@@ -192,7 +192,7 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      pointer-events: none; /* Modal background should not block clicks */
+      pointer-events: auto; /* Allow interactions with the modal */
       z-index: 20;
     }
 
@@ -1524,6 +1524,7 @@
     let gameTime = 0;
     let gameStartTime = 0;
     let waveCount = 0;
+    let isCameraAnimating = false; // Prevent overlapping camera animations
     let lastWaveEndTime = 0; // Track when last wave was cleared
     let windmillQuest = { active: false, timer: 0, duration: 30, windmill: null, hasCompleted: false };
     let runStartGold = 0;  // Track gold at start of run for end-of-run calculation
@@ -2090,8 +2091,8 @@
       }
 
       takeDamage(amount) {
-        // Check invulnerability frames
-        if (this.invulnerable) return;
+        // Check invulnerability frames and pause state
+        if (isPaused || this.invulnerable) return;
         
         // Armor reduction
         const reduced = Math.max(1, amount * (1 - playerStats.armor / 100));
@@ -2380,6 +2381,7 @@
 
       update(dt, playerPos) {
         if (this.isDead) return;
+        if (isPaused) return; // Don't update enemies while paused
 
         // Windmill Quest: Attack windmill instead of player
         let targetPos = playerPos;
@@ -5384,6 +5386,15 @@
     }
     
     function createSlowMotionEffect() {
+      // Prevent multiple simultaneous camera animations
+      if (isCameraAnimating) return;
+      isCameraAnimating = true;
+      
+      // Safety timeout to reset flag in case animation doesn't complete normally
+      const safetyTimeout = setTimeout(() => {
+        isCameraAnimating = false;
+      }, 1500); // Reset after 1500ms (longer than zoom animation duration of 1200ms)
+      
       // Create slow motion visual overlay
       const slowMoOverlay = document.createElement('div');
       slowMoOverlay.style.position = 'fixed';
@@ -5553,6 +5564,12 @@
         
         if (t < 1) {
           requestAnimationFrame(zoomAnim);
+        } else {
+          // Reset flag when zoom animation completes (longest animation)
+          if (typeof safetyTimeout !== 'undefined') {
+            clearTimeout(safetyTimeout);
+          }
+          isCameraAnimating = false;
         }
       };
       zoomAnim();
@@ -7078,7 +7095,11 @@
       lastTime = time;
       gameTime = time / 1000; // Update game time in seconds
 
-      if (isPaused || isGameOver || !isGameActive) return;
+      if (isPaused || isGameOver || !isGameActive) {
+        // Still render the scene so visual effects (camera shake, particles, and modals) are visible
+        renderer.render(scene, camera);
+        return;
+      }
       
       // Handle keyboard/gamepad input updates (integrated into game loop)
       if (gameSettings.controlType === 'keyboard') {
