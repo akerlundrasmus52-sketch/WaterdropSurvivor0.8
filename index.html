@@ -1511,6 +1511,7 @@
     let goldCoins = [];
     let chests = [];
     let particles = [];
+    let debrisParticles = []; // Managed array for limbs, pieces, and debris
     let damageNumbers = [];
     let meteors = [];
     let flashLights = []; // Track temporary flash lights for cleanup
@@ -1600,7 +1601,10 @@
       thornsPercent: 0,
       hasBerserkerRage: false,
       treasureHunterChance: 0,
-      doubleCritChance: 0
+      doubleCritChance: 0,
+      // Slow debuff tracking (for slowing enemies)
+      activeSlows: 0, // Counter for active slow effects
+      originalWalkSpeed: 25 // Backup of original speed
     };
 
     // Weapons State
@@ -1990,10 +1994,16 @@
           this.auraCircle.position.x = this.mesh.position.x;
           this.auraCircle.position.z = this.mesh.position.z;
           
-          // Scale based on aura range
-          const scale = weapons.aura.range * 2;
-          this.auraCircle.geometry.dispose();
-          this.auraCircle.geometry = new THREE.RingGeometry(scale - 0.5, scale, 32);
+          // Scale based on aura range - OPTIMIZED: Use mesh scaling instead of recreating geometry
+          // Original geometry: RingGeometry(2.5, 3, 32) representing range 3
+          // Scale the mesh to match current range (range 3 is base scale 1)
+          const baseRange = 3; // Initial aura range when geometry was created
+          const targetScale = weapons.aura.range / baseRange;
+          // Only update scale if it changed significantly (avoid unnecessary updates)
+          if (!this.lastAuraScale || Math.abs(this.lastAuraScale - targetScale) > 0.01) {
+            this.auraCircle.scale.set(targetScale, targetScale, 1);
+            this.lastAuraScale = targetScale;
+          }
           
           // Rotate and pulse
           this.auraCircle.rotation.z += 0.02;
@@ -2494,13 +2504,26 @@
               spawnParticles(this.mesh.position, 0xFF6347, 8); // Tomato red thorns
             }
             
-            // Slowing enemy slows player on hit
+            // Slowing enemy slows player on hit - FIXED: Prevent stacking bug
             if (this.type === 3) {
-              playerStats.walkSpeed *= this.slowAmount;
+              // Apply slow only on first stack
+              if (playerStats.activeSlows === 0) {
+                playerStats.originalWalkSpeed = playerStats.walkSpeed;
+                playerStats.walkSpeed *= this.slowAmount;
+              }
+              
+              // Increment active slow counter
+              playerStats.activeSlows++;
+              
               // Remove slow after duration
               setTimeout(() => {
-                playerStats.walkSpeed /= this.slowAmount;
+                playerStats.activeSlows--;
+                // Only restore speed when all slows are gone
+                if (playerStats.activeSlows === 0) {
+                  playerStats.walkSpeed = playerStats.originalWalkSpeed;
+                }
               }, this.slowDuration);
+              
               // Visual effect for slow
               spawnParticles(player.mesh.position, 0x00FFFF, 10);
             }
@@ -2612,44 +2635,27 @@
           // Reduce speed
           this.speed *= 0.6;
           
-          // Spawn more limb pieces - ENHANCED
+          // Spawn more limb pieces - OPTIMIZED: Use managed debris system
           const enemyColor = this.mesh.material.color.getHex();
-          for(let i = 0; i < 8; i++) { // Increased from 4 to 8
+          for(let i = 0; i < 6; i++) { // Reduced from 8 to 6 for performance
             const limbSize = Math.random() * 0.2 + 0.2; // Varied limb sizes
-            const limb = new THREE.Mesh(
-              new THREE.BoxGeometry(limbSize, limbSize * 0.5, limbSize * 0.5),
-              new THREE.MeshBasicMaterial({ color: enemyColor })
-            );
-            limb.position.copy(this.mesh.position);
-            scene.add(limb);
-            
             const vel = new THREE.Vector3(
               (Math.random() - 0.5) * 0.5, // Increased velocity
               Math.random() * 0.6,
               (Math.random() - 0.5) * 0.5
             );
             
-            let life = 60; // Increased lifetime
-            const updateLimb = () => {
-              life--;
-              limb.position.add(vel);
-              vel.y -= 0.02; // Gravity
-              limb.rotation.x += 0.15;
-              limb.rotation.y += 0.15;
-              
-              if (life <= 0 || limb.position.y < 0) {
-                scene.remove(limb);
-                limb.geometry.dispose();
-                limb.material.dispose();
-              } else {
-                requestAnimationFrame(updateLimb);
-              }
-            };
-            updateLimb();
+            debrisParticles.push(new DebrisParticle(
+              this.mesh.position.clone(),
+              enemyColor,
+              { x: limbSize, y: limbSize * 0.5, z: limbSize * 0.5 },
+              vel,
+              { lifetime: 60 }
+            ));
           }
           
-          spawnParticles(this.mesh.position, enemyColor, 25); // Increased from 20
-          spawnParticles(this.mesh.position, 0x8B0000, 10); // Added blood splatter
+          spawnParticles(this.mesh.position, enemyColor, 20); // Reduced from 25
+          spawnParticles(this.mesh.position, 0x8B0000, 8); // Reduced from 10
           playSound('hit');
         }
         
@@ -2662,39 +2668,22 @@
           const newScale = 1 - damagePercent;
           this.mesh.scale.multiplyScalar(newScale);
           
-          // Spawn broken pieces
+          // Spawn broken pieces - OPTIMIZED: Use managed debris system
           const enemyColor = this.mesh.material.color.getHex();
-          for(let i = 0; i < 5; i++) {
-            const piece = new THREE.Mesh(
-              new THREE.BoxGeometry(0.2, 0.2, 0.2),
-              new THREE.MeshBasicMaterial({ color: enemyColor })
-            );
-            piece.position.copy(this.mesh.position);
-            scene.add(piece);
-            
+          for(let i = 0; i < 4; i++) { // Reduced from 5 to 4 for performance
             const vel = new THREE.Vector3(
               (Math.random() - 0.5) * 0.3,
               Math.random() * 0.4,
               (Math.random() - 0.5) * 0.3
             );
             
-            let life = 40;
-            const updatePiece = () => {
-              life--;
-              piece.position.add(vel);
-              vel.y -= 0.02; // Gravity
-              piece.rotation.x += 0.1;
-              piece.rotation.y += 0.1;
-              
-              if (life <= 0 || piece.position.y < 0) {
-                scene.remove(piece);
-                piece.geometry.dispose();
-                piece.material.dispose();
-              } else {
-                requestAnimationFrame(updatePiece);
-              }
-            };
-            updatePiece();
+            debrisParticles.push(new DebrisParticle(
+              this.mesh.position.clone(),
+              enemyColor,
+              { x: 0.2, y: 0.2, z: 0.2 },
+              vel,
+              { lifetime: 40 }
+            ));
           }
           
           // Enhanced particles for destruction
@@ -2774,16 +2763,9 @@
         };
         animateRing();
         
-        // Explode into more pieces - ENHANCED
-        const pieceCount = this.isMiniBoss ? 25 : 15; // More pieces for mini-boss
+        // Explode into more pieces - OPTIMIZED: Use managed debris system
+        const pieceCount = this.isMiniBoss ? 15 : 10; // Reduced from 25:15 for performance
         for(let i = 0; i < pieceCount; i++) {
-          const piece = new THREE.Mesh(
-            new THREE.BoxGeometry(0.3, 0.3, 0.3),
-            new THREE.MeshBasicMaterial({ color: enemyColor, transparent: true })
-          );
-          piece.position.copy(this.mesh.position);
-          scene.add(piece);
-          
           const angle = (i / pieceCount) * Math.PI * 2;
           const speed = this.isMiniBoss ? 0.6 : 0.4; // Faster explosion for mini-boss
           const vel = new THREE.Vector3(
@@ -2792,24 +2774,13 @@
             Math.sin(angle) * speed
           );
           
-          let life = 50;
-          const updatePiece = () => {
-            life--;
-            piece.position.add(vel);
-            vel.y -= 0.02; // Gravity
-            piece.rotation.x += 0.15;
-            piece.rotation.y += 0.15;
-            piece.material.opacity = life / 50;
-            
-            if (life <= 0 || piece.position.y < 0) {
-              scene.remove(piece);
-              piece.geometry.dispose();
-              piece.material.dispose();
-            } else {
-              requestAnimationFrame(updatePiece);
-            }
-          };
-          updatePiece();
+          debrisParticles.push(new DebrisParticle(
+            this.mesh.position.clone(),
+            enemyColor,
+            { x: 0.3, y: 0.3, z: 0.3 },
+            vel,
+            { lifetime: 50, fadeOut: true }
+          ));
         }
         
         // Screen flash on kill (dopamine boost) - stronger flash for mini-boss
@@ -3249,6 +3220,49 @@
       }
     }
 
+    // DebrisParticle class for managing limbs, pieces, and explosion debris
+    // This replaces individual requestAnimationFrame loops with a managed array
+    class DebrisParticle {
+      constructor(pos, color, size, velocity, options = {}) {
+        const geo = new THREE.BoxGeometry(size.x, size.y, size.z);
+        const mat = new THREE.MeshBasicMaterial({ 
+          color: color,
+          transparent: options.fadeOut || false,
+          opacity: 1
+        });
+        this.mesh = new THREE.Mesh(geo, mat);
+        this.mesh.position.copy(pos);
+        scene.add(this.mesh);
+        
+        this.vel = velocity.clone();
+        this.life = options.lifetime || 60;
+        this.maxLife = this.life;
+        this.fadeOut = options.fadeOut || false;
+        this.gravity = options.gravity !== undefined ? options.gravity : 0.02;
+        this.rotationSpeed = options.rotationSpeed !== undefined ? options.rotationSpeed : 0.15;
+      }
+      
+      update() {
+        this.life--;
+        this.mesh.position.add(this.vel);
+        this.vel.y -= this.gravity; // Gravity
+        this.mesh.rotation.x += this.rotationSpeed;
+        this.mesh.rotation.y += this.rotationSpeed;
+        
+        if (this.fadeOut) {
+          this.mesh.material.opacity = this.life / this.maxLife;
+        }
+        
+        if (this.life <= 0 || this.mesh.position.y < 0) {
+          scene.remove(this.mesh);
+          this.mesh.geometry.dispose();
+          this.mesh.material.dispose();
+          return false; // Remove from array
+        }
+        return true; // Keep in array
+      }
+    }
+
     class ExpGem {
       constructor(x, z) {
         // Create 6-sided star shape
@@ -3344,47 +3358,27 @@
       collect() {
         this.active = false;
         
-        // SPLASH EFFECT when collected - more intense with stars
+        // SPLASH EFFECT when collected - OPTIMIZED: Use managed debris system
         const splashPos = this.mesh.position.clone();
-        const SPLASH_PARTICLE_COUNT = 20;
+        const SPLASH_PARTICLE_COUNT = 15; // Reduced from 20 for performance
         
-        // Star-shaped splash particles
+        // Star-shaped splash particles using managed debris system
         for(let i=0; i<SPLASH_PARTICLE_COUNT; i++) {
           const angle = (i / SPLASH_PARTICLE_COUNT) * Math.PI * 2;
           const speed = 0.15 + Math.random() * 0.2;
-          const particle = new THREE.Mesh(
-            new THREE.SphereGeometry(0.08, 8, 8),
-            new THREE.MeshBasicMaterial({ 
-              color: COLORS.exp, 
-              transparent: true, 
-              opacity: 0.9
-            })
-          );
-          particle.position.copy(splashPos);
-          scene.add(particle);
-          
           const vel = new THREE.Vector3(
             Math.cos(angle) * speed,
             0.2 + Math.random() * 0.15,
             Math.sin(angle) * speed
           );
           
-          let life = 30;
-          const updateParticle = () => {
-            life--;
-            particle.position.add(vel);
-            vel.y -= 0.02; // Gravity
-            particle.material.opacity = life / 30;
-            
-            if (life <= 0 || particle.position.y < 0.05) {
-              scene.remove(particle);
-              particle.geometry.dispose();
-              particle.material.dispose();
-            } else {
-              requestAnimationFrame(updateParticle);
-            }
-          };
-          updateParticle();
+          debrisParticles.push(new DebrisParticle(
+            splashPos,
+            COLORS.exp,
+            { x: 0.08, y: 0.08, z: 0.08 },
+            vel,
+            { lifetime: 30, fadeOut: true }
+          ));
         }
         
         // Screen flash effect
@@ -5433,49 +5427,29 @@
     }
     
     function createLevelUpEffects() {
-      // Water Fountain Effect - 60 water droplet particles explode from character
-      for(let i=0; i<60; i++) {
-        const angle = (i / 60) * Math.PI * 2;
+      // Water Fountain Effect - OPTIMIZED: Use managed debris system
+      for(let i=0; i<40; i++) { // Reduced from 60 to 40 for performance
+        const angle = (i / 40) * Math.PI * 2;
         const speed = 0.2 + Math.random() * 0.4;
         const height = 0.6 + Math.random() * 0.8;
         
-        // Water droplets
-        const dropletGeo = new THREE.SphereGeometry(0.08, 8, 8);
-        const dropletMat = new THREE.MeshPhysicalMaterial({ 
-          color: COLORS.player,
-          transparent: true,
-          opacity: 0.9,
-          metalness: 0.3,
-          roughness: 0.1
-        });
-        const droplet = new THREE.Mesh(dropletGeo, dropletMat);
-        droplet.position.copy(player.mesh.position);
-        droplet.position.y += 1;
-        scene.add(droplet);
-        
+        // Water droplets using debris system
         const vel = new THREE.Vector3(
           Math.cos(angle) * speed,
           height,
           Math.sin(angle) * speed
         );
         
-        let life = 80;
-        const updateDroplet = () => {
-          life--;
-          droplet.position.add(vel);
-          vel.y -= 0.03; // Gravity
-          droplet.rotation.y += 0.1;
-          droplet.material.opacity = life / 80;
-          
-          if (life <= 0 || droplet.position.y < 0) {
-            scene.remove(droplet);
-            droplet.geometry.dispose();
-            droplet.material.dispose();
-          } else {
-            requestAnimationFrame(updateDroplet);
-          }
-        };
-        updateDroplet();
+        const startPos = player.mesh.position.clone();
+        startPos.y += 1;
+        
+        debrisParticles.push(new DebrisParticle(
+          startPos,
+          COLORS.player,
+          { x: 0.08, y: 0.08, z: 0.08 },
+          vel,
+          { lifetime: 80, fadeOut: true, gravity: 0.03, rotationSpeed: 0.1 }
+        ));
       }
       
       // Expanding splash ring on ground
@@ -5509,11 +5483,11 @@
       };
       updateRing();
       
-      // Fountain/explosion of "LEVEL UP" text particles from player's head
+      // Fountain/explosion of "LEVEL UP" text particles from player's head - OPTIMIZED
       const texts = ["L", "E", "V", "E", "L", " ", "U", "P", "!"];
       
-      for(let i=0; i<40; i++) {
-        const angle = (i / 40) * Math.PI * 2;
+      for(let i=0; i<15; i++) { // Reduced from 40 to 15 for performance
+        const angle = (i / 15) * Math.PI * 2;
         const speed = 0.15 + Math.random() * 0.35;
         const text = texts[i % texts.length];
         
@@ -5529,9 +5503,9 @@
         particles.push(particle);
       }
       
-      // Add regular colored particles
-      for(let i=0; i<30; i++) {
-        const angle = (i / 30) * Math.PI * 2;
+      // Add regular colored particles - OPTIMIZED
+      for(let i=0; i<10; i++) { // Reduced from 30 to 10 for performance
+        const angle = (i / 10) * Math.PI * 2;
         const speed = 0.2 + Math.random() * 0.3;
         const particle = new LevelUpParticle(
           player.mesh.position.clone(),
@@ -7657,6 +7631,7 @@
       goldCoins.forEach(g => g.update(player.mesh.position));
       chests.forEach(c => c.update(player.mesh.position));
       particles = particles.filter(p => p.update() !== false);
+      debrisParticles = debrisParticles.filter(d => d.update() !== false);
       
       // OPTIMIZED: Use cached animated objects instead of scene.traverse() every frame
       // Windmill Rotation and Light Animation
