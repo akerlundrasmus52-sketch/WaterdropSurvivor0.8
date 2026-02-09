@@ -1992,7 +1992,10 @@
           this.auraCircle.position.z = this.mesh.position.z;
           
           // Scale based on aura range - OPTIMIZED: Use mesh scaling instead of recreating geometry
-          const targetScale = weapons.aura.range * 2;
+          // Original geometry: RingGeometry(2.5, 3, 32) representing range 3
+          // Scale the mesh to match current range (range 3 is base scale 1)
+          const baseRange = 3; // Initial aura range when geometry was created
+          const targetScale = weapons.aura.range / baseRange;
           // Only update scale if it changed significantly (avoid unnecessary updates)
           if (!this.lastAuraScale || Math.abs(this.lastAuraScale - targetScale) > 0.01) {
             this.auraCircle.scale.set(targetScale, targetScale, 1);
@@ -2501,7 +2504,7 @@
             // Slowing enemy slows player on hit - FIXED: Prevent stacking bug
             if (this.type === 3) {
               // Initialize slow tracking if not exists
-              if (!playerStats.activeSlows) playerStats.activeSlows = 0;
+              if (playerStats.activeSlows === undefined) playerStats.activeSlows = 0;
               
               // Apply slow only on first stack
               if (playerStats.activeSlows === 0) {
@@ -2647,7 +2650,7 @@
               enemyColor,
               { x: limbSize, y: limbSize * 0.5, z: limbSize * 0.5 },
               vel,
-              60 // lifetime
+              { lifetime: 60 }
             ));
           }
           
@@ -2679,7 +2682,7 @@
               enemyColor,
               { x: 0.2, y: 0.2, z: 0.2 },
               vel,
-              40 // lifetime
+              { lifetime: 40 }
             ));
           }
           
@@ -2770,14 +2773,13 @@
             0.3 + Math.random() * 0.3,
             Math.sin(angle) * speed
           );
-          vel.fadeOut = true; // Enable fade out effect
           
           debrisParticles.push(new DebrisParticle(
             this.mesh.position.clone(),
             enemyColor,
             { x: 0.3, y: 0.3, z: 0.3 },
             vel,
-            50 // lifetime
+            { lifetime: 50, fadeOut: true }
           ));
         }
         
@@ -3221,11 +3223,11 @@
     // DebrisParticle class for managing limbs, pieces, and explosion debris
     // This replaces individual requestAnimationFrame loops with a managed array
     class DebrisParticle {
-      constructor(pos, color, size, velocity, lifetime = 60) {
+      constructor(pos, color, size, velocity, options = {}) {
         const geo = new THREE.BoxGeometry(size.x, size.y, size.z);
         const mat = new THREE.MeshBasicMaterial({ 
           color: color,
-          transparent: velocity.fadeOut || false,
+          transparent: options.fadeOut || false,
           opacity: 1
         });
         this.mesh = new THREE.Mesh(geo, mat);
@@ -3233,11 +3235,11 @@
         scene.add(this.mesh);
         
         this.vel = velocity.clone ? velocity.clone() : new THREE.Vector3(velocity.x, velocity.y, velocity.z);
-        this.life = lifetime;
-        this.maxLife = lifetime;
-        this.fadeOut = velocity.fadeOut || false;
-        this.gravity = velocity.gravity !== undefined ? velocity.gravity : 0.02;
-        this.rotationSpeed = velocity.rotationSpeed || 0.15;
+        this.life = options.lifetime || 60;
+        this.maxLife = this.life;
+        this.fadeOut = options.fadeOut || false;
+        this.gravity = options.gravity !== undefined ? options.gravity : 0.02;
+        this.rotationSpeed = options.rotationSpeed !== undefined ? options.rotationSpeed : 0.15;
       }
       
       update() {
@@ -3369,14 +3371,13 @@
             0.2 + Math.random() * 0.15,
             Math.sin(angle) * speed
           );
-          vel.fadeOut = true; // Enable fade out effect
           
           debrisParticles.push(new DebrisParticle(
             splashPos,
             COLORS.exp,
             { x: 0.08, y: 0.08, z: 0.08 },
             vel,
-            30 // lifetime
+            { lifetime: 30, fadeOut: true }
           ));
         }
         
@@ -5438,9 +5439,6 @@
           height,
           Math.sin(angle) * speed
         );
-        vel.fadeOut = true; // Enable fade out
-        vel.gravity = 0.03; // Slightly more gravity
-        vel.rotationSpeed = 0.1;
         
         const startPos = player.mesh.position.clone();
         startPos.y += 1;
@@ -5450,7 +5448,7 @@
           COLORS.player,
           { x: 0.08, y: 0.08, z: 0.08 },
           vel,
-          80 // lifetime
+          { lifetime: 80, fadeOut: true, gravity: 0.03, rotationSpeed: 0.1 }
         ));
       }
       
