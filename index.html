@@ -1601,7 +1601,10 @@
       thornsPercent: 0,
       hasBerserkerRage: false,
       treasureHunterChance: 0,
-      doubleCritChance: 0
+      doubleCritChance: 0,
+      // Slow debuff tracking (for slowing enemies)
+      activeSlows: 0, // Counter for active slow effects
+      originalWalkSpeed: 25 // Backup of original speed
     };
 
     // Weapons State
@@ -2503,9 +2506,6 @@
             
             // Slowing enemy slows player on hit - FIXED: Prevent stacking bug
             if (this.type === 3) {
-              // Initialize slow tracking if not exists
-              if (playerStats.activeSlows === undefined) playerStats.activeSlows = 0;
-              
               // Apply slow only on first stack
               if (playerStats.activeSlows === 0) {
                 playerStats.originalWalkSpeed = playerStats.walkSpeed;
@@ -3234,7 +3234,7 @@
         this.mesh.position.copy(pos);
         scene.add(this.mesh);
         
-        this.vel = velocity.clone ? velocity.clone() : new THREE.Vector3(velocity.x, velocity.y, velocity.z);
+        this.vel = velocity.clone();
         this.life = options.lifetime || 60;
         this.maxLife = this.life;
         this.fadeOut = options.fadeOut || false;
