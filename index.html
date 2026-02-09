@@ -5566,7 +5566,9 @@
           requestAnimationFrame(zoomAnim);
         } else {
           // Reset flag when zoom animation completes (longest animation)
-          clearTimeout(safetyTimeout);
+          if (typeof safetyTimeout !== 'undefined') {
+            clearTimeout(safetyTimeout);
+          }
           isCameraAnimating = false;
         }
       };
