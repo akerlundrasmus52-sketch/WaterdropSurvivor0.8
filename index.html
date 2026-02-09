@@ -201,10 +201,10 @@
       padding: 20px;
       border-radius: 20px;
       border: 5px solid #FFD700; /* Golden border for level-up emphasis */
-      width: 85%;
-      max-width: 350px;
-      max-height: none; /* Remove height restriction - no scrolling needed */
-      overflow-y: visible; /* No scrolling */
+      width: 92%; /* Increased from 85% for better mobile support */
+      max-width: 420px; /* Increased from 350px */
+      max-height: 90vh; /* Add safety net for viewport height */
+      overflow-y: auto; /* Enable scrolling if content exceeds viewport */
       text-align: center;
       box-shadow: 0 15px 30px rgba(0,0,0,0.9), 0 0 50px rgba(255,215,0,0.7), inset 0 0 40px rgba(255,215,0,0.15), inset 0 0 0 2px rgba(0,0,0,0.5); /* Darker shadow and inner dark edge */
       pointer-events: auto; /* Modal content should receive clicks */
@@ -218,11 +218,11 @@
     }
 
     .upgrade-card {
-      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); /* Match menu gradient */
+      background: linear-gradient(135deg, #0d1117, #1a1e2e, #0d1117); /* Unified dark theme */
       margin: 10px 0;
       padding: 20px;
       border-radius: 20px; /* More rounded for soft feel */
-      border: 3px solid #5DADE2; /* Blue border matching achievement screen */
+      border: 3px solid #3a4a5e; /* Darker border for unified theme */
       cursor: pointer;
       transition: all 0.2s ease;
       box-shadow: 
@@ -232,9 +232,29 @@
         inset 0 2px 4px rgba(255,255,255,0.1); /* Top highlight */
       position: relative;
       overflow: hidden;
+      animation: constantLightningShimmer 3s ease-in-out infinite; /* Constant shimmer */
     }
     
-    /* Lightning effect on hover */
+    /* Constant lightning shimmer animation for all cards */
+    @keyframes constantLightningShimmer {
+      0%, 100% { 
+        box-shadow: 
+          0 8px 16px rgba(0,0,0,0.6),
+          0 0 20px rgba(93,173,226,0.3),
+          inset 0 -4px 8px rgba(0,0,0,0.3),
+          inset 0 2px 4px rgba(255,255,255,0.1);
+      }
+      50% { 
+        box-shadow: 
+          0 8px 16px rgba(0,0,0,0.6),
+          0 0 30px rgba(93,173,226,0.5),
+          0 0 45px rgba(93,173,226,0.2),
+          inset 0 -4px 8px rgba(0,0,0,0.3),
+          inset 0 2px 4px rgba(255,255,255,0.1);
+      }
+    }
+    
+    /* Lightning effect pseudo-element - always visible with subtle pulse */
     .upgrade-card::before {
       content: '';
       position: absolute;
@@ -243,8 +263,20 @@
       width: 200%;
       height: 200%;
       background: radial-gradient(circle, rgba(93,173,226,0.3) 0%, transparent 70%);
-      opacity: 0;
+      opacity: 0.2; /* Always slightly visible */
       pointer-events: none;
+      animation: constantLightningMovement 4s ease-in-out infinite;
+    }
+    
+    @keyframes constantLightningMovement {
+      0%, 100% { 
+        opacity: 0.2;
+        transform: translate(0, 0);
+      }
+      50% { 
+        opacity: 0.4;
+        transform: translate(-5%, -5%);
+      }
     }
 
     .upgrade-card:hover {
@@ -255,11 +287,13 @@
         0 0 50px rgba(93,173,226,0.3), /* Extended glow */
         inset 0 -4px 8px rgba(0,0,0,0.3),
         inset 0 2px 4px rgba(255,255,255,0.2); /* Brighter top highlight */
-      border-color: #FFD700; /* Golden border on hover */
+      border-color: #5DADE2; /* Electric blue border on hover */
+      animation-play-state: paused; /* Pause shimmer on hover */
     }
     
     .upgrade-card:hover::before {
       animation: lightning-pulse 1s ease-in-out infinite;
+      opacity: 0.6; /* More visible on hover */
     }
 
     .upgrade-card:active {
@@ -300,13 +334,14 @@
       text-shadow: 1px 1px 2px rgba(0,0,0,0.6);
     }
     
-    /* Special upgrade cards */
+    /* Special upgrade cards - now use unified dark theme with electric blue accents */
     .upgrade-card.perk {
-      border-color: #9b59b6;
-      background: linear-gradient(135deg, #2c1a3d 0%, #3d2859 50%, #4e3870 100%);
+      /* Override with unified theme - same dark background */
+      background: linear-gradient(135deg, #0d1117, #1a1e2e, #0d1117);
+      border-color: #3a4a5e; /* Same border as regular cards */
       box-shadow: 
         0 8px 16px rgba(0,0,0,0.6),
-        0 0 25px rgba(155,89,182,0.5),
+        0 0 25px rgba(93,173,226,0.4), /* Electric blue glow instead of purple */
         inset 0 -4px 8px rgba(0,0,0,0.3),
         inset 0 2px 4px rgba(255,255,255,0.1);
       animation: perkPulse 2.5s ease-in-out infinite;
@@ -316,44 +351,50 @@
       animation-play-state: paused; /* Pause pulse animation on hover */
       box-shadow: 
         0 12px 24px rgba(0,0,0,0.8),
-        0 0 40px rgba(155,89,182,0.7),
-        0 0 60px rgba(155,89,182,0.4),
+        0 0 40px rgba(93,173,226,0.7), /* Electric blue glow on hover */
+        0 0 60px rgba(93,173,226,0.4),
         inset 0 -4px 8px rgba(0,0,0,0.3),
         inset 0 2px 4px rgba(255,255,255,0.2);
+      border-color: #5DADE2; /* Electric blue border on hover */
     }
     
     .upgrade-card.legendary {
-      border-color: #ff6b6b;
+      /* Override with unified theme - same dark background */
+      background: linear-gradient(135deg, #0d1117, #1a1e2e, #0d1117);
+      border-color: #3a4a5e; /* Same border as regular cards */
       box-shadow: 
         0 8px 16px rgba(0,0,0,0.6),
-        0 0 25px rgba(255,107,107,0.5),
+        0 0 25px rgba(93,173,226,0.4), /* Electric blue glow */
         inset 0 -4px 8px rgba(0,0,0,0.3),
         inset 0 2px 4px rgba(255,255,255,0.1);
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #8b5ea3 100%);
+      animation: constantLightningShimmer 3s ease-in-out infinite; /* Same shimmer as regular cards */
     }
     
     .upgrade-card.legendary:hover {
       box-shadow: 
         0 12px 24px rgba(0,0,0,0.8),
-        0 0 40px rgba(255,107,107,0.7),
-        0 0 60px rgba(255,107,107,0.4),
+        0 0 40px rgba(93,173,226,0.7), /* Electric blue glow on hover */
+        0 0 60px rgba(93,173,226,0.4),
         inset 0 -4px 8px rgba(0,0,0,0.3),
         inset 0 2px 4px rgba(255,255,255,0.2);
+      border-color: #5DADE2; /* Electric blue border on hover */
+      animation-play-state: paused; /* Pause shimmer on hover */
     }
     
+    /* Updated perk pulse with electric blue instead of purple */
     @keyframes perkPulse {
       0%, 100% { 
         box-shadow: 
           0 8px 16px rgba(0,0,0,0.6),
-          0 0 25px rgba(155,89,182,0.5),
+          0 0 25px rgba(93,173,226,0.4), /* Electric blue */
           inset 0 -4px 8px rgba(0,0,0,0.3),
           inset 0 2px 4px rgba(255,255,255,0.1);
       }
       50% { 
         box-shadow: 
           0 8px 16px rgba(0,0,0,0.6),
-          0 0 35px rgba(155,89,182,0.8),
-          0 0 50px rgba(155,89,182,0.4),
+          0 0 35px rgba(93,173,226,0.8), /* Stronger electric blue */
+          0 0 50px rgba(93,173,226,0.4),
           inset 0 -4px 8px rgba(0,0,0,0.3),
           inset 0 2px 4px rgba(255,255,255,0.1);
       }
@@ -975,11 +1016,38 @@
     }
 
     /* Responsive Media Queries */
+    
+    /* Small screen optimization */
+    @media (max-width: 480px) {
+      .modal-content {
+        width: 95%;
+        max-width: 380px;
+        padding: 15px; /* Reduced padding */
+      }
+      
+      h2 {
+        font-size: 26px; /* Reduced from 32px */
+      }
+      
+      .upgrade-card {
+        padding: 15px; /* Reduced from 20px */
+        margin: 8px 0; /* Reduced from 10px */
+      }
+      
+      .upgrade-title {
+        font-size: 18px; /* Reduced from 20px */
+      }
+      
+      .upgrade-desc {
+        font-size: 12px; /* Reduced from 13px */
+      }
+    }
+    
     @media (orientation: portrait) {
       /* Portrait mode adjustments */
       .modal-content {
-        width: 90%;
-        max-width: 350px;
+        width: 92%;
+        max-width: 420px;
       }
 
       .bar-container {
@@ -997,8 +1065,8 @@
     @media (orientation: landscape) {
       /* Landscape mode adjustments */
       .modal-content {
-        width: 70%;
-        max-width: 500px;
+        width: 75%; /* Adjusted from 70% */
+        max-width: 520px; /* Adjusted from 500px */
       }
 
       .bar-container {
@@ -1530,6 +1598,8 @@
     let runStartGold = 0;  // Track gold at start of run for end-of-run calculation
     let lastCleanupTime = 0; // Track last memory cleanup time
     let miniBossesSpawned = new Set(); // Track which mini-boss levels have been spawned
+    let lastLevelUpTime = 0; // Track last level up to prevent overlapping effects
+    let levelUpInProgress = false; // Flag to prevent overlapping level up calls
     
     // Performance optimization - particle cap to prevent memory overflow
     const MAX_PARTICLES = 150;
@@ -5308,6 +5378,14 @@
     }
 
     function levelUp() {
+      // Throttle level up to prevent overlapping calls
+      const now = Date.now();
+      if (levelUpInProgress || (now - lastLevelUpTime < 2000)) {
+        return; // Prevent overlapping level-ups within 2 seconds
+      }
+      
+      levelUpInProgress = true;
+      lastLevelUpTime = now;
       isPaused = true;
       playerStats.lvl++;
       playerStats.exp -= playerStats.expReq;
@@ -5320,6 +5398,7 @@
             gameOver(); // Show game over screen as victory screen
           }, 2000);
         }, 1000);
+        levelUpInProgress = false;
         return;
       }
       
@@ -5354,6 +5433,10 @@
       // Show upgrade modal with dramatic entrance after effects - FASTER
       setTimeout(() => {
         showUpgradeModal();
+        // Reset level-up flag after modal is shown
+        setTimeout(() => {
+          levelUpInProgress = false;
+        }, 500);
       }, 800);
     }
     
@@ -5390,10 +5473,14 @@
       if (isCameraAnimating) return;
       isCameraAnimating = true;
       
-      // Safety timeout to reset flag in case animation doesn't complete normally
-      const safetyTimeout = setTimeout(() => {
+      // Multiple safety timeouts to ensure flag is always reset
+      const safetyTimeout1 = setTimeout(() => {
         isCameraAnimating = false;
       }, 1500); // Reset after 1500ms (longer than zoom animation duration of 1200ms)
+      
+      const safetyTimeout2 = setTimeout(() => {
+        isCameraAnimating = false;
+      }, 2500); // Additional safety timeout
       
       // Create slow motion visual overlay
       const slowMoOverlay = document.createElement('div');
@@ -5438,9 +5525,14 @@
     }
     
     function createLevelUpEffects() {
+      // Detect milestone levels (10, 15, 20, 25) and reduce effects
+      const isMilestoneLevel = [10, 15, 20, 25].includes(playerStats.lvl);
+      const particleReduction = isMilestoneLevel ? 0.5 : 1; // 50% reduction at milestone levels
+      
       // Water Fountain Effect - OPTIMIZED: Use managed debris system
-      for(let i=0; i<40; i++) { // Reduced from 60 to 40 for performance
-        const angle = (i / 40) * Math.PI * 2;
+      const waterDropletCount = Math.floor(40 * particleReduction); // Further reduced at milestone levels
+      for(let i=0; i<waterDropletCount; i++) {
+        const angle = (i / waterDropletCount) * Math.PI * 2;
         const speed = 0.2 + Math.random() * 0.4;
         const height = 0.6 + Math.random() * 0.8;
         
@@ -5497,8 +5589,9 @@
       // Fountain/explosion of "LEVEL UP" text particles from player's head - OPTIMIZED
       const texts = ["L", "E", "V", "E", "L", " ", "U", "P", "!"];
       
-      for(let i=0; i<15; i++) { // Reduced from 40 to 15 for performance
-        const angle = (i / 15) * Math.PI * 2;
+      const textParticleCount = Math.floor(15 * particleReduction); // Further reduced at milestone levels
+      for(let i=0; i<textParticleCount; i++) {
+        const angle = (i / textParticleCount) * Math.PI * 2;
         const speed = 0.15 + Math.random() * 0.35;
         const text = texts[i % texts.length];
         
@@ -5515,8 +5608,9 @@
       }
       
       // Add regular colored particles - OPTIMIZED
-      for(let i=0; i<10; i++) { // Reduced from 30 to 10 for performance
-        const angle = (i / 10) * Math.PI * 2;
+      const coloredParticleCount = Math.floor(10 * particleReduction); // Further reduced at milestone levels
+      for(let i=0; i<coloredParticleCount; i++) {
+        const angle = (i / coloredParticleCount) * Math.PI * 2;
         const speed = 0.2 + Math.random() * 0.3;
         const particle = new LevelUpParticle(
           player.mesh.position.clone(),
@@ -5529,9 +5623,10 @@
         particles.push(particle);
       }
       
-      // Lightning bolts - Reduced from 8 to 4 for performance
-      for(let i=0; i<4; i++) {
-        const angle = (i / 4) * Math.PI * 2;
+      // Lightning bolts - Reduced from 8 to 4 for performance, further reduced at milestone levels
+      const lightningCount = Math.floor(4 * particleReduction);
+      for(let i=0; i<lightningCount; i++) {
+        const angle = (i / lightningCount) * Math.PI * 2;
         const lightning = new LightningBolt(
           player.mesh.position.clone(),
           new THREE.Vector3(
@@ -5566,9 +5661,6 @@
           requestAnimationFrame(zoomAnim);
         } else {
           // Reset flag when zoom animation completes (longest animation)
-          if (typeof safetyTimeout !== 'undefined') {
-            clearTimeout(safetyTimeout);
-          }
           isCameraAnimating = false;
         }
       };
@@ -7094,6 +7186,10 @@
       const dt = (time - lastTime) / 1000;
       lastTime = time;
       gameTime = time / 1000; // Update game time in seconds
+      
+      // Frame rate protection: Skip heavy updates if lag spike detected
+      const DT_THRESHOLD = 0.1; // 100ms threshold
+      const isLagSpike = dt > DT_THRESHOLD;
 
       if (isPaused || isGameOver || !isGameActive) {
         // Still render the scene so visual effects (camera shake, particles, and modals) are visible
