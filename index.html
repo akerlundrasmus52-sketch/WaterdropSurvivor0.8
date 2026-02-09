@@ -4494,9 +4494,9 @@
       farmGroup.add(barn);
       
       // Barn roof
-      const roofGeo = new THREE.ConeGeometry(7, 3, 4);
+      const barnRoofGeo = new THREE.ConeGeometry(7, 3, 4);
       const roofMat = new THREE.MeshToonMaterial({ color: 0x654321 }); // Brown
-      const roof = new THREE.Mesh(roofGeo, roofMat);
+      const roof = new THREE.Mesh(barnRoofGeo, roofMat);
       roof.position.set(12, 7.5, 0);
       roof.rotation.y = Math.PI/4;
       farmGroup.add(roof);
