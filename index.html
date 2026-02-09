@@ -5390,6 +5390,11 @@
       if (isCameraAnimating) return;
       isCameraAnimating = true;
       
+      // Safety timeout to reset flag in case animation doesn't complete normally
+      const safetyTimeout = setTimeout(() => {
+        isCameraAnimating = false;
+      }, 1500); // Reset after 1500ms (longer than zoom animation duration of 1200ms)
+      
       // Create slow motion visual overlay
       const slowMoOverlay = document.createElement('div');
       slowMoOverlay.style.position = 'fixed';
@@ -5561,6 +5566,7 @@
           requestAnimationFrame(zoomAnim);
         } else {
           // Reset flag when zoom animation completes (longest animation)
+          clearTimeout(safetyTimeout);
           isCameraAnimating = false;
         }
       };
@@ -7088,7 +7094,7 @@
       gameTime = time / 1000; // Update game time in seconds
 
       if (isPaused || isGameOver || !isGameActive) {
-        // Still render the scene so visual effects (camera shake, particles, modals) are visible
+        // Still render the scene so visual effects (camera shake, particles, and modals) are visible
         renderer.render(scene, camera);
         return;
       }
