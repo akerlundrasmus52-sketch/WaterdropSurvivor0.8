@@ -1183,8 +1183,8 @@
   <script type="importmap">
     {
       "imports": {
-        "three": "https://unpkg.com/three@0.176.0/build/three.module.js",
-        "three/addons/": "https://unpkg.com/three@0.176.0/examples/jsm/"
+        "three": "https://unpkg.com/three@0.170.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.170.0/examples/jsm/"
       }
     }
   </script>
@@ -1220,33 +1220,50 @@
     };
 
     // --- AUDIO SYSTEM (Oscillators) ---
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    let audioCtx = null;
+    function getAudioContext() {
+      if (!audioCtx) {
+        try {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        } catch(e) {
+          console.warn('AudioContext not available:', e);
+        }
+      }
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume().catch(() => {});
+      }
+      return audioCtx;
+    }
     let musicOscillators = [];
     let musicGain = null;
     let currentMusicLevel = 0;
     
     function initMusic() {
+      const ctx = getAudioContext();
+      if (!ctx) return;
       if (!musicGain) {
-        musicGain = audioCtx.createGain();
+        musicGain = ctx.createGain();
         musicGain.gain.value = 0.05;
-        musicGain.connect(audioCtx.destination);
+        musicGain.connect(ctx.destination);
       }
     }
     
     function updateBackgroundMusic() {
       initMusic();
+      const ctx = getAudioContext();
+      if (!ctx) return;
       
       if (!gameSettings.musicEnabled) {
         // Stop all music if disabled
         if (musicGain) {
-          musicGain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.5);
+          musicGain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.5);
         }
         return;
       }
       
       // Restore music volume if enabled and currently at 0
       if (musicGain && musicGain.gain.value < 0.01 && musicOscillators.length > 0) {
-        musicGain.gain.linearRampToValueAtTime(0.15, audioCtx.currentTime + 0.5);
+        musicGain.gain.linearRampToValueAtTime(0.15, ctx.currentTime + 0.5);
       }
       
       const targetLevel = Math.min(playerStats.lvl, 10);
@@ -1255,8 +1272,8 @@
         currentMusicLevel = targetLevel;
         
         // Add new layer with happier, more upbeat sounds
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
         
         osc.connect(gain);
         gain.connect(musicGain);
@@ -1281,8 +1298,8 @@
         osc.frequency.value = majorScaleFreqs[currentMusicLevel - 1];
         
         // Add faster vibrato for more energetic feel
-        const lfo = audioCtx.createOscillator();
-        const lfoGain = audioCtx.createGain();
+        const lfo = ctx.createOscillator();
+        const lfoGain = ctx.createGain();
         lfo.frequency.value = 6 + currentMusicLevel * 0.5; // Faster vibrato
         lfoGain.gain.value = 8 + currentMusicLevel * 0.8; // More pronounced
         lfo.connect(lfoGain);
@@ -1290,61 +1307,61 @@
         lfo.start();
         
         gain.gain.value = 0;
-        gain.gain.linearRampToValueAtTime(0.25 + currentMusicLevel * 0.02, audioCtx.currentTime + 0.8);
+        gain.gain.linearRampToValueAtTime(0.25 + currentMusicLevel * 0.02, ctx.currentTime + 0.8);
         
         osc.start();
         musicOscillators.push({ osc, gain, lfo });
         
         // Add harmony layer (third above) for richer sound
-        const harmony = audioCtx.createOscillator();
-        const harmonyGain = audioCtx.createGain();
+        const harmony = ctx.createOscillator();
+        const harmonyGain = ctx.createGain();
         harmony.connect(harmonyGain);
         harmonyGain.connect(musicGain);
         harmony.type = 'sine';
         harmony.frequency.value = majorScaleFreqs[currentMusicLevel - 1] * 1.26; // Major third
         harmonyGain.gain.value = 0;
-        harmonyGain.gain.linearRampToValueAtTime(0.15, audioCtx.currentTime + 0.8);
+        harmonyGain.gain.linearRampToValueAtTime(0.15, ctx.currentTime + 0.8);
         harmony.start();
         musicOscillators.push({ osc: harmony, gain: harmonyGain, lfo: null });
         
         // Add uplifting high melody for levels 3+
         if (currentMusicLevel >= 3) {
-          const melody = audioCtx.createOscillator();
-          const melodyGain = audioCtx.createGain();
+          const melody = ctx.createOscillator();
+          const melodyGain = ctx.createGain();
           melody.connect(melodyGain);
           melodyGain.connect(musicGain);
           melody.type = 'triangle';
           melody.frequency.value = majorScaleFreqs[currentMusicLevel - 1] * 2; // Octave up
           melodyGain.gain.value = 0;
-          melodyGain.gain.linearRampToValueAtTime(0.12, audioCtx.currentTime + 0.8);
+          melodyGain.gain.linearRampToValueAtTime(0.12, ctx.currentTime + 0.8);
           melody.start();
           musicOscillators.push({ osc: melody, gain: melodyGain, lfo: null });
         }
         
         // Add energetic rhythm layer for levels 5+
         if (currentMusicLevel >= 5) {
-          const rhythm = audioCtx.createOscillator();
-          const rhythmGain = audioCtx.createGain();
+          const rhythm = ctx.createOscillator();
+          const rhythmGain = ctx.createGain();
           rhythm.connect(rhythmGain);
           rhythmGain.connect(musicGain);
           rhythm.type = 'square';
           rhythm.frequency.value = majorScaleFreqs[currentMusicLevel - 1] * 0.5; // Bass line
           rhythmGain.gain.value = 0;
-          rhythmGain.gain.linearRampToValueAtTime(0.18, audioCtx.currentTime + 0.8);
+          rhythmGain.gain.linearRampToValueAtTime(0.18, ctx.currentTime + 0.8);
           rhythm.start();
           musicOscillators.push({ osc: rhythm, gain: rhythmGain, lfo: null });
         }
         
         // Add high frequency sparkle for levels 7+
         if (currentMusicLevel >= 7) {
-          const sparkle = audioCtx.createOscillator();
-          const sparkleGain = audioCtx.createGain();
+          const sparkle = ctx.createOscillator();
+          const sparkleGain = ctx.createGain();
           sparkle.connect(sparkleGain);
           sparkleGain.connect(musicGain);
           sparkle.type = 'sine';
           sparkle.frequency.value = majorScaleFreqs[currentMusicLevel - 1] * 4; // High sparkle
           sparkleGain.gain.value = 0;
-          sparkleGain.gain.linearRampToValueAtTime(0.1, audioCtx.currentTime + 0.8);
+          sparkleGain.gain.linearRampToValueAtTime(0.1, ctx.currentTime + 0.8);
           sparkle.start();
           musicOscillators.push({ osc: sparkle, gain: sparkleGain, lfo: null });
         }
@@ -1353,13 +1370,15 @@
     
     function playSound(type) {
       if (!gameSettings.soundEnabled) return; // Respect sound settings
-      if (audioCtx.state === 'suspended') audioCtx.resume();
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
+      const ctx = getAudioContext();
+      if (!ctx) return;
+      if (ctx.state === 'suspended') ctx.resume();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
       osc.connect(gain);
-      gain.connect(audioCtx.destination);
+      gain.connect(ctx.destination);
 
-      const now = audioCtx.currentTime;
+      const now = ctx.currentTime;
       
       if (type === 'shoot') {
         // Realistic gun sound - sharper and snappier
@@ -1381,10 +1400,10 @@
         osc.stop(now + 0.08);
         
         // Add deep bass punch
-        const osc2 = audioCtx.createOscillator();
-        const gain2 = audioCtx.createGain();
+        const osc2 = ctx.createOscillator();
+        const gain2 = ctx.createGain();
         osc2.connect(gain2);
-        gain2.connect(audioCtx.destination);
+        gain2.connect(ctx.destination);
         osc2.type = 'sine';
         osc2.frequency.setValueAtTime(80, now);
         osc2.frequency.exponentialRampToValueAtTime(30, now + 0.06);
@@ -1419,10 +1438,10 @@
         osc.stop(now + 0.2);
         
         // Add bubbles layer
-        const osc2 = audioCtx.createOscillator();
-        const gain2 = audioCtx.createGain();
+        const osc2 = ctx.createOscillator();
+        const gain2 = ctx.createGain();
         osc2.connect(gain2);
-        gain2.connect(audioCtx.destination);
+        gain2.connect(ctx.destination);
         osc2.type = 'triangle';
         osc2.frequency.setValueAtTime(1500, now);
         osc2.frequency.exponentialRampToValueAtTime(500, now + 0.15);
@@ -1469,10 +1488,10 @@
         osc.stop(now + 0.15);
         
         // Add wind layer
-        const osc2 = audioCtx.createOscillator();
-        const gain2 = audioCtx.createGain();
+        const osc2 = ctx.createOscillator();
+        const gain2 = ctx.createGain();
         osc2.connect(gain2);
-        gain2.connect(audioCtx.destination);
+        gain2.connect(ctx.destination);
         osc2.type = 'triangle';
         osc2.frequency.setValueAtTime(1200, now);
         osc2.frequency.exponentialRampToValueAtTime(300, now + 0.12);
@@ -7771,6 +7790,27 @@
     // Init Game
     try { init(); } catch(e) { console.error(e); alert("Game Error: " + e.message); }
 
+  </script>
+  
+  <script>
+    // Global error handler for module loading errors
+    window.addEventListener('error', (event) => {
+      if (event.message && (event.message.includes('module') || event.message.includes('import'))) {
+        const loadingContainer = document.getElementById('loadingContainer');
+        if (loadingContainer) {
+          loadingContainer.innerHTML = `
+            <div style="color: red; font-family: Arial, sans-serif; text-align: center; padding: 20px; background: rgba(0,0,0,0.8); border-radius: 10px;">
+              <h2>⚠️ Failed to Load Game</h2>
+              <p>Error loading game resources. Please check your internet connection and try refreshing the page.</p>
+              <p style="font-size: 0.9em; color: #ff6b6b; margin-top: 10px;">Technical details: ${event.message}</p>
+              <button onclick="location.reload()" style="margin-top: 20px; padding: 10px 20px; background: #4FC3F7; border: none; border-radius: 5px; color: white; cursor: pointer; font-size: 16px;">
+                Retry
+              </button>
+            </div>
+          `;
+        }
+      }
+    }, true);
   </script>
 </body>
 </html>
