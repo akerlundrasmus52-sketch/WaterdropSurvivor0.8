@@ -5426,49 +5426,32 @@
     }
     
     function createLevelUpEffects() {
-      // Water Fountain Effect - 60 water droplet particles explode from character
-      for(let i=0; i<60; i++) {
-        const angle = (i / 60) * Math.PI * 2;
+      // Water Fountain Effect - OPTIMIZED: Use managed debris system
+      for(let i=0; i<40; i++) { // Reduced from 60 to 40 for performance
+        const angle = (i / 40) * Math.PI * 2;
         const speed = 0.2 + Math.random() * 0.4;
         const height = 0.6 + Math.random() * 0.8;
         
-        // Water droplets
-        const dropletGeo = new THREE.SphereGeometry(0.08, 8, 8);
-        const dropletMat = new THREE.MeshPhysicalMaterial({ 
-          color: COLORS.player,
-          transparent: true,
-          opacity: 0.9,
-          metalness: 0.3,
-          roughness: 0.1
-        });
-        const droplet = new THREE.Mesh(dropletGeo, dropletMat);
-        droplet.position.copy(player.mesh.position);
-        droplet.position.y += 1;
-        scene.add(droplet);
-        
+        // Water droplets using debris system
         const vel = new THREE.Vector3(
           Math.cos(angle) * speed,
           height,
           Math.sin(angle) * speed
         );
+        vel.fadeOut = true; // Enable fade out
+        vel.gravity = 0.03; // Slightly more gravity
+        vel.rotationSpeed = 0.1;
         
-        let life = 80;
-        const updateDroplet = () => {
-          life--;
-          droplet.position.add(vel);
-          vel.y -= 0.03; // Gravity
-          droplet.rotation.y += 0.1;
-          droplet.material.opacity = life / 80;
-          
-          if (life <= 0 || droplet.position.y < 0) {
-            scene.remove(droplet);
-            droplet.geometry.dispose();
-            droplet.material.dispose();
-          } else {
-            requestAnimationFrame(updateDroplet);
-          }
-        };
-        updateDroplet();
+        const startPos = player.mesh.position.clone();
+        startPos.y += 1;
+        
+        debrisParticles.push(new DebrisParticle(
+          startPos,
+          COLORS.player,
+          { x: 0.08, y: 0.08, z: 0.08 },
+          vel,
+          80 // lifetime
+        ));
       }
       
       // Expanding splash ring on ground
