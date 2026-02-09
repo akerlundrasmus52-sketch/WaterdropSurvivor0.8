@@ -1584,6 +1584,10 @@
     let meteors = [];
     let flashLights = []; // Track temporary flash lights for cleanup
     let activeTimeouts = []; // Track active timeouts for cleanup
+    let animatedRings = []; // Managed array for expanding ring effects (Bug 3 fix)
+    let cameraShake = null; // Managed camera shake state (Bug 3 fix)
+    let fallingObjects = []; // Managed array for falling objects like water droplets (Bug 3 fix)
+    let animatedRotations = []; // Managed array for rotation animations like chest lids (Bug 3 fix)
     let lastTime = 0;
     let frameCount = 0;
     let isPaused = false;
@@ -1605,6 +1609,7 @@
     const MAX_PARTICLES = 150;
     const MAX_PROJECTILES = 100;
     const MAX_METEORS = 50;
+    const MAX_DEBRIS = 200;
     
     // Cache animated objects to avoid scene.traverse() every frame
     let animatedObjects = {
@@ -2037,25 +2042,13 @@
             smoke.position.copy(tipWorldPos);
             scene.add(smoke);
             
-            // Animate smoke rising
-            let smokeLife = 80;
-            const updateSmoke = () => {
-              smokeLife--;
-              smoke.position.y += 0.02; // Rise up
-              smoke.position.x += (Math.random() - 0.5) * 0.01; // Drift
-              smoke.position.z += (Math.random() - 0.5) * 0.01;
-              smoke.scale.multiplyScalar(1.02); // Expand
-              smoke.material.opacity = (smokeLife / 80) * 0.5; // Fade out
-              
-              if (smokeLife <= 0) {
-                scene.remove(smoke);
-                smoke.geometry.dispose();
-                smoke.material.dispose();
-              } else {
-                requestAnimationFrame(updateSmoke);
-              }
-            };
-            updateSmoke();
+            // Add to managed array instead of standalone requestAnimationFrame (Bug 3 fix)
+            fallingObjects.push({
+              mesh: smoke,
+              life: 80,
+              maxLife: 80,
+              type: 'smoke' // Track type for different update logic
+            });
           }
         }
         
@@ -2223,30 +2216,13 @@
           }, 50);
         }, 50);
         
-        // Enhanced screen shake on damage
-        const originalCameraPos = { 
-          x: camera.position.x, 
-          y: camera.position.y, 
-          z: camera.position.z 
+        // Enhanced screen shake on damage - MANAGED (Bug 3 fix)
+        cameraShake = {
+          time: 0,
+          duration: 0.25,
+          intensity: 0.7,
+          originalPos: camera.position.clone()
         };
-        let shakeTime = 0;
-        const shakeDuration = 0.25; // Slightly longer (was 0.2)
-        
-        const shakeAnim = () => {
-          shakeTime += 0.016;
-          if (shakeTime < shakeDuration) {
-            const intensity = (1 - shakeTime / shakeDuration) * 0.7; // More intense (was 0.5)
-            camera.position.x = originalCameraPos.x + (Math.random() - 0.5) * intensity;
-            camera.position.y = originalCameraPos.y + (Math.random() - 0.5) * intensity;
-            camera.position.z = originalCameraPos.z + (Math.random() - 0.5) * intensity;
-            requestAnimationFrame(shakeAnim);
-          } else {
-            camera.position.x = originalCameraPos.x;
-            camera.position.y = originalCameraPos.y;
-            camera.position.z = originalCameraPos.z;
-          }
-        };
-        shakeAnim();
 
         if (playerStats.hp <= 0) {
           // ENHANCED Death splash: more particles + ground pool with fade
@@ -2803,7 +2779,7 @@
         spawnParticles(this.mesh.position, 0xFFFFFF, 15);
         spawnParticles(this.mesh.position, 0x8B0000, 12); // Blood particles
         
-        // Add explosion ring effect
+        // Add explosion ring effect - MANAGED (Bug 3 fix)
         const ringGeo = new THREE.RingGeometry(0.1, 0.2, 16);
         const ringMat = new THREE.MeshBasicMaterial({ 
           color: enemyColor, 
@@ -2817,23 +2793,14 @@
         ring.rotation.x = Math.PI / 2;
         scene.add(ring);
         
-        // Animate ring expanding and fading
-        let ringLife = 20;
-        const animateRing = () => {
-          ringLife--;
-          const scale = 1 + (20 - ringLife) * 0.3;
-          ring.scale.set(scale, scale, 1);
-          ring.material.opacity = ringLife / 20;
-          
-          if (ringLife <= 0) {
-            scene.remove(ring);
-            ring.geometry.dispose();
-            ring.material.dispose();
-          } else {
-            requestAnimationFrame(animateRing);
-          }
-        };
-        animateRing();
+        // Add to managed array instead of using standalone requestAnimationFrame
+        animatedRings.push({
+          mesh: ring,
+          life: 20,
+          maxLife: 20,
+          scale: 1,
+          scaleRate: 0.3
+        });
         
         // Explode into more pieces - OPTIMIZED: Use managed debris system
         const pieceCount = this.isMiniBoss ? 15 : 10; // Reduced from 25:15 for performance
@@ -3636,17 +3603,14 @@
       open() {
         this.opened = true;
         
-        // Animate lid opening
-        let openProgress = 0;
-        const animateLid = () => {
-          openProgress += 0.05;
-          if (openProgress < 1) {
-            this.lid.rotation.x = -openProgress * Math.PI * 0.7; // Open 70%
-            this.lid.position.z = -openProgress * 0.2; // Slide back slightly
-            requestAnimationFrame(animateLid);
-          }
-        };
-        animateLid();
+        // Animate lid opening - MANAGED (Bug 3 fix)
+        animatedRotations.push({
+          object: this.lid,
+          type: 'chestLid',
+          progress: 0,
+          targetProgress: 1,
+          speed: 0.05
+        });
         
         // Play sound and effects
         playSound('coin'); // Reuse coin sound
@@ -5188,6 +5152,11 @@
     
 
     function spawnWave() {
+      // Don't spawn enemies while the level-up modal is showing
+      if (isPaused) {
+        return;
+      }
+      
       waveCount++;
       
       // Check if this is a mini-boss wave (ONLY levels 10, 25, 50)
@@ -5344,7 +5313,7 @@
     }
     
     function spawnWaterDroplet(pos) {
-      // Create small water droplet that falls and disappears
+      // Create small water droplet that falls and disappears - MANAGED (Bug 3 fix)
       const geo = new THREE.SphereGeometry(0.1, 8, 8);
       const mat = new THREE.MeshBasicMaterial({ color: COLORS.player, transparent: true, opacity: 0.6 });
       const mesh = new THREE.Mesh(geo, mat);
@@ -5352,21 +5321,12 @@
       mesh.position.y = 0.3;
       scene.add(mesh);
       
-      // Animate falling
-      let life = 20;
-      const update = () => {
-        life--;
-        mesh.position.y -= 0.02;
-        mat.opacity = life / 20;
-        if (life <= 0 || mesh.position.y <= 0.05) {
-          scene.remove(mesh);
-          mesh.geometry.dispose();
-          mesh.material.dispose();
-        } else {
-          requestAnimationFrame(update);
-        }
-      };
-      update();
+      // Add to managed array instead of using standalone requestAnimationFrame
+      fallingObjects.push({
+        mesh: mesh,
+        life: 20,
+        maxLife: 20
+      });
     }
 
     function addExp(amount) {
@@ -5433,10 +5393,6 @@
       // Show upgrade modal with dramatic entrance after effects - FASTER
       setTimeout(() => {
         showUpgradeModal();
-        // Reset level-up flag after modal is shown
-        setTimeout(() => {
-          levelUpInProgress = false;
-        }, 500);
       }, 800);
     }
     
@@ -5569,22 +5525,14 @@
       ring.rotation.x = -Math.PI / 2;
       scene.add(ring);
       
-      let ringLife = 60;
-      const updateRing = () => {
-        ringLife--;
-        const scale = 1 + (60 - ringLife) * 0.15;
-        ring.scale.set(scale, scale, 1);
-        ring.material.opacity = ringLife / 60;
-        
-        if (ringLife <= 0) {
-          scene.remove(ring);
-          ring.geometry.dispose();
-          ring.material.dispose();
-        } else {
-          requestAnimationFrame(updateRing);
-        }
-      };
-      updateRing();
+      // Add to managed array instead of using standalone requestAnimationFrame (Bug 3 fix)
+      animatedRings.push({
+        mesh: ring,
+        life: 60,
+        maxLife: 60,
+        scale: 1,
+        scaleRate: 0.15
+      });
       
       // Fountain/explosion of "LEVEL UP" text particles from player's head - OPTIMIZED
       const texts = ["L", "E", "V", "E", "L", " ", "U", "P", "!"];
@@ -5666,24 +5614,13 @@
       };
       zoomAnim();
       
-      // Screen shake
-      const originalCameraPos = camera.position.clone();
-      let shakeTime = 0;
-      const shakeDuration = 0.5;
-      
-      const shakeAnim = () => {
-        shakeTime += 0.016;
-        if (shakeTime < shakeDuration) {
-          const intensity = (1 - shakeTime / shakeDuration) * 2;
-          camera.position.x = originalCameraPos.x + (Math.random() - 0.5) * intensity;
-          camera.position.y = originalCameraPos.y + (Math.random() - 0.5) * intensity;
-          camera.position.z = originalCameraPos.z + (Math.random() - 0.5) * intensity;
-          requestAnimationFrame(shakeAnim);
-        } else {
-          camera.position.copy(originalCameraPos);
-        }
+      // Screen shake - MANAGED (Bug 3 fix)
+      cameraShake = {
+        time: 0,
+        duration: 0.5,
+        intensity: 2,
+        originalPos: camera.position.clone()
       };
-      shakeAnim();
     }
     
     class LevelUpTextParticle {
@@ -6468,7 +6405,19 @@
           modal.querySelector('h2').innerText = 'LEVEL UP!';
           modal.querySelector('h2').style.fontSize = '32px';
           isPaused = false;
+          levelUpInProgress = false; // Reset flag when player makes choice
           updateHUD();
+          
+          // Bug 1 Fix: Check if player has enough XP to level up again
+          // This handles excess XP that accumulates during rapid kills
+          setTimeout(() => {
+            if (playerStats.exp >= playerStats.expReq) {
+              // Queue another level-up after a short delay
+              setTimeout(() => {
+                levelUp();
+              }, 100);
+            }
+          }, 100);
         };
         list.appendChild(card);
       });
@@ -7741,6 +7690,17 @@
         });
       }
       
+      if (debrisParticles.length > MAX_DEBRIS) {
+        const excess = debrisParticles.splice(0, debrisParticles.length - MAX_DEBRIS);
+        excess.forEach(d => {
+          if (d.mesh && d.mesh.parent) {
+            scene.remove(d.mesh);
+            if (d.mesh.geometry) d.mesh.geometry.dispose();
+            if (d.mesh.material) d.mesh.material.dispose();
+          }
+        });
+      }
+      
       // Projectiles update returns false if dead
       projectiles = projectiles.filter(p => p.update() !== false);
       meteors = meteors.filter(m => m.update() !== false);
@@ -7749,6 +7709,76 @@
       chests.forEach(c => c.update(player.mesh.position));
       particles = particles.filter(p => p.update() !== false);
       debrisParticles = debrisParticles.filter(d => d.update() !== false);
+      
+      // Update animated rings (Bug 3 fix: managed ring animations)
+      animatedRings = animatedRings.filter(ring => {
+        ring.life--;
+        const scale = ring.scale + (ring.maxLife - ring.life) * ring.scaleRate;
+        ring.mesh.scale.set(scale, scale, 1);
+        ring.mesh.material.opacity = ring.life / ring.maxLife;
+        
+        if (ring.life <= 0) {
+          scene.remove(ring.mesh);
+          ring.mesh.geometry.dispose();
+          ring.mesh.material.dispose();
+          return false; // Remove from array
+        }
+        return true; // Keep in array
+      });
+      
+      // Update camera shake (Bug 3 fix: managed camera shake)
+      if (cameraShake) {
+        cameraShake.time += 0.016;
+        if (cameraShake.time < cameraShake.duration) {
+          const progress = cameraShake.time / cameraShake.duration;
+          const intensity = (1 - progress) * cameraShake.intensity;
+          camera.position.x = cameraShake.originalPos.x + (Math.random() - 0.5) * intensity;
+          camera.position.y = cameraShake.originalPos.y + (Math.random() - 0.5) * intensity;
+          camera.position.z = cameraShake.originalPos.z + (Math.random() - 0.5) * intensity;
+        } else {
+          camera.position.copy(cameraShake.originalPos);
+          cameraShake = null; // Clear shake effect
+        }
+      }
+      
+      // Update falling objects (Bug 3 fix: managed falling objects)
+      fallingObjects = fallingObjects.filter(obj => {
+        obj.life--;
+        
+        if (obj.type === 'smoke') {
+          // Smoke animation: rise up and drift
+          obj.mesh.position.y += 0.02;
+          obj.mesh.position.x += (Math.random() - 0.5) * 0.01;
+          obj.mesh.position.z += (Math.random() - 0.5) * 0.01;
+          obj.mesh.scale.multiplyScalar(1.02);
+          obj.mesh.material.opacity = (obj.life / obj.maxLife) * 0.5;
+        } else {
+          // Water droplet animation: fall down
+          obj.mesh.position.y -= 0.02;
+          obj.mesh.material.opacity = obj.life / obj.maxLife;
+        }
+        
+        if (obj.life <= 0 || obj.mesh.position.y <= 0.05) {
+          scene.remove(obj.mesh);
+          obj.mesh.geometry.dispose();
+          obj.mesh.material.dispose();
+          return false; // Remove from array
+        }
+        return true; // Keep in array
+      });
+      
+      // Update animated rotations (Bug 3 fix: managed rotation animations)
+      animatedRotations = animatedRotations.filter(anim => {
+        anim.progress += anim.speed;
+        
+        if (anim.type === 'chestLid') {
+          anim.object.rotation.x = -anim.progress * Math.PI * 0.7;
+          anim.object.position.z = -anim.progress * 0.2;
+        }
+        
+        // Remove when animation completes
+        return anim.progress < anim.targetProgress;
+      });
       
       // OPTIMIZED: Use cached animated objects instead of scene.traverse() every frame
       // Windmill Rotation and Light Animation
