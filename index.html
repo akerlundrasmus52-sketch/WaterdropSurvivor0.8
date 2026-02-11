@@ -7190,7 +7190,8 @@
       requestAnimationFrame(animate);
 
       if (!lastTime) lastTime = time;
-      const dt = Math.min((time - lastTime) / 1000, 1/30); // Clamp dt to max 33ms per frame
+      const MAX_FRAME_TIME = 1/30; // Maximum 33ms per frame to prevent large delta spikes
+      const dt = Math.min((time - lastTime) / 1000, MAX_FRAME_TIME);
       lastTime = time;
       gameTime = time / 1000; // Update game time in seconds
       
@@ -7199,7 +7200,7 @@
       const isLagSpike = dt > DT_THRESHOLD;
 
       if (isPaused || isGameOver || !isGameActive) {
-        // Don't render when on main menu to save GPU
+        // Don't render when paused, game over, or on main menu to save GPU
         return;
       }
       
