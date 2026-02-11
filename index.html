@@ -1641,12 +1641,32 @@
     let lastExpFlashTime = 0; // Track last exp flash to throttle (max 1 per 500ms)
     let levelUpInProgress = false; // Flag to prevent overlapping level up calls
     
+    // LEVEL 18+ performance tuning constants
+    const VISUAL_CULLING_LEVEL = 18; // Level at which to start culling distant enemy visuals
+    const VISUAL_CULLING_DISTANCE = 20; // Distance beyond which to skip enemy visual updates
+    const HIGH_LEVEL_PARTICLE_REDUCTION = 0.20; // Reduce particles by 20% at high levels (1 - 0.8 = 0.20)
+    const ELITE_SPAWN_RATE = 0.2; // Elite enemies spawn at 20% rate (down from 30%)
+    const ENEMY_AVOIDANCE_THRESHOLD = 15; // Reduce avoidance checks when enemies exceed this count
+    
     // Performance optimization - particle cap to prevent memory overflow and freezing
     // CRITICAL FIX for freeze at 150-200 kills caused by:
     // 1. Particle explosion from Lightning + Vampire combo
     // 2. FIXED: Synchronous disposal of Three.js objects during render loop (now deferred)
     // 3. Unbounded arrays growing faster than cleanup
-    // FIX SUMMARY:
+    // 
+    // LEVEL 18+ RENDERING FREEZE FIX:
+    // - Elite enemies (type 9) introduced at level 18 with 200 HP (very high)
+    // - High HP enemies live longer, causing accumulation on screen
+    // - More particles generated from prolonged combat with Elite enemies
+    // - Enemy avoidance O(n²) loop becomes bottleneck with many enemies
+    // FIX IMPLEMENTATION:
+    // 1. MAX_ENEMIES cap (25) with automatic cleanup of farthest enemies
+    // 2. Reduced enemy avoidance checks from 5 to 3 when >15 enemies alive
+    // 3. 20% particle reduction at level 18+ for all spawn calls
+    // 4. Elite enemy spawn rate reduced to 20% (from 30%)
+    // 5. Skip visual animations for enemies >20 units away at level 18+
+    // 
+    // PREVIOUS FIX SUMMARY:
     // - All geometry/material disposal now queued for deferred processing
     // - Disposal queue processing increased from 10 to 30 items/frame
     // - Added periodic scene graph cleanup every 3 seconds
@@ -2516,7 +2536,7 @@
           // LEVEL 18+ FIX: Further reduce avoidance checks when many enemies are alive
           let avoidanceCount = 0;
           const enemyCount = enemies.length;
-          const maxAvoidanceChecks = enemyCount > 15 ? 3 : 5; // Reduce checks at high enemy counts
+          const maxAvoidanceChecks = enemyCount > ENEMY_AVOIDANCE_THRESHOLD ? 3 : 5; // Reduce checks at high enemy counts
           
           for (let other of enemies) {
             if (other === this || other.isDead || avoidanceCount >= maxAvoidanceChecks) continue;
@@ -2638,7 +2658,7 @@
         // Squishy idle with more gravity-based wobble
         // LEVEL 18+ FIX: Skip visual updates for distant enemies to improve performance
         const distToPlayer = this.mesh.position.distanceTo(targetPos);
-        const skipVisuals = playerStats.lvl >= 18 && distToPlayer > 20; // Skip if far away at high levels
+        const skipVisuals = playerStats.lvl >= VISUAL_CULLING_LEVEL && distToPlayer > VISUAL_CULLING_DISTANCE;
         
         if (!skipVisuals) {
           this.pulsePhase += dt * 6; // Slightly faster
@@ -5383,9 +5403,9 @@
           }
         }
         
-        // LEVEL 18+ FIX: Further reduce Elite (type 9) spawn rate to 20%
+        // LEVEL 18+ FIX: Further reduce Elite (type 9) spawn rate
         // Elite enemies have very high HP and can cause accumulation
-        if (type === 9 && Math.random() > 0.2) {
+        if (type === 9 && Math.random() > ELITE_SPAWN_RATE) {
           // Fallback to other hard variants or basic enemies
           const fallbackTypes = [6, 7, 8]; // Other hard variants
           type = fallbackTypes[Math.floor(Math.random() * fallbackTypes.length)];
@@ -5411,18 +5431,23 @@
       const particleUsage = particles.length / MAX_PARTICLES;
       let adjustedCount = count;
       
-      // LEVEL 18+ FIX: Additional particle reduction when player level is high
-      // Elite enemies (level 18+) have high HP and create more particles
-      if (playerStats.lvl >= 18) {
-        adjustedCount = Math.max(1, Math.floor(count * 0.8)); // 20% base reduction at high levels
+      // LEVEL 18+ FIX: Choose the most aggressive reduction needed
+      // Don't compound reductions - use whichever is stricter
+      let reductionFactor = 1.0;
+      
+      // Level-based reduction for high-HP enemies (Elite at level 18+)
+      if (playerStats.lvl >= VISUAL_CULLING_LEVEL) {
+        reductionFactor = Math.min(reductionFactor, 1.0 - HIGH_LEVEL_PARTICLE_REDUCTION); // 0.8
       }
       
-      // Scale down particle count when near capacity to maintain 60 FPS
+      // Capacity-based reduction to maintain 60 FPS
       if (particleUsage > 0.8) {
-        adjustedCount = Math.max(1, Math.floor(adjustedCount * 0.5)); // 50% reduction
+        reductionFactor = Math.min(reductionFactor, 0.5); // Use most aggressive
       } else if (particleUsage > 0.6) {
-        adjustedCount = Math.max(1, Math.floor(adjustedCount * 0.7)); // 30% reduction
+        reductionFactor = Math.min(reductionFactor, 0.7);
       }
+      
+      adjustedCount = Math.max(1, Math.floor(count * reductionFactor));
       
       for(let i=0; i<adjustedCount; i++) particles.push(new Particle(pos, color));
     }
