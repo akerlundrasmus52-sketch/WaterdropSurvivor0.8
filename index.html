@@ -1749,8 +1749,8 @@
 
     class Player {
       constructor() {
-        // Create water droplet shape (teardrop)
-        const geometry = new THREE.SphereGeometry(0.5, 32, 32);
+        // Create water droplet shape (teardrop) - reduced segments for performance
+        const geometry = new THREE.SphereGeometry(0.5, 16, 16); // Reduced from 32x32
         
         // Modify geometry to make it more teardrop-shaped
         const positions = geometry.attributes.position;
@@ -1769,17 +1769,10 @@
         }
         geometry.computeVertexNormals();
         
-        const material = new THREE.MeshPhysicalMaterial({ 
+        const material = new THREE.MeshToonMaterial({ 
           color: COLORS.player,
           transparent: true,
-          opacity: 0.75,
-          metalness: 0.1,
-          roughness: 0.2,
-          transmission: 0.3,
-          thickness: 0.5,
-          envMapIntensity: 1,
-          clearcoat: 1,
-          clearcoatRoughness: 0.1
+          opacity: 0.75
         });
         
         this.mesh = new THREE.Mesh(geometry, material);
@@ -1876,7 +1869,7 @@
         this.mesh.add(this.glow);
         
         // Aura Circle (visible when aura weapon is active)
-        const auraGeo = new THREE.RingGeometry(2.5, 3, 32); // Initial range 3
+        const auraGeo = new THREE.RingGeometry(2.5, 3, 16); // Reduced from 32 for performance
         const auraMat = new THREE.MeshBasicMaterial({ 
           color: 0x5DADE2, 
           transparent: true, 
@@ -2389,14 +2382,10 @@
           color = 0xFFD700; // Gold - MiniBoss
         }
 
-        const material = new THREE.MeshPhysicalMaterial({ 
+        const material = new THREE.MeshToonMaterial({ 
           color: color,
           transparent: true,
           opacity: 0.85,
-          metalness: type === 10 ? 0.4 : 0.1,
-          roughness: 0.6,
-          transmission: 0.2,
-          thickness: 0.5,
           emissive: type === 10 ? color : 0x000000,
           emissiveIntensity: type === 10 ? 0.3 : 0
         });
@@ -3388,17 +3377,10 @@
         const geometry = new THREE.ExtrudeGeometry(starShape, extrudeSettings);
         geometry.center();
         
-        const material = new THREE.MeshPhysicalMaterial({ 
+        const material = new THREE.MeshToonMaterial({ 
           color: COLORS.exp, // Light blue matching EXP bar
           transparent: true,
           opacity: 0.8,
-          metalness: 0.3,
-          roughness: 0.2,
-          transmission: 0.2,
-          thickness: 0.5,
-          envMapIntensity: 1,
-          clearcoat: 1,
-          clearcoatRoughness: 0.1,
           emissive: COLORS.exp,
           emissiveIntensity: 0.3
         });
@@ -3591,10 +3573,8 @@
       constructor(x, z) {
         // Create chest mesh - simple box with bronze/gold color
         const geometry = new THREE.BoxGeometry(0.8, 0.6, 0.6);
-        const material = new THREE.MeshPhysicalMaterial({ 
+        const material = new THREE.MeshToonMaterial({ 
           color: 0xCD7F32, // Bronze color
-          metalness: 0.7,
-          roughness: 0.3,
           emissive: 0xFFD700,
           emissiveIntensity: 0.2
         });
@@ -3604,10 +3584,8 @@
         
         // Add lid (different color)
         const lidGeo = new THREE.BoxGeometry(0.85, 0.1, 0.65);
-        const lidMat = new THREE.MeshPhysicalMaterial({ 
-          color: 0xFFD700, // Gold lid
-          metalness: 0.8,
-          roughness: 0.2
+        const lidMat = new THREE.MeshToonMaterial({ 
+          color: 0xFFD700 // Gold lid
         });
         this.lid = new THREE.Mesh(lidGeo, lidMat);
         this.lid.position.set(0, 0.35, 0);
@@ -4183,8 +4161,8 @@
 
     // --- WORLD GENERATION ---
     function createWorld() {
-      // Ground - EXPANDED MAP
-      const groundGeo = new THREE.PlaneGeometry(400, 400); // Expanded from 200x200 to 400x400
+      // Ground - REDUCED MAP for mobile performance
+      const groundGeo = new THREE.PlaneGeometry(200, 200); // Reduced from 400x400 to 200x200
       const groundMat = new THREE.MeshToonMaterial({ color: COLORS.ground });
       const ground = new THREE.Mesh(groundGeo, groundMat);
       ground.rotation.x = -Math.PI / 2;
@@ -4195,7 +4173,7 @@
       // NOTE: Old lake removed - using enhanced reflective lake defined later (line ~3747)
       
       // Add water ripple effect
-      const rippleGeo = new THREE.RingGeometry(14, 15, 32);
+      const rippleGeo = new THREE.RingGeometry(14, 15, 16); // Reduced from 32 for performance
       const rippleMat = new THREE.MeshBasicMaterial({ color: 0x3399FF, transparent: true, opacity: 0.5 });
       const ripple = new THREE.Mesh(rippleGeo, rippleMat);
       ripple.rotation.x = -Math.PI / 2;
@@ -4205,12 +4183,8 @@
       animatedObjects.waterRipples.push(ripple); // Cache for optimized animation
 
       // Smooth nice roads connecting areas
-      const roadMat = new THREE.MeshPhysicalMaterial({ 
-        color: 0xD3D3D3, // Light gray - smooth and polished
-        metalness: 0.05,
-        roughness: 0.3,
-        clearcoat: 0.8, // Makes it look polished
-        clearcoatRoughness: 0.2
+      const roadMat = new THREE.MeshToonMaterial({ 
+        color: 0xD3D3D3 // Light gray - smooth and polished
       });
       const roadGeo = new THREE.PlaneGeometry(4, 4);
       
@@ -4230,25 +4204,25 @@
         }
       }
       
-      // Main roads connecting key locations:
-      // 1. Statue (0,0) to Windmill (40,40) - curved path
-      createCurvedRoad(0, 0, 40, 40, 25, 3);
+      // Main roads connecting key locations (scaled for 200×200 map):
+      // 1. Statue (0,0) to Windmill (24,24) - curved path
+      createCurvedRoad(0, 0, 24, 24, 25, 3);
       
-      // 2. Statue (0,0) to Cabin (-20,-20) - curved path
-      createCurvedRoad(0, 0, -20, -20, 15, -2);
+      // 2. Statue (0,0) to Cabin (-12,-12) - curved path
+      createCurvedRoad(0, 0, -12, -12, 15, -2);
       
-      // 3. Statue (0,0) to Stonehenge (-60,-20) - curved path
-      createCurvedRoad(0, 0, -60, -20, 30, 5);
+      // 3. Statue (0,0) to Stonehenge (-36,-12) - curved path
+      createCurvedRoad(0, 0, -36, -12, 30, 5);
       
-      // 4. REMOVED: Statue (0,0) to Pyramid (50,-50) - road was going through lake
+      // 4. REMOVED: Statue (0,0) to Pyramid (30,-30) - road was going through lake
       // Instead, create road that goes around the lake to the east
-      createCurvedRoad(0, 0, 50, 0, 25, 2); // Road to east first
-      createCurvedRoad(50, 0, 50, -50, 25, 3); // Then south to pyramid
+      createCurvedRoad(0, 0, 30, 0, 25, 2); // Road to east first
+      createCurvedRoad(30, 0, 30, -30, 25, 3); // Then south to pyramid
       
-      // 5. Statue (0,0) to Mine (-40,40) - curved path
-      createCurvedRoad(0, 0, -40, 40, 25, 4);
+      // 5. Statue (0,0) to Mine (-24,24) - curved path
+      createCurvedRoad(0, 0, -24, 24, 25, 4);
       
-      // 6. Windmill (40,40) to Farm (35,35) - short connecting road
+      // 6. Windmill (24,24) to Farm (21,21) - short connecting road
       createCurvedRoad(40, 40, 35, 35, 8, 0);
       
       // 7. Circular road around statue - smooth ring road for patrol area
@@ -4307,9 +4281,9 @@
       cabin.castShadow = true;
       scene.add(cabin);
 
-      // Windmill with improvements
+      // Windmill with improvements - repositioned for 200×200 map
       const wmGroup = new THREE.Group();
-      wmGroup.position.set(40, 0, 40);
+      wmGroup.position.set(24, 0, 24); // Scaled from (40,40) by ~0.6×
       const wmBase = new THREE.Mesh(new THREE.CylinderGeometry(2, 3, 8, 8), new THREE.MeshToonMaterial({color: 0xD2B48C})); // Beige
       wmBase.position.y = 4;
       wmGroup.add(wmBase);
@@ -4331,7 +4305,7 @@
       wmGroup.add(wmLight);
       
       // Add ground light circle
-      const groundLightGeo = new THREE.CircleGeometry(5, 32);
+      const groundLightGeo = new THREE.CircleGeometry(5, 16); // Reduced from 32 for performance
       const groundLightMat = new THREE.MeshBasicMaterial({
         color: 0xFFFFAA,
         transparent: true,
@@ -4339,7 +4313,7 @@
       });
       const groundLight = new THREE.Mesh(groundLightGeo, groundLightMat);
       groundLight.rotation.x = -Math.PI/2;
-      groundLight.position.set(40, 0.05, 40);
+      groundLight.position.set(24, 0.05, 24); // Scaled for 200×200 map
       scene.add(groundLight);
       
       const wmBlades = new THREE.Mesh(new THREE.BoxGeometry(12, 1, 1), new THREE.MeshBasicMaterial({color: 0x8B4513})); // Brown
@@ -4357,7 +4331,7 @@
       const mineGeo = new THREE.DodecahedronGeometry(5);
       const mineMat = new THREE.MeshToonMaterial({ color: 0x555555 });
       const mine = new THREE.Mesh(mineGeo, mineMat);
-      mine.position.set(-40, 2, 40);
+      mine.position.set(-24, 2, 24); // Scaled for 200×200 map
       scene.add(mine);
       const mineEnt = new THREE.Mesh(new THREE.CircleGeometry(2, 16), new THREE.MeshBasicMaterial({color: 0x000000}));
       mineEnt.position.set(-40, 2, 44);
@@ -4366,7 +4340,7 @@
 
       // Stonehenge - Circle of big rocks - MADE MORE VISIBLE
       const stonehengeGroup = new THREE.Group();
-      stonehengeGroup.position.set(-60, 0, -20);
+      stonehengeGroup.position.set(-36, 0, -12); // Scaled from (-60,-20) by ~0.6× for 200×200 map
       
       const stoneMat = new THREE.MeshToonMaterial({ color: 0x808080 }); // Gray stone
       const numStones = 30; // Real Stonehenge has ~30 stones in outer circle
@@ -4411,7 +4385,7 @@
 
       // Mayan Pyramid - Stepped pyramid - MADE MORE VISIBLE
       const mayanGroup = new THREE.Group();
-      mayanGroup.position.set(50, 0, -50);
+      mayanGroup.position.set(30, 0, -30); // Scaled from (50,-50) by ~0.6× for 200×200 map
       
       const pyramidMat = new THREE.MeshToonMaterial({ color: 0xD2B48C }); // Tan/beige like ancient stone
       const pyramidSteps = 6; // Increased from 5
@@ -4465,12 +4439,8 @@
       
       // Water droplet statue (large blue droplet)
       const statueGeo = new THREE.SphereGeometry(1, 16, 16);
-      const statueMat = new THREE.MeshPhysicalMaterial({ 
-        color: COLORS.player,
-        metalness: 0.3,
-        roughness: 0.2,
-        clearcoat: 1,
-        clearcoatRoughness: 0.1
+      const statueMat = new THREE.MeshToonMaterial({ 
+        color: COLORS.player
       });
       const statue = new THREE.Mesh(statueGeo, statueMat);
       statue.position.y = 2.5;
@@ -4623,10 +4593,8 @@
       
       const crystalGeo = new THREE.OctahedronGeometry(1);
       for(let i=0; i<6; i++) {
-        const crystalMat = new THREE.MeshPhysicalMaterial({
+        const crystalMat = new THREE.MeshToonMaterial({
           color: 0x9B59B6, // Purple
-          metalness: 0.5,
-          roughness: 0.1,
           emissive: 0x9B59B6,
           emissiveIntensity: 0.3,
           transparent: true,
@@ -4683,22 +4651,19 @@
       scene.add(waterfallGroup);
 
       // Reflective Lake - Enhanced with realistic water properties
-      const enhancedLakeGeo = new THREE.CircleGeometry(18, 32);
-      const enhancedLakeMat = new THREE.MeshPhysicalMaterial({ 
+      const enhancedLakeGeo = new THREE.CircleGeometry(18, 16); // Reduced from 32 for performance
+      const enhancedLakeMat = new THREE.MeshToonMaterial({ 
         color: COLORS.lake,
-        metalness: 0.3, // Reduced for more natural water look
-        roughness: 0.2, // Slightly rougher for less distortion
         transparent: true,
-        opacity: 0.85, // Slightly more transparent
-        reflectivity: 0.8 // Reduced for more natural reflections
+        opacity: 0.85
       });
       const enhancedLake = new THREE.Mesh(enhancedLakeGeo, enhancedLakeMat);
       enhancedLake.rotation.x = -Math.PI / 2;
       enhancedLake.position.set(30, 0.01, -30);
       scene.add(enhancedLake);
       
-      // Sun sparkles on lake
-      for(let i=0; i<10; i++) {
+      // Sun sparkles on lake - reduced for mobile performance
+      for(let i=0; i<5; i++) { // Reduced from 10 to 5
         const sparkleGeo = new THREE.CircleGeometry(0.3, 6);
         const sparkleMat = new THREE.MeshBasicMaterial({ 
           color: 0xFFFFFF,
@@ -4758,7 +4723,7 @@
       const shadowGeo = new THREE.CircleGeometry(2, 16);
       const shadowMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.3 });
       
-      for (let i = 0; i < 120; i++) { // Increased from 50 to 120
+      for (let i = 0; i < 45; i++) { // Reduced from 120 to 45 for mobile performance
         const group = new THREE.Group();
         const trunk = new THREE.Mesh(trunkGeo, trunkMat);
         trunk.position.y = 1;
@@ -4801,14 +4766,14 @@
         
         // Avoid spawning trees in lake area
         while (inLake && attempts < MAX_SPAWN_ATTEMPTS) {
-          if (i < 80) {
-            // First 80 trees in forest area (Top Left quadrant mostly)
-            tx = (Math.random() * 100) - 90;
-            tz = (Math.random() * 100) - 90;
+          if (i < 30) {
+            // First 30 trees in forest area (Top Left quadrant mostly) - scaled for 200×200 map
+            tx = (Math.random() * 60) - 54; // ~0.6× scale
+            tz = (Math.random() * 60) - 54;
           } else {
-            // Remaining 40 trees spread across entire map
-            tx = (Math.random() * 180) - 90;
-            tz = (Math.random() * 180) - 90;
+            // Remaining 15 trees spread across map - scaled for 200×200 map
+            tx = (Math.random() * 108) - 54; // ~0.6× scale
+            tz = (Math.random() * 108) - 54;
           }
           
           // Check if tree would be in lake
@@ -4851,8 +4816,8 @@
       waterfallGroup2.add(waterfall);
       animatedObjects.waterfalls.push(waterfall); // Cache for optimized animation
       
-      // Add flowing water particles
-      for(let i=0; i<5; i++) {
+      // Add flowing water particles - reduced for mobile performance
+      for(let i=0; i<3; i++) { // Reduced from 5 to 3
         const dropGeo = new THREE.SphereGeometry(0.3, 8, 8);
         const dropMat = new THREE.MeshBasicMaterial({ 
           color: 0x4ECDC4, 
@@ -4886,14 +4851,14 @@
       const flowerGeo = new THREE.ConeGeometry(0.2, 0.5, 6);
       const flowerColors = [0xFF69B4, 0xFFFF00, 0xFF0000, 0xFFA500, 0xFFFFFF];
       
-      for(let i=0; i<250; i++) {
+      for(let i=0; i<80; i++) { // Reduced from 250 to 80 for mobile performance
         const flower = new THREE.Mesh(flowerGeo, new THREE.MeshBasicMaterial({ 
           color: flowerColors[Math.floor(Math.random() * flowerColors.length)] 
         }));
         flower.position.set(
-          (Math.random() - 0.5) * 160,
+          (Math.random() - 0.5) * 96, // Scaled from 160 to ~96 (0.6×) for 200×200 map
           0.25,
-          (Math.random() - 0.5) * 160
+          (Math.random() - 0.5) * 96
         );
         flower.rotation.x = -Math.PI/2;
         scene.add(flower);
@@ -4909,8 +4874,8 @@
       // Scene
       scene = new THREE.Scene();
       scene.background = new THREE.Color(COLORS.bg);
-      // Fog for depth
-      scene.fog = new THREE.Fog(COLORS.bg, 20, 60);
+      // Fog for depth - reduced for mobile performance
+      scene.fog = new THREE.Fog(COLORS.bg, 15, 45); // Reduced from 20-60 to 15-45
 
       // Camera (Orthographic for miniature look)
       const aspect = window.innerWidth / window.innerHeight;
@@ -4919,9 +4884,13 @@
       camera.position.set(20, 20, 20); // Isometric angle
       camera.lookAt(scene.position);
 
-      // Renderer
-      renderer = new THREE.WebGLRenderer({ antialias: true });
+      // Renderer - optimized for mobile performance
+      renderer = new THREE.WebGLRenderer({ 
+        antialias: false, // Disabled for performance
+        powerPreference: 'high-performance' // Use high-performance GPU
+      });
       renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Cap pixel ratio
       renderer.shadowMap.enabled = true;
       renderer.shadowMap.type = THREE.PCFSoftShadowMap;
       document.getElementById('game-container').appendChild(renderer.domElement);
@@ -4933,12 +4902,12 @@
       const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
       dirLight.position.set(50, 100, 50);
       dirLight.castShadow = true;
-      dirLight.shadow.mapSize.width = 2048;
-      dirLight.shadow.mapSize.height = 2048;
-      dirLight.shadow.camera.left = -100;
-      dirLight.shadow.camera.right = 100;
-      dirLight.shadow.camera.top = 100;
-      dirLight.shadow.camera.bottom = -100;
+      dirLight.shadow.mapSize.width = 512; // Reduced from 2048 for performance
+      dirLight.shadow.mapSize.height = 512; // Reduced from 2048 for performance
+      dirLight.shadow.camera.left = -60; // Reduced from -100 to match 200x200 map
+      dirLight.shadow.camera.right = 60; // Reduced from 100
+      dirLight.shadow.camera.top = 60; // Reduced from 100
+      dirLight.shadow.camera.bottom = -60; // Reduced from -100
       scene.add(dirLight);
 
       // Setup
@@ -5594,7 +5563,7 @@
       }
       
       // Expanding splash ring on ground
-      const ringGeo = new THREE.RingGeometry(0.5, 1, 32);
+      const ringGeo = new THREE.RingGeometry(0.5, 1, 16); // Reduced from 32 for performance
       const ringMat = new THREE.MeshBasicMaterial({ 
         color: COLORS.player,
         transparent: true,
