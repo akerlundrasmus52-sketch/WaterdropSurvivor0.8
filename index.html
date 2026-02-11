@@ -1162,6 +1162,30 @@
       explosionTetra: new THREE.TetrahedronGeometry(0.25)
     };
 
+    // Material pool for particle reuse (prevents memory leak from creating new materials)
+    const materialPool = {
+      materials: new Map(), // color -> material
+      getMaterial: function(color) {
+        if (!this.materials.has(color)) {
+          const mat = new THREE.MeshPhysicalMaterial({ 
+            color: color,
+            transparent: true,
+            opacity: 0.9,
+            metalness: 0.3,
+            roughness: 0.4,
+            emissive: color,
+            emissiveIntensity: 0.3
+          });
+          this.materials.set(color, mat);
+        }
+        return this.materials.get(color);
+      },
+      dispose: function() {
+        this.materials.forEach(mat => mat.dispose());
+        this.materials.clear();
+      }
+    };
+
     // Input - Twin-Stick Controls
     const joystickLeft = { x: 0, y: 0, active: false, id: null, originX: 0, originY: 0 }; // Movement
     const joystickRight = { x: 0, y: 0, active: false, id: null, originX: 0, originY: 0 }; // Aiming
@@ -1858,15 +1882,10 @@
           const pieceGeo = i % 3 === 0 ? 
             sharedGeometries.explosionTetra : 
             sharedGeometries.explosionPiece;
+          // Use material pool for explosion pieces
           const piece = new THREE.Mesh(
             pieceGeo,
-            new THREE.MeshPhysicalMaterial({ 
-              color: enemyColor,
-              transparent: true,
-              opacity: 1,
-              emissive: enemyColor,
-              emissiveIntensity: 0.5
-            })
+            materialPool.getMaterial(enemyColor)
           );
           piece.position.copy(this.mesh.position);
           scene.add(piece);
@@ -1892,8 +1911,7 @@
             
             if (life <= 0 || piece.position.y < 0) {
               scene.remove(piece);
-              // Don't dispose shared geometry, only material
-              piece.material.dispose();
+              // Don't dispose shared geometry or pooled material
             } else {
               requestAnimationFrame(updatePiece);
             }
@@ -2158,15 +2176,8 @@
           sharedGeometries.particleTetra
         ];
         const geo = geoOptions[Math.floor(Math.random() * geoOptions.length)];
-        const mat = new THREE.MeshPhysicalMaterial({ 
-          color: color,
-          transparent: true,
-          opacity: 0.9,
-          metalness: 0.3,
-          roughness: 0.4,
-          emissive: color,
-          emissiveIntensity: 0.3
-        });
+        // Use material pool instead of creating new materials
+        const mat = materialPool.getMaterial(color);
         this.mesh = new THREE.Mesh(geo, mat);
         this.mesh.position.copy(pos);
         
@@ -2214,8 +2225,7 @@
         
         if (this.life <= 0) {
           scene.remove(this.mesh);
-          // Don't dispose shared geometry, only material
-          this.mesh.material.dispose();
+          // Don't dispose shared geometry or pooled material
           return false;
         }
         return true;
@@ -4933,13 +4943,6 @@ Total Gold Earned: ${saveData.totalGoldEarned}
                 scene.remove(flashLight);
               }, 50);
               
-              // Lightning effect from gun
-              const lightning = new LightningBolt(
-                player.mesh.position.clone(),
-                targetPosition.clone()
-              );
-              particles.push(lightning);
-              
               // Muzzle flash particles (bright and intense)
               spawnParticles(player.mesh.position, 0xFFFF00, 5);
               spawnParticles(player.mesh.position, 0xFFFFFF, 3);
@@ -5062,48 +5065,51 @@ Total Gold Earned: ${saveData.totalGoldEarned}
       goldCoins.forEach(g => g.update(player.mesh.position));
       particles = particles.filter(p => p.update() !== false);
       
-      // Windmill Rotation and Light Animation
-      scene.children.forEach(c => {
-        if (c.userData.isWindmill) {
-          // Rotate the blades stored in userData
-          if (c.userData.blades && c.userData.blades.length > 0) {
-            c.userData.blades[0].rotation.z += 0.05;
-            c.userData.blades[1].rotation.z += 0.05;
+      // Optimize animations: run only every 3rd frame to reduce overhead
+      if (frameCount % 3 === 0) {
+        // Windmill Rotation and Light Animation
+        scene.children.forEach(c => {
+          if (c.userData.isWindmill) {
+            // Rotate the blades stored in userData
+            if (c.userData.blades && c.userData.blades.length > 0) {
+              c.userData.blades[0].rotation.z += 0.15; // 3x speed since running 1/3 as often
+              c.userData.blades[1].rotation.z += 0.15;
+            }
+            
+            // Animate windmill light (pulsing) with null check
+            if (c.userData.light && c.userData.light.material) {
+              c.userData.light.material.opacity = 0.8 + Math.sin(gameTime * 3) * 0.2;
+            }
           }
-          
-          // Animate windmill light (pulsing) with null check
-          if (c.userData.light && c.userData.light.material) {
-            c.userData.light.material.opacity = 0.8 + Math.sin(gameTime * 3) * 0.2;
+          // Water ripple animation
+          if (c.userData.isWaterRipple) {
+            c.userData.phase += 0.15; // 3x speed since running 1/3 as often
+            const scale = 1 + Math.sin(c.userData.phase) * 0.1;
+            c.scale.set(scale, 1, scale);
+            c.material.opacity = 0.3 + Math.sin(c.userData.phase) * 0.2;
           }
-        }
-        // Water ripple animation
-        if (c.userData.isWaterRipple) {
-          c.userData.phase += 0.05;
-          const scale = 1 + Math.sin(c.userData.phase) * 0.1;
-          c.scale.set(scale, 1, scale);
-          c.material.opacity = 0.3 + Math.sin(c.userData.phase) * 0.2;
-        }
-      });
-      
-      // Waterfall animation
-      scene.traverse(obj => {
-        if (obj.userData.isWaterfall) {
-          obj.userData.phase += 0.05;
-          obj.material.opacity = 0.6 + Math.sin(obj.userData.phase) * 0.1;
-        }
-        if (obj.userData.isWaterDrop) {
-          obj.position.y -= obj.userData.speed;
-          if (obj.position.y < 0) {
-            obj.position.y = obj.userData.startY;
+        });
+        
+        // Waterfall animation
+        scene.traverse(obj => {
+          if (obj.userData.isWaterfall) {
+            obj.userData.phase += 0.15; // 3x speed since running 1/3 as often
+            obj.material.opacity = 0.6 + Math.sin(obj.userData.phase) * 0.1;
           }
-        }
-        if (obj.userData.isSplash) {
-          obj.userData.phase += 0.1;
-          const scale = 1 + Math.sin(obj.userData.phase) * 0.3;
-          obj.scale.set(scale, 1, scale);
-          obj.material.opacity = 0.4 + Math.sin(obj.userData.phase) * 0.2;
-        }
-      });
+          if (obj.userData.isWaterDrop) {
+            obj.position.y -= obj.userData.speed * 3; // 3x speed since running 1/3 as often
+            if (obj.position.y < 0) {
+              obj.position.y = obj.userData.startY;
+            }
+          }
+          if (obj.userData.isSplash) {
+            obj.userData.phase += 0.3; // 3x speed since running 1/3 as often
+            const scale = 1 + Math.sin(obj.userData.phase) * 0.3;
+            obj.scale.set(scale, 1, scale);
+            obj.material.opacity = 0.4 + Math.sin(obj.userData.phase) * 0.2;
+          }
+        });
+      }
 
       // Performance-optimized cleanup with limits
       const now = Date.now();
