@@ -2668,6 +2668,12 @@
         const oldHp = this.hp;
         this.hp -= amount;
         
+        // Life steal healing
+        if (playerStats.lifeStealPercent > 0) {
+          const healAmount = amount * playerStats.lifeStealPercent;
+          playerStats.hp = Math.min(playerStats.maxHp, playerStats.hp + healAmount);
+        }
+        
         // Throttle damage numbers and particles for performance (Bug 1 fix)
         const now = Date.now();
         if (!this.lastDamageNumberTime || now - this.lastDamageNumberTime > 100) {
