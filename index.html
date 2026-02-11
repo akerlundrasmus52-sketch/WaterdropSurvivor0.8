@@ -220,8 +220,8 @@
     .upgrade-card {
       background: linear-gradient(135deg, #0d1117, #1a1e2e, #0d1117); /* Unified dark theme */
       margin: 10px 0;
-      padding: 20px;
-      border-radius: 20px; /* More rounded for soft feel */
+      padding: 15px; /* Reduced from 20px - smaller boxes */
+      border-radius: 15px; /* Reduced from 20px - smaller boxes */
       border: 3px solid #3a4a5e; /* Darker border for unified theme */
       cursor: pointer;
       transition: all 0.2s ease;
@@ -232,10 +232,10 @@
         inset 0 2px 4px rgba(255,255,255,0.1); /* Top highlight */
       position: relative;
       overflow: hidden;
-      animation: constantLightningShimmer 3s ease-in-out infinite; /* Constant shimmer */
+      /* Removed constant lightning shimmer animation - only for special cards */
     }
     
-    /* Constant lightning shimmer animation for all cards */
+    /* Shimmer animation only for lightning-related cards */
     @keyframes constantLightningShimmer {
       0%, 100% { 
         box-shadow: 
@@ -254,8 +254,8 @@
       }
     }
     
-    /* Lightning effect pseudo-element - always visible with subtle pulse */
-    .upgrade-card::before {
+    /* Lightning effect pseudo-element - only for lightning weapon cards */
+    .upgrade-card.lightning-upgrade::before {
       content: '';
       position: absolute;
       top: -50%;
@@ -288,12 +288,17 @@
         inset 0 -4px 8px rgba(0,0,0,0.3),
         inset 0 2px 4px rgba(255,255,255,0.2); /* Brighter top highlight */
       border-color: #5DADE2; /* Electric blue border on hover */
-      animation-play-state: paused; /* Pause shimmer on hover */
     }
     
-    .upgrade-card:hover::before {
+    /* Lightning card hover effect */
+    .upgrade-card.lightning-upgrade:hover::before {
       animation: lightning-pulse 1s ease-in-out infinite;
       opacity: 0.6; /* More visible on hover */
+    }
+    
+    /* Add shimmer animation only for lightning cards */
+    .upgrade-card.lightning-upgrade {
+      animation: constantLightningShimmer 3s ease-in-out infinite;
     }
 
     .upgrade-card:active {
@@ -1637,14 +1642,29 @@
     let levelUpInProgress = false; // Flag to prevent overlapping level up calls
     
     // Performance optimization - particle cap to prevent memory overflow and freezing
-    // Increased limits to prevent rendering freeze after Vampire upgrade (70-120 kills)
-    const MAX_PARTICLES = 250; // Increased from 150 to prevent freeze with multiple weapons
-    const MAX_PROJECTILES = 150; // Increased from 100 for better weapon performance
-    const MAX_METEORS = 40; // Increased from 30 for smoother gameplay
-    const MAX_DEBRIS = 120; // Increased from 100 for better visual effects
+    // CRITICAL FIX for freeze at ~177 kills caused by:
+    // 1. Particle explosion from Lightning + Vampire combo
+    // 2. Synchronous disposal of Three.js objects during render loop
+    // 3. Unbounded arrays growing faster than cleanup
+    const MAX_PARTICLES = 300; // Increased from 250 for better headroom
+    const MAX_PROJECTILES = 200; // Increased from 150 for high-intensity moments
+    const MAX_METEORS = 50; // Increased from 40 for smoother gameplay
+    const MAX_DEBRIS = 150; // Increased from 120 for better visual effects
     const MAX_FRAME_TIME = 1/30; // Maximum 33ms per frame to prevent large delta spikes
     const MAX_GOLD_COINS = 30; // Maximum gold coins on screen, excess auto-collected
     const MAX_EXP_GEMS = 50; // Maximum exp gems on screen, excess auto-collected
+    const MAX_LIGHTNING_CHAINS = 1; // CRITICAL: Limit chain lightning depth to prevent explosion
+    const MAX_DAMAGE_NUMBERS = 25; // Cap damage number DOM elements
+    
+    // Object pooling for particles to avoid create/dispose overhead
+    const particlePool = {
+      debris: [],
+      lightning: [],
+      simple: []
+    };
+    
+    // Deferred disposal queue - cleanup outside render loop
+    const disposalQueue = [];
     
     // Cache animated objects to avoid scene.traverse() every frame
     let animatedObjects = {
@@ -6465,7 +6485,12 @@
           card.className += ' legendary';
         }
         
-        const iconHTML = u.icon ? `<div style="font-size: 48px; margin-bottom: 10px;">${u.icon}</div>` : '';
+        // Add lightning-upgrade class for lightning weapon cards
+        if (u.id && (u.id === 'lightning' || u.id === 'lightning_upgrade')) {
+          card.className += ' lightning-upgrade';
+        }
+        
+        const iconHTML = u.icon ? `<div style="font-size: 40px; margin-bottom: 8px;">${u.icon}</div>` : ''; /* Reduced icon size */
         card.innerHTML = `${iconHTML}<div class="upgrade-title">${u.title}</div><div class="upgrade-desc">${u.desc}</div>`;
         
         // Add dramatic entrance animation - alternate left/right
@@ -6565,10 +6590,10 @@
 
     // Track active damage numbers to prevent DOM overflow (Bug 1 fix)
     const activeDamageNumbers = [];
-    const MAX_DAMAGE_NUMBERS = 20;
+    // Use global MAX_DAMAGE_NUMBERS defined earlier
     
     function createDamageNumber(amount, pos, isCrit = false) {
-      // Cap the number of active damage number elements (Bug 1 fix)
+      // Cap the number of active damage number elements (CRITICAL FIX for freeze)
       if (activeDamageNumbers.length >= MAX_DAMAGE_NUMBERS) {
         // Remove oldest damage number early
         const oldest = activeDamageNumbers.shift();
@@ -7581,6 +7606,8 @@
           spawnParticles(enemy.mesh.position, 0x7B68EE, 6); // Purple sparks
           
           // Chain Lightning - Find nearest enemy within 8 units at 60% damage
+          // CRITICAL: Limited to 1 chain per target (follows MAX_LIGHTNING_CHAINS)
+          // This prevents particle explosion that caused freeze at ~177 kills
           const chainRange = 8;
           let chainTarget = null;
           let minChainDist = Infinity;
@@ -7764,14 +7791,16 @@
       // Entities Update
       enemies.forEach(e => e.update(dt, player.mesh.position));
       
-      // Apply particle limits to prevent memory overflow (CRITICAL FIX for freeze bug)
+      // CRITICAL FIX: Deferred disposal to prevent render freeze
+      // Instead of disposing immediately, queue objects for cleanup outside render loop
+      // Apply particle limits to prevent memory overflow
       if (particles.length > MAX_PARTICLES) {
         const excess = particles.splice(0, particles.length - MAX_PARTICLES);
         excess.forEach(p => {
           if (p.mesh && p.mesh.parent) {
             scene.remove(p.mesh);
-            if (p.mesh.geometry) p.mesh.geometry.dispose();
-            if (p.mesh.material) p.mesh.material.dispose();
+            // Queue for deferred disposal instead of immediate
+            disposalQueue.push({ geo: p.mesh.geometry, mat: p.mesh.material });
           }
         });
       }
@@ -7781,8 +7810,8 @@
         excess.forEach(p => {
           if (p.mesh && p.mesh.parent) {
             scene.remove(p.mesh);
-            if (p.mesh.geometry) p.mesh.geometry.dispose();
-            if (p.mesh.material) p.mesh.material.dispose();
+            // Queue for deferred disposal
+            disposalQueue.push({ geo: p.mesh.geometry, mat: p.mesh.material });
           }
         });
       }
@@ -7792,8 +7821,8 @@
         excess.forEach(m => {
           if (m.mesh && m.mesh.parent) {
             scene.remove(m.mesh);
-            if (m.mesh.geometry) m.mesh.geometry.dispose();
-            if (m.mesh.material) m.mesh.material.dispose();
+            // Queue for deferred disposal
+            disposalQueue.push({ geo: m.mesh.geometry, mat: m.mesh.material });
           }
         });
       }
@@ -7803,10 +7832,24 @@
         excess.forEach(d => {
           if (d.mesh && d.mesh.parent) {
             scene.remove(d.mesh);
-            if (d.mesh.geometry) d.mesh.geometry.dispose();
-            if (d.mesh.material) d.mesh.material.dispose();
+            // Queue for deferred disposal
+            disposalQueue.push({ geo: d.mesh.geometry, mat: d.mesh.material });
           }
         });
+      }
+      
+      // Process disposal queue (limit to 10 per frame to avoid stutter)
+      const disposalsThisFrame = Math.min(10, disposalQueue.length);
+      for (let i = 0; i < disposalsThisFrame; i++) {
+        const item = disposalQueue.shift();
+        if (item.geo) item.geo.dispose();
+        if (item.mat) {
+          if (Array.isArray(item.mat)) {
+            item.mat.forEach(m => m.dispose());
+          } else {
+            item.mat.dispose();
+          }
+        }
       }
       
       // Projectiles update returns false if dead
