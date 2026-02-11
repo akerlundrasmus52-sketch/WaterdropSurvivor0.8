@@ -6803,6 +6803,11 @@
       isGameActive = true;
       document.getElementById('gameover-screen').style.display = 'none';
       updateHUD();
+      
+      // Force immediate render to prevent black screen on game start
+      if (renderer && scene && camera) {
+        renderer.render(scene, camera);
+      }
     }
 
     function toggleStats() {
@@ -7194,10 +7199,6 @@
       const dt = Math.min((time - lastTime) / 1000, MAX_FRAME_TIME);
       lastTime = time;
       gameTime = time / 1000; // Update game time in seconds
-      
-      // Frame rate protection: Skip heavy updates if lag spike detected
-      const DT_THRESHOLD = 0.1; // 100ms threshold
-      const isLagSpike = dt > DT_THRESHOLD;
 
       // Skip rendering when on main menu to save GPU, but still render during pause/game over for visual effects
       if (!isGameActive) {
