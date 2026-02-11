@@ -1620,6 +1620,7 @@
     let animatedRotations = []; // Managed array for rotation animations like chest lids (Bug 3 fix)
     let lastExpFlashTime = 0; // Throttle for EXP gem collection flash (Bug 5 fix)
     let lastTime = 0;
+    const MAX_FRAME_TIME = 1/30; // Maximum 33ms per frame to prevent large delta spikes
     let frameCount = 0;
     let isPaused = false;
     let isGameOver = false;
@@ -7190,7 +7191,6 @@
       requestAnimationFrame(animate);
 
       if (!lastTime) lastTime = time;
-      const MAX_FRAME_TIME = 1/30; // Maximum 33ms per frame to prevent large delta spikes
       const dt = Math.min((time - lastTime) / 1000, MAX_FRAME_TIME);
       lastTime = time;
       gameTime = time / 1000; // Update game time in seconds
@@ -7199,8 +7199,14 @@
       const DT_THRESHOLD = 0.1; // 100ms threshold
       const isLagSpike = dt > DT_THRESHOLD;
 
-      if (isPaused || isGameOver || !isGameActive) {
-        // Don't render when paused, game over, or on main menu to save GPU
+      // Skip rendering when on main menu to save GPU, but still render during pause/game over for visual effects
+      if (!isGameActive) {
+        return;
+      }
+
+      if (isPaused || isGameOver) {
+        // Still render the scene so visual effects (camera shake, particles, and modals) are visible
+        renderer.render(scene, camera);
         return;
       }
       
