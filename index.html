@@ -733,6 +733,69 @@
       max-width: 600px;
     }
 
+    /* Tutorial Overlay */
+    #tutorial-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.85);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      pointer-events: none;
+    }
+
+    #tutorial-overlay.active {
+      display: flex;
+      pointer-events: auto;
+    }
+
+    .tutorial-box {
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      border: 3px solid #5DADE2;
+      border-radius: 15px;
+      padding: 30px 40px;
+      max-width: 500px;
+      text-align: center;
+      box-shadow: 0 0 30px rgba(93, 173, 226, 0.5);
+      animation: tutorialFadeIn 0.5s ease-out;
+    }
+
+    @keyframes tutorialFadeIn {
+      from {
+        opacity: 0;
+        transform: scale(0.9) translateY(-20px);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
+    }
+
+    .tutorial-step {
+      font-size: 18px;
+      color: #FFD700;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+
+    .tutorial-text {
+      font-size: 24px;
+      color: #5DADE2;
+      line-height: 1.6;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+      margin-bottom: 20px;
+    }
+
+    .tutorial-progress {
+      font-size: 14px;
+      color: #ecf0f1;
+      opacity: 0.7;
+    }
+
   </style>
 </head>
 <body>
@@ -795,6 +858,15 @@
   </div>
 
   <div id="game-container"></div>
+
+  <!-- Tutorial Overlay -->
+  <div id="tutorial-overlay">
+    <div class="tutorial-box">
+      <div class="tutorial-step" id="tutorial-step">TUTORIAL 1/8</div>
+      <div class="tutorial-text" id="tutorial-text">Move with the joystick</div>
+      <div class="tutorial-progress">Auto-advancing...</div>
+    </div>
+  </div>
 
   <div id="ui-layer">
     <div class="hud-top">
@@ -1144,6 +1216,22 @@
     let waveCount = 0;
     let windmillQuest = { active: false, timer: 0, duration: 30, windmill: null, hasCompleted: false };
     let runStartGold = 0;  // Track gold at start of run for end-of-run calculation
+
+    // Tutorial system
+    let tutorialActive = false;
+    let tutorialStep = 0;
+    let tutorialTimer = 0;
+    const TUTORIAL_STEP_DURATION = 4000; // 4 seconds per step
+    const tutorialSteps = [
+      "Move with the joystick",
+      "Kill enemies, pick up EXP stars",
+      "Level up, choose upgrades - each has stat bonuses",
+      "Weapons add up - use 1-4 weapons at same time depending on level",
+      "Start with 1 weapon",
+      "Game is hard! Buy permanent upgrades between runs",
+      "Roguelite Survivor - Boss at Level 50, Stage Complete at Level 100",
+      "Good luck!"
+    ];
 
     // Performance limits to prevent rendering freezes at high levels
     const MAX_PARTICLES = 200;  // Reduced from unlimited to prevent accumulation
@@ -2470,6 +2558,7 @@
       totalRuns: 0,
       bestTime: 0,
       bestKills: 0,
+      tutorialCompleted: false,
       upgrades: {
         maxHp: 0,
         hpRegen: 0,
@@ -3423,6 +3512,22 @@
 
     function spawnWave() {
       waveCount++;
+      
+      // During tutorial, only spawn 3 Type 0 enemies total
+      if (tutorialActive) {
+        // Only spawn initial 3 enemies if none exist
+        if (enemies.length === 0) {
+          for (let i = 0; i < 3; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const dist = 25 + Math.random() * 5;
+            const ex = player.mesh.position.x + Math.cos(angle) * dist;
+            const ez = player.mesh.position.z + Math.sin(angle) * dist;
+            enemies.push(new Enemy(0, ex, ez, 1)); // Type 0, level 1
+          }
+        }
+        return;
+      }
+      
       // Scale spawn count with player level for increased difficulty
       const baseCount = 3 + Math.floor(waveCount / 2); // 3, 3, 4, 4, 5...
       const levelBonus = Math.floor(playerStats.lvl / 5); // +1 every 5 levels
@@ -4523,6 +4628,12 @@
       isPaused = false;
       isGameActive = true;
       document.getElementById('gameover-screen').style.display = 'none';
+      
+      // Start tutorial on first game
+      if (!saveData.tutorialCompleted) {
+        startTutorial();
+      }
+      
       updateHUD();
     }
 
@@ -4597,6 +4708,54 @@ Total Gold Earned: ${saveData.totalGoldEarned}
         modal.style.display = 'flex';
         isPaused = true;
       }
+    }
+
+    // --- TUTORIAL SYSTEM ---
+    function startTutorial() {
+      tutorialActive = true;
+      tutorialStep = 0;
+      tutorialTimer = Date.now();
+      updateTutorialDisplay();
+      document.getElementById('tutorial-overlay').classList.add('active');
+      
+      // Limit initial enemies during tutorial
+      if (enemies.length > 3) {
+        const excess = enemies.slice(3);
+        excess.forEach(e => {
+          e.isDead = true;
+          if (e.mesh && e.mesh.parent) {
+            scene.remove(e.mesh);
+          }
+        });
+        enemies = enemies.slice(0, 3);
+      }
+    }
+
+    function updateTutorial() {
+      if (!tutorialActive) return;
+      
+      const now = Date.now();
+      if (now - tutorialTimer >= TUTORIAL_STEP_DURATION) {
+        tutorialStep++;
+        if (tutorialStep >= tutorialSteps.length) {
+          endTutorial();
+        } else {
+          tutorialTimer = now;
+          updateTutorialDisplay();
+        }
+      }
+    }
+
+    function updateTutorialDisplay() {
+      document.getElementById('tutorial-step').innerText = `TUTORIAL ${tutorialStep + 1}/${tutorialSteps.length}`;
+      document.getElementById('tutorial-text').innerText = tutorialSteps[tutorialStep];
+    }
+
+    function endTutorial() {
+      tutorialActive = false;
+      document.getElementById('tutorial-overlay').classList.remove('active');
+      saveData.tutorialCompleted = true;
+      saveSaveData();
     }
 
     // --- INPUT SYSTEM ---
@@ -4871,6 +5030,11 @@ Total Gold Earned: ${saveData.totalGoldEarned}
 
       // Player Update
       player.update(dt);
+      
+      // Update tutorial if active
+      if (tutorialActive) {
+        updateTutorial();
+      }
       
       // Check windmill quest trigger
       if (!windmillQuest.active && !windmillQuest.hasCompleted) {
