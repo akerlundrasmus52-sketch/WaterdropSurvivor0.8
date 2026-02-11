@@ -7721,7 +7721,7 @@
             const finalDmg = isCrit ? dmg * playerStats.critDmg : dmg;
             e.takeDamage(finalDmg);
             
-            // Fire particles on hit - reduced for performance
+            // Fire particles on hit - reduced from 6/4 to 3/2 for performance
             spawnParticles(e.mesh.position, 0xFF4500, 3); // Orange-red fire
             spawnParticles(e.mesh.position, 0xFFD700, 2); // Yellow flames
             hit = true;
