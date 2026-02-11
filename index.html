@@ -2899,27 +2899,27 @@
             // MiniBoss: guaranteed 60-120 gold (doubled from 30-60)
             goldAmount = 60 + Math.floor(Math.random() * 61);
           } else if (this.type === 0) { // Tank
-            goldAmount = 4 + Math.floor(Math.random() * 4); // 4-6 gold (doubled from 2-3)
+            goldAmount = 4 + Math.floor(Math.random() * 3); // 4-6 gold (doubled from 2-3)
           } else if (this.type === 1) { // Fast
             goldAmount = 2; // 2 gold (doubled from 1)
           } else if (this.type === 2) { // Balanced
-            goldAmount = 2 + Math.floor(Math.random() * 4); // 2-4 gold (doubled from 1-2)
+            goldAmount = 2 + Math.floor(Math.random() * 3); // 2-4 gold (doubled from 1-2)
           } else if (this.type === 3) { // Slowing
-            goldAmount = 4 + Math.floor(Math.random() * 4); // 4-6 gold (doubled from 2-3)
+            goldAmount = 4 + Math.floor(Math.random() * 3); // 4-6 gold (doubled from 2-3)
           } else if (this.type === 4) { // Ranged
-            goldAmount = 2 + Math.floor(Math.random() * 4); // 2-4 gold (doubled from 1-2)
+            goldAmount = 2 + Math.floor(Math.random() * 3); // 2-4 gold (doubled from 1-2)
           } else if (this.type === 5) { // Flying
-            goldAmount = 4 + Math.floor(Math.random() * 4); // 4-6 gold (doubled from 2-3)
+            goldAmount = 4 + Math.floor(Math.random() * 3); // 4-6 gold (doubled from 2-3)
           } else if (this.type === 6) { // Hard Tank
-            goldAmount = 6 + Math.floor(Math.random() * 6); // 6-10 gold (doubled from 3-5)
+            goldAmount = 6 + Math.floor(Math.random() * 5); // 6-10 gold (doubled from 3-5)
           } else if (this.type === 7) { // Hard Fast
-            goldAmount = 4 + Math.floor(Math.random() * 6); // 4-8 gold (doubled from 2-4)
+            goldAmount = 4 + Math.floor(Math.random() * 5); // 4-8 gold (doubled from 2-4)
           } else if (this.type === 8) { // Hard Balanced
-            goldAmount = 6 + Math.floor(Math.random() * 6); // 6-10 gold (doubled from 3-5)
+            goldAmount = 6 + Math.floor(Math.random() * 5); // 6-10 gold (doubled from 3-5)
           } else if (this.type === 9) { // Elite
-            goldAmount = 10 + Math.floor(Math.random() * 8); // 10-16 gold (doubled from 5-8)
+            goldAmount = 10 + Math.floor(Math.random() * 7); // 10-16 gold (doubled from 5-8)
           } else {
-            goldAmount = 2 + Math.floor(Math.random() * 4); // 2-4 gold (doubled from 1-2)
+            goldAmount = 2 + Math.floor(Math.random() * 3); // 2-4 gold (doubled from 1-2)
           }
           spawnGold(this.mesh.position.x, this.mesh.position.z, goldAmount);
         }
@@ -4602,9 +4602,9 @@
       
       scene.add(farmGroup);
 
-      // Crystal Tower - 6 floating crystals with animation (moved away from Stonehenge)
+      // Crystal Tower - 6 floating crystals with animation (moved north from Stonehenge)
       const crystalGroup = new THREE.Group();
-      crystalGroup.position.set(-50, 0, 30); // Moved to opposite side of map from Stonehenge
+      crystalGroup.position.set(-50, 0, 30); // Moved 30 units north along z-axis from Stonehenge area
       
       const crystalGeo = new THREE.OctahedronGeometry(1);
       for(let i=0; i<6; i++) {
