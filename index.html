@@ -4253,6 +4253,14 @@
       createCurvedRoad(-90, -20, -60, -20, 20, 0);
       // East edge to Windmill area
       createCurvedRoad(90, 40, 40, 40, 30, -4);
+      
+      // 9. Additional connecting roads for better landscape connectivity
+      // Connect Crystal Tower to Mine area
+      createCurvedRoad(-50, 30, -24, 24, 20, -3);
+      // Connect Stonehenge to Cabin
+      createCurvedRoad(-36, -12, -20, -20, 15, 2);
+      // Connect Windmill to House area
+      createCurvedRoad(24, 24, 10, -45, 40, 5);
 
       // Wooden fences around play area
       const fenceMat = new THREE.MeshToonMaterial({ color: 0x8B4513 });
@@ -4594,9 +4602,9 @@
       
       scene.add(farmGroup);
 
-      // Crystal Tower - 6 floating crystals with animation
+      // Crystal Tower - 6 floating crystals with animation (moved away from Stonehenge)
       const crystalGroup = new THREE.Group();
-      crystalGroup.position.set(-50, 0, 0);
+      crystalGroup.position.set(-50, 0, 30); // Moved to opposite side of map from Stonehenge
       
       const crystalGeo = new THREE.OctahedronGeometry(1);
       for(let i=0; i<6; i++) {
