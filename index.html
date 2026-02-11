@@ -1780,7 +1780,7 @@
         scene.add(this.mesh);
         
         // Add water shine effect (multiple layers)
-        const shineGeo = new THREE.SphereGeometry(0.52, 8, 8);
+        const shineGeo = new THREE.SphereGeometry(0.52, 16, 16); // Match player segments for consistency
         const shineMat = new THREE.MeshBasicMaterial({ 
           color: 0xFFFFFF, 
           transparent: true, 
@@ -4813,7 +4813,7 @@
       waterfallGroup2.add(waterfall);
       animatedObjects.waterfalls.push(waterfall); // Cache for optimized animation
       
-      // Add flowing water particles - reduced from 5 to 3
+      // Add flowing water particles - reduced count and adjusted spacing for smaller waterfall
       for(let i=0; i<3; i++) {
         const dropGeo = new THREE.SphereGeometry(0.3, 6, 6);
         const dropMat = new THREE.MeshBasicMaterial({ 
@@ -4889,7 +4889,7 @@
       renderer.setSize(window.innerWidth, window.innerHeight);
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
       renderer.shadowMap.enabled = true;
-      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Soft shadows help compensate for lower resolution
       document.getElementById('game-container').appendChild(renderer.domElement);
 
       // Lights
@@ -4899,8 +4899,8 @@
       const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
       dirLight.position.set(50, 100, 50);
       dirLight.castShadow = true;
-      dirLight.shadow.mapSize.width = 512;
-      dirLight.shadow.mapSize.height = 512;
+      dirLight.shadow.mapSize.width = 512; // Reduced for mobile performance
+      dirLight.shadow.mapSize.height = 512; // PCFSoftShadowMap helps smooth the result
       dirLight.shadow.camera.left = -60;
       dirLight.shadow.camera.right = 60;
       dirLight.shadow.camera.top = 60;
