@@ -1192,7 +1192,6 @@
       sword: { active: false, level: 0, damage: 30, cooldown: 1500, lastShot: 0, range: 3.5 },
       aura: { active: false, level: 0, damage: 5, cooldown: 500, lastShot: 0, range: 4 },
       meteor: { active: false, level: 0, damage: 60, cooldown: 2500, lastShot: 0, area: 5 },
-      lightning: { active: false, level: 0, damage: 25, cooldown: 3000, lastShot: 0, targets: 4 },
       doubleBarrel: { active: false, level: 0, damage: 25, cooldown: 1200, lastShot: 0, range: 12, spread: 0.3 }
     };
 
@@ -3688,21 +3687,6 @@
         particles.push(particle);
       }
       
-      // Lightning bolts - reduce count at high levels
-      const lightningCount = Math.floor(8 * particleReduction);
-      for(let i=0; i<lightningCount; i++) {
-        const angle = (i / lightningCount) * Math.PI * 2;
-        const lightning = new LightningBolt(
-          player.mesh.position.clone(),
-          new THREE.Vector3(
-            Math.cos(angle) * 5,
-            8,
-            Math.sin(angle) * 5
-          )
-        );
-        particles.push(lightning);
-      }
-      
       // Zoom effect
       const originalD = 20;
       const zoomD = 15;
@@ -3812,46 +3796,7 @@
       }
     }
     
-    class LightningBolt {
-      constructor(start, end) {
-        const points = [];
-        const segments = 8;
-        
-        for(let i=0; i<=segments; i++) {
-          const t = i / segments;
-          const x = start.x + (end.x - start.x) * t + (Math.random() - 0.5) * 1.5;
-          const y = start.y + (end.y - start.y) * t + (Math.random() - 0.5) * 1.5;
-          const z = start.z + (end.z - start.z) * t + (Math.random() - 0.5) * 1.5;
-          points.push(new THREE.Vector3(x, y, z));
-        }
-        
-        const geometry = new THREE.BufferGeometry().setFromPoints(points);
-        const material = new THREE.LineBasicMaterial({ 
-          color: 0x5DADE2, 
-          transparent: true, 
-          opacity: 1,
-          linewidth: 3
-        });
-        
-        this.mesh = new THREE.Line(geometry, material);
-        scene.add(this.mesh);
-        this.life = 20;
-        this.maxLife = 20;
-      }
-      
-      update() {
-        this.life--;
-        this.mesh.material.opacity = this.life / this.maxLife;
-        
-        if (this.life <= 0) {
-          scene.remove(this.mesh);
-          this.mesh.geometry.dispose();
-          this.mesh.material.dispose();
-          return false;
-        }
-        return true;
-      }
-    }
+
     
     class LevelUpParticle {
       constructor(pos, vel) {
@@ -4043,7 +3988,6 @@
             weapons.sword.cooldown *= 0.95;
             weapons.aura.cooldown *= 0.95;
             weapons.meteor.cooldown *= 0.95;
-            weapons.lightning.cooldown *= 0.95;
             weapons.doubleBarrel.cooldown *= 0.95;
             showStatChange('-5% All Weapon Cooldowns');
           } 
@@ -4120,22 +4064,6 @@
           });
         }
         
-        if (weapons.lightning.active && weapons.lightning.level < 4) {
-          const nextLevel = weapons.lightning.level + 1;
-          const targetIncrease = nextLevel === 2 ? 3 : (nextLevel === 3 ? 2 : 1);
-          choices.push({ 
-            id: 'lightning_upgrade', 
-            title: `LIGHTNING Level ${nextLevel}`, 
-            desc: `Damage +10, Targets +${targetIncrease}`, 
-            apply: () => { 
-              weapons.lightning.level++;
-              weapons.lightning.damage += 10;
-              weapons.lightning.targets += targetIncrease;
-              showStatChange(`Lightning Level ${weapons.lightning.level}`);
-            } 
-          });
-        }
-        
         if (weapons.doubleBarrel.active && weapons.doubleBarrel.level < 4) {
           const nextLevel = weapons.doubleBarrel.level + 1;
           choices.push({ 
@@ -4188,16 +4116,6 @@
               weapons.meteor.active = true;
               weapons.meteor.level = 1;
               showStatChange('New Weapon: Meteor');
-            } 
-          },
-          { 
-            id: 'lightning', 
-            title: 'LIGHTNING STRIKES', 
-            desc: 'Random lightning hits 4 enemies', 
-            apply: () => { 
-              weapons.lightning.active = true;
-              weapons.lightning.level = 1;
-              showStatChange('New Weapon: Lightning');
             } 
           },
           { 
@@ -5077,51 +4995,6 @@ Total Gold Earned: ${saveData.totalGoldEarned}
         
         meteors.push(new Meteor(targetX, targetZ));
         weapons.meteor.lastShot = time;
-      }
-
-      // 5. LIGHTNING STRIKES
-      if (weapons.lightning.active && time - weapons.lightning.lastShot > weapons.lightning.cooldown) {
-        // Hit random enemies
-        const targets = [];
-        const aliveEnemies = enemies.filter(e => !e.isDead);
-        
-        // Select random enemies up to target count
-        const targetCount = Math.min(weapons.lightning.targets, aliveEnemies.length);
-        const shuffled = [...aliveEnemies].sort(() => 0.5 - Math.random());
-        
-        for(let i = 0; i < targetCount; i++) {
-          const enemy = shuffled[i];
-          targets.push(enemy);
-          
-          // Create lightning bolt from sky
-          const lightning = new LightningBolt(
-            new THREE.Vector3(enemy.mesh.position.x, 15, enemy.mesh.position.z),
-            enemy.mesh.position.clone()
-          );
-          particles.push(lightning);
-          
-          // Flash effect
-          const flashLight = new THREE.PointLight(0x5DADE2, 3, 15);
-          flashLight.position.copy(enemy.mesh.position);
-          flashLight.position.y += 2;
-          scene.add(flashLight);
-          setTimeout(() => scene.remove(flashLight), 100);
-          
-          // Damage enemy
-          const dmg = weapons.lightning.damage * playerStats.strength;
-          const isCrit = Math.random() < playerStats.critChance;
-          const finalDmg = isCrit ? dmg * playerStats.critDmg : dmg;
-          enemy.takeDamage(finalDmg);
-          createDamageNumber(finalDmg, enemy.mesh.position, isCrit);
-          
-          // Particles
-          spawnParticles(enemy.mesh.position, 0x5DADE2, 10);
-        }
-        
-        weapons.lightning.lastShot = time;
-        if (targets.length > 0) {
-          playSound('shoot');
-        }
       }
 
       // 6. DOUBLE BARREL
