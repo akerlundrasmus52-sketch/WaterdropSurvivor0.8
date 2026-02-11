@@ -1178,7 +1178,7 @@
       
       <div class="settings-item">
         <label for="auto-aim-checkbox">Auto-Aim</label>
-        <input type="checkbox" id="auto-aim-checkbox" checked>
+        <input type="checkbox" id="auto-aim-checkbox">
       </div>
       
       <div class="settings-item">
@@ -1636,11 +1636,12 @@
     let lastExpFlashTime = 0; // Track last exp flash to throttle (max 1 per 500ms)
     let levelUpInProgress = false; // Flag to prevent overlapping level up calls
     
-    // Performance optimization - particle cap to prevent memory overflow
-    const MAX_PARTICLES = 150;
-    const MAX_PROJECTILES = 100;
-    const MAX_METEORS = 30; // Reduced from 50 for mobile performance
-    const MAX_DEBRIS = 100; // Reduced from 200 for mobile performance
+    // Performance optimization - particle cap to prevent memory overflow and freezing
+    // Increased limits to prevent rendering freeze after Vampire upgrade (70-120 kills)
+    const MAX_PARTICLES = 250; // Increased from 150 to prevent freeze with multiple weapons
+    const MAX_PROJECTILES = 150; // Increased from 100 for better weapon performance
+    const MAX_METEORS = 40; // Increased from 30 for smoother gameplay
+    const MAX_DEBRIS = 120; // Increased from 100 for better visual effects
     const MAX_FRAME_TIME = 1/30; // Maximum 33ms per frame to prevent large delta spikes
     const MAX_GOLD_COINS = 30; // Maximum gold coins on screen, excess auto-collected
     const MAX_EXP_GEMS = 50; // Maximum exp gems on screen, excess auto-collected
@@ -1658,7 +1659,7 @@
 
     // Game Settings
     const gameSettings = {
-      autoAim: true,
+      autoAim: false, // Changed to false - players must aim manually by default
       controlType: 'touch', // 'touch', 'keyboard', 'gamepad'
       soundEnabled: true,
       musicEnabled: true,
@@ -2887,35 +2888,41 @@
           spawnExp(this.mesh.position.x, this.mesh.position.z);
         }
         
-        // Drop GOLD based on enemy type (REDUCED for better balance)
-        let goldAmount = 0;
-        if (this.isMiniBoss) {
-          // MiniBoss: guaranteed 30-60 gold (reduced from 50-100)
-          goldAmount = 30 + Math.floor(Math.random() * 31);
-        } else if (this.type === 0) { // Tank
-          goldAmount = 2 + Math.floor(Math.random() * 2); // 2-3 gold (reduced from 3-5)
-        } else if (this.type === 1) { // Fast
-          goldAmount = 1; // 1 gold (fast enemies drop less)
-        } else if (this.type === 2) { // Balanced
-          goldAmount = 1 + Math.floor(Math.random() * 2); // 1-2 gold (reduced from 2-3)
-        } else if (this.type === 3) { // Slowing
-          goldAmount = 2 + Math.floor(Math.random() * 2); // 2-3 gold (reduced from 3-4)
-        } else if (this.type === 4) { // Ranged
-          goldAmount = 1 + Math.floor(Math.random() * 2); // 1-2 gold (reduced from 2-4)
-        } else if (this.type === 5) { // Flying
-          goldAmount = 2 + Math.floor(Math.random() * 2); // 2-3 gold (reduced from 3-5)
-        } else if (this.type === 6) { // Hard Tank
-          goldAmount = 3 + Math.floor(Math.random() * 3); // 3-5 gold (reduced from 5-8)
-        } else if (this.type === 7) { // Hard Fast
-          goldAmount = 2 + Math.floor(Math.random() * 3); // 2-4 gold (reduced from 4-6)
-        } else if (this.type === 8) { // Hard Balanced
-          goldAmount = 3 + Math.floor(Math.random() * 3); // 3-5 gold (reduced from 4-7)
-        } else if (this.type === 9) { // Elite
-          goldAmount = 5 + Math.floor(Math.random() * 4); // 5-8 gold (reduced from 8-12)
-        } else {
-          goldAmount = 1 + Math.floor(Math.random() * 2); // 1-2 gold (reduced from 2-3)
+        // Drop GOLD based on enemy type (50% chance to drop, but DOUBLE value)
+        // This reduces clutter while maintaining total gold economy
+        // Mini-bosses ALWAYS drop gold, regular enemies have 50% chance
+        const shouldDropGold = this.isMiniBoss || Math.random() < 0.5;
+        
+        if (shouldDropGold) {
+          let goldAmount = 0;
+          if (this.isMiniBoss) {
+            // MiniBoss: guaranteed 60-120 gold (doubled from 30-60)
+            goldAmount = 60 + Math.floor(Math.random() * 61);
+          } else if (this.type === 0) { // Tank
+            goldAmount = 4 + Math.floor(Math.random() * 3); // 4-6 gold (doubled from 2-3)
+          } else if (this.type === 1) { // Fast
+            goldAmount = 2; // 2 gold (doubled from 1)
+          } else if (this.type === 2) { // Balanced
+            goldAmount = 2 + Math.floor(Math.random() * 3); // 2-4 gold (doubled from 1-2)
+          } else if (this.type === 3) { // Slowing
+            goldAmount = 4 + Math.floor(Math.random() * 3); // 4-6 gold (doubled from 2-3)
+          } else if (this.type === 4) { // Ranged
+            goldAmount = 2 + Math.floor(Math.random() * 3); // 2-4 gold (doubled from 1-2)
+          } else if (this.type === 5) { // Flying
+            goldAmount = 4 + Math.floor(Math.random() * 3); // 4-6 gold (doubled from 2-3)
+          } else if (this.type === 6) { // Hard Tank
+            goldAmount = 6 + Math.floor(Math.random() * 5); // 6-10 gold (doubled from 3-5)
+          } else if (this.type === 7) { // Hard Fast
+            goldAmount = 4 + Math.floor(Math.random() * 5); // 4-8 gold (doubled from 2-4)
+          } else if (this.type === 8) { // Hard Balanced
+            goldAmount = 6 + Math.floor(Math.random() * 5); // 6-10 gold (doubled from 3-5)
+          } else if (this.type === 9) { // Elite
+            goldAmount = 10 + Math.floor(Math.random() * 7); // 10-16 gold (doubled from 5-8)
+          } else {
+            goldAmount = 2 + Math.floor(Math.random() * 3); // 2-4 gold (doubled from 1-2)
+          }
+          spawnGold(this.mesh.position.x, this.mesh.position.z, goldAmount);
         }
-        spawnGold(this.mesh.position.x, this.mesh.position.z, goldAmount);
         
         playerStats.kills++;
         updateHUD();
@@ -4246,6 +4253,14 @@
       createCurvedRoad(-90, -20, -60, -20, 20, 0);
       // East edge to Windmill area
       createCurvedRoad(90, 40, 40, 40, 30, -4);
+      
+      // 9. Additional connecting roads for better landscape connectivity
+      // Connect Crystal Tower to Mine area
+      createCurvedRoad(-50, 30, -24, 24, 20, -3);
+      // Connect Stonehenge to Cabin
+      createCurvedRoad(-36, -12, -20, -20, 15, 2);
+      // Connect Windmill to House area
+      createCurvedRoad(24, 24, 10, -45, 40, 5);
 
       // Wooden fences around play area
       const fenceMat = new THREE.MeshToonMaterial({ color: 0x8B4513 });
@@ -4492,9 +4507,9 @@
       
       scene.add(dockGroup);
 
-      // Small House near lake
+      // Small House near lake (moved away from lake center)
       const houseGroup = new THREE.Group();
-      houseGroup.position.set(20, 0, -30); // West of lake
+      houseGroup.position.set(10, 0, -45); // Moved south and west of lake to avoid overlap
       
       // House base
       const houseBaseGeo = new THREE.BoxGeometry(6, 4, 5);
@@ -4587,9 +4602,9 @@
       
       scene.add(farmGroup);
 
-      // Crystal Tower - 6 floating crystals with animation
+      // Crystal Tower - 6 floating crystals with animation (moved north from Stonehenge)
       const crystalGroup = new THREE.Group();
-      crystalGroup.position.set(-50, 0, 0);
+      crystalGroup.position.set(-50, 0, 30); // Moved 30 units north along z-axis from Stonehenge area
       
       const crystalGeo = new THREE.OctahedronGeometry(1);
       for(let i=0; i<6; i++) {
@@ -5308,7 +5323,19 @@
     }
 
     function spawnParticles(pos, color, count) {
-      for(let i=0; i<count; i++) particles.push(new Particle(pos, color));
+      // Performance optimization: reduce particle count when nearing limits to prevent freeze
+      // This prevents the rendering freeze issue after Vampire upgrade (70-120 kills)
+      const particleUsage = particles.length / MAX_PARTICLES;
+      let adjustedCount = count;
+      
+      // Scale down particle count when near capacity to maintain 60 FPS
+      if (particleUsage > 0.8) {
+        adjustedCount = Math.max(1, Math.floor(count * 0.5)); // 50% reduction
+      } else if (particleUsage > 0.6) {
+        adjustedCount = Math.max(1, Math.floor(count * 0.7)); // 30% reduction
+      }
+      
+      for(let i=0; i<adjustedCount; i++) particles.push(new Particle(pos, color));
     }
 
     function spawnExp(x, z) {
