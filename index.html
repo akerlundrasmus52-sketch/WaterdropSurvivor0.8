@@ -1633,6 +1633,7 @@
     let lastCleanupTime = 0; // Track last memory cleanup time
     let miniBossesSpawned = new Set(); // Track which mini-boss levels have been spawned
     let lastLevelUpTime = 0; // Track last level up to prevent overlapping effects
+    let lastExpFlashTime = 0; // Track last exp flash to throttle (max 1 per 500ms)
     let levelUpInProgress = false; // Flag to prevent overlapping level up calls
     
     // Performance optimization - particle cap to prevent memory overflow
@@ -2669,6 +2670,15 @@
         const oldHp = this.hp;
         this.hp -= amount;
         
+        // Life steal healing
+        if (playerStats.lifeStealPercent > 0) {
+          const healAmount = amount * playerStats.lifeStealPercent;
+          playerStats.hp = Math.min(playerStats.maxHp, playerStats.hp + healAmount);
+          if (healAmount > 0) {
+            updateHUD();
+          }
+        }
+        
         // Throttle damage numbers and particles for performance (Bug 1 fix)
         const now = Date.now();
         if (!this.lastDamageNumberTime || now - this.lastDamageNumberTime > 100) {
@@ -2689,8 +2699,8 @@
           currentColor.g *= 0.8;
           currentColor.b *= 0.8;
           
-          // Blood spots (small red particles)
-          spawnParticles(this.mesh.position, 0x8B0000, 10);
+          // Blood spots (small red particles) - reduced for performance
+          spawnParticles(this.mesh.position, 0x8B0000, 5); // Reduced from 10
           playSound('hit');
         }
         
@@ -2711,7 +2721,7 @@
             this.mesh.add(hole);
           }
           
-          spawnParticles(this.mesh.position, 0x8B0000, 15);
+          spawnParticles(this.mesh.position, 0x8B0000, 8); // Reduced from 15
           playSound('hit');
         }
         
@@ -2741,8 +2751,8 @@
             ));
           }
           
-          spawnParticles(this.mesh.position, enemyColor, 20); // Reduced from 25
-          spawnParticles(this.mesh.position, 0x8B0000, 8); // Reduced from 10
+          spawnParticles(this.mesh.position, enemyColor, 10); // Reduced from 20
+          spawnParticles(this.mesh.position, 0x8B0000, 4); // Reduced from 8
           playSound('hit');
         }
         
@@ -2773,8 +2783,8 @@
             ));
           }
           
-          // Enhanced particles for destruction
-          spawnParticles(this.mesh.position, enemyColor, 15);
+          // Enhanced particles for destruction - reduced for performance
+          spawnParticles(this.mesh.position, enemyColor, 8); // Reduced from 15
           playSound('hit');
         }
         
@@ -2817,10 +2827,10 @@
         // More dramatic explosion effect on death
         const enemyColor = this.mesh.material.color.getHex();
         
-        // Main explosion - ENHANCED with more particles
-        spawnParticles(this.mesh.position, enemyColor, 40);
-        spawnParticles(this.mesh.position, 0xFFFFFF, 15);
-        spawnParticles(this.mesh.position, 0x8B0000, 12); // Blood particles
+        // Main explosion - reduced particle counts for performance
+        spawnParticles(this.mesh.position, enemyColor, 15); // Reduced from 40
+        spawnParticles(this.mesh.position, 0xFFFFFF, 5); // Reduced from 15
+        spawnParticles(this.mesh.position, 0x8B0000, 4); // Reduced from 12 (blood particles)
         
         // Add explosion ring effect - MANAGED (Bug 3 fix)
         const ringGeo = new THREE.RingGeometry(0.1, 0.2, 16);
@@ -2846,7 +2856,7 @@
         });
         
         // Explode into more pieces - OPTIMIZED: Use managed debris system
-        const pieceCount = this.isMiniBoss ? 15 : 10; // Reduced from 25:15 for performance
+        const pieceCount = this.isMiniBoss ? 8 : 5; // Reduced from 15:10 for performance
         for(let i = 0; i < pieceCount; i++) {
           const angle = (i / pieceCount) * Math.PI * 2;
           const speed = this.isMiniBoss ? 0.6 : 0.4; // Faster explosion for mini-boss
@@ -3401,6 +3411,7 @@
         this.rotSpeed = Math.random() * 0.1 + 0.05;
         this.bobPhase = Math.random() * Math.PI * 2;
         this.sparklePhase = Math.random() * Math.PI * 2;
+        this.exp = GAME_CONFIG.expValue; // Store exp value for auto-collect
       }
 
       update(playerPos) {
@@ -3463,18 +3474,22 @@
           ));
         }
         
-        // Screen flash effect
-        const flash = document.createElement('div');
-        flash.style.position = 'fixed';
-        flash.style.top = '0';
-        flash.style.left = '0';
-        flash.style.width = '100%';
-        flash.style.height = '100%';
-        flash.style.background = 'rgba(93, 173, 226, 0.3)';
-        flash.style.pointerEvents = 'none';
-        flash.style.zIndex = '500';
-        document.body.appendChild(flash);
-        setTimeout(() => flash.remove(), 100);
+        // Screen flash effect - throttled to max 1 per 500ms for performance
+        const now = Date.now();
+        if (now - lastExpFlashTime > 500) {
+          const flash = document.createElement('div');
+          flash.style.position = 'fixed';
+          flash.style.top = '0';
+          flash.style.left = '0';
+          flash.style.width = '100%';
+          flash.style.height = '100%';
+          flash.style.background = 'rgba(93, 173, 226, 0.3)';
+          flash.style.pointerEvents = 'none';
+          flash.style.zIndex = '500';
+          document.body.appendChild(flash);
+          setTimeout(() => flash.remove(), 100);
+          lastExpFlashTime = now;
+        }
         
         scene.remove(this.mesh);
         this.mesh.geometry.dispose();
@@ -5328,10 +5343,30 @@
     }
 
     function spawnExp(x, z) {
+      // Cap exp gems and auto-collect excess
+      if (expGems.length >= MAX_EXP_GEMS) {
+        const oldest = expGems.shift();
+        if (oldest && oldest.mesh) {
+          addExp(oldest.exp);
+          scene.remove(oldest.mesh);
+          oldest.mesh.geometry.dispose();
+          oldest.mesh.material.dispose();
+        }
+      }
       expGems.push(new ExpGem(x, z));
     }
     
     function spawnGold(x, z, amount) {
+      // Cap gold coins and auto-collect excess
+      if (goldCoins.length >= MAX_GOLD_COINS) {
+        const oldest = goldCoins.shift();
+        if (oldest && oldest.mesh) {
+          addGold(oldest.amount);
+          scene.remove(oldest.mesh);
+          oldest.mesh.geometry.dispose();
+          oldest.mesh.material.dispose();
+        }
+      }
       goldCoins.push(new GoldCoin(x, z, amount));
     }
     
@@ -7719,12 +7754,11 @@
             const dmg = weapons.fireRing.damage * playerStats.strength;
             const isCrit = Math.random() < playerStats.critChance;
             const finalDmg = isCrit ? dmg * playerStats.critDmg : dmg;
-            e.takeDamage(finalDmg);
-            createDamageNumber(finalDmg, e.mesh.position, isCrit);
+            e.takeDamage(finalDmg, isCrit); // Removed duplicate createDamageNumber - takeDamage already handles it
             
-            // Fire particles on hit
-            spawnParticles(e.mesh.position, 0xFF4500, 6); // Orange-red fire
-            spawnParticles(e.mesh.position, 0xFFD700, 4); // Yellow flames
+            // Fire particles on hit - reduced for performance
+            spawnParticles(e.mesh.position, 0xFF4500, 3); // Reduced from 6 (orange-red fire)
+            spawnParticles(e.mesh.position, 0xFFD700, 2); // Reduced from 4 (yellow flames)
             hit = true;
           }
         });
