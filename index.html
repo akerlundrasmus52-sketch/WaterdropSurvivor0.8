@@ -1640,6 +1640,8 @@
     const MAX_PROJECTILES = 100;
     const MAX_METEORS = 50;
     const MAX_DEBRIS = 200;
+    const MAX_GOLD_COINS = 30;
+    const MAX_EXP_GEMS = 50;
     
     // Cache animated objects to avoid scene.traverse() every frame
     let animatedObjects = {
@@ -7762,6 +7764,34 @@
             if (d.mesh.geometry) d.mesh.geometry.dispose();
             if (d.mesh.material) d.mesh.material.dispose();
           }
+        });
+      }
+      
+      // Apply gold coin limit to prevent memory overflow
+      if (goldCoins.length > MAX_GOLD_COINS) {
+        const excess = goldCoins.splice(0, goldCoins.length - MAX_GOLD_COINS);
+        excess.forEach(g => {
+          if (g.mesh && g.mesh.parent) {
+            scene.remove(g.mesh);
+            if (g.mesh.geometry) g.mesh.geometry.dispose();
+            if (g.mesh.material) g.mesh.material.dispose();
+          }
+          // Auto-collect the gold value so player doesn't lose it
+          addGold(g.amount);
+        });
+      }
+      
+      // Apply EXP gem limit to prevent memory overflow
+      if (expGems.length > MAX_EXP_GEMS) {
+        const excess = expGems.splice(0, expGems.length - MAX_EXP_GEMS);
+        excess.forEach(g => {
+          if (g.mesh && g.mesh.parent) {
+            scene.remove(g.mesh);
+            if (g.mesh.geometry) g.mesh.geometry.dispose();
+            if (g.mesh.material) g.mesh.material.dispose();
+          }
+          // Auto-collect the EXP so player doesn't lose it
+          addExp(GAME_CONFIG.expValue);
         });
       }
       
