@@ -7707,11 +7707,10 @@
             const isCrit = Math.random() < playerStats.critChance;
             const finalDmg = isCrit ? dmg * playerStats.critDmg : dmg;
             e.takeDamage(finalDmg);
-            createDamageNumber(finalDmg, e.mesh.position, isCrit);
             
-            // Fire particles on hit
-            spawnParticles(e.mesh.position, 0xFF4500, 6); // Orange-red fire
-            spawnParticles(e.mesh.position, 0xFFD700, 4); // Yellow flames
+            // Fire particles on hit - reduced for performance
+            spawnParticles(e.mesh.position, 0xFF4500, 3); // Orange-red fire
+            spawnParticles(e.mesh.position, 0xFFD700, 2); // Yellow flames
             hit = true;
           }
         });
