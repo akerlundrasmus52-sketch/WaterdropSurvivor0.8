@@ -2558,19 +2558,25 @@
       const lightning = new THREE.Line(geometry, material);
       scene.add(lightning);
       
-      // Flicker effect and remove after short time
+      // Flicker effect using requestAnimationFrame for better performance
       let opacity = 1;
-      const flickerInterval = setInterval(() => {
-        opacity = Math.random() * 0.5 + 0.5;
-        material.opacity = opacity;
-      }, 50);
+      let flickerFrames = 0;
+      const maxFlickerFrames = 4; // ~200ms at 60fps
       
-      setTimeout(() => {
-        clearInterval(flickerInterval);
-        scene.remove(lightning);
-        geometry.dispose();
-        material.dispose();
-      }, 200);
+      const flickerAnimation = () => {
+        if (flickerFrames < maxFlickerFrames) {
+          opacity = Math.random() * 0.5 + 0.5;
+          material.opacity = opacity;
+          flickerFrames++;
+          requestAnimationFrame(flickerAnimation);
+        } else {
+          scene.remove(lightning);
+          geometry.dispose();
+          material.dispose();
+        }
+      };
+      
+      flickerAnimation();
     }
 
     class Particle {
@@ -5270,6 +5276,8 @@ Total Gold Earned: ${saveData.totalGoldEarned}
           e.isDead = true;
           if (e.mesh && e.mesh.parent) {
             scene.remove(e.mesh);
+            e.mesh.geometry.dispose();
+            e.mesh.material.dispose();
           }
         });
         enemies = enemies.slice(0, 3);
