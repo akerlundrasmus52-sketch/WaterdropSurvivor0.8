@@ -2730,7 +2730,7 @@
           
           // Spawn more limb pieces - OPTIMIZED: Use managed debris system
           const enemyColor = this.mesh.material.color.getHex();
-          for(let i = 0; i < 3; i++) { // Reduced from 8 to 6 for performance
+          for(let i = 0; i < 3; i++) { // Reduced from 6 to 3 for performance
             const limbSize = Math.random() * 0.2 + 0.2; // Varied limb sizes
             const vel = new THREE.Vector3(
               (Math.random() - 0.5) * 0.5, // Increased velocity
@@ -2763,7 +2763,7 @@
           
           // Spawn broken pieces - OPTIMIZED: Use managed debris system
           const enemyColor = this.mesh.material.color.getHex();
-          for(let i = 0; i < 2; i++) { // Reduced from 5 to 4 for performance
+          for(let i = 0; i < 2; i++) { // Reduced from 4 to 2 for performance
             const vel = new THREE.Vector3(
               (Math.random() - 0.5) * 0.3,
               Math.random() * 0.4,
