@@ -1310,7 +1310,9 @@
       walkSpeed: 25, // Display value
       kills: 0,
       hpRegen: 0,
-      gold: 0
+      gold: 0,
+      bossDefeated: false,
+      bossSpawned: false
     };
 
     // Weapons State
@@ -1757,11 +1759,23 @@
           let vx = (dx / dist) * this.speed;
           let vz = (dz / dist) * this.speed;
           
-          // Triangle moves erratically
+          // Type-specific movement patterns
           if (this.type === 1) {
-            const wobble = Math.sin(gameTime * 10 + this.wobbleOffset) * 0.05;
-            vx += wobble * (dz/dist); // Perpendicular
+            // Fast enemy: Zigzag perpendicular oscillation
+            const wobble = Math.sin(gameTime * 10 + this.wobbleOffset) * 0.06;
+            vx += wobble * (dz/dist); // Perpendicular zigzag
             vz -= wobble * (dx/dist);
+          } else if (this.type === 2) {
+            // Balanced enemy: Circle strafe pattern
+            const angle = Math.atan2(dz, dx);
+            const strafe = Math.sin(gameTime * 4 + this.wobbleOffset) * 0.04;
+            vx += Math.cos(angle + Math.PI / 2) * strafe;
+            vz += Math.sin(angle + Math.PI / 2) * strafe;
+          } else if (this.type === 3) {
+            // Slowing enemy: Weaving approach pattern
+            const wave = Math.sin(gameTime * 5 + this.wobbleOffset) * 0.05;
+            vx += wave * Math.cos(gameTime * 3);
+            vz += wave * Math.sin(gameTime * 3);
           }
           
           this.mesh.position.x += vx;
@@ -2059,6 +2073,160 @@
       }
     }
 
+    // Boss class - powerful enemy that spawns at level 50
+    class Boss extends Enemy {
+      constructor(x, z, playerLevel = 50) {
+        super(3, x, z, playerLevel); // Start as slowing type base
+        
+        // Override with boss stats
+        this.hp = 5000 * (1 + (playerLevel - 50) * 0.2); // Scale with level beyond 50
+        this.maxHp = this.hp;
+        this.speed = GAME_CONFIG.enemySpeedBase * 0.5; // Slower but tankier
+        this.damage = 80 * (1 + (playerLevel - 50) * 0.15);
+        this.isBoss = true;
+        this.attackCooldown = 800; // Faster attacks
+        this.specialAttackCooldown = 5000; // 5 second special attack
+        this.lastSpecialAttack = Date.now();
+        
+        // Make boss visually distinct - larger and glowing
+        this.mesh.scale.set(2.5, 2.5, 2.5);
+        this.mesh.material.color.setHex(0xFF0000); // Red boss
+        this.mesh.material.emissive.setHex(0x800000); // Dark red glow
+        this.mesh.material.emissiveIntensity = 0.5;
+        
+        // Add boss light effect
+        const bossLight = new THREE.PointLight(0xFF0000, 2, 10);
+        bossLight.position.copy(this.mesh.position);
+        bossLight.position.y = 1;
+        this.bossLight = bossLight;
+        scene.add(bossLight);
+        
+        // Boss health bar
+        this.createHealthBar();
+      }
+      
+      createHealthBar() {
+        // Create boss health bar at top of screen
+        const hpBarContainer = document.createElement('div');
+        hpBarContainer.id = 'boss-hp-bar-container';
+        hpBarContainer.style.position = 'fixed';
+        hpBarContainer.style.top = '10px';
+        hpBarContainer.style.left = '50%';
+        hpBarContainer.style.transform = 'translateX(-50%)';
+        hpBarContainer.style.width = '400px';
+        hpBarContainer.style.height = '30px';
+        hpBarContainer.style.background = 'linear-gradient(to bottom, #3a3a3a 0%, #3a3a3a 50%, #6a6a6a 50%, #6a6a6a 100%)';
+        hpBarContainer.style.borderRadius = '15px';
+        hpBarContainer.style.border = '3px solid #2a2a2a';
+        hpBarContainer.style.overflow = 'hidden';
+        hpBarContainer.style.boxShadow = '0 3px 8px rgba(0,0,0,0.3)';
+        hpBarContainer.style.zIndex = '999';
+        
+        const hpBarFill = document.createElement('div');
+        hpBarFill.id = 'boss-hp-fill';
+        hpBarFill.style.width = '100%';
+        hpBarFill.style.height = '100%';
+        hpBarFill.style.background = 'linear-gradient(to right, #8B0000, #FF0000, #FF4500)';
+        hpBarFill.style.transition = 'width 0.3s ease';
+        hpBarFill.style.boxShadow = 'inset 0 2px 4px rgba(255,255,255,0.3), inset 0 -2px 4px rgba(0,0,0,0.3)';
+        
+        hpBarContainer.appendChild(hpBarFill);
+        
+        const hpText = document.createElement('div');
+        hpText.id = 'boss-hp-text';
+        hpText.style.position = 'absolute';
+        hpText.style.top = '35px';
+        hpText.style.left = '50%';
+        hpText.style.transform = 'translateX(-50%)';
+        hpText.style.color = '#FF0000';
+        hpText.style.fontWeight = 'bold';
+        hpText.style.fontSize = '18px';
+        hpText.style.textShadow = '2px 2px 0 #000, 0 0 10px rgba(255,0,0,0.8)';
+        hpText.innerText = 'BOSS: WATER TITAN';
+        
+        document.body.appendChild(hpBarContainer);
+        document.body.appendChild(hpText);
+        
+        this.hpBarFill = hpBarFill;
+        this.hpText = hpText;
+      }
+      
+      update(dt, playerPos) {
+        super.update(dt, playerPos);
+        
+        // Update light position
+        if (this.bossLight) {
+          this.bossLight.position.copy(this.mesh.position);
+          this.bossLight.position.y = 1;
+        }
+        
+        // Update health bar
+        if (this.hpBarFill) {
+          const hpPercent = Math.max(0, (this.hp / this.maxHp) * 100);
+          this.hpBarFill.style.width = hpPercent + '%';
+        }
+        
+        // Special attack: Summon minions
+        const now = Date.now();
+        if (now - this.lastSpecialAttack > this.specialAttackCooldown) {
+          this.summonMinions();
+          this.lastSpecialAttack = now;
+        }
+      }
+      
+      summonMinions() {
+        // Summon 3 enemies around the boss
+        for (let i = 0; i < 3; i++) {
+          const angle = (i / 3) * Math.PI * 2;
+          const dist = 3;
+          const ex = this.mesh.position.x + Math.cos(angle) * dist;
+          const ez = this.mesh.position.z + Math.sin(angle) * dist;
+          enemies.push(new Enemy(1, ex, ez, playerStats.lvl)); // Fast enemies
+        }
+        
+        // Visual effect
+        spawnParticles(this.mesh.position, 0xFF0000, 20);
+        createFloatingText("MINIONS SUMMONED!", this.mesh.position);
+        playSound('hit');
+      }
+      
+      die() {
+        // Clean up boss-specific elements
+        if (this.bossLight) {
+          scene.remove(this.bossLight);
+        }
+        if (this.hpBarFill) {
+          document.getElementById('boss-hp-bar-container')?.remove();
+          document.getElementById('boss-hp-text')?.remove();
+        }
+        
+        // Extra rewards for killing boss
+        for (let i = 0; i < 10; i++) {
+          const angle = (i / 10) * Math.PI * 2;
+          const dist = 2 + Math.random() * 2;
+          const x = this.mesh.position.x + Math.cos(angle) * dist;
+          const z = this.mesh.position.z + Math.sin(angle) * dist;
+          spawnExp(x, z);
+          spawnGold(x, z, 10 + Math.floor(Math.random() * 10)); // 10-20 gold
+        }
+        
+        // Big explosion
+        spawnParticles(this.mesh.position, 0xFF0000, 50);
+        spawnParticles(this.mesh.position, 0xFFFF00, 30);
+        
+        // Screen shake
+        camera.position.x += (Math.random() - 0.5) * 2;
+        camera.position.z += (Math.random() - 0.5) * 2;
+        
+        createFloatingText("BOSS DEFEATED!", this.mesh.position);
+        
+        // Mark boss as defeated for this run
+        playerStats.bossDefeated = true;
+        
+        super.die();
+      }
+    }
+
     class Projectile {
       constructor(x, z, target) {
         const geometry = new THREE.SphereGeometry(0.2, 8, 8);
@@ -2256,18 +2424,112 @@
         const range = weapons.meteor.area;
         const dmg = weapons.meteor.damage * playerStats.strength;
         
+        const hitEnemies = [];
         enemies.forEach(e => {
           const d = e.mesh.position.distanceTo(this.target);
           if (d < range) {
             e.takeDamage(dmg);
+            hitEnemies.push(e);
           }
         });
+        
+        // Chain Lightning Effect - strike nearest enemies within 8 units at 60% damage
+        if (hitEnemies.length > 0 && weapons.meteor.level >= 2) {
+          const chainDmg = dmg * 0.6;
+          const chainRange = 8;
+          const maxChains = Math.min(3, weapons.meteor.level); // 2-3 chains based on level
+          
+          for (let i = 0; i < Math.min(maxChains, hitEnemies.length); i++) {
+            const sourceEnemy = hitEnemies[i];
+            
+            // Find nearest enemy not yet hit
+            let nearestEnemy = null;
+            let minDist = Infinity;
+            
+            enemies.forEach(e => {
+              if (e.isDead || hitEnemies.includes(e)) return;
+              const d = e.mesh.position.distanceTo(sourceEnemy.mesh.position);
+              if (d < chainRange && d < minDist) {
+                minDist = d;
+                nearestEnemy = e;
+              }
+            });
+            
+            if (nearestEnemy) {
+              hitEnemies.push(nearestEnemy);
+              nearestEnemy.takeDamage(chainDmg);
+              
+              // Visual lightning bolt
+              createLightningBolt(sourceEnemy.mesh.position, nearestEnemy.mesh.position);
+              
+              // Lightning particles at impact
+              spawnParticles(nearestEnemy.mesh.position, 0x7B68EE, 6);
+              spawnParticles(nearestEnemy.mesh.position, 0x9D4EDD, 4);
+            }
+          }
+        }
         
         // Visuals
         spawnParticles(this.target, 0xFF4500, 10);
         spawnParticles(this.target, 0xFFFF00, 5);
+        
+        // Lightning flash light
+        const flashLight = new THREE.PointLight(0x7B68EE, 5, 15);
+        flashLight.position.copy(this.target);
+        flashLight.position.y = 1;
+        addTemporaryLight(flashLight, 100);
+        
         playSound('hit'); // Boom
       }
+    }
+
+    // Helper function to create lightning bolt visual
+    function createLightningBolt(start, end) {
+      const segments = 12;
+      const points = [];
+      
+      for (let i = 0; i <= segments; i++) {
+        const t = i / segments;
+        const point = new THREE.Vector3(
+          start.x + (end.x - start.x) * t,
+          start.y + (end.y - start.y) * t + 0.5,
+          start.z + (end.z - start.z) * t
+        );
+        
+        // Add random jitter to middle points
+        if (i > 0 && i < segments) {
+          point.x += (Math.random() - 0.5) * 0.3;
+          point.y += (Math.random() - 0.5) * 0.3;
+          point.z += (Math.random() - 0.5) * 0.3;
+        }
+        
+        points.push(point);
+      }
+      
+      const geometry = new THREE.BufferGeometry().setFromPoints(points);
+      const material = new THREE.LineBasicMaterial({ 
+        color: 0x7B68EE,
+        linewidth: 3,
+        transparent: true,
+        opacity: 1
+      });
+      
+      const lightning = new THREE.Line(geometry, material);
+      scene.add(lightning);
+      
+      // Flicker effect and remove after short time
+      let opacity = 1;
+      const flickerInterval = setInterval(() => {
+        opacity = Math.random() * 0.5 + 0.5;
+        material.opacity = opacity;
+      }, 50);
+      
+      setTimeout(() => {
+        clearInterval(flickerInterval);
+        scene.remove(lightning);
+        geometry.dispose();
+        material.dispose();
+      }, 200);
     }
 
     class Particle {
@@ -4538,6 +4800,8 @@
       playerStats.armor = baseArmor;
       playerStats.hpRegen = baseRegen;
       playerStats.gold = 0;
+      playerStats.bossDefeated = false;
+      playerStats.bossSpawned = false;
       waveCount = 0;
       frameCount = 0;
       lastTime = 0; // Reset for clean first-frame delta
@@ -5018,6 +5282,34 @@ Total Gold Earned: ${saveData.totalGoldEarned}
       frameCount++;
       if (frameCount % GAME_CONFIG.waveInterval === 0) {
         spawnWave();
+      }
+      
+      // Boss spawn at level 50
+      if (playerStats.lvl >= 50 && !playerStats.bossSpawned) {
+        playerStats.bossSpawned = true;
+        const angle = Math.random() * Math.PI * 2;
+        const dist = 30; // Spawn further away
+        const bossX = player.mesh.position.x + Math.cos(angle) * dist;
+        const bossZ = player.mesh.position.z + Math.sin(angle) * dist;
+        enemies.push(new Boss(bossX, bossZ, playerStats.lvl));
+        
+        // Big announcement
+        createFloatingText("BOSS INCOMING!", player.mesh.position);
+        
+        // Flash screen red
+        const flash = document.createElement('div');
+        flash.style.position = 'fixed';
+        flash.style.top = '0';
+        flash.style.left = '0';
+        flash.style.width = '100%';
+        flash.style.height = '100%';
+        flash.style.background = 'rgba(255, 0, 0, 0.5)';
+        flash.style.pointerEvents = 'none';
+        flash.style.zIndex = '500';
+        document.body.appendChild(flash);
+        setTimeout(() => flash.remove(), 500);
+        
+        playSound('hit');
       }
       
       // HP Regen (Every 60 frames approx 1 sec)
