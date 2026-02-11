@@ -1618,6 +1618,7 @@
     let cameraShake = null; // Managed camera shake state (Bug 3 fix)
     let fallingObjects = []; // Managed array for falling objects like water droplets (Bug 3 fix)
     let animatedRotations = []; // Managed array for rotation animations like chest lids (Bug 3 fix)
+    let lastExpFlashTime = 0; // Throttle for EXP gem collection flash (Bug 5 fix)
     let lastTime = 0;
     let frameCount = 0;
     let isPaused = false;
@@ -1640,6 +1641,8 @@
     const MAX_PROJECTILES = 100;
     const MAX_METEORS = 50;
     const MAX_DEBRIS = 200;
+    
+    
     
     // Cache animated objects to avoid scene.traverse() every frame
     let animatedObjects = {
@@ -2665,6 +2668,15 @@
       takeDamage(amount, isCrit = false) {
         const oldHp = this.hp;
         this.hp -= amount;
+
+        // Calculate actual damage dealt (clamp to old HP and ignore non-positive values)
+        const actualDamage = Math.max(0, Math.min(amount, oldHp));
+        
+        // Life steal healing based on actual damage dealt
+        if (playerStats.lifeStealPercent > 0 && actualDamage > 0) {
+          const healAmount = actualDamage * playerStats.lifeStealPercent;
+          playerStats.hp = Math.min(playerStats.maxHp, playerStats.hp + healAmount);
+        }
         
         // Throttle damage numbers and particles for performance (Bug 1 fix)
         const now = Date.now();
@@ -2687,7 +2699,7 @@
           currentColor.b *= 0.8;
           
           // Blood spots (small red particles)
-          spawnParticles(this.mesh.position, 0x8B0000, 10);
+          spawnParticles(this.mesh.position, 0x8B0000, 5);
           playSound('hit');
         }
         
@@ -2708,7 +2720,7 @@
             this.mesh.add(hole);
           }
           
-          spawnParticles(this.mesh.position, 0x8B0000, 15);
+          spawnParticles(this.mesh.position, 0x8B0000, 8);
           playSound('hit');
         }
         
@@ -2721,7 +2733,7 @@
           
           // Spawn more limb pieces - OPTIMIZED: Use managed debris system
           const enemyColor = this.mesh.material.color.getHex();
-          for(let i = 0; i < 6; i++) { // Reduced from 8 to 6 for performance
+          for(let i = 0; i < 3; i++) { // Reduced from 6 to 3 for performance
             const limbSize = Math.random() * 0.2 + 0.2; // Varied limb sizes
             const vel = new THREE.Vector3(
               (Math.random() - 0.5) * 0.5, // Increased velocity
@@ -2738,8 +2750,8 @@
             ));
           }
           
-          spawnParticles(this.mesh.position, enemyColor, 20); // Reduced from 25
-          spawnParticles(this.mesh.position, 0x8B0000, 8); // Reduced from 10
+          spawnParticles(this.mesh.position, enemyColor, 10); // Reduced from 25
+          spawnParticles(this.mesh.position, 0x8B0000, 4); // Reduced from 10
           playSound('hit');
         }
         
@@ -2754,7 +2766,7 @@
           
           // Spawn broken pieces - OPTIMIZED: Use managed debris system
           const enemyColor = this.mesh.material.color.getHex();
-          for(let i = 0; i < 4; i++) { // Reduced from 5 to 4 for performance
+          for(let i = 0; i < 2; i++) { // Reduced from 4 to 2 for performance
             const vel = new THREE.Vector3(
               (Math.random() - 0.5) * 0.3,
               Math.random() * 0.4,
@@ -2771,7 +2783,7 @@
           }
           
           // Enhanced particles for destruction
-          spawnParticles(this.mesh.position, enemyColor, 15);
+          spawnParticles(this.mesh.position, enemyColor, 8);
           playSound('hit');
         }
         
@@ -2815,9 +2827,9 @@
         const enemyColor = this.mesh.material.color.getHex();
         
         // Main explosion - ENHANCED with more particles
-        spawnParticles(this.mesh.position, enemyColor, 40);
-        spawnParticles(this.mesh.position, 0xFFFFFF, 15);
-        spawnParticles(this.mesh.position, 0x8B0000, 12); // Blood particles
+        spawnParticles(this.mesh.position, enemyColor, 15);
+        spawnParticles(this.mesh.position, 0xFFFFFF, 5);
+        spawnParticles(this.mesh.position, 0x8B0000, 4); // Blood particles
         
         // Add explosion ring effect - MANAGED (Bug 3 fix)
         const ringGeo = new THREE.RingGeometry(0.1, 0.2, 16);
@@ -2843,7 +2855,7 @@
         });
         
         // Explode into more pieces - OPTIMIZED: Use managed debris system
-        const pieceCount = this.isMiniBoss ? 15 : 10; // Reduced from 25:15 for performance
+        const pieceCount = this.isMiniBoss ? 8 : 5; // Reduced from 25:15 for performance
         for(let i = 0; i < pieceCount; i++) {
           const angle = (i / pieceCount) * Math.PI * 2;
           const speed = this.isMiniBoss ? 0.6 : 0.4; // Faster explosion for mini-boss
@@ -3460,18 +3472,22 @@
           ));
         }
         
-        // Screen flash effect
-        const flash = document.createElement('div');
-        flash.style.position = 'fixed';
-        flash.style.top = '0';
-        flash.style.left = '0';
-        flash.style.width = '100%';
-        flash.style.height = '100%';
-        flash.style.background = 'rgba(93, 173, 226, 0.3)';
-        flash.style.pointerEvents = 'none';
-        flash.style.zIndex = '500';
-        document.body.appendChild(flash);
-        setTimeout(() => flash.remove(), 100);
+        // Screen flash effect - throttled to max 1 per 500ms (Bug 5 fix)
+        const now = Date.now();
+        if (now - lastExpFlashTime > 500) {
+          const flash = document.createElement('div');
+          flash.style.position = 'fixed';
+          flash.style.top = '0';
+          flash.style.left = '0';
+          flash.style.width = '100%';
+          flash.style.height = '100%';
+          flash.style.background = 'rgba(93, 173, 226, 0.3)';
+          flash.style.pointerEvents = 'none';
+          flash.style.zIndex = '500';
+          document.body.appendChild(flash);
+          setTimeout(() => flash.remove(), 100);
+          lastExpFlashTime = now;
+        }
         
         scene.remove(this.mesh);
         this.mesh.geometry.dispose();
@@ -7707,11 +7723,10 @@
             const isCrit = Math.random() < playerStats.critChance;
             const finalDmg = isCrit ? dmg * playerStats.critDmg : dmg;
             e.takeDamage(finalDmg);
-            createDamageNumber(finalDmg, e.mesh.position, isCrit);
             
-            // Fire particles on hit
-            spawnParticles(e.mesh.position, 0xFF4500, 6); // Orange-red fire
-            spawnParticles(e.mesh.position, 0xFFD700, 4); // Yellow flames
+            // Fire particles on hit - reduced from 6/4 to 3/2 for performance
+            spawnParticles(e.mesh.position, 0xFF4500, 3); // Orange-red fire
+            spawnParticles(e.mesh.position, 0xFFD700, 2); // Yellow flames
             hit = true;
           }
         });
@@ -7764,6 +7779,46 @@
             if (d.mesh.material) d.mesh.material.dispose();
           }
         });
+      }
+      
+      // Apply gold coin limit to prevent memory overflow
+      if (goldCoins.length > MAX_GOLD_COINS) {
+        const excess = goldCoins.splice(0, goldCoins.length - MAX_GOLD_COINS);
+        let totalGold = 0;
+        excess.forEach(g => {
+          // Prefer using the GoldCoin destroy method to keep cleanup consistent
+          if (g && typeof g.destroy === "function") {
+            g.destroy();
+          } else if (g.mesh && g.mesh.parent) {
+            scene.remove(g.mesh);
+            if (g.mesh.geometry) g.mesh.geometry.dispose();
+            if (g.mesh.material) g.mesh.material.dispose();
+          }
+          // Auto-collect the gold value so player doesn't lose it
+          if (typeof g.amount === "number") {
+            totalGold += g.amount;
+          }
+        });
+        if (totalGold > 0) {
+          addGold(totalGold);
+        }
+      }
+      
+      // Apply EXP gem limit to prevent memory overflow
+      if (expGems.length > MAX_EXP_GEMS) {
+        const excess = expGems.splice(0, expGems.length - MAX_EXP_GEMS);
+        excess.forEach(g => {
+          if (g.mesh && g.mesh.parent) {
+            scene.remove(g.mesh);
+            if (g.mesh.geometry) g.mesh.geometry.dispose();
+            if (g.mesh.material) g.mesh.material.dispose();
+          }
+        });
+        // Auto-collect the EXP so player doesn't lose it (aggregate to avoid frame spikes)
+        const totalExp = excess.length * GAME_CONFIG.expValue;
+        if (totalExp > 0) {
+          addExp(totalExp);
+        }
       }
       
       // Projectiles update returns false if dead
