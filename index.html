@@ -1655,6 +1655,7 @@
     const MAX_PROJECTILES = 200; // Increased from 150 for high-intensity moments
     const MAX_METEORS = 50; // Increased from 40 for smoother gameplay
     const MAX_DEBRIS = 150; // Increased from 120 for better visual effects
+    const MAX_ENEMIES = 25; // LEVEL 18+ FIX: Cap total enemies to prevent freeze with high-HP enemies
     const MAX_FRAME_TIME = 1/30; // Maximum 33ms per frame to prevent large delta spikes
     const MAX_GOLD_COINS = 30; // Maximum gold coins on screen, excess auto-collected
     const MAX_EXP_GEMS = 50; // Maximum exp gems on screen, excess auto-collected
@@ -2512,8 +2513,11 @@
           
           // Add enemy avoidance to prevent stacking/trains (optimized)
           // Only check nearby enemies to avoid O(n²) performance issues
+          // LEVEL 18+ FIX: Further reduce avoidance checks when many enemies are alive
           let avoidanceCount = 0;
-          const maxAvoidanceChecks = 5; // Limit checks to nearest enemies
+          const enemyCount = enemies.length;
+          const maxAvoidanceChecks = enemyCount > 15 ? 3 : 5; // Reduce checks at high enemy counts
+          
           for (let other of enemies) {
             if (other === this || other.isDead || avoidanceCount >= maxAvoidanceChecks) continue;
             const odx = this.mesh.position.x - other.mesh.position.x;
@@ -2632,20 +2636,26 @@
         }
 
         // Squishy idle with more gravity-based wobble
-        this.pulsePhase += dt * 6; // Slightly faster
-        const squish = Math.sin(this.pulsePhase) * 0.08; // More pronounced from 0.05
+        // LEVEL 18+ FIX: Skip visual updates for distant enemies to improve performance
+        const distToPlayer = this.mesh.position.distanceTo(targetPos);
+        const skipVisuals = playerStats.lvl >= 18 && distToPlayer > 20; // Skip if far away at high levels
         
-        // MiniBoss glowing effect
-        if (this.isMiniBoss) {
-          const glowIntensity = 0.3 + Math.sin(this.pulsePhase * 2) * 0.2;
-          this.mesh.material.emissiveIntensity = glowIntensity;
-          // Larger breathing effect for mini-boss
-          this.mesh.scale.set(1+squish*2, 1-squish*2, 1+squish*2);
-        } else if (this.type === 0 || this.type === 3 || this.type === 6) {
-           // Tank, Slowing, and Hard Tank breathe more dramatically
-           this.mesh.scale.set(1+squish*1.5, 1-squish*1.5, 1+squish*1.5);
-        } else {
-           this.mesh.scale.set(1-squish, 1+squish*1.5, 1-squish);
+        if (!skipVisuals) {
+          this.pulsePhase += dt * 6; // Slightly faster
+          const squish = Math.sin(this.pulsePhase) * 0.08; // More pronounced from 0.05
+          
+          // MiniBoss glowing effect
+          if (this.isMiniBoss) {
+            const glowIntensity = 0.3 + Math.sin(this.pulsePhase * 2) * 0.2;
+            this.mesh.material.emissiveIntensity = glowIntensity;
+            // Larger breathing effect for mini-boss
+            this.mesh.scale.set(1+squish*2, 1-squish*2, 1+squish*2);
+          } else if (this.type === 0 || this.type === 3 || this.type === 6) {
+             // Tank, Slowing, and Hard Tank breathe more dramatically
+             this.mesh.scale.set(1+squish*1.5, 1-squish*1.5, 1+squish*1.5);
+          } else {
+             this.mesh.scale.set(1-squish, 1+squish*1.5, 1-squish);
+          }
         }
       }
 
@@ -5373,6 +5383,14 @@
           }
         }
         
+        // LEVEL 18+ FIX: Further reduce Elite (type 9) spawn rate to 20%
+        // Elite enemies have very high HP and can cause accumulation
+        if (type === 9 && Math.random() > 0.2) {
+          // Fallback to other hard variants or basic enemies
+          const fallbackTypes = [6, 7, 8]; // Other hard variants
+          type = fallbackTypes[Math.floor(Math.random() * fallbackTypes.length)];
+        }
+        
         enemies.push(new Enemy(type, ex, ez, playerStats.lvl));
       }
       
@@ -5393,11 +5411,17 @@
       const particleUsage = particles.length / MAX_PARTICLES;
       let adjustedCount = count;
       
+      // LEVEL 18+ FIX: Additional particle reduction when player level is high
+      // Elite enemies (level 18+) have high HP and create more particles
+      if (playerStats.lvl >= 18) {
+        adjustedCount = Math.max(1, Math.floor(count * 0.8)); // 20% base reduction at high levels
+      }
+      
       // Scale down particle count when near capacity to maintain 60 FPS
       if (particleUsage > 0.8) {
-        adjustedCount = Math.max(1, Math.floor(count * 0.5)); // 50% reduction
+        adjustedCount = Math.max(1, Math.floor(adjustedCount * 0.5)); // 50% reduction
       } else if (particleUsage > 0.6) {
-        adjustedCount = Math.max(1, Math.floor(count * 0.7)); // 30% reduction
+        adjustedCount = Math.max(1, Math.floor(adjustedCount * 0.7)); // 30% reduction
       }
       
       for(let i=0; i<adjustedCount; i++) particles.push(new Particle(pos, color));
@@ -7919,6 +7943,25 @@
             disposalQueue.push({ geo: d.mesh.geometry, mat: d.mesh.material });
           }
         });
+      }
+      
+      // LEVEL 18+ FIX: Cap maximum enemies to prevent rendering freeze
+      // Elite enemies (level 18+) have high HP and accumulate more easily
+      const aliveEnemiesCount = enemies.filter(e => !e.isDead).length;
+      if (aliveEnemiesCount > MAX_ENEMIES) {
+        // Remove oldest alive enemies that are farthest from player
+        const aliveEnemies = enemies.filter(e => !e.isDead);
+        aliveEnemies.sort((a, b) => {
+          const distA = player.mesh.position.distanceTo(a.mesh.position);
+          const distB = player.mesh.position.distanceTo(b.mesh.position);
+          return distB - distA; // Sort by distance descending (farthest first)
+        });
+        
+        // Remove excess enemies (farthest ones)
+        const toRemove = aliveEnemiesCount - MAX_ENEMIES;
+        for (let i = 0; i < toRemove && i < aliveEnemies.length; i++) {
+          aliveEnemies[i].die(); // Trigger normal death cleanup
+        }
       }
       
       // Process disposal queue (increased to 30 per frame to handle high kill rates)
