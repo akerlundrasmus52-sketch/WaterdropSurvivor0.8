@@ -1149,7 +1149,7 @@
       <!-- Upgrade cards will be added dynamically -->
     </div>
     <button class="back-btn" id="shop-back-btn">BACK TO MENU</button>
-    <button class="back-btn" id="reset-progress-btn" style="background: #c0392b; border-color: #e74c3c; position: absolute; top: 20px; right: 20px; padding: 10px 30px; font-size: 16px;">⚠️ RESET</button>
+    <button class="back-btn" id="reset-progress-btn" aria-label="Reset game progress" style="background: #c0392b; border-color: #e74c3c; position: absolute; top: 20px; right: 20px; padding: 10px 30px; font-size: 16px;">⚠️ RESET</button>
   </div>
 
   <!-- Achievements Screen -->
@@ -6130,16 +6130,6 @@
           } 
         },
         { 
-          id: 'projectile_speed', 
-          icon: '🚀',
-          title: 'RAPID FIRE', 
-          desc: 'Projectile Speed +20% (Faster Travel)', 
-          apply: () => { 
-            // This would require updating projectile velocity, placeholder for now
-            showStatChange('Projectile Speed +20%');
-          } 
-        },
-        { 
           id: 'pickup_radius', 
           icon: '🌟',
           title: 'TREASURE SEEKER', 
@@ -6147,16 +6137,6 @@
           apply: () => { 
             goldMagnetRange *= 1.3;
             showStatChange('Gold Pickup Range +30%');
-          } 
-        },
-        { 
-          id: 'knockback', 
-          icon: '💢',
-          title: 'KNOCKBACK MASTER', 
-          desc: 'Knockback Force +25% (Push Enemies)', 
-          apply: () => { 
-            // Placeholder - would require updating knockback mechanics
-            showStatChange('Knockback +25%');
           } 
         },
         { 
@@ -6690,10 +6670,11 @@
 
     // Track active damage numbers to prevent DOM overflow (Bug 1 fix)
     const activeDamageNumbers = [];
-    // Use global MAX_DAMAGE_NUMBERS defined earlier
+    // MAX_DAMAGE_NUMBERS constant is defined at line ~1657 (top of file)
     
     function createDamageNumber(amount, pos, isCrit = false) {
       // Cap the number of active damage number elements (CRITICAL FIX for freeze)
+      // Uses global MAX_DAMAGE_NUMBERS = 25 defined at top of file
       if (activeDamageNumbers.length >= MAX_DAMAGE_NUMBERS) {
         // Remove oldest damage number early
         const oldest = activeDamageNumbers.shift();
