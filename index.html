@@ -4231,37 +4231,80 @@
         }
       }
       
-      // Main roads connecting key locations (scaled for 200×200 map):
-      // 1. Statue (0,0) to Windmill (24,24) - curved path
-      createCurvedRoad(0, 0, 24, 24, 25, 3);
+      // Main roads connecting key locations from the rondell (scaled for 200×200 map):
+      // Roads now start from the edge of the rondell (radius ~10) for better flow
       
-      // 2. Statue (0,0) to Cabin (-12,-12) - curved path
-      createCurvedRoad(0, 0, -12, -12, 15, -2);
+      // 1. Rondell to Windmill (24,24) - curved path from NE exit
+      const neAngle = Math.PI / 4; // 45 degrees
+      const neX = Math.cos(neAngle) * 10;
+      const neZ = Math.sin(neAngle) * 10;
+      createCurvedRoad(neX, neZ, 24, 24, 20, 3);
       
-      // 3. Statue (0,0) to Stonehenge (-36,-12) - curved path
-      createCurvedRoad(0, 0, -36, -12, 30, 5);
+      // 2. Rondell to Cabin (-12,-12) - curved path from SW exit
+      const swAngle = Math.PI * 5 / 4; // 225 degrees
+      const swX = Math.cos(swAngle) * 10;
+      const swZ = Math.sin(swAngle) * 10;
+      createCurvedRoad(swX, swZ, -12, -12, 15, -2);
       
-      // 4. REMOVED: Statue (0,0) to Pyramid (30,-30) - road was going through lake
-      // Instead, create road that goes around the lake to the east
-      createCurvedRoad(0, 0, 30, 0, 25, 2); // Road to east first
+      // 3. Rondell to Stonehenge (-36,-12) - curved path from W exit
+      const wAngle = Math.PI; // 180 degrees
+      const wX = Math.cos(wAngle) * 10;
+      const wZ = Math.sin(wAngle) * 10;
+      createCurvedRoad(wX, wZ, -36, -12, 30, 5);
+      
+      // 4. Rondell to Pyramid (30,-30) - road goes east then south (avoiding lake)
+      const eAngle = 0; // 0 degrees (east)
+      const eX = Math.cos(eAngle) * 10;
+      const eZ = Math.sin(eAngle) * 10;
+      createCurvedRoad(eX, eZ, 30, 0, 22, 2); // Road to east first
       createCurvedRoad(30, 0, 30, -30, 25, 3); // Then south to pyramid
       
-      // 5. Statue (0,0) to Mine (-24,24) - curved path
-      createCurvedRoad(0, 0, -24, 24, 25, 4);
+      // 5. Rondell to Mine (-24,24) - curved path from NW exit
+      const nwAngle = Math.PI * 3 / 4; // 135 degrees
+      const nwX = Math.cos(nwAngle) * 10;
+      const nwZ = Math.sin(nwAngle) * 10;
+      createCurvedRoad(nwX, nwZ, -24, 24, 25, 4);
       
       // 6. Windmill (24,24) to Farm (21,21) - short connecting road
       createCurvedRoad(40, 40, 35, 35, 8, 0);
       
-      // 7. Circular road around statue - smooth ring road for patrol area
-      for(let i = 0; i < 60; i++) {
+      // 7. Enhanced circular rondell around statue - beautiful roundabout with decorative pattern
+      // Outer ring
+      for(let i = 0; i < 80; i++) {
         const road = new THREE.Mesh(roadGeo, roadMat);
         road.rotation.x = -Math.PI/2;
-        const angle = (i / 60) * Math.PI * 2;
-        const x = Math.cos(angle) * 8; // Smaller circle around statue
-        const z = Math.sin(angle) * 8;
+        const angle = (i / 80) * Math.PI * 2;
+        const x = Math.cos(angle) * 10; // Larger circle around statue
+        const z = Math.sin(angle) * 10;
         road.position.set(x, 0.03, z);
         road.receiveShadow = true;
         scene.add(road);
+      }
+      
+      // Inner decorative ring (closer to statue)
+      for(let i = 0; i < 40; i++) {
+        const road = new THREE.Mesh(roadGeo, roadMat);
+        road.rotation.x = -Math.PI/2;
+        const angle = (i / 40) * Math.PI * 2;
+        const x = Math.cos(angle) * 6; // Inner circle
+        const z = Math.sin(angle) * 6;
+        road.position.set(x, 0.03, z);
+        road.receiveShadow = true;
+        scene.add(road);
+      }
+      
+      // Radial spokes connecting inner and outer rings (4 main directions)
+      for(let dir = 0; dir < 4; dir++) {
+        const angle = (dir / 4) * Math.PI * 2;
+        for(let r = 6; r <= 10; r += 0.5) {
+          const road = new THREE.Mesh(roadGeo, roadMat);
+          road.rotation.x = -Math.PI/2;
+          const x = Math.cos(angle) * r;
+          const z = Math.sin(angle) * r;
+          road.position.set(x, 0.03, z);
+          road.receiveShadow = true;
+          scene.add(road);
+        }
       }
       
       // 8. Map edge access roads (from edges to main areas)
