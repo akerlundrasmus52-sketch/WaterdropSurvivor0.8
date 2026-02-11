@@ -1620,6 +1620,7 @@
     let animatedRotations = []; // Managed array for rotation animations like chest lids (Bug 3 fix)
     let lastExpFlashTime = 0; // Throttle for EXP gem collection flash (Bug 5 fix)
     let lastTime = 0;
+    const MAX_FRAME_TIME = 1/30; // Maximum 33ms per frame to prevent large delta spikes
     let frameCount = 0;
     let isPaused = false;
     let isGameOver = false;
@@ -2153,9 +2154,9 @@
         camera.position.z = this.mesh.position.z + 20; // Isometric offset
         camera.lookAt(this.mesh.position);
 
-        // Bounds (Map is 400x400, from -200 to 200)
-        this.mesh.position.x = Math.max(-195, Math.min(195, this.mesh.position.x));
-        this.mesh.position.z = Math.max(-195, Math.min(195, this.mesh.position.z));
+        // Bounds (Map is 200x200, from -100 to 100)
+        this.mesh.position.x = Math.max(-95, Math.min(95, this.mesh.position.x));
+        this.mesh.position.z = Math.max(-95, Math.min(95, this.mesh.position.z));
       }
 
       dash(dx, dz) {
@@ -6656,6 +6657,8 @@
       playerStats.hpRegen = baseRegen;
       playerStats.gold = 0;
       waveCount = 0;
+      frameCount = 0; // Reset frame counter for spawn timing
+      lastTime = 0; // Reset lastTime for clean first-frame delta
       lastWaveEndTime = 0; // Reset wave timing
       miniBossesSpawned.clear(); // Reset mini-boss tracking
       gameStartTime = Date.now();
@@ -7187,7 +7190,8 @@
     function animate(time) {
       requestAnimationFrame(animate);
 
-      const dt = (time - lastTime) / 1000;
+      if (!lastTime) lastTime = time;
+      const dt = Math.min((time - lastTime) / 1000, MAX_FRAME_TIME);
       lastTime = time;
       gameTime = time / 1000; // Update game time in seconds
       
@@ -7195,7 +7199,12 @@
       const DT_THRESHOLD = 0.1; // 100ms threshold
       const isLagSpike = dt > DT_THRESHOLD;
 
-      if (isPaused || isGameOver || !isGameActive) {
+      // Skip rendering when on main menu to save GPU, but still render during pause/game over for visual effects
+      if (!isGameActive) {
+        return;
+      }
+
+      if (isPaused || isGameOver) {
         // Still render the scene so visual effects (camera shake, particles, and modals) are visible
         renderer.render(scene, camera);
         return;
