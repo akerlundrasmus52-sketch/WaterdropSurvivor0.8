@@ -1407,10 +1407,9 @@
           this.auraCircle.position.x = this.mesh.position.x;
           this.auraCircle.position.z = this.mesh.position.z;
           
-          // Scale based on aura range
-          const scale = weapons.aura.range * 2;
-          this.auraCircle.geometry.dispose();
-          this.auraCircle.geometry = new THREE.RingGeometry(scale - 0.5, scale, 32);
+          // Scale based on aura range - use mesh scaling instead of geometry recreation
+          const scale = weapons.aura.range;
+          this.auraCircle.scale.set(scale, scale, 1);
           
           // Rotate and pulse
           this.auraCircle.rotation.z += 0.02;
