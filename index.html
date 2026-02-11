@@ -7781,15 +7781,24 @@
       // Apply gold coin limit to prevent memory overflow
       if (goldCoins.length > MAX_GOLD_COINS) {
         const excess = goldCoins.splice(0, goldCoins.length - MAX_GOLD_COINS);
+        let totalGold = 0;
         excess.forEach(g => {
-          if (g.mesh && g.mesh.parent) {
+          // Prefer using the GoldCoin destroy method to keep cleanup consistent
+          if (g && typeof g.destroy === "function") {
+            g.destroy();
+          } else if (g.mesh && g.mesh.parent) {
             scene.remove(g.mesh);
             if (g.mesh.geometry) g.mesh.geometry.dispose();
             if (g.mesh.material) g.mesh.material.dispose();
           }
           // Auto-collect the gold value so player doesn't lose it
-          addGold(g.amount);
+          if (typeof g.amount === "number") {
+            totalGold += g.amount;
+          }
         });
+        if (totalGold > 0) {
+          addGold(totalGold);
+        }
       }
       
       // Apply EXP gem limit to prevent memory overflow
