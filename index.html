@@ -4892,6 +4892,12 @@
       renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Soft shadows help compensate for lower resolution
       document.getElementById('game-container').appendChild(renderer.domElement);
 
+      // Keep renderer resolution in sync with devicePixelRatio on resize
+      window.addEventListener('resize', function () {
+        if (!renderer) return;
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      });
       // Lights
       const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
       scene.add(ambientLight);
