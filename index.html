@@ -220,8 +220,8 @@
     .upgrade-card {
       background: linear-gradient(135deg, #0d1117, #1a1e2e, #0d1117); /* Unified dark theme */
       margin: 10px 0;
-      padding: 20px;
-      border-radius: 20px; /* More rounded for soft feel */
+      padding: 15px; /* Reduced from 20px - smaller boxes */
+      border-radius: 15px; /* Reduced from 20px - smaller boxes */
       border: 3px solid #3a4a5e; /* Darker border for unified theme */
       cursor: pointer;
       transition: all 0.2s ease;
@@ -232,10 +232,10 @@
         inset 0 2px 4px rgba(255,255,255,0.1); /* Top highlight */
       position: relative;
       overflow: hidden;
-      animation: constantLightningShimmer 3s ease-in-out infinite; /* Constant shimmer */
+      /* Removed constant lightning shimmer animation - only for special cards */
     }
     
-    /* Constant lightning shimmer animation for all cards */
+    /* Shimmer animation only for lightning-related cards */
     @keyframes constantLightningShimmer {
       0%, 100% { 
         box-shadow: 
@@ -254,8 +254,8 @@
       }
     }
     
-    /* Lightning effect pseudo-element - always visible with subtle pulse */
-    .upgrade-card::before {
+    /* Lightning effect pseudo-element - only for lightning weapon cards */
+    .upgrade-card.lightning-upgrade::before {
       content: '';
       position: absolute;
       top: -50%;
@@ -288,12 +288,17 @@
         inset 0 -4px 8px rgba(0,0,0,0.3),
         inset 0 2px 4px rgba(255,255,255,0.2); /* Brighter top highlight */
       border-color: #5DADE2; /* Electric blue border on hover */
-      animation-play-state: paused; /* Pause shimmer on hover */
     }
     
-    .upgrade-card:hover::before {
+    /* Lightning card hover effect */
+    .upgrade-card.lightning-upgrade:hover::before {
       animation: lightning-pulse 1s ease-in-out infinite;
       opacity: 0.6; /* More visible on hover */
+    }
+    
+    /* Add shimmer animation only for lightning cards */
+    .upgrade-card.lightning-upgrade {
+      animation: constantLightningShimmer 3s ease-in-out infinite;
     }
 
     .upgrade-card:active {
@@ -673,10 +678,10 @@
       transform: translateX(-50%);
     }
 
-    #start-game-btn { top: 50.25%; } /* Moved 3.5% lower from 46.75% */
-    #progression-btn { top: 59.75%; } /* Adjusted spacing - reduced from 61.25% */
-    #achievements-btn { top: 69.25%; } /* Adjusted spacing - reduced from 72.25% */
-    #credits-btn { top: min(78.75%, calc(100% - 60px)); } /* Adjusted spacing - reduced from 82.75% */
+    #start-game-btn { top: 55.25%; } /* Moved 5% lower from 50.25% */
+    #progression-btn { top: 64.75%; } /* Moved 5% lower from 59.75% */
+    #achievements-btn { top: 74.25%; } /* Moved 5% lower from 69.25% */
+    #credits-btn { top: min(83.75%, calc(100% - 60px)); } /* Moved 5% lower from 78.75% */
 
     .menu-btn::before {
       content: '';
@@ -1144,7 +1149,7 @@
       <!-- Upgrade cards will be added dynamically -->
     </div>
     <button class="back-btn" id="shop-back-btn">BACK TO MENU</button>
-    <button class="back-btn" id="reset-progress-btn" style="background: #c0392b; border-color: #e74c3c; position: absolute; bottom: 20px; right: 20px;">RESET PROGRESS</button>
+    <button class="back-btn" id="reset-progress-btn" aria-label="Reset game progress" style="background: #c0392b; border-color: #e74c3c; position: absolute; top: 20px; right: 20px; padding: 10px 30px; font-size: 16px;">⚠️ RESET</button>
   </div>
 
   <!-- Achievements Screen -->
@@ -1637,14 +1642,29 @@
     let levelUpInProgress = false; // Flag to prevent overlapping level up calls
     
     // Performance optimization - particle cap to prevent memory overflow and freezing
-    // Increased limits to prevent rendering freeze after Vampire upgrade (70-120 kills)
-    const MAX_PARTICLES = 250; // Increased from 150 to prevent freeze with multiple weapons
-    const MAX_PROJECTILES = 150; // Increased from 100 for better weapon performance
-    const MAX_METEORS = 40; // Increased from 30 for smoother gameplay
-    const MAX_DEBRIS = 120; // Increased from 100 for better visual effects
+    // CRITICAL FIX for freeze at ~177 kills caused by:
+    // 1. Particle explosion from Lightning + Vampire combo
+    // 2. Synchronous disposal of Three.js objects during render loop
+    // 3. Unbounded arrays growing faster than cleanup
+    const MAX_PARTICLES = 300; // Increased from 250 for better headroom
+    const MAX_PROJECTILES = 200; // Increased from 150 for high-intensity moments
+    const MAX_METEORS = 50; // Increased from 40 for smoother gameplay
+    const MAX_DEBRIS = 150; // Increased from 120 for better visual effects
     const MAX_FRAME_TIME = 1/30; // Maximum 33ms per frame to prevent large delta spikes
     const MAX_GOLD_COINS = 30; // Maximum gold coins on screen, excess auto-collected
     const MAX_EXP_GEMS = 50; // Maximum exp gems on screen, excess auto-collected
+    const MAX_LIGHTNING_CHAINS = 1; // CRITICAL: Limit chain lightning depth to prevent explosion
+    const MAX_DAMAGE_NUMBERS = 25; // Cap damage number DOM elements
+    
+    // Object pooling for particles to avoid create/dispose overhead
+    const particlePool = {
+      debris: [],
+      lightning: [],
+      simple: []
+    };
+    
+    // Deferred disposal queue - cleanup outside render loop
+    const disposalQueue = [];
     
     // Cache animated objects to avoid scene.traverse() every frame
     let animatedObjects = {
@@ -4211,37 +4231,80 @@
         }
       }
       
-      // Main roads connecting key locations (scaled for 200×200 map):
-      // 1. Statue (0,0) to Windmill (24,24) - curved path
-      createCurvedRoad(0, 0, 24, 24, 25, 3);
+      // Main roads connecting key locations from the rondell (scaled for 200×200 map):
+      // Roads now start from the edge of the rondell (radius ~10) for better flow
       
-      // 2. Statue (0,0) to Cabin (-12,-12) - curved path
-      createCurvedRoad(0, 0, -12, -12, 15, -2);
+      // 1. Rondell to Windmill (24,24) - curved path from NE exit
+      const neAngle = Math.PI / 4; // 45 degrees
+      const neX = Math.cos(neAngle) * 10;
+      const neZ = Math.sin(neAngle) * 10;
+      createCurvedRoad(neX, neZ, 24, 24, 20, 3);
       
-      // 3. Statue (0,0) to Stonehenge (-36,-12) - curved path
-      createCurvedRoad(0, 0, -36, -12, 30, 5);
+      // 2. Rondell to Cabin (-12,-12) - curved path from SW exit
+      const swAngle = Math.PI * 5 / 4; // 225 degrees
+      const swX = Math.cos(swAngle) * 10;
+      const swZ = Math.sin(swAngle) * 10;
+      createCurvedRoad(swX, swZ, -12, -12, 15, -2);
       
-      // 4. REMOVED: Statue (0,0) to Pyramid (30,-30) - road was going through lake
-      // Instead, create road that goes around the lake to the east
-      createCurvedRoad(0, 0, 30, 0, 25, 2); // Road to east first
+      // 3. Rondell to Stonehenge (-36,-12) - curved path from W exit
+      const wAngle = Math.PI; // 180 degrees
+      const wX = Math.cos(wAngle) * 10;
+      const wZ = Math.sin(wAngle) * 10;
+      createCurvedRoad(wX, wZ, -36, -12, 30, 5);
+      
+      // 4. Rondell to Pyramid (30,-30) - road goes east then south (avoiding lake)
+      const eAngle = 0; // 0 degrees (east)
+      const eX = Math.cos(eAngle) * 10;
+      const eZ = Math.sin(eAngle) * 10;
+      createCurvedRoad(eX, eZ, 30, 0, 22, 2); // Road to east first
       createCurvedRoad(30, 0, 30, -30, 25, 3); // Then south to pyramid
       
-      // 5. Statue (0,0) to Mine (-24,24) - curved path
-      createCurvedRoad(0, 0, -24, 24, 25, 4);
+      // 5. Rondell to Mine (-24,24) - curved path from NW exit
+      const nwAngle = Math.PI * 3 / 4; // 135 degrees
+      const nwX = Math.cos(nwAngle) * 10;
+      const nwZ = Math.sin(nwAngle) * 10;
+      createCurvedRoad(nwX, nwZ, -24, 24, 25, 4);
       
       // 6. Windmill (24,24) to Farm (21,21) - short connecting road
       createCurvedRoad(40, 40, 35, 35, 8, 0);
       
-      // 7. Circular road around statue - smooth ring road for patrol area
-      for(let i = 0; i < 60; i++) {
+      // 7. Enhanced circular rondell around statue - beautiful roundabout with decorative pattern
+      // Outer ring
+      for(let i = 0; i < 80; i++) {
         const road = new THREE.Mesh(roadGeo, roadMat);
         road.rotation.x = -Math.PI/2;
-        const angle = (i / 60) * Math.PI * 2;
-        const x = Math.cos(angle) * 8; // Smaller circle around statue
-        const z = Math.sin(angle) * 8;
+        const angle = (i / 80) * Math.PI * 2;
+        const x = Math.cos(angle) * 10; // Larger circle around statue
+        const z = Math.sin(angle) * 10;
         road.position.set(x, 0.03, z);
         road.receiveShadow = true;
         scene.add(road);
+      }
+      
+      // Inner decorative ring (closer to statue)
+      for(let i = 0; i < 40; i++) {
+        const road = new THREE.Mesh(roadGeo, roadMat);
+        road.rotation.x = -Math.PI/2;
+        const angle = (i / 40) * Math.PI * 2;
+        const x = Math.cos(angle) * 6; // Inner circle
+        const z = Math.sin(angle) * 6;
+        road.position.set(x, 0.03, z);
+        road.receiveShadow = true;
+        scene.add(road);
+      }
+      
+      // Radial spokes connecting inner and outer rings (4 main directions)
+      for(let dir = 0; dir < 4; dir++) {
+        const angle = (dir / 4) * Math.PI * 2;
+        for(let r = 6; r <= 10; r += 0.5) {
+          const road = new THREE.Mesh(roadGeo, roadMat);
+          road.rotation.x = -Math.PI/2;
+          const x = Math.cos(angle) * r;
+          const z = Math.sin(angle) * r;
+          road.position.set(x, 0.03, z);
+          road.receiveShadow = true;
+          scene.add(road);
+        }
       }
       
       // 8. Map edge access roads (from edges to main areas)
@@ -6065,20 +6128,56 @@
             playerStats.doubleCritChance += 0.25;
             showStatChange('Lucky Strikes +25% (Total: ' + Math.round(playerStats.doubleCritChance * 100) + '%)');
           } 
+        },
+        { 
+          id: 'pickup_radius', 
+          icon: '🌟',
+          title: 'TREASURE SEEKER', 
+          desc: 'Gold Pickup Range +30%', 
+          apply: () => { 
+            goldMagnetRange *= 1.3;
+            showStatChange('Gold Pickup Range +30%');
+          } 
+        },
+        { 
+          id: 'dodge_chance', 
+          icon: '👻',
+          title: 'PHANTOM STEP', 
+          desc: 'Dodge Chance +5% (Chance to Avoid Damage)', 
+          apply: () => { 
+            playerStats.dodgeChance = (playerStats.dodgeChance || 0) + 0.05;
+            showStatChange('Dodge Chance +5% (Total: ' + Math.round(playerStats.dodgeChance * 100) + '%)');
+          } 
+        },
+        { 
+          id: 'exp_multiplier', 
+          icon: '📈',
+          title: 'EXPERIENCE BOOST', 
+          desc: 'EXP Gain +10% (Faster Leveling)', 
+          apply: () => { 
+            GAME_CONFIG.expMultiplier = (GAME_CONFIG.expMultiplier || 1) * 1.1;
+            showStatChange('EXP Gain +10%');
+          } 
         }
       ];
 
       // --- SPECIAL LEVELS ---
       
       // Levels 4, 9, 17: WEAPON UPGRADE LEVELS
-      if ([4, 9, 17].includes(playerStats.lvl)) {
+      // After Level 15, weapon upgrades continue every 4 levels: 4, 9, 17, 21, 25, 29...
+      const weaponUpgradeLevels = [4, 9, 17];
+      for (let i = 21; i <= 50; i += 4) {
+        weaponUpgradeLevels.push(i);
+      }
+      
+      if (weaponUpgradeLevels.includes(playerStats.lvl)) {
         modal.querySelector('h2').innerText = 'WEAPON UPGRADE!';
         modal.querySelector('h2').style.fontSize = '36px';
         
         choices = [];
         
-        // Offer weapon upgrades for active weapons
-        if (weapons.gun.active && weapons.gun.level < 4) {
+        // Offer weapon upgrades for active weapons (NO LEVEL CAP - can upgrade indefinitely)
+        if (weapons.gun.active) {
           const nextLevel = weapons.gun.level + 1;
           choices.push({ 
             id: 'gun_upgrade', 
@@ -6094,7 +6193,7 @@
           });
         }
         
-        if (weapons.sword.active && weapons.sword.level < 4) {
+        if (weapons.sword.active) {
           const nextLevel = weapons.sword.level + 1;
           choices.push({ 
             id: 'sword_upgrade', 
@@ -6110,11 +6209,11 @@
           });
         }
         
-        if (weapons.aura.active && weapons.aura.level < 4) {
+        if (weapons.aura.active) {
           const nextLevel = weapons.aura.level + 1;
           const baseRange = 3; // Initial range
           const currentRange = weapons.aura.range;
-          const nextRange = Math.min(5, baseRange * (1 + (nextLevel * 0.10))); // +10% per level, cap at 5
+          const nextRange = baseRange * (1 + (nextLevel * 0.10)); // +10% per level, no cap
           const rangeIncrease = Math.round((nextRange - currentRange) * 10) / 10;
           
           choices.push({ 
@@ -6125,13 +6224,13 @@
             apply: () => { 
               weapons.aura.level++;
               weapons.aura.damage += 3;
-              weapons.aura.range = Math.min(5, baseRange * (1 + (weapons.aura.level * 0.10)));
+              weapons.aura.range = baseRange * (1 + (weapons.aura.level * 0.10));
               showStatChange(`Aura Level ${weapons.aura.level}: +3 Dmg, +${rangeIncrease.toFixed(1)} Range`);
             } 
           });
         }
         
-        if (weapons.meteor.active && weapons.meteor.level < 4) {
+        if (weapons.meteor.active) {
           const nextLevel = weapons.meteor.level + 1;
           choices.push({ 
             id: 'meteor_upgrade', 
@@ -6147,7 +6246,7 @@
           });
         }
         
-        if (weapons.lightning.active && weapons.lightning.level < 4) {
+        if (weapons.lightning.active) {
           const nextLevel = weapons.lightning.level + 1;
           const targetIncrease = nextLevel === 2 ? 3 : (nextLevel === 3 ? 2 : 1);
           choices.push({ 
@@ -6164,7 +6263,7 @@
           });
         }
         
-        if (weapons.doubleBarrel.active && weapons.doubleBarrel.level < 4) {
+        if (weapons.doubleBarrel.active) {
           const nextLevel = weapons.doubleBarrel.level + 1;
           choices.push({ 
             id: 'doublebarrel_upgrade', 
@@ -6180,7 +6279,7 @@
           });
         }
         
-        if (weapons.iceSpear.active && weapons.iceSpear.level < 4) {
+        if (weapons.iceSpear.active) {
           const nextLevel = weapons.iceSpear.level + 1;
           choices.push({ 
             id: 'icespear_upgrade', 
@@ -6197,7 +6296,7 @@
           });
         }
         
-        if (weapons.fireRing.active && weapons.fireRing.level < 4) {
+        if (weapons.fireRing.active) {
           const nextLevel = weapons.fireRing.level + 1;
           choices.push({ 
             id: 'firering_upgrade', 
@@ -6382,8 +6481,9 @@
           }
         ];
       } 
-      // Level 12, 18, 25: PERK UNLOCKS
-      else if ([12, 18, 25].includes(playerStats.lvl)) {
+      // Level 12: PERK UNLOCK (Only before Level 15 - class cap)
+      // After Level 15, classes are capped, perks are no longer offered
+      else if (playerStats.lvl === 12) {
         modal.querySelector('h2').innerText = 'PERK UNLOCK!';
         modal.querySelector('h2').style.fontSize = '40px';
         
@@ -6465,7 +6565,12 @@
           card.className += ' legendary';
         }
         
-        const iconHTML = u.icon ? `<div style="font-size: 48px; margin-bottom: 10px;">${u.icon}</div>` : '';
+        // Add lightning-upgrade class for lightning weapon cards
+        if (u.id && (u.id === 'lightning' || u.id === 'lightning_upgrade')) {
+          card.className += ' lightning-upgrade';
+        }
+        
+        const iconHTML = u.icon ? `<div style="font-size: 40px; margin-bottom: 8px;">${u.icon}</div>` : ''; /* Reduced icon size */
         card.innerHTML = `${iconHTML}<div class="upgrade-title">${u.title}</div><div class="upgrade-desc">${u.desc}</div>`;
         
         // Add dramatic entrance animation - alternate left/right
@@ -6565,10 +6670,11 @@
 
     // Track active damage numbers to prevent DOM overflow (Bug 1 fix)
     const activeDamageNumbers = [];
-    const MAX_DAMAGE_NUMBERS = 20;
+    // MAX_DAMAGE_NUMBERS constant is defined at line ~1657 (top of file)
     
     function createDamageNumber(amount, pos, isCrit = false) {
-      // Cap the number of active damage number elements (Bug 1 fix)
+      // Cap the number of active damage number elements (CRITICAL FIX for freeze)
+      // Uses global MAX_DAMAGE_NUMBERS = 25 defined at top of file
       if (activeDamageNumbers.length >= MAX_DAMAGE_NUMBERS) {
         // Remove oldest damage number early
         const oldest = activeDamageNumbers.shift();
@@ -7581,6 +7687,8 @@
           spawnParticles(enemy.mesh.position, 0x7B68EE, 6); // Purple sparks
           
           // Chain Lightning - Find nearest enemy within 8 units at 60% damage
+          // CRITICAL: Limited to 1 chain per target (follows MAX_LIGHTNING_CHAINS)
+          // This prevents particle explosion that caused freeze at ~177 kills
           const chainRange = 8;
           let chainTarget = null;
           let minChainDist = Infinity;
@@ -7764,14 +7872,16 @@
       // Entities Update
       enemies.forEach(e => e.update(dt, player.mesh.position));
       
-      // Apply particle limits to prevent memory overflow (CRITICAL FIX for freeze bug)
+      // CRITICAL FIX: Deferred disposal to prevent render freeze
+      // Instead of disposing immediately, queue objects for cleanup outside render loop
+      // Apply particle limits to prevent memory overflow
       if (particles.length > MAX_PARTICLES) {
         const excess = particles.splice(0, particles.length - MAX_PARTICLES);
         excess.forEach(p => {
           if (p.mesh && p.mesh.parent) {
             scene.remove(p.mesh);
-            if (p.mesh.geometry) p.mesh.geometry.dispose();
-            if (p.mesh.material) p.mesh.material.dispose();
+            // Queue for deferred disposal instead of immediate
+            disposalQueue.push({ geo: p.mesh.geometry, mat: p.mesh.material });
           }
         });
       }
@@ -7781,8 +7891,8 @@
         excess.forEach(p => {
           if (p.mesh && p.mesh.parent) {
             scene.remove(p.mesh);
-            if (p.mesh.geometry) p.mesh.geometry.dispose();
-            if (p.mesh.material) p.mesh.material.dispose();
+            // Queue for deferred disposal
+            disposalQueue.push({ geo: p.mesh.geometry, mat: p.mesh.material });
           }
         });
       }
@@ -7792,8 +7902,8 @@
         excess.forEach(m => {
           if (m.mesh && m.mesh.parent) {
             scene.remove(m.mesh);
-            if (m.mesh.geometry) m.mesh.geometry.dispose();
-            if (m.mesh.material) m.mesh.material.dispose();
+            // Queue for deferred disposal
+            disposalQueue.push({ geo: m.mesh.geometry, mat: m.mesh.material });
           }
         });
       }
@@ -7803,10 +7913,24 @@
         excess.forEach(d => {
           if (d.mesh && d.mesh.parent) {
             scene.remove(d.mesh);
-            if (d.mesh.geometry) d.mesh.geometry.dispose();
-            if (d.mesh.material) d.mesh.material.dispose();
+            // Queue for deferred disposal
+            disposalQueue.push({ geo: d.mesh.geometry, mat: d.mesh.material });
           }
         });
+      }
+      
+      // Process disposal queue (limit to 10 per frame to avoid stutter)
+      const disposalsThisFrame = Math.min(10, disposalQueue.length);
+      for (let i = 0; i < disposalsThisFrame; i++) {
+        const item = disposalQueue.shift();
+        if (item.geo) item.geo.dispose();
+        if (item.mat) {
+          if (Array.isArray(item.mat)) {
+            item.mat.forEach(m => m.dispose());
+          } else {
+            item.mat.dispose();
+          }
+        }
       }
       
       // Projectiles update returns false if dead
