@@ -1133,6 +1133,7 @@
     let particles = [];
     let damageNumbers = [];
     let meteors = [];
+    let temporaryLights = []; // Track lights with expiration times
     let lastTime = 0;
     let frameCount = 0;
     let isPaused = false;
@@ -1151,7 +1152,19 @@
     const MAX_FRAME_TIME = 1/30; // 33ms max delta-time to prevent physics explosions
     const CLEANUP_INTERVAL = 200; // Cleanup every 200ms instead of 500ms
     const PARTICLE_REDUCTION_START_LEVEL = 12; // Start reducing particles at level 12
+    const ANIMATION_FRAME_SKIP = 3; // Run animations every Nth frame for performance
+    const ADAPTIVE_QUALITY_THRESHOLD_MS = 25; // If frame time exceeds this (40fps), reduce quality
+    const ADAPTIVE_QUALITY_MIN_PARTICLES = 50; // Minimum particles before adaptive quality kicks in
+    const ADAPTIVE_QUALITY_REDUCTION_FACTOR = 0.5; // Reduce particles to 50% of max when quality drops
     let lastCleanupTime = 0;
+    
+    // Performance monitoring
+    let framePerformanceStats = {
+      lastFrameTime: 0,
+      avgFrameTime: 16.67, // Target 60fps
+      frameTimeSamples: [],
+      maxSamples: 60 // Track last 60 frames
+    };
     
     // Shared geometries for particle pooling (performance optimization)
     const sharedGeometries = {
@@ -1160,6 +1173,32 @@
       particleTetra: new THREE.TetrahedronGeometry(0.15),
       explosionPiece: new THREE.BoxGeometry(0.3, 0.3, 0.3),
       explosionTetra: new THREE.TetrahedronGeometry(0.25)
+    };
+
+    // Material pool for particle reuse (prevents memory leak from creating new materials)
+    // Materials are cached per color (expected format: hex number like 0xFF0000)
+    const materialPool = {
+      materials: new Map(), // Map<colorHex, Material>
+      getMaterial: function(color) {
+        // Returns a cached material for the given color, or creates and caches a new one
+        if (!this.materials.has(color)) {
+          const mat = new THREE.MeshPhysicalMaterial({ 
+            color: color,
+            transparent: true,
+            opacity: 0.9,
+            metalness: 0.3,
+            roughness: 0.4,
+            emissive: color,
+            emissiveIntensity: 0.3
+          });
+          this.materials.set(color, mat);
+        }
+        return this.materials.get(color);
+      },
+      dispose: function() {
+        this.materials.forEach(mat => mat.dispose());
+        this.materials.clear();
+      }
     };
 
     // Input - Twin-Stick Controls
@@ -1192,7 +1231,6 @@
       sword: { active: false, level: 0, damage: 30, cooldown: 1500, lastShot: 0, range: 3.5 },
       aura: { active: false, level: 0, damage: 5, cooldown: 500, lastShot: 0, range: 4 },
       meteor: { active: false, level: 0, damage: 60, cooldown: 2500, lastShot: 0, area: 5 },
-      lightning: { active: false, level: 0, damage: 25, cooldown: 3000, lastShot: 0, targets: 4 },
       doubleBarrel: { active: false, level: 0, damage: 25, cooldown: 1200, lastShot: 0, range: 12, spread: 0.3 }
     };
 
@@ -1859,15 +1897,10 @@
           const pieceGeo = i % 3 === 0 ? 
             sharedGeometries.explosionTetra : 
             sharedGeometries.explosionPiece;
+          // Use material pool for explosion pieces
           const piece = new THREE.Mesh(
             pieceGeo,
-            new THREE.MeshPhysicalMaterial({ 
-              color: enemyColor,
-              transparent: true,
-              opacity: 1,
-              emissive: enemyColor,
-              emissiveIntensity: 0.5
-            })
+            materialPool.getMaterial(enemyColor)
           );
           piece.position.copy(this.mesh.position);
           scene.add(piece);
@@ -1893,8 +1926,7 @@
             
             if (life <= 0 || piece.position.y < 0) {
               scene.remove(piece);
-              // Don't dispose shared geometry, only material
-              piece.material.dispose();
+              // Don't dispose shared geometry or pooled material
             } else {
               requestAnimationFrame(updatePiece);
             }
@@ -2159,15 +2191,8 @@
           sharedGeometries.particleTetra
         ];
         const geo = geoOptions[Math.floor(Math.random() * geoOptions.length)];
-        const mat = new THREE.MeshPhysicalMaterial({ 
-          color: color,
-          transparent: true,
-          opacity: 0.9,
-          metalness: 0.3,
-          roughness: 0.4,
-          emissive: color,
-          emissiveIntensity: 0.3
-        });
+        // Use material pool instead of creating new materials
+        const mat = materialPool.getMaterial(color);
         this.mesh = new THREE.Mesh(geo, mat);
         this.mesh.position.copy(pos);
         
@@ -2215,8 +2240,7 @@
         
         if (this.life <= 0) {
           scene.remove(this.mesh);
-          // Don't dispose shared geometry, only material
-          this.mesh.material.dispose();
+          // Don't dispose shared geometry or pooled material
           return false;
         }
         return true;
@@ -3446,6 +3470,11 @@
       goldCoins.push(new GoldCoin(x, z, amount));
     }
     
+    function addTemporaryLight(light, duration) {
+      scene.add(light);
+      temporaryLights.push({ light, expireTime: Date.now() + duration });
+    }
+    
     function addGold(amount) {
       // Apply gold bonus from permanent upgrades
       const bonus = PERMANENT_UPGRADES.goldEarned.effect(saveData.upgrades.goldEarned);
@@ -3688,21 +3717,6 @@
         particles.push(particle);
       }
       
-      // Lightning bolts - reduce count at high levels
-      const lightningCount = Math.floor(8 * particleReduction);
-      for(let i=0; i<lightningCount; i++) {
-        const angle = (i / lightningCount) * Math.PI * 2;
-        const lightning = new LightningBolt(
-          player.mesh.position.clone(),
-          new THREE.Vector3(
-            Math.cos(angle) * 5,
-            8,
-            Math.sin(angle) * 5
-          )
-        );
-        particles.push(lightning);
-      }
-      
       // Zoom effect
       const originalD = 20;
       const zoomD = 15;
@@ -3812,46 +3826,7 @@
       }
     }
     
-    class LightningBolt {
-      constructor(start, end) {
-        const points = [];
-        const segments = 8;
-        
-        for(let i=0; i<=segments; i++) {
-          const t = i / segments;
-          const x = start.x + (end.x - start.x) * t + (Math.random() - 0.5) * 1.5;
-          const y = start.y + (end.y - start.y) * t + (Math.random() - 0.5) * 1.5;
-          const z = start.z + (end.z - start.z) * t + (Math.random() - 0.5) * 1.5;
-          points.push(new THREE.Vector3(x, y, z));
-        }
-        
-        const geometry = new THREE.BufferGeometry().setFromPoints(points);
-        const material = new THREE.LineBasicMaterial({ 
-          color: 0x5DADE2, 
-          transparent: true, 
-          opacity: 1,
-          linewidth: 3
-        });
-        
-        this.mesh = new THREE.Line(geometry, material);
-        scene.add(this.mesh);
-        this.life = 20;
-        this.maxLife = 20;
-      }
-      
-      update() {
-        this.life--;
-        this.mesh.material.opacity = this.life / this.maxLife;
-        
-        if (this.life <= 0) {
-          scene.remove(this.mesh);
-          this.mesh.geometry.dispose();
-          this.mesh.material.dispose();
-          return false;
-        }
-        return true;
-      }
-    }
+
     
     class LevelUpParticle {
       constructor(pos, vel) {
@@ -4043,7 +4018,6 @@
             weapons.sword.cooldown *= 0.95;
             weapons.aura.cooldown *= 0.95;
             weapons.meteor.cooldown *= 0.95;
-            weapons.lightning.cooldown *= 0.95;
             weapons.doubleBarrel.cooldown *= 0.95;
             showStatChange('-5% All Weapon Cooldowns');
           } 
@@ -4120,22 +4094,6 @@
           });
         }
         
-        if (weapons.lightning.active && weapons.lightning.level < 4) {
-          const nextLevel = weapons.lightning.level + 1;
-          const targetIncrease = nextLevel === 2 ? 3 : (nextLevel === 3 ? 2 : 1);
-          choices.push({ 
-            id: 'lightning_upgrade', 
-            title: `LIGHTNING Level ${nextLevel}`, 
-            desc: `Damage +10, Targets +${targetIncrease}`, 
-            apply: () => { 
-              weapons.lightning.level++;
-              weapons.lightning.damage += 10;
-              weapons.lightning.targets += targetIncrease;
-              showStatChange(`Lightning Level ${weapons.lightning.level}`);
-            } 
-          });
-        }
-        
         if (weapons.doubleBarrel.active && weapons.doubleBarrel.level < 4) {
           const nextLevel = weapons.doubleBarrel.level + 1;
           choices.push({ 
@@ -4188,16 +4146,6 @@
               weapons.meteor.active = true;
               weapons.meteor.level = 1;
               showStatChange('New Weapon: Meteor');
-            } 
-          },
-          { 
-            id: 'lightning', 
-            title: 'LIGHTNING STRIKES', 
-            desc: 'Random lightning hits 4 enemies', 
-            apply: () => { 
-              weapons.lightning.active = true;
-              weapons.lightning.level = 1;
-              showStatChange('New Weapon: Lightning');
             } 
           },
           { 
@@ -4880,6 +4828,9 @@ Total Gold Earned: ${saveData.totalGoldEarned}
     function animate(time) {
       requestAnimationFrame(animate);
 
+      // Performance monitoring - track frame time
+      const frameStartTime = performance.now();
+
       // First-frame guard to prevent massive delta on startup
       if (!lastTime) {
         lastTime = time;
@@ -5004,23 +4955,11 @@ Total Gold Earned: ${saveData.totalGoldEarned}
             setTimeout(() => {
               projectiles.push(new Projectile(player.mesh.position.x, player.mesh.position.z, targetPosition));
               
-              // Muzzle flash light effect
+              // Muzzle flash light effect (tracked for cleanup)
               const flashLight = new THREE.PointLight(0xFFFF00, 2, 10);
               flashLight.position.copy(player.mesh.position);
               flashLight.position.y += 1;
-              scene.add(flashLight);
-              
-              // Remove flash after short time
-              setTimeout(() => {
-                scene.remove(flashLight);
-              }, 50);
-              
-              // Lightning effect from gun
-              const lightning = new LightningBolt(
-                player.mesh.position.clone(),
-                targetPosition.clone()
-              );
-              particles.push(lightning);
+              addTemporaryLight(flashLight, 50);
               
               // Muzzle flash particles (bright and intense)
               spawnParticles(player.mesh.position, 0xFFFF00, 5);
@@ -5079,51 +5018,6 @@ Total Gold Earned: ${saveData.totalGoldEarned}
         weapons.meteor.lastShot = time;
       }
 
-      // 5. LIGHTNING STRIKES
-      if (weapons.lightning.active && time - weapons.lightning.lastShot > weapons.lightning.cooldown) {
-        // Hit random enemies
-        const targets = [];
-        const aliveEnemies = enemies.filter(e => !e.isDead);
-        
-        // Select random enemies up to target count
-        const targetCount = Math.min(weapons.lightning.targets, aliveEnemies.length);
-        const shuffled = [...aliveEnemies].sort(() => 0.5 - Math.random());
-        
-        for(let i = 0; i < targetCount; i++) {
-          const enemy = shuffled[i];
-          targets.push(enemy);
-          
-          // Create lightning bolt from sky
-          const lightning = new LightningBolt(
-            new THREE.Vector3(enemy.mesh.position.x, 15, enemy.mesh.position.z),
-            enemy.mesh.position.clone()
-          );
-          particles.push(lightning);
-          
-          // Flash effect
-          const flashLight = new THREE.PointLight(0x5DADE2, 3, 15);
-          flashLight.position.copy(enemy.mesh.position);
-          flashLight.position.y += 2;
-          scene.add(flashLight);
-          setTimeout(() => scene.remove(flashLight), 100);
-          
-          // Damage enemy
-          const dmg = weapons.lightning.damage * playerStats.strength;
-          const isCrit = Math.random() < playerStats.critChance;
-          const finalDmg = isCrit ? dmg * playerStats.critDmg : dmg;
-          enemy.takeDamage(finalDmg);
-          createDamageNumber(finalDmg, enemy.mesh.position, isCrit);
-          
-          // Particles
-          spawnParticles(enemy.mesh.position, 0x5DADE2, 10);
-        }
-        
-        weapons.lightning.lastShot = time;
-        if (targets.length > 0) {
-          playSound('shoot');
-        }
-      }
-
       // 6. DOUBLE BARREL
       if (weapons.doubleBarrel.active && time - weapons.doubleBarrel.lastShot > weapons.doubleBarrel.cooldown) {
         // Find nearest enemy
@@ -5169,8 +5063,7 @@ Total Gold Earned: ${saveData.totalGoldEarned}
           const flashLight = new THREE.PointLight(0xFFFF00, 3, 12);
           flashLight.position.copy(player.mesh.position);
           flashLight.position.y += 1;
-          scene.add(flashLight);
-          setTimeout(() => scene.remove(flashLight), 80);
+          addTemporaryLight(flashLight, 80);
           
           spawnParticles(player.mesh.position, 0xFFFF00, 8);
           spawnParticles(player.mesh.position, 0xFFFFFF, 5);
@@ -5189,48 +5082,52 @@ Total Gold Earned: ${saveData.totalGoldEarned}
       goldCoins.forEach(g => g.update(player.mesh.position));
       particles = particles.filter(p => p.update() !== false);
       
-      // Windmill Rotation and Light Animation
-      scene.children.forEach(c => {
-        if (c.userData.isWindmill) {
-          // Rotate the blades stored in userData
-          if (c.userData.blades && c.userData.blades.length > 0) {
-            c.userData.blades[0].rotation.z += 0.05;
-            c.userData.blades[1].rotation.z += 0.05;
+      // Optimize animations: run only every Nth frame to reduce overhead
+      if (frameCount % ANIMATION_FRAME_SKIP === 0) {
+        const animSpeedMultiplier = ANIMATION_FRAME_SKIP; // Compensate for reduced frequency
+        // Windmill Rotation and Light Animation
+        scene.children.forEach(c => {
+          if (c.userData.isWindmill) {
+            // Rotate the blades stored in userData
+            if (c.userData.blades && c.userData.blades.length > 0) {
+              c.userData.blades[0].rotation.z += 0.05 * animSpeedMultiplier;
+              c.userData.blades[1].rotation.z += 0.05 * animSpeedMultiplier;
+            }
+            
+            // Animate windmill light (pulsing) with null check
+            if (c.userData.light && c.userData.light.material) {
+              c.userData.light.material.opacity = 0.8 + Math.sin(gameTime * 3) * 0.2;
+            }
           }
-          
-          // Animate windmill light (pulsing) with null check
-          if (c.userData.light && c.userData.light.material) {
-            c.userData.light.material.opacity = 0.8 + Math.sin(gameTime * 3) * 0.2;
+          // Water ripple animation
+          if (c.userData.isWaterRipple) {
+            c.userData.phase += 0.05 * animSpeedMultiplier;
+            const scale = 1 + Math.sin(c.userData.phase) * 0.1;
+            c.scale.set(scale, 1, scale);
+            c.material.opacity = 0.3 + Math.sin(c.userData.phase) * 0.2;
           }
-        }
-        // Water ripple animation
-        if (c.userData.isWaterRipple) {
-          c.userData.phase += 0.05;
-          const scale = 1 + Math.sin(c.userData.phase) * 0.1;
-          c.scale.set(scale, 1, scale);
-          c.material.opacity = 0.3 + Math.sin(c.userData.phase) * 0.2;
-        }
-      });
-      
-      // Waterfall animation
-      scene.traverse(obj => {
-        if (obj.userData.isWaterfall) {
-          obj.userData.phase += 0.05;
-          obj.material.opacity = 0.6 + Math.sin(obj.userData.phase) * 0.1;
-        }
-        if (obj.userData.isWaterDrop) {
-          obj.position.y -= obj.userData.speed;
-          if (obj.position.y < 0) {
-            obj.position.y = obj.userData.startY;
+        });
+        
+        // Waterfall animation
+        scene.traverse(obj => {
+          if (obj.userData.isWaterfall) {
+            obj.userData.phase += 0.05 * animSpeedMultiplier;
+            obj.material.opacity = 0.6 + Math.sin(obj.userData.phase) * 0.1;
           }
-        }
-        if (obj.userData.isSplash) {
-          obj.userData.phase += 0.1;
-          const scale = 1 + Math.sin(obj.userData.phase) * 0.3;
-          obj.scale.set(scale, 1, scale);
-          obj.material.opacity = 0.4 + Math.sin(obj.userData.phase) * 0.2;
-        }
-      });
+          if (obj.userData.isWaterDrop) {
+            obj.position.y -= obj.userData.speed * animSpeedMultiplier;
+            if (obj.position.y < 0) {
+              obj.position.y = obj.userData.startY;
+            }
+          }
+          if (obj.userData.isSplash) {
+            obj.userData.phase += 0.1 * animSpeedMultiplier;
+            const scale = 1 + Math.sin(obj.userData.phase) * 0.3;
+            obj.scale.set(scale, 1, scale);
+            obj.material.opacity = 0.4 + Math.sin(obj.userData.phase) * 0.2;
+          }
+        });
+      }
 
       // Performance-optimized cleanup with limits
       const now = Date.now();
@@ -5242,6 +5139,15 @@ Total Gold Earned: ${saveData.totalGoldEarned}
         expGems = expGems.filter(g => g.active);
         goldCoins = goldCoins.filter(g => g.active);
         
+        // Cleanup expired temporary lights
+        temporaryLights = temporaryLights.filter(item => {
+          if (now >= item.expireTime) {
+            scene.remove(item.light);
+            return false;
+          }
+          return true;
+        });
+        
         // Particle limits with proper disposal
         if (particles.length > MAX_PARTICLES) {
           const excess = particles.splice(0, particles.length - MAX_PARTICLES);
@@ -5250,13 +5156,11 @@ Total Gold Earned: ${saveData.totalGoldEarned}
             if (p.mesh && p.mesh.parent) {
               scene.remove(p.mesh);
             }
-            // Don't dispose shared geometries, only materials
+            // Don't dispose shared geometries or pooled materials
             if (p.mesh && p.mesh.geometry && !sharedGeoSet.has(p.mesh.geometry)) {
               p.mesh.geometry.dispose();
             }
-            if (p.mesh && p.mesh.material) {
-              p.mesh.material.dispose();
-            }
+            // Materials are now pooled, don't dispose them
           });
         }
         
@@ -5281,6 +5185,28 @@ Total Gold Earned: ${saveData.totalGoldEarned}
       }
 
       renderer.render(scene, camera);
+      
+      // Performance tracking - update stats after render
+      const frameEndTime = performance.now();
+      const frameTime = frameEndTime - frameStartTime;
+      framePerformanceStats.frameTimeSamples.push(frameTime);
+      if (framePerformanceStats.frameTimeSamples.length > framePerformanceStats.maxSamples) {
+        framePerformanceStats.frameTimeSamples.shift();
+      }
+      framePerformanceStats.avgFrameTime = framePerformanceStats.frameTimeSamples.reduce((a, b) => a + b, 0) / framePerformanceStats.frameTimeSamples.length;
+      framePerformanceStats.lastFrameTime = frameTime;
+      
+      // Adaptive quality: if average frame time exceeds threshold, reduce particle cap
+      if (framePerformanceStats.avgFrameTime > ADAPTIVE_QUALITY_THRESHOLD_MS && particles.length > ADAPTIVE_QUALITY_MIN_PARTICLES) {
+        // Aggressively remove particles when performance is poor
+        const targetCount = Math.floor(MAX_PARTICLES * ADAPTIVE_QUALITY_REDUCTION_FACTOR);
+        if (particles.length > targetCount) {
+          const excess = particles.splice(0, particles.length - targetCount);
+          excess.forEach(p => {
+            if (p.mesh && p.mesh.parent) scene.remove(p.mesh);
+          });
+        }
+      }
     }
 
     // Init Game
