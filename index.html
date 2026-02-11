@@ -7810,9 +7810,12 @@
             if (g.mesh.geometry) g.mesh.geometry.dispose();
             if (g.mesh.material) g.mesh.material.dispose();
           }
-          // Auto-collect the EXP so player doesn't lose it
-          addExp(GAME_CONFIG.expValue);
         });
+        // Auto-collect the EXP so player doesn't lose it (aggregate to avoid frame spikes)
+        const totalExp = excess.length * GAME_CONFIG.expValue;
+        if (totalExp > 0) {
+          addExp(totalExp);
+        }
       }
       
       // Projectiles update returns false if dead
