@@ -3842,10 +3842,10 @@
       kills500: { id: 'kills500', name: 'Mass Destroyer', desc: 'Kill 500 enemies', reward: 250, check: () => Math.max(saveData.bestKills || 0, playerStats.kills) >= 500, claimed: false },
       kills1000: { id: 'kills1000', name: 'Legendary Warrior', desc: 'Kill 1000 enemies', reward: 500, check: () => Math.max(saveData.bestKills || 0, playerStats.kills) >= 1000, claimed: false },
       
-      // Bug 3 fix: Check against total gold earned from saveData OR current run gold
-      gold100: { id: 'gold100', name: 'Small Fortune', desc: 'Collect 100 gold in one run', reward: 50, check: () => Math.max(saveData.totalGoldEarned || 0, playerStats.gold) >= 100, claimed: false },
-      gold500: { id: 'gold500', name: 'Treasure Hunter', desc: 'Collect 500 gold in one run', reward: 150, check: () => Math.max(saveData.totalGoldEarned || 0, playerStats.gold) >= 500, claimed: false },
-      gold1000: { id: 'gold1000', name: 'Gold Baron', desc: 'Collect 1000 gold in one run', reward: 300, check: () => Math.max(saveData.totalGoldEarned || 0, playerStats.gold) >= 1000, claimed: false },
+      // Bug 3 fix: Check against best gold in one run from saveData OR current run gold
+      gold100: { id: 'gold100', name: 'Small Fortune', desc: 'Collect 100 gold in one run', reward: 50, check: () => Math.max(saveData.bestGold || 0, playerStats.gold) >= 100, claimed: false },
+      gold500: { id: 'gold500', name: 'Treasure Hunter', desc: 'Collect 500 gold in one run', reward: 150, check: () => Math.max(saveData.bestGold || 0, playerStats.gold) >= 500, claimed: false },
+      gold1000: { id: 'gold1000', name: 'Gold Baron', desc: 'Collect 1000 gold in one run', reward: 300, check: () => Math.max(saveData.bestGold || 0, playerStats.gold) >= 1000, claimed: false },
       
       // These are per-run only, claimable during a run (no fix needed)
       dasher: { id: 'dasher', name: 'Dash Master', desc: 'Perform 50 dashes in one run', reward: 100, check: () => playerStats.dashesPerformed >= 50, claimed: false },
@@ -6623,11 +6623,10 @@
       
       // Update save data (Bug 3 fix - save all best stats for achievements)
       saveData.totalRuns++;
-      if (survivalTime > saveData.bestTime) saveData.bestTime = survivalTime;
-      if (playerStats.kills > saveData.bestKills) saveData.bestKills = playerStats.kills;
       saveData.bestKills = Math.max(saveData.bestKills || 0, playerStats.kills);
       saveData.bestLevel = Math.max(saveData.bestLevel || 0, playerStats.lvl);
       saveData.bestTime = Math.max(saveData.bestTime || 0, survivalTime);
+      saveData.bestGold = Math.max(saveData.bestGold || 0, playerStats.gold);
       saveSaveData();
       
       // Display game over screen
