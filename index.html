@@ -1152,10 +1152,14 @@
     const MAX_FRAME_TIME = 1/30; // 33ms max delta-time to prevent physics explosions
     const CLEANUP_INTERVAL = 200; // Cleanup every 200ms instead of 500ms
     const PARTICLE_REDUCTION_START_LEVEL = 12; // Start reducing particles at level 12
+    const ANIMATION_FRAME_SKIP = 3; // Run animations every Nth frame for performance
+    const ADAPTIVE_QUALITY_THRESHOLD_MS = 25; // If frame time exceeds this (40fps), reduce quality
+    const ADAPTIVE_QUALITY_MIN_PARTICLES = 50; // Minimum particles before adaptive quality kicks in
+    const ADAPTIVE_QUALITY_REDUCTION_FACTOR = 0.5; // Reduce particles to 50% of max when quality drops
     let lastCleanupTime = 0;
     
     // Performance monitoring
-    let performanceStats = {
+    let framePerformanceStats = {
       lastFrameTime: 0,
       avgFrameTime: 16.67, // Target 60fps
       frameTimeSamples: [],
@@ -1172,9 +1176,11 @@
     };
 
     // Material pool for particle reuse (prevents memory leak from creating new materials)
+    // Materials are cached per color (expected format: hex number like 0xFF0000)
     const materialPool = {
-      materials: new Map(), // color -> material
+      materials: new Map(), // Map<colorHex, Material>
       getMaterial: function(color) {
+        // Returns a cached material for the given color, or creates and caches a new one
         if (!this.materials.has(color)) {
           const mat = new THREE.MeshPhysicalMaterial({ 
             color: color,
@@ -5076,15 +5082,16 @@ Total Gold Earned: ${saveData.totalGoldEarned}
       goldCoins.forEach(g => g.update(player.mesh.position));
       particles = particles.filter(p => p.update() !== false);
       
-      // Optimize animations: run only every 3rd frame to reduce overhead
-      if (frameCount % 3 === 0) {
+      // Optimize animations: run only every Nth frame to reduce overhead
+      if (frameCount % ANIMATION_FRAME_SKIP === 0) {
+        const animSpeedMultiplier = ANIMATION_FRAME_SKIP; // Compensate for reduced frequency
         // Windmill Rotation and Light Animation
         scene.children.forEach(c => {
           if (c.userData.isWindmill) {
             // Rotate the blades stored in userData
             if (c.userData.blades && c.userData.blades.length > 0) {
-              c.userData.blades[0].rotation.z += 0.15; // 3x speed since running 1/3 as often
-              c.userData.blades[1].rotation.z += 0.15;
+              c.userData.blades[0].rotation.z += 0.05 * animSpeedMultiplier;
+              c.userData.blades[1].rotation.z += 0.05 * animSpeedMultiplier;
             }
             
             // Animate windmill light (pulsing) with null check
@@ -5094,7 +5101,7 @@ Total Gold Earned: ${saveData.totalGoldEarned}
           }
           // Water ripple animation
           if (c.userData.isWaterRipple) {
-            c.userData.phase += 0.15; // 3x speed since running 1/3 as often
+            c.userData.phase += 0.05 * animSpeedMultiplier;
             const scale = 1 + Math.sin(c.userData.phase) * 0.1;
             c.scale.set(scale, 1, scale);
             c.material.opacity = 0.3 + Math.sin(c.userData.phase) * 0.2;
@@ -5104,17 +5111,17 @@ Total Gold Earned: ${saveData.totalGoldEarned}
         // Waterfall animation
         scene.traverse(obj => {
           if (obj.userData.isWaterfall) {
-            obj.userData.phase += 0.15; // 3x speed since running 1/3 as often
+            obj.userData.phase += 0.05 * animSpeedMultiplier;
             obj.material.opacity = 0.6 + Math.sin(obj.userData.phase) * 0.1;
           }
           if (obj.userData.isWaterDrop) {
-            obj.position.y -= obj.userData.speed * 3; // 3x speed since running 1/3 as often
+            obj.position.y -= obj.userData.speed * animSpeedMultiplier;
             if (obj.position.y < 0) {
               obj.position.y = obj.userData.startY;
             }
           }
           if (obj.userData.isSplash) {
-            obj.userData.phase += 0.3; // 3x speed since running 1/3 as often
+            obj.userData.phase += 0.1 * animSpeedMultiplier;
             const scale = 1 + Math.sin(obj.userData.phase) * 0.3;
             obj.scale.set(scale, 1, scale);
             obj.material.opacity = 0.4 + Math.sin(obj.userData.phase) * 0.2;
@@ -5182,17 +5189,17 @@ Total Gold Earned: ${saveData.totalGoldEarned}
       // Performance tracking - update stats after render
       const frameEndTime = performance.now();
       const frameTime = frameEndTime - frameStartTime;
-      performanceStats.frameTimeSamples.push(frameTime);
-      if (performanceStats.frameTimeSamples.length > performanceStats.maxSamples) {
-        performanceStats.frameTimeSamples.shift();
+      framePerformanceStats.frameTimeSamples.push(frameTime);
+      if (framePerformanceStats.frameTimeSamples.length > framePerformanceStats.maxSamples) {
+        framePerformanceStats.frameTimeSamples.shift();
       }
-      performanceStats.avgFrameTime = performanceStats.frameTimeSamples.reduce((a, b) => a + b, 0) / performanceStats.frameTimeSamples.length;
-      performanceStats.lastFrameTime = frameTime;
+      framePerformanceStats.avgFrameTime = framePerformanceStats.frameTimeSamples.reduce((a, b) => a + b, 0) / framePerformanceStats.frameTimeSamples.length;
+      framePerformanceStats.lastFrameTime = frameTime;
       
-      // Adaptive quality: if average frame time exceeds 25ms (40fps), reduce particle cap
-      if (performanceStats.avgFrameTime > 25 && particles.length > 50) {
+      // Adaptive quality: if average frame time exceeds threshold, reduce particle cap
+      if (framePerformanceStats.avgFrameTime > ADAPTIVE_QUALITY_THRESHOLD_MS && particles.length > ADAPTIVE_QUALITY_MIN_PARTICLES) {
         // Aggressively remove particles when performance is poor
-        const targetCount = Math.floor(MAX_PARTICLES * 0.5);
+        const targetCount = Math.floor(MAX_PARTICLES * ADAPTIVE_QUALITY_REDUCTION_FACTOR);
         if (particles.length > targetCount) {
           const excess = particles.splice(0, particles.length - targetCount);
           excess.forEach(p => {
