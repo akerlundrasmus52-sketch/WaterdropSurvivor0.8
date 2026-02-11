@@ -1017,29 +1017,59 @@
 
     /* Responsive Media Queries */
     
-    /* Small screen optimization */
+    /* Small screen optimization (Bug 2 fix - more aggressive reductions) */
     @media (max-width: 480px) {
       .modal-content {
         width: 95%;
         max-width: 380px;
+        max-height: 85vh; /* Bug 2 fix */
+        overflow-y: auto; /* Bug 2 fix */
         padding: 15px; /* Reduced padding */
       }
       
       h2 {
-        font-size: 26px; /* Reduced from 32px */
+        font-size: 22px; /* Bug 2 fix - reduced from 26px */
+        margin-bottom: 8px; /* Bug 2 fix */
       }
       
       .upgrade-card {
-        padding: 15px; /* Reduced from 20px */
-        margin: 8px 0; /* Reduced from 10px */
+        padding: 12px; /* Bug 2 fix - reduced from 15px */
+        margin: 5px 0; /* Bug 2 fix - reduced from 8px */
       }
       
       .upgrade-title {
-        font-size: 18px; /* Reduced from 20px */
+        font-size: 16px; /* Bug 2 fix - reduced from 18px */
       }
       
       .upgrade-desc {
-        font-size: 12px; /* Reduced from 13px */
+        font-size: 11px; /* Bug 2 fix - reduced from 12px */
+      }
+    }
+    
+    /* Very small screens - even more compact (Bug 2 fix) */
+    @media (max-height: 600px) {
+      .modal-content {
+        max-height: 85vh;
+        overflow-y: auto;
+        padding: 10px;
+      }
+      
+      h2 {
+        font-size: 20px;
+        margin-bottom: 6px;
+      }
+      
+      .upgrade-card {
+        padding: 10px;
+        margin: 4px 0;
+      }
+      
+      .upgrade-title {
+        font-size: 15px;
+      }
+      
+      .upgrade-desc {
+        font-size: 10px;
       }
     }
     
@@ -2635,7 +2665,13 @@
       takeDamage(amount, isCrit = false) {
         const oldHp = this.hp;
         this.hp -= amount;
-        createDamageNumber(amount, this.mesh.position, isCrit);
+        
+        // Throttle damage numbers and particles for performance (Bug 1 fix)
+        const now = Date.now();
+        if (!this.lastDamageNumberTime || now - this.lastDamageNumberTime > 100) {
+          createDamageNumber(amount, this.mesh.position, isCrit);
+          this.lastDamageNumberTime = now;
+        }
         
         const hpPercent = this.hp / this.maxHp;
         const oldHpPercent = oldHp / this.maxHp;
@@ -2744,14 +2780,18 @@
         this.mesh.material.color.setHex(0xFFFFFF);
         
         // Enhanced splash particles using enemy's own color
-        const enemyColor = oldColor;
-        const particleCount = isCrit ? 8 : 3;
-        spawnParticles(this.mesh.position, enemyColor, particleCount);
-        
-        // Additional impact particles
-        if (isCrit) {
-          spawnParticles(this.mesh.position, enemyColor, 5);
-          spawnParticles(this.mesh.position, 0xFFFFFF, 3);
+        // Throttle particle spawning for performance (Bug 1 fix)
+        if (!this.lastParticleTime || now - this.lastParticleTime > 100) {
+          const enemyColor = oldColor;
+          const particleCount = isCrit ? 8 : 3;
+          spawnParticles(this.mesh.position, enemyColor, particleCount);
+          
+          // Additional impact particles
+          if (isCrit) {
+            spawnParticles(this.mesh.position, enemyColor, 5);
+            spawnParticles(this.mesh.position, 0xFFFFFF, 3);
+          }
+          this.lastParticleTime = now;
         }
         
         // Enhanced squishy deformation on hit
@@ -3795,24 +3835,28 @@
 
     // --- ACHIEVEMENTS SYSTEM ---
     const ACHIEVEMENTS = {
-      kills10: { id: 'kills10', name: 'First Blood', desc: 'Kill 10 enemies', reward: 25, check: () => playerStats.kills >= 10, claimed: false },
-      kills50: { id: 'kills50', name: 'Killer Instinct', desc: 'Kill 50 enemies', reward: 50, check: () => playerStats.kills >= 50, claimed: false },
-      kills100: { id: 'kills100', name: 'Century Slayer', desc: 'Kill 100 enemies', reward: 100, check: () => playerStats.kills >= 100, claimed: false },
-      kills500: { id: 'kills500', name: 'Mass Destroyer', desc: 'Kill 500 enemies', reward: 250, check: () => playerStats.kills >= 500, claimed: false },
-      kills1000: { id: 'kills1000', name: 'Legendary Warrior', desc: 'Kill 1000 enemies', reward: 500, check: () => playerStats.kills >= 1000, claimed: false },
+      // Bug 3 fix: Check against best stats from saveData OR current run stats
+      kills10: { id: 'kills10', name: 'First Blood', desc: 'Kill 10 enemies', reward: 25, check: () => Math.max(saveData.bestKills || 0, playerStats.kills) >= 10, claimed: false },
+      kills50: { id: 'kills50', name: 'Killer Instinct', desc: 'Kill 50 enemies', reward: 50, check: () => Math.max(saveData.bestKills || 0, playerStats.kills) >= 50, claimed: false },
+      kills100: { id: 'kills100', name: 'Century Slayer', desc: 'Kill 100 enemies', reward: 100, check: () => Math.max(saveData.bestKills || 0, playerStats.kills) >= 100, claimed: false },
+      kills500: { id: 'kills500', name: 'Mass Destroyer', desc: 'Kill 500 enemies', reward: 250, check: () => Math.max(saveData.bestKills || 0, playerStats.kills) >= 500, claimed: false },
+      kills1000: { id: 'kills1000', name: 'Legendary Warrior', desc: 'Kill 1000 enemies', reward: 500, check: () => Math.max(saveData.bestKills || 0, playerStats.kills) >= 1000, claimed: false },
       
-      gold100: { id: 'gold100', name: 'Small Fortune', desc: 'Collect 100 gold in one run', reward: 50, check: () => playerStats.gold >= 100, claimed: false },
-      gold500: { id: 'gold500', name: 'Treasure Hunter', desc: 'Collect 500 gold in one run', reward: 150, check: () => playerStats.gold >= 500, claimed: false },
-      gold1000: { id: 'gold1000', name: 'Gold Baron', desc: 'Collect 1000 gold in one run', reward: 300, check: () => playerStats.gold >= 1000, claimed: false },
+      // Bug 3 fix: Check against best gold in one run from saveData OR current run gold
+      gold100: { id: 'gold100', name: 'Small Fortune', desc: 'Collect 100 gold in one run', reward: 50, check: () => Math.max(saveData.bestGold || 0, playerStats.gold) >= 100, claimed: false },
+      gold500: { id: 'gold500', name: 'Treasure Hunter', desc: 'Collect 500 gold in one run', reward: 150, check: () => Math.max(saveData.bestGold || 0, playerStats.gold) >= 500, claimed: false },
+      gold1000: { id: 'gold1000', name: 'Gold Baron', desc: 'Collect 1000 gold in one run', reward: 300, check: () => Math.max(saveData.bestGold || 0, playerStats.gold) >= 1000, claimed: false },
       
+      // These are per-run only, claimable during a run (no fix needed)
       dasher: { id: 'dasher', name: 'Dash Master', desc: 'Perform 50 dashes in one run', reward: 100, check: () => playerStats.dashesPerformed >= 50, claimed: false },
-      survivor: { id: 'survivor', name: 'Time Warrior', desc: 'Survive for 10 minutes', reward: 200, check: () => playerStats.survivalTime >= 600, claimed: false },
+      survivor: { id: 'survivor', name: 'Time Warrior', desc: 'Survive for 10 minutes', reward: 200, check: () => Math.max(saveData.bestTime || 0, playerStats.survivalTime) >= 600, claimed: false },
       weaponMaster: { id: 'weaponMaster', name: 'Weapon Master', desc: 'Unlock all 3 weapons', reward: 150, check: () => playerStats.weaponsUnlocked >= 3, claimed: false },
       untouchable: { id: 'untouchable', name: 'Untouchable', desc: 'Take no damage for 3 minutes', reward: 300, check: () => playerStats.survivalTime >= 180 && playerStats.damageTaken === 0, claimed: false },
       
-      level10: { id: 'level10', name: 'Rising Star', desc: 'Reach Level 10', reward: 100, check: () => playerStats.lvl >= 10, claimed: false },
-      level25: { id: 'level25', name: 'Experienced Fighter', desc: 'Reach Level 25', reward: 250, check: () => playerStats.lvl >= 25, claimed: false },
-      level50: { id: 'level50', name: 'Master Champion', desc: 'Reach Level 50', reward: 500, check: () => playerStats.lvl >= 50, claimed: false }
+      // Bug 3 fix: Check against best level from saveData OR current level
+      level10: { id: 'level10', name: 'Rising Star', desc: 'Reach Level 10', reward: 100, check: () => Math.max(saveData.bestLevel || 0, playerStats.lvl) >= 10, claimed: false },
+      level25: { id: 'level25', name: 'Experienced Fighter', desc: 'Reach Level 25', reward: 250, check: () => Math.max(saveData.bestLevel || 0, playerStats.lvl) >= 25, claimed: false },
+      level50: { id: 'level50', name: 'Master Champion', desc: 'Reach Level 50', reward: 500, check: () => Math.max(saveData.bestLevel || 0, playerStats.lvl) >= 50, claimed: false }
     };
 
     function updateAchievementsScreen() {
@@ -6485,7 +6529,20 @@
       updateHUD();
     }
 
+    // Track active damage numbers to prevent DOM overflow (Bug 1 fix)
+    const activeDamageNumbers = [];
+    const MAX_DAMAGE_NUMBERS = 20;
+    
     function createDamageNumber(amount, pos, isCrit = false) {
+      // Cap the number of active damage number elements (Bug 1 fix)
+      if (activeDamageNumbers.length >= MAX_DAMAGE_NUMBERS) {
+        // Remove oldest damage number early
+        const oldest = activeDamageNumbers.shift();
+        if (oldest && oldest.parentNode) {
+          oldest.remove();
+        }
+      }
+      
       const div = document.createElement('div');
       div.className = isCrit ? 'damage-number critical' : 'damage-number normal';
       div.innerText = isCrit ? `CRITICAL!\n${Math.floor(amount)}` : Math.floor(amount);
@@ -6506,7 +6563,13 @@
       div.style.textAlign = 'center';
       
       document.body.appendChild(div);
-      setTimeout(() => div.remove(), 1000);
+      activeDamageNumbers.push(div);
+      
+      setTimeout(() => {
+        div.remove();
+        const idx = activeDamageNumbers.indexOf(div);
+        if (idx > -1) activeDamageNumbers.splice(idx, 1);
+      }, 1000);
     }
     
     // Message fade tracking to prevent memory leaks
@@ -6558,10 +6621,12 @@
       const survivalTime = Math.floor((Date.now() - gameStartTime) / 1000);
       const goldEarned = playerStats.gold - runStartGold;
       
-      // Update save data
+      // Update save data (Bug 3 fix - save all best stats for achievements)
       saveData.totalRuns++;
-      if (survivalTime > saveData.bestTime) saveData.bestTime = survivalTime;
-      if (playerStats.kills > saveData.bestKills) saveData.bestKills = playerStats.kills;
+      saveData.bestKills = Math.max(saveData.bestKills || 0, playerStats.kills);
+      saveData.bestLevel = Math.max(saveData.bestLevel || 0, playerStats.lvl);
+      saveData.bestTime = Math.max(saveData.bestTime || 0, survivalTime);
+      saveData.bestGold = Math.max(saveData.bestGold || 0, playerStats.gold);
       saveSaveData();
       
       // Display game over screen
