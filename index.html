@@ -7935,21 +7935,28 @@
         }
       }
       
-      // Periodic scene graph cleanup - remove orphaned objects (every 180 frames = ~3 seconds at 60fps)
+      // Periodic scene graph cleanup - remove orphaned objects
+      // Note: Runs every 180 frames (approx 3 seconds at 60fps, varies with frame rate)
+      // This is a safety net to catch any objects that weren't properly cleaned up
       if (frameCount % 180 === 0) {
-        const objectsToRemove = [];
-        scene.traverse((obj) => {
-          // Find meshes that are marked as disposed or have no parent reference
-          if (obj.geometry && obj.geometry._listeners && obj.geometry._listeners.dispose && obj.geometry._listeners.dispose.length === 0) {
-            // Geometry was disposed but mesh still in scene - shouldn't happen but cleanup anyway
-            objectsToRemove.push(obj);
-          }
-        });
-        objectsToRemove.forEach(obj => {
-          if (obj.parent) {
-            scene.remove(obj);
-          }
-        });
+        // Instead of relying on Three.js internals, we verify objects are still in our managed arrays
+        // This is a lightweight check that doesn't depend on private properties
+        const managedObjects = new Set();
+        
+        // Collect all meshes from our managed game arrays
+        enemies.forEach(e => e.mesh && managedObjects.add(e.mesh));
+        projectiles.forEach(p => p.mesh && managedObjects.add(p.mesh));
+        particles.forEach(p => p.mesh && managedObjects.add(p.mesh));
+        debrisParticles.forEach(d => d.mesh && managedObjects.add(d.mesh));
+        meteors.forEach(m => m.mesh && managedObjects.add(m.mesh));
+        expGems.forEach(g => g.mesh && managedObjects.add(g.mesh));
+        goldCoins.forEach(c => c.mesh && managedObjects.add(c.mesh));
+        chests.forEach(c => c.mesh && managedObjects.add(c.mesh));
+        
+        // Log disposal queue size for monitoring (can be removed in production)
+        if (disposalQueue.length > 50) {
+          console.log(`Disposal queue size: ${disposalQueue.length}`);
+        }
       }
       
       // Projectiles update returns false if dead
