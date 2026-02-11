@@ -2687,7 +2687,7 @@
           currentColor.b *= 0.8;
           
           // Blood spots (small red particles)
-          spawnParticles(this.mesh.position, 0x8B0000, 10);
+          spawnParticles(this.mesh.position, 0x8B0000, 5);
           playSound('hit');
         }
         
@@ -2708,7 +2708,7 @@
             this.mesh.add(hole);
           }
           
-          spawnParticles(this.mesh.position, 0x8B0000, 15);
+          spawnParticles(this.mesh.position, 0x8B0000, 8);
           playSound('hit');
         }
         
@@ -2721,7 +2721,7 @@
           
           // Spawn more limb pieces - OPTIMIZED: Use managed debris system
           const enemyColor = this.mesh.material.color.getHex();
-          for(let i = 0; i < 6; i++) { // Reduced from 8 to 6 for performance
+          for(let i = 0; i < 3; i++) { // Reduced from 8 to 6 for performance
             const limbSize = Math.random() * 0.2 + 0.2; // Varied limb sizes
             const vel = new THREE.Vector3(
               (Math.random() - 0.5) * 0.5, // Increased velocity
@@ -2738,8 +2738,8 @@
             ));
           }
           
-          spawnParticles(this.mesh.position, enemyColor, 20); // Reduced from 25
-          spawnParticles(this.mesh.position, 0x8B0000, 8); // Reduced from 10
+          spawnParticles(this.mesh.position, enemyColor, 10); // Reduced from 25
+          spawnParticles(this.mesh.position, 0x8B0000, 4); // Reduced from 10
           playSound('hit');
         }
         
@@ -2754,7 +2754,7 @@
           
           // Spawn broken pieces - OPTIMIZED: Use managed debris system
           const enemyColor = this.mesh.material.color.getHex();
-          for(let i = 0; i < 4; i++) { // Reduced from 5 to 4 for performance
+          for(let i = 0; i < 2; i++) { // Reduced from 5 to 4 for performance
             const vel = new THREE.Vector3(
               (Math.random() - 0.5) * 0.3,
               Math.random() * 0.4,
@@ -2771,7 +2771,7 @@
           }
           
           // Enhanced particles for destruction
-          spawnParticles(this.mesh.position, enemyColor, 15);
+          spawnParticles(this.mesh.position, enemyColor, 8);
           playSound('hit');
         }
         
@@ -2815,9 +2815,9 @@
         const enemyColor = this.mesh.material.color.getHex();
         
         // Main explosion - ENHANCED with more particles
-        spawnParticles(this.mesh.position, enemyColor, 40);
-        spawnParticles(this.mesh.position, 0xFFFFFF, 15);
-        spawnParticles(this.mesh.position, 0x8B0000, 12); // Blood particles
+        spawnParticles(this.mesh.position, enemyColor, 15);
+        spawnParticles(this.mesh.position, 0xFFFFFF, 5);
+        spawnParticles(this.mesh.position, 0x8B0000, 4); // Blood particles
         
         // Add explosion ring effect - MANAGED (Bug 3 fix)
         const ringGeo = new THREE.RingGeometry(0.1, 0.2, 16);
@@ -2843,7 +2843,7 @@
         });
         
         // Explode into more pieces - OPTIMIZED: Use managed debris system
-        const pieceCount = this.isMiniBoss ? 15 : 10; // Reduced from 25:15 for performance
+        const pieceCount = this.isMiniBoss ? 8 : 5; // Reduced from 25:15 for performance
         for(let i = 0; i < pieceCount; i++) {
           const angle = (i / pieceCount) * Math.PI * 2;
           const speed = this.isMiniBoss ? 0.6 : 0.4; // Faster explosion for mini-boss
