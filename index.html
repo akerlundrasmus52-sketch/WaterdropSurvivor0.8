@@ -1618,6 +1618,7 @@
     let cameraShake = null; // Managed camera shake state (Bug 3 fix)
     let fallingObjects = []; // Managed array for falling objects like water droplets (Bug 3 fix)
     let animatedRotations = []; // Managed array for rotation animations like chest lids (Bug 3 fix)
+    let lastExpFlashTime = 0; // Throttle for EXP gem collection flash (Bug 5 fix)
     let lastTime = 0;
     let frameCount = 0;
     let isPaused = false;
@@ -3468,18 +3469,22 @@
           ));
         }
         
-        // Screen flash effect
-        const flash = document.createElement('div');
-        flash.style.position = 'fixed';
-        flash.style.top = '0';
-        flash.style.left = '0';
-        flash.style.width = '100%';
-        flash.style.height = '100%';
-        flash.style.background = 'rgba(93, 173, 226, 0.3)';
-        flash.style.pointerEvents = 'none';
-        flash.style.zIndex = '500';
-        document.body.appendChild(flash);
-        setTimeout(() => flash.remove(), 100);
+        // Screen flash effect - throttled to max 1 per 500ms (Bug 5 fix)
+        const now = Date.now();
+        if (now - lastExpFlashTime > 500) {
+          const flash = document.createElement('div');
+          flash.style.position = 'fixed';
+          flash.style.top = '0';
+          flash.style.left = '0';
+          flash.style.width = '100%';
+          flash.style.height = '100%';
+          flash.style.background = 'rgba(93, 173, 226, 0.3)';
+          flash.style.pointerEvents = 'none';
+          flash.style.zIndex = '500';
+          document.body.appendChild(flash);
+          setTimeout(() => flash.remove(), 100);
+          lastExpFlashTime = now;
+        }
         
         scene.remove(this.mesh);
         this.mesh.geometry.dispose();
