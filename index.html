@@ -2668,10 +2668,13 @@
       takeDamage(amount, isCrit = false) {
         const oldHp = this.hp;
         this.hp -= amount;
+
+        // Calculate actual damage dealt (clamp to old HP and ignore non-positive values)
+        const actualDamage = Math.max(0, Math.min(amount, oldHp));
         
-        // Life steal healing
-        if (playerStats.lifeStealPercent > 0) {
-          const healAmount = amount * playerStats.lifeStealPercent;
+        // Life steal healing based on actual damage dealt
+        if (playerStats.lifeStealPercent > 0 && actualDamage > 0) {
+          const healAmount = actualDamage * playerStats.lifeStealPercent;
           playerStats.hp = Math.min(playerStats.maxHp, playerStats.hp + healAmount);
         }
         
