@@ -1133,6 +1133,7 @@
     let particles = [];
     let damageNumbers = [];
     let meteors = [];
+    let temporaryLights = []; // Track lights with expiration times
     let lastTime = 0;
     let frameCount = 0;
     let isPaused = false;
@@ -3455,6 +3456,11 @@
       goldCoins.push(new GoldCoin(x, z, amount));
     }
     
+    function addTemporaryLight(light, duration) {
+      scene.add(light);
+      temporaryLights.push({ light, expireTime: Date.now() + duration });
+    }
+    
     function addGold(amount) {
       // Apply gold bonus from permanent upgrades
       const bonus = PERMANENT_UPGRADES.goldEarned.effect(saveData.upgrades.goldEarned);
@@ -4932,16 +4938,11 @@ Total Gold Earned: ${saveData.totalGoldEarned}
             setTimeout(() => {
               projectiles.push(new Projectile(player.mesh.position.x, player.mesh.position.z, targetPosition));
               
-              // Muzzle flash light effect
+              // Muzzle flash light effect (tracked for cleanup)
               const flashLight = new THREE.PointLight(0xFFFF00, 2, 10);
               flashLight.position.copy(player.mesh.position);
               flashLight.position.y += 1;
-              scene.add(flashLight);
-              
-              // Remove flash after short time
-              setTimeout(() => {
-                scene.remove(flashLight);
-              }, 50);
+              addTemporaryLight(flashLight, 50);
               
               // Muzzle flash particles (bright and intense)
               spawnParticles(player.mesh.position, 0xFFFF00, 5);
@@ -5045,8 +5046,7 @@ Total Gold Earned: ${saveData.totalGoldEarned}
           const flashLight = new THREE.PointLight(0xFFFF00, 3, 12);
           flashLight.position.copy(player.mesh.position);
           flashLight.position.y += 1;
-          scene.add(flashLight);
-          setTimeout(() => scene.remove(flashLight), 80);
+          addTemporaryLight(flashLight, 80);
           
           spawnParticles(player.mesh.position, 0xFFFF00, 8);
           spawnParticles(player.mesh.position, 0xFFFFFF, 5);
@@ -5121,6 +5121,15 @@ Total Gold Earned: ${saveData.totalGoldEarned}
         expGems = expGems.filter(g => g.active);
         goldCoins = goldCoins.filter(g => g.active);
         
+        // Cleanup expired temporary lights
+        temporaryLights = temporaryLights.filter(item => {
+          if (now >= item.expireTime) {
+            scene.remove(item.light);
+            return false;
+          }
+          return true;
+        });
+        
         // Particle limits with proper disposal
         if (particles.length > MAX_PARTICLES) {
           const excess = particles.splice(0, particles.length - MAX_PARTICLES);
@@ -5129,13 +5138,11 @@ Total Gold Earned: ${saveData.totalGoldEarned}
             if (p.mesh && p.mesh.parent) {
               scene.remove(p.mesh);
             }
-            // Don't dispose shared geometries, only materials
+            // Don't dispose shared geometries or pooled materials
             if (p.mesh && p.mesh.geometry && !sharedGeoSet.has(p.mesh.geometry)) {
               p.mesh.geometry.dispose();
             }
-            if (p.mesh && p.mesh.material) {
-              p.mesh.material.dispose();
-            }
+            // Materials are now pooled, don't dispose them
           });
         }
         
