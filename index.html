@@ -1154,6 +1154,14 @@
     const PARTICLE_REDUCTION_START_LEVEL = 12; // Start reducing particles at level 12
     let lastCleanupTime = 0;
     
+    // Performance monitoring
+    let performanceStats = {
+      lastFrameTime: 0,
+      avgFrameTime: 16.67, // Target 60fps
+      frameTimeSamples: [],
+      maxSamples: 60 // Track last 60 frames
+    };
+    
     // Shared geometries for particle pooling (performance optimization)
     const sharedGeometries = {
       particleBox: new THREE.BoxGeometry(0.2, 0.2, 0.2),
@@ -4814,6 +4822,9 @@ Total Gold Earned: ${saveData.totalGoldEarned}
     function animate(time) {
       requestAnimationFrame(animate);
 
+      // Performance monitoring - track frame time
+      const frameStartTime = performance.now();
+
       // First-frame guard to prevent massive delta on startup
       if (!lastTime) {
         lastTime = time;
@@ -5167,6 +5178,28 @@ Total Gold Earned: ${saveData.totalGoldEarned}
       }
 
       renderer.render(scene, camera);
+      
+      // Performance tracking - update stats after render
+      const frameEndTime = performance.now();
+      const frameTime = frameEndTime - frameStartTime;
+      performanceStats.frameTimeSamples.push(frameTime);
+      if (performanceStats.frameTimeSamples.length > performanceStats.maxSamples) {
+        performanceStats.frameTimeSamples.shift();
+      }
+      performanceStats.avgFrameTime = performanceStats.frameTimeSamples.reduce((a, b) => a + b, 0) / performanceStats.frameTimeSamples.length;
+      performanceStats.lastFrameTime = frameTime;
+      
+      // Adaptive quality: if average frame time exceeds 25ms (40fps), reduce particle cap
+      if (performanceStats.avgFrameTime > 25 && particles.length > 50) {
+        // Aggressively remove particles when performance is poor
+        const targetCount = Math.floor(MAX_PARTICLES * 0.5);
+        if (particles.length > targetCount) {
+          const excess = particles.splice(0, particles.length - targetCount);
+          excess.forEach(p => {
+            if (p.mesh && p.mesh.parent) scene.remove(p.mesh);
+          });
+        }
+      }
     }
 
     // Init Game
