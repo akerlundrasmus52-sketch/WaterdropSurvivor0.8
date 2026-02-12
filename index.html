@@ -1620,7 +1620,7 @@
     let fallingObjects = []; // Managed array for falling objects like water droplets (Bug 3 fix)
     let animatedRotations = []; // Managed array for rotation animations like chest lids (Bug 3 fix)
     let lastExpFlashTime = 0; // Throttle for EXP gem collection flash (Bug 5 fix)
-    let lastTime = 0;
+    let lastTime = null;
     let frameCount = 0;
     let isPaused = false;
     let isGameOver = false;
@@ -7344,6 +7344,20 @@
     // --- MAIN LOOP ---
     function animate(time) {
       requestAnimationFrame(animate);
+
+      // Safety check: Ensure Three.js components are initialized before rendering
+      if (!renderer || !scene || !camera) {
+        return;
+      }
+
+      // Initialize lastTime on first frame to prevent huge dt
+      if (lastTime === null) {
+        lastTime = time;
+        gameTime = time / 1000; // Initialize gameTime for visual effects
+        // Render the initial frame before returning to avoid blank screen
+        renderer.render(scene, camera);
+        return;
+      }
 
       const dt = (time - lastTime) / 1000;
       lastTime = time;
