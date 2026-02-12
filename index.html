@@ -360,6 +360,7 @@
       transition: transform 0.1s, box-shadow 0.1s;
       box-shadow: 0 4px 8px rgba(0,0,0,0.5), 0 0 15px rgba(93,173,226,0.4), inset 0 0 0 2px rgba(0,0,0,0.4); /* Blue glow */
       min-height: 60px; /* Minimum height for text-only cards */
+      max-height: 120px; /* Maximum height to prevent overly large cards */
     }
 
     .upgrade-card:hover {
@@ -6772,16 +6773,13 @@
         lvlDisplay.innerText = `LVL: ${playerStats.lvl}`;
       }
       
-      // Show gold and kills in status bar when they change
+      // Update gold and kills in status bar (only if not showing upgrade message)
+      const statusBar = document.getElementById('unified-status-bar');
       const statusText = document.getElementById('status-bar-text');
-      if (statusText && !statusText.innerText.includes('Upgrade') && !statusText.innerText.includes('Weapon')) {
+      if (statusText && statusBar && !statusBar.dataset.showingMessage) {
         statusText.innerText = `GOLD: ${playerStats.gold} | KILLS: ${playerStats.kills}`;
         statusText.style.color = '#FFD700';
-        
-        const statusBar = document.getElementById('unified-status-bar');
-        if (statusBar) {
-          statusBar.classList.add('show');
-        }
+        statusBar.classList.add('show');
       }
       
       // Legacy elements - keep for backwards compatibility but hide
@@ -6917,6 +6915,9 @@
       // Update text with yellow/blue coloring
       statusText.innerText = text;
       
+      // Mark that we're showing a message
+      statusBar.dataset.showingMessage = 'true';
+      
       // Determine color based on message type
       if (text.includes('GOLD') || text.includes('Gold') || text.includes('+') || text.includes('New Weapon')) {
         statusText.style.color = '#FFD700'; // Yellow for gold and positive changes
@@ -6926,12 +6927,14 @@
       
       // Show with swoosh animation
       statusBar.classList.remove('show');
-      void statusBar.offsetWidth; // Force reflow
+      // Force reflow to restart CSS animation - this ensures the animation plays even if class is re-added quickly
+      void statusBar.offsetWidth;
       statusBar.classList.add('show');
       
       // Clear after 3 seconds with fade out
       statusMessageFadeTimeout = setTimeout(() => {
         statusBar.classList.remove('show');
+        delete statusBar.dataset.showingMessage;
       }, 3000);
     }
 
