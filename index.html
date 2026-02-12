@@ -1620,7 +1620,7 @@
     let fallingObjects = []; // Managed array for falling objects like water droplets (Bug 3 fix)
     let animatedRotations = []; // Managed array for rotation animations like chest lids (Bug 3 fix)
     let lastExpFlashTime = 0; // Throttle for EXP gem collection flash (Bug 5 fix)
-    let lastTime = 0;
+    let lastTime = null;
     let frameCount = 0;
     let isPaused = false;
     let isGameOver = false;
@@ -7351,7 +7351,7 @@
       }
 
       // Initialize lastTime on first frame to prevent huge dt
-      if (lastTime === 0) {
+      if (lastTime === null) {
         lastTime = time;
       }
 
