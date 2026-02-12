@@ -1,0 +1,14 @@
+# Backups
+*.backup
+*.backup2
+*.backup3
+*.old
+index_new.html
+test_game.html
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
