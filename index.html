@@ -43,826 +43,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="screen-orientation" content="portrait">
   <title>Water Drop Survivor</title>
-  <style>
-    html {
-      width: 100%;
-      height: 100%;
-      margin: 0;
-      padding: 0;
-    }
-
-    body {
-      margin: 0;
-      padding: 0;
-      overflow: hidden;
-      background-color: #E6F2FF; /* Soft blue to match loading screen theme */
-      font-family: 'M PLUS Rounded 1c', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      touch-action: none;
-      user-select: none;
-      -webkit-user-select: none;
-      width: 100%;
-      height: 100%;
-    }
-
-    #game-container {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      z-index: 1;
-    }
-
-    #ui-layer {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      z-index: 10;
-      pointer-events: none;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-    }
-
-    /* HUD */
-    .hud-top {
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .bar-container {
-      width: 200px;
-      height: 24px;
-      background: linear-gradient(to bottom, #3a3a3a 0%, #3a3a3a 50%, #6a6a6a 50%, #6a6a6a 100%);
-      border-radius: 12px;
-      border: 3px solid #2a2a2a;
-      overflow: hidden;
-      position: relative;
-      box-shadow: 0 3px 8px rgba(0,0,0,0.3), inset 0 2px 4px rgba(0,0,0,0.2), 0 0 15px rgba(0,0,0,0.5);
-    }
-    
-    .bar-wrapper {
-      position: relative;
-      width: 200px;
-    }
-
-    .bar-fill {
-      height: 100%;
-      width: 100%;
-      transition: width 0.3s ease-out;
-      box-shadow: inset 0 2px 4px rgba(255,255,255,0.2);
-      border-radius: 12px;
-    }
-    
-    .bar-text {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      color: white;
-      font-weight: bold;
-      font-size: 12px;
-      text-shadow: 1px 1px 3px rgba(0,0,0,0.9), -1px -1px 3px rgba(0,0,0,0.9), 
-                   1px -1px 3px rgba(0,0,0,0.9), -1px 1px 3px rgba(0,0,0,0.9),
-                   0 0 5px rgba(0,0,0,1);
-      pointer-events: none;
-      z-index: 2;
-      white-space: nowrap;
-    }
-
-    #hp-fill { 
-      background: linear-gradient(to bottom, #FF4444, #CC0000);
-      width: 100%;
-      box-shadow: 0 0 10px rgba(255,68,68,0.8), 0 0 20px rgba(255,68,68,0.4), inset 0 2px 4px rgba(255,255,255,0.2);
-    }
-    #exp-fill { 
-      background: linear-gradient(to bottom, #5DADE2, #3498DB);
-      width: 0%;
-      box-shadow: 0 0 10px rgba(93,173,226,0.8), 0 0 20px rgba(93,173,226,0.4), inset 0 2px 4px rgba(255,255,255,0.2);
-    }
-
-    .stat-text {
-      color: #8B4513;
-      font-weight: bold;
-      text-shadow: 1px 1px 2px rgba(0,0,0,0.5), -1px -1px 1px rgba(255,255,255,0.3), 0 0 5px rgba(139,69,19,0.3);
-      font-size: 14px;
-      margin-top: 4px;
-    }
-
-    /* Joystick */
-    #joystick-zone {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      pointer-events: auto;
-      touch-action: none;
-    }
-    
-    .joystick-outer {
-      position: absolute;
-      width: 120px;
-      height: 120px;
-      border-radius: 50%;
-      background: rgba(93, 173, 226, 0.3);
-      border: 3px solid rgba(93, 173, 226, 0.5);
-      display: none;
-      pointer-events: none;
-    }
-    
-    .joystick-inner {
-      position: absolute;
-      width: 50px;
-      height: 50px;
-      border-radius: 50%;
-      background: rgba(93, 173, 226, 0.7);
-      border: 2px solid rgba(255, 255, 255, 0.8);
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      pointer-events: none;
-    }
-
-    /* Level Up Modal */
-    #levelup-modal {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(40, 40, 40, 0.9);
-      display: none; /* Flex when active */
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      pointer-events: auto;
-      z-index: 20;
-    }
-
-    .modal-content {
-      background: linear-gradient(to bottom, #4a4a4a, #3a3a3a);
-      padding: 25px;
-      border-radius: 20px;
-      border: 4px solid #5DADE2;
-      width: 80%;
-      max-width: 400px;
-      text-align: center;
-      box-shadow: 0 15px 30px rgba(0,0,0,0.7), 0 0 40px rgba(93,173,226,0.5), inset 0 0 30px rgba(93,173,226,0.1);
-    }
-
-    h2 {
-      color: #5DADE2;
-      margin-top: 0;
-      font-size: 32px;
-      text-shadow: 0 0 10px rgba(93,173,226,0.8), 0 0 20px rgba(93,173,226,0.6), 0 0 30px rgba(93,173,226,0.4), 2px 2px 4px rgba(0,0,0,0.8);
-    }
-
-    .upgrade-card {
-      background: linear-gradient(to bottom, #5a5a5a, #4a4a4a);
-      margin: 10px 0;
-      padding: 15px;
-      border-radius: 15px;
-      border: 3px solid #2a2a2a;
-      cursor: pointer;
-      transition: transform 0.1s, box-shadow 0.1s;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.3), 0 0 10px rgba(93,173,226,0.2);
-    }
-
-    .upgrade-card:hover {
-      box-shadow: 0 6px 12px rgba(93,173,226,0.5), 0 0 20px rgba(93,173,226,0.4);
-    }
-
-    .upgrade-card:active {
-      transform: scale(0.95);
-    }
-
-    .upgrade-title {
-      font-weight: bold;
-      color: #FFD700;
-      font-size: 18px;
-      text-shadow: 0 0 8px rgba(255,215,0,0.6), 0 0 15px rgba(255,215,0,0.3), 1px 1px 2px rgba(0,0,0,0.8);
-    }
-
-    .upgrade-desc {
-      font-size: 12px;
-      color: #bbb;
-      display: none; /* Hidden - only show funny names */
-    }
-
-    /* Damage Numbers */
-    .damage-number {
-      position: absolute;
-      font-weight: bold;
-      font-size: 16px;
-      pointer-events: none;
-      animation: floatUp 1s forwards;
-      z-index: 1000;
-    }
-    
-    .damage-number.critical {
-      color: #FFD700;
-      text-shadow: -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000, 0 0 10px rgba(255,215,0,0.8), 0 0 20px rgba(255,215,0,0.5), 2px 2px 4px rgba(0,0,0,0.9);
-      font-size: 24px;
-    }
-    
-    .damage-number.normal {
-      color: #FFFFFF;
-      text-shadow: -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000, 0 0 8px rgba(93,173,226,0.6), 0 0 15px rgba(93,173,226,0.3), 2px 2px 3px rgba(0,0,0,0.8);
-    }
-
-    @keyframes floatUp {
-      0% { transform: translateY(0) scale(1); opacity: 1; }
-      100% { transform: translateY(-60px) scale(1.3); opacity: 0; }
-    }
-
-    /* Game Over Screen */
-    #gameover-screen {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0,0,0,0.8);
-      display: none;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      pointer-events: auto;
-      z-index: 30;
-      color: white;
-    }
-
-    .btn {
-      background: #5A3A31;
-      color: white;
-      border: none;
-      padding: 15px 30px;
-      font-size: 20px;
-      border-radius: 50px;
-      margin-top: 20px;
-      font-weight: bold;
-      box-shadow: 0 4px 0 #3a2a21, 0 0 0 rgba(90,58,49,0);
-      transition: all 0.15s ease;
-      cursor: pointer;
-      position: relative;
-      overflow: hidden;
-    }
-    
-    .btn::before {
-      content: '';
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: 0;
-      height: 0;
-      border-radius: 50%;
-      background: rgba(255, 255, 255, 0.5);
-      transform: translate(-50%, -50%);
-      transition: width 0.6s, height 0.6s;
-    }
-    
-    .btn:hover {
-      box-shadow: 0 6px 0 #3a2a21, 0 0 20px rgba(90,58,49,0.6);
-      filter: brightness(1.1);
-    }
-    
-    .btn:active {
-      transform: translateY(4px) scale(0.98);
-      box-shadow: 0 0 30px rgba(255,255,255,0.8);
-      animation: lightning-flash 0.3s ease;
-    }
-    
-    .btn:active::before {
-      width: 300px;
-      height: 300px;
-    }
-
-    .btn-small {
-      background: #5A3A31;
-      color: white;
-      border: none;
-      padding: 10px 20px;
-      font-size: 16px;
-      border-radius: 30px;
-      font-weight: bold;
-      box-shadow: 0 3px 0 #3a2a21, 0 0 0 rgba(90,58,49,0);
-      cursor: pointer;
-      transition: all 0.15s ease;
-      position: relative;
-      overflow: hidden;
-    }
-    
-    .btn-small::before {
-      content: '';
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: 0;
-      height: 0;
-      border-radius: 50%;
-      background: rgba(255, 255, 255, 0.5);
-      transform: translate(-50%, -50%);
-      transition: width 0.6s, height 0.6s;
-    }
-    
-    .btn-small:hover {
-      box-shadow: 0 5px 0 #3a2a21, 0 0 20px rgba(90,58,49,0.6);
-      filter: brightness(1.1);
-    }
-    
-    .btn-small:active {
-      transform: translateY(3px) scale(0.98);
-      box-shadow: 0 0 30px rgba(255,255,255,0.8);
-      animation: lightning-flash 0.3s ease;
-    }
-    
-    .btn-small:active::before {
-      width: 200px;
-      height: 200px;
-    }
-
-    /* Loading Screen */
-    #loading-screen {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      z-index: 10000;
-      transition: opacity 0.5s ease-out;
-      background-image: url('321E5768-E77B-4471-8C32-5D7C1D715A4B.png');
-      background-size: cover;
-      background-position: center;
-      background-repeat: no-repeat;
-    }
-
-    #loading-screen.fade-out {
-      opacity: 0;
-      pointer-events: none;
-    }
-
-    .loading-splash-logo {
-      max-width: 60%;
-      max-height: 40%;
-      width: auto;
-      height: auto;
-      object-fit: contain;
-      margin-bottom: 40px;
-      animation: pulse 2s infinite;
-      filter: drop-shadow(0 0 20px rgba(93,173,226,0.6));
-    }
-
-    .game-title {
-      font-size: 48px;
-      color: #5DADE2;
-      text-shadow: 0 0 20px rgba(93,173,226,0.8), 0 0 40px rgba(93,173,226,0.5);
-      margin-bottom: 40px;
-      animation: pulse 2s infinite;
-      display: none; /* Hide text title when logo is present */
-    }
-
-    @keyframes pulse {
-      0%, 100% { transform: scale(1); }
-      50% { transform: scale(1.05); }
-    }
-
-    .loading-bar-container {
-      width: 80%;
-      max-width: 400px;
-      height: 24px;
-      background: rgba(42, 42, 42, 0.8);
-      border-radius: 12px;
-      overflow: hidden;
-      border: 3px solid rgba(93, 173, 226, 0.8);
-      backdrop-filter: blur(5px);
-    }
-
-    .loading-bar {
-      height: 100%;
-      background: linear-gradient(to right, #52C1E8, #5DADE2, #6EC9F0);
-      width: 0%;
-      transition: width 0.3s ease;
-      box-shadow: 0 0 15px rgba(93,173,226,0.9), inset 0 0 10px rgba(255,255,255,0.3);
-    }
-
-    /* Main Menu */
-    #main-menu {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(to bottom, #1a1a2e, #16213e);
-      display: none;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      z-index: 50; /* Lower than UI layer buttons */
-    }
-
-    #main-menu::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background-image: url('654811F9-1760-4A74-B977-73ECB1A92913.png');
-      background-size: cover;
-      background-position: center;
-      background-repeat: no-repeat;
-      opacity: 0.6;
-      z-index: -1;
-    }
-
-    .menu-title {
-      font-size: 42px;
-      color: #5DADE2;
-      text-shadow: 0 0 20px rgba(93,173,226,0.8), 0 0 40px rgba(93,173,226,0.5);
-      margin-bottom: 40px;
-      animation: titlePulse 3s ease-in-out infinite;
-    }
-
-    @keyframes titlePulse {
-      0%, 100% {
-        text-shadow: 0 0 20px rgba(93,173,226,0.8), 0 0 40px rgba(93,173,226,0.5);
-        transform: scale(1);
-      }
-      50% {
-        text-shadow: 0 0 30px rgba(93,173,226,1), 0 0 60px rgba(93,173,226,0.7);
-        transform: scale(1.02);
-      }
-    }
-
-    .menu-buttons {
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-      animation: menuFadeIn 0.8s ease-out;
-    }
-
-    @keyframes menuFadeIn {
-      from {
-        opacity: 0;
-        transform: translateY(20px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    .menu-btn {
-      background: rgba(93, 173, 226, 0.1);
-      color: rgba(255, 255, 255, 0.9);
-      border: 2px solid rgba(93, 173, 226, 0.3);
-      padding: 20px 60px;
-      font-size: 24px;
-      border-radius: 50px;
-      font-weight: bold;
-      cursor: pointer;
-      box-shadow: 0 0 0 rgba(93,173,226,0);
-      transition: all 0.3s ease;
-      position: relative;
-      overflow: hidden;
-      backdrop-filter: blur(3px);
-    }
-
-    .menu-btn::before {
-      content: '';
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: 0;
-      height: 0;
-      border-radius: 50%;
-      background: rgba(255, 255, 255, 0.5);
-      transform: translate(-50%, -50%);
-      transition: width 0.6s, height 0.6s;
-    }
-
-    .menu-btn:hover {
-      background: rgba(93, 173, 226, 0.25);
-      border-color: rgba(93, 173, 226, 0.6);
-      box-shadow: 0 0 20px rgba(93,173,226,0.4), 0 0 40px rgba(93,173,226,0.2);
-      transform: scale(1.05);
-    }
-
-    .menu-btn:active {
-      transform: scale(0.95);
-      background: rgba(93, 173, 226, 0.35);
-      box-shadow: 0 0 30px rgba(93,173,226,0.6), 0 0 50px rgba(93,173,226,0.4);
-      animation: lightning-flash 0.3s ease;
-    }
-
-    .menu-btn:active::before {
-      width: 300px;
-      height: 300px;
-    }
-
-    @keyframes lightning-flash {
-      0%, 100% { filter: brightness(1.1); }
-      50% { filter: brightness(2); box-shadow: 0 0 40px rgba(255,255,255,1), 0 0 80px rgba(93,173,226,1); }
-    }
-
-    .gold-display {
-      position: absolute;
-      top: 20px;
-      right: 20px;
-      font-size: 24px;
-      color: #FFD700;
-      font-weight: bold;
-      text-shadow: 0 0 10px rgba(255,215,0,0.8), 2px 2px 4px #000;
-      pointer-events: none; /* Allow clicks to pass through */
-      z-index: 1;
-    }
-
-    /* Progression Shop */
-    #progression-shop {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(to bottom, #1a1a2e, #16213e);
-      display: none;
-      flex-direction: column;
-      align-items: center;
-      z-index: 50; /* Lower than UI layer buttons */
-      overflow-y: auto;
-      padding: 20px;
-    }
-
-    .shop-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      width: 90%;
-      max-width: 800px;
-      margin-bottom: 20px;
-    }
-
-    .shop-title {
-      font-size: 36px;
-      color: #5DADE2;
-      text-shadow: 0 0 15px rgba(93,173,226,0.8);
-    }
-
-    .shop-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 15px;
-      width: 90%;
-      max-width: 1200px;
-      margin-bottom: 80px;
-    }
-
-    .upgrade-shop-card {
-      background: linear-gradient(to bottom, #2c3e50, #1a252f);
-      border: 3px solid #34495e;
-      border-radius: 15px;
-      padding: 15px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .upgrade-shop-card.max-level {
-      opacity: 0.6;
-      border-color: #95a5a6;
-    }
-
-    .upgrade-shop-title {
-      font-size: 20px;
-      color: #5DADE2;
-      font-weight: bold;
-    }
-
-    .upgrade-shop-desc {
-      font-size: 14px;
-      color: #bdc3c7;
-    }
-
-    .upgrade-shop-level {
-      font-size: 16px;
-      color: #f39c12;
-      font-weight: bold;
-    }
-
-    .upgrade-shop-cost {
-      font-size: 18px;
-      color: #FFD700;
-      font-weight: bold;
-    }
-
-    .upgrade-buy-btn {
-      background: linear-gradient(to bottom, #27ae60, #229954);
-      color: white;
-      border: none;
-      padding: 10px 20px;
-      font-size: 16px;
-      border-radius: 8px;
-      font-weight: bold;
-      cursor: pointer;
-      margin-top: 5px;
-      transition: all 0.15s ease;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .upgrade-buy-btn::before {
-      content: '';
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: 0;
-      height: 0;
-      border-radius: 50%;
-      background: rgba(255, 255, 255, 0.5);
-      transform: translate(-50%, -50%);
-      transition: width 0.6s, height 0.6s;
-    }
-
-    .upgrade-buy-btn:hover:not(:disabled) {
-      box-shadow: 0 0 20px rgba(39,174,96,0.6);
-      filter: brightness(1.1);
-    }
-
-    .upgrade-buy-btn:disabled {
-      background: linear-gradient(to bottom, #7f8c8d, #95a5a6);
-      cursor: not-allowed;
-    }
-
-    .upgrade-buy-btn:not(:disabled):active {
-      transform: scale(0.95);
-      animation: lightning-flash 0.3s ease;
-    }
-
-    .upgrade-buy-btn:not(:disabled):active::before {
-      width: 200px;
-      height: 200px;
-    }
-
-    .back-btn {
-      position: fixed;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: linear-gradient(to bottom, #e74c3c, #c0392b);
-      color: white;
-      border: none;
-      padding: 15px 40px;
-      font-size: 20px;
-      border-radius: 40px;
-      font-weight: bold;
-      cursor: pointer;
-      box-shadow: 0 4px 0 #a93226, 0 0 0 rgba(231,76,60,0);
-      transition: all 0.15s ease;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .back-btn::before {
-      content: '';
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: 0;
-      height: 0;
-      border-radius: 50%;
-      background: rgba(255, 255, 255, 0.5);
-      transform: translate(-50%, -50%);
-      transition: width 0.6s, height 0.6s;
-    }
-
-    .back-btn:hover {
-      box-shadow: 0 6px 0 #a93226, 0 0 20px rgba(231,76,60,0.6);
-      filter: brightness(1.1);
-    }
-
-    .back-btn:active {
-      transform: translateX(-50%) translateY(4px) scale(0.98);
-      box-shadow: 0 0 30px rgba(255,255,255,0.8);
-      animation: lightning-flash 0.3s ease;
-    }
-
-    .back-btn:active::before {
-      width: 300px;
-      height: 300px;
-    }
-
-    /* Credits/Achievements Screens */
-    #credits-screen, #achievements-screen {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(to bottom, #1a1a2e, #16213e);
-      display: none;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      z-index: 50; /* Lower than UI layer buttons */
-      padding: 40px;
-    }
-
-    .screen-title {
-      font-size: 40px;
-      color: #5DADE2;
-      text-shadow: 0 0 15px rgba(93,173,226,0.8);
-      margin-bottom: 30px;
-    }
-
-    .screen-content {
-      font-size: 18px;
-      color: #ecf0f1;
-      text-align: center;
-      line-height: 1.8;
-      max-width: 600px;
-    }
-
-    /* Tutorial Overlay */
-    #tutorial-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.85);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 100;
-      pointer-events: none;
-    }
-
-    #tutorial-overlay.active {
-      display: flex;
-      pointer-events: auto;
-    }
-
-    .tutorial-box {
-      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-      border: 3px solid #5DADE2;
-      border-radius: 15px;
-      padding: 30px 40px;
-      max-width: 500px;
-      text-align: center;
-      box-shadow: 0 0 30px rgba(93, 173, 226, 0.5);
-      animation: tutorialFadeIn 0.5s ease-out;
-      cursor: pointer;
-      transition: transform 0.2s ease, box-shadow 0.2s ease;
-    }
-
-    .tutorial-box:hover {
-      transform: scale(1.02);
-      box-shadow: 0 0 40px rgba(93, 173, 226, 0.7);
-    }
-
-    @keyframes tutorialFadeIn {
-      from {
-        opacity: 0;
-        transform: scale(0.9) translateY(-20px);
-      }
-      to {
-        opacity: 1;
-        transform: scale(1) translateY(0);
-      }
-    }
-
-    .tutorial-step {
-      font-size: 18px;
-      color: #FFD700;
-      font-weight: bold;
-      margin-bottom: 10px;
-    }
-
-    .tutorial-text {
-      font-size: 24px;
-      color: #5DADE2;
-      line-height: 1.6;
-      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
-      margin-bottom: 20px;
-    }
-
-    .tutorial-progress {
-      font-size: 14px;
-      color: #ecf0f1;
-      opacity: 0.7;
-      font-weight: bold;
-    }
-
-  </style>
+  <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
 
@@ -952,6 +133,10 @@
       <div class="stat-text" id="lvl-text" style="color: #5DADE2;">LVL: 1</div>
       <div class="stat-text" id="score-text" style="color: #8B4513;">KILLS: 0</div>
       <div class="stat-text" id="gold-text" style="color: #FFD700;">GOLD: 0</div>
+      <div class="stat-text" id="fps-text" style="color: #90EE90; font-size: 11px;">FPS: 60</div>
+      
+      <!-- Info Bar for Events -->
+      <div id="info-bar" style="margin-top: 10px; max-width: 250px; max-height: 60px; overflow-y: auto; font-size: 11px; color: #E0E0E0; line-height: 1.3; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);"></div>
       
       <!-- Windmill Quest UI -->
       <div id="windmill-quest-ui" style="display: none; margin-top: 10px;">
@@ -1287,6 +472,14 @@
     let waveCount = 0;
     let windmillQuest = { active: false, timer: 0, duration: 30, windmill: null, hasCompleted: false };
     let runStartGold = 0;  // Track gold at start of run for end-of-run calculation
+    
+    // FPS tracking
+    let fpsFrames = [];
+    let lastFpsUpdate = 0;
+    
+    // Info bar for events
+    const infoBarMessages = [];
+    const MAX_INFO_MESSAGES = 4;
 
     // Tutorial system
     let tutorialActive = false;
@@ -2887,6 +2080,7 @@
           scene.remove(this.mesh);
           if (this.light) {
             scene.remove(this.light);
+            this.light.dispose(); // Fix memory leak: properly dispose light
             this.light = null;
           }
           // Don't dispose shared geometry or pooled material
@@ -3210,6 +2404,7 @@
             );
           }
           createFloatingText(`+${goldAmount} GOLD!`, this.mesh.position);
+          addInfoMessage(`💰 Chest: +${goldAmount} gold`, '#FFD700');
         } else if (rewardRoll < 0.7) {
           // EXP reward (30% chance)
           for (let i = 0; i < 10; i++) {
@@ -3221,6 +2416,7 @@
             );
           }
           createFloatingText("EXP BOOST!", this.mesh.position);
+          addInfoMessage("⭐ Chest: EXP boost!", '#5DADE2');
         } else {
           // Health reward (30% chance)
           const healAmount = Math.floor(playerStats.maxHp * 0.3); // 30% of max HP
@@ -3228,6 +2424,7 @@
           updateHUD();
           spawnParticles(player.mesh.position, 0x00FF00, 20);
           createFloatingText(`+${healAmount} HP!`, this.mesh.position);
+          addInfoMessage(`❤️ Chest: +${healAmount} HP`, '#00FF00');
         }
         
         // Visual effects
@@ -4304,6 +3501,7 @@
     
     function spawnChest(x, z) {
       chests.push(new Chest(x, z));
+      addInfoMessage("📦 Treasure chest appeared!", '#FFD700');
     }
     
     function trySpawnChest() {
@@ -4517,6 +3715,57 @@
       }, 1500);
     }
     
+    function createExplosionShockwave(position) {
+      // Create expanding ring shockwave
+      const ringGeo = new THREE.RingGeometry(0.1, 0.3, 32);
+      const ringMat = new THREE.MeshBasicMaterial({ 
+        color: 0x5DADE2, 
+        transparent: true, 
+        opacity: 0.8,
+        side: THREE.DoubleSide
+      });
+      const ring = new THREE.Mesh(ringGeo, ringMat);
+      ring.position.copy(position);
+      ring.position.y = 0.1;
+      ring.rotation.x = -Math.PI / 2;
+      scene.add(ring);
+      
+      // Animate ring expansion
+      let progress = 0;
+      const animateRing = () => {
+        progress += 0.03;
+        if (progress < 1) {
+          const scale = 1 + progress * 8;
+          ring.scale.set(scale, scale, 1);
+          ringMat.opacity = 0.8 * (1 - progress);
+          requestAnimationFrame(animateRing);
+        } else {
+          scene.remove(ring);
+          ringGeo.dispose();
+          ringMat.dispose();
+        }
+      };
+      animateRing();
+      
+      // Add bright flash at center
+      const flashLight = new THREE.PointLight(0x5DADE2, 3, 10);
+      flashLight.position.copy(position);
+      scene.add(flashLight);
+      
+      let flashProgress = 0;
+      const animateFlash = () => {
+        flashProgress += 0.05;
+        if (flashProgress < 1) {
+          flashLight.intensity = 3 * (1 - flashProgress);
+          requestAnimationFrame(animateFlash);
+        } else {
+          scene.remove(flashLight);
+          flashLight.dispose();
+        }
+      };
+      animateFlash();
+    }
+    
     function createLevelUpEffects() {
       // Progressive particle reduction based on level to prevent freezes
       const level = playerStats.lvl;
@@ -4532,6 +3781,9 @@
       if (isMilestoneLevel) {
         particleReduction *= 0.6; // Extra 40% reduction at milestone levels
       }
+      
+      // Add explosion shockwave effect
+      createExplosionShockwave(player.mesh.position.clone());
       
       // Fountain/explosion of "LEVEL UP" text particles from player's head
       const texts = ["L", "E", "V", "E", "L", " ", "U", "P", "!"];
@@ -4968,8 +4220,8 @@
         // Shuffle and limit to 3 choices
         choices = choices.sort(() => 0.5 - Math.random()).slice(0, 3);
       }
-      // Level 5: Choose Secondary Weapon
-      else if (playerStats.lvl === 5) {
+      // Level 7: Choose Secondary Weapon
+      else if (playerStats.lvl === 7) {
         choices = [
           { 
             id: 'sword', 
@@ -4979,6 +4231,7 @@
               weapons.sword.active = true;
               weapons.sword.level = 1;
               showStatChange('New Weapon: Sword');
+              addInfoMessage('⚔️ Weapon unlocked: Sword', '#FFD700');
             } 
           },
           { 
@@ -4989,6 +4242,7 @@
               weapons.aura.active = true;
               weapons.aura.level = 1;
               showStatChange('New Weapon: Aura');
+              addInfoMessage('✨ Weapon unlocked: Aura', '#FFD700');
             } 
           },
           { 
@@ -4999,6 +4253,7 @@
               weapons.meteor.active = true;
               weapons.meteor.level = 1;
               showStatChange('New Weapon: Meteor');
+              addInfoMessage('☄️ Weapon unlocked: Meteor', '#FFD700');
             } 
           },
           { 
@@ -5009,12 +4264,13 @@
               weapons.doubleBarrel.active = true;
               weapons.doubleBarrel.level = 1;
               showStatChange('New Weapon: Double Barrel');
+              addInfoMessage('🔫 Weapon unlocked: Double Barrel', '#FFD700');
             } 
           }
         ];
       }
-      // Level 10: CLASS SELECTION
-      else if (playerStats.lvl === 10) {
+      // Level 14: CLASS SELECTION
+      else if (playerStats.lvl === 14) {
         modal.querySelector('h2').innerText = 'CHOOSE YOUR CLASS';
         modal.querySelector('h2').style.fontSize = '42px';
         
@@ -5071,6 +4327,122 @@
             } 
           }
         ];
+      }
+      // Level 21: Third Weapon Slot
+      else if (playerStats.lvl === 21) {
+        modal.querySelector('h2').innerText = 'THIRD WEAPON UNLOCKED!';
+        modal.querySelector('h2').style.fontSize = '36px';
+        
+        // Show only weapons not yet unlocked
+        const availableWeapons = [
+          { 
+            id: 'sword', 
+            title: 'SLASHY SLASH', 
+            desc: 'Slash enemies in front', 
+            active: weapons.sword.active,
+            apply: () => { 
+              weapons.sword.active = true;
+              weapons.sword.level = 1;
+              showStatChange('New Weapon: Sword');
+              addInfoMessage('⚔️ Weapon unlocked: Sword', '#FFD700');
+            } 
+          },
+          { 
+            id: 'aura', 
+            title: 'ZAP ZONE', 
+            desc: 'Damage aura around you', 
+            active: weapons.aura.active,
+            apply: () => { 
+              weapons.aura.active = true;
+              weapons.aura.level = 1;
+              showStatChange('New Weapon: Aura');
+              addInfoMessage('✨ Weapon unlocked: Aura', '#FFD700');
+            } 
+          },
+          { 
+            id: 'meteor', 
+            title: 'SPACE ROCKS', 
+            desc: 'Call meteors from sky', 
+            active: weapons.meteor.active,
+            apply: () => { 
+              weapons.meteor.active = true;
+              weapons.meteor.level = 1;
+              showStatChange('New Weapon: Meteor');
+              addInfoMessage('☄️ Weapon unlocked: Meteor', '#FFD700');
+            } 
+          },
+          { 
+            id: 'doublebarrel', 
+            title: 'DOUBLE BARREL', 
+            desc: 'Powerful shotgun spread', 
+            active: weapons.doubleBarrel.active,
+            apply: () => { 
+              weapons.doubleBarrel.active = true;
+              weapons.doubleBarrel.level = 1;
+              showStatChange('New Weapon: Double Barrel');
+              addInfoMessage('🔫 Weapon unlocked: Double Barrel', '#FFD700');
+            } 
+          }
+        ];
+        choices = availableWeapons.filter(w => !w.active);
+      }
+      // Level 28: Fourth Weapon Slot
+      else if (playerStats.lvl === 28) {
+        modal.querySelector('h2').innerText = 'FOURTH WEAPON UNLOCKED!';
+        modal.querySelector('h2').style.fontSize = '36px';
+        
+        // Show only weapons not yet unlocked
+        const availableWeapons = [
+          { 
+            id: 'sword', 
+            title: 'SLASHY SLASH', 
+            desc: 'Slash enemies in front', 
+            active: weapons.sword.active,
+            apply: () => { 
+              weapons.sword.active = true;
+              weapons.sword.level = 1;
+              showStatChange('New Weapon: Sword');
+              addInfoMessage('⚔️ Weapon unlocked: Sword', '#FFD700');
+            } 
+          },
+          { 
+            id: 'aura', 
+            title: 'ZAP ZONE', 
+            desc: 'Damage aura around you', 
+            active: weapons.aura.active,
+            apply: () => { 
+              weapons.aura.active = true;
+              weapons.aura.level = 1;
+              showStatChange('New Weapon: Aura');
+              addInfoMessage('✨ Weapon unlocked: Aura', '#FFD700');
+            } 
+          },
+          { 
+            id: 'meteor', 
+            title: 'SPACE ROCKS', 
+            desc: 'Call meteors from sky', 
+            active: weapons.meteor.active,
+            apply: () => { 
+              weapons.meteor.active = true;
+              weapons.meteor.level = 1;
+              showStatChange('New Weapon: Meteor');
+              addInfoMessage('☄️ Weapon unlocked: Meteor', '#FFD700');
+            } 
+          },
+          { 
+            id: 'doublebarrel', 
+            title: 'DOUBLE BARREL', 
+            desc: 'Powerful shotgun spread', 
+            active: weapons.doubleBarrel.active,
+            apply: () => { 
+              weapons.doubleBarrel.active = true;
+              weapons.doubleBarrel.level = 1;
+              showStatChange('New Weapon: Double Barrel');
+              addInfoMessage('🔫 Weapon unlocked: Double Barrel', '#FFD700');
+            } 
+          }
+        ];
+        choices = availableWeapons.filter(w => !w.active);
       }
       // Level 25: PERK SELECTION
       else if (playerStats.lvl === 25 && !playerStats.perks.vampire && !playerStats.perks.berserker && !playerStats.perks.phoenix) {
@@ -5179,6 +4551,47 @@
       document.getElementById('lvl-text').innerText = `LVL: ${playerStats.lvl}`;
       document.getElementById('score-text').innerText = `KILLS: ${playerStats.kills}`;
       document.getElementById('gold-text').innerText = `GOLD: ${playerStats.gold}`;
+    }
+    
+    function updateFPS(currentTime) {
+      // Track frame times
+      fpsFrames.push(currentTime);
+      
+      // Keep only last 60 frames
+      if (fpsFrames.length > 60) {
+        fpsFrames.shift();
+      }
+      
+      // Update FPS display every 500ms
+      if (currentTime - lastFpsUpdate > 500 && fpsFrames.length > 1) {
+        const timeDiff = fpsFrames[fpsFrames.length - 1] - fpsFrames[0];
+        const fps = Math.round((fpsFrames.length - 1) / (timeDiff / 1000));
+        document.getElementById('fps-text').innerText = `FPS: ${fps}`;
+        
+        // Color code FPS
+        const fpsText = document.getElementById('fps-text');
+        if (fps >= 55) fpsText.style.color = '#90EE90'; // Green
+        else if (fps >= 40) fpsText.style.color = '#FFD700'; // Yellow
+        else fpsText.style.color = '#FF6B6B'; // Red
+        
+        lastFpsUpdate = currentTime;
+      }
+    }
+    
+    function addInfoMessage(message, color = '#E0E0E0') {
+      const timestamp = Date.now();
+      infoBarMessages.push({ text: message, color, timestamp });
+      
+      // Keep only recent messages
+      if (infoBarMessages.length > MAX_INFO_MESSAGES) {
+        infoBarMessages.shift();
+      }
+      
+      // Update display
+      const infoBar = document.getElementById('info-bar');
+      infoBar.innerHTML = infoBarMessages
+        .map(msg => `<div style="color: ${msg.color};">${msg.text}</div>`)
+        .join('');
     }
     
     function updateWindmillQuestUI() {
@@ -5420,8 +4833,11 @@
       
       particles.forEach(p => {
         scene.remove(p.mesh);
-        p.mesh.geometry.dispose();
-        p.mesh.material.dispose();
+        if (p.light) {
+          scene.remove(p.light);
+          p.light.dispose(); // Fix memory leak: properly dispose light
+        }
+        // Don't dispose shared geometries or pooled materials
       });
       particles = [];
       
@@ -5836,6 +5252,9 @@ Total Gold Earned: ${saveData.totalGoldEarned}
     function animate(time) {
       requestAnimationFrame(animate);
 
+      // Update FPS counter
+      updateFPS(time);
+
       // Performance monitoring - track frame time
       const frameStartTime = performance.now();
 
@@ -5880,6 +5299,7 @@ Total Gold Earned: ${saveData.totalGoldEarned}
         
         // Big announcement
         createFloatingText("BOSS INCOMING!", player.mesh.position);
+        addInfoMessage("⚠️ BOSS SPAWNED!", '#FF0000');
         
         // Flash screen red
         const flash = document.createElement('div');
@@ -6202,6 +5622,7 @@ Total Gold Earned: ${saveData.totalGoldEarned}
             // Clean up lights attached to particles
             if (p.light && p.light.parent) {
               scene.remove(p.light);
+              p.light.dispose(); // Fix memory leak: properly dispose light
             }
             // Don't dispose shared geometries or pooled materials
             if (p.mesh && p.mesh.geometry && !sharedGeoSet.has(p.mesh.geometry)) {
