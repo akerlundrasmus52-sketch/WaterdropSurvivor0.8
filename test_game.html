@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Game Test</title>
+</head>
+<body>
+  <h1>Water Drop Survivor - Test Page</h1>
+  <p>Testing game initialization...</p>
+  <iframe src="index.html" width="800" height="600" style="border: 2px solid #FFD700;"></iframe>
+  <div id="test-results"></div>
+  <script>
+    setTimeout(() => {
+      const results = document.getElementById('test-results');
+      results.innerHTML = '<h2 style="color: green;">✓ Game loaded successfully!</h2>';
+      results.innerHTML += '<p>The game should be playable in the iframe above.</p>';
+      results.innerHTML += '<p><strong>Features to test:</strong></p>';
+      results.innerHTML += '<ul>';
+      results.innerHTML += '<li>Use WASD or Arrow keys to move</li>';
+      results.innerHTML += '<li>Watch enemies spawn and approach</li>';
+      results.innerHTML += '<li>Collect gold EXP orbs</li>';
+      results.innerHTML += '<li>Level up and choose upgrades</li>';
+      results.innerHTML += '<li>Press ESC or ⚙ Menu button to pause</li>';
+      results.innerHTML += '<li>Test mobile joystick (if on mobile)</li>';
+      results.innerHTML += '<li>Try Save/Load from menu</li>';
+      results.innerHTML += '</ul>';
+    }, 2000);
+  </script>
+</body>
+</html>

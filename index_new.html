@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="screen-orientation" content="portrait">
+  <title>Water Drop Survivor - Pixel Art Edition</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background-color: #000000;
+      font-family: 'M PLUS Rounded 1c', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    #game-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #1a1a1a;
+    }
+
+    #game-canvas {
+      image-rendering: pixelated;
+      image-rendering: -moz-crisp-edges;
+      image-rendering: crisp-edges;
+      background: #2d4a3e;
+    }
+
+    /* Unified Color Palette (derived from menu images) */
+    :root {
+      --color-primary: #5DADE2;
+      --color-primary-dark: #3498DB;
+      --color-accent: #FFD700;
+      --color-accent-orange: #FFA500;
+      --color-danger: #CD5C5C;
+      --color-bg-dark: #1a1a2e;
+      --color-bg-medium: #16213e;
+      --color-border: #8B4513;
+      --color-text-light: #FFFFFF;
+      --color-text-dim: #CCCCCC;
+      --color-hp-red: #E74C3C;
+      --color-exp-blue: #3498DB;
+      --color-gold: #FFD700;
+    }
+
+    /* UI Layer */
+    #ui-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 10;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    /* HUD */
+    .hud-top {
+      padding: 15px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: none;
+    }
+
+    .bar-container {
+      width: 180px;
+      height: 22px;
+      background: linear-gradient(to bottom, #2a2a2a 0%, #2a2a2a 50%, #4a4a4a 50%, #4a4a4a 100%);
+      border-radius: 11px;
+      border: 3px solid var(--color-border);
+      overflow: hidden;
+      position: relative;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.4), inset 0 2px 3px rgba(0,0,0,0.3);
+    }
+
+    .bar-fill {
+      height: 100%;
+      transition: width 0.3s ease;
+      border-radius: 8px;
+      position: relative;
+    }
+
+    .hp-bar { background: linear-gradient(to right, var(--color-hp-red), #C0392B); }
+    .exp-bar { background: linear-gradient(to right, var(--color-exp-blue), var(--color-primary)); }
+
+    .bar-text {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 11px;
+      font-weight: bold;
+      color: var(--color-text-light);
+      text-shadow: 1px 1px 2px #000;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
+    .level-badge {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      background: linear-gradient(135deg, var(--color-accent), var(--color-accent-orange));
+      border: 3px solid var(--color-border);
+      border-radius: 50%;
+      width: 55px;
+      height: 55px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      font-weight: 900;
+      color: #000;
+      text-shadow: 1px 1px 0 rgba(255,255,255,0.5);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.4), inset 0 2px 4px rgba(255,255,255,0.3);
+      pointer-events: none;
+    }
+
+    .status-bar {
+      position: absolute;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(26, 26, 46, 0.85);
+      border: 2px solid var(--color-border);
+      border-radius: 8px;
+      padding: 8px 15px;
+      font-size: 13px;
+      color: var(--color-text-light);
+      text-shadow: 1px 1px 2px #000;
+      max-width: 90%;
+      text-align: center;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+    }
+
+    .status-bar.show {
+      opacity: 1;
+    }
+
+    /* Loading Screen */
+    #loading-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: url('321E5768-E77B-4471-8C32-5D7C1D715A4B.png');
+      background-size: cover;
+      background-position: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      z-index: 10000;
+      transition: opacity 0.5s ease-out;
+    }
+
+    #loading-screen.fade-out {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .loading-bar-container {
+      width: 300px;
+      height: 22px;
+      background: #1a1a1a;
+      border-radius: 11px;
+      overflow: hidden;
+      border: 3px solid var(--color-border);
+      margin-bottom: 50px;
+    }
+
+    .loading-bar {
+      height: 100%;
+      background: linear-gradient(to right, var(--color-accent), var(--color-accent-orange), var(--color-danger));
+      width: 0%;
+      transition: width 0.3s ease;
+      box-shadow: 0 0 10px rgba(255, 165, 0, 0.8);
+    }
+
+    /* Main Menu */
+    #main-menu {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: var(--color-bg-dark);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+    }
+
+    #main-menu::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: url('654811F9-1760-4A74-B977-73ECB1A92913.png');
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      opacity: 1;
+      z-index: -1;
+    }
+
+    .menu-buttons {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    .menu-btn {
+      background: transparent;
+      color: transparent;
+      border: none;
+      padding: 0;
+      font-size: 0;
+      box-shadow: none;
+      position: absolute;
+      width: 260px;
+      height: 50px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      overflow: visible;
+      left: 50%;
+      transform: translateX(-50%);
+      pointer-events: auto;
+    }
+
+    #start-game-btn { top: 50.25%; }
+    #progression-btn { top: 59.75%; }
+    #achievements-btn { top: 69.25%; }
+    #credits-btn { top: min(78.75%, calc(100% - 60px)); }
+
+    .menu-btn:hover {
+      box-shadow: 0 0 20px rgba(93, 173, 226, 0.8), 0 0 40px rgba(93, 173, 226, 0.6);
+    }
+
+    .gold-display {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      font-size: 24px;
+      color: var(--color-gold);
+      font-weight: bold;
+      text-shadow: 0 0 10px rgba(255,215,0,0.8), 2px 2px 4px #000;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    /* Level-up Modal - UNIFIED PALETTE */
+    #levelup-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.75);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      pointer-events: auto;
+    }
+
+    .modal-content {
+      background: linear-gradient(to bottom, var(--color-bg-medium), var(--color-bg-dark));
+      border: 4px solid var(--color-border);
+      border-radius: 20px;
+      padding: 25px;
+      max-width: 90%;
+      max-height: 80%;
+      overflow-y: auto;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.7);
+    }
+
+    .modal-content h2 {
+      color: var(--color-primary);
+      text-shadow: 0 0 15px rgba(93,173,226,0.8);
+      text-align: center;
+      margin-bottom: 20px;
+      font-size: 32px;
+    }
+
+    .upgrade-choices {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      margin-bottom: 15px;
+    }
+
+    .upgrade-option {
+      background: linear-gradient(to bottom, #2c3e50, #1a252f);
+      border: 3px solid var(--color-border);
+      border-radius: 12px;
+      padding: 15px;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+      color: var(--color-text-light);
+    }
+
+    .upgrade-option:hover {
+      border-color: var(--color-primary);
+      box-shadow: 0 0 20px rgba(93,173,226,0.6);
+      transform: translateY(-3px);
+    }
+
+    .upgrade-option .icon {
+      font-size: 36px;
+      margin-bottom: 8px;
+    }
+
+    .upgrade-option .title {
+      font-size: 18px;
+      font-weight: bold;
+      color: var(--color-accent);
+      margin-bottom: 6px;
+    }
+
+    .upgrade-option .desc {
+      font-size: 12px;
+      color: var(--color-text-dim);
+    }
+
+    /* Touch Controls */
+    .touch-control {
+      position: absolute;
+      width: 120px;
+      height: 120px;
+      bottom: 20px;
+      background: radial-gradient(circle, rgba(93,173,226,0.3), rgba(93,173,226,0.1));
+      border: 3px solid rgba(93,173,226,0.5);
+      border-radius: 50%;
+      pointer-events: auto;
+      touch-action: none;
+    }
+
+    #touch-left { left: 20px; }
+    #touch-right { right: 20px; }
+
+    .joystick-knob {
+      position: absolute;
+      width: 50px;
+      height: 50px;
+      background: radial-gradient(circle, var(--color-primary), var(--color-primary-dark));
+      border: 2px solid var(--color-text-light);
+      border-radius: 50%;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    }
+
+    /* Pause Menu */
+    #pause-menu {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.85);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 80;
+      flex-direction: column;
+      gap: 15px;
+      pointer-events: auto;
+    }
+
+    .pause-btn {
+      background: linear-gradient(to bottom, var(--color-primary), var(--color-primary-dark));
+      color: var(--color-text-light);
+      border: 3px solid var(--color-border);
+      border-radius: 10px;
+      padding: 15px 40px;
+      font-size: 20px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .pause-btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 20px rgba(93,173,226,0.8);
+    }
+
+    /* Game Over */
+    #game-over-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.9);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 90;
+      flex-direction: column;
+      pointer-events: auto;
+    }
+
+    .game-over-title {
+      font-size: 48px;
+      color: var(--color-danger);
+      text-shadow: 0 0 20px rgba(231,76,60,0.8);
+      margin-bottom: 20px;
+    }
+
+    .game-over-stats {
+      background: linear-gradient(to bottom, var(--color-bg-medium), var(--color-bg-dark));
+      border: 3px solid var(--color-border);
+      border-radius: 15px;
+      padding: 20px;
+      margin-bottom: 20px;
+      color: var(--color-text-light);
+    }
+
+    /* Victory Screen */
+    #victory-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.9);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 90;
+      flex-direction: column;
+      pointer-events: auto;
+    }
+
+    .victory-title {
+      font-size: 48px;
+      color: var(--color-accent);
+      text-shadow: 0 0 20px rgba(255,215,0,0.8);
+      margin-bottom: 20px;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+
+    /* Countdown Overlay */
+    .countdown-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 70;
+      pointer-events: none;
+    }
+
+    .countdown-number {
+      font-size: 120px;
+      font-weight: 900;
+      color: var(--color-accent);
+      text-shadow: 0 0 30px rgba(255,215,0,0.8), 0 0 60px rgba(255,215,0,0.5);
+      animation: countdown-pop 1s ease;
+    }
+
+    @keyframes countdown-pop {
+      0% { transform: scale(0); opacity: 0; }
+      50% { transform: scale(1.2); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    /* Pause Button */
+    #pause-btn {
+      position: absolute;
+      top: 15px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(26,26,46,0.8);
+      border: 2px solid var(--color-border);
+      border-radius: 8px;
+      padding: 8px 20px;
+      color: var(--color-text-light);
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      pointer-events: auto;
+      z-index: 11;
+    }
+
+    #pause-btn:hover {
+      background: rgba(93,173,226,0.3);
+      border-color: var(--color-primary);
+    }
+
+    /* Hide scrollbars */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--color-bg-dark);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--color-border);
+      border-radius: 4px;
+    }
+
+    /* Progression Shop */
+    #progression-shop {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: var(--color-bg-dark);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      z-index: 50;
+      overflow-y: auto;
+      padding: 20px;
+      pointer-events: auto;
+    }
+
+    .shop-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 90%;
+      max-width: 800px;
+      margin-bottom: 20px;
+    }
+
+    .shop-title {
+      font-size: 32px;
+      color: var(--color-primary);
+      text-shadow: 0 0 15px rgba(93,173,226,0.8);
+    }
+
+    .close-shop-btn {
+      background: var(--color-danger);
+      color: var(--color-text-light);
+      border: 2px solid var(--color-border);
+      border-radius: 8px;
+      padding: 10px 20px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .shop-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 15px;
+      width: 90%;
+      max-width: 1200px;
+      margin-bottom: 80px;
+    }
+
+    .upgrade-shop-card {
+      background: linear-gradient(to bottom, #2c3e50, #1a252f);
+      border: 3px solid var(--color-border);
+      border-radius: 12px;
+      padding: 15px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .upgrade-shop-card .title {
+      font-size: 18px;
+      font-weight: bold;
+      color: var(--color-accent);
+    }
+
+    .upgrade-shop-card .desc {
+      font-size: 13px;
+      color: var(--color-text-dim);
+      flex-grow: 1;
+    }
+
+    .upgrade-shop-card .cost {
+      font-size: 16px;
+      color: var(--color-gold);
+      font-weight: bold;
+    }
+
+    .upgrade-shop-card button {
+      background: var(--color-primary);
+      color: var(--color-text-light);
+      border: none;
+      border-radius: 6px;
+      padding: 10px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .upgrade-shop-card button:hover:not(:disabled) {
+      background: var(--color-primary-dark);
+      transform: translateY(-2px);
+    }
+
+    .upgrade-shop-card button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* Achievements Screen */
+    #achievements-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: var(--color-bg-dark);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      z-index: 50;
+      overflow-y: auto;
+      padding: 20px;
+      pointer-events: auto;
+    }
+
+    .achievements-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 90%;
+      max-width: 800px;
+      margin-bottom: 20px;
+    }
+
+    .achievements-title {
+      font-size: 32px;
+      color: var(--color-primary);
+      text-shadow: 0 0 15px rgba(93,173,226,0.8);
+    }
+
+    .close-achievements-btn {
+      background: var(--color-danger);
+      color: var(--color-text-light);
+      border: 2px solid var(--color-border);
+      border-radius: 8px;
+      padding: 10px 20px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .achievements-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 15px;
+      width: 90%;
+      max-width: 1200px;
+    }
+
+    .achievement-card {
+      background: linear-gradient(to bottom, #2c3e50, #1a252f);
+      border: 3px solid var(--color-border);
+      border-radius: 12px;
+      padding: 15px;
+    }
+
+    .achievement-card.claimed {
+      border-color: var(--color-accent);
+      box-shadow: 0 0 15px rgba(255,215,0,0.4);
+    }
+
+    /* Credits Screen */
+    #credits-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.95);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+      flex-direction: column;
+      overflow-y: auto;
+      pointer-events: auto;
+    }
+
+    .credits-content {
+      text-align: center;
+      color: var(--color-text-light);
+      max-width: 600px;
+      padding: 20px;
+    }
+
+    .credits-title {
+      font-size: 36px;
+      color: var(--color-primary);
+      margin-bottom: 30px;
+    }
+
+    .credits-text {
+      font-size: 16px;
+      line-height: 1.8;
+      margin-bottom: 30px;
+    }
+
+    .close-credits-btn {
+      background: var(--color-primary);
+      color: var(--color-text-light);
+      border: 2px solid var(--color-border);
+      border-radius: 8px;
+      padding: 12px 30px;
+      font-size: 18px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <!-- Loading Screen -->
+  <div id="loading-screen">
+    <div class="loading-bar-container">
+      <div class="loading-bar" id="loading-bar"></div>
+    </div>
+  </div>
+
+  <!-- Main Menu -->
+  <div id="main-menu">
+    <div class="gold-display">🪙 <span id="menu-gold">0</span></div>
+    <div class="menu-buttons">
+      <button class="menu-btn" id="start-game-btn"></button>
+      <button class="menu-btn" id="progression-btn"></button>
+      <button class="menu-btn" id="achievements-btn"></button>
+      <button class="menu-btn" id="credits-btn"></button>
+    </div>
+  </div>
+
+  <!-- Game Container -->
+  <div id="game-container">
+    <canvas id="game-canvas"></canvas>
+  </div>
+
+  <!-- UI Layer -->
+  <div id="ui-layer">
+    <div class="hud-top">
+      <div class="bar-container">
+        <div class="bar-fill hp-bar" id="hp-bar" style="width: 100%;"></div>
+        <div class="bar-text" id="hp-text">100 / 100</div>
+      </div>
+      <div class="bar-container">
+        <div class="bar-fill exp-bar" id="exp-bar" style="width: 0%;"></div>
+        <div class="bar-text" id="exp-text">0 / 10</div>
+      </div>
+    </div>
+    <div class="level-badge" id="level-badge">1</div>
+    <button id="pause-btn" style="display: none;">⏸ PAUSE</button>
+    <div class="status-bar" id="status-bar"></div>
+  </div>
+
+  <!-- Touch Controls -->
+  <div class="touch-control" id="touch-left" style="display: none;">
+    <div class="joystick-knob" id="knob-left"></div>
+  </div>
+  <div class="touch-control" id="touch-right" style="display: none;">
+    <div class="joystick-knob" id="knob-right"></div>
+  </div>
+
+  <!-- Level-up Modal -->
+  <div id="levelup-modal">
+    <div class="modal-content">
+      <h2>LEVEL UP!</h2>
+      <div class="upgrade-choices" id="upgrade-choices"></div>
+    </div>
+  </div>
+
+  <!-- Pause Menu -->
+  <div id="pause-menu">
+    <h2 style="color: var(--color-primary); font-size: 42px; margin-bottom: 20px;">PAUSED</h2>
+    <button class="pause-btn" id="resume-btn">RESUME</button>
+    <button class="pause-btn" id="restart-btn">RESTART</button>
+    <button class="pause-btn" id="quit-btn">QUIT TO MENU</button>
+  </div>
+
+  <!-- Game Over Screen -->
+  <div id="game-over-screen">
+    <div class="game-over-title">GAME OVER</div>
+    <div class="game-over-stats" id="game-over-stats"></div>
+    <button class="pause-btn" id="restart-game-btn">TRY AGAIN</button>
+    <button class="pause-btn" id="menu-btn">MAIN MENU</button>
+  </div>
+
+  <!-- Victory Screen -->
+  <div id="victory-screen">
+    <div class="victory-title">VICTORY!</div>
+    <div class="game-over-stats" id="victory-stats"></div>
+    <button class="pause-btn" id="continue-btn">CONTINUE</button>
+    <button class="pause-btn" id="victory-menu-btn">MAIN MENU</button>
+  </div>
+
+  <!-- Countdown Overlay -->
+  <div class="countdown-overlay" id="countdown-overlay">
+    <div class="countdown-number" id="countdown-number">3</div>
+  </div>
+
+  <!-- Progression Shop -->
+  <div id="progression-shop">
+    <div class="shop-header">
+      <div class="shop-title">PROGRESSION SHOP</div>
+      <div class="gold-display">🪙 <span id="shop-gold">0</span></div>
+      <button class="close-shop-btn" id="close-shop-btn">CLOSE</button>
+    </div>
+    <div class="shop-grid" id="shop-grid"></div>
+  </div>
+
+  <!-- Achievements Screen -->
+  <div id="achievements-screen">
+    <div class="achievements-header">
+      <div class="achievements-title">ACHIEVEMENTS</div>
+      <button class="close-achievements-btn" id="close-achievements-btn">CLOSE</button>
+    </div>
+    <div class="achievements-grid" id="achievements-grid"></div>
+  </div>
+
+  <!-- Credits Screen -->
+  <div id="credits-screen">
+    <div class="credits-content">
+      <div class="credits-title">CREDITS</div>
+      <div class="credits-text">
+        <p><strong>Water Drop Survivor</strong></p>
+        <p>Pixel Art Edition</p>
+        <br>
+        <p>A Vampire Survivors-style game</p>
+        <p>rebuilt from the ground up</p>
+        <br>
+        <p>Created with ❤️</p>
+      </div>
+      <button class="close-credits-btn" id="close-credits-btn">CLOSE</button>
+    </div>
+  </div>
+
+  <script>
