@@ -207,11 +207,17 @@
     }
 
     .stat-text {
-      color: #5DADE2; /* Light blue matching menu */
+      color: #FFD700; /* Gold/yellow color like menu buttons */
       font-weight: bold;
-      text-shadow: 1px 1px 2px rgba(0,0,0,0.7), 0 0 8px rgba(93,173,226,0.6);
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.9), 0 0 8px rgba(255,215,0,0.6);
       font-size: 14px;
       margin-top: 4px;
+      background: linear-gradient(to bottom, #5A3A31, #3a2a21); /* Brown gradient like menu buttons */
+      padding: 6px 12px;
+      border-radius: 8px;
+      border: 2px solid #3a2a21; /* Dark border */
+      box-shadow: 0 2px 4px rgba(0,0,0,0.5), inset 0 1px 2px rgba(255,255,255,0.1);
+      width: 200px;
     }
 
     .stat-text.gold-text {
@@ -293,14 +299,15 @@
     }
 
     .upgrade-card {
-      background: linear-gradient(to bottom, #2c3e50, #1a252f); /* Darker, more refined gradient */
-      margin: 10px 0;
-      padding: 15px;
-      border-radius: 15px;
+      background: linear-gradient(to bottom, #2c3e50, #1a252f); /* Consistent dark gradient for all boxes */
+      margin: 8px 0; /* Reduced margin */
+      padding: 12px; /* Reduced padding */
+      border-radius: 12px; /* Slightly smaller radius */
       border: 3px solid #5DADE2; /* Light blue border matching menu */
       cursor: pointer;
       transition: transform 0.1s, box-shadow 0.1s;
       box-shadow: 0 4px 8px rgba(0,0,0,0.5), 0 0 15px rgba(93,173,226,0.4), inset 0 0 0 2px rgba(0,0,0,0.4); /* Blue glow */
+      max-height: 70px; /* Limit height to fit more on screen */
     }
 
     .upgrade-card:hover {
@@ -314,35 +321,37 @@
     .upgrade-title {
       font-weight: bold;
       color: #5DADE2; /* Light blue matching menu */
-      font-size: 18px;
+      font-size: 16px; /* Slightly smaller font */
       text-shadow: 0 0 8px rgba(93,173,226,0.6), 0 0 15px rgba(93,173,226,0.3), 1px 1px 2px rgba(0,0,0,0.8);
     }
 
     .upgrade-desc {
-      font-size: 12px;
+      font-size: 11px; /* Smaller description */
       color: #bbb;
       display: none; /* Hidden - only show funny names */
     }
     
-    /* Special upgrade cards */
+    /* Unified styling - all upgrade cards use same color scheme now */
     .upgrade-card.perk {
-      border-color: #9b59b6;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.3), 0 0 20px rgba(155,89,182,0.6);
-      animation: perkPulse 2s infinite;
+      /* Same styling as regular cards for consistency */
+      border-color: #5DADE2;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.5), 0 0 15px rgba(93,173,226,0.4), inset 0 0 0 2px rgba(0,0,0,0.4);
+      animation: none; /* Remove pulsing for consistency */
     }
     
     .upgrade-card.perk:hover {
-      box-shadow: 0 6px 12px rgba(155,89,182,0.8), 0 0 30px rgba(155,89,182,0.7);
+      box-shadow: 0 6px 12px rgba(93,173,226,0.6), 0 0 25px rgba(93,173,226,0.5);
     }
     
     .upgrade-card.legendary {
-      border-color: #ff6b6b;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.3), 0 0 20px rgba(255,107,107,0.6);
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      /* Same styling as regular cards for consistency */
+      border-color: #5DADE2;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.5), 0 0 15px rgba(93,173,226,0.4), inset 0 0 0 2px rgba(0,0,0,0.4);
+      background: linear-gradient(to bottom, #2c3e50, #1a252f); /* Match regular cards */
     }
     
     .upgrade-card.legendary:hover {
-      box-shadow: 0 6px 12px rgba(255,107,107,0.8), 0 0 30px rgba(255,107,107,0.7);
+      box-shadow: 0 6px 12px rgba(93,173,226,0.6), 0 0 25px rgba(93,173,226,0.5);
     }
     
     @keyframes perkPulse {
@@ -356,20 +365,20 @@
       100% { transform: scale(1.05); text-shadow: 0 0 25px rgba(255,215,0,1), 0 0 35px rgba(255,215,0,1), 2px 2px 4px rgba(0,0,0,0.9); }
     }
 
-    /* ENHANCEMENT: Combo text display styles for maintainability */
+    /* ENHANCEMENT: Combo text display - styled like stat bar */
     .combo-text-display {
       color: #FFD700;
       text-shadow: 0 0 15px rgba(255,215,0,1), 0 0 25px rgba(255,215,0,0.8), 2px 2px 4px rgba(0,0,0,0.9);
-      font-size: 22px;
+      font-size: 18px; /* Slightly smaller to fit in stat bar */
       font-weight: 900;
-      letter-spacing: 2px;
+      letter-spacing: 1px; /* Reduced spacing */
       animation: comboGlow 0.8s infinite alternate;
     }
 
     .combo-bonus-display {
-      color: #FFF;
-      text-shadow: 0 0 8px rgba(255,255,255,0.8), 1px 1px 3px rgba(0,0,0,0.8);
-      font-size: 14px;
+      color: #FFD700; /* Match main combo color */
+      text-shadow: 0 0 8px rgba(255,215,0,0.8), 1px 1px 3px rgba(0,0,0,0.8);
+      font-size: 12px;
       margin-top: 2px;
     }
 
@@ -538,6 +547,7 @@
     #loading-screen.fade-out {
       opacity: 0;
       pointer-events: none;
+      transition: opacity 0.3s ease-out; /* Fade out transition */
     }
 
     .loading-splash-logo {
@@ -1141,13 +1151,13 @@
       <!-- Additional stat info display -->
       <div class="stat-text" id="extra-stats-text" style="color: #9370DB; text-shadow: 0 0 5px rgba(147,112,219,0.6), 1px 1px 2px rgba(0,0,0,0.5); font-size: 12px; margin-top: 3px; display: none;"></div>
       
-      <!-- Status Message Bar -->
-      <div class="stat-text" id="status-message" style="color: #5DADE2; text-shadow: 0 0 8px rgba(93,173,226,0.8), 0 0 12px rgba(93,173,226,0.5), 1px 1px 2px rgba(0,0,0,0.5); font-size: 16px; min-height: 20px; margin-top: 5px;"></div>
+      <!-- Status Message Bar - styled like stat bar -->
+      <div class="stat-text" id="status-message" style="color: #FFD700; font-size: 14px; min-height: 20px; margin-top: 5px;"></div>
       
-      <!-- ENHANCEMENT: Combo Display - Shows kill streak multiplier -->
-      <div id="combo-display" style="display: none; margin-top: 8px; padding: 8px 15px; background: linear-gradient(135deg, rgba(255,107,107,0.9), rgba(155,89,182,0.9)); border: 3px solid #FFD700; border-radius: 15px; box-shadow: 0 0 20px rgba(255,215,0,0.8), inset 0 0 15px rgba(0,0,0,0.3);">
-        <div class="stat-text combo-text-display" id="combo-text">0x COMBO!</div>
-        <div class="stat-text combo-bonus-display" id="combo-bonus-text">+0% Damage & Gold</div>
+      <!-- ENHANCEMENT: Combo Display - Shows kill streak multiplier, styled like stat bar -->
+      <div id="combo-display" style="display: none; margin-top: 8px; padding: 6px 12px; background: linear-gradient(to bottom, #5A3A31, #3a2a21); border: 2px solid #3a2a21; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.5), inset 0 1px 2px rgba(255,255,255,0.1); width: 200px;">
+        <div class="stat-text combo-text-display" id="combo-text" style="background: none; border: none; box-shadow: none; padding: 0; width: auto; margin: 0;">0x COMBO!</div>
+        <div class="stat-text combo-bonus-display" id="combo-bonus-text" style="background: none; border: none; box-shadow: none; padding: 0; width: auto; margin-top: 2px;">+0% Damage & Gold</div>
       </div>
       
       <!-- Windmill Quest UI -->
@@ -1233,6 +1243,7 @@
       exp: 0x5DADE2, // Light Blue (Matching EXP bar)
     };
 
+    // Game Configuration Constants
     const GAME_CONFIG = {
       playerSpeedBase: 0.12, // Slower as requested
       enemySpeedBase: 0.05,  // Slower as requested
@@ -1244,7 +1255,10 @@
       lakeCenterZ: -30,
       lakeRadius: 18,
       // ENHANCEMENT: Combo system configuration
-      comboTimerDuration: 3000 // milliseconds - time window to maintain combo
+      comboTimerDuration: 3000, // milliseconds - time window to maintain combo
+      // Camera shake constants for weapon effects
+      meteorShakeIntensity: 0.2,
+      meteorShakeDecay: 0.92
     };
 
     // --- AUDIO SYSTEM (Oscillators) ---
@@ -1547,6 +1561,9 @@
     let runStartGold = 0;  // Track gold at start of run for end-of-run calculation
     let lastCleanupTime = 0; // Track last memory cleanup time
     let miniBossesSpawned = new Set(); // Track which mini-boss levels have been spawned
+    
+    // Camera shake state - prevents multiple animations from interfering
+    let isCameraShaking = false;
     
     // Countdown system (PR #70-71)
     let countdownActive = false;
@@ -2748,9 +2765,9 @@
         const particleCount = isCrit ? 4 : 2;
         spawnParticles(this.mesh.position, enemyColor, particleCount);
         
-        // Reduced impact particles for crits
+        // Reduced impact particles for crits (more than non-crit for visual feedback)
         if (isCrit) {
-          spawnParticles(this.mesh.position, 0xFFFFFF, 2);
+          spawnParticles(this.mesh.position, 0xFFFFFF, 3);
         }
         
         // Enhanced squishy deformation on hit
@@ -2773,10 +2790,10 @@
         // Optimized explosion effect on death
         const enemyColor = this.mesh.material.color.getHex();
         
-        // Main explosion with balanced particle count
-        spawnParticles(this.mesh.position, enemyColor, 20);
-        spawnParticles(this.mesh.position, 0xFFFFFF, 6);
-        spawnParticles(this.mesh.position, 0x8B0000, 5);
+        // Reduced death explosion particles for better performance
+        spawnParticles(this.mesh.position, enemyColor, 10);
+        spawnParticles(this.mesh.position, 0xFFFFFF, 3);
+        spawnParticles(this.mesh.position, 0x8B0000, 2);
         
         // Add explosion ring effect
         const ringGeo = new THREE.RingGeometry(0.1, 0.2, 16);
@@ -2810,8 +2827,8 @@
         };
         animateRing();
         
-        // Explode into more pieces - ENHANCED
-        const pieceCount = this.isMiniBoss ? 25 : 15; // More pieces for mini-boss
+        // Reduced explosion pieces for better performance
+        const pieceCount = this.isMiniBoss ? 15 : 8; // Fewer pieces for better performance
         for(let i = 0; i < pieceCount; i++) {
           const piece = new THREE.Mesh(
             new THREE.BoxGeometry(0.3, 0.3, 0.3),
@@ -5591,19 +5608,19 @@
         return;
       }
       
-      // Custom XP Curve: Smoother progression up to level 50
-      // Level 1→2: 3 kills, 2→3: 4 kills, 3→4: 5 kills, etc.
+      // Custom XP Curve: Balanced progression to reach level 50
+      // Adjusted to make reaching level 50 more achievable
       let killsNeeded;
       if (playerStats.lvl <= 5) {
         killsNeeded = 2 + playerStats.lvl; // Levels 1-5: 3, 4, 5, 6, 7 kills respectively
       } else if (playerStats.lvl <= 15) {
         killsNeeded = 7 + Math.floor((playerStats.lvl - 5) * 0.5); // Levels 6-15: 7-12 kills
       } else if (playerStats.lvl <= 30) {
-        killsNeeded = 12 + Math.floor((playerStats.lvl - 15) * 0.7); // Levels 16-30: 12-22 kills
+        killsNeeded = 12 + Math.floor((playerStats.lvl - 15) * 0.6); // Levels 16-30: 12-21 kills (reduced)
       } else if (playerStats.lvl <= 50) {
-        killsNeeded = 22 + Math.floor((playerStats.lvl - 30) * 1); // Levels 31-50: 22-42 kills
+        killsNeeded = 21 + Math.floor((playerStats.lvl - 30) * 0.7); // Levels 31-50: 21-35 kills (reduced for balance)
       } else {
-        killsNeeded = 42 + Math.floor((playerStats.lvl - 50) * 1.5); // Levels 51+: 42+ kills (harder progression)
+        killsNeeded = 35 + Math.floor((playerStats.lvl - 50) * 1.5); // Levels 51+: 35+ kills (harder progression)
       }
       playerStats.expReq = killsNeeded * GAME_CONFIG.expValue;
       
@@ -5718,8 +5735,8 @@
         }
       });
       
-      // Optimized Water Fountain Effect - fewer particles
-      for(let i=0; i<35; i++) {
+      // Reduced Water Fountain Effect for better performance
+      for(let i=0; i<20; i++) {
         const angle = (i / 60) * Math.PI * 2;
         const speed = 0.2 + Math.random() * 0.4;
         const height = 0.6 + Math.random() * 0.8;
@@ -5794,10 +5811,10 @@
       };
       updateRing();
       
-      // Optimized fountain/explosion of text particles
+      // Reduced fountain/explosion of text particles for performance
       const texts = ["L", "E", "V", "E", "L", " ", "U", "P", "!"];
       
-      for(let i=0; i<25; i++) {
+      for(let i=0; i<15; i++) {
         const angle = (i / 40) * Math.PI * 2;
         const speed = 0.15 + Math.random() * 0.35;
         const text = texts[i % texts.length];
@@ -5814,8 +5831,8 @@
         particles.push(particle);
       }
       
-      // Optimized colored particles
-      for(let i=0; i<20; i++) {
+      // Reduced colored particles for performance
+      for(let i=0; i<12; i++) {
         const angle = (i / 30) * Math.PI * 2;
         const speed = 0.2 + Math.random() * 0.3;
         const particle = new LevelUpParticle(
@@ -5829,8 +5846,8 @@
         particles.push(particle);
       }
       
-      // Optimized lightning bolts for performance
-      for(let i=0; i<3; i++) {
+      // Reduced lightning bolts for performance
+      for(let i=0; i<2; i++) {
         const angle = (i / 4) * Math.PI * 2;
         const lightning = new LightningBolt(
           player.mesh.position.clone(),
@@ -7714,10 +7731,10 @@
               }, 60);
               activeTimeouts.push(kickbackTimeoutId);
               
-              // Optimized muzzle flash particles (balanced for performance)
-              spawnParticles(player.mesh.position, 0xFFFF00, 4);
-              spawnParticles(player.mesh.position, 0xFFFFFF, 3);
-              spawnParticles(player.mesh.position, 0xFFA500, 2);
+              // Reduced muzzle flash particles for better performance
+              spawnParticles(player.mesh.position, 0xFFFF00, 2);
+              spawnParticles(player.mesh.position, 0xFFFFFF, 2);
+              spawnParticles(player.mesh.position, 0xFFA500, 1);
             }, i * 100);
           }
           weapons.gun.lastShot = time;
@@ -7735,9 +7752,20 @@
         weapons.sword.lastShot = time;
         playSound('shoot'); // Reuse sound for now
         
-        // Optimized sword slash visual effects
-        spawnParticles(player.mesh.position, 0xC0C0C0, 4);
-        spawnParticles(player.mesh.position, 0xFFFFFF, 2);
+        // Add sword recoil effect - slight forward lunge
+        const originalY = player.mesh.position.y;
+        const originalRotX = player.mesh.rotation.x;
+        player.mesh.position.y = originalY - 0.05; // Slight dip
+        player.mesh.rotation.x = originalRotX - 0.08; // Forward tilt
+        const swordRecoilTimeoutId = setTimeout(() => {
+          player.mesh.position.y = originalY;
+          player.mesh.rotation.x = originalRotX;
+        }, 50);
+        activeTimeouts.push(swordRecoilTimeoutId);
+        
+        // Reduced sword slash particles for better performance
+        spawnParticles(player.mesh.position, 0xC0C0C0, 2);
+        spawnParticles(player.mesh.position, 0xFFFFFF, 1);
         // Add flash light for sword slash - track timeout for proper cleanup
         const slashLight = new THREE.PointLight(0xC0C0C0, 3, 8);
         slashLight.position.copy(player.mesh.position);
@@ -7768,6 +7796,14 @@
           }
         });
         if (hit) {
+          // Aura pulse recoil - subtle expansion
+          const originalScale = player.mesh.scale.x;
+          player.mesh.scale.set(originalScale * 1.15, originalScale * 0.9, originalScale * 1.15);
+          const auraRecoilTimeoutId = setTimeout(() => {
+            player.mesh.scale.set(originalScale, originalScale, originalScale);
+          }, 80);
+          activeTimeouts.push(auraRecoilTimeoutId);
+          
           // Optimized visual effect for aura tick
           spawnParticles(player.mesh.position, 0x5DADE2, 5);
           spawnParticles(player.mesh.position, 0xFFFFFF, 2);
@@ -7789,6 +7825,30 @@
         
         meteors.push(new Meteor(targetX, targetZ));
         weapons.meteor.lastShot = time;
+        
+        // Add camera shake recoil for meteor impact (only if not already shaking)
+        if (!isCameraShaking) {
+          isCameraShaking = true;
+          let shakeIntensity = GAME_CONFIG.meteorShakeIntensity;
+          const shakeDecay = GAME_CONFIG.meteorShakeDecay;
+          const shakeAnim = () => {
+            if (shakeIntensity > 0.01) {
+              camera.position.x = targetCameraPos.x + (Math.random() - 0.5) * shakeIntensity;
+              camera.position.z = targetCameraPos.z + (Math.random() - 0.5) * shakeIntensity;
+              shakeIntensity *= shakeDecay;
+              requestAnimationFrame(shakeAnim);
+            } else {
+              camera.position.x = targetCameraPos.x;
+              camera.position.z = targetCameraPos.z;
+              isCameraShaking = false;
+            }
+          };
+          shakeAnim();
+        }
+        
+        // Visual feedback for meteor casting
+        spawnParticles(player.mesh.position, 0xFF4500, 3); // Orange particles
+        spawnParticles(player.mesh.position, 0xFFFFFF, 2);
       }
 
       // 5. LIGHTNING STRIKES
