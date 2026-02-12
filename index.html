@@ -367,7 +367,7 @@
     .btn:active {
       transform: translateY(4px) scale(0.98);
       box-shadow: 0 0 30px rgba(255,255,255,0.8);
-      animation: lightning-flash 0.3s ease;
+      animation: lightning-flash 0.2s ease;
     }
     
     .btn:active::before {
@@ -411,7 +411,7 @@
     .btn-small:active {
       transform: translateY(3px) scale(0.98);
       box-shadow: 0 0 30px rgba(255,255,255,0.8);
-      animation: lightning-flash 0.3s ease;
+      animation: lightning-flash 0.2s ease;
     }
     
     .btn-small:active::before {
@@ -572,7 +572,7 @@
 
     .menu-btn:active {
       box-shadow: 0 0 40px rgba(255, 255, 255, 1), 0 0 60px rgba(93, 173, 226, 1), inset 0 0 40px rgba(255, 255, 255, 0.8);
-      animation: lightning-flash 0.3s ease;
+      animation: lightning-flash 0.2s ease;
     }
 
     .menu-btn:active::before {
@@ -582,7 +582,7 @@
 
     @keyframes lightning-flash {
       0%, 100% { filter: brightness(1.1); }
-      50% { filter: brightness(2); box-shadow: 0 0 40px rgba(255,255,255,1), 0 0 80px rgba(93,173,226,1); }
+      50% { filter: brightness(1.8); box-shadow: 0 0 30px rgba(255,255,255,0.8), 0 0 60px rgba(93,173,226,0.8); }
     }
 
     .gold-display {
@@ -715,7 +715,7 @@
 
     .upgrade-buy-btn:not(:disabled):active {
       transform: scale(0.95);
-      animation: lightning-flash 0.3s ease;
+      animation: lightning-flash 0.2s ease;
     }
 
     .upgrade-buy-btn:not(:disabled):active::before {
@@ -763,7 +763,7 @@
     .back-btn:active {
       transform: translateX(-50%) translateY(4px) scale(0.98);
       box-shadow: 0 0 30px rgba(255,255,255,0.8);
-      animation: lightning-flash 0.3s ease;
+      animation: lightning-flash 0.2s ease;
     }
 
     .back-btn:active::before {
@@ -1731,13 +1731,13 @@
           this.mesh.position.x += this.dashVec.x * speed * dt;
           this.mesh.position.z += this.dashVec.z * speed * dt;
           
-          // Enhanced splash effect trail during dash - MORE PARTICLES
-          if (Math.random() < 0.7) { // Increased from 0.5
-            spawnParticles(this.mesh.position, COLORS.player, 3); // Increased from 2
+          // Optimized splash effect trail during dash
+          if (Math.random() < 0.4) {
+            spawnParticles(this.mesh.position, COLORS.player, 1);
             spawnWaterDroplet(this.mesh.position);
-            // Add white sparkle particles during dash
-            if (Math.random() < 0.4) {
-              spawnParticles(this.mesh.position, 0xFFFFFF, 2);
+            // Reduced white sparkle particles
+            if (Math.random() < 0.2) {
+              spawnParticles(this.mesh.position, 0xFFFFFF, 1);
             }
           }
           
@@ -1758,13 +1758,13 @@
             this.mesh.position.x += targetVel.x;
             this.mesh.position.z += targetVel.z;
 
-            // Enhanced water droplet trail when moving - MORE PARTICLES
+            // Optimized water droplet trail when moving
             this.trailTimer += dt;
-            if (this.trailTimer > 0.12) { // Faster trail (was 0.15)
+            if (this.trailTimer > 0.15) {
               this.trailTimer = 0;
               spawnWaterDroplet(this.mesh.position);
-              // Add extra splash particles during movement
-              if (Math.random() < 0.3) {
+              // Reduced splash particles
+              if (Math.random() < 0.15) {
                 spawnParticles(this.mesh.position, COLORS.player, 1);
               }
             }
@@ -1968,9 +1968,9 @@
         this.isDashing = true;
         this.dashTime = this.dashDuration;
         
-        // Splash effect on dash start - more dramatic
-        spawnParticles(this.mesh.position, COLORS.player, 20);
-        for(let i=0; i<8; i++) {
+        // Optimized splash effect on dash start
+        spawnParticles(this.mesh.position, COLORS.player, 8);
+        for(let i=0; i<3; i++) {
           spawnWaterDroplet(this.mesh.position);
         }
         
@@ -2031,10 +2031,10 @@
           this.mesh.material.color.setHex(COLORS.player);
         }, 100);
         
-        // ENHANCED - Drop more water particles and squishy deformation
-        spawnParticles(this.mesh.position, COLORS.player, 15); // Increased from 8
-        spawnParticles(this.mesh.position, 0xFFFFFF, 5); // Added white impact particles
-        for(let i=0; i<5; i++) { // Increased from 3 to 5
+        // Optimized - Fewer particles on hit for better performance
+        spawnParticles(this.mesh.position, COLORS.player, 6);
+        spawnParticles(this.mesh.position, 0xFFFFFF, 2);
+        for(let i=0; i<2; i++) {
           spawnWaterDroplet(this.mesh.position);
         }
         
@@ -2073,9 +2073,9 @@
         shakeAnim();
 
         if (playerStats.hp <= 0) {
-          // ENHANCED Death splash: more particles + ground pool with fade
-          spawnParticles(this.mesh.position, COLORS.player, 50); // Increased from 30
-          spawnParticles(this.mesh.position, 0xFFFFFF, 15); // Added white explosion
+          // Optimized death splash with balanced particle count
+          spawnParticles(this.mesh.position, COLORS.player, 25);
+          spawnParticles(this.mesh.position, 0xFFFFFF, 8)
           
           // Create ground pool (flat circle that fades out)
           const poolGeo = new THREE.CircleGeometry(1.5, 16);
@@ -2466,10 +2466,22 @@
         playSound('shoot');
       }
 
-      takeDamage(amount, isCrit = false) {
+      takeDamage(amount, isCrit = false, sourcePos = null) {
         const oldHp = this.hp;
         this.hp -= amount;
         createDamageNumber(amount, this.mesh.position, isCrit);
+        
+        // Add knockback effect when hit
+        if (sourcePos) {
+          const knockbackStrength = isCrit ? 0.3 : 0.15;
+          const dx = this.mesh.position.x - sourcePos.x;
+          const dz = this.mesh.position.z - sourcePos.z;
+          const dist = Math.sqrt(dx * dx + dz * dz);
+          if (dist > 0) {
+            this.mesh.position.x += (dx / dist) * knockbackStrength;
+            this.mesh.position.z += (dz / dist) * knockbackStrength;
+          }
+        }
         
         const hpPercent = this.hp / this.maxHp;
         const oldHpPercent = oldHp / this.maxHp;
@@ -2553,8 +2565,8 @@
             updateLimb();
           }
           
-          spawnParticles(this.mesh.position, enemyColor, 25); // Increased from 20
-          spawnParticles(this.mesh.position, 0x8B0000, 10); // Added blood splatter
+          spawnParticles(this.mesh.position, enemyColor, 12);
+          spawnParticles(this.mesh.position, 0x8B0000, 4)
           playSound('hit');
         }
         
@@ -2602,8 +2614,8 @@
             updatePiece();
           }
           
-          // Enhanced particles for destruction
-          spawnParticles(this.mesh.position, enemyColor, 15);
+          // Optimized particles for destruction
+          spawnParticles(this.mesh.position, enemyColor, 8);
           playSound('hit');
         }
         
@@ -2611,15 +2623,14 @@
         const oldColor = this.mesh.material.color.getHex();
         this.mesh.material.color.setHex(0xFFFFFF);
         
-        // Enhanced splash particles using enemy's own color
+        // Optimized splash particles using enemy's own color
         const enemyColor = oldColor;
-        const particleCount = isCrit ? 8 : 3;
+        const particleCount = isCrit ? 4 : 2;
         spawnParticles(this.mesh.position, enemyColor, particleCount);
         
-        // Additional impact particles
+        // Reduced impact particles for crits
         if (isCrit) {
-          spawnParticles(this.mesh.position, enemyColor, 5);
-          spawnParticles(this.mesh.position, 0xFFFFFF, 3);
+          spawnParticles(this.mesh.position, 0xFFFFFF, 2);
         }
         
         // Enhanced squishy deformation on hit
@@ -2639,13 +2650,13 @@
       die() {
         this.isDead = true;
         
-        // More dramatic explosion effect on death
+        // Optimized explosion effect on death
         const enemyColor = this.mesh.material.color.getHex();
         
-        // Main explosion - ENHANCED with more particles
-        spawnParticles(this.mesh.position, enemyColor, 40);
-        spawnParticles(this.mesh.position, 0xFFFFFF, 15);
-        spawnParticles(this.mesh.position, 0x8B0000, 12); // Blood particles
+        // Main explosion with balanced particle count
+        spawnParticles(this.mesh.position, enemyColor, 20);
+        spawnParticles(this.mesh.position, 0xFFFFFF, 6);
+        spawnParticles(this.mesh.position, 0x8B0000, 5)
         
         // Add explosion ring effect
         const ringGeo = new THREE.RingGeometry(0.1, 0.2, 16);
@@ -2870,9 +2881,9 @@
             const isCrit = Math.random() < playerStats.critChance;
             if (isCrit) dmg *= playerStats.critDmg;
             
-            enemy.takeDamage(Math.floor(dmg), isCrit);
+            enemy.takeDamage(Math.floor(dmg), isCrit, this.mesh.position);
             
-            // Knockback effect
+            // Additional visual knockback effect (the takeDamage also handles knockback now)
             const knockbackForce = 0.5;
             enemy.mesh.position.x += this.vx * knockbackForce;
             enemy.mesh.position.z += this.vz * knockbackForce;
@@ -3010,7 +3021,7 @@
             const isCrit = Math.random() < playerStats.critChance;
             if (isCrit) dmg *= playerStats.critDmg;
             
-            enemy.takeDamage(Math.floor(dmg), isCrit);
+            enemy.takeDamage(Math.floor(dmg), isCrit, this.mesh.position);
             
             // Apply slow effect
             if (!enemy.slowedUntil || enemy.slowedUntil < Date.now()) {
@@ -3127,7 +3138,7 @@
         );
         
         scene.add(this.mesh);
-        this.life = 30;
+        this.life = 20; // Reduced from 30 for better performance
       }
       
       update() {
@@ -7303,20 +7314,21 @@
               }, 80);
               activeTimeouts.push(timeoutId);
               
-              // Gun kickback effect - slight recoil visual
+              // Improved Gun kickback effect with smooth animation
               const originalY = player.mesh.position.y;
-              player.mesh.position.y = originalY - 0.05;
+              const originalRotX = player.mesh.rotation.x;
+              player.mesh.position.y = originalY - 0.08; // More pronounced
+              player.mesh.rotation.x = originalRotX + 0.1; // Add slight tilt back
               const kickbackTimeoutId = setTimeout(() => {
                 player.mesh.position.y = originalY;
-              }, 50);
+                player.mesh.rotation.x = originalRotX;
+              }, 60);
               activeTimeouts.push(kickbackTimeoutId);
               
-              // ENHANCED Muzzle flash particles (bright and intense) - MORE particles
-              spawnParticles(player.mesh.position, 0xFFFF00, 12); // Increased from 8
-              spawnParticles(player.mesh.position, 0xFFFFFF, 8); // Increased from 5
-              spawnParticles(player.mesh.position, 0xFFA500, 8); // Increased from 5
-              // Add smoke particles
-              spawnParticles(player.mesh.position, 0x888888, 4);
+              // Optimized muzzle flash particles (balanced for performance)
+              spawnParticles(player.mesh.position, 0xFFFF00, 4);
+              spawnParticles(player.mesh.position, 0xFFFFFF, 3);
+              spawnParticles(player.mesh.position, 0xFFA500, 2);
             }, i * 100);
           }
           weapons.gun.lastShot = time;
@@ -7334,9 +7346,9 @@
         weapons.sword.lastShot = time;
         playSound('shoot'); // Reuse sound for now
         
-        // ENHANCED - Add sword slash visual effects
-        spawnParticles(player.mesh.position, 0xC0C0C0, 8); // Silver slash particles
-        spawnParticles(player.mesh.position, 0xFFFFFF, 5); // White sparkles
+        // Optimized sword slash visual effects
+        spawnParticles(player.mesh.position, 0xC0C0C0, 4);
+        spawnParticles(player.mesh.position, 0xFFFFFF, 2);
         // Add flash light for sword slash - track timeout for proper cleanup
         const slashLight = new THREE.PointLight(0xC0C0C0, 3, 8);
         slashLight.position.copy(player.mesh.position);
@@ -7362,14 +7374,14 @@
           if (e.isDead) return;
           const d = player.mesh.position.distanceTo(e.mesh.position);
           if (d < weapons.aura.range) {
-            e.takeDamage(weapons.aura.damage * playerStats.strength);
+            e.takeDamage(weapons.aura.damage * playerStats.strength, false, player.mesh.position);
             hit = true;
           }
         });
         if (hit) {
-          // ENHANCED - Visual effect for aura tick
-          spawnParticles(player.mesh.position, 0x5DADE2, 10); // Blue aura particles
-          spawnParticles(player.mesh.position, 0xFFFFFF, 5); // White sparkles
+          // Optimized visual effect for aura tick
+          spawnParticles(player.mesh.position, 0x5DADE2, 5);
+          spawnParticles(player.mesh.position, 0xFFFFFF, 2);
         }
         weapons.aura.lastShot = time;
       }
