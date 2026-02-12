@@ -3894,7 +3894,7 @@
       combo50: { id: 'combo50', name: 'Combo Legend', desc: 'Achieve a 50-kill combo', reward: 300, check: () => playerStats.maxCombo >= 50, claimed: false },
       combo100: { id: 'combo100', name: 'Unstoppable Force', desc: 'Achieve a 100-kill combo', reward: 500, check: () => playerStats.maxCombo >= 100, claimed: false },
       
-      critStreak: { id: 'critStreak', name: 'Critical Precision', desc: 'Land 100 critical hits', reward: 200, check: () => playerStats.totalCrits >= 100, claimed: false },
+      critStreak: { id: 'totalCrits100', name: 'Critical Precision', desc: 'Land 100 critical hits', reward: 200, check: () => playerStats.totalCrits >= 100, claimed: false },
       bossSlayer: { id: 'bossSlayer', name: 'Boss Slayer', desc: 'Defeat 5 mini-bosses', reward: 250, check: () => playerStats.bossesKilled >= 5, claimed: false },
       perfectRun: { id: 'perfectRun', name: 'Perfect Run', desc: 'Complete a run without taking damage', reward: 1000, check: () => playerStats.perfectRuns > 0, claimed: false }
     };
