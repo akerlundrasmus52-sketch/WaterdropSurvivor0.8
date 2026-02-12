@@ -421,6 +421,7 @@ h2 {
   align-items: center;
   justify-content: center;
   z-index: 50; /* Lower than UI layer buttons */
+  pointer-events: auto; /* Ensure menu captures touch events on mobile */
 }
 
 #main-menu::before {
@@ -489,6 +490,7 @@ h2 {
   position: relative;
   overflow: hidden;
   backdrop-filter: blur(3px);
+  pointer-events: auto; /* Ensure buttons receive touch events on mobile */
 }
 
 .menu-btn::before {
@@ -554,6 +556,7 @@ h2 {
   z-index: 50; /* Lower than UI layer buttons */
   overflow-y: auto;
   padding: 20px;
+  pointer-events: auto; /* Ensure shop captures touch events on mobile */
 }
 
 .shop-header {
@@ -727,6 +730,7 @@ h2 {
   justify-content: center;
   z-index: 50; /* Lower than UI layer buttons */
   padding: 40px;
+  pointer-events: auto; /* Ensure screens capture touch events on mobile */
 }
 
 .screen-title {
