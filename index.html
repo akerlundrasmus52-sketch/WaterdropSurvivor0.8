@@ -2914,6 +2914,12 @@
         const previousMultiplier = playerStats.comboMultiplier;
         playerStats.comboMultiplier = 1.0 + Math.min(Math.floor(playerStats.comboCount / 5) * 0.25, 1.0);
         
+        // Trigger feedback when the combo multiplier increases
+        if (playerStats.comboMultiplier > previousMultiplier) {
+          createFloatingText(`${playerStats.comboMultiplier.toFixed(2)}x MULTIPLIER!`, player.mesh.position);
+          playSound('levelup');
+        }
+        
         // Update max combo achieved
         if (playerStats.comboCount > playerStats.maxCombo) {
           playerStats.maxCombo = playerStats.comboCount;
