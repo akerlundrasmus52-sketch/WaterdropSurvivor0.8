@@ -225,6 +225,58 @@
       margin-top: 8px;
     }
 
+    /* Bottom Left HUD for Level and Status */
+    .hud-bottom-left {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    /* Unified Status Bar - Like empty HP/EXP bar */
+    .unified-status-bar {
+      background: linear-gradient(to bottom, #1a1a2e 0%, #1a1a2e 50%, #2c3e50 50%, #2c3e50 100%);
+      border-radius: 12px;
+      border: 3px solid #16213e;
+      padding: 8px 15px;
+      min-width: 250px;
+      max-width: 400px;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.5), inset 0 2px 4px rgba(0,0,0,0.3);
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+
+    .unified-status-bar.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .status-bar-content {
+      font-size: 14px;
+      font-weight: bold;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.9);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Animation for status swoosh */
+    @keyframes swooshUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
     /* Joystick */
     #joystick-zone {
       position: absolute;
@@ -301,13 +353,13 @@
     .upgrade-card {
       background: linear-gradient(to bottom, #2c3e50, #1a252f); /* Consistent dark gradient for all boxes */
       margin: 8px 0; /* Reduced margin */
-      padding: 12px; /* Reduced padding */
+      padding: 16px; /* Increased padding for better text readability */
       border-radius: 12px; /* Slightly smaller radius */
       border: 3px solid #5DADE2; /* Light blue border matching menu */
       cursor: pointer;
       transition: transform 0.1s, box-shadow 0.1s;
       box-shadow: 0 4px 8px rgba(0,0,0,0.5), 0 0 15px rgba(93,173,226,0.4), inset 0 0 0 2px rgba(0,0,0,0.4); /* Blue glow */
-      max-height: 70px; /* Limit height to fit more on screen */
+      min-height: 60px; /* Minimum height for text-only cards */
     }
 
     .upgrade-card:hover {
@@ -321,14 +373,15 @@
     .upgrade-title {
       font-weight: bold;
       color: #5DADE2; /* Light blue matching menu */
-      font-size: 16px; /* Slightly smaller font */
+      font-size: 18px; /* Slightly larger for better readability */
       text-shadow: 0 0 8px rgba(93,173,226,0.6), 0 0 15px rgba(93,173,226,0.3), 1px 1px 2px rgba(0,0,0,0.8);
+      margin-bottom: 4px;
     }
 
     .upgrade-desc {
-      font-size: 11px; /* Smaller description */
-      color: #bbb;
-      display: none; /* Hidden - only show funny names */
+      font-size: 13px; /* Larger description for better readability */
+      color: #ddd; /* Brighter text */
+      line-height: 1.3;
     }
     
     /* Unified styling - all upgrade cards use same color scheme now */
@@ -1144,22 +1197,6 @@
         <div class="bar-text" id="exp-text" style="color: #FFFFFF;">EXP: 0%</div>
       </div>
       
-      <div class="stat-text" id="lvl-text" style="color: #5DADE2; text-shadow: 0 0 8px rgba(93,173,226,0.8), 0 0 12px rgba(93,173,226,0.5), 1px 1px 2px rgba(0,0,0,0.5);">LVL: 1</div>
-      <div class="stat-text" id="score-text" style="color: #8B4513;">KILLS: 0</div>
-      <div class="stat-text gold-text" id="gold-text" style="color: #FFD700; text-shadow: 0 0 10px rgba(255,215,0,0.9), 0 0 15px rgba(255,215,0,0.6), 1px 1px 2px rgba(0,0,0,0.5);">GOLD: 0</div>
-      
-      <!-- Additional stat info display -->
-      <div class="stat-text" id="extra-stats-text" style="color: #9370DB; text-shadow: 0 0 5px rgba(147,112,219,0.6), 1px 1px 2px rgba(0,0,0,0.5); font-size: 12px; margin-top: 3px; display: none;"></div>
-      
-      <!-- Status Message Bar - styled like stat bar -->
-      <div class="stat-text" id="status-message" style="color: #FFD700; font-size: 14px; min-height: 20px; margin-top: 5px;"></div>
-      
-      <!-- ENHANCEMENT: Combo Display - Shows kill streak multiplier, styled like stat bar -->
-      <div id="combo-display" style="display: none; margin-top: 8px; padding: 6px 12px; background: linear-gradient(to bottom, #5A3A31, #3a2a21); border: 2px solid #3a2a21; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.5), inset 0 1px 2px rgba(255,255,255,0.1); width: 200px;">
-        <div class="stat-text combo-text-display" id="combo-text" style="background: none; border: none; box-shadow: none; padding: 0; width: auto; margin: 0;">0x COMBO!</div>
-        <div class="stat-text combo-bonus-display" id="combo-bonus-text" style="background: none; border: none; box-shadow: none; padding: 0; width: auto; margin-top: 2px;">+0% Damage & Gold</div>
-      </div>
-      
       <!-- Windmill Quest UI -->
       <div id="windmill-quest-ui" style="display: none; margin-top: 10px;">
         <div class="bar-container" style="border-color: #8B4513;">
@@ -1167,6 +1204,31 @@
         </div>
         <div class="stat-text" id="windmill-hp-text" style="color: #8B4513;">WINDMILL: 600/600</div>
         <div class="stat-text" id="windmill-timer-text" style="color: #FFD700; font-size: 18px;">DEFEND: 30s</div>
+      </div>
+    </div>
+    
+    <!-- Bottom Left Status Bar - Unified Display -->
+    <div class="hud-bottom-left">
+      <div id="lvl-display" style="font-size: 16px; color: #5DADE2; font-weight: bold; text-shadow: 0 0 8px rgba(93,173,226,0.8), 1px 1px 2px rgba(0,0,0,0.5);">LVL: 1</div>
+      
+      <!-- Unified Status Bar Container -->
+      <div id="unified-status-bar" class="unified-status-bar">
+        <div class="status-bar-content">
+          <span id="status-bar-text" style="color: #FFD700;">Ready</span>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Legacy stat displays - hidden but kept for compatibility -->
+    <div style="display: none;">
+      <div class="stat-text" id="lvl-text" style="color: #5DADE2;">LVL: 1</div>
+      <div class="stat-text" id="score-text" style="color: #8B4513;">KILLS: 0</div>
+      <div class="stat-text gold-text" id="gold-text" style="color: #FFD700;">GOLD: 0</div>
+      <div class="stat-text" id="extra-stats-text" style="color: #9370DB;">Stats</div>
+      <div class="stat-text" id="status-message" style="color: #FFD700;">Status</div>
+      <div id="combo-display">
+        <div class="stat-text" id="combo-text">Combo</div>
+        <div class="stat-text" id="combo-bonus-text">Bonus</div>
       </div>
     </div>
     <button id="stats-btn" class="btn-small" style="position: absolute; top: 20px; right: 20px; pointer-events: auto; z-index: 100;">STATS</button>
@@ -6669,8 +6731,8 @@
           card.className += ' legendary';
         }
         
-        const iconHTML = u.icon ? `<div style="font-size: 48px; margin-bottom: 10px;">${u.icon}</div>` : '';
-        card.innerHTML = `${iconHTML}<div class="upgrade-title">${u.title}</div><div class="upgrade-desc">${u.desc}</div>`;
+        // Text-only display - no icons, just names and descriptions
+        card.innerHTML = `<div class="upgrade-title">${u.title}</div><div class="upgrade-desc" style="display: block; margin-top: 4px;">${u.desc}</div>`;
         
         // Add dramatic entrance animation - alternate left/right
         card.style.opacity = '0';
@@ -6703,16 +6765,34 @@
       const expPct = (playerStats.exp / playerStats.expReq) * 100;
       document.getElementById('exp-fill').style.width = `${Math.min(100, expPct)}%`;
       document.getElementById('exp-text').innerText = `EXP: ${Math.min(100, Math.ceil(expPct))}%`;
-      document.getElementById('lvl-text').innerText = `LVL: ${playerStats.lvl}`;
-      document.getElementById('score-text').innerText = `KILLS: ${playerStats.kills}`;
-      document.getElementById('gold-text').innerText = `GOLD: ${playerStats.gold}`;
       
-      // Show extended stat info after level ups (toggle visibility after level 3)
-      const extraStatsEl = document.getElementById('extra-stats-text');
-      if (extraStatsEl && playerStats.lvl >= 3) {
-        extraStatsEl.style.display = 'block';
-        extraStatsEl.innerText = `ATK: ${Math.round(playerStats.strength * 100)}% | ARM: ${playerStats.armor}% | SPD: ${Math.round(playerStats.walkSpeed)}`;
+      // Update level display in bottom left
+      const lvlDisplay = document.getElementById('lvl-display');
+      if (lvlDisplay) {
+        lvlDisplay.innerText = `LVL: ${playerStats.lvl}`;
       }
+      
+      // Show gold and kills in status bar when they change
+      const statusText = document.getElementById('status-bar-text');
+      if (statusText && !statusText.innerText.includes('Upgrade') && !statusText.innerText.includes('Weapon')) {
+        statusText.innerText = `GOLD: ${playerStats.gold} | KILLS: ${playerStats.kills}`;
+        statusText.style.color = '#FFD700';
+        
+        const statusBar = document.getElementById('unified-status-bar');
+        if (statusBar) {
+          statusBar.classList.add('show');
+        }
+      }
+      
+      // Legacy elements - keep for backwards compatibility but hide
+      const lvlText = document.getElementById('lvl-text');
+      if (lvlText) lvlText.style.display = 'none';
+      const scoreText = document.getElementById('score-text');
+      if (scoreText) scoreText.style.display = 'none';
+      const goldText = document.getElementById('gold-text');
+      if (goldText) goldText.style.display = 'none';
+      const extraStatsEl = document.getElementById('extra-stats-text');
+      if (extraStatsEl) extraStatsEl.style.display = 'none';
     }
     
     function updateWindmillQuestUI() {
@@ -6819,9 +6899,10 @@
     let statusMessageFadeTimeout = null;
     
     function showStatChange(text) {
-      // Display message in status bar instead of floating text
-      const statusEl = document.getElementById('status-message');
-      if (!statusEl) return;
+      // Display message in unified status bar at bottom left
+      const statusBar = document.getElementById('unified-status-bar');
+      const statusText = document.getElementById('status-bar-text');
+      if (!statusBar || !statusText) return;
       
       // Clear any existing fade interval and timeout
       if (statusMessageFadeInterval) {
@@ -6833,24 +6914,24 @@
         statusMessageFadeTimeout = null;
       }
       
-      statusEl.innerText = text;
-      statusEl.style.color = '#FFD700';
-      statusEl.style.opacity = '1';
+      // Update text with yellow/blue coloring
+      statusText.innerText = text;
+      
+      // Determine color based on message type
+      if (text.includes('GOLD') || text.includes('Gold') || text.includes('+') || text.includes('New Weapon')) {
+        statusText.style.color = '#FFD700'; // Yellow for gold and positive changes
+      } else {
+        statusText.style.color = '#5DADE2'; // Blue for other updates
+      }
+      
+      // Show with swoosh animation
+      statusBar.classList.remove('show');
+      void statusBar.offsetWidth; // Force reflow
+      statusBar.classList.add('show');
       
       // Clear after 3 seconds with fade out
       statusMessageFadeTimeout = setTimeout(() => {
-        let opacity = 1;
-        statusMessageFadeInterval = setInterval(() => {
-          opacity -= 0.05;
-          if (opacity <= 0) {
-            clearInterval(statusMessageFadeInterval);
-            statusMessageFadeInterval = null;
-            statusEl.innerText = '';
-            statusEl.style.opacity = '1';
-          } else {
-            statusEl.style.opacity = opacity.toString();
-          }
-        }, 50);
+        statusBar.classList.remove('show');
       }, 3000);
     }
 
