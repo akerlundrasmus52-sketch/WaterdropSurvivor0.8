@@ -908,7 +908,7 @@
     <div class="tutorial-box" id="tutorial-box">
       <div class="tutorial-step" id="tutorial-step">TUTORIAL 1/8</div>
       <div class="tutorial-text" id="tutorial-text">Move with the joystick</div>
-      <div class="tutorial-progress">Click anywhere to continue →</div>
+      <div class="tutorial-progress">Click to continue →</div>
     </div>
   </div>
 
@@ -1266,7 +1266,9 @@
     let tutorialActive = false;
     let tutorialStep = 0;
     let tutorialTimer = 0;
-    const TUTORIAL_STEP_DURATION = 4000; // 4 seconds per step
+    let tutorialBoxElement = null; // Store reference to tutorial box
+    const TUTORIAL_STEP_DURATION = 4000; // 4 seconds per step (original)
+    const TUTORIAL_AUTO_ADVANCE_DURATION = 10000; // 10 seconds auto-advance fallback
     const tutorialSteps = [
       "Move with the joystick",
       "Kill enemies, pick up EXP stars",
@@ -5321,9 +5323,9 @@ Total Gold Earned: ${saveData.totalGoldEarned}
       updateTutorialDisplay();
       document.getElementById('tutorial-overlay').classList.add('active');
       
-      // Add click handler to advance or close tutorial
-      const tutorialBox = document.getElementById('tutorial-box');
-      tutorialBox.onclick = advanceTutorial;
+      // Store reference and add click handler to advance or close tutorial
+      tutorialBoxElement = document.getElementById('tutorial-box');
+      tutorialBoxElement.onclick = advanceTutorial;
       
       // Limit initial enemies during tutorial
       if (enemies.length > 3) {
@@ -5356,8 +5358,8 @@ Total Gold Earned: ${saveData.totalGoldEarned}
       if (!tutorialActive) return;
       
       const now = Date.now();
-      // Keep auto-advance as fallback (10 seconds instead of 4 for more time to read)
-      if (now - tutorialTimer >= TUTORIAL_STEP_DURATION * 2.5) {
+      // Auto-advance as fallback after 10 seconds
+      if (now - tutorialTimer >= TUTORIAL_AUTO_ADVANCE_DURATION) {
         advanceTutorial();
       }
     }
@@ -5370,10 +5372,10 @@ Total Gold Earned: ${saveData.totalGoldEarned}
     function endTutorial() {
       tutorialActive = false;
       document.getElementById('tutorial-overlay').classList.remove('active');
-      // Remove click handler
-      const tutorialBox = document.getElementById('tutorial-box');
-      if (tutorialBox) {
-        tutorialBox.onclick = null;
+      // Remove click handler using stored reference
+      if (tutorialBoxElement) {
+        tutorialBoxElement.onclick = null;
+        tutorialBoxElement = null;
       }
       saveData.tutorialCompleted = true;
       saveSaveData();
