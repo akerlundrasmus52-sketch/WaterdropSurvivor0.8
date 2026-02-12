@@ -1887,6 +1887,10 @@
         
         // Physics/Visuals
         this.velocity = new THREE.Vector3(0, 0, 0);
+        this.acceleration = 0.015; // Tighter acceleration
+        this.deceleration = 0.85; // Smooth deceleration (friction)
+        this.maxVelocity = 0.5; // Max speed cap
+        this.recoilVelocity = new THREE.Vector3(0, 0, 0); // Recoil from shooting
         this.targetScale = new THREE.Vector3(1, 1, 1);
         this.trailTimer = 0;
         this.wobblePhase = 0;
@@ -1948,6 +1952,7 @@
         }
         // Movement
         else {
+          // Calculate target velocity based on input
           const targetVel = new THREE.Vector3(0, 0, 0);
         
           // Movement with LEFT stick
@@ -1956,8 +1961,16 @@
             targetVel.x = joystickLeft.x * speed * dt; // Frame-rate independent
             targetVel.z = joystickLeft.y * speed * dt;
           
-            this.mesh.position.x += targetVel.x;
-            this.mesh.position.z += targetVel.z;
+            // Apply acceleration toward target velocity
+            this.velocity.x += (targetVel.x - this.velocity.x) * this.acceleration;
+            this.velocity.z += (targetVel.z - this.velocity.z) * this.acceleration;
+            
+            // Cap max velocity
+            const velMag = Math.sqrt(this.velocity.x * this.velocity.x + this.velocity.z * this.velocity.z);
+            if (velMag > this.maxVelocity) {
+              this.velocity.x = (this.velocity.x / velMag) * this.maxVelocity;
+              this.velocity.z = (this.velocity.z / velMag) * this.maxVelocity;
+            }
 
             // Optimized water droplet trail when moving
             this.trailTimer += dt;
@@ -1970,9 +1983,31 @@
               }
             }
           } else {
-            // Idle
+            // Apply deceleration when no input
+            this.velocity.x *= this.deceleration;
+            this.velocity.z *= this.deceleration;
+            
+            // Stop completely when velocity is very small
+            if (Math.abs(this.velocity.x) < 0.001) this.velocity.x = 0;
+            if (Math.abs(this.velocity.z) < 0.001) this.velocity.z = 0;
+            
             this.trailTimer = 0;
           }
+          
+          // Apply recoil from shooting
+          this.velocity.x += this.recoilVelocity.x;
+          this.velocity.z += this.recoilVelocity.z;
+          
+          // Dampen recoil quickly
+          this.recoilVelocity.x *= 0.7;
+          this.recoilVelocity.z *= 0.7;
+          if (Math.abs(this.recoilVelocity.x) < 0.001) this.recoilVelocity.x = 0;
+          if (Math.abs(this.recoilVelocity.z) < 0.001) this.recoilVelocity.z = 0;
+          
+          // Apply final velocity to position
+          this.mesh.position.x += this.velocity.x;
+          this.mesh.position.z += this.velocity.z;
+        }
           
           // Rotation/Aiming with RIGHT stick (independent of movement)
           if (joystickRight.active) {
@@ -6473,6 +6508,86 @@
             playerStats.doubleCritChance += 0.25;
             showStatChange('Lucky Strikes +25% (Total: ' + Math.round(playerStats.doubleCritChance * 100) + '%)');
           } 
+        },
+        { 
+          id: 'explosive_rounds', 
+          icon: '💣',
+          title: 'EXPLOSIVE ROUNDS', 
+          desc: 'Projectiles deal 40% splash damage in small area', 
+          apply: () => { 
+            playerStats.explosiveRounds = true;
+            showStatChange('Explosive Rounds Unlocked!');
+          } 
+        },
+        { 
+          id: 'piercing_shots', 
+          icon: '🎯',
+          title: 'PIERCING SHOTS', 
+          desc: 'Projectiles pierce through 1 additional enemy', 
+          apply: () => { 
+            playerStats.piercingShots = (playerStats.piercingShots || 0) + 1;
+            showStatChange('Piercing Shots +1 (Total: ' + playerStats.piercingShots + ')');
+          } 
+        },
+        { 
+          id: 'chain_reaction', 
+          icon: '⚡',
+          title: 'CHAIN REACTION', 
+          desc: '15% chance to trigger chain lightning on hit', 
+          apply: () => { 
+            playerStats.chainReactionChance = (playerStats.chainReactionChance || 0) + 0.15;
+            showStatChange('Chain Reaction +15% (Total: ' + Math.round(playerStats.chainReactionChance * 100) + '%)');
+          } 
+        },
+        { 
+          id: 'iron_will', 
+          icon: '🛡️',
+          title: 'IRON WILL', 
+          desc: 'Reduce damage taken by 8% (stacks with armor)', 
+          apply: () => { 
+            playerStats.damageReduction = (playerStats.damageReduction || 0) + 0.08;
+            showStatChange('Iron Will +8% (Total: ' + Math.round(playerStats.damageReduction * 100) + '% DR)');
+          } 
+        },
+        { 
+          id: 'multi_strike', 
+          icon: '🗡️',
+          title: 'MULTI-STRIKE', 
+          desc: '10% chance to attack twice in rapid succession', 
+          apply: () => { 
+            playerStats.multiStrikeChance = (playerStats.multiStrikeChance || 0) + 0.1;
+            showStatChange('Multi-Strike +10% (Total: ' + Math.round(playerStats.multiStrikeChance * 100) + '%)');
+          } 
+        },
+        { 
+          id: 'execution', 
+          icon: '⚰️',
+          title: 'EXECUTION', 
+          desc: 'Deal 50% more damage to enemies below 25% HP', 
+          apply: () => { 
+            playerStats.executionDamage = true;
+            showStatChange('Execution Unlocked!');
+          } 
+        },
+        { 
+          id: 'adrenaline', 
+          icon: '💉',
+          title: 'ADRENALINE RUSH', 
+          desc: 'Gain 15% speed boost when HP above 80%', 
+          apply: () => { 
+            playerStats.adrenalineRush = true;
+            showStatChange('Adrenaline Rush Unlocked!');
+          } 
+        },
+        { 
+          id: 'fortify', 
+          icon: '🏰',
+          title: 'FORTIFY', 
+          desc: 'Gain 20% damage resistance for 3s after taking damage', 
+          apply: () => { 
+            playerStats.fortifyOnHit = true;
+            showStatChange('Fortify Unlocked!');
+          } 
         }
       ];
 
@@ -7930,6 +8045,14 @@
         }
 
         if (nearest) {
+          // Apply gun recoil
+          const recoilStrength = 0.015;
+          const dx = nearest.mesh.position.x - player.mesh.position.x;
+          const dz = nearest.mesh.position.z - player.mesh.position.z;
+          const dist = Math.sqrt(dx*dx + dz*dz);
+          player.recoilVelocity.x -= (dx / dist) * recoilStrength;
+          player.recoilVelocity.z -= (dz / dist) * recoilStrength;
+          
           // Fire based on barrels
           for(let i=0; i<weapons.gun.barrels; i++) {
             setTimeout(() => {
