@@ -55,7 +55,7 @@
       margin: 0;
       padding: 0;
       overflow: hidden;
-      background-color: #FFF0F5; /* Lavender Blush */
+      background-color: #E6F2FF; /* Soft blue to match loading screen theme */
       font-family: 'M PLUS Rounded 1c', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       touch-action: none;
       user-select: none;
@@ -104,12 +104,34 @@
       position: relative;
       box-shadow: 0 3px 8px rgba(0,0,0,0.3), inset 0 2px 4px rgba(0,0,0,0.2), 0 0 15px rgba(0,0,0,0.5);
     }
+    
+    .bar-wrapper {
+      position: relative;
+      width: 200px;
+    }
 
     .bar-fill {
       height: 100%;
       width: 100%;
       transition: width 0.3s ease-out;
       box-shadow: inset 0 2px 4px rgba(255,255,255,0.2);
+      border-radius: 12px;
+    }
+    
+    .bar-text {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: white;
+      font-weight: bold;
+      font-size: 12px;
+      text-shadow: 1px 1px 3px rgba(0,0,0,0.9), -1px -1px 3px rgba(0,0,0,0.9), 
+                   1px -1px 3px rgba(0,0,0,0.9), -1px 1px 3px rgba(0,0,0,0.9),
+                   0 0 5px rgba(0,0,0,1);
+      pointer-events: none;
+      z-index: 2;
+      white-space: nowrap;
     }
 
     #hp-fill { 
@@ -914,15 +936,19 @@
 
   <div id="ui-layer">
     <div class="hud-top">
-      <div class="bar-container" id="hp-bar-container">
-        <div class="bar-fill" id="hp-fill"></div>
+      <div class="bar-wrapper">
+        <div class="bar-container" id="hp-bar-container">
+          <div class="bar-fill" id="hp-fill"></div>
+        </div>
+        <div class="bar-text" id="hp-bar-text">HP: 100/100</div>
       </div>
-      <div class="stat-text" id="hp-text" style="color: #FF4444;">HP: 100/100</div>
       
-      <div class="bar-container" id="exp-bar-container" style="border-color: #2a2a2a;">
-        <div class="bar-fill" id="exp-fill"></div>
+      <div class="bar-wrapper">
+        <div class="bar-container" id="exp-bar-container" style="border-color: #2a2a2a;">
+          <div class="bar-fill" id="exp-fill"></div>
+        </div>
+        <div class="bar-text" id="exp-bar-text">EXP: 0/100</div>
       </div>
-      <div class="stat-text" id="exp-text" style="color: #5DADE2;">EXP: 0%</div>
       <div class="stat-text" id="lvl-text" style="color: #5DADE2;">LVL: 1</div>
       <div class="stat-text" id="score-text" style="color: #8B4513;">KILLS: 0</div>
       <div class="stat-text" id="gold-text" style="color: #FFD700;">GOLD: 0</div>
@@ -995,17 +1021,17 @@
 
     // --- CONSTANTS & CONFIG ---
     const COLORS = {
-      bg: 0xFFF0F5,
+      bg: 0xE6F2FF, // Soft light blue background to match loading screen
       player: 0x4FC3F7, // Light Blue - more like water droplet
       enemySquare: 0xFF69B4, // Hot Pink
       enemyTriangle: 0xFFD700, // Gold
       enemyRound: 0x9370DB, // Purple
-      ground: 0x7CFC00, // Lawn Green (More vibrant)
-      forest: 0x98FB98, // Pale Green
-      lake: 0x1E90FF, // Dodger Blue (More water-like)
-      cabin: 0xDEB887, // Burlywood
-      farmland: 0xF0E68C, // Khaki
-      exp: 0x5DADE2, // Light Blue (Matching EXP bar)
+      ground: 0x6BB6D6, // Softer blue-green to match loading screen theme
+      forest: 0x87CEEB, // Sky Blue - lighter, more cohesive
+      lake: 0x3399FF, // Brighter blue to match water theme
+      cabin: 0xC9A87C, // Warm tan for buildings
+      farmland: 0xE8D4A0, // Light sandy color
+      exp: 0x5DADE2, // Light Blue (Matching EXP bar and loading screen)
     };
 
     const GAME_CONFIG = {
@@ -3506,11 +3532,11 @@
 
       // Smooth nice roads connecting areas with curves
       const roadMat = new THREE.MeshPhysicalMaterial({ 
-        color: 0xC8C8C8, // Slightly darker gray - natural stone path
-        metalness: 0.02,
-        roughness: 0.5,
-        clearcoat: 0.5,
-        clearcoatRoughness: 0.3
+        color: 0xA8D8EA, // Soft blue-gray to match loading screen palette
+        metalness: 0.05,
+        roughness: 0.6,
+        clearcoat: 0.6,
+        clearcoatRoughness: 0.2
       });
       const roadGeo = new THREE.PlaneGeometry(3, 3); // Slightly smaller for natural look
       
@@ -3599,14 +3625,14 @@
       // Windmill with improvements
       const wmGroup = new THREE.Group();
       wmGroup.position.set(40, 0, 40);
-      const wmBase = new THREE.Mesh(new THREE.CylinderGeometry(2, 3, 8, 8), new THREE.MeshToonMaterial({color: 0xD2B48C})); // Beige
+      const wmBase = new THREE.Mesh(new THREE.CylinderGeometry(2, 3, 8, 8), new THREE.MeshToonMaterial({color: 0xB8D4E6})); // Soft blue-gray
       wmBase.position.y = 4;
       wmGroup.add(wmBase);
       
       // Add door to windmill
       const wmDoor = new THREE.Mesh(
         new THREE.BoxGeometry(1.5, 3, 0.3),
-        new THREE.MeshToonMaterial({color: 0x3a2a1a})
+        new THREE.MeshToonMaterial({color: 0x5A6B7C}) // Darker blue-gray
       );
       wmDoor.position.set(0, 1.5, 2.8);
       wmGroup.add(wmDoor);
@@ -3614,7 +3640,7 @@
       // Add light on windmill (glowing sphere)
       const wmLight = new THREE.Mesh(
         new THREE.SphereGeometry(0.3, 16, 16),
-        new THREE.MeshBasicMaterial({color: 0xFFFF00})
+        new THREE.MeshBasicMaterial({color: 0x5DADE2}) // Blue to match theme
       );
       wmLight.position.set(0, 9, 0);
       wmGroup.add(wmLight);
@@ -3622,7 +3648,7 @@
       // Add ground light circle
       const groundLightGeo = new THREE.CircleGeometry(5, 32);
       const groundLightMat = new THREE.MeshBasicMaterial({
-        color: 0xFFFFAA,
+        color: 0x9DD9F3, // Soft blue glow
         transparent: true,
         opacity: 0.2
       });
@@ -3631,7 +3657,7 @@
       groundLight.position.set(40, 0.05, 40);
       scene.add(groundLight);
       
-      const wmBlades = new THREE.Mesh(new THREE.BoxGeometry(12, 1, 1), new THREE.MeshBasicMaterial({color: 0x8B4513})); // Brown
+      const wmBlades = new THREE.Mesh(new THREE.BoxGeometry(12, 1, 1), new THREE.MeshBasicMaterial({color: 0x7BA8C1})); // Blue-gray blades
       wmBlades.position.set(0, 7, 2);
       wmGroup.add(wmBlades);
       const wmBlades2 = wmBlades.clone();
@@ -3643,11 +3669,11 @@
       
       // Mine
       const mineGeo = new THREE.DodecahedronGeometry(5);
-      const mineMat = new THREE.MeshToonMaterial({ color: 0x555555 });
+      const mineMat = new THREE.MeshToonMaterial({ color: 0x7A8FA0 }); // Blue-gray rock
       const mine = new THREE.Mesh(mineGeo, mineMat);
       mine.position.set(-40, 2, 40);
       scene.add(mine);
-      const mineEnt = new THREE.Mesh(new THREE.CircleGeometry(2, 16), new THREE.MeshBasicMaterial({color: 0x000000}));
+      const mineEnt = new THREE.Mesh(new THREE.CircleGeometry(2, 16), new THREE.MeshBasicMaterial({color: 0x2C3E50})); // Dark blue-gray entrance
       mineEnt.position.set(-40, 2, 44);
       mineEnt.rotation.y = Math.PI;
       scene.add(mineEnt);
@@ -3658,11 +3684,11 @@
       
       // More realistic stone material with texture variation
       const stoneMat = new THREE.MeshPhysicalMaterial({ 
-        color: 0x9E9E9E, // Weathered gray stone
+        color: 0xA8C5D6, // Soft blue-gray stones to match theme
         metalness: 0.0,
-        roughness: 0.9,
-        clearcoat: 0.1,
-        clearcoatRoughness: 0.8
+        roughness: 0.85,
+        clearcoat: 0.15,
+        clearcoatRoughness: 0.7
       });
       
       const numStones = 10; // Real Stonehenge has ~30 originally, simplified to 10
@@ -5142,11 +5168,14 @@
     function updateHUD() {
       const hpPct = (playerStats.hp / playerStats.maxHp) * 100;
       document.getElementById('hp-fill').style.width = `${Math.max(0, hpPct)}%`;
-      document.getElementById('hp-text').innerText = `HP: ${Math.max(0, Math.ceil(playerStats.hp))}/${playerStats.maxHp}`;
+      const hpCurrent = Math.max(0, Math.ceil(playerStats.hp));
+      document.getElementById('hp-bar-text').innerText = `HP: ${hpCurrent}/${playerStats.maxHp}`;
       
       const expPct = (playerStats.exp / playerStats.expReq) * 100;
       document.getElementById('exp-fill').style.width = `${Math.min(100, expPct)}%`;
-      document.getElementById('exp-text').innerText = `EXP: ${Math.min(100, Math.ceil(expPct))}%`;
+      const expCurrent = Math.ceil(playerStats.exp);
+      const expRequired = playerStats.expReq;
+      document.getElementById('exp-bar-text').innerText = `EXP: ${expCurrent}/${expRequired}`;
       document.getElementById('lvl-text').innerText = `LVL: ${playerStats.lvl}`;
       document.getElementById('score-text').innerText = `KILLS: ${playerStats.kills}`;
       document.getElementById('gold-text').innerText = `GOLD: ${playerStats.gold}`;
