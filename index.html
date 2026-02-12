@@ -1304,7 +1304,7 @@
     const GAME_CONFIG = {
       playerSpeedBase: 0.12, // Slower as requested
       enemySpeedBase: 0.05,  // Slower as requested
-      waveInterval: 240, // Reduced from 300 to 240 frames (4s instead of 5s) for higher difficulty
+      waveInterval: 240, // Frames between waves (at 60 FPS: 240 frames = 4 seconds)
       expValue: 10,
       baseExpReq: 20,
       // Lake configuration - used for spawn avoidance
@@ -1315,7 +1315,12 @@
       comboTimerDuration: 3000, // milliseconds - time window to maintain combo
       // Camera shake constants for weapon effects
       meteorShakeIntensity: 0.2,
-      meteorShakeDecay: 0.92
+      meteorShakeDecay: 0.92,
+      // Physics constants
+      gunRecoilStrength: 0.015, // Recoil pushback when firing
+      droneOrbitRadius: 2, // Orbital radius for drone around player
+      droneOrbitSpeed: 0.5, // Speed multiplier for drone orbit
+      droneRotorAccel: 0.5 // Rotor spin acceleration
     };
 
     // --- AUDIO SYSTEM (Oscillators) ---
@@ -1881,7 +1886,7 @@
         // Physics/Visuals
         this.velocity = new THREE.Vector3(0, 0, 0);
         this.acceleration = 0.015; // Tighter acceleration
-        this.deceleration = 0.85; // Smooth deceleration (friction)
+        this.friction = 0.85; // Smooth friction/damping (1.0 = no friction, 0.0 = instant stop)
         this.maxVelocity = 0.5; // Max speed cap
         this.recoilVelocity = new THREE.Vector3(0, 0, 0); // Recoil from shooting
         this.targetScale = new THREE.Vector3(1, 1, 1);
@@ -1976,9 +1981,9 @@
               }
             }
           } else {
-            // Apply deceleration when no input
-            this.velocity.x *= this.deceleration;
-            this.velocity.z *= this.deceleration;
+            // Apply friction when no input
+            this.velocity.x *= this.friction;
+            this.velocity.z *= this.friction;
             
             // Stop completely when velocity is very small
             if (Math.abs(this.velocity.x) < 0.001) this.velocity.x = 0;
@@ -6143,8 +6148,8 @@
         if (!this.active) return;
         
         // Follow player with smooth lag
-        const offsetX = Math.cos(gameTime * 0.5) * 2;
-        const offsetZ = Math.sin(gameTime * 0.5) * 2;
+        const offsetX = Math.cos(gameTime * GAME_CONFIG.droneOrbitSpeed) * GAME_CONFIG.droneOrbitRadius;
+        const offsetZ = Math.sin(gameTime * GAME_CONFIG.droneOrbitSpeed) * GAME_CONFIG.droneOrbitRadius;
         this.targetPos.set(
           player.mesh.position.x + offsetX,
           player.mesh.position.y + 1.2,
@@ -6170,7 +6175,7 @@
         this.mesh.position.y += Math.sin(gameTime * 3) * 0.002;
         
         // Rotate rotor
-        this.rotorSpeed += 0.5;
+        this.rotorSpeed += GAME_CONFIG.droneRotorAccel;
         this.rotor.rotation.y = this.rotorSpeed;
         
         // Pulsing glow
@@ -8068,13 +8073,12 @@
         }
 
         if (nearest) {
-          // Apply gun recoil
-          const recoilStrength = 0.015;
+          // Apply gun recoil using configured strength
           const dx = nearest.mesh.position.x - player.mesh.position.x;
           const dz = nearest.mesh.position.z - player.mesh.position.z;
           const dist = Math.sqrt(dx*dx + dz*dz);
-          player.recoilVelocity.x -= (dx / dist) * recoilStrength;
-          player.recoilVelocity.z -= (dz / dist) * recoilStrength;
+          player.recoilVelocity.x -= (dx / dist) * GAME_CONFIG.gunRecoilStrength;
+          player.recoilVelocity.z -= (dz / dist) * GAME_CONFIG.gunRecoilStrength;
           
           // Fire based on barrels
           for(let i=0; i<weapons.gun.barrels; i++) {
