@@ -2078,7 +2078,7 @@
         if (playerStats.hp <= 0) {
           // Optimized death splash with balanced particle count
           spawnParticles(this.mesh.position, COLORS.player, 25);
-          spawnParticles(this.mesh.position, 0xFFFFFF, 8)
+          spawnParticles(this.mesh.position, 0xFFFFFF, 8);
           
           // Create ground pool (flat circle that fades out)
           const poolGeo = new THREE.CircleGeometry(1.5, 16);
@@ -2569,7 +2569,7 @@
           }
           
           spawnParticles(this.mesh.position, enemyColor, 12);
-          spawnParticles(this.mesh.position, 0x8B0000, 4)
+          spawnParticles(this.mesh.position, 0x8B0000, 4);
           playSound('hit');
         }
         
@@ -2659,7 +2659,7 @@
         // Main explosion with balanced particle count
         spawnParticles(this.mesh.position, enemyColor, 20);
         spawnParticles(this.mesh.position, 0xFFFFFF, 6);
-        spawnParticles(this.mesh.position, 0x8B0000, 5)
+        spawnParticles(this.mesh.position, 0x8B0000, 5);
         
         // Add explosion ring effect
         const ringGeo = new THREE.RingGeometry(0.1, 0.2, 16);
