@@ -7745,6 +7745,17 @@
         weapons.sword.lastShot = time;
         playSound('shoot'); // Reuse sound for now
         
+        // Add sword recoil effect - slight forward lunge
+        const originalY = player.mesh.position.y;
+        const originalRotX = player.mesh.rotation.x;
+        player.mesh.position.y = originalY - 0.05; // Slight dip
+        player.mesh.rotation.x = originalRotX - 0.08; // Forward tilt
+        const swordRecoilTimeoutId = setTimeout(() => {
+          player.mesh.position.y = originalY;
+          player.mesh.rotation.x = originalRotX;
+        }, 50);
+        activeTimeouts.push(swordRecoilTimeoutId);
+        
         // Reduced sword slash particles for better performance
         spawnParticles(player.mesh.position, 0xC0C0C0, 2);
         spawnParticles(player.mesh.position, 0xFFFFFF, 1);
@@ -7778,6 +7789,14 @@
           }
         });
         if (hit) {
+          // Aura pulse recoil - subtle expansion
+          const originalScale = player.mesh.scale.x;
+          player.mesh.scale.set(originalScale * 1.15, originalScale * 0.9, originalScale * 1.15);
+          const auraRecoilTimeoutId = setTimeout(() => {
+            player.mesh.scale.set(originalScale, originalScale, originalScale);
+          }, 80);
+          activeTimeouts.push(auraRecoilTimeoutId);
+          
           // Optimized visual effect for aura tick
           spawnParticles(player.mesh.position, 0x5DADE2, 5);
           spawnParticles(player.mesh.position, 0xFFFFFF, 2);
@@ -7799,6 +7818,26 @@
         
         meteors.push(new Meteor(targetX, targetZ));
         weapons.meteor.lastShot = time;
+        
+        // Add camera shake recoil for meteor impact
+        let shakeIntensity = 0.2;
+        let shakeDecay = 0.92;
+        const shakeAnim = () => {
+          if (shakeIntensity > 0.01) {
+            camera.position.x = targetCameraPos.x + (Math.random() - 0.5) * shakeIntensity;
+            camera.position.z = targetCameraPos.z + (Math.random() - 0.5) * shakeIntensity;
+            shakeIntensity *= shakeDecay;
+            requestAnimationFrame(shakeAnim);
+          } else {
+            camera.position.x = targetCameraPos.x;
+            camera.position.z = targetCameraPos.z;
+          }
+        };
+        shakeAnim();
+        
+        // Visual feedback for meteor casting
+        spawnParticles(player.mesh.position, 0xFF4500, 3); // Orange particles
+        spawnParticles(player.mesh.position, 0xFFFFFF, 2);
       }
 
       // 5. LIGHTNING STRIKES
