@@ -547,7 +547,7 @@
     #loading-screen.fade-out {
       opacity: 0;
       pointer-events: none;
-      transition: opacity 0.3s ease-out; /* Faster fade out */
+      transition: opacity 0.3s ease-out; /* Fade out transition */
     }
 
     .loading-splash-logo {
@@ -1243,6 +1243,7 @@
       exp: 0x5DADE2, // Light Blue (Matching EXP bar)
     };
 
+    // Game Configuration Constants
     const GAME_CONFIG = {
       playerSpeedBase: 0.12, // Slower as requested
       enemySpeedBase: 0.05,  // Slower as requested
@@ -1254,7 +1255,10 @@
       lakeCenterZ: -30,
       lakeRadius: 18,
       // ENHANCEMENT: Combo system configuration
-      comboTimerDuration: 3000 // milliseconds - time window to maintain combo
+      comboTimerDuration: 3000, // milliseconds - time window to maintain combo
+      // Camera shake constants for weapon effects
+      meteorShakeIntensity: 0.2,
+      meteorShakeDecay: 0.92
     };
 
     // --- AUDIO SYSTEM (Oscillators) ---
@@ -1557,6 +1561,9 @@
     let runStartGold = 0;  // Track gold at start of run for end-of-run calculation
     let lastCleanupTime = 0; // Track last memory cleanup time
     let miniBossesSpawned = new Set(); // Track which mini-boss levels have been spawned
+    
+    // Camera shake state - prevents multiple animations from interfering
+    let isCameraShaking = false;
     
     // Countdown system (PR #70-71)
     let countdownActive = false;
@@ -2758,9 +2765,9 @@
         const particleCount = isCrit ? 4 : 2;
         spawnParticles(this.mesh.position, enemyColor, particleCount);
         
-        // Reduced impact particles for crits (performance)
+        // Reduced impact particles for crits (more than non-crit for visual feedback)
         if (isCrit) {
-          spawnParticles(this.mesh.position, 0xFFFFFF, 1);
+          spawnParticles(this.mesh.position, 0xFFFFFF, 3);
         }
         
         // Enhanced squishy deformation on hit
@@ -7819,21 +7826,25 @@
         meteors.push(new Meteor(targetX, targetZ));
         weapons.meteor.lastShot = time;
         
-        // Add camera shake recoil for meteor impact
-        let shakeIntensity = 0.2;
-        let shakeDecay = 0.92;
-        const shakeAnim = () => {
-          if (shakeIntensity > 0.01) {
-            camera.position.x = targetCameraPos.x + (Math.random() - 0.5) * shakeIntensity;
-            camera.position.z = targetCameraPos.z + (Math.random() - 0.5) * shakeIntensity;
-            shakeIntensity *= shakeDecay;
-            requestAnimationFrame(shakeAnim);
-          } else {
-            camera.position.x = targetCameraPos.x;
-            camera.position.z = targetCameraPos.z;
-          }
-        };
-        shakeAnim();
+        // Add camera shake recoil for meteor impact (only if not already shaking)
+        if (!isCameraShaking) {
+          isCameraShaking = true;
+          let shakeIntensity = GAME_CONFIG.meteorShakeIntensity;
+          const shakeDecay = GAME_CONFIG.meteorShakeDecay;
+          const shakeAnim = () => {
+            if (shakeIntensity > 0.01) {
+              camera.position.x = targetCameraPos.x + (Math.random() - 0.5) * shakeIntensity;
+              camera.position.z = targetCameraPos.z + (Math.random() - 0.5) * shakeIntensity;
+              shakeIntensity *= shakeDecay;
+              requestAnimationFrame(shakeAnim);
+            } else {
+              camera.position.x = targetCameraPos.x;
+              camera.position.z = targetCameraPos.z;
+              isCameraShaking = false;
+            }
+          };
+          shakeAnim();
+        }
         
         // Visual feedback for meteor casting
         spawnParticles(player.mesh.position, 0xFF4500, 3); // Orange particles
