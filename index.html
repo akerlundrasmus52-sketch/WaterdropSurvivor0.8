@@ -1292,7 +1292,7 @@
     const ADAPTIVE_QUALITY_MIN_PARTICLES = 50; // Minimum particles before adaptive quality kicks in
     const ADAPTIVE_QUALITY_REDUCTION_FACTOR = 0.5; // Reduce particles to 50% of max when quality drops
     const MEMORY_CLEANUP_INTERVAL = 5000; // Run aggressive memory cleanup every 5 seconds
-    const PARTICLE_LIGHT_CLEANUP_THRESHOLD = 10; // Clean up particle lights when life drops below this
+    const PARTICLE_LIGHT_CLEANUP_THRESHOLD = 15; // Clean up particle lights when life drops below this (particles have maxLife of 45)
     const MAX_METEOR_LIFETIME = 100; // Maximum frames a meteor can exist
     const MAX_PROJECTILE_DISTANCE = 80; // Maximum distance from player before projectile cleanup
     const MAX_PROJECTILE_DISTANCE_SQUARED = MAX_PROJECTILE_DISTANCE * MAX_PROJECTILE_DISTANCE; // For performance
@@ -1304,12 +1304,16 @@
     
     // Visual effect constants
     const PARTICLE_GLOW_CHANCE = 0.15; // 15% of particles get glow effects
+    const PARTICLE_LIGHT_INTENSITY = 0.5; // Intensity of particle glow lights
+    const PARTICLE_LIGHT_DISTANCE = 4; // Distance range of particle glow lights
     const PROJECTILE_TRAIL_FRAME_INTERVAL = 2; // Spawn trail particle every N frames
     const SCREEN_SHAKE_CRIT_CHANCE = 0.3; // 30% chance of screen shake on crit
     const SCREEN_SHAKE_INTENSITY = 0.15; // Camera shake intensity
+    const SCREEN_SHAKE_DURATION = 50; // Duration of screen shake in ms
     
     let lastCleanupTime = 0;
     let lastMemoryCleanup = 0;
+    let cameraShakeInProgress = false; // Prevent overlapping shakes
     
     // Performance monitoring
     let framePerformanceStats = {
@@ -2485,8 +2489,9 @@
               // Spawn extra impact particles for critical hits
               spawnParticles(enemy.mesh.position, 0xFFD700, 8);
               spawnParticles(enemy.mesh.position, 0xFFFFFF, 5);
-              // Minor screen shake on crit with proper restoration
-              if (Math.random() < SCREEN_SHAKE_CRIT_CHANCE) {
+              // Minor screen shake on crit with proper restoration (prevent overlapping shakes)
+              if (!cameraShakeInProgress && Math.random() < SCREEN_SHAKE_CRIT_CHANCE) {
+                cameraShakeInProgress = true;
                 const originalCameraPos = {
                   x: camera.position.x,
                   y: camera.position.y,
@@ -2499,7 +2504,8 @@
                   camera.position.x = originalCameraPos.x;
                   camera.position.y = originalCameraPos.y;
                   camera.position.z = originalCameraPos.z;
-                }, 50);
+                  cameraShakeInProgress = false;
+                }, SCREEN_SHAKE_DURATION);
               }
             }
             
@@ -2634,6 +2640,7 @@
         
         this.speed = 0.5;
         this.active = true;
+        this.fallTime = 0; // Track lifetime for cleanup
       }
       
       update() {
@@ -2641,6 +2648,7 @@
         
         this.mesh.position.y -= this.speed;
         this.speed += 0.05; // Gravity
+        this.fallTime++; // Increment lifetime
         
         if (this.mesh.position.y <= 0) {
           this.explode();
@@ -2806,7 +2814,7 @@
         
         // Add point light for glow effect (only for some particles)
         if (Math.random() < PARTICLE_GLOW_CHANCE) {  // Configurable glow chance
-          this.light = new THREE.PointLight(color, 0.5, 4);
+          this.light = new THREE.PointLight(color, PARTICLE_LIGHT_INTENSITY, PARTICLE_LIGHT_DISTANCE);
           this.light.position.copy(pos);
           scene.add(this.light);
         }
@@ -2827,10 +2835,10 @@
         this.mesh.rotation.z += this.rotVel.z;
         
         // Update light position if it exists
-        if (this.light) {
+        if (this.light && this.light.parent) {
           this.light.position.copy(this.mesh.position);
           const lifeFactor = this.life / this.maxLife;
-          this.light.intensity = lifeFactor * 0.5;
+          this.light.intensity = lifeFactor * PARTICLE_LIGHT_INTENSITY;
         }
         
         // Bounce with energy loss
