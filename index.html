@@ -8269,7 +8269,7 @@
           
           // Create small cyan projectile
           const geo = new THREE.SphereGeometry(0.1, 8, 8);
-          const mat = new THREE.MeshBasicMaterial({ color: 0x00FFFF, emissive: 0x00FFFF, emissiveIntensity: 0.8 });
+          const mat = new THREE.MeshStandardMaterial({ color: 0x00FFFF, emissive: 0x00FFFF, emissiveIntensity: 0.8 });
           projectile.mesh = new THREE.Mesh(geo, mat);
           projectile.mesh.position.copy(droneInstance.mesh.position);
           scene.add(projectile.mesh);
