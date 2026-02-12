@@ -3391,6 +3391,11 @@
       const loadingBar = document.getElementById('loading-bar');
       let progress = 0;
       
+      // Clear any existing interval before creating a new one
+      if (loadingInterval) {
+        clearInterval(loadingInterval);
+      }
+      
       // Progress interval
       loadingInterval = setInterval(() => {
         progress += 10;
@@ -3411,21 +3416,21 @@
     }
     
     // Global error handlers to surface errors and complete loading
-    window.onerror = function(message, source, lineno, colno, error) {
-      console.error('Global error:', message, source, lineno, colno, error);
-      const errorDetail = error ? error.message : message;
+    window.addEventListener('error', function(event) {
+      console.error('Global error:', event.message, event.filename, event.lineno, event.colno, event.error);
+      const errorDetail = event.error ? event.error.message : event.message;
       showErrorToast('An error occurred', errorDetail);
       completeLoading();
-      return true; // Prevent default error handling
-    };
+      event.preventDefault(); // Prevent default error handling
+    });
     
-    window.onunhandledrejection = function(event) {
+    window.addEventListener('unhandledrejection', function(event) {
       console.error('Unhandled promise rejection:', event.reason);
       const errorDetail = event.reason ? (event.reason.message || event.reason) : 'Unknown error';
       showErrorToast('Promise rejection', errorDetail);
       completeLoading();
       event.preventDefault(); // Prevent default handling
-    };
+    });
 
     function init() {
       // Load save data first
