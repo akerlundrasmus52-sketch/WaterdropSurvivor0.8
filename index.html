@@ -43,17 +43,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="screen-orientation" content="portrait">
   <title>Water Drop Survivor</title>
-  <!-- Soft, cute, rounded font from Google Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700;800&display=swap" rel="stylesheet">
   <style>
     body {
       margin: 0;
       padding: 0;
       overflow: hidden;
-      background-color: #000000; /* Black background to avoid white space issues */
-      font-family: 'M PLUS Rounded 1c', 'Comic Sans MS', 'Arial Rounded MT Bold', cursive, sans-serif;
+      background-color: #FFF0F5; /* Lavender Blush */
+      font-family: 'M PLUS Rounded 1c', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       touch-action: none;
       user-select: none;
       -webkit-user-select: none;
@@ -66,7 +62,6 @@
       width: 100%;
       height: 100%;
       z-index: 1;
-      background-color: #000000; /* Ensure no white space */
     }
 
     #ui-layer {
@@ -84,32 +79,10 @@
 
     /* HUD */
     .hud-top {
-      padding: 15px;
+      padding: 20px;
       display: flex;
       flex-direction: column;
-      gap: 8px;
-      max-width: 100%;
-    }
-
-    /* Responsive bar sizing for portrait/landscape */
-    @media (orientation: portrait) {
-      .bar-container {
-        width: min(200px, 40vw);
-        height: 24px;
-      }
-      .hud-top {
-        padding: 10px;
-      }
-    }
-
-    @media (orientation: landscape) {
-      .bar-container {
-        width: min(200px, 25vw);
-        height: 20px;
-      }
-      .hud-top {
-        padding: 8px;
-      }
+      gap: 10px;
     }
 
     .bar-container {
@@ -144,7 +117,7 @@
     .stat-text {
       color: #8B4513;
       font-weight: bold;
-      font-family: 'M PLUS Rounded 1c', 'Comic Sans MS', 'Chalkboard', cursive, sans-serif;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.5), -1px -1px 1px rgba(255,255,255,0.3), 0 0 5px rgba(139,69,19,0.3);
       font-size: 14px;
       margin-top: 4px;
     }
@@ -158,7 +131,6 @@
       height: 100%;
       pointer-events: auto;
       touch-action: none;
-      z-index: 50; /* Ensure joystick is always on top and never blocked */
     }
     
     .joystick-outer {
@@ -185,35 +157,6 @@
       pointer-events: none;
     }
 
-    /* Tutorial Text */
-    #tutorial-text {
-      position: absolute;
-      top: 15%;
-      left: 50%;
-      transform: translate(-50%, 0);
-      
-      /* Match level up box styling */
-      background: linear-gradient(to bottom, #4a4a4a, #3a3a3a);
-      padding: 20px 30px;
-      border-radius: 20px;
-      border: 4px solid #5DADE2;
-      box-shadow: 0 15px 30px rgba(0,0,0,0.7), 0 0 40px rgba(93,173,226,0.5), inset 0 0 30px rgba(93,173,226,0.1);
-      
-      /* Cosy, fitting font styling */
-      color: #FFD700;
-      font-size: 20px;
-      font-weight: bold;
-      font-family: 'M PLUS Rounded 1c', 'Comic Sans MS', 'Chalkboard', cursive, sans-serif;
-      text-align: center;
-      text-shadow: 0 0 8px rgba(255,215,0,0.6), 0 0 15px rgba(255,215,0,0.3), 1px 1px 2px rgba(0,0,0,0.8);
-      
-      opacity: 0;
-      transition: opacity 0.5s ease-in-out;
-      z-index: 30; /* Below joystick zone (z-index: 50) to never block input */
-      pointer-events: none; /* Critical: Ensure tutorial text never blocks joystick input */
-      max-width: 85%;
-    }
-
     /* Level Up Modal */
     #levelup-modal {
       position: absolute;
@@ -226,24 +169,19 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      pointer-events: none; /* Don't block joystick - only modal-content captures events */
-      z-index: 20; /* Below joystick zone (z-index: 50) to never block input */
-      overflow-y: auto; /* Allow scrolling if needed */
-      padding: 20px 0; /* Padding for scroll */
+      pointer-events: auto;
+      z-index: 20;
     }
 
     .modal-content {
       background: linear-gradient(to bottom, #4a4a4a, #3a3a3a);
-      padding: 20px;
+      padding: 25px;
       border-radius: 20px;
       border: 4px solid #5DADE2;
-      width: 85%;
+      width: 80%;
       max-width: 400px;
-      max-height: 85vh; /* Ensure it fits on screen */
-      overflow-y: auto; /* Allow internal scrolling */
       text-align: center;
       box-shadow: 0 15px 30px rgba(0,0,0,0.7), 0 0 40px rgba(93,173,226,0.5), inset 0 0 30px rgba(93,173,226,0.1);
-      pointer-events: auto; /* Modal content captures clicks, but modal background doesn't block joystick */
     }
 
     h2 {
@@ -428,7 +366,7 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: flex-end;
+      justify-content: center;
       z-index: 10000;
       transition: opacity 0.5s ease-out;
       background-image: url('321E5768-E77B-4471-8C32-5D7C1D715A4B.png');
@@ -443,7 +381,14 @@
     }
 
     .loading-splash-logo {
-      display: none; /* Remove small centered image */
+      max-width: 60%;
+      max-height: 40%;
+      width: auto;
+      height: auto;
+      object-fit: contain;
+      margin-bottom: 40px;
+      animation: pulse 2s infinite;
+      filter: drop-shadow(0 0 20px rgba(93,173,226,0.6));
     }
 
     .game-title {
@@ -469,7 +414,6 @@
       overflow: hidden;
       border: 3px solid rgba(93, 173, 226, 0.8);
       backdrop-filter: blur(5px);
-      margin-bottom: 40px;
     }
 
     .loading-bar {
@@ -487,75 +431,55 @@
       left: 0;
       width: 100%;
       height: 100%;
-      background-image: url('654811F9-1760-4A74-B977-73ECB1A92913.png');
-      background-size: cover;
-      background-position: center;
-      background-repeat: no-repeat;
+      background: linear-gradient(to bottom, #1a1a2e, #16213e);
       display: none;
-      z-index: 50;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 50; /* Lower than UI layer buttons */
     }
 
     #main-menu::before {
-      display: none; /* Remove duplicate background */
-    }
-
-    .menu-title {
-      display: none; /* Text is already in the image */
-    }
-
-    .menu-buttons {
+      content: '';
       position: absolute;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
+      background-image: url('654811F9-1760-4A74-B977-73ECB1A92913.png');
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      opacity: 0.6;
+      z-index: -1;
+    }
+
+    .menu-title {
+      font-size: 42px;
+      color: #5DADE2;
+      text-shadow: 0 0 20px rgba(93,173,226,0.8), 0 0 40px rgba(93,173,226,0.5);
+      margin-bottom: 40px;
+    }
+
+    .menu-buttons {
       display: flex;
       flex-direction: column;
-      align-items: center;
-      justify-content: center;
+      gap: 20px;
     }
 
     .menu-btn {
-      background: transparent;
-      color: transparent;
+      background: linear-gradient(to bottom, #5DADE2, #3498DB);
+      color: white;
       border: none;
-      padding: 0;
-      font-size: 0;
-      border-radius: 0;
+      padding: 20px 60px;
+      font-size: 24px;
+      border-radius: 50px;
       font-weight: bold;
       cursor: pointer;
-      box-shadow: none;
-      transition: all 0.3s ease;
-      position: absolute;
-      overflow: visible;
-      /* Invisible clickable hotspots positioned over image text */
-      width: 300px;
-      height: 60px;
-    }
-
-    /* Position buttons over text in image - moved 5% lower */
-    #start-game-btn {
-      top: 51.75%;
-      left: 50%;
-      transform: translateX(-50%);
-    }
-
-    #progression-btn {
-      top: 62.75%;
-      left: 50%;
-      transform: translateX(-50%);
-    }
-
-    #achievements-btn {
-      top: 73.75%;
-      left: 50%;
-      transform: translateX(-50%);
-    }
-
-    #credits-btn {
-      top: 84.75%;
-      left: 50%;
-      transform: translateX(-50%);
+      box-shadow: 0 6px 0 #2874A6, 0 0 0 rgba(93,173,226,0);
+      transition: all 0.15s ease;
+      position: relative;
+      overflow: hidden;
     }
 
     .menu-btn::before {
@@ -566,22 +490,21 @@
       width: 0;
       height: 0;
       border-radius: 50%;
-      background: transparent;
+      background: rgba(255, 255, 255, 0.5);
       transform: translate(-50%, -50%);
       transition: width 0.6s, height 0.6s;
     }
 
     .menu-btn:hover {
-      transform: translateX(-50%);
-      box-shadow: 0 0 30px rgba(255,255,255,0.8), 0 0 60px rgba(93,173,226,0.6);
-      filter: drop-shadow(0 0 20px rgba(255,255,255,0.9));
+      transform: translateY(-2px);
+      box-shadow: 0 8px 0 #2874A6, 0 0 20px rgba(93,173,226,0.6), 0 0 40px rgba(93,173,226,0.3);
+      filter: brightness(1.1);
     }
 
     .menu-btn:active {
-      transform: translateX(-50%) scale(0.95) translateY(3px);
-      box-shadow: 0 2px 8px rgba(0,0,0,0.6), 0 0 50px rgba(255,255,255,1), 0 0 100px rgba(93,173,226,0.9);
+      transform: translateY(6px) scale(0.98);
+      box-shadow: 0 0 30px rgba(255,255,255,0.8), 0 0 50px rgba(93,173,226,0.8);
       animation: lightning-flash 0.3s ease;
-      filter: brightness(1.3);
     }
 
     .menu-btn:active::before {
@@ -592,28 +515,6 @@
     @keyframes lightning-flash {
       0%, 100% { filter: brightness(1.1); }
       50% { filter: brightness(2); box-shadow: 0 0 40px rgba(255,255,255,1), 0 0 80px rgba(93,173,226,1); }
-    }
-    
-    @keyframes slideInRight {
-      from {
-        transform: translateX(400px);
-        opacity: 0;
-      }
-      to {
-        transform: translateX(0);
-        opacity: 1;
-      }
-    }
-    
-    @keyframes slideOutRight {
-      from {
-        transform: translateX(0);
-        opacity: 1;
-      }
-      to {
-        transform: translateX(400px);
-        opacity: 0;
-      }
     }
 
     .gold-display {
@@ -641,9 +542,7 @@
       align-items: center;
       z-index: 50; /* Lower than UI layer buttons */
       overflow-y: auto;
-      overflow-x: hidden; /* Prevent horizontal overflow */
       padding: 20px;
-      padding-bottom: 100px; /* Extra space for back button */
     }
 
     .shop-header {
@@ -663,11 +562,11 @@
 
     .shop-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
       gap: 15px;
       width: 90%;
       max-width: 1200px;
-      margin-bottom: 100px; /* Increased space for back button visibility */
+      margin-bottom: 80px;
     }
 
     .upgrade-shop-card {
@@ -815,31 +714,9 @@
       display: none;
       flex-direction: column;
       align-items: center;
-      justify-content: flex-start; /* Changed from center to allow scrolling */
+      justify-content: center;
       z-index: 50; /* Lower than UI layer buttons */
       padding: 40px;
-      overflow-y: auto; /* Enable scroll for achievements */
-      overflow-x: hidden;
-    }
-    
-    /* Custom scrollbar for achievements screen */
-    #achievements-screen::-webkit-scrollbar {
-      width: 12px;
-    }
-    
-    #achievements-screen::-webkit-scrollbar-track {
-      background: rgba(0, 0, 0, 0.3);
-      border-radius: 10px;
-    }
-    
-    #achievements-screen::-webkit-scrollbar-thumb {
-      background: linear-gradient(to bottom, #5DADE2, #3498DB);
-      border-radius: 10px;
-      border: 2px solid rgba(0, 0, 0, 0.3);
-    }
-    
-    #achievements-screen::-webkit-scrollbar-thumb:hover {
-      background: linear-gradient(to bottom, #7EC8E3, #5DADE2);
     }
 
     .screen-title {
@@ -855,7 +732,6 @@
       text-align: center;
       line-height: 1.8;
       max-width: 600px;
-      margin-bottom: 100px; /* Space for back button visibility */
     }
 
   </style>
@@ -921,31 +797,28 @@
 
   <div id="game-container"></div>
 
-  <!-- Tutorial Text -->
-  <div id="tutorial-text"></div>
-
   <div id="ui-layer">
     <div class="hud-top">
       <div class="bar-container" id="hp-bar-container">
         <div class="bar-fill" id="hp-fill"></div>
       </div>
-      <div class="stat-text" id="hp-text" style="color: #FF4444; text-shadow: 0 0 8px rgba(255,68,68,0.6), 0 0 15px rgba(255,68,68,0.3), 1px 1px 2px rgba(0,0,0,0.8);">HP: 100/100</div>
+      <div class="stat-text" id="hp-text" style="color: #FF4444;">HP: 100/100</div>
       
       <div class="bar-container" id="exp-bar-container" style="border-color: #2a2a2a;">
         <div class="bar-fill" id="exp-fill"></div>
       </div>
-      <div class="stat-text" id="exp-text" style="color: #5DADE2; text-shadow: 0 0 8px rgba(93,173,226,0.6), 0 0 15px rgba(93,173,226,0.3), 1px 1px 2px rgba(0,0,0,0.8);">EXP: 0%</div>
-      <div class="stat-text" id="lvl-text" style="color: #5DADE2; text-shadow: 0 0 8px rgba(93,173,226,0.6), 0 0 15px rgba(93,173,226,0.3), 1px 1px 2px rgba(0,0,0,0.8);">LVL: 1</div>
-      <div class="stat-text" id="score-text" style="color: #ecf0f1; text-shadow: 0 0 8px rgba(236,240,241,0.4), 0 0 15px rgba(236,240,241,0.2), 1px 1px 2px rgba(0,0,0,0.8);">KILLS: 0</div>
-      <div class="stat-text" id="gold-text" style="color: #FFD700; text-shadow: 0 0 8px rgba(255,215,0,0.6), 0 0 15px rgba(255,215,0,0.3), 1px 1px 2px rgba(0,0,0,0.8);">GOLD: 0</div>
+      <div class="stat-text" id="exp-text" style="color: #5DADE2;">EXP: 0%</div>
+      <div class="stat-text" id="lvl-text" style="color: #5DADE2;">LVL: 1</div>
+      <div class="stat-text" id="score-text" style="color: #8B4513;">KILLS: 0</div>
+      <div class="stat-text" id="gold-text" style="color: #FFD700;">GOLD: 0</div>
       
       <!-- Windmill Quest UI -->
       <div id="windmill-quest-ui" style="display: none; margin-top: 10px;">
         <div class="bar-container" style="border-color: #8B4513;">
           <div class="bar-fill" id="windmill-hp-fill" style="background: #8B4513; width: 100%;"></div>
         </div>
-        <div class="stat-text" id="windmill-hp-text" style="color: #8B4513; text-shadow: 0 0 8px rgba(139,69,19,0.6), 0 0 15px rgba(139,69,19,0.3), 1px 1px 2px rgba(0,0,0,0.8);">WINDMILL: 600/600</div>
-        <div class="stat-text" id="windmill-timer-text" style="color: #FFD700; font-size: 18px; text-shadow: 0 0 8px rgba(255,215,0,0.6), 0 0 15px rgba(255,215,0,0.3), 1px 1px 2px rgba(0,0,0,0.8);">DEFEND: 30s</div>
+        <div class="stat-text" id="windmill-hp-text" style="color: #8B4513;">WINDMILL: 600/600</div>
+        <div class="stat-text" id="windmill-timer-text" style="color: #FFD700; font-size: 18px;">DEFEND: 30s</div>
       </div>
     </div>
     <button id="stats-btn" class="btn-small" style="position: absolute; top: 20px; right: 20px; pointer-events: auto; z-index: 100;">STATS</button>
@@ -976,7 +849,7 @@
   <div id="stats-modal" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 25; align-items: center; justify-content: center; pointer-events: auto; flex-direction: column;">
     <div class="modal-content" style="max-height: 80vh; overflow-y: auto;">
       <h2>PLAYER STATS</h2>
-      <div id="stats-content" style="text-align: left; margin-bottom: 20px; font-family: 'M PLUS Rounded 1c', 'Comic Sans MS', 'Chalkboard', cursive, sans-serif; font-size: 14px; line-height: 1.8; color: #ecf0f1; text-shadow: 0 0 5px rgba(236,240,241,0.3), 1px 1px 2px rgba(0,0,0,0.8);"></div>
+      <div id="stats-content" style="text-align: left; margin-bottom: 20px; font-family: monospace; font-size: 14px; line-height: 1.8; color: #ecf0f1;"></div>
       <button class="btn" id="close-stats-btn">CLOSE</button>
     </div>
   </div>
@@ -1030,28 +903,123 @@
 
     // --- AUDIO SYSTEM (Oscillators) ---
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    // Music removed - keeping only sound effects
     let musicOscillators = [];
     let musicGain = null;
     let currentMusicLevel = 0;
     
     function initMusic() {
-      // Music disabled - no background music
+      if (!musicGain) {
+        musicGain = audioCtx.createGain();
+        musicGain.gain.value = 0.05;
+        musicGain.connect(audioCtx.destination);
+      }
     }
     
     function updateBackgroundMusic() {
-      // Music disabled - no background music
+      initMusic();
+      const targetLevel = Math.min(playerStats.lvl, 10);
+      
+      if (targetLevel > currentMusicLevel) {
+        currentMusicLevel = targetLevel;
+        
+        // Add new layer with happier, more upbeat sounds
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        
+        osc.connect(gain);
+        gain.connect(musicGain);
+        
+        // Major key frequencies - happier, more dopamine-inducing (C Major scale)
+        const baseFreq = 261.63; // C4 (Middle C)
+        const majorScaleFreqs = [
+          baseFreq,           // C - Level 1
+          baseFreq * 1.125,   // D - Level 2
+          baseFreq * 1.26,    // E - Level 3
+          baseFreq * 1.33,    // F - Level 4
+          baseFreq * 1.5,     // G - Level 5
+          baseFreq * 1.68,    // A - Level 6
+          baseFreq * 1.89,    // B - Level 7
+          baseFreq * 2,       // C - Level 8 (octave up)
+          baseFreq * 2.25,    // D - Level 9
+          baseFreq * 2.52     // E - Level 10
+        ];
+        
+        // Use sine wave for happier, cleaner sound
+        osc.type = 'sine';
+        osc.frequency.value = majorScaleFreqs[currentMusicLevel - 1];
+        
+        // Add faster vibrato for more energetic feel
+        const lfo = audioCtx.createOscillator();
+        const lfoGain = audioCtx.createGain();
+        lfo.frequency.value = 6 + currentMusicLevel * 0.5; // Faster vibrato
+        lfoGain.gain.value = 8 + currentMusicLevel * 0.8; // More pronounced
+        lfo.connect(lfoGain);
+        lfoGain.connect(osc.frequency);
+        lfo.start();
+        
+        gain.gain.value = 0;
+        gain.gain.linearRampToValueAtTime(0.25 + currentMusicLevel * 0.02, audioCtx.currentTime + 0.8);
+        
+        osc.start();
+        musicOscillators.push({ osc, gain, lfo });
+        
+        // Add harmony layer (third above) for richer sound
+        const harmony = audioCtx.createOscillator();
+        const harmonyGain = audioCtx.createGain();
+        harmony.connect(harmonyGain);
+        harmonyGain.connect(musicGain);
+        harmony.type = 'sine';
+        harmony.frequency.value = majorScaleFreqs[currentMusicLevel - 1] * 1.26; // Major third
+        harmonyGain.gain.value = 0;
+        harmonyGain.gain.linearRampToValueAtTime(0.15, audioCtx.currentTime + 0.8);
+        harmony.start();
+        musicOscillators.push({ osc: harmony, gain: harmonyGain, lfo: null });
+        
+        // Add uplifting high melody for levels 3+
+        if (currentMusicLevel >= 3) {
+          const melody = audioCtx.createOscillator();
+          const melodyGain = audioCtx.createGain();
+          melody.connect(melodyGain);
+          melodyGain.connect(musicGain);
+          melody.type = 'triangle';
+          melody.frequency.value = majorScaleFreqs[currentMusicLevel - 1] * 2; // Octave up
+          melodyGain.gain.value = 0;
+          melodyGain.gain.linearRampToValueAtTime(0.12, audioCtx.currentTime + 0.8);
+          melody.start();
+          musicOscillators.push({ osc: melody, gain: melodyGain, lfo: null });
+        }
+        
+        // Add energetic rhythm layer for levels 5+
+        if (currentMusicLevel >= 5) {
+          const rhythm = audioCtx.createOscillator();
+          const rhythmGain = audioCtx.createGain();
+          rhythm.connect(rhythmGain);
+          rhythmGain.connect(musicGain);
+          rhythm.type = 'square';
+          rhythm.frequency.value = majorScaleFreqs[currentMusicLevel - 1] * 0.5; // Bass line
+          rhythmGain.gain.value = 0;
+          rhythmGain.gain.linearRampToValueAtTime(0.18, audioCtx.currentTime + 0.8);
+          rhythm.start();
+          musicOscillators.push({ osc: rhythm, gain: rhythmGain, lfo: null });
+        }
+        
+        // Add high frequency sparkle for levels 7+
+        if (currentMusicLevel >= 7) {
+          const sparkle = audioCtx.createOscillator();
+          const sparkleGain = audioCtx.createGain();
+          sparkle.connect(sparkleGain);
+          sparkleGain.connect(musicGain);
+          sparkle.type = 'sine';
+          sparkle.frequency.value = majorScaleFreqs[currentMusicLevel - 1] * 4; // High sparkle
+          sparkleGain.gain.value = 0;
+          sparkleGain.gain.linearRampToValueAtTime(0.1, audioCtx.currentTime + 0.8);
+          sparkle.start();
+          musicOscillators.push({ osc: sparkle, gain: sparkleGain, lfo: null });
+        }
+      }
     }
     
     function playSound(type) {
-      // TODO: Replace synthesized sounds with realistic audio samples
-      // For production: Use Web Audio API to load and play .mp3/.wav files
-      // Lightning: Thunder/lightning recordings with 2-3 variations
-      // Gun: Realistic firearm sounds
-      // Sword: Swoosh/slash sounds
-      // Hit: Punchy impact sounds
-      // Currently using synthesized placeholder sounds
-      
       if (audioCtx.state === 'suspended') audioCtx.resume();
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
@@ -1061,7 +1029,7 @@
       const now = audioCtx.currentTime;
       
       if (type === 'shoot') {
-        // Placeholder - Replace with realistic gun sound
+        // Realistic gun sound - sharper and snappier
         osc.type = 'square';
         osc.frequency.setValueAtTime(800, now);
         osc.frequency.exponentialRampToValueAtTime(80, now + 0.03);
@@ -1070,7 +1038,7 @@
         osc.start(now);
         osc.stop(now + 0.08);
       } else if (type === 'hit') {
-        // Placeholder - Replace with punchy impact sound
+        // Punchy hit sound with more bass
         osc.type = 'triangle';
         osc.frequency.setValueAtTime(200, now);
         osc.frequency.exponentialRampToValueAtTime(50, now + 0.08);
@@ -1103,7 +1071,8 @@
         osc.start(now);
         osc.stop(now + 0.6);
         
-        // Music disabled
+        // Update background music
+        updateBackgroundMusic();
       } else if (type === 'splash') {
         // Water splash sound
         osc.type = 'sine';
@@ -1156,6 +1125,10 @@
     let damageNumbers = [];
     let meteors = [];
     let lastTime = null; // Initialize as null for proper first-frame detection
+
+    // Deferred disposal queue for Three.js memory management (PR #81)
+    const disposalQueue = [];
+    const MAX_DISPOSALS_PER_FRAME = 10;
     let frameCount = 0;
     let isPaused = false;
     let isGameOver = false;
@@ -1165,22 +1138,6 @@
     let waveCount = 0;
     let windmillQuest = { active: false, timer: 0, duration: 30, windmill: null, hasCompleted: false };
     let runStartGold = 0;  // Track gold at start of run for end-of-run calculation
-    let sessionDamagesTaken = 0;  // Session-specific damage tracking for Untouchable achievement
-
-    // Deferred disposal queue for Three.js memory management (PR #81)
-    const disposalQueue = [];
-    const MAX_DISPOSALS_PER_FRAME = 10;
-
-    // Countdown System (replaces tutorial)
-    let countdownActive = false;
-    let countdownStep = 0;
-    let countdownTimer = 0;
-    const countdownMessages = [
-      "Good luck!",
-      "3",
-      "2",
-      "1"
-    ];
 
     // Shared geometries for particle pooling (performance optimization)
     const sharedGeometries = {
@@ -1238,30 +1195,6 @@
     };
 
     // --- CLASSES ---
-
-    // Deferred disposal functions (PR #81)
-    function queueDisposal(mesh) {
-      if (mesh) {
-        scene.remove(mesh);
-        disposalQueue.push({ geo: mesh.geometry, mat: mesh.material });
-      }
-    }
-
-    function processDisposalQueue() {
-      let count = 0;
-      while (disposalQueue.length > 0 && count < MAX_DISPOSALS_PER_FRAME) {
-        const item = disposalQueue.shift();
-        if (item.geo) item.geo.dispose();
-        if (item.mat) {
-          if (Array.isArray(item.mat)) {
-            item.mat.forEach(m => m.dispose());
-          } else {
-            item.mat.dispose();
-          }
-        }
-        count++;
-      }
-    }
 
     class Player {
       constructor() {
@@ -1325,27 +1258,6 @@
         this.highlight.position.set(-0.2, 0.3, 0.2);
         this.mesh.add(this.highlight);
         
-        // Add cigar accessory
-        const cigarGeo = new THREE.CylinderGeometry(0.03, 0.04, 0.25, 8);
-        const cigarMat = new THREE.MeshPhongMaterial({ 
-          color: 0x8B4513,
-          shininess: 10
-        });
-        this.cigar = new THREE.Mesh(cigarGeo, cigarMat);
-        this.cigar.rotation.z = Math.PI / 2; // Horizontal
-        this.cigar.position.set(0.3, 0.1, 0.35);
-        this.mesh.add(this.cigar);
-        
-        // Add glowing tip to cigar
-        const tipGeo = new THREE.SphereGeometry(0.05, 8, 8);
-        const tipMat = new THREE.MeshBasicMaterial({ 
-          color: 0xFF4500,
-          emissive: 0xFF4500
-        });
-        this.cigarTip = new THREE.Mesh(tipGeo, tipMat);
-        this.cigarTip.position.set(0.425, 0.1, 0.35);
-        this.mesh.add(this.cigarTip);
-        
         // Aura Circle (visible when aura weapon is active)
         const auraGeo = new THREE.RingGeometry(3.5, 4, 32);
         const auraMat = new THREE.MeshBasicMaterial({ 
@@ -1405,8 +1317,8 @@
             targetVel.x = joystickLeft.x * speed;
             targetVel.z = joystickLeft.y * speed;
           
-            this.mesh.position.x += targetVel.x * dt;
-            this.mesh.position.z += targetVel.z * dt;
+            this.mesh.position.x += targetVel.x;
+            this.mesh.position.z += targetVel.z;
 
             // Water droplet trail when moving
             this.trailTimer += dt;
@@ -1475,81 +1387,14 @@
         // Pulse highlight with deterministic variation based on gameTime
         this.highlight.material.opacity = 0.6 + Math.sin(gameTime * 3) * 0.2 + Math.sin(gameTime * 7) * 0.1;
         
-        // Animate cigar tip glow
-        if (this.cigarTip) {
-          this.cigarTip.material.opacity = 0.7 + Math.sin(gameTime * 8) * 0.3;
-          
-          // Smoke particles from cigar
-          if (Math.random() < SMOKE_SPAWN_PROBABILITY) {
-            const smokeGeo = new THREE.SphereGeometry(0.05 + Math.random() * 0.03, 6, 6);
-            const smokeMat = new THREE.MeshBasicMaterial({ 
-              color: 0xCCCCCC, 
-              transparent: true, 
-              opacity: 0.3
-            });
-            const smoke = new THREE.Mesh(smokeGeo, smokeMat);
-            
-            // Get world position of cigar tip
-            const tipWorldPos = new THREE.Vector3();
-            this.cigarTip.getWorldPosition(tipWorldPos);
-            smoke.position.copy(tipWorldPos);
-            
-            scene.add(smoke);
-            smoke.userData = {
-              isCigarSmoke: true,
-              riseSpeed: 0.015 + Math.random() * 0.01,
-              lifetime: 1.5,
-              driftX: (Math.random() - 0.5) * 0.02,
-              driftZ: (Math.random() - 0.5) * 0.02,
-              fadeSpeed: 0.01
-            };
-            particles.push(smoke);
-          }
-        }
-        
-        // Character drops water when moving - wet, bubbly, squishy effects
-        const movementSpeed = Math.sqrt(this.velocity.x * this.velocity.x + this.velocity.z * this.velocity.z);
-        if (movementSpeed > 0.01) {
-          // Drop water droplets on ground
-          if (Math.random() < 0.15) { // 15% chance each frame when moving
-            spawnWaterDroplet(this.mesh.position);
-          }
-          
-          // Add small bubble particles rising from character
-          if (Math.random() < 0.1) {
-            const bubbleGeo = new THREE.SphereGeometry(0.1 + Math.random() * 0.05, 8, 8);
-            const bubbleMat = new THREE.MeshPhysicalMaterial({ 
-              color: 0x4ECDC4, 
-              transparent: true, 
-              opacity: 0.6,
-              metalness: 0.9,
-              roughness: 0.1
-            });
-            const bubble = new THREE.Mesh(bubbleGeo, bubbleMat);
-            bubble.position.copy(this.mesh.position);
-            bubble.position.y += 0.3;
-            scene.add(bubble);
-            
-            bubble.userData = {
-              isPlayerBubble: true,
-              riseSpeed: 0.02 + Math.random() * 0.02,
-              lifetime: 1.5,
-              driftX: (Math.random() - 0.5) * 0.01,
-              driftZ: (Math.random() - 0.5) * 0.01
-            };
-            particles.push(bubble);
-          }
-        }
-        
         // Update aura circle
         if (weapons.aura.active) {
           this.auraCircle.visible = true;
           this.auraCircle.position.x = this.mesh.position.x;
           this.auraCircle.position.z = this.mesh.position.z;
           
-          // Scale based on aura range with cap
-          const cappedRange = Math.min(weapons.aura.range, MAX_AURA_RANGE);
-          const scale = cappedRange * 2;
+          // Scale based on aura range
+          const scale = weapons.aura.range * 2;
           this.auraCircle.geometry.dispose();
           this.auraCircle.geometry = new THREE.RingGeometry(scale - 0.5, scale, 32);
           
@@ -1575,10 +1420,6 @@
         this.isDashing = true;
         this.dashTime = this.dashDuration;
         
-        // Track dashes for achievements
-        if (!saveData.totalDashes) saveData.totalDashes = 0;
-        saveData.totalDashes++;
-        
         // Splash effect on dash start - more dramatic
         spawnParticles(this.mesh.position, COLORS.player, 20);
         for(let i=0; i<8; i++) {
@@ -1598,11 +1439,6 @@
       }
 
       takeDamage(amount) {
-        // Track damage for achievements (both session and total)
-        sessionDamagesTaken++; // Session-specific for Untouchable achievement
-        if (!saveData.damagesTaken) saveData.damagesTaken = 0;
-        saveData.damagesTaken++;
-        
         // Armor reduction
         const reduced = Math.max(1, amount * (1 - playerStats.armor / 100));
         playerStats.hp -= reduced;
@@ -1746,10 +1582,7 @@
         this.maxHp = this.hp;
         this.damage = 33 * levelScaling; // Damage scaled by level
         this.isDead = false;
-        this.isDamaged = false; // Track if enemy has been visually damaged (legacy)
-        this.isDamaged75 = false; // Track 75% HP damage state
-        this.isDamaged50 = false; // Track 50% HP damage state
-        this.isDamaged25 = false; // Track 25% HP damage state
+        this.isDamaged = false; // Track if enemy has been visually damaged
         this.pulsePhase = Math.random() * Math.PI;
         this.wobbleOffset = Math.random() * 100;
         this.lastAttackTime = 0;
@@ -1781,37 +1614,19 @@
           }
           this.mesh.lookAt(targetPos);
         } else if (dist > 0.5) {
-          // Move towards target with different patterns per enemy type
+          // Move towards target
           let vx = (dx / dist) * this.speed;
           let vz = (dz / dist) * this.speed;
           
-          // Type 0 (Tank) - Direct chase, slow but steady
-          if (this.type === 0) {
-            // No special movement pattern
-          }
-          // Type 1 (Fast) - Zigzag erratic movement
-          else if (this.type === 1) {
+          // Triangle moves erratically
+          if (this.type === 1) {
             const wobble = Math.sin(gameTime * 10 + this.wobbleOffset) * 0.05;
             vx += wobble * (dz/dist); // Perpendicular
             vz -= wobble * (dx/dist);
           }
-          // Type 2 (Balanced) - Circle strafe pattern
-          else if (this.type === 2) {
-            const circleSpeed = 0.02;
-            const angle = Math.atan2(dz, dx);
-            const circleAngle = angle + Math.sin(gameTime * 2 + this.wobbleOffset) * 0.5;
-            vx = Math.cos(circleAngle) * this.speed;
-            vz = Math.sin(circleAngle) * this.speed;
-          }
-          // Type 3 (Slowing) - Weaving approach
-          else if (this.type === 3) {
-            const weave = Math.sin(gameTime * 4 + this.wobbleOffset) * 0.03;
-            vx += weave * (dz/dist);
-            vz -= weave * (dx/dist);
-          }
           
-          this.mesh.position.x += vx * dt;
-          this.mesh.position.z += vz * dt;
+          this.mesh.position.x += vx;
+          this.mesh.position.z += vz;
           this.mesh.lookAt(targetPos);
         }
 
@@ -1902,134 +1717,65 @@
         this.hp -= amount;
         createDamageNumber(amount, this.mesh.position, isCrit);
         
-        // 4-STAGE ENEMY DAMAGE STATES
+        // Destruction effect at 20% HP threshold
         const hpPercent = this.hp / this.maxHp;
         const oldHpPercent = oldHp / this.maxHp;
-        const enemyColor = this.mesh.material.color.getHex();
         
-        // Stage 4 (25% HP) - Missing limbs, large body parts gone, slowed movement
-        if (oldHpPercent >= 0.25 && hpPercent < 0.25 && !this.isDamaged25) {
-          this.isDamaged25 = true;
-          this.walkSpeed *= 0.6; // Slowed by 40% due to missing limb
-          this.mesh.scale.multiplyScalar(0.7); // Much smaller - major body parts missing
+        // First hit below 20% - destroy part of body
+        if (oldHpPercent >= 0.2 && hpPercent < 0.2 && !this.isDamaged) {
+          this.isDamaged = true;
           
-          // Spawn large broken limbs
-          for(let i = 0; i < 8; i++) {
-            const limb = new THREE.Mesh(
-              new THREE.BoxGeometry(0.3 + Math.random() * 0.3, 0.3 + Math.random() * 0.3, 0.1),
-              new THREE.MeshToonMaterial({ color: enemyColor, transparent: true, opacity: 0.9 })
-            );
-            limb.position.copy(this.mesh.position);
-            scene.add(limb);
-            
-            const vel = new THREE.Vector3(
-              (Math.random() - 0.5) * 0.5,
-              Math.random() * 0.6,
-              (Math.random() - 0.5) * 0.5
-            );
-            
-            let life = 60;
-            const updateLimb = () => {
-              life--;
-              limb.position.add(vel);
-              vel.y -= 0.02; // Gravity
-              limb.rotation.x += 0.15;
-              limb.rotation.y += 0.15;
-              limb.material.opacity = life / 60;
-              
-              if (life <= 0 || limb.position.y < 0) {
-                scene.remove(limb);
-                limb.geometry.dispose();
-                limb.material.dispose();
-              } else {
-                requestAnimationFrame(updateLimb);
-              }
-            };
-            updateLimb();
-          }
+          // Visually damage the enemy - make smaller and break off pieces
+          const damagePercent = 0.35 + Math.random() * 0.15; // 35-50%
+          const newScale = 1 - damagePercent;
+          this.mesh.scale.multiplyScalar(newScale);
           
-          spawnParticles(this.mesh.position, enemyColor, 20);
-          playSound('hit');
-        }
-        
-        // Stage 3 (50% HP) - Flesh ripped off, major wounds
-        else if (oldHpPercent >= 0.5 && hpPercent < 0.5 && !this.isDamaged50) {
-          this.isDamaged50 = true;
-          this.mesh.scale.multiplyScalar(0.85); // Noticeably damaged
-          
-          // Add wound texture by darkening parts
-          this.mesh.material.emissive.setHex(0x330000); // Dark red wounds
-          this.mesh.material.emissiveIntensity = 0.3;
-          
-          // Spawn flesh pieces
-          for(let i = 0; i < 10; i++) {
-            const flesh = new THREE.Mesh(
-              new THREE.BoxGeometry(0.2, 0.2, 0.1),
-              new THREE.MeshBasicMaterial({ color: 0x8B0000 }) // Dark red flesh
-            );
-            flesh.position.copy(this.mesh.position);
-            scene.add(flesh);
-            
-            const vel = new THREE.Vector3(
-              (Math.random() - 0.5) * 0.4,
-              Math.random() * 0.5,
-              (Math.random() - 0.5) * 0.4
-            );
-            
-            let life = 50;
-            const updateFlesh = () => {
-              life--;
-              flesh.position.add(vel);
-              vel.y -= 0.02;
-              flesh.rotation.x += 0.1;
-              flesh.rotation.y += 0.1;
-              
-              if (life <= 0 || flesh.position.y < 0) {
-                scene.remove(flesh);
-                flesh.geometry.dispose();
-                flesh.material.dispose();
-              } else {
-                requestAnimationFrame(updateFlesh);
-              }
-            };
-            updateFlesh();
-          }
-          
-          spawnParticles(this.mesh.position, 0x8B0000, 15); // Blood color
-          playSound('hit');
-        }
-        
-        // Stage 2 (75% HP) - Blood spots, small holes, damage marks
-        else if (oldHpPercent >= 0.75 && hpPercent < 0.75 && !this.isDamaged75) {
-          this.isDamaged75 = true;
-          
-          // Add blood spots - slightly darken color
-          const currentColor = this.mesh.material.color.clone();
-          currentColor.multiplyScalar(0.8); // Darken by 20%
-          this.mesh.material.color.copy(currentColor);
-          
-          // Add small damage marks (holes)
+          // Spawn broken pieces
+          const enemyColor = this.mesh.material.color.getHex();
           for(let i = 0; i < 5; i++) {
-            const hole = new THREE.Mesh(
-              new THREE.CircleGeometry(0.1, 8),
-              new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.7 })
+            const piece = new THREE.Mesh(
+              new THREE.BoxGeometry(0.2, 0.2, 0.2),
+              new THREE.MeshBasicMaterial({ color: enemyColor })
             );
-            hole.position.copy(this.mesh.position);
-            hole.position.x += (Math.random() - 0.5) * 0.5;
-            hole.position.y += (Math.random() - 0.5) * 0.5;
-            hole.position.z += (Math.random() - 0.5) * 0.5;
-            this.mesh.add(hole);
+            piece.position.copy(this.mesh.position);
+            scene.add(piece);
+            
+            const vel = new THREE.Vector3(
+              (Math.random() - 0.5) * 0.3,
+              Math.random() * 0.4,
+              (Math.random() - 0.5) * 0.3
+            );
+            
+            let life = 40;
+            const updatePiece = () => {
+              life--;
+              piece.position.add(vel);
+              vel.y -= 0.02; // Gravity
+              piece.rotation.x += 0.1;
+              piece.rotation.y += 0.1;
+              
+              if (life <= 0 || piece.position.y < 0) {
+                scene.remove(piece);
+                piece.geometry.dispose();
+                piece.material.dispose();
+              } else {
+                requestAnimationFrame(updatePiece);
+              }
+            };
+            updatePiece();
           }
           
-          spawnParticles(this.mesh.position, 0xFF0000, 8); // Red blood particles
+          // Enhanced particles for destruction
+          spawnParticles(this.mesh.position, enemyColor, 15);
           playSound('hit');
         }
         
-        // Flash on every hit
+        // Flash
         const oldColor = this.mesh.material.color.getHex();
         this.mesh.material.color.setHex(0xFFFFFF);
         
         // Enhanced splash particles using enemy's own color
+        const enemyColor = oldColor;
         const particleCount = isCrit ? 8 : 3;
         spawnParticles(this.mesh.position, enemyColor, particleCount);
         
@@ -2086,7 +1832,9 @@
           ring.scale.set(scale, scale, 1);
           ring.material.opacity = ringLife / 20 * 0.8;
           if (ringLife <= 0) {
-            queueDisposal(ring);  // Use deferred disposal
+            scene.remove(ring);
+            ring.geometry.dispose();
+            ring.material.dispose();
           } else {
             requestAnimationFrame(updateRing);
           }
@@ -2154,7 +1902,9 @@
         document.body.appendChild(flash);
         setTimeout(() => flash.remove(), 60);
         
-        queueDisposal(this.mesh);  // Use deferred disposal
+        scene.remove(this.mesh);
+        this.mesh.geometry.dispose();
+        this.mesh.material.dispose();
         
         // Drop EXP
         spawnExp(this.mesh.position.x, this.mesh.position.z);
@@ -2196,12 +1946,12 @@
         this.vz = (dz / dist) * this.speed;
       }
 
-      update(dt = 1/60) {
+      update() {
         if (!this.active) return;
         
         // Handle enemy projectiles separately
         if (this.isEnemyProjectile) {
-          this.mesh.position.add(this.direction.clone().multiplyScalar(this.speed * dt * 60));
+          this.mesh.position.add(this.direction.clone().multiplyScalar(this.speed));
           this.lifetime--;
           
           if (this.lifetime <= 0) {
@@ -2222,8 +1972,8 @@
         }
         
         // Player projectiles
-        this.mesh.position.x += this.vx * dt * 60;
-        this.mesh.position.z += this.vz * dt * 60;
+        this.mesh.position.x += this.vx;
+        this.mesh.position.z += this.vz;
         this.life--;
 
         if (this.life <= 0) {
@@ -2268,7 +2018,9 @@
 
       destroy() {
         this.active = false;
-        queueDisposal(this.mesh);  // Use deferred disposal
+        scene.remove(this.mesh);
+        this.mesh.geometry.dispose();
+        this.mesh.material.dispose();
       }
     }
 
@@ -2345,11 +2097,11 @@
         this.active = true;
       }
       
-      update(dt = 1/60) {
+      update() {
         if (!this.active) return false;
         
-        this.mesh.position.y -= this.speed * dt * 60;
-        this.speed += 0.05 * dt * 60; // Gravity
+        this.mesh.position.y -= this.speed;
+        this.speed += 0.05; // Gravity
         
         if (this.mesh.position.y <= 0) {
           this.explode();
@@ -2360,8 +2112,12 @@
       
       explode() {
         this.active = false;
-        queueDisposal(this.mesh);  // Use deferred disposal
-        queueDisposal(this.shadow);  // Use deferred disposal
+        scene.remove(this.mesh);
+        scene.remove(this.shadow);
+        this.mesh.geometry.dispose();
+        this.mesh.material.dispose();
+        this.shadow.geometry.dispose();
+        this.shadow.material.dispose();
         
         // AOE Damage
         const range = weapons.meteor.area;
@@ -2421,16 +2177,15 @@
         this.maxLife = 40;
       }
       
-      update(dt = 1/60) {
+      update() {
         this.life--;
-        const dtFactor = dt * 60;
-        this.mesh.position.add(this.vel.clone().multiplyScalar(dtFactor));
-        this.vel.y -= 0.025 * dtFactor; // Gravity with realistic feel
+        this.mesh.position.add(this.vel);
+        this.vel.y -= 0.025; // Gravity with realistic feel
         
         // Apply rotation
-        this.mesh.rotation.x += this.rotVel.x * dtFactor;
-        this.mesh.rotation.y += this.rotVel.y * dtFactor;
-        this.mesh.rotation.z += this.rotVel.z * dtFactor;
+        this.mesh.rotation.x += this.rotVel.x;
+        this.mesh.rotation.y += this.rotVel.y;
+        this.mesh.rotation.z += this.rotVel.z;
         
         // Bounce with energy loss
         if (this.mesh.position.y < 0.1) {
@@ -2606,7 +2361,9 @@
         document.body.appendChild(flash);
         setTimeout(() => flash.remove(), 100);
         
-        queueDisposal(this.mesh);  // Use deferred disposal
+        scene.remove(this.mesh);
+        this.mesh.geometry.dispose();
+        this.mesh.material.dispose();
         
         addExp(GAME_CONFIG.expValue);
         playSound('collect');
@@ -2661,7 +2418,9 @@
       
       destroy() {
         this.active = false;
-        queueDisposal(this.mesh);  // Use deferred disposal
+        scene.remove(this.mesh);
+        this.mesh.geometry.dispose();
+        this.mesh.material.dispose();
       }
     }
 
@@ -2688,33 +2447,8 @@
         expEarned: 0,
         maxWeapons: 0
       },
-      achievements: [],
-      notifications: [], // New notification/inbox system
-      inventory: [], // New inventory system for equipment
-      equippedItems: {} // Currently equipped items
+      achievements: []
     };
-    
-    // Rarity system for items
-    const RARITIES = {
-      COMMON: { name: 'Common', color: '#FFFFFF', multiplier: 1.0 },
-      RARE: { name: 'Rare', color: '#4FC3F7', multiplier: 1.25 },
-      EPIC: { name: 'Epic', color: '#AB47BC', multiplier: 1.5 },
-      LEGENDARY: { name: 'Legendary', color: '#FFD700', multiplier: 2.0 },
-      MYTHIC: { name: 'Mythic', color: '#FF1744', multiplier: 3.0 }
-    };
-    
-    // Game balance constants
-    const MAX_AURA_RANGE = 5;
-    const INITIAL_AURA_RANGE = 3;
-    const AURA_RANGE_INCREASE_MULTIPLIER = 0.1;
-    const AIM_ASSIST_FACTOR = 0.33;
-    const SMOKE_SPAWN_PROBABILITY = 0.15;
-    
-    // ID generation counter to prevent collisions
-    let idCounter = 0;
-    function generateUniqueId() {
-      return `${Date.now()}_${idCounter++}_${Math.random().toString(36).substr(2, 9)}`;
-    }
 
     let saveData = { ...defaultSaveData };
 
@@ -2725,9 +2459,6 @@
           saveData = JSON.parse(saved);
           // Ensure all fields exist
           saveData.upgrades = { ...defaultSaveData.upgrades, ...saveData.upgrades };
-          saveData.notifications = saveData.notifications || [];
-          saveData.inventory = saveData.inventory || [];
-          saveData.equippedItems = saveData.equippedItems || {};
         }
       } catch (e) {
         console.error('Failed to load save data:', e);
@@ -2742,314 +2473,50 @@
         console.error('Failed to save data:', e);
       }
     }
-    
-    // --- NOTIFICATION/INBOX SYSTEM ---
-    function addNotification(type, title, message, reward = null) {
-      const notification = {
-        id: generateUniqueId(),
-        type: type, // 'reward', 'achievement', 'info', 'warning'
-        title: title,
-        message: message,
-        reward: reward,
-        timestamp: Date.now(),
-        read: false
-      };
-      saveData.notifications.push(notification);
-      saveSaveData();
-      
-      // Show notification popup
-      showNotificationPopup(notification);
-    }
-    
-    function showNotificationPopup(notification) {
-      const popup = document.createElement('div');
-      popup.style.position = 'fixed';
-      popup.style.top = '80px';
-      popup.style.right = '20px';
-      popup.style.background = 'linear-gradient(to bottom, #2c3e50, #1a252f)';
-      popup.style.border = '3px solid #5DADE2';
-      popup.style.borderRadius = '10px';
-      popup.style.padding = '15px';
-      popup.style.maxWidth = '300px';
-      popup.style.zIndex = '2000';
-      popup.style.boxShadow = '0 0 20px rgba(93,173,226,0.5)';
-      popup.style.animation = 'slideInRight 0.3s ease';
-      
-      const titleEl = document.createElement('div');
-      titleEl.style.color = '#5DADE2';
-      titleEl.style.fontWeight = 'bold';
-      titleEl.style.fontSize = '18px';
-      titleEl.style.marginBottom = '5px';
-      titleEl.textContent = notification.title;
-      
-      const messageEl = document.createElement('div');
-      messageEl.style.color = '#ecf0f1';
-      messageEl.style.fontSize = '14px';
-      messageEl.textContent = notification.message;
-      
-      popup.appendChild(titleEl);
-      popup.appendChild(messageEl);
-      
-      if (notification.reward) {
-        const rewardEl = document.createElement('div');
-        rewardEl.style.color = '#FFD700';
-        rewardEl.style.fontWeight = 'bold';
-        rewardEl.style.marginTop = '5px';
-        rewardEl.textContent = `+${notification.reward} Gold`;
-        popup.appendChild(rewardEl);
-      }
-      
-      document.body.appendChild(popup);
-      
-      // Auto-remove after 4 seconds
-      setTimeout(() => {
-        popup.style.animation = 'slideOutRight 0.3s ease';
-        setTimeout(() => {
-          if (popup.parentNode) {
-            popup.parentNode.removeChild(popup);
-          }
-        }, 300);
-      }, 4000);
-    }
-    
-    // --- INVENTORY SYSTEM ---
-    function addItemToInventory(item) {
-      saveData.inventory.push(item);
-      saveSaveData();
-      addNotification('reward', 'New Item!', `You got: ${item.name} (${RARITIES[item.rarity].name})`);
-    }
-    
-    function equipItem(itemId, slot) {
-      const item = saveData.inventory.find(i => i.id === itemId);
-      if (item) {
-        saveData.equippedItems[slot] = itemId;
-        saveSaveData();
-        addNotification('info', 'Item Equipped', `${item.name} equipped to ${slot}`);
-      }
-    }
-    
-    function generateRandomItem(level = 1) {
-      const rarityRoll = Math.random();
-      let rarity;
-      if (rarityRoll < 0.5) rarity = 'COMMON';
-      else if (rarityRoll < 0.75) rarity = 'RARE';
-      else if (rarityRoll < 0.9) rarity = 'EPIC';
-      else if (rarityRoll < 0.97) rarity = 'LEGENDARY';
-      else rarity = 'MYTHIC';
-      
-      const types = ['weapon', 'armor', 'accessory'];
-      const type = types[Math.floor(Math.random() * types.length)];
-      
-      return {
-        id: generateUniqueId(),
-        name: `${RARITIES[rarity].name} ${type}`,
-        type: type,
-        rarity: rarity,
-        level: level,
-        stats: {
-          damage: Math.floor(5 * level * RARITIES[rarity].multiplier),
-          defense: Math.floor(3 * level * RARITIES[rarity].multiplier),
-          health: Math.floor(10 * level * RARITIES[rarity].multiplier)
-        }
-      };
-    }
 
     // --- ACHIEVEMENTS SYSTEM ---
     const ACHIEVEMENTS = {
-      kills100: { id: 'kills100', name: '100 Kills', desc: 'Kill 100 enemies', reward: 50, check: () => playerStats.kills >= 100, claimed: false },
-      kills250: { id: 'kills250', name: '250 Kills', desc: 'Kill 250 enemies', reward: 100, check: () => playerStats.kills >= 250, claimed: false },
-      kills500: { id: 'kills500', name: '500 Kills', desc: 'Kill 500 enemies', reward: 200, check: () => playerStats.kills >= 500, claimed: false },
-      kills1000: { id: 'kills1000', name: '1000 Kills', desc: 'Kill 1000 enemies', reward: 500, check: () => playerStats.kills >= 1000, claimed: false },
-      level10: { id: 'level10', name: 'Level 10', desc: 'Reach Level 10', reward: 100, check: () => playerStats.lvl >= 10, claimed: false },
-      level25: { id: 'level25', name: 'Level 25', desc: 'Reach Level 25', reward: 250, check: () => playerStats.lvl >= 25, claimed: false },
-      level50: { id: 'level50', name: 'Level 50', desc: 'Reach Level 50', reward: 500, check: () => playerStats.lvl >= 50, claimed: false },
-      level75: { id: 'level75', name: 'Level 75', desc: 'Reach Level 75', reward: 750, check: () => playerStats.lvl >= 75, claimed: false },
-      level100: { id: 'level100', name: 'Level 100', desc: 'Reach Level 100', reward: 1000, check: () => playerStats.lvl >= 100, claimed: false },
-      goldCollector: { id: 'goldCollector', name: 'Gold Collector', desc: 'Collect 1000 gold total', reward: 150, check: () => saveData.totalGold >= 1000, claimed: false },
-      dasher: { id: 'dasher', name: 'Dasher', desc: 'Perform 50 dashes', reward: 75, check: () => saveData.totalDashes >= 50, claimed: false },
-      survivor: { id: 'survivor', name: 'Survivor', desc: 'Survive for 10 minutes', reward: 300, check: () => gameTime >= 600, claimed: false },
-      weaponMaster: { id: 'weaponMaster', name: 'Weapon Master', desc: 'Unlock all weapons', reward: 400, check: () => weapons.gun.active && weapons.sword.active && weapons.aura.active && weapons.meteor.active && weapons.lightning.active, claimed: false },
-      noHit: { id: 'noHit', name: 'Untouchable', desc: 'Reach level 5 without taking damage', reward: 500, check: () => playerStats.lvl >= 5 && sessionDamagesTaken === 0, claimed: false }
+      kills100: { id: 'kills100', name: '100 Kills', desc: 'Kill 100 enemies', reward: 50, check: () => playerStats.kills >= 100 },
+      level10: { id: 'level10', name: 'Level 10', desc: 'Reach Level 10', reward: 100, check: () => playerStats.lvl >= 10 },
+      level25: { id: 'level25', name: 'Level 25', desc: 'Reach Level 25', reward: 250, check: () => playerStats.lvl >= 25 },
+      level50: { id: 'level50', name: 'Level 50', desc: 'Reach Level 50', reward: 500, check: () => playerStats.lvl >= 50 },
+      level75: { id: 'level75', name: 'Level 75', desc: 'Reach Level 75', reward: 750, check: () => playerStats.lvl >= 75 },
+      level100: { id: 'level100', name: 'Level 100', desc: 'Reach Level 100', reward: 1000, check: () => playerStats.lvl >= 100 }
     };
-
-    // Initialize achievement tracking stats
-    if (!saveData.totalGold) saveData.totalGold = 0;
-    if (!saveData.totalDashes) saveData.totalDashes = 0;
-    if (!saveData.damagesTaken) saveData.damagesTaken = 0;
-    if (!saveData.unclaimedAchievements) saveData.unclaimedAchievements = [];
 
     function updateAchievementsScreen() {
       const content = document.getElementById('achievements-content');
       if (!content) return;
       
-      let html = '<div style="display: grid; gap: 15px; width: 100%; max-width: 600px; margin: 0 auto; padding-bottom: 100px;">';
+      let html = '<div style="display: grid; gap: 15px; width: 100%; max-width: 600px; margin: 0 auto;">';
       
       for (const key in ACHIEVEMENTS) {
         const achievement = ACHIEVEMENTS[key];
         const isEarned = saveData.achievements && saveData.achievements.includes(achievement.id);
-        const isClaimed = achievement.claimed || (saveData.claimedAchievements && saveData.claimedAchievements.includes(achievement.id));
-        const canClaim = isEarned && !isClaimed;
         
         html += `
           <div style="
-            background: linear-gradient(to bottom, ${isClaimed ? '#2c5530' : isEarned ? '#4a4a1a' : '#3a3a3a'}, ${isClaimed ? '#1a3020' : isEarned ? '#2a2a0a' : '#2a2a2a'});
-            border: 3px solid ${isClaimed ? '#00FF00' : isEarned ? '#FFD700' : '#5a5a5a'};
+            background: linear-gradient(to bottom, ${isEarned ? '#2c5530' : '#3a3a3a'}, ${isEarned ? '#1a3020' : '#2a2a2a'});
+            border: 3px solid ${isEarned ? '#FFD700' : '#5a5a5a'};
             border-radius: 15px;
             padding: 15px;
             text-align: left;
-            cursor: ${canClaim ? 'pointer' : 'default'};
-            transition: all 0.2s;
-            font-family: 'M PLUS Rounded 1c', 'Comic Sans MS', 'Chalkboard', cursive, sans-serif;
-            ${canClaim ? 'box-shadow: 0 0 15px rgba(255,215,0,0.6); animation: pulse-gold 1.5s infinite;' : ''}
-          " ${canClaim ? `onclick="claimAchievement('${achievement.id}')"` : ''}>
-            <div style="color: ${isClaimed ? '#00FF00' : isEarned ? '#FFD700' : '#bbb'}; font-size: 20px; font-weight: bold; margin-bottom: 5px; text-shadow: 0 0 8px ${isClaimed ? 'rgba(0,255,0,0.6)' : isEarned ? 'rgba(255,215,0,0.6)' : 'rgba(187,187,187,0.3)'}, 1px 1px 2px rgba(0,0,0,0.8);">
-              ${isClaimed ? '✓ ' : isEarned ? '! ' : ''}${achievement.name}
+          ">
+            <div style="color: ${isEarned ? '#FFD700' : '#bbb'}; font-size: 20px; font-weight: bold; margin-bottom: 5px;">
+              ${isEarned ? '✓ ' : ''}${achievement.name}
             </div>
-            <div style="color: ${isClaimed ? '#90ee90' : isEarned ? '#f0e68c' : '#888'}; font-size: 14px; margin-bottom: 8px; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">
+            <div style="color: ${isEarned ? '#90ee90' : '#888'}; font-size: 14px; margin-bottom: 8px;">
               ${achievement.desc}
             </div>
-            <div style="color: #FFD700; font-size: 16px; font-weight: bold; text-shadow: 0 0 8px rgba(255,215,0,0.6), 1px 1px 2px rgba(0,0,0,0.8);">
-              Reward: ${achievement.reward} Gold ${isClaimed ? '(CLAIMED)' : isEarned ? '(CLICK TO CLAIM)' : ''}
+            <div style="color: #FFD700; font-size: 16px; font-weight: bold;">
+              Reward: ${achievement.reward} Gold
             </div>
           </div>
         `;
       }
       
       html += '</div>';
-      
-      // Add pulse animation CSS if not already added
-      if (!document.getElementById('achievementPulse')) {
-        const style = document.createElement('style');
-        style.id = 'achievementPulse';
-        style.textContent = `
-          @keyframes pulse-gold {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.02); box-shadow: 0 0 25px rgba(255,215,0,0.9); }
-          }
-        `;
-        document.head.appendChild(style);
-      }
-      
       content.innerHTML = html;
-      
-      // Update notification badge on achievements button
-      updateAchievementNotification();
-    }
-    
-    function claimAchievement(achievementId) {
-      const achievement = ACHIEVEMENTS[achievementId];
-      if (!achievement) return;
-      
-      const isEarned = saveData.achievements && saveData.achievements.includes(achievement.id);
-      const isClaimed = achievement.claimed || (saveData.claimedAchievements && saveData.claimedAchievements.includes(achievement.id));
-      
-      if (isEarned && !isClaimed) {
-        // Mark as claimed
-        if (!saveData.claimedAchievements) saveData.claimedAchievements = [];
-        saveData.claimedAchievements.push(achievement.id);
-        achievement.claimed = true;
-        
-        // Award gold with visual effect
-        addGold(achievement.reward);
-        
-        // Add notification for achievement claim
-        addNotification('achievement', 'Achievement Unlocked!', `${achievement.name} - ${achievement.desc}`, achievement.reward);
-        
-        // Show gold bag with amount
-        const goldBag = document.createElement('div');
-        goldBag.style.position = 'fixed';
-        goldBag.style.top = '50%';
-        goldBag.style.left = '50%';
-        goldBag.style.transform = 'translate(-50%, -50%) scale(0)';
-        goldBag.style.fontSize = '80px';
-        goldBag.style.zIndex = '10000';
-        goldBag.style.pointerEvents = 'none';
-        goldBag.innerHTML = `💰<br><span style="font-size: 40px; color: #FFD700; text-shadow: 0 0 10px rgba(255,215,0,0.8);">+${achievement.reward} GOLD</span>`;
-        goldBag.style.textAlign = 'center';
-        document.body.appendChild(goldBag);
-        
-        // Animate gold bag
-        let scale = 0;
-        const duration = 2000;
-        const start = Date.now();
-        const animateGoldBag = () => {
-          const elapsed = Date.now() - start;
-          const t = elapsed / duration;
-          
-          if (t >= 1) {
-            goldBag.remove();
-            return;
-          }
-          
-          if (t < 0.3) {
-            scale = t / 0.3; // Scale up
-          } else if (t < 0.7) {
-            scale = 1; // Hold
-          } else {
-            scale = 1 - ((t - 0.7) / 0.3); // Fade out
-          }
-          
-          goldBag.style.transform = `translate(-50%, -50%) scale(${scale})`;
-          requestAnimationFrame(animateGoldBag);
-        };
-        animateGoldBag();
-        
-        // Play sound
-        playSound('levelup');
-        
-        // Save
-        saveSaveData();
-        
-        // Refresh screen
-        updateAchievementsScreen();
-      }
-    }
-    
-    function updateAchievementNotification() {
-      // Check if there are unclaimed achievements
-      let unclaimedCount = 0;
-      for (const key in ACHIEVEMENTS) {
-        const achievement = ACHIEVEMENTS[key];
-        const isEarned = saveData.achievements && saveData.achievements.includes(achievement.id);
-        const isClaimed = achievement.claimed || (saveData.claimedAchievements && saveData.claimedAchievements.includes(achievement.id));
-        if (isEarned && !isClaimed) {
-          unclaimedCount++;
-        }
-      }
-      
-      // Update or create notification badge
-      let badge = document.getElementById('achievement-notification-badge');
-      if (unclaimedCount > 0) {
-        if (!badge) {
-          badge = document.createElement('div');
-          badge.id = 'achievement-notification-badge';
-          badge.style.position = 'absolute';
-          badge.style.top = '0';
-          badge.style.right = '10px';
-          badge.style.width = '30px';
-          badge.style.height = '30px';
-          badge.style.borderRadius = '50%';
-          badge.style.background = 'linear-gradient(to bottom, #FF0000, #CC0000)';
-          badge.style.border = '2px solid #FFD700';
-          badge.style.color = 'white';
-          badge.style.fontSize = '18px';
-          badge.style.fontWeight = 'bold';
-          badge.style.display = 'flex';
-          badge.style.alignItems = 'center';
-          badge.style.justifyContent = 'center';
-          badge.style.boxShadow = '0 0 10px rgba(255,0,0,0.8)';
-          badge.style.animation = 'pulse 1s infinite';
-          badge.style.pointerEvents = 'none';
-          badge.style.zIndex = '1000';
-          
-          const achievementsBtn = document.getElementById('achievements-btn');
-          achievementsBtn.style.position = 'relative';
-          achievementsBtn.appendChild(badge);
-        }
-        badge.textContent = unclaimedCount;
-      } else if (badge) {
-        badge.remove();
-      }
     }
 
     function checkAchievements() {
@@ -3063,13 +2530,16 @@
         
         // Check if achieved
         if (achievement.check()) {
-          // Award achievement (but don't give gold yet - must claim)
+          // Award achievement
           if (!saveData.achievements) saveData.achievements = [];
           saveData.achievements.push(achievement.id);
           
+          // Award gold
+          addGold(achievement.reward);
+          
           // Show achievement notification
-          createFloatingText(`ACHIEVEMENT UNLOCKED: ${achievement.name}`, player.mesh.position);
-          createFloatingText(`Go to menu to claim!`, player.mesh.position);
+          createFloatingText(`ACHIEVEMENT: ${achievement.name}`, player.mesh.position);
+          createFloatingText(`+${achievement.reward} GOLD`, player.mesh.position);
           
           // Save
           saveSaveData();
@@ -3081,9 +2551,6 @@
           for(let i=0; i<30; i++) {
             spawnParticles(player.mesh.position, 0xFFD700, 5);
           }
-          
-          // Update notification badge
-          updateAchievementNotification();
         }
       }
     }
@@ -3205,58 +2672,22 @@
       scene.add(ground);
 
       // Features
-      // Lake (Blue Plane) with realistic water effects, reflections, and sun
+      // Lake (Blue Plane) with water effect
       const lakeGeo = new THREE.CircleGeometry(15, 32);
-      const lakeMat = new THREE.MeshPhysicalMaterial({ 
-        color: COLORS.lake, 
-        transparent: true, 
-        opacity: 0.85,
-        metalness: 0.9, // High metalness for reflections
-        roughness: 0.1, // Low roughness for smooth water
-        clearcoat: 1.0, // Clear coat for glossy surface
-        clearcoatRoughness: 0.1
-      });
+      const lakeMat = new THREE.MeshBasicMaterial({ color: COLORS.lake, transparent: true, opacity: 0.8 });
       const lake = new THREE.Mesh(lakeGeo, lakeMat);
       lake.rotation.x = -Math.PI / 2;
       lake.position.set(30, 0.01, -30);
-      lake.receiveShadow = true;
       scene.add(lake);
       
-      // Add water ripple effect with multiple rings
-      for(let i=0; i<3; i++) {
-        const rippleGeo = new THREE.RingGeometry(13 + i, 14 + i, 32);
-        const rippleMat = new THREE.MeshBasicMaterial({ 
-          color: 0x3399FF, 
-          transparent: true, 
-          opacity: 0.4 - i*0.1 
-        });
-        const ripple = new THREE.Mesh(rippleGeo, rippleMat);
-        ripple.rotation.x = -Math.PI / 2;
-        ripple.position.set(30, 0.02 + i*0.01, -30);
-        ripple.userData = { isWaterRipple: true, phase: i * Math.PI / 3, ringIndex: i };
-        scene.add(ripple);
-      }
-      
-      // Sun reflection on water - animated sparkles
-      for(let i=0; i<15; i++) {
-        const sparkleGeo = new THREE.CircleGeometry(0.3, 8);
-        const sparkleMat = new THREE.MeshBasicMaterial({ 
-          color: 0xFFFFAA, 
-          transparent: true, 
-          opacity: 0.6 
-        });
-        const sparkle = new THREE.Mesh(sparkleGeo, sparkleMat);
-        sparkle.rotation.x = -Math.PI / 2;
-        const angle = (i / 15) * Math.PI * 2;
-        const radius = 3 + Math.random() * 10;
-        sparkle.position.set(
-          30 + Math.cos(angle) * radius, 
-          0.05, 
-          -30 + Math.sin(angle) * radius
-        );
-        sparkle.userData = { isSunSparkle: true, phase: Math.random() * Math.PI * 2, baseOpacity: 0.4 + Math.random() * 0.3 };
-        scene.add(sparkle);
-      }
+      // Add water ripple effect
+      const rippleGeo = new THREE.RingGeometry(14, 15, 32);
+      const rippleMat = new THREE.MeshBasicMaterial({ color: 0x3399FF, transparent: true, opacity: 0.5 });
+      const ripple = new THREE.Mesh(rippleGeo, rippleMat);
+      ripple.rotation.x = -Math.PI / 2;
+      ripple.position.set(30, 0.02, -30);
+      ripple.userData = { isWaterRipple: true, phase: 0 };
+      scene.add(ripple);
 
       // Smooth nice roads connecting areas with curves
       const roadMat = new THREE.MeshPhysicalMaterial({ 
@@ -3643,76 +3074,52 @@
         }
       }
       
-      // Waterfall from sloped cliff into lake - IMPROVED with realistic sloping
+      // Waterfall from cliff into lake
       const waterfallGroup = new THREE.Group();
       
-      // Sloped cliff - multiple levels creating a gradual slope down to hills
-      const cliffMat = new THREE.MeshPhysicalMaterial({ 
-        color: 0x696969, // Dark gray
-        metalness: 0.1,
-        roughness: 0.9
-      });
-      
-      // Top cliff section
-      const cliff1 = new THREE.Mesh(new THREE.BoxGeometry(10, 10, 8), cliffMat);
-      cliff1.position.set(30, 5, -48);
-      cliff1.castShadow = true;
-      cliff1.receiveShadow = true;
-      waterfallGroup.add(cliff1);
-      
-      // Middle slope - smaller and lower
-      const cliff2 = new THREE.Mesh(new THREE.BoxGeometry(12, 6, 10), cliffMat);
-      cliff2.position.set(30, 3, -43);
-      cliff2.castShadow = true;
-      cliff2.receiveShadow = true;
-      waterfallGroup.add(cliff2);
-      
-      // Lower hill - gentle slope
-      const cliff3 = new THREE.Mesh(new THREE.BoxGeometry(14, 3, 12), cliffMat);
-      cliff3.position.set(30, 1.5, -37);
-      cliff3.castShadow = true;
-      cliff3.receiveShadow = true;
-      waterfallGroup.add(cliff3);
+      // Cliff/rock formation
+      const cliffGeo = new THREE.BoxGeometry(8, 12, 6);
+      const cliffMat = new THREE.MeshToonMaterial({ color: 0x696969 }); // Dark gray
+      const cliff = new THREE.Mesh(cliffGeo, cliffMat);
+      cliff.position.set(30, 6, -45); // Above and behind the lake
+      cliff.castShadow = true;
+      waterfallGroup.add(cliff);
       
       // Waterfall - multiple planes to simulate water flow
-      const waterfallGeo = new THREE.PlaneGeometry(3, 10);
-      const waterfallMat = new THREE.MeshPhysicalMaterial({ 
+      const waterfallGeo = new THREE.PlaneGeometry(3, 12);
+      const waterfallMat = new THREE.MeshBasicMaterial({ 
         color: 0x87CEEB, 
         transparent: true, 
-        opacity: 0.7,
-        side: THREE.DoubleSide,
-        metalness: 0.5,
-        roughness: 0.2
+        opacity: 0.6,
+        side: THREE.DoubleSide
       });
       
       const waterfall = new THREE.Mesh(waterfallGeo, waterfallMat);
-      waterfall.position.set(30, 6, -43);
-      waterfall.rotation.x = -0.3; // Angled flow
+      waterfall.position.set(30, 6, -39);
+      waterfall.rotation.x = -0.2; // Slight angle
       waterfall.userData = { isWaterfall: true, phase: 0 };
       waterfallGroup.add(waterfall);
       
-      // Add flowing water particles with better animation
-      for(let i=0; i<8; i++) {
+      // Add flowing water particles
+      for(let i=0; i<5; i++) {
         const dropGeo = new THREE.SphereGeometry(0.3, 8, 8);
-        const dropMat = new THREE.MeshPhysicalMaterial({ 
+        const dropMat = new THREE.MeshBasicMaterial({ 
           color: 0x4ECDC4, 
           transparent: true, 
-          opacity: 0.8,
-          metalness: 0.8,
-          roughness: 0.1
+          opacity: 0.7 
         });
         const drop = new THREE.Mesh(dropGeo, dropMat);
-        drop.position.set(30 + (Math.random()-0.5)*2, 10 - i*1.2, -43 + i*0.5);
-        drop.userData = { isWaterDrop: true, speed: 0.15 + Math.random()*0.1, startY: 10 - i*1.2 };
+        drop.position.set(30 + (Math.random()-0.5)*2, 12 - i*2, -39);
+        drop.userData = { isWaterDrop: true, speed: 0.1 + Math.random()*0.1, startY: 12 - i*2 };
         waterfallGroup.add(drop);
       }
       
-      // Splash at bottom with mist effect
-      const splashGeo = new THREE.CircleGeometry(3, 32);
+      // Splash at bottom
+      const splashGeo = new THREE.CircleGeometry(2, 16);
       const splashMat = new THREE.MeshBasicMaterial({ 
         color: 0xFFFFFF, 
         transparent: true, 
-        opacity: 0.5 
+        opacity: 0.4 
       });
       const splash = new THREE.Mesh(splashGeo, splashMat);
       splash.rotation.x = -Math.PI/2;
@@ -3720,273 +3127,23 @@
       splash.userData = { isSplash: true, phase: 0 };
       waterfallGroup.add(splash);
       
-      // Mist particles rising from splash
-      for(let i=0; i<6; i++) {
-        const mistGeo = new THREE.SphereGeometry(0.5, 8, 8);
-        const mistMat = new THREE.MeshBasicMaterial({ 
-          color: 0xE0FFFF, 
-          transparent: true, 
-          opacity: 0.3 
-        });
-        const mist = new THREE.Mesh(mistGeo, mistMat);
-        mist.position.set(30 + (Math.random()-0.5)*4, 0.5 + i*0.5, -33 + (Math.random()-0.5)*4);
-        mist.userData = { isMist: true, riseSpeed: 0.02 + Math.random()*0.02, maxY: 3 + i };
-        waterfallGroup.add(mist);
-      }
-      
       scene.add(waterfallGroup);
       
-      // FARM AREA - Wheat field, Barn, and Tractor (near windmill, with distance)
-      const farmGroup = new THREE.Group();
-      farmGroup.position.set(25, 0, 55); // Near windmill but with distance
-      
-      // Wheat field - golden yellow grain field
-      const wheatFieldGeo = new THREE.PlaneGeometry(20, 15);
-      const wheatMat = new THREE.MeshToonMaterial({ color: 0xF4A460 }); // Sandy brown/wheat color
-      const wheatField = new THREE.Mesh(wheatFieldGeo, wheatMat);
-      wheatField.rotation.x = -Math.PI/2;
-      wheatField.position.y = 0.05;
-      wheatField.receiveShadow = true;
-      farmGroup.add(wheatField);
-      
-      // Individual wheat stalks for detail
-      const wheatStalkGeo = new THREE.CylinderGeometry(0.1, 0.1, 1.5, 4);
-      const wheatStalkMat = new THREE.MeshToonMaterial({ color: 0xDAA520 }); // Goldenrod
-      for(let i=0; i<50; i++) {
-        const stalk = new THREE.Mesh(wheatStalkGeo, wheatStalkMat);
-        stalk.position.set(
-          (Math.random() - 0.5) * 18,
-          0.75,
-          (Math.random() - 0.5) * 13
-        );
-        stalk.castShadow = true;
-        farmGroup.add(stalk);
-      }
-      
-      // Barn building - classic red barn
-      const barnBase = new THREE.Mesh(
-        new THREE.BoxGeometry(8, 6, 10),
-        new THREE.MeshToonMaterial({ color: 0x8B0000 }) // Dark red
-      );
-      barnBase.position.set(-15, 3, 0);
-      barnBase.castShadow = true;
-      barnBase.receiveShadow = true;
-      farmGroup.add(barnBase);
-      
-      // Barn roof - triangular
-      const barnRoofGeo = new THREE.ConeGeometry(6, 4, 4);
-      const barnRoof = new THREE.Mesh(barnRoofGeo, new THREE.MeshToonMaterial({ color: 0x654321 })); // Brown
-      barnRoof.rotation.y = Math.PI/4;
-      barnRoof.position.set(-15, 8, 0);
-      barnRoof.castShadow = true;
-      farmGroup.add(barnRoof);
-      
-      // Barn door
-      const barnDoor = new THREE.Mesh(
-        new THREE.BoxGeometry(3, 4, 0.2),
-        new THREE.MeshToonMaterial({ color: 0x3a2a1a })
-      );
-      barnDoor.position.set(-15, 2, 5.1);
-      farmGroup.add(barnDoor);
-      
-      // Tractor - simple geometric tractor
-      const tractorBody = new THREE.Mesh(
-        new THREE.BoxGeometry(3, 2, 4),
-        new THREE.MeshToonMaterial({ color: 0x228B22 }) // Forest green
-      );
-      tractorBody.position.set(5, 1, -5);
-      tractorBody.castShadow = true;
-      farmGroup.add(tractorBody);
-      
-      // Tractor cabin
-      const tractorCabin = new THREE.Mesh(
-        new THREE.BoxGeometry(2, 2, 2),
-        new THREE.MeshToonMaterial({ color: 0x32CD32 }) // Lime green
-      );
-      tractorCabin.position.set(5, 3, -4);
-      tractorCabin.castShadow = true;
-      farmGroup.add(tractorCabin);
-      
-      // Tractor wheels
-      const wheelGeo = new THREE.CylinderGeometry(0.8, 0.8, 0.5, 8);
-      const wheelMat = new THREE.MeshToonMaterial({ color: 0x2F4F4F }); // Dark slate gray
-      const wheels = [
-        [-1, 0.8, -5.5], [1, 0.8, -5.5], // Front wheels
-        [-1, 0.8, -3.5], [1, 0.8, -3.5]  // Back wheels
-      ];
-      wheels.forEach(pos => {
-        const wheel = new THREE.Mesh(wheelGeo, wheelMat);
-        wheel.rotation.z = Math.PI/2;
-        wheel.position.set(5 + pos[0], pos[1], pos[2]);
-        farmGroup.add(wheel);
-      });
-      
-      scene.add(farmGroup);
-      
-      // MYSTICAL/MAGICAL BUILDING - Crystal Tower
-      const crystalGroup = new THREE.Group();
-      crystalGroup.position.set(-50, 0, 55);
-      
-      // Tower base - stone platform
-      const towerBase = new THREE.Mesh(
-        new THREE.CylinderGeometry(6, 7, 2, 8),
-        new THREE.MeshPhysicalMaterial({ 
-          color: 0x708090, // Slate gray
-          metalness: 0.3,
-          roughness: 0.6
-        })
-      );
-      towerBase.position.y = 1;
-      towerBase.castShadow = true;
-      crystalGroup.add(towerBase);
-      
-      // Crystal spire - glowing magical structure
-      const crystalGeo = new THREE.ConeGeometry(3, 15, 6);
-      const crystalMat = new THREE.MeshPhysicalMaterial({ 
-        color: 0x9370DB, // Medium purple
-        metalness: 0.9,
-        roughness: 0.1,
-        transparent: true,
-        opacity: 0.85,
-        emissive: 0x9370DB,
-        emissiveIntensity: 0.5
-      });
-      const crystal = new THREE.Mesh(crystalGeo, crystalMat);
-      crystal.position.y = 10;
-      crystal.castShadow = true;
-      crystalGroup.add(crystal);
-      
-      // Floating crystals around tower
-      for(let i=0; i<6; i++) {
-        const angle = (i / 6) * Math.PI * 2;
-        const floatCrystal = new THREE.Mesh(
-          new THREE.OctahedronGeometry(0.8),
-          new THREE.MeshPhysicalMaterial({ 
-            color: 0xBA55D3, // Medium orchid
-            metalness: 0.8,
-            roughness: 0.2,
-            emissive: 0xBA55D3,
-            emissiveIntensity: 0.3
-          })
-        );
-        floatCrystal.position.set(
-          Math.cos(angle) * 5,
-          8 + Math.sin(gameTime + i) * 2,
-          Math.sin(angle) * 5
-        );
-        floatCrystal.userData = { isMagicCrystal: true, angle: angle, index: i, phaseOffset: i * Math.PI / 3 };
-        crystalGroup.add(floatCrystal);
-      }
-      
-      // Magical glow circle on ground
-      const magicGlow = new THREE.Mesh(
-        new THREE.CircleGeometry(8, 32),
-        new THREE.MeshBasicMaterial({ 
-          color: 0xDDA0DD, // Plum
-          transparent: true,
-          opacity: 0.3
-        })
-      );
-      magicGlow.rotation.x = -Math.PI/2;
-      magicGlow.position.y = 0.06;
-      crystalGroup.add(magicGlow);
-      
-      scene.add(crystalGroup);
-      
-      // STATUE - Cool statue in center of map (replacing brown square if exists)
-      const statueGroup = new THREE.Group();
-      statueGroup.position.set(0, 0, 0); // Center of map
-      
-      // Pedestal
-      const pedestalGeo = new THREE.CylinderGeometry(2.5, 3, 2, 8);
-      const pedestalMat = new THREE.MeshPhysicalMaterial({ 
-        color: 0xDCDCDC, // Gainsboro (light gray marble)
-        metalness: 0.2,
-        roughness: 0.4
-      });
-      const pedestal = new THREE.Mesh(pedestalGeo, pedestalMat);
-      pedestal.position.y = 1;
-      pedestal.castShadow = true;
-      statueGroup.add(pedestal);
-      
-      // Statue figure - water droplet warrior
-      const statueBodyGeo = new THREE.SphereGeometry(1.5, 16, 16);
-      const statueMat = new THREE.MeshPhysicalMaterial({ 
-        color: 0xC0C0C0, // Silver
-        metalness: 0.8,
-        roughness: 0.2
-      });
-      const statueBody = new THREE.Mesh(statueBodyGeo, statueMat);
-      statueBody.position.y = 4;
-      statueBody.scale.y = 1.5; // Taller droplet shape
-      statueBody.castShadow = true;
-      statueGroup.add(statueBody);
-      
-      // Statue weapon - raised sword/spear
-      const statueWeaponGeo = new THREE.CylinderGeometry(0.2, 0.2, 4, 8);
-      const statueWeapon = new THREE.Mesh(statueWeaponGeo, statueMat);
-      statueWeapon.position.set(1, 6, 0);
-      statueWeapon.rotation.z = -Math.PI/4;
-      statueWeapon.castShadow = true;
-      statueGroup.add(statueWeapon);
-      
-      // Plaque
-      const plaqueGeo = new THREE.BoxGeometry(2, 0.8, 0.2);
-      const plaque = new THREE.Mesh(plaqueGeo, new THREE.MeshToonMaterial({ color: 0x8B7355 }));
-      plaque.position.set(0, 0.4, 3.2);
-      statueGroup.add(plaque);
-      
-      scene.add(statueGroup);
-      
-      // Scatter MORE flowers around environment (increased from 100 to 250)
+      // Scatter flowers around environment
       const flowerGeo = new THREE.ConeGeometry(0.2, 0.5, 6);
-      const flowerColors = [0xFF69B4, 0xFFFF00, 0xFF0000, 0xFFA500, 0xFFFFFF, 0xFF1493, 0x9370DB];
+      const flowerColors = [0xFF69B4, 0xFFFF00, 0xFF0000, 0xFFA500, 0xFFFFFF];
       
-      for(let i=0; i<250; i++) {
+      for(let i=0; i<100; i++) {
         const flower = new THREE.Mesh(flowerGeo, new THREE.MeshBasicMaterial({ 
           color: flowerColors[Math.floor(Math.random() * flowerColors.length)] 
         }));
         flower.position.set(
-          (Math.random() - 0.5) * 170,
+          (Math.random() - 0.5) * 160,
           0.25,
-          (Math.random() - 0.5) * 170
+          (Math.random() - 0.5) * 160
         );
         flower.rotation.x = -Math.PI/2;
         scene.add(flower);
-      }
-      
-      // Add MORE fences around different areas
-      const fenceMat2 = new THREE.MeshToonMaterial({ color: 0x8B4513 });
-      const postGeo2 = new THREE.BoxGeometry(0.3, 2, 0.3);
-      const railGeo2 = new THREE.BoxGeometry(4, 0.2, 0.2);
-      
-      // Fence around farm area
-      for(let i=0; i<20; i++) {
-        const post = new THREE.Mesh(postGeo2, fenceMat2);
-        if(i < 5) {
-          post.position.set(15 + i*4, 1, 47);
-        } else if(i < 10) {
-          post.position.set(35, 1, 47 + (i-5)*4);
-        } else if(i < 15) {
-          post.position.set(35 - (i-10)*4, 1, 67);
-        } else {
-          post.position.set(15, 1, 67 - (i-15)*4);
-        }
-        post.castShadow = true;
-        scene.add(post);
-      }
-      
-      // Fence around mystical building
-      for(let i=0; i<16; i++) {
-        const angle = (i / 16) * Math.PI * 2;
-        const post = new THREE.Mesh(postGeo2, fenceMat2);
-        post.position.set(
-          -50 + Math.cos(angle) * 12,
-          1,
-          55 + Math.sin(angle) * 12
-        );
-        post.castShadow = true;
-        scene.add(post);
       }
     }
 
@@ -4015,8 +3172,8 @@
         top = d / aspect;
         bottom = -d / aspect;
       } else {
-        // Landscape mode: zoom in MORE (closer camera) by reducing d
-        const landscapeD = d * 0.5; // 50% closer zoom for landscape (increased from 0.65)
+        // Landscape mode: zoom in more (closer camera) by reducing d
+        const landscapeD = d * 0.65; // 35% closer zoom for landscape
         left = -landscapeD * aspect;
         right = landscapeD * aspect;
         top = landscapeD;
@@ -4064,7 +3221,8 @@
       createWorld();
       player = new Player();
       
-      // Music disabled
+      // Initialize background music
+      updateBackgroundMusic();
       
       // Listeners
       setupInputs();
@@ -4228,20 +3386,6 @@
 
     function spawnWave() {
       waveCount++;
-      
-      // Tutorial mode - only 3 enemies initially
-      if (countdownActive) {
-        const count = 3;
-        for(let i=0; i<count; i++) {
-          const angle = Math.random() * Math.PI * 2;
-          const dist = 25 + Math.random() * 10;
-          const ex = player.mesh.position.x + Math.cos(angle) * dist;
-          const ez = player.mesh.position.z + Math.sin(angle) * dist;
-          enemies.push(new Enemy(0, ex, ez, 1)); // Only tank type, level 1
-        }
-        return;
-      }
-      
       // Scale spawn count with player level for increased difficulty
       const baseCount = 3 + Math.floor(waveCount / 2); // 3, 3, 4, 4, 5...
       const levelBonus = Math.floor(playerStats.lvl / 5); // +1 every 5 levels
@@ -4270,50 +3414,29 @@
       }
     }
 
-    function startCountdown() {
-      countdownActive = true;
-      countdownStep = 0;
-      countdownTimer = 0;
-      showCountdownMessage(0);
+
+    // Deferred Disposal Queue System (PR #81)
+    function queueDisposal(mesh) {
+      // Remove from scene first
+      scene.remove(mesh);
+      // Queue geometry and material for deferred disposal
+      disposalQueue.push({ geo: mesh.geometry, mat: mesh.material });
     }
 
-    function showCountdownMessage(step) {
-      if (step >= countdownMessages.length) {
-        endCountdown();
-        return;
-      }
-      
-      const countdownText = document.getElementById('tutorial-text');
-      countdownText.textContent = countdownMessages[step];
-      countdownText.style.opacity = '1';
-      countdownText.style.fontSize = step === 0 ? '48px' : '96px'; // Larger for countdown numbers
-      
-      // Duration based on step: "Good luck!" = 1.5s, numbers = 1s each
-      const duration = step === 0 ? 1500 : 1000;
-      
-      setTimeout(() => {
-        countdownText.style.opacity = '0';
-        setTimeout(() => {
-          countdownStep++;
-          if (countdownStep < countdownMessages.length) {
-            showCountdownMessage(countdownStep);
+    function processDisposalQueue() {
+      let count = 0;
+      while (disposalQueue.length > 0 && count < MAX_DISPOSALS_PER_FRAME) {
+        const item = disposalQueue.shift();
+        if (item.geo) item.geo.dispose();
+        if (item.mat) {
+          if (Array.isArray(item.mat)) {
+            item.mat.forEach(m => m.dispose());
           } else {
-            endCountdown();
+            item.mat.dispose();
           }
-        }, 300);
-      }, duration);
-    }
-
-    function endCountdown() {
-      countdownActive = false;
-      const countdownText = document.getElementById('tutorial-text');
-      countdownText.style.opacity = '0';
-      countdownText.style.fontSize = '36px'; // Reset to default
-      
-      // Ensure game is properly active and not frozen
-      isPaused = false;
-      isGameActive = true;
-      gameStartTime = Date.now(); // Reset game start time
+        }
+        count++;
+      }
     }
 
     function spawnParticles(pos, color, count) {
@@ -4335,8 +3458,6 @@
       playerStats.gold += finalAmount;
       saveData.gold += finalAmount;
       saveData.totalGoldEarned += finalAmount;
-      if (!saveData.totalGold) saveData.totalGold = 0;
-      saveData.totalGold += finalAmount; // Track for achievements
       updateHUD();
       updateGoldDisplays();
     }
@@ -4520,62 +3641,6 @@
     }
     
     function createLevelUpEffects() {
-      // WATER FOUNTAIN EXPLOSION from character's head - water drops everywhere!
-      for(let i=0; i<60; i++) {
-        const angle = (i / 60) * Math.PI * 2;
-        const speed = 0.2 + Math.random() * 0.4;
-        const height = 0.6 + Math.random() * 0.8;
-        
-        // Create water droplet particles
-        const dropGeo = new THREE.SphereGeometry(0.15 + Math.random() * 0.1, 8, 8);
-        const dropMat = new THREE.MeshPhysicalMaterial({ 
-          color: 0x4ECDC4, 
-          transparent: true, 
-          opacity: 0.9,
-          metalness: 0.8,
-          roughness: 0.1
-        });
-        const drop = new THREE.Mesh(dropGeo, dropMat);
-        drop.position.copy(player.mesh.position);
-        drop.position.y += 2; // From character's head
-        scene.add(drop);
-        
-        drop.userData = {
-          isLevelUpWater: true,
-          velocity: new THREE.Vector3(
-            Math.cos(angle) * speed,
-            height,
-            Math.sin(angle) * speed
-          ),
-          gravity: -0.02,
-          lifetime: 2.0
-        };
-        particles.push(drop);
-      }
-      
-      // Water splash ring around character
-      const splashRingGeo = new THREE.RingGeometry(0.5, 2, 32);
-      const splashRingMat = new THREE.MeshBasicMaterial({ 
-        color: 0x5DADE2, 
-        transparent: true, 
-        opacity: 0.8,
-        side: THREE.DoubleSide
-      });
-      const splashRing = new THREE.Mesh(splashRingGeo, splashRingMat);
-      splashRing.rotation.x = -Math.PI / 2;
-      splashRing.position.copy(player.mesh.position);
-      splashRing.position.y = 0.1;
-      scene.add(splashRing);
-      
-      splashRing.userData = {
-        isLevelUpSplash: true,
-        expansionSpeed: 0.15,
-        maxRadius: 8,
-        lifetime: 1.5,
-        time: 0
-      };
-      particles.push(splashRing);
-      
       // Fountain/explosion of "LEVEL UP" text particles from player's head
       const texts = ["L", "E", "V", "E", "L", " ", "U", "P", "!"];
       
@@ -4625,7 +3690,7 @@
         particles.push(lightning);
       }
       
-      // Zoom effect (camera zooms in on character)
+      // Zoom effect
       const originalD = 20;
       const zoomD = 15;
       const zoomDuration = 1000; // ms
@@ -4735,68 +3800,35 @@
     }
     
     class LightningBolt {
-      constructor(start, end, isChain = false) {
+      constructor(start, end) {
         const points = [];
-        const segments = 12; // More segments for more visible lightning
+        const segments = 8;
         
         for(let i=0; i<=segments; i++) {
           const t = i / segments;
-          const x = start.x + (end.x - start.x) * t + (Math.random() - 0.5) * (isChain ? 0.8 : 1.5);
-          const y = start.y + (end.y - start.y) * t + (Math.random() - 0.5) * (isChain ? 0.8 : 1.5);
-          const z = start.z + (end.z - start.z) * t + (Math.random() - 0.5) * (isChain ? 0.8 : 1.5);
+          const x = start.x + (end.x - start.x) * t + (Math.random() - 0.5) * 1.5;
+          const y = start.y + (end.y - start.y) * t + (Math.random() - 0.5) * 1.5;
+          const z = start.z + (end.z - start.z) * t + (Math.random() - 0.5) * 1.5;
           points.push(new THREE.Vector3(x, y, z));
         }
         
         const geometry = new THREE.BufferGeometry().setFromPoints(points);
-        // Blue-purple tint for lightning
-        const lightningColor = isChain ? 0x9D4EDD : 0x7B68EE; // Purple for chain, blue-purple for main
         const material = new THREE.LineBasicMaterial({ 
-          color: lightningColor, 
+          color: 0x5DADE2, 
           transparent: true, 
           opacity: 1,
-          linewidth: isChain ? 2 : 4 // Thicker main bolt
+          linewidth: 3
         });
         
         this.mesh = new THREE.Line(geometry, material);
         scene.add(this.mesh);
-        this.life = 15;
-        this.maxLife = 15;
-        this.isChain = isChain;
-        this.groundPos = end.clone();
-        
-        // Ground impact effect - sparks/particles where lightning hits
-        if (!isChain && end.y <= 1) {
-          this.createGroundImpact(end);
-        }
+        this.life = 20;
+        this.maxLife = 20;
       }
       
-      createGroundImpact(pos) {
-        // Spawn bright particles at impact point
-        for(let i = 0; i < 8; i++) {
-          const particle = new Particle(pos, 0xFFFFFF);
-          particle.vel.y = Math.random() * 0.3 + 0.1;
-          particle.vel.x = (Math.random() - 0.5) * 0.3;
-          particle.vel.z = (Math.random() - 0.5) * 0.3;
-          particles.push(particle);
-        }
-        // Add purple/blue sparks
-        for(let i = 0; i < 6; i++) {
-          const particle = new Particle(pos, 0x9D4EDD);
-          particle.vel.y = Math.random() * 0.2;
-          particle.vel.x = (Math.random() - 0.5) * 0.4;
-          particle.vel.z = (Math.random() - 0.5) * 0.4;
-          particles.push(particle);
-        }
-      }
-      
-      update(dt = 1/60) {
+      update() {
         this.life--;
         this.mesh.material.opacity = this.life / this.maxLife;
-        
-        // Flicker effect for more dramatic lightning
-        if (Math.random() < 0.3) {
-          this.mesh.material.opacity *= 0.5;
-        }
         
         if (this.life <= 0) {
           scene.remove(this.mesh);
@@ -5047,15 +4079,14 @@
         
         if (weapons.aura.active && weapons.aura.level < 4) {
           const nextLevel = weapons.aura.level + 1;
-          const rangeIncrease = INITIAL_AURA_RANGE * AURA_RANGE_INCREASE_MULTIPLIER; // 10% increase per level
           choices.push({ 
             id: 'aura_upgrade', 
             title: `AURA Level ${nextLevel}`, 
-            desc: `Damage +3, Range +10% (${rangeIncrease.toFixed(1)})`, 
+            desc: `Damage +3, Range +0.5`, 
             apply: () => { 
               weapons.aura.level++;
               weapons.aura.damage += 3;
-              weapons.aura.range += rangeIncrease;
+              weapons.aura.range += 0.5;
               showStatChange(`Aura Level ${weapons.aura.level}`);
             } 
           });
@@ -5345,20 +4376,19 @@
     }
     
     function showStatChange(text) {
-      // Create floating text on LOWER-LEFT side of screen (smaller, not blocking view)
+      // Create floating text on left side of screen
       const div = document.createElement('div');
       div.style.position = 'fixed';
-      div.style.bottom = '120px'; // Lower position (above joystick zone)
-      div.style.left = '10px'; // More to the left
-      div.style.transform = 'translateX(-100%) scale(0)';
+      div.style.top = '50%';
+      div.style.left = '20px';
+      div.style.transform = 'translateX(-100%) translateY(-50%) scale(0)';
       div.style.color = '#FFD700';
-      div.style.fontSize = '14px'; // Smaller text
+      div.style.fontSize = '20px';
       div.style.fontWeight = 'bold';
-      div.style.fontFamily = "'M PLUS Rounded 1c', 'Comic Sans MS', cursive, sans-serif"; // Cosy font
-      div.style.textShadow = '0 0 8px rgba(255,215,0,0.8), 0 0 15px rgba(255,215,0,0.5), 1px 1px 3px #000';
-      div.style.padding = '6px 10px'; // Smaller padding
-      div.style.background = 'rgba(30,30,30,0.85)';
-      div.style.borderRadius = '8px';
+      div.style.textShadow = '0 0 10px rgba(255,215,0,0.8), 0 0 20px rgba(255,215,0,0.5), 2px 2px 4px #000';
+      div.style.padding = '10px 15px';
+      div.style.background = 'rgba(30,30,30,0.9)';
+      div.style.borderRadius = '10px';
       div.style.border = '2px solid #FFD700';
       div.style.zIndex = '2000';
       div.style.pointerEvents = 'none';
@@ -5366,9 +4396,9 @@
       
       document.body.appendChild(div);
       
-      // Animate: slide in from left, scale up, hold, then fade out
+      // Animate: slide in from left, scale up, then scale down
       let scale = 0;
-      const animDuration = 2000; // ms (longer display time)
+      const animDuration = 1500; // ms
       const startTime = Date.now();
       
       const animate = () => {
@@ -5380,18 +4410,11 @@
           return;
         }
         
-        // Scale up quickly, hold, then fade
-        if (t < 0.2) {
-          scale = t / 0.2; // Scale up in first 20%
-        } else if (t < 0.8) {
-          scale = 1; // Hold at full size
-        } else {
-          scale = 1 - ((t - 0.8) / 0.2); // Fade out in last 20%
-        }
-        
+        // Scale up then down (sine wave)
+        scale = Math.sin(t * Math.PI);
         // Slide in from left
-        const translateX = (1 - Math.min(t * 3, 1)) * -100;
-        div.style.transform = `translateX(${translateX}%) scale(${scale})`;
+        const translateX = (1 - Math.min(t * 2, 1)) * -100;
+        div.style.transform = `translateX(${translateX}%) translateY(-50%) scale(${scale})`;
         
         requestAnimationFrame(animate);
       };
@@ -5402,63 +4425,6 @@
       isGameOver = true;
       isPaused = true;
       isGameActive = false;
-      
-      // Create death water splash/pool effect
-      if (player && player.mesh) {
-        // Big water splash particles
-        for (let i = 0; i < 30; i++) {
-          const angle = Math.random() * Math.PI * 2;
-          const speed = 0.5 + Math.random() * 1.5;
-          const particleGeo = new THREE.SphereGeometry(0.1 + Math.random() * 0.15, 8, 8);
-          const particleMat = new THREE.MeshPhysicalMaterial({
-            color: COLORS.player,
-            transparent: true,
-            opacity: 0.8
-          });
-          const particle = new THREE.Mesh(particleGeo, particleMat);
-          particle.position.copy(player.mesh.position);
-          particle.position.y = 0.3;
-          scene.add(particle);
-          
-          particle.userData = {
-            velocityX: Math.cos(angle) * speed,
-            velocityY: 0.5 + Math.random() * 1,
-            velocityZ: Math.sin(angle) * speed,
-            lifetime: 2,
-            gravity: -9.8
-          };
-          particles.push(particle);
-        }
-        
-        // Create water pool on ground
-        const poolGeo = new THREE.CircleGeometry(1.5, 32);
-        const poolMat = new THREE.MeshBasicMaterial({
-          color: COLORS.player,
-          transparent: true,
-          opacity: 0.5,
-          side: THREE.DoubleSide
-        });
-        const pool = new THREE.Mesh(poolGeo, poolMat);
-        pool.position.copy(player.mesh.position);
-        pool.position.y = 0.01;
-        pool.rotation.x = -Math.PI / 2;
-        scene.add(pool);
-        
-        // Fade out the pool over time
-        let poolOpacity = 0.5;
-        const fadePool = () => {
-          poolOpacity -= 0.01;
-          if (poolOpacity > 0) {
-            pool.material.opacity = poolOpacity;
-            requestAnimationFrame(fadePool);
-          } else {
-            scene.remove(pool);
-            pool.geometry.dispose();
-            pool.material.dispose();
-          }
-        };
-        setTimeout(fadePool, 1000);
-      }
       
       // Calculate run stats
       const survivalTime = Math.floor((Date.now() - gameStartTime) / 1000);
@@ -5480,9 +4446,6 @@
     }
 
     function resetGame() {
-      // Reset session-specific achievement tracking
-      sessionDamagesTaken = 0; // Session-specific for Untouchable achievement
-      
       // Apply permanent upgrades from save data
       const baseHp = 100 + PERMANENT_UPGRADES.maxHp.effect(saveData.upgrades.maxHp);
       const baseRegen = PERMANENT_UPGRADES.hpRegen.effect(saveData.upgrades.hpRegen);
@@ -5513,14 +4476,11 @@
       gameStartTime = Date.now();
       runStartGold = saveData.gold;
       
-      // Reset all weapons to initial state
       const gunCooldown = 1000 * (1 - cdReduction);
       weapons.gun = { active: true, level: 1, damage: 15, cooldown: gunCooldown, lastShot: 0, range: 12, barrels: 1 };
-      weapons.sword = { active: false, level: 0, damage: 30, cooldown: 1500, lastShot: 0, range: 3.5 };
-      weapons.aura = { active: false, level: 0, damage: 5, cooldown: 500, lastShot: 0, range: INITIAL_AURA_RANGE }; // Reduced by 25%
-      weapons.meteor = { active: false, level: 0, damage: 60, cooldown: 2500, lastShot: 0, area: 5 };
-      weapons.lightning = { active: false, level: 0, damage: 25, cooldown: 3000, lastShot: 0, targets: 4 };
-      weapons.doubleBarrel = { active: false, level: 0, damage: 25, cooldown: 1200, lastShot: 0, range: 12, spread: 0.3 };
+      weapons.sword.active = false;
+      weapons.aura.active = false;
+      weapons.meteor.active = false;
       
       windmillQuest = { active: false, timer: 0, duration: 15, windmill: null, hasCompleted: false };
       document.getElementById('windmill-quest-ui').style.display = 'none';
@@ -5541,26 +4501,34 @@
       });
       musicOscillators = [];
       currentMusicLevel = 0;
-      // Music disabled
+      updateBackgroundMusic();
 
       // Clear Entities
       enemies.forEach(e => {
-        queueDisposal(e.mesh);  // Use deferred disposal
+        scene.remove(e.mesh);
+        e.mesh.geometry.dispose();
+        e.mesh.material.dispose();
       });
       enemies = [];
       
       expGems.forEach(e => {
-        queueDisposal(e.mesh);  // Use deferred disposal
+        scene.remove(e.mesh);
+        e.mesh.geometry.dispose();
+        e.mesh.material.dispose();
       });
       expGems = [];
       
       goldCoins.forEach(g => {
-        queueDisposal(g.mesh);  // Use deferred disposal
+        scene.remove(g.mesh);
+        g.mesh.geometry.dispose();
+        g.mesh.material.dispose();
       });
       goldCoins = [];
 
       projectiles.forEach(p => {
-        queueDisposal(p.mesh);  // Use deferred disposal
+        scene.remove(p.mesh);
+        p.mesh.geometry.dispose();
+        p.mesh.material.dispose();
       });
       projectiles = [];
       
@@ -5572,8 +4540,10 @@
       particles = [];
       
       meteors.forEach(m => {
-        queueDisposal(m.mesh);  // Use deferred disposal
-        queueDisposal(m.shadow);  // Use deferred disposal
+        scene.remove(m.mesh);
+        scene.remove(m.shadow);
+        m.mesh.geometry.dispose();
+        m.mesh.material.dispose();
       });
       meteors = [];
 
@@ -5581,10 +4551,6 @@
       if (player) {
         player.mesh.position.set(0, 0.5, 0);
         player.mesh.material.color.setHex(COLORS.player);
-        // Hide aura circle visual
-        if (player.auraCircle) {
-          player.auraCircle.visible = false;
-        }
       }
 
       isGameOver = false;
@@ -5592,9 +4558,6 @@
       isGameActive = true;
       document.getElementById('gameover-screen').style.display = 'none';
       updateHUD();
-      
-      // Start countdown (replaces tutorial)
-      startCountdown();
     }
 
     function toggleStats() {
@@ -5685,7 +4648,6 @@ Total Gold Earned: ${saveData.totalGoldEarned}
       let swipeDetected = false;
       
       zone.addEventListener('touchstart', (e) => {
-        if (!isGameActive) return; // Don't interfere with menu touches
         e.preventDefault();
         
         for (let i = 0; i < e.changedTouches.length; i++) {
@@ -5726,11 +4688,6 @@ Total Gold Earned: ${saveData.totalGoldEarned}
             joystickLeft.originX = touch.clientX;
             joystickLeft.originY = touch.clientY;
             
-            // Store for dash detection
-            touchStartX = touch.clientX;
-            touchStartY = touch.clientY;
-            touchStartTime = Date.now();
-            
             // Show dynamic joystick at touch position
             joystickOuter.style.display = 'block';
             joystickOuter.style.left = (touch.clientX - 60) + 'px';
@@ -5754,7 +4711,6 @@ Total Gold Earned: ${saveData.totalGoldEarned}
       }, { passive: false });
 
       zone.addEventListener('touchmove', (e) => {
-        if (!isGameActive) return; // Don't interfere with menu touches
         e.preventDefault();
         
         for (let i = 0; i < e.changedTouches.length; i++) {
@@ -5805,23 +4761,11 @@ Total Gold Earned: ${saveData.totalGoldEarned}
       }, { passive: false });
 
       const endJoystick = (e) => {
-        if (!isGameActive) return; // Don't interfere with menu touches
         e.preventDefault();
         for (let i = 0; i < e.changedTouches.length; i++) {
           const touch = e.changedTouches[i];
           
           if (touch.identifier === joystickLeft.id) {
-            // Check for dash swipe - fast swipe in any 360° direction
-            const dx = touch.clientX - touchStartX;
-            const dy = touch.clientY - touchStartY;
-            const dt = Date.now() - touchStartTime;
-            const dist = Math.sqrt(dx*dx + dy*dy);
-            
-            // Quick swipe for dash (at least 60 pixels, less than 250ms for responsive feel)
-            if (dt < 250 && dist > 60) {
-              player.dash(dx/dist, dy/dist);
-            }
-            
             joystickLeft.active = false;
             joystickLeft.x = 0;
             joystickLeft.y = 0;
@@ -5855,6 +4799,40 @@ Total Gold Earned: ${saveData.totalGoldEarned}
       // Stats Button
       document.getElementById('stats-btn').addEventListener('click', toggleStats);
       document.getElementById('close-stats-btn').addEventListener('click', toggleStats);
+      
+      // Swipe Detection (Global - for dash)
+      container.addEventListener('touchstart', (e) => {
+        const t = e.changedTouches[0];
+        touchStartX = t.clientX;
+        touchStartY = t.clientY;
+        touchStartTime = Date.now();
+        swipeDetected = false;
+      }, { passive: false });
+
+      container.addEventListener('touchmove', (e) => {
+        const t = e.changedTouches[0];
+        const dx = t.clientX - touchStartX;
+        const dy = t.clientY - touchStartY;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        
+        // If moved enough, mark as swipe
+        if (dist > 30) {
+          swipeDetected = true;
+        }
+      }, { passive: false });
+
+      container.addEventListener('touchend', (e) => {
+        const t = e.changedTouches[0];
+        const dx = t.clientX - touchStartX;
+        const dy = t.clientY - touchStartY;
+        const dt = Date.now() - touchStartTime;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        
+        // Quick swipe for dash (at least 40 pixels, less than 400ms)
+        if (dt < 400 && dist > 40 && swipeDetected) {
+           player.dash(dx/dist, dy/dist);
+        }
+      }, { passive: false });
     }
 
     function onWindowResize() {
@@ -5869,8 +4847,8 @@ Total Gold Earned: ${saveData.totalGoldEarned}
         camera.top = d / aspect;
         camera.bottom = -d / aspect;
       } else {
-        // Landscape mode: zoom in MORE (closer camera) by reducing d
-        const landscapeD = d * 0.5; // 50% closer zoom for landscape (increased from 0.65)
+        // Landscape mode: zoom in more (closer camera) by reducing d
+        const landscapeD = d * 0.65; // 35% closer zoom for landscape
         camera.left = -landscapeD * aspect;
         camera.right = landscapeD * aspect;
         camera.top = landscapeD;
@@ -5982,7 +4960,7 @@ Total Gold Earned: ${saveData.totalGoldEarned}
         if (nearest) {
           let targetPosition = nearest.mesh.position;
           
-          // In landscape mode with right joystick active, apply aim assist
+          // In landscape mode with right joystick active, apply 25% aim assist
           if (!isPortrait && joystickRight.active) {
             // Manual aiming with right joystick
             const aimAngle = Math.atan2(joystickRight.x, joystickRight.y);
@@ -5993,11 +4971,12 @@ Total Gold Earned: ${saveData.totalGoldEarned}
             const manualZ = player.mesh.position.z + Math.cos(aimAngle) * aimDistance;
             const manualTarget = new THREE.Vector3(manualX, nearest.mesh.position.y, manualZ);
             
-            // Apply aim assist: blend between manual aim and auto-aim
+            // Apply 25% aim assist: blend between manual aim and auto-aim
+            const assistFactor = 0.25;
             targetPosition = new THREE.Vector3(
-              manualTarget.x * (1 - AIM_ASSIST_FACTOR) + nearest.mesh.position.x * AIM_ASSIST_FACTOR,
+              manualTarget.x * (1 - assistFactor) + nearest.mesh.position.x * assistFactor,
               nearest.mesh.position.y,
-              manualTarget.z * (1 - AIM_ASSIST_FACTOR) + nearest.mesh.position.z * AIM_ASSIST_FACTOR
+              manualTarget.z * (1 - assistFactor) + nearest.mesh.position.z * assistFactor
             );
           }
           // In portrait mode: full auto-aim (default behavior)
@@ -6096,19 +5075,19 @@ Total Gold Earned: ${saveData.totalGoldEarned}
           const enemy = shuffled[i];
           targets.push(enemy);
           
-          // Create lightning bolt from sky with enhanced visuals
+          // Create lightning bolt from sky
           const lightning = new LightningBolt(
             new THREE.Vector3(enemy.mesh.position.x, 15, enemy.mesh.position.z),
             enemy.mesh.position.clone()
           );
           particles.push(lightning);
           
-          // Flash effect with blue-purple light
-          const flashLight = new THREE.PointLight(0x7B68EE, 4, 20);
+          // Flash effect
+          const flashLight = new THREE.PointLight(0x5DADE2, 3, 15);
           flashLight.position.copy(enemy.mesh.position);
           flashLight.position.y += 2;
           scene.add(flashLight);
-          setTimeout(() => scene.remove(flashLight), 150);
+          setTimeout(() => scene.remove(flashLight), 100);
           
           // Damage enemy
           const dmg = weapons.lightning.damage * playerStats.strength;
@@ -6117,40 +5096,13 @@ Total Gold Earned: ${saveData.totalGoldEarned}
           enemy.takeDamage(finalDmg);
           createDamageNumber(finalDmg, enemy.mesh.position, isCrit);
           
-          // Enhanced particles with purple tint
-          spawnParticles(enemy.mesh.position, 0x9D4EDD, 8);
-          spawnParticles(enemy.mesh.position, 0xFFFFFF, 5);
-          
-          // CHAIN LIGHTNING - Find nearest enemy within range and chain to them
-          const chainRange = 8;
-          const chainDmg = dmg * 0.6; // Chain does 60% damage
-          const nearestChainTarget = aliveEnemies
-            .filter(e => e !== enemy && !e.isDead)
-            .map(e => ({ enemy: e, dist: e.mesh.position.distanceTo(enemy.mesh.position) }))
-            .filter(obj => obj.dist < chainRange)
-            .sort((a, b) => a.dist - b.dist)[0];
-          
-          if (nearestChainTarget) {
-            const chainEnemy = nearestChainTarget.enemy;
-            // Create chain lightning bolt
-            const chainLightning = new LightningBolt(
-              enemy.mesh.position.clone(),
-              chainEnemy.mesh.position.clone(),
-              true // isChain flag
-            );
-            particles.push(chainLightning);
-            
-            // Chain damage
-            const chainFinalDmg = isCrit ? chainDmg * playerStats.critDmg : chainDmg;
-            chainEnemy.takeDamage(chainFinalDmg);
-            createDamageNumber(chainFinalDmg, chainEnemy.mesh.position, false);
-            spawnParticles(chainEnemy.mesh.position, 0x9D4EDD, 5);
-          }
+          // Particles
+          spawnParticles(enemy.mesh.position, 0x5DADE2, 10);
         }
         
         weapons.lightning.lastShot = time;
         if (targets.length > 0) {
-          playSound('shoot'); // TODO: Replace with realistic lightning sound
+          playSound('shoot');
         }
       }
 
@@ -6213,11 +5165,11 @@ Total Gold Earned: ${saveData.totalGoldEarned}
       // Entities Update
       enemies.forEach(e => e.update(dt, player.mesh.position));
       // Projectiles update returns false if dead
-      projectiles = projectiles.filter(p => p.update(dt) !== false);
-      meteors = meteors.filter(m => m.update(dt) !== false);
+      projectiles = projectiles.filter(p => p.update() !== false);
+      meteors = meteors.filter(m => m.update() !== false);
       expGems.forEach(g => g.update(player.mesh.position));
       goldCoins.forEach(g => g.update(player.mesh.position));
-      particles = particles.filter(p => p.update(dt) !== false);
+      particles = particles.filter(p => p.update() !== false);
       
       // Windmill Rotation and Light Animation
       scene.children.forEach(c => {
@@ -6246,7 +5198,7 @@ Total Gold Earned: ${saveData.totalGoldEarned}
       scene.traverse(obj => {
         if (obj.userData.isWaterfall) {
           obj.userData.phase += 0.05;
-          obj.material.opacity = 0.7 + Math.sin(obj.userData.phase) * 0.1;
+          obj.material.opacity = 0.6 + Math.sin(obj.userData.phase) * 0.1;
         }
         if (obj.userData.isWaterDrop) {
           obj.position.y -= obj.userData.speed;
@@ -6258,87 +5210,7 @@ Total Gold Earned: ${saveData.totalGoldEarned}
           obj.userData.phase += 0.1;
           const scale = 1 + Math.sin(obj.userData.phase) * 0.3;
           obj.scale.set(scale, 1, scale);
-          obj.material.opacity = 0.5 + Math.sin(obj.userData.phase) * 0.2;
-        }
-        // Mist rising animation
-        if (obj.userData.isMist) {
-          obj.position.y += obj.userData.riseSpeed;
-          if (obj.position.y > obj.userData.maxY) {
-            obj.position.y = 0.5;
-          }
-          obj.material.opacity = 0.3 * (1 - (obj.position.y / obj.userData.maxY));
-        }
-        // Magic crystal floating animation
-        if (obj.userData.isMagicCrystal) {
-          const angle = obj.userData.angle + gameTime * 0.3;
-          obj.position.x = -50 + Math.cos(angle) * 5;
-          obj.position.z = 55 + Math.sin(angle) * 5;
-          obj.position.y = 8 + Math.sin(gameTime * 2 + obj.userData.phaseOffset) * 2;
-          obj.rotation.y += 0.02;
-          obj.rotation.x += 0.01;
-        }
-        // Sun sparkles on water animation
-        if (obj.userData.isSunSparkle) {
-          obj.userData.phase += 0.05;
-          obj.material.opacity = obj.userData.baseOpacity * (0.5 + Math.sin(obj.userData.phase) * 0.5);
-          const scale = 0.8 + Math.sin(obj.userData.phase * 1.5) * 0.4;
-          obj.scale.set(scale, 1, scale);
-        }
-        // Level up water droplets animation
-        if (obj.userData.isLevelUpWater) {
-          obj.userData.velocity.y += obj.userData.gravity; // Apply gravity
-          obj.position.x += obj.userData.velocity.x * dt * 20;
-          obj.position.y += obj.userData.velocity.y * dt * 20;
-          obj.position.z += obj.userData.velocity.z * dt * 20;
-          obj.userData.lifetime -= dt;
-          obj.material.opacity = Math.max(0, obj.userData.lifetime / 2.0);
-          if (obj.userData.lifetime <= 0) {
-            scene.remove(obj);
-            return false; // Mark for removal
-          }
-        }
-        // Level up splash ring animation
-        if (obj.userData.isLevelUpSplash) {
-          obj.userData.time += dt;
-          const t = obj.userData.time / obj.userData.lifetime;
-          const currentRadius = 0.5 + t * obj.userData.maxRadius;
-          obj.scale.set(currentRadius, 1, currentRadius);
-          obj.material.opacity = 0.8 * (1 - t);
-          if (t >= 1) {
-            scene.remove(obj);
-            return false; // Mark for removal
-          }
-        }
-        // Player bubble animation
-        if (obj.userData.isPlayerBubble) {
-          obj.position.y += obj.userData.riseSpeed;
-          obj.position.x += obj.userData.driftX;
-          obj.position.z += obj.userData.driftZ;
-          obj.userData.lifetime -= dt;
-          obj.material.opacity = Math.max(0, obj.userData.lifetime / 1.5) * 0.6;
-          obj.scale.multiplyScalar(1.01); // Slowly expand
-          if (obj.userData.lifetime <= 0 || obj.position.y > 5) {
-            scene.remove(obj);
-            obj.geometry.dispose();
-            obj.material.dispose();
-            return false;
-          }
-        }
-        
-        // Update cigar smoke particles
-        if (obj.userData.isCigarSmoke) {
-          obj.position.y += obj.userData.riseSpeed;
-          obj.position.x += obj.userData.driftX;
-          obj.position.z += obj.userData.driftZ;
-          obj.userData.lifetime -= dt;
-          obj.material.opacity = Math.max(0, obj.userData.lifetime / 1.5) * 0.3;
-          obj.scale.multiplyScalar(1.03); // Expand faster than bubbles
-          if (obj.userData.lifetime <= 0 || obj.position.y > 3) {
-            scene.remove(obj);
-            obj.geometry.dispose();
-            obj.material.dispose();
-            return false;
-          }
+          obj.material.opacity = 0.4 + Math.sin(obj.userData.phase) * 0.2;
         }
       });
 
