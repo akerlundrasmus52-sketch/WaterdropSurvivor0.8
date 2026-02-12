@@ -3475,9 +3475,7 @@
           lastExpFlashTime = now;
         }
         
-        scene.remove(this.mesh);
-        this.mesh.geometry.dispose();
-        this.mesh.material.dispose();
+        queueDisposal(this.mesh);
         
         addExp(GAME_CONFIG.expValue);
         playSound('collect');
@@ -3565,9 +3563,7 @@
       
       destroy() {
         this.active = false;
-        scene.remove(this.mesh);
-        this.mesh.geometry.dispose();
-        this.mesh.material.dispose();
+        queueDisposal(this.mesh);
       }
     }
 
@@ -3761,15 +3757,12 @@
       
       destroy() {
         this.active = false;
-        scene.remove(this.mesh);
+        queueDisposal(this.mesh);
         if (this.glowLight) {
           scene.remove(this.glowLight);
         }
-        this.mesh.geometry.dispose();
-        this.mesh.material.dispose();
         if (this.lid) {
-          this.lid.geometry.dispose();
-          this.lid.material.dispose();
+          queueDisposal(this.lid);
         }
       }
     }
@@ -6756,49 +6749,36 @@
 
       // Clear Entities
       enemies.forEach(e => {
-        scene.remove(e.mesh);
-        e.mesh.geometry.dispose();
-        e.mesh.material.dispose();
+        queueDisposal(e.mesh);
       });
       enemies = [];
       
       expGems.forEach(e => {
-        scene.remove(e.mesh);
-        e.mesh.geometry.dispose();
-        e.mesh.material.dispose();
+        queueDisposal(e.mesh);
       });
       expGems = [];
       
       goldCoins.forEach(g => {
-        scene.remove(g.mesh);
-        g.mesh.geometry.dispose();
-        g.mesh.material.dispose();
+        queueDisposal(g.mesh);
       });
       goldCoins = [];
       
       chests.forEach(c => {
         if (c.glowLight) scene.remove(c.glowLight);
-        scene.remove(c.mesh);
-        c.mesh.geometry.dispose();
-        c.mesh.material.dispose();
+        queueDisposal(c.mesh);
         if (c.lid) {
-          c.lid.geometry.dispose();
-          c.lid.material.dispose();
+          queueDisposal(c.lid);
         }
       });
       chests = [];
 
       projectiles.forEach(p => {
-        scene.remove(p.mesh);
-        p.mesh.geometry.dispose();
-        p.mesh.material.dispose();
+        queueDisposal(p.mesh);
       });
       projectiles = [];
       
       particles.forEach(p => {
-        scene.remove(p.mesh);
-        p.mesh.geometry.dispose();
-        p.mesh.material.dispose();
+        queueDisposal(p.mesh);
       });
       particles = [];
       
@@ -6815,10 +6795,8 @@
       activeTimeouts = [];
       
       meteors.forEach(m => {
-        scene.remove(m.mesh);
-        scene.remove(m.shadow);
-        m.mesh.geometry.dispose();
-        m.mesh.material.dispose();
+        queueDisposal(m.mesh);
+        queueDisposal(m.shadow);
       });
       meteors = [];
 
@@ -7845,9 +7823,7 @@
         ring.mesh.material.opacity = ring.life / ring.maxLife;
         
         if (ring.life <= 0) {
-          scene.remove(ring.mesh);
-          ring.mesh.geometry.dispose();
-          ring.mesh.material.dispose();
+          queueDisposal(ring.mesh);
           return false; // Remove from array
         }
         return true; // Keep in array
@@ -7886,9 +7862,7 @@
         }
         
         if (obj.life <= 0 || obj.mesh.position.y <= 0.05) {
-          scene.remove(obj.mesh);
-          obj.mesh.geometry.dispose();
-          obj.mesh.material.dispose();
+          queueDisposal(obj.mesh);
           return false; // Remove from array
         }
         return true; // Keep in array
@@ -8011,9 +7985,7 @@
             excessItems.forEach(item => {
               if (item.active) {
                 collectCallback(item);
-                scene.remove(item.mesh);
-                item.mesh.geometry.dispose();
-                item.mesh.material.dispose();
+                queueDisposal(item.mesh);
                 item.active = false;
               }
             });
