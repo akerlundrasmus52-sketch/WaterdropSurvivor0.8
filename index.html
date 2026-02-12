@@ -374,16 +374,16 @@
 
     // Enemy type definitions
     const ENEMY_TYPES = [
-      { name: 'Tank', hp: 150, speed: 1.0, damage: 25, color: '#FF69B4', size: 28, xp: 15, gold: 0.2 },
-      { name: 'Fast', hp: 50, speed: 4.0, damage: 15, color: '#FF6B6B', size: 16, xp: 5, gold: 0.1 },
-      { name: 'Balanced', hp: 100, speed: 2.0, damage: 20, color: '#4ECDC4', size: 20, xp: 10, gold: 0.15 },
-      { name: 'Slowing', hp: 120, speed: 1.5, damage: 18, color: '#00FFFF', size: 22, xp: 12, gold: 0.2, slow: true },
-      { name: 'Ranged', hp: 80, speed: 1.2, damage: 22, color: '#FF6347', size: 18, xp: 12, gold: 0.25, ranged: true },
-      { name: 'Flying', hp: 90, speed: 3.0, damage: 16, color: '#87CEEB', size: 19, xp: 11, gold: 0.2, flying: true },
-      { name: 'HardTank', hp: 250, speed: 0.8, damage: 35, color: '#FF1493', size: 32, xp: 25, gold: 0.3 },
-      { name: 'HardFast', hp: 75, speed: 5.0, damage: 18, color: '#FFD700', size: 18, xp: 15, gold: 0.2 },
-      { name: 'HardBalanced', hp: 180, speed: 2.5, damage: 28, color: '#9932CC', size: 24, xp: 20, gold: 0.25 },
-      { name: 'Elite', hp: 300, speed: 2.0, damage: 40, color: '#FF0000', size: 30, xp: 30, gold: 0.5 },
+      { name: 'Tank', hp: 150, speed: 1.0, damage: 8, color: '#FF69B4', size: 28, xp: 15, gold: 0.2 },
+      { name: 'Fast', hp: 50, speed: 4.0, damage: 5, color: '#FF6B6B', size: 16, xp: 5, gold: 0.1 },
+      { name: 'Balanced', hp: 100, speed: 2.0, damage: 7, color: '#4ECDC4', size: 20, xp: 10, gold: 0.15 },
+      { name: 'Slowing', hp: 120, speed: 1.5, damage: 6, color: '#00FFFF', size: 22, xp: 12, gold: 0.2, slow: true },
+      { name: 'Ranged', hp: 80, speed: 1.2, damage: 7, color: '#FF6347', size: 18, xp: 12, gold: 0.25, ranged: true },
+      { name: 'Flying', hp: 90, speed: 3.0, damage: 6, color: '#87CEEB', size: 19, xp: 11, gold: 0.2, flying: true },
+      { name: 'HardTank', hp: 250, speed: 0.8, damage: 12, color: '#FF1493', size: 32, xp: 25, gold: 0.3 },
+      { name: 'HardFast', hp: 75, speed: 5.0, damage: 8, color: '#FFD700', size: 18, xp: 15, gold: 0.2 },
+      { name: 'HardBalanced', hp: 180, speed: 2.5, damage: 10, color: '#9932CC', size: 24, xp: 20, gold: 0.25 },
+      { name: 'Elite', hp: 300, speed: 2.0, damage: 15, color: '#FF0000', size: 30, xp: 30, gold: 0.5 },
     ];
 
     // ============================================
@@ -795,7 +795,7 @@
               player.slowed = true;
               player.slowEndTime = gameTime + 2;
             }
-            enemy.attackCooldown = 1;
+            enemy.attackCooldown = 1.5; // Increased from 1
           }
         }
         
