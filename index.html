@@ -7353,6 +7353,7 @@
       // Initialize lastTime on first frame to prevent huge dt
       if (lastTime === null) {
         lastTime = time;
+        gameTime = time / 1000; // Initialize gameTime for visual effects
         // Render the initial frame before returning to avoid blank screen
         renderer.render(scene, camera);
         return;
