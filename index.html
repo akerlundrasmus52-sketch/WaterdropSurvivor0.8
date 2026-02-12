@@ -3333,6 +3333,23 @@
     }
 
     // --- GAME LOGIC ---
+    
+    // Global error handlers to surface errors and complete loading
+    window.onerror = function(message, source, lineno, colno, error) {
+      console.error('Global error:', message, source, lineno, colno, error);
+      const errorDetail = error ? error.message : message;
+      showErrorToast('An error occurred', errorDetail);
+      completeLoading();
+      return true; // Prevent default error handling
+    };
+    
+    window.onunhandledrejection = function(event) {
+      console.error('Unhandled promise rejection:', event.reason);
+      const errorDetail = event.reason ? (event.reason.message || event.reason) : 'Unknown error';
+      showErrorToast('Promise rejection', errorDetail);
+      completeLoading();
+      event.preventDefault(); // Prevent default handling
+    };
 
     function init() {
       // Load save data first
@@ -3428,26 +3445,81 @@
       requestAnimationFrame(animate);
     }
     
+    // Loading completion guard to ensure it finishes exactly once
+    let loadingCompleted = false;
+    let loadingInterval = null;
+    
+    function completeLoading() {
+      if (loadingCompleted) return;
+      loadingCompleted = true;
+      
+      // Clear interval if it exists
+      if (loadingInterval) {
+        clearInterval(loadingInterval);
+        loadingInterval = null;
+      }
+      
+      // Hide loading overlay and show main menu
+      const loadingScreen = document.getElementById('loading-screen');
+      loadingScreen.classList.add('fade-out');
+      setTimeout(() => {
+        loadingScreen.style.display = 'none';
+        showMainMenu();
+      }, 500);
+    }
+    
+    function showErrorToast(message, detail) {
+      // Create simple error toast with fixed position, high z-index, red background
+      const toast = document.createElement('div');
+      toast.style.cssText = `
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: #d32f2f;
+        color: white;
+        padding: 15px 20px;
+        border-radius: 8px;
+        z-index: 100000;
+        font-family: Arial, sans-serif;
+        font-size: 14px;
+        max-width: 90%;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        text-align: center;
+      `;
+      toast.innerHTML = `<strong>${message}</strong>${detail ? '<br><span style="font-size: 12px;">' + detail + '</span>' : ''}`;
+      document.body.appendChild(toast);
+      
+      // Auto-remove after 10 seconds
+      setTimeout(() => {
+        if (toast.parentElement) {
+          toast.parentElement.removeChild(toast);
+        }
+      }, 10000);
+    }
+    
     function showLoadingScreen() {
       const loadingScreen = document.getElementById('loading-screen');
       const loadingBar = document.getElementById('loading-bar');
       let progress = 0;
       
-      const interval = setInterval(() => {
+      // Progress interval
+      loadingInterval = setInterval(() => {
         progress += 10;
         loadingBar.style.width = progress + '%';
         
         if (progress >= 100) {
-          clearInterval(interval);
-          setTimeout(() => {
-            loadingScreen.classList.add('fade-out');
-            setTimeout(() => {
-              loadingScreen.style.display = 'none';
-              showMainMenu();
-            }, 500);
-          }, 300);
+          completeLoading();
         }
       }, 100);
+      
+      // Hard timeout: force completion after 6 seconds
+      setTimeout(() => {
+        if (!loadingCompleted) {
+          console.warn('Loading timeout reached, forcing completion');
+          completeLoading();
+        }
+      }, 6000);
     }
     
     function showMainMenu() {
@@ -5993,7 +6065,13 @@ Total Gold Earned: ${saveData.totalGoldEarned}
     }
 
     // Init Game
-    try { init(); } catch(e) { console.error(e); alert("Game Error: " + e.message); }
+    try { 
+      init(); 
+    } catch(e) { 
+      console.error('Init error:', e); 
+      showErrorToast('Initialization failed', e.message);
+      completeLoading();
+    }
 
   </script>
 </body>
