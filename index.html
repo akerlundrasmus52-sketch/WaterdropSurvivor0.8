@@ -38,6 +38,81 @@
   - Upgrades: Atk +10%, AtkSpd +10%, Armor +25%
   - Visual Style: Green ground, Brown/Beige Windmill, Blue Lakes, Trees with shadows/canopy
   - Controls: Mobile Touch (Joystick) + Portrait Mode
+
+  ═══════════════════════════════════════════════════════════════════════════════════════
+  🌟 COMPREHENSIVE ENHANCEMENTS - DOPAMINE BOOSTERS & DEPTH IMPROVEMENTS 🌟
+  ═══════════════════════════════════════════════════════════════════════════════════════
+
+  This game has been enhanced with multiple systems designed to increase depth, fun, and
+  addictive gameplay through psychological reward mechanisms (dopamine boosters):
+
+  ┌─────────────────────────────────────────────────────────────────────────────────────┐
+  │ 🔥 1. COMBO SYSTEM - Reward Consecutive Performance                                │
+  ├─────────────────────────────────────────────────────────────────────────────────────┤
+  │ • Tracks consecutive kills within 3-second windows                                  │
+  │ • Combo multiplier increases damage & gold (every 5 kills = +25%, max 2.0x)        │
+  │ • Visual combo display with pulsing glow animations                                 │
+  │ • Milestone celebrations at 10, 25, 50, 100+ kill combos                           │
+  │ • Combo loss notifications for failed streaks                                       │
+  │ WHY: Creates tension/excitement and rewards skilled play with immediate feedback    │
+  └─────────────────────────────────────────────────────────────────────────────────────┘
+
+  ┌─────────────────────────────────────────────────────────────────────────────────────┐
+  │ ⭐ 2. LEVEL MILESTONE REWARDS - Celebrate Progress                                 │
+  ├─────────────────────────────────────────────────────────────────────────────────────┤
+  │ • Every 5 levels: +20 Max HP, +5% Damage, Full Heal                                │
+  │ • Level 20: ALL weapons get ULTIMATE evolution with dramatic power boosts           │
+  │   - Gun: Triple barrel shots for massive DPS                                        │
+  │   - Sword: Mega damage with wider arc                                               │
+  │   - Aura: Nova blast with 1.5x range                                                │
+  │   - Meteor: Shower with double damage and area                                      │
+  │   - Lightning: Storm hitting 10 targets                                             │
+  │ • Special celebration effects and sound feedback                                    │
+  │ WHY: Provides major milestone dopamine hits and keeps long sessions interesting     │
+  └─────────────────────────────────────────────────────────────────────────────────────┘
+
+  ┌─────────────────────────────────────────────────────────────────────────────────────┐
+  │ 🎯 3. ENHANCED ACHIEVEMENT SYSTEM - Long-term Goals                                │
+  ├─────────────────────────────────────────────────────────────────────────────────────┤
+  │ • Original: 17 achievements for basic progression                                   │
+  │ • NEW: 7 achievements for advanced gameplay:                                        │
+  │   - Combo achievements (10, 25, 50, 100-kill streaks)                              │
+  │   - Critical Precision (100 total crits)                                            │
+  │   - Boss Slayer (5 mini-bosses defeated)                                            │
+  │   - Perfect Run (complete without taking damage) - 1000 gold reward!               │
+  │ • All achievements unlockable for gold rewards                                      │
+  │ WHY: Provides long-term progression goals and rewards mastery                       │
+  └─────────────────────────────────────────────────────────────────────────────────────┘
+
+  ┌─────────────────────────────────────────────────────────────────────────────────────┐
+  │ 📊 4. ADVANCED STAT TRACKING - Measure Everything                                  │
+  ├─────────────────────────────────────────────────────────────────────────────────────┤
+  │ • Max combo reached (all-time record)                                               │
+  │ • Total critical hits landed (lifetime tracker)                                     │
+  │ • Critical hit streaks (consecutive crits with special feedback at 5+)             │
+  │ • Mini-bosses defeated (lifetime count)                                             │
+  │ • Perfect runs completed (ultimate mastery metric)                                  │
+  │ WHY: Players love tracking their performance and beating personal records           │
+  └─────────────────────────────────────────────────────────────────────────────────────┘
+
+  ┌─────────────────────────────────────────────────────────────────────────────────────┐
+  │ 💪 5. DOPAMINE TRIGGER MECHANISMS - Psychological Engagement                       │
+  ├─────────────────────────────────────────────────────────────────────────────────────┤
+  │ • Visual Feedback: Glowing combo display, screen flashes, particle effects         │
+  │ • Audio Feedback: Level-up sounds on milestone achievements                         │
+  │ • Reward Stacking: Combo multipliers apply to BOTH damage AND gold                 │
+  │ • Near-miss Tension: 3-second combo timer creates urgency                          │
+  │ • Variable Rewards: Crits can chain with combo multipliers for huge numbers        │
+  │ • Power Fantasy: Ultimate weapons at level 20 feel dramatically stronger           │
+  │ WHY: Multiple simultaneous reward systems create compounding satisfaction           │
+  └─────────────────────────────────────────────────────────────────────────────────────┘
+
+  IMPLEMENTATION NOTES:
+  - All systems are balanced to enhance without overwhelming
+  - Visual feedback is prominent but not intrusive
+  - Progression is faster early, slower late (good engagement curve)
+  - Multiple viable strategies encourage experimentation
+  - Reset mechanics preserve meta-progression while allowing fresh starts
   -->
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
@@ -279,6 +354,23 @@
     @keyframes comboGlow {
       0% { transform: scale(1); text-shadow: 0 0 15px rgba(255,215,0,1), 0 0 25px rgba(255,215,0,0.8), 2px 2px 4px rgba(0,0,0,0.9); }
       100% { transform: scale(1.05); text-shadow: 0 0 25px rgba(255,215,0,1), 0 0 35px rgba(255,215,0,1), 2px 2px 4px rgba(0,0,0,0.9); }
+    }
+
+    /* ENHANCEMENT: Combo text display styles for maintainability */
+    .combo-text-display {
+      color: #FFD700;
+      text-shadow: 0 0 15px rgba(255,215,0,1), 0 0 25px rgba(255,215,0,0.8), 2px 2px 4px rgba(0,0,0,0.9);
+      font-size: 22px;
+      font-weight: 900;
+      letter-spacing: 2px;
+      animation: comboGlow 0.8s infinite alternate;
+    }
+
+    .combo-bonus-display {
+      color: #FFF;
+      text-shadow: 0 0 8px rgba(255,255,255,0.8), 1px 1px 3px rgba(0,0,0,0.8);
+      font-size: 14px;
+      margin-top: 2px;
     }
 
     /* Damage Numbers */
@@ -1054,8 +1146,8 @@
       
       <!-- ENHANCEMENT: Combo Display - Shows kill streak multiplier -->
       <div id="combo-display" style="display: none; margin-top: 8px; padding: 8px 15px; background: linear-gradient(135deg, rgba(255,107,107,0.9), rgba(155,89,182,0.9)); border: 3px solid #FFD700; border-radius: 15px; box-shadow: 0 0 20px rgba(255,215,0,0.8), inset 0 0 15px rgba(0,0,0,0.3);">
-        <div class="stat-text" id="combo-text" style="color: #FFD700; text-shadow: 0 0 15px rgba(255,215,0,1), 0 0 25px rgba(255,215,0,0.8), 2px 2px 4px rgba(0,0,0,0.9); font-size: 22px; font-weight: 900; letter-spacing: 2px; animation: comboGlow 0.8s infinite alternate;">0x COMBO!</div>
-        <div class="stat-text" id="combo-bonus-text" style="color: #FFF; text-shadow: 0 0 8px rgba(255,255,255,0.8), 1px 1px 3px rgba(0,0,0,0.8); font-size: 14px; margin-top: 2px;">+0% Damage & Gold</div>
+        <div class="stat-text combo-text-display" id="combo-text">0x COMBO!</div>
+        <div class="stat-text combo-bonus-display" id="combo-bonus-text">+0% Damage & Gold</div>
       </div>
       
       <!-- Windmill Quest UI -->
@@ -1150,7 +1242,9 @@
       // Lake configuration - used for spawn avoidance
       lakeCenterX: 30,
       lakeCenterZ: -30,
-      lakeRadius: 18
+      lakeRadius: 18,
+      // ENHANCEMENT: Combo system configuration
+      comboTimerDuration: 3000 // milliseconds - time window to maintain combo
     };
 
     // --- AUDIO SYSTEM (Oscillators) ---
@@ -2814,9 +2908,10 @@
         // ENHANCEMENT: Combo System - Track consecutive kills and apply multipliers
         playerStats.kills++;
         playerStats.comboCount++;
-        playerStats.comboTimer = 3000; // 3 seconds to maintain combo
+        playerStats.comboTimer = GAME_CONFIG.comboTimerDuration; // Use configured duration
         
-        // Calculate combo multiplier (increases every 5 kills, caps at 5x)
+        // Calculate combo multiplier (increases every 5 kills, caps at 2.0x)
+        // Formula: 1.0 + min(floor(combo/5) * 0.25, 1.0) => 1.0x, 1.25x, 1.5x, 1.75x, 2.0x (max)
         const previousMultiplier = playerStats.comboMultiplier;
         playerStats.comboMultiplier = 1.0 + Math.min(Math.floor(playerStats.comboCount / 5) * 0.25, 1.0);
         
@@ -5430,7 +5525,7 @@
       if (isMilestone && playerStats.lvl > 0) {
         // Permanent stat bonuses at milestones
         playerStats.maxHp += 20;
-        playerStats.hp = Math.min(playerStats.maxHp, playerStats.hp + 20); // Heal on milestone
+        playerStats.hp = playerStats.maxHp; // Full heal on milestone
         playerStats.strength += 0.05; // +5% damage every 5 levels
         
         // Special celebration for milestones
