@@ -673,10 +673,10 @@
       transform: translateX(-50%);
     }
 
-    #start-game-btn { top: 50.25%; } /* Moved 3.5% lower from 46.75% */
-    #progression-btn { top: 59.75%; } /* Adjusted spacing - reduced from 61.25% */
-    #achievements-btn { top: 69.25%; } /* Adjusted spacing - reduced from 72.25% */
-    #credits-btn { top: min(78.75%, calc(100% - 60px)); } /* Adjusted spacing - reduced from 82.75% */
+    #start-game-btn { top: 55.25%; } /* PR #64: Moved 5% lower (was 50.25%) */
+    #progression-btn { top: 64.75%; } /* PR #64: Moved 5% lower (was 59.75%) */
+    #achievements-btn { top: 74.25%; } /* PR #64: Moved 5% lower (was 69.25%) */
+    #credits-btn { top: min(83.75%, calc(100% - 60px)); } /* PR #64: Moved 5% lower (was 78.75%) */
 
     .menu-btn::before {
       content: '';
@@ -1234,6 +1234,7 @@
         <div class="stat-text" id="windmill-timer-text" style="color: #FFD700; font-size: 18px;">DEFEND: 30s</div>
       </div>
     </div>
+    <button id="reset-btn" class="btn-small" style="position: absolute; top: 20px; right: 180px; pointer-events: auto; z-index: 100; background: #e74c3c; border-color: #c0392b;">RESET</button>
     <button id="stats-btn" class="btn-small" style="position: absolute; top: 20px; right: 20px; pointer-events: auto; z-index: 100;">STATS</button>
     <button id="settings-btn" class="btn-small" style="position: absolute; top: 20px; right: 100px; pointer-events: auto; z-index: 100;">⚙️</button>
 
@@ -4489,6 +4490,52 @@
       
       scene.add(statueGroup);
 
+      // PR #64: Circular rondell at statue spawn - dual concentric rings with radial spokes
+      const rondellMat = new THREE.MeshToonMaterial({ color: 0x808080 }); // Gray stone for roads
+      
+      // Outer ring (r=10)
+      const outerRingGeo = new THREE.TorusGeometry(10, 0.3, 8, 32);
+      const outerRing = new THREE.Mesh(outerRingGeo, rondellMat);
+      outerRing.rotation.x = Math.PI / 2;
+      outerRing.position.y = 0.05;
+      outerRing.castShadow = true;
+      scene.add(outerRing);
+      
+      // Inner ring (r=6)
+      const innerRingGeo = new THREE.TorusGeometry(6, 0.3, 8, 32);
+      const innerRing = new THREE.Mesh(innerRingGeo, rondellMat);
+      innerRing.rotation.x = Math.PI / 2;
+      innerRing.position.y = 0.05;
+      innerRing.castShadow = true;
+      scene.add(innerRing);
+      
+      // 4 radial spokes connecting inner to outer ring
+      for (let i = 0; i < 4; i++) {
+        const angle = (i / 4) * Math.PI * 2;
+        const spokeGeo = new THREE.BoxGeometry(4, 0.2, 0.6); // Length 4 (from r=6 to r=10)
+        const spoke = new THREE.Mesh(spokeGeo, rondellMat);
+        spoke.position.set(
+          Math.cos(angle) * 8, // Center at r=8 (midpoint between 6 and 10)
+          0.05,
+          Math.sin(angle) * 8
+        );
+        spoke.rotation.y = angle;
+        spoke.castShadow = true;
+        scene.add(spoke);
+        
+        // Roads extending from outer ring exits
+        const roadLength = 15;
+        const roadGeo = new THREE.BoxGeometry(roadLength, 0.15, 1);
+        const road = new THREE.Mesh(roadGeo, rondellMat);
+        road.position.set(
+          Math.cos(angle) * (10 + roadLength / 2),
+          0.04,
+          Math.sin(angle) * (10 + roadLength / 2)
+        );
+        road.rotation.y = angle;
+        scene.add(road);
+      }
+
       // REMOVED: Comet Stone artifact (was beside the lake, now replaced with better structures below)
 
       // Additional Mountain near lake
@@ -7146,6 +7193,38 @@
       // Stats Button
       document.getElementById('stats-btn').addEventListener('click', toggleStats);
       document.getElementById('close-stats-btn').addEventListener('click', toggleStats);
+      
+      // PR #64: Reset Button with double confirmation
+      let resetClickCount = 0;
+      let resetClickTimer = null;
+      document.getElementById('reset-btn').addEventListener('click', () => {
+        playSound('levelup');
+        resetClickCount++;
+        
+        if (resetClickCount === 1) {
+          // First click - show warning
+          showStatChange('⚠️ Click RESET again to confirm!');
+          document.getElementById('reset-btn').style.background = '#c0392b';
+          document.getElementById('reset-btn').style.transform = 'scale(1.1)';
+          
+          // Reset after 3 seconds if no second click
+          resetClickTimer = setTimeout(() => {
+            resetClickCount = 0;
+            document.getElementById('reset-btn').style.background = '#e74c3c';
+            document.getElementById('reset-btn').style.transform = 'scale(1)';
+          }, 3000);
+        } else if (resetClickCount === 2) {
+          // Second click - confirm and reset
+          clearTimeout(resetClickTimer);
+          resetClickCount = 0;
+          document.getElementById('reset-btn').style.background = '#e74c3c';
+          document.getElementById('reset-btn').style.transform = 'scale(1)';
+          showStatChange('🔄 Resetting game...');
+          setTimeout(() => {
+            resetGame();
+          }, 500);
+        }
+      });
       
       // Swipe Detection (Global - for dash)
       container.addEventListener('touchstart', (e) => {
