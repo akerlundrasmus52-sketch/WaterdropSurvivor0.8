@@ -3715,6 +3715,57 @@
       }, 1500);
     }
     
+    function createExplosionShockwave(position) {
+      // Create expanding ring shockwave
+      const ringGeo = new THREE.RingGeometry(0.1, 0.3, 32);
+      const ringMat = new THREE.MeshBasicMaterial({ 
+        color: 0x5DADE2, 
+        transparent: true, 
+        opacity: 0.8,
+        side: THREE.DoubleSide
+      });
+      const ring = new THREE.Mesh(ringGeo, ringMat);
+      ring.position.copy(position);
+      ring.position.y = 0.1;
+      ring.rotation.x = -Math.PI / 2;
+      scene.add(ring);
+      
+      // Animate ring expansion
+      let progress = 0;
+      const animateRing = () => {
+        progress += 0.03;
+        if (progress < 1) {
+          const scale = 1 + progress * 8;
+          ring.scale.set(scale, scale, 1);
+          ringMat.opacity = 0.8 * (1 - progress);
+          requestAnimationFrame(animateRing);
+        } else {
+          scene.remove(ring);
+          ringGeo.dispose();
+          ringMat.dispose();
+        }
+      };
+      animateRing();
+      
+      // Add bright flash at center
+      const flashLight = new THREE.PointLight(0x5DADE2, 3, 10);
+      flashLight.position.copy(position);
+      scene.add(flashLight);
+      
+      let flashProgress = 0;
+      const animateFlash = () => {
+        flashProgress += 0.05;
+        if (flashProgress < 1) {
+          flashLight.intensity = 3 * (1 - flashProgress);
+          requestAnimationFrame(animateFlash);
+        } else {
+          scene.remove(flashLight);
+          flashLight.dispose();
+        }
+      };
+      animateFlash();
+    }
+    
     function createLevelUpEffects() {
       // Progressive particle reduction based on level to prevent freezes
       const level = playerStats.lvl;
@@ -3730,6 +3781,9 @@
       if (isMilestoneLevel) {
         particleReduction *= 0.6; // Extra 40% reduction at milestone levels
       }
+      
+      // Add explosion shockwave effect
+      createExplosionShockwave(player.mesh.position.clone());
       
       // Fountain/explosion of "LEVEL UP" text particles from player's head
       const texts = ["L", "E", "V", "E", "L", " ", "U", "P", "!"];
