@@ -6847,6 +6847,10 @@
       if (playerStats.damageTaken === 0 && playerStats.kills > 0) {
         playerStats.perfectRuns++;
         createFloatingText("🎉 PERFECT RUN! No damage taken! 🎉", player.mesh.position);
+        // Ensure achievements (including Perfect Run) are checked immediately
+        if (typeof checkAchievements === 'function') {
+          checkAchievements();
+        }
       }
       
       // Update save data
