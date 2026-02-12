@@ -964,7 +964,7 @@
       updateProjectiles(delta);
       updateParticles(delta);
       updateExpOrbs(delta);
-      updateVisualEffects(deltaTime); // Add visual effects update
+      updateVisualEffects(deltaTime); // Add visual effects update with deltaTime in ms
       
       if (Math.random() < 0.02 + gameState.player.level * 0.001) {
         spawnEnemy();
@@ -1525,8 +1525,8 @@
           const screenX = x - gameState.camera.x;
           const screenY = y - gameState.camera.y;
           
-          // Pseudo-random pattern based on position
-          const seed = ((x / tileSize) * 73 + (y / tileSize) * 37) % 100;
+          // Pseudo-random pattern based on position (ensure positive values)
+          const seed = Math.abs(((x / tileSize) * 73 + (y / tileSize) * 37)) % 100;
           const pattern = Math.floor(seed % 5);
           
           // Base tile color (varied grass)
@@ -1574,8 +1574,8 @@
           
           // Add random small details (flowers, pebbles)
           if (seed % 13 === 0) {
-            // Small flower
-            ctx.fillStyle = pattern % 2 === 0 ? '#ff69b4' : '#ffd700';
+            // Small flower - use seed for better distribution
+            ctx.fillStyle = seed % 2 === 0 ? '#ff69b4' : '#ffd700';
             ctx.fillRect(screenX + 8, screenY + 8, 2, 2);
             ctx.fillStyle = '#2f6b50';
             ctx.fillRect(screenX + 8, screenY + 10, 2, 3);
@@ -2266,7 +2266,10 @@
     }
 
     function addBloodStain(x, y) {
-      if (bloodStains.length > 100) bloodStains.shift(); // Limit stains
+      // Remove multiple old stains at once when limit reached
+      if (bloodStains.length >= 100) {
+        bloodStains.splice(0, 10); // Remove 10 oldest stains at once
+      }
       bloodStains.push({
         x: x,
         y: y,
