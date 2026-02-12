@@ -7345,6 +7345,16 @@
     function animate(time) {
       requestAnimationFrame(animate);
 
+      // Safety check: Ensure Three.js components are initialized before rendering
+      if (!renderer || !scene || !camera) {
+        return;
+      }
+
+      // Initialize lastTime on first frame to prevent huge dt
+      if (lastTime === 0) {
+        lastTime = time;
+      }
+
       const dt = (time - lastTime) / 1000;
       lastTime = time;
       gameTime = time / 1000; // Update game time in seconds
