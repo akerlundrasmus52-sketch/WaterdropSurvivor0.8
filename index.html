@@ -458,12 +458,36 @@
       color: #5DADE2;
       text-shadow: 0 0 20px rgba(93,173,226,0.8), 0 0 40px rgba(93,173,226,0.5);
       margin-bottom: 40px;
+      animation: titlePulse 3s ease-in-out infinite;
+    }
+
+    @keyframes titlePulse {
+      0%, 100% {
+        text-shadow: 0 0 20px rgba(93,173,226,0.8), 0 0 40px rgba(93,173,226,0.5);
+        transform: scale(1);
+      }
+      50% {
+        text-shadow: 0 0 30px rgba(93,173,226,1), 0 0 60px rgba(93,173,226,0.7);
+        transform: scale(1.02);
+      }
     }
 
     .menu-buttons {
       display: flex;
       flex-direction: column;
       gap: 20px;
+      animation: menuFadeIn 0.8s ease-out;
+    }
+
+    @keyframes menuFadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
 
     .menu-btn {
