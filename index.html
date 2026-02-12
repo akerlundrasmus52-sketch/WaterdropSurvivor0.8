@@ -3375,14 +3375,25 @@
         box-shadow: 0 4px 12px rgba(0,0,0,0.3);
         text-align: center;
       `;
-      toast.innerHTML = `<strong>${message}</strong>${detail ? '<br><span style="font-size: 12px;">' + detail + '</span>' : ''}`;
+      
+      // Use textContent to prevent XSS
+      const messageEl = document.createElement('strong');
+      messageEl.textContent = message;
+      toast.appendChild(messageEl);
+      
+      if (detail) {
+        toast.appendChild(document.createElement('br'));
+        const detailEl = document.createElement('span');
+        detailEl.style.fontSize = '12px';
+        detailEl.textContent = detail;
+        toast.appendChild(detailEl);
+      }
+      
       document.body.appendChild(toast);
       
       // Auto-remove after 10 seconds
       setTimeout(() => {
-        if (toast.parentElement) {
-          toast.parentElement.removeChild(toast);
-        }
+        toast.remove();
       }, 10000);
     }
     
@@ -3421,7 +3432,7 @@
       const errorDetail = event.error ? event.error.message : event.message;
       showErrorToast('An error occurred', errorDetail);
       completeLoading();
-      event.preventDefault(); // Prevent default error handling
+      // Don't prevent default to allow browser error reporting
     });
     
     window.addEventListener('unhandledrejection', function(event) {
@@ -3429,7 +3440,7 @@
       const errorDetail = event.reason ? (event.reason.message || event.reason) : 'Unknown error';
       showErrorToast('Promise rejection', errorDetail);
       completeLoading();
-      event.preventDefault(); // Prevent default handling
+      // Don't prevent default to allow browser error reporting
     });
 
     function init() {
