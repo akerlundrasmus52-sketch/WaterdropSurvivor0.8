@@ -548,10 +548,10 @@
       transform: translateX(-50%);
     }
 
-    #start-game-btn { top: 50.25%; } /* Moved 3.5% lower from 46.75% */
-    #progression-btn { top: 59.75%; } /* Adjusted spacing - reduced from 61.25% */
-    #achievements-btn { top: 69.25%; } /* Adjusted spacing - reduced from 72.25% */
-    #credits-btn { top: min(78.75%, calc(100% - 60px)); } /* Adjusted spacing - reduced from 82.75% */
+    #start-game-btn { top: 54.25%; } /* Moved 4% lower */
+    #progression-btn { top: 63.75%; } /* Moved 4% lower */
+    #achievements-btn { top: 73.25%; } /* Moved 4% lower */
+    #credits-btn { top: min(82.75%, calc(100% - 60px)); } /* Moved 4% lower */
 
     .menu-btn::before {
       content: '';
@@ -962,7 +962,7 @@
       <!-- Upgrade cards will be added dynamically -->
     </div>
     <button class="back-btn" id="shop-back-btn">BACK TO MENU</button>
-    <button class="back-btn" id="reset-progress-btn" style="background: #c0392b; border-color: #e74c3c; position: absolute; bottom: 20px; right: 20px;">RESET PROGRESS</button>
+    <button class="back-btn" id="reset-progress-btn" style="background: #c0392b; border-color: #e74c3c; position: absolute; top: 20px; right: 20px;">RESET PROGRESS</button>
   </div>
 
   <!-- Achievements Screen -->
@@ -5381,8 +5381,29 @@
     }
     
     function createLevelUpEffects() {
-      // Water Fountain Effect - 60 water droplet particles explode from character
-      for(let i=0; i<60; i++) {
+      // Level up detonation: Damage nearby enemies
+      const EXPLOSION_RADIUS = 5;
+      const EXPLOSION_DAMAGE = 30 + playerStats.lvl * 5;
+      
+      enemies.forEach(e => {
+        if (e.isDead) return;
+        const dist = player.mesh.position.distanceTo(e.mesh.position);
+        if (dist < EXPLOSION_RADIUS) {
+          e.takeDamage(EXPLOSION_DAMAGE, false, player.mesh.position);
+          // Extra knockback for level up explosion
+          const dx = e.mesh.position.x - player.mesh.position.x;
+          const dz = e.mesh.position.z - player.mesh.position.z;
+          const knockbackStrength = 0.8 * (1 - dist / EXPLOSION_RADIUS);
+          const distNorm = Math.sqrt(dx * dx + dz * dz);
+          if (distNorm > 0) {
+            e.mesh.position.x += (dx / distNorm) * knockbackStrength;
+            e.mesh.position.z += (dz / distNorm) * knockbackStrength;
+          }
+        }
+      });
+      
+      // Optimized Water Fountain Effect - fewer particles
+      for(let i=0; i<35; i++) {
         const angle = (i / 60) * Math.PI * 2;
         const speed = 0.2 + Math.random() * 0.4;
         const height = 0.6 + Math.random() * 0.8;
@@ -5457,10 +5478,10 @@
       };
       updateRing();
       
-      // Fountain/explosion of "LEVEL UP" text particles from player's head
+      // Optimized fountain/explosion of text particles
       const texts = ["L", "E", "V", "E", "L", " ", "U", "P", "!"];
       
-      for(let i=0; i<40; i++) {
+      for(let i=0; i<25; i++) {
         const angle = (i / 40) * Math.PI * 2;
         const speed = 0.15 + Math.random() * 0.35;
         const text = texts[i % texts.length];
@@ -5477,8 +5498,8 @@
         particles.push(particle);
       }
       
-      // Add regular colored particles
-      for(let i=0; i<30; i++) {
+      // Optimized colored particles
+      for(let i=0; i<20; i++) {
         const angle = (i / 30) * Math.PI * 2;
         const speed = 0.2 + Math.random() * 0.3;
         const particle = new LevelUpParticle(
@@ -5492,8 +5513,8 @@
         particles.push(particle);
       }
       
-      // Lightning bolts - Reduced from 8 to 4 for performance
-      for(let i=0; i<4; i++) {
+      // Optimized lightning bolts for performance
+      for(let i=0; i<3; i++) {
         const angle = (i / 4) * Math.PI * 2;
         const lightning = new LightningBolt(
           player.mesh.position.clone(),
@@ -5735,7 +5756,7 @@
         { 
           id: 'str', 
           icon: '⚔️',
-          title: 'MUSCLE JUICE', 
+          title: 'STRENGTH BOOST', 
           desc: 'Weapon Damage +15% (Base Strength Multiplier)', 
           apply: () => { 
             playerStats.strength += 0.15; 
@@ -5745,7 +5766,7 @@
         { 
           id: 'aspd', 
           icon: '⚡',
-          title: 'SPEEDY TRIGGER', 
+          title: 'ATTACK SPEED', 
           desc: 'Attack Speed +15% (Faster Weapon Fire Rate)', 
           apply: () => { 
             playerStats.atkSpeed += 0.15; 
@@ -5757,7 +5778,7 @@
         { 
           id: 'armor', 
           icon: '🛡️',
-          title: 'THICC ARMOR', 
+          title: 'ARMOR UPGRADE', 
           desc: 'Armor +12% (Damage Reduction, Max 80%)', 
           apply: () => { 
             playerStats.armor = Math.min(80, playerStats.armor + 12); 
@@ -5767,7 +5788,7 @@
         { 
           id: 'hp', 
           icon: '❤️',
-          title: 'CHONKY BODY', 
+          title: 'MAX HEALTH', 
           desc: 'Max HP +30 (Instant Heal +30)', 
           apply: () => { 
             playerStats.maxHp += 30; 
@@ -5778,7 +5799,7 @@
         { 
           id: 'crit', 
           icon: '🎯',
-          title: 'CRIT MACHINE', 
+          title: 'CRITICAL CHANCE', 
           desc: 'Critical Hit Chance +8% (Lucky Strikes)', 
           apply: () => { 
             playerStats.critChance += 0.08; 
@@ -5788,7 +5809,7 @@
         { 
           id: 'regen', 
           icon: '💚',
-          title: 'HEALING VIBES', 
+          title: 'HP REGENERATION', 
           desc: 'HP Regeneration +2/sec (Passive Healing)', 
           apply: () => { 
             playerStats.hpRegen += 2; 
@@ -5798,7 +5819,7 @@
         { 
           id: 'speed', 
           icon: '🏃',
-          title: 'SPEEDY BOI', 
+          title: 'MOVEMENT SPEED', 
           desc: 'Movement Speed +15% (Faster Movement)', 
           apply: () => { 
             playerStats.walkSpeed *= 1.15; 
@@ -5808,7 +5829,7 @@
         { 
           id: 'critdmg', 
           icon: '💥',
-          title: 'GLASS CANNON', 
+          title: 'CRITICAL DAMAGE', 
           desc: 'Critical Damage +30% (Stronger Crits)', 
           apply: () => { 
             playerStats.critDmg += 0.3; 
@@ -5818,7 +5839,7 @@
         { 
           id: 'magnet', 
           icon: '🧲',
-          title: 'XP MAGNET', 
+          title: 'PICKUP RANGE', 
           desc: 'EXP Pickup Range +25% (+1 unit)', 
           apply: () => { 
             magnetRange += 1; 
@@ -5828,7 +5849,7 @@
         { 
           id: 'cooldown', 
           icon: '⏱️',
-          title: 'COOLDOWN MASTER', 
+          title: 'COOLDOWN REDUCTION', 
           desc: 'All Weapon Cooldowns -5% (Faster Abilities)', 
           apply: () => { 
             weapons.gun.cooldown *= 0.95;
