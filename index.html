@@ -1350,14 +1350,13 @@
         const oldColor = this.mesh.material.color.getHex();
         this.mesh.material.color.setHex(0xFFFFFF);
         
-        // Enhanced splash particles using enemy's own color
-        // enemyColor already declared at the top of this function
+        // Enhanced splash particles using enemy's own color (use oldColor from flash, not enemyColor from top)
         const particleCount = isCrit ? 8 : 3;
-        spawnParticles(this.mesh.position, enemyColor, particleCount);
+        spawnParticles(this.mesh.position, oldColor, particleCount);
         
         // Additional impact particles
         if (isCrit) {
-          spawnParticles(this.mesh.position, enemyColor, 5);
+          spawnParticles(this.mesh.position, oldColor, 5);
           spawnParticles(this.mesh.position, 0xFFFFFF, 3);
         }
         
