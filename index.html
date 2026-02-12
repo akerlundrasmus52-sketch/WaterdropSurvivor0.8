@@ -191,7 +191,7 @@
   </div>
 
   <!-- Import Map for Three.js -->
-  <script async src="https://unpkg.com/es-module-shims@1.8.0/dist/es-module-shims.js"></script>
+  <script async src="https://unpkg.com/es-module-shims@1.8.0/dist/es-module-shims.js" onerror="window.__esModuleShimsFailed = true;"></script>
   <script type="importmap">
     {
       "imports": {
@@ -6088,6 +6088,177 @@ Total Gold Earned: ${saveData.totalGoldEarned}
       completeLoading();
     }
 
+    // Set flag to indicate module loaded successfully
+    window.__gameModuleLoaded = true;
+
   </script>
+
+  <!-- Fallback script for handling module loading failures -->
+  <script>
+    (function() {
+      // This is a regular script (not type="module") that runs even if the module fails
+      // It provides a fallback mechanism to show an error message if the game module doesn't load
+      
+      // Timeout in milliseconds to wait for the module to load before showing error
+      const MODULE_LOAD_TIMEOUT_MS = 10000;
+      
+      function showModuleLoadError() {
+        // Only show error if loading screen is still visible and module didn't load
+        const loadingScreen = document.getElementById('loading-screen');
+        if (!loadingScreen || loadingScreen.style.display === 'none') {
+          return; // Game already loaded or screen already hidden
+        }
+
+        // Hide the loading screen
+        loadingScreen.style.display = 'none';
+
+        // Create error overlay
+        const errorOverlay = document.createElement('div');
+        errorOverlay.id = 'module-load-error-overlay';
+        errorOverlay.style.cssText = `
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(0, 0, 0, 0.95);
+          z-index: 10001;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          font-family: Arial, sans-serif;
+          color: white;
+          text-align: center;
+          padding: 20px;
+          box-sizing: border-box;
+        `;
+
+        // Error content
+        const errorContent = document.createElement('div');
+        errorContent.style.cssText = `
+          max-width: 500px;
+          background: rgba(211, 47, 47, 0.2);
+          border: 2px solid #d32f2f;
+          border-radius: 12px;
+          padding: 30px;
+          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        `;
+
+        const errorIcon = document.createElement('div');
+        errorIcon.textContent = '⚠️';
+        errorIcon.style.cssText = `
+          font-size: 64px;
+          margin-bottom: 20px;
+        `;
+
+        const errorTitle = document.createElement('h2');
+        errorTitle.textContent = 'Failed to Load Game';
+        errorTitle.style.cssText = `
+          margin: 0 0 15px 0;
+          font-size: 24px;
+          color: #ff5252;
+        `;
+
+        const errorMessage = document.createElement('p');
+        errorMessage.textContent = 'The game failed to load. This might be due to:';
+        errorMessage.style.cssText = `
+          margin: 0 0 15px 0;
+          font-size: 16px;
+          line-height: 1.5;
+        `;
+
+        const errorReasons = document.createElement('ul');
+        errorReasons.style.cssText = `
+          text-align: left;
+          margin: 0 0 20px 0;
+          padding-left: 20px;
+          font-size: 14px;
+          line-height: 1.8;
+        `;
+        errorReasons.innerHTML = `
+          <li>No internet connection</li>
+          <li>CDN service is unavailable</li>
+          <li>Network firewall blocking game resources</li>
+          <li>Browser compatibility issues</li>
+        `;
+
+        const retryButton = document.createElement('button');
+        retryButton.textContent = '🔄 Retry';
+        retryButton.setAttribute('aria-label', 'Reload page to retry loading game');
+        retryButton.style.cssText = `
+          background: #4CAF50;
+          color: white;
+          border: none;
+          border-radius: 8px;
+          padding: 15px 40px;
+          font-size: 18px;
+          font-weight: bold;
+          cursor: pointer;
+          margin-top: 10px;
+          transition: background 0.3s;
+        `;
+        retryButton.onmouseover = function() {
+          this.style.background = '#45a049';
+        };
+        retryButton.onmouseout = function() {
+          this.style.background = '#4CAF50';
+        };
+        retryButton.onfocus = function() {
+          this.style.background = '#45a049';
+          this.style.outline = '2px solid #ffffff';
+          this.style.outlineOffset = '2px';
+        };
+        retryButton.onblur = function() {
+          this.style.background = '#4CAF50';
+          this.style.outline = '';
+        };
+        retryButton.onclick = function() {
+          window.location.reload();
+        };
+
+        // Assemble the error overlay
+        errorContent.appendChild(errorIcon);
+        errorContent.appendChild(errorTitle);
+        errorContent.appendChild(errorMessage);
+        errorContent.appendChild(errorReasons);
+        errorContent.appendChild(retryButton);
+        errorOverlay.appendChild(errorContent);
+        
+        document.body.appendChild(errorOverlay);
+      }
+
+      function checkModuleLoaded() {
+        // Check if module loaded successfully or if es-module-shims failed
+        if (window.__gameModuleLoaded) {
+          // Module loaded successfully, nothing to do
+          return;
+        }
+
+        if (window.__esModuleShimsFailed) {
+          // es-module-shims failed to load, show error immediately
+          console.error('es-module-shims failed to load');
+          showModuleLoadError();
+          return;
+        }
+
+        // Module didn't load within timeout
+        console.error('Game module failed to load within timeout');
+        showModuleLoadError();
+      }
+
+      // Wait for DOM to be ready
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+          // Give the module time to load after DOM is ready
+          setTimeout(checkModuleLoaded, MODULE_LOAD_TIMEOUT_MS);
+        });
+      } else {
+        // DOM already ready, start timeout immediately
+        setTimeout(checkModuleLoaded, MODULE_LOAD_TIMEOUT_MS);
+      }
+    })();
+  </script>
+
 </body>
 </html>
