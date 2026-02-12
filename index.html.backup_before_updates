@@ -1715,7 +1715,7 @@
       sword: { active: false, level: 0, damage: 30, cooldown: 1500, lastShot: 0, range: 3.5 },
       aura: { active: false, level: 0, damage: 5, cooldown: 500, lastShot: 0, range: 3 },
       meteor: { active: false, level: 0, damage: 60, cooldown: 2500, lastShot: 0, area: 5 },
-      drone: { active: false, level: 0, damage: 18, cooldown: 800, lastShot: 0, range: 15, projectileSpeed: 0.25, followSpeed: 0.08 },
+      lightning: { active: false, level: 0, damage: 25, cooldown: 3000, lastShot: 0, targets: 4 },
       doubleBarrel: { active: false, level: 0, damage: 25, cooldown: 1200, lastShot: 0, range: 12, spread: 0.3 },
       iceSpear: { active: false, level: 0, damage: 20, cooldown: 1500, lastShot: 0, range: 15, slowPercent: 0.4, slowDuration: 2000 },
       fireRing: { active: false, level: 0, damage: 8, cooldown: 800, lastShot: 0, range: 4, orbs: 3, rotationSpeed: 2 }
@@ -3048,7 +3048,7 @@
 
     class Projectile {
       constructor(x, z, target) {
-        const geometry = new THREE.SphereGeometry(0.12, 8, 8); // Smaller bullet (was 0.25)
+        const geometry = new THREE.SphereGeometry(0.25, 8, 8); // Larger bullet (was 0.2)
         const material = new THREE.MeshBasicMaterial({ 
           color: 0xFFFF00,
           transparent: true,
@@ -3058,8 +3058,8 @@
         this.mesh.position.set(x, 0.5, z);
         scene.add(this.mesh);
         
-        // Add glowing trail effect (also smaller)
-        const glowGeometry = new THREE.SphereGeometry(0.18, 6, 6); // Smaller glow (was 0.35)
+        // Add glowing trail effect
+        const glowGeometry = new THREE.SphereGeometry(0.35, 6, 6);
         const glowMaterial = new THREE.MeshBasicMaterial({
           color: 0xFFFF00,
           transparent: true,
@@ -3102,51 +3102,6 @@
             spawnParticles(player.mesh.position, 0xFF6347, 5);
             this.destroy();
             playSound('hit');
-          }
-          return;
-        }
-        
-        // Handle drone projectiles separately
-        if (this.isDroneProjectile) {
-          this.mesh.position.add(this.direction.clone().multiplyScalar(this.speed));
-          this.lifetime--;
-          
-          if (this.lifetime <= 0) {
-            this.destroy();
-            return;
-          }
-          
-          // Check collision with enemies
-          for (let enemy of enemies) {
-            if (enemy.isDead) continue;
-            const dx = this.mesh.position.x - enemy.mesh.position.x;
-            const dz = this.mesh.position.z - enemy.mesh.position.z;
-            if (dx*dx + dz*dz < 0.6) { // Hit radius
-              // Calculate Damage
-              let dmg = this.damage * playerStats.damage * playerStats.strength * playerStats.comboMultiplier;
-              
-              const isCrit = Math.random() < playerStats.critChance;
-              if (isCrit) {
-                dmg *= playerStats.critDmg;
-                playerStats.critStreak++;
-                playerStats.totalCrits++;
-                if (playerStats.critStreak === 5) {
-                  createFloatingText("5 CRITS IN A ROW! 🎯", player.mesh.position);
-                }
-              } else {
-                playerStats.critStreak = 0;
-              }
-              
-              enemy.takeDamage(Math.floor(dmg), isCrit, this.mesh.position);
-              
-              // Cyan spark effect on hit
-              spawnParticles(enemy.mesh.position, 0x00FFFF, 8);
-              spawnParticles(enemy.mesh.position, 0xFFFFFF, 3);
-              
-              this.destroy();
-              playSound('hit');
-              break;
-            }
           }
           return;
         }
@@ -5695,12 +5650,11 @@
             showStatChange('Meteor ULTIMATE: Meteor Shower!');
           }
           
-          // Drone Ultimate: Enhanced targeting and dual fire
-          if (weapons.drone.active) {
-            weapons.drone.damage += 25;
-            weapons.drone.range += 5;
-            weapons.drone.cooldown *= 0.5; // Double fire rate
-            showStatChange('Drone ULTIMATE: Twin Turrets!');
+          // Lightning Ultimate: 10 targets
+          if (weapons.lightning.active) {
+            weapons.lightning.targets = Math.max(weapons.lightning.targets, 10);
+            weapons.lightning.damage += 30;
+            showStatChange('Lightning ULTIMATE: Storm!');
           }
           
           playSound('levelup');
@@ -6068,100 +6022,6 @@
       }
     }
     
-    // Drone Turret - auto-follow companion that shoots at enemies
-    class DroneTurret {
-      constructor() {
-        // Create drone body
-        const bodyGeo = new THREE.BoxGeometry(0.4, 0.2, 0.4);
-        const bodyMat = new THREE.MeshPhongMaterial({ 
-          color: 0x00FFFF, // Cyan color
-          emissive: 0x00AAAA,
-          emissiveIntensity: 0.5
-        });
-        this.mesh = new THREE.Mesh(bodyGeo, bodyMat);
-        this.mesh.position.copy(player.mesh.position);
-        this.mesh.position.y = 1.2;
-        scene.add(this.mesh);
-        
-        // Create propeller/rotor effect
-        const rotorGeo = new THREE.BoxGeometry(0.6, 0.05, 0.1);
-        const rotorMat = new THREE.MeshBasicMaterial({ color: 0xFFFFFF, transparent: true, opacity: 0.7 });
-        this.rotor = new THREE.Mesh(rotorGeo, rotorMat);
-        this.rotor.position.y = 0.15;
-        this.mesh.add(this.rotor);
-        
-        // Glow effect
-        const glowGeo = new THREE.SphereGeometry(0.15, 8, 8);
-        const glowMat = new THREE.MeshBasicMaterial({ 
-          color: 0x00FFFF, 
-          transparent: true, 
-          opacity: 0.6 
-        });
-        this.glow = new THREE.Mesh(glowGeo, glowMat);
-        this.mesh.add(this.glow);
-        
-        this.targetPos = new THREE.Vector3();
-        this.velocity = new THREE.Vector3();
-        this.rotorSpeed = 0;
-        this.active = true;
-      }
-      
-      update(dt) {
-        if (!this.active) return;
-        
-        // Follow player with smooth lag
-        const offsetX = Math.cos(gameTime * 0.5) * 2;
-        const offsetZ = Math.sin(gameTime * 0.5) * 2;
-        this.targetPos.set(
-          player.mesh.position.x + offsetX,
-          player.mesh.position.y + 1.2,
-          player.mesh.position.z + offsetZ
-        );
-        
-        // Smooth movement toward target
-        const dx = this.targetPos.x - this.mesh.position.x;
-        const dy = this.targetPos.y - this.mesh.position.y;
-        const dz = this.targetPos.z - this.mesh.position.z;
-        
-        this.velocity.x += dx * weapons.drone.followSpeed;
-        this.velocity.y += dy * weapons.drone.followSpeed;
-        this.velocity.z += dz * weapons.drone.followSpeed;
-        
-        // Apply damping
-        this.velocity.multiplyScalar(0.92);
-        
-        // Update position
-        this.mesh.position.add(this.velocity);
-        
-        // Hover bobbing
-        this.mesh.position.y += Math.sin(gameTime * 3) * 0.002;
-        
-        // Rotate rotor
-        this.rotorSpeed += 0.5;
-        this.rotor.rotation.y = this.rotorSpeed;
-        
-        // Pulsing glow
-        this.glow.material.opacity = 0.4 + Math.sin(gameTime * 5) * 0.2;
-        
-        // Tilt based on velocity
-        this.mesh.rotation.z = -this.velocity.x * 0.3;
-        this.mesh.rotation.x = this.velocity.z * 0.3;
-      }
-      
-      destroy() {
-        this.active = false;
-        scene.remove(this.mesh);
-        this.mesh.geometry.dispose();
-        this.mesh.material.dispose();
-        this.rotor.geometry.dispose();
-        this.rotor.material.dispose();
-        this.glow.geometry.dispose();
-        this.glow.material.dispose();
-      }
-    }
-    
-    let droneInstance = null;
-    
     class LightningBolt {
       constructor(start, end) {
         const points = [];
@@ -6393,7 +6253,7 @@
             weapons.sword.cooldown *= 0.95;
             weapons.aura.cooldown *= 0.95;
             weapons.meteor.cooldown *= 0.95;
-            weapons.drone.cooldown *= 0.95;
+            weapons.lightning.cooldown *= 0.95;
             weapons.doubleBarrel.cooldown *= 0.95;
             weapons.iceSpear.cooldown *= 0.95;
             weapons.fireRing.cooldown *= 0.95;
@@ -6555,19 +6415,19 @@
           });
         }
         
-        if (weapons.drone.active && weapons.drone.level < 4) {
-          const nextLevel = weapons.drone.level + 1;
+        if (weapons.lightning.active && weapons.lightning.level < 4) {
+          const nextLevel = weapons.lightning.level + 1;
+          const targetIncrease = nextLevel === 2 ? 3 : (nextLevel === 3 ? 2 : 1);
           choices.push({ 
-            id: 'drone_upgrade', 
-            icon: '🤖',
-            title: `DRONE TURRET Level ${nextLevel}`, 
-            desc: `Damage +8, Fire Rate +12%, Range +2`, 
+            id: 'lightning_upgrade', 
+            icon: '⚡',
+            title: `LIGHTNING Level ${nextLevel}`, 
+            desc: `Damage +10, Targets +${targetIncrease}`, 
             apply: () => { 
-              weapons.drone.level++;
-              weapons.drone.damage += 8;
-              weapons.drone.cooldown *= 0.88;
-              weapons.drone.range += 2;
-              showStatChange(`Drone Turret Level ${weapons.drone.level}: +8 Dmg, +12% Fire Rate, +2 Range`);
+              weapons.lightning.level++;
+              weapons.lightning.damage += 10;
+              weapons.lightning.targets += targetIncrease;
+              showStatChange(`Lightning Level ${weapons.lightning.level}: +10 Dmg, +${targetIncrease} Targets`);
             } 
           });
         }
@@ -6665,25 +6525,33 @@
             } 
           },
           { 
-            id: 'drone', 
-            icon: '🤖',
-            title: 'DRONE TURRET', 
-            desc: 'Auto-follow drone that shoots enemies', 
+            id: 'lightning', 
+            icon: '⚡',
+            title: 'LIGHTNING STRIKES', 
+            desc: 'Random lightning hits 4 enemies', 
             apply: () => { 
-              weapons.drone.active = true;
-              weapons.drone.level = 1;
-              showStatChange('New Weapon: Drone Turret');
+              weapons.lightning.active = true;
+              weapons.lightning.level = 1;
+              showStatChange('New Weapon: Lightning');
               
-              // Create drone instance
-              droneInstance = new DroneTurret();
-              
-              // Create spawn effect
-              spawnParticles(player.mesh.position, 0x00FFFF, 20);
+              // Create powerful lightning effect when unlocked
+              for(let i=0; i<6; i++) {
+                const angle = (i / 6) * Math.PI * 2;
+                const lightning = new LightningBolt(
+                  new THREE.Vector3(player.mesh.position.x, 20, player.mesh.position.z),
+                  new THREE.Vector3(
+                    player.mesh.position.x + Math.cos(angle) * 8,
+                    0,
+                    player.mesh.position.z + Math.sin(angle) * 8
+                  )
+                );
+                particles.push(lightning);
+              }
               
               // Screen flash
               if (flashOverlay) {
-                flashOverlay.style.opacity = '0.3';
-                flashOverlay.style.background = 'rgba(0, 255, 255, 0.3)';
+                flashOverlay.style.opacity = '0.4';
+                flashOverlay.style.background = 'rgba(0, 255, 255, 0.4)';
                 setTimeout(() => { flashOverlay.style.opacity = '0'; }, 200);
               }
             } 
@@ -7153,16 +7021,10 @@
       weapons.sword = { active: false, level: 0, damage: 30, cooldown: 1500, lastShot: 0, range: 3.5 };
       weapons.aura = { active: false, level: 0, damage: 5, cooldown: 500, lastShot: 0, range: 3 };
       weapons.meteor = { active: false, level: 0, damage: 60, cooldown: 2500, lastShot: 0, area: 5 };
-      weapons.drone = { active: false, level: 0, damage: 18, cooldown: 800, lastShot: 0, range: 15, projectileSpeed: 0.25, followSpeed: 0.08 };
+      weapons.lightning = { active: false, level: 0, damage: 25, cooldown: 3000, lastShot: 0, targets: 4 };
       weapons.doubleBarrel = { active: false, level: 0, damage: 25, cooldown: 1200, lastShot: 0, range: 12, spread: 0.3 };
       weapons.iceSpear = { active: false, level: 0, damage: 20, cooldown: 1500, lastShot: 0, range: 15, slowPercent: 0.4, slowDuration: 2000 };
       weapons.fireRing = { active: false, level: 0, damage: 8, cooldown: 800, lastShot: 0, range: 4, orbs: 3, rotationSpeed: 2 };
-      
-      // Clean up old drone if exists
-      if (droneInstance) {
-        droneInstance.destroy();
-        droneInstance = null;
-      }
       
       // Reset perks (these are temporary and should not persist between runs)
       playerStats.perks = {
@@ -8084,53 +7946,102 @@
       }
 
       // 5. LIGHTNING STRIKES
-      // Drone Turret - Auto-follow companion weapon
-      if (weapons.drone.active && droneInstance && time - weapons.drone.lastShot > weapons.drone.cooldown) {
-        // Update drone position
-        droneInstance.update(FIXED_TIMESTEP);
-        
-        // Find closest enemy within range
+      if (weapons.lightning.active && time - weapons.lightning.lastShot > weapons.lightning.cooldown) {
+        // Hit random enemies
+        const targets = [];
         const aliveEnemies = enemies.filter(e => !e.isDead);
-        let closestEnemy = null;
-        let minDist = weapons.drone.range;
         
-        for (let enemy of aliveEnemies) {
-          const dist = droneInstance.mesh.position.distanceTo(enemy.mesh.position);
-          if (dist < minDist) {
-            minDist = dist;
-            closestEnemy = enemy;
+        // Select random enemies up to target count
+        const targetCount = Math.min(weapons.lightning.targets, aliveEnemies.length);
+        const shuffled = [...aliveEnemies].sort(() => 0.5 - Math.random());
+        
+        for(let i = 0; i < targetCount; i++) {
+          const enemy = shuffled[i];
+          targets.push(enemy);
+          
+          // Create lightning bolt from sky
+          const lightning = new LightningBolt(
+            new THREE.Vector3(enemy.mesh.position.x, 15, enemy.mesh.position.z),
+            enemy.mesh.position.clone()
+          );
+          particles.push(lightning);
+          
+          // Flash effect - bright cyan for lightning
+          const flashLight = new THREE.PointLight(0x00FFFF, 5, 20); // Cyan to match lightning color
+          flashLight.position.copy(enemy.mesh.position);
+          flashLight.position.y += 2;
+          scene.add(flashLight);
+          flashLights.push(flashLight);
+          const timeoutId = setTimeout(() => {
+            scene.remove(flashLight);
+            const idx = flashLights.indexOf(flashLight);
+            if (idx > -1) flashLights.splice(idx, 1);
+            const tidx = activeTimeouts.indexOf(timeoutId);
+            if (tidx > -1) activeTimeouts.splice(tidx, 1);
+          }, 150);
+          activeTimeouts.push(timeoutId);
+          
+          // Damage enemy
+          const dmg = weapons.lightning.damage * playerStats.strength;
+          const isCrit = Math.random() < playerStats.critChance;
+          const finalDmg = isCrit ? dmg * playerStats.critDmg : dmg;
+          enemy.takeDamage(finalDmg);
+          createDamageNumber(finalDmg, enemy.mesh.position, isCrit);
+          
+          // Ground impact particles - 8 white + 6 purple sparks
+          spawnParticles(enemy.mesh.position, 0xFFFFFF, 8); // White sparks
+          spawnParticles(enemy.mesh.position, 0x7B68EE, 6); // Purple sparks
+          
+          // Chain Lightning - Find nearest enemy within 8 units at 60% damage
+          const chainRange = 8;
+          let chainTarget = null;
+          let minChainDist = Infinity;
+          
+          for (let e of aliveEnemies) {
+            if (e === enemy || e.isDead) continue;
+            const dist = enemy.mesh.position.distanceTo(e.mesh.position);
+            if (dist < chainRange && dist < minChainDist) {
+              minChainDist = dist;
+              chainTarget = e;
+            }
+          }
+          
+          if (chainTarget) {
+            // Create chain lightning visual
+            const chainLightning = new LightningBolt(
+              enemy.mesh.position.clone(),
+              chainTarget.mesh.position.clone()
+            );
+            chainLightning.mesh.material.color.setHex(0xADD8E6); // Light blue for chain
+            particles.push(chainLightning);
+            
+            // Chain damage (60% of original)
+            const chainDmg = finalDmg * 0.6;
+            chainTarget.takeDamage(chainDmg);
+            createDamageNumber(chainDmg, chainTarget.mesh.position, false);
+            
+            // Chain impact particles
+            spawnParticles(chainTarget.mesh.position, 0xADD8E6, 8);
+            
+            // Chain flash
+            const chainFlashLight = new THREE.PointLight(0xADD8E6, 2, 10);
+            chainFlashLight.position.copy(chainTarget.mesh.position);
+            chainFlashLight.position.y += 1;
+            scene.add(chainFlashLight);
+            flashLights.push(chainFlashLight);
+            const chainTimeoutId = setTimeout(() => {
+              scene.remove(chainFlashLight);
+              const idx = flashLights.indexOf(chainFlashLight);
+              if (idx > -1) flashLights.splice(idx, 1);
+              const tidx = activeTimeouts.indexOf(chainTimeoutId);
+              if (tidx > -1) activeTimeouts.splice(tidx, 1);
+            }, 80);
+            activeTimeouts.push(chainTimeoutId);
           }
         }
         
-        if (closestEnemy) {
-          // Fire projectile from drone to enemy
-          const projectile = {
-            active: true,
-            mesh: null,
-            direction: new THREE.Vector3(),
-            speed: weapons.drone.projectileSpeed,
-            lifetime: 60,
-            damage: weapons.drone.damage,
-            isDroneProjectile: true
-          };
-          
-          // Create small cyan projectile
-          const geo = new THREE.SphereGeometry(0.1, 8, 8);
-          const mat = new THREE.MeshBasicMaterial({ color: 0x00FFFF, emissive: 0x00FFFF, emissiveIntensity: 0.8 });
-          projectile.mesh = new THREE.Mesh(geo, mat);
-          projectile.mesh.position.copy(droneInstance.mesh.position);
-          scene.add(projectile.mesh);
-          
-          // Calculate direction to enemy
-          const dx = closestEnemy.mesh.position.x - droneInstance.mesh.position.x;
-          const dy = closestEnemy.mesh.position.y - droneInstance.mesh.position.y;
-          const dz = closestEnemy.mesh.position.z - droneInstance.mesh.position.z;
-          const dist = Math.sqrt(dx*dx + dy*dy + dz*dz);
-          projectile.direction.set(dx/dist, dy/dist, dz/dist);
-          
-          projectiles.push(projectile);
-          
-          weapons.drone.lastShot = time;
+        weapons.lightning.lastShot = time;
+        if (targets.length > 0) {
           playSound('shoot');
         }
       }
@@ -8272,11 +8183,6 @@
       goldCoins.forEach(g => g.update(player.mesh.position));
       chests.forEach(c => c.update(player.mesh.position));
       particles = particles.filter(p => p.update() !== false);
-      
-      // Update drone turret if active
-      if (droneInstance && weapons.drone.active) {
-        droneInstance.update(FIXED_TIMESTEP);
-      }
       
       // Windmill Rotation and Light Animation
       scene.children.forEach(c => {
