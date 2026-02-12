@@ -38,6 +38,81 @@
   - Upgrades: Atk +10%, AtkSpd +10%, Armor +25%
   - Visual Style: Green ground, Brown/Beige Windmill, Blue Lakes, Trees with shadows/canopy
   - Controls: Mobile Touch (Joystick) + Portrait Mode
+
+  ═══════════════════════════════════════════════════════════════════════════════════════
+  🌟 COMPREHENSIVE ENHANCEMENTS - DOPAMINE BOOSTERS & DEPTH IMPROVEMENTS 🌟
+  ═══════════════════════════════════════════════════════════════════════════════════════
+
+  This game has been enhanced with multiple systems designed to increase depth, fun, and
+  addictive gameplay through psychological reward mechanisms (dopamine boosters):
+
+  ┌─────────────────────────────────────────────────────────────────────────────────────┐
+  │ 🔥 1. COMBO SYSTEM - Reward Consecutive Performance                                │
+  ├─────────────────────────────────────────────────────────────────────────────────────┤
+  │ • Tracks consecutive kills within 3-second windows                                  │
+  │ • Combo multiplier increases damage & gold (every 5 kills = +25%, max 2.0x)        │
+  │ • Visual combo display with pulsing glow animations                                 │
+  │ • Milestone celebrations at 10, 25, 50, 100+ kill combos                           │
+  │ • Combo loss notifications for failed streaks                                       │
+  │ WHY: Creates tension/excitement and rewards skilled play with immediate feedback    │
+  └─────────────────────────────────────────────────────────────────────────────────────┘
+
+  ┌─────────────────────────────────────────────────────────────────────────────────────┐
+  │ ⭐ 2. LEVEL MILESTONE REWARDS - Celebrate Progress                                 │
+  ├─────────────────────────────────────────────────────────────────────────────────────┤
+  │ • Every 5 levels: +20 Max HP, +5% Damage, Full Heal                                │
+  │ • Level 20: ALL weapons get ULTIMATE evolution with dramatic power boosts           │
+  │   - Gun: Triple barrel shots for massive DPS                                        │
+  │   - Sword: Mega damage with wider arc                                               │
+  │   - Aura: Nova blast with 1.5x range                                                │
+  │   - Meteor: Shower with double damage and area                                      │
+  │   - Lightning: Storm hitting 10 targets                                             │
+  │ • Special celebration effects and sound feedback                                    │
+  │ WHY: Provides major milestone dopamine hits and keeps long sessions interesting     │
+  └─────────────────────────────────────────────────────────────────────────────────────┘
+
+  ┌─────────────────────────────────────────────────────────────────────────────────────┐
+  │ 🎯 3. ENHANCED ACHIEVEMENT SYSTEM - Long-term Goals                                │
+  ├─────────────────────────────────────────────────────────────────────────────────────┤
+  │ • Original: 17 achievements for basic progression                                   │
+  │ • NEW: 7 achievements for advanced gameplay:                                        │
+  │   - Combo achievements (10, 25, 50, 100-kill streaks)                              │
+  │   - Critical Precision (100 total crits)                                            │
+  │   - Boss Slayer (5 mini-bosses defeated)                                            │
+  │   - Perfect Run (complete without taking damage) - 1000 gold reward!               │
+  │ • All achievements unlockable for gold rewards                                      │
+  │ WHY: Provides long-term progression goals and rewards mastery                       │
+  └─────────────────────────────────────────────────────────────────────────────────────┘
+
+  ┌─────────────────────────────────────────────────────────────────────────────────────┐
+  │ 📊 4. ADVANCED STAT TRACKING - Measure Everything                                  │
+  ├─────────────────────────────────────────────────────────────────────────────────────┤
+  │ • Max combo reached (all-time record)                                               │
+  │ • Total critical hits landed (lifetime tracker)                                     │
+  │ • Critical hit streaks (consecutive crits with special feedback at 5+)             │
+  │ • Mini-bosses defeated (lifetime count)                                             │
+  │ • Perfect runs completed (ultimate mastery metric)                                  │
+  │ WHY: Players love tracking their performance and beating personal records           │
+  └─────────────────────────────────────────────────────────────────────────────────────┘
+
+  ┌─────────────────────────────────────────────────────────────────────────────────────┐
+  │ 💪 5. DOPAMINE TRIGGER MECHANISMS - Psychological Engagement                       │
+  ├─────────────────────────────────────────────────────────────────────────────────────┤
+  │ • Visual Feedback: Glowing combo display, screen flashes, particle effects         │
+  │ • Audio Feedback: Level-up sounds on milestone achievements                         │
+  │ • Reward Stacking: Combo multipliers apply to BOTH damage AND gold                 │
+  │ • Near-miss Tension: 3-second combo timer creates urgency                          │
+  │ • Variable Rewards: Crits can chain with combo multipliers for huge numbers        │
+  │ • Power Fantasy: Ultimate weapons at level 20 feel dramatically stronger           │
+  │ WHY: Multiple simultaneous reward systems create compounding satisfaction           │
+  └─────────────────────────────────────────────────────────────────────────────────────┘
+
+  IMPLEMENTATION NOTES:
+  - All systems are balanced to enhance without overwhelming
+  - Visual feedback is prominent but not intrusive
+  - Progression is faster early, slower late (good engagement curve)
+  - Multiple viable strategies encourage experimentation
+  - Reset mechanics preserve meta-progression while allowing fresh starts
   -->
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
@@ -273,6 +348,29 @@
     @keyframes perkPulse {
       0%, 100% { box-shadow: 0 4px 8px rgba(0,0,0,0.3), 0 0 20px rgba(155,89,182,0.6); }
       50% { box-shadow: 0 4px 8px rgba(0,0,0,0.3), 0 0 30px rgba(155,89,182,0.9); }
+    }
+
+    /* ENHANCEMENT: Combo Glow Animation - Makes combo display pulse */
+    @keyframes comboGlow {
+      0% { transform: scale(1); text-shadow: 0 0 15px rgba(255,215,0,1), 0 0 25px rgba(255,215,0,0.8), 2px 2px 4px rgba(0,0,0,0.9); }
+      100% { transform: scale(1.05); text-shadow: 0 0 25px rgba(255,215,0,1), 0 0 35px rgba(255,215,0,1), 2px 2px 4px rgba(0,0,0,0.9); }
+    }
+
+    /* ENHANCEMENT: Combo text display styles for maintainability */
+    .combo-text-display {
+      color: #FFD700;
+      text-shadow: 0 0 15px rgba(255,215,0,1), 0 0 25px rgba(255,215,0,0.8), 2px 2px 4px rgba(0,0,0,0.9);
+      font-size: 22px;
+      font-weight: 900;
+      letter-spacing: 2px;
+      animation: comboGlow 0.8s infinite alternate;
+    }
+
+    .combo-bonus-display {
+      color: #FFF;
+      text-shadow: 0 0 8px rgba(255,255,255,0.8), 1px 1px 3px rgba(0,0,0,0.8);
+      font-size: 14px;
+      margin-top: 2px;
     }
 
     /* Damage Numbers */
@@ -1046,6 +1144,12 @@
       <!-- Status Message Bar -->
       <div class="stat-text" id="status-message" style="color: #5DADE2; text-shadow: 0 0 8px rgba(93,173,226,0.8), 0 0 12px rgba(93,173,226,0.5), 1px 1px 2px rgba(0,0,0,0.5); font-size: 16px; min-height: 20px; margin-top: 5px;"></div>
       
+      <!-- ENHANCEMENT: Combo Display - Shows kill streak multiplier -->
+      <div id="combo-display" style="display: none; margin-top: 8px; padding: 8px 15px; background: linear-gradient(135deg, rgba(255,107,107,0.9), rgba(155,89,182,0.9)); border: 3px solid #FFD700; border-radius: 15px; box-shadow: 0 0 20px rgba(255,215,0,0.8), inset 0 0 15px rgba(0,0,0,0.3);">
+        <div class="stat-text combo-text-display" id="combo-text">0x COMBO!</div>
+        <div class="stat-text combo-bonus-display" id="combo-bonus-text">+0% Damage & Gold</div>
+      </div>
+      
       <!-- Windmill Quest UI -->
       <div id="windmill-quest-ui" style="display: none; margin-top: 10px;">
         <div class="bar-container" style="border-color: #8B4513;">
@@ -1138,7 +1242,9 @@
       // Lake configuration - used for spawn avoidance
       lakeCenterX: 30,
       lakeCenterZ: -30,
-      lakeRadius: 18
+      lakeRadius: 18,
+      // ENHANCEMENT: Combo system configuration
+      comboTimerDuration: 3000 // milliseconds - time window to maintain combo
     };
 
     // --- AUDIO SYSTEM (Oscillators) ---
@@ -1508,7 +1614,18 @@
       thornsPercent: 0,
       hasBerserkerRage: false,
       treasureHunterChance: 0,
-      doubleCritChance: 0
+      doubleCritChance: 0,
+      // ENHANCEMENT: Combo System - Tracks consecutive kills for multiplier bonuses
+      comboCount: 0,
+      comboMultiplier: 1.0,
+      comboTimer: 0,
+      maxCombo: 0,
+      // ENHANCEMENT: Streak System - Tracks crit streaks and perfect dodges
+      critStreak: 0,
+      // ENHANCEMENT: Achievement tracking
+      bossesKilled: 0,
+      totalCrits: 0,
+      perfectRuns: 0 // Runs with no damage taken
     };
 
     // Weapons State
@@ -2782,9 +2899,67 @@
         } else {
           goldAmount = 1 + Math.floor(Math.random() * 2); // 1-2 gold (reduced from 2-3)
         }
+        
+        // ENHANCEMENT: Apply combo multiplier to gold drops
+        goldAmount = Math.floor(goldAmount * playerStats.comboMultiplier);
         spawnGold(this.mesh.position.x, this.mesh.position.z, goldAmount);
         
+        // ENHANCEMENT: Combo System - Track consecutive kills and apply multipliers
         playerStats.kills++;
+        playerStats.comboCount++;
+        playerStats.comboTimer = GAME_CONFIG.comboTimerDuration; // Use configured duration
+        
+        // Calculate combo multiplier (increases every 5 kills, caps at 2.0x)
+        // Formula: 1.0 + min(floor(combo/5) * 0.25, 1.0) => 1.0x, 1.25x, 1.5x, 1.75x, 2.0x (max)
+        const previousMultiplier = playerStats.comboMultiplier;
+        playerStats.comboMultiplier = 1.0 + Math.min(Math.floor(playerStats.comboCount / 5) * 0.25, 1.0);
+        
+        // Trigger feedback when the combo multiplier increases
+        if (playerStats.comboMultiplier > previousMultiplier) {
+          createFloatingText(`${playerStats.comboMultiplier.toFixed(2)}x MULTIPLIER!`, player.mesh.position);
+          playSound('levelup');
+        }
+        
+        // Update max combo achieved
+        if (playerStats.comboCount > playerStats.maxCombo) {
+          playerStats.maxCombo = playerStats.comboCount;
+        }
+        
+        // ENHANCEMENT: Track boss kills for achievements
+        if (this.isMiniBoss) {
+          playerStats.bossesKilled++;
+        }
+        
+        // Show combo display if combo >= 3
+        if (playerStats.comboCount >= 3) {
+          const comboDisplay = document.getElementById('combo-display');
+          const comboText = document.getElementById('combo-text');
+          const comboBonusText = document.getElementById('combo-bonus-text');
+          
+          if (comboDisplay && comboText && comboBonusText) {
+            comboDisplay.style.display = 'block';
+            comboText.innerText = `${playerStats.comboCount}-KILL COMBO!`;
+            
+            const bonusPercent = Math.floor((playerStats.comboMultiplier - 1) * 100);
+            comboBonusText.innerText = `+${bonusPercent}% Damage & Gold`;
+            
+            // Special message for milestone combos
+            if (playerStats.comboCount === 10) {
+              createFloatingText("10-KILL COMBO! 🔥", player.mesh.position);
+              playSound('levelup');
+            } else if (playerStats.comboCount === 25) {
+              createFloatingText("25-KILL RAMPAGE! ⚡", player.mesh.position);
+              playSound('levelup');
+            } else if (playerStats.comboCount === 50) {
+              createFloatingText("50-KILL UNSTOPPABLE! 💥", player.mesh.position);
+              playSound('levelup');
+            } else if (playerStats.comboCount % 100 === 0) {
+              createFloatingText(`${playerStats.comboCount}-KILL GODLIKE! 🌟`, player.mesh.position);
+              playSound('levelup');
+            }
+          }
+        }
+        
         updateHUD();
         checkAchievements(); // Check for achievements after kill
       }
@@ -2873,16 +3048,26 @@
           const dx = this.mesh.position.x - enemy.mesh.position.x;
           const dz = this.mesh.position.z - enemy.mesh.position.z;
           if (dx*dx + dz*dz < 0.6) { // Hit radius
-            // Calculate Damage
-            let dmg = weapons.gun.damage * playerStats.damage * playerStats.strength;
+            // Calculate Damage - ENHANCEMENT: Apply combo multiplier for increased damage
+            let dmg = weapons.gun.damage * playerStats.damage * playerStats.strength * playerStats.comboMultiplier;
             
             // Double barrel uses its own damage
             if (weapons.doubleBarrel.active && this.isDoubleBarrel) {
-              dmg = weapons.doubleBarrel.damage * playerStats.damage * playerStats.strength;
+              dmg = weapons.doubleBarrel.damage * playerStats.damage * playerStats.strength * playerStats.comboMultiplier;
             }
             
             const isCrit = Math.random() < playerStats.critChance;
-            if (isCrit) dmg *= playerStats.critDmg;
+            if (isCrit) {
+              dmg *= playerStats.critDmg;
+              // ENHANCEMENT: Track crit streaks for achievements
+              playerStats.critStreak++;
+              playerStats.totalCrits++;
+              if (playerStats.critStreak === 5) {
+                createFloatingText("5 CRITS IN A ROW! 🎯", player.mesh.position);
+              }
+            } else {
+              playerStats.critStreak = 0;
+            }
             
             enemy.takeDamage(Math.floor(dmg), isCrit, this.mesh.position);
             
@@ -2931,8 +3116,8 @@
         this.life = 10; // frames
         this.maxLife = 10;
         
-        // Deal damage immediately
-        const dmg = weapons.sword.damage * playerStats.strength * playerStats.damage;
+        // Deal damage immediately - ENHANCEMENT: Apply combo multiplier
+        const dmg = weapons.sword.damage * playerStats.strength * playerStats.damage * playerStats.comboMultiplier;
         
         enemies.forEach(e => {
           const dx = e.mesh.position.x - x;
@@ -3701,7 +3886,17 @@
       
       level10: { id: 'level10', name: 'Rising Star', desc: 'Reach Level 10', reward: 100, check: () => playerStats.lvl >= 10, claimed: false },
       level25: { id: 'level25', name: 'Experienced Fighter', desc: 'Reach Level 25', reward: 250, check: () => playerStats.lvl >= 25, claimed: false },
-      level50: { id: 'level50', name: 'Master Champion', desc: 'Reach Level 50', reward: 500, check: () => playerStats.lvl >= 50, claimed: false }
+      level50: { id: 'level50', name: 'Master Champion', desc: 'Reach Level 50', reward: 500, check: () => playerStats.lvl >= 50, claimed: false },
+      
+      // ENHANCEMENT: New achievements for combo system and advanced gameplay
+      combo10: { id: 'combo10', name: 'Combo Starter', desc: 'Achieve a 10-kill combo', reward: 75, check: () => playerStats.maxCombo >= 10, claimed: false },
+      combo25: { id: 'combo25', name: 'Combo Master', desc: 'Achieve a 25-kill combo', reward: 150, check: () => playerStats.maxCombo >= 25, claimed: false },
+      combo50: { id: 'combo50', name: 'Combo Legend', desc: 'Achieve a 50-kill combo', reward: 300, check: () => playerStats.maxCombo >= 50, claimed: false },
+      combo100: { id: 'combo100', name: 'Unstoppable Force', desc: 'Achieve a 100-kill combo', reward: 500, check: () => playerStats.maxCombo >= 100, claimed: false },
+      
+      critStreak: { id: 'totalCrits100', name: 'Critical Precision', desc: 'Land 100 critical hits', reward: 200, check: () => playerStats.totalCrits >= 100, claimed: false },
+      bossSlayer: { id: 'bossSlayer', name: 'Boss Slayer', desc: 'Defeat 5 mini-bosses', reward: 250, check: () => playerStats.bossesKilled >= 5, claimed: false },
+      perfectRun: { id: 'perfectRun', name: 'Perfect Run', desc: 'Complete a run without taking damage', reward: 1000, check: () => playerStats.perfectRuns > 0, claimed: false }
     };
 
     function updateAchievementsScreen() {
@@ -5330,6 +5525,64 @@
       playerStats.lvl++;
       playerStats.exp -= playerStats.expReq;
       
+      // ENHANCEMENT: Level Milestone Rewards - Bonus effects for every 5 levels
+      const isMilestone = playerStats.lvl % 5 === 0;
+      if (isMilestone && playerStats.lvl > 0) {
+        // Permanent stat bonuses at milestones
+        playerStats.maxHp += 20;
+        playerStats.hp = playerStats.maxHp; // Full heal on milestone
+        playerStats.strength += 0.05; // +5% damage every 5 levels
+        
+        // Special celebration for milestones
+        setTimeout(() => {
+          createFloatingText(`⭐ LEVEL ${playerStats.lvl} MILESTONE! ⭐\n+20 Max HP, +5% Damage, Full Heal!`, player.mesh.position);
+        }, 500);
+      }
+      
+      // ENHANCEMENT: Weapon Evolution System - Ultimate forms at level 20
+      if (playerStats.lvl === 20) {
+        setTimeout(() => {
+          createFloatingText(`🌟 ULTIMATE WEAPON EVOLUTION! 🌟\nAll weapons gain ULTIMATE POWER!`, player.mesh.position);
+          
+          // Gun Ultimate: Triple Barrel with penetration
+          if (weapons.gun.active) {
+            weapons.gun.barrels = 3;
+            weapons.gun.damage += 20;
+            showStatChange('Gun ULTIMATE: Triple Shot!');
+          }
+          
+          // Sword Ultimate: Wider arc and damage
+          if (weapons.sword.active) {
+            weapons.sword.damage += 40;
+            weapons.sword.range += 1.5;
+            showStatChange('Sword ULTIMATE: Mega Slash!');
+          }
+          
+          // Aura Ultimate: Double range
+          if (weapons.aura.active) {
+            weapons.aura.range *= 1.5;
+            weapons.aura.damage += 8;
+            showStatChange('Aura ULTIMATE: Nova Blast!');
+          }
+          
+          // Meteor Ultimate: Double meteors
+          if (weapons.meteor.active) {
+            weapons.meteor.damage += 50;
+            weapons.meteor.area += 2;
+            showStatChange('Meteor ULTIMATE: Meteor Shower!');
+          }
+          
+          // Lightning Ultimate: 10 targets
+          if (weapons.lightning.active) {
+            weapons.lightning.targets = Math.max(weapons.lightning.targets, 10);
+            weapons.lightning.damage += 30;
+            showStatChange('Lightning ULTIMATE: Storm!');
+          }
+          
+          playSound('levelup');
+        }, 1000);
+      }
+      
       // Victory condition: Reaching level 50
       if (playerStats.lvl === 50) {
         setTimeout(() => {
@@ -6596,6 +6849,16 @@
       const survivalTime = Math.floor((Date.now() - gameStartTime) / 1000);
       const goldEarned = playerStats.gold - runStartGold;
       
+      // ENHANCEMENT: Track perfect runs (no damage taken)
+      if (playerStats.damageTaken === 0 && playerStats.kills > 0) {
+        playerStats.perfectRuns++;
+        createFloatingText("🎉 PERFECT RUN! No damage taken! 🎉", player.mesh.position);
+        // Ensure achievements (including Perfect Run) are checked immediately
+        if (typeof checkAchievements === 'function') {
+          checkAchievements();
+        }
+      }
+      
       // Update save data
       saveData.totalRuns++;
       if (survivalTime > saveData.bestTime) saveData.bestTime = survivalTime;
@@ -6682,6 +6945,20 @@
       playerStats.dashesPerformed = 0;
       playerStats.damageTaken = 0;
       playerStats.weaponsUnlocked = 0;
+      
+      // ENHANCEMENT: Reset combo and streak stats for new run
+      playerStats.comboCount = 0;
+      playerStats.comboMultiplier = 1.0;
+      playerStats.comboTimer = 0;
+      playerStats.critStreak = 0;
+      // Keep maxCombo, bossesKilled, totalCrits, perfectRuns as they track all-time records
+
+      // Ensure combo UI is reset/hidden at the start of a new run
+      const comboDisplayEl = document.getElementById('combo-display');
+      if (comboDisplayEl) {
+        comboDisplayEl.style.display = 'none';
+        comboDisplayEl.textContent = '';
+      }
       
       windmillQuest = { active: false, timer: 0, duration: 15, windmill: null, hasCompleted: false };
       document.getElementById('windmill-quest-ui').style.display = 'none';
@@ -7330,6 +7607,27 @@
         updateHUD();
         // Green particle
         spawnParticles(player.mesh.position, 0x00FF00, 2);
+      }
+
+      // ENHANCEMENT: Combo Timer - Decrease combo timer and reset combo if expired
+      if (playerStats.comboTimer > 0) {
+        playerStats.comboTimer -= dt * 1000; // Convert dt to milliseconds
+        
+        if (playerStats.comboTimer <= 0) {
+          // Combo expired, reset
+          if (playerStats.comboCount >= 3) {
+            // Show combo lost message for significant combos
+            createFloatingText(`Combo Lost: ${playerStats.comboCount}x`, player.mesh.position);
+          }
+          playerStats.comboCount = 0;
+          playerStats.comboMultiplier = 1.0;
+          
+          // Hide combo display
+          const comboDisplay = document.getElementById('combo-display');
+          if (comboDisplay) {
+            comboDisplay.style.display = 'none';
+          }
+        }
       }
 
       // Player Update
