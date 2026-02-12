@@ -220,7 +220,7 @@
     .upgrade-card {
       background: linear-gradient(135deg, #0d1117, #1a1e2e, #0d1117); /* Unified dark theme */
       margin: 10px 0;
-      padding: 20px;
+      padding: 15px;
       border-radius: 20px; /* More rounded for soft feel */
       border: 3px solid #3a4a5e; /* Darker border for unified theme */
       cursor: pointer;
@@ -1713,6 +1713,8 @@
       hasBerserkerRage: false,
       treasureHunterChance: 0,
       doubleCritChance: 0,
+      dodgeChance: 0, // PR #64 - Phantom Step
+      expMultiplier: 1, // PR #64 - Experience Boost
       // Slow debuff tracking (for slowing enemies)
       activeSlows: 0, // Counter for active slow effects
       originalWalkSpeed: 25 // Backup of original speed
@@ -2191,6 +2193,36 @@
       takeDamage(amount) {
         // Check invulnerability frames and pause state
         if (isPaused || this.invulnerable) return;
+        
+        // Dodge check (PR #64 - Phantom Step upgrade)
+        if (playerStats.dodgeChance && Math.random() < playerStats.dodgeChance) {
+          // Dodge successful!
+          const div = document.createElement('div');
+          div.className = 'damage-number';
+          div.innerText = 'DODGE!';
+          div.style.color = '#00FF00';
+          div.style.fontSize = '28px';
+          div.style.fontWeight = 'bold';
+          div.style.textShadow = '0 0 8px rgba(0,255,0,0.8), 2px 2px 4px #000';
+          
+          const vec = this.mesh.position.clone();
+          vec.y += 2;
+          vec.project(camera);
+          
+          const x = (vec.x * .5 + .5) * window.innerWidth;
+          const y = (-(vec.y * .5) + .5) * window.innerHeight;
+          
+          div.style.position = 'absolute';
+          div.style.left = `${x}px`;
+          div.style.top = `${y}px`;
+          div.style.transform = 'translate(-50%, -50%)';
+          div.style.pointerEvents = 'none';
+          div.style.zIndex = '1000';
+          
+          document.body.appendChild(div);
+          setTimeout(() => div.remove(), 1000);
+          return; // No damage taken
+        }
         
         // Armor reduction
         const reduced = Math.max(1, amount * (1 - playerStats.armor / 100));
@@ -5390,7 +5422,9 @@
     }
 
     function addExp(amount) {
-      playerStats.exp += amount;
+      // Apply expMultiplier (PR #64 - Experience Boost)
+      const actualAmount = amount * (playerStats.expMultiplier || 1);
+      playerStats.exp += actualAmount;
       if (playerStats.exp >= playerStats.expReq) {
         levelUp();
       }
@@ -6047,20 +6081,51 @@
             playerStats.doubleCritChance += 0.25;
             showStatChange('Lucky Strikes +25% (Total: ' + Math.round(playerStats.doubleCritChance * 100) + '%)');
           } 
+        },
+        { 
+          id: 'treasure_seeker', 
+          icon: '🪙',
+          title: 'TREASURE SEEKER', 
+          desc: 'Gold Drops +30% (More Coins Per Kill)', 
+          apply: () => { 
+            playerStats.treasureHunterChance += 0.3;
+            showStatChange('Treasure Seeker +30% Gold');
+          } 
+        },
+        { 
+          id: 'phantom_step', 
+          icon: '👻',
+          title: 'PHANTOM STEP', 
+          desc: 'Dodge Chance +5% (Avoid Damage)', 
+          apply: () => { 
+            playerStats.dodgeChance = (playerStats.dodgeChance || 0) + 0.05;
+            showStatChange('Dodge +5% (Total: ' + Math.round((playerStats.dodgeChance || 0) * 100) + '%)');
+          } 
+        },
+        { 
+          id: 'experience_boost', 
+          icon: '⭐',
+          title: 'EXPERIENCE BOOST', 
+          desc: 'XP Gain +10% (Level Up Faster)', 
+          apply: () => { 
+            playerStats.expMultiplier = (playerStats.expMultiplier || 1) + 0.1;
+            showStatChange('XP Boost +10% (Total: ' + Math.round((playerStats.expMultiplier || 1) * 100) + '%)');
+          } 
         }
       ];
 
       // --- SPECIAL LEVELS ---
       
-      // Levels 4, 9, 17: WEAPON UPGRADE LEVELS
-      if ([4, 9, 17].includes(playerStats.lvl)) {
+      // Weapon upgrade levels: Every 4 levels up to 50 (PR #64)
+      const weaponUpgradeLevels = [4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48];
+      if (weaponUpgradeLevels.includes(playerStats.lvl) && playerStats.lvl <= 50) {
         modal.querySelector('h2').innerText = 'WEAPON UPGRADE!';
         modal.querySelector('h2').style.fontSize = '36px';
         
         choices = [];
         
-        // Offer weapon upgrades for active weapons
-        if (weapons.gun.active && weapons.gun.level < 4) {
+        // Offer weapon upgrades for active weapons (no level cap)
+        if (weapons.gun.active) {
           const nextLevel = weapons.gun.level + 1;
           choices.push({ 
             id: 'gun_upgrade', 
@@ -6076,7 +6141,7 @@
           });
         }
         
-        if (weapons.sword.active && weapons.sword.level < 4) {
+        if (weapons.sword.active) {
           const nextLevel = weapons.sword.level + 1;
           choices.push({ 
             id: 'sword_upgrade', 
@@ -6092,11 +6157,12 @@
           });
         }
         
-        if (weapons.aura.active && weapons.aura.level < 4) {
+        if (weapons.aura.active) {
           const nextLevel = weapons.aura.level + 1;
           const baseRange = 3; // Initial range
           const currentRange = weapons.aura.range;
-          const nextRange = Math.min(5, baseRange * (1 + (nextLevel * 0.10))); // +10% per level, cap at 5
+          // No cap on aura range (PR #64)
+          const nextRange = baseRange * (1 + (nextLevel * 0.10)); // +10% per level without cap
           const rangeIncrease = Math.round((nextRange - currentRange) * 10) / 10;
           
           choices.push({ 
@@ -6107,13 +6173,13 @@
             apply: () => { 
               weapons.aura.level++;
               weapons.aura.damage += 3;
-              weapons.aura.range = Math.min(5, baseRange * (1 + (weapons.aura.level * 0.10)));
+              weapons.aura.range = baseRange * (1 + (weapons.aura.level * 0.10)); // No cap
               showStatChange(`Aura Level ${weapons.aura.level}: +3 Dmg, +${rangeIncrease.toFixed(1)} Range`);
             } 
           });
         }
         
-        if (weapons.meteor.active && weapons.meteor.level < 4) {
+        if (weapons.meteor.active) {
           const nextLevel = weapons.meteor.level + 1;
           choices.push({ 
             id: 'meteor_upgrade', 
@@ -6129,7 +6195,7 @@
           });
         }
         
-        if (weapons.lightning.active && weapons.lightning.level < 4) {
+        if (weapons.lightning.active) {
           const nextLevel = weapons.lightning.level + 1;
           const targetIncrease = nextLevel === 2 ? 3 : (nextLevel === 3 ? 2 : 1);
           choices.push({ 
@@ -6146,7 +6212,7 @@
           });
         }
         
-        if (weapons.doubleBarrel.active && weapons.doubleBarrel.level < 4) {
+        if (weapons.doubleBarrel.active) {
           const nextLevel = weapons.doubleBarrel.level + 1;
           choices.push({ 
             id: 'doublebarrel_upgrade', 
@@ -6162,7 +6228,7 @@
           });
         }
         
-        if (weapons.iceSpear.active && weapons.iceSpear.level < 4) {
+        if (weapons.iceSpear.active) {
           const nextLevel = weapons.iceSpear.level + 1;
           choices.push({ 
             id: 'icespear_upgrade', 
@@ -6179,7 +6245,7 @@
           });
         }
         
-        if (weapons.fireRing.active && weapons.fireRing.level < 4) {
+        if (weapons.fireRing.active) {
           const nextLevel = weapons.fireRing.level + 1;
           choices.push({ 
             id: 'firering_upgrade', 
@@ -6305,8 +6371,8 @@
           }
         ];
       }
-      // Level 10: CLASS SELECTION
-      else if (playerStats.lvl === 10) {
+      // Level 15: CLASS SELECTION (PR #64 - capped at L15)
+      else if (playerStats.lvl === 15) {
         modal.querySelector('h2').innerText = 'CHOOSE YOUR CLASS';
         modal.querySelector('h2').style.fontSize = '42px';
         
@@ -6364,8 +6430,8 @@
           }
         ];
       } 
-      // Level 12, 18, 25: PERK UNLOCKS
-      else if ([12, 18, 25].includes(playerStats.lvl)) {
+      // Level 12: PERK UNLOCK (PR #64 - only at L12)
+      else if (playerStats.lvl === 12) {
         modal.querySelector('h2').innerText = 'PERK UNLOCK!';
         modal.querySelector('h2').style.fontSize = '40px';
         
@@ -6447,7 +6513,7 @@
           card.className += ' legendary';
         }
         
-        const iconHTML = u.icon ? `<div style="font-size: 48px; margin-bottom: 10px;">${u.icon}</div>` : '';
+        const iconHTML = u.icon ? `<div style="font-size: 40px; margin-bottom: 10px;">${u.icon}</div>` : '';
         card.innerHTML = `${iconHTML}<div class="upgrade-title">${u.title}</div><div class="upgrade-desc">${u.desc}</div>`;
         
         // Add dramatic entrance animation - alternate left/right
@@ -6721,6 +6787,8 @@
       playerStats.hasBerserkerRage = false;
       playerStats.treasureHunterChance = 0;
       playerStats.doubleCritChance = 0;
+      playerStats.dodgeChance = 0; // PR #64
+      playerStats.expMultiplier = 1; // PR #64
       playerStats.survivalTime = 0;
       playerStats.dashesPerformed = 0;
       playerStats.damageTaken = 0;
