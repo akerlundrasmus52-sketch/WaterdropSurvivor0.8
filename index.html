@@ -1040,6 +1040,9 @@
       <div class="stat-text" id="score-text" style="color: #8B4513;">KILLS: 0</div>
       <div class="stat-text gold-text" id="gold-text" style="color: #FFD700; text-shadow: 0 0 10px rgba(255,215,0,0.9), 0 0 15px rgba(255,215,0,0.6), 1px 1px 2px rgba(0,0,0,0.5);">GOLD: 0</div>
       
+      <!-- Additional stat info display -->
+      <div class="stat-text" id="extra-stats-text" style="color: #9370DB; text-shadow: 0 0 5px rgba(147,112,219,0.6), 1px 1px 2px rgba(0,0,0,0.5); font-size: 12px; margin-top: 3px; display: none;"></div>
+      
       <!-- Status Message Bar -->
       <div class="stat-text" id="status-message" style="color: #5DADE2; text-shadow: 0 0 8px rgba(93,173,226,0.8), 0 0 12px rgba(93,173,226,0.5), 1px 1px 2px rgba(0,0,0,0.5); font-size: 16px; min-height: 20px; margin-top: 5px;"></div>
       
@@ -6436,6 +6439,13 @@
       document.getElementById('lvl-text').innerText = `LVL: ${playerStats.lvl}`;
       document.getElementById('score-text').innerText = `KILLS: ${playerStats.kills}`;
       document.getElementById('gold-text').innerText = `GOLD: ${playerStats.gold}`;
+      
+      // Show extended stat info after level ups (toggle visibility after level 3)
+      const extraStatsEl = document.getElementById('extra-stats-text');
+      if (extraStatsEl && playerStats.lvl >= 3) {
+        extraStatsEl.style.display = 'block';
+        extraStatsEl.innerText = `ATK: ${Math.round(playerStats.strength * 100)}% | ARM: ${playerStats.armor}% | SPD: ${Math.round(playerStats.walkSpeed)}`;
+      }
     }
     
     function updateWindmillQuestUI() {
