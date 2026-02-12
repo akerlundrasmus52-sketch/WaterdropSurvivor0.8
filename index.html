@@ -1328,8 +1328,8 @@
             targetVel.x = joystickLeft.x * speed;
             targetVel.z = joystickLeft.y * speed;
           
-            this.mesh.position.x += targetVel.x;
-            this.mesh.position.z += targetVel.z;
+            this.mesh.position.x += targetVel.x * dt;
+            this.mesh.position.z += targetVel.z * dt;
 
             // Water droplet trail when moving
             this.trailTimer += dt;
@@ -1636,8 +1636,8 @@
             vz -= wobble * (dx/dist);
           }
           
-          this.mesh.position.x += vx;
-          this.mesh.position.z += vz;
+          this.mesh.position.x += vx * dt;
+          this.mesh.position.z += vz * dt;
           this.mesh.lookAt(targetPos);
         }
 
@@ -2190,13 +2190,19 @@
       
       update() {
         this.life--;
-        this.mesh.position.add(this.vel);
+        this.mesh.position.x += this.vel.x * dt * 60;
+
+        this.mesh.position.y += this.vel.y * dt * 60;
+
+        this.mesh.position.z += this.vel.z * dt * 60;
         this.vel.y -= 0.025; // Gravity with realistic feel
         
         // Apply rotation
-        this.mesh.rotation.x += this.rotVel.x;
-        this.mesh.rotation.y += this.rotVel.y;
-        this.mesh.rotation.z += this.rotVel.z;
+        this.mesh.rotation.x += this.rotVel.x * dt * 60;
+
+        this.mesh.rotation.y += this.rotVel.y * dt * 60;
+
+        this.mesh.rotation.z += this.rotVel.z * dt * 60;
         
         // Bounce with energy loss
         if (this.mesh.position.y < 0.1) {
@@ -3834,7 +3840,11 @@
       
       update() {
         this.life--;
-        this.mesh.position.add(this.vel);
+        this.mesh.position.x += this.vel.x * dt * 60;
+
+        this.mesh.position.y += this.vel.y * dt * 60;
+
+        this.mesh.position.z += this.vel.z * dt * 60;
         this.vel.y -= 0.02; // Gravity
         this.mesh.rotation.z += this.rotSpeed;
         
@@ -3913,7 +3923,11 @@
       
       update() {
         this.life--;
-        this.mesh.position.add(this.vel);
+        this.mesh.position.x += this.vel.x * dt * 60;
+
+        this.mesh.position.y += this.vel.y * dt * 60;
+
+        this.mesh.position.z += this.vel.z * dt * 60;
         this.vel.y -= 0.015; // Gravity
         this.mesh.rotation.x += 0.1;
         this.mesh.rotation.y += 0.1;
@@ -4537,9 +4551,11 @@
       
       const gunCooldown = 1000 * (1 - cdReduction);
       weapons.gun = { active: true, level: 1, damage: 15, cooldown: gunCooldown, lastShot: 0, range: 12, barrels: 1 };
-      weapons.sword.active = false;
-      weapons.aura.active = false;
-      weapons.meteor.active = false;
+      weapons.sword = { active: false, level: 0, damage: 30, cooldown: 1500, lastShot: 0, range: 3.5 };
+      weapons.aura = { active: false, level: 0, damage: 5, cooldown: 500, lastShot: 0, range: 4 };
+      weapons.meteor = { active: false, level: 0, damage: 60, cooldown: 2500, lastShot: 0, area: 5 };
+      weapons.lightning = { active: false, level: 0, damage: 25, cooldown: 3000, lastShot: 0, targets: 4 };
+      weapons.doubleBarrel = { active: false, level: 0, damage: 25, cooldown: 1200, lastShot: 0, range: 12, spread: 0.3 };
       
       windmillQuest = { active: false, timer: 0, duration: 15, windmill: null, hasCompleted: false };
       document.getElementById('windmill-quest-ui').style.display = 'none';
@@ -4613,8 +4629,8 @@
       }
 
       isGameOver = false;
-      isPaused = false;
-      isGameActive = true;
+      isPaused = true;  // Start paused, countdown will unpause
+      isGameActive = false;  // Not active until countdown completes
       document.getElementById('gameover-screen').style.display = 'none';
       updateHUD();
     }
