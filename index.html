@@ -1314,6 +1314,7 @@
     let lastCleanupTime = 0;
     let lastMemoryCleanup = 0;
     let cameraShakeInProgress = false; // Prevent overlapping shakes
+    let cameraShakeOffset = { x: 0, y: 0, z: 0 }; // Current shake offset to apply
     
     // Performance monitoring
     let framePerformanceStats = {
@@ -1586,7 +1587,7 @@
             this.mesh.rotation.y += angleDiff * ROTATION_INTERPOLATION_FACTOR; // Smooth turn
           }
 
-          // Velocity now managed through acceleration/friction above
+          // Velocity is now managed through PLAYER_ACCELERATION and PLAYER_FRICTION constants applied above
         }
         
         const speedMag = this.velocity.length();
@@ -1643,9 +1644,10 @@
           this.auraCircle.visible = false;
         }
 
-        // Camera Follow
-        camera.position.x = this.mesh.position.x;
-        camera.position.z = this.mesh.position.z + 20; // Isometric offset
+        // Camera Follow with shake offset
+        camera.position.x = this.mesh.position.x + cameraShakeOffset.x;
+        camera.position.z = this.mesh.position.z + 20 + cameraShakeOffset.z; // Isometric offset + shake
+        camera.position.y += cameraShakeOffset.y; // Apply shake to Y
         camera.lookAt(this.mesh.position);
 
         // Bounds (Map is 200x200)
@@ -2489,21 +2491,16 @@
               // Spawn extra impact particles for critical hits
               spawnParticles(enemy.mesh.position, 0xFFD700, 8);
               spawnParticles(enemy.mesh.position, 0xFFFFFF, 5);
-              // Minor screen shake on crit with proper restoration (prevent overlapping shakes)
+              // Minor screen shake on crit with offset-based approach (prevents position conflicts)
               if (!cameraShakeInProgress && Math.random() < SCREEN_SHAKE_CRIT_CHANCE) {
                 cameraShakeInProgress = true;
-                const originalCameraPos = {
-                  x: camera.position.x,
-                  y: camera.position.y,
-                  z: camera.position.z
-                };
-                camera.position.x += (Math.random() - 0.5) * SCREEN_SHAKE_INTENSITY;
-                camera.position.y += (Math.random() - 0.5) * SCREEN_SHAKE_INTENSITY;
-                camera.position.z += (Math.random() - 0.5) * SCREEN_SHAKE_INTENSITY;
+                cameraShakeOffset.x = (Math.random() - 0.5) * SCREEN_SHAKE_INTENSITY;
+                cameraShakeOffset.y = (Math.random() - 0.5) * SCREEN_SHAKE_INTENSITY;
+                cameraShakeOffset.z = (Math.random() - 0.5) * SCREEN_SHAKE_INTENSITY;
                 setTimeout(() => {
-                  camera.position.x = originalCameraPos.x;
-                  camera.position.y = originalCameraPos.y;
-                  camera.position.z = originalCameraPos.z;
+                  cameraShakeOffset.x = 0;
+                  cameraShakeOffset.y = 0;
+                  cameraShakeOffset.z = 0;
                   cameraShakeInProgress = false;
                 }, SCREEN_SHAKE_DURATION);
               }
@@ -2649,6 +2646,12 @@
         this.mesh.position.y -= this.speed;
         this.speed += 0.05; // Gravity
         this.fallTime++; // Increment lifetime
+        
+        // Check if meteor has been falling too long (safety check)
+        if (this.fallTime >= MAX_METEOR_LIFETIME) {
+          this.explode();
+          return false;
+        }
         
         if (this.mesh.position.y <= 0) {
           this.explode();
@@ -4392,8 +4395,8 @@
       playerStats.exp -= playerStats.expReq;
       
       // Improved XP Curve for better pacing: starts easier, scales progressively
-      // Lvl 1->2 (2 kills=20), 2->3 (3 kills=30), 3->4 (4 kills=40), 4->5 (5 kills=50)
-      // Then: 6, 7, 9, 11, 14, 17, 20, 24, 28...
+      // Level 1->2: 2 kills, 2->3: 3 kills, 3->4: 4 kills... up to 8->9: 8 kills
+      // Then increases by +2 per level: 9->10: 10 kills, 10->11: 12 kills, 11->12: 14 kills...
       const baseKills = Math.min(playerStats.lvl, 8); // Linear up to level 8
       const extraKills = Math.max(0, playerStats.lvl - 8) * 2; // Then +2 per level
       const killsNeeded = baseKills + extraKills;
@@ -6203,12 +6206,16 @@ Total Gold Earned: ${saveData.totalGoldEarned}
       if (now - lastMemoryCleanup > MEMORY_CLEANUP_INTERVAL) {
         lastMemoryCleanup = now;
         
-        // Force cleanup of all inactive particles with lights
-        particles.forEach(p => {
+        // Force cleanup of particles with low life that have lights (remove entire particle)
+        particles = particles.filter(p => {
           if (p.light && p.life < PARTICLE_LIGHT_CLEANUP_THRESHOLD) {
+            // Remove entire particle early if it has a light and is near end of life
+            scene.remove(p.mesh);
             scene.remove(p.light);
             p.light = null;
+            return false; // Remove from array
           }
+          return true; // Keep particle
         });
         
         // Clean up projectiles that are off-screen or too old (optimized with distanceToSquared)
