@@ -207,6 +207,43 @@
       50% { transform: translateY(-10px); }
     }
 
+    #loadingScreen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: url('321E5768-E77B-4471-8C32-5D7C1D715A4B.png');
+      background-size: cover;
+      background-position: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      z-index: 10000;
+      transition: opacity 0.5s ease-out;
+      padding-bottom: 100px;
+    }
+
+    #loadingScreen.fade-out {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .loading-text {
+      color: #FFF;
+      font-size: 24px;
+      font-weight: bold;
+      text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.8), 0 0 20px rgba(93, 173, 226, 0.8);
+      margin-bottom: 20px;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.6; }
+      50% { opacity: 1; }
+    }
+
     .floating-text {
       position: absolute;
       font-size: 20px;
@@ -308,6 +345,10 @@
   </style>
 </head>
 <body>
+  <div id="loadingScreen">
+    <div class="loading-text">TAP TO START</div>
+  </div>
+  
   <canvas id="gameCanvas"></canvas>
   <div class="ui-overlay">
     <div class="hud">
@@ -323,6 +364,7 @@
       <div class="stat-text gold-text">Gold: <span id="goldText">0</span></div>
       <div class="stat-text">Kills: <span id="killsText">0</span></div>
       <div class="stat-text" style="font-size: 12px; color: #AAA;">Time: <span id="timeText">0:00</span></div>
+      <div class="stat-text" id="dashIndicator" style="font-size: 12px; color: #5DADE2;">⚡ Dash Ready</div>
     </div>
 
     <div id="upgradeModal" class="modal" style="display: none;">
@@ -331,15 +373,17 @@
       <div class="upgrade-container" id="upgradeOptions"></div>
     </div>
 
-    <div id="startModal" class="modal">
+    <div id="startModal" class="modal" style="display: none;">
       <div class="menu-container">
         <div class="menu-title">💧 WATER DROP SURVIVOR 💧</div>
         <button id="startButton">START GAME</button>
         <div style="color: #CCC; text-align: center; margin-top: 10px; font-size: 14px;">
           <p>WASD / Arrow Keys - Move</p>
+          <p>Spacebar - Dash</p>
           <p>Mouse - Aim & Shoot</p>
           <p>Touch - Virtual Joysticks</p>
-          <p style="margin-top: 10px; color: #5DADE2;">High-Fidelity Pixel Art Edition</p>
+          <p>Swipe - Dash (Mobile)</p>
+          <p style="margin-top: 10px; color: #5DADE2;">Ultimate Pixel Art Edition</p>
         </div>
       </div>
     </div>
@@ -362,14 +406,19 @@
     // GAME CONFIGURATION
     // ============================================
     const CONFIG = {
-      CANVAS_WIDTH: 1280,
-      CANVAS_HEIGHT: 720,
-      MAP_SIZE: 8000,
-      PLAYER_SIZE: 24,
-      ENEMY_SIZE: 20,
+      // Canvas optimized for iPhone 16 portrait (390x844)
+      // Can be scaled to other devices via CSS in resizeCanvas()
+      CANVAS_WIDTH: 390,  
+      CANVAS_HEIGHT: 844,
+      MAP_SIZE: 1500,     // Smaller map to fit screen without scrolling
+      PLAYER_SIZE: 20,
+      ENEMY_SIZE: 16,
       PARTICLE_COUNT: 30,
       CAMERA_SMOOTH: 0.1,
-      AIM_OFFSET: 120,
+      AIM_OFFSET: 80,
+      DASH_COOLDOWN: 1.0, // Dash cooldown in seconds
+      DASH_SPEED: 500,    // Dash speed
+      DASH_DURATION: 0.2, // Dash duration in seconds
     };
 
     // Enemy type definitions
@@ -403,6 +452,7 @@
       vx: 0,
       vy: 0,
       angle: 0,
+      targetAngle: 0, // For smooth rotation animation
       hp: 100,
       maxHp: 100,
       level: 1,
@@ -437,6 +487,18 @@
       slowEndTime: 0,
       invulnerable: false,
       invulnerableUntil: 0,
+      
+      // Dash mechanics
+      isDashing: false,
+      dashTime: 0,
+      dashDx: 0,
+      dashDy: 0,
+      dashCooldownRemaining: 0,
+      
+      // Animation
+      wobblePhase: 0,
+      squishX: 1,
+      squishY: 1,
     };
 
     // Camera
@@ -475,8 +537,8 @@
 
     // Landmarks
     const landmarks = {
-      stonehenge: { x: 2000, y: 2000, radius: 400 },
-      pyramid: { x: 6000, y: 6000, width: 600, height: 600 }
+      stonehenge: { x: 400, y: 400, radius: 80 },
+      pyramid: { x: 1100, y: 1100, width: 120, height: 120 }
     };
 
     // Wave system
@@ -491,8 +553,29 @@
       resizeCanvas();
       window.addEventListener('resize', resizeCanvas);
       
+      // Handle loading screen
+      const loadingScreen = document.getElementById('loadingScreen');
+      const startModal = document.getElementById('startModal');
+      
+      loadingScreen.addEventListener('click', () => {
+        loadingScreen.classList.add('fade-out');
+        setTimeout(() => {
+          loadingScreen.style.display = 'none';
+          startModal.style.display = 'block';
+        }, 500);
+      });
+      
       // Keyboard
-      window.addEventListener('keydown', e => input.keys[e.key.toLowerCase()] = true);
+      window.addEventListener('keydown', e => {
+        input.keys[e.key.toLowerCase()] = true;
+        
+        // Dash on spacebar
+        if (e.key === ' ' && !player.isDashing && player.dashCooldownRemaining <= 0) {
+          if (input.moveX !== 0 || input.moveY !== 0) {
+            performDash(input.moveX, input.moveY);
+          }
+        }
+      });
       window.addEventListener('keyup', e => input.keys[e.key.toLowerCase()] = false);
       
       // Mouse
@@ -538,6 +621,50 @@
       const rightJoy = document.getElementById('rightJoystick');
       const leftStick = document.getElementById('leftStick');
       const rightStick = document.getElementById('rightStick');
+      
+      // Swipe detection for dash (on canvas)
+      let swipeStart = null;
+      canvas.addEventListener('touchstart', e => {
+        // Only track swipes outside joystick areas
+        const touch = e.touches[0];
+        const leftRect = leftJoy.getBoundingClientRect();
+        const rightRect = rightJoy.getBoundingClientRect();
+        
+        const inLeftJoy = touch.clientX >= leftRect.left && touch.clientX <= leftRect.right &&
+                         touch.clientY >= leftRect.top && touch.clientY <= leftRect.bottom;
+        const inRightJoy = touch.clientX >= rightRect.left && touch.clientX <= rightRect.right &&
+                          touch.clientY >= rightRect.top && touch.clientY <= rightRect.bottom;
+        
+        if (!inLeftJoy && !inRightJoy) {
+          swipeStart = { x: touch.clientX, y: touch.clientY, time: Date.now(), id: touch.identifier };
+        }
+      });
+      
+      canvas.addEventListener('touchend', e => {
+        if (swipeStart) {
+          let touch = null;
+          for (let i = 0; i < e.changedTouches.length; i++) {
+            if (e.changedTouches[i].identifier === swipeStart.id) {
+              touch = e.changedTouches[i];
+              break;
+            }
+          }
+          if (!touch) {
+            return;
+          }
+          const dx = touch.clientX - swipeStart.x;
+          const dy = touch.clientY - swipeStart.y;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+          const time = Date.now() - swipeStart.time;
+          
+          // Swipe threshold: 50px in less than 300ms
+          if (distance > 50 && time < 300) {
+            performDash(dx, dy);
+          }
+          
+          swipeStart = null;
+        }
+      });
 
       function handleJoystickStart(e, joy, isLeft) {
         e.preventDefault();
@@ -686,22 +813,71 @@
     }
 
     function updatePlayer(dt) {
-      // Movement with slow effect
-      const speedMult = player.slowed ? 0.5 : 1.0;
-      player.vx = input.moveX * player.speed * speedMult;
-      player.vy = input.moveY * player.speed * speedMult;
+      // Dash cooldown
+      if (player.dashCooldownRemaining > 0) {
+        player.dashCooldownRemaining -= dt;
+      }
       
-      player.x += player.vx;
-      player.y += player.vy;
+      // Dash logic
+      if (player.isDashing) {
+        player.dashTime -= dt;
+        
+        // Dash movement with sine curve for smooth acceleration/deceleration
+        const tRaw = 1 - (player.dashTime / CONFIG.DASH_DURATION);
+        const t = Math.max(0, Math.min(1, tRaw));
+        const dashSpeed = Math.sin(t * Math.PI) * CONFIG.DASH_SPEED;
+        
+        const dashStepX = player.dashDx * dashSpeed * dt;
+        const dashStepY = player.dashDy * dashSpeed * dt;
+        
+        player.x += dashStepX;
+        player.y += dashStepY;
+        
+        // Create dash trail particles
+        if (Math.random() < 0.3) {
+          createParticle(player.x, player.y, '#5DADE2', 8, dashStepX * 0.5, dashStepY * 0.5);
+        }
+        
+        if (player.dashTime <= 0) {
+          player.isDashing = false;
+        }
+      } else {
+        // Normal movement with slow effect
+        const speedMult = player.slowed ? 0.5 : 1.0;
+        player.vx = input.moveX * player.speed * speedMult;
+        player.vy = input.moveY * player.speed * speedMult;
+        
+        player.x += player.vx;
+        player.y += player.vy;
+      }
       
       // Map bounds
       player.x = Math.max(CONFIG.PLAYER_SIZE, Math.min(CONFIG.MAP_SIZE - CONFIG.PLAYER_SIZE, player.x));
       player.y = Math.max(CONFIG.PLAYER_SIZE, Math.min(CONFIG.MAP_SIZE - CONFIG.PLAYER_SIZE, player.y));
       
-      // Angle
+      // Smooth 360-degree rotation
       if (input.aimX !== 0 || input.aimY !== 0) {
-        player.angle = Math.atan2(input.aimY, input.aimX);
+        player.targetAngle = Math.atan2(input.aimY, input.aimX);
+      } else if (input.moveX !== 0 || input.moveY !== 0) {
+        player.targetAngle = Math.atan2(input.moveY, input.moveX);
       }
+      
+      // Smooth angle interpolation for 360-degree animation
+      let angleDiff = player.targetAngle - player.angle;
+      // Normalize to -PI to PI using modulo (more efficient than while loops)
+      angleDiff = ((angleDiff + Math.PI) % (Math.PI * 2)) - Math.PI;
+      if (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+      player.angle += angleDiff * 0.15; // Smooth rotation
+      
+      // Enhanced wobble animation based on movement
+      const moveSpeed = Math.sqrt(player.vx * player.vx + player.vy * player.vy);
+      player.wobblePhase += dt * (3 + moveSpeed * 0.5);
+      
+      // Squish effect based on movement (inertia)
+      const targetSquishX = 1 + Math.abs(player.vx) * 0.02;
+      const targetSquishY = 1 + Math.abs(player.vy) * 0.02;
+      player.squishX += (targetSquishX - player.squishX) * 0.1;
+      player.squishY += (targetSquishY - player.squishY) * 0.1;
       
       // Check slow effect expiration
       if (player.slowed && gameTime > player.slowEndTime) {
@@ -738,15 +914,13 @@
     }
 
     function updateCamera(dt) {
-      // Target includes aim offset
-      camera.targetX = player.x + input.aimX * CONFIG.AIM_OFFSET;
-      camera.targetY = player.y + input.aimY * CONFIG.AIM_OFFSET;
+      // Fixed camera centered on map - no movement
+      camera.x = CONFIG.MAP_SIZE / 2;
+      camera.y = CONFIG.MAP_SIZE / 2;
+      camera.targetX = camera.x;
+      camera.targetY = camera.y;
       
-      // Smooth follow
-      camera.x += (camera.targetX - camera.x) * CONFIG.CAMERA_SMOOTH;
-      camera.y += (camera.targetY - camera.y) * CONFIG.CAMERA_SMOOTH;
-      
-      // Screen shake
+      // Screen shake only
       if (camera.shake > 0) {
         camera.shake -= dt * 5;
         camera.shakeX = (Math.random() - 0.5) * camera.shake * 20;
@@ -1059,6 +1233,32 @@
       const seconds = Math.floor(gameTime % 60);
       alert(`Game Over!\nTime: ${minutes}:${seconds.toString().padStart(2, '0')}\nKills: ${player.kills}\nLevel: ${player.level}`);
       location.reload();
+    }
+
+    function performDash(dx, dy) {
+      if (player.isDashing || player.dashCooldownRemaining > 0) return;
+      
+      // Normalize direction (use epsilon for floating-point comparison)
+      const mag = Math.sqrt(dx * dx + dy * dy);
+      if (mag < 0.001) return; // Epsilon threshold for floating-point precision
+      
+      player.dashDx = dx / mag;
+      player.dashDy = dy / mag;
+      player.isDashing = true;
+      player.dashTime = CONFIG.DASH_DURATION;
+      player.dashCooldownRemaining = CONFIG.DASH_COOLDOWN;
+      
+      // Create dash particles
+      for (let i = 0; i < 10; i++) {
+        createParticle(
+          player.x + (Math.random() - 0.5) * 20,
+          player.y + (Math.random() - 0.5) * 20,
+          '#7EC8F5',
+          6,
+          (Math.random() - 0.5) * 2,
+          (Math.random() - 0.5) * 2
+        );
+      }
     }
 
     // ============================================
@@ -1387,35 +1587,66 @@
         }
       }
       
+      // Dash trail effect
+      if (player.isDashing) {
+        ctx.globalAlpha = 0.3;
+        for (let i = 1; i <= 3; i++) {
+          ctx.save();
+          ctx.translate(-player.dashDx * CONFIG.PLAYER_SIZE * i * 0.5, -player.dashDy * CONFIG.PLAYER_SIZE * i * 0.5);
+          ctx.scale(1 - i * 0.15, 1 - i * 0.15);
+          
+          const gradient = ctx.createRadialGradient(-5, -5, 0, 0, 0, CONFIG.PLAYER_SIZE);
+          gradient.addColorStop(0, '#7EC8F5');
+          gradient.addColorStop(1, '#4A90E2');
+          ctx.fillStyle = gradient;
+          ctx.beginPath();
+          ctx.arc(0, 0, CONFIG.PLAYER_SIZE, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+        ctx.globalAlpha = 1;
+      }
+      
+      // Enhanced wobble/squish effect
+      const wobbleAmount = Math.sin(player.wobblePhase) * 0.1;
+      ctx.scale(player.squishX + wobbleAmount, player.squishY - wobbleAmount);
+      
       // Shadow
       ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
       ctx.beginPath();
       ctx.ellipse(2, 2, CONFIG.PLAYER_SIZE * 0.8, CONFIG.PLAYER_SIZE * 0.6, 0, 0, Math.PI * 2);
       ctx.fill();
       
-      // Water drop body (gradient)
+      // Water drop body (gradient) with improved detail
       const gradient = ctx.createRadialGradient(-5, -5, 0, 0, 0, CONFIG.PLAYER_SIZE);
-      gradient.addColorStop(0, '#7EC8F5');
-      gradient.addColorStop(0.5, '#5DADE2');
-      gradient.addColorStop(1, '#4A90E2');
+      gradient.addColorStop(0, '#FFFFFF');  // White center for highlight
+      gradient.addColorStop(0.2, '#7EC8F5'); // Light blue
+      gradient.addColorStop(0.6, '#5DADE2'); // Medium blue
+      gradient.addColorStop(1, '#4A90E2');   // Dark blue edge
       
       ctx.fillStyle = gradient;
       ctx.beginPath();
       ctx.arc(0, 0, CONFIG.PLAYER_SIZE, 0, Math.PI * 2);
       ctx.fill();
       
-      // Highlight
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+      // Enhanced highlight/shine
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
       ctx.beginPath();
-      ctx.arc(-6, -6, 8, 0, Math.PI * 2);
+      ctx.arc(-6, -6, 6, 0, Math.PI * 2);
       ctx.fill();
       
-      // Direction indicator
+      // Secondary smaller highlight
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+      ctx.beginPath();
+      ctx.arc(-3, -10, 3, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Direction indicator (aiming line)
       ctx.strokeStyle = '#FFD700';
-      ctx.lineWidth = 3;
+      ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(0, 0);
-      ctx.lineTo(CONFIG.PLAYER_SIZE + 10, 0);
+      ctx.lineTo(CONFIG.PLAYER_SIZE + 8, 0);
       ctx.stroke();
       
       ctx.globalAlpha = 1; // Reset alpha
@@ -1585,6 +1816,19 @@
       
       document.getElementById('healthFill').style.width = (player.hp / player.maxHp * 100) + '%';
       document.getElementById('expFill').style.width = (player.xp / player.xpToLevel * 100) + '%';
+      
+      // Update dash indicator
+      const dashIndicator = document.getElementById('dashIndicator');
+      if (player.isDashing) {
+        dashIndicator.textContent = '⚡ Dashing!';
+        dashIndicator.style.color = '#FFD700';
+      } else if (player.dashCooldownRemaining > 0) {
+        dashIndicator.textContent = `⚡ Dash (${player.dashCooldownRemaining.toFixed(1)}s)`;
+        dashIndicator.style.color = '#888';
+      } else {
+        dashIndicator.textContent = '⚡ Dash Ready';
+        dashIndicator.style.color = '#5DADE2';
+      }
     }
 
     // ============================================
