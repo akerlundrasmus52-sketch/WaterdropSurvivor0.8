@@ -6099,6 +6099,9 @@ Total Gold Earned: ${saveData.totalGoldEarned}
       // This is a regular script (not type="module") that runs even if the module fails
       // It provides a fallback mechanism to show an error message if the game module doesn't load
       
+      // Timeout in milliseconds to wait for the module to load before showing error
+      const MODULE_LOAD_TIMEOUT_MS = 10000;
+      
       function showModuleLoadError() {
         // Only show error if loading screen is still visible and module didn't load
         const loadingScreen = document.getElementById('loading-screen');
@@ -6237,12 +6240,12 @@ Total Gold Earned: ${saveData.totalGoldEarned}
       // Wait for DOM to be ready
       if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', function() {
-          // Give the module 10 seconds to load after DOM is ready
-          setTimeout(checkModuleLoaded, 10000);
+          // Give the module time to load after DOM is ready
+          setTimeout(checkModuleLoaded, MODULE_LOAD_TIMEOUT_MS);
         });
       } else {
         // DOM already ready, start timeout immediately
-        setTimeout(checkModuleLoaded, 10000);
+        setTimeout(checkModuleLoaded, MODULE_LOAD_TIMEOUT_MS);
       }
     })();
   </script>
