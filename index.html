@@ -5192,26 +5192,8 @@
       let progress = 0;
       let hasCompleted = false;
       
-      // Extended loading duration: 20 iterations × 400ms = 8000ms (8 seconds total)
-      const interval = setInterval(() => {
-        progress += 5;
-        loadingBar.style.width = progress + '%';
-        
-        if (progress >= 100 && !hasCompleted) {
-          hasCompleted = true;
-          clearInterval(interval);
-          setTimeout(() => {
-            loadingScreen.classList.add('fade-out');
-            setTimeout(() => {
-              loadingScreen.style.display = 'none';
-              showMainMenu();
-            }, 500);
-          }, 600); // Extended delay before fade
-        }
-      }, 400); // Slower progress updates for longer duration
-      
-      // Fail-safe timeout: force hide loading screen after 12 seconds
-      setTimeout(() => {
+      // Complete loading and show main menu
+      const completeLoading = () => {
         if (!hasCompleted) {
           hasCompleted = true;
           clearInterval(interval);
@@ -5221,7 +5203,20 @@
             showMainMenu();
           }, 500);
         }
-      }, 12000);
+      };
+      
+      // Extended loading duration: 20 iterations × 400ms = 8000ms (8 seconds total)
+      const interval = setInterval(() => {
+        progress += 5;
+        loadingBar.style.width = progress + '%';
+        
+        if (progress >= 100) {
+          setTimeout(completeLoading, 600); // Extended delay before fade
+        }
+      }, 400); // Slower progress updates for longer duration
+      
+      // Fail-safe timeout: force hide loading screen after 12 seconds
+      setTimeout(completeLoading, 12000);
     }
     
     function showMainMenu() {
@@ -7848,8 +7843,7 @@
 
       // ALTERNATIVE FREEZE FIX: Fixed Timestep Accumulator (NOT using PR #60 delta clamping)
       // This prevents freeze by using consistent physics steps instead of clamping
-      // Compute frameTime defensively to handle first frame and prevent NaN
-      let frameTime = (lastTime > 0) ? (time - lastTime) / 1000 : 0;
+      let frameTime = (time - lastTime) / 1000;
       lastTime = time;
       
       // Cap frame time to prevent spiral of death
