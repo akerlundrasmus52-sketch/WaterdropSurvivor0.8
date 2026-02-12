@@ -1962,7 +1962,10 @@
         
         // Handle enemy projectiles separately
         if (this.isEnemyProjectile) {
-          this.mesh.position.add(this.direction.clone().multiplyScalar(this.speed));
+          const moveAmount = this.speed * dt * 60;
+        this.mesh.position.x += this.direction.x * moveAmount;
+        this.mesh.position.y += this.direction.y * moveAmount;
+        this.mesh.position.z += this.direction.z * moveAmount;
           this.lifetime--;
           
           if (this.lifetime <= 0) {
@@ -1983,8 +1986,8 @@
         }
         
         // Player projectiles
-        this.mesh.position.x += this.vx;
-        this.mesh.position.z += this.vz;
+        this.mesh.position.x += this.vx * dt * 60;
+        this.mesh.position.z += this.vz * dt * 60;
         this.life--;
 
         if (this.life <= 0) {
@@ -2111,8 +2114,8 @@
       update(dt = 1/60) {
         if (!this.active) return false;
         
-        this.mesh.position.y -= this.speed;
-        this.speed += 0.05; // Gravity
+        this.mesh.position.y -= this.speed * dt * 60;
+        this.speed += 0.05 * dt * 60; // Gravity
         
         if (this.mesh.position.y <= 0) {
           this.explode();
