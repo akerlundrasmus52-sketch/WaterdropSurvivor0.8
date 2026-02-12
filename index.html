@@ -1304,7 +1304,7 @@
     const GAME_CONFIG = {
       playerSpeedBase: 0.12, // Slower as requested
       enemySpeedBase: 0.05,  // Slower as requested
-      waveInterval: 300, // Frames between waves (approx 5s)
+      waveInterval: 240, // Reduced from 300 to 240 frames (4s instead of 5s) for higher difficulty
       expValue: 10,
       baseExpReq: 20,
       // Lake configuration - used for spawn avoidance
@@ -2368,8 +2368,8 @@
         let geometry;
         let color;
         
-        // Enemy scaling based on player level - NOT SPEED, just HP and DAMAGE
-        const levelScaling = 1 + (playerLevel - 1) * 0.10; // Reduced from 15% to 10% increase per level for better balance
+        // Enemy scaling based on player level - Increased for higher difficulty
+        const levelScaling = 1 + (playerLevel - 1) * 0.15; // Increased from 10% to 15% per level
         
         if (type === 0) {
           // Bacteria/Amoeba - Squishy organic blob shape
@@ -5519,10 +5519,10 @@
         return;
       }
       
-      // Scale spawn count with player level for increased difficulty - Rebalanced for better gameplay
-      const baseCount = 2 + Math.floor(waveCount / 4); // Reduced to make it less overwhelming
-      const levelBonus = Math.floor(playerStats.lvl / 6); // Slower scaling
-      const count = Math.min(baseCount + levelBonus, 10); // Lower cap at 10 enemies per wave
+      // Scale spawn count with player level for increased difficulty - Rebalanced for higher challenge
+      const baseCount = 3 + Math.floor(waveCount / 3); // Increased from 2 + waveCount/4
+      const levelBonus = Math.floor(playerStats.lvl / 4); // Faster scaling (was /6)
+      const count = Math.min(baseCount + levelBonus, 15); // Higher cap at 15 enemies per wave (was 10)
       
       for(let i=0; i<count; i++) {
         // Spawn at edge of camera view approx - avoid lake area
