@@ -275,6 +275,12 @@
       50% { box-shadow: 0 4px 8px rgba(0,0,0,0.3), 0 0 30px rgba(155,89,182,0.9); }
     }
 
+    /* ENHANCEMENT: Combo Glow Animation - Makes combo display pulse */
+    @keyframes comboGlow {
+      0% { transform: scale(1); text-shadow: 0 0 15px rgba(255,215,0,1), 0 0 25px rgba(255,215,0,0.8), 2px 2px 4px rgba(0,0,0,0.9); }
+      100% { transform: scale(1.05); text-shadow: 0 0 25px rgba(255,215,0,1), 0 0 35px rgba(255,215,0,1), 2px 2px 4px rgba(0,0,0,0.9); }
+    }
+
     /* Damage Numbers */
     .damage-number {
       position: absolute;
@@ -1046,6 +1052,12 @@
       <!-- Status Message Bar -->
       <div class="stat-text" id="status-message" style="color: #5DADE2; text-shadow: 0 0 8px rgba(93,173,226,0.8), 0 0 12px rgba(93,173,226,0.5), 1px 1px 2px rgba(0,0,0,0.5); font-size: 16px; min-height: 20px; margin-top: 5px;"></div>
       
+      <!-- ENHANCEMENT: Combo Display - Shows kill streak multiplier -->
+      <div id="combo-display" style="display: none; margin-top: 8px; padding: 8px 15px; background: linear-gradient(135deg, rgba(255,107,107,0.9), rgba(155,89,182,0.9)); border: 3px solid #FFD700; border-radius: 15px; box-shadow: 0 0 20px rgba(255,215,0,0.8), inset 0 0 15px rgba(0,0,0,0.3);">
+        <div class="stat-text" id="combo-text" style="color: #FFD700; text-shadow: 0 0 15px rgba(255,215,0,1), 0 0 25px rgba(255,215,0,0.8), 2px 2px 4px rgba(0,0,0,0.9); font-size: 22px; font-weight: 900; letter-spacing: 2px; animation: comboGlow 0.8s infinite alternate;">0x COMBO!</div>
+        <div class="stat-text" id="combo-bonus-text" style="color: #FFF; text-shadow: 0 0 8px rgba(255,255,255,0.8), 1px 1px 3px rgba(0,0,0,0.8); font-size: 14px; margin-top: 2px;">+0% Damage & Gold</div>
+      </div>
+      
       <!-- Windmill Quest UI -->
       <div id="windmill-quest-ui" style="display: none; margin-top: 10px;">
         <div class="bar-container" style="border-color: #8B4513;">
@@ -1508,7 +1520,19 @@
       thornsPercent: 0,
       hasBerserkerRage: false,
       treasureHunterChance: 0,
-      doubleCritChance: 0
+      doubleCritChance: 0,
+      // ENHANCEMENT: Combo System - Tracks consecutive kills for multiplier bonuses
+      comboCount: 0,
+      comboMultiplier: 1.0,
+      comboTimer: 0,
+      maxCombo: 0,
+      // ENHANCEMENT: Streak System - Tracks crit streaks and perfect dodges
+      critStreak: 0,
+      dodgeStreak: 0,
+      // ENHANCEMENT: Achievement tracking
+      bossesKilled: 0,
+      totalCrits: 0,
+      perfectRuns: 0 // Runs with no damage taken
     };
 
     // Weapons State
@@ -2782,9 +2806,60 @@
         } else {
           goldAmount = 1 + Math.floor(Math.random() * 2); // 1-2 gold (reduced from 2-3)
         }
+        
+        // ENHANCEMENT: Apply combo multiplier to gold drops
+        goldAmount = Math.floor(goldAmount * playerStats.comboMultiplier);
         spawnGold(this.mesh.position.x, this.mesh.position.z, goldAmount);
         
+        // ENHANCEMENT: Combo System - Track consecutive kills and apply multipliers
         playerStats.kills++;
+        playerStats.comboCount++;
+        playerStats.comboTimer = 3000; // 3 seconds to maintain combo
+        
+        // Calculate combo multiplier (increases every 5 kills, caps at 5x)
+        const previousMultiplier = playerStats.comboMultiplier;
+        playerStats.comboMultiplier = 1.0 + Math.min(Math.floor(playerStats.comboCount / 5) * 0.25, 1.0);
+        
+        // Update max combo achieved
+        if (playerStats.comboCount > playerStats.maxCombo) {
+          playerStats.maxCombo = playerStats.comboCount;
+        }
+        
+        // ENHANCEMENT: Track boss kills for achievements
+        if (this.isMiniBoss) {
+          playerStats.bossesKilled++;
+        }
+        
+        // Show combo display if combo >= 3
+        if (playerStats.comboCount >= 3) {
+          const comboDisplay = document.getElementById('combo-display');
+          const comboText = document.getElementById('combo-text');
+          const comboBonusText = document.getElementById('combo-bonus-text');
+          
+          if (comboDisplay && comboText && comboBonusText) {
+            comboDisplay.style.display = 'block';
+            comboText.innerText = `${playerStats.comboCount}x COMBO!`;
+            
+            const bonusPercent = Math.floor((playerStats.comboMultiplier - 1) * 100);
+            comboBonusText.innerText = `+${bonusPercent}% Damage & Gold`;
+            
+            // Special message for milestone combos
+            if (playerStats.comboCount === 10) {
+              createFloatingText("10-KILL COMBO! 🔥", player.mesh.position);
+              playSound('levelup');
+            } else if (playerStats.comboCount === 25) {
+              createFloatingText("25-KILL RAMPAGE! ⚡", player.mesh.position);
+              playSound('levelup');
+            } else if (playerStats.comboCount === 50) {
+              createFloatingText("50-KILL UNSTOPPABLE! 💥", player.mesh.position);
+              playSound('levelup');
+            } else if (playerStats.comboCount % 100 === 0) {
+              createFloatingText(`${playerStats.comboCount}-KILL GODLIKE! 🌟`, player.mesh.position);
+              playSound('levelup');
+            }
+          }
+        }
+        
         updateHUD();
         checkAchievements(); // Check for achievements after kill
       }
@@ -2873,16 +2948,26 @@
           const dx = this.mesh.position.x - enemy.mesh.position.x;
           const dz = this.mesh.position.z - enemy.mesh.position.z;
           if (dx*dx + dz*dz < 0.6) { // Hit radius
-            // Calculate Damage
-            let dmg = weapons.gun.damage * playerStats.damage * playerStats.strength;
+            // Calculate Damage - ENHANCEMENT: Apply combo multiplier for increased damage
+            let dmg = weapons.gun.damage * playerStats.damage * playerStats.strength * playerStats.comboMultiplier;
             
             // Double barrel uses its own damage
             if (weapons.doubleBarrel.active && this.isDoubleBarrel) {
-              dmg = weapons.doubleBarrel.damage * playerStats.damage * playerStats.strength;
+              dmg = weapons.doubleBarrel.damage * playerStats.damage * playerStats.strength * playerStats.comboMultiplier;
             }
             
             const isCrit = Math.random() < playerStats.critChance;
-            if (isCrit) dmg *= playerStats.critDmg;
+            if (isCrit) {
+              dmg *= playerStats.critDmg;
+              // ENHANCEMENT: Track crit streaks for achievements
+              playerStats.critStreak++;
+              playerStats.totalCrits++;
+              if (playerStats.critStreak === 5) {
+                createFloatingText("5 CRITS IN A ROW! 🎯", player.mesh.position);
+              }
+            } else {
+              playerStats.critStreak = 0;
+            }
             
             enemy.takeDamage(Math.floor(dmg), isCrit, this.mesh.position);
             
@@ -2931,8 +3016,8 @@
         this.life = 10; // frames
         this.maxLife = 10;
         
-        // Deal damage immediately
-        const dmg = weapons.sword.damage * playerStats.strength * playerStats.damage;
+        // Deal damage immediately - ENHANCEMENT: Apply combo multiplier
+        const dmg = weapons.sword.damage * playerStats.strength * playerStats.damage * playerStats.comboMultiplier;
         
         enemies.forEach(e => {
           const dx = e.mesh.position.x - x;
@@ -7330,6 +7415,27 @@
         updateHUD();
         // Green particle
         spawnParticles(player.mesh.position, 0x00FF00, 2);
+      }
+
+      // ENHANCEMENT: Combo Timer - Decrease combo timer and reset combo if expired
+      if (playerStats.comboTimer > 0) {
+        playerStats.comboTimer -= dt * 1000; // Convert dt to milliseconds
+        
+        if (playerStats.comboTimer <= 0) {
+          // Combo expired, reset
+          if (playerStats.comboCount >= 3) {
+            // Show combo lost message for significant combos
+            createFloatingText(`Combo Lost: ${playerStats.comboCount}x`, player.mesh.position);
+          }
+          playerStats.comboCount = 0;
+          playerStats.comboMultiplier = 1.0;
+          
+          // Hide combo display
+          const comboDisplay = document.getElementById('combo-display');
+          if (comboDisplay) {
+            comboDisplay.style.display = 'none';
+          }
+        }
       }
 
       // Player Update
