@@ -28,7 +28,8 @@
       image-rendering: -webkit-crisp-edges;
       image-rendering: pixelated;
       image-rendering: crisp-edges;
-      background: #16213e;
+      background: #0f1f2e;
+      box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.5);
     }
 
     .ui-overlay {
@@ -47,18 +48,24 @@
       left: 10px;
       color: #FFD700;
       font-size: 14px;
-      text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+      text-shadow: 2px 2px 0px rgba(0,0,0,0.8), 0 0 5px rgba(255, 215, 0, 0.5);
       pointer-events: none;
       line-height: 1.6;
+      background: rgba(15, 31, 46, 0.7);
+      padding: 10px;
+      border: 2px solid #FFD700;
+      border-radius: 0px;
     }
 
     .health-bar {
       width: 200px;
       height: 20px;
-      background: #333;
-      border: 2px solid #FFD700;
+      background: #0f1f2e;
+      border: 3px solid #FFD700;
+      border-radius: 0px;
       margin: 5px 0;
       position: relative;
+      box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5), 0 0 10px rgba(255, 215, 0, 0.3);
     }
 
     .health-fill {
@@ -70,10 +77,12 @@
     .exp-bar {
       width: 200px;
       height: 15px;
-      background: #333;
-      border: 2px solid #FFA500;
+      background: #0f1f2e;
+      border: 3px solid #FFA500;
+      border-radius: 0px;
       margin: 5px 0;
       position: relative;
+      box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5), 0 0 10px rgba(255, 165, 0, 0.3);
     }
 
     .exp-fill {
@@ -87,9 +96,9 @@
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      background: rgba(26, 26, 46, 0.95);
-      border: 3px solid #FFD700;
-      border-radius: 10px;
+      background: rgba(15, 31, 46, 0.95);
+      border: 4px solid #FFD700;
+      border-radius: 0px;
       padding: 20px;
       color: #FFD700;
       pointer-events: auto;
@@ -98,6 +107,8 @@
       max-height: 80%;
       overflow-y: auto;
       z-index: 100;
+      box-shadow: 0 0 20px rgba(255, 215, 0, 0.5), inset 0 0 10px rgba(0, 0, 0, 0.5);
+      image-rendering: pixelated;
     }
 
     .modal.active {
@@ -111,18 +122,20 @@
     }
 
     .upgrade-option {
-      background: rgba(93, 173, 226, 0.2);
-      border: 2px solid #5DADE2;
-      border-radius: 5px;
+      background: rgba(26, 58, 46, 0.8);
+      border: 3px solid #5DADE2;
+      border-radius: 0px;
       padding: 15px;
       margin: 10px 0;
       cursor: pointer;
       transition: all 0.2s;
+      box-shadow: 0 0 10px rgba(93, 173, 226, 0.3);
     }
 
     .upgrade-option:hover {
       background: rgba(93, 173, 226, 0.4);
       transform: scale(1.02);
+      box-shadow: 0 0 20px rgba(93, 173, 226, 0.6);
     }
 
     .upgrade-option h3 {
@@ -137,8 +150,8 @@
 
     .button {
       background: #5DADE2;
-      border: 2px solid #FFD700;
-      border-radius: 5px;
+      border: 3px solid #FFD700;
+      border-radius: 0px;
       padding: 10px 20px;
       color: #1a1a2e;
       font-weight: bold;
@@ -146,11 +159,19 @@
       margin: 5px;
       pointer-events: auto;
       transition: all 0.2s;
+      box-shadow: 0 4px 0 #3498DB, 0 0 10px rgba(255, 215, 0, 0.3);
+      text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.5);
     }
 
     .button:hover {
       background: #FFD700;
-      transform: scale(1.05);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 0 #FFA500, 0 0 20px rgba(255, 215, 0, 0.6);
+    }
+
+    .button:active {
+      transform: translateY(2px);
+      box-shadow: 0 2px 0 #3498DB, 0 0 10px rgba(255, 215, 0, 0.3);
     }
 
     .joystick {
@@ -204,15 +225,29 @@
       position: absolute;
       top: 10px;
       right: 10px;
-      background: rgba(93, 173, 226, 0.8);
-      border: 2px solid #FFD700;
-      border-radius: 5px;
+      background: rgba(93, 173, 226, 0.9);
+      border: 3px solid #FFD700;
+      border-radius: 0px;
       padding: 10px 15px;
       color: #1a1a2e;
       font-weight: bold;
       cursor: pointer;
       pointer-events: auto;
       z-index: 50;
+      box-shadow: 0 4px 0 #3498DB, 0 0 10px rgba(255, 215, 0, 0.5);
+      text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.3);
+      transition: all 0.1s;
+    }
+    
+    .menu-button:hover {
+      background: rgba(255, 215, 0, 0.9);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 0 #FFA500, 0 0 20px rgba(255, 215, 0, 0.7);
+    }
+    
+    .menu-button:active {
+      transform: translateY(2px);
+      box-shadow: 0 2px 0 #3498DB, 0 0 10px rgba(255, 215, 0, 0.5);
     }
 
     .shop-item {
@@ -244,9 +279,205 @@
       background: #666;
       cursor: not-allowed;
     }
+
+    /* Pixel Art Load Screen */
+    #loadScreen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(180deg, #0f1f2e 0%, #1a3a2e 50%, #0f1f2e 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 10000;
+      transition: opacity 0.5s ease-out;
+    }
+
+    #loadScreen.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .load-title {
+      font-size: 48px;
+      font-weight: bold;
+      color: #5DADE2;
+      text-shadow: 4px 4px 0 #2574A9, 0 0 20px rgba(93, 173, 226, 0.8);
+      margin-bottom: 30px;
+      animation: titlePulse 2s ease-in-out infinite;
+    }
+
+    @keyframes titlePulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+
+    .load-water-drop {
+      width: 80px;
+      height: 100px;
+      margin-bottom: 40px;
+      position: relative;
+    }
+
+    .load-water-drop::before {
+      content: '';
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: #5DADE2;
+      clip-path: polygon(50% 0%, 80% 30%, 80% 70%, 50% 100%, 20% 70%, 20% 30%);
+      animation: dropFloat 2s ease-in-out infinite;
+      box-shadow: 0 0 30px rgba(93, 173, 226, 0.6);
+    }
+
+    @keyframes dropFloat {
+      0%, 100% { transform: translateY(0) scale(1); }
+      50% { transform: translateY(-10px) scale(1.05); }
+    }
+
+    .loading-bar-container {
+      width: 300px;
+      height: 30px;
+      background: #0f1f2e;
+      border: 4px solid #FFD700;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 0 20px rgba(255, 215, 0, 0.5), inset 0 0 10px rgba(0, 0, 0, 0.5);
+    }
+
+    .loading-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #5DADE2, #FFD700, #FFA500);
+      width: 0%;
+      transition: width 0.3s ease;
+      box-shadow: 0 0 20px rgba(255, 215, 0, 0.8);
+      animation: shimmer 2s linear infinite;
+    }
+
+    @keyframes shimmer {
+      0% { filter: brightness(1); }
+      50% { filter: brightness(1.3); }
+      100% { filter: brightness(1); }
+    }
+
+    .load-text {
+      margin-top: 20px;
+      color: #FFD700;
+      font-size: 18px;
+      text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.8);
+    }
+
+    /* Pixel Art Main Menu */
+    #mainMenu {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(180deg, #0f1f2e 0%, #1a3a2e 50%, #0f1f2e 100%);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+
+    #mainMenu.active {
+      display: flex;
+    }
+
+    .menu-title {
+      font-size: 64px;
+      font-weight: bold;
+      color: #5DADE2;
+      text-shadow: 6px 6px 0 #2574A9, 0 0 30px rgba(93, 173, 226, 0.8);
+      margin-bottom: 20px;
+      animation: titlePulse 2s ease-in-out infinite;
+    }
+
+    .menu-subtitle {
+      font-size: 24px;
+      color: #FFD700;
+      text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.8);
+      margin-bottom: 50px;
+    }
+
+    .menu-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .menu-btn {
+      background: #5DADE2;
+      border: 4px solid #FFD700;
+      padding: 15px 40px;
+      font-size: 24px;
+      font-weight: bold;
+      color: #1a1a2e;
+      cursor: pointer;
+      box-shadow: 0 6px 0 #3498DB, 0 0 20px rgba(255, 215, 0, 0.5);
+      text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.3);
+      transition: all 0.1s;
+      min-width: 250px;
+    }
+
+    .menu-btn:hover {
+      background: #FFD700;
+      transform: translateY(-3px);
+      box-shadow: 0 9px 0 #FFA500, 0 0 30px rgba(255, 215, 0, 0.8);
+    }
+
+    .menu-btn:active {
+      transform: translateY(3px);
+      box-shadow: 0 3px 0 #3498DB, 0 0 20px rgba(255, 215, 0, 0.5);
+    }
+
+    .menu-water-drop {
+      width: 120px;
+      height: 150px;
+      margin-bottom: 40px;
+      position: relative;
+    }
+
+    .menu-water-drop::before {
+      content: '';
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: #5DADE2;
+      clip-path: polygon(50% 0%, 80% 30%, 80% 70%, 50% 100%, 20% 70%, 20% 30%);
+      animation: dropFloat 2s ease-in-out infinite;
+      box-shadow: 0 0 40px rgba(93, 173, 226, 0.8);
+    }
   </style>
 </head>
 <body>
+  <!-- Pixel Art Load Screen -->
+  <div id="loadScreen">
+    <div class="load-title">💧 WATER DROP SURVIVOR 💧</div>
+    <div class="load-water-drop"></div>
+    <div class="loading-bar-container">
+      <div class="loading-bar" id="loadingBar"></div>
+    </div>
+    <div class="load-text">Loading pixel art assets...</div>
+  </div>
+
+  <!-- Pixel Art Main Menu -->
+  <div id="mainMenu">
+    <div class="menu-water-drop"></div>
+    <div class="menu-title">💧 WATER DROP SURVIVOR 💧</div>
+    <div class="menu-subtitle">Pixel Art Edition</div>
+    <div class="menu-buttons">
+      <button class="menu-btn" id="startGameBtn">▶ START GAME</button>
+      <button class="menu-btn" id="continueGameBtn" style="display: none;">↻ CONTINUE</button>
+      <button class="menu-btn" id="menuAchievementsBtn">🏆 ACHIEVEMENTS</button>
+    </div>
+  </div>
+
   <canvas id="gameCanvas"></canvas>
   
   <div class="ui-overlay">
@@ -281,6 +512,7 @@
       <button class="button" id="achievementsBtn">Achievements</button>
       <button class="button" id="saveBtn">Save Game</button>
       <button class="button" id="loadBtn">Load Game</button>
+      <button class="button" id="mainMenuBtnFromPause">Main Menu</button>
       <button class="button" id="restartBtn">Restart</button>
     </div>
 
@@ -312,6 +544,66 @@
   </div>
 
   <script>
+    // === LOAD SCREEN AND MENU MANAGEMENT ===
+    let gameStarted = false;
+    const loadScreen = document.getElementById('loadScreen');
+    const mainMenu = document.getElementById('mainMenu');
+    const loadingBar = document.getElementById('loadingBar');
+    const canvas = document.getElementById('gameCanvas');
+    
+    // Simulate loading with progress bar
+    let loadProgress = 0;
+    const loadInterval = setInterval(() => {
+      loadProgress += Math.random() * 15 + 5;
+      if (loadProgress >= 100) {
+        loadProgress = 100;
+        loadingBar.style.width = '100%';
+        clearInterval(loadInterval);
+        setTimeout(() => {
+          loadScreen.classList.add('hidden');
+          setTimeout(() => {
+            loadScreen.style.display = 'none';
+            showMainMenu();
+          }, 500);
+        }, 500);
+      } else {
+        loadingBar.style.width = loadProgress + '%';
+      }
+    }, 100);
+    
+    function showMainMenu() {
+      mainMenu.classList.add('active');
+      canvas.style.display = 'none';
+      document.querySelector('.ui-overlay').style.display = 'none';
+    }
+    
+    function hideMainMenu() {
+      mainMenu.classList.remove('active');
+      canvas.style.display = 'block';
+      document.querySelector('.ui-overlay').style.display = 'block';
+    }
+    
+    // Menu button handlers
+    document.getElementById('startGameBtn').addEventListener('click', () => {
+      hideMainMenu();
+      if (!gameStarted) {
+        gameStarted = true;
+        startGame();
+      } else {
+        startNewGame();
+      }
+    });
+    
+    document.getElementById('continueGameBtn').addEventListener('click', () => {
+      hideMainMenu();
+      gameState.paused = false;
+    });
+    
+    document.getElementById('menuAchievementsBtn').addEventListener('click', () => {
+      document.getElementById('achievementsModal').classList.add('active');
+      showAchievements();
+    });
+    
     // === GAME CONSTANTS ===
     const COLORS = {
       blue: '#5DADE2',
@@ -329,7 +621,6 @@
     const MAP_WIDTH = 3000;
     const MAP_HEIGHT = 3000;
 
-    const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     
     function resizeCanvas() {
@@ -360,7 +651,7 @@
 
     // === GAME DATA ===
     let gameState = {
-      paused: false,
+      paused: true,  // Start paused until menu selection
       gameOver: false,
       victory: false,
       player: {
@@ -991,6 +1282,17 @@
       
       drawGrid();
       
+      // Ambient floating particles (dust, light motes)
+      for (let i = 0; i < 20; i++) {
+        const px = ((gameState.camera.x + i * 40 + gameTime * 10) % MAP_WIDTH) - gameState.camera.x;
+        const py = ((gameState.camera.y + i * 30 + Math.sin(gameTime + i) * 20) % MAP_HEIGHT) - gameState.camera.y;
+        
+        if (px >= 0 && px < CANVAS_WIDTH && py >= 0 && py < CANVAS_HEIGHT) {
+          ctx.fillStyle = 'rgba(173, 216, 230, 0.3)';
+          ctx.fillRect(px, py, 2, 2);
+        }
+      }
+      
       gameState.expOrbs.forEach(orb => {
         const screenX = orb.x - gameState.camera.x;
         const screenY = orb.y - gameState.camera.y;
@@ -1014,8 +1316,17 @@
         const screenX = proj.x - gameState.camera.x;
         const screenY = proj.y - gameState.camera.y;
         
+        // Pixel art projectile with glow
         ctx.fillStyle = COLORS.orange;
         ctx.fillRect(screenX - proj.size / 2, screenY - proj.size / 2, proj.size, proj.size);
+        
+        // Add glow trail
+        ctx.fillStyle = 'rgba(255, 165, 0, 0.5)';
+        ctx.fillRect(screenX - proj.size, screenY - proj.size, proj.size * 2, proj.size * 2);
+        
+        // Core bright pixel
+        ctx.fillStyle = '#FFFF00';
+        ctx.fillRect(screenX - 1, screenY - 1, 2, 2);
       });
       
       gameState.enemies.forEach(enemy => {
@@ -1041,6 +1352,15 @@
       
       const playerScreenX = gameState.player.x - gameState.camera.x;
       const playerScreenY = gameState.player.y - gameState.camera.y;
+      
+      // Draw player lighting aura
+      const lightRadius = 80;
+      for (let r = lightRadius; r > 0; r -= 10) {
+        const alpha = (1 - r / lightRadius) * 0.15;
+        ctx.fillStyle = `rgba(93, 173, 226, ${alpha})`;
+        ctx.fillRect(playerScreenX - r, playerScreenY - r, r * 2, r * 2);
+      }
+      
       drawPlayer(playerScreenX, playerScreenY);
       
       gameState.player.weapons.forEach(weapon => {
@@ -1061,7 +1381,34 @@
       const startX = Math.floor(gameState.camera.x / gridSize) * gridSize;
       const startY = Math.floor(gameState.camera.y / gridSize) * gridSize;
       
-      ctx.strokeStyle = 'rgba(93, 173, 226, 0.1)';
+      // Draw pixel art tiles
+      const tileSize = 16;
+      for (let x = startX; x < gameState.camera.x + CANVAS_WIDTH; x += tileSize) {
+        for (let y = startY; y < gameState.camera.y + CANVAS_HEIGHT; y += tileSize) {
+          const screenX = x - gameState.camera.x;
+          const screenY = y - gameState.camera.y;
+          
+          // Create pixel art grass tile effect
+          const baseColor = '#1a3a2e';
+          const darkColor = '#0f2419';
+          const lightColor = '#234d37';
+          
+          // Pseudo-random pattern based on position
+          const pattern = ((x / tileSize + y / tileSize) % 3);
+          
+          ctx.fillStyle = pattern === 0 ? darkColor : (pattern === 1 ? baseColor : lightColor);
+          ctx.fillRect(screenX, screenY, tileSize, tileSize);
+          
+          // Add pixel detail
+          if ((x + y) % 32 === 0) {
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+            ctx.fillRect(screenX + 6, screenY + 6, 4, 4);
+          }
+        }
+      }
+      
+      // Grid lines (subtle)
+      ctx.strokeStyle = 'rgba(93, 173, 226, 0.05)';
       ctx.lineWidth = 1;
       
       for (let x = startX; x < gameState.camera.x + CANVAS_WIDTH; x += gridSize) {
@@ -1083,63 +1430,153 @@
 
     function drawPlayer(x, y) {
       const size = gameState.player.size;
+      const pixelSize = 2; // Pixel block size
       
-      ctx.fillStyle = COLORS.blue;
-      ctx.beginPath();
-      ctx.arc(x, y + size / 4, size / 2, 0, Math.PI * 2);
-      ctx.fill();
+      // Draw shadow (pixel art)
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+      ctx.fillRect(x - size/2 + 2, y + size/2, size, 4);
       
-      ctx.beginPath();
-      ctx.moveTo(x, y - size / 2);
-      ctx.lineTo(x - size / 2, y + size / 4);
-      ctx.arc(x, y + size / 4, size / 2, Math.PI, 0);
-      ctx.lineTo(x, y - size / 2);
-      ctx.fill();
+      // Pixel art water drop body - main blue
+      ctx.fillStyle = '#3498DB';
+      ctx.fillRect(x - 6, y - 8, 12, 16);
+      ctx.fillRect(x - 8, y - 4, 4, 8);
+      ctx.fillRect(x + 4, y - 4, 4, 8);
+      ctx.fillRect(x - 4, y + 8, 8, 4);
       
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-      ctx.beginPath();
-      ctx.arc(x - size / 4, y, size / 4, 0, Math.PI * 2);
-      ctx.fill();
+      // Darker blue outline/shading
+      ctx.fillStyle = '#2574A9';
+      ctx.fillRect(x + 4, y - 4, 2, 8);
+      ctx.fillRect(x - 4, y + 4, 8, 2);
+      
+      // Light blue highlights
+      ctx.fillStyle = '#5DADE2';
+      ctx.fillRect(x - 6, y - 8, 6, 4);
+      ctx.fillRect(x - 8, y - 4, 2, 4);
+      
+      // White shine/reflection (pixel art style)
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+      ctx.fillRect(x - 4, y - 6, 4, 4);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+      ctx.fillRect(x - 2, y - 4, 2, 2);
+      
+      // Glow effect (pixelated)
+      if (gameTime % 2 < 1) {
+        ctx.fillStyle = 'rgba(93, 173, 226, 0.2)';
+        ctx.fillRect(x - 10, y - 10, 20, 20);
+      }
     }
 
     function drawEnemy(x, y, enemy) {
       const size = enemy.size;
       
+      // Shadow
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+      ctx.fillRect(x - size + 2, y + size, size * 2, 3);
+      
       if (enemy.type === 'square' || enemy.isBoss) {
-        ctx.fillStyle = enemy.isBoss ? COLORS.orange : COLORS.brown;
+        const mainColor = enemy.isBoss ? '#FF8C00' : '#654321';
+        const darkColor = enemy.isBoss ? '#CC7000' : '#4A3216';
+        const lightColor = enemy.isBoss ? '#FFA500' : '#8B6331';
+        
+        // Pixel art square body
+        ctx.fillStyle = mainColor;
         ctx.fillRect(x - size, y - size, size * 2, size * 2);
+        
+        // Shading
+        ctx.fillStyle = darkColor;
+        ctx.fillRect(x + size/2, y - size, size/2, size * 2);
+        ctx.fillRect(x - size, y + size/2, size * 2, size/2);
+        
+        // Highlights
+        ctx.fillStyle = lightColor;
+        ctx.fillRect(x - size, y - size, size/2, size/2);
+        
+        // Eyes (pixel art)
+        ctx.fillStyle = '#FF0000';
+        ctx.fillRect(x - size/2, y - size/4, 3, 3);
+        ctx.fillRect(x + size/4, y - size/4, 3, 3);
+        
+        // Glow for boss
+        if (enemy.isBoss) {
+          ctx.fillStyle = 'rgba(255, 165, 0, 0.3)';
+          ctx.fillRect(x - size - 4, y - size - 4, size * 2 + 8, size * 2 + 8);
+        }
       } else if (enemy.type === 'triangle') {
-        ctx.fillStyle = COLORS.brown;
-        ctx.beginPath();
-        ctx.moveTo(x, y - size);
-        ctx.lineTo(x + size, y + size);
-        ctx.lineTo(x - size, y + size);
-        ctx.closePath();
-        ctx.fill();
+        const mainColor = '#654321';
+        const darkColor = '#4A3216';
+        
+        // Pixel art triangle
+        ctx.fillStyle = mainColor;
+        for (let i = 0; i < size * 2; i++) {
+          const w = (size * 2) - i;
+          ctx.fillRect(x - w/2, y - size + i, w, 1);
+        }
+        
+        // Shading
+        ctx.fillStyle = darkColor;
+        for (let i = size; i < size * 2; i++) {
+          const w = (size * 2) - i;
+          ctx.fillRect(x - w/2, y - size + i, w/2, 1);
+        }
+        
+        // Eyes
+        ctx.fillStyle = '#FF0000';
+        ctx.fillRect(x - 4, y - 2, 2, 2);
+        ctx.fillRect(x + 2, y - 2, 2, 2);
       } else if (enemy.type === 'round') {
-        ctx.fillStyle = COLORS.brown;
-        ctx.beginPath();
-        ctx.arc(x, y, size, 0, Math.PI * 2);
-        ctx.fill();
+        const mainColor = '#654321';
+        const darkColor = '#4A3216';
+        const lightColor = '#8B6331';
+        
+        // Pixel art circle using rectangles
+        ctx.fillStyle = mainColor;
+        ctx.fillRect(x - size/2, y - size, size, size * 2);
+        ctx.fillRect(x - size, y - size/2, size * 2, size);
+        ctx.fillRect(x - size * 0.7, y - size * 0.7, size * 1.4, size * 1.4);
+        
+        // Shading
+        ctx.fillStyle = darkColor;
+        ctx.fillRect(x + size/4, y - size/2, size/2, size);
+        ctx.fillRect(x, y + size/4, size, size/2);
+        
+        // Highlight
+        ctx.fillStyle = lightColor;
+        ctx.fillRect(x - size/2, y - size/2, size/3, size/3);
+        
+        // Eyes
+        ctx.fillStyle = '#FF0000';
+        ctx.fillRect(x - size/3, y - size/6, 2, 2);
+        ctx.fillRect(x + size/6, y - size/6, 2, 2);
       }
     }
 
     function drawStar(x, y, size, points, color) {
+      // Pixel art star
       ctx.fillStyle = color;
-      ctx.beginPath();
-      for (let i = 0; i < points * 2; i++) {
-        const angle = (Math.PI * i) / points;
-        const radius = i % 2 === 0 ? size : size / 2;
-        const px = x + Math.cos(angle - Math.PI / 2) * radius;
-        const py = y + Math.sin(angle - Math.PI / 2) * radius;
-        if (i === 0) {
-          ctx.moveTo(px, py);
-        } else {
-          ctx.lineTo(px, py);
-        }
+      
+      // Center diamond
+      ctx.fillRect(x - size/2, y - 2, size, 4);
+      ctx.fillRect(x - 2, y - size/2, 4, size);
+      
+      // Corners
+      ctx.fillRect(x - size/3, y - size/3, size * 2/3, size * 2/3);
+      
+      // Glow effect
+      ctx.fillStyle = 'rgba(255, 215, 0, 0.3)';
+      ctx.fillRect(x - size, y - size, size * 2, size * 2);
+      
+      // Bright center
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(x - 2, y - 2, 4, 4);
+      
+      // Animated sparkle
+      if (Math.floor(gameTime * 3) % 2 === 0) {
+        ctx.fillStyle = color;
+        ctx.fillRect(x - size - 2, y - 1, 2, 2);
+        ctx.fillRect(x + size, y - 1, 2, 2);
+        ctx.fillRect(x - 1, y - size - 2, 2, 2);
+        ctx.fillRect(x - 1, y + size, 2, 2);
       }
-      ctx.closePath();
-      ctx.fill();
     }
 
     function createParticle(x, y, vx, vy, color, life) {
@@ -1423,6 +1860,12 @@
     };
     document.getElementById('saveBtn').onclick = saveGame;
     document.getElementById('loadBtn').onclick = loadGame;
+    document.getElementById('mainMenuBtnFromPause').onclick = () => {
+      hideAllModals();
+      gameState.paused = true;
+      showMainMenu();
+      document.getElementById('continueGameBtn').style.display = 'block';
+    };
     document.getElementById('restartBtn').onclick = () => {
       if (confirm('Restart game? Progress will be lost.')) {
         initGame();
@@ -1473,7 +1916,16 @@
       render();
     }
 
-    initGame();
+    // Start animation loop but don't init game yet (wait for menu)
+    function startGame() {
+      initGame();
+    }
+    
+    function startNewGame() {
+      initGame();
+      document.getElementById('continueGameBtn').style.display = 'block';
+    }
+    
     requestAnimationFrame(animate);
   </script>
 </body>
