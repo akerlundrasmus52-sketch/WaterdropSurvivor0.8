@@ -1129,6 +1129,17 @@
     // Deferred disposal queue for Three.js memory management (PR #81)
     const disposalQueue = [];
     const MAX_DISPOSALS_PER_FRAME = 10;
+
+    // Countdown System (replaces direct game start)
+    let countdownActive = false;
+    let countdownStep = 0;
+    let countdownTimer = 0;
+    const countdownMessages = [
+      "Good luck!",
+      "3",
+      "2",
+      "1"
+    ];
     let frameCount = 0;
     let isPaused = false;
     let isGameOver = false;
@@ -3335,6 +3346,7 @@
         playSound('levelup');
         hideMainMenu();
         resetGame();
+        startCountdown(); // Start countdown after resetting game
       };
       
       document.getElementById('progression-btn').onclick = () => {
@@ -3437,6 +3449,53 @@
         }
         count++;
       }
+    }
+
+
+    function startCountdown() {
+      countdownActive = true;
+      countdownStep = 0;
+      countdownTimer = 0;
+      showCountdownMessage(0);
+    }
+
+    function showCountdownMessage(step) {
+      if (step >= countdownMessages.length) {
+        endCountdown();
+        return;
+      }
+      
+      const countdownText = document.getElementById('tutorial-text');
+      countdownText.textContent = countdownMessages[step];
+      countdownText.style.opacity = '1';
+      countdownText.style.fontSize = step === 0 ? '48px' : '96px'; // Larger for countdown numbers
+      
+      // Duration based on step: "Good luck!" = 1.5s, numbers = 1s each
+      const duration = step === 0 ? 1500 : 1000;
+      
+      setTimeout(() => {
+        countdownText.style.opacity = '0';
+        setTimeout(() => {
+          countdownStep++;
+          if (countdownStep < countdownMessages.length) {
+            showCountdownMessage(countdownStep);
+          } else {
+            endCountdown();
+          }
+        }, 300);
+      }, duration);
+    }
+
+    function endCountdown() {
+      countdownActive = false;
+      const countdownText = document.getElementById('tutorial-text');
+      countdownText.style.opacity = '0';
+      countdownText.style.fontSize = '36px'; // Reset to default
+      
+      // Ensure game is properly active and not frozen (PR #28 fix)
+      isPaused = false;
+      isGameActive = true;
+      gameStartTime = Date.now(); // Reset game start time
     }
 
     function spawnParticles(pos, color, count) {
@@ -4879,6 +4938,13 @@ Total Gold Earned: ${saveData.totalGoldEarned}
       const dt = (time - lastTime) / 1000;
       lastTime = time;
       gameTime = time / 1000; // Update game time in seconds
+
+      // Handle countdown sequence
+      if (countdownActive) {
+        // During countdown, still render but don't update game logic
+        renderer.render(scene, camera);
+        return;
+      }
 
       if (isPaused || isGameOver || !isGameActive) {
         // Still render the scene so visual effects (camera shake, particles, and modals) are visible
