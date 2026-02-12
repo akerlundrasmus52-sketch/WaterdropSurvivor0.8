@@ -686,11 +686,14 @@
       particles: [],
       expOrbs: [],
       miniBosses: [],
+      decals: [],
       camera: { x: 0, y: 0 },
       keys: {},
       joystick: { active: false, x: 0, y: 0 },
       shopPurchases: {},
-      achievements: []
+      achievements: [],
+      screenFlash: null,
+      cameraShake: null
     };
 
     const WEAPON_TYPES = {
@@ -885,6 +888,9 @@
       gameState.particles = [];
       gameState.expOrbs = [];
       gameState.miniBosses = [];
+      gameState.decals = [];
+      gameState.screenFlash = null;
+      gameState.cameraShake = null;
       gameState.paused = false;
       gameState.gameOver = false;
       gameState.victory = false;
@@ -942,6 +948,14 @@
       
       const delta = deltaTime / 1000;
       gameTime += delta;
+      
+      // Update screen effects
+      if (gameState.screenFlash && gameState.screenFlash.time < gameState.screenFlash.duration) {
+        gameState.screenFlash.time += delta;
+      }
+      if (gameState.cameraShake && gameState.cameraShake.time < gameState.cameraShake.duration) {
+        gameState.cameraShake.time += delta;
+      }
       
       const minutes = Math.floor(gameTime / 60);
       const seconds = Math.floor(gameTime % 60);
@@ -1105,6 +1119,12 @@
 
     function calculateDamage(baseDamage) {
       const isCrit = Math.random() < gameState.player.critChance;
+      if (isCrit) {
+        // Screen flash on crit
+        gameState.screenFlash = { intensity: 0.4, duration: 0.15, time: 0 };
+        // Camera shake on crit
+        gameState.cameraShake = { intensity: 8, duration: 0.2, time: 0 };
+      }
       return baseDamage * (isCrit ? gameState.player.critDamage : 1);
     }
 
@@ -1116,7 +1136,40 @@
         gameState.player.health = Math.min(gameState.player.maxHealth, gameState.player.health + heal);
       }
       
+      // Enhanced damage particles
+      const isBigHit = damage > 30;
       createDamageParticle(enemy.x, enemy.y, Math.floor(damage));
+      
+      // Blood splatter effect
+      const particleCount = isBigHit ? 12 : 6;
+      for (let i = 0; i < particleCount; i++) {
+        const angle = (Math.PI * 2 * i) / particleCount + Math.random() * 0.5;
+        const speed = 50 + Math.random() * 50;
+        createParticle(
+          enemy.x,
+          enemy.y,
+          Math.cos(angle) * speed,
+          Math.sin(angle) * speed,
+          enemy.isBoss ? '#FF6B35' : '#8B0000',
+          0.8
+        );
+      }
+      
+      // Create blood decal (persistent particle)
+      if (Math.random() < 0.5) {
+        gameState.decals = gameState.decals || [];
+        gameState.decals.push({
+          x: enemy.x + (Math.random() - 0.5) * enemy.size,
+          y: enemy.y + (Math.random() - 0.5) * enemy.size,
+          size: 3 + Math.random() * 4,
+          alpha: 0.6,
+          color: '#4A0000'
+        });
+        // Limit decals to prevent performance issues
+        if (gameState.decals.length > 100) {
+          gameState.decals.shift();
+        }
+      }
       
       if (enemy.health <= 0) {
         killEnemy(enemy);
@@ -1277,19 +1330,57 @@
     }
 
     function render() {
-      ctx.fillStyle = COLORS.bg2;
+      // Apply camera shake
+      let shakeX = 0;
+      let shakeY = 0;
+      if (gameState.cameraShake && gameState.cameraShake.time < gameState.cameraShake.duration) {
+        const progress = gameState.cameraShake.time / gameState.cameraShake.duration;
+        const intensity = gameState.cameraShake.intensity * (1 - progress);
+        shakeX = (Math.random() - 0.5) * intensity * 2;
+        shakeY = (Math.random() - 0.5) * intensity * 2;
+      }
+      
+      // Fill with darker background for atmosphere
+      ctx.fillStyle = '#0a0f14';
       ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+      
+      // Save context for shake
+      ctx.save();
+      ctx.translate(shakeX, shakeY);
       
       drawGrid();
       
-      // Ambient floating particles (dust, light motes)
-      for (let i = 0; i < 20; i++) {
+      // Draw blood decals (persistent impacts)
+      if (gameState.decals) {
+        gameState.decals.forEach(decal => {
+          const screenX = decal.x - gameState.camera.x;
+          const screenY = decal.y - gameState.camera.y;
+          
+          if (screenX >= -20 && screenX <= CANVAS_WIDTH + 20 && screenY >= -20 && screenY <= CANVAS_HEIGHT + 20) {
+            ctx.globalAlpha = decal.alpha;
+            ctx.fillStyle = decal.color;
+            
+            // Irregular blood splatter shape
+            ctx.fillRect(screenX - decal.size/2, screenY - decal.size/2, decal.size, decal.size);
+            ctx.fillRect(screenX - decal.size/3, screenY - decal.size/2 - 1, decal.size * 0.6, decal.size + 2);
+            ctx.fillRect(screenX - decal.size/2 - 1, screenY - decal.size/3, decal.size + 2, decal.size * 0.6);
+            
+            ctx.globalAlpha = 1;
+          }
+        });
+      }
+      
+      // Enhanced ambient floating particles (dust, light motes, fireflies)
+      for (let i = 0; i < 30; i++) {
         const px = ((gameState.camera.x + i * 40 + gameTime * 10) % MAP_WIDTH) - gameState.camera.x;
         const py = ((gameState.camera.y + i * 30 + Math.sin(gameTime + i) * 20) % MAP_HEIGHT) - gameState.camera.y;
         
         if (px >= 0 && px < CANVAS_WIDTH && py >= 0 && py < CANVAS_HEIGHT) {
-          ctx.fillStyle = 'rgba(173, 216, 230, 0.3)';
-          ctx.fillRect(px, py, 2, 2);
+          const pulse = Math.sin(gameTime * 2 + i) * 0.5 + 0.5;
+          ctx.fillStyle = `rgba(173, 216, 230, ${pulse * 0.4})`;
+          ctx.fillRect(px - 1, py - 1, 3, 3);
+          ctx.fillStyle = `rgba(255, 255, 255, ${pulse * 0.6})`;
+          ctx.fillRect(px, py, 1, 1);
         }
       }
       
@@ -1299,6 +1390,14 @@
         
         if (screenX < -50 || screenX > CANVAS_WIDTH + 50 || screenY < -50 || screenY > CANVAS_HEIGHT + 50) return;
         
+        // Add light glow around exp orbs
+        const glowSize = 30;
+        for (let r = glowSize; r > 0; r -= 5) {
+          const alpha = (1 - r / glowSize) * 0.1;
+          ctx.fillStyle = `rgba(255, 215, 0, ${alpha})`;
+          ctx.fillRect(screenX - r, screenY - r, r * 2, r * 2);
+        }
+        
         drawStar(screenX, screenY, orb.size, 8, COLORS.gold);
       });
       
@@ -1306,247 +1405,492 @@
         const screenX = particle.x - gameState.camera.x;
         const screenY = particle.y - gameState.camera.y;
         
-        ctx.globalAlpha = particle.life / particle.maxLife;
+        const alpha = particle.life / particle.maxLife;
+        ctx.globalAlpha = alpha;
+        
+        // Enhanced particles with glow
         ctx.fillStyle = particle.color;
+        ctx.fillRect(screenX - 3, screenY - 3, 6, 6);
         ctx.fillRect(screenX - 2, screenY - 2, 4, 4);
+        
+        // Particle light
+        if (particle.color.includes('255')) {
+          ctx.fillStyle = `rgba(255, 200, 100, ${alpha * 0.3})`;
+          ctx.fillRect(screenX - 6, screenY - 6, 12, 12);
+        }
+        
         ctx.globalAlpha = 1;
       });
       
+      // Draw projectiles with enhanced lighting
       gameState.projectiles.forEach(proj => {
         const screenX = proj.x - gameState.camera.x;
         const screenY = proj.y - gameState.camera.y;
         
-        // Pixel art projectile with glow
+        // Projectile light emission
+        const projLightRadius = 40;
+        for (let r = projLightRadius; r > 0; r -= 8) {
+          const alpha = (1 - r / projLightRadius) * 0.2;
+          ctx.fillStyle = `rgba(255, 165, 0, ${alpha})`;
+          ctx.fillRect(screenX - r, screenY - r, r * 2, r * 2);
+        }
+        
+        // Enhanced projectile with multiple layers
+        ctx.fillStyle = '#804000';
+        ctx.fillRect(screenX - proj.size, screenY - proj.size, proj.size * 2, proj.size * 2);
+        
         ctx.fillStyle = COLORS.orange;
         ctx.fillRect(screenX - proj.size / 2, screenY - proj.size / 2, proj.size, proj.size);
         
-        // Add glow trail
-        ctx.fillStyle = 'rgba(255, 165, 0, 0.5)';
-        ctx.fillRect(screenX - proj.size, screenY - proj.size, proj.size * 2, proj.size * 2);
-        
-        // Core bright pixel
+        // Bright core
         ctx.fillStyle = '#FFFF00';
+        ctx.fillRect(screenX - 2, screenY - 2, 4, 4);
+        ctx.fillStyle = '#FFFFFF';
         ctx.fillRect(screenX - 1, screenY - 1, 2, 2);
+        
+        // Trail effect
+        ctx.fillStyle = 'rgba(255, 165, 0, 0.4)';
+        ctx.fillRect(screenX - proj.size - 3, screenY - proj.size - 3, proj.size * 2 + 6, proj.size * 2 + 6);
       });
       
+      // Draw enemies with enhanced lighting effects
       gameState.enemies.forEach(enemy => {
         const screenX = enemy.x - gameState.camera.x;
         const screenY = enemy.y - gameState.camera.y;
         
         if (screenX < -100 || screenX > CANVAS_WIDTH + 100 || screenY < -100 || screenY > CANVAS_HEIGHT + 100) return;
         
+        // Enemy light emission (bosses and certain types)
+        if (enemy.isBoss) {
+          const enemyLightRadius = 60;
+          for (let r = enemyLightRadius; r > 0; r -= 10) {
+            const alpha = (1 - r / enemyLightRadius) * 0.15;
+            ctx.fillStyle = `rgba(255, 140, 0, ${alpha})`;
+            ctx.fillRect(screenX - r, screenY - r, r * 2, r * 2);
+          }
+        }
+        
         drawEnemy(screenX, screenY, enemy);
         
+        // Enhanced health bar with glow
         if (enemy.health < enemy.maxHealth) {
           const barWidth = enemy.size * 2;
           const barHeight = 4;
           const healthPercent = enemy.health / enemy.maxHealth;
           
-          ctx.fillStyle = COLORS.black;
+          // Bar background with border
+          ctx.fillStyle = '#000000';
+          ctx.fillRect(screenX - barWidth / 2 - 1, screenY - enemy.size - 11, barWidth + 2, barHeight + 2);
+          
+          ctx.fillStyle = '#1a1a1a';
           ctx.fillRect(screenX - barWidth / 2, screenY - enemy.size - 10, barWidth, barHeight);
           
-          ctx.fillStyle = enemy.isBoss ? COLORS.orange : COLORS.blue;
+          // Health fill with gradient effect
+          const healthColor = enemy.isBoss ? COLORS.orange : COLORS.blue;
+          ctx.fillStyle = healthColor;
           ctx.fillRect(screenX - barWidth / 2, screenY - enemy.size - 10, barWidth * healthPercent, barHeight);
+          
+          // Bright overlay on health bar
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+          ctx.fillRect(screenX - barWidth / 2, screenY - enemy.size - 10, barWidth * healthPercent, 1);
         }
       });
       
       const playerScreenX = gameState.player.x - gameState.camera.x;
       const playerScreenY = gameState.player.y - gameState.camera.y;
       
-      // Draw player lighting aura
-      const lightRadius = 80;
-      for (let r = lightRadius; r > 0; r -= 10) {
-        const alpha = (1 - r / lightRadius) * 0.15;
-        ctx.fillStyle = `rgba(93, 173, 226, ${alpha})`;
+      // Enhanced player lighting aura (multi-layer)
+      const lightRadius = 120;
+      for (let r = lightRadius; r > 0; r -= 15) {
+        const alpha = (1 - r / lightRadius) * 0.25;
+        const pulse = Math.sin(gameTime * 2) * 0.05 + 0.95;
+        ctx.fillStyle = `rgba(93, 173, 226, ${alpha * pulse})`;
+        ctx.fillRect(playerScreenX - r, playerScreenY - r, r * 2, r * 2);
+      }
+      
+      // Inner bright light
+      for (let r = 40; r > 0; r -= 8) {
+        const alpha = (1 - r / 40) * 0.3;
+        ctx.fillStyle = `rgba(173, 216, 230, ${alpha})`;
         ctx.fillRect(playerScreenX - r, playerScreenY - r, r * 2, r * 2);
       }
       
       drawPlayer(playerScreenX, playerScreenY);
       
+      // Enhanced weapon aura effect
       gameState.player.weapons.forEach(weapon => {
         if (weapon.type === 'aura') {
+          const auraPulse = Math.sin(gameTime * 4) * 0.3 + 0.7;
+          
+          // Outer glow
+          ctx.fillStyle = `rgba(93, 173, 226, ${auraPulse * 0.15})`;
+          ctx.fillRect(playerScreenX - weapon.range - 10, playerScreenY - weapon.range - 10, 
+                       (weapon.range + 10) * 2, (weapon.range + 10) * 2);
+          
+          // Inner glow
+          ctx.fillStyle = `rgba(93, 173, 226, ${auraPulse * 0.25})`;
+          ctx.fillRect(playerScreenX - weapon.range, playerScreenY - weapon.range, 
+                       weapon.range * 2, weapon.range * 2);
+          
+          // Aura ring
           ctx.strokeStyle = COLORS.blue;
-          ctx.lineWidth = 2;
-          ctx.globalAlpha = 0.3;
+          ctx.lineWidth = 3;
+          ctx.globalAlpha = auraPulse * 0.5;
           ctx.beginPath();
           ctx.arc(playerScreenX, playerScreenY, weapon.range, 0, Math.PI * 2);
           ctx.stroke();
           ctx.globalAlpha = 1;
         }
       });
+      
+      // Restore context after shake
+      ctx.restore();
+      
+      // Apply darkness overlay for atmospheric effect
+      ctx.fillStyle = 'rgba(10, 15, 20, 0.3)';
+      ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+      
+      // Screen flash effect on crit
+      if (gameState.screenFlash && gameState.screenFlash.time < gameState.screenFlash.duration) {
+        const progress = gameState.screenFlash.time / gameState.screenFlash.duration;
+        const alpha = gameState.screenFlash.intensity * (1 - progress);
+        ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+        ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+      }
     }
 
     function drawGrid() {
-      const gridSize = 50;
-      const startX = Math.floor(gameState.camera.x / gridSize) * gridSize;
-      const startY = Math.floor(gameState.camera.y / gridSize) * gridSize;
-      
-      // Draw pixel art tiles
       const tileSize = 16;
+      const startX = Math.floor(gameState.camera.x / tileSize) * tileSize;
+      const startY = Math.floor(gameState.camera.y / tileSize) * tileSize;
+      
+      // Draw enhanced pixel art tiles with variation
       for (let x = startX; x < gameState.camera.x + CANVAS_WIDTH; x += tileSize) {
         for (let y = startY; y < gameState.camera.y + CANVAS_HEIGHT; y += tileSize) {
           const screenX = x - gameState.camera.x;
           const screenY = y - gameState.camera.y;
           
-          // Create pixel art grass tile effect
-          const baseColor = '#1a3a2e';
-          const darkColor = '#0f2419';
-          const lightColor = '#234d37';
+          // Pseudo-random seed based on position
+          const seed = Math.abs(Math.sin(x * 0.01) * Math.cos(y * 0.01) * 1000);
+          const variant = Math.floor(seed % 10);
           
-          // Pseudo-random pattern based on position
-          const pattern = ((x / tileSize + y / tileSize) % 3);
+          // Base terrain colors with more variety
+          const darkGreen = '#0f2419';
+          const baseGreen = '#1a3a2e';
+          const midGreen = '#1e4530';
+          const lightGreen = '#234d37';
+          const veryLightGreen = '#2a5940';
           
-          ctx.fillStyle = pattern === 0 ? darkColor : (pattern === 1 ? baseColor : lightColor);
+          // Choose base color with weighted randomness
+          let baseColor;
+          if (variant < 4) baseColor = baseGreen;
+          else if (variant < 7) baseColor = midGreen;
+          else if (variant < 9) baseColor = lightGreen;
+          else baseColor = darkGreen;
+          
+          // Draw base tile
+          ctx.fillStyle = baseColor;
           ctx.fillRect(screenX, screenY, tileSize, tileSize);
           
-          // Add pixel detail
-          if ((x + y) % 32 === 0) {
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
-            ctx.fillRect(screenX + 6, screenY + 6, 4, 4);
+          // Add organic texture detail
+          if (variant === 0 || variant === 3) {
+            // Grass tuft detail
+            ctx.fillStyle = veryLightGreen;
+            ctx.fillRect(screenX + 2, screenY + 4, 2, 3);
+            ctx.fillRect(screenX + 7, screenY + 8, 2, 3);
+            ctx.fillRect(screenX + 11, screenY + 2, 2, 4);
+          } else if (variant === 1 || variant === 5) {
+            // Stone/pebble detail
+            ctx.fillStyle = '#3a3a3a';
+            ctx.fillRect(screenX + 5, screenY + 6, 3, 3);
+            ctx.fillRect(screenX + 4, screenY + 7, 1, 1);
+            ctx.fillRect(screenX + 8, screenY + 7, 1, 1);
+            
+            ctx.fillStyle = '#4a4a4a';
+            ctx.fillRect(screenX + 5, screenY + 6, 2, 2);
+          } else if (variant === 2) {
+            // Crack pattern
+            ctx.fillStyle = darkGreen;
+            ctx.fillRect(screenX + 3, screenY + 8, 8, 1);
+            ctx.fillRect(screenX + 6, screenY + 7, 1, 3);
+          } else if (variant === 6) {
+            // Moss patch
+            ctx.fillStyle = lightGreen;
+            ctx.fillRect(screenX + 4, screenY + 4, 6, 6);
+            ctx.fillStyle = veryLightGreen;
+            ctx.fillRect(screenX + 5, screenY + 5, 4, 4);
+          } else if (variant === 8) {
+            // Water reflection/puddle
+            ctx.fillStyle = '#1a3d5c';
+            ctx.fillRect(screenX + 3, screenY + 5, 8, 5);
+            ctx.fillStyle = 'rgba(93, 173, 226, 0.3)';
+            ctx.fillRect(screenX + 4, screenY + 6, 6, 2);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.fillRect(screenX + 5, screenY + 6, 2, 1);
+          }
+          
+          // Add subtle noise texture to all tiles
+          if (variant % 2 === 0) {
+            const noiseX = (seed * 7) % tileSize;
+            const noiseY = (seed * 11) % tileSize;
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+            ctx.fillRect(screenX + noiseX, screenY + noiseY, 1, 1);
+          }
+          
+          // Random dark spots for depth
+          if (variant === 4 || variant === 7) {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+            ctx.fillRect(screenX + 2, screenY + 2, 2, 2);
+            ctx.fillRect(screenX + 10, screenY + 11, 2, 2);
           }
         }
-      }
-      
-      // Grid lines (subtle)
-      ctx.strokeStyle = 'rgba(93, 173, 226, 0.05)';
-      ctx.lineWidth = 1;
-      
-      for (let x = startX; x < gameState.camera.x + CANVAS_WIDTH; x += gridSize) {
-        const screenX = x - gameState.camera.x;
-        ctx.beginPath();
-        ctx.moveTo(screenX, 0);
-        ctx.lineTo(screenX, CANVAS_HEIGHT);
-        ctx.stroke();
-      }
-      
-      for (let y = startY; y < gameState.camera.y + CANVAS_HEIGHT; y += gridSize) {
-        const screenY = y - gameState.camera.y;
-        ctx.beginPath();
-        ctx.moveTo(0, screenY);
-        ctx.lineTo(CANVAS_WIDTH, screenY);
-        ctx.stroke();
       }
     }
 
     function drawPlayer(x, y) {
       const size = gameState.player.size;
-      const pixelSize = 2; // Pixel block size
       
-      // Draw shadow (pixel art)
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-      ctx.fillRect(x - size/2 + 2, y + size/2, size, 4);
+      // Wobble animation for soft-body physics
+      const wobbleX = Math.sin(gameTime * 8) * 1.5;
+      const wobbleY = Math.cos(gameTime * 8) * 1.5;
+      const squishX = 1 + Math.sin(gameTime * 6) * 0.08;
+      const squishY = 1 - Math.sin(gameTime * 6) * 0.08;
       
-      // Pixel art water drop body - main blue
+      // Draw shadow (soft, elliptical)
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+      ctx.fillRect(x - size/2 + 2, y + size/2 + 2, size * 1.2, 5);
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+      ctx.fillRect(x - size/2, y + size/2 + 1, size * 1.2 + 4, 6);
+      
+      // Water drop base (volumetric, multi-layer)
+      // Darkest layer (depth)
+      ctx.fillStyle = '#1B5E8F';
+      const s1 = size * squishX;
+      const s2 = size * squishY;
+      ctx.fillRect(x - s1 * 0.55 + wobbleX * 0.3, y - s2 * 0.5, s1 * 1.1, s2 * 1.2);
+      ctx.fillRect(x - s1 * 0.7 + wobbleX * 0.3, y - s2 * 0.2, s1 * 0.3, s2 * 0.6);
+      ctx.fillRect(x + s1 * 0.4 + wobbleX * 0.3, y - s2 * 0.2, s1 * 0.3, s2 * 0.6);
+      
+      // Mid tone (main body)
+      ctx.fillStyle = '#2E7CB5';
+      ctx.fillRect(x - s1 * 0.5 + wobbleX * 0.5, y - s2 * 0.45, s1, s2 * 1.1);
+      ctx.fillRect(x - s1 * 0.65 + wobbleX * 0.5, y - s2 * 0.15, s1 * 0.25, s2 * 0.5);
+      ctx.fillRect(x + s1 * 0.4 + wobbleX * 0.5, y - s2 * 0.15, s1 * 0.25, s2 * 0.5);
+      ctx.fillRect(x - s1 * 0.35 + wobbleX * 0.5, y + s2 * 0.5, s1 * 0.7, s2 * 0.3);
+      
+      // Bright blue (light side)
       ctx.fillStyle = '#3498DB';
-      ctx.fillRect(x - 6, y - 8, 12, 16);
-      ctx.fillRect(x - 8, y - 4, 4, 8);
-      ctx.fillRect(x + 4, y - 4, 4, 8);
-      ctx.fillRect(x - 4, y + 8, 8, 4);
+      ctx.fillRect(x - s1 * 0.45 + wobbleX, y - s2 * 0.4, s1 * 0.9, s2);
+      ctx.fillRect(x - s1 * 0.6 + wobbleX, y - s2 * 0.1, s1 * 0.2, s2 * 0.4);
+      ctx.fillRect(x + s1 * 0.4 + wobbleX, y - s2 * 0.1, s1 * 0.2, s2 * 0.4);
       
-      // Darker blue outline/shading
-      ctx.fillStyle = '#2574A9';
-      ctx.fillRect(x + 4, y - 4, 2, 8);
-      ctx.fillRect(x - 4, y + 4, 8, 2);
-      
-      // Light blue highlights
+      // Highlights (lighter blue)
       ctx.fillStyle = '#5DADE2';
-      ctx.fillRect(x - 6, y - 8, 6, 4);
-      ctx.fillRect(x - 8, y - 4, 2, 4);
+      ctx.fillRect(x - s1 * 0.4 + wobbleX, y - s2 * 0.35, s1 * 0.5, s2 * 0.4);
+      ctx.fillRect(x - s1 * 0.55 + wobbleX, y - s2 * 0.05, s1 * 0.15, s2 * 0.25);
+      ctx.fillRect(x - s1 * 0.25 + wobbleX, y + s2 * 0.3, s1 * 0.5, s2 * 0.2);
       
-      // White shine/reflection (pixel art style)
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-      ctx.fillRect(x - 4, y - 6, 4, 4);
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
-      ctx.fillRect(x - 2, y - 4, 2, 2);
+      // Specular highlights (white shine)
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+      ctx.fillRect(x - s1 * 0.3 + wobbleX * 1.2, y - s2 * 0.25, s1 * 0.25, s2 * 0.25);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+      ctx.fillRect(x - s1 * 0.25 + wobbleX * 1.2, y - s2 * 0.2, s1 * 0.15, s2 * 0.15);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+      ctx.fillRect(x - s1 * 0.2 + wobbleX * 1.2, y - s2 * 0.15, s1 * 0.1, s2 * 0.1);
       
-      // Glow effect (pixelated)
-      if (gameTime % 2 < 1) {
-        ctx.fillStyle = 'rgba(93, 173, 226, 0.2)';
-        ctx.fillRect(x - 10, y - 10, 20, 20);
-      }
+      // Secondary highlight
+      ctx.fillStyle = 'rgba(173, 216, 230, 0.6)';
+      ctx.fillRect(x - s1 * 0.5 + wobbleX * 0.8, y + s2 * 0.1, s1 * 0.2, s2 * 0.15);
+      
+      // Rim lighting (edge glow)
+      ctx.fillStyle = 'rgba(93, 173, 226, 0.3)';
+      ctx.fillRect(x - s1 * 0.75, y - s2 * 0.5, s1 * 0.1, s2 * 1.2);
+      ctx.fillRect(x + s1 * 0.65, y - s2 * 0.5, s1 * 0.1, s2 * 1.2);
+      
+      // Animated shimmer effect
+      const shimmer = Math.sin(gameTime * 4) * 0.5 + 0.5;
+      ctx.fillStyle = `rgba(255, 255, 255, ${shimmer * 0.3})`;
+      ctx.fillRect(x - s1 * 0.15 + wobbleX * 1.5, y - s2 * 0.1, s1 * 0.1, s2 * 0.2);
     }
 
     function drawEnemy(x, y, enemy) {
       const size = enemy.size;
+      const breathe = Math.sin(gameTime * 3 + enemy.x) * 0.05 + 1;
       
-      // Shadow
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-      ctx.fillRect(x - size + 2, y + size, size * 2, 3);
+      // Enhanced shadow with softness
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+      ctx.fillRect(x - size * 1.1, y + size * 0.9, size * 2.2, 4);
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+      ctx.fillRect(x - size * 1.2, y + size * 0.85, size * 2.4, 6);
       
       if (enemy.type === 'square' || enemy.isBoss) {
         const mainColor = enemy.isBoss ? '#FF8C00' : '#654321';
-        const darkColor = enemy.isBoss ? '#CC7000' : '#4A3216';
+        const darkColor = enemy.isBoss ? '#B35900' : '#3A1F0F';
+        const midColor = enemy.isBoss ? '#CC7000' : '#4A3216';
         const lightColor = enemy.isBoss ? '#FFA500' : '#8B6331';
+        const highlightColor = enemy.isBoss ? '#FFD700' : '#A67C52';
         
-        // Pixel art square body
-        ctx.fillStyle = mainColor;
-        ctx.fillRect(x - size, y - size, size * 2, size * 2);
+        const s = size * breathe;
         
-        // Shading
+        // Darkest outline/depth
         ctx.fillStyle = darkColor;
-        ctx.fillRect(x + size/2, y - size, size/2, size * 2);
-        ctx.fillRect(x - size, y + size/2, size * 2, size/2);
+        ctx.fillRect(x - s * 1.05, y - s * 1.05, s * 2.1, s * 2.1);
         
-        // Highlights
+        // Main body with texture
+        ctx.fillStyle = mainColor;
+        ctx.fillRect(x - s, y - s, s * 2, s * 2);
+        
+        // Add texture pattern
+        ctx.fillStyle = midColor;
+        for (let i = 0; i < 3; i++) {
+          for (let j = 0; j < 3; j++) {
+            if ((i + j) % 2 === 0) {
+              ctx.fillRect(x - s + i * s * 0.6, y - s + j * s * 0.6, s * 0.4, s * 0.4);
+            }
+          }
+        }
+        
+        // Deep shadow (right and bottom)
+        ctx.fillStyle = darkColor;
+        ctx.fillRect(x + s * 0.6, y - s, s * 0.4, s * 2);
+        ctx.fillRect(x - s, y + s * 0.6, s * 2, s * 0.4);
+        
+        // Mid shadow
+        ctx.fillStyle = midColor;
+        ctx.fillRect(x + s * 0.3, y - s, s * 0.3, s * 2);
+        ctx.fillRect(x - s, y + s * 0.3, s * 2, s * 0.3);
+        
+        // Highlights (top-left)
         ctx.fillStyle = lightColor;
-        ctx.fillRect(x - size, y - size, size/2, size/2);
+        ctx.fillRect(x - s, y - s, s * 0.6, s * 0.6);
+        ctx.fillRect(x - s * 0.7, y - s * 0.7, s * 0.3, s * 1.4);
+        ctx.fillRect(x - s * 0.7, y - s * 0.7, s * 1.4, s * 0.3);
         
-        // Eyes (pixel art)
+        // Bright specular highlight
+        ctx.fillStyle = highlightColor;
+        ctx.fillRect(x - s * 0.8, y - s * 0.8, s * 0.3, s * 0.3);
+        
+        // Eyes with glow
+        ctx.fillStyle = '#330000';
+        ctx.fillRect(x - s * 0.5, y - s * 0.25, s * 0.25, s * 0.3);
+        ctx.fillRect(x + s * 0.25, y - s * 0.25, s * 0.25, s * 0.3);
+        
         ctx.fillStyle = '#FF0000';
-        ctx.fillRect(x - size/2, y - size/4, 3, 3);
-        ctx.fillRect(x + size/4, y - size/4, 3, 3);
+        ctx.fillRect(x - s * 0.45, y - s * 0.2, s * 0.15, s * 0.2);
+        ctx.fillRect(x + s * 0.3, y - s * 0.2, s * 0.15, s * 0.2);
         
-        // Glow for boss
+        ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
+        ctx.fillRect(x - s * 0.5, y - s * 0.25, s * 0.3, s * 0.35);
+        ctx.fillRect(x + s * 0.2, y - s * 0.25, s * 0.3, s * 0.35);
+        
+        // Boss special effects
         if (enemy.isBoss) {
-          ctx.fillStyle = 'rgba(255, 165, 0, 0.3)';
-          ctx.fillRect(x - size - 4, y - size - 4, size * 2 + 8, size * 2 + 8);
+          const pulse = Math.sin(gameTime * 5) * 0.3 + 0.7;
+          ctx.fillStyle = `rgba(255, 140, 0, ${pulse * 0.3})`;
+          ctx.fillRect(x - s * 1.2, y - s * 1.2, s * 2.4, s * 2.4);
+          ctx.fillStyle = `rgba(255, 165, 0, ${pulse * 0.2})`;
+          ctx.fillRect(x - s * 1.4, y - s * 1.4, s * 2.8, s * 2.8);
         }
       } else if (enemy.type === 'triangle') {
-        const mainColor = '#654321';
-        const darkColor = '#4A3216';
+        const mainColor = '#8B4513';
+        const darkColor = '#3A1F0F';
+        const midColor = '#654321';
+        const lightColor = '#A0522D';
         
-        // Pixel art triangle
-        ctx.fillStyle = mainColor;
-        for (let i = 0; i < size * 2; i++) {
-          const w = (size * 2) - i;
-          ctx.fillRect(x - w/2, y - size + i, w, 1);
+        const s = size * breathe;
+        
+        // Pixel art triangle with enhanced shading
+        for (let i = 0; i < s * 2; i++) {
+          const w = (s * 2) - i;
+          const ratio = i / (s * 2);
+          
+          // Gradient from light to dark
+          if (ratio < 0.3) {
+            ctx.fillStyle = lightColor;
+          } else if (ratio < 0.6) {
+            ctx.fillStyle = mainColor;
+          } else {
+            ctx.fillStyle = midColor;
+          }
+          ctx.fillRect(x - w/2, y - s + i, w, 1);
         }
         
-        // Shading
+        // Deep shadow on right side
         ctx.fillStyle = darkColor;
-        for (let i = size; i < size * 2; i++) {
-          const w = (size * 2) - i;
-          ctx.fillRect(x - w/2, y - size + i, w/2, 1);
+        for (let i = s; i < s * 2; i++) {
+          const w = (s * 2) - i;
+          ctx.fillRect(x - w/2 + w * 0.7, y - s + i, w * 0.3, 1);
         }
         
-        // Eyes
+        // Texture detail
+        for (let i = s * 0.5; i < s * 1.5; i += s * 0.4) {
+          const w = (s * 2) - i;
+          ctx.fillStyle = darkColor;
+          ctx.fillRect(x - w/2 + w * 0.1, y - s + i, w * 0.15, 2);
+        }
+        
+        // Eyes with pupils
+        ctx.fillStyle = '#330000';
+        ctx.fillRect(x - s * 0.3, y - s * 0.1, s * 0.15, s * 0.15);
+        ctx.fillRect(x + s * 0.15, y - s * 0.1, s * 0.15, s * 0.15);
+        
         ctx.fillStyle = '#FF0000';
-        ctx.fillRect(x - 4, y - 2, 2, 2);
-        ctx.fillRect(x + 2, y - 2, 2, 2);
+        ctx.fillRect(x - s * 0.25, y - s * 0.05, s * 0.1, s * 0.1);
+        ctx.fillRect(x + s * 0.2, y - s * 0.05, s * 0.1, s * 0.1);
       } else if (enemy.type === 'round') {
-        const mainColor = '#654321';
-        const darkColor = '#4A3216';
-        const lightColor = '#8B6331';
+        const mainColor = '#8B4513';
+        const darkColor = '#3A1F0F';
+        const midColor = '#654321';
+        const lightColor = '#A0522D';
+        const highlightColor = '#CD853F';
         
-        // Pixel art circle using rectangles
-        ctx.fillStyle = mainColor;
-        ctx.fillRect(x - size/2, y - size, size, size * 2);
-        ctx.fillRect(x - size, y - size/2, size * 2, size);
-        ctx.fillRect(x - size * 0.7, y - size * 0.7, size * 1.4, size * 1.4);
+        const s = size * breathe;
         
-        // Shading
+        // Multi-layer circle for volume
         ctx.fillStyle = darkColor;
-        ctx.fillRect(x + size/4, y - size/2, size/2, size);
-        ctx.fillRect(x, y + size/4, size, size/2);
+        ctx.fillRect(x - s * 0.5, y - s * 1.05, s, s * 2.1);
+        ctx.fillRect(x - s * 1.05, y - s * 0.5, s * 2.1, s);
+        ctx.fillRect(x - s * 0.75, y - s * 0.75, s * 1.5, s * 1.5);
         
-        // Highlight
+        ctx.fillStyle = midColor;
+        ctx.fillRect(x - s * 0.5, y - s, s, s * 2);
+        ctx.fillRect(x - s, y - s * 0.5, s * 2, s);
+        ctx.fillRect(x - s * 0.7, y - s * 0.7, s * 1.4, s * 1.4);
+        
+        ctx.fillStyle = mainColor;
+        ctx.fillRect(x - s * 0.45, y - s * 0.9, s * 0.9, s * 1.8);
+        ctx.fillRect(x - s * 0.9, y - s * 0.45, s * 1.8, s * 0.9);
+        ctx.fillRect(x - s * 0.65, y - s * 0.65, s * 1.3, s * 1.3);
+        
+        // Shadow on right and bottom
+        ctx.fillStyle = darkColor;
+        ctx.fillRect(x + s * 0.3, y - s * 0.5, s * 0.5, s);
+        ctx.fillRect(x, y + s * 0.3, s, s * 0.5);
+        ctx.fillRect(x + s * 0.2, y + s * 0.2, s * 0.5, s * 0.5);
+        
+        // Highlights on top-left
         ctx.fillStyle = lightColor;
-        ctx.fillRect(x - size/2, y - size/2, size/3, size/3);
+        ctx.fillRect(x - s * 0.7, y - s * 0.7, s * 0.4, s * 0.4);
+        ctx.fillRect(x - s * 0.5, y - s * 0.5, s * 0.3, s * 0.5);
+        ctx.fillRect(x - s * 0.5, y - s * 0.5, s * 0.5, s * 0.3);
+        
+        ctx.fillStyle = highlightColor;
+        ctx.fillRect(x - s * 0.6, y - s * 0.6, s * 0.25, s * 0.25);
+        
+        // Texture spots
+        ctx.fillStyle = darkColor;
+        ctx.fillRect(x - s * 0.3, y - s * 0.3, s * 0.15, s * 0.15);
+        ctx.fillRect(x + s * 0.2, y - s * 0.1, s * 0.15, s * 0.15);
+        ctx.fillRect(x - s * 0.1, y + s * 0.3, s * 0.15, s * 0.15);
         
         // Eyes
+        ctx.fillStyle = '#330000';
+        ctx.fillRect(x - s * 0.35, y - s * 0.15, s * 0.15, s * 0.15);
+        ctx.fillRect(x + s * 0.2, y - s * 0.15, s * 0.15, s * 0.15);
+        
         ctx.fillStyle = '#FF0000';
-        ctx.fillRect(x - size/3, y - size/6, 2, 2);
-        ctx.fillRect(x + size/6, y - size/6, 2, 2);
+        ctx.fillRect(x - s * 0.3, y - s * 0.1, s * 0.1, s * 0.1);
+        ctx.fillRect(x + s * 0.25, y - s * 0.1, s * 0.1, s * 0.1);
       }
     }
 
