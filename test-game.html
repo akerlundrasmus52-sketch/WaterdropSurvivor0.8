@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test Game</title>
+  <style>
+    body { margin: 0; background: #000; }
+    #game-container { width: 100vw; height: 100vh; }
+  </style>
+</head>
+<body>
+  <div id="game-container"></div>
+  <script type="module">
+    // Mock THREE for testing
+    window.THREE = {
+      Scene: class { constructor() { this.children = []; this.background = null; this.fog = null; } add(obj) { this.children.push(obj); } remove(obj) { const idx = this.children.indexOf(obj); if (idx >= 0) this.children.splice(idx, 1); } },
+      Color: class { constructor(color) { this.color = color; } },
+      Fog: class { constructor(color, near, far) { this.color = color; this.near = near; this.far = far; } },
+      OrthographicCamera: class { constructor() { this.position = {set: () => {}}; } lookAt() {} },
+      WebGLRenderer: class { constructor(opts) { this.domElement = document.createElement('canvas'); this.shadowMap = { enabled: false, type: 0 }; } setSize() {} setPixelRatio() {} render() { console.log('Rendering...'); } },
+      PCFSoftShadowMap: 0,
+      AmbientLight: class { constructor() {} },
+      DirectionalLight: class { constructor() { this.shadow = { mapSize: {}, camera: {} }; this.position = {set: () => {}}; } },
+      PlaneGeometry: class {},
+      MeshToonMaterial: class {},
+      Mesh: class { constructor() { this.rotation = {}; this.position = {set: () => {}, x: 0, y: 0, z: 0}; this.receiveShadow = false; this.userData = {}; this.geometry = {dispose: () => {}}; this.material = {dispose: () => {}, color: {setHex: () => {}}}; } },
+    };
+
+    // Test the game initialization flow
+    let isGameActive = false;
+    let scene, camera, renderer;
+
+    function init() {
+      console.log('[TEST] init() called');
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0xFFF0F5);
+      
+      camera = new THREE.OrthographicCamera();
+      renderer = new THREE.WebGLRenderer({ antialias: false });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      document.getElementById('game-container').appendChild(renderer.domElement);
+      
+      console.log('[TEST] Scene, camera, renderer created');
+      console.log('[TEST] Canvas appended to container');
+      
+      requestAnimationFrame(animate);
+    }
+
+    function animate(time) {
+      requestAnimationFrame(animate);
+      
+      if (!isGameActive) {
+        console.log('[TEST] isGameActive=false, returning without render');
+        return;
+      }
+      
+      console.log('[TEST] Rendering frame');
+      renderer.render(scene, camera);
+    }
+
+    function resetGame() {
+      console.log('[TEST] resetGame() called');
+      isGameActive = true;
+      console.log('[TEST] isGameActive set to true');
+    }
+
+    // Simulate the game flow
+    setTimeout(() => {
+      console.log('[TEST] Simulating init...');
+      init();
+    }, 100);
+
+    setTimeout(() => {
+      console.log('[TEST] Simulating Start Game click...');
+      resetGame();
+    }, 2000);
+  </script>
+</body>
+</html>
