@@ -4039,11 +4039,21 @@
       
       // Helper function to create smooth curved road between two points
       function createCurvedRoad(startX, startZ, endX, endZ, segments, curve = 0) {
+        const LAKE_CENTER_X = 30;
+        const LAKE_CENTER_Z = -30;
+        const LAKE_RADIUS = 18;
+        
         for(let i = 0; i <= segments; i++) {
           const t = i / segments;
           // Smooth interpolation with optional curve
           const x = startX + (endX - startX) * t + Math.sin(t * Math.PI) * curve;
           const z = startZ + (endZ - startZ) * t + Math.sin(t * Math.PI) * curve;
+          
+          // Check if road segment would be in lake - skip if true
+          const distToLake = Math.sqrt((x - LAKE_CENTER_X) * (x - LAKE_CENTER_X) + (z - LAKE_CENTER_Z) * (z - LAKE_CENTER_Z));
+          if (distToLake < LAKE_RADIUS) {
+            continue; // Skip this segment
+          }
           
           const road = new THREE.Mesh(roadGeo, roadMat);
           road.rotation.x = -Math.PI/2;
@@ -4072,16 +4082,25 @@
       // 6. Windmill (40,40) to Farm (35,35) - short connecting road
       createCurvedRoad(40, 40, 35, 35, 8, 0);
       
-      // 7. Circular road around statue - smooth ring road for patrol area
+      // 7. Circular road around statue - smooth ring road for patrol area (avoid lake)
       for(let i = 0; i < 60; i++) {
         const road = new THREE.Mesh(roadGeo, roadMat);
         road.rotation.x = -Math.PI/2;
         const angle = (i / 60) * Math.PI * 2;
         const x = Math.cos(angle) * 8; // Smaller circle around statue
         const z = Math.sin(angle) * 8;
-        road.position.set(x, 0.03, z);
-        road.receiveShadow = true;
-        scene.add(road);
+        
+        // Check if road would be in lake
+        const LAKE_CENTER_X = 30;
+        const LAKE_CENTER_Z = -30;
+        const LAKE_RADIUS = 18;
+        const distToLake = Math.sqrt((x - LAKE_CENTER_X) * (x - LAKE_CENTER_X) + (z - LAKE_CENTER_Z) * (z - LAKE_CENTER_Z));
+        
+        if (distToLake >= LAKE_RADIUS) {
+          road.position.set(x, 0.03, z);
+          road.receiveShadow = true;
+          scene.add(road);
+        }
       }
       
       // 8. Map edge access roads (from edges to main areas)
@@ -4535,6 +4554,33 @@
           scene.add(rail);
         }
       }
+      
+      // Add stone walls for visual variety
+      const stoneWallGeo = new THREE.BoxGeometry(2, 1.2, 0.5);
+      const stoneWallMat = new THREE.MeshToonMaterial({ color: 0x808080 }); // Gray stone
+      
+      // Stone walls around certain areas
+      for(let i=0; i<15; i++) {
+        const angle = (i / 15) * Math.PI * 2;
+        const x = -40 + Math.cos(angle) * 20;
+        const z = -40 + Math.sin(angle) * 20;
+        
+        const wall = new THREE.Mesh(stoneWallGeo, stoneWallMat);
+        wall.position.set(x, 0.6, z);
+        wall.rotation.y = angle + Math.PI / 2;
+        wall.castShadow = true;
+        scene.add(wall);
+        
+        // Add some stacked stones on walls
+        if (i % 3 === 0) {
+          const topStoneGeo = new THREE.BoxGeometry(0.5, 0.4, 0.4);
+          const topStone = new THREE.Mesh(topStoneGeo, stoneWallMat);
+          topStone.position.set(x, 1.3, z);
+          topStone.rotation.y = angle + Math.random() * 0.5;
+          topStone.castShadow = true;
+          scene.add(topStone);
+        }
+      }
 
       // Forest (Various tree types with better shadows)
       const trunkGeo = new THREE.CylinderGeometry(0.5, 0.7, 2, 6);
@@ -4677,17 +4723,34 @@
       const flowerGeo = new THREE.ConeGeometry(0.2, 0.5, 6);
       const flowerColors = [0xFF69B4, 0xFFFF00, 0xFF0000, 0xFFA500, 0xFFFFFF];
       
-      for(let i=0; i<250; i++) {
+      // Optimized flower count and lake exclusion - reduced from 250 to 50
+      for(let i=0; i<50; i++) {
         const flower = new THREE.Mesh(flowerGeo, new THREE.MeshBasicMaterial({ 
           color: flowerColors[Math.floor(Math.random() * flowerColors.length)] 
         }));
-        flower.position.set(
-          (Math.random() - 0.5) * 160,
-          0.25,
-          (Math.random() - 0.5) * 160
-        );
-        flower.rotation.x = -Math.PI/2;
-        scene.add(flower);
+        
+        // Lake exclusion zone
+        const LAKE_CENTER_X = 30;
+        const LAKE_CENTER_Z = -30;
+        const LAKE_EXCLUSION_RADIUS = 20;
+        
+        let fx, fz;
+        let inLake = true;
+        let attempts = 0;
+        
+        while (inLake && attempts < 20) {
+          fx = (Math.random() - 0.5) * 160;
+          fz = (Math.random() - 0.5) * 160;
+          const distToLake = Math.sqrt((fx - LAKE_CENTER_X) * (fx - LAKE_CENTER_X) + (fz - LAKE_CENTER_Z) * (fz - LAKE_CENTER_Z));
+          inLake = distToLake < LAKE_EXCLUSION_RADIUS;
+          attempts++;
+        }
+        
+        if (!inLake) {
+          flower.position.set(fx, 0.25, fz);
+          flower.rotation.x = -Math.PI/2;
+          scene.add(flower);
+        }
       }
     }
 
