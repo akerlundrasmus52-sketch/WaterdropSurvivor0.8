@@ -636,13 +636,22 @@
                           touch.clientY >= rightRect.top && touch.clientY <= rightRect.bottom;
         
         if (!inLeftJoy && !inRightJoy) {
-          swipeStart = { x: touch.clientX, y: touch.clientY, time: Date.now() };
+          swipeStart = { x: touch.clientX, y: touch.clientY, time: Date.now(), id: touch.identifier };
         }
       });
       
       canvas.addEventListener('touchend', e => {
         if (swipeStart) {
-          const touch = e.changedTouches[0];
+          let touch = null;
+          for (let i = 0; i < e.changedTouches.length; i++) {
+            if (e.changedTouches[i].identifier === swipeStart.id) {
+              touch = e.changedTouches[i];
+              break;
+            }
+          }
+          if (!touch) {
+            return;
+          }
           const dx = touch.clientX - swipeStart.x;
           const dy = touch.clientY - swipeStart.y;
           const distance = Math.sqrt(dx * dx + dy * dy);
