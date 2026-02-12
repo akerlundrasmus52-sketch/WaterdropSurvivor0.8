@@ -2199,9 +2199,7 @@
         
         // Apply rotation
         this.mesh.rotation.x += this.rotVel.x * dt * 60;
-
         this.mesh.rotation.y += this.rotVel.y * dt * 60;
-
         this.mesh.rotation.z += this.rotVel.z * dt * 60;
         
         // Bounce with energy loss
@@ -5247,11 +5245,11 @@ Total Gold Earned: ${saveData.totalGoldEarned}
       // Entities Update
       enemies.forEach(e => e.update(dt, player.mesh.position));
       // Projectiles update returns false if dead
-      projectiles = projectiles.filter(p => p.update() !== false);
-      meteors = meteors.filter(m => m.update() !== false);
+      projectiles = projectiles.filter(p => p.update(dt) !== false);
+      meteors = meteors.filter(m => m.update(dt) !== false);
       expGems.forEach(g => g.update(player.mesh.position));
       goldCoins.forEach(g => g.update(player.mesh.position));
-      particles = particles.filter(p => p.update() !== false);
+      particles = particles.filter(p => p.update(dt) !== false);
       
       // Windmill Rotation and Light Animation
       scene.children.forEach(c => {
