@@ -1200,13 +1200,6 @@
       </div>
       
       <!-- Windmill Quest UI -->
-      <div id="windmill-quest-ui" style="display: none; margin-top: 10px;">
-        <div class="bar-container" style="border-color: #8B4513;">
-          <div class="bar-fill" id="windmill-hp-fill" style="background: #8B4513; width: 100%;"></div>
-        </div>
-        <div class="stat-text" id="windmill-hp-text" style="color: #8B4513;">WINDMILL: 600/600</div>
-        <div class="stat-text" id="windmill-timer-text" style="color: #FFD700; font-size: 18px;">DEFEND: 30s</div>
-      </div>
     </div>
     
     <!-- Bottom Left Status Bar - Unified Display -->
@@ -2618,7 +2611,12 @@
           if (windmillQuest.windmill.userData.hp <= 0) {
             windmillQuest.active = false;
             createFloatingText("WINDMILL DESTROYED!", windmillQuest.windmill.position);
-            document.getElementById('windmill-quest-ui').style.display = 'none';
+            // Reset status bar
+            const statusText = document.getElementById('status-bar-text');
+            if (statusText) {
+              statusText.innerText = 'Ready';
+              statusText.style.color = '#FFD700';
+            }
           }
         } else if (dist < 1.0 && this.type !== 4) { // Ranged enemies don't melee attack
           // Attack player with cooldown to prevent instant death
@@ -7047,10 +7045,14 @@
       const hp = windmillQuest.windmill.userData.hp;
       const maxHp = windmillQuest.windmill.userData.maxHp;
       const hpPct = (hp / maxHp) * 100;
+      const timeLeft = Math.ceil(windmillQuest.timer);
       
-      document.getElementById('windmill-hp-fill').style.width = `${Math.max(0, hpPct)}%`;
-      document.getElementById('windmill-hp-text').innerText = `WINDMILL: ${Math.max(0, Math.ceil(hp))}/${maxHp}`;
-      document.getElementById('windmill-timer-text').innerText = `DEFEND: ${Math.ceil(windmillQuest.timer)}s`;
+      // Update status bar with windmill quest info
+      const statusText = document.getElementById('status-bar-text');
+      if (statusText) {
+        statusText.innerText = `⚙️ DEFEND WINDMILL: ${Math.ceil(hp)}/${maxHp} HP | ${timeLeft}s`;
+        statusText.style.color = hpPct > 50 ? '#8B4513' : hpPct > 25 ? '#FFD700' : '#FF4444';
+      }
     }
     
     function startWindmillQuest(windmill) {
@@ -7062,7 +7064,6 @@
       windmill.userData.hp = 600;
       windmill.userData.maxHp = 600;
       
-      document.getElementById('windmill-quest-ui').style.display = 'block';
       updateWindmillQuestUI();
       
       createFloatingText("DEFEND THE WINDMILL!", windmill.position);
@@ -7071,7 +7072,13 @@
     function completeWindmillQuest() {
       windmillQuest.active = false;
       windmillQuest.hasCompleted = true;
-      document.getElementById('windmill-quest-ui').style.display = 'none';
+      
+      // Reset status bar
+      const statusText = document.getElementById('status-bar-text');
+      if (statusText) {
+        statusText.innerText = 'Ready';
+        statusText.style.color = '#FFD700';
+      }
       
       createFloatingText("QUEST COMPLETE!", windmillQuest.windmill.position);
       
@@ -7317,7 +7324,13 @@
       }
       
       windmillQuest = { active: false, timer: 0, duration: 15, windmill: null, hasCompleted: false };
-      document.getElementById('windmill-quest-ui').style.display = 'none';
+      
+      // Reset status bar
+      const statusText = document.getElementById('status-bar-text');
+      if (statusText) {
+        statusText.innerText = 'Ready';
+        statusText.style.color = '#FFD700';
+      }
       
       // Reset windmill HP
       if (scene) {
@@ -8023,7 +8036,17 @@
         } else if (windmillQuest.windmill && windmillQuest.windmill.userData.hp <= 0) {
           // Quest failed
           windmillQuest.active = false;
-          document.getElementById('windmill-quest-ui').style.display = 'none';
+          
+          // Reset status bar
+          const statusText = document.getElementById('status-bar-text');
+          if (statusText) {
+            statusText.innerText = 'Quest Failed!';
+            statusText.style.color = '#FF4444';
+            setTimeout(() => {
+              statusText.innerText = 'Ready';
+              statusText.style.color = '#FFD700';
+            }, 3000);
+          }
         }
       }
 
