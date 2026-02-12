@@ -6904,6 +6904,10 @@
       gameStartTime = Date.now();
       runStartGold = saveData.gold;
       
+      // FREEZE FIX: Reset timing variables to prevent time accumulation issues
+      lastTime = null; // Will be re-initialized on next frame
+      accumulator = 0;
+      
       // Reset player invulnerability state
       if (player) {
         player.invulnerable = false;
@@ -7476,12 +7480,19 @@
       // Handle countdown sequence (PR #70)
       if (countdownActive) {
         // During countdown, still render but don't update game logic
+        // Reset lastTime to prevent time accumulation during countdown
+        lastTime = time;
+        accumulator = 0;
         renderer.render(scene, camera);
         return;
       }
 
       if (isPaused || isGameOver || !isGameActive) {
         // Still render the scene so visual effects (camera shake, particles, modals) are visible (PR #82)
+        // FREEZE FIX: Reset lastTime to prevent accumulator buildup during pause
+        // This prevents the physics loop from trying to catch up when unpausing
+        lastTime = time;
+        accumulator = 0;
         renderer.render(scene, camera);
         return;
       }
