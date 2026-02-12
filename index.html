@@ -44,6 +44,13 @@
   <meta name="screen-orientation" content="portrait">
   <title>Water Drop Survivor</title>
   <style>
+    html {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+
     body {
       margin: 0;
       padding: 0;
@@ -53,6 +60,8 @@
       touch-action: none;
       user-select: none;
       -webkit-user-select: none;
+      width: 100%;
+      height: 100%;
     }
 
     #game-container {
@@ -458,12 +467,36 @@
       color: #5DADE2;
       text-shadow: 0 0 20px rgba(93,173,226,0.8), 0 0 40px rgba(93,173,226,0.5);
       margin-bottom: 40px;
+      animation: titlePulse 3s ease-in-out infinite;
+    }
+
+    @keyframes titlePulse {
+      0%, 100% {
+        text-shadow: 0 0 20px rgba(93,173,226,0.8), 0 0 40px rgba(93,173,226,0.5);
+        transform: scale(1);
+      }
+      50% {
+        text-shadow: 0 0 30px rgba(93,173,226,1), 0 0 60px rgba(93,173,226,0.7);
+        transform: scale(1.02);
+      }
     }
 
     .menu-buttons {
       display: flex;
       flex-direction: column;
       gap: 20px;
+      animation: menuFadeIn 0.8s ease-out;
+    }
+
+    @keyframes menuFadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
 
     .menu-btn {
@@ -765,6 +798,13 @@
       text-align: center;
       box-shadow: 0 0 30px rgba(93, 173, 226, 0.5);
       animation: tutorialFadeIn 0.5s ease-out;
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .tutorial-box:hover {
+      transform: scale(1.02);
+      box-shadow: 0 0 40px rgba(93, 173, 226, 0.7);
     }
 
     @keyframes tutorialFadeIn {
@@ -797,6 +837,7 @@
       font-size: 14px;
       color: #ecf0f1;
       opacity: 0.7;
+      font-weight: bold;
     }
 
   </style>
@@ -864,10 +905,10 @@
 
   <!-- Tutorial Overlay -->
   <div id="tutorial-overlay">
-    <div class="tutorial-box">
+    <div class="tutorial-box" id="tutorial-box">
       <div class="tutorial-step" id="tutorial-step">TUTORIAL 1/8</div>
       <div class="tutorial-text" id="tutorial-text">Move with the joystick</div>
-      <div class="tutorial-progress">Auto-advancing...</div>
+      <div class="tutorial-progress">Click to continue →</div>
     </div>
   </div>
 
@@ -1225,7 +1266,9 @@
     let tutorialActive = false;
     let tutorialStep = 0;
     let tutorialTimer = 0;
-    const TUTORIAL_STEP_DURATION = 4000; // 4 seconds per step
+    let tutorialBoxElement = null; // Store reference to tutorial box
+    const TUTORIAL_STEP_DURATION = 4000; // 4 seconds per step (original)
+    const TUTORIAL_AUTO_ADVANCE_DURATION = 10000; // 10 seconds auto-advance fallback
     const tutorialSteps = [
       "Move with the joystick",
       "Kill enemies, pick up EXP stars",
@@ -3783,6 +3826,7 @@
       // Renderer
       renderer = new THREE.WebGLRenderer({ antialias: true });
       renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(window.devicePixelRatio); // Support high-DPI displays
       renderer.shadowMap.enabled = true;
       renderer.shadowMap.type = THREE.PCFSoftShadowMap;
       document.getElementById('game-container').appendChild(renderer.domElement);
@@ -3931,6 +3975,8 @@
       document.getElementById('start-game-btn').onclick = () => {
         playSound('levelup');
         hideMainMenu();
+        // Request fullscreen for better experience
+        requestFullscreen();
         resetGame();
       };
       
@@ -5277,6 +5323,10 @@ Total Gold Earned: ${saveData.totalGoldEarned}
       updateTutorialDisplay();
       document.getElementById('tutorial-overlay').classList.add('active');
       
+      // Store reference and add click handler to advance or close tutorial
+      tutorialBoxElement = document.getElementById('tutorial-box');
+      tutorialBoxElement.onclick = advanceTutorial;
+      
       // Limit initial enemies during tutorial
       if (enemies.length > 3) {
         const excess = enemies.slice(3);
@@ -5292,18 +5342,25 @@ Total Gold Earned: ${saveData.totalGoldEarned}
       }
     }
 
+    function advanceTutorial() {
+      if (!tutorialActive) return;
+      
+      tutorialStep++;
+      if (tutorialStep >= tutorialSteps.length) {
+        endTutorial();
+      } else {
+        tutorialTimer = Date.now();
+        updateTutorialDisplay();
+      }
+    }
+
     function updateTutorial() {
       if (!tutorialActive) return;
       
       const now = Date.now();
-      if (now - tutorialTimer >= TUTORIAL_STEP_DURATION) {
-        tutorialStep++;
-        if (tutorialStep >= tutorialSteps.length) {
-          endTutorial();
-        } else {
-          tutorialTimer = now;
-          updateTutorialDisplay();
-        }
+      // Auto-advance as fallback after 10 seconds
+      if (now - tutorialTimer >= TUTORIAL_AUTO_ADVANCE_DURATION) {
+        advanceTutorial();
       }
     }
 
@@ -5315,8 +5372,27 @@ Total Gold Earned: ${saveData.totalGoldEarned}
     function endTutorial() {
       tutorialActive = false;
       document.getElementById('tutorial-overlay').classList.remove('active');
+      // Remove click handler using stored reference
+      if (tutorialBoxElement) {
+        tutorialBoxElement.onclick = null;
+        tutorialBoxElement = null;
+      }
       saveData.tutorialCompleted = true;
       saveSaveData();
+    }
+
+    // --- FULLSCREEN SUPPORT ---
+    function requestFullscreen() {
+      const elem = document.documentElement;
+      if (elem.requestFullscreen) {
+        elem.requestFullscreen().catch(err => {
+          console.log('Fullscreen request failed:', err);
+        });
+      } else if (elem.webkitRequestFullscreen) { /* Safari */
+        elem.webkitRequestFullscreen();
+      } else if (elem.msRequestFullscreen) { /* IE11 */
+        elem.msRequestFullscreen();
+      }
     }
 
     // --- INPUT SYSTEM ---
