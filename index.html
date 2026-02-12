@@ -827,12 +827,15 @@
         const t = Math.max(0, Math.min(1, tRaw));
         const dashSpeed = Math.sin(t * Math.PI) * CONFIG.DASH_SPEED;
         
-        player.x += player.dashDx * dashSpeed * dt;
-        player.y += player.dashDy * dashSpeed * dt;
+        const dashStepX = player.dashDx * dashSpeed * dt;
+        const dashStepY = player.dashDy * dashSpeed * dt;
+        
+        player.x += dashStepX;
+        player.y += dashStepY;
         
         // Create dash trail particles
         if (Math.random() < 0.3) {
-          createParticle(player.x, player.y, '#5DADE2', 8, player.vx * 0.5, player.vy * 0.5);
+          createParticle(player.x, player.y, '#5DADE2', 8, dashStepX * 0.5, dashStepY * 0.5);
         }
         
         if (player.dashTime <= 0) {
