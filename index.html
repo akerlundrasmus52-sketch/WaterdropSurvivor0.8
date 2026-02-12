@@ -207,11 +207,17 @@
     }
 
     .stat-text {
-      color: #5DADE2; /* Light blue matching menu */
+      color: #FFD700; /* Gold/yellow color like menu buttons */
       font-weight: bold;
-      text-shadow: 1px 1px 2px rgba(0,0,0,0.7), 0 0 8px rgba(93,173,226,0.6);
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.9), 0 0 8px rgba(255,215,0,0.6);
       font-size: 14px;
       margin-top: 4px;
+      background: linear-gradient(to bottom, #5A3A31, #3a2a21); /* Brown gradient like menu buttons */
+      padding: 6px 12px;
+      border-radius: 8px;
+      border: 2px solid #3a2a21; /* Dark border */
+      box-shadow: 0 2px 4px rgba(0,0,0,0.5), inset 0 1px 2px rgba(255,255,255,0.1);
+      width: 200px;
     }
 
     .stat-text.gold-text {
@@ -293,14 +299,15 @@
     }
 
     .upgrade-card {
-      background: linear-gradient(to bottom, #2c3e50, #1a252f); /* Darker, more refined gradient */
-      margin: 10px 0;
-      padding: 15px;
-      border-radius: 15px;
+      background: linear-gradient(to bottom, #2c3e50, #1a252f); /* Consistent dark gradient for all boxes */
+      margin: 8px 0; /* Reduced margin */
+      padding: 12px; /* Reduced padding */
+      border-radius: 12px; /* Slightly smaller radius */
       border: 3px solid #5DADE2; /* Light blue border matching menu */
       cursor: pointer;
       transition: transform 0.1s, box-shadow 0.1s;
       box-shadow: 0 4px 8px rgba(0,0,0,0.5), 0 0 15px rgba(93,173,226,0.4), inset 0 0 0 2px rgba(0,0,0,0.4); /* Blue glow */
+      max-height: 70px; /* Limit height to fit more on screen */
     }
 
     .upgrade-card:hover {
@@ -314,35 +321,37 @@
     .upgrade-title {
       font-weight: bold;
       color: #5DADE2; /* Light blue matching menu */
-      font-size: 18px;
+      font-size: 16px; /* Slightly smaller font */
       text-shadow: 0 0 8px rgba(93,173,226,0.6), 0 0 15px rgba(93,173,226,0.3), 1px 1px 2px rgba(0,0,0,0.8);
     }
 
     .upgrade-desc {
-      font-size: 12px;
+      font-size: 11px; /* Smaller description */
       color: #bbb;
       display: none; /* Hidden - only show funny names */
     }
     
-    /* Special upgrade cards */
+    /* Unified styling - all upgrade cards use same color scheme now */
     .upgrade-card.perk {
-      border-color: #9b59b6;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.3), 0 0 20px rgba(155,89,182,0.6);
-      animation: perkPulse 2s infinite;
+      /* Same styling as regular cards for consistency */
+      border-color: #5DADE2;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.5), 0 0 15px rgba(93,173,226,0.4), inset 0 0 0 2px rgba(0,0,0,0.4);
+      animation: none; /* Remove pulsing for consistency */
     }
     
     .upgrade-card.perk:hover {
-      box-shadow: 0 6px 12px rgba(155,89,182,0.8), 0 0 30px rgba(155,89,182,0.7);
+      box-shadow: 0 6px 12px rgba(93,173,226,0.6), 0 0 25px rgba(93,173,226,0.5);
     }
     
     .upgrade-card.legendary {
-      border-color: #ff6b6b;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.3), 0 0 20px rgba(255,107,107,0.6);
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      /* Same styling as regular cards for consistency */
+      border-color: #5DADE2;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.5), 0 0 15px rgba(93,173,226,0.4), inset 0 0 0 2px rgba(0,0,0,0.4);
+      background: linear-gradient(to bottom, #2c3e50, #1a252f); /* Match regular cards */
     }
     
     .upgrade-card.legendary:hover {
-      box-shadow: 0 6px 12px rgba(255,107,107,0.8), 0 0 30px rgba(255,107,107,0.7);
+      box-shadow: 0 6px 12px rgba(93,173,226,0.6), 0 0 25px rgba(93,173,226,0.5);
     }
     
     @keyframes perkPulse {
@@ -356,20 +365,20 @@
       100% { transform: scale(1.05); text-shadow: 0 0 25px rgba(255,215,0,1), 0 0 35px rgba(255,215,0,1), 2px 2px 4px rgba(0,0,0,0.9); }
     }
 
-    /* ENHANCEMENT: Combo text display styles for maintainability */
+    /* ENHANCEMENT: Combo text display - styled like stat bar */
     .combo-text-display {
       color: #FFD700;
       text-shadow: 0 0 15px rgba(255,215,0,1), 0 0 25px rgba(255,215,0,0.8), 2px 2px 4px rgba(0,0,0,0.9);
-      font-size: 22px;
+      font-size: 18px; /* Slightly smaller to fit in stat bar */
       font-weight: 900;
-      letter-spacing: 2px;
+      letter-spacing: 1px; /* Reduced spacing */
       animation: comboGlow 0.8s infinite alternate;
     }
 
     .combo-bonus-display {
-      color: #FFF;
-      text-shadow: 0 0 8px rgba(255,255,255,0.8), 1px 1px 3px rgba(0,0,0,0.8);
-      font-size: 14px;
+      color: #FFD700; /* Match main combo color */
+      text-shadow: 0 0 8px rgba(255,215,0,0.8), 1px 1px 3px rgba(0,0,0,0.8);
+      font-size: 12px;
       margin-top: 2px;
     }
 
@@ -538,6 +547,7 @@
     #loading-screen.fade-out {
       opacity: 0;
       pointer-events: none;
+      transition: opacity 0.3s ease-out; /* Faster fade out */
     }
 
     .loading-splash-logo {
@@ -1141,13 +1151,13 @@
       <!-- Additional stat info display -->
       <div class="stat-text" id="extra-stats-text" style="color: #9370DB; text-shadow: 0 0 5px rgba(147,112,219,0.6), 1px 1px 2px rgba(0,0,0,0.5); font-size: 12px; margin-top: 3px; display: none;"></div>
       
-      <!-- Status Message Bar -->
-      <div class="stat-text" id="status-message" style="color: #5DADE2; text-shadow: 0 0 8px rgba(93,173,226,0.8), 0 0 12px rgba(93,173,226,0.5), 1px 1px 2px rgba(0,0,0,0.5); font-size: 16px; min-height: 20px; margin-top: 5px;"></div>
+      <!-- Status Message Bar - styled like stat bar -->
+      <div class="stat-text" id="status-message" style="color: #FFD700; font-size: 14px; min-height: 20px; margin-top: 5px;"></div>
       
-      <!-- ENHANCEMENT: Combo Display - Shows kill streak multiplier -->
-      <div id="combo-display" style="display: none; margin-top: 8px; padding: 8px 15px; background: linear-gradient(135deg, rgba(255,107,107,0.9), rgba(155,89,182,0.9)); border: 3px solid #FFD700; border-radius: 15px; box-shadow: 0 0 20px rgba(255,215,0,0.8), inset 0 0 15px rgba(0,0,0,0.3);">
-        <div class="stat-text combo-text-display" id="combo-text">0x COMBO!</div>
-        <div class="stat-text combo-bonus-display" id="combo-bonus-text">+0% Damage & Gold</div>
+      <!-- ENHANCEMENT: Combo Display - Shows kill streak multiplier, styled like stat bar -->
+      <div id="combo-display" style="display: none; margin-top: 8px; padding: 6px 12px; background: linear-gradient(to bottom, #5A3A31, #3a2a21); border: 2px solid #3a2a21; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.5), inset 0 1px 2px rgba(255,255,255,0.1); width: 200px;">
+        <div class="stat-text combo-text-display" id="combo-text" style="background: none; border: none; box-shadow: none; padding: 0; width: auto; margin: 0;">0x COMBO!</div>
+        <div class="stat-text combo-bonus-display" id="combo-bonus-text" style="background: none; border: none; box-shadow: none; padding: 0; width: auto; margin-top: 2px;">+0% Damage & Gold</div>
       </div>
       
       <!-- Windmill Quest UI -->
