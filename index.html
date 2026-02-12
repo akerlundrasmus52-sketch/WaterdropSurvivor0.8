@@ -1600,7 +1600,7 @@
     let meteors = [];
     let flashLights = []; // Track temporary flash lights for cleanup
     let activeTimeouts = []; // Track active timeouts for cleanup
-    let lastTime = null; // Initialize as null for proper first-frame detection (PR #82 fix)
+    let lastTime = 0; // Initialize to 0 to prevent NaN frameTime on first frame
     
     // Deferred disposal queue for Three.js memory management (PR #81)
     const disposalQueue = [];
@@ -2005,7 +2005,6 @@
           // Apply final velocity to position
           this.mesh.position.x += this.velocity.x;
           this.mesh.position.z += this.velocity.z;
-        }
           
           // Rotation/Aiming with RIGHT stick (independent of movement)
           if (joystickRight.active) {
@@ -5191,6 +5190,20 @@
       const loadingScreen = document.getElementById('loading-screen');
       const loadingBar = document.getElementById('loading-bar');
       let progress = 0;
+      let hasCompleted = false;
+      
+      // Complete loading and show main menu
+      const completeLoading = () => {
+        if (!hasCompleted) {
+          hasCompleted = true;
+          clearInterval(interval);
+          loadingScreen.classList.add('fade-out');
+          setTimeout(() => {
+            loadingScreen.style.display = 'none';
+            showMainMenu();
+          }, 500);
+        }
+      };
       
       // Extended loading duration: 20 iterations × 400ms = 8000ms (8 seconds total)
       const interval = setInterval(() => {
@@ -5198,16 +5211,12 @@
         loadingBar.style.width = progress + '%';
         
         if (progress >= 100) {
-          clearInterval(interval);
-          setTimeout(() => {
-            loadingScreen.classList.add('fade-out');
-            setTimeout(() => {
-              loadingScreen.style.display = 'none';
-              showMainMenu();
-            }, 500);
-          }, 600); // Extended delay before fade
+          setTimeout(completeLoading, 600); // Extended delay before fade
         }
       }, 400); // Slower progress updates for longer duration
+      
+      // Fail-safe timeout: force hide loading screen after 12 seconds
+      setTimeout(completeLoading, 12000);
     }
     
     function showMainMenu() {
@@ -7826,13 +7835,10 @@
         return;
       }
 
-      // Initialize lastTime on first frame to prevent huge dt (PR #82 fix)
-      if (lastTime === null) {
+      // Guard first frame: initialize lastTime without returning early
+      if (lastTime === 0) {
         lastTime = time;
-        gameTime = time / 1000; // Initialize gameTime for visual effects
-        // Render the initial frame before returning to avoid blank screen
-        renderer.render(scene, camera);
-        return;
+        gameTime = time / 1000;
       }
 
       // ALTERNATIVE FREEZE FIX: Fixed Timestep Accumulator (NOT using PR #60 delta clamping)
@@ -7847,7 +7853,7 @@
       
       accumulator += frameTime;
       
-      // Update gameTime for visual effects (smooth, not stepped)
+      // Update gameTime for visual effects on every frame (smooth, not stepped)
       gameTime = time / 1000;
       
       // Handle countdown sequence (PR #70)
