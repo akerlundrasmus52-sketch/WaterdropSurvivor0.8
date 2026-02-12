@@ -406,8 +406,10 @@
     // GAME CONFIGURATION
     // ============================================
     const CONFIG = {
-      CANVAS_WIDTH: 390,  // iPhone 16 width
-      CANVAS_HEIGHT: 844, // iPhone 16 height (portrait)
+      // Canvas optimized for iPhone 16 portrait (390x844)
+      // Can be scaled to other devices via CSS in resizeCanvas()
+      CANVAS_WIDTH: 390,  
+      CANVAS_HEIGHT: 844,
       MAP_SIZE: 1500,     // Smaller map to fit screen without scrolling
       PLAYER_SIZE: 20,
       ENEMY_SIZE: 16,
@@ -849,9 +851,9 @@
       
       // Smooth angle interpolation for 360-degree animation
       let angleDiff = player.targetAngle - player.angle;
-      // Normalize to -PI to PI
-      while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
-      while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+      // Normalize to -PI to PI using modulo (more efficient than while loops)
+      angleDiff = ((angleDiff + Math.PI) % (Math.PI * 2)) - Math.PI;
+      if (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
       player.angle += angleDiff * 0.15; // Smooth rotation
       
       // Enhanced wobble animation based on movement
@@ -1223,9 +1225,9 @@
     function performDash(dx, dy) {
       if (player.isDashing || player.dashCooldownRemaining > 0) return;
       
-      // Normalize direction
+      // Normalize direction (use epsilon for floating-point comparison)
       const mag = Math.sqrt(dx * dx + dy * dy);
-      if (mag === 0) return;
+      if (mag < 0.001) return; // Epsilon threshold for floating-point precision
       
       player.dashDx = dx / mag;
       player.dashDy = dy / mag;
