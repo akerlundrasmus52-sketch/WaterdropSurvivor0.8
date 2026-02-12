@@ -6952,6 +6952,13 @@
       playerStats.comboTimer = 0;
       playerStats.critStreak = 0;
       // Keep maxCombo, bossesKilled, totalCrits, perfectRuns as they track all-time records
+
+      // Ensure combo UI is reset/hidden at the start of a new run
+      const comboDisplayEl = document.getElementById('combo-display');
+      if (comboDisplayEl) {
+        comboDisplayEl.style.display = 'none';
+        comboDisplayEl.textContent = '';
+      }
       
       windmillQuest = { active: false, timer: 0, duration: 15, windmill: null, hasCompleted: false };
       document.getElementById('windmill-quest-ui').style.display = 'none';
