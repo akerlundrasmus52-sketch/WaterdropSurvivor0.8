@@ -823,7 +823,8 @@
         player.dashTime -= dt;
         
         // Dash movement with sine curve for smooth acceleration/deceleration
-        const t = 1 - (player.dashTime / CONFIG.DASH_DURATION);
+        const tRaw = 1 - (player.dashTime / CONFIG.DASH_DURATION);
+        const t = Math.max(0, Math.min(1, tRaw));
         const dashSpeed = Math.sin(t * Math.PI) * CONFIG.DASH_SPEED;
         
         player.x += player.dashDx * dashSpeed * dt;
