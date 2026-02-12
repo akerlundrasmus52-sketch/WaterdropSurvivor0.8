@@ -996,7 +996,8 @@
         let color;
         
         // Enemy scaling based on player level - NOT SPEED, just HP and DAMAGE
-        const levelScaling = 1 + (playerLevel - 1) * 0.15; // 15% increase per level
+        // Adjusted for better balance - level 50 should be reachable with ~50% crit upgrades
+        const levelScaling = 1 + (playerLevel - 1) * 0.10; // 10% increase per level (reduced from 15%)
         
         if (type === 0) {
           // Bacteria/Amoeba - Squishy organic blob shape
@@ -1072,9 +1073,12 @@
         }
         
         this.maxHp = this.hp;
-        this.damage = 33 * levelScaling; // Damage scaled by level
+        // Enemy damage scales slower than HP for better gameplay balance
+        this.damage = 33 * (1 + (playerLevel - 1) * 0.08); // 8% damage increase per level
         this.isDead = false;
-        this.isDamaged = false; // Track if enemy has been visually damaged
+        this.isDamaged = false; // Track if enemy has been visually damaged (20% HP)
+        this.isDamagedStage1 = false; // Track first damage stage (50% HP)
+        this.isDamagedStage2 = false; // Track second damage stage (35% HP)
         this.pulsePhase = Math.random() * Math.PI;
         this.wobbleOffset = Math.random() * 100;
         this.lastAttackTime = 0;
@@ -1232,11 +1236,68 @@
         this.hp -= amount;
         createDamageNumber(amount, this.mesh.position, isCrit);
         
-        // Destruction effect at 20% HP threshold
+        // Progressive damage visualization at multiple HP thresholds
         const hpPercent = this.hp / this.maxHp;
         const oldHpPercent = oldHp / this.maxHp;
+        const enemyColor = this.mesh.material.color.getHex();
         
-        // First hit below 20% - destroy part of body
+        // Stage 3: Below 50% HP - First signs of damage (cracks)
+        if (oldHpPercent >= 0.5 && hpPercent < 0.5 && !this.isDamagedStage1) {
+          this.isDamagedStage1 = true;
+          // Darken the material slightly to show damage
+          const currentColor = this.mesh.material.color;
+          currentColor.multiplyScalar(0.85);
+          // Small particle burst
+          spawnParticles(this.mesh.position, enemyColor, 8);
+          playSound('hit');
+        }
+        
+        // Stage 2: Below 35% HP - More visible damage
+        if (oldHpPercent >= 0.35 && hpPercent < 0.35 && !this.isDamagedStage2) {
+          this.isDamagedStage2 = true;
+          // Make slightly transparent and darker
+          this.mesh.material.opacity = 0.75;
+          const currentColor = this.mesh.material.color;
+          currentColor.multiplyScalar(0.8);
+          // Medium particle burst with pieces
+          spawnParticles(this.mesh.position, enemyColor, 12);
+          // Small broken pieces
+          for(let i = 0; i < 2; i++) {
+            const piece = new THREE.Mesh(
+              new THREE.BoxGeometry(0.15, 0.15, 0.15),
+              new THREE.MeshBasicMaterial({ color: enemyColor })
+            );
+            piece.position.copy(this.mesh.position);
+            scene.add(piece);
+            
+            const vel = new THREE.Vector3(
+              (Math.random() - 0.5) * 0.25,
+              Math.random() * 0.3,
+              (Math.random() - 0.5) * 0.25
+            );
+            
+            let life = 30;
+            const updatePiece = () => {
+              life--;
+              piece.position.add(vel);
+              vel.y -= 0.02;
+              piece.rotation.x += 0.15;
+              piece.rotation.y += 0.15;
+              
+              if (life <= 0 || piece.position.y < 0) {
+                scene.remove(piece);
+                piece.geometry.dispose();
+                piece.material.dispose();
+              } else {
+                requestAnimationFrame(updatePiece);
+              }
+            };
+            updatePiece();
+          }
+          playSound('hit');
+        }
+        
+        // Stage 1: Below 20% HP - Heavy damage (existing logic enhanced)
         if (oldHpPercent >= 0.2 && hpPercent < 0.2 && !this.isDamaged) {
           this.isDamaged = true;
           
@@ -1244,9 +1305,9 @@
           const damagePercent = 0.35 + Math.random() * 0.15; // 35-50%
           const newScale = 1 - damagePercent;
           this.mesh.scale.multiplyScalar(newScale);
+          this.mesh.material.opacity = 0.6;
           
           // Spawn broken pieces
-          const enemyColor = this.mesh.material.color.getHex();
           for(let i = 0; i < 5; i++) {
             const piece = new THREE.Mesh(
               new THREE.BoxGeometry(0.2, 0.2, 0.2),
@@ -3167,6 +3228,92 @@
       
       scene.add(waterfallGroup);
       
+      // Spawn Statues - Visual markers showing enemy spawn zones
+      // Place 8 statues around the perimeter where enemies spawn
+      const statuePositions = [
+        { x: 30, z: 0 },   // E
+        { x: 21, z: 21 },  // NE
+        { x: 0, z: 30 },   // N
+        { x: -21, z: 21 }, // NW
+        { x: -30, z: 0 },  // W
+        { x: -21, z: -21 },// SW
+        { x: 0, z: -30 },  // S
+        { x: 21, z: -21 }  // SE
+      ];
+      
+      statuePositions.forEach((pos, index) => {
+        const statueGroup = new THREE.Group();
+        
+        // Pedestal base
+        const pedestalGeo = new THREE.CylinderGeometry(1, 1.2, 0.5, 8);
+        const pedestalMat = new THREE.MeshToonMaterial({ color: 0x7A8FA0 }); // Stone gray-blue
+        const pedestal = new THREE.Mesh(pedestalGeo, pedestalMat);
+        pedestal.position.y = 0.25;
+        pedestal.castShadow = true;
+        statueGroup.add(pedestal);
+        
+        // Statue pillar
+        const pillarGeo = new THREE.CylinderGeometry(0.7, 0.7, 3, 8);
+        const pillar = new THREE.Mesh(pillarGeo, pedestalMat);
+        pillar.position.y = 2;
+        pillar.castShadow = true;
+        statueGroup.add(pillar);
+        
+        // Decorative top - water droplet shape to match theme
+        const dropletGeo = new THREE.SphereGeometry(0.8, 16, 16);
+        const positions = dropletGeo.attributes.position;
+        for (let i = 0; i < positions.count; i++) {
+          const y = positions.getY(i);
+          if (y > 0) {
+            positions.setY(i, y * 1.3); // Stretch top
+          }
+        }
+        dropletGeo.computeVertexNormals();
+        
+        const dropletMat = new THREE.MeshPhysicalMaterial({ 
+          color: 0x5DADE2, // Light blue to match water theme
+          metalness: 0.3,
+          roughness: 0.4,
+          transparent: true,
+          opacity: 0.9,
+          emissive: 0x3399CC,
+          emissiveIntensity: 0.3
+        });
+        const droplet = new THREE.Mesh(dropletGeo, dropletMat);
+        droplet.position.y = 4;
+        droplet.castShadow = true;
+        statueGroup.add(droplet);
+        
+        // Glowing ring around base
+        const ringGeo = new THREE.TorusGeometry(1.5, 0.1, 8, 16);
+        const ringMat = new THREE.MeshBasicMaterial({ 
+          color: 0x5DADE2,
+          transparent: true,
+          opacity: 0.5
+        });
+        const ring = new THREE.Mesh(ringGeo, ringMat);
+        ring.rotation.x = Math.PI / 2;
+        ring.position.y = 0.1;
+        statueGroup.add(ring);
+        
+        // Add subtle point light
+        const statueLight = new THREE.PointLight(0x5DADE2, 0.5, 10);
+        statueLight.position.y = 4;
+        statueGroup.add(statueLight);
+        
+        // Store reference for animation
+        statueGroup.userData = {
+          isSpawnStatue: true,
+          droplet: droplet,
+          ring: ring,
+          light: statueLight,
+          phase: index * (Math.PI * 2 / 8) // Offset animation
+        };
+        
+        statueGroup.position.set(pos.x, 0, pos.z);
+        scene.add(statueGroup);
+      });
+      
       // Scatter flowers around environment
       const flowerGeo = new THREE.ConeGeometry(0.2, 0.5, 6);
       const flowerColors = [0xFF69B4, 0xFFFF00, 0xFF0000, 0xFFA500, 0xFFFFFF];
@@ -4230,8 +4377,7 @@
             apply: () => { 
               weapons.sword.active = true;
               weapons.sword.level = 1;
-              showStatChange('New Weapon: Sword');
-              addInfoMessage('⚔️ Weapon unlocked: Sword', '#FFD700');
+              announceWeaponUnlock('Sword', '⚔️');
             } 
           },
           { 
@@ -4241,8 +4387,7 @@
             apply: () => { 
               weapons.aura.active = true;
               weapons.aura.level = 1;
-              showStatChange('New Weapon: Aura');
-              addInfoMessage('✨ Weapon unlocked: Aura', '#FFD700');
+              announceWeaponUnlock('Aura', '✨');
             } 
           },
           { 
@@ -4252,8 +4397,7 @@
             apply: () => { 
               weapons.meteor.active = true;
               weapons.meteor.level = 1;
-              showStatChange('New Weapon: Meteor');
-              addInfoMessage('☄️ Weapon unlocked: Meteor', '#FFD700');
+              announceWeaponUnlock('Meteor', '☄️');
             } 
           },
           { 
@@ -4263,8 +4407,7 @@
             apply: () => { 
               weapons.doubleBarrel.active = true;
               weapons.doubleBarrel.level = 1;
-              showStatChange('New Weapon: Double Barrel');
-              addInfoMessage('🔫 Weapon unlocked: Double Barrel', '#FFD700');
+              announceWeaponUnlock('Double Barrel', '🔫');
             } 
           }
         ];
@@ -4343,8 +4486,7 @@
             apply: () => { 
               weapons.sword.active = true;
               weapons.sword.level = 1;
-              showStatChange('New Weapon: Sword');
-              addInfoMessage('⚔️ Weapon unlocked: Sword', '#FFD700');
+              announceWeaponUnlock('Sword', '⚔️');
             } 
           },
           { 
@@ -4355,8 +4497,7 @@
             apply: () => { 
               weapons.aura.active = true;
               weapons.aura.level = 1;
-              showStatChange('New Weapon: Aura');
-              addInfoMessage('✨ Weapon unlocked: Aura', '#FFD700');
+              announceWeaponUnlock('Aura', '✨');
             } 
           },
           { 
@@ -4367,8 +4508,7 @@
             apply: () => { 
               weapons.meteor.active = true;
               weapons.meteor.level = 1;
-              showStatChange('New Weapon: Meteor');
-              addInfoMessage('☄️ Weapon unlocked: Meteor', '#FFD700');
+              announceWeaponUnlock('Meteor', '☄️');
             } 
           },
           { 
@@ -4379,8 +4519,7 @@
             apply: () => { 
               weapons.doubleBarrel.active = true;
               weapons.doubleBarrel.level = 1;
-              showStatChange('New Weapon: Double Barrel');
-              addInfoMessage('🔫 Weapon unlocked: Double Barrel', '#FFD700');
+              announceWeaponUnlock('Double Barrel', '🔫');
             } 
           }
         ];
@@ -4401,8 +4540,7 @@
             apply: () => { 
               weapons.sword.active = true;
               weapons.sword.level = 1;
-              showStatChange('New Weapon: Sword');
-              addInfoMessage('⚔️ Weapon unlocked: Sword', '#FFD700');
+              announceWeaponUnlock('Sword', '⚔️');
             } 
           },
           { 
@@ -4413,8 +4551,31 @@
             apply: () => { 
               weapons.aura.active = true;
               weapons.aura.level = 1;
-              showStatChange('New Weapon: Aura');
-              addInfoMessage('✨ Weapon unlocked: Aura', '#FFD700');
+              announceWeaponUnlock('Aura', '✨');
+            } 
+          },
+          { 
+            id: 'meteor', 
+            title: 'SPACE ROCKS', 
+            desc: 'Call meteors from sky', 
+            active: weapons.meteor.active,
+            apply: () => { 
+              weapons.meteor.active = true;
+              weapons.meteor.level = 1;
+              announceWeaponUnlock('Meteor', '☄️');
+            } 
+          },
+          { 
+            id: 'doublebarrel', 
+            title: 'DOUBLE BARREL', 
+            desc: 'Powerful shotgun spread', 
+            active: weapons.doubleBarrel.active,
+            apply: () => { 
+              weapons.doubleBarrel.active = true;
+              weapons.doubleBarrel.level = 1;
+              announceWeaponUnlock('Double Barrel', '🔫');
+            } 
+          }
             } 
           },
           { 
@@ -4665,6 +4826,73 @@
       setTimeout(() => div.remove(), 1000);
     }
     
+    function announceWeaponUnlock(weaponName, weaponIcon) {
+      // Create large center-screen announcement for weapon unlocks
+      const overlay = document.createElement('div');
+      overlay.style.position = 'fixed';
+      overlay.style.top = '50%';
+      overlay.style.left = '50%';
+      overlay.style.transform = 'translate(-50%, -50%) scale(0)';
+      overlay.style.zIndex = '3000';
+      overlay.style.pointerEvents = 'none';
+      
+      // Create announcement box
+      const box = document.createElement('div');
+      box.style.background = 'linear-gradient(135deg, rgba(93, 173, 226, 0.95) 0%, rgba(41, 128, 185, 0.95) 100%)';
+      box.style.padding = '30px 50px';
+      box.style.borderRadius = '20px';
+      box.style.border = '4px solid #FFD700';
+      box.style.boxShadow = '0 0 40px rgba(93, 173, 226, 0.8), 0 0 80px rgba(93, 173, 226, 0.4), inset 0 0 20px rgba(255, 255, 255, 0.2)';
+      box.style.textAlign = 'center';
+      box.innerHTML = `
+        <div style="font-size: 24px; color: #FFD700; font-weight: bold; text-shadow: 0 0 10px rgba(255, 215, 0, 0.8), 2px 2px 4px #000; margin-bottom: 10px;">WEAPON UNLOCKED!</div>
+        <div style="font-size: 48px; margin: 15px 0;">${weaponIcon}</div>
+        <div style="font-size: 32px; color: #FFFFFF; font-weight: bold; text-shadow: 0 0 10px rgba(93, 173, 226, 0.8), 2px 2px 4px #000;">${weaponName}</div>
+      `;
+      
+      overlay.appendChild(box);
+      document.body.appendChild(overlay);
+      
+      // Animate: scale up, hold, then fade out
+      const animDuration = 2500; // ms
+      const startTime = Date.now();
+      
+      const animate = () => {
+        const elapsed = Date.now() - startTime;
+        const t = elapsed / animDuration;
+        
+        if (t >= 1) {
+          overlay.remove();
+          return;
+        }
+        
+        let scale, opacity;
+        if (t < 0.2) {
+          // Scale up quickly (0-0.2)
+          scale = t / 0.2;
+          opacity = 1;
+        } else if (t < 0.7) {
+          // Hold (0.2-0.7)
+          scale = 1 + Math.sin((t - 0.2) * 20) * 0.05; // Slight pulse
+          opacity = 1;
+        } else {
+          // Fade out (0.7-1.0)
+          scale = 1 + ((t - 0.7) / 0.3) * 0.2;
+          opacity = 1 - ((t - 0.7) / 0.3);
+        }
+        
+        overlay.style.transform = `translate(-50%, -50%) scale(${scale})`;
+        overlay.style.opacity = opacity;
+        
+        requestAnimationFrame(animate);
+      };
+      animate();
+      
+      // Also add to info bar
+      addInfoMessage(`${weaponIcon} Weapon unlocked: ${weaponName}`, '#FFD700');
+      playSound('levelup');
+    }
+
     function showStatChange(text) {
       // Create floating text on left side of screen
       const div = document.createElement('div');
@@ -5588,6 +5816,18 @@ Total Gold Earned: ${saveData.totalGoldEarned}
             const scale = 1 + Math.sin(obj.userData.phase) * 0.3;
             obj.scale.set(scale, 1, scale);
             obj.material.opacity = 0.4 + Math.sin(obj.userData.phase) * 0.2;
+          }
+          // Spawn statue animation
+          if (obj.userData.isSpawnStatue) {
+            obj.userData.phase += 0.02 * animSpeedMultiplier;
+            // Rotate droplet
+            obj.userData.droplet.rotation.y += 0.01 * animSpeedMultiplier;
+            // Pulse ring
+            const ringScale = 1 + Math.sin(obj.userData.phase) * 0.15;
+            obj.userData.ring.scale.set(ringScale, ringScale, ringScale);
+            obj.userData.ring.material.opacity = 0.3 + Math.sin(obj.userData.phase) * 0.2;
+            // Pulse light
+            obj.userData.light.intensity = 0.4 + Math.sin(obj.userData.phase) * 0.3;
           }
         });
       }
