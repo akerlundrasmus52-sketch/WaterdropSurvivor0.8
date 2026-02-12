@@ -435,6 +435,8 @@
       // Effects
       slowed: false,
       slowEndTime: 0,
+      invulnerable: false,
+      invulnerableUntil: 0,
     };
 
     // Camera
@@ -604,7 +606,10 @@
     function startGame() {
       gameStarted = true;
       document.getElementById('startModal').style.display = 'none';
-      spawnEnemyWave();
+      // Grace period: spawn first wave after 3 seconds
+      setTimeout(() => {
+        spawnEnemyWave();
+      }, 3000);
       lastTime = performance.now();
       requestAnimationFrame(gameLoop);
     }
@@ -1024,6 +1029,11 @@
     }
 
     function damagePlayer(damage) {
+      // Check invulnerability frames (0.5 seconds after taking damage)
+      if (player.invulnerable && gameTime < player.invulnerableUntil) {
+        return;
+      }
+      
       const actualDamage = Math.max(1, damage - player.armor);
       
       if (Math.random() < player.dodge) {
@@ -1034,6 +1044,10 @@
       player.hp -= actualDamage;
       createDamageNumber(player.x, player.y - 30, Math.floor(actualDamage), false);
       camera.shake = 1;
+      
+      // Set invulnerability frames
+      player.invulnerable = true;
+      player.invulnerableUntil = gameTime + 0.5;
       
       if (player.hp <= 0) {
         gameOver();
@@ -1063,9 +1077,9 @@
       
       const type = ENEMY_TYPES[typeIndex];
       
-      // Spawn outside screen
+      // Spawn outside screen (farther away)
       const angle = Math.random() * Math.PI * 2;
-      const distance = 900;
+      const distance = 1200; // Increased from 900
       
       // Scale with wave
       const waveScale = 1 + waveNumber * 0.1;
@@ -1365,6 +1379,14 @@
       ctx.translate(player.x, player.y);
       ctx.rotate(player.angle);
       
+      // Flash when invulnerable
+      if (player.invulnerable && gameTime < player.invulnerableUntil) {
+        const flashSpeed = 10; // Flash frequency
+        if (Math.floor(gameTime * flashSpeed) % 2 === 0) {
+          ctx.globalAlpha = 0.5;
+        }
+      }
+      
       // Shadow
       ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
       ctx.beginPath();
@@ -1396,6 +1418,7 @@
       ctx.lineTo(CONFIG.PLAYER_SIZE + 10, 0);
       ctx.stroke();
       
+      ctx.globalAlpha = 1; // Reset alpha
       ctx.restore();
     }
 
