@@ -1351,7 +1351,7 @@
         this.mesh.material.color.setHex(0xFFFFFF);
         
         // Enhanced splash particles using enemy's own color
-        const enemyColor = oldColor;
+        // enemyColor already declared at the top of this function
         const particleCount = isCrit ? 8 : 3;
         spawnParticles(this.mesh.position, enemyColor, particleCount);
         
