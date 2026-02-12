@@ -6185,6 +6185,7 @@ Total Gold Earned: ${saveData.totalGoldEarned}
 
         const retryButton = document.createElement('button');
         retryButton.textContent = '🔄 Retry';
+        retryButton.setAttribute('aria-label', 'Reload page to retry loading game');
         retryButton.style.cssText = `
           background: #4CAF50;
           color: white;
@@ -6202,6 +6203,15 @@ Total Gold Earned: ${saveData.totalGoldEarned}
         };
         retryButton.onmouseout = function() {
           this.style.background = '#4CAF50';
+        };
+        retryButton.onfocus = function() {
+          this.style.background = '#45a049';
+          this.style.outline = '2px solid #ffffff';
+          this.style.outlineOffset = '2px';
+        };
+        retryButton.onblur = function() {
+          this.style.background = '#4CAF50';
+          this.style.outline = 'none';
         };
         retryButton.onclick = function() {
           window.location.reload();
