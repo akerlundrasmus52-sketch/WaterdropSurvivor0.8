@@ -2353,14 +2353,29 @@
     class Projectile {
       constructor(x, z, target) {
         const geometry = new THREE.SphereGeometry(0.2, 8, 8);
-        const material = new THREE.MeshBasicMaterial({ color: 0xFFFF00 });
+        const material = new THREE.MeshBasicMaterial({ 
+          color: 0xFFFF00,
+          transparent: true,
+          opacity: 0.95
+        });
         this.mesh = new THREE.Mesh(geometry, material);
         this.mesh.position.set(x, 0.5, z);
         scene.add(this.mesh);
+        
+        // Add glow effect for projectiles
+        const glowGeo = new THREE.SphereGeometry(0.3, 8, 8);
+        const glowMat = new THREE.MeshBasicMaterial({
+          color: 0xFFFF00,
+          transparent: true,
+          opacity: 0.3
+        });
+        this.glow = new THREE.Mesh(glowGeo, glowMat);
+        this.mesh.add(this.glow);
 
         this.speed = 0.4;
         this.active = true;
         this.life = 60; // Frames
+        this.trailTimer = 0;
 
         // Calculate direction
         const dx = target.x - x;
@@ -2399,6 +2414,18 @@
         this.mesh.position.x += this.vx;
         this.mesh.position.z += this.vz;
         this.life--;
+        
+        // Animate glow pulse
+        if (this.glow) {
+          const pulse = 1 + Math.sin(gameTime * 10) * 0.2;
+          this.glow.scale.setScalar(pulse);
+        }
+        
+        // Add trail effect
+        this.trailTimer++;
+        if (this.trailTimer % 2 === 0) { // Every 2 frames
+          spawnParticles(this.mesh.position, 0xFFFF00, 1);
+        }
 
         if (this.life <= 0) {
           this.destroy();
@@ -2471,6 +2498,10 @@
       destroy() {
         this.active = false;
         scene.remove(this.mesh);
+        if (this.glow) {
+          this.glow.geometry.dispose();
+          this.glow.material.dispose();
+        }
         this.mesh.geometry.dispose();
         this.mesh.material.dispose();
       }
@@ -2478,17 +2509,39 @@
 
     class SwordSlash {
       constructor(x, z, angle) {
-        // Arc geometry
+        // Arc geometry with enhanced visuals
         const geometry = new THREE.RingGeometry(1.5, 2.5, 8, 1, -Math.PI/4, Math.PI/2);
-        const material = new THREE.MeshBasicMaterial({ color: 0xFFFFFF, side: THREE.DoubleSide, transparent: true, opacity: 0.8 });
+        const material = new THREE.MeshBasicMaterial({ 
+          color: 0xFFFFFF, 
+          side: THREE.DoubleSide, 
+          transparent: true, 
+          opacity: 0.9 
+        });
         this.mesh = new THREE.Mesh(geometry, material);
         this.mesh.rotation.x = -Math.PI / 2;
         this.mesh.rotation.z = angle - Math.PI/4; // Adjust for arc center
         this.mesh.position.set(x, 0.6, z);
         scene.add(this.mesh);
         
-        this.life = 10; // frames
-        this.maxLife = 10;
+        // Add glow effect to sword slash
+        const glowGeo = new THREE.RingGeometry(1.3, 2.7, 8, 1, -Math.PI/4, Math.PI/2);
+        const glowMat = new THREE.MeshBasicMaterial({
+          color: 0xADD8E6,
+          side: THREE.DoubleSide,
+          transparent: true,
+          opacity: 0.4
+        });
+        this.glow = new THREE.Mesh(glowGeo, glowMat);
+        this.glow.rotation.x = -Math.PI / 2;
+        this.glow.rotation.z = angle - Math.PI/4;
+        this.glow.position.set(x, 0.58, z);
+        scene.add(this.glow);
+        
+        this.life = 12; // frames - slightly longer
+        this.maxLife = 12;
+        this.angle = angle;
+        this.x = x;
+        this.z = z;
         
         // Deal damage immediately
         const dmg = weapons.sword.damage * playerStats.strength * playerStats.damage;
@@ -2508,6 +2561,8 @@
             
             if (Math.abs(diff) < Math.PI/3) {
               e.takeDamage(dmg);
+              // Add slash particles
+              spawnParticles(e.mesh.position, 0xFFFFFF, 4);
             }
           }
         });
@@ -2515,11 +2570,24 @@
       
       update() {
         this.life--;
-        this.mesh.material.opacity = this.life / this.maxLife;
+        const lifeFactor = this.life / this.maxLife;
+        this.mesh.material.opacity = lifeFactor * 0.9;
+        if (this.glow) {
+          this.glow.material.opacity = lifeFactor * 0.4;
+          // Pulse effect
+          const scale = 1 + (1 - lifeFactor) * 0.3;
+          this.glow.scale.setScalar(scale);
+        }
+        
         if (this.life <= 0) {
           scene.remove(this.mesh);
           this.mesh.geometry.dispose();
           this.mesh.material.dispose();
+          if (this.glow) {
+            scene.remove(this.glow);
+            this.glow.geometry.dispose();
+            this.glow.material.dispose();
+          }
           return false;
         }
         return true;
