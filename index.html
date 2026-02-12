@@ -8077,8 +8077,11 @@
           const dx = nearest.mesh.position.x - player.mesh.position.x;
           const dz = nearest.mesh.position.z - player.mesh.position.z;
           const dist = Math.sqrt(dx*dx + dz*dz);
-          player.recoilVelocity.x -= (dx / dist) * GAME_CONFIG.gunRecoilStrength;
-          player.recoilVelocity.z -= (dz / dist) * GAME_CONFIG.gunRecoilStrength;
+          const EPSILON = 1e-4;
+          if (dist > EPSILON) {
+            player.recoilVelocity.x -= (dx / dist) * GAME_CONFIG.gunRecoilStrength;
+            player.recoilVelocity.z -= (dz / dist) * GAME_CONFIG.gunRecoilStrength;
+          }
           
           // Fire based on barrels
           for(let i=0; i<weapons.gun.barrels; i++) {
