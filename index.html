@@ -207,6 +207,43 @@
       50% { transform: translateY(-10px); }
     }
 
+    #loadingScreen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: url('321E5768-E77B-4471-8C32-5D7C1D715A4B.png');
+      background-size: cover;
+      background-position: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      z-index: 10000;
+      transition: opacity 0.5s ease-out;
+      padding-bottom: 100px;
+    }
+
+    #loadingScreen.fade-out {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .loading-text {
+      color: #FFF;
+      font-size: 24px;
+      font-weight: bold;
+      text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.8), 0 0 20px rgba(93, 173, 226, 0.8);
+      margin-bottom: 20px;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.6; }
+      50% { opacity: 1; }
+    }
+
     .floating-text {
       position: absolute;
       font-size: 20px;
@@ -308,6 +345,10 @@
   </style>
 </head>
 <body>
+  <div id="loadingScreen">
+    <div class="loading-text">TAP TO START</div>
+  </div>
+  
   <canvas id="gameCanvas"></canvas>
   <div class="ui-overlay">
     <div class="hud">
@@ -323,6 +364,7 @@
       <div class="stat-text gold-text">Gold: <span id="goldText">0</span></div>
       <div class="stat-text">Kills: <span id="killsText">0</span></div>
       <div class="stat-text" style="font-size: 12px; color: #AAA;">Time: <span id="timeText">0:00</span></div>
+      <div class="stat-text" id="dashIndicator" style="font-size: 12px; color: #5DADE2;">⚡ Dash Ready</div>
     </div>
 
     <div id="upgradeModal" class="modal" style="display: none;">
@@ -331,15 +373,17 @@
       <div class="upgrade-container" id="upgradeOptions"></div>
     </div>
 
-    <div id="startModal" class="modal">
+    <div id="startModal" class="modal" style="display: none;">
       <div class="menu-container">
         <div class="menu-title">💧 WATER DROP SURVIVOR 💧</div>
         <button id="startButton">START GAME</button>
         <div style="color: #CCC; text-align: center; margin-top: 10px; font-size: 14px;">
           <p>WASD / Arrow Keys - Move</p>
+          <p>Spacebar - Dash</p>
           <p>Mouse - Aim & Shoot</p>
           <p>Touch - Virtual Joysticks</p>
-          <p style="margin-top: 10px; color: #5DADE2;">High-Fidelity Pixel Art Edition</p>
+          <p>Swipe - Dash (Mobile)</p>
+          <p style="margin-top: 10px; color: #5DADE2;">Ultimate Pixel Art Edition</p>
         </div>
       </div>
     </div>
@@ -506,6 +550,18 @@
     function init() {
       resizeCanvas();
       window.addEventListener('resize', resizeCanvas);
+      
+      // Handle loading screen
+      const loadingScreen = document.getElementById('loadingScreen');
+      const startModal = document.getElementById('startModal');
+      
+      loadingScreen.addEventListener('click', () => {
+        loadingScreen.classList.add('fade-out');
+        setTimeout(() => {
+          loadingScreen.style.display = 'none';
+          startModal.style.display = 'block';
+        }, 500);
+      });
       
       // Keyboard
       window.addEventListener('keydown', e => {
@@ -1745,6 +1801,19 @@
       
       document.getElementById('healthFill').style.width = (player.hp / player.maxHp * 100) + '%';
       document.getElementById('expFill').style.width = (player.xp / player.xpToLevel * 100) + '%';
+      
+      // Update dash indicator
+      const dashIndicator = document.getElementById('dashIndicator');
+      if (player.isDashing) {
+        dashIndicator.textContent = '⚡ Dashing!';
+        dashIndicator.style.color = '#FFD700';
+      } else if (player.dashCooldownRemaining > 0) {
+        dashIndicator.textContent = `⚡ Dash (${player.dashCooldownRemaining.toFixed(1)}s)`;
+        dashIndicator.style.color = '#888';
+      } else {
+        dashIndicator.textContent = '⚡ Dash Ready';
+        dashIndicator.style.color = '#5DADE2';
+      }
     }
 
     // ============================================
