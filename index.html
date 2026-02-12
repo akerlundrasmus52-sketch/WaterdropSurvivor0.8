@@ -2748,9 +2748,9 @@
         const particleCount = isCrit ? 4 : 2;
         spawnParticles(this.mesh.position, enemyColor, particleCount);
         
-        // Reduced impact particles for crits
+        // Reduced impact particles for crits (performance)
         if (isCrit) {
-          spawnParticles(this.mesh.position, 0xFFFFFF, 2);
+          spawnParticles(this.mesh.position, 0xFFFFFF, 1);
         }
         
         // Enhanced squishy deformation on hit
@@ -2773,10 +2773,10 @@
         // Optimized explosion effect on death
         const enemyColor = this.mesh.material.color.getHex();
         
-        // Main explosion with balanced particle count
-        spawnParticles(this.mesh.position, enemyColor, 20);
-        spawnParticles(this.mesh.position, 0xFFFFFF, 6);
-        spawnParticles(this.mesh.position, 0x8B0000, 5);
+        // Reduced death explosion particles for better performance
+        spawnParticles(this.mesh.position, enemyColor, 10);
+        spawnParticles(this.mesh.position, 0xFFFFFF, 3);
+        spawnParticles(this.mesh.position, 0x8B0000, 2);
         
         // Add explosion ring effect
         const ringGeo = new THREE.RingGeometry(0.1, 0.2, 16);
@@ -2810,8 +2810,8 @@
         };
         animateRing();
         
-        // Explode into more pieces - ENHANCED
-        const pieceCount = this.isMiniBoss ? 25 : 15; // More pieces for mini-boss
+        // Reduced explosion pieces for better performance
+        const pieceCount = this.isMiniBoss ? 15 : 8; // Fewer pieces for better performance
         for(let i = 0; i < pieceCount; i++) {
           const piece = new THREE.Mesh(
             new THREE.BoxGeometry(0.3, 0.3, 0.3),
@@ -5591,19 +5591,19 @@
         return;
       }
       
-      // Custom XP Curve: Smoother progression up to level 50
-      // Level 1→2: 3 kills, 2→3: 4 kills, 3→4: 5 kills, etc.
+      // Custom XP Curve: Balanced progression to reach level 50
+      // Adjusted to make reaching level 50 more achievable
       let killsNeeded;
       if (playerStats.lvl <= 5) {
         killsNeeded = 2 + playerStats.lvl; // Levels 1-5: 3, 4, 5, 6, 7 kills respectively
       } else if (playerStats.lvl <= 15) {
         killsNeeded = 7 + Math.floor((playerStats.lvl - 5) * 0.5); // Levels 6-15: 7-12 kills
       } else if (playerStats.lvl <= 30) {
-        killsNeeded = 12 + Math.floor((playerStats.lvl - 15) * 0.7); // Levels 16-30: 12-22 kills
+        killsNeeded = 12 + Math.floor((playerStats.lvl - 15) * 0.6); // Levels 16-30: 12-21 kills (reduced)
       } else if (playerStats.lvl <= 50) {
-        killsNeeded = 22 + Math.floor((playerStats.lvl - 30) * 1); // Levels 31-50: 22-42 kills
+        killsNeeded = 21 + Math.floor((playerStats.lvl - 30) * 0.7); // Levels 31-50: 21-35 kills (reduced for balance)
       } else {
-        killsNeeded = 42 + Math.floor((playerStats.lvl - 50) * 1.5); // Levels 51+: 42+ kills (harder progression)
+        killsNeeded = 35 + Math.floor((playerStats.lvl - 50) * 1.5); // Levels 51+: 35+ kills (harder progression)
       }
       playerStats.expReq = killsNeeded * GAME_CONFIG.expValue;
       
@@ -5718,8 +5718,8 @@
         }
       });
       
-      // Optimized Water Fountain Effect - fewer particles
-      for(let i=0; i<35; i++) {
+      // Reduced Water Fountain Effect for better performance
+      for(let i=0; i<20; i++) {
         const angle = (i / 60) * Math.PI * 2;
         const speed = 0.2 + Math.random() * 0.4;
         const height = 0.6 + Math.random() * 0.8;
@@ -5794,10 +5794,10 @@
       };
       updateRing();
       
-      // Optimized fountain/explosion of text particles
+      // Reduced fountain/explosion of text particles for performance
       const texts = ["L", "E", "V", "E", "L", " ", "U", "P", "!"];
       
-      for(let i=0; i<25; i++) {
+      for(let i=0; i<15; i++) {
         const angle = (i / 40) * Math.PI * 2;
         const speed = 0.15 + Math.random() * 0.35;
         const text = texts[i % texts.length];
@@ -5814,8 +5814,8 @@
         particles.push(particle);
       }
       
-      // Optimized colored particles
-      for(let i=0; i<20; i++) {
+      // Reduced colored particles for performance
+      for(let i=0; i<12; i++) {
         const angle = (i / 30) * Math.PI * 2;
         const speed = 0.2 + Math.random() * 0.3;
         const particle = new LevelUpParticle(
@@ -5829,8 +5829,8 @@
         particles.push(particle);
       }
       
-      // Optimized lightning bolts for performance
-      for(let i=0; i<3; i++) {
+      // Reduced lightning bolts for performance
+      for(let i=0; i<2; i++) {
         const angle = (i / 4) * Math.PI * 2;
         const lightning = new LightningBolt(
           player.mesh.position.clone(),
@@ -7714,10 +7714,10 @@
               }, 60);
               activeTimeouts.push(kickbackTimeoutId);
               
-              // Optimized muzzle flash particles (balanced for performance)
-              spawnParticles(player.mesh.position, 0xFFFF00, 4);
-              spawnParticles(player.mesh.position, 0xFFFFFF, 3);
-              spawnParticles(player.mesh.position, 0xFFA500, 2);
+              // Reduced muzzle flash particles for better performance
+              spawnParticles(player.mesh.position, 0xFFFF00, 2);
+              spawnParticles(player.mesh.position, 0xFFFFFF, 2);
+              spawnParticles(player.mesh.position, 0xFFA500, 1);
             }, i * 100);
           }
           weapons.gun.lastShot = time;
@@ -7735,9 +7735,9 @@
         weapons.sword.lastShot = time;
         playSound('shoot'); // Reuse sound for now
         
-        // Optimized sword slash visual effects
-        spawnParticles(player.mesh.position, 0xC0C0C0, 4);
-        spawnParticles(player.mesh.position, 0xFFFFFF, 2);
+        // Reduced sword slash particles for better performance
+        spawnParticles(player.mesh.position, 0xC0C0C0, 2);
+        spawnParticles(player.mesh.position, 0xFFFFFF, 1);
         // Add flash light for sword slash - track timeout for proper cleanup
         const slashLight = new THREE.PointLight(0xC0C0C0, 3, 8);
         slashLight.position.copy(player.mesh.position);
