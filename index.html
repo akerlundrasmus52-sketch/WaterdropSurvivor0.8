@@ -3786,7 +3786,17 @@
       
       level10: { id: 'level10', name: 'Rising Star', desc: 'Reach Level 10', reward: 100, check: () => playerStats.lvl >= 10, claimed: false },
       level25: { id: 'level25', name: 'Experienced Fighter', desc: 'Reach Level 25', reward: 250, check: () => playerStats.lvl >= 25, claimed: false },
-      level50: { id: 'level50', name: 'Master Champion', desc: 'Reach Level 50', reward: 500, check: () => playerStats.lvl >= 50, claimed: false }
+      level50: { id: 'level50', name: 'Master Champion', desc: 'Reach Level 50', reward: 500, check: () => playerStats.lvl >= 50, claimed: false },
+      
+      // ENHANCEMENT: New achievements for combo system and advanced gameplay
+      combo10: { id: 'combo10', name: 'Combo Starter', desc: 'Achieve a 10-kill combo', reward: 75, check: () => playerStats.maxCombo >= 10, claimed: false },
+      combo25: { id: 'combo25', name: 'Combo Master', desc: 'Achieve a 25-kill combo', reward: 150, check: () => playerStats.maxCombo >= 25, claimed: false },
+      combo50: { id: 'combo50', name: 'Combo Legend', desc: 'Achieve a 50-kill combo', reward: 300, check: () => playerStats.maxCombo >= 50, claimed: false },
+      combo100: { id: 'combo100', name: 'Unstoppable Force', desc: 'Achieve a 100-kill combo', reward: 500, check: () => playerStats.maxCombo >= 100, claimed: false },
+      
+      critStreak: { id: 'critStreak', name: 'Critical Precision', desc: 'Land 100 critical hits', reward: 200, check: () => playerStats.totalCrits >= 100, claimed: false },
+      bossSlayer: { id: 'bossSlayer', name: 'Boss Slayer', desc: 'Defeat 5 mini-bosses', reward: 250, check: () => playerStats.bossesKilled >= 5, claimed: false },
+      perfectRun: { id: 'perfectRun', name: 'Perfect Run', desc: 'Complete a run without taking damage', reward: 1000, check: () => playerStats.perfectRuns > 0, claimed: false }
     };
 
     function updateAchievementsScreen() {
@@ -5415,6 +5425,64 @@
       playerStats.lvl++;
       playerStats.exp -= playerStats.expReq;
       
+      // ENHANCEMENT: Level Milestone Rewards - Bonus effects for every 5 levels
+      const isMilestone = playerStats.lvl % 5 === 0;
+      if (isMilestone && playerStats.lvl > 0) {
+        // Permanent stat bonuses at milestones
+        playerStats.maxHp += 20;
+        playerStats.hp = Math.min(playerStats.maxHp, playerStats.hp + 20); // Heal on milestone
+        playerStats.strength += 0.05; // +5% damage every 5 levels
+        
+        // Special celebration for milestones
+        setTimeout(() => {
+          createFloatingText(`⭐ LEVEL ${playerStats.lvl} MILESTONE! ⭐\n+20 Max HP, +5% Damage, Full Heal!`, player.mesh.position);
+        }, 500);
+      }
+      
+      // ENHANCEMENT: Weapon Evolution System - Ultimate forms at level 20
+      if (playerStats.lvl === 20) {
+        setTimeout(() => {
+          createFloatingText(`🌟 ULTIMATE WEAPON EVOLUTION! 🌟\nAll weapons gain ULTIMATE POWER!`, player.mesh.position);
+          
+          // Gun Ultimate: Triple Barrel with penetration
+          if (weapons.gun.active) {
+            weapons.gun.barrels = 3;
+            weapons.gun.damage += 20;
+            showStatChange('Gun ULTIMATE: Triple Shot!');
+          }
+          
+          // Sword Ultimate: Wider arc and damage
+          if (weapons.sword.active) {
+            weapons.sword.damage += 40;
+            weapons.sword.range += 1.5;
+            showStatChange('Sword ULTIMATE: Mega Slash!');
+          }
+          
+          // Aura Ultimate: Double range
+          if (weapons.aura.active) {
+            weapons.aura.range *= 1.5;
+            weapons.aura.damage += 8;
+            showStatChange('Aura ULTIMATE: Nova Blast!');
+          }
+          
+          // Meteor Ultimate: Double meteors
+          if (weapons.meteor.active) {
+            weapons.meteor.damage += 50;
+            weapons.meteor.area += 2;
+            showStatChange('Meteor ULTIMATE: Meteor Shower!');
+          }
+          
+          // Lightning Ultimate: 10 targets
+          if (weapons.lightning.active) {
+            weapons.lightning.targets = Math.max(weapons.lightning.targets, 10);
+            weapons.lightning.damage += 30;
+            showStatChange('Lightning ULTIMATE: Storm!');
+          }
+          
+          playSound('levelup');
+        }, 1000);
+      }
+      
       // Victory condition: Reaching level 50
       if (playerStats.lvl === 50) {
         setTimeout(() => {
@@ -6681,6 +6749,12 @@
       const survivalTime = Math.floor((Date.now() - gameStartTime) / 1000);
       const goldEarned = playerStats.gold - runStartGold;
       
+      // ENHANCEMENT: Track perfect runs (no damage taken)
+      if (playerStats.damageTaken === 0 && playerStats.kills > 0) {
+        playerStats.perfectRuns++;
+        createFloatingText("🎉 PERFECT RUN! No damage taken! 🎉", player.mesh.position);
+      }
+      
       // Update save data
       saveData.totalRuns++;
       if (survivalTime > saveData.bestTime) saveData.bestTime = survivalTime;
@@ -6767,6 +6841,13 @@
       playerStats.dashesPerformed = 0;
       playerStats.damageTaken = 0;
       playerStats.weaponsUnlocked = 0;
+      
+      // ENHANCEMENT: Reset combo and streak stats for new run
+      playerStats.comboCount = 0;
+      playerStats.comboMultiplier = 1.0;
+      playerStats.comboTimer = 0;
+      playerStats.critStreak = 0;
+      // Keep maxCombo, bossesKilled, totalCrits, perfectRuns as they track all-time records
       
       windmillQuest = { active: false, timer: 0, duration: 15, windmill: null, hasCompleted: false };
       document.getElementById('windmill-quest-ui').style.display = 'none';
