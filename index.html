@@ -44,6 +44,13 @@
   <meta name="screen-orientation" content="portrait">
   <title>Water Drop Survivor</title>
   <style>
+    html {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+
     body {
       margin: 0;
       padding: 0;
@@ -53,6 +60,8 @@
       touch-action: none;
       user-select: none;
       -webkit-user-select: none;
+      width: 100%;
+      height: 100%;
     }
 
     #game-container {
@@ -3815,6 +3824,7 @@
       // Renderer
       renderer = new THREE.WebGLRenderer({ antialias: true });
       renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(window.devicePixelRatio); // Support high-DPI displays
       renderer.shadowMap.enabled = true;
       renderer.shadowMap.type = THREE.PCFSoftShadowMap;
       document.getElementById('game-container').appendChild(renderer.domElement);
