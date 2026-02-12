@@ -1291,7 +1291,11 @@
     const ADAPTIVE_QUALITY_THRESHOLD_MS = 22; // Lower threshold for earlier intervention (was 25)
     const ADAPTIVE_QUALITY_MIN_PARTICLES = 50; // Minimum particles before adaptive quality kicks in
     const ADAPTIVE_QUALITY_REDUCTION_FACTOR = 0.5; // Reduce particles to 50% of max when quality drops
-    const MEMORY_CLEANUP_INTERVAL = 5000; // Run aggressive memory cleanup every 5 seconds
+    const MEMORY_CLEANUP_INTERVAL_MS = 5000; // Run aggressive memory cleanup every 5 seconds
+    const PARTICLE_LIGHT_CLEANUP_THRESHOLD = 10; // Clean up particle lights when life drops below this
+    const MAX_METEOR_LIFETIME = 100; // Maximum frames a meteor can exist
+    const MAX_PROJECTILE_DISTANCE = 80; // Maximum distance from player before projectile cleanup
+    const MAX_PROJECTILE_DISTANCE_SQUARED = MAX_PROJECTILE_DISTANCE * MAX_PROJECTILE_DISTANCE; // For performance
     let lastCleanupTime = 0;
     let lastMemoryCleanup = 0;
     
@@ -1514,8 +1518,8 @@
             targetVel.x = joystickLeft.x * speed;
             targetVel.z = joystickLeft.y * speed;
           
-            // Apply acceleration for more realistic movement
-            const accel = 0.15; // Increased from implicit value
+            // Apply acceleration for smoother and more realistic movement
+            const accel = 0.15;
             this.velocity.x += (targetVel.x - this.velocity.x) * accel;
             this.velocity.z += (targetVel.z - this.velocity.z) * accel;
             
@@ -1568,7 +1572,7 @@
             this.mesh.rotation.y += angleDiff * 0.2; // Smooth turn
           }
 
-          // Remove old lerp call as we're now handling velocity directly above
+          // Velocity now managed through acceleration/friction above
         }
         
         const speedMag = this.velocity.length();
@@ -2471,15 +2475,21 @@
               // Spawn extra impact particles for critical hits
               spawnParticles(enemy.mesh.position, 0xFFD700, 8);
               spawnParticles(enemy.mesh.position, 0xFFFFFF, 5);
-              // Minor screen shake on crit
+              // Minor screen shake on crit with proper restoration
               if (Math.random() < 0.3) {
                 const shakeIntensity = 0.15;
-                const originalCameraY = camera.position.y;
+                const originalCameraPos = {
+                  x: camera.position.x,
+                  y: camera.position.y,
+                  z: camera.position.z
+                };
                 camera.position.x += (Math.random() - 0.5) * shakeIntensity;
                 camera.position.y += (Math.random() - 0.5) * shakeIntensity;
                 camera.position.z += (Math.random() - 0.5) * shakeIntensity;
                 setTimeout(() => {
-                  camera.position.y = originalCameraY;
+                  camera.position.x = originalCameraPos.x;
+                  camera.position.y = originalCameraPos.y;
+                  camera.position.z = originalCameraPos.z;
                 }, 50);
               }
             }
@@ -6173,22 +6183,22 @@ Total Gold Earned: ${saveData.totalGoldEarned}
       }
       
       // Aggressive memory cleanup every 5 seconds to prevent crashes
-      if (now - lastMemoryCleanup > MEMORY_CLEANUP_INTERVAL) {
+      if (now - lastMemoryCleanup > MEMORY_CLEANUP_INTERVAL_MS) {
         lastMemoryCleanup = now;
         
         // Force cleanup of all inactive particles with lights
         particles.forEach(p => {
-          if (p.light && p.life < 10) {
+          if (p.light && p.life < PARTICLE_LIGHT_CLEANUP_THRESHOLD) {
             scene.remove(p.light);
             p.light = null;
           }
         });
         
-        // Clean up projectiles that are off-screen or too old
+        // Clean up projectiles that are off-screen or too old (optimized with distanceToSquared)
         projectiles = projectiles.filter(p => {
           if (!p.active || !p.mesh || !p.mesh.parent) return false;
-          const dist = p.mesh.position.distanceTo(player.mesh.position);
-          return dist < 80; // Remove if too far from player
+          const distSq = p.mesh.position.distanceToSquared(player.mesh.position);
+          return distSq < MAX_PROJECTILE_DISTANCE_SQUARED; // Remove if too far from player
         });
         
         // Clean up old sword slashes
@@ -6200,7 +6210,7 @@ Total Gold Earned: ${saveData.totalGoldEarned}
         // Clean up meteors that are too old
         meteors = meteors.filter(m => {
           if (!m || !m.mesh || !m.mesh.parent) return false;
-          return m.fallTime < 100; // Remove meteors that have been around too long
+          return m.fallTime < MAX_METEOR_LIFETIME; // Remove meteors that have been around too long
         });
       }
 
