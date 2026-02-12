@@ -1642,7 +1642,9 @@
     const MAX_METEORS = 50;
     const MAX_DEBRIS = 200;
     
-    
+    // Deferred disposal queue for performance (PR #64)
+    const disposalQueue = [];
+    const MAX_DISPOSALS_PER_FRAME = 10;
     
     // Cache animated objects to avoid scene.traverse() every frame
     let animatedObjects = {
@@ -2887,9 +2889,7 @@
         document.body.appendChild(flash);
         setTimeout(() => flash.remove(), this.isMiniBoss ? 100 : 50);
         
-        scene.remove(this.mesh);
-        this.mesh.geometry.dispose();
-        this.mesh.material.dispose();
+        queueDisposal(this.mesh);
         
         // Drop EXP
         const expMultiplier = this.isMiniBoss ? 3 : 1;
@@ -3047,15 +3047,11 @@
 
       destroy() {
         this.active = false;
-        scene.remove(this.mesh);
-        this.mesh.geometry.dispose();
-        this.mesh.material.dispose();
+        queueDisposal(this.mesh);
         
         // Remove glow if it exists
         if (this.glow) {
-          scene.remove(this.glow);
-          this.glow.geometry.dispose();
-          this.glow.material.dispose();
+          queueDisposal(this.glow);
         }
       }
     }
@@ -3201,9 +3197,7 @@
 
       destroy() {
         this.active = false;
-        scene.remove(this.mesh);
-        this.mesh.geometry.dispose();
-        this.mesh.material.dispose();
+        queueDisposal(this.mesh);
       }
     }
 
@@ -3245,12 +3239,8 @@
       
       explode() {
         this.active = false;
-        scene.remove(this.mesh);
-        scene.remove(this.shadow);
-        this.mesh.geometry.dispose();
-        this.mesh.material.dispose();
-        this.shadow.geometry.dispose();
-        this.shadow.material.dispose();
+        queueDisposal(this.mesh);
+        queueDisposal(this.shadow);
         
         // AOE Damage
         const range = weapons.meteor.area;
@@ -3302,9 +3292,7 @@
         }
         
         if (this.life <= 0) {
-          scene.remove(this.mesh);
-          this.mesh.geometry.dispose();
-          this.mesh.material.dispose();
+          queueDisposal(this.mesh);
           return false;
         }
         return true;
@@ -3345,9 +3333,7 @@
         }
         
         if (this.life <= 0 || this.mesh.position.y < 0) {
-          scene.remove(this.mesh);
-          this.mesh.geometry.dispose();
-          this.mesh.material.dispose();
+          queueDisposal(this.mesh);
           return false; // Remove from array
         }
         return true; // Keep in array
@@ -5333,6 +5319,27 @@
         const cx = player.mesh.position.x + Math.cos(chestAngle) * chestDist;
         const cz = player.mesh.position.z + Math.sin(chestAngle) * chestDist;
         spawnChest(cx, cz);
+      }
+    }
+
+    // Deferred disposal functions (PR #64)
+    function queueDisposal(mesh) {
+      if (mesh) {
+        scene.remove(mesh);
+        disposalQueue.push({ geo: mesh.geometry, mat: mesh.material });
+      }
+    }
+    
+    function processDisposalQueue() {
+      let count = 0;
+      while (disposalQueue.length > 0 && count < MAX_DISPOSALS_PER_FRAME) {
+        const item = disposalQueue.shift();
+        if (item.geo) item.geo.dispose();
+        if (item.mat) {
+          if (Array.isArray(item.mat)) item.mat.forEach(m => m.dispose());
+          else item.mat.dispose();
+        }
+        count++;
       }
     }
 
@@ -8027,6 +8034,9 @@
       chests = chests.filter(c => c.active);
 
       renderer.render(scene, camera);
+      
+      // Process deferred disposal queue (PR #64)
+      processDisposalQueue();
     }
 
     // Init Game
