@@ -3353,7 +3353,7 @@
       setTimeout(() => {
         loadingScreen.style.display = 'none';
         showMainMenu();
-      }, 500);
+      }, 500); // Wait for CSS fade-out transition (0.5s in styles.css)
     }
     
     function showErrorToast(message, detail) {
@@ -3391,7 +3391,7 @@
       
       document.body.appendChild(toast);
       
-      // Auto-remove after 10 seconds
+      // Auto-remove after 10 seconds to avoid cluttering the UI
       setTimeout(() => {
         toast.remove();
       }, 10000);
@@ -3407,7 +3407,7 @@
         clearInterval(loadingInterval);
       }
       
-      // Progress interval
+      // Progress interval - increments by 10% every 100ms for 1 second total
       loadingInterval = setInterval(() => {
         progress += 10;
         loadingBar.style.width = progress + '%';
@@ -3417,7 +3417,7 @@
         }
       }, 100);
       
-      // Hard timeout: force completion after 6 seconds
+      // Hard timeout: force completion after 6 seconds even if progress stalls
       setTimeout(() => {
         if (!loadingCompleted) {
           console.warn('Loading timeout reached, forcing completion');
