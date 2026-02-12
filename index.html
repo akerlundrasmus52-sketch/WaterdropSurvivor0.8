@@ -2933,7 +2933,7 @@
           
           if (comboDisplay && comboText && comboBonusText) {
             comboDisplay.style.display = 'block';
-            comboText.innerText = `${playerStats.comboCount}x COMBO!`;
+            comboText.innerText = `${playerStats.comboCount}-KILL COMBO!`;
             
             const bonusPercent = Math.floor((playerStats.comboMultiplier - 1) * 100);
             comboBonusText.innerText = `+${bonusPercent}% Damage & Gold`;
