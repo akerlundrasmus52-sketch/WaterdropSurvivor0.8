@@ -4166,8 +4166,8 @@
         // Shuffle and limit to 3 choices
         choices = choices.sort(() => 0.5 - Math.random()).slice(0, 3);
       }
-      // Level 5: Choose Secondary Weapon
-      else if (playerStats.lvl === 5) {
+      // Level 7: Choose Secondary Weapon
+      else if (playerStats.lvl === 7) {
         choices = [
           { 
             id: 'sword', 
@@ -4177,6 +4177,7 @@
               weapons.sword.active = true;
               weapons.sword.level = 1;
               showStatChange('New Weapon: Sword');
+              addInfoMessage('⚔️ Weapon unlocked: Sword', '#FFD700');
             } 
           },
           { 
@@ -4187,6 +4188,7 @@
               weapons.aura.active = true;
               weapons.aura.level = 1;
               showStatChange('New Weapon: Aura');
+              addInfoMessage('✨ Weapon unlocked: Aura', '#FFD700');
             } 
           },
           { 
@@ -4197,6 +4199,7 @@
               weapons.meteor.active = true;
               weapons.meteor.level = 1;
               showStatChange('New Weapon: Meteor');
+              addInfoMessage('☄️ Weapon unlocked: Meteor', '#FFD700');
             } 
           },
           { 
@@ -4207,12 +4210,13 @@
               weapons.doubleBarrel.active = true;
               weapons.doubleBarrel.level = 1;
               showStatChange('New Weapon: Double Barrel');
+              addInfoMessage('🔫 Weapon unlocked: Double Barrel', '#FFD700');
             } 
           }
         ];
       }
-      // Level 10: CLASS SELECTION
-      else if (playerStats.lvl === 10) {
+      // Level 14: CLASS SELECTION
+      else if (playerStats.lvl === 14) {
         modal.querySelector('h2').innerText = 'CHOOSE YOUR CLASS';
         modal.querySelector('h2').style.fontSize = '42px';
         
@@ -4269,6 +4273,122 @@
             } 
           }
         ];
+      }
+      // Level 21: Third Weapon Slot
+      else if (playerStats.lvl === 21) {
+        modal.querySelector('h2').innerText = 'THIRD WEAPON UNLOCKED!';
+        modal.querySelector('h2').style.fontSize = '36px';
+        
+        // Show only weapons not yet unlocked
+        const availableWeapons = [
+          { 
+            id: 'sword', 
+            title: 'SLASHY SLASH', 
+            desc: 'Slash enemies in front', 
+            active: weapons.sword.active,
+            apply: () => { 
+              weapons.sword.active = true;
+              weapons.sword.level = 1;
+              showStatChange('New Weapon: Sword');
+              addInfoMessage('⚔️ Weapon unlocked: Sword', '#FFD700');
+            } 
+          },
+          { 
+            id: 'aura', 
+            title: 'ZAP ZONE', 
+            desc: 'Damage aura around you', 
+            active: weapons.aura.active,
+            apply: () => { 
+              weapons.aura.active = true;
+              weapons.aura.level = 1;
+              showStatChange('New Weapon: Aura');
+              addInfoMessage('✨ Weapon unlocked: Aura', '#FFD700');
+            } 
+          },
+          { 
+            id: 'meteor', 
+            title: 'SPACE ROCKS', 
+            desc: 'Call meteors from sky', 
+            active: weapons.meteor.active,
+            apply: () => { 
+              weapons.meteor.active = true;
+              weapons.meteor.level = 1;
+              showStatChange('New Weapon: Meteor');
+              addInfoMessage('☄️ Weapon unlocked: Meteor', '#FFD700');
+            } 
+          },
+          { 
+            id: 'doublebarrel', 
+            title: 'DOUBLE BARREL', 
+            desc: 'Powerful shotgun spread', 
+            active: weapons.doubleBarrel.active,
+            apply: () => { 
+              weapons.doubleBarrel.active = true;
+              weapons.doubleBarrel.level = 1;
+              showStatChange('New Weapon: Double Barrel');
+              addInfoMessage('🔫 Weapon unlocked: Double Barrel', '#FFD700');
+            } 
+          }
+        ];
+        choices = availableWeapons.filter(w => !w.active);
+      }
+      // Level 28: Fourth Weapon Slot
+      else if (playerStats.lvl === 28) {
+        modal.querySelector('h2').innerText = 'FOURTH WEAPON UNLOCKED!';
+        modal.querySelector('h2').style.fontSize = '36px';
+        
+        // Show only weapons not yet unlocked
+        const availableWeapons = [
+          { 
+            id: 'sword', 
+            title: 'SLASHY SLASH', 
+            desc: 'Slash enemies in front', 
+            active: weapons.sword.active,
+            apply: () => { 
+              weapons.sword.active = true;
+              weapons.sword.level = 1;
+              showStatChange('New Weapon: Sword');
+              addInfoMessage('⚔️ Weapon unlocked: Sword', '#FFD700');
+            } 
+          },
+          { 
+            id: 'aura', 
+            title: 'ZAP ZONE', 
+            desc: 'Damage aura around you', 
+            active: weapons.aura.active,
+            apply: () => { 
+              weapons.aura.active = true;
+              weapons.aura.level = 1;
+              showStatChange('New Weapon: Aura');
+              addInfoMessage('✨ Weapon unlocked: Aura', '#FFD700');
+            } 
+          },
+          { 
+            id: 'meteor', 
+            title: 'SPACE ROCKS', 
+            desc: 'Call meteors from sky', 
+            active: weapons.meteor.active,
+            apply: () => { 
+              weapons.meteor.active = true;
+              weapons.meteor.level = 1;
+              showStatChange('New Weapon: Meteor');
+              addInfoMessage('☄️ Weapon unlocked: Meteor', '#FFD700');
+            } 
+          },
+          { 
+            id: 'doublebarrel', 
+            title: 'DOUBLE BARREL', 
+            desc: 'Powerful shotgun spread', 
+            active: weapons.doubleBarrel.active,
+            apply: () => { 
+              weapons.doubleBarrel.active = true;
+              weapons.doubleBarrel.level = 1;
+              showStatChange('New Weapon: Double Barrel');
+              addInfoMessage('🔫 Weapon unlocked: Double Barrel', '#FFD700');
+            } 
+          }
+        ];
+        choices = availableWeapons.filter(w => !w.active);
       }
       // Level 25: PERK SELECTION
       else if (playerStats.lvl === 25 && !playerStats.perks.vampire && !playerStats.perks.berserker && !playerStats.perks.phoenix) {
