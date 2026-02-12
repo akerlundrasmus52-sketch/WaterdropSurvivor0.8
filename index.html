@@ -5353,6 +5353,7 @@ Total Gold Earned: ${saveData.totalGoldEarned}
       let swipeDetected = false;
       
       zone.addEventListener('touchstart', (e) => {
+        if (!isGameActive) return; // Don't interfere with menu touches
         e.preventDefault();
         
         for (let i = 0; i < e.changedTouches.length; i++) {
@@ -5416,6 +5417,7 @@ Total Gold Earned: ${saveData.totalGoldEarned}
       }, { passive: false });
 
       zone.addEventListener('touchmove', (e) => {
+        if (!isGameActive) return; // Don't interfere with menu touches
         e.preventDefault();
         
         for (let i = 0; i < e.changedTouches.length; i++) {
@@ -5466,6 +5468,7 @@ Total Gold Earned: ${saveData.totalGoldEarned}
       }, { passive: false });
 
       const endJoystick = (e) => {
+        if (!isGameActive) return; // Don't interfere with menu touches
         e.preventDefault();
         for (let i = 0; i < e.changedTouches.length; i++) {
           const touch = e.changedTouches[i];
