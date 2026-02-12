@@ -2268,9 +2268,7 @@
 
       destroy() {
         this.active = false;
-        scene.remove(this.mesh);
-        this.mesh.geometry.dispose();
-        this.mesh.material.dispose();
+        queueDisposal(this.mesh);  // Use deferred disposal
       }
     }
 
@@ -2362,12 +2360,8 @@
       
       explode() {
         this.active = false;
-        scene.remove(this.mesh);
-        scene.remove(this.shadow);
-        this.mesh.geometry.dispose();
-        this.mesh.material.dispose();
-        this.shadow.geometry.dispose();
-        this.shadow.material.dispose();
+        queueDisposal(this.mesh);  // Use deferred disposal
+        queueDisposal(this.shadow);  // Use deferred disposal
         
         // AOE Damage
         const range = weapons.meteor.area;
@@ -2612,9 +2606,7 @@
         document.body.appendChild(flash);
         setTimeout(() => flash.remove(), 100);
         
-        scene.remove(this.mesh);
-        this.mesh.geometry.dispose();
-        this.mesh.material.dispose();
+        queueDisposal(this.mesh);  // Use deferred disposal
         
         addExp(GAME_CONFIG.expValue);
         playSound('collect');
@@ -2669,9 +2661,7 @@
       
       destroy() {
         this.active = false;
-        scene.remove(this.mesh);
-        this.mesh.geometry.dispose();
-        this.mesh.material.dispose();
+        queueDisposal(this.mesh);  // Use deferred disposal
       }
     }
 
@@ -5555,30 +5545,22 @@
 
       // Clear Entities
       enemies.forEach(e => {
-        scene.remove(e.mesh);
-        e.mesh.geometry.dispose();
-        e.mesh.material.dispose();
+        queueDisposal(e.mesh);  // Use deferred disposal
       });
       enemies = [];
       
       expGems.forEach(e => {
-        scene.remove(e.mesh);
-        e.mesh.geometry.dispose();
-        e.mesh.material.dispose();
+        queueDisposal(e.mesh);  // Use deferred disposal
       });
       expGems = [];
       
       goldCoins.forEach(g => {
-        scene.remove(g.mesh);
-        g.mesh.geometry.dispose();
-        g.mesh.material.dispose();
+        queueDisposal(g.mesh);  // Use deferred disposal
       });
       goldCoins = [];
 
       projectiles.forEach(p => {
-        scene.remove(p.mesh);
-        p.mesh.geometry.dispose();
-        p.mesh.material.dispose();
+        queueDisposal(p.mesh);  // Use deferred disposal
       });
       projectiles = [];
       
@@ -5590,10 +5572,8 @@
       particles = [];
       
       meteors.forEach(m => {
-        scene.remove(m.mesh);
-        scene.remove(m.shadow);
-        m.mesh.geometry.dispose();
-        m.mesh.material.dispose();
+        queueDisposal(m.mesh);  // Use deferred disposal
+        queueDisposal(m.shadow);  // Use deferred disposal
       });
       meteors = [];
 
