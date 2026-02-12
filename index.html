@@ -220,7 +220,7 @@
     .upgrade-card {
       background: linear-gradient(135deg, #0d1117, #1a1e2e, #0d1117); /* Unified dark theme */
       margin: 10px 0;
-      padding: 20px;
+      padding: 15px;
       border-radius: 20px; /* More rounded for soft feel */
       border: 3px solid #3a4a5e; /* Darker border for unified theme */
       cursor: pointer;
@@ -673,10 +673,10 @@
       transform: translateX(-50%);
     }
 
-    #start-game-btn { top: 50.25%; } /* Moved 3.5% lower from 46.75% */
-    #progression-btn { top: 59.75%; } /* Adjusted spacing - reduced from 61.25% */
-    #achievements-btn { top: 69.25%; } /* Adjusted spacing - reduced from 72.25% */
-    #credits-btn { top: min(78.75%, calc(100% - 60px)); } /* Adjusted spacing - reduced from 82.75% */
+    #start-game-btn { top: 55.25%; } /* PR #64: Moved 5% lower (was 50.25%) */
+    #progression-btn { top: 64.75%; } /* PR #64: Moved 5% lower (was 59.75%) */
+    #achievements-btn { top: 74.25%; } /* PR #64: Moved 5% lower (was 69.25%) */
+    #credits-btn { top: min(83.75%, calc(100% - 60px)); } /* PR #64: Moved 5% lower (was 78.75%) */
 
     .menu-btn::before {
       content: '';
@@ -1234,6 +1234,7 @@
         <div class="stat-text" id="windmill-timer-text" style="color: #FFD700; font-size: 18px;">DEFEND: 30s</div>
       </div>
     </div>
+    <button id="reset-btn" class="btn-small" style="position: absolute; top: 20px; right: 180px; pointer-events: auto; z-index: 100; background: #e74c3c; border-color: #c0392b;">RESET</button>
     <button id="stats-btn" class="btn-small" style="position: absolute; top: 20px; right: 20px; pointer-events: auto; z-index: 100;">STATS</button>
     <button id="settings-btn" class="btn-small" style="position: absolute; top: 20px; right: 100px; pointer-events: auto; z-index: 100;">⚙️</button>
 
@@ -1312,9 +1313,9 @@
       expValue: 10,
       baseExpReq: 20,
       // Lake configuration - used for spawn avoidance
-      lakeCenterX: 18,
-      lakeCenterZ: -18,
-      lakeRadius: 12
+      lakeCenterX: 30,
+      lakeCenterZ: -30,
+      lakeRadius: 18
     };
 
     // --- AUDIO SYSTEM (Oscillators) ---
@@ -1620,7 +1621,6 @@
     let animatedRotations = []; // Managed array for rotation animations like chest lids (Bug 3 fix)
     let lastExpFlashTime = 0; // Throttle for EXP gem collection flash (Bug 5 fix)
     let lastTime = 0;
-    const MAX_FRAME_TIME = 1/30; // Maximum 33ms per frame to prevent large delta spikes
     let frameCount = 0;
     let isPaused = false;
     let isGameOver = false;
@@ -1640,10 +1640,12 @@
     // Performance optimization - particle cap to prevent memory overflow
     const MAX_PARTICLES = 150;
     const MAX_PROJECTILES = 100;
-    const MAX_METEORS = 30;
-    const MAX_DEBRIS = 100;
+    const MAX_METEORS = 50;
+    const MAX_DEBRIS = 200;
     
-    
+    // Deferred disposal queue for performance (PR #64)
+    const disposalQueue = [];
+    const MAX_DISPOSALS_PER_FRAME = 10;
     
     // Cache animated objects to avoid scene.traverse() every frame
     let animatedObjects = {
@@ -1712,6 +1714,8 @@
       hasBerserkerRage: false,
       treasureHunterChance: 0,
       doubleCritChance: 0,
+      dodgeChance: 0, // PR #64 - Phantom Step
+      expMultiplier: 1, // PR #64 - Experience Boost
       // Slow debuff tracking (for slowing enemies)
       activeSlows: 0, // Counter for active slow effects
       originalWalkSpeed: 25 // Backup of original speed
@@ -1750,7 +1754,7 @@
     class Player {
       constructor() {
         // Create water droplet shape (teardrop)
-        const geometry = new THREE.SphereGeometry(0.5, 16, 16);
+        const geometry = new THREE.SphereGeometry(0.5, 32, 32);
         
         // Modify geometry to make it more teardrop-shaped
         const positions = geometry.attributes.position;
@@ -1769,10 +1773,17 @@
         }
         geometry.computeVertexNormals();
         
-        const material = new THREE.MeshToonMaterial({ 
+        const material = new THREE.MeshPhysicalMaterial({ 
           color: COLORS.player,
           transparent: true,
-          opacity: 0.85
+          opacity: 0.75,
+          metalness: 0.1,
+          roughness: 0.2,
+          transmission: 0.3,
+          thickness: 0.5,
+          envMapIntensity: 1,
+          clearcoat: 1,
+          clearcoatRoughness: 0.1
         });
         
         this.mesh = new THREE.Mesh(geometry, material);
@@ -1781,7 +1792,7 @@
         scene.add(this.mesh);
         
         // Add water shine effect (multiple layers)
-        const shineGeo = new THREE.SphereGeometry(0.52, 16, 16); // Match player segments for consistency
+        const shineGeo = new THREE.SphereGeometry(0.52, 16, 16);
         const shineMat = new THREE.MeshBasicMaterial({ 
           color: 0xFFFFFF, 
           transparent: true, 
@@ -1792,7 +1803,7 @@
         this.mesh.add(this.shine);
         
         // Add reflection highlight
-        const highlightGeo = new THREE.SphereGeometry(0.15, 8, 8);
+        const highlightGeo = new THREE.SphereGeometry(0.15, 16, 16);
         const highlightMat = new THREE.MeshBasicMaterial({ 
           color: 0xFFFFFF, 
           transparent: true, 
@@ -2154,9 +2165,9 @@
         camera.position.z = this.mesh.position.z + 20; // Isometric offset
         camera.lookAt(this.mesh.position);
 
-        // Bounds (Map is 200x200, from -100 to 100)
-        this.mesh.position.x = Math.max(-95, Math.min(95, this.mesh.position.x));
-        this.mesh.position.z = Math.max(-95, Math.min(95, this.mesh.position.z));
+        // Bounds (Map is 400x400, from -200 to 200)
+        this.mesh.position.x = Math.max(-195, Math.min(195, this.mesh.position.x));
+        this.mesh.position.z = Math.max(-195, Math.min(195, this.mesh.position.z));
       }
 
       dash(dx, dz) {
@@ -2183,6 +2194,36 @@
       takeDamage(amount) {
         // Check invulnerability frames and pause state
         if (isPaused || this.invulnerable) return;
+        
+        // Dodge check (PR #64 - Phantom Step upgrade)
+        if (playerStats.dodgeChance && Math.random() < playerStats.dodgeChance) {
+          // Dodge successful!
+          const div = document.createElement('div');
+          div.className = 'damage-number';
+          div.innerText = 'DODGE!';
+          div.style.color = '#00FF00';
+          div.style.fontSize = '28px';
+          div.style.fontWeight = 'bold';
+          div.style.textShadow = '0 0 8px rgba(0,255,0,0.8), 2px 2px 4px #000';
+          
+          const vec = this.mesh.position.clone();
+          vec.y += 2;
+          vec.project(camera);
+          
+          const x = (vec.x * .5 + .5) * window.innerWidth;
+          const y = (-(vec.y * .5) + .5) * window.innerHeight;
+          
+          div.style.position = 'absolute';
+          div.style.left = `${x}px`;
+          div.style.top = `${y}px`;
+          div.style.transform = 'translate(-50%, -50%)';
+          div.style.pointerEvents = 'none';
+          div.style.zIndex = '1000';
+          
+          document.body.appendChild(div);
+          setTimeout(() => div.remove(), 1000);
+          return; // No damage taken
+        }
         
         // Armor reduction
         const reduced = Math.max(1, amount * (1 - playerStats.armor / 100));
@@ -2323,7 +2364,7 @@
         
         if (type === 0) {
           // Bacteria/Amoeba - Squishy organic blob shape
-          geometry = new THREE.SphereGeometry(0.6, 6, 6);
+          geometry = new THREE.SphereGeometry(0.6, 8, 8);
           // Modify geometry to make it irregular/organic
           const positions = geometry.attributes.position;
           for (let i = 0; i < positions.count; i++) {
@@ -2342,7 +2383,7 @@
           color = COLORS.enemySquare; // Pink/Hot Pink - Tanky
         } else if (type === 1) {
           // Water Bug - Elongated with segments
-          geometry = new THREE.CapsuleGeometry(0.3, 0.8, 4, 6);
+          geometry = new THREE.CapsuleGeometry(0.3, 0.8, 6, 8);
           color = COLORS.enemyTriangle; // Gold - Fast
         } else if (type === 2) {
           // Microbe - Round squishy
@@ -2366,7 +2407,7 @@
           color = 0xFF1493; // Deep pink - Hard Tank
         } else if (type === 7) {
           // Hard Fast
-          geometry = new THREE.CapsuleGeometry(0.3, 0.8, 4, 6);
+          geometry = new THREE.CapsuleGeometry(0.3, 0.8, 6, 8);
           color = 0xFFD700; // Gold - Hard Fast
         } else if (type === 8) {
           // Hard Balanced
@@ -2382,10 +2423,14 @@
           color = 0xFFD700; // Gold - MiniBoss
         }
 
-        const material = new THREE.MeshToonMaterial({ 
+        const material = new THREE.MeshPhysicalMaterial({ 
           color: color,
           transparent: true,
           opacity: 0.85,
+          metalness: type === 10 ? 0.4 : 0.1,
+          roughness: 0.6,
+          transmission: 0.2,
+          thickness: 0.5,
           emissive: type === 10 ? color : 0x000000,
           emissiveIntensity: type === 10 ? 0.3 : 0
         });
@@ -2877,9 +2922,7 @@
         document.body.appendChild(flash);
         setTimeout(() => flash.remove(), this.isMiniBoss ? 100 : 50);
         
-        scene.remove(this.mesh);
-        this.mesh.geometry.dispose();
-        this.mesh.material.dispose();
+        queueDisposal(this.mesh);
         
         // Drop EXP
         const expMultiplier = this.isMiniBoss ? 3 : 1;
@@ -2925,7 +2968,7 @@
 
     class Projectile {
       constructor(x, z, target) {
-        const geometry = new THREE.SphereGeometry(0.25, 6, 6); // Larger bullet (was 0.2)
+        const geometry = new THREE.SphereGeometry(0.25, 8, 8); // Larger bullet (was 0.2)
         const material = new THREE.MeshBasicMaterial({ 
           color: 0xFFFF00,
           transparent: true,
@@ -2936,7 +2979,7 @@
         scene.add(this.mesh);
         
         // Add glowing trail effect
-        const glowGeometry = new THREE.SphereGeometry(0.35, 4, 4);
+        const glowGeometry = new THREE.SphereGeometry(0.35, 6, 6);
         const glowMaterial = new THREE.MeshBasicMaterial({
           color: 0xFFFF00,
           transparent: true,
@@ -3037,15 +3080,11 @@
 
       destroy() {
         this.active = false;
-        scene.remove(this.mesh);
-        this.mesh.geometry.dispose();
-        this.mesh.material.dispose();
+        queueDisposal(this.mesh);
         
         // Remove glow if it exists
         if (this.glow) {
-          scene.remove(this.glow);
-          this.glow.geometry.dispose();
-          this.glow.material.dispose();
+          queueDisposal(this.glow);
         }
       }
     }
@@ -3191,9 +3230,7 @@
 
       destroy() {
         this.active = false;
-        scene.remove(this.mesh);
-        this.mesh.geometry.dispose();
-        this.mesh.material.dispose();
+        queueDisposal(this.mesh);
       }
     }
 
@@ -3235,12 +3272,8 @@
       
       explode() {
         this.active = false;
-        scene.remove(this.mesh);
-        scene.remove(this.shadow);
-        this.mesh.geometry.dispose();
-        this.mesh.material.dispose();
-        this.shadow.geometry.dispose();
-        this.shadow.material.dispose();
+        queueDisposal(this.mesh);
+        queueDisposal(this.shadow);
         
         // AOE Damage
         const range = weapons.meteor.area;
@@ -3292,9 +3325,7 @@
         }
         
         if (this.life <= 0) {
-          scene.remove(this.mesh);
-          this.mesh.geometry.dispose();
-          this.mesh.material.dispose();
+          queueDisposal(this.mesh);
           return false;
         }
         return true;
@@ -3335,9 +3366,7 @@
         }
         
         if (this.life <= 0 || this.mesh.position.y < 0) {
-          scene.remove(this.mesh);
-          this.mesh.geometry.dispose();
-          this.mesh.material.dispose();
+          queueDisposal(this.mesh);
           return false; // Remove from array
         }
         return true; // Keep in array
@@ -3377,10 +3406,17 @@
         const geometry = new THREE.ExtrudeGeometry(starShape, extrudeSettings);
         geometry.center();
         
-        const material = new THREE.MeshToonMaterial({ 
+        const material = new THREE.MeshPhysicalMaterial({ 
           color: COLORS.exp, // Light blue matching EXP bar
           transparent: true,
-          opacity: 0.9,
+          opacity: 0.8,
+          metalness: 0.3,
+          roughness: 0.2,
+          transmission: 0.2,
+          thickness: 0.5,
+          envMapIntensity: 1,
+          clearcoat: 1,
+          clearcoatRoughness: 0.1,
           emissive: COLORS.exp,
           emissiveIntensity: 0.3
         });
@@ -3472,9 +3508,7 @@
           lastExpFlashTime = now;
         }
         
-        scene.remove(this.mesh);
-        this.mesh.geometry.dispose();
-        this.mesh.material.dispose();
+        queueDisposal(this.mesh);
         
         addExp(GAME_CONFIG.expValue);
         playSound('collect');
@@ -3483,7 +3517,7 @@
 
     class GoldCoin {
       constructor(x, z, amount) {
-        const geometry = new THREE.CylinderGeometry(0.2, 0.2, 0.1, 6);
+        const geometry = new THREE.CylinderGeometry(0.2, 0.2, 0.1, 8);
         const material = new THREE.MeshBasicMaterial({ 
           color: 0xFFD700,
           transparent: true,
@@ -3562,9 +3596,7 @@
       
       destroy() {
         this.active = false;
-        scene.remove(this.mesh);
-        this.mesh.geometry.dispose();
-        this.mesh.material.dispose();
+        queueDisposal(this.mesh);
       }
     }
 
@@ -3572,8 +3604,10 @@
       constructor(x, z) {
         // Create chest mesh - simple box with bronze/gold color
         const geometry = new THREE.BoxGeometry(0.8, 0.6, 0.6);
-        const material = new THREE.MeshToonMaterial({ 
+        const material = new THREE.MeshPhysicalMaterial({ 
           color: 0xCD7F32, // Bronze color
+          metalness: 0.7,
+          roughness: 0.3,
           emissive: 0xFFD700,
           emissiveIntensity: 0.2
         });
@@ -3583,8 +3617,10 @@
         
         // Add lid (different color)
         const lidGeo = new THREE.BoxGeometry(0.85, 0.1, 0.65);
-        const lidMat = new THREE.MeshToonMaterial({ 
-          color: 0xFFD700 // Gold lid
+        const lidMat = new THREE.MeshPhysicalMaterial({ 
+          color: 0xFFD700, // Gold lid
+          metalness: 0.8,
+          roughness: 0.2
         });
         this.lid = new THREE.Mesh(lidGeo, lidMat);
         this.lid.position.set(0, 0.35, 0);
@@ -3754,15 +3790,12 @@
       
       destroy() {
         this.active = false;
-        scene.remove(this.mesh);
+        queueDisposal(this.mesh);
         if (this.glowLight) {
           scene.remove(this.glowLight);
         }
-        this.mesh.geometry.dispose();
-        this.mesh.material.dispose();
         if (this.lid) {
-          this.lid.geometry.dispose();
-          this.lid.material.dispose();
+          queueDisposal(this.lid);
         }
       }
     }
@@ -4160,8 +4193,8 @@
 
     // --- WORLD GENERATION ---
     function createWorld() {
-      // Ground - Smaller map for better performance
-      const groundGeo = new THREE.PlaneGeometry(200, 200);
+      // Ground - EXPANDED MAP
+      const groundGeo = new THREE.PlaneGeometry(400, 400); // Expanded from 200x200 to 400x400
       const groundMat = new THREE.MeshToonMaterial({ color: COLORS.ground });
       const ground = new THREE.Mesh(groundGeo, groundMat);
       ground.rotation.x = -Math.PI / 2;
@@ -4172,18 +4205,22 @@
       // NOTE: Old lake removed - using enhanced reflective lake defined later (line ~3747)
       
       // Add water ripple effect
-      const rippleGeo = new THREE.RingGeometry(9, 10, 16);
+      const rippleGeo = new THREE.RingGeometry(14, 15, 32);
       const rippleMat = new THREE.MeshBasicMaterial({ color: 0x3399FF, transparent: true, opacity: 0.5 });
       const ripple = new THREE.Mesh(rippleGeo, rippleMat);
       ripple.rotation.x = -Math.PI / 2;
-      ripple.position.set(18, 0.02, -18);
+      ripple.position.set(30, 0.02, -30);
       ripple.userData = { isWaterRipple: true, phase: 0 };
       scene.add(ripple);
       animatedObjects.waterRipples.push(ripple); // Cache for optimized animation
 
       // Smooth nice roads connecting areas
-      const roadMat = new THREE.MeshToonMaterial({ 
-        color: 0xD3D3D3 // Light gray - smooth and polished
+      const roadMat = new THREE.MeshPhysicalMaterial({ 
+        color: 0xD3D3D3, // Light gray - smooth and polished
+        metalness: 0.05,
+        roughness: 0.3,
+        clearcoat: 0.8, // Makes it look polished
+        clearcoatRoughness: 0.2
       });
       const roadGeo = new THREE.PlaneGeometry(4, 4);
       
@@ -4204,24 +4241,25 @@
       }
       
       // Main roads connecting key locations:
-      // 1. Statue (0,0) to Windmill (24,24) - curved path
-      createCurvedRoad(0, 0, 24, 24, 20, 2);
+      // 1. Statue (0,0) to Windmill (40,40) - curved path
+      createCurvedRoad(0, 0, 40, 40, 25, 3);
       
-      // 2. Statue (0,0) to Cabin (-12,-12) - curved path
-      createCurvedRoad(0, 0, -12, -12, 12, -1);
+      // 2. Statue (0,0) to Cabin (-20,-20) - curved path
+      createCurvedRoad(0, 0, -20, -20, 15, -2);
       
-      // 3. Statue (0,0) to Stonehenge (-36,-12) - curved path
-      createCurvedRoad(0, 0, -36, -12, 22, 3);
+      // 3. Statue (0,0) to Stonehenge (-60,-20) - curved path
+      createCurvedRoad(0, 0, -60, -20, 30, 5);
       
-      // 4. Road to Pyramid - goes around lake
-      createCurvedRoad(0, 0, 30, 0, 18, 1); // Road to east first
-      createCurvedRoad(30, 0, 30, -30, 18, 2); // Then south to pyramid
+      // 4. REMOVED: Statue (0,0) to Pyramid (50,-50) - road was going through lake
+      // Instead, create road that goes around the lake to the east
+      createCurvedRoad(0, 0, 50, 0, 25, 2); // Road to east first
+      createCurvedRoad(50, 0, 50, -50, 25, 3); // Then south to pyramid
       
-      // 5. Statue (0,0) to Mine (-24,24) - curved path
-      createCurvedRoad(0, 0, -24, 24, 18, 2);
+      // 5. Statue (0,0) to Mine (-40,40) - curved path
+      createCurvedRoad(0, 0, -40, 40, 25, 4);
       
-      // 6. Windmill (24,24) to Farm (21,21) - short connecting road
-      createCurvedRoad(24, 24, 21, 21, 6, 0);
+      // 6. Windmill (40,40) to Farm (35,35) - short connecting road
+      createCurvedRoad(40, 40, 35, 35, 8, 0);
       
       // 7. Circular road around statue - smooth ring road for patrol area
       for(let i = 0; i < 60; i++) {
@@ -4237,13 +4275,13 @@
       
       // 8. Map edge access roads (from edges to main areas)
       // North edge to Windmill
-      createCurvedRoad(24, 50, 24, 24, 18, 2);
+      createCurvedRoad(40, 90, 40, 40, 30, 3);
       // South edge to Pyramid
-      createCurvedRoad(30, -50, 30, -30, 15, -2);
+      createCurvedRoad(50, -90, 50, -50, 25, -3);
       // West edge to Stonehenge
-      createCurvedRoad(-50, -12, -36, -12, 15, 0);
+      createCurvedRoad(-90, -20, -60, -20, 20, 0);
       // East edge to Windmill area
-      createCurvedRoad(50, 24, 24, 24, 20, -2);
+      createCurvedRoad(90, 40, 40, 40, 30, -4);
 
       // Wooden fences around play area
       const fenceMat = new THREE.MeshToonMaterial({ color: 0x8B4513 });
@@ -4251,10 +4289,10 @@
       const railGeo = new THREE.BoxGeometry(4, 0.2, 0.2);
       
       // Create fence segments around perimeter
-      for(let i=0; i<24; i++) {
-        const angle = (i / 24) * Math.PI * 2;
-        const x = Math.cos(angle) * 50;
-        const z = Math.sin(angle) * 50;
+      for(let i=0; i<40; i++) {
+        const angle = (i / 40) * Math.PI * 2;
+        const x = Math.cos(angle) * 85;
+        const z = Math.sin(angle) * 85;
         
         // Fence post
         const post = new THREE.Mesh(postGeo, fenceMat);
@@ -4275,13 +4313,13 @@
       const cabinGeo = new THREE.BoxGeometry(6, 5, 6);
       const cabinMat = new THREE.MeshToonMaterial({ color: COLORS.cabin });
       const cabin = new THREE.Mesh(cabinGeo, cabinMat);
-      cabin.position.set(-12, 2.5, -12);
+      cabin.position.set(-20, 2.5, -20);
       cabin.castShadow = true;
       scene.add(cabin);
 
       // Windmill with improvements
       const wmGroup = new THREE.Group();
-      wmGroup.position.set(24, 0, 24);
+      wmGroup.position.set(40, 0, 40);
       const wmBase = new THREE.Mesh(new THREE.CylinderGeometry(2, 3, 8, 8), new THREE.MeshToonMaterial({color: 0xD2B48C})); // Beige
       wmBase.position.y = 4;
       wmGroup.add(wmBase);
@@ -4303,7 +4341,7 @@
       wmGroup.add(wmLight);
       
       // Add ground light circle
-      const groundLightGeo = new THREE.CircleGeometry(5, 16);
+      const groundLightGeo = new THREE.CircleGeometry(5, 32);
       const groundLightMat = new THREE.MeshBasicMaterial({
         color: 0xFFFFAA,
         transparent: true,
@@ -4311,7 +4349,7 @@
       });
       const groundLight = new THREE.Mesh(groundLightGeo, groundLightMat);
       groundLight.rotation.x = -Math.PI/2;
-      groundLight.position.set(24, 0.05, 24);
+      groundLight.position.set(40, 0.05, 40);
       scene.add(groundLight);
       
       const wmBlades = new THREE.Mesh(new THREE.BoxGeometry(12, 1, 1), new THREE.MeshBasicMaterial({color: 0x8B4513})); // Brown
@@ -4329,16 +4367,16 @@
       const mineGeo = new THREE.DodecahedronGeometry(5);
       const mineMat = new THREE.MeshToonMaterial({ color: 0x555555 });
       const mine = new THREE.Mesh(mineGeo, mineMat);
-      mine.position.set(-24, 2, 24);
+      mine.position.set(-40, 2, 40);
       scene.add(mine);
       const mineEnt = new THREE.Mesh(new THREE.CircleGeometry(2, 16), new THREE.MeshBasicMaterial({color: 0x000000}));
-      mineEnt.position.set(-24, 2, 26);
+      mineEnt.position.set(-40, 2, 44);
       mineEnt.rotation.y = Math.PI;
       scene.add(mineEnt);
 
       // Stonehenge - Circle of big rocks - MADE MORE VISIBLE
       const stonehengeGroup = new THREE.Group();
-      stonehengeGroup.position.set(-36, 0, -12);
+      stonehengeGroup.position.set(-60, 0, -20);
       
       const stoneMat = new THREE.MeshToonMaterial({ color: 0x808080 }); // Gray stone
       const numStones = 30; // Real Stonehenge has ~30 stones in outer circle
@@ -4383,7 +4421,7 @@
 
       // Mayan Pyramid - Stepped pyramid - MADE MORE VISIBLE
       const mayanGroup = new THREE.Group();
-      mayanGroup.position.set(30, 0, -30);
+      mayanGroup.position.set(50, 0, -50);
       
       const pyramidMat = new THREE.MeshToonMaterial({ color: 0xD2B48C }); // Tan/beige like ancient stone
       const pyramidSteps = 6; // Increased from 5
@@ -4437,8 +4475,12 @@
       
       // Water droplet statue (large blue droplet)
       const statueGeo = new THREE.SphereGeometry(1, 16, 16);
-      const statueMat = new THREE.MeshToonMaterial({ 
-        color: COLORS.player
+      const statueMat = new THREE.MeshPhysicalMaterial({ 
+        color: COLORS.player,
+        metalness: 0.3,
+        roughness: 0.2,
+        clearcoat: 1,
+        clearcoatRoughness: 0.1
       });
       const statue = new THREE.Mesh(statueGeo, statueMat);
       statue.position.y = 2.5;
@@ -4447,6 +4489,52 @@
       statueGroup.add(statue);
       
       scene.add(statueGroup);
+
+      // PR #64: Circular rondell at statue spawn - dual concentric rings with radial spokes
+      const rondellMat = new THREE.MeshToonMaterial({ color: 0x808080 }); // Gray stone for roads
+      
+      // Outer ring (r=10)
+      const outerRingGeo = new THREE.TorusGeometry(10, 0.3, 8, 32);
+      const outerRing = new THREE.Mesh(outerRingGeo, rondellMat);
+      outerRing.rotation.x = Math.PI / 2;
+      outerRing.position.y = 0.05;
+      outerRing.castShadow = true;
+      scene.add(outerRing);
+      
+      // Inner ring (r=6)
+      const innerRingGeo = new THREE.TorusGeometry(6, 0.3, 8, 32);
+      const innerRing = new THREE.Mesh(innerRingGeo, rondellMat);
+      innerRing.rotation.x = Math.PI / 2;
+      innerRing.position.y = 0.05;
+      innerRing.castShadow = true;
+      scene.add(innerRing);
+      
+      // 4 radial spokes connecting inner to outer ring
+      for (let i = 0; i < 4; i++) {
+        const angle = (i / 4) * Math.PI * 2;
+        const spokeGeo = new THREE.BoxGeometry(4, 0.2, 0.6); // Length 4 (from r=6 to r=10)
+        const spoke = new THREE.Mesh(spokeGeo, rondellMat);
+        spoke.position.set(
+          Math.cos(angle) * 8, // Center at r=8 (midpoint between 6 and 10)
+          0.05,
+          Math.sin(angle) * 8
+        );
+        spoke.rotation.y = angle;
+        spoke.castShadow = true;
+        scene.add(spoke);
+        
+        // Roads extending from outer ring exits
+        const roadLength = 15;
+        const roadGeo = new THREE.BoxGeometry(roadLength, 0.15, 1);
+        const road = new THREE.Mesh(roadGeo, rondellMat);
+        road.position.set(
+          Math.cos(angle) * (10 + roadLength / 2),
+          0.04,
+          Math.sin(angle) * (10 + roadLength / 2)
+        );
+        road.rotation.y = angle;
+        scene.add(road);
+      }
 
       // REMOVED: Comet Stone artifact (was beside the lake, now replaced with better structures below)
 
@@ -4529,7 +4617,7 @@
 
       // Farm Area near windmill
       const farmGroup = new THREE.Group();
-      farmGroup.position.set(21, 0, 21); // Near windmill
+      farmGroup.position.set(35, 0, 35); // Near windmill
       
       // Wheat field (50 stalks)
       const wheatGeo = new THREE.ConeGeometry(0.1, 0.8, 4);
@@ -4587,12 +4675,14 @@
 
       // Crystal Tower - 6 floating crystals with animation
       const crystalGroup = new THREE.Group();
-      crystalGroup.position.set(-30, 0, 0);
+      crystalGroup.position.set(-50, 0, 0);
       
       const crystalGeo = new THREE.OctahedronGeometry(1);
       for(let i=0; i<6; i++) {
-        const crystalMat = new THREE.MeshToonMaterial({
+        const crystalMat = new THREE.MeshPhysicalMaterial({
           color: 0x9B59B6, // Purple
+          metalness: 0.5,
+          roughness: 0.1,
           emissive: 0x9B59B6,
           emissiveIntensity: 0.3,
           transparent: true,
@@ -4621,7 +4711,7 @@
 
       // Enhanced Waterfall - 3-tier cliffs with water drops and mist
       const waterfallGroup = new THREE.Group();
-      waterfallGroup.position.set(12, 0, -30);
+      waterfallGroup.position.set(20, 0, -50);
       
       // 3-tier cliffs
       const cliffMat = new THREE.MeshToonMaterial({ color: 0x708090 }); // Slate gray
@@ -4649,19 +4739,22 @@
       scene.add(waterfallGroup);
 
       // Reflective Lake - Enhanced with realistic water properties
-      const enhancedLakeGeo = new THREE.CircleGeometry(12, 16);
-      const enhancedLakeMat = new THREE.MeshToonMaterial({ 
+      const enhancedLakeGeo = new THREE.CircleGeometry(18, 32);
+      const enhancedLakeMat = new THREE.MeshPhysicalMaterial({ 
         color: COLORS.lake,
+        metalness: 0.3, // Reduced for more natural water look
+        roughness: 0.2, // Slightly rougher for less distortion
         transparent: true,
-        opacity: 0.85
+        opacity: 0.85, // Slightly more transparent
+        reflectivity: 0.8 // Reduced for more natural reflections
       });
       const enhancedLake = new THREE.Mesh(enhancedLakeGeo, enhancedLakeMat);
       enhancedLake.rotation.x = -Math.PI / 2;
-      enhancedLake.position.set(18, 0.01, -18);
+      enhancedLake.position.set(30, 0.01, -30);
       scene.add(enhancedLake);
       
       // Sun sparkles on lake
-      for(let i=0; i<5; i++) {
+      for(let i=0; i<10; i++) {
         const sparkleGeo = new THREE.CircleGeometry(0.3, 6);
         const sparkleMat = new THREE.MeshBasicMaterial({ 
           color: 0xFFFFFF,
@@ -4670,11 +4763,11 @@
         });
         const sparkle = new THREE.Mesh(sparkleGeo, sparkleMat);
         const angle = Math.random() * Math.PI * 2;
-        const dist = Math.random() * 10;
+        const dist = Math.random() * 15;
         sparkle.position.set(
-          18 + Math.cos(angle) * dist,
+          30 + Math.cos(angle) * dist,
           0.02,
-          -18 + Math.sin(angle) * dist
+          -30 + Math.sin(angle) * dist
         );
         sparkle.rotation.x = -Math.PI/2;
         sparkle.userData = { 
@@ -4687,10 +4780,10 @@
       }
 
       // More fences around farm area
-      for(let i=0; i<12; i++) {
-        const angle = (i / 12) * Math.PI * 2;
-        const x = 21 + Math.cos(angle) * 12;
-        const z = 21 + Math.sin(angle) * 12;
+      for(let i=0; i<20; i++) {
+        const angle = (i / 20) * Math.PI * 2;
+        const x = 35 + Math.cos(angle) * 15;
+        const z = 35 + Math.sin(angle) * 15;
         
         const post = new THREE.Mesh(postGeo, fenceMat);
         post.position.set(x, 1, z);
@@ -4721,7 +4814,7 @@
       const shadowGeo = new THREE.CircleGeometry(2, 16);
       const shadowMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.3 });
       
-      for (let i = 0; i < 45; i++) { // Reduced from 120 to 45
+      for (let i = 0; i < 120; i++) { // Increased from 50 to 120
         const group = new THREE.Group();
         const trunk = new THREE.Mesh(trunkGeo, trunkMat);
         trunk.position.y = 1;
@@ -4753,9 +4846,9 @@
         
         // Random pos in forest area and spread across map
         // Lake exclusion zone constants
-        const LAKE_CENTER_X = 18;
-        const LAKE_CENTER_Z = -18;
-        const LAKE_EXCLUSION_RADIUS = 14; // Lake radius 12 + buffer 2
+        const LAKE_CENTER_X = 30;
+        const LAKE_CENTER_Z = -30;
+        const LAKE_EXCLUSION_RADIUS = 18; // Lake radius 15 + buffer 3
         const MAX_SPAWN_ATTEMPTS = 20;
         
         let tx, tz;
@@ -4764,14 +4857,14 @@
         
         // Avoid spawning trees in lake area
         while (inLake && attempts < MAX_SPAWN_ATTEMPTS) {
-          if (i < 30) {
-            // First 30 trees in forest area (Top Left quadrant mostly)
-            tx = (Math.random() * 55) - 50;
-            tz = (Math.random() * 55) - 50;
+          if (i < 80) {
+            // First 80 trees in forest area (Top Left quadrant mostly)
+            tx = (Math.random() * 100) - 90;
+            tz = (Math.random() * 100) - 90;
           } else {
-            // Remaining 15 trees spread across entire map
-            tx = (Math.random() * 95) - 47.5;
-            tz = (Math.random() * 95) - 47.5;
+            // Remaining 40 trees spread across entire map
+            tx = (Math.random() * 180) - 90;
+            tz = (Math.random() * 180) - 90;
           }
           
           // Check if tree would be in lake
@@ -4794,7 +4887,7 @@
       const cliffGeo2 = new THREE.BoxGeometry(8, 12, 6);
       const cliffMat2 = new THREE.MeshToonMaterial({ color: 0x696969 }); // Dark gray
       const cliff2 = new THREE.Mesh(cliffGeo2, cliffMat2);
-      cliff2.position.set(18, 6, -27); // Above and behind the lake
+      cliff2.position.set(30, 6, -45); // Above and behind the lake
       cliff2.castShadow = true;
       waterfallGroup2.add(cliff2);
       
@@ -4808,23 +4901,23 @@
       });
       
       const waterfall = new THREE.Mesh(waterfallGeo, waterfallMat);
-      waterfall.position.set(18, 6, -23);
+      waterfall.position.set(30, 6, -39);
       waterfall.rotation.x = -0.2; // Slight angle
       waterfall.userData = { isWaterfall: true, phase: 0 };
       waterfallGroup2.add(waterfall);
       animatedObjects.waterfalls.push(waterfall); // Cache for optimized animation
       
-      // Add flowing water particles - reduced count and adjusted spacing for smaller waterfall
-      for(let i=0; i<3; i++) {
-        const dropGeo = new THREE.SphereGeometry(0.3, 6, 6);
+      // Add flowing water particles
+      for(let i=0; i<5; i++) {
+        const dropGeo = new THREE.SphereGeometry(0.3, 8, 8);
         const dropMat = new THREE.MeshBasicMaterial({ 
           color: 0x4ECDC4, 
           transparent: true, 
           opacity: 0.7 
         });
         const drop = new THREE.Mesh(dropGeo, dropMat);
-        drop.position.set(18 + (Math.random()-0.5)*2, 12 - i*3, -23);
-        drop.userData = { isWaterDrop: true, speed: 0.1 + Math.random()*0.1, startY: 12 - i*3 };
+        drop.position.set(30 + (Math.random()-0.5)*2, 12 - i*2, -39);
+        drop.userData = { isWaterDrop: true, speed: 0.1 + Math.random()*0.1, startY: 12 - i*2 };
         waterfallGroup2.add(drop);
         animatedObjects.waterDrops.push(drop); // Cache for optimized animation
       }
@@ -4838,7 +4931,7 @@
       });
       const splash = new THREE.Mesh(splashGeo, splashMat);
       splash.rotation.x = -Math.PI/2;
-      splash.position.set(18, 0.1, -20);
+      splash.position.set(30, 0.1, -33);
       splash.userData = { isSplash: true, phase: 0 };
       waterfallGroup2.add(splash);
       animatedObjects.splashes.push(splash); // Cache for optimized animation
@@ -4849,14 +4942,14 @@
       const flowerGeo = new THREE.ConeGeometry(0.2, 0.5, 6);
       const flowerColors = [0xFF69B4, 0xFFFF00, 0xFF0000, 0xFFA500, 0xFFFFFF];
       
-      for(let i=0; i<80; i++) {
+      for(let i=0; i<250; i++) {
         const flower = new THREE.Mesh(flowerGeo, new THREE.MeshBasicMaterial({ 
           color: flowerColors[Math.floor(Math.random() * flowerColors.length)] 
         }));
         flower.position.set(
-          (Math.random() - 0.5) * 90,
+          (Math.random() - 0.5) * 160,
           0.25,
-          (Math.random() - 0.5) * 90
+          (Math.random() - 0.5) * 160
         );
         flower.rotation.x = -Math.PI/2;
         scene.add(flower);
@@ -4873,7 +4966,7 @@
       scene = new THREE.Scene();
       scene.background = new THREE.Color(COLORS.bg);
       // Fog for depth
-      scene.fog = new THREE.Fog(COLORS.bg, 15, 45);
+      scene.fog = new THREE.Fog(COLORS.bg, 20, 60);
 
       // Camera (Orthographic for miniature look)
       const aspect = window.innerWidth / window.innerHeight;
@@ -4883,22 +4976,12 @@
       camera.lookAt(scene.position);
 
       // Renderer
-      renderer = new THREE.WebGLRenderer({ 
-        antialias: false,
-        powerPreference: 'high-performance'
-      });
+      renderer = new THREE.WebGLRenderer({ antialias: true });
       renderer.setSize(window.innerWidth, window.innerHeight);
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
       renderer.shadowMap.enabled = true;
-      renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Soft shadows help compensate for lower resolution
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
       document.getElementById('game-container').appendChild(renderer.domElement);
 
-      // Keep renderer resolution in sync with devicePixelRatio on resize
-      window.addEventListener('resize', function () {
-        if (!renderer) return;
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        renderer.setSize(window.innerWidth, window.innerHeight);
-      });
       // Lights
       const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
       scene.add(ambientLight);
@@ -4906,12 +4989,12 @@
       const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
       dirLight.position.set(50, 100, 50);
       dirLight.castShadow = true;
-      dirLight.shadow.mapSize.width = 512; // Reduced for mobile performance
-      dirLight.shadow.mapSize.height = 512; // PCFSoftShadowMap helps smooth the result
-      dirLight.shadow.camera.left = -60;
-      dirLight.shadow.camera.right = 60;
-      dirLight.shadow.camera.top = 60;
-      dirLight.shadow.camera.bottom = -60;
+      dirLight.shadow.mapSize.width = 2048;
+      dirLight.shadow.mapSize.height = 2048;
+      dirLight.shadow.camera.left = -100;
+      dirLight.shadow.camera.right = 100;
+      dirLight.shadow.camera.top = 100;
+      dirLight.shadow.camera.bottom = -100;
       scene.add(dirLight);
 
       // Setup
@@ -5237,7 +5320,7 @@
         
         do {
           const angle = Math.random() * Math.PI * 2;
-          const dist = 18 + Math.random() * 7; // Adjusted for smaller map
+          const dist = 25 + Math.random() * 10; // Just outside view
           ex = player.mesh.position.x + Math.cos(angle) * dist;
           ez = player.mesh.position.z + Math.sin(angle) * dist;
           
@@ -5311,6 +5394,27 @@
       }
     }
 
+    // Deferred disposal functions (PR #64)
+    function queueDisposal(mesh) {
+      if (mesh) {
+        scene.remove(mesh);
+        disposalQueue.push({ geo: mesh.geometry, mat: mesh.material });
+      }
+    }
+    
+    function processDisposalQueue() {
+      let count = 0;
+      while (disposalQueue.length > 0 && count < MAX_DISPOSALS_PER_FRAME) {
+        const item = disposalQueue.shift();
+        if (item.geo) item.geo.dispose();
+        if (item.mat) {
+          if (Array.isArray(item.mat)) item.mat.forEach(m => m.dispose());
+          else item.mat.dispose();
+        }
+        count++;
+      }
+    }
+
     function spawnParticles(pos, color, count) {
       for(let i=0; i<count; i++) particles.push(new Particle(pos, color));
     }
@@ -5365,7 +5469,9 @@
     }
 
     function addExp(amount) {
-      playerStats.exp += amount;
+      // Apply expMultiplier (PR #64 - Experience Boost)
+      const actualAmount = amount * (playerStats.expMultiplier || 1);
+      playerStats.exp += actualAmount;
       if (playerStats.exp >= playerStats.expReq) {
         levelUp();
       }
@@ -6022,20 +6128,51 @@
             playerStats.doubleCritChance += 0.25;
             showStatChange('Lucky Strikes +25% (Total: ' + Math.round(playerStats.doubleCritChance * 100) + '%)');
           } 
+        },
+        { 
+          id: 'treasure_seeker', 
+          icon: '🪙',
+          title: 'TREASURE SEEKER', 
+          desc: 'Gold Drops +30% (More Coins Per Kill)', 
+          apply: () => { 
+            playerStats.treasureHunterChance += 0.3;
+            showStatChange('Treasure Seeker +30% Gold');
+          } 
+        },
+        { 
+          id: 'phantom_step', 
+          icon: '👻',
+          title: 'PHANTOM STEP', 
+          desc: 'Dodge Chance +5% (Avoid Damage)', 
+          apply: () => { 
+            playerStats.dodgeChance = (playerStats.dodgeChance || 0) + 0.05;
+            showStatChange('Dodge +5% (Total: ' + Math.round((playerStats.dodgeChance || 0) * 100) + '%)');
+          } 
+        },
+        { 
+          id: 'experience_boost', 
+          icon: '⭐',
+          title: 'EXPERIENCE BOOST', 
+          desc: 'XP Gain +10% (Level Up Faster)', 
+          apply: () => { 
+            playerStats.expMultiplier = (playerStats.expMultiplier || 1) + 0.1;
+            showStatChange('XP Boost +10% (Total: ' + Math.round((playerStats.expMultiplier || 1) * 100) + '%)');
+          } 
         }
       ];
 
       // --- SPECIAL LEVELS ---
       
-      // Levels 4, 9, 17: WEAPON UPGRADE LEVELS
-      if ([4, 9, 17].includes(playerStats.lvl)) {
+      // Weapon upgrade levels: Every 4 levels up to 50 (PR #64)
+      const weaponUpgradeLevels = [4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48];
+      if (weaponUpgradeLevels.includes(playerStats.lvl) && playerStats.lvl <= 50) {
         modal.querySelector('h2').innerText = 'WEAPON UPGRADE!';
         modal.querySelector('h2').style.fontSize = '36px';
         
         choices = [];
         
-        // Offer weapon upgrades for active weapons
-        if (weapons.gun.active && weapons.gun.level < 4) {
+        // Offer weapon upgrades for active weapons (no level cap)
+        if (weapons.gun.active) {
           const nextLevel = weapons.gun.level + 1;
           choices.push({ 
             id: 'gun_upgrade', 
@@ -6051,7 +6188,7 @@
           });
         }
         
-        if (weapons.sword.active && weapons.sword.level < 4) {
+        if (weapons.sword.active) {
           const nextLevel = weapons.sword.level + 1;
           choices.push({ 
             id: 'sword_upgrade', 
@@ -6067,11 +6204,12 @@
           });
         }
         
-        if (weapons.aura.active && weapons.aura.level < 4) {
+        if (weapons.aura.active) {
           const nextLevel = weapons.aura.level + 1;
           const baseRange = 3; // Initial range
           const currentRange = weapons.aura.range;
-          const nextRange = Math.min(5, baseRange * (1 + (nextLevel * 0.10))); // +10% per level, cap at 5
+          // No cap on aura range (PR #64)
+          const nextRange = baseRange * (1 + (nextLevel * 0.10)); // +10% per level without cap
           const rangeIncrease = Math.round((nextRange - currentRange) * 10) / 10;
           
           choices.push({ 
@@ -6082,13 +6220,13 @@
             apply: () => { 
               weapons.aura.level++;
               weapons.aura.damage += 3;
-              weapons.aura.range = Math.min(5, baseRange * (1 + (weapons.aura.level * 0.10)));
+              weapons.aura.range = baseRange * (1 + (weapons.aura.level * 0.10)); // No cap
               showStatChange(`Aura Level ${weapons.aura.level}: +3 Dmg, +${rangeIncrease.toFixed(1)} Range`);
             } 
           });
         }
         
-        if (weapons.meteor.active && weapons.meteor.level < 4) {
+        if (weapons.meteor.active) {
           const nextLevel = weapons.meteor.level + 1;
           choices.push({ 
             id: 'meteor_upgrade', 
@@ -6104,7 +6242,7 @@
           });
         }
         
-        if (weapons.lightning.active && weapons.lightning.level < 4) {
+        if (weapons.lightning.active) {
           const nextLevel = weapons.lightning.level + 1;
           const targetIncrease = nextLevel === 2 ? 3 : (nextLevel === 3 ? 2 : 1);
           choices.push({ 
@@ -6121,7 +6259,7 @@
           });
         }
         
-        if (weapons.doubleBarrel.active && weapons.doubleBarrel.level < 4) {
+        if (weapons.doubleBarrel.active) {
           const nextLevel = weapons.doubleBarrel.level + 1;
           choices.push({ 
             id: 'doublebarrel_upgrade', 
@@ -6137,7 +6275,7 @@
           });
         }
         
-        if (weapons.iceSpear.active && weapons.iceSpear.level < 4) {
+        if (weapons.iceSpear.active) {
           const nextLevel = weapons.iceSpear.level + 1;
           choices.push({ 
             id: 'icespear_upgrade', 
@@ -6154,7 +6292,7 @@
           });
         }
         
-        if (weapons.fireRing.active && weapons.fireRing.level < 4) {
+        if (weapons.fireRing.active) {
           const nextLevel = weapons.fireRing.level + 1;
           choices.push({ 
             id: 'firering_upgrade', 
@@ -6280,8 +6418,8 @@
           }
         ];
       }
-      // Level 10: CLASS SELECTION
-      else if (playerStats.lvl === 10) {
+      // Level 15: CLASS SELECTION (PR #64 - capped at L15)
+      else if (playerStats.lvl === 15) {
         modal.querySelector('h2').innerText = 'CHOOSE YOUR CLASS';
         modal.querySelector('h2').style.fontSize = '42px';
         
@@ -6339,8 +6477,8 @@
           }
         ];
       } 
-      // Level 12, 18, 25: PERK UNLOCKS
-      else if ([12, 18, 25].includes(playerStats.lvl)) {
+      // Level 12: PERK UNLOCK (PR #64 - only at L12)
+      else if (playerStats.lvl === 12) {
         modal.querySelector('h2').innerText = 'PERK UNLOCK!';
         modal.querySelector('h2').style.fontSize = '40px';
         
@@ -6422,7 +6560,7 @@
           card.className += ' legendary';
         }
         
-        const iconHTML = u.icon ? `<div style="font-size: 48px; margin-bottom: 10px;">${u.icon}</div>` : '';
+        const iconHTML = u.icon ? `<div style="font-size: 40px; margin-bottom: 10px;">${u.icon}</div>` : '';
         card.innerHTML = `${iconHTML}<div class="upgrade-title">${u.title}</div><div class="upgrade-desc">${u.desc}</div>`;
         
         // Add dramatic entrance animation - alternate left/right
@@ -6657,8 +6795,6 @@
       playerStats.hpRegen = baseRegen;
       playerStats.gold = 0;
       waveCount = 0;
-      frameCount = 0; // Reset frame counter for spawn timing
-      lastTime = 0; // Reset lastTime for clean first-frame delta
       lastWaveEndTime = 0; // Reset wave timing
       miniBossesSpawned.clear(); // Reset mini-boss tracking
       gameStartTime = Date.now();
@@ -6698,6 +6834,8 @@
       playerStats.hasBerserkerRage = false;
       playerStats.treasureHunterChance = 0;
       playerStats.doubleCritChance = 0;
+      playerStats.dodgeChance = 0; // PR #64
+      playerStats.expMultiplier = 1; // PR #64
       playerStats.survivalTime = 0;
       playerStats.dashesPerformed = 0;
       playerStats.damageTaken = 0;
@@ -6726,49 +6864,36 @@
 
       // Clear Entities
       enemies.forEach(e => {
-        scene.remove(e.mesh);
-        e.mesh.geometry.dispose();
-        e.mesh.material.dispose();
+        queueDisposal(e.mesh);
       });
       enemies = [];
       
       expGems.forEach(e => {
-        scene.remove(e.mesh);
-        e.mesh.geometry.dispose();
-        e.mesh.material.dispose();
+        queueDisposal(e.mesh);
       });
       expGems = [];
       
       goldCoins.forEach(g => {
-        scene.remove(g.mesh);
-        g.mesh.geometry.dispose();
-        g.mesh.material.dispose();
+        queueDisposal(g.mesh);
       });
       goldCoins = [];
       
       chests.forEach(c => {
         if (c.glowLight) scene.remove(c.glowLight);
-        scene.remove(c.mesh);
-        c.mesh.geometry.dispose();
-        c.mesh.material.dispose();
+        queueDisposal(c.mesh);
         if (c.lid) {
-          c.lid.geometry.dispose();
-          c.lid.material.dispose();
+          queueDisposal(c.lid);
         }
       });
       chests = [];
 
       projectiles.forEach(p => {
-        scene.remove(p.mesh);
-        p.mesh.geometry.dispose();
-        p.mesh.material.dispose();
+        queueDisposal(p.mesh);
       });
       projectiles = [];
       
       particles.forEach(p => {
-        scene.remove(p.mesh);
-        p.mesh.geometry.dispose();
-        p.mesh.material.dispose();
+        queueDisposal(p.mesh);
       });
       particles = [];
       
@@ -6785,10 +6910,8 @@
       activeTimeouts = [];
       
       meteors.forEach(m => {
-        scene.remove(m.mesh);
-        scene.remove(m.shadow);
-        m.mesh.geometry.dispose();
-        m.mesh.material.dispose();
+        queueDisposal(m.mesh);
+        queueDisposal(m.shadow);
       });
       meteors = [];
 
@@ -7071,6 +7194,38 @@
       document.getElementById('stats-btn').addEventListener('click', toggleStats);
       document.getElementById('close-stats-btn').addEventListener('click', toggleStats);
       
+      // PR #64: Reset Button with double confirmation
+      let resetClickCount = 0;
+      let resetClickTimer = null;
+      document.getElementById('reset-btn').addEventListener('click', () => {
+        playSound('levelup');
+        resetClickCount++;
+        
+        if (resetClickCount === 1) {
+          // First click - show warning
+          showStatChange('⚠️ Click RESET again to confirm!');
+          document.getElementById('reset-btn').style.background = '#c0392b';
+          document.getElementById('reset-btn').style.transform = 'scale(1.1)';
+          
+          // Reset after 3 seconds if no second click
+          resetClickTimer = setTimeout(() => {
+            resetClickCount = 0;
+            document.getElementById('reset-btn').style.background = '#e74c3c';
+            document.getElementById('reset-btn').style.transform = 'scale(1)';
+          }, 3000);
+        } else if (resetClickCount === 2) {
+          // Second click - confirm and reset
+          clearTimeout(resetClickTimer);
+          resetClickCount = 0;
+          document.getElementById('reset-btn').style.background = '#e74c3c';
+          document.getElementById('reset-btn').style.transform = 'scale(1)';
+          showStatChange('🔄 Resetting game...');
+          setTimeout(() => {
+            resetGame();
+          }, 500);
+        }
+      });
+      
       // Swipe Detection (Global - for dash)
       container.addEventListener('touchstart', (e) => {
         const t = e.changedTouches[0];
@@ -7190,8 +7345,7 @@
     function animate(time) {
       requestAnimationFrame(animate);
 
-      if (!lastTime) lastTime = time;
-      const dt = Math.min((time - lastTime) / 1000, MAX_FRAME_TIME);
+      const dt = (time - lastTime) / 1000;
       lastTime = time;
       gameTime = time / 1000; // Update game time in seconds
       
@@ -7199,12 +7353,7 @@
       const DT_THRESHOLD = 0.1; // 100ms threshold
       const isLagSpike = dt > DT_THRESHOLD;
 
-      // Skip rendering when on main menu to save GPU, but still render during pause/game over for visual effects
-      if (!isGameActive) {
-        return;
-      }
-
-      if (isPaused || isGameOver) {
+      if (isPaused || isGameOver || !isGameActive) {
         // Still render the scene so visual effects (camera shake, particles, and modals) are visible
         renderer.render(scene, camera);
         return;
@@ -7821,9 +7970,7 @@
         ring.mesh.material.opacity = ring.life / ring.maxLife;
         
         if (ring.life <= 0) {
-          scene.remove(ring.mesh);
-          ring.mesh.geometry.dispose();
-          ring.mesh.material.dispose();
+          queueDisposal(ring.mesh);
           return false; // Remove from array
         }
         return true; // Keep in array
@@ -7862,9 +8009,7 @@
         }
         
         if (obj.life <= 0 || obj.mesh.position.y <= 0.05) {
-          scene.remove(obj.mesh);
-          obj.mesh.geometry.dispose();
-          obj.mesh.material.dispose();
+          queueDisposal(obj.mesh);
           return false; // Remove from array
         }
         return true; // Keep in array
@@ -7987,9 +8132,7 @@
             excessItems.forEach(item => {
               if (item.active) {
                 collectCallback(item);
-                scene.remove(item.mesh);
-                item.mesh.geometry.dispose();
-                item.mesh.material.dispose();
+                queueDisposal(item.mesh);
                 item.active = false;
               }
             });
@@ -8010,6 +8153,9 @@
       chests = chests.filter(c => c.active);
 
       renderer.render(scene, camera);
+      
+      // Process deferred disposal queue (PR #64)
+      processDisposalQueue();
     }
 
     // Init Game
