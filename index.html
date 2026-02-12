@@ -367,7 +367,7 @@
     .btn:active {
       transform: translateY(4px) scale(0.98);
       box-shadow: 0 0 30px rgba(255,255,255,0.8);
-      animation: lightning-flash 0.3s ease;
+      animation: lightning-flash 0.2s ease;
     }
     
     .btn:active::before {
@@ -411,7 +411,7 @@
     .btn-small:active {
       transform: translateY(3px) scale(0.98);
       box-shadow: 0 0 30px rgba(255,255,255,0.8);
-      animation: lightning-flash 0.3s ease;
+      animation: lightning-flash 0.2s ease;
     }
     
     .btn-small:active::before {
@@ -548,10 +548,10 @@
       transform: translateX(-50%);
     }
 
-    #start-game-btn { top: 50.25%; } /* Moved 3.5% lower from 46.75% */
-    #progression-btn { top: 59.75%; } /* Adjusted spacing - reduced from 61.25% */
-    #achievements-btn { top: 69.25%; } /* Adjusted spacing - reduced from 72.25% */
-    #credits-btn { top: min(78.75%, calc(100% - 60px)); } /* Adjusted spacing - reduced from 82.75% */
+    #start-game-btn { top: 54.25%; } /* Moved 4% lower */
+    #progression-btn { top: 63.75%; } /* Moved 4% lower */
+    #achievements-btn { top: 73.25%; } /* Moved 4% lower */
+    #credits-btn { top: min(82.75%, calc(100% - 60px)); } /* Moved 4% lower */
 
     .menu-btn::before {
       content: '';
@@ -572,7 +572,7 @@
 
     .menu-btn:active {
       box-shadow: 0 0 40px rgba(255, 255, 255, 1), 0 0 60px rgba(93, 173, 226, 1), inset 0 0 40px rgba(255, 255, 255, 0.8);
-      animation: lightning-flash 0.3s ease;
+      animation: lightning-flash 0.2s ease;
     }
 
     .menu-btn:active::before {
@@ -582,7 +582,7 @@
 
     @keyframes lightning-flash {
       0%, 100% { filter: brightness(1.1); }
-      50% { filter: brightness(2); box-shadow: 0 0 40px rgba(255,255,255,1), 0 0 80px rgba(93,173,226,1); }
+      50% { filter: brightness(1.8); box-shadow: 0 0 30px rgba(255,255,255,0.8), 0 0 60px rgba(93,173,226,0.8); }
     }
 
     .gold-display {
@@ -715,7 +715,7 @@
 
     .upgrade-buy-btn:not(:disabled):active {
       transform: scale(0.95);
-      animation: lightning-flash 0.3s ease;
+      animation: lightning-flash 0.2s ease;
     }
 
     .upgrade-buy-btn:not(:disabled):active::before {
@@ -763,7 +763,7 @@
     .back-btn:active {
       transform: translateX(-50%) translateY(4px) scale(0.98);
       box-shadow: 0 0 30px rgba(255,255,255,0.8);
-      animation: lightning-flash 0.3s ease;
+      animation: lightning-flash 0.2s ease;
     }
 
     .back-btn:active::before {
@@ -962,7 +962,7 @@
       <!-- Upgrade cards will be added dynamically -->
     </div>
     <button class="back-btn" id="shop-back-btn">BACK TO MENU</button>
-    <button class="back-btn" id="reset-progress-btn" style="background: #c0392b; border-color: #e74c3c; position: absolute; bottom: 20px; right: 20px;">RESET PROGRESS</button>
+    <button class="back-btn" id="reset-progress-btn" style="background: #c0392b; border-color: #e74c3c; position: absolute; top: 20px; right: 20px;">RESET PROGRESS</button>
   </div>
 
   <!-- Achievements Screen -->
@@ -1039,6 +1039,9 @@
       <div class="stat-text" id="lvl-text" style="color: #5DADE2; text-shadow: 0 0 8px rgba(93,173,226,0.8), 0 0 12px rgba(93,173,226,0.5), 1px 1px 2px rgba(0,0,0,0.5);">LVL: 1</div>
       <div class="stat-text" id="score-text" style="color: #8B4513;">KILLS: 0</div>
       <div class="stat-text gold-text" id="gold-text" style="color: #FFD700; text-shadow: 0 0 10px rgba(255,215,0,0.9), 0 0 15px rgba(255,215,0,0.6), 1px 1px 2px rgba(0,0,0,0.5);">GOLD: 0</div>
+      
+      <!-- Additional stat info display -->
+      <div class="stat-text" id="extra-stats-text" style="color: #9370DB; text-shadow: 0 0 5px rgba(147,112,219,0.6), 1px 1px 2px rgba(0,0,0,0.5); font-size: 12px; margin-top: 3px; display: none;"></div>
       
       <!-- Status Message Bar -->
       <div class="stat-text" id="status-message" style="color: #5DADE2; text-shadow: 0 0 8px rgba(93,173,226,0.8), 0 0 12px rgba(93,173,226,0.5), 1px 1px 2px rgba(0,0,0,0.5); font-size: 16px; min-height: 20px; margin-top: 5px;"></div>
@@ -1731,13 +1734,13 @@
           this.mesh.position.x += this.dashVec.x * speed * dt;
           this.mesh.position.z += this.dashVec.z * speed * dt;
           
-          // Enhanced splash effect trail during dash - MORE PARTICLES
-          if (Math.random() < 0.7) { // Increased from 0.5
-            spawnParticles(this.mesh.position, COLORS.player, 3); // Increased from 2
+          // Optimized splash effect trail during dash
+          if (Math.random() < 0.4) {
+            spawnParticles(this.mesh.position, COLORS.player, 1);
             spawnWaterDroplet(this.mesh.position);
-            // Add white sparkle particles during dash
-            if (Math.random() < 0.4) {
-              spawnParticles(this.mesh.position, 0xFFFFFF, 2);
+            // Reduced white sparkle particles
+            if (Math.random() < 0.2) {
+              spawnParticles(this.mesh.position, 0xFFFFFF, 1);
             }
           }
           
@@ -1758,13 +1761,13 @@
             this.mesh.position.x += targetVel.x;
             this.mesh.position.z += targetVel.z;
 
-            // Enhanced water droplet trail when moving - MORE PARTICLES
+            // Optimized water droplet trail when moving
             this.trailTimer += dt;
-            if (this.trailTimer > 0.12) { // Faster trail (was 0.15)
+            if (this.trailTimer > 0.15) {
               this.trailTimer = 0;
               spawnWaterDroplet(this.mesh.position);
-              // Add extra splash particles during movement
-              if (Math.random() < 0.3) {
+              // Reduced splash particles
+              if (Math.random() < 0.15) {
                 spawnParticles(this.mesh.position, COLORS.player, 1);
               }
             }
@@ -1968,9 +1971,9 @@
         this.isDashing = true;
         this.dashTime = this.dashDuration;
         
-        // Splash effect on dash start - more dramatic
-        spawnParticles(this.mesh.position, COLORS.player, 20);
-        for(let i=0; i<8; i++) {
+        // Optimized splash effect on dash start
+        spawnParticles(this.mesh.position, COLORS.player, 8);
+        for(let i=0; i<3; i++) {
           spawnWaterDroplet(this.mesh.position);
         }
         
@@ -2031,10 +2034,10 @@
           this.mesh.material.color.setHex(COLORS.player);
         }, 100);
         
-        // ENHANCED - Drop more water particles and squishy deformation
-        spawnParticles(this.mesh.position, COLORS.player, 15); // Increased from 8
-        spawnParticles(this.mesh.position, 0xFFFFFF, 5); // Added white impact particles
-        for(let i=0; i<5; i++) { // Increased from 3 to 5
+        // Optimized - Fewer particles on hit for better performance
+        spawnParticles(this.mesh.position, COLORS.player, 6);
+        spawnParticles(this.mesh.position, 0xFFFFFF, 2);
+        for(let i=0; i<2; i++) {
           spawnWaterDroplet(this.mesh.position);
         }
         
@@ -2073,9 +2076,9 @@
         shakeAnim();
 
         if (playerStats.hp <= 0) {
-          // ENHANCED Death splash: more particles + ground pool with fade
-          spawnParticles(this.mesh.position, COLORS.player, 50); // Increased from 30
-          spawnParticles(this.mesh.position, 0xFFFFFF, 15); // Added white explosion
+          // Optimized death splash with balanced particle count
+          spawnParticles(this.mesh.position, COLORS.player, 25);
+          spawnParticles(this.mesh.position, 0xFFFFFF, 8);
           
           // Create ground pool (flat circle that fades out)
           const poolGeo = new THREE.CircleGeometry(1.5, 16);
@@ -2466,10 +2469,22 @@
         playSound('shoot');
       }
 
-      takeDamage(amount, isCrit = false) {
+      takeDamage(amount, isCrit = false, sourcePos = null) {
         const oldHp = this.hp;
         this.hp -= amount;
         createDamageNumber(amount, this.mesh.position, isCrit);
+        
+        // Add knockback effect when hit
+        if (sourcePos) {
+          const knockbackStrength = isCrit ? 0.3 : 0.15;
+          const dx = this.mesh.position.x - sourcePos.x;
+          const dz = this.mesh.position.z - sourcePos.z;
+          const dist = Math.sqrt(dx * dx + dz * dz);
+          if (dist > 0) {
+            this.mesh.position.x += (dx / dist) * knockbackStrength;
+            this.mesh.position.z += (dz / dist) * knockbackStrength;
+          }
+        }
         
         const hpPercent = this.hp / this.maxHp;
         const oldHpPercent = oldHp / this.maxHp;
@@ -2553,8 +2568,8 @@
             updateLimb();
           }
           
-          spawnParticles(this.mesh.position, enemyColor, 25); // Increased from 20
-          spawnParticles(this.mesh.position, 0x8B0000, 10); // Added blood splatter
+          spawnParticles(this.mesh.position, enemyColor, 12);
+          spawnParticles(this.mesh.position, 0x8B0000, 4);
           playSound('hit');
         }
         
@@ -2602,8 +2617,8 @@
             updatePiece();
           }
           
-          // Enhanced particles for destruction
-          spawnParticles(this.mesh.position, enemyColor, 15);
+          // Optimized particles for destruction
+          spawnParticles(this.mesh.position, enemyColor, 8);
           playSound('hit');
         }
         
@@ -2611,15 +2626,14 @@
         const oldColor = this.mesh.material.color.getHex();
         this.mesh.material.color.setHex(0xFFFFFF);
         
-        // Enhanced splash particles using enemy's own color
+        // Optimized splash particles using enemy's own color
         const enemyColor = oldColor;
-        const particleCount = isCrit ? 8 : 3;
+        const particleCount = isCrit ? 4 : 2;
         spawnParticles(this.mesh.position, enemyColor, particleCount);
         
-        // Additional impact particles
+        // Reduced impact particles for crits
         if (isCrit) {
-          spawnParticles(this.mesh.position, enemyColor, 5);
-          spawnParticles(this.mesh.position, 0xFFFFFF, 3);
+          spawnParticles(this.mesh.position, 0xFFFFFF, 2);
         }
         
         // Enhanced squishy deformation on hit
@@ -2639,13 +2653,13 @@
       die() {
         this.isDead = true;
         
-        // More dramatic explosion effect on death
+        // Optimized explosion effect on death
         const enemyColor = this.mesh.material.color.getHex();
         
-        // Main explosion - ENHANCED with more particles
-        spawnParticles(this.mesh.position, enemyColor, 40);
-        spawnParticles(this.mesh.position, 0xFFFFFF, 15);
-        spawnParticles(this.mesh.position, 0x8B0000, 12); // Blood particles
+        // Main explosion with balanced particle count
+        spawnParticles(this.mesh.position, enemyColor, 20);
+        spawnParticles(this.mesh.position, 0xFFFFFF, 6);
+        spawnParticles(this.mesh.position, 0x8B0000, 5);
         
         // Add explosion ring effect
         const ringGeo = new THREE.RingGeometry(0.1, 0.2, 16);
@@ -2870,9 +2884,9 @@
             const isCrit = Math.random() < playerStats.critChance;
             if (isCrit) dmg *= playerStats.critDmg;
             
-            enemy.takeDamage(Math.floor(dmg), isCrit);
+            enemy.takeDamage(Math.floor(dmg), isCrit, this.mesh.position);
             
-            // Knockback effect
+            // Additional visual knockback effect (the takeDamage also handles knockback now)
             const knockbackForce = 0.5;
             enemy.mesh.position.x += this.vx * knockbackForce;
             enemy.mesh.position.z += this.vz * knockbackForce;
@@ -3010,7 +3024,7 @@
             const isCrit = Math.random() < playerStats.critChance;
             if (isCrit) dmg *= playerStats.critDmg;
             
-            enemy.takeDamage(Math.floor(dmg), isCrit);
+            enemy.takeDamage(Math.floor(dmg), isCrit, this.mesh.position);
             
             // Apply slow effect
             if (!enemy.slowedUntil || enemy.slowedUntil < Date.now()) {
@@ -3127,7 +3141,7 @@
         );
         
         scene.add(this.mesh);
-        this.life = 30;
+        this.life = 20; // Reduced from 30 for better performance
       }
       
       update() {
@@ -4028,11 +4042,21 @@
       
       // Helper function to create smooth curved road between two points
       function createCurvedRoad(startX, startZ, endX, endZ, segments, curve = 0) {
+        const LAKE_CENTER_X = 30;
+        const LAKE_CENTER_Z = -30;
+        const LAKE_RADIUS = 18;
+        
         for(let i = 0; i <= segments; i++) {
           const t = i / segments;
           // Smooth interpolation with optional curve
           const x = startX + (endX - startX) * t + Math.sin(t * Math.PI) * curve;
           const z = startZ + (endZ - startZ) * t + Math.sin(t * Math.PI) * curve;
+          
+          // Check if road segment would be in lake - skip if true
+          const distToLake = Math.sqrt((x - LAKE_CENTER_X) * (x - LAKE_CENTER_X) + (z - LAKE_CENTER_Z) * (z - LAKE_CENTER_Z));
+          if (distToLake < LAKE_RADIUS) {
+            continue; // Skip this segment
+          }
           
           const road = new THREE.Mesh(roadGeo, roadMat);
           road.rotation.x = -Math.PI/2;
@@ -4061,16 +4085,25 @@
       // 6. Windmill (40,40) to Farm (35,35) - short connecting road
       createCurvedRoad(40, 40, 35, 35, 8, 0);
       
-      // 7. Circular road around statue - smooth ring road for patrol area
+      // 7. Circular road around statue - smooth ring road for patrol area (avoid lake)
       for(let i = 0; i < 60; i++) {
         const road = new THREE.Mesh(roadGeo, roadMat);
         road.rotation.x = -Math.PI/2;
         const angle = (i / 60) * Math.PI * 2;
         const x = Math.cos(angle) * 8; // Smaller circle around statue
         const z = Math.sin(angle) * 8;
-        road.position.set(x, 0.03, z);
-        road.receiveShadow = true;
-        scene.add(road);
+        
+        // Check if road would be in lake
+        const LAKE_CENTER_X = 30;
+        const LAKE_CENTER_Z = -30;
+        const LAKE_RADIUS = 18;
+        const distToLake = Math.sqrt((x - LAKE_CENTER_X) * (x - LAKE_CENTER_X) + (z - LAKE_CENTER_Z) * (z - LAKE_CENTER_Z));
+        
+        if (distToLake >= LAKE_RADIUS) {
+          road.position.set(x, 0.03, z);
+          road.receiveShadow = true;
+          scene.add(road);
+        }
       }
       
       // 8. Map edge access roads (from edges to main areas)
@@ -4524,6 +4557,33 @@
           scene.add(rail);
         }
       }
+      
+      // Add stone walls for visual variety
+      const stoneWallGeo = new THREE.BoxGeometry(2, 1.2, 0.5);
+      const stoneWallMat = new THREE.MeshToonMaterial({ color: 0x808080 }); // Gray stone
+      
+      // Stone walls around certain areas
+      for(let i=0; i<15; i++) {
+        const angle = (i / 15) * Math.PI * 2;
+        const x = -40 + Math.cos(angle) * 20;
+        const z = -40 + Math.sin(angle) * 20;
+        
+        const wall = new THREE.Mesh(stoneWallGeo, stoneWallMat);
+        wall.position.set(x, 0.6, z);
+        wall.rotation.y = angle + Math.PI / 2;
+        wall.castShadow = true;
+        scene.add(wall);
+        
+        // Add some stacked stones on walls
+        if (i % 3 === 0) {
+          const topStoneGeo = new THREE.BoxGeometry(0.5, 0.4, 0.4);
+          const topStone = new THREE.Mesh(topStoneGeo, stoneWallMat);
+          topStone.position.set(x, 1.3, z);
+          topStone.rotation.y = angle + Math.random() * 0.5;
+          topStone.castShadow = true;
+          scene.add(topStone);
+        }
+      }
 
       // Forest (Various tree types with better shadows)
       const trunkGeo = new THREE.CylinderGeometry(0.5, 0.7, 2, 6);
@@ -4666,17 +4726,34 @@
       const flowerGeo = new THREE.ConeGeometry(0.2, 0.5, 6);
       const flowerColors = [0xFF69B4, 0xFFFF00, 0xFF0000, 0xFFA500, 0xFFFFFF];
       
-      for(let i=0; i<250; i++) {
+      // Optimized flower count and lake exclusion - reduced from 250 to 50
+      for(let i=0; i<50; i++) {
         const flower = new THREE.Mesh(flowerGeo, new THREE.MeshBasicMaterial({ 
           color: flowerColors[Math.floor(Math.random() * flowerColors.length)] 
         }));
-        flower.position.set(
-          (Math.random() - 0.5) * 160,
-          0.25,
-          (Math.random() - 0.5) * 160
-        );
-        flower.rotation.x = -Math.PI/2;
-        scene.add(flower);
+        
+        // Lake exclusion zone
+        const LAKE_CENTER_X = 30;
+        const LAKE_CENTER_Z = -30;
+        const LAKE_EXCLUSION_RADIUS = 20;
+        
+        let fx, fz;
+        let inLake = true;
+        let attempts = 0;
+        
+        while (inLake && attempts < 20) {
+          fx = (Math.random() - 0.5) * 160;
+          fz = (Math.random() - 0.5) * 160;
+          const distToLake = Math.sqrt((fx - LAKE_CENTER_X) * (fx - LAKE_CENTER_X) + (fz - LAKE_CENTER_Z) * (fz - LAKE_CENTER_Z));
+          inLake = distToLake < LAKE_EXCLUSION_RADIUS;
+          attempts++;
+        }
+        
+        if (!inLake) {
+          flower.position.set(fx, 0.25, fz);
+          flower.rotation.x = -Math.PI/2;
+          scene.add(flower);
+        }
       }
     }
 
@@ -5370,8 +5447,29 @@
     }
     
     function createLevelUpEffects() {
-      // Water Fountain Effect - 60 water droplet particles explode from character
-      for(let i=0; i<60; i++) {
+      // Level up detonation: Damage nearby enemies
+      const EXPLOSION_RADIUS = 5;
+      const EXPLOSION_DAMAGE = 30 + playerStats.lvl * 5;
+      
+      enemies.forEach(e => {
+        if (e.isDead) return;
+        const dist = player.mesh.position.distanceTo(e.mesh.position);
+        if (dist < EXPLOSION_RADIUS) {
+          e.takeDamage(EXPLOSION_DAMAGE, false, player.mesh.position);
+          // Extra knockback for level up explosion
+          const dx = e.mesh.position.x - player.mesh.position.x;
+          const dz = e.mesh.position.z - player.mesh.position.z;
+          const knockbackStrength = 0.8 * (1 - dist / EXPLOSION_RADIUS);
+          const distNorm = Math.sqrt(dx * dx + dz * dz);
+          if (distNorm > 0) {
+            e.mesh.position.x += (dx / distNorm) * knockbackStrength;
+            e.mesh.position.z += (dz / distNorm) * knockbackStrength;
+          }
+        }
+      });
+      
+      // Optimized Water Fountain Effect - fewer particles
+      for(let i=0; i<35; i++) {
         const angle = (i / 60) * Math.PI * 2;
         const speed = 0.2 + Math.random() * 0.4;
         const height = 0.6 + Math.random() * 0.8;
@@ -5446,10 +5544,10 @@
       };
       updateRing();
       
-      // Fountain/explosion of "LEVEL UP" text particles from player's head
+      // Optimized fountain/explosion of text particles
       const texts = ["L", "E", "V", "E", "L", " ", "U", "P", "!"];
       
-      for(let i=0; i<40; i++) {
+      for(let i=0; i<25; i++) {
         const angle = (i / 40) * Math.PI * 2;
         const speed = 0.15 + Math.random() * 0.35;
         const text = texts[i % texts.length];
@@ -5466,8 +5564,8 @@
         particles.push(particle);
       }
       
-      // Add regular colored particles
-      for(let i=0; i<30; i++) {
+      // Optimized colored particles
+      for(let i=0; i<20; i++) {
         const angle = (i / 30) * Math.PI * 2;
         const speed = 0.2 + Math.random() * 0.3;
         const particle = new LevelUpParticle(
@@ -5481,8 +5579,8 @@
         particles.push(particle);
       }
       
-      // Lightning bolts - Reduced from 8 to 4 for performance
-      for(let i=0; i<4; i++) {
+      // Optimized lightning bolts for performance
+      for(let i=0; i<3; i++) {
         const angle = (i / 4) * Math.PI * 2;
         const lightning = new LightningBolt(
           player.mesh.position.clone(),
@@ -5724,7 +5822,7 @@
         { 
           id: 'str', 
           icon: '⚔️',
-          title: 'MUSCLE JUICE', 
+          title: 'STRENGTH BOOST', 
           desc: 'Weapon Damage +15% (Base Strength Multiplier)', 
           apply: () => { 
             playerStats.strength += 0.15; 
@@ -5734,7 +5832,7 @@
         { 
           id: 'aspd', 
           icon: '⚡',
-          title: 'SPEEDY TRIGGER', 
+          title: 'ATTACK SPEED', 
           desc: 'Attack Speed +15% (Faster Weapon Fire Rate)', 
           apply: () => { 
             playerStats.atkSpeed += 0.15; 
@@ -5746,7 +5844,7 @@
         { 
           id: 'armor', 
           icon: '🛡️',
-          title: 'THICC ARMOR', 
+          title: 'ARMOR UPGRADE', 
           desc: 'Armor +12% (Damage Reduction, Max 80%)', 
           apply: () => { 
             playerStats.armor = Math.min(80, playerStats.armor + 12); 
@@ -5756,7 +5854,7 @@
         { 
           id: 'hp', 
           icon: '❤️',
-          title: 'CHONKY BODY', 
+          title: 'MAX HEALTH', 
           desc: 'Max HP +30 (Instant Heal +30)', 
           apply: () => { 
             playerStats.maxHp += 30; 
@@ -5767,7 +5865,7 @@
         { 
           id: 'crit', 
           icon: '🎯',
-          title: 'CRIT MACHINE', 
+          title: 'CRITICAL CHANCE', 
           desc: 'Critical Hit Chance +8% (Lucky Strikes)', 
           apply: () => { 
             playerStats.critChance += 0.08; 
@@ -5777,7 +5875,7 @@
         { 
           id: 'regen', 
           icon: '💚',
-          title: 'HEALING VIBES', 
+          title: 'HP REGENERATION', 
           desc: 'HP Regeneration +2/sec (Passive Healing)', 
           apply: () => { 
             playerStats.hpRegen += 2; 
@@ -5787,7 +5885,7 @@
         { 
           id: 'speed', 
           icon: '🏃',
-          title: 'SPEEDY BOI', 
+          title: 'MOVEMENT SPEED', 
           desc: 'Movement Speed +15% (Faster Movement)', 
           apply: () => { 
             playerStats.walkSpeed *= 1.15; 
@@ -5797,7 +5895,7 @@
         { 
           id: 'critdmg', 
           icon: '💥',
-          title: 'GLASS CANNON', 
+          title: 'CRITICAL DAMAGE', 
           desc: 'Critical Damage +30% (Stronger Crits)', 
           apply: () => { 
             playerStats.critDmg += 0.3; 
@@ -5807,7 +5905,7 @@
         { 
           id: 'magnet', 
           icon: '🧲',
-          title: 'XP MAGNET', 
+          title: 'PICKUP RANGE', 
           desc: 'EXP Pickup Range +25% (+1 unit)', 
           apply: () => { 
             magnetRange += 1; 
@@ -5817,7 +5915,7 @@
         { 
           id: 'cooldown', 
           icon: '⏱️',
-          title: 'COOLDOWN MASTER', 
+          title: 'COOLDOWN REDUCTION', 
           desc: 'All Weapon Cooldowns -5% (Faster Abilities)', 
           apply: () => { 
             weapons.gun.cooldown *= 0.95;
@@ -6341,6 +6439,13 @@
       document.getElementById('lvl-text').innerText = `LVL: ${playerStats.lvl}`;
       document.getElementById('score-text').innerText = `KILLS: ${playerStats.kills}`;
       document.getElementById('gold-text').innerText = `GOLD: ${playerStats.gold}`;
+      
+      // Show extended stat info after level ups (toggle visibility after level 3)
+      const extraStatsEl = document.getElementById('extra-stats-text');
+      if (extraStatsEl && playerStats.lvl >= 3) {
+        extraStatsEl.style.display = 'block';
+        extraStatsEl.innerText = `ATK: ${Math.round(playerStats.strength * 100)}% | ARM: ${playerStats.armor}% | SPD: ${Math.round(playerStats.walkSpeed)}`;
+      }
     }
     
     function updateWindmillQuestUI() {
@@ -7303,20 +7408,21 @@
               }, 80);
               activeTimeouts.push(timeoutId);
               
-              // Gun kickback effect - slight recoil visual
+              // Improved Gun kickback effect with smooth animation
               const originalY = player.mesh.position.y;
-              player.mesh.position.y = originalY - 0.05;
+              const originalRotX = player.mesh.rotation.x;
+              player.mesh.position.y = originalY - 0.08; // More pronounced
+              player.mesh.rotation.x = originalRotX + 0.1; // Add slight tilt back
               const kickbackTimeoutId = setTimeout(() => {
                 player.mesh.position.y = originalY;
-              }, 50);
+                player.mesh.rotation.x = originalRotX;
+              }, 60);
               activeTimeouts.push(kickbackTimeoutId);
               
-              // ENHANCED Muzzle flash particles (bright and intense) - MORE particles
-              spawnParticles(player.mesh.position, 0xFFFF00, 12); // Increased from 8
-              spawnParticles(player.mesh.position, 0xFFFFFF, 8); // Increased from 5
-              spawnParticles(player.mesh.position, 0xFFA500, 8); // Increased from 5
-              // Add smoke particles
-              spawnParticles(player.mesh.position, 0x888888, 4);
+              // Optimized muzzle flash particles (balanced for performance)
+              spawnParticles(player.mesh.position, 0xFFFF00, 4);
+              spawnParticles(player.mesh.position, 0xFFFFFF, 3);
+              spawnParticles(player.mesh.position, 0xFFA500, 2);
             }, i * 100);
           }
           weapons.gun.lastShot = time;
@@ -7334,9 +7440,9 @@
         weapons.sword.lastShot = time;
         playSound('shoot'); // Reuse sound for now
         
-        // ENHANCED - Add sword slash visual effects
-        spawnParticles(player.mesh.position, 0xC0C0C0, 8); // Silver slash particles
-        spawnParticles(player.mesh.position, 0xFFFFFF, 5); // White sparkles
+        // Optimized sword slash visual effects
+        spawnParticles(player.mesh.position, 0xC0C0C0, 4);
+        spawnParticles(player.mesh.position, 0xFFFFFF, 2);
         // Add flash light for sword slash - track timeout for proper cleanup
         const slashLight = new THREE.PointLight(0xC0C0C0, 3, 8);
         slashLight.position.copy(player.mesh.position);
@@ -7362,14 +7468,14 @@
           if (e.isDead) return;
           const d = player.mesh.position.distanceTo(e.mesh.position);
           if (d < weapons.aura.range) {
-            e.takeDamage(weapons.aura.damage * playerStats.strength);
+            e.takeDamage(weapons.aura.damage * playerStats.strength, false, player.mesh.position);
             hit = true;
           }
         });
         if (hit) {
-          // ENHANCED - Visual effect for aura tick
-          spawnParticles(player.mesh.position, 0x5DADE2, 10); // Blue aura particles
-          spawnParticles(player.mesh.position, 0xFFFFFF, 5); // White sparkles
+          // Optimized visual effect for aura tick
+          spawnParticles(player.mesh.position, 0x5DADE2, 5);
+          spawnParticles(player.mesh.position, 0xFFFFFF, 2);
         }
         weapons.aura.lastShot = time;
       }
