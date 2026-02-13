@@ -1768,6 +1768,9 @@
     let droneTurrets = []; // Track active drone turrets
     let lastTime = null; // Initialize as null for proper first-frame detection (PR #82 fix)
     
+    // Phase 5: Initialize particle object pool for performance
+    let particlePool = null; // Will be initialized after scene is created
+    
     // Deferred disposal queue for Three.js memory management (PR #81)
     const disposalQueue = [];
     const MAX_DISPOSALS_PER_FRAME = 10;
@@ -2037,6 +2040,9 @@
         this.trailTimer = 0;
         this.wobblePhase = 0;
         
+        // Phase 5: Low health water bleed timer
+        this.waterBleedTimer = 0;
+        
         // Dash
         this.isDashing = false;
         this.dashTime = 0;
@@ -2066,6 +2072,20 @@
           }
         } else {
           this.mesh.material.opacity = 0.75; // Normal opacity
+        }
+        
+        // Phase 5: Water bleed effect when health < 30%
+        const healthPercent = playerStats.hp / playerStats.maxHp;
+        if (healthPercent < 0.3) {
+          this.waterBleedTimer += dt;
+          if (this.waterBleedTimer > 0.08) { // Fast drip
+            this.waterBleedTimer = 0;
+            spawnWaterDroplet(this.mesh.position);
+            // Add blue water particles trailing behind
+            if (Math.random() < 0.5) {
+              spawnParticles(this.mesh.position, COLORS.player, 1);
+            }
+          }
         }
         
         // Dash Logic
@@ -2951,6 +2971,9 @@
       }
 
       takeDamage(amount, isCrit = false) {
+        // Phase 5: Hit impact particles (flesh/blood) on every hit
+        spawnParticles(this.mesh.position, 0x8B0000, 3); // Blood particles
+        
         // Phase 3: Apply armor reduction for MiniBoss
         let finalAmount = amount;
         if (this.armor > 0) {
@@ -3133,82 +3156,139 @@
       die() {
         this.isDead = true;
         
+        // Phase 5: Death Variety - 50% explode into pieces, 50% leave corpse sprite
+        const explodeIntoPieces = Math.random() < 0.5;
+        
         // More dramatic explosion effect on death
         const enemyColor = this.mesh.material.color.getHex();
         
-        // Main explosion - ENHANCED with more particles
-        spawnParticles(this.mesh.position, enemyColor, 40);
-        spawnParticles(this.mesh.position, 0xFFFFFF, 15);
-        spawnParticles(this.mesh.position, 0x8B0000, 12); // Blood particles
-        
-        // Add explosion ring effect
-        const ringGeo = new THREE.RingGeometry(0.1, 0.2, 16);
-        const ringMat = new THREE.MeshBasicMaterial({ 
-          color: enemyColor, 
-          transparent: true, 
-          opacity: 0.8,
-          side: THREE.DoubleSide
-        });
-        const ring = new THREE.Mesh(ringGeo, ringMat);
-        ring.position.copy(this.mesh.position);
-        ring.position.y = 0.1;
-        ring.rotation.x = Math.PI / 2;
-        scene.add(ring);
-        
-        // Animate ring expanding and fading
-        let ringLife = 20;
-        const animateRing = () => {
-          ringLife--;
-          const scale = 1 + (20 - ringLife) * 0.3;
-          ring.scale.set(scale, scale, 1);
-          ring.material.opacity = ringLife / 20;
+        if (explodeIntoPieces) {
+          // EXPLOSION DEATH: Main explosion - ENHANCED with more particles
+          spawnParticles(this.mesh.position, enemyColor, 40);
+          spawnParticles(this.mesh.position, 0xFFFFFF, 15);
+          spawnParticles(this.mesh.position, 0x8B0000, 12); // Blood particles
           
-          if (ringLife <= 0) {
-            scene.remove(ring);
-            ring.geometry.dispose();
-            ring.material.dispose();
-          } else {
-            requestAnimationFrame(animateRing);
-          }
-        };
-        animateRing();
-        
-        // Explode into more pieces - ENHANCED
-        const pieceCount = this.isMiniBoss ? 25 : 15; // More pieces for mini-boss
-        for(let i = 0; i < pieceCount; i++) {
-          const piece = new THREE.Mesh(
-            new THREE.BoxGeometry(0.3, 0.3, 0.3),
-            new THREE.MeshBasicMaterial({ color: enemyColor, transparent: true })
-          );
-          piece.position.copy(this.mesh.position);
-          scene.add(piece);
+          // Add explosion ring effect
+          const ringGeo = new THREE.RingGeometry(0.1, 0.2, 16);
+          const ringMat = new THREE.MeshBasicMaterial({ 
+            color: enemyColor, 
+            transparent: true, 
+            opacity: 0.8,
+            side: THREE.DoubleSide
+          });
+          const ring = new THREE.Mesh(ringGeo, ringMat);
+          ring.position.copy(this.mesh.position);
+          ring.position.y = 0.1;
+          ring.rotation.x = Math.PI / 2;
+          scene.add(ring);
           
-          const angle = (i / pieceCount) * Math.PI * 2;
-          const speed = this.isMiniBoss ? 0.6 : 0.4; // Faster explosion for mini-boss
-          const vel = new THREE.Vector3(
-            Math.cos(angle) * speed,
-            0.3 + Math.random() * 0.3,
-            Math.sin(angle) * speed
-          );
-          
-          let life = 50;
-          const updatePiece = () => {
-            life--;
-            piece.position.add(vel);
-            vel.y -= 0.02; // Gravity
-            piece.rotation.x += 0.15;
-            piece.rotation.y += 0.15;
-            piece.material.opacity = life / 50;
+          // Animate ring expanding and fading
+          let ringLife = 20;
+          const animateRing = () => {
+            ringLife--;
+            const scale = 1 + (20 - ringLife) * 0.3;
+            ring.scale.set(scale, scale, 1);
+            ring.material.opacity = ringLife / 20;
             
-            if (life <= 0 || piece.position.y < 0) {
-              scene.remove(piece);
-              piece.geometry.dispose();
-              piece.material.dispose();
+            if (ringLife <= 0) {
+              scene.remove(ring);
+              ring.geometry.dispose();
+              ring.material.dispose();
             } else {
-              requestAnimationFrame(updatePiece);
+              requestAnimationFrame(animateRing);
             }
           };
-          updatePiece();
+          animateRing();
+          
+          // Explode into more pieces - ENHANCED
+          const pieceCount = this.isMiniBoss ? 25 : 15; // More pieces for mini-boss
+          for(let i = 0; i < pieceCount; i++) {
+            const piece = new THREE.Mesh(
+              new THREE.BoxGeometry(0.3, 0.3, 0.3),
+              new THREE.MeshBasicMaterial({ color: enemyColor, transparent: true })
+            );
+            piece.position.copy(this.mesh.position);
+            scene.add(piece);
+            
+            const angle = (i / pieceCount) * Math.PI * 2;
+            const speed = this.isMiniBoss ? 0.6 : 0.4; // Faster explosion for mini-boss
+            const vel = new THREE.Vector3(
+              Math.cos(angle) * speed,
+              0.3 + Math.random() * 0.3,
+              Math.sin(angle) * speed
+            );
+            
+            let life = 50;
+            const updatePiece = () => {
+              life--;
+              piece.position.add(vel);
+              vel.y -= 0.02; // Gravity
+              piece.rotation.x += 0.15;
+              piece.rotation.y += 0.15;
+              piece.material.opacity = life / 50;
+              
+              if (life <= 0 || piece.position.y < 0) {
+                scene.remove(piece);
+                piece.geometry.dispose();
+                piece.material.dispose();
+              } else {
+                requestAnimationFrame(updatePiece);
+              }
+            };
+            updatePiece();
+          }
+        } else {
+          // CORPSE DEATH: Leave a corpse sprite that fades away
+          spawnParticles(this.mesh.position, enemyColor, 15);
+          spawnParticles(this.mesh.position, 0x8B0000, 8); // Blood particles
+          
+          // Create flat corpse sprite (flattened version of enemy)
+          const corpseGeo = new THREE.CircleGeometry(0.6, 16);
+          const corpseMat = new THREE.MeshBasicMaterial({ 
+            color: enemyColor, 
+            transparent: true,
+            opacity: 0.7,
+            side: THREE.DoubleSide
+          });
+          const corpse = new THREE.Mesh(corpseGeo, corpseMat);
+          corpse.position.copy(this.mesh.position);
+          corpse.position.y = 0.02; // Just above ground
+          corpse.rotation.x = -Math.PI / 2; // Lay flat
+          scene.add(corpse);
+          
+          // Add blood pool under corpse
+          const bloodGeo = new THREE.CircleGeometry(0.8, 16);
+          const bloodMat = new THREE.MeshBasicMaterial({ 
+            color: 0x8B0000, 
+            transparent: true,
+            opacity: 0.5,
+            side: THREE.DoubleSide
+          });
+          const bloodPool = new THREE.Mesh(bloodGeo, bloodMat);
+          bloodPool.position.copy(this.mesh.position);
+          bloodPool.position.y = 0.01; // Just above ground
+          bloodPool.rotation.x = -Math.PI / 2;
+          scene.add(bloodPool);
+          
+          // Fade out corpse over time
+          let corpseLife = 120; // 2 seconds at 60fps
+          const fadeCorpse = () => {
+            corpseLife--;
+            corpse.material.opacity = (corpseLife / 120) * 0.7;
+            bloodPool.material.opacity = (corpseLife / 120) * 0.5;
+            
+            if (corpseLife <= 0) {
+              scene.remove(corpse);
+              scene.remove(bloodPool);
+              corpse.geometry.dispose();
+              corpse.material.dispose();
+              bloodPool.geometry.dispose();
+              bloodPool.material.dispose();
+            } else {
+              requestAnimationFrame(fadeCorpse);
+            }
+          };
+          fadeCorpse();
         }
         
         // Screen flash on kill (dopamine boost) - stronger flash for mini-boss
@@ -3613,6 +3693,51 @@
       }
     }
 
+    // Phase 5: Object Pooling System for Particles (Performance Critical)
+    class ObjectPool {
+      constructor(createFn, resetFn, initialSize = 100) {
+        this.createFn = createFn;
+        this.resetFn = resetFn;
+        this.pool = [];
+        this.active = [];
+        
+        // Pre-allocate initial pool
+        for (let i = 0; i < initialSize; i++) {
+          this.pool.push(this.createFn());
+        }
+      }
+      
+      get() {
+        let obj;
+        if (this.pool.length > 0) {
+          obj = this.pool.pop();
+        } else {
+          obj = this.createFn();
+        }
+        this.active.push(obj);
+        return obj;
+      }
+      
+      release(obj) {
+        const index = this.active.indexOf(obj);
+        if (index > -1) {
+          this.active.splice(index, 1);
+          this.resetFn(obj);
+          this.pool.push(obj);
+        }
+      }
+      
+      clear() {
+        // Clean up all objects
+        for (const obj of this.active) {
+          if (obj.mesh && obj.mesh.parent) {
+            scene.remove(obj.mesh);
+          }
+        }
+        this.active = [];
+      }
+    }
+
     class Particle {
       constructor(pos, color) {
         const geo = new THREE.BoxGeometry(0.2, 0.2, 0.2);
@@ -3626,6 +3751,21 @@
           (Math.random() - 0.5) * 0.3
         );
         
+        scene.add(this.mesh);
+        this.life = 30;
+      }
+      
+      reset(pos, color) {
+        // Reuse existing particle
+        this.mesh.position.copy(pos);
+        this.mesh.material.color.setHex(color);
+        this.vel.set(
+          (Math.random() - 0.5) * 0.3,
+          Math.random() * 0.3,
+          (Math.random() - 0.5) * 0.3
+        );
+        this.mesh.rotation.set(0, 0, 0);
+        this.mesh.visible = true;
         scene.add(this.mesh);
         this.life = 30;
       }
@@ -3646,11 +3786,19 @@
         
         if (this.life <= 0) {
           scene.remove(this.mesh);
-          this.mesh.geometry.dispose();
-          this.mesh.material.dispose();
+          this.mesh.visible = false;
           return false;
         }
         return true;
+      }
+      
+      dispose() {
+        // Only called on final cleanup
+        if (this.mesh) {
+          scene.remove(this.mesh);
+          this.mesh.geometry.dispose();
+          this.mesh.material.dispose();
+        }
       }
     }
 
@@ -5424,6 +5572,13 @@
       scene.background = new THREE.Color(COLORS.bg);
       // Fog for depth
       scene.fog = new THREE.Fog(COLORS.bg, 20, 60);
+      
+      // Phase 5: Initialize particle object pool for performance (100 particles pre-allocated)
+      particlePool = new ObjectPool(
+        () => new Particle(new THREE.Vector3(0, 0, 0), 0xFFFFFF),
+        (particle) => particle.mesh.visible = false,
+        100
+      );
 
       // Camera (Orthographic for miniature look)
       const aspect = window.innerWidth / window.innerHeight;
@@ -5915,8 +6070,14 @@
       }
     }
 
+    // Phase 5: Updated to use Object Pool for performance
     function spawnParticles(pos, color, count) {
-      for(let i=0; i<count; i++) particles.push(new Particle(pos, color));
+      if (!particlePool) return; // Safety check
+      for(let i=0; i<count; i++) {
+        const particle = particlePool.get();
+        particle.reset(pos, color);
+        particles.push(particle);
+      }
     }
 
     function spawnExp(x, z) {
@@ -8504,7 +8665,15 @@
       expGems.forEach(g => g.update(player.mesh.position));
       goldCoins.forEach(g => g.update(player.mesh.position));
       chests.forEach(c => c.update(player.mesh.position));
-      particles = particles.filter(p => p.update() !== false);
+      
+      // Phase 5: Update particles and release back to pool when dead
+      particles = particles.filter(p => {
+        const alive = p.update();
+        if (!alive && particlePool) {
+          particlePool.release(p);
+        }
+        return alive !== false;
+      });
       
       // Windmill Rotation and Light Animation
       scene.children.forEach(c => {
