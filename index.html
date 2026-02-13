@@ -1341,6 +1341,7 @@
       <button class="menu-btn" id="start-game-btn">START GAME</button>
       <button class="menu-btn" id="progression-btn">PROGRESSION</button>
       <button class="menu-btn" id="attributes-btn" style="position: relative;">ATTRIBUTES</button>
+      <button class="menu-btn" id="gear-btn">GEAR & EQUIPMENT</button>
       <button class="menu-btn" id="achievements-btn">ACHIEVEMENTS</button>
       <button class="menu-btn" id="credits-btn">CREDITS</button>
     </div>
@@ -1377,6 +1378,26 @@
       <!-- Dynamically populated -->
     </div>
     <button class="back-btn" id="attributes-back-btn" style="margin-top: 20px;">BACK TO MENU</button>
+  </div>
+
+  <!-- Gear & Equipment Screen -->
+  <div id="gear-screen" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 20; overflow-y: auto; flex-direction: column; align-items: center; justify-content: flex-start; padding: 20px;">
+    <div class="screen-title" style="color: #F39C12; font-size: 36px; margin: 20px 0; text-shadow: 0 0 10px rgba(243,156,18,0.8);">GEAR & EQUIPMENT</div>
+    <div style="color: #FFD700; font-size: 18px; margin-bottom: 10px;">Equip gear to boost your attributes</div>
+    
+    <!-- Gear Stats Display -->
+    <div id="gear-stats-display" style="background: linear-gradient(to bottom, #2a3a4a, #1a2a3a); border: 3px solid #F39C12; border-radius: 15px; padding: 15px; margin-bottom: 20px; width: 100%; max-width: 700px;">
+      <div style="color: #F39C12; font-size: 20px; font-weight: bold; margin-bottom: 10px;">Current Gear Bonuses:</div>
+      <div id="gear-stats-content" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;">
+        <!-- Dynamically populated -->
+      </div>
+    </div>
+    
+    <!-- Gear Slots -->
+    <div class="screen-content" id="gear-content" style="display: grid; gap: 15px; width: 100%; max-width: 900px; margin: 0 auto;">
+      <!-- Dynamically populated -->
+    </div>
+    <button class="back-btn" id="gear-back-btn" style="margin-top: 20px;">BACK TO MENU</button>
   </div>
 
   <!-- Credits Screen -->
@@ -4568,7 +4589,15 @@
         luck: 0,
         wisdom: 0
       },
-      unspentAttributePoints: 0
+      unspentAttributePoints: 0,
+      // Gear system
+      equippedGear: {
+        weapon: null,
+        armor: null,
+        accessory1: null,
+        accessory2: null
+      },
+      inventory: []
     };
 
     let saveData = { ...defaultSaveData };
@@ -4582,6 +4611,8 @@
           saveData.upgrades = { ...defaultSaveData.upgrades, ...saveData.upgrades };
           saveData.attributes = { ...defaultSaveData.attributes, ...(saveData.attributes || {}) };
           saveData.unspentAttributePoints = saveData.unspentAttributePoints || 0;
+          saveData.equippedGear = { ...defaultSaveData.equippedGear, ...(saveData.equippedGear || {}) };
+          saveData.inventory = saveData.inventory || [];
         }
       } catch (e) {
         console.error('Failed to load save data:', e);
@@ -4997,6 +5028,263 @@
     
     // Expose to global scope for onclick handlers
     window.increaseAttribute = increaseAttribute;
+
+    // --- GEAR SYSTEM ---
+    const GEAR_ATTRIBUTES = {
+      flexibility: { name: 'Flexibility', icon: '🤸', color: '#9B59B6' },
+      movementSpeed: { name: 'Movement Speed', icon: '💨', color: '#3498DB' },
+      attackSpeed: { name: 'Attack Speed', icon: '⚡', color: '#F39C12' },
+      attackPrecision: { name: 'Attack Precision', icon: '🎯', color: '#E74C3C' },
+      critChance: { name: 'Crit Chance', icon: '✨', color: '#E67E22' },
+      elementalMagic: { name: 'Elemental Magic', icon: '🔮', color: '#8E44AD' }
+    };
+
+    // Define starter gear that players begin with
+    const STARTER_GEAR = [
+      {
+        id: 'starter_weapon',
+        name: 'Worn Sword',
+        type: 'weapon',
+        rarity: 'common',
+        stats: { attackSpeed: 1, attackPrecision: 1 },
+        description: 'A basic weapon'
+      },
+      {
+        id: 'starter_armor',
+        name: 'Leather Vest',
+        type: 'armor',
+        rarity: 'common',
+        stats: { flexibility: 1, movementSpeed: 1 },
+        description: 'Basic protection'
+      },
+      {
+        id: 'starter_accessory1',
+        name: 'Lucky Charm',
+        type: 'accessory',
+        rarity: 'common',
+        stats: { critChance: 1 },
+        description: 'Brings good fortune'
+      }
+    ];
+
+    // Additional gear that can be obtained (for future expansion)
+    const GEAR_POOL = [
+      {
+        id: 'blazing_sword',
+        name: 'Blazing Sword',
+        type: 'weapon',
+        rarity: 'rare',
+        stats: { attackSpeed: 2, attackPrecision: 2, elementalMagic: 1 },
+        description: 'A sword wreathed in flames'
+      },
+      {
+        id: 'frost_blade',
+        name: 'Frost Blade',
+        type: 'weapon',
+        rarity: 'epic',
+        stats: { attackSpeed: 3, attackPrecision: 3, elementalMagic: 2 },
+        description: 'Freezes enemies on hit'
+      },
+      {
+        id: 'shadow_cloak',
+        name: 'Shadow Cloak',
+        type: 'armor',
+        rarity: 'rare',
+        stats: { flexibility: 3, movementSpeed: 2 },
+        description: 'Move like a shadow'
+      },
+      {
+        id: 'dragon_plate',
+        name: 'Dragon Plate',
+        type: 'armor',
+        rarity: 'legendary',
+        stats: { flexibility: 2, movementSpeed: 1, attackPrecision: 2 },
+        description: 'Forged from dragon scales'
+      },
+      {
+        id: 'crit_ring',
+        name: 'Ring of Critical Strikes',
+        type: 'accessory',
+        rarity: 'rare',
+        stats: { critChance: 3, attackPrecision: 1 },
+        description: 'Increases critical hit chance'
+      },
+      {
+        id: 'speed_boots',
+        name: 'Winged Boots',
+        type: 'accessory',
+        rarity: 'epic',
+        stats: { movementSpeed: 4, flexibility: 1 },
+        description: 'Swift as the wind'
+      },
+      {
+        id: 'magic_amulet',
+        name: 'Arcane Amulet',
+        type: 'accessory',
+        rarity: 'legendary',
+        stats: { elementalMagic: 4, attackSpeed: 2 },
+        description: 'Channels magical energy'
+      }
+    ];
+
+    function initializeGear() {
+      // Give players starter gear if they don't have any
+      if (!saveData.inventory || saveData.inventory.length === 0) {
+        saveData.inventory = [...STARTER_GEAR];
+        
+        // Auto-equip starter gear
+        saveData.equippedGear.weapon = 'starter_weapon';
+        saveData.equippedGear.armor = 'starter_armor';
+        saveData.equippedGear.accessory1 = 'starter_accessory1';
+        
+        saveSaveData();
+      }
+    }
+
+    function updateGearScreen() {
+      const content = document.getElementById('gear-content');
+      const statsContent = document.getElementById('gear-stats-content');
+      
+      if (!content || !statsContent) return;
+      
+      // Calculate total gear bonuses
+      const gearStats = calculateGearStats();
+      
+      // Update stats display
+      let statsHtml = '';
+      for (const statKey in GEAR_ATTRIBUTES) {
+        const stat = GEAR_ATTRIBUTES[statKey];
+        const value = gearStats[statKey] || 0;
+        statsHtml += `
+          <div style="display: flex; align-items: center; gap: 10px; padding: 5px;">
+            <span style="font-size: 24px;">${stat.icon}</span>
+            <div>
+              <div style="color: ${stat.color}; font-size: 14px; font-weight: bold;">${stat.name}</div>
+              <div style="color: #FFD700; font-size: 16px; font-weight: bold;">+${value}</div>
+            </div>
+          </div>
+        `;
+      }
+      statsContent.innerHTML = statsHtml;
+      
+      // Build gear slots display
+      let html = '';
+      
+      const slots = [
+        { key: 'weapon', name: 'Weapon Slot', icon: '⚔️' },
+        { key: 'armor', name: 'Armor Slot', icon: '🛡️' },
+        { key: 'accessory1', name: 'Accessory Slot 1', icon: '💍' },
+        { key: 'accessory2', name: 'Accessory Slot 2', icon: '📿' }
+      ];
+      
+      for (const slot of slots) {
+        const equippedId = saveData.equippedGear[slot.key];
+        const equippedGear = equippedId ? saveData.inventory.find(g => g.id === equippedId) : null;
+        
+        html += `
+          <div style="background: linear-gradient(to bottom, #2a3a4a, #1a2a3a); border: 3px solid #F39C12; border-radius: 15px; padding: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 32px;">${slot.icon}</span>
+                <div style="color: #F39C12; font-size: 20px; font-weight: bold;">${slot.name}</div>
+              </div>
+            </div>
+            ${equippedGear ? `
+              <div style="background: rgba(0,0,0,0.3); border: 2px solid ${getRarityColor(equippedGear.rarity)}; border-radius: 10px; padding: 15px;">
+                <div style="color: ${getRarityColor(equippedGear.rarity)}; font-size: 18px; font-weight: bold; margin-bottom: 5px;">
+                  ${equippedGear.name}
+                </div>
+                <div style="color: #aaa; font-size: 13px; margin-bottom: 10px;">${equippedGear.description}</div>
+                <div style="margin-bottom: 10px;">
+                  ${Object.entries(equippedGear.stats).map(([stat, val]) => `
+                    <div style="color: #90ee90; font-size: 13px;">• ${GEAR_ATTRIBUTES[stat].name}: +${val}</div>
+                  `).join('')}
+                </div>
+                <button onclick="unequipGear('${slot.key}')" style="padding: 8px 15px; background: linear-gradient(to bottom, #c0392b, #a93226); color: white; border: 2px solid #e74c3c; border-radius: 8px; cursor: pointer; font-weight: bold;">UNEQUIP</button>
+              </div>
+            ` : `
+              <div style="color: #777; font-size: 14px; text-align: center; padding: 20px;">
+                Empty Slot
+              </div>
+            `}
+            <div style="margin-top: 15px;">
+              <div style="color: #5DADE2; font-size: 16px; font-weight: bold; margin-bottom: 10px;">Available Gear:</div>
+              <div style="display: grid; gap: 10px; max-height: 200px; overflow-y: auto;">
+                ${saveData.inventory.filter(g => {
+                  const gearType = g.type === 'accessory' ? (slot.key === 'accessory1' || slot.key === 'accessory2') : g.type === slot.key;
+                  const notEquipped = g.id !== equippedId;
+                  return gearType && notEquipped;
+                }).map(gear => `
+                  <div style="background: rgba(0,0,0,0.4); border: 2px solid ${getRarityColor(gear.rarity)}; border-radius: 8px; padding: 10px; cursor: pointer;" onclick="equipGear('${slot.key}', '${gear.id}')">
+                    <div style="color: ${getRarityColor(gear.rarity)}; font-size: 14px; font-weight: bold;">${gear.name}</div>
+                    <div style="color: #999; font-size: 11px;">${gear.description}</div>
+                    <div style="margin-top: 5px;">
+                      ${Object.entries(gear.stats).map(([stat, val]) => `
+                        <span style="color: #90ee90; font-size: 11px; margin-right: 10px;">+${val} ${GEAR_ATTRIBUTES[stat].icon}</span>
+                      `).join('')}
+                    </div>
+                  </div>
+                `).join('') || '<div style="color: #777; font-size: 12px; padding: 10px;">No available gear for this slot</div>'}
+              </div>
+            </div>
+          </div>
+        `;
+      }
+      
+      content.innerHTML = html;
+    }
+
+    function getRarityColor(rarity) {
+      const colors = {
+        common: '#AAAAAA',
+        rare: '#5DADE2',
+        epic: '#9B59B6',
+        legendary: '#F39C12',
+        mythic: '#E74C3C'
+      };
+      return colors[rarity] || colors.common;
+    }
+
+    function calculateGearStats() {
+      const stats = {};
+      
+      for (const statKey in GEAR_ATTRIBUTES) {
+        stats[statKey] = 0;
+      }
+      
+      // Sum up stats from all equipped gear
+      for (const slotKey in saveData.equippedGear) {
+        const gearId = saveData.equippedGear[slotKey];
+        if (gearId) {
+          const gear = saveData.inventory.find(g => g.id === gearId);
+          if (gear && gear.stats) {
+            for (const statKey in gear.stats) {
+              stats[statKey] += gear.stats[statKey];
+            }
+          }
+        }
+      }
+      
+      return stats;
+    }
+
+    function equipGear(slotKey, gearId) {
+      saveData.equippedGear[slotKey] = gearId;
+      playSound('coin');
+      saveSaveData();
+      updateGearScreen();
+    }
+
+    function unequipGear(slotKey) {
+      saveData.equippedGear[slotKey] = null;
+      playSound('waterdrop');
+      saveSaveData();
+      updateGearScreen();
+    }
+
+    // Expose to global scope for onclick handlers
+    window.equipGear = equipGear;
+    window.unequipGear = unequipGear;
 
     // Upgrade definitions for the progression shop
     const PERMANENT_UPGRADES = {
@@ -6092,6 +6380,9 @@
       cacheAnimatedObjects();
       player = new Player();
       
+      // Initialize gear system
+      initializeGear();
+      
       // Initialize background music
       updateBackgroundMusic();
       
@@ -6334,6 +6625,13 @@
         document.getElementById('attributes-screen').style.display = 'flex';
       };
       
+      document.getElementById('gear-btn').onclick = () => {
+        playSound('waterdrop');
+        hideMainMenu();
+        updateGearScreen();
+        document.getElementById('gear-screen').style.display = 'flex';
+      };
+      
       document.getElementById('credits-btn').onclick = () => {
         playSound('waterdrop');
         hideMainMenu();
@@ -6356,6 +6654,12 @@
       document.getElementById('attributes-back-btn').onclick = () => {
         playSound('waterdrop');
         document.getElementById('attributes-screen').style.display = 'none';
+        showMainMenu();
+      };
+      
+      document.getElementById('gear-back-btn').onclick = () => {
+        playSound('waterdrop');
+        document.getElementById('gear-screen').style.display = 'none';
         showMainMenu();
       };
       
@@ -8281,19 +8585,29 @@
       const attrCritDmg = luck * ATTRIBUTE_INFO.luck.effects.critDamage;
       const attrCdReduction = wisdom * ATTRIBUTE_INFO.wisdom.effects.cooldownReduction;
       
-      // Reset Stats with permanent upgrades and attributes applied
+      // Apply gear bonuses
+      const gearStats = calculateGearStats();
+      // Gear provides small, balanced bonuses (each point gives +1-2% depending on stat)
+      const gearFlexibilityBonus = gearStats.flexibility * 0.01;  // +1% armor per point
+      const gearMoveSpeedBonus = gearStats.movementSpeed * 0.02;  // +2% speed per point
+      const gearAtkSpeedBonus = gearStats.attackSpeed * 0.02;     // +2% attack speed per point
+      const gearPrecisionBonus = gearStats.attackPrecision * 0.01; // +1% crit chance per point
+      const gearCritBonus = gearStats.critChance * 0.02;          // +2% crit chance per point
+      const gearMagicBonus = gearStats.elementalMagic * 0.03;     // +3% damage per point
+      
+      // Reset Stats with permanent upgrades, attributes, and gear applied
       playerStats.lvl = 1;
       playerStats.exp = 0;
       playerStats.expReq = GAME_CONFIG.baseExpReq;
       playerStats.hp = baseHp + attrHp;
       playerStats.maxHp = baseHp + attrHp;
-      playerStats.strength = baseDamage * (1 + attrDamage);
-      playerStats.walkSpeed = baseSpeed;
+      playerStats.strength = baseDamage * (1 + attrDamage + gearMagicBonus);
+      playerStats.walkSpeed = baseSpeed * (1 + gearMoveSpeedBonus);
       playerStats.kills = 0;
-      playerStats.atkSpeed = baseAtkSpeed * (1 + attrAtkSpeed);
-      playerStats.critChance = baseCritChance + attrCritChance;
+      playerStats.atkSpeed = baseAtkSpeed * (1 + attrAtkSpeed + gearAtkSpeedBonus);
+      playerStats.critChance = baseCritChance + attrCritChance + gearPrecisionBonus + gearCritBonus;
       playerStats.critDmg = baseCritDmg + attrCritDmg;
-      playerStats.armor = baseArmor;
+      playerStats.armor = baseArmor + (gearStats.flexibility * 1); // Flexibility gives +1% armor per point
       playerStats.hpRegen = baseRegen + attrRegen;
       playerStats.gold = 0;
       waveCount = 0;
