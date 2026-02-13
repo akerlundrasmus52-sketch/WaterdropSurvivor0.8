@@ -2152,7 +2152,8 @@
     const joystickRight = { x: 0, y: 0, active: false, id: null, originX: 0, originY: 0 }; // Aiming
     
     // Throttle joystick DOM updates for performance (60fps = ~16ms)
-    let lastJoystickUpdate = 0;
+    let lastJoystickLeftUpdate = 0;
+    let lastJoystickRightUpdate = 0;
     const JOYSTICK_UPDATE_INTERVAL = 16; // milliseconds
     
     // Swipe detection for dash
@@ -9326,8 +9327,8 @@
               
               // Throttle DOM updates for performance
               const now = Date.now();
-              if (now - lastJoystickUpdate >= JOYSTICK_UPDATE_INTERVAL) {
-                lastJoystickUpdate = now;
+              if (now - lastJoystickLeftUpdate >= JOYSTICK_UPDATE_INTERVAL) {
+                lastJoystickLeftUpdate = now;
                 // Update inner joystick knob position
                 joystickInner.style.left = '50%';
                 joystickInner.style.top = '50%';
@@ -9352,8 +9353,8 @@
               
               // Throttle DOM updates for performance
               const now = Date.now();
-              if (now - lastJoystickUpdate >= JOYSTICK_UPDATE_INTERVAL) {
-                lastJoystickUpdate = now;
+              if (now - lastJoystickRightUpdate >= JOYSTICK_UPDATE_INTERVAL) {
+                lastJoystickRightUpdate = now;
                 // Update inner joystick knob position for right stick
                 joystickInnerRight.style.left = '50%';
                 joystickInnerRight.style.top = '50%';
