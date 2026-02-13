@@ -8284,7 +8284,7 @@
     let performanceLog = {
       frameCount: 0,
       lastLogTime: 0,
-      totalFrameTime: 0, // Will be set after first frame
+      totalFrameTime: 0, // Tracks the time taken by the most recent frame
       slowFrames: 0,
       spawnCount: 0,
       renderCount: 0,
@@ -8334,10 +8334,14 @@
       const previousFrameTime = performanceLog.totalFrameTime;
       let shouldSkipRender = false;
       
-      if (previousFrameTime > FRAME_TIME_BUDGET * 2 && previousFrameTime > 0) {
-        // Previous frame took more than 2x budget, skip rendering this frame
+      // Skip if previous frame exceeded 2x budget (first frame has totalFrameTime=0 so won't skip)
+      if (previousFrameTime > FRAME_TIME_BUDGET * 2) {
         shouldSkipRender = true;
-        console.warn(`Frame skip triggered: previous frame took ${previousFrameTime.toFixed(2)}ms`);
+        // Throttled warning to prevent console spam during sustained poor performance
+        if (!window.lastFrameSkipWarning || (Date.now() - window.lastFrameSkipWarning) > 5000) {
+          console.warn(`Frame skip triggered: previous frame took ${previousFrameTime.toFixed(2)}ms`);
+          window.lastFrameSkipWarning = Date.now();
+        }
       }
       
       // Handle countdown sequence (PR #70)
@@ -9009,8 +9013,7 @@
           // Active objects are already filtered above, so invalid objects are removed
         }
       } else {
-        // Frame was skipped to maintain performance
-        console.log('Frame rendering skipped to prevent freeze');
+        // Frame was skipped to maintain performance (already warned above with throttling)
       }
       
       const renderEndTime = performance.now();
