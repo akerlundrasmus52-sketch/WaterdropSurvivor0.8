@@ -7500,7 +7500,6 @@
       
       // Add lightning glow layers based on combo count
       for (let i = 0; i < lightningCount; i++) {
-        const intensity = glowIntensity * (1 + i * 0.5);
         const spread = 10 + i * 15;
         shadowLayers += `,
         0 0 ${spread}px rgba(255,255,255,0.9),
@@ -8284,7 +8283,7 @@
     let performanceLog = {
       frameCount: 0,
       lastLogTime: 0,
-      totalFrameTime: 0, // Tracks the time taken by the most recent frame
+      totalFrameTime: 0, // Tracks the time taken by the previous frame (0 on first frame)
       slowFrames: 0,
       spawnCount: 0,
       renderCount: 0,
@@ -8327,7 +8326,7 @@
         dt = MAX_DELTA_TIME;
       }
       
-      // Frame Skip Mechanism: Skip rendering if previous frame took too long
+      // Frame Skip Mechanism: Determine if rendering should be skipped based on previous frame time
       // Note: This only skips the render call - game logic still runs to maintain state consistency
       // Rendering is often a significant performance cost, so skipping it can provide relief
       const FRAME_TIME_BUDGET = 33.33; // ~30fps minimum (33.33ms per frame)
