@@ -2370,7 +2370,7 @@
         this.auraCircle.rotation.x = -Math.PI / 2; // Lay flat on ground
         this.auraCircle.position.y = 0.1;
         this.auraCircle.visible = false;
-        this.currentAuraRange = 0; // Track current range to avoid recreating geometry
+        this.currentAuraRange = 3; // Initial geometry scale matches default aura range * 2
         scene.add(this.auraCircle);
         
         // Fire Ring Orbs (visible when fireRing weapon is active)
