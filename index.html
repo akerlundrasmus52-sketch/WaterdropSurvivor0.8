@@ -2461,7 +2461,8 @@
         let color;
         
         // Enemy scaling based on player level - NOT SPEED, just HP and DAMAGE
-        const levelScaling = 1 + (playerLevel - 1) * 0.10; // Reduced from 15% to 10% increase per level for better balance
+        // Phase 3: Increased difficulty - 15% per level (was 10%)
+        const levelScaling = 1 + (playerLevel - 1) * 0.15;
         
         if (type === 0) {
           // Bacteria/Amoeba - Squishy organic blob shape
@@ -2578,9 +2579,12 @@
           this.speed = GAME_CONFIG.enemySpeedBase * 0.9;
         } else if (type === 10) { // MiniBoss
           const miniBossStartLevel = 10;
-          this.hp = 500 * (1 + (playerLevel - miniBossStartLevel) * 0.15);
+          // Phase 3: Double MiniBoss hitpoints for increased difficulty
+          this.hp = 1000 * (1 + (playerLevel - miniBossStartLevel) * 0.15);
           this.speed = GAME_CONFIG.enemySpeedBase * 0.5;
           this.isMiniBoss = true;
+          // Phase 3: Add armor stat (damage reduction)
+          this.armor = 0.25; // 25% damage reduction
         }
         
         this.maxHp = this.hp;
@@ -2592,6 +2596,7 @@
         this.wobbleOffset = Math.random() * 100;
         this.lastAttackTime = 0;
         this.attackCooldown = 1000; // 1 second cooldown
+        this.armor = this.armor || 0; // Initialize armor for all enemies (Phase 3)
       }
 
       update(dt, playerPos) {
@@ -2788,9 +2793,19 @@
       }
 
       takeDamage(amount, isCrit = false) {
+        // Phase 3: Apply armor reduction for MiniBoss
+        let finalAmount = amount;
+        if (this.armor > 0) {
+          finalAmount = amount * (1 - this.armor);
+          // Show armor reduction effect
+          if (this.isMiniBoss) {
+            createFloatingText(`-${Math.floor(amount * this.armor)}`, this.mesh.position, '#FFD700');
+          }
+        }
+        
         const oldHp = this.hp;
-        this.hp -= amount;
-        createDamageNumber(amount, this.mesh.position, isCrit);
+        this.hp -= finalAmount;
+        createDamageNumber(Math.floor(finalAmount), this.mesh.position, isCrit);
         
         const hpPercent = this.hp / this.maxHp;
         const oldHpPercent = oldHp / this.maxHp;
@@ -5508,14 +5523,16 @@
         enemies.push(new Enemy(type, ex, ez, playerStats.lvl));
       }
       
-      // Spawn chest after certain waves (every 3rd wave)
-      if (waveCount % 3 === 0) {
-        // Spawn chest near player but not too close
+      // Phase 3: Chest spawn logic - only on wave completion (every 5th wave), high combo, or quest completion
+      // Remove automatic every-3rd-wave spawning for more strategic chest placement
+      if (waveCount % 5 === 0) {
+        // Wave completion chest
         const chestAngle = Math.random() * Math.PI * 2;
         const chestDist = 10 + Math.random() * 5; // 10-15 units from player
         const cx = player.mesh.position.x + Math.cos(chestAngle) * chestDist;
         const cz = player.mesh.position.z + Math.sin(chestAngle) * chestDist;
         spawnChest(cx, cz);
+        createFloatingText('Wave Bonus Chest!', player.mesh.position, '#FFD700');
       }
     }
 
@@ -6741,6 +6758,17 @@
           showCombo();
         }
         
+        // Phase 3: Spawn chest on high combo (10+ kills)
+        if (comboState.count === 10 && !comboState.chestSpawned) {
+          comboState.chestSpawned = true;
+          const chestAngle = Math.random() * Math.PI * 2;
+          const chestDist = 10 + Math.random() * 5;
+          const cx = player.mesh.position.x + Math.cos(chestAngle) * chestDist;
+          const cz = player.mesh.position.z + Math.sin(chestAngle) * chestDist;
+          spawnChest(cx, cz);
+          createFloatingText('Combo Reward Chest!', player.mesh.position, '#FFD700');
+        }
+        
         // Clear existing fade timer
         if (comboState.fadeTimer) {
           clearTimeout(comboState.fadeTimer);
@@ -6789,6 +6817,7 @@
         comboEl.style.opacity = '0';
         comboEl.style.animation = 'none';
         comboState.count = 0;
+        comboState.chestSpawned = false; // Reset chest spawn flag for next combo (Phase 3)
       }, COMBO_ANIMATION_DURATION);
     }
     
@@ -7532,9 +7561,16 @@
         return;
       }
 
-      const dt = (time - lastTime) / 1000;
+      let dt = (time - lastTime) / 1000;
       lastTime = time;
       gameTime = time / 1000; // Update game time in seconds
+      
+      // Phase 3: Lag compensation - cap deltaTime to prevent death spiral
+      const MAX_DELTA_TIME = 0.1; // 100ms cap
+      if (dt > MAX_DELTA_TIME) {
+        console.warn(`High deltaTime detected: ${dt}s, capping to ${MAX_DELTA_TIME}s`);
+        dt = MAX_DELTA_TIME;
+      }
       
       // Handle countdown sequence (PR #70)
       if (countdownActive) {
@@ -8162,7 +8198,16 @@
       goldCoins = goldCoins.filter(g => g.active);
       chests = chests.filter(c => c.active);
 
-      renderer.render(scene, camera);
+      // Phase 3: Render loop protection - wrap in try-catch to prevent freeze
+      try {
+        renderer.render(scene, camera);
+      } catch (error) {
+        console.error('Render error caught - game continues:', error);
+        // Try to identify problematic objects
+        if (error.message && error.message.includes('undefined')) {
+          console.warn('Possible undefined object in scene. Attempting recovery...');
+        }
+      }
       
       // Process disposal queue after rendering (PR #81)
       processDisposalQueue();
