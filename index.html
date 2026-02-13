@@ -1381,7 +1381,7 @@
         <div id="bottom-hp-fill"></div>
         <div id="bottom-hp-text">HP: 100/100</div>
       </div>
-      <div id="bottom-level-display">Current Lvl: 1</div>
+      <div id="bottom-level-display">Current Level: 1</div>
       <div id="bottom-exp-bar">
         <div id="bottom-exp-fill"></div>
         <div id="bottom-exp-text">EXP: 0%</div>
@@ -7346,7 +7346,7 @@
       document.getElementById('bottom-hp-text').innerText = `HP: ${Math.max(0, Math.ceil(playerStats.hp))}/${playerStats.maxHp}`;
       document.getElementById('bottom-exp-fill').style.width = `${Math.min(100, expPct)}%`;
       document.getElementById('bottom-exp-text').innerText = `EXP: ${Math.min(100, Math.ceil(expPct))}%`;
-      document.getElementById('bottom-level-display').innerText = `Current Lvl: ${playerStats.lvl}`;
+      document.getElementById('bottom-level-display').innerText = `Current Level: ${playerStats.lvl}`;
     }
     
     // Stats Bar removed - Users access stats via STATS button modal
@@ -7380,7 +7380,7 @@
         }
         
         // Spawn chest on high combo milestones
-        // Check for top 3 combo achievements: Unbelievable (7), Mythical (8), GODLIKE (9)
+        // Check for top 3 combo achievements: Amazing (7), Fantastic (8), Unbelievable (9)
         const isTopCombo = comboState.count === 7 || comboState.count === 8 || comboState.count === 9;
         if (isTopCombo && comboState.topCombos.length < comboState.maxTopCombos && !comboState.topCombos.includes(comboState.count)) {
           comboState.topCombos.push(comboState.count);
@@ -7409,7 +7409,7 @@
       const comboText = document.getElementById('combo-text');
       const comboMultiplier = document.getElementById('combo-multiplier');
       
-      // New combo progression: 5=Epic Kill, 6=Multikill, 7=Amazing, 8=Fantastic, 9=Unbelievable, 10=Mythical, 11=GODLIKE, then x20, x30...
+      // New combo progression: 5=Epic Kill, 6=Multikill, 7=Amazing, 8=Fantastic, 9=Unbelievable, 10=Mythical, 11+=GODLIKE, 20+=x20...
       let message = '';
       let comboLevel = 'normal'; // for styling classes
       
@@ -7503,6 +7503,7 @@
         comboEl.style.opacity = '0';
         comboEl.style.animation = 'none';
         comboState.count = 0;
+        comboState.topCombos = []; // Reset top combos for next combo sequence
       }, COMBO_ANIMATION_DURATION);
     }
     
