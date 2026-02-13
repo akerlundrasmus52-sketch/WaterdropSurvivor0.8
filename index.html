@@ -8607,7 +8607,7 @@
       playerStats.atkSpeed = baseAtkSpeed * (1 + attrAtkSpeed + gearAtkSpeedBonus);
       playerStats.critChance = baseCritChance + attrCritChance + gearPrecisionBonus + gearCritBonus;
       playerStats.critDmg = baseCritDmg + attrCritDmg;
-      playerStats.armor = baseArmor + (gearStats.flexibility * 1); // Flexibility gives +1% armor per point
+      playerStats.armor = baseArmor + gearStats.flexibility; // Flexibility gives flat armor bonus
       playerStats.hpRegen = baseRegen + attrRegen;
       playerStats.gold = 0;
       waveCount = 0;
