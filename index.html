@@ -201,7 +201,15 @@
       }
     }
     
-    @keyframes combo-fade-out {
+    /* Combo Timer Display */
+    #combo-timer {
+      display: none;
+      color: #FF4444;
+      text-shadow: 0 0 8px rgba(255,68,68,0.8), 0 0 12px rgba(255,68,68,0.5), 1px 1px 2px rgba(0,0,0,0.5);
+      font-size: 14px;
+      font-weight: bold;
+      margin-top: 3px;
+    }
       0% {
         opacity: 1;
         transform: scale(1);
@@ -1562,7 +1570,7 @@
       <div class="stat-text" id="status-message" style="color: #5DADE2; text-shadow: 0 0 8px rgba(93,173,226,0.8), 0 0 12px rgba(93,173,226,0.5), 1px 1px 2px rgba(0,0,0,0.5); font-size: 16px; min-height: 20px; margin-top: 5px;"></div>
       
       <!-- Combo Timer Display -->
-      <div class="stat-text" id="combo-timer" style="display: none; color: #FF4444; text-shadow: 0 0 8px rgba(255,68,68,0.8), 0 0 12px rgba(255,68,68,0.5), 1px 1px 2px rgba(0,0,0,0.5); font-size: 14px; font-weight: bold; margin-top: 3px;"></div>
+      <div class="stat-text" id="combo-timer"></div>
       
       <!-- Windmill Quest UI -->
       <div id="windmill-quest-ui" style="display: none; margin-top: 10px;">
@@ -8525,7 +8533,6 @@
       if (comboCount >= 20) return 'mythical';
       if (comboCount >= 15) return 'epic';
       if (comboCount >= 12) return 'rare';
-      if (comboCount >= 10) return 'rare';
       if (comboCount >= 9) return 'uncommon';
       if (comboCount >= 7) return 'common';
       return null;
@@ -8538,7 +8545,8 @@
       fadeTimer: null,
       topCombos: [], // Track top 3 combo achievements
       maxTopCombos: 3,
-      shownMilestones: [] // Track which milestone texts have been shown to prevent repeats
+      shownMilestones: [], // Track which milestone texts have been shown to prevent repeats
+      timerInterval: null // Track combo timer interval for cleanup
     };
     
     function updateComboCounter(newKill = false) {
@@ -8595,28 +8603,34 @@
     // Update the combo timer display in the status bar
     function updateComboTimer() {
       const comboTimerEl = document.getElementById('combo-timer');
+      
+      // Clear existing interval if any
+      if (comboState.timerInterval) {
+        clearInterval(comboState.timerInterval);
+        comboState.timerInterval = null;
+      }
+      
       if (comboState.count >= 5) {
         comboTimerEl.style.display = 'block';
         
-        // Calculate time remaining
-        const currentTime = Date.now();
-        const timeElapsed = currentTime - comboState.lastKillTime;
-        const timeRemaining = Math.max(0, comboState.comboWindow - timeElapsed);
-        const secondsRemaining = (timeRemaining / 1000).toFixed(1);
-        
-        comboTimerEl.innerText = `Combo Timer: ${secondsRemaining}s`;
-        
-        // Update timer every 100ms while combo is active
-        if (timeRemaining > 0) {
-          setTimeout(() => {
-            if (comboState.count >= 5) {
-              updateComboTimer();
+        // Start new interval to update timer display
+        comboState.timerInterval = setInterval(() => {
+          const currentTime = Date.now();
+          const timeElapsed = currentTime - comboState.lastKillTime;
+          const timeRemaining = Math.max(0, comboState.comboWindow - timeElapsed);
+          const secondsRemaining = (timeRemaining / 1000).toFixed(1);
+          
+          comboTimerEl.innerText = `Combo Timer: ${secondsRemaining}s`;
+          
+          // Stop timer when combo expires
+          if (timeRemaining <= 0) {
+            if (comboState.timerInterval) {
+              clearInterval(comboState.timerInterval);
+              comboState.timerInterval = null;
             }
-          }, 100);
-        } else {
-          // Combo expired
-          comboTimerEl.style.display = 'none';
-        }
+            comboTimerEl.style.display = 'none';
+          }
+        }, 100); // Update every 100ms for smooth countdown
       } else {
         comboTimerEl.style.display = 'none';
       }
@@ -8628,13 +8642,14 @@
       const comboMultiplier = document.getElementById('combo-multiplier');
       
       // Updated combo progression: x5=Multikill, x6=Rare, x7=Epic, x8=Legendary, x9=Mythical, 
-      // x10=Amazing, x11=Unbelievable, x12=Fantastic, x13-19=Higher combos, x20=GODLIKE, x21+=GODLIKE x2, x3...
+      // x10=Amazing, x11=Unbelievable, x12=Fantastic, x13-19=Higher combos, x20=GODLIKE (configurable), x21+=GODLIKE x2, x3...
       let message = '';
       let comboLevel = 'normal'; // for styling classes
       let isMilestone = false;
       
+      // Define milestones dynamically based on GODLIKE threshold
+      const milestones = [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, GODLIKE_COMBO_THRESHOLD];
       // Check if this is a new milestone that hasn't been shown yet
-      const milestones = [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
       if (milestones.includes(comboState.count) && !comboState.shownMilestones.includes(comboState.count)) {
         isMilestone = true;
         comboState.shownMilestones.push(comboState.count);
@@ -8706,13 +8721,13 @@
       let fontSize = 38; // Base font size (smaller start, reduced from 42)
       let lightningCount = 0; // Number of lightning effects (keep minimal)
       
-      if (comboState.count >= 21) {
+      if (comboState.count >= GODLIKE_COMBO_THRESHOLD + 1) {
         // GODLIKE x2, x3... - Red/Black with max glow
         textColor = '#8B0000'; // Dark red
         glowIntensity = 70; // Reduced from 90
         fontSize = 78; // Reduced from 86
         lightningCount = 4; // Reduced from 6
-      } else if (comboState.count === 20) {
+      } else if (comboState.count === GODLIKE_COMBO_THRESHOLD) {
         // GODLIKE - Red/Black with glowing light effects
         textColor = '#8B0000'; // Dark red  
         glowIntensity = 65; // Reduced from 85
@@ -8816,6 +8831,12 @@
       const comboEl = document.getElementById('combo-counter');
       const comboTimerEl = document.getElementById('combo-timer');
       comboEl.style.animation = `combo-fade-out ${COMBO_ANIMATION_DURATION}ms ease-out forwards`;
+      
+      // Clear combo timer interval
+      if (comboState.timerInterval) {
+        clearInterval(comboState.timerInterval);
+        comboState.timerInterval = null;
+      }
       
       setTimeout(() => {
         comboEl.style.opacity = '0';
