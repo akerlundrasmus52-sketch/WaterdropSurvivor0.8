@@ -1957,6 +1957,17 @@
     let flashLights = []; // Track temporary flash lights for cleanup
     let activeTimeouts = []; // Track active timeouts for cleanup
     let droneTurrets = []; // Track active drone turrets
+    // Performance: Cache animated scene objects to avoid scene.traverse() every frame
+    let animatedSceneObjects = {
+      windmills: [],
+      waterRipples: [],
+      sparkles: [],
+      crystals: [],
+      cometParticles: [],
+      waterfalls: [],
+      waterDrops: [],
+      splashes: []
+    };
     let lastTime = null; // Initialize as null for proper first-frame detection (PR #82 fix)
     
     // Phase 5: Initialize particle object pool for performance
@@ -3542,26 +3553,33 @@
       }
     }
 
+    // Performance: Cached geometries and materials for projectiles (reused across instances)
+    const projectileGeometryCache = {
+      bullet: new THREE.SphereGeometry(0.25, 8, 8),
+      bulletGlow: new THREE.SphereGeometry(0.35, 6, 6)
+    };
+    const projectileMaterialCache = {
+      bullet: new THREE.MeshBasicMaterial({ 
+        color: 0xFFFF00,
+        transparent: true,
+        opacity: 0.95
+      }),
+      bulletGlow: new THREE.MeshBasicMaterial({
+        color: 0xFFFF00,
+        transparent: true,
+        opacity: 0.4
+      })
+    };
+
     class Projectile {
       constructor(x, z, target) {
-        const geometry = new THREE.SphereGeometry(0.25, 8, 8); // Larger bullet (was 0.2)
-        const material = new THREE.MeshBasicMaterial({ 
-          color: 0xFFFF00,
-          transparent: true,
-          opacity: 0.95
-        });
-        this.mesh = new THREE.Mesh(geometry, material);
+        // Performance: Reuse cached geometry and materials instead of creating new ones
+        this.mesh = new THREE.Mesh(projectileGeometryCache.bullet, projectileMaterialCache.bullet);
         this.mesh.position.set(x, 0.5, z);
         scene.add(this.mesh);
         
-        // Add glowing trail effect
-        const glowGeometry = new THREE.SphereGeometry(0.35, 6, 6);
-        const glowMaterial = new THREE.MeshBasicMaterial({
-          color: 0xFFFF00,
-          transparent: true,
-          opacity: 0.4
-        });
-        this.glow = new THREE.Mesh(glowGeometry, glowMaterial);
+        // Add glowing trail effect with cached resources
+        this.glow = new THREE.Mesh(projectileGeometryCache.bulletGlow, projectileMaterialCache.bulletGlow);
         this.glow.position.copy(this.mesh.position);
         scene.add(this.glow);
 
@@ -3662,14 +3680,12 @@
       destroy() {
         this.active = false;
         scene.remove(this.mesh);
-        this.mesh.geometry.dispose();
-        this.mesh.material.dispose();
+        // Performance: Don't dispose shared cached geometry/material
         
         // Remove glow if it exists
         if (this.glow) {
           scene.remove(this.glow);
-          this.glow.geometry.dispose();
-          this.glow.material.dispose();
+          // Performance: Don't dispose shared cached geometry/material
         }
       }
     }
@@ -5792,6 +5808,31 @@
       }
     }
 
+    // Performance: Cache animated objects to avoid scene.traverse() every frame
+    function cacheAnimatedObjects() {
+      animatedSceneObjects = {
+        windmills: [],
+        waterRipples: [],
+        sparkles: [],
+        crystals: [],
+        cometParticles: [],
+        waterfalls: [],
+        waterDrops: [],
+        splashes: []
+      };
+      
+      scene.traverse(obj => {
+        if (obj.userData.isWindmill) animatedSceneObjects.windmills.push(obj);
+        else if (obj.userData.isWaterRipple) animatedSceneObjects.waterRipples.push(obj);
+        else if (obj.userData.isSparkle) animatedSceneObjects.sparkles.push(obj);
+        else if (obj.userData.isCrystal) animatedSceneObjects.crystals.push(obj);
+        else if (obj.userData.isCometParticle) animatedSceneObjects.cometParticles.push(obj);
+        else if (obj.userData.isWaterfall) animatedSceneObjects.waterfalls.push(obj);
+        else if (obj.userData.isWaterDrop) animatedSceneObjects.waterDrops.push(obj);
+        else if (obj.userData.isSplash) animatedSceneObjects.splashes.push(obj);
+      });
+    }
+
     // --- GAME LOGIC ---
 
     function init() {
@@ -5842,6 +5883,8 @@
 
       // Setup
       createWorld();
+      // Performance: Cache animated scene objects after world creation
+      cacheAnimatedObjects();
       player = new Player();
       
       // Initialize background music
@@ -9131,97 +9174,96 @@
         return alive;
       });
       
+      // Performance: Use cached arrays instead of scene.traverse() every frame
       // Windmill Rotation and Light Animation
-      scene.children.forEach(c => {
-        if (c.userData.isWindmill) {
-          // Rotate the blades stored in userData
-          if (c.userData.blades && c.userData.blades.length > 0) {
-            c.userData.blades[0].rotation.z += 0.05;
-            c.userData.blades[1].rotation.z += 0.05;
-          }
-          
-          // Animate windmill light (pulsing) with null check
-          if (c.userData.light && c.userData.light.material) {
-            c.userData.light.material.opacity = 0.8 + Math.sin(gameTime * 3) * 0.2;
-          }
+      animatedSceneObjects.windmills.forEach(c => {
+        // Rotate the blades stored in userData
+        if (c.userData.blades && c.userData.blades.length > 0) {
+          c.userData.blades[0].rotation.z += 0.05;
+          c.userData.blades[1].rotation.z += 0.05;
         }
-        // Water ripple animation
-        if (c.userData.isWaterRipple) {
-          c.userData.phase += 0.05;
-          const scale = 1 + Math.sin(c.userData.phase) * 0.1;
-          c.scale.set(scale, 1, scale);
-          c.material.opacity = 0.3 + Math.sin(c.userData.phase) * 0.2;
+        
+        // Animate windmill light (pulsing) with null check
+        if (c.userData.light && c.userData.light.material) {
+          c.userData.light.material.opacity = 0.8 + Math.sin(gameTime * 3) * 0.2;
         }
-        // Lake sparkles animation
-        if (c.userData.isSparkle) {
-          c.userData.phase += 0.02 * c.userData.speed;
-          c.material.opacity = 0.3 + Math.abs(Math.sin(c.userData.phase)) * 0.7;
-          c.scale.set(
-            1 + Math.sin(c.userData.phase * 2) * 0.5,
-            1,
-            1 + Math.sin(c.userData.phase * 2) * 0.5
-          );
-        }
+      });
+      
+      // Water ripple animation
+      animatedSceneObjects.waterRipples.forEach(c => {
+        c.userData.phase += 0.05;
+        const scale = 1 + Math.sin(c.userData.phase) * 0.1;
+        c.scale.set(scale, 1, scale);
+        c.material.opacity = 0.3 + Math.sin(c.userData.phase) * 0.2;
+      });
+      
+      // Lake sparkles animation
+      animatedSceneObjects.sparkles.forEach(c => {
+        c.userData.phase += 0.02 * c.userData.speed;
+        c.material.opacity = 0.3 + Math.abs(Math.sin(c.userData.phase)) * 0.7;
+        c.scale.set(
+          1 + Math.sin(c.userData.phase * 2) * 0.5,
+          1,
+          1 + Math.sin(c.userData.phase * 2) * 0.5
+        );
       });
       
       // Crystal tower animation
-      scene.traverse(obj => {
-        if (obj.userData.isCrystal) {
-          // Rotate crystals
-          obj.rotation.x += 0.01;
-          obj.rotation.y += 0.02;
-          
-          // Orbit animation
-          obj.userData.phase += 0.01 * obj.userData.orbitSpeed;
-          const offsetY = Math.sin(obj.userData.phase) * 0.5;
-          obj.position.y += offsetY * 0.05;
-          
-          // Pulsing emissive
-          if (obj.material.emissiveIntensity !== undefined) {
-            obj.material.emissiveIntensity = 0.3 + Math.sin(obj.userData.phase * 2) * 0.2;
-          }
-        }
+      animatedSceneObjects.crystals.forEach(obj => {
+        // Rotate crystals
+        obj.rotation.x += 0.01;
+        obj.rotation.y += 0.02;
         
-        // Comet particle animation (orbiting particles)
-        if (obj.userData.isCometParticle) {
-          // Store the initial position as the orbit center (relative to parent/comet group)
-          if (!obj.userData.basePosition) {
-            obj.userData.basePosition = obj.position.clone();
-          }
-          
-          obj.userData.angle += obj.userData.speed * 0.02;
-          
-          const centerX = obj.userData.basePosition.x;
-          const centerZ = obj.userData.basePosition.z;
-          const centerY = obj.userData.basePosition.y;
-          
-          obj.position.x = centerX + Math.cos(obj.userData.angle) * obj.userData.radius;
-          obj.position.z = centerZ + Math.sin(obj.userData.angle) * obj.userData.radius;
-          obj.position.y = centerY + obj.userData.height + Math.sin(obj.userData.angle * 2) * 0.3;
-          
-          // Pulsing opacity (between 0.3 and 0.7 for good visibility)
-          obj.material.opacity = 0.5 + Math.sin(obj.userData.angle * 3) * 0.2;
+        // Orbit animation
+        obj.userData.phase += 0.01 * obj.userData.orbitSpeed;
+        const offsetY = Math.sin(obj.userData.phase) * 0.5;
+        obj.position.y += offsetY * 0.05;
+        
+        // Pulsing emissive
+        if (obj.material.emissiveIntensity !== undefined) {
+          obj.material.emissiveIntensity = 0.3 + Math.sin(obj.userData.phase * 2) * 0.2;
         }
       });
       
+      // Comet particle animation (orbiting particles)
+      animatedSceneObjects.cometParticles.forEach(obj => {
+        // Store the initial position as the orbit center (relative to parent/comet group)
+        if (!obj.userData.basePosition) {
+          obj.userData.basePosition = obj.position.clone();
+        }
+        
+        obj.userData.angle += obj.userData.speed * 0.02;
+        
+        const centerX = obj.userData.basePosition.x;
+        const centerZ = obj.userData.basePosition.z;
+        const centerY = obj.userData.basePosition.y;
+        
+        obj.position.x = centerX + Math.cos(obj.userData.angle) * obj.userData.radius;
+        obj.position.z = centerZ + Math.sin(obj.userData.angle) * obj.userData.radius;
+        obj.position.y = centerY + obj.userData.height + Math.sin(obj.userData.angle * 2) * 0.3;
+        
+        // Pulsing opacity (between 0.3 and 0.7 for good visibility)
+        obj.material.opacity = 0.5 + Math.sin(obj.userData.angle * 3) * 0.2;
+      });
+      
       // Waterfall animation
-      scene.traverse(obj => {
-        if (obj.userData.isWaterfall) {
-          obj.userData.phase += 0.05;
-          obj.material.opacity = 0.6 + Math.sin(obj.userData.phase) * 0.1;
+      animatedSceneObjects.waterfalls.forEach(obj => {
+        obj.userData.phase += 0.05;
+        obj.material.opacity = 0.6 + Math.sin(obj.userData.phase) * 0.1;
+      });
+      
+      animatedSceneObjects.waterDrops.forEach(obj => {
+        obj.position.y -= obj.userData.speed;
+        if (obj.position.y < 0) {
+          obj.position.y = obj.userData.startY;
         }
-        if (obj.userData.isWaterDrop) {
-          obj.position.y -= obj.userData.speed;
-          if (obj.position.y < 0) {
-            obj.position.y = obj.userData.startY;
-          }
-        }
-        if (obj.userData.isSplash) {
-          obj.userData.phase += 0.1;
-          const scale = 1 + Math.sin(obj.userData.phase) * 0.3;
-          obj.scale.set(scale, 1, scale);
-          obj.material.opacity = 0.4 + Math.sin(obj.userData.phase) * 0.2;
-        }
+      });
+      
+      animatedSceneObjects.splashes.forEach(obj => {
+        obj.userData.phase += 0.1;
+        const scale = 1 + Math.sin(obj.userData.phase) * 0.3;
+        obj.scale.set(scale, 1, scale);
+        obj.material.opacity = 0.4 + Math.sin(obj.userData.phase) * 0.2;
       });
 
       // Cleanup and memory management (run every 3 seconds to avoid performance issues)
