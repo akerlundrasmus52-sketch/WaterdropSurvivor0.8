@@ -4860,11 +4860,11 @@
       illuminatiGroup.add(allSeeingEyeGroup);
       
       // Fences around pyramid (4 sides)
-      const fenceMat = new THREE.MeshToonMaterial({ color: 0x8B4513 }); // Brown
+      const illuminatiFenceMat = new THREE.MeshToonMaterial({ color: 0x8B4513 }); // Brown
       for (let side = 0; side < 4; side++) {
         for (let i = 0; i < 8; i++) {
           const fencePostGeo = new THREE.BoxGeometry(0.3, 2, 0.3);
-          const fencePost = new THREE.Mesh(fencePostGeo, fenceMat);
+          const fencePost = new THREE.Mesh(fencePostGeo, illuminatiFenceMat);
           
           let x, z;
           if (side === 0) { // North
