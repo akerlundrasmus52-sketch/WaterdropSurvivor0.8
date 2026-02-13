@@ -4774,11 +4774,18 @@
       const eyeOutline = new THREE.Mesh(eyeOutlineGeo, eyeOutlineMat);
       eyeOfHorusGroup.add(eyeOutline);
       
+      // Eye white/sclera
+      const eyeWhiteGeo = new THREE.CircleGeometry(0.3, 16);
+      const eyeWhiteMat = new THREE.MeshBasicMaterial({ color: 0xFFFFFF });
+      const eyeWhite = new THREE.Mesh(eyeWhiteGeo, eyeWhiteMat);
+      eyeWhite.position.z = 0.01;
+      eyeOfHorusGroup.add(eyeWhite);
+      
       // Pupil
-      const pupilGeo = new THREE.CircleGeometry(0.3, 16);
+      const pupilGeo = new THREE.CircleGeometry(0.15, 16);
       const pupilMat = new THREE.MeshBasicMaterial({ color: 0xFFD700 }); // Gold
       const pupil = new THREE.Mesh(pupilGeo, pupilMat);
-      pupil.position.z = 0.01;
+      pupil.position.z = 0.02;
       eyeOfHorusGroup.add(pupil);
       
       mayanGroup.add(eyeOfHorusGroup);
@@ -5257,9 +5264,14 @@
         
         // Phase 4: Road exclusion - helper function to check if position is on a road
         function isOnRoad(x, z) {
+          // Constants for road exclusion zones
+          const CIRCULAR_ROAD_RADIUS = 8; // Radius of circular road around statue
+          const CIRCULAR_ROAD_BUFFER = 3; // Buffer zone around circular road
+          const ROAD_WIDTH_BUFFER = 4;     // Buffer zone for linear roads
+          
           // Check distance to statue (circular road around it)
           const distToStatue = Math.sqrt(x * x + z * z);
-          if (Math.abs(distToStatue - 8) < 3) return true; // Circular road buffer
+          if (Math.abs(distToStatue - CIRCULAR_ROAD_RADIUS) < CIRCULAR_ROAD_BUFFER) return true;
           
           // Check linear roads (simplified check - within buffer of main paths)
           const roads = [
@@ -5284,7 +5296,7 @@
             
             // Check distance to road
             const distToRoad = Math.sqrt((x - projX) ** 2 + (z - projZ) ** 2);
-            if (distToRoad < 4) return true; // Road width buffer
+            if (distToRoad < ROAD_WIDTH_BUFFER) return true;
           }
           
           return false;
@@ -7208,8 +7220,7 @@
       else if (comboState.count >= 20) message = 'Fantastic';
       else if (comboState.count >= 15) message = 'Amazing';
       else if (comboState.count >= 10) message = 'Epic';
-      else if (comboState.count >= 5) message = 'Multi Kill';
-      else if (comboState.count >= 4) message = 'Multi Kill';
+      else if (comboState.count >= 4) message = 'Multi Kill'; // x4-x5 as per spec
       else if (comboState.count >= 3) message = 'Triple Kill';
       else if (comboState.count >= 2) message = 'Double Kill';
       else message = comboState.count + 'x COMBO!';
