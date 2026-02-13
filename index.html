@@ -144,59 +144,9 @@
       margin-top: 8px;
     }
     
-    /* Stats Bar - Phase 2 */
-    #stats-bar {
-      background: linear-gradient(to bottom, #2a2a3e, #1a1a2e);
-      border: 2px solid #FFD700;
-      border-radius: 10px;
-      padding: 10px;
-      margin-top: 10px;
-      max-width: 220px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.6), 0 0 15px rgba(255,215,0,0.3);
-      transition: opacity 0.3s, max-height 0.3s;
-      overflow: hidden;
-    }
+    /* Stats Bar - Removed (Stats accessible via Stats Button Modal only) */
     
-    #stats-bar.collapsed {
-      max-height: 30px;
-      overflow: hidden;
-    }
-    
-    #stats-bar-header {
-      color: #FFD700;
-      font-size: 14px;
-      font-weight: bold;
-      text-shadow: 0 0 8px rgba(255,215,0,0.6), 1px 1px 2px rgba(0,0,0,0.8);
-      margin-bottom: 8px;
-      cursor: pointer;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    
-    #stats-bar-content {
-      font-size: 11px;
-      color: #c9d1d9;
-      line-height: 1.6;
-      text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
-    }
-    
-    .stat-line {
-      margin: 2px 0;
-      display: flex;
-      justify-content: space-between;
-    }
-    
-    .stat-label {
-      color: #5DADE2;
-    }
-    
-    .stat-value {
-      color: #FFD700;
-      font-weight: bold;
-    }
-    
-    /* Combo Counter - Phase 2 */
+    /* Combo Counter - Red/Black Theme */
     #combo-counter {
       position: absolute;
       top: 35%;
@@ -212,27 +162,27 @@
     #combo-text {
       font-size: 48px;
       font-weight: 900;
-      color: #FFD700;
+      color: #FF0000;
       text-shadow: 
-        3px 3px 0 #8B4513,
-        -1px -1px 0 #8B4513,
-        1px -1px 0 #8B4513,
-        -1px 1px 0 #8B4513,
-        0 0 20px rgba(255,215,0,0.8),
-        0 0 40px rgba(255,215,0,0.5);
+        3px 3px 0 #000,
+        -2px -2px 0 #000,
+        2px -2px 0 #000,
+        -2px 2px 0 #000,
+        0 0 20px rgba(255,0,0,0.9),
+        0 0 40px rgba(255,0,0,0.7);
       animation: combo-bubble 0.5s ease-out;
     }
     
     #combo-multiplier {
       font-size: 24px;
       font-weight: bold;
-      color: #FF6B6B;
+      color: #8B0000;
       text-shadow: 
-        2px 2px 0 #8B0000,
-        -1px -1px 0 #8B0000,
-        1px -1px 0 #8B0000,
-        -1px 1px 0 #8B0000,
-        0 0 15px rgba(255,107,107,0.8);
+        2px 2px 0 #000,
+        -1px -1px 0 #000,
+        1px -1px 0 #000,
+        -1px 1px 0 #000,
+        0 0 15px rgba(139,0,0,0.8);
       margin-top: 5px;
     }
     
@@ -262,54 +212,58 @@
       }
     }
     
-    /* Phase 3: Hill EXP Bar - Redesigned */
-    #egg-exp-container {
+    /* New Bottom Layout: HP Bar, Level Display, EXP Bar */
+    #bottom-bars-container {
       position: absolute;
       bottom: 0;
       left: 0;
       width: 100%;
-      height: 120px;
       z-index: 100;
       pointer-events: none;
-      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding-bottom: 10px;
+      gap: 8px;
     }
     
-    #egg-exp-bar {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      width: 100%;
-      height: 240px;
-      background: linear-gradient(to bottom, #2a2a2a, #1a1a1a);
-      border-radius: 50% 50% 0 0 / 100% 100% 0 0;
-      border: 3px solid #FFD700;
-      border-bottom: none;
+    /* HP Bar at the top of bottom section */
+    #bottom-hp-bar {
+      width: 90%;
+      max-width: 600px;
+      height: 30px;
+      background: linear-gradient(to bottom, #3a3a3a 0%, #3a3a3a 50%, #6a6a6a 50%, #6a6a6a 100%);
+      border-radius: 15px;
+      border: 3px solid #2a2a2a;
       overflow: hidden;
-      box-shadow: 
-        0 -4px 8px rgba(0,0,0,0.6),
-        0 0 20px rgba(255,215,0,0.4),
-        inset 0 2px 4px rgba(0,0,0,0.3);
+      position: relative;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.3), inset 0 2px 4px rgba(0,0,0,0.2), 0 0 15px rgba(0,0,0,0.5);
     }
     
-    #egg-exp-fill {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      width: 0%;
+    #bottom-hp-fill {
       height: 100%;
-      background: linear-gradient(to top, #3498DB, #5DADE2, #87CEEB);
-      box-shadow: 
-        inset 0 2px 4px rgba(255,255,255,0.3),
-        0 0 10px rgba(93,173,226,0.6);
+      width: 100%;
+      background: linear-gradient(to bottom, #FF4444, #CC0000);
+      box-shadow: 0 0 10px rgba(255,68,68,0.8), 0 0 20px rgba(255,68,68,0.4), inset 0 2px 4px rgba(255,255,255,0.2);
       transition: width 0.3s ease-out;
     }
     
-    #egg-exp-level {
+    #bottom-hp-text {
       position: absolute;
-      top: 20px;
+      top: 50%;
       left: 50%;
-      transform: translateX(-50%);
-      font-size: 24px;
+      transform: translate(-50%, -50%);
+      font-weight: bold;
+      font-size: 14px;
+      color: #FFFFFF;
+      text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+      pointer-events: none;
+      z-index: 1;
+    }
+    
+    /* Level Display */
+    #bottom-level-display {
+      font-size: 20px;
       font-weight: bold;
       color: #FFD700;
       text-shadow: 
@@ -318,55 +272,105 @@
         1px -1px 0 #000,
         -1px 1px 0 #000,
         0 0 15px rgba(255,215,0,0.8);
-      z-index: 2;
     }
     
-    #egg-exp-text {
-      position: absolute;
-      bottom: 40px;
-      left: 50%;
-      transform: translateX(-50%);
-      font-size: 16px;
-      font-weight: bold;
-      color: #FFFFFF;
-      text-shadow: 
-        1px 1px 0 #000,
-        -1px -1px 0 #000,
-        1px -1px 0 #000,
-        -1px 1px 0 #000;
-      z-index: 2;
-      pointer-events: none;
+    /* EXP Bar at bottom */
+    #bottom-exp-bar {
+      width: 100%;
+      height: 24px;
+      background: linear-gradient(to bottom, #3a3a3a 0%, #3a3a3a 50%, #6a6a6a 50%, #6a6a6a 100%);
+      border: 3px solid #2a2a2a;
+      overflow: hidden;
+      position: relative;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.3), inset 0 2px 4px rgba(0,0,0,0.2), 0 0 15px rgba(0,0,0,0.5);
     }
     
-    /* Phase 3: Stat Notification Queue */
-    #stat-notifications {
+    #bottom-exp-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(to bottom, #5DADE2, #3498DB);
+      box-shadow: 0 0 10px rgba(93,173,226,0.8), 0 0 20px rgba(93,173,226,0.4), inset 0 2px 4px rgba(255,255,255,0.2);
+      transition: width 0.3s ease-out;
+    }
+    
+    #bottom-exp-text {
       position: absolute;
       top: 50%;
-      right: 30px;
-      transform: translateY(-50%);
-      width: 250px;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-weight: bold;
+      font-size: 12px;
+      color: #FFFFFF;
+      text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+      pointer-events: none;
+      z-index: 1;
+    }
+    
+    /* Stat Notification Queue - Red/Black Dominant */
+    #stat-notifications {
+      position: absolute;
+      top: 15%;
+      right: 20px;
+      transform: translateY(0);
+      width: 280px;
       z-index: 150;
       pointer-events: none;
     }
     
     .stat-notification {
-      background: linear-gradient(to right, rgba(42, 42, 62, 0.95), rgba(26, 26, 46, 0.95));
-      border: 2px solid #FFD700;
+      background: linear-gradient(to right, rgba(20, 0, 0, 0.95), rgba(40, 0, 0, 0.90));
+      border: 2px solid #FF0000;
       border-radius: 8px;
       padding: 12px 16px;
       margin-bottom: 10px;
-      font-size: 14px;
+      font-size: 15px;
       font-weight: bold;
-      color: #FFD700;
-      text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
-      box-shadow: 0 4px 8px rgba(0,0,0,0.6), 0 0 15px rgba(255,215,0,0.3);
-      animation: stat-float-in 0.3s ease-out;
+      color: #FF0000;
+      text-shadow: 
+        0 0 8px rgba(255,0,0,0.8),
+        0 0 16px rgba(255,0,0,0.6),
+        1px 1px 2px rgba(0,0,0,0.9);
+      box-shadow: 
+        0 4px 8px rgba(0,0,0,0.8), 
+        0 0 20px rgba(255,0,0,0.5),
+        inset 0 0 10px rgba(255,0,0,0.2);
+      animation: stat-float-in-right 0.4s ease-out;
     }
     
-    @keyframes stat-float-in {
+    .stat-notification.combo-high {
+      border-color: #8B0000;
+      color: #8B0000;
+      text-shadow: 
+        0 0 12px rgba(139,0,0,0.9),
+        0 0 24px rgba(139,0,0,0.7),
+        2px 2px 4px rgba(0,0,0,0.9);
+      box-shadow: 
+        0 4px 12px rgba(0,0,0,0.9), 
+        0 0 30px rgba(139,0,0,0.7),
+        inset 0 0 15px rgba(139,0,0,0.3);
+    }
+    
+    .stat-notification.combo-mythical {
+      border-color: #000000;
+      color: #1a0000;
+      background: linear-gradient(to right, rgba(10, 0, 0, 0.98), rgba(5, 0, 0, 0.95));
+      text-shadow: 
+        0 0 16px rgba(200,0,0,1.0),
+        0 0 32px rgba(200,0,0,0.9),
+        0 0 48px rgba(200,0,0,0.6),
+        3px 3px 6px rgba(0,0,0,1.0);
+      box-shadow: 
+        0 6px 16px rgba(0,0,0,1.0), 
+        0 0 40px rgba(200,0,0,0.9),
+        0 0 60px rgba(200,0,0,0.6),
+        inset 0 0 20px rgba(200,0,0,0.4);
+      animation: stat-float-in-right 0.4s ease-out, intense-glow 1s ease-in-out infinite alternate;
+    }
+    
+    @keyframes stat-float-in-right {
       0% {
         opacity: 0;
-        transform: translateX(50px);
+        transform: translateX(100px);
       }
       100% {
         opacity: 1;
@@ -377,34 +381,33 @@
     @keyframes stat-fade-out {
       0% {
         opacity: 1;
-        transform: translateX(0);
+        transform: translateX(0) scale(1);
       }
       100% {
         opacity: 0;
-        transform: translateX(50px);
+        transform: translateX(30px) scale(0.8);
       }
     }
     
-    /* Phase 3: Wave Counter in Stats Bar */
-    #wave-counter {
-      margin-top: 8px;
-      padding-top: 8px;
-      border-top: 1px solid #FFD700;
-      text-align: center;
-      font-size: 12px;
-      font-weight: bold;
+    @keyframes intense-glow {
+      0% {
+        box-shadow: 
+          0 6px 16px rgba(0,0,0,1.0), 
+          0 0 40px rgba(200,0,0,0.9),
+          0 0 60px rgba(200,0,0,0.6),
+          inset 0 0 20px rgba(200,0,0,0.4);
+      }
+      100% {
+        box-shadow: 
+          0 6px 20px rgba(0,0,0,1.0), 
+          0 0 60px rgba(255,0,0,1.0),
+          0 0 100px rgba(255,0,0,0.8),
+          inset 0 0 30px rgba(255,0,0,0.6);
+      }
     }
     
-    #wave-text {
-      color: #5DADE2;
-      text-shadow: 0 0 8px rgba(93,173,226,0.6);
-    }
+    /* Wave Counter - Removed (was in stats bar) */
     
-    #wave-number {
-      color: #FFD700;
-      font-size: 14px;
-      text-shadow: 0 0 10px rgba(255,215,0,0.8);
-    }
     
     /* Equipment Menu Button - Phase 2 Placeholder */
     #equipment-btn {
@@ -1351,25 +1354,6 @@
       <!-- Status Message Bar -->
       <div class="stat-text" id="status-message" style="color: #5DADE2; text-shadow: 0 0 8px rgba(93,173,226,0.8), 0 0 12px rgba(93,173,226,0.5), 1px 1px 2px rgba(0,0,0,0.5); font-size: 16px; min-height: 20px; margin-top: 5px;"></div>
       
-      <!-- Stats Bar - Phase 2 -->
-      <div id="stats-bar">
-        <div id="stats-bar-header">
-          <span>📊 STATS</span>
-          <span id="stats-toggle" style="font-size: 12px;">▼</span>
-        </div>
-        <div id="stats-bar-content">
-          <div class="stat-line"><span class="stat-label">DMG:</span> <span class="stat-value" id="stat-strength">0</span></div>
-          <div class="stat-line"><span class="stat-label">ATK SPD:</span> <span class="stat-value" id="stat-atkspeed">1.0x</span></div>
-          <div class="stat-line"><span class="stat-label">CRIT:</span> <span class="stat-value" id="stat-crit">10%</span></div>
-          <div class="stat-line"><span class="stat-label">ARM:</span> <span class="stat-value" id="stat-armor">0%</span></div>
-          <div class="stat-line"><span class="stat-label">REG:</span> <span class="stat-value" id="stat-regen">0/s</span></div>
-          <!-- Phase 3: Wave Counter -->
-          <div id="wave-counter">
-            <span id="wave-text">WAVE: </span><span id="wave-number">1</span>
-          </div>
-        </div>
-      </div>
-      
       <!-- Windmill Quest UI -->
       <div id="windmill-quest-ui" style="display: none; margin-top: 10px;">
         <div class="bar-container" style="border-color: #8B4513;">
@@ -1385,18 +1369,22 @@
     <!-- Equipment Button - Phase 2 Placeholder -->
     <button id="equipment-btn" title="Equipment (Coming Soon)">⚔️</button>
     
-    <!-- Combo Counter - Phase 2 -->
+    <!-- Combo Counter - Red/Black Theme -->
     <div id="combo-counter">
       <div id="combo-text"></div>
       <div id="combo-multiplier"></div>
     </div>
 
-    <!-- Phase 3: Egg-shaped EXP Bar -->
-    <div id="egg-exp-container">
-      <div id="egg-exp-level">LVL 1</div>
-      <div id="egg-exp-bar">
-        <div id="egg-exp-fill"></div>
-        <div id="egg-exp-text">0%</div>
+    <!-- New Bottom Bars Layout -->
+    <div id="bottom-bars-container">
+      <div id="bottom-hp-bar">
+        <div id="bottom-hp-fill"></div>
+        <div id="bottom-hp-text">HP: 100/100</div>
+      </div>
+      <div id="bottom-level-display">Current Level: 1</div>
+      <div id="bottom-exp-bar">
+        <div id="bottom-exp-fill"></div>
+        <div id="bottom-exp-text">EXP: 0%</div>
       </div>
     </div>
 
@@ -1503,121 +1491,19 @@
     }
     
     function updateBackgroundMusic() {
+      // Background music removed per requirements
+      // Stop all music
       initMusic();
-      
-      if (!gameSettings.musicEnabled) {
-        // Stop all music if disabled
-        if (musicGain) {
-          musicGain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.5);
-        }
-        return;
+      if (musicGain) {
+        musicGain.gain.setValueAtTime(0, audioCtx.currentTime);
       }
-      
-      // Restore music volume if enabled and currently at 0
-      if (musicGain && musicGain.gain.value < 0.01 && musicOscillators.length > 0) {
-        musicGain.gain.linearRampToValueAtTime(0.15, audioCtx.currentTime + 0.5);
-      }
-      
-      const targetLevel = Math.min(playerStats.lvl, 10);
-      
-      if (targetLevel > currentMusicLevel) {
-        currentMusicLevel = targetLevel;
-        
-        // Add new layer with happier, more upbeat sounds
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        
-        osc.connect(gain);
-        gain.connect(musicGain);
-        
-        // Major key frequencies - happier, more dopamine-inducing (C Major scale)
-        const baseFreq = 261.63; // C4 (Middle C)
-        const majorScaleFreqs = [
-          baseFreq,           // C - Level 1
-          baseFreq * 1.125,   // D - Level 2
-          baseFreq * 1.26,    // E - Level 3
-          baseFreq * 1.33,    // F - Level 4
-          baseFreq * 1.5,     // G - Level 5
-          baseFreq * 1.68,    // A - Level 6
-          baseFreq * 1.89,    // B - Level 7
-          baseFreq * 2,       // C - Level 8 (octave up)
-          baseFreq * 2.25,    // D - Level 9
-          baseFreq * 2.52     // E - Level 10
-        ];
-        
-        // Use sine wave for happier, cleaner sound
-        osc.type = 'sine';
-        osc.frequency.value = majorScaleFreqs[currentMusicLevel - 1];
-        
-        // Add faster vibrato for more energetic feel
-        const lfo = audioCtx.createOscillator();
-        const lfoGain = audioCtx.createGain();
-        lfo.frequency.value = 6 + currentMusicLevel * 0.5; // Faster vibrato
-        lfoGain.gain.value = 8 + currentMusicLevel * 0.8; // More pronounced
-        lfo.connect(lfoGain);
-        lfoGain.connect(osc.frequency);
-        lfo.start();
-        
-        gain.gain.value = 0;
-        gain.gain.linearRampToValueAtTime(0.25 + currentMusicLevel * 0.02, audioCtx.currentTime + 0.8);
-        
-        osc.start();
-        musicOscillators.push({ osc, gain, lfo });
-        
-        // Add harmony layer (third above) for richer sound
-        const harmony = audioCtx.createOscillator();
-        const harmonyGain = audioCtx.createGain();
-        harmony.connect(harmonyGain);
-        harmonyGain.connect(musicGain);
-        harmony.type = 'sine';
-        harmony.frequency.value = majorScaleFreqs[currentMusicLevel - 1] * 1.26; // Major third
-        harmonyGain.gain.value = 0;
-        harmonyGain.gain.linearRampToValueAtTime(0.15, audioCtx.currentTime + 0.8);
-        harmony.start();
-        musicOscillators.push({ osc: harmony, gain: harmonyGain, lfo: null });
-        
-        // Add uplifting high melody for levels 3+
-        if (currentMusicLevel >= 3) {
-          const melody = audioCtx.createOscillator();
-          const melodyGain = audioCtx.createGain();
-          melody.connect(melodyGain);
-          melodyGain.connect(musicGain);
-          melody.type = 'triangle';
-          melody.frequency.value = majorScaleFreqs[currentMusicLevel - 1] * 2; // Octave up
-          melodyGain.gain.value = 0;
-          melodyGain.gain.linearRampToValueAtTime(0.12, audioCtx.currentTime + 0.8);
-          melody.start();
-          musicOscillators.push({ osc: melody, gain: melodyGain, lfo: null });
-        }
-        
-        // Add energetic rhythm layer for levels 5+
-        if (currentMusicLevel >= 5) {
-          const rhythm = audioCtx.createOscillator();
-          const rhythmGain = audioCtx.createGain();
-          rhythm.connect(rhythmGain);
-          rhythmGain.connect(musicGain);
-          rhythm.type = 'square';
-          rhythm.frequency.value = majorScaleFreqs[currentMusicLevel - 1] * 0.5; // Bass line
-          rhythmGain.gain.value = 0;
-          rhythmGain.gain.linearRampToValueAtTime(0.18, audioCtx.currentTime + 0.8);
-          rhythm.start();
-          musicOscillators.push({ osc: rhythm, gain: rhythmGain, lfo: null });
-        }
-        
-        // Add high frequency sparkle for levels 7+
-        if (currentMusicLevel >= 7) {
-          const sparkle = audioCtx.createOscillator();
-          const sparkleGain = audioCtx.createGain();
-          sparkle.connect(sparkleGain);
-          sparkleGain.connect(musicGain);
-          sparkle.type = 'sine';
-          sparkle.frequency.value = majorScaleFreqs[currentMusicLevel - 1] * 4; // High sparkle
-          sparkleGain.gain.value = 0;
-          sparkleGain.gain.linearRampToValueAtTime(0.1, audioCtx.currentTime + 0.8);
-          sparkle.start();
-          musicOscillators.push({ osc: sparkle, gain: sparkleGain, lfo: null });
-        }
-      }
+      musicOscillators.forEach(m => {
+        try {
+          m.osc.stop();
+          if (m.lfo) m.lfo.stop();
+        } catch (e) {}
+      });
+      musicOscillators = [];
     }
     
     function playSound(type) {
@@ -1662,21 +1548,98 @@
         osc2.start(now);
         osc2.stop(now + 0.06);
       } else if (type === 'levelup') {
-        // Hi-Fi Level Up Sound - Ascending arpeggio
+        // Slow motion "Waoooo" effect - ascending with slow sweep
         osc.type = 'sine';
-        osc.frequency.setValueAtTime(400, now);
-        osc.frequency.linearRampToValueAtTime(500, now + 0.08);
-        osc.frequency.linearRampToValueAtTime(633, now + 0.16);
-        osc.frequency.linearRampToValueAtTime(800, now + 0.24);
-        osc.frequency.linearRampToValueAtTime(1000, now + 0.32);
-        gain.gain.setValueAtTime(0.25, now);
-        gain.gain.linearRampToValueAtTime(0.2, now + 0.3);
-        gain.gain.linearRampToValueAtTime(0, now + 0.6);
+        osc.frequency.setValueAtTime(200, now);
+        osc.frequency.linearRampToValueAtTime(400, now + 0.3);
+        osc.frequency.linearRampToValueAtTime(600, now + 0.6);
+        osc.frequency.linearRampToValueAtTime(800, now + 0.9);
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.linearRampToValueAtTime(0.25, now + 0.8);
+        gain.gain.linearRampToValueAtTime(0, now + 1.2);
         osc.start(now);
-        osc.stop(now + 0.6);
+        osc.stop(now + 1.2);
         
-        // Update background music
-        updateBackgroundMusic();
+        // Add ethereal layer
+        const osc2 = audioCtx.createOscillator();
+        const gain2 = audioCtx.createGain();
+        osc2.connect(gain2);
+        gain2.connect(audioCtx.destination);
+        osc2.type = 'triangle';
+        osc2.frequency.setValueAtTime(400, now);
+        osc2.frequency.linearRampToValueAtTime(1200, now + 1.0);
+        gain2.gain.setValueAtTime(0.15, now);
+        gain2.gain.linearRampToValueAtTime(0, now + 1.2);
+        osc2.start(now);
+        osc2.stop(now + 1.2);
+      } else if (type === 'upgrade') {
+        // "Wooooaaa" sound after picking upgrade
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(600, now);
+        osc.frequency.linearRampToValueAtTime(400, now + 0.4);
+        osc.frequency.linearRampToValueAtTime(300, now + 0.7);
+        gain.gain.setValueAtTime(0.25, now);
+        gain.gain.linearRampToValueAtTime(0, now + 0.8);
+        osc.start(now);
+        osc.stop(now + 0.8);
+        
+        // Add resonance
+        const osc2 = audioCtx.createOscillator();
+        const gain2 = audioCtx.createGain();
+        osc2.connect(gain2);
+        gain2.connect(audioCtx.destination);
+        osc2.type = 'triangle';
+        osc2.frequency.setValueAtTime(1200, now);
+        osc2.frequency.linearRampToValueAtTime(600, now + 0.7);
+        gain2.gain.setValueAtTime(0.12, now);
+        gain2.gain.linearRampToValueAtTime(0, now + 0.8);
+        osc2.start(now);
+        osc2.stop(now + 0.8);
+      } else if (type === 'waterdrop') {
+        // Waterdrop sound for menus/buttons - like Android click
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(1200, now);
+        osc.frequency.exponentialRampToValueAtTime(400, now + 0.08);
+        gain.gain.setValueAtTime(0.15, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+        osc.start(now);
+        osc.stop(now + 0.08);
+        
+        // Add droplet splash
+        const osc2 = audioCtx.createOscillator();
+        const gain2 = audioCtx.createGain();
+        osc2.connect(gain2);
+        gain2.connect(audioCtx.destination);
+        osc2.type = 'triangle';
+        osc2.frequency.setValueAtTime(2000, now + 0.02);
+        osc2.frequency.exponentialRampToValueAtTime(800, now + 0.1);
+        gain2.gain.setValueAtTime(0.08, now + 0.02);
+        gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+        osc2.start(now + 0.02);
+        osc2.stop(now + 0.1);
+      } else if (type === 'multikill') {
+        // Unreal Tournament style multikill announcement
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(300, now);
+        osc.frequency.linearRampToValueAtTime(400, now + 0.15);
+        osc.frequency.linearRampToValueAtTime(350, now + 0.3);
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.linearRampToValueAtTime(0, now + 0.4);
+        osc.start(now);
+        osc.stop(now + 0.4);
+        
+        // Add impact
+        const osc2 = audioCtx.createOscillator();
+        const gain2 = audioCtx.createGain();
+        osc2.connect(gain2);
+        gain2.connect(audioCtx.destination);
+        osc2.type = 'square';
+        osc2.frequency.setValueAtTime(150, now);
+        osc2.frequency.exponentialRampToValueAtTime(100, now + 0.2);
+        gain2.gain.setValueAtTime(0.25, now);
+        gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+        osc2.start(now);
+        osc2.stop(now + 0.2);
       } else if (type === 'splash') {
         // Water splash sound
         osc.type = 'sine';
@@ -1749,7 +1712,121 @@
         gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
         osc2.start(now);
         osc2.stop(now + 0.12);
+      } else if (type === 'sword') {
+        // Sword slash - metallic swoosh
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(600, now);
+        osc.frequency.exponentialRampToValueAtTime(200, now + 0.15);
+        gain.gain.setValueAtTime(0.25, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+        osc.start(now);
+        osc.stop(now + 0.15);
+        
+        // Add metallic ring
+        const osc2 = audioCtx.createOscillator();
+        const gain2 = audioCtx.createGain();
+        osc2.connect(gain2);
+        gain2.connect(audioCtx.destination);
+        osc2.type = 'square';
+        osc2.frequency.setValueAtTime(2000, now);
+        osc2.frequency.exponentialRampToValueAtTime(1000, now + 0.1);
+        gain2.gain.setValueAtTime(0.15, now);
+        gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+        osc2.start(now);
+        osc2.stop(now + 0.1);
+      } else if (type === 'doublebarrel') {
+        // Double barrel - deeper, more powerful gun sound
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(400, now);
+        osc.frequency.exponentialRampToValueAtTime(50, now + 0.05);
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+        osc.start(now);
+        osc.stop(now + 0.1);
+        
+        // Add bass boom
+        const osc2 = audioCtx.createOscillator();
+        const gain2 = audioCtx.createGain();
+        osc2.connect(gain2);
+        gain2.connect(audioCtx.destination);
+        osc2.type = 'sine';
+        osc2.frequency.setValueAtTime(100, now);
+        osc2.frequency.exponentialRampToValueAtTime(30, now + 0.08);
+        gain2.gain.setValueAtTime(0.35, now);
+        gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+        osc2.start(now);
+        osc2.stop(now + 0.08);
+      } else if (type === 'meteor') {
+        // Meteor impact - explosive boom
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(150, now);
+        osc.frequency.exponentialRampToValueAtTime(40, now + 0.3);
+        gain.gain.setValueAtTime(0.35, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+        osc.start(now);
+        osc.stop(now + 0.3);
+        
+        // Add explosion layer
+        const osc2 = audioCtx.createOscillator();
+        const gain2 = audioCtx.createGain();
+        osc2.connect(gain2);
+        gain2.connect(audioCtx.destination);
+        osc2.type = 'square';
+        osc2.frequency.setValueAtTime(300, now);
+        osc2.frequency.exponentialRampToValueAtTime(100, now + 0.25);
+        gain2.gain.setValueAtTime(0.25, now);
+        gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+        osc2.start(now);
+        osc2.stop(now + 0.25);
       }
+    }
+    
+    // Drone humming sound - continuous
+    let droneOscillator = null;
+    let droneGain = null;
+    
+    function startDroneHum() {
+      if (!gameSettings.soundEnabled || droneOscillator) return;
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      
+      droneOscillator = audioCtx.createOscillator();
+      droneGain = audioCtx.createGain();
+      
+      droneOscillator.connect(droneGain);
+      droneGain.connect(audioCtx.destination);
+      
+      droneOscillator.type = 'sawtooth';
+      droneOscillator.frequency.setValueAtTime(120, audioCtx.currentTime);
+      
+      // Add subtle vibrato
+      const lfo = audioCtx.createOscillator();
+      const lfoGain = audioCtx.createGain();
+      lfo.frequency.value = 4;
+      lfoGain.gain.value = 5;
+      lfo.connect(lfoGain);
+      lfoGain.connect(droneOscillator.frequency);
+      lfo.start();
+      
+      droneGain.gain.setValueAtTime(0, audioCtx.currentTime);
+      droneGain.gain.linearRampToValueAtTime(0.08, audioCtx.currentTime + 0.5);
+      
+      droneOscillator.start();
+    }
+    
+    function stopDroneHum() {
+      if (!droneOscillator) return;
+      
+      droneGain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.5);
+      
+      setTimeout(() => {
+        if (droneOscillator) {
+          try {
+            droneOscillator.stop();
+          } catch (e) {}
+          droneOscillator = null;
+          droneGain = null;
+        }
+      }, 500);
     }
 
     // --- GAME STATE ---
@@ -3689,7 +3766,7 @@
         // Visuals
         spawnParticles(this.target, 0xFF4500, 10);
         spawnParticles(this.target, 0xFFFF00, 5);
-        playSound('hit'); // Boom
+        playSound('meteor'); // Explosive boom sound
       }
     }
 
@@ -5754,13 +5831,13 @@
     function setupMenus() {
       // Settings button
       document.getElementById('settings-btn').onclick = () => {
-        playSound('levelup');
+        playSound('waterdrop');
         isPaused = true;
         document.getElementById('settings-modal').style.display = 'flex';
       };
       
       document.getElementById('settings-close-btn').onclick = () => {
-        playSound('levelup');
+        playSound('waterdrop');
         isPaused = false;
         document.getElementById('settings-modal').style.display = 'none';
       };
@@ -5820,46 +5897,46 @@
       
       // Main Menu Buttons
       document.getElementById('start-game-btn').onclick = () => {
-        playSound('levelup');
+        playSound('waterdrop');
         hideMainMenu();
         resetGame();
         startCountdown(); // Start countdown after resetting game (PR #70)
       };
       
       document.getElementById('progression-btn').onclick = () => {
-        playSound('levelup');
+        playSound('waterdrop');
         hideMainMenu();
         showProgressionShop();
       };
       
       document.getElementById('achievements-btn').onclick = () => {
-        playSound('levelup');
+        playSound('waterdrop');
         hideMainMenu();
         updateAchievementsScreen();
         document.getElementById('achievements-screen').style.display = 'flex';
       };
       
       document.getElementById('credits-btn').onclick = () => {
-        playSound('levelup');
+        playSound('waterdrop');
         hideMainMenu();
         document.getElementById('credits-screen').style.display = 'flex';
       };
       
       // Back buttons
       document.getElementById('shop-back-btn').onclick = () => {
-        playSound('levelup');
+        playSound('waterdrop');
         document.getElementById('progression-shop').style.display = 'none';
         showMainMenu();
       };
       
       document.getElementById('achievements-back-btn').onclick = () => {
-        playSound('levelup');
+        playSound('waterdrop');
         document.getElementById('achievements-screen').style.display = 'none';
         showMainMenu();
       };
       
       document.getElementById('credits-back-btn').onclick = () => {
-        playSound('levelup');
+        playSound('waterdrop');
         document.getElementById('credits-screen').style.display = 'none';
         showMainMenu();
       };
@@ -5907,18 +5984,7 @@
         showMainMenu();
       };
       
-      // Phase 2: Stats Bar Toggle
-      document.getElementById('stats-bar-header').onclick = () => {
-        const statsBar = document.getElementById('stats-bar');
-        const toggle = document.getElementById('stats-toggle');
-        if (statsBar.classList.contains('collapsed')) {
-          statsBar.classList.remove('collapsed');
-          toggle.innerText = '▼';
-        } else {
-          statsBar.classList.add('collapsed');
-          toggle.innerText = '▶';
-        }
-      };
+      // Stats Bar removed - No toggle needed
       
       // Phase 2: Equipment Button (Placeholder)
       document.getElementById('equipment-btn').onclick = () => {
@@ -6903,6 +6969,7 @@
                 );
                 droneTurrets.push(drone);
                 weapons.droneTurret.droneCount++;
+                startDroneHum(); // Start continuous drone sound
                 showStatChange(`Drone Turret Level ${weapons.droneTurret.level}: +8 Dmg, +10% Fire Rate, +1 Drone!`);
               } else {
                 showStatChange(`Drone Turret Level ${weapons.droneTurret.level}: +8 Dmg, +10% Fire Rate`);
@@ -7013,6 +7080,7 @@
               // Create initial drone
               const drone = new DroneTurret(player);
               droneTurrets.push(drone);
+              startDroneHum(); // Start continuous drone sound
               showStatChange('New Weapon: Drone Turret');
               
               // Visual effect when unlocked
@@ -7233,7 +7301,7 @@
             c.style.opacity = '0.5';
           });
           
-          playSound('splash'); // Water splash sound when picking
+          playSound('upgrade'); // "Wooooaaa" sound after picking upgrade
           
           // Phase 4: Wrap in try-catch to ensure modal always closes
           try {
@@ -7273,37 +7341,25 @@
       document.getElementById('exp-fill').style.width = `${Math.min(100, expPct)}%`;
       document.getElementById('exp-text').innerText = `EXP: ${Math.min(100, Math.ceil(expPct))}%`;
       
-      // Phase 3: Update egg-shaped EXP bar
-      document.getElementById('egg-exp-fill').style.width = `${Math.min(100, expPct)}%`;
-      document.getElementById('egg-exp-text').innerText = `${Math.min(100, Math.ceil(expPct))}%`;
-      document.getElementById('egg-exp-level').innerText = `LVL ${playerStats.lvl}`;
-      
-      // Removed static stats box display (LVL, KILLS, GOLD) - User relies on Stats Button modal and Stats Bar
-      
-      // Phase 3: Update wave counter
-      document.getElementById('wave-number').innerText = waveCount;
-      
-      // Update stats bar - Phase 2
-      updateStatsBar();
+      // Update new bottom bars
+      document.getElementById('bottom-hp-fill').style.width = `${Math.max(0, hpPct)}%`;
+      document.getElementById('bottom-hp-text').innerText = `HP: ${Math.max(0, Math.ceil(playerStats.hp))}/${playerStats.maxHp}`;
+      document.getElementById('bottom-exp-fill').style.width = `${Math.min(100, expPct)}%`;
+      document.getElementById('bottom-exp-text').innerText = `EXP: ${Math.min(100, Math.ceil(expPct))}%`;
+      document.getElementById('bottom-level-display').innerText = `Current Level: ${playerStats.lvl}`;
     }
     
-    // Phase 2: Stats Bar Update Function
-    function updateStatsBar() {
-      // Standardized to 1 decimal place for consistency
-      document.getElementById('stat-strength').innerText = playerStats.strength.toFixed(1);
-      document.getElementById('stat-atkspeed').innerText = playerStats.atkSpeed.toFixed(1) + 'x';
-      document.getElementById('stat-crit').innerText = Math.round(playerStats.critChance * 100) + '%';
-      document.getElementById('stat-armor').innerText = Math.round(playerStats.armor) + '%';
-      document.getElementById('stat-regen').innerText = playerStats.hpRegen.toFixed(1) + '/s';
-    }
+    // Stats Bar removed - Users access stats via STATS button modal
     
-    // Phase 2: Combo System
+    // Combo System - Red/Black Theme
     const COMBO_ANIMATION_DURATION = 500; // milliseconds - matches CSS animation duration
     let comboState = {
       count: 0,
       lastKillTime: 0,
       comboWindow: 2000, // 2 seconds between kills to maintain combo
-      fadeTimer: null
+      fadeTimer: null,
+      topCombos: [], // Track top 3 combo achievements
+      maxTopCombos: 3
     };
     
     function updateComboCounter(newKill = false) {
@@ -7323,15 +7379,17 @@
           showCombo();
         }
         
-        // Phase 3: Spawn chest on high combo (10+ kills)
-        if (comboState.count === 10 && !comboState.chestSpawned) {
-          comboState.chestSpawned = true;
+        // Spawn chest on high combo milestones
+        // Check for top 3 combo achievements: Amazing (7), Fantastic (8), Unbelievable (9)
+        const isTopCombo = comboState.count === 7 || comboState.count === 8 || comboState.count === 9;
+        if (isTopCombo && comboState.topCombos.length < comboState.maxTopCombos && !comboState.topCombos.includes(comboState.count)) {
+          comboState.topCombos.push(comboState.count);
           const chestAngle = Math.random() * Math.PI * 2;
           const chestDist = 10 + Math.random() * 5;
           const cx = player.mesh.position.x + Math.cos(chestAngle) * chestDist;
           const cz = player.mesh.position.z + Math.sin(chestAngle) * chestDist;
           spawnChest(cx, cz);
-          createFloatingText('Combo Reward Chest!', player.mesh.position, '#FFD700');
+          showStatChange('Top Combo Chest Spawned!');
         }
         
         // Clear existing fade timer
@@ -7351,44 +7409,81 @@
       const comboText = document.getElementById('combo-text');
       const comboMultiplier = document.getElementById('combo-multiplier');
       
-      // Phase 4: Updated "Hype" combo messages with specific tiers
+      // New combo progression: 5=Epic Kill, 6=Multikill, 7=Amazing, 8=Fantastic, 9=Unbelievable, 10=Mythical, 11+=GODLIKE, 20+=x20...
       let message = '';
-      if (comboState.count >= 50) message = 'Da Killing Machine';
-      else if (comboState.count >= 45) message = 'WTF';
-      else if (comboState.count >= 40) message = 'Impossible';
-      else if (comboState.count >= 35) message = 'No F***ing Way';
-      else if (comboState.count >= 30) message = 'Godlike';
-      else if (comboState.count >= 25) message = 'Unbelievable';
-      else if (comboState.count >= 20) message = 'Fantastic';
-      else if (comboState.count >= 15) message = 'Amazing';
-      else if (comboState.count >= 10) message = 'Epic';
-      else if (comboState.count >= 4) message = 'Multi Kill'; // x4-x5 as per spec
-      else if (comboState.count >= 3) message = 'Triple Kill';
-      else if (comboState.count >= 2) message = 'Double Kill';
-      else message = comboState.count + 'x COMBO!';
+      let comboLevel = 'normal'; // for styling classes
+      
+      if (comboState.count >= 20) {
+        message = `x${comboState.count}`;
+        comboLevel = 'mythical';
+      } else if (comboState.count >= 11) {
+        message = 'GODLIKE';
+        comboLevel = 'mythical';
+      } else if (comboState.count === 10) {
+        message = 'Mythical';
+        comboLevel = 'mythical';
+      } else if (comboState.count === 9) {
+        message = 'Unbelievable';
+        comboLevel = 'high';
+      } else if (comboState.count === 8) {
+        message = 'Fantastic';
+        comboLevel = 'high';
+      } else if (comboState.count === 7) {
+        message = 'Amazing';
+        comboLevel = 'high';
+      } else if (comboState.count === 6) {
+        message = 'Multikill';
+        comboLevel = 'high';
+      } else if (comboState.count === 5) {
+        message = 'Epic Kill';
+        comboLevel = 'high';
+      } else if (comboState.count === 4) {
+        message = 'Quad Kill';
+      } else if (comboState.count === 3) {
+        message = 'Triple Kill';
+      } else if (comboState.count === 2) {
+        message = 'Double Kill';
+      } else {
+        message = comboState.count + 'x COMBO!';
+      }
       
       comboText.innerText = message;
       comboMultiplier.innerText = `x${comboState.count}`;
       
-      // Phase 4: Color gradient from White -> Red -> Black as multiplier increases
-      // White (0-9) -> Red (10-29) -> Dark Red to Black (30+)
-      let textColor = '#FFFFFF'; // Default white
-      if (comboState.count >= 40) {
-        textColor = '#1a1a1a'; // Almost black
-      } else if (comboState.count >= 30) {
-        textColor = '#4d0000'; // Very dark red
-      } else if (comboState.count >= 20) {
-        textColor = '#990000'; // Dark red
+      // Red/Black color gradient with intensifying glow
+      let textColor = '#FF0000'; // Default red
+      let glowIntensity = 20;
+      
+      if (comboState.count >= 11) {
+        textColor = '#000000'; // Black
+        glowIntensity = 60;
       } else if (comboState.count >= 10) {
-        textColor = '#FF0000'; // Bright red
+        textColor = '#1a0000'; // Very dark red
+        glowIntensity = 50;
+      } else if (comboState.count >= 7) {
+        textColor = '#8B0000'; // Dark red
+        glowIntensity = 40;
       } else if (comboState.count >= 5) {
-        textColor = '#FF6666'; // Light red
-      } else if (comboState.count >= 3) {
-        textColor = '#FFB3B3'; // Very light red/pink
+        textColor = '#CC0000'; // Medium red
+        glowIntensity = 30;
       }
       
       comboText.style.color = textColor;
+      comboText.style.textShadow = `
+        3px 3px 0 #000,
+        -2px -2px 0 #000,
+        2px -2px 0 #000,
+        -2px 2px 0 #000,
+        0 0 ${glowIntensity}px rgba(255,0,0,0.9),
+        0 0 ${glowIntensity * 2}px rgba(255,0,0,0.7)`;
       comboMultiplier.style.color = textColor;
+      
+      // Show stat notification for combos >= 5
+      if (comboState.count >= 5) {
+        showStatChange(message, comboLevel);
+        // Play multikill sound for high combos
+        playSound('multikill');
+      }
       
       // Show with animation
       comboEl.style.opacity = '1';
@@ -7408,7 +7503,7 @@
         comboEl.style.opacity = '0';
         comboEl.style.animation = 'none';
         comboState.count = 0;
-        comboState.chestSpawned = false; // Reset chest spawn flag for next combo (Phase 3)
+        comboState.topCombos = []; // Reset top combos for next combo sequence
       }, COMBO_ANIMATION_DURATION);
     }
     
@@ -7515,13 +7610,13 @@
     let statusMessageFadeInterval = null;
     let statusMessageFadeTimeout = null;
     
-    // Phase 3: Stat Notification Queue System
+    // Stat Notification Queue System - Red/Black Theme
     const statNotificationQueue = [];
     let isShowingNotification = false;
 
-    function showStatChange(text) {
-      // Add to queue
-      statNotificationQueue.push(text);
+    function showStatChange(text, level = 'normal') {
+      // Add to queue with level
+      statNotificationQueue.push({ text, level });
       
       // Start processing queue if not already processing
       if (!isShowingNotification) {
@@ -7536,31 +7631,41 @@
       }
 
       isShowingNotification = true;
-      const text = statNotificationQueue.shift();
+      const { text, level } = statNotificationQueue.shift();
       
       // Create notification element
       const container = document.getElementById('stat-notifications');
       const notification = document.createElement('div');
       notification.className = 'stat-notification';
+      
+      // Add styling based on level
+      if (level === 'mythical') {
+        notification.classList.add('combo-mythical');
+      } else if (level === 'high') {
+        notification.classList.add('combo-high');
+      }
+      
       notification.innerText = text;
       container.appendChild(notification);
 
-      // Fade out after 2 seconds
+      // Faster fade out: 1.2 seconds display, then 0.4s fade
       setTimeout(() => {
-        notification.style.animation = 'stat-fade-out 0.3s ease-out forwards';
+        notification.style.animation = 'stat-fade-out 0.4s ease-out forwards';
         
         // Remove element and process next in queue
         setTimeout(() => {
           container.removeChild(notification);
           processStatNotificationQueue();
-        }, 300);
-      }, 2000);
+        }, 400);
+      }, 1200);
     }
 
     function gameOver() {
       isGameOver = true;
       isPaused = true;
       isGameActive = false;
+      
+      stopDroneHum(); // Stop drone sound
       
       // Calculate run stats
       const survivalTime = Math.floor((Date.now() - gameStartTime) / 1000);
@@ -7582,6 +7687,8 @@
     }
 
     function resetGame() {
+      stopDroneHum(); // Stop drone sound on reset
+      
       // Apply permanent upgrades from save data
       const baseHp = 100 + PERMANENT_UPGRADES.maxHp.effect(saveData.upgrades.maxHp);
       const baseRegen = PERMANENT_UPGRADES.hpRegen.effect(saveData.upgrades.hpRegen);
@@ -8394,7 +8501,7 @@
             }, i * 100);
           }
           weapons.gun.lastShot = time;
-          playSound('shoot');
+          playSound('shoot'); // Gun sound
         }
       }
 
@@ -8406,7 +8513,7 @@
         const angle = player.mesh.rotation.y;
         projectiles.push(new SwordSlash(player.mesh.position.x, player.mesh.position.z, angle));
         weapons.sword.lastShot = time;
-        playSound('shoot'); // Reuse sound for now
+        playSound('sword'); // Sword slash sound
         
         // ENHANCED - Add sword slash visual effects
         spawnParticles(player.mesh.position, 0xC0C0C0, 8); // Silver slash particles
@@ -8576,7 +8683,7 @@
           spawnParticles(player.mesh.position, 0xFFFFFF, 5);
           
           weapons.doubleBarrel.lastShot = time;
-          playSound('shoot');
+          playSound('doublebarrel'); // Double barrel sound
         }
       }
       
