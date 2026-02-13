@@ -6909,11 +6909,13 @@
       const optionsSettingsBtn = document.getElementById('options-settings-btn');
       
       menuBtn.addEventListener('click', () => {
+        isPaused = true;
         optionsMenu.style.display = 'flex';
         playSound('waterdrop');
       });
       
       closeOptionsBtn.addEventListener('click', () => {
+        isPaused = false;
         optionsMenu.style.display = 'none';
         playSound('waterdrop');
       });
@@ -6925,8 +6927,9 @@
       
       optionsSettingsBtn.addEventListener('click', () => {
         optionsMenu.style.display = 'none';
+        isPaused = true;
         // Open settings modal
-        settingsModal.style.display = 'flex';
+        document.getElementById('settings-modal').style.display = 'flex';
       });
       
       document.getElementById('settings-btn').onclick = () => {
@@ -8811,11 +8814,13 @@
     
     function hideCombo() {
       const comboEl = document.getElementById('combo-counter');
+      const comboTimerEl = document.getElementById('combo-timer');
       comboEl.style.animation = `combo-fade-out ${COMBO_ANIMATION_DURATION}ms ease-out forwards`;
       
       setTimeout(() => {
         comboEl.style.opacity = '0';
         comboEl.style.animation = 'none';
+        comboTimerEl.style.display = 'none'; // Hide timer when combo is lost
         
         // Spawn chest when combo is lost at minimum threshold
         if (comboState.count >= MIN_COMBO_FOR_CHEST_ON_LOSS) {
@@ -8834,6 +8839,7 @@
         
         comboState.count = 0;
         comboState.topCombos = []; // Reset top combos for next combo sequence
+        comboState.shownMilestones = []; // Reset shown milestones
       }, COMBO_ANIMATION_DURATION);
     }
     
