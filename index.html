@@ -4518,6 +4518,14 @@
             coinData.mesh.position.x = this.centerPos.x + Math.cos(coinData.angle) * radius;
             coinData.mesh.position.z = this.centerPos.z + Math.sin(coinData.angle) * radius;
             coinData.mesh.rotation.y += 0.15;
+            
+            // Update Y position for bouncing
+            if (this.bounceTime < 1) {
+              coinData.mesh.position.y = 0.4 + Math.abs(Math.sin(this.bounceTime * Math.PI * 3)) * 0.5 * (1 - this.bounceTime);
+            } else {
+              const baseY = 0.3;
+              coinData.mesh.position.y = baseY + Math.sin(this.wobblePhase) * 0.1;
+            }
           });
         } else if (this.type === 'bag') {
           // Bag swaying
@@ -4531,15 +4539,24 @@
           this.wobblePhase += 0.05;
         }
         
-        // Bounce physics on spawn
-        if (this.bounceTime < 1) {
-          this.mesh.position.y = 0.4 + Math.abs(Math.sin(this.bounceTime * Math.PI * 3)) * 0.5 * (1 - this.bounceTime);
-          this.bounceTime += 0.02;
+        // Bounce physics on spawn (for single, bag, chest types)
+        if (this.type !== 'multiple') {
+          if (this.bounceTime < 1) {
+            this.mesh.position.y = 0.4 + Math.abs(Math.sin(this.bounceTime * Math.PI * 3)) * 0.5 * (1 - this.bounceTime);
+            this.bounceTime += 0.02;
+          } else {
+            // Wobble after bounce
+            this.wobblePhase += 0.05;
+            const baseY = this.type === 'chest' || this.type === 'bag' ? 0.4 : 0.3;
+            this.mesh.position.y = baseY + Math.sin(this.wobblePhase) * 0.1;
+          }
         } else {
-          // Wobble after bounce
-          this.wobblePhase += 0.05;
-          const baseY = this.type === 'chest' || this.type === 'bag' ? 0.4 : 0.3;
-          this.mesh.position.y = baseY + Math.sin(this.wobblePhase) * 0.1;
+          // Multiple coins handle bounce in their loop
+          if (this.bounceTime < 1) {
+            this.bounceTime += 0.02;
+          } else {
+            this.wobblePhase += 0.05;
+          }
         }
         
         // NO MAGNET - player must walk over gold to collect it
@@ -6858,12 +6875,12 @@
       
       menuBtn.addEventListener('click', () => {
         optionsMenu.style.display = 'flex';
-        playSound('menu');
+        playSound('waterdrop');
       });
       
       closeOptionsBtn.addEventListener('click', () => {
         optionsMenu.style.display = 'none';
-        playSound('menu');
+        playSound('waterdrop');
       });
       
       optionsStatsBtn.addEventListener('click', () => {
