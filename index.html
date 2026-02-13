@@ -2151,6 +2151,10 @@
     const joystickLeft = { x: 0, y: 0, active: false, id: null, originX: 0, originY: 0 }; // Movement
     const joystickRight = { x: 0, y: 0, active: false, id: null, originX: 0, originY: 0 }; // Aiming
     
+    // Throttle joystick DOM updates for performance (60fps = ~16ms)
+    let lastJoystickUpdate = 0;
+    const JOYSTICK_UPDATE_INTERVAL = 16; // milliseconds
+    
     // Swipe detection for dash
     let swipeStart = null;
     
@@ -2228,7 +2232,7 @@
     class Player {
       constructor() {
         // Create water droplet shape (teardrop)
-        const geometry = new THREE.SphereGeometry(0.5, 32, 32);
+        const geometry = new THREE.SphereGeometry(0.5, 16, 16); // Reduced segments for performance
         
         // Modify geometry to make it more teardrop-shaped
         const positions = geometry.attributes.position;
@@ -2354,7 +2358,7 @@
         this.mesh.add(this.glow);
         
         // Aura Circle (visible when aura weapon is active)
-        const auraGeo = new THREE.RingGeometry(2.5, 3, 32); // Initial range 3
+        const auraGeo = new THREE.RingGeometry(2.5, 3, 16); // Reduced segments for performance
         const auraMat = new THREE.MeshBasicMaterial({ 
           color: 0x5DADE2, 
           transparent: true, 
@@ -2603,7 +2607,7 @@
           // Scale based on aura range
           const scale = weapons.aura.range * 2;
           this.auraCircle.geometry.dispose();
-          this.auraCircle.geometry = new THREE.RingGeometry(scale - 0.5, scale, 32);
+          this.auraCircle.geometry = new THREE.RingGeometry(scale - 0.5, scale, 16); // Reduced segments for performance
           
           // Rotate and pulse
           this.auraCircle.rotation.z += 0.02;
@@ -2674,7 +2678,7 @@
         this.dashTime = this.dashDuration;
         
         // Splash effect on dash start - more dramatic
-        spawnParticles(this.mesh.position, COLORS.player, 20);
+        spawnParticles(this.mesh.position, COLORS.player, 10); // Reduced for performance
         for(let i=0; i<8; i++) {
           spawnWaterDroplet(this.mesh.position);
         }
@@ -2737,8 +2741,8 @@
         }, 100);
         
         // ENHANCED - Drop more water particles and squishy deformation
-        spawnParticles(this.mesh.position, COLORS.player, 15); // Increased from 8
-        spawnParticles(this.mesh.position, 0xFFFFFF, 5); // Added white impact particles
+        spawnParticles(this.mesh.position, COLORS.player, 8); // Reduced for performance
+        spawnParticles(this.mesh.position, 0xFFFFFF, 3); // Reduced for performance
         for(let i=0; i<5; i++) { // Increased from 3 to 5
           spawnWaterDroplet(this.mesh.position);
         }
@@ -2779,8 +2783,8 @@
 
         if (playerStats.hp <= 0) {
           // ENHANCED Death splash: more particles + ground pool with fade
-          spawnParticles(this.mesh.position, COLORS.player, 50); // Increased from 30
-          spawnParticles(this.mesh.position, 0xFFFFFF, 15); // Added white explosion
+          spawnParticles(this.mesh.position, COLORS.player, 25); // Reduced for performance
+          spawnParticles(this.mesh.position, 0xFFFFFF, 8); // Reduced for performance
           
           // Create ground pool (flat circle that fades out)
           const poolGeo = new THREE.CircleGeometry(1.5, 16);
@@ -3360,7 +3364,7 @@
             this.mesh.add(hole);
           }
           
-          spawnParticles(this.mesh.position, 0x8B0000, 15);
+          spawnParticles(this.mesh.position, 0x8B0000, 8); // Reduced for performance
           playSound('hit');
         }
         
@@ -3407,8 +3411,8 @@
             updateLimb();
           }
           
-          spawnParticles(this.mesh.position, enemyColor, 25); // Increased from 20
-          spawnParticles(this.mesh.position, 0x8B0000, 10); // Added blood splatter
+          spawnParticles(this.mesh.position, enemyColor, 12); // Reduced for performance
+          spawnParticles(this.mesh.position, 0x8B0000, 5); // Reduced for performance
           playSound('hit');
         }
         
@@ -3457,7 +3461,7 @@
           }
           
           // Enhanced particles for destruction
-          spawnParticles(this.mesh.position, enemyColor, 15);
+          spawnParticles(this.mesh.position, enemyColor, 8); // Reduced for performance
           playSound('hit');
         }
         
@@ -3501,9 +3505,9 @@
         
         if (explodeIntoPieces) {
           // EXPLOSION DEATH: Main explosion - ENHANCED with more particles
-          spawnParticles(this.mesh.position, enemyColor, 40);
-          spawnParticles(this.mesh.position, 0xFFFFFF, 15);
-          spawnParticles(this.mesh.position, 0x8B0000, 12); // Blood particles
+          spawnParticles(this.mesh.position, enemyColor, 20); // Reduced for performance
+          spawnParticles(this.mesh.position, 0xFFFFFF, 8); // Reduced for performance
+          spawnParticles(this.mesh.position, 0x8B0000, 6); // Reduced for performance
           
           // Add explosion ring effect
           const ringGeo = new THREE.RingGeometry(0.1, 0.2, 16);
@@ -3576,8 +3580,8 @@
           }
         } else {
           // CORPSE DEATH: Leave a corpse sprite that fades away
-          spawnParticles(this.mesh.position, enemyColor, 15);
-          spawnParticles(this.mesh.position, 0x8B0000, 8); // Blood particles
+          spawnParticles(this.mesh.position, enemyColor, 8); // Reduced for performance
+          spawnParticles(this.mesh.position, 0x8B0000, 4); // Reduced for performance
           
           // Create flat corpse sprite (flattened version of enemy)
           const corpseGeo = new THREE.CircleGeometry(0.6, 16);
@@ -4570,8 +4574,8 @@
           playSound('coin');
           
           // Gold collect particles - 20 sparkles + flash
-          spawnParticles(this.mesh.position, 0xFFD700, 15);
-          spawnParticles(this.mesh.position, 0xFFFFFF, 5); // White flash sparkles
+          spawnParticles(this.mesh.position, 0xFFD700, 8); // Reduced for performance
+          spawnParticles(this.mesh.position, 0xFFFFFF, 3); // Reduced for performance
           
           // Flash effect - bright point light
           const flashLight = new THREE.PointLight(0xFFD700, 4, 8);
@@ -4704,8 +4708,8 @@
         this.wobblePhase = Math.random() * Math.PI * 2;
         
         // Spawn sparkles around chest with tier-specific colors
-        spawnParticles(this.mesh.position, props.particleColor, 15);
-        spawnParticles(this.mesh.position, 0xFFFFFF, 8);
+        spawnParticles(this.mesh.position, props.particleColor, 8); // Reduced for performance
+        spawnParticles(this.mesh.position, 0xFFFFFF, 4); // Reduced for performance
         
         // Add glowing light effect with tier-specific color
         const glowLight = new THREE.PointLight(props.lightColor, props.intensity, 6);
@@ -4762,9 +4766,9 @@
         playSound('coin'); // Reuse coin sound
         
         // Explosion of particles
-        spawnParticles(this.mesh.position, 0xFFD700, 30);
-        spawnParticles(this.mesh.position, 0xFFFFFF, 15);
-        spawnParticles(this.mesh.position, 0xFF69B4, 10); // Pink sparkles
+        spawnParticles(this.mesh.position, 0xFFD700, 15); // Reduced for performance
+        spawnParticles(this.mesh.position, 0xFFFFFF, 8); // Reduced for performance
+        spawnParticles(this.mesh.position, 0xFF69B4, 5); // Reduced for performance
         
         // Flash effect
         const flashLight = new THREE.PointLight(0xFFD700, 8, 15);
@@ -4803,7 +4807,7 @@
           const actualHeal = playerStats.hp - prevHp;
           createFloatingText(`+${actualHeal} HP!`, this.mesh.position);
           showStatChange(`Chest: +${actualHeal} HP!`);
-          spawnParticles(this.mesh.position, 0xFF69B4, 20); // Pink health particles
+          spawnParticles(this.mesh.position, 0xFF69B4, 10); // Reduced for performance
         } else if (rand < 0.6) {
           // Gold (25% chance)
           const goldAmount = 12 + Math.floor(Math.random() * 19); // 12-30 gold (reduced from 20-50)
@@ -5740,7 +5744,7 @@
       // NOTE: Old lake removed - using enhanced reflective lake defined later (line ~3747)
       
       // Add water ripple effect
-      const rippleGeo = new THREE.RingGeometry(14, 15, 32);
+      const rippleGeo = new THREE.RingGeometry(14, 15, 16); // Reduced segments for performance
       const rippleMat = new THREE.MeshBasicMaterial({ color: 0x3399FF, transparent: true, opacity: 0.5 });
       const ripple = new THREE.Mesh(rippleGeo, rippleMat);
       ripple.rotation.x = -Math.PI / 2;
@@ -6220,7 +6224,7 @@
       cometGroup.position.set(37, 0, -30); // Right beside lake where player spawns
       
       // Impact crater (dark brown ring)
-      const craterGeo = new THREE.RingGeometry(2, 3, 32);
+      const craterGeo = new THREE.RingGeometry(2, 3, 16); // Reduced segments for performance
       const craterMat = new THREE.MeshToonMaterial({ color: 0x3E2723 }); // Dark brown
       const crater = new THREE.Mesh(craterGeo, craterMat);
       crater.rotation.x = -Math.PI/2;
@@ -7469,7 +7473,7 @@
       }
       
       // Expanding splash ring on ground
-      const ringGeo = new THREE.RingGeometry(0.5, 1, 32);
+      const ringGeo = new THREE.RingGeometry(0.5, 1, 16); // Reduced segments for performance
       const ringMat = new THREE.MeshBasicMaterial({ 
         color: COLORS.player,
         transparent: true,
@@ -9316,10 +9320,15 @@
               joystickLeft.x = (dx / dist) * (clampedDist / maxDist);
               joystickLeft.y = (dy / dist) * (clampedDist / maxDist);
               
-              // Update inner joystick knob position
-              joystickInner.style.left = '50%';
-              joystickInner.style.top = '50%';
-              joystickInner.style.transform = `translate(calc(-50% + ${joystickLeft.x * 35}px), calc(-50% + ${joystickLeft.y * 35}px))`;
+              // Throttle DOM updates for performance
+              const now = Date.now();
+              if (now - lastJoystickUpdate >= JOYSTICK_UPDATE_INTERVAL) {
+                lastJoystickUpdate = now;
+                // Update inner joystick knob position
+                joystickInner.style.left = '50%';
+                joystickInner.style.top = '50%';
+                joystickInner.style.transform = `translate(calc(-50% + ${joystickLeft.x * 35}px), calc(-50% + ${joystickLeft.y * 35}px))`;
+              }
             }
           }
           
@@ -9337,10 +9346,15 @@
               joystickRight.x = (dx / dist) * (clampedDist / maxDist);
               joystickRight.y = (dy / dist) * (clampedDist / maxDist);
               
-              // Update inner joystick knob position for right stick
-              joystickInnerRight.style.left = '50%';
-              joystickInnerRight.style.top = '50%';
-              joystickInnerRight.style.transform = `translate(calc(-50% + ${joystickRight.x * 35}px), calc(-50% + ${joystickRight.y * 35}px))`;
+              // Throttle DOM updates for performance
+              const now = Date.now();
+              if (now - lastJoystickUpdate >= JOYSTICK_UPDATE_INTERVAL) {
+                lastJoystickUpdate = now;
+                // Update inner joystick knob position for right stick
+                joystickInnerRight.style.left = '50%';
+                joystickInnerRight.style.top = '50%';
+                joystickInnerRight.style.transform = `translate(calc(-50% + ${joystickRight.x * 35}px), calc(-50% + ${joystickRight.y * 35}px))`;
+              }
             }
           }
         }
@@ -9803,10 +9817,10 @@
               }, 50);
               activeTimeouts.push(kickbackTimeoutId);
               
-              // ENHANCED Muzzle flash particles (bright and intense) - MORE particles
-              spawnParticles(player.mesh.position, 0xFFFF00, 12); // Increased from 8
-              spawnParticles(player.mesh.position, 0xFFFFFF, 8); // Increased from 5
-              spawnParticles(player.mesh.position, 0xFFA500, 8); // Increased from 5
+              // ENHANCED Muzzle flash particles (bright and intense) - Reduced for performance
+              spawnParticles(player.mesh.position, 0xFFFF00, 6); // Reduced for performance
+              spawnParticles(player.mesh.position, 0xFFFFFF, 4); // Reduced for performance
+              spawnParticles(player.mesh.position, 0xFFA500, 4); // Reduced for performance
               // Add smoke particles
               spawnParticles(player.mesh.position, 0x888888, 4);
             }, i * 100);
