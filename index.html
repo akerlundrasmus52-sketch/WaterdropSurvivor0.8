@@ -304,6 +304,18 @@
       animation: water-shimmer 3s ease-in-out infinite;
     }
     
+    /* Water wave/slosh animation when attacked */
+    #waterdrop-container.attacked #waterdrop-exp-fill {
+      animation: water-slosh-fill 0.4s ease-out, water-shimmer 3s ease-in-out infinite;
+    }
+    
+    @keyframes water-slosh-fill {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-3px) scaleX(1.05); }
+      50% { transform: translateX(3px) scaleX(1.05); }
+      75% { transform: translateX(-2px) scaleX(1.02); }
+    }
+    
     /* Add shimmer effect to the EXP fill for extra squishiness */
     @keyframes water-shimmer {
       0%, 100% { opacity: 0.9; }
@@ -463,7 +475,7 @@
       font-size: 24px;
       cursor: pointer;
       pointer-events: auto;
-      z-index: 100;
+      z-index: 150; /* Increased to ensure it's above joystick zone */
       box-shadow: 0 4px 0 #2a1a11, 0 6px 12px rgba(0,0,0,0.5);
       transition: all 0.2s;
       display: none; /* Hidden in landscape, shown in portrait */
@@ -1614,13 +1626,23 @@
             <!-- Water animation filter for bubbles/shimmer -->
             <filter id="water-turbulence" x="0%" y="0%" width="100%" height="100%">
               <!-- Seed value 2 provides consistent gentle water turbulence pattern -->
-              <feTurbulence baseFrequency="0.02" numOctaves="3" seed="2">
+              <feTurbulence id="water-turbulence-wave" baseFrequency="0.02" numOctaves="3" seed="2">
                 <animate attributeName="baseFrequency" 
                          from="0.02" to="0.025" 
                          dur="3s" 
                          repeatCount="indefinite"/>
               </feTurbulence>
               <feDisplacementMap in="SourceGraphic" scale="3"/>
+            </filter>
+            <!-- Stronger turbulence for attack animation -->
+            <filter id="water-turbulence-attack" x="0%" y="0%" width="100%" height="100%">
+              <feTurbulence baseFrequency="0.05" numOctaves="4" seed="5">
+                <animate attributeName="baseFrequency" 
+                         from="0.05" to="0.03" 
+                         dur="0.4s" 
+                         repeatCount="1"/>
+              </feTurbulence>
+              <feDisplacementMap in="SourceGraphic" scale="8"/>
             </filter>
           </defs>
           <!-- Background -->
@@ -1691,9 +1713,35 @@
       <h2 class="options-title">OPTIONS</h2>
       <div class="options-buttons">
         <button class="btn-small" id="options-stats-btn">STATS</button>
+        <button class="btn-small" id="options-attributes-btn">⚔️ EQUIPMENT</button>
         <button class="btn-small" id="options-settings-btn">⚙️ SETTINGS</button>
         <button class="btn-small" id="close-options-btn">CLOSE</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Attributes & Equipment Menu Modal -->
+  <div id="attributes-menu" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 200; align-items: center; justify-content: center; pointer-events: auto;">
+    <div class="modal-content" style="max-height: 80vh; overflow-y: auto; width: 90%; max-width: 500px;">
+      <h2 style="color: #FFD700; text-shadow: 2px 2px 0 #000, 0 0 15px rgba(255,215,0,0.8);">ATTRIBUTES & EQUIPMENT</h2>
+      
+      <!-- Attributes Section -->
+      <div style="margin-bottom: 20px; text-align: left;">
+        <h3 style="color: #5DADE2; text-shadow: 0 0 10px rgba(93,173,226,0.6); margin-bottom: 10px;">Player Attributes</h3>
+        <div id="attributes-content" style="font-family: monospace; font-size: 14px; line-height: 1.8; color: #ecf0f1;">
+          <!-- Will be populated dynamically -->
+        </div>
+      </div>
+      
+      <!-- Equipment Section -->
+      <div style="margin-bottom: 20px; text-align: left;">
+        <h3 style="color: #5DADE2; text-shadow: 0 0 10px rgba(93,173,226,0.6); margin-bottom: 10px;">Equipment</h3>
+        <div id="equipment-content" style="font-family: monospace; font-size: 14px; line-height: 1.8; color: #ecf0f1;">
+          <!-- Will be populated dynamically -->
+        </div>
+      </div>
+      
+      <button class="btn" id="close-attributes-btn">CLOSE</button>
     </div>
   </div>
 
@@ -2735,10 +2783,21 @@
         
         // Trigger waterdrop UI attack animation
         const waterdropContainer = document.getElementById('waterdrop-container');
+        const waterdropExpFill = document.getElementById('waterdrop-exp-fill');
         if (waterdropContainer) {
           waterdropContainer.classList.add('attacked');
+          
+          // Switch to attack water turbulence filter for more dramatic wave effect
+          if (waterdropExpFill) {
+            waterdropExpFill.setAttribute('filter', 'url(#water-turbulence-attack)');
+          }
+          
           setTimeout(() => {
             waterdropContainer.classList.remove('attacked');
+            // Switch back to normal water turbulence
+            if (waterdropExpFill) {
+              waterdropExpFill.setAttribute('filter', 'url(#water-turbulence)');
+            }
           }, 400);
         }
         
@@ -6914,6 +6973,7 @@
       const optionsMenu = document.getElementById('options-menu');
       const closeOptionsBtn = document.getElementById('close-options-btn');
       const optionsStatsBtn = document.getElementById('options-stats-btn');
+      const optionsAttributesBtn = document.getElementById('options-attributes-btn');
       const optionsSettingsBtn = document.getElementById('options-settings-btn');
       
       menuBtn.addEventListener('click', () => {
@@ -6931,6 +6991,11 @@
       optionsStatsBtn.addEventListener('click', () => {
         optionsMenu.style.display = 'none';
         toggleStats();
+      });
+      
+      optionsAttributesBtn.addEventListener('click', () => {
+        optionsMenu.style.display = 'none';
+        showAttributesMenu();
       });
       
       optionsSettingsBtn.addEventListener('click', () => {
@@ -7122,14 +7187,80 @@
       
       // Stats Bar removed - No toggle needed
       
-      // Phase 2: Equipment Button (Placeholder)
+      // Attributes & Equipment Button
       document.getElementById('equipment-btn').onclick = () => {
-        playSound('hit');
-        alert('⚔️ EQUIPMENT SYSTEM\n\nComing in Phase 3!\n\nThis feature will allow you to equip special gear and customize your build.');
+        playSound('waterdrop');
+        showAttributesMenu();
+      };
+      
+      // Attributes Menu Close Button
+      document.getElementById('close-attributes-btn').onclick = () => {
+        playSound('waterdrop');
+        document.getElementById('attributes-menu').style.display = 'none';
+        isPaused = false;
       };
       
       // Initialize control type UI on startup
       updateControlType();
+    }
+    
+    // Function to show attributes and equipment menu
+    function showAttributesMenu() {
+      isPaused = true;
+      
+      // Populate attributes content
+      const attributesContent = document.getElementById('attributes-content');
+      attributesContent.innerHTML = `
+        <div style="background: rgba(0,0,0,0.3); padding: 10px; border-radius: 5px; margin-bottom: 5px;">
+          <strong style="color: #FFD700;">❤️ Health:</strong> ${playerStats.maxHp} HP
+        </div>
+        <div style="background: rgba(0,0,0,0.3); padding: 10px; border-radius: 5px; margin-bottom: 5px;">
+          <strong style="color: #FFD700;">💪 Strength:</strong> ${playerStats.strength}
+        </div>
+        <div style="background: rgba(0,0,0,0.3); padding: 10px; border-radius: 5px; margin-bottom: 5px;">
+          <strong style="color: #FFD700;">⚡ Speed:</strong> ${playerStats.speed}
+        </div>
+        <div style="background: rgba(0,0,0,0.3); padding: 10px; border-radius: 5px; margin-bottom: 5px;">
+          <strong style="color: #FFD700;">⚔️ Damage:</strong> ${playerStats.damage}
+        </div>
+        <div style="background: rgba(0,0,0,0.3); padding: 10px; border-radius: 5px; margin-bottom: 5px;">
+          <strong style="color: #FFD700;">🎯 Crit Chance:</strong> ${(playerStats.critChance * 100).toFixed(1)}%
+        </div>
+        <div style="background: rgba(0,0,0,0.3); padding: 10px; border-radius: 5px; margin-bottom: 5px;">
+          <strong style="color: #FFD700;">💥 Crit Damage:</strong> ${(playerStats.critDamage * 100).toFixed(0)}%
+        </div>
+        <div style="background: rgba(0,0,0,0.3); padding: 10px; border-radius: 5px; margin-bottom: 5px;">
+          <strong style="color: #FFD700;">🛡️ Armor:</strong> ${playerStats.armor}%
+        </div>
+        <div style="background: rgba(0,0,0,0.3); padding: 10px; border-radius: 5px; margin-bottom: 5px;">
+          <strong style="color: #FFD700;">🏃 Walk Speed:</strong> ${(playerStats.walkSpeed * 100).toFixed(0)}%
+        </div>
+      `;
+      
+      // Populate equipment content
+      const equipmentContent = document.getElementById('equipment-content');
+      const weapons = [];
+      
+      // Check which weapons player has unlocked
+      if (playerStats.lvl >= 1) {
+        weapons.push('🔫 <strong>Gun</strong> - Basic ranged weapon (15 damage)');
+      }
+      if (playerStats.lvl >= 5) {
+        weapons.push('⚔️ <strong>Sword</strong> - Melee slash weapon (Unlocked at Lvl 5)');
+      }
+      if (playerStats.lvl >= 10) {
+        weapons.push('💫 <strong>Energy Aura</strong> - Area damage (Unlocked at Lvl 10)');
+      }
+      
+      if (weapons.length === 0) {
+        equipmentContent.innerHTML = '<div style="color: #888;">No equipment unlocked yet.</div>';
+      } else {
+        equipmentContent.innerHTML = weapons.map(w => 
+          `<div style="background: rgba(0,0,0,0.3); padding: 10px; border-radius: 5px; margin-bottom: 5px;">${w}</div>`
+        ).join('');
+      }
+      
+      document.getElementById('attributes-menu').style.display = 'flex';
     }
     
 
