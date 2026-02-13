@@ -696,6 +696,50 @@
       height: 300px;
     }
 
+    /* PR #114: Options Menu for portrait mode */
+    #menu-btn {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      pointer-events: auto;
+      z-index: 100;
+      display: none; /* Hidden by default, shown in portrait mode via media query */
+    }
+    
+    #options-menu {
+      position: absolute;
+      top: 80px;
+      right: 20px;
+      background: rgba(90, 58, 49, 0.95);
+      border: 3px solid #8B4513;
+      border-radius: 15px;
+      padding: 15px;
+      display: none;
+      flex-direction: row;
+      gap: 10px;
+      pointer-events: auto;
+      z-index: 99;
+      box-shadow: 0 6px 12px rgba(0,0,0,0.5);
+    }
+    
+    #options-menu.visible {
+      display: flex;
+    }
+    
+    /* Portrait mode adjustments */
+    @media (orientation: portrait) {
+      #menu-btn {
+        display: block;
+      }
+      
+      /* Hide stats, settings, equipment buttons in portrait mode */
+      #stats-btn,
+      #settings-btn,
+      #equipment-btn {
+        display: none !important;
+      }
+    }
+    
     .btn-small {
       background: #5A3A31;
       color: white;
@@ -1364,6 +1408,16 @@
         <div class="stat-text" id="windmill-timer-text" style="color: #FFD700; font-size: 18px;">DEFEND: 30s</div>
       </div>
     </div>
+    
+    <!-- PR #114: Menu button for portrait mode -->
+    <button id="menu-btn" class="btn-small" style="pointer-events: auto; z-index: 100;">MENU</button>
+    
+    <!-- PR #114: Options menu (shown when menu button is clicked in portrait mode) -->
+    <div id="options-menu">
+      <button id="options-stats-btn" class="btn-small">STATS</button>
+      <button id="options-settings-btn" class="btn-small">⚙️</button>
+    </div>
+    
     <button id="stats-btn" class="btn-small" style="position: absolute; top: 20px; right: 20px; pointer-events: auto; z-index: 100;">STATS</button>
     <button id="settings-btn" class="btn-small" style="position: absolute; top: 20px; right: 120px; pointer-events: auto; z-index: 100;">⚙️</button>
     
@@ -5820,6 +5874,31 @@
     }
     
     function setupMenus() {
+      // PR #114: Menu button for portrait mode
+      const menuBtn = document.getElementById('menu-btn');
+      const optionsMenu = document.getElementById('options-menu');
+      
+      if (menuBtn && optionsMenu) {
+        menuBtn.onclick = () => {
+          playSound('waterdrop');
+          optionsMenu.classList.toggle('visible');
+        };
+        
+        // Options menu buttons (same functionality as regular buttons)
+        document.getElementById('options-stats-btn').onclick = () => {
+          playSound('waterdrop');
+          optionsMenu.classList.remove('visible'); // Close menu
+          toggleStats();
+        };
+        
+        document.getElementById('options-settings-btn').onclick = () => {
+          playSound('waterdrop');
+          optionsMenu.classList.remove('visible'); // Close menu
+          isPaused = true;
+          document.getElementById('settings-modal').style.display = 'flex';
+        };
+      }
+      
       // Settings button
       document.getElementById('settings-btn').onclick = () => {
         playSound('waterdrop');
