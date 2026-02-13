@@ -204,10 +204,13 @@
     @keyframes combo-fade-out {
       0% {
         opacity: 1;
-        transform: scale(1);
+        transform: scale(1) translateY(0);
       }
       100% {
         opacity: 0;
+        transform: scale(0.8) translateY(-50px); /* Float upward when fading */
+      }
+    }
         transform: scale(0.8) translateY(-20px);
       }
     }
@@ -7374,8 +7377,8 @@
         }
         comboState.lastKillTime = currentTime;
         
-        // Show combo if 2+ kills
-        if (comboState.count >= 2) {
+        // Show combo if 5+ kills (updated to start at 5)
+        if (comboState.count >= 5) {
           showCombo();
         }
         
@@ -7397,7 +7400,7 @@
           clearTimeout(comboState.fadeTimer);
         }
         
-        // Set new fade timer
+        // Set new fade timer - persist combo text until lost
         comboState.fadeTimer = setTimeout(() => {
           hideCombo();
         }, comboState.comboWindow);
@@ -7409,7 +7412,7 @@
       const comboText = document.getElementById('combo-text');
       const comboMultiplier = document.getElementById('combo-multiplier');
       
-      // New combo progression: 5=Epic Kill, 6=Multikill, 7=Amazing, 8=Fantastic, 9=Unbelievable, 10=Mythical, 11+=GODLIKE, 20+=x20...
+      // Updated combo progression: 5=Multikill (first message), 6=Amazing, 7=Fantastic, 8=Unbelievable, 9=Mythical, 10=Legendary, 11+=GODLIKE, 20+=x20...
       let message = '';
       let comboLevel = 'normal'; // for styling classes
       
@@ -7420,72 +7423,103 @@
         message = 'GODLIKE';
         comboLevel = 'mythical';
       } else if (comboState.count === 10) {
-        message = 'Mythical';
+        message = 'Legendary';
         comboLevel = 'mythical';
       } else if (comboState.count === 9) {
+        message = 'Mythical';
+        comboLevel = 'mythical';
+      } else if (comboState.count === 8) {
         message = 'Unbelievable';
         comboLevel = 'high';
-      } else if (comboState.count === 8) {
+      } else if (comboState.count === 7) {
         message = 'Fantastic';
         comboLevel = 'high';
-      } else if (comboState.count === 7) {
+      } else if (comboState.count === 6) {
         message = 'Amazing';
         comboLevel = 'high';
-      } else if (comboState.count === 6) {
-        message = 'Multikill';
-        comboLevel = 'high';
       } else if (comboState.count === 5) {
-        message = 'Epic Kill';
+        message = 'Multikill';  // First combo message at 5 kills
         comboLevel = 'high';
-      } else if (comboState.count === 4) {
-        message = 'Quad Kill';
-      } else if (comboState.count === 3) {
-        message = 'Triple Kill';
-      } else if (comboState.count === 2) {
-        message = 'Double Kill';
       } else {
         message = comboState.count + 'x COMBO!';
       }
       
       comboText.innerText = message;
-      comboMultiplier.innerText = `x${comboState.count}`;
+      comboMultiplier.innerText = `combo x${comboState.count}`; // Updated format to "combo x5", "combo x6", etc.
       
-      // Red/Black color gradient with intensifying glow
-      let textColor = '#FF0000'; // Default red
+      // White to Dark Red gradient with intensifying glow and size
+      let textColor = '#FFFFFF'; // Start with White
       let glowIntensity = 20;
+      let fontSize = 48; // Base font size
+      let lightningCount = 0; // Number of lightning effects
       
       if (comboState.count >= 11) {
-        textColor = '#000000'; // Black
-        glowIntensity = 60;
+        textColor = '#8B0000'; // Dark red for GODLIKE
+        glowIntensity = 80;
+        fontSize = 80;
+        lightningCount = 5;
       } else if (comboState.count >= 10) {
-        textColor = '#1a0000'; // Very dark red
+        textColor = '#A00000'; // Dark red
+        glowIntensity = 70;
+        fontSize = 72;
+        lightningCount = 4;
+      } else if (comboState.count >= 9) {
+        textColor = '#B00000'; // Medium dark red
+        glowIntensity = 60;
+        fontSize = 66;
+        lightningCount = 4;
+      } else if (comboState.count >= 8) {
+        textColor = '#C80000'; // Medium red
         glowIntensity = 50;
+        fontSize = 60;
+        lightningCount = 3;
       } else if (comboState.count >= 7) {
-        textColor = '#8B0000'; // Dark red
+        textColor = '#E00000'; // Lighter red
         glowIntensity = 40;
-      } else if (comboState.count >= 5) {
-        textColor = '#CC0000'; // Medium red
+        fontSize = 56;
+        lightningCount = 3;
+      } else if (comboState.count >= 6) {
+        textColor = '#FF3333'; // Light red
         glowIntensity = 30;
+        fontSize = 52;
+        lightningCount = 2;
+      } else if (comboState.count === 5) {
+        textColor = '#FFFFFF'; // White for first combo
+        glowIntensity = 25;
+        fontSize = 48;
+        lightningCount = 1;
       }
       
+      comboText.style.fontSize = `${fontSize}px`;
       comboText.style.color = textColor;
-      comboText.style.textShadow = `
+      
+      // Build lightning effect with multiple layers
+      let shadowLayers = `
         3px 3px 0 #000,
         -2px -2px 0 #000,
         2px -2px 0 #000,
-        -2px 2px 0 #000,
-        0 0 ${glowIntensity}px rgba(255,0,0,0.9),
-        0 0 ${glowIntensity * 2}px rgba(255,0,0,0.7)`;
-      comboMultiplier.style.color = textColor;
+        -2px 2px 0 #000`;
       
-      // Show stat notification for combos >= 5
-      if (comboState.count >= 5) {
-        showStatChange(message, comboLevel);
-        // Play multikill sound for high combos
-        playSound('multikill');
+      // Add lightning glow layers based on combo count
+      for (let i = 0; i < lightningCount; i++) {
+        const intensity = glowIntensity * (1 + i * 0.5);
+        const spread = 10 + i * 15;
+        shadowLayers += `,
+        0 0 ${spread}px rgba(255,255,255,0.9),
+        0 0 ${spread * 2}px rgba(255,200,0,0.7),
+        0 0 ${spread * 3}px rgba(255,100,0,0.5)`;
       }
       
-      // Show with animation
+      comboText.style.textShadow = shadowLayers;
+      comboMultiplier.style.color = textColor;
+      comboMultiplier.style.fontSize = `${Math.floor(fontSize * 0.5)}px`; // Scale multiplier text
+      
+      // Show stat notification for all combos
+      showStatChange(message, comboLevel);
+      // Play multikill sound
+      playSound('multikill');
+      
+      // Show with animation - scale grows with combo count
       comboEl.style.opacity = '1';
       comboEl.style.animation = `combo-bubble ${COMBO_ANIMATION_DURATION}ms ease-out`;
       
@@ -8248,6 +8282,17 @@
     }
 
     // --- MAIN LOOP ---
+    // Performance tracking for freeze bug investigation
+    let performanceLog = {
+      frameCount: 0,
+      lastLogTime: 0,
+      totalFrameTime: 0,
+      slowFrames: 0,
+      spawnCount: 0,
+      renderCount: 0,
+      lastEnemyCount: 0
+    };
+    
     function animate(time) {
       requestAnimationFrame(animate);
       
@@ -8265,6 +8310,9 @@
         return;
       }
 
+      // Performance tracking - start frame timer
+      const frameStartTime = performance.now();
+
       let dt = (time - lastTime) / 1000;
       lastTime = time;
       gameTime = time / 1000; // Update game time in seconds
@@ -8278,6 +8326,17 @@
           window.lastLagWarning = Date.now();
         }
         dt = MAX_DELTA_TIME;
+      }
+      
+      // Frame Skip Mechanism: Skip rendering if previous frame took too long
+      const FRAME_TIME_BUDGET = 33.33; // ~30fps minimum (33.33ms per frame)
+      const previousFrameTime = performanceLog.totalFrameTime;
+      let shouldSkipRender = false;
+      
+      if (previousFrameTime > FRAME_TIME_BUDGET * 2) {
+        // Previous frame took more than 2x budget, skip rendering this frame
+        shouldSkipRender = true;
+        console.warn(`Frame skip triggered: previous frame took ${previousFrameTime.toFixed(2)}ms`);
       }
       
       // Handle countdown sequence (PR #70)
@@ -8393,11 +8452,32 @@
       // Spawn new wave if: interval passed AND (no enemies alive OR enough time since last spawn)
       if (frameCount % GAME_CONFIG.waveInterval === 0 && (aliveEnemies === 0 || timeSinceLastWave > GAME_CONFIG.waveInterval)) {
         lastWaveEndTime = frameCount; // Update last wave time on every spawn
+        const spawnStartTime = performance.now();
         spawnWave();
+        const spawnEndTime = performance.now();
+        performanceLog.spawnCount++;
+        
+        // Log if spawning took unusually long
+        if (spawnEndTime - spawnStartTime > 10) {
+          console.warn(`Spawn wave took ${(spawnEndTime - spawnStartTime).toFixed(2)}ms, enemies: ${aliveEnemies}`);
+        }
       } else if (aliveEnemies === 0 && timeSinceLastWave >= minWaveDelay) {
         // Quick spawn if all enemies cleared and minimum delay passed
         lastWaveEndTime = frameCount;
+        const spawnStartTime = performance.now();
         spawnWave();
+        const spawnEndTime = performance.now();
+        performanceLog.spawnCount++;
+        
+        // Log if spawning took unusually long
+        if (spawnEndTime - spawnStartTime > 10) {
+          console.warn(`Quick spawn took ${(spawnEndTime - spawnStartTime).toFixed(2)}ms`);
+        }
+      }
+      
+      // Track enemy count changes for logging
+      if (aliveEnemies !== performanceLog.lastEnemyCount) {
+        performanceLog.lastEnemyCount = aliveEnemies;
       }
       
       // HP Regen (Every 60 frames approx 1 sec)
@@ -8915,12 +8995,52 @@
       chests = chests.filter(c => c.active);
 
       // Phase 3: Render loop protection - wrap in try-catch to prevent freeze
-      try {
-        renderer.render(scene, camera);
-      } catch (error) {
-        console.error('Render error caught - game continues:', error);
-        // Log error details but continue - the game loop will recover naturally
-        // Active objects are already filtered above, so invalid objects are removed
+      // Frame Skip Mechanism: Skip rendering if frame budget exceeded
+      const renderStartTime = performance.now();
+      
+      if (!shouldSkipRender) {
+        try {
+          renderer.render(scene, camera);
+          performanceLog.renderCount++;
+        } catch (error) {
+          console.error('Render error caught - game continues:', error);
+          // Log error details but continue - the game loop will recover naturally
+          // Active objects are already filtered above, so invalid objects are removed
+        }
+      } else {
+        // Frame was skipped to maintain performance
+        console.log('Frame rendering skipped to prevent freeze');
+      }
+      
+      const renderEndTime = performance.now();
+      
+      // Track frame performance
+      const frameEndTime = performance.now();
+      const totalFrameTime = frameEndTime - frameStartTime;
+      performanceLog.totalFrameTime = totalFrameTime;
+      performanceLog.frameCount++;
+      
+      // Log slow frames
+      if (totalFrameTime > FRAME_TIME_BUDGET) {
+        performanceLog.slowFrames++;
+        if (totalFrameTime > FRAME_TIME_BUDGET * 1.5) {
+          console.warn(`Slow frame detected: ${totalFrameTime.toFixed(2)}ms (render: ${(renderEndTime - renderStartTime).toFixed(2)}ms, enemies: ${aliveEnemies}, particles: ${particles.length}, projectiles: ${projectiles.length})`);
+        }
+      }
+      
+      // Periodic performance summary (every 5 seconds)
+      const currentTime = performance.now();
+      if (currentTime - performanceLog.lastLogTime > 5000) {
+        const avgFrameTime = performanceLog.totalFrameTime; // Last frame time as proxy
+        const slowFramePercent = (performanceLog.slowFrames / performanceLog.frameCount * 100).toFixed(1);
+        console.log(`Performance Summary: Avg frame: ${avgFrameTime.toFixed(2)}ms, Slow frames: ${slowFramePercent}%, Enemies: ${aliveEnemies}, Spawns: ${performanceLog.spawnCount}, Renders: ${performanceLog.renderCount}`);
+        
+        // Reset counters for next period
+        performanceLog.lastLogTime = currentTime;
+        performanceLog.slowFrames = 0;
+        performanceLog.frameCount = 0;
+        performanceLog.spawnCount = 0;
+        performanceLog.renderCount = 0;
       }
       
       // Process disposal queue after rendering (PR #81)
