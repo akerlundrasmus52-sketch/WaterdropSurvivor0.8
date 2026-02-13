@@ -1217,11 +1217,11 @@
           <span id="stats-toggle" style="font-size: 12px;">▼</span>
         </div>
         <div id="stats-bar-content">
-          <div class="stat-line"><span class="stat-label">STR:</span> <span class="stat-value" id="stat-strength">0</span></div>
+          <div class="stat-line"><span class="stat-label">DMG:</span> <span class="stat-value" id="stat-strength">0</span></div>
           <div class="stat-line"><span class="stat-label">ATK SPD:</span> <span class="stat-value" id="stat-atkspeed">1.0x</span></div>
           <div class="stat-line"><span class="stat-label">CRIT:</span> <span class="stat-value" id="stat-crit">10%</span></div>
-          <div class="stat-line"><span class="stat-label">ARMOR:</span> <span class="stat-value" id="stat-armor">0%</span></div>
-          <div class="stat-line"><span class="stat-label">REGEN:</span> <span class="stat-value" id="stat-regen">0/s</span></div>
+          <div class="stat-line"><span class="stat-label">ARM:</span> <span class="stat-value" id="stat-armor">0%</span></div>
+          <div class="stat-line"><span class="stat-label">REG:</span> <span class="stat-value" id="stat-regen">0/s</span></div>
         </div>
       </div>
       
@@ -6707,14 +6707,16 @@
     
     // Phase 2: Stats Bar Update Function
     function updateStatsBar() {
-      document.getElementById('stat-strength').innerText = playerStats.strength.toFixed(2);
-      document.getElementById('stat-atkspeed').innerText = playerStats.atkSpeed.toFixed(2) + 'x';
+      // Standardized to 1 decimal place for consistency
+      document.getElementById('stat-strength').innerText = playerStats.strength.toFixed(1);
+      document.getElementById('stat-atkspeed').innerText = playerStats.atkSpeed.toFixed(1) + 'x';
       document.getElementById('stat-crit').innerText = Math.round(playerStats.critChance * 100) + '%';
-      document.getElementById('stat-armor').innerText = playerStats.armor + '%';
+      document.getElementById('stat-armor').innerText = Math.round(playerStats.armor) + '%';
       document.getElementById('stat-regen').innerText = playerStats.hpRegen.toFixed(1) + '/s';
     }
     
     // Phase 2: Combo System
+    const COMBO_ANIMATION_DURATION = 500; // milliseconds - matches CSS animation duration
     let comboState = {
       count: 0,
       lastKillTime: 0,
@@ -6756,14 +6758,14 @@
       const comboText = document.getElementById('combo-text');
       const comboMultiplier = document.getElementById('combo-multiplier');
       
-      // Determine combo message
+      // Determine combo message (ordered from highest to lowest with consistent >= comparisons)
       let message = '';
-      if (comboState.count === 2) message = 'DOUBLE KILL!';
-      else if (comboState.count === 3) message = 'TRIPLE KILL!';
-      else if (comboState.count === 4) message = 'QUAD KILL!';
-      else if (comboState.count === 5) message = 'MEGA KILL!';
-      else if (comboState.count >= 10) message = 'LEGENDARY!';
+      if (comboState.count >= 10) message = 'LEGENDARY!';
       else if (comboState.count >= 7) message = 'UNSTOPPABLE!';
+      else if (comboState.count >= 5) message = 'MEGA KILL!';
+      else if (comboState.count >= 4) message = 'QUAD KILL!';
+      else if (comboState.count >= 3) message = 'TRIPLE KILL!';
+      else if (comboState.count >= 2) message = 'DOUBLE KILL!';
       else message = comboState.count + 'x COMBO!';
       
       comboText.innerText = message;
@@ -6771,23 +6773,23 @@
       
       // Show with animation
       comboEl.style.opacity = '1';
-      comboEl.style.animation = 'combo-bubble 0.5s ease-out';
+      comboEl.style.animation = `combo-bubble ${COMBO_ANIMATION_DURATION}ms ease-out`;
       
       // Reset animation after it completes
       setTimeout(() => {
         comboEl.style.animation = 'none';
-      }, 500);
+      }, COMBO_ANIMATION_DURATION);
     }
     
     function hideCombo() {
       const comboEl = document.getElementById('combo-counter');
-      comboEl.style.animation = 'combo-fade-out 0.5s ease-out forwards';
+      comboEl.style.animation = `combo-fade-out ${COMBO_ANIMATION_DURATION}ms ease-out forwards`;
       
       setTimeout(() => {
         comboEl.style.opacity = '0';
         comboEl.style.animation = 'none';
         comboState.count = 0;
-      }, 500);
+      }, COMBO_ANIMATION_DURATION);
     }
     
     function updateWindmillQuestUI() {
