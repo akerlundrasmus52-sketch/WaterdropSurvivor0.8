@@ -488,6 +488,25 @@
       max-width: 500px;
     }
     
+    /* Attributes menu section container */
+    .attributes-section {
+      margin-bottom: 20px;
+      text-align: left;
+    }
+    
+    /* Attributes menu content area */
+    .attributes-content {
+      font-family: monospace;
+      font-size: 14px;
+      line-height: 1.8;
+      color: #ecf0f1;
+    }
+    
+    /* Empty state message */
+    .empty-message {
+      color: #888;
+    }
+    
     /* Equipment Menu Button - Phase 2 Placeholder */
     #equipment-btn {
       position: absolute;
@@ -1776,17 +1795,17 @@
       <h2 class="attributes-modal-title">ATTRIBUTES & EQUIPMENT</h2>
       
       <!-- Attributes Section -->
-      <div style="margin-bottom: 20px; text-align: left;">
+      <div class="attributes-section">
         <h3 class="attributes-section-title">Player Attributes</h3>
-        <div id="attributes-content" style="font-family: monospace; font-size: 14px; line-height: 1.8; color: #ecf0f1;">
+        <div id="attributes-content" class="attributes-content">
           <!-- Will be populated dynamically -->
         </div>
       </div>
       
       <!-- Equipment Section -->
-      <div style="margin-bottom: 20px; text-align: left;">
+      <div class="attributes-section">
         <h3 class="attributes-section-title">Equipment</h3>
-        <div id="equipment-content" style="font-family: monospace; font-size: 14px; line-height: 1.8; color: #ecf0f1;">
+        <div id="equipment-content" class="attributes-content">
           <!-- Will be populated dynamically -->
         </div>
       </div>
@@ -7305,7 +7324,7 @@
       }
       
       if (weaponsList.length === 0) {
-        equipmentContent.innerHTML = '<div style="color: #888;">No equipment unlocked yet.</div>';
+        equipmentContent.innerHTML = '<div class="empty-message">No equipment unlocked yet.</div>';
       } else {
         equipmentContent.innerHTML = weaponsList.map(w => 
           `<div class="attribute-item">${w}</div>`
