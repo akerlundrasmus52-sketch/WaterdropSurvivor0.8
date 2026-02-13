@@ -1337,6 +1337,7 @@
         <div class="bar-text" id="hp-text" style="color: #FFFFFF;">HP: 100/100</div>
       </div>
       
+      <!-- Phase 3: Old EXP bar hidden - kept for backward compatibility with updateHUD() -->
       <div class="bar-container" id="exp-bar-container" style="border-color: #2a2a2a; display: none;">
         <div class="bar-fill" id="exp-fill"></div>
         <div class="bar-text" id="exp-text" style="color: #FFFFFF;">EXP: 0%</div>
@@ -2751,7 +2752,7 @@
         this.wobbleOffset = Math.random() * 100;
         this.lastAttackTime = 0;
         this.attackCooldown = 1000; // 1 second cooldown
-        this.armor = this.armor || 0; // Initialize armor for all enemies (Phase 3)
+        // Armor defaults to 0 if not set (only MiniBoss has armor = 0.25)
       }
 
       update(dt, playerPos) {
@@ -6502,7 +6503,9 @@
         
         if (weapons.droneTurret.active && weapons.droneTurret.level < 5) {
           const nextLevel = weapons.droneTurret.level + 1;
-          const addDrone = nextLevel === 2 || nextLevel === 4 || nextLevel === 5; // Add drone at level 2, 4, and 5
+          // Phase 3: Define levels where drones are added
+          const DRONE_TURRET_SPAWN_LEVELS = [2, 4, 5];
+          const addDrone = DRONE_TURRET_SPAWN_LEVELS.includes(nextLevel);
           choices.push({ 
             id: 'droneturret_upgrade', 
             title: `DRONE TURRET Level ${nextLevel}`, 
@@ -7740,7 +7743,11 @@
       // Phase 3: Lag compensation - cap deltaTime to prevent death spiral
       const MAX_DELTA_TIME = 0.1; // 100ms cap
       if (dt > MAX_DELTA_TIME) {
-        console.warn(`High deltaTime detected: ${dt}s, capping to ${MAX_DELTA_TIME}s`);
+        // Throttle warning to avoid console spam during sustained lag
+        if (!window.lastLagWarning || (Date.now() - window.lastLagWarning) > 5000) {
+          console.warn(`High deltaTime detected: ${dt.toFixed(3)}s, capping to ${MAX_DELTA_TIME}s`);
+          window.lastLagWarning = Date.now();
+        }
         dt = MAX_DELTA_TIME;
       }
       
@@ -8375,10 +8382,8 @@
         renderer.render(scene, camera);
       } catch (error) {
         console.error('Render error caught - game continues:', error);
-        // Try to identify problematic objects
-        if (error.message && error.message.includes('undefined')) {
-          console.warn('Possible undefined object in scene. Attempting recovery...');
-        }
+        // Log error details but continue - the game loop will recover naturally
+        // Active objects are already filtered above, so invalid objects are removed
       }
       
       // Process disposal queue after rendering (PR #81)
