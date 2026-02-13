@@ -308,12 +308,14 @@
     }
     
     /* Stat Notification Queue - Red/Black Dominant */
+    /* PR #114: Improved stat notification positioning and animation */
     #stat-notifications {
       position: absolute;
-      top: 15%;
-      right: 20px;
-      transform: translateY(0);
-      width: 280px;
+      bottom: 30%;
+      right: 10px;
+      width: auto;
+      max-width: 350px;
+      min-width: 200px;
       z-index: 150;
       pointer-events: none;
     }
@@ -321,7 +323,7 @@
     .stat-notification {
       background: linear-gradient(to right, rgba(20, 0, 0, 0.95), rgba(40, 0, 0, 0.90));
       border: 2px solid #FF0000;
-      border-radius: 8px;
+      border-radius: 12px;
       padding: 12px 16px;
       margin-bottom: 10px;
       font-size: 15px;
@@ -335,7 +337,9 @@
         0 4px 8px rgba(0,0,0,0.8), 
         0 0 20px rgba(255,0,0,0.5),
         inset 0 0 10px rgba(255,0,0,0.2);
-      animation: stat-float-in-right 0.4s ease-out;
+      animation: stat-float-in-improved 0.5s ease-out;
+      width: fit-content;
+      white-space: nowrap;
     }
     
     .stat-notification.combo-high {
@@ -368,6 +372,22 @@
       animation: stat-float-in-right 0.4s ease-out, intense-glow 1s ease-in-out infinite alternate;
     }
     
+    /* PR #114: Improved animation - floats from right lower, up and over middle, then smaller */
+    @keyframes stat-float-in-improved {
+      0% {
+        opacity: 0;
+        transform: translateX(150px) translateY(50px) scale(0.5);
+      }
+      50% {
+        opacity: 1;
+        transform: translateX(-20px) translateY(-20px) scale(1.1);
+      }
+      100% {
+        opacity: 1;
+        transform: translateX(0) translateY(0) scale(1);
+      }
+    }
+    
     @keyframes stat-float-in-right {
       0% {
         opacity: 0;
@@ -386,7 +406,7 @@
       }
       100% {
         opacity: 0;
-        transform: translateX(30px) scale(0.8);
+        transform: translateX(50px) scale(0.6);
       }
     }
     
@@ -696,6 +716,50 @@
       height: 300px;
     }
 
+    /* PR #114: Options Menu for portrait mode */
+    #menu-btn {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      pointer-events: auto;
+      z-index: 100;
+      display: none; /* Hidden by default, shown in portrait mode via media query */
+    }
+    
+    #options-menu {
+      position: absolute;
+      top: 80px;
+      right: 20px;
+      background: rgba(90, 58, 49, 0.95);
+      border: 3px solid #8B4513;
+      border-radius: 15px;
+      padding: 15px;
+      display: none;
+      flex-direction: row;
+      gap: 10px;
+      pointer-events: auto;
+      z-index: 99;
+      box-shadow: 0 6px 12px rgba(0,0,0,0.5);
+    }
+    
+    #options-menu.visible {
+      display: flex;
+    }
+    
+    /* Portrait mode adjustments */
+    @media (orientation: portrait) {
+      #menu-btn {
+        display: block;
+      }
+      
+      /* Hide stats, settings, equipment buttons in portrait mode */
+      #stats-btn,
+      #settings-btn,
+      #equipment-btn {
+        display: none !important;
+      }
+    }
+    
     .btn-small {
       background: #5A3A31;
       color: white;
@@ -1364,6 +1428,16 @@
         <div class="stat-text" id="windmill-timer-text" style="color: #FFD700; font-size: 18px;">DEFEND: 30s</div>
       </div>
     </div>
+    
+    <!-- PR #114: Menu button for portrait mode -->
+    <button id="menu-btn" class="btn-small">MENU</button>
+    
+    <!-- PR #114: Options menu (shown when menu button is clicked in portrait mode) -->
+    <div id="options-menu">
+      <button id="options-stats-btn" class="btn-small">STATS</button>
+      <button id="options-settings-btn" class="btn-small">⚙️</button>
+    </div>
+    
     <button id="stats-btn" class="btn-small" style="position: absolute; top: 20px; right: 20px; pointer-events: auto; z-index: 100;">STATS</button>
     <button id="settings-btn" class="btn-small" style="position: absolute; top: 20px; right: 120px; pointer-events: auto; z-index: 100;">⚙️</button>
     
@@ -1917,6 +1991,8 @@
       dashesPerformed: 0,
       damageTaken: 0,
       weaponsUnlocked: 0,
+      maxCombo: 0, // PR #114: Track max combo reached
+      miniBossesKilled: 0, // PR #114: Track mini boss kills
       // Perk System
       perks: {
         vampire: 0,      // Life steal %
@@ -3241,12 +3317,12 @@
         const enemyColor = this.mesh.material.color.getHex();
         
         if (explodeIntoPieces) {
-          // EXPLOSION DEATH: Main explosion - ENHANCED with more particles
-          spawnParticles(this.mesh.position, enemyColor, 40);
-          spawnParticles(this.mesh.position, 0xFFFFFF, 15);
-          spawnParticles(this.mesh.position, 0x8B0000, 12); // Blood particles
+          // EXPLOSION DEATH: Main explosion - REDUCED particle count to prevent freeze (PR #114)
+          spawnParticles(this.mesh.position, enemyColor, 20); // Reduced from 40
+          spawnParticles(this.mesh.position, 0xFFFFFF, 8);    // Reduced from 15
+          spawnParticles(this.mesh.position, 0x8B0000, 6);    // Reduced from 12
           
-          // Add explosion ring effect
+          // Add explosion ring effect - OPTIMIZED to avoid nested requestAnimationFrame
           const ringGeo = new THREE.RingGeometry(0.1, 0.2, 16);
           const ringMat = new THREE.MeshBasicMaterial({ 
             color: enemyColor, 
@@ -3260,23 +3336,10 @@
           ring.rotation.x = Math.PI / 2;
           scene.add(ring);
           
-          // Animate ring expanding and fading
-          let ringLife = 20;
-          const animateRing = () => {
-            ringLife--;
-            const scale = 1 + (20 - ringLife) * 0.3;
-            ring.scale.set(scale, scale, 1);
-            ring.material.opacity = ringLife / 20;
-            
-            if (ringLife <= 0) {
-              scene.remove(ring);
-              ring.geometry.dispose();
-              ring.material.dispose();
-            } else {
-              requestAnimationFrame(animateRing);
-            }
-          };
-          animateRing();
+          // Store ring data for main loop animation instead of nested requestAnimationFrame (PR #114 fix)
+          ring.userData.isExplosionRing = true;
+          ring.userData.ringLife = 20;
+          ring.userData.maxLife = 20;
           
           // Explode into more pieces - ENHANCED
           const pieceCount = this.isMiniBoss ? 25 : 15; // More pieces for mini-boss
@@ -3423,6 +3486,10 @@
         spawnGold(this.mesh.position.x, this.mesh.position.z, goldAmount);
         
         playerStats.kills++;
+        // PR #114: Track mini boss kills for achievements
+        if (this.isMiniBoss) {
+          playerStats.miniBossesKilled++;
+        }
         updateHUD();
         updateComboCounter(true); // Phase 2: Track combo on kill
         checkAchievements(); // Check for achievements after kill
@@ -4402,6 +4469,37 @@
       kills100: { id: 'kills100', name: 'Century Slayer', desc: 'Kill 100 enemies', reward: 100, check: () => playerStats.kills >= 100, claimed: false },
       kills500: { id: 'kills500', name: 'Mass Destroyer', desc: 'Kill 500 enemies', reward: 250, check: () => playerStats.kills >= 500, claimed: false },
       kills1000: { id: 'kills1000', name: 'Legendary Warrior', desc: 'Kill 1000 enemies', reward: 500, check: () => playerStats.kills >= 1000, claimed: false },
+      
+      // PR #114: Combo achievements
+      combo5: { id: 'combo5', name: 'Combo Starter', desc: 'Reach a 5 kill combo', reward: 30, check: () => playerStats.maxCombo >= 5, claimed: false },
+      combo10: { id: 'combo10', name: 'Combo Expert', desc: 'Reach a 10 kill combo', reward: 75, check: () => playerStats.maxCombo >= 10, claimed: false },
+      combo15: { id: 'combo15', name: 'Combo Master', desc: 'Reach a 15 kill combo', reward: 150, check: () => playerStats.maxCombo >= 15, claimed: false },
+      comboGodlike: { id: 'comboGodlike', name: 'GODLIKE', desc: 'Reach GODLIKE combo status', reward: 300, check: () => playerStats.maxCombo >= 20, claimed: false },
+      
+      // PR #114: Upgrade achievements (first, 50%, 100% for HP, STR, SPD, REGEN, MOVE)
+      hpFirst: { id: 'hpFirst', name: 'Health Boost', desc: 'Purchase first HP upgrade', reward: 20, check: () => saveData.upgrades.maxHp >= 1, claimed: false },
+      hpMid: { id: 'hpMid', name: 'Fortified', desc: 'Upgrade HP to 50%', reward: 50, check: () => saveData.upgrades.maxHp >= 5, claimed: false },
+      hpMax: { id: 'hpMax', name: 'Immortal', desc: 'Max out HP upgrades', reward: 150, check: () => saveData.upgrades.maxHp >= 10, claimed: false },
+      
+      strFirst: { id: 'strFirst', name: 'Power Up', desc: 'Purchase first Damage upgrade', reward: 20, check: () => saveData.upgrades.attackDamage >= 1, claimed: false },
+      strMid: { id: 'strMid', name: 'Heavy Hitter', desc: 'Upgrade Damage to 50%', reward: 50, check: () => saveData.upgrades.attackDamage >= 5, claimed: false },
+      strMax: { id: 'strMax', name: 'Unstoppable Force', desc: 'Max out Damage upgrades', reward: 150, check: () => saveData.upgrades.attackDamage >= 10, claimed: false },
+      
+      spdFirst: { id: 'spdFirst', name: 'Swift Strike', desc: 'Purchase first Attack Speed upgrade', reward: 20, check: () => saveData.upgrades.attackSpeed >= 1, claimed: false },
+      spdMid: { id: 'spdMid', name: 'Rapid Fire', desc: 'Upgrade Attack Speed to 50%', reward: 50, check: () => saveData.upgrades.attackSpeed >= 5, claimed: false },
+      spdMax: { id: 'spdMax', name: 'Speed Demon', desc: 'Max out Attack Speed upgrades', reward: 150, check: () => saveData.upgrades.attackSpeed >= 10, claimed: false },
+      
+      regenFirst: { id: 'regenFirst', name: 'Healing Touch', desc: 'Purchase first HP Regen upgrade', reward: 20, check: () => saveData.upgrades.hpRegen >= 1, claimed: false },
+      regenMid: { id: 'regenMid', name: 'Regenerator', desc: 'Upgrade HP Regen to 50%', reward: 50, check: () => saveData.upgrades.hpRegen >= 5, claimed: false },
+      regenMax: { id: 'regenMax', name: 'Phoenix', desc: 'Max out HP Regen upgrades', reward: 150, check: () => saveData.upgrades.hpRegen >= 10, claimed: false },
+      
+      moveFirst: { id: 'moveFirst', name: 'Quick Feet', desc: 'Purchase first Move Speed upgrade', reward: 20, check: () => saveData.upgrades.moveSpeed >= 1, claimed: false },
+      moveMid: { id: 'moveMid', name: 'Speedster', desc: 'Upgrade Move Speed to 50%', reward: 50, check: () => saveData.upgrades.moveSpeed >= 5, claimed: false },
+      moveMax: { id: 'moveMax', name: 'Flash', desc: 'Max out Move Speed upgrades', reward: 150, check: () => saveData.upgrades.moveSpeed >= 10, claimed: false },
+      
+      // PR #114: Mini boss and map completion achievements
+      miniBossKilled: { id: 'miniBossKilled', name: 'Boss Slayer', desc: 'Defeat a Mini-Boss', reward: 200, check: () => playerStats.miniBossesKilled >= 1, claimed: false },
+      mapComplete: { id: 'mapComplete', name: 'Map Conqueror', desc: 'Complete the entire map', reward: 500, check: () => playerStats.lvl >= 50 && playerStats.miniBossesKilled >= 3, claimed: false },
       
       gold100: { id: 'gold100', name: 'Small Fortune', desc: 'Collect 100 gold in one run', reward: 50, check: () => playerStats.gold >= 100, claimed: false },
       gold500: { id: 'gold500', name: 'Treasure Hunter', desc: 'Collect 500 gold in one run', reward: 150, check: () => playerStats.gold >= 500, claimed: false },
@@ -5628,6 +5726,9 @@
         flower.rotation.x = -Math.PI/2;
         scene.add(flower);
       }
+      
+      // PR #114: Cache animated objects after world creation to avoid scene.traverse() every frame
+      cacheAnimatedObjects();
     }
 
     // --- GAME LOGIC ---
@@ -5830,6 +5931,31 @@
     }
     
     function setupMenus() {
+      // PR #114: Menu button for portrait mode
+      const menuBtn = document.getElementById('menu-btn');
+      const optionsMenu = document.getElementById('options-menu');
+      
+      if (menuBtn && optionsMenu) {
+        menuBtn.onclick = () => {
+          playSound('waterdrop');
+          optionsMenu.classList.toggle('visible');
+        };
+        
+        // Options menu buttons (same functionality as regular buttons)
+        document.getElementById('options-stats-btn').onclick = () => {
+          playSound('waterdrop');
+          optionsMenu.classList.remove('visible'); // Close menu
+          toggleStats();
+        };
+        
+        document.getElementById('options-settings-btn').onclick = () => {
+          playSound('waterdrop');
+          optionsMenu.classList.remove('visible'); // Close menu
+          isPaused = true;
+          document.getElementById('settings-modal').style.display = 'flex';
+        };
+      }
+      
       // Settings button
       document.getElementById('settings-btn').onclick = () => {
         playSound('waterdrop');
@@ -6160,6 +6286,9 @@
       saveData.totalGoldEarned += finalAmount;
       updateHUD();
       updateGoldDisplays();
+      
+      // PR #114: Show gold pickup amount in stat bar notification
+      showStatChange(`+${finalAmount} Gold`);
     }
     
     function updateGoldDisplays() {
@@ -7215,7 +7344,8 @@
             apply: () => { 
               playerStats.perks.vampire++;
               playerStats.lifeStealPercent += 0.05;
-              showStatChange(`Vampire Level ${playerStats.perks.vampire}! (5% of damage heals you)`);
+              // PR #114: More descriptive stat change text (shortened for readability)
+              showStatChange(`Vampire Lvl ${playerStats.perks.vampire} - ${(playerStats.lifeStealPercent * 100).toFixed(1)}% Life Steal`);
             } 
           },
           { 
@@ -7226,7 +7356,8 @@
             apply: () => { 
               playerStats.perks.juggernaut++;
               playerStats.armor = Math.min(80, playerStats.armor + 8);
-              showStatChange(`Juggernaut Perk Level ${playerStats.perks.juggernaut}! (+8% Armor)`);
+              // PR #114: More descriptive stat change text (shortened for readability)
+              showStatChange(`Juggernaut Lvl ${playerStats.perks.juggernaut} - ${playerStats.armor.toFixed(1)}% Reduction`);
             } 
           },
           { 
@@ -7374,6 +7505,11 @@
           comboState.count = 1; // Reset to 1 for first kill
         }
         comboState.lastKillTime = currentTime;
+        
+        // PR #114: Track max combo for achievements
+        if (comboState.count > playerStats.maxCombo) {
+          playerStats.maxCombo = comboState.count;
+        }
         
         // Show combo if 5+ kills (updated to start at 5)
         if (comboState.count >= 5) {
@@ -8291,6 +8427,39 @@
       cumulativeFrameTime: 0 // Track cumulative time for accurate average
     };
     
+    // Cache animated objects to avoid scene.traverse() every frame (PR #114 freeze bug fix)
+    let animatedObjects = {
+      windmills: [],
+      crystals: [],
+      cometParticles: [],
+      waterfalls: [],
+      waterDrops: [],
+      splashes: []
+    };
+    
+    // Function to cache animated objects from scene (call once or when objects are added)
+    function cacheAnimatedObjects() {
+      animatedObjects = {
+        windmills: [],
+        crystals: [],
+        cometParticles: [],
+        waterfalls: [],
+        waterDrops: [],
+        splashes: []
+      };
+      
+      scene.traverse(obj => {
+        if (obj.userData.isWindmill) animatedObjects.windmills.push(obj);
+        if (obj.userData.isCrystal) animatedObjects.crystals.push(obj);
+        if (obj.userData.isCometParticle) animatedObjects.cometParticles.push(obj);
+        if (obj.userData.isWaterfall) animatedObjects.waterfalls.push(obj);
+        if (obj.userData.isWaterDrop) animatedObjects.waterDrops.push(obj);
+        if (obj.userData.isSplash) animatedObjects.splashes.push(obj);
+      });
+      
+      console.log(`Cached animated objects: ${animatedObjects.windmills.length} windmills, ${animatedObjects.crystals.length} crystals, ${animatedObjects.cometParticles.length} particles, ${animatedObjects.waterfalls.length} waterfalls`);
+    }
+    
     function animate(time) {
       requestAnimationFrame(animate);
       
@@ -8857,21 +9026,23 @@
         return alive;
       });
       
+      // PR #114: Optimized animations using cached objects instead of scene.traverse()
       // Windmill Rotation and Light Animation
-      scene.children.forEach(c => {
-        if (c.userData.isWindmill) {
-          // Rotate the blades stored in userData
-          if (c.userData.blades && c.userData.blades.length > 0) {
-            c.userData.blades[0].rotation.z += 0.05;
-            c.userData.blades[1].rotation.z += 0.05;
-          }
-          
-          // Animate windmill light (pulsing) with null check
-          if (c.userData.light && c.userData.light.material) {
-            c.userData.light.material.opacity = 0.8 + Math.sin(gameTime * 3) * 0.2;
-          }
+      animatedObjects.windmills.forEach(c => {
+        // Rotate the blades stored in userData
+        if (c.userData.blades && c.userData.blades.length > 0) {
+          c.userData.blades[0].rotation.z += 0.05;
+          c.userData.blades[1].rotation.z += 0.05;
         }
-        // Water ripple animation
+        
+        // Animate windmill light (pulsing) with null check
+        if (c.userData.light && c.userData.light.material) {
+          c.userData.light.material.opacity = 0.8 + Math.sin(gameTime * 3) * 0.2;
+        }
+      });
+      
+      // Water ripple and sparkle animation (still need scene.children for these)
+      scene.children.forEach(c => {
         if (c.userData.isWaterRipple) {
           c.userData.phase += 0.05;
           const scale = 1 + Math.sin(c.userData.phase) * 0.1;
@@ -8890,63 +9061,79 @@
         }
       });
       
-      // Crystal tower animation
-      scene.traverse(obj => {
-        if (obj.userData.isCrystal) {
-          // Rotate crystals
-          obj.rotation.x += 0.01;
-          obj.rotation.y += 0.02;
-          
-          // Orbit animation
-          obj.userData.phase += 0.01 * obj.userData.orbitSpeed;
-          const offsetY = Math.sin(obj.userData.phase) * 0.5;
-          obj.position.y += offsetY * 0.05;
-          
-          // Pulsing emissive
-          if (obj.material.emissiveIntensity !== undefined) {
-            obj.material.emissiveIntensity = 0.3 + Math.sin(obj.userData.phase * 2) * 0.2;
-          }
-        }
+      // Crystal tower animation (using cached objects)
+      animatedObjects.crystals.forEach(obj => {
+        // Rotate crystals
+        obj.rotation.x += 0.01;
+        obj.rotation.y += 0.02;
         
-        // Comet particle animation (orbiting particles)
-        if (obj.userData.isCometParticle) {
-          // Store the initial position as the orbit center (relative to parent/comet group)
-          if (!obj.userData.basePosition) {
-            obj.userData.basePosition = obj.position.clone();
-          }
-          
-          obj.userData.angle += obj.userData.speed * 0.02;
-          
-          const centerX = obj.userData.basePosition.x;
-          const centerZ = obj.userData.basePosition.z;
-          const centerY = obj.userData.basePosition.y;
-          
-          obj.position.x = centerX + Math.cos(obj.userData.angle) * obj.userData.radius;
-          obj.position.z = centerZ + Math.sin(obj.userData.angle) * obj.userData.radius;
-          obj.position.y = centerY + obj.userData.height + Math.sin(obj.userData.angle * 2) * 0.3;
-          
-          // Pulsing opacity (between 0.3 and 0.7 for good visibility)
-          obj.material.opacity = 0.5 + Math.sin(obj.userData.angle * 3) * 0.2;
+        // Orbit animation
+        obj.userData.phase += 0.01 * obj.userData.orbitSpeed;
+        const offsetY = Math.sin(obj.userData.phase) * 0.5;
+        obj.position.y += offsetY * 0.05;
+        
+        // Pulsing emissive
+        if (obj.material.emissiveIntensity !== undefined) {
+          obj.material.emissiveIntensity = 0.3 + Math.sin(obj.userData.phase * 2) * 0.2;
         }
       });
       
-      // Waterfall animation
-      scene.traverse(obj => {
-        if (obj.userData.isWaterfall) {
-          obj.userData.phase += 0.05;
-          obj.material.opacity = 0.6 + Math.sin(obj.userData.phase) * 0.1;
+      // Comet particle animation (using cached objects)
+      animatedObjects.cometParticles.forEach(obj => {
+        // Store the initial position as the orbit center (relative to parent/comet group)
+        if (!obj.userData.basePosition) {
+          obj.userData.basePosition = obj.position.clone();
         }
-        if (obj.userData.isWaterDrop) {
-          obj.position.y -= obj.userData.speed;
-          if (obj.position.y < 0) {
-            obj.position.y = obj.userData.startY;
+        
+        obj.userData.angle += obj.userData.speed * 0.02;
+        
+        const centerX = obj.userData.basePosition.x;
+        const centerZ = obj.userData.basePosition.z;
+        const centerY = obj.userData.basePosition.y;
+        
+        obj.position.x = centerX + Math.cos(obj.userData.angle) * obj.userData.radius;
+        obj.position.z = centerZ + Math.sin(obj.userData.angle) * obj.userData.radius;
+        obj.position.y = centerY + obj.userData.height + Math.sin(obj.userData.angle * 2) * 0.3;
+        
+        // Pulsing opacity (between 0.3 and 0.7 for good visibility)
+        obj.material.opacity = 0.5 + Math.sin(obj.userData.angle * 3) * 0.2;
+      });
+      
+      // Waterfall animation (using cached objects)
+      animatedObjects.waterfalls.forEach(obj => {
+        obj.userData.phase += 0.05;
+        obj.material.opacity = 0.6 + Math.sin(obj.userData.phase) * 0.1;
+      });
+      
+      animatedObjects.waterDrops.forEach(obj => {
+        obj.position.y -= obj.userData.speed;
+        if (obj.position.y < 0) {
+          obj.position.y = obj.userData.startY;
+        }
+      });
+      
+      animatedObjects.splashes.forEach(obj => {
+        obj.userData.phase += 0.1;
+        const scale = 1 + Math.sin(obj.userData.phase) * 0.3;
+        obj.scale.set(scale, 1, scale);
+        obj.material.opacity = 0.4 + Math.sin(obj.userData.phase) * 0.2;
+      });
+      
+      // PR #114: Animate explosion rings in main loop (no nested requestAnimationFrame)
+      scene.children.forEach(obj => {
+        if (obj.userData.isExplosionRing) {
+          obj.userData.ringLife--;
+          const life = obj.userData.ringLife;
+          const maxLife = obj.userData.maxLife;
+          const scale = 1 + (maxLife - life) * 0.3;
+          obj.scale.set(scale, scale, 1);
+          obj.material.opacity = life / maxLife;
+          
+          if (life <= 0) {
+            scene.remove(obj);
+            obj.geometry.dispose();
+            obj.material.dispose();
           }
-        }
-        if (obj.userData.isSplash) {
-          obj.userData.phase += 0.1;
-          const scale = 1 + Math.sin(obj.userData.phase) * 0.3;
-          obj.scale.set(scale, 1, scale);
-          obj.material.opacity = 0.4 + Math.sin(obj.userData.phase) * 0.2;
         }
       });
 
