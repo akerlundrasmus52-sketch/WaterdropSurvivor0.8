@@ -7445,7 +7445,7 @@
       }
       
       comboText.innerText = message;
-      comboMultiplier.innerText = `combo x${comboState.count}`; // Updated format to "combo x5", "combo x6", etc.
+      comboMultiplier.innerText = `x${comboState.count}`; // Display multiplier only to avoid redundancy
       
       // White to Dark Red gradient with intensifying glow and size
       let textColor = '#FFFFFF'; // Start with White
@@ -8286,11 +8286,12 @@
     let performanceLog = {
       frameCount: 0,
       lastLogTime: 0,
-      totalFrameTime: 0,
+      totalFrameTime: 16.67, // Initialize to ~60fps frame time (16.67ms) to prevent first frame skip
       slowFrames: 0,
       spawnCount: 0,
       renderCount: 0,
-      lastEnemyCount: 0
+      lastEnemyCount: 0,
+      cumulativeFrameTime: 0 // Track cumulative time for accurate average
     };
     
     function animate(time) {
@@ -9028,10 +9029,13 @@
         }
       }
       
+      // Track cumulative frame time for accurate average
+      performanceLog.cumulativeFrameTime += totalFrameTime;
+      
       // Periodic performance summary (every 5 seconds)
       const currentTime = performance.now();
       if (currentTime - performanceLog.lastLogTime > 5000) {
-        const avgFrameTime = performanceLog.totalFrameTime; // Last frame time as proxy
+        const avgFrameTime = performanceLog.cumulativeFrameTime / performanceLog.frameCount;
         const slowFramePercent = (performanceLog.slowFrames / performanceLog.frameCount * 100).toFixed(1);
         console.log(`Performance Summary: Avg frame: ${avgFrameTime.toFixed(2)}ms, Slow frames: ${slowFramePercent}%, Enemies: ${aliveEnemies}, Spawns: ${performanceLog.spawnCount}, Renders: ${performanceLog.renderCount}`);
         
@@ -9041,6 +9045,7 @@
         performanceLog.frameCount = 0;
         performanceLog.spawnCount = 0;
         performanceLog.renderCount = 0;
+        performanceLog.cumulativeFrameTime = 0;
       }
       
       // Process disposal queue after rendering (PR #81)
