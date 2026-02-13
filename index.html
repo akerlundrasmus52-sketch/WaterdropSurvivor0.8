@@ -262,6 +262,145 @@
       }
     }
     
+    /* Phase 3: Egg-shaped EXP Bar */
+    #egg-exp-container {
+      position: absolute;
+      bottom: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 300px;
+      height: 60px;
+      z-index: 100;
+      pointer-events: none;
+    }
+    
+    #egg-exp-bar {
+      width: 100%;
+      height: 50px;
+      background: linear-gradient(to bottom, #2a2a2a, #1a1a1a);
+      border-radius: 50%;
+      border: 3px solid #FFD700;
+      overflow: hidden;
+      position: relative;
+      box-shadow: 
+        0 4px 8px rgba(0,0,0,0.6),
+        0 0 20px rgba(255,215,0,0.4),
+        inset 0 2px 4px rgba(0,0,0,0.3);
+    }
+    
+    #egg-exp-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(to right, #3498DB, #5DADE2, #87CEEB);
+      box-shadow: 
+        inset 0 2px 4px rgba(255,255,255,0.3),
+        0 0 10px rgba(93,173,226,0.6);
+      transition: width 0.3s ease-out;
+      border-radius: 50%;
+    }
+    
+    #egg-exp-level {
+      position: absolute;
+      top: -8px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 18px;
+      font-weight: bold;
+      color: #FFD700;
+      text-shadow: 
+        2px 2px 0 #000,
+        -1px -1px 0 #000,
+        1px -1px 0 #000,
+        -1px 1px 0 #000,
+        0 0 15px rgba(255,215,0,0.8);
+      z-index: 2;
+    }
+    
+    #egg-exp-text {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 14px;
+      font-weight: bold;
+      color: #FFFFFF;
+      text-shadow: 
+        1px 1px 0 #000,
+        -1px -1px 0 #000,
+        1px -1px 0 #000,
+        -1px 1px 0 #000;
+      z-index: 2;
+      pointer-events: none;
+    }
+    
+    /* Phase 3: Stat Notification Queue */
+    #stat-notifications {
+      position: absolute;
+      top: 50%;
+      right: 30px;
+      transform: translateY(-50%);
+      width: 250px;
+      z-index: 150;
+      pointer-events: none;
+    }
+    
+    .stat-notification {
+      background: linear-gradient(to right, rgba(42, 42, 62, 0.95), rgba(26, 26, 46, 0.95));
+      border: 2px solid #FFD700;
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-bottom: 10px;
+      font-size: 14px;
+      font-weight: bold;
+      color: #FFD700;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.6), 0 0 15px rgba(255,215,0,0.3);
+      animation: stat-float-in 0.3s ease-out;
+    }
+    
+    @keyframes stat-float-in {
+      0% {
+        opacity: 0;
+        transform: translateX(50px);
+      }
+      100% {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+    
+    @keyframes stat-fade-out {
+      0% {
+        opacity: 1;
+        transform: translateX(0);
+      }
+      100% {
+        opacity: 0;
+        transform: translateX(50px);
+      }
+    }
+    
+    /* Phase 3: Wave Counter in Stats Bar */
+    #wave-counter {
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid #FFD700;
+      text-align: center;
+      font-size: 12px;
+      font-weight: bold;
+    }
+    
+    #wave-text {
+      color: #5DADE2;
+      text-shadow: 0 0 8px rgba(93,173,226,0.6);
+    }
+    
+    #wave-number {
+      color: #FFD700;
+      font-size: 14px;
+      text-shadow: 0 0 10px rgba(255,215,0,0.8);
+    }
+    
     /* Equipment Menu Button - Phase 2 Placeholder */
     #equipment-btn {
       position: absolute;
@@ -1198,7 +1337,8 @@
         <div class="bar-text" id="hp-text" style="color: #FFFFFF;">HP: 100/100</div>
       </div>
       
-      <div class="bar-container" id="exp-bar-container" style="border-color: #2a2a2a;">
+      <!-- Phase 3: Old EXP bar hidden - kept for backward compatibility with updateHUD() -->
+      <div class="bar-container" id="exp-bar-container" style="border-color: #2a2a2a; display: none;">
         <div class="bar-fill" id="exp-fill"></div>
         <div class="bar-text" id="exp-text" style="color: #FFFFFF;">EXP: 0%</div>
       </div>
@@ -1222,6 +1362,10 @@
           <div class="stat-line"><span class="stat-label">CRIT:</span> <span class="stat-value" id="stat-crit">10%</span></div>
           <div class="stat-line"><span class="stat-label">ARM:</span> <span class="stat-value" id="stat-armor">0%</span></div>
           <div class="stat-line"><span class="stat-label">REG:</span> <span class="stat-value" id="stat-regen">0/s</span></div>
+          <!-- Phase 3: Wave Counter -->
+          <div id="wave-counter">
+            <span id="wave-text">WAVE: </span><span id="wave-number">1</span>
+          </div>
         </div>
       </div>
       
@@ -1245,6 +1389,18 @@
       <div id="combo-text"></div>
       <div id="combo-multiplier"></div>
     </div>
+
+    <!-- Phase 3: Egg-shaped EXP Bar -->
+    <div id="egg-exp-container">
+      <div id="egg-exp-level">LVL 1</div>
+      <div id="egg-exp-bar">
+        <div id="egg-exp-fill"></div>
+        <div id="egg-exp-text">0%</div>
+      </div>
+    </div>
+
+    <!-- Phase 3: Stat Notification Queue -->
+    <div id="stat-notifications"></div>
 
     <!-- Countdown Text (PR #70-71) -->
     <div id="tutorial-text" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 96px; font-weight: bold; color: #FFF; text-shadow: 0 0 20px rgba(255,255,255,0.8), 0 0 40px rgba(93,173,226,0.6); opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 150;"></div>
@@ -2461,7 +2617,8 @@
         let color;
         
         // Enemy scaling based on player level - NOT SPEED, just HP and DAMAGE
-        const levelScaling = 1 + (playerLevel - 1) * 0.10; // Reduced from 15% to 10% increase per level for better balance
+        // Phase 3: Increased difficulty - 15% per level (was 10%)
+        const levelScaling = 1 + (playerLevel - 1) * 0.15;
         
         if (type === 0) {
           // Bacteria/Amoeba - Squishy organic blob shape
@@ -2578,9 +2735,12 @@
           this.speed = GAME_CONFIG.enemySpeedBase * 0.9;
         } else if (type === 10) { // MiniBoss
           const miniBossStartLevel = 10;
-          this.hp = 500 * (1 + (playerLevel - miniBossStartLevel) * 0.15);
+          // Phase 3: Double MiniBoss hitpoints for increased difficulty
+          this.hp = 1000 * (1 + (playerLevel - miniBossStartLevel) * 0.15);
           this.speed = GAME_CONFIG.enemySpeedBase * 0.5;
           this.isMiniBoss = true;
+          // Phase 3: Add armor stat (damage reduction)
+          this.armor = 0.25; // 25% damage reduction
         }
         
         this.maxHp = this.hp;
@@ -2592,6 +2752,7 @@
         this.wobbleOffset = Math.random() * 100;
         this.lastAttackTime = 0;
         this.attackCooldown = 1000; // 1 second cooldown
+        // Armor defaults to 0 if not set (only MiniBoss has armor = 0.25)
       }
 
       update(dt, playerPos) {
@@ -2788,9 +2949,19 @@
       }
 
       takeDamage(amount, isCrit = false) {
+        // Phase 3: Apply armor reduction for MiniBoss
+        let finalAmount = amount;
+        if (this.armor > 0) {
+          finalAmount = amount * (1 - this.armor);
+          // Show armor reduction effect
+          if (this.isMiniBoss) {
+            createFloatingText(`-${Math.floor(amount * this.armor)}`, this.mesh.position, '#FFD700');
+          }
+        }
+        
         const oldHp = this.hp;
-        this.hp -= amount;
-        createDamageNumber(amount, this.mesh.position, isCrit);
+        this.hp -= finalAmount;
+        createDamageNumber(Math.floor(finalAmount), this.mesh.position, isCrit);
         
         const hpPercent = this.hp / this.maxHp;
         const oldHpPercent = oldHp / this.maxHp;
@@ -5508,14 +5679,16 @@
         enemies.push(new Enemy(type, ex, ez, playerStats.lvl));
       }
       
-      // Spawn chest after certain waves (every 3rd wave)
-      if (waveCount % 3 === 0) {
-        // Spawn chest near player but not too close
+      // Phase 3: Chest spawn logic - only on wave completion (every 5th wave), high combo, or quest completion
+      // Remove automatic every-3rd-wave spawning for more strategic chest placement
+      if (waveCount % 5 === 0) {
+        // Wave completion chest
         const chestAngle = Math.random() * Math.PI * 2;
         const chestDist = 10 + Math.random() * 5; // 10-15 units from player
         const cx = player.mesh.position.x + Math.cos(chestAngle) * chestDist;
         const cz = player.mesh.position.z + Math.sin(chestAngle) * chestDist;
         spawnChest(cx, cz);
+        createFloatingText('Wave Bonus Chest!', player.mesh.position, '#FFD700');
       }
     }
 
@@ -6257,8 +6430,9 @@
         
         choices = [];
         
+        // Phase 3: Weapon upgrades now go to level 5 (up from 4)
         // Offer weapon upgrades for active weapons
-        if (weapons.gun.active && weapons.gun.level < 4) {
+        if (weapons.gun.active && weapons.gun.level < 5) {
           const nextLevel = weapons.gun.level + 1;
           choices.push({ 
             id: 'gun_upgrade', 
@@ -6274,7 +6448,7 @@
           });
         }
         
-        if (weapons.sword.active && weapons.sword.level < 4) {
+        if (weapons.sword.active && weapons.sword.level < 5) {
           const nextLevel = weapons.sword.level + 1;
           choices.push({ 
             id: 'sword_upgrade', 
@@ -6290,7 +6464,7 @@
           });
         }
         
-        if (weapons.aura.active && weapons.aura.level < 4) {
+        if (weapons.aura.active && weapons.aura.level < 5) {
           const nextLevel = weapons.aura.level + 1;
           const baseRange = 3; // Initial range
           const currentRange = weapons.aura.range;
@@ -6311,7 +6485,7 @@
           });
         }
         
-        if (weapons.meteor.active && weapons.meteor.level < 4) {
+        if (weapons.meteor.active && weapons.meteor.level < 5) {
           const nextLevel = weapons.meteor.level + 1;
           choices.push({ 
             id: 'meteor_upgrade', 
@@ -6327,9 +6501,11 @@
           });
         }
         
-        if (weapons.droneTurret.active && weapons.droneTurret.level < 4) {
+        if (weapons.droneTurret.active && weapons.droneTurret.level < 5) {
           const nextLevel = weapons.droneTurret.level + 1;
-          const addDrone = nextLevel === 2 || nextLevel === 4; // Add drone at level 2 and 4
+          // Phase 3: Define levels where drones are added
+          const DRONE_TURRET_SPAWN_LEVELS = [2, 4, 5];
+          const addDrone = DRONE_TURRET_SPAWN_LEVELS.includes(nextLevel);
           choices.push({ 
             id: 'droneturret_upgrade', 
             title: `DRONE TURRET Level ${nextLevel}`, 
@@ -6360,7 +6536,7 @@
           });
         }
         
-        if (weapons.doubleBarrel.active && weapons.doubleBarrel.level < 4) {
+        if (weapons.doubleBarrel.active && weapons.doubleBarrel.level < 5) {
           const nextLevel = weapons.doubleBarrel.level + 1;
           choices.push({ 
             id: 'doublebarrel_upgrade', 
@@ -6376,7 +6552,7 @@
           });
         }
         
-        if (weapons.iceSpear.active && weapons.iceSpear.level < 4) {
+        if (weapons.iceSpear.active && weapons.iceSpear.level < 5) {
           const nextLevel = weapons.iceSpear.level + 1;
           choices.push({ 
             id: 'icespear_upgrade', 
@@ -6393,7 +6569,7 @@
           });
         }
         
-        if (weapons.fireRing.active && weapons.fireRing.level < 4) {
+        if (weapons.fireRing.active && weapons.fireRing.level < 5) {
           const nextLevel = weapons.fireRing.level + 1;
           choices.push({ 
             id: 'firering_upgrade', 
@@ -6410,11 +6586,11 @@
           });
         }
         
-        // Add some stat upgrades too
-        choices.push(...commonUpgrades.sort(() => 0.5 - Math.random()).slice(0, 2));
+        // Phase 3: Add more stat upgrades for diversity (was 2, now 3)
+        choices.push(...commonUpgrades.sort(() => 0.5 - Math.random()).slice(0, 3));
         
-        // Shuffle and limit to 3 choices
-        choices = choices.sort(() => 0.5 - Math.random()).slice(0, 3);
+        // Phase 3: Shuffle and limit to 4 choices (was 3) for more diverse alternatives
+        choices = choices.sort(() => 0.5 - Math.random()).slice(0, 4);
       }
       // Level 5: Choose Secondary Weapon
       else if (playerStats.lvl === 5) {
@@ -6695,11 +6871,21 @@
       document.getElementById('hp-text').innerText = `HP: ${Math.max(0, Math.ceil(playerStats.hp))}/${playerStats.maxHp}`;
       
       const expPct = (playerStats.exp / playerStats.expReq) * 100;
+      // Update old EXP bar (hidden but keep for compatibility)
       document.getElementById('exp-fill').style.width = `${Math.min(100, expPct)}%`;
       document.getElementById('exp-text').innerText = `EXP: ${Math.min(100, Math.ceil(expPct))}%`;
+      
+      // Phase 3: Update egg-shaped EXP bar
+      document.getElementById('egg-exp-fill').style.width = `${Math.min(100, expPct)}%`;
+      document.getElementById('egg-exp-text').innerText = `${Math.min(100, Math.ceil(expPct))}%`;
+      document.getElementById('egg-exp-level').innerText = `LVL ${playerStats.lvl}`;
+      
       document.getElementById('lvl-text').innerText = `LVL: ${playerStats.lvl}`;
       document.getElementById('score-text').innerText = `KILLS: ${playerStats.kills}`;
       document.getElementById('gold-text').innerText = `GOLD: ${playerStats.gold}`;
+      
+      // Phase 3: Update wave counter
+      document.getElementById('wave-number').innerText = waveCount;
       
       // Update stats bar - Phase 2
       updateStatsBar();
@@ -6739,6 +6925,17 @@
         // Show combo if 2+ kills
         if (comboState.count >= 2) {
           showCombo();
+        }
+        
+        // Phase 3: Spawn chest on high combo (10+ kills)
+        if (comboState.count === 10 && !comboState.chestSpawned) {
+          comboState.chestSpawned = true;
+          const chestAngle = Math.random() * Math.PI * 2;
+          const chestDist = 10 + Math.random() * 5;
+          const cx = player.mesh.position.x + Math.cos(chestAngle) * chestDist;
+          const cz = player.mesh.position.z + Math.sin(chestAngle) * chestDist;
+          spawnChest(cx, cz);
+          createFloatingText('Combo Reward Chest!', player.mesh.position, '#FFD700');
         }
         
         // Clear existing fade timer
@@ -6789,6 +6986,7 @@
         comboEl.style.opacity = '0';
         comboEl.style.animation = 'none';
         comboState.count = 0;
+        comboState.chestSpawned = false; // Reset chest spawn flag for next combo (Phase 3)
       }, COMBO_ANIMATION_DURATION);
     }
     
@@ -6895,40 +7093,46 @@
     let statusMessageFadeInterval = null;
     let statusMessageFadeTimeout = null;
     
+    // Phase 3: Stat Notification Queue System
+    const statNotificationQueue = [];
+    let isShowingNotification = false;
+
     function showStatChange(text) {
-      // Display message in status bar instead of floating text
-      const statusEl = document.getElementById('status-message');
-      if (!statusEl) return;
+      // Add to queue
+      statNotificationQueue.push(text);
       
-      // Clear any existing fade interval and timeout
-      if (statusMessageFadeInterval) {
-        clearInterval(statusMessageFadeInterval);
-        statusMessageFadeInterval = null;
+      // Start processing queue if not already processing
+      if (!isShowingNotification) {
+        processStatNotificationQueue();
       }
-      if (statusMessageFadeTimeout) {
-        clearTimeout(statusMessageFadeTimeout);
-        statusMessageFadeTimeout = null;
+    }
+
+    function processStatNotificationQueue() {
+      if (statNotificationQueue.length === 0) {
+        isShowingNotification = false;
+        return;
       }
+
+      isShowingNotification = true;
+      const text = statNotificationQueue.shift();
       
-      statusEl.innerText = text;
-      statusEl.style.color = '#FFD700';
-      statusEl.style.opacity = '1';
-      
-      // Clear after 3 seconds with fade out
-      statusMessageFadeTimeout = setTimeout(() => {
-        let opacity = 1;
-        statusMessageFadeInterval = setInterval(() => {
-          opacity -= 0.05;
-          if (opacity <= 0) {
-            clearInterval(statusMessageFadeInterval);
-            statusMessageFadeInterval = null;
-            statusEl.innerText = '';
-            statusEl.style.opacity = '1';
-          } else {
-            statusEl.style.opacity = opacity.toString();
-          }
-        }, 50);
-      }, 3000);
+      // Create notification element
+      const container = document.getElementById('stat-notifications');
+      const notification = document.createElement('div');
+      notification.className = 'stat-notification';
+      notification.innerText = text;
+      container.appendChild(notification);
+
+      // Fade out after 2 seconds
+      setTimeout(() => {
+        notification.style.animation = 'stat-fade-out 0.3s ease-out forwards';
+        
+        // Remove element and process next in queue
+        setTimeout(() => {
+          container.removeChild(notification);
+          processStatNotificationQueue();
+        }, 300);
+      }, 2000);
     }
 
     function gameOver() {
@@ -7532,9 +7736,20 @@
         return;
       }
 
-      const dt = (time - lastTime) / 1000;
+      let dt = (time - lastTime) / 1000;
       lastTime = time;
       gameTime = time / 1000; // Update game time in seconds
+      
+      // Phase 3: Lag compensation - cap deltaTime to prevent death spiral
+      const MAX_DELTA_TIME = 0.1; // 100ms cap
+      if (dt > MAX_DELTA_TIME) {
+        // Throttle warning to avoid console spam during sustained lag
+        if (!window.lastLagWarning || (Date.now() - window.lastLagWarning) > 5000) {
+          console.warn(`High deltaTime detected: ${dt.toFixed(3)}s, capping to ${MAX_DELTA_TIME}s`);
+          window.lastLagWarning = Date.now();
+        }
+        dt = MAX_DELTA_TIME;
+      }
       
       // Handle countdown sequence (PR #70)
       if (countdownActive) {
@@ -8162,7 +8377,14 @@
       goldCoins = goldCoins.filter(g => g.active);
       chests = chests.filter(c => c.active);
 
-      renderer.render(scene, camera);
+      // Phase 3: Render loop protection - wrap in try-catch to prevent freeze
+      try {
+        renderer.render(scene, camera);
+      } catch (error) {
+        console.error('Render error caught - game continues:', error);
+        // Log error details but continue - the game loop will recover naturally
+        // Active objects are already filtered above, so invalid objects are removed
+      }
       
       // Process disposal queue after rendering (PR #81)
       processDisposalQueue();
