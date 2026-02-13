@@ -235,6 +235,24 @@
       position: relative;
       margin-bottom: 5px;
       filter: drop-shadow(0 3px 8px rgba(0,0,0,0.5)) drop-shadow(0 0 15px rgba(93,173,226,0.4));
+      transition: transform 0.15s ease-out;
+    }
+    
+    #waterdrop-container.grow {
+      animation: waterdrop-grow 0.3s ease-out;
+    }
+    
+    @keyframes waterdrop-grow {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
+    
+    @keyframes waterdrop-slosh {
+      /* Reserved for future player movement reaction animation */
+      0%, 100% { transform: rotate(0deg); }
+      25% { transform: rotate(-2deg); }
+      75% { transform: rotate(2deg); }
     }
     
     #waterdrop-svg {
@@ -294,53 +312,52 @@
     }
     
     .stat-notification {
-      background: linear-gradient(to right, rgba(20, 0, 0, 0.95), rgba(40, 0, 0, 0.90));
-      border: 2px solid #FF0000;
-      border-radius: 8px;
-      padding: 12px 16px;
+      background: linear-gradient(to bottom, #3a3a3a 0%, #3a3a3a 50%, #6a6a6a 50%, #6a6a6a 100%);
+      border: 3px solid #2a2a2a;
+      border-radius: 20px;
+      padding: 10px 18px;
       margin-bottom: 10px;
       font-size: 15px;
       font-weight: bold;
-      color: #FF0000;
+      color: #FFD700;
       text-shadow: 
-        0 0 8px rgba(255,0,0,0.8),
-        0 0 16px rgba(255,0,0,0.6),
-        1px 1px 2px rgba(0,0,0,0.9);
+        -1px -1px 0 #000, 
+        1px -1px 0 #000, 
+        -1px 1px 0 #000, 
+        1px 1px 0 #000,
+        0 0 5px rgba(255,215,0,0.5);
       box-shadow: 
-        0 4px 8px rgba(0,0,0,0.8), 
-        0 0 20px rgba(255,0,0,0.5),
-        inset 0 0 10px rgba(255,0,0,0.2);
+        0 3px 8px rgba(0,0,0,0.3), 
+        inset 0 2px 4px rgba(0,0,0,0.2), 
+        0 0 15px rgba(0,0,0,0.5);
       animation: stat-float-in-right 0.4s ease-out;
+      display: inline-block;
+      max-width: fit-content;
+      white-space: nowrap;
     }
     
     .stat-notification.combo-high {
-      border-color: #8B0000;
-      color: #8B0000;
+      /* Keep same base style, just slightly brighter gold for combos */
+      color: #FFD700;
       text-shadow: 
-        0 0 12px rgba(139,0,0,0.9),
-        0 0 24px rgba(139,0,0,0.7),
-        2px 2px 4px rgba(0,0,0,0.9);
-      box-shadow: 
-        0 4px 12px rgba(0,0,0,0.9), 
-        0 0 30px rgba(139,0,0,0.7),
-        inset 0 0 15px rgba(139,0,0,0.3);
+        -1px -1px 0 #000, 
+        1px -1px 0 #000, 
+        -1px 1px 0 #000, 
+        1px 1px 0 #000,
+        0 0 8px rgba(255,215,0,0.7);
     }
     
     .stat-notification.combo-mythical {
-      border-color: #000000;
-      color: #1a0000;
-      background: linear-gradient(to right, rgba(10, 0, 0, 0.98), rgba(5, 0, 0, 0.95));
+      /* For mythical combos, add slight glow effect */
+      color: #FFD700;
       text-shadow: 
-        0 0 16px rgba(200,0,0,1.0),
-        0 0 32px rgba(200,0,0,0.9),
-        0 0 48px rgba(200,0,0,0.6),
-        3px 3px 6px rgba(0,0,0,1.0);
-      box-shadow: 
-        0 6px 16px rgba(0,0,0,1.0), 
-        0 0 40px rgba(200,0,0,0.9),
-        0 0 60px rgba(200,0,0,0.6),
-        inset 0 0 20px rgba(200,0,0,0.4);
-      animation: stat-float-in-right 0.4s ease-out, intense-glow 1s ease-in-out infinite alternate;
+        -1px -1px 0 #000, 
+        1px -1px 0 #000, 
+        -1px 1px 0 #000, 
+        1px 1px 0 #000,
+        0 0 12px rgba(255,215,0,0.9),
+        0 0 20px rgba(255,215,0,0.5);
+      animation: stat-float-in-right 0.4s ease-out, subtle-glow 2s ease-in-out infinite alternate;
     }
     
     @keyframes stat-float-in-right {
@@ -365,20 +382,18 @@
       }
     }
     
-    @keyframes intense-glow {
+    @keyframes subtle-glow {
       0% {
         box-shadow: 
-          0 6px 16px rgba(0,0,0,1.0), 
-          0 0 40px rgba(200,0,0,0.9),
-          0 0 60px rgba(200,0,0,0.6),
-          inset 0 0 20px rgba(200,0,0,0.4);
+          0 3px 8px rgba(0,0,0,0.3), 
+          inset 0 2px 4px rgba(0,0,0,0.2), 
+          0 0 15px rgba(255,215,0,0.3);
       }
       100% {
         box-shadow: 
-          0 6px 20px rgba(0,0,0,1.0), 
-          0 0 60px rgba(255,0,0,1.0),
-          0 0 100px rgba(255,0,0,0.8),
-          inset 0 0 30px rgba(255,0,0,0.6);
+          0 3px 8px rgba(0,0,0,0.3), 
+          inset 0 2px 4px rgba(0,0,0,0.2), 
+          0 0 25px rgba(255,215,0,0.5);
       }
     }
     
@@ -493,39 +508,120 @@
     }
 
     .upgrade-card {
-      background: linear-gradient(to bottom, #3a3a4e, #2a2a3e); /* Darker, menu-matching gradient */
+      /* Unified base color for all boxes */
+      background: linear-gradient(to bottom, #3a3a4e, #2a2a3e);
       margin: 10px 0;
       padding: 15px;
       border-radius: 15px;
-      border: 3px solid #FFD700; /* Golden border */
+      /* Default border (standard upgrades - grey) */
+      border: 3px solid #888888;
       cursor: pointer;
       transition: transform 0.1s, box-shadow 0.2s, filter 0.2s;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.5), 0 0 15px rgba(255,215,0,0.4), inset 0 0 0 2px rgba(0,0,0,0.4); /* Darker shadow and inner dark edge */
+      box-shadow: 0 4px 8px rgba(0,0,0,0.5), inset 0 0 0 2px rgba(0,0,0,0.4);
       position: relative;
     }
 
     .upgrade-card:hover {
-      /* Yellow/Blue Lightning effect on hover */
-      box-shadow: 0 0 20px rgba(255,215,0,0.8), 0 0 40px rgba(93,173,226,0.6), 0 0 60px rgba(255,215,0,0.4), inset 0 0 30px rgba(93,173,226,0.2);
-      border-color: #5DADE2;
+      box-shadow: 0 0 20px rgba(136,136,136,0.6), 0 0 40px rgba(136,136,136,0.4);
       filter: brightness(1.2);
       animation: lightning-pulse 0.5s ease-in-out infinite;
     }
 
     .upgrade-card:active {
       transform: scale(0.95);
-      /* Intense lightning flash on press */
-      box-shadow: 0 0 30px rgba(255,255,255,1), 0 0 60px rgba(93,173,226,1), 0 0 90px rgba(255,215,0,1), inset 0 0 40px rgba(255,255,255,0.3);
+      box-shadow: 0 0 30px rgba(255,255,255,0.5), 0 0 60px rgba(136,136,136,0.8);
       filter: brightness(1.5);
       animation: lightning-flash 0.3s ease;
     }
     
+    /* Weapon upgrades - Red edges */
+    .upgrade-card.weapon {
+      border-color: #FF4444;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.5), 0 0 15px rgba(255,68,68,0.3), inset 0 0 0 2px rgba(0,0,0,0.4);
+    }
+    
+    .upgrade-card.weapon:hover {
+      box-shadow: 0 0 20px rgba(255,68,68,0.8), 0 0 40px rgba(255,68,68,0.6);
+    }
+    
+    /* Class upgrades - Purple edges */
+    .upgrade-card.class {
+      border-color: #9b59b6;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.5), 0 0 15px rgba(155,89,182,0.3), inset 0 0 0 2px rgba(0,0,0,0.4);
+    }
+    
+    .upgrade-card.class:hover {
+      box-shadow: 0 0 20px rgba(155,89,182,0.8), 0 0 40px rgba(155,89,182,0.6);
+    }
+    
+    /* Rarity-based edge colors */
+    .upgrade-card.rarity-common {
+      border-color: #888888;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.5), inset 0 0 0 2px rgba(0,0,0,0.4);
+    }
+    
+    .upgrade-card.rarity-rare {
+      border-color: #2ecc71;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.5), 0 0 15px rgba(46,204,113,0.3), inset 0 0 0 2px rgba(0,0,0,0.4);
+    }
+    
+    .upgrade-card.rarity-rare:hover {
+      box-shadow: 0 0 20px rgba(46,204,113,0.8), 0 0 40px rgba(46,204,113,0.6);
+    }
+    
+    .upgrade-card.rarity-epic {
+      border-color: #9b59b6;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.5), 0 0 15px rgba(155,89,182,0.3), inset 0 0 0 2px rgba(0,0,0,0.4);
+    }
+    
+    .upgrade-card.rarity-epic:hover {
+      box-shadow: 0 0 20px rgba(155,89,182,0.8), 0 0 40px rgba(155,89,182,0.6);
+    }
+    
+    .upgrade-card.rarity-legendary {
+      border-color: #FFA500;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.5), 0 0 20px rgba(255,165,0,0.5), inset 0 0 0 2px rgba(0,0,0,0.4);
+      animation: legendary-glow 2s ease-in-out infinite alternate;
+    }
+    
+    .upgrade-card.rarity-legendary:hover {
+      box-shadow: 0 0 25px rgba(255,165,0,1), 0 0 50px rgba(255,165,0,0.8);
+    }
+    
+    .upgrade-card.rarity-mythical {
+      border-color: #FF4444;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.5), 0 0 20px rgba(255,68,68,0.5), inset 0 0 0 2px rgba(0,0,0,0.4);
+      animation: mythical-glow 1.5s ease-in-out infinite alternate;
+    }
+    
+    .upgrade-card.rarity-mythical:hover {
+      box-shadow: 0 0 25px rgba(255,68,68,1), 0 0 50px rgba(255,68,68,0.8);
+    }
+    
+    @keyframes legendary-glow {
+      0% { 
+        box-shadow: 0 4px 8px rgba(0,0,0,0.5), 0 0 20px rgba(255,165,0,0.5), inset 0 0 0 2px rgba(0,0,0,0.4);
+      }
+      100% { 
+        box-shadow: 0 4px 8px rgba(0,0,0,0.5), 0 0 30px rgba(255,165,0,0.8), 0 0 50px rgba(255,165,0,0.4), inset 0 0 0 2px rgba(0,0,0,0.4);
+      }
+    }
+    
+    @keyframes mythical-glow {
+      0% { 
+        box-shadow: 0 4px 8px rgba(0,0,0,0.5), 0 0 20px rgba(255,68,68,0.5), inset 0 0 0 2px rgba(0,0,0,0.4);
+      }
+      100% { 
+        box-shadow: 0 4px 8px rgba(0,0,0,0.5), 0 0 30px rgba(255,68,68,0.8), 0 0 50px rgba(255,68,68,0.4), inset 0 0 0 2px rgba(0,0,0,0.4);
+      }
+    }
+    
     @keyframes lightning-pulse {
       0%, 100% { 
-        box-shadow: 0 0 20px rgba(255,215,0,0.8), 0 0 40px rgba(93,173,226,0.6), 0 0 60px rgba(255,215,0,0.4), inset 0 0 30px rgba(93,173,226,0.2);
+        filter: brightness(1.2);
       }
       50% { 
-        box-shadow: 0 0 25px rgba(255,215,0,1), 0 0 50px rgba(93,173,226,0.8), 0 0 75px rgba(255,215,0,0.6), inset 0 0 35px rgba(93,173,226,0.3);
+        filter: brightness(1.3);
       }
     }
 
@@ -545,30 +641,31 @@
       display: block; /* Make descriptions visible for clarity */
     }
     
-    /* Special upgrade cards */
+    /* Perk upgrades (same as class) */
     .upgrade-card.perk {
       border-color: #9b59b6;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.3), 0 0 20px rgba(155,89,182,0.6);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.5), 0 0 15px rgba(155,89,182,0.3), inset 0 0 0 2px rgba(0,0,0,0.4);
       animation: perkPulse 2s infinite;
     }
     
     .upgrade-card.perk:hover {
-      box-shadow: 0 6px 12px rgba(155,89,182,0.8), 0 0 30px rgba(155,89,182,0.7);
+      box-shadow: 0 0 20px rgba(155,89,182,0.8), 0 0 40px rgba(155,89,182,0.6);
     }
     
-    .upgrade-card.legendary {
-      border-color: #ff6b6b;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.3), 0 0 20px rgba(255,107,107,0.6);
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    /* Highest possible upgrade gets legendary treatment */
+    .upgrade-card.max-upgrade {
+      border-color: #FFA500;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.5), 0 0 20px rgba(255,165,0,0.5), inset 0 0 0 2px rgba(0,0,0,0.4);
+      animation: legendary-glow 2s ease-in-out infinite alternate;
     }
     
-    .upgrade-card.legendary:hover {
-      box-shadow: 0 6px 12px rgba(255,107,107,0.8), 0 0 30px rgba(255,107,107,0.7);
+    .upgrade-card.max-upgrade:hover {
+      box-shadow: 0 0 25px rgba(255,165,0,1), 0 0 50px rgba(255,165,0,0.8);
     }
     
     @keyframes perkPulse {
-      0%, 100% { box-shadow: 0 4px 8px rgba(0,0,0,0.3), 0 0 20px rgba(155,89,182,0.6); }
-      50% { box-shadow: 0 4px 8px rgba(0,0,0,0.3), 0 0 30px rgba(155,89,182,0.9); }
+      0%, 100% { box-shadow: 0 4px 8px rgba(0,0,0,0.5), 0 0 15px rgba(155,89,182,0.3); }
+      50% { box-shadow: 0 4px 8px rgba(0,0,0,0.5), 0 0 25px rgba(155,89,182,0.6); }
     }
 
     /* Damage Numbers */
@@ -1359,20 +1456,34 @@
           <!-- Definitions -->
           <defs>
             <clipPath id="waterdrop-clip">
-              <path d="M 50 10 Q 30 30, 30 60 Q 30 90, 50 110 Q 70 90, 70 60 Q 70 30, 50 10 Z" />
+              <!-- Waterdrop shape: top(50,10), left curve(25), right curve(75), bottom(50,110) -->
+              <path d="M 50 10 C 35 20, 25 35, 25 60 C 25 85, 35 100, 50 110 C 65 100, 75 85, 75 60 C 75 35, 65 20, 50 10 Z" />
             </clipPath>
             <linearGradient id="exp-gradient" x1="0%" y1="100%" x2="0%" y2="0%">
               <stop offset="0%" style="stop-color:#3498DB;stop-opacity:1" />
               <stop offset="100%" style="stop-color:#5DADE2;stop-opacity:1" />
             </linearGradient>
+            <!-- Water animation filter for bubbles/shimmer -->
+            <filter id="water-turbulence" x="0%" y="0%" width="100%" height="100%">
+              <!-- Seed value 2 provides consistent gentle water turbulence pattern -->
+              <feTurbulence baseFrequency="0.02" numOctaves="3" seed="2">
+                <animate attributeName="baseFrequency" 
+                         from="0.02" to="0.025" 
+                         dur="3s" 
+                         repeatCount="indefinite"/>
+              </feTurbulence>
+              <feDisplacementMap in="SourceGraphic" scale="3"/>
+            </filter>
           </defs>
           <!-- Background -->
-          <path d="M 50 10 Q 30 30, 30 60 Q 30 90, 50 110 Q 70 90, 70 60 Q 70 30, 50 10 Z" 
+          <path d="M 50 10 C 35 20, 25 35, 25 60 C 25 85, 35 100, 50 110 C 65 100, 75 85, 75 60 C 75 35, 65 20, 50 10 Z" 
                 fill="rgba(58,58,58,0.8)" stroke="#2a2a2a" stroke-width="3"/>
           <!-- EXP Fill (clips to waterdrop shape, fills from bottom to top) -->
           <g clip-path="url(#waterdrop-clip)">
             <rect id="waterdrop-exp-fill" x="0" y="10" width="100" height="110" 
-                  fill="url(#exp-gradient)" />
+                  fill="url(#exp-gradient)" 
+                  filter="url(#water-turbulence)" 
+                  opacity="0.9"/>
           </g>
           <!-- Level text -->
           <text id="waterdrop-level-text" x="50" y="70" 
@@ -3885,12 +3996,13 @@
       constructor(x, z) {
         // Create 6-sided star shape
         const starShape = new THREE.Shape();
-        const outerRadius = 0.36;
-        const innerRadius = 0.18;
-        const points = 6;
+        const outerRadius = 0.4;
+        const innerRadius = 0.16;
+        const points = 5; // 5-point star like Super Mario
+        const STAR_ROTATION_OFFSET = Math.PI / 2; // Rotate to start from top point.
         
         for (let i = 0; i < points * 2; i++) {
-          const angle = (i / (points * 2)) * Math.PI * 2;
+          const angle = (i / (points * 2)) * Math.PI * 2 - STAR_ROTATION_OFFSET;
           const radius = i % 2 === 0 ? outerRadius : innerRadius;
           const x = Math.cos(angle) * radius;
           const y = Math.sin(angle) * radius;
@@ -3904,11 +4016,11 @@
         starShape.closePath();
         
         const extrudeSettings = {
-          depth: 0.1,
+          depth: 0.12,
           bevelEnabled: true,
-          bevelThickness: 0.05,
-          bevelSize: 0.05,
-          bevelSegments: 2
+          bevelThickness: 0.08,
+          bevelSize: 0.08,
+          bevelSegments: 3
         };
         
         const geometry = new THREE.ExtrudeGeometry(starShape, extrudeSettings);
@@ -6248,6 +6360,14 @@
 
     function addExp(amount) {
       playerStats.exp += amount;
+      
+      // Trigger waterdrop grow animation on XP pickup
+      const waterdropContainer = document.getElementById('waterdrop-container');
+      waterdropContainer.classList.add('grow');
+      setTimeout(() => {
+        waterdropContainer.classList.remove('grow');
+      }, 300);
+      
       if (playerStats.exp >= playerStats.expReq) {
         levelUp();
       }
@@ -7325,12 +7445,28 @@
         const card = document.createElement('div');
         card.className = 'upgrade-card';
         
-        // Add special styling for perks and powerful upgrades
-        if (u.id && u.id.startsWith('perk_')) {
-          card.className += ' perk';
-        } else if (u.id && (u.id.includes('dash_mastery') || u.id.includes('second_wind') || 
-                            u.id.includes('berserker_rage') || u.id.includes('lucky_strikes'))) {
-          card.className += ' legendary';
+        // Add appropriate styling classes based on upgrade type
+        if (u.id) {
+          // Class upgrades
+          if (u.id.startsWith('class_')) {
+            card.className += ' class';
+          }
+          // Perk upgrades (class-like purple edges)
+          else if (u.id.startsWith('perk_')) {
+            card.className += ' perk';
+          }
+          // Weapon upgrades
+          else if (u.id.includes('gun_') || u.id.includes('sword_') || u.id.includes('aura_') || 
+                   u.id.includes('meteor_') || u.id.includes('drone_') || u.id.includes('double_barrel_') ||
+                   u.id.includes('ice_spear_') || u.id.includes('fire_ring_')) {
+            card.className += ' weapon';
+          }
+          
+          // Special powerful upgrades get max-upgrade legendary glow
+          if (u.id.includes('dash_mastery') || u.id.includes('second_wind') || 
+              u.id.includes('berserker_rage') || u.id.includes('lucky_strikes')) {
+            card.className += ' max-upgrade';
+          }
         }
         
         // Phase 1: Text-only upgrade cards (removed icons as requested)
@@ -7665,7 +7801,9 @@
             const cx = player.mesh.position.x + Math.cos(chestAngle) * chestDist;
             const cz = player.mesh.position.z + Math.sin(chestAngle) * chestDist;
             spawnChest(cx, cz, chestTier);
-            showStatChange(`Combo Lost! ${chestTier.toUpperCase()} Chest Spawned!`);
+            // Show only in stat bar: "combo lost" and chest rarity (no text on main screen)
+            const tierCapitalized = chestTier.charAt(0).toUpperCase() + chestTier.slice(1);
+            showStatChange(`Combo lost - ${tierCapitalized} chest`);
           }
         }
         
