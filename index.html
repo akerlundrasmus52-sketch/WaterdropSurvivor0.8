@@ -2369,6 +2369,7 @@
         this.auraCircle.rotation.x = -Math.PI / 2; // Lay flat on ground
         this.auraCircle.position.y = 0.1;
         this.auraCircle.visible = false;
+        this.currentAuraRange = 0; // Track current range to avoid recreating geometry
         scene.add(this.auraCircle);
         
         // Fire Ring Orbs (visible when fireRing weapon is active)
@@ -2604,10 +2605,13 @@
           this.auraCircle.position.x = this.mesh.position.x;
           this.auraCircle.position.z = this.mesh.position.z;
           
-          // Scale based on aura range
+          // Scale based on aura range - only recreate geometry if range changed
           const scale = weapons.aura.range * 2;
-          this.auraCircle.geometry.dispose();
-          this.auraCircle.geometry = new THREE.RingGeometry(scale - 0.5, scale, 16); // Reduced segments for performance
+          if (this.currentAuraRange !== scale) {
+            this.currentAuraRange = scale;
+            this.auraCircle.geometry.dispose();
+            this.auraCircle.geometry = new THREE.RingGeometry(scale - 0.5, scale, 16); // Reduced segments for performance
+          }
           
           // Rotate and pulse
           this.auraCircle.rotation.z += 0.02;
