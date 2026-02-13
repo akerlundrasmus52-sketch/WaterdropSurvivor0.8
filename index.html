@@ -7385,6 +7385,10 @@
       modal.style.display = 'flex';
     }
 
+    // Waterdrop dimensions constants (match SVG viewBox)
+    const WATERDROP_SVG_HEIGHT = 120; // Total SVG viewBox height
+    const WATERDROP_FILL_HEIGHT = 110; // Fillable area height (waterdrop shape)
+    
     function updateHUD() {
       const hpPct = (playerStats.hp / playerStats.maxHp) * 100;
       document.getElementById('hp-fill').style.width = `${Math.max(0, hpPct)}%`;
@@ -7404,8 +7408,8 @@
       
       // Update waterdrop EXP fill (fills from bottom to top like a thermometer)
       const waterdropFill = document.getElementById('waterdrop-exp-fill');
-      const fillHeight = 110 * (expPct / 100); // 110 is the height of the waterdrop
-      const fillY = 120 - fillHeight; // Start from bottom (120 is total SVG height)
+      const fillHeight = WATERDROP_FILL_HEIGHT * (expPct / 100);
+      const fillY = WATERDROP_SVG_HEIGHT - fillHeight;
       waterdropFill.setAttribute('y', fillY);
       waterdropFill.setAttribute('height', fillHeight);
     }
@@ -7414,6 +7418,17 @@
     
     // Combo System - Red/Black Theme
     const COMBO_ANIMATION_DURATION = 500; // milliseconds - matches CSS animation duration
+    
+    // Helper function to determine chest tier based on combo count
+    function getChestTierForCombo(comboCount) {
+      if (comboCount >= 14) return 'mythical';
+      if (comboCount >= 12) return 'epic';
+      if (comboCount >= 10) return 'rare';
+      if (comboCount >= 9) return 'uncommon';
+      if (comboCount >= 7) return 'common';
+      return null;
+    }
+    
     let comboState = {
       count: 0,
       lastKillTime: 0,
@@ -7443,20 +7458,12 @@
         // Spawn chest on specific combo milestones:
         // 7 kills: Common (white), 9 kills: Uncommon (green), 10 kills: Rare (blue)
         // 12 kills: Epic (purple), 14 (GODLIKE): Mythical (special)
-        let chestTier = null;
-        if (comboState.count === 14) {
-          chestTier = 'mythical';
-        } else if (comboState.count === 12) {
-          chestTier = 'epic';
-        } else if (comboState.count === 10) {
-          chestTier = 'rare';
-        } else if (comboState.count === 9) {
-          chestTier = 'uncommon';
-        } else if (comboState.count === 7) {
-          chestTier = 'common';
-        }
+        const chestTier = getChestTierForCombo(comboState.count);
+        const isMilestone = comboState.count === 7 || comboState.count === 9 || 
+                           comboState.count === 10 || comboState.count === 12 || 
+                           comboState.count === 14;
         
-        if (chestTier && !comboState.topCombos.includes(comboState.count)) {
+        if (chestTier && isMilestone && !comboState.topCombos.includes(comboState.count)) {
           comboState.topCombos.push(comboState.count);
           const chestAngle = Math.random() * Math.PI * 2;
           const chestDist = 10 + Math.random() * 5;
@@ -7488,7 +7495,7 @@
       let comboLevel = 'normal'; // for styling classes
       
       if (comboState.count >= 15) {
-        const godlikeMultiplier = comboState.count - 13;
+        const godlikeMultiplier = comboState.count - 14;
         message = `GODLIKE x${godlikeMultiplier}`;
         comboLevel = 'mythical';
       } else if (comboState.count === 14) {
@@ -7651,22 +7658,15 @@
         
         // Spawn chest when combo is lost at 10+ kills
         if (comboState.count >= 10) {
-          // Determine tier based on combo count
-          let chestTier = 'common';
-          if (comboState.count >= 14) {
-            chestTier = 'mythical';
-          } else if (comboState.count >= 12) {
-            chestTier = 'epic';
-          } else if (comboState.count >= 10) {
-            chestTier = 'rare';
+          const chestTier = getChestTierForCombo(comboState.count);
+          if (chestTier) {
+            const chestAngle = Math.random() * Math.PI * 2;
+            const chestDist = 10 + Math.random() * 5;
+            const cx = player.mesh.position.x + Math.cos(chestAngle) * chestDist;
+            const cz = player.mesh.position.z + Math.sin(chestAngle) * chestDist;
+            spawnChest(cx, cz, chestTier);
+            showStatChange(`Combo Lost! ${chestTier.toUpperCase()} Chest Spawned!`);
           }
-          
-          const chestAngle = Math.random() * Math.PI * 2;
-          const chestDist = 10 + Math.random() * 5;
-          const cx = player.mesh.position.x + Math.cos(chestAngle) * chestDist;
-          const cz = player.mesh.position.z + Math.sin(chestAngle) * chestDist;
-          spawnChest(cx, cz, chestTier);
-          showStatChange(`Combo Lost! ${chestTier.toUpperCase()} Chest Spawned!`);
         }
         
         comboState.count = 0;
