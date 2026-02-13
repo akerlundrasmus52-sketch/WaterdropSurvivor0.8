@@ -1768,6 +1768,9 @@
     let droneTurrets = []; // Track active drone turrets
     let lastTime = null; // Initialize as null for proper first-frame detection (PR #82 fix)
     
+    // Phase 5: Initialize particle object pool for performance
+    let particlePool = null; // Will be initialized after scene is created
+    
     // Deferred disposal queue for Three.js memory management (PR #81)
     const disposalQueue = [];
     const MAX_DISPOSALS_PER_FRAME = 10;
@@ -2037,6 +2040,9 @@
         this.trailTimer = 0;
         this.wobblePhase = 0;
         
+        // Phase 5: Low health water bleed timer
+        this.waterBleedTimer = 0;
+        
         // Dash
         this.isDashing = false;
         this.dashTime = 0;
@@ -2066,6 +2072,20 @@
           }
         } else {
           this.mesh.material.opacity = 0.75; // Normal opacity
+        }
+        
+        // Phase 5: Water bleed effect when health < 30%
+        const healthPercent = playerStats.hp / playerStats.maxHp;
+        if (healthPercent < 0.3) {
+          this.waterBleedTimer += dt;
+          if (this.waterBleedTimer > 0.08) { // Fast drip
+            this.waterBleedTimer = 0;
+            spawnWaterDroplet(this.mesh.position);
+            // Add blue water particles trailing behind
+            if (Math.random() < 0.5) {
+              spawnParticles(this.mesh.position, COLORS.player, 1);
+            }
+          }
         }
         
         // Dash Logic
@@ -2951,6 +2971,9 @@
       }
 
       takeDamage(amount, isCrit = false) {
+        // Phase 5: Hit impact particles (flesh/blood) on every hit
+        spawnParticles(this.mesh.position, 0x8B0000, 3); // Blood particles
+        
         // Phase 3: Apply armor reduction for MiniBoss
         let finalAmount = amount;
         if (this.armor > 0) {
@@ -3133,82 +3156,139 @@
       die() {
         this.isDead = true;
         
+        // Phase 5: Death Variety - 50% explode into pieces, 50% leave corpse sprite
+        const explodeIntoPieces = Math.random() < 0.5;
+        
         // More dramatic explosion effect on death
         const enemyColor = this.mesh.material.color.getHex();
         
-        // Main explosion - ENHANCED with more particles
-        spawnParticles(this.mesh.position, enemyColor, 40);
-        spawnParticles(this.mesh.position, 0xFFFFFF, 15);
-        spawnParticles(this.mesh.position, 0x8B0000, 12); // Blood particles
-        
-        // Add explosion ring effect
-        const ringGeo = new THREE.RingGeometry(0.1, 0.2, 16);
-        const ringMat = new THREE.MeshBasicMaterial({ 
-          color: enemyColor, 
-          transparent: true, 
-          opacity: 0.8,
-          side: THREE.DoubleSide
-        });
-        const ring = new THREE.Mesh(ringGeo, ringMat);
-        ring.position.copy(this.mesh.position);
-        ring.position.y = 0.1;
-        ring.rotation.x = Math.PI / 2;
-        scene.add(ring);
-        
-        // Animate ring expanding and fading
-        let ringLife = 20;
-        const animateRing = () => {
-          ringLife--;
-          const scale = 1 + (20 - ringLife) * 0.3;
-          ring.scale.set(scale, scale, 1);
-          ring.material.opacity = ringLife / 20;
+        if (explodeIntoPieces) {
+          // EXPLOSION DEATH: Main explosion - ENHANCED with more particles
+          spawnParticles(this.mesh.position, enemyColor, 40);
+          spawnParticles(this.mesh.position, 0xFFFFFF, 15);
+          spawnParticles(this.mesh.position, 0x8B0000, 12); // Blood particles
           
-          if (ringLife <= 0) {
-            scene.remove(ring);
-            ring.geometry.dispose();
-            ring.material.dispose();
-          } else {
-            requestAnimationFrame(animateRing);
-          }
-        };
-        animateRing();
-        
-        // Explode into more pieces - ENHANCED
-        const pieceCount = this.isMiniBoss ? 25 : 15; // More pieces for mini-boss
-        for(let i = 0; i < pieceCount; i++) {
-          const piece = new THREE.Mesh(
-            new THREE.BoxGeometry(0.3, 0.3, 0.3),
-            new THREE.MeshBasicMaterial({ color: enemyColor, transparent: true })
-          );
-          piece.position.copy(this.mesh.position);
-          scene.add(piece);
+          // Add explosion ring effect
+          const ringGeo = new THREE.RingGeometry(0.1, 0.2, 16);
+          const ringMat = new THREE.MeshBasicMaterial({ 
+            color: enemyColor, 
+            transparent: true, 
+            opacity: 0.8,
+            side: THREE.DoubleSide
+          });
+          const ring = new THREE.Mesh(ringGeo, ringMat);
+          ring.position.copy(this.mesh.position);
+          ring.position.y = 0.1;
+          ring.rotation.x = Math.PI / 2;
+          scene.add(ring);
           
-          const angle = (i / pieceCount) * Math.PI * 2;
-          const speed = this.isMiniBoss ? 0.6 : 0.4; // Faster explosion for mini-boss
-          const vel = new THREE.Vector3(
-            Math.cos(angle) * speed,
-            0.3 + Math.random() * 0.3,
-            Math.sin(angle) * speed
-          );
-          
-          let life = 50;
-          const updatePiece = () => {
-            life--;
-            piece.position.add(vel);
-            vel.y -= 0.02; // Gravity
-            piece.rotation.x += 0.15;
-            piece.rotation.y += 0.15;
-            piece.material.opacity = life / 50;
+          // Animate ring expanding and fading
+          let ringLife = 20;
+          const animateRing = () => {
+            ringLife--;
+            const scale = 1 + (20 - ringLife) * 0.3;
+            ring.scale.set(scale, scale, 1);
+            ring.material.opacity = ringLife / 20;
             
-            if (life <= 0 || piece.position.y < 0) {
-              scene.remove(piece);
-              piece.geometry.dispose();
-              piece.material.dispose();
+            if (ringLife <= 0) {
+              scene.remove(ring);
+              ring.geometry.dispose();
+              ring.material.dispose();
             } else {
-              requestAnimationFrame(updatePiece);
+              requestAnimationFrame(animateRing);
             }
           };
-          updatePiece();
+          animateRing();
+          
+          // Explode into more pieces - ENHANCED
+          const pieceCount = this.isMiniBoss ? 25 : 15; // More pieces for mini-boss
+          for(let i = 0; i < pieceCount; i++) {
+            const piece = new THREE.Mesh(
+              new THREE.BoxGeometry(0.3, 0.3, 0.3),
+              new THREE.MeshBasicMaterial({ color: enemyColor, transparent: true })
+            );
+            piece.position.copy(this.mesh.position);
+            scene.add(piece);
+            
+            const angle = (i / pieceCount) * Math.PI * 2;
+            const speed = this.isMiniBoss ? 0.6 : 0.4; // Faster explosion for mini-boss
+            const vel = new THREE.Vector3(
+              Math.cos(angle) * speed,
+              0.3 + Math.random() * 0.3,
+              Math.sin(angle) * speed
+            );
+            
+            let life = 50;
+            const updatePiece = () => {
+              life--;
+              piece.position.add(vel);
+              vel.y -= 0.02; // Gravity
+              piece.rotation.x += 0.15;
+              piece.rotation.y += 0.15;
+              piece.material.opacity = life / 50;
+              
+              if (life <= 0 || piece.position.y < 0) {
+                scene.remove(piece);
+                piece.geometry.dispose();
+                piece.material.dispose();
+              } else {
+                requestAnimationFrame(updatePiece);
+              }
+            };
+            updatePiece();
+          }
+        } else {
+          // CORPSE DEATH: Leave a corpse sprite that fades away
+          spawnParticles(this.mesh.position, enemyColor, 15);
+          spawnParticles(this.mesh.position, 0x8B0000, 8); // Blood particles
+          
+          // Create flat corpse sprite (flattened version of enemy)
+          const corpseGeo = new THREE.CircleGeometry(0.6, 16);
+          const corpseMat = new THREE.MeshBasicMaterial({ 
+            color: enemyColor, 
+            transparent: true,
+            opacity: 0.7,
+            side: THREE.DoubleSide
+          });
+          const corpse = new THREE.Mesh(corpseGeo, corpseMat);
+          corpse.position.copy(this.mesh.position);
+          corpse.position.y = 0.02; // Just above ground
+          corpse.rotation.x = -Math.PI / 2; // Lay flat
+          scene.add(corpse);
+          
+          // Add blood pool under corpse
+          const bloodGeo = new THREE.CircleGeometry(0.8, 16);
+          const bloodMat = new THREE.MeshBasicMaterial({ 
+            color: 0x8B0000, 
+            transparent: true,
+            opacity: 0.5,
+            side: THREE.DoubleSide
+          });
+          const bloodPool = new THREE.Mesh(bloodGeo, bloodMat);
+          bloodPool.position.copy(this.mesh.position);
+          bloodPool.position.y = 0.01; // Just above ground
+          bloodPool.rotation.x = -Math.PI / 2;
+          scene.add(bloodPool);
+          
+          // Fade out corpse over time (approximately 2 seconds)
+          let corpseLife = 120;
+          const fadeCorpse = () => {
+            corpseLife--;
+            corpse.material.opacity = (corpseLife / 120) * 0.7;
+            bloodPool.material.opacity = (corpseLife / 120) * 0.5;
+            
+            if (corpseLife <= 0) {
+              scene.remove(corpse);
+              scene.remove(bloodPool);
+              corpse.geometry.dispose();
+              corpse.material.dispose();
+              bloodPool.geometry.dispose();
+              bloodPool.material.dispose();
+            } else {
+              requestAnimationFrame(fadeCorpse);
+            }
+          };
+          fadeCorpse();
         }
         
         // Screen flash on kill (dopamine boost) - stronger flash for mini-boss
@@ -3613,6 +3693,50 @@
       }
     }
 
+    // Phase 5: Object Pooling System for Particles (Performance Critical)
+    class ObjectPool {
+      constructor(createFn, resetFn, initialSize = 100) {
+        this.createFn = createFn;
+        this.resetFn = resetFn;
+        this.pool = [];
+        this.activeSet = new Set(); // Use Set for O(1) lookups instead of array
+        
+        // Pre-allocate initial pool
+        for (let i = 0; i < initialSize; i++) {
+          this.pool.push(this.createFn());
+        }
+      }
+      
+      get() {
+        let obj;
+        if (this.pool.length > 0) {
+          obj = this.pool.pop();
+        } else {
+          obj = this.createFn();
+        }
+        this.activeSet.add(obj);
+        return obj;
+      }
+      
+      release(obj) {
+        if (this.activeSet.has(obj)) {
+          this.activeSet.delete(obj);
+          this.resetFn(obj);
+          this.pool.push(obj);
+        }
+      }
+      
+      clear() {
+        // Clean up all objects
+        for (const obj of this.activeSet) {
+          if (obj.mesh && obj.mesh.parent) {
+            scene.remove(obj.mesh);
+          }
+        }
+        this.activeSet.clear();
+      }
+    }
+
     class Particle {
       constructor(pos, color) {
         const geo = new THREE.BoxGeometry(0.2, 0.2, 0.2);
@@ -3626,6 +3750,21 @@
           (Math.random() - 0.5) * 0.3
         );
         
+        scene.add(this.mesh);
+        this.life = 30;
+      }
+      
+      reset(pos, color) {
+        // Reuse existing particle
+        this.mesh.position.copy(pos);
+        this.mesh.material.color.setHex(color);
+        this.vel.set(
+          (Math.random() - 0.5) * 0.3,
+          Math.random() * 0.3,
+          (Math.random() - 0.5) * 0.3
+        );
+        this.mesh.rotation.set(0, 0, 0);
+        this.mesh.visible = true;
         scene.add(this.mesh);
         this.life = 30;
       }
@@ -3646,11 +3785,19 @@
         
         if (this.life <= 0) {
           scene.remove(this.mesh);
-          this.mesh.geometry.dispose();
-          this.mesh.material.dispose();
+          this.mesh.visible = false;
           return false;
         }
         return true;
+      }
+      
+      dispose() {
+        // Only called on final cleanup
+        if (this.mesh) {
+          scene.remove(this.mesh);
+          this.mesh.geometry.dispose();
+          this.mesh.material.dispose();
+        }
       }
     }
 
@@ -4518,95 +4665,83 @@
       ripple.userData = { isWaterRipple: true, phase: 0 };
       scene.add(ripple);
 
-      // Phase 4: Old Wagon Roads connecting areas (gravel with grass strip in middle)
-      const roadMat = new THREE.MeshPhysicalMaterial({ 
-        color: 0x8B7355, // Brown-gray for gravel/dirt
+      // Phase 5: New Map Design - Clean Rondel and Main Paths (replacing Wagon Roads)
+      
+      // Central Rondel - Circular paved/gravel area around statue
+      const rondelMat = new THREE.MeshPhysicalMaterial({ 
+        color: 0xA8A8A8, // Light gray stone/gravel
         metalness: 0.0,
-        roughness: 0.95, // Very rough for dirt/gravel texture
+        roughness: 0.8,
       });
-      const roadGeo = new THREE.PlaneGeometry(4, 4);
+      const rondelRadius = 10;
+      const rondelGeo = new THREE.CircleGeometry(rondelRadius, 64);
+      const rondel = new THREE.Mesh(rondelGeo, rondelMat);
+      rondel.rotation.x = -Math.PI/2;
+      rondel.position.set(0, 0.02, 0);
+      rondel.receiveShadow = true;
+      scene.add(rondel);
       
-      // Grass strip material for the middle of wagon roads
-      const grassStripMat = new THREE.MeshPhysicalMaterial({
-        color: 0x4a7c3e, // Darker green for overgrown grass
+      // Path material - smooth dirt/gravel path
+      const pathMat = new THREE.MeshPhysicalMaterial({ 
+        color: 0x9A8A6A, // Light brown dirt
         metalness: 0.0,
-        roughness: 0.9
+        roughness: 0.85,
       });
-      const grassStripGeo = new THREE.PlaneGeometry(1, 4); // Narrow grass strip
       
-      // Helper function to create smooth curved road between two points
-      function createCurvedRoad(startX, startZ, endX, endZ, segments, curve = 0) {
-        for(let i = 0; i <= segments; i++) {
-          const t = i / segments;
-          // Smooth interpolation with optional curve
-          const x = startX + (endX - startX) * t + Math.sin(t * Math.PI) * curve;
-          const z = startZ + (endZ - startZ) * t + Math.sin(t * Math.PI) * curve;
-          
-          const road = new THREE.Mesh(roadGeo, roadMat);
-          road.rotation.x = -Math.PI/2;
-          road.position.set(x, 0.03, z);
-          road.receiveShadow = true;
-          scene.add(road);
-          
-          // Phase 4: Add grass strip in the middle of the wagon road
-          const grassStrip = new THREE.Mesh(grassStripGeo, grassStripMat);
-          grassStrip.rotation.x = -Math.PI/2;
-          grassStrip.position.set(x, 0.04, z); // Slightly higher than road
-          grassStrip.receiveShadow = true;
-          scene.add(grassStrip);
-        }
-      }
-      
-      // Main roads connecting key locations:
-      // 1. Statue (0,0) to Windmill (40,40) - curved path
-      createCurvedRoad(0, 0, 40, 40, 25, 3);
-      
-      // 2. Statue (0,0) to Cabin (-20,-20) - curved path
-      createCurvedRoad(0, 0, -20, -20, 15, -2);
-      
-      // 3. Phase 4: Statue (0,0) to Stonehenge (60,60) - curved path (updated location)
-      createCurvedRoad(0, 0, 60, 60, 30, 5);
-      
-      // 4. Statue (0,0) to Pyramid (50,-50) - curved path
-      createCurvedRoad(0, 0, 50, -50, 35, -4);
-      
-      // 5. Statue (0,0) to Mine (-40,40) - curved path
-      createCurvedRoad(0, 0, -40, 40, 25, 4);
-      
-      // 6. Windmill (40,40) to Farm (35,35) - short connecting road
-      createCurvedRoad(40, 40, 35, 35, 8, 0);
-      
-      // 6b. Phase 4: Statue (0,0) to Lake (30,-30) - curved path
-      createCurvedRoad(0, 0, 30, -30, 20, 2);
-      
-      // 7. Circular road around statue - smooth ring road for patrol area
-      for(let i = 0; i < 60; i++) {
-        const road = new THREE.Mesh(roadGeo, roadMat);
-        road.rotation.x = -Math.PI/2;
-        const angle = (i / 60) * Math.PI * 2;
-        const x = Math.cos(angle) * 8; // Smaller circle around statue
-        const z = Math.sin(angle) * 8;
-        road.position.set(x, 0.03, z);
-        road.receiveShadow = true;
-        scene.add(road);
+      // Helper function to create smooth straight path
+      function createPath(startX, startZ, endX, endZ, width = 3) {
+        const length = Math.sqrt((endX - startX) ** 2 + (endZ - startZ) ** 2);
+        const angle = Math.atan2(endZ - startZ, endX - startX);
         
-        // Phase 4: Add grass strip in the middle of circular wagon road
-        const grassStrip = new THREE.Mesh(grassStripGeo, grassStripMat);
-        grassStrip.rotation.x = -Math.PI/2;
-        grassStrip.position.set(x, 0.04, z);
-        grassStrip.receiveShadow = true;
-        scene.add(grassStrip);
+        // Create path as single mesh for performance
+        const pathGeo = new THREE.PlaneGeometry(width, length);
+        const path = new THREE.Mesh(pathGeo, pathMat);
+        path.rotation.x = -Math.PI/2;
+        path.rotation.z = angle - Math.PI/2;
+        path.position.set((startX + endX) / 2, 0.02, (startZ + endZ) / 2);
+        path.receiveShadow = true;
+        scene.add(path);
       }
       
-      // 8. Map edge access roads (from edges to main areas)
-      // North edge to Windmill
-      createCurvedRoad(40, 90, 40, 40, 30, 3);
-      // South edge to Pyramid
-      createCurvedRoad(50, -90, 50, -50, 25, -3);
-      // Phase 4: Northeast edge to Stonehenge (new location)
-      createCurvedRoad(90, 90, 60, 60, 25, -2);
-      // East edge to Windmill area
-      createCurvedRoad(90, 40, 40, 40, 30, -4);
+      // 4 Main Paths from Central Hub (Rondel):
+      // Paths start from different points on the rondel edge based on direction
+      
+      // 1. Path to Stonehenge (60, 60) - Northeast direction
+      createPath(rondelRadius * 0.707, rondelRadius * 0.707, 60, 60, 3);
+      
+      // 2. Path to Illuminati Pyramid (-70, 50) - Northwest direction  
+      createPath(-rondelRadius * 0.6, rondelRadius * 0.8, -70, 50, 3);
+      
+      // 3. Path to Lake (30, -30) - Southeast direction
+      createPath(rondelRadius * 0.707, -rondelRadius * 0.707, 30, -30, 3);
+      
+      // 4. Path to Windmill (40, 40) - East direction (slightly different from Stonehenge)
+      createPath(rondelRadius * 0.9, rondelRadius * 0.436, 40, 40, 3);
+      
+      // Farm Fields - Fill empty spaces with farm texture
+      // Create large farm field background (performance optimized - single large mesh)
+      const farmFieldMat = new THREE.MeshPhysicalMaterial({ 
+        color: 0x6B8E23, // Olive drab green for farmland
+        metalness: 0.0,
+        roughness: 0.95,
+      });
+      
+      // Create farm field patches in strategic locations
+      const farmFields = [
+        { x: 20, z: 20, size: 15 },   // Near windmill
+        { x: -30, z: 20, size: 20 },  // Near mine
+        { x: 20, z: -20, size: 15 },  // Near lake
+        { x: 45, z: 45, size: 12 },   // Around stonehenge approach
+      ];
+      
+      farmFields.forEach(field => {
+        const fieldGeo = new THREE.PlaneGeometry(field.size, field.size);
+        const fieldMesh = new THREE.Mesh(fieldGeo, farmFieldMat);
+        fieldMesh.rotation.x = -Math.PI/2;
+        fieldMesh.position.set(field.x, 0.01, field.z);
+        fieldMesh.receiveShadow = true;
+        scene.add(fieldMesh);
+      });
 
       // Wooden fences around play area
       const fenceMat = new THREE.MeshToonMaterial({ color: 0x8B4513 });
@@ -4686,6 +4821,44 @@
       // Store blades reference for rotation animation
       wmGroup.userData = { isWindmill: true, blades: [wmBlades, wmBlades2], hp: 600, maxHp: 600, questActive: false, light: wmLight };
       scene.add(wmGroup);
+      
+      // Phase 5: Add "QUEST HERE" signpost at Windmill entrance
+      const signpostGroup = new THREE.Group();
+      signpostGroup.position.set(40, 0, 45); // In front of windmill
+      
+      // Signpost pole
+      const signPoleGeo = new THREE.CylinderGeometry(0.2, 0.2, 3, 8);
+      const signPoleMat = new THREE.MeshToonMaterial({ color: 0x8B4513 }); // Brown wood
+      const signPole = new THREE.Mesh(signPoleGeo, signPoleMat);
+      signPole.position.y = 1.5;
+      signpostGroup.add(signPole);
+      
+      // Signpost board
+      const signBoardGeo = new THREE.BoxGeometry(4, 1.2, 0.2);
+      const signBoardMat = new THREE.MeshToonMaterial({ color: 0xD2B48C }); // Tan wood
+      const signBoard = new THREE.Mesh(signBoardGeo, signBoardMat);
+      signBoard.position.y = 3.2;
+      signpostGroup.add(signBoard);
+      
+      // Add text sprite for "QUEST HERE"
+      const canvas = document.createElement('canvas');
+      canvas.width = 512;
+      canvas.height = 128;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#8B0000'; // Dark red text
+      ctx.font = 'bold 60px Arial';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('QUEST HERE', 256, 64);
+      
+      const texture = new THREE.CanvasTexture(canvas);
+      const spriteMat = new THREE.SpriteMaterial({ map: texture });
+      const sprite = new THREE.Sprite(spriteMat);
+      sprite.scale.set(3.5, 0.875, 1);
+      sprite.position.y = 3.2;
+      signpostGroup.add(sprite);
+      
+      scene.add(signpostGroup);
       
       // Mine
       const mineGeo = new THREE.DodecahedronGeometry(5);
@@ -5266,53 +5439,19 @@
         const LAKE_EXCLUSION_RADIUS = 18; // Lake radius 15 + buffer 3
         const MAX_SPAWN_ATTEMPTS = 20;
         
-        // Phase 4: Road exclusion - helper function to check if position is on a road
-        function isOnRoad(x, z) {
-          // Constants for road exclusion zones
-          const CIRCULAR_ROAD_RADIUS = 8; // Radius of circular road around statue
-          const CIRCULAR_ROAD_BUFFER = 3; // Buffer zone around circular road
-          const ROAD_WIDTH_BUFFER = 4;     // Buffer zone for linear roads
-          
-          // Check distance to statue (circular road around it)
-          const distToStatue = Math.sqrt(x * x + z * z);
-          if (Math.abs(distToStatue - CIRCULAR_ROAD_RADIUS) < CIRCULAR_ROAD_BUFFER) return true;
-          
-          // Check linear roads (simplified check - within buffer of main paths)
-          const roads = [
-            {x1: 0, z1: 0, x2: 40, z2: 40},    // To Windmill
-            {x1: 0, z1: 0, x2: -20, z2: -20},  // To Cabin
-            {x1: 0, z1: 0, x2: 60, z2: 60},    // To Stonehenge (Phase 4: updated location)
-            {x1: 0, z1: 0, x2: 50, z2: -50},   // To Pyramid
-            {x1: 0, z1: 0, x2: -40, z2: 40},   // To Mine
-            {x1: 0, z1: 0, x2: 30, z2: -30},   // To Lake (Phase 4)
-            {x1: 40, z1: 40, x2: 35, z2: 35}   // Windmill to Farm
-          ];
-          
-          for (const road of roads) {
-            const roadLength = Math.sqrt((road.x2 - road.x1) ** 2 + (road.z2 - road.z1) ** 2);
-            const dx = road.x2 - road.x1;
-            const dz = road.z2 - road.z1;
-            
-            // Project point onto road line
-            const t = Math.max(0, Math.min(1, ((x - road.x1) * dx + (z - road.z1) * dz) / (roadLength ** 2)));
-            const projX = road.x1 + t * dx;
-            const projZ = road.z1 + t * dz;
-            
-            // Check distance to road
-            const distToRoad = Math.sqrt((x - projX) ** 2 + (z - projZ) ** 2);
-            if (distToRoad < ROAD_WIDTH_BUFFER) return true;
-          }
-          
-          return false;
+        // Phase 5: Simple exclusion - just avoid rondel center
+        function isInRondel(x, z) {
+          const distToCenter = Math.sqrt(x * x + z * z);
+          return distToCenter < (rondelRadius + 2); // Rondel radius + buffer
         }
         
         let tx, tz;
         let inLake = true;
-        let onRoad = true;
+        let inRondel = true;
         let attempts = 0;
         
-        // Phase 4: Avoid spawning trees in lake area AND on roads
-        while ((inLake || onRoad) && attempts < MAX_SPAWN_ATTEMPTS) {
+        // Avoid spawning trees in lake area and rondel
+        while ((inLake || inRondel) && attempts < MAX_SPAWN_ATTEMPTS) {
           if (i < 80) {
             // First 80 trees in forest area (Top Left quadrant mostly)
             tx = (Math.random() * 100) - 90;
@@ -5327,14 +5466,14 @@
           const distToLake = Math.sqrt((tx - LAKE_CENTER_X) * (tx - LAKE_CENTER_X) + (tz - LAKE_CENTER_Z) * (tz - LAKE_CENTER_Z));
           inLake = distToLake < LAKE_EXCLUSION_RADIUS;
           
-          // Phase 4: Check if tree would be on a road
-          onRoad = isOnRoad(tx, tz);
+          // Check if tree would be in rondel
+          inRondel = isInRondel(tx, tz);
           
           attempts++;
         }
         
-        // Only add tree if not in lake and not on road
-        if (!inLake && !onRoad) {
+        // Only add tree if not in lake and not in rondel
+        if (!inLake && !inRondel) {
           group.position.set(tx, 0, tz);
           scene.add(group);
         }
@@ -5424,6 +5563,13 @@
       scene.background = new THREE.Color(COLORS.bg);
       // Fog for depth
       scene.fog = new THREE.Fog(COLORS.bg, 20, 60);
+      
+      // Phase 5: Initialize particle object pool for performance (100 particles pre-allocated)
+      particlePool = new ObjectPool(
+        () => new Particle(new THREE.Vector3(0, 0, 0), 0xFFFFFF),
+        (particle) => particle.mesh.visible = false,
+        100
+      );
 
       // Camera (Orthographic for miniature look)
       const aspect = window.innerWidth / window.innerHeight;
@@ -5915,8 +6061,14 @@
       }
     }
 
+    // Phase 5: Updated to use Object Pool for performance
     function spawnParticles(pos, color, count) {
-      for(let i=0; i<count; i++) particles.push(new Particle(pos, color));
+      if (!particlePool) return; // Safety check
+      for(let i=0; i<count; i++) {
+        const particle = particlePool.get();
+        particle.reset(pos, color);
+        particles.push(particle);
+      }
     }
 
     function spawnExp(x, z) {
@@ -8504,7 +8656,15 @@
       expGems.forEach(g => g.update(player.mesh.position));
       goldCoins.forEach(g => g.update(player.mesh.position));
       chests.forEach(c => c.update(player.mesh.position));
-      particles = particles.filter(p => p.update() !== false);
+      
+      // Phase 5: Update particles and release back to pool when dead
+      particles = particles.filter(p => {
+        const alive = p.update();
+        if (!alive && particlePool) {
+          particlePool.release(p);
+        }
+        return alive;
+      });
       
       // Windmill Rotation and Light Animation
       scene.children.forEach(c => {
