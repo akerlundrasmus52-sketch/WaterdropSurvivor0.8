@@ -213,7 +213,7 @@
     }
     }
     
-    /* New Bottom Layout: Level Display, HP Bar, EXP Bar (from top to bottom) */
+    /* New Bottom Layout: Waterdrop Level Display with EXP filling, Traditional EXP Bar */
     #bottom-bars-container {
       position: absolute;
       bottom: 0;
@@ -228,51 +228,26 @@
       gap: 8px;
     }
     
-    /* HP Bar in middle */
-    #bottom-hp-bar {
-      width: 90%;
-      max-width: 600px;
-      height: 30px;
-      background: linear-gradient(to bottom, #3a3a3a 0%, #3a3a3a 50%, #6a6a6a 50%, #6a6a6a 100%);
-      border-radius: 15px;
-      border: 3px solid #2a2a2a;
-      overflow: hidden;
+    /* Waterdrop Level Display Container */
+    #waterdrop-container {
+      width: 80px;
+      height: 96px;
       position: relative;
-      box-shadow: 0 3px 8px rgba(0,0,0,0.3), inset 0 2px 4px rgba(0,0,0,0.2), 0 0 15px rgba(0,0,0,0.5);
+      margin-bottom: 5px;
+      filter: drop-shadow(0 3px 8px rgba(0,0,0,0.5)) drop-shadow(0 0 15px rgba(93,173,226,0.4));
     }
     
-    #bottom-hp-fill {
-      height: 100%;
+    #waterdrop-svg {
       width: 100%;
-      background: linear-gradient(to bottom, #FF4444, #CC0000);
-      box-shadow: 0 0 10px rgba(255,68,68,0.8), 0 0 20px rgba(255,68,68,0.4), inset 0 2px 4px rgba(255,255,255,0.2);
-      transition: width 0.3s ease-out;
+      height: 100%;
     }
     
-    #bottom-hp-text {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      font-weight: bold;
-      font-size: 14px;
-      color: #FFFFFF;
-      text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
-      pointer-events: none;
-      z-index: 1;
+    #waterdrop-exp-fill {
+      transition: y 0.3s ease-out, height 0.3s ease-out;
     }
     
-    /* Level Display at top */
-    #bottom-level-display {
-      font-size: 20px;
-      font-weight: bold;
-      color: #FFD700;
-      text-shadow: 
-        2px 2px 0 #000,
-        -1px -1px 0 #000,
-        1px -1px 0 #000,
-        -1px 1px 0 #000,
-        0 0 15px rgba(255,215,0,0.8);
+    #waterdrop-level-text {
+      text-shadow: 0 0 10px rgba(255,215,0,0.8);
     }
     
     /* EXP Bar at bottom */
@@ -1378,10 +1353,40 @@
 
     <!-- New Bottom Bars Layout -->
     <div id="bottom-bars-container">
-      <div id="bottom-level-display">Current Level: 1</div>
-      <div id="bottom-hp-bar">
-        <div id="bottom-hp-fill"></div>
-        <div id="bottom-hp-text">HP: 100/100</div>
+      <!-- Waterdrop Level Display with EXP filling from bottom to top -->
+      <div id="waterdrop-container">
+        <svg id="waterdrop-svg" viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg">
+          <!-- Waterdrop shape -->
+          <defs>
+            <clipPath id="waterdrop-clip">
+              <path d="M 50 10 Q 30 30, 30 60 Q 30 90, 50 110 Q 70 90, 70 60 Q 70 30, 50 10 Z" />
+            </clipPath>
+          </defs>
+          <!-- Background -->
+          <path d="M 50 10 Q 30 30, 30 60 Q 30 90, 50 110 Q 70 90, 70 60 Q 70 30, 50 10 Z" 
+                fill="rgba(58,58,58,0.8)" stroke="#2a2a2a" stroke-width="3"/>
+          <!-- EXP Fill (clips to waterdrop shape, fills from bottom to top) -->
+          <g clip-path="url(#waterdrop-clip)">
+            <rect id="waterdrop-exp-fill" x="0" y="10" width="100" height="110" 
+                  fill="url(#exp-gradient)" />
+          </g>
+          <!-- Gradient for EXP -->
+          <defs>
+            <linearGradient id="exp-gradient" x1="0%" y1="100%" x2="0%" y2="0%">
+              <stop offset="0%" style="stop-color:#3498DB;stop-opacity:1" />
+              <stop offset="100%" style="stop-color:#5DADE2;stop-opacity:1" />
+            </linearGradient>
+          </defs>
+          <!-- Level text -->
+          <text id="waterdrop-level-text" x="50" y="70" 
+                text-anchor="middle" 
+                font-size="24" 
+                font-weight="bold" 
+                fill="#FFD700"
+                stroke="#000" 
+                stroke-width="2"
+                paint-order="stroke">1</text>
+        </svg>
       </div>
       <div id="bottom-exp-bar">
         <div id="bottom-exp-fill"></div>
@@ -4127,14 +4132,62 @@
     }
 
     class Chest {
-      constructor(x, z) {
-        // Create chest mesh - simple box with bronze/gold color
+      constructor(x, z, tier = 'common') {
+        this.tier = tier;
+        
+        // Define chest tier properties
+        const tierProps = {
+          common: {
+            bodyColor: 0x8B7355,    // Brown
+            lidColor: 0xC0C0C0,     // Silver
+            emissive: 0xFFFFFF,     // White
+            lightColor: 0xFFFFFF,   // White light
+            particleColor: 0xFFFFFF, // White particles
+            intensity: 1.0
+          },
+          uncommon: {
+            bodyColor: 0x4A7C59,    // Dark Green
+            lidColor: 0x6B8E23,     // Olive Green
+            emissive: 0x00FF00,     // Green
+            lightColor: 0x00FF00,   // Green light
+            particleColor: 0x00FF00, // Green particles
+            intensity: 1.3
+          },
+          rare: {
+            bodyColor: 0x4169E1,    // Royal Blue
+            lidColor: 0x1E90FF,     // Dodger Blue
+            emissive: 0x0080FF,     // Blue
+            lightColor: 0x0080FF,   // Blue light
+            particleColor: 0x0080FF, // Blue particles
+            intensity: 1.6
+          },
+          epic: {
+            bodyColor: 0x8B00FF,    // Purple
+            lidColor: 0xDA70D6,     // Orchid
+            emissive: 0xA020F0,     // Purple
+            lightColor: 0xA020F0,   // Purple light
+            particleColor: 0xA020F0, // Purple particles
+            intensity: 2.0
+          },
+          mythical: {
+            bodyColor: 0xFF4500,    // Orange-Red
+            lidColor: 0xFF6347,     // Tomato
+            emissive: 0xFF0000,     // Red
+            lightColor: 0xFF8C00,   // Dark Orange
+            particleColor: 0xFF0000, // Red particles
+            intensity: 2.5
+          }
+        };
+        
+        const props = tierProps[tier] || tierProps.common;
+        
+        // Create chest mesh - simple box with tier-specific color
         const geometry = new THREE.BoxGeometry(0.8, 0.6, 0.6);
         const material = new THREE.MeshPhysicalMaterial({ 
-          color: 0xCD7F32, // Bronze color
+          color: props.bodyColor,
           metalness: 0.7,
           roughness: 0.3,
-          emissive: 0xFFD700,
+          emissive: props.emissive,
           emissiveIntensity: 0.2
         });
         this.mesh = new THREE.Mesh(geometry, material);
@@ -4144,7 +4197,7 @@
         // Add lid (different color)
         const lidGeo = new THREE.BoxGeometry(0.85, 0.1, 0.65);
         const lidMat = new THREE.MeshPhysicalMaterial({ 
-          color: 0xFFD700, // Gold lid
+          color: props.lidColor,
           metalness: 0.8,
           roughness: 0.2
         });
@@ -4157,12 +4210,12 @@
         this.collectRange = 1.5;
         this.wobblePhase = Math.random() * Math.PI * 2;
         
-        // Spawn sparkles around chest
-        spawnParticles(this.mesh.position, 0xFFD700, 15);
+        // Spawn sparkles around chest with tier-specific colors
+        spawnParticles(this.mesh.position, props.particleColor, 15);
         spawnParticles(this.mesh.position, 0xFFFFFF, 8);
         
-        // Add glowing light effect
-        const glowLight = new THREE.PointLight(0xFFD700, 1.5, 6);
+        // Add glowing light effect with tier-specific color
+        const glowLight = new THREE.PointLight(props.lightColor, props.intensity, 6);
         glowLight.position.copy(this.mesh.position);
         glowLight.position.y += 0.5;
         scene.add(glowLight);
@@ -6146,8 +6199,8 @@
       goldCoins.push(new GoldCoin(x, z, amount));
     }
     
-    function spawnChest(x, z) {
-      chests.push(new Chest(x, z));
+    function spawnChest(x, z, tier = 'common') {
+      chests.push(new Chest(x, z, tier));
       createFloatingText('CHEST!', new THREE.Vector3(x, 0.3, z));
     }
     
@@ -7342,12 +7395,19 @@
       document.getElementById('exp-fill').style.width = `${Math.min(100, expPct)}%`;
       document.getElementById('exp-text').innerText = `EXP: ${Math.min(100, Math.ceil(expPct))}%`;
       
-      // Update new bottom bars
-      document.getElementById('bottom-hp-fill').style.width = `${Math.max(0, hpPct)}%`;
-      document.getElementById('bottom-hp-text').innerText = `HP: ${Math.max(0, Math.ceil(playerStats.hp))}/${playerStats.maxHp}`;
+      // Update bottom bars (EXP bar and waterdrop level display)
       document.getElementById('bottom-exp-fill').style.width = `${Math.min(100, expPct)}%`;
       document.getElementById('bottom-exp-text').innerText = `EXP: ${Math.min(100, Math.ceil(expPct))}%`;
-      document.getElementById('bottom-level-display').innerText = `Current Level: ${playerStats.lvl}`;
+      
+      // Update waterdrop level display
+      document.getElementById('waterdrop-level-text').textContent = playerStats.lvl;
+      
+      // Update waterdrop EXP fill (fills from bottom to top like a thermometer)
+      const waterdropFill = document.getElementById('waterdrop-exp-fill');
+      const fillHeight = 110 * (expPct / 100); // 110 is the height of the waterdrop
+      const fillY = 120 - fillHeight; // Start from bottom (120 is total SVG height)
+      waterdropFill.setAttribute('y', fillY);
+      waterdropFill.setAttribute('height', fillHeight);
     }
     
     // Stats Bar removed - Users access stats via STATS button modal
@@ -7380,17 +7440,30 @@
           showCombo();
         }
         
-        // Spawn chest on high combo milestones
-        // Check for top 3 combo achievements: Amazing (7), Fantastic (8), Unbelievable (9)
-        const isTopCombo = comboState.count === 7 || comboState.count === 8 || comboState.count === 9;
-        if (isTopCombo && comboState.topCombos.length < comboState.maxTopCombos && !comboState.topCombos.includes(comboState.count)) {
+        // Spawn chest on specific combo milestones:
+        // 7 kills: Common (white), 9 kills: Uncommon (green), 10 kills: Rare (blue)
+        // 12 kills: Epic (purple), 14 (GODLIKE): Mythical (special)
+        let chestTier = null;
+        if (comboState.count === 14) {
+          chestTier = 'mythical';
+        } else if (comboState.count === 12) {
+          chestTier = 'epic';
+        } else if (comboState.count === 10) {
+          chestTier = 'rare';
+        } else if (comboState.count === 9) {
+          chestTier = 'uncommon';
+        } else if (comboState.count === 7) {
+          chestTier = 'common';
+        }
+        
+        if (chestTier && !comboState.topCombos.includes(comboState.count)) {
           comboState.topCombos.push(comboState.count);
           const chestAngle = Math.random() * Math.PI * 2;
           const chestDist = 10 + Math.random() * 5;
           const cx = player.mesh.position.x + Math.cos(chestAngle) * chestDist;
           const cz = player.mesh.position.z + Math.sin(chestAngle) * chestDist;
-          spawnChest(cx, cz);
-          showStatChange('Top Combo Chest Spawned!');
+          spawnChest(cx, cz, chestTier);
+          showStatChange(`${chestTier.toUpperCase()} Chest Spawned!`);
         }
         
         // Clear existing fade timer
@@ -7410,30 +7483,40 @@
       const comboText = document.getElementById('combo-text');
       const comboMultiplier = document.getElementById('combo-multiplier');
       
-      // Updated combo progression: 5=Multikill (first message), 6=Amazing, 7=Fantastic, 8=Unbelievable, 9=Mythical, 10=Legendary, 11+=GODLIKE, 20+=x20...
+      // Updated combo progression: x5=Multikill, x6=Rare, x7=Epic, x8=Legendary, x9=Mythical, x10=Amazing, x11=Unbelievable, x12=Fantastic, x13=Almost Max, x14=GODLIKE, x15+=GODLIKE x2, x3...
       let message = '';
       let comboLevel = 'normal'; // for styling classes
       
-      if (comboState.count >= 20) {
-        message = `x${comboState.count}`;
+      if (comboState.count >= 15) {
+        const godlikeMultiplier = comboState.count - 13;
+        message = `GODLIKE x${godlikeMultiplier}`;
         comboLevel = 'mythical';
-      } else if (comboState.count >= 11) {
+      } else if (comboState.count === 14) {
         message = 'GODLIKE';
         comboLevel = 'mythical';
+      } else if (comboState.count === 13) {
+        message = 'Almost Max Combo';
+        comboLevel = 'mythical';
+      } else if (comboState.count === 12) {
+        message = 'Fantastic Combo';
+        comboLevel = 'mythical';
+      } else if (comboState.count === 11) {
+        message = 'Unbelievable Combo';
+        comboLevel = 'mythical';
       } else if (comboState.count === 10) {
-        message = 'Legendary';
+        message = 'Amazing Combo';
         comboLevel = 'mythical';
       } else if (comboState.count === 9) {
-        message = 'Mythical';
+        message = 'Mythical Combo';
         comboLevel = 'mythical';
       } else if (comboState.count === 8) {
-        message = 'Unbelievable';
+        message = 'Legendary Combo';
         comboLevel = 'high';
       } else if (comboState.count === 7) {
-        message = 'Fantastic';
+        message = 'Epic Combo';
         comboLevel = 'high';
       } else if (comboState.count === 6) {
-        message = 'Amazing';
+        message = 'Rare Combo';
         comboLevel = 'high';
       } else if (comboState.count === 5) {
         message = 'Multikill';  // First combo message at 5 kills
@@ -7445,46 +7528,78 @@
       comboText.innerText = message;
       comboMultiplier.innerText = `x${comboState.count}`; // Display multiplier only to avoid redundancy
       
-      // White to Dark Red gradient with intensifying glow and size
-      let textColor = '#FFFFFF'; // Start with White
+      // Yellow/White to Dark Red gradient with intensifying glow and size
+      // x5: Multikill starts smaller with yellow/white, each higher grows bigger to GODLIKE red/black
+      let textColor = '#FFFF00'; // Start with Yellow
       let glowIntensity = 20;
-      let fontSize = 48; // Base font size
+      let fontSize = 42; // Base font size (smaller start)
       let lightningCount = 0; // Number of lightning effects
       
-      if (comboState.count >= 11) {
-        textColor = '#8B0000'; // Dark red for GODLIKE
-        glowIntensity = 80;
-        fontSize = 80;
+      if (comboState.count >= 15) {
+        // GODLIKE x2, x3... - Red/Black with max glow
+        textColor = '#8B0000'; // Dark red
+        glowIntensity = 90;
+        fontSize = 86;
+        lightningCount = 6;
+      } else if (comboState.count === 14) {
+        // GODLIKE - Red/Black with glowing light effects
+        textColor = '#8B0000'; // Dark red  
+        glowIntensity = 85;
+        fontSize = 82;
         lightningCount = 5;
-      } else if (comboState.count >= 10) {
+      } else if (comboState.count === 13) {
+        // Almost Max Combo
         textColor = '#A00000'; // Dark red
-        glowIntensity = 70;
+        glowIntensity = 78;
+        fontSize = 76;
+        lightningCount = 5;
+      } else if (comboState.count === 12) {
+        // Fantastic Combo
+        textColor = '#B00000'; // Medium dark red
+        glowIntensity = 72;
         fontSize = 72;
         lightningCount = 4;
-      } else if (comboState.count >= 9) {
-        textColor = '#B00000'; // Medium dark red
-        glowIntensity = 60;
-        fontSize = 66;
+      } else if (comboState.count === 11) {
+        // Unbelievable Combo
+        textColor = '#B80000'; // Medium dark red
+        glowIntensity = 66;
+        fontSize = 68;
         lightningCount = 4;
-      } else if (comboState.count >= 8) {
+      } else if (comboState.count === 10) {
+        // Amazing Combo
         textColor = '#C80000'; // Medium red
-        glowIntensity = 50;
+        glowIntensity = 60;
+        fontSize = 64;
+        lightningCount = 4;
+      } else if (comboState.count === 9) {
+        // Mythical Combo
+        textColor = '#D80000'; // Lighter red
+        glowIntensity = 54;
         fontSize = 60;
         lightningCount = 3;
-      } else if (comboState.count >= 7) {
-        textColor = '#E00000'; // Lighter red
-        glowIntensity = 40;
+      } else if (comboState.count === 8) {
+        // Legendary Combo
+        textColor = '#E80000'; // Light red
+        glowIntensity = 48;
         fontSize = 56;
         lightningCount = 3;
-      } else if (comboState.count >= 6) {
-        textColor = '#FF3333'; // Light red
-        glowIntensity = 30;
+      } else if (comboState.count === 7) {
+        // Epic Combo
+        textColor = '#FF3333'; // Very light red
+        glowIntensity = 40;
         fontSize = 52;
         lightningCount = 2;
-      } else if (comboState.count === 5) {
-        textColor = '#FFFFFF'; // White for first combo
-        glowIntensity = 25;
+      } else if (comboState.count === 6) {
+        // Rare Combo
+        textColor = '#FF6666'; // Pink-ish red
+        glowIntensity = 32;
         fontSize = 48;
+        lightningCount = 2;
+      } else if (comboState.count === 5) {
+        // Multikill - Yellow/White start
+        textColor = '#FFFF99'; // Light yellow
+        glowIntensity = 25;
+        fontSize = 42;
         lightningCount = 1;
       }
       
@@ -7533,6 +7648,27 @@
       setTimeout(() => {
         comboEl.style.opacity = '0';
         comboEl.style.animation = 'none';
+        
+        // Spawn chest when combo is lost at 10+ kills
+        if (comboState.count >= 10) {
+          // Determine tier based on combo count
+          let chestTier = 'common';
+          if (comboState.count >= 14) {
+            chestTier = 'mythical';
+          } else if (comboState.count >= 12) {
+            chestTier = 'epic';
+          } else if (comboState.count >= 10) {
+            chestTier = 'rare';
+          }
+          
+          const chestAngle = Math.random() * Math.PI * 2;
+          const chestDist = 10 + Math.random() * 5;
+          const cx = player.mesh.position.x + Math.cos(chestAngle) * chestDist;
+          const cz = player.mesh.position.z + Math.sin(chestAngle) * chestDist;
+          spawnChest(cx, cz, chestTier);
+          showStatChange(`Combo Lost! ${chestTier.toUpperCase()} Chest Spawned!`);
+        }
+        
         comboState.count = 0;
         comboState.topCombos = []; // Reset top combos for next combo sequence
       }, COMBO_ANIMATION_DURATION);
