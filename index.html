@@ -262,29 +262,29 @@
       }
     }
     
-    /* Phase 3: Sun Rise EXP Bar (Semi-Circle) */
+    /* Phase 3: Hill EXP Bar - Redesigned */
     #egg-exp-container {
       position: absolute;
       bottom: 0;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 200px;
-      height: 100px;
+      left: 0;
+      width: 100%;
+      height: 120px;
       z-index: 100;
       pointer-events: none;
       overflow: hidden;
     }
     
     #egg-exp-bar {
-      width: 200px;
-      height: 200px;
-      background: linear-gradient(to bottom, #2a2a2a, #1a1a1a);
-      border-radius: 50%;
-      border: 3px solid #FFD700;
-      overflow: hidden;
       position: absolute;
       bottom: 0;
       left: 0;
+      width: 100%;
+      height: 240px;
+      background: linear-gradient(to bottom, #2a2a2a, #1a1a1a);
+      border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+      border: 3px solid #FFD700;
+      border-bottom: none;
+      overflow: hidden;
       box-shadow: 
         0 -4px 8px rgba(0,0,0,0.6),
         0 0 20px rgba(255,215,0,0.4),
@@ -292,14 +292,16 @@
     }
     
     #egg-exp-fill {
-      height: 100%;
+      position: absolute;
+      bottom: 0;
+      left: 0;
       width: 0%;
+      height: 100%;
       background: linear-gradient(to top, #3498DB, #5DADE2, #87CEEB);
       box-shadow: 
         inset 0 2px 4px rgba(255,255,255,0.3),
         0 0 10px rgba(93,173,226,0.6);
       transition: width 0.3s ease-out;
-      border-radius: 50%;
     }
     
     #egg-exp-level {
@@ -307,7 +309,7 @@
       top: 20px;
       left: 50%;
       transform: translateX(-50%);
-      font-size: 18px;
+      font-size: 24px;
       font-weight: bold;
       color: #FFD700;
       text-shadow: 
@@ -321,10 +323,10 @@
     
     #egg-exp-text {
       position: absolute;
-      top: 50%;
+      bottom: 40px;
       left: 50%;
-      transform: translate(-50%, -50%);
-      font-size: 14px;
+      transform: translateX(-50%);
+      font-size: 16px;
       font-weight: bold;
       color: #FFFFFF;
       text-shadow: 
@@ -1346,10 +1348,6 @@
         <div class="bar-text" id="exp-text" style="color: #FFFFFF;">EXP: 0%</div>
       </div>
       
-      <div class="stat-text" id="lvl-text" style="color: #5DADE2; text-shadow: 0 0 8px rgba(93,173,226,0.8), 0 0 12px rgba(93,173,226,0.5), 1px 1px 2px rgba(0,0,0,0.5);">LVL: 1</div>
-      <div class="stat-text" id="score-text" style="color: #8B4513;">KILLS: 0</div>
-      <div class="stat-text gold-text" id="gold-text" style="color: #FFD700; text-shadow: 0 0 10px rgba(255,215,0,0.9), 0 0 15px rgba(255,215,0,0.6), 1px 1px 2px rgba(0,0,0,0.5);">GOLD: 0</div>
-      
       <!-- Status Message Bar -->
       <div class="stat-text" id="status-message" style="color: #5DADE2; text-shadow: 0 0 8px rgba(93,173,226,0.8), 0 0 12px rgba(93,173,226,0.5), 1px 1px 2px rgba(0,0,0,0.5); font-size: 16px; min-height: 20px; margin-top: 5px;"></div>
       
@@ -1382,7 +1380,7 @@
       </div>
     </div>
     <button id="stats-btn" class="btn-small" style="position: absolute; top: 20px; right: 20px; pointer-events: auto; z-index: 100;">STATS</button>
-    <button id="settings-btn" class="btn-small" style="position: absolute; top: 20px; right: 100px; pointer-events: auto; z-index: 100;">⚙️</button>
+    <button id="settings-btn" class="btn-small" style="position: absolute; top: 20px; right: 120px; pointer-events: auto; z-index: 100;">⚙️</button>
     
     <!-- Equipment Button - Phase 2 Placeholder -->
     <button id="equipment-btn" title="Equipment (Coming Soon)">⚔️</button>
@@ -7128,9 +7126,7 @@
       document.getElementById('egg-exp-text').innerText = `${Math.min(100, Math.ceil(expPct))}%`;
       document.getElementById('egg-exp-level').innerText = `LVL ${playerStats.lvl}`;
       
-      document.getElementById('lvl-text').innerText = `LVL: ${playerStats.lvl}`;
-      document.getElementById('score-text').innerText = `KILLS: ${playerStats.kills}`;
-      document.getElementById('gold-text').innerText = `GOLD: ${playerStats.gold}`;
+      // Removed static stats box display (LVL, KILLS, GOLD) - User relies on Stats Button modal and Stats Bar
       
       // Phase 3: Update wave counter
       document.getElementById('wave-number').innerText = waveCount;
