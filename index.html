@@ -1971,6 +1971,8 @@
       dashesPerformed: 0,
       damageTaken: 0,
       weaponsUnlocked: 0,
+      maxCombo: 0, // PR #114: Track max combo reached
+      miniBossesKilled: 0, // PR #114: Track mini boss kills
       // Perk System
       perks: {
         vampire: 0,      // Life steal %
@@ -3464,6 +3466,10 @@
         spawnGold(this.mesh.position.x, this.mesh.position.z, goldAmount);
         
         playerStats.kills++;
+        // PR #114: Track mini boss kills for achievements
+        if (this.isMiniBoss) {
+          playerStats.miniBossesKilled++;
+        }
         updateHUD();
         updateComboCounter(true); // Phase 2: Track combo on kill
         checkAchievements(); // Check for achievements after kill
@@ -4443,6 +4449,37 @@
       kills100: { id: 'kills100', name: 'Century Slayer', desc: 'Kill 100 enemies', reward: 100, check: () => playerStats.kills >= 100, claimed: false },
       kills500: { id: 'kills500', name: 'Mass Destroyer', desc: 'Kill 500 enemies', reward: 250, check: () => playerStats.kills >= 500, claimed: false },
       kills1000: { id: 'kills1000', name: 'Legendary Warrior', desc: 'Kill 1000 enemies', reward: 500, check: () => playerStats.kills >= 1000, claimed: false },
+      
+      // PR #114: Combo achievements
+      combo5: { id: 'combo5', name: 'Combo Starter', desc: 'Reach a 5 kill combo', reward: 30, check: () => playerStats.maxCombo >= 5, claimed: false },
+      combo10: { id: 'combo10', name: 'Combo Expert', desc: 'Reach a 10 kill combo', reward: 75, check: () => playerStats.maxCombo >= 10, claimed: false },
+      combo15: { id: 'combo15', name: 'Combo Master', desc: 'Reach a 15 kill combo', reward: 150, check: () => playerStats.maxCombo >= 15, claimed: false },
+      comboGodlike: { id: 'comboGodlike', name: 'GODLIKE', desc: 'Reach GODLIKE combo status', reward: 300, check: () => playerStats.maxCombo >= 20, claimed: false },
+      
+      // PR #114: Upgrade achievements (first, 50%, 100% for HP, STR, SPD, REGEN, MOVE)
+      hpFirst: { id: 'hpFirst', name: 'Health Boost', desc: 'Purchase first HP upgrade', reward: 20, check: () => saveData.upgrades.maxHp >= 1, claimed: false },
+      hpMid: { id: 'hpMid', name: 'Fortified', desc: 'Upgrade HP to 50%', reward: 50, check: () => saveData.upgrades.maxHp >= 5, claimed: false },
+      hpMax: { id: 'hpMax', name: 'Immortal', desc: 'Max out HP upgrades', reward: 150, check: () => saveData.upgrades.maxHp >= 10, claimed: false },
+      
+      strFirst: { id: 'strFirst', name: 'Power Up', desc: 'Purchase first Damage upgrade', reward: 20, check: () => saveData.upgrades.attackDamage >= 1, claimed: false },
+      strMid: { id: 'strMid', name: 'Heavy Hitter', desc: 'Upgrade Damage to 50%', reward: 50, check: () => saveData.upgrades.attackDamage >= 5, claimed: false },
+      strMax: { id: 'strMax', name: 'Unstoppable Force', desc: 'Max out Damage upgrades', reward: 150, check: () => saveData.upgrades.attackDamage >= 10, claimed: false },
+      
+      spdFirst: { id: 'spdFirst', name: 'Swift Strike', desc: 'Purchase first Attack Speed upgrade', reward: 20, check: () => saveData.upgrades.attackSpeed >= 1, claimed: false },
+      spdMid: { id: 'spdMid', name: 'Rapid Fire', desc: 'Upgrade Attack Speed to 50%', reward: 50, check: () => saveData.upgrades.attackSpeed >= 5, claimed: false },
+      spdMax: { id: 'spdMax', name: 'Speed Demon', desc: 'Max out Attack Speed upgrades', reward: 150, check: () => saveData.upgrades.attackSpeed >= 10, claimed: false },
+      
+      regenFirst: { id: 'regenFirst', name: 'Healing Touch', desc: 'Purchase first HP Regen upgrade', reward: 20, check: () => saveData.upgrades.hpRegen >= 1, claimed: false },
+      regenMid: { id: 'regenMid', name: 'Regenerator', desc: 'Upgrade HP Regen to 50%', reward: 50, check: () => saveData.upgrades.hpRegen >= 5, claimed: false },
+      regenMax: { id: 'regenMax', name: 'Phoenix', desc: 'Max out HP Regen upgrades', reward: 150, check: () => saveData.upgrades.hpRegen >= 10, claimed: false },
+      
+      moveFirst: { id: 'moveFirst', name: 'Quick Feet', desc: 'Purchase first Move Speed upgrade', reward: 20, check: () => saveData.upgrades.moveSpeed >= 1, claimed: false },
+      moveMid: { id: 'moveMid', name: 'Speedster', desc: 'Upgrade Move Speed to 50%', reward: 50, check: () => saveData.upgrades.moveSpeed >= 5, claimed: false },
+      moveMax: { id: 'moveMax', name: 'Flash', desc: 'Max out Move Speed upgrades', reward: 150, check: () => saveData.upgrades.moveSpeed >= 10, claimed: false },
+      
+      // PR #114: Mini boss and map completion achievements
+      miniBossKilled: { id: 'miniBossKilled', name: 'Boss Slayer', desc: 'Defeat a Mini-Boss', reward: 200, check: () => playerStats.miniBossesKilled >= 1, claimed: false },
+      mapComplete: { id: 'mapComplete', name: 'Map Conqueror', desc: 'Complete the entire map', reward: 500, check: () => playerStats.lvl >= 50 && playerStats.miniBossesKilled >= 3, claimed: false },
       
       gold100: { id: 'gold100', name: 'Small Fortune', desc: 'Collect 100 gold in one run', reward: 50, check: () => playerStats.gold >= 100, claimed: false },
       gold500: { id: 'gold500', name: 'Treasure Hunter', desc: 'Collect 500 gold in one run', reward: 150, check: () => playerStats.gold >= 500, claimed: false },
@@ -7443,6 +7480,11 @@
           comboState.count = 1; // Reset to 1 for first kill
         }
         comboState.lastKillTime = currentTime;
+        
+        // PR #114: Track max combo for achievements
+        if (comboState.count > playerStats.maxCombo) {
+          playerStats.maxCombo = comboState.count;
+        }
         
         // Show combo if 5+ kills (updated to start at 5)
         if (comboState.count >= 5) {
