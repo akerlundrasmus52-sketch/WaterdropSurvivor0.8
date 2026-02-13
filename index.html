@@ -262,28 +262,31 @@
       }
     }
     
-    /* Phase 3: Egg-shaped EXP Bar */
+    /* Phase 3: Sun Rise EXP Bar (Semi-Circle) */
     #egg-exp-container {
       position: absolute;
-      bottom: 40px;
+      bottom: 0;
       left: 50%;
       transform: translateX(-50%);
-      width: 300px;
-      height: 60px;
+      width: 200px;
+      height: 100px;
       z-index: 100;
       pointer-events: none;
+      overflow: hidden;
     }
     
     #egg-exp-bar {
-      width: 100%;
-      height: 50px;
+      width: 200px;
+      height: 200px;
       background: linear-gradient(to bottom, #2a2a2a, #1a1a1a);
       border-radius: 50%;
       border: 3px solid #FFD700;
       overflow: hidden;
-      position: relative;
+      position: absolute;
+      bottom: 0;
+      left: 0;
       box-shadow: 
-        0 4px 8px rgba(0,0,0,0.6),
+        0 -4px 8px rgba(0,0,0,0.6),
         0 0 20px rgba(255,215,0,0.4),
         inset 0 2px 4px rgba(0,0,0,0.3);
     }
@@ -291,7 +294,7 @@
     #egg-exp-fill {
       height: 100%;
       width: 0%;
-      background: linear-gradient(to right, #3498DB, #5DADE2, #87CEEB);
+      background: linear-gradient(to top, #3498DB, #5DADE2, #87CEEB);
       box-shadow: 
         inset 0 2px 4px rgba(255,255,255,0.3),
         0 0 10px rgba(93,173,226,0.6);
@@ -301,7 +304,7 @@
     
     #egg-exp-level {
       position: absolute;
-      top: -8px;
+      top: 10px;
       left: 50%;
       transform: translateX(-50%);
       font-size: 18px;
@@ -1337,8 +1340,8 @@
         <div class="bar-text" id="hp-text" style="color: #FFFFFF;">HP: 100/100</div>
       </div>
       
-      <!-- Phase 3: Old EXP bar hidden - kept for backward compatibility with updateHUD() -->
-      <div class="bar-container" id="exp-bar-container" style="border-color: #2a2a2a; display: none;">
+      <!-- Phase 3: EXP bar at top (restored) -->
+      <div class="bar-container" id="exp-bar-container" style="border-color: #2a2a2a;">
         <div class="bar-fill" id="exp-fill"></div>
         <div class="bar-text" id="exp-text" style="color: #FFFFFF;">EXP: 0%</div>
       </div>
@@ -1789,10 +1792,11 @@
     let countdownStep = 0;
     let countdownTimer = 0;
     const countdownMessages = [
-      "Good luck!",
+      "Get Ready",
       "3",
       "2",
-      "1"
+      "1",
+      "Survive"
     ];
 
     // Game Settings
@@ -4029,12 +4033,14 @@
           playerStats.hp = Math.min(playerStats.maxHp, playerStats.hp + healAmount);
           const actualHeal = playerStats.hp - prevHp;
           createFloatingText(`+${actualHeal} HP!`, this.mesh.position);
+          showStatChange(`Chest: +${actualHeal} HP!`);
           spawnParticles(this.mesh.position, 0xFF69B4, 20); // Pink health particles
         } else if (rand < 0.6) {
           // Gold (25% chance)
           const goldAmount = 12 + Math.floor(Math.random() * 19); // 12-30 gold (reduced from 20-50)
           addGold(goldAmount);
           createFloatingText(`+${goldAmount} Gold!`, this.mesh.position);
+          showStatChange(`Chest: +${goldAmount} Gold!`);
         } else if (rand < 0.85) {
           // Random perk/stat boost (25% chance)
           this.applyRandomPerk();
@@ -4044,7 +4050,7 @@
           // Apply a small weapon boost - check if weapon exists
           if (weapons && weapons.gun && weapons.gun.active) {
             weapons.gun.damage += 5;
-            showStatChange('Gun Damage +5');
+            showStatChange('Chest: Gun Damage +5');
           }
         }
       }
@@ -4056,31 +4062,31 @@
             const maxWalkSpeed = 50; // 2x the initial 25
             if (playerStats.walkSpeed < maxWalkSpeed) {
               playerStats.walkSpeed *= 1.1;
-              showStatChange('+10% Move Speed');
+              showStatChange('Chest: +10% Move Speed');
             } else {
-              showStatChange('Max Speed Reached');
+              showStatChange('Chest: Max Speed Reached');
             }
           }},
           { name: 'Damage Boost', apply: () => { 
             playerStats.strength += 0.1;
-            showStatChange('+10% Damage');
+            showStatChange('Chest: +10% Damage');
           }},
           { name: 'Health Boost', apply: () => { 
             playerStats.maxHp += 20;
             playerStats.hp += 20;
-            showStatChange('+20 Max HP');
+            showStatChange('Chest: +20 Max HP');
           }},
           { name: 'Armor Boost', apply: () => { 
             playerStats.armor = Math.min(80, playerStats.armor + 8);
-            showStatChange('+8% Armor');
+            showStatChange('Chest: +8% Armor');
           }},
           { name: 'Attack Speed', apply: () => {
             // Cap minimum cooldown at 300ms to prevent performance issues
             if (weapons.gun.cooldown > 300) {
               weapons.gun.cooldown *= 0.9;
-              showStatChange('+10% Attack Speed');
+              showStatChange('Chest: +10% Attack Speed');
             } else {
-              showStatChange('Max Attack Speed');
+              showStatChange('Chest: Max Attack Speed');
             }
           }}
         ];
@@ -5517,35 +5523,23 @@
         return;
       }
       
-      const countdownText = document.getElementById('tutorial-text');
-      if (!countdownText) return;
-      
-      countdownText.textContent = countdownMessages[step];
-      countdownText.style.opacity = '1';
-      countdownText.style.fontSize = step === 0 ? '48px' : '96px';
-      countdownText.style.color = step === 0 ? '#FFD700' : '#FFF';
+      // Use Stat Log for countdown messages
+      showStatChange(countdownMessages[step]);
       
       const duration = step === 0 ? 1500 : 1000;
       
       setTimeout(() => {
-        countdownText.style.opacity = '0';
-        setTimeout(() => {
-          countdownStep++;
-          if (countdownStep < countdownMessages.length) {
-            showCountdownMessage(countdownStep);
-          } else {
-            endCountdown();
-          }
-        }, 300);
+        countdownStep++;
+        if (countdownStep < countdownMessages.length) {
+          showCountdownMessage(countdownStep);
+        } else {
+          endCountdown();
+        }
       }, duration);
     }
     
     function endCountdown() {
       countdownActive = false;
-      const countdownText = document.getElementById('tutorial-text');
-      if (countdownText) {
-        countdownText.style.opacity = '0';
-      }
       
       // Ensure game properly unpauses
       isPaused = false;
