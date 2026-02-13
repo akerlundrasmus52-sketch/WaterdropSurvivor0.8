@@ -1129,7 +1129,9 @@
       // Lake configuration - used for spawn avoidance
       lakeCenterX: 30,
       lakeCenterZ: -30,
-      lakeRadius: 18
+      lakeRadius: 18,
+      // Performance optimization - Phase 1
+      maxEnemiesOnScreen: 50
     };
 
     // --- AUDIO SYSTEM (Oscillators) ---
@@ -1415,96 +1417,6 @@
     // Deferred disposal queue for Three.js memory management (PR #81)
     const disposalQueue = [];
     const MAX_DISPOSALS_PER_FRAME = 10;
-    
-    // Object Pools for performance optimization (Phase 1 - Critical Performance Fix)
-    const objectPools = {
-      enemies: {
-        pool: [],
-        maxSize: 100,
-        acquire: function(type) {
-          let enemy = this.pool.find(e => !e.active && e.pooledType === type);
-          if (!enemy && this.pool.length < this.maxSize) {
-            // Create new enemy and add to pool
-            enemy = new Enemy(0, 0, type);
-            enemy.pooledType = type;
-            this.pool.push(enemy);
-          }
-          if (enemy) {
-            enemy.active = true;
-            enemy.isDead = false;
-          }
-          return enemy;
-        },
-        release: function(enemy) {
-          if (enemy) {
-            enemy.active = false;
-            enemy.mesh.visible = false;
-            // Keep mesh in scene but hidden for reuse
-          }
-        }
-      },
-      projectiles: {
-        pool: [],
-        maxSize: 200,
-        acquire: function() {
-          let projectile = this.pool.find(p => !p.active);
-          if (!projectile && this.pool.length < this.maxSize) {
-            // Create minimal projectile object for pooling
-            projectile = {
-              mesh: null,
-              glow: null,
-              active: false,
-              life: 0,
-              vx: 0,
-              vz: 0,
-              isEnemyProjectile: false,
-              damage: 0
-            };
-            this.pool.push(projectile);
-          }
-          if (projectile) {
-            projectile.active = true;
-          }
-          return projectile;
-        },
-        release: function(projectile) {
-          if (projectile) {
-            projectile.active = false;
-            if (projectile.mesh) projectile.mesh.visible = false;
-            if (projectile.glow) projectile.glow.visible = false;
-          }
-        }
-      },
-      damageNumbers: {
-        pool: [],
-        maxSize: 50,
-        active: [],
-        acquire: function() {
-          let damageNum = this.pool.find(d => !d.active);
-          if (!damageNum && this.pool.length < this.maxSize) {
-            damageNum = {
-              div: document.createElement('div'),
-              active: false,
-              life: 0
-            };
-            this.pool.push(damageNum);
-          }
-          if (damageNum) {
-            damageNum.active = true;
-            this.active.push(damageNum);
-          }
-          return damageNum;
-        },
-        release: function(damageNum) {
-          if (damageNum) {
-            damageNum.active = false;
-            damageNum.div.style.display = 'none';
-            const idx = this.active.indexOf(damageNum);
-            if (idx > -1) this.active.splice(idx, 1);
-          }
-        }
-      }
-    };
     
     let frameCount = 0;
     let isPaused = false;
@@ -2284,14 +2196,16 @@
         const targetY = this.player.mesh.position.y + this.offset.y + bobHeight;
         const targetZ = this.player.mesh.position.z + this.offset.z;
         
-        // Smooth follow with lerp
-        this.mesh.position.x += (targetX - this.mesh.position.x) * 0.1;
-        this.mesh.position.y += (targetY - this.mesh.position.y) * 0.1;
-        this.mesh.position.z += (targetZ - this.mesh.position.z) * 0.1;
+        // Smooth follow with lerp (frame-rate independent)
+        const lerpSpeed = 0.1 / dt; // Normalize for frame rate
+        const lerpFactor = Math.min(1, dt * 6); // Cap at 1.0, smooth at 60fps
+        this.mesh.position.x += (targetX - this.mesh.position.x) * lerpFactor;
+        this.mesh.position.y += (targetY - this.mesh.position.y) * lerpFactor;
+        this.mesh.position.z += (targetZ - this.mesh.position.z) * lerpFactor;
         
-        // Rotate propellers
-        this.propeller1.rotation.y += 0.3;
-        this.propeller2.rotation.y += 0.3;
+        // Rotate propellers (frame-rate independent)
+        this.propeller1.rotation.y += 0.3 * dt * 60; // Normalized for 60fps
+        this.propeller2.rotation.y += 0.3 * dt * 60;
         
         // Pulse core
         this.core.material.opacity = 0.6 + Math.sin(gameTime * 5) * 0.2;
@@ -3075,6 +2989,11 @@
             // Double barrel uses its own damage
             if (weapons.doubleBarrel.active && this.isDoubleBarrel) {
               dmg = weapons.doubleBarrel.damage * playerStats.damage * playerStats.strength;
+            }
+            
+            // Drone turret uses its own damage
+            if (weapons.droneTurret.active && this.isDroneTurret) {
+              dmg = weapons.droneTurret.damage * playerStats.damage * playerStats.strength;
             }
             
             const isCrit = Math.random() < playerStats.critChance;
@@ -5259,11 +5178,10 @@
       waveCount++;
       
       // Phase 1 Performance Fix: Limit maximum enemies on screen
-      const MAX_ENEMIES_ON_SCREEN = 50;
       const currentEnemyCount = enemies.filter(e => !e.isDead).length;
       
       // Skip spawning if we're at the limit
-      if (currentEnemyCount >= MAX_ENEMIES_ON_SCREEN) {
+      if (currentEnemyCount >= GAME_CONFIG.maxEnemiesOnScreen) {
         return;
       }
       
@@ -6204,18 +6122,19 @@
               weapons.droneTurret.damage += 8;
               weapons.droneTurret.cooldown *= 0.9;
               if (addDrone) {
-                weapons.droneTurret.droneCount++;
-                // Create new drone
+                // Create new drone first, then update count
                 const drone = new DroneTurret(player);
                 // Position offset for multiple drones
                 const droneIndex = droneTurrets.length;
-                const angle = (droneIndex / weapons.droneTurret.droneCount) * Math.PI * 2;
+                const totalDrones = weapons.droneTurret.droneCount + 1; // Count after adding
+                const angle = (droneIndex / totalDrones) * Math.PI * 2;
                 drone.offset = new THREE.Vector3(
                   Math.cos(angle) * 2.5,
                   1.5,
                   Math.sin(angle) * 2.5
                 );
                 droneTurrets.push(drone);
+                weapons.droneTurret.droneCount++;
                 showStatChange(`Drone Turret Level ${weapons.droneTurret.level}: +8 Dmg, +10% Fire Rate, +1 Drone!`);
               } else {
                 showStatChange(`Drone Turret Level ${weapons.droneTurret.level}: +8 Dmg, +10% Fire Rate`);
@@ -7622,11 +7541,14 @@
           
           // Fire projectile from drone
           if (nearestEnemy) {
-            projectiles.push(new Projectile(
+            const projectile = new Projectile(
               drone.mesh.position.x, 
               drone.mesh.position.z, 
               nearestEnemy.mesh.position
-            ));
+            );
+            // Mark projectile as from drone turret for damage calculation
+            projectile.isDroneTurret = true;
+            projectiles.push(projectile);
             
             // Small muzzle flash from drone
             const flashLight = new THREE.PointLight(0x00FFFF, 2, 8);
