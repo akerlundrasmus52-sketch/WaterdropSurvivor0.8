@@ -6429,8 +6429,9 @@
         
         choices = [];
         
+        // Phase 3: Weapon upgrades now go to level 5 (up from 4)
         // Offer weapon upgrades for active weapons
-        if (weapons.gun.active && weapons.gun.level < 4) {
+        if (weapons.gun.active && weapons.gun.level < 5) {
           const nextLevel = weapons.gun.level + 1;
           choices.push({ 
             id: 'gun_upgrade', 
@@ -6446,7 +6447,7 @@
           });
         }
         
-        if (weapons.sword.active && weapons.sword.level < 4) {
+        if (weapons.sword.active && weapons.sword.level < 5) {
           const nextLevel = weapons.sword.level + 1;
           choices.push({ 
             id: 'sword_upgrade', 
@@ -6462,7 +6463,7 @@
           });
         }
         
-        if (weapons.aura.active && weapons.aura.level < 4) {
+        if (weapons.aura.active && weapons.aura.level < 5) {
           const nextLevel = weapons.aura.level + 1;
           const baseRange = 3; // Initial range
           const currentRange = weapons.aura.range;
@@ -6483,7 +6484,7 @@
           });
         }
         
-        if (weapons.meteor.active && weapons.meteor.level < 4) {
+        if (weapons.meteor.active && weapons.meteor.level < 5) {
           const nextLevel = weapons.meteor.level + 1;
           choices.push({ 
             id: 'meteor_upgrade', 
@@ -6499,9 +6500,9 @@
           });
         }
         
-        if (weapons.droneTurret.active && weapons.droneTurret.level < 4) {
+        if (weapons.droneTurret.active && weapons.droneTurret.level < 5) {
           const nextLevel = weapons.droneTurret.level + 1;
-          const addDrone = nextLevel === 2 || nextLevel === 4; // Add drone at level 2 and 4
+          const addDrone = nextLevel === 2 || nextLevel === 4 || nextLevel === 5; // Add drone at level 2, 4, and 5
           choices.push({ 
             id: 'droneturret_upgrade', 
             title: `DRONE TURRET Level ${nextLevel}`, 
@@ -6532,7 +6533,7 @@
           });
         }
         
-        if (weapons.doubleBarrel.active && weapons.doubleBarrel.level < 4) {
+        if (weapons.doubleBarrel.active && weapons.doubleBarrel.level < 5) {
           const nextLevel = weapons.doubleBarrel.level + 1;
           choices.push({ 
             id: 'doublebarrel_upgrade', 
@@ -6548,7 +6549,7 @@
           });
         }
         
-        if (weapons.iceSpear.active && weapons.iceSpear.level < 4) {
+        if (weapons.iceSpear.active && weapons.iceSpear.level < 5) {
           const nextLevel = weapons.iceSpear.level + 1;
           choices.push({ 
             id: 'icespear_upgrade', 
@@ -6565,7 +6566,7 @@
           });
         }
         
-        if (weapons.fireRing.active && weapons.fireRing.level < 4) {
+        if (weapons.fireRing.active && weapons.fireRing.level < 5) {
           const nextLevel = weapons.fireRing.level + 1;
           choices.push({ 
             id: 'firering_upgrade', 
@@ -6582,11 +6583,11 @@
           });
         }
         
-        // Add some stat upgrades too
-        choices.push(...commonUpgrades.sort(() => 0.5 - Math.random()).slice(0, 2));
+        // Phase 3: Add more stat upgrades for diversity (was 2, now 3)
+        choices.push(...commonUpgrades.sort(() => 0.5 - Math.random()).slice(0, 3));
         
-        // Shuffle and limit to 3 choices
-        choices = choices.sort(() => 0.5 - Math.random()).slice(0, 3);
+        // Phase 3: Shuffle and limit to 4 choices (was 3) for more diverse alternatives
+        choices = choices.sort(() => 0.5 - Math.random()).slice(0, 4);
       }
       // Level 5: Choose Secondary Weapon
       else if (playerStats.lvl === 5) {
