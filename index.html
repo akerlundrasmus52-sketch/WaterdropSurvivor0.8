@@ -204,7 +204,7 @@
     @keyframes combo-fade-out {
       0% {
         opacity: 1;
-        transform: scale(1) translateY(0);
+        transform: scale(1);
       }
       100% {
         opacity: 0;
@@ -8284,7 +8284,7 @@
     let performanceLog = {
       frameCount: 0,
       lastLogTime: 0,
-      totalFrameTime: 16.67, // Initialize to reasonable default (~60fps frame time)
+      totalFrameTime: 0, // Will be set after first frame
       slowFrames: 0,
       spawnCount: 0,
       renderCount: 0,
@@ -8329,12 +8329,12 @@
       
       // Frame Skip Mechanism: Skip rendering if previous frame took too long
       // Note: This only skips the render call - game logic still runs to maintain state consistency
-      // Rendering is typically the most expensive operation, so skipping it provides significant relief
+      // Rendering is often a significant performance cost, so skipping it can provide relief
       const FRAME_TIME_BUDGET = 33.33; // ~30fps minimum (33.33ms per frame)
       const previousFrameTime = performanceLog.totalFrameTime;
       let shouldSkipRender = false;
       
-      if (previousFrameTime > FRAME_TIME_BUDGET * 2) {
+      if (previousFrameTime > FRAME_TIME_BUDGET * 2 && previousFrameTime > 0) {
         // Previous frame took more than 2x budget, skip rendering this frame
         shouldSkipRender = true;
         console.warn(`Frame skip triggered: previous frame took ${previousFrameTime.toFixed(2)}ms`);
@@ -9046,7 +9046,6 @@
         performanceLog.spawnCount = 0;
         performanceLog.renderCount = 0;
         performanceLog.cumulativeFrameTime = 0;
-        // Note: totalFrameTime retains last frame's value for next period's first frame skip check
       }
       
       // Process disposal queue after rendering (PR #81)
