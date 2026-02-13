@@ -143,6 +143,158 @@
       font-size: 12px;
       margin-top: 8px;
     }
+    
+    /* Stats Bar - Phase 2 */
+    #stats-bar {
+      background: linear-gradient(to bottom, #2a2a3e, #1a1a2e);
+      border: 2px solid #FFD700;
+      border-radius: 10px;
+      padding: 10px;
+      margin-top: 10px;
+      max-width: 220px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.6), 0 0 15px rgba(255,215,0,0.3);
+      transition: opacity 0.3s, max-height 0.3s;
+      overflow: hidden;
+    }
+    
+    #stats-bar.collapsed {
+      max-height: 30px;
+      overflow: hidden;
+    }
+    
+    #stats-bar-header {
+      color: #FFD700;
+      font-size: 14px;
+      font-weight: bold;
+      text-shadow: 0 0 8px rgba(255,215,0,0.6), 1px 1px 2px rgba(0,0,0,0.8);
+      margin-bottom: 8px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    #stats-bar-content {
+      font-size: 11px;
+      color: #c9d1d9;
+      line-height: 1.6;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+    }
+    
+    .stat-line {
+      margin: 2px 0;
+      display: flex;
+      justify-content: space-between;
+    }
+    
+    .stat-label {
+      color: #5DADE2;
+    }
+    
+    .stat-value {
+      color: #FFD700;
+      font-weight: bold;
+    }
+    
+    /* Combo Counter - Phase 2 */
+    #combo-counter {
+      position: absolute;
+      top: 35%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      pointer-events: none;
+      z-index: 100;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    
+    #combo-text {
+      font-size: 48px;
+      font-weight: 900;
+      color: #FFD700;
+      text-shadow: 
+        3px 3px 0 #8B4513,
+        -1px -1px 0 #8B4513,
+        1px -1px 0 #8B4513,
+        -1px 1px 0 #8B4513,
+        0 0 20px rgba(255,215,0,0.8),
+        0 0 40px rgba(255,215,0,0.5);
+      animation: combo-bubble 0.5s ease-out;
+    }
+    
+    #combo-multiplier {
+      font-size: 24px;
+      font-weight: bold;
+      color: #FF6B6B;
+      text-shadow: 
+        2px 2px 0 #8B0000,
+        -1px -1px 0 #8B0000,
+        1px -1px 0 #8B0000,
+        -1px 1px 0 #8B0000,
+        0 0 15px rgba(255,107,107,0.8);
+      margin-top: 5px;
+    }
+    
+    @keyframes combo-bubble {
+      0% {
+        transform: scale(0.5) translateY(20px);
+        opacity: 0;
+      }
+      60% {
+        transform: scale(1.1) translateY(0);
+        opacity: 1;
+      }
+      100% {
+        transform: scale(1) translateY(0);
+        opacity: 1;
+      }
+    }
+    
+    @keyframes combo-fade-out {
+      0% {
+        opacity: 1;
+        transform: scale(1);
+      }
+      100% {
+        opacity: 0;
+        transform: scale(0.8) translateY(-20px);
+      }
+    }
+    
+    /* Equipment Menu Button - Phase 2 Placeholder */
+    #equipment-btn {
+      position: absolute;
+      top: 20px;
+      right: 150px;
+      background: linear-gradient(to bottom, #5A3A31, #3a2a21);
+      border: 3px solid #8B4513;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      font-size: 24px;
+      cursor: pointer;
+      pointer-events: auto;
+      z-index: 100;
+      box-shadow: 0 4px 0 #2a1a11, 0 6px 12px rgba(0,0,0,0.5);
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #FFD700;
+      text-shadow: 0 0 8px rgba(255,215,0,0.6);
+    }
+    
+    #equipment-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 0 #2a1a11, 0 8px 16px rgba(0,0,0,0.6);
+      filter: brightness(1.2);
+    }
+    
+    #equipment-btn:active {
+      transform: translateY(2px);
+      box-shadow: 0 2px 0 #2a1a11, 0 4px 8px rgba(0,0,0,0.4);
+    }
 
     /* Joystick */
     #joystick-zone {
@@ -187,7 +339,7 @@
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(40, 40, 40, 0.95); /* Slightly more opaque for better contrast */
+      background: linear-gradient(to bottom, rgba(26, 26, 46, 0.97), rgba(22, 33, 62, 0.97)); /* Match menu dark theme */
       display: none; /* Flex when active */
       flex-direction: column;
       align-items: center;
@@ -197,7 +349,7 @@
     }
 
     .modal-content {
-      background: linear-gradient(to bottom, #5a5a5a, #3a3a3a); /* Lighter gradient for better visibility */
+      background: linear-gradient(to bottom, #2a2a3e, #1a1a2e); /* Darker, RPG-style gradient matching menu */
       padding: 20px;
       border-radius: 20px;
       border: 5px solid #FFD700; /* Golden border for level-up emphasis */
@@ -218,35 +370,56 @@
     }
 
     .upgrade-card {
-      background: linear-gradient(to bottom, #6a6a6a, #4a4a4a); /* Lighter gradient */
+      background: linear-gradient(to bottom, #3a3a4e, #2a2a3e); /* Darker, menu-matching gradient */
       margin: 10px 0;
       padding: 15px;
       border-radius: 15px;
       border: 3px solid #FFD700; /* Golden border */
       cursor: pointer;
-      transition: transform 0.1s, box-shadow 0.1s;
+      transition: transform 0.1s, box-shadow 0.2s, filter 0.2s;
       box-shadow: 0 4px 8px rgba(0,0,0,0.5), 0 0 15px rgba(255,215,0,0.4), inset 0 0 0 2px rgba(0,0,0,0.4); /* Darker shadow and inner dark edge */
+      position: relative;
     }
 
     .upgrade-card:hover {
-      box-shadow: 0 6px 12px rgba(255,215,0,0.6), 0 0 25px rgba(255,215,0,0.5); /* Stronger golden glow on hover */
+      /* Yellow/Blue Lightning effect on hover */
+      box-shadow: 0 0 20px rgba(255,215,0,0.8), 0 0 40px rgba(93,173,226,0.6), 0 0 60px rgba(255,215,0,0.4), inset 0 0 30px rgba(93,173,226,0.2);
+      border-color: #5DADE2;
+      filter: brightness(1.2);
+      animation: lightning-pulse 0.5s ease-in-out infinite;
     }
 
     .upgrade-card:active {
       transform: scale(0.95);
+      /* Intense lightning flash on press */
+      box-shadow: 0 0 30px rgba(255,255,255,1), 0 0 60px rgba(93,173,226,1), 0 0 90px rgba(255,215,0,1), inset 0 0 40px rgba(255,255,255,0.3);
+      filter: brightness(1.5);
+      animation: lightning-flash 0.3s ease;
+    }
+    
+    @keyframes lightning-pulse {
+      0%, 100% { 
+        box-shadow: 0 0 20px rgba(255,215,0,0.8), 0 0 40px rgba(93,173,226,0.6), 0 0 60px rgba(255,215,0,0.4), inset 0 0 30px rgba(93,173,226,0.2);
+      }
+      50% { 
+        box-shadow: 0 0 25px rgba(255,215,0,1), 0 0 50px rgba(93,173,226,0.8), 0 0 75px rgba(255,215,0,0.6), inset 0 0 35px rgba(93,173,226,0.3);
+      }
     }
 
     .upgrade-title {
       font-weight: bold;
       color: #FFD700;
-      font-size: 18px;
-      text-shadow: 0 0 8px rgba(255,215,0,0.6), 0 0 15px rgba(255,215,0,0.3), 1px 1px 2px rgba(0,0,0,0.8);
+      font-size: 20px; /* Slightly larger for better legibility */
+      text-shadow: 0 0 10px rgba(255,215,0,0.8), 0 0 20px rgba(255,215,0,0.4), 2px 2px 4px rgba(0,0,0,1);
+      margin-bottom: 8px;
     }
 
     .upgrade-desc {
-      font-size: 12px;
-      color: #bbb;
-      display: none; /* Hidden - only show funny names */
+      font-size: 13px;
+      color: #c9d1d9; /* Lighter, more legible text */
+      line-height: 1.4;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+      display: block; /* Make descriptions visible for clarity */
     }
     
     /* Special upgrade cards */
@@ -1037,6 +1210,21 @@
       <!-- Status Message Bar -->
       <div class="stat-text" id="status-message" style="color: #5DADE2; text-shadow: 0 0 8px rgba(93,173,226,0.8), 0 0 12px rgba(93,173,226,0.5), 1px 1px 2px rgba(0,0,0,0.5); font-size: 16px; min-height: 20px; margin-top: 5px;"></div>
       
+      <!-- Stats Bar - Phase 2 -->
+      <div id="stats-bar">
+        <div id="stats-bar-header">
+          <span>📊 STATS</span>
+          <span id="stats-toggle" style="font-size: 12px;">▼</span>
+        </div>
+        <div id="stats-bar-content">
+          <div class="stat-line"><span class="stat-label">DMG:</span> <span class="stat-value" id="stat-strength">0</span></div>
+          <div class="stat-line"><span class="stat-label">ATK SPD:</span> <span class="stat-value" id="stat-atkspeed">1.0x</span></div>
+          <div class="stat-line"><span class="stat-label">CRIT:</span> <span class="stat-value" id="stat-crit">10%</span></div>
+          <div class="stat-line"><span class="stat-label">ARM:</span> <span class="stat-value" id="stat-armor">0%</span></div>
+          <div class="stat-line"><span class="stat-label">REG:</span> <span class="stat-value" id="stat-regen">0/s</span></div>
+        </div>
+      </div>
+      
       <!-- Windmill Quest UI -->
       <div id="windmill-quest-ui" style="display: none; margin-top: 10px;">
         <div class="bar-container" style="border-color: #8B4513;">
@@ -1048,6 +1236,15 @@
     </div>
     <button id="stats-btn" class="btn-small" style="position: absolute; top: 20px; right: 20px; pointer-events: auto; z-index: 100;">STATS</button>
     <button id="settings-btn" class="btn-small" style="position: absolute; top: 20px; right: 100px; pointer-events: auto; z-index: 100;">⚙️</button>
+    
+    <!-- Equipment Button - Phase 2 Placeholder -->
+    <button id="equipment-btn" title="Equipment (Coming Soon)">⚔️</button>
+    
+    <!-- Combo Counter - Phase 2 -->
+    <div id="combo-counter">
+      <div id="combo-text"></div>
+      <div id="combo-multiplier"></div>
+    </div>
 
     <!-- Countdown Text (PR #70-71) -->
     <div id="tutorial-text" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 96px; font-weight: bold; color: #FFF; text-shadow: 0 0 20px rgba(255,255,255,0.8), 0 0 40px rgba(93,173,226,0.6); opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 150;"></div>
@@ -2896,6 +3093,7 @@
         
         playerStats.kills++;
         updateHUD();
+        updateComboCounter(true); // Phase 2: Track combo on kill
         checkAchievements(); // Check for achievements after kill
       }
     }
@@ -5169,6 +5367,25 @@
         showMainMenu();
       };
       
+      // Phase 2: Stats Bar Toggle
+      document.getElementById('stats-bar-header').onclick = () => {
+        const statsBar = document.getElementById('stats-bar');
+        const toggle = document.getElementById('stats-toggle');
+        if (statsBar.classList.contains('collapsed')) {
+          statsBar.classList.remove('collapsed');
+          toggle.innerText = '▼';
+        } else {
+          statsBar.classList.add('collapsed');
+          toggle.innerText = '▶';
+        }
+      };
+      
+      // Phase 2: Equipment Button (Placeholder)
+      document.getElementById('equipment-btn').onclick = () => {
+        playSound('hit');
+        alert('⚔️ EQUIPMENT SYSTEM\n\nComing in Phase 3!\n\nThis feature will allow you to equip special gear and customize your build.');
+      };
+      
       // Initialize control type UI on startup
       updateControlType();
     }
@@ -6483,6 +6700,96 @@
       document.getElementById('lvl-text').innerText = `LVL: ${playerStats.lvl}`;
       document.getElementById('score-text').innerText = `KILLS: ${playerStats.kills}`;
       document.getElementById('gold-text').innerText = `GOLD: ${playerStats.gold}`;
+      
+      // Update stats bar - Phase 2
+      updateStatsBar();
+    }
+    
+    // Phase 2: Stats Bar Update Function
+    function updateStatsBar() {
+      // Standardized to 1 decimal place for consistency
+      document.getElementById('stat-strength').innerText = playerStats.strength.toFixed(1);
+      document.getElementById('stat-atkspeed').innerText = playerStats.atkSpeed.toFixed(1) + 'x';
+      document.getElementById('stat-crit').innerText = Math.round(playerStats.critChance * 100) + '%';
+      document.getElementById('stat-armor').innerText = Math.round(playerStats.armor) + '%';
+      document.getElementById('stat-regen').innerText = playerStats.hpRegen.toFixed(1) + '/s';
+    }
+    
+    // Phase 2: Combo System
+    const COMBO_ANIMATION_DURATION = 500; // milliseconds - matches CSS animation duration
+    let comboState = {
+      count: 0,
+      lastKillTime: 0,
+      comboWindow: 2000, // 2 seconds between kills to maintain combo
+      fadeTimer: null
+    };
+    
+    function updateComboCounter(newKill = false) {
+      const currentTime = Date.now();
+      
+      if (newKill) {
+        // Check if within combo window
+        if (currentTime - comboState.lastKillTime <= comboState.comboWindow) {
+          comboState.count++;
+        } else {
+          comboState.count = 1; // Reset to 1 for first kill
+        }
+        comboState.lastKillTime = currentTime;
+        
+        // Show combo if 2+ kills
+        if (comboState.count >= 2) {
+          showCombo();
+        }
+        
+        // Clear existing fade timer
+        if (comboState.fadeTimer) {
+          clearTimeout(comboState.fadeTimer);
+        }
+        
+        // Set new fade timer
+        comboState.fadeTimer = setTimeout(() => {
+          hideCombo();
+        }, comboState.comboWindow);
+      }
+    }
+    
+    function showCombo() {
+      const comboEl = document.getElementById('combo-counter');
+      const comboText = document.getElementById('combo-text');
+      const comboMultiplier = document.getElementById('combo-multiplier');
+      
+      // Determine combo message (ordered from highest to lowest with consistent >= comparisons)
+      let message = '';
+      if (comboState.count >= 10) message = 'LEGENDARY!';
+      else if (comboState.count >= 7) message = 'UNSTOPPABLE!';
+      else if (comboState.count >= 5) message = 'MEGA KILL!';
+      else if (comboState.count >= 4) message = 'QUAD KILL!';
+      else if (comboState.count >= 3) message = 'TRIPLE KILL!';
+      else if (comboState.count >= 2) message = 'DOUBLE KILL!';
+      else message = comboState.count + 'x COMBO!';
+      
+      comboText.innerText = message;
+      comboMultiplier.innerText = `x${comboState.count}`;
+      
+      // Show with animation
+      comboEl.style.opacity = '1';
+      comboEl.style.animation = `combo-bubble ${COMBO_ANIMATION_DURATION}ms ease-out`;
+      
+      // Reset animation after it completes
+      setTimeout(() => {
+        comboEl.style.animation = 'none';
+      }, COMBO_ANIMATION_DURATION);
+    }
+    
+    function hideCombo() {
+      const comboEl = document.getElementById('combo-counter');
+      comboEl.style.animation = `combo-fade-out ${COMBO_ANIMATION_DURATION}ms ease-out forwards`;
+      
+      setTimeout(() => {
+        comboEl.style.opacity = '0';
+        comboEl.style.animation = 'none';
+        comboState.count = 0;
+      }, COMBO_ANIMATION_DURATION);
     }
     
     function updateWindmillQuestUI() {
