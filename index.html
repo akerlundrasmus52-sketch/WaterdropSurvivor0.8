@@ -438,6 +438,28 @@
     
     /* Wave Counter - Removed (was in stats bar) */
     
+    /* Attributes Menu Styles */
+    .attributes-modal-title {
+      color: #FFD700;
+      text-shadow: 2px 2px 0 #000, 0 0 15px rgba(255,215,0,0.8);
+    }
+    
+    .attributes-section-title {
+      color: #5DADE2;
+      text-shadow: 0 0 10px rgba(93,173,226,0.6);
+      margin-bottom: 10px;
+    }
+    
+    .attribute-item {
+      background: rgba(0,0,0,0.3);
+      padding: 10px;
+      border-radius: 5px;
+      margin-bottom: 5px;
+    }
+    
+    .attribute-item strong {
+      color: #FFD700;
+    }
     
     /* Equipment Menu Button - Phase 2 Placeholder */
     #equipment-btn {
@@ -1723,11 +1745,11 @@
   <!-- Attributes & Equipment Menu Modal -->
   <div id="attributes-menu" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 200; align-items: center; justify-content: center; pointer-events: auto;">
     <div class="modal-content" style="max-height: 80vh; overflow-y: auto; width: 90%; max-width: 500px;">
-      <h2 style="color: #FFD700; text-shadow: 2px 2px 0 #000, 0 0 15px rgba(255,215,0,0.8);">ATTRIBUTES & EQUIPMENT</h2>
+      <h2 class="attributes-modal-title">ATTRIBUTES & EQUIPMENT</h2>
       
       <!-- Attributes Section -->
       <div style="margin-bottom: 20px; text-align: left;">
-        <h3 style="color: #5DADE2; text-shadow: 0 0 10px rgba(93,173,226,0.6); margin-bottom: 10px;">Player Attributes</h3>
+        <h3 class="attributes-section-title">Player Attributes</h3>
         <div id="attributes-content" style="font-family: monospace; font-size: 14px; line-height: 1.8; color: #ecf0f1;">
           <!-- Will be populated dynamically -->
         </div>
@@ -1735,7 +1757,7 @@
       
       <!-- Equipment Section -->
       <div style="margin-bottom: 20px; text-align: left;">
-        <h3 style="color: #5DADE2; text-shadow: 0 0 10px rgba(93,173,226,0.6); margin-bottom: 10px;">Equipment</h3>
+        <h3 class="attributes-section-title">Equipment</h3>
         <div id="equipment-content" style="font-family: monospace; font-size: 14px; line-height: 1.8; color: #ecf0f1;">
           <!-- Will be populated dynamically -->
         </div>
@@ -7211,52 +7233,52 @@
       // Populate attributes content
       const attributesContent = document.getElementById('attributes-content');
       attributesContent.innerHTML = `
-        <div style="background: rgba(0,0,0,0.3); padding: 10px; border-radius: 5px; margin-bottom: 5px;">
-          <strong style="color: #FFD700;">❤️ Health:</strong> ${playerStats.maxHp} HP
+        <div class="attribute-item">
+          <strong>❤️ Health:</strong> ${playerStats.maxHp} HP
         </div>
-        <div style="background: rgba(0,0,0,0.3); padding: 10px; border-radius: 5px; margin-bottom: 5px;">
-          <strong style="color: #FFD700;">💪 Strength:</strong> ${playerStats.strength}
+        <div class="attribute-item">
+          <strong>💪 Strength:</strong> ${playerStats.strength}
         </div>
-        <div style="background: rgba(0,0,0,0.3); padding: 10px; border-radius: 5px; margin-bottom: 5px;">
-          <strong style="color: #FFD700;">⚡ Speed:</strong> ${playerStats.speed}
+        <div class="attribute-item">
+          <strong>⚡ Speed:</strong> ${playerStats.speed}
         </div>
-        <div style="background: rgba(0,0,0,0.3); padding: 10px; border-radius: 5px; margin-bottom: 5px;">
-          <strong style="color: #FFD700;">⚔️ Damage:</strong> ${playerStats.damage}
+        <div class="attribute-item">
+          <strong>⚔️ Damage:</strong> ${playerStats.damage}
         </div>
-        <div style="background: rgba(0,0,0,0.3); padding: 10px; border-radius: 5px; margin-bottom: 5px;">
-          <strong style="color: #FFD700;">🎯 Crit Chance:</strong> ${(playerStats.critChance * 100).toFixed(1)}%
+        <div class="attribute-item">
+          <strong>🎯 Crit Chance:</strong> ${(playerStats.critChance * 100).toFixed(1)}%
         </div>
-        <div style="background: rgba(0,0,0,0.3); padding: 10px; border-radius: 5px; margin-bottom: 5px;">
-          <strong style="color: #FFD700;">💥 Crit Damage:</strong> ${(playerStats.critDamage * 100).toFixed(0)}%
+        <div class="attribute-item">
+          <strong>💥 Crit Damage:</strong> ${(playerStats.critDamage * 100).toFixed(0)}%
         </div>
-        <div style="background: rgba(0,0,0,0.3); padding: 10px; border-radius: 5px; margin-bottom: 5px;">
-          <strong style="color: #FFD700;">🛡️ Armor:</strong> ${playerStats.armor}%
+        <div class="attribute-item">
+          <strong>🛡️ Armor:</strong> ${playerStats.armor}%
         </div>
-        <div style="background: rgba(0,0,0,0.3); padding: 10px; border-radius: 5px; margin-bottom: 5px;">
-          <strong style="color: #FFD700;">🏃 Walk Speed:</strong> ${(playerStats.walkSpeed * 100).toFixed(0)}%
+        <div class="attribute-item">
+          <strong>🏃 Walk Speed:</strong> ${(playerStats.walkSpeed * 100).toFixed(0)}%
         </div>
       `;
       
       // Populate equipment content
       const equipmentContent = document.getElementById('equipment-content');
-      const weapons = [];
+      const weaponsList = [];
       
       // Check which weapons player has unlocked
-      if (playerStats.lvl >= 1) {
-        weapons.push('🔫 <strong>Gun</strong> - Basic ranged weapon (15 damage)');
+      if (playerStats.lvl >= 1 && weapons.gun.active) {
+        weaponsList.push(`🔫 <strong>Gun</strong> - Basic ranged weapon (${weapons.gun.damage} damage)`);
       }
-      if (playerStats.lvl >= 5) {
-        weapons.push('⚔️ <strong>Sword</strong> - Melee slash weapon (Unlocked at Lvl 5)');
+      if (playerStats.lvl >= 5 && weapons.sword.active) {
+        weaponsList.push(`⚔️ <strong>Sword</strong> - Melee slash weapon (${weapons.sword.damage} damage)`);
       }
-      if (playerStats.lvl >= 10) {
-        weapons.push('💫 <strong>Energy Aura</strong> - Area damage (Unlocked at Lvl 10)');
+      if (playerStats.lvl >= 10 && weapons.energyAura.active) {
+        weaponsList.push(`💫 <strong>Energy Aura</strong> - Area damage (${weapons.energyAura.damage} damage)`);
       }
       
-      if (weapons.length === 0) {
+      if (weaponsList.length === 0) {
         equipmentContent.innerHTML = '<div style="color: #888;">No equipment unlocked yet.</div>';
       } else {
-        equipmentContent.innerHTML = weapons.map(w => 
-          `<div style="background: rgba(0,0,0,0.3); padding: 10px; border-radius: 5px; margin-bottom: 5px;">${w}</div>`
+        equipmentContent.innerHTML = weaponsList.map(w => 
+          `<div class="attribute-item">${w}</div>`
         ).join('');
       }
       
