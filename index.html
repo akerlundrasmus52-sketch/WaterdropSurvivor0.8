@@ -308,12 +308,14 @@
     }
     
     /* Stat Notification Queue - Red/Black Dominant */
+    /* PR #114: Improved stat notification positioning and animation */
     #stat-notifications {
       position: absolute;
-      top: 15%;
-      right: 20px;
-      transform: translateY(0);
-      width: 280px;
+      bottom: 30%;
+      right: 10px;
+      width: auto;
+      max-width: 350px;
+      min-width: 200px;
       z-index: 150;
       pointer-events: none;
     }
@@ -321,7 +323,7 @@
     .stat-notification {
       background: linear-gradient(to right, rgba(20, 0, 0, 0.95), rgba(40, 0, 0, 0.90));
       border: 2px solid #FF0000;
-      border-radius: 8px;
+      border-radius: 12px;
       padding: 12px 16px;
       margin-bottom: 10px;
       font-size: 15px;
@@ -335,7 +337,9 @@
         0 4px 8px rgba(0,0,0,0.8), 
         0 0 20px rgba(255,0,0,0.5),
         inset 0 0 10px rgba(255,0,0,0.2);
-      animation: stat-float-in-right 0.4s ease-out;
+      animation: stat-float-in-improved 0.5s ease-out;
+      width: fit-content;
+      white-space: nowrap;
     }
     
     .stat-notification.combo-high {
@@ -368,6 +372,22 @@
       animation: stat-float-in-right 0.4s ease-out, intense-glow 1s ease-in-out infinite alternate;
     }
     
+    /* PR #114: Improved animation - floats from right lower, up and over middle, then smaller */
+    @keyframes stat-float-in-improved {
+      0% {
+        opacity: 0;
+        transform: translateX(150px) translateY(50px) scale(0.5);
+      }
+      50% {
+        opacity: 1;
+        transform: translateX(-20px) translateY(-20px) scale(1.1);
+      }
+      100% {
+        opacity: 1;
+        transform: translateX(0) translateY(0) scale(1);
+      }
+    }
+    
     @keyframes stat-float-in-right {
       0% {
         opacity: 0;
@@ -386,7 +406,7 @@
       }
       100% {
         opacity: 0;
-        transform: translateX(30px) scale(0.8);
+        transform: translateX(50px) scale(0.6);
       }
     }
     
@@ -6266,6 +6286,9 @@
       saveData.totalGoldEarned += finalAmount;
       updateHUD();
       updateGoldDisplays();
+      
+      // PR #114: Show gold pickup amount in stat bar notification
+      showStatChange(`+${finalAmount} Gold`);
     }
     
     function updateGoldDisplays() {
@@ -7321,7 +7344,8 @@
             apply: () => { 
               playerStats.perks.vampire++;
               playerStats.lifeStealPercent += 0.05;
-              showStatChange(`Vampire Level ${playerStats.perks.vampire}! (5% of damage heals you)`);
+              // PR #114: More descriptive stat change text
+              showStatChange(`Vampire Lvl ${playerStats.perks.vampire} - Life Steal: ${(playerStats.lifeStealPercent * 100).toFixed(1)}% of damage heals you`);
             } 
           },
           { 
@@ -7332,7 +7356,8 @@
             apply: () => { 
               playerStats.perks.juggernaut++;
               playerStats.armor = Math.min(80, playerStats.armor + 8);
-              showStatChange(`Juggernaut Perk Level ${playerStats.perks.juggernaut}! (+8% Armor)`);
+              // PR #114: More descriptive stat change text with % reduction
+              showStatChange(`Juggernaut Lvl ${playerStats.perks.juggernaut} - Damage Reduction: ${playerStats.armor.toFixed(1)}%`);
             } 
           },
           { 
