@@ -4666,95 +4666,81 @@
       ripple.userData = { isWaterRipple: true, phase: 0 };
       scene.add(ripple);
 
-      // Phase 4: Old Wagon Roads connecting areas (gravel with grass strip in middle)
-      const roadMat = new THREE.MeshPhysicalMaterial({ 
-        color: 0x8B7355, // Brown-gray for gravel/dirt
+      // Phase 5: New Map Design - Clean Rondel and Main Paths (replacing Wagon Roads)
+      
+      // Central Rondel - Circular paved/gravel area around statue
+      const rondelMat = new THREE.MeshPhysicalMaterial({ 
+        color: 0xA8A8A8, // Light gray stone/gravel
         metalness: 0.0,
-        roughness: 0.95, // Very rough for dirt/gravel texture
+        roughness: 0.8,
       });
-      const roadGeo = new THREE.PlaneGeometry(4, 4);
+      const rondelRadius = 10;
+      const rondelGeo = new THREE.CircleGeometry(rondelRadius, 64);
+      const rondel = new THREE.Mesh(rondelGeo, rondelMat);
+      rondel.rotation.x = -Math.PI/2;
+      rondel.position.set(0, 0.02, 0);
+      rondel.receiveShadow = true;
+      scene.add(rondel);
       
-      // Grass strip material for the middle of wagon roads
-      const grassStripMat = new THREE.MeshPhysicalMaterial({
-        color: 0x4a7c3e, // Darker green for overgrown grass
+      // Path material - smooth dirt/gravel path
+      const pathMat = new THREE.MeshPhysicalMaterial({ 
+        color: 0x9A8A6A, // Light brown dirt
         metalness: 0.0,
-        roughness: 0.9
+        roughness: 0.85,
       });
-      const grassStripGeo = new THREE.PlaneGeometry(1, 4); // Narrow grass strip
       
-      // Helper function to create smooth curved road between two points
-      function createCurvedRoad(startX, startZ, endX, endZ, segments, curve = 0) {
-        for(let i = 0; i <= segments; i++) {
-          const t = i / segments;
-          // Smooth interpolation with optional curve
-          const x = startX + (endX - startX) * t + Math.sin(t * Math.PI) * curve;
-          const z = startZ + (endZ - startZ) * t + Math.sin(t * Math.PI) * curve;
-          
-          const road = new THREE.Mesh(roadGeo, roadMat);
-          road.rotation.x = -Math.PI/2;
-          road.position.set(x, 0.03, z);
-          road.receiveShadow = true;
-          scene.add(road);
-          
-          // Phase 4: Add grass strip in the middle of the wagon road
-          const grassStrip = new THREE.Mesh(grassStripGeo, grassStripMat);
-          grassStrip.rotation.x = -Math.PI/2;
-          grassStrip.position.set(x, 0.04, z); // Slightly higher than road
-          grassStrip.receiveShadow = true;
-          scene.add(grassStrip);
-        }
-      }
-      
-      // Main roads connecting key locations:
-      // 1. Statue (0,0) to Windmill (40,40) - curved path
-      createCurvedRoad(0, 0, 40, 40, 25, 3);
-      
-      // 2. Statue (0,0) to Cabin (-20,-20) - curved path
-      createCurvedRoad(0, 0, -20, -20, 15, -2);
-      
-      // 3. Phase 4: Statue (0,0) to Stonehenge (60,60) - curved path (updated location)
-      createCurvedRoad(0, 0, 60, 60, 30, 5);
-      
-      // 4. Statue (0,0) to Pyramid (50,-50) - curved path
-      createCurvedRoad(0, 0, 50, -50, 35, -4);
-      
-      // 5. Statue (0,0) to Mine (-40,40) - curved path
-      createCurvedRoad(0, 0, -40, 40, 25, 4);
-      
-      // 6. Windmill (40,40) to Farm (35,35) - short connecting road
-      createCurvedRoad(40, 40, 35, 35, 8, 0);
-      
-      // 6b. Phase 4: Statue (0,0) to Lake (30,-30) - curved path
-      createCurvedRoad(0, 0, 30, -30, 20, 2);
-      
-      // 7. Circular road around statue - smooth ring road for patrol area
-      for(let i = 0; i < 60; i++) {
-        const road = new THREE.Mesh(roadGeo, roadMat);
-        road.rotation.x = -Math.PI/2;
-        const angle = (i / 60) * Math.PI * 2;
-        const x = Math.cos(angle) * 8; // Smaller circle around statue
-        const z = Math.sin(angle) * 8;
-        road.position.set(x, 0.03, z);
-        road.receiveShadow = true;
-        scene.add(road);
+      // Helper function to create smooth straight path
+      function createPath(startX, startZ, endX, endZ, width = 3) {
+        const length = Math.sqrt((endX - startX) ** 2 + (endZ - startZ) ** 2);
+        const angle = Math.atan2(endZ - startZ, endX - startX);
         
-        // Phase 4: Add grass strip in the middle of circular wagon road
-        const grassStrip = new THREE.Mesh(grassStripGeo, grassStripMat);
-        grassStrip.rotation.x = -Math.PI/2;
-        grassStrip.position.set(x, 0.04, z);
-        grassStrip.receiveShadow = true;
-        scene.add(grassStrip);
+        // Create path as single mesh for performance
+        const pathGeo = new THREE.PlaneGeometry(width, length);
+        const path = new THREE.Mesh(pathGeo, pathMat);
+        path.rotation.x = -Math.PI/2;
+        path.rotation.z = angle - Math.PI/2;
+        path.position.set((startX + endX) / 2, 0.02, (startZ + endZ) / 2);
+        path.receiveShadow = true;
+        scene.add(path);
       }
       
-      // 8. Map edge access roads (from edges to main areas)
-      // North edge to Windmill
-      createCurvedRoad(40, 90, 40, 40, 30, 3);
-      // South edge to Pyramid
-      createCurvedRoad(50, -90, 50, -50, 25, -3);
-      // Phase 4: Northeast edge to Stonehenge (new location)
-      createCurvedRoad(90, 90, 60, 60, 25, -2);
-      // East edge to Windmill area
-      createCurvedRoad(90, 40, 40, 40, 30, -4);
+      // 4 Main Paths from Central Hub (Rondel):
+      // 1. Path to Stonehenge (60, 60)
+      createPath(rondelRadius * 0.707, rondelRadius * 0.707, 60, 60, 3);
+      
+      // 2. Path to Illuminati Pyramid (-70, 50)
+      createPath(-rondelRadius * 0.6, rondelRadius * 0.8, -70, 50, 3);
+      
+      // 3. Path to Lake (30, -30)
+      createPath(rondelRadius * 0.707, -rondelRadius * 0.707, 30, -30, 3);
+      
+      // 4. Path to Windmill (40, 40)
+      createPath(rondelRadius * 0.707, rondelRadius * 0.707, 40, 40, 3);
+      
+      // Farm Fields - Fill empty spaces with farm texture
+      // Create large farm field background (performance optimized - single large mesh)
+      const farmFieldMat = new THREE.MeshPhysicalMaterial({ 
+        color: 0x6B8E23, // Olive drab green for farmland
+        metalness: 0.0,
+        roughness: 0.95,
+      });
+      
+      // Create farm field patches in strategic locations
+      const farmFields = [
+        { x: 20, z: 20, size: 15 },   // Near windmill
+        { x: -30, z: 20, size: 20 },  // Near mine
+        { x: 20, z: -20, size: 15 },  // Near lake
+        { x: 45, z: 45, size: 12 },   // Around stonehenge approach
+      ];
+      
+      farmFields.forEach(field => {
+        const fieldGeo = new THREE.PlaneGeometry(field.size, field.size);
+        const fieldMesh = new THREE.Mesh(fieldGeo, farmFieldMat);
+        fieldMesh.rotation.x = -Math.PI/2;
+        fieldMesh.position.set(field.x, 0.01, field.z);
+        fieldMesh.receiveShadow = true;
+        scene.add(fieldMesh);
+      });
 
       // Wooden fences around play area
       const fenceMat = new THREE.MeshToonMaterial({ color: 0x8B4513 });
@@ -4834,6 +4820,44 @@
       // Store blades reference for rotation animation
       wmGroup.userData = { isWindmill: true, blades: [wmBlades, wmBlades2], hp: 600, maxHp: 600, questActive: false, light: wmLight };
       scene.add(wmGroup);
+      
+      // Phase 5: Add "QUEST HERE" signpost at Windmill entrance
+      const signpostGroup = new THREE.Group();
+      signpostGroup.position.set(40, 0, 45); // In front of windmill
+      
+      // Signpost pole
+      const signPoleGeo = new THREE.CylinderGeometry(0.2, 0.2, 3, 8);
+      const signPoleMat = new THREE.MeshToonMaterial({ color: 0x8B4513 }); // Brown wood
+      const signPole = new THREE.Mesh(signPoleGeo, signPoleMat);
+      signPole.position.y = 1.5;
+      signpostGroup.add(signPole);
+      
+      // Signpost board
+      const signBoardGeo = new THREE.BoxGeometry(4, 1.2, 0.2);
+      const signBoardMat = new THREE.MeshToonMaterial({ color: 0xD2B48C }); // Tan wood
+      const signBoard = new THREE.Mesh(signBoardGeo, signBoardMat);
+      signBoard.position.y = 3.2;
+      signpostGroup.add(signBoard);
+      
+      // Add text sprite for "QUEST HERE"
+      const canvas = document.createElement('canvas');
+      canvas.width = 512;
+      canvas.height = 128;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#8B0000'; // Dark red text
+      ctx.font = 'bold 60px Arial';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('QUEST HERE', 256, 64);
+      
+      const texture = new THREE.CanvasTexture(canvas);
+      const spriteMat = new THREE.SpriteMaterial({ map: texture });
+      const sprite = new THREE.Sprite(spriteMat);
+      sprite.scale.set(3.5, 0.875, 1);
+      sprite.position.y = 3.2;
+      signpostGroup.add(sprite);
+      
+      scene.add(signpostGroup);
       
       // Mine
       const mineGeo = new THREE.DodecahedronGeometry(5);
@@ -5414,53 +5438,19 @@
         const LAKE_EXCLUSION_RADIUS = 18; // Lake radius 15 + buffer 3
         const MAX_SPAWN_ATTEMPTS = 20;
         
-        // Phase 4: Road exclusion - helper function to check if position is on a road
-        function isOnRoad(x, z) {
-          // Constants for road exclusion zones
-          const CIRCULAR_ROAD_RADIUS = 8; // Radius of circular road around statue
-          const CIRCULAR_ROAD_BUFFER = 3; // Buffer zone around circular road
-          const ROAD_WIDTH_BUFFER = 4;     // Buffer zone for linear roads
-          
-          // Check distance to statue (circular road around it)
-          const distToStatue = Math.sqrt(x * x + z * z);
-          if (Math.abs(distToStatue - CIRCULAR_ROAD_RADIUS) < CIRCULAR_ROAD_BUFFER) return true;
-          
-          // Check linear roads (simplified check - within buffer of main paths)
-          const roads = [
-            {x1: 0, z1: 0, x2: 40, z2: 40},    // To Windmill
-            {x1: 0, z1: 0, x2: -20, z2: -20},  // To Cabin
-            {x1: 0, z1: 0, x2: 60, z2: 60},    // To Stonehenge (Phase 4: updated location)
-            {x1: 0, z1: 0, x2: 50, z2: -50},   // To Pyramid
-            {x1: 0, z1: 0, x2: -40, z2: 40},   // To Mine
-            {x1: 0, z1: 0, x2: 30, z2: -30},   // To Lake (Phase 4)
-            {x1: 40, z1: 40, x2: 35, z2: 35}   // Windmill to Farm
-          ];
-          
-          for (const road of roads) {
-            const roadLength = Math.sqrt((road.x2 - road.x1) ** 2 + (road.z2 - road.z1) ** 2);
-            const dx = road.x2 - road.x1;
-            const dz = road.z2 - road.z1;
-            
-            // Project point onto road line
-            const t = Math.max(0, Math.min(1, ((x - road.x1) * dx + (z - road.z1) * dz) / (roadLength ** 2)));
-            const projX = road.x1 + t * dx;
-            const projZ = road.z1 + t * dz;
-            
-            // Check distance to road
-            const distToRoad = Math.sqrt((x - projX) ** 2 + (z - projZ) ** 2);
-            if (distToRoad < ROAD_WIDTH_BUFFER) return true;
-          }
-          
-          return false;
+        // Phase 5: Simple exclusion - just avoid rondel center
+        function isInRondel(x, z) {
+          const distToCenter = Math.sqrt(x * x + z * z);
+          return distToCenter < 12; // Rondel radius (10) + buffer
         }
         
         let tx, tz;
         let inLake = true;
-        let onRoad = true;
+        let inRondel = true;
         let attempts = 0;
         
-        // Phase 4: Avoid spawning trees in lake area AND on roads
-        while ((inLake || onRoad) && attempts < MAX_SPAWN_ATTEMPTS) {
+        // Avoid spawning trees in lake area and rondel
+        while ((inLake || inRondel) && attempts < MAX_SPAWN_ATTEMPTS) {
           if (i < 80) {
             // First 80 trees in forest area (Top Left quadrant mostly)
             tx = (Math.random() * 100) - 90;
@@ -5475,14 +5465,14 @@
           const distToLake = Math.sqrt((tx - LAKE_CENTER_X) * (tx - LAKE_CENTER_X) + (tz - LAKE_CENTER_Z) * (tz - LAKE_CENTER_Z));
           inLake = distToLake < LAKE_EXCLUSION_RADIUS;
           
-          // Phase 4: Check if tree would be on a road
-          onRoad = isOnRoad(tx, tz);
+          // Check if tree would be in rondel
+          inRondel = isInRondel(tx, tz);
           
           attempts++;
         }
         
-        // Only add tree if not in lake and not on road
-        if (!inLake && !onRoad) {
+        // Only add tree if not in lake and not in rondel
+        if (!inLake && !inRondel) {
           group.position.set(tx, 0, tz);
           scene.add(group);
         }
