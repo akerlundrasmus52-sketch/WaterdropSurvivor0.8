@@ -1712,7 +1712,121 @@
         gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
         osc2.start(now);
         osc2.stop(now + 0.12);
+      } else if (type === 'sword') {
+        // Sword slash - metallic swoosh
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(600, now);
+        osc.frequency.exponentialRampToValueAtTime(200, now + 0.15);
+        gain.gain.setValueAtTime(0.25, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+        osc.start(now);
+        osc.stop(now + 0.15);
+        
+        // Add metallic ring
+        const osc2 = audioCtx.createOscillator();
+        const gain2 = audioCtx.createGain();
+        osc2.connect(gain2);
+        gain2.connect(audioCtx.destination);
+        osc2.type = 'square';
+        osc2.frequency.setValueAtTime(2000, now);
+        osc2.frequency.exponentialRampToValueAtTime(1000, now + 0.1);
+        gain2.gain.setValueAtTime(0.15, now);
+        gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+        osc2.start(now);
+        osc2.stop(now + 0.1);
+      } else if (type === 'doublebarrel') {
+        // Double barrel - deeper, more powerful gun sound
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(400, now);
+        osc.frequency.exponentialRampToValueAtTime(50, now + 0.05);
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+        osc.start(now);
+        osc.stop(now + 0.1);
+        
+        // Add bass boom
+        const osc2 = audioCtx.createOscillator();
+        const gain2 = audioCtx.createGain();
+        osc2.connect(gain2);
+        gain2.connect(audioCtx.destination);
+        osc2.type = 'sine';
+        osc2.frequency.setValueAtTime(100, now);
+        osc2.frequency.exponentialRampToValueAtTime(30, now + 0.08);
+        gain2.gain.setValueAtTime(0.35, now);
+        gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+        osc2.start(now);
+        osc2.stop(now + 0.08);
+      } else if (type === 'meteor') {
+        // Meteor impact - explosive boom
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(150, now);
+        osc.frequency.exponentialRampToValueAtTime(40, now + 0.3);
+        gain.gain.setValueAtTime(0.35, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+        osc.start(now);
+        osc.stop(now + 0.3);
+        
+        // Add explosion layer
+        const osc2 = audioCtx.createOscillator();
+        const gain2 = audioCtx.createGain();
+        osc2.connect(gain2);
+        gain2.connect(audioCtx.destination);
+        osc2.type = 'square';
+        osc2.frequency.setValueAtTime(300, now);
+        osc2.frequency.exponentialRampToValueAtTime(100, now + 0.25);
+        gain2.gain.setValueAtTime(0.25, now);
+        gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+        osc2.start(now);
+        osc2.stop(now + 0.25);
       }
+    }
+    
+    // Drone humming sound - continuous
+    let droneOscillator = null;
+    let droneGain = null;
+    
+    function startDroneHum() {
+      if (!gameSettings.soundEnabled || droneOscillator) return;
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      
+      droneOscillator = audioCtx.createOscillator();
+      droneGain = audioCtx.createGain();
+      
+      droneOscillator.connect(droneGain);
+      droneGain.connect(audioCtx.destination);
+      
+      droneOscillator.type = 'sawtooth';
+      droneOscillator.frequency.setValueAtTime(120, audioCtx.currentTime);
+      
+      // Add subtle vibrato
+      const lfo = audioCtx.createOscillator();
+      const lfoGain = audioCtx.createGain();
+      lfo.frequency.value = 4;
+      lfoGain.gain.value = 5;
+      lfo.connect(lfoGain);
+      lfoGain.connect(droneOscillator.frequency);
+      lfo.start();
+      
+      droneGain.gain.setValueAtTime(0, audioCtx.currentTime);
+      droneGain.gain.linearRampToValueAtTime(0.08, audioCtx.currentTime + 0.5);
+      
+      droneOscillator.start();
+    }
+    
+    function stopDroneHum() {
+      if (!droneOscillator) return;
+      
+      droneGain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.5);
+      
+      setTimeout(() => {
+        if (droneOscillator) {
+          try {
+            droneOscillator.stop();
+          } catch (e) {}
+          droneOscillator = null;
+          droneGain = null;
+        }
+      }, 500);
     }
 
     // --- GAME STATE ---
@@ -3652,7 +3766,7 @@
         // Visuals
         spawnParticles(this.target, 0xFF4500, 10);
         spawnParticles(this.target, 0xFFFF00, 5);
-        playSound('hit'); // Boom
+        playSound('meteor'); // Explosive boom sound
       }
     }
 
@@ -6855,6 +6969,7 @@
                 );
                 droneTurrets.push(drone);
                 weapons.droneTurret.droneCount++;
+                startDroneHum(); // Start continuous drone sound
                 showStatChange(`Drone Turret Level ${weapons.droneTurret.level}: +8 Dmg, +10% Fire Rate, +1 Drone!`);
               } else {
                 showStatChange(`Drone Turret Level ${weapons.droneTurret.level}: +8 Dmg, +10% Fire Rate`);
@@ -6965,6 +7080,7 @@
               // Create initial drone
               const drone = new DroneTurret(player);
               droneTurrets.push(drone);
+              startDroneHum(); // Start continuous drone sound
               showStatChange('New Weapon: Drone Turret');
               
               // Visual effect when unlocked
@@ -7548,6 +7664,8 @@
       isPaused = true;
       isGameActive = false;
       
+      stopDroneHum(); // Stop drone sound
+      
       // Calculate run stats
       const survivalTime = Math.floor((Date.now() - gameStartTime) / 1000);
       const goldEarned = playerStats.gold - runStartGold;
@@ -7568,6 +7686,8 @@
     }
 
     function resetGame() {
+      stopDroneHum(); // Stop drone sound on reset
+      
       // Apply permanent upgrades from save data
       const baseHp = 100 + PERMANENT_UPGRADES.maxHp.effect(saveData.upgrades.maxHp);
       const baseRegen = PERMANENT_UPGRADES.hpRegen.effect(saveData.upgrades.hpRegen);
@@ -8380,7 +8500,7 @@
             }, i * 100);
           }
           weapons.gun.lastShot = time;
-          playSound('shoot');
+          playSound('shoot'); // Gun sound
         }
       }
 
@@ -8392,7 +8512,7 @@
         const angle = player.mesh.rotation.y;
         projectiles.push(new SwordSlash(player.mesh.position.x, player.mesh.position.z, angle));
         weapons.sword.lastShot = time;
-        playSound('shoot'); // Reuse sound for now
+        playSound('sword'); // Sword slash sound
         
         // ENHANCED - Add sword slash visual effects
         spawnParticles(player.mesh.position, 0xC0C0C0, 8); // Silver slash particles
@@ -8562,7 +8682,7 @@
           spawnParticles(player.mesh.position, 0xFFFFFF, 5);
           
           weapons.doubleBarrel.lastShot = time;
-          playSound('shoot');
+          playSound('doublebarrel'); // Double barrel sound
         }
       }
       
