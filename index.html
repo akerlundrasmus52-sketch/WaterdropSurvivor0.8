@@ -266,10 +266,24 @@
     }
     
     @keyframes waterdrop-slosh {
-      /* Reserved for future player movement reaction animation */
+      /* Water slosh animation for movement/attack */
       0%, 100% { transform: rotate(0deg); }
-      25% { transform: rotate(-2deg); }
-      75% { transform: rotate(2deg); }
+      25% { transform: rotate(-3deg); }
+      75% { transform: rotate(3deg); }
+    }
+    
+    /* Attack bounce animation */
+    #waterdrop-container.attacked {
+      animation: waterdrop-bounce 0.4s ease-out, waterdrop-bubble 2.5s ease-in-out infinite;
+    }
+    
+    @keyframes waterdrop-bounce {
+      0% { transform: scale(1) scaleY(1); }
+      20% { transform: scale(0.85) scaleY(1.2); }
+      40% { transform: scale(1.1) scaleY(0.9); }
+      60% { transform: scale(0.95) scaleY(1.05); }
+      80% { transform: scale(1.02) scaleY(0.98); }
+      100% { transform: scale(1) scaleY(1); }
     }
     
     #waterdrop-svg {
@@ -1547,6 +1561,9 @@
       <!-- Status Message Bar -->
       <div class="stat-text" id="status-message" style="color: #5DADE2; text-shadow: 0 0 8px rgba(93,173,226,0.8), 0 0 12px rgba(93,173,226,0.5), 1px 1px 2px rgba(0,0,0,0.5); font-size: 16px; min-height: 20px; margin-top: 5px;"></div>
       
+      <!-- Combo Timer Display -->
+      <div class="stat-text" id="combo-timer" style="display: none; color: #FF4444; text-shadow: 0 0 8px rgba(255,68,68,0.8), 0 0 12px rgba(255,68,68,0.5), 1px 1px 2px rgba(0,0,0,0.5); font-size: 14px; font-weight: bold; margin-top: 3px;"></div>
+      
       <!-- Windmill Quest UI -->
       <div id="windmill-quest-ui" style="display: none; margin-top: 10px;">
         <div class="bar-container" style="border-color: #8B4513;">
@@ -2707,6 +2724,15 @@
         playerStats.hp -= reduced;
         updateHUD();
         playSound('hit');
+        
+        // Trigger waterdrop UI attack animation
+        const waterdropContainer = document.getElementById('waterdrop-container');
+        if (waterdropContainer) {
+          waterdropContainer.classList.add('attacked');
+          setTimeout(() => {
+            waterdropContainer.classList.remove('attacked');
+          }, 400);
+        }
         
         // Show damage number for player (red color)
         const div = document.createElement('div');
@@ -8487,14 +8513,15 @@
     
     // Combo System - Red/Black Theme
     const COMBO_ANIMATION_DURATION = 500; // milliseconds - matches CSS animation duration
-    const GODLIKE_COMBO_THRESHOLD = 14; // Combo count where GODLIKE is achieved
+    const GODLIKE_COMBO_THRESHOLD = 20; // Combo count where GODLIKE is achieved (increased from 14 to 20 for harder difficulty)
     const MIN_COMBO_FOR_CHEST_ON_LOSS = 10; // Minimum combo to spawn chest when lost
-    const CHEST_SPAWN_MILESTONES = [7, 9, 10, 12, 14]; // Combo counts that spawn chests
+    const CHEST_SPAWN_MILESTONES = [7, 9, 10, 12, 15, 20]; // Combo counts that spawn chests (updated to include 15 and 20)
     
     // Helper function to determine chest tier based on combo count
     function getChestTierForCombo(comboCount) {
-      if (comboCount >= 14) return 'mythical';
-      if (comboCount >= 12) return 'epic';
+      if (comboCount >= 20) return 'mythical';
+      if (comboCount >= 15) return 'epic';
+      if (comboCount >= 12) return 'rare';
       if (comboCount >= 10) return 'rare';
       if (comboCount >= 9) return 'uncommon';
       if (comboCount >= 7) return 'common';
@@ -8507,7 +8534,8 @@
       comboWindow: 2000, // 2 seconds between kills to maintain combo
       fadeTimer: null,
       topCombos: [], // Track top 3 combo achievements
-      maxTopCombos: 3
+      maxTopCombos: 3,
+      shownMilestones: [] // Track which milestone texts have been shown to prevent repeats
     };
     
     function updateComboCounter(newKill = false) {
@@ -8519,6 +8547,7 @@
           comboState.count++;
         } else {
           comboState.count = 1; // Reset to 1 for first kill
+          comboState.shownMilestones = []; // Reset shown milestones when combo breaks
         }
         comboState.lastKillTime = currentTime;
         
@@ -8529,7 +8558,7 @@
         
         // Spawn chest on specific combo milestones:
         // 7 kills: Common (white), 9 kills: Uncommon (green), 10 kills: Rare (blue)
-        // 12 kills: Epic (purple), 14 (GODLIKE): Mythical (special)
+        // 12 kills: Rare (blue), 15 kills: Epic (purple), 20 (GODLIKE): Mythical (special)
         const isMilestone = CHEST_SPAWN_MILESTONES.includes(comboState.count);
         
         if (isMilestone && !comboState.topCombos.includes(comboState.count)) {
@@ -8554,6 +8583,39 @@
         comboState.fadeTimer = setTimeout(() => {
           hideCombo();
         }, comboState.comboWindow);
+        
+        // Update combo timer display
+        updateComboTimer();
+      }
+    }
+    
+    // Update the combo timer display in the status bar
+    function updateComboTimer() {
+      const comboTimerEl = document.getElementById('combo-timer');
+      if (comboState.count >= 5) {
+        comboTimerEl.style.display = 'block';
+        
+        // Calculate time remaining
+        const currentTime = Date.now();
+        const timeElapsed = currentTime - comboState.lastKillTime;
+        const timeRemaining = Math.max(0, comboState.comboWindow - timeElapsed);
+        const secondsRemaining = (timeRemaining / 1000).toFixed(1);
+        
+        comboTimerEl.innerText = `Combo Timer: ${secondsRemaining}s`;
+        
+        // Update timer every 100ms while combo is active
+        if (timeRemaining > 0) {
+          setTimeout(() => {
+            if (comboState.count >= 5) {
+              updateComboTimer();
+            }
+          }, 100);
+        } else {
+          // Combo expired
+          comboTimerEl.style.display = 'none';
+        }
+      } else {
+        comboTimerEl.style.display = 'none';
       }
     }
     
@@ -8562,70 +8624,97 @@
       const comboText = document.getElementById('combo-text');
       const comboMultiplier = document.getElementById('combo-multiplier');
       
-      // Updated combo progression: x5=Multikill, x6=Rare, x7=Epic, x8=Legendary, x9=Mythical, x10=Amazing, x11=Unbelievable, x12=Fantastic, x13=Almost Max, x14=GODLIKE, x15+=GODLIKE x2, x3...
+      // Updated combo progression: x5=Multikill, x6=Rare, x7=Epic, x8=Legendary, x9=Mythical, 
+      // x10=Amazing, x11=Unbelievable, x12=Fantastic, x13-19=Higher combos, x20=GODLIKE, x21+=GODLIKE x2, x3...
       let message = '';
       let comboLevel = 'normal'; // for styling classes
+      let isMilestone = false;
+      
+      // Check if this is a new milestone that hasn't been shown yet
+      const milestones = [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
+      if (milestones.includes(comboState.count) && !comboState.shownMilestones.includes(comboState.count)) {
+        isMilestone = true;
+        comboState.shownMilestones.push(comboState.count);
+      }
       
       if (comboState.count >= GODLIKE_COMBO_THRESHOLD + 1) {
         const godlikeMultiplier = comboState.count - GODLIKE_COMBO_THRESHOLD;
-        message = `GODLIKE x${godlikeMultiplier}`;
+        message = isMilestone ? `GODLIKE x${godlikeMultiplier}` : `${comboState.count}x COMBO!`;
         comboLevel = 'mythical';
       } else if (comboState.count === GODLIKE_COMBO_THRESHOLD) {
-        message = 'GODLIKE';
+        message = isMilestone ? 'GODLIKE' : `${comboState.count}x COMBO!`;
+        comboLevel = 'mythical';
+      } else if (comboState.count === 19) {
+        message = isMilestone ? 'Almost Godlike' : `${comboState.count}x COMBO!`;
+        comboLevel = 'mythical';
+      } else if (comboState.count === 18) {
+        message = isMilestone ? 'Unstoppable' : `${comboState.count}x COMBO!`;
+        comboLevel = 'mythical';
+      } else if (comboState.count === 17) {
+        message = isMilestone ? 'Dominating' : `${comboState.count}x COMBO!`;
+        comboLevel = 'mythical';
+      } else if (comboState.count === 16) {
+        message = isMilestone ? 'Rampage' : `${comboState.count}x COMBO!`;
+        comboLevel = 'mythical';
+      } else if (comboState.count === 15) {
+        message = isMilestone ? 'Monster Combo' : `${comboState.count}x COMBO!`;
+        comboLevel = 'mythical';
+      } else if (comboState.count === 14) {
+        message = isMilestone ? 'Insane Combo' : `${comboState.count}x COMBO!`;
         comboLevel = 'mythical';
       } else if (comboState.count === 13) {
-        message = 'Almost Max Combo';
+        message = isMilestone ? 'Almost Max Combo' : `${comboState.count}x COMBO!`;
         comboLevel = 'mythical';
       } else if (comboState.count === 12) {
-        message = 'Fantastic Combo';
+        message = isMilestone ? 'Fantastic Combo' : `${comboState.count}x COMBO!`;
         comboLevel = 'mythical';
       } else if (comboState.count === 11) {
-        message = 'Unbelievable Combo';
+        message = isMilestone ? 'Unbelievable Combo' : `${comboState.count}x COMBO!`;
         comboLevel = 'mythical';
       } else if (comboState.count === 10) {
-        message = 'Amazing Combo';
+        message = isMilestone ? 'Amazing Combo' : `${comboState.count}x COMBO!`;
         comboLevel = 'mythical';
       } else if (comboState.count === 9) {
-        message = 'Mythical Combo';
+        message = isMilestone ? 'Mythical Combo' : `${comboState.count}x COMBO!`;
         comboLevel = 'mythical';
       } else if (comboState.count === 8) {
-        message = 'Legendary Combo';
+        message = isMilestone ? 'Legendary Combo' : `${comboState.count}x COMBO!`;
         comboLevel = 'high';
       } else if (comboState.count === 7) {
-        message = 'Epic Combo';
+        message = isMilestone ? 'Epic Combo' : `${comboState.count}x COMBO!`;
         comboLevel = 'high';
       } else if (comboState.count === 6) {
-        message = 'Rare Combo';
+        message = isMilestone ? 'Rare Combo' : `${comboState.count}x COMBO!`;
         comboLevel = 'high';
       } else if (comboState.count === 5) {
-        message = 'Multikill';  // First combo message at 5 kills
+        message = isMilestone ? 'Multikill' : `${comboState.count}x COMBO!`;  // First combo message at 5 kills
         comboLevel = 'high';
       } else {
         message = comboState.count + 'x COMBO!';
       }
       
       comboText.innerText = message;
-      comboMultiplier.innerText = `x${comboState.count}`; // Display multiplier only to avoid redundancy
+      comboMultiplier.innerText = isMilestone ? '' : `x${comboState.count}`; // Only show multiplier when not showing milestone text
       
+      // Progressive scaling: Start small at 5, gradually grow bigger to GODLIKE at 20
       // Yellow/White to Dark Red gradient with intensifying glow and size
-      // x5: Multikill starts smaller with yellow/white, each higher grows bigger to GODLIKE red/black
       let textColor = '#FFFF00'; // Start with Yellow
       let glowIntensity = 20;
-      let fontSize = 42; // Base font size (smaller start)
-      let lightningCount = 0; // Number of lightning effects
+      let fontSize = 38; // Base font size (smaller start, reduced from 42)
+      let lightningCount = 0; // Number of lightning effects (keep minimal)
       
-      if (comboState.count >= 15) {
+      if (comboState.count >= 21) {
         // GODLIKE x2, x3... - Red/Black with max glow
         textColor = '#8B0000'; // Dark red
-        glowIntensity = 90;
-        fontSize = 86;
-        lightningCount = 6;
-      } else if (comboState.count === 14) {
+        glowIntensity = 70; // Reduced from 90
+        fontSize = 78; // Reduced from 86
+        lightningCount = 4; // Reduced from 6
+      } else if (comboState.count === 20) {
         // GODLIKE - Red/Black with glowing light effects
         textColor = '#8B0000'; // Dark red  
-        glowIntensity = 85;
-        fontSize = 82;
-        lightningCount = 5;
+        glowIntensity = 65; // Reduced from 85
+        fontSize = 74; // Reduced from 82
+        lightningCount = 3; // Reduced from 5
       } else if (comboState.count === 13) {
         // Almost Max Combo
         textColor = '#A00000'; // Dark red
@@ -8634,52 +8723,52 @@
         lightningCount = 5;
       } else if (comboState.count === 12) {
         // Fantastic Combo
-        textColor = '#B00000'; // Medium dark red
-        glowIntensity = 72;
-        fontSize = 72;
-        lightningCount = 4;
+        textColor = '#C00000'; // Medium dark red
+        glowIntensity = 48; // Reduced from 72
+        fontSize = 56; // Reduced from 72
+        lightningCount = 2; // Reduced from 4
       } else if (comboState.count === 11) {
         // Unbelievable Combo
-        textColor = '#B80000'; // Medium dark red
-        glowIntensity = 66;
-        fontSize = 68;
-        lightningCount = 4;
+        textColor = '#C80000'; // Medium dark red
+        glowIntensity = 46; // Reduced from 66
+        fontSize = 54; // Reduced from 68
+        lightningCount = 2; // Reduced from 4
       } else if (comboState.count === 10) {
         // Amazing Combo
-        textColor = '#C80000'; // Medium red
-        glowIntensity = 60;
-        fontSize = 64;
-        lightningCount = 4;
+        textColor = '#D00000'; // Medium red
+        glowIntensity = 44; // Reduced from 60
+        fontSize = 52; // Reduced from 64
+        lightningCount = 1; // Reduced from 4
       } else if (comboState.count === 9) {
         // Mythical Combo
         textColor = '#D80000'; // Lighter red
-        glowIntensity = 54;
-        fontSize = 60;
-        lightningCount = 3;
+        glowIntensity = 42; // Reduced from 54
+        fontSize = 50; // Reduced from 60
+        lightningCount = 1; // Reduced from 3
       } else if (comboState.count === 8) {
         // Legendary Combo
-        textColor = '#E80000'; // Light red
-        glowIntensity = 48;
-        fontSize = 56;
-        lightningCount = 3;
+        textColor = '#E00000'; // Light red
+        glowIntensity = 40; // Reduced from 48
+        fontSize = 48; // Reduced from 56
+        lightningCount = 1; // Reduced from 3
       } else if (comboState.count === 7) {
         // Epic Combo
-        textColor = '#FF3333'; // Very light red
-        glowIntensity = 40;
-        fontSize = 52;
-        lightningCount = 2;
+        textColor = '#E80000'; // Very light red
+        glowIntensity = 36; // Reduced from 40
+        fontSize = 46; // Reduced from 52
+        lightningCount = 1; // Reduced from 2
       } else if (comboState.count === 6) {
         // Rare Combo
-        textColor = '#FF6666'; // Pink-ish red
-        glowIntensity = 32;
-        fontSize = 48;
-        lightningCount = 2;
+        textColor = '#FF3333'; // Pink-ish red
+        glowIntensity = 32; // Reduced
+        fontSize = 44; // Reduced from 48
+        lightningCount = 0; // Reduced from 2
       } else if (comboState.count === 5) {
         // Multikill - Yellow/White start
         textColor = '#FFFF99'; // Light yellow
-        glowIntensity = 25;
-        fontSize = 42;
-        lightningCount = 1;
+        glowIntensity = 25; // Reduced
+        fontSize = 40; // Reduced from 42
+        lightningCount = 0; // Reduced from 1
       }
       
       comboText.style.fontSize = `${fontSize}px`;
