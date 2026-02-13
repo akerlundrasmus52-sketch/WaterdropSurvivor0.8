@@ -48,6 +48,11 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700;800;900&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --attack-animation-duration: 0.4s;
+      --attribute-item-bg: rgba(0,0,0,0.3);
+    }
+    
     body {
       margin: 0;
       padding: 0;
@@ -282,7 +287,7 @@
     
     /* Attack bounce animation */
     #waterdrop-container.attacked {
-      animation: waterdrop-bounce 0.4s ease-out, waterdrop-bubble 2.5s ease-in-out infinite;
+      animation: waterdrop-bounce var(--attack-animation-duration) ease-out, waterdrop-bubble 2.5s ease-in-out infinite;
     }
     
     @keyframes waterdrop-bounce {
@@ -302,6 +307,18 @@
     #waterdrop-exp-fill {
       transition: y 0.3s ease-out, height 0.3s ease-out;
       animation: water-shimmer 3s ease-in-out infinite;
+    }
+    
+    /* Water wave/slosh animation when attacked */
+    #waterdrop-container.attacked #waterdrop-exp-fill {
+      animation: water-slosh-fill var(--attack-animation-duration) ease-out, water-shimmer 3s ease-in-out infinite;
+    }
+    
+    @keyframes water-slosh-fill {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-3px) scaleX(1.05); }
+      50% { transform: translateX(3px) scaleX(1.05); }
+      75% { transform: translateX(-2px) scaleX(1.02); }
     }
     
     /* Add shimmer effect to the EXP fill for extra squishiness */
@@ -426,6 +443,69 @@
     
     /* Wave Counter - Removed (was in stats bar) */
     
+    /* Attributes Menu Styles */
+    .attributes-modal-title {
+      color: #FFD700;
+      text-shadow: 2px 2px 0 #000, 0 0 15px rgba(255,215,0,0.8);
+    }
+    
+    .attributes-section-title {
+      color: #5DADE2;
+      text-shadow: 0 0 10px rgba(93,173,226,0.6);
+      margin-bottom: 10px;
+    }
+    
+    .attribute-item {
+      background: var(--attribute-item-bg);
+      padding: 10px;
+      border-radius: 5px;
+      margin-bottom: 5px;
+    }
+    
+    .attribute-item strong {
+      color: #FFD700;
+    }
+    
+    /* Attributes Menu Modal Layout */
+    #attributes-menu {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.9);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+      pointer-events: auto;
+    }
+    
+    #attributes-menu .modal-content {
+      max-height: 80vh;
+      overflow-y: auto;
+      width: 90%;
+      max-width: 500px;
+    }
+    
+    /* Attributes menu section container */
+    .attributes-section {
+      margin-bottom: 20px;
+      text-align: left;
+    }
+    
+    /* Attributes menu content area */
+    .attributes-content {
+      font-family: monospace;
+      font-size: 14px;
+      line-height: 1.8;
+      color: #ecf0f1;
+    }
+    
+    /* Empty state message */
+    .empty-message {
+      color: #888;
+    }
     
     /* Equipment Menu Button - Phase 2 Placeholder */
     #equipment-btn {
@@ -463,7 +543,7 @@
       font-size: 24px;
       cursor: pointer;
       pointer-events: auto;
-      z-index: 100;
+      z-index: 150; /* Increased to ensure it's above joystick zone */
       box-shadow: 0 4px 0 #2a1a11, 0 6px 12px rgba(0,0,0,0.5);
       transition: all 0.2s;
       display: none; /* Hidden in landscape, shown in portrait */
@@ -1614,13 +1694,24 @@
             <!-- Water animation filter for bubbles/shimmer -->
             <filter id="water-turbulence" x="0%" y="0%" width="100%" height="100%">
               <!-- Seed value 2 provides consistent gentle water turbulence pattern -->
-              <feTurbulence baseFrequency="0.02" numOctaves="3" seed="2">
+              <feTurbulence id="water-turbulence-wave" baseFrequency="0.02" numOctaves="3" seed="2">
                 <animate attributeName="baseFrequency" 
                          from="0.02" to="0.025" 
                          dur="3s" 
                          repeatCount="indefinite"/>
               </feTurbulence>
               <feDisplacementMap in="SourceGraphic" scale="3"/>
+            </filter>
+            <!-- Stronger turbulence for attack animation -->
+            <!-- Duration matches --attack-animation-duration CSS variable (0.4s) and ATTACK_ANIMATION_DURATION_MS constant (400ms) -->
+            <filter id="water-turbulence-attack" x="0%" y="0%" width="100%" height="100%">
+              <feTurbulence baseFrequency="0.05" numOctaves="4" seed="5">
+                <animate attributeName="baseFrequency" 
+                         from="0.05" to="0.03" 
+                         dur="0.4s" 
+                         repeatCount="1"/>
+              </feTurbulence>
+              <feDisplacementMap in="SourceGraphic" scale="8"/>
             </filter>
           </defs>
           <!-- Background -->
@@ -1691,9 +1782,35 @@
       <h2 class="options-title">OPTIONS</h2>
       <div class="options-buttons">
         <button class="btn-small" id="options-stats-btn">STATS</button>
+        <button class="btn-small" id="options-attributes-btn">⚔️ EQUIPMENT</button>
         <button class="btn-small" id="options-settings-btn">⚙️ SETTINGS</button>
         <button class="btn-small" id="close-options-btn">CLOSE</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Attributes & Equipment Menu Modal -->
+  <div id="attributes-menu">
+    <div class="modal-content">
+      <h2 class="attributes-modal-title">ATTRIBUTES & EQUIPMENT</h2>
+      
+      <!-- Attributes Section -->
+      <div class="attributes-section">
+        <h3 class="attributes-section-title">Player Attributes</h3>
+        <div id="attributes-content" class="attributes-content">
+          <!-- Will be populated dynamically -->
+        </div>
+      </div>
+      
+      <!-- Equipment Section -->
+      <div class="attributes-section">
+        <h3 class="attributes-section-title">Equipment</h3>
+        <div id="equipment-content" class="attributes-content">
+          <!-- Will be populated dynamically -->
+        </div>
+      </div>
+      
+      <button class="btn" id="close-attributes-btn">CLOSE</button>
     </div>
   </div>
 
@@ -1722,6 +1839,8 @@
     import * as THREE from 'three';
 
     // --- CONSTANTS & CONFIG ---
+    const ATTACK_ANIMATION_DURATION_MS = 400; // Duration of waterdrop attack animation in milliseconds
+    
     const COLORS = {
       bg: 0xFFF0F5,
       player: 0x4FC3F7, // Light Blue - more like water droplet
@@ -2735,11 +2854,22 @@
         
         // Trigger waterdrop UI attack animation
         const waterdropContainer = document.getElementById('waterdrop-container');
+        const waterdropExpFill = document.getElementById('waterdrop-exp-fill');
         if (waterdropContainer) {
           waterdropContainer.classList.add('attacked');
+          
+          // Switch to attack water turbulence filter for more dramatic wave effect
+          if (waterdropExpFill) {
+            waterdropExpFill.setAttribute('filter', 'url(#water-turbulence-attack)');
+          }
+          
           setTimeout(() => {
             waterdropContainer.classList.remove('attacked');
-          }, 400);
+            // Switch back to normal water turbulence
+            if (waterdropExpFill) {
+              waterdropExpFill.setAttribute('filter', 'url(#water-turbulence)');
+            }
+          }, ATTACK_ANIMATION_DURATION_MS);
         }
         
         // Show damage number for player (red color)
@@ -6914,6 +7044,7 @@
       const optionsMenu = document.getElementById('options-menu');
       const closeOptionsBtn = document.getElementById('close-options-btn');
       const optionsStatsBtn = document.getElementById('options-stats-btn');
+      const optionsAttributesBtn = document.getElementById('options-attributes-btn');
       const optionsSettingsBtn = document.getElementById('options-settings-btn');
       
       menuBtn.addEventListener('click', () => {
@@ -6931,6 +7062,11 @@
       optionsStatsBtn.addEventListener('click', () => {
         optionsMenu.style.display = 'none';
         toggleStats();
+      });
+      
+      optionsAttributesBtn.addEventListener('click', () => {
+        optionsMenu.style.display = 'none';
+        showAttributesMenu();
       });
       
       optionsSettingsBtn.addEventListener('click', () => {
@@ -7122,14 +7258,80 @@
       
       // Stats Bar removed - No toggle needed
       
-      // Phase 2: Equipment Button (Placeholder)
+      // Attributes & Equipment Button
       document.getElementById('equipment-btn').onclick = () => {
-        playSound('hit');
-        alert('⚔️ EQUIPMENT SYSTEM\n\nComing in Phase 3!\n\nThis feature will allow you to equip special gear and customize your build.');
+        playSound('waterdrop');
+        showAttributesMenu();
+      };
+      
+      // Attributes Menu Close Button
+      document.getElementById('close-attributes-btn').onclick = () => {
+        playSound('waterdrop');
+        document.getElementById('attributes-menu').style.display = 'none';
+        isPaused = false;
       };
       
       // Initialize control type UI on startup
       updateControlType();
+    }
+    
+    // Function to show attributes and equipment menu
+    function showAttributesMenu() {
+      isPaused = true;
+      
+      // Populate attributes content
+      const attributesContent = document.getElementById('attributes-content');
+      attributesContent.innerHTML = `
+        <div class="attribute-item">
+          <strong>❤️ Health:</strong> ${playerStats.maxHp} HP
+        </div>
+        <div class="attribute-item">
+          <strong>💪 Strength:</strong> ${playerStats.strength}
+        </div>
+        <div class="attribute-item">
+          <strong>⚡ Speed:</strong> ${playerStats.speed}
+        </div>
+        <div class="attribute-item">
+          <strong>⚔️ Damage:</strong> ${playerStats.damage}
+        </div>
+        <div class="attribute-item">
+          <strong>🎯 Crit Chance:</strong> ${(playerStats.critChance * 100).toFixed(1)}%
+        </div>
+        <div class="attribute-item">
+          <strong>💥 Crit Damage:</strong> ${(playerStats.critDamage * 100).toFixed(0)}%
+        </div>
+        <div class="attribute-item">
+          <strong>🛡️ Armor:</strong> ${playerStats.armor}%
+        </div>
+        <div class="attribute-item">
+          <strong>🏃 Walk Speed:</strong> ${(playerStats.walkSpeed * 100).toFixed(0)}%
+        </div>
+      `;
+      
+      // Populate equipment content
+      const equipmentContent = document.getElementById('equipment-content');
+      const weaponsList = [];
+      
+      // Check which weapons player has unlocked
+      if (playerStats.lvl >= 1 && weapons.gun.active) {
+        weaponsList.push(`🔫 <strong>Gun</strong> - Basic ranged weapon (${weapons.gun.damage} damage)`);
+      }
+      if (playerStats.lvl >= 5 && weapons.sword.active) {
+        weaponsList.push(`⚔️ <strong>Sword</strong> - Melee slash weapon (${weapons.sword.damage} damage)`);
+      }
+      if (playerStats.lvl >= 10 && weapons.energyAura.active) {
+        weaponsList.push(`💫 <strong>Energy Aura</strong> - Area damage (${weapons.energyAura.damage} damage)`);
+      }
+      
+      if (weaponsList.length === 0) {
+        equipmentContent.innerHTML = '<div class="empty-message">No equipment unlocked yet.</div>';
+      } else {
+        equipmentContent.innerHTML = weaponsList.map(w => 
+          `<div class="attribute-item">${w}</div>`
+        ).join('');
+      }
+      
+      document.getElementById('attributes-menu').style.display = 'flex';
     }
     
 
