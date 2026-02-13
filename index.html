@@ -48,6 +48,11 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700;800;900&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --attack-animation-duration: 0.4s;
+      --attribute-item-bg: rgba(0,0,0,0.3);
+    }
+    
     body {
       margin: 0;
       padding: 0;
@@ -282,7 +287,7 @@
     
     /* Attack bounce animation */
     #waterdrop-container.attacked {
-      animation: waterdrop-bounce 0.4s ease-out, waterdrop-bubble 2.5s ease-in-out infinite;
+      animation: waterdrop-bounce var(--attack-animation-duration) ease-out, waterdrop-bubble 2.5s ease-in-out infinite;
     }
     
     @keyframes waterdrop-bounce {
@@ -306,7 +311,7 @@
     
     /* Water wave/slosh animation when attacked */
     #waterdrop-container.attacked #waterdrop-exp-fill {
-      animation: water-slosh-fill 0.4s ease-out, water-shimmer 3s ease-in-out infinite;
+      animation: water-slosh-fill var(--attack-animation-duration) ease-out, water-shimmer 3s ease-in-out infinite;
     }
     
     @keyframes water-slosh-fill {
@@ -451,7 +456,7 @@
     }
     
     .attribute-item {
-      background: rgba(0,0,0,0.3);
+      background: var(--attribute-item-bg);
       padding: 10px;
       border-radius: 5px;
       margin-bottom: 5px;
@@ -1792,6 +1797,8 @@
     import * as THREE from 'three';
 
     // --- CONSTANTS & CONFIG ---
+    const ATTACK_ANIMATION_DURATION_MS = 400; // Duration of waterdrop attack animation in milliseconds
+    
     const COLORS = {
       bg: 0xFFF0F5,
       player: 0x4FC3F7, // Light Blue - more like water droplet
@@ -2820,7 +2827,7 @@
             if (waterdropExpFill) {
               waterdropExpFill.setAttribute('filter', 'url(#water-turbulence)');
             }
-          }, 400);
+          }, ATTACK_ANIMATION_DURATION_MS);
         }
         
         // Show damage number for player (red color)
