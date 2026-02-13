@@ -1356,11 +1356,15 @@
       <!-- Waterdrop Level Display with EXP filling from bottom to top -->
       <div id="waterdrop-container">
         <svg id="waterdrop-svg" viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg">
-          <!-- Waterdrop shape -->
+          <!-- Definitions -->
           <defs>
             <clipPath id="waterdrop-clip">
               <path d="M 50 10 Q 30 30, 30 60 Q 30 90, 50 110 Q 70 90, 70 60 Q 70 30, 50 10 Z" />
             </clipPath>
+            <linearGradient id="exp-gradient" x1="0%" y1="100%" x2="0%" y2="0%">
+              <stop offset="0%" style="stop-color:#3498DB;stop-opacity:1" />
+              <stop offset="100%" style="stop-color:#5DADE2;stop-opacity:1" />
+            </linearGradient>
           </defs>
           <!-- Background -->
           <path d="M 50 10 Q 30 30, 30 60 Q 30 90, 50 110 Q 70 90, 70 60 Q 70 30, 50 10 Z" 
@@ -1370,13 +1374,6 @@
             <rect id="waterdrop-exp-fill" x="0" y="10" width="100" height="110" 
                   fill="url(#exp-gradient)" />
           </g>
-          <!-- Gradient for EXP -->
-          <defs>
-            <linearGradient id="exp-gradient" x1="0%" y1="100%" x2="0%" y2="0%">
-              <stop offset="0%" style="stop-color:#3498DB;stop-opacity:1" />
-              <stop offset="100%" style="stop-color:#5DADE2;stop-opacity:1" />
-            </linearGradient>
-          </defs>
           <!-- Level text -->
           <text id="waterdrop-level-text" x="50" y="70" 
                 text-anchor="middle" 
@@ -7418,6 +7415,9 @@
     
     // Combo System - Red/Black Theme
     const COMBO_ANIMATION_DURATION = 500; // milliseconds - matches CSS animation duration
+    const GODLIKE_COMBO_THRESHOLD = 14; // Combo count where GODLIKE is achieved
+    const MIN_COMBO_FOR_CHEST_ON_LOSS = 10; // Minimum combo to spawn chest when lost
+    const CHEST_SPAWN_MILESTONES = [7, 9, 10, 12, 14]; // Combo counts that spawn chests
     
     // Helper function to determine chest tier based on combo count
     function getChestTierForCombo(comboCount) {
@@ -7458,19 +7458,19 @@
         // Spawn chest on specific combo milestones:
         // 7 kills: Common (white), 9 kills: Uncommon (green), 10 kills: Rare (blue)
         // 12 kills: Epic (purple), 14 (GODLIKE): Mythical (special)
-        const chestTier = getChestTierForCombo(comboState.count);
-        const isMilestone = comboState.count === 7 || comboState.count === 9 || 
-                           comboState.count === 10 || comboState.count === 12 || 
-                           comboState.count === 14;
+        const isMilestone = CHEST_SPAWN_MILESTONES.includes(comboState.count);
         
-        if (chestTier && isMilestone && !comboState.topCombos.includes(comboState.count)) {
-          comboState.topCombos.push(comboState.count);
-          const chestAngle = Math.random() * Math.PI * 2;
-          const chestDist = 10 + Math.random() * 5;
-          const cx = player.mesh.position.x + Math.cos(chestAngle) * chestDist;
-          const cz = player.mesh.position.z + Math.sin(chestAngle) * chestDist;
-          spawnChest(cx, cz, chestTier);
-          showStatChange(`${chestTier.toUpperCase()} Chest Spawned!`);
+        if (isMilestone && !comboState.topCombos.includes(comboState.count)) {
+          const chestTier = getChestTierForCombo(comboState.count);
+          if (chestTier) {
+            comboState.topCombos.push(comboState.count);
+            const chestAngle = Math.random() * Math.PI * 2;
+            const chestDist = 10 + Math.random() * 5;
+            const cx = player.mesh.position.x + Math.cos(chestAngle) * chestDist;
+            const cz = player.mesh.position.z + Math.sin(chestAngle) * chestDist;
+            spawnChest(cx, cz, chestTier);
+            showStatChange(`${chestTier.toUpperCase()} Chest Spawned!`);
+          }
         }
         
         // Clear existing fade timer
@@ -7494,11 +7494,11 @@
       let message = '';
       let comboLevel = 'normal'; // for styling classes
       
-      if (comboState.count >= 15) {
-        const godlikeMultiplier = comboState.count - 14;
+      if (comboState.count >= GODLIKE_COMBO_THRESHOLD + 1) {
+        const godlikeMultiplier = comboState.count - GODLIKE_COMBO_THRESHOLD;
         message = `GODLIKE x${godlikeMultiplier}`;
         comboLevel = 'mythical';
-      } else if (comboState.count === 14) {
+      } else if (comboState.count === GODLIKE_COMBO_THRESHOLD) {
         message = 'GODLIKE';
         comboLevel = 'mythical';
       } else if (comboState.count === 13) {
@@ -7656,8 +7656,8 @@
         comboEl.style.opacity = '0';
         comboEl.style.animation = 'none';
         
-        // Spawn chest when combo is lost at 10+ kills
-        if (comboState.count >= 10) {
+        // Spawn chest when combo is lost at minimum threshold
+        if (comboState.count >= MIN_COMBO_FOR_CHEST_ON_LOSS) {
           const chestTier = getChestTierForCombo(comboState.count);
           if (chestTier) {
             const chestAngle = Math.random() * Math.PI * 2;
