@@ -230,22 +230,39 @@
     
     /* Waterdrop Level Display Container */
     #waterdrop-container {
-      width: 80px;
-      height: 96px;
+      width: 90px;
+      height: 110px;
       position: relative;
-      margin-bottom: 5px;
+      margin-bottom: 15px;
       filter: drop-shadow(0 3px 8px rgba(0,0,0,0.5)) drop-shadow(0 0 15px rgba(93,173,226,0.4));
       transition: transform 0.15s ease-out;
+      animation: waterdrop-bubble 2.5s ease-in-out infinite;
     }
     
     #waterdrop-container.grow {
-      animation: waterdrop-grow 0.3s ease-out;
+      animation: waterdrop-grow 0.3s ease-out, waterdrop-bubble 2.5s ease-in-out infinite;
     }
     
     @keyframes waterdrop-grow {
-      0% { transform: scale(1); }
-      50% { transform: scale(1.1); }
-      100% { transform: scale(1); }
+      0% { transform: scale(1) scaleY(1); }
+      50% { transform: scale(1.15) scaleY(1.05); }
+      100% { transform: scale(1) scaleY(1); }
+    }
+    
+    /* Bubbling/Squishing animation - makes waterdrop more squishy */
+    @keyframes waterdrop-bubble {
+      0%, 100% { 
+        transform: scale(1) scaleY(1); 
+      }
+      25% { 
+        transform: scale(0.98) scaleY(1.04); /* Squish horizontally, stretch vertically */
+      }
+      50% { 
+        transform: scale(1.02) scaleY(0.98); /* Stretch horizontally, squish vertically */
+      }
+      75% { 
+        transform: scale(0.99) scaleY(1.02); /* Squish horizontally, stretch vertically */
+      }
     }
     
     @keyframes waterdrop-slosh {
@@ -262,42 +279,30 @@
     
     #waterdrop-exp-fill {
       transition: y 0.3s ease-out, height 0.3s ease-out;
+      animation: water-shimmer 3s ease-in-out infinite;
+    }
+    
+    /* Add shimmer effect to the EXP fill for extra squishiness */
+    @keyframes water-shimmer {
+      0%, 100% { opacity: 0.9; }
+      50% { opacity: 0.95; }
     }
     
     #waterdrop-level-text {
       text-shadow: 0 0 10px rgba(255,215,0,0.8);
     }
     
-    /* EXP Bar at bottom */
+    /* EXP Bar at bottom - REMOVED per PR #117 adjustments */
     #bottom-exp-bar {
-      width: 100%;
-      height: 24px;
-      background: linear-gradient(to bottom, #3a3a3a 0%, #3a3a3a 50%, #6a6a6a 50%, #6a6a6a 100%);
-      border: 3px solid #2a2a2a;
-      overflow: hidden;
-      position: relative;
-      box-shadow: 0 3px 8px rgba(0,0,0,0.3), inset 0 2px 4px rgba(0,0,0,0.2), 0 0 15px rgba(0,0,0,0.5);
+      display: none; /* Hide the bottom EXP bar */
     }
     
     #bottom-exp-fill {
-      height: 100%;
-      width: 0%;
-      background: linear-gradient(to bottom, #5DADE2, #3498DB);
-      box-shadow: 0 0 10px rgba(93,173,226,0.8), 0 0 20px rgba(93,173,226,0.4), inset 0 2px 4px rgba(255,255,255,0.2);
-      transition: width 0.3s ease-out;
+      display: none;
     }
     
     #bottom-exp-text {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      font-weight: bold;
-      font-size: 12px;
-      color: #FFFFFF;
-      text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
-      pointer-events: none;
-      z-index: 1;
+      display: none;
     }
     
     /* Stat Notification Queue - Red/Black Dominant */
@@ -421,6 +426,79 @@
       justify-content: center;
       color: #FFD700;
       text-shadow: 0 0 8px rgba(255,215,0,0.6);
+    }
+    
+    /* PR #117: Menu button */
+    #menu-btn {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: linear-gradient(to bottom, #5A3A31, #3a2a21);
+      border: 3px solid #8B4513;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      font-size: 24px;
+      cursor: pointer;
+      pointer-events: auto;
+      z-index: 100;
+      box-shadow: 0 4px 0 #2a1a11, 0 6px 12px rgba(0,0,0,0.5);
+      transition: all 0.2s;
+      display: none; /* Hidden in landscape, shown in portrait */
+      align-items: center;
+      justify-content: center;
+      color: #FFD700;
+      text-shadow: 0 0 8px rgba(255,215,0,0.6);
+    }
+    
+    #equipment-btn:hover, #menu-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 0 #2a1a11, 0 8px 16px rgba(0,0,0,0.6);
+      filter: brightness(1.2);
+    }
+    
+    #equipment-btn:active, #menu-btn:active {
+      transform: translateY(2px);
+      box-shadow: 0 2px 0 #2a1a11, 0 4px 8px rgba(0,0,0,0.4);
+    }
+    
+    /* PR #117: Options Menu Modal */
+    #options-menu {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.85);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+      pointer-events: auto;
+    }
+    
+    .options-content {
+      background: linear-gradient(to bottom, #2a2a2a 0%, #2a2a2a 50%, #4a4a4a 50%, #4a4a4a 100%);
+      border: 5px solid #8B4513;
+      border-radius: 20px;
+      padding: 30px;
+      max-width: 400px;
+      width: 90%;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+    }
+    
+    .options-title {
+      font-size: 32px;
+      color: #FFD700;
+      text-align: center;
+      margin-bottom: 20px;
+      text-shadow: 0 0 15px rgba(255,215,0,0.8);
+    }
+    
+    .options-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
     }
     
     #equipment-btn:hover {
@@ -1300,7 +1378,15 @@
         padding: 10px;
       }
       
-      /* Right joystick visibility controlled by auto-aim setting, not orientation */
+      /* PR #117: Fix button overlap in portrait mode */
+      /* Hide settings and stats buttons in portrait, show only menu button */
+      #settings-btn, #stats-btn, #equipment-btn {
+        display: none !important;
+      }
+      
+      #menu-btn {
+        display: flex !important;
+      }
     }
 
     @media (orientation: landscape) {
@@ -1473,6 +1559,9 @@
     <button id="stats-btn" class="btn-small" style="position: absolute; top: 20px; right: 20px; pointer-events: auto; z-index: 100;">STATS</button>
     <button id="settings-btn" class="btn-small" style="position: absolute; top: 20px; right: 120px; pointer-events: auto; z-index: 100;">⚙️</button>
     
+    <!-- PR #117: Menu button (shows in portrait mode) -->
+    <button id="menu-btn" title="Menu">☰</button>
+    
     <!-- Equipment Button - Phase 2 Placeholder -->
     <button id="equipment-btn" title="Equipment (Coming Soon)">⚔️</button>
     
@@ -1568,6 +1657,18 @@
       <h2>PLAYER STATS</h2>
       <div id="stats-content" style="text-align: left; margin-bottom: 20px; font-family: monospace; font-size: 14px; line-height: 1.8; color: #ecf0f1;"></div>
       <button class="btn" id="close-stats-btn">CLOSE</button>
+    </div>
+  </div>
+  
+  <!-- PR #117: Options Menu Modal -->
+  <div id="options-menu">
+    <div class="options-content">
+      <h2 class="options-title">OPTIONS</h2>
+      <div class="options-buttons">
+        <button class="btn-small" id="options-stats-btn">STATS</button>
+        <button class="btn-small" id="options-settings-btn">⚙️ SETTINGS</button>
+        <button class="btn-small" id="close-options-btn">CLOSE</button>
+      </div>
     </div>
   </div>
 
@@ -3550,35 +3651,50 @@
           spawnExp(this.mesh.position.x, this.mesh.position.z);
         }
         
-        // Drop GOLD based on enemy type (REDUCED for better balance)
+        // PR #117: Drop GOLD - Reduced drop rate (chest-like rarity), bigger amounts
         let goldAmount = 0;
+        let dropChance = 0;
+        
         if (this.isMiniBoss) {
-          // MiniBoss: guaranteed 30-60 gold (reduced from 50-100)
-          goldAmount = 30 + Math.floor(Math.random() * 31);
-        } else if (this.type === 0) { // Tank
-          goldAmount = 2 + Math.floor(Math.random() * 2); // 2-3 gold (reduced from 3-5)
-        } else if (this.type === 1) { // Fast
-          goldAmount = 1; // 1 gold (fast enemies drop less)
-        } else if (this.type === 2) { // Balanced
-          goldAmount = 1 + Math.floor(Math.random() * 2); // 1-2 gold (reduced from 2-3)
-        } else if (this.type === 3) { // Slowing
-          goldAmount = 2 + Math.floor(Math.random() * 2); // 2-3 gold (reduced from 3-4)
-        } else if (this.type === 4) { // Ranged
-          goldAmount = 1 + Math.floor(Math.random() * 2); // 1-2 gold (reduced from 2-4)
-        } else if (this.type === 5) { // Flying
-          goldAmount = 2 + Math.floor(Math.random() * 2); // 2-3 gold (reduced from 3-5)
-        } else if (this.type === 6) { // Hard Tank
-          goldAmount = 3 + Math.floor(Math.random() * 3); // 3-5 gold (reduced from 5-8)
-        } else if (this.type === 7) { // Hard Fast
-          goldAmount = 2 + Math.floor(Math.random() * 3); // 2-4 gold (reduced from 4-6)
-        } else if (this.type === 8) { // Hard Balanced
-          goldAmount = 3 + Math.floor(Math.random() * 3); // 3-5 gold (reduced from 4-7)
-        } else if (this.type === 9) { // Elite
-          goldAmount = 5 + Math.floor(Math.random() * 4); // 5-8 gold (reduced from 8-12)
+          // MiniBoss: guaranteed 50-100 gold (increased from 30-60)
+          goldAmount = 50 + Math.floor(Math.random() * 51);
+          dropChance = 1.0; // 100% for mini-boss
         } else {
-          goldAmount = 1 + Math.floor(Math.random() * 2); // 1-2 gold (reduced from 2-3)
+          // Regular enemies: MUCH lower drop rate (5-10% instead of 100%)
+          dropChance = 0.05 + Math.random() * 0.05; // 5-10% chance
+          
+          if (Math.random() < dropChance) {
+            // When they DO drop, drop MUCH more gold
+            if (this.type === 0) { // Tank
+              goldAmount = 8 + Math.floor(Math.random() * 5); // 8-12 gold (was 2-3)
+            } else if (this.type === 1) { // Fast
+              goldAmount = 5 + Math.floor(Math.random() * 3); // 5-7 gold (was 1)
+            } else if (this.type === 2) { // Balanced
+              goldAmount = 6 + Math.floor(Math.random() * 4); // 6-9 gold (was 1-2)
+            } else if (this.type === 3) { // Slowing
+              goldAmount = 8 + Math.floor(Math.random() * 5); // 8-12 gold (was 2-3)
+            } else if (this.type === 4) { // Ranged
+              goldAmount = 6 + Math.floor(Math.random() * 4); // 6-9 gold (was 1-2)
+            } else if (this.type === 5) { // Flying
+              goldAmount = 8 + Math.floor(Math.random() * 5); // 8-12 gold (was 2-3)
+            } else if (this.type === 6) { // Hard Tank
+              goldAmount = 15 + Math.floor(Math.random() * 11); // 15-25 gold (was 3-5)
+            } else if (this.type === 7) { // Hard Fast
+              goldAmount = 10 + Math.floor(Math.random() * 11); // 10-20 gold (was 2-4)
+            } else if (this.type === 8) { // Hard Balanced
+              goldAmount = 15 + Math.floor(Math.random() * 11); // 15-25 gold (was 3-5)
+            } else if (this.type === 9) { // Elite
+              goldAmount = 25 + Math.floor(Math.random() * 26); // 25-50 gold (was 5-8)
+            } else {
+              goldAmount = 5 + Math.floor(Math.random() * 6); // 5-10 gold (was 1-2)
+            }
+          }
         }
-        spawnGold(this.mesh.position.x, this.mesh.position.z, goldAmount);
+        
+        // Only spawn gold if amount > 0
+        if (goldAmount > 0) {
+          spawnGold(this.mesh.position.x, this.mesh.position.z, goldAmount);
+        }
         
         playerStats.kills++;
         updateHUD();
@@ -4044,10 +4160,10 @@
 
     class ExpGem {
       constructor(x, z) {
-        // Create 6-sided star shape
+        // Create 5-sided star shape (Super Mario 64 style)
         const starShape = new THREE.Shape();
-        const outerRadius = 0.4;
-        const innerRadius = 0.16;
+        const outerRadius = 0.5; // Larger for more visibility
+        const innerRadius = 0.2;
         const points = 5; // 5-point star like Super Mario
         const STAR_ROTATION_OFFSET = Math.PI / 2; // Rotate to start from top point.
         
@@ -4066,29 +4182,30 @@
         starShape.closePath();
         
         const extrudeSettings = {
-          depth: 0.12,
+          depth: 0.15,
           bevelEnabled: true,
-          bevelThickness: 0.08,
-          bevelSize: 0.08,
+          bevelThickness: 0.1,
+          bevelSize: 0.1,
           bevelSegments: 3
         };
         
         const geometry = new THREE.ExtrudeGeometry(starShape, extrudeSettings);
         geometry.center();
         
+        // BLUE color like the EXP bar (PR #117)
         const material = new THREE.MeshPhysicalMaterial({ 
-          color: COLORS.exp, // Light blue matching EXP bar
+          color: 0x3498DB, // Blue matching EXP bar
           transparent: true,
-          opacity: 0.8,
-          metalness: 0.3,
+          opacity: 0.9,
+          metalness: 0.5,
           roughness: 0.2,
-          transmission: 0.2,
+          transmission: 0.1,
           thickness: 0.5,
-          envMapIntensity: 1,
+          envMapIntensity: 1.2,
           clearcoat: 1,
           clearcoatRoughness: 0.1,
-          emissive: COLORS.exp,
-          emissiveIntensity: 0.3
+          emissive: 0x5DADE2, // Lighter blue glow
+          emissiveIntensity: 0.4
         });
         
         this.mesh = new THREE.Mesh(geometry, material);
@@ -4096,15 +4213,16 @@
         this.mesh.rotation.x = Math.PI / 2; // Lay flat
         scene.add(this.mesh);
         this.active = true;
-        this.rotSpeed = Math.random() * 0.1 + 0.05;
+        this.rotSpeed = 0.08; // Steady 360-degree rotation
         this.bobPhase = Math.random() * Math.PI * 2;
         this.sparklePhase = Math.random() * Math.PI * 2;
+        this.value = GAME_CONFIG.expValue;
       }
 
       update(playerPos) {
         if (!this.active) return;
 
-        // Spin on Z axis (since it's rotated to lay flat)
+        // Spin 360 degrees on Z axis like Earth (PR #117)
         this.mesh.rotation.z += this.rotSpeed;
         
         // Bob up and down
@@ -4113,7 +4231,7 @@
         
         // Sparkle effect
         this.sparklePhase += 0.1;
-        this.mesh.material.emissiveIntensity = 0.3 + Math.sin(this.sparklePhase) * 0.2;
+        this.mesh.material.emissiveIntensity = 0.4 + Math.sin(this.sparklePhase) * 0.2;
 
         // Magnet
         const dx = playerPos.x - this.mesh.position.x;
@@ -4124,9 +4242,9 @@
           this.mesh.position.x += (dx / dist) * 0.3;
           this.mesh.position.z += (dz / dist) * 0.3;
           
-          // Visual Trail when pulled - water particles with sparkle
+          // Visual Trail when pulled - blue particles with sparkle (PR #117)
           if (Math.random() < 0.3) {
-             spawnParticles(this.mesh.position, COLORS.exp, 1);
+             spawnParticles(this.mesh.position, 0x3498DB, 1);
           }
         }
 
@@ -4138,18 +4256,18 @@
       collect() {
         this.active = false;
         
-        // SPLASH EFFECT when collected - more intense with stars
+        // SPLASH EFFECT when collected - blue star-burst (PR #117)
         const splashPos = this.mesh.position.clone();
         const SPLASH_PARTICLE_COUNT = 20;
         
-        // Star-shaped splash particles
+        // Blue star-shaped splash particles
         for(let i=0; i<SPLASH_PARTICLE_COUNT; i++) {
           const angle = (i / SPLASH_PARTICLE_COUNT) * Math.PI * 2;
           const speed = 0.15 + Math.random() * 0.2;
           const particle = new THREE.Mesh(
             new THREE.SphereGeometry(0.08, 8, 8),
             new THREE.MeshBasicMaterial({ 
-              color: COLORS.exp, 
+              color: 0x3498DB, // Blue color (PR #117)
               transparent: true, 
               opacity: 0.9
             })
@@ -4181,14 +4299,14 @@
           updateParticle();
         }
         
-        // Screen flash effect
+        // Screen flash effect - blue tint (PR #117)
         const flash = document.createElement('div');
         flash.style.position = 'fixed';
         flash.style.top = '0';
         flash.style.left = '0';
         flash.style.width = '100%';
         flash.style.height = '100%';
-        flash.style.background = 'rgba(93, 173, 226, 0.3)';
+        flash.style.background = 'rgba(52, 152, 219, 0.2)'; // Blue flash
         flash.style.pointerEvents = 'none';
         flash.style.zIndex = '500';
         document.body.appendChild(flash);
@@ -4198,26 +4316,17 @@
         this.mesh.geometry.dispose();
         this.mesh.material.dispose();
         
-        addExp(GAME_CONFIG.expValue);
+        addExp(this.value);
         playSound('collect');
       }
     }
 
+    // PR #117: Gold System Overhaul
+    // Different gold drop types based on amount
     class GoldCoin {
       constructor(x, z, amount) {
-        const geometry = new THREE.CylinderGeometry(0.2, 0.2, 0.1, 8);
-        const material = new THREE.MeshBasicMaterial({ 
-          color: 0xFFD700,
-          transparent: true,
-          opacity: 0.95
-        });
-        this.mesh = new THREE.Mesh(geometry, material);
-        this.mesh.position.set(x, 0.3, z);
-        this.mesh.rotation.x = Math.PI / 2;
-        scene.add(this.mesh);
-        
-        this.active = true;
         this.amount = amount;
+        this.active = true;
         this.magnetRange = 4;
         this.collectRange = 0.8;
         this.vx = 0;
@@ -4225,28 +4334,229 @@
         this.wobblePhase = Math.random() * Math.PI * 2;
         this.bounceTime = 0;
         
+        // Create appropriate visual based on amount
+        if (amount >= 50) {
+          // 50+ gold: Gold chest glowing from inside
+          this.createGoldChest(x, z);
+        } else if (amount >= 25) {
+          // 25+ gold: Leather bag with knot
+          this.createLeatherBag(x, z);
+        } else if (amount >= 10) {
+          // 10 coins: 3 spinning coins around center
+          this.createMultipleCoins(x, z, 3);
+        } else {
+          // 5 coins: 1 spinning gold coin
+          this.createSingleCoin(x, z);
+        }
+        
         // Play gold drop sound
         playSound('coinDrop');
         
-        // Spawn 8 sparkles on creation
-        spawnParticles(this.mesh.position, 0xFFD700, 8);
-        spawnParticles(this.mesh.position, 0xFFFFFF, 2);
+        // Spawn sparkles on creation
+        spawnParticles(this.mesh ? this.mesh.position : new THREE.Vector3(x, 0.3, z), 0xFFD700, 8);
+        spawnParticles(this.mesh ? this.mesh.position : new THREE.Vector3(x, 0.3, z), 0xFFFFFF, 2);
+      }
+      
+      createSingleCoin(x, z) {
+        // Single large spinning coin
+        const geometry = new THREE.CylinderGeometry(0.3, 0.3, 0.12, 16);
+        const material = new THREE.MeshPhysicalMaterial({ 
+          color: 0xFFD700,
+          transparent: true,
+          opacity: 0.95,
+          metalness: 0.9,
+          roughness: 0.1,
+          emissive: 0xFFAA00,
+          emissiveIntensity: 0.3
+        });
+        this.mesh = new THREE.Mesh(geometry, material);
+        this.mesh.position.set(x, 0.4, z);
+        this.mesh.rotation.x = Math.PI / 2;
+        scene.add(this.mesh);
+        this.type = 'single';
+      }
+      
+      createMultipleCoins(x, z, count) {
+        // Multiple coins orbiting around center
+        this.coins = [];
+        this.centerPos = new THREE.Vector3(x, 0.4, z);
+        const radius = 0.4;
+        
+        for (let i = 0; i < count; i++) {
+          const angle = (i / count) * Math.PI * 2;
+          const geometry = new THREE.CylinderGeometry(0.25, 0.25, 0.1, 12);
+          const material = new THREE.MeshPhysicalMaterial({ 
+            color: 0xFFD700,
+            transparent: true,
+            opacity: 0.95,
+            metalness: 0.9,
+            roughness: 0.1,
+            emissive: 0xFFAA00,
+            emissiveIntensity: 0.3
+          });
+          const coin = new THREE.Mesh(geometry, material);
+          coin.position.set(
+            x + Math.cos(angle) * radius,
+            0.4,
+            z + Math.sin(angle) * radius
+          );
+          coin.rotation.x = Math.PI / 2;
+          scene.add(coin);
+          this.coins.push({ mesh: coin, angle: angle });
+        }
+        this.mesh = this.coins[0].mesh; // Reference for position
+        this.type = 'multiple';
+        this.orbitSpeed = 0.05;
+      }
+      
+      createLeatherBag(x, z) {
+        // Leather bag with knot - using sphere for bag, smaller sphere for knot
+        const group = new THREE.Group();
+        
+        // Bag body
+        const bagGeo = new THREE.SphereGeometry(0.35, 16, 16);
+        bagGeo.scale(1, 1.2, 1); // Slightly taller
+        const bagMat = new THREE.MeshPhysicalMaterial({ 
+          color: 0x8B4513, // Brown leather
+          transparent: true,
+          opacity: 0.95,
+          metalness: 0.1,
+          roughness: 0.9
+        });
+        const bag = new THREE.Mesh(bagGeo, bagMat);
+        bag.position.y = 0;
+        group.add(bag);
+        
+        // Knot at top
+        const knotGeo = new THREE.SphereGeometry(0.15, 8, 8);
+        const knotMat = new THREE.MeshBasicMaterial({ color: 0x654321 }); // Darker brown
+        const knot = new THREE.Mesh(knotGeo, knotMat);
+        knot.position.y = 0.35;
+        group.add(knot);
+        
+        // Gold coins texture (simple circles on the bag)
+        const coinGeo = new THREE.CircleGeometry(0.08, 8);
+        const coinMat = new THREE.MeshBasicMaterial({ 
+          color: 0xFFD700,
+          side: THREE.DoubleSide
+        });
+        for (let i = 0; i < 3; i++) {
+          const coin = new THREE.Mesh(coinGeo, coinMat);
+          const angle = (i / 3) * Math.PI * 2;
+          coin.position.set(
+            Math.cos(angle) * 0.25,
+            -0.1 + Math.random() * 0.2,
+            Math.sin(angle) * 0.25
+          );
+          coin.lookAt(group.position);
+          group.add(coin);
+        }
+        
+        group.position.set(x, 0.4, z);
+        scene.add(group);
+        this.mesh = group;
+        this.type = 'bag';
+      }
+      
+      createGoldChest(x, z) {
+        // Gold chest glowing from inside
+        const group = new THREE.Group();
+        
+        // Chest body
+        const chestGeo = new THREE.BoxGeometry(0.5, 0.4, 0.4);
+        const chestMat = new THREE.MeshPhysicalMaterial({ 
+          color: 0xFFD700,
+          transparent: true,
+          opacity: 0.95,
+          metalness: 0.9,
+          roughness: 0.2,
+          emissive: 0xFFD700,
+          emissiveIntensity: 0.5
+        });
+        const chest = new THREE.Mesh(chestGeo, chestMat);
+        chest.position.y = 0;
+        group.add(chest);
+        
+        // Chest lid (slightly open)
+        const lidGeo = new THREE.BoxGeometry(0.52, 0.1, 0.42);
+        const lidMat = new THREE.MeshPhysicalMaterial({ 
+          color: 0xDAA520, // Goldenrod
+          metalness: 0.8,
+          roughness: 0.3,
+          emissive: 0xFFD700,
+          emissiveIntensity: 0.3
+        });
+        const lid = new THREE.Mesh(lidGeo, lidMat);
+        lid.position.set(0, 0.25, -0.1);
+        lid.rotation.x = -0.3; // Slightly open
+        group.add(lid);
+        
+        // Inner glow light
+        const glowLight = new THREE.PointLight(0xFFD700, 2, 3);
+        glowLight.position.set(0, 0.1, 0);
+        group.add(glowLight);
+        this.glowLight = glowLight;
+        
+        group.position.set(x, 0.4, z);
+        scene.add(group);
+        this.mesh = group;
+        this.type = 'chest';
       }
       
       update(playerPos) {
         if (!this.active) return;
         
-        // Spinning
-        this.mesh.rotation.y += 0.15;
+        // Type-specific animations
+        if (this.type === 'single') {
+          // Single coin spinning
+          this.mesh.rotation.y += 0.15;
+        } else if (this.type === 'multiple') {
+          // Multiple coins orbiting and spinning
+          this.coins.forEach((coinData, i) => {
+            coinData.angle += this.orbitSpeed;
+            const radius = 0.4;
+            coinData.mesh.position.x = this.centerPos.x + Math.cos(coinData.angle) * radius;
+            coinData.mesh.position.z = this.centerPos.z + Math.sin(coinData.angle) * radius;
+            coinData.mesh.rotation.y += 0.15;
+            
+            // Update Y position for bouncing
+            if (this.bounceTime < 1) {
+              coinData.mesh.position.y = 0.4 + Math.abs(Math.sin(this.bounceTime * Math.PI * 3)) * 0.5 * (1 - this.bounceTime);
+            } else {
+              const baseY = 0.3;
+              coinData.mesh.position.y = baseY + Math.sin(this.wobblePhase) * 0.1;
+            }
+          });
+        } else if (this.type === 'bag') {
+          // Bag swaying
+          this.mesh.rotation.z = Math.sin(this.wobblePhase) * 0.1;
+          this.wobblePhase += 0.05;
+        } else if (this.type === 'chest') {
+          // Chest glowing pulse
+          if (this.glowLight) {
+            this.glowLight.intensity = 2 + Math.sin(this.wobblePhase * 2) * 0.5;
+          }
+          this.wobblePhase += 0.05;
+        }
         
-        // Bounce physics on spawn
-        if (this.bounceTime < 1) {
-          this.mesh.position.y = 0.3 + Math.abs(Math.sin(this.bounceTime * Math.PI * 3)) * 0.5 * (1 - this.bounceTime);
-          this.bounceTime += 0.02;
+        // Bounce physics on spawn (for single, bag, chest types)
+        if (this.type !== 'multiple') {
+          if (this.bounceTime < 1) {
+            this.mesh.position.y = 0.4 + Math.abs(Math.sin(this.bounceTime * Math.PI * 3)) * 0.5 * (1 - this.bounceTime);
+            this.bounceTime += 0.02;
+          } else {
+            // Wobble after bounce
+            this.wobblePhase += 0.05;
+            const baseY = this.type === 'chest' || this.type === 'bag' ? 0.4 : 0.3;
+            this.mesh.position.y = baseY + Math.sin(this.wobblePhase) * 0.1;
+          }
         } else {
-          // Wobble after bounce
-          this.wobblePhase += 0.1;
-          this.mesh.position.y = 0.3 + Math.sin(this.wobblePhase) * 0.1;
+          // Multiple coins handle bounce in their loop
+          if (this.bounceTime < 1) {
+            this.bounceTime += 0.02;
+          } else {
+            this.wobblePhase += 0.05;
+          }
         }
         
         // NO MAGNET - player must walk over gold to collect it
@@ -4284,9 +4594,33 @@
       
       destroy() {
         this.active = false;
-        scene.remove(this.mesh);
-        this.mesh.geometry.dispose();
-        this.mesh.material.dispose();
+        
+        if (this.type === 'multiple' && this.coins) {
+          // Clean up multiple coins
+          this.coins.forEach(coinData => {
+            scene.remove(coinData.mesh);
+            coinData.mesh.geometry.dispose();
+            coinData.mesh.material.dispose();
+          });
+        } else if (this.mesh) {
+          // Clean up single mesh or group
+          if (this.glowLight) {
+            this.mesh.remove(this.glowLight);
+          }
+          scene.remove(this.mesh);
+          
+          // Dispose geometries and materials recursively
+          this.mesh.traverse((child) => {
+            if (child.geometry) child.geometry.dispose();
+            if (child.material) {
+              if (Array.isArray(child.material)) {
+                child.material.forEach(mat => mat.dispose());
+              } else {
+                child.material.dispose();
+              }
+            }
+          });
+        }
       }
     }
 
@@ -6532,6 +6866,34 @@
     
     function setupMenus() {
       // Settings button
+      // PR #117: Menu button and options modal handlers
+      const menuBtn = document.getElementById('menu-btn');
+      const optionsMenu = document.getElementById('options-menu');
+      const closeOptionsBtn = document.getElementById('close-options-btn');
+      const optionsStatsBtn = document.getElementById('options-stats-btn');
+      const optionsSettingsBtn = document.getElementById('options-settings-btn');
+      
+      menuBtn.addEventListener('click', () => {
+        optionsMenu.style.display = 'flex';
+        playSound('waterdrop');
+      });
+      
+      closeOptionsBtn.addEventListener('click', () => {
+        optionsMenu.style.display = 'none';
+        playSound('waterdrop');
+      });
+      
+      optionsStatsBtn.addEventListener('click', () => {
+        optionsMenu.style.display = 'none';
+        toggleStats();
+      });
+      
+      optionsSettingsBtn.addEventListener('click', () => {
+        optionsMenu.style.display = 'none';
+        // Open settings modal
+        settingsModal.style.display = 'flex';
+      });
+      
       document.getElementById('settings-btn').onclick = () => {
         playSound('waterdrop');
         isPaused = true;
