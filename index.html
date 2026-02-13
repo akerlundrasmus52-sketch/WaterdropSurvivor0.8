@@ -3270,8 +3270,8 @@
           bloodPool.rotation.x = -Math.PI / 2;
           scene.add(bloodPool);
           
-          // Fade out corpse over time
-          let corpseLife = 120; // 2 seconds at 60fps
+          // Fade out corpse over time (approximately 2 seconds)
+          let corpseLife = 120;
           const fadeCorpse = () => {
             corpseLife--;
             corpse.material.opacity = (corpseLife / 120) * 0.7;
@@ -3699,7 +3699,7 @@
         this.createFn = createFn;
         this.resetFn = resetFn;
         this.pool = [];
-        this.active = [];
+        this.activeSet = new Set(); // Use Set for O(1) lookups instead of array
         
         // Pre-allocate initial pool
         for (let i = 0; i < initialSize; i++) {
@@ -3714,14 +3714,13 @@
         } else {
           obj = this.createFn();
         }
-        this.active.push(obj);
+        this.activeSet.add(obj);
         return obj;
       }
       
       release(obj) {
-        const index = this.active.indexOf(obj);
-        if (index > -1) {
-          this.active.splice(index, 1);
+        if (this.activeSet.has(obj)) {
+          this.activeSet.delete(obj);
           this.resetFn(obj);
           this.pool.push(obj);
         }
@@ -3729,12 +3728,12 @@
       
       clear() {
         // Clean up all objects
-        for (const obj of this.active) {
+        for (const obj of this.activeSet) {
           if (obj.mesh && obj.mesh.parent) {
             scene.remove(obj.mesh);
           }
         }
-        this.active = [];
+        this.activeSet.clear();
       }
     }
 
@@ -4705,17 +4704,19 @@
       }
       
       // 4 Main Paths from Central Hub (Rondel):
-      // 1. Path to Stonehenge (60, 60)
+      // Paths start from different points on the rondel edge based on direction
+      
+      // 1. Path to Stonehenge (60, 60) - Northeast direction
       createPath(rondelRadius * 0.707, rondelRadius * 0.707, 60, 60, 3);
       
-      // 2. Path to Illuminati Pyramid (-70, 50)
+      // 2. Path to Illuminati Pyramid (-70, 50) - Northwest direction  
       createPath(-rondelRadius * 0.6, rondelRadius * 0.8, -70, 50, 3);
       
-      // 3. Path to Lake (30, -30)
+      // 3. Path to Lake (30, -30) - Southeast direction
       createPath(rondelRadius * 0.707, -rondelRadius * 0.707, 30, -30, 3);
       
-      // 4. Path to Windmill (40, 40)
-      createPath(rondelRadius * 0.707, rondelRadius * 0.707, 40, 40, 3);
+      // 4. Path to Windmill (40, 40) - East direction (slightly different from Stonehenge)
+      createPath(rondelRadius * 0.9, rondelRadius * 0.436, 40, 40, 3);
       
       // Farm Fields - Fill empty spaces with farm texture
       // Create large farm field background (performance optimized - single large mesh)
@@ -5441,7 +5442,7 @@
         // Phase 5: Simple exclusion - just avoid rondel center
         function isInRondel(x, z) {
           const distToCenter = Math.sqrt(x * x + z * z);
-          return distToCenter < 12; // Rondel radius (10) + buffer
+          return distToCenter < (rondelRadius + 2); // Rondel radius + buffer
         }
         
         let tx, tz;
@@ -8662,7 +8663,7 @@
         if (!alive && particlePool) {
           particlePool.release(p);
         }
-        return alive !== false;
+        return alive;
       });
       
       // Windmill Rotation and Light Animation
