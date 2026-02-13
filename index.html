@@ -249,6 +249,7 @@
     }
     
     @keyframes waterdrop-slosh {
+      /* Reserved for future player movement reaction animation */
       0%, 100% { transform: rotate(0deg); }
       25% { transform: rotate(-2deg); }
       75% { transform: rotate(2deg); }
@@ -1463,6 +1464,7 @@
             </linearGradient>
             <!-- Water animation filter for bubbles/shimmer -->
             <filter id="water-turbulence" x="0%" y="0%" width="100%" height="100%">
+              <!-- Seed value 2 provides consistent gentle water turbulence pattern -->
               <feTurbulence baseFrequency="0.02" numOctaves="3" seed="2">
                 <animate attributeName="baseFrequency" 
                          from="0.02" to="0.025" 
@@ -3996,9 +3998,10 @@
         const outerRadius = 0.4;
         const innerRadius = 0.16;
         const points = 5; // 5-point star like Super Mario
+        const STAR_ROTATION_OFFSET = Math.PI / 2; // Rotate to start from top point
         
         for (let i = 0; i < points * 2; i++) {
-          const angle = (i / (points * 2)) * Math.PI * 2 - Math.PI / 2; // Start from top
+          const angle = (i / (points * 2)) * Math.PI * 2 - STAR_ROTATION_OFFSET;
           const radius = i % 2 === 0 ? outerRadius : innerRadius;
           const x = Math.cos(angle) * radius;
           const y = Math.sin(angle) * radius;
@@ -7798,7 +7801,8 @@
             const cz = player.mesh.position.z + Math.sin(chestAngle) * chestDist;
             spawnChest(cx, cz, chestTier);
             // Show only in stat bar: "combo lost" and chest rarity (no text on main screen)
-            showStatChange(`Combo lost - ${chestTier} chest`);
+            const tierCapitalized = chestTier.charAt(0).toUpperCase() + chestTier.slice(1);
+            showStatChange(`Combo lost - ${tierCapitalized} chest`);
           }
         }
         
