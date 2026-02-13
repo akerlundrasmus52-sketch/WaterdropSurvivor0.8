@@ -4514,15 +4514,21 @@
       ripple.userData = { isWaterRipple: true, phase: 0 };
       scene.add(ripple);
 
-      // Smooth nice roads connecting areas
+      // Phase 4: Old Wagon Roads connecting areas (gravel with grass strip in middle)
       const roadMat = new THREE.MeshPhysicalMaterial({ 
-        color: 0xD3D3D3, // Light gray - smooth and polished
-        metalness: 0.05,
-        roughness: 0.3,
-        clearcoat: 0.8, // Makes it look polished
-        clearcoatRoughness: 0.2
+        color: 0x8B7355, // Brown-gray for gravel/dirt
+        metalness: 0.0,
+        roughness: 0.95, // Very rough for dirt/gravel texture
       });
       const roadGeo = new THREE.PlaneGeometry(4, 4);
+      
+      // Grass strip material for the middle of wagon roads
+      const grassStripMat = new THREE.MeshPhysicalMaterial({
+        color: 0x4a7c3e, // Darker green for overgrown grass
+        metalness: 0.0,
+        roughness: 0.9
+      });
+      const grassStripGeo = new THREE.PlaneGeometry(1, 4); // Narrow grass strip
       
       // Helper function to create smooth curved road between two points
       function createCurvedRoad(startX, startZ, endX, endZ, segments, curve = 0) {
@@ -4537,6 +4543,13 @@
           road.position.set(x, 0.03, z);
           road.receiveShadow = true;
           scene.add(road);
+          
+          // Phase 4: Add grass strip in the middle of the wagon road
+          const grassStrip = new THREE.Mesh(grassStripGeo, grassStripMat);
+          grassStrip.rotation.x = -Math.PI/2;
+          grassStrip.position.set(x, 0.04, z); // Slightly higher than road
+          grassStrip.receiveShadow = true;
+          scene.add(grassStrip);
         }
       }
       
@@ -4547,8 +4560,8 @@
       // 2. Statue (0,0) to Cabin (-20,-20) - curved path
       createCurvedRoad(0, 0, -20, -20, 15, -2);
       
-      // 3. Statue (0,0) to Stonehenge (-60,-20) - curved path
-      createCurvedRoad(0, 0, -60, -20, 30, 5);
+      // 3. Phase 4: Statue (0,0) to Stonehenge (60,60) - curved path (updated location)
+      createCurvedRoad(0, 0, 60, 60, 30, 5);
       
       // 4. Statue (0,0) to Pyramid (50,-50) - curved path
       createCurvedRoad(0, 0, 50, -50, 35, -4);
@@ -4558,6 +4571,9 @@
       
       // 6. Windmill (40,40) to Farm (35,35) - short connecting road
       createCurvedRoad(40, 40, 35, 35, 8, 0);
+      
+      // 6b. Phase 4: Statue (0,0) to Lake (30,-30) - curved path
+      createCurvedRoad(0, 0, 30, -30, 20, 2);
       
       // 7. Circular road around statue - smooth ring road for patrol area
       for(let i = 0; i < 60; i++) {
@@ -4569,6 +4585,13 @@
         road.position.set(x, 0.03, z);
         road.receiveShadow = true;
         scene.add(road);
+        
+        // Phase 4: Add grass strip in the middle of circular wagon road
+        const grassStrip = new THREE.Mesh(grassStripGeo, grassStripMat);
+        grassStrip.rotation.x = -Math.PI/2;
+        grassStrip.position.set(x, 0.04, z);
+        grassStrip.receiveShadow = true;
+        scene.add(grassStrip);
       }
       
       // 8. Map edge access roads (from edges to main areas)
@@ -4576,8 +4599,8 @@
       createCurvedRoad(40, 90, 40, 40, 30, 3);
       // South edge to Pyramid
       createCurvedRoad(50, -90, 50, -50, 25, -3);
-      // West edge to Stonehenge
-      createCurvedRoad(-90, -20, -60, -20, 20, 0);
+      // Phase 4: Northeast edge to Stonehenge (new location)
+      createCurvedRoad(90, 90, 60, 60, 25, -2);
       // East edge to Windmill area
       createCurvedRoad(90, 40, 40, 40, 30, -4);
 
@@ -4671,9 +4694,9 @@
       mineEnt.rotation.y = Math.PI;
       scene.add(mineEnt);
 
-      // Stonehenge - Circle of big rocks - MADE MORE VISIBLE
+      // Phase 4: Stonehenge - Circle of big rocks - Relocated to new mystical location
       const stonehengeGroup = new THREE.Group();
-      stonehengeGroup.position.set(-60, 0, -20);
+      stonehengeGroup.position.set(60, 0, 60); // New location - northeast area
       
       const stoneMat = new THREE.MeshToonMaterial({ color: 0x808080 }); // Gray stone
       const numStones = 30; // Real Stonehenge has ~30 stones in outer circle
@@ -4741,6 +4764,32 @@
       temple.castShadow = true;
       mayanGroup.add(temple);
       
+      // Phase 4: Eye of Horus on Maya Pyramid
+      const eyeOfHorusGroup = new THREE.Group();
+      eyeOfHorusGroup.position.set(0, pyramidSteps * 2.5 + 4, 2.5); // Front of temple
+      
+      // Eye outline (oval)
+      const eyeOutlineGeo = new THREE.CircleGeometry(0.6, 16);
+      const eyeOutlineMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+      const eyeOutline = new THREE.Mesh(eyeOutlineGeo, eyeOutlineMat);
+      eyeOfHorusGroup.add(eyeOutline);
+      
+      // Eye white/sclera
+      const eyeWhiteGeo = new THREE.CircleGeometry(0.3, 16);
+      const eyeWhiteMat = new THREE.MeshBasicMaterial({ color: 0xFFFFFF });
+      const eyeWhite = new THREE.Mesh(eyeWhiteGeo, eyeWhiteMat);
+      eyeWhite.position.z = 0.01;
+      eyeOfHorusGroup.add(eyeWhite);
+      
+      // Pupil
+      const pupilGeo = new THREE.CircleGeometry(0.15, 16);
+      const pupilMat = new THREE.MeshBasicMaterial({ color: 0xFFD700 }); // Gold
+      const pupil = new THREE.Mesh(pupilGeo, pupilMat);
+      pupil.position.z = 0.02;
+      eyeOfHorusGroup.add(pupil);
+      
+      mayanGroup.add(eyeOfHorusGroup);
+      
       // Add some decorative blocks on sides - MADE LARGER
       for(let side=0; side<4; side++) {
         const angle = (side / 4) * Math.PI * 2;
@@ -4757,6 +4806,125 @@
       }
       
       scene.add(mayanGroup);
+
+      // Phase 4: Illuminati Pyramid - Pyramid with All-Seeing Eye, Fences, and Men in Black guards
+      const illuminatiGroup = new THREE.Group();
+      illuminatiGroup.position.set(-70, 0, 50); // New landmark location
+      
+      // Pyramid base and steps
+      const illuminatiPyramidMat = new THREE.MeshToonMaterial({ color: 0xC0C0C0 }); // Silver/gray stone
+      const illuminatiSteps = 5;
+      
+      for(let i = 0; i < illuminatiSteps; i++) {
+        const stepSize = 12 - i * 2;
+        const stepHeight = 2;
+        const stepGeo = new THREE.BoxGeometry(stepSize, stepHeight, stepSize);
+        const step = new THREE.Mesh(stepGeo, illuminatiPyramidMat);
+        step.position.set(0, i * stepHeight + stepHeight/2, 0);
+        step.castShadow = true;
+        illuminatiGroup.add(step);
+      }
+      
+      // Capstone (floating slightly)
+      const capstoneGeo = new THREE.ConeGeometry(2, 2, 4);
+      const capstoneMat = new THREE.MeshPhysicalMaterial({ 
+        color: 0xFFD700, // Gold
+        metalness: 0.8,
+        roughness: 0.2,
+        emissive: 0xFFD700,
+        emissiveIntensity: 0.3
+      });
+      const capstone = new THREE.Mesh(capstoneGeo, capstoneMat);
+      capstone.position.set(0, illuminatiSteps * 2 + 1.5, 0);
+      capstone.rotation.y = Math.PI / 4;
+      capstone.castShadow = true;
+      illuminatiGroup.add(capstone);
+      
+      // All-Seeing Eye (on capstone)
+      const allSeeingEyeGroup = new THREE.Group();
+      allSeeingEyeGroup.position.set(0, illuminatiSteps * 2 + 1.5, 1.2);
+      
+      // Eye background (triangle)
+      const eyeTriGeo = new THREE.CircleGeometry(0.8, 3);
+      const eyeTriMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+      const eyeTri = new THREE.Mesh(eyeTriGeo, eyeTriMat);
+      allSeeingEyeGroup.add(eyeTri);
+      
+      // Eye pupil
+      const eyePupilGeo = new THREE.CircleGeometry(0.4, 16);
+      const eyePupilMat = new THREE.MeshBasicMaterial({ color: 0xFFFFFF });
+      const eyePupil = new THREE.Mesh(eyePupilGeo, eyePupilMat);
+      eyePupil.position.z = 0.01;
+      allSeeingEyeGroup.add(eyePupil);
+      
+      // Inner pupil
+      const innerPupilGeo = new THREE.CircleGeometry(0.15, 16);
+      const innerPupilMat = new THREE.MeshBasicMaterial({ color: 0x0000FF }); // Blue eye
+      const innerPupil = new THREE.Mesh(innerPupilGeo, innerPupilMat);
+      innerPupil.position.z = 0.02;
+      allSeeingEyeGroup.add(innerPupil);
+      
+      illuminatiGroup.add(allSeeingEyeGroup);
+      
+      // Fences around pyramid (4 sides)
+      const illuminatiFenceMat = new THREE.MeshToonMaterial({ color: 0x8B4513 }); // Brown
+      for (let side = 0; side < 4; side++) {
+        for (let i = 0; i < 8; i++) {
+          const fencePostGeo = new THREE.BoxGeometry(0.3, 2, 0.3);
+          const fencePost = new THREE.Mesh(fencePostGeo, illuminatiFenceMat);
+          
+          let x, z;
+          if (side === 0) { // North
+            x = -8 + i * 2;
+            z = 10;
+          } else if (side === 1) { // East
+            x = 8;
+            z = -8 + i * 2;
+          } else if (side === 2) { // South
+            x = 8 - i * 2;
+            z = -10;
+          } else { // West
+            x = -8;
+            z = 8 - i * 2;
+          }
+          
+          fencePost.position.set(x, 1, z);
+          fencePost.castShadow = true;
+          illuminatiGroup.add(fencePost);
+        }
+      }
+      
+      // Men in Black guards (2 static sprites/shapes)
+      const guardMat = new THREE.MeshToonMaterial({ color: 0x000000 }); // Black
+      const guardPositions = [
+        [0, 0, 12],  // Guard 1 (front)
+        [0, 0, -12]  // Guard 2 (back)
+      ];
+      
+      guardPositions.forEach(pos => {
+        // Guard body (rectangle)
+        const guardBodyGeo = new THREE.BoxGeometry(1, 2, 0.5);
+        const guardBody = new THREE.Mesh(guardBodyGeo, guardMat);
+        guardBody.position.set(pos[0], 1, pos[2]);
+        guardBody.castShadow = true;
+        illuminatiGroup.add(guardBody);
+        
+        // Guard head
+        const guardHeadGeo = new THREE.BoxGeometry(0.6, 0.6, 0.6);
+        const guardHead = new THREE.Mesh(guardHeadGeo, guardMat);
+        guardHead.position.set(pos[0], 2.3, pos[2]);
+        guardHead.castShadow = true;
+        illuminatiGroup.add(guardHead);
+        
+        // Sunglasses (white rectangles)
+        const sunglassesGeo = new THREE.PlaneGeometry(0.5, 0.15);
+        const sunglassesMat = new THREE.MeshBasicMaterial({ color: 0xFFFFFF });
+        const sunglasses = new THREE.Mesh(sunglassesGeo, sunglassesMat);
+        sunglasses.position.set(pos[0], 2.3, pos[2] + 0.35);
+        illuminatiGroup.add(sunglasses);
+      });
+      
+      scene.add(illuminatiGroup);
 
       // Water Statue in Center - Replace brown square
       const statueGroup = new THREE.Group();
@@ -4868,6 +5036,24 @@
       barn.position.set(12, 3, 0);
       barn.castShadow = true;
       farmGroup.add(barn);
+      
+      // Phase 4: Farm fields texture/area around barn (plowed field rows)
+      const fieldMat = new THREE.MeshToonMaterial({ color: 0x654321 }); // Brown soil
+      for (let row = 0; row < 6; row++) {
+        for (let col = 0; col < 8; col++) {
+          const fieldPlot = new THREE.Mesh(
+            new THREE.PlaneGeometry(1.5, 1.5),
+            fieldMat
+          );
+          fieldPlot.rotation.x = -Math.PI / 2;
+          fieldPlot.position.set(
+            -2 + col * 2,
+            0.02,
+            -6 + row * 2
+          );
+          farmGroup.add(fieldPlot);
+        }
+      }
       
       // Barn roof
       const roofGeo = new THREE.ConeGeometry(7, 3, 4);
@@ -5076,12 +5262,53 @@
         const LAKE_EXCLUSION_RADIUS = 18; // Lake radius 15 + buffer 3
         const MAX_SPAWN_ATTEMPTS = 20;
         
+        // Phase 4: Road exclusion - helper function to check if position is on a road
+        function isOnRoad(x, z) {
+          // Constants for road exclusion zones
+          const CIRCULAR_ROAD_RADIUS = 8; // Radius of circular road around statue
+          const CIRCULAR_ROAD_BUFFER = 3; // Buffer zone around circular road
+          const ROAD_WIDTH_BUFFER = 4;     // Buffer zone for linear roads
+          
+          // Check distance to statue (circular road around it)
+          const distToStatue = Math.sqrt(x * x + z * z);
+          if (Math.abs(distToStatue - CIRCULAR_ROAD_RADIUS) < CIRCULAR_ROAD_BUFFER) return true;
+          
+          // Check linear roads (simplified check - within buffer of main paths)
+          const roads = [
+            {x1: 0, z1: 0, x2: 40, z2: 40},    // To Windmill
+            {x1: 0, z1: 0, x2: -20, z2: -20},  // To Cabin
+            {x1: 0, z1: 0, x2: 60, z2: 60},    // To Stonehenge (Phase 4: updated location)
+            {x1: 0, z1: 0, x2: 50, z2: -50},   // To Pyramid
+            {x1: 0, z1: 0, x2: -40, z2: 40},   // To Mine
+            {x1: 0, z1: 0, x2: 30, z2: -30},   // To Lake (Phase 4)
+            {x1: 40, z1: 40, x2: 35, z2: 35}   // Windmill to Farm
+          ];
+          
+          for (const road of roads) {
+            const roadLength = Math.sqrt((road.x2 - road.x1) ** 2 + (road.z2 - road.z1) ** 2);
+            const dx = road.x2 - road.x1;
+            const dz = road.z2 - road.z1;
+            
+            // Project point onto road line
+            const t = Math.max(0, Math.min(1, ((x - road.x1) * dx + (z - road.z1) * dz) / (roadLength ** 2)));
+            const projX = road.x1 + t * dx;
+            const projZ = road.z1 + t * dz;
+            
+            // Check distance to road
+            const distToRoad = Math.sqrt((x - projX) ** 2 + (z - projZ) ** 2);
+            if (distToRoad < ROAD_WIDTH_BUFFER) return true;
+          }
+          
+          return false;
+        }
+        
         let tx, tz;
         let inLake = true;
+        let onRoad = true;
         let attempts = 0;
         
-        // Avoid spawning trees in lake area
-        while (inLake && attempts < MAX_SPAWN_ATTEMPTS) {
+        // Phase 4: Avoid spawning trees in lake area AND on roads
+        while ((inLake || onRoad) && attempts < MAX_SPAWN_ATTEMPTS) {
           if (i < 80) {
             // First 80 trees in forest area (Top Left quadrant mostly)
             tx = (Math.random() * 100) - 90;
@@ -5095,11 +5322,15 @@
           // Check if tree would be in lake
           const distToLake = Math.sqrt((tx - LAKE_CENTER_X) * (tx - LAKE_CENTER_X) + (tz - LAKE_CENTER_Z) * (tz - LAKE_CENTER_Z));
           inLake = distToLake < LAKE_EXCLUSION_RADIUS;
+          
+          // Phase 4: Check if tree would be on a road
+          onRoad = isOnRoad(tx, tz);
+          
           attempts++;
         }
         
-        // Only add tree if not in lake
-        if (!inLake) {
+        // Only add tree if not in lake and not on road
+        if (!inLake && !onRoad) {
           group.position.set(tx, 0, tz);
           scene.add(group);
         }
@@ -6851,13 +7082,36 @@
         }
         
         card.onclick = () => {
+          // Phase 4: Prevent double-clicking by immediately disabling all cards
+          const allCards = list.querySelectorAll('.upgrade-card');
+          allCards.forEach(c => {
+            c.style.pointerEvents = 'none';
+            c.style.opacity = '0.5';
+          });
+          
           playSound('splash'); // Water splash sound when picking
-          u.apply();
+          
+          // Phase 4: Wrap in try-catch to ensure modal always closes
+          try {
+            u.apply();
+          } catch (error) {
+            console.error('Error applying upgrade:', error);
+          }
+          
+          // Always close modal and resume game
           modal.style.display = 'none';
           modal.querySelector('h2').innerText = 'LEVEL UP!';
           modal.querySelector('h2').style.fontSize = '32px';
           isPaused = false;
           updateHUD();
+          
+          // Re-enable pointer events after closing (for next level up)
+          setTimeout(() => {
+            allCards.forEach(c => {
+              c.style.pointerEvents = 'auto';
+              c.style.opacity = '1';
+            });
+          }, 500);
         };
         list.appendChild(card);
       });
@@ -6955,18 +7209,44 @@
       const comboText = document.getElementById('combo-text');
       const comboMultiplier = document.getElementById('combo-multiplier');
       
-      // Determine combo message (ordered from highest to lowest with consistent >= comparisons)
+      // Phase 4: Updated "Hype" combo messages with specific tiers
       let message = '';
-      if (comboState.count >= 10) message = 'LEGENDARY!';
-      else if (comboState.count >= 7) message = 'UNSTOPPABLE!';
-      else if (comboState.count >= 5) message = 'MEGA KILL!';
-      else if (comboState.count >= 4) message = 'QUAD KILL!';
-      else if (comboState.count >= 3) message = 'TRIPLE KILL!';
-      else if (comboState.count >= 2) message = 'DOUBLE KILL!';
+      if (comboState.count >= 50) message = 'Da Killing Machine';
+      else if (comboState.count >= 45) message = 'WTF';
+      else if (comboState.count >= 40) message = 'Impossible';
+      else if (comboState.count >= 35) message = 'No F***ing Way';
+      else if (comboState.count >= 30) message = 'Godlike';
+      else if (comboState.count >= 25) message = 'Unbelievable';
+      else if (comboState.count >= 20) message = 'Fantastic';
+      else if (comboState.count >= 15) message = 'Amazing';
+      else if (comboState.count >= 10) message = 'Epic';
+      else if (comboState.count >= 4) message = 'Multi Kill'; // x4-x5 as per spec
+      else if (comboState.count >= 3) message = 'Triple Kill';
+      else if (comboState.count >= 2) message = 'Double Kill';
       else message = comboState.count + 'x COMBO!';
       
       comboText.innerText = message;
       comboMultiplier.innerText = `x${comboState.count}`;
+      
+      // Phase 4: Color gradient from White -> Red -> Black as multiplier increases
+      // White (0-9) -> Red (10-29) -> Dark Red to Black (30+)
+      let textColor = '#FFFFFF'; // Default white
+      if (comboState.count >= 40) {
+        textColor = '#1a1a1a'; // Almost black
+      } else if (comboState.count >= 30) {
+        textColor = '#4d0000'; // Very dark red
+      } else if (comboState.count >= 20) {
+        textColor = '#990000'; // Dark red
+      } else if (comboState.count >= 10) {
+        textColor = '#FF0000'; // Bright red
+      } else if (comboState.count >= 5) {
+        textColor = '#FF6666'; // Light red
+      } else if (comboState.count >= 3) {
+        textColor = '#FFB3B3'; // Very light red/pink
+      }
+      
+      comboText.style.color = textColor;
+      comboMultiplier.style.color = textColor;
       
       // Show with animation
       comboEl.style.opacity = '1';
@@ -7326,7 +7606,7 @@
 
       // Reset Player - Spawn near the statue at map center
       if (player) {
-        player.mesh.position.set(0, 0.5, 0); // Spawn near the statue (statue at 0, 0, 0)
+        player.mesh.position.set(3, 0.5, 3); // Phase 4: Spawn next to the statue (not inside it)
         player.mesh.material.color.setHex(COLORS.player);
       }
 
