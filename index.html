@@ -1456,6 +1456,7 @@
           <!-- Definitions -->
           <defs>
             <clipPath id="waterdrop-clip">
+              <!-- Waterdrop shape: top(50,10), left curve(25), right curve(75), bottom(50,110) -->
               <path d="M 50 10 C 35 20, 25 35, 25 60 C 25 85, 35 100, 50 110 C 65 100, 75 85, 75 60 C 75 35, 65 20, 50 10 Z" />
             </clipPath>
             <linearGradient id="exp-gradient" x1="0%" y1="100%" x2="0%" y2="0%">
@@ -3998,7 +3999,7 @@
         const outerRadius = 0.4;
         const innerRadius = 0.16;
         const points = 5; // 5-point star like Super Mario
-        const STAR_ROTATION_OFFSET = Math.PI / 2; // Rotate to start from top point
+        const STAR_ROTATION_OFFSET = Math.PI / 2; // Rotate to start from top point.
         
         for (let i = 0; i < points * 2; i++) {
           const angle = (i / (points * 2)) * Math.PI * 2 - STAR_ROTATION_OFFSET;
