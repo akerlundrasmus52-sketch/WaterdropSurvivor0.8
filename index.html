@@ -211,8 +211,6 @@
         transform: scale(0.8) translateY(-50px); /* Float upward when fading */
       }
     }
-        transform: scale(0.8) translateY(-20px);
-      }
     }
     
     /* New Bottom Layout: HP Bar, Level Display, EXP Bar */
@@ -8286,7 +8284,7 @@
     let performanceLog = {
       frameCount: 0,
       lastLogTime: 0,
-      totalFrameTime: 16.67, // Initialize to ~60fps frame time (16.67ms) to prevent first frame skip
+      totalFrameTime: 16.67, // Initialize to reasonable default (~60fps frame time)
       slowFrames: 0,
       spawnCount: 0,
       renderCount: 0,
@@ -8330,6 +8328,8 @@
       }
       
       // Frame Skip Mechanism: Skip rendering if previous frame took too long
+      // Note: This only skips the render call - game logic still runs to maintain state consistency
+      // Rendering is typically the most expensive operation, so skipping it provides significant relief
       const FRAME_TIME_BUDGET = 33.33; // ~30fps minimum (33.33ms per frame)
       const previousFrameTime = performanceLog.totalFrameTime;
       let shouldSkipRender = false;
@@ -9046,6 +9046,7 @@
         performanceLog.spawnCount = 0;
         performanceLog.renderCount = 0;
         performanceLog.cumulativeFrameTime = 0;
+        // Note: totalFrameTime retains last frame's value for next period's first frame skip check
       }
       
       // Process disposal queue after rendering (PR #81)
