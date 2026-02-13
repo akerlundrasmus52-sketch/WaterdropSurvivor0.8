@@ -1430,7 +1430,7 @@
     </div>
     
     <!-- PR #114: Menu button for portrait mode -->
-    <button id="menu-btn" class="btn-small" style="pointer-events: auto; z-index: 100;">MENU</button>
+    <button id="menu-btn" class="btn-small">MENU</button>
     
     <!-- PR #114: Options menu (shown when menu button is clicked in portrait mode) -->
     <div id="options-menu">
@@ -7344,8 +7344,8 @@
             apply: () => { 
               playerStats.perks.vampire++;
               playerStats.lifeStealPercent += 0.05;
-              // PR #114: More descriptive stat change text
-              showStatChange(`Vampire Lvl ${playerStats.perks.vampire} - Life Steal: ${(playerStats.lifeStealPercent * 100).toFixed(1)}% of damage heals you`);
+              // PR #114: More descriptive stat change text (shortened for readability)
+              showStatChange(`Vampire Lvl ${playerStats.perks.vampire} - ${(playerStats.lifeStealPercent * 100).toFixed(1)}% Life Steal`);
             } 
           },
           { 
@@ -7356,8 +7356,8 @@
             apply: () => { 
               playerStats.perks.juggernaut++;
               playerStats.armor = Math.min(80, playerStats.armor + 8);
-              // PR #114: More descriptive stat change text with % reduction
-              showStatChange(`Juggernaut Lvl ${playerStats.perks.juggernaut} - Damage Reduction: ${playerStats.armor.toFixed(1)}%`);
+              // PR #114: More descriptive stat change text (shortened for readability)
+              showStatChange(`Juggernaut Lvl ${playerStats.perks.juggernaut} - ${playerStats.armor.toFixed(1)}% Reduction`);
             } 
           },
           { 
