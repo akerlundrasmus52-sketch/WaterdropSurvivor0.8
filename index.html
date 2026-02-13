@@ -213,7 +213,7 @@
     }
     }
     
-    /* New Bottom Layout: HP Bar, Level Display, EXP Bar */
+    /* New Bottom Layout: Level Display, HP Bar, EXP Bar (from top to bottom) */
     #bottom-bars-container {
       position: absolute;
       bottom: 0;
@@ -228,7 +228,7 @@
       gap: 8px;
     }
     
-    /* HP Bar at the top of bottom section */
+    /* HP Bar in middle */
     #bottom-hp-bar {
       width: 90%;
       max-width: 600px;
@@ -262,7 +262,7 @@
       z-index: 1;
     }
     
-    /* Level Display */
+    /* Level Display at top */
     #bottom-level-display {
       font-size: 20px;
       font-weight: bold;
@@ -1378,11 +1378,11 @@
 
     <!-- New Bottom Bars Layout -->
     <div id="bottom-bars-container">
+      <div id="bottom-level-display">Current Level: 1</div>
       <div id="bottom-hp-bar">
         <div id="bottom-hp-fill"></div>
         <div id="bottom-hp-text">HP: 100/100</div>
       </div>
-      <div id="bottom-level-display">Current Level: 1</div>
       <div id="bottom-exp-bar">
         <div id="bottom-exp-fill"></div>
         <div id="bottom-exp-text">EXP: 0%</div>
