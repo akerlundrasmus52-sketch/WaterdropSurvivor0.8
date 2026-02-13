@@ -466,6 +466,28 @@
       color: #FFD700;
     }
     
+    /* Attributes Menu Modal Layout */
+    #attributes-menu {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.9);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+      pointer-events: auto;
+    }
+    
+    #attributes-menu .modal-content {
+      max-height: 80vh;
+      overflow-y: auto;
+      width: 90%;
+      max-width: 500px;
+    }
+    
     /* Equipment Menu Button - Phase 2 Placeholder */
     #equipment-btn {
       position: absolute;
@@ -1662,6 +1684,7 @@
               <feDisplacementMap in="SourceGraphic" scale="3"/>
             </filter>
             <!-- Stronger turbulence for attack animation -->
+            <!-- Duration matches --attack-animation-duration CSS variable (0.4s) and ATTACK_ANIMATION_DURATION_MS constant (400ms) -->
             <filter id="water-turbulence-attack" x="0%" y="0%" width="100%" height="100%">
               <feTurbulence baseFrequency="0.05" numOctaves="4" seed="5">
                 <animate attributeName="baseFrequency" 
@@ -1748,8 +1771,8 @@
   </div>
 
   <!-- Attributes & Equipment Menu Modal -->
-  <div id="attributes-menu" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 200; align-items: center; justify-content: center; pointer-events: auto;">
-    <div class="modal-content" style="max-height: 80vh; overflow-y: auto; width: 90%; max-width: 500px;">
+  <div id="attributes-menu">
+    <div class="modal-content">
       <h2 class="attributes-modal-title">ATTRIBUTES & EQUIPMENT</h2>
       
       <!-- Attributes Section -->
