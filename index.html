@@ -1340,6 +1340,8 @@
     <div class="menu-buttons">
       <button class="menu-btn" id="start-game-btn">START GAME</button>
       <button class="menu-btn" id="progression-btn">PROGRESSION</button>
+      <button class="menu-btn" id="attributes-btn" style="position: relative;">ATTRIBUTES</button>
+      <button class="menu-btn" id="gear-btn">GEAR & EQUIPMENT</button>
       <button class="menu-btn" id="achievements-btn">ACHIEVEMENTS</button>
       <button class="menu-btn" id="credits-btn">CREDITS</button>
     </div>
@@ -1364,6 +1366,38 @@
       <!-- Dynamically populated -->
     </div>
     <button class="back-btn" id="achievements-back-btn">BACK TO MENU</button>
+  </div>
+
+  <!-- Attributes Screen -->
+  <div id="attributes-screen" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 20; overflow-y: auto; flex-direction: column; align-items: center; justify-content: flex-start; padding: 20px;">
+    <div class="screen-title" style="color: #5DADE2; font-size: 36px; margin: 20px 0; text-shadow: 0 0 10px rgba(93,173,226,0.8);">ATTRIBUTES</div>
+    <div style="color: #FFD700; font-size: 20px; font-weight: bold; margin-bottom: 20px;" id="attr-points-display">
+      Unspent Points: 0
+    </div>
+    <div class="screen-content" id="attributes-content" style="display: grid; gap: 15px; width: 100%; max-width: 700px; margin: 0 auto;">
+      <!-- Dynamically populated -->
+    </div>
+    <button class="back-btn" id="attributes-back-btn" style="margin-top: 20px;">BACK TO MENU</button>
+  </div>
+
+  <!-- Gear & Equipment Screen -->
+  <div id="gear-screen" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 20; overflow-y: auto; flex-direction: column; align-items: center; justify-content: flex-start; padding: 20px;">
+    <div class="screen-title" style="color: #F39C12; font-size: 36px; margin: 20px 0; text-shadow: 0 0 10px rgba(243,156,18,0.8);">GEAR & EQUIPMENT</div>
+    <div style="color: #FFD700; font-size: 18px; margin-bottom: 10px;">Equip gear to boost your attributes</div>
+    
+    <!-- Gear Stats Display -->
+    <div id="gear-stats-display" style="background: linear-gradient(to bottom, #2a3a4a, #1a2a3a); border: 3px solid #F39C12; border-radius: 15px; padding: 15px; margin-bottom: 20px; width: 100%; max-width: 700px;">
+      <div style="color: #F39C12; font-size: 20px; font-weight: bold; margin-bottom: 10px;">Current Gear Bonuses:</div>
+      <div id="gear-stats-content" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;">
+        <!-- Dynamically populated -->
+      </div>
+    </div>
+    
+    <!-- Gear Slots -->
+    <div class="screen-content" id="gear-content" style="display: grid; gap: 15px; width: 100%; max-width: 900px; margin: 0 auto;">
+      <!-- Dynamically populated -->
+    </div>
+    <button class="back-btn" id="gear-back-btn" style="margin-top: 20px;">BACK TO MENU</button>
   </div>
 
   <!-- Credits Screen -->
@@ -1957,6 +1991,17 @@
     let flashLights = []; // Track temporary flash lights for cleanup
     let activeTimeouts = []; // Track active timeouts for cleanup
     let droneTurrets = []; // Track active drone turrets
+    // Performance: Cache animated scene objects to avoid scene.traverse() every frame
+    let animatedSceneObjects = {
+      windmills: [],
+      waterRipples: [],
+      sparkles: [],
+      crystals: [],
+      cometParticles: [],
+      waterfalls: [],
+      waterDrops: [],
+      splashes: []
+    };
     let lastTime = null; // Initialize as null for proper first-frame detection (PR #82 fix)
     
     // Phase 5: Initialize particle object pool for performance
@@ -3542,26 +3587,33 @@
       }
     }
 
+    // Performance: Cached geometries and materials for projectiles (reused across instances)
+    const projectileGeometryCache = {
+      bullet: new THREE.SphereGeometry(0.25, 8, 8),
+      bulletGlow: new THREE.SphereGeometry(0.35, 6, 6)
+    };
+    const projectileMaterialCache = {
+      bullet: new THREE.MeshBasicMaterial({ 
+        color: 0xFFFF00,
+        transparent: true,
+        opacity: 0.95
+      }),
+      bulletGlow: new THREE.MeshBasicMaterial({
+        color: 0xFFFF00,
+        transparent: true,
+        opacity: 0.4
+      })
+    };
+
     class Projectile {
       constructor(x, z, target) {
-        const geometry = new THREE.SphereGeometry(0.25, 8, 8); // Larger bullet (was 0.2)
-        const material = new THREE.MeshBasicMaterial({ 
-          color: 0xFFFF00,
-          transparent: true,
-          opacity: 0.95
-        });
-        this.mesh = new THREE.Mesh(geometry, material);
+        // Performance: Reuse cached geometry and materials instead of creating new ones
+        this.mesh = new THREE.Mesh(projectileGeometryCache.bullet, projectileMaterialCache.bullet);
         this.mesh.position.set(x, 0.5, z);
         scene.add(this.mesh);
         
-        // Add glowing trail effect
-        const glowGeometry = new THREE.SphereGeometry(0.35, 6, 6);
-        const glowMaterial = new THREE.MeshBasicMaterial({
-          color: 0xFFFF00,
-          transparent: true,
-          opacity: 0.4
-        });
-        this.glow = new THREE.Mesh(glowGeometry, glowMaterial);
+        // Add glowing trail effect with cached resources
+        this.glow = new THREE.Mesh(projectileGeometryCache.bulletGlow, projectileMaterialCache.bulletGlow);
         this.glow.position.copy(this.mesh.position);
         scene.add(this.glow);
 
@@ -3662,14 +3714,12 @@
       destroy() {
         this.active = false;
         scene.remove(this.mesh);
-        this.mesh.geometry.dispose();
-        this.mesh.material.dispose();
+        // Performance: Don't dispose shared cached geometry/material
         
         // Remove glow if it exists
         if (this.glow) {
           scene.remove(this.glow);
-          this.glow.geometry.dispose();
-          this.glow.material.dispose();
+          // Performance: Don't dispose shared cached geometry/material
         }
       }
     }
@@ -4530,7 +4580,24 @@
         expEarned: 0,
         maxWeapons: 0
       },
-      achievements: []
+      achievements: [],
+      // Achievement-based attribute points
+      attributes: {
+        dexterity: 0,
+        strength: 0,
+        vitality: 0,
+        luck: 0,
+        wisdom: 0
+      },
+      unspentAttributePoints: 0,
+      // Gear system
+      equippedGear: {
+        weapon: null,
+        armor: null,
+        accessory1: null,
+        accessory2: null
+      },
+      inventory: []
     };
 
     let saveData = { ...defaultSaveData };
@@ -4542,6 +4609,10 @@
           saveData = JSON.parse(saved);
           // Ensure all fields exist
           saveData.upgrades = { ...defaultSaveData.upgrades, ...saveData.upgrades };
+          saveData.attributes = { ...defaultSaveData.attributes, ...(saveData.attributes || {}) };
+          saveData.unspentAttributePoints = saveData.unspentAttributePoints || 0;
+          saveData.equippedGear = { ...defaultSaveData.equippedGear, ...(saveData.equippedGear || {}) };
+          saveData.inventory = saveData.inventory || [];
         }
       } catch (e) {
         console.error('Failed to load save data:', e);
@@ -4559,24 +4630,24 @@
 
     // --- ACHIEVEMENTS SYSTEM ---
     const ACHIEVEMENTS = {
-      kills10: { id: 'kills10', name: 'First Blood', desc: 'Kill 10 enemies', reward: 25, check: () => playerStats.kills >= 10, claimed: false },
-      kills50: { id: 'kills50', name: 'Killer Instinct', desc: 'Kill 50 enemies', reward: 50, check: () => playerStats.kills >= 50, claimed: false },
-      kills100: { id: 'kills100', name: 'Century Slayer', desc: 'Kill 100 enemies', reward: 100, check: () => playerStats.kills >= 100, claimed: false },
-      kills500: { id: 'kills500', name: 'Mass Destroyer', desc: 'Kill 500 enemies', reward: 250, check: () => playerStats.kills >= 500, claimed: false },
-      kills1000: { id: 'kills1000', name: 'Legendary Warrior', desc: 'Kill 1000 enemies', reward: 500, check: () => playerStats.kills >= 1000, claimed: false },
+      kills10: { id: 'kills10', name: 'First Blood', desc: 'Kill 10 enemies', reward: 25, attributePoints: 1, check: () => playerStats.kills >= 10, claimed: false },
+      kills50: { id: 'kills50', name: 'Killer Instinct', desc: 'Kill 50 enemies', reward: 50, attributePoints: 1, check: () => playerStats.kills >= 50, claimed: false },
+      kills100: { id: 'kills100', name: 'Century Slayer', desc: 'Kill 100 enemies', reward: 100, attributePoints: 2, check: () => playerStats.kills >= 100, claimed: false },
+      kills500: { id: 'kills500', name: 'Mass Destroyer', desc: 'Kill 500 enemies', reward: 250, attributePoints: 2, check: () => playerStats.kills >= 500, claimed: false },
+      kills1000: { id: 'kills1000', name: 'Legendary Warrior', desc: 'Kill 1000 enemies', reward: 500, attributePoints: 3, check: () => playerStats.kills >= 1000, claimed: false },
       
-      gold100: { id: 'gold100', name: 'Small Fortune', desc: 'Collect 100 gold in one run', reward: 50, check: () => playerStats.gold >= 100, claimed: false },
-      gold500: { id: 'gold500', name: 'Treasure Hunter', desc: 'Collect 500 gold in one run', reward: 150, check: () => playerStats.gold >= 500, claimed: false },
-      gold1000: { id: 'gold1000', name: 'Gold Baron', desc: 'Collect 1000 gold in one run', reward: 300, check: () => playerStats.gold >= 1000, claimed: false },
+      gold100: { id: 'gold100', name: 'Small Fortune', desc: 'Collect 100 gold in one run', reward: 50, attributePoints: 1, check: () => playerStats.gold >= 100, claimed: false },
+      gold500: { id: 'gold500', name: 'Treasure Hunter', desc: 'Collect 500 gold in one run', reward: 150, attributePoints: 1, check: () => playerStats.gold >= 500, claimed: false },
+      gold1000: { id: 'gold1000', name: 'Gold Baron', desc: 'Collect 1000 gold in one run', reward: 300, attributePoints: 2, check: () => playerStats.gold >= 1000, claimed: false },
       
-      dasher: { id: 'dasher', name: 'Dash Master', desc: 'Perform 50 dashes in one run', reward: 100, check: () => playerStats.dashesPerformed >= 50, claimed: false },
-      survivor: { id: 'survivor', name: 'Time Warrior', desc: 'Survive for 10 minutes', reward: 200, check: () => playerStats.survivalTime >= 600, claimed: false },
-      weaponMaster: { id: 'weaponMaster', name: 'Weapon Master', desc: 'Unlock all 3 weapons', reward: 150, check: () => playerStats.weaponsUnlocked >= 3, claimed: false },
-      untouchable: { id: 'untouchable', name: 'Untouchable', desc: 'Take no damage for 3 minutes', reward: 300, check: () => playerStats.survivalTime >= 180 && playerStats.damageTaken === 0, claimed: false },
+      dasher: { id: 'dasher', name: 'Dash Master', desc: 'Perform 50 dashes in one run', reward: 100, attributePoints: 1, check: () => playerStats.dashesPerformed >= 50, claimed: false },
+      survivor: { id: 'survivor', name: 'Time Warrior', desc: 'Survive for 10 minutes', reward: 200, attributePoints: 2, check: () => playerStats.survivalTime >= 600, claimed: false },
+      weaponMaster: { id: 'weaponMaster', name: 'Weapon Master', desc: 'Unlock all 3 weapons', reward: 150, attributePoints: 1, check: () => playerStats.weaponsUnlocked >= 3, claimed: false },
+      untouchable: { id: 'untouchable', name: 'Untouchable', desc: 'Take no damage for 3 minutes', reward: 300, attributePoints: 3, check: () => playerStats.survivalTime >= 180 && playerStats.damageTaken === 0, claimed: false },
       
-      level10: { id: 'level10', name: 'Rising Star', desc: 'Reach Level 10', reward: 100, check: () => playerStats.lvl >= 10, claimed: false },
-      level25: { id: 'level25', name: 'Experienced Fighter', desc: 'Reach Level 25', reward: 250, check: () => playerStats.lvl >= 25, claimed: false },
-      level50: { id: 'level50', name: 'Master Champion', desc: 'Reach Level 50', reward: 500, check: () => playerStats.lvl >= 50, claimed: false }
+      level10: { id: 'level10', name: 'Rising Star', desc: 'Reach Level 10', reward: 100, attributePoints: 1, check: () => playerStats.lvl >= 10, claimed: false },
+      level25: { id: 'level25', name: 'Experienced Fighter', desc: 'Reach Level 25', reward: 250, attributePoints: 2, check: () => playerStats.lvl >= 25, claimed: false },
+      level50: { id: 'level50', name: 'Master Champion', desc: 'Reach Level 50', reward: 500, attributePoints: 3, check: () => playerStats.lvl >= 50, claimed: false }
     };
 
     function updateAchievementsScreen() {
@@ -4612,7 +4683,12 @@
               ${achievement.desc}
             </div>
             <div style="color: #FFD700; font-size: 16px; font-weight: bold;">
-              Reward: ${achievement.reward} Gold ${canClaim ? '- CLICK TO CLAIM!' : ''}
+              Reward: ${achievement.reward} Gold
+            </div>
+            <div style="color: #5DADE2; font-size: 16px; font-weight: bold; margin-top: 5px;">
+              Attribute Points: ${achievement.attributePoints} ${canClaim ? '⭐' : ''}
+            </div>
+            ${canClaim ? '<div style="color: #FFFF00; font-size: 14px; margin-top: 8px; animation: pulse 1s infinite;">CLICK TO CLAIM!</div>' : ''}
             </div>
           </div>
         `;
@@ -4672,11 +4748,19 @@
       // Award gold
       addGold(achievement.reward);
       
+      // Award attribute points
+      saveData.unspentAttributePoints += achievement.attributePoints;
+      
       // Play sound
       playSound('coin');
       
       // Show gold bag animation
       showGoldBagAnimation(achievement.reward);
+      
+      // Show attribute points notification
+      if (achievement.attributePoints > 0) {
+        showStatChange(`+${achievement.attributePoints} Attribute Point${achievement.attributePoints > 1 ? 's' : ''}! Check Attributes Menu`);
+      }
       
       // Save
       saveSaveData();
@@ -4776,6 +4860,431 @@
         updateAchievementsScreen();
       }
     }
+
+    // --- ATTRIBUTES SYSTEM ---
+    const ATTRIBUTE_INFO = {
+      dexterity: {
+        name: 'Dexterity',
+        icon: '🎯',
+        description: 'Improves attack speed and critical chance',
+        effects: {
+          attackSpeed: 0.03, // +3% per point
+          critChance: 0.01   // +1% per point
+        }
+      },
+      strength: {
+        name: 'Strength',
+        icon: '💪',
+        description: 'Increases damage output',
+        effects: {
+          damage: 0.05 // +5% per point
+        }
+      },
+      vitality: {
+        name: 'Vitality',
+        icon: '❤️',
+        description: 'Boosts maximum health and health regeneration',
+        effects: {
+          maxHp: 10,      // +10 HP per point
+          hpRegen: 0.25   // +0.25 HP/sec per point
+        }
+      },
+      luck: {
+        name: 'Luck',
+        icon: '🍀',
+        description: 'Increases critical damage and treasure find chance',
+        effects: {
+          critDamage: 0.05,       // +5% crit damage per point
+          goldEarned: 0.03        // +3% gold find per point
+        }
+      },
+      wisdom: {
+        name: 'Wisdom',
+        icon: '🧠',
+        description: 'Reduces cooldowns and increases experience gain',
+        effects: {
+          cooldownReduction: 0.02, // +2% per point
+          expEarned: 0.03          // +3% per point
+        }
+      }
+    };
+
+    function updateAttributesScreen() {
+      const content = document.getElementById('attributes-content');
+      const pointsDisplay = document.getElementById('attr-points-display');
+      
+      if (!content || !pointsDisplay) return;
+      
+      const unspent = saveData.unspentAttributePoints || 0;
+      pointsDisplay.textContent = `Unspent Points: ${unspent}`;
+      
+      // Update badge on attributes button if there are unspent points
+      updateAttributesBadge(unspent);
+      
+      let html = '';
+      
+      for (const attrKey in ATTRIBUTE_INFO) {
+        const attr = ATTRIBUTE_INFO[attrKey];
+        const currentLevel = saveData.attributes[attrKey] || 0;
+        const canIncrease = unspent > 0;
+        
+        // Build effects display
+        let effectsHtml = '';
+        for (const effectKey in attr.effects) {
+          const value = attr.effects[effectKey];
+          const effectName = effectKey.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+          const displayValue = effectKey.includes('Hp') ? `+${value}` : `+${(value * 100).toFixed(0)}%`;
+          effectsHtml += `<div style="color: #90ee90; font-size: 13px;">• ${effectName}: ${displayValue} per point</div>`;
+        }
+        
+        html += `
+          <div style="
+            background: linear-gradient(to bottom, #2a3a4a, #1a2a3a);
+            border: 3px solid #5DADE2;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: left;
+            position: relative;
+          ">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 32px;">${attr.icon}</span>
+                <div>
+                  <div style="color: #5DADE2; font-size: 22px; font-weight: bold;">${attr.name}</div>
+                  <div style="color: #aaa; font-size: 14px;">Level: ${currentLevel}</div>
+                </div>
+              </div>
+              <button 
+                onclick="increaseAttribute('${attrKey}')" 
+                style="
+                  padding: 10px 20px;
+                  font-size: 24px;
+                  background: ${canIncrease ? 'linear-gradient(to bottom, #3498DB, #2C3E50)' : '#555'};
+                  color: white;
+                  border: 2px solid ${canIncrease ? '#5DADE2' : '#777'};
+                  border-radius: 10px;
+                  cursor: ${canIncrease ? 'pointer' : 'not-allowed'};
+                  opacity: ${canIncrease ? '1' : '0.5'};
+                "
+                ${!canIncrease ? 'disabled' : ''}
+              >+</button>
+            </div>
+            <div style="color: #ddd; font-size: 14px; margin-bottom: 10px;">${attr.description}</div>
+            <div style="margin-top: 10px;">
+              ${effectsHtml}
+            </div>
+          </div>
+        `;
+      }
+      
+      content.innerHTML = html;
+    }
+
+    function updateAttributesBadge(count) {
+      let badge = document.getElementById('attributes-badge');
+      const attrBtn = document.getElementById('attributes-btn');
+      
+      if (count > 0 && attrBtn) {
+        if (!badge) {
+          badge = document.createElement('div');
+          badge.id = 'attributes-badge';
+          badge.style.cssText = `
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #FF0000;
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+            box-shadow: 0 0 10px rgba(255, 0, 0, 0.8);
+            z-index: 100;
+          `;
+          attrBtn.appendChild(badge);
+        }
+        badge.textContent = count;
+      } else if (badge) {
+        badge.remove();
+      }
+    }
+
+    function increaseAttribute(attrKey) {
+      if (!saveData.attributes[attrKey]) saveData.attributes[attrKey] = 0;
+      
+      if (saveData.unspentAttributePoints > 0) {
+        saveData.attributes[attrKey]++;
+        saveData.unspentAttributePoints--;
+        
+        playSound('levelup');
+        saveSaveData();
+        updateAttributesScreen();
+      }
+    }
+    
+    // Expose to global scope for onclick handlers
+    window.increaseAttribute = increaseAttribute;
+
+    // --- GEAR SYSTEM ---
+    const GEAR_ATTRIBUTES = {
+      flexibility: { name: 'Flexibility', icon: '🤸', color: '#9B59B6' },
+      movementSpeed: { name: 'Movement Speed', icon: '💨', color: '#3498DB' },
+      attackSpeed: { name: 'Attack Speed', icon: '⚡', color: '#F39C12' },
+      attackPrecision: { name: 'Attack Precision', icon: '🎯', color: '#E74C3C' },
+      critChance: { name: 'Crit Chance', icon: '✨', color: '#E67E22' },
+      elementalMagic: { name: 'Elemental Magic', icon: '🔮', color: '#8E44AD' }
+    };
+
+    // Define starter gear that players begin with
+    const STARTER_GEAR = [
+      {
+        id: 'starter_weapon',
+        name: 'Worn Sword',
+        type: 'weapon',
+        rarity: 'common',
+        stats: { attackSpeed: 1, attackPrecision: 1 },
+        description: 'A basic weapon'
+      },
+      {
+        id: 'starter_armor',
+        name: 'Leather Vest',
+        type: 'armor',
+        rarity: 'common',
+        stats: { flexibility: 1, movementSpeed: 1 },
+        description: 'Basic protection'
+      },
+      {
+        id: 'starter_accessory1',
+        name: 'Lucky Charm',
+        type: 'accessory',
+        rarity: 'common',
+        stats: { critChance: 1 },
+        description: 'Brings good fortune'
+      }
+    ];
+
+    // Additional gear that can be obtained (for future expansion)
+    const GEAR_POOL = [
+      {
+        id: 'blazing_sword',
+        name: 'Blazing Sword',
+        type: 'weapon',
+        rarity: 'rare',
+        stats: { attackSpeed: 2, attackPrecision: 2, elementalMagic: 1 },
+        description: 'A sword wreathed in flames'
+      },
+      {
+        id: 'frost_blade',
+        name: 'Frost Blade',
+        type: 'weapon',
+        rarity: 'epic',
+        stats: { attackSpeed: 3, attackPrecision: 3, elementalMagic: 2 },
+        description: 'Freezes enemies on hit'
+      },
+      {
+        id: 'shadow_cloak',
+        name: 'Shadow Cloak',
+        type: 'armor',
+        rarity: 'rare',
+        stats: { flexibility: 3, movementSpeed: 2 },
+        description: 'Move like a shadow'
+      },
+      {
+        id: 'dragon_plate',
+        name: 'Dragon Plate',
+        type: 'armor',
+        rarity: 'legendary',
+        stats: { flexibility: 2, movementSpeed: 1, attackPrecision: 2 },
+        description: 'Forged from dragon scales'
+      },
+      {
+        id: 'crit_ring',
+        name: 'Ring of Critical Strikes',
+        type: 'accessory',
+        rarity: 'rare',
+        stats: { critChance: 3, attackPrecision: 1 },
+        description: 'Increases critical hit chance'
+      },
+      {
+        id: 'speed_boots',
+        name: 'Winged Boots',
+        type: 'accessory',
+        rarity: 'epic',
+        stats: { movementSpeed: 4, flexibility: 1 },
+        description: 'Swift as the wind'
+      },
+      {
+        id: 'magic_amulet',
+        name: 'Arcane Amulet',
+        type: 'accessory',
+        rarity: 'legendary',
+        stats: { elementalMagic: 4, attackSpeed: 2 },
+        description: 'Channels magical energy'
+      }
+    ];
+
+    function initializeGear() {
+      // Give players starter gear if they don't have any
+      if (!saveData.inventory || saveData.inventory.length === 0) {
+        saveData.inventory = [...STARTER_GEAR];
+        
+        // Auto-equip starter gear
+        saveData.equippedGear.weapon = 'starter_weapon';
+        saveData.equippedGear.armor = 'starter_armor';
+        saveData.equippedGear.accessory1 = 'starter_accessory1';
+        
+        saveSaveData();
+      }
+    }
+
+    function updateGearScreen() {
+      const content = document.getElementById('gear-content');
+      const statsContent = document.getElementById('gear-stats-content');
+      
+      if (!content || !statsContent) return;
+      
+      // Calculate total gear bonuses
+      const gearStats = calculateGearStats();
+      
+      // Update stats display
+      let statsHtml = '';
+      for (const statKey in GEAR_ATTRIBUTES) {
+        const stat = GEAR_ATTRIBUTES[statKey];
+        const value = gearStats[statKey] || 0;
+        statsHtml += `
+          <div style="display: flex; align-items: center; gap: 10px; padding: 5px;">
+            <span style="font-size: 24px;">${stat.icon}</span>
+            <div>
+              <div style="color: ${stat.color}; font-size: 14px; font-weight: bold;">${stat.name}</div>
+              <div style="color: #FFD700; font-size: 16px; font-weight: bold;">+${value}</div>
+            </div>
+          </div>
+        `;
+      }
+      statsContent.innerHTML = statsHtml;
+      
+      // Build gear slots display
+      let html = '';
+      
+      const slots = [
+        { key: 'weapon', name: 'Weapon Slot', icon: '⚔️' },
+        { key: 'armor', name: 'Armor Slot', icon: '🛡️' },
+        { key: 'accessory1', name: 'Accessory Slot 1', icon: '💍' },
+        { key: 'accessory2', name: 'Accessory Slot 2', icon: '📿' }
+      ];
+      
+      for (const slot of slots) {
+        const equippedId = saveData.equippedGear[slot.key];
+        const equippedGear = equippedId ? saveData.inventory.find(g => g.id === equippedId) : null;
+        
+        html += `
+          <div style="background: linear-gradient(to bottom, #2a3a4a, #1a2a3a); border: 3px solid #F39C12; border-radius: 15px; padding: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 32px;">${slot.icon}</span>
+                <div style="color: #F39C12; font-size: 20px; font-weight: bold;">${slot.name}</div>
+              </div>
+            </div>
+            ${equippedGear ? `
+              <div style="background: rgba(0,0,0,0.3); border: 2px solid ${getRarityColor(equippedGear.rarity)}; border-radius: 10px; padding: 15px;">
+                <div style="color: ${getRarityColor(equippedGear.rarity)}; font-size: 18px; font-weight: bold; margin-bottom: 5px;">
+                  ${equippedGear.name}
+                </div>
+                <div style="color: #aaa; font-size: 13px; margin-bottom: 10px;">${equippedGear.description}</div>
+                <div style="margin-bottom: 10px;">
+                  ${Object.entries(equippedGear.stats).map(([stat, val]) => `
+                    <div style="color: #90ee90; font-size: 13px;">• ${GEAR_ATTRIBUTES[stat].name}: +${val}</div>
+                  `).join('')}
+                </div>
+                <button onclick="unequipGear('${slot.key}')" style="padding: 8px 15px; background: linear-gradient(to bottom, #c0392b, #a93226); color: white; border: 2px solid #e74c3c; border-radius: 8px; cursor: pointer; font-weight: bold;">UNEQUIP</button>
+              </div>
+            ` : `
+              <div style="color: #777; font-size: 14px; text-align: center; padding: 20px;">
+                Empty Slot
+              </div>
+            `}
+            <div style="margin-top: 15px;">
+              <div style="color: #5DADE2; font-size: 16px; font-weight: bold; margin-bottom: 10px;">Available Gear:</div>
+              <div style="display: grid; gap: 10px; max-height: 200px; overflow-y: auto;">
+                ${saveData.inventory.filter(g => {
+                  const gearType = g.type === 'accessory' ? (slot.key === 'accessory1' || slot.key === 'accessory2') : g.type === slot.key;
+                  const notEquipped = g.id !== equippedId;
+                  return gearType && notEquipped;
+                }).map(gear => `
+                  <div style="background: rgba(0,0,0,0.4); border: 2px solid ${getRarityColor(gear.rarity)}; border-radius: 8px; padding: 10px; cursor: pointer;" onclick="equipGear('${slot.key}', '${gear.id}')">
+                    <div style="color: ${getRarityColor(gear.rarity)}; font-size: 14px; font-weight: bold;">${gear.name}</div>
+                    <div style="color: #999; font-size: 11px;">${gear.description}</div>
+                    <div style="margin-top: 5px;">
+                      ${Object.entries(gear.stats).map(([stat, val]) => `
+                        <span style="color: #90ee90; font-size: 11px; margin-right: 10px;">+${val} ${GEAR_ATTRIBUTES[stat].icon}</span>
+                      `).join('')}
+                    </div>
+                  </div>
+                `).join('') || '<div style="color: #777; font-size: 12px; padding: 10px;">No available gear for this slot</div>'}
+              </div>
+            </div>
+          </div>
+        `;
+      }
+      
+      content.innerHTML = html;
+    }
+
+    function getRarityColor(rarity) {
+      const colors = {
+        common: '#AAAAAA',
+        rare: '#5DADE2',
+        epic: '#9B59B6',
+        legendary: '#F39C12',
+        mythic: '#E74C3C'
+      };
+      return colors[rarity] || colors.common;
+    }
+
+    function calculateGearStats() {
+      const stats = {};
+      
+      for (const statKey in GEAR_ATTRIBUTES) {
+        stats[statKey] = 0;
+      }
+      
+      // Sum up stats from all equipped gear
+      for (const slotKey in saveData.equippedGear) {
+        const gearId = saveData.equippedGear[slotKey];
+        if (gearId) {
+          const gear = saveData.inventory.find(g => g.id === gearId);
+          if (gear && gear.stats) {
+            for (const statKey in gear.stats) {
+              stats[statKey] += gear.stats[statKey];
+            }
+          }
+        }
+      }
+      
+      return stats;
+    }
+
+    function equipGear(slotKey, gearId) {
+      saveData.equippedGear[slotKey] = gearId;
+      playSound('coin');
+      saveSaveData();
+      updateGearScreen();
+    }
+
+    function unequipGear(slotKey) {
+      saveData.equippedGear[slotKey] = null;
+      playSound('waterdrop');
+      saveSaveData();
+      updateGearScreen();
+    }
+
+    // Expose to global scope for onclick handlers
+    window.equipGear = equipGear;
+    window.unequipGear = unequipGear;
 
     // Upgrade definitions for the progression shop
     const PERMANENT_UPGRADES = {
@@ -5792,6 +6301,31 @@
       }
     }
 
+    // Performance: Cache animated objects to avoid scene.traverse() every frame
+    function cacheAnimatedObjects() {
+      animatedSceneObjects = {
+        windmills: [],
+        waterRipples: [],
+        sparkles: [],
+        crystals: [],
+        cometParticles: [],
+        waterfalls: [],
+        waterDrops: [],
+        splashes: []
+      };
+      
+      scene.traverse(obj => {
+        if (obj.userData.isWindmill) animatedSceneObjects.windmills.push(obj);
+        else if (obj.userData.isWaterRipple) animatedSceneObjects.waterRipples.push(obj);
+        else if (obj.userData.isSparkle) animatedSceneObjects.sparkles.push(obj);
+        else if (obj.userData.isCrystal) animatedSceneObjects.crystals.push(obj);
+        else if (obj.userData.isCometParticle) animatedSceneObjects.cometParticles.push(obj);
+        else if (obj.userData.isWaterfall) animatedSceneObjects.waterfalls.push(obj);
+        else if (obj.userData.isWaterDrop) animatedSceneObjects.waterDrops.push(obj);
+        else if (obj.userData.isSplash) animatedSceneObjects.splashes.push(obj);
+      });
+    }
+
     // --- GAME LOGIC ---
 
     function init() {
@@ -5842,7 +6376,12 @@
 
       // Setup
       createWorld();
+      // Performance: Cache animated scene objects after world creation
+      cacheAnimatedObjects();
       player = new Player();
+      
+      // Initialize gear system
+      initializeGear();
       
       // Initialize background music
       updateBackgroundMusic();
@@ -6079,6 +6618,20 @@
         document.getElementById('achievements-screen').style.display = 'flex';
       };
       
+      document.getElementById('attributes-btn').onclick = () => {
+        playSound('waterdrop');
+        hideMainMenu();
+        updateAttributesScreen();
+        document.getElementById('attributes-screen').style.display = 'flex';
+      };
+      
+      document.getElementById('gear-btn').onclick = () => {
+        playSound('waterdrop');
+        hideMainMenu();
+        updateGearScreen();
+        document.getElementById('gear-screen').style.display = 'flex';
+      };
+      
       document.getElementById('credits-btn').onclick = () => {
         playSound('waterdrop');
         hideMainMenu();
@@ -6095,6 +6648,18 @@
       document.getElementById('achievements-back-btn').onclick = () => {
         playSound('waterdrop');
         document.getElementById('achievements-screen').style.display = 'none';
+        showMainMenu();
+      };
+      
+      document.getElementById('attributes-back-btn').onclick = () => {
+        playSound('waterdrop');
+        document.getElementById('attributes-screen').style.display = 'none';
+        showMainMenu();
+      };
+      
+      document.getElementById('gear-back-btn').onclick = () => {
+        playSound('waterdrop');
+        document.getElementById('gear-screen').style.display = 'none';
         showMainMenu();
       };
       
@@ -8005,20 +8570,45 @@
       const baseArmor = PERMANENT_UPGRADES.armor.effect(saveData.upgrades.armor);
       const cdReduction = PERMANENT_UPGRADES.cooldownReduction.effect(saveData.upgrades.cooldownReduction);
       
-      // Reset Stats with permanent upgrades applied
+      // Apply attribute bonuses from achievement system
+      const dexterity = saveData.attributes.dexterity || 0;
+      const strength = saveData.attributes.strength || 0;
+      const vitality = saveData.attributes.vitality || 0;
+      const luck = saveData.attributes.luck || 0;
+      const wisdom = saveData.attributes.wisdom || 0;
+      
+      const attrHp = vitality * ATTRIBUTE_INFO.vitality.effects.maxHp;
+      const attrRegen = vitality * ATTRIBUTE_INFO.vitality.effects.hpRegen;
+      const attrAtkSpeed = dexterity * ATTRIBUTE_INFO.dexterity.effects.attackSpeed;
+      const attrCritChance = dexterity * ATTRIBUTE_INFO.dexterity.effects.critChance;
+      const attrDamage = strength * ATTRIBUTE_INFO.strength.effects.damage;
+      const attrCritDmg = luck * ATTRIBUTE_INFO.luck.effects.critDamage;
+      const attrCdReduction = wisdom * ATTRIBUTE_INFO.wisdom.effects.cooldownReduction;
+      
+      // Apply gear bonuses
+      const gearStats = calculateGearStats();
+      // Gear provides small, balanced bonuses (each point gives +1-2% depending on stat)
+      const gearFlexibilityBonus = gearStats.flexibility * 0.01;  // +1% armor per point
+      const gearMoveSpeedBonus = gearStats.movementSpeed * 0.02;  // +2% speed per point
+      const gearAtkSpeedBonus = gearStats.attackSpeed * 0.02;     // +2% attack speed per point
+      const gearPrecisionBonus = gearStats.attackPrecision * 0.01; // +1% crit chance per point
+      const gearCritBonus = gearStats.critChance * 0.02;          // +2% crit chance per point
+      const gearMagicBonus = gearStats.elementalMagic * 0.03;     // +3% damage per point
+      
+      // Reset Stats with permanent upgrades, attributes, and gear applied
       playerStats.lvl = 1;
       playerStats.exp = 0;
       playerStats.expReq = GAME_CONFIG.baseExpReq;
-      playerStats.hp = baseHp;
-      playerStats.maxHp = baseHp;
-      playerStats.strength = baseDamage;
-      playerStats.walkSpeed = baseSpeed;
+      playerStats.hp = baseHp + attrHp;
+      playerStats.maxHp = baseHp + attrHp;
+      playerStats.strength = baseDamage * (1 + attrDamage + gearMagicBonus);
+      playerStats.walkSpeed = baseSpeed * (1 + gearMoveSpeedBonus);
       playerStats.kills = 0;
-      playerStats.atkSpeed = baseAtkSpeed;
-      playerStats.critChance = baseCritChance;
-      playerStats.critDmg = baseCritDmg;
-      playerStats.armor = baseArmor;
-      playerStats.hpRegen = baseRegen;
+      playerStats.atkSpeed = baseAtkSpeed * (1 + attrAtkSpeed + gearAtkSpeedBonus);
+      playerStats.critChance = baseCritChance + attrCritChance + gearPrecisionBonus + gearCritBonus;
+      playerStats.critDmg = baseCritDmg + attrCritDmg;
+      playerStats.armor = baseArmor + gearStats.flexibility; // Flexibility gives flat armor bonus
+      playerStats.hpRegen = baseRegen + attrRegen;
       playerStats.gold = 0;
       waveCount = 0;
       lastWaveEndTime = 0; // Reset wave timing
@@ -8032,7 +8622,8 @@
         player.invulnerabilityTime = 0;
       }
       
-      const gunCooldown = 1000 * (1 - cdReduction);
+      const totalCdReduction = cdReduction + attrCdReduction;
+      const gunCooldown = 1000 * (1 - totalCdReduction);
       weapons.gun = { active: true, level: 1, damage: 15, cooldown: gunCooldown, lastShot: 0, range: 12, barrels: 1 };
       weapons.sword = { active: false, level: 0, damage: 30, cooldown: 1500, lastShot: 0, range: 3.5 };
       weapons.aura = { active: false, level: 0, damage: 5, cooldown: 500, lastShot: 0, range: 3 };
@@ -9131,97 +9722,96 @@
         return alive;
       });
       
+      // Performance: Use cached arrays instead of scene.traverse() every frame
       // Windmill Rotation and Light Animation
-      scene.children.forEach(c => {
-        if (c.userData.isWindmill) {
-          // Rotate the blades stored in userData
-          if (c.userData.blades && c.userData.blades.length > 0) {
-            c.userData.blades[0].rotation.z += 0.05;
-            c.userData.blades[1].rotation.z += 0.05;
-          }
-          
-          // Animate windmill light (pulsing) with null check
-          if (c.userData.light && c.userData.light.material) {
-            c.userData.light.material.opacity = 0.8 + Math.sin(gameTime * 3) * 0.2;
-          }
+      animatedSceneObjects.windmills.forEach(c => {
+        // Rotate the blades stored in userData
+        if (c.userData.blades && c.userData.blades.length > 0) {
+          c.userData.blades[0].rotation.z += 0.05;
+          c.userData.blades[1].rotation.z += 0.05;
         }
-        // Water ripple animation
-        if (c.userData.isWaterRipple) {
-          c.userData.phase += 0.05;
-          const scale = 1 + Math.sin(c.userData.phase) * 0.1;
-          c.scale.set(scale, 1, scale);
-          c.material.opacity = 0.3 + Math.sin(c.userData.phase) * 0.2;
+        
+        // Animate windmill light (pulsing) with null check
+        if (c.userData.light && c.userData.light.material) {
+          c.userData.light.material.opacity = 0.8 + Math.sin(gameTime * 3) * 0.2;
         }
-        // Lake sparkles animation
-        if (c.userData.isSparkle) {
-          c.userData.phase += 0.02 * c.userData.speed;
-          c.material.opacity = 0.3 + Math.abs(Math.sin(c.userData.phase)) * 0.7;
-          c.scale.set(
-            1 + Math.sin(c.userData.phase * 2) * 0.5,
-            1,
-            1 + Math.sin(c.userData.phase * 2) * 0.5
-          );
-        }
+      });
+      
+      // Water ripple animation
+      animatedSceneObjects.waterRipples.forEach(c => {
+        c.userData.phase += 0.05;
+        const scale = 1 + Math.sin(c.userData.phase) * 0.1;
+        c.scale.set(scale, 1, scale);
+        c.material.opacity = 0.3 + Math.sin(c.userData.phase) * 0.2;
+      });
+      
+      // Lake sparkles animation
+      animatedSceneObjects.sparkles.forEach(c => {
+        c.userData.phase += 0.02 * c.userData.speed;
+        c.material.opacity = 0.3 + Math.abs(Math.sin(c.userData.phase)) * 0.7;
+        c.scale.set(
+          1 + Math.sin(c.userData.phase * 2) * 0.5,
+          1,
+          1 + Math.sin(c.userData.phase * 2) * 0.5
+        );
       });
       
       // Crystal tower animation
-      scene.traverse(obj => {
-        if (obj.userData.isCrystal) {
-          // Rotate crystals
-          obj.rotation.x += 0.01;
-          obj.rotation.y += 0.02;
-          
-          // Orbit animation
-          obj.userData.phase += 0.01 * obj.userData.orbitSpeed;
-          const offsetY = Math.sin(obj.userData.phase) * 0.5;
-          obj.position.y += offsetY * 0.05;
-          
-          // Pulsing emissive
-          if (obj.material.emissiveIntensity !== undefined) {
-            obj.material.emissiveIntensity = 0.3 + Math.sin(obj.userData.phase * 2) * 0.2;
-          }
-        }
+      animatedSceneObjects.crystals.forEach(obj => {
+        // Rotate crystals
+        obj.rotation.x += 0.01;
+        obj.rotation.y += 0.02;
         
-        // Comet particle animation (orbiting particles)
-        if (obj.userData.isCometParticle) {
-          // Store the initial position as the orbit center (relative to parent/comet group)
-          if (!obj.userData.basePosition) {
-            obj.userData.basePosition = obj.position.clone();
-          }
-          
-          obj.userData.angle += obj.userData.speed * 0.02;
-          
-          const centerX = obj.userData.basePosition.x;
-          const centerZ = obj.userData.basePosition.z;
-          const centerY = obj.userData.basePosition.y;
-          
-          obj.position.x = centerX + Math.cos(obj.userData.angle) * obj.userData.radius;
-          obj.position.z = centerZ + Math.sin(obj.userData.angle) * obj.userData.radius;
-          obj.position.y = centerY + obj.userData.height + Math.sin(obj.userData.angle * 2) * 0.3;
-          
-          // Pulsing opacity (between 0.3 and 0.7 for good visibility)
-          obj.material.opacity = 0.5 + Math.sin(obj.userData.angle * 3) * 0.2;
+        // Orbit animation
+        obj.userData.phase += 0.01 * obj.userData.orbitSpeed;
+        const offsetY = Math.sin(obj.userData.phase) * 0.5;
+        obj.position.y += offsetY * 0.05;
+        
+        // Pulsing emissive
+        if (obj.material.emissiveIntensity !== undefined) {
+          obj.material.emissiveIntensity = 0.3 + Math.sin(obj.userData.phase * 2) * 0.2;
         }
       });
       
+      // Comet particle animation (orbiting particles)
+      animatedSceneObjects.cometParticles.forEach(obj => {
+        // Store the initial position as the orbit center (relative to parent/comet group)
+        if (!obj.userData.basePosition) {
+          obj.userData.basePosition = obj.position.clone();
+        }
+        
+        obj.userData.angle += obj.userData.speed * 0.02;
+        
+        const centerX = obj.userData.basePosition.x;
+        const centerZ = obj.userData.basePosition.z;
+        const centerY = obj.userData.basePosition.y;
+        
+        obj.position.x = centerX + Math.cos(obj.userData.angle) * obj.userData.radius;
+        obj.position.z = centerZ + Math.sin(obj.userData.angle) * obj.userData.radius;
+        obj.position.y = centerY + obj.userData.height + Math.sin(obj.userData.angle * 2) * 0.3;
+        
+        // Pulsing opacity (between 0.3 and 0.7 for good visibility)
+        obj.material.opacity = 0.5 + Math.sin(obj.userData.angle * 3) * 0.2;
+      });
+      
       // Waterfall animation
-      scene.traverse(obj => {
-        if (obj.userData.isWaterfall) {
-          obj.userData.phase += 0.05;
-          obj.material.opacity = 0.6 + Math.sin(obj.userData.phase) * 0.1;
+      animatedSceneObjects.waterfalls.forEach(obj => {
+        obj.userData.phase += 0.05;
+        obj.material.opacity = 0.6 + Math.sin(obj.userData.phase) * 0.1;
+      });
+      
+      animatedSceneObjects.waterDrops.forEach(obj => {
+        obj.position.y -= obj.userData.speed;
+        if (obj.position.y < 0) {
+          obj.position.y = obj.userData.startY;
         }
-        if (obj.userData.isWaterDrop) {
-          obj.position.y -= obj.userData.speed;
-          if (obj.position.y < 0) {
-            obj.position.y = obj.userData.startY;
-          }
-        }
-        if (obj.userData.isSplash) {
-          obj.userData.phase += 0.1;
-          const scale = 1 + Math.sin(obj.userData.phase) * 0.3;
-          obj.scale.set(scale, 1, scale);
-          obj.material.opacity = 0.4 + Math.sin(obj.userData.phase) * 0.2;
-        }
+      });
+      
+      animatedSceneObjects.splashes.forEach(obj => {
+        obj.userData.phase += 0.1;
+        const scale = 1 + Math.sin(obj.userData.phase) * 0.3;
+        obj.scale.set(scale, 1, scale);
+        obj.material.opacity = 0.4 + Math.sin(obj.userData.phase) * 0.2;
       });
 
       // Cleanup and memory management (run every 3 seconds to avoid performance issues)
