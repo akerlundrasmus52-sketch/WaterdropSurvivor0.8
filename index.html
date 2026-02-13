@@ -8630,7 +8630,7 @@
             }
             comboTimerEl.style.display = 'none';
           }
-        }, 100); // Update every 100ms for smooth countdown
+        }, 200); // Update every 200ms for smooth countdown while minimizing CPU usage
       } else {
         comboTimerEl.style.display = 'none';
       }
@@ -8648,7 +8648,8 @@
       let isMilestone = false;
       
       // Define milestones dynamically based on GODLIKE threshold
-      const milestones = [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, GODLIKE_COMBO_THRESHOLD];
+      // Include all combo values from 5 up to GODLIKE threshold
+      const milestones = Array.from({length: GODLIKE_COMBO_THRESHOLD - 4}, (_, i) => i + 5);
       // Check if this is a new milestone that hasn't been shown yet
       if (milestones.includes(comboState.count) && !comboState.shownMilestones.includes(comboState.count)) {
         isMilestone = true;
