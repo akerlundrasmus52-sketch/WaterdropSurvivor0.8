@@ -7186,7 +7186,6 @@
     let loadingDismissed = false;
     let loadingInterval = null;
     let loadingFailsafeTimeout = null;
-    let firstFrameRendered = false;
     
     function showLoadingScreen() {
       const loadingScreen = document.getElementById('loading-screen');
@@ -10317,10 +10316,11 @@
         gameTime = time / 1000; // Initialize gameTime for visual effects
         // Render the initial frame before returning to avoid blank screen
         renderer.render(scene, camera);
-        firstFrameRendered = true;
         // Dismiss loading screen after first frame is rendered
         // This ensures setupMenus and requestAnimationFrame have both completed
-        setTimeout(() => dismissLoadingScreen(), 100);
+        // Small delay to ensure the frame is fully rendered before dismissing
+        const LOADING_DISMISS_DELAY_MS = 100;
+        setTimeout(() => dismissLoadingScreen(), LOADING_DISMISS_DELAY_MS);
         return;
       }
 
