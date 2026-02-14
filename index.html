@@ -7540,11 +7540,14 @@
       // Show loading screen FIRST before any Three.js initialization (hotfix for hang)
       showLoadingScreen();
       
-      // Load save data first
-      loadSaveData();
-      
-      // Scene
-      scene = new THREE.Scene();
+      // Defer Three.js initialization to allow loading screen timers to start (hotfix)
+      setTimeout(() => {
+        try {
+          // Load save data first
+          loadSaveData();
+          
+          // Scene
+          scene = new THREE.Scene();
       scene.background = new THREE.Color(COLORS.bg);
       // Fog for depth
       scene.fog = new THREE.Fog(COLORS.bg, 20, 60);
@@ -7606,6 +7609,14 @@
       // Loading screen already shown at start of init()
       // Start Loop
       requestAnimationFrame(animate);
+      
+        } catch(e) {
+          console.error('Three.js initialization error:', e);
+          // Loading screen fallback will handle dismissal after 12 seconds
+          // Error will be visible to user via alert from outer try-catch
+          throw e; // Re-throw to trigger outer error handler
+        }
+      }, 0); // Defer to next event loop tick
     }
     
     function showLoadingScreen() {
