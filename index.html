@@ -3897,6 +3897,28 @@
           spawnGold(this.mesh.position.x, this.mesh.position.z, goldAmount);
         }
         
+        // PR #125-143: Mini-bosses drop guaranteed rare+ gear
+        if (this.isMiniBoss) {
+          const gearRarities = ['rare', 'rare', 'epic', 'legendary']; // Weighted towards rare
+          const gearRarity = gearRarities[Math.floor(Math.random() * gearRarities.length)];
+          
+          const slots = ['helmet', 'bodyArmor', 'boots', 'ring', 'amulet', 'weaponCharm'];
+          const randomSlot = slots[Math.floor(Math.random() * slots.length)];
+          
+          const newGear = generateGear(randomSlot, gearRarity);
+          saveData.inventory.push(newGear);
+          
+          // Auto-equip to empty slots
+          if (!saveData.equippedGear[randomSlot]) {
+            saveData.equippedGear[randomSlot] = newGear.id;
+            createFloatingText(`Equipped: ${newGear.name}!`, this.mesh.position, getRarityColor(newGear.rarity));
+          } else {
+            createFloatingText(`Found: ${newGear.name}!`, this.mesh.position, getRarityColor(newGear.rarity));
+          }
+          
+          saveSaveData();
+        }
+        
         playerStats.kills++;
         updateHUD();
         updateComboCounter(true); // Phase 2: Track combo on kill
@@ -5012,11 +5034,51 @@
       }
       
       giveReward() {
-        // Determine reward type
+        // PR #125-143: Determine reward type with gear drops
         const rand = Math.random();
         
-        if (rand < 0.35) {
-          // Health restore (35% chance)
+        // Determine gear drop chance based on chest tier
+        const gearDropChances = {
+          common: 0.15,
+          uncommon: 0.30,
+          rare: 0.50,
+          epic: 0.75,
+          mythical: 1.00
+        };
+        
+        const gearDropChance = gearDropChances[this.tier] || 0.15;
+        
+        if (rand < gearDropChance) {
+          // PR #125-143: Gear drop based on tier
+          const gearRarities = {
+            common: 'common',
+            uncommon: 'uncommon',
+            rare: 'rare',
+            epic: 'epic',
+            mythical: 'legendary'
+          };
+          const gearRarity = gearRarities[this.tier] || 'common';
+          
+          // Random slot
+          const slots = ['helmet', 'bodyArmor', 'boots', 'ring', 'amulet', 'weaponCharm'];
+          const randomSlot = slots[Math.floor(Math.random() * slots.length)];
+          
+          const newGear = generateGear(randomSlot, gearRarity);
+          saveData.inventory.push(newGear);
+          
+          // PR #125-143: Auto-equip to empty slots
+          if (!saveData.equippedGear[randomSlot]) {
+            saveData.equippedGear[randomSlot] = newGear.id;
+            createFloatingText(`Equipped: ${newGear.name}!`, this.mesh.position, getRarityColor(newGear.rarity));
+            showStatChange(`Chest: Auto-equipped ${newGear.name}`);
+          } else {
+            createFloatingText(`Found: ${newGear.name}!`, this.mesh.position, getRarityColor(newGear.rarity));
+            showStatChange(`Chest: ${newGear.name} added to inventory`);
+          }
+          
+          saveSaveData();
+        } else if (rand < 0.35 + gearDropChance) {
+          // Health restore (adjusted chance)
           const healAmount = 50;
           const prevHp = playerStats.hp;
           playerStats.hp = Math.min(playerStats.maxHp, playerStats.hp + healAmount);
@@ -5024,17 +5086,17 @@
           createFloatingText(`+${actualHeal} HP!`, this.mesh.position);
           showStatChange(`Chest: +${actualHeal} HP!`);
           spawnParticles(this.mesh.position, 0xFF69B4, 10); // Reduced for performance
-        } else if (rand < 0.6) {
-          // Gold (25% chance)
+        } else if (rand < 0.6 + gearDropChance) {
+          // Gold (adjusted chance)
           const goldAmount = 12 + Math.floor(Math.random() * 19); // 12-30 gold (reduced from 20-50)
           addGold(goldAmount);
           createFloatingText(`+${goldAmount} Gold!`, this.mesh.position);
           showStatChange(`Chest: +${goldAmount} Gold!`);
-        } else if (rand < 0.85) {
-          // Random perk/stat boost (25% chance)
+        } else if (rand < 0.85 + gearDropChance) {
+          // Random perk/stat boost (adjusted chance)
           this.applyRandomPerk();
         } else {
-          // Weapon attachment or upgrade hint (15% chance)
+          // Weapon attachment or upgrade hint (adjusted chance)
           createFloatingText('Weapon Enhanced!', this.mesh.position);
           // Apply a small weapon boost - check if weapon exists
           if (weapons && weapons.gun && weapons.gun.active) {
@@ -8856,6 +8918,28 @@
             const cz = player.mesh.position.z + Math.sin(chestAngle) * chestDist;
             spawnChest(cx, cz, chestTier);
             showStatChange(`${chestTier.toUpperCase()} Chest Spawned!`);
+            
+            // PR #125-143: Combo streaks ≥15 drop guaranteed epic+ gear
+            if (comboState.count >= 15) {
+              const gearRarities = ['epic', 'epic', 'legendary']; // Weighted towards epic
+              const gearRarity = gearRarities[Math.floor(Math.random() * gearRarities.length)];
+              
+              const slots = ['helmet', 'bodyArmor', 'boots', 'ring', 'amulet', 'weaponCharm'];
+              const randomSlot = slots[Math.floor(Math.random() * slots.length)];
+              
+              const newGear = generateGear(randomSlot, gearRarity);
+              saveData.inventory.push(newGear);
+              
+              // Auto-equip to empty slots
+              if (!saveData.equippedGear[randomSlot]) {
+                saveData.equippedGear[randomSlot] = newGear.id;
+                createFloatingText(`Equipped: ${newGear.name}!`, player.mesh.position, getRarityColor(newGear.rarity));
+              } else {
+                createFloatingText(`Found: ${newGear.name}!`, player.mesh.position, getRarityColor(newGear.rarity));
+              }
+              
+              saveSaveData();
+            }
           }
         }
         
