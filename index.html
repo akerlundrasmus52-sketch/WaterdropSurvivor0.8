@@ -1857,33 +1857,43 @@
   <!-- Loading bar animation - starts immediately on page load -->
   <script>
     (function() {
-      // Start loading bar animation immediately
-      var loadingBar = document.getElementById('loading-bar');
-      var progress = 0;
-      var loadingInterval;
-      
       // Flag to track if loading has been completed by the main game
       window.gameLoadingComplete = false;
       
-      // Animate loading bar during ES module loading
-      loadingInterval = setInterval(function() {
-        if (window.gameLoadingComplete) {
-          clearInterval(loadingInterval);
-          return;
-        }
+      // Start animation once DOM is ready (loading bar element exists)
+      function startLoadingAnimation() {
+        var loadingBar = document.getElementById('loading-bar');
+        if (!loadingBar) return; // Safety check
         
-        // Slow progress up to 90% during module loading
-        if (progress < 90) {
-          progress += 2; // Increment by 2% every 100ms
-          loadingBar.style.width = progress + '%';
-        } else {
-          // Slow down near the end to wait for game initialization
-          clearInterval(loadingInterval);
-        }
-      }, 100);
+        var progress = 0;
+        
+        // Animate loading bar during ES module loading
+        var initialLoadingInterval = setInterval(function() {
+          if (window.gameLoadingComplete) {
+            clearInterval(initialLoadingInterval);
+            return;
+          }
+          
+          // Slow progress up to 90% during module loading
+          if (progress < 90) {
+            progress += 2; // Increment by 2% every 100ms
+            loadingBar.style.width = progress + '%';
+          } else {
+            // Slow down near the end to wait for game initialization
+            clearInterval(initialLoadingInterval);
+          }
+        }, 100);
+        
+        // Store the interval ID globally so it can be cleared by the game
+        window.initialLoadingInterval = initialLoadingInterval;
+      }
       
-      // Store the interval ID globally so it can be cleared by the game
-      window.loadingBarInterval = loadingInterval;
+      // Start animation immediately if DOM is ready, otherwise wait for DOMContentLoaded
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', startLoadingAnimation);
+      } else {
+        startLoadingAnimation();
+      }
     })();
   </script>
 
@@ -7174,12 +7184,15 @@
       const loadingBar = document.getElementById('loading-bar');
       let dismissed = false; // PR #129: Prevent double dismissal
       
+      // Loading failsafe timeout constant
+      const LOADING_FAILSAFE_TIMEOUT_MS = 12000;
+      
       // Signal that game loading is complete
       window.gameLoadingComplete = true;
       
       // Clear any existing loading bar interval from the standalone script
-      if (window.loadingBarInterval) {
-        clearInterval(window.loadingBarInterval);
+      if (window.initialLoadingInterval) {
+        clearInterval(window.initialLoadingInterval);
       }
       
       // Function to dismiss loading screen
@@ -7197,7 +7210,10 @@
       
       // Get current progress from the standalone animation
       let currentWidth = loadingBar.style.width;
-      let progress = currentWidth ? parseFloat(currentWidth) : 0;
+      let progress = 0;
+      if (currentWidth && currentWidth.endsWith('%')) {
+        progress = parseFloat(currentWidth.replace('%', ''));
+      }
       
       // Complete the loading bar animation from current position to 100%
       const interval = setInterval(() => {
@@ -7212,10 +7228,12 @@
       }, 100); // Fast completion
       
       // PR #129: Failsafe timeout - dismiss after 12s maximum even if ES module fails
+      // Normal loading: up to 9s (90% at 2%/100ms) + completion (~2s) + 0.6s delay + 0.5s fade
+      // Failsafe: 12s provides buffer for slow systems or initialization delays
       const failsafeTimeout = setTimeout(() => {
-        console.warn('Loading screen failsafe triggered after 12s');
+        console.warn('Loading screen failsafe triggered after ' + LOADING_FAILSAFE_TIMEOUT_MS + 'ms');
         dismissLoadingScreen();
-      }, 12000);
+      }, LOADING_FAILSAFE_TIMEOUT_MS);
     }
     
     function showMainMenu() {
