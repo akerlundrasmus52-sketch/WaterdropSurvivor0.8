@@ -149,7 +149,8 @@
     /* Combo Counter - Red/Black Theme */
     #combo-counter {
       position: absolute;
-      /* CHANGED: Position over character head, not center of screen */
+      /* Positioned dynamically over player head in JavaScript (lines ~9527-9537) */
+      /* These are fallback values if player is not yet initialized */
       top: 40%;
       left: 50%;
       transform: translate(-50%, -50%);
@@ -2229,6 +2230,7 @@
     // CRITICAL FIX: Watchdog timer to detect and recover from freezes
     let lastFrameTimestamp = Date.now();
     let freezeDetected = false;
+    let lastEmergencyCleanup = 0; // Track last emergency cleanup time
     
     let frameCount = 0;
     let isPaused = false;
@@ -9665,18 +9667,25 @@
     
     // CRITICAL FIX: Watchdog timer to detect freezes
     function initWatchdog() {
+      // Check more frequently (every 500ms) to catch freezes quickly
       setInterval(() => {
         const now = Date.now();
         const timeSinceLastFrame = now - lastFrameTimestamp;
         
         // If more than 2 seconds since last frame, freeze detected
-        if (timeSinceLastFrame > 2000 && !freezeDetected) {
-          freezeDetected = true;
-          console.error('FREEZE DETECTED! Initiating emergency cleanup...');
-          performEmergencyCleanup();
-          freezeDetected = false;
+        if (timeSinceLastFrame > 2000) {
+          // Only trigger if not already in cleanup (prevent repeated cleanup)
+          if (!freezeDetected) {
+            freezeDetected = true;
+            console.error('FREEZE DETECTED! Initiating emergency cleanup...');
+            performEmergencyCleanup();
+            // Reset flag after 5 seconds to allow detection of new freezes
+            setTimeout(() => {
+              freezeDetected = false;
+            }, 5000);
+          }
         }
-      }, 3000); // Check every 3 seconds
+      }, 500); // Check every 500ms for faster freeze detection
     }
     
     // CRITICAL FIX: Emergency cleanup when freeze detected
@@ -9731,13 +9740,6 @@
             damageNumberElements[i].remove();
           }
         }
-      }
-      
-      // Force garbage collection hint (non-standard but works in some browsers)
-      if (window.gc) {
-        try {
-          window.gc();
-        } catch (e) {}
       }
       
       console.warn('Emergency cleanup complete');
@@ -9836,8 +9838,8 @@
       const wrappedCallback = () => {
         frameCount++;
         
-        // Auto-terminate if lifetime exceeded
-        if (frameCount > maxLifetime) {
+        // Auto-terminate if lifetime exceeded (use >= for exact lifetime)
+        if (frameCount >= maxLifetime) {
           activeRAFCallbacks.delete(id);
           return;
         }
@@ -10653,11 +10655,16 @@
       }
       
       // CRITICAL FIX: Emergency cleanup if entity count is too high
+      // Add cooldown to prevent repeated cleanup (only once every 5 seconds)
       const totalEntities = projectiles.length + particles.length + enemies.length + 
                            meteors.length + flashLights.length + expGems.length + goldCoins.length;
       if (totalEntities > GAME_CONFIG.emergencyCleanupThreshold) {
-        console.warn(`Emergency cleanup triggered: ${totalEntities} total entities`);
-        performEmergencyCleanup();
+        const timeSinceLastEmergency = currentTime - lastEmergencyCleanup;
+        if (timeSinceLastEmergency > 5000) { // Only cleanup once per 5 seconds
+          console.warn(`Emergency cleanup triggered: ${totalEntities} total entities`);
+          performEmergencyCleanup();
+          lastEmergencyCleanup = currentTime;
+        }
       }
       
       // Phase 3: Lag compensation - cap deltaTime to prevent death spiral
