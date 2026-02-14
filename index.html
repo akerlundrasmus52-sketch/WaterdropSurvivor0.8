@@ -1125,6 +1125,41 @@
     #progression-btn { top: 59.75%; } /* Adjusted spacing - reduced from 61.25% */
     #achievements-btn { top: 69.25%; } /* Adjusted spacing - reduced from 72.25% */
     #credits-btn { top: min(78.75%, calc(100% - 60px)); } /* Adjusted spacing - reduced from 82.75% */
+    
+    /* Equipment icon button on main menu */
+    #main-menu-equipment-btn {
+      position: absolute;
+      top: 44%; /* Positioned between title and START GAME */
+      left: 50%;
+      transform: translateX(-50%);
+      background: linear-gradient(to bottom, #5A3A31, #3a2a21);
+      border: 3px solid #8B4513;
+      border-radius: 50%;
+      width: 60px;
+      height: 60px;
+      font-size: 28px;
+      cursor: pointer;
+      pointer-events: auto;
+      z-index: 51;
+      box-shadow: 0 4px 0 #2a1a11, 0 6px 12px rgba(0,0,0,0.5);
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #FFD700;
+      text-shadow: 0 0 8px rgba(255,215,0,0.6);
+    }
+    
+    #main-menu-equipment-btn:hover {
+      transform: translateX(-50%) translateY(-2px);
+      box-shadow: 0 6px 0 #2a1a11, 0 8px 16px rgba(0,0,0,0.6);
+      filter: brightness(1.2);
+    }
+    
+    #main-menu-equipment-btn:active {
+      transform: translateX(-50%) translateY(2px);
+      box-shadow: 0 2px 0 #2a1a11, 0 4px 8px rgba(0,0,0,0.4);
+    }
 
     .menu-btn::before {
       content: '';
@@ -1525,6 +1560,7 @@
   <div id="main-menu">
     <div class="gold-display" id="menu-gold">GOLD: 0</div>
     <div class="menu-title">WATER DROP SURVIVOR</div>
+    <button id="main-menu-equipment-btn" title="Equipment">⚔️</button>
     <div class="menu-buttons">
       <button class="menu-btn" id="start-game-btn">START GAME</button>
       <button class="menu-btn" id="progression-btn">PROGRESSION</button>
@@ -4037,6 +4073,15 @@
             const isCrit = Math.random() < playerStats.critChance;
             if (isCrit) dmg *= playerStats.critDmg;
             
+            // Defensive clamp: Ensure damage is finite and positive (fallback to 1)
+            if (!isFinite(dmg) || dmg <= 0) {
+              if (!window._nanDamageWarned) {
+                console.warn('Projectile.update: Invalid damage detected:', dmg, 'Base dmg:', weapons.gun.damage, 'Stats:', playerStats.damage, playerStats.strength, 'Crit:', playerStats.critDmg);
+                window._nanDamageWarned = true;
+              }
+              dmg = 1; // Fallback to minimum damage
+            }
+            
             enemy.takeDamage(Math.floor(dmg), isCrit);
             
             // Knockback effect
@@ -4083,7 +4128,16 @@
         this.maxLife = 10;
         
         // Deal damage immediately
-        const dmg = weapons.sword.damage * playerStats.strength * playerStats.damage;
+        let dmg = weapons.sword.damage * playerStats.strength * playerStats.damage;
+        
+        // Defensive clamp: Ensure damage is finite and positive (fallback to 1)
+        if (!isFinite(dmg) || dmg <= 0) {
+          if (!window._nanDamageWarnedSword) {
+            console.warn('SwordArc: Invalid damage detected:', dmg, 'Base dmg:', weapons.sword.damage, 'Stats:', playerStats.damage, playerStats.strength);
+            window._nanDamageWarnedSword = true;
+          }
+          dmg = 1; // Fallback to minimum damage
+        }
         
         enemies.forEach(e => {
           const dx = e.mesh.position.x - x;
@@ -4175,6 +4229,15 @@
             const isCrit = Math.random() < playerStats.critChance;
             if (isCrit) dmg *= playerStats.critDmg;
             
+            // Defensive clamp: Ensure damage is finite and positive (fallback to 1)
+            if (!isFinite(dmg) || dmg <= 0) {
+              if (!window._nanDamageWarnedIce) {
+                console.warn('IceSpear.update: Invalid damage detected:', dmg, 'Base dmg:', weapons.iceSpear.damage, 'Stats:', playerStats.damage, playerStats.strength, 'Crit:', playerStats.critDmg);
+                window._nanDamageWarnedIce = true;
+              }
+              dmg = 1; // Fallback to minimum damage
+            }
+            
             enemy.takeDamage(Math.floor(dmg), isCrit);
             
             // Apply slow effect
@@ -4262,7 +4325,16 @@
         
         // AOE Damage
         const range = weapons.meteor.area;
-        const dmg = weapons.meteor.damage * playerStats.strength;
+        let dmg = weapons.meteor.damage * playerStats.strength;
+        
+        // Defensive clamp: Ensure damage is finite and positive (fallback to 1)
+        if (!isFinite(dmg) || dmg <= 0) {
+          if (!window._nanDamageWarnedMeteor) {
+            console.warn('Meteor: Invalid damage detected:', dmg, 'Base dmg:', weapons.meteor.damage, 'Stats:', playerStats.strength);
+            window._nanDamageWarnedMeteor = true;
+          }
+          dmg = 1; // Fallback to minimum damage
+        }
         
         enemies.forEach(e => {
           const d = e.mesh.position.distanceTo(this.target);
@@ -7572,6 +7644,22 @@
         document.getElementById('gear-screen').style.display = 'flex';
       };
       
+      document.getElementById('main-menu-equipment-btn').onclick = () => {
+        playSound('waterdrop');
+        hideMainMenu();
+        // Prefer gear-screen if present, otherwise fallback to attributes-menu
+        const gearScreen = document.getElementById('gear-screen');
+        if (gearScreen) {
+          updateGearScreen();
+          gearScreen.style.display = 'flex';
+        } else {
+          const attributesMenu = document.getElementById('attributes-menu');
+          if (attributesMenu) {
+            attributesMenu.style.display = 'flex';
+          }
+        }
+      };
+      
       document.getElementById('credits-btn').onclick = () => {
         playSound('waterdrop');
         hideMainMenu();
@@ -10656,11 +10744,22 @@
       if (weapons.aura.active && time - weapons.aura.lastShot > weapons.aura.cooldown) {
         // Damage all in range
         let hit = false;
+        let auraDmg = weapons.aura.damage * playerStats.strength;
+        
+        // Defensive clamp: Ensure damage is finite and positive (fallback to 1)
+        if (!isFinite(auraDmg) || auraDmg <= 0) {
+          if (!window._nanDamageWarnedAura) {
+            console.warn('Aura: Invalid damage detected:', auraDmg, 'Base dmg:', weapons.aura.damage, 'Stats:', playerStats.strength);
+            window._nanDamageWarnedAura = true;
+          }
+          auraDmg = 1; // Fallback to minimum damage
+        }
+        
         enemies.forEach(e => {
           if (e.isDead) return;
           const d = player.mesh.position.distanceTo(e.mesh.position);
           if (d < weapons.aura.range) {
-            e.takeDamage(weapons.aura.damage * playerStats.strength);
+            e.takeDamage(auraDmg);
             hit = true;
           }
         });
@@ -10853,11 +10952,21 @@
           if (e.isDead) return;
           const d = player.mesh.position.distanceTo(e.mesh.position);
           if (d < weapons.fireRing.range) {
-            const dmg = weapons.fireRing.damage * playerStats.strength;
+            let dmg = weapons.fireRing.damage * playerStats.strength;
             const isCrit = Math.random() < playerStats.critChance;
-            const finalDmg = isCrit ? dmg * playerStats.critDmg : dmg;
-            e.takeDamage(finalDmg);
-            createDamageNumber(finalDmg, e.mesh.position, isCrit);
+            if (isCrit) dmg *= playerStats.critDmg;
+            
+            // Defensive clamp: Ensure damage is finite and positive (fallback to 1)
+            if (!isFinite(dmg) || dmg <= 0) {
+              if (!window._nanDamageWarnedFireRing) {
+                console.warn('FireRing: Invalid damage detected:', dmg, 'Base dmg:', weapons.fireRing.damage, 'Stats:', playerStats.strength, 'Crit:', playerStats.critDmg);
+                window._nanDamageWarnedFireRing = true;
+              }
+              dmg = 1; // Fallback to minimum damage
+            }
+            
+            e.takeDamage(dmg);
+            createDamageNumber(dmg, e.mesh.position, isCrit);
             
             // Fire particles on hit
             spawnParticles(e.mesh.position, 0xFF4500, 6); // Orange-red fire
