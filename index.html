@@ -160,30 +160,30 @@
     }
     
     #combo-text {
-      font-size: 48px;
+      font-size: 24px;
       font-weight: 900;
       color: #FF0000;
-      text-shadow: 
-        3px 3px 0 #000,
-        -2px -2px 0 #000,
-        2px -2px 0 #000,
-        -2px 2px 0 #000,
-        0 0 20px rgba(255,0,0,0.9),
-        0 0 40px rgba(255,0,0,0.7);
-      animation: combo-bubble 0.5s ease-out;
-    }
-    
-    #combo-multiplier {
-      font-size: 24px;
-      font-weight: bold;
-      color: #8B0000;
       text-shadow: 
         2px 2px 0 #000,
         -1px -1px 0 #000,
         1px -1px 0 #000,
         -1px 1px 0 #000,
-        0 0 15px rgba(139,0,0,0.8);
-      margin-top: 5px;
+        0 0 15px rgba(255,0,0,0.9),
+        0 0 30px rgba(255,0,0,0.7);
+      animation: combo-bubble 0.5s ease-out;
+    }
+    
+    #combo-multiplier {
+      font-size: 16px;
+      font-weight: bold;
+      color: #8B0000;
+      text-shadow: 
+        1px 1px 0 #000,
+        -1px -1px 0 #000,
+        1px -1px 0 #000,
+        -1px 1px 0 #000,
+        0 0 10px rgba(139,0,0,0.8);
+      margin-top: 3px;
     }
     
     @keyframes combo-bubble {
@@ -1512,7 +1512,16 @@
   <div id="credits-screen">
     <div class="screen-title">CREDITS</div>
     <div class="screen-content">
-      <p>Made by Timmy Durell aka - TimmieTooth</p>
+      <p>Made by</p>
+      <p><br></p>
+      <p>Timmy Durell</p>
+      <p>Aka</p>
+      <p>TimmieTooth</p>
+      <p><br></p>
+      <p>Music</p>
+      <p>TimmieTooth</p>
+      <p><br></p>
+      <p>Totally animated with code using AI and basic skills on programming</p>
     </div>
     <button class="back-btn" id="credits-back-btn">BACK TO MENU</button>
   </div>
@@ -2421,6 +2430,13 @@
         // Phase 5: Low health water bleed timer
         this.waterBleedTimer = 0;
         
+        // Blinking eyes
+        this.blinkTimer = 0;
+        this.blinkInterval = 3 + Math.random() * 2; // Blink every 3-5 seconds
+        this.isBlinking = false;
+        this.blinkDuration = 0.15; // How long blink lasts
+        this.blinkProgress = 0;
+        
         // Dash
         this.isDashing = false;
         this.dashTime = 0;
@@ -2450,6 +2466,31 @@
           }
         } else {
           this.mesh.material.opacity = 0.75; // Normal opacity
+        }
+        
+        // Blinking eyes animation
+        this.blinkTimer += dt;
+        if (this.blinkTimer >= this.blinkInterval) {
+          this.isBlinking = true;
+          this.blinkTimer = 0;
+          this.blinkProgress = 0;
+          this.blinkInterval = 3 + Math.random() * 2; // Next blink in 3-5 seconds
+        }
+        
+        if (this.isBlinking) {
+          this.blinkProgress += dt;
+          if (this.blinkProgress >= this.blinkDuration) {
+            this.isBlinking = false;
+            this.blinkProgress = 0;
+            // Reset eye scale to normal
+            this.leftEye.scale.y = 1;
+            this.rightEye.scale.y = 1;
+          } else {
+            // Squish eyes vertically to simulate blinking
+            const blinkAmount = Math.sin((this.blinkProgress / this.blinkDuration) * Math.PI);
+            this.leftEye.scale.y = 1 - blinkAmount * 0.9; // Squish to 10% height
+            this.rightEye.scale.y = 1 - blinkAmount * 0.9;
+          }
         }
         
         // Phase 5: Water bleed effect when health < 30%
@@ -2550,7 +2591,7 @@
 
           // Inertia / Squish Effect - Enhanced for Phase 1
           // Lerp velocity for smooth transition with more acceleration feel
-          const lerpFactor = joystickLeft.active ? 0.15 : 0.08; // Faster accel, slower decel
+          const lerpFactor = joystickLeft.active ? 0.18 : 0.06; // Even faster accel, even slower decel for more weight
           this.velocity.lerp(targetVel, lerpFactor);
         }
         
@@ -2558,19 +2599,23 @@
         
         // Realistic water droplet physics with MORE PRONOUNCED wobble (Phase 1 enhancement)
         // Wobble increases with speed
-        this.wobblePhase += dt * (12 + speedMag * 50); // Increased from 10 + speedMag * 40
-        const wobble = Math.sin(this.wobblePhase) * (0.10 + speedMag * 0.30); // Increased from 0.08 + speedMag * 0.25
+        this.wobblePhase += dt * (14 + speedMag * 60); // Enhanced from 12 + speedMag * 50
+        const wobble = Math.sin(this.wobblePhase) * (0.12 + speedMag * 0.35); // Enhanced from 0.10 + speedMag * 0.30
         
         // Squish effect: stretch in direction of movement (MORE DRAMATIC for Phase 1)
-        const stretchX = 1 + Math.abs(this.velocity.x) * 3.0; // Increased from 2.5
-        const stretchZ = 1 + Math.abs(this.velocity.z) * 3.0; // Increased from 2.5
+        const stretchX = 1 + Math.abs(this.velocity.x) * 3.5; // Enhanced from 3.0
+        const stretchZ = 1 + Math.abs(this.velocity.z) * 3.5; // Enhanced from 3.0
         const squishY = 1 / Math.sqrt(stretchX * stretchZ);
+        
+        // Add gravity effect when decelerating (bouncy settling)
+        const deceleration = joystickLeft.active ? 0 : Math.min(speedMag * 2, 1);
+        const gravityBounce = Math.abs(Math.sin(this.wobblePhase * 2)) * deceleration * 0.15;
         
         // Apply deformation with wobble (MORE PRONOUNCED for Phase 1)
         this.mesh.scale.set(
-          stretchX * (1 + wobble * 0.6), // Increased from 0.5
-          squishY * (1 - wobble * 0.4), // Increased from 0.35
-          stretchZ * (1 + wobble * 0.6)  // Increased from 0.5
+          stretchX * (1 + wobble * 0.65), // Enhanced from 0.6
+          squishY * (1 - wobble * 0.45 + gravityBounce), // Enhanced from 0.4, add gravity bounce
+          stretchZ * (1 + wobble * 0.65)  // Enhanced from 0.6
         );
         
         // Animate water shine
@@ -6227,23 +6272,7 @@
       signBoard.position.y = 3.2;
       signpostGroup.add(signBoard);
       
-      // Add text sprite for "QUEST HERE"
-      const canvas = document.createElement('canvas');
-      canvas.width = 512;
-      canvas.height = 128;
-      const ctx = canvas.getContext('2d');
-      ctx.fillStyle = '#8B0000'; // Dark red text
-      ctx.font = 'bold 60px Arial';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('QUEST HERE', 256, 64);
-      
-      const texture = new THREE.CanvasTexture(canvas);
-      const spriteMat = new THREE.SpriteMaterial({ map: texture });
-      const sprite = new THREE.Sprite(spriteMat);
-      sprite.scale.set(3.5, 0.875, 1);
-      sprite.position.y = 3.2;
-      signpostGroup.add(sprite);
+      // Removed "QUEST HERE" text sprite - quest info now displayed in HUD stats bar only
       
       scene.add(signpostGroup);
       
