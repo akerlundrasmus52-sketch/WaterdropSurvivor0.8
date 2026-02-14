@@ -2661,9 +2661,43 @@
           
           // Rotation/Aiming with RIGHT stick (independent of movement)
           if (joystickRight.active) {
-            // Manual aim: Turn to face the direction of right stick
-            const angle = Math.atan2(joystickRight.x, joystickRight.y);
-            this.mesh.rotation.y = angle;
+            // PR #125: Precision aiming - Manual aim with aim-assist
+            // Base aim direction from right stick
+            let aimAngle = Math.atan2(joystickRight.x, joystickRight.y);
+            
+            // PR #125: Apply 15% nudge toward nearest enemy within 15 units when precision > 0
+            if (playerStats.precision > 0 && enemies && enemies.length > 0) {
+              let nearestEnemy = null;
+              let minDist = Infinity;
+              const AIM_ASSIST_RANGE = 15; // units
+              
+              enemies.forEach(e => {
+                if (e && !e.isDead) {
+                  const dist = this.mesh.position.distanceTo(e.mesh.position);
+                  if (dist < minDist && dist < AIM_ASSIST_RANGE) {
+                    minDist = dist;
+                    nearestEnemy = e;
+                  }
+                }
+              });
+              
+              if (nearestEnemy) {
+                // Calculate angle to enemy
+                const dx = nearestEnemy.mesh.position.x - this.mesh.position.x;
+                const dz = nearestEnemy.mesh.position.z - this.mesh.position.z;
+                const enemyAngle = Math.atan2(dx, dz);
+                
+                // Blend 15% toward enemy angle (aim-assist)
+                const ASSIST_STRENGTH = 0.15;
+                aimAngle = aimAngle + (enemyAngle - aimAngle) * ASSIST_STRENGTH;
+              }
+            }
+            
+            // Apply final aim angle
+            this.mesh.rotation.y = aimAngle;
+            
+            // PR #125: Manual aim bonuses (+1% crit per precision, +2% gold per precision)
+            // These are applied in stat calculations
           } else if (gameSettings.autoAim && enemies && enemies.length > 0) {
             // Auto-aim when enabled (works in any orientation)
             let nearestEnemy = null;
@@ -4034,7 +4068,10 @@
               dmg = weapons.droneTurret.damage * (playerStats.damage || 1) * (playerStats.strength || 1);
             }
             
-            const isCrit = Math.random() < playerStats.critChance;
+            // PR #125: Crit chance with precision bonus (+1% per precision when manual aiming)
+            const precisionCritBonus = joystickRight.active ? (playerStats.precision * 0.01) : 0;
+            const effectiveCritChance = playerStats.critChance + precisionCritBonus;
+            const isCrit = Math.random() < effectiveCritChance;
             if (isCrit) dmg *= (playerStats.critDmg || 1.5);
             
             // PR #124: Validate damage is finite and positive (change <= 0 to < 0 allows zero damage)
@@ -4181,7 +4218,10 @@
           if (dx*dx + dz*dz < 0.6) {
             // PR #124: Calculate Damage with NaN guards and fallbacks
             let dmg = weapons.iceSpear.damage * (playerStats.damage || 1) * (playerStats.strength || 1);
-            const isCrit = Math.random() < playerStats.critChance;
+            // PR #125: Crit chance with precision bonus
+            const precisionCritBonus = joystickRight.active ? (playerStats.precision * 0.01) : 0;
+            const effectiveCritChance = playerStats.critChance + precisionCritBonus;
+            const isCrit = Math.random() < effectiveCritChance;
             if (isCrit) dmg *= (playerStats.critDmg || 1.5);
             
             // PR #124: Validate damage is finite and positive
@@ -7612,7 +7652,9 @@
     // Phase 5: Updated to use Object Pool for performance
     function spawnParticles(pos, color, count) {
       if (!particlePool) return; // Safety check
-      for(let i=0; i<count; i++) {
+      // PR #125: Apply FPS watchdog particle throttling
+      const throttledCount = Math.ceil(count * (performanceLog.particleThrottle || 1.0));
+      for(let i=0; i<throttledCount; i++) {
         const particle = particlePool.get();
         particle.reset(pos, color);
         particles.push(particle);
@@ -7634,8 +7676,11 @@
     
     function addGold(amount) {
       // Apply gold bonus from permanent upgrades
-      const bonus = PERMANENT_UPGRADES.goldEarned.effect(saveData.upgrades.goldEarned);
-      const finalAmount = Math.floor(amount * (1 + bonus));
+      const upgradeBonus = PERMANENT_UPGRADES.goldEarned.effect(saveData.upgrades.goldEarned);
+      // PR #124-125: Apply gold bonus from Luck attribute and precision (manual aim)
+      const attrBonus = playerStats.goldBonus || 1; // From Luck attribute
+      const precisionBonus = joystickRight.active ? (playerStats.precision * 0.02) : 0; // +2% per precision when manual aiming
+      const finalAmount = Math.floor(amount * (1 + upgradeBonus) * attrBonus * (1 + precisionBonus));
       playerStats.gold += finalAmount;
       saveData.gold += finalAmount;
       saveData.totalGoldEarned += finalAmount;
@@ -10074,7 +10119,11 @@
       spawnCount: 0,
       renderCount: 0,
       lastEnemyCount: 0,
-      cumulativeFrameTime: 0 // Track cumulative time for accurate average
+      cumulativeFrameTime: 0, // Track cumulative time for accurate average
+      // PR #125: FPS watchdog for particle throttling
+      fpsHistory: [],       // Rolling window of last 10 frame times
+      averageFps: 60,       // Current average FPS
+      particleThrottle: 1.0 // Multiplier for particle spawning (1.0 = 100%, 0.5 = 50%)
     };
     
     function animate(time) {
@@ -10123,6 +10172,24 @@
           window.lastLagWarning = Date.now();
         }
         dt = MAX_DELTA_TIME;
+      }
+      
+      // PR #125: FPS Watchdog - Track rolling 10-frame average FPS
+      performanceLog.fpsHistory.push(dt);
+      if (performanceLog.fpsHistory.length > 10) {
+        performanceLog.fpsHistory.shift(); // Keep only last 10 frames
+      }
+      // Calculate average FPS from rolling window
+      if (performanceLog.fpsHistory.length > 0) {
+        const avgDt = performanceLog.fpsHistory.reduce((sum, val) => sum + val, 0) / performanceLog.fpsHistory.length;
+        performanceLog.averageFps = avgDt > 0 ? 1 / avgDt : 60;
+        
+        // PR #125: Throttle particle spawning to 50% when FPS < 30
+        if (performanceLog.averageFps < 30) {
+          performanceLog.particleThrottle = 0.5;
+        } else {
+          performanceLog.particleThrottle = 1.0;
+        }
       }
       
       // Frame Skip Mechanism: Determine if rendering should be skipped based on previous frame time
@@ -10637,7 +10704,10 @@
           const d = player.mesh.position.distanceTo(e.mesh.position);
           if (d < weapons.fireRing.range) {
             const dmg = weapons.fireRing.damage * (playerStats.strength || 1);
-            const isCrit = Math.random() < playerStats.critChance;
+            // PR #125: Crit chance with precision bonus
+            const precisionCritBonus = joystickRight.active ? (playerStats.precision * 0.01) : 0;
+            const effectiveCritChance = playerStats.critChance + precisionCritBonus;
+            const isCrit = Math.random() < effectiveCritChance;
             const finalDmg = isCrit ? dmg * (playerStats.critDmg || 1.5) : dmg;
             
             // PR #124: Validate damage is finite and positive
