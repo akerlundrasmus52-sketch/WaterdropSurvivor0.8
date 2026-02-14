@@ -2037,6 +2037,11 @@
       // Performance optimization - Phase 1
       maxEnemiesOnScreen: 50
     };
+    
+    // UI/UX Constants
+    const COUNTDOWN_TIMEOUT_MS = 10000; // Safety timeout for countdown
+    const STATE_LOG_THROTTLE_MS = 3000; // Throttle for state logging
+    const TUTORIAL_SHOWN_KEY = 'waterDropSurvivorTutorialShown'; // LocalStorage key
 
     // --- AUDIO SYSTEM (Oscillators) ---
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -7723,13 +7728,13 @@
       countdownTimer = 0;
       showCountdownMessage(0);
       
-      // Safety timeout: Force-start game if countdown doesn't complete in 10 seconds
+      // Safety timeout: Force-start game if countdown doesn't complete
       setTimeout(() => {
         if (countdownActive) {
           console.warn('⚠️ Countdown timeout - forcing game start');
           endCountdown();
         }
-      }, 10000);
+      }, COUNTDOWN_TIMEOUT_MS);
     }
     
     function showCountdownMessage(step) {
@@ -7944,7 +7949,7 @@
         playSound('waterdrop');
         
         // NEW: Check if tutorial should be shown (first time or user hasn't dismissed it)
-        const tutorialShown = localStorage.getItem('waterDropSurvivorTutorialShown');
+        const tutorialShown = localStorage.getItem(TUTORIAL_SHOWN_KEY);
         console.log('📖 Tutorial shown before:', tutorialShown);
         
         if (!tutorialShown || tutorialShown !== 'true') {
@@ -7986,7 +7991,7 @@
         const dontShow = document.getElementById('tutorial-dont-show').checked;
         if (dontShow) {
           console.log('✅ Saving tutorial preference');
-          localStorage.setItem('waterDropSurvivorTutorialShown', 'true');
+          localStorage.setItem(TUTORIAL_SHOWN_KEY, 'true');
         }
         
         // Hide tutorial and start game
@@ -10895,7 +10900,7 @@
 
       if (isPaused || isGameOver || !isGameActive) {
         // Log state changes (throttled to avoid spam)
-        if (!window.lastStateLog || (Date.now() - window.lastStateLog) > 3000) {
+        if (!window.lastStateLog || (Date.now() - window.lastStateLog) > STATE_LOG_THROTTLE_MS) {
           console.log('⏸️ Game paused/inactive - isPaused:', isPaused, 'isGameOver:', isGameOver, 'isGameActive:', isGameActive);
           window.lastStateLog = Date.now();
         }
@@ -11627,7 +11632,7 @@
     window.debugStartGame = function() {
       console.log('🔧 DEBUG: Force-starting game');
       // Clear tutorial flag to show tutorial
-      localStorage.removeItem('waterDropSurvivorTutorialShown');
+      localStorage.removeItem(TUTORIAL_SHOWN_KEY);
       // Force hide menu and start game
       hideMainMenu();
       document.getElementById('tutorial-overlay').style.display = 'none';
@@ -11637,7 +11642,7 @@
     
     window.debugSkipTutorial = function() {
       console.log('🔧 DEBUG: Skipping tutorial permanently');
-      localStorage.setItem('waterDropSurvivorTutorialShown', 'true');
+      localStorage.setItem(TUTORIAL_SHOWN_KEY, 'true');
       console.log('✅ Tutorial will be skipped on next Start Game click');
     };
 
