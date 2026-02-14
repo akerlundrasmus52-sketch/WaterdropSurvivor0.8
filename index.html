@@ -7458,16 +7458,16 @@
       }
       
       // Settings handlers
-      const autoAimCheckboxHandler = document.getElementById('auto-aim-checkbox');
-      if (autoAimCheckboxHandler) {
-        autoAimCheckboxHandler.onchange = (e) => {
+      const autoAimCheckbox = document.getElementById('auto-aim-checkbox');
+      if (autoAimCheckbox) {
+        autoAimCheckbox.onchange = (e) => {
           gameSettings.autoAim = e.target.checked;
         };
       }
       
-      const controlTypeSelectHandler = document.getElementById('control-type-select');
-      if (controlTypeSelectHandler) {
-        controlTypeSelectHandler.onchange = (e) => {
+      const controlTypeSelect = document.getElementById('control-type-select');
+      if (controlTypeSelect) {
+        controlTypeSelect.onchange = (e) => {
           gameSettings.controlType = e.target.value;
           // Clear joystick states when switching control types
           joystickLeft.active = false;
@@ -7482,38 +7482,34 @@
         };
       }
       
-      const soundToggleHandler = document.getElementById('sound-toggle');
-      if (soundToggleHandler) {
-        soundToggleHandler.onchange = (e) => {
+      const soundToggle = document.getElementById('sound-toggle');
+      if (soundToggle) {
+        soundToggle.onchange = (e) => {
           gameSettings.soundEnabled = e.target.checked;
         };
       }
       
-      const musicToggleHandler = document.getElementById('music-toggle');
-      if (musicToggleHandler) {
-        musicToggleHandler.onchange = (e) => {
+      const musicToggle = document.getElementById('music-toggle');
+      if (musicToggle) {
+        musicToggle.onchange = (e) => {
           gameSettings.musicEnabled = e.target.checked;
           updateBackgroundMusic();
         };
       }
 
       // Sync settings UI controls with current gameSettings state
-      const autoAimCheckbox = document.getElementById('auto-aim-checkbox');
       if (autoAimCheckbox) {
         autoAimCheckbox.checked = !!gameSettings.autoAim;
       }
 
-      const controlTypeSelect = document.getElementById('control-type-select');
       if (controlTypeSelect && typeof gameSettings.controlType === 'string') {
         controlTypeSelect.value = gameSettings.controlType;
       }
 
-      const soundToggle = document.getElementById('sound-toggle');
       if (soundToggle) {
         soundToggle.checked = !!gameSettings.soundEnabled;
       }
 
-      const musicToggle = document.getElementById('music-toggle');
       if (musicToggle) {
         musicToggle.checked = !!gameSettings.musicEnabled;
       }
