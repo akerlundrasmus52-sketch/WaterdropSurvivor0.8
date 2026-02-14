@@ -2640,9 +2640,11 @@
             this.mesh.rotation.y = angle;
           }
 
-          // Inertia / Squish Effect - Enhanced for Phase 1
-          // Lerp velocity for smooth transition with more acceleration feel
-          const lerpFactor = joystickLeft.active ? 0.18 : 0.06; // Even faster accel, even slower decel for more weight
+          // Inertia / Squish Effect - Enhanced for realistic water physics
+          // Lerp velocity for smooth transition
+          // Fast acceleration (0.18): Quick response when starting to move
+          // Slow deceleration (0.06): Weighty feel when stopping, water keeps momentum
+          const lerpFactor = joystickLeft.active ? 0.18 : 0.06;
           this.velocity.lerp(targetVel, lerpFactor);
         }
         
@@ -2659,6 +2661,9 @@
         const squishY = 1 / Math.sqrt(stretchX * stretchZ);
         
         // Add gravity effect when decelerating (bouncy settling)
+        // deceleration: 0-1 value based on current speed when not moving
+        // wobblePhase * 2: Faster oscillation for settling bounce
+        // 0.15: Amplitude of bounce effect (subtle but noticeable)
         const deceleration = joystickLeft.active ? 0 : Math.min(speedMag * 2, 1);
         const gravityBounce = Math.abs(Math.sin(this.wobblePhase * 2)) * deceleration * 0.15;
         
@@ -5310,11 +5315,12 @@
       // Show gold bag animation
       showGoldBagAnimation(achievement.reward);
       
-      // Show attribute points notification
+      // Show attribute points notification (delayed to avoid overlapping notifications)
+      const NOTIFICATION_DELAY_MS = 1500;
       if (achievement.attributePoints > 0) {
         setTimeout(() => {
           showStatChange(`+${achievement.attributePoints} Attribute Point${achievement.attributePoints > 1 ? 's' : ''}! Check Attributes Menu`);
-        }, 1500);
+        }, NOTIFICATION_DELAY_MS);
       }
       
       // Save
@@ -6593,7 +6599,8 @@
       signBoard.position.y = 3.2;
       signpostGroup.add(signBoard);
       
-      // Removed "QUEST HERE" text sprite - quest info now displayed in HUD stats bar only
+      // Removed "QUEST HERE" text sprite per requirements
+      // Quest info now displayed only in HUD stats bar
       
       scene.add(signpostGroup);
       
@@ -7351,7 +7358,9 @@
       renderer.shadowMap.enabled = true;
       renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Soft shadows - high quality
       renderer.toneMapping = THREE.ACESFilmicToneMapping; // Better color/brightness
-      renderer.toneMappingExposure = 1.1; // Slightly brighter for better visibility
+      // Slightly increased exposure (1.1 vs 1.0) for better visibility without sacrificing color accuracy
+      // ACES tone mapping provides filmic look while preserving color relationships
+      renderer.toneMappingExposure = 1.1;
       renderer.outputEncoding = THREE.sRGBEncoding; // Correct color space
       // Enable physically correct lighting for better reflections
       renderer.physicallyCorrectLights = true;
