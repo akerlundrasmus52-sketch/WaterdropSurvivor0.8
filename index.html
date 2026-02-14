@@ -10803,7 +10803,6 @@
       // Initialize lastTime on first frame (when it's 0) to establish time baseline
       if (lastTime === 0) {
         lastTime = time;
-        gameTime = 0; // Initialize gameTime to 0
         // Render the initial frame to show the scene
         renderer.render(scene, camera);
         return; // Exit early to establish proper time baseline for next frame
@@ -10816,8 +10815,8 @@
       
       // Safety: Guard against NaN/invalid time values (hotfix for loading screen hang)
       if (!Number.isFinite(dt) || dt < 0 || dt > 1) {
+        console.warn('Invalid dt detected:', dt, '- using fallback of', FALLBACK_FRAME_TIME);
         dt = FALLBACK_FRAME_TIME; // Fallback to ~60fps frame time
-        console.warn('Invalid dt detected, using fallback value:', dt);
       }
       
       lastTime = time;
