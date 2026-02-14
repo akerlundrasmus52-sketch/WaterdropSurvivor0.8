@@ -376,6 +376,12 @@
       0%, 100% { transform: translateY(0); }
       50% { transform: translateY(-3px); }
     }
+    
+    @media (prefers-reduced-motion: reduce) {
+      .waterdrop-fill {
+        animation: none;
+      }
+    }
 
     .waterdrop-level {
       position: absolute;
@@ -1432,10 +1438,10 @@
     <div id="tutorial-text" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 96px; font-weight: bold; color: #FFF; text-shadow: 0 0 20px rgba(255,255,255,0.8), 0 0 40px rgba(93,173,226,0.6); opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 150;"></div>
 
     <!-- Waterdrop EXP Display -->
-    <div id="waterdrop-display">
+    <div id="waterdrop-display" role="status" aria-label="Experience progress indicator">
       <div class="waterdrop-container">
         <div class="waterdrop-shape">
-          <div class="waterdrop-fill" id="waterdrop-fill"></div>
+          <div class="waterdrop-fill" id="waterdrop-fill" aria-hidden="true"></div>
         </div>
         <div class="waterdrop-level" id="waterdrop-level">1</div>
       </div>
@@ -7118,13 +7124,13 @@
         // Assign random rarity for visual variety
         const rarities = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic'];
         const rarityWeights = [30, 25, 20, 15, 7, 3]; // Weighted probabilities
-        let randomValue = Math.random() * 100;
+        let weightedRandom = Math.random() * 100;
         let selectedRarity = 'common';
         let cumulativeWeight = 0;
         
         for (let i = 0; i < rarities.length; i++) {
           cumulativeWeight += rarityWeights[i];
-          if (randomValue < cumulativeWeight) {
+          if (weightedRandom < cumulativeWeight) {
             selectedRarity = rarities[i];
             break;
           }
