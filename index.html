@@ -427,7 +427,7 @@
     /* Wave Counter - Removed (was in stats bar) */
     
     
-    /* Equipment Menu Button - Phase 2 Placeholder */
+    /* Equipment Menu Button */
     #equipment-btn {
       position: absolute;
       top: 20px;
@@ -661,12 +661,12 @@
     }
     
     .upgrade-card.rarity-rare {
-      border-color: #2ecc71;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.5), 0 0 15px rgba(46,204,113,0.3), inset 0 0 0 2px rgba(0,0,0,0.4);
+      border-color: #3498DB;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.5), 0 0 15px rgba(52,152,219,0.3), inset 0 0 0 2px rgba(0,0,0,0.4);
     }
     
     .upgrade-card.rarity-rare:hover {
-      box-shadow: 0 0 20px rgba(46,204,113,0.8), 0 0 40px rgba(46,204,113,0.6);
+      box-shadow: 0 0 20px rgba(52,152,219,0.8), 0 0 40px rgba(52,152,219,0.6);
     }
     
     .upgrade-card.rarity-epic {
@@ -1587,8 +1587,8 @@
     <!-- PR #117: Menu button (shows in portrait mode) -->
     <button id="menu-btn" title="Menu">☰</button>
     
-    <!-- Equipment Button - Phase 2 Placeholder -->
-    <button id="equipment-btn" title="Equipment (Coming Soon)">⚔️</button>
+    <!-- Equipment Button -->
+    <button id="equipment-btn" title="Equipment">⚔️</button>
     
     <!-- Combo Counter - Red/Black Theme -->
     <div id="combo-counter">
@@ -4205,8 +4205,8 @@
       constructor(x, z) {
         // Create 5-sided star shape (Super Mario 64 style)
         const starShape = new THREE.Shape();
-        const outerRadius = 0.5; // Larger for more visibility
-        const innerRadius = 0.2;
+        const outerRadius = 0.25; // 50% smaller than previous size
+        const innerRadius = 0.1; // Proportionally smaller
         const points = 5; // 5-point star like Super Mario
         const STAR_ROTATION_OFFSET = Math.PI / 2; // Rotate to start from top point.
         
@@ -4257,6 +4257,7 @@
         scene.add(this.mesh);
         this.active = true;
         this.rotSpeed = 0.08; // Steady 360-degree rotation
+        this.rotSpeedY = 0.05; // Separate axis rotation (Y-axis)
         this.bobPhase = Math.random() * Math.PI * 2;
         this.sparklePhase = Math.random() * Math.PI * 2;
         this.value = GAME_CONFIG.expValue;
@@ -4267,6 +4268,9 @@
 
         // Spin 360 degrees on Z axis like Earth (PR #117)
         this.mesh.rotation.z += this.rotSpeed;
+        
+        // Spin on Y axis as separate axis rotation
+        this.mesh.rotation.y += this.rotSpeedY;
         
         // Bob up and down
         this.bobPhase += 0.05;
@@ -7122,10 +7126,12 @@
       
       // Stats Bar removed - No toggle needed
       
-      // Phase 2: Equipment Button (Placeholder)
+      // Equipment Button - Opens Gear Screen
       document.getElementById('equipment-btn').onclick = () => {
         playSound('hit');
-        alert('⚔️ EQUIPMENT SYSTEM\n\nComing in Phase 3!\n\nThis feature will allow you to equip special gear and customize your build.');
+        document.getElementById('main-menu').style.display = 'none';
+        document.getElementById('gear-screen').style.display = 'flex';
+        updateGearScreen();
       };
       
       // Initialize control type UI on startup
