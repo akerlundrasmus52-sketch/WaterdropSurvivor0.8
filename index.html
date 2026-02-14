@@ -169,10 +169,15 @@
       height: 24px;
       background: linear-gradient(to bottom, #1a1a2e 0%, #1a1a2e 50%, #2c3e50 50%, #2c3e50 100%); /* Match menu gradient colors */
       border-radius: 12px;
-      border: 3px solid #16213e; /* Dark border matching menu */
+      border: 3px solid #3a4a5e; /* Enhanced visible border */
       overflow: hidden;
       position: relative;
-      box-shadow: 0 3px 8px rgba(0,0,0,0.5), inset 0 2px 4px rgba(0,0,0,0.3), 0 0 15px rgba(0,0,0,0.6);
+      box-shadow: 
+        0 0 0 1px rgba(255,255,255,0.1), /* Inner border highlight */
+        0 4px 12px rgba(0,0,0,0.6), /* Stronger drop shadow */
+        inset 0 2px 4px rgba(0,0,0,0.4), /* Inner shadow for depth */
+        0 0 20px rgba(0,0,0,0.4); /* Outer glow for definition */
+      outline: 1px solid rgba(0,0,0,0.5); /* Additional outline for edge definition */
     }
 
     .bar-fill {
@@ -196,14 +201,24 @@
     }
 
     #hp-fill { 
-      background: linear-gradient(to bottom, #FF4444, #CC0000);
+      background: linear-gradient(to bottom, #FF5555 0%, #FF4444 50%, #CC0000 100%); /* Enhanced gradient with more steps */
       width: 100%;
-      box-shadow: 0 0 10px rgba(255,68,68,0.8), 0 0 20px rgba(255,68,68,0.4), inset 0 2px 4px rgba(255,255,255,0.2);
+      box-shadow: 
+        0 0 15px rgba(255,68,68,1), /* Strong inner glow */
+        0 0 25px rgba(255,68,68,0.6), /* Medium glow */
+        0 0 35px rgba(255,68,68,0.3), /* Outer glow */
+        inset 0 2px 6px rgba(255,255,255,0.3), /* Enhanced inner highlight */
+        inset 0 -2px 6px rgba(0,0,0,0.3); /* Bottom shadow for depth */
     }
     #exp-fill { 
-      background: linear-gradient(to bottom, #5DADE2, #3498DB);
+      background: linear-gradient(to bottom, #6DB8E8 0%, #5DADE2 50%, #3498DB 100%); /* Enhanced gradient with more steps */
       width: 0%;
-      box-shadow: 0 0 10px rgba(93,173,226,0.8), 0 0 20px rgba(93,173,226,0.4), inset 0 2px 4px rgba(255,255,255,0.2);
+      box-shadow: 
+        0 0 15px rgba(93,173,226,1), /* Strong inner glow */
+        0 0 25px rgba(93,173,226,0.6), /* Medium glow */
+        0 0 35px rgba(93,173,226,0.3), /* Outer glow */
+        inset 0 2px 6px rgba(255,255,255,0.3), /* Enhanced inner highlight */
+        inset 0 -2px 6px rgba(0,0,0,0.3); /* Bottom shadow for depth */
     }
 
     .stat-text {
@@ -357,15 +372,29 @@
       border-radius: 12px; /* Slightly smaller radius */
       border: 3px solid #5DADE2; /* Light blue border matching menu */
       cursor: pointer;
-      transition: transform 0.1s, box-shadow 0.1s;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.5), 0 0 15px rgba(93,173,226,0.4), inset 0 0 0 2px rgba(0,0,0,0.4); /* Blue glow */
+      transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+      box-shadow: 
+        0 0 0 1px rgba(93,173,226,0.3), /* Inner border glow */
+        0 0 20px rgba(93,173,226,0.5), /* Primary glow layer */
+        0 0 35px rgba(93,173,226,0.3), /* Secondary glow layer */
+        0 6px 12px rgba(0,0,0,0.6), /* Drop shadow for depth */
+        inset 0 1px 3px rgba(255,255,255,0.1), /* Inner highlight */
+        inset 0 0 0 2px rgba(0,0,0,0.5); /* Inner border for definition */
       min-height: 60px; /* Minimum height for text-only cards */
       max-height: 120px; /* Maximum height to prevent overly large cards */
       overflow-y: auto; /* Allow scrolling when content exceeds max height to prevent overlap */
     }
 
     .upgrade-card:hover {
-      box-shadow: 0 6px 12px rgba(93,173,226,0.6), 0 0 25px rgba(93,173,226,0.5); /* Stronger blue glow on hover */
+      border-color: #7DC5F0; /* Brighter border on hover */
+      transform: translateY(-2px); /* Slight lift effect */
+      box-shadow: 
+        0 0 0 2px rgba(93,173,226,0.5), /* Stronger inner border glow */
+        0 0 30px rgba(93,173,226,0.7), /* Stronger primary glow */
+        0 0 50px rgba(93,173,226,0.5), /* Stronger secondary glow */
+        0 8px 16px rgba(0,0,0,0.7), /* Enhanced drop shadow */
+        inset 0 1px 3px rgba(255,255,255,0.15), /* Brighter inner highlight */
+        inset 0 0 0 2px rgba(0,0,0,0.5); /* Inner border for definition */
     }
 
     .upgrade-card:active {
@@ -390,23 +419,49 @@
     .upgrade-card.perk {
       /* Same styling as regular cards for consistency */
       border-color: #5DADE2;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.5), 0 0 15px rgba(93,173,226,0.4), inset 0 0 0 2px rgba(0,0,0,0.4);
+      box-shadow: 
+        0 0 0 1px rgba(93,173,226,0.3), /* Inner border glow */
+        0 0 20px rgba(93,173,226,0.5), /* Primary glow layer */
+        0 0 35px rgba(93,173,226,0.3), /* Secondary glow layer */
+        0 6px 12px rgba(0,0,0,0.6), /* Drop shadow for depth */
+        inset 0 1px 3px rgba(255,255,255,0.1), /* Inner highlight */
+        inset 0 0 0 2px rgba(0,0,0,0.5); /* Inner border for definition */
       animation: none; /* Remove pulsing for consistency */
     }
     
     .upgrade-card.perk:hover {
-      box-shadow: 0 6px 12px rgba(93,173,226,0.6), 0 0 25px rgba(93,173,226,0.5);
+      border-color: #7DC5F0; /* Brighter border on hover */
+      box-shadow: 
+        0 0 0 2px rgba(93,173,226,0.5), /* Stronger inner border glow */
+        0 0 30px rgba(93,173,226,0.7), /* Stronger primary glow */
+        0 0 50px rgba(93,173,226,0.5), /* Stronger secondary glow */
+        0 8px 16px rgba(0,0,0,0.7), /* Enhanced drop shadow */
+        inset 0 1px 3px rgba(255,255,255,0.15), /* Brighter inner highlight */
+        inset 0 0 0 2px rgba(0,0,0,0.5); /* Inner border for definition */
     }
     
     .upgrade-card.legendary {
       /* Same styling as regular cards for consistency */
       border-color: #5DADE2;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.5), 0 0 15px rgba(93,173,226,0.4), inset 0 0 0 2px rgba(0,0,0,0.4);
+      box-shadow: 
+        0 0 0 1px rgba(93,173,226,0.3), /* Inner border glow */
+        0 0 20px rgba(93,173,226,0.5), /* Primary glow layer */
+        0 0 35px rgba(93,173,226,0.3), /* Secondary glow layer */
+        0 6px 12px rgba(0,0,0,0.6), /* Drop shadow for depth */
+        inset 0 1px 3px rgba(255,255,255,0.1), /* Inner highlight */
+        inset 0 0 0 2px rgba(0,0,0,0.5); /* Inner border for definition */
       background: linear-gradient(to bottom, #2c3e50, #1a252f); /* Match regular cards */
     }
     
     .upgrade-card.legendary:hover {
-      box-shadow: 0 6px 12px rgba(93,173,226,0.6), 0 0 25px rgba(93,173,226,0.5);
+      border-color: #7DC5F0; /* Brighter border on hover */
+      box-shadow: 
+        0 0 0 2px rgba(93,173,226,0.5), /* Stronger inner border glow */
+        0 0 30px rgba(93,173,226,0.7), /* Stronger primary glow */
+        0 0 50px rgba(93,173,226,0.5), /* Stronger secondary glow */
+        0 8px 16px rgba(0,0,0,0.7), /* Enhanced drop shadow */
+        inset 0 1px 3px rgba(255,255,255,0.15), /* Brighter inner highlight */
+        inset 0 0 0 2px rgba(0,0,0,0.5); /* Inner border for definition */
     }
     
     @keyframes perkPulse {
@@ -416,8 +471,56 @@
 
     /* ENHANCEMENT: Combo Glow Animation - Makes combo display pulse */
     @keyframes comboGlow {
-      0% { transform: scale(1); text-shadow: 0 0 15px rgba(255,215,0,1), 0 0 25px rgba(255,215,0,0.8), 2px 2px 4px rgba(0,0,0,0.9); }
-      100% { transform: scale(1.05); text-shadow: 0 0 25px rgba(255,215,0,1), 0 0 35px rgba(255,215,0,1), 2px 2px 4px rgba(0,0,0,0.9); }
+      0% { 
+        transform: scale(1); 
+        text-shadow: 0 0 15px rgba(255,215,0,1), 0 0 25px rgba(255,215,0,0.8), 2px 2px 4px rgba(0,0,0,0.9); 
+      }
+      100% { 
+        transform: scale(1.08); 
+        text-shadow: 0 0 30px rgba(255,215,0,1), 0 0 45px rgba(255,215,0,1), 2px 2px 4px rgba(0,0,0,0.9); 
+      }
+    }
+
+    /* ENHANCEMENT: Combo display container with proper background and border */
+    #combo-display {
+      position: absolute;
+      top: 100px;
+      left: 20px;
+      background: linear-gradient(to bottom, #2a2010 0%, #2a2010 50%, #3a3020 50%, #3a3020 100%);
+      border-radius: 12px;
+      border: 3px solid #FFD700;
+      padding: 10px 18px;
+      box-shadow: 
+        0 0 0 1px rgba(255,215,0,0.3), /* Inner border glow */
+        0 0 25px rgba(255,215,0,0.6), /* Primary golden glow */
+        0 0 40px rgba(255,215,0,0.4), /* Secondary glow layer */
+        0 6px 12px rgba(0,0,0,0.7), /* Drop shadow for depth */
+        inset 0 1px 3px rgba(255,255,255,0.1), /* Inner highlight */
+        inset 0 0 0 2px rgba(0,0,0,0.5); /* Inner border for definition */
+      animation: comboPulse 1s ease-in-out infinite;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    @keyframes comboPulse {
+      0%, 100% {
+        box-shadow: 
+          0 0 0 1px rgba(255,215,0,0.3),
+          0 0 25px rgba(255,215,0,0.6),
+          0 0 40px rgba(255,215,0,0.4),
+          0 6px 12px rgba(0,0,0,0.7),
+          inset 0 1px 3px rgba(255,255,255,0.1),
+          inset 0 0 0 2px rgba(0,0,0,0.5);
+      }
+      50% {
+        box-shadow: 
+          0 0 0 2px rgba(255,215,0,0.5),
+          0 0 35px rgba(255,215,0,0.8),
+          0 0 55px rgba(255,215,0,0.6),
+          0 6px 12px rgba(0,0,0,0.7),
+          inset 0 1px 3px rgba(255,255,255,0.15),
+          inset 0 0 0 2px rgba(0,0,0,0.5);
+      }
     }
 
     /* ENHANCEMENT: Combo text display - styled like stat bar */
@@ -427,6 +530,10 @@
       font-size: 18px; /* Slightly smaller to fit in stat bar */
       font-weight: 900;
       letter-spacing: 1px; /* Reduced spacing */
+      animation: comboGlow 0.8s infinite alternate;
+    }
+
+    #combo-text {
       animation: comboGlow 0.8s infinite alternate;
     }
 
