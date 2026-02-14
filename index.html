@@ -4401,10 +4401,10 @@
 
     class ExpGem {
       constructor(x, z) {
-        // Create 5-sided star shape (Super Mario 64 style)
+        // PR #125-143: Create 5-sided star shape - 75% smaller
         const starShape = new THREE.Shape();
-        const outerRadius = 0.5; // Larger for more visibility
-        const innerRadius = 0.2;
+        const outerRadius = 0.125; // 75% smaller (was 0.5, now 0.125)
+        const innerRadius = 0.05;  // 75% smaller (was 0.2, now 0.05)
         const points = 5; // 5-point star like Super Mario
         const STAR_ROTATION_OFFSET = Math.PI / 2; // Rotate to start from top point.
         
@@ -4423,10 +4423,10 @@
         starShape.closePath();
         
         const extrudeSettings = {
-          depth: 0.15,
+          depth: 0.04,  // Scaled down proportionally
           bevelEnabled: true,
-          bevelThickness: 0.1,
-          bevelSize: 0.1,
+          bevelThickness: 0.025,  // Scaled down
+          bevelSize: 0.025,  // Scaled down
           bevelSegments: 3
         };
         
@@ -4463,8 +4463,9 @@
       update(playerPos) {
         if (!this.active) return;
 
-        // Spin 360 degrees on Z axis like Earth (PR #117)
+        // PR #125-143: Spin 360 degrees on Z axis (horizontal) + Y-axis rotation
         this.mesh.rotation.z += this.rotSpeed;
+        this.mesh.rotation.y += 0.03; // Add Y-axis rotation
         
         // Bob up and down
         this.bobPhase += 0.05;
