@@ -712,7 +712,8 @@
       }
     }
 
-    @keyframes pulse {
+    /* Skill tree node availability indicator - fades in and out */
+    @keyframes skill-fade {
       0%, 100% { opacity: 1; }
       50% { opacity: 0.7; }
     }
@@ -6656,7 +6657,7 @@
         cost: 1,
         maxLevel: 1,
         requires: ['defense_4'],
-        effect: (level) => ({ hpRegen: level * 0.1 })
+        effect: (level) => ({ hpRegen: level * 0.1 }) // 0.1 HP/sec = 1 HP per 10 seconds
       },
       'defense_6': {
         id: 'defense_6',
@@ -7140,7 +7141,7 @@
             cursor: ${canUnlock ? 'pointer' : 'default'};
             opacity: ${level === 0 && !canUnlock ? '0.6' : '1'};
             transition: all 0.2s;
-            ${canUnlock ? `box-shadow: 0 0 15px ${branch.color}; animation: pulse 2s infinite;` : ''}
+            ${canUnlock ? `box-shadow: 0 0 15px ${branch.color}; animation: skill-fade 2s infinite;` : ''}
           `;
           
           if (canUnlock) {
@@ -7187,11 +7188,11 @@
       }
     }
 
-    // Recalculate all stats from skill tree
+    // Update UI after skill tree changes
     function recalculateAllStats() {
-      // This function is called when skills are unlocked to ensure all bonuses are applied
-      // The skill bonuses are applied dynamically during gameplay where needed
-      // This ensures the UI and persistent effects are updated
+      // Called when skills are unlocked to refresh UI
+      // Skill bonuses are applied dynamically via getSkillBonus() calls during gameplay
+      // This ensures the HUD reflects any immediate stat changes
       updateHUD();
     }
 
