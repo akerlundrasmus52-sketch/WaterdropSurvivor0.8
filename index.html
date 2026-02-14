@@ -7713,11 +7713,23 @@
       updateGoldDisplays();
       isGameActive = false;
       isPaused = true;
+      // CRITICAL FIX: Hide game UI buttons when menu is shown to prevent overlap
+      const gameUIButtons = ['equipment-btn', 'menu-btn', 'settings-btn', 'stats-btn'];
+      gameUIButtons.forEach(btnId => {
+        const btn = document.getElementById(btnId);
+        if (btn) btn.style.display = 'none';
+      });
     }
     
     function hideMainMenu() {
       console.log('🚪 Hiding main menu');
       document.getElementById('main-menu').style.display = 'none';
+      // CRITICAL FIX: Show game UI buttons again when menu is hidden
+      const gameUIButtons = ['equipment-btn', 'menu-btn', 'settings-btn', 'stats-btn'];
+      gameUIButtons.forEach(btnId => {
+        const btn = document.getElementById(btnId);
+        if (btn) btn.style.display = 'flex'; // or 'block' depending on button
+      });
     }
     
     // Countdown system (PR #70-71)
