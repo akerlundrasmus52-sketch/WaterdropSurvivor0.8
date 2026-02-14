@@ -160,30 +160,30 @@
     }
     
     #combo-text {
-      font-size: 48px;
+      font-size: 24px;
       font-weight: 900;
       color: #FF0000;
-      text-shadow: 
-        3px 3px 0 #000,
-        -2px -2px 0 #000,
-        2px -2px 0 #000,
-        -2px 2px 0 #000,
-        0 0 20px rgba(255,0,0,0.9),
-        0 0 40px rgba(255,0,0,0.7);
-      animation: combo-bubble 0.5s ease-out;
-    }
-    
-    #combo-multiplier {
-      font-size: 24px;
-      font-weight: bold;
-      color: #8B0000;
       text-shadow: 
         2px 2px 0 #000,
         -1px -1px 0 #000,
         1px -1px 0 #000,
         -1px 1px 0 #000,
-        0 0 15px rgba(139,0,0,0.8);
-      margin-top: 5px;
+        0 0 15px rgba(255,0,0,0.9),
+        0 0 30px rgba(255,0,0,0.7);
+      animation: combo-bubble 0.5s ease-out;
+    }
+    
+    #combo-multiplier {
+      font-size: 16px;
+      font-weight: bold;
+      color: #8B0000;
+      text-shadow: 
+        1px 1px 0 #000,
+        -1px -1px 0 #000,
+        1px -1px 0 #000,
+        -1px 1px 0 #000,
+        0 0 10px rgba(139,0,0,0.8);
+      margin-top: 3px;
     }
     
     @keyframes combo-bubble {
@@ -1409,6 +1409,17 @@
       #menu-btn {
         display: flex !important;
       }
+      
+      /* Ensure back button is 100% visible in portrait mode */
+      .back-btn {
+        bottom: max(30px, env(safe-area-inset-bottom, 30px));
+        margin-bottom: 10px;
+      }
+      
+      /* Center and align all menus properly */
+      #main-menu, #credits-screen, #achievements-screen {
+        padding: max(40px, env(safe-area-inset-top, 40px)) 20px max(100px, calc(env(safe-area-inset-bottom, 20px) + 80px)) 20px;
+      }
     }
 
     @media (orientation: landscape) {
@@ -1427,6 +1438,29 @@
         padding: 8px;
         flex-direction: row;
         justify-content: space-between;
+      }
+      
+      /* Fix unaligned buttons in landscape mode */
+      #stats-btn, #settings-btn {
+        top: 15px;
+      }
+      
+      #settings-btn {
+        right: 110px;
+      }
+      
+      #stats-btn {
+        right: 15px;
+      }
+      
+      #equipment-btn {
+        top: 15px;
+        right: 205px;
+      }
+      
+      /* Center menus properly in landscape */
+      #main-menu, #credits-screen, #achievements-screen {
+        padding: 30px 40px 100px 40px;
       }
     }
 
@@ -1493,6 +1527,11 @@
     <div class="screen-title" style="color: #F39C12; font-size: 36px; margin: 20px 0; text-shadow: 0 0 10px rgba(243,156,18,0.8);">GEAR & EQUIPMENT</div>
     <div style="color: #FFD700; font-size: 18px; margin-bottom: 10px;">Equip gear to boost your attributes</div>
     
+    <!-- Skill Tree Button -->
+    <button id="skill-tree-btn" style="background: linear-gradient(to bottom, #9b59b6, #8e44ad); color: white; border: 3px solid #FFD700; padding: 12px 30px; font-size: 18px; border-radius: 25px; font-weight: bold; cursor: pointer; margin-bottom: 15px; box-shadow: 0 4px 0 #6c3483, 0 0 20px rgba(155,89,182,0.5); transition: all 0.2s;">
+      🌟 SKILL TREE 🌟
+    </button>
+    
     <!-- Gear Stats Display -->
     <div id="gear-stats-display" style="background: linear-gradient(to bottom, #2a3a4a, #1a2a3a); border: 3px solid #F39C12; border-radius: 15px; padding: 15px; margin-bottom: 20px; width: 100%; max-width: 700px;">
       <div style="color: #F39C12; font-size: 20px; font-weight: bold; margin-bottom: 10px;">Current Gear Bonuses:</div>
@@ -1508,11 +1547,32 @@
     <button class="back-btn" id="gear-back-btn" style="margin-top: 20px;">BACK TO MENU</button>
   </div>
 
+  <!-- Skill Tree Screen -->
+  <div id="skill-tree-screen" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 25; overflow-y: auto; flex-direction: column; align-items: center; justify-content: flex-start; padding: 20px;">
+    <div class="screen-title" style="color: #9b59b6; font-size: 36px; margin: 20px 0; text-shadow: 0 0 10px rgba(155,89,182,0.8);">SKILL TREE</div>
+    <div style="color: #FFD700; font-size: 20px; font-weight: bold; margin-bottom: 20px;" id="skill-points-display">
+      Skill Points: 0
+    </div>
+    <div class="screen-content" id="skill-tree-content" style="display: grid; gap: 20px; width: 100%; max-width: 900px; margin: 0 auto; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));">
+      <!-- Dynamically populated with skills -->
+    </div>
+    <button class="back-btn" id="skill-tree-back-btn" style="margin-top: 20px;">BACK TO GEAR</button>
+  </div>
+
   <!-- Credits Screen -->
   <div id="credits-screen">
     <div class="screen-title">CREDITS</div>
     <div class="screen-content">
-      <p>Made by Timmy Durell aka - TimmieTooth</p>
+      <p>Made by</p>
+      <p><br></p>
+      <p>Timmy Durell</p>
+      <p>Aka</p>
+      <p>TimmieTooth</p>
+      <p><br></p>
+      <p>Music</p>
+      <p>TimmieTooth</p>
+      <p><br></p>
+      <p>Totally animated with code using AI and basic skills on programming</p>
     </div>
     <button class="back-btn" id="credits-back-btn">BACK TO MENU</button>
   </div>
@@ -2421,6 +2481,13 @@
         // Phase 5: Low health water bleed timer
         this.waterBleedTimer = 0;
         
+        // Blinking eyes
+        this.blinkTimer = 0;
+        this.blinkInterval = 3 + Math.random() * 2; // Blink every 3-5 seconds
+        this.isBlinking = false;
+        this.blinkDuration = 0.15; // How long blink lasts
+        this.blinkProgress = 0;
+        
         // Dash
         this.isDashing = false;
         this.dashTime = 0;
@@ -2450,6 +2517,31 @@
           }
         } else {
           this.mesh.material.opacity = 0.75; // Normal opacity
+        }
+        
+        // Blinking eyes animation
+        this.blinkTimer += dt;
+        if (this.blinkTimer >= this.blinkInterval) {
+          this.isBlinking = true;
+          this.blinkTimer = 0;
+          this.blinkProgress = 0;
+          this.blinkInterval = 3 + Math.random() * 2; // Next blink in 3-5 seconds
+        }
+        
+        if (this.isBlinking) {
+          this.blinkProgress += dt;
+          if (this.blinkProgress >= this.blinkDuration) {
+            this.isBlinking = false;
+            this.blinkProgress = 0;
+            // Reset eye scale to normal
+            this.leftEye.scale.y = 1;
+            this.rightEye.scale.y = 1;
+          } else {
+            // Squish eyes vertically to simulate blinking
+            const blinkAmount = Math.sin((this.blinkProgress / this.blinkDuration) * Math.PI);
+            this.leftEye.scale.y = 1 - blinkAmount * 0.9; // Squish to 10% height
+            this.rightEye.scale.y = 1 - blinkAmount * 0.9;
+          }
         }
         
         // Phase 5: Water bleed effect when health < 30%
@@ -2548,9 +2640,11 @@
             this.mesh.rotation.y = angle;
           }
 
-          // Inertia / Squish Effect - Enhanced for Phase 1
-          // Lerp velocity for smooth transition with more acceleration feel
-          const lerpFactor = joystickLeft.active ? 0.15 : 0.08; // Faster accel, slower decel
+          // Inertia / Squish Effect - Enhanced for realistic water physics
+          // Lerp velocity for smooth transition
+          // Fast acceleration (0.18): Quick response when starting to move
+          // Slow deceleration (0.06): Weighty feel when stopping, water keeps momentum
+          const lerpFactor = joystickLeft.active ? 0.18 : 0.06;
           this.velocity.lerp(targetVel, lerpFactor);
         }
         
@@ -2558,19 +2652,26 @@
         
         // Realistic water droplet physics with MORE PRONOUNCED wobble (Phase 1 enhancement)
         // Wobble increases with speed
-        this.wobblePhase += dt * (12 + speedMag * 50); // Increased from 10 + speedMag * 40
-        const wobble = Math.sin(this.wobblePhase) * (0.10 + speedMag * 0.30); // Increased from 0.08 + speedMag * 0.25
+        this.wobblePhase += dt * (14 + speedMag * 60); // Enhanced from 12 + speedMag * 50
+        const wobble = Math.sin(this.wobblePhase) * (0.12 + speedMag * 0.35); // Enhanced from 0.10 + speedMag * 0.30
         
         // Squish effect: stretch in direction of movement (MORE DRAMATIC for Phase 1)
-        const stretchX = 1 + Math.abs(this.velocity.x) * 3.0; // Increased from 2.5
-        const stretchZ = 1 + Math.abs(this.velocity.z) * 3.0; // Increased from 2.5
+        const stretchX = 1 + Math.abs(this.velocity.x) * 3.5; // Enhanced from 3.0
+        const stretchZ = 1 + Math.abs(this.velocity.z) * 3.5; // Enhanced from 3.0
         const squishY = 1 / Math.sqrt(stretchX * stretchZ);
+        
+        // Add gravity effect when decelerating (bouncy settling)
+        // deceleration: 0-1 value based on current speed when not moving
+        // wobblePhase * 2: Faster oscillation for settling bounce
+        // 0.15: Amplitude of bounce effect (subtle but noticeable)
+        const deceleration = joystickLeft.active ? 0 : Math.min(speedMag * 2, 1);
+        const gravityBounce = Math.abs(Math.sin(this.wobblePhase * 2)) * deceleration * 0.15;
         
         // Apply deformation with wobble (MORE PRONOUNCED for Phase 1)
         this.mesh.scale.set(
-          stretchX * (1 + wobble * 0.6), // Increased from 0.5
-          squishY * (1 - wobble * 0.4), // Increased from 0.35
-          stretchZ * (1 + wobble * 0.6)  // Increased from 0.5
+          stretchX * (1 + wobble * 0.65), // Enhanced from 0.6
+          squishY * (1 - wobble * 0.45 + gravityBounce), // Enhanced from 0.4, add gravity bounce
+          stretchZ * (1 + wobble * 0.65)  // Enhanced from 0.6
         );
         
         // Animate water shine
@@ -5019,6 +5120,9 @@
         wisdom: 0
       },
       unspentAttributePoints: 0,
+      // Skill Tree System
+      skillPoints: 0,
+      unlockedSkills: [], // Array of skill IDs that have been unlocked
       // Gear system - Expanded to 6 slots for deeper RPG mechanics
       equippedGear: {
         helmet: null,
@@ -5061,38 +5165,38 @@
 
     // --- ACHIEVEMENTS SYSTEM ---
     const ACHIEVEMENTS = {
-      kills10: { id: 'kills10', name: 'First Blood', desc: 'Kill 10 enemies', reward: 25, attributePoints: 1, check: () => playerStats.kills >= 10, claimed: false },
-      kills50: { id: 'kills50', name: 'Killer Instinct', desc: 'Kill 50 enemies', reward: 50, attributePoints: 1, check: () => playerStats.kills >= 50, claimed: false },
-      kills100: { id: 'kills100', name: 'Century Slayer', desc: 'Kill 100 enemies', reward: 100, attributePoints: 2, check: () => playerStats.kills >= 100, claimed: false },
-      kills500: { id: 'kills500', name: 'Mass Destroyer', desc: 'Kill 500 enemies', reward: 250, attributePoints: 2, check: () => playerStats.kills >= 500, claimed: false },
-      kills1000: { id: 'kills1000', name: 'Legendary Warrior', desc: 'Kill 1000 enemies', reward: 500, attributePoints: 3, check: () => playerStats.kills >= 1000, claimed: false },
-      kills2500: { id: 'kills2500', name: 'Elite Slayer', desc: 'Kill 2500 enemies', reward: 750, attributePoints: 3, check: () => playerStats.kills >= 2500, claimed: false },
-      kills5000: { id: 'kills5000', name: 'God of War', desc: 'Kill 5000 enemies', reward: 1000, attributePoints: 4, check: () => playerStats.kills >= 5000, claimed: false },
+      kills10: { id: 'kills10', name: 'First Blood', desc: 'Kill 10 enemies', reward: 25, attributePoints: 1, skillPoints: 1, check: () => playerStats.kills >= 10, claimed: false },
+      kills50: { id: 'kills50', name: 'Killer Instinct', desc: 'Kill 50 enemies', reward: 50, attributePoints: 1, skillPoints: 1, check: () => playerStats.kills >= 50, claimed: false },
+      kills100: { id: 'kills100', name: 'Century Slayer', desc: 'Kill 100 enemies', reward: 100, attributePoints: 2, skillPoints: 2, check: () => playerStats.kills >= 100, claimed: false },
+      kills500: { id: 'kills500', name: 'Mass Destroyer', desc: 'Kill 500 enemies', reward: 250, attributePoints: 2, skillPoints: 2, check: () => playerStats.kills >= 500, claimed: false },
+      kills1000: { id: 'kills1000', name: 'Legendary Warrior', desc: 'Kill 1000 enemies', reward: 500, attributePoints: 3, skillPoints: 3, check: () => playerStats.kills >= 1000, claimed: false },
+      kills2500: { id: 'kills2500', name: 'Elite Slayer', desc: 'Kill 2500 enemies', reward: 750, attributePoints: 3, skillPoints: 3, check: () => playerStats.kills >= 2500, claimed: false },
+      kills5000: { id: 'kills5000', name: 'God of War', desc: 'Kill 5000 enemies', reward: 1000, attributePoints: 4, skillPoints: 5, check: () => playerStats.kills >= 5000, claimed: false },
       
-      gold100: { id: 'gold100', name: 'Small Fortune', desc: 'Collect 100 gold in one run', reward: 50, attributePoints: 1, check: () => playerStats.gold >= 100, claimed: false },
-      gold500: { id: 'gold500', name: 'Treasure Hunter', desc: 'Collect 500 gold in one run', reward: 150, attributePoints: 1, check: () => playerStats.gold >= 500, claimed: false },
-      gold1000: { id: 'gold1000', name: 'Gold Baron', desc: 'Collect 1000 gold in one run', reward: 300, attributePoints: 2, check: () => playerStats.gold >= 1000, claimed: false },
-      gold2500: { id: 'gold2500', name: 'Wealth Magnet', desc: 'Collect 2500 gold in one run', reward: 500, attributePoints: 2, check: () => playerStats.gold >= 2500, claimed: false },
+      gold100: { id: 'gold100', name: 'Small Fortune', desc: 'Collect 100 gold in one run', reward: 50, attributePoints: 1, skillPoints: 1, check: () => playerStats.gold >= 100, claimed: false },
+      gold500: { id: 'gold500', name: 'Treasure Hunter', desc: 'Collect 500 gold in one run', reward: 150, attributePoints: 1, skillPoints: 1, check: () => playerStats.gold >= 500, claimed: false },
+      gold1000: { id: 'gold1000', name: 'Gold Baron', desc: 'Collect 1000 gold in one run', reward: 300, attributePoints: 2, skillPoints: 2, check: () => playerStats.gold >= 1000, claimed: false },
+      gold2500: { id: 'gold2500', name: 'Wealth Magnet', desc: 'Collect 2500 gold in one run', reward: 500, attributePoints: 2, skillPoints: 2, check: () => playerStats.gold >= 2500, claimed: false },
       
-      dasher: { id: 'dasher', name: 'Dash Master', desc: 'Perform 50 dashes in one run', reward: 100, attributePoints: 1, check: () => playerStats.dashesPerformed >= 50, claimed: false },
-      survivor: { id: 'survivor', name: 'Time Warrior', desc: 'Survive for 10 minutes', reward: 200, attributePoints: 2, check: () => playerStats.survivalTime >= 600, claimed: false },
-      survivor20: { id: 'survivor20', name: 'Endurance Master', desc: 'Survive for 20 minutes', reward: 400, attributePoints: 3, check: () => playerStats.survivalTime >= 1200, claimed: false },
-      survivor30: { id: 'survivor30', name: 'Immortal Legend', desc: 'Survive for 30 minutes', reward: 600, attributePoints: 4, check: () => playerStats.survivalTime >= 1800, claimed: false },
-      weaponMaster: { id: 'weaponMaster', name: 'Weapon Master', desc: 'Unlock all 3 weapons', reward: 150, attributePoints: 1, check: () => playerStats.weaponsUnlocked >= 3, claimed: false },
-      untouchable: { id: 'untouchable', name: 'Untouchable', desc: 'Take no damage for 3 minutes', reward: 300, attributePoints: 3, check: () => playerStats.survivalTime >= 180 && playerStats.damageTaken === 0, claimed: false },
+      dasher: { id: 'dasher', name: 'Dash Master', desc: 'Perform 50 dashes in one run', reward: 100, attributePoints: 1, skillPoints: 1, check: () => playerStats.dashesPerformed >= 50, claimed: false },
+      survivor: { id: 'survivor', name: 'Time Warrior', desc: 'Survive for 10 minutes', reward: 200, attributePoints: 2, skillPoints: 2, check: () => playerStats.survivalTime >= 600, claimed: false },
+      survivor20: { id: 'survivor20', name: 'Endurance Master', desc: 'Survive for 20 minutes', reward: 400, attributePoints: 3, skillPoints: 3, check: () => playerStats.survivalTime >= 1200, claimed: false },
+      survivor30: { id: 'survivor30', name: 'Immortal Legend', desc: 'Survive for 30 minutes', reward: 600, attributePoints: 4, skillPoints: 4, check: () => playerStats.survivalTime >= 1800, claimed: false },
+      weaponMaster: { id: 'weaponMaster', name: 'Weapon Master', desc: 'Unlock all 3 weapons', reward: 150, attributePoints: 1, skillPoints: 1, check: () => playerStats.weaponsUnlocked >= 3, claimed: false },
+      untouchable: { id: 'untouchable', name: 'Untouchable', desc: 'Take no damage for 3 minutes', reward: 300, attributePoints: 3, skillPoints: 3, check: () => playerStats.survivalTime >= 180 && playerStats.damageTaken === 0, claimed: false },
       
-      miniBoss1: { id: 'miniBoss1', name: 'Boss Slayer I', desc: 'Defeat your first mini-boss', reward: 150, attributePoints: 2, check: () => playerStats.miniBossesDefeated >= 1, claimed: false },
-      miniBoss3: { id: 'miniBoss3', name: 'Boss Slayer II', desc: 'Defeat 3 mini-bosses', reward: 300, attributePoints: 2, check: () => playerStats.miniBossesDefeated >= 3, claimed: false },
-      miniBoss5: { id: 'miniBoss5', name: 'Boss Slayer III', desc: 'Defeat 5 mini-bosses', reward: 500, attributePoints: 3, check: () => playerStats.miniBossesDefeated >= 5, claimed: false },
-      miniBoss10: { id: 'miniBoss10', name: 'Boss Hunter', desc: 'Defeat 10 mini-bosses', reward: 800, attributePoints: 4, check: () => playerStats.miniBossesDefeated >= 10, claimed: false },
+      miniBoss1: { id: 'miniBoss1', name: 'Boss Slayer I', desc: 'Defeat your first mini-boss', reward: 150, attributePoints: 2, skillPoints: 2, check: () => playerStats.miniBossesDefeated >= 1, claimed: false },
+      miniBoss3: { id: 'miniBoss3', name: 'Boss Slayer II', desc: 'Defeat 3 mini-bosses', reward: 300, attributePoints: 2, skillPoints: 2, check: () => playerStats.miniBossesDefeated >= 3, claimed: false },
+      miniBoss5: { id: 'miniBoss5', name: 'Boss Slayer III', desc: 'Defeat 5 mini-bosses', reward: 500, attributePoints: 3, skillPoints: 3, check: () => playerStats.miniBossesDefeated >= 5, claimed: false },
+      miniBoss10: { id: 'miniBoss10', name: 'Boss Hunter', desc: 'Defeat 10 mini-bosses', reward: 800, attributePoints: 4, skillPoints: 4, check: () => playerStats.miniBossesDefeated >= 10, claimed: false },
       
-      level10: { id: 'level10', name: 'Rising Star', desc: 'Reach Level 10', reward: 100, attributePoints: 1, check: () => playerStats.lvl >= 10, claimed: false },
-      level25: { id: 'level25', name: 'Experienced Fighter', desc: 'Reach Level 25', reward: 250, attributePoints: 2, check: () => playerStats.lvl >= 25, claimed: false },
-      level50: { id: 'level50', name: 'Master Champion', desc: 'Reach Level 50', reward: 500, attributePoints: 3, check: () => playerStats.lvl >= 50, claimed: false },
-      level75: { id: 'level75', name: 'Elite Warrior', desc: 'Reach Level 75', reward: 750, attributePoints: 3, check: () => playerStats.lvl >= 75, claimed: false },
-      level100: { id: 'level100', name: 'Legendary Hero', desc: 'Reach Level 100', reward: 1000, attributePoints: 4, check: () => playerStats.lvl >= 100, claimed: false },
-      level125: { id: 'level125', name: 'Unstoppable Force', desc: 'Reach Level 125', reward: 1250, attributePoints: 4, check: () => playerStats.lvl >= 125, claimed: false },
-      level150: { id: 'level150', name: 'Ascended Champion', desc: 'Reach Level 150', reward: 1500, attributePoints: 5, check: () => playerStats.lvl >= 150, claimed: false }
+      level10: { id: 'level10', name: 'Rising Star', desc: 'Reach Level 10', reward: 100, attributePoints: 1, skillPoints: 1, check: () => playerStats.lvl >= 10, claimed: false },
+      level25: { id: 'level25', name: 'Experienced Fighter', desc: 'Reach Level 25', reward: 250, attributePoints: 2, skillPoints: 2, check: () => playerStats.lvl >= 25, claimed: false },
+      level50: { id: 'level50', name: 'Master Champion', desc: 'Reach Level 50', reward: 500, attributePoints: 3, skillPoints: 3, check: () => playerStats.lvl >= 50, claimed: false },
+      level75: { id: 'level75', name: 'Elite Warrior', desc: 'Reach Level 75', reward: 750, attributePoints: 3, skillPoints: 3, check: () => playerStats.lvl >= 75, claimed: false },
+      level100: { id: 'level100', name: 'Legendary Hero', desc: 'Reach Level 100', reward: 1000, attributePoints: 4, skillPoints: 5, check: () => playerStats.lvl >= 100, claimed: false },
+      level125: { id: 'level125', name: 'Unstoppable Force', desc: 'Reach Level 125', reward: 1250, attributePoints: 4, skillPoints: 5, check: () => playerStats.lvl >= 125, claimed: false },
+      level150: { id: 'level150', name: 'Ascended Champion', desc: 'Reach Level 150', reward: 1500, attributePoints: 5, skillPoints: 10, check: () => playerStats.lvl >= 150, claimed: false }
     };
 
     function updateAchievementsScreen() {
@@ -5130,8 +5234,11 @@
             <div style="color: #FFD700; font-size: 16px; font-weight: bold;">
               Reward: ${achievement.reward} Gold
             </div>
-            <div style="color: #5DADE2; font-size: 16px; font-weight: bold; margin-top: 5px;">
-              Attribute Points: ${achievement.attributePoints} ${canClaim ? '⭐' : ''}
+            <div style="color: #5DADE2; font-size: 14px; font-weight: bold; margin-top: 5px;">
+              +${achievement.attributePoints} Attribute Point${achievement.attributePoints > 1 ? 's' : ''}
+            </div>
+            <div style="color: #9b59b6; font-size: 14px; font-weight: bold; margin-top: 3px;">
+              +${achievement.skillPoints} Skill Point${achievement.skillPoints > 1 ? 's' : ''} ${canClaim ? '⭐' : ''}
             </div>
             ${canClaim ? '<div style="color: #FFFF00; font-size: 14px; margin-top: 8px; animation: pulse 1s infinite;">CLICK TO CLAIM!</div>' : ''}
             </div>
@@ -5196,15 +5303,24 @@
       // Award attribute points
       saveData.unspentAttributePoints += achievement.attributePoints;
       
+      // Award skill points
+      if (achievement.skillPoints) {
+        saveData.skillPoints += achievement.skillPoints;
+        showStatChange(`+${achievement.skillPoints} Skill Point${achievement.skillPoints > 1 ? 's' : ''}! Check Skill Tree`);
+      }
+      
       // Play sound
       playSound('coin');
       
       // Show gold bag animation
       showGoldBagAnimation(achievement.reward);
       
-      // Show attribute points notification
+      // Show attribute points notification (delayed to avoid overlapping notifications)
+      const NOTIFICATION_DELAY_MS = 1500;
       if (achievement.attributePoints > 0) {
-        showStatChange(`+${achievement.attributePoints} Attribute Point${achievement.attributePoints > 1 ? 's' : ''}! Check Attributes Menu`);
+        setTimeout(() => {
+          showStatChange(`+${achievement.attributePoints} Attribute Point${achievement.attributePoints > 1 ? 's' : ''}! Check Attributes Menu`);
+        }, NOTIFICATION_DELAY_MS);
       }
       
       // Save
@@ -5920,6 +6036,249 @@
       updateGearScreen();
     }
 
+    // ===== SKILL TREE SYSTEM =====
+    
+    const SKILL_TREE = {
+      // Combat Skills
+      'combat_mastery': {
+        id: 'combat_mastery',
+        name: 'Combat Mastery',
+        description: '+10% Damage, +5% Attack Speed',
+        icon: '⚔️',
+        category: 'Combat',
+        cost: 1,
+        maxLevel: 5,
+        requires: [],
+        effect: (level) => ({ damage: level * 0.10, attackSpeed: level * 0.05 })
+      },
+      'critical_expert': {
+        id: 'critical_expert',
+        name: 'Critical Expert',
+        description: '+5% Crit Chance, +10% Crit Damage',
+        icon: '💥',
+        category: 'Combat',
+        cost: 1,
+        maxLevel: 5,
+        requires: ['combat_mastery'],
+        effect: (level) => ({ critChance: level * 0.05, critDamage: level * 0.10 })
+      },
+      'berserker': {
+        id: 'berserker',
+        name: 'Berserker',
+        description: '+20% Damage when below 30% HP',
+        icon: '🔥',
+        category: 'Combat',
+        cost: 2,
+        maxLevel: 3,
+        requires: ['combat_mastery'],
+        effect: (level) => ({ berserkerDamage: level * 0.20 })
+      },
+      
+      // Defense Skills
+      'iron_skin': {
+        id: 'iron_skin',
+        name: 'Iron Skin',
+        description: '+5 Armor, +50 Max HP',
+        icon: '🛡️',
+        category: 'Defense',
+        cost: 1,
+        maxLevel: 5,
+        requires: [],
+        effect: (level) => ({ armor: level * 5, maxHp: level * 50 })
+      },
+      'regeneration': {
+        id: 'regeneration',
+        name: 'Regeneration',
+        description: '+1 HP/sec Regen',
+        icon: '💚',
+        category: 'Defense',
+        cost: 1,
+        maxLevel: 5,
+        requires: ['iron_skin'],
+        effect: (level) => ({ hpRegen: level * 1 })
+      },
+      'last_stand': {
+        id: 'last_stand',
+        name: 'Last Stand',
+        description: 'Survive fatal damage once per run with 1 HP',
+        icon: '💀',
+        category: 'Defense',
+        cost: 3,
+        maxLevel: 1,
+        requires: ['iron_skin'],
+        effect: (level) => ({ lastStand: level })
+      },
+      
+      // Utility Skills
+      'swift_feet': {
+        id: 'swift_feet',
+        name: 'Swift Feet',
+        description: '+10% Movement Speed',
+        icon: '👟',
+        category: 'Utility',
+        cost: 1,
+        maxLevel: 5,
+        requires: [],
+        effect: (level) => ({ moveSpeed: level * 0.10 })
+      },
+      'dash_master': {
+        id: 'dash_master',
+        name: 'Dash Master',
+        description: '-20% Dash Cooldown',
+        icon: '💨',
+        category: 'Utility',
+        cost: 1,
+        maxLevel: 5,
+        requires: ['swift_feet'],
+        effect: (level) => ({ dashCooldown: level * 0.20 })
+      },
+      'treasure_hunter': {
+        id: 'treasure_hunter',
+        name: 'Treasure Hunter',
+        description: '+15% Gold Drop, +10% EXP Gain',
+        icon: '💰',
+        category: 'Utility',
+        cost: 1,
+        maxLevel: 5,
+        requires: ['swift_feet'],
+        effect: (level) => ({ goldDrop: level * 0.15, expGain: level * 0.10 })
+      },
+      
+      // Ultimate Skills
+      'unstoppable': {
+        id: 'unstoppable',
+        name: 'Unstoppable',
+        description: '+25% All Stats',
+        icon: '⭐',
+        category: 'Ultimate',
+        cost: 5,
+        maxLevel: 1,
+        requires: ['critical_expert', 'regeneration', 'dash_master'],
+        effect: (level) => ({ allStats: level * 0.25 })
+      }
+    };
+    
+    function getSkillLevel(skillId) {
+      const skill = saveData.unlockedSkills.find(s => s.id === skillId);
+      return skill ? skill.level : 0;
+    }
+    
+    function canUnlockSkill(skillId) {
+      const skill = SKILL_TREE[skillId];
+      if (!skill) return false;
+      
+      const currentLevel = getSkillLevel(skillId);
+      if (currentLevel >= skill.maxLevel) return false;
+      if (saveData.skillPoints < skill.cost) return false;
+      
+      // Check prerequisites
+      for (const reqId of skill.requires) {
+        if (getSkillLevel(reqId) === 0) return false;
+      }
+      
+      return true;
+    }
+    
+    function unlockSkill(skillId) {
+      if (!canUnlockSkill(skillId)) return false;
+      
+      const skill = SKILL_TREE[skillId];
+      const existing = saveData.unlockedSkills.find(s => s.id === skillId);
+      
+      if (existing) {
+        existing.level++;
+      } else {
+        saveData.unlockedSkills.push({ id: skillId, level: 1 });
+      }
+      
+      saveData.skillPoints -= skill.cost;
+      playSound('coin');
+      saveSaveData();
+      updateSkillTreeScreen();
+      recalculateAllStats();
+      return true;
+    }
+    
+    function updateSkillTreeScreen() {
+      const container = document.getElementById('skill-tree-content');
+      const pointsDisplay = document.getElementById('skill-points-display');
+      
+      pointsDisplay.textContent = `Skill Points: ${saveData.skillPoints}`;
+      
+      container.innerHTML = '';
+      
+      const categories = ['Combat', 'Defense', 'Utility', 'Ultimate'];
+      
+      categories.forEach(category => {
+        const categorySkills = Object.values(SKILL_TREE).filter(s => s.category === category);
+        if (categorySkills.length === 0) return;
+        
+        const categoryDiv = document.createElement('div');
+        categoryDiv.style.cssText = 'background: linear-gradient(to bottom, #2a2a3e, #1a1a2e); border: 3px solid #9b59b6; border-radius: 15px; padding: 20px;';
+        
+        categoryDiv.innerHTML = `
+          <div style="color: #9b59b6; font-size: 24px; font-weight: bold; margin-bottom: 15px; text-align: center;">${category}</div>
+        `;
+        
+        categorySkills.forEach(skill => {
+          const level = getSkillLevel(skill.id);
+          const canUnlock = canUnlockSkill(skill.id);
+          const maxed = level >= skill.maxLevel;
+          
+          const skillDiv = document.createElement('div');
+          skillDiv.style.cssText = `
+            background: ${maxed ? 'linear-gradient(to bottom, #27ae60, #229954)' : (level > 0 ? 'linear-gradient(to bottom, #3498db, #2980b9)' : 'linear-gradient(to bottom, #34495e, #2c3e50)')};
+            border: 2px solid ${maxed ? '#FFD700' : (canUnlock ? '#9b59b6' : '#555')};
+            border-radius: 10px;
+            padding: 12px;
+            margin: 10px 0;
+            cursor: ${canUnlock ? 'pointer' : 'default'};
+            opacity: ${level === 0 && !canUnlock ? '0.6' : '1'};
+            transition: all 0.2s;
+          `;
+          
+          if (canUnlock) {
+            skillDiv.onmouseover = () => skillDiv.style.transform = 'scale(1.05)';
+            skillDiv.onmouseout = () => skillDiv.style.transform = 'scale(1)';
+            skillDiv.onclick = () => unlockSkill(skill.id);
+          }
+          
+          const reqText = skill.requires.length > 0 
+            ? `<div style="color: #95a5a6; font-size: 11px; margin-top: 5px;">Requires: ${skill.requires.map(r => SKILL_TREE[r].name).join(', ')}</div>`
+            : '';
+          
+          skillDiv.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div style="font-size: 28px;">${skill.icon}</div>
+              <div style="flex: 1; margin: 0 10px;">
+                <div style="color: #fff; font-size: 16px; font-weight: bold;">${skill.name}</div>
+                <div style="color: #ecf0f1; font-size: 12px; margin-top: 3px;">${skill.description}</div>
+                ${reqText}
+              </div>
+              <div style="text-align: right;">
+                <div style="color: #FFD700; font-size: 14px; font-weight: bold;">${level}/${skill.maxLevel}</div>
+                <div style="color: #e74c3c; font-size: 12px;">Cost: ${skill.cost} SP</div>
+              </div>
+            </div>
+          `;
+          
+          categoryDiv.appendChild(skillDiv);
+        });
+        
+        container.appendChild(categoryDiv);
+      });
+    }
+    
+    // Add skill points from achievements
+    function awardSkillPoints(amount, reason = '') {
+      saveData.skillPoints += amount;
+      playSound('coin');
+      saveSaveData();
+      if (reason) {
+        showStatChange(`+${amount} Skill Point${amount > 1 ? 's' : ''}! ${reason}`);
+      }
+    }
+
     // Expose to global scope for onclick handlers
     window.equipGear = equipGear;
     window.unequipGear = unequipGear;
@@ -6067,6 +6426,19 @@
       rondel.position.set(0, 0.02, 0);
       rondel.receiveShadow = true;
       scene.add(rondel);
+      
+      // Grass border around the gravel rondel
+      const grassBorderMat = new THREE.MeshPhysicalMaterial({ 
+        color: 0x5A8000, // Darker green for grass border
+        metalness: 0.0,
+        roughness: 0.95,
+      });
+      const grassBorderGeo = new THREE.RingGeometry(rondelRadius, rondelRadius + 1.5, 64); // 1.5 unit wide grass border
+      const grassBorder = new THREE.Mesh(grassBorderGeo, grassBorderMat);
+      grassBorder.rotation.x = -Math.PI/2;
+      grassBorder.position.set(0, 0.01, 0);
+      grassBorder.receiveShadow = true;
+      scene.add(grassBorder);
       
       // Path material - smooth dirt/gravel path
       const pathMat = new THREE.MeshPhysicalMaterial({ 
@@ -6227,23 +6599,8 @@
       signBoard.position.y = 3.2;
       signpostGroup.add(signBoard);
       
-      // Add text sprite for "QUEST HERE"
-      const canvas = document.createElement('canvas');
-      canvas.width = 512;
-      canvas.height = 128;
-      const ctx = canvas.getContext('2d');
-      ctx.fillStyle = '#8B0000'; // Dark red text
-      ctx.font = 'bold 60px Arial';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('QUEST HERE', 256, 64);
-      
-      const texture = new THREE.CanvasTexture(canvas);
-      const spriteMat = new THREE.SpriteMaterial({ map: texture });
-      const sprite = new THREE.Sprite(spriteMat);
-      sprite.scale.set(3.5, 0.875, 1);
-      sprite.position.y = 3.2;
-      signpostGroup.add(sprite);
+      // Removed "QUEST HERE" text sprite per requirements
+      // Quest info now displayed only in HUD stats bar
       
       scene.add(signpostGroup);
       
@@ -6575,9 +6932,9 @@
       
       scene.add(cometGroup);
 
-      // Farm Area near windmill
+      // Farm Area near windmill (adjusted for better alignment)
       const farmGroup = new THREE.Group();
-      farmGroup.position.set(35, 0, 35); // Near windmill
+      farmGroup.position.set(32, 0, 38); // Better aligned near windmill (was 35, 35)
       
       // Wheat field (50 stalks)
       const wheatGeo = new THREE.ConeGeometry(0.1, 0.8, 4);
@@ -6999,10 +7356,14 @@
       renderer.setSize(window.innerWidth, window.innerHeight);
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Cap at 2x for performance
       renderer.shadowMap.enabled = true;
-      renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Soft shadows
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Soft shadows - high quality
       renderer.toneMapping = THREE.ACESFilmicToneMapping; // Better color/brightness
-      renderer.toneMappingExposure = 1.0;
+      // Slightly increased exposure (1.1 vs 1.0) for better visibility without sacrificing color accuracy
+      // ACES tone mapping provides filmic look while preserving color relationships
+      renderer.toneMappingExposure = 1.1;
       renderer.outputEncoding = THREE.sRGBEncoding; // Correct color space
+      // Enable physically correct lighting for better reflections
+      renderer.physicallyCorrectLights = true;
       document.getElementById('game-container').appendChild(renderer.domElement);
 
       // Lights - store references for performance optimization
@@ -7341,7 +7702,26 @@
       document.getElementById('gear-back-btn').onclick = () => {
         playSound('waterdrop');
         document.getElementById('gear-screen').style.display = 'none';
-        showMainMenu();
+        // If game was active, resume it; otherwise return to main menu
+        if (isGameActive) {
+          isPaused = false;
+        } else {
+          showMainMenu();
+        }
+      };
+      
+      // Skill Tree button and back button
+      document.getElementById('skill-tree-btn').onclick = () => {
+        playSound('waterdrop');
+        document.getElementById('gear-screen').style.display = 'none';
+        document.getElementById('skill-tree-screen').style.display = 'flex';
+        updateSkillTreeScreen();
+      };
+      
+      document.getElementById('skill-tree-back-btn').onclick = () => {
+        playSound('waterdrop');
+        document.getElementById('skill-tree-screen').style.display = 'none';
+        document.getElementById('gear-screen').style.display = 'flex';
       };
       
       document.getElementById('credits-back-btn').onclick = () => {
@@ -7395,10 +7775,15 @@
       
       // Stats Bar removed - No toggle needed
       
-      // Equipment Button - Opens Gear Screen
+      // Equipment Button - Opens Gear Screen (pauses game if in progress)
       document.getElementById('equipment-btn').onclick = () => {
         playSound('hit');
-        document.getElementById('main-menu').style.display = 'none';
+        // If game is active, pause it; otherwise just hide main menu
+        if (isGameActive) {
+          isPaused = true;
+        } else {
+          document.getElementById('main-menu').style.display = 'none';
+        }
         document.getElementById('gear-screen').style.display = 'flex';
         updateGearScreen();
       };
