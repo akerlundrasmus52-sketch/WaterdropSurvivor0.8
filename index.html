@@ -2352,6 +2352,8 @@
       dashesPerformed: 0,
       damageTaken: 0,
       weaponsUnlocked: 0,
+      xpMultiplier: 1, // From gear
+      dodgeChance: 0, // From gear
       // Perk System
       perks: {
         vampire: 0,      // Life steal %
@@ -6062,7 +6064,16 @@
           const gear = saveData.inventory.find(g => g.id === gearId);
           if (gear && gear.stats) {
             for (const statKey in gear.stats) {
-              stats[statKey] += gear.stats[statKey];
+              // Handle "allStats" - distribute to multiple stats
+              if (statKey === 'allStats') {
+                // Add to hp, armor, damage, moveSpeed
+                stats.hp = (stats.hp || 0) + gear.stats[statKey] * 5;
+                stats.armor = (stats.armor || 0) + gear.stats[statKey];
+                stats.damage = (stats.damage || 0) + gear.stats[statKey];
+                stats.moveSpeed = (stats.moveSpeed || 0) + gear.stats[statKey];
+              } else {
+                stats[statKey] = (stats[statKey] || 0) + gear.stats[statKey];
+              }
             }
           }
         }
@@ -6070,11 +6081,47 @@
       
       return stats;
     }
+    
+    // Apply gear stats to player stats (called when gear changes or game starts)
+    function applyGearStats() {
+      const gearStats = calculateGearStats();
+      
+      // Reset player stats to base values (from permanent upgrades)
+      const baseMaxHp = 100 + PERMANENT_UPGRADES.maxHp.effect(saveData.upgrades.maxHp);
+      const baseHpRegen = PERMANENT_UPGRADES.hpRegen.effect(saveData.upgrades.hpRegen);
+      const baseMoveSpeed = 25 * (1 + PERMANENT_UPGRADES.moveSpeed.effect(saveData.upgrades.moveSpeed));
+      const baseDamage = 1 + PERMANENT_UPGRADES.attackDamage.effect(saveData.upgrades.attackDamage);
+      const baseAtkSpeed = 1 + PERMANENT_UPGRADES.attackSpeed.effect(saveData.upgrades.attackSpeed);
+      const baseCritChance = 0.1 + PERMANENT_UPGRADES.critChance.effect(saveData.upgrades.critChance);
+      const baseArmor = PERMANENT_UPGRADES.armor.effect(saveData.upgrades.armor);
+      
+      // Apply gear bonuses (additive for most, multiplicative for some)
+      playerStats.maxHp = Math.floor(baseMaxHp + (gearStats.hp || 0));
+      playerStats.hpRegen = baseHpRegen + (gearStats.hpRegen || 0);
+      playerStats.walkSpeed = baseMoveSpeed + (gearStats.moveSpeed || 0);
+      playerStats.damage = baseDamage + (gearStats.damage || 0) * 0.1; // 0.1 multiplier per point
+      playerStats.atkSpeed = baseAtkSpeed + (gearStats.attackSpeed || 0) * 0.01; // 0.01 multiplier per point
+      playerStats.critChance = baseCritChance + (gearStats.critChance || 0) * 0.01; // 0.01 per point
+      playerStats.armor = Math.min(80, baseArmor + (gearStats.armor || 0)); // Cap at 80%
+      
+      // XP bonus from gear (affects XP gain multiplier)
+      const xpBonus = (gearStats.xpBonus || 0) * 0.01; // Convert to percentage
+      playerStats.xpMultiplier = 1 + xpBonus;
+      
+      // Dodge chance from gear (new stat)
+      playerStats.dodgeChance = (gearStats.dodgeChance || 0) * 0.01; // Convert to percentage
+      
+      // Clamp HP if it went over max due to max HP changes
+      playerStats.hp = Math.min(playerStats.hp, playerStats.maxHp);
+      
+      updateHUD();
+    }
 
     function equipGear(slotKey, gearId) {
       saveData.equippedGear[slotKey] = gearId;
       playSound('coin');
       saveSaveData();
+      applyGearStats(); // Apply stats when gear changes
       updateGearScreen();
     }
 
@@ -6082,6 +6129,7 @@
       saveData.equippedGear[slotKey] = null;
       playSound('waterdrop');
       saveSaveData();
+      applyGearStats(); // Apply stats when gear changes
       updateGearScreen();
     }
 
@@ -7185,6 +7233,7 @@
       
       // Initialize gear system
       initializeGear();
+      applyGearStats(); // Apply gear bonuses to player stats
       
       // Initialize background music
       updateBackgroundMusic();
@@ -7834,7 +7883,12 @@
     }
 
     function addExp(amount) {
-      playerStats.exp += amount;
+      // Apply XP multiplier from gear and permanent upgrades
+      const gearXpBonus = playerStats.xpMultiplier || 1;
+      const upgradeXpBonus = 1 + PERMANENT_UPGRADES.expEarned.effect(saveData.upgrades.expEarned);
+      const finalAmount = amount * gearXpBonus * upgradeXpBonus;
+      
+      playerStats.exp += finalAmount;
       
       // Trigger waterdrop grow animation on XP pickup
       const waterdropContainer = document.getElementById('waterdrop-container');
