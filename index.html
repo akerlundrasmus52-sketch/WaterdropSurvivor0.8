@@ -2247,7 +2247,7 @@
       waterDrops: [],
       splashes: []
     };
-    let lastTime = null; // Initialize as null for proper first-frame detection (PR #82 fix)
+    let lastTime = 0; // Initialize to 0 to prevent NaN on first frame
     
     // Phase 5: Initialize particle object pool for performance
     let particlePool = null; // Will be initialized after scene is created
@@ -2872,6 +2872,12 @@
       }
 
       takeDamage(amount) {
+        // Guard: Reject non-finite damage
+        if (!isFinite(amount) || amount < 0) {
+          console.warn('Player.takeDamage: Invalid damage amount:', amount);
+          return;
+        }
+        
         // Check invulnerability frames
         if (this.invulnerable) return;
         
@@ -3511,6 +3517,12 @@
       }
 
       takeDamage(amount, isCrit = false) {
+        // Guard: Reject non-finite damage
+        if (!isFinite(amount) || amount < 0) {
+          console.warn('Enemy.takeDamage: Invalid damage amount:', amount);
+          return;
+        }
+        
         // Phase 5: Hit impact particles (flesh/blood) on every hit
         spawnParticles(this.mesh.position, 0x8B0000, 3); // Blood particles
         
@@ -10296,8 +10308,13 @@
         return;
       }
 
-      // Initialize lastTime on first frame to prevent huge dt (PR #82 fix)
-      if (lastTime === null) {
+      // Guard: Ensure time parameter is finite
+      if (!isFinite(time) || time < 0) {
+        time = performance.now();
+      }
+
+      // Initialize lastTime on first frame to prevent huge dt
+      if (lastTime === 0) {
         lastTime = time;
         gameTime = time / 1000; // Initialize gameTime for visual effects
         // Render the initial frame before returning to avoid blank screen
@@ -10311,6 +10328,11 @@
       let dt = (time - lastTime) / 1000;
       lastTime = time;
       gameTime = time / 1000; // Update game time in seconds
+      
+      // Guard: Ensure dt is finite and non-negative
+      if (!isFinite(dt) || dt < 0) {
+        dt = 0.016; // Default to ~60fps (16ms)
+      }
       
       // Phase 3: Lag compensation - cap deltaTime to prevent death spiral
       const MAX_DELTA_TIME = 0.1; // 100ms cap
