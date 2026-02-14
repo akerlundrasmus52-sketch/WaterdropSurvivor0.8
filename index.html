@@ -2010,7 +2010,7 @@
     
     // Visual constants (PR #117-143)
     const EXP_STAR_COLOR = 0x3498DB; // Deep blue for EXP stars
-    const GOLD_FLASH_BASE_INTENSITY = 4; // Base intensity for gold collection flash
+    const GOLD_FLASH_MIN_INTENSITY = 4; // Minimum intensity for gold collection flash
 
     // Game Settings
     const gameSettings = {
@@ -4355,7 +4355,7 @@
           spawnParticles(this.mesh.position, 0xFFFFFF, Math.floor(particleCount / 3));
           
           // Flash effect - bright point light
-          const flashLight = new THREE.PointLight(0xFFD700, GOLD_FLASH_BASE_INTENSITY + (this.amount / GOLD_LIGHT_INTENSITY_SCALE), 8);
+          const flashLight = new THREE.PointLight(0xFFD700, GOLD_FLASH_MIN_INTENSITY + (this.amount / GOLD_LIGHT_INTENSITY_SCALE), 8);
           flashLight.position.copy(this.mesh.position);
           flashLight.position.y += 1;
           scene.add(flashLight);
@@ -6276,7 +6276,8 @@
 
     function spawnParticles(pos, color, count) {
       // Apply FPS-based throttle (PR #124-143)
-      const throttledCount = Math.round(count * particleThrottle);
+      // Use floor to ensure single particles can be throttled to 0
+      const throttledCount = Math.floor(count * particleThrottle);
       for(let i=0; i<throttledCount; i++) particles.push(new Particle(pos, color));
     }
 
