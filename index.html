@@ -1122,6 +1122,7 @@
     }
 
     #start-game-btn { top: 50.25%; } /* Moved 3.5% lower from 46.75% */
+    #up-to-now-btn { top: 42%; } /* Positioned above start-game-btn, below title */
     #progression-btn { top: 59.75%; } /* Adjusted spacing - reduced from 61.25% */
     #achievements-btn { top: 69.25%; } /* Adjusted spacing - reduced from 72.25% */
     #credits-btn { top: min(78.75%, calc(100% - 60px)); } /* Adjusted spacing - reduced from 82.75% */
@@ -1525,6 +1526,7 @@
   <div id="main-menu">
     <div class="gold-display" id="menu-gold">GOLD: 0</div>
     <div class="menu-title">WATER DROP SURVIVOR</div>
+    <button class="menu-btn" id="up-to-now-btn">UP TO NOW</button>
     <div class="menu-buttons">
       <button class="menu-btn" id="start-game-btn">START GAME</button>
       <button class="menu-btn" id="progression-btn">PROGRESSION</button>
@@ -7551,6 +7553,15 @@
         hideMainMenu();
         resetGame();
         startCountdown(); // Start countdown after resetting game (PR #70)
+      };
+      
+      document.getElementById('up-to-now-btn').onclick = () => {
+        playSound('waterdrop');
+        hideMainMenu();
+        resetGame();
+        // Skip countdown/tutorial - start immediately
+        isGameActive = true;
+        isPaused = false;
       };
       
       document.getElementById('progression-btn').onclick = () => {
