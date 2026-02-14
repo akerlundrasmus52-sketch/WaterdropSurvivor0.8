@@ -2240,6 +2240,129 @@
       baseWalkSpeed: 25
     };
 
+    // --- PHASE 5: COMPANION SYSTEM ---
+    const COMPANIONS = {
+      stormWolf: {
+        id: 'stormWolf',
+        name: 'Storm Wolf',
+        icon: '🐺',
+        type: 'melee',
+        baseStats: { 
+          damage: 8, 
+          attackSpeed: 1.2, 
+          health: 50,
+          range: 150,
+          followDistance: 80
+        },
+        evolvedName: 'Thunder Beast',
+        evolvedIcon: '⚡',
+        evolvedStats: { 
+          damage: 20, 
+          attackSpeed: 0.8, 
+          health: 100,
+          range: 180,
+          followDistance: 80
+        },
+        unlockCondition: 'default',
+        description: 'Melee companion that lunges at enemies',
+        evolvedDescription: 'Lightning-charged beast with AoE attacks',
+        abilities: {
+          base: {
+            stun: { chance: 0.10, duration: 0.5 }
+          },
+          evolved: {
+            lightningAoE: { radius: 3, damageMultiplier: 0.5 },
+            howl: { cooldown: 30, duration: 5, damageBonus: 0.15 }
+          }
+        }
+      },
+      skyFalcon: {
+        id: 'skyFalcon',
+        name: 'Sky Falcon',
+        icon: '🦅',
+        type: 'ranged',
+        baseStats: { 
+          damage: 6, 
+          attackSpeed: 1.5, 
+          health: 50,
+          range: 200,
+          orbitRadius: 100
+        },
+        evolvedName: 'Phoenix',
+        evolvedIcon: '🔥',
+        evolvedStats: { 
+          damage: 15, 
+          attackSpeed: 1.0, 
+          health: 100,
+          range: 250,
+          orbitRadius: 100
+        },
+        unlockCondition: 'level15',
+        description: 'Ranged companion that dives from above',
+        evolvedDescription: 'Fiery bird that leaves burning trails',
+        abilities: {
+          base: {
+            accuracy: 1.0, // 100% accuracy
+            ignoreObstacles: true
+          },
+          evolved: {
+            burn: { dps: 3, duration: 3 },
+            rebirth: { usedThisRun: false, reviveHP: 0.30 }
+          }
+        }
+      },
+      waterSpirit: {
+        id: 'waterSpirit',
+        name: 'Water Spirit',
+        icon: '💧',
+        type: 'support',
+        baseStats: { 
+          damage: 0, 
+          attackSpeed: 8.0, // Heal interval
+          health: 50,
+          range: 120,
+          orbitRadius: 50
+        },
+        evolvedName: 'Ocean Guardian',
+        evolvedIcon: '🌊',
+        evolvedStats: { 
+          damage: 0, 
+          attackSpeed: 5.0, // Heal interval
+          health: 100,
+          range: 150,
+          orbitRadius: 50
+        },
+        unlockCondition: 'companionDenLevel2',
+        description: 'Support companion that heals and slows enemies',
+        evolvedDescription: 'Powerful guardian with shields and waves',
+        abilities: {
+          base: {
+            heal: 5,
+            enemySlow: 0.10 // 10% slow
+          },
+          evolved: {
+            heal: 10,
+            shield: { cooldown: 20, uses: 1 },
+            tidalWave: { cooldown: 45, damage: 25, pushDistance: 5 }
+          }
+        }
+      }
+    };
+
+    // Companion XP level requirements
+    const COMPANION_LEVEL_REQUIREMENTS = [
+      0,    // Level 1
+      100,  // Level 2
+      250,  // Level 3
+      500,  // Level 4
+      800,  // Level 5
+      1200, // Level 6
+      1700, // Level 7
+      2300, // Level 8
+      3000, // Level 9
+      4000  // Level 10 - EVOLUTION!
+    ];
+
     // --- AUDIO SYSTEM (Oscillators) ---
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     let musicOscillators = [];
@@ -2664,6 +2787,14 @@
     
     // Counter for unique gear ID generation
     let gearIdCounter = 0;
+    
+    // Phase 5: Companion System Variables
+    let activeCompanion = null; // Currently active companion instance
+    let selectedCompanionId = null; // ID of selected companion for the run
+    let companionBuffs = {
+      damageBonus: 0,
+      lastHowlTime: 0
+    };
     
     // Countdown system (PR #70-71)
     let countdownActive = false;
@@ -3436,6 +3567,505 @@
         hardTankGeometryCache = geometry;
       }
       return hardTankGeometryCache;
+    }
+
+    // --- PHASE 5: COMPANION CLASS ---
+    class Companion {
+      constructor(companionId, companionData) {
+        this.id = companionId;
+        this.config = COMPANIONS[companionId];
+        this.data = companionData; // Reference to saveData
+        
+        // Calculate current stats based on level
+        this.isEvolved = this.data.level >= 10;
+        const stats = this.isEvolved ? this.config.evolvedStats : this.config.baseStats;
+        
+        // Apply level scaling
+        const levelBonus = (this.data.level - 1) * 0.10; // +10% damage per level
+        const speedBonus = (this.data.level - 1) * 0.05; // +5% attack speed per level
+        
+        this.damage = stats.damage * (1 + levelBonus);
+        this.attackSpeed = stats.attackSpeed * (1 - speedBonus); // Lower is faster
+        this.maxHealth = stats.health + (this.data.level - 1) * 10;
+        this.health = this.maxHealth;
+        this.range = stats.range || 150;
+        
+        // Position and movement
+        this.position = new THREE.Vector3(0, 0, 0);
+        this.targetPosition = new THREE.Vector3(0, 0, 0);
+        this.velocity = new THREE.Vector3(0, 0, 0);
+        
+        // AI state
+        this.lastAttackTime = 0;
+        this.currentTarget = null;
+        this.aiTimer = 0;
+        this.orbitAngle = Math.random() * Math.PI * 2;
+        
+        // Special abilities state
+        this.lastHowlTime = 0;
+        this.lastShieldTime = 0;
+        this.lastTidalWaveTime = 0;
+        this.shieldActive = false;
+        this.burnTargets = new Map(); // Track burning enemies
+        
+        // Respawn system
+        this.isDead = false;
+        this.respawnTimer = 0;
+        this.respawnDuration = 10;
+        
+        // Visual representation
+        this.createMesh();
+      }
+      
+      createMesh() {
+        // Create a simple visual representation (emoji-like)
+        const size = this.isEvolved ? 0.7 : 0.5;
+        const geometry = new THREE.SphereGeometry(size, 16, 16);
+        const color = this.config.type === 'melee' ? 0x888888 : 
+                      this.config.type === 'ranged' ? 0xFFAA00 : 
+                      0x44AAFF;
+        const material = new THREE.MeshToonMaterial({ color: color });
+        
+        this.mesh = new THREE.Mesh(geometry, material);
+        this.mesh.position.copy(player.mesh.position);
+        this.mesh.position.y = this.config.type === 'ranged' ? 2 : 0.5;
+        this.mesh.castShadow = true;
+        scene.add(this.mesh);
+        
+        // Add glow effect
+        const glowGeo = new THREE.SphereGeometry(size * 1.2, 16, 16);
+        const glowColor = this.isEvolved ? 
+          (this.id === 'stormWolf' ? 0xFFFF00 : this.id === 'skyFalcon' ? 0xFF4400 : 0x00FFFF) :
+          color;
+        const glowMat = new THREE.MeshBasicMaterial({ 
+          color: glowColor,
+          transparent: true, 
+          opacity: 0.3,
+          side: THREE.BackSide
+        });
+        this.glow = new THREE.Mesh(glowGeo, glowMat);
+        this.mesh.add(this.glow);
+      }
+      
+      update(dt, time) {
+        if (this.isDead) {
+          this.respawnTimer += dt;
+          if (this.respawnTimer >= this.respawnDuration) {
+            this.respawn();
+          }
+          return;
+        }
+        
+        // Update position based on AI behavior
+        this.updateAI(dt);
+        
+        // Update attack logic
+        this.updateAttack(time);
+        
+        // Update special abilities
+        this.updateAbilities(dt, time);
+        
+        // Visual animations
+        this.updateVisuals(dt, time);
+      }
+      
+      updateAI(dt) {
+        if (!player || !player.mesh) return;
+        
+        this.aiTimer += dt;
+        
+        if (this.config.type === 'melee') {
+          // Storm Wolf: Follow player closely, charge at enemies
+          const toPlayer = new THREE.Vector3().subVectors(player.mesh.position, this.position);
+          const distToPlayer = toPlayer.length();
+          
+          if (distToPlayer > this.config.baseStats.followDistance) {
+            // Move towards player
+            toPlayer.normalize().multiplyScalar(GAME_CONFIG.playerSpeedBase * 1.2);
+            this.velocity.lerp(toPlayer, 0.1);
+          } else {
+            // Close enough, look for enemies to charge
+            this.velocity.multiplyScalar(0.9);
+          }
+        } else if (this.config.type === 'ranged') {
+          // Sky Falcon: Circle above player
+          this.orbitAngle += dt * 2;
+          const radius = this.config.baseStats.orbitRadius;
+          this.targetPosition.set(
+            player.mesh.position.x + Math.cos(this.orbitAngle) * radius,
+            2,
+            player.mesh.position.z + Math.sin(this.orbitAngle) * radius
+          );
+          
+          const toTarget = new THREE.Vector3().subVectors(this.targetPosition, this.position);
+          this.velocity.lerp(toTarget.multiplyScalar(0.1), 0.2);
+        } else if (this.config.type === 'support') {
+          // Water Spirit: Orbit around player at ground level
+          this.orbitAngle += dt * 3;
+          const radius = this.config.baseStats.orbitRadius;
+          this.targetPosition.set(
+            player.mesh.position.x + Math.cos(this.orbitAngle) * radius,
+            0.5,
+            player.mesh.position.z + Math.sin(this.orbitAngle) * radius
+          );
+          
+          const toTarget = new THREE.Vector3().subVectors(this.targetPosition, this.position);
+          this.velocity.lerp(toTarget.multiplyScalar(0.15), 0.2);
+        }
+        
+        // Apply velocity
+        this.position.add(this.velocity);
+        this.mesh.position.copy(this.position);
+      }
+      
+      updateAttack(time) {
+        const cooldown = this.attackSpeed * 1000; // Convert to ms
+        if (time - this.lastAttackTime < cooldown) return;
+        
+        if (this.config.type === 'melee') {
+          this.meleeAttack();
+        } else if (this.config.type === 'ranged') {
+          this.rangedAttack();
+        } else if (this.config.type === 'support') {
+          this.supportAction();
+        }
+        
+        this.lastAttackTime = time;
+      }
+      
+      meleeAttack() {
+        // Find nearest enemy within range
+        let nearest = null;
+        let minDist = this.range;
+        
+        for (let enemy of enemies) {
+          if (enemy.isDead) continue;
+          const dist = this.position.distanceTo(enemy.mesh.position);
+          if (dist < minDist) {
+            minDist = dist;
+            nearest = enemy;
+          }
+        }
+        
+        if (nearest) {
+          // Apply damage
+          let dmg = this.damage;
+          
+          // Apply player strength bonus
+          dmg *= playerStats.strength;
+          
+          // Check for crit
+          if (Math.random() < playerStats.critChance) {
+            dmg *= playerStats.critDmg;
+          }
+          
+          // Apply companion den XP bonus as damage bonus
+          const denLevel = saveData.camp.companionDen.level;
+          const denBonus = denLevel * 0.05;
+          dmg *= (1 + denBonus);
+          
+          // Apply Thunder Beast howl buff if active
+          if (companionBuffs.damageBonus > 0) {
+            dmg *= (1 + companionBuffs.damageBonus);
+          }
+          
+          nearest.takeDamage(dmg);
+          
+          // Stun chance (base form)
+          if (!this.isEvolved && Math.random() < this.config.abilities.base.stun.chance) {
+            // Simple stun implementation - slow enemy
+            const originalSpeed = nearest.speed;
+            nearest.speed *= 0.1;
+            setTimeout(() => {
+              nearest.speed = originalSpeed;
+            }, this.config.abilities.base.stun.duration * 1000);
+          }
+          
+          // Lightning AoE (evolved form)
+          if (this.isEvolved && this.config.abilities.evolved.lightningAoE) {
+            const aoeRadius = this.config.abilities.evolved.lightningAoE.radius;
+            const aoeDmg = dmg * this.config.abilities.evolved.lightningAoE.damageMultiplier;
+            
+            enemies.forEach(e => {
+              if (e.isDead || e === nearest) return;
+              const dist = nearest.mesh.position.distanceTo(e.mesh.position);
+              if (dist < aoeRadius) {
+                e.takeDamage(aoeDmg);
+                spawnParticles(e.mesh.position, 0xFFFF00, 3);
+              }
+            });
+          }
+          
+          // Visual feedback
+          const particleColor = this.isEvolved ? 0xFFFF00 : 0xCCCCCC;
+          spawnParticles(nearest.mesh.position, particleColor, 5);
+        }
+      }
+      
+      rangedAttack() {
+        // Find farthest enemy within range (dive bombing from above)
+        let target = null;
+        let maxDist = 0;
+        
+        for (let enemy of enemies) {
+          if (enemy.isDead) continue;
+          const dist = this.position.distanceTo(enemy.mesh.position);
+          if (dist < this.range && dist > maxDist) {
+            maxDist = dist;
+            target = enemy;
+          }
+        }
+        
+        if (target) {
+          // Apply damage
+          let dmg = this.damage;
+          
+          // Apply player strength bonus
+          dmg *= playerStats.strength;
+          
+          // Check for crit
+          if (Math.random() < playerStats.critChance) {
+            dmg *= playerStats.critDmg;
+          }
+          
+          // Apply companion den bonus
+          const denLevel = saveData.camp.companionDen.level;
+          const denBonus = denLevel * 0.05;
+          dmg *= (1 + denBonus);
+          
+          target.takeDamage(dmg);
+          
+          // Burn DoT (evolved form)
+          if (this.isEvolved && this.config.abilities.evolved.burn) {
+            const burnDps = this.config.abilities.evolved.burn.dps;
+            const burnDuration = this.config.abilities.evolved.burn.duration;
+            this.burnTargets.set(target, { 
+              damage: burnDps,
+              endTime: Date.now() + burnDuration * 1000,
+              tickTimer: 0
+            });
+          }
+          
+          // Visual feedback
+          const particleColor = this.isEvolved ? 0xFF4400 : 0xFFAA00;
+          spawnParticles(target.mesh.position, particleColor, 5);
+        }
+      }
+      
+      supportAction() {
+        // Healing pulse
+        if (playerStats.hp < playerStats.maxHp * 0.8) {
+          const healAmount = this.isEvolved ? 
+            this.config.evolvedStats.abilities?.heal || this.config.abilities.evolved.heal :
+            this.config.abilities.base.heal;
+          
+          playerStats.hp = Math.min(playerStats.maxHp, playerStats.hp + healAmount);
+          updateHUD();
+          
+          // Visual feedback
+          spawnParticles(player.mesh.position, 0x00FF00, 8);
+          createFloatingText(`+${healAmount} HP`, player.mesh.position);
+        }
+      }
+      
+      updateAbilities(dt, time) {
+        // Thunder Beast Howl
+        if (this.isEvolved && this.id === 'stormWolf' && this.config.abilities.evolved.howl) {
+          const howlCooldown = this.config.abilities.evolved.howl.cooldown * 1000;
+          if (time - this.lastHowlTime >= howlCooldown) {
+            this.useHowl(time);
+            this.lastHowlTime = time;
+          }
+        }
+        
+        // Ocean Guardian Shield
+        if (this.isEvolved && this.id === 'waterSpirit' && this.config.abilities.evolved.shield) {
+          const shieldCooldown = this.config.abilities.evolved.shield.cooldown * 1000;
+          if (time - this.lastShieldTime >= shieldCooldown) {
+            this.shieldActive = true;
+            this.lastShieldTime = time;
+            createFloatingText("SHIELD ACTIVE!", player.mesh.position);
+            spawnParticles(player.mesh.position, 0x00FFFF, 15);
+          }
+        }
+        
+        // Ocean Guardian Tidal Wave
+        if (this.isEvolved && this.id === 'waterSpirit' && this.config.abilities.evolved.tidalWave) {
+          const waveCooldown = this.config.abilities.evolved.tidalWave.cooldown * 1000;
+          if (time - this.lastTidalWaveTime >= waveCooldown) {
+            this.useTidalWave();
+            this.lastTidalWaveTime = time;
+          }
+        }
+        
+        // Update burn DoT
+        if (this.burnTargets.size > 0) {
+          this.burnTargets.forEach((burnData, enemy) => {
+            if (enemy.isDead || Date.now() > burnData.endTime) {
+              this.burnTargets.delete(enemy);
+              return;
+            }
+            
+            burnData.tickTimer += dt;
+            if (burnData.tickTimer >= 1.0) { // Tick every second
+              enemy.takeDamage(burnData.damage);
+              spawnParticles(enemy.mesh.position, 0xFF4400, 2);
+              burnData.tickTimer = 0;
+            }
+          });
+        }
+      }
+      
+      useHowl(time) {
+        const duration = this.config.abilities.evolved.howl.duration * 1000;
+        const bonus = this.config.abilities.evolved.howl.damageBonus;
+        
+        companionBuffs.damageBonus = bonus;
+        companionBuffs.lastHowlTime = time;
+        
+        createFloatingText("HOWL! +15% DMG", this.mesh.position);
+        spawnParticles(this.mesh.position, 0xFFFF00, 20);
+        
+        // Reset buff after duration
+        setTimeout(() => {
+          companionBuffs.damageBonus = 0;
+        }, duration);
+      }
+      
+      useTidalWave() {
+        const waveDamage = this.config.abilities.evolved.tidalWave.damage;
+        const pushDistance = this.config.abilities.evolved.tidalWave.pushDistance;
+        
+        enemies.forEach(enemy => {
+          if (enemy.isDead) return;
+          
+          enemy.takeDamage(waveDamage);
+          
+          // Push enemy away from player
+          const pushDir = new THREE.Vector3()
+            .subVectors(enemy.mesh.position, player.mesh.position)
+            .normalize()
+            .multiplyScalar(pushDistance);
+          
+          enemy.mesh.position.add(pushDir);
+        });
+        
+        createFloatingText("TIDAL WAVE!", this.mesh.position);
+        spawnParticles(player.mesh.position, 0x00FFFF, 30);
+      }
+      
+      updateVisuals(dt, time) {
+        // Idle bobbing animation
+        const bobSpeed = 3;
+        const bobAmount = 0.1;
+        const baseY = this.config.type === 'ranged' ? 2 : 0.5;
+        this.mesh.position.y = baseY + Math.sin(time / 1000 * bobSpeed) * bobAmount;
+        
+        // Rotate glow
+        if (this.glow) {
+          this.glow.rotation.y += dt * 2;
+        }
+      }
+      
+      takeDamage(amount) {
+        // Check shield
+        if (this.shieldActive) {
+          this.shieldActive = false;
+          createFloatingText("SHIELD BLOCKED!", this.mesh.position);
+          spawnParticles(this.mesh.position, 0x00FFFF, 10);
+          return;
+        }
+        
+        this.health -= amount;
+        spawnParticles(this.mesh.position, 0xFF0000, 5);
+        
+        if (this.health <= 0) {
+          this.die();
+        }
+      }
+      
+      die() {
+        this.isDead = true;
+        this.respawnTimer = 0;
+        this.mesh.visible = false;
+        createFloatingText("Companion Down! Respawning...", this.mesh.position);
+      }
+      
+      respawn() {
+        this.isDead = false;
+        this.health = this.maxHealth;
+        this.mesh.visible = true;
+        this.position.copy(player.mesh.position);
+        createFloatingText("Companion Respawned!", this.mesh.position);
+        spawnParticles(this.mesh.position, 0x00FF00, 15);
+      }
+      
+      gainXP(amount) {
+        const xpMultiplier = 0.10; // Companions gain 10% of enemy XP
+        let xpGain = amount * xpMultiplier;
+        
+        // Apply Companion Den XP bonus
+        const denLevel = saveData.camp.companionDen.level;
+        if (denLevel >= 2) {
+          xpGain *= (1 + 0.25); // Level 2: +25%
+        }
+        if (denLevel >= 3) {
+          xpGain *= (1 + 0.25); // Level 3: Additional +25% (total 50%)
+        }
+        
+        this.data.xp += xpGain;
+        
+        // Check for level up
+        while (this.data.level < 10 && this.data.xp >= COMPANION_LEVEL_REQUIREMENTS[this.data.level]) {
+          this.levelUp();
+        }
+        
+        saveSaveData();
+      }
+      
+      levelUp() {
+        this.data.level++;
+        
+        // Recalculate stats
+        const wasEvolved = this.isEvolved;
+        this.isEvolved = this.data.level >= 10;
+        const stats = this.isEvolved ? this.config.evolvedStats : this.config.baseStats;
+        
+        const levelBonus = (this.data.level - 1) * 0.10;
+        const speedBonus = (this.data.level - 1) * 0.05;
+        
+        this.damage = stats.damage * (1 + levelBonus);
+        this.attackSpeed = stats.attackSpeed * (1 - speedBonus);
+        this.maxHealth = stats.health + (this.data.level - 1) * 10;
+        this.health = this.maxHealth;
+        this.range = stats.range || 150;
+        
+        // Evolution transformation
+        if (!wasEvolved && this.isEvolved) {
+          this.evolve();
+        }
+        
+        createFloatingText(`${this.config.name} Level ${this.data.level}!`, this.mesh.position);
+        spawnParticles(this.mesh.position, 0xFFFF00, 20);
+      }
+      
+      evolve() {
+        // Remove old mesh
+        scene.remove(this.mesh);
+        
+        // Create new evolved mesh
+        this.createMesh();
+        
+        createFloatingText(`EVOLVED: ${this.config.evolvedName}!`, this.mesh.position);
+        spawnParticles(this.mesh.position, 0xFF00FF, 40);
+        playSound('levelup');
+      }
+      
+      destroy() {
+        if (this.mesh) {
+          scene.remove(this.mesh);
+        }
+      }
     }
 
     // Drone Turret class - New weapon replacing Lightning
@@ -5593,7 +6223,14 @@
       forge: { level: 1, enchantments: [] },
       alchemy: { level: 1, potions: [], elixirs: {} },
       library: { level: 1, researchBonuses: {}, xpMultiplier: 0 },
-      companionDen: { level: 1, companions: [] },
+      companionDen: { 
+        level: 1, 
+        companions: {
+          stormWolf: { unlocked: true, level: 1, xp: 0, selected: false },
+          skyFalcon: { unlocked: false, level: 1, xp: 0, selected: false },
+          waterSpirit: { unlocked: false, level: 1, xp: 0, selected: false }
+        }
+      },
       training: { level: 1, accuracyBonus: 0, critBonus: 0 },
       meditation: { level: 1, healthRegen: 0, passiveIncome: 0 },
       campfire: { level: 1, startingBuffs: [] }
@@ -5622,6 +6259,25 @@
                 saveData.camp[structure] = { ...defaultCampData[structure] };
               }
             });
+            // Ensure companion data structure exists
+            if (saveData.camp.companionDen && !saveData.camp.companionDen.companions) {
+              saveData.camp.companionDen.companions = {
+                stormWolf: { unlocked: true, level: 1, xp: 0, selected: false },
+                skyFalcon: { unlocked: false, level: 1, xp: 0, selected: false },
+                waterSpirit: { unlocked: false, level: 1, xp: 0, selected: false }
+              };
+            } else if (saveData.camp.companionDen && saveData.camp.companionDen.companions) {
+              // Ensure all companions exist in old saves
+              if (!saveData.camp.companionDen.companions.stormWolf) {
+                saveData.camp.companionDen.companions.stormWolf = { unlocked: true, level: 1, xp: 0, selected: false };
+              }
+              if (!saveData.camp.companionDen.companions.skyFalcon) {
+                saveData.camp.companionDen.companions.skyFalcon = { unlocked: false, level: 1, xp: 0, selected: false };
+              }
+              if (!saveData.camp.companionDen.companions.waterSpirit) {
+                saveData.camp.companionDen.companions.waterSpirit = { unlocked: false, level: 1, xp: 0, selected: false };
+              }
+            }
           }
         }
       } catch (e) {
@@ -9322,6 +9978,11 @@
       const finalAmount = Math.floor(amount * xpMultiplier);
       playerStats.exp += finalAmount;
       
+      // Phase 5: Give companion XP (10% of enemy XP)
+      if (activeCompanion) {
+        activeCompanion.gainXP(finalAmount);
+      }
+      
       // Trigger waterdrop grow animation on XP pickup
       const waterdropContainer = document.getElementById('waterdrop-container');
       waterdropContainer.classList.add('grow');
@@ -9343,6 +10004,14 @@
       // Award 1 skill point per level
       saveData.skillPoints++;
       saveSaveData();
+      
+      // Phase 5: Check for companion unlocks
+      if (playerStats.lvl === 15 && !saveData.camp.companionDen.companions.skyFalcon.unlocked) {
+        saveData.camp.companionDen.companions.skyFalcon.unlocked = true;
+        saveSaveData();
+        showStatChange('🦅 Sky Falcon Unlocked! Visit Companion Den to select.');
+        playSound('levelup');
+      }
       
       // Victory condition: Reaching level 100
       if (playerStats.lvl === 100) {
@@ -11519,6 +12188,36 @@
         player.mesh.position.set(3, 0.5, 3); // Phase 4: Spawn next to the statue (not inside it)
         player.mesh.material.color.setHex(COLORS.player);
       }
+      
+      // Phase 5: Initialize companion for the run
+      if (activeCompanion) {
+        activeCompanion.destroy();
+        activeCompanion = null;
+      }
+      
+      // Find selected companion
+      const companions = saveData.camp.companionDen.companions;
+      selectedCompanionId = null;
+      Object.keys(companions).forEach(id => {
+        if (companions[id].selected && companions[id].unlocked) {
+          selectedCompanionId = id;
+        }
+      });
+      
+      // Spawn the selected companion
+      if (selectedCompanionId) {
+        activeCompanion = new Companion(selectedCompanionId, companions[selectedCompanionId]);
+        // Reset rebirth ability for Phoenix
+        if (selectedCompanionId === 'skyFalcon' && companions[selectedCompanionId].level >= 10) {
+          COMPANIONS.skyFalcon.abilities.evolved.rebirth.usedThisRun = false;
+        }
+      }
+      
+      // Reset companion buffs
+      companionBuffs = {
+        damageBonus: 0,
+        lastHowlTime: 0
+      };
 
       isGameOver = false;
       isPaused = true;  // Start paused, countdown will unpause (PR #70)
@@ -12159,6 +12858,11 @@
 
       // Player Update
       player.update(dt);
+      
+      // Phase 5: Companion Update
+      if (activeCompanion) {
+        activeCompanion.update(dt, time);
+      }
       
       // Check windmill quest trigger
       if (!windmillQuest.active && !windmillQuest.hasCompleted) {
