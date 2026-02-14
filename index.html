@@ -2416,7 +2416,7 @@
       waterDrops: [],
       splashes: []
     };
-    let lastTime = null; // Initialize as null for proper first-frame detection (PR #82 fix)
+    let lastTime = 0; // Initialize to 0 for safe first-frame delta (hotfix)
     
     // Phase 5: Initialize particle object pool for performance
     let particlePool = null; // Will be initialized after scene is created
@@ -7921,6 +7921,12 @@
       
       // Main Menu Buttons
       document.getElementById('start-game-btn').onclick = () => {
+        // Guard: Prevent starting if game is already active or countdown is running
+        if (isGameActive || countdownActive) {
+          console.log('Game already active or countdown in progress');
+          return;
+        }
+        
         playSound('waterdrop');
         
         // NEW: Check if tutorial should be shown (first time or user hasn't dismissed it)
@@ -7938,6 +7944,12 @@
       
       // NEW: Tutorial overlay button handler
       document.getElementById('tutorial-start-btn').onclick = () => {
+        // Guard: Prevent starting if game is already active or countdown is running
+        if (isGameActive || countdownActive) {
+          console.log('Game already active or countdown in progress');
+          return;
+        }
+        
         playSound('waterdrop');
         
         // Check if user wants to hide tutorial in the future
@@ -10154,14 +10166,22 @@
       playerStats.expReq = GAME_CONFIG.baseExpReq;
       playerStats.hp = baseHp + attrHp;
       playerStats.maxHp = baseHp + attrHp;
-      playerStats.strength = baseDamage * (1 + attrDamage + gearMagicBonus);
-      playerStats.walkSpeed = baseSpeed * (1 + attrMoveSpeed + gearMoveSpeedBonus);
+      // Guard against NaN in critical stats (hotfix)
+      playerStats.strength = Number.isFinite(baseDamage * (1 + attrDamage + gearMagicBonus)) 
+        ? baseDamage * (1 + attrDamage + gearMagicBonus) : 1;
+      playerStats.walkSpeed = Number.isFinite(baseSpeed * (1 + attrMoveSpeed + gearMoveSpeedBonus)) 
+        ? baseSpeed * (1 + attrMoveSpeed + gearMoveSpeedBonus) : 25;
       playerStats.kills = 0;
-      playerStats.atkSpeed = baseAtkSpeed * (1 + attrAtkSpeed + gearAtkSpeedBonus);
-      playerStats.critChance = baseCritChance + attrCritChance + gearPrecisionBonus + gearCritBonus;
-      playerStats.critDmg = baseCritDmg + attrCritDmg;
-      playerStats.armor = baseArmor + gearStats.flexibility; // Flexibility gives flat armor bonus
-      playerStats.hpRegen = baseRegen + attrRegen;
+      playerStats.atkSpeed = Number.isFinite(baseAtkSpeed * (1 + attrAtkSpeed + gearAtkSpeedBonus)) 
+        ? baseAtkSpeed * (1 + attrAtkSpeed + gearAtkSpeedBonus) : 1;
+      playerStats.critChance = Number.isFinite(baseCritChance + attrCritChance + gearPrecisionBonus + gearCritBonus) 
+        ? baseCritChance + attrCritChance + gearPrecisionBonus + gearCritBonus : 0.1;
+      playerStats.critDmg = Number.isFinite(baseCritDmg + attrCritDmg) 
+        ? baseCritDmg + attrCritDmg : 1.5;
+      playerStats.armor = Number.isFinite(baseArmor + gearStats.flexibility) 
+        ? baseArmor + gearStats.flexibility : 0;
+      playerStats.hpRegen = Number.isFinite(baseRegen + attrRegen) 
+        ? baseRegen + attrRegen : 0;
       playerStats.gold = 0;
       waveCount = 0;
       lastWaveEndTime = 0; // Reset wave timing
@@ -10780,13 +10800,13 @@
         return;
       }
 
-      // Initialize lastTime on first frame to prevent huge dt (PR #82 fix)
-      if (lastTime === null) {
+      // Initialize lastTime on first frame (when it's 0) to establish time baseline
+      if (lastTime === 0) {
         lastTime = time;
-        gameTime = time / 1000; // Initialize gameTime for visual effects
-        // Render the initial frame and continue (don't return early to allow loading screen updates)
+        gameTime = 0; // Initialize gameTime to 0
+        // Render the initial frame to show the scene
         renderer.render(scene, camera);
-        // Don't return - allow the loop to continue for loading screen animations
+        return; // Exit early to establish proper time baseline for next frame
       }
 
       // Performance tracking - start frame timer
@@ -10795,9 +10815,9 @@
       let dt = (time - lastTime) / 1000;
       
       // Safety: Guard against NaN/invalid time values (hotfix for loading screen hang)
-      if (!isFinite(dt) || dt < 0 || dt > 1) {
+      if (!Number.isFinite(dt) || dt < 0 || dt > 1) {
         dt = FALLBACK_FRAME_TIME; // Fallback to ~60fps frame time
-        console.warn('Invalid dt detected, using fallback value');
+        console.warn('Invalid dt detected, using fallback value:', dt);
       }
       
       lastTime = time;
