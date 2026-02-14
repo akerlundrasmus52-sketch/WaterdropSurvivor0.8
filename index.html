@@ -4073,8 +4073,8 @@
             const isCrit = Math.random() < playerStats.critChance;
             if (isCrit) dmg *= playerStats.critDmg;
             
-            // Defensive clamp: Ensure damage is finite and positive (fallback to 1)
-            if (!isFinite(dmg) || dmg <= 0) {
+            // NaN protection: Only clamp if invalid or negative, allow positive fractional damage
+            if (!isFinite(dmg) || dmg < 0) {
               if (!window._nanDamageWarned) {
                 console.warn('Projectile.update: Invalid damage detected:', dmg, 'Base dmg:', weapons.gun.damage, 'Stats:', playerStats.damage, playerStats.strength, 'Crit:', playerStats.critDmg);
                 window._nanDamageWarned = true;
@@ -4130,8 +4130,8 @@
         // Deal damage immediately
         let dmg = weapons.sword.damage * playerStats.strength * playerStats.damage;
         
-        // Defensive clamp: Ensure damage is finite and positive (fallback to 1)
-        if (!isFinite(dmg) || dmg <= 0) {
+        // NaN protection: Only clamp if invalid or negative, allow positive fractional damage
+        if (!isFinite(dmg) || dmg < 0) {
           if (!window._nanDamageWarnedSword) {
             console.warn('SwordArc: Invalid damage detected:', dmg, 'Base dmg:', weapons.sword.damage, 'Stats:', playerStats.damage, playerStats.strength);
             window._nanDamageWarnedSword = true;
@@ -4229,8 +4229,8 @@
             const isCrit = Math.random() < playerStats.critChance;
             if (isCrit) dmg *= playerStats.critDmg;
             
-            // Defensive clamp: Ensure damage is finite and positive (fallback to 1)
-            if (!isFinite(dmg) || dmg <= 0) {
+            // NaN protection: Only clamp if invalid or negative, allow positive fractional damage
+            if (!isFinite(dmg) || dmg < 0) {
               if (!window._nanDamageWarnedIce) {
                 console.warn('IceSpear.update: Invalid damage detected:', dmg, 'Base dmg:', weapons.iceSpear.damage, 'Stats:', playerStats.damage, playerStats.strength, 'Crit:', playerStats.critDmg);
                 window._nanDamageWarnedIce = true;
@@ -4327,8 +4327,8 @@
         const range = weapons.meteor.area;
         let dmg = weapons.meteor.damage * playerStats.strength;
         
-        // Defensive clamp: Ensure damage is finite and positive (fallback to 1)
-        if (!isFinite(dmg) || dmg <= 0) {
+        // NaN protection: Only clamp if invalid or negative, allow positive fractional damage
+        if (!isFinite(dmg) || dmg < 0) {
           if (!window._nanDamageWarnedMeteor) {
             console.warn('Meteor: Invalid damage detected:', dmg, 'Base dmg:', weapons.meteor.damage, 'Stats:', playerStats.strength);
             window._nanDamageWarnedMeteor = true;
@@ -10746,8 +10746,8 @@
         let hit = false;
         let auraDmg = weapons.aura.damage * playerStats.strength;
         
-        // Defensive clamp: Ensure damage is finite and positive (fallback to 1)
-        if (!isFinite(auraDmg) || auraDmg <= 0) {
+        // NaN protection: Only clamp if invalid or negative, allow positive fractional damage
+        if (!isFinite(auraDmg) || auraDmg < 0) {
           if (!window._nanDamageWarnedAura) {
             console.warn('Aura: Invalid damage detected:', auraDmg, 'Base dmg:', weapons.aura.damage, 'Stats:', playerStats.strength);
             window._nanDamageWarnedAura = true;
@@ -10956,8 +10956,8 @@
             const isCrit = Math.random() < playerStats.critChance;
             if (isCrit) dmg *= playerStats.critDmg;
             
-            // Defensive clamp: Ensure damage is finite and positive (fallback to 1)
-            if (!isFinite(dmg) || dmg <= 0) {
+            // NaN protection: Only clamp if invalid or negative, allow positive fractional damage
+            if (!isFinite(dmg) || dmg < 0) {
               if (!window._nanDamageWarnedFireRing) {
                 console.warn('FireRing: Invalid damage detected:', dmg, 'Base dmg:', weapons.fireRing.damage, 'Stats:', playerStats.strength, 'Crit:', playerStats.critDmg);
                 window._nanDamageWarnedFireRing = true;
