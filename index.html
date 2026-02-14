@@ -3181,18 +3181,96 @@
             const bonusPercent = Math.floor((playerStats.comboMultiplier - 1) * 100);
             comboBonusText.innerText = `+${bonusPercent}% Damage & Gold`;
             
-            // Special message for milestone combos
-            if (playerStats.comboCount === 10) {
-              createFloatingText("10-KILL COMBO! 🔥", player.mesh.position);
+            // NEW: Named milestone system with progressive sizing and glow
+            let milestoneName = '';
+            let milestoneSize = 1.0;
+            let glowIntensity = 1.0;
+            
+            if (playerStats.comboCount === 5) {
+              milestoneName = 'MULTIKILL';
+              milestoneSize = 1.2;
+              glowIntensity = 1.2;
+            } else if (playerStats.comboCount === 6) {
+              milestoneName = 'RARE COMBO';
+              milestoneSize = 1.3;
+              glowIntensity = 1.4;
+            } else if (playerStats.comboCount === 7) {
+              milestoneName = 'EPIC COMBO';
+              milestoneSize = 1.4;
+              glowIntensity = 1.6;
+            } else if (playerStats.comboCount === 8) {
+              milestoneName = 'LEGENDARY COMBO';
+              milestoneSize = 1.5;
+              glowIntensity = 1.8;
+            } else if (playerStats.comboCount === 9) {
+              milestoneName = 'MYTHICAL COMBO';
+              milestoneSize = 1.6;
+              glowIntensity = 2.0;
+            } else if (playerStats.comboCount === 10) {
+              milestoneName = 'AMAZING COMBO';
+              milestoneSize = 1.7;
+              glowIntensity = 2.2;
+            } else if (playerStats.comboCount === 11) {
+              milestoneName = 'UNBELIEVABLE COMBO';
+              milestoneSize = 1.8;
+              glowIntensity = 2.4;
+            } else if (playerStats.comboCount === 12) {
+              milestoneName = 'FANTASTIC COMBO';
+              milestoneSize = 1.9;
+              glowIntensity = 2.6;
+            } else if (playerStats.comboCount === 13) {
+              milestoneName = 'ALMOST MAX COMBO';
+              milestoneSize = 2.0;
+              glowIntensity = 2.8;
+            } else if (playerStats.comboCount === 14) {
+              milestoneName = 'GODLIKE';
+              milestoneSize = 2.2;
+              glowIntensity = 3.0;
+            } else if (playerStats.comboCount >= 15) {
+              const godlikeMultiplier = Math.floor((playerStats.comboCount - 13) / 1);
+              milestoneName = `GODLIKE x${godlikeMultiplier}`;
+              milestoneSize = 2.2 + (godlikeMultiplier * 0.1);
+              glowIntensity = 3.0 + (godlikeMultiplier * 0.2);
+            }
+            
+            // Display milestone with enhanced visual effects
+            if (milestoneName) {
+              // Update combo text styling for this milestone
+              comboText.style.fontSize = `${24 * milestoneSize}px`;
+              comboText.style.textShadow = `
+                0 0 ${10 * glowIntensity}px rgba(255, 215, 0, 0.8),
+                0 0 ${20 * glowIntensity}px rgba(255, 215, 0, 0.6),
+                0 0 ${30 * glowIntensity}px rgba(255, 215, 0, 0.4),
+                2px 2px 4px rgba(0, 0, 0, 0.9)
+              `;
+              comboText.innerText = milestoneName;
+              
+              // Create floating text for milestone announcement
+              createFloatingText(`${milestoneName}! 🔥`, player.mesh.position);
               playSound('levelup');
-            } else if (playerStats.comboCount === 25) {
+              
+              // Screen flash for high milestones (10+)
+              if (playerStats.comboCount >= 10 && flashOverlay) {
+                const flashIntensity = Math.min(0.3 + (playerStats.comboCount - 10) * 0.02, 0.6);
+                flashOverlay.style.opacity = flashIntensity.toString();
+                flashOverlay.style.background = `rgba(255, 215, 0, ${flashIntensity})`;
+                setTimeout(() => { flashOverlay.style.opacity = '0'; }, 150);
+              }
+            } else {
+              // Reset to default styling for non-milestone combos
+              comboText.style.fontSize = '24px';
+              comboText.style.textShadow = '2px 2px 4px rgba(0, 0, 0, 0.9)';
+            }
+            
+            // Keep old milestones for backwards compatibility (25, 50, 100+)
+            if (playerStats.comboCount === 25) {
               createFloatingText("25-KILL RAMPAGE! ⚡", player.mesh.position);
               playSound('levelup');
             } else if (playerStats.comboCount === 50) {
               createFloatingText("50-KILL UNSTOPPABLE! 💥", player.mesh.position);
               playSound('levelup');
-            } else if (playerStats.comboCount % 100 === 0) {
-              createFloatingText(`${playerStats.comboCount}-KILL GODLIKE! 🌟`, player.mesh.position);
+            } else if (playerStats.comboCount % 100 === 0 && playerStats.comboCount >= 100) {
+              createFloatingText(`${playerStats.comboCount}-KILL LEGENDARY! 🌟`, player.mesh.position);
               playSound('levelup');
             }
           }
