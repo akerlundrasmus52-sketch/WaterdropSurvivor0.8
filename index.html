@@ -149,7 +149,8 @@
     /* Combo Counter - Red/Black Theme */
     #combo-counter {
       position: absolute;
-      top: 35%;
+      /* CHANGED: Position over character head, not center of screen */
+      top: 40%;
       left: 50%;
       transform: translate(-50%, -50%);
       text-align: center;
@@ -160,21 +161,23 @@
     }
     
     #combo-text {
-      font-size: 24px;
+      /* CHANGED: Much smaller size for combo text */
+      font-size: 14px;
       font-weight: 900;
       color: #FF0000;
       text-shadow: 
-        2px 2px 0 #000,
+        1px 1px 0 #000,
         -1px -1px 0 #000,
         1px -1px 0 #000,
         -1px 1px 0 #000,
-        0 0 15px rgba(255,0,0,0.9),
-        0 0 30px rgba(255,0,0,0.7);
+        0 0 8px rgba(255,0,0,0.9),
+        0 0 15px rgba(255,0,0,0.7);
       animation: combo-bubble 0.5s ease-out;
     }
     
     #combo-multiplier {
-      font-size: 16px;
+      /* CHANGED: Smaller multiplier text */
+      font-size: 11px;
       font-weight: bold;
       color: #8B0000;
       text-shadow: 
@@ -182,13 +185,13 @@
         -1px -1px 0 #000,
         1px -1px 0 #000,
         -1px 1px 0 #000,
-        0 0 10px rgba(139,0,0,0.8);
-      margin-top: 3px;
+        0 0 8px rgba(139,0,0,0.8);
+      margin-top: 2px;
     }
     
     @keyframes combo-bubble {
       0% {
-        transform: scale(0.5) translateY(20px);
+        transform: scale(0.5) translateY(10px);
         opacity: 0;
       }
       60% {
@@ -205,10 +208,11 @@
     #combo-timer {
       display: none;
       color: #FF4444;
-      text-shadow: 0 0 8px rgba(255,68,68,0.8), 0 0 12px rgba(255,68,68,0.5), 1px 1px 2px rgba(0,0,0,0.5);
-      font-size: 14px;
+      text-shadow: 0 0 6px rgba(255,68,68,0.8), 0 0 10px rgba(255,68,68,0.5), 1px 1px 2px rgba(0,0,0,0.5);
+      /* CHANGED: Smaller timer text */
+      font-size: 10px;
       font-weight: bold;
-      margin-top: 3px;
+      margin-top: 2px;
     }
       0% {
         opacity: 1;
@@ -584,6 +588,8 @@
       justify-content: center;
       pointer-events: none; /* Modal background should not block clicks */
       z-index: 20;
+      /* CHANGED: Add padding for mobile safety */
+      padding: 20px 0;
     }
 
     .modal-content {
@@ -593,8 +599,9 @@
       border: 5px solid #FFD700; /* Golden border for level-up emphasis */
       width: 85%;
       max-width: 350px;
-      max-height: none; /* Remove height restriction - no scrolling needed */
-      overflow-y: visible; /* No scrolling */
+      /* CHANGED: Make scrollable and fit to screen */
+      max-height: 85vh;
+      overflow-y: auto;
       text-align: center;
       box-shadow: 0 15px 30px rgba(0,0,0,0.9), 0 0 50px rgba(255,215,0,0.7), inset 0 0 40px rgba(255,215,0,0.15), inset 0 0 0 2px rgba(0,0,0,0.5); /* Darker shadow and inner dark edge */
       pointer-events: auto; /* Modal content should receive clicks */
@@ -9436,94 +9443,108 @@
       comboText.innerText = message;
       comboMultiplier.innerText = isMilestone ? '' : `x${comboState.count}`; // Only show multiplier when not showing milestone text
       
+      // CHANGED: Much smaller font sizes for combo text (over character head)
       // Progressive scaling: Start small at 5, gradually grow bigger to GODLIKE at 20
       // Yellow/White to Dark Red gradient with intensifying glow and size
       let textColor = '#FFFF00'; // Start with Yellow
       let glowIntensity = 20;
-      let fontSize = 38; // Base font size (smaller start, reduced from 42)
+      let fontSize = 12; // CHANGED: Much smaller base font size
       let lightningCount = 0; // Number of lightning effects (keep minimal)
       
       if (comboState.count >= GODLIKE_COMBO_THRESHOLD + 1) {
         // GODLIKE x2, x3... - Red/Black with max glow
         textColor = '#8B0000'; // Dark red
-        glowIntensity = 70; // Reduced from 90
-        fontSize = 78; // Reduced from 86
-        lightningCount = 4; // Reduced from 6
+        glowIntensity = 70;
+        fontSize = 22; // CHANGED: Smaller max size
+        lightningCount = 4;
       } else if (comboState.count === GODLIKE_COMBO_THRESHOLD) {
         // GODLIKE - Red/Black with glowing light effects
         textColor = '#8B0000'; // Dark red  
-        glowIntensity = 65; // Reduced from 85
-        fontSize = 74; // Reduced from 82
-        lightningCount = 3; // Reduced from 5
+        glowIntensity = 65;
+        fontSize = 21; // CHANGED: Smaller max size
+        lightningCount = 3;
       } else if (comboState.count === 13) {
         // Almost Max Combo
         textColor = '#A00000'; // Dark red
         glowIntensity = 78;
-        fontSize = 76;
+        fontSize = 20; // CHANGED: Smaller size
         lightningCount = 5;
       } else if (comboState.count === 12) {
         // Fantastic Combo
         textColor = '#C00000'; // Medium dark red
-        glowIntensity = 48; // Reduced from 72
-        fontSize = 56; // Reduced from 72
-        lightningCount = 2; // Reduced from 4
+        glowIntensity = 48;
+        fontSize = 18; // CHANGED: Smaller size
+        lightningCount = 2;
       } else if (comboState.count === 11) {
         // Unbelievable Combo
         textColor = '#C80000'; // Medium dark red
-        glowIntensity = 46; // Reduced from 66
-        fontSize = 54; // Reduced from 68
-        lightningCount = 2; // Reduced from 4
+        glowIntensity = 46;
+        fontSize = 17; // CHANGED: Smaller size
+        lightningCount = 2;
       } else if (comboState.count === 10) {
         // Amazing Combo
         textColor = '#D00000'; // Medium red
-        glowIntensity = 44; // Reduced from 60
-        fontSize = 52; // Reduced from 64
-        lightningCount = 1; // Reduced from 4
+        glowIntensity = 44;
+        fontSize = 16; // CHANGED: Smaller size
+        lightningCount = 1;
       } else if (comboState.count === 9) {
         // Mythical Combo
         textColor = '#D80000'; // Lighter red
-        glowIntensity = 42; // Reduced from 54
-        fontSize = 50; // Reduced from 60
-        lightningCount = 1; // Reduced from 3
+        glowIntensity = 42;
+        fontSize = 16; // CHANGED: Smaller size
+        lightningCount = 1;
       } else if (comboState.count === 8) {
         // Legendary Combo
         textColor = '#E00000'; // Light red
-        glowIntensity = 40; // Reduced from 48
-        fontSize = 48; // Reduced from 56
-        lightningCount = 1; // Reduced from 3
+        glowIntensity = 40;
+        fontSize = 15; // CHANGED: Smaller size
+        lightningCount = 1;
       } else if (comboState.count === 7) {
         // Epic Combo
         textColor = '#E80000'; // Very light red
-        glowIntensity = 36; // Reduced from 40
-        fontSize = 46; // Reduced from 52
-        lightningCount = 1; // Reduced from 2
+        glowIntensity = 36;
+        fontSize = 14; // CHANGED: Smaller size
+        lightningCount = 1;
       } else if (comboState.count === 6) {
         // Rare Combo
         textColor = '#FF3333'; // Pink-ish red
-        glowIntensity = 32; // Reduced
-        fontSize = 44; // Reduced from 48
-        lightningCount = 0; // Reduced from 2
+        glowIntensity = 32;
+        fontSize = 13; // CHANGED: Smaller size
+        lightningCount = 0;
       } else if (comboState.count === 5) {
         // Multikill - Yellow/White start
         textColor = '#FFFF99'; // Light yellow
-        glowIntensity = 25; // Reduced
-        fontSize = 40; // Reduced from 42
-        lightningCount = 0; // Reduced from 1
+        glowIntensity = 25;
+        fontSize = 12; // CHANGED: Smaller size
+        lightningCount = 0;
       }
       
       comboText.style.fontSize = `${fontSize}px`;
       comboText.style.color = textColor;
       
+      // CHANGED: Position combo over player's head dynamically
+      if (player && player.mesh && camera) {
+        const playerPos = player.mesh.position.clone();
+        playerPos.y += 2; // Above player's head
+        playerPos.project(camera);
+        
+        const x = (playerPos.x * .5 + .5) * window.innerWidth;
+        const y = (-(playerPos.y * .5) + .5) * window.innerHeight;
+        
+        comboEl.style.left = `${x}px`;
+        comboEl.style.top = `${y}px`;
+      }
+      
       // Build lightning effect with multiple layers
       let shadowLayers = `
-        3px 3px 0 #000,
-        -2px -2px 0 #000,
-        2px -2px 0 #000,
-        -2px 2px 0 #000`;
+        2px 2px 0 #000,
+        -1px -1px 0 #000,
+        1px -1px 0 #000,
+        -1px 1px 0 #000`;
       
       // Add lightning glow layers based on combo count
       for (let i = 0; i < lightningCount; i++) {
-        const spread = 10 + i * 15;
+        const spread = 5 + i * 8; // CHANGED: Smaller glow spread
         shadowLayers += `,
         0 0 ${spread}px rgba(255,255,255,0.9),
         0 0 ${spread * 2}px rgba(255,200,0,0.7),
@@ -9532,7 +9553,7 @@
       
       comboText.style.textShadow = shadowLayers;
       comboMultiplier.style.color = textColor;
-      comboMultiplier.style.fontSize = `${Math.floor(fontSize * 0.5)}px`; // Scale multiplier text
+      comboMultiplier.style.fontSize = `${Math.floor(fontSize * 0.6)}px`; // Scale multiplier text
       
       // Show stat notification for all combos
       showStatChange(message, comboLevel);
