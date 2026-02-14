@@ -2368,7 +2368,12 @@
       thornsPercent: 0,
       hasBerserkerRage: false,
       treasureHunterChance: 0,
-      doubleCritChance: 0
+      doubleCritChance: 0,
+      // PR #125: Precision aiming system
+      precision: 0,         // Precision stat for aim-assist and bonuses
+      dodge: 0,             // Dodge chance (from Agility attribute)
+      goldBonus: 1,         // Gold drop multiplier (from Luck attribute)
+      xpBonus: 1            // XP gain multiplier (from Wisdom attribute)
     };
 
     // Weapons State
@@ -5485,10 +5490,12 @@
       dexterity: {
         name: 'Dexterity',
         icon: '🎯',
-        description: 'Improves attack speed and critical chance',
+        description: 'Improves attack speed, crit, dodge, and move speed (Agility)',
         effects: {
           attackSpeed: 0.03, // +3% per point
-          critChance: 0.01   // +1% per point
+          critChance: 0.01,  // +1% per point
+          dodge: 0.01,       // +1% dodge per point (PR #124)
+          moveSpeed: 0.02    // +2% move speed per point (PR #124)
         }
       },
       strength: {
@@ -5520,10 +5527,10 @@
       wisdom: {
         name: 'Wisdom',
         icon: '🧠',
-        description: 'Reduces cooldowns and increases experience gain',
+        description: 'Reduces cooldowns and increases XP gain (Intelligence)',
         effects: {
           cooldownReduction: 0.02, // +2% per point
-          expEarned: 0.03          // +3% per point
+          expEarned: 0.03          // +3% XP gain per point (PR #124)
         }
       }
     };
@@ -9435,9 +9442,13 @@
       const attrRegen = vitality * ATTRIBUTE_INFO.vitality.effects.hpRegen;
       const attrAtkSpeed = dexterity * ATTRIBUTE_INFO.dexterity.effects.attackSpeed;
       const attrCritChance = dexterity * ATTRIBUTE_INFO.dexterity.effects.critChance;
+      const attrDodge = dexterity * ATTRIBUTE_INFO.dexterity.effects.dodge; // PR #124
+      const attrMoveSpeed = dexterity * ATTRIBUTE_INFO.dexterity.effects.moveSpeed; // PR #124
       const attrDamage = strength * ATTRIBUTE_INFO.strength.effects.damage;
       const attrCritDmg = luck * ATTRIBUTE_INFO.luck.effects.critDamage;
+      const attrGoldBonus = luck * ATTRIBUTE_INFO.luck.effects.goldEarned; // PR #124
       const attrCdReduction = wisdom * ATTRIBUTE_INFO.wisdom.effects.cooldownReduction;
+      const attrXpBonus = wisdom * ATTRIBUTE_INFO.wisdom.effects.expEarned; // PR #124
       
       // PR #125-143: Apply gear bonuses multiplicatively with new stat system
       const gearStats = calculateGearStats();
@@ -9457,17 +9468,21 @@
       playerStats.maxHp = baseHp + attrHp + gearHpBonus;
       playerStats.hp = Math.min(playerStats.hp, playerStats.maxHp); // Adjust current HP if max changed
       playerStats.strength = baseDamage * (1 + attrDamage + gearDamageBonus);
-      playerStats.walkSpeed = baseSpeed * (1 + gearMoveSpeedBonus);
+      playerStats.walkSpeed = baseSpeed * (1 + attrMoveSpeed + gearMoveSpeedBonus); // PR #124: Add Dexterity move speed
       playerStats.atkSpeed = baseAtkSpeed * (1 + attrAtkSpeed + gearAtkSpeedBonus);
       playerStats.critChance = baseCritChance + attrCritChance + gearCritBonus;
       // PR #124: Ensure critDmg is ALWAYS set (never undefined/null)
       playerStats.critDmg = (baseCritDmg + attrCritDmg) || 1.5; // Fallback to 1.5x if somehow 0
       playerStats.armor = baseArmor + gearArmorBonus;
       playerStats.hpRegen = baseRegen + attrRegen + gearHpRegenBonus;
+      // PR #124-125: Add new stats for precision aiming and attribute bonuses
+      playerStats.dodge = attrDodge + gearDodgeBonus; // Dodge from Dexterity + gear
+      playerStats.goldBonus = 1 + attrGoldBonus; // Gold multiplier from Luck (1.0 = 100%)
+      playerStats.xpBonus = 1 + attrXpBonus + gearXpBonus; // XP multiplier from Wisdom + gear
       
       return {
         baseHp, baseRegen, baseSpeed, baseDamage, baseAtkSpeed, baseCritChance, baseCritDmg, baseArmor, cdReduction,
-        attrHp, attrRegen, attrAtkSpeed, attrCritChance, attrDamage, attrCritDmg, attrCdReduction,
+        attrHp, attrRegen, attrAtkSpeed, attrCritChance, attrDodge, attrMoveSpeed, attrDamage, attrCritDmg, attrGoldBonus, attrCdReduction, attrXpBonus,
         gearHpBonus, gearArmorBonus, gearHpRegenBonus, gearMoveSpeedBonus, gearDodgeBonus, gearDamageBonus, gearCritBonus, gearAtkSpeedBonus, gearXpBonus
       };
     }
@@ -9485,7 +9500,7 @@
       playerStats.hp = stats.baseHp + stats.attrHp + stats.gearHpBonus;
       playerStats.maxHp = stats.baseHp + stats.attrHp + stats.gearHpBonus;
       playerStats.strength = stats.baseDamage * (1 + stats.attrDamage + stats.gearDamageBonus);
-      playerStats.walkSpeed = stats.baseSpeed * (1 + stats.gearMoveSpeedBonus);
+      playerStats.walkSpeed = stats.baseSpeed * (1 + stats.attrMoveSpeed + stats.gearMoveSpeedBonus); // PR #124: Add Dexterity move speed
       playerStats.kills = 0;
       playerStats.atkSpeed = stats.baseAtkSpeed * (1 + stats.attrAtkSpeed + stats.gearAtkSpeedBonus);
       playerStats.critChance = stats.baseCritChance + stats.attrCritChance + stats.gearCritBonus;
@@ -9493,6 +9508,11 @@
       playerStats.critDmg = (stats.baseCritDmg + stats.attrCritDmg) || 1.5;
       playerStats.armor = stats.baseArmor + stats.gearArmorBonus;
       playerStats.hpRegen = stats.baseRegen + stats.attrRegen + stats.gearHpRegenBonus;
+      // PR #124-125: Initialize new stats
+      playerStats.dodge = stats.attrDodge + stats.gearDodgeBonus;
+      playerStats.goldBonus = 1 + stats.attrGoldBonus;
+      playerStats.xpBonus = 1 + stats.attrXpBonus + stats.gearXpBonus;
+      playerStats.precision = 0; // PR #125: Reset precision (gained through gameplay)
       playerStats.gold = 0;
       waveCount = 0;
       lastWaveEndTime = 0; // Reset wave timing
