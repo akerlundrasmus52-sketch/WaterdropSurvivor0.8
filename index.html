@@ -3747,7 +3747,6 @@
         
         // Track mini-boss defeats for achievements
         if (this.isMiniBoss) {
-          if (!playerStats.miniBossesDefeated) playerStats.miniBossesDefeated = 0;
           playerStats.miniBossesDefeated++;
           createFloatingText("MINI-BOSS DEFEATED! 🏆", this.mesh.position);
         }
@@ -5043,10 +5042,10 @@
       weaponMaster: { id: 'weaponMaster', name: 'Weapon Master', desc: 'Unlock all 3 weapons', reward: 150, attributePoints: 1, check: () => playerStats.weaponsUnlocked >= 3, claimed: false },
       untouchable: { id: 'untouchable', name: 'Untouchable', desc: 'Take no damage for 3 minutes', reward: 300, attributePoints: 3, check: () => playerStats.survivalTime >= 180 && playerStats.damageTaken === 0, claimed: false },
       
-      miniBoss1: { id: 'miniBoss1', name: 'Boss Slayer I', desc: 'Defeat your first mini-boss', reward: 150, attributePoints: 2, check: () => (playerStats.miniBossesDefeated || 0) >= 1, claimed: false },
-      miniBoss3: { id: 'miniBoss3', name: 'Boss Slayer II', desc: 'Defeat 3 mini-bosses', reward: 300, attributePoints: 2, check: () => (playerStats.miniBossesDefeated || 0) >= 3, claimed: false },
-      miniBoss5: { id: 'miniBoss5', name: 'Boss Slayer III', desc: 'Defeat 5 mini-bosses', reward: 500, attributePoints: 3, check: () => (playerStats.miniBossesDefeated || 0) >= 5, claimed: false },
-      miniBoss10: { id: 'miniBoss10', name: 'Boss Hunter', desc: 'Defeat 10 mini-bosses', reward: 800, attributePoints: 4, check: () => (playerStats.miniBossesDefeated || 0) >= 10, claimed: false },
+      miniBoss1: { id: 'miniBoss1', name: 'Boss Slayer I', desc: 'Defeat your first mini-boss', reward: 150, attributePoints: 2, check: () => playerStats.miniBossesDefeated >= 1, claimed: false },
+      miniBoss3: { id: 'miniBoss3', name: 'Boss Slayer II', desc: 'Defeat 3 mini-bosses', reward: 300, attributePoints: 2, check: () => playerStats.miniBossesDefeated >= 3, claimed: false },
+      miniBoss5: { id: 'miniBoss5', name: 'Boss Slayer III', desc: 'Defeat 5 mini-bosses', reward: 500, attributePoints: 3, check: () => playerStats.miniBossesDefeated >= 5, claimed: false },
+      miniBoss10: { id: 'miniBoss10', name: 'Boss Hunter', desc: 'Defeat 10 mini-bosses', reward: 800, attributePoints: 4, check: () => playerStats.miniBossesDefeated >= 10, claimed: false },
       
       level10: { id: 'level10', name: 'Rising Star', desc: 'Reach Level 10', reward: 100, attributePoints: 1, check: () => playerStats.lvl >= 10, claimed: false },
       level25: { id: 'level25', name: 'Experienced Fighter', desc: 'Reach Level 25', reward: 250, attributePoints: 2, check: () => playerStats.lvl >= 25, claimed: false },
