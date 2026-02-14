@@ -712,6 +712,12 @@
       }
     }
 
+    /* Skill tree node availability indicator - fades in and out */
+    @keyframes skill-fade {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+
     .upgrade-title {
       font-weight: bold;
       color: #FFD700;
@@ -6507,122 +6513,544 @@
     // ===== SKILL TREE SYSTEM =====
     
     const SKILL_TREE = {
-      // Combat Skills
-      'combat_mastery': {
-        id: 'combat_mastery',
-        name: 'Combat Mastery',
-        description: '+10% Damage, +5% Attack Speed',
+      // ===== OFFENSE BRANCH (Red theme) =====
+      'offense_1': {
+        id: 'offense_1',
+        name: 'Sharp Edge',
+        description: '+5% base damage',
         icon: '⚔️',
-        category: 'Combat',
+        category: 'Offense',
         cost: 1,
-        maxLevel: 5,
+        maxLevel: 1,
         requires: [],
-        effect: (level) => ({ damage: level * 0.10, attackSpeed: level * 0.05 })
+        effect: (level) => ({ baseDamage: level * 0.05 })
       },
-      'critical_expert': {
-        id: 'critical_expert',
-        name: 'Critical Expert',
-        description: '+5% Crit Chance, +10% Crit Damage',
-        icon: '💥',
-        category: 'Combat',
+      'offense_2': {
+        id: 'offense_2',
+        name: 'Power Strike',
+        description: '+10% damage',
+        icon: '💪',
+        category: 'Offense',
         cost: 1,
-        maxLevel: 5,
-        requires: ['combat_mastery'],
-        effect: (level) => ({ critChance: level * 0.05, critDamage: level * 0.10 })
+        maxLevel: 1,
+        requires: ['offense_1'],
+        effect: (level) => ({ damage: level * 0.10 })
       },
-      'berserker': {
-        id: 'berserker',
-        name: 'Berserker',
-        description: '+20% Damage when below 30% HP',
-        icon: '🔥',
-        category: 'Combat',
-        cost: 2,
-        maxLevel: 3,
-        requires: ['combat_mastery'],
-        effect: (level) => ({ berserkerDamage: level * 0.20 })
+      'offense_3': {
+        id: 'offense_3',
+        name: 'Critical Eye',
+        description: '+5% crit chance',
+        icon: '👁️',
+        category: 'Offense',
+        cost: 1,
+        maxLevel: 1,
+        requires: ['offense_2'],
+        effect: (level) => ({ critChance: level * 0.05 })
+      },
+      'offense_4': {
+        id: 'offense_4',
+        name: 'Deadly Precision',
+        description: '+15% crit damage',
+        icon: '🎯',
+        category: 'Offense',
+        cost: 1,
+        maxLevel: 1,
+        requires: ['offense_3'],
+        effect: (level) => ({ critDamage: level * 0.15 })
+      },
+      'offense_5': {
+        id: 'offense_5',
+        name: 'Multi-Strike',
+        description: '10% chance for double hit',
+        icon: '⚡',
+        category: 'Offense',
+        cost: 1,
+        maxLevel: 1,
+        requires: ['offense_4'],
+        effect: (level) => ({ multiStrike: level * 0.10 })
+      },
+      'offense_6': {
+        id: 'offense_6',
+        name: 'Weapon Mastery',
+        description: '+20% weapon damage',
+        icon: '🗡️',
+        category: 'Offense',
+        cost: 1,
+        maxLevel: 1,
+        requires: ['offense_5'],
+        effect: (level) => ({ weaponDamage: level * 0.20 })
+      },
+      'offense_7': {
+        id: 'offense_7',
+        name: 'Executioner',
+        description: '+25% damage to enemies below 30% HP',
+        icon: '💀',
+        category: 'Offense',
+        cost: 1,
+        maxLevel: 1,
+        requires: ['offense_6'],
+        effect: (level) => ({ executionerDamage: level * 0.25 })
+      },
+      'offense_8': {
+        id: 'offense_8',
+        name: 'Annihilation',
+        description: '+35% overall damage, attacks pierce +1 enemy',
+        icon: '💥',
+        category: 'Offense',
+        cost: 1,
+        maxLevel: 1,
+        requires: ['offense_7'],
+        effect: (level) => ({ annihilationDamage: level * 0.35, pierce: level })
       },
       
-      // Defense Skills
-      'iron_skin': {
-        id: 'iron_skin',
-        name: 'Iron Skin',
-        description: '+5 Armor, +50 Max HP',
+      // ===== DEFENSE BRANCH (Blue theme) =====
+      'defense_1': {
+        id: 'defense_1',
+        name: 'Tough Skin',
+        description: '+5 max HP',
         icon: '🛡️',
         category: 'Defense',
         cost: 1,
-        maxLevel: 5,
+        maxLevel: 1,
         requires: [],
-        effect: (level) => ({ armor: level * 5, maxHp: level * 50 })
+        effect: (level) => ({ maxHp: level * 5 })
       },
-      'regeneration': {
-        id: 'regeneration',
+      'defense_2': {
+        id: 'defense_2',
+        name: 'Resilience',
+        description: '+10 max HP',
+        icon: '💪',
+        category: 'Defense',
+        cost: 1,
+        maxLevel: 1,
+        requires: ['defense_1'],
+        effect: (level) => ({ maxHp: level * 10 })
+      },
+      'defense_3': {
+        id: 'defense_3',
+        name: 'Armor Plating',
+        description: '+5% damage reduction',
+        icon: '🛡️',
+        category: 'Defense',
+        cost: 1,
+        maxLevel: 1,
+        requires: ['defense_2'],
+        effect: (level) => ({ armor: level * 5 })
+      },
+      'defense_4': {
+        id: 'defense_4',
+        name: 'Fortitude',
+        description: '+10% damage reduction',
+        icon: '🏰',
+        category: 'Defense',
+        cost: 1,
+        maxLevel: 1,
+        requires: ['defense_3'],
+        effect: (level) => ({ armor: level * 10 })
+      },
+      'defense_5': {
+        id: 'defense_5',
         name: 'Regeneration',
-        description: '+1 HP/sec Regen',
+        description: 'Heal 1 HP every 10 seconds',
         icon: '💚',
         category: 'Defense',
         cost: 1,
-        maxLevel: 5,
-        requires: ['iron_skin'],
-        effect: (level) => ({ hpRegen: level * 1 })
-      },
-      'last_stand': {
-        id: 'last_stand',
-        name: 'Last Stand',
-        description: 'Survive fatal damage once per run with 1 HP',
-        icon: '💀',
-        category: 'Defense',
-        cost: 3,
         maxLevel: 1,
-        requires: ['iron_skin'],
-        effect: (level) => ({ lastStand: level })
+        requires: ['defense_4'],
+        effect: (level) => ({ hpRegen: level * 0.1 }) // 0.1 HP/sec = 1 HP per 10 seconds
+      },
+      'defense_6': {
+        id: 'defense_6',
+        name: 'Second Wind',
+        description: 'Survive fatal blow once per run with 20% HP',
+        icon: '❤️',
+        category: 'Defense',
+        cost: 1,
+        maxLevel: 1,
+        requires: ['defense_5'],
+        effect: (level) => ({ secondWind: level })
+      },
+      'defense_7': {
+        id: 'defense_7',
+        name: 'Iron Will',
+        description: '+25 max HP, +15% damage reduction',
+        icon: '🔰',
+        category: 'Defense',
+        cost: 1,
+        maxLevel: 1,
+        requires: ['defense_6'],
+        effect: (level) => ({ maxHp: level * 25, armor: level * 15 })
+      },
+      'defense_8': {
+        id: 'defense_8',
+        name: 'Immortal Guardian',
+        description: 'Regenerate 2% max HP per second when below 25% HP',
+        icon: '⛨',
+        category: 'Defense',
+        cost: 1,
+        maxLevel: 1,
+        requires: ['defense_7'],
+        effect: (level) => ({ immortalGuardian: level })
       },
       
-      // Utility Skills
-      'swift_feet': {
-        id: 'swift_feet',
+      // ===== MOBILITY BRANCH (Green theme) =====
+      'mobility_1': {
+        id: 'mobility_1',
         name: 'Swift Feet',
-        description: '+10% Movement Speed',
+        description: '+5% movement speed',
         icon: '👟',
-        category: 'Utility',
+        category: 'Mobility',
         cost: 1,
-        maxLevel: 5,
+        maxLevel: 1,
         requires: [],
+        effect: (level) => ({ moveSpeed: level * 0.05 })
+      },
+      'mobility_2': {
+        id: 'mobility_2',
+        name: 'Quick Step',
+        description: '+10% movement speed',
+        icon: '💨',
+        category: 'Mobility',
+        cost: 1,
+        maxLevel: 1,
+        requires: ['mobility_1'],
         effect: (level) => ({ moveSpeed: level * 0.10 })
       },
-      'dash_master': {
-        id: 'dash_master',
-        name: 'Dash Master',
-        description: '-20% Dash Cooldown',
-        icon: '💨',
-        category: 'Utility',
+      'mobility_3': {
+        id: 'mobility_3',
+        name: 'Evasion',
+        description: '5% chance to dodge attacks',
+        icon: '🌪️',
+        category: 'Mobility',
         cost: 1,
-        maxLevel: 5,
-        requires: ['swift_feet'],
+        maxLevel: 1,
+        requires: ['mobility_2'],
+        effect: (level) => ({ dodge: level * 0.05 })
+      },
+      'mobility_4': {
+        id: 'mobility_4',
+        name: 'Agility',
+        description: '+10% dodge chance',
+        icon: '🏃',
+        category: 'Mobility',
+        cost: 1,
+        maxLevel: 1,
+        requires: ['mobility_3'],
+        effect: (level) => ({ dodge: level * 0.10 })
+      },
+      'mobility_5': {
+        id: 'mobility_5',
+        name: 'Dash Master',
+        description: 'Dash cooldown -20%',
+        icon: '⚡',
+        category: 'Mobility',
+        cost: 1,
+        maxLevel: 1,
+        requires: ['mobility_4'],
         effect: (level) => ({ dashCooldown: level * 0.20 })
       },
-      'treasure_hunter': {
-        id: 'treasure_hunter',
+      'mobility_6': {
+        id: 'mobility_6',
+        name: 'Phantom Step',
+        description: 'Brief invincibility after taking damage',
+        icon: '👻',
+        category: 'Mobility',
+        cost: 1,
+        maxLevel: 1,
+        requires: ['mobility_5'],
+        effect: (level) => ({ phantomStep: level })
+      },
+      'mobility_7': {
+        id: 'mobility_7',
+        name: 'Wind Walker',
+        description: '+25% movement speed, enemies have -10% accuracy',
+        icon: '🌬️',
+        category: 'Mobility',
+        cost: 1,
+        maxLevel: 1,
+        requires: ['mobility_6'],
+        effect: (level) => ({ moveSpeed: level * 0.25, enemyAccuracy: -level * 0.10 })
+      },
+      'mobility_8': {
+        id: 'mobility_8',
+        name: 'Untouchable',
+        description: '25% dodge chance, leave damaging trail while moving',
+        icon: '✨',
+        category: 'Mobility',
+        cost: 1,
+        maxLevel: 1,
+        requires: ['mobility_7'],
+        effect: (level) => ({ dodge: level * 0.25, damagingTrail: level })
+      },
+      
+      // ===== UTILITY BRANCH (Yellow/Gold theme) =====
+      'utility_1': {
+        id: 'utility_1',
+        name: 'Magnetic Pull',
+        description: '+15% pickup range',
+        icon: '🧲',
+        category: 'Utility',
+        cost: 1,
+        maxLevel: 1,
+        requires: [],
+        effect: (level) => ({ magnetRange: level * 0.15 })
+      },
+      'utility_2': {
+        id: 'utility_2',
+        name: 'XP Boost',
+        description: '+10% XP gain',
+        icon: '📈',
+        category: 'Utility',
+        cost: 1,
+        maxLevel: 1,
+        requires: ['utility_1'],
+        effect: (level) => ({ expGain: level * 0.10 })
+      },
+      'utility_3': {
+        id: 'utility_3',
+        name: 'Lucky Find',
+        description: '+10% gold drop rate',
+        icon: '🍀',
+        category: 'Utility',
+        cost: 1,
+        maxLevel: 1,
+        requires: ['utility_2'],
+        effect: (level) => ({ goldDrop: level * 0.10 })
+      },
+      'utility_4': {
+        id: 'utility_4',
+        name: 'Fortune',
+        description: '+15% luck stat',
+        icon: '🎲',
+        category: 'Utility',
+        cost: 1,
+        maxLevel: 1,
+        requires: ['utility_3'],
+        effect: (level) => ({ luck: level * 0.15 })
+      },
+      'utility_5': {
+        id: 'utility_5',
+        name: 'Efficient Learner',
+        description: '+20% XP gain',
+        icon: '📚',
+        category: 'Utility',
+        cost: 1,
+        maxLevel: 1,
+        requires: ['utility_4'],
+        effect: (level) => ({ expGain: level * 0.20 })
+      },
+      'utility_6': {
+        id: 'utility_6',
         name: 'Treasure Hunter',
-        description: '+15% Gold Drop, +10% EXP Gain',
+        description: 'Chests drop better loot',
         icon: '💰',
         category: 'Utility',
         cost: 1,
-        maxLevel: 5,
-        requires: ['swift_feet'],
-        effect: (level) => ({ goldDrop: level * 0.15, expGain: level * 0.10 })
+        maxLevel: 1,
+        requires: ['utility_5'],
+        effect: (level) => ({ treasureHunter: level })
+      },
+      'utility_7': {
+        id: 'utility_7',
+        name: 'Golden Touch',
+        description: '+50% gold, +30% pickup range',
+        icon: '👑',
+        category: 'Utility',
+        cost: 1,
+        maxLevel: 1,
+        requires: ['utility_6'],
+        effect: (level) => ({ goldDrop: level * 0.50, magnetRange: level * 0.30 })
+      },
+      'utility_8': {
+        id: 'utility_8',
+        name: 'Master of Fortune',
+        description: 'Double rare drops, +50% XP, all pickups auto-collect',
+        icon: '💎',
+        category: 'Utility',
+        cost: 1,
+        maxLevel: 1,
+        requires: ['utility_7'],
+        effect: (level) => ({ rareDrop: level * 2, expGain: level * 0.50, autoCollect: level })
       },
       
-      // Ultimate Skills
-      'unstoppable': {
-        id: 'unstoppable',
-        name: 'Unstoppable',
-        description: '+25% All Stats',
-        icon: '⭐',
-        category: 'Ultimate',
-        cost: 5,
+      // ===== ELEMENTAL BRANCH (Purple theme) =====
+      'elemental_1': {
+        id: 'elemental_1',
+        name: 'Fire Affinity',
+        description: 'Attacks have 5% chance to burn (DoT)',
+        icon: '🔥',
+        category: 'Elemental',
+        cost: 1,
         maxLevel: 1,
-        requires: ['critical_expert', 'regeneration', 'dash_master'],
-        effect: (level) => ({ allStats: level * 0.25 })
+        requires: [],
+        effect: (level) => ({ fireProc: level * 0.05 })
+      },
+      'elemental_2': {
+        id: 'elemental_2',
+        name: 'Ice Affinity',
+        description: 'Attacks have 5% chance to slow enemies',
+        icon: '❄️',
+        category: 'Elemental',
+        cost: 1,
+        maxLevel: 1,
+        requires: ['elemental_1'],
+        effect: (level) => ({ iceProc: level * 0.05 })
+      },
+      'elemental_3': {
+        id: 'elemental_3',
+        name: 'Lightning Affinity',
+        description: 'Attacks have 5% chance to chain to nearby enemy',
+        icon: '⚡',
+        category: 'Elemental',
+        cost: 1,
+        maxLevel: 1,
+        requires: ['elemental_2'],
+        effect: (level) => ({ lightningProc: level * 0.05 })
+      },
+      'elemental_4': {
+        id: 'elemental_4',
+        name: 'Elemental Surge',
+        description: '+10% all elemental proc chances',
+        icon: '🌟',
+        category: 'Elemental',
+        cost: 1,
+        maxLevel: 1,
+        requires: ['elemental_3'],
+        effect: (level) => ({ elementalBoost: level * 0.10 })
+      },
+      'elemental_5': {
+        id: 'elemental_5',
+        name: 'Burning Inferno',
+        description: 'Burn damage +50%, spread to nearby enemies',
+        icon: '🔥',
+        category: 'Elemental',
+        cost: 1,
+        maxLevel: 1,
+        requires: ['elemental_4'],
+        effect: (level) => ({ burnDamage: level * 0.50, burnSpread: level })
+      },
+      'elemental_6': {
+        id: 'elemental_6',
+        name: 'Frozen Heart',
+        description: 'Slowed enemies take +20% damage',
+        icon: '❄️',
+        category: 'Elemental',
+        cost: 1,
+        maxLevel: 1,
+        requires: ['elemental_5'],
+        effect: (level) => ({ frozenDamage: level * 0.20 })
+      },
+      'elemental_7': {
+        id: 'elemental_7',
+        name: 'Storm Caller',
+        description: 'Lightning chains to 3 enemies, +30% lightning damage',
+        icon: '⚡',
+        category: 'Elemental',
+        cost: 1,
+        maxLevel: 1,
+        requires: ['elemental_6'],
+        effect: (level) => ({ lightningChains: level * 3, lightningDamage: level * 0.30 })
+      },
+      'elemental_8': {
+        id: 'elemental_8',
+        name: 'Elemental Overlord',
+        description: '20% chance for all 3 elements on hit, elemental explosions on kill',
+        icon: '🌈',
+        category: 'Elemental',
+        cost: 1,
+        maxLevel: 1,
+        requires: ['elemental_7'],
+        effect: (level) => ({ tripleElement: level * 0.20, elementalExplosion: level })
+      },
+      
+      // ===== MASTERY BRANCH (White/Silver theme) =====
+      'mastery_1': {
+        id: 'mastery_1',
+        name: 'Weapon Proficiency',
+        description: 'All weapons +5% fire rate',
+        icon: '🎯',
+        category: 'Mastery',
+        cost: 1,
+        maxLevel: 1,
+        requires: [],
+        effect: (level) => ({ fireRate: level * 0.05 })
+      },
+      'mastery_2': {
+        id: 'mastery_2',
+        name: 'Area Expert',
+        description: '+10% AoE size',
+        icon: '⭕',
+        category: 'Mastery',
+        cost: 1,
+        maxLevel: 1,
+        requires: ['mastery_1'],
+        effect: (level) => ({ aoeSize: level * 0.10 })
+      },
+      'mastery_3': {
+        id: 'mastery_3',
+        name: 'Duration Master',
+        description: '+15% effect duration',
+        icon: '⏱️',
+        category: 'Mastery',
+        cost: 1,
+        maxLevel: 1,
+        requires: ['mastery_2'],
+        effect: (level) => ({ effectDuration: level * 0.15 })
+      },
+      'mastery_4': {
+        id: 'mastery_4',
+        name: 'Cooldown Reduction',
+        description: '-10% all cooldowns',
+        icon: '⚡',
+        category: 'Mastery',
+        cost: 1,
+        maxLevel: 1,
+        requires: ['mastery_3'],
+        effect: (level) => ({ cooldownReduction: level * 0.10 })
+      },
+      'mastery_5': {
+        id: 'mastery_5',
+        name: 'Projectile Master',
+        description: '+1 projectile to all weapons',
+        icon: '🎲',
+        category: 'Mastery',
+        cost: 1,
+        maxLevel: 1,
+        requires: ['mastery_4'],
+        effect: (level) => ({ projectileCount: level })
+      },
+      'mastery_6': {
+        id: 'mastery_6',
+        name: 'Evolution Affinity',
+        description: 'Weapons evolve at lower levels',
+        icon: '🔮',
+        category: 'Mastery',
+        cost: 1,
+        maxLevel: 1,
+        requires: ['mastery_5'],
+        effect: (level) => ({ evolutionBonus: level })
+      },
+      'mastery_7': {
+        id: 'mastery_7',
+        name: 'Ultimate Power',
+        description: 'All weapon stats +20%',
+        icon: '⭐',
+        category: 'Mastery',
+        cost: 1,
+        maxLevel: 1,
+        requires: ['mastery_6'],
+        effect: (level) => ({ weaponStats: level * 0.20 })
+      },
+      'mastery_8': {
+        id: 'mastery_8',
+        name: 'Transcendence',
+        description: 'Unlock ultimate forms for all weapons, +50% all stats',
+        icon: '✨',
+        category: 'Mastery',
+        cost: 1,
+        maxLevel: 1,
+        requires: ['mastery_7'],
+        effect: (level) => ({ ultimateForms: level, allStats: level * 0.50 })
       }
     };
     
@@ -6675,17 +7103,27 @@
       
       container.innerHTML = '';
       
-      const categories = ['Combat', 'Defense', 'Utility', 'Ultimate'];
+      // Define branches with themed colors
+      const branches = [
+        { name: 'Offense', emoji: '⚔️', color: '#e74c3c', borderColor: '#c0392b' },
+        { name: 'Defense', emoji: '🛡️', color: '#3498db', borderColor: '#2980b9' },
+        { name: 'Mobility', emoji: '🏃', color: '#27ae60', borderColor: '#229954' },
+        { name: 'Utility', emoji: '🔧', color: '#f39c12', borderColor: '#e67e22' },
+        { name: 'Elemental', emoji: '🔮', color: '#9b59b6', borderColor: '#8e44ad' },
+        { name: 'Mastery', emoji: '🌟', color: '#95a5a6', borderColor: '#7f8c8d' }
+      ];
       
-      categories.forEach(category => {
-        const categorySkills = Object.values(SKILL_TREE).filter(s => s.category === category);
+      branches.forEach(branch => {
+        const categorySkills = Object.values(SKILL_TREE).filter(s => s.category === branch.name);
         if (categorySkills.length === 0) return;
         
         const categoryDiv = document.createElement('div');
-        categoryDiv.style.cssText = 'background: linear-gradient(to bottom, #2a2a3e, #1a1a2e); border: 3px solid #9b59b6; border-radius: 15px; padding: 20px;';
+        categoryDiv.style.cssText = `background: linear-gradient(to bottom, #2a2a3e, #1a1a2e); border: 3px solid ${branch.borderColor}; border-radius: 15px; padding: 20px; box-shadow: 0 0 15px ${branch.color}40;`;
         
         categoryDiv.innerHTML = `
-          <div style="color: #9b59b6; font-size: 24px; font-weight: bold; margin-bottom: 15px; text-align: center;">${category}</div>
+          <div style="color: ${branch.color}; font-size: 24px; font-weight: bold; margin-bottom: 15px; text-align: center; text-shadow: 0 0 10px ${branch.color};">
+            ${branch.emoji} ${branch.name}
+          </div>
         `;
         
         categorySkills.forEach(skill => {
@@ -6695,14 +7133,15 @@
           
           const skillDiv = document.createElement('div');
           skillDiv.style.cssText = `
-            background: ${maxed ? 'linear-gradient(to bottom, #27ae60, #229954)' : (level > 0 ? 'linear-gradient(to bottom, #3498db, #2980b9)' : 'linear-gradient(to bottom, #34495e, #2c3e50)')};
-            border: 2px solid ${maxed ? '#FFD700' : (canUnlock ? '#9b59b6' : '#555')};
+            background: ${maxed ? 'linear-gradient(to bottom, #27ae60, #229954)' : (level > 0 ? `linear-gradient(to bottom, ${branch.color}, ${branch.borderColor})` : 'linear-gradient(to bottom, #34495e, #2c3e50)')};
+            border: 2px solid ${maxed ? '#FFD700' : (canUnlock ? branch.color : '#555')};
             border-radius: 10px;
             padding: 12px;
             margin: 10px 0;
             cursor: ${canUnlock ? 'pointer' : 'default'};
             opacity: ${level === 0 && !canUnlock ? '0.6' : '1'};
             transition: all 0.2s;
+            ${canUnlock ? `box-shadow: 0 0 15px ${branch.color}; animation: skill-fade 2s infinite;` : ''}
           `;
           
           if (canUnlock) {
@@ -6715,17 +7154,19 @@
             ? `<div style="color: #95a5a6; font-size: 11px; margin-top: 5px;">Requires: ${skill.requires.map(r => SKILL_TREE[r].name).join(', ')}</div>`
             : '';
           
+          const statusIcon = maxed ? '✅' : (level > 0 ? '⭐' : '🔒');
+          
           skillDiv.innerHTML = `
             <div style="display: flex; justify-content: space-between; align-items: center;">
               <div style="font-size: 28px;">${skill.icon}</div>
               <div style="flex: 1; margin: 0 10px;">
-                <div style="color: #fff; font-size: 16px; font-weight: bold;">${skill.name}</div>
+                <div style="color: #fff; font-size: 16px; font-weight: bold;">${skill.name} ${statusIcon}</div>
                 <div style="color: #ecf0f1; font-size: 12px; margin-top: 3px;">${skill.description}</div>
                 ${reqText}
               </div>
               <div style="text-align: right;">
                 <div style="color: #FFD700; font-size: 14px; font-weight: bold;">${level}/${skill.maxLevel}</div>
-                <div style="color: #e74c3c; font-size: 12px;">Cost: ${skill.cost} SP</div>
+                <div style="color: ${canUnlock ? '#2ecc71' : '#e74c3c'}; font-size: 12px; font-weight: bold;">Cost: ${skill.cost} SP</div>
               </div>
             </div>
           `;
@@ -6745,6 +7186,43 @@
       if (reason) {
         showStatChange(`+${amount} Skill Point${amount > 1 ? 's' : ''}! ${reason}`);
       }
+    }
+
+    // Update UI after skill tree changes
+    function recalculateAllStats() {
+      // Called when skills are unlocked to refresh UI
+      // Skill bonuses are applied dynamically via getSkillBonus() calls during gameplay
+      // This ensures the HUD reflects any immediate stat changes
+      updateHUD();
+    }
+
+    // Get total skill bonus for a specific stat
+    function getSkillBonus(statName) {
+      let total = 0;
+      
+      saveData.unlockedSkills.forEach(unlockedSkill => {
+        const skill = SKILL_TREE[unlockedSkill.id];
+        if (skill) {
+          const effects = skill.effect(unlockedSkill.level);
+          if (effects[statName]) {
+            total += effects[statName];
+          }
+        }
+      });
+      
+      return total;
+    }
+
+    // Check if a specific skill effect is active
+    function hasSkillEffect(effectName) {
+      return saveData.unlockedSkills.some(unlockedSkill => {
+        const skill = SKILL_TREE[unlockedSkill.id];
+        if (skill) {
+          const effects = skill.effect(unlockedSkill.level);
+          return effects[effectName] && effects[effectName] > 0;
+        }
+        return false;
+      });
     }
 
     // Expose to global scope for onclick handlers
@@ -8861,6 +9339,10 @@
       isPaused = true;
       playerStats.lvl++;
       playerStats.exp -= playerStats.expReq;
+      
+      // Award 1 skill point per level
+      saveData.skillPoints++;
+      saveSaveData();
       
       // Victory condition: Reaching level 100
       if (playerStats.lvl === 100) {
