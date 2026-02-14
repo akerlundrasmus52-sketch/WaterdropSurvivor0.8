@@ -2031,6 +2031,33 @@
 
     <!-- Phase 3: Stat Notification Queue -->
     <div id="stat-notifications"></div>
+    
+    <!-- Phase 5: Companion Portrait UI -->
+    <div id="companion-portrait" style="
+      position: absolute;
+      bottom: 120px;
+      right: 20px;
+      width: 100px;
+      background: linear-gradient(135deg, rgba(26, 26, 46, 0.95), rgba(22, 33, 62, 0.95));
+      border: 3px solid #5DADE2;
+      border-radius: 15px;
+      padding: 10px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8);
+      display: none;
+      pointer-events: none;
+    ">
+      <div style="text-align: center; margin-bottom: 5px;">
+        <div id="companion-icon" style="font-size: 36px;">🐺</div>
+        <div id="companion-name" style="font-size: 12px; color: #5DADE2; font-weight: bold;">Storm Wolf</div>
+        <div id="companion-level" style="font-size: 10px; color: #95a5a6;">Lvl 1</div>
+      </div>
+      <div style="background: #34495e; height: 6px; border-radius: 3px; overflow: hidden; margin-bottom: 3px;">
+        <div id="companion-xp-bar" style="background: linear-gradient(90deg, #3498db, #2ecc71); height: 100%; width: 0%;"></div>
+      </div>
+      <div style="background: #c0392b; height: 4px; border-radius: 2px; overflow: hidden;">
+        <div id="companion-hp-bar" style="background: #e74c3c; height: 100%; width: 100%;"></div>
+      </div>
+    </div>
 
     <!-- Countdown Text (PR #70-71) -->
     <div id="tutorial-text" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 96px; font-weight: bold; color: #FFF; text-shadow: 0 0 20px rgba(255,255,255,0.8), 0 0 40px rgba(93,173,226,0.6); opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 150;"></div>
@@ -3509,6 +3536,34 @@
         shakeAnim();
 
         if (playerStats.hp <= 0) {
+          // Phase 5: Check for Phoenix Rebirth
+          if (activeCompanion && 
+              activeCompanion.id === 'skyFalcon' && 
+              activeCompanion.isEvolved && 
+              !COMPANIONS.skyFalcon.abilities.evolved.rebirth.usedThisRun) {
+            
+            // Phoenix revives the player!
+            COMPANIONS.skyFalcon.abilities.evolved.rebirth.usedThisRun = true;
+            const reviveHP = playerStats.maxHp * COMPANIONS.skyFalcon.abilities.evolved.rebirth.reviveHP;
+            playerStats.hp = reviveHP;
+            
+            // Visual effects
+            createFloatingText('PHOENIX REBIRTH! 🔥', this.mesh.position);
+            spawnParticles(this.mesh.position, 0xFF4400, 40);
+            spawnParticles(this.mesh.position, 0xFFAA00, 30);
+            spawnParticles(this.mesh.position, 0xFFFFFF, 20);
+            playSound('levelup');
+            
+            // Brief invulnerability
+            this.invulnerable = true;
+            this.invulnerabilityTime = 0;
+            this.invulnerabilityDuration = 3.0; // 3 seconds of invulnerability after rebirth
+            
+            updateHUD();
+            showStatChange('🔥 Phoenix used Rebirth! You have been revived!');
+            return;
+          }
+          
           // ENHANCED Death splash: more particles + ground pool with fade
           spawnParticles(this.mesh.position, COLORS.player, 25); // Reduced for performance
           spawnParticles(this.mesh.position, 0xFFFFFF, 8); // Reduced for performance
@@ -8187,7 +8242,213 @@
     };
     window.researchBonus = () => { showStatChange('⚠️ Research system coming in future update!'); playSound('hit'); };
     window.viewLore = () => { showStatChange('📜 Ancient texts speak of the Water Drop\'s destiny...'); playSound('levelup'); };
-    window.manageCompanions = () => { showStatChange('⚠️ Companion system coming in Phase 5!'); playSound('hit'); };
+    window.manageCompanions = () => { 
+      playSound('levelup');
+      
+      // Create companion management modal
+      const modal = document.createElement('div');
+      modal.id = 'companion-modal';
+      modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.9);
+        z-index: 1000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      `;
+      
+      const companions = saveData.camp.companionDen.companions;
+      const denLevel = saveData.camp.companionDen.level;
+      
+      // Helper function to get unlock status
+      const getUnlockStatus = (id) => {
+        const config = COMPANIONS[id];
+        if (config.unlockCondition === 'default') return { unlocked: true, text: 'Default' };
+        if (config.unlockCondition === 'level15') {
+          return companions[id].unlocked ? 
+            { unlocked: true, text: 'Unlocked' } : 
+            { unlocked: false, text: 'Reach Level 15 in a run' };
+        }
+        if (config.unlockCondition === 'companionDenLevel2') {
+          return denLevel >= 2 ? 
+            { unlocked: true, text: 'Unlocked' } : 
+            { unlocked: false, text: 'Upgrade Companion Den to Level 2' };
+        }
+        return { unlocked: false, text: 'Locked' };
+      };
+      
+      // Auto-unlock Water Spirit if den is level 2+
+      if (denLevel >= 2 && !companions.waterSpirit.unlocked) {
+        companions.waterSpirit.unlocked = true;
+        saveSaveData();
+      }
+      
+      // Build companion cards
+      let companionHTML = '';
+      Object.keys(COMPANIONS).forEach(id => {
+        const config = COMPANIONS[id];
+        const data = companions[id];
+        const unlockStatus = getUnlockStatus(id);
+        const isEvolved = data.level >= 10;
+        const displayName = isEvolved ? config.evolvedName : config.name;
+        const displayIcon = isEvolved ? config.evolvedIcon : config.icon;
+        const displayDesc = isEvolved ? config.evolvedDescription : config.description;
+        
+        // Calculate stats
+        const stats = isEvolved ? config.evolvedStats : config.baseStats;
+        const levelBonus = (data.level - 1) * 0.10;
+        const speedBonus = (data.level - 1) * 0.05;
+        const damage = stats.damage * (1 + levelBonus);
+        const attackSpeed = stats.attackSpeed * (1 - speedBonus);
+        const health = stats.health + (data.level - 1) * 10;
+        
+        // XP progress
+        const currentXP = data.xp;
+        const requiredXP = data.level < 10 ? COMPANION_LEVEL_REQUIREMENTS[data.level] : COMPANION_LEVEL_REQUIREMENTS[9];
+        const xpPercent = data.level >= 10 ? 100 : (currentXP / requiredXP * 100);
+        
+        companionHTML += \`
+          <div style="
+            background: linear-gradient(135deg, \${unlockStatus.unlocked ? '#2c3e50' : '#1a1a1a'} 0%, \${unlockStatus.unlocked ? '#34495e' : '#0a0a0a'} 100%);
+            border: 3px solid \${data.selected ? '#f39c12' : unlockStatus.unlocked ? '#5DADE2' : '#555'};
+            border-radius: 15px;
+            padding: 20px;
+            min-width: 280px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            \${unlockStatus.unlocked ? '' : 'opacity: 0.6;'}
+          ">
+            <div style="text-align: center; margin-bottom: 15px;">
+              <div style="font-size: 48px; margin-bottom: 10px;">\${displayIcon}</div>
+              <div style="font-size: 20px; font-weight: bold; color: \${isEvolved ? '#f39c12' : '#5DADE2'}; margin-bottom: 5px;">
+                \${displayName}
+              </div>
+              <div style="font-size: 12px; color: #95a5a6;">
+                \${config.type.toUpperCase()} • \${displayDesc}
+              </div>
+            </div>
+            
+            \${unlockStatus.unlocked ? \`
+              <div style="margin: 15px 0; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 8px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                  <span style="color: #ecf0f1;">Level \${data.level}\${isEvolved ? ' ⭐' : ''}</span>
+                  <span style="color: #ecf0f1;">\${Math.floor(currentXP)} / \${requiredXP} XP</span>
+                </div>
+                <div style="background: #34495e; height: 8px; border-radius: 4px; overflow: hidden;">
+                  <div style="background: linear-gradient(90deg, #3498db, #2ecc71); height: 100%; width: \${xpPercent}%;"></div>
+                </div>
+              </div>
+              
+              <div style="font-size: 13px; margin: 10px 0;">
+                <div style="display: grid; grid-template-columns: auto auto; gap: 5px;">
+                  <span style="color: #95a5a6;">❤️ Health:</span><span style="color: #ecf0f1; text-align: right;">\${health}</span>
+                  <span style="color: #95a5a6;">⚔️ Damage:</span><span style="color: #ecf0f1; text-align: right;">\${damage.toFixed(1)}</span>
+                  <span style="color: #95a5a6;">⚡ Speed:</span><span style="color: #ecf0f1; text-align: right;">\${attackSpeed.toFixed(1)}s</span>
+                </div>
+              </div>
+              
+              \${isEvolved ? \`
+                <div style="background: rgba(243, 156, 18, 0.2); padding: 8px; border-radius: 5px; margin: 10px 0; font-size: 12px; color: #f39c12;">
+                  ✨ EVOLVED FORM
+                </div>
+              \` : ''}
+              
+              <button onclick="selectCompanion('\${id}')" style="
+                width: 100%;
+                padding: 12px;
+                background: \${data.selected ? 'linear-gradient(135deg, #27ae60, #2ecc71)' : 'linear-gradient(135deg, #3498db, #5DADE2)'};
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-size: 16px;
+                font-weight: bold;
+                cursor: pointer;
+                margin-top: 10px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+              ">
+                \${data.selected ? '✓ SELECTED' : 'SELECT'}
+              </button>
+            \` : \`
+              <div style="text-align: center; padding: 20px; color: #e74c3c; font-size: 14px;">
+                🔒 \${unlockStatus.text}
+              </div>
+            \`}
+          </div>
+        \`;
+      });
+      
+      modal.innerHTML = \`
+        <div style="
+          background: linear-gradient(135deg, #1a1a2e, #16213e);
+          border: 3px solid #5DADE2;
+          border-radius: 20px;
+          padding: 30px;
+          max-width: 900px;
+          width: 100%;
+          max-height: 90vh;
+          overflow-y: auto;
+          box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+        ">
+          <h2 style="color: #5DADE2; text-align: center; margin: 0 0 10px 0; font-size: 28px; text-shadow: 0 0 10px rgba(93,173,226,0.5);">
+            🐾 COMPANION DEN
+          </h2>
+          <p style="color: #95a5a6; text-align: center; margin: 0 0 25px 0; font-size: 14px;">
+            Choose your loyal companion to fight alongside you
+          </p>
+          
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 20px;">
+            \${companionHTML}
+          </div>
+          
+          <button onclick="closeCompanionModal()" style="
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+          ">
+            CLOSE
+          </button>
+        </div>
+      \`;
+      
+      document.body.appendChild(modal);
+    };
+    
+    window.selectCompanion = (id) => {
+      const companions = saveData.camp.companionDen.companions;
+      
+      // Deselect all
+      Object.keys(companions).forEach(cId => {
+        companions[cId].selected = false;
+      });
+      
+      // Select this one
+      companions[id].selected = true;
+      saveSaveData();
+      
+      playSound('levelup');
+      showStatChange(\`✓ \${COMPANIONS[id].name} selected!\`);
+      
+      // Refresh the modal
+      document.getElementById('companion-modal').remove();
+      window.manageCompanions();
+    };
+    
+    window.closeCompanionModal = () => {
+      const modal = document.getElementById('companion-modal');
+      if (modal) modal.remove();
+      playSound('hit');
+    };
     window.startDrill = () => { showStatChange('⚠️ Training drills coming in future update!'); playSound('hit'); };
     window.viewChallenges = () => { showStatChange('⚠️ Daily challenges coming in future update!'); playSound('hit'); };
     window.meditate = () => {
@@ -11187,6 +11448,39 @@
       const fillY = WATERDROP_SVG_HEIGHT - fillHeight;
       waterdropFill.setAttribute('y', fillY);
       waterdropFill.setAttribute('height', fillHeight);
+      
+      // Phase 5: Update companion UI
+      updateCompanionUI();
+    }
+    
+    function updateCompanionUI() {
+      const portrait = document.getElementById('companion-portrait');
+      
+      if (!activeCompanion || !isGameActive || activeCompanion.isDead) {
+        portrait.style.display = 'none';
+        return;
+      }
+      
+      portrait.style.display = 'block';
+      
+      const config = activeCompanion.config;
+      const data = activeCompanion.data;
+      const isEvolved = data.level >= 10;
+      
+      // Update icon and name
+      document.getElementById('companion-icon').textContent = isEvolved ? config.evolvedIcon : config.icon;
+      document.getElementById('companion-name').textContent = isEvolved ? config.evolvedName : config.name;
+      document.getElementById('companion-level').textContent = `Lvl ${data.level}${isEvolved ? ' ⭐' : ''}`;
+      
+      // Update XP bar
+      const currentXP = data.xp;
+      const requiredXP = data.level < 10 ? COMPANION_LEVEL_REQUIREMENTS[data.level] : COMPANION_LEVEL_REQUIREMENTS[9];
+      const xpPercent = data.level >= 10 ? 100 : (currentXP / requiredXP * 100);
+      document.getElementById('companion-xp-bar').style.width = `${xpPercent}%`;
+      
+      // Update HP bar
+      const hpPercent = (activeCompanion.health / activeCompanion.maxHealth) * 100;
+      document.getElementById('companion-hp-bar').style.width = `${hpPercent}%`;
     }
     
     // Stats Bar removed - Users access stats via STATS button modal
