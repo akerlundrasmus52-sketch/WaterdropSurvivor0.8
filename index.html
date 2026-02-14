@@ -2003,6 +2003,7 @@
     
     // --- CONSTANTS & CONFIG ---
     const ATTACK_ANIMATION_DURATION_MS = 400; // Duration of waterdrop attack animation in milliseconds
+    const FALLBACK_FRAME_TIME = 0.016; // Fallback frame time in seconds (~60fps) for invalid dt values
     
     const COLORS = {
       bg: 0xFFF0F5,
@@ -7661,12 +7662,13 @@
       const loadingBar = document.getElementById('loading-bar');
       let progress = 0;
       let completed = false; // Track if loading completed normally
+      let interval; // Declare first to avoid race condition with fallbackTimeout
       
       // Fallback timeout: Force dismiss loading screen after 12 seconds (hotfix for hang)
       const fallbackTimeout = setTimeout(() => {
         if (!completed) {
           console.warn('Loading screen fallback timeout triggered after 12 seconds');
-          clearInterval(interval);
+          if (interval) clearInterval(interval);
           loadingScreen.classList.add('fade-out');
           setTimeout(() => {
             loadingScreen.style.display = 'none';
@@ -7676,7 +7678,7 @@
       }, 12000); // 12 second max loading time
       
       // Extended loading duration: 20 iterations × 400ms = 8000ms (8 seconds total)
-      const interval = setInterval(() => {
+      interval = setInterval(() => {
         progress += 5;
         loadingBar.style.width = progress + '%';
         
@@ -10788,8 +10790,8 @@
       let dt = (time - lastTime) / 1000;
       
       // Safety: Guard against NaN/invalid time values (hotfix for loading screen hang)
-      if (!isFinite(dt) || dt < 0) {
-        dt = 0.016; // Fallback to ~60fps frame time
+      if (!isFinite(dt) || dt < 0 || dt > 1) {
+        dt = FALLBACK_FRAME_TIME; // Fallback to ~60fps frame time
         console.warn('Invalid dt detected, using fallback value');
       }
       
