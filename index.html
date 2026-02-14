@@ -1451,6 +1451,331 @@
       }
     }
 
+    /* ============================================
+       CAMP SCREEN STYLES
+       ============================================ */
+    #camp-screen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(180deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      z-index: 25;
+      overflow-y: auto;
+      padding: 20px;
+      pointer-events: auto;
+    }
+
+    .camp-header {
+      width: 100%;
+      max-width: 600px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding: 0 10px;
+    }
+
+    .camp-title {
+      font-size: 28px;
+      font-weight: 900;
+      color: #FFD700;
+      text-shadow: 2px 2px 0 #000, 0 0 15px rgba(255,215,0,0.6);
+    }
+
+    .camp-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 15px;
+      max-width: 600px;
+      width: 100%;
+      margin-bottom: 20px;
+    }
+
+    .camp-structure {
+      background: linear-gradient(135deg, #2d3561 0%, #1f2847 100%);
+      border: 3px solid #4a5a8a;
+      border-radius: 15px;
+      padding: 15px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+      text-align: center;
+    }
+
+    .camp-structure:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 16px rgba(0,0,0,0.5);
+      border-color: #5DADE2;
+      background: linear-gradient(135deg, #3a4575 0%, #2a3555 100%);
+    }
+
+    .camp-structure:active {
+      transform: translateY(-2px);
+    }
+
+    .camp-structure.max-level {
+      border-color: #FFD700;
+      box-shadow: 0 4px 8px rgba(255,215,0,0.4), 0 0 20px rgba(255,215,0,0.3);
+      animation: glow-pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes glow-pulse {
+      0%, 100% { box-shadow: 0 4px 8px rgba(255,215,0,0.4), 0 0 20px rgba(255,215,0,0.3); }
+      50% { box-shadow: 0 4px 8px rgba(255,215,0,0.6), 0 0 30px rgba(255,215,0,0.5); }
+    }
+
+    .structure-icon {
+      font-size: 48px;
+      margin-bottom: 8px;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+    }
+
+    .structure-name {
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 5px;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+    }
+
+    .structure-level {
+      font-size: 14px;
+      color: #5DADE2;
+      margin-bottom: 5px;
+      font-weight: 600;
+    }
+
+    .structure-desc {
+      font-size: 12px;
+      color: #aaa;
+    }
+
+    .btn-large {
+      background: linear-gradient(to bottom, #5A3A31, #3a2a21);
+      border: 3px solid #8B4513;
+      color: white;
+      padding: 20px 40px;
+      font-size: 24px;
+      font-weight: 900;
+      border-radius: 50px;
+      cursor: pointer;
+      box-shadow: 0 6px 0 #2a1a11, 0 8px 16px rgba(0,0,0,0.5);
+      transition: all 0.2s;
+      margin-top: 10px;
+      text-shadow: 2px 2px 0 #000;
+    }
+
+    .btn-large:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 0 #2a1a11, 0 10px 20px rgba(0,0,0,0.6);
+      filter: brightness(1.1);
+    }
+
+    .btn-large:active {
+      transform: translateY(4px);
+      box-shadow: 0 2px 0 #2a1a11, 0 4px 8px rgba(0,0,0,0.4);
+    }
+
+    /* ============================================
+       STRUCTURE MODAL STYLES
+       ============================================ */
+    #structure-modal {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.9);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 35;
+      pointer-events: auto;
+      padding: 20px;
+    }
+
+    .structure-modal-content {
+      background: linear-gradient(180deg, #1f2847 0%, #16213e 100%);
+      border: 4px solid #5DADE2;
+      border-radius: 20px;
+      max-width: 500px;
+      width: 100%;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+      position: relative;
+    }
+
+    .structure-modal-header {
+      background: linear-gradient(135deg, #2d3561 0%, #1f2847 100%);
+      padding: 20px;
+      border-bottom: 3px solid #4a5a8a;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      position: relative;
+    }
+
+    .structure-modal-icon {
+      font-size: 48px;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+    }
+
+    .structure-modal-title {
+      font-size: 24px;
+      font-weight: 900;
+      color: #FFD700;
+      text-shadow: 2px 2px 0 #000;
+      flex: 1;
+    }
+
+    .close-modal-btn {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      background: rgba(255,255,255,0.1);
+      border: 2px solid #fff;
+      color: #fff;
+      font-size: 24px;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+    }
+
+    .close-modal-btn:hover {
+      background: rgba(255,255,255,0.2);
+      transform: rotate(90deg);
+    }
+
+    .structure-modal-body {
+      padding: 20px;
+    }
+
+    .structure-info {
+      margin-bottom: 20px;
+    }
+
+    .structure-current-level {
+      font-size: 20px;
+      font-weight: 700;
+      color: #5DADE2;
+      margin-bottom: 15px;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+    }
+
+    .structure-benefits {
+      background: rgba(0,0,0,0.3);
+      padding: 15px;
+      border-radius: 10px;
+      border: 2px solid #4a5a8a;
+    }
+
+    .structure-benefits p {
+      margin: 8px 0;
+      color: #fff;
+      font-size: 14px;
+    }
+
+    .structure-upgrade-section {
+      background: rgba(0,0,0,0.3);
+      padding: 15px;
+      border-radius: 10px;
+      border: 2px solid #4a5a8a;
+      margin-bottom: 20px;
+    }
+
+    .next-level-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #FFD700;
+      margin-bottom: 10px;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+    }
+
+    .next-level-benefits {
+      margin-bottom: 15px;
+    }
+
+    .next-level-benefits p {
+      margin: 5px 0;
+      color: #5DADE2;
+      font-size: 14px;
+    }
+
+    .btn-upgrade {
+      width: 100%;
+      background: linear-gradient(to bottom, #5A3A31, #3a2a21);
+      border: 3px solid #8B4513;
+      color: white;
+      padding: 15px;
+      font-size: 18px;
+      font-weight: 900;
+      border-radius: 25px;
+      cursor: pointer;
+      box-shadow: 0 4px 0 #2a1a11;
+      transition: all 0.2s;
+      text-shadow: 2px 2px 0 #000;
+    }
+
+    .btn-upgrade:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 0 #2a1a11;
+      filter: brightness(1.1);
+    }
+
+    .btn-upgrade:active:not(:disabled) {
+      transform: translateY(2px);
+      box-shadow: 0 2px 0 #2a1a11;
+    }
+
+    .btn-upgrade:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .structure-actions {
+      margin-top: 20px;
+    }
+
+    .structure-actions button {
+      width: 100%;
+      background: linear-gradient(to bottom, #4a5a8a, #2d3561);
+      border: 2px solid #5DADE2;
+      color: white;
+      padding: 12px;
+      font-size: 16px;
+      font-weight: 700;
+      border-radius: 20px;
+      cursor: pointer;
+      margin-bottom: 10px;
+      transition: all 0.2s;
+    }
+
+    .structure-actions button:hover {
+      background: linear-gradient(to bottom, #5a6a9a, #3d4671);
+      transform: translateY(-2px);
+    }
+
+    /* Update button positioning for new camp button */
+    #camp-btn { top: 45.5%; }
+    #start-game-btn { top: 52.75%; }
+    #progression-btn { top: 60%; }
+    #attributes-btn { top: 67.25%; }
+    #gear-btn { top: 74.5%; }
+    #achievements-btn { top: 81.75%; }
+    #credits-btn { top: min(89%, calc(100% - 60px)); }
+
   </style>
 </head>
 <body>
@@ -1467,6 +1792,7 @@
     <div class="gold-display" id="menu-gold">GOLD: 0</div>
     <div class="menu-title">WATER DROP SURVIVOR</div>
     <div class="menu-buttons">
+      <button class="menu-btn" id="camp-btn">🏕️ BASE CAMP</button>
       <button class="menu-btn" id="start-game-btn">START GAME</button>
       <button class="menu-btn" id="progression-btn">PROGRESSION</button>
       <button class="menu-btn" id="attributes-btn" style="position: relative;">ATTRIBUTES</button>
@@ -1744,6 +2070,94 @@
     </div>
   </div>
 
+  <!-- Home Base Camp Screen -->
+  <div id="camp-screen">
+    <div class="camp-header">
+      <div class="camp-title">🏕️ HOME BASE CAMP</div>
+      <div class="gold-display" id="camp-gold">GOLD: 0</div>
+    </div>
+    <div class="camp-grid">
+      <!-- Structure Cards -->
+      <div class="camp-structure" data-structure="forge">
+        <div class="structure-icon">🔨</div>
+        <div class="structure-name">FORGE</div>
+        <div class="structure-level">Level <span class="level-value">1</span></div>
+        <div class="structure-desc">Craft & Enchant</div>
+      </div>
+      <div class="camp-structure" data-structure="alchemy">
+        <div class="structure-icon">⚗️</div>
+        <div class="structure-name">ALCHEMY LAB</div>
+        <div class="structure-level">Level <span class="level-value">1</span></div>
+        <div class="structure-desc">Potions & Elixirs</div>
+      </div>
+      <div class="camp-structure" data-structure="library">
+        <div class="structure-icon">📚</div>
+        <div class="structure-name">LIBRARY</div>
+        <div class="structure-level">Level <span class="level-value">1</span></div>
+        <div class="structure-desc">Research & XP</div>
+      </div>
+      <div class="camp-structure" data-structure="companionDen">
+        <div class="structure-icon">🐾</div>
+        <div class="structure-name">COMPANION DEN</div>
+        <div class="structure-level">Level <span class="level-value">1</span></div>
+        <div class="structure-desc">Pet Housing</div>
+      </div>
+      <div class="camp-structure" data-structure="training">
+        <div class="structure-icon">⚔️</div>
+        <div class="structure-name">TRAINING GROUNDS</div>
+        <div class="structure-level">Level <span class="level-value">1</span></div>
+        <div class="structure-desc">Combat Practice</div>
+      </div>
+      <div class="camp-structure" data-structure="meditation">
+        <div class="structure-icon">🧘</div>
+        <div class="structure-name">MEDITATION SHRINE</div>
+        <div class="structure-level">Level <span class="level-value">1</span></div>
+        <div class="structure-desc">Passive Bonuses</div>
+      </div>
+      <div class="camp-structure" data-structure="campfire">
+        <div class="structure-icon">🔥</div>
+        <div class="structure-name">CAMPFIRE</div>
+        <div class="structure-level">Level <span class="level-value">1</span></div>
+        <div class="structure-desc">Rest & Recovery</div>
+      </div>
+    </div>
+    <button class="btn-large" id="start-run-btn">START RUN</button>
+    <button class="back-btn" id="camp-back-btn">BACK TO MENU</button>
+  </div>
+
+  <!-- Structure Modal -->
+  <div id="structure-modal">
+    <div class="structure-modal-content">
+      <div class="structure-modal-header">
+        <div class="structure-modal-icon">🔨</div>
+        <div class="structure-modal-title">FORGE</div>
+        <button class="close-modal-btn" id="close-structure-modal">✕</button>
+      </div>
+      <div class="structure-modal-body">
+        <div class="structure-info">
+          <div class="structure-current-level">Level <span id="modal-current-level">1</span></div>
+          <div class="structure-benefits" id="modal-benefits">
+            <!-- Benefits populated dynamically -->
+          </div>
+        </div>
+        <div class="structure-upgrade-section">
+          <div class="upgrade-info">
+            <div class="next-level-title">Next Level Benefits:</div>
+            <div class="next-level-benefits" id="modal-next-benefits">
+              <!-- Next level benefits populated dynamically -->
+            </div>
+          </div>
+          <button class="btn-upgrade" id="upgrade-structure-btn">
+            UPGRADE <span id="upgrade-cost">100</span> GOLD
+          </button>
+        </div>
+        <div class="structure-actions" id="modal-actions">
+          <!-- Structure-specific actions populated dynamically -->
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Game Over Screen -->
   <div id="gameover-screen">
     <h1 style="color: #5DADE2; font-size: 40px; text-shadow: 2px 2px 0 #000, 0 0 10px rgba(93,173,226,0.8);">GAME OVER</h1>
@@ -1751,7 +2165,7 @@
     <p id="final-kills" style="font-size: 20px; margin: 10px 0;">Kills: 0</p>
     <p id="gold-earned" style="font-size: 24px; margin: 10px 0; color: #FFD700; font-weight: bold;">Gold Earned: 0</p>
     <p id="total-gold" style="font-size: 20px; margin: 10px 0; color: #FFD700;">Total Gold: 0</p>
-    <button class="btn" id="restart-btn">CONTINUE</button>
+    <button class="btn" id="restart-btn">RETURN TO CAMP</button>
   </div>
 
   <!-- Import Map for Three.js -->
@@ -5168,6 +5582,17 @@
       inventory: []
     };
 
+    // Camp Data Structure
+    const defaultCampData = {
+      forge: { level: 1, enchantments: [] },
+      alchemy: { level: 1, potions: [], elixirs: {} },
+      library: { level: 1, researchBonuses: {}, xpMultiplier: 0 },
+      companionDen: { level: 1, companions: [] },
+      training: { level: 1, accuracyBonus: 0, critBonus: 0 },
+      meditation: { level: 1, healthRegen: 0, passiveIncome: 0 },
+      campfire: { level: 1, startingBuffs: [] }
+    };
+
     let saveData = { ...defaultSaveData };
 
     function loadSaveData() {
@@ -5181,10 +5606,22 @@
           saveData.unspentAttributePoints = saveData.unspentAttributePoints || 0;
           saveData.equippedGear = { ...defaultSaveData.equippedGear, ...(saveData.equippedGear || {}) };
           saveData.inventory = saveData.inventory || [];
+          // Initialize camp data if not present
+          if (!saveData.camp) {
+            saveData.camp = { ...defaultCampData };
+          } else {
+            // Ensure all structures exist
+            Object.keys(defaultCampData).forEach(structure => {
+              if (!saveData.camp[structure]) {
+                saveData.camp[structure] = { ...defaultCampData[structure] };
+              }
+            });
+          }
         }
       } catch (e) {
         console.error('Failed to load save data:', e);
         saveData = { ...defaultSaveData };
+        saveData.camp = { ...defaultCampData };
       }
     }
 
@@ -6313,6 +6750,325 @@
     // Expose to global scope for onclick handlers
     window.equipGear = equipGear;
     window.unequipGear = unequipGear;
+
+    // ============================================
+    // CAMP SYSTEM - Phase 3
+    // ============================================
+    
+    const STRUCTURE_CONFIG = {
+      forge: {
+        name: 'Forge',
+        icon: '🔨',
+        maxLevel: 10,
+        getUpgradeCost: (level) => Math.floor(100 * Math.pow(1.5, level - 1)),
+        getBenefits: (level) => ({
+          craftingSlots: Math.min(level, 5),
+          enchantmentPower: level * 2,
+          rareRecipeChance: Math.min(level * 5, 50)
+        }),
+        getDescription: (level) => {
+          const benefits = STRUCTURE_CONFIG.forge.getBenefits(level);
+          return [
+            `Crafting Slots: ${benefits.craftingSlots}`,
+            `Enchantment Power: +${benefits.enchantmentPower}%`,
+            `Rare Recipe Chance: ${benefits.rareRecipeChance}%`
+          ];
+        }
+      },
+      alchemy: {
+        name: 'Alchemy Lab',
+        icon: '⚗️',
+        maxLevel: 10,
+        getUpgradeCost: (level) => Math.floor(120 * Math.pow(1.5, level - 1)),
+        getBenefits: (level) => ({
+          potionSlots: Math.min(2 + Math.floor(level / 2), 6),
+          potionPower: level * 10,
+          elixirBonus: level * 1
+        }),
+        getDescription: (level) => {
+          const benefits = STRUCTURE_CONFIG.alchemy.getBenefits(level);
+          return [
+            `Potion Slots: ${benefits.potionSlots}`,
+            `Potion Power: +${benefits.potionPower}%`,
+            `Elixir Stat Bonus: +${benefits.elixirBonus} per stat`
+          ];
+        }
+      },
+      library: {
+        name: 'Library',
+        icon: '📚',
+        maxLevel: 10,
+        getUpgradeCost: (level) => Math.floor(150 * Math.pow(1.5, level - 1)),
+        getBenefits: (level) => ({
+          xpBonus: level * 5,
+          researchSlots: Math.min(level, 5),
+          loreUnlocked: level * 2
+        }),
+        getDescription: (level) => {
+          const benefits = STRUCTURE_CONFIG.library.getBenefits(level);
+          return [
+            `XP Gain: +${benefits.xpBonus}%`,
+            `Research Slots: ${benefits.researchSlots}`,
+            `Lore Pages: ${benefits.loreUnlocked}`
+          ];
+        }
+      },
+      companionDen: {
+        name: 'Companion Den',
+        icon: '🐾',
+        maxLevel: 10,
+        getUpgradeCost: (level) => Math.floor(180 * Math.pow(1.5, level - 1)),
+        getBenefits: (level) => ({
+          companionSlots: Math.min(Math.floor(level / 2) + 1, 5),
+          xpRecovery: level * 10,
+          trainingBonus: level * 5
+        }),
+        getDescription: (level) => {
+          const benefits = STRUCTURE_CONFIG.companionDen.getBenefits(level);
+          return [
+            `Companion Slots: ${benefits.companionSlots}`,
+            `XP Recovery: +${benefits.xpRecovery}%`,
+            `Training Bonus: +${benefits.trainingBonus}%`
+          ];
+        }
+      },
+      training: {
+        name: 'Training Grounds',
+        icon: '⚔️',
+        maxLevel: 10,
+        getUpgradeCost: (level) => Math.floor(130 * Math.pow(1.5, level - 1)),
+        getBenefits: (level) => ({
+          accuracyBonus: level * 2,
+          critBonus: level * 1,
+          drillRewards: level * 10
+        }),
+        getDescription: (level) => {
+          const benefits = STRUCTURE_CONFIG.training.getBenefits(level);
+          return [
+            `Accuracy Bonus: +${benefits.accuracyBonus}%`,
+            `Crit Chance: +${benefits.critBonus}%`,
+            `Drill Rewards: +${benefits.drillRewards} Gold`
+          ];
+        }
+      },
+      meditation: {
+        name: 'Meditation Shrine',
+        icon: '🧘',
+        maxLevel: 10,
+        getUpgradeCost: (level) => Math.floor(140 * Math.pow(1.5, level - 1)),
+        getBenefits: (level) => ({
+          healthRegen: level * 0.5,
+          passiveGold: level * 2,
+          meditationPower: level * 15
+        }),
+        getDescription: (level) => {
+          const benefits = STRUCTURE_CONFIG.meditation.getBenefits(level);
+          return [
+            `Health Regen: +${benefits.healthRegen}/sec`,
+            `Passive Gold: +${benefits.passiveGold}/min`,
+            `Meditation Buff: +${benefits.meditationPower}% all stats`
+          ];
+        }
+      },
+      campfire: {
+        name: 'Campfire',
+        icon: '🔥',
+        maxLevel: 10,
+        getUpgradeCost: (level) => Math.floor(100 * Math.pow(1.5, level - 1)),
+        getBenefits: (level) => ({
+          startingHealth: level * 5,
+          startingDamage: level * 3,
+          buffDuration: level * 10
+        }),
+        getDescription: (level) => {
+          const benefits = STRUCTURE_CONFIG.campfire.getBenefits(level);
+          return [
+            `Starting Health: +${benefits.startingHealth}%`,
+            `Starting Damage: +${benefits.startingDamage}%`,
+            `Buff Duration: ${benefits.buffDuration}s`
+          ];
+        }
+      }
+    };
+
+    let currentStructure = null;
+
+    function updateCampScreen() {
+      if (!saveData.camp) {
+        saveData.camp = { ...defaultCampData };
+      }
+
+      document.getElementById('camp-gold').innerText = `GOLD: ${saveData.gold}`;
+
+      // Update all structure cards
+      Object.keys(STRUCTURE_CONFIG).forEach(structureId => {
+        const card = document.querySelector(`.camp-structure[data-structure="${structureId}"]`);
+        if (card) {
+          const level = saveData.camp[structureId]?.level || 1;
+          card.querySelector('.level-value').innerText = level;
+          
+          // Add max level glow
+          if (level >= STRUCTURE_CONFIG[structureId].maxLevel) {
+            card.classList.add('max-level');
+          } else {
+            card.classList.remove('max-level');
+          }
+        }
+      });
+    }
+
+    function showCampScreen() {
+      document.getElementById('main-menu').style.display = 'none';
+      document.getElementById('camp-screen').style.display = 'flex';
+      updateCampScreen();
+    }
+
+    function hideCampScreen() {
+      document.getElementById('camp-screen').style.display = 'none';
+      document.getElementById('main-menu').style.display = 'flex';
+    }
+
+    function openStructureModal(structureId) {
+      currentStructure = structureId;
+      const config = STRUCTURE_CONFIG[structureId];
+      const structureData = saveData.camp[structureId];
+      const level = structureData.level;
+
+      const modal = document.getElementById('structure-modal');
+      modal.querySelector('.structure-modal-icon').innerText = config.icon;
+      modal.querySelector('.structure-modal-title').innerText = config.name.toUpperCase();
+      modal.querySelector('#modal-current-level').innerText = level;
+
+      // Show current benefits
+      const benefitsHTML = config.getDescription(level).map(desc => `<p>✓ ${desc}</p>`).join('');
+      modal.querySelector('#modal-benefits').innerHTML = benefitsHTML;
+
+      // Show next level benefits or max level message
+      const upgradeBtn = modal.querySelector('#upgrade-structure-btn');
+      const nextBenefitsDiv = modal.querySelector('#modal-next-benefits');
+      
+      if (level >= config.maxLevel) {
+        nextBenefitsDiv.innerHTML = '<p style="color: #FFD700; font-weight: bold;">⭐ MAX LEVEL REACHED ⭐</p>';
+        upgradeBtn.disabled = true;
+        upgradeBtn.style.display = 'none';
+      } else {
+        const nextLevel = level + 1;
+        const nextBenefitsHTML = config.getDescription(nextLevel).map(desc => `<p>→ ${desc}</p>`).join('');
+        nextBenefitsDiv.innerHTML = nextBenefitsHTML;
+        
+        const cost = config.getUpgradeCost(level);
+        upgradeBtn.querySelector('#upgrade-cost').innerText = cost;
+        upgradeBtn.disabled = saveData.gold < cost;
+        upgradeBtn.style.display = 'block';
+      }
+
+      // Show structure-specific actions
+      const actionsDiv = modal.querySelector('#modal-actions');
+      actionsDiv.innerHTML = getStructureActions(structureId, level);
+
+      modal.style.display = 'flex';
+      playSound('levelup');
+    }
+
+    function closeStructureModal() {
+      document.getElementById('structure-modal').style.display = 'none';
+      currentStructure = null;
+      playSound('hit');
+    }
+
+    function upgradeStructure() {
+      if (!currentStructure) return;
+
+      const config = STRUCTURE_CONFIG[currentStructure];
+      const structureData = saveData.camp[currentStructure];
+      const level = structureData.level;
+
+      if (level >= config.maxLevel) {
+        return;
+      }
+
+      const cost = config.getUpgradeCost(level);
+      if (saveData.gold < cost) {
+        return;
+      }
+
+      // Deduct gold and upgrade
+      saveData.gold -= cost;
+      structureData.level += 1;
+      
+      saveSaveData();
+      playSound('upgrade');
+      
+      // Show upgrade effect
+      showStatChange(`${config.name} upgraded to Level ${structureData.level}!`);
+
+      // Refresh displays
+      updateCampScreen();
+      openStructureModal(currentStructure); // Refresh modal
+      updateGoldDisplays();
+    }
+
+    function getStructureActions(structureId, level) {
+      // Placeholder for structure-specific actions
+      const actions = {
+        forge: '<button onclick="craftItem()">🔨 Craft Item</button><button onclick="enchantGear()">✨ Enchant Gear</button>',
+        alchemy: '<button onclick="brewPotion()">⚗️ Brew Potion</button><button onclick="createElixir()">🧪 Create Elixir</button>',
+        library: '<button onclick="researchBonus()">📖 Research Bonus</button><button onclick="viewLore()">📜 View Lore</button>',
+        companionDen: '<button onclick="manageCompanions()">🐾 Manage Companions</button>',
+        training: '<button onclick="startDrill()">⚔️ Start Drill</button><button onclick="viewChallenges()">🎯 View Challenges</button>',
+        meditation: '<button onclick="meditate()">🧘 Meditate (5 min)</button><button onclick="collectPassiveGold()">💰 Collect Gold</button>',
+        campfire: '<button onclick="restAtCampfire()">🔥 Rest (Full Heal)</button><button onclick="viewStory()">📖 View Story</button>'
+      };
+
+      return actions[structureId] || '';
+    }
+
+    // Structure action stubs (to be implemented)
+    window.craftItem = () => { showStatChange('⚠️ Crafting system coming in future update!'); playSound('hit'); };
+    window.enchantGear = () => { showStatChange('⚠️ Enchanting system coming in future update!'); playSound('hit'); };
+    window.brewPotion = () => { showStatChange('⚠️ Potion brewing coming in future update!'); playSound('hit'); };
+    window.createElixir = () => { 
+      // Simple elixir system - permanent stat boost
+      const cost = 500;
+      if (saveData.gold >= cost) {
+        saveData.gold -= cost;
+        const stats = ['maxHp', 'attackDamage', 'attackSpeed', 'armor'];
+        const randomStat = stats[Math.floor(Math.random() * stats.length)];
+        // Ensure elixirs object exists
+        if (!saveData.camp.alchemy.elixirs) {
+          saveData.camp.alchemy.elixirs = {};
+        }
+        if (!saveData.camp.alchemy.elixirs[randomStat]) {
+          saveData.camp.alchemy.elixirs[randomStat] = 0;
+        }
+        saveData.camp.alchemy.elixirs[randomStat] += 1;
+        saveSaveData();
+        updateGoldDisplays();
+        showStatChange(`✨ Elixir created! +1 permanent ${randomStat} bonus!`);
+        playSound('upgrade');
+      } else {
+        showStatChange('⚠️ Need 500 gold to create elixir!');
+        playSound('hit');
+      }
+    };
+    window.researchBonus = () => { showStatChange('⚠️ Research system coming in future update!'); playSound('hit'); };
+    window.viewLore = () => { showStatChange('📜 Ancient texts speak of the Water Drop\'s destiny...'); playSound('levelup'); };
+    window.manageCompanions = () => { showStatChange('⚠️ Companion system coming in Phase 5!'); playSound('hit'); };
+    window.startDrill = () => { showStatChange('⚠️ Training drills coming in future update!'); playSound('hit'); };
+    window.viewChallenges = () => { showStatChange('⚠️ Daily challenges coming in future update!'); playSound('hit'); };
+    window.meditate = () => {
+      const level = saveData.camp.meditation.level;
+      const meditationPower = STRUCTURE_CONFIG.meditation.getBenefits(level).meditationPower;
+      showStatChange(`🧘 Meditating... +${meditationPower}% to all stats for next run!`);
+      playSound('levelup');
+      // Note: Meditation buff system to be fully implemented in future update
+    };
+    window.collectPassiveGold = () => { showStatChange('⚠️ Passive income system coming in future update!'); playSound('hit'); };
+    window.restAtCampfire = () => { 
+      showStatChange('🔥 Rested at campfire. Ready for the next run!');
+      playSound('levelup');
+    };
+    window.viewStory = () => { showStatChange('🔥 The campfire crackles as you prepare for battle...'); playSound('levelup'); };
 
     // Upgrade definitions for the progression shop
     const PERMANENT_UPGRADES = {
@@ -7674,6 +8430,11 @@
       updateBackgroundMusic();
       
       // Main Menu Buttons
+      document.getElementById('camp-btn').onclick = () => {
+        playSound('waterdrop');
+        showCampScreen();
+      };
+
       document.getElementById('start-game-btn').onclick = () => {
         playSound('waterdrop');
         hideMainMenu();
@@ -7763,6 +8524,31 @@
         document.getElementById('credits-screen').style.display = 'none';
         showMainMenu();
       };
+
+      // Camp Screen Buttons
+      document.getElementById('camp-back-btn').onclick = () => {
+        playSound('waterdrop');
+        hideCampScreen();
+      };
+
+      document.getElementById('start-run-btn').onclick = () => {
+        playSound('waterdrop');
+        document.getElementById('camp-screen').style.display = 'none';
+        resetGame();
+        startCountdown();
+      };
+
+      // Camp Structure Cards - Click to open modal
+      document.querySelectorAll('.camp-structure').forEach(card => {
+        card.onclick = () => {
+          const structureId = card.getAttribute('data-structure');
+          openStructureModal(structureId);
+        };
+      });
+
+      // Structure Modal Buttons
+      document.getElementById('close-structure-modal').onclick = closeStructureModal;
+      document.getElementById('upgrade-structure-btn').onclick = upgradeStructure;
       
       // Reset progress button with double confirmation
       document.getElementById('settings-reset-btn').onclick = () => {
@@ -7804,7 +8590,8 @@
       document.getElementById('restart-btn').onclick = () => {
         playSound('levelup');
         document.getElementById('gameover-screen').style.display = 'none';
-        showMainMenu();
+        // Return to camp instead of main menu for roguelite loop
+        showCampScreen();
       };
       
       // Stats Bar removed - No toggle needed
@@ -10046,23 +10833,65 @@
       const gearAtkSpeedBonus = (gearStats.attackSpeed || 0) * 0.01; // +1% per point
       const gearXpBonus = (gearStats.xpBonus || 0) * 0.01;           // +1% per point
       
-      // Reset Stats with permanent upgrades, attributes, and gear applied
+      // Apply camp structure bonuses
+      const campBonuses = {
+        hp: 0,
+        damage: 0,
+        xp: 0,
+        accuracy: 0,
+        crit: 0,
+        regen: 0
+      };
+      
+      if (saveData.camp) {
+        // Library - XP bonus
+        const libraryLevel = saveData.camp.library?.level || 1;
+        campBonuses.xp = STRUCTURE_CONFIG.library.getBenefits(libraryLevel).xpBonus * 0.01;
+        
+        // Training Grounds - Accuracy and Crit bonuses
+        const trainingLevel = saveData.camp.training?.level || 1;
+        const trainingBenefits = STRUCTURE_CONFIG.training.getBenefits(trainingLevel);
+        campBonuses.accuracy = trainingBenefits.accuracyBonus * 0.01;
+        campBonuses.crit = trainingBenefits.critBonus * 0.01;
+        
+        // Meditation Shrine - Health Regen
+        const meditationLevel = saveData.camp.meditation?.level || 1;
+        campBonuses.regen = STRUCTURE_CONFIG.meditation.getBenefits(meditationLevel).healthRegen;
+        
+        // Campfire - Starting buffs
+        const campfireLevel = saveData.camp.campfire?.level || 1;
+        const campfireBenefits = STRUCTURE_CONFIG.campfire.getBenefits(campfireLevel);
+        campBonuses.hp = campfireBenefits.startingHealth * 0.01;
+        campBonuses.damage = campfireBenefits.startingDamage * 0.01;
+        
+        // Alchemy elixirs - permanent stat bonuses
+        if (saveData.camp.alchemy?.elixirs) {
+          const elixirs = saveData.camp.alchemy.elixirs;
+          // Each elixir provides different stat increases based on stat type
+          campBonuses.hpBonus = (elixirs.maxHp || 0) * 5;           // +5 HP per elixir
+          campBonuses.damageBonus = (elixirs.attackDamage || 0) * 0.05;  // +5% damage per elixir
+          campBonuses.atkSpeedBonus = (elixirs.attackSpeed || 0) * 0.05; // +5% attack speed per elixir
+          campBonuses.armorBonus = (elixirs.armor || 0) * 2;        // +2 armor per elixir
+        }
+      }
+      
+      // Reset Stats with permanent upgrades, attributes, gear, and camp bonuses applied
       playerStats.lvl = 1;
       playerStats.exp = 0;
       playerStats.expReq = GAME_CONFIG.baseExpReq;
-      playerStats.hp = baseHp + attrHp + gearHpBonus;
-      playerStats.maxHp = baseHp + attrHp + gearHpBonus;
-      playerStats.strength = baseDamage * (1 + attrDamage + gearDamageBonus);
+      playerStats.hp = (baseHp + attrHp + gearHpBonus + (campBonuses.hpBonus || 0)) * (1 + campBonuses.hp);
+      playerStats.maxHp = (baseHp + attrHp + gearHpBonus + (campBonuses.hpBonus || 0)) * (1 + campBonuses.hp);
+      playerStats.strength = baseDamage * (1 + attrDamage + gearDamageBonus + campBonuses.damage + (campBonuses.damageBonus || 0));
       playerStats.walkSpeed = baseSpeed * (1 + gearMoveSpeedBonus);
       playerStats.kills = 0;
       playerStats.miniBossesDefeated = 0; // Reset mini-boss tracking
-      playerStats.atkSpeed = baseAtkSpeed * (1 + attrAtkSpeed + gearAtkSpeedBonus);
-      playerStats.critChance = baseCritChance + attrCritChance + gearCritBonus;
+      playerStats.atkSpeed = baseAtkSpeed * (1 + attrAtkSpeed + gearAtkSpeedBonus + (campBonuses.atkSpeedBonus || 0));
+      playerStats.critChance = baseCritChance + attrCritChance + gearCritBonus + campBonuses.crit;
       playerStats.critDmg = baseCritDmg + attrCritDmg;
-      playerStats.armor = Math.min(80, baseArmor + gearArmorBonus); // Cap at 80% damage reduction
-      playerStats.hpRegen = baseRegen + attrRegen + gearHpRegenBonus;
+      playerStats.armor = Math.min(80, baseArmor + gearArmorBonus + (campBonuses.armorBonus || 0)); // Cap at 80% damage reduction
+      playerStats.hpRegen = baseRegen + attrRegen + gearHpRegenBonus + campBonuses.regen;
       playerStats.dodge = gearDodgeBonus; // Dodge from gear
-      playerStats.xpMultiplier = 1 + gearXpBonus; // Store XP bonus multiplier
+      playerStats.xpMultiplier = 1 + gearXpBonus + campBonuses.xp; // Store XP bonus multiplier
       playerStats.gold = 0;
       waveCount = 0;
       lastWaveEndTime = 0; // Reset wave timing
