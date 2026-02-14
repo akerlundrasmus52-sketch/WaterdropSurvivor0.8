@@ -1508,6 +1508,18 @@
         flex-direction: row;
         justify-content: space-between;
       }
+      
+      /* NEW: Show menu button in landscape too for consistency */
+      #menu-btn {
+        display: flex !important;
+        top: 20px;
+        right: 220px; /* Position to left of settings/stats buttons */
+      }
+      
+      /* Ensure settings and stats buttons are visible in landscape */
+      #settings-btn, #stats-btn {
+        display: flex !important;
+      }
     }
 
     /* NEW: Tutorial overlay button styles */
