@@ -3994,21 +3994,27 @@
           const dx = this.mesh.position.x - enemy.mesh.position.x;
           const dz = this.mesh.position.z - enemy.mesh.position.z;
           if (dx*dx + dz*dz < 0.6) { // Hit radius
-            // Calculate Damage
-            let dmg = weapons.gun.damage * playerStats.damage * playerStats.strength;
+            // PR #124: Calculate Damage with NaN guards and fallbacks
+            let dmg = weapons.gun.damage * (playerStats.damage || 1) * (playerStats.strength || 1);
             
             // Double barrel uses its own damage
             if (weapons.doubleBarrel.active && this.isDoubleBarrel) {
-              dmg = weapons.doubleBarrel.damage * playerStats.damage * playerStats.strength;
+              dmg = weapons.doubleBarrel.damage * (playerStats.damage || 1) * (playerStats.strength || 1);
             }
             
             // Drone turret uses its own damage
             if (weapons.droneTurret.active && this.isDroneTurret) {
-              dmg = weapons.droneTurret.damage * playerStats.damage * playerStats.strength;
+              dmg = weapons.droneTurret.damage * (playerStats.damage || 1) * (playerStats.strength || 1);
             }
             
             const isCrit = Math.random() < playerStats.critChance;
-            if (isCrit) dmg *= playerStats.critDmg;
+            if (isCrit) dmg *= (playerStats.critDmg || 1.5);
+            
+            // PR #124: Validate damage is finite and positive (change <= 0 to < 0 allows zero damage)
+            if (!Number.isFinite(dmg) || dmg < 0) {
+              console.warn('Invalid gun damage calculated, using default 15');
+              dmg = 15;
+            }
             
             enemy.takeDamage(Math.floor(dmg), isCrit);
             
@@ -4055,8 +4061,11 @@
         this.life = 10; // frames
         this.maxLife = 10;
         
-        // Deal damage immediately
-        const dmg = weapons.sword.damage * playerStats.strength * playerStats.damage;
+        // PR #124: Deal damage immediately with NaN guards and fallbacks
+        const dmg = weapons.sword.damage * (playerStats.strength || 1) * (playerStats.damage || 1);
+        
+        // PR #124: Validate damage is finite and positive
+        const validDmg = (Number.isFinite(dmg) && dmg >= 0) ? dmg : 30; // Default to base sword damage
         
         enemies.forEach(e => {
           const dx = e.mesh.position.x - x;
@@ -4072,7 +4081,7 @@
             while (diff > Math.PI) diff -= Math.PI*2;
             
             if (Math.abs(diff) < Math.PI/3) {
-              e.takeDamage(dmg);
+              e.takeDamage(validDmg);
             }
           }
         });
@@ -4143,10 +4152,16 @@
           const dx = this.mesh.position.x - enemy.mesh.position.x;
           const dz = this.mesh.position.z - enemy.mesh.position.z;
           if (dx*dx + dz*dz < 0.6) {
-            // Calculate Damage
-            let dmg = weapons.iceSpear.damage * playerStats.damage * playerStats.strength;
+            // PR #124: Calculate Damage with NaN guards and fallbacks
+            let dmg = weapons.iceSpear.damage * (playerStats.damage || 1) * (playerStats.strength || 1);
             const isCrit = Math.random() < playerStats.critChance;
-            if (isCrit) dmg *= playerStats.critDmg;
+            if (isCrit) dmg *= (playerStats.critDmg || 1.5);
+            
+            // PR #124: Validate damage is finite and positive
+            if (!Number.isFinite(dmg) || dmg < 0) {
+              console.warn('Invalid ice spear damage calculated, using default 20');
+              dmg = 20;
+            }
             
             enemy.takeDamage(Math.floor(dmg), isCrit);
             
@@ -4233,14 +4248,17 @@
         this.shadow.geometry.dispose();
         this.shadow.material.dispose();
         
-        // AOE Damage
+        // PR #124: AOE Damage with NaN guards and fallbacks
         const range = weapons.meteor.area;
-        const dmg = weapons.meteor.damage * playerStats.strength;
+        const dmg = weapons.meteor.damage * (playerStats.strength || 1);
+        
+        // PR #124: Validate damage is finite and positive
+        const validDmg = (Number.isFinite(dmg) && dmg >= 0) ? dmg : 60; // Default to base meteor damage
         
         enemies.forEach(e => {
           const d = e.mesh.position.distanceTo(this.target);
           if (d < range) {
-            e.takeDamage(dmg);
+            e.takeDamage(validDmg);
           }
         });
         
@@ -9284,9 +9302,9 @@
       updateGoldDisplays();
     }
 
-    function resetGame() {
-      stopDroneHum(); // Stop drone sound on reset
-      
+    // PR #124: Create recalculateAllStats() function for stat recalculation
+    // This function calculates and applies all stat bonuses from permanent upgrades, attributes, and gear
+    function recalculateAllStats() {
       // Apply permanent upgrades from save data
       const baseHp = 100 + PERMANENT_UPGRADES.maxHp.effect(saveData.upgrades.maxHp);
       const baseRegen = PERMANENT_UPGRADES.hpRegen.effect(saveData.upgrades.hpRegen);
@@ -9315,28 +9333,53 @@
       
       // Apply gear bonuses
       const gearStats = calculateGearStats();
-      // Gear provides small, balanced bonuses (each point gives +1-2% depending on stat)
-      const gearFlexibilityBonus = gearStats.flexibility * 0.01;  // +1% armor per point
-      const gearMoveSpeedBonus = gearStats.movementSpeed * 0.02;  // +2% speed per point
-      const gearAtkSpeedBonus = gearStats.attackSpeed * 0.02;     // +2% attack speed per point
-      const gearPrecisionBonus = gearStats.attackPrecision * 0.01; // +1% crit chance per point
-      const gearCritBonus = gearStats.critChance * 0.02;          // +2% crit chance per point
-      const gearMagicBonus = gearStats.elementalMagic * 0.03;     // +3% damage per point
+      const gearFlexibilityBonus = gearStats.flexibility * 0.01;
+      const gearMoveSpeedBonus = gearStats.movementSpeed * 0.02;
+      const gearAtkSpeedBonus = gearStats.attackSpeed * 0.02;
+      const gearPrecisionBonus = gearStats.attackPrecision * 0.01;
+      const gearCritBonus = gearStats.critChance * 0.02;
+      const gearMagicBonus = gearStats.elementalMagic * 0.03;
+      
+      // Update playerStats with all bonuses
+      playerStats.maxHp = baseHp + attrHp;
+      playerStats.hp = Math.min(playerStats.hp, playerStats.maxHp); // Adjust current HP if max changed
+      playerStats.strength = baseDamage * (1 + attrDamage + gearMagicBonus);
+      playerStats.walkSpeed = baseSpeed * (1 + gearMoveSpeedBonus);
+      playerStats.atkSpeed = baseAtkSpeed * (1 + attrAtkSpeed + gearAtkSpeedBonus);
+      playerStats.critChance = baseCritChance + attrCritChance + gearPrecisionBonus + gearCritBonus;
+      // PR #124: Ensure critDmg is ALWAYS set (never undefined/null)
+      playerStats.critDmg = baseCritDmg + attrCritDmg || 1.5; // Fallback to 1.5x if somehow 0
+      playerStats.armor = baseArmor + gearStats.flexibility;
+      playerStats.hpRegen = baseRegen + attrRegen;
+      
+      return {
+        baseHp, baseRegen, baseSpeed, baseDamage, baseAtkSpeed, baseCritChance, baseCritDmg, baseArmor, cdReduction,
+        attrHp, attrRegen, attrAtkSpeed, attrCritChance, attrDamage, attrCritDmg, attrCdReduction,
+        gearFlexibilityBonus, gearMoveSpeedBonus, gearAtkSpeedBonus, gearPrecisionBonus, gearCritBonus, gearMagicBonus
+      };
+    }
+
+    function resetGame() {
+      stopDroneHum(); // Stop drone sound on reset
+      
+      // PR #124: Use recalculateAllStats() function to apply all bonuses
+      const stats = recalculateAllStats();
       
       // Reset Stats with permanent upgrades, attributes, and gear applied
       playerStats.lvl = 1;
       playerStats.exp = 0;
       playerStats.expReq = GAME_CONFIG.baseExpReq;
-      playerStats.hp = baseHp + attrHp;
-      playerStats.maxHp = baseHp + attrHp;
-      playerStats.strength = baseDamage * (1 + attrDamage + gearMagicBonus);
-      playerStats.walkSpeed = baseSpeed * (1 + gearMoveSpeedBonus);
+      playerStats.hp = stats.baseHp + stats.attrHp;
+      playerStats.maxHp = stats.baseHp + stats.attrHp;
+      playerStats.strength = stats.baseDamage * (1 + stats.attrDamage + stats.gearMagicBonus);
+      playerStats.walkSpeed = stats.baseSpeed * (1 + stats.gearMoveSpeedBonus);
       playerStats.kills = 0;
-      playerStats.atkSpeed = baseAtkSpeed * (1 + attrAtkSpeed + gearAtkSpeedBonus);
-      playerStats.critChance = baseCritChance + attrCritChance + gearPrecisionBonus + gearCritBonus;
-      playerStats.critDmg = baseCritDmg + attrCritDmg;
-      playerStats.armor = baseArmor + gearStats.flexibility; // Flexibility gives flat armor bonus
-      playerStats.hpRegen = baseRegen + attrRegen;
+      playerStats.atkSpeed = stats.baseAtkSpeed * (1 + stats.attrAtkSpeed + stats.gearAtkSpeedBonus);
+      playerStats.critChance = stats.baseCritChance + stats.attrCritChance + stats.gearPrecisionBonus + stats.gearCritBonus;
+      // PR #124: Ensure critDmg is ALWAYS set
+      playerStats.critDmg = stats.baseCritDmg + stats.attrCritDmg || 1.5;
+      playerStats.armor = stats.baseArmor + (calculateGearStats().flexibility || 0); // Flexibility gives flat armor bonus
+      playerStats.hpRegen = stats.baseRegen + stats.attrRegen;
       playerStats.gold = 0;
       waveCount = 0;
       lastWaveEndTime = 0; // Reset wave timing
@@ -9350,7 +9393,7 @@
         player.invulnerabilityTime = 0;
       }
       
-      const totalCdReduction = cdReduction + attrCdReduction;
+      const totalCdReduction = stats.cdReduction + stats.attrCdReduction;
       const gunCooldown = 1000 * (1 - totalCdReduction);
       weapons.gun = { active: true, level: 1, damage: 15, cooldown: gunCooldown, lastShot: 0, range: 12, barrels: 1 };
       weapons.sword = { active: false, level: 0, damage: 30, cooldown: 1500, lastShot: 0, range: 3.5 };
@@ -9914,9 +9957,22 @@
       // Performance tracking - start frame timer
       const frameStartTime = performance.now();
 
+      // PR #124: NaN Prevention - Add Number.isFinite() guards to timing calculations
       let dt = (time - lastTime) / 1000;
       lastTime = time;
       gameTime = time / 1000; // Update game time in seconds
+      
+      // Validate time calculations to prevent NaN propagation
+      if (!Number.isFinite(dt) || dt < 0) {
+        console.warn('Invalid deltaTime detected, resetting to 0.016s (60fps)');
+        dt = 0.016; // Fallback to 60fps frame time
+      }
+      if (!Number.isFinite(lastTime)) {
+        lastTime = time;
+      }
+      if (!Number.isFinite(gameTime)) {
+        gameTime = time / 1000;
+      }
       
       // Phase 3: Lag compensation - cap deltaTime to prevent death spiral
       const MAX_DELTA_TIME = 0.1; // 100ms cap
@@ -10238,13 +10294,16 @@
 
       // 3. AURA
       if (weapons.aura.active && time - weapons.aura.lastShot > weapons.aura.cooldown) {
-        // Damage all in range
+        // PR #124: Damage all in range with NaN guards
+        const auraDmg = weapons.aura.damage * (playerStats.strength || 1);
+        const validAuraDmg = (Number.isFinite(auraDmg) && auraDmg >= 0) ? auraDmg : 5; // Default aura damage
+        
         let hit = false;
         enemies.forEach(e => {
           if (e.isDead) return;
           const d = player.mesh.position.distanceTo(e.mesh.position);
           if (d < weapons.aura.range) {
-            e.takeDamage(weapons.aura.damage * playerStats.strength);
+            e.takeDamage(validAuraDmg);
             hit = true;
           }
         });
@@ -10431,17 +10490,21 @@
       
       // 8. FIRE RING
       if (weapons.fireRing.active && time - weapons.fireRing.lastShot > weapons.fireRing.cooldown) {
-        // Damage enemies within ring range
+        // PR #124: Damage enemies within ring range with NaN guards
         let hit = false;
         enemies.forEach(e => {
           if (e.isDead) return;
           const d = player.mesh.position.distanceTo(e.mesh.position);
           if (d < weapons.fireRing.range) {
-            const dmg = weapons.fireRing.damage * playerStats.strength;
+            const dmg = weapons.fireRing.damage * (playerStats.strength || 1);
             const isCrit = Math.random() < playerStats.critChance;
-            const finalDmg = isCrit ? dmg * playerStats.critDmg : dmg;
-            e.takeDamage(finalDmg);
-            createDamageNumber(finalDmg, e.mesh.position, isCrit);
+            const finalDmg = isCrit ? dmg * (playerStats.critDmg || 1.5) : dmg;
+            
+            // PR #124: Validate damage is finite and positive
+            const validDmg = (Number.isFinite(finalDmg) && finalDmg >= 0) ? finalDmg : 8; // Default fire ring damage
+            
+            e.takeDamage(validDmg);
+            createDamageNumber(validDmg, e.mesh.position, isCrit);
             
             // Fire particles on hit
             spawnParticles(e.mesh.position, 0xFF4500, 6); // Orange-red fire
