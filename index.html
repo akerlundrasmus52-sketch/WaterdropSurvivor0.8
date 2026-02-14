@@ -1774,7 +1774,7 @@
     <div id="stat-notifications"></div>
 
     <!-- NEW: First-Run Tutorial Overlay -->
-    <div id="tutorial-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 200; padding: 20px; box-sizing: border-box; overflow-y: auto;">
+    <div id="tutorial-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 10001; padding: 20px; box-sizing: border-box; overflow-y: auto; pointer-events: auto;">
       <div style="max-width: 800px; margin: 0 auto; color: #FFF; font-family: 'M PLUS Rounded 1c', sans-serif;">
         <h1 style="text-align: center; color: #5DADE2; font-size: 48px; margin-bottom: 30px; text-shadow: 0 0 20px rgba(93,173,226,0.8);">
           🌊 Water Drop Survivor - Tutorial 🌊
@@ -7722,6 +7722,14 @@
       countdownStep = 0;
       countdownTimer = 0;
       showCountdownMessage(0);
+      
+      // Safety timeout: Force-start game if countdown doesn't complete in 10 seconds
+      setTimeout(() => {
+        if (countdownActive) {
+          console.warn('⚠️ Countdown timeout - forcing game start');
+          endCountdown();
+        }
+      }, 10000);
     }
     
     function showCountdownMessage(step) {
@@ -11614,6 +11622,24 @@
       // Process disposal queue after rendering (PR #81)
       processDisposalQueue();
     }
+
+    // Debug function to force-start game (can be called from console)
+    window.debugStartGame = function() {
+      console.log('🔧 DEBUG: Force-starting game');
+      // Clear tutorial flag to show tutorial
+      localStorage.removeItem('waterDropSurvivorTutorialShown');
+      // Force hide menu and start game
+      hideMainMenu();
+      document.getElementById('tutorial-overlay').style.display = 'none';
+      resetGame();
+      startCountdown();
+    };
+    
+    window.debugSkipTutorial = function() {
+      console.log('🔧 DEBUG: Skipping tutorial permanently');
+      localStorage.setItem('waterDropSurvivorTutorialShown', 'true');
+      console.log('✅ Tutorial will be skipped on next Start Game click');
+    };
 
     // Init Game - improved error handling (hotfix for loading screen hang)
     try { 
