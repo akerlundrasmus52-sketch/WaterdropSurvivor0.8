@@ -5787,6 +5787,10 @@
       playerStats.gold += finalAmount;
       saveData.gold += finalAmount;
       saveData.totalGoldEarned += finalAmount;
+      
+      // Show recent pickup notification
+      showPickupNotification(`+${finalAmount} GOLD`, '#FFD700');
+      
       updateHUD();
       updateGoldDisplays();
     }
@@ -5827,6 +5831,10 @@
 
     function addExp(amount) {
       playerStats.exp += amount;
+      
+      // Show recent pickup notification
+      showPickupNotification(`+${amount} EXP`, '#5DADE2');
+      
       if (playerStats.exp >= playerStats.expReq) {
         levelUp();
       }
@@ -6375,6 +6383,47 @@
           }
         }, 50);
       }, 4000);
+    }
+    
+    // Pickup notification system - shows recent gold/exp pickups
+    let recentPickups = [];
+    const MAX_PICKUP_DISPLAY = 5;
+    
+    function showPickupNotification(text, color) {
+      // Add to recent pickups array
+      recentPickups.push({
+        text: text,
+        color: color,
+        time: Date.now()
+      });
+      
+      // Keep only recent pickups (last 5)
+      if (recentPickups.length > MAX_PICKUP_DISPLAY) {
+        recentPickups.shift();
+      }
+      
+      // Update display of pickups in the combo display area
+      const comboDisplay = document.getElementById('combo-display');
+      if (comboDisplay && playerStats.comboCount < 3) {
+        // Only show pickups when combo display is not active
+        const pickupText = recentPickups.map(p => `<span style="color: ${p.color};">${p.text}</span>`).join(' ');
+        const comboText = document.getElementById('combo-text');
+        if (comboText) {
+          comboText.innerHTML = pickupText;
+          comboDisplay.style.display = 'block';
+          
+          // Auto-hide after 2 seconds
+          setTimeout(() => {
+            if (playerStats.comboCount < 3) {
+              comboDisplay.style.display = 'none';
+            }
+          }, 2000);
+        }
+      }
+      
+      // Clean up old pickups (older than 3 seconds)
+      const now = Date.now();
+      recentPickups = recentPickups.filter(p => now - p.time < 3000);
     }
 
     function showUpgradeModal() {
@@ -7011,12 +7060,57 @@
         lvlDisplay.innerText = `LVL: ${playerStats.lvl}`;
       }
       
-      // Update gold and kills in status bar (only if not showing upgrade message)
+      // ENHANCED: Comprehensive status bar with all relevant information
       const statusBar = document.getElementById('unified-status-bar');
       const statusText = document.getElementById('status-bar-text');
       if (statusText && statusBar && !statusBar.dataset.showingMessage) {
-        statusText.innerText = `GOLD: ${playerStats.gold} | KILLS: ${playerStats.kills}`;
-        statusText.style.color = '#FFD700';
+        // Build comprehensive status string
+        let statusParts = [];
+        
+        // Basic stats
+        statusParts.push(`GOLD: ${playerStats.gold}`);
+        statusParts.push(`KILLS: ${playerStats.kills}`);
+        
+        // Combo count if active (3+ combo)
+        if (playerStats.comboCount >= 3) {
+          const comboColor = playerStats.comboCount >= 10 ? '#FF4500' : '#FFD700';
+          const comboText = `<span style="color: ${comboColor}; font-weight: bold;">COMBO: x${playerStats.comboCount}</span>`;
+          statusParts.push(comboText);
+          
+          // Show combo multiplier
+          if (playerStats.comboMultiplier > 1.0) {
+            const multText = `<span style="color: #FF6347;">MULT: ${playerStats.comboMultiplier.toFixed(2)}x</span>`;
+            statusParts.push(multText);
+          }
+        }
+        
+        // Active effects/buffs
+        const activeEffects = [];
+        if (playerStats.dashCooldown > 0) {
+          activeEffects.push('⚡DASH');
+        }
+        if (playerStats.invulnerable) {
+          activeEffects.push('🛡️INVULN');
+        }
+        if (playerStats.hasBerserkerRage && playerStats.hp < playerStats.maxHp * 0.3) {
+          activeEffects.push('💥RAGE');
+        }
+        if (activeEffects.length > 0) {
+          statusParts.push(`<span style="color: #9370DB;">${activeEffects.join(' ')}</span>`);
+        }
+        
+        // Wave/Time information
+        if (typeof waveNumber !== 'undefined' && waveNumber > 0) {
+          statusParts.push(`<span style="color: #87CEEB;">WAVE: ${waveNumber}</span>`);
+        }
+        if (typeof gameTime !== 'undefined' && gameTime > 0) {
+          const minutes = Math.floor(gameTime / 60);
+          const seconds = Math.floor(gameTime % 60);
+          statusParts.push(`<span style="color: #90EE90;">TIME: ${minutes}:${seconds.toString().padStart(2, '0')}</span>`);
+        }
+        
+        // Join all parts with separators
+        statusText.innerHTML = statusParts.join(' <span style="color: #666;">|</span> ');
         statusBar.classList.add('show');
       }
       
