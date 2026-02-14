@@ -7183,6 +7183,11 @@
       setupMenus();
       window.addEventListener('resize', onWindowResize, false);
       
+      // Signal that menu setup is complete and game is ready
+      // This must be set AFTER setupMenus() to ensure button handlers are attached
+      // before the failsafe timeout (line 1910) checks this flag
+      window.gameLoadingComplete = true;
+      
       // Show loading screen, then main menu
       showLoadingScreen();
 
@@ -7203,8 +7208,8 @@
       // Loading failsafe timeout constant
       const LOADING_FAILSAFE_TIMEOUT_MS = 12000;
       
-      // Signal that game loading is complete
-      window.gameLoadingComplete = true;
+      // NOTE: window.gameLoadingComplete is now set in init() AFTER setupMenus() completes
+      // This ensures button handlers are attached before the flag is set to true
       
       // Clear any existing loading bar interval from the standalone script
       if (window.initialLoadingInterval) {
@@ -7396,6 +7401,12 @@
       const optionsAttributesBtn = document.getElementById('options-attributes-btn');
       const optionsSettingsBtn = document.getElementById('options-settings-btn');
       
+      // Defensive null checks to prevent errors if elements are missing
+      if (!menuBtn || !optionsMenu || !closeOptionsBtn || !optionsStatsBtn || !optionsAttributesBtn || !optionsSettingsBtn) {
+        console.error('setupMenus: Required menu elements not found in DOM');
+        return;
+      }
+      
       menuBtn.addEventListener('click', () => {
         isPaused = true;
         activeAnimations.length = 0; // Clear animations on pause (PR #121)
@@ -7427,46 +7438,64 @@
         document.getElementById('settings-modal').style.display = 'flex';
       });
       
-      document.getElementById('settings-btn').onclick = () => {
-        playSound('waterdrop');
-        isPaused = true;
-        activeAnimations.length = 0; // Clear animations on pause (PR #121)
-        document.getElementById('settings-modal').style.display = 'flex';
-      };
+      const settingsBtn = document.getElementById('settings-btn');
+      if (settingsBtn) {
+        settingsBtn.onclick = () => {
+          playSound('waterdrop');
+          isPaused = true;
+          activeAnimations.length = 0; // Clear animations on pause (PR #121)
+          document.getElementById('settings-modal').style.display = 'flex';
+        };
+      }
       
-      document.getElementById('settings-close-btn').onclick = () => {
-        playSound('waterdrop');
-        isPaused = false;
-        document.getElementById('settings-modal').style.display = 'none';
-      };
+      const settingsCloseBtn = document.getElementById('settings-close-btn');
+      if (settingsCloseBtn) {
+        settingsCloseBtn.onclick = () => {
+          playSound('waterdrop');
+          isPaused = false;
+          document.getElementById('settings-modal').style.display = 'none';
+        };
+      }
       
       // Settings handlers
-      document.getElementById('auto-aim-checkbox').onchange = (e) => {
-        gameSettings.autoAim = e.target.checked;
-      };
+      const autoAimCheckboxHandler = document.getElementById('auto-aim-checkbox');
+      if (autoAimCheckboxHandler) {
+        autoAimCheckboxHandler.onchange = (e) => {
+          gameSettings.autoAim = e.target.checked;
+        };
+      }
       
-      document.getElementById('control-type-select').onchange = (e) => {
-        gameSettings.controlType = e.target.value;
-        // Clear joystick states when switching control types
-        joystickLeft.active = false;
-        joystickLeft.x = 0;
-        joystickLeft.y = 0;
-        joystickRight.active = false;
-        joystickRight.x = 0;
-        joystickRight.y = 0;
-        // Clear keyboard state when switching control types
-        gameSettings.keysPressed = {};
-        updateControlType();
-      };
+      const controlTypeSelectHandler = document.getElementById('control-type-select');
+      if (controlTypeSelectHandler) {
+        controlTypeSelectHandler.onchange = (e) => {
+          gameSettings.controlType = e.target.value;
+          // Clear joystick states when switching control types
+          joystickLeft.active = false;
+          joystickLeft.x = 0;
+          joystickLeft.y = 0;
+          joystickRight.active = false;
+          joystickRight.x = 0;
+          joystickRight.y = 0;
+          // Clear keyboard state when switching control types
+          gameSettings.keysPressed = {};
+          updateControlType();
+        };
+      }
       
-      document.getElementById('sound-toggle').onchange = (e) => {
-        gameSettings.soundEnabled = e.target.checked;
-      };
+      const soundToggleHandler = document.getElementById('sound-toggle');
+      if (soundToggleHandler) {
+        soundToggleHandler.onchange = (e) => {
+          gameSettings.soundEnabled = e.target.checked;
+        };
+      }
       
-      document.getElementById('music-toggle').onchange = (e) => {
-        gameSettings.musicEnabled = e.target.checked;
-        updateBackgroundMusic();
-      };
+      const musicToggleHandler = document.getElementById('music-toggle');
+      if (musicToggleHandler) {
+        musicToggleHandler.onchange = (e) => {
+          gameSettings.musicEnabled = e.target.checked;
+          updateBackgroundMusic();
+        };
+      }
 
       // Sync settings UI controls with current gameSettings state
       const autoAimCheckbox = document.getElementById('auto-aim-checkbox');
@@ -7496,91 +7525,129 @@
       // Main Menu Buttons
       // PR #129: Start button concurrency guard
       let startButtonLocked = false;
-      document.getElementById('start-game-btn').onclick = () => {
-        if (startButtonLocked) return; // Prevent double-clicks during countdown
-        startButtonLocked = true;
-        setTimeout(() => { startButtonLocked = false; }, 3000); // Unlock after countdown
-        
-        playSound('waterdrop');
-        hideMainMenu();
-        resetGame();
-        startCountdown(); // Start countdown after resetting game (PR #70)
-      };
+      const startGameBtn = document.getElementById('start-game-btn');
+      if (startGameBtn) {
+        startGameBtn.onclick = () => {
+          if (startButtonLocked) return; // Prevent double-clicks during countdown
+          startButtonLocked = true;
+          setTimeout(() => { startButtonLocked = false; }, 3000); // Unlock after countdown
+          
+          playSound('waterdrop');
+          hideMainMenu();
+          resetGame();
+          startCountdown(); // Start countdown after resetting game (PR #70)
+        };
+      }
       
-      document.getElementById('progression-btn').onclick = () => {
-        playSound('waterdrop');
-        hideMainMenu();
-        showProgressionShop();
-      };
+      const progressionBtn = document.getElementById('progression-btn');
+      if (progressionBtn) {
+        progressionBtn.onclick = () => {
+          playSound('waterdrop');
+          hideMainMenu();
+          showProgressionShop();
+        };
+      }
       
-      document.getElementById('achievements-btn').onclick = () => {
-        playSound('waterdrop');
-        hideMainMenu();
-        updateAchievementsScreen();
-        document.getElementById('achievements-screen').style.display = 'flex';
-      };
+      const achievementsBtn = document.getElementById('achievements-btn');
+      if (achievementsBtn) {
+        achievementsBtn.onclick = () => {
+          playSound('waterdrop');
+          hideMainMenu();
+          updateAchievementsScreen();
+          document.getElementById('achievements-screen').style.display = 'flex';
+        };
+      }
       
-      document.getElementById('attributes-btn').onclick = () => {
-        playSound('waterdrop');
-        hideMainMenu();
-        updateAttributesScreen();
-        document.getElementById('attributes-screen').style.display = 'flex';
-      };
+      const attributesBtn = document.getElementById('attributes-btn');
+      if (attributesBtn) {
+        attributesBtn.onclick = () => {
+          playSound('waterdrop');
+          hideMainMenu();
+          updateAttributesScreen();
+          document.getElementById('attributes-screen').style.display = 'flex';
+        };
+      }
       
-      document.getElementById('gear-btn').onclick = () => {
-        playSound('waterdrop');
-        hideMainMenu();
-        updateGearScreen();
-        document.getElementById('gear-screen').style.display = 'flex';
-      };
+      const gearBtn = document.getElementById('gear-btn');
+      if (gearBtn) {
+        gearBtn.onclick = () => {
+          playSound('waterdrop');
+          hideMainMenu();
+          updateGearScreen();
+          document.getElementById('gear-screen').style.display = 'flex';
+        };
+      }
       
       // PR #138: Circular equipment button handler
-      document.getElementById('menu-equipment-btn').onclick = () => {
-        playSound('waterdrop');
-        hideMainMenu();
-        updateGearScreen();
-        document.getElementById('gear-screen').style.display = 'flex';
-      };
+      const menuEquipmentBtn = document.getElementById('menu-equipment-btn');
+      if (menuEquipmentBtn) {
+        menuEquipmentBtn.onclick = () => {
+          playSound('waterdrop');
+          hideMainMenu();
+          updateGearScreen();
+          document.getElementById('gear-screen').style.display = 'flex';
+        };
+      }
       
-      document.getElementById('credits-btn').onclick = () => {
-        playSound('waterdrop');
-        hideMainMenu();
-        document.getElementById('credits-screen').style.display = 'flex';
-      };
+      const creditsBtn = document.getElementById('credits-btn');
+      if (creditsBtn) {
+        creditsBtn.onclick = () => {
+          playSound('waterdrop');
+          hideMainMenu();
+          document.getElementById('credits-screen').style.display = 'flex';
+        };
+      }
       
       // Back buttons
-      document.getElementById('shop-back-btn').onclick = () => {
-        playSound('waterdrop');
-        document.getElementById('progression-shop').style.display = 'none';
-        showMainMenu();
-      };
+      const shopBackBtn = document.getElementById('shop-back-btn');
+      if (shopBackBtn) {
+        shopBackBtn.onclick = () => {
+          playSound('waterdrop');
+          document.getElementById('progression-shop').style.display = 'none';
+          showMainMenu();
+        };
+      }
       
-      document.getElementById('achievements-back-btn').onclick = () => {
-        playSound('waterdrop');
-        document.getElementById('achievements-screen').style.display = 'none';
-        showMainMenu();
-      };
+      const achievementsBackBtn = document.getElementById('achievements-back-btn');
+      if (achievementsBackBtn) {
+        achievementsBackBtn.onclick = () => {
+          playSound('waterdrop');
+          document.getElementById('achievements-screen').style.display = 'none';
+          showMainMenu();
+        };
+      }
       
-      document.getElementById('attributes-back-btn').onclick = () => {
-        playSound('waterdrop');
-        document.getElementById('attributes-screen').style.display = 'none';
-        showMainMenu();
-      };
+      const attributesBackBtn = document.getElementById('attributes-back-btn');
+      if (attributesBackBtn) {
+        attributesBackBtn.onclick = () => {
+          playSound('waterdrop');
+          document.getElementById('attributes-screen').style.display = 'none';
+          showMainMenu();
+        };
+      }
       
-      document.getElementById('gear-back-btn').onclick = () => {
-        playSound('waterdrop');
-        document.getElementById('gear-screen').style.display = 'none';
-        showMainMenu();
-      };
+      const gearBackBtn = document.getElementById('gear-back-btn');
+      if (gearBackBtn) {
+        gearBackBtn.onclick = () => {
+          playSound('waterdrop');
+          document.getElementById('gear-screen').style.display = 'none';
+          showMainMenu();
+        };
+      }
       
-      document.getElementById('credits-back-btn').onclick = () => {
-        playSound('waterdrop');
-        document.getElementById('credits-screen').style.display = 'none';
-        showMainMenu();
-      };
+      const creditsBackBtn = document.getElementById('credits-back-btn');
+      if (creditsBackBtn) {
+        creditsBackBtn.onclick = () => {
+          playSound('waterdrop');
+          document.getElementById('credits-screen').style.display = 'none';
+          showMainMenu();
+        };
+      }
       
       // Reset progress button with double confirmation
-      document.getElementById('settings-reset-btn').onclick = () => {
+      const settingsResetBtn = document.getElementById('settings-reset-btn');
+      if (settingsResetBtn) {
+        settingsResetBtn.onclick = () => {
         if (confirm('⚠️ WARNING ⚠️\n\nAre you ABSOLUTELY SURE you want to RESET ALL PROGRESS?\n\nThis will delete:\n• All permanent upgrades\n• All gold\n• All achievements\n\nThis action CANNOT be undone!')) {
           // Second confirmation
           if (confirm('FINAL CONFIRMATION\n\nThis is your LAST CHANCE!\n\nDo you really want to DELETE EVERYTHING?\n\nClick OK to permanently reset, or Cancel to keep your progress.')) {
@@ -7615,27 +7682,39 @@
         }
       };
       
+        };
+      }
+      
       // Restart button now returns to menu
-      document.getElementById('restart-btn').onclick = () => {
-        playSound('levelup');
-        document.getElementById('gameover-screen').style.display = 'none';
-        showMainMenu();
-      };
+      const restartBtn = document.getElementById('restart-btn');
+      if (restartBtn) {
+        restartBtn.onclick = () => {
+          playSound('levelup');
+          document.getElementById('gameover-screen').style.display = 'none';
+          showMainMenu();
+        };
+      }
       
       // Stats Bar removed - No toggle needed
       
       // Attributes & Equipment Button
-      document.getElementById('equipment-btn').onclick = () => {
-        playSound('waterdrop');
-        showAttributesMenu();
-      };
+      const equipmentBtn = document.getElementById('equipment-btn');
+      if (equipmentBtn) {
+        equipmentBtn.onclick = () => {
+          playSound('waterdrop');
+          showAttributesMenu();
+        };
+      }
       
       // Attributes Menu Close Button
-      document.getElementById('close-attributes-btn').onclick = () => {
-        playSound('waterdrop');
-        document.getElementById('attributes-menu').style.display = 'none';
-        isPaused = false;
-      };
+      const closeAttributesBtn = document.getElementById('close-attributes-btn');
+      if (closeAttributesBtn) {
+        closeAttributesBtn.onclick = () => {
+          playSound('waterdrop');
+          document.getElementById('attributes-menu').style.display = 'none';
+          isPaused = false;
+        };
+      }
       
       // Initialize control type UI on startup
       updateControlType();
@@ -11134,7 +11213,15 @@
     }
 
     // Init Game
-    try { init(); } catch(e) { console.error(e); alert("Game Error: " + e.message); }
+    try { 
+      init(); 
+    } catch(e) { 
+      console.error('Game initialization failed:', e);
+      console.error('Stack trace:', e.stack);
+      alert("Game Error: " + e.message + "\n\nPlease refresh the page. If the problem persists, check the browser console for details.");
+      // Ensure gameLoadingComplete stays false so failsafe can handle it
+      window.gameLoadingComplete = false;
+    }
 
   </script>
 </body>
