@@ -2315,7 +2315,9 @@
       soundEnabled: true,
       musicEnabled: true,
       isPortrait: null,
-      inputListenersRegistered: false
+      inputListenersRegistered: false,
+      isManualAiming: false, // NEW: Track when player is using manual aim (right stick)
+      tutorialShown: false // NEW: Track if tutorial has been shown
     };
 
     // Input - Twin-Stick Controls
@@ -2354,6 +2356,7 @@
       weaponsUnlocked: 0,
       xpMultiplier: 1, // From gear
       dodgeChance: 0, // From gear
+      precision: 0, // NEW: Aiming/Precision attribute - increases crit/headshot chance and gold bonus when manual aiming
       // Perk System
       perks: {
         vampire: 0,      // Life steal %
@@ -2659,10 +2662,48 @@
           // Rotation/Aiming with RIGHT stick (independent of movement)
           if (joystickRight.active) {
             // Manual aim: Turn to face the direction of right stick
-            const angle = Math.atan2(joystickRight.x, joystickRight.y);
-            this.mesh.rotation.y = angle;
+            gameSettings.isManualAiming = true;
+            let targetAngle = Math.atan2(joystickRight.x, joystickRight.y);
+            
+            // Aim-assist in manual mode: nudge toward nearby enemies
+            if (enemies && enemies.length > 0) {
+              let nearestEnemy = null;
+              let minDist = Infinity;
+              const aimAssistRange = 15; // Assist range in units
+              const aimAssistStrength = 0.15; // How much to nudge (15%)
+              
+              enemies.forEach(e => {
+                if (e && !e.isDead) {
+                  const dist = this.mesh.position.distanceTo(e.mesh.position);
+                  if (dist < minDist && dist < aimAssistRange) {
+                    minDist = dist;
+                    nearestEnemy = e;
+                  }
+                }
+              });
+              
+              if (nearestEnemy) {
+                const dx = nearestEnemy.mesh.position.x - this.mesh.position.x;
+                const dz = nearestEnemy.mesh.position.z - this.mesh.position.z;
+                const enemyAngle = Math.atan2(dx, dz);
+                
+                // Calculate angle difference
+                let angleDiff = enemyAngle - targetAngle;
+                // Normalize to -PI to PI
+                while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+                while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+                
+                // Only assist if aiming somewhat close to enemy (within 45 degrees)
+                if (Math.abs(angleDiff) < Math.PI / 4) {
+                  targetAngle += angleDiff * aimAssistStrength;
+                }
+              }
+            }
+            
+            this.mesh.rotation.y = targetAngle;
           } else if (gameSettings.autoAim && enemies && enemies.length > 0) {
-            // Auto-aim when enabled (works in any orientation)
+            // Auto-aim when enabled and right stick is idle (works in any orientation)
+            gameSettings.isManualAiming = false;
             let nearestEnemy = null;
             let minDist = Infinity;
             enemies.forEach(e => {
@@ -2680,10 +2721,13 @@
               const angle = Math.atan2(dx, dz);
               this.mesh.rotation.y = angle;
             }
-          } else if (joystickLeft.active) {
-            // If no right stick input and no auto-aim, rotate to face movement direction
-            const angle = Math.atan2(targetVel.x, targetVel.z);
-            this.mesh.rotation.y = angle;
+          } else {
+            gameSettings.isManualAiming = false;
+            if (joystickLeft.active) {
+              // If no right stick input and no auto-aim, rotate to face movement direction
+              const angle = Math.atan2(targetVel.x, targetVel.z);
+              this.mesh.rotation.y = angle;
+            }
           }
 
           // Inertia / Squish Effect - Enhanced for Phase 1
@@ -3896,6 +3940,15 @@
         
         // Only spawn gold if amount > 0
         if (goldAmount > 0) {
+          // NEW: Manual aim bonus - small gold increase when manually aiming
+          if (gameSettings.isManualAiming) {
+            const manualAimBonus = 1 + (playerStats.precision * 0.02); // 2% per precision point
+            goldAmount = Math.floor(goldAmount * manualAimBonus);
+            // Show bonus notification occasionally
+            if (Math.random() < 0.2) {
+              createFloatingText('+Precision!', this.mesh.position, '#FFD700');
+            }
+          }
           spawnGold(this.mesh.position.x, this.mesh.position.z, goldAmount);
         }
         
@@ -4022,7 +4075,13 @@
               dmg = weapons.droneTurret.damage * playerStats.damage * playerStats.strength;
             }
             
-            const isCrit = Math.random() < playerStats.critChance;
+            // NEW: Manual aim bonus - increased crit chance with precision
+            let effectiveCritChance = playerStats.critChance;
+            if (gameSettings.isManualAiming) {
+              effectiveCritChance += playerStats.precision * 0.01; // +1% crit per precision point
+            }
+            
+            const isCrit = Math.random() < effectiveCritChance;
             if (isCrit) dmg *= playerStats.critDmg;
             
             enemy.takeDamage(Math.floor(dmg), isCrit);
@@ -4160,7 +4219,14 @@
           if (dx*dx + dz*dz < 0.6) {
             // Calculate Damage
             let dmg = weapons.iceSpear.damage * playerStats.damage * playerStats.strength;
-            const isCrit = Math.random() < playerStats.critChance;
+            
+            // NEW: Manual aim bonus - increased crit chance with precision
+            let effectiveCritChance = playerStats.critChance;
+            if (gameSettings.isManualAiming) {
+              effectiveCritChance += playerStats.precision * 0.01; // +1% crit per precision point
+            }
+            
+            const isCrit = Math.random() < effectiveCritChance;
             if (isCrit) dmg *= playerStats.critDmg;
             
             enemy.takeDamage(Math.floor(dmg), isCrit);
@@ -4646,12 +4712,40 @@
         bag.position.y = 0;
         group.add(bag);
         
-        // Knot at top
+        // Knot at top (animated)
         const knotGeo = new THREE.SphereGeometry(0.15, 8, 8);
         const knotMat = new THREE.MeshBasicMaterial({ color: 0x654321 }); // Darker brown
         const knot = new THREE.Mesh(knotGeo, knotMat);
         knot.position.y = 0.35;
         group.add(knot);
+        this.knot = knot; // Store reference for animation
+        
+        // NEW: Add loose coins dropping around the bag
+        this.looseCoins = [];
+        for (let i = 0; i < 3; i++) {
+          const coinGeo = new THREE.CylinderGeometry(0.15, 0.15, 0.08, 12);
+          const coinMat = new THREE.MeshPhysicalMaterial({ 
+            color: 0xFFD700,
+            metalness: 0.9,
+            roughness: 0.1,
+            emissive: 0xFFAA00,
+            emissiveIntensity: 0.3
+          });
+          const looseCoin = new THREE.Mesh(coinGeo, coinMat);
+          const angle = (i / 3) * Math.PI * 2;
+          looseCoin.position.set(
+            x + Math.cos(angle) * 0.5,
+            0.3,
+            z + Math.sin(angle) * 0.5
+          );
+          looseCoin.rotation.x = Math.PI / 2;
+          scene.add(looseCoin);
+          this.looseCoins.push({
+            mesh: looseCoin,
+            angle: angle,
+            bouncePhase: Math.random() * Math.PI * 2
+          });
+        }
         
         // Gold coins texture (simple circles on the bag)
         const coinGeo = new THREE.CircleGeometry(0.08, 8);
@@ -4727,8 +4821,11 @@
         
         // Type-specific animations
         if (this.type === 'single') {
-          // Single coin spinning
-          this.mesh.rotation.y += 0.15;
+          // Single coin spinning on its axis like EXP stars (Y-axis rotation)
+          this.mesh.rotation.y += 0.08; // Steady 360-degree rotation on axis
+          
+          // Add slight wobble for interest
+          this.mesh.rotation.x = Math.PI / 2 + Math.sin(this.wobblePhase * 2) * 0.05;
         } else if (this.type === 'multiple') {
           // Multiple coins orbiting and spinning
           this.coins.forEach((coinData, i) => {
@@ -4736,7 +4833,12 @@
             const radius = 0.4;
             coinData.mesh.position.x = this.centerPos.x + Math.cos(coinData.angle) * radius;
             coinData.mesh.position.z = this.centerPos.z + Math.sin(coinData.angle) * radius;
-            coinData.mesh.rotation.y += 0.15;
+            
+            // Spin on axis like EXP stars (Y-axis rotation)
+            coinData.mesh.rotation.y += 0.08;
+            
+            // Add slight wobble for interest
+            coinData.mesh.rotation.x = Math.PI / 2 + Math.sin(this.wobblePhase * 2 + i) * 0.05;
             
             // Update Y position for bouncing
             if (this.bounceTime < 1) {
@@ -4750,6 +4852,27 @@
           // Bag swaying
           this.mesh.rotation.z = Math.sin(this.wobblePhase) * 0.1;
           this.wobblePhase += 0.05;
+          
+          // NEW: Animate knot bouncing
+          if (this.knot) {
+            this.knot.scale.set(
+              1 + Math.sin(this.wobblePhase * 3) * 0.1,
+              1 - Math.sin(this.wobblePhase * 3) * 0.1,
+              1 + Math.sin(this.wobblePhase * 3) * 0.1
+            );
+          }
+          
+          // NEW: Animate loose coins
+          if (this.looseCoins) {
+            this.looseCoins.forEach((coinData) => {
+              // Spin on axis like EXP stars
+              coinData.mesh.rotation.y += 0.08;
+              
+              // Bob up and down
+              coinData.bouncePhase += 0.06;
+              coinData.mesh.position.y = 0.3 + Math.sin(coinData.bouncePhase) * 0.08;
+            });
+          }
         } else if (this.type === 'chest') {
           // Chest glowing pulse
           if (this.glowLight) {
@@ -4821,6 +4944,32 @@
             coinData.mesh.geometry.dispose();
             coinData.mesh.material.dispose();
           });
+        } else if (this.type === 'bag' && this.looseCoins) {
+          // NEW: Clean up bag's loose coins
+          this.looseCoins.forEach(coinData => {
+            scene.remove(coinData.mesh);
+            coinData.mesh.geometry.dispose();
+            coinData.mesh.material.dispose();
+          });
+          
+          if (this.mesh) {
+            if (this.glowLight) {
+              this.mesh.remove(this.glowLight);
+            }
+            scene.remove(this.mesh);
+            
+            // Dispose geometries and materials recursively
+            this.mesh.traverse((child) => {
+              if (child.geometry) child.geometry.dispose();
+              if (child.material) {
+                if (Array.isArray(child.material)) {
+                  child.material.forEach(mat => mat.dispose());
+                } else {
+                  child.material.dispose();
+                }
+              }
+            });
+          }
         } else if (this.mesh) {
           // Clean up single mesh or group
           if (this.glowLight) {
@@ -4917,6 +5066,39 @@
         this.lid.position.set(0, 0.35, 0);
         this.mesh.add(this.lid);
         
+        // NEW: Add light seams (thin glowing lines between lid and body)
+        const seamGeo = new THREE.PlaneGeometry(0.9, 0.05);
+        const seamMat = new THREE.MeshBasicMaterial({ 
+          color: props.lightColor,
+          transparent: true,
+          opacity: 0.6,
+          side: THREE.DoubleSide
+        });
+        
+        // Front seam
+        const seamFront = new THREE.Mesh(seamGeo, seamMat);
+        seamFront.position.set(0, 0.3, 0.33);
+        this.mesh.add(seamFront);
+        
+        // Back seam
+        const seamBack = new THREE.Mesh(seamGeo, seamMat.clone());
+        seamBack.position.set(0, 0.3, -0.33);
+        this.mesh.add(seamBack);
+        
+        // Side seams
+        const seamSideGeo = new THREE.PlaneGeometry(0.05, 0.65);
+        const seamLeft = new THREE.Mesh(seamSideGeo, seamMat.clone());
+        seamLeft.position.set(-0.43, 0.3, 0);
+        seamLeft.rotation.y = Math.PI / 2;
+        this.mesh.add(seamLeft);
+        
+        const seamRight = new THREE.Mesh(seamSideGeo, seamMat.clone());
+        seamRight.position.set(0.43, 0.3, 0);
+        seamRight.rotation.y = Math.PI / 2;
+        this.mesh.add(seamRight);
+        
+        this.seams = [seamFront, seamBack, seamLeft, seamRight];
+        
         this.active = true;
         this.opened = false;
         this.collectRange = 1.5;
@@ -4949,7 +5131,18 @@
           this.glowLight.position.copy(this.mesh.position);
           this.glowLight.position.y += 0.5;
           // Pulsing glow
-          this.glowLight.intensity = 1.5 + Math.sin(this.wobblePhase * 2) * 0.5;
+          const pulseIntensity = 1.5 + Math.sin(this.wobblePhase * 2) * 0.5;
+          this.glowLight.intensity = pulseIntensity;
+          
+          // NEW: Pulse seam opacity in sync with light
+          if (this.seams) {
+            const seamOpacity = 0.4 + Math.sin(this.wobblePhase * 2) * 0.3;
+            this.seams.forEach(seam => {
+              if (seam.material) {
+                seam.material.opacity = seamOpacity;
+              }
+            });
+          }
         }
         
         // Check if player is close enough to open
@@ -10832,7 +11025,14 @@
           const d = player.mesh.position.distanceTo(e.mesh.position);
           if (d < weapons.fireRing.range) {
             const dmg = weapons.fireRing.damage * playerStats.strength;
-            const isCrit = Math.random() < playerStats.critChance;
+            
+            // NEW: Manual aim bonus - increased crit chance with precision
+            let effectiveCritChance = playerStats.critChance;
+            if (gameSettings.isManualAiming) {
+              effectiveCritChance += playerStats.precision * 0.01; // +1% crit per precision point
+            }
+            
+            const isCrit = Math.random() < effectiveCritChance;
             const finalDmg = isCrit ? dmg * playerStats.critDmg : dmg;
             e.takeDamage(finalDmg);
             createDamageNumber(finalDmg, e.mesh.position, isCrit);
