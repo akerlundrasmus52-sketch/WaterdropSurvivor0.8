@@ -7186,6 +7186,7 @@
     let loadingDismissed = false;
     let loadingInterval = null;
     let loadingFailsafeTimeout = null;
+    const LOADING_DISMISS_DELAY_MS = 100; // Delay after first frame before dismissing loading screen
     
     function showLoadingScreen() {
       const loadingScreen = document.getElementById('loading-screen');
@@ -10319,7 +10320,6 @@
         // Dismiss loading screen after first frame is rendered
         // This ensures setupMenus and requestAnimationFrame have both completed
         // Small delay to ensure the frame is fully rendered before dismissing
-        const LOADING_DISMISS_DELAY_MS = 100;
         setTimeout(() => dismissLoadingScreen(), LOADING_DISMISS_DELAY_MS);
         return;
       }
