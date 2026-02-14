@@ -7452,10 +7452,10 @@
       let baseCount, levelBonus, cap;
       
       if (playerStats.lvl <= 30) {
-        // Early game: Aggressive spawns (4-8 enemies per wave)
-        baseCount = 4 + Math.floor(waveCount / 3);
-        levelBonus = Math.floor(playerStats.lvl / 4);
-        cap = 8;
+        // Early game: Moderate spawns for better new player experience (3-7 enemies per wave)
+        baseCount = 3 + Math.floor(waveCount / 4);
+        levelBonus = Math.floor(playerStats.lvl / 5);
+        cap = 7;
       } else if (playerStats.lvl <= 75) {
         // Mid-game: Moderate spawns after upgrade threshold
         baseCount = 3 + Math.floor(waveCount / 4);
@@ -7628,7 +7628,10 @@
     }
 
     function addExp(amount) {
-      playerStats.exp += amount;
+      // Apply XP bonus from gear
+      const xpMultiplier = playerStats.xpMultiplier || 1;
+      const finalAmount = Math.floor(amount * xpMultiplier);
+      playerStats.exp += finalAmount;
       
       // Trigger waterdrop grow animation on XP pickup
       const waterdropContainer = document.getElementById('waterdrop-container');
@@ -9377,31 +9380,36 @@
       const attrCritDmg = luck * ATTRIBUTE_INFO.luck.effects.critDamage;
       const attrCdReduction = wisdom * ATTRIBUTE_INFO.wisdom.effects.cooldownReduction;
       
-      // Apply gear bonuses
+      // Apply gear bonuses from new 6-slot equipment system
       const gearStats = calculateGearStats();
-      // Gear provides small, balanced bonuses (each point gives +1-2% depending on stat)
-      const gearFlexibilityBonus = gearStats.flexibility * 0.01;  // +1% armor per point
-      const gearMoveSpeedBonus = gearStats.movementSpeed * 0.02;  // +2% speed per point
-      const gearAtkSpeedBonus = gearStats.attackSpeed * 0.02;     // +2% attack speed per point
-      const gearPrecisionBonus = gearStats.attackPrecision * 0.01; // +1% crit chance per point
-      const gearCritBonus = gearStats.critChance * 0.02;          // +2% crit chance per point
-      const gearMagicBonus = gearStats.elementalMagic * 0.03;     // +3% damage per point
+      // Gear provides meaningful RPG bonuses
+      const gearHpBonus = gearStats.hp || 0;              // Flat HP bonus
+      const gearArmorBonus = gearStats.armor || 0;        // Flat armor bonus (%)
+      const gearHpRegenBonus = gearStats.hpRegen || 0;    // Flat HP regen/sec
+      const gearMoveSpeedBonus = (gearStats.moveSpeed || 0) * 0.01;  // +1% per point
+      const gearDodgeBonus = (gearStats.dodge || 0) * 0.01;          // +1% per point
+      const gearDamageBonus = (gearStats.damage || 0) * 0.01;        // +1% per point
+      const gearCritBonus = (gearStats.critChance || 0) * 0.01;      // +1% per point
+      const gearAtkSpeedBonus = (gearStats.attackSpeed || 0) * 0.01; // +1% per point
+      const gearXpBonus = (gearStats.xpBonus || 0) * 0.01;           // +1% per point
       
       // Reset Stats with permanent upgrades, attributes, and gear applied
       playerStats.lvl = 1;
       playerStats.exp = 0;
       playerStats.expReq = GAME_CONFIG.baseExpReq;
-      playerStats.hp = baseHp + attrHp;
-      playerStats.maxHp = baseHp + attrHp;
-      playerStats.strength = baseDamage * (1 + attrDamage + gearMagicBonus);
+      playerStats.hp = baseHp + attrHp + gearHpBonus;
+      playerStats.maxHp = baseHp + attrHp + gearHpBonus;
+      playerStats.strength = baseDamage * (1 + attrDamage + gearDamageBonus);
       playerStats.walkSpeed = baseSpeed * (1 + gearMoveSpeedBonus);
       playerStats.kills = 0;
       playerStats.miniBossesDefeated = 0; // Reset mini-boss tracking
       playerStats.atkSpeed = baseAtkSpeed * (1 + attrAtkSpeed + gearAtkSpeedBonus);
-      playerStats.critChance = baseCritChance + attrCritChance + gearPrecisionBonus + gearCritBonus;
+      playerStats.critChance = baseCritChance + attrCritChance + gearCritBonus;
       playerStats.critDmg = baseCritDmg + attrCritDmg;
-      playerStats.armor = baseArmor + gearStats.flexibility; // Flexibility gives flat armor bonus
-      playerStats.hpRegen = baseRegen + attrRegen;
+      playerStats.armor = Math.min(80, baseArmor + gearArmorBonus); // Cap at 80% damage reduction
+      playerStats.hpRegen = baseRegen + attrRegen + gearHpRegenBonus;
+      playerStats.dodge = gearDodgeBonus; // Dodge from gear
+      playerStats.xpMultiplier = 1 + gearXpBonus; // Store XP bonus multiplier
       playerStats.gold = 0;
       waveCount = 0;
       lastWaveEndTime = 0; // Reset wave timing
