@@ -7713,11 +7713,23 @@
       updateGoldDisplays();
       isGameActive = false;
       isPaused = true;
+      // CRITICAL FIX: Hide game UI buttons when menu is shown to prevent overlap
+      const gameUIButtons = ['equipment-btn', 'menu-btn', 'settings-btn', 'stats-btn'];
+      gameUIButtons.forEach(btnId => {
+        const btn = document.getElementById(btnId);
+        if (btn) btn.style.display = 'none';
+      });
     }
     
     function hideMainMenu() {
       console.log('🚪 Hiding main menu');
       document.getElementById('main-menu').style.display = 'none';
+      // CRITICAL FIX: Show game UI buttons again when menu is hidden
+      const gameUIButtons = ['equipment-btn', 'menu-btn', 'settings-btn', 'stats-btn'];
+      gameUIButtons.forEach(btnId => {
+        const btn = document.getElementById(btnId);
+        if (btn) btn.style.display = 'flex'; // or 'block' depending on button
+      });
     }
     
     // Countdown system (PR #70-71)
@@ -11653,9 +11665,17 @@
       console.error('Game initialization error:', e); 
       // Check if it's a Three.js loading issue
       if (typeof THREE === 'undefined') {
-        alert("Failed to load Three.js library. Please check your internet connection and reload the page.");
+        alert("Failed to load required libraries. Please check your internet connection and reload the page.");
       } else {
         alert("Game Error: " + e.message);
+      }
+      // CRITICAL FIX: Even if init() fails, set up menu handlers as fallback
+      console.log('🔧 Setting up fallback menu handlers');
+      try {
+        setupMenus();
+        console.log('✅ Fallback menu setup complete');
+      } catch (menuError) {
+        console.error('❌ Fallback menu setup also failed:', menuError);
       }
     }
 
