@@ -2305,33 +2305,6 @@
     let lastCleanupTime = 0; // Track last memory cleanup time
     let miniBossesSpawned = new Set(); // Track which mini-boss levels have been spawned
     
-    // Centralized Animation System (PR #121) - Prevents render freeze from competing requestAnimationFrame loops
-    let activeAnimations = [];
-    const MAX_ACTIVE_ANIMATIONS = 200; // Limit to prevent overwhelming frame budget
-    
-    function addAnimation(updateFn) {
-      // Prevent animation overflow during intense gameplay
-      if (activeAnimations.length >= MAX_ACTIVE_ANIMATIONS) {
-        console.warn('Animation limit reached, skipping new animation');
-        return;
-      }
-      activeAnimations.push(updateFn);
-    }
-    
-    // Render recovery watchdog (PR #121) - Detects and recovers from render stalls
-    let lastRenderTime = performance.now();
-    let isRecovering = false; // Prevent multiple concurrent recovery attempts
-    setInterval(() => {
-      if (isGameActive && !isPaused && performance.now() - lastRenderTime > 500 && !isRecovering) {
-        isRecovering = true;
-        console.warn('Render recovery triggered - stall detected');
-        requestAnimationFrame(() => {
-          animate(performance.now());
-          isRecovering = false;
-        });
-      }
-    }, 1000);
-    
     // Countdown system (PR #70-71)
     let countdownActive = false;
     let countdownStep = 0;
@@ -2801,11 +2774,11 @@
                 scene.remove(smoke);
                 smoke.geometry.dispose();
                 smoke.material.dispose();
-                return false; // Remove from animation system
+              } else {
+                requestAnimationFrame(updateSmoke);
               }
-              return true; // Continue animating
             };
-            addAnimation(updateSmoke);
+            updateSmoke();
           }
         }
         
@@ -3012,15 +2985,14 @@
             camera.position.x = originalCameraPos.x + (Math.random() - 0.5) * intensity;
             camera.position.y = originalCameraPos.y + (Math.random() - 0.5) * intensity;
             camera.position.z = originalCameraPos.z + (Math.random() - 0.5) * intensity;
-            return true; // Continue animating
+            requestAnimationFrame(shakeAnim);
           } else {
             camera.position.x = originalCameraPos.x;
             camera.position.y = originalCameraPos.y;
             camera.position.z = originalCameraPos.z;
-            return false; // Complete animation
           }
         };
-        addAnimation(shakeAnim);
+        shakeAnim();
 
         if (playerStats.hp <= 0) {
           // ENHANCED Death splash: more particles + ground pool with fade
@@ -3651,11 +3623,11 @@
                 scene.remove(limb);
                 limb.geometry.dispose();
                 limb.material.dispose();
-                return false; // Remove from animation system
+              } else {
+                requestAnimationFrame(updateLimb);
               }
-              return true; // Continue animating
             };
-            addAnimation(updateLimb);
+            updateLimb();
           }
           
           spawnParticles(this.mesh.position, enemyColor, 12); // Reduced for performance
@@ -3700,11 +3672,11 @@
                 scene.remove(piece);
                 piece.geometry.dispose();
                 piece.material.dispose();
-                return false; // Remove from animation system
+              } else {
+                requestAnimationFrame(updatePiece);
               }
-              return true; // Continue animating
             };
-            addAnimation(updatePiece);
+            updatePiece();
           }
           
           // Enhanced particles for destruction
@@ -3782,11 +3754,11 @@
               scene.remove(ring);
               ring.geometry.dispose();
               ring.material.dispose();
-              return false; // Remove from animation system
+            } else {
+              requestAnimationFrame(animateRing);
             }
-            return true; // Continue animating
           };
-          addAnimation(animateRing);
+          animateRing();
           
           // Explode into more pieces - ENHANCED
           const pieceCount = this.isMiniBoss ? 25 : 15; // More pieces for mini-boss
@@ -3819,11 +3791,11 @@
                 scene.remove(piece);
                 piece.geometry.dispose();
                 piece.material.dispose();
-                return false; // Remove from animation system
+              } else {
+                requestAnimationFrame(updatePiece);
               }
-              return true; // Continue animating
             };
-            addAnimation(updatePiece);
+            updatePiece();
           }
         } else {
           // CORPSE DEATH: Leave a corpse sprite that fades away
@@ -3872,11 +3844,11 @@
               corpse.material.dispose();
               bloodPool.geometry.dispose();
               bloodPool.material.dispose();
-              return false; // Remove from animation system
+            } else {
+              requestAnimationFrame(fadeCorpse);
             }
-            return true; // Continue animating
           };
-          addAnimation(fadeCorpse);
+          fadeCorpse();
         }
         
         // Screen flash on kill (dopamine boost) - stronger flash for mini-boss
@@ -4595,11 +4567,11 @@
               scene.remove(particle);
               particle.geometry.dispose();
               particle.material.dispose();
-              return false; // Remove from animation system
+            } else {
+              requestAnimationFrame(updateParticle);
             }
-            return true; // Continue animating
           };
-          addAnimation(updateParticle);
+          updateParticle();
         }
         
         // Screen flash effect - blue tint (PR #117)
@@ -5056,11 +5028,10 @@
           if (openProgress < 1) {
             this.lid.rotation.x = -openProgress * Math.PI * 0.7; // Open 70%
             this.lid.position.z = -openProgress * 0.2; // Slide back slightly
-            return true; // Continue animating
+            requestAnimationFrame(animateLid);
           }
-          return false; // Animation complete
         };
-        addAnimation(animateLid);
+        animateLid();
         
         // Play sound and effects
         playSound('coin'); // Reuse coin sound
@@ -7514,7 +7485,6 @@
       
       menuBtn.addEventListener('click', () => {
         isPaused = true;
-        activeAnimations.length = 0; // Clear animations on pause (PR #121)
         optionsMenu.style.display = 'flex';
         playSound('waterdrop');
       });
@@ -7538,7 +7508,6 @@
       optionsSettingsBtn.addEventListener('click', () => {
         optionsMenu.style.display = 'none';
         isPaused = true;
-        activeAnimations.length = 0; // Clear animations on pause (PR #121)
         // Open settings modal
         document.getElementById('settings-modal').style.display = 'flex';
       });
@@ -7546,7 +7515,6 @@
       document.getElementById('settings-btn').onclick = () => {
         playSound('waterdrop');
         isPaused = true;
-        activeAnimations.length = 0; // Clear animations on pause (PR #121)
         document.getElementById('settings-modal').style.display = 'flex';
       };
       
@@ -7762,7 +7730,6 @@
     // Function to show attributes and equipment menu
     function showAttributesMenu() {
       isPaused = true;
-      activeAnimations.length = 0; // Clear animations on pause (PR #121)
       
       // Populate attributes content
       const attributesContent = document.getElementById('attributes-content');
@@ -8018,11 +7985,11 @@
           scene.remove(mesh);
           mesh.geometry.dispose();
           mesh.material.dispose();
-          return false; // Remove from animation system
+        } else {
+          requestAnimationFrame(update);
         }
-        return true; // Continue animating
       };
-      addAnimation(update);
+      update();
     }
 
     function addExp(amount) {
@@ -8215,11 +8182,11 @@
             scene.remove(droplet);
             droplet.geometry.dispose();
             droplet.material.dispose();
-            return false; // Remove from animation system
+          } else {
+            requestAnimationFrame(updateDroplet);
           }
-          return true; // Continue animating
         };
-        addAnimation(updateDroplet);
+        updateDroplet();
       }
       
       // Expanding splash ring on ground
@@ -8247,11 +8214,11 @@
           scene.remove(ring);
           ring.geometry.dispose();
           ring.material.dispose();
-          return false; // Remove from animation system
+        } else {
+          requestAnimationFrame(updateRing);
         }
-        return true; // Continue animating
       };
-      addAnimation(updateRing);
+      updateRing();
       
       // Fountain/explosion of "LEVEL UP" text particles from player's head
       const texts = ["L", "E", "V", "E", "L", " ", "U", "P", "!"];
@@ -8322,11 +8289,10 @@
         camera.updateProjectionMatrix();
         
         if (t < 1) {
-          return true; // Continue animating
+          requestAnimationFrame(zoomAnim);
         }
-        return false; // Animation complete
       };
-      addAnimation(zoomAnim);
+      zoomAnim();
       
       // Screen shake
       const originalCameraPos = camera.position.clone();
@@ -8340,13 +8306,12 @@
           camera.position.x = originalCameraPos.x + (Math.random() - 0.5) * intensity;
           camera.position.y = originalCameraPos.y + (Math.random() - 0.5) * intensity;
           camera.position.z = originalCameraPos.z + (Math.random() - 0.5) * intensity;
-          return true; // Continue animating
+          requestAnimationFrame(shakeAnim);
         } else {
           camera.position.copy(originalCameraPos);
-          return false; // Animation complete
         }
       };
-      addAnimation(shakeAnim);
+      shakeAnim();
     }
     
     class LevelUpTextParticle {
@@ -9753,9 +9718,6 @@
       isPaused = true;
       isGameActive = false;
       
-      // Clear all active animations to prevent buildup (PR #121)
-      activeAnimations.length = 0;
-      
       stopDroneHum(); // Stop drone sound
       
       // Calculate run stats
@@ -10602,20 +10564,6 @@
       // Player Update
       player.update(dt);
       
-      // Update centralized animation system (PR #121)
-      // Process all active animations and remove completed ones
-      for (let i = activeAnimations.length - 1; i >= 0; i--) {
-        try {
-          const shouldContinue = activeAnimations[i]();
-          if (shouldContinue === false) {
-            activeAnimations.splice(i, 1);
-          }
-        } catch (error) {
-          console.error('Animation error, removing animation:', error);
-          activeAnimations.splice(i, 1);
-        }
-      }
-      
       // Check windmill quest trigger
       if (!windmillQuest.active && !windmillQuest.hasCompleted) {
         scene.children.forEach(child => {
@@ -11146,7 +11094,6 @@
       if (!shouldSkipRender) {
         try {
           renderer.render(scene, camera);
-          lastRenderTime = performance.now(); // Track successful render for watchdog (PR #121)
           performanceLog.renderCount++;
         } catch (error) {
           console.error('Render error caught - game continues:', error);
