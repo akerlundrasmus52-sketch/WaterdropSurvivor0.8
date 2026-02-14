@@ -527,17 +527,6 @@
       flex-direction: column;
       gap: 15px;
     }
-    
-    #equipment-btn:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 0 #2a1a11, 0 8px 16px rgba(0,0,0,0.6);
-      filter: brightness(1.2);
-    }
-    
-    #equipment-btn:active {
-      transform: translateY(2px);
-      box-shadow: 0 2px 0 #2a1a11, 0 4px 8px rgba(0,0,0,0.4);
-    }
 
     /* Joystick */
     #joystick-zone {
@@ -2208,7 +2197,7 @@
       waterDrops: [],
       splashes: []
     };
-    let lastTime = null; // Initialize as null for proper first-frame detection (PR #82 fix)
+    let lastTime = 0; // Initialize as 0 for proper first-frame detection
     
     // Phase 5: Initialize particle object pool for performance
     let particlePool = null; // Will be initialized after scene is created
@@ -2237,6 +2226,7 @@
     let isGameOver = false;
     let isGameActive = false;  // Changed to false - start with menu
     let gameTime = 0;
+    let dt = 0;
     let gameStartTime = 0;
     let waveCount = 0;
     let lastWaveEndTime = 0; // Track when last wave was cleared
@@ -4022,19 +4012,23 @@
           if (dx*dx + dz*dz < 0.6) { // Hit radius
             // Calculate Damage
             let dmg = weapons.gun.damage * playerStats.damage * playerStats.strength;
+            if (!Number.isFinite(dmg) || dmg < 0) dmg = 1;
             
             // Double barrel uses its own damage
             if (weapons.doubleBarrel.active && this.isDoubleBarrel) {
               dmg = weapons.doubleBarrel.damage * playerStats.damage * playerStats.strength;
+              if (!Number.isFinite(dmg) || dmg < 0) dmg = 1;
             }
             
             // Drone turret uses its own damage
             if (weapons.droneTurret.active && this.isDroneTurret) {
               dmg = weapons.droneTurret.damage * playerStats.damage * playerStats.strength;
+              if (!Number.isFinite(dmg) || dmg < 0) dmg = 1;
             }
             
             const isCrit = Math.random() < playerStats.critChance;
             if (isCrit) dmg *= playerStats.critDmg;
+            if (!Number.isFinite(dmg) || dmg < 0) dmg = 1;
             
             enemy.takeDamage(Math.floor(dmg), isCrit);
             
@@ -4082,7 +4076,8 @@
         this.maxLife = 10;
         
         // Deal damage immediately
-        const dmg = weapons.sword.damage * playerStats.strength * playerStats.damage;
+        let dmg = weapons.sword.damage * playerStats.strength * playerStats.damage;
+        if (!Number.isFinite(dmg) || dmg < 0) dmg = 1;
         
         enemies.forEach(e => {
           const dx = e.mesh.position.x - x;
@@ -4171,8 +4166,10 @@
           if (dx*dx + dz*dz < 0.6) {
             // Calculate Damage
             let dmg = weapons.iceSpear.damage * playerStats.damage * playerStats.strength;
+            if (!Number.isFinite(dmg) || dmg < 0) dmg = 1;
             const isCrit = Math.random() < playerStats.critChance;
             if (isCrit) dmg *= playerStats.critDmg;
+            if (!Number.isFinite(dmg) || dmg < 0) dmg = 1;
             
             enemy.takeDamage(Math.floor(dmg), isCrit);
             
@@ -4261,7 +4258,8 @@
         
         // AOE Damage
         const range = weapons.meteor.area;
-        const dmg = weapons.meteor.damage * playerStats.strength;
+        let dmg = weapons.meteor.damage * playerStats.strength;
+        if (!Number.isFinite(dmg) || dmg < 0) dmg = 1;
         
         enemies.forEach(e => {
           const d = e.mesh.position.distanceTo(this.target);
@@ -10631,8 +10629,8 @@
         return;
       }
 
-      // Initialize lastTime on first frame to prevent huge dt (PR #82 fix)
-      if (lastTime === null) {
+      // Initialize lastTime on first frame to prevent huge dt
+      if (lastTime === 0) {
         lastTime = time;
         gameTime = time / 1000; // Initialize gameTime for visual effects
         // Render the initial frame before returning to avoid blank screen
@@ -10644,8 +10642,10 @@
       const frameStartTime = performance.now();
 
       let dt = (time - lastTime) / 1000;
+      if (!Number.isFinite(dt) || dt < 0) dt = 0.016; // 60fps fallback
       lastTime = time;
       gameTime = time / 1000; // Update game time in seconds
+      if (!Number.isFinite(gameTime)) gameTime = 0;
       
       // CRITICAL FIX: Periodic memory cleanup to prevent freeze
       const currentTime = Date.now();
@@ -10979,7 +10979,9 @@
           if (e.isDead) return;
           const d = player.mesh.position.distanceTo(e.mesh.position);
           if (d < weapons.aura.range) {
-            e.takeDamage(weapons.aura.damage * playerStats.strength);
+            let dmg = weapons.aura.damage * playerStats.strength;
+            if (!Number.isFinite(dmg) || dmg < 0) dmg = 1;
+            e.takeDamage(dmg);
             hit = true;
           }
         });
@@ -11172,10 +11174,15 @@
           if (e.isDead) return;
           const d = player.mesh.position.distanceTo(e.mesh.position);
           if (d < weapons.fireRing.range) {
-            const dmg = weapons.fireRing.damage * playerStats.strength;
+            let dmg = weapons.fireRing.damage * playerStats.strength;
+            if (!Number.isFinite(dmg) || dmg < 0) dmg = 1;
             const isCrit = Math.random() < playerStats.critChance;
             const finalDmg = isCrit ? dmg * playerStats.critDmg : dmg;
-            e.takeDamage(finalDmg);
+            if (!Number.isFinite(finalDmg) || finalDmg < 0) {
+              e.takeDamage(1);
+            } else {
+              e.takeDamage(finalDmg);
+            }
             createDamageNumber(finalDmg, e.mesh.position, isCrit);
             
             // Fire particles on hit
