@@ -1963,6 +1963,43 @@
     }
   </script>
 
+  <!-- Standalone loading screen handler - runs even if Three.js fails to load (hotfix) -->
+  <script>
+    // This script runs independently of the main game module
+    // Ensures loading screen always dismisses even if Three.js fails to load
+    (function() {
+      let dismissed = false;
+      
+      // Force dismiss loading screen after 12 seconds maximum
+      setTimeout(function() {
+        if (!dismissed) {
+          dismissed = true;
+          console.warn('[Fallback] Loading screen timeout - forcing dismissal after 12 seconds');
+          const loadingScreen = document.getElementById('loading-screen');
+          if (loadingScreen) {
+            loadingScreen.classList.add('fade-out');
+            setTimeout(function() {
+              loadingScreen.style.display = 'none';
+              const mainMenu = document.getElementById('main-menu');
+              if (mainMenu) {
+                mainMenu.style.display = 'flex';
+              }
+              // Show error if Three.js failed to load
+              if (typeof THREE === 'undefined') {
+                alert('Failed to load required libraries. Please check your internet connection and reload the page.');
+              }
+            }, 500);
+          }
+        }
+      }, 12000);
+      
+      // Export dismiss function so main script can call it
+      window.dismissLoadingScreen = function() {
+        dismissed = true;
+      };
+    })();
+  </script>
+
   <script type="module">
     import * as THREE from 'three';
 
@@ -1971,6 +2008,7 @@
     
     // --- CONSTANTS & CONFIG ---
     const ATTACK_ANIMATION_DURATION_MS = 400; // Duration of waterdrop attack animation in milliseconds
+    const FALLBACK_FRAME_TIME = 0.016; // Fallback frame time in seconds (~60fps) for invalid dt values
     
     const COLORS = {
       bg: 0xFFF0F5,
@@ -7542,11 +7580,17 @@
     // --- GAME LOGIC ---
 
     function init() {
-      // Load save data first
-      loadSaveData();
+      // Show loading screen FIRST before any Three.js initialization (hotfix for hang)
+      showLoadingScreen();
       
-      // Scene
-      scene = new THREE.Scene();
+      // Defer Three.js initialization to allow loading screen timers to start (hotfix)
+      setTimeout(() => {
+        try {
+          // Load save data first
+          loadSaveData();
+          
+          // Scene
+          scene = new THREE.Scene();
       scene.background = new THREE.Color(COLORS.bg);
       // Fog for depth
       scene.fog = new THREE.Fog(COLORS.bg, 20, 60);
@@ -7605,25 +7649,49 @@
       setupMenus();
       window.addEventListener('resize', onWindowResize, false);
       
-      // Show loading screen, then main menu
-      showLoadingScreen();
-
+      // Loading screen already shown at start of init()
       // Start Loop
       requestAnimationFrame(animate);
+      
+        } catch(e) {
+          console.error('Three.js initialization error:', e);
+          // Loading screen fallback will handle dismissal after 12 seconds
+          // Error will be visible to user via alert from outer try-catch
+          throw e; // Re-throw to trigger outer error handler
+        }
+      }, 0); // Defer to next event loop tick
     }
     
     function showLoadingScreen() {
       const loadingScreen = document.getElementById('loading-screen');
       const loadingBar = document.getElementById('loading-bar');
       let progress = 0;
+      let completed = false; // Track if loading completed normally
+      let interval; // Declare first to avoid race condition with fallbackTimeout
+      
+      // Fallback timeout: Force dismiss loading screen after 12 seconds (hotfix for hang)
+      const fallbackTimeout = setTimeout(() => {
+        if (!completed) {
+          console.warn('Loading screen fallback timeout triggered after 12 seconds');
+          if (interval) clearInterval(interval);
+          loadingScreen.classList.add('fade-out');
+          setTimeout(() => {
+            loadingScreen.style.display = 'none';
+            showMainMenu();
+          }, 500);
+        }
+      }, 12000); // 12 second max loading time
       
       // Extended loading duration: 20 iterations × 400ms = 8000ms (8 seconds total)
-      const interval = setInterval(() => {
+      interval = setInterval(() => {
         progress += 5;
         loadingBar.style.width = progress + '%';
         
         if (progress >= 100) {
+          completed = true; // Mark as completed normally
+          if (window.dismissLoadingScreen) window.dismissLoadingScreen(); // Notify standalone handler
           clearInterval(interval);
+          clearTimeout(fallbackTimeout); // Cancel fallback since we completed normally
           setTimeout(() => {
             loadingScreen.classList.add('fade-out');
             setTimeout(() => {
@@ -10716,15 +10784,22 @@
       if (lastTime === null) {
         lastTime = time;
         gameTime = time / 1000; // Initialize gameTime for visual effects
-        // Render the initial frame before returning to avoid blank screen
+        // Render the initial frame and continue (don't return early to allow loading screen updates)
         renderer.render(scene, camera);
-        return;
+        // Don't return - allow the loop to continue for loading screen animations
       }
 
       // Performance tracking - start frame timer
       const frameStartTime = performance.now();
 
       let dt = (time - lastTime) / 1000;
+      
+      // Safety: Guard against NaN/invalid time values (hotfix for loading screen hang)
+      if (!isFinite(dt) || dt < 0 || dt > 1) {
+        dt = FALLBACK_FRAME_TIME; // Fallback to ~60fps frame time
+        console.warn('Invalid dt detected, using fallback value');
+      }
+      
       lastTime = time;
       gameTime = time / 1000; // Update game time in seconds
       
@@ -11491,8 +11566,18 @@
       processDisposalQueue();
     }
 
-    // Init Game
-    try { init(); } catch(e) { console.error(e); alert("Game Error: " + e.message); }
+    // Init Game - improved error handling (hotfix for loading screen hang)
+    try { 
+      init(); 
+    } catch(e) { 
+      console.error('Game initialization error:', e); 
+      // Check if it's a Three.js loading issue
+      if (typeof THREE === 'undefined') {
+        alert("Failed to load Three.js library. Please check your internet connection and reload the page.");
+      } else {
+        alert("Game Error: " + e.message);
+      }
+    }
 
   </script>
 </body>
