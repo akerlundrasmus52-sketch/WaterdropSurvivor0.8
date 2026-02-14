@@ -3897,6 +3897,16 @@
           spawnGold(this.mesh.position.x, this.mesh.position.z, goldAmount);
         }
         
+        // Gear drops from mini-bosses (guaranteed rare+ gear)
+        if (this.isMiniBoss) {
+          const gear = generateRandomGear('rare'); // Min rare for mini-boss
+          if (gear) {
+            addGearToInventory(gear);
+            createFloatingText(`⚡ ${gear.name}!`, this.mesh.position);
+            spawnParticles(this.mesh.position, RARITY[gear.rarity.toUpperCase()].color, 30);
+          }
+        }
+        
         playerStats.kills++;
         updateHUD();
         updateComboCounter(true); // Phase 2: Track combo on kill
@@ -4997,7 +5007,39 @@
       }
       
       giveReward() {
-        // Determine reward type
+        // Gear drop chance based on chest tier
+        const gearDropChance = {
+          common: 0.15,
+          uncommon: 0.30,
+          rare: 0.50,
+          epic: 0.70,
+          mythical: 1.00
+        };
+        
+        const tierToMinRarity = {
+          common: 'common',
+          uncommon: 'uncommon',
+          rare: 'rare',
+          epic: 'epic',
+          mythical: 'legendary'
+        };
+        
+        const dropChance = gearDropChance[this.tier] || 0.15;
+        
+        // Check for gear drop first
+        if (Math.random() < dropChance) {
+          const minRarity = tierToMinRarity[this.tier] || 'common';
+          const gear = generateRandomGear(minRarity);
+          if (gear) {
+            addGearToInventory(gear);
+            createFloatingText(`${gear.name}!`, this.mesh.position);
+            spawnParticles(this.mesh.position, RARITY[gear.rarity.toUpperCase()].color, 20);
+            playSound('levelup');
+            return; // Gear drop replaces other rewards
+          }
+        }
+        
+        // Determine other reward types if no gear dropped
         const rand = Math.random();
         
         if (rand < 0.35) {
@@ -5090,6 +5132,7 @@
     const inventory = [];
     const RARITY = {
       COMMON: { name: 'Common', color: 0xAAAAAA, multiplier: 1.0 },
+      UNCOMMON: { name: 'Uncommon', color: 0x1EFF00, multiplier: 1.15 },
       RARE: { name: 'Rare', color: 0x5DADE2, multiplier: 1.25 },
       EPIC: { name: 'Epic', color: 0x9B59B6, multiplier: 1.5 },
       LEGENDARY: { name: 'Legendary', color: 0xF39C12, multiplier: 2.0 },
@@ -5129,12 +5172,14 @@
         wisdom: 0
       },
       unspentAttributePoints: 0,
-      // Gear system
+      // Gear system - 6 slots: Helmet, Body Armor, Boots, Ring, Amulet, Weapon Charm
       equippedGear: {
-        weapon: null,
-        armor: null,
-        accessory1: null,
-        accessory2: null
+        helmet: null,
+        bodyArmor: null,
+        boots: null,
+        ring: null,
+        amulet: null,
+        weaponCharm: null
       },
       inventory: []
     };
@@ -5570,101 +5615,317 @@
 
     // --- GEAR SYSTEM ---
     const GEAR_ATTRIBUTES = {
-      flexibility: { name: 'Flexibility', icon: '🤸', color: '#9B59B6' },
-      movementSpeed: { name: 'Movement Speed', icon: '💨', color: '#3498DB' },
-      attackSpeed: { name: 'Attack Speed', icon: '⚡', color: '#F39C12' },
-      attackPrecision: { name: 'Attack Precision', icon: '🎯', color: '#E74C3C' },
-      critChance: { name: 'Crit Chance', icon: '✨', color: '#E67E22' },
-      elementalMagic: { name: 'Elemental Magic', icon: '🔮', color: '#8E44AD' }
+      hp: { name: 'HP', icon: '❤️', color: '#E74C3C' },
+      armor: { name: 'Armor', icon: '🛡️', color: '#95A5A6' },
+      hpRegen: { name: 'HP Regen', icon: '💚', color: '#27AE60' },
+      moveSpeed: { name: 'Move Speed', icon: '💨', color: '#3498DB' },
+      dodgeChance: { name: 'Dodge Chance', icon: '🌀', color: '#1ABC9C' },
+      damage: { name: 'Damage', icon: '⚔️', color: '#E67E22' },
+      critChance: { name: 'Crit Chance', icon: '✨', color: '#F39C12' },
+      attackSpeed: { name: 'Attack Speed', icon: '⚡', color: '#F1C40F' },
+      allStats: { name: 'All Stats', icon: '🌟', color: '#9B59B6' },
+      xpBonus: { name: 'XP Bonus', icon: '📈', color: '#5DADE2' }
     };
 
     // Define starter gear that players begin with
     const STARTER_GEAR = [
       {
-        id: 'starter_weapon',
-        name: 'Worn Sword',
-        type: 'weapon',
+        id: 'starter_helmet',
+        name: 'Cloth Cap',
+        type: 'helmet',
         rarity: 'common',
-        stats: { attackSpeed: 1, attackPrecision: 1 },
-        description: 'A basic weapon'
+        stats: { hp: 10, armor: 2 },
+        description: 'A basic cloth cap'
       },
       {
-        id: 'starter_armor',
+        id: 'starter_bodyArmor',
         name: 'Leather Vest',
-        type: 'armor',
+        type: 'bodyArmor',
         rarity: 'common',
-        stats: { flexibility: 1, movementSpeed: 1 },
-        description: 'Basic protection'
+        stats: { armor: 5, hpRegen: 0.5 },
+        description: 'Basic leather protection'
       },
       {
-        id: 'starter_accessory1',
-        name: 'Lucky Charm',
-        type: 'accessory',
+        id: 'starter_boots',
+        name: 'Worn Boots',
+        type: 'boots',
         rarity: 'common',
-        stats: { critChance: 1 },
-        description: 'Brings good fortune'
+        stats: { moveSpeed: 5 },
+        description: 'Old but functional boots'
       }
     ];
 
-    // Additional gear that can be obtained (for future expansion)
+    // Expanded gear pool with 6 equipment slots and 5 rarity tiers
     const GEAR_POOL = [
+      // HELMETS - +HP, +Armor
       {
-        id: 'blazing_sword',
-        name: 'Blazing Sword',
-        type: 'weapon',
-        rarity: 'rare',
-        stats: { attackSpeed: 2, attackPrecision: 2, elementalMagic: 1 },
-        description: 'A sword wreathed in flames'
+        id: 'iron_helmet',
+        name: 'Iron Helmet',
+        type: 'helmet',
+        rarity: 'uncommon',
+        stats: { hp: 20, armor: 5 },
+        description: 'Sturdy iron protection'
       },
       {
-        id: 'frost_blade',
-        name: 'Frost Blade',
-        type: 'weapon',
+        id: 'knights_helm',
+        name: 'Knight\'s Helm',
+        type: 'helmet',
+        rarity: 'rare',
+        stats: { hp: 35, armor: 8 },
+        description: 'A knight\'s trusted helm'
+      },
+      {
+        id: 'dragon_helm',
+        name: 'Dragon Helm',
+        type: 'helmet',
         rarity: 'epic',
-        stats: { attackSpeed: 3, attackPrecision: 3, elementalMagic: 2 },
-        description: 'Freezes enemies on hit'
-      },
-      {
-        id: 'shadow_cloak',
-        name: 'Shadow Cloak',
-        type: 'armor',
-        rarity: 'rare',
-        stats: { flexibility: 3, movementSpeed: 2 },
-        description: 'Move like a shadow'
-      },
-      {
-        id: 'dragon_plate',
-        name: 'Dragon Plate',
-        type: 'armor',
-        rarity: 'legendary',
-        stats: { flexibility: 2, movementSpeed: 1, attackPrecision: 2 },
+        stats: { hp: 50, armor: 12 },
         description: 'Forged from dragon scales'
       },
       {
-        id: 'crit_ring',
-        name: 'Ring of Critical Strikes',
-        type: 'accessory',
-        rarity: 'rare',
-        stats: { critChance: 3, attackPrecision: 1 },
-        description: 'Increases critical hit chance'
-      },
-      {
-        id: 'speed_boots',
-        name: 'Winged Boots',
-        type: 'accessory',
-        rarity: 'epic',
-        stats: { movementSpeed: 4, flexibility: 1 },
-        description: 'Swift as the wind'
-      },
-      {
-        id: 'magic_amulet',
-        name: 'Arcane Amulet',
-        type: 'accessory',
+        id: 'crown_of_kings',
+        name: 'Crown of Kings',
+        type: 'helmet',
         rarity: 'legendary',
-        stats: { elementalMagic: 4, attackSpeed: 2 },
-        description: 'Channels magical energy'
+        stats: { hp: 75, armor: 18 },
+        description: 'Worn by ancient rulers'
+      },
+      
+      // BODY ARMOR - +Armor, +HP Regen
+      {
+        id: 'chainmail',
+        name: 'Chainmail',
+        type: 'bodyArmor',
+        rarity: 'uncommon',
+        stats: { armor: 8, hpRegen: 1 },
+        description: 'Interlocked metal rings'
+      },
+      {
+        id: 'plate_armor',
+        name: 'Plate Armor',
+        type: 'bodyArmor',
+        rarity: 'rare',
+        stats: { armor: 12, hpRegen: 1.5 },
+        description: 'Heavy steel plates'
+      },
+      {
+        id: 'blessed_armor',
+        name: 'Blessed Armor',
+        type: 'bodyArmor',
+        rarity: 'epic',
+        stats: { armor: 18, hpRegen: 2.5 },
+        description: 'Blessed by divine light'
+      },
+      {
+        id: 'titans_plate',
+        name: 'Titan\'s Plate',
+        type: 'bodyArmor',
+        rarity: 'legendary',
+        stats: { armor: 25, hpRegen: 4 },
+        description: 'Armor of the titans'
+      },
+      
+      // BOOTS - +Move Speed, +Dodge Chance
+      {
+        id: 'leather_boots',
+        name: 'Leather Boots',
+        type: 'boots',
+        rarity: 'uncommon',
+        stats: { moveSpeed: 8, dodgeChance: 2 },
+        description: 'Light and flexible'
+      },
+      {
+        id: 'swift_boots',
+        name: 'Swift Boots',
+        type: 'boots',
+        rarity: 'rare',
+        stats: { moveSpeed: 12, dodgeChance: 4 },
+        description: 'Enchanted for speed'
+      },
+      {
+        id: 'shadow_treads',
+        name: 'Shadow Treads',
+        type: 'boots',
+        rarity: 'epic',
+        stats: { moveSpeed: 18, dodgeChance: 7 },
+        description: 'Walk like a shadow'
+      },
+      {
+        id: 'hermes_boots',
+        name: 'Hermes\' Boots',
+        type: 'boots',
+        rarity: 'legendary',
+        stats: { moveSpeed: 25, dodgeChance: 10 },
+        description: 'Wings on your feet'
+      },
+      
+      // RINGS - +Damage, +Crit Chance
+      {
+        id: 'bronze_ring',
+        name: 'Bronze Ring',
+        type: 'ring',
+        rarity: 'uncommon',
+        stats: { damage: 3, critChance: 2 },
+        description: 'A simple bronze band'
+      },
+      {
+        id: 'silver_ring',
+        name: 'Silver Ring',
+        type: 'ring',
+        rarity: 'rare',
+        stats: { damage: 5, critChance: 4 },
+        description: 'Polished silver'
+      },
+      {
+        id: 'ruby_ring',
+        name: 'Ruby Ring',
+        type: 'ring',
+        rarity: 'epic',
+        stats: { damage: 8, critChance: 6 },
+        description: 'Set with a blood ruby'
+      },
+      {
+        id: 'ring_of_power',
+        name: 'Ring of Power',
+        type: 'ring',
+        rarity: 'legendary',
+        stats: { damage: 12, critChance: 10 },
+        description: 'One ring to rule them all'
+      },
+      
+      // AMULETS - +All Stats (small), +XP Bonus
+      {
+        id: 'simple_amulet',
+        name: 'Simple Amulet',
+        type: 'amulet',
+        rarity: 'uncommon',
+        stats: { allStats: 1, xpBonus: 5 },
+        description: 'A basic charm'
+      },
+      {
+        id: 'jade_amulet',
+        name: 'Jade Amulet',
+        type: 'amulet',
+        rarity: 'rare',
+        stats: { allStats: 2, xpBonus: 10 },
+        description: 'Carved from jade'
+      },
+      {
+        id: 'golden_amulet',
+        name: 'Golden Amulet',
+        type: 'amulet',
+        rarity: 'epic',
+        stats: { allStats: 3, xpBonus: 15 },
+        description: 'Radiates golden light'
+      },
+      {
+        id: 'phoenix_amulet',
+        name: 'Phoenix Amulet',
+        type: 'amulet',
+        rarity: 'legendary',
+        stats: { allStats: 5, xpBonus: 25 },
+        description: 'Eternal like the phoenix'
+      },
+      
+      // WEAPON CHARMS - +Attack Speed, +Damage
+      {
+        id: 'stone_charm',
+        name: 'Stone Charm',
+        type: 'weaponCharm',
+        rarity: 'uncommon',
+        stats: { attackSpeed: 5, damage: 2 },
+        description: 'Carved from stone'
+      },
+      {
+        id: 'crystal_charm',
+        name: 'Crystal Charm',
+        type: 'weaponCharm',
+        rarity: 'rare',
+        stats: { attackSpeed: 8, damage: 4 },
+        description: 'Glows with energy'
+      },
+      {
+        id: 'rune_charm',
+        name: 'Rune Charm',
+        type: 'weaponCharm',
+        rarity: 'epic',
+        stats: { attackSpeed: 12, damage: 6 },
+        description: 'Ancient runes pulse'
+      },
+      {
+        id: 'godslayer_charm',
+        name: 'Godslayer Charm',
+        type: 'weaponCharm',
+        rarity: 'legendary',
+        stats: { attackSpeed: 18, damage: 10 },
+        description: 'Blessed to slay gods'
       }
     ];
+
+    // Generate random gear based on tier/rarity
+    function generateRandomGear(minRarity = 'common') {
+      // Filter gear pool by minimum rarity
+      const rarityOrder = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
+      const minRarityIndex = rarityOrder.indexOf(minRarity);
+      
+      const availableGear = GEAR_POOL.filter(gear => {
+        const gearRarityIndex = rarityOrder.indexOf(gear.rarity);
+        return gearRarityIndex >= minRarityIndex;
+      });
+      
+      if (availableGear.length === 0) return null;
+      
+      // Weighted random selection (higher rarity = lower chance)
+      const rarityWeights = {
+        common: 0,
+        uncommon: 50,
+        rare: 25,
+        epic: 15,
+        legendary: 10
+      };
+      
+      let totalWeight = 0;
+      const weightedGear = availableGear.map(gear => {
+        const weight = rarityWeights[gear.rarity] || 10;
+        totalWeight += weight;
+        return { gear, weight };
+      });
+      
+      let random = Math.random() * totalWeight;
+      for (const item of weightedGear) {
+        random -= item.weight;
+        if (random <= 0) {
+          // Return a copy with unique ID
+          return {
+            ...item.gear,
+            id: `${item.gear.id}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+          };
+        }
+      }
+      
+      return weightedGear[0].gear; // Fallback
+    }
+    
+    // Add gear to player inventory
+    function addGearToInventory(gear) {
+      if (!gear) return;
+      
+      // Add to inventory
+      saveData.inventory.push(gear);
+      
+      // Check if the slot is empty - auto-equip if so
+      const slotKey = gear.type;
+      if (!saveData.equippedGear[slotKey]) {
+        saveData.equippedGear[slotKey] = gear.id;
+        showStatChange(`Auto-equipped: ${gear.name}`);
+        playSound('coin');
+      } else {
+        // Show notification that new gear is available
+        showStatChange(`New gear: ${gear.name}`);
+      }
+      
+      saveSaveData();
+    }
 
     function initializeGear() {
       // Give players starter gear if they don't have any
@@ -5672,9 +5933,9 @@
         saveData.inventory = [...STARTER_GEAR];
         
         // Auto-equip starter gear
-        saveData.equippedGear.weapon = 'starter_weapon';
-        saveData.equippedGear.armor = 'starter_armor';
-        saveData.equippedGear.accessory1 = 'starter_accessory1';
+        saveData.equippedGear.helmet = 'starter_helmet';
+        saveData.equippedGear.bodyArmor = 'starter_bodyArmor';
+        saveData.equippedGear.boots = 'starter_boots';
         
         saveSaveData();
       }
@@ -5706,14 +5967,16 @@
       }
       statsContent.innerHTML = statsHtml;
       
-      // Build gear slots display
+      // Build gear slots display - 6 slots: Helmet, Body Armor, Boots, Ring, Amulet, Weapon Charm
       let html = '';
       
       const slots = [
-        { key: 'weapon', name: 'Weapon Slot', icon: '⚔️' },
-        { key: 'armor', name: 'Armor Slot', icon: '🛡️' },
-        { key: 'accessory1', name: 'Accessory Slot 1', icon: '💍' },
-        { key: 'accessory2', name: 'Accessory Slot 2', icon: '📿' }
+        { key: 'helmet', name: 'Helmet', icon: '⛑️' },
+        { key: 'bodyArmor', name: 'Body Armor', icon: '🛡️' },
+        { key: 'boots', name: 'Boots', icon: '👢' },
+        { key: 'ring', name: 'Ring', icon: '💍' },
+        { key: 'amulet', name: 'Amulet', icon: '📿' },
+        { key: 'weaponCharm', name: 'Weapon Charm', icon: '✨' }
       ];
       
       for (const slot of slots) {
@@ -5750,7 +6013,7 @@
               <div style="color: #5DADE2; font-size: 16px; font-weight: bold; margin-bottom: 10px;">Available Gear:</div>
               <div style="display: grid; gap: 10px; max-height: 200px; overflow-y: auto;">
                 ${saveData.inventory.filter(g => {
-                  const gearType = g.type === 'accessory' ? (slot.key === 'accessory1' || slot.key === 'accessory2') : g.type === slot.key;
+                  const gearType = g.type === slot.key;
                   const notEquipped = g.id !== equippedId;
                   return gearType && notEquipped;
                 }).map(gear => `
@@ -5776,6 +6039,7 @@
     function getRarityColor(rarity) {
       const colors = {
         common: '#AAAAAA',
+        uncommon: '#1EFF00',
         rare: '#5DADE2',
         epic: '#9B59B6',
         legendary: '#F39C12',
@@ -8822,6 +9086,17 @@
             const cz = player.mesh.position.z + Math.sin(chestAngle) * chestDist;
             spawnChest(cx, cz, chestTier);
             showStatChange(`${chestTier.toUpperCase()} Chest Spawned!`);
+            
+            // Bonus gear drop for combo 15+ (guaranteed epic+ gear)
+            if (comboState.count >= 15) {
+              const minRarity = comboState.count >= 20 ? 'legendary' : 'epic';
+              const bonusGear = generateRandomGear(minRarity);
+              if (bonusGear) {
+                addGearToInventory(bonusGear);
+                createFloatingText(`💫 ${bonusGear.name}!`, player.mesh.position);
+                spawnParticles(player.mesh.position, RARITY[bonusGear.rarity.toUpperCase()].color, 25);
+              }
+            }
           }
         }
         
