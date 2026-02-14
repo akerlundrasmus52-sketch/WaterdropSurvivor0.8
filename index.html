@@ -1858,15 +1858,19 @@
   <script>
     // 12-second maximum loading timeout - prevents infinite loading if ES module fails
     setTimeout(function() {
-      var ls = document.getElementById('loading-screen');
-      // Check computed display value for robustness (handles CSS and inline styles)
-      if (ls && window.getComputedStyle(ls).display !== 'none' && !ls.classList.contains('fade-out')) {
-        ls.classList.add('fade-out');
-        setTimeout(function() {
-          ls.style.display = 'none';
-          var menu = document.getElementById('main-menu');
-          if (menu) menu.style.display = 'flex';
-        }, 500);
+      try {
+        var ls = document.getElementById('loading-screen');
+        // Check computed display value for robustness (handles CSS and inline styles)
+        if (ls && window.getComputedStyle(ls).display !== 'none' && !ls.classList.contains('fade-out')) {
+          ls.classList.add('fade-out');
+          setTimeout(function() {
+            ls.style.display = 'none';
+            var menu = document.getElementById('main-menu');
+            if (menu) menu.style.display = 'flex';
+          }, 500);
+        }
+      } catch (e) {
+        // Silently handle any DOM timing issues - failsafe should not cause errors
       }
     }, 12000);
   </script>
