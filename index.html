@@ -1854,6 +1854,39 @@
     <button class="btn" id="restart-btn">CONTINUE</button>
   </div>
 
+  <!-- Loading bar animation - starts immediately on page load -->
+  <script>
+    (function() {
+      // Start loading bar animation immediately
+      var loadingBar = document.getElementById('loading-bar');
+      var progress = 0;
+      var loadingInterval;
+      
+      // Flag to track if loading has been completed by the main game
+      window.gameLoadingComplete = false;
+      
+      // Animate loading bar during ES module loading
+      loadingInterval = setInterval(function() {
+        if (window.gameLoadingComplete) {
+          clearInterval(loadingInterval);
+          return;
+        }
+        
+        // Slow progress up to 90% during module loading
+        if (progress < 90) {
+          progress += 2; // Increment by 2% every 100ms
+          loadingBar.style.width = progress + '%';
+        } else {
+          // Slow down near the end to wait for game initialization
+          clearInterval(loadingInterval);
+        }
+      }, 100);
+      
+      // Store the interval ID globally so it can be cleared by the game
+      window.loadingBarInterval = loadingInterval;
+    })();
+  </script>
+
   <!-- Standalone loading screen failsafe - runs independently of ES module (PR #129-132 spec) -->
   <script>
     // 12-second maximum loading timeout - prevents infinite loading if ES module fails
@@ -7139,8 +7172,15 @@
     function showLoadingScreen() {
       const loadingScreen = document.getElementById('loading-screen');
       const loadingBar = document.getElementById('loading-bar');
-      let progress = 0;
       let dismissed = false; // PR #129: Prevent double dismissal
+      
+      // Signal that game loading is complete
+      window.gameLoadingComplete = true;
+      
+      // Clear any existing loading bar interval from the standalone script
+      if (window.loadingBarInterval) {
+        clearInterval(window.loadingBarInterval);
+      }
       
       // Function to dismiss loading screen
       const dismissLoadingScreen = () => {
@@ -7155,19 +7195,23 @@
         }, 500);
       };
       
-      // Extended loading duration: 20 iterations × 400ms = 8000ms (8 seconds total)
+      // Get current progress from the standalone animation
+      let currentWidth = loadingBar.style.width;
+      let progress = currentWidth ? parseFloat(currentWidth) : 0;
+      
+      // Complete the loading bar animation from current position to 100%
       const interval = setInterval(() => {
         progress += 5;
+        if (progress > 100) progress = 100;
         loadingBar.style.width = progress + '%';
         
         if (progress >= 100) {
-          setTimeout(dismissLoadingScreen, 600); // Extended delay before fade
+          clearInterval(interval);
+          setTimeout(dismissLoadingScreen, 600); // Delay before fade
         }
-      }, 400); // Slower progress updates for longer duration
+      }, 100); // Fast completion
       
       // PR #129: Failsafe timeout - dismiss after 12s maximum even if ES module fails
-      // Normal loading: 8s (20 iterations × 400ms) + 0.6s delay + 0.5s fade = 9.1s total
-      // Failsafe: 12s provides 2.9s buffer for slow systems or initialization delays
       const failsafeTimeout = setTimeout(() => {
         console.warn('Loading screen failsafe triggered after 12s');
         dismissLoadingScreen();
