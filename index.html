@@ -7611,6 +7611,20 @@
       const loadingScreen = document.getElementById('loading-screen');
       const loadingBar = document.getElementById('loading-bar');
       let progress = 0;
+      let completed = false; // Track if loading completed normally
+      
+      // Fallback timeout: Force dismiss loading screen after 12 seconds (hotfix for hang)
+      const fallbackTimeout = setTimeout(() => {
+        if (!completed) {
+          console.warn('Loading screen fallback timeout triggered after 12 seconds');
+          clearInterval(interval);
+          loadingScreen.classList.add('fade-out');
+          setTimeout(() => {
+            loadingScreen.style.display = 'none';
+            showMainMenu();
+          }, 500);
+        }
+      }, 12000); // 12 second max loading time
       
       // Extended loading duration: 20 iterations × 400ms = 8000ms (8 seconds total)
       const interval = setInterval(() => {
@@ -7618,7 +7632,9 @@
         loadingBar.style.width = progress + '%';
         
         if (progress >= 100) {
+          completed = true; // Mark as completed normally
           clearInterval(interval);
+          clearTimeout(fallbackTimeout); // Cancel fallback since we completed normally
           setTimeout(() => {
             loadingScreen.classList.add('fade-out');
             setTimeout(() => {
@@ -10711,15 +10727,22 @@
       if (lastTime === null) {
         lastTime = time;
         gameTime = time / 1000; // Initialize gameTime for visual effects
-        // Render the initial frame before returning to avoid blank screen
+        // Render the initial frame and continue (don't return early to allow loading screen updates)
         renderer.render(scene, camera);
-        return;
+        // Don't return - allow the loop to continue for loading screen animations
       }
 
       // Performance tracking - start frame timer
       const frameStartTime = performance.now();
 
       let dt = (time - lastTime) / 1000;
+      
+      // Safety: Guard against NaN/invalid time values (hotfix for loading screen hang)
+      if (!isFinite(dt) || dt < 0) {
+        dt = 0.016; // Fallback to ~60fps frame time
+        console.warn('Invalid dt detected, using fallback value');
+      }
+      
       lastTime = time;
       gameTime = time / 1000; // Update game time in seconds
       
