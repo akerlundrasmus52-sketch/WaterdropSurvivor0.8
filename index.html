@@ -167,17 +167,17 @@
     .bar-container {
       width: 200px;
       height: 24px;
-      background: linear-gradient(to bottom, #1a1a2e 0%, #1a1a2e 50%, #2c3e50 50%, #2c3e50 100%); /* Match menu gradient colors */
+      background: linear-gradient(to bottom, #0a0a1e 0%, #0a0a1e 50%, #1a1a2e 50%, #1a1a2e 100%); /* Darker background */
       border-radius: 12px;
-      border: 3px solid #3a4a5e; /* Enhanced visible border */
+      border: 3px solid #2a3a4e; /* Darker border */
       overflow: hidden;
       position: relative;
       box-shadow: 
-        0 0 0 1px rgba(255,255,255,0.1), /* Inner border highlight */
-        0 4px 12px rgba(0,0,0,0.6), /* Stronger drop shadow */
-        inset 0 2px 4px rgba(0,0,0,0.4), /* Inner shadow for depth */
-        0 0 20px rgba(0,0,0,0.4); /* Outer glow for definition */
-      outline: 1px solid rgba(0,0,0,0.5); /* Additional outline for edge definition */
+        0 0 0 1px rgba(255,255,255,0.05), /* Subtle inner border highlight */
+        0 4px 12px rgba(0,0,0,0.8), /* Stronger drop shadow */
+        inset 0 3px 8px rgba(0,0,0,0.7), /* Deeper inner shadow for more depth */
+        0 0 20px rgba(0,0,0,0.5); /* Outer glow for definition */
+      outline: 1px solid rgba(0,0,0,0.6); /* Darker outline for edge definition */
     }
 
     .bar-fill {
@@ -201,14 +201,14 @@
     }
 
     #hp-fill { 
-      background: linear-gradient(to bottom, #FF5555 0%, #FF4444 50%, #CC0000 100%); /* Enhanced gradient with more steps */
+      background: linear-gradient(to right, #E74C3C 0%, #C0392B 50%, #A93226 100%); /* Smoother gradient with more depth */
       width: 100%;
       box-shadow: 
-        0 0 15px rgba(255,68,68,1), /* Strong inner glow */
-        0 0 25px rgba(255,68,68,0.6), /* Medium glow */
-        0 0 35px rgba(255,68,68,0.3), /* Outer glow */
+        0 0 15px rgba(231,76,60,0.9), /* Stronger inner glow */
+        0 0 25px rgba(231,76,60,0.6), /* Medium glow */
+        0 0 35px rgba(231,76,60,0.3), /* Outer glow */
         inset 0 2px 6px rgba(255,255,255,0.3), /* Enhanced inner highlight */
-        inset 0 -2px 6px rgba(0,0,0,0.3); /* Bottom shadow for depth */
+        inset 0 -2px 6px rgba(0,0,0,0.4); /* Deeper bottom shadow for depth */
     }
     #exp-fill { 
       background: linear-gradient(to bottom, #6DB8E8 0%, #5DADE2 50%, #3498DB 100%); /* Enhanced gradient with more steps */
@@ -326,6 +326,75 @@
       left: 50%;
       transform: translate(-50%, -50%);
       pointer-events: none;
+    }
+
+    /* Waterdrop EXP Display - Bottom Center */
+    #waterdrop-display {
+      position: absolute;
+      bottom: 140px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 90px;
+      height: 110px;
+      pointer-events: none;
+      z-index: 15;
+    }
+
+    .waterdrop-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+
+    .waterdrop-shape {
+      position: absolute;
+      width: 90px;
+      height: 110px;
+      background: linear-gradient(to bottom, #2c3e50 0%, #1a252f 100%);
+      border: 3px solid #5DADE2;
+      border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+      box-shadow: 
+        0 0 20px rgba(93,173,226,0.6),
+        0 4px 12px rgba(0,0,0,0.7),
+        inset 0 2px 4px rgba(255,255,255,0.1);
+      overflow: hidden;
+    }
+
+    .waterdrop-fill {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 0%;
+      background: linear-gradient(to top, #3498db 0%, #5DADE2 100%);
+      box-shadow: inset 0 2px 6px rgba(255,255,255,0.3);
+      transition: height 0.5s ease-out;
+      animation: water-wave 2s ease-in-out infinite;
+    }
+
+    @keyframes water-wave {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-3px); }
+    }
+    
+    @media (prefers-reduced-motion: reduce) {
+      .waterdrop-fill {
+        animation: none;
+      }
+    }
+
+    .waterdrop-level {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 28px;
+      font-weight: bold;
+      color: #FFFFFF;
+      text-shadow: 
+        -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000,
+        0 0 10px rgba(93,173,226,0.8);
+      z-index: 2;
     }
 
     /* Level Up Modal */
@@ -462,6 +531,37 @@
         0 8px 16px rgba(0,0,0,0.7), /* Enhanced drop shadow */
         inset 0 1px 3px rgba(255,255,255,0.15), /* Brighter inner highlight */
         inset 0 0 0 2px rgba(0,0,0,0.5); /* Inner border for definition */
+    }
+    
+    /* Rarity-based border colors */
+    .upgrade-card.rarity-common {
+      border-color: #999999;
+      box-shadow: 0 0 20px rgba(153,153,153,0.4), 0 6px 12px rgba(0,0,0,0.6);
+    }
+    
+    .upgrade-card.rarity-uncommon {
+      border-color: #2ecc71;
+      box-shadow: 0 0 20px rgba(46,204,113,0.5), 0 6px 12px rgba(0,0,0,0.6);
+    }
+    
+    .upgrade-card.rarity-rare {
+      border-color: #3498db;
+      box-shadow: 0 0 20px rgba(52,152,219,0.5), 0 6px 12px rgba(0,0,0,0.6);
+    }
+    
+    .upgrade-card.rarity-epic {
+      border-color: #9b59b6;
+      box-shadow: 0 0 20px rgba(155,89,182,0.5), 0 6px 12px rgba(0,0,0,0.6);
+    }
+    
+    .upgrade-card.rarity-legendary {
+      border-color: #f39c12;
+      box-shadow: 0 0 25px rgba(243,156,18,0.6), 0 6px 12px rgba(0,0,0,0.6);
+    }
+    
+    .upgrade-card.rarity-mythic {
+      border-color: #e74c3c;
+      box-shadow: 0 0 25px rgba(231,76,60,0.6), 0 6px 12px rgba(0,0,0,0.6);
     }
     
     @keyframes perkPulse {
@@ -1336,6 +1436,16 @@
 
     <!-- Countdown Text (PR #70-71) -->
     <div id="tutorial-text" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 96px; font-weight: bold; color: #FFF; text-shadow: 0 0 20px rgba(255,255,255,0.8), 0 0 40px rgba(93,173,226,0.6); opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 150;"></div>
+
+    <!-- Waterdrop EXP Display -->
+    <div id="waterdrop-display" role="status" aria-label="Experience progress indicator">
+      <div class="waterdrop-container">
+        <div class="waterdrop-shape">
+          <div class="waterdrop-fill" id="waterdrop-fill" aria-hidden="true"></div>
+        </div>
+        <div class="waterdrop-level" id="waterdrop-level">1</div>
+      </div>
+    </div>
 
     <div id="joystick-zone">
       <div class="joystick-outer" id="joystick-outer">
@@ -7011,6 +7121,23 @@
         const card = document.createElement('div');
         card.className = 'upgrade-card';
         
+        // Assign random rarity for visual variety
+        const rarities = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic'];
+        const rarityWeights = [30, 25, 20, 15, 7, 3]; // Weighted probabilities
+        let weightedRandom = Math.random() * 100;
+        let selectedRarity = 'common';
+        let cumulativeWeight = 0;
+        
+        for (let i = 0; i < rarities.length; i++) {
+          cumulativeWeight += rarityWeights[i];
+          if (weightedRandom < cumulativeWeight) {
+            selectedRarity = rarities[i];
+            break;
+          }
+        }
+        
+        card.className += ` rarity-${selectedRarity}`;
+        
         // Add special styling for perks and powerful upgrades
         if (u.id && u.id.startsWith('perk_')) {
           card.className += ' perk';
@@ -7058,6 +7185,15 @@
       const lvlDisplay = document.getElementById('lvl-display');
       if (lvlDisplay) {
         lvlDisplay.innerText = `LVL: ${playerStats.lvl}`;
+      }
+      
+      // Update waterdrop display
+      const waterdropFill = document.getElementById('waterdrop-fill');
+      const waterdropLevel = document.getElementById('waterdrop-level');
+      if (waterdropFill && waterdropLevel) {
+        const expPct = (playerStats.exp / playerStats.expReq) * 100;
+        waterdropFill.style.height = `${Math.min(100, expPct)}%`;
+        waterdropLevel.innerText = playerStats.lvl;
       }
       
       // ENHANCED: Comprehensive status bar with all relevant information
