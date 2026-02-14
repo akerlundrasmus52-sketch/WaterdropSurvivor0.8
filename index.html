@@ -1948,6 +1948,9 @@
       <!-- Status Message Bar -->
       <div class="stat-text" id="status-message" style="color: #5DADE2; text-shadow: 0 0 8px rgba(93,173,226,0.8), 0 0 12px rgba(93,173,226,0.5), 1px 1px 2px rgba(0,0,0,0.5); font-size: 16px; min-height: 20px; margin-top: 5px;"></div>
       
+      <!-- FPS Counter (debug mode) -->
+      <div class="stat-text" id="fps-counter" style="color: #00FF00; font-size: 14px; font-family: monospace; display: none;">FPS: 60</div>
+      
       <!-- Combo Timer Display -->
       <div class="stat-text" id="combo-timer"></div>
       
@@ -2252,7 +2255,7 @@
       maxGoldCoins: 50,
       maxDamageNumbers: 30, // DOM elements cap
       // Memory cleanup intervals
-      cleanupInterval: 10000, // Cleanup every 10 seconds
+      cleanupInterval: 5000, // Cleanup every 5 seconds (reduced from 10s for better performance)
       emergencyCleanupThreshold: 500, // Total entities before emergency cleanup
       // Phase 2: Stat caps for balanced progression
       statCaps: {
@@ -2775,7 +2778,7 @@
     
     // Deferred disposal queue for Three.js memory management (PR #81)
     const disposalQueue = [];
-    const MAX_DISPOSALS_PER_FRAME = 10;
+    const MAX_DISPOSALS_PER_FRAME = 50; // Increased from 10 to 50 for faster cleanup
     
     // CRITICAL FIX: Track RAF callbacks to prevent accumulation (freeze fix)
     let activeRAFCallbacks = new Set();
@@ -12067,6 +12070,48 @@
         activeTimeouts.splice(0, activeTimeouts.length - 30);
       }
       
+      // 7. Clean up excess expGems (FREEZE FIX)
+      if (expGems.length > GAME_CONFIG.maxExpGems) {
+        const excess = expGems.length - GAME_CONFIG.maxExpGems;
+        for (let i = 0; i < excess; i++) {
+          const g = expGems[i];
+          if (g && g.mesh) {
+            scene.remove(g.mesh);
+            disposalQueue.push({ geo: g.mesh.geometry, mat: g.mesh.material });
+            cleanedItems++;
+          }
+        }
+        expGems.splice(0, excess);
+      }
+      
+      // 8. Clean up excess goldCoins (FREEZE FIX)
+      if (goldCoins.length > GAME_CONFIG.maxGoldCoins) {
+        const excess = goldCoins.length - GAME_CONFIG.maxGoldCoins;
+        for (let i = 0; i < excess; i++) {
+          const c = goldCoins[i];
+          if (c && c.mesh) {
+            scene.remove(c.mesh);
+            disposalQueue.push({ geo: c.mesh.geometry, mat: c.mesh.material });
+            cleanedItems++;
+          }
+        }
+        goldCoins.splice(0, excess);
+      }
+      
+      // 9. Clean up old chests (FREEZE FIX)
+      if (chests.length > 20) {
+        const excess = chests.length - 20;
+        for (let i = 0; i < excess; i++) {
+          const ch = chests[i];
+          if (ch && ch.mesh) {
+            scene.remove(ch.mesh);
+            disposalQueue.push({ geo: ch.mesh.geometry, mat: ch.mesh.material });
+            cleanedItems++;
+          }
+        }
+        chests.splice(0, excess);
+      }
+      
       const endTime = performance.now();
       if (cleanedItems > 0) {
         console.log(`Memory cleanup: ${cleanedItems} items cleaned in ${(endTime - startTime).toFixed(2)}ms`);
@@ -12849,6 +12894,16 @@
         gameSettings.keysPressed = keysPressed; // Store reference for game loop access
         
         window.addEventListener('keydown', (e) => {
+          // F3 key to toggle FPS counter (debug mode)
+          if (e.key === 'F3') {
+            const fpsCounter = document.getElementById('fps-counter');
+            if (fpsCounter) {
+              fpsCounter.style.display = fpsCounter.style.display === 'none' ? 'block' : 'none';
+            }
+            e.preventDefault();
+            return;
+          }
+          
           if (!isGameActive || isPaused || isGameOver) return;
           if (gameSettings.controlType !== 'keyboard') return;
           keysPressed[e.key.toLowerCase()] = true;
@@ -13768,12 +13823,28 @@
       // Track cumulative frame time for accurate average
       performanceLog.cumulativeFrameTime += totalFrameTime;
       
+      // Update FPS counter display
+      const fpsCounterElement = document.getElementById('fps-counter');
+      if (fpsCounterElement && fpsCounterElement.style.display !== 'none') {
+        const fps = Math.round(1000 / totalFrameTime);
+        fpsCounterElement.textContent = `FPS: ${fps}`;
+        // Color code based on performance
+        if (fps >= 55) {
+          fpsCounterElement.style.color = '#00FF00'; // Green
+        } else if (fps >= 30) {
+          fpsCounterElement.style.color = '#FFFF00'; // Yellow
+        } else {
+          fpsCounterElement.style.color = '#FF0000'; // Red
+        }
+      }
+      
       // Periodic performance summary (every 5 seconds)
       const performanceCheckTime = performance.now();
       if (performanceCheckTime - performanceLog.lastLogTime > 5000) {
         const avgFrameTime = performanceLog.cumulativeFrameTime / performanceLog.frameCount;
         const slowFramePercent = (performanceLog.slowFrames / performanceLog.frameCount * 100).toFixed(1);
-        console.log(`Performance Summary: Avg frame: ${avgFrameTime.toFixed(2)}ms, Slow frames: ${slowFramePercent}%, Enemies: ${aliveEnemies}, Spawns: ${performanceLog.spawnCount}, Renders: ${performanceLog.renderCount}`);
+        const avgFPS = Math.round(1000 / avgFrameTime);
+        console.log(`Performance Summary: Avg FPS: ${avgFPS}, Avg frame: ${avgFrameTime.toFixed(2)}ms, Slow frames: ${slowFramePercent}%, Enemies: ${aliveEnemies}, Spawns: ${performanceLog.spawnCount}, Renders: ${performanceLog.renderCount}`);
         
         // Reset counters for next period
         performanceLog.lastLogTime = performanceCheckTime;
