@@ -2284,10 +2284,15 @@
     
     // Render recovery watchdog (PR #121) - Detects and recovers from render stalls
     let lastRenderTime = performance.now();
+    let isRecovering = false; // Prevent multiple concurrent recovery attempts
     setInterval(() => {
-      if (isGameActive && !isPaused && performance.now() - lastRenderTime > 500) {
+      if (isGameActive && !isPaused && performance.now() - lastRenderTime > 500 && !isRecovering) {
+        isRecovering = true;
         console.warn('Render recovery triggered - stall detected');
-        requestAnimationFrame(animate);
+        requestAnimationFrame(() => {
+          animate(performance.now());
+          isRecovering = false;
+        });
       }
     }, 1000);
     
@@ -10096,8 +10101,13 @@
       // Update centralized animation system (PR #121)
       // Process all active animations and remove completed ones
       for (let i = activeAnimations.length - 1; i >= 0; i--) {
-        const shouldContinue = activeAnimations[i]();
-        if (shouldContinue === false) {
+        try {
+          const shouldContinue = activeAnimations[i]();
+          if (shouldContinue === false) {
+            activeAnimations.splice(i, 1);
+          }
+        } catch (error) {
+          console.error('Animation error, removing animation:', error);
           activeAnimations.splice(i, 1);
         }
       }
