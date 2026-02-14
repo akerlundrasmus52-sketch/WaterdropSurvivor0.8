@@ -11447,14 +11447,14 @@
       performanceLog.cumulativeFrameTime += totalFrameTime;
       
       // Periodic performance summary (every 5 seconds)
-      const currentTime = performance.now();
-      if (currentTime - performanceLog.lastLogTime > 5000) {
+      const performanceCheckTime = performance.now();
+      if (performanceCheckTime - performanceLog.lastLogTime > 5000) {
         const avgFrameTime = performanceLog.cumulativeFrameTime / performanceLog.frameCount;
         const slowFramePercent = (performanceLog.slowFrames / performanceLog.frameCount * 100).toFixed(1);
         console.log(`Performance Summary: Avg frame: ${avgFrameTime.toFixed(2)}ms, Slow frames: ${slowFramePercent}%, Enemies: ${aliveEnemies}, Spawns: ${performanceLog.spawnCount}, Renders: ${performanceLog.renderCount}`);
         
         // Reset counters for next period
-        performanceLog.lastLogTime = currentTime;
+        performanceLog.lastLogTime = performanceCheckTime;
         performanceLog.slowFrames = 0;
         performanceLog.frameCount = 0;
         performanceLog.spawnCount = 0;
