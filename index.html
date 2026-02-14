@@ -1816,7 +1816,18 @@
       maxDamageNumbers: 30, // DOM elements cap
       // Memory cleanup intervals
       cleanupInterval: 10000, // Cleanup every 10 seconds
-      emergencyCleanupThreshold: 500 // Total entities before emergency cleanup
+      emergencyCleanupThreshold: 500, // Total entities before emergency cleanup
+      // Phase 2: Stat caps for balanced progression
+      statCaps: {
+        armor: 80,              // 80% damage reduction max (percentage)
+        critChance: 0.40,       // 40% crit chance max (decimal)
+        critDamage: 3.0,        // 300% crit damage max (multiplier)
+        hpRegen: 15,            // 15 HP/s max
+        lifeSteal: 0.15,        // 15% life steal max (decimal)
+        moveSpeed: 2.0          // 2x movement speed max (multiplier)
+      },
+      // Base player stats
+      baseWalkSpeed: 25
     };
 
     // --- AUDIO SYSTEM (Oscillators) ---
@@ -5055,8 +5066,8 @@
       applyRandomPerk() {
         const perks = [
           { name: 'Speed Boost', apply: () => { 
-            // Cap max speed at 2x initial walkSpeed (50) to prevent breaking physics
-            const maxWalkSpeed = 50; // 2x the initial 25
+            // Cap max speed at 2x initial walkSpeed to prevent breaking physics
+            const maxWalkSpeed = GAME_CONFIG.baseWalkSpeed * GAME_CONFIG.statCaps.moveSpeed;
             if (playerStats.walkSpeed < maxWalkSpeed) {
               playerStats.walkSpeed *= 1.02;
               showStatChange('Chest: +2% Move Speed');
@@ -5074,7 +5085,7 @@
             showStatChange('Chest: +5 Max HP');
           }},
           { name: 'Armor Boost', apply: () => { 
-            playerStats.armor = Math.min(80, playerStats.armor + 3);
+            playerStats.armor = Math.min(GAME_CONFIG.statCaps.armor, playerStats.armor + 3);
             showStatChange('Chest: +3% Armor');
           }},
           { name: 'Attack Speed', apply: () => {
@@ -8573,7 +8584,7 @@
           title: 'THICC ARMOR', 
           desc: 'Armor +3% (Damage Reduction, Max 80%)', 
           apply: () => { 
-            playerStats.armor = Math.min(80, playerStats.armor + 3); 
+            playerStats.armor = Math.min(GAME_CONFIG.statCaps.armor, playerStats.armor + 3); 
             showStatChange('+3% Armor (Current: ' + playerStats.armor + '%)');
           } 
         },
@@ -8594,7 +8605,7 @@
           title: 'CRIT MACHINE', 
           desc: 'Critical Hit Chance +1% (Lucky Strikes, Max 40%)', 
           apply: () => { 
-            playerStats.critChance = Math.min(0.40, playerStats.critChance + 0.01);
+            playerStats.critChance = Math.min(GAME_CONFIG.statCaps.critChance, playerStats.critChance + 0.01);
             showStatChange('+1% Crit Chance (Now: ' + Math.round(playerStats.critChance * 100) + '%)');
           } 
         },
@@ -8604,7 +8615,7 @@
           title: 'HEALING VIBES', 
           desc: 'HP Regeneration +0.3/sec (Passive Healing, Max 15/s)', 
           apply: () => { 
-            playerStats.hpRegen = Math.min(15, playerStats.hpRegen + 0.3);
+            playerStats.hpRegen = Math.min(GAME_CONFIG.statCaps.hpRegen, playerStats.hpRegen + 0.3);
             showStatChange('+0.3 HP/sec Regen (Total: ' + playerStats.hpRegen.toFixed(1) + '/sec)');
           } 
         },
@@ -8614,8 +8625,8 @@
           title: 'SPEEDY BOI', 
           desc: 'Movement Speed +2% (Faster Movement, Max 200%)', 
           apply: () => { 
-            const currentSpeedMultiplier = playerStats.walkSpeed / 25;
-            if (currentSpeedMultiplier < 2.0) {
+            const currentSpeedMultiplier = playerStats.walkSpeed / GAME_CONFIG.baseWalkSpeed;
+            if (currentSpeedMultiplier < GAME_CONFIG.statCaps.moveSpeed) {
               playerStats.walkSpeed *= 1.02; 
               showStatChange('+2% Move Speed');
             } else {
@@ -8629,7 +8640,7 @@
           title: 'GLASS CANNON', 
           desc: 'Critical Damage +5% (Stronger Crits, Max 300%)', 
           apply: () => { 
-            playerStats.critDmg = Math.min(3.0, playerStats.critDmg + 0.05);
+            playerStats.critDmg = Math.min(GAME_CONFIG.statCaps.critDamage, playerStats.critDmg + 0.05);
             showStatChange('+5% Crit Damage (Now: ' + Math.round(playerStats.critDmg * 100) + '%)');
           } 
         },
@@ -8690,7 +8701,7 @@
           title: 'LIFE STEAL', 
           desc: 'Heal 1% of Damage Dealt (Stacks, Max 15%)', 
           apply: () => { 
-            playerStats.lifeStealPercent = Math.min(0.15, playerStats.lifeStealPercent + 0.01);
+            playerStats.lifeStealPercent = Math.min(GAME_CONFIG.statCaps.lifeSteal, playerStats.lifeStealPercent + 0.01);
             showStatChange('Life Steal +1% (Total: ' + Math.round(playerStats.lifeStealPercent * 100) + '%)');
           } 
         },
@@ -10009,7 +10020,7 @@
       // Apply permanent upgrades from save data
       const baseHp = 100 + PERMANENT_UPGRADES.maxHp.effect(saveData.upgrades.maxHp);
       const baseRegen = PERMANENT_UPGRADES.hpRegen.effect(saveData.upgrades.hpRegen);
-      const baseSpeed = 25 * (1 + PERMANENT_UPGRADES.moveSpeed.effect(saveData.upgrades.moveSpeed));
+      const baseSpeed = GAME_CONFIG.baseWalkSpeed * (1 + PERMANENT_UPGRADES.moveSpeed.effect(saveData.upgrades.moveSpeed));
       const baseDamage = 1 + PERMANENT_UPGRADES.attackDamage.effect(saveData.upgrades.attackDamage);
       const baseAtkSpeed = 1 + PERMANENT_UPGRADES.attackSpeed.effect(saveData.upgrades.attackSpeed);
       const baseCritChance = 0.1 + PERMANENT_UPGRADES.critChance.effect(saveData.upgrades.critChance);
