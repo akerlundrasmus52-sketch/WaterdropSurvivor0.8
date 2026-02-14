@@ -2150,6 +2150,15 @@
     let lastCleanupTime = 0; // Track last memory cleanup time
     let miniBossesSpawned = new Set(); // Track which mini-boss levels have been spawned
     
+    // Time-of-day system for dynamic lighting
+    let timeOfDay = 0; // 0-1 representing full day cycle (0=dawn, 0.25=noon, 0.5=dusk, 0.75=night)
+    let dayNightCycleSpeed = 0.0001; // Speed of day/night transition
+    let directionalLight = null; // Cache reference for performance
+    let ambientLight = null; // Cache reference for performance
+    
+    // Counter for unique gear ID generation
+    let gearIdCounter = 0;
+    
     // Countdown system (PR #70-71)
     let countdownActive = false;
     let countdownStep = 0;
@@ -3745,6 +3754,34 @@
         
         playerStats.kills++;
         
+        // Gear drop system - chance to drop gear based on enemy type
+        const gearDropChance = this.isMiniBoss ? 0.50 : 0.05; // 50% for mini-bosses, 5% for regular enemies
+        if (Math.random() < gearDropChance) {
+          const rarities = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
+          const rarityWeights = this.isMiniBoss 
+            ? [0.1, 0.25, 0.35, 0.20, 0.10]  // Mini-boss: better drop rates
+            : [0.60, 0.25, 0.10, 0.04, 0.01]; // Regular: mostly common
+          
+          let roll = Math.random();
+          let rarity = 'common';
+          let cumulative = 0;
+          for (let i = 0; i < rarities.length; i++) {
+            cumulative += rarityWeights[i];
+            if (roll < cumulative) {
+              rarity = rarities[i];
+              break;
+            }
+          }
+          
+          const slotTypes = ['helmet', 'bodyArmor', 'boots', 'ring', 'amulet', 'weaponCharm'];
+          const slotType = slotTypes[Math.floor(Math.random() * slotTypes.length)];
+          const newGear = generateGear(slotType, rarity);
+          
+          saveData.inventory.push(newGear);
+          saveSaveData();
+          createFloatingText(`+${newGear.name} (${rarity})`, this.mesh.position);
+        }
+        
         // Track mini-boss defeats for achievements
         if (this.isMiniBoss) {
           playerStats.miniBossesDefeated++;
@@ -4982,12 +5019,14 @@
         wisdom: 0
       },
       unspentAttributePoints: 0,
-      // Gear system
+      // Gear system - Expanded to 6 slots for deeper RPG mechanics
       equippedGear: {
-        weapon: null,
-        armor: null,
-        accessory1: null,
-        accessory2: null
+        helmet: null,
+        bodyArmor: null,
+        boots: null,
+        ring: null,
+        amulet: null,
+        weaponCharm: null
       },
       inventory: []
     };
@@ -5435,101 +5474,214 @@
     // Expose to global scope for onclick handlers
     window.increaseAttribute = increaseAttribute;
 
-    // --- GEAR SYSTEM ---
+    // --- GEAR SYSTEM - Enhanced for deeper RPG mechanics ---
     const GEAR_ATTRIBUTES = {
-      flexibility: { name: 'Flexibility', icon: '🤸', color: '#9B59B6' },
-      movementSpeed: { name: 'Movement Speed', icon: '💨', color: '#3498DB' },
-      attackSpeed: { name: 'Attack Speed', icon: '⚡', color: '#F39C12' },
-      attackPrecision: { name: 'Attack Precision', icon: '🎯', color: '#E74C3C' },
-      critChance: { name: 'Crit Chance', icon: '✨', color: '#E67E22' },
-      elementalMagic: { name: 'Elemental Magic', icon: '🔮', color: '#8E44AD' }
+      hp: { name: 'HP', icon: '❤️', color: '#E74C3C' },
+      armor: { name: 'Armor', icon: '🛡️', color: '#95A5A6' },
+      hpRegen: { name: 'HP Regen', icon: '💚', color: '#2ECC71' },
+      moveSpeed: { name: 'Move Speed', icon: '💨', color: '#3498DB' },
+      dodge: { name: 'Dodge', icon: '🤸', color: '#9B59B6' },
+      damage: { name: 'Damage', icon: '⚔️', color: '#E67E22' },
+      critChance: { name: 'Crit Chance', icon: '✨', color: '#F39C12' },
+      attackSpeed: { name: 'Attack Speed', icon: '⚡', color: '#F1C40F' },
+      xpBonus: { name: 'XP Bonus', icon: '⭐', color: '#FFD700' }
     };
 
     // Define starter gear that players begin with
     const STARTER_GEAR = [
       {
-        id: 'starter_weapon',
-        name: 'Worn Sword',
-        type: 'weapon',
+        id: 'starter_helmet',
+        name: 'Leather Cap',
+        type: 'helmet',
         rarity: 'common',
-        stats: { attackSpeed: 1, attackPrecision: 1 },
-        description: 'A basic weapon'
+        stats: { hp: 10, armor: 2 },
+        description: 'Basic head protection'
       },
       {
-        id: 'starter_armor',
-        name: 'Leather Vest',
-        type: 'armor',
+        id: 'starter_bodyArmor',
+        name: 'Cloth Tunic',
+        type: 'bodyArmor',
         rarity: 'common',
-        stats: { flexibility: 1, movementSpeed: 1 },
-        description: 'Basic protection'
+        stats: { hp: 20, armor: 5 },
+        description: 'Simple body armor'
       },
       {
-        id: 'starter_accessory1',
-        name: 'Lucky Charm',
-        type: 'accessory',
+        id: 'starter_boots',
+        name: 'Worn Boots',
+        type: 'boots',
         rarity: 'common',
-        stats: { critChance: 1 },
-        description: 'Brings good fortune'
+        stats: { moveSpeed: 5, dodge: 1 },
+        description: 'Well-traveled footwear'
+      },
+      {
+        id: 'starter_ring',
+        name: 'Copper Ring',
+        type: 'ring',
+        rarity: 'common',
+        stats: { critChance: 2 },
+        description: 'A simple copper band'
+      },
+      {
+        id: 'starter_amulet',
+        name: 'Wooden Pendant',
+        type: 'amulet',
+        rarity: 'common',
+        stats: { hpRegen: 1, xpBonus: 5 },
+        description: 'Carved from oak'
+      },
+      {
+        id: 'starter_weaponCharm',
+        name: 'Iron Charm',
+        type: 'weaponCharm',
+        rarity: 'common',
+        stats: { damage: 5, attackSpeed: 3 },
+        description: 'Enhances weapon power'
       }
     ];
 
-    // Additional gear that can be obtained (for future expansion)
+    // Enhanced gear pool with 6 slot types and proper stats
     const GEAR_POOL = [
+      // Helmets
       {
-        id: 'blazing_sword',
-        name: 'Blazing Sword',
-        type: 'weapon',
-        rarity: 'rare',
-        stats: { attackSpeed: 2, attackPrecision: 2, elementalMagic: 1 },
-        description: 'A sword wreathed in flames'
+        id: 'steel_helmet',
+        name: 'Steel Helmet',
+        type: 'helmet',
+        rarity: 'uncommon',
+        stats: { hp: 25, armor: 8 },
+        description: 'Sturdy metal protection'
       },
       {
-        id: 'frost_blade',
-        name: 'Frost Blade',
-        type: 'weapon',
-        rarity: 'epic',
-        stats: { attackSpeed: 3, attackPrecision: 3, elementalMagic: 2 },
-        description: 'Freezes enemies on hit'
+        id: 'dragon_helm',
+        name: 'Dragon Helm',
+        type: 'helmet',
+        rarity: 'legendary',
+        stats: { hp: 80, armor: 25, hpRegen: 3 },
+        description: 'Forged from dragon scales'
+      },
+      // Body Armor
+      {
+        id: 'chainmail',
+        name: 'Chainmail Vest',
+        type: 'bodyArmor',
+        rarity: 'uncommon',
+        stats: { hp: 40, armor: 12 },
+        description: 'Interlocking metal rings'
+      },
+      {
+        id: 'plate_armor',
+        name: 'Plate Armor',
+        type: 'bodyArmor',
+        rarity: 'rare',
+        stats: { hp: 60, armor: 20, dodge: -5 },
+        description: 'Heavy but protective'
       },
       {
         id: 'shadow_cloak',
         name: 'Shadow Cloak',
-        type: 'armor',
-        rarity: 'rare',
-        stats: { flexibility: 3, movementSpeed: 2 },
+        type: 'bodyArmor',
+        rarity: 'epic',
+        stats: { hp: 50, dodge: 15, moveSpeed: 10 },
         description: 'Move like a shadow'
       },
-      {
-        id: 'dragon_plate',
-        name: 'Dragon Plate',
-        type: 'armor',
-        rarity: 'legendary',
-        stats: { flexibility: 2, movementSpeed: 1, attackPrecision: 2 },
-        description: 'Forged from dragon scales'
-      },
-      {
-        id: 'crit_ring',
-        name: 'Ring of Critical Strikes',
-        type: 'accessory',
-        rarity: 'rare',
-        stats: { critChance: 3, attackPrecision: 1 },
-        description: 'Increases critical hit chance'
-      },
+      // Boots
       {
         id: 'speed_boots',
         name: 'Winged Boots',
-        type: 'accessory',
-        rarity: 'epic',
-        stats: { movementSpeed: 4, flexibility: 1 },
+        type: 'boots',
+        rarity: 'rare',
+        stats: { moveSpeed: 15, dodge: 8 },
         description: 'Swift as the wind'
       },
       {
-        id: 'magic_amulet',
-        name: 'Arcane Amulet',
-        type: 'accessory',
+        id: 'heavy_boots',
+        name: 'Iron Boots',
+        type: 'boots',
+        rarity: 'uncommon',
+        stats: { armor: 10, moveSpeed: -5 },
+        description: 'Slow but sturdy'
+      },
+      // Rings
+      {
+        id: 'crit_ring',
+        name: 'Ring of Critical Strikes',
+        type: 'ring',
+        rarity: 'rare',
+        stats: { critChance: 10, damage: 8 },
+        description: 'Increases critical hits'
+      },
+      {
+        id: 'vampiric_ring',
+        name: 'Vampiric Ring',
+        type: 'ring',
+        rarity: 'epic',
+        stats: { hpRegen: 5, damage: 12 },
+        description: 'Drains life from enemies'
+      },
+      {
+        id: 'legendary_ring',
+        name: 'Ring of the Ancients',
+        type: 'ring',
         rarity: 'legendary',
-        stats: { elementalMagic: 4, attackSpeed: 2 },
+        stats: { damage: 20, critChance: 15, attackSpeed: 10 },
+        description: 'Power of the old gods'
+      },
+      // Amulets
+      {
+        id: 'xp_amulet',
+        name: 'Scholar\'s Pendant',
+        type: 'amulet',
+        rarity: 'uncommon',
+        stats: { xpBonus: 15, hp: 15 },
+        description: 'Enhances learning'
+      },
+      {
+        id: 'life_amulet',
+        name: 'Amulet of Vitality',
+        type: 'amulet',
+        rarity: 'rare',
+        stats: { hp: 50, hpRegen: 4 },
+        description: 'Pulses with life energy'
+      },
+      {
+        id: 'arcane_amulet',
+        name: 'Arcane Amulet',
+        type: 'amulet',
+        rarity: 'legendary',
+        stats: { xpBonus: 30, hpRegen: 8, hp: 70 },
         description: 'Channels magical energy'
+      },
+      // Weapon Charms
+      {
+        id: 'power_charm',
+        name: 'Charm of Power',
+        type: 'weaponCharm',
+        rarity: 'uncommon',
+        stats: { damage: 12, attackSpeed: 5 },
+        description: 'Boosts weapon damage'
+      },
+      {
+        id: 'speed_charm',
+        name: 'Charm of Haste',
+        type: 'weaponCharm',
+        rarity: 'rare',
+        stats: { attackSpeed: 15, critChance: 5 },
+        description: 'Lightning-fast strikes'
+      },
+      {
+        id: 'berserker_charm',
+        name: 'Berserker\'s Rage',
+        type: 'weaponCharm',
+        rarity: 'epic',
+        stats: { damage: 25, attackSpeed: 12, critChance: 8 },
+        description: 'Unleash fury'
+      },
+      {
+        id: 'godslayer_charm',
+        name: 'Godslayer Charm',
+        type: 'weaponCharm',
+        rarity: 'legendary',
+        stats: { damage: 40, critChance: 20, attackSpeed: 20 },
+        description: 'The ultimate weapon enhancement'
       }
     ];
 
@@ -5538,10 +5690,13 @@
       if (!saveData.inventory || saveData.inventory.length === 0) {
         saveData.inventory = [...STARTER_GEAR];
         
-        // Auto-equip starter gear
-        saveData.equippedGear.weapon = 'starter_weapon';
-        saveData.equippedGear.armor = 'starter_armor';
-        saveData.equippedGear.accessory1 = 'starter_accessory1';
+        // Auto-equip all starter gear to their respective slots
+        saveData.equippedGear.helmet = 'starter_helmet';
+        saveData.equippedGear.bodyArmor = 'starter_bodyArmor';
+        saveData.equippedGear.boots = 'starter_boots';
+        saveData.equippedGear.ring = 'starter_ring';
+        saveData.equippedGear.amulet = 'starter_amulet';
+        saveData.equippedGear.weaponCharm = 'starter_weaponCharm';
         
         saveSaveData();
       }
@@ -5577,10 +5732,12 @@
       let html = '';
       
       const slots = [
-        { key: 'weapon', name: 'Weapon Slot', icon: '⚔️' },
-        { key: 'armor', name: 'Armor Slot', icon: '🛡️' },
-        { key: 'accessory1', name: 'Accessory Slot 1', icon: '💍' },
-        { key: 'accessory2', name: 'Accessory Slot 2', icon: '📿' }
+        { key: 'helmet', name: 'Helmet', icon: '⛑️' },
+        { key: 'bodyArmor', name: 'Body Armor', icon: '🛡️' },
+        { key: 'boots', name: 'Boots', icon: '👢' },
+        { key: 'ring', name: 'Ring', icon: '💍' },
+        { key: 'amulet', name: 'Amulet', icon: '📿' },
+        { key: 'weaponCharm', name: 'Weapon Charm', icon: '✨' }
       ];
       
       for (const slot of slots) {
@@ -5617,7 +5774,7 @@
               <div style="color: #5DADE2; font-size: 16px; font-weight: bold; margin-bottom: 10px;">Available Gear:</div>
               <div style="display: grid; gap: 10px; max-height: 200px; overflow-y: auto;">
                 ${saveData.inventory.filter(g => {
-                  const gearType = g.type === 'accessory' ? (slot.key === 'accessory1' || slot.key === 'accessory2') : g.type === slot.key;
+                  const gearType = g.type === slot.key;
                   const notEquipped = g.id !== equippedId;
                   return gearType && notEquipped;
                 }).map(gear => `
@@ -5642,13 +5799,88 @@
 
     function getRarityColor(rarity) {
       const colors = {
-        common: '#AAAAAA',
-        rare: '#5DADE2',
-        epic: '#9B59B6',
-        legendary: '#F39C12',
-        mythic: '#E74C3C'
+        common: '#999999',      // Gray
+        uncommon: '#2ecc71',    // Green
+        rare: '#3498db',        // Blue
+        epic: '#9b59b6',        // Purple
+        legendary: '#e74c3c'    // Red/Gold
       };
       return colors[rarity] || colors.common;
+    }
+
+    // Gear generation system for procedural drops
+    function generateGear(slotType, rarity = 'common') {
+      const slotPrefixes = {
+        helmet: ['Iron', 'Steel', 'Mythril', 'Dragon', 'Ancient'],
+        bodyArmor: ['Leather', 'Chain', 'Plate', 'Elven', 'Celestial'],
+        boots: ['Worn', 'Swift', 'Winged', 'Shadow', 'Ethereal'],
+        ring: ['Simple', 'Enchanted', 'Magical', 'Cursed', 'Divine'],
+        amulet: ['Wooden', 'Silver', 'Golden', 'Crystal', 'Arcane'],
+        weaponCharm: ['Basic', 'Enhanced', 'Superior', 'Masterwork', 'Legendary']
+      };
+      
+      const slotSuffixes = {
+        helmet: ['Cap', 'Helm', 'Helmet', 'Crown', 'Diadem'],
+        bodyArmor: ['Vest', 'Mail', 'Armor', 'Plate', 'Carapace'],
+        boots: ['Boots', 'Shoes', 'Greaves', 'Sabatons', 'Treads'],
+        ring: ['Band', 'Ring', 'Loop', 'Circle', 'Halo'],
+        amulet: ['Pendant', 'Amulet', 'Talisman', 'Charm', 'Medallion'],
+        weaponCharm: ['Charm', 'Enhancement', 'Rune', 'Sigil', 'Emblem']
+      };
+      
+      const rarityMultipliers = {
+        common: 1,
+        uncommon: 2,
+        rare: 3,
+        epic: 5,
+        legendary: 8
+      };
+      
+      const slotStatPools = {
+        helmet: ['hp', 'armor', 'hpRegen'],
+        bodyArmor: ['hp', 'armor', 'dodge'],
+        boots: ['moveSpeed', 'dodge', 'armor'],
+        ring: ['critChance', 'damage', 'hpRegen'],
+        amulet: ['xpBonus', 'hpRegen', 'hp'],
+        weaponCharm: ['damage', 'attackSpeed', 'critChance']
+      };
+      
+      const prefix = slotPrefixes[slotType][Math.floor(Math.random() * slotPrefixes[slotType].length)];
+      const suffix = slotSuffixes[slotType][Math.floor(Math.random() * slotSuffixes[slotType].length)];
+      const name = `${prefix} ${suffix}`;
+      
+      const stats = {};
+      const statPool = slotStatPools[slotType];
+      const numStats = Math.min(1 + Math.floor(Math.random() * 3), statPool.length);
+      const selectedStats = [];
+      
+      for (let i = 0; i < numStats; i++) {
+        let stat;
+        do {
+          stat = statPool[Math.floor(Math.random() * statPool.length)];
+        } while (selectedStats.includes(stat));
+        selectedStats.push(stat);
+        
+        const baseValue = 5 + Math.floor(Math.random() * 10);
+        stats[stat] = Math.floor(baseValue * rarityMultipliers[rarity]);
+      }
+      
+      const descriptions = [
+        'A well-crafted piece',
+        'Forged by masters',
+        'Imbued with power',
+        'Ancient and powerful',
+        'Radiates energy'
+      ];
+      
+      return {
+        id: `generated_${++gearIdCounter}_${Math.random().toString(36).substr(2, 9)}`,
+        name,
+        type: slotType,
+        rarity,
+        stats,
+        description: descriptions[Math.floor(Math.random() * descriptions.length)]
+      };
     }
 
     function calculateGearStats() {
@@ -6741,8 +6973,8 @@
       // Scene
       scene = new THREE.Scene();
       scene.background = new THREE.Color(COLORS.bg);
-      // Fog for depth
-      scene.fog = new THREE.Fog(COLORS.bg, 20, 60);
+      // Enhanced exponential fog for better depth perception and atmosphere
+      scene.fog = new THREE.FogExp2(0x87CEEB, 0.005); // Sky blue fog with exponential falloff
       
       // Phase 5: Initialize particle object pool for performance (100 particles pre-allocated)
       particlePool = new ObjectPool(
@@ -6758,27 +6990,39 @@
       camera.position.set(20, 20, 20); // Isometric angle
       camera.lookAt(scene.position);
 
-      // Renderer
-      renderer = new THREE.WebGLRenderer({ antialias: true });
+      // Renderer with enhanced quality settings
+      renderer = new THREE.WebGLRenderer({ 
+        antialias: true,
+        powerPreference: 'high-performance',
+        alpha: false
+      });
       renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Cap at 2x for performance
       renderer.shadowMap.enabled = true;
-      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Soft shadows
+      renderer.toneMapping = THREE.ACESFilmicToneMapping; // Better color/brightness
+      renderer.toneMappingExposure = 1.0;
+      renderer.outputEncoding = THREE.sRGBEncoding; // Correct color space
       document.getElementById('game-container').appendChild(renderer.domElement);
 
-      // Lights
-      const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+      // Lights - store references for performance optimization
+      ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
       scene.add(ambientLight);
 
-      const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-      dirLight.position.set(50, 100, 50);
-      dirLight.castShadow = true;
-      dirLight.shadow.mapSize.width = 2048;
-      dirLight.shadow.mapSize.height = 2048;
-      dirLight.shadow.camera.left = -100;
-      dirLight.shadow.camera.right = 100;
-      dirLight.shadow.camera.top = 100;
-      dirLight.shadow.camera.bottom = -100;
-      scene.add(dirLight);
+      directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+      directionalLight.position.set(50, 100, 50);
+      directionalLight.castShadow = true;
+      // Enhanced shadow quality for better visuals
+      directionalLight.shadow.mapSize.width = 4096;  // Increased from 2048
+      directionalLight.shadow.mapSize.height = 4096; // Increased from 2048
+      directionalLight.shadow.camera.left = -100;
+      directionalLight.shadow.camera.right = 100;
+      directionalLight.shadow.camera.top = 100;
+      directionalLight.shadow.camera.bottom = -100;
+      directionalLight.shadow.camera.near = 0.5;
+      directionalLight.shadow.camera.far = 500;
+      directionalLight.shadow.bias = -0.0001; // Reduce shadow acne
+      scene.add(directionalLight);
 
       // Setup
       createWorld();
@@ -7213,10 +7457,10 @@
       let baseCount, levelBonus, cap;
       
       if (playerStats.lvl <= 30) {
-        // Early game: Aggressive spawns (4-8 enemies per wave)
-        baseCount = 4 + Math.floor(waveCount / 3);
-        levelBonus = Math.floor(playerStats.lvl / 4);
-        cap = 8;
+        // Early game: Moderate spawns for better new player experience (3-7 enemies per wave)
+        baseCount = 3 + Math.floor(waveCount / 4);
+        levelBonus = Math.floor(playerStats.lvl / 5);
+        cap = 7;
       } else if (playerStats.lvl <= 75) {
         // Mid-game: Moderate spawns after upgrade threshold
         baseCount = 3 + Math.floor(waveCount / 4);
@@ -7389,7 +7633,10 @@
     }
 
     function addExp(amount) {
-      playerStats.exp += amount;
+      // Apply XP bonus from gear
+      const xpMultiplier = playerStats.xpMultiplier || 1;
+      const finalAmount = Math.floor(amount * xpMultiplier);
+      playerStats.exp += finalAmount;
       
       // Trigger waterdrop grow animation on XP pickup
       const waterdropContainer = document.getElementById('waterdrop-container');
@@ -9138,31 +9385,36 @@
       const attrCritDmg = luck * ATTRIBUTE_INFO.luck.effects.critDamage;
       const attrCdReduction = wisdom * ATTRIBUTE_INFO.wisdom.effects.cooldownReduction;
       
-      // Apply gear bonuses
+      // Apply gear bonuses from new 6-slot equipment system
       const gearStats = calculateGearStats();
-      // Gear provides small, balanced bonuses (each point gives +1-2% depending on stat)
-      const gearFlexibilityBonus = gearStats.flexibility * 0.01;  // +1% armor per point
-      const gearMoveSpeedBonus = gearStats.movementSpeed * 0.02;  // +2% speed per point
-      const gearAtkSpeedBonus = gearStats.attackSpeed * 0.02;     // +2% attack speed per point
-      const gearPrecisionBonus = gearStats.attackPrecision * 0.01; // +1% crit chance per point
-      const gearCritBonus = gearStats.critChance * 0.02;          // +2% crit chance per point
-      const gearMagicBonus = gearStats.elementalMagic * 0.03;     // +3% damage per point
+      // Gear provides meaningful RPG bonuses
+      const gearHpBonus = gearStats.hp || 0;              // Flat HP bonus
+      const gearArmorBonus = gearStats.armor || 0;        // Flat armor bonus (%)
+      const gearHpRegenBonus = gearStats.hpRegen || 0;    // Flat HP regen/sec
+      const gearMoveSpeedBonus = (gearStats.moveSpeed || 0) * 0.01;  // +1% per point
+      const gearDodgeBonus = (gearStats.dodge || 0) * 0.01;          // +1% per point
+      const gearDamageBonus = (gearStats.damage || 0) * 0.01;        // +1% per point
+      const gearCritBonus = (gearStats.critChance || 0) * 0.01;      // +1% per point
+      const gearAtkSpeedBonus = (gearStats.attackSpeed || 0) * 0.01; // +1% per point
+      const gearXpBonus = (gearStats.xpBonus || 0) * 0.01;           // +1% per point
       
       // Reset Stats with permanent upgrades, attributes, and gear applied
       playerStats.lvl = 1;
       playerStats.exp = 0;
       playerStats.expReq = GAME_CONFIG.baseExpReq;
-      playerStats.hp = baseHp + attrHp;
-      playerStats.maxHp = baseHp + attrHp;
-      playerStats.strength = baseDamage * (1 + attrDamage + gearMagicBonus);
+      playerStats.hp = baseHp + attrHp + gearHpBonus;
+      playerStats.maxHp = baseHp + attrHp + gearHpBonus;
+      playerStats.strength = baseDamage * (1 + attrDamage + gearDamageBonus);
       playerStats.walkSpeed = baseSpeed * (1 + gearMoveSpeedBonus);
       playerStats.kills = 0;
       playerStats.miniBossesDefeated = 0; // Reset mini-boss tracking
       playerStats.atkSpeed = baseAtkSpeed * (1 + attrAtkSpeed + gearAtkSpeedBonus);
-      playerStats.critChance = baseCritChance + attrCritChance + gearPrecisionBonus + gearCritBonus;
+      playerStats.critChance = baseCritChance + attrCritChance + gearCritBonus;
       playerStats.critDmg = baseCritDmg + attrCritDmg;
-      playerStats.armor = baseArmor + gearStats.flexibility; // Flexibility gives flat armor bonus
-      playerStats.hpRegen = baseRegen + attrRegen;
+      playerStats.armor = Math.min(80, baseArmor + gearArmorBonus); // Cap at 80% damage reduction
+      playerStats.hpRegen = baseRegen + attrRegen + gearHpRegenBonus;
+      playerStats.dodge = gearDodgeBonus; // Dodge from gear
+      playerStats.xpMultiplier = 1 + gearXpBonus; // Store XP bonus multiplier
       playerStats.gold = 0;
       waveCount = 0;
       lastWaveEndTime = 0; // Reset wave timing
@@ -10425,6 +10677,58 @@
       expGems = expGems.filter(g => g.active);
       goldCoins = goldCoins.filter(g => g.active);
       chests = chests.filter(c => c.active);
+
+      // Dynamic time-of-day lighting system for enhanced visuals
+      if (isGameActive && !isPaused && !isGameOver && directionalLight && ambientLight) {
+        timeOfDay += dayNightCycleSpeed;
+        if (timeOfDay > 1) timeOfDay = 0;
+        
+        // Calculate sun position and color based on time
+        const angle = timeOfDay * Math.PI * 2;
+        const sunHeight = Math.sin(angle);
+        
+        // Position: sun moves in arc across sky
+        directionalLight.position.set(
+          50 * Math.cos(angle),
+          50 + 50 * sunHeight,
+          50 * Math.sin(angle)
+        );
+        
+        // Color changes: warm at sunrise/sunset, white at noon, cool at night
+        if (timeOfDay < 0.15 || timeOfDay > 0.85) { // Dawn/Dusk
+          const dawnDuskFactor = timeOfDay < 0.15 ? timeOfDay / 0.15 : (1 - timeOfDay) / 0.15;
+          directionalLight.color.setHex(0xffa040); // Warm orange/red
+          directionalLight.intensity = 0.3 + 0.4 * dawnDuskFactor;
+          ambientLight.intensity = 0.3;
+          ambientLight.color.setHex(0xffa040);
+        } else if (timeOfDay >= 0.15 && timeOfDay <= 0.35) { // Morning
+          directionalLight.color.setHex(0xffffdd); // Warm white
+          directionalLight.intensity = 0.7;
+          ambientLight.intensity = 0.6;
+          ambientLight.color.setHex(0xffffff);
+        } else if (timeOfDay > 0.35 && timeOfDay < 0.65) { // Noon
+          directionalLight.color.setHex(0xffffff); // Pure white
+          directionalLight.intensity = 0.9;
+          ambientLight.intensity = 0.6;
+          ambientLight.color.setHex(0xffffff);
+        } else { // Evening
+          directionalLight.color.setHex(0xffd0a0); // Warm sunset
+          directionalLight.intensity = 0.5;
+          ambientLight.intensity = 0.6;
+          ambientLight.color.setHex(0xffffff);
+        }
+        
+        // Enhanced fog effects based on time of day
+        if (scene.fog) {
+          if (timeOfDay < 0.15 || timeOfDay > 0.85) { // Dawn/Dusk - more fog
+            scene.fog.density = 0.008;
+            scene.fog.color.setHex(0xffa060);
+          } else {
+            scene.fog.density = 0.005;
+            scene.fog.color.setHex(0x87CEEB);
+          }
+        }
+      }
 
       // Phase 3: Render loop protection - wrap in try-catch to prevent freeze
       // Frame Skip Mechanism: Skip rendering if frame budget exceeded
