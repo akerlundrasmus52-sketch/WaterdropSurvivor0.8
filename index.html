@@ -5448,16 +5448,8 @@
     }
 
     // --- ATTRIBUTES SYSTEM ---
+    // 5 Core Attributes: Strength, Vitality, Agility, Intelligence, Luck
     const ATTRIBUTE_INFO = {
-      dexterity: {
-        name: 'Dexterity',
-        icon: '🎯',
-        description: 'Improves attack speed and critical chance',
-        effects: {
-          attackSpeed: 0.03, // +3% per point
-          critChance: 0.01   // +1% per point
-        }
-      },
       strength: {
         name: 'Strength',
         icon: '💪',
@@ -5475,22 +5467,32 @@
           hpRegen: 0.25   // +0.25 HP/sec per point
         }
       },
+      dexterity: {
+        name: 'Agility',
+        icon: '🎯',
+        description: 'Improves speed, attack speed and dodge chance',
+        effects: {
+          attackSpeed: 0.03, // +3% per point
+          critChance: 0.01,  // +1% crit chance (represents dodge)
+          moveSpeed: 0.02    // +2% move speed per point
+        }
+      },
+      wisdom: {
+        name: 'Intelligence',
+        icon: '🧠',
+        description: 'Increases experience gain and ability power',
+        effects: {
+          expEarned: 0.03,           // +3% XP gain per point
+          cooldownReduction: 0.02    // +2% ability power (cooldown reduction)
+        }
+      },
       luck: {
         name: 'Luck',
         icon: '🍀',
         description: 'Increases critical damage and treasure find chance',
         effects: {
           critDamage: 0.05,       // +5% crit damage per point
-          goldEarned: 0.03        // +3% gold find per point
-        }
-      },
-      wisdom: {
-        name: 'Wisdom',
-        icon: '🧠',
-        description: 'Reduces cooldowns and increases experience gain',
-        effects: {
-          cooldownReduction: 0.02, // +2% per point
-          expEarned: 0.03          // +3% per point
+          goldEarned: 0.03        // +3% gold drop rate per point
         }
       }
     };
@@ -5512,15 +5514,18 @@
       for (const attrKey in ATTRIBUTE_INFO) {
         const attr = ATTRIBUTE_INFO[attrKey];
         const currentLevel = saveData.attributes[attrKey] || 0;
-        const canIncrease = unspent > 0;
+        const nextCost = getAttributeCost(currentLevel);
+        const canIncrease = unspent >= nextCost;
         
-        // Build effects display
+        // Build effects display with current total bonuses
         let effectsHtml = '';
         for (const effectKey in attr.effects) {
-          const value = attr.effects[effectKey];
+          const valuePerPoint = attr.effects[effectKey];
+          const totalValue = valuePerPoint * currentLevel;
           const effectName = effectKey.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
-          const displayValue = effectKey.includes('Hp') ? `+${value}` : `+${(value * 100).toFixed(0)}%`;
-          effectsHtml += `<div style="color: #90ee90; font-size: 13px;">• ${effectName}: ${displayValue} per point</div>`;
+          const displayValuePerPoint = effectKey.includes('Hp') ? `+${valuePerPoint}` : `+${(valuePerPoint * 100).toFixed(0)}%`;
+          const displayTotal = effectKey.includes('Hp') ? `(${totalValue.toFixed(1)} total)` : `(${(totalValue * 100).toFixed(0)}% total)`;
+          effectsHtml += `<div style="color: #90ee90; font-size: 13px;">• ${effectName}: ${displayValuePerPoint} per point ${displayTotal}</div>`;
         }
         
         html += `
@@ -5544,16 +5549,23 @@
                 onclick="increaseAttribute('${attrKey}')" 
                 style="
                   padding: 10px 20px;
-                  font-size: 24px;
+                  font-size: 18px;
                   background: ${canIncrease ? 'linear-gradient(to bottom, #3498DB, #2C3E50)' : '#555'};
                   color: white;
                   border: 2px solid ${canIncrease ? '#5DADE2' : '#777'};
                   border-radius: 10px;
                   cursor: ${canIncrease ? 'pointer' : 'not-allowed'};
                   opacity: ${canIncrease ? '1' : '0.5'};
+                  display: flex;
+                  flex-direction: column;
+                  align-items: center;
+                  gap: 2px;
                 "
                 ${!canIncrease ? 'disabled' : ''}
-              >+</button>
+              >
+                <span style="font-size: 24px;">+</span>
+                <span style="font-size: 11px; color: #FFD700;">Cost: ${nextCost}</span>
+              </button>
             </div>
             <div style="color: #ddd; font-size: 14px; margin-bottom: 10px;">${attr.description}</div>
             <div style="margin-top: 10px;">
@@ -5564,6 +5576,12 @@
       }
       
       content.innerHTML = html;
+    }
+    
+    // Calculate attribute upgrade cost based on current level
+    // Cost increases every level: level 0→1 costs 1, level 9→10 costs 10, etc.
+    function getAttributeCost(currentLevel) {
+      return currentLevel + 1;
     }
 
     function updateAttributesBadge(count) {
@@ -5602,9 +5620,12 @@
     function increaseAttribute(attrKey) {
       if (!saveData.attributes[attrKey]) saveData.attributes[attrKey] = 0;
       
-      if (saveData.unspentAttributePoints > 0) {
+      const currentLevel = saveData.attributes[attrKey];
+      const cost = getAttributeCost(currentLevel);
+      
+      if (saveData.unspentAttributePoints >= cost) {
         saveData.attributes[attrKey]++;
-        saveData.unspentAttributePoints--;
+        saveData.unspentAttributePoints -= cost;
         
         playSound('levelup');
         saveSaveData();
@@ -5900,7 +5921,7 @@
           // Return a copy with unique ID
           return {
             ...item.gear,
-            id: `${item.gear.id}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+            id: `${item.gear.id}_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`
           };
         }
       }
@@ -7839,8 +7860,15 @@
     
     function addGold(amount) {
       // Apply gold bonus from permanent upgrades
-      const bonus = PERMANENT_UPGRADES.goldEarned.effect(saveData.upgrades.goldEarned);
-      const finalAmount = Math.floor(amount * (1 + bonus));
+      const upgradeBonus = PERMANENT_UPGRADES.goldEarned.effect(saveData.upgrades.goldEarned);
+      
+      // Apply gold bonus from Luck attribute (multiplicative stacking)
+      const luck = saveData.attributes.luck || 0;
+      const luckBonus = luck * ATTRIBUTE_INFO.luck.effects.goldEarned;
+      
+      // Stack multiplicatively: base * (1 + upgrade) * (1 + luck)
+      const finalAmount = Math.floor(amount * (1 + upgradeBonus) * (1 + luckBonus));
+      
       playerStats.gold += finalAmount;
       saveData.gold += finalAmount;
       saveData.totalGoldEarned += finalAmount;
@@ -7886,7 +7914,13 @@
       // Apply XP multiplier from gear and permanent upgrades
       const gearXpBonus = playerStats.xpMultiplier || 1;
       const upgradeXpBonus = 1 + PERMANENT_UPGRADES.expEarned.effect(saveData.upgrades.expEarned);
-      const finalAmount = amount * gearXpBonus * upgradeXpBonus;
+      
+      // Apply XP bonus from Intelligence/Wisdom attribute (multiplicative stacking)
+      const wisdom = saveData.attributes.wisdom || 0;
+      const wisdomBonus = 1 + (wisdom * ATTRIBUTE_INFO.wisdom.effects.expEarned);
+      
+      // Stack multiplicatively: base * gear * upgrade * wisdom
+      const finalAmount = amount * gearXpBonus * upgradeXpBonus * wisdomBonus;
       
       playerStats.exp += finalAmount;
       
@@ -7907,6 +7941,9 @@
       isPaused = true;
       playerStats.lvl++;
       playerStats.exp -= playerStats.expReq;
+      
+      // Award 1 attribute point per level-up (in addition to upgrade card)
+      saveData.unspentAttributePoints += 1;
       
       // Victory condition: Reaching level 50
       if (playerStats.lvl === 50) {
@@ -9418,8 +9455,8 @@
         comboTimerEl.style.display = 'none'; // Hide timer when combo is lost
         
         // Clear combo text to prevent stale messages
-        comboText.innerText = '';
-        comboMultiplier.innerText = '';
+        comboText.textContent = '';
+        comboMultiplier.textContent = '';
         
         // Spawn chest when combo is lost at minimum threshold
         if (comboState.count >= MIN_COMBO_FOR_CHEST_ON_LOSS) {
@@ -9647,6 +9684,7 @@
       const attrRegen = vitality * ATTRIBUTE_INFO.vitality.effects.hpRegen;
       const attrAtkSpeed = dexterity * ATTRIBUTE_INFO.dexterity.effects.attackSpeed;
       const attrCritChance = dexterity * ATTRIBUTE_INFO.dexterity.effects.critChance;
+      const attrMoveSpeed = dexterity * ATTRIBUTE_INFO.dexterity.effects.moveSpeed;
       const attrDamage = strength * ATTRIBUTE_INFO.strength.effects.damage;
       const attrCritDmg = luck * ATTRIBUTE_INFO.luck.effects.critDamage;
       const attrCdReduction = wisdom * ATTRIBUTE_INFO.wisdom.effects.cooldownReduction;
@@ -9661,14 +9699,14 @@
       const gearCritBonus = gearStats.critChance * 0.02;          // +2% crit chance per point
       const gearMagicBonus = gearStats.elementalMagic * 0.03;     // +3% damage per point
       
-      // Reset Stats with permanent upgrades, attributes, and gear applied
+      // Reset Stats with permanent upgrades, attributes, and gear applied (multiplicative stacking)
       playerStats.lvl = 1;
       playerStats.exp = 0;
       playerStats.expReq = GAME_CONFIG.baseExpReq;
       playerStats.hp = baseHp + attrHp;
       playerStats.maxHp = baseHp + attrHp;
       playerStats.strength = baseDamage * (1 + attrDamage + gearMagicBonus);
-      playerStats.walkSpeed = baseSpeed * (1 + gearMoveSpeedBonus);
+      playerStats.walkSpeed = baseSpeed * (1 + attrMoveSpeed + gearMoveSpeedBonus);
       playerStats.kills = 0;
       playerStats.atkSpeed = baseAtkSpeed * (1 + attrAtkSpeed + gearAtkSpeedBonus);
       playerStats.critChance = baseCritChance + attrCritChance + gearPrecisionBonus + gearCritBonus;
