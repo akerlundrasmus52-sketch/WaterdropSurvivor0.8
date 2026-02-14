@@ -1863,7 +1863,10 @@
       // Start animation once DOM is ready (loading bar element exists)
       function startLoadingAnimation() {
         var loadingBar = document.getElementById('loading-bar');
-        if (!loadingBar) return; // Safety check
+        if (!loadingBar) {
+          // Safety check: if loading bar element doesn't exist, don't start animation
+          return;
+        }
         
         var progress = 0;
         
@@ -7212,13 +7215,12 @@
       let currentWidth = loadingBar.style.width;
       let progress = 0;
       if (currentWidth && currentWidth.endsWith('%')) {
-        progress = parseFloat(currentWidth.replace('%', ''));
+        progress = parseFloat(currentWidth.slice(0, -1));
       }
       
       // Complete the loading bar animation from current position to 100%
       const interval = setInterval(() => {
-        progress += 5;
-        if (progress > 100) progress = 100;
+        progress = Math.min(progress + 5, 100);
         loadingBar.style.width = progress + '%';
         
         if (progress >= 100) {
