@@ -4186,17 +4186,17 @@
           const dx = this.mesh.position.x - enemy.mesh.position.x;
           const dz = this.mesh.position.z - enemy.mesh.position.z;
           if (dx*dx + dz*dz < 0.6) { // Hit radius
-            // Calculate Damage
-            let dmg = weapons.gun.damage * playerStats.damage * playerStats.strength;
+            // Calculate Damage (with guards against NaN)
+            let dmg = weapons.gun.damage * (playerStats.damage || 1) * (playerStats.strength || 1);
             
             // Double barrel uses its own damage
             if (weapons.doubleBarrel.active && this.isDoubleBarrel) {
-              dmg = weapons.doubleBarrel.damage * playerStats.damage * playerStats.strength;
+              dmg = weapons.doubleBarrel.damage * (playerStats.damage || 1) * (playerStats.strength || 1);
             }
             
             // Drone turret uses its own damage
             if (weapons.droneTurret.active && this.isDroneTurret) {
-              dmg = weapons.droneTurret.damage * playerStats.damage * playerStats.strength;
+              dmg = weapons.droneTurret.damage * (playerStats.damage || 1) * (playerStats.strength || 1);
             }
             
             // NEW: Manual aim bonus - increased crit chance with precision
@@ -4206,7 +4206,7 @@
             }
             
             const isCrit = Math.random() < effectiveCritChance;
-            if (isCrit) dmg *= playerStats.critDmg;
+            if (isCrit) dmg *= (playerStats.critDmg || 1.5); // Guard against NaN
             
             enemy.takeDamage(Math.floor(dmg), isCrit);
             
@@ -4254,7 +4254,7 @@
         this.maxLife = 10;
         
         // Deal damage immediately
-        const dmg = weapons.sword.damage * playerStats.strength * playerStats.damage;
+        const dmg = weapons.sword.damage * (playerStats.strength || 1) * (playerStats.damage || 1);
         
         enemies.forEach(e => {
           const dx = e.mesh.position.x - x;
@@ -4341,8 +4341,8 @@
           const dx = this.mesh.position.x - enemy.mesh.position.x;
           const dz = this.mesh.position.z - enemy.mesh.position.z;
           if (dx*dx + dz*dz < 0.6) {
-            // Calculate Damage
-            let dmg = weapons.iceSpear.damage * playerStats.damage * playerStats.strength;
+            // Calculate Damage (with guards against NaN)
+            let dmg = weapons.iceSpear.damage * (playerStats.damage || 1) * (playerStats.strength || 1);
             
             // NEW: Manual aim bonus - increased crit chance with precision
             let effectiveCritChance = playerStats.critChance;
@@ -4351,7 +4351,7 @@
             }
             
             const isCrit = Math.random() < effectiveCritChance;
-            if (isCrit) dmg *= playerStats.critDmg;
+            if (isCrit) dmg *= (playerStats.critDmg || 1.5); // Guard against NaN
             
             enemy.takeDamage(Math.floor(dmg), isCrit);
             
@@ -4440,7 +4440,7 @@
         
         // AOE Damage
         const range = weapons.meteor.area;
-        const dmg = weapons.meteor.damage * playerStats.strength;
+        const dmg = weapons.meteor.damage * (playerStats.strength || 1);
         
         enemies.forEach(e => {
           const d = e.mesh.position.distanceTo(this.target);
@@ -6444,7 +6444,12 @@
       const baseDamage = 1 + PERMANENT_UPGRADES.attackDamage.effect(saveData.upgrades.attackDamage);
       const baseAtkSpeed = 1 + PERMANENT_UPGRADES.attackSpeed.effect(saveData.upgrades.attackSpeed);
       const baseCritChance = 0.1 + PERMANENT_UPGRADES.critChance.effect(saveData.upgrades.critChance);
+      const baseCritDmg = 1.5 + PERMANENT_UPGRADES.critDamage.effect(saveData.upgrades.critDamage);
       const baseArmor = PERMANENT_UPGRADES.armor.effect(saveData.upgrades.armor);
+      
+      // Apply attribute bonuses
+      const luck = saveData.attributes.luck || 0;
+      const attrCritDmg = luck * ATTRIBUTE_INFO.luck.effects.critDamage;
       
       // Apply gear bonuses (additive for most, multiplicative for some)
       playerStats.maxHp = Math.floor(baseMaxHp + (gearStats.hp || 0));
@@ -6453,6 +6458,7 @@
       playerStats.damage = baseDamage + (gearStats.damage || 0) * GEAR_STAT_MULTIPLIERS.DAMAGE_PER_POINT;
       playerStats.atkSpeed = baseAtkSpeed + (gearStats.attackSpeed || 0) * GEAR_STAT_MULTIPLIERS.ATTACK_SPEED_PER_POINT;
       playerStats.critChance = baseCritChance + (gearStats.critChance || 0) * GEAR_STAT_MULTIPLIERS.CRIT_CHANCE_PER_POINT;
+      playerStats.critDmg = baseCritDmg + attrCritDmg;
       playerStats.armor = Math.min(80, baseArmor + (gearStats.armor || 0)); // Cap at 80%
       
       // XP bonus from gear (affects XP gain multiplier)
@@ -9918,6 +9924,11 @@
     }
 
     function createDamageNumber(amount, pos, isCrit = false) {
+      // Defensive guard: ensure amount is finite, default to 0 if not
+      if (!isFinite(amount) || isNaN(amount)) {
+        amount = 0;
+      }
+      
       const div = document.createElement('div');
       div.className = isCrit ? 'damage-number critical' : 'damage-number normal';
       div.innerText = isCrit ? `CRITICAL!\n${Math.floor(amount)}` : Math.floor(amount);
@@ -11041,7 +11052,7 @@
           if (e.isDead) return;
           const d = player.mesh.position.distanceTo(e.mesh.position);
           if (d < weapons.aura.range) {
-            e.takeDamage(weapons.aura.damage * playerStats.strength);
+            e.takeDamage(weapons.aura.damage * (playerStats.strength || 1));
             hit = true;
           }
         });
@@ -11234,7 +11245,7 @@
           if (e.isDead) return;
           const d = player.mesh.position.distanceTo(e.mesh.position);
           if (d < weapons.fireRing.range) {
-            const dmg = weapons.fireRing.damage * playerStats.strength;
+            const dmg = weapons.fireRing.damage * (playerStats.strength || 1);
             
             // NEW: Manual aim bonus - increased crit chance with precision
             let effectiveCritChance = playerStats.critChance;
@@ -11243,7 +11254,7 @@
             }
             
             const isCrit = Math.random() < effectiveCritChance;
-            const finalDmg = isCrit ? dmg * playerStats.critDmg : dmg;
+            const finalDmg = isCrit ? dmg * (playerStats.critDmg || 1.5) : dmg; // Guard against NaN
             e.takeDamage(finalDmg);
             createDamageNumber(finalDmg, e.mesh.position, isCrit);
             
