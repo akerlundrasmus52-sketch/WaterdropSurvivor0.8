@@ -7182,10 +7182,15 @@
       requestAnimationFrame(animate);
     }
     
+    // Global state for loading screen dismissal
+    let loadingDismissed = false;
+    let loadingInterval = null;
+    let loadingFailsafeTimeout = null;
+    const LOADING_DISMISS_DELAY_MS = 100; // Delay after first frame before dismissing loading screen
+    
     function showLoadingScreen() {
       const loadingScreen = document.getElementById('loading-screen');
       const loadingBar = document.getElementById('loading-bar');
-      let dismissed = false; // PR #129: Prevent double dismissal
       
       // Loading failsafe timeout constant
       const LOADING_FAILSAFE_TIMEOUT_MS = 12000;
@@ -7198,19 +7203,6 @@
         clearInterval(window.initialLoadingInterval);
       }
       
-      // Function to dismiss loading screen
-      const dismissLoadingScreen = () => {
-        if (dismissed) return;
-        dismissed = true;
-        clearInterval(interval);
-        clearTimeout(failsafeTimeout);
-        loadingScreen.classList.add('fade-out');
-        setTimeout(() => {
-          loadingScreen.style.display = 'none';
-          showMainMenu();
-        }, 500);
-      };
-      
       // Get current progress from the standalone animation
       let currentWidth = loadingBar.style.width;
       let progress = 0;
@@ -7219,23 +7211,50 @@
       }
       
       // Complete the loading bar animation from current position to 100%
-      const interval = setInterval(() => {
+      loadingInterval = setInterval(() => {
         progress = Math.min(progress + 5, 100);
         loadingBar.style.width = progress + '%';
         
         if (progress >= 100) {
-          clearInterval(interval);
-          setTimeout(dismissLoadingScreen, 600); // Delay before fade
+          clearInterval(loadingInterval);
+          loadingInterval = null;
+          // Don't dismiss automatically - wait for animation loop to start
         }
       }, 100); // Fast completion
       
-      // PR #129: Failsafe timeout - dismiss after 12s maximum even if ES module fails
-      // Normal loading: up to 9s (90% at 2%/100ms) + completion (~2s) + 0.6s delay + 0.5s fade
-      // Failsafe: 12s provides buffer for slow systems or initialization delays
-      const failsafeTimeout = setTimeout(() => {
+      // PR #129: Failsafe timeout - dismiss after 12s maximum even if initialization fails
+      loadingFailsafeTimeout = setTimeout(() => {
         console.warn('Loading screen failsafe triggered after ' + LOADING_FAILSAFE_TIMEOUT_MS + 'ms');
         dismissLoadingScreen();
       }, LOADING_FAILSAFE_TIMEOUT_MS);
+    }
+    
+    function dismissLoadingScreen() {
+      if (loadingDismissed) return;
+      loadingDismissed = true;
+      
+      const loadingScreen = document.getElementById('loading-screen');
+      
+      // Clear any active loading interval and timeout
+      if (loadingInterval) {
+        clearInterval(loadingInterval);
+        loadingInterval = null;
+      }
+      if (loadingFailsafeTimeout) {
+        clearTimeout(loadingFailsafeTimeout);
+        loadingFailsafeTimeout = null;
+      }
+      
+      // Ensure loading bar is at 100%
+      const loadingBar = document.getElementById('loading-bar');
+      loadingBar.style.width = '100%';
+      
+      // Fade out and show main menu
+      loadingScreen.classList.add('fade-out');
+      setTimeout(() => {
+        loadingScreen.style.display = 'none';
+        showMainMenu();
+      }, 500);
     }
     
     function showMainMenu() {
@@ -10298,6 +10317,10 @@
         gameTime = time / 1000; // Initialize gameTime for visual effects
         // Render the initial frame before returning to avoid blank screen
         renderer.render(scene, camera);
+        // Dismiss loading screen after first frame is rendered
+        // This ensures setupMenus and requestAnimationFrame have both completed
+        // Small delay to ensure the frame is fully rendered before dismissing
+        setTimeout(() => dismissLoadingScreen(), LOADING_DISMISS_DELAY_MS);
         return;
       }
 
