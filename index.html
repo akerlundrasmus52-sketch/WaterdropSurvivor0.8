@@ -9925,7 +9925,7 @@
 
     function createDamageNumber(amount, pos, isCrit = false) {
       // Defensive guard: ensure amount is finite, default to 0 if not
-      if (!isFinite(amount) || isNaN(amount)) {
+      if (!isFinite(amount)) {
         amount = 0;
       }
       
