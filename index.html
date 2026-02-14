@@ -1807,7 +1807,18 @@
       lakeCenterZ: -30,
       lakeRadius: 18,
       // Performance optimization - Phase 1
-      maxEnemiesOnScreen: 50
+      maxEnemiesOnScreen: 50,
+      // CRITICAL FIX: Entity caps to prevent freeze at 300s
+      maxProjectiles: 200,
+      maxParticles: 300,
+      maxFlashLights: 20,
+      maxMeteors: 10,
+      maxExpGems: 100,
+      maxGoldCoins: 50,
+      maxDamageNumbers: 30, // DOM elements cap
+      // Memory cleanup intervals
+      cleanupInterval: 10000, // Cleanup every 10 seconds
+      emergencyCleanupThreshold: 500 // Total entities before emergency cleanup
     };
 
     // --- AUDIO SYSTEM (Oscillators) ---
@@ -2196,6 +2207,20 @@
     // Deferred disposal queue for Three.js memory management (PR #81)
     const disposalQueue = [];
     const MAX_DISPOSALS_PER_FRAME = 10;
+    
+    // CRITICAL FIX: Track RAF callbacks to prevent accumulation (freeze fix)
+    let activeRAFCallbacks = new Set();
+    let rafCallbackId = 0;
+    
+    // CRITICAL FIX: DOM element pool for damage numbers (freeze fix)
+    const domElementPool = {
+      damageNumbers: [],
+      maxPoolSize: 50
+    };
+    
+    // CRITICAL FIX: Watchdog timer to detect and recover from freezes
+    let lastFrameTimestamp = Date.now();
+    let freezeDetected = false;
     
     let frameCount = 0;
     let isPaused = false;
@@ -7397,6 +7422,9 @@
       // Initialize background music
       updateBackgroundMusic();
       
+      // CRITICAL FIX: Initialize watchdog timer for freeze detection
+      initWatchdog();
+      
       // Listeners
       setupInputs();
       setupMenus();
@@ -8000,21 +8028,19 @@
       mesh.position.y = 0.3;
       scene.add(mesh);
       
-      // Animate falling
+      // CRITICAL FIX: Use managed RAF with auto-cleanup
       let life = 20;
-      const update = () => {
+      createManagedRAF(() => {
         life--;
         mesh.position.y -= 0.02;
         mat.opacity = life / 20;
         if (life <= 0 || mesh.position.y <= 0.05) {
           scene.remove(mesh);
-          mesh.geometry.dispose();
-          mesh.material.dispose();
-        } else {
-          requestAnimationFrame(update);
+          disposalQueue.push({ geo: mesh.geometry, mat: mesh.material });
+          return false; // Stop animation
         }
-      };
-      update();
+        return true; // Continue animation
+      }, 20); // Max 20 frames
     }
 
     function addExp(amount) {
@@ -8192,8 +8218,9 @@
           Math.sin(angle) * speed
         );
         
+        // CRITICAL FIX: Use managed RAF with auto-cleanup
         let life = 80;
-        const updateDroplet = () => {
+        createManagedRAF(() => {
           life--;
           droplet.position.add(vel);
           vel.y -= 0.03; // Gravity
@@ -8202,13 +8229,11 @@
           
           if (life <= 0 || droplet.position.y < 0) {
             scene.remove(droplet);
-            droplet.geometry.dispose();
-            droplet.material.dispose();
-          } else {
-            requestAnimationFrame(updateDroplet);
+            disposalQueue.push({ geo: droplet.geometry, mat: droplet.material });
+            return false; // Stop animation
           }
-        };
-        updateDroplet();
+          return true; // Continue animation
+        }, 80); // Max 80 frames
       }
       
       // Expanding splash ring on ground
@@ -8225,8 +8250,9 @@
       ring.rotation.x = -Math.PI / 2;
       scene.add(ring);
       
+      // CRITICAL FIX: Use managed RAF with auto-cleanup
       let ringLife = 60;
-      const updateRing = () => {
+      createManagedRAF(() => {
         ringLife--;
         const scale = 1 + (60 - ringLife) * 0.15;
         ring.scale.set(scale, scale, 1);
@@ -8234,13 +8260,11 @@
         
         if (ringLife <= 0) {
           scene.remove(ring);
-          ring.geometry.dispose();
-          ring.material.dispose();
-        } else {
-          requestAnimationFrame(updateRing);
+          disposalQueue.push({ geo: ring.geometry, mat: ring.material });
+          return false; // Stop animation
         }
-      };
-      updateRing();
+        return true; // Continue animation
+      }, 60); // Max 60 frames
       
       // Fountain/explosion of "LEVEL UP" text particles from player's head
       const texts = ["L", "E", "V", "E", "L", " ", "U", "P", "!"];
@@ -9617,6 +9641,204 @@
       disposalQueue.push({ geo: mesh.geometry, mat: mesh.material });
     }
     
+    // CRITICAL FIX: Watchdog timer to detect freezes
+    function initWatchdog() {
+      setInterval(() => {
+        const now = Date.now();
+        const timeSinceLastFrame = now - lastFrameTimestamp;
+        
+        // If more than 2 seconds since last frame, freeze detected
+        if (timeSinceLastFrame > 2000 && !freezeDetected) {
+          freezeDetected = true;
+          console.error('FREEZE DETECTED! Initiating emergency cleanup...');
+          performEmergencyCleanup();
+          freezeDetected = false;
+        }
+      }, 3000); // Check every 3 seconds
+    }
+    
+    // CRITICAL FIX: Emergency cleanup when freeze detected
+    function performEmergencyCleanup() {
+      console.warn('Emergency cleanup: Clearing excess entities');
+      
+      // Cap projectiles
+      while (projectiles.length > GAME_CONFIG.maxProjectiles / 2) {
+        const p = projectiles.shift();
+        if (p && p.mesh) {
+          scene.remove(p.mesh);
+          if (p.mesh.geometry) p.mesh.geometry.dispose();
+          if (p.mesh.material) p.mesh.material.dispose();
+        }
+      }
+      
+      // Cap particles
+      while (particles.length > GAME_CONFIG.maxParticles / 2) {
+        const p = particles.shift();
+        if (p && p.mesh) {
+          scene.remove(p.mesh);
+          if (p.mesh.geometry) p.mesh.geometry.dispose();
+          if (p.mesh.material) p.mesh.material.dispose();
+        }
+      }
+      
+      // Cap meteors
+      while (meteors.length > 5) {
+        const m = meteors.shift();
+        if (m && m.mesh) {
+          scene.remove(m.mesh);
+          if (m.mesh.geometry) m.mesh.geometry.dispose();
+          if (m.mesh.material) m.mesh.material.dispose();
+        }
+      }
+      
+      // Clear excess flash lights
+      while (flashLights.length > 5) {
+        const light = flashLights.shift();
+        if (light) scene.remove(light);
+      }
+      
+      // Clear old timeouts
+      activeTimeouts.forEach(id => clearTimeout(id));
+      activeTimeouts = [];
+      
+      // Clear excess DOM damage numbers
+      const damageNumberElements = document.querySelectorAll('.damage-number, .damage-number.critical, .damage-number.normal');
+      if (damageNumberElements.length > 10) {
+        for (let i = 0; i < damageNumberElements.length - 10; i++) {
+          if (damageNumberElements[i]) {
+            damageNumberElements[i].remove();
+          }
+        }
+      }
+      
+      // Force garbage collection hint (non-standard but works in some browsers)
+      if (window.gc) {
+        try {
+          window.gc();
+        } catch (e) {}
+      }
+      
+      console.warn('Emergency cleanup complete');
+    }
+    
+    // CRITICAL FIX: Comprehensive memory cleanup function
+    function performMemoryCleanup() {
+      const startTime = performance.now();
+      let cleanedItems = 0;
+      
+      // 1. Clean up excess projectiles (oldest first)
+      if (projectiles.length > GAME_CONFIG.maxProjectiles) {
+        const excess = projectiles.length - GAME_CONFIG.maxProjectiles;
+        for (let i = 0; i < excess; i++) {
+          const p = projectiles[i];
+          if (p && p.mesh) {
+            scene.remove(p.mesh);
+            disposalQueue.push({ geo: p.mesh.geometry, mat: p.mesh.material });
+            cleanedItems++;
+          }
+        }
+        projectiles.splice(0, excess);
+      }
+      
+      // 2. Clean up excess particles
+      if (particles.length > GAME_CONFIG.maxParticles) {
+        const excess = particles.length - GAME_CONFIG.maxParticles;
+        for (let i = 0; i < excess; i++) {
+          const p = particles[i];
+          if (p && p.mesh) {
+            scene.remove(p.mesh);
+            disposalQueue.push({ geo: p.mesh.geometry, mat: p.mesh.material });
+            cleanedItems++;
+          }
+        }
+        particles.splice(0, excess);
+      }
+      
+      // 3. Clean up excess meteors
+      if (meteors.length > GAME_CONFIG.maxMeteors) {
+        const excess = meteors.length - GAME_CONFIG.maxMeteors;
+        for (let i = 0; i < excess; i++) {
+          const m = meteors[i];
+          if (m && m.mesh) {
+            scene.remove(m.mesh);
+            disposalQueue.push({ geo: m.mesh.geometry, mat: m.mesh.material });
+            cleanedItems++;
+          }
+        }
+        meteors.splice(0, excess);
+      }
+      
+      // 4. Clean up excess flash lights
+      if (flashLights.length > GAME_CONFIG.maxFlashLights) {
+        const excess = flashLights.length - GAME_CONFIG.maxFlashLights;
+        for (let i = 0; i < excess; i++) {
+          const light = flashLights[i];
+          if (light) {
+            scene.remove(light);
+            cleanedItems++;
+          }
+        }
+        flashLights.splice(0, excess);
+      }
+      
+      // 5. Clean up DOM damage numbers
+      const damageNumberElements = document.querySelectorAll('.damage-number, .damage-number.critical, .damage-number.normal');
+      if (damageNumberElements.length > GAME_CONFIG.maxDamageNumbers) {
+        const excess = damageNumberElements.length - GAME_CONFIG.maxDamageNumbers;
+        for (let i = 0; i < excess; i++) {
+          if (damageNumberElements[i]) {
+            damageNumberElements[i].remove();
+            cleanedItems++;
+          }
+        }
+      }
+      
+      // 6. Clean up old timeouts that may have failed
+      if (activeTimeouts.length > 50) {
+        // Keep only the 30 most recent
+        activeTimeouts.splice(0, activeTimeouts.length - 30);
+      }
+      
+      const endTime = performance.now();
+      if (cleanedItems > 0) {
+        console.log(`Memory cleanup: ${cleanedItems} items cleaned in ${(endTime - startTime).toFixed(2)}ms`);
+      }
+    }
+    
+    // CRITICAL FIX: Managed RAF callback wrapper to track and prevent leaks
+    function createManagedRAF(callback, maxLifetime = 300) {
+      const id = rafCallbackId++;
+      let frameCount = 0;
+      activeRAFCallbacks.add(id);
+      
+      const wrappedCallback = () => {
+        frameCount++;
+        
+        // Auto-terminate if lifetime exceeded
+        if (frameCount > maxLifetime) {
+          activeRAFCallbacks.delete(id);
+          return;
+        }
+        
+        // Call original callback, if it returns false, stop
+        const shouldContinue = callback();
+        
+        if (shouldContinue !== false && activeRAFCallbacks.has(id)) {
+          requestAnimationFrame(wrappedCallback);
+        } else {
+          activeRAFCallbacks.delete(id);
+        }
+      };
+      
+      requestAnimationFrame(wrappedCallback);
+      return id;
+    }
+    
+    // CRITICAL FIX: Stop a managed RAF callback
+    function stopManagedRAF(id) {
+      activeRAFCallbacks.delete(id);
+    }
+
     function processDisposalQueue() {
       let count = 0;
       while (disposalQueue.length > 0 && count < MAX_DISPOSALS_PER_FRAME) {
@@ -9638,7 +9860,18 @@
     }
 
     function createDamageNumber(amount, pos, isCrit = false) {
-      const div = document.createElement('div');
+      // CRITICAL FIX: Use DOM element pool to prevent memory leaks
+      let div = domElementPool.damageNumbers.pop();
+      
+      if (!div) {
+        // Create new element if pool is empty
+        div = document.createElement('div');
+        div.style.position = 'absolute';
+        div.style.whiteSpace = 'pre';
+        div.style.textAlign = 'center';
+        div.style.transform = 'translate(-50%, -50%)';
+      }
+      
       div.className = isCrit ? 'damage-number critical' : 'damage-number normal';
       div.innerText = isCrit ? `CRITICAL!\n${Math.floor(amount)}` : Math.floor(amount);
       
@@ -9650,15 +9883,21 @@
       const x = (vec.x * .5 + .5) * window.innerWidth;
       const y = (-(vec.y * .5) + .5) * window.innerHeight;
       
-      div.style.position = 'absolute';
       div.style.left = `${x}px`;
       div.style.top = `${y}px`;
-      div.style.transform = 'translate(-50%, -50%)';
-      div.style.whiteSpace = 'pre';
-      div.style.textAlign = 'center';
       
       document.body.appendChild(div);
-      setTimeout(() => div.remove(), 1000);
+      
+      // CRITICAL FIX: Return to pool instead of creating new DOM nodes
+      setTimeout(() => {
+        if (div.parentElement) {
+          div.parentElement.removeChild(div);
+        }
+        // Return to pool if not at max size
+        if (domElementPool.damageNumbers.length < domElementPool.maxPoolSize) {
+          domElementPool.damageNumbers.push(div);
+        }
+      }, 1000);
     }
     
     // Message fade tracking to prevent memory leaks
@@ -10360,6 +10599,9 @@
     function animate(time) {
       requestAnimationFrame(animate);
       
+      // CRITICAL FIX: Update watchdog timestamp
+      lastFrameTimestamp = Date.now();
+      
       // Safety check: Ensure Three.js components are initialized before rendering (PR #82)
       if (!renderer || !scene || !camera) {
         return;
@@ -10380,6 +10622,21 @@
       let dt = (time - lastTime) / 1000;
       lastTime = time;
       gameTime = time / 1000; // Update game time in seconds
+      
+      // CRITICAL FIX: Periodic memory cleanup to prevent freeze
+      const currentTime = Date.now();
+      if (currentTime - lastCleanupTime > GAME_CONFIG.cleanupInterval) {
+        performMemoryCleanup();
+        lastCleanupTime = currentTime;
+      }
+      
+      // CRITICAL FIX: Emergency cleanup if entity count is too high
+      const totalEntities = projectiles.length + particles.length + enemies.length + 
+                           meteors.length + flashLights.length + expGems.length + goldCoins.length;
+      if (totalEntities > GAME_CONFIG.emergencyCleanupThreshold) {
+        console.warn(`Emergency cleanup triggered: ${totalEntities} total entities`);
+        performEmergencyCleanup();
+      }
       
       // Phase 3: Lag compensation - cap deltaTime to prevent death spiral
       const MAX_DELTA_TIME = 0.1; // 100ms cap
