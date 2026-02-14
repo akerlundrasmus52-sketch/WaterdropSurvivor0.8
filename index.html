@@ -2153,6 +2153,11 @@
     // Time-of-day system for dynamic lighting
     let timeOfDay = 0; // 0-1 representing full day cycle (0=dawn, 0.25=noon, 0.5=dusk, 0.75=night)
     let dayNightCycleSpeed = 0.0001; // Speed of day/night transition
+    let directionalLight = null; // Cache reference for performance
+    let ambientLight = null; // Cache reference for performance
+    
+    // Counter for unique gear ID generation
+    let gearIdCounter = 0;
     
     // Countdown system (PR #70-71)
     let countdownActive = false;
@@ -5869,7 +5874,7 @@
       ];
       
       return {
-        id: `generated_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        id: `generated_${++gearIdCounter}_${Math.random().toString(36).substr(2, 9)}`,
         name,
         type: slotType,
         rarity,
@@ -7000,24 +7005,24 @@
       renderer.outputEncoding = THREE.sRGBEncoding; // Correct color space
       document.getElementById('game-container').appendChild(renderer.domElement);
 
-      // Lights
-      const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+      // Lights - store references for performance optimization
+      ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
       scene.add(ambientLight);
 
-      const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-      dirLight.position.set(50, 100, 50);
-      dirLight.castShadow = true;
+      directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+      directionalLight.position.set(50, 100, 50);
+      directionalLight.castShadow = true;
       // Enhanced shadow quality for better visuals
-      dirLight.shadow.mapSize.width = 4096;  // Increased from 2048
-      dirLight.shadow.mapSize.height = 4096; // Increased from 2048
-      dirLight.shadow.camera.left = -100;
-      dirLight.shadow.camera.right = 100;
-      dirLight.shadow.camera.top = 100;
-      dirLight.shadow.camera.bottom = -100;
-      dirLight.shadow.camera.near = 0.5;
-      dirLight.shadow.camera.far = 500;
-      dirLight.shadow.bias = -0.0001; // Reduce shadow acne
-      scene.add(dirLight);
+      directionalLight.shadow.mapSize.width = 4096;  // Increased from 2048
+      directionalLight.shadow.mapSize.height = 4096; // Increased from 2048
+      directionalLight.shadow.camera.left = -100;
+      directionalLight.shadow.camera.right = 100;
+      directionalLight.shadow.camera.top = 100;
+      directionalLight.shadow.camera.bottom = -100;
+      directionalLight.shadow.camera.near = 0.5;
+      directionalLight.shadow.camera.far = 500;
+      directionalLight.shadow.bias = -0.0001; // Reduce shadow acne
+      scene.add(directionalLight);
 
       // Setup
       createWorld();
@@ -10674,51 +10679,43 @@
       chests = chests.filter(c => c.active);
 
       // Dynamic time-of-day lighting system for enhanced visuals
-      if (isGameActive && !isPaused && !isGameOver) {
+      if (isGameActive && !isPaused && !isGameOver && directionalLight && ambientLight) {
         timeOfDay += dayNightCycleSpeed;
         if (timeOfDay > 1) timeOfDay = 0;
         
-        // Update directional light based on time of day
-        const dirLight = scene.children.find(child => child instanceof THREE.DirectionalLight);
-        if (dirLight) {
-          // Calculate sun position and color based on time
-          const angle = timeOfDay * Math.PI * 2;
-          const sunHeight = Math.sin(angle);
-          
-          // Position: sun moves in arc across sky
-          dirLight.position.set(
-            50 * Math.cos(angle),
-            50 + 50 * sunHeight,
-            50 * Math.sin(angle)
-          );
-          
-          // Color changes: warm at sunrise/sunset, white at noon, cool at night
-          if (timeOfDay < 0.15 || timeOfDay > 0.85) { // Dawn/Dusk
-            const dawnDuskFactor = timeOfDay < 0.15 ? timeOfDay / 0.15 : (1 - timeOfDay) / 0.15;
-            dirLight.color.setHex(0xffa040); // Warm orange/red
-            dirLight.intensity = 0.3 + 0.4 * dawnDuskFactor;
-          } else if (timeOfDay >= 0.15 && timeOfDay <= 0.35) { // Morning
-            dirLight.color.setHex(0xffffdd); // Warm white
-            dirLight.intensity = 0.7;
-          } else if (timeOfDay > 0.35 && timeOfDay < 0.65) { // Noon
-            dirLight.color.setHex(0xffffff); // Pure white
-            dirLight.intensity = 0.9;
-          } else { // Evening
-            dirLight.color.setHex(0xffd0a0); // Warm sunset
-            dirLight.intensity = 0.5;
-          }
-        }
+        // Calculate sun position and color based on time
+        const angle = timeOfDay * Math.PI * 2;
+        const sunHeight = Math.sin(angle);
         
-        // Update ambient light for overall scene brightness
-        const ambientLight = scene.children.find(child => child instanceof THREE.AmbientLight);
-        if (ambientLight) {
-          if (timeOfDay < 0.15 || timeOfDay > 0.85) { // Dawn/Dusk
-            ambientLight.intensity = 0.3;
-            ambientLight.color.setHex(0xffa040);
-          } else if (timeOfDay > 0.15 && timeOfDay < 0.85) { // Day
-            ambientLight.intensity = 0.6;
-            ambientLight.color.setHex(0xffffff);
-          }
+        // Position: sun moves in arc across sky
+        directionalLight.position.set(
+          50 * Math.cos(angle),
+          50 + 50 * sunHeight,
+          50 * Math.sin(angle)
+        );
+        
+        // Color changes: warm at sunrise/sunset, white at noon, cool at night
+        if (timeOfDay < 0.15 || timeOfDay > 0.85) { // Dawn/Dusk
+          const dawnDuskFactor = timeOfDay < 0.15 ? timeOfDay / 0.15 : (1 - timeOfDay) / 0.15;
+          directionalLight.color.setHex(0xffa040); // Warm orange/red
+          directionalLight.intensity = 0.3 + 0.4 * dawnDuskFactor;
+          ambientLight.intensity = 0.3;
+          ambientLight.color.setHex(0xffa040);
+        } else if (timeOfDay >= 0.15 && timeOfDay <= 0.35) { // Morning
+          directionalLight.color.setHex(0xffffdd); // Warm white
+          directionalLight.intensity = 0.7;
+          ambientLight.intensity = 0.6;
+          ambientLight.color.setHex(0xffffff);
+        } else if (timeOfDay > 0.35 && timeOfDay < 0.65) { // Noon
+          directionalLight.color.setHex(0xffffff); // Pure white
+          directionalLight.intensity = 0.9;
+          ambientLight.intensity = 0.6;
+          ambientLight.color.setHex(0xffffff);
+        } else { // Evening
+          directionalLight.color.setHex(0xffd0a0); // Warm sunset
+          directionalLight.intensity = 0.5;
+          ambientLight.intensity = 0.6;
+          ambientLight.color.setHex(0xffffff);
         }
         
         // Enhanced fog effects based on time of day
