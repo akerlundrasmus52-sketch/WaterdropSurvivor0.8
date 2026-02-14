@@ -1774,7 +1774,7 @@
     <div id="stat-notifications"></div>
 
     <!-- NEW: First-Run Tutorial Overlay -->
-    <div id="tutorial-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 200; padding: 20px; box-sizing: border-box; overflow-y: auto;">
+    <div id="tutorial-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 10001; padding: 20px; box-sizing: border-box; overflow-y: auto; pointer-events: auto;">
       <div style="max-width: 800px; margin: 0 auto; color: #FFF; font-family: 'M PLUS Rounded 1c', sans-serif;">
         <h1 style="text-align: center; color: #5DADE2; font-size: 48px; margin-bottom: 30px; text-shadow: 0 0 20px rgba(93,173,226,0.8);">
           🌊 Water Drop Survivor - Tutorial 🌊
@@ -2037,6 +2037,11 @@
       // Performance optimization - Phase 1
       maxEnemiesOnScreen: 50
     };
+    
+    // UI/UX Constants
+    const COUNTDOWN_TIMEOUT_MS = 10000; // Safety timeout for countdown
+    const STATE_LOG_THROTTLE_MS = 3000; // Throttle for state logging
+    const TUTORIAL_SHOWN_KEY = 'waterDropSurvivorTutorialShown'; // LocalStorage key
 
     // --- AUDIO SYSTEM (Oscillators) ---
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -7711,15 +7716,25 @@
     }
     
     function hideMainMenu() {
+      console.log('🚪 Hiding main menu');
       document.getElementById('main-menu').style.display = 'none';
     }
     
     // Countdown system (PR #70-71)
     function startCountdown() {
+      console.log('⏱️ Starting countdown');
       countdownActive = true;
       countdownStep = 0;
       countdownTimer = 0;
       showCountdownMessage(0);
+      
+      // Safety timeout: Force-start game if countdown doesn't complete
+      setTimeout(() => {
+        if (countdownActive) {
+          console.warn('⚠️ Countdown timeout - forcing game start');
+          endCountdown();
+        }
+      }, COUNTDOWN_TIMEOUT_MS);
     }
     
     function showCountdownMessage(step) {
@@ -7744,12 +7759,14 @@
     }
     
     function endCountdown() {
+      console.log('✅ Countdown complete - Activating game');
       countdownActive = false;
       
       // Ensure game properly unpauses
       isPaused = false;
       isGameActive = true;
       gameStartTime = Date.now();
+      console.log('🎮 Game state: isGameActive =', isGameActive, ', isPaused =', isPaused);
     }
     
     function showProgressionShop() {
@@ -7921,21 +7938,37 @@
       
       // Main Menu Buttons
       document.getElementById('start-game-btn').onclick = () => {
+        console.log('🎮 START GAME BUTTON CLICKED');
+        
         // Guard: Prevent starting if game is already active or countdown is running
         if (isGameActive || countdownActive) {
-          console.log('Game already active or countdown in progress');
+          console.log('⚠️ Game already active or countdown in progress');
           return;
         }
         
         playSound('waterdrop');
         
         // NEW: Check if tutorial should be shown (first time or user hasn't dismissed it)
-        const tutorialShown = localStorage.getItem('waterDropSurvivorTutorialShown');
+        const tutorialShown = localStorage.getItem(TUTORIAL_SHOWN_KEY);
+        console.log('📖 Tutorial shown before:', tutorialShown);
+        
         if (!tutorialShown || tutorialShown !== 'true') {
           // Show tutorial overlay
-          document.getElementById('tutorial-overlay').style.display = 'block';
+          console.log('📖 Showing tutorial overlay');
+          const tutorialOverlay = document.getElementById('tutorial-overlay');
+          if (tutorialOverlay) {
+            tutorialOverlay.style.display = 'block';
+            console.log('✅ Tutorial overlay displayed');
+          } else {
+            console.error('⚠️ Tutorial overlay element not found! Starting game directly as fallback.');
+            // Fallback: Start game directly if tutorial is missing
+            hideMainMenu();
+            resetGame();
+            startCountdown();
+          }
         } else {
           // Skip tutorial and start game
+          console.log('✅ Skipping tutorial, starting game directly');
           hideMainMenu();
           resetGame();
           startCountdown();
@@ -7944,9 +7977,11 @@
       
       // NEW: Tutorial overlay button handler
       document.getElementById('tutorial-start-btn').onclick = () => {
+        console.log('🎮 TUTORIAL START BUTTON CLICKED');
+        
         // Guard: Prevent starting if game is already active or countdown is running
         if (isGameActive || countdownActive) {
-          console.log('Game already active or countdown in progress');
+          console.log('⚠️ Game already active or countdown in progress');
           return;
         }
         
@@ -7955,10 +7990,12 @@
         // Check if user wants to hide tutorial in the future
         const dontShow = document.getElementById('tutorial-dont-show').checked;
         if (dontShow) {
-          localStorage.setItem('waterDropSurvivorTutorialShown', 'true');
+          console.log('✅ Saving tutorial preference');
+          localStorage.setItem(TUTORIAL_SHOWN_KEY, 'true');
         }
         
         // Hide tutorial and start game
+        console.log('📖 Hiding tutorial overlay');
         document.getElementById('tutorial-overlay').style.display = 'none';
         hideMainMenu();
         resetGame();
@@ -10121,6 +10158,7 @@
     }
 
     function resetGame() {
+      console.log('🔄 Resetting game...');
       stopDroneHum(); // Stop drone sound on reset
       
       // Apply permanent upgrades from save data
@@ -10861,6 +10899,11 @@
       }
 
       if (isPaused || isGameOver || !isGameActive) {
+        // Log state changes (throttled to avoid spam)
+        if (!window.lastStateLog || (Date.now() - window.lastStateLog) > STATE_LOG_THROTTLE_MS) {
+          console.log('⏸️ Game paused/inactive - isPaused:', isPaused, 'isGameOver:', isGameOver, 'isGameActive:', isGameActive);
+          window.lastStateLog = Date.now();
+        }
         // Still render the scene so visual effects (camera shake, particles, modals) are visible (PR #82)
         renderer.render(scene, camera);
         return;
@@ -11584,6 +11627,24 @@
       // Process disposal queue after rendering (PR #81)
       processDisposalQueue();
     }
+
+    // Debug function to force-start game (can be called from console)
+    window.debugStartGame = function() {
+      console.log('🔧 DEBUG: Force-starting game');
+      // Clear tutorial flag to show tutorial
+      localStorage.removeItem(TUTORIAL_SHOWN_KEY);
+      // Force hide menu and start game
+      hideMainMenu();
+      document.getElementById('tutorial-overlay').style.display = 'none';
+      resetGame();
+      startCountdown();
+    };
+    
+    window.debugSkipTutorial = function() {
+      console.log('🔧 DEBUG: Skipping tutorial permanently');
+      localStorage.setItem(TUTORIAL_SHOWN_KEY, 'true');
+      console.log('✅ Tutorial will be skipped on next Start Game click');
+    };
 
     // Init Game - improved error handling (hotfix for loading screen hang)
     try { 
