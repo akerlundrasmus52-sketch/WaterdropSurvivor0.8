@@ -4035,7 +4035,15 @@
             }
             
             const isCrit = Math.random() < playerStats.critChance;
-            if (isCrit) dmg *= playerStats.critDmg;
+            // Guard crit multiplier from producing NaN
+            const critMultiplier = Number.isFinite(playerStats.critDmg) ? playerStats.critDmg : 1;
+            if (isCrit) dmg *= critMultiplier;
+            
+            // Defensive clamp: ensure dmg is always finite and positive (min 1)
+            if (!Number.isFinite(dmg) || dmg <= 0) {
+              console.warn('Projectile.update: Non-finite or zero damage detected, clamping to 1. Original dmg:', dmg);
+              dmg = 1;
+            }
             
             enemy.takeDamage(Math.floor(dmg), isCrit);
             
