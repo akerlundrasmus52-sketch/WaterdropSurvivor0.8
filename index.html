@@ -1816,7 +1816,18 @@
       maxDamageNumbers: 30, // DOM elements cap
       // Memory cleanup intervals
       cleanupInterval: 10000, // Cleanup every 10 seconds
-      emergencyCleanupThreshold: 500 // Total entities before emergency cleanup
+      emergencyCleanupThreshold: 500, // Total entities before emergency cleanup
+      // Phase 2: Stat caps for balanced progression
+      statCaps: {
+        armor: 80,              // 80% damage reduction max (percentage)
+        critChance: 0.40,       // 40% crit chance max (decimal)
+        critDamage: 3.0,        // 300% crit damage max (multiplier)
+        hpRegen: 15,            // 15 HP/s max
+        lifeSteal: 0.15,        // 15% life steal max (decimal)
+        moveSpeed: 2.0          // 2x movement speed max (multiplier)
+      },
+      // Base player stats
+      baseWalkSpeed: 25
     };
 
     // --- AUDIO SYSTEM (Oscillators) ---
@@ -3282,11 +3293,10 @@
         }
         
         this.maxHp = this.hp;
-        // CHANGED: Even higher base damage (60 instead of 50) - harder early game
-        // At 100 HP start, this means ~2 hits to die without upgrades (very hard)
-        // Armor upgrades become critical for survival
-        this.damage = (type === 9 ? 60 * 1.5 : 60) * levelScaling; // Elite does 1.5x damage
-        if (type === 10) this.damage = 90 * levelScaling; // MiniBoss damage - extremely threatening
+        // Base damage reduced for better early game balance
+        // At 100 HP start, this gives more room to learn mechanics
+        this.damage = (type === 9 ? 25 * 1.5 : 25) * levelScaling; // Elite does 1.5x damage
+        if (type === 10) this.damage = 40 * levelScaling; // MiniBoss damage - threatening but fair
         this.isDead = false;
         this.isDamaged = false; // Track if enemy has been visually damaged
         this.pulsePhase = Math.random() * Math.PI;
@@ -5056,27 +5066,27 @@
       applyRandomPerk() {
         const perks = [
           { name: 'Speed Boost', apply: () => { 
-            // Cap max speed at 2x initial walkSpeed (50) to prevent breaking physics
-            const maxWalkSpeed = 50; // 2x the initial 25
+            // Cap max speed at 2x initial walkSpeed to prevent breaking physics
+            const maxWalkSpeed = GAME_CONFIG.baseWalkSpeed * GAME_CONFIG.statCaps.moveSpeed;
             if (playerStats.walkSpeed < maxWalkSpeed) {
-              playerStats.walkSpeed *= 1.1;
-              showStatChange('Chest: +10% Move Speed');
+              playerStats.walkSpeed *= 1.02;
+              showStatChange('Chest: +2% Move Speed');
             } else {
               showStatChange('Chest: Max Speed Reached');
             }
           }},
           { name: 'Damage Boost', apply: () => { 
-            playerStats.strength += 0.1;
-            showStatChange('Chest: +10% Damage');
+            playerStats.strength += 0.02;
+            showStatChange('Chest: +2% Damage');
           }},
           { name: 'Health Boost', apply: () => { 
-            playerStats.maxHp += 20;
-            playerStats.hp += 20;
-            showStatChange('Chest: +20 Max HP');
+            playerStats.maxHp += 5;
+            playerStats.hp += 5;
+            showStatChange('Chest: +5 Max HP');
           }},
           { name: 'Armor Boost', apply: () => { 
-            playerStats.armor = Math.min(80, playerStats.armor + 8);
-            showStatChange('Chest: +8% Armor');
+            playerStats.armor = Math.min(GAME_CONFIG.statCaps.armor, playerStats.armor + 3);
+            showStatChange('Chest: +3% Armor');
           }},
           { name: 'Attack Speed', apply: () => {
             // Cap minimum cooldown at 300ms to prevent performance issues
@@ -5227,9 +5237,7 @@
       level25: { id: 'level25', name: 'Experienced Fighter', desc: 'Reach Level 25', reward: 250, attributePoints: 2, skillPoints: 2, check: () => playerStats.lvl >= 25, claimed: false },
       level50: { id: 'level50', name: 'Master Champion', desc: 'Reach Level 50', reward: 500, attributePoints: 3, skillPoints: 3, check: () => playerStats.lvl >= 50, claimed: false },
       level75: { id: 'level75', name: 'Elite Warrior', desc: 'Reach Level 75', reward: 750, attributePoints: 3, skillPoints: 3, check: () => playerStats.lvl >= 75, claimed: false },
-      level100: { id: 'level100', name: 'Legendary Hero', desc: 'Reach Level 100', reward: 1000, attributePoints: 4, skillPoints: 5, check: () => playerStats.lvl >= 100, claimed: false },
-      level125: { id: 'level125', name: 'Unstoppable Force', desc: 'Reach Level 125', reward: 1250, attributePoints: 4, skillPoints: 5, check: () => playerStats.lvl >= 125, claimed: false },
-      level150: { id: 'level150', name: 'Ascended Champion', desc: 'Reach Level 150', reward: 1500, attributePoints: 5, skillPoints: 10, check: () => playerStats.lvl >= 150, claimed: false }
+      level100: { id: 'level100', name: 'Legendary Hero - VICTORY!', desc: 'Reach Level 100 and Win!', reward: 1000, attributePoints: 5, skillPoints: 10, check: () => playerStats.lvl >= 100, claimed: false }
     };
 
     function updateAchievementsScreen() {
@@ -7840,9 +7848,9 @@
         return;
       }
       
-      // Check if this is a mini-boss wave - expanded progression to 150
-      // Mini-bosses appear after players cross upgrade thresholds (approx every 15 levels)
-      const miniBossLevels = [10, 25, 40, 55, 70, 85, 100, 115, 130, 145];
+      // Check if this is a mini-boss wave - every ~15 levels to level 100
+      // Mini-bosses appear after players cross upgrade thresholds
+      const miniBossLevels = [10, 25, 40, 55, 70, 85, 100];
       const isMiniBossWave = miniBossLevels.includes(playerStats.lvl) && !miniBossesSpawned.has(playerStats.lvl);
       
       if (isMiniBossWave) {
@@ -7872,31 +7880,33 @@
       }
       
       // Scale spawn count with player level for increased difficulty
-      // Early game (1-30): More enemies, harder challenge - "hard as hell"
-      // Mid-game (31-75): Balanced progression after upgrades
-      // Late-game (76-150): Gradually increasing endgame difficulty
+      // Smoother difficulty curve over 100 levels
+      // Level 1-20: Learning phase (3-5 enemies)
+      // Level 21-50: Mid-game (4-8 enemies)
+      // Level 51-80: Late-game (6-12 enemies)
+      // Level 81-100: End-game (8-15 enemies)
       let baseCount, levelBonus, cap;
       
-      if (playerStats.lvl <= 30) {
-        // CHANGED: Early game much harder - more enemies (5-12 per wave)
-        baseCount = 5 + Math.floor(waveCount / 3);
-        levelBonus = Math.floor(playerStats.lvl / 4);
+      if (playerStats.lvl <= 20) {
+        // Learning phase: 3-5 enemies per wave
+        baseCount = 3;
+        levelBonus = Math.floor(playerStats.lvl / 10);
+        cap = 5;
+      } else if (playerStats.lvl <= 50) {
+        // Mid-game: 4-8 enemies per wave
+        baseCount = 4;
+        levelBonus = Math.floor((playerStats.lvl - 20) / 8);
+        cap = 8;
+      } else if (playerStats.lvl <= 80) {
+        // Late-game: 6-12 enemies per wave
+        baseCount = 6;
+        levelBonus = Math.floor((playerStats.lvl - 50) / 5);
         cap = 12;
-      } else if (playerStats.lvl <= 75) {
-        // CHANGED: Mid-game harder (5-15 per wave)
-        baseCount = 5 + Math.floor(waveCount / 3);
-        levelBonus = Math.floor(playerStats.lvl / 5);
-        cap = 15;
-      } else if (playerStats.lvl <= 120) {
-        // CHANGED: Late-game intense (8-20 per wave)
-        baseCount = 8 + Math.floor(waveCount / 2);
-        levelBonus = Math.floor(playerStats.lvl / 4);
-        cap = 20;
       } else {
-        // CHANGED: End-game maximum challenge (10-25 per wave)
-        baseCount = 10 + Math.floor(waveCount / 2);
-        levelBonus = Math.floor(playerStats.lvl / 3);
-        cap = 25;
+        // End-game: 8-15 enemies per wave
+        baseCount = 8;
+        levelBonus = Math.floor((playerStats.lvl - 80) / 3);
+        cap = 15;
       }
       
       const count = Math.min(baseCount + levelBonus, cap);
@@ -8075,10 +8085,10 @@
       playerStats.lvl++;
       playerStats.exp -= playerStats.expReq;
       
-      // Victory condition: Reaching level 150
-      if (playerStats.lvl === 150) {
+      // Victory condition: Reaching level 100
+      if (playerStats.lvl === 100) {
         setTimeout(() => {
-          showStatChange('🎉 ULTIMATE VICTORY! You reached Level 150! 🎉');
+          showStatChange('🎉 ULTIMATE VICTORY! You reached Level 100! 🎉');
           setTimeout(() => {
             gameOver(); // Show game over screen as victory screen
           }, 2000);
@@ -8086,10 +8096,11 @@
         return;
       }
       
-      // Custom XP Curve: Progressive difficulty scaling to level 150
-      // Early game (1-30): Hard but manageable
-      // Mid game (31-75): Balanced progression after upgrade threshold
-      // Late game (76-150): Challenging endgame content
+      // Custom XP Curve: Progressive difficulty scaling to level 100
+      // Early game (1-20): Learning phase
+      // Mid game (21-50): Balanced progression
+      // Late game (51-80): Challenging content
+      // End game (81-100): Final push
       let killsNeeded;
       if (playerStats.lvl <= 5) {
         killsNeeded = 2 + playerStats.lvl; // Levels 1-5: 3, 4, 5, 6, 7 kills respectively
@@ -8101,12 +8112,8 @@
         killsNeeded = 22 + Math.floor((playerStats.lvl - 30) * 1); // Levels 31-50: 22-42 kills
       } else if (playerStats.lvl <= 75) {
         killsNeeded = 42 + Math.floor((playerStats.lvl - 50) * 1.2); // Levels 51-75: 42-72 kills
-      } else if (playerStats.lvl <= 100) {
-        killsNeeded = 72 + Math.floor((playerStats.lvl - 75) * 1.5); // Levels 76-100: 72-109 kills
-      } else if (playerStats.lvl <= 125) {
-        killsNeeded = 109 + Math.floor((playerStats.lvl - 100) * 1.8); // Levels 101-125: 109-154 kills
       } else {
-        killsNeeded = 154 + Math.floor((playerStats.lvl - 125) * 2); // Levels 126-150: 154+ kills (extreme endgame)
+        killsNeeded = 72 + Math.floor((playerStats.lvl - 75) * 1.5); // Levels 76-100: 72-109 kills
       }
       playerStats.expReq = killsNeeded * GAME_CONFIG.expValue;
       
@@ -8553,83 +8560,88 @@
           id: 'str', 
           icon: '⚔️',
           title: 'MUSCLE JUICE', 
-          desc: 'Weapon Damage +15% (Base Strength Multiplier)', 
+          desc: 'Weapon Damage +2% (Base Strength Multiplier)', 
           apply: () => { 
-            playerStats.strength += 0.15; 
-            showStatChange('+15% Damage');
+            playerStats.strength += 0.02; 
+            showStatChange('+2% Damage');
           } 
         },
         { 
           id: 'aspd', 
           icon: '⚡',
           title: 'SPEEDY TRIGGER', 
-          desc: 'Attack Speed +15% (Faster Weapon Fire Rate)', 
+          desc: 'Attack Speed +2% (Faster Weapon Fire Rate)', 
           apply: () => { 
-            playerStats.atkSpeed += 0.15; 
-            weapons.gun.cooldown *= 0.85; 
-            weapons.doubleBarrel.cooldown *= 0.85;
-            showStatChange('+15% Attack Speed');
+            playerStats.atkSpeed += 0.02; 
+            weapons.gun.cooldown *= 0.98; 
+            weapons.doubleBarrel.cooldown *= 0.98;
+            showStatChange('+2% Attack Speed');
           } 
         },
         { 
           id: 'armor', 
           icon: '🛡️',
           title: 'THICC ARMOR', 
-          desc: 'Armor +12% (Damage Reduction, Max 80%)', 
+          desc: 'Armor +3% (Damage Reduction, Max 80%)', 
           apply: () => { 
-            playerStats.armor = Math.min(80, playerStats.armor + 12); 
-            showStatChange('+12% Armor (Current: ' + playerStats.armor + '%)');
+            playerStats.armor = Math.min(GAME_CONFIG.statCaps.armor, playerStats.armor + 3); 
+            showStatChange('+3% Armor (Current: ' + playerStats.armor + '%)');
           } 
         },
         { 
           id: 'hp', 
           icon: '❤️',
           title: 'CHONKY BODY', 
-          desc: 'Max HP +30 (Instant Heal +30)', 
+          desc: 'Max HP +5 (Instant Heal +5)', 
           apply: () => { 
-            playerStats.maxHp += 30; 
-            playerStats.hp += 30; 
-            showStatChange('+30 Max HP');
+            playerStats.maxHp += 5; 
+            playerStats.hp += 5; 
+            showStatChange('+5 Max HP');
           } 
         },
         { 
           id: 'crit', 
           icon: '🎯',
           title: 'CRIT MACHINE', 
-          desc: 'Critical Hit Chance +8% (Lucky Strikes)', 
+          desc: 'Critical Hit Chance +1% (Lucky Strikes, Max 40%)', 
           apply: () => { 
-            playerStats.critChance += 0.08; 
-            showStatChange('+8% Crit Chance (Now: ' + Math.round(playerStats.critChance * 100) + '%)');
+            playerStats.critChance = Math.min(GAME_CONFIG.statCaps.critChance, playerStats.critChance + 0.01);
+            showStatChange('+1% Crit Chance (Now: ' + Math.round(playerStats.critChance * 100) + '%)');
           } 
         },
         { 
           id: 'regen', 
           icon: '💚',
           title: 'HEALING VIBES', 
-          desc: 'HP Regeneration +2/sec (Passive Healing)', 
+          desc: 'HP Regeneration +0.3/sec (Passive Healing, Max 15/s)', 
           apply: () => { 
-            playerStats.hpRegen += 2; 
-            showStatChange('+2 HP/sec Regen (Total: ' + playerStats.hpRegen + '/sec)');
+            playerStats.hpRegen = Math.min(GAME_CONFIG.statCaps.hpRegen, playerStats.hpRegen + 0.3);
+            showStatChange('+0.3 HP/sec Regen (Total: ' + playerStats.hpRegen.toFixed(1) + '/sec)');
           } 
         },
         { 
           id: 'speed', 
           icon: '🏃',
           title: 'SPEEDY BOI', 
-          desc: 'Movement Speed +15% (Faster Movement)', 
+          desc: 'Movement Speed +2% (Faster Movement, Max 200%)', 
           apply: () => { 
-            playerStats.walkSpeed *= 1.15; 
-            showStatChange('+15% Move Speed');
+            const currentSpeedMultiplier = playerStats.walkSpeed / GAME_CONFIG.baseWalkSpeed;
+            if (currentSpeedMultiplier < GAME_CONFIG.statCaps.moveSpeed) {
+              playerStats.walkSpeed *= 1.02; 
+              showStatChange('+2% Move Speed');
+            } else {
+              showStatChange('Move Speed capped at 200%!');
+            }
           } 
         },
         { 
           id: 'critdmg', 
           icon: '💥',
           title: 'GLASS CANNON', 
-          desc: 'Critical Damage +30% (Stronger Crits)', 
+          desc: 'Critical Damage +5% (Stronger Crits, Max 300%)', 
           apply: () => { 
-            playerStats.critDmg += 0.3; 
-            showStatChange('+30% Crit Damage (Now: ' + Math.round(playerStats.critDmg * 100) + '%)');
+            playerStats.critDmg = Math.min(GAME_CONFIG.statCaps.critDamage, playerStats.critDmg + 0.05);
+            showStatChange('+5% Crit Damage (Now: ' + Math.round(playerStats.critDmg * 100) + '%)');
           } 
         },
         { 
@@ -8687,10 +8699,10 @@
           id: 'life_steal', 
           icon: '🩸',
           title: 'LIFE STEAL', 
-          desc: 'Heal 3% of Damage Dealt (Stacks)', 
+          desc: 'Heal 1% of Damage Dealt (Stacks, Max 15%)', 
           apply: () => { 
-            playerStats.lifeStealPercent += 0.03;
-            showStatChange('Life Steal +3% (Total: ' + Math.round(playerStats.lifeStealPercent * 100) + '%)');
+            playerStats.lifeStealPercent = Math.min(GAME_CONFIG.statCaps.lifeSteal, playerStats.lifeStealPercent + 0.01);
+            showStatChange('Life Steal +1% (Total: ' + Math.round(playerStats.lifeStealPercent * 100) + '%)');
           } 
         },
         { 
@@ -10008,7 +10020,7 @@
       // Apply permanent upgrades from save data
       const baseHp = 100 + PERMANENT_UPGRADES.maxHp.effect(saveData.upgrades.maxHp);
       const baseRegen = PERMANENT_UPGRADES.hpRegen.effect(saveData.upgrades.hpRegen);
-      const baseSpeed = 25 * (1 + PERMANENT_UPGRADES.moveSpeed.effect(saveData.upgrades.moveSpeed));
+      const baseSpeed = GAME_CONFIG.baseWalkSpeed * (1 + PERMANENT_UPGRADES.moveSpeed.effect(saveData.upgrades.moveSpeed));
       const baseDamage = 1 + PERMANENT_UPGRADES.attackDamage.effect(saveData.upgrades.attackDamage);
       const baseAtkSpeed = 1 + PERMANENT_UPGRADES.attackSpeed.effect(saveData.upgrades.attackSpeed);
       const baseCritChance = 0.1 + PERMANENT_UPGRADES.critChance.effect(saveData.upgrades.critChance);
