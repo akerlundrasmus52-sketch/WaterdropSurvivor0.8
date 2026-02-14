@@ -1125,6 +1125,41 @@
     #progression-btn { top: 59.75%; } /* Adjusted spacing - reduced from 61.25% */
     #achievements-btn { top: 69.25%; } /* Adjusted spacing - reduced from 72.25% */
     #credits-btn { top: min(78.75%, calc(100% - 60px)); } /* Adjusted spacing - reduced from 82.75% */
+    
+    /* Equipment icon button on main menu */
+    #main-menu-equipment-btn {
+      position: absolute;
+      top: 44%; /* Positioned between title and START GAME */
+      left: 50%;
+      transform: translateX(-50%);
+      background: linear-gradient(to bottom, #5A3A31, #3a2a21);
+      border: 3px solid #8B4513;
+      border-radius: 50%;
+      width: 60px;
+      height: 60px;
+      font-size: 28px;
+      cursor: pointer;
+      pointer-events: auto;
+      z-index: 51;
+      box-shadow: 0 4px 0 #2a1a11, 0 6px 12px rgba(0,0,0,0.5);
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #FFD700;
+      text-shadow: 0 0 8px rgba(255,215,0,0.6);
+    }
+    
+    #main-menu-equipment-btn:hover {
+      transform: translateX(-50%) translateY(-2px);
+      box-shadow: 0 6px 0 #2a1a11, 0 8px 16px rgba(0,0,0,0.6);
+      filter: brightness(1.2);
+    }
+    
+    #main-menu-equipment-btn:active {
+      transform: translateX(-50%) translateY(2px);
+      box-shadow: 0 2px 0 #2a1a11, 0 4px 8px rgba(0,0,0,0.4);
+    }
 
     .menu-btn::before {
       content: '';
@@ -1525,6 +1560,7 @@
   <div id="main-menu">
     <div class="gold-display" id="menu-gold">GOLD: 0</div>
     <div class="menu-title">WATER DROP SURVIVOR</div>
+    <button id="main-menu-equipment-btn" title="Equipment">⚔️</button>
     <div class="menu-buttons">
       <button class="menu-btn" id="start-game-btn">START GAME</button>
       <button class="menu-btn" id="progression-btn">PROGRESSION</button>
@@ -7606,6 +7642,22 @@
         hideMainMenu();
         updateGearScreen();
         document.getElementById('gear-screen').style.display = 'flex';
+      };
+      
+      document.getElementById('main-menu-equipment-btn').onclick = () => {
+        playSound('waterdrop');
+        hideMainMenu();
+        // Prefer gear-screen if present, otherwise fallback to attributes-menu
+        const gearScreen = document.getElementById('gear-screen');
+        if (gearScreen) {
+          updateGearScreen();
+          gearScreen.style.display = 'flex';
+        } else {
+          const attributesMenu = document.getElementById('attributes-menu');
+          if (attributesMenu) {
+            attributesMenu.style.display = 'flex';
+          }
+        }
       };
       
       document.getElementById('credits-btn').onclick = () => {
