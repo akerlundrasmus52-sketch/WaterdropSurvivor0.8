@@ -4363,8 +4363,8 @@
       constructor(x, z) {
         // Create 5-sided star shape (Super Mario 64 style)
         const starShape = new THREE.Shape();
-        const outerRadius = 0.5; // Larger for more visibility
-        const innerRadius = 0.2;
+        const outerRadius = 0.125; // 75% smaller (25% of original 0.5)
+        const innerRadius = 0.05; // 75% smaller (25% of original 0.2)
         const points = 5; // 5-point star like Super Mario
         const STAR_ROTATION_OFFSET = Math.PI / 2; // Rotate to start from top point.
         
@@ -4425,6 +4425,9 @@
 
         // Spin 360 degrees on Z axis like Earth (PR #117)
         this.mesh.rotation.z += this.rotSpeed;
+        
+        // Add Earth-like axial tilt rotation - secondary rotation for wobble effect
+        this.mesh.rotation.y += 0.03; // Slower tilt rotation
         
         // Bob up and down
         this.bobPhase += 0.05;
@@ -9050,8 +9053,10 @@
       comboMultiplier.style.color = textColor;
       comboMultiplier.style.fontSize = `${Math.floor(fontSize * 0.5)}px`; // Scale multiplier text
       
-      // Show stat notification for all combos
-      showStatChange(message, comboLevel);
+      // Only show stat notification for milestone combos (not every kill)
+      if (isMilestone) {
+        showStatChange(message, comboLevel);
+      }
       // Play multikill sound
       playSound('multikill');
       
@@ -9067,6 +9072,8 @@
     
     function hideCombo() {
       const comboEl = document.getElementById('combo-counter');
+      const comboText = document.getElementById('combo-text');
+      const comboMultiplier = document.getElementById('combo-multiplier');
       const comboTimerEl = document.getElementById('combo-timer');
       comboEl.style.animation = `combo-fade-out ${COMBO_ANIMATION_DURATION}ms ease-out forwards`;
       
@@ -9081,6 +9088,10 @@
         comboEl.style.animation = 'none';
         comboTimerEl.style.display = 'none'; // Hide timer when combo is lost
         
+        // Clear combo text to prevent stale messages
+        comboText.innerText = '';
+        comboMultiplier.innerText = '';
+        
         // Spawn chest when combo is lost at minimum threshold
         if (comboState.count >= MIN_COMBO_FOR_CHEST_ON_LOSS) {
           const chestTier = getChestTierForCombo(comboState.count);
@@ -9090,9 +9101,7 @@
             const cx = player.mesh.position.x + Math.cos(chestAngle) * chestDist;
             const cz = player.mesh.position.z + Math.sin(chestAngle) * chestDist;
             spawnChest(cx, cz, chestTier);
-            // Show only in stat bar: "combo lost" and chest rarity (no text on main screen)
-            const tierCapitalized = chestTier.charAt(0).toUpperCase() + chestTier.slice(1);
-            showStatChange(`Combo lost - ${tierCapitalized} chest`);
+            // No "combo lost" text - just silently fade out
           }
         }
         
