@@ -4112,17 +4112,6 @@
 
     class GoldCoin {
       constructor(x, z, amount) {
-        const geometry = new THREE.CylinderGeometry(0.2, 0.2, 0.1, 8);
-        const material = new THREE.MeshBasicMaterial({ 
-          color: 0xFFD700,
-          transparent: true,
-          opacity: 0.95
-        });
-        this.mesh = new THREE.Mesh(geometry, material);
-        this.mesh.position.set(x, 0.3, z);
-        this.mesh.rotation.x = Math.PI / 2;
-        scene.add(this.mesh);
-        
         this.active = true;
         this.amount = amount;
         this.magnetRange = 4;
@@ -4131,24 +4120,192 @@
         this.vz = 0;
         this.wobblePhase = Math.random() * Math.PI * 2;
         this.bounceTime = 0;
+        this.meshes = []; // Array to hold multiple meshes for variants
+        this.baseX = x;
+        this.baseZ = z;
+        
+        // Create appropriate variant based on amount (PR #117)
+        if (amount >= 50) {
+          this.createGoldChest(x, z);
+        } else if (amount >= 25) {
+          this.createLeatherBag(x, z);
+        } else if (amount >= 10) {
+          this.createMultipleCoins(x, z);
+        } else {
+          this.createSingleCoin(x, z);
+        }
         
         // Play gold drop sound
         playSound('coinDrop');
         
-        // Spawn 8 sparkles on creation
-        spawnParticles(this.mesh.position, 0xFFD700, 8);
-        spawnParticles(this.mesh.position, 0xFFFFFF, 2);
+        // Spawn sparkles on creation
+        const sparkleCount = Math.min(8 + Math.floor(amount / 10), 20);
+        spawnParticles(new THREE.Vector3(x, 0.3, z), 0xFFD700, sparkleCount);
+        spawnParticles(new THREE.Vector3(x, 0.3, z), 0xFFFFFF, Math.floor(sparkleCount / 4));
+      }
+      
+      createSingleCoin(x, z) {
+        // Large spinning gold coin (PR #117)
+        const geometry = new THREE.CylinderGeometry(0.25, 0.25, 0.1, 12);
+        const material = new THREE.MeshPhysicalMaterial({ 
+          color: 0xFFD700,
+          metalness: 0.9,
+          roughness: 0.2,
+          transparent: true,
+          opacity: 0.98
+        });
+        this.mesh = new THREE.Mesh(geometry, material);
+        this.mesh.position.set(x, 0.3, z);
+        this.mesh.rotation.x = Math.PI / 2;
+        scene.add(this.mesh);
+        this.meshes.push(this.mesh);
+        this.variant = 'single';
+      }
+      
+      createMultipleCoins(x, z) {
+        // 3 coins orbiting around center (PR #117)
+        this.mesh = new THREE.Group();
+        this.mesh.position.set(x, 0.3, z);
+        scene.add(this.mesh);
+        this.meshes.push(this.mesh);
+        
+        for (let i = 0; i < 3; i++) {
+          const angle = (i / 3) * Math.PI * 2;
+          const radius = 0.4;
+          const coinGeo = new THREE.CylinderGeometry(0.15, 0.15, 0.08, 10);
+          const coinMat = new THREE.MeshPhysicalMaterial({ 
+            color: 0xFFD700,
+            metalness: 0.85,
+            roughness: 0.25
+          });
+          const coin = new THREE.Mesh(coinGeo, coinMat);
+          coin.position.set(Math.cos(angle) * radius, 0, Math.sin(angle) * radius);
+          coin.rotation.x = Math.PI / 2;
+          this.mesh.add(coin);
+        }
+        this.variant = 'multiple';
+        this.orbitPhase = Math.random() * Math.PI * 2;
+      }
+      
+      createLeatherBag(x, z) {
+        // Brown leather pouch with knot (PR #117)
+        this.mesh = new THREE.Group();
+        this.mesh.position.set(x, 0.3, z);
+        scene.add(this.mesh);
+        this.meshes.push(this.mesh);
+        
+        // Bag body (rounded bottom)
+        const bagGeo = new THREE.SphereGeometry(0.3, 12, 12, 0, Math.PI * 2, 0, Math.PI * 0.7);
+        const bagMat = new THREE.MeshPhysicalMaterial({ 
+          color: 0x8B4513, // Saddle brown
+          roughness: 0.8,
+          metalness: 0.1
+        });
+        const bag = new THREE.Mesh(bagGeo, bagMat);
+        bag.position.y = -0.1;
+        this.mesh.add(bag);
+        
+        // Knot at top (darker)
+        const knotGeo = new THREE.SphereGeometry(0.12, 8, 8);
+        const knotMat = new THREE.MeshPhysicalMaterial({ 
+          color: 0x654321, // Dark brown
+          roughness: 0.9,
+          metalness: 0.05
+        });
+        const knot = new THREE.Mesh(knotGeo, knotMat);
+        knot.position.y = 0.15;
+        knot.scale.set(1, 0.6, 1);
+        this.mesh.add(knot);
+        
+        // Gold coin symbols on bag
+        for (let i = 0; i < 3; i++) {
+          const angle = (i / 3) * Math.PI * 2;
+          const coinSymbol = new THREE.Mesh(
+            new THREE.CircleGeometry(0.08, 8),
+            new THREE.MeshBasicMaterial({ color: 0xFFD700, opacity: 0.6, transparent: true })
+          );
+          coinSymbol.position.set(Math.cos(angle) * 0.2, -0.05, Math.sin(angle) * 0.2);
+          coinSymbol.rotation.y = -angle;
+          this.mesh.add(coinSymbol);
+        }
+        
+        this.variant = 'bag';
+      }
+      
+      createGoldChest(x, z) {
+        // Golden chest with glowing interior (PR #117)
+        this.mesh = new THREE.Group();
+        this.mesh.position.set(x, 0.3, z);
+        scene.add(this.mesh);
+        this.meshes.push(this.mesh);
+        
+        // Chest base
+        const baseGeo = new THREE.BoxGeometry(0.6, 0.4, 0.5);
+        const baseMat = new THREE.MeshPhysicalMaterial({ 
+          color: 0xFFD700,
+          metalness: 0.9,
+          roughness: 0.2,
+          emissive: 0xFFD700,
+          emissiveIntensity: 0.3
+        });
+        const base = new THREE.Mesh(baseGeo, baseMat);
+        base.position.y = -0.1;
+        this.mesh.add(base);
+        
+        // Chest lid (open, tilted)
+        const lidGeo = new THREE.BoxGeometry(0.62, 0.12, 0.52);
+        const lidMat = new THREE.MeshPhysicalMaterial({ 
+          color: 0xFFD700,
+          metalness: 0.9,
+          roughness: 0.15,
+          emissive: 0xFFD700,
+          emissiveIntensity: 0.4
+        });
+        const lid = new THREE.Mesh(lidGeo, lidMat);
+        lid.position.set(0, 0.15, -0.25);
+        lid.rotation.x = -Math.PI / 3; // Open angle
+        this.mesh.add(lid);
+        
+        // Glowing interior light
+        const glowLight = new THREE.PointLight(0xFFD700, 2, 3);
+        glowLight.position.set(0, 0.1, 0);
+        this.mesh.add(glowLight);
+        this.glowLight = glowLight;
+        
+        this.variant = 'chest';
+        this.glowPhase = 0;
       }
       
       update(playerPos) {
         if (!this.active) return;
         
-        // Spinning
-        this.mesh.rotation.y += 0.15;
+        // Variant-specific animations
+        if (this.variant === 'single') {
+          // Single coin spinning
+          this.mesh.rotation.y += 0.15;
+        } else if (this.variant === 'multiple') {
+          // 3 coins orbiting
+          this.orbitPhase += 0.05;
+          this.mesh.rotation.y += 0.08;
+          // Individual coin spins
+          this.mesh.children.forEach((coin, i) => {
+            coin.rotation.y += 0.12;
+          });
+        } else if (this.variant === 'bag') {
+          // Bag swaying
+          this.mesh.rotation.z = Math.sin(this.wobblePhase * 0.5) * 0.1;
+        } else if (this.variant === 'chest') {
+          // Chest glowing pulse
+          this.glowPhase += 0.05;
+          if (this.glowLight) {
+            this.glowLight.intensity = 2 + Math.sin(this.glowPhase) * 0.5;
+          }
+        }
         
         // Bounce physics on spawn
         if (this.bounceTime < 1) {
-          this.mesh.position.y = 0.3 + Math.abs(Math.sin(this.bounceTime * Math.PI * 3)) * 0.5 * (1 - this.bounceTime);
+          const mainMesh = this.mesh;
+          mainMesh.position.y = 0.3 + Math.abs(Math.sin(this.bounceTime * Math.PI * 3)) * 0.5 * (1 - this.bounceTime);
           this.bounceTime += 0.02;
         } else {
           // Wobble after bounce
@@ -4166,12 +4323,13 @@
           addGold(this.amount);
           playSound('coin');
           
-          // Gold collect particles - 20 sparkles + flash
-          spawnParticles(this.mesh.position, 0xFFD700, 15);
-          spawnParticles(this.mesh.position, 0xFFFFFF, 5); // White flash sparkles
+          // Gold collect particles - more for larger amounts
+          const particleCount = Math.min(15 + Math.floor(this.amount / 5), 40);
+          spawnParticles(this.mesh.position, 0xFFD700, particleCount);
+          spawnParticles(this.mesh.position, 0xFFFFFF, Math.floor(particleCount / 3));
           
           // Flash effect - bright point light
-          const flashLight = new THREE.PointLight(0xFFD700, 4, 8);
+          const flashLight = new THREE.PointLight(0xFFD700, 4 + (this.amount / 25), 8);
           flashLight.position.copy(this.mesh.position);
           flashLight.position.y += 1;
           scene.add(flashLight);
@@ -4191,9 +4349,32 @@
       
       destroy() {
         this.active = false;
-        scene.remove(this.mesh);
-        this.mesh.geometry.dispose();
-        this.mesh.material.dispose();
+        this.meshes.forEach(mesh => {
+          scene.remove(mesh);
+          if (mesh.geometry) {
+            mesh.geometry.dispose();
+          }
+          if (mesh.material) {
+            if (Array.isArray(mesh.material)) {
+              mesh.material.forEach(m => m.dispose());
+            } else {
+              mesh.material.dispose();
+            }
+          }
+          // Dispose children for groups
+          if (mesh.children) {
+            mesh.children.forEach(child => {
+              if (child.geometry) child.geometry.dispose();
+              if (child.material) {
+                if (Array.isArray(child.material)) {
+                  child.material.forEach(m => m.dispose());
+                } else {
+                  child.material.dispose();
+                }
+              }
+            });
+          }
+        });
       }
     }
 
