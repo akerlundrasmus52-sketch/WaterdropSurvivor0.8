@@ -427,7 +427,7 @@
     /* Wave Counter - Removed (was in stats bar) */
     
     
-    /* Equipment Menu Button - Phase 2 Placeholder */
+    /* Equipment Menu Button */
     #equipment-btn {
       position: absolute;
       top: 20px;
@@ -1587,8 +1587,8 @@
     <!-- PR #117: Menu button (shows in portrait mode) -->
     <button id="menu-btn" title="Menu">☰</button>
     
-    <!-- Equipment Button - Phase 2 Placeholder -->
-    <button id="equipment-btn" title="Equipment (Coming Soon)">⚔️</button>
+    <!-- Equipment Button -->
+    <button id="equipment-btn" title="Equipment">⚔️</button>
     
     <!-- Combo Counter - Red/Black Theme -->
     <div id="combo-counter">
@@ -7126,10 +7126,12 @@
       
       // Stats Bar removed - No toggle needed
       
-      // Phase 2: Equipment Button (Placeholder)
+      // Equipment Button - Opens Gear Screen
       document.getElementById('equipment-btn').onclick = () => {
         playSound('hit');
-        alert('⚔️ EQUIPMENT SYSTEM\n\nComing in Phase 3!\n\nThis feature will allow you to equip special gear and customize your build.');
+        document.getElementById('main-menu').style.display = 'none';
+        document.getElementById('gear-screen').style.display = 'flex';
+        updateGearScreen();
       };
       
       // Initialize control type UI on startup
