@@ -1961,6 +1961,9 @@
   <script type="module">
     import * as THREE from 'three';
 
+    // --- DEBUG & PERFORMANCE FLAGS ---
+    window.DEBUG_MODE = false; // Set to true for performance logging
+    
     // --- CONSTANTS & CONFIG ---
     const ATTACK_ANIMATION_DURATION_MS = 400; // Duration of waterdrop attack animation in milliseconds
     
@@ -2792,13 +2795,11 @@
             if (enemies && enemies.length > 0) {
               let nearestEnemy = null;
               let minDist = Infinity;
-              const aimAssistRange = 15; // Assist range in units
-              const aimAssistStrength = 0.15; // How much to nudge (15%)
               
               enemies.forEach(e => {
                 if (e && !e.isDead) {
                   const dist = this.mesh.position.distanceTo(e.mesh.position);
-                  if (dist < minDist && dist < aimAssistRange) {
+                  if (dist < minDist && dist < AIM_ASSIST_RANGE) {
                     minDist = dist;
                     nearestEnemy = e;
                   }
@@ -2816,9 +2817,9 @@
                 while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
                 while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
                 
-                // Only assist if aiming somewhat close to enemy (within 45 degrees)
-                if (Math.abs(angleDiff) < Math.PI / 4) {
-                  targetAngle += angleDiff * aimAssistStrength;
+                // Only assist if aiming somewhat close to enemy
+                if (Math.abs(angleDiff) < AIM_ASSIST_ANGLE) {
+                  targetAngle += angleDiff * AIM_ASSIST_STRENGTH;
                 }
               }
             }
@@ -5190,7 +5191,7 @@
         this.mesh.add(this.lid);
         
         // NEW: Add light seams (thin glowing lines between lid and body)
-        const seamGeo = new THREE.PlaneGeometry(0.9, 0.05);
+        // Reuse same material for all seams for better performance
         const seamMat = new THREE.MeshBasicMaterial({ 
           color: props.lightColor,
           transparent: true,
@@ -5199,28 +5200,30 @@
         });
         
         // Front seam
+        const seamGeo = new THREE.PlaneGeometry(0.9, 0.05);
         const seamFront = new THREE.Mesh(seamGeo, seamMat);
         seamFront.position.set(0, 0.3, 0.33);
         this.mesh.add(seamFront);
         
         // Back seam
-        const seamBack = new THREE.Mesh(seamGeo, seamMat.clone());
+        const seamBack = new THREE.Mesh(seamGeo, seamMat);
         seamBack.position.set(0, 0.3, -0.33);
         this.mesh.add(seamBack);
         
         // Side seams
         const seamSideGeo = new THREE.PlaneGeometry(0.05, 0.65);
-        const seamLeft = new THREE.Mesh(seamSideGeo, seamMat.clone());
+        const seamLeft = new THREE.Mesh(seamSideGeo, seamMat);
         seamLeft.position.set(-0.43, 0.3, 0);
         seamLeft.rotation.y = Math.PI / 2;
         this.mesh.add(seamLeft);
         
-        const seamRight = new THREE.Mesh(seamSideGeo, seamMat.clone());
+        const seamRight = new THREE.Mesh(seamSideGeo, seamMat);
         seamRight.position.set(0.43, 0.3, 0);
         seamRight.rotation.y = Math.PI / 2;
         this.mesh.add(seamRight);
         
         this.seams = [seamFront, seamBack, seamLeft, seamRight];
+        this.seamMaterial = seamMat; // Store reference for animation
         
         this.active = true;
         this.opened = false;
@@ -5257,14 +5260,10 @@
           const pulseIntensity = 1.5 + Math.sin(this.wobblePhase * 2) * 0.5;
           this.glowLight.intensity = pulseIntensity;
           
-          // NEW: Pulse seam opacity in sync with light
-          if (this.seams) {
+          // NEW: Pulse seam opacity in sync with light (use shared material)
+          if (this.seamMaterial) {
             const seamOpacity = 0.4 + Math.sin(this.wobblePhase * 2) * 0.3;
-            this.seams.forEach(seam => {
-              if (seam.material) {
-                seam.material.opacity = seamOpacity;
-              }
-            });
+            this.seamMaterial.opacity = seamOpacity;
           }
         }
         
@@ -10637,9 +10636,14 @@
     };
     
     // NEW: Performance watchdog for portrait mode
+    const DEFAULT_FPS = 60;
+    const AIM_ASSIST_STRENGTH = 0.15; // 15% nudge toward enemies
+    const AIM_ASSIST_RANGE = 15; // units
+    const AIM_ASSIST_ANGLE = Math.PI / 4; // 45 degrees
+    
     let performanceWatchdog = {
-      fpsHistory: [],
-      currentFPS: 60,
+      fpsHistory: [DEFAULT_FPS], // Initialize with default to prevent division by zero
+      currentFPS: DEFAULT_FPS,
       throttleEffects: false,
       lastFPSCheck: 0,
       checkInterval: 1000 // Check FPS every second
@@ -10649,7 +10653,7 @@
       const currentTime = performance.now();
       
       // Calculate FPS from delta time
-      const fps = dt > 0 ? 1000 / dt : 60;
+      const fps = dt > 0 ? 1000 / dt : DEFAULT_FPS;
       
       // Update FPS history (keep last 10 samples)
       performanceWatchdog.fpsHistory.push(fps);
@@ -10661,19 +10665,25 @@
       if (currentTime - performanceWatchdog.lastFPSCheck > performanceWatchdog.checkInterval) {
         performanceWatchdog.lastFPSCheck = currentTime;
         
-        // Calculate average FPS
-        const avgFPS = performanceWatchdog.fpsHistory.reduce((a, b) => a + b, 0) / performanceWatchdog.fpsHistory.length;
+        // Calculate average FPS (safe from division by zero)
+        const avgFPS = performanceWatchdog.fpsHistory.length > 0 
+          ? performanceWatchdog.fpsHistory.reduce((a, b) => a + b, 0) / performanceWatchdog.fpsHistory.length 
+          : DEFAULT_FPS;
         performanceWatchdog.currentFPS = avgFPS;
         
         // Throttle effects if FPS drops below 30 (especially important in portrait mode)
         const lowFPSThreshold = 30;
         if (avgFPS < lowFPSThreshold && !performanceWatchdog.throttleEffects) {
           performanceWatchdog.throttleEffects = true;
-          console.warn(`Low FPS detected (${avgFPS.toFixed(1)}), throttling effects`);
+          if (window.DEBUG_MODE) {
+            console.warn(`Low FPS detected (${avgFPS.toFixed(1)}), throttling effects`);
+          }
         } else if (avgFPS >= lowFPSThreshold + 5 && performanceWatchdog.throttleEffects) {
           // Add hysteresis: only re-enable at FPS > 35
           performanceWatchdog.throttleEffects = false;
-          console.log(`FPS recovered (${avgFPS.toFixed(1)}), restoring effects`);
+          if (window.DEBUG_MODE) {
+            console.log(`FPS recovered (${avgFPS.toFixed(1)}), restoring effects`);
+          }
         }
       }
     }
