@@ -1510,6 +1510,18 @@
       }
     }
 
+    /* NEW: Tutorial overlay button styles */
+    #tutorial-start-btn:hover {
+      background: linear-gradient(135deg, #3498DB, #2980B9);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 25px rgba(93,173,226,0.6);
+    }
+
+    #tutorial-start-btn:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 10px rgba(93,173,226,0.4);
+    }
+
   </style>
 </head>
 <body>
@@ -1743,6 +1755,105 @@
 
     <!-- Phase 3: Stat Notification Queue -->
     <div id="stat-notifications"></div>
+
+    <!-- NEW: First-Run Tutorial Overlay -->
+    <div id="tutorial-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 200; padding: 20px; box-sizing: border-box; overflow-y: auto;">
+      <div style="max-width: 800px; margin: 0 auto; color: #FFF; font-family: 'M PLUS Rounded 1c', sans-serif;">
+        <h1 style="text-align: center; color: #5DADE2; font-size: 48px; margin-bottom: 30px; text-shadow: 0 0 20px rgba(93,173,226,0.8);">
+          🌊 Water Drop Survivor - Tutorial 🌊
+        </h1>
+        
+        <div style="background: rgba(93,173,226,0.1); border: 2px solid #5DADE2; border-radius: 10px; padding: 20px; margin-bottom: 20px;">
+          <h2 style="color: #FFD700; margin-top: 0;">⚠️ Early Alpha Notice</h2>
+          <p style="font-size: 18px; line-height: 1.6;">
+            This game is in <strong>early alpha</strong> development. Sounds and music are pending and will be added in future updates.
+          </p>
+        </div>
+
+        <div style="background: rgba(255,255,255,0.05); border-radius: 10px; padding: 20px; margin-bottom: 20px;">
+          <h2 style="color: #5DADE2;">🎮 Controls</h2>
+          <ul style="font-size: 18px; line-height: 2;">
+            <li><strong>Left Stick:</strong> Move your water drop character</li>
+            <li><strong>Right Stick:</strong> Manual aim (optional) - aim where you want to shoot</li>
+            <li><strong>Auto-Aim:</strong> When right stick is idle, auto-aim targets nearest enemy</li>
+            <li><strong>Toggle Auto-Aim:</strong> Use the settings button to turn auto-aim on/off</li>
+          </ul>
+        </div>
+
+        <div style="background: rgba(255,255,255,0.05); border-radius: 10px; padding: 20px; margin-bottom: 20px;">
+          <h2 style="color: #5DADE2;">📱 Recommended: Portrait Mode</h2>
+          <p style="font-size: 18px; line-height: 1.6;">
+            For the best mobile experience, play in <strong>portrait orientation</strong>. Landscape mode is supported but portrait offers better visibility and control.
+          </p>
+        </div>
+
+        <div style="background: rgba(255,255,255,0.05); border-radius: 10px; padding: 20px; margin-bottom: 20px;">
+          <h2 style="color: #5DADE2;">🎯 Game Mechanics</h2>
+          <ul style="font-size: 18px; line-height: 2;">
+            <li><strong>Camera:</strong> Top-down view follows your character</li>
+            <li><strong>Quests:</strong> Complete objectives to earn rewards</li>
+            <li><strong>Combos:</strong> Chain kills quickly for bonus XP</li>
+            <li><strong>Survival Bosses:</strong> Face mini-bosses at levels 10, 25, and 50</li>
+          </ul>
+        </div>
+
+        <div style="background: rgba(255,255,255,0.05); border-radius: 10px; padding: 20px; margin-bottom: 20px;">
+          <h2 style="color: #5DADE2;">💰 Progression System</h2>
+          <p style="font-size: 18px; line-height: 1.6;">
+            <strong>Gold-Based Upgrades:</strong> After you die, spend collected gold in the shop to permanently upgrade your stats. This is how you progress and get stronger for future runs!
+          </p>
+        </div>
+
+        <div style="background: rgba(255,255,255,0.05); border-radius: 10px; padding: 20px; margin-bottom: 20px;">
+          <h2 style="color: #5DADE2;">⚔️ Level-Up System</h2>
+          <p style="font-size: 18px; line-height: 1.6;">
+            Each level-up offers choices between different upgrades, weapons, equipment, and attributes. Build your character strategically! The depth of combinations is part of the fun.
+          </p>
+        </div>
+
+        <div style="background: rgba(255,255,255,0.05); border-radius: 10px; padding: 20px; margin-bottom: 20px;">
+          <h2 style="color: #5DADE2;">🎯 Manual Aim Bonus</h2>
+          <p style="font-size: 18px; line-height: 1.6;">
+            Using manual aim (right stick) with high <strong>Precision</strong> attribute gives you:
+            <br>• Increased critical hit chance
+            <br>• Bonus gold from kills
+            <br>• Aim-assist to help you target enemies
+          </p>
+        </div>
+
+        <div style="background: rgba(255,215,0,0.1); border: 2px solid #FFD700; border-radius: 10px; padding: 20px; margin-bottom: 20px;">
+          <h2 style="color: #FFD700;">📧 Contact & Support</h2>
+          <p style="font-size: 18px; line-height: 1.6;">
+            <strong>Developer Email:</strong> <a href="mailto:timmie_tooth@live.com" style="color: #5DADE2;">timmie_tooth@live.com</a>
+            <br><br>
+            <strong>Donations:</strong> Crypto donation information can be found in the Credits menu.
+          </p>
+        </div>
+
+        <div style="text-align: center; margin-top: 30px;">
+          <label style="display: block; font-size: 20px; margin-bottom: 20px; cursor: pointer;">
+            <input type="checkbox" id="tutorial-dont-show" style="width: 20px; height: 20px; vertical-align: middle; margin-right: 10px; cursor: pointer;">
+            <span style="vertical-align: middle;">Don't show this again</span>
+          </label>
+          
+          <button id="tutorial-start-btn" style="
+            background: linear-gradient(135deg, #5DADE2, #3498DB);
+            color: #FFF;
+            font-size: 32px;
+            font-weight: bold;
+            padding: 20px 60px;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(93,173,226,0.4);
+            font-family: 'M PLUS Rounded 1c', sans-serif;
+            transition: all 0.3s;
+          ">
+            START GAME
+          </button>
+        </div>
+      </div>
+    </div>
 
     <!-- Countdown Text (PR #70-71) -->
     <div id="tutorial-text" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 96px; font-weight: bold; color: #FFF; text-shadow: 0 0 20px rgba(255,255,255,0.8), 0 0 40px rgba(93,173,226,0.6); opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 150;"></div>
@@ -7721,9 +7832,35 @@
       // Main Menu Buttons
       document.getElementById('start-game-btn').onclick = () => {
         playSound('waterdrop');
+        
+        // NEW: Check if tutorial should be shown (first time or user hasn't dismissed it)
+        const tutorialShown = localStorage.getItem('waterDropSurvivorTutorialShown');
+        if (!tutorialShown || tutorialShown !== 'true') {
+          // Show tutorial overlay
+          document.getElementById('tutorial-overlay').style.display = 'block';
+        } else {
+          // Skip tutorial and start game
+          hideMainMenu();
+          resetGame();
+          startCountdown();
+        }
+      };
+      
+      // NEW: Tutorial overlay button handler
+      document.getElementById('tutorial-start-btn').onclick = () => {
+        playSound('waterdrop');
+        
+        // Check if user wants to hide tutorial in the future
+        const dontShow = document.getElementById('tutorial-dont-show').checked;
+        if (dontShow) {
+          localStorage.setItem('waterDropSurvivorTutorialShown', 'true');
+        }
+        
+        // Hide tutorial and start game
+        document.getElementById('tutorial-overlay').style.display = 'none';
         hideMainMenu();
         resetGame();
-        startCountdown(); // Start countdown after resetting game (PR #70)
+        startCountdown();
       };
       
       document.getElementById('progression-btn').onclick = () => {
@@ -8046,6 +8183,12 @@
     // Phase 5: Updated to use Object Pool for performance
     function spawnParticles(pos, color, count) {
       if (!particlePool) return; // Safety check
+      
+      // NEW: Throttle particle count when performance is low
+      if (performanceWatchdog.throttleEffects) {
+        count = Math.max(1, Math.floor(count / 2)); // Reduce to 50% (min 1)
+      }
+      
       for(let i=0; i<count; i++) {
         const particle = particlePool.get();
         particle.reset(pos, color);
@@ -10481,6 +10624,48 @@
       cumulativeFrameTime: 0 // Track cumulative time for accurate average
     };
     
+    // NEW: Performance watchdog for portrait mode
+    let performanceWatchdog = {
+      fpsHistory: [],
+      currentFPS: 60,
+      throttleEffects: false,
+      lastFPSCheck: 0,
+      checkInterval: 1000 // Check FPS every second
+    };
+    
+    function updatePerformanceWatchdog(dt) {
+      const currentTime = performance.now();
+      
+      // Calculate FPS from delta time
+      const fps = dt > 0 ? 1000 / dt : 60;
+      
+      // Update FPS history (keep last 10 samples)
+      performanceWatchdog.fpsHistory.push(fps);
+      if (performanceWatchdog.fpsHistory.length > 10) {
+        performanceWatchdog.fpsHistory.shift();
+      }
+      
+      // Check FPS periodically
+      if (currentTime - performanceWatchdog.lastFPSCheck > performanceWatchdog.checkInterval) {
+        performanceWatchdog.lastFPSCheck = currentTime;
+        
+        // Calculate average FPS
+        const avgFPS = performanceWatchdog.fpsHistory.reduce((a, b) => a + b, 0) / performanceWatchdog.fpsHistory.length;
+        performanceWatchdog.currentFPS = avgFPS;
+        
+        // Throttle effects if FPS drops below 30 (especially important in portrait mode)
+        const lowFPSThreshold = 30;
+        if (avgFPS < lowFPSThreshold && !performanceWatchdog.throttleEffects) {
+          performanceWatchdog.throttleEffects = true;
+          console.warn(`Low FPS detected (${avgFPS.toFixed(1)}), throttling effects`);
+        } else if (avgFPS >= lowFPSThreshold + 5 && performanceWatchdog.throttleEffects) {
+          // Add hysteresis: only re-enable at FPS > 35
+          performanceWatchdog.throttleEffects = false;
+          console.log(`FPS recovered (${avgFPS.toFixed(1)}), restoring effects`);
+        }
+      }
+    }
+    
     function animate(time) {
       requestAnimationFrame(animate);
       
@@ -10515,6 +10700,9 @@
         }
         dt = MAX_DELTA_TIME;
       }
+      
+      // NEW: Update performance watchdog
+      updatePerformanceWatchdog(dt * 1000); // Convert to milliseconds
       
       // Frame Skip Mechanism: Determine if rendering should be skipped based on previous frame time
       // Note: This only skips the render call - game logic still runs to maintain state consistency
