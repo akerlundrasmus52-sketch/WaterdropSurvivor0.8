@@ -5058,24 +5058,24 @@
             // Cap max speed at 2x initial walkSpeed (50) to prevent breaking physics
             const maxWalkSpeed = 50; // 2x the initial 25
             if (playerStats.walkSpeed < maxWalkSpeed) {
-              playerStats.walkSpeed *= 1.1;
-              showStatChange('Chest: +10% Move Speed');
+              playerStats.walkSpeed *= 1.02;
+              showStatChange('Chest: +2% Move Speed');
             } else {
               showStatChange('Chest: Max Speed Reached');
             }
           }},
           { name: 'Damage Boost', apply: () => { 
-            playerStats.strength += 0.1;
-            showStatChange('Chest: +10% Damage');
+            playerStats.strength += 0.02;
+            showStatChange('Chest: +2% Damage');
           }},
           { name: 'Health Boost', apply: () => { 
-            playerStats.maxHp += 20;
-            playerStats.hp += 20;
-            showStatChange('Chest: +20 Max HP');
+            playerStats.maxHp += 5;
+            playerStats.hp += 5;
+            showStatChange('Chest: +5 Max HP');
           }},
           { name: 'Armor Boost', apply: () => { 
-            playerStats.armor = Math.min(80, playerStats.armor + 8);
-            showStatChange('Chest: +8% Armor');
+            playerStats.armor = Math.min(80, playerStats.armor + 3);
+            showStatChange('Chest: +3% Armor');
           }},
           { name: 'Attack Speed', apply: () => {
             // Cap minimum cooldown at 300ms to prevent performance issues
