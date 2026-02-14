@@ -1096,6 +1096,34 @@
       display: none;
     }
 
+    /* PR #138: Circular Equipment button on main menu */
+    .circular-equipment-btn {
+      position: absolute;
+      top: 140px; /* Below title */
+      left: 50%;
+      transform: translateX(-50%);
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #8B4513 0%, #D2691E 50%, #FFD700 100%); /* Brown to gold gradient */
+      border: 3px solid #FFD700;
+      color: #FFF;
+      font-size: 28px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(255, 215, 0, 0.5), inset 0 2px 5px rgba(255, 255, 255, 0.3);
+      z-index: 10;
+    }
+
+    .circular-equipment-btn:hover {
+      transform: translateX(-50%) scale(1.1);
+      box-shadow: 0 6px 20px rgba(255, 215, 0, 0.7), inset 0 2px 5px rgba(255, 255, 255, 0.5);
+    }
+
+    .circular-equipment-btn:active {
+      transform: translateX(-50%) scale(0.95);
+    }
+
     .menu-buttons {
       position: absolute;
       top: 0;
@@ -1525,6 +1553,8 @@
   <div id="main-menu">
     <div class="gold-display" id="menu-gold">GOLD: 0</div>
     <div class="menu-title">WATER DROP SURVIVOR</div>
+    <!-- PR #138: Circular Equipment button under title -->
+    <button id="menu-equipment-btn" class="circular-equipment-btn" title="Equipment" aria-label="Open Equipment Screen">⚔️</button>
     <div class="menu-buttons">
       <button class="menu-btn" id="start-game-btn">START GAME</button>
       <button class="menu-btn" id="progression-btn">PROGRESSION</button>
@@ -2368,7 +2398,12 @@
       thornsPercent: 0,
       hasBerserkerRage: false,
       treasureHunterChance: 0,
-      doubleCritChance: 0
+      doubleCritChance: 0,
+      // PR #125: Precision aiming system
+      precision: 0,         // Precision stat for aim-assist and bonuses
+      dodge: 0,             // Dodge chance (from Agility attribute)
+      goldBonus: 1,         // Gold drop multiplier (from Luck attribute)
+      xpBonus: 1            // XP gain multiplier (from Wisdom attribute)
     };
 
     // Weapons State
@@ -2656,9 +2691,43 @@
           
           // Rotation/Aiming with RIGHT stick (independent of movement)
           if (joystickRight.active) {
-            // Manual aim: Turn to face the direction of right stick
-            const angle = Math.atan2(joystickRight.x, joystickRight.y);
-            this.mesh.rotation.y = angle;
+            // PR #125: Precision aiming - Manual aim with aim-assist
+            // Base aim direction from right stick
+            let aimAngle = Math.atan2(joystickRight.x, joystickRight.y);
+            
+            // PR #125: Apply 15% nudge toward nearest enemy within 15 units when precision > 0
+            if (playerStats.precision > 0 && enemies && enemies.length > 0) {
+              let nearestEnemy = null;
+              let minDist = Infinity;
+              const AIM_ASSIST_RANGE = 15; // units
+              
+              enemies.forEach(e => {
+                if (e && !e.isDead) {
+                  const dist = this.mesh.position.distanceTo(e.mesh.position);
+                  if (dist < minDist && dist < AIM_ASSIST_RANGE) {
+                    minDist = dist;
+                    nearestEnemy = e;
+                  }
+                }
+              });
+              
+              if (nearestEnemy) {
+                // Calculate angle to enemy
+                const dx = nearestEnemy.mesh.position.x - this.mesh.position.x;
+                const dz = nearestEnemy.mesh.position.z - this.mesh.position.z;
+                const enemyAngle = Math.atan2(dx, dz);
+                
+                // Blend 15% toward enemy angle (aim-assist)
+                const ASSIST_STRENGTH = 0.15;
+                aimAngle = aimAngle + (enemyAngle - aimAngle) * ASSIST_STRENGTH;
+              }
+            }
+            
+            // Apply final aim angle
+            this.mesh.rotation.y = aimAngle;
+            
+            // PR #125: Manual aim bonuses (+1% crit per precision, +2% gold per precision)
+            // These are applied in stat calculations
           } else if (gameSettings.autoAim && enemies && enemies.length > 0) {
             // Auto-aim when enabled (works in any orientation)
             let nearestEnemy = null;
@@ -3897,6 +3966,28 @@
           spawnGold(this.mesh.position.x, this.mesh.position.z, goldAmount);
         }
         
+        // PR #125-143: Mini-bosses drop guaranteed rare+ gear
+        if (this.isMiniBoss) {
+          const gearRarities = ['rare', 'rare', 'epic', 'legendary']; // Weighted towards rare
+          const gearRarity = gearRarities[Math.floor(Math.random() * gearRarities.length)];
+          
+          const slots = ['helmet', 'bodyArmor', 'boots', 'ring', 'amulet', 'weaponCharm'];
+          const randomSlot = slots[Math.floor(Math.random() * slots.length)];
+          
+          const newGear = generateGear(randomSlot, gearRarity);
+          saveData.inventory.push(newGear);
+          
+          // Auto-equip to empty slots
+          if (!saveData.equippedGear[randomSlot]) {
+            saveData.equippedGear[randomSlot] = newGear.id;
+            createFloatingText(`Equipped: ${newGear.name}!`, this.mesh.position, getRarityColor(newGear.rarity));
+          } else {
+            createFloatingText(`Found: ${newGear.name}!`, this.mesh.position, getRarityColor(newGear.rarity));
+          }
+          
+          saveSaveData();
+        }
+        
         playerStats.kills++;
         updateHUD();
         updateComboCounter(true); // Phase 2: Track combo on kill
@@ -3994,21 +4085,30 @@
           const dx = this.mesh.position.x - enemy.mesh.position.x;
           const dz = this.mesh.position.z - enemy.mesh.position.z;
           if (dx*dx + dz*dz < 0.6) { // Hit radius
-            // Calculate Damage
-            let dmg = weapons.gun.damage * playerStats.damage * playerStats.strength;
+            // PR #124: Calculate Damage with NaN guards and fallbacks
+            let dmg = weapons.gun.damage * (playerStats.damage || 1) * (playerStats.strength || 1);
             
             // Double barrel uses its own damage
             if (weapons.doubleBarrel.active && this.isDoubleBarrel) {
-              dmg = weapons.doubleBarrel.damage * playerStats.damage * playerStats.strength;
+              dmg = weapons.doubleBarrel.damage * (playerStats.damage || 1) * (playerStats.strength || 1);
             }
             
             // Drone turret uses its own damage
             if (weapons.droneTurret.active && this.isDroneTurret) {
-              dmg = weapons.droneTurret.damage * playerStats.damage * playerStats.strength;
+              dmg = weapons.droneTurret.damage * (playerStats.damage || 1) * (playerStats.strength || 1);
             }
             
-            const isCrit = Math.random() < playerStats.critChance;
-            if (isCrit) dmg *= playerStats.critDmg;
+            // PR #125: Crit chance with precision bonus (+1% per precision when manual aiming)
+            const precisionCritBonus = joystickRight.active ? (playerStats.precision * 0.01) : 0;
+            const effectiveCritChance = playerStats.critChance + precisionCritBonus;
+            const isCrit = Math.random() < effectiveCritChance;
+            if (isCrit) dmg *= (playerStats.critDmg || 1.5);
+            
+            // PR #124: Validate damage is finite and positive (change <= 0 to < 0 allows zero damage)
+            if (!Number.isFinite(dmg) || dmg < 0) {
+              console.warn('Invalid gun damage calculated, using default 15');
+              dmg = 15;
+            }
             
             enemy.takeDamage(Math.floor(dmg), isCrit);
             
@@ -4055,8 +4155,11 @@
         this.life = 10; // frames
         this.maxLife = 10;
         
-        // Deal damage immediately
-        const dmg = weapons.sword.damage * playerStats.strength * playerStats.damage;
+        // PR #124: Deal damage immediately with NaN guards and fallbacks
+        const dmg = weapons.sword.damage * (playerStats.strength || 1) * (playerStats.damage || 1);
+        
+        // PR #124: Validate damage is finite and positive
+        const validDmg = (Number.isFinite(dmg) && dmg >= 0) ? dmg : 30; // Default to base sword damage
         
         enemies.forEach(e => {
           const dx = e.mesh.position.x - x;
@@ -4072,7 +4175,7 @@
             while (diff > Math.PI) diff -= Math.PI*2;
             
             if (Math.abs(diff) < Math.PI/3) {
-              e.takeDamage(dmg);
+              e.takeDamage(validDmg);
             }
           }
         });
@@ -4143,10 +4246,19 @@
           const dx = this.mesh.position.x - enemy.mesh.position.x;
           const dz = this.mesh.position.z - enemy.mesh.position.z;
           if (dx*dx + dz*dz < 0.6) {
-            // Calculate Damage
-            let dmg = weapons.iceSpear.damage * playerStats.damage * playerStats.strength;
-            const isCrit = Math.random() < playerStats.critChance;
-            if (isCrit) dmg *= playerStats.critDmg;
+            // PR #124: Calculate Damage with NaN guards and fallbacks
+            let dmg = weapons.iceSpear.damage * (playerStats.damage || 1) * (playerStats.strength || 1);
+            // PR #125: Crit chance with precision bonus
+            const precisionCritBonus = joystickRight.active ? (playerStats.precision * 0.01) : 0;
+            const effectiveCritChance = playerStats.critChance + precisionCritBonus;
+            const isCrit = Math.random() < effectiveCritChance;
+            if (isCrit) dmg *= (playerStats.critDmg || 1.5);
+            
+            // PR #124: Validate damage is finite and positive
+            if (!Number.isFinite(dmg) || dmg < 0) {
+              console.warn('Invalid ice spear damage calculated, using default 20');
+              dmg = 20;
+            }
             
             enemy.takeDamage(Math.floor(dmg), isCrit);
             
@@ -4233,14 +4345,17 @@
         this.shadow.geometry.dispose();
         this.shadow.material.dispose();
         
-        // AOE Damage
+        // PR #124: AOE Damage with NaN guards and fallbacks
         const range = weapons.meteor.area;
-        const dmg = weapons.meteor.damage * playerStats.strength;
+        const dmg = weapons.meteor.damage * (playerStats.strength || 1);
+        
+        // PR #124: Validate damage is finite and positive
+        const validDmg = (Number.isFinite(dmg) && dmg >= 0) ? dmg : 60; // Default to base meteor damage
         
         enemies.forEach(e => {
           const d = e.mesh.position.distanceTo(this.target);
           if (d < range) {
-            e.takeDamage(dmg);
+            e.takeDamage(validDmg);
           }
         });
         
@@ -4361,10 +4476,10 @@
 
     class ExpGem {
       constructor(x, z) {
-        // Create 5-sided star shape (Super Mario 64 style)
+        // PR #125-143: Create 5-sided star shape - 75% smaller
         const starShape = new THREE.Shape();
-        const outerRadius = 0.5; // Larger for more visibility
-        const innerRadius = 0.2;
+        const outerRadius = 0.125; // 75% smaller (was 0.5, now 0.125)
+        const innerRadius = 0.05;  // 75% smaller (was 0.2, now 0.05)
         const points = 5; // 5-point star like Super Mario
         const STAR_ROTATION_OFFSET = Math.PI / 2; // Rotate to start from top point.
         
@@ -4383,10 +4498,10 @@
         starShape.closePath();
         
         const extrudeSettings = {
-          depth: 0.15,
+          depth: 0.04,  // Scaled down proportionally
           bevelEnabled: true,
-          bevelThickness: 0.1,
-          bevelSize: 0.1,
+          bevelThickness: 0.025,  // Scaled down
+          bevelSize: 0.025,  // Scaled down
           bevelSegments: 3
         };
         
@@ -4423,8 +4538,9 @@
       update(playerPos) {
         if (!this.active) return;
 
-        // Spin 360 degrees on Z axis like Earth (PR #117)
+        // PR #125-143: Spin 360 degrees on Z axis (horizontal) + Y-axis rotation
         this.mesh.rotation.z += this.rotSpeed;
+        this.mesh.rotation.y += 0.03; // Add Y-axis rotation
         
         // Bob up and down
         this.bobPhase += 0.05;
@@ -4994,11 +5110,51 @@
       }
       
       giveReward() {
-        // Determine reward type
+        // PR #125-143: Determine reward type with gear drops
         const rand = Math.random();
         
-        if (rand < 0.35) {
-          // Health restore (35% chance)
+        // Determine gear drop chance based on chest tier
+        const gearDropChances = {
+          common: 0.15,
+          uncommon: 0.30,
+          rare: 0.50,
+          epic: 0.75,
+          mythical: 1.00
+        };
+        
+        const gearDropChance = gearDropChances[this.tier] || 0.15;
+        
+        if (rand < gearDropChance) {
+          // PR #125-143: Gear drop based on tier
+          const gearRarities = {
+            common: 'common',
+            uncommon: 'uncommon',
+            rare: 'rare',
+            epic: 'epic',
+            mythical: 'legendary'
+          };
+          const gearRarity = gearRarities[this.tier] || 'common';
+          
+          // Random slot
+          const slots = ['helmet', 'bodyArmor', 'boots', 'ring', 'amulet', 'weaponCharm'];
+          const randomSlot = slots[Math.floor(Math.random() * slots.length)];
+          
+          const newGear = generateGear(randomSlot, gearRarity);
+          saveData.inventory.push(newGear);
+          
+          // PR #125-143: Auto-equip to empty slots
+          if (!saveData.equippedGear[randomSlot]) {
+            saveData.equippedGear[randomSlot] = newGear.id;
+            createFloatingText(`Equipped: ${newGear.name}!`, this.mesh.position, getRarityColor(newGear.rarity));
+            showStatChange(`Chest: Auto-equipped ${newGear.name}`);
+          } else {
+            createFloatingText(`Found: ${newGear.name}!`, this.mesh.position, getRarityColor(newGear.rarity));
+            showStatChange(`Chest: ${newGear.name} added to inventory`);
+          }
+          
+          saveSaveData();
+        } else if (rand < 0.35 + gearDropChance) {
+          // Health restore (adjusted chance)
           const healAmount = 50;
           const prevHp = playerStats.hp;
           playerStats.hp = Math.min(playerStats.maxHp, playerStats.hp + healAmount);
@@ -5006,17 +5162,17 @@
           createFloatingText(`+${actualHeal} HP!`, this.mesh.position);
           showStatChange(`Chest: +${actualHeal} HP!`);
           spawnParticles(this.mesh.position, 0xFF69B4, 10); // Reduced for performance
-        } else if (rand < 0.6) {
-          // Gold (25% chance)
+        } else if (rand < 0.6 + gearDropChance) {
+          // Gold (adjusted chance)
           const goldAmount = 12 + Math.floor(Math.random() * 19); // 12-30 gold (reduced from 20-50)
           addGold(goldAmount);
           createFloatingText(`+${goldAmount} Gold!`, this.mesh.position);
           showStatChange(`Chest: +${goldAmount} Gold!`);
-        } else if (rand < 0.85) {
-          // Random perk/stat boost (25% chance)
+        } else if (rand < 0.85 + gearDropChance) {
+          // Random perk/stat boost (adjusted chance)
           this.applyRandomPerk();
         } else {
-          // Weapon attachment or upgrade hint (15% chance)
+          // Weapon attachment or upgrade hint (adjusted chance)
           createFloatingText('Weapon Enhanced!', this.mesh.position);
           // Apply a small weapon boost - check if weapon exists
           if (weapons && weapons.gun && weapons.gun.active) {
@@ -5126,12 +5282,14 @@
         wisdom: 0
       },
       unspentAttributePoints: 0,
-      // Gear system
+      // PR #125-143: Gear system - 6 slots with new structure
       equippedGear: {
-        weapon: null,
-        armor: null,
-        accessory1: null,
-        accessory2: null
+        helmet: null,
+        bodyArmor: null,
+        boots: null,
+        ring: null,
+        amulet: null,
+        weaponCharm: null
       },
       inventory: []
     };
@@ -5402,10 +5560,12 @@
       dexterity: {
         name: 'Dexterity',
         icon: '🎯',
-        description: 'Improves attack speed and critical chance',
+        description: 'Improves attack speed, crit, dodge, and move speed (Agility)',
         effects: {
           attackSpeed: 0.03, // +3% per point
-          critChance: 0.01   // +1% per point
+          critChance: 0.01,  // +1% per point
+          dodge: 0.01,       // +1% dodge per point (PR #124)
+          moveSpeed: 0.02    // +2% move speed per point (PR #124)
         }
       },
       strength: {
@@ -5437,10 +5597,10 @@
       wisdom: {
         name: 'Wisdom',
         icon: '🧠',
-        description: 'Reduces cooldowns and increases experience gain',
+        description: 'Reduces cooldowns and increases XP gain (Intelligence)',
         effects: {
           cooldownReduction: 0.02, // +2% per point
-          expEarned: 0.03          // +3% per point
+          expEarned: 0.03          // +3% XP gain per point (PR #124)
         }
       }
     };
@@ -5566,100 +5726,118 @@
     window.increaseAttribute = increaseAttribute;
 
     // --- GEAR SYSTEM ---
+    // PR #125-143: Updated gear attributes for new equipment system
     const GEAR_ATTRIBUTES = {
-      flexibility: { name: 'Flexibility', icon: '🤸', color: '#9B59B6' },
-      movementSpeed: { name: 'Movement Speed', icon: '💨', color: '#3498DB' },
+      hp: { name: 'HP', icon: '❤️', color: '#E74C3C' },
+      armor: { name: 'Armor', icon: '🛡️', color: '#95A5A6' },
+      hpRegen: { name: 'HP Regen', icon: '💚', color: '#2ECC71' },
+      moveSpeed: { name: 'Move Speed', icon: '💨', color: '#3498DB' },
+      dodge: { name: 'Dodge', icon: '🌀', color: '#9B59B6' },
+      damage: { name: 'Damage', icon: '⚔️', color: '#E67E22' },
+      crit: { name: 'Crit', icon: '✨', color: '#F1C40F' },
       attackSpeed: { name: 'Attack Speed', icon: '⚡', color: '#F39C12' },
-      attackPrecision: { name: 'Attack Precision', icon: '🎯', color: '#E74C3C' },
-      critChance: { name: 'Crit Chance', icon: '✨', color: '#E67E22' },
-      elementalMagic: { name: 'Elemental Magic', icon: '🔮', color: '#8E44AD' }
+      xpBonus: { name: 'XP Bonus', icon: '📈', color: '#1ABC9C' }
     };
 
-    // Define starter gear that players begin with
+    // PR #125-143: Define 5 rarities
+    const GEAR_RARITIES = {
+      common: { name: 'Common', color: '#999999', chance: 0.50, statRange: [1, 2] },
+      uncommon: { name: 'Uncommon', color: '#2ecc71', chance: 0.30, statRange: [2, 4] },
+      rare: { name: 'Rare', color: '#3498db', chance: 0.15, statRange: [3, 6] },
+      epic: { name: 'Epic', color: '#9b59b6', chance: 0.04, statRange: [5, 9] },
+      legendary: { name: 'Legendary', color: '#e74c3c', chance: 0.01, statRange: [8, 15] }
+    };
+
+    // PR #125-143: Gear generation system with proper slot types and rarities
+    const GEAR_SLOT_NAMES = {
+      helmet: ['Helm', 'Cap', 'Crown', 'Hood', 'Mask', 'Headband'],
+      bodyArmor: ['Armor', 'Vest', 'Chestplate', 'Robe', 'Tunic', 'Mail'],
+      boots: ['Boots', 'Shoes', 'Greaves', 'Sandals', 'Slippers'],
+      ring: ['Ring', 'Band', 'Circle', 'Loop'],
+      amulet: ['Amulet', 'Necklace', 'Pendant', 'Talisman', 'Charm'],
+      weaponCharm: ['Charm', 'Rune', 'Sigil', 'Emblem', 'Trinket']
+    };
+
+    const GEAR_PREFIXES = {
+      common: ['Worn', 'Old', 'Simple', 'Basic', 'Plain'],
+      uncommon: ['Sturdy', 'Fine', 'Quality', 'Good', 'Decent'],
+      rare: ['Superior', 'Excellent', 'Rare', 'Pristine', 'Polished'],
+      epic: ['Epic', 'Magnificent', 'Powerful', 'Mighty', 'Grand'],
+      legendary: ['Legendary', 'Divine', 'Eternal', 'Mythic', 'Ancient']
+    };
+
+    // PR #125-143: Generate random gear with proper stats based on slot and rarity
+    function generateGear(slot, rarity = null) {
+      // Determine rarity if not specified
+      if (!rarity) {
+        const roll = Math.random();
+        let cumulative = 0;
+        for (const r in GEAR_RARITIES) {
+          cumulative += GEAR_RARITIES[r].chance;
+          if (roll <= cumulative) {
+            rarity = r;
+            break;
+          }
+        }
+      }
+      
+      const rarityInfo = GEAR_RARITIES[rarity];
+      const [minStat, maxStat] = rarityInfo.statRange;
+      
+      // Generate stats based on slot type
+      const stats = {};
+      let numStats = 1;
+      if (rarity === 'uncommon') numStats = 2;
+      else if (rarity === 'rare') numStats = 2;  // Both uncommon and rare have 2 stats
+      else if (rarity === 'epic') numStats = 3;
+      else if (rarity === 'legendary') numStats = 4;
+      
+      // Define primary stats for each slot type
+      const slotStatPools = {
+        helmet: ['hp', 'armor', 'hpRegen', 'xpBonus'],
+        bodyArmor: ['hp', 'armor', 'hpRegen', 'dodge'],
+        boots: ['moveSpeed', 'dodge', 'hp'],
+        ring: ['crit', 'damage', 'attackSpeed'],
+        amulet: ['damage', 'crit', 'xpBonus', 'attackSpeed'],
+        weaponCharm: ['damage', 'attackSpeed', 'crit']
+      };
+      
+      const availableStats = [...slotStatPools[slot]];
+      
+      for (let i = 0; i < numStats && availableStats.length > 0; i++) {
+        const statIndex = Math.floor(Math.random() * availableStats.length);
+        const statType = availableStats.splice(statIndex, 1)[0];
+        stats[statType] = Math.floor(minStat + Math.random() * (maxStat - minStat + 1));
+      }
+      
+      // Generate name
+      const prefix = GEAR_PREFIXES[rarity][Math.floor(Math.random() * GEAR_PREFIXES[rarity].length)];
+      const baseName = GEAR_SLOT_NAMES[slot][Math.floor(Math.random() * GEAR_SLOT_NAMES[slot].length)];
+      const name = `${prefix} ${baseName}`;
+      
+      // PR #125-143: Generate unique ID with counter to prevent collisions
+      if (!window.gearIdCounter) window.gearIdCounter = 0;
+      window.gearIdCounter++;
+      
+      return {
+        id: `gear_${Date.now()}_${window.gearIdCounter}_${Math.random().toString(36).substr(2, 9)}`,
+        name,
+        slot,
+        rarity,
+        stats,
+        description: `A ${rarity} ${slot.replace(/([A-Z])/g, ' $1').toLowerCase()}`
+      };
+    }
+
+    // PR #125-143: Starter gear for new players
     const STARTER_GEAR = [
       {
-        id: 'starter_weapon',
-        name: 'Worn Sword',
-        type: 'weapon',
+        id: 'starter_helmet',
+        name: 'Simple Cap',
+        slot: 'helmet',
         rarity: 'common',
-        stats: { attackSpeed: 1, attackPrecision: 1 },
-        description: 'A basic weapon'
-      },
-      {
-        id: 'starter_armor',
-        name: 'Leather Vest',
-        type: 'armor',
-        rarity: 'common',
-        stats: { flexibility: 1, movementSpeed: 1 },
-        description: 'Basic protection'
-      },
-      {
-        id: 'starter_accessory1',
-        name: 'Lucky Charm',
-        type: 'accessory',
-        rarity: 'common',
-        stats: { critChance: 1 },
-        description: 'Brings good fortune'
-      }
-    ];
-
-    // Additional gear that can be obtained (for future expansion)
-    const GEAR_POOL = [
-      {
-        id: 'blazing_sword',
-        name: 'Blazing Sword',
-        type: 'weapon',
-        rarity: 'rare',
-        stats: { attackSpeed: 2, attackPrecision: 2, elementalMagic: 1 },
-        description: 'A sword wreathed in flames'
-      },
-      {
-        id: 'frost_blade',
-        name: 'Frost Blade',
-        type: 'weapon',
-        rarity: 'epic',
-        stats: { attackSpeed: 3, attackPrecision: 3, elementalMagic: 2 },
-        description: 'Freezes enemies on hit'
-      },
-      {
-        id: 'shadow_cloak',
-        name: 'Shadow Cloak',
-        type: 'armor',
-        rarity: 'rare',
-        stats: { flexibility: 3, movementSpeed: 2 },
-        description: 'Move like a shadow'
-      },
-      {
-        id: 'dragon_plate',
-        name: 'Dragon Plate',
-        type: 'armor',
-        rarity: 'legendary',
-        stats: { flexibility: 2, movementSpeed: 1, attackPrecision: 2 },
-        description: 'Forged from dragon scales'
-      },
-      {
-        id: 'crit_ring',
-        name: 'Ring of Critical Strikes',
-        type: 'accessory',
-        rarity: 'rare',
-        stats: { critChance: 3, attackPrecision: 1 },
-        description: 'Increases critical hit chance'
-      },
-      {
-        id: 'speed_boots',
-        name: 'Winged Boots',
-        type: 'accessory',
-        rarity: 'epic',
-        stats: { movementSpeed: 4, flexibility: 1 },
-        description: 'Swift as the wind'
-      },
-      {
-        id: 'magic_amulet',
-        name: 'Arcane Amulet',
-        type: 'accessory',
-        rarity: 'legendary',
-        stats: { elementalMagic: 4, attackSpeed: 2 },
-        description: 'Channels magical energy'
+        stats: { hp: 2, armor: 1 },
+        description: 'Basic head protection'
       }
     ];
 
@@ -5668,10 +5846,8 @@
       if (!saveData.inventory || saveData.inventory.length === 0) {
         saveData.inventory = [...STARTER_GEAR];
         
-        // Auto-equip starter gear
-        saveData.equippedGear.weapon = 'starter_weapon';
-        saveData.equippedGear.armor = 'starter_armor';
-        saveData.equippedGear.accessory1 = 'starter_accessory1';
+        // PR #125-143: Auto-equip starter gear to helmet slot
+        saveData.equippedGear.helmet = 'starter_helmet';
         
         saveSaveData();
       }
@@ -5691,26 +5867,30 @@
       for (const statKey in GEAR_ATTRIBUTES) {
         const stat = GEAR_ATTRIBUTES[statKey];
         const value = gearStats[statKey] || 0;
-        statsHtml += `
-          <div style="display: flex; align-items: center; gap: 10px; padding: 5px;">
-            <span style="font-size: 24px;">${stat.icon}</span>
-            <div>
-              <div style="color: ${stat.color}; font-size: 14px; font-weight: bold;">${stat.name}</div>
-              <div style="color: #FFD700; font-size: 16px; font-weight: bold;">+${value}</div>
+        if (value > 0) {  // Only show non-zero stats
+          statsHtml += `
+            <div style="display: flex; align-items: center; gap: 10px; padding: 5px;">
+              <span style="font-size: 24px;">${stat.icon}</span>
+              <div>
+                <div style="color: ${stat.color}; font-size: 14px; font-weight: bold;">${stat.name}</div>
+                <div style="color: #FFD700; font-size: 16px; font-weight: bold;">+${value}</div>
+              </div>
             </div>
-          </div>
-        `;
+          `;
+        }
       }
-      statsContent.innerHTML = statsHtml;
+      statsContent.innerHTML = statsHtml || '<div style="color: #999; text-align: center; padding: 20px;">No gear equipped</div>';
       
-      // Build gear slots display
+      // PR #125-143: Build gear slots display for 6 slots
       let html = '';
       
       const slots = [
-        { key: 'weapon', name: 'Weapon Slot', icon: '⚔️' },
-        { key: 'armor', name: 'Armor Slot', icon: '🛡️' },
-        { key: 'accessory1', name: 'Accessory Slot 1', icon: '💍' },
-        { key: 'accessory2', name: 'Accessory Slot 2', icon: '📿' }
+        { key: 'helmet', name: 'Helmet', icon: '⛑️' },
+        { key: 'bodyArmor', name: 'Body Armor', icon: '🛡️' },
+        { key: 'boots', name: 'Boots', icon: '👢' },
+        { key: 'ring', name: 'Ring', icon: '💍' },
+        { key: 'amulet', name: 'Amulet', icon: '📿' },
+        { key: 'weaponCharm', name: 'Weapon Charm', icon: '⚔️' }
       ];
       
       for (const slot of slots) {
@@ -5723,7 +5903,7 @@
               <div style="display: flex; align-items: center; gap: 10px;">
                 <span style="font-size: 32px;">${slot.icon}</span>
                 <div style="color: #F39C12; font-size: 20px; font-weight: bold;">${slot.name}</div>
-              </div>
+              </div>`;
             </div>
             ${equippedGear ? `
               <div style="background: rgba(0,0,0,0.3); border: 2px solid ${getRarityColor(equippedGear.rarity)}; border-radius: 10px; padding: 15px;">
@@ -5733,7 +5913,7 @@
                 <div style="color: #aaa; font-size: 13px; margin-bottom: 10px;">${equippedGear.description}</div>
                 <div style="margin-bottom: 10px;">
                   ${Object.entries(equippedGear.stats).map(([stat, val]) => `
-                    <div style="color: #90ee90; font-size: 13px;">• ${GEAR_ATTRIBUTES[stat].name}: +${val}</div>
+                    <div style="color: #90ee90; font-size: 13px;">• ${GEAR_ATTRIBUTES[stat] ? GEAR_ATTRIBUTES[stat].name : stat}: +${val}</div>
                   `).join('')}
                 </div>
                 <button onclick="unequipGear('${slot.key}')" style="padding: 8px 15px; background: linear-gradient(to bottom, #c0392b, #a93226); color: white; border: 2px solid #e74c3c; border-radius: 8px; cursor: pointer; font-weight: bold;">UNEQUIP</button>
@@ -5747,16 +5927,16 @@
               <div style="color: #5DADE2; font-size: 16px; font-weight: bold; margin-bottom: 10px;">Available Gear:</div>
               <div style="display: grid; gap: 10px; max-height: 200px; overflow-y: auto;">
                 ${saveData.inventory.filter(g => {
-                  const gearType = g.type === 'accessory' ? (slot.key === 'accessory1' || slot.key === 'accessory2') : g.type === slot.key;
+                  const gearSlot = g.slot || g.type; // Support both old 'type' and new 'slot'
                   const notEquipped = g.id !== equippedId;
-                  return gearType && notEquipped;
+                  return gearSlot === slot.key && notEquipped;
                 }).map(gear => `
                   <div style="background: rgba(0,0,0,0.4); border: 2px solid ${getRarityColor(gear.rarity)}; border-radius: 8px; padding: 10px; cursor: pointer;" onclick="equipGear('${slot.key}', '${gear.id}')">
                     <div style="color: ${getRarityColor(gear.rarity)}; font-size: 14px; font-weight: bold;">${gear.name}</div>
                     <div style="color: #999; font-size: 11px;">${gear.description}</div>
                     <div style="margin-top: 5px;">
                       ${Object.entries(gear.stats).map(([stat, val]) => `
-                        <span style="color: #90ee90; font-size: 11px; margin-right: 10px;">+${val} ${GEAR_ATTRIBUTES[stat].icon}</span>
+                        <span style="color: #90ee90; font-size: 11px; margin-right: 10px;">+${val} ${GEAR_ATTRIBUTES[stat] ? GEAR_ATTRIBUTES[stat].icon : stat}</span>
                       `).join('')}
                     </div>
                   </div>
@@ -5770,13 +5950,14 @@
       content.innerHTML = html;
     }
 
+    // PR #125-143: Updated getRarityColor for 5 rarities
     function getRarityColor(rarity) {
       const colors = {
-        common: '#AAAAAA',
-        rare: '#5DADE2',
-        epic: '#9B59B6',
-        legendary: '#F39C12',
-        mythic: '#E74C3C'
+        common: '#999999',
+        uncommon: '#2ecc71',
+        rare: '#3498db',
+        epic: '#9b59b6',
+        legendary: '#e74c3c'
       };
       return colors[rarity] || colors.common;
     }
@@ -6938,6 +7119,20 @@
       const loadingScreen = document.getElementById('loading-screen');
       const loadingBar = document.getElementById('loading-bar');
       let progress = 0;
+      let dismissed = false; // PR #129: Prevent double dismissal
+      
+      // Function to dismiss loading screen
+      const dismissLoadingScreen = () => {
+        if (dismissed) return;
+        dismissed = true;
+        clearInterval(interval);
+        clearTimeout(failsafeTimeout);
+        loadingScreen.classList.add('fade-out');
+        setTimeout(() => {
+          loadingScreen.style.display = 'none';
+          showMainMenu();
+        }, 500);
+      };
       
       // Extended loading duration: 20 iterations × 400ms = 8000ms (8 seconds total)
       const interval = setInterval(() => {
@@ -6945,16 +7140,17 @@
         loadingBar.style.width = progress + '%';
         
         if (progress >= 100) {
-          clearInterval(interval);
-          setTimeout(() => {
-            loadingScreen.classList.add('fade-out');
-            setTimeout(() => {
-              loadingScreen.style.display = 'none';
-              showMainMenu();
-            }, 500);
-          }, 600); // Extended delay before fade
+          setTimeout(dismissLoadingScreen, 600); // Extended delay before fade
         }
       }, 400); // Slower progress updates for longer duration
+      
+      // PR #129: Failsafe timeout - dismiss after 12s maximum even if ES module fails
+      // Normal loading: 8s (20 iterations × 400ms) + 0.6s delay + 0.5s fade = 9.1s total
+      // Failsafe: 12s provides 2.9s buffer for slow systems or initialization delays
+      const failsafeTimeout = setTimeout(() => {
+        console.warn('Loading screen failsafe triggered after 12s');
+        dismissLoadingScreen();
+      }, 12000);
     }
     
     function showMainMenu() {
@@ -6962,10 +7158,22 @@
       updateGoldDisplays();
       isGameActive = false;
       isPaused = true;
+      // PR #129: Hide game UI buttons to prevent z-index conflicts
+      const gameUIButtons = ['menu-btn', 'equipment-btn', 'settings-btn', 'stats-btn'];
+      gameUIButtons.forEach(id => {
+        const btn = document.getElementById(id);
+        if (btn) btn.style.display = 'none';
+      });
     }
     
     function hideMainMenu() {
       document.getElementById('main-menu').style.display = 'none';
+      // PR #129: Restore game UI buttons
+      const gameUIButtons = ['menu-btn', 'equipment-btn', 'settings-btn', 'stats-btn'];
+      gameUIButtons.forEach(id => {
+        const btn = document.getElementById(id);
+        if (btn) btn.style.display = 'flex';
+      });
     }
     
     // Countdown system (PR #70-71)
@@ -7174,7 +7382,13 @@
       updateBackgroundMusic();
       
       // Main Menu Buttons
+      // PR #129: Start button concurrency guard
+      let startButtonLocked = false;
       document.getElementById('start-game-btn').onclick = () => {
+        if (startButtonLocked) return; // Prevent double-clicks during countdown
+        startButtonLocked = true;
+        setTimeout(() => { startButtonLocked = false; }, 3000); // Unlock after countdown
+        
         playSound('waterdrop');
         hideMainMenu();
         resetGame();
@@ -7202,6 +7416,14 @@
       };
       
       document.getElementById('gear-btn').onclick = () => {
+        playSound('waterdrop');
+        hideMainMenu();
+        updateGearScreen();
+        document.getElementById('gear-screen').style.display = 'flex';
+      };
+      
+      // PR #138: Circular equipment button handler
+      document.getElementById('menu-equipment-btn').onclick = () => {
         playSound('waterdrop');
         hideMainMenu();
         updateGearScreen();
@@ -7501,7 +7723,9 @@
     // Phase 5: Updated to use Object Pool for performance
     function spawnParticles(pos, color, count) {
       if (!particlePool) return; // Safety check
-      for(let i=0; i<count; i++) {
+      // PR #125: Apply FPS watchdog particle throttling
+      const throttledCount = Math.ceil(count * (performanceLog.particleThrottle || 1.0));
+      for(let i=0; i<throttledCount; i++) {
         const particle = particlePool.get();
         particle.reset(pos, color);
         particles.push(particle);
@@ -7523,8 +7747,11 @@
     
     function addGold(amount) {
       // Apply gold bonus from permanent upgrades
-      const bonus = PERMANENT_UPGRADES.goldEarned.effect(saveData.upgrades.goldEarned);
-      const finalAmount = Math.floor(amount * (1 + bonus));
+      const upgradeBonus = PERMANENT_UPGRADES.goldEarned.effect(saveData.upgrades.goldEarned);
+      // PR #124-125: Apply gold bonus from Luck attribute and precision (manual aim)
+      const attrBonus = playerStats.goldBonus || 1; // From Luck attribute
+      const precisionBonus = joystickRight.active ? (playerStats.precision * 0.02) : 0; // +2% per precision when manual aiming
+      const finalAmount = Math.floor(amount * (1 + upgradeBonus) * attrBonus * (1 + precisionBonus));
       playerStats.gold += finalAmount;
       saveData.gold += finalAmount;
       saveData.totalGoldEarned += finalAmount;
@@ -8819,6 +9046,28 @@
             const cz = player.mesh.position.z + Math.sin(chestAngle) * chestDist;
             spawnChest(cx, cz, chestTier);
             showStatChange(`${chestTier.toUpperCase()} Chest Spawned!`);
+            
+            // PR #125-143: Combo streaks ≥15 drop guaranteed epic+ gear
+            if (comboState.count >= 15) {
+              const gearRarities = ['epic', 'epic', 'legendary']; // Weighted towards epic
+              const gearRarity = gearRarities[Math.floor(Math.random() * gearRarities.length)];
+              
+              const slots = ['helmet', 'bodyArmor', 'boots', 'ring', 'amulet', 'weaponCharm'];
+              const randomSlot = slots[Math.floor(Math.random() * slots.length)];
+              
+              const newGear = generateGear(randomSlot, gearRarity);
+              saveData.inventory.push(newGear);
+              
+              // Auto-equip to empty slots
+              if (!saveData.equippedGear[randomSlot]) {
+                saveData.equippedGear[randomSlot] = newGear.id;
+                createFloatingText(`Equipped: ${newGear.name}!`, player.mesh.position, getRarityColor(newGear.rarity));
+              } else {
+                createFloatingText(`Found: ${newGear.name}!`, player.mesh.position, getRarityColor(newGear.rarity));
+              }
+              
+              saveSaveData();
+            }
           }
         }
         
@@ -8943,14 +9192,16 @@
         message = isMilestone ? 'Rare Combo' : `${comboState.count}x COMBO!`;
         comboLevel = 'high';
       } else if (comboState.count === 5) {
-        message = isMilestone ? 'Multikill' : `${comboState.count}x COMBO!`;  // First combo message at 5 kills
+        message = isMilestone ? 'Multikill' : '';  // PR #124: First milestone at 5 kills
         comboLevel = 'high';
       } else {
-        message = comboState.count + 'x COMBO!';
+        // PR #124: No text for combos below milestone (< 5)
+        // This is intentional - players only see feedback at milestones (5, 10, 15, etc.)
+        message = '';
       }
       
       comboText.innerText = message;
-      comboMultiplier.innerText = isMilestone ? '' : `x${comboState.count}`; // Only show multiplier when not showing milestone text
+      comboMultiplier.innerText = isMilestone ? `x${comboState.count}` : ''; // PR #124: Only show count on milestones
       
       // Progressive scaling: Start small at 5, gradually grow bigger to GODLIKE at 20
       // Yellow/White to Dark Red gradient with intensifying glow and size
@@ -9050,19 +9301,25 @@
       comboMultiplier.style.color = textColor;
       comboMultiplier.style.fontSize = `${Math.floor(fontSize * 0.5)}px`; // Scale multiplier text
       
-      // Show stat notification for all combos
-      showStatChange(message, comboLevel);
-      // Play multikill sound
-      playSound('multikill');
-      
-      // Show with animation - scale grows with combo count
-      comboEl.style.opacity = '1';
-      comboEl.style.animation = `combo-bubble ${COMBO_ANIMATION_DURATION}ms ease-out`;
-      
-      // Reset animation after it completes
-      setTimeout(() => {
-        comboEl.style.animation = 'none';
-      }, COMBO_ANIMATION_DURATION);
+      // PR #124: Only show visual/audio feedback on milestones
+      if (isMilestone) {
+        // Show stat notification for milestone combos
+        showStatChange(message, comboLevel);
+        // Play multikill sound
+        playSound('multikill');
+        
+        // Show with animation - scale grows with combo count
+        comboEl.style.opacity = '1';
+        comboEl.style.animation = `combo-bubble ${COMBO_ANIMATION_DURATION}ms ease-out`;
+        
+        // Reset animation after it completes
+        setTimeout(() => {
+          comboEl.style.animation = 'none';
+        }, COMBO_ANIMATION_DURATION);
+      } else {
+        // Hide combo element for non-milestones
+        comboEl.style.opacity = '0';
+      }
     }
     
     function hideCombo() {
@@ -9090,9 +9347,10 @@
             const cx = player.mesh.position.x + Math.cos(chestAngle) * chestDist;
             const cz = player.mesh.position.z + Math.sin(chestAngle) * chestDist;
             spawnChest(cx, cz, chestTier);
-            // Show only in stat bar: "combo lost" and chest rarity (no text on main screen)
+            // PR #124: NO "combo lost" notification - spawn chest silently
             const tierCapitalized = chestTier.charAt(0).toUpperCase() + chestTier.slice(1);
-            showStatChange(`Combo lost - ${tierCapitalized} chest`);
+            // Only show chest spawn, no mention of combo loss
+            showStatChange(`${tierCapitalized} chest spawned!`);
           }
         }
         
@@ -9284,9 +9542,9 @@
       updateGoldDisplays();
     }
 
-    function resetGame() {
-      stopDroneHum(); // Stop drone sound on reset
-      
+    // PR #124: Create recalculateAllStats() function for stat recalculation
+    // This function calculates and applies all stat bonuses from permanent upgrades, attributes, and gear
+    function recalculateAllStats() {
       // Apply permanent upgrades from save data
       const baseHp = 100 + PERMANENT_UPGRADES.maxHp.effect(saveData.upgrades.maxHp);
       const baseRegen = PERMANENT_UPGRADES.hpRegen.effect(saveData.upgrades.hpRegen);
@@ -9309,34 +9567,77 @@
       const attrRegen = vitality * ATTRIBUTE_INFO.vitality.effects.hpRegen;
       const attrAtkSpeed = dexterity * ATTRIBUTE_INFO.dexterity.effects.attackSpeed;
       const attrCritChance = dexterity * ATTRIBUTE_INFO.dexterity.effects.critChance;
+      const attrDodge = dexterity * ATTRIBUTE_INFO.dexterity.effects.dodge; // PR #124
+      const attrMoveSpeed = dexterity * ATTRIBUTE_INFO.dexterity.effects.moveSpeed; // PR #124
       const attrDamage = strength * ATTRIBUTE_INFO.strength.effects.damage;
       const attrCritDmg = luck * ATTRIBUTE_INFO.luck.effects.critDamage;
+      const attrGoldBonus = luck * ATTRIBUTE_INFO.luck.effects.goldEarned; // PR #124
       const attrCdReduction = wisdom * ATTRIBUTE_INFO.wisdom.effects.cooldownReduction;
+      const attrXpBonus = wisdom * ATTRIBUTE_INFO.wisdom.effects.expEarned; // PR #124
       
-      // Apply gear bonuses
+      // PR #125-143: Apply gear bonuses multiplicatively with new stat system
       const gearStats = calculateGearStats();
-      // Gear provides small, balanced bonuses (each point gives +1-2% depending on stat)
-      const gearFlexibilityBonus = gearStats.flexibility * 0.01;  // +1% armor per point
-      const gearMoveSpeedBonus = gearStats.movementSpeed * 0.02;  // +2% speed per point
-      const gearAtkSpeedBonus = gearStats.attackSpeed * 0.02;     // +2% attack speed per point
-      const gearPrecisionBonus = gearStats.attackPrecision * 0.01; // +1% crit chance per point
-      const gearCritBonus = gearStats.critChance * 0.02;          // +2% crit chance per point
-      const gearMagicBonus = gearStats.elementalMagic * 0.03;     // +3% damage per point
       
-      // Reset Stats with permanent upgrades, attributes, and gear applied
+      // Gear provides multiplicative bonuses
+      const gearHpBonus = gearStats.hp || 0;  // Flat HP bonus
+      const gearArmorBonus = gearStats.armor || 0;  // Flat armor bonus
+      const gearHpRegenBonus = gearStats.hpRegen || 0;  // Flat HP regen bonus
+      const gearMoveSpeedBonus = (gearStats.moveSpeed || 0) * 0.02;  // 2% per point
+      const gearDodgeBonus = (gearStats.dodge || 0) * 0.01;  // 1% per point (future use)
+      const gearDamageBonus = (gearStats.damage || 0) * 0.05;  // 5% per point
+      const gearCritBonus = (gearStats.crit || 0) * 0.01;  // 1% per point
+      const gearAtkSpeedBonus = (gearStats.attackSpeed || 0) * 0.03;  // 3% per point
+      const gearXpBonus = (gearStats.xpBonus || 0) * 0.05;  // 5% per point (future use)
+      
+      // PR #125-143: Update playerStats with all bonuses including new gear stats
+      playerStats.maxHp = baseHp + attrHp + gearHpBonus;
+      playerStats.hp = Math.min(playerStats.hp, playerStats.maxHp); // Adjust current HP if max changed
+      playerStats.strength = baseDamage * (1 + attrDamage + gearDamageBonus);
+      playerStats.walkSpeed = baseSpeed * (1 + attrMoveSpeed + gearMoveSpeedBonus); // PR #124: Add Dexterity move speed
+      playerStats.atkSpeed = baseAtkSpeed * (1 + attrAtkSpeed + gearAtkSpeedBonus);
+      playerStats.critChance = baseCritChance + attrCritChance + gearCritBonus;
+      // PR #124: Ensure critDmg is ALWAYS set (never undefined/null)
+      playerStats.critDmg = (baseCritDmg + attrCritDmg) || 1.5; // Fallback to 1.5x if somehow 0
+      playerStats.armor = baseArmor + gearArmorBonus;
+      playerStats.hpRegen = baseRegen + attrRegen + gearHpRegenBonus;
+      // PR #124-125: Add new stats for precision aiming and attribute bonuses
+      playerStats.dodge = attrDodge + gearDodgeBonus; // Dodge from Dexterity + gear
+      playerStats.goldBonus = 1 + attrGoldBonus; // Gold multiplier from Luck (1.0 = 100%)
+      playerStats.xpBonus = 1 + attrXpBonus + gearXpBonus; // XP multiplier from Wisdom + gear
+      
+      return {
+        baseHp, baseRegen, baseSpeed, baseDamage, baseAtkSpeed, baseCritChance, baseCritDmg, baseArmor, cdReduction,
+        attrHp, attrRegen, attrAtkSpeed, attrCritChance, attrDodge, attrMoveSpeed, attrDamage, attrCritDmg, attrGoldBonus, attrCdReduction, attrXpBonus,
+        gearHpBonus, gearArmorBonus, gearHpRegenBonus, gearMoveSpeedBonus, gearDodgeBonus, gearDamageBonus, gearCritBonus, gearAtkSpeedBonus, gearXpBonus
+      };
+    }
+
+    function resetGame() {
+      stopDroneHum(); // Stop drone sound on reset
+      
+      // PR #124: Use recalculateAllStats() function to apply all bonuses
+      const stats = recalculateAllStats();
+      
+      // PR #124-143: Reset Stats with permanent upgrades, attributes, and gear applied (use recalculateAllStats)
       playerStats.lvl = 1;
       playerStats.exp = 0;
       playerStats.expReq = GAME_CONFIG.baseExpReq;
-      playerStats.hp = baseHp + attrHp;
-      playerStats.maxHp = baseHp + attrHp;
-      playerStats.strength = baseDamage * (1 + attrDamage + gearMagicBonus);
-      playerStats.walkSpeed = baseSpeed * (1 + gearMoveSpeedBonus);
+      playerStats.hp = stats.baseHp + stats.attrHp + stats.gearHpBonus;
+      playerStats.maxHp = stats.baseHp + stats.attrHp + stats.gearHpBonus;
+      playerStats.strength = stats.baseDamage * (1 + stats.attrDamage + stats.gearDamageBonus);
+      playerStats.walkSpeed = stats.baseSpeed * (1 + stats.attrMoveSpeed + stats.gearMoveSpeedBonus); // PR #124: Add Dexterity move speed
       playerStats.kills = 0;
-      playerStats.atkSpeed = baseAtkSpeed * (1 + attrAtkSpeed + gearAtkSpeedBonus);
-      playerStats.critChance = baseCritChance + attrCritChance + gearPrecisionBonus + gearCritBonus;
-      playerStats.critDmg = baseCritDmg + attrCritDmg;
-      playerStats.armor = baseArmor + gearStats.flexibility; // Flexibility gives flat armor bonus
-      playerStats.hpRegen = baseRegen + attrRegen;
+      playerStats.atkSpeed = stats.baseAtkSpeed * (1 + stats.attrAtkSpeed + stats.gearAtkSpeedBonus);
+      playerStats.critChance = stats.baseCritChance + stats.attrCritChance + stats.gearCritBonus;
+      // PR #124: Ensure critDmg is ALWAYS set
+      playerStats.critDmg = (stats.baseCritDmg + stats.attrCritDmg) || 1.5;
+      playerStats.armor = stats.baseArmor + stats.gearArmorBonus;
+      playerStats.hpRegen = stats.baseRegen + stats.attrRegen + stats.gearHpRegenBonus;
+      // PR #124-125: Initialize new stats
+      playerStats.dodge = stats.attrDodge + stats.gearDodgeBonus;
+      playerStats.goldBonus = 1 + stats.attrGoldBonus;
+      playerStats.xpBonus = 1 + stats.attrXpBonus + stats.gearXpBonus;
+      playerStats.precision = 0; // PR #125: Reset precision (gained through gameplay)
       playerStats.gold = 0;
       waveCount = 0;
       lastWaveEndTime = 0; // Reset wave timing
@@ -9350,7 +9651,7 @@
         player.invulnerabilityTime = 0;
       }
       
-      const totalCdReduction = cdReduction + attrCdReduction;
+      const totalCdReduction = stats.cdReduction + stats.attrCdReduction;
       const gunCooldown = 1000 * (1 - totalCdReduction);
       weapons.gun = { active: true, level: 1, damage: 15, cooldown: gunCooldown, lastShot: 0, range: 12, barrels: 1 };
       weapons.sword = { active: false, level: 0, damage: 30, cooldown: 1500, lastShot: 0, range: 3.5 };
@@ -9891,7 +10192,11 @@
       spawnCount: 0,
       renderCount: 0,
       lastEnemyCount: 0,
-      cumulativeFrameTime: 0 // Track cumulative time for accurate average
+      cumulativeFrameTime: 0, // Track cumulative time for accurate average
+      // PR #125: FPS watchdog for particle throttling
+      fpsHistory: [],       // Rolling window of last 10 frame times
+      averageFps: 60,       // Current average FPS
+      particleThrottle: 1.0 // Multiplier for particle spawning (1.0 = 100%, 0.5 = 50%)
     };
     
     function animate(time) {
@@ -9914,9 +10219,22 @@
       // Performance tracking - start frame timer
       const frameStartTime = performance.now();
 
+      // PR #124: NaN Prevention - Add Number.isFinite() guards to timing calculations
       let dt = (time - lastTime) / 1000;
       lastTime = time;
       gameTime = time / 1000; // Update game time in seconds
+      
+      // Validate time calculations to prevent NaN propagation
+      if (!Number.isFinite(dt) || dt < 0) {
+        console.warn('Invalid deltaTime detected, resetting to 0.016s (60fps)');
+        dt = 0.016; // Fallback to 60fps frame time
+      }
+      if (!Number.isFinite(lastTime)) {
+        lastTime = time;
+      }
+      if (!Number.isFinite(gameTime)) {
+        gameTime = time / 1000;
+      }
       
       // Phase 3: Lag compensation - cap deltaTime to prevent death spiral
       const MAX_DELTA_TIME = 0.1; // 100ms cap
@@ -9927,6 +10245,24 @@
           window.lastLagWarning = Date.now();
         }
         dt = MAX_DELTA_TIME;
+      }
+      
+      // PR #125: FPS Watchdog - Track rolling 10-frame average FPS
+      performanceLog.fpsHistory.push(dt);
+      if (performanceLog.fpsHistory.length > 10) {
+        performanceLog.fpsHistory.shift(); // Keep only last 10 frames
+      }
+      // Calculate average FPS from rolling window
+      if (performanceLog.fpsHistory.length > 0) {
+        const avgDt = performanceLog.fpsHistory.reduce((sum, val) => sum + val, 0) / performanceLog.fpsHistory.length;
+        performanceLog.averageFps = avgDt > 0 ? 1 / avgDt : 60;
+        
+        // PR #125: Throttle particle spawning to 50% when FPS < 30
+        if (performanceLog.averageFps < 30) {
+          performanceLog.particleThrottle = 0.5;
+        } else {
+          performanceLog.particleThrottle = 1.0;
+        }
       }
       
       // Frame Skip Mechanism: Determine if rendering should be skipped based on previous frame time
@@ -10238,13 +10574,16 @@
 
       // 3. AURA
       if (weapons.aura.active && time - weapons.aura.lastShot > weapons.aura.cooldown) {
-        // Damage all in range
+        // PR #124: Damage all in range with NaN guards
+        const auraDmg = weapons.aura.damage * (playerStats.strength || 1);
+        const validAuraDmg = (Number.isFinite(auraDmg) && auraDmg >= 0) ? auraDmg : 5; // Default aura damage
+        
         let hit = false;
         enemies.forEach(e => {
           if (e.isDead) return;
           const d = player.mesh.position.distanceTo(e.mesh.position);
           if (d < weapons.aura.range) {
-            e.takeDamage(weapons.aura.damage * playerStats.strength);
+            e.takeDamage(validAuraDmg);
             hit = true;
           }
         });
@@ -10431,17 +10770,24 @@
       
       // 8. FIRE RING
       if (weapons.fireRing.active && time - weapons.fireRing.lastShot > weapons.fireRing.cooldown) {
-        // Damage enemies within ring range
+        // PR #124: Damage enemies within ring range with NaN guards
         let hit = false;
         enemies.forEach(e => {
           if (e.isDead) return;
           const d = player.mesh.position.distanceTo(e.mesh.position);
           if (d < weapons.fireRing.range) {
-            const dmg = weapons.fireRing.damage * playerStats.strength;
-            const isCrit = Math.random() < playerStats.critChance;
-            const finalDmg = isCrit ? dmg * playerStats.critDmg : dmg;
-            e.takeDamage(finalDmg);
-            createDamageNumber(finalDmg, e.mesh.position, isCrit);
+            const dmg = weapons.fireRing.damage * (playerStats.strength || 1);
+            // PR #125: Crit chance with precision bonus
+            const precisionCritBonus = joystickRight.active ? (playerStats.precision * 0.01) : 0;
+            const effectiveCritChance = playerStats.critChance + precisionCritBonus;
+            const isCrit = Math.random() < effectiveCritChance;
+            const finalDmg = isCrit ? dmg * (playerStats.critDmg || 1.5) : dmg;
+            
+            // PR #124: Validate damage is finite and positive
+            const validDmg = (Number.isFinite(finalDmg) && finalDmg >= 0) ? finalDmg : 8; // Default fire ring damage
+            
+            e.takeDamage(validDmg);
+            createDamageNumber(validDmg, e.mesh.position, isCrit);
             
             // Fire particles on hit
             spawnParticles(e.mesh.position, 0xFF4500, 6); // Orange-red fire
