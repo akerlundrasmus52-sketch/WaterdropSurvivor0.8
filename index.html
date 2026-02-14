@@ -1,10 +1,60 @@
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-    <title>Waterdrop</title>
-    <link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Water Drop Survivor</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #e0f7fa; }
+        #game { margin: 50px auto; width: 600px; height: 400px; border: 1px solid #00695c; position: relative; overflow: hidden; }
+        .drop { background-color: #00bcd4; width: 20px; height: 20px; border-radius: 50%; position: absolute; }
+        .bucket { background-color: #f44336; width: 100px; height: 20px; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); }
+    </style>
 </head>
 <body>
-    <h1>Welcome to Waterdrop</h1>
-    <p>This is the pre-PR version of the index.html file.</p>
+    <h1>Water Drop Survivor Game</h1>
+    <div id="game">
+        <div class="bucket"></div>
+    </div>
+    <script>
+        // Game Logic
+        let gameArea = document.getElementById('game');
+        let bucket = document.querySelector('.bucket');
+        let dropInterval;
+        let drops = [];
+
+        function createDrop() {
+            let drop = document.createElement('div');
+            drop.classList.add('drop');
+            drop.style.left = Math.random() * (gameArea.clientWidth - 20) + 'px';
+            gameArea.appendChild(drop);
+            drops.push(drop);
+            fallDrop(drop);
+        }
+
+        function fallDrop(drop) {
+            let fallInterval = setInterval(() => {
+                let dropBottom = parseInt(drop.style.top) || 0;
+                drop.style.top = dropBottom + 5 + 'px';
+                if (dropBottom > gameArea.clientHeight) {
+                    clearInterval(fallInterval);
+                    gameArea.removeChild(drop);
+                    drops.shift();
+                }
+            }, 20);
+        }
+
+        function moveBucket(event) {
+            let bucketLeft = bucket.offsetLeft;
+            if (event.key === 'ArrowLeft' && bucketLeft > 0) {
+                bucket.style.left = bucketLeft - 15 + 'px';
+            } else if (event.key === 'ArrowRight' && bucketLeft < gameArea.clientWidth - 100) {
+                bucket.style.left = bucketLeft + 15 + 'px';
+            }
+        }
+
+        document.addEventListener('keydown', moveBucket);
+        dropInterval = setInterval(createDrop, 1000);
+    </script>
 </body>
 </html>
