@@ -1158,6 +1158,41 @@
       50% { filter: brightness(2); box-shadow: 0 0 40px rgba(255,255,255,1), 0 0 80px rgba(93,173,226,1); }
     }
 
+    /* Equipment menu button - round icon under title */
+    #equipment-menu-btn {
+      position: absolute;
+      top: 44%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: linear-gradient(to bottom, #5A3A31, #3a2a21);
+      border: 3px solid #8B4513;
+      border-radius: 50%;
+      width: 60px;
+      height: 60px;
+      font-size: 30px;
+      cursor: pointer;
+      z-index: 51;
+      box-shadow: 0 4px 0 #2a1a11, 0 6px 12px rgba(0,0,0,0.5);
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #FFD700;
+      text-shadow: 0 0 8px rgba(255,215,0,0.6);
+      pointer-events: none; /* Only enabled on main menu */
+    }
+
+    #equipment-menu-btn:hover {
+      transform: translateX(-50%) translateY(-2px);
+      box-shadow: 0 6px 0 #2a1a11, 0 8px 16px rgba(0,0,0,0.6);
+      filter: brightness(1.2);
+    }
+
+    #equipment-menu-btn:active {
+      transform: translateX(-50%) translateY(2px);
+      box-shadow: 0 2px 0 #2a1a11, 0 4px 8px rgba(0,0,0,0.4);
+    }
+
     .gold-display {
       position: absolute;
       top: 20px;
@@ -1525,6 +1560,7 @@
   <div id="main-menu">
     <div class="gold-display" id="menu-gold">GOLD: 0</div>
     <div class="menu-title">WATER DROP SURVIVOR</div>
+    <button id="equipment-menu-btn" title="Equipment & Gear">⚔️</button>
     <div class="menu-buttons">
       <button class="menu-btn" id="start-game-btn">START GAME</button>
       <button class="menu-btn" id="progression-btn">PROGRESSION</button>
@@ -4035,7 +4071,19 @@
             }
             
             const isCrit = Math.random() < playerStats.critChance;
-            if (isCrit) dmg *= playerStats.critDmg;
+            if (isCrit) {
+              const critMult = isFinite(playerStats.critDmg) ? playerStats.critDmg : 1.5;
+              dmg *= critMult;
+            }
+            
+            // Defensive clamp: ensure damage is finite and positive
+            if (!isFinite(dmg) || dmg <= 0) {
+              if (!window.nanDamageWarned) {
+                console.warn('Projectile.update: Non-finite or non-positive damage detected. dmg:', dmg, 'playerStats:', playerStats);
+                window.nanDamageWarned = true;
+              }
+              dmg = 1; // Fallback to minimum damage
+            }
             
             enemy.takeDamage(Math.floor(dmg), isCrit);
             
@@ -7326,10 +7374,14 @@
       updateGoldDisplays();
       isGameActive = false;
       isPaused = true;
+      // Enable equipment menu button pointer events
+      document.getElementById('equipment-menu-btn').style.pointerEvents = 'auto';
     }
     
     function hideMainMenu() {
       document.getElementById('main-menu').style.display = 'none';
+      // Disable equipment menu button pointer events
+      document.getElementById('equipment-menu-btn').style.pointerEvents = 'none';
     }
     
     // Countdown system (PR #70-71)
@@ -7566,6 +7618,14 @@
       };
       
       document.getElementById('gear-btn').onclick = () => {
+        playSound('waterdrop');
+        hideMainMenu();
+        updateGearScreen();
+        document.getElementById('gear-screen').style.display = 'flex';
+      };
+      
+      // Equipment menu button (round icon on main menu)
+      document.getElementById('equipment-menu-btn').onclick = () => {
         playSound('waterdrop');
         hideMainMenu();
         updateGearScreen();
