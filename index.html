@@ -1508,6 +1508,30 @@
         flex-direction: row;
         justify-content: space-between;
       }
+      
+      /* NEW: Show menu button in landscape too for consistency */
+      #menu-btn {
+        display: flex !important;
+        top: 20px;
+        right: 220px; /* Position to left of settings/stats buttons */
+      }
+      
+      /* Ensure settings and stats buttons are visible in landscape */
+      #settings-btn, #stats-btn {
+        display: flex !important;
+      }
+    }
+
+    /* NEW: Tutorial overlay button styles */
+    #tutorial-start-btn:hover {
+      background: linear-gradient(135deg, #3498DB, #2980B9);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 25px rgba(93,173,226,0.6);
+    }
+
+    #tutorial-start-btn:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 10px rgba(93,173,226,0.4);
     }
 
   </style>
@@ -1744,6 +1768,105 @@
     <!-- Phase 3: Stat Notification Queue -->
     <div id="stat-notifications"></div>
 
+    <!-- NEW: First-Run Tutorial Overlay -->
+    <div id="tutorial-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 200; padding: 20px; box-sizing: border-box; overflow-y: auto;">
+      <div style="max-width: 800px; margin: 0 auto; color: #FFF; font-family: 'M PLUS Rounded 1c', sans-serif;">
+        <h1 style="text-align: center; color: #5DADE2; font-size: 48px; margin-bottom: 30px; text-shadow: 0 0 20px rgba(93,173,226,0.8);">
+          🌊 Water Drop Survivor - Tutorial 🌊
+        </h1>
+        
+        <div style="background: rgba(93,173,226,0.1); border: 2px solid #5DADE2; border-radius: 10px; padding: 20px; margin-bottom: 20px;">
+          <h2 style="color: #FFD700; margin-top: 0;">⚠️ Early Alpha Notice</h2>
+          <p style="font-size: 18px; line-height: 1.6;">
+            This game is in <strong>early alpha</strong> development. Sounds and music are pending and will be added in future updates.
+          </p>
+        </div>
+
+        <div style="background: rgba(255,255,255,0.05); border-radius: 10px; padding: 20px; margin-bottom: 20px;">
+          <h2 style="color: #5DADE2;">🎮 Controls</h2>
+          <ul style="font-size: 18px; line-height: 2;">
+            <li><strong>Left Stick:</strong> Move your water drop character</li>
+            <li><strong>Right Stick:</strong> Manual aim (optional) - aim where you want to shoot</li>
+            <li><strong>Auto-Aim:</strong> When right stick is idle, auto-aim targets nearest enemy</li>
+            <li><strong>Toggle Auto-Aim:</strong> Use the settings button to turn auto-aim on/off</li>
+          </ul>
+        </div>
+
+        <div style="background: rgba(255,255,255,0.05); border-radius: 10px; padding: 20px; margin-bottom: 20px;">
+          <h2 style="color: #5DADE2;">📱 Recommended: Portrait Mode</h2>
+          <p style="font-size: 18px; line-height: 1.6;">
+            For the best mobile experience, play in <strong>portrait orientation</strong>. Landscape mode is supported but portrait offers better visibility and control.
+          </p>
+        </div>
+
+        <div style="background: rgba(255,255,255,0.05); border-radius: 10px; padding: 20px; margin-bottom: 20px;">
+          <h2 style="color: #5DADE2;">🎯 Game Mechanics</h2>
+          <ul style="font-size: 18px; line-height: 2;">
+            <li><strong>Camera:</strong> Top-down view follows your character</li>
+            <li><strong>Quests:</strong> Complete objectives to earn rewards</li>
+            <li><strong>Combos:</strong> Chain kills quickly for bonus XP</li>
+            <li><strong>Survival Bosses:</strong> Face mini-bosses at levels 10, 25, and 50</li>
+          </ul>
+        </div>
+
+        <div style="background: rgba(255,255,255,0.05); border-radius: 10px; padding: 20px; margin-bottom: 20px;">
+          <h2 style="color: #5DADE2;">💰 Progression System</h2>
+          <p style="font-size: 18px; line-height: 1.6;">
+            <strong>Gold-Based Upgrades:</strong> After you die, spend collected gold in the shop to permanently upgrade your stats. This is how you progress and get stronger for future runs!
+          </p>
+        </div>
+
+        <div style="background: rgba(255,255,255,0.05); border-radius: 10px; padding: 20px; margin-bottom: 20px;">
+          <h2 style="color: #5DADE2;">⚔️ Level-Up System</h2>
+          <p style="font-size: 18px; line-height: 1.6;">
+            Each level-up offers choices between different upgrades, weapons, equipment, and attributes. Build your character strategically! The depth of combinations is part of the fun.
+          </p>
+        </div>
+
+        <div style="background: rgba(255,255,255,0.05); border-radius: 10px; padding: 20px; margin-bottom: 20px;">
+          <h2 style="color: #5DADE2;">🎯 Manual Aim Bonus</h2>
+          <p style="font-size: 18px; line-height: 1.6;">
+            Using manual aim (right stick) with high <strong>Precision</strong> attribute gives you:
+            <br>• Increased critical hit chance
+            <br>• Bonus gold from kills
+            <br>• Aim-assist to help you target enemies
+          </p>
+        </div>
+
+        <div style="background: rgba(255,215,0,0.1); border: 2px solid #FFD700; border-radius: 10px; padding: 20px; margin-bottom: 20px;">
+          <h2 style="color: #FFD700;">📧 Contact & Support</h2>
+          <p style="font-size: 18px; line-height: 1.6;">
+            <strong>Developer Email:</strong> <a href="mailto:timmie_tooth@live.com" style="color: #5DADE2;">timmie_tooth@live.com</a>
+            <br><br>
+            <strong>Donations:</strong> Crypto donation information can be found in the Credits menu.
+          </p>
+        </div>
+
+        <div style="text-align: center; margin-top: 30px;">
+          <label style="display: block; font-size: 20px; margin-bottom: 20px; cursor: pointer;">
+            <input type="checkbox" id="tutorial-dont-show" style="width: 20px; height: 20px; vertical-align: middle; margin-right: 10px; cursor: pointer;">
+            <span style="vertical-align: middle;">Don't show this again</span>
+          </label>
+          
+          <button id="tutorial-start-btn" style="
+            background: linear-gradient(135deg, #5DADE2, #3498DB);
+            color: #FFF;
+            font-size: 32px;
+            font-weight: bold;
+            padding: 20px 60px;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(93,173,226,0.4);
+            font-family: 'M PLUS Rounded 1c', sans-serif;
+            transition: all 0.3s;
+          ">
+            START GAME
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Countdown Text (PR #70-71) -->
     <div id="tutorial-text" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 96px; font-weight: bold; color: #FFF; text-shadow: 0 0 20px rgba(255,255,255,0.8), 0 0 40px rgba(93,173,226,0.6); opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 150;"></div>
 
@@ -1838,6 +1961,9 @@
   <script type="module">
     import * as THREE from 'three';
 
+    // --- DEBUG & PERFORMANCE FLAGS ---
+    window.DEBUG_MODE = false; // Set to true for performance logging
+    
     // --- CONSTANTS & CONFIG ---
     const ATTACK_ANIMATION_DURATION_MS = 400; // Duration of waterdrop attack animation in milliseconds
     
@@ -2315,7 +2441,9 @@
       soundEnabled: true,
       musicEnabled: true,
       isPortrait: null,
-      inputListenersRegistered: false
+      inputListenersRegistered: false,
+      isManualAiming: false, // NEW: Track when player is using manual aim (right stick)
+      tutorialShown: false // NEW: Track if tutorial has been shown
     };
 
     // Input - Twin-Stick Controls
@@ -2354,6 +2482,7 @@
       weaponsUnlocked: 0,
       xpMultiplier: 1, // From gear
       dodgeChance: 0, // From gear
+      precision: 0, // NEW: Aiming/Precision attribute - increases crit/headshot chance and gold bonus when manual aiming
       // Perk System
       perks: {
         vampire: 0,      // Life steal %
@@ -2659,10 +2788,46 @@
           // Rotation/Aiming with RIGHT stick (independent of movement)
           if (joystickRight.active) {
             // Manual aim: Turn to face the direction of right stick
-            const angle = Math.atan2(joystickRight.x, joystickRight.y);
-            this.mesh.rotation.y = angle;
+            gameSettings.isManualAiming = true;
+            let targetAngle = Math.atan2(joystickRight.x, joystickRight.y);
+            
+            // Aim-assist in manual mode: nudge toward nearby enemies
+            if (enemies && enemies.length > 0) {
+              let nearestEnemy = null;
+              let minDist = Infinity;
+              
+              enemies.forEach(e => {
+                if (e && !e.isDead) {
+                  const dist = this.mesh.position.distanceTo(e.mesh.position);
+                  if (dist < minDist && dist < AIM_ASSIST_RANGE) {
+                    minDist = dist;
+                    nearestEnemy = e;
+                  }
+                }
+              });
+              
+              if (nearestEnemy) {
+                const dx = nearestEnemy.mesh.position.x - this.mesh.position.x;
+                const dz = nearestEnemy.mesh.position.z - this.mesh.position.z;
+                const enemyAngle = Math.atan2(dx, dz);
+                
+                // Calculate angle difference
+                let angleDiff = enemyAngle - targetAngle;
+                // Normalize to -PI to PI
+                while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+                while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+                
+                // Only assist if aiming somewhat close to enemy
+                if (Math.abs(angleDiff) < AIM_ASSIST_ANGLE) {
+                  targetAngle += angleDiff * AIM_ASSIST_STRENGTH;
+                }
+              }
+            }
+            
+            this.mesh.rotation.y = targetAngle;
           } else if (gameSettings.autoAim && enemies && enemies.length > 0) {
-            // Auto-aim when enabled (works in any orientation)
+            // Auto-aim when enabled and right stick is idle (works in any orientation)
+            gameSettings.isManualAiming = false;
             let nearestEnemy = null;
             let minDist = Infinity;
             enemies.forEach(e => {
@@ -2680,10 +2845,13 @@
               const angle = Math.atan2(dx, dz);
               this.mesh.rotation.y = angle;
             }
-          } else if (joystickLeft.active) {
-            // If no right stick input and no auto-aim, rotate to face movement direction
-            const angle = Math.atan2(targetVel.x, targetVel.z);
-            this.mesh.rotation.y = angle;
+          } else {
+            gameSettings.isManualAiming = false;
+            if (joystickLeft.active) {
+              // If no right stick input and no auto-aim, rotate to face movement direction
+              const angle = Math.atan2(targetVel.x, targetVel.z);
+              this.mesh.rotation.y = angle;
+            }
           }
 
           // Inertia / Squish Effect - Enhanced for Phase 1
@@ -3896,6 +4064,15 @@
         
         // Only spawn gold if amount > 0
         if (goldAmount > 0) {
+          // NEW: Manual aim bonus - small gold increase when manually aiming
+          if (gameSettings.isManualAiming) {
+            const manualAimBonus = 1 + (playerStats.precision * 0.02); // 2% per precision point
+            goldAmount = Math.floor(goldAmount * manualAimBonus);
+            // Show bonus notification occasionally
+            if (Math.random() < 0.2) {
+              createFloatingText('+Precision!', this.mesh.position, '#FFD700');
+            }
+          }
           spawnGold(this.mesh.position.x, this.mesh.position.z, goldAmount);
         }
         
@@ -4022,7 +4199,13 @@
               dmg = weapons.droneTurret.damage * playerStats.damage * playerStats.strength;
             }
             
-            const isCrit = Math.random() < playerStats.critChance;
+            // NEW: Manual aim bonus - increased crit chance with precision
+            let effectiveCritChance = playerStats.critChance;
+            if (gameSettings.isManualAiming) {
+              effectiveCritChance += playerStats.precision * 0.01; // +1% crit per precision point
+            }
+            
+            const isCrit = Math.random() < effectiveCritChance;
             if (isCrit) dmg *= playerStats.critDmg;
             
             enemy.takeDamage(Math.floor(dmg), isCrit);
@@ -4160,7 +4343,14 @@
           if (dx*dx + dz*dz < 0.6) {
             // Calculate Damage
             let dmg = weapons.iceSpear.damage * playerStats.damage * playerStats.strength;
-            const isCrit = Math.random() < playerStats.critChance;
+            
+            // NEW: Manual aim bonus - increased crit chance with precision
+            let effectiveCritChance = playerStats.critChance;
+            if (gameSettings.isManualAiming) {
+              effectiveCritChance += playerStats.precision * 0.01; // +1% crit per precision point
+            }
+            
+            const isCrit = Math.random() < effectiveCritChance;
             if (isCrit) dmg *= playerStats.critDmg;
             
             enemy.takeDamage(Math.floor(dmg), isCrit);
@@ -4646,12 +4836,40 @@
         bag.position.y = 0;
         group.add(bag);
         
-        // Knot at top
+        // Knot at top (animated)
         const knotGeo = new THREE.SphereGeometry(0.15, 8, 8);
         const knotMat = new THREE.MeshBasicMaterial({ color: 0x654321 }); // Darker brown
         const knot = new THREE.Mesh(knotGeo, knotMat);
         knot.position.y = 0.35;
         group.add(knot);
+        this.knot = knot; // Store reference for animation
+        
+        // NEW: Add loose coins dropping around the bag
+        this.looseCoins = [];
+        for (let i = 0; i < 3; i++) {
+          const coinGeo = new THREE.CylinderGeometry(0.15, 0.15, 0.08, 12);
+          const coinMat = new THREE.MeshPhysicalMaterial({ 
+            color: 0xFFD700,
+            metalness: 0.9,
+            roughness: 0.1,
+            emissive: 0xFFAA00,
+            emissiveIntensity: 0.3
+          });
+          const looseCoin = new THREE.Mesh(coinGeo, coinMat);
+          const angle = (i / 3) * Math.PI * 2;
+          looseCoin.position.set(
+            x + Math.cos(angle) * 0.5,
+            0.3,
+            z + Math.sin(angle) * 0.5
+          );
+          looseCoin.rotation.x = Math.PI / 2;
+          scene.add(looseCoin);
+          this.looseCoins.push({
+            mesh: looseCoin,
+            angle: angle,
+            bouncePhase: Math.random() * Math.PI * 2
+          });
+        }
         
         // Gold coins texture (simple circles on the bag)
         const coinGeo = new THREE.CircleGeometry(0.08, 8);
@@ -4727,8 +4945,11 @@
         
         // Type-specific animations
         if (this.type === 'single') {
-          // Single coin spinning
-          this.mesh.rotation.y += 0.15;
+          // Single coin spinning on its axis like EXP stars (Y-axis rotation)
+          this.mesh.rotation.y += 0.08; // Steady 360-degree rotation on axis
+          
+          // Add slight wobble for interest
+          this.mesh.rotation.x = Math.PI / 2 + Math.sin(this.wobblePhase * 2) * 0.05;
         } else if (this.type === 'multiple') {
           // Multiple coins orbiting and spinning
           this.coins.forEach((coinData, i) => {
@@ -4736,7 +4957,12 @@
             const radius = 0.4;
             coinData.mesh.position.x = this.centerPos.x + Math.cos(coinData.angle) * radius;
             coinData.mesh.position.z = this.centerPos.z + Math.sin(coinData.angle) * radius;
-            coinData.mesh.rotation.y += 0.15;
+            
+            // Spin on axis like EXP stars (Y-axis rotation)
+            coinData.mesh.rotation.y += 0.08;
+            
+            // Add slight wobble for interest
+            coinData.mesh.rotation.x = Math.PI / 2 + Math.sin(this.wobblePhase * 2 + i) * 0.05;
             
             // Update Y position for bouncing
             if (this.bounceTime < 1) {
@@ -4750,6 +4976,27 @@
           // Bag swaying
           this.mesh.rotation.z = Math.sin(this.wobblePhase) * 0.1;
           this.wobblePhase += 0.05;
+          
+          // NEW: Animate knot bouncing
+          if (this.knot) {
+            this.knot.scale.set(
+              1 + Math.sin(this.wobblePhase * 3) * 0.1,
+              1 - Math.sin(this.wobblePhase * 3) * 0.1,
+              1 + Math.sin(this.wobblePhase * 3) * 0.1
+            );
+          }
+          
+          // NEW: Animate loose coins
+          if (this.looseCoins) {
+            this.looseCoins.forEach((coinData) => {
+              // Spin on axis like EXP stars
+              coinData.mesh.rotation.y += 0.08;
+              
+              // Bob up and down
+              coinData.bouncePhase += 0.06;
+              coinData.mesh.position.y = 0.3 + Math.sin(coinData.bouncePhase) * 0.08;
+            });
+          }
         } else if (this.type === 'chest') {
           // Chest glowing pulse
           if (this.glowLight) {
@@ -4821,6 +5068,32 @@
             coinData.mesh.geometry.dispose();
             coinData.mesh.material.dispose();
           });
+        } else if (this.type === 'bag' && this.looseCoins) {
+          // NEW: Clean up bag's loose coins
+          this.looseCoins.forEach(coinData => {
+            scene.remove(coinData.mesh);
+            coinData.mesh.geometry.dispose();
+            coinData.mesh.material.dispose();
+          });
+          
+          if (this.mesh) {
+            if (this.glowLight) {
+              this.mesh.remove(this.glowLight);
+            }
+            scene.remove(this.mesh);
+            
+            // Dispose geometries and materials recursively
+            this.mesh.traverse((child) => {
+              if (child.geometry) child.geometry.dispose();
+              if (child.material) {
+                if (Array.isArray(child.material)) {
+                  child.material.forEach(mat => mat.dispose());
+                } else {
+                  child.material.dispose();
+                }
+              }
+            });
+          }
         } else if (this.mesh) {
           // Clean up single mesh or group
           if (this.glowLight) {
@@ -4917,6 +5190,41 @@
         this.lid.position.set(0, 0.35, 0);
         this.mesh.add(this.lid);
         
+        // NEW: Add light seams (thin glowing lines between lid and body)
+        // Reuse same material for all seams for better performance
+        const seamMat = new THREE.MeshBasicMaterial({ 
+          color: props.lightColor,
+          transparent: true,
+          opacity: 0.6,
+          side: THREE.DoubleSide
+        });
+        
+        // Front seam
+        const seamGeo = new THREE.PlaneGeometry(0.9, 0.05);
+        const seamFront = new THREE.Mesh(seamGeo, seamMat);
+        seamFront.position.set(0, 0.3, 0.33);
+        this.mesh.add(seamFront);
+        
+        // Back seam
+        const seamBack = new THREE.Mesh(seamGeo, seamMat);
+        seamBack.position.set(0, 0.3, -0.33);
+        this.mesh.add(seamBack);
+        
+        // Side seams
+        const seamSideGeo = new THREE.PlaneGeometry(0.05, 0.65);
+        const seamLeft = new THREE.Mesh(seamSideGeo, seamMat);
+        seamLeft.position.set(-0.43, 0.3, 0);
+        seamLeft.rotation.y = Math.PI / 2;
+        this.mesh.add(seamLeft);
+        
+        const seamRight = new THREE.Mesh(seamSideGeo, seamMat);
+        seamRight.position.set(0.43, 0.3, 0);
+        seamRight.rotation.y = Math.PI / 2;
+        this.mesh.add(seamRight);
+        
+        this.seams = [seamFront, seamBack, seamLeft, seamRight];
+        this.seamMaterial = seamMat; // Store reference for animation
+        
         this.active = true;
         this.opened = false;
         this.collectRange = 1.5;
@@ -4949,7 +5257,14 @@
           this.glowLight.position.copy(this.mesh.position);
           this.glowLight.position.y += 0.5;
           // Pulsing glow
-          this.glowLight.intensity = 1.5 + Math.sin(this.wobblePhase * 2) * 0.5;
+          const pulseIntensity = 1.5 + Math.sin(this.wobblePhase * 2) * 0.5;
+          this.glowLight.intensity = pulseIntensity;
+          
+          // NEW: Pulse seam opacity in sync with light (use shared material)
+          if (this.seamMaterial) {
+            const seamOpacity = 0.4 + Math.sin(this.wobblePhase * 2) * 0.3;
+            this.seamMaterial.opacity = seamOpacity;
+          }
         }
         
         // Check if player is close enough to open
@@ -7528,9 +7843,35 @@
       // Main Menu Buttons
       document.getElementById('start-game-btn').onclick = () => {
         playSound('waterdrop');
+        
+        // NEW: Check if tutorial should be shown (first time or user hasn't dismissed it)
+        const tutorialShown = localStorage.getItem('waterDropSurvivorTutorialShown');
+        if (!tutorialShown || tutorialShown !== 'true') {
+          // Show tutorial overlay
+          document.getElementById('tutorial-overlay').style.display = 'block';
+        } else {
+          // Skip tutorial and start game
+          hideMainMenu();
+          resetGame();
+          startCountdown();
+        }
+      };
+      
+      // NEW: Tutorial overlay button handler
+      document.getElementById('tutorial-start-btn').onclick = () => {
+        playSound('waterdrop');
+        
+        // Check if user wants to hide tutorial in the future
+        const dontShow = document.getElementById('tutorial-dont-show').checked;
+        if (dontShow) {
+          localStorage.setItem('waterDropSurvivorTutorialShown', 'true');
+        }
+        
+        // Hide tutorial and start game
+        document.getElementById('tutorial-overlay').style.display = 'none';
         hideMainMenu();
         resetGame();
-        startCountdown(); // Start countdown after resetting game (PR #70)
+        startCountdown();
       };
       
       document.getElementById('progression-btn').onclick = () => {
@@ -7853,6 +8194,12 @@
     // Phase 5: Updated to use Object Pool for performance
     function spawnParticles(pos, color, count) {
       if (!particlePool) return; // Safety check
+      
+      // NEW: Throttle particle count when performance is low
+      if (performanceWatchdog.throttleEffects) {
+        count = Math.max(1, Math.floor(count / 2)); // Reduce to 50% (min 1)
+      }
+      
       for(let i=0; i<count; i++) {
         const particle = particlePool.get();
         particle.reset(pos, color);
@@ -10288,6 +10635,59 @@
       cumulativeFrameTime: 0 // Track cumulative time for accurate average
     };
     
+    // NEW: Performance watchdog for portrait mode
+    const DEFAULT_FPS = 60;
+    const AIM_ASSIST_STRENGTH = 0.15; // 15% nudge toward enemies
+    const AIM_ASSIST_RANGE = 15; // units
+    const AIM_ASSIST_ANGLE = Math.PI / 4; // 45 degrees
+    
+    let performanceWatchdog = {
+      fpsHistory: [DEFAULT_FPS], // Initialize with default to prevent division by zero
+      currentFPS: DEFAULT_FPS,
+      throttleEffects: false,
+      lastFPSCheck: 0,
+      checkInterval: 1000 // Check FPS every second
+    };
+    
+    function updatePerformanceWatchdog(dt) {
+      const currentTime = performance.now();
+      
+      // Calculate FPS from delta time
+      const fps = dt > 0 ? 1000 / dt : DEFAULT_FPS;
+      
+      // Update FPS history (keep last 10 samples)
+      performanceWatchdog.fpsHistory.push(fps);
+      if (performanceWatchdog.fpsHistory.length > 10) {
+        performanceWatchdog.fpsHistory.shift();
+      }
+      
+      // Check FPS periodically
+      if (currentTime - performanceWatchdog.lastFPSCheck > performanceWatchdog.checkInterval) {
+        performanceWatchdog.lastFPSCheck = currentTime;
+        
+        // Calculate average FPS (safe from division by zero)
+        const avgFPS = performanceWatchdog.fpsHistory.length > 0 
+          ? performanceWatchdog.fpsHistory.reduce((a, b) => a + b, 0) / performanceWatchdog.fpsHistory.length 
+          : DEFAULT_FPS;
+        performanceWatchdog.currentFPS = avgFPS;
+        
+        // Throttle effects if FPS drops below 30 (especially important in portrait mode)
+        const lowFPSThreshold = 30;
+        if (avgFPS < lowFPSThreshold && !performanceWatchdog.throttleEffects) {
+          performanceWatchdog.throttleEffects = true;
+          if (window.DEBUG_MODE) {
+            console.warn(`Low FPS detected (${avgFPS.toFixed(1)}), throttling effects`);
+          }
+        } else if (avgFPS >= lowFPSThreshold + 5 && performanceWatchdog.throttleEffects) {
+          // Add hysteresis: only re-enable at FPS > 35
+          performanceWatchdog.throttleEffects = false;
+          if (window.DEBUG_MODE) {
+            console.log(`FPS recovered (${avgFPS.toFixed(1)}), restoring effects`);
+          }
+        }
+      }
+    }
+    
     function animate(time) {
       requestAnimationFrame(animate);
       
@@ -10322,6 +10722,9 @@
         }
         dt = MAX_DELTA_TIME;
       }
+      
+      // NEW: Update performance watchdog
+      updatePerformanceWatchdog(dt * 1000); // Convert to milliseconds
       
       // Frame Skip Mechanism: Determine if rendering should be skipped based on previous frame time
       // Note: This only skips the render call - game logic still runs to maintain state consistency
@@ -10832,7 +11235,14 @@
           const d = player.mesh.position.distanceTo(e.mesh.position);
           if (d < weapons.fireRing.range) {
             const dmg = weapons.fireRing.damage * playerStats.strength;
-            const isCrit = Math.random() < playerStats.critChance;
+            
+            // NEW: Manual aim bonus - increased crit chance with precision
+            let effectiveCritChance = playerStats.critChance;
+            if (gameSettings.isManualAiming) {
+              effectiveCritChance += playerStats.precision * 0.01; // +1% crit per precision point
+            }
+            
+            const isCrit = Math.random() < effectiveCritChance;
             const finalDmg = isCrit ? dmg * playerStats.critDmg : dmg;
             e.takeDamage(finalDmg);
             createDamageNumber(finalDmg, e.mesh.position, isCrit);
