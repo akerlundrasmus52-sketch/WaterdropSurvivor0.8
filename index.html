@@ -7034,6 +7034,10 @@
         saveData.gold -= cost;
         const stats = ['maxHp', 'attackDamage', 'attackSpeed', 'armor'];
         const randomStat = stats[Math.floor(Math.random() * stats.length)];
+        // Ensure elixirs object exists
+        if (!saveData.camp.alchemy.elixirs) {
+          saveData.camp.alchemy.elixirs = {};
+        }
         if (!saveData.camp.alchemy.elixirs[randomStat]) {
           saveData.camp.alchemy.elixirs[randomStat] = 0;
         }
@@ -7057,9 +7061,7 @@
       const meditationPower = STRUCTURE_CONFIG.meditation.getBenefits(level).meditationPower;
       showStatChange(`🧘 Meditating... +${meditationPower}% to all stats for next run!`);
       playSound('levelup');
-      // Store temporary buff (would be applied on run start)
-      saveData.camp.meditation.activeBuffs = { allStats: meditationPower };
-      saveSaveData();
+      // Note: Meditation buff system to be fully implemented in future update
     };
     window.collectPassiveGold = () => { showStatChange('⚠️ Passive income system coming in future update!'); playSound('hit'); };
     window.restAtCampfire = () => { 
@@ -10865,11 +10867,11 @@
         // Alchemy elixirs - permanent stat bonuses
         if (saveData.camp.alchemy?.elixirs) {
           const elixirs = saveData.camp.alchemy.elixirs;
-          // Each elixir provides +5 to a specific stat
-          campBonuses.hpBonus = (elixirs.maxHp || 0) * 5;
-          campBonuses.damageBonus = (elixirs.attackDamage || 0) * 0.05;
-          campBonuses.atkSpeedBonus = (elixirs.attackSpeed || 0) * 0.05;
-          campBonuses.armorBonus = (elixirs.armor || 0) * 2;
+          // Each elixir provides different stat increases based on stat type
+          campBonuses.hpBonus = (elixirs.maxHp || 0) * 5;           // +5 HP per elixir
+          campBonuses.damageBonus = (elixirs.attackDamage || 0) * 0.05;  // +5% damage per elixir
+          campBonuses.atkSpeedBonus = (elixirs.attackSpeed || 0) * 0.05; // +5% attack speed per elixir
+          campBonuses.armorBonus = (elixirs.armor || 0) * 2;        // +2 armor per elixir
         }
       }
       
