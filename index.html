@@ -1409,6 +1409,17 @@
       #menu-btn {
         display: flex !important;
       }
+      
+      /* Ensure back button is 100% visible in portrait mode */
+      .back-btn {
+        bottom: max(30px, env(safe-area-inset-bottom, 30px));
+        margin-bottom: 10px;
+      }
+      
+      /* Center and align all menus properly */
+      #main-menu, #credits-screen, #achievements-screen {
+        padding: max(40px, env(safe-area-inset-top, 40px)) 20px max(100px, calc(env(safe-area-inset-bottom, 20px) + 80px)) 20px;
+      }
     }
 
     @media (orientation: landscape) {
@@ -1427,6 +1438,29 @@
         padding: 8px;
         flex-direction: row;
         justify-content: space-between;
+      }
+      
+      /* Fix unaligned buttons in landscape mode */
+      #stats-btn, #settings-btn {
+        top: 15px;
+      }
+      
+      #settings-btn {
+        right: 110px;
+      }
+      
+      #stats-btn {
+        right: 15px;
+      }
+      
+      #equipment-btn {
+        top: 15px;
+        right: 205px;
+      }
+      
+      /* Center menus properly in landscape */
+      #main-menu, #credits-screen, #achievements-screen {
+        padding: 30px 40px 100px 40px;
       }
     }
 
@@ -7370,7 +7404,12 @@
       document.getElementById('gear-back-btn').onclick = () => {
         playSound('waterdrop');
         document.getElementById('gear-screen').style.display = 'none';
-        showMainMenu();
+        // If game was active, resume it; otherwise return to main menu
+        if (isGameActive) {
+          isPaused = false;
+        } else {
+          showMainMenu();
+        }
       };
       
       document.getElementById('credits-back-btn').onclick = () => {
@@ -7424,10 +7463,15 @@
       
       // Stats Bar removed - No toggle needed
       
-      // Equipment Button - Opens Gear Screen
+      // Equipment Button - Opens Gear Screen (pauses game if in progress)
       document.getElementById('equipment-btn').onclick = () => {
         playSound('hit');
-        document.getElementById('main-menu').style.display = 'none';
+        // If game is active, pause it; otherwise just hide main menu
+        if (isGameActive) {
+          isPaused = true;
+        } else {
+          document.getElementById('main-menu').style.display = 'none';
+        }
         document.getElementById('gear-screen').style.display = 'flex';
         updateGearScreen();
       };
