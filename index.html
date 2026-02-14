@@ -5144,12 +5144,14 @@
         wisdom: 0
       },
       unspentAttributePoints: 0,
-      // Gear system
+      // PR #125-143: Gear system - 6 slots with new structure
       equippedGear: {
-        weapon: null,
-        armor: null,
-        accessory1: null,
-        accessory2: null
+        helmet: null,
+        bodyArmor: null,
+        boots: null,
+        ring: null,
+        amulet: null,
+        weaponCharm: null
       },
       inventory: []
     };
@@ -5584,100 +5586,114 @@
     window.increaseAttribute = increaseAttribute;
 
     // --- GEAR SYSTEM ---
+    // PR #125-143: Updated gear attributes for new equipment system
     const GEAR_ATTRIBUTES = {
-      flexibility: { name: 'Flexibility', icon: '🤸', color: '#9B59B6' },
-      movementSpeed: { name: 'Movement Speed', icon: '💨', color: '#3498DB' },
+      hp: { name: 'HP', icon: '❤️', color: '#E74C3C' },
+      armor: { name: 'Armor', icon: '🛡️', color: '#95A5A6' },
+      hpRegen: { name: 'HP Regen', icon: '💚', color: '#2ECC71' },
+      moveSpeed: { name: 'Move Speed', icon: '💨', color: '#3498DB' },
+      dodge: { name: 'Dodge', icon: '🌀', color: '#9B59B6' },
+      damage: { name: 'Damage', icon: '⚔️', color: '#E67E22' },
+      crit: { name: 'Crit', icon: '✨', color: '#F1C40F' },
       attackSpeed: { name: 'Attack Speed', icon: '⚡', color: '#F39C12' },
-      attackPrecision: { name: 'Attack Precision', icon: '🎯', color: '#E74C3C' },
-      critChance: { name: 'Crit Chance', icon: '✨', color: '#E67E22' },
-      elementalMagic: { name: 'Elemental Magic', icon: '🔮', color: '#8E44AD' }
+      xpBonus: { name: 'XP Bonus', icon: '📈', color: '#1ABC9C' }
     };
 
-    // Define starter gear that players begin with
+    // PR #125-143: Define 5 rarities
+    const GEAR_RARITIES = {
+      common: { name: 'Common', color: '#999999', chance: 0.50, statRange: [1, 2] },
+      uncommon: { name: 'Uncommon', color: '#2ecc71', chance: 0.30, statRange: [2, 4] },
+      rare: { name: 'Rare', color: '#3498db', chance: 0.15, statRange: [3, 6] },
+      epic: { name: 'Epic', color: '#9b59b6', chance: 0.04, statRange: [5, 9] },
+      legendary: { name: 'Legendary', color: '#e74c3c', chance: 0.01, statRange: [8, 15] }
+    };
+
+    // PR #125-143: Gear generation system with proper slot types and rarities
+    const GEAR_SLOT_NAMES = {
+      helmet: ['Helm', 'Cap', 'Crown', 'Hood', 'Mask', 'Headband'],
+      bodyArmor: ['Armor', 'Vest', 'Chestplate', 'Robe', 'Tunic', 'Mail'],
+      boots: ['Boots', 'Shoes', 'Greaves', 'Sandals', 'Slippers'],
+      ring: ['Ring', 'Band', 'Circle', 'Loop'],
+      amulet: ['Amulet', 'Necklace', 'Pendant', 'Talisman', 'Charm'],
+      weaponCharm: ['Charm', 'Rune', 'Sigil', 'Emblem', 'Trinket']
+    };
+
+    const GEAR_PREFIXES = {
+      common: ['Worn', 'Old', 'Simple', 'Basic', 'Plain'],
+      uncommon: ['Sturdy', 'Fine', 'Quality', 'Good', 'Decent'],
+      rare: ['Superior', 'Excellent', 'Rare', 'Pristine', 'Polished'],
+      epic: ['Epic', 'Magnificent', 'Powerful', 'Mighty', 'Grand'],
+      legendary: ['Legendary', 'Divine', 'Eternal', 'Mythic', 'Ancient']
+    };
+
+    // PR #125-143: Generate random gear with proper stats based on slot and rarity
+    function generateGear(slot, rarity = null) {
+      // Determine rarity if not specified
+      if (!rarity) {
+        const roll = Math.random();
+        let cumulative = 0;
+        for (const r in GEAR_RARITIES) {
+          cumulative += GEAR_RARITIES[r].chance;
+          if (roll <= cumulative) {
+            rarity = r;
+            break;
+          }
+        }
+      }
+      
+      const rarityInfo = GEAR_RARITIES[rarity];
+      const [minStat, maxStat] = rarityInfo.statRange;
+      
+      // Generate stats based on slot type
+      const stats = {};
+      let numStats = 1;
+      if (rarity === 'uncommon') numStats = 2;
+      else if (rarity === 'rare') numStats = 2;
+      else if (rarity === 'epic') numStats = 3;
+      else if (rarity === 'legendary') numStats = 4;
+      
+      // Define primary stats for each slot type
+      const slotStatPools = {
+        helmet: ['hp', 'armor', 'hpRegen', 'xpBonus'],
+        bodyArmor: ['hp', 'armor', 'hpRegen', 'dodge'],
+        boots: ['moveSpeed', 'dodge', 'hp'],
+        ring: ['crit', 'damage', 'attackSpeed'],
+        amulet: ['damage', 'crit', 'xpBonus', 'attackSpeed'],
+        weaponCharm: ['damage', 'attackSpeed', 'crit']
+      };
+      
+      const availableStats = [...slotStatPools[slot]];
+      
+      for (let i = 0; i < numStats && availableStats.length > 0; i++) {
+        const statIndex = Math.floor(Math.random() * availableStats.length);
+        const statType = availableStats.splice(statIndex, 1)[0];
+        stats[statType] = Math.floor(minStat + Math.random() * (maxStat - minStat + 1));
+      }
+      
+      // Generate name
+      const prefix = GEAR_PREFIXES[rarity][Math.floor(Math.random() * GEAR_PREFIXES[rarity].length)];
+      const baseName = GEAR_SLOT_NAMES[slot][Math.floor(Math.random() * GEAR_SLOT_NAMES[slot].length)];
+      const name = `${prefix} ${baseName}`;
+      
+      return {
+        id: `gear_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        name,
+        slot,
+        rarity,
+        stats,
+        description: `A ${rarity} ${slot.replace(/([A-Z])/g, ' $1').toLowerCase()}`
+      };
+    }
+
+    // PR #125-143: Starter gear for new players
     const STARTER_GEAR = [
       {
-        id: 'starter_weapon',
-        name: 'Worn Sword',
-        type: 'weapon',
+        id: 'starter_helmet',
+        name: 'Simple Cap',
+        slot: 'helmet',
         rarity: 'common',
-        stats: { attackSpeed: 1, attackPrecision: 1 },
-        description: 'A basic weapon'
-      },
-      {
-        id: 'starter_armor',
-        name: 'Leather Vest',
-        type: 'armor',
-        rarity: 'common',
-        stats: { flexibility: 1, movementSpeed: 1 },
-        description: 'Basic protection'
-      },
-      {
-        id: 'starter_accessory1',
-        name: 'Lucky Charm',
-        type: 'accessory',
-        rarity: 'common',
-        stats: { critChance: 1 },
-        description: 'Brings good fortune'
-      }
-    ];
-
-    // Additional gear that can be obtained (for future expansion)
-    const GEAR_POOL = [
-      {
-        id: 'blazing_sword',
-        name: 'Blazing Sword',
-        type: 'weapon',
-        rarity: 'rare',
-        stats: { attackSpeed: 2, attackPrecision: 2, elementalMagic: 1 },
-        description: 'A sword wreathed in flames'
-      },
-      {
-        id: 'frost_blade',
-        name: 'Frost Blade',
-        type: 'weapon',
-        rarity: 'epic',
-        stats: { attackSpeed: 3, attackPrecision: 3, elementalMagic: 2 },
-        description: 'Freezes enemies on hit'
-      },
-      {
-        id: 'shadow_cloak',
-        name: 'Shadow Cloak',
-        type: 'armor',
-        rarity: 'rare',
-        stats: { flexibility: 3, movementSpeed: 2 },
-        description: 'Move like a shadow'
-      },
-      {
-        id: 'dragon_plate',
-        name: 'Dragon Plate',
-        type: 'armor',
-        rarity: 'legendary',
-        stats: { flexibility: 2, movementSpeed: 1, attackPrecision: 2 },
-        description: 'Forged from dragon scales'
-      },
-      {
-        id: 'crit_ring',
-        name: 'Ring of Critical Strikes',
-        type: 'accessory',
-        rarity: 'rare',
-        stats: { critChance: 3, attackPrecision: 1 },
-        description: 'Increases critical hit chance'
-      },
-      {
-        id: 'speed_boots',
-        name: 'Winged Boots',
-        type: 'accessory',
-        rarity: 'epic',
-        stats: { movementSpeed: 4, flexibility: 1 },
-        description: 'Swift as the wind'
-      },
-      {
-        id: 'magic_amulet',
-        name: 'Arcane Amulet',
-        type: 'accessory',
-        rarity: 'legendary',
-        stats: { elementalMagic: 4, attackSpeed: 2 },
-        description: 'Channels magical energy'
+        stats: { hp: 2, armor: 1 },
+        description: 'Basic head protection'
       }
     ];
 
@@ -5686,10 +5702,8 @@
       if (!saveData.inventory || saveData.inventory.length === 0) {
         saveData.inventory = [...STARTER_GEAR];
         
-        // Auto-equip starter gear
-        saveData.equippedGear.weapon = 'starter_weapon';
-        saveData.equippedGear.armor = 'starter_armor';
-        saveData.equippedGear.accessory1 = 'starter_accessory1';
+        // PR #125-143: Auto-equip starter gear to helmet slot
+        saveData.equippedGear.helmet = 'starter_helmet';
         
         saveSaveData();
       }
@@ -5709,26 +5723,30 @@
       for (const statKey in GEAR_ATTRIBUTES) {
         const stat = GEAR_ATTRIBUTES[statKey];
         const value = gearStats[statKey] || 0;
-        statsHtml += `
-          <div style="display: flex; align-items: center; gap: 10px; padding: 5px;">
-            <span style="font-size: 24px;">${stat.icon}</span>
-            <div>
-              <div style="color: ${stat.color}; font-size: 14px; font-weight: bold;">${stat.name}</div>
-              <div style="color: #FFD700; font-size: 16px; font-weight: bold;">+${value}</div>
+        if (value > 0) {  // Only show non-zero stats
+          statsHtml += `
+            <div style="display: flex; align-items: center; gap: 10px; padding: 5px;">
+              <span style="font-size: 24px;">${stat.icon}</span>
+              <div>
+                <div style="color: ${stat.color}; font-size: 14px; font-weight: bold;">${stat.name}</div>
+                <div style="color: #FFD700; font-size: 16px; font-weight: bold;">+${value}</div>
+              </div>
             </div>
-          </div>
-        `;
+          `;
+        }
       }
-      statsContent.innerHTML = statsHtml;
+      statsContent.innerHTML = statsHtml || '<div style="color: #999; text-align: center; padding: 20px;">No gear equipped</div>';
       
-      // Build gear slots display
+      // PR #125-143: Build gear slots display for 6 slots
       let html = '';
       
       const slots = [
-        { key: 'weapon', name: 'Weapon Slot', icon: '⚔️' },
-        { key: 'armor', name: 'Armor Slot', icon: '🛡️' },
-        { key: 'accessory1', name: 'Accessory Slot 1', icon: '💍' },
-        { key: 'accessory2', name: 'Accessory Slot 2', icon: '📿' }
+        { key: 'helmet', name: 'Helmet', icon: '⛑️' },
+        { key: 'bodyArmor', name: 'Body Armor', icon: '🛡️' },
+        { key: 'boots', name: 'Boots', icon: '👢' },
+        { key: 'ring', name: 'Ring', icon: '💍' },
+        { key: 'amulet', name: 'Amulet', icon: '📿' },
+        { key: 'weaponCharm', name: 'Weapon Charm', icon: '⚔️' }
       ];
       
       for (const slot of slots) {
@@ -5741,7 +5759,7 @@
               <div style="display: flex; align-items: center; gap: 10px;">
                 <span style="font-size: 32px;">${slot.icon}</span>
                 <div style="color: #F39C12; font-size: 20px; font-weight: bold;">${slot.name}</div>
-              </div>
+              </div>`;
             </div>
             ${equippedGear ? `
               <div style="background: rgba(0,0,0,0.3); border: 2px solid ${getRarityColor(equippedGear.rarity)}; border-radius: 10px; padding: 15px;">
@@ -5751,7 +5769,7 @@
                 <div style="color: #aaa; font-size: 13px; margin-bottom: 10px;">${equippedGear.description}</div>
                 <div style="margin-bottom: 10px;">
                   ${Object.entries(equippedGear.stats).map(([stat, val]) => `
-                    <div style="color: #90ee90; font-size: 13px;">• ${GEAR_ATTRIBUTES[stat].name}: +${val}</div>
+                    <div style="color: #90ee90; font-size: 13px;">• ${GEAR_ATTRIBUTES[stat] ? GEAR_ATTRIBUTES[stat].name : stat}: +${val}</div>
                   `).join('')}
                 </div>
                 <button onclick="unequipGear('${slot.key}')" style="padding: 8px 15px; background: linear-gradient(to bottom, #c0392b, #a93226); color: white; border: 2px solid #e74c3c; border-radius: 8px; cursor: pointer; font-weight: bold;">UNEQUIP</button>
@@ -5765,16 +5783,16 @@
               <div style="color: #5DADE2; font-size: 16px; font-weight: bold; margin-bottom: 10px;">Available Gear:</div>
               <div style="display: grid; gap: 10px; max-height: 200px; overflow-y: auto;">
                 ${saveData.inventory.filter(g => {
-                  const gearType = g.type === 'accessory' ? (slot.key === 'accessory1' || slot.key === 'accessory2') : g.type === slot.key;
+                  const gearSlot = g.slot || g.type; // Support both old 'type' and new 'slot'
                   const notEquipped = g.id !== equippedId;
-                  return gearType && notEquipped;
+                  return gearSlot === slot.key && notEquipped;
                 }).map(gear => `
                   <div style="background: rgba(0,0,0,0.4); border: 2px solid ${getRarityColor(gear.rarity)}; border-radius: 8px; padding: 10px; cursor: pointer;" onclick="equipGear('${slot.key}', '${gear.id}')">
                     <div style="color: ${getRarityColor(gear.rarity)}; font-size: 14px; font-weight: bold;">${gear.name}</div>
                     <div style="color: #999; font-size: 11px;">${gear.description}</div>
                     <div style="margin-top: 5px;">
                       ${Object.entries(gear.stats).map(([stat, val]) => `
-                        <span style="color: #90ee90; font-size: 11px; margin-right: 10px;">+${val} ${GEAR_ATTRIBUTES[stat].icon}</span>
+                        <span style="color: #90ee90; font-size: 11px; margin-right: 10px;">+${val} ${GEAR_ATTRIBUTES[stat] ? GEAR_ATTRIBUTES[stat].icon : stat}</span>
                       `).join('')}
                     </div>
                   </div>
@@ -5788,13 +5806,14 @@
       content.innerHTML = html;
     }
 
+    // PR #125-143: Updated getRarityColor for 5 rarities
     function getRarityColor(rarity) {
       const colors = {
-        common: '#AAAAAA',
-        rare: '#5DADE2',
-        epic: '#9B59B6',
-        legendary: '#F39C12',
-        mythic: '#E74C3C'
+        common: '#999999',
+        uncommon: '#2ecc71',
+        rare: '#3498db',
+        epic: '#9b59b6',
+        legendary: '#e74c3c'
       };
       return colors[rarity] || colors.common;
     }
@@ -9331,31 +9350,36 @@
       const attrCritDmg = luck * ATTRIBUTE_INFO.luck.effects.critDamage;
       const attrCdReduction = wisdom * ATTRIBUTE_INFO.wisdom.effects.cooldownReduction;
       
-      // Apply gear bonuses
+      // PR #125-143: Apply gear bonuses multiplicatively with new stat system
       const gearStats = calculateGearStats();
-      const gearFlexibilityBonus = gearStats.flexibility * 0.01;
-      const gearMoveSpeedBonus = gearStats.movementSpeed * 0.02;
-      const gearAtkSpeedBonus = gearStats.attackSpeed * 0.02;
-      const gearPrecisionBonus = gearStats.attackPrecision * 0.01;
-      const gearCritBonus = gearStats.critChance * 0.02;
-      const gearMagicBonus = gearStats.elementalMagic * 0.03;
       
-      // Update playerStats with all bonuses
-      playerStats.maxHp = baseHp + attrHp;
+      // Gear provides multiplicative bonuses
+      const gearHpBonus = gearStats.hp || 0;  // Flat HP bonus
+      const gearArmorBonus = gearStats.armor || 0;  // Flat armor bonus
+      const gearHpRegenBonus = gearStats.hpRegen || 0;  // Flat HP regen bonus
+      const gearMoveSpeedBonus = (gearStats.moveSpeed || 0) * 0.02;  // 2% per point
+      const gearDodgeBonus = (gearStats.dodge || 0) * 0.01;  // 1% per point (future use)
+      const gearDamageBonus = (gearStats.damage || 0) * 0.05;  // 5% per point
+      const gearCritBonus = (gearStats.crit || 0) * 0.01;  // 1% per point
+      const gearAtkSpeedBonus = (gearStats.attackSpeed || 0) * 0.03;  // 3% per point
+      const gearXpBonus = (gearStats.xpBonus || 0) * 0.05;  // 5% per point (future use)
+      
+      // PR #125-143: Update playerStats with all bonuses including new gear stats
+      playerStats.maxHp = baseHp + attrHp + gearHpBonus;
       playerStats.hp = Math.min(playerStats.hp, playerStats.maxHp); // Adjust current HP if max changed
-      playerStats.strength = baseDamage * (1 + attrDamage + gearMagicBonus);
+      playerStats.strength = baseDamage * (1 + attrDamage + gearDamageBonus);
       playerStats.walkSpeed = baseSpeed * (1 + gearMoveSpeedBonus);
       playerStats.atkSpeed = baseAtkSpeed * (1 + attrAtkSpeed + gearAtkSpeedBonus);
-      playerStats.critChance = baseCritChance + attrCritChance + gearPrecisionBonus + gearCritBonus;
+      playerStats.critChance = baseCritChance + attrCritChance + gearCritBonus;
       // PR #124: Ensure critDmg is ALWAYS set (never undefined/null)
       playerStats.critDmg = baseCritDmg + attrCritDmg || 1.5; // Fallback to 1.5x if somehow 0
-      playerStats.armor = baseArmor + gearStats.flexibility;
-      playerStats.hpRegen = baseRegen + attrRegen;
+      playerStats.armor = baseArmor + gearArmorBonus;
+      playerStats.hpRegen = baseRegen + attrRegen + gearHpRegenBonus;
       
       return {
         baseHp, baseRegen, baseSpeed, baseDamage, baseAtkSpeed, baseCritChance, baseCritDmg, baseArmor, cdReduction,
         attrHp, attrRegen, attrAtkSpeed, attrCritChance, attrDamage, attrCritDmg, attrCdReduction,
-        gearFlexibilityBonus, gearMoveSpeedBonus, gearAtkSpeedBonus, gearPrecisionBonus, gearCritBonus, gearMagicBonus
+        gearHpBonus, gearArmorBonus, gearHpRegenBonus, gearMoveSpeedBonus, gearDodgeBonus, gearDamageBonus, gearCritBonus, gearAtkSpeedBonus, gearXpBonus
       };
     }
 
@@ -9365,21 +9389,21 @@
       // PR #124: Use recalculateAllStats() function to apply all bonuses
       const stats = recalculateAllStats();
       
-      // Reset Stats with permanent upgrades, attributes, and gear applied
+      // PR #124-143: Reset Stats with permanent upgrades, attributes, and gear applied (use recalculateAllStats)
       playerStats.lvl = 1;
       playerStats.exp = 0;
       playerStats.expReq = GAME_CONFIG.baseExpReq;
-      playerStats.hp = stats.baseHp + stats.attrHp;
-      playerStats.maxHp = stats.baseHp + stats.attrHp;
-      playerStats.strength = stats.baseDamage * (1 + stats.attrDamage + stats.gearMagicBonus);
+      playerStats.hp = stats.baseHp + stats.attrHp + stats.gearHpBonus;
+      playerStats.maxHp = stats.baseHp + stats.attrHp + stats.gearHpBonus;
+      playerStats.strength = stats.baseDamage * (1 + stats.attrDamage + stats.gearDamageBonus);
       playerStats.walkSpeed = stats.baseSpeed * (1 + stats.gearMoveSpeedBonus);
       playerStats.kills = 0;
       playerStats.atkSpeed = stats.baseAtkSpeed * (1 + stats.attrAtkSpeed + stats.gearAtkSpeedBonus);
-      playerStats.critChance = stats.baseCritChance + stats.attrCritChance + stats.gearPrecisionBonus + stats.gearCritBonus;
+      playerStats.critChance = stats.baseCritChance + stats.attrCritChance + stats.gearCritBonus;
       // PR #124: Ensure critDmg is ALWAYS set
       playerStats.critDmg = stats.baseCritDmg + stats.attrCritDmg || 1.5;
-      playerStats.armor = stats.baseArmor + (calculateGearStats().flexibility || 0); // Flexibility gives flat armor bonus
-      playerStats.hpRegen = stats.baseRegen + stats.attrRegen;
+      playerStats.armor = stats.baseArmor + stats.gearArmorBonus;
+      playerStats.hpRegen = stats.baseRegen + stats.attrRegen + stats.gearHpRegenBonus;
       playerStats.gold = 0;
       waveCount = 0;
       lastWaveEndTime = 0; // Reset wave timing
