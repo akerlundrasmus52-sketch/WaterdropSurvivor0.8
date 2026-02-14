@@ -6147,6 +6147,19 @@
       rondel.receiveShadow = true;
       scene.add(rondel);
       
+      // Grass border around the gravel rondel
+      const grassBorderMat = new THREE.MeshPhysicalMaterial({ 
+        color: 0x5A8000, // Darker green for grass border
+        metalness: 0.0,
+        roughness: 0.95,
+      });
+      const grassBorderGeo = new THREE.RingGeometry(rondelRadius, rondelRadius + 1.5, 64); // 1.5 unit wide grass border
+      const grassBorder = new THREE.Mesh(grassBorderGeo, grassBorderMat);
+      grassBorder.rotation.x = -Math.PI/2;
+      grassBorder.position.set(0, 0.01, 0);
+      grassBorder.receiveShadow = true;
+      scene.add(grassBorder);
+      
       // Path material - smooth dirt/gravel path
       const pathMat = new THREE.MeshPhysicalMaterial({ 
         color: 0x9A8A6A, // Light brown dirt
@@ -6638,9 +6651,9 @@
       
       scene.add(cometGroup);
 
-      // Farm Area near windmill
+      // Farm Area near windmill (adjusted for better alignment)
       const farmGroup = new THREE.Group();
-      farmGroup.position.set(35, 0, 35); // Near windmill
+      farmGroup.position.set(32, 0, 38); // Better aligned near windmill (was 35, 35)
       
       // Wheat field (50 stalks)
       const wheatGeo = new THREE.ConeGeometry(0.1, 0.8, 4);
@@ -7062,10 +7075,12 @@
       renderer.setSize(window.innerWidth, window.innerHeight);
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Cap at 2x for performance
       renderer.shadowMap.enabled = true;
-      renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Soft shadows
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Soft shadows - high quality
       renderer.toneMapping = THREE.ACESFilmicToneMapping; // Better color/brightness
-      renderer.toneMappingExposure = 1.0;
+      renderer.toneMappingExposure = 1.1; // Slightly brighter for better visibility
       renderer.outputEncoding = THREE.sRGBEncoding; // Correct color space
+      // Enable physically correct lighting for better reflections
+      renderer.physicallyCorrectLights = true;
       document.getElementById('game-container').appendChild(renderer.domElement);
 
       // Lights - store references for performance optimization
