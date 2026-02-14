@@ -3086,6 +3086,20 @@
         this.trailTimer = 0;
         this.wobblePhase = 0;
         
+        // Enhanced squish physics properties for ultra-realistic water drop
+        this.squishX = 1.0;
+        this.squishY = 1.0;
+        this.squishZ = 1.0;
+        this.targetSquishX = 1.0;
+        this.targetSquishY = 1.0;
+        this.targetSquishZ = 1.0;
+        this.wobbleAmount = 0.05;
+        this.wobbleSpeed = 0.15;
+        
+        // Trail effect for motion blur
+        this.trailPositions = [];
+        this.maxTrailLength = 5;
+        
         // Phase 5: Low health water bleed timer
         this.waterBleedTimer = 0;
         
@@ -3258,29 +3272,68 @@
         
         const speedMag = this.velocity.length();
         
-        // Realistic water droplet physics with MORE PRONOUNCED wobble (Phase 1 enhancement)
-        // Wobble increases with speed
-        this.wobblePhase += dt * (14 + speedMag * 60); // Enhanced from 12 + speedMag * 50
-        const wobble = Math.sin(this.wobblePhase) * (0.12 + speedMag * 0.35); // Enhanced from 0.10 + speedMag * 0.30
+        // ENHANCED: Ultra-realistic water droplet physics with advanced squish system
+        // Calculate speed for physics-based deformation
+        const speed = Math.sqrt(this.velocity.x * this.velocity.x + this.velocity.z * this.velocity.z);
+        const maxSpeed = 0.15; // Maximum expected speed
+        const speedRatio = Math.min(speed / maxSpeed, 1);
         
-        // Squish effect: stretch in direction of movement (MORE DRAMATIC for Phase 1)
-        const stretchX = 1 + Math.abs(this.velocity.x) * 3.5; // Enhanced from 3.0
-        const stretchZ = 1 + Math.abs(this.velocity.z) * 3.5; // Enhanced from 3.0
-        const squishY = 1 / Math.sqrt(stretchX * stretchZ);
+        // Movement-based squish (stretch in direction of motion)
+        if (speed > 0.01) {
+          // Calculate movement angle
+          const moveAngle = Math.atan2(this.velocity.z, this.velocity.x);
+          
+          // Stretch along movement direction (horizontal stretch, vertical squish)
+          this.targetSquishX = 1.0 + speedRatio * 0.3; // Stretch up to 1.3x when moving fast
+          this.targetSquishY = 1.0 - speedRatio * 0.2; // Squish down to 0.8x when moving fast
+          this.targetSquishZ = 1.0 + speedRatio * 0.3;
+        } else {
+          // Idle wobble (return to round with gentle oscillation)
+          this.wobblePhase += this.wobbleSpeed;
+          this.targetSquishX = 1.0 + Math.sin(this.wobblePhase) * this.wobbleAmount;
+          this.targetSquishY = 1.0 - Math.sin(this.wobblePhase) * this.wobbleAmount;
+          this.targetSquishZ = 1.0 + Math.cos(this.wobblePhase * 0.7) * this.wobbleAmount;
+        }
         
-        // Add gravity effect when decelerating (bouncy settling)
-        // deceleration: 0-1 value based on current speed when not moving
-        // wobblePhase * 2: Faster oscillation for settling bounce
-        // 0.15: Amplitude of bounce effect (subtle but noticeable)
+        // Smooth interpolation for springy water physics (lerp with elastic feel)
+        const squishLerp = 0.15; // Slower interpolation = more springy
+        this.squishX += (this.targetSquishX - this.squishX) * squishLerp;
+        this.squishY += (this.targetSquishY - this.squishY) * squishLerp;
+        this.squishZ += (this.targetSquishZ - this.squishZ) * squishLerp;
+        
+        // Original wobble for additional organic movement
+        this.wobblePhase += dt * (14 + speedMag * 60);
+        const wobble = Math.sin(this.wobblePhase) * (0.12 + speedMag * 0.35);
+        
+        // Combine both squish systems for ultra-realistic effect
+        const finalStretchX = this.squishX * (1 + wobble * 0.65);
+        const finalStretchZ = this.squishZ * (1 + wobble * 0.65);
+        const finalSquishY = this.squishY * (1 - wobble * 0.45);
+        
+        // Add gravity bounce when decelerating (settling effect)
         const deceleration = joystickLeft.active ? 0 : Math.min(speedMag * 2, 1);
         const gravityBounce = Math.abs(Math.sin(this.wobblePhase * 2)) * deceleration * 0.15;
         
-        // Apply deformation with wobble (MORE PRONOUNCED for Phase 1)
+        // Apply final deformation
         this.mesh.scale.set(
-          stretchX * (1 + wobble * 0.65), // Enhanced from 0.6
-          squishY * (1 - wobble * 0.45 + gravityBounce), // Enhanced from 0.4, add gravity bounce
-          stretchZ * (1 + wobble * 0.65)  // Enhanced from 0.6
+          finalStretchX,
+          finalSquishY + gravityBounce,
+          finalStretchZ
         );
+        
+        // Update trail positions for motion blur effect
+        if (speed > 0.02) {
+          this.trailPositions.unshift({
+            x: this.mesh.position.x,
+            y: this.mesh.position.y,
+            z: this.mesh.position.z
+          });
+          if (this.trailPositions.length > this.maxTrailLength) {
+            this.trailPositions.pop();
+          }
+        } else {
+          this.trailPositions = []; // Clear trail when not moving
+        }
         
         // Animate water shine
         this.shine.rotation.y += 0.05;
