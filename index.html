@@ -2820,7 +2820,8 @@
     let selectedCompanionId = null; // ID of selected companion for the run
     let companionBuffs = {
       damageBonus: 0,
-      lastHowlTime: 0
+      lastHowlTime: 0,
+      howlEndTime: 0
     };
     
     // Countdown system (PR #70-71)
@@ -3637,7 +3638,7 @@
         
         // Apply level scaling
         const levelBonus = (this.data.level - 1) * 0.10; // +10% damage per level
-        const speedBonus = (this.data.level - 1) * 0.05; // +5% attack speed per level
+        const speedBonus = (this.data.level - 1) * 0.05; // Reduces attack cooldown by 5% per level
         
         this.damage = stats.damage * (1 + levelBonus);
         this.attackSpeed = stats.attackSpeed * (1 - speedBonus); // Lower is faster
@@ -3729,12 +3730,15 @@
         
         this.aiTimer += dt;
         
+        const stats = this.isEvolved ? this.config.evolvedStats : this.config.baseStats;
+        
         if (this.config.type === 'melee') {
           // Storm Wolf: Follow player closely, charge at enemies
           const toPlayer = new THREE.Vector3().subVectors(player.mesh.position, this.position);
           const distToPlayer = toPlayer.length();
+          const followDistance = stats.followDistance || 80;
           
-          if (distToPlayer > this.config.baseStats.followDistance) {
+          if (distToPlayer > followDistance) {
             // Move towards player
             toPlayer.normalize().multiplyScalar(GAME_CONFIG.playerSpeedBase * 1.2);
             this.velocity.lerp(toPlayer, 0.1);
@@ -3745,7 +3749,7 @@
         } else if (this.config.type === 'ranged') {
           // Sky Falcon: Circle above player
           this.orbitAngle += dt * 2;
-          const radius = this.config.baseStats.orbitRadius;
+          const radius = stats.orbitRadius || 100;
           this.targetPosition.set(
             player.mesh.position.x + Math.cos(this.orbitAngle) * radius,
             2,
@@ -3757,7 +3761,7 @@
         } else if (this.config.type === 'support') {
           // Water Spirit: Orbit around player at ground level
           this.orbitAngle += dt * 3;
-          const radius = this.config.baseStats.orbitRadius;
+          const radius = stats.orbitRadius || 50;
           this.targetPosition.set(
             player.mesh.position.x + Math.cos(this.orbitAngle) * radius,
             0.5,
@@ -3831,9 +3835,14 @@
             // Simple stun implementation - slow enemy
             const originalSpeed = nearest.speed;
             nearest.speed *= 0.1;
-            setTimeout(() => {
-              nearest.speed = originalSpeed;
+            const stunTimeout = setTimeout(() => {
+              // Check if enemy still exists before restoring speed
+              if (!nearest.isDead && enemies.includes(nearest)) {
+                nearest.speed = originalSpeed;
+              }
             }, this.config.abilities.base.stun.duration * 1000);
+            // Track timeout for cleanup
+            activeTimeouts.push(stunTimeout);
           }
           
           // Lightning AoE (evolved form)
@@ -3911,7 +3920,7 @@
         // Healing pulse
         if (playerStats.hp < playerStats.maxHp * 0.8) {
           const healAmount = this.isEvolved ? 
-            this.config.evolvedStats.abilities?.heal || this.config.abilities.evolved.heal :
+            this.config.abilities.evolved.heal :
             this.config.abilities.base.heal;
           
           playerStats.hp = Math.min(playerStats.maxHp, playerStats.hp + healAmount);
@@ -3924,6 +3933,11 @@
       }
       
       updateAbilities(dt, time) {
+        // Update howl buff expiration (time-based)
+        if (companionBuffs.damageBonus > 0 && companionBuffs.howlEndTime && time > companionBuffs.howlEndTime) {
+          companionBuffs.damageBonus = 0;
+        }
+        
         // Thunder Beast Howl
         if (this.isEvolved && this.id === 'stormWolf' && this.config.abilities.evolved.howl) {
           const howlCooldown = this.config.abilities.evolved.howl.cooldown * 1000;
@@ -3977,14 +3991,10 @@
         
         companionBuffs.damageBonus = bonus;
         companionBuffs.lastHowlTime = time;
+        companionBuffs.howlEndTime = time + duration;
         
         createFloatingText("HOWL! +15% DMG", this.mesh.position);
         spawnParticles(this.mesh.position, 0xFFFF00, 20);
-        
-        // Reset buff after duration
-        setTimeout(() => {
-          companionBuffs.damageBonus = 0;
-        }, duration);
       }
       
       useTidalWave() {
@@ -4061,12 +4071,14 @@
         
         // Apply Companion Den XP bonus
         const denLevel = saveData.camp.companionDen.level;
+        let xpBonus = 0;
         if (denLevel >= 2) {
-          xpGain *= (1 + 0.25); // Level 2: +25%
+          xpBonus += 0.25; // Level 2: +25%
         }
         if (denLevel >= 3) {
-          xpGain *= (1 + 0.25); // Level 3: Additional +25% (total 50%)
+          xpBonus += 0.25; // Level 3: Additional +25% (total 50%)
         }
+        xpGain *= (1 + xpBonus);
         
         this.data.xp += xpGain;
         
@@ -12510,7 +12522,8 @@
       // Reset companion buffs
       companionBuffs = {
         damageBonus: 0,
-        lastHowlTime: 0
+        lastHowlTime: 0,
+        howlEndTime: 0
       };
 
       isGameOver = false;
