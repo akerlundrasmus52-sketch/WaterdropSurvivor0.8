@@ -2206,6 +2206,7 @@
       dashesPerformed: 0,
       damageTaken: 0,
       weaponsUnlocked: 0,
+      miniBossesDefeated: 0, // Track mini-boss kills for achievements
       // Perk System
       perks: {
         vampire: 0,      // Life steal %
@@ -3146,8 +3147,11 @@
         }
         
         this.maxHp = this.hp;
-        this.damage = (type === 9 ? 25 * 1.5 : 25) * levelScaling; // Elite does 1.5x damage
-        if (type === 10) this.damage = 50 * levelScaling; // MiniBoss damage
+        // Early game difficulty: Higher base damage (50 instead of 25)
+        // At 100 HP start, this means ~2 hits to die without upgrades (hard as hell)
+        // Armor upgrades become critical for survival
+        this.damage = (type === 9 ? 50 * 1.5 : 50) * levelScaling; // Elite does 1.5x damage
+        if (type === 10) this.damage = 75 * levelScaling; // MiniBoss damage - even more threatening
         this.isDead = false;
         this.isDamaged = false; // Track if enemy has been visually damaged
         this.pulsePhase = Math.random() * Math.PI;
@@ -3740,6 +3744,13 @@
         }
         
         playerStats.kills++;
+        
+        // Track mini-boss defeats for achievements
+        if (this.isMiniBoss) {
+          playerStats.miniBossesDefeated++;
+          createFloatingText("MINI-BOSS DEFEATED! 🏆", this.mesh.position);
+        }
+        
         updateHUD();
         updateComboCounter(true); // Phase 2: Track combo on kill
         checkAchievements(); // Check for achievements after kill
@@ -5016,19 +5027,33 @@
       kills100: { id: 'kills100', name: 'Century Slayer', desc: 'Kill 100 enemies', reward: 100, attributePoints: 2, check: () => playerStats.kills >= 100, claimed: false },
       kills500: { id: 'kills500', name: 'Mass Destroyer', desc: 'Kill 500 enemies', reward: 250, attributePoints: 2, check: () => playerStats.kills >= 500, claimed: false },
       kills1000: { id: 'kills1000', name: 'Legendary Warrior', desc: 'Kill 1000 enemies', reward: 500, attributePoints: 3, check: () => playerStats.kills >= 1000, claimed: false },
+      kills2500: { id: 'kills2500', name: 'Elite Slayer', desc: 'Kill 2500 enemies', reward: 750, attributePoints: 3, check: () => playerStats.kills >= 2500, claimed: false },
+      kills5000: { id: 'kills5000', name: 'God of War', desc: 'Kill 5000 enemies', reward: 1000, attributePoints: 4, check: () => playerStats.kills >= 5000, claimed: false },
       
       gold100: { id: 'gold100', name: 'Small Fortune', desc: 'Collect 100 gold in one run', reward: 50, attributePoints: 1, check: () => playerStats.gold >= 100, claimed: false },
       gold500: { id: 'gold500', name: 'Treasure Hunter', desc: 'Collect 500 gold in one run', reward: 150, attributePoints: 1, check: () => playerStats.gold >= 500, claimed: false },
       gold1000: { id: 'gold1000', name: 'Gold Baron', desc: 'Collect 1000 gold in one run', reward: 300, attributePoints: 2, check: () => playerStats.gold >= 1000, claimed: false },
+      gold2500: { id: 'gold2500', name: 'Wealth Magnet', desc: 'Collect 2500 gold in one run', reward: 500, attributePoints: 2, check: () => playerStats.gold >= 2500, claimed: false },
       
       dasher: { id: 'dasher', name: 'Dash Master', desc: 'Perform 50 dashes in one run', reward: 100, attributePoints: 1, check: () => playerStats.dashesPerformed >= 50, claimed: false },
       survivor: { id: 'survivor', name: 'Time Warrior', desc: 'Survive for 10 minutes', reward: 200, attributePoints: 2, check: () => playerStats.survivalTime >= 600, claimed: false },
+      survivor20: { id: 'survivor20', name: 'Endurance Master', desc: 'Survive for 20 minutes', reward: 400, attributePoints: 3, check: () => playerStats.survivalTime >= 1200, claimed: false },
+      survivor30: { id: 'survivor30', name: 'Immortal Legend', desc: 'Survive for 30 minutes', reward: 600, attributePoints: 4, check: () => playerStats.survivalTime >= 1800, claimed: false },
       weaponMaster: { id: 'weaponMaster', name: 'Weapon Master', desc: 'Unlock all 3 weapons', reward: 150, attributePoints: 1, check: () => playerStats.weaponsUnlocked >= 3, claimed: false },
       untouchable: { id: 'untouchable', name: 'Untouchable', desc: 'Take no damage for 3 minutes', reward: 300, attributePoints: 3, check: () => playerStats.survivalTime >= 180 && playerStats.damageTaken === 0, claimed: false },
       
+      miniBoss1: { id: 'miniBoss1', name: 'Boss Slayer I', desc: 'Defeat your first mini-boss', reward: 150, attributePoints: 2, check: () => playerStats.miniBossesDefeated >= 1, claimed: false },
+      miniBoss3: { id: 'miniBoss3', name: 'Boss Slayer II', desc: 'Defeat 3 mini-bosses', reward: 300, attributePoints: 2, check: () => playerStats.miniBossesDefeated >= 3, claimed: false },
+      miniBoss5: { id: 'miniBoss5', name: 'Boss Slayer III', desc: 'Defeat 5 mini-bosses', reward: 500, attributePoints: 3, check: () => playerStats.miniBossesDefeated >= 5, claimed: false },
+      miniBoss10: { id: 'miniBoss10', name: 'Boss Hunter', desc: 'Defeat 10 mini-bosses', reward: 800, attributePoints: 4, check: () => playerStats.miniBossesDefeated >= 10, claimed: false },
+      
       level10: { id: 'level10', name: 'Rising Star', desc: 'Reach Level 10', reward: 100, attributePoints: 1, check: () => playerStats.lvl >= 10, claimed: false },
       level25: { id: 'level25', name: 'Experienced Fighter', desc: 'Reach Level 25', reward: 250, attributePoints: 2, check: () => playerStats.lvl >= 25, claimed: false },
-      level50: { id: 'level50', name: 'Master Champion', desc: 'Reach Level 50', reward: 500, attributePoints: 3, check: () => playerStats.lvl >= 50, claimed: false }
+      level50: { id: 'level50', name: 'Master Champion', desc: 'Reach Level 50', reward: 500, attributePoints: 3, check: () => playerStats.lvl >= 50, claimed: false },
+      level75: { id: 'level75', name: 'Elite Warrior', desc: 'Reach Level 75', reward: 750, attributePoints: 3, check: () => playerStats.lvl >= 75, claimed: false },
+      level100: { id: 'level100', name: 'Legendary Hero', desc: 'Reach Level 100', reward: 1000, attributePoints: 4, check: () => playerStats.lvl >= 100, claimed: false },
+      level125: { id: 'level125', name: 'Unstoppable Force', desc: 'Reach Level 125', reward: 1250, attributePoints: 4, check: () => playerStats.lvl >= 125, claimed: false },
+      level150: { id: 'level150', name: 'Ascended Champion', desc: 'Reach Level 150', reward: 1500, attributePoints: 5, check: () => playerStats.lvl >= 150, claimed: false }
     };
 
     function updateAchievementsScreen() {
@@ -7150,8 +7175,9 @@
         return;
       }
       
-      // Check if this is a mini-boss wave (ONLY levels 10, 25, 50)
-      const miniBossLevels = [10, 25, 50];
+      // Check if this is a mini-boss wave - expanded progression to 150
+      // Mini-bosses appear after players cross upgrade thresholds (approx every 15 levels)
+      const miniBossLevels = [10, 25, 40, 55, 70, 85, 100, 115, 130, 145];
       const isMiniBossWave = miniBossLevels.includes(playerStats.lvl) && !miniBossesSpawned.has(playerStats.lvl);
       
       if (isMiniBossWave) {
@@ -7180,10 +7206,35 @@
         return;
       }
       
-      // Scale spawn count with player level for increased difficulty - Rebalanced for better gameplay
-      const baseCount = 2 + Math.floor(waveCount / 4); // Reduced to make it less overwhelming
-      const levelBonus = Math.floor(playerStats.lvl / 6); // Slower scaling
-      const count = Math.min(baseCount + levelBonus, 10); // Lower cap at 10 enemies per wave
+      // Scale spawn count with player level for increased difficulty
+      // Early game (1-30): More enemies, harder challenge - "hard as hell"
+      // Mid-game (31-75): Balanced progression after upgrades
+      // Late-game (76-150): Gradually increasing endgame difficulty
+      let baseCount, levelBonus, cap;
+      
+      if (playerStats.lvl <= 30) {
+        // Early game: Aggressive spawns (4-8 enemies per wave)
+        baseCount = 4 + Math.floor(waveCount / 3);
+        levelBonus = Math.floor(playerStats.lvl / 4);
+        cap = 8;
+      } else if (playerStats.lvl <= 75) {
+        // Mid-game: Moderate spawns after upgrade threshold
+        baseCount = 3 + Math.floor(waveCount / 4);
+        levelBonus = Math.floor(playerStats.lvl / 6);
+        cap = 10;
+      } else if (playerStats.lvl <= 120) {
+        // Late-game: Progressive difficulty
+        baseCount = 4 + Math.floor(waveCount / 3);
+        levelBonus = Math.floor(playerStats.lvl / 5);
+        cap = 12;
+      } else {
+        // End-game: Maximum challenge
+        baseCount = 5 + Math.floor(waveCount / 2);
+        levelBonus = Math.floor(playerStats.lvl / 4);
+        cap = 15;
+      }
+      
+      const count = Math.min(baseCount + levelBonus, cap);
       
       for(let i=0; i<count; i++) {
         // Spawn at edge of camera view approx - avoid lake area
@@ -7358,10 +7409,10 @@
       playerStats.lvl++;
       playerStats.exp -= playerStats.expReq;
       
-      // Victory condition: Reaching level 50
-      if (playerStats.lvl === 50) {
+      // Victory condition: Reaching level 150
+      if (playerStats.lvl === 150) {
         setTimeout(() => {
-          showStatChange('🎉 VICTORY! You reached Level 50! 🎉');
+          showStatChange('🎉 ULTIMATE VICTORY! You reached Level 150! 🎉');
           setTimeout(() => {
             gameOver(); // Show game over screen as victory screen
           }, 2000);
@@ -7369,8 +7420,10 @@
         return;
       }
       
-      // Custom XP Curve: Smoother progression up to level 50
-      // Level 1→2: 3 kills, 2→3: 4 kills, 3→4: 5 kills, etc.
+      // Custom XP Curve: Progressive difficulty scaling to level 150
+      // Early game (1-30): Hard but manageable
+      // Mid game (31-75): Balanced progression after upgrade threshold
+      // Late game (76-150): Challenging endgame content
       let killsNeeded;
       if (playerStats.lvl <= 5) {
         killsNeeded = 2 + playerStats.lvl; // Levels 1-5: 3, 4, 5, 6, 7 kills respectively
@@ -7380,8 +7433,14 @@
         killsNeeded = 12 + Math.floor((playerStats.lvl - 15) * 0.7); // Levels 16-30: 12-22 kills
       } else if (playerStats.lvl <= 50) {
         killsNeeded = 22 + Math.floor((playerStats.lvl - 30) * 1); // Levels 31-50: 22-42 kills
+      } else if (playerStats.lvl <= 75) {
+        killsNeeded = 42 + Math.floor((playerStats.lvl - 50) * 1.2); // Levels 51-75: 42-72 kills
+      } else if (playerStats.lvl <= 100) {
+        killsNeeded = 72 + Math.floor((playerStats.lvl - 75) * 1.5); // Levels 76-100: 72-109 kills
+      } else if (playerStats.lvl <= 125) {
+        killsNeeded = 109 + Math.floor((playerStats.lvl - 100) * 1.8); // Levels 101-125: 109-154 kills
       } else {
-        killsNeeded = 42 + Math.floor((playerStats.lvl - 50) * 1.5); // Levels 51+: 42+ kills (harder progression)
+        killsNeeded = 154 + Math.floor((playerStats.lvl - 125) * 2); // Levels 126-150: 154+ kills (extreme endgame)
       }
       playerStats.expReq = killsNeeded * GAME_CONFIG.expValue;
       
@@ -9098,6 +9157,7 @@
       playerStats.strength = baseDamage * (1 + attrDamage + gearMagicBonus);
       playerStats.walkSpeed = baseSpeed * (1 + gearMoveSpeedBonus);
       playerStats.kills = 0;
+      playerStats.miniBossesDefeated = 0; // Reset mini-boss tracking
       playerStats.atkSpeed = baseAtkSpeed * (1 + attrAtkSpeed + gearAtkSpeedBonus);
       playerStats.critChance = baseCritChance + attrCritChance + gearPrecisionBonus + gearCritBonus;
       playerStats.critDmg = baseCritDmg + attrCritDmg;
