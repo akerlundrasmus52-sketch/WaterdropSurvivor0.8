@@ -1905,9 +1905,17 @@
     // 12-second maximum loading timeout - prevents infinite loading if ES module fails
     setTimeout(function() {
       try {
+        // Only trigger failsafe if game initialization hasn't completed
+        // This prevents race condition where failsafe hides screen before setupMenus() runs
+        if (window.gameLoadingComplete) {
+          // ES module loaded successfully, let it handle dismissal
+          return;
+        }
+        
         var ls = document.getElementById('loading-screen');
         // Check computed display value for robustness (handles CSS and inline styles)
         if (ls && window.getComputedStyle(ls).display !== 'none' && !ls.classList.contains('fade-out')) {
+          console.warn('Loading screen failsafe triggered - ES module may have failed to load');
           ls.classList.add('fade-out');
           setTimeout(function() {
             ls.style.display = 'none';
