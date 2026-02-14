@@ -1948,6 +1948,9 @@
       <!-- Status Message Bar -->
       <div class="stat-text" id="status-message" style="color: #5DADE2; text-shadow: 0 0 8px rgba(93,173,226,0.8), 0 0 12px rgba(93,173,226,0.5), 1px 1px 2px rgba(0,0,0,0.5); font-size: 16px; min-height: 20px; margin-top: 5px;"></div>
       
+      <!-- Landmark Quest Progress -->
+      <div class="stat-text" id="landmark-progress" style="color: #FFD700; font-size: 14px; text-shadow: 0 0 8px rgba(255,215,0,0.8), 1px 1px 2px rgba(0,0,0,0.5); display: none;">🗺️ Landmarks: 0/10</div>
+      
       <!-- FPS Counter (debug mode) -->
       <div class="stat-text" id="fps-counter" style="color: #00FF00; font-size: 14px; font-family: monospace; display: none;">FPS: 60</div>
       
@@ -2838,6 +2841,21 @@
       "1",
       "Survive!"
     ];
+    
+    // Landmark Discovery Quest System
+    const landmarks = [
+      { name: 'Windmill', x: 40, z: 40, discovered: false },
+      { name: 'Stonehenge', x: 60, z: 60, discovered: false },
+      { name: 'Mayan Pyramid', x: 50, z: -50, discovered: false },
+      { name: 'Illuminati Pyramid', x: -70, z: 50, discovered: false },
+      { name: 'Lake', x: 30, z: -30, discovered: false },
+      { name: 'Mine', x: -40, z: 40, discovered: false },
+      { name: 'Cabin', x: -20, z: -20, discovered: false },
+      { name: 'Comet Stone', x: 37, z: -30, discovered: false },
+      { name: 'Farm', x: 32, z: 38, discovered: false },
+      { name: 'Water Statue', x: 0, z: 0, discovered: false }
+    ];
+    const LANDMARK_DISCOVERY_RADIUS = 50; // Distance to discover a landmark
 
     // Game Settings
     const gameSettings = {
@@ -12579,6 +12597,15 @@
       });
       activeTimeouts = [];
       
+      // Reset landmark discoveries for new game
+      landmarks.forEach(landmark => {
+        landmark.discovered = false;
+      });
+      const landmarkProgressEl = document.getElementById('landmark-progress');
+      if (landmarkProgressEl) {
+        landmarkProgressEl.textContent = '🗺️ Landmarks: 0/' + landmarks.length;
+      }
+      
       meteors.forEach(m => {
         scene.remove(m.mesh);
         scene.remove(m.shadow);
@@ -13647,6 +13674,43 @@
         }
         return alive;
       });
+      
+      // Landmark Discovery System - Check proximity to landmarks
+      if (player && player.mesh) {
+        let discoveredCount = 0;
+        let newDiscovery = false;
+        
+        landmarks.forEach(landmark => {
+          if (!landmark.discovered) {
+            const distance = Math.sqrt(
+              Math.pow(player.mesh.position.x - landmark.x, 2) + 
+              Math.pow(player.mesh.position.z - landmark.z, 2)
+            );
+            
+            if (distance < LANDMARK_DISCOVERY_RADIUS) {
+              landmark.discovered = true;
+              newDiscovery = true;
+              showStatusMessage(`🗺️ Discovered: ${landmark.name}!`, 3000);
+              spawnParticles(new THREE.Vector3(landmark.x, 1, landmark.z), 0xFFD700, 10);
+            }
+          }
+          if (landmark.discovered) discoveredCount++;
+        });
+        
+        // Update landmark progress UI
+        const landmarkProgressEl = document.getElementById('landmark-progress');
+        if (landmarkProgressEl) {
+          landmarkProgressEl.textContent = `🗺️ Landmarks: ${discoveredCount}/${landmarks.length}`;
+          landmarkProgressEl.style.display = 'block';
+          
+          // All landmarks discovered - special reward
+          if (discoveredCount === landmarks.length && newDiscovery) {
+            showStatusMessage('🎉 All Landmarks Discovered! +500 Gold!', 5000);
+            playerStats.gold += 500;
+            updateHUD();
+          }
+        }
+      }
       
       // Performance: Use cached arrays instead of scene.traverse() every frame
       // Windmill Rotation and Light Animation
