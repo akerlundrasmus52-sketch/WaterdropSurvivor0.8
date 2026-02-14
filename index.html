@@ -1554,7 +1554,7 @@
     <div class="gold-display" id="menu-gold">GOLD: 0</div>
     <div class="menu-title">WATER DROP SURVIVOR</div>
     <!-- PR #138: Circular Equipment button under title -->
-    <button id="menu-equipment-btn" class="circular-equipment-btn" title="Equipment">⚔️</button>
+    <button id="menu-equipment-btn" class="circular-equipment-btn" title="Equipment" aria-label="Open Equipment Screen">⚔️</button>
     <div class="menu-buttons">
       <button class="menu-btn" id="start-game-btn">START GAME</button>
       <button class="menu-btn" id="progression-btn">PROGRESSION</button>
@@ -7145,6 +7145,8 @@
       }, 400); // Slower progress updates for longer duration
       
       // PR #129: Failsafe timeout - dismiss after 12s maximum even if ES module fails
+      // Normal loading: 8s (20 iterations × 400ms) + 0.6s delay + 0.5s fade = 9.1s total
+      // Failsafe: 12s provides 2.9s buffer for slow systems or initialization delays
       const failsafeTimeout = setTimeout(() => {
         console.warn('Loading screen failsafe triggered after 12s');
         dismissLoadingScreen();
@@ -9190,10 +9192,12 @@
         message = isMilestone ? 'Rare Combo' : `${comboState.count}x COMBO!`;
         comboLevel = 'high';
       } else if (comboState.count === 5) {
-        message = isMilestone ? 'Multikill' : '';  // PR #124: Only show milestone text, no count
+        message = isMilestone ? 'Multikill' : '';  // PR #124: First milestone at 5 kills
         comboLevel = 'high';
       } else {
-        message = ''; // PR #124: No text for non-milestone combos (< 5)
+        // PR #124: No text for combos below milestone (< 5)
+        // This is intentional - players only see feedback at milestones (5, 10, 15, etc.)
+        message = '';
       }
       
       comboText.innerText = message;
