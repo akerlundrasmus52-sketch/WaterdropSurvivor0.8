@@ -48,11 +48,6 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700;800;900&display=swap" rel="stylesheet">
   <style>
-    :root {
-      --attack-animation-duration: 0.4s;
-      --attribute-item-bg: rgba(0,0,0,0.3);
-    }
-    
     body {
       margin: 0;
       padding: 0;
@@ -287,7 +282,7 @@
     
     /* Attack bounce animation */
     #waterdrop-container.attacked {
-      animation: waterdrop-bounce var(--attack-animation-duration) ease-out, waterdrop-bubble 2.5s ease-in-out infinite;
+      animation: waterdrop-bounce 0.4s ease-out, waterdrop-bubble 2.5s ease-in-out infinite;
     }
     
     @keyframes waterdrop-bounce {
@@ -307,18 +302,6 @@
     #waterdrop-exp-fill {
       transition: y 0.3s ease-out, height 0.3s ease-out;
       animation: water-shimmer 3s ease-in-out infinite;
-    }
-    
-    /* Water wave/slosh animation when attacked */
-    #waterdrop-container.attacked #waterdrop-exp-fill {
-      animation: water-slosh-fill var(--attack-animation-duration) ease-out, water-shimmer 3s ease-in-out infinite;
-    }
-    
-    @keyframes water-slosh-fill {
-      0%, 100% { transform: translateX(0); }
-      25% { transform: translateX(-3px) scaleX(1.05); }
-      50% { transform: translateX(3px) scaleX(1.05); }
-      75% { transform: translateX(-2px) scaleX(1.02); }
     }
     
     /* Add shimmer effect to the EXP fill for extra squishiness */
@@ -443,69 +426,6 @@
     
     /* Wave Counter - Removed (was in stats bar) */
     
-    /* Attributes Menu Styles */
-    .attributes-modal-title {
-      color: #FFD700;
-      text-shadow: 2px 2px 0 #000, 0 0 15px rgba(255,215,0,0.8);
-    }
-    
-    .attributes-section-title {
-      color: #5DADE2;
-      text-shadow: 0 0 10px rgba(93,173,226,0.6);
-      margin-bottom: 10px;
-    }
-    
-    .attribute-item {
-      background: var(--attribute-item-bg);
-      padding: 10px;
-      border-radius: 5px;
-      margin-bottom: 5px;
-    }
-    
-    .attribute-item strong {
-      color: #FFD700;
-    }
-    
-    /* Attributes Menu Modal Layout */
-    #attributes-menu {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0,0,0,0.9);
-      z-index: 200;
-      align-items: center;
-      justify-content: center;
-      pointer-events: auto;
-    }
-    
-    #attributes-menu .modal-content {
-      max-height: 80vh;
-      overflow-y: auto;
-      width: 90%;
-      max-width: 500px;
-    }
-    
-    /* Attributes menu section container */
-    .attributes-section {
-      margin-bottom: 20px;
-      text-align: left;
-    }
-    
-    /* Attributes menu content area */
-    .attributes-content {
-      font-family: monospace;
-      font-size: 14px;
-      line-height: 1.8;
-      color: #ecf0f1;
-    }
-    
-    /* Empty state message */
-    .empty-message {
-      color: #888;
-    }
     
     /* Equipment Menu Button - Phase 2 Placeholder */
     #equipment-btn {
@@ -543,7 +463,7 @@
       font-size: 24px;
       cursor: pointer;
       pointer-events: auto;
-      z-index: 150; /* Increased to ensure it's above joystick zone */
+      z-index: 100;
       box-shadow: 0 4px 0 #2a1a11, 0 6px 12px rgba(0,0,0,0.5);
       transition: all 0.2s;
       display: none; /* Hidden in landscape, shown in portrait */
@@ -1694,24 +1614,13 @@
             <!-- Water animation filter for bubbles/shimmer -->
             <filter id="water-turbulence" x="0%" y="0%" width="100%" height="100%">
               <!-- Seed value 2 provides consistent gentle water turbulence pattern -->
-              <feTurbulence id="water-turbulence-wave" baseFrequency="0.02" numOctaves="3" seed="2">
+              <feTurbulence baseFrequency="0.02" numOctaves="3" seed="2">
                 <animate attributeName="baseFrequency" 
                          from="0.02" to="0.025" 
                          dur="3s" 
                          repeatCount="indefinite"/>
               </feTurbulence>
               <feDisplacementMap in="SourceGraphic" scale="3"/>
-            </filter>
-            <!-- Stronger turbulence for attack animation -->
-            <!-- Duration matches --attack-animation-duration CSS variable (0.4s) and ATTACK_ANIMATION_DURATION_MS constant (400ms) -->
-            <filter id="water-turbulence-attack" x="0%" y="0%" width="100%" height="100%">
-              <feTurbulence baseFrequency="0.05" numOctaves="4" seed="5">
-                <animate attributeName="baseFrequency" 
-                         from="0.05" to="0.03" 
-                         dur="0.4s" 
-                         repeatCount="1"/>
-              </feTurbulence>
-              <feDisplacementMap in="SourceGraphic" scale="8"/>
             </filter>
           </defs>
           <!-- Background -->
@@ -1782,35 +1691,9 @@
       <h2 class="options-title">OPTIONS</h2>
       <div class="options-buttons">
         <button class="btn-small" id="options-stats-btn">STATS</button>
-        <button class="btn-small" id="options-attributes-btn">⚔️ EQUIPMENT</button>
         <button class="btn-small" id="options-settings-btn">⚙️ SETTINGS</button>
         <button class="btn-small" id="close-options-btn">CLOSE</button>
       </div>
-    </div>
-  </div>
-
-  <!-- Attributes & Equipment Menu Modal -->
-  <div id="attributes-menu">
-    <div class="modal-content">
-      <h2 class="attributes-modal-title">ATTRIBUTES & EQUIPMENT</h2>
-      
-      <!-- Attributes Section -->
-      <div class="attributes-section">
-        <h3 class="attributes-section-title">Player Attributes</h3>
-        <div id="attributes-content" class="attributes-content">
-          <!-- Will be populated dynamically -->
-        </div>
-      </div>
-      
-      <!-- Equipment Section -->
-      <div class="attributes-section">
-        <h3 class="attributes-section-title">Equipment</h3>
-        <div id="equipment-content" class="attributes-content">
-          <!-- Will be populated dynamically -->
-        </div>
-      </div>
-      
-      <button class="btn" id="close-attributes-btn">CLOSE</button>
     </div>
   </div>
 
@@ -1839,8 +1722,6 @@
     import * as THREE from 'three';
 
     // --- CONSTANTS & CONFIG ---
-    const ATTACK_ANIMATION_DURATION_MS = 400; // Duration of waterdrop attack animation in milliseconds
-    
     const COLORS = {
       bg: 0xFFF0F5,
       player: 0x4FC3F7, // Light Blue - more like water droplet
@@ -2269,33 +2150,6 @@
     let lastCleanupTime = 0; // Track last memory cleanup time
     let miniBossesSpawned = new Set(); // Track which mini-boss levels have been spawned
     
-    // Centralized Animation System (PR #121) - Prevents render freeze from competing requestAnimationFrame loops
-    let activeAnimations = [];
-    const MAX_ACTIVE_ANIMATIONS = 200; // Limit to prevent overwhelming frame budget
-    
-    function addAnimation(updateFn) {
-      // Prevent animation overflow during intense gameplay
-      if (activeAnimations.length >= MAX_ACTIVE_ANIMATIONS) {
-        console.warn('Animation limit reached, skipping new animation');
-        return;
-      }
-      activeAnimations.push(updateFn);
-    }
-    
-    // Render recovery watchdog (PR #121) - Detects and recovers from render stalls
-    let lastRenderTime = performance.now();
-    let isRecovering = false; // Prevent multiple concurrent recovery attempts
-    setInterval(() => {
-      if (isGameActive && !isPaused && performance.now() - lastRenderTime > 500 && !isRecovering) {
-        isRecovering = true;
-        console.warn('Render recovery triggered - stall detected');
-        requestAnimationFrame(() => {
-          animate(performance.now());
-          isRecovering = false;
-        });
-      }
-    }, 1000);
-    
     // Countdown system (PR #70-71)
     let countdownActive = false;
     let countdownStep = 0;
@@ -2352,8 +2206,6 @@
       dashesPerformed: 0,
       damageTaken: 0,
       weaponsUnlocked: 0,
-      xpMultiplier: 1, // From gear
-      dodgeChance: 0, // From gear
       // Perk System
       perks: {
         vampire: 0,      // Life steal %
@@ -2765,11 +2617,11 @@
                 scene.remove(smoke);
                 smoke.geometry.dispose();
                 smoke.material.dispose();
-                return false; // Remove from animation system
+              } else {
+                requestAnimationFrame(updateSmoke);
               }
-              return true; // Continue animating
             };
-            addAnimation(updateSmoke);
+            updateSmoke();
           }
         }
         
@@ -2883,22 +2735,11 @@
         
         // Trigger waterdrop UI attack animation
         const waterdropContainer = document.getElementById('waterdrop-container');
-        const waterdropExpFill = document.getElementById('waterdrop-exp-fill');
         if (waterdropContainer) {
           waterdropContainer.classList.add('attacked');
-          
-          // Switch to attack water turbulence filter for more dramatic wave effect
-          if (waterdropExpFill) {
-            waterdropExpFill.setAttribute('filter', 'url(#water-turbulence-attack)');
-          }
-          
           setTimeout(() => {
             waterdropContainer.classList.remove('attacked');
-            // Switch back to normal water turbulence
-            if (waterdropExpFill) {
-              waterdropExpFill.setAttribute('filter', 'url(#water-turbulence)');
-            }
-          }, ATTACK_ANIMATION_DURATION_MS);
+          }, 400);
         }
         
         // Show damage number for player (red color)
@@ -2970,15 +2811,14 @@
             camera.position.x = originalCameraPos.x + (Math.random() - 0.5) * intensity;
             camera.position.y = originalCameraPos.y + (Math.random() - 0.5) * intensity;
             camera.position.z = originalCameraPos.z + (Math.random() - 0.5) * intensity;
-            return true; // Continue animating
+            requestAnimationFrame(shakeAnim);
           } else {
             camera.position.x = originalCameraPos.x;
             camera.position.y = originalCameraPos.y;
             camera.position.z = originalCameraPos.z;
-            return false; // Complete animation
           }
         };
-        addAnimation(shakeAnim);
+        shakeAnim();
 
         if (playerStats.hp <= 0) {
           // ENHANCED Death splash: more particles + ground pool with fade
@@ -3603,11 +3443,11 @@
                 scene.remove(limb);
                 limb.geometry.dispose();
                 limb.material.dispose();
-                return false; // Remove from animation system
+              } else {
+                requestAnimationFrame(updateLimb);
               }
-              return true; // Continue animating
             };
-            addAnimation(updateLimb);
+            updateLimb();
           }
           
           spawnParticles(this.mesh.position, enemyColor, 12); // Reduced for performance
@@ -3652,11 +3492,11 @@
                 scene.remove(piece);
                 piece.geometry.dispose();
                 piece.material.dispose();
-                return false; // Remove from animation system
+              } else {
+                requestAnimationFrame(updatePiece);
               }
-              return true; // Continue animating
             };
-            addAnimation(updatePiece);
+            updatePiece();
           }
           
           // Enhanced particles for destruction
@@ -3734,11 +3574,11 @@
               scene.remove(ring);
               ring.geometry.dispose();
               ring.material.dispose();
-              return false; // Remove from animation system
+            } else {
+              requestAnimationFrame(animateRing);
             }
-            return true; // Continue animating
           };
-          addAnimation(animateRing);
+          animateRing();
           
           // Explode into more pieces - ENHANCED
           const pieceCount = this.isMiniBoss ? 25 : 15; // More pieces for mini-boss
@@ -3771,11 +3611,11 @@
                 scene.remove(piece);
                 piece.geometry.dispose();
                 piece.material.dispose();
-                return false; // Remove from animation system
+              } else {
+                requestAnimationFrame(updatePiece);
               }
-              return true; // Continue animating
             };
-            addAnimation(updatePiece);
+            updatePiece();
           }
         } else {
           // CORPSE DEATH: Leave a corpse sprite that fades away
@@ -3824,11 +3664,11 @@
               corpse.material.dispose();
               bloodPool.geometry.dispose();
               bloodPool.material.dispose();
-              return false; // Remove from animation system
+            } else {
+              requestAnimationFrame(fadeCorpse);
             }
-            return true; // Continue animating
           };
-          addAnimation(fadeCorpse);
+          fadeCorpse();
         }
         
         // Screen flash on kill (dopamine boost) - stronger flash for mini-boss
@@ -3897,19 +3737,6 @@
         // Only spawn gold if amount > 0
         if (goldAmount > 0) {
           spawnGold(this.mesh.position.x, this.mesh.position.z, goldAmount);
-        }
-        
-        // Gear drops from mini-bosses (guaranteed rare+ gear)
-        if (this.isMiniBoss) {
-          const gear = generateRandomGear('rare'); // Min rare for mini-boss
-          if (gear) {
-            addGearToInventory(gear);
-            createFloatingText(`⚡ ${gear.name}!`, this.mesh.position);
-            // Safe rarity lookup
-            const rarityKey = gear.rarity.toUpperCase();
-            const rarityColor = RARITY[rarityKey] ? RARITY[rarityKey].color : 0xFFFFFF;
-            spawnParticles(this.mesh.position, rarityColor, 30);
-          }
         }
         
         playerStats.kills++;
@@ -4378,8 +4205,8 @@
       constructor(x, z) {
         // Create 5-sided star shape (Super Mario 64 style)
         const starShape = new THREE.Shape();
-        const outerRadius = 0.125; // 75% smaller (25% of original 0.5)
-        const innerRadius = 0.05; // 75% smaller (25% of original 0.2)
+        const outerRadius = 0.5; // Larger for more visibility
+        const innerRadius = 0.2;
         const points = 5; // 5-point star like Super Mario
         const STAR_ROTATION_OFFSET = Math.PI / 2; // Rotate to start from top point.
         
@@ -4440,9 +4267,6 @@
 
         // Spin 360 degrees on Z axis like Earth (PR #117)
         this.mesh.rotation.z += this.rotSpeed;
-        
-        // Add Earth-like axial tilt rotation - secondary rotation for wobble effect
-        this.mesh.rotation.y += 0.03; // Slower tilt rotation
         
         // Bob up and down
         this.bobPhase += 0.05;
@@ -4511,11 +4335,11 @@
               scene.remove(particle);
               particle.geometry.dispose();
               particle.material.dispose();
-              return false; // Remove from animation system
+            } else {
+              requestAnimationFrame(updateParticle);
             }
-            return true; // Continue animating
           };
-          addAnimation(updateParticle);
+          updateParticle();
         }
         
         // Screen flash effect - blue tint (PR #117)
@@ -4972,11 +4796,10 @@
           if (openProgress < 1) {
             this.lid.rotation.x = -openProgress * Math.PI * 0.7; // Open 70%
             this.lid.position.z = -openProgress * 0.2; // Slide back slightly
-            return true; // Continue animating
+            requestAnimationFrame(animateLid);
           }
-          return false; // Animation complete
         };
-        addAnimation(animateLid);
+        animateLid();
         
         // Play sound and effects
         playSound('coin'); // Reuse coin sound
@@ -5012,42 +4835,7 @@
       }
       
       giveReward() {
-        // Gear drop chance based on chest tier
-        const gearDropChance = {
-          common: 0.15,
-          uncommon: 0.30,
-          rare: 0.50,
-          epic: 0.70,
-          mythical: 1.00
-        };
-        
-        const tierToMinRarity = {
-          common: 'common',
-          uncommon: 'uncommon',
-          rare: 'rare',
-          epic: 'epic',
-          mythical: 'legendary'
-        };
-        
-        const dropChance = gearDropChance[this.tier] || 0.15;
-        
-        // Check for gear drop first
-        if (Math.random() < dropChance) {
-          const minRarity = tierToMinRarity[this.tier] || 'common';
-          const gear = generateRandomGear(minRarity);
-          if (gear) {
-            addGearToInventory(gear);
-            createFloatingText(`${gear.name}!`, this.mesh.position);
-            // Safe rarity lookup
-            const rarityKey = gear.rarity.toUpperCase();
-            const rarityColor = RARITY[rarityKey] ? RARITY[rarityKey].color : 0xFFFFFF;
-            spawnParticles(this.mesh.position, rarityColor, 20);
-            playSound('levelup');
-            return; // Gear drop replaces other rewards
-          }
-        }
-        
-        // Determine other reward types if no gear dropped
+        // Determine reward type
         const rand = Math.random();
         
         if (rand < 0.35) {
@@ -5140,7 +4928,6 @@
     const inventory = [];
     const RARITY = {
       COMMON: { name: 'Common', color: 0xAAAAAA, multiplier: 1.0 },
-      UNCOMMON: { name: 'Uncommon', color: 0x1EFF00, multiplier: 1.15 },
       RARE: { name: 'Rare', color: 0x5DADE2, multiplier: 1.25 },
       EPIC: { name: 'Epic', color: 0x9B59B6, multiplier: 1.5 },
       LEGENDARY: { name: 'Legendary', color: 0xF39C12, multiplier: 2.0 },
@@ -5180,14 +4967,12 @@
         wisdom: 0
       },
       unspentAttributePoints: 0,
-      // Gear system - 6 slots: Helmet, Body Armor, Boots, Ring, Amulet, Weapon Charm
+      // Gear system
       equippedGear: {
-        helmet: null,
-        bodyArmor: null,
-        boots: null,
-        ring: null,
-        amulet: null,
-        weaponCharm: null
+        weapon: null,
+        armor: null,
+        accessory1: null,
+        accessory2: null
       },
       inventory: []
     };
@@ -5454,8 +5239,16 @@
     }
 
     // --- ATTRIBUTES SYSTEM ---
-    // 5 Core Attributes: Strength, Vitality, Agility, Intelligence, Luck
     const ATTRIBUTE_INFO = {
+      dexterity: {
+        name: 'Dexterity',
+        icon: '🎯',
+        description: 'Improves attack speed and critical chance',
+        effects: {
+          attackSpeed: 0.03, // +3% per point
+          critChance: 0.01   // +1% per point
+        }
+      },
       strength: {
         name: 'Strength',
         icon: '💪',
@@ -5473,32 +5266,22 @@
           hpRegen: 0.25   // +0.25 HP/sec per point
         }
       },
-      dexterity: {
-        name: 'Agility',
-        icon: '🎯',
-        description: 'Improves speed, attack speed and dodge chance',
-        effects: {
-          attackSpeed: 0.03, // +3% per point
-          critChance: 0.01,  // +1% crit chance (represents dodge)
-          moveSpeed: 0.02    // +2% move speed per point
-        }
-      },
-      wisdom: {
-        name: 'Intelligence',
-        icon: '🧠',
-        description: 'Increases experience gain and ability power',
-        effects: {
-          expEarned: 0.03,           // +3% XP gain per point
-          cooldownReduction: 0.02    // +2% ability power (cooldown reduction)
-        }
-      },
       luck: {
         name: 'Luck',
         icon: '🍀',
         description: 'Increases critical damage and treasure find chance',
         effects: {
           critDamage: 0.05,       // +5% crit damage per point
-          goldEarned: 0.03        // +3% gold drop rate per point
+          goldEarned: 0.03        // +3% gold find per point
+        }
+      },
+      wisdom: {
+        name: 'Wisdom',
+        icon: '🧠',
+        description: 'Reduces cooldowns and increases experience gain',
+        effects: {
+          cooldownReduction: 0.02, // +2% per point
+          expEarned: 0.03          // +3% per point
         }
       }
     };
@@ -5520,18 +5303,15 @@
       for (const attrKey in ATTRIBUTE_INFO) {
         const attr = ATTRIBUTE_INFO[attrKey];
         const currentLevel = saveData.attributes[attrKey] || 0;
-        const nextCost = getAttributeCost(currentLevel);
-        const canIncrease = unspent >= nextCost;
+        const canIncrease = unspent > 0;
         
-        // Build effects display with current total bonuses
+        // Build effects display
         let effectsHtml = '';
         for (const effectKey in attr.effects) {
-          const valuePerPoint = attr.effects[effectKey];
-          const totalValue = valuePerPoint * currentLevel;
+          const value = attr.effects[effectKey];
           const effectName = effectKey.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
-          const displayValuePerPoint = effectKey.includes('Hp') ? `+${valuePerPoint}` : `+${(valuePerPoint * 100).toFixed(0)}%`;
-          const displayTotal = effectKey.includes('Hp') ? `(${totalValue.toFixed(1)} total)` : `(${(totalValue * 100).toFixed(0)}% total)`;
-          effectsHtml += `<div style="color: #90ee90; font-size: 13px;">• ${effectName}: ${displayValuePerPoint} per point ${displayTotal}</div>`;
+          const displayValue = effectKey.includes('Hp') ? `+${value}` : `+${(value * 100).toFixed(0)}%`;
+          effectsHtml += `<div style="color: #90ee90; font-size: 13px;">• ${effectName}: ${displayValue} per point</div>`;
         }
         
         html += `
@@ -5555,23 +5335,16 @@
                 onclick="increaseAttribute('${attrKey}')" 
                 style="
                   padding: 10px 20px;
-                  font-size: 18px;
+                  font-size: 24px;
                   background: ${canIncrease ? 'linear-gradient(to bottom, #3498DB, #2C3E50)' : '#555'};
                   color: white;
                   border: 2px solid ${canIncrease ? '#5DADE2' : '#777'};
                   border-radius: 10px;
                   cursor: ${canIncrease ? 'pointer' : 'not-allowed'};
                   opacity: ${canIncrease ? '1' : '0.5'};
-                  display: flex;
-                  flex-direction: column;
-                  align-items: center;
-                  gap: 2px;
                 "
                 ${!canIncrease ? 'disabled' : ''}
-              >
-                <span style="font-size: 24px;">+</span>
-                <span style="font-size: 11px; color: #FFD700;">Cost: ${nextCost}</span>
-              </button>
+              >+</button>
             </div>
             <div style="color: #ddd; font-size: 14px; margin-bottom: 10px;">${attr.description}</div>
             <div style="margin-top: 10px;">
@@ -5582,12 +5355,6 @@
       }
       
       content.innerHTML = html;
-    }
-    
-    // Calculate attribute upgrade cost based on current level
-    // Cost increases every level: level 0→1 costs 1, level 9→10 costs 10, etc.
-    function getAttributeCost(currentLevel) {
-      return currentLevel + 1;
     }
 
     function updateAttributesBadge(count) {
@@ -5626,12 +5393,9 @@
     function increaseAttribute(attrKey) {
       if (!saveData.attributes[attrKey]) saveData.attributes[attrKey] = 0;
       
-      const currentLevel = saveData.attributes[attrKey];
-      const cost = getAttributeCost(currentLevel);
-      
-      if (saveData.unspentAttributePoints >= cost) {
+      if (saveData.unspentAttributePoints > 0) {
         saveData.attributes[attrKey]++;
-        saveData.unspentAttributePoints -= cost;
+        saveData.unspentAttributePoints--;
         
         playSound('levelup');
         saveSaveData();
@@ -5644,317 +5408,101 @@
 
     // --- GEAR SYSTEM ---
     const GEAR_ATTRIBUTES = {
-      hp: { name: 'HP', icon: '❤️', color: '#E74C3C' },
-      armor: { name: 'Armor', icon: '🛡️', color: '#95A5A6' },
-      hpRegen: { name: 'HP Regen', icon: '💚', color: '#27AE60' },
-      moveSpeed: { name: 'Move Speed', icon: '💨', color: '#3498DB' },
-      dodgeChance: { name: 'Dodge Chance', icon: '🌀', color: '#1ABC9C' },
-      damage: { name: 'Damage', icon: '⚔️', color: '#E67E22' },
-      critChance: { name: 'Crit Chance', icon: '✨', color: '#F39C12' },
-      attackSpeed: { name: 'Attack Speed', icon: '⚡', color: '#F1C40F' },
-      allStats: { name: 'All Stats', icon: '🌟', color: '#9B59B6' },
-      xpBonus: { name: 'XP Bonus', icon: '📈', color: '#5DADE2' }
+      flexibility: { name: 'Flexibility', icon: '🤸', color: '#9B59B6' },
+      movementSpeed: { name: 'Movement Speed', icon: '💨', color: '#3498DB' },
+      attackSpeed: { name: 'Attack Speed', icon: '⚡', color: '#F39C12' },
+      attackPrecision: { name: 'Attack Precision', icon: '🎯', color: '#E74C3C' },
+      critChance: { name: 'Crit Chance', icon: '✨', color: '#E67E22' },
+      elementalMagic: { name: 'Elemental Magic', icon: '🔮', color: '#8E44AD' }
     };
 
     // Define starter gear that players begin with
     const STARTER_GEAR = [
       {
-        id: 'starter_helmet',
-        name: 'Cloth Cap',
-        type: 'helmet',
+        id: 'starter_weapon',
+        name: 'Worn Sword',
+        type: 'weapon',
         rarity: 'common',
-        stats: { hp: 10, armor: 2 },
-        description: 'A basic cloth cap'
+        stats: { attackSpeed: 1, attackPrecision: 1 },
+        description: 'A basic weapon'
       },
       {
-        id: 'starter_bodyArmor',
+        id: 'starter_armor',
         name: 'Leather Vest',
-        type: 'bodyArmor',
+        type: 'armor',
         rarity: 'common',
-        stats: { armor: 5, hpRegen: 0.5 },
-        description: 'Basic leather protection'
+        stats: { flexibility: 1, movementSpeed: 1 },
+        description: 'Basic protection'
       },
       {
-        id: 'starter_boots',
-        name: 'Worn Boots',
-        type: 'boots',
+        id: 'starter_accessory1',
+        name: 'Lucky Charm',
+        type: 'accessory',
         rarity: 'common',
-        stats: { moveSpeed: 5 },
-        description: 'Old but functional boots'
+        stats: { critChance: 1 },
+        description: 'Brings good fortune'
       }
     ];
 
-    // Expanded gear pool with 6 equipment slots and 5 rarity tiers
+    // Additional gear that can be obtained (for future expansion)
     const GEAR_POOL = [
-      // HELMETS - +HP, +Armor
       {
-        id: 'iron_helmet',
-        name: 'Iron Helmet',
-        type: 'helmet',
-        rarity: 'uncommon',
-        stats: { hp: 20, armor: 5 },
-        description: 'Sturdy iron protection'
-      },
-      {
-        id: 'knights_helm',
-        name: 'Knight\'s Helm',
-        type: 'helmet',
+        id: 'blazing_sword',
+        name: 'Blazing Sword',
+        type: 'weapon',
         rarity: 'rare',
-        stats: { hp: 35, armor: 8 },
-        description: 'A knight\'s trusted helm'
+        stats: { attackSpeed: 2, attackPrecision: 2, elementalMagic: 1 },
+        description: 'A sword wreathed in flames'
       },
       {
-        id: 'dragon_helm',
-        name: 'Dragon Helm',
-        type: 'helmet',
+        id: 'frost_blade',
+        name: 'Frost Blade',
+        type: 'weapon',
         rarity: 'epic',
-        stats: { hp: 50, armor: 12 },
+        stats: { attackSpeed: 3, attackPrecision: 3, elementalMagic: 2 },
+        description: 'Freezes enemies on hit'
+      },
+      {
+        id: 'shadow_cloak',
+        name: 'Shadow Cloak',
+        type: 'armor',
+        rarity: 'rare',
+        stats: { flexibility: 3, movementSpeed: 2 },
+        description: 'Move like a shadow'
+      },
+      {
+        id: 'dragon_plate',
+        name: 'Dragon Plate',
+        type: 'armor',
+        rarity: 'legendary',
+        stats: { flexibility: 2, movementSpeed: 1, attackPrecision: 2 },
         description: 'Forged from dragon scales'
       },
       {
-        id: 'crown_of_kings',
-        name: 'Crown of Kings',
-        type: 'helmet',
-        rarity: 'legendary',
-        stats: { hp: 75, armor: 18 },
-        description: 'Worn by ancient rulers'
-      },
-      
-      // BODY ARMOR - +Armor, +HP Regen
-      {
-        id: 'chainmail',
-        name: 'Chainmail',
-        type: 'bodyArmor',
-        rarity: 'uncommon',
-        stats: { armor: 8, hpRegen: 1 },
-        description: 'Interlocked metal rings'
-      },
-      {
-        id: 'plate_armor',
-        name: 'Plate Armor',
-        type: 'bodyArmor',
+        id: 'crit_ring',
+        name: 'Ring of Critical Strikes',
+        type: 'accessory',
         rarity: 'rare',
-        stats: { armor: 12, hpRegen: 1.5 },
-        description: 'Heavy steel plates'
+        stats: { critChance: 3, attackPrecision: 1 },
+        description: 'Increases critical hit chance'
       },
       {
-        id: 'blessed_armor',
-        name: 'Blessed Armor',
-        type: 'bodyArmor',
+        id: 'speed_boots',
+        name: 'Winged Boots',
+        type: 'accessory',
         rarity: 'epic',
-        stats: { armor: 18, hpRegen: 2.5 },
-        description: 'Blessed by divine light'
+        stats: { movementSpeed: 4, flexibility: 1 },
+        description: 'Swift as the wind'
       },
       {
-        id: 'titans_plate',
-        name: 'Titan\'s Plate',
-        type: 'bodyArmor',
+        id: 'magic_amulet',
+        name: 'Arcane Amulet',
+        type: 'accessory',
         rarity: 'legendary',
-        stats: { armor: 25, hpRegen: 4 },
-        description: 'Armor of the titans'
-      },
-      
-      // BOOTS - +Move Speed, +Dodge Chance
-      {
-        id: 'leather_boots',
-        name: 'Leather Boots',
-        type: 'boots',
-        rarity: 'uncommon',
-        stats: { moveSpeed: 8, dodgeChance: 2 },
-        description: 'Light and flexible'
-      },
-      {
-        id: 'swift_boots',
-        name: 'Swift Boots',
-        type: 'boots',
-        rarity: 'rare',
-        stats: { moveSpeed: 12, dodgeChance: 4 },
-        description: 'Enchanted for speed'
-      },
-      {
-        id: 'shadow_treads',
-        name: 'Shadow Treads',
-        type: 'boots',
-        rarity: 'epic',
-        stats: { moveSpeed: 18, dodgeChance: 7 },
-        description: 'Walk like a shadow'
-      },
-      {
-        id: 'hermes_boots',
-        name: 'Hermes\' Boots',
-        type: 'boots',
-        rarity: 'legendary',
-        stats: { moveSpeed: 25, dodgeChance: 10 },
-        description: 'Wings on your feet'
-      },
-      
-      // RINGS - +Damage, +Crit Chance
-      {
-        id: 'bronze_ring',
-        name: 'Bronze Ring',
-        type: 'ring',
-        rarity: 'uncommon',
-        stats: { damage: 3, critChance: 2 },
-        description: 'A simple bronze band'
-      },
-      {
-        id: 'silver_ring',
-        name: 'Silver Ring',
-        type: 'ring',
-        rarity: 'rare',
-        stats: { damage: 5, critChance: 4 },
-        description: 'Polished silver'
-      },
-      {
-        id: 'ruby_ring',
-        name: 'Ruby Ring',
-        type: 'ring',
-        rarity: 'epic',
-        stats: { damage: 8, critChance: 6 },
-        description: 'Set with a blood ruby'
-      },
-      {
-        id: 'ring_of_power',
-        name: 'Ring of Power',
-        type: 'ring',
-        rarity: 'legendary',
-        stats: { damage: 12, critChance: 10 },
-        description: 'One ring to rule them all'
-      },
-      
-      // AMULETS - +All Stats (small), +XP Bonus
-      {
-        id: 'simple_amulet',
-        name: 'Simple Amulet',
-        type: 'amulet',
-        rarity: 'uncommon',
-        stats: { allStats: 1, xpBonus: 5 },
-        description: 'A basic charm'
-      },
-      {
-        id: 'jade_amulet',
-        name: 'Jade Amulet',
-        type: 'amulet',
-        rarity: 'rare',
-        stats: { allStats: 2, xpBonus: 10 },
-        description: 'Carved from jade'
-      },
-      {
-        id: 'golden_amulet',
-        name: 'Golden Amulet',
-        type: 'amulet',
-        rarity: 'epic',
-        stats: { allStats: 3, xpBonus: 15 },
-        description: 'Radiates golden light'
-      },
-      {
-        id: 'phoenix_amulet',
-        name: 'Phoenix Amulet',
-        type: 'amulet',
-        rarity: 'legendary',
-        stats: { allStats: 5, xpBonus: 25 },
-        description: 'Eternal like the phoenix'
-      },
-      
-      // WEAPON CHARMS - +Attack Speed, +Damage
-      {
-        id: 'stone_charm',
-        name: 'Stone Charm',
-        type: 'weaponCharm',
-        rarity: 'uncommon',
-        stats: { attackSpeed: 5, damage: 2 },
-        description: 'Carved from stone'
-      },
-      {
-        id: 'crystal_charm',
-        name: 'Crystal Charm',
-        type: 'weaponCharm',
-        rarity: 'rare',
-        stats: { attackSpeed: 8, damage: 4 },
-        description: 'Glows with energy'
-      },
-      {
-        id: 'rune_charm',
-        name: 'Rune Charm',
-        type: 'weaponCharm',
-        rarity: 'epic',
-        stats: { attackSpeed: 12, damage: 6 },
-        description: 'Ancient runes pulse'
-      },
-      {
-        id: 'godslayer_charm',
-        name: 'Godslayer Charm',
-        type: 'weaponCharm',
-        rarity: 'legendary',
-        stats: { attackSpeed: 18, damage: 10 },
-        description: 'Blessed to slay gods'
+        stats: { elementalMagic: 4, attackSpeed: 2 },
+        description: 'Channels magical energy'
       }
     ];
-
-    // Generate random gear based on tier/rarity
-    function generateRandomGear(minRarity = 'common') {
-      // Filter gear pool by minimum rarity
-      const rarityOrder = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
-      const minRarityIndex = rarityOrder.indexOf(minRarity);
-      
-      const availableGear = GEAR_POOL.filter(gear => {
-        const gearRarityIndex = rarityOrder.indexOf(gear.rarity);
-        return gearRarityIndex >= minRarityIndex;
-      });
-      
-      if (availableGear.length === 0) return null;
-      
-      // Weighted random selection (higher rarity = lower chance)
-      const rarityWeights = {
-        common: 0,
-        uncommon: 50,
-        rare: 25,
-        epic: 15,
-        legendary: 10
-      };
-      
-      let totalWeight = 0;
-      const weightedGear = availableGear.map(gear => {
-        const weight = rarityWeights[gear.rarity] || 10;
-        totalWeight += weight;
-        return { gear, weight };
-      });
-      
-      let random = Math.random() * totalWeight;
-      for (const item of weightedGear) {
-        random -= item.weight;
-        if (random <= 0) {
-          // Return a copy with unique ID
-          return {
-            ...item.gear,
-            id: `${item.gear.id}_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`
-          };
-        }
-      }
-      
-      return weightedGear[0].gear; // Fallback
-    }
-    
-    // Add gear to player inventory
-    function addGearToInventory(gear) {
-      if (!gear) return;
-      
-      // Add to inventory
-      saveData.inventory.push(gear);
-      
-      // Check if the slot is empty - auto-equip if so
-      const slotKey = gear.type;
-      if (!saveData.equippedGear[slotKey]) {
-        saveData.equippedGear[slotKey] = gear.id;
-        showStatChange(`Auto-equipped: ${gear.name}`);
-        playSound('coin');
-      } else {
-        // Show notification that new gear is available
-        showStatChange(`New gear: ${gear.name}`);
-      }
-      
-      saveSaveData();
-    }
 
     function initializeGear() {
       // Give players starter gear if they don't have any
@@ -5962,9 +5510,9 @@
         saveData.inventory = [...STARTER_GEAR];
         
         // Auto-equip starter gear
-        saveData.equippedGear.helmet = 'starter_helmet';
-        saveData.equippedGear.bodyArmor = 'starter_bodyArmor';
-        saveData.equippedGear.boots = 'starter_boots';
+        saveData.equippedGear.weapon = 'starter_weapon';
+        saveData.equippedGear.armor = 'starter_armor';
+        saveData.equippedGear.accessory1 = 'starter_accessory1';
         
         saveSaveData();
       }
@@ -5996,16 +5544,14 @@
       }
       statsContent.innerHTML = statsHtml;
       
-      // Build gear slots display - 6 slots: Helmet, Body Armor, Boots, Ring, Amulet, Weapon Charm
+      // Build gear slots display
       let html = '';
       
       const slots = [
-        { key: 'helmet', name: 'Helmet', icon: '⛑️' },
-        { key: 'bodyArmor', name: 'Body Armor', icon: '🛡️' },
-        { key: 'boots', name: 'Boots', icon: '👢' },
-        { key: 'ring', name: 'Ring', icon: '💍' },
-        { key: 'amulet', name: 'Amulet', icon: '📿' },
-        { key: 'weaponCharm', name: 'Weapon Charm', icon: '✨' }
+        { key: 'weapon', name: 'Weapon Slot', icon: '⚔️' },
+        { key: 'armor', name: 'Armor Slot', icon: '🛡️' },
+        { key: 'accessory1', name: 'Accessory Slot 1', icon: '💍' },
+        { key: 'accessory2', name: 'Accessory Slot 2', icon: '📿' }
       ];
       
       for (const slot of slots) {
@@ -6042,7 +5588,7 @@
               <div style="color: #5DADE2; font-size: 16px; font-weight: bold; margin-bottom: 10px;">Available Gear:</div>
               <div style="display: grid; gap: 10px; max-height: 200px; overflow-y: auto;">
                 ${saveData.inventory.filter(g => {
-                  const gearType = g.type === slot.key;
+                  const gearType = g.type === 'accessory' ? (slot.key === 'accessory1' || slot.key === 'accessory2') : g.type === slot.key;
                   const notEquipped = g.id !== equippedId;
                   return gearType && notEquipped;
                 }).map(gear => `
@@ -6068,7 +5614,6 @@
     function getRarityColor(rarity) {
       const colors = {
         common: '#AAAAAA',
-        uncommon: '#1EFF00',
         rare: '#5DADE2',
         epic: '#9B59B6',
         legendary: '#F39C12',
@@ -6091,16 +5636,7 @@
           const gear = saveData.inventory.find(g => g.id === gearId);
           if (gear && gear.stats) {
             for (const statKey in gear.stats) {
-              // Handle "allStats" - distribute to multiple stats
-              if (statKey === 'allStats') {
-                // Add to hp, armor, damage, moveSpeed
-                stats.hp = (stats.hp || 0) + gear.stats[statKey] * 5;
-                stats.armor = (stats.armor || 0) + gear.stats[statKey];
-                stats.damage = (stats.damage || 0) + gear.stats[statKey];
-                stats.moveSpeed = (stats.moveSpeed || 0) + gear.stats[statKey];
-              } else {
-                stats[statKey] = (stats[statKey] || 0) + gear.stats[statKey];
-              }
+              stats[statKey] += gear.stats[statKey];
             }
           }
         }
@@ -6108,56 +5644,11 @@
       
       return stats;
     }
-    
-    // Gear stat multipliers (for game balance tuning)
-    const GEAR_STAT_MULTIPLIERS = {
-      DAMAGE_PER_POINT: 0.1,         // Each damage point = 10% bonus
-      ATTACK_SPEED_PER_POINT: 0.01,  // Each attack speed point = 1% bonus
-      CRIT_CHANCE_PER_POINT: 0.01,   // Each crit point = 1% chance
-      DODGE_CHANCE_PER_POINT: 0.01,  // Each dodge point = 1% chance
-      XP_BONUS_PER_POINT: 0.01       // Each XP point = 1% bonus
-    };
-    
-    // Apply gear stats to player stats (called when gear changes or game starts)
-    function applyGearStats() {
-      const gearStats = calculateGearStats();
-      
-      // Reset player stats to base values (from permanent upgrades)
-      const baseMaxHp = 100 + PERMANENT_UPGRADES.maxHp.effect(saveData.upgrades.maxHp);
-      const baseHpRegen = PERMANENT_UPGRADES.hpRegen.effect(saveData.upgrades.hpRegen);
-      const baseMoveSpeed = 25 * (1 + PERMANENT_UPGRADES.moveSpeed.effect(saveData.upgrades.moveSpeed));
-      const baseDamage = 1 + PERMANENT_UPGRADES.attackDamage.effect(saveData.upgrades.attackDamage);
-      const baseAtkSpeed = 1 + PERMANENT_UPGRADES.attackSpeed.effect(saveData.upgrades.attackSpeed);
-      const baseCritChance = 0.1 + PERMANENT_UPGRADES.critChance.effect(saveData.upgrades.critChance);
-      const baseArmor = PERMANENT_UPGRADES.armor.effect(saveData.upgrades.armor);
-      
-      // Apply gear bonuses (additive for most, multiplicative for some)
-      playerStats.maxHp = Math.floor(baseMaxHp + (gearStats.hp || 0));
-      playerStats.hpRegen = baseHpRegen + (gearStats.hpRegen || 0);
-      playerStats.walkSpeed = baseMoveSpeed + (gearStats.moveSpeed || 0);
-      playerStats.damage = baseDamage + (gearStats.damage || 0) * GEAR_STAT_MULTIPLIERS.DAMAGE_PER_POINT;
-      playerStats.atkSpeed = baseAtkSpeed + (gearStats.attackSpeed || 0) * GEAR_STAT_MULTIPLIERS.ATTACK_SPEED_PER_POINT;
-      playerStats.critChance = baseCritChance + (gearStats.critChance || 0) * GEAR_STAT_MULTIPLIERS.CRIT_CHANCE_PER_POINT;
-      playerStats.armor = Math.min(80, baseArmor + (gearStats.armor || 0)); // Cap at 80%
-      
-      // XP bonus from gear (affects XP gain multiplier)
-      const xpBonus = (gearStats.xpBonus || 0) * GEAR_STAT_MULTIPLIERS.XP_BONUS_PER_POINT;
-      playerStats.xpMultiplier = 1 + xpBonus;
-      
-      // Dodge chance from gear (new stat)
-      playerStats.dodgeChance = (gearStats.dodgeChance || 0) * GEAR_STAT_MULTIPLIERS.DODGE_CHANCE_PER_POINT;
-      
-      // Clamp HP if it went over max due to max HP changes
-      playerStats.hp = Math.min(playerStats.hp, playerStats.maxHp);
-      
-      updateHUD();
-    }
 
     function equipGear(slotKey, gearId) {
       saveData.equippedGear[slotKey] = gearId;
       playSound('coin');
       saveSaveData();
-      applyGearStats(); // Apply stats when gear changes
       updateGearScreen();
     }
 
@@ -6165,7 +5656,6 @@
       saveData.equippedGear[slotKey] = null;
       playSound('waterdrop');
       saveSaveData();
-      applyGearStats(); // Apply stats when gear changes
       updateGearScreen();
     }
 
@@ -7269,7 +6759,6 @@
       
       // Initialize gear system
       initializeGear();
-      applyGearStats(); // Apply gear bonuses to player stats
       
       // Initialize background music
       updateBackgroundMusic();
@@ -7425,12 +6914,10 @@
       const optionsMenu = document.getElementById('options-menu');
       const closeOptionsBtn = document.getElementById('close-options-btn');
       const optionsStatsBtn = document.getElementById('options-stats-btn');
-      const optionsAttributesBtn = document.getElementById('options-attributes-btn');
       const optionsSettingsBtn = document.getElementById('options-settings-btn');
       
       menuBtn.addEventListener('click', () => {
         isPaused = true;
-        activeAnimations.length = 0; // Clear animations on pause (PR #121)
         optionsMenu.style.display = 'flex';
         playSound('waterdrop');
       });
@@ -7446,15 +6933,9 @@
         toggleStats();
       });
       
-      optionsAttributesBtn.addEventListener('click', () => {
-        optionsMenu.style.display = 'none';
-        showAttributesMenu();
-      });
-      
       optionsSettingsBtn.addEventListener('click', () => {
         optionsMenu.style.display = 'none';
         isPaused = true;
-        activeAnimations.length = 0; // Clear animations on pause (PR #121)
         // Open settings modal
         document.getElementById('settings-modal').style.display = 'flex';
       });
@@ -7462,7 +6943,6 @@
       document.getElementById('settings-btn').onclick = () => {
         playSound('waterdrop');
         isPaused = true;
-        activeAnimations.length = 0; // Clear animations on pause (PR #121)
         document.getElementById('settings-modal').style.display = 'flex';
       };
       
@@ -7642,81 +7122,14 @@
       
       // Stats Bar removed - No toggle needed
       
-      // Attributes & Equipment Button
+      // Phase 2: Equipment Button (Placeholder)
       document.getElementById('equipment-btn').onclick = () => {
-        playSound('waterdrop');
-        showAttributesMenu();
-      };
-      
-      // Attributes Menu Close Button
-      document.getElementById('close-attributes-btn').onclick = () => {
-        playSound('waterdrop');
-        document.getElementById('attributes-menu').style.display = 'none';
-        isPaused = false;
+        playSound('hit');
+        alert('⚔️ EQUIPMENT SYSTEM\n\nComing in Phase 3!\n\nThis feature will allow you to equip special gear and customize your build.');
       };
       
       // Initialize control type UI on startup
       updateControlType();
-    }
-    
-    // Function to show attributes and equipment menu
-    function showAttributesMenu() {
-      isPaused = true;
-      activeAnimations.length = 0; // Clear animations on pause (PR #121)
-      
-      // Populate attributes content
-      const attributesContent = document.getElementById('attributes-content');
-      attributesContent.innerHTML = `
-        <div class="attribute-item">
-          <strong>❤️ Health:</strong> ${playerStats.maxHp} HP
-        </div>
-        <div class="attribute-item">
-          <strong>💪 Strength:</strong> ${playerStats.strength}
-        </div>
-        <div class="attribute-item">
-          <strong>⚡ Speed:</strong> ${playerStats.speed}
-        </div>
-        <div class="attribute-item">
-          <strong>⚔️ Damage:</strong> ${playerStats.damage}
-        </div>
-        <div class="attribute-item">
-          <strong>🎯 Crit Chance:</strong> ${(playerStats.critChance * 100).toFixed(1)}%
-        </div>
-        <div class="attribute-item">
-          <strong>💥 Crit Damage:</strong> ${(playerStats.critDamage * 100).toFixed(0)}%
-        </div>
-        <div class="attribute-item">
-          <strong>🛡️ Armor:</strong> ${playerStats.armor}%
-        </div>
-        <div class="attribute-item">
-          <strong>🏃 Walk Speed:</strong> ${(playerStats.walkSpeed * 100).toFixed(0)}%
-        </div>
-      `;
-      
-      // Populate equipment content
-      const equipmentContent = document.getElementById('equipment-content');
-      const weaponsList = [];
-      
-      // Check which weapons player has unlocked
-      if (playerStats.lvl >= 1 && weapons.gun.active) {
-        weaponsList.push(`🔫 <strong>Gun</strong> - Basic ranged weapon (${weapons.gun.damage} damage)`);
-      }
-      if (playerStats.lvl >= 5 && weapons.sword.active) {
-        weaponsList.push(`⚔️ <strong>Sword</strong> - Melee slash weapon (${weapons.sword.damage} damage)`);
-      }
-      if (playerStats.lvl >= 10 && weapons.energyAura.active) {
-        weaponsList.push(`💫 <strong>Energy Aura</strong> - Area damage (${weapons.energyAura.damage} damage)`);
-      }
-      
-      if (weaponsList.length === 0) {
-        equipmentContent.innerHTML = '<div class="empty-message">No equipment unlocked yet.</div>';
-      } else {
-        equipmentContent.innerHTML = weaponsList.map(w => 
-          `<div class="attribute-item">${w}</div>`
-        ).join('');
-      }
-      
-      document.getElementById('attributes-menu').style.display = 'flex';
     }
     
 
@@ -7875,15 +7288,8 @@
     
     function addGold(amount) {
       // Apply gold bonus from permanent upgrades
-      const upgradeBonus = PERMANENT_UPGRADES.goldEarned.effect(saveData.upgrades.goldEarned);
-      
-      // Apply gold bonus from Luck attribute (multiplicative stacking)
-      const luck = saveData.attributes.luck || 0;
-      const luckBonus = luck * ATTRIBUTE_INFO.luck.effects.goldEarned;
-      
-      // Stack multiplicatively: base * (1 + upgrade) * (1 + luck)
-      const finalAmount = Math.floor(amount * (1 + upgradeBonus) * (1 + luckBonus));
-      
+      const bonus = PERMANENT_UPGRADES.goldEarned.effect(saveData.upgrades.goldEarned);
+      const finalAmount = Math.floor(amount * (1 + bonus));
       playerStats.gold += finalAmount;
       saveData.gold += finalAmount;
       saveData.totalGoldEarned += finalAmount;
@@ -7918,26 +7324,15 @@
           scene.remove(mesh);
           mesh.geometry.dispose();
           mesh.material.dispose();
-          return false; // Remove from animation system
+        } else {
+          requestAnimationFrame(update);
         }
-        return true; // Continue animating
       };
-      addAnimation(update);
+      update();
     }
 
     function addExp(amount) {
-      // Apply XP multiplier from gear and permanent upgrades
-      const gearXpBonus = playerStats.xpMultiplier || 1;
-      const upgradeXpBonus = 1 + PERMANENT_UPGRADES.expEarned.effect(saveData.upgrades.expEarned);
-      
-      // Apply XP bonus from Intelligence/Wisdom attribute (multiplicative stacking)
-      const wisdom = saveData.attributes.wisdom || 0;
-      const wisdomBonus = 1 + (wisdom * ATTRIBUTE_INFO.wisdom.effects.expEarned);
-      
-      // Stack multiplicatively: base * gear * upgrade * wisdom
-      const finalAmount = amount * gearXpBonus * upgradeXpBonus * wisdomBonus;
-      
-      playerStats.exp += finalAmount;
+      playerStats.exp += amount;
       
       // Trigger waterdrop grow animation on XP pickup
       const waterdropContainer = document.getElementById('waterdrop-container');
@@ -7956,9 +7351,6 @@
       isPaused = true;
       playerStats.lvl++;
       playerStats.exp -= playerStats.expReq;
-      
-      // Award 1 attribute point per level-up (in addition to upgrade card)
-      saveData.unspentAttributePoints += 1;
       
       // Victory condition: Reaching level 50
       if (playerStats.lvl === 50) {
@@ -8115,11 +7507,11 @@
             scene.remove(droplet);
             droplet.geometry.dispose();
             droplet.material.dispose();
-            return false; // Remove from animation system
+          } else {
+            requestAnimationFrame(updateDroplet);
           }
-          return true; // Continue animating
         };
-        addAnimation(updateDroplet);
+        updateDroplet();
       }
       
       // Expanding splash ring on ground
@@ -8147,11 +7539,11 @@
           scene.remove(ring);
           ring.geometry.dispose();
           ring.material.dispose();
-          return false; // Remove from animation system
+        } else {
+          requestAnimationFrame(updateRing);
         }
-        return true; // Continue animating
       };
-      addAnimation(updateRing);
+      updateRing();
       
       // Fountain/explosion of "LEVEL UP" text particles from player's head
       const texts = ["L", "E", "V", "E", "L", " ", "U", "P", "!"];
@@ -8222,11 +7614,10 @@
         camera.updateProjectionMatrix();
         
         if (t < 1) {
-          return true; // Continue animating
+          requestAnimationFrame(zoomAnim);
         }
-        return false; // Animation complete
       };
-      addAnimation(zoomAnim);
+      zoomAnim();
       
       // Screen shake
       const originalCameraPos = camera.position.clone();
@@ -8240,13 +7631,12 @@
           camera.position.x = originalCameraPos.x + (Math.random() - 0.5) * intensity;
           camera.position.y = originalCameraPos.y + (Math.random() - 0.5) * intensity;
           camera.position.z = originalCameraPos.z + (Math.random() - 0.5) * intensity;
-          return true; // Continue animating
+          requestAnimationFrame(shakeAnim);
         } else {
           camera.position.copy(originalCameraPos);
-          return false; // Animation complete
         }
       };
-      addAnimation(shakeAnim);
+      shakeAnim();
     }
     
     class LevelUpTextParticle {
@@ -9192,20 +8582,6 @@
             const cz = player.mesh.position.z + Math.sin(chestAngle) * chestDist;
             spawnChest(cx, cz, chestTier);
             showStatChange(`${chestTier.toUpperCase()} Chest Spawned!`);
-            
-            // Bonus gear drop for combo 15+ (guaranteed epic+ gear)
-            if (comboState.count >= 15) {
-              const minRarity = comboState.count >= 20 ? 'legendary' : 'epic';
-              const bonusGear = generateRandomGear(minRarity);
-              if (bonusGear) {
-                addGearToInventory(bonusGear);
-                createFloatingText(`💫 ${bonusGear.name}!`, player.mesh.position);
-                // Safe rarity lookup
-                const rarityKey = bonusGear.rarity.toUpperCase();
-                const rarityColor = RARITY[rarityKey] ? RARITY[rarityKey].color : 0xFFFFFF;
-                spawnParticles(player.mesh.position, rarityColor, 25);
-              }
-            }
           }
         }
         
@@ -9437,10 +8813,8 @@
       comboMultiplier.style.color = textColor;
       comboMultiplier.style.fontSize = `${Math.floor(fontSize * 0.5)}px`; // Scale multiplier text
       
-      // Only show stat notification for milestone combos (not every kill)
-      if (isMilestone) {
-        showStatChange(message, comboLevel);
-      }
+      // Show stat notification for all combos
+      showStatChange(message, comboLevel);
       // Play multikill sound
       playSound('multikill');
       
@@ -9456,8 +8830,6 @@
     
     function hideCombo() {
       const comboEl = document.getElementById('combo-counter');
-      const comboText = document.getElementById('combo-text');
-      const comboMultiplier = document.getElementById('combo-multiplier');
       const comboTimerEl = document.getElementById('combo-timer');
       comboEl.style.animation = `combo-fade-out ${COMBO_ANIMATION_DURATION}ms ease-out forwards`;
       
@@ -9472,10 +8844,6 @@
         comboEl.style.animation = 'none';
         comboTimerEl.style.display = 'none'; // Hide timer when combo is lost
         
-        // Clear combo text to prevent stale messages
-        comboText.textContent = '';
-        comboMultiplier.textContent = '';
-        
         // Spawn chest when combo is lost at minimum threshold
         if (comboState.count >= MIN_COMBO_FOR_CHEST_ON_LOSS) {
           const chestTier = getChestTierForCombo(comboState.count);
@@ -9485,7 +8853,9 @@
             const cx = player.mesh.position.x + Math.cos(chestAngle) * chestDist;
             const cz = player.mesh.position.z + Math.sin(chestAngle) * chestDist;
             spawnChest(cx, cz, chestTier);
-            // No "combo lost" text - just silently fade out
+            // Show only in stat bar: "combo lost" and chest rarity (no text on main screen)
+            const tierCapitalized = chestTier.charAt(0).toUpperCase() + chestTier.slice(1);
+            showStatChange(`Combo lost - ${tierCapitalized} chest`);
           }
         }
         
@@ -9653,9 +9023,6 @@
       isPaused = true;
       isGameActive = false;
       
-      // Clear all active animations to prevent buildup (PR #121)
-      activeAnimations.length = 0;
-      
       stopDroneHum(); // Stop drone sound
       
       // Calculate run stats
@@ -9702,7 +9069,6 @@
       const attrRegen = vitality * ATTRIBUTE_INFO.vitality.effects.hpRegen;
       const attrAtkSpeed = dexterity * ATTRIBUTE_INFO.dexterity.effects.attackSpeed;
       const attrCritChance = dexterity * ATTRIBUTE_INFO.dexterity.effects.critChance;
-      const attrMoveSpeed = dexterity * ATTRIBUTE_INFO.dexterity.effects.moveSpeed;
       const attrDamage = strength * ATTRIBUTE_INFO.strength.effects.damage;
       const attrCritDmg = luck * ATTRIBUTE_INFO.luck.effects.critDamage;
       const attrCdReduction = wisdom * ATTRIBUTE_INFO.wisdom.effects.cooldownReduction;
@@ -9717,14 +9083,14 @@
       const gearCritBonus = gearStats.critChance * 0.02;          // +2% crit chance per point
       const gearMagicBonus = gearStats.elementalMagic * 0.03;     // +3% damage per point
       
-      // Reset Stats with permanent upgrades, attributes, and gear applied (multiplicative stacking)
+      // Reset Stats with permanent upgrades, attributes, and gear applied
       playerStats.lvl = 1;
       playerStats.exp = 0;
       playerStats.expReq = GAME_CONFIG.baseExpReq;
       playerStats.hp = baseHp + attrHp;
       playerStats.maxHp = baseHp + attrHp;
       playerStats.strength = baseDamage * (1 + attrDamage + gearMagicBonus);
-      playerStats.walkSpeed = baseSpeed * (1 + attrMoveSpeed + gearMoveSpeedBonus);
+      playerStats.walkSpeed = baseSpeed * (1 + gearMoveSpeedBonus);
       playerStats.kills = 0;
       playerStats.atkSpeed = baseAtkSpeed * (1 + attrAtkSpeed + gearAtkSpeedBonus);
       playerStats.critChance = baseCritChance + attrCritChance + gearPrecisionBonus + gearCritBonus;
@@ -10492,20 +9858,6 @@
       // Player Update
       player.update(dt);
       
-      // Update centralized animation system (PR #121)
-      // Process all active animations and remove completed ones
-      for (let i = activeAnimations.length - 1; i >= 0; i--) {
-        try {
-          const shouldContinue = activeAnimations[i]();
-          if (shouldContinue === false) {
-            activeAnimations.splice(i, 1);
-          }
-        } catch (error) {
-          console.error('Animation error, removing animation:', error);
-          activeAnimations.splice(i, 1);
-        }
-      }
-      
       // Check windmill quest trigger
       if (!windmillQuest.active && !windmillQuest.hasCompleted) {
         scene.children.forEach(child => {
@@ -11015,7 +10367,6 @@
       if (!shouldSkipRender) {
         try {
           renderer.render(scene, camera);
-          lastRenderTime = performance.now(); // Track successful render for watchdog (PR #121)
           performanceLog.renderCount++;
         } catch (error) {
           console.error('Render error caught - game continues:', error);
