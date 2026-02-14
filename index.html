@@ -2150,6 +2150,10 @@
     let lastCleanupTime = 0; // Track last memory cleanup time
     let miniBossesSpawned = new Set(); // Track which mini-boss levels have been spawned
     
+    // Time-of-day system for dynamic lighting
+    let timeOfDay = 0; // 0-1 representing full day cycle (0=dawn, 0.25=noon, 0.5=dusk, 0.75=night)
+    let dayNightCycleSpeed = 0.0001; // Speed of day/night transition
+    
     // Countdown system (PR #70-71)
     let countdownActive = false;
     let countdownStep = 0;
@@ -6964,8 +6968,8 @@
       // Scene
       scene = new THREE.Scene();
       scene.background = new THREE.Color(COLORS.bg);
-      // Fog for depth
-      scene.fog = new THREE.Fog(COLORS.bg, 20, 60);
+      // Enhanced exponential fog for better depth perception and atmosphere
+      scene.fog = new THREE.FogExp2(0x87CEEB, 0.005); // Sky blue fog with exponential falloff
       
       // Phase 5: Initialize particle object pool for performance (100 particles pre-allocated)
       particlePool = new ObjectPool(
@@ -6981,11 +6985,19 @@
       camera.position.set(20, 20, 20); // Isometric angle
       camera.lookAt(scene.position);
 
-      // Renderer
-      renderer = new THREE.WebGLRenderer({ antialias: true });
+      // Renderer with enhanced quality settings
+      renderer = new THREE.WebGLRenderer({ 
+        antialias: true,
+        powerPreference: 'high-performance',
+        alpha: false
+      });
       renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Cap at 2x for performance
       renderer.shadowMap.enabled = true;
-      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Soft shadows
+      renderer.toneMapping = THREE.ACESFilmicToneMapping; // Better color/brightness
+      renderer.toneMappingExposure = 1.0;
+      renderer.outputEncoding = THREE.sRGBEncoding; // Correct color space
       document.getElementById('game-container').appendChild(renderer.domElement);
 
       // Lights
@@ -6995,12 +7007,16 @@
       const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
       dirLight.position.set(50, 100, 50);
       dirLight.castShadow = true;
-      dirLight.shadow.mapSize.width = 2048;
-      dirLight.shadow.mapSize.height = 2048;
+      // Enhanced shadow quality for better visuals
+      dirLight.shadow.mapSize.width = 4096;  // Increased from 2048
+      dirLight.shadow.mapSize.height = 4096; // Increased from 2048
       dirLight.shadow.camera.left = -100;
       dirLight.shadow.camera.right = 100;
       dirLight.shadow.camera.top = 100;
       dirLight.shadow.camera.bottom = -100;
+      dirLight.shadow.camera.near = 0.5;
+      dirLight.shadow.camera.far = 500;
+      dirLight.shadow.bias = -0.0001; // Reduce shadow acne
       scene.add(dirLight);
 
       // Setup
@@ -10648,6 +10664,66 @@
       expGems = expGems.filter(g => g.active);
       goldCoins = goldCoins.filter(g => g.active);
       chests = chests.filter(c => c.active);
+
+      // Dynamic time-of-day lighting system for enhanced visuals
+      if (isGameActive && !isPaused && !isGameOver) {
+        timeOfDay += dayNightCycleSpeed;
+        if (timeOfDay > 1) timeOfDay = 0;
+        
+        // Update directional light based on time of day
+        const dirLight = scene.children.find(child => child instanceof THREE.DirectionalLight);
+        if (dirLight) {
+          // Calculate sun position and color based on time
+          const angle = timeOfDay * Math.PI * 2;
+          const sunHeight = Math.sin(angle);
+          
+          // Position: sun moves in arc across sky
+          dirLight.position.set(
+            50 * Math.cos(angle),
+            50 + 50 * sunHeight,
+            50 * Math.sin(angle)
+          );
+          
+          // Color changes: warm at sunrise/sunset, white at noon, cool at night
+          if (timeOfDay < 0.15 || timeOfDay > 0.85) { // Dawn/Dusk
+            const dawnDuskFactor = timeOfDay < 0.15 ? timeOfDay / 0.15 : (1 - timeOfDay) / 0.15;
+            dirLight.color.setHex(0xffa040); // Warm orange/red
+            dirLight.intensity = 0.3 + 0.4 * dawnDuskFactor;
+          } else if (timeOfDay >= 0.15 && timeOfDay <= 0.35) { // Morning
+            dirLight.color.setHex(0xffffdd); // Warm white
+            dirLight.intensity = 0.7;
+          } else if (timeOfDay > 0.35 && timeOfDay < 0.65) { // Noon
+            dirLight.color.setHex(0xffffff); // Pure white
+            dirLight.intensity = 0.9;
+          } else { // Evening
+            dirLight.color.setHex(0xffd0a0); // Warm sunset
+            dirLight.intensity = 0.5;
+          }
+        }
+        
+        // Update ambient light for overall scene brightness
+        const ambientLight = scene.children.find(child => child instanceof THREE.AmbientLight);
+        if (ambientLight) {
+          if (timeOfDay < 0.15 || timeOfDay > 0.85) { // Dawn/Dusk
+            ambientLight.intensity = 0.3;
+            ambientLight.color.setHex(0xffa040);
+          } else if (timeOfDay > 0.15 && timeOfDay < 0.85) { // Day
+            ambientLight.intensity = 0.6;
+            ambientLight.color.setHex(0xffffff);
+          }
+        }
+        
+        // Enhanced fog effects based on time of day
+        if (scene.fog) {
+          if (timeOfDay < 0.15 || timeOfDay > 0.85) { // Dawn/Dusk - more fog
+            scene.fog.density = 0.008;
+            scene.fog.color.setHex(0xffa060);
+          } else {
+            scene.fog.density = 0.005;
+            scene.fog.color.setHex(0x87CEEB);
+          }
+        }
+      }
 
       // Phase 3: Render loop protection - wrap in try-catch to prevent freeze
       // Frame Skip Mechanism: Skip rendering if frame budget exceeded
