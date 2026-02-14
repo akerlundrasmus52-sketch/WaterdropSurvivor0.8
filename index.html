@@ -1854,6 +1854,27 @@
     <button class="btn" id="restart-btn">CONTINUE</button>
   </div>
 
+  <!-- Standalone loading screen failsafe - runs independently of ES module (PR #129-132 spec) -->
+  <script>
+    // 12-second maximum loading timeout - prevents infinite loading if ES module fails
+    setTimeout(function() {
+      try {
+        var ls = document.getElementById('loading-screen');
+        // Check computed display value for robustness (handles CSS and inline styles)
+        if (ls && window.getComputedStyle(ls).display !== 'none' && !ls.classList.contains('fade-out')) {
+          ls.classList.add('fade-out');
+          setTimeout(function() {
+            ls.style.display = 'none';
+            var menu = document.getElementById('main-menu');
+            if (menu) menu.style.display = 'flex';
+          }, 500);
+        }
+      } catch (e) {
+        // Silently handle any DOM timing issues - failsafe should not cause errors
+      }
+    }, 12000);
+  </script>
+
   <!-- Import Map for Three.js -->
   <script async src="https://unpkg.com/es-module-shims@1.8.0/dist/es-module-shims.js"></script>
   <script type="importmap">
