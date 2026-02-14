@@ -254,13 +254,19 @@
 
     /* Unified Status Bar - Like empty HP/EXP bar */
     .unified-status-bar {
-      background: linear-gradient(to bottom, #1a1a2e 0%, #1a1a2e 50%, #2c3e50 50%, #2c3e50 100%);
+      background: linear-gradient(to bottom, rgba(26,26,46,0.95) 0%, rgba(44,62,80,0.95) 100%);
       border-radius: 12px;
-      border: 3px solid #16213e;
-      padding: 8px 15px;
+      border: 3px solid #5DADE2; /* Light blue edges like EXP bar */
+      padding: 10px 18px;
       min-width: 250px;
       max-width: 400px;
-      box-shadow: 0 3px 8px rgba(0,0,0,0.5), inset 0 2px 4px rgba(0,0,0,0.3);
+      box-shadow: 
+        0 0 0 1px rgba(93,173,226,0.3),
+        0 0 20px rgba(93,173,226,0.5),
+        0 0 35px rgba(93,173,226,0.3),
+        0 6px 12px rgba(0,0,0,0.7),
+        inset 0 1px 3px rgba(255,255,255,0.1),
+        inset 0 -2px 8px rgba(0,0,0,0.5); /* Dark inner shadow */
       opacity: 0;
       transform: translateY(20px);
       transition: opacity 0.3s ease, transform 0.3s ease;
@@ -358,6 +364,7 @@
         0 4px 12px rgba(0,0,0,0.7),
         inset 0 2px 4px rgba(255,255,255,0.1);
       overflow: hidden;
+      animation: waterdrop-bubble 3s ease-in-out infinite;
     }
 
     .waterdrop-fill {
@@ -369,12 +376,26 @@
       background: linear-gradient(to top, #3498db 0%, #5DADE2 100%);
       box-shadow: inset 0 2px 6px rgba(255,255,255,0.3);
       transition: height 0.5s ease-out;
-      animation: water-wave 2s ease-in-out infinite;
+      animation: water-wave 2s ease-in-out infinite, water-shimmer 2.5s ease-in-out infinite;
     }
 
     @keyframes water-wave {
       0%, 100% { transform: translateY(0); }
       50% { transform: translateY(-3px); }
+    }
+    
+    /* Squishy bubbling animation for waterdrop (PR #117) */
+    @keyframes waterdrop-bubble {
+      0%, 100% { transform: scale(1) scaleY(1); }
+      25% { transform: scale(0.98) scaleY(1.04); }
+      50% { transform: scale(1.02) scaleY(0.98); }
+      75% { transform: scale(0.99) scaleY(1.02); }
+    }
+    
+    /* Water shimmer effect */
+    @keyframes water-shimmer {
+      0%, 100% { box-shadow: inset 0 2px 6px rgba(255,255,255,0.3); }
+      50% { box-shadow: inset 0 2px 10px rgba(255,255,255,0.5); }
     }
     
     @media (prefers-reduced-motion: reduce) {
@@ -533,35 +554,150 @@
         inset 0 0 0 2px rgba(0,0,0,0.5); /* Inner border for definition */
     }
     
-    /* Rarity-based border colors */
+    /* Rarity-based border colors with INTENSE glowing edges */
     .upgrade-card.rarity-common {
       border-color: #999999;
-      box-shadow: 0 0 20px rgba(153,153,153,0.4), 0 6px 12px rgba(0,0,0,0.6);
+      box-shadow: 
+        0 0 0 1px rgba(153,153,153,0.5),
+        0 0 25px rgba(153,153,153,0.6),
+        0 0 40px rgba(153,153,153,0.4),
+        0 0 60px rgba(153,153,153,0.2),
+        0 6px 12px rgba(0,0,0,0.6),
+        inset 0 1px 3px rgba(255,255,255,0.1),
+        inset 0 0 0 2px rgba(0,0,0,0.5);
     }
     
     .upgrade-card.rarity-uncommon {
       border-color: #2ecc71;
-      box-shadow: 0 0 20px rgba(46,204,113,0.5), 0 6px 12px rgba(0,0,0,0.6);
+      box-shadow: 
+        0 0 0 1px rgba(46,204,113,0.6),
+        0 0 30px rgba(46,204,113,0.7),
+        0 0 50px rgba(46,204,113,0.5),
+        0 0 75px rgba(46,204,113,0.3),
+        0 6px 12px rgba(0,0,0,0.6),
+        inset 0 1px 3px rgba(255,255,255,0.1),
+        inset 0 0 0 2px rgba(0,0,0,0.5);
     }
     
     .upgrade-card.rarity-rare {
       border-color: #3498db;
-      box-shadow: 0 0 20px rgba(52,152,219,0.5), 0 6px 12px rgba(0,0,0,0.6);
+      box-shadow: 
+        0 0 0 1px rgba(52,152,219,0.6),
+        0 0 35px rgba(52,152,219,0.8),
+        0 0 55px rgba(52,152,219,0.6),
+        0 0 80px rgba(52,152,219,0.4),
+        0 6px 12px rgba(0,0,0,0.6),
+        inset 0 1px 3px rgba(255,255,255,0.1),
+        inset 0 0 0 2px rgba(0,0,0,0.5);
     }
     
     .upgrade-card.rarity-epic {
       border-color: #9b59b6;
-      box-shadow: 0 0 20px rgba(155,89,182,0.5), 0 6px 12px rgba(0,0,0,0.6);
+      box-shadow: 
+        0 0 0 2px rgba(155,89,182,0.7),
+        0 0 40px rgba(155,89,182,0.9),
+        0 0 60px rgba(155,89,182,0.7),
+        0 0 90px rgba(155,89,182,0.5),
+        0 6px 12px rgba(0,0,0,0.6),
+        inset 0 1px 3px rgba(255,255,255,0.15),
+        inset 0 0 0 2px rgba(0,0,0,0.5);
+      animation: epicPulse 2s ease-in-out infinite;
     }
     
     .upgrade-card.rarity-legendary {
       border-color: #f39c12;
-      box-shadow: 0 0 25px rgba(243,156,18,0.6), 0 6px 12px rgba(0,0,0,0.6);
+      box-shadow: 
+        0 0 0 2px rgba(243,156,18,0.8),
+        0 0 45px rgba(243,156,18,1.0),
+        0 0 70px rgba(243,156,18,0.8),
+        0 0 100px rgba(243,156,18,0.6),
+        0 6px 12px rgba(0,0,0,0.6),
+        inset 0 1px 3px rgba(255,255,255,0.2),
+        inset 0 0 0 2px rgba(0,0,0,0.5);
+      animation: legendaryPulse 1.5s ease-in-out infinite;
     }
     
     .upgrade-card.rarity-mythic {
       border-color: #e74c3c;
-      box-shadow: 0 0 25px rgba(231,76,60,0.6), 0 6px 12px rgba(0,0,0,0.6);
+      box-shadow: 
+        0 0 0 3px rgba(231,76,60,0.9),
+        0 0 50px rgba(231,76,60,1.0),
+        0 0 80px rgba(231,76,60,0.9),
+        0 0 120px rgba(231,76,60,0.7),
+        0 6px 12px rgba(0,0,0,0.6),
+        inset 0 1px 3px rgba(255,255,255,0.25),
+        inset 0 0 0 2px rgba(0,0,0,0.5);
+      animation: mythicPulse 1.2s ease-in-out infinite;
+    }
+    
+    /* Pulsing animations for higher rarities */
+    @keyframes epicPulse {
+      0%, 100% {
+        box-shadow: 
+          0 0 0 2px rgba(155,89,182,0.7),
+          0 0 40px rgba(155,89,182,0.9),
+          0 0 60px rgba(155,89,182,0.7),
+          0 0 90px rgba(155,89,182,0.5),
+          0 6px 12px rgba(0,0,0,0.6),
+          inset 0 1px 3px rgba(255,255,255,0.15),
+          inset 0 0 0 2px rgba(0,0,0,0.5);
+      }
+      50% {
+        box-shadow: 
+          0 0 0 3px rgba(155,89,182,0.9),
+          0 0 50px rgba(155,89,182,1.0),
+          0 0 75px rgba(155,89,182,0.9),
+          0 0 110px rgba(155,89,182,0.7),
+          0 6px 12px rgba(0,0,0,0.6),
+          inset 0 1px 3px rgba(255,255,255,0.2),
+          inset 0 0 0 2px rgba(0,0,0,0.5);
+      }
+    }
+    
+    @keyframes legendaryPulse {
+      0%, 100% {
+        box-shadow: 
+          0 0 0 2px rgba(243,156,18,0.8),
+          0 0 45px rgba(243,156,18,1.0),
+          0 0 70px rgba(243,156,18,0.8),
+          0 0 100px rgba(243,156,18,0.6),
+          0 6px 12px rgba(0,0,0,0.6),
+          inset 0 1px 3px rgba(255,255,255,0.2),
+          inset 0 0 0 2px rgba(0,0,0,0.5);
+      }
+      50% {
+        box-shadow: 
+          0 0 0 4px rgba(243,156,18,1.0),
+          0 0 55px rgba(243,156,18,1.0),
+          0 0 85px rgba(243,156,18,1.0),
+          0 0 120px rgba(243,156,18,0.8),
+          0 6px 12px rgba(0,0,0,0.6),
+          inset 0 1px 3px rgba(255,255,255,0.3),
+          inset 0 0 0 2px rgba(0,0,0,0.5);
+      }
+    }
+    
+    @keyframes mythicPulse {
+      0%, 100% {
+        box-shadow: 
+          0 0 0 3px rgba(231,76,60,0.9),
+          0 0 50px rgba(231,76,60,1.0),
+          0 0 80px rgba(231,76,60,0.9),
+          0 0 120px rgba(231,76,60,0.7),
+          0 6px 12px rgba(0,0,0,0.6),
+          inset 0 1px 3px rgba(255,255,255,0.25),
+          inset 0 0 0 2px rgba(0,0,0,0.5);
+      }
+      50% {
+        box-shadow: 
+          0 0 0 5px rgba(231,76,60,1.0),
+          0 0 65px rgba(231,76,60,1.0),
+          0 0 100px rgba(231,76,60,1.0),
+          0 0 150px rgba(231,76,60,0.9),
+          0 6px 12px rgba(0,0,0,0.6),
+          inset 0 1px 3px rgba(255,255,255,0.35),
+          inset 0 0 0 2px rgba(0,0,0,0.5);
+      }
     }
     
     @keyframes perkPulse {
@@ -1841,12 +1977,40 @@
     let countdownActive = false;
     let countdownStep = 0;
     let countdownTimer = 0;
+    let startButtonLocked = false; // Concurrency guard (PR #124-143)
+    const START_BUTTON_UNLOCK_DELAY = 3000; // 3 seconds
     const countdownMessages = [
       "Good luck!",
       "3",
       "2",
       "1"
     ];
+    
+    // FPS Watchdog constants (PR #124-143)
+    const FPS_THROTTLE_THRESHOLD = 30;
+    const THROTTLE_LOW_FPS = 0.5; // 50% particles when low FPS
+    const THROTTLE_NORMAL_FPS = 1.0; // 100% particles when normal FPS
+    
+    // Gold variant thresholds (PR #117)
+    const GOLD_CHEST_THRESHOLD = 50; // Golden chest for 50+ gold
+    const GOLD_BAG_THRESHOLD = 25;   // Leather bag for 25-49 gold
+    const GOLD_MULTIPLE_THRESHOLD = 10; // 3 orbiting coins for 10-24 gold
+    // Single coin for < 10 gold
+    const GOLD_LIGHT_INTENSITY_SCALE = 25; // Divisor for flash light intensity
+    
+    // Precision aiming constants (PR #124-143)
+    const PRECISION_AIM_RANGE = 15; // Range in units for enemy detection
+    const PRECISION_AIM_NUDGE_STRENGTH = 0.15; // 15% aim assistance
+    const PRECISION_CRIT_BONUS_PER_POINT = 0.01; // 1% crit per precision point
+    const PRECISION_GOLD_BONUS_PER_POINT = 0.02; // 2% gold per precision point
+    
+    // Loading screen constants (PR #124-143)
+    const LOADING_FADE_DELAY = 500; // ms before fade starts
+    const LOADING_FAILSAFE_TIMEOUT = 12000; // 12 second maximum
+    
+    // Visual constants (PR #117-143)
+    const EXP_STAR_COLOR = 0x3498DB; // Deep blue for EXP stars
+    const GOLD_FLASH_MIN_INTENSITY = 4; // Minimum intensity for gold collection flash
 
     // Game Settings
     const gameSettings = {
@@ -1914,7 +2078,12 @@
       // ENHANCEMENT: Achievement tracking
       bossesKilled: 0,
       totalCrits: 0,
-      perfectRuns: 0 // Runs with no damage taken
+      perfectRuns: 0, // Runs with no damage taken
+      // ENHANCEMENT: Precision Aiming (PR #124-143)
+      precision: 0, // Precision attribute for aiming bonuses
+      dodge: 0, // Dodge chance percentage
+      goldBonus: 1.0, // Gold multiplier (1.0 = 100%)
+      xpBonus: 1.0 // XP multiplier (1.0 = 100%)
     };
 
     // Weapons State
@@ -1931,6 +2100,12 @@
 
     // Magnet range for XP collection
     let magnetRange = 2; // Base range for XP magnet
+    
+    // FPS Watchdog (PR #124-143)
+    let fpsHistory = [];
+    const FPS_HISTORY_SIZE = 10;
+    let lastFrameTime = performance.now();
+    let particleThrottle = 1.0; // 1.0 = 100%, 0.5 = 50%
     
     // Dash mechanics
     let dashCooldown = 1000; // Base cooldown in ms (1 second)
@@ -2189,7 +2364,36 @@
           // Rotation/Aiming with RIGHT stick (independent of movement)
           if (joystickRight.active) {
             // Manual aim: Turn to face the direction of right stick
-            const angle = Math.atan2(joystickRight.x, joystickRight.y);
+            let angle = Math.atan2(joystickRight.x, joystickRight.y);
+            
+            // PRECISION AIMING: 15% nudge toward nearest enemy within range (PR #124-143)
+            if (playerStats.precision > 0 && enemies && enemies.length > 0) {
+              let nearestEnemy = null;
+              let minDist = Infinity;
+              enemies.forEach(e => {
+                if (e && !e.isDead) {
+                  const dist = this.mesh.position.distanceTo(e.mesh.position);
+                  if (dist < PRECISION_AIM_RANGE && dist < minDist) {
+                    minDist = dist;
+                    nearestEnemy = e;
+                  }
+                }
+              });
+              
+              if (nearestEnemy) {
+                const dx = nearestEnemy.mesh.position.x - this.mesh.position.x;
+                const dz = nearestEnemy.mesh.position.z - this.mesh.position.z;
+                const targetAngle = Math.atan2(dx, dz);
+                
+                // Nudge toward enemy
+                const angleDiff = targetAngle - angle;
+                // Normalize angle difference to [-PI, PI] efficiently
+                const normalizedDiff = Math.atan2(Math.sin(angleDiff), Math.cos(angleDiff));
+                
+                angle += normalizedDiff * PRECISION_AIM_NUDGE_STRENGTH;
+              }
+            }
+            
             this.mesh.rotation.y = angle;
           } else if (gameSettings.autoAim && enemies && enemies.length > 0) {
             // Auto-aim when enabled (works in any orientation)
@@ -3292,12 +3496,17 @@
             comboBonusText.innerText = `+${bonusPercent}% Damage & Gold`;
             
             // NEW: Named milestone system with progressive sizing and glow
+            // Starts at 4 kills to make reaching first milestone more achievable
             let milestoneName = '';
             let milestoneSize = 1.0;
             let glowIntensity = 1.0;
             
-            if (playerStats.comboCount === 5) {
-              milestoneName = 'MULTIKILL';
+            if (playerStats.comboCount === 4) {
+              milestoneName = 'COMMON COMBO';
+              milestoneSize = 1.1;
+              glowIntensity = 1.0;
+            } else if (playerStats.comboCount === 5) {
+              milestoneName = 'UNCOMMON COMBO';
               milestoneSize = 1.2;
               glowIntensity = 1.2;
             } else if (playerStats.comboCount === 6) {
@@ -3316,31 +3525,10 @@
               milestoneName = 'MYTHICAL COMBO';
               milestoneSize = 1.6;
               glowIntensity = 2.0;
-            } else if (playerStats.comboCount === 10) {
-              milestoneName = 'AMAZING COMBO';
-              milestoneSize = 1.7;
-              glowIntensity = 2.2;
-            } else if (playerStats.comboCount === 11) {
-              milestoneName = 'UNBELIEVABLE COMBO';
+            } else if (playerStats.comboCount >= 10) {
+              milestoneName = 'GODLIKE COMBO';
               milestoneSize = 1.8;
-              glowIntensity = 2.4;
-            } else if (playerStats.comboCount === 12) {
-              milestoneName = 'FANTASTIC COMBO';
-              milestoneSize = 1.9;
-              glowIntensity = 2.6;
-            } else if (playerStats.comboCount === 13) {
-              milestoneName = 'ALMOST MAX COMBO';
-              milestoneSize = 2.0;
-              glowIntensity = 2.8;
-            } else if (playerStats.comboCount === 14) {
-              milestoneName = 'GODLIKE';
-              milestoneSize = 2.2;
-              glowIntensity = 3.0;
-            } else if (playerStats.comboCount >= 15) {
-              const godlikeMultiplier = Math.floor((playerStats.comboCount - 13) / 1);
-              milestoneName = `GODLIKE x${godlikeMultiplier}`;
-              milestoneSize = 2.2 + (godlikeMultiplier * 0.1);
-              glowIntensity = 3.0 + (godlikeMultiplier * 0.2);
+              glowIntensity = 2.5;
             }
             
             // Display milestone with enhanced visual effects
@@ -3482,7 +3670,13 @@
               dmg = weapons.doubleBarrel.damage * playerStats.damage * playerStats.strength * playerStats.comboMultiplier;
             }
             
-            const isCrit = Math.random() < playerStats.critChance;
+            // PRECISION AIMING: +1% crit per precision point when manual aiming (PR #124-143)
+            let effectiveCritChance = playerStats.critChance;
+            if (joystickRight.active && playerStats.precision > 0) {
+              effectiveCritChance += playerStats.precision * PRECISION_CRIT_BONUS_PER_POINT;
+            }
+            
+            const isCrit = Math.random() < effectiveCritChance;
             if (isCrit) {
               dmg *= playerStats.critDmg;
               // ENHANCEMENT: Track crit streaks for achievements
@@ -3781,11 +3975,11 @@
 
     class ExpGem {
       constructor(x, z) {
-        // Create 6-sided star shape
+        // Create 5-point star shape (PR #117 style)
         const starShape = new THREE.Shape();
-        const outerRadius = 0.36;
-        const innerRadius = 0.18;
-        const points = 6;
+        const outerRadius = 0.125; // 75% size reduction from original 0.5
+        const innerRadius = 0.05;  // 75% size reduction from original 0.2
+        const points = 5; // 5-point star
         
         for (let i = 0; i < points * 2; i++) {
           const angle = (i / (points * 2)) * Math.PI * 2;
@@ -3813,7 +4007,7 @@
         geometry.center();
         
         const material = new THREE.MeshPhysicalMaterial({ 
-          color: COLORS.exp, // Light blue matching EXP bar
+          color: EXP_STAR_COLOR, // Deep blue (#3498DB)
           transparent: true,
           opacity: 0.8,
           metalness: 0.3,
@@ -3823,8 +4017,8 @@
           envMapIntensity: 1,
           clearcoat: 1,
           clearcoatRoughness: 0.1,
-          emissive: COLORS.exp,
-          emissiveIntensity: 0.3
+          emissive: 0x5DADE2, // Lighter blue glow
+          emissiveIntensity: 0.4
         });
         
         this.mesh = new THREE.Mesh(geometry, material);
@@ -3842,6 +4036,9 @@
 
         // Spin on Z axis (since it's rotated to lay flat)
         this.mesh.rotation.z += this.rotSpeed;
+        
+        // Y-axis rotation for Earth-like axial tilt effect (PR #117-143)
+        this.mesh.rotation.y += 0.03;
         
         // Bob up and down
         this.bobPhase += 0.05;
@@ -3862,7 +4059,7 @@
           
           // Visual Trail when pulled - water particles with sparkle
           if (Math.random() < 0.3) {
-             spawnParticles(this.mesh.position, COLORS.exp, 1);
+             spawnParticles(this.mesh.position, EXP_STAR_COLOR, 1); // Deep blue
           }
         }
 
@@ -3885,7 +4082,7 @@
           const particle = new THREE.Mesh(
             new THREE.SphereGeometry(0.08, 8, 8),
             new THREE.MeshBasicMaterial({ 
-              color: COLORS.exp, 
+              color: EXP_STAR_COLOR, // Deep blue
               transparent: true, 
               opacity: 0.9
             })
@@ -3941,17 +4138,6 @@
 
     class GoldCoin {
       constructor(x, z, amount) {
-        const geometry = new THREE.CylinderGeometry(0.2, 0.2, 0.1, 8);
-        const material = new THREE.MeshBasicMaterial({ 
-          color: 0xFFD700,
-          transparent: true,
-          opacity: 0.95
-        });
-        this.mesh = new THREE.Mesh(geometry, material);
-        this.mesh.position.set(x, 0.3, z);
-        this.mesh.rotation.x = Math.PI / 2;
-        scene.add(this.mesh);
-        
         this.active = true;
         this.amount = amount;
         this.magnetRange = 4;
@@ -3960,24 +4146,192 @@
         this.vz = 0;
         this.wobblePhase = Math.random() * Math.PI * 2;
         this.bounceTime = 0;
+        this.meshes = []; // Array to hold multiple meshes for variants
+        this.baseX = x;
+        this.baseZ = z;
+        
+        // Create appropriate variant based on amount (PR #117)
+        if (amount >= GOLD_CHEST_THRESHOLD) {
+          this.createGoldChest(x, z);
+        } else if (amount >= GOLD_BAG_THRESHOLD) {
+          this.createLeatherBag(x, z);
+        } else if (amount >= GOLD_MULTIPLE_THRESHOLD) {
+          this.createMultipleCoins(x, z);
+        } else {
+          this.createSingleCoin(x, z);
+        }
         
         // Play gold drop sound
         playSound('coinDrop');
         
-        // Spawn 8 sparkles on creation
-        spawnParticles(this.mesh.position, 0xFFD700, 8);
-        spawnParticles(this.mesh.position, 0xFFFFFF, 2);
+        // Spawn sparkles on creation
+        const sparkleCount = Math.min(8 + Math.floor(amount / 10), 20);
+        spawnParticles(new THREE.Vector3(x, 0.3, z), 0xFFD700, sparkleCount);
+        spawnParticles(new THREE.Vector3(x, 0.3, z), 0xFFFFFF, Math.floor(sparkleCount / 4));
+      }
+      
+      createSingleCoin(x, z) {
+        // Large spinning gold coin (PR #117)
+        const geometry = new THREE.CylinderGeometry(0.25, 0.25, 0.1, 12);
+        const material = new THREE.MeshPhysicalMaterial({ 
+          color: 0xFFD700,
+          metalness: 0.9,
+          roughness: 0.2,
+          transparent: true,
+          opacity: 0.98
+        });
+        this.mesh = new THREE.Mesh(geometry, material);
+        this.mesh.position.set(x, 0.3, z);
+        this.mesh.rotation.x = Math.PI / 2;
+        scene.add(this.mesh);
+        this.meshes.push(this.mesh);
+        this.variant = 'single';
+      }
+      
+      createMultipleCoins(x, z) {
+        // 3 coins orbiting around center (PR #117)
+        this.mesh = new THREE.Group();
+        this.mesh.position.set(x, 0.3, z);
+        scene.add(this.mesh);
+        this.meshes.push(this.mesh);
+        
+        for (let i = 0; i < 3; i++) {
+          const angle = (i / 3) * Math.PI * 2;
+          const radius = 0.4;
+          const coinGeo = new THREE.CylinderGeometry(0.15, 0.15, 0.08, 10);
+          const coinMat = new THREE.MeshPhysicalMaterial({ 
+            color: 0xFFD700,
+            metalness: 0.85,
+            roughness: 0.25
+          });
+          const coin = new THREE.Mesh(coinGeo, coinMat);
+          coin.position.set(Math.cos(angle) * radius, 0, Math.sin(angle) * radius);
+          coin.rotation.x = Math.PI / 2;
+          this.mesh.add(coin);
+        }
+        this.variant = 'multiple';
+        this.orbitPhase = Math.random() * Math.PI * 2;
+      }
+      
+      createLeatherBag(x, z) {
+        // Brown leather pouch with knot (PR #117)
+        this.mesh = new THREE.Group();
+        this.mesh.position.set(x, 0.3, z);
+        scene.add(this.mesh);
+        this.meshes.push(this.mesh);
+        
+        // Bag body (rounded bottom)
+        const bagGeo = new THREE.SphereGeometry(0.3, 12, 12, 0, Math.PI * 2, 0, Math.PI * 0.7);
+        const bagMat = new THREE.MeshPhysicalMaterial({ 
+          color: 0x8B4513, // Saddle brown
+          roughness: 0.8,
+          metalness: 0.1
+        });
+        const bag = new THREE.Mesh(bagGeo, bagMat);
+        bag.position.y = -0.1;
+        this.mesh.add(bag);
+        
+        // Knot at top (darker)
+        const knotGeo = new THREE.SphereGeometry(0.12, 8, 8);
+        const knotMat = new THREE.MeshPhysicalMaterial({ 
+          color: 0x654321, // Dark brown
+          roughness: 0.9,
+          metalness: 0.05
+        });
+        const knot = new THREE.Mesh(knotGeo, knotMat);
+        knot.position.y = 0.15;
+        knot.scale.set(1, 0.6, 1);
+        this.mesh.add(knot);
+        
+        // Gold coin symbols on bag
+        for (let i = 0; i < 3; i++) {
+          const angle = (i / 3) * Math.PI * 2;
+          const coinSymbol = new THREE.Mesh(
+            new THREE.CircleGeometry(0.08, 8),
+            new THREE.MeshBasicMaterial({ color: 0xFFD700, opacity: 0.6, transparent: true })
+          );
+          coinSymbol.position.set(Math.cos(angle) * 0.2, -0.05, Math.sin(angle) * 0.2);
+          coinSymbol.rotation.y = -angle;
+          this.mesh.add(coinSymbol);
+        }
+        
+        this.variant = 'bag';
+      }
+      
+      createGoldChest(x, z) {
+        // Golden chest with glowing interior (PR #117)
+        this.mesh = new THREE.Group();
+        this.mesh.position.set(x, 0.3, z);
+        scene.add(this.mesh);
+        this.meshes.push(this.mesh);
+        
+        // Chest base
+        const baseGeo = new THREE.BoxGeometry(0.6, 0.4, 0.5);
+        const baseMat = new THREE.MeshPhysicalMaterial({ 
+          color: 0xFFD700,
+          metalness: 0.9,
+          roughness: 0.2,
+          emissive: 0xFFD700,
+          emissiveIntensity: 0.3
+        });
+        const base = new THREE.Mesh(baseGeo, baseMat);
+        base.position.y = -0.1;
+        this.mesh.add(base);
+        
+        // Chest lid (open, tilted)
+        const lidGeo = new THREE.BoxGeometry(0.62, 0.12, 0.52);
+        const lidMat = new THREE.MeshPhysicalMaterial({ 
+          color: 0xFFD700,
+          metalness: 0.9,
+          roughness: 0.15,
+          emissive: 0xFFD700,
+          emissiveIntensity: 0.4
+        });
+        const lid = new THREE.Mesh(lidGeo, lidMat);
+        lid.position.set(0, 0.15, -0.25);
+        lid.rotation.x = -Math.PI / 3; // Open angle
+        this.mesh.add(lid);
+        
+        // Glowing interior light
+        const glowLight = new THREE.PointLight(0xFFD700, 2, 3);
+        glowLight.position.set(0, 0.1, 0);
+        this.mesh.add(glowLight);
+        this.glowLight = glowLight;
+        
+        this.variant = 'chest';
+        this.glowPhase = 0;
       }
       
       update(playerPos) {
         if (!this.active) return;
         
-        // Spinning
-        this.mesh.rotation.y += 0.15;
+        // Variant-specific animations
+        if (this.variant === 'single') {
+          // Single coin spinning
+          this.mesh.rotation.y += 0.15;
+        } else if (this.variant === 'multiple') {
+          // 3 coins orbiting
+          this.orbitPhase += 0.05;
+          this.mesh.rotation.y += 0.08;
+          // Individual coin spins
+          this.mesh.children.forEach((coin, i) => {
+            coin.rotation.y += 0.12;
+          });
+        } else if (this.variant === 'bag') {
+          // Bag swaying
+          this.mesh.rotation.z = Math.sin(this.wobblePhase * 0.5) * 0.1;
+        } else if (this.variant === 'chest') {
+          // Chest glowing pulse
+          this.glowPhase += 0.05;
+          if (this.glowLight) {
+            this.glowLight.intensity = 2 + Math.sin(this.glowPhase) * 0.5;
+          }
+        }
         
         // Bounce physics on spawn
         if (this.bounceTime < 1) {
-          this.mesh.position.y = 0.3 + Math.abs(Math.sin(this.bounceTime * Math.PI * 3)) * 0.5 * (1 - this.bounceTime);
+          const mainMesh = this.mesh;
+          mainMesh.position.y = 0.3 + Math.abs(Math.sin(this.bounceTime * Math.PI * 3)) * 0.5 * (1 - this.bounceTime);
           this.bounceTime += 0.02;
         } else {
           // Wobble after bounce
@@ -3995,12 +4349,13 @@
           addGold(this.amount);
           playSound('coin');
           
-          // Gold collect particles - 20 sparkles + flash
-          spawnParticles(this.mesh.position, 0xFFD700, 15);
-          spawnParticles(this.mesh.position, 0xFFFFFF, 5); // White flash sparkles
+          // Gold collect particles - more for larger amounts
+          const particleCount = Math.min(15 + Math.floor(this.amount / 5), 40);
+          spawnParticles(this.mesh.position, 0xFFD700, particleCount);
+          spawnParticles(this.mesh.position, 0xFFFFFF, Math.floor(particleCount / 3));
           
           // Flash effect - bright point light
-          const flashLight = new THREE.PointLight(0xFFD700, 4, 8);
+          const flashLight = new THREE.PointLight(0xFFD700, GOLD_FLASH_MIN_INTENSITY + (this.amount / GOLD_LIGHT_INTENSITY_SCALE), 8);
           flashLight.position.copy(this.mesh.position);
           flashLight.position.y += 1;
           scene.add(flashLight);
@@ -4020,9 +4375,32 @@
       
       destroy() {
         this.active = false;
-        scene.remove(this.mesh);
-        this.mesh.geometry.dispose();
-        this.mesh.material.dispose();
+        this.meshes.forEach(mesh => {
+          scene.remove(mesh);
+          if (mesh.geometry) {
+            mesh.geometry.dispose();
+          }
+          if (mesh.material) {
+            if (Array.isArray(mesh.material)) {
+              mesh.material.forEach(m => m.dispose());
+            } else {
+              mesh.material.dispose();
+            }
+          }
+          // Dispose children for groups
+          if (mesh.children) {
+            mesh.children.forEach(child => {
+              if (child.geometry) child.geometry.dispose();
+              if (child.material) {
+                if (Array.isArray(child.material)) {
+                  child.material.forEach(m => m.dispose());
+                } else {
+                  child.material.dispose();
+                }
+              }
+            });
+          }
+        });
       }
     }
 
@@ -5453,6 +5831,7 @@
       const loadingScreen = document.getElementById('loading-screen');
       const loadingBar = document.getElementById('loading-bar');
       let progress = 0;
+      let intervalCleared = false;
       
       // Extended loading duration: 20 iterations × 400ms = 8000ms (8 seconds total)
       const interval = setInterval(() => {
@@ -5460,16 +5839,29 @@
         loadingBar.style.width = progress + '%';
         
         if (progress >= 100) {
+          intervalCleared = true;
           clearInterval(interval);
           setTimeout(() => {
             loadingScreen.classList.add('fade-out');
             setTimeout(() => {
               loadingScreen.style.display = 'none';
               showMainMenu();
-            }, 500);
+            }, LOADING_FADE_DELAY);
           }, 600); // Extended delay before fade
         }
       }, 400); // Slower progress updates for longer duration
+      
+      // FAILSAFE: 12 second timeout (PR #124-143)
+      setTimeout(() => {
+        if (!intervalCleared) {
+          clearInterval(interval);
+          loadingScreen.classList.add('fade-out');
+          setTimeout(() => {
+            loadingScreen.style.display = 'none';
+            showMainMenu();
+          }, LOADING_FADE_DELAY);
+        }
+      }, LOADING_FAILSAFE_TIMEOUT);
     }
     
     function showMainMenu() {
@@ -5662,10 +6054,19 @@
       
       // Main Menu Buttons
       document.getElementById('start-game-btn').onclick = () => {
+        // Concurrency guard: Prevent double-clicks (PR #124-143)
+        if (startButtonLocked) return;
+        startButtonLocked = true;
+        
         playSound('levelup');
         hideMainMenu();
         resetGame();
         startCountdown(); // Start countdown after resetting game (PR #70)
+        
+        // Unlock after delay to prevent double-clicks
+        setTimeout(() => {
+          startButtonLocked = false;
+        }, START_BUTTON_UNLOCK_DELAY);
       };
       
       document.getElementById('progression-btn').onclick = () => {
@@ -5874,7 +6275,10 @@
     }
 
     function spawnParticles(pos, color, count) {
-      for(let i=0; i<count; i++) particles.push(new Particle(pos, color));
+      // Apply FPS-based throttle (PR #124-143)
+      // Use floor to ensure single particles can be throttled to 0
+      const throttledCount = Math.floor(count * particleThrottle);
+      for(let i=0; i<throttledCount; i++) particles.push(new Particle(pos, color));
     }
 
     function spawnExp(x, z) {
@@ -5893,7 +6297,14 @@
     function addGold(amount) {
       // Apply gold bonus from permanent upgrades
       const bonus = PERMANENT_UPGRADES.goldEarned.effect(saveData.upgrades.goldEarned);
-      const finalAmount = Math.floor(amount * (1 + bonus));
+      
+      // PRECISION AIMING: +2% gold per precision point when manual aiming (PR #124-143)
+      let precisionBonus = 0;
+      if (joystickRight.active && playerStats.precision > 0) {
+        precisionBonus = playerStats.precision * PRECISION_GOLD_BONUS_PER_POINT;
+      }
+      
+      const finalAmount = Math.floor(amount * (1 + bonus + precisionBonus));
       playerStats.gold += finalAmount;
       saveData.gold += finalAmount;
       saveData.totalGoldEarned += finalAmount;
@@ -8016,6 +8427,31 @@
     // --- MAIN LOOP ---
     function animate(time) {
       requestAnimationFrame(animate);
+      
+      // FPS Watchdog: Track rolling 10-frame average (PR #124-143)
+      const currentTime = performance.now();
+      const frameDelta = currentTime - lastFrameTime;
+      lastFrameTime = currentTime;
+      
+      if (frameDelta > 0) {
+        const currentFPS = 1000 / frameDelta;
+        fpsHistory.push(currentFPS);
+        if (fpsHistory.length > FPS_HISTORY_SIZE) {
+          fpsHistory.shift();
+        }
+        
+        // Calculate average FPS
+        if (fpsHistory.length === FPS_HISTORY_SIZE) {
+          const avgFPS = fpsHistory.reduce((a, b) => a + b, 0) / FPS_HISTORY_SIZE;
+          
+          // Throttle particles when FPS drops below threshold
+          if (avgFPS < FPS_THROTTLE_THRESHOLD) {
+            particleThrottle = THROTTLE_LOW_FPS;
+          } else {
+            particleThrottle = THROTTLE_NORMAL_FPS;
+          }
+        }
+      }
       
       // Safety check: Ensure Three.js components are initialized before rendering (PR #82)
       if (!renderer || !scene || !camera) {
