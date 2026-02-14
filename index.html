@@ -4075,8 +4075,8 @@
             
             // Defensive clamp: Ensure damage is finite and positive (fallback to 1)
             if (!isFinite(dmg) || dmg <= 0) {
-              if (!isFinite(dmg) && !window._nanDamageWarned) {
-                console.warn('Projectile.update: Non-finite damage detected. Base dmg:', weapons.gun.damage, 'Stats:', playerStats.damage, playerStats.strength, 'Crit:', playerStats.critDmg);
+              if (!window._nanDamageWarned) {
+                console.warn('Projectile.update: Invalid damage detected:', dmg, 'Base dmg:', weapons.gun.damage, 'Stats:', playerStats.damage, playerStats.strength, 'Crit:', playerStats.critDmg);
                 window._nanDamageWarned = true;
               }
               dmg = 1; // Fallback to minimum damage
@@ -4132,8 +4132,8 @@
         
         // Defensive clamp: Ensure damage is finite and positive (fallback to 1)
         if (!isFinite(dmg) || dmg <= 0) {
-          if (!isFinite(dmg) && !window._nanDamageWarnedSword) {
-            console.warn('SwordArc: Non-finite damage detected. Base dmg:', weapons.sword.damage, 'Stats:', playerStats.damage, playerStats.strength);
+          if (!window._nanDamageWarnedSword) {
+            console.warn('SwordArc: Invalid damage detected:', dmg, 'Base dmg:', weapons.sword.damage, 'Stats:', playerStats.damage, playerStats.strength);
             window._nanDamageWarnedSword = true;
           }
           dmg = 1; // Fallback to minimum damage
@@ -4231,8 +4231,8 @@
             
             // Defensive clamp: Ensure damage is finite and positive (fallback to 1)
             if (!isFinite(dmg) || dmg <= 0) {
-              if (!isFinite(dmg) && !window._nanDamageWarnedIce) {
-                console.warn('IceSpear.update: Non-finite damage detected. Base dmg:', weapons.iceSpear.damage, 'Stats:', playerStats.damage, playerStats.strength, 'Crit:', playerStats.critDmg);
+              if (!window._nanDamageWarnedIce) {
+                console.warn('IceSpear.update: Invalid damage detected:', dmg, 'Base dmg:', weapons.iceSpear.damage, 'Stats:', playerStats.damage, playerStats.strength, 'Crit:', playerStats.critDmg);
                 window._nanDamageWarnedIce = true;
               }
               dmg = 1; // Fallback to minimum damage
@@ -4329,8 +4329,8 @@
         
         // Defensive clamp: Ensure damage is finite and positive (fallback to 1)
         if (!isFinite(dmg) || dmg <= 0) {
-          if (!isFinite(dmg) && !window._nanDamageWarnedMeteor) {
-            console.warn('Meteor: Non-finite damage detected. Base dmg:', weapons.meteor.damage, 'Stats:', playerStats.strength);
+          if (!window._nanDamageWarnedMeteor) {
+            console.warn('Meteor: Invalid damage detected:', dmg, 'Base dmg:', weapons.meteor.damage, 'Stats:', playerStats.strength);
             window._nanDamageWarnedMeteor = true;
           }
           dmg = 1; // Fallback to minimum damage
@@ -10748,8 +10748,8 @@
         
         // Defensive clamp: Ensure damage is finite and positive (fallback to 1)
         if (!isFinite(auraDmg) || auraDmg <= 0) {
-          if (!isFinite(auraDmg) && !window._nanDamageWarnedAura) {
-            console.warn('Aura: Non-finite damage detected. Base dmg:', weapons.aura.damage, 'Stats:', playerStats.strength);
+          if (!window._nanDamageWarnedAura) {
+            console.warn('Aura: Invalid damage detected:', auraDmg, 'Base dmg:', weapons.aura.damage, 'Stats:', playerStats.strength);
             window._nanDamageWarnedAura = true;
           }
           auraDmg = 1; // Fallback to minimum damage
@@ -10958,8 +10958,8 @@
             
             // Defensive clamp: Ensure damage is finite and positive (fallback to 1)
             if (!isFinite(dmg) || dmg <= 0) {
-              if (!isFinite(dmg) && !window._nanDamageWarnedFireRing) {
-                console.warn('FireRing: Non-finite damage detected. Base dmg:', weapons.fireRing.damage, 'Stats:', playerStats.strength, 'Crit:', playerStats.critDmg);
+              if (!window._nanDamageWarnedFireRing) {
+                console.warn('FireRing: Invalid damage detected:', dmg, 'Base dmg:', weapons.fireRing.damage, 'Stats:', playerStats.strength, 'Crit:', playerStats.critDmg);
                 window._nanDamageWarnedFireRing = true;
               }
               dmg = 1; // Fallback to minimum damage
