@@ -9076,14 +9076,14 @@
         message = isMilestone ? 'Rare Combo' : `${comboState.count}x COMBO!`;
         comboLevel = 'high';
       } else if (comboState.count === 5) {
-        message = isMilestone ? 'Multikill' : `${comboState.count}x COMBO!`;  // First combo message at 5 kills
+        message = isMilestone ? 'Multikill' : '';  // PR #124: Only show milestone text, no count
         comboLevel = 'high';
       } else {
-        message = comboState.count + 'x COMBO!';
+        message = ''; // PR #124: No text for non-milestone combos (< 5)
       }
       
       comboText.innerText = message;
-      comboMultiplier.innerText = isMilestone ? '' : `x${comboState.count}`; // Only show multiplier when not showing milestone text
+      comboMultiplier.innerText = isMilestone ? `x${comboState.count}` : ''; // PR #124: Only show count on milestones
       
       // Progressive scaling: Start small at 5, gradually grow bigger to GODLIKE at 20
       // Yellow/White to Dark Red gradient with intensifying glow and size
@@ -9183,19 +9183,25 @@
       comboMultiplier.style.color = textColor;
       comboMultiplier.style.fontSize = `${Math.floor(fontSize * 0.5)}px`; // Scale multiplier text
       
-      // Show stat notification for all combos
-      showStatChange(message, comboLevel);
-      // Play multikill sound
-      playSound('multikill');
-      
-      // Show with animation - scale grows with combo count
-      comboEl.style.opacity = '1';
-      comboEl.style.animation = `combo-bubble ${COMBO_ANIMATION_DURATION}ms ease-out`;
-      
-      // Reset animation after it completes
-      setTimeout(() => {
-        comboEl.style.animation = 'none';
-      }, COMBO_ANIMATION_DURATION);
+      // PR #124: Only show visual/audio feedback on milestones
+      if (isMilestone) {
+        // Show stat notification for milestone combos
+        showStatChange(message, comboLevel);
+        // Play multikill sound
+        playSound('multikill');
+        
+        // Show with animation - scale grows with combo count
+        comboEl.style.opacity = '1';
+        comboEl.style.animation = `combo-bubble ${COMBO_ANIMATION_DURATION}ms ease-out`;
+        
+        // Reset animation after it completes
+        setTimeout(() => {
+          comboEl.style.animation = 'none';
+        }, COMBO_ANIMATION_DURATION);
+      } else {
+        // Hide combo element for non-milestones
+        comboEl.style.opacity = '0';
+      }
     }
     
     function hideCombo() {
@@ -9223,9 +9229,10 @@
             const cx = player.mesh.position.x + Math.cos(chestAngle) * chestDist;
             const cz = player.mesh.position.z + Math.sin(chestAngle) * chestDist;
             spawnChest(cx, cz, chestTier);
-            // Show only in stat bar: "combo lost" and chest rarity (no text on main screen)
+            // PR #124: NO "combo lost" notification - spawn chest silently
             const tierCapitalized = chestTier.charAt(0).toUpperCase() + chestTier.slice(1);
-            showStatChange(`Combo lost - ${tierCapitalized} chest`);
+            // Only show chest spawn, no mention of combo loss
+            showStatChange(`${tierCapitalized} chest spawned!`);
           }
         }
         
