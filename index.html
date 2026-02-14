@@ -1,7 +1,7 @@
-<!DOCTYPE html>
+455496b8ecc184)<!DOCTYPE html>
 <html>
 <head>
- <!--
+  <!--
   GAME REQUIREMENTS:
   - Genre: Survivor / Horde Survival (Vampire Survivors style)
   - Theme: Water drops (Player), Round/Soft/Squishy shapes
@@ -1769,7 +1769,7 @@
     <div id="stat-notifications"></div>
 
     <!-- NEW: First-Run Tutorial Overlay -->
-    <div id="tutorial-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 10001; padding: 20px; box-sizing: border-box; overflow-y: auto; pointer-events: auto;">
+    <div id="tutorial-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 200; padding: 20px; box-sizing: border-box; overflow-y: auto;">
       <div style="max-width: 800px; margin: 0 auto; color: #FFF; font-family: 'M PLUS Rounded 1c', sans-serif;">
         <h1 style="text-align: center; color: #5DADE2; font-size: 48px; margin-bottom: 30px; text-shadow: 0 0 20px rgba(93,173,226,0.8);">
           🌊 Water Drop Survivor - Tutorial 🌊
@@ -1958,43 +1958,6 @@
     }
   </script>
 
-  <!-- Standalone loading screen handler - runs even if Three.js fails to load (hotfix) -->
-  <script>
-    // This script runs independently of the main game module
-    // Ensures loading screen always dismisses even if Three.js fails to load
-    (function() {
-      let dismissed = false;
-      
-      // Force dismiss loading screen after 12 seconds maximum
-      setTimeout(function() {
-        if (!dismissed) {
-          dismissed = true;
-          console.warn('[Fallback] Loading screen timeout - forcing dismissal after 12 seconds');
-          const loadingScreen = document.getElementById('loading-screen');
-          if (loadingScreen) {
-            loadingScreen.classList.add('fade-out');
-            setTimeout(function() {
-              loadingScreen.style.display = 'none';
-              const mainMenu = document.getElementById('main-menu');
-              if (mainMenu) {
-                mainMenu.style.display = 'flex';
-              }
-              // Show error if Three.js failed to load
-              if (typeof THREE === 'undefined') {
-                alert('Failed to load required libraries. Please check your internet connection and reload the page.');
-              }
-            }, 500);
-          }
-        }
-      }, 12000);
-      
-      // Export dismiss function so main script can call it
-      window.dismissLoadingScreen = function() {
-        dismissed = true;
-      };
-    })();
-  </script>
-
   <script type="module">
     import * as THREE from 'three';
 
@@ -2003,7 +1966,6 @@
     
     // --- CONSTANTS & CONFIG ---
     const ATTACK_ANIMATION_DURATION_MS = 400; // Duration of waterdrop attack animation in milliseconds
-    const FALLBACK_FRAME_TIME = 0.016; // Fallback frame time in seconds (~60fps) for invalid dt values
     
     const COLORS = {
       bg: 0xFFF0F5,
@@ -2032,11 +1994,6 @@
       // Performance optimization - Phase 1
       maxEnemiesOnScreen: 50
     };
-    
-    // UI/UX Constants
-    const COUNTDOWN_TIMEOUT_MS = 10000; // Safety timeout for countdown
-    const STATE_LOG_THROTTLE_MS = 3000; // Throttle for state logging
-    const TUTORIAL_SHOWN_KEY = 'waterDropSurvivorTutorialShown'; // LocalStorage key
 
     // --- AUDIO SYSTEM (Oscillators) ---
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -2416,7 +2373,7 @@
       waterDrops: [],
       splashes: []
     };
-    let lastTime = 0; // Initialize to 0 for safe first-frame delta (hotfix)
+    let lastTime = null; // Initialize as null for proper first-frame detection (PR #82 fix)
     
     // Phase 5: Initialize particle object pool for performance
     let particlePool = null; // Will be initialized after scene is created
@@ -4229,17 +4186,17 @@
           const dx = this.mesh.position.x - enemy.mesh.position.x;
           const dz = this.mesh.position.z - enemy.mesh.position.z;
           if (dx*dx + dz*dz < 0.6) { // Hit radius
-            // Calculate Damage (with guards against NaN)
-            let dmg = weapons.gun.damage * (playerStats.damage || 1) * (playerStats.strength || 1);
+            // Calculate Damage
+            let dmg = weapons.gun.damage * playerStats.damage * playerStats.strength;
             
             // Double barrel uses its own damage
             if (weapons.doubleBarrel.active && this.isDoubleBarrel) {
-              dmg = weapons.doubleBarrel.damage * (playerStats.damage || 1) * (playerStats.strength || 1);
+              dmg = weapons.doubleBarrel.damage * playerStats.damage * playerStats.strength;
             }
             
             // Drone turret uses its own damage
             if (weapons.droneTurret.active && this.isDroneTurret) {
-              dmg = weapons.droneTurret.damage * (playerStats.damage || 1) * (playerStats.strength || 1);
+              dmg = weapons.droneTurret.damage * playerStats.damage * playerStats.strength;
             }
             
             // NEW: Manual aim bonus - increased crit chance with precision
@@ -4249,7 +4206,7 @@
             }
             
             const isCrit = Math.random() < effectiveCritChance;
-            if (isCrit) dmg *= (playerStats.critDmg || 1.5); // Guard against NaN
+            if (isCrit) dmg *= playerStats.critDmg;
             
             enemy.takeDamage(Math.floor(dmg), isCrit);
             
@@ -4297,7 +4254,7 @@
         this.maxLife = 10;
         
         // Deal damage immediately
-        const dmg = weapons.sword.damage * (playerStats.strength || 1) * (playerStats.damage || 1);
+        const dmg = weapons.sword.damage * playerStats.strength * playerStats.damage;
         
         enemies.forEach(e => {
           const dx = e.mesh.position.x - x;
@@ -4384,8 +4341,8 @@
           const dx = this.mesh.position.x - enemy.mesh.position.x;
           const dz = this.mesh.position.z - enemy.mesh.position.z;
           if (dx*dx + dz*dz < 0.6) {
-            // Calculate Damage (with guards against NaN)
-            let dmg = weapons.iceSpear.damage * (playerStats.damage || 1) * (playerStats.strength || 1);
+            // Calculate Damage
+            let dmg = weapons.iceSpear.damage * playerStats.damage * playerStats.strength;
             
             // NEW: Manual aim bonus - increased crit chance with precision
             let effectiveCritChance = playerStats.critChance;
@@ -4394,7 +4351,7 @@
             }
             
             const isCrit = Math.random() < effectiveCritChance;
-            if (isCrit) dmg *= (playerStats.critDmg || 1.5); // Guard against NaN
+            if (isCrit) dmg *= playerStats.critDmg;
             
             enemy.takeDamage(Math.floor(dmg), isCrit);
             
@@ -4483,7 +4440,7 @@
         
         // AOE Damage
         const range = weapons.meteor.area;
-        const dmg = weapons.meteor.damage * (playerStats.strength || 1);
+        const dmg = weapons.meteor.damage * playerStats.strength;
         
         enemies.forEach(e => {
           const d = e.mesh.position.distanceTo(this.target);
@@ -6487,12 +6444,7 @@
       const baseDamage = 1 + PERMANENT_UPGRADES.attackDamage.effect(saveData.upgrades.attackDamage);
       const baseAtkSpeed = 1 + PERMANENT_UPGRADES.attackSpeed.effect(saveData.upgrades.attackSpeed);
       const baseCritChance = 0.1 + PERMANENT_UPGRADES.critChance.effect(saveData.upgrades.critChance);
-      const baseCritDmg = 1.5 + PERMANENT_UPGRADES.critDamage.effect(saveData.upgrades.critDamage);
       const baseArmor = PERMANENT_UPGRADES.armor.effect(saveData.upgrades.armor);
-      
-      // Apply attribute bonuses
-      const luck = saveData.attributes.luck || 0;
-      const attrCritDmg = luck * ATTRIBUTE_INFO.luck.effects.critDamage;
       
       // Apply gear bonuses (additive for most, multiplicative for some)
       playerStats.maxHp = Math.floor(baseMaxHp + (gearStats.hp || 0));
@@ -6501,7 +6453,6 @@
       playerStats.damage = baseDamage + (gearStats.damage || 0) * GEAR_STAT_MULTIPLIERS.DAMAGE_PER_POINT;
       playerStats.atkSpeed = baseAtkSpeed + (gearStats.attackSpeed || 0) * GEAR_STAT_MULTIPLIERS.ATTACK_SPEED_PER_POINT;
       playerStats.critChance = baseCritChance + (gearStats.critChance || 0) * GEAR_STAT_MULTIPLIERS.CRIT_CHANCE_PER_POINT;
-      playerStats.critDmg = baseCritDmg + attrCritDmg;
       playerStats.armor = Math.min(80, baseArmor + (gearStats.armor || 0)); // Cap at 80%
       
       // XP bonus from gear (affects XP gain multiplier)
@@ -7580,17 +7531,11 @@
     // --- GAME LOGIC ---
 
     function init() {
-      // Show loading screen FIRST before any Three.js initialization (hotfix for hang)
-      showLoadingScreen();
+      // Load save data first
+      loadSaveData();
       
-      // Defer Three.js initialization to allow loading screen timers to start (hotfix)
-      setTimeout(() => {
-        try {
-          // Load save data first
-          loadSaveData();
-          
-          // Scene
-          scene = new THREE.Scene();
+      // Scene
+      scene = new THREE.Scene();
       scene.background = new THREE.Color(COLORS.bg);
       // Fog for depth
       scene.fog = new THREE.Fog(COLORS.bg, 20, 60);
@@ -7649,49 +7594,25 @@
       setupMenus();
       window.addEventListener('resize', onWindowResize, false);
       
-      // Loading screen already shown at start of init()
+      // Show loading screen, then main menu
+      showLoadingScreen();
+
       // Start Loop
       requestAnimationFrame(animate);
-      
-        } catch(e) {
-          console.error('Three.js initialization error:', e);
-          // Loading screen fallback will handle dismissal after 12 seconds
-          // Error will be visible to user via alert from outer try-catch
-          throw e; // Re-throw to trigger outer error handler
-        }
-      }, 0); // Defer to next event loop tick
     }
     
     function showLoadingScreen() {
       const loadingScreen = document.getElementById('loading-screen');
       const loadingBar = document.getElementById('loading-bar');
       let progress = 0;
-      let completed = false; // Track if loading completed normally
-      let interval; // Declare first to avoid race condition with fallbackTimeout
-      
-      // Fallback timeout: Force dismiss loading screen after 12 seconds (hotfix for hang)
-      const fallbackTimeout = setTimeout(() => {
-        if (!completed) {
-          console.warn('Loading screen fallback timeout triggered after 12 seconds');
-          if (interval) clearInterval(interval);
-          loadingScreen.classList.add('fade-out');
-          setTimeout(() => {
-            loadingScreen.style.display = 'none';
-            showMainMenu();
-          }, 500);
-        }
-      }, 12000); // 12 second max loading time
       
       // Extended loading duration: 20 iterations × 400ms = 8000ms (8 seconds total)
-      interval = setInterval(() => {
+      const interval = setInterval(() => {
         progress += 5;
         loadingBar.style.width = progress + '%';
         
         if (progress >= 100) {
-          completed = true; // Mark as completed normally
-          if (window.dismissLoadingScreen) window.dismissLoadingScreen(); // Notify standalone handler
           clearInterval(interval);
-          clearTimeout(fallbackTimeout); // Cancel fallback since we completed normally
           setTimeout(() => {
             loadingScreen.classList.add('fade-out');
             setTimeout(() => {
@@ -7708,40 +7629,18 @@
       updateGoldDisplays();
       isGameActive = false;
       isPaused = true;
-      // CRITICAL FIX: Hide game UI buttons when menu is shown to prevent overlap
-      const gameUIButtons = ['equipment-btn', 'menu-btn', 'settings-btn', 'stats-btn'];
-      gameUIButtons.forEach(btnId => {
-        const btn = document.getElementById(btnId);
-        if (btn) btn.style.display = 'none';
-      });
     }
     
     function hideMainMenu() {
-      console.log('🚪 Hiding main menu');
       document.getElementById('main-menu').style.display = 'none';
-      // CRITICAL FIX: Show game UI buttons again when menu is hidden
-      const gameUIButtons = ['equipment-btn', 'menu-btn', 'settings-btn', 'stats-btn'];
-      gameUIButtons.forEach(btnId => {
-        const btn = document.getElementById(btnId);
-        if (btn) btn.style.display = 'flex'; // or 'block' depending on button
-      });
     }
     
     // Countdown system (PR #70-71)
     function startCountdown() {
-      console.log('⏱️ Starting countdown');
       countdownActive = true;
       countdownStep = 0;
       countdownTimer = 0;
       showCountdownMessage(0);
-      
-      // Safety timeout: Force-start game if countdown doesn't complete
-      setTimeout(() => {
-        if (countdownActive) {
-          console.warn('⚠️ Countdown timeout - forcing game start');
-          endCountdown();
-        }
-      }, COUNTDOWN_TIMEOUT_MS);
     }
     
     function showCountdownMessage(step) {
@@ -7766,14 +7665,12 @@
     }
     
     function endCountdown() {
-      console.log('✅ Countdown complete - Activating game');
       countdownActive = false;
       
       // Ensure game properly unpauses
       isPaused = false;
       isGameActive = true;
       gameStartTime = Date.now();
-      console.log('🎮 Game state: isGameActive =', isGameActive, ', isPaused =', isPaused);
     }
     
     function showProgressionShop() {
@@ -7945,37 +7842,15 @@
       
       // Main Menu Buttons
       document.getElementById('start-game-btn').onclick = () => {
-        console.log('🎮 START GAME BUTTON CLICKED');
-        
-        // Guard: Prevent starting if game is already active or countdown is running
-        if (isGameActive || countdownActive) {
-          console.log('⚠️ Game already active or countdown in progress');
-          return;
-        }
-        
         playSound('waterdrop');
         
         // NEW: Check if tutorial should be shown (first time or user hasn't dismissed it)
-        const tutorialShown = localStorage.getItem(TUTORIAL_SHOWN_KEY);
-        console.log('📖 Tutorial shown before:', tutorialShown);
-        
+        const tutorialShown = localStorage.getItem('waterDropSurvivorTutorialShown');
         if (!tutorialShown || tutorialShown !== 'true') {
           // Show tutorial overlay
-          console.log('📖 Showing tutorial overlay');
-          const tutorialOverlay = document.getElementById('tutorial-overlay');
-          if (tutorialOverlay) {
-            tutorialOverlay.style.display = 'block';
-            console.log('✅ Tutorial overlay displayed');
-          } else {
-            console.error('⚠️ Tutorial overlay element not found! Starting game directly as fallback.');
-            // Fallback: Start game directly if tutorial is missing
-            hideMainMenu();
-            resetGame();
-            startCountdown();
-          }
+          document.getElementById('tutorial-overlay').style.display = 'block';
         } else {
           // Skip tutorial and start game
-          console.log('✅ Skipping tutorial, starting game directly');
           hideMainMenu();
           resetGame();
           startCountdown();
@@ -7984,25 +7859,15 @@
       
       // NEW: Tutorial overlay button handler
       document.getElementById('tutorial-start-btn').onclick = () => {
-        console.log('🎮 TUTORIAL START BUTTON CLICKED');
-        
-        // Guard: Prevent starting if game is already active or countdown is running
-        if (isGameActive || countdownActive) {
-          console.log('⚠️ Game already active or countdown in progress');
-          return;
-        }
-        
         playSound('waterdrop');
         
         // Check if user wants to hide tutorial in the future
         const dontShow = document.getElementById('tutorial-dont-show').checked;
         if (dontShow) {
-          console.log('✅ Saving tutorial preference');
-          localStorage.setItem(TUTORIAL_SHOWN_KEY, 'true');
+          localStorage.setItem('waterDropSurvivorTutorialShown', 'true');
         }
         
         // Hide tutorial and start game
-        console.log('📖 Hiding tutorial overlay');
         document.getElementById('tutorial-overlay').style.display = 'none';
         hideMainMenu();
         resetGame();
@@ -10053,11 +9918,6 @@
     }
 
     function createDamageNumber(amount, pos, isCrit = false) {
-      // Defensive guard: ensure amount is finite, default to 0 if not
-      if (!isFinite(amount)) {
-        amount = 0;
-      }
-      
       const div = document.createElement('div');
       div.className = isCrit ? 'damage-number critical' : 'damage-number normal';
       div.innerText = isCrit ? `CRITICAL!\n${Math.floor(amount)}` : Math.floor(amount);
@@ -10165,7 +10025,6 @@
     }
 
     function resetGame() {
-      console.log('🔄 Resetting game...');
       stopDroneHum(); // Stop drone sound on reset
       
       // Apply permanent upgrades from save data
@@ -10211,22 +10070,14 @@
       playerStats.expReq = GAME_CONFIG.baseExpReq;
       playerStats.hp = baseHp + attrHp;
       playerStats.maxHp = baseHp + attrHp;
-      // Guard against NaN in critical stats (hotfix)
-      playerStats.strength = Number.isFinite(baseDamage * (1 + attrDamage + gearMagicBonus)) 
-        ? baseDamage * (1 + attrDamage + gearMagicBonus) : 1;
-      playerStats.walkSpeed = Number.isFinite(baseSpeed * (1 + attrMoveSpeed + gearMoveSpeedBonus)) 
-        ? baseSpeed * (1 + attrMoveSpeed + gearMoveSpeedBonus) : 25;
+      playerStats.strength = baseDamage * (1 + attrDamage + gearMagicBonus);
+      playerStats.walkSpeed = baseSpeed * (1 + attrMoveSpeed + gearMoveSpeedBonus);
       playerStats.kills = 0;
-      playerStats.atkSpeed = Number.isFinite(baseAtkSpeed * (1 + attrAtkSpeed + gearAtkSpeedBonus)) 
-        ? baseAtkSpeed * (1 + attrAtkSpeed + gearAtkSpeedBonus) : 1;
-      playerStats.critChance = Number.isFinite(baseCritChance + attrCritChance + gearPrecisionBonus + gearCritBonus) 
-        ? baseCritChance + attrCritChance + gearPrecisionBonus + gearCritBonus : 0.1;
-      playerStats.critDmg = Number.isFinite(baseCritDmg + attrCritDmg) 
-        ? baseCritDmg + attrCritDmg : 1.5;
-      playerStats.armor = Number.isFinite(baseArmor + gearStats.flexibility) 
-        ? baseArmor + gearStats.flexibility : 0;
-      playerStats.hpRegen = Number.isFinite(baseRegen + attrRegen) 
-        ? baseRegen + attrRegen : 0;
+      playerStats.atkSpeed = baseAtkSpeed * (1 + attrAtkSpeed + gearAtkSpeedBonus);
+      playerStats.critChance = baseCritChance + attrCritChance + gearPrecisionBonus + gearCritBonus;
+      playerStats.critDmg = baseCritDmg + attrCritDmg;
+      playerStats.armor = baseArmor + gearStats.flexibility; // Flexibility gives flat armor bonus
+      playerStats.hpRegen = baseRegen + attrRegen;
       playerStats.gold = 0;
       waveCount = 0;
       lastWaveEndTime = 0; // Reset wave timing
@@ -10845,25 +10696,19 @@
         return;
       }
 
-      // Initialize lastTime on first frame (when it's 0) to establish time baseline
-      if (lastTime === 0) {
+      // Initialize lastTime on first frame to prevent huge dt (PR #82 fix)
+      if (lastTime === null) {
         lastTime = time;
-        // Render the initial frame to show the scene
+        gameTime = time / 1000; // Initialize gameTime for visual effects
+        // Render the initial frame before returning to avoid blank screen
         renderer.render(scene, camera);
-        return; // Exit early to establish proper time baseline for next frame
+        return;
       }
 
       // Performance tracking - start frame timer
       const frameStartTime = performance.now();
 
       let dt = (time - lastTime) / 1000;
-      
-      // Safety: Guard against NaN/invalid time values (hotfix for loading screen hang)
-      if (!Number.isFinite(dt) || dt < 0 || dt > 1) {
-        console.warn('Invalid dt detected:', dt, '- using fallback of', FALLBACK_FRAME_TIME);
-        dt = FALLBACK_FRAME_TIME; // Fallback to ~60fps frame time
-      }
-      
       lastTime = time;
       gameTime = time / 1000; // Update game time in seconds
       
@@ -10906,11 +10751,6 @@
       }
 
       if (isPaused || isGameOver || !isGameActive) {
-        // Log state changes (throttled to avoid spam)
-        if (!window.lastStateLog || (Date.now() - window.lastStateLog) > STATE_LOG_THROTTLE_MS) {
-          console.log('⏸️ Game paused/inactive - isPaused:', isPaused, 'isGameOver:', isGameOver, 'isGameActive:', isGameActive);
-          window.lastStateLog = Date.now();
-        }
         // Still render the scene so visual effects (camera shake, particles, modals) are visible (PR #82)
         renderer.render(scene, camera);
         return;
@@ -11201,7 +11041,7 @@
           if (e.isDead) return;
           const d = player.mesh.position.distanceTo(e.mesh.position);
           if (d < weapons.aura.range) {
-            e.takeDamage(weapons.aura.damage * (playerStats.strength || 1));
+            e.takeDamage(weapons.aura.damage * playerStats.strength);
             hit = true;
           }
         });
@@ -11394,7 +11234,7 @@
           if (e.isDead) return;
           const d = player.mesh.position.distanceTo(e.mesh.position);
           if (d < weapons.fireRing.range) {
-            const dmg = weapons.fireRing.damage * (playerStats.strength || 1);
+            const dmg = weapons.fireRing.damage * playerStats.strength;
             
             // NEW: Manual aim bonus - increased crit chance with precision
             let effectiveCritChance = playerStats.critChance;
@@ -11403,7 +11243,7 @@
             }
             
             const isCrit = Math.random() < effectiveCritChance;
-            const finalDmg = isCrit ? dmg * (playerStats.critDmg || 1.5) : dmg; // Guard against NaN
+            const finalDmg = isCrit ? dmg * playerStats.critDmg : dmg;
             e.takeDamage(finalDmg);
             createDamageNumber(finalDmg, e.mesh.position, isCrit);
             
@@ -11635,44 +11475,8 @@
       processDisposalQueue();
     }
 
-    // Debug function to force-start game (can be called from console)
-    window.debugStartGame = function() {
-      console.log('🔧 DEBUG: Force-starting game');
-      // Clear tutorial flag to show tutorial
-      localStorage.removeItem(TUTORIAL_SHOWN_KEY);
-      // Force hide menu and start game
-      hideMainMenu();
-      document.getElementById('tutorial-overlay').style.display = 'none';
-      resetGame();
-      startCountdown();
-    };
-    
-    window.debugSkipTutorial = function() {
-      console.log('🔧 DEBUG: Skipping tutorial permanently');
-      localStorage.setItem(TUTORIAL_SHOWN_KEY, 'true');
-      console.log('✅ Tutorial will be skipped on next Start Game click');
-    };
-
-    // Init Game - improved error handling (hotfix for loading screen hang)
-    try { 
-      init(); 
-    } catch(e) { 
-      console.error('Game initialization error:', e); 
-      // Check if it's a Three.js loading issue
-      if (typeof THREE === 'undefined') {
-        alert("Failed to load required libraries. Please check your internet connection and reload the page.");
-      } else {
-        alert("Game Error: " + e.message);
-      }
-      // CRITICAL FIX: Even if init() fails, set up menu handlers as fallback
-      console.log('🔧 Setting up fallback menu handlers');
-      try {
-        setupMenus();
-        console.log('✅ Fallback menu setup complete');
-      } catch (menuError) {
-        console.error('❌ Fallback menu setup also failed:', menuError);
-      }
-    }
+    // Init Game
+    try { init(); } catch(e) { console.error(e); alert("Game Error: " + e.message); }
 
   </script>
 </body>
