@@ -3,6 +3,7 @@
 *.old
 index_new.html
 test_game.html
+test-loading-bar.html
 
 # Logs
 *.log
