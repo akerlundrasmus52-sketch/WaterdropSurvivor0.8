@@ -7711,11 +7711,13 @@
     }
     
     function hideMainMenu() {
+      console.log('🚪 Hiding main menu');
       document.getElementById('main-menu').style.display = 'none';
     }
     
     // Countdown system (PR #70-71)
     function startCountdown() {
+      console.log('⏱️ Starting countdown');
       countdownActive = true;
       countdownStep = 0;
       countdownTimer = 0;
@@ -7744,12 +7746,14 @@
     }
     
     function endCountdown() {
+      console.log('✅ Countdown complete - Activating game');
       countdownActive = false;
       
       // Ensure game properly unpauses
       isPaused = false;
       isGameActive = true;
       gameStartTime = Date.now();
+      console.log('🎮 Game state: isGameActive =', isGameActive, ', isPaused =', isPaused);
     }
     
     function showProgressionShop() {
@@ -7921,9 +7925,11 @@
       
       // Main Menu Buttons
       document.getElementById('start-game-btn').onclick = () => {
+        console.log('🎮 START GAME BUTTON CLICKED');
+        
         // Guard: Prevent starting if game is already active or countdown is running
         if (isGameActive || countdownActive) {
-          console.log('Game already active or countdown in progress');
+          console.log('⚠️ Game already active or countdown in progress');
           return;
         }
         
@@ -7931,11 +7937,25 @@
         
         // NEW: Check if tutorial should be shown (first time or user hasn't dismissed it)
         const tutorialShown = localStorage.getItem('waterDropSurvivorTutorialShown');
+        console.log('📖 Tutorial shown before:', tutorialShown);
+        
         if (!tutorialShown || tutorialShown !== 'true') {
           // Show tutorial overlay
-          document.getElementById('tutorial-overlay').style.display = 'block';
+          console.log('📖 Showing tutorial overlay');
+          const tutorialOverlay = document.getElementById('tutorial-overlay');
+          if (tutorialOverlay) {
+            tutorialOverlay.style.display = 'block';
+            console.log('✅ Tutorial overlay displayed');
+          } else {
+            console.error('⚠️ Tutorial overlay element not found! Starting game directly as fallback.');
+            // Fallback: Start game directly if tutorial is missing
+            hideMainMenu();
+            resetGame();
+            startCountdown();
+          }
         } else {
           // Skip tutorial and start game
+          console.log('✅ Skipping tutorial, starting game directly');
           hideMainMenu();
           resetGame();
           startCountdown();
@@ -7944,9 +7964,11 @@
       
       // NEW: Tutorial overlay button handler
       document.getElementById('tutorial-start-btn').onclick = () => {
+        console.log('🎮 TUTORIAL START BUTTON CLICKED');
+        
         // Guard: Prevent starting if game is already active or countdown is running
         if (isGameActive || countdownActive) {
-          console.log('Game already active or countdown in progress');
+          console.log('⚠️ Game already active or countdown in progress');
           return;
         }
         
@@ -7955,10 +7977,12 @@
         // Check if user wants to hide tutorial in the future
         const dontShow = document.getElementById('tutorial-dont-show').checked;
         if (dontShow) {
+          console.log('✅ Saving tutorial preference');
           localStorage.setItem('waterDropSurvivorTutorialShown', 'true');
         }
         
         // Hide tutorial and start game
+        console.log('📖 Hiding tutorial overlay');
         document.getElementById('tutorial-overlay').style.display = 'none';
         hideMainMenu();
         resetGame();
@@ -10121,6 +10145,7 @@
     }
 
     function resetGame() {
+      console.log('🔄 Resetting game...');
       stopDroneHum(); // Stop drone sound on reset
       
       // Apply permanent upgrades from save data
@@ -10861,6 +10886,11 @@
       }
 
       if (isPaused || isGameOver || !isGameActive) {
+        // Log state changes (throttled to avoid spam)
+        if (!window.lastStateLog || (Date.now() - window.lastStateLog) > 3000) {
+          console.log('⏸️ Game paused/inactive - isPaused:', isPaused, 'isGameOver:', isGameOver, 'isGameActive:', isGameActive);
+          window.lastStateLog = Date.now();
+        }
         // Still render the scene so visual effects (camera shake, particles, modals) are visible (PR #82)
         renderer.render(scene, camera);
         return;
