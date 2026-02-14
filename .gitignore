@@ -1,7 +1,5 @@
 # Backups
-*.backup
-*.backup2
-*.backup3
+*.backup*
 *.old
 index_new.html
 test_game.html
