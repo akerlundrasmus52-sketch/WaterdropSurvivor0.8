@@ -1958,6 +1958,43 @@
     }
   </script>
 
+  <!-- Standalone loading screen handler - runs even if Three.js fails to load (hotfix) -->
+  <script>
+    // This script runs independently of the main game module
+    // Ensures loading screen always dismisses even if Three.js fails to load
+    (function() {
+      let dismissed = false;
+      
+      // Force dismiss loading screen after 12 seconds maximum
+      setTimeout(function() {
+        if (!dismissed) {
+          dismissed = true;
+          console.warn('[Fallback] Loading screen timeout - forcing dismissal after 12 seconds');
+          const loadingScreen = document.getElementById('loading-screen');
+          if (loadingScreen) {
+            loadingScreen.classList.add('fade-out');
+            setTimeout(function() {
+              loadingScreen.style.display = 'none';
+              const mainMenu = document.getElementById('main-menu');
+              if (mainMenu) {
+                mainMenu.style.display = 'flex';
+              }
+              // Show error if Three.js failed to load
+              if (typeof THREE === 'undefined') {
+                alert('Failed to load required libraries. Please check your internet connection and reload the page.');
+              }
+            }, 500);
+          }
+        }
+      }, 12000);
+      
+      // Export dismiss function so main script can call it
+      window.dismissLoadingScreen = function() {
+        dismissed = true;
+      };
+    })();
+  </script>
+
   <script type="module">
     import * as THREE from 'three';
 
@@ -7645,6 +7682,7 @@
         
         if (progress >= 100) {
           completed = true; // Mark as completed normally
+          if (window.dismissLoadingScreen) window.dismissLoadingScreen(); // Notify standalone handler
           clearInterval(interval);
           clearTimeout(fallbackTimeout); // Cancel fallback since we completed normally
           setTimeout(() => {
