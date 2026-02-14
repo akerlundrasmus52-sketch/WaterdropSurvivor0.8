@@ -1952,7 +1952,7 @@
       <div class="stat-text" id="landmark-progress" style="color: #FFD700; font-size: 14px; text-shadow: 0 0 8px rgba(255,215,0,0.8), 1px 1px 2px rgba(0,0,0,0.5); display: none;">🗺️ Landmarks: 0/10</div>
       
       <!-- FPS Counter (debug mode) -->
-      <div class="stat-text" id="fps-counter" style="color: #00FF00; font-size: 14px; font-family: monospace; display: none;">FPS: 60</div>
+      <div class="stat-text" id="fps-counter" style="color: #00FF00; font-size: 14px; font-family: monospace; display: none;">FPS: --</div>
       
       <!-- Combo Timer Display -->
       <div class="stat-text" id="combo-timer"></div>
@@ -2856,6 +2856,7 @@
       { name: 'Water Statue', x: 0, z: 0, discovered: false }
     ];
     const LANDMARK_DISCOVERY_RADIUS = 50; // Distance to discover a landmark
+    let landmarksAllDiscoveredRewardGiven = false; // Track if completion reward was given
 
     // Game Settings
     const gameSettings = {
@@ -3293,14 +3294,11 @@
         // ENHANCED: Ultra-realistic water droplet physics with advanced squish system
         // Calculate speed for physics-based deformation
         const speed = Math.sqrt(this.velocity.x * this.velocity.x + this.velocity.z * this.velocity.z);
-        const maxSpeed = 0.15; // Maximum expected speed
+        const maxSpeed = 0.15; // Maximum expected speed (matches GAME_CONFIG.playerSpeedBase * max multipliers)
         const speedRatio = Math.min(speed / maxSpeed, 1);
         
         // Movement-based squish (stretch in direction of motion)
         if (speed > 0.01) {
-          // Calculate movement angle
-          const moveAngle = Math.atan2(this.velocity.z, this.velocity.x);
-          
           // Stretch along movement direction (horizontal stretch, vertical squish)
           this.targetSquishX = 1.0 + speedRatio * 0.3; // Stretch up to 1.3x when moving fast
           this.targetSquishY = 1.0 - speedRatio * 0.2; // Squish down to 0.8x when moving fast
@@ -12601,9 +12599,10 @@
       landmarks.forEach(landmark => {
         landmark.discovered = false;
       });
+      landmarksAllDiscoveredRewardGiven = false; // Reset completion reward flag
       const landmarkProgressEl = document.getElementById('landmark-progress');
       if (landmarkProgressEl) {
-        landmarkProgressEl.textContent = '🗺️ Landmarks: 0/' + landmarks.length;
+        landmarkProgressEl.textContent = `🗺️ Landmarks: 0/${landmarks.length}`;
       }
       
       meteors.forEach(m => {
@@ -13703,8 +13702,9 @@
           landmarkProgressEl.textContent = `🗺️ Landmarks: ${discoveredCount}/${landmarks.length}`;
           landmarkProgressEl.style.display = 'block';
           
-          // All landmarks discovered - special reward
-          if (discoveredCount === landmarks.length && newDiscovery) {
+          // All landmarks discovered - special reward (only once per game)
+          if (discoveredCount === landmarks.length && !landmarksAllDiscoveredRewardGiven) {
+            landmarksAllDiscoveredRewardGiven = true;
             showStatusMessage('🎉 All Landmarks Discovered! +500 Gold!', 5000);
             playerStats.gold += 500;
             updateHUD();
