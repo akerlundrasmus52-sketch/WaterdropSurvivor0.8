@@ -3905,7 +3905,10 @@
           if (gear) {
             addGearToInventory(gear);
             createFloatingText(`⚡ ${gear.name}!`, this.mesh.position);
-            spawnParticles(this.mesh.position, RARITY[gear.rarity.toUpperCase()].color, 30);
+            // Safe rarity lookup
+            const rarityKey = gear.rarity.toUpperCase();
+            const rarityColor = RARITY[rarityKey] ? RARITY[rarityKey].color : 0xFFFFFF;
+            spawnParticles(this.mesh.position, rarityColor, 30);
           }
         }
         
@@ -5035,7 +5038,10 @@
           if (gear) {
             addGearToInventory(gear);
             createFloatingText(`${gear.name}!`, this.mesh.position);
-            spawnParticles(this.mesh.position, RARITY[gear.rarity.toUpperCase()].color, 20);
+            // Safe rarity lookup
+            const rarityKey = gear.rarity.toUpperCase();
+            const rarityColor = RARITY[rarityKey] ? RARITY[rarityKey].color : 0xFFFFFF;
+            spawnParticles(this.mesh.position, rarityColor, 20);
             playSound('levelup');
             return; // Gear drop replaces other rewards
           }
@@ -6103,6 +6109,15 @@
       return stats;
     }
     
+    // Gear stat multipliers (for game balance tuning)
+    const GEAR_STAT_MULTIPLIERS = {
+      DAMAGE_PER_POINT: 0.1,         // Each damage point = 10% bonus
+      ATTACK_SPEED_PER_POINT: 0.01,  // Each attack speed point = 1% bonus
+      CRIT_CHANCE_PER_POINT: 0.01,   // Each crit point = 1% chance
+      DODGE_CHANCE_PER_POINT: 0.01,  // Each dodge point = 1% chance
+      XP_BONUS_PER_POINT: 0.01       // Each XP point = 1% bonus
+    };
+    
     // Apply gear stats to player stats (called when gear changes or game starts)
     function applyGearStats() {
       const gearStats = calculateGearStats();
@@ -6120,17 +6135,17 @@
       playerStats.maxHp = Math.floor(baseMaxHp + (gearStats.hp || 0));
       playerStats.hpRegen = baseHpRegen + (gearStats.hpRegen || 0);
       playerStats.walkSpeed = baseMoveSpeed + (gearStats.moveSpeed || 0);
-      playerStats.damage = baseDamage + (gearStats.damage || 0) * 0.1; // 0.1 multiplier per point
-      playerStats.atkSpeed = baseAtkSpeed + (gearStats.attackSpeed || 0) * 0.01; // 0.01 multiplier per point
-      playerStats.critChance = baseCritChance + (gearStats.critChance || 0) * 0.01; // 0.01 per point
+      playerStats.damage = baseDamage + (gearStats.damage || 0) * GEAR_STAT_MULTIPLIERS.DAMAGE_PER_POINT;
+      playerStats.atkSpeed = baseAtkSpeed + (gearStats.attackSpeed || 0) * GEAR_STAT_MULTIPLIERS.ATTACK_SPEED_PER_POINT;
+      playerStats.critChance = baseCritChance + (gearStats.critChance || 0) * GEAR_STAT_MULTIPLIERS.CRIT_CHANCE_PER_POINT;
       playerStats.armor = Math.min(80, baseArmor + (gearStats.armor || 0)); // Cap at 80%
       
       // XP bonus from gear (affects XP gain multiplier)
-      const xpBonus = (gearStats.xpBonus || 0) * 0.01; // Convert to percentage
+      const xpBonus = (gearStats.xpBonus || 0) * GEAR_STAT_MULTIPLIERS.XP_BONUS_PER_POINT;
       playerStats.xpMultiplier = 1 + xpBonus;
       
       // Dodge chance from gear (new stat)
-      playerStats.dodgeChance = (gearStats.dodgeChance || 0) * 0.01; // Convert to percentage
+      playerStats.dodgeChance = (gearStats.dodgeChance || 0) * GEAR_STAT_MULTIPLIERS.DODGE_CHANCE_PER_POINT;
       
       // Clamp HP if it went over max due to max HP changes
       playerStats.hp = Math.min(playerStats.hp, playerStats.maxHp);
@@ -9185,7 +9200,10 @@
               if (bonusGear) {
                 addGearToInventory(bonusGear);
                 createFloatingText(`💫 ${bonusGear.name}!`, player.mesh.position);
-                spawnParticles(player.mesh.position, RARITY[bonusGear.rarity.toUpperCase()].color, 25);
+                // Safe rarity lookup
+                const rarityKey = bonusGear.rarity.toUpperCase();
+                const rarityColor = RARITY[rarityKey] ? RARITY[rarityKey].color : 0xFFFFFF;
+                spawnParticles(player.mesh.position, rarityColor, 25);
               }
             }
           }
