@@ -5711,7 +5711,7 @@
       const stats = {};
       let numStats = 1;
       if (rarity === 'uncommon') numStats = 2;
-      else if (rarity === 'rare') numStats = 2;
+      else if (rarity === 'rare') numStats = 2;  // Both uncommon and rare have 2 stats
       else if (rarity === 'epic') numStats = 3;
       else if (rarity === 'legendary') numStats = 4;
       
@@ -5738,8 +5738,12 @@
       const baseName = GEAR_SLOT_NAMES[slot][Math.floor(Math.random() * GEAR_SLOT_NAMES[slot].length)];
       const name = `${prefix} ${baseName}`;
       
+      // PR #125-143: Generate unique ID with counter to prevent collisions
+      if (!window.gearIdCounter) window.gearIdCounter = 0;
+      window.gearIdCounter++;
+      
       return {
-        id: `gear_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        id: `gear_${Date.now()}_${window.gearIdCounter}_${Math.random().toString(36).substr(2, 9)}`,
         name,
         slot,
         rarity,
@@ -9457,7 +9461,7 @@
       playerStats.atkSpeed = baseAtkSpeed * (1 + attrAtkSpeed + gearAtkSpeedBonus);
       playerStats.critChance = baseCritChance + attrCritChance + gearCritBonus;
       // PR #124: Ensure critDmg is ALWAYS set (never undefined/null)
-      playerStats.critDmg = baseCritDmg + attrCritDmg || 1.5; // Fallback to 1.5x if somehow 0
+      playerStats.critDmg = (baseCritDmg + attrCritDmg) || 1.5; // Fallback to 1.5x if somehow 0
       playerStats.armor = baseArmor + gearArmorBonus;
       playerStats.hpRegen = baseRegen + attrRegen + gearHpRegenBonus;
       
@@ -9486,7 +9490,7 @@
       playerStats.atkSpeed = stats.baseAtkSpeed * (1 + stats.attrAtkSpeed + stats.gearAtkSpeedBonus);
       playerStats.critChance = stats.baseCritChance + stats.attrCritChance + stats.gearCritBonus;
       // PR #124: Ensure critDmg is ALWAYS set
-      playerStats.critDmg = stats.baseCritDmg + stats.attrCritDmg || 1.5;
+      playerStats.critDmg = (stats.baseCritDmg + stats.attrCritDmg) || 1.5;
       playerStats.armor = stats.baseArmor + stats.gearArmorBonus;
       playerStats.hpRegen = stats.baseRegen + stats.attrRegen + stats.gearHpRegenBonus;
       playerStats.gold = 0;
