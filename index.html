@@ -2869,11 +2869,17 @@
       console.info('[INIT] Three.js CDN loaded successfully');
     } catch (importError) {
       console.error('[INIT] Failed to load Three.js from CDN:', importError);
-      alert('Failed to load 3D graphics library.\n\nPlease check your internet connection and refresh the page.');
-      // Set ready flag to allow fallback menu to work
+      // Set ready flag to signal module load attempt completed (even though it failed)
+      // This allows loading screen to finish and fallback menu handlers to activate
+      // Note: The flag indicates "loading attempted", not "fully functional"
+      // Fallback handlers will show appropriate messages if clicked
       window.gameModuleReady = true;
-      throw importError; // Re-throw to prevent further execution
+      // Set THREE to null so the rest of the module is skipped
+      THREE = null;
     }
+    
+    // Only proceed if THREE.js loaded successfully
+    if (THREE) {
 
     // --- CONSTANTS & CONFIG ---
     // Error recovery delay for accessibility (allows adequate time to read and comprehend alert)
@@ -10599,9 +10605,11 @@
       // State variables (window.isPaused, window.isGameActive) are initialized at module start
       // and used consistently throughout the code to ensure fallback handlers have access
       
-      // Signal to loading screen that module is ready
+      // Signal to loading screen that module is ready (success path)
       // CRITICAL: Must be AFTER setupMenus() AND after exposing window functions
-      // This ensures fallback menu handlers have access to all required functions
+      // This ensures all game functions are available before loading completes
+      // Note: This flag is also set to true on CDN failures (in the catch block above)
+      // to allow loading screen to complete, but in that case fallback handlers are used
       window.gameModuleReady = true;
       console.info('[INIT] Game module fully initialized and ready');
 
@@ -15088,9 +15096,11 @@
           console.error('Failed to show main menu fallback:', menuError);
         }
       }, ERROR_RECOVERY_DELAY_MS);
-      // Set ready flag even on error to prevent loading screen timeout
-      window.gameModuleReady = true;
+      // Note: We don't set window.gameModuleReady = true on init() errors
+      // The flag is only set on: 1) CDN failure (in catch block), 2) successful init (in init)
+      // Init errors are unexpected and should not signal "ready"
     }
+    } // End of if (THREE) block
 
   </script>
 </body>
