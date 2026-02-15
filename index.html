@@ -13856,7 +13856,7 @@
 
       if (isPaused || isGameOver || !isGameActive) {
         // Don't render scene when canvas is hidden (on main menu)
-        if (renderer.domElement.style.display === 'none') {
+        if (renderer && renderer.domElement && renderer.domElement.style.display === 'none') {
           return;
         }
         // Still render the scene so visual effects (camera shake, particles, modals) are visible (PR #82)
