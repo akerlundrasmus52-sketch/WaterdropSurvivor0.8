@@ -1789,7 +1789,7 @@
         <label for="quality-select">Graphics Quality</label>
         <select id="quality-select">
           <option value="low">Low (Better Performance)</option>
-          <option value="medium" selected>Medium (Balanced)</option>
+          <option value="medium">Medium (Balanced)</option>
           <option value="high">High (Better Visuals)</option>
         </select>
       </div>
@@ -9428,7 +9428,7 @@
         return;
       }
       
-      // Dispose existing shadow map if it exists to ensure proper reinitialization
+      // Dispose existing shadow maps to ensure proper reinitialization
       if (window.dirLight.shadow.map) {
         window.dirLight.shadow.map.dispose();
         window.dirLight.shadow.map = null;
@@ -9441,7 +9441,8 @@
           renderer.shadowMap.type = THREE.BasicShadowMap;
           window.dirLight.shadow.mapSize.width = 512;
           window.dirLight.shadow.mapSize.height = 512;
-          renderer.setPixelRatio(1); // Fixed pixel ratio
+          // Fixed 1:1 ratio for maximum performance on low-end devices
+          renderer.setPixelRatio(1);
           break;
         
         case 'medium':
@@ -9450,6 +9451,7 @@
           renderer.shadowMap.type = THREE.PCFSoftShadowMap;
           window.dirLight.shadow.mapSize.width = 1024;
           window.dirLight.shadow.mapSize.height = 1024;
+          // Cap at 1.5x device ratio for balanced quality/performance
           renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
           break;
         
@@ -9459,6 +9461,7 @@
           renderer.shadowMap.type = THREE.PCFSoftShadowMap;
           window.dirLight.shadow.mapSize.width = 2048;
           window.dirLight.shadow.mapSize.height = 2048;
+          // Cap at 2x device ratio for maximum visual quality
           renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
           break;
       }
