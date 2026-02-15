@@ -1653,8 +1653,8 @@
     <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
       <button class="btn" id="camp-buildings-tab" style="padding: 10px 20px; font-size: 16px; background: #5A3A31;">BUILDINGS</button>
       <button class="btn" id="camp-skills-tab" style="padding: 10px 20px; font-size: 16px; background: #3a3a3a;">SKILL TREE</button>
-      <button class="btn" id="camp-sleep-tab" style="padding: 10px 20px; font-size: 16px; background: #3a3a3a;">💤 SLEEP</button>
-      <button class="btn" id="camp-training-tab" style="padding: 10px 20px; font-size: 16px; background: #3a3a3a;">🏋️ TRAINING</button>
+      <button class="btn" id="camp-sleep-tab" style="padding: 10px 20px; font-size: 16px; background: #3a3a3a;" aria-label="Sleep">💤 SLEEP</button>
+      <button class="btn" id="camp-training-tab" style="padding: 10px 20px; font-size: 16px; background: #3a3a3a;" aria-label="Training">🏋️ TRAINING</button>
     </div>
 
     <!-- Buildings Section -->
@@ -6871,6 +6871,20 @@
       }
     }
 
+    // Training Hall constants
+    const TRAINING_POINT_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours
+    
+    // Fun combo names (defined once to avoid recreation)
+    const FUN_COMBO_NAMES = [
+      'xoxo', 'serious?', 'no way', 'one million combo almost', 
+      'i lost count combo', 'are you even real?', 'stop it already',
+      'ok this is ridiculous', 'somebody stop them', 'mercy please',
+      'absolute madness', 'breaking the game', 'console.log("help")',
+      'error 404: combo limit not found', 'combo.exe has stopped',
+      'infinity and beyond', 'to the moon', 'unstoppable force',
+      'immovable object met', 'game over man', 'legend has it'
+    ];
+    
     // Training Hall functions
     function updateTrainingPoints() {
       // Award training points based on time
@@ -6880,11 +6894,11 @@
       }
       
       const timeSinceLastPoint = now - saveData.lastTrainingPointTime;
-      const pointsEarned = Math.floor(timeSinceLastPoint / (24 * 60 * 60 * 1000)); // 1 point per 24 hours
+      const pointsEarned = Math.floor(timeSinceLastPoint / TRAINING_POINT_INTERVAL_MS);
       
       if (pointsEarned > 0) {
         saveData.trainingPoints += pointsEarned;
-        saveData.lastTrainingPointTime += pointsEarned * (24 * 60 * 60 * 1000);
+        saveData.lastTrainingPointTime += pointsEarned * TRAINING_POINT_INTERVAL_MS;
         saveSaveData();
       }
     }
@@ -6892,7 +6906,7 @@
     function getNextTrainingPointTime() {
       if (!saveData.lastTrainingPointTime) return 'Soon';
       const now = Date.now();
-      const nextPointTime = saveData.lastTrainingPointTime + (24 * 60 * 60 * 1000);
+      const nextPointTime = saveData.lastTrainingPointTime + TRAINING_POINT_INTERVAL_MS;
       const timeRemaining = nextPointTime - now;
       
       if (timeRemaining <= 0) return 'Available now!';
@@ -7078,14 +7092,23 @@
           const bonusText = Object.entries(bonus)
             .map(([key, value]) => {
               if (key === 'skillPoints') return `${value} skill points`;
-              if (typeof value === 'number') {
+              if (key === 'craftingTier') return `Crafting: ${value}`;
+              if (key === 'gearTier') return `Max tier: ${value}`;
+              if (key === 'companionDamage') return `+${Math.round(value * 100)}% companion dmg`;
+              if (key === 'unlocks') return value;
+              if (key === 'trainingEfficiency') return `+${Math.round(value * 100)}% training`;
+              if (key === 'recycleValue') return `+${Math.round(value * 100)}% recycle`;
+              if (key === 'fusionPower') return `+${Math.round(value * 100)}% fusion`;
+              if (key === 'shopDiscount') return `+${Math.round(value * 100)}% discount`;
+              if (key === 'itemVariety') return `${value} items`;
+              if (typeof value === 'number' && value !== 0) {
                 if (value >= 1) return `+${Math.round(value)} ${key}`;
                 return `+${Math.round(value * 100)}% ${key}`;
               }
-              return `${key}: ${value}`;
+              return null; // Filter out undefined/null values
             })
-            .filter(text => text && !text.includes('undefined'))
-            .join(', ') || 'No bonus';
+            .filter(text => text !== null && text !== undefined)
+            .join(', ') || 'Utility building';
           
           buildingCard.innerHTML = `
             <div class="building-header">
@@ -10463,21 +10486,12 @@
       }
       
       if (comboState.count >= GODLIKE_COMBO_THRESHOLD + 1) {
-        // Fun random names after GODLIKE
-        const funNames = [
-          'xoxo', 'serious?', 'no way', 'one million combo almost', 
-          'i lost count combo', 'are you even real?', 'stop it already',
-          'ok this is ridiculous', 'somebody stop them', 'mercy please',
-          'absolute madness', 'breaking the game', 'console.log("help")',
-          'error 404: combo limit not found', 'combo.exe has stopped',
-          'infinity and beyond', 'to the moon', 'unstoppable force',
-          'immovable object met', 'game over man', 'legend has it'
-        ];
+        // Fun random names after GODLIKE (using pre-defined constant array)
         const godlikeMultiplier = comboState.count - GODLIKE_COMBO_THRESHOLD;
         
         // Rotate through fun names, wrap around
-        const nameIndex = (godlikeMultiplier - 1) % funNames.length;
-        const funName = funNames[nameIndex];
+        const nameIndex = (godlikeMultiplier - 1) % FUN_COMBO_NAMES.length;
+        const funName = FUN_COMBO_NAMES[nameIndex];
         
         message = isMilestone ? funName.toUpperCase() : `${comboState.count}x COMBO!`;
         comboLevel = 'mythical';
@@ -11026,10 +11040,10 @@
       const attrCdReduction = wisdom * ATTRIBUTE_INFO.wisdom.effects.cooldownReduction;
       
       // Training hall bonuses
-      // Endurance: +2% stamina/high-speed duration per point (interpreted as +2% move speed)
+      // Endurance: Increases stamina and high-speed duration (implemented as +2% move speed per point)
       const enduranceMoveSpeed = trainingEndurance * 0.02;
-      // Flexibility: +1% turn/dodge responsiveness per point (armor + evasion)
-      const flexibilityArmor = trainingFlexibility * 2; // +2 armor per point
+      // Flexibility: Improves turn speed and dodge responsiveness (implemented as +2 flat armor per point)
+      const flexibilityArmor = trainingFlexibility * 2;
       
       // Apply gear bonuses
       const gearStats = calculateGearStats();
