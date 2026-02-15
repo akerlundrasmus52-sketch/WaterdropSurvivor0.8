@@ -9423,7 +9423,16 @@
 
     // Apply graphics quality settings
     function applyGraphicsQuality(quality) {
-      if (!renderer || !window.dirLight) return;
+      if (!renderer || !window.dirLight) {
+        console.warn('[Graphics Quality] Cannot apply settings: renderer or dirLight not initialized');
+        return;
+      }
+      
+      // Dispose existing shadow map if it exists to ensure proper reinitialization
+      if (window.dirLight.shadow.map) {
+        window.dirLight.shadow.map.dispose();
+        window.dirLight.shadow.map = null;
+      }
       
       switch(quality) {
         case 'low':
@@ -9456,6 +9465,7 @@
       
       // Force shadow map update
       renderer.shadowMap.needsUpdate = true;
+      console.log(`[Graphics Quality] Applied ${quality} quality settings`);
     }
 
     // --- GAME LOGIC ---
