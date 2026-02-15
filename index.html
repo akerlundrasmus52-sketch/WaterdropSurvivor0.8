@@ -7732,7 +7732,7 @@
       }
       
       // Check if this is the first skill purchase (make it free)
-      const isFirstSkill = saveData.storyQuests?.buildingFirstUse?.skillTree ? false : true;
+      const isFirstSkill = !saveData.storyQuests?.buildingFirstUse?.skillTree;
       const costToCharge = isFirstSkill ? 0 : skill.cost;
       
       if (saveData.skillPoints >= costToCharge) {
@@ -10406,9 +10406,14 @@
     function levelUp() {
       isPaused = true;
       
-      // Pause combo timer during level-up
-      if (comboState.lastKillTime) {
-        comboState.pausedAt = Date.now();
+      // Pause combo timer during level-up (only if combo is still active)
+      if (comboState.lastKillTime && comboState.count >= 5) {
+        const currentTime = Date.now();
+        const timeSinceLastKill = currentTime - comboState.lastKillTime;
+        // Only pause if combo hasn't expired yet
+        if (timeSinceLastKill < comboState.comboWindow) {
+          comboState.pausedAt = Date.now();
+        }
       }
       
       playerStats.lvl++;
