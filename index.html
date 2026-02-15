@@ -9837,6 +9837,13 @@
         menuElement.style.display = 'flex';
         console.info('[MENU] Menu display set to flex');
         
+        // Hide game UI buttons while on main menu (per existing spec)
+        const gameButtons = ['menu-btn', 'equipment-btn', 'settings-btn', 'stats-btn'];
+        gameButtons.forEach(id => {
+          const btn = document.getElementById(id);
+          if (btn) btn.style.display = 'none';
+        });
+        
         updateGoldDisplays();
         isGameActive = false;
         isPaused = true;
@@ -9859,7 +9866,16 @@
     }
     
     function hideMainMenu() {
-      document.getElementById('main-menu').style.display = 'none';
+      const mainMenu = document.getElementById('main-menu');
+      if (mainMenu) {
+        mainMenu.style.display = 'none';
+      }
+      // Restore game UI buttons
+      const gameButtons = ['menu-btn', 'equipment-btn', 'settings-btn', 'stats-btn'];
+      gameButtons.forEach(id => {
+        const btn = document.getElementById(id);
+        if (btn) btn.style.display = '';  // Reset to default
+      });
     }
     
     // Countdown system (PR #70-71)
