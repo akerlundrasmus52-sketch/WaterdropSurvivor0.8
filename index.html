@@ -2571,9 +2571,19 @@
     (function() {
       'use strict';
       
+      // Flag to track if handlers have been initialized
+      let menuHandlersInitialized = false;
+      
       // Wait for DOM and loading screen to complete before setting up menu handlers
       function setupMenuButtonHandlers() {
+        // Prevent duplicate initialization
+        if (menuHandlersInitialized) {
+          console.info('[MENU] Fallback handlers already initialized, skipping');
+          return;
+        }
+        
         console.info('[MENU] Setting up fallback menu button handlers');
+        menuHandlersInitialized = true;
         
         // Helper function to play sound if available
         function playSound(soundName) {
@@ -2786,15 +2796,26 @@
       
       // Wait for loading to complete and menu to be visible
       function waitForMenuAndSetup() {
-        // Check if main menu exists and is visible
-        const mainMenu = document.getElementById('main-menu');
-        if (mainMenu) {
-          // Setup handlers immediately
-          setupMenuButtonHandlers();
-        } else {
-          // Menu not in DOM yet, wait for it
-          setTimeout(waitForMenuAndSetup, 100);
+        // Maximum retry attempts to prevent infinite polling
+        const maxRetries = 50; // 50 * 100ms = 5 seconds max wait
+        let retries = 0;
+        
+        function checkMenu() {
+          // Check if main menu exists and is visible
+          const mainMenu = document.getElementById('main-menu');
+          if (mainMenu) {
+            // Setup handlers immediately
+            setupMenuButtonHandlers();
+          } else if (retries < maxRetries) {
+            // Menu not in DOM yet, wait for it
+            retries++;
+            setTimeout(checkMenu, 100);
+          } else {
+            console.warn('[MENU] Timeout waiting for main menu to appear in DOM');
+          }
         }
+        
+        checkMenu();
       }
       
       // Start waiting once DOM is ready
