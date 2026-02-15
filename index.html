@@ -1042,6 +1042,7 @@
     }
 
     #start-game-btn { top: 50.25%; } /* Moved 3.5% lower from 46.75% */
+    #camp-btn { top: 54.75%; } /* New camp button */
     #progression-btn { top: 59.75%; } /* Adjusted spacing - reduced from 61.25% */
     #achievements-btn { top: 69.25%; } /* Adjusted spacing - reduced from 72.25% */
     #credits-btn { top: min(78.75%, calc(100% - 60px)); } /* Adjusted spacing - reduced from 82.75% */
@@ -1265,7 +1266,7 @@
     }
 
     /* Credits/Achievements Screens */
-    #credits-screen, #achievements-screen {
+    #credits-screen, #achievements-screen, #camp-screen {
       position: fixed;
       top: 0;
       left: 0;
@@ -1294,6 +1295,132 @@
       text-align: center;
       line-height: 1.8;
       max-width: 600px;
+    }
+
+    /* Camp Building Styles */
+    .building-card {
+      background: linear-gradient(to bottom, #3a3a4e, #2a2a3e);
+      border: 3px solid #8B4513;
+      border-radius: 15px;
+      padding: 20px;
+      margin: 15px 0;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+      text-align: left;
+      max-width: 700px;
+      width: 100%;
+    }
+
+    .building-card:hover {
+      box-shadow: 0 0 20px rgba(139,69,19,0.6);
+      transform: translateY(-2px);
+      filter: brightness(1.1);
+    }
+
+    .building-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .building-name {
+      font-size: 22px;
+      color: #FFD700;
+      font-weight: bold;
+      text-shadow: 0 0 10px rgba(255,215,0,0.6);
+    }
+
+    .building-level {
+      font-size: 18px;
+      color: #5DADE2;
+      font-weight: bold;
+    }
+
+    .building-desc {
+      font-size: 14px;
+      color: #c9d1d9;
+      margin-bottom: 10px;
+      line-height: 1.4;
+    }
+
+    .building-cost {
+      font-size: 16px;
+      color: #FFD700;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+
+    .building-bonus {
+      font-size: 14px;
+      color: #2ecc71;
+      margin: 5px 0;
+    }
+
+    .building-locked {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* Skill Tree Styles */
+    .skill-tree-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      width: 100%;
+      max-width: 900px;
+      margin: 20px 0;
+    }
+
+    .skill-node {
+      background: linear-gradient(to bottom, #3a3a4e, #2a2a3e);
+      border: 3px solid #666;
+      border-radius: 12px;
+      padding: 15px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .skill-node:hover {
+      border-color: #5DADE2;
+      box-shadow: 0 0 15px rgba(93,173,226,0.5);
+      transform: scale(1.05);
+    }
+
+    .skill-node.unlocked {
+      border-color: #2ecc71;
+      box-shadow: 0 0 15px rgba(46,204,113,0.4);
+    }
+
+    .skill-node.locked {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .skill-name {
+      font-size: 16px;
+      color: #FFD700;
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
+
+    .skill-desc {
+      font-size: 12px;
+      color: #c9d1d9;
+      margin-bottom: 8px;
+    }
+
+    .skill-cost {
+      font-size: 14px;
+      color: #5DADE2;
+      font-weight: bold;
+    }
+
+    /* Credits Right Align */
+    #credits-screen .screen-content {
+      text-align: right;
     }
 
     /* Settings Modal */
@@ -1447,6 +1574,7 @@
     <div class="menu-title">WATER DROP SURVIVOR</div>
     <div class="menu-buttons">
       <button class="menu-btn" id="start-game-btn">START GAME</button>
+      <button class="menu-btn" id="camp-btn">⛺ CAMP</button>
       <button class="menu-btn" id="progression-btn">PROGRESSION</button>
       <button class="menu-btn" id="attributes-btn" style="position: relative;">ATTRIBUTES</button>
       <button class="menu-btn" id="gear-btn">GEAR & EQUIPMENT</button>
@@ -1515,6 +1643,38 @@
       <p>Made by Timmy Durell aka - TimmieTooth</p>
     </div>
     <button class="back-btn" id="credits-back-btn">BACK TO MENU</button>
+  </div>
+
+  <!-- Camp Screen -->
+  <div id="camp-screen">
+    <div class="screen-title">⛺ CAMP</div>
+    
+    <!-- Camp Tabs -->
+    <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+      <button class="btn" id="camp-buildings-tab" style="padding: 10px 20px; font-size: 16px; background: #5A3A31;">BUILDINGS</button>
+      <button class="btn" id="camp-skills-tab" style="padding: 10px 20px; font-size: 16px; background: #3a3a3a;">SKILL TREE</button>
+    </div>
+
+    <!-- Buildings Section -->
+    <div id="camp-buildings-section" style="width: 100%; max-width: 800px;">
+      <div style="color: #FFD700; font-size: 20px; margin-bottom: 15px;">Camp Buildings</div>
+      <div id="camp-buildings-content">
+        <!-- Dynamically populated -->
+      </div>
+    </div>
+
+    <!-- Skills Section -->
+    <div id="camp-skills-section" style="display: none; width: 100%; max-width: 900px;">
+      <div style="color: #FFD700; font-size: 20px; margin-bottom: 15px;">Skill Tree</div>
+      <div style="color: #5DADE2; font-size: 16px; margin-bottom: 15px;" id="skill-points-display">
+        Skill Points Available: 0
+      </div>
+      <div class="skill-tree-container" id="camp-skills-content">
+        <!-- Dynamically populated -->
+      </div>
+    </div>
+
+    <button class="back-btn" id="camp-back-btn">BACK TO MENU</button>
   </div>
 
   <!-- Settings Modal -->
@@ -1704,11 +1864,14 @@
     <p id="final-kills" style="font-size: 20px; margin: 10px 0;">Kills: 0</p>
     <p id="gold-earned" style="font-size: 24px; margin: 10px 0; color: #FFD700; font-weight: bold;">Gold Earned: 0</p>
     <p id="total-gold" style="font-size: 20px; margin: 10px 0; color: #FFD700;">Total Gold: 0</p>
-    <button class="btn" id="restart-btn">CONTINUE</button>
+    <div style="display: flex; gap: 15px; margin-top: 20px;">
+      <button class="btn" id="restart-btn">CONTINUE</button>
+      <button class="btn" id="goto-camp-btn" style="background: #8B4513;">⛺ GO TO CAMP</button>
+    </div>
   </div>
 
   <!-- Import Map for Three.js -->
-  <script async src="https://unpkg.com/es-module-shims@1.8.0/dist/es-module-shims.js"></script>
+  <script async src="https://unpkg.com/es-module-shims@1.8.0/dist/es-module-shims.js" onerror="console.warn('[CDN] ES Module Shims failed to load - game requires THREE.js to function')"></script>
   <script type="importmap">
     {
       "imports": {
@@ -1716,6 +1879,39 @@
         "three/addons/": "https://unpkg.com/three@0.176.0/examples/jsm/"
       }
     }
+  </script>
+
+  <!-- CDN Error Logging (Non-blocking) -->
+  <script>
+    // Monitor font loading and log errors gracefully
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(() => {
+        console.log('[CDN] Fonts loaded successfully');
+      }).catch((error) => {
+        console.warn('[CDN] Font loading failed, using fallback fonts:', error);
+      });
+    }
+
+    // Listen for resource errors (images, scripts, stylesheets)
+    window.addEventListener('error', function(event) {
+      if (event.target !== window) {
+        const resourceUrl = event.target.src || event.target.href || 'unknown';
+        if (resourceUrl.includes('fonts.googleapis.com') || resourceUrl.includes('fonts.gstatic.com')) {
+          console.warn('[CDN] Font resource failed to load:', resourceUrl, '- using system fonts');
+        } else if (resourceUrl.includes('unpkg.com')) {
+          console.warn('[CDN] CDN resource failed to load:', resourceUrl, '- attempting graceful degradation');
+        } else if (resourceUrl !== 'unknown') {
+          console.warn('[CDN] Resource failed to load:', resourceUrl);
+        }
+        // Don't show blocking alerts, just log
+      }
+    }, true);
+
+    // Override default error handler to prevent blocking alerts
+    window.addEventListener('unhandledrejection', function(event) {
+      console.error('[Error] Unhandled promise rejection:', event.reason);
+      event.preventDefault(); // Prevent default alert behavior
+    });
   </script>
 
   <script type="module">
@@ -5246,7 +5442,23 @@
         skyFalcon: { unlocked: false, level: 1, xp: 0 },
         waterSpirit: { unlocked: false, level: 1, xp: 0 }
       },
-      selectedCompanion: 'stormWolf' // Default companion
+      selectedCompanion: 'stormWolf', // Default companion
+      // Camp System
+      campBuildings: {
+        trainingGrounds: { level: 0, maxLevel: 10 },
+        armory: { level: 0, maxLevel: 10 },
+        library: { level: 0, maxLevel: 10 },
+        workshop: { level: 0, maxLevel: 10 },
+        shrine: { level: 0, maxLevel: 10 }
+      },
+      skillTree: {
+        combatMastery: { unlocked: false, level: 0, maxLevel: 5 },
+        survivalist: { unlocked: false, level: 0, maxLevel: 5 },
+        wealthHunter: { unlocked: false, level: 0, maxLevel: 5 },
+        quickLearner: { unlocked: false, level: 0, maxLevel: 5 },
+        fortification: { unlocked: false, level: 0, maxLevel: 5 }
+      },
+      skillPoints: 0
     };
 
     let saveData = { ...defaultSaveData };
@@ -6196,6 +6408,276 @@
       return upgrade.baseCost + (currentLevel * upgrade.costIncrease);
     }
 
+    // --- CAMP SYSTEM ---
+    const CAMP_BUILDINGS = {
+      trainingGrounds: {
+        name: 'Training Grounds',
+        icon: '🏋️',
+        description: 'Train your combat skills',
+        baseCost: 100,
+        costMultiplier: 1.5,
+        maxCost: 100000, // Prevent overflow at high levels
+        bonus: (level) => ({
+          damage: 0.05 * level, // +5% damage per level
+          attackSpeed: 0.03 * level // +3% attack speed per level
+        })
+      },
+      armory: {
+        name: 'Armory',
+        icon: '🛡️',
+        description: 'Strengthen your defenses',
+        baseCost: 150,
+        costMultiplier: 1.5,
+        maxCost: 100000,
+        bonus: (level) => ({
+          hp: 20 * level, // +20 HP per level
+          armor: 5 * level // +5 armor per level
+        })
+      },
+      library: {
+        name: 'Library',
+        icon: '📚',
+        description: 'Study ancient knowledge',
+        baseCost: 200,
+        costMultiplier: 1.5,
+        maxCost: 100000,
+        skillPointLevelInterval: 3, // Award 1 skill point every 3 levels
+        bonus: (level) => ({
+          xp: 0.1 * level, // +10% XP per level
+          skillPoints: Math.floor(level / 3) // +1 skill point every 3 levels
+        })
+      },
+      workshop: {
+        name: 'Workshop',
+        icon: '🔧',
+        description: 'Craft better equipment',
+        baseCost: 175,
+        costMultiplier: 1.5,
+        maxCost: 100000,
+        bonus: (level) => ({
+          critChance: 0.02 * level, // +2% crit chance per level
+          critDamage: 0.1 * level // +10% crit damage per level
+        })
+      },
+      shrine: {
+        name: 'Shrine',
+        icon: '⭐',
+        description: 'Commune with spirits',
+        baseCost: 250,
+        costMultiplier: 1.5,
+        maxCost: 100000,
+        bonus: (level) => ({
+          gold: 0.1 * level, // +10% gold per level
+          regen: 0.5 * level // +0.5 HP/sec per level
+        })
+      }
+    };
+
+    const SKILL_TREE = {
+      combatMastery: {
+        name: 'Combat Mastery',
+        description: '+10% damage, +5% crit chance',
+        cost: 1,
+        maxLevel: 5,
+        requires: null,
+        bonus: (level) => ({
+          damage: 0.1 * level,
+          critChance: 0.05 * level
+        })
+      },
+      survivalist: {
+        name: 'Survivalist',
+        description: '+15 HP, +1 HP/sec regen',
+        cost: 1,
+        maxLevel: 5,
+        requires: null,
+        bonus: (level) => ({
+          hp: 15 * level,
+          regen: 1 * level
+        })
+      },
+      wealthHunter: {
+        name: 'Wealth Hunter',
+        description: '+15% gold gain, +10% XP gain',
+        cost: 1,
+        maxLevel: 5,
+        requires: null,
+        bonus: (level) => ({
+          gold: 0.15 * level,
+          xp: 0.1 * level
+        })
+      },
+      quickLearner: {
+        name: 'Quick Learner',
+        description: '+20% XP gain, -5% cooldown',
+        cost: 1,
+        maxLevel: 5,
+        requires: null,
+        bonus: (level) => ({
+          xp: 0.2 * level,
+          cooldown: 0.05 * level
+        })
+      },
+      fortification: {
+        name: 'Fortification',
+        description: '+10 armor, +5% damage reduction',
+        cost: 1,
+        maxLevel: 5,
+        requires: null,
+        bonus: (level) => ({
+          armor: 10 * level,
+          damageReduction: 0.05 * level
+        })
+      }
+    };
+
+    function getBuildingCost(buildingId) {
+      const building = CAMP_BUILDINGS[buildingId];
+      const currentLevel = saveData.campBuildings[buildingId].level;
+      const calculatedCost = Math.floor(building.baseCost * Math.pow(building.costMultiplier, currentLevel));
+      // Cap cost at maxCost to prevent overflow at very high levels
+      return Math.min(calculatedCost, building.maxCost || 100000);
+    }
+
+    function upgradeCampBuilding(buildingId) {
+      const building = CAMP_BUILDINGS[buildingId];
+      const buildingData = saveData.campBuildings[buildingId];
+      const cost = getBuildingCost(buildingId);
+      
+      if (buildingData.level >= buildingData.maxLevel) {
+        showStatusMessage('Building is at max level!', 2000);
+        return;
+      }
+      
+      if (saveData.gold >= cost) {
+        saveData.gold -= cost;
+        buildingData.level++;
+        
+        // Award skill points from library
+        if (buildingId === 'library') {
+          const bonus = building.bonus(buildingData.level);
+          if (bonus.skillPoints > 0) {
+            saveData.skillPoints += bonus.skillPoints;
+          }
+        }
+        
+        saveSaveData();
+        updateCampScreen();
+        playSound('collect');
+        showStatusMessage(`${building.name} upgraded to level ${buildingData.level}!`, 2000);
+      } else {
+        playSound('invalid');
+        showStatusMessage('Not enough gold!', 2000);
+      }
+    }
+
+    function unlockSkill(skillId) {
+      const skill = SKILL_TREE[skillId];
+      const skillData = saveData.skillTree[skillId];
+      
+      if (skillData.level >= skill.maxLevel) {
+        showStatusMessage('Skill is at max level!', 2000);
+        return;
+      }
+      
+      if (saveData.skillPoints >= skill.cost) {
+        saveData.skillPoints -= skill.cost;
+        if (!skillData.unlocked) {
+          skillData.unlocked = true;
+        }
+        skillData.level++;
+        
+        saveSaveData();
+        updateCampScreen();
+        playSound('collect');
+        showStatusMessage(`${skill.name} leveled up!`, 2000);
+      } else {
+        playSound('invalid');
+        showStatusMessage('Not enough skill points!', 2000);
+      }
+    }
+
+    function updateCampScreen() {
+      // Update buildings section
+      const buildingsContent = document.getElementById('camp-buildings-content');
+      buildingsContent.innerHTML = '';
+      
+      for (const [buildingId, building] of Object.entries(CAMP_BUILDINGS)) {
+        const buildingData = saveData.campBuildings[buildingId];
+        const cost = getBuildingCost(buildingId);
+        const isMaxLevel = buildingData.level >= buildingData.maxLevel;
+        const canAfford = saveData.gold >= cost;
+        
+        const buildingCard = document.createElement('div');
+        buildingCard.className = 'building-card';
+        if (isMaxLevel) buildingCard.classList.add('building-locked');
+        
+        const bonus = building.bonus(buildingData.level);
+        const bonusText = Object.entries(bonus)
+          .map(([key, value]) => {
+            if (key === 'skillPoints') return `${value} skill points`;
+            if (typeof value === 'number') {
+              if (value >= 1) return `+${Math.round(value)} ${key}`;
+              return `+${Math.round(value * 100)}% ${key}`;
+            }
+            return `${key}: ${value}`;
+          })
+          .join(', ');
+        
+        buildingCard.innerHTML = `
+          <div class="building-header">
+            <div class="building-name">${building.icon} ${building.name}</div>
+            <div class="building-level">Level ${buildingData.level}/${buildingData.maxLevel}</div>
+          </div>
+          <div class="building-desc">${building.description}</div>
+          <div class="building-bonus">Current: ${bonusText}</div>
+          <div class="building-cost">${isMaxLevel ? 'MAX LEVEL' : `Cost: ${cost} gold`}</div>
+        `;
+        
+        if (!isMaxLevel) {
+          buildingCard.onclick = () => upgradeCampBuilding(buildingId);
+          if (!canAfford) {
+            buildingCard.style.opacity = '0.6';
+          }
+        }
+        
+        buildingsContent.appendChild(buildingCard);
+      }
+      
+      // Update skills section
+      const skillsContent = document.getElementById('camp-skills-content');
+      const skillPointsDisplay = document.getElementById('skill-points-display');
+      skillPointsDisplay.textContent = `Skill Points Available: ${saveData.skillPoints}`;
+      skillsContent.innerHTML = '';
+      
+      for (const [skillId, skill] of Object.entries(SKILL_TREE)) {
+        const skillData = saveData.skillTree[skillId];
+        const isMaxLevel = skillData.level >= skill.maxLevel;
+        const canAfford = saveData.skillPoints >= skill.cost;
+        
+        const skillNode = document.createElement('div');
+        skillNode.className = 'skill-node';
+        if (skillData.unlocked) skillNode.classList.add('unlocked');
+        if (!canAfford || isMaxLevel) skillNode.classList.add('locked');
+        
+        skillNode.innerHTML = `
+          <div class="skill-name">${skill.name}</div>
+          <div class="skill-desc">${skill.description}</div>
+          <div style="font-size: 12px; color: #5DADE2; margin: 5px 0;">Level ${skillData.level}/${skill.maxLevel}</div>
+          <div class="skill-cost">${isMaxLevel ? 'MAX' : `${skill.cost} SP`}</div>
+        `;
+        
+        if (!isMaxLevel) {
+          skillNode.onclick = () => unlockSkill(skillId);
+        }
+        
+        skillsContent.appendChild(skillNode);
+      }
+      
+      // Update gold display
+      document.getElementById('menu-gold').textContent = `GOLD: ${saveData.gold}`;
+    }
+
     // --- WORLD GENERATION ---
     function createWorld() {
       // Ground - EXPANDED MAP
@@ -6222,9 +6704,9 @@
       
       // Central Rondel - Circular paved/gravel area around statue
       const rondelMat = new THREE.MeshPhysicalMaterial({ 
-        color: 0xA8A8A8, // Light gray stone/gravel
-        metalness: 0.0,
-        roughness: 0.8,
+        color: 0xB0C4DE, // Light steel blue - matches water theme
+        metalness: 0.1,
+        roughness: 0.7,
       });
       const rondelRadius = 10;
       const rondelGeo = new THREE.CircleGeometry(rondelRadius, 64);
@@ -6662,7 +7144,7 @@
       
       // Pedestal
       const pedestalGeo = new THREE.CylinderGeometry(1.5, 2, 1.5, 8);
-      const pedestalMat = new THREE.MeshToonMaterial({ color: 0xD3D3D3 }); // Light gray stone
+      const pedestalMat = new THREE.MeshToonMaterial({ color: 0x87CEEB }); // Sky blue - matches water theme
       const pedestal = new THREE.Mesh(pedestalGeo, pedestalMat);
       pedestal.position.y = 0.75;
       pedestal.castShadow = true;
@@ -7480,6 +7962,13 @@
         document.getElementById('credits-screen').style.display = 'flex';
       };
       
+      document.getElementById('camp-btn').onclick = () => {
+        playSound('waterdrop');
+        hideMainMenu();
+        updateCampScreen();
+        document.getElementById('camp-screen').style.display = 'flex';
+      };
+      
       // Back buttons
       document.getElementById('shop-back-btn').onclick = () => {
         playSound('waterdrop');
@@ -7509,6 +7998,38 @@
         playSound('waterdrop');
         document.getElementById('credits-screen').style.display = 'none';
         showMainMenu();
+      };
+      
+      document.getElementById('camp-back-btn').onclick = () => {
+        playSound('waterdrop');
+        document.getElementById('camp-screen').style.display = 'none';
+        showMainMenu();
+      };
+      
+      // Camp tab switching
+      document.getElementById('camp-buildings-tab').onclick = () => {
+        playSound('waterdrop');
+        document.getElementById('camp-buildings-section').style.display = 'block';
+        document.getElementById('camp-skills-section').style.display = 'none';
+        document.getElementById('camp-buildings-tab').style.background = '#5A3A31';
+        document.getElementById('camp-skills-tab').style.background = '#3a3a3a';
+      };
+      
+      document.getElementById('camp-skills-tab').onclick = () => {
+        playSound('waterdrop');
+        document.getElementById('camp-buildings-section').style.display = 'none';
+        document.getElementById('camp-skills-section').style.display = 'block';
+        document.getElementById('camp-buildings-tab').style.background = '#3a3a3a';
+        document.getElementById('camp-skills-tab').style.background = '#5A3A31';
+      };
+      
+      // Go to Camp from death screen
+      document.getElementById('goto-camp-btn').onclick = () => {
+        playSound('waterdrop');
+        document.getElementById('gameover-screen').style.display = 'none';
+        updateCampScreen();
+        document.getElementById('camp-screen').style.display = 'flex';
+        // Keep menu hidden during camp visit from death
       };
       
       // Reset progress button with double confirmation
@@ -10982,7 +11503,7 @@
     }
 
     // Init Game
-    try { init(); } catch(e) { console.error(e); alert("Game Error: " + e.message); }
+    try { init(); } catch(e) { console.error('[Game Error]', e); console.error('[Game] Initialization failed - game cannot start'); }
 
   </script>
 </body>
