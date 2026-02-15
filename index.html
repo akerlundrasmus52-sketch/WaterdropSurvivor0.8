@@ -9671,6 +9671,10 @@
     }
 
     // --- GAME LOGIC ---
+    
+    // Guard flag to prevent showing main menu multiple times
+    // Declared here before init() to avoid temporal dead zone issues
+    let mainMenuShown = false;
 
     function init() {
       // Load save data first
@@ -9764,6 +9768,8 @@
       // This handles race condition where module loads after loading screen completes
       // Check immediately - the event listener is already registered and will catch
       // any events that fire after this point
+      // Note: Both the event listener and this fallback may call showMainMenu(),
+      // but the guard flag in showMainMenu() ensures it only executes once
       if (window.gameLoadingCompleted) {
         console.log('Loading already completed - showing main menu via fallback');
         showMainMenu();
@@ -9772,8 +9778,6 @@
       // Start Loop
       requestAnimationFrame(animate);
     }
-    
-    let mainMenuShown = false; // Guard flag to prevent showing main menu multiple times
     
     function showMainMenu() {
       if (mainMenuShown) return; // Already shown, prevent duplicate calls
