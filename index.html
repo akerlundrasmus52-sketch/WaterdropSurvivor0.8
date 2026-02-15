@@ -2488,6 +2488,217 @@
       lastUpdateTime: 0
     };
     
+    // Ambient Creatures System
+    let ambientCreatures = [];
+    let ambientCreatureTimer = 0;
+    
+    function updateAmbientCreatures(dt) {
+      const t = dayNightCycle.timeOfDay;
+      
+      // Update timer
+      ambientCreatureTimer += dt;
+      
+      // Spawn new creatures based on time of day
+      if (ambientCreatureTimer > 2) { // Every 2 seconds, check for spawning
+        ambientCreatureTimer = 0;
+        
+        // Day creatures (0.2 - 0.7): Birds
+        if (t >= 0.2 && t < 0.7 && ambientCreatures.length < 10) {
+          if (Math.random() < 0.3) {
+            spawnBird();
+          }
+        }
+        
+        // Dawn/Dusk (0.7 - 0.9): Fireflies
+        if ((t >= 0.7 && t < 0.9) && ambientCreatures.length < 15) {
+          if (Math.random() < 0.5) {
+            spawnFirefly();
+          }
+        }
+        
+        // Night creatures (0.9 - 1.0 OR 0.0 - 0.2): Bats and Owls
+        if ((t >= 0.9 || t < 0.2) && ambientCreatures.length < 12) {
+          if (Math.random() < 0.4) {
+            if (Math.random() < 0.7) {
+              spawnBat();
+            } else {
+              spawnOwl();
+            }
+          }
+        }
+      }
+      
+      // Update existing creatures
+      for (let i = ambientCreatures.length - 1; i >= 0; i--) {
+        const creature = ambientCreatures[i];
+        creature.life--;
+        
+        if (creature.life <= 0 || !creature.mesh.parent) {
+          // Remove creature
+          if (creature.mesh.parent) {
+            scene.remove(creature.mesh);
+          }
+          creature.mesh.geometry.dispose();
+          creature.mesh.material.dispose();
+          ambientCreatures.splice(i, 1);
+          continue;
+        }
+        
+        // Update position based on creature type
+        if (creature.type === 'bird') {
+          creature.mesh.position.x += creature.velocity.x * dt;
+          creature.mesh.position.y += Math.sin(creature.life * 0.05) * 0.01;
+          creature.mesh.position.z += creature.velocity.z * dt;
+          creature.mesh.rotation.y = Math.atan2(creature.velocity.z, creature.velocity.x);
+        } else if (creature.type === 'bat') {
+          creature.mesh.position.x += creature.velocity.x * dt;
+          creature.mesh.position.y += Math.sin(creature.life * 0.1) * 0.02;
+          creature.mesh.position.z += creature.velocity.z * dt;
+          creature.mesh.rotation.y = Math.atan2(creature.velocity.z, creature.velocity.x);
+        } else if (creature.type === 'owl') {
+          creature.mesh.position.x += creature.velocity.x * dt;
+          creature.mesh.position.y += Math.sin(creature.life * 0.03) * 0.015;
+          creature.mesh.position.z += creature.velocity.z * dt;
+          creature.mesh.rotation.y = Math.atan2(creature.velocity.z, creature.velocity.x);
+        } else if (creature.type === 'firefly') {
+          creature.mesh.position.x += Math.sin(creature.life * 0.05) * 0.02;
+          creature.mesh.position.y += Math.sin(creature.life * 0.08) * 0.01;
+          creature.mesh.position.z += Math.cos(creature.life * 0.05) * 0.02;
+          // Pulsing glow
+          const glow = 0.5 + Math.sin(creature.life * 0.15) * 0.5;
+          creature.mesh.material.opacity = glow * 0.8;
+        }
+      }
+    }
+    
+    function spawnBird() {
+      const birdGeo = new THREE.ConeGeometry(0.1, 0.2, 4);
+      const birdMat = new THREE.MeshBasicMaterial({ color: 0x8B4513 }); // Brown
+      const bird = new THREE.Mesh(birdGeo, birdMat);
+      
+      // Spawn at random edge of map
+      const edge = Math.floor(Math.random() * 4);
+      if (edge === 0) { // Top
+        bird.position.set(Math.random() * 200 - 100, 8 + Math.random() * 5, 100);
+      } else if (edge === 1) { // Right
+        bird.position.set(100, 8 + Math.random() * 5, Math.random() * 200 - 100);
+      } else if (edge === 2) { // Bottom
+        bird.position.set(Math.random() * 200 - 100, 8 + Math.random() * 5, -100);
+      } else { // Left
+        bird.position.set(-100, 8 + Math.random() * 5, Math.random() * 200 - 100);
+      }
+      
+      bird.rotation.x = Math.PI / 2;
+      scene.add(bird);
+      
+      const velocity = new THREE.Vector3(
+        (Math.random() - 0.5) * 10,
+        0,
+        (Math.random() - 0.5) * 10
+      ).normalize().multiplyScalar(8);
+      
+      ambientCreatures.push({
+        type: 'bird',
+        mesh: bird,
+        velocity: velocity,
+        life: 300
+      });
+    }
+    
+    function spawnBat() {
+      const batGeo = new THREE.ConeGeometry(0.08, 0.15, 4);
+      const batMat = new THREE.MeshBasicMaterial({ color: 0x2a2a2a }); // Dark gray
+      const bat = new THREE.Mesh(batGeo, batMat);
+      
+      const edge = Math.floor(Math.random() * 4);
+      if (edge === 0) {
+        bat.position.set(Math.random() * 200 - 100, 5 + Math.random() * 3, 100);
+      } else if (edge === 1) {
+        bat.position.set(100, 5 + Math.random() * 3, Math.random() * 200 - 100);
+      } else if (edge === 2) {
+        bat.position.set(Math.random() * 200 - 100, 5 + Math.random() * 3, -100);
+      } else {
+        bat.position.set(-100, 5 + Math.random() * 3, Math.random() * 200 - 100);
+      }
+      
+      bat.rotation.x = Math.PI / 2;
+      scene.add(bat);
+      
+      const velocity = new THREE.Vector3(
+        (Math.random() - 0.5) * 10,
+        0,
+        (Math.random() - 0.5) * 10
+      ).normalize().multiplyScalar(12);
+      
+      ambientCreatures.push({
+        type: 'bat',
+        mesh: bat,
+        velocity: velocity,
+        life: 250
+      });
+    }
+    
+    function spawnOwl() {
+      const owlGeo = new THREE.ConeGeometry(0.12, 0.25, 4);
+      const owlMat = new THREE.MeshBasicMaterial({ color: 0x8B7355 }); // Tan
+      const owl = new THREE.Mesh(owlGeo, owlMat);
+      
+      const edge = Math.floor(Math.random() * 4);
+      if (edge === 0) {
+        owl.position.set(Math.random() * 200 - 100, 6 + Math.random() * 4, 100);
+      } else if (edge === 1) {
+        owl.position.set(100, 6 + Math.random() * 4, Math.random() * 200 - 100);
+      } else if (edge === 2) {
+        owl.position.set(Math.random() * 200 - 100, 6 + Math.random() * 4, -100);
+      } else {
+        owl.position.set(-100, 6 + Math.random() * 4, Math.random() * 200 - 100);
+      }
+      
+      owl.rotation.x = Math.PI / 2;
+      scene.add(owl);
+      
+      const velocity = new THREE.Vector3(
+        (Math.random() - 0.5) * 10,
+        0,
+        (Math.random() - 0.5) * 10
+      ).normalize().multiplyScalar(6);
+      
+      ambientCreatures.push({
+        type: 'owl',
+        mesh: owl,
+        velocity: velocity,
+        life: 350
+      });
+    }
+    
+    function spawnFirefly() {
+      const fireflyGeo = new THREE.SphereGeometry(0.05, 6, 6);
+      const fireflyMat = new THREE.MeshBasicMaterial({ 
+        color: 0xFFFF00,
+        transparent: true,
+        opacity: 0.7
+      });
+      const firefly = new THREE.Mesh(fireflyGeo, fireflyMat);
+      
+      // Spawn near player
+      const offsetX = (Math.random() - 0.5) * 30;
+      const offsetZ = (Math.random() - 0.5) * 30;
+      firefly.position.set(
+        player.mesh.position.x + offsetX,
+        1 + Math.random() * 3,
+        player.mesh.position.z + offsetZ
+      );
+      
+      scene.add(firefly);
+      
+      ambientCreatures.push({
+        type: 'firefly',
+        mesh: firefly,
+        velocity: new THREE.Vector3(0, 0, 0),
+        life: 400
+      });
+    }
+    
     let waveCount = 0;
     let lastWaveEndTime = 0; // Track when last wave was cleared
     let windmillQuest = { active: false, timer: 0, duration: 30, windmill: null, hasCompleted: false };
@@ -12611,6 +12822,11 @@
       // Day/Night Cycle - Update lighting smoothly (non-blocking)
       // Runs every frame regardless of pause state for smooth visual transitions
       updateDayNightCycle(dt);
+      
+      // Update ambient creatures (birds, bats, fireflies, owls) based on time of day
+      if (isGameActive && !isPaused) {
+        updateAmbientCreatures(dt);
+      }
       
       // Frame Skip Mechanism: Determine if rendering should be skipped based on previous frame time
       // Note: This only skips the render call - game logic still runs to maintain state consistency
