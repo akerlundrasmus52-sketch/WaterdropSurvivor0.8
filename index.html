@@ -1789,7 +1789,7 @@
         <label for="quality-select">Graphics Quality</label>
         <select id="quality-select">
           <option value="low">Low (Better Performance)</option>
-          <option value="medium" selected>Medium (Balanced)</option>
+          <option value="medium">Medium (Balanced)</option>
           <option value="high">High (Better Visuals)</option>
         </select>
       </div>
@@ -9849,8 +9849,9 @@
       }
       
       const qualitySelect = document.getElementById('quality-select');
-      if (qualitySelect && typeof gameSettings.graphicsQuality === 'string') {
-        qualitySelect.value = gameSettings.graphicsQuality;
+      if (qualitySelect) {
+        // Set to saved value or default (gameSettings.graphicsQuality is always defined)
+        qualitySelect.value = gameSettings.graphicsQuality || 'medium';
       }
 
       // Ensure game systems reflect the current settings
