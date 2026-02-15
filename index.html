@@ -2848,7 +2848,8 @@
     import * as THREE from 'three';
 
     // Initialize game state on window object for fallback menu handlers
-    // These are initialized early so they can be accessed before init() completes
+    // Exposed on window (instead of module-scoped) to allow standalone menu button handlers
+    // and external code to access game state. Used consistently throughout to keep in sync.
     window.isPaused = false;
     window.isGameActive = false;
 
@@ -10573,7 +10574,8 @@
       window.updateAttributesScreen = updateAttributesScreen;
       window.updateGearScreen = updateGearScreen;
       window.updateAchievementsScreen = updateAchievementsScreen;
-      // State variables are synced via getters/setters defined earlier
+      // State variables (window.isPaused, window.isGameActive) are initialized at module start
+      // and used consistently throughout the code to ensure fallback handlers have access
       
       // Signal to loading screen that module is ready
       // CRITICAL: Must be AFTER setupMenus() AND after exposing window functions
