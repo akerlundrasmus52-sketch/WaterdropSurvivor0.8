@@ -2979,8 +2979,8 @@
         this.mesh.add(this.bandage);
         
         // Vertical bandage piece
-        const bandageGeo2 = new THREE.BoxGeometry(0.05, 0.3, 0.05);
-        this.bandageVert = new THREE.Mesh(bandageGeo2, bandageMat);
+        const bandageVertGeo = new THREE.BoxGeometry(0.05, 0.3, 0.05);
+        this.bandageVert = new THREE.Mesh(bandageVertGeo, bandageMat);
         this.bandageVert.position.set(0, 0.35, 0);
         this.mesh.add(this.bandageVert);
         
@@ -2992,31 +2992,30 @@
         
         // Arms (simple cylinders attached to body)
         const armGeo = new THREE.CylinderGeometry(0.06, 0.06, 0.35, 8);
-        const armMat = new THREE.MeshToonMaterial({ color: COLORS.player, opacity: 0.85, transparent: true });
+        const limbMaterial = new THREE.MeshToonMaterial({ color: COLORS.player, opacity: 0.85, transparent: true });
         
         // Left arm
-        this.leftArm = new THREE.Mesh(armGeo, armMat);
+        this.leftArm = new THREE.Mesh(armGeo, limbMaterial);
         this.leftArm.position.set(-0.35, 0, 0);
         this.leftArm.rotation.z = Math.PI / 6; // Angled outward
         this.mesh.add(this.leftArm);
         
         // Right arm (holding gun)
-        this.rightArm = new THREE.Mesh(armGeo, armMat);
+        this.rightArm = new THREE.Mesh(armGeo, limbMaterial);
         this.rightArm.position.set(0.35, 0, 0);
         this.rightArm.rotation.z = -Math.PI / 6; // Angled outward
         this.mesh.add(this.rightArm);
         
         // Legs (simple cylinders below body)
         const legGeo = new THREE.CylinderGeometry(0.08, 0.07, 0.4, 8);
-        const legMat = new THREE.MeshToonMaterial({ color: COLORS.player, opacity: 0.85, transparent: true });
         
         // Left leg
-        this.leftLeg = new THREE.Mesh(legGeo, legMat);
+        this.leftLeg = new THREE.Mesh(legGeo, limbMaterial);
         this.leftLeg.position.set(-0.15, -0.45, 0);
         this.mesh.add(this.leftLeg);
         
         // Right leg
-        this.rightLeg = new THREE.Mesh(legGeo, legMat);
+        this.rightLeg = new THREE.Mesh(legGeo, limbMaterial);
         this.rightLeg.position.set(0.15, -0.45, 0);
         this.mesh.add(this.rightLeg);
         
@@ -4059,6 +4058,12 @@
         playSound('shoot');
       }
 
+      /**
+       * Apply damage to the enemy
+       * @param {number} amount - Damage amount
+       * @param {boolean} isCrit - Whether this is a critical hit
+       * @param {string} damageType - Type of damage: 'physical', 'fire', 'ice', 'lightning', 'shotgun', 'headshot'
+       */
       takeDamage(amount, isCrit = false, damageType = 'physical') {
         // Track last damage type for death effects
         this.lastDamageType = damageType;
