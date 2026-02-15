@@ -10121,6 +10121,7 @@
     let mainMenuInitialized = false;
     let menuShowAttempts = 0; // Track retry attempts to prevent infinite loops
     const MAX_MENU_SHOW_ATTEMPTS = 3;
+    let isCanvasVisible = true; // Track canvas visibility state for menu transitions
 
     function init() {
       // Signal to loading screen that module is ready
@@ -10270,6 +10271,14 @@
         menuElement.style.display = 'flex';
         console.info('[MENU] Menu display set to flex');
         
+        // Hide game canvas to prevent black map from showing
+        // Set flag before DOM manipulation to ensure state is consistent
+        if (renderer && renderer.domElement) {
+          isCanvasVisible = false; // Update flag first to prevent rendering race conditions
+          renderer.domElement.style.display = 'none';
+          console.info('[MENU] Game canvas hidden');
+        }
+        
         // Hide game UI buttons while on main menu (per existing spec)
         const gameButtons = ['menu-btn', 'equipment-btn', 'settings-btn', 'stats-btn'];
         gameButtons.forEach(id => {
@@ -10302,6 +10311,13 @@
       const mainMenu = document.getElementById('main-menu');
       if (mainMenu) {
         mainMenu.style.display = 'none';
+      }
+      // Show game canvas when leaving menu
+      // Set flag before DOM manipulation to ensure state is consistent
+      if (renderer && renderer.domElement) {
+        isCanvasVisible = true; // Update flag first to allow rendering when canvas becomes visible
+        renderer.domElement.style.display = '';
+        console.info('[MENU] Game canvas shown');
       }
       // Restore game UI buttons
       const gameButtons = ['menu-btn', 'equipment-btn', 'settings-btn', 'stats-btn'];
@@ -13844,7 +13860,11 @@
       }
 
       if (isPaused || isGameOver || !isGameActive) {
-        // Still render the scene so visual effects (camera shake, particles, modals) are visible (PR #82)
+        // Don't render scene when canvas is hidden (on main menu)
+        if (!isCanvasVisible) {
+          return;
+        }
+        // Render the scene for paused/game-over states so visual effects (camera shake, particles, modals) are visible (PR #82)
         renderer.render(scene, camera);
         return;
       }
