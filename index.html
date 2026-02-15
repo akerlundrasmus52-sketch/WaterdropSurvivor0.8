@@ -6825,6 +6825,40 @@
       
       scene.add(montanaGroup);
       
+      // Montana Quest Signpost
+      const montanaQuestSign = new THREE.Group();
+      montanaQuestSign.position.set(-80, 0, -90); // In front of Montana sign
+      
+      const mSignPoleGeo = new THREE.CylinderGeometry(0.2, 0.2, 3, 8);
+      const mSignPoleMat = new THREE.MeshToonMaterial({ color: 0x8B4513 });
+      const mSignPole = new THREE.Mesh(mSignPoleGeo, mSignPoleMat);
+      mSignPole.position.y = 1.5;
+      montanaQuestSign.add(mSignPole);
+      
+      const mSignBoardGeo = new THREE.BoxGeometry(4, 1.2, 0.2);
+      const mSignBoardMat = new THREE.MeshToonMaterial({ color: 0xD2B48C });
+      const mSignBoard = new THREE.Mesh(mSignBoardGeo, mSignBoardMat);
+      mSignBoard.position.y = 3.2;
+      montanaQuestSign.add(mSignBoard);
+      
+      const mSignCanvas = document.createElement('canvas');
+      mSignCanvas.width = 512;
+      mSignCanvas.height = 128;
+      const mSignCtx = mSignCanvas.getContext('2d');
+      mSignCtx.fillStyle = '#4169E1'; // Royal blue
+      mSignCtx.font = 'bold 52px Arial';
+      mSignCtx.textAlign = 'center';
+      mSignCtx.textBaseline = 'middle';
+      mSignCtx.fillText('QUEST HERE', 256, 64);
+      const mSignTexture = new THREE.CanvasTexture(mSignCanvas);
+      const mSignSpriteMat = new THREE.SpriteMaterial({ map: mSignTexture });
+      const mSignSprite = new THREE.Sprite(mSignSpriteMat);
+      mSignSprite.scale.set(3.5, 0.875, 1);
+      mSignSprite.position.y = 3.2;
+      montanaQuestSign.add(mSignSprite);
+      
+      scene.add(montanaQuestSign);
+      
       // EIFFEL TOWER: Iconic Paris landmark in fields biome
       const eiffelGroup = new THREE.Group();
       eiffelGroup.position.set(80, 0, 50); // Eastern side of fields
@@ -6901,6 +6935,47 @@
       }
       
       scene.add(eiffelGroup);
+      
+      // ===== BIOME DECORATIONS =====
+      
+      // DESERT BIOME: Cacti in southern zone
+      const cactusGeo = new THREE.CylinderGeometry(0.3, 0.3, 3, 8);
+      const cactusMat = new THREE.MeshToonMaterial({ color: 0x2F4F2F }); // Dark green
+      for (let i = 0; i < 20; i++) {
+        const cactus = new THREE.Mesh(cactusGeo, cactusMat);
+        const x = (Math.random() - 0.5) * 400;
+        const z = 100 + Math.random() * 50; // Southern desert zone
+        cactus.position.set(x, 1.5, z);
+        cactus.castShadow = true;
+        scene.add(cactus);
+        
+        // Add arms to some cacti
+        if (Math.random() < 0.5) {
+          const armGeo = new THREE.CylinderGeometry(0.2, 0.2, 1, 6);
+          const arm1 = new THREE.Mesh(armGeo, cactusMat);
+          arm1.position.set(0.5, 0.5, 0);
+          arm1.rotation.z = Math.PI / 3;
+          cactus.add(arm1);
+          
+          const arm2 = new THREE.Mesh(armGeo, cactusMat);
+          arm2.position.set(-0.5, 0.3, 0);
+          arm2.rotation.z = -Math.PI / 3;
+          cactus.add(arm2);
+        }
+      }
+      
+      // MOUNTAIN BIOME: Rocky formations
+      const rockGeo = new THREE.DodecahedronGeometry(1.5);
+      const rockMat = new THREE.MeshToonMaterial({ color: 0x696969 }); // Dim gray
+      for (let i = 0; i < 25; i++) {
+        const rock = new THREE.Mesh(rockGeo, rockMat);
+        const x = (Math.random() - 0.5) * 400;
+        const z = -50 + Math.random() * 50; // Mountain zone
+        rock.position.set(x, 0.75, z);
+        rock.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+        rock.castShadow = true;
+        scene.add(rock);
+      }
 
       // Features
       // NOTE: Old lake removed - using enhanced reflective lake defined later (line ~3747)
@@ -6966,6 +7041,13 @@
       
       // 4. Path to Windmill (40, 40) - East direction (slightly different from Stonehenge)
       createPath(rondelRadius * 0.9, rondelRadius * 0.436, 40, 40, 3);
+      
+      // NEW BIOME PATHS:
+      // 5. Path to Montana (-80, -100) - Northern direction (snowy zone)
+      createPath(0, -rondelRadius, -80, -100, 3);
+      
+      // 6. Path to Eiffel Tower (80, 50) - Eastern direction (fields)
+      createPath(rondelRadius, rondelRadius * 0.5, 80, 50, 3);
       
       // Farm Fields - Fill empty spaces with farm texture
       // Create large farm field background (performance optimized - single large mesh)
