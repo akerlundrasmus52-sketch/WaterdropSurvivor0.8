@@ -2161,6 +2161,14 @@
       window.isGameActive = active;
     }
     
+    // Day/Night Cycle System - Smooth, non-blocking transitions
+    let dayNightCycle = {
+      enabled: true,
+      timeOfDay: 0, // 0-1, where 0=midnight, 0.25=dawn, 0.5=noon, 0.75=dusk, 1=midnight
+      cycleSpeed: 0.00005, // Very slow cycle (about 5 minutes for full day/night)
+      lastUpdateTime: 0
+    };
+    
     let waveCount = 0;
     let lastWaveEndTime = 0; // Track when last wave was cleared
     let windmillQuest = { active: false, timer: 0, duration: 30, windmill: null, hasCompleted: false };
@@ -6955,20 +6963,21 @@
       renderer.shadowMap.type = THREE.PCFSoftShadowMap;
       document.getElementById('game-container').appendChild(renderer.domElement);
 
-      // Lights
-      const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-      scene.add(ambientLight);
+      // Day/Night Cycle System - Non-blocking, smooth transitions
+      // Store light references for day/night cycle
+      window.ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+      scene.add(window.ambientLight);
 
-      const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-      dirLight.position.set(50, 100, 50);
-      dirLight.castShadow = true;
-      dirLight.shadow.mapSize.width = 2048;
-      dirLight.shadow.mapSize.height = 2048;
-      dirLight.shadow.camera.left = -100;
-      dirLight.shadow.camera.right = 100;
-      dirLight.shadow.camera.top = 100;
-      dirLight.shadow.camera.bottom = -100;
-      scene.add(dirLight);
+      window.dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+      window.dirLight.position.set(50, 100, 50);
+      window.dirLight.castShadow = true;
+      window.dirLight.shadow.mapSize.width = 2048;
+      window.dirLight.shadow.mapSize.height = 2048;
+      window.dirLight.shadow.camera.left = -100;
+      window.dirLight.shadow.camera.right = 100;
+      window.dirLight.shadow.camera.top = 100;
+      window.dirLight.shadow.camera.bottom = -100;
+      scene.add(window.dirLight);
 
       // Setup
       createWorld();
@@ -9916,6 +9925,74 @@
       cumulativeFrameTime: 0 // Track cumulative time for accurate average
     };
     
+    // Day/Night Cycle Update - Non-blocking, smooth lighting transitions
+    function updateDayNightCycle(dt) {
+      if (!dayNightCycle.enabled || !window.ambientLight || !window.dirLight) return;
+      
+      // Update time of day
+      dayNightCycle.timeOfDay += dayNightCycle.cycleSpeed * dt;
+      if (dayNightCycle.timeOfDay > 1) dayNightCycle.timeOfDay -= 1;
+      
+      const t = dayNightCycle.timeOfDay;
+      
+      // Calculate sun position and lighting based on time of day
+      // 0 = midnight (dark), 0.25 = sunrise, 0.5 = noon (bright), 0.75 = sunset, 1 = midnight
+      let sunIntensity, ambientIntensity, skyColor;
+      
+      if (t < 0.25) {
+        // Night to sunrise (0 -> 0.25)
+        const phase = t / 0.25;
+        sunIntensity = 0.2 + (0.6 * phase); // 0.2 -> 0.8
+        ambientIntensity = 0.3 + (0.3 * phase); // 0.3 -> 0.6
+        skyColor = new THREE.Color().lerpColors(
+          new THREE.Color(0x1a1a2e), // Dark blue night
+          new THREE.Color(0x87CEEB), // Light blue day
+          phase
+        );
+      } else if (t < 0.5) {
+        // Sunrise to noon (0.25 -> 0.5)
+        const phase = (t - 0.25) / 0.25;
+        sunIntensity = 0.8 + (0.2 * phase); // 0.8 -> 1.0
+        ambientIntensity = 0.6 + (0.1 * phase); // 0.6 -> 0.7
+        skyColor = new THREE.Color(0x87CEEB); // Bright day
+      } else if (t < 0.75) {
+        // Noon to sunset (0.5 -> 0.75)
+        const phase = (t - 0.5) / 0.25;
+        sunIntensity = 1.0 - (0.6 * phase); // 1.0 -> 0.4
+        ambientIntensity = 0.7 - (0.3 * phase); // 0.7 -> 0.4
+        skyColor = new THREE.Color().lerpColors(
+          new THREE.Color(0x87CEEB), // Day blue
+          new THREE.Color(0xFF6B35), // Sunset orange
+          phase
+        );
+      } else {
+        // Sunset to night (0.75 -> 1.0)
+        const phase = (t - 0.75) / 0.25;
+        sunIntensity = 0.4 - (0.2 * phase); // 0.4 -> 0.2
+        ambientIntensity = 0.4 - (0.1 * phase); // 0.4 -> 0.3
+        skyColor = new THREE.Color().lerpColors(
+          new THREE.Color(0xFF6B35), // Sunset orange
+          new THREE.Color(0x1a1a2e), // Night dark blue
+          phase
+        );
+      }
+      
+      // Apply lighting changes smoothly (non-blocking)
+      window.ambientLight.intensity = ambientIntensity;
+      window.dirLight.intensity = sunIntensity;
+      
+      // Update sky color
+      scene.background = skyColor;
+      
+      // Move sun position in an arc
+      const sunAngle = (t - 0.25) * Math.PI * 2; // Offset so noon is at top
+      window.dirLight.position.set(
+        Math.cos(sunAngle) * 50,
+        Math.max(10, Math.sin(sunAngle) * 100), // Never go below horizon
+        Math.sin(sunAngle) * 50
+      );
+    }
+    
     function animate(time) {
       requestAnimationFrame(animate);
       
@@ -9950,6 +10027,10 @@
         }
         dt = MAX_DELTA_TIME;
       }
+      
+      // Day/Night Cycle - Update lighting smoothly (non-blocking)
+      // Runs every frame regardless of pause state for smooth visual transitions
+      updateDayNightCycle(dt);
       
       // Frame Skip Mechanism: Determine if rendering should be skipped based on previous frame time
       // Note: This only skips the render call - game logic still runs to maintain state consistency
