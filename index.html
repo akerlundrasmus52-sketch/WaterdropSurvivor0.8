@@ -2143,6 +2143,32 @@
     let isGameActive = false;  // Changed to false - start with menu
     let gameTime = 0;
     let gameStartTime = 0;
+    
+    // Expose game state on window object for external access and fallback handlers (acceptance criteria #2)
+    // These are kept in sync with local variables throughout the code
+    window.isPaused = false;
+    window.isGameActive = false;
+    window.gameModuleReady = false;  // Will be set true after init completes
+    
+    // Helper functions to keep window variables in sync (acceptance criteria #2)
+    function setGamePaused(paused) {
+      isPaused = paused;
+      window.isPaused = paused;
+    }
+    
+    function setGameActive(active) {
+      isGameActive = active;
+      window.isGameActive = active;
+    }
+    
+    // Day/Night Cycle System - Smooth, non-blocking transitions
+    let dayNightCycle = {
+      enabled: true,
+      timeOfDay: 0, // 0-1, where 0=midnight, 0.25=dawn, 0.5=noon, 0.75=dusk, 1=midnight
+      cycleSpeed: 0.000033, // Very slow cycle (about 8.3 minutes for full day/night at 60fps)
+      lastUpdateTime: 0
+    };
+    
     let waveCount = 0;
     let lastWaveEndTime = 0; // Track when last wave was cleared
     let windmillQuest = { active: false, timer: 0, duration: 30, windmill: null, hasCompleted: false };
@@ -2161,6 +2187,45 @@
       "1",
       "Survive!"
     ];
+
+    // Phase 5: Companion System Data
+    const COMPANIONS = {
+      stormWolf: {
+        id: 'stormWolf',
+        name: 'Storm Wolf',
+        icon: '🐺',
+        evolvedIcon: '⚡',
+        type: 'melee',
+        baseStats: { damage: 8, attackSpeed: 1.2, health: 50 },
+        evolvedStats: { damage: 20, attackSpeed: 0.8, health: 100 },
+        unlockCondition: 'default',
+        description: 'Melee companion that follows and attacks enemies'
+      },
+      skyFalcon: {
+        id: 'skyFalcon',
+        name: 'Sky Falcon',
+        icon: '🦅',
+        evolvedIcon: '🔥',
+        type: 'ranged',
+        baseStats: { damage: 6, attackSpeed: 1.5, health: 40 },
+        evolvedStats: { damage: 15, attackSpeed: 1.0, health: 80 },
+        unlockCondition: 'level15',
+        description: 'Ranged companion that circles and dives at enemies'
+      },
+      waterSpirit: {
+        id: 'waterSpirit',
+        name: 'Water Spirit',
+        icon: '💧',
+        evolvedIcon: '🌊',
+        type: 'support',
+        baseStats: { damage: 3, attackSpeed: 8.0, health: 60 },
+        evolvedStats: { damage: 8, attackSpeed: 5.0, health: 120 },
+        unlockCondition: 'denLevel2',
+        description: 'Support companion that heals and slows enemies'
+      }
+    };
+    
+    let activeCompanion = null; // Will hold the active Companion instance
 
     // Game Settings
     const gameSettings = {
@@ -3743,6 +3808,35 @@
           spawnGold(this.mesh.position.x, this.mesh.position.z, goldAmount);
         }
         
+        // Phase 1: Gear drop system - enemies have a chance to drop gear
+        let gearDropChance = 0;
+        if (this.isMiniBoss) {
+          gearDropChance = 0.5; // 50% for mini-boss
+        } else {
+          // Regular enemies: 3-8% chance (scales with enemy type 0-9)
+          // Enemy types 0-9 add 0-0.05% additional chance
+          gearDropChance = 0.03 + Math.min(this.type * 0.005, 0.05); // 3-8% cap
+        }
+        
+        if (Math.random() < gearDropChance) {
+          const newGear = generateRandomGear();
+          saveData.inventory.push(newGear);
+          saveSaveData();
+          
+          // Show notification
+          const rarityColors = {
+            common: '#AAAAAA',
+            uncommon: '#00FF00',
+            rare: '#5DADE2',
+            epic: '#9B59B6',
+            legendary: '#F39C12'
+          };
+          createFloatingText(`+${newGear.name}`, this.mesh.position, rarityColors[newGear.rarity] || '#FFFFFF');
+          playSound('coin');
+          
+          console.log('[Phase 1 Gear Drop]', newGear.name, '-', newGear.rarity);
+        }
+        
         playerStats.kills++;
         
         // Track mini-boss defeats for achievements
@@ -3774,6 +3868,159 @@
         opacity: 0.4
       })
     };
+
+    // Phase 5: Companion System - Simplified implementation for stable gameplay
+    class Companion {
+      constructor(companionId) {
+        this.companionId = companionId;
+        this.data = COMPANIONS[companionId];
+        this.companionData = saveData.companions[companionId];
+        
+        // Stats based on level
+        const isEvolved = this.companionData.level >= 10;
+        const stats = isEvolved ? this.data.evolvedStats : this.data.baseStats;
+        
+        this.damage = stats.damage;
+        this.attackSpeed = stats.attackSpeed;
+        this.maxHp = stats.health;
+        this.hp = this.maxHp;
+        this.isDead = false;
+        this.respawnTimer = 0;
+        this.lastAttackTime = 0;
+        
+        // Create visual representation
+        const icon = isEvolved ? this.data.evolvedIcon : this.data.icon;
+        const size = 0.8;
+        const geo = new THREE.BoxGeometry(size, size, size);
+        const mat = new THREE.MeshStandardMaterial({ 
+          color: this.data.type === 'melee' ? 0x8B4513 : 
+                 this.data.type === 'ranged' ? 0x4169E1 : 0x00CED1
+        });
+        this.mesh = new THREE.Mesh(geo, mat);
+        this.mesh.castShadow = true;
+        scene.add(this.mesh);
+        
+        // Position near player
+        this.mesh.position.copy(player.mesh.position);
+        this.mesh.position.x += 2;
+      }
+      
+      update(dt) {
+        if (this.isDead) {
+          this.respawnTimer -= dt;
+          if (this.respawnTimer <= 0) {
+            this.respawn();
+          }
+          return;
+        }
+        
+        if (!player || !player.mesh) return;
+        
+        // Follow player with simple AI
+        const dx = player.mesh.position.x - this.mesh.position.x;
+        const dz = player.mesh.position.z - this.mesh.position.z;
+        const dist = Math.sqrt(dx*dx + dz*dz);
+        
+        // Keep distance from player (melee closer, others farther)
+        const targetDist = this.data.type === 'melee' ? 2 : 3;
+        
+        if (dist > targetDist + 0.5) {
+          // Move toward player
+          const moveSpeed = 0.15;
+          this.mesh.position.x += (dx / dist) * moveSpeed;
+          this.mesh.position.z += (dz / dist) * moveSpeed;
+        } else if (dist < targetDist - 0.5) {
+          // Move away from player
+          const moveSpeed = 0.1;
+          this.mesh.position.x -= (dx / dist) * moveSpeed;
+          this.mesh.position.z -= (dz / dist) * moveSpeed;
+        }
+        
+        // Attack nearest enemy
+        const now = Date.now();
+        if (enemies.length > 0 && now - this.lastAttackTime > this.attackSpeed * 1000) {
+          let nearest = null;
+          let nearestDist = Infinity;
+          
+          for (const enemy of enemies) {
+            const ex = enemy.mesh.position.x - this.mesh.position.x;
+            const ez = enemy.mesh.position.z - this.mesh.position.z;
+            const d = ex*ex + ez*ez;
+            if (d < nearestDist && d < 100) { // Range check
+              nearestDist = d;
+              nearest = enemy;
+            }
+          }
+          
+          if (nearest) {
+            // Attack
+            const damageMultiplier = 1 + (this.companionData.level - 1) * 0.1; // +10% per level
+            const finalDamage = Math.floor(this.damage * damageMultiplier * playerStats.strength);
+            nearest.takeDamage(finalDamage, false);
+            spawnParticles(nearest.mesh.position, 0xFF6347, 3);
+            this.lastAttackTime = now;
+          }
+        }
+        
+        // Bob animation
+        this.mesh.position.y = 0.5 + Math.sin(Date.now() * 0.003) * 0.1;
+      }
+      
+      takeDamage(amount) {
+        this.hp -= amount;
+        if (this.hp <= 0) {
+          this.die();
+        }
+      }
+      
+      die() {
+        this.isDead = true;
+        this.mesh.visible = false;
+        this.respawnTimer = 10; // 10 second respawn
+        createFloatingText('Companion down!', this.mesh.position, '#FF6347');
+      }
+      
+      respawn() {
+        this.isDead = false;
+        this.hp = this.maxHp;
+        this.mesh.visible = true;
+        this.mesh.position.copy(player.mesh.position);
+        this.mesh.position.x += 2;
+        createFloatingText('Companion respawned!', this.mesh.position, '#00FF00');
+      }
+      
+      addXP(amount) {
+        // Companions gain 10% of all XP awarded to the player
+        const companionXP = Math.floor(amount * 0.1);
+        this.companionData.xp += companionXP;
+        
+        // Level up check (simplified progression)
+        const xpRequired = [0, 100, 250, 500, 800, 1200, 1700, 2300, 3000, 4000];
+        if (this.companionData.level < 10 && this.companionData.xp >= xpRequired[this.companionData.level]) {
+          this.companionData.level++;
+          saveData.companions[this.companionId] = this.companionData;
+          saveSaveData();
+          
+          if (this.companionData.level === 10) {
+            createFloatingText('⭐ COMPANION EVOLVED! ⭐', this.mesh.position, '#FFD700');
+            // Update stats to evolved form
+            const stats = this.data.evolvedStats;
+            this.damage = stats.damage;
+            this.attackSpeed = stats.attackSpeed;
+            this.maxHp = stats.health;
+            this.hp = this.maxHp;
+          } else {
+            createFloatingText(`Level ${this.companionData.level}!`, this.mesh.position, '#00FF00');
+          }
+        }
+      }
+      
+      destroy() {
+        scene.remove(this.mesh);
+        this.mesh.geometry.dispose();
+        this.mesh.material.dispose();
+      }
+    }
 
     class Projectile {
       constructor(x, z, target) {
@@ -4983,13 +5230,23 @@
       },
       unspentAttributePoints: 0,
       // Gear system
+      // Phase 1: Expand gear system to 6 slots with enhanced RPG stats
       equippedGear: {
-        weapon: null,
-        armor: null,
-        accessory1: null,
-        accessory2: null
+        weapon: null,        // Main weapon slot
+        armor: null,         // Body armor slot  
+        helmet: null,        // Head slot (Phase 1)
+        boots: null,         // Feet slot (Phase 1)
+        ring: null,          // Accessory ring slot (Phase 1)
+        amulet: null         // Accessory amulet slot (Phase 1)
       },
-      inventory: []
+      inventory: [],
+      // Phase 5: Companion System
+      companions: {
+        stormWolf: { unlocked: true, level: 1, xp: 0 },
+        skyFalcon: { unlocked: false, level: 1, xp: 0 },
+        waterSpirit: { unlocked: false, level: 1, xp: 0 }
+      },
+      selectedCompanion: 'stormWolf' // Default companion
     };
 
     let saveData = { ...defaultSaveData };
@@ -5445,7 +5702,7 @@
       elementalMagic: { name: 'Elemental Magic', icon: '🔮', color: '#8E44AD' }
     };
 
-    // Define starter gear that players begin with
+    // Phase 1: Define starter gear for all 6 slots
     const STARTER_GEAR = [
       {
         id: 'starter_weapon',
@@ -5460,16 +5717,40 @@
         name: 'Leather Vest',
         type: 'armor',
         rarity: 'common',
-        stats: { flexibility: 1, movementSpeed: 1 },
+        stats: { flexibility: 2, movementSpeed: 1 },
         description: 'Basic protection'
       },
       {
-        id: 'starter_accessory1',
-        name: 'Lucky Charm',
-        type: 'accessory',
+        id: 'starter_helmet',
+        name: 'Cloth Cap',
+        type: 'helmet',
+        rarity: 'common',
+        stats: { flexibility: 1 },
+        description: 'Simple head covering'
+      },
+      {
+        id: 'starter_boots',
+        name: 'Worn Boots',
+        type: 'boots',
+        rarity: 'common',
+        stats: { movementSpeed: 1 },
+        description: 'Weathered footwear'
+      },
+      {
+        id: 'starter_ring',
+        name: 'Brass Ring',
+        type: 'ring',
         rarity: 'common',
         stats: { critChance: 1 },
-        description: 'Brings good fortune'
+        description: 'Simple metal band'
+      },
+      {
+        id: 'starter_amulet',
+        name: 'Wooden Pendant',
+        type: 'amulet',
+        rarity: 'common',
+        stats: { elementalMagic: 1 },
+        description: 'Carved charm'
       }
     ];
 
@@ -5507,41 +5788,88 @@
         stats: { flexibility: 2, movementSpeed: 1, attackPrecision: 2 },
         description: 'Forged from dragon scales'
       },
+      // Phase 1: Helmets
       {
-        id: 'crit_ring',
-        name: 'Ring of Critical Strikes',
-        type: 'accessory',
-        rarity: 'rare',
-        stats: { critChance: 3, attackPrecision: 1 },
-        description: 'Increases critical hit chance'
+        id: 'iron_helmet',
+        name: 'Iron Helmet',
+        type: 'helmet',
+        rarity: 'uncommon',
+        stats: { flexibility: 2 },
+        description: 'Sturdy head protection'
       },
+      {
+        id: 'crown_of_wisdom',
+        name: 'Crown of Wisdom',
+        type: 'helmet',
+        rarity: 'epic',
+        stats: { flexibility: 2, elementalMagic: 2 },
+        description: 'Enhances magical abilities'
+      },
+      // Phase 1: Boots
       {
         id: 'speed_boots',
         name: 'Winged Boots',
-        type: 'accessory',
+        type: 'boots',
         rarity: 'epic',
         stats: { movementSpeed: 4, flexibility: 1 },
         description: 'Swift as the wind'
       },
       {
+        id: 'shadow_steps',
+        name: 'Shadow Steps',
+        type: 'boots',
+        rarity: 'rare',
+        stats: { movementSpeed: 3 },
+        description: 'Silent and swift'
+      },
+      // Phase 1: Rings
+      {
+        id: 'crit_ring',
+        name: 'Ring of Critical Strikes',
+        type: 'ring',
+        rarity: 'rare',
+        stats: { critChance: 3, attackPrecision: 1 },
+        description: 'Increases critical hit chance'
+      },
+      {
+        id: 'power_ring',
+        name: 'Ring of Power',
+        type: 'ring',
+        rarity: 'legendary',
+        stats: { attackSpeed: 2, attackPrecision: 2, critChance: 1 },
+        description: 'Overwhelming offensive power'
+      },
+      // Phase 1: Amulets
+      {
         id: 'magic_amulet',
         name: 'Arcane Amulet',
-        type: 'accessory',
+        type: 'amulet',
         rarity: 'legendary',
         stats: { elementalMagic: 4, attackSpeed: 2 },
         description: 'Channels magical energy'
+      },
+      {
+        id: 'life_amulet',
+        name: 'Amulet of Life',
+        type: 'amulet',
+        rarity: 'epic',
+        stats: { flexibility: 3, elementalMagic: 1 },
+        description: 'Grants vitality and resilience'
       }
     ];
 
     function initializeGear() {
-      // Give players starter gear if they don't have any
+      // Phase 1: Give players starter gear for all 6 slots if they don't have any
       if (!saveData.inventory || saveData.inventory.length === 0) {
         saveData.inventory = [...STARTER_GEAR];
         
-        // Auto-equip starter gear
+        // Auto-equip all 6 starter items
         saveData.equippedGear.weapon = 'starter_weapon';
         saveData.equippedGear.armor = 'starter_armor';
-        saveData.equippedGear.accessory1 = 'starter_accessory1';
+        saveData.equippedGear.helmet = 'starter_helmet';
+        saveData.equippedGear.boots = 'starter_boots';
+        saveData.equippedGear.ring = 'starter_ring';
+        saveData.equippedGear.amulet = 'starter_amulet';
         
         saveSaveData();
       }
@@ -5573,14 +5901,16 @@
       }
       statsContent.innerHTML = statsHtml;
       
-      // Build gear slots display
+      // Phase 1: Build gear slots display for all 6 slots
       let html = '';
       
       const slots = [
-        { key: 'weapon', name: 'Weapon Slot', icon: '⚔️' },
-        { key: 'armor', name: 'Armor Slot', icon: '🛡️' },
-        { key: 'accessory1', name: 'Accessory Slot 1', icon: '💍' },
-        { key: 'accessory2', name: 'Accessory Slot 2', icon: '📿' }
+        { key: 'weapon', name: 'Weapon', icon: '⚔️' },
+        { key: 'armor', name: 'Armor', icon: '🛡️' },
+        { key: 'helmet', name: 'Helmet', icon: '⛑️' },
+        { key: 'boots', name: 'Boots', icon: '👢' },
+        { key: 'ring', name: 'Ring', icon: '💍' },
+        { key: 'amulet', name: 'Amulet', icon: '📿' }
       ];
       
       for (const slot of slots) {
@@ -5643,12 +5973,80 @@
     function getRarityColor(rarity) {
       const colors = {
         common: '#AAAAAA',
+        uncommon: '#00FF00',
         rare: '#5DADE2',
         epic: '#9B59B6',
         legendary: '#F39C12',
         mythic: '#E74C3C'
       };
       return colors[rarity] || colors.common;
+    }
+    
+    // Phase 1: Gear drop system - procedurally generate gear with rarity tiers
+    function generateRandomGear() {
+      // Rarity chances: common 50%, uncommon 25%, rare 15%, epic 8%, legendary 2%
+      const rarityRoll = Math.random();
+      let rarity;
+      if (rarityRoll < 0.50) rarity = 'common';
+      else if (rarityRoll < 0.75) rarity = 'uncommon';
+      else if (rarityRoll < 0.90) rarity = 'rare';
+      else if (rarityRoll < 0.98) rarity = 'epic';
+      else rarity = 'legendary';
+      
+      // Choose random gear type from all 6 slots
+      const types = ['weapon', 'armor', 'helmet', 'boots', 'ring', 'amulet'];
+      const type = types[Math.floor(Math.random() * types.length)];
+      
+      // Base stats by rarity
+      const rarityStatMult = {
+        common: 1,
+        uncommon: 1.5,
+        rare: 2,
+        epic: 3,
+        legendary: 4
+      };
+      const mult = rarityStatMult[rarity];
+      
+      // Generate random stats (1-3 random attributes)
+      const statCount = Math.floor(Math.random() * 3) + 1;
+      const stats = {};
+      const availableStats = Object.keys(GEAR_ATTRIBUTES);
+      const chosenStats = [];
+      
+      for (let i = 0; i < statCount; i++) {
+        const stat = availableStats[Math.floor(Math.random() * availableStats.length)];
+        if (!chosenStats.includes(stat)) {
+          chosenStats.push(stat);
+          stats[stat] = Math.floor((Math.random() * 2 + 1) * mult);
+        }
+      }
+      
+      // Generate unique ID
+      const id = `gear_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+      
+      // Generate name
+      const prefixes = ['Worn', 'Simple', 'Fine', 'Superior', 'Masterwork', 'Legendary'];
+      const typeNames = {
+        weapon: ['Blade', 'Sword', 'Axe', 'Dagger', 'Mace'],
+        armor: ['Vest', 'Plate', 'Mail', 'Cuirass', 'Armor'],
+        helmet: ['Cap', 'Helm', 'Crown', 'Mask', 'Circlet'],
+        boots: ['Boots', 'Shoes', 'Greaves', 'Treads', 'Steps'],
+        ring: ['Ring', 'Band', 'Loop', 'Circle', 'Hoop'],
+        amulet: ['Amulet', 'Pendant', 'Charm', 'Talisman', 'Necklace']
+      };
+      
+      const prefix = prefixes[Math.min(Math.floor(mult), prefixes.length - 1)];
+      const typeName = typeNames[type][Math.floor(Math.random() * typeNames[type].length)];
+      const name = `${prefix} ${typeName}`;
+      
+      return {
+        id,
+        name,
+        type,
+        rarity,
+        stats,
+        description: `A ${rarity} ${type}`
+      };
     }
 
     function calculateGearStats() {
@@ -6765,20 +7163,21 @@
       renderer.shadowMap.type = THREE.PCFSoftShadowMap;
       document.getElementById('game-container').appendChild(renderer.domElement);
 
-      // Lights
-      const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-      scene.add(ambientLight);
+      // Day/Night Cycle System - Non-blocking, smooth transitions
+      // Store light references for day/night cycle
+      window.ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+      scene.add(window.ambientLight);
 
-      const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-      dirLight.position.set(50, 100, 50);
-      dirLight.castShadow = true;
-      dirLight.shadow.mapSize.width = 2048;
-      dirLight.shadow.mapSize.height = 2048;
-      dirLight.shadow.camera.left = -100;
-      dirLight.shadow.camera.right = 100;
-      dirLight.shadow.camera.top = 100;
-      dirLight.shadow.camera.bottom = -100;
-      scene.add(dirLight);
+      window.dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+      window.dirLight.position.set(50, 100, 50);
+      window.dirLight.castShadow = true;
+      window.dirLight.shadow.mapSize.width = 2048;
+      window.dirLight.shadow.mapSize.height = 2048;
+      window.dirLight.shadow.camera.left = -100;
+      window.dirLight.shadow.camera.right = 100;
+      window.dirLight.shadow.camera.top = 100;
+      window.dirLight.shadow.camera.bottom = -100;
+      scene.add(window.dirLight);
 
       // Setup
       createWorld();
@@ -6802,6 +7201,11 @@
 
       // Start Loop
       requestAnimationFrame(animate);
+      
+      // Signal that module is fully initialized (acceptance criteria #2)
+      // This MUST be last, after all handlers are attached
+      window.gameModuleReady = true;
+      console.log('[Init] Game module ready - all systems initialized');
     }
     
     function showLoadingScreen() {
@@ -6830,8 +7234,8 @@
     function showMainMenu() {
       document.getElementById('main-menu').style.display = 'flex';
       updateGoldDisplays();
-      isGameActive = false;
-      isPaused = true;
+      setGameActive(false);
+      setGamePaused(true);
     }
     
     function hideMainMenu() {
@@ -6870,10 +7274,11 @@
     function endCountdown() {
       countdownActive = false;
       
-      // Ensure game properly unpauses
-      isPaused = false;
-      isGameActive = true;
+      // Ensure game properly unpauses (use helper functions to sync window variables)
+      setGamePaused(false);
+      setGameActive(true);
       gameStartTime = Date.now();
+      console.log('[Countdown] Game started - isPaused:', isPaused, 'isGameActive:', isGameActive);
     }
     
     function showProgressionShop() {
@@ -7390,6 +7795,11 @@
 
     function addExp(amount) {
       playerStats.exp += amount;
+      
+      // Phase 5: Give companion XP (10% of player XP)
+      if (activeCompanion && !activeCompanion.isDead) {
+        activeCompanion.addXP(amount);
+      }
       
       // Trigger waterdrop grow animation on XP pickup
       const waterdropContainer = document.getElementById('waterdrop-container');
@@ -9302,6 +9712,17 @@
         m.mesh.material.dispose();
       });
       meteors = [];
+      
+      // Phase 5: Spawn companion if one is selected
+      if (activeCompanion) {
+        activeCompanion.destroy();
+        activeCompanion = null;
+      }
+      
+      if (saveData.selectedCompanion && saveData.companions[saveData.selectedCompanion]?.unlocked) {
+        activeCompanion = new Companion(saveData.selectedCompanion);
+        console.log('[Phase 5] Spawned companion:', saveData.selectedCompanion);
+      }
 
       // Reset Player - Spawn near the statue at map center
       if (player) {
@@ -9720,6 +10141,75 @@
       cumulativeFrameTime: 0 // Track cumulative time for accurate average
     };
     
+    // Day/Night Cycle Update - Non-blocking, smooth lighting transitions
+    function updateDayNightCycle(dt) {
+      if (!dayNightCycle.enabled || !window.ambientLight || !window.dirLight) return;
+      
+      // Update time of day
+      dayNightCycle.timeOfDay += dayNightCycle.cycleSpeed * dt;
+      if (dayNightCycle.timeOfDay > 1) dayNightCycle.timeOfDay -= 1;
+      
+      const t = dayNightCycle.timeOfDay;
+      
+      // Calculate sun position and lighting based on time of day
+      // 0 = midnight (dark), 0.25 = sunrise, 0.5 = noon (bright), 0.75 = sunset, 1 = midnight
+      let sunIntensity, ambientIntensity, skyColor;
+      
+      if (t < 0.25) {
+        // Night to sunrise (0 -> 0.25)
+        const phase = t / 0.25;
+        sunIntensity = 0.2 + (0.6 * phase); // 0.2 -> 0.8
+        ambientIntensity = 0.3 + (0.3 * phase); // 0.3 -> 0.6
+        skyColor = new THREE.Color().lerpColors(
+          new THREE.Color(0x1a1a2e), // Dark blue night
+          new THREE.Color(0x87CEEB), // Light blue day
+          phase
+        );
+      } else if (t < 0.5) {
+        // Sunrise to noon (0.25 -> 0.5)
+        const phase = (t - 0.25) / 0.25;
+        sunIntensity = 0.8 + (0.2 * phase); // 0.8 -> 1.0
+        ambientIntensity = 0.6 + (0.1 * phase); // 0.6 -> 0.7
+        skyColor = new THREE.Color(0x87CEEB); // Bright day
+      } else if (t < 0.75) {
+        // Noon to sunset (0.5 -> 0.75)
+        const phase = (t - 0.5) / 0.25;
+        sunIntensity = 1.0 - (0.6 * phase); // 1.0 -> 0.4
+        ambientIntensity = 0.7 - (0.3 * phase); // 0.7 -> 0.4
+        skyColor = new THREE.Color().lerpColors(
+          new THREE.Color(0x87CEEB), // Day blue
+          new THREE.Color(0xFF6B35), // Sunset orange
+          phase
+        );
+      } else {
+        // Sunset to night (0.75 -> 1.0)
+        const phase = (t - 0.75) / 0.25;
+        sunIntensity = 0.4 - (0.2 * phase); // 0.4 -> 0.2
+        ambientIntensity = 0.4 - (0.1 * phase); // 0.4 -> 0.3
+        skyColor = new THREE.Color().lerpColors(
+          new THREE.Color(0xFF6B35), // Sunset orange
+          new THREE.Color(0x1a1a2e), // Night dark blue
+          phase
+        );
+      }
+      
+      // Apply lighting changes smoothly (non-blocking)
+      window.ambientLight.intensity = ambientIntensity;
+      window.dirLight.intensity = sunIntensity;
+      
+      // Update sky color
+      scene.background = skyColor;
+      
+      // Move sun position in an arc
+      const sunAngle = (t - 0.25) * Math.PI * 2; // Offset so noon is at top
+      // Keep sun at minimum height of 20 to stay above effective horizon
+      window.dirLight.position.set(
+        Math.cos(sunAngle) * 50,
+        Math.max(20, Math.sin(sunAngle) * 100), // Minimum 20 units above ground
+        Math.sin(sunAngle) * 50
+      );
+    }
+    
     function animate(time) {
       requestAnimationFrame(animate);
       
@@ -9754,6 +10244,10 @@
         }
         dt = MAX_DELTA_TIME;
       }
+      
+      // Day/Night Cycle - Update lighting smoothly (non-blocking)
+      // Runs every frame regardless of pause state for smooth visual transitions
+      updateDayNightCycle(dt);
       
       // Frame Skip Mechanism: Determine if rendering should be skipped based on previous frame time
       // Note: This only skips the render call - game logic still runs to maintain state consistency
@@ -10266,6 +10760,11 @@
 
       // Entities Update
       enemies.forEach(e => e.update(dt, player.mesh.position));
+      
+      // Phase 5: Update companion
+      if (activeCompanion && !activeCompanion.isDead) {
+        activeCompanion.update(dt);
+      }
       
       // Update drone turrets
       droneTurrets.forEach(drone => drone.update(dt));
