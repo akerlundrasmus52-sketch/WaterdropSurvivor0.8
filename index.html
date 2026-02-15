@@ -2207,6 +2207,82 @@
     <button class="btn" id="restart-btn">RETURN TO CAMP</button>
   </div>
 
+  <!-- Loading Bar Animation Script - Runs immediately on page load -->
+  <!-- This script is independent of module loading to ensure loading bar always works -->
+  <script>
+    /**
+     * Initialize and animate the loading bar
+     * Runs immediately when DOM is ready, independent of ES module loading
+     * Duration: 8 seconds (20 iterations × 400ms)
+     * Includes 12-second failsafe timeout for slow systems
+     */
+    (function() {
+      let loadingInitialized = false;
+      
+      function startLoadingBar() {
+        // Prevent duplicate initialization
+        if (loadingInitialized) return;
+        loadingInitialized = true;
+        
+        const loadingScreen = document.getElementById('loading-screen');
+        const loadingBar = document.getElementById('loading-bar');
+        
+        if (!loadingScreen || !loadingBar) {
+          console.warn('Loading screen elements not found');
+          return;
+        }
+        
+        let progress = 0;
+        let animationFrame = null;
+        
+        // Main loading animation: 20 steps over 8 seconds
+        const loadingInterval = setInterval(() => {
+          progress += 5; // Increment by 5% each step
+          loadingBar.style.width = progress + '%';
+          
+          // Smooth transition using CSS
+          loadingBar.style.transition = 'width 0.3s ease-out';
+          
+          if (progress >= 100) {
+            clearInterval(loadingInterval);
+            
+            // Wait briefly at 100% before fading out
+            setTimeout(() => {
+              loadingScreen.classList.add('fade-out');
+              
+              // Remove loading screen after fade animation completes
+              setTimeout(() => {
+                loadingScreen.style.display = 'none';
+              }, 500); // Match CSS transition duration
+            }, 600);
+          }
+        }, 400); // 400ms per step = 8 seconds total
+        
+        // Failsafe: Force hide loading screen after 12 seconds
+        // Prevents infinite loading if something goes wrong
+        setTimeout(() => {
+          if (progress < 100) {
+            console.warn('Loading timeout reached - forcing completion');
+            loadingBar.style.width = '100%';
+          }
+          clearInterval(loadingInterval);
+          loadingScreen.classList.add('fade-out');
+          setTimeout(() => {
+            loadingScreen.style.display = 'none';
+          }, 500);
+        }, 12000); // 12 second maximum timeout
+      }
+      
+      // Start loading bar as soon as DOM is ready
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', startLoadingBar);
+      } else {
+        // DOM already loaded
+        startLoadingBar();
+      }
+    })();
+  </script>
+
   <!-- Import Map for Three.js -->
   <script async src="https://unpkg.com/es-module-shims@1.8.0/dist/es-module-shims.js"></script>
   <script type="importmap">
@@ -9671,34 +9747,14 @@
       setupMenus();
       window.addEventListener('resize', onWindowResize, false);
       
-      // Show loading screen, then main menu
-      showLoadingScreen();
+      // Loading screen is now handled by standalone script above
+      // Show main menu after a brief delay to allow loading animation
+      setTimeout(() => {
+        showMainMenu();
+      }, 9000); // Show menu after loading completes (8s animation + 1s buffer)
 
       // Start Loop
       requestAnimationFrame(animate);
-    }
-    
-    function showLoadingScreen() {
-      const loadingScreen = document.getElementById('loading-screen');
-      const loadingBar = document.getElementById('loading-bar');
-      let progress = 0;
-      
-      // Extended loading duration: 20 iterations × 400ms = 8000ms (8 seconds total)
-      const interval = setInterval(() => {
-        progress += 5;
-        loadingBar.style.width = progress + '%';
-        
-        if (progress >= 100) {
-          clearInterval(interval);
-          setTimeout(() => {
-            loadingScreen.classList.add('fade-out');
-            setTimeout(() => {
-              loadingScreen.style.display = 'none';
-              showMainMenu();
-            }, 500);
-          }, 600); // Extended delay before fade
-        }
-      }, 400); // Slower progress updates for longer duration
     }
     
     function showMainMenu() {
