@@ -716,6 +716,33 @@
       }
     }
     
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    
+    @keyframes popIn {
+      from { 
+        opacity: 0;
+        transform: scale(0.7) translateY(-20px);
+      }
+      to { 
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
+    }
+    
+    @keyframes pulse {
+      0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+      50% {
+        opacity: 0.6;
+        transform: scale(1.2);
+      }
+    }
+    
     @keyframes lightning-pulse {
       0%, 100% { 
         filter: brightness(1.2);
@@ -1580,6 +1607,7 @@
       <button class="menu-btn" id="gear-btn">GEAR & EQUIPMENT</button>
       <button class="menu-btn" id="achievements-btn">ACHIEVEMENTS</button>
       <button class="menu-btn" id="credits-btn">CREDITS</button>
+      <button class="menu-btn" id="quit-game-btn" style="margin-top: 20px; background: #8B0000;">🚪 QUIT GAME</button>
     </div>
   </div>
 
@@ -1925,6 +1953,7 @@
         <button class="btn-small" id="options-stats-btn">STATS</button>
         <button class="btn-small" id="options-settings-btn">⚙️ SETTINGS</button>
         <button class="btn-small" id="options-camp-btn">⛺ GO TO CAMP</button>
+        <button class="btn-small" id="options-exit-btn">🚪 EXIT TO MENU</button>
         <button class="btn-small" id="close-options-btn">CLOSE</button>
       </div>
     </div>
@@ -5581,7 +5610,28 @@
       nextRunTimeOfDay: 'day', // 'day' or 'night' - chosen from sleep option
       // Training Hall system
       trainingPoints: 0,
-      lastTrainingPointTime: 0 // Timestamp of last training point awarded
+      lastTrainingPointTime: 0, // Timestamp of last training point awarded
+      // Story Quest System
+      storyQuests: {
+        welcomeShown: false, // First camp popup shown
+        mainBuildingUnlocked: false, // Main/Quest building unlocked
+        currentQuest: null, // Current active story quest
+        completedQuests: [], // List of completed quest IDs
+        questProgress: {}, // Progress tracking for active quests
+        buildingFirstUse: { // Track first-time use of each building
+          skillTree: false,
+          forge: false,
+          armory: false,
+          trashRecycle: false,
+          companionHouse: false,
+          trainingHall: false,
+          tempShop: false
+        }
+      },
+      // Side challenges
+      sideChallenges: {
+        kill10Enemies: { completed: false, progress: 0, target: 10 }
+      }
     };
 
     let saveData = { ...defaultSaveData };
@@ -5606,6 +5656,12 @@
           saveData.lastTrainingPointTime = saveData.lastTrainingPointTime || 0;
           saveData.skillPoints = saveData.skillPoints || 0;
           saveData.selectedCompanion = saveData.selectedCompanion || 'stormWolf';
+          // Story quest system (new fields)
+          saveData.storyQuests = { ...defaultSaveData.storyQuests, ...(saveData.storyQuests || {}) };
+          if (saveData.storyQuests) {
+            saveData.storyQuests.buildingFirstUse = { ...defaultSaveData.storyQuests.buildingFirstUse, ...(saveData.storyQuests.buildingFirstUse || {}) };
+          }
+          saveData.sideChallenges = { ...defaultSaveData.sideChallenges, ...(saveData.sideChallenges || {}) };
         }
       } catch (e) {
         console.error('Failed to load save data:', e);
@@ -6865,6 +6921,12 @@
         updateCampScreen();
         playSound('collect');
         showStatusMessage(`${skill.name} leveled up!`, 2000);
+        
+        // Quest progression: first skill unlock
+        if (!saveData.storyQuests.buildingFirstUse.skillTree) {
+          saveData.storyQuests.buildingFirstUse.skillTree = true;
+          progressQuest('useSkillTree', true);
+        }
       } else {
         playSound('invalid');
         showStatusMessage('Not enough skill points!', 2000);
@@ -7014,6 +7076,127 @@
       }
     }
 
+    // --- STORY QUEST SYSTEM ---
+    // Check if a building has an active quest
+    function hasQuestForBuilding(buildingId) {
+      const currentQuest = saveData.storyQuests.currentQuest;
+      if (!currentQuest) return false;
+      
+      // Map quests to buildings
+      const questBuildingMap = {
+        'unlockSkillTree': 'skillTree',
+        'useSkillTree': 'skillTree',
+        'useForge': 'forge',
+        'useRecycle': 'trashRecycle',
+        'useArmory': 'armory',
+        'useCompanionHouse': 'companionHouse',
+        'useTrainingHall': 'trainingHall',
+        'useTempShop': 'tempShop'
+      };
+      
+      return questBuildingMap[currentQuest] === buildingId;
+    }
+    
+    // Progress quest based on game events
+    function progressQuest(questId, completed = false) {
+      if (saveData.storyQuests.currentQuest !== questId) return;
+      
+      if (completed) {
+        saveData.storyQuests.completedQuests.push(questId);
+        saveData.storyQuests.currentQuest = null;
+        saveSaveData();
+        
+        // Trigger next quest in chain
+        setTimeout(() => {
+          advanceQuestChain();
+        }, 1000);
+      }
+    }
+    
+    // Advance to next quest in story chain
+    function advanceQuestChain() {
+      const completed = saveData.storyQuests.completedQuests;
+      
+      // Quest chain progression
+      if (!completed.includes('firstRun') && !saveData.storyQuests.currentQuest) {
+        // Quest 1: Start a run and die
+        saveData.storyQuests.currentQuest = 'firstRun';
+        saveSaveData();
+        showQuestPopup(
+          '📜 Quest: First Steps',
+          'Start a new run and experience the gameplay. Don\'t worry about dying - it\'s part of the learning process!<br><br><b>Objective:</b> Start a run → Survive → Eventually return to camp',
+          'Start My First Run!'
+        );
+      } else if (completed.includes('firstRun') && !completed.includes('unlockSkillTree')) {
+        // Quest 2: Unlock Skill Tree
+        saveData.storyQuests.currentQuest = 'unlockSkillTree';
+        saveSaveData();
+        showQuestPopup(
+          '📜 Quest: Path to Power',
+          'You\'ve completed your first run! Now it\'s time to unlock the Skill Tree building.<br><br><b>Objective:</b> Purchase the Skill Tree building (250 gold)',
+          'Got it!'
+        );
+      } else if (completed.includes('unlockSkillTree') && !completed.includes('useSkillTree') && !saveData.storyQuests.buildingFirstUse.skillTree) {
+        // Quest 3: Use Skill Tree (unlock first skill)
+        saveData.storyQuests.currentQuest = 'useSkillTree';
+        saveSaveData();
+        showQuestPopup(
+          '📜 Quest: Learn New Skills',
+          'The Skill Tree is unlocked! Time to learn your first skill.<br><br><b>Objective:</b> Unlock any skill in the Skill Tree (free for first one)',
+          'Let\'s Learn!'
+        );
+      }
+      // Add more quest chain steps here...
+    }
+
+    // --- STORY QUEST POPUP SYSTEM ---
+    function showQuestPopup(title, message, buttonText = 'Got it!', onClose = null) {
+      // Create popup overlay
+      const overlay = document.createElement('div');
+      overlay.id = 'quest-popup-overlay';
+      overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.9);
+        z-index: 100;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        animation: fadeIn 0.3s ease-out;
+      `;
+      
+      const popup = document.createElement('div');
+      popup.style.cssText = `
+        background: linear-gradient(to bottom, #2a3a4a, #1a2a3a);
+        border: 3px solid #FFD700;
+        border-radius: 20px;
+        padding: 30px;
+        max-width: 500px;
+        width: 90%;
+        text-align: center;
+        animation: popIn 0.3s ease-out;
+        box-shadow: 0 0 30px rgba(255,215,0,0.5);
+      `;
+      
+      popup.innerHTML = `
+        <div style="font-size: 28px; color: #FFD700; font-weight: bold; margin-bottom: 20px;">${title}</div>
+        <div style="font-size: 18px; color: #FFF; line-height: 1.6; margin-bottom: 30px;">${message}</div>
+        <button class="btn" style="font-size: 18px; padding: 12px 30px; background: #FFD700; color: #000;">${buttonText}</button>
+      `;
+      
+      const button = popup.querySelector('button');
+      button.onclick = () => {
+        document.body.removeChild(overlay);
+        if (onClose) onClose();
+      };
+      
+      overlay.appendChild(popup);
+      document.body.appendChild(overlay);
+    }
+
     function updateCampScreen() {
       // Check for first-time camp visit
       if (!saveData.hasVisitedCamp) {
@@ -7025,10 +7208,30 @@
         saveData.campBuildings.inventory.level = 1;
         saveData.campBuildings.campHub.unlocked = true;
         saveData.campBuildings.campHub.level = 1;
-        saveSaveData();
         
-        // Show welcome message
-        showStatusMessage('🎉 Welcome to Camp! Free buildings unlocked!', 3000);
+        // Show first-time welcome popup
+        if (!saveData.storyQuests.welcomeShown) {
+          saveData.storyQuests.welcomeShown = true;
+          saveSaveData();
+          
+          // Show popup after a brief delay
+          setTimeout(() => {
+            showQuestPopup(
+              '🎉 Welcome to Waterdrop Survivor Camp!',
+              'Hey there! Welcome to your camp. This is where you\'ll upgrade between runs and unlock new abilities.<br><br>📜 <b>Go to the Quest/Main building to start your first story quest!</b><br><br>Complete quests to unlock more buildings and features.',
+              'Let\'s Go!',
+              () => {
+                // Set the first quest
+                if (!saveData.storyQuests.currentQuest) {
+                  saveData.storyQuests.currentQuest = 'firstRun';
+                  saveSaveData();
+                }
+              }
+            );
+          }, 500);
+        }
+        
+        saveSaveData();
       }
       
       // Update buildings section
@@ -7072,6 +7275,11 @@
               updateCampScreen();
               playSound('collect');
               showStatusMessage(`${building.name} unlocked!`, 2000);
+              
+              // Quest progression: Skill Tree unlocked
+              if (buildingId === 'skillTree' && saveData.storyQuests.currentQuest === 'unlockSkillTree') {
+                progressQuest('unlockSkillTree', true);
+              }
             } else {
               playSound('invalid');
               showStatusMessage('Not enough gold!', 2000);
@@ -7110,13 +7318,13 @@
             .filter(text => text !== null && text !== undefined)
             .join(', ') || 'Utility building';
           
-          buildingCard.innerHTML = `
-            <div class="building-header">
-              <div class="building-name">${building.icon} ${building.name}</div>
-              <div class="building-level">Level ${buildingData.level}/${buildingData.maxLevel}</div>
-            </div>
-            <div class="building-desc">${building.description}</div>
-            <div class="building-bonus">Current: ${bonusText}</div>
+           buildingCard.innerHTML = `
+             <div class="building-header">
+               <div class="building-name">${building.icon} ${building.name}${hasQuestForBuilding(buildingId) ? ' <span style="color: #FF4444; font-size: 24px; animation: pulse 1s infinite;">!</span>' : ''}</div>
+               <div class="building-level">Level ${buildingData.level}/${buildingData.maxLevel}</div>
+             </div>
+             <div class="building-desc">${building.description}</div>
+             <div class="building-bonus">Current: ${bonusText}</div>
             <div class="building-cost">${isMaxLevel ? 'MAX LEVEL' : (building.isFree ? 'FREE' : `Cost: ${cost} gold`)}</div>
           `;
           
@@ -8627,6 +8835,17 @@
         playSound('waterdrop');
       });
       
+      // Exit to Main Menu from in-game
+      const optionsExitBtn = document.getElementById('options-exit-btn');
+      optionsExitBtn.addEventListener('click', () => {
+        if (confirm('Exit to main menu? Your progress in this run will be lost.')) {
+          optionsMenu.style.display = 'none';
+          resetGame();
+          showMainMenu();
+          playSound('waterdrop');
+        }
+      });
+      
       optionsSettingsBtn.addEventListener('click', () => {
         optionsMenu.style.display = 'none';
         isPaused = true;
@@ -8745,6 +8964,17 @@
         hideMainMenu();
         updateCampScreen();
         document.getElementById('camp-screen').style.display = 'flex';
+      };
+      
+      // Quit Game button (closes window/tab)
+      document.getElementById('quit-game-btn').onclick = () => {
+        if (confirm('Are you sure you want to quit the game?')) {
+          window.close();
+          // If window.close() fails (some browsers prevent it), show message
+          setTimeout(() => {
+            alert('Please close this tab/window manually.');
+          }, 100);
+        }
       };
       
       // Back buttons
@@ -10964,6 +11194,11 @@
       if (survivalTime > saveData.bestTime) saveData.bestTime = survivalTime;
       if (playerStats.kills > saveData.bestKills) saveData.bestKills = playerStats.kills;
       saveSaveData();
+      
+      // Quest progression: first run completed
+      if (saveData.storyQuests.currentQuest === 'firstRun') {
+        progressQuest('firstRun', true);
+      }
       
       // Display game over screen
       document.getElementById('gameover-screen').style.display = 'flex';
