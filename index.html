@@ -3481,7 +3481,10 @@
             
             // Animate smoke rising with tracked RAF callback
             let smokeLife = 80;
-            let rafId = null;
+            // Create a tracking object that holds the current RAF ID
+            const smokeCallback = { rafId: null };
+            this.activeSmokeCallbacks.push(smokeCallback);
+            
             const updateSmoke = () => {
               smokeLife--;
               smoke.position.y += 0.02; // Rise up
@@ -3494,15 +3497,12 @@
                 scene.remove(smoke);
                 smoke.geometry.dispose();
                 smoke.material.dispose();
-                // Remove this RAF ID from tracking
-                if (rafId !== null) {
-                  const index = this.activeSmokeCallbacks.indexOf(rafId);
-                  if (index > -1) this.activeSmokeCallbacks.splice(index, 1);
-                }
+                // Remove this callback object from tracking
+                const index = this.activeSmokeCallbacks.indexOf(smokeCallback);
+                if (index > -1) this.activeSmokeCallbacks.splice(index, 1);
               } else {
-                rafId = requestAnimationFrame(updateSmoke);
-                // Track the RAF callback for cleanup
-                this.activeSmokeCallbacks.push(rafId);
+                // Update the RAF ID in the tracking object
+                smokeCallback.rafId = requestAnimationFrame(updateSmoke);
               }
             };
             updateSmoke();
@@ -9690,6 +9690,8 @@
     // NOTE: This flag is never reset as the game only initializes once per page load.
     // Game restarts return to camp screen, not main menu, so reinitializing is not needed.
     let mainMenuInitialized = false;
+    let menuShowAttempts = 0; // Track retry attempts to prevent infinite loops
+    const MAX_MENU_SHOW_ATTEMPTS = 3;
 
     function init() {
       // Load save data first
@@ -9791,14 +9793,15 @@
         showMainMenu();
       }
       
-      // GUARANTEED FALLBACK: Force menu display after 2 seconds if it hasn't shown
+      // GUARANTEED FALLBACK: Force menu display after 1 second if it hasn't shown
       // This handles cases where both the event and immediate check fail
+      // Retry limit in showMainMenu() prevents infinite loops on persistent errors
       setTimeout(() => {
-        if (!mainMenuInitialized) {
-          console.warn('[MENU] Menu not initialized after 2s - forcing display');
+        if (!mainMenuInitialized && menuShowAttempts < MAX_MENU_SHOW_ATTEMPTS) {
+          console.warn('[MENU] Menu not initialized after 1s - forcing display');
           showMainMenu();
         }
-      }, 2000);
+      }, 1000);
 
       // Start Loop
       requestAnimationFrame(animate);
@@ -9814,8 +9817,15 @@
         return; // Already initialized, prevent duplicate calls
       }
       
+      // Check retry limit to prevent infinite error loops
+      menuShowAttempts++;
+      if (menuShowAttempts > MAX_MENU_SHOW_ATTEMPTS) {
+        console.error('[MENU] Maximum retry attempts reached, giving up');
+        return;
+      }
+      
       try {
-        console.info('[MENU] Initializing main menu');
+        console.info(`[MENU] Initializing main menu (attempt ${menuShowAttempts}/${MAX_MENU_SHOW_ATTEMPTS})`);
         
         // Verify DOM element exists before accessing
         const menuElement = document.getElementById('main-menu');
@@ -9835,14 +9845,14 @@
         console.info('[MENU] Main menu initialized successfully');
       } catch (error) {
         console.error('[MENU] Failed to show main menu:', error);
-        // Don't set mainMenuInitialized on error so retry can occur
-        mainMenuInitialized = false;
         
-        // Try to display a user-friendly error
-        const errorDiv = document.createElement('div');
-        errorDiv.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(255,0,0,0.8);color:white;padding:20px;border-radius:10px;z-index:9999;text-align:center;';
-        errorDiv.innerHTML = '<h2>Menu Loading Error</h2><p>Please refresh the page</p><p style="font-size:12px;">Error: ' + error.message + '</p>';
-        document.body.appendChild(errorDiv);
+        // Only show error UI on final attempt to avoid multiple error messages
+        if (menuShowAttempts >= MAX_MENU_SHOW_ATTEMPTS) {
+          const errorDiv = document.createElement('div');
+          errorDiv.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(255,0,0,0.8);color:white;padding:20px;border-radius:10px;z-index:9999;text-align:center;';
+          errorDiv.innerHTML = '<h2>Menu Loading Error</h2><p>Please refresh the page</p><p style="font-size:12px;">Error: ' + error.message + '</p>';
+          document.body.appendChild(errorDiv);
+        }
       }
     }
     
@@ -12755,8 +12765,10 @@
       if (player) {
         // Cancel all active smoke particle RAF callbacks to prevent memory leak
         if (player.activeSmokeCallbacks) {
-          player.activeSmokeCallbacks.forEach(rafId => {
-            cancelAnimationFrame(rafId);
+          player.activeSmokeCallbacks.forEach(callbackObj => {
+            if (callbackObj.rafId !== null) {
+              cancelAnimationFrame(callbackObj.rafId);
+            }
           });
           player.activeSmokeCallbacks = [];
         }
