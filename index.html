@@ -1743,14 +1743,14 @@
       
       <!-- Montana Quest UI -->
       <div id="montana-quest-ui" style="display: none; margin-top: 10px;">
-        <div class="stat-text" style="color: #F0F8FF; font-size: 20px; text-shadow: 2px 2px 4px #000;">❄️ MONTANA QUEST ❄️</div>
+        <div class="stat-text" style="color: #F0F8FF; font-size: 20px; text-shadow: 2px 2px 4px #000;" aria-label="Montana Quest">❄️ MONTANA QUEST ❄️</div>
         <div class="stat-text" id="montana-kills-text" style="color: #4FC3F7; font-size: 16px;">Enemies: 0/15</div>
         <div class="stat-text" id="montana-timer-text" style="color: #FFD700; font-size: 18px;">Time: 45s</div>
       </div>
       
       <!-- Eiffel Tower Quest UI -->
       <div id="eiffel-quest-ui" style="display: none; margin-top: 10px;">
-        <div class="stat-text" style="color: #8B7355; font-size: 20px; text-shadow: 2px 2px 4px #000;">🗼 EIFFEL QUEST 🗼</div>
+        <div class="stat-text" style="color: #8B7355; font-size: 20px; text-shadow: 2px 2px 4px #000;" aria-label="Eiffel Quest">🗼 EIFFEL QUEST 🗼</div>
         <div class="stat-text" id="eiffel-kills-text" style="color: #4FC3F7; font-size: 16px;">Enemies: 0/25</div>
         <div class="stat-text" id="eiffel-timer-text" style="color: #FFD700; font-size: 18px;">Time: 60s</div>
       </div>
@@ -10234,6 +10234,7 @@
       createFloatingText("MONTANA CONQUERED!", new THREE.Vector3(montanaQuest.position.x, 5, montanaQuest.position.z));
       
       // Reward: +2 levels, +500 gold, +3 attribute points
+      // Note: Recalculate experience requirement for new level to maintain progression balance
       playerStats.lvl += 2;
       playerStats.expReq = (playerStats.lvl * 2) * GAME_CONFIG.expValue;
       playerStats.gold += 500;
@@ -10273,13 +10274,14 @@
       
       createFloatingText("EIFFEL TOWER DEFENDED!", new THREE.Vector3(eiffelQuest.position.x, 10, eiffelQuest.position.z));
       
-      // Reward: +3 levels, +1000 gold, +5 attribute points, unlock special weapon
+      // Reward: +3 levels, +1000 gold, +5 attribute points, +20 gun damage
+      // Note: Recalculate experience requirement for new level to maintain progression balance
       playerStats.lvl += 3;
       playerStats.expReq = (playerStats.lvl * 2) * GAME_CONFIG.expValue;
       playerStats.gold += 1000;
       playerStats.attributePoints += 5;
       
-      // Boost weapon damage
+      // Permanent gun damage boost (powerful reward for challenging quest)
       weapons.gun.damage += 20;
       
       showStatChange("Eiffel Quest Complete! +3 Levels, +1000 Gold, +5 Attribute Points, +20 Gun Damage!");
