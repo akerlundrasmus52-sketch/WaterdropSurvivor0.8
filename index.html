@@ -3260,15 +3260,23 @@
           const tipBrightness = 0.7 + Math.sin(gameTime * 8) * 0.3;
           this.cigarTip.material.opacity = tipBrightness;
           
-          // Smoke particles from cigar
+          // Enhanced cigar smoke with lighting reaction
           this.smokeTimer += dt;
           if (this.smokeTimer > 0.2) { // Every 0.2 seconds
             this.smokeTimer = 0;
             
+            // Get current lighting intensity for smoke color (reacts to day/night)
+            const lightIntensity = window.dirLight ? window.dirLight.intensity : 0.8;
+            const smokeColor = new THREE.Color().lerpColors(
+              new THREE.Color(0x555555), // Dark gray in night
+              new THREE.Color(0xCCCCCC), // Light gray in day
+              lightIntensity
+            );
+            
             // Create smoke particle
             const smokeGeo = new THREE.SphereGeometry(0.05, 6, 6);
             const smokeMat = new THREE.MeshBasicMaterial({ 
-              color: 0xCCCCCC,
+              color: smokeColor,
               transparent: true,
               opacity: 0.5
             });
@@ -4443,43 +4451,12 @@
         const explodeIntoPieces = Math.random() < 0.5;
         
         if (explodeIntoPieces) {
-          // EXPLOSION DEATH: Main explosion
+          // EXPLOSION DEATH: Main explosion (death ring removed per requirements)
           spawnParticles(this.mesh.position, enemyColor, 20);
           spawnParticles(this.mesh.position, 0xFFFFFF, 8);
           spawnParticles(this.mesh.position, 0x8B0000, 6);
           
-          // Explosion ring
-          const ringGeo = new THREE.RingGeometry(0.1, 0.2, 16);
-          const ringMat = new THREE.MeshBasicMaterial({ 
-            color: enemyColor, 
-            transparent: true, 
-            opacity: 0.8,
-            side: THREE.DoubleSide
-          });
-          const ring = new THREE.Mesh(ringGeo, ringMat);
-          ring.position.copy(this.mesh.position);
-          ring.position.y = 0.1;
-          ring.rotation.x = Math.PI / 2;
-          scene.add(ring);
-          
-          let ringLife = 20;
-          const animateRing = () => {
-            ringLife--;
-            const scale = 1 + (20 - ringLife) * 0.3;
-            ring.scale.set(scale, scale, 1);
-            ring.material.opacity = ringLife / 20;
-            
-            if (ringLife <= 0) {
-              scene.remove(ring);
-              ring.geometry.dispose();
-              ring.material.dispose();
-            } else {
-              requestAnimationFrame(animateRing);
-            }
-          };
-          animateRing();
-          
-          // Explode into pieces
+          // Explode into pieces (NO death ring)
           const pieceCount = this.isMiniBoss ? 25 : 15;
           for(let i = 0; i < pieceCount; i++) {
             const piece = new THREE.Mesh(
@@ -9515,8 +9492,10 @@
       // Scene
       scene = new THREE.Scene();
       scene.background = new THREE.Color(COLORS.bg);
-      // Fog for depth
+      // Enhanced fog for depth - reacts to day/night cycle lighting
       scene.fog = new THREE.Fog(COLORS.bg, 20, 60);
+      // Store fog reference for dynamic updates based on lighting
+      window.sceneFog = scene.fog;
       
       // Phase 5: Initialize particle object pool for performance (100 particles pre-allocated)
       particlePool = new ObjectPool(
@@ -9544,6 +9523,7 @@
       window.ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
       scene.add(window.ambientLight);
 
+      // Realistic sun/moon with soft dynamic shadows
       window.dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
       window.dirLight.position.set(50, 100, 50);
       window.dirLight.castShadow = true;
@@ -9553,6 +9533,9 @@
       window.dirLight.shadow.camera.right = 100;
       window.dirLight.shadow.camera.top = 100;
       window.dirLight.shadow.camera.bottom = -100;
+      // Soft shadow settings for realistic effect
+      window.dirLight.shadow.radius = 4; // Soft shadow blur
+      window.dirLight.shadow.bias = -0.0001; // Prevent shadow acne
       scene.add(window.dirLight);
 
       // Apply graphics quality settings
@@ -12892,6 +12875,11 @@
       
       // Update sky color
       scene.background = skyColor;
+      
+      // Update fog color to match sky (fog reacts to lighting)
+      if (window.sceneFog) {
+        window.sceneFog.color = skyColor;
+      }
       
       // Move sun position in an arc
       const sunAngle = (t - 0.25) * Math.PI * 2; // Offset so noon is at top
