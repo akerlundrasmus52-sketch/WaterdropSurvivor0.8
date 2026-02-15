@@ -806,15 +806,87 @@
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(0,0,0,0.8);
+      background: rgba(0,0,0,0.95);
       display: none;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
+      justify-content: flex-start;
       pointer-events: auto;
       z-index: 30;
       color: white;
+      overflow-y: auto;
+      padding: 20px;
     }
+
+    .death-screen-content {
+      width: 100%;
+      max-width: 600px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      padding: 20px 0;
+    }
+
+    .death-screen-section {
+      background: linear-gradient(135deg, rgba(45,53,97,0.8) 0%, rgba(31,40,71,0.8) 100%);
+      border: 2px solid #4a5a8a;
+      border-radius: 15px;
+      padding: 15px;
+    }
+
+    .death-screen-section h3 {
+      color: #FFD700;
+      margin: 0 0 10px 0;
+      font-size: 20px;
+      text-shadow: 2px 2px 0 #000;
+    }
+
+    .death-stat-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      font-size: 16px;
+    }
+
+    .death-stat-item:last-child {
+      border-bottom: none;
+    }
+
+    .death-stat-label {
+      color: #aaa;
+    }
+
+    .death-stat-value {
+      color: #fff;
+      font-weight: bold;
+    }
+
+    .death-gear-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px;
+      background: rgba(0,0,0,0.3);
+      border-radius: 8px;
+      margin-bottom: 5px;
+    }
+
+    .death-gear-icon {
+      font-size: 24px;
+    }
+
+    .death-gear-name {
+      flex: 1;
+      font-weight: bold;
+    }
+
+    .rarity-common { color: #AAAAAA; }
+    .rarity-uncommon { color: #5DADE2; }
+    .rarity-rare { color: #9B59B6; }
+    .rarity-epic { color: #F39C12; }
+    .rarity-legendary { color: #E74C3C; }
+
 
     .btn {
       background: #5A3A31;
@@ -1588,6 +1660,37 @@
     }
 
     /* ============================================
+       NOTIFICATION BADGE STYLES
+       ============================================ */
+    .notification-badge {
+      position: absolute;
+      top: -5px;
+      right: -5px;
+      background: #ff3333;
+      color: white;
+      border-radius: 50%;
+      width: 18px;
+      height: 18px;
+      font-size: 12px;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: pulse 1s infinite;
+      z-index: 100;
+      pointer-events: none;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+    }
+
+    .camp-structure {
+      position: relative;
+    }
+
+    /* ============================================
        STRUCTURE MODAL STYLES
        ============================================ */
     #structure-modal {
@@ -1973,7 +2076,10 @@
     <button id="menu-btn" title="Menu">☰</button>
     
     <!-- Equipment Button -->
-    <button id="equipment-btn" title="Equipment">⚔️</button>
+    <button id="equipment-btn" title="Equipment" style="position: relative;">
+      ⚔️
+      <span id="equipment-badge" class="notification-badge" style="display: none;">!</span>
+    </button>
     
     <!-- Combo Counter - Red/Black Theme -->
     <div id="combo-counter">
@@ -2118,48 +2224,59 @@
     <div class="camp-grid">
       <!-- Structure Cards -->
       <div class="camp-structure" data-structure="forge">
+        <span class="notification-badge" id="badge-forge" style="display: none;">!</span>
         <div class="structure-icon">🔨</div>
         <div class="structure-name">FORGE</div>
         <div class="structure-level">Level <span class="level-value">1</span></div>
         <div class="structure-desc">Craft & Enchant</div>
       </div>
       <div class="camp-structure" data-structure="alchemy">
+        <span class="notification-badge" id="badge-alchemy" style="display: none;">!</span>
         <div class="structure-icon">⚗️</div>
         <div class="structure-name">ALCHEMY LAB</div>
         <div class="structure-level">Level <span class="level-value">1</span></div>
         <div class="structure-desc">Potions & Elixirs</div>
       </div>
       <div class="camp-structure" data-structure="library">
+        <span class="notification-badge" id="badge-library" style="display: none;">!</span>
         <div class="structure-icon">📚</div>
         <div class="structure-name">LIBRARY</div>
         <div class="structure-level">Level <span class="level-value">1</span></div>
         <div class="structure-desc">Research & XP</div>
       </div>
       <div class="camp-structure" data-structure="companionDen">
+        <span class="notification-badge" id="badge-companionDen" style="display: none;">!</span>
         <div class="structure-icon">🐾</div>
         <div class="structure-name">COMPANION DEN</div>
         <div class="structure-level">Level <span class="level-value">1</span></div>
         <div class="structure-desc">Pet Housing</div>
       </div>
       <div class="camp-structure" data-structure="training">
+        <span class="notification-badge" id="badge-training" style="display: none;">!</span>
         <div class="structure-icon">⚔️</div>
         <div class="structure-name">TRAINING GROUNDS</div>
         <div class="structure-level">Level <span class="level-value">1</span></div>
         <div class="structure-desc">Combat Practice</div>
       </div>
       <div class="camp-structure" data-structure="meditation">
+        <span class="notification-badge" id="badge-meditation" style="display: none;">!</span>
         <div class="structure-icon">🧘</div>
         <div class="structure-name">MEDITATION SHRINE</div>
         <div class="structure-level">Level <span class="level-value">1</span></div>
         <div class="structure-desc">Passive Bonuses</div>
       </div>
       <div class="camp-structure" data-structure="campfire">
+        <span class="notification-badge" id="badge-campfire" style="display: none;">!</span>
         <div class="structure-icon">🔥</div>
         <div class="structure-name">CAMPFIRE</div>
         <div class="structure-level">Level <span class="level-value">1</span></div>
         <div class="structure-desc">Rest & Recovery</div>
       </div>
     </div>
+    <button class="btn-large" id="inventory-btn" style="background: linear-gradient(to bottom, #8e44ad, #7d3c98); margin-bottom: 10px; position: relative;">
+      📦 INVENTORY
+      <span class="notification-badge" id="badge-inventory" style="display: none; right: 10px;">!</span>
+    </button>
     <button class="btn-large" id="start-run-btn">START RUN</button>
     <button class="back-btn" id="camp-back-btn">BACK TO MENU</button>
   </div>
@@ -2197,14 +2314,81 @@
     </div>
   </div>
 
+  <!-- Inventory Modal -->
+  <div id="inventory-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 40; overflow-y: auto; padding: 20px;">
+    <div style="max-width: 900px; margin: 0 auto;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2 style="color: #FFD700; font-size: 32px; margin: 0; text-shadow: 2px 2px 0 #000;">📦 INVENTORY</h2>
+        <button id="close-inventory-btn" style="background: rgba(255,255,255,0.1); border: 2px solid #fff; color: #fff; font-size: 24px; width: 40px; height: 40px; border-radius: 50%; cursor: pointer;">✕</button>
+      </div>
+      <div style="color: #aaa; margin-bottom: 20px; font-size: 14px;">Manage your collected equipment. Click to equip or compare items.</div>
+      
+      <!-- Inventory Grid -->
+      <div id="inventory-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px;">
+        <!-- Populated dynamically -->
+      </div>
+      
+      <div id="inventory-empty" style="text-align: center; padding: 60px 20px; color: #777; font-size: 18px; display: none;">
+        <div style="font-size: 64px; margin-bottom: 20px;">📭</div>
+        <div>Your inventory is empty</div>
+        <div style="font-size: 14px; margin-top: 10px;">Defeat enemies to collect equipment</div>
+      </div>
+    </div>
+  </div>
+
   <!-- Game Over Screen -->
   <div id="gameover-screen">
-    <h1 style="color: #5DADE2; font-size: 40px; text-shadow: 2px 2px 0 #000, 0 0 10px rgba(93,173,226,0.8);">GAME OVER</h1>
-    <p id="final-score" style="font-size: 20px; margin: 10px 0;">Survived: 0s</p>
-    <p id="final-kills" style="font-size: 20px; margin: 10px 0;">Kills: 0</p>
-    <p id="gold-earned" style="font-size: 24px; margin: 10px 0; color: #FFD700; font-weight: bold;">Gold Earned: 0</p>
-    <p id="total-gold" style="font-size: 20px; margin: 10px 0; color: #FFD700;">Total Gold: 0</p>
-    <button class="btn" id="restart-btn">RETURN TO CAMP</button>
+    <div class="death-screen-content">
+      <h1 style="color: #E74C3C; font-size: 48px; text-shadow: 3px 3px 0 #000, 0 0 20px rgba(231,76,60,0.8); margin: 20px 0; text-align: center;">YOU DIED</h1>
+      
+      <!-- Run Summary -->
+      <div class="death-screen-section">
+        <h3>📊 RUN SUMMARY</h3>
+        <div class="death-stat-item">
+          <span class="death-stat-label">⏱️ Survival Time</span>
+          <span class="death-stat-value" id="final-score">0s</span>
+        </div>
+        <div class="death-stat-item">
+          <span class="death-stat-label">💀 Enemies Killed</span>
+          <span class="death-stat-value" id="final-kills">0</span>
+        </div>
+        <div class="death-stat-item">
+          <span class="death-stat-label">⭐ Experience Gained</span>
+          <span class="death-stat-value" id="final-xp">0 XP</span>
+        </div>
+        <div class="death-stat-item">
+          <span class="death-stat-label">🏆 Final Level</span>
+          <span class="death-stat-value" id="final-level">1</span>
+        </div>
+      </div>
+      
+      <!-- Gold Earned -->
+      <div class="death-screen-section">
+        <h3>💰 REWARDS</h3>
+        <div class="death-stat-item">
+          <span class="death-stat-label">Gold Earned</span>
+          <span class="death-stat-value" id="gold-earned" style="color: #FFD700;">0</span>
+        </div>
+        <div class="death-stat-item">
+          <span class="death-stat-label">Total Gold</span>
+          <span class="death-stat-value" id="total-gold" style="color: #FFD700;">0</span>
+        </div>
+      </div>
+      
+      <!-- Equipment Collected -->
+      <div class="death-screen-section" id="equipment-section" style="display: none;">
+        <h3>⚔️ EQUIPMENT COLLECTED</h3>
+        <div id="equipment-list"></div>
+      </div>
+      
+      <!-- Achievements Unlocked -->
+      <div class="death-screen-section" id="achievements-section" style="display: none;">
+        <h3>🏅 ACHIEVEMENTS UNLOCKED</h3>
+        <div id="achievements-list"></div>
+      </div>
+      
+      <button class="btn" id="restart-btn">RETURN TO CAMP</button>
+    </div>
   </div>
 
   <!-- Loading Bar Animation Script - Runs immediately on page load -->
@@ -2897,6 +3081,14 @@
     let runStartGold = 0;  // Track gold at start of run for end-of-run calculation
     let lastCleanupTime = 0; // Track last memory cleanup time
     let miniBossesSpawned = new Set(); // Track which mini-boss levels have been spawned
+    
+    // Run statistics tracking for enhanced death screen
+    let runStats = {
+      itemsCollected: [],      // Array of items collected during run
+      achievementsUnlocked: [], // Array of achievements unlocked during run
+      xpGained: 0,             // Total XP gained during run
+      startInventorySize: 0    // Inventory size at start of run
+    };
     
     // Time-of-day system for dynamic lighting
     let timeOfDay = 0; // 0-1 representing full day cycle (0=dawn, 0.25=noon, 0.5=dusk, 0.75=night)
@@ -5189,6 +5381,8 @@
           const newGear = generateGear(slotType, rarity);
           
           saveData.inventory.push(newGear);
+          runStats.itemsCollected.push(newGear); // Track for death screen
+          saveData.notificationBadges.inventory = true; // Set notification badge
           saveSaveData();
           createFloatingText(`+${newGear.name} (${rarity})`, this.mesh.position);
         }
@@ -6441,6 +6635,15 @@
       // Skill Tree System
       skillPoints: 0,
       unlockedSkills: [], // Array of skill IDs that have been unlocked
+      // Notification badges - track which UI elements should show red "!" badges
+      notificationBadges: {
+        inventory: false,
+        forge: false,
+        training: false,
+        companionDen: false,
+        achievements: false,
+        campStructures: {} // Keys are structure names, values are boolean
+      },
       // Gear system - Expanded to 6 slots for deeper RPG mechanics
       equippedGear: {
         helmet: null,
@@ -6484,6 +6687,16 @@
           saveData.unspentAttributePoints = saveData.unspentAttributePoints || 0;
           saveData.equippedGear = { ...defaultSaveData.equippedGear, ...(saveData.equippedGear || {}) };
           saveData.inventory = saveData.inventory || [];
+          // Initialize notification badges if not present
+          if (!saveData.notificationBadges) {
+            saveData.notificationBadges = { ...defaultSaveData.notificationBadges };
+          } else {
+            saveData.notificationBadges = { 
+              ...defaultSaveData.notificationBadges, 
+              ...saveData.notificationBadges,
+              campStructures: { ...(saveData.notificationBadges.campStructures || {}) }
+            };
+          }
           // Initialize camp data if not present
           if (!saveData.camp) {
             saveData.camp = { ...defaultCampData };
@@ -6752,6 +6965,15 @@
         // Check if achieved - mark internally but don't auto-claim
         if (achievement.check()) {
           hasNewAchievement = true;
+          
+          // Track newly unlocked achievements for death screen
+          if (!runStats.achievementsUnlocked.find(a => a.id === achievement.id)) {
+            runStats.achievementsUnlocked.push({
+              id: achievement.id,
+              name: achievement.name
+            });
+            saveData.notificationBadges.achievements = true; // Set notification badge
+          }
           
           // Show notification only the FIRST TIME it's unlocked (not on every run)
           // Check if this specific achievement has been notified before by storing in localStorage
@@ -7287,6 +7509,18 @@
         legendary: '#e74c3c'    // Red/Gold
       };
       return colors[rarity] || colors.common;
+    }
+
+    function getGearIcon(slotType) {
+      const icons = {
+        helmet: '⛑️',
+        bodyArmor: '🛡️',
+        boots: '👢',
+        ring: '💍',
+        amulet: '📿',
+        weaponCharm: '✨'
+      };
+      return icons[slotType] || '⚔️';
     }
 
     // Gear generation system for procedural drops
@@ -8284,6 +8518,9 @@
           }
         }
       });
+      
+      // Update notification badges
+      updateNotificationBadges();
     }
 
     function showCampScreen() {
@@ -8375,6 +8612,162 @@
       updateCampScreen();
       openStructureModal(currentStructure); // Refresh modal
       updateGoldDisplays();
+    }
+
+    // Inventory Modal Functions
+    function openInventoryModal() {
+      const modal = document.getElementById('inventory-modal');
+      modal.style.display = 'block';
+      
+      // Clear notification badge
+      saveData.notificationBadges.inventory = false;
+      saveSaveData();
+      updateNotificationBadges();
+      
+      updateInventoryDisplay();
+    }
+
+    function closeInventoryModal() {
+      document.getElementById('inventory-modal').style.display = 'none';
+      playSound('hit');
+    }
+
+    function updateInventoryDisplay() {
+      const inventoryGrid = document.getElementById('inventory-grid');
+      const inventoryEmpty = document.getElementById('inventory-empty');
+      
+      if (saveData.inventory.length === 0) {
+        inventoryGrid.style.display = 'none';
+        inventoryEmpty.style.display = 'block';
+        return;
+      }
+      
+      inventoryGrid.style.display = 'grid';
+      inventoryEmpty.style.display = 'none';
+      
+      // Group items by type
+      const itemsByType = {
+        helmet: [],
+        bodyArmor: [],
+        boots: [],
+        ring: [],
+        amulet: [],
+        weaponCharm: []
+      };
+      
+      saveData.inventory.forEach(item => {
+        if (itemsByType[item.type]) {
+          itemsByType[item.type].push(item);
+        }
+      });
+      
+      // Build HTML
+      let html = '';
+      const slotNames = {
+        helmet: '⛑️ Helmets',
+        bodyArmor: '🛡️ Body Armor',
+        boots: '👢 Boots',
+        ring: '💍 Rings',
+        amulet: '📿 Amulets',
+        weaponCharm: '✨ Weapon Charms'
+      };
+      
+      for (const [slotType, items] of Object.entries(itemsByType)) {
+        if (items.length === 0) continue;
+        
+        html += `<div style="grid-column: 1 / -1; color: #5DADE2; font-size: 18px; font-weight: bold; margin-top: 20px; padding-bottom: 10px; border-bottom: 2px solid #4a5a8a;">${slotNames[slotType]}</div>`;
+        
+        items.forEach(item => {
+          const isEquipped = saveData.equippedGear[slotType] === item.id;
+          html += `
+            <div style="background: linear-gradient(135deg, rgba(45,53,97,0.8) 0%, rgba(31,40,71,0.8) 100%); border: 2px solid ${getRarityColor(item.rarity)}; border-radius: 12px; padding: 15px; position: relative;">
+              ${isEquipped ? '<div style="position: absolute; top: 10px; right: 10px; background: #27ae60; color: white; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: bold;">EQUIPPED</div>' : ''}
+              <div style="color: ${getRarityColor(item.rarity)}; font-size: 18px; font-weight: bold; margin-bottom: 8px;">${item.name}</div>
+              <div style="color: #aaa; font-size: 12px; margin-bottom: 12px;">${item.description}</div>
+              <div style="margin-bottom: 12px;">
+                ${Object.entries(item.stats).map(([stat, val]) => `
+                  <div style="color: #90ee90; font-size: 13px; display: flex; justify-content: space-between;">
+                    <span>${GEAR_ATTRIBUTES[stat].icon} ${GEAR_ATTRIBUTES[stat].name}</span>
+                    <span>+${val}</span>
+                  </div>
+                `).join('')}
+              </div>
+              ${!isEquipped ? `
+                <button onclick="equipGearFromInventory('${slotType}', '${item.id}')" style="width: 100%; padding: 10px; background: linear-gradient(to bottom, #27ae60, #229954); color: white; border: 2px solid #2ecc71; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 14px;">
+                  EQUIP
+                </button>
+              ` : `
+                <button onclick="unequipGearFromInventory('${slotType}')" style="width: 100%; padding: 10px; background: linear-gradient(to bottom, #c0392b, #a93226); color: white; border: 2px solid #e74c3c; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 14px;">
+                  UNEQUIP
+                </button>
+              `}
+            </div>
+          `;
+        });
+      }
+      
+      inventoryGrid.innerHTML = html;
+    }
+
+    function equipGearFromInventory(slotKey, gearId) {
+      equipGear(slotKey, gearId);
+      updateInventoryDisplay();
+    }
+
+    function unequipGearFromInventory(slotKey) {
+      unequipGear(slotKey);
+      updateInventoryDisplay();
+    }
+
+    // Expose functions to global scope for onclick handlers
+    window.equipGearFromInventory = equipGearFromInventory;
+    window.unequipGearFromInventory = unequipGearFromInventory;
+
+    // Notification Badge System
+    function updateNotificationBadges() {
+      // Equipment/Inventory badge
+      const equipmentBadge = document.getElementById('equipment-badge');
+      const inventoryBadge = document.getElementById('badge-inventory');
+      if (equipmentBadge) {
+        equipmentBadge.style.display = saveData.notificationBadges.inventory ? 'flex' : 'none';
+      }
+      if (inventoryBadge) {
+        inventoryBadge.style.display = saveData.notificationBadges.inventory ? 'flex' : 'none';
+      }
+      
+      // Training Grounds badge - show if skill points available
+      const trainingBadge = document.getElementById('badge-training');
+      if (trainingBadge) {
+        const hasSkillPoints = saveData.skillPoints && saveData.skillPoints > 0;
+        trainingBadge.style.display = hasSkillPoints ? 'flex' : 'none';
+      }
+      
+      // Companion Den badge - show if companion can be upgraded or new companion available
+      const companionBadge = document.getElementById('badge-companionDen');
+      if (companionBadge && saveData.camp.companionDen) {
+        let hasCompanionUpdate = false;
+        const companions = saveData.camp.companionDen.companions || {};
+        for (const [id, companion] of Object.entries(companions)) {
+          // Check if companion can level up (simplified - just check if unlocked and has XP)
+          if (companion.unlocked && companion.level < 10) {
+            hasCompanionUpdate = true;
+            break;
+          }
+        }
+        companionBadge.style.display = hasCompanionUpdate ? 'flex' : 'none';
+      }
+      
+      // Camp Structure badges - show if affordable upgrades
+      const structures = ['forge', 'alchemy', 'library', 'meditation', 'campfire'];
+      structures.forEach(structureId => {
+        const badge = document.getElementById(`badge-${structureId}`);
+        if (badge && STRUCTURE_CONFIG[structureId] && saveData.camp[structureId]) {
+          const level = saveData.camp[structureId].level;
+          const config = STRUCTURE_CONFIG[structureId];
+          const canAffordUpgrade = level < config.maxLevel && saveData.gold >= config.getUpgradeCost(level);
+          badge.style.display = canAffordUpgrade ? 'flex' : 'none';
+        }
+      });
     }
 
     function getStructureActions(structureId, level) {
@@ -10183,6 +10576,12 @@
         startCountdown();
       };
 
+      // Inventory Button
+      document.getElementById('inventory-btn').onclick = () => {
+        playSound('coin');
+        openInventoryModal();
+      };
+
       // Camp Structure Cards - Click to open modal
       document.querySelectorAll('.camp-structure').forEach(card => {
         card.onclick = () => {
@@ -10194,6 +10593,9 @@
       // Structure Modal Buttons
       document.getElementById('close-structure-modal').onclick = closeStructureModal;
       document.getElementById('upgrade-structure-btn').onclick = upgradeStructure;
+      
+      // Inventory Modal Buttons
+      document.getElementById('close-inventory-btn').onclick = closeInventoryModal;
       
       // Reset progress button with double confirmation
       document.getElementById('settings-reset-btn').onclick = () => {
@@ -10244,6 +10646,11 @@
       // Equipment Button - Opens Gear Screen (pauses game if in progress)
       document.getElementById('equipment-btn').onclick = () => {
         playSound('hit');
+        // Clear inventory notification badge when viewing equipment
+        saveData.notificationBadges.inventory = false;
+        saveSaveData();
+        updateNotificationBadges();
+        
         // If game is active, pause it; otherwise just hide main menu
         if (isGameActive) {
           isPaused = true;
@@ -10488,6 +10895,7 @@
       const xpMultiplier = playerStats.xpMultiplier || 1;
       const finalAmount = Math.floor(amount * xpMultiplier);
       playerStats.exp += finalAmount;
+      runStats.xpGained += finalAmount; // Track XP for death screen
       
       // Phase 5: Give companion XP (10% of enemy XP)
       if (activeCompanion) {
@@ -12519,12 +12927,55 @@
       if (playerStats.kills > saveData.bestKills) saveData.bestKills = playerStats.kills;
       saveSaveData();
       
-      // Display game over screen
+      // Display enhanced game over screen
       document.getElementById('gameover-screen').style.display = 'flex';
-      document.getElementById('final-score').innerText = `Survived: ${survivalTime}s`;
-      document.getElementById('final-kills').innerText = `Kills: ${playerStats.kills}`;
-      document.getElementById('gold-earned').innerText = `Gold Earned: ${goldEarned}`;
-      document.getElementById('total-gold').innerText = `Total Gold: ${saveData.gold}`;
+      
+      // Basic stats
+      document.getElementById('final-score').innerText = `${survivalTime}s`;
+      document.getElementById('final-kills').innerText = `${playerStats.kills}`;
+      document.getElementById('final-xp').innerText = `${runStats.xpGained} XP`;
+      document.getElementById('final-level').innerText = `Level ${playerStats.lvl}`;
+      document.getElementById('gold-earned').innerText = `${goldEarned}`;
+      document.getElementById('total-gold').innerText = `${saveData.gold}`;
+      
+      // Equipment collected section
+      const equipmentSection = document.getElementById('equipment-section');
+      const equipmentList = document.getElementById('equipment-list');
+      if (runStats.itemsCollected.length > 0) {
+        equipmentSection.style.display = 'block';
+        equipmentList.innerHTML = '';
+        runStats.itemsCollected.forEach(item => {
+          const itemDiv = document.createElement('div');
+          itemDiv.className = 'death-gear-item';
+          itemDiv.innerHTML = `
+            <span class="death-gear-icon">${getGearIcon(item.type)}</span>
+            <span class="death-gear-name rarity-${item.rarity}">${item.name}</span>
+          `;
+          equipmentList.appendChild(itemDiv);
+        });
+      } else {
+        equipmentSection.style.display = 'none';
+      }
+      
+      // Achievements unlocked section
+      const achievementsSection = document.getElementById('achievements-section');
+      const achievementsList = document.getElementById('achievements-list');
+      if (runStats.achievementsUnlocked.length > 0) {
+        achievementsSection.style.display = 'block';
+        achievementsList.innerHTML = '';
+        runStats.achievementsUnlocked.forEach(achievement => {
+          const achDiv = document.createElement('div');
+          achDiv.className = 'death-gear-item';
+          achDiv.innerHTML = `
+            <span class="death-gear-icon">🏅</span>
+            <span class="death-gear-name" style="color: #FFD700;">${achievement.name}</span>
+          `;
+          achievementsList.appendChild(achDiv);
+        });
+      } else {
+        achievementsSection.style.display = 'none';
+      }
+      
       updateGoldDisplays();
     }
 
@@ -12635,6 +13086,14 @@
       miniBossesSpawned.clear(); // Reset mini-boss tracking
       gameStartTime = Date.now();
       runStartGold = saveData.gold;
+      
+      // Initialize run statistics for enhanced death screen
+      runStats = {
+        itemsCollected: [],
+        achievementsUnlocked: [],
+        xpGained: 0,
+        startInventorySize: saveData.inventory.length
+      };
       
       // Reset player invulnerability state
       if (player) {
