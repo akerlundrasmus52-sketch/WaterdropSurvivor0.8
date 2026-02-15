@@ -10273,8 +10273,8 @@
         
         // Hide game canvas to prevent black map from showing
         if (renderer && renderer.domElement) {
-          isCanvasVisible = false;
           renderer.domElement.style.display = 'none';
+          isCanvasVisible = false;
           console.info('[MENU] Game canvas hidden');
         }
         
@@ -10313,8 +10313,8 @@
       }
       // Show game canvas when leaving menu
       if (renderer && renderer.domElement) {
-        isCanvasVisible = true;
         renderer.domElement.style.display = '';
+        isCanvasVisible = true;
         console.info('[MENU] Game canvas shown');
       }
       // Restore game UI buttons
