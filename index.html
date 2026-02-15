@@ -2407,6 +2407,9 @@
       // The game does not support hot reloading or client-side navigation.
       window.loadingScreenCompleted = false;
       
+      // Timing constants
+      const MENU_FALLBACK_DELAY_MS = 100; // Delay before checking if menu needs fallback display
+      
       // Global function to show main menu - can be called from anywhere
       window.showMainMenuFromLoading = function() {
         const mainMenu = document.getElementById('main-menu');
@@ -2435,6 +2438,16 @@
         let isCompleted = false;
         let resourcesLoaded = false;
         
+        // Register window.onload listener FIRST to avoid race condition on fast connections
+        window.addEventListener('load', () => {
+          console.info('[LOADING] window.onload event fired - all resources loaded');
+          resourcesLoaded = true;
+          // If progress bar is already at 100%, complete immediately
+          if (progress >= 100) {
+            checkModuleReady();
+          }
+        });
+        
         // Function to complete loading and show main menu
         function completeLoading() {
           if (isCompleted) return; // Prevent duplicate calls
@@ -2458,7 +2471,7 @@
                 console.info('[LOADING] Fallback: Showing main menu directly');
                 window.showMainMenuFromLoading();
               }
-            }, 100);
+            }, MENU_FALLBACK_DELAY_MS);
           }, 500); // Match CSS transition duration
         }
         
@@ -2471,16 +2484,6 @@
           }
           return false;
         }
-        
-        // Listen for window.onload to know when all resources are loaded
-        window.addEventListener('load', () => {
-          console.info('[LOADING] window.onload event fired - all resources loaded');
-          resourcesLoaded = true;
-          // If progress bar is already at 100%, complete immediately
-          if (progress >= 100) {
-            checkModuleReady();
-          }
-        });
         
         // Main loading animation: 20 steps over 8 seconds
         const loadingInterval = setInterval(() => {
@@ -2533,7 +2536,9 @@
             clearInterval(loadingInterval);
             console.warn('[LOADING] Failsafe timeout reached - forcing completion');
             loadingBar.style.width = '100%';
-            resourcesLoaded = true; // Force flag
+            // Set resourcesLoaded flag: After 12 seconds, sufficient time has passed
+            // for any resources to load or fail, making it safe to proceed
+            resourcesLoaded = true;
             completeLoading();
           }
         }, 12000); // 12 second maximum timeout
