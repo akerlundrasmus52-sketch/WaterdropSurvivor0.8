@@ -2188,6 +2188,45 @@
       "Survive!"
     ];
 
+    // Phase 5: Companion System Data
+    const COMPANIONS = {
+      stormWolf: {
+        id: 'stormWolf',
+        name: 'Storm Wolf',
+        icon: '🐺',
+        evolvedIcon: '⚡',
+        type: 'melee',
+        baseStats: { damage: 8, attackSpeed: 1.2, health: 50 },
+        evolvedStats: { damage: 20, attackSpeed: 0.8, health: 100 },
+        unlockCondition: 'default',
+        description: 'Melee companion that follows and attacks enemies'
+      },
+      skyFalcon: {
+        id: 'skyFalcon',
+        name: 'Sky Falcon',
+        icon: '🦅',
+        evolvedIcon: '🔥',
+        type: 'ranged',
+        baseStats: { damage: 6, attackSpeed: 1.5, health: 40 },
+        evolvedStats: { damage: 15, attackSpeed: 1.0, health: 80 },
+        unlockCondition: 'level15',
+        description: 'Ranged companion that circles and dives at enemies'
+      },
+      waterSpirit: {
+        id: 'waterSpirit',
+        name: 'Water Spirit',
+        icon: '💧',
+        evolvedIcon: '🌊',
+        type: 'support',
+        baseStats: { damage: 3, attackSpeed: 8.0, health: 60 },
+        evolvedStats: { damage: 8, attackSpeed: 5.0, health: 120 },
+        unlockCondition: 'denLevel2',
+        description: 'Support companion that heals and slows enemies'
+      }
+    };
+    
+    let activeCompanion = null; // Will hold the active Companion instance
+
     // Game Settings
     const gameSettings = {
       autoAim: true,
@@ -3829,6 +3868,159 @@
       })
     };
 
+    // Phase 5: Companion System - Simplified implementation for stable gameplay
+    class Companion {
+      constructor(companionId) {
+        this.companionId = companionId;
+        this.data = COMPANIONS[companionId];
+        this.companionData = saveData.companions[companionId];
+        
+        // Stats based on level
+        const isEvolved = this.companionData.level >= 10;
+        const stats = isEvolved ? this.data.evolvedStats : this.data.baseStats;
+        
+        this.damage = stats.damage;
+        this.attackSpeed = stats.attackSpeed;
+        this.maxHp = stats.health;
+        this.hp = this.maxHp;
+        this.isDead = false;
+        this.respawnTimer = 0;
+        this.lastAttackTime = 0;
+        
+        // Create visual representation
+        const icon = isEvolved ? this.data.evolvedIcon : this.data.icon;
+        const size = 0.8;
+        const geo = new THREE.BoxGeometry(size, size, size);
+        const mat = new THREE.MeshStandardMaterial({ 
+          color: this.data.type === 'melee' ? 0x8B4513 : 
+                 this.data.type === 'ranged' ? 0x4169E1 : 0x00CED1
+        });
+        this.mesh = new THREE.Mesh(geo, mat);
+        this.mesh.castShadow = true;
+        scene.add(this.mesh);
+        
+        // Position near player
+        this.mesh.position.copy(player.mesh.position);
+        this.mesh.position.x += 2;
+      }
+      
+      update(dt) {
+        if (this.isDead) {
+          this.respawnTimer -= dt;
+          if (this.respawnTimer <= 0) {
+            this.respawn();
+          }
+          return;
+        }
+        
+        if (!player || !player.mesh) return;
+        
+        // Follow player with simple AI
+        const dx = player.mesh.position.x - this.mesh.position.x;
+        const dz = player.mesh.position.z - this.mesh.position.z;
+        const dist = Math.sqrt(dx*dx + dz*dz);
+        
+        // Keep distance from player (melee closer, others farther)
+        const targetDist = this.data.type === 'melee' ? 2 : 3;
+        
+        if (dist > targetDist + 0.5) {
+          // Move toward player
+          const moveSpeed = 0.15;
+          this.mesh.position.x += (dx / dist) * moveSpeed;
+          this.mesh.position.z += (dz / dist) * moveSpeed;
+        } else if (dist < targetDist - 0.5) {
+          // Move away from player
+          const moveSpeed = 0.1;
+          this.mesh.position.x -= (dx / dist) * moveSpeed;
+          this.mesh.position.z -= (dz / dist) * moveSpeed;
+        }
+        
+        // Attack nearest enemy
+        const now = Date.now();
+        if (enemies.length > 0 && now - this.lastAttackTime > this.attackSpeed * 1000) {
+          let nearest = null;
+          let nearestDist = Infinity;
+          
+          for (const enemy of enemies) {
+            const ex = enemy.mesh.position.x - this.mesh.position.x;
+            const ez = enemy.mesh.position.z - this.mesh.position.z;
+            const d = ex*ex + ez*ez;
+            if (d < nearestDist && d < 100) { // Range check
+              nearestDist = d;
+              nearest = enemy;
+            }
+          }
+          
+          if (nearest) {
+            // Attack
+            const damageMultiplier = 1 + (this.companionData.level - 1) * 0.1; // +10% per level
+            const finalDamage = Math.floor(this.damage * damageMultiplier * playerStats.strength);
+            nearest.takeDamage(finalDamage, false);
+            spawnParticles(nearest.mesh.position, 0xFF6347, 3);
+            this.lastAttackTime = now;
+          }
+        }
+        
+        // Bob animation
+        this.mesh.position.y = 0.5 + Math.sin(Date.now() * 0.003) * 0.1;
+      }
+      
+      takeDamage(amount) {
+        this.hp -= amount;
+        if (this.hp <= 0) {
+          this.die();
+        }
+      }
+      
+      die() {
+        this.isDead = true;
+        this.mesh.visible = false;
+        this.respawnTimer = 10; // 10 second respawn
+        createFloatingText('Companion down!', this.mesh.position, '#FF6347');
+      }
+      
+      respawn() {
+        this.isDead = false;
+        this.hp = this.maxHp;
+        this.mesh.visible = true;
+        this.mesh.position.copy(player.mesh.position);
+        this.mesh.position.x += 2;
+        createFloatingText('Companion respawned!', this.mesh.position, '#00FF00');
+      }
+      
+      addXP(amount) {
+        // Companions gain 10% of enemy XP
+        const companionXP = Math.floor(amount * 0.1);
+        this.companionData.xp += companionXP;
+        
+        // Level up check (simplified progression)
+        const xpRequired = [0, 100, 250, 500, 800, 1200, 1700, 2300, 3000, 4000];
+        if (this.companionData.level < 10 && this.companionData.xp >= xpRequired[this.companionData.level]) {
+          this.companionData.level++;
+          saveData.companions[this.companionId] = this.companionData;
+          saveSaveData();
+          
+          if (this.companionData.level === 10) {
+            createFloatingText('⭐ COMPANION EVOLVED! ⭐', this.mesh.position, '#FFD700');
+            // Update stats to evolved form
+            const stats = this.data.evolvedStats;
+            this.damage = stats.damage;
+            this.attackSpeed = stats.attackSpeed;
+            this.maxHp = stats.health;
+            this.hp = this.maxHp;
+          } else {
+            createFloatingText(`Level ${this.companionData.level}!`, this.mesh.position, '#00FF00');
+          }
+        }
+      }
+      
+      destroy() {
+        scene.remove(this.mesh);
+        this.mesh.geometry.dispose();
+        this.mesh.material.dispose();
+      }
+    }
+
     class Projectile {
       constructor(x, z, target) {
         // Performance: Reuse cached geometry and materials instead of creating new ones
@@ -5046,7 +5238,14 @@
         ring: null,          // Accessory ring slot (Phase 1)
         amulet: null         // Accessory amulet slot (Phase 1)
       },
-      inventory: []
+      inventory: [],
+      // Phase 5: Companion System
+      companions: {
+        stormWolf: { unlocked: true, level: 1, xp: 0 },
+        skyFalcon: { unlocked: false, level: 1, xp: 0 },
+        waterSpirit: { unlocked: false, level: 1, xp: 0 }
+      },
+      selectedCompanion: 'stormWolf' // Default companion
     };
 
     let saveData = { ...defaultSaveData };
@@ -7596,6 +7795,11 @@
     function addExp(amount) {
       playerStats.exp += amount;
       
+      // Phase 5: Give companion XP (10% of player XP)
+      if (activeCompanion && !activeCompanion.isDead) {
+        activeCompanion.addXP(amount);
+      }
+      
       // Trigger waterdrop grow animation on XP pickup
       const waterdropContainer = document.getElementById('waterdrop-container');
       waterdropContainer.classList.add('grow');
@@ -9507,6 +9711,17 @@
         m.mesh.material.dispose();
       });
       meteors = [];
+      
+      // Phase 5: Spawn companion if one is selected
+      if (activeCompanion) {
+        activeCompanion.destroy();
+        activeCompanion = null;
+      }
+      
+      if (saveData.selectedCompanion && saveData.companions[saveData.selectedCompanion]?.unlocked) {
+        activeCompanion = new Companion(saveData.selectedCompanion);
+        console.log('[Phase 5] Spawned companion:', saveData.selectedCompanion);
+      }
 
       // Reset Player - Spawn near the statue at map center
       if (player) {
@@ -10543,6 +10758,11 @@
 
       // Entities Update
       enemies.forEach(e => e.update(dt, player.mesh.position));
+      
+      // Phase 5: Update companion
+      if (activeCompanion && !activeCompanion.isDead) {
+        activeCompanion.update(dt);
+      }
       
       // Update drone turrets
       droneTurrets.forEach(drone => drone.update(dt));
