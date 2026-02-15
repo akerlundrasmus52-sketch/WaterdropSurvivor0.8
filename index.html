@@ -144,6 +144,18 @@
       margin-top: 8px;
     }
     
+    /* Quest Arrow Guidance */
+    #quest-arrow {
+      display: none;
+      position: absolute;
+      font-size: 48px;
+      color: #FFD700;
+      text-shadow: 0 0 20px rgba(255,215,0,1), 0 0 40px rgba(255,215,0,0.6);
+      pointer-events: none;
+      z-index: 50;
+      animation: questArrowPulse 1.5s ease-in-out infinite;
+    }
+    
     /* Stats Bar - Removed (Stats accessible via Stats Button Modal only) */
     
     /* Combo Counter - Red/Black Theme */
@@ -1832,7 +1844,7 @@
       <div class="stat-text" id="quest-tracker" style="display: none; color: #FFD700; text-shadow: 0 0 8px rgba(255,215,0,0.8), 1px 1px 2px rgba(0,0,0,0.8); font-size: 14px; margin-top: 5px; background: rgba(0,0,0,0.7); padding: 5px 10px; border-radius: 5px; border: 1px solid #FFD700;"></div>
       
       <!-- Quest Arrow Guidance (in-game) -->
-      <div id="quest-arrow" style="display: none; position: absolute; font-size: 48px; color: #FFD700; text-shadow: 0 0 20px rgba(255,215,0,1), 0 0 40px rgba(255,215,0,0.6); pointer-events: none; z-index: 50; animation: questArrowPulse 1.5s ease-in-out infinite;">❗➤</div>
+      <div id="quest-arrow">❗➤</div>
       
       <!-- Combo Timer Display -->
       <div class="stat-text" id="combo-timer"></div>
@@ -5474,6 +5486,8 @@
     }
 
     class Particle {
+      static MAX_LIFETIME = 30; // Frames until particle fades out
+      
       constructor(pos, color) {
         const geo = new THREE.BoxGeometry(0.2, 0.2, 0.2);
         // Changed to MeshPhysicalMaterial for light reactivity (smoke/fog effects)
@@ -5496,7 +5510,7 @@
         );
         
         scene.add(this.mesh);
-        this.life = 30;
+        this.life = Particle.MAX_LIFETIME;
       }
       
       reset(pos, color) {
@@ -5512,7 +5526,7 @@
         this.mesh.rotation.set(0, 0, 0);
         this.mesh.visible = true;
         scene.add(this.mesh);
-        this.life = 30;
+        this.life = Particle.MAX_LIFETIME;
       }
       
       update() {
@@ -5523,7 +5537,7 @@
         this.mesh.rotation.y += 0.1;
         
         // Fade out based on life remaining (more realistic smoke/fog effect)
-        this.mesh.material.opacity = Math.min(0.8, this.life / 30);
+        this.mesh.material.opacity = Math.min(0.8, this.life / Particle.MAX_LIFETIME);
         
         if (this.mesh.position.y < 0) {
           this.mesh.position.y = 0;
@@ -7718,7 +7732,7 @@
       }
       
       // Check if this is the first skill purchase (make it free)
-      const isFirstSkill = !saveData.storyQuests.buildingFirstUse.skillTree;
+      const isFirstSkill = saveData.storyQuests?.buildingFirstUse?.skillTree ? false : true;
       const costToCharge = isFirstSkill ? 0 : skill.cost;
       
       if (saveData.skillPoints >= costToCharge) {
@@ -10395,7 +10409,6 @@
       // Pause combo timer during level-up
       if (comboState.lastKillTime) {
         comboState.pausedAt = Date.now();
-        comboState.pauseDuration = 0;
       }
       
       playerStats.lvl++;
