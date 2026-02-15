@@ -7970,16 +7970,12 @@
       setupMenus();
       window.addEventListener('resize', onWindowResize, false);
       
-      // Show loading screen, then main menu
-      showLoadingScreen();
-
-      // Start Loop
+      // Start Loop - begin rendering immediately (non-blocking)
       requestAnimationFrame(animate);
       
-      // Signal that module is fully initialized (acceptance criteria #2)
-      // This MUST be last, after all handlers are attached
-      window.gameModuleReady = true;
-      console.log('[Init] Game module ready - all systems initialized');
+      // Show loading screen, then main menu (acceptance criteria #1)
+      // gameModuleReady will be set after loading completes (acceptance criteria #2)
+      showLoadingScreen();
     }
     
     function showLoadingScreen() {
@@ -8010,6 +8006,13 @@
       updateGoldDisplays();
       setGameActive(false);
       setGamePaused(true);
+      
+      // Signal that module is fully initialized (acceptance criteria #2)
+      // This is set AFTER loading screen completes and main menu is shown
+      if (!window.gameModuleReady) {
+        window.gameModuleReady = true;
+        console.log('[Init] Game module ready - loading complete, main menu shown');
+      }
     }
     
     function hideMainMenu() {
