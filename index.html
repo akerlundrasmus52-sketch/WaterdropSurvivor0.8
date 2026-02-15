@@ -2209,6 +2209,7 @@
       <h2 class="options-title">OPTIONS</h2>
       <div class="options-buttons">
         <button class="btn-small" id="options-stats-btn">STATS</button>
+        <button class="btn-small" id="options-camp-btn">🏕️ GO TO CAMP</button>
         <button class="btn-small" id="options-settings-btn">⚙️ SETTINGS</button>
         <button class="btn-small" id="close-options-btn">CLOSE</button>
       </div>
@@ -2387,7 +2388,10 @@
         <div id="achievements-list"></div>
       </div>
       
-      <button class="btn" id="restart-btn">RETURN TO CAMP</button>
+      <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
+        <button class="btn" id="try-again-btn">🔄 TRY AGAIN</button>
+        <button class="btn" id="restart-btn">🏕️ RETURN TO CAMP</button>
+      </div>
     </div>
   </div>
 
@@ -10438,10 +10442,6 @@
     let isCanvasVisible = true; // Track canvas visibility state for menu transitions
 
     function init() {
-      // Signal to loading screen that module is ready
-      window.gameModuleReady = true;
-      console.info('[INIT] Game module initialized, signaling ready to loading screen');
-      
       // Load save data first
       loadSaveData();
       
@@ -10522,6 +10522,10 @@
       setupInputs();
       setupMenus();
       window.addEventListener('resize', onWindowResize, false);
+      
+      // Signal to loading screen that module is ready - MUST be after setupMenus()
+      window.gameModuleReady = true;
+      console.info('[INIT] Game module fully initialized and ready');
       
       // Loading screen is now handled by standalone script above
       // Listen for loading completion event to show main menu
@@ -10765,6 +10769,7 @@
       const optionsMenu = document.getElementById('options-menu');
       const closeOptionsBtn = document.getElementById('close-options-btn');
       const optionsStatsBtn = document.getElementById('options-stats-btn');
+      const optionsCampBtn = document.getElementById('options-camp-btn');
       const optionsSettingsBtn = document.getElementById('options-settings-btn');
       
       menuBtn.addEventListener('click', () => {
@@ -10782,6 +10787,17 @@
       optionsStatsBtn.addEventListener('click', () => {
         optionsMenu.style.display = 'none';
         toggleStats();
+      });
+      
+      optionsCampBtn.addEventListener('click', () => {
+        playSound('waterdrop');
+        optionsMenu.style.display = 'none';
+        isPaused = false;
+        // End the current game and go to camp
+        if (isGameActive) {
+          isGameActive = false;
+        }
+        showCampScreen();
       });
       
       optionsSettingsBtn.addEventListener('click', () => {
@@ -11028,6 +11044,15 @@
         document.getElementById('gameover-screen').style.display = 'none';
         // Return to camp instead of main menu for roguelite loop
         showCampScreen();
+      };
+      
+      // Try Again button restarts the game immediately
+      document.getElementById('try-again-btn').onclick = () => {
+        playSound('levelup');
+        document.getElementById('gameover-screen').style.display = 'none';
+        // Restart the game directly
+        resetGame();
+        startCountdown();
       };
       
       // Stats Bar removed - No toggle needed
@@ -13964,11 +13989,8 @@
       zone.addEventListener('touchend', endJoystick);
       zone.addEventListener('touchcancel', endJoystick);
 
-      // Restart Button
-      document.getElementById('restart-btn').addEventListener('click', resetGame);
-      document.getElementById('restart-btn').addEventListener('touchstart', (e) => {
-        e.stopPropagation(); // Prevent joystick interference
-      }, { passive: true });
+      // Restart Button - Handler is in setupMenus()
+      // Try Again Button - Handler is in setupMenus()
 
       // Stats Button
       document.getElementById('stats-btn').addEventListener('click', toggleStats);
