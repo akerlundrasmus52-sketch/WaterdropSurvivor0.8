@@ -2282,12 +2282,10 @@
                 const maxPollAttempts = 30; // 30 * 100ms = 3 seconds
                 const pollInterval = setInterval(() => {
                   pollAttempts++;
-                  // Check if module became ready
-                  if (window.gameModuleReady) {
+                  // Check if module became ready or timeout reached
+                  if (checkModuleReady()) {
+                    // Module is ready, loading completed
                     clearInterval(pollInterval);
-                    if (!isCompleted) {
-                      completeLoading();
-                    }
                   } else if (pollAttempts >= maxPollAttempts) {
                     // Timeout reached, complete anyway
                     clearInterval(pollInterval);
