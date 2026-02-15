@@ -8009,6 +8009,7 @@
       
       // Signal that module is fully initialized (acceptance criteria #2)
       // This is set AFTER loading screen completes and main menu is shown
+      // The check ensures it's only set once during initial load (not when returning from other screens)
       if (!window.gameModuleReady) {
         window.gameModuleReady = true;
         console.log('[Init] Game module ready - loading complete, main menu shown');
