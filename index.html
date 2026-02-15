@@ -2218,10 +2218,10 @@
      */
     (function() {
       let loadingInitialized = false;
-      // Global flag to track if loading has completed - used by module for fallback
+      // Global flag to track if loading screen has completed - used by module for fallback
       // NOTE: This flag is never reset as loading only happens once per page load.
       // The game does not support hot reloading or client-side navigation.
-      window.gameLoadingCompleted = false;
+      window.loadingScreenCompleted = false;
       
       function startLoadingBar() {
         // Prevent duplicate initialization
@@ -2248,7 +2248,7 @@
           setTimeout(() => {
             loadingScreen.style.display = 'none';
             // Set global flag for fallback mechanism
-            window.gameLoadingCompleted = true;
+            window.loadingScreenCompleted = true;
             // Dispatch custom event that game init can listen to
             window.dispatchEvent(new CustomEvent('loadingComplete'));
           }, 500); // Match CSS transition duration
@@ -2305,7 +2305,8 @@
     import * as THREE from 'three';
 
     // --- CONSTANTS & CONFIG ---
-    const ERROR_RECOVERY_DELAY_MS = 1000; // Delay before showing menu after error, allows user to read alert
+    // Error recovery delay increased for accessibility (allows time to read alert)
+    const ERROR_RECOVERY_DELAY_MS = 3000; // 3 seconds for users with cognitive disabilities or slower reading speeds
     
     const COLORS = {
       bg: 0xFFF0F5,
@@ -9674,11 +9675,11 @@
 
     // --- GAME LOGIC ---
     
-    // Guard flag to prevent showing main menu multiple times
+    // Guard flag to prevent duplicate main menu initialization
     // Declared here before init() to avoid temporal dead zone issues
     // NOTE: This flag is never reset as the game only initializes once per page load.
     // Game restarts return to camp screen, not main menu, so reinitializing is not needed.
-    let mainMenuShown = false;
+    let mainMenuInitialized = false;
 
     function init() {
       // Load save data first
@@ -9774,7 +9775,7 @@
       // any events that fire after this point
       // Note: Both the event listener and this fallback may call showMainMenu(),
       // but the guard flag in showMainMenu() ensures it only executes once
-      if (window.gameLoadingCompleted) {
+      if (window.loadingScreenCompleted) {
         console.log('Loading already completed - showing main menu via fallback');
         showMainMenu();
       }
@@ -9786,8 +9787,8 @@
     function showMainMenu() {
       // Guard flag check and assignment
       // NOTE: JavaScript is single-threaded, so this check-then-set is atomic in the browser
-      if (mainMenuShown) return; // Already shown, prevent duplicate calls
-      mainMenuShown = true;
+      if (mainMenuInitialized) return; // Already initialized, prevent duplicate calls
+      mainMenuInitialized = true;
       
       document.getElementById('main-menu').style.display = 'flex';
       updateGoldDisplays();
