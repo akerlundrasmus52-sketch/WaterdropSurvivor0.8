@@ -7317,12 +7317,12 @@
       farmGroup.add(barn);
       
       // Phase 4: Farm fields texture/area around barn (plowed field rows)
-      const fieldMat = new THREE.MeshToonMaterial({ color: 0x654321 }); // Brown soil
+      const barnFieldMat = new THREE.MeshToonMaterial({ color: 0x654321 }); // Brown soil
       for (let row = 0; row < 6; row++) {
         for (let col = 0; col < 8; col++) {
           const fieldPlot = new THREE.Mesh(
             new THREE.PlaneGeometry(1.5, 1.5),
-            fieldMat
+            barnFieldMat
           );
           fieldPlot.rotation.x = -Math.PI / 2;
           fieldPlot.position.set(
