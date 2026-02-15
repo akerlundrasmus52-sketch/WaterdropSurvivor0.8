@@ -2565,6 +2565,274 @@
     }
   </script>
 
+  <!-- Fallback Menu Button Handlers - Independent of Three.js module -->
+  <!-- This ensures menu buttons work even if the game module fails to load -->
+  <script>
+    (function() {
+      'use strict';
+      
+      // Flag to track if handlers have been initialized
+      let menuHandlersInitialized = false;
+      
+      // Wait for DOM and loading screen to complete before setting up menu handlers
+      function setupMenuButtonHandlers() {
+        // Prevent duplicate initialization
+        if (menuHandlersInitialized) {
+          console.info('[MENU] Fallback handlers already initialized, skipping');
+          return;
+        }
+        
+        console.info('[MENU] Setting up fallback menu button handlers');
+        menuHandlersInitialized = true;
+        
+        // Helper function to play sound if available
+        function playSound(soundName) {
+          if (window.playSound && typeof window.playSound === 'function') {
+            window.playSound(soundName);
+          }
+        }
+        
+        // Helper functions to show/hide menu screens
+        function hideMainMenu() {
+          const mainMenu = document.getElementById('main-menu');
+          if (mainMenu) {
+            mainMenu.style.display = 'none';
+          }
+        }
+        
+        function showMainMenu() {
+          const mainMenu = document.getElementById('main-menu');
+          if (mainMenu) {
+            mainMenu.style.display = 'flex';
+          }
+        }
+        
+        // Camp button handler
+        const campBtn = document.getElementById('camp-btn');
+        if (campBtn && !campBtn.onclick) {
+          campBtn.onclick = function() {
+            playSound('waterdrop');
+            if (window.showCampScreen && typeof window.showCampScreen === 'function') {
+              window.showCampScreen();
+            } else {
+              console.warn('[MENU] showCampScreen not available yet');
+              alert('Camp screen will be available once the game fully loads.');
+            }
+          };
+        }
+        
+        // Start Game button handler
+        const startGameBtn = document.getElementById('start-game-btn');
+        if (startGameBtn && !startGameBtn.onclick) {
+          startGameBtn.onclick = function() {
+            playSound('waterdrop');
+            if (window.resetGame && typeof window.resetGame === 'function' && 
+                window.startCountdown && typeof window.startCountdown === 'function') {
+              hideMainMenu();
+              window.resetGame();
+              window.startCountdown();
+            } else {
+              console.warn('[MENU] Game functions not available yet');
+              alert('Please wait for the game to fully load before starting.');
+            }
+          };
+        }
+        
+        // Progression button handler
+        const progressionBtn = document.getElementById('progression-btn');
+        if (progressionBtn && !progressionBtn.onclick) {
+          progressionBtn.onclick = function() {
+            playSound('waterdrop');
+            if (window.showProgressionShop && typeof window.showProgressionShop === 'function') {
+              hideMainMenu();
+              window.showProgressionShop();
+            } else {
+              console.warn('[MENU] showProgressionShop not available yet');
+              alert('Progression shop will be available once the game fully loads.');
+            }
+          };
+        }
+        
+        // Attributes button handler
+        const attributesBtn = document.getElementById('attributes-btn');
+        if (attributesBtn && !attributesBtn.onclick) {
+          attributesBtn.onclick = function() {
+            playSound('waterdrop');
+            if (window.updateAttributesScreen && typeof window.updateAttributesScreen === 'function') {
+              hideMainMenu();
+              window.updateAttributesScreen();
+              const attrScreen = document.getElementById('attributes-screen');
+              if (attrScreen) {
+                attrScreen.style.display = 'flex';
+              }
+            } else {
+              console.warn('[MENU] updateAttributesScreen not available yet');
+              alert('Attributes screen will be available once the game fully loads.');
+            }
+          };
+        }
+        
+        // Gear button handler
+        const gearBtn = document.getElementById('gear-btn');
+        if (gearBtn && !gearBtn.onclick) {
+          gearBtn.onclick = function() {
+            playSound('waterdrop');
+            if (window.updateGearScreen && typeof window.updateGearScreen === 'function') {
+              hideMainMenu();
+              window.updateGearScreen();
+              const gearScreen = document.getElementById('gear-screen');
+              if (gearScreen) {
+                gearScreen.style.display = 'flex';
+              }
+            } else {
+              console.warn('[MENU] updateGearScreen not available yet');
+              alert('Gear screen will be available once the game fully loads.');
+            }
+          };
+        }
+        
+        // Achievements button handler
+        const achievementsBtn = document.getElementById('achievements-btn');
+        if (achievementsBtn && !achievementsBtn.onclick) {
+          achievementsBtn.onclick = function() {
+            playSound('waterdrop');
+            if (window.updateAchievementsScreen && typeof window.updateAchievementsScreen === 'function') {
+              hideMainMenu();
+              window.updateAchievementsScreen();
+              const achievementsScreen = document.getElementById('achievements-screen');
+              if (achievementsScreen) {
+                achievementsScreen.style.display = 'flex';
+              }
+            } else {
+              console.warn('[MENU] updateAchievementsScreen not available yet');
+              alert('Achievements will be available once the game fully loads.');
+            }
+          };
+        }
+        
+        // Credits button handler
+        const creditsBtn = document.getElementById('credits-btn');
+        if (creditsBtn && !creditsBtn.onclick) {
+          creditsBtn.onclick = function() {
+            playSound('waterdrop');
+            hideMainMenu();
+            const creditsScreen = document.getElementById('credits-screen');
+            if (creditsScreen) {
+              creditsScreen.style.display = 'flex';
+            }
+          };
+        }
+        
+        // Back buttons
+        const shopBackBtn = document.getElementById('shop-back-btn');
+        if (shopBackBtn && !shopBackBtn.onclick) {
+          shopBackBtn.onclick = function() {
+            playSound('waterdrop');
+            const progressionShop = document.getElementById('progression-shop');
+            if (progressionShop) {
+              progressionShop.style.display = 'none';
+            }
+            showMainMenu();
+          };
+        }
+        
+        const achievementsBackBtn = document.getElementById('achievements-back-btn');
+        if (achievementsBackBtn && !achievementsBackBtn.onclick) {
+          achievementsBackBtn.onclick = function() {
+            playSound('waterdrop');
+            const achievementsScreen = document.getElementById('achievements-screen');
+            if (achievementsScreen) {
+              achievementsScreen.style.display = 'none';
+            }
+            showMainMenu();
+          };
+        }
+        
+        const attributesBackBtn = document.getElementById('attributes-back-btn');
+        if (attributesBackBtn && !attributesBackBtn.onclick) {
+          attributesBackBtn.onclick = function() {
+            playSound('waterdrop');
+            const attributesScreen = document.getElementById('attributes-screen');
+            if (attributesScreen) {
+              attributesScreen.style.display = 'none';
+            }
+            showMainMenu();
+          };
+        }
+        
+        const gearBackBtn = document.getElementById('gear-back-btn');
+        if (gearBackBtn && !gearBackBtn.onclick) {
+          gearBackBtn.onclick = function() {
+            playSound('waterdrop');
+            const gearScreen = document.getElementById('gear-screen');
+            if (gearScreen) {
+              gearScreen.style.display = 'none';
+            }
+            // If game was active, resume it; otherwise return to main menu
+            if (window.isGameActive) {
+              if (window.isPaused !== undefined) {
+                window.isPaused = false;
+              }
+            } else {
+              showMainMenu();
+            }
+          };
+        }
+        
+        const creditsBackBtn = document.getElementById('credits-back-btn');
+        if (creditsBackBtn && !creditsBackBtn.onclick) {
+          creditsBackBtn.onclick = function() {
+            playSound('waterdrop');
+            const creditsScreen = document.getElementById('credits-screen');
+            if (creditsScreen) {
+              creditsScreen.style.display = 'none';
+            }
+            showMainMenu();
+          };
+        }
+        
+        console.info('[MENU] Fallback menu button handlers setup complete');
+      }
+      
+      // Wait for loading to complete and menu to be visible
+      function waitForMenuAndSetup() {
+        // Maximum retry attempts to prevent infinite polling
+        const maxRetries = 50; // 50 * 100ms = 5 seconds max wait
+        let retries = 0;
+        
+        function checkMenu() {
+          // Check if main menu exists and is visible
+          const mainMenu = document.getElementById('main-menu');
+          if (mainMenu) {
+            // Setup handlers immediately
+            setupMenuButtonHandlers();
+          } else if (retries < maxRetries) {
+            // Menu not in DOM yet, wait for it
+            retries++;
+            setTimeout(checkMenu, 100);
+          } else {
+            console.warn('[MENU] Timeout waiting for main menu to appear in DOM');
+          }
+        }
+        
+        checkMenu();
+      }
+      
+      // Start waiting once DOM is ready
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', waitForMenuAndSetup);
+      } else {
+        waitForMenuAndSetup();
+      }
+      
+      // Also listen for loading complete event
+      window.addEventListener('loadingComplete', function() {
+        // Give loading screen time to fade out and menu to appear
+        setTimeout(setupMenuButtonHandlers, 100);
+      });
+    })();
+  </script>
+
   <script type="module">
     import * as THREE from 'three';
 
@@ -10283,6 +10551,21 @@
         }
       }, 1000);
 
+      // Expose key functions to window for fallback menu handlers
+      window.playSound = playSound;
+      window.resetGame = resetGame;
+      window.startCountdown = startCountdown;
+      window.showMainMenu = showMainMenu;
+      window.hideMainMenu = hideMainMenu;
+      window.showCampScreen = showCampScreen;
+      window.hideCampScreen = hideCampScreen;
+      window.showProgressionShop = showProgressionShop;
+      window.updateAttributesScreen = updateAttributesScreen;
+      window.updateGearScreen = updateGearScreen;
+      window.updateAchievementsScreen = updateAchievementsScreen;
+      window.isGameActive = false; // Will be updated by game logic
+      window.isPaused = false; // Will be updated by game logic
+
       // Start Loop
       requestAnimationFrame(animate);
     }
@@ -10334,7 +10617,9 @@
         
         updateGoldDisplays();
         isGameActive = false;
+        window.isGameActive = false;
         isPaused = true;
+        window.isPaused = true;
         
         // Mark as initialized only after all steps complete successfully
         mainMenuInitialized = true;
@@ -10407,7 +10692,9 @@
       
       // Ensure game properly unpauses
       isPaused = false;
+      window.isPaused = false;
       isGameActive = true;
+      window.isGameActive = true;
       gameStartTime = Date.now();
     }
     
@@ -13015,7 +13302,9 @@
     function gameOver() {
       isGameOver = true;
       isPaused = true;
+      window.isPaused = true;
       isGameActive = false;
+      window.isGameActive = false;
       
       stopDroneHum(); // Stop drone sound
       
@@ -13402,7 +13691,9 @@
 
       isGameOver = false;
       isPaused = true;  // Start paused, countdown will unpause (PR #70)
+      window.isPaused = true;
       isGameActive = false;  // Not active until countdown completes (PR #70)
+      window.isGameActive = false;
       document.getElementById('gameover-screen').style.display = 'none';
       updateHUD();
     }
