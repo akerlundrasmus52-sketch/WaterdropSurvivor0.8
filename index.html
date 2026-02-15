@@ -3495,14 +3495,14 @@
                 smoke.geometry.dispose();
                 smoke.material.dispose();
                 // Remove this RAF ID from tracking
-                const index = this.activeSmokeCallbacks.indexOf(rafId);
-                if (index > -1) this.activeSmokeCallbacks.splice(index, 1);
+                if (rafId !== null) {
+                  const index = this.activeSmokeCallbacks.indexOf(rafId);
+                  if (index > -1) this.activeSmokeCallbacks.splice(index, 1);
+                }
               } else {
                 rafId = requestAnimationFrame(updateSmoke);
                 // Track the RAF callback for cleanup
-                if (!this.activeSmokeCallbacks.includes(rafId)) {
-                  this.activeSmokeCallbacks.push(rafId);
-                }
+                this.activeSmokeCallbacks.push(rafId);
               }
             };
             updateSmoke();
