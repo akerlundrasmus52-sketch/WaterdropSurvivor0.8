@@ -2388,6 +2388,8 @@
     let windmillQuest = { active: false, timer: 0, duration: 30, windmill: null, hasCompleted: false };
     let montanaQuest = { active: false, timer: 0, duration: 45, kills: 0, killsNeeded: 15, landmark: null, hasCompleted: false };
     let eiffelQuest = { active: false, timer: 0, duration: 60, kills: 0, killsNeeded: 25, landmark: null, hasCompleted: false };
+    const MONTANA_QUEST_TRIGGER_DISTANCE = 15; // Proximity distance for Montana quest
+    const EIFFEL_QUEST_TRIGGER_DISTANCE = 20; // Proximity distance for Eiffel quest (larger due to taller structure)
     let montanaLandmark = null; // Store Montana landmark reference for efficient distance checks
     let eiffelLandmark = null; // Store Eiffel landmark reference for efficient distance checks
     let runStartGold = 0;  // Track gold at start of run for end-of-run calculation
@@ -7582,10 +7584,7 @@
       
       // Store reference for quest system
       montanaGroup.userData = { 
-        isMontana: true, 
-        hp: 1000, 
-        maxHp: 1000, 
-        questActive: false 
+        isMontana: true
       };
       
       scene.add(montanaGroup);
@@ -7708,10 +7707,7 @@
       
       // Store reference for quest system
       eiffelGroup.userData = { 
-        isEiffel: true, 
-        hp: 1500, 
-        maxHp: 1500, 
-        questActive: false 
+        isEiffel: true
       };
       
       scene.add(eiffelGroup);
@@ -10215,7 +10211,7 @@
     }
     
     function startMontanaQuest(landmark) {
-      if (montanaQuest.hasCompleted || montanaQuest.active) return; // Prevent race condition
+      if (!landmark || montanaQuest.hasCompleted || montanaQuest.active) return; // Prevent race condition and validate landmark
       
       montanaQuest.active = true;
       montanaQuest.timer = montanaQuest.duration;
@@ -10226,7 +10222,7 @@
       updateMontanaQuestUI();
       
       createFloatingText("MONTANA CHALLENGE!", landmark.position);
-      createFloatingText("SURVIVE 45s & KILL 15!", landmark.position);
+      createFloatingText(`SURVIVE ${montanaQuest.duration}s & KILL ${montanaQuest.killsNeeded}!`, landmark.position);
     }
     
     function completeMontanaQuest() {
@@ -10260,7 +10256,7 @@
     }
     
     function startEiffelQuest(landmark) {
-      if (eiffelQuest.hasCompleted || eiffelQuest.active) return; // Prevent race condition
+      if (!landmark || eiffelQuest.hasCompleted || eiffelQuest.active) return; // Prevent race condition and validate landmark
       
       eiffelQuest.active = true;
       eiffelQuest.timer = eiffelQuest.duration;
@@ -10271,7 +10267,7 @@
       updateEiffelQuestUI();
       
       createFloatingText("EIFFEL CHALLENGE!", landmark.position);
-      createFloatingText("SURVIVE 60s & KILL 25!", landmark.position);
+      createFloatingText(`SURVIVE ${eiffelQuest.duration}s & KILL ${eiffelQuest.killsNeeded}!`, landmark.position);
     }
     
     function completeEiffelQuest() {
@@ -11369,7 +11365,7 @@
       // Check Montana quest trigger (optimized with stored reference)
       if (!montanaQuest.active && !montanaQuest.hasCompleted && montanaLandmark) {
         const dist = player.mesh.position.distanceTo(montanaLandmark.position);
-        if (dist < 15) {
+        if (dist < MONTANA_QUEST_TRIGGER_DISTANCE) {
           startMontanaQuest(montanaLandmark);
         }
       }
@@ -11393,7 +11389,7 @@
       // Check Eiffel quest trigger (optimized with stored reference)
       if (!eiffelQuest.active && !eiffelQuest.hasCompleted && eiffelLandmark) {
         const dist = player.mesh.position.distanceTo(eiffelLandmark.position);
-        if (dist < 20) {
+        if (dist < EIFFEL_QUEST_TRIGGER_DISTANCE) {
           startEiffelQuest(eiffelLandmark);
         }
       }
