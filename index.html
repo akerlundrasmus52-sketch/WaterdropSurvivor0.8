@@ -9246,7 +9246,7 @@
         const requiredXP = data.level < 10 ? COMPANION_LEVEL_REQUIREMENTS[data.level] : COMPANION_LEVEL_REQUIREMENTS[9];
         const xpPercent = data.level >= 10 ? 100 : (currentXP / requiredXP * 100);
         
-        companionHTML += \`
+        companionHTML += `
           <div style="
             background: linear-gradient(135deg, \${unlockStatus.unlocked ? '#2c3e50' : '#1a1a1a'} 0%, \${unlockStatus.unlocked ? '#34495e' : '#0a0a0a'} 100%);
             border: 3px solid \${data.selected ? '#f39c12' : unlockStatus.unlocked ? '#5DADE2' : '#555'};
