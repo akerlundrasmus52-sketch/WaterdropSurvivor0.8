@@ -10272,9 +10272,10 @@
         console.info('[MENU] Menu display set to flex');
         
         // Hide game canvas to prevent black map from showing
+        // Set flag before DOM manipulation to ensure state is consistent
         if (renderer && renderer.domElement) {
+          isCanvasVisible = false; // Update flag first to prevent rendering race conditions
           renderer.domElement.style.display = 'none';
-          isCanvasVisible = false;
           console.info('[MENU] Game canvas hidden');
         }
         
@@ -10312,9 +10313,10 @@
         mainMenu.style.display = 'none';
       }
       // Show game canvas when leaving menu
+      // Set flag before DOM manipulation to ensure state is consistent
       if (renderer && renderer.domElement) {
+        isCanvasVisible = true; // Update flag first to allow rendering when canvas becomes visible
         renderer.domElement.style.display = '';
-        isCanvasVisible = true;
         console.info('[MENU] Game canvas shown');
       }
       // Restore game UI buttons
