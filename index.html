@@ -2396,9 +2396,9 @@
   <script>
     /**
      * Initialize and animate the loading bar
-     * Runs immediately when DOM is ready, independent of ES module loading
-     * Duration: 8 seconds (20 iterations × 400ms)
-     * Includes 12-second failsafe timeout for slow systems
+     * Uses window.onload to ensure all resources are loaded before completion
+     * Duration: Progress bar animates smoothly based on intervals
+     * Includes failsafe timeout for slow systems
      */
     (function() {
       let loadingInitialized = false;
@@ -2406,6 +2406,20 @@
       // NOTE: This flag is never reset as loading only happens once per page load.
       // The game does not support hot reloading or client-side navigation.
       window.loadingScreenCompleted = false;
+      
+      // Timing constants
+      const MENU_FALLBACK_DELAY_MS = 100; // Delay before checking if menu needs fallback display
+      
+      // Global function to show main menu - can be called from anywhere
+      window.showMainMenuFromLoading = function() {
+        const mainMenu = document.getElementById('main-menu');
+        if (mainMenu) {
+          mainMenu.style.display = 'flex';
+          console.info('[LOADING] Main menu displayed');
+        } else {
+          console.warn('[LOADING] Main menu element not found');
+        }
+      };
       
       function startLoadingBar() {
         // Prevent duplicate initialization
@@ -2422,19 +2436,42 @@
         
         let progress = 0;
         let isCompleted = false;
+        let resourcesLoaded = false;
+        
+        // Register window.onload listener FIRST to avoid race condition on fast connections
+        window.addEventListener('load', () => {
+          console.info('[LOADING] window.onload event fired - all resources loaded');
+          resourcesLoaded = true;
+          // If progress bar is already at 100%, complete immediately
+          if (progress >= 100) {
+            checkModuleReady();
+          }
+        });
         
         // Function to complete loading and show main menu
         function completeLoading() {
           if (isCompleted) return; // Prevent duplicate calls
           isCompleted = true;
           
+          console.info('[LOADING] Completing loading screen transition');
           loadingScreen.classList.add('fade-out');
+          
           setTimeout(() => {
             loadingScreen.style.display = 'none';
             // Set global flag for fallback mechanism
             window.loadingScreenCompleted = true;
+            
             // Dispatch custom event that game init can listen to
             window.dispatchEvent(new CustomEvent('loadingComplete'));
+            
+            // Directly show main menu as fallback if event listener isn't set up yet
+            setTimeout(() => {
+              const mainMenu = document.getElementById('main-menu');
+              if (mainMenu && mainMenu.style.display !== 'flex') {
+                console.info('[LOADING] Fallback: Showing main menu directly');
+                window.showMainMenuFromLoading();
+              }
+            }, MENU_FALLBACK_DELAY_MS);
           }, 500); // Match CSS transition duration
         }
         
@@ -2457,28 +2494,34 @@
             clearInterval(loadingInterval);
             // Wait briefly at 100% to show completed bar
             setTimeout(() => {
-              // Check if module is ready before completing
-              if (!checkModuleReady()) {
-                // Module not ready yet, wait and check again
-                console.info('[LOADING] Waiting for game module to initialize...');
-                // Poll for module ready every 100ms for up to 3 seconds
-                let pollAttempts = 0;
-                const maxPollAttempts = 30; // 30 * 100ms = 3 seconds
-                const pollInterval = setInterval(() => {
-                  pollAttempts++;
-                  // Check if module became ready or timeout reached
-                  if (checkModuleReady()) {
-                    // Module is ready, loading completed
-                    clearInterval(pollInterval);
-                  } else if (pollAttempts >= maxPollAttempts) {
-                    // Timeout reached, complete anyway
-                    clearInterval(pollInterval);
-                    if (!isCompleted) {
-                      console.warn('[LOADING] Module ready signal not received, completing anyway');
-                      completeLoading();
+              // Only complete if resources are loaded OR timeout exceeded
+              if (resourcesLoaded) {
+                console.info('[LOADING] Progress complete and resources loaded');
+                // Check if module is ready before completing
+                if (!checkModuleReady()) {
+                  // Module not ready yet, wait and check again
+                  console.info('[LOADING] Waiting for game module to initialize...');
+                  // Poll for module ready every 100ms for up to 3 seconds
+                  let pollAttempts = 0;
+                  const maxPollAttempts = 30; // 30 * 100ms = 3 seconds
+                  const pollInterval = setInterval(() => {
+                    pollAttempts++;
+                    // Check if module became ready or timeout reached
+                    if (checkModuleReady()) {
+                      // Module is ready, loading completed
+                      clearInterval(pollInterval);
+                    } else if (pollAttempts >= maxPollAttempts) {
+                      // Timeout reached, complete anyway
+                      clearInterval(pollInterval);
+                      if (!isCompleted) {
+                        console.warn('[LOADING] Module ready signal not received, completing anyway');
+                        completeLoading();
+                      }
                     }
-                  }
-                }, 100);
+                  }, 100);
+                }
+              } else {
+                console.info('[LOADING] Progress complete, waiting for window.onload...');
               }
             }, 600);
           }
@@ -2491,8 +2534,11 @@
           if (!isCompleted) {
             // Clear interval and complete loading
             clearInterval(loadingInterval);
-            console.warn('Loading timeout reached - forcing completion');
+            console.warn('[LOADING] Failsafe timeout reached - forcing completion');
             loadingBar.style.width = '100%';
+            // Set resourcesLoaded flag: After 12 seconds, sufficient time has passed
+            // for any resources to load or fail, making it safe to proceed
+            resourcesLoaded = true;
             completeLoading();
           }
         }, 12000); // 12 second maximum timeout
