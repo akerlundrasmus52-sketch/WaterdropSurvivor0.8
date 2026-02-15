@@ -1613,7 +1613,7 @@
 
   <!-- Main Menu -->
   <div id="main-menu">
-    <div class="gold-display" id="menu-gold">GOLD: 0</div>
+    <!-- Gold display removed from main menu per requirements - only show in inventory/forge/progression/death -->
     <div class="menu-title">WATER DROP SURVIVOR</div>
     <div class="menu-buttons">
       <button class="menu-btn" id="start-game-btn">START GAME</button>
@@ -8302,8 +8302,9 @@
       // Update quest tracker
       updateQuestTracker();
       
-      // Update gold display
-      document.getElementById('menu-gold').textContent = `GOLD: ${saveData.gold}`;
+      // Update gold display (not on main menu per requirements - only in progression/camp/death)
+      const menuGold = document.getElementById('menu-gold');
+      if (menuGold) menuGold.textContent = `GOLD: ${saveData.gold}`;
     }
 
     // --- WORLD GENERATION ---
