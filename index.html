@@ -10530,10 +10530,6 @@
       setupMenus();
       window.addEventListener('resize', onWindowResize, false);
       
-      // Signal to loading screen that module is ready - MUST be after setupMenus()
-      window.gameModuleReady = true;
-      console.info('[INIT] Game module fully initialized and ready');
-      
       // Loading screen is now handled by standalone script above
       // Listen for loading completion event to show main menu
       window.addEventListener('loadingComplete', () => {
@@ -10576,6 +10572,12 @@
       window.updateAchievementsScreen = updateAchievementsScreen;
       window.isGameActive = false; // Will be updated by game logic
       window.isPaused = false; // Will be updated by game logic
+      
+      // Signal to loading screen that module is ready
+      // CRITICAL: Must be AFTER setupMenus() AND after exposing window functions
+      // This ensures fallback menu handlers have access to all required functions
+      window.gameModuleReady = true;
+      console.info('[INIT] Game module fully initialized and ready');
 
       // Start Loop
       requestAnimationFrame(animate);
