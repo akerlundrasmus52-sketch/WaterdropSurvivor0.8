@@ -8658,6 +8658,8 @@
       saveData.inventory.forEach(item => {
         if (itemsByType[item.type]) {
           itemsByType[item.type].push(item);
+        } else {
+          console.warn(`Unknown item type: ${item.type} for item:`, item);
         }
       });
       
@@ -12947,10 +12949,17 @@
         runStats.itemsCollected.forEach(item => {
           const itemDiv = document.createElement('div');
           itemDiv.className = 'death-gear-item';
-          itemDiv.innerHTML = `
-            <span class="death-gear-icon">${getGearIcon(item.type)}</span>
-            <span class="death-gear-name rarity-${item.rarity}">${item.name}</span>
-          `;
+          
+          const iconSpan = document.createElement('span');
+          iconSpan.className = 'death-gear-icon';
+          iconSpan.textContent = getGearIcon(item.type);
+          
+          const nameSpan = document.createElement('span');
+          nameSpan.className = `death-gear-name rarity-${item.rarity}`;
+          nameSpan.textContent = item.name;
+          
+          itemDiv.appendChild(iconSpan);
+          itemDiv.appendChild(nameSpan);
           equipmentList.appendChild(itemDiv);
         });
       } else {
@@ -12966,10 +12975,18 @@
         runStats.achievementsUnlocked.forEach(achievement => {
           const achDiv = document.createElement('div');
           achDiv.className = 'death-gear-item';
-          achDiv.innerHTML = `
-            <span class="death-gear-icon">🏅</span>
-            <span class="death-gear-name" style="color: #FFD700;">${achievement.name}</span>
-          `;
+          
+          const iconSpan = document.createElement('span');
+          iconSpan.className = 'death-gear-icon';
+          iconSpan.textContent = '🏅';
+          
+          const nameSpan = document.createElement('span');
+          nameSpan.className = 'death-gear-name';
+          nameSpan.style.color = '#FFD700';
+          nameSpan.textContent = achievement.name;
+          
+          achDiv.appendChild(iconSpan);
+          achDiv.appendChild(nameSpan);
           achievementsList.appendChild(achDiv);
         });
       } else {
