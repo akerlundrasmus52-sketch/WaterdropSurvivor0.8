@@ -1785,6 +1785,15 @@
         <input type="checkbox" id="music-toggle" checked>
       </div>
       
+      <div class="settings-item">
+        <label for="quality-select">Graphics Quality</label>
+        <select id="quality-select">
+          <option value="low">Low (Better Performance)</option>
+          <option value="medium" selected>Medium (Balanced)</option>
+          <option value="high">High (Better Visuals)</option>
+        </select>
+      </div>
+      
       <button id="settings-reset-btn" class="settings-close-btn" style="background: linear-gradient(to bottom, #c0392b, #a93226); margin-top: 10px;">RESET PROGRESS</button>
       <button class="settings-close-btn" id="settings-close-btn">CLOSE</button>
     </div>
@@ -2765,10 +2774,11 @@
 
     // Game Settings
     const gameSettings = {
-      autoAim: true,
+      autoAim: false, // Auto-aim off by default, upgradeable via attributes
       controlType: 'touch', // 'touch', 'keyboard', 'gamepad'
       soundEnabled: true,
       musicEnabled: true,
+      graphicsQuality: 'medium', // 'low', 'medium', 'high'
       isPortrait: null,
       inputListenersRegistered: false
     };
@@ -9411,6 +9421,43 @@
       });
     }
 
+    // Apply graphics quality settings
+    function applyGraphicsQuality(quality) {
+      if (!renderer || !window.dirLight) return;
+      
+      switch(quality) {
+        case 'low':
+          // Low quality: Basic shadows, lower resolution
+          renderer.shadowMap.enabled = true;
+          renderer.shadowMap.type = THREE.BasicShadowMap;
+          window.dirLight.shadow.mapSize.width = 512;
+          window.dirLight.shadow.mapSize.height = 512;
+          renderer.setPixelRatio(1); // Fixed pixel ratio
+          break;
+        
+        case 'medium':
+          // Medium quality: Soft shadows, balanced resolution
+          renderer.shadowMap.enabled = true;
+          renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+          window.dirLight.shadow.mapSize.width = 1024;
+          window.dirLight.shadow.mapSize.height = 1024;
+          renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+          break;
+        
+        case 'high':
+          // High quality: Best shadows, highest resolution
+          renderer.shadowMap.enabled = true;
+          renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+          window.dirLight.shadow.mapSize.width = 2048;
+          window.dirLight.shadow.mapSize.height = 2048;
+          renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+          break;
+      }
+      
+      // Force shadow map update
+      renderer.shadowMap.needsUpdate = true;
+    }
+
     // --- GAME LOGIC ---
 
     function init() {
@@ -9459,6 +9506,9 @@
       window.dirLight.shadow.camera.top = 100;
       window.dirLight.shadow.camera.bottom = -100;
       scene.add(window.dirLight);
+
+      // Apply graphics quality settings
+      applyGraphicsQuality(gameSettings.graphicsQuality);
 
       // Setup
       createWorld();
@@ -9718,6 +9768,11 @@
         gameSettings.musicEnabled = e.target.checked;
         updateBackgroundMusic();
       };
+      
+      document.getElementById('quality-select').onchange = (e) => {
+        gameSettings.graphicsQuality = e.target.value;
+        applyGraphicsQuality(e.target.value);
+      };
 
       // Sync settings UI controls with current gameSettings state
       const autoAimCheckbox = document.getElementById('auto-aim-checkbox');
@@ -9738,6 +9793,11 @@
       const musicToggle = document.getElementById('music-toggle');
       if (musicToggle) {
         musicToggle.checked = !!gameSettings.musicEnabled;
+      }
+      
+      const qualitySelect = document.getElementById('quality-select');
+      if (qualitySelect && typeof gameSettings.graphicsQuality === 'string') {
+        qualitySelect.value = gameSettings.graphicsQuality;
       }
 
       // Ensure game systems reflect the current settings
