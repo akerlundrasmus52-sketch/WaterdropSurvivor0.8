@@ -10608,8 +10608,8 @@
       // Signal to loading screen that module is ready (success path)
       // CRITICAL: Must be AFTER setupMenus() AND after exposing window functions
       // This ensures all game functions are available before loading completes
-      // Note: This flag is also set to true on CDN failures (line 2874) to allow
-      // loading screen to complete, but in that case fallback handlers are used
+      // Note: This flag is also set to true on CDN failures (in the catch block above)
+      // to allow loading screen to complete, but in that case fallback handlers are used
       window.gameModuleReady = true;
       console.info('[INIT] Game module fully initialized and ready');
 
@@ -15097,7 +15097,7 @@
         }
       }, ERROR_RECOVERY_DELAY_MS);
       // Note: We don't set window.gameModuleReady = true on init() errors
-      // The flag is only set on: 1) CDN failure (line 2874), 2) successful init (line 10611)
+      // The flag is only set on: 1) CDN failure (in catch block), 2) successful init (in init)
       // Init errors are unexpected and should not signal "ready"
     }
     } // End of if (THREE) block
