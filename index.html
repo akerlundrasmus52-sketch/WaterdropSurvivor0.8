@@ -1803,6 +1803,9 @@
       <!-- Status Message Bar -->
       <div class="stat-text" id="status-message" style="color: #5DADE2; text-shadow: 0 0 8px rgba(93,173,226,0.8), 0 0 12px rgba(93,173,226,0.5), 1px 1px 2px rgba(0,0,0,0.5); font-size: 16px; min-height: 20px; margin-top: 5px;"></div>
       
+      <!-- Active Quest Tracker (Camp Only) -->
+      <div class="stat-text" id="quest-tracker" style="display: none; color: #FFD700; text-shadow: 0 0 8px rgba(255,215,0,0.8), 1px 1px 2px rgba(0,0,0,0.8); font-size: 14px; margin-top: 5px; background: rgba(0,0,0,0.7); padding: 5px 10px; border-radius: 5px; border: 1px solid #FFD700;"></div>
+      
       <!-- Combo Timer Display -->
       <div class="stat-text" id="combo-timer"></div>
       
@@ -7213,6 +7216,38 @@
       }
       // Continue with more building quests...
     }
+    
+    // Update quest tracker in camp screen
+    function updateQuestTracker() {
+      const questTracker = document.getElementById('quest-tracker');
+      if (!questTracker) return;
+      
+      const currentQuest = saveData.storyQuests.currentQuest;
+      if (!currentQuest) {
+        questTracker.style.display = 'none';
+        return;
+      }
+      
+      // Quest descriptions
+      const questDescriptions = {
+        'firstRun': '📜 Quest: Start your first run!',
+        'unlockSkillTree': '📜 Quest: Unlock Skill Tree (250g)',
+        'useSkillTree': '📜 Quest: Learn your first skill',
+        'unlockForge': '📜 Quest: Unlock Forge (250g)',
+        'useForge': '📜 Quest: Craft your first weapon',
+        'unlockRecycle': '📜 Quest: Unlock Trash & Recycle (300g)',
+        'useRecycle': '📜 Quest: Scrap an item',
+        'unlockArmory': '📜 Quest: Unlock Armory (250g)',
+        'useArmory': '📜 Quest: Equip gear at Armory'
+      };
+      
+      if (questDescriptions[currentQuest]) {
+        questTracker.textContent = questDescriptions[currentQuest];
+        questTracker.style.display = 'block';
+      } else {
+        questTracker.style.display = 'none';
+      }
+    }
 
     // --- STORY QUEST POPUP SYSTEM ---
     function showQuestPopup(title, message, buttonText = 'Got it!', onClose = null) {
@@ -7459,6 +7494,9 @@
       
       // Update training section
       updateTrainingSection();
+      
+      // Update quest tracker
+      updateQuestTracker();
       
       // Update gold display
       document.getElementById('menu-gold').textContent = `GOLD: ${saveData.gold}`;
