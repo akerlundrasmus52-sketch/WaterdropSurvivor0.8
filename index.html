@@ -2238,7 +2238,6 @@
         
         let progress = 0;
         let isCompleted = false;
-        let readyToComplete = false;
         
         // Function to complete loading and show main menu
         function completeLoading() {
@@ -2258,7 +2257,7 @@
         // Function to check if game module is ready
         function checkModuleReady() {
           // Check if game module has signaled it's ready
-          if (window.gameModuleReady || readyToComplete) {
+          if (window.gameModuleReady) {
             completeLoading();
             return true;
           }
@@ -2278,15 +2277,21 @@
               if (!checkModuleReady()) {
                 // Module not ready yet, wait and check again
                 console.info('[LOADING] Waiting for game module to initialize...');
-                readyToComplete = true;
                 // Poll for module ready every 100ms for up to 3 seconds
                 let pollAttempts = 0;
                 const maxPollAttempts = 30; // 30 * 100ms = 3 seconds
                 const pollInterval = setInterval(() => {
                   pollAttempts++;
-                  if (checkModuleReady() || pollAttempts >= maxPollAttempts) {
+                  // Check if module became ready
+                  if (window.gameModuleReady) {
                     clearInterval(pollInterval);
-                    if (pollAttempts >= maxPollAttempts) {
+                    if (!isCompleted) {
+                      completeLoading();
+                    }
+                  } else if (pollAttempts >= maxPollAttempts) {
+                    // Timeout reached, complete anyway
+                    clearInterval(pollInterval);
+                    if (!isCompleted) {
                       console.warn('[LOADING] Module ready signal not received, completing anyway');
                       completeLoading();
                     }
