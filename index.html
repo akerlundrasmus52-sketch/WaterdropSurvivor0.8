@@ -2165,7 +2165,7 @@
     let dayNightCycle = {
       enabled: true,
       timeOfDay: 0, // 0-1, where 0=midnight, 0.25=dawn, 0.5=noon, 0.75=dusk, 1=midnight
-      cycleSpeed: 0.00005, // Very slow cycle (about 5 minutes for full day/night)
+      cycleSpeed: 0.000033, // Very slow cycle (about 8.3 minutes for full day/night at 60fps)
       lastUpdateTime: 0
     };
     
@@ -3813,8 +3813,9 @@
         if (this.isMiniBoss) {
           gearDropChance = 0.5; // 50% for mini-boss
         } else {
-          // Regular enemies: 3-8% chance (scales with enemy type)
-          gearDropChance = 0.03 + (this.type / 100); // 3% base + up to 0.09% per type
+          // Regular enemies: 3-8% chance (scales with enemy type 0-9)
+          // Enemy types 0-9 add 0-0.05% additional chance
+          gearDropChance = 0.03 + Math.min(this.type * 0.005, 0.05); // 3-8% cap
         }
         
         if (Math.random() < gearDropChance) {
@@ -3989,7 +3990,7 @@
       }
       
       addXP(amount) {
-        // Companions gain 10% of enemy XP
+        // Companions gain 10% of all XP awarded to the player
         const companionXP = Math.floor(amount * 0.1);
         this.companionData.xp += companionXP;
         
@@ -6021,7 +6022,7 @@
       }
       
       // Generate unique ID
-      const id = `gear_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const id = `gear_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
       
       // Generate name
       const prefixes = ['Worn', 'Simple', 'Fine', 'Superior', 'Masterwork', 'Legendary'];
@@ -10201,9 +10202,10 @@
       
       // Move sun position in an arc
       const sunAngle = (t - 0.25) * Math.PI * 2; // Offset so noon is at top
+      // Keep sun at minimum height of 20 to stay above effective horizon
       window.dirLight.position.set(
         Math.cos(sunAngle) * 50,
-        Math.max(10, Math.sin(sunAngle) * 100), // Never go below horizon
+        Math.max(20, Math.sin(sunAngle) * 100), // Minimum 20 units above ground
         Math.sin(sunAngle) * 50
       );
     }
