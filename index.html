@@ -1785,6 +1785,15 @@
         <input type="checkbox" id="music-toggle" checked>
       </div>
       
+      <div class="settings-item">
+        <label for="quality-select">Graphics Quality</label>
+        <select id="quality-select">
+          <option value="low">Low (Better Performance)</option>
+          <option value="medium">Medium (Balanced)</option>
+          <option value="high">High (Better Visuals)</option>
+        </select>
+      </div>
+      
       <button id="settings-reset-btn" class="settings-close-btn" style="background: linear-gradient(to bottom, #c0392b, #a93226); margin-top: 10px;">RESET PROGRESS</button>
       <button class="settings-close-btn" id="settings-close-btn">CLOSE</button>
     </div>
@@ -2765,10 +2774,11 @@
 
     // Game Settings
     const gameSettings = {
-      autoAim: true,
+      autoAim: false, // Auto-aim off by default, upgradeable via attributes
       controlType: 'touch', // 'touch', 'keyboard', 'gamepad'
       soundEnabled: true,
       musicEnabled: true,
+      graphicsQuality: 'medium', // 'low', 'medium', 'high'
       isPortrait: null,
       inputListenersRegistered: false
     };
@@ -6256,6 +6266,7 @@
 
     // --- SAVE SYSTEM ---
     const SAVE_KEY = 'waterDropSurvivorSave';
+    const SETTINGS_KEY = 'waterDropSurvivorSettings';
 
     const defaultSaveData = {
       gold: 0,
@@ -6403,6 +6414,39 @@
         localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
       } catch (e) {
         console.error('Failed to save data:', e);
+      }
+    }
+    
+    // Settings persistence
+    function saveSettings() {
+      try {
+        const settings = {
+          autoAim: gameSettings.autoAim,
+          controlType: gameSettings.controlType,
+          soundEnabled: gameSettings.soundEnabled,
+          musicEnabled: gameSettings.musicEnabled,
+          graphicsQuality: gameSettings.graphicsQuality
+        };
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+      } catch (e) {
+        console.error('Failed to save settings:', e);
+      }
+    }
+    
+    function loadSettings() {
+      try {
+        const saved = localStorage.getItem(SETTINGS_KEY);
+        if (saved) {
+          const settings = JSON.parse(saved);
+          // Apply saved settings to gameSettings
+          if (settings.autoAim !== undefined) gameSettings.autoAim = settings.autoAim;
+          if (settings.controlType) gameSettings.controlType = settings.controlType;
+          if (settings.soundEnabled !== undefined) gameSettings.soundEnabled = settings.soundEnabled;
+          if (settings.musicEnabled !== undefined) gameSettings.musicEnabled = settings.musicEnabled;
+          if (settings.graphicsQuality) gameSettings.graphicsQuality = settings.graphicsQuality;
+        }
+      } catch (e) {
+        console.error('Failed to load settings:', e);
       }
     }
 
@@ -9411,11 +9455,62 @@
       });
     }
 
+    // Apply graphics quality settings
+    function applyGraphicsQuality(quality) {
+      if (!renderer || !window.dirLight) {
+        console.warn('[Graphics Quality] Cannot apply settings: renderer or dirLight not initialized. Call after init() completes.');
+        return;
+      }
+      
+      // Dispose existing shadow maps to ensure proper reinitialization
+      if (window.dirLight.shadow.map) {
+        window.dirLight.shadow.map.dispose();
+        window.dirLight.shadow.map = null;
+      }
+      
+      switch(quality) {
+        case 'low':
+          // Low quality: Basic shadows, lower resolution
+          renderer.shadowMap.enabled = true;
+          renderer.shadowMap.type = THREE.BasicShadowMap;
+          window.dirLight.shadow.mapSize.width = 512;
+          window.dirLight.shadow.mapSize.height = 512;
+          // Fixed 1:1 ratio for maximum performance on low-end devices
+          renderer.setPixelRatio(1);
+          break;
+        
+        case 'medium':
+          // Medium quality: Soft shadows, balanced resolution
+          renderer.shadowMap.enabled = true;
+          renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+          window.dirLight.shadow.mapSize.width = 1024;
+          window.dirLight.shadow.mapSize.height = 1024;
+          // Cap at 1.5x device ratio for balanced quality/performance
+          renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+          break;
+        
+        case 'high':
+          // High quality: Best shadows, highest resolution
+          renderer.shadowMap.enabled = true;
+          renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+          window.dirLight.shadow.mapSize.width = 2048;
+          window.dirLight.shadow.mapSize.height = 2048;
+          // Cap at 2x device ratio for maximum visual quality
+          renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+          break;
+      }
+      
+      // Force shadow map update
+      renderer.shadowMap.needsUpdate = true;
+      console.log(`[Graphics Quality] Applied ${quality} quality settings`);
+    }
+
     // --- GAME LOGIC ---
 
     function init() {
-      // Load save data first
+      // Load save data and settings first
       loadSaveData();
+      loadSettings();
       
       // Scene
       scene = new THREE.Scene();
@@ -9459,6 +9554,9 @@
       window.dirLight.shadow.camera.top = 100;
       window.dirLight.shadow.camera.bottom = -100;
       scene.add(window.dirLight);
+
+      // Apply graphics quality settings
+      applyGraphicsQuality(gameSettings.graphicsQuality);
 
       // Setup
       createWorld();
@@ -9694,6 +9792,7 @@
       // Settings handlers
       document.getElementById('auto-aim-checkbox').onchange = (e) => {
         gameSettings.autoAim = e.target.checked;
+        saveSettings();
       };
       
       document.getElementById('control-type-select').onchange = (e) => {
@@ -9708,15 +9807,24 @@
         // Clear keyboard state when switching control types
         gameSettings.keysPressed = {};
         updateControlType();
+        saveSettings();
       };
       
       document.getElementById('sound-toggle').onchange = (e) => {
         gameSettings.soundEnabled = e.target.checked;
+        saveSettings();
       };
       
       document.getElementById('music-toggle').onchange = (e) => {
         gameSettings.musicEnabled = e.target.checked;
         updateBackgroundMusic();
+        saveSettings();
+      };
+      
+      document.getElementById('quality-select').onchange = (e) => {
+        gameSettings.graphicsQuality = e.target.value;
+        applyGraphicsQuality(e.target.value);
+        saveSettings();
       };
 
       // Sync settings UI controls with current gameSettings state
@@ -9738,6 +9846,12 @@
       const musicToggle = document.getElementById('music-toggle');
       if (musicToggle) {
         musicToggle.checked = !!gameSettings.musicEnabled;
+      }
+      
+      const qualitySelect = document.getElementById('quality-select');
+      if (qualitySelect) {
+        // Set to saved value (fallback to 'medium' as defensive programming)
+        qualitySelect.value = gameSettings.graphicsQuality || 'medium';
       }
 
       // Ensure game systems reflect the current settings
