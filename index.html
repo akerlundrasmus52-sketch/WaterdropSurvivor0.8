@@ -2847,6 +2847,11 @@
   <script type="module">
     import * as THREE from 'three';
 
+    // Initialize game state on window object for fallback menu handlers
+    // These are initialized early so they can be accessed before init() completes
+    window.isPaused = false;
+    window.isGameActive = false;
+
     // --- CONSTANTS & CONFIG ---
     // Error recovery delay for accessibility (allows adequate time to read and comprehend alert)
     const ERROR_RECOVERY_DELAY_MS = 5000; // 5 seconds for users with cognitive disabilities or slower reading speeds
@@ -3428,9 +3433,7 @@
     let lastEmergencyCleanup = 0; // Track last emergency cleanup time
     
     let frameCount = 0;
-    let isPaused = false;
     let isGameOver = false;
-    let isGameActive = false;  // Changed to false - start with menu
     let gameTime = 0;
     let dt = 0;
     let gameStartTime = 0;
@@ -10570,8 +10573,7 @@
       window.updateAttributesScreen = updateAttributesScreen;
       window.updateGearScreen = updateGearScreen;
       window.updateAchievementsScreen = updateAchievementsScreen;
-      window.isGameActive = false; // Will be updated by game logic
-      window.isPaused = false; // Will be updated by game logic
+      // State variables are synced via getters/setters defined earlier
       
       // Signal to loading screen that module is ready
       // CRITICAL: Must be AFTER setupMenus() AND after exposing window functions
@@ -10629,9 +10631,7 @@
         });
         
         updateGoldDisplays();
-        isGameActive = false;
         window.isGameActive = false;
-        isPaused = true;
         window.isPaused = true;
         
         // Mark as initialized only after all steps complete successfully
@@ -10704,9 +10704,7 @@
       countdownActive = false;
       
       // Ensure game properly unpauses
-      isPaused = false;
       window.isPaused = false;
-      isGameActive = true;
       window.isGameActive = true;
       gameStartTime = Date.now();
     }
@@ -10782,13 +10780,13 @@
       const optionsSettingsBtn = document.getElementById('options-settings-btn');
       
       menuBtn.addEventListener('click', () => {
-        isPaused = true;
+        window.isPaused = true;
         optionsMenu.style.display = 'flex';
         playSound('waterdrop');
       });
       
       closeOptionsBtn.addEventListener('click', () => {
-        isPaused = false;
+        window.isPaused = false;
         optionsMenu.style.display = 'none';
         playSound('waterdrop');
       });
@@ -10802,27 +10800,27 @@
         playSound('waterdrop');
         optionsMenu.style.display = 'none';
         // End the current game and go to camp
-        isGameActive = false;
-        isPaused = false;
+        window.isGameActive = false;
+        window.isPaused = false;
         showCampScreen();
       });
       
       optionsSettingsBtn.addEventListener('click', () => {
         optionsMenu.style.display = 'none';
-        isPaused = true;
+        window.isPaused = true;
         // Open settings modal
         document.getElementById('settings-modal').style.display = 'flex';
       });
       
       document.getElementById('settings-btn').onclick = () => {
         playSound('waterdrop');
-        isPaused = true;
+        window.isPaused = true;
         document.getElementById('settings-modal').style.display = 'flex';
       };
       
       document.getElementById('settings-close-btn').onclick = () => {
         playSound('waterdrop');
-        isPaused = false;
+        window.isPaused = false;
         document.getElementById('settings-modal').style.display = 'none';
       };
       
@@ -10948,8 +10946,8 @@
         playSound('waterdrop');
         document.getElementById('gear-screen').style.display = 'none';
         // If game was active, resume it; otherwise return to main menu
-        if (isGameActive) {
-          isPaused = false;
+        if (window.isGameActive) {
+          window.isPaused = false;
         } else {
           showMainMenu();
         }
@@ -11035,7 +11033,7 @@
             // Reset game and return to menu
             resetGame();
             document.getElementById('settings-modal').style.display = 'none';
-            isPaused = false;
+            window.isPaused = false;
             showMainMenu();
             updateShopUI();
             
@@ -11073,8 +11071,8 @@
         updateNotificationBadges();
         
         // If game is active, pause it; otherwise just hide main menu
-        if (isGameActive) {
-          isPaused = true;
+        if (window.isGameActive) {
+          window.isPaused = true;
         } else {
           document.getElementById('main-menu').style.display = 'none';
         }
@@ -11337,7 +11335,7 @@
     }
 
     function levelUp() {
-      isPaused = true;
+      window.isPaused = true;
       playerStats.lvl++;
       playerStats.exp -= playerStats.expReq;
       
@@ -12483,7 +12481,7 @@
           modal.style.display = 'none';
           modal.querySelector('h2').innerText = 'LEVEL UP!';
           modal.querySelector('h2').style.fontSize = '32px';
-          isPaused = false;
+          window.isPaused = false;
           updateHUD();
           
           // Re-enable pointer events after closing (for next level up)
@@ -12535,7 +12533,7 @@
     function updateCompanionUI() {
       const portrait = document.getElementById('companion-portrait');
       
-      if (!activeCompanion || !isGameActive || activeCompanion.isDead) {
+      if (!activeCompanion || !window.isGameActive || activeCompanion.isDead) {
         portrait.style.display = 'none';
         return;
       }
@@ -13333,9 +13331,7 @@
 
     function gameOver() {
       isGameOver = true;
-      isPaused = true;
       window.isPaused = true;
-      isGameActive = false;
       window.isGameActive = false;
       
       stopDroneHum(); // Stop drone sound
@@ -13722,10 +13718,8 @@
       };
 
       isGameOver = false;
-      isPaused = true;  // Start paused, countdown will unpause (PR #70)
-      window.isPaused = true;
-      isGameActive = false;  // Not active until countdown completes (PR #70)
-      window.isGameActive = false;
+      window.isPaused = true;  // Start paused, countdown will unpause (PR #70)
+      window.isGameActive = false;  // Not active until countdown completes (PR #70)
       document.getElementById('gameover-screen').style.display = 'none';
       updateHUD();
     }
@@ -13738,11 +13732,11 @@
       if (modal.style.display === 'flex') {
         modal.style.display = 'none';
         if (levelUpModal.style.display !== 'flex' && !isGameOver) {
-          isPaused = false;
+          window.isPaused = false;
         }
       } else {
         // Calculate current run time
-        const currentRunTime = isGameActive ? Math.floor((Date.now() - gameStartTime) / 1000) : 0;
+        const currentRunTime = window.isGameActive ? Math.floor((Date.now() - gameStartTime) / 1000) : 0;
         const goldThisRun = playerStats.gold - runStartGold;
         
         // Get permanent upgrade bonuses
@@ -13817,7 +13811,7 @@
 </div>
         `;
         modal.style.display = 'flex';
-        isPaused = true;
+        window.isPaused = true;
       }
     }
 
@@ -14053,7 +14047,7 @@
             return;
           }
           
-          if (!isGameActive || isPaused || isGameOver) return;
+          if (!window.isGameActive || window.isPaused || isGameOver) return;
           if (gameSettings.controlType !== 'keyboard') return;
           keysPressed[e.key.toLowerCase()] = true;
           
@@ -14225,7 +14219,7 @@
         return;
       }
 
-      if (isPaused || isGameOver || !isGameActive) {
+      if (window.isPaused || isGameOver || !window.isGameActive) {
         // Don't render scene when canvas is hidden (on main menu)
         if (!isCanvasVisible) {
           return;
@@ -14927,7 +14921,7 @@
       chests = chests.filter(c => c.active);
 
       // Dynamic time-of-day lighting system for enhanced visuals
-      if (isGameActive && !isPaused && !isGameOver && directionalLight && ambientLight) {
+      if (window.isGameActive && !window.isPaused && !isGameOver && directionalLight && ambientLight) {
         timeOfDay += dayNightCycleSpeed;
         if (timeOfDay > 1) timeOfDay = 0;
         
