@@ -2233,9 +2233,13 @@
         }
         
         let progress = 0;
+        let isCompleted = false;
         
         // Function to complete loading and show main menu
         function completeLoading() {
+          if (isCompleted) return; // Prevent duplicate calls
+          isCompleted = true;
+          
           loadingScreen.classList.add('fade-out');
           setTimeout(() => {
             loadingScreen.style.display = 'none';
@@ -2262,9 +2266,12 @@
           if (progress < 100) {
             console.warn('Loading timeout reached - forcing completion');
             loadingBar.style.width = '100%';
+            clearInterval(loadingInterval);
           }
-          clearInterval(loadingInterval);
-          setTimeout(completeLoading, 0);
+          // Only complete if not already done
+          if (!isCompleted) {
+            completeLoading();
+          }
         }, 12000); // 12 second maximum timeout
       }
       
