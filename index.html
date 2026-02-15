@@ -2233,28 +2233,26 @@
         }
         
         let progress = 0;
-        let animationFrame = null;
+        
+        // Function to complete loading and show main menu
+        function completeLoading() {
+          loadingScreen.classList.add('fade-out');
+          setTimeout(() => {
+            loadingScreen.style.display = 'none';
+            // Dispatch custom event that game init can listen to
+            window.dispatchEvent(new CustomEvent('loadingComplete'));
+          }, 500); // Match CSS transition duration
+        }
         
         // Main loading animation: 20 steps over 8 seconds
         const loadingInterval = setInterval(() => {
           progress += 5; // Increment by 5% each step
           loadingBar.style.width = progress + '%';
           
-          // Smooth transition using CSS
-          loadingBar.style.transition = 'width 0.3s ease-out';
-          
           if (progress >= 100) {
             clearInterval(loadingInterval);
-            
             // Wait briefly at 100% before fading out
-            setTimeout(() => {
-              loadingScreen.classList.add('fade-out');
-              
-              // Remove loading screen after fade animation completes
-              setTimeout(() => {
-                loadingScreen.style.display = 'none';
-              }, 500); // Match CSS transition duration
-            }, 600);
+            setTimeout(completeLoading, 600);
           }
         }, 400); // 400ms per step = 8 seconds total
         
@@ -2266,10 +2264,7 @@
             loadingBar.style.width = '100%';
           }
           clearInterval(loadingInterval);
-          loadingScreen.classList.add('fade-out');
-          setTimeout(() => {
-            loadingScreen.style.display = 'none';
-          }, 500);
+          setTimeout(completeLoading, 0);
         }, 12000); // 12 second maximum timeout
       }
       
@@ -9748,10 +9743,10 @@
       window.addEventListener('resize', onWindowResize, false);
       
       // Loading screen is now handled by standalone script above
-      // Show main menu after a brief delay to allow loading animation
-      setTimeout(() => {
+      // Listen for loading completion event to show main menu
+      window.addEventListener('loadingComplete', () => {
         showMainMenu();
-      }, 9000); // Show menu after loading completes (8s animation + 1s buffer)
+      });
 
       // Start Loop
       requestAnimationFrame(animate);
