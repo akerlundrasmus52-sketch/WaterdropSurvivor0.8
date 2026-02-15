@@ -1871,7 +1871,7 @@
   </div>
 
   <!-- Import Map for Three.js -->
-  <script async src="https://unpkg.com/es-module-shims@1.8.0/dist/es-module-shims.js" onerror="console.warn('[CDN] ES Module Shims failed to load from unpkg.com - continuing with fallback')"></script>
+  <script async src="https://unpkg.com/es-module-shims@1.8.0/dist/es-module-shims.js" onerror="console.warn('[CDN] ES Module Shims failed to load - game requires THREE.js to function')"></script>
   <script type="importmap">
     {
       "imports": {
@@ -6416,6 +6416,7 @@
         description: 'Train your combat skills',
         baseCost: 100,
         costMultiplier: 1.5,
+        maxCost: 100000, // Prevent overflow at high levels
         bonus: (level) => ({
           damage: 0.05 * level, // +5% damage per level
           attackSpeed: 0.03 * level // +3% attack speed per level
@@ -6427,6 +6428,7 @@
         description: 'Strengthen your defenses',
         baseCost: 150,
         costMultiplier: 1.5,
+        maxCost: 100000,
         bonus: (level) => ({
           hp: 20 * level, // +20 HP per level
           armor: 5 * level // +5 armor per level
@@ -6438,6 +6440,8 @@
         description: 'Study ancient knowledge',
         baseCost: 200,
         costMultiplier: 1.5,
+        maxCost: 100000,
+        skillPointLevelInterval: 3, // Award 1 skill point every 3 levels
         bonus: (level) => ({
           xp: 0.1 * level, // +10% XP per level
           skillPoints: Math.floor(level / 3) // +1 skill point every 3 levels
@@ -6449,6 +6453,7 @@
         description: 'Craft better equipment',
         baseCost: 175,
         costMultiplier: 1.5,
+        maxCost: 100000,
         bonus: (level) => ({
           critChance: 0.02 * level, // +2% crit chance per level
           critDamage: 0.1 * level // +10% crit damage per level
@@ -6460,6 +6465,7 @@
         description: 'Commune with spirits',
         baseCost: 250,
         costMultiplier: 1.5,
+        maxCost: 100000,
         bonus: (level) => ({
           gold: 0.1 * level, // +10% gold per level
           regen: 0.5 * level // +0.5 HP/sec per level
@@ -6528,7 +6534,9 @@
     function getBuildingCost(buildingId) {
       const building = CAMP_BUILDINGS[buildingId];
       const currentLevel = saveData.campBuildings[buildingId].level;
-      return Math.floor(building.baseCost * Math.pow(building.costMultiplier, currentLevel));
+      const calculatedCost = Math.floor(building.baseCost * Math.pow(building.costMultiplier, currentLevel));
+      // Cap cost at maxCost to prevent overflow at very high levels
+      return Math.min(calculatedCost, building.maxCost || 100000);
     }
 
     function upgradeCampBuilding(buildingId) {
@@ -8021,7 +8029,7 @@
         document.getElementById('gameover-screen').style.display = 'none';
         updateCampScreen();
         document.getElementById('camp-screen').style.display = 'flex';
-        showMainMenu(); // Also show main menu background
+        // Keep menu hidden during camp visit from death
       };
       
       // Reset progress button with double confirmation
@@ -11495,7 +11503,7 @@
     }
 
     // Init Game
-    try { init(); } catch(e) { console.error('[Game Error]', e); console.warn('[Game] Continuing with fallback configuration'); }
+    try { init(); } catch(e) { console.error('[Game Error]', e); console.error('[Game] Initialization failed - game cannot start'); }
 
   </script>
 </body>
