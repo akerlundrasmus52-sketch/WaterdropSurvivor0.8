@@ -9818,11 +9818,11 @@
       }
       
       // Check retry limit to prevent infinite error loops
-      menuShowAttempts++;
-      if (menuShowAttempts > MAX_MENU_SHOW_ATTEMPTS) {
+      if (menuShowAttempts >= MAX_MENU_SHOW_ATTEMPTS) {
         console.error('[MENU] Maximum retry attempts reached, giving up');
         return;
       }
+      menuShowAttempts++;
       
       try {
         console.info(`[MENU] Initializing main menu (attempt ${menuShowAttempts}/${MAX_MENU_SHOW_ATTEMPTS})`);
@@ -9834,7 +9834,6 @@
           throw new Error('main-menu element not found');
         }
         
-        mainMenuInitialized = true;
         menuElement.style.display = 'flex';
         console.info('[MENU] Menu display set to flex');
         
@@ -9842,6 +9841,8 @@
         isGameActive = false;
         isPaused = true;
         
+        // Mark as initialized only after all steps complete successfully
+        mainMenuInitialized = true;
         console.info('[MENU] Main menu initialized successfully');
       } catch (error) {
         console.error('[MENU] Failed to show main menu:', error);
@@ -9849,6 +9850,7 @@
         // Only show error UI on final attempt to avoid multiple error messages
         if (menuShowAttempts >= MAX_MENU_SHOW_ATTEMPTS) {
           const errorDiv = document.createElement('div');
+          errorDiv.className = 'menu-error-overlay';
           errorDiv.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(255,0,0,0.8);color:white;padding:20px;border-radius:10px;z-index:9999;text-align:center;';
           errorDiv.innerHTML = '<h2>Menu Loading Error</h2><p>Please refresh the page</p><p style="font-size:12px;">Error: ' + error.message + '</p>';
           document.body.appendChild(errorDiv);
@@ -12766,9 +12768,8 @@
         // Cancel all active smoke particle RAF callbacks to prevent memory leak
         if (player.activeSmokeCallbacks) {
           player.activeSmokeCallbacks.forEach(callbackObj => {
-            if (callbackObj.rafId !== null) {
-              cancelAnimationFrame(callbackObj.rafId);
-            }
+            // RAF ID is guaranteed to exist since objects are only added after scheduling
+            cancelAnimationFrame(callbackObj.rafId);
           });
           player.activeSmokeCallbacks = [];
         }
