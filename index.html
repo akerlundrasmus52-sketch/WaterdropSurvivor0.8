@@ -1789,7 +1789,7 @@
         <label for="quality-select">Graphics Quality</label>
         <select id="quality-select">
           <option value="low">Low (Better Performance)</option>
-          <option value="medium">Medium (Balanced)</option>
+          <option value="medium" selected>Medium (Balanced)</option>
           <option value="high">High (Better Visuals)</option>
         </select>
       </div>
@@ -6266,6 +6266,7 @@
 
     // --- SAVE SYSTEM ---
     const SAVE_KEY = 'waterDropSurvivorSave';
+    const SETTINGS_KEY = 'waterDropSurvivorSettings';
 
     const defaultSaveData = {
       gold: 0,
@@ -6413,6 +6414,39 @@
         localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
       } catch (e) {
         console.error('Failed to save data:', e);
+      }
+    }
+    
+    // Settings persistence
+    function saveSettings() {
+      try {
+        const settings = {
+          autoAim: gameSettings.autoAim,
+          controlType: gameSettings.controlType,
+          soundEnabled: gameSettings.soundEnabled,
+          musicEnabled: gameSettings.musicEnabled,
+          graphicsQuality: gameSettings.graphicsQuality
+        };
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+      } catch (e) {
+        console.error('Failed to save settings:', e);
+      }
+    }
+    
+    function loadSettings() {
+      try {
+        const saved = localStorage.getItem(SETTINGS_KEY);
+        if (saved) {
+          const settings = JSON.parse(saved);
+          // Apply saved settings to gameSettings
+          if (settings.autoAim !== undefined) gameSettings.autoAim = settings.autoAim;
+          if (settings.controlType) gameSettings.controlType = settings.controlType;
+          if (settings.soundEnabled !== undefined) gameSettings.soundEnabled = settings.soundEnabled;
+          if (settings.musicEnabled !== undefined) gameSettings.musicEnabled = settings.musicEnabled;
+          if (settings.graphicsQuality) gameSettings.graphicsQuality = settings.graphicsQuality;
+        }
+      } catch (e) {
+        console.error('Failed to load settings:', e);
       }
     }
 
@@ -9474,8 +9508,9 @@
     // --- GAME LOGIC ---
 
     function init() {
-      // Load save data first
+      // Load save data and settings first
       loadSaveData();
+      loadSettings();
       
       // Scene
       scene = new THREE.Scene();
@@ -9757,6 +9792,7 @@
       // Settings handlers
       document.getElementById('auto-aim-checkbox').onchange = (e) => {
         gameSettings.autoAim = e.target.checked;
+        saveSettings();
       };
       
       document.getElementById('control-type-select').onchange = (e) => {
@@ -9771,20 +9807,24 @@
         // Clear keyboard state when switching control types
         gameSettings.keysPressed = {};
         updateControlType();
+        saveSettings();
       };
       
       document.getElementById('sound-toggle').onchange = (e) => {
         gameSettings.soundEnabled = e.target.checked;
+        saveSettings();
       };
       
       document.getElementById('music-toggle').onchange = (e) => {
         gameSettings.musicEnabled = e.target.checked;
         updateBackgroundMusic();
+        saveSettings();
       };
       
       document.getElementById('quality-select').onchange = (e) => {
         gameSettings.graphicsQuality = e.target.value;
         applyGraphicsQuality(e.target.value);
+        saveSettings();
       };
 
       // Sync settings UI controls with current gameSettings state
