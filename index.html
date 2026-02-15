@@ -4166,6 +4166,17 @@
         
         playerStats.kills++;
         
+        // Track side challenge progress
+        if (saveData.sideChallenges.kill10Enemies && !saveData.sideChallenges.kill10Enemies.completed) {
+          saveData.sideChallenges.kill10Enemies.progress++;
+          if (saveData.sideChallenges.kill10Enemies.progress >= saveData.sideChallenges.kill10Enemies.target) {
+            saveData.sideChallenges.kill10Enemies.completed = true;
+            saveSaveData();
+            createFloatingText("Side Quest Complete: Kill 10 Enemies! +50 Gold", this.mesh.position, '#FFD700');
+            saveData.gold += 50;
+          }
+        }
+        
         // Track mini-boss defeats for achievements
         if (this.isMiniBoss) {
           playerStats.miniBossesDefeated++;
@@ -7145,8 +7156,62 @@
           'The Skill Tree is unlocked! Time to learn your first skill.<br><br><b>Objective:</b> Unlock any skill in the Skill Tree (free for first one)',
           'Let\'s Learn!'
         );
+      } else if (completed.includes('useSkillTree') && !completed.includes('unlockForge')) {
+        // Quest 4: Unlock Forge
+        saveData.storyQuests.currentQuest = 'unlockForge';
+        saveSaveData();
+        showQuestPopup(
+          '📜 Quest: Forge Your Arsenal',
+          'Time to unlock the Forge to craft powerful weapons!<br><br><b>Objective:</b> Purchase the Forge building (250 gold)',
+          'To the Forge!'
+        );
+      } else if (completed.includes('unlockForge') && !completed.includes('useForge') && !saveData.storyQuests.buildingFirstUse.forge) {
+        // Quest 5: Craft first weapon
+        saveData.storyQuests.currentQuest = 'useForge';
+        saveSaveData();
+        showQuestPopup(
+          '📜 Quest: Craft Your First Weapon',
+          'Use the Forge to craft your first weapon upgrade!<br><br><b>Objective:</b> Craft any weapon at the Forge',
+          'Let\'s Craft!'
+        );
+      } else if (completed.includes('useForge') && !completed.includes('unlockRecycle')) {
+        // Quest 6: Unlock Trash & Recycle
+        saveData.storyQuests.currentQuest = 'unlockRecycle';
+        saveSaveData();
+        showQuestPopup(
+          '📜 Quest: Recycling Power',
+          'Unlock Trash & Recycle to convert unwanted gear into materials!<br><br><b>Objective:</b> Purchase Trash & Recycle building (300 gold)',
+          'Let\'s Recycle!'
+        );
+      } else if (completed.includes('unlockRecycle') && !completed.includes('useRecycle') && !saveData.storyQuests.buildingFirstUse.trashRecycle) {
+        // Quest 7: Recycle first item
+        saveData.storyQuests.currentQuest = 'useRecycle';
+        saveSaveData();
+        showQuestPopup(
+          '📜 Quest: Scrap for Materials',
+          'Time to turn old gear into useful materials!<br><br><b>Objective:</b> Scrap any item at Trash & Recycle',
+          'Let\'s Scrap!'
+        );
+      } else if (completed.includes('useRecycle') && !completed.includes('unlockArmory')) {
+        // Quest 8: Unlock Armory
+        saveData.storyQuests.currentQuest = 'unlockArmory';
+        saveSaveData();
+        showQuestPopup(
+          '📜 Quest: Gear Up',
+          'Unlock the Armory to manage and upgrade your equipment!<br><br><b>Objective:</b> Purchase Armory building (250 gold)',
+          'To the Armory!'
+        );
+      } else if (completed.includes('unlockArmory') && !completed.includes('useArmory') && !saveData.storyQuests.buildingFirstUse.armory) {
+        // Quest 9: Equip/infuse gear
+        saveData.storyQuests.currentQuest = 'useArmory';
+        saveSaveData();
+        showQuestPopup(
+          '📜 Quest: Equip Your Gear',
+          'Visit the Armory to equip or upgrade your gear!<br><br><b>Objective:</b> Equip or infuse any item at the Armory',
+          'Gear Up!'
+        );
       }
-      // Add more quest chain steps here...
+      // Continue with more building quests...
     }
 
     // --- STORY QUEST POPUP SYSTEM ---
@@ -7276,9 +7341,15 @@
               playSound('collect');
               showStatusMessage(`${building.name} unlocked!`, 2000);
               
-              // Quest progression: Skill Tree unlocked
+              // Quest progression: Building unlocks
               if (buildingId === 'skillTree' && saveData.storyQuests.currentQuest === 'unlockSkillTree') {
                 progressQuest('unlockSkillTree', true);
+              } else if (buildingId === 'forge' && saveData.storyQuests.currentQuest === 'unlockForge') {
+                progressQuest('unlockForge', true);
+              } else if (buildingId === 'trashRecycle' && saveData.storyQuests.currentQuest === 'unlockRecycle') {
+                progressQuest('unlockRecycle', true);
+              } else if (buildingId === 'armory' && saveData.storyQuests.currentQuest === 'unlockArmory') {
+                progressQuest('unlockArmory', true);
               }
             } else {
               playSound('invalid');
