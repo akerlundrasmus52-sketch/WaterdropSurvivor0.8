@@ -9786,7 +9786,9 @@
     
     function showMainMenu() {
       // Guard flag check and assignment
-      // NOTE: JavaScript is single-threaded, so this check-then-set is atomic in the browser
+      // NOTE: While JavaScript is single-threaded, async callbacks can interleave between event loop ticks.
+      // This guard flag pattern prevents re-execution across different async calls (event listener, fallback, error recovery).
+      // The first call to reach this point sets the flag, preventing subsequent calls from executing the body.
       if (mainMenuInitialized) return; // Already initialized, prevent duplicate calls
       mainMenuInitialized = true;
       
@@ -14073,6 +14075,9 @@
       const errorMsg = `The game failed to start properly.\n\nPlease refresh the page to try again. If the problem persists, try clearing your browser cache.`;
       alert(errorMsg);
       // Try to show main menu anyway in case it's a non-critical error
+      // NOTE: This is a best-effort recovery. The menu may not function correctly if
+      // critical initialization steps failed, but it's better than showing a black screen.
+      // Users can refresh as instructed in the error message.
       setTimeout(() => {
         try {
           // Always use showMainMenu to respect the guard flag
