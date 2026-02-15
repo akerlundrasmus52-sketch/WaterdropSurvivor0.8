@@ -9784,6 +9784,8 @@
     }
     
     function showMainMenu() {
+      // Guard flag check and assignment
+      // NOTE: JavaScript is single-threaded, so this check-then-set is atomic in the browser
       if (mainMenuShown) return; // Already shown, prevent duplicate calls
       mainMenuShown = true;
       
@@ -14073,9 +14075,7 @@
       setTimeout(() => {
         try {
           // Always use showMainMenu to respect the guard flag
-          if (typeof showMainMenu === 'function') {
-            showMainMenu();
-          }
+          showMainMenu();
         } catch(menuError) {
           console.error('Failed to show main menu fallback:', menuError);
         }
