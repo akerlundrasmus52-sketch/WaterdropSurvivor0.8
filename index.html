@@ -2847,9 +2847,13 @@
   <!-- Initialize critical game state BEFORE module script -->
   <!-- This ensures state is available even if module import fails -->
   <script>
-    // Initialize game state on window object for fallback menu handlers
+    // Initialize critical game state on window object for fallback menu handlers
     // Exposed on window (instead of module-scoped) to allow standalone menu button handlers
     // and external code to access game state. Used consistently throughout to keep in sync.
+    // - isPaused: Controls pause state of the game (false = running, true = paused)
+    // - isGameActive: Whether game loop is active (false = menu/idle, true = gameplay)
+    // - gameModuleReady: Signals that Three.js module loaded and init() completed successfully
+    //   Also set to true on errors to prevent loading screen timeout and allow fallback menu
     window.isPaused = false;
     window.isGameActive = false;
     window.gameModuleReady = false;
@@ -2865,8 +2869,7 @@
       console.info('[INIT] Three.js CDN loaded successfully');
     } catch (importError) {
       console.error('[INIT] Failed to load Three.js from CDN:', importError);
-      const errorMsg = 'Failed to load 3D graphics library.\n\nPlease check your internet connection and refresh the page.';
-      alert(errorMsg);
+      alert('Failed to load 3D graphics library.\n\nPlease check your internet connection and refresh the page.');
       // Set ready flag to allow fallback menu to work
       window.gameModuleReady = true;
       throw importError; // Re-throw to prevent further execution
