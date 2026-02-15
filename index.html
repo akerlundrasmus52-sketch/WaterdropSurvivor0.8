@@ -9458,7 +9458,7 @@
     // Apply graphics quality settings
     function applyGraphicsQuality(quality) {
       if (!renderer || !window.dirLight) {
-        console.warn('[Graphics Quality] Cannot apply settings: renderer or dirLight not initialized');
+        console.warn('[Graphics Quality] Cannot apply settings: renderer or dirLight not initialized. Call after init() completes.');
         return;
       }
       
@@ -9850,7 +9850,7 @@
       
       const qualitySelect = document.getElementById('quality-select');
       if (qualitySelect) {
-        // Set to saved value or default (gameSettings.graphicsQuality is always defined)
+        // Set to saved value (fallback to 'medium' as defensive programming)
         qualitySelect.value = gameSettings.graphicsQuality || 'medium';
       }
 
