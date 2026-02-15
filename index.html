@@ -2238,6 +2238,7 @@
         
         let progress = 0;
         let isCompleted = false;
+        let readyToComplete = false;
         
         // Function to complete loading and show main menu
         function completeLoading() {
@@ -2254,6 +2255,16 @@
           }, 500); // Match CSS transition duration
         }
         
+        // Function to check if game module is ready
+        function checkModuleReady() {
+          // Check if game module has signaled it's ready
+          if (window.gameModuleReady || readyToComplete) {
+            completeLoading();
+            return true;
+          }
+          return false;
+        }
+        
         // Main loading animation: 20 steps over 8 seconds
         const loadingInterval = setInterval(() => {
           progress += 5; // Increment by 5% each step
@@ -2261,8 +2272,28 @@
           
           if (progress >= 100) {
             clearInterval(loadingInterval);
-            // Wait briefly at 100% before fading out
-            setTimeout(completeLoading, 600);
+            // Wait briefly at 100% to show completed bar
+            setTimeout(() => {
+              // Check if module is ready before completing
+              if (!checkModuleReady()) {
+                // Module not ready yet, wait and check again
+                console.info('[LOADING] Waiting for game module to initialize...');
+                readyToComplete = true;
+                // Poll for module ready every 100ms for up to 3 seconds
+                let pollAttempts = 0;
+                const maxPollAttempts = 30; // 30 * 100ms = 3 seconds
+                const pollInterval = setInterval(() => {
+                  pollAttempts++;
+                  if (checkModuleReady() || pollAttempts >= maxPollAttempts) {
+                    clearInterval(pollInterval);
+                    if (pollAttempts >= maxPollAttempts) {
+                      console.warn('[LOADING] Module ready signal not received, completing anyway');
+                      completeLoading();
+                    }
+                  }
+                }, 100);
+              }
+            }, 600);
           }
         }, 400); // 400ms per step = 8 seconds total
         
@@ -9694,6 +9725,10 @@
     const MAX_MENU_SHOW_ATTEMPTS = 3;
 
     function init() {
+      // Signal to loading screen that module is ready
+      window.gameModuleReady = true;
+      console.info('[INIT] Game module initialized, signaling ready to loading screen');
+      
       // Load save data first
       loadSaveData();
       
