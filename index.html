@@ -2263,11 +2263,10 @@
         // Failsafe: Force hide loading screen after 12 seconds
         // Prevents infinite loading if something goes wrong
         setTimeout(() => {
-          // Always clear the interval to prevent unnecessary ticks
-          clearInterval(loadingInterval);
-          
           // Only trigger completion if not already done
           if (!isCompleted) {
+            // Clear interval and complete loading
+            clearInterval(loadingInterval);
             console.warn('Loading timeout reached - forcing completion');
             loadingBar.style.width = '100%';
             completeLoading();
