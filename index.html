@@ -3848,7 +3848,10 @@
         playSound('shoot');
       }
 
-      takeDamage(amount, isCrit = false) {
+      takeDamage(amount, isCrit = false, damageType = 'physical') {
+        // Track last damage type for death effects
+        this.lastDamageType = damageType;
+        
         // Phase 5: Hit impact particles (flesh/blood) on every hit
         spawnParticles(this.mesh.position, 0x8B0000, 3); // Blood particles
         
@@ -4044,139 +4047,46 @@
           updateEiffelQuestUI();
         }
         
-        // Phase 5: Death Variety - 50% explode into pieces, 50% leave corpse sprite
-        const explodeIntoPieces = Math.random() < 0.5;
-        
-        // More dramatic explosion effect on death
+        // Determine death effect based on damage type and health when dying
+        const damageType = this.lastDamageType || 'physical';
         const enemyColor = this.mesh.material.color.getHex();
         
-        if (explodeIntoPieces) {
-          // EXPLOSION DEATH: Main explosion - ENHANCED with more particles
-          spawnParticles(this.mesh.position, enemyColor, 20); // Reduced for performance
-          spawnParticles(this.mesh.position, 0xFFFFFF, 8); // Reduced for performance
-          spawnParticles(this.mesh.position, 0x8B0000, 6); // Reduced for performance
-          
-          // Add explosion ring effect
-          const ringGeo = new THREE.RingGeometry(0.1, 0.2, 16);
-          const ringMat = new THREE.MeshBasicMaterial({ 
-            color: enemyColor, 
-            transparent: true, 
-            opacity: 0.8,
-            side: THREE.DoubleSide
-          });
-          const ring = new THREE.Mesh(ringGeo, ringMat);
-          ring.position.copy(this.mesh.position);
-          ring.position.y = 0.1;
-          ring.rotation.x = Math.PI / 2;
-          scene.add(ring);
-          
-          // Animate ring expanding and fading
-          let ringLife = 20;
-          const animateRing = () => {
-            ringLife--;
-            const scale = 1 + (20 - ringLife) * 0.3;
-            ring.scale.set(scale, scale, 1);
-            ring.material.opacity = ringLife / 20;
-            
-            if (ringLife <= 0) {
-              scene.remove(ring);
-              ring.geometry.dispose();
-              ring.material.dispose();
-            } else {
-              requestAnimationFrame(animateRing);
-            }
-          };
-          animateRing();
-          
-          // Explode into more pieces - ENHANCED
-          const pieceCount = this.isMiniBoss ? 25 : 15; // More pieces for mini-boss
-          for(let i = 0; i < pieceCount; i++) {
-            const piece = new THREE.Mesh(
-              new THREE.BoxGeometry(0.3, 0.3, 0.3),
-              new THREE.MeshBasicMaterial({ color: enemyColor, transparent: true })
-            );
-            piece.position.copy(this.mesh.position);
-            scene.add(piece);
-            
-            const angle = (i / pieceCount) * Math.PI * 2;
-            const speed = this.isMiniBoss ? 0.6 : 0.4; // Faster explosion for mini-boss
-            const vel = new THREE.Vector3(
-              Math.cos(angle) * speed,
-              0.3 + Math.random() * 0.3,
-              Math.sin(angle) * speed
-            );
-            
-            let life = 50;
-            const updatePiece = () => {
-              life--;
-              piece.position.add(vel);
-              vel.y -= 0.02; // Gravity
-              piece.rotation.x += 0.15;
-              piece.rotation.y += 0.15;
-              piece.material.opacity = life / 50;
-              
-              if (life <= 0 || piece.position.y < 0) {
-                scene.remove(piece);
-                piece.geometry.dispose();
-                piece.material.dispose();
-              } else {
-                requestAnimationFrame(updatePiece);
-              }
-            };
-            updatePiece();
-          }
+        // Special death effects based on damage type
+        if (damageType === 'fire') {
+          // Fire death: Char and ash
+          this.dieByFire(enemyColor);
+        } else if (damageType === 'ice') {
+          // Ice death: Shatter into ice shards
+          this.dieByIce(enemyColor);
+        } else if (damageType === 'lightning') {
+          // Lightning death: Blackened and smoke
+          this.dieByLightning(enemyColor);
+        } else if (damageType === 'shotgun') {
+          // Shotgun death: Massive gibs explosion
+          this.dieByShotgun(enemyColor);
+        } else if (damageType === 'headshot') {
+          // Headshot: Specific head explosion
+          this.dieByHeadshot(enemyColor);
         } else {
-          // CORPSE DEATH: Leave a corpse sprite that fades away
-          spawnParticles(this.mesh.position, enemyColor, 8); // Reduced for performance
-          spawnParticles(this.mesh.position, 0x8B0000, 4); // Reduced for performance
-          
-          // Create flat corpse sprite (flattened version of enemy)
-          const corpseGeo = new THREE.CircleGeometry(0.6, 16);
-          const corpseMat = new THREE.MeshBasicMaterial({ 
-            color: enemyColor, 
-            transparent: true,
-            opacity: 0.7,
-            side: THREE.DoubleSide
-          });
-          const corpse = new THREE.Mesh(corpseGeo, corpseMat);
-          corpse.position.copy(this.mesh.position);
-          corpse.position.y = 0.02; // Just above ground
-          corpse.rotation.x = -Math.PI / 2; // Lay flat
-          scene.add(corpse);
-          
-          // Add blood pool under corpse
-          const bloodGeo = new THREE.CircleGeometry(0.8, 16);
-          const bloodMat = new THREE.MeshBasicMaterial({ 
-            color: 0x8B0000, 
-            transparent: true,
-            opacity: 0.5,
-            side: THREE.DoubleSide
-          });
-          const bloodPool = new THREE.Mesh(bloodGeo, bloodMat);
-          bloodPool.position.copy(this.mesh.position);
-          bloodPool.position.y = 0.01; // Just above ground
-          bloodPool.rotation.x = -Math.PI / 2;
-          scene.add(bloodPool);
-          
-          // Fade out corpse over time (approximately 2 seconds)
-          let corpseLife = 120;
-          const fadeCorpse = () => {
-            corpseLife--;
-            corpse.material.opacity = (corpseLife / 120) * 0.7;
-            bloodPool.material.opacity = (corpseLife / 120) * 0.5;
-            
-            if (corpseLife <= 0) {
-              scene.remove(corpse);
-              scene.remove(bloodPool);
-              corpse.geometry.dispose();
-              corpse.material.dispose();
-              bloodPool.geometry.dispose();
-              bloodPool.material.dispose();
-            } else {
-              requestAnimationFrame(fadeCorpse);
+          // Standard death (bullet/physical)
+          this.dieStandard(enemyColor);
+        }
+        
+        // Flying enemies fall to ground
+        if (this.isFlying) {
+          const fallDuration = 60;
+          let fallTimer = 0;
+          const startY = this.mesh.position.y;
+          const fallAnim = () => {
+            if (fallTimer < fallDuration && this.mesh.parent) {
+              fallTimer++;
+              this.mesh.position.y = startY * (1 - fallTimer / fallDuration);
+              this.mesh.rotation.x += 0.1;
+              this.mesh.rotation.z += 0.15;
+              requestAnimationFrame(fallAnim);
             }
           };
-          fadeCorpse();
+          fallAnim();
         }
         
         // Screen flash on kill (dopamine boost) - stronger flash for mini-boss
@@ -4299,6 +4209,487 @@
         updateHUD();
         updateComboCounter(true); // Phase 2: Track combo on kill
         checkAchievements(); // Check for achievements after kill
+      }
+      
+      // Specialized death effects by damage type
+      dieStandard(enemyColor) {
+        // Phase 5: Death Variety - 50% explode into pieces, 50% leave corpse sprite
+        const explodeIntoPieces = Math.random() < 0.5;
+        
+        if (explodeIntoPieces) {
+          // EXPLOSION DEATH: Main explosion
+          spawnParticles(this.mesh.position, enemyColor, 20);
+          spawnParticles(this.mesh.position, 0xFFFFFF, 8);
+          spawnParticles(this.mesh.position, 0x8B0000, 6);
+          
+          // Explosion ring
+          const ringGeo = new THREE.RingGeometry(0.1, 0.2, 16);
+          const ringMat = new THREE.MeshBasicMaterial({ 
+            color: enemyColor, 
+            transparent: true, 
+            opacity: 0.8,
+            side: THREE.DoubleSide
+          });
+          const ring = new THREE.Mesh(ringGeo, ringMat);
+          ring.position.copy(this.mesh.position);
+          ring.position.y = 0.1;
+          ring.rotation.x = Math.PI / 2;
+          scene.add(ring);
+          
+          let ringLife = 20;
+          const animateRing = () => {
+            ringLife--;
+            const scale = 1 + (20 - ringLife) * 0.3;
+            ring.scale.set(scale, scale, 1);
+            ring.material.opacity = ringLife / 20;
+            
+            if (ringLife <= 0) {
+              scene.remove(ring);
+              ring.geometry.dispose();
+              ring.material.dispose();
+            } else {
+              requestAnimationFrame(animateRing);
+            }
+          };
+          animateRing();
+          
+          // Explode into pieces
+          const pieceCount = this.isMiniBoss ? 25 : 15;
+          for(let i = 0; i < pieceCount; i++) {
+            const piece = new THREE.Mesh(
+              new THREE.BoxGeometry(0.3, 0.3, 0.3),
+              new THREE.MeshBasicMaterial({ color: enemyColor, transparent: true })
+            );
+            piece.position.copy(this.mesh.position);
+            scene.add(piece);
+            
+            const angle = (i / pieceCount) * Math.PI * 2;
+            const speed = this.isMiniBoss ? 0.6 : 0.4;
+            const vel = new THREE.Vector3(
+              Math.cos(angle) * speed,
+              0.3 + Math.random() * 0.3,
+              Math.sin(angle) * speed
+            );
+            
+            let life = 50;
+            const updatePiece = () => {
+              life--;
+              piece.position.add(vel);
+              vel.y -= 0.02; // Gravity
+              piece.rotation.x += 0.15;
+              piece.rotation.y += 0.15;
+              piece.material.opacity = life / 50;
+              
+              if (life <= 0 || piece.position.y < 0) {
+                scene.remove(piece);
+                piece.geometry.dispose();
+                piece.material.dispose();
+              } else {
+                requestAnimationFrame(updatePiece);
+              }
+            };
+            updatePiece();
+          }
+        } else {
+          // CORPSE DEATH: Leave a corpse sprite
+          spawnParticles(this.mesh.position, enemyColor, 8);
+          spawnParticles(this.mesh.position, 0x8B0000, 4);
+          
+          // Corpse sprite
+          const corpseGeo = new THREE.CircleGeometry(0.6, 16);
+          const corpseMat = new THREE.MeshBasicMaterial({ 
+            color: enemyColor, 
+            transparent: true,
+            opacity: 0.7,
+            side: THREE.DoubleSide
+          });
+          const corpse = new THREE.Mesh(corpseGeo, corpseMat);
+          corpse.position.copy(this.mesh.position);
+          corpse.position.y = 0.02;
+          corpse.rotation.x = -Math.PI / 2;
+          scene.add(corpse);
+          
+          // Blood pool
+          const bloodGeo = new THREE.CircleGeometry(0.8, 16);
+          const bloodMat = new THREE.MeshBasicMaterial({ 
+            color: 0x8B0000, 
+            transparent: true,
+            opacity: 0.5,
+            side: THREE.DoubleSide
+          });
+          const bloodPool = new THREE.Mesh(bloodGeo, bloodMat);
+          bloodPool.position.copy(this.mesh.position);
+          bloodPool.position.y = 0.01;
+          bloodPool.rotation.x = -Math.PI / 2;
+          scene.add(bloodPool);
+          
+          // Fade out
+          let corpseLife = 120;
+          const fadeCorpse = () => {
+            corpseLife--;
+            corpse.material.opacity = (corpseLife / 120) * 0.7;
+            bloodPool.material.opacity = (corpseLife / 120) * 0.5;
+            
+            if (corpseLife <= 0) {
+              scene.remove(corpse);
+              scene.remove(bloodPool);
+              corpse.geometry.dispose();
+              corpse.material.dispose();
+              bloodPool.geometry.dispose();
+              bloodPool.material.dispose();
+            } else {
+              requestAnimationFrame(fadeCorpse);
+            }
+          };
+          fadeCorpse();
+        }
+      }
+      
+      dieByFire(enemyColor) {
+        // Fire death: Char and burn to ash
+        spawnParticles(this.mesh.position, 0xFF4500, 20); // Orange fire
+        spawnParticles(this.mesh.position, 0xFFFF00, 10); // Yellow flames
+        spawnParticles(this.mesh.position, 0x222222, 8); // Black smoke
+        
+        // Charred corpse
+        const corpseGeo = new THREE.CircleGeometry(0.6, 16);
+        const corpseMat = new THREE.MeshBasicMaterial({ 
+          color: 0x222222, // Charred black
+          transparent: true,
+          opacity: 0.8,
+          side: THREE.DoubleSide
+        });
+        const corpse = new THREE.Mesh(corpseGeo, corpseMat);
+        corpse.position.copy(this.mesh.position);
+        corpse.position.y = 0.02;
+        corpse.rotation.x = -Math.PI / 2;
+        scene.add(corpse);
+        
+        // Burn mark on ground
+        const burnGeo = new THREE.CircleGeometry(0.9, 16);
+        const burnMat = new THREE.MeshBasicMaterial({ 
+          color: 0x111111, 
+          transparent: true,
+          opacity: 0.6,
+          side: THREE.DoubleSide
+        });
+        const burnMark = new THREE.Mesh(burnGeo, burnMat);
+        burnMark.position.copy(this.mesh.position);
+        burnMark.position.y = 0.01;
+        burnMark.rotation.x = -Math.PI / 2;
+        scene.add(burnMark);
+        
+        // Fade to ash
+        let life = 120;
+        const fadeToAsh = () => {
+          life--;
+          corpse.material.opacity = (life / 120) * 0.8;
+          corpse.scale.multiplyScalar(0.995); // Shrink
+          
+          if (life <= 0) {
+            scene.remove(corpse);
+            scene.remove(burnMark);
+            corpse.geometry.dispose();
+            corpse.material.dispose();
+            burnMark.geometry.dispose();
+            burnMark.material.dispose();
+          } else {
+            requestAnimationFrame(fadeToAsh);
+          }
+        };
+        fadeToAsh();
+      }
+      
+      dieByIce(enemyColor) {
+        // Ice death: Shatter into ice crystals
+        spawnParticles(this.mesh.position, 0x87CEEB, 15); // Light blue ice
+        spawnParticles(this.mesh.position, 0xFFFFFF, 12); // White frost
+        
+        // Shatter into ice shards
+        const shardCount = 20;
+        for(let i = 0; i < shardCount; i++) {
+          const shardGeo = new THREE.ConeGeometry(0.1, 0.3, 4);
+          const shardMat = new THREE.MeshBasicMaterial({ 
+            color: 0xADD8E6, // Light ice blue
+            transparent: true,
+            opacity: 0.7
+          });
+          const shard = new THREE.Mesh(shardGeo, shardMat);
+          shard.position.copy(this.mesh.position);
+          scene.add(shard);
+          
+          const angle = (i / shardCount) * Math.PI * 2;
+          const vel = new THREE.Vector3(
+            Math.cos(angle) * 0.3,
+            0.4 + Math.random() * 0.2,
+            Math.sin(angle) * 0.3
+          );
+          
+          let life = 60;
+          const updateShard = () => {
+            life--;
+            shard.position.add(vel);
+            vel.y -= 0.03; // Gravity
+            shard.rotation.x += 0.2;
+            shard.rotation.z += 0.15;
+            shard.material.opacity = (life / 60) * 0.7;
+            
+            if (life <= 0 || shard.position.y < 0) {
+              scene.remove(shard);
+              shard.geometry.dispose();
+              shard.material.dispose();
+            } else {
+              requestAnimationFrame(updateShard);
+            }
+          };
+          updateShard();
+        }
+      }
+      
+      dieByLightning(enemyColor) {
+        // Lightning death: Blackened and smoking
+        spawnParticles(this.mesh.position, 0xFFFF00, 15); // Yellow lightning
+        spawnParticles(this.mesh.position, 0xFFFFFF, 10); // White flash
+        spawnParticles(this.mesh.position, 0x444444, 8); // Gray smoke
+        
+        // Blackened corpse
+        const corpseGeo = new THREE.CircleGeometry(0.6, 16);
+        const corpseMat = new THREE.MeshBasicMaterial({ 
+          color: 0x1a1a1a, // Very dark gray
+          transparent: true,
+          opacity: 0.9,
+          side: THREE.DoubleSide
+        });
+        const corpse = new THREE.Mesh(corpseGeo, corpseMat);
+        corpse.position.copy(this.mesh.position);
+        corpse.position.y = 0.02;
+        corpse.rotation.x = -Math.PI / 2;
+        scene.add(corpse);
+        
+        // Smoke particles rising
+        let smokeLife = 80;
+        const createSmoke = () => {
+          if (smokeLife > 0) {
+            smokeLife--;
+            const smokeGeo = new THREE.SphereGeometry(0.1, 6, 6);
+            const smokeMat = new THREE.MeshBasicMaterial({ 
+              color: 0x666666,
+              transparent: true,
+              opacity: 0.4
+            });
+            const smoke = new THREE.Mesh(smokeGeo, smokeMat);
+            smoke.position.copy(this.mesh.position);
+            smoke.position.y = 0.1;
+            scene.add(smoke);
+            
+            let life = 40;
+            const updateSmoke = () => {
+              life--;
+              smoke.position.y += 0.03;
+              smoke.position.x += (Math.random() - 0.5) * 0.02;
+              smoke.position.z += (Math.random() - 0.5) * 0.02;
+              smoke.scale.multiplyScalar(1.03);
+              smoke.material.opacity = (life / 40) * 0.4;
+              
+              if (life <= 0) {
+                scene.remove(smoke);
+                smoke.geometry.dispose();
+                smoke.material.dispose();
+              } else {
+                requestAnimationFrame(updateSmoke);
+              }
+            };
+            updateSmoke();
+            
+            setTimeout(createSmoke, 100);
+          }
+        };
+        createSmoke();
+        
+        // Fade corpse
+        let corpseLife = 120;
+        const fadeCorpse = () => {
+          corpseLife--;
+          corpse.material.opacity = (corpseLife / 120) * 0.9;
+          
+          if (corpseLife <= 0) {
+            scene.remove(corpse);
+            corpse.geometry.dispose();
+            corpse.material.dispose();
+          } else {
+            requestAnimationFrame(fadeCorpse);
+          }
+        };
+        fadeCorpse();
+      }
+      
+      dieByShotgun(enemyColor) {
+        // Shotgun death: Massive explosion of gibs
+        spawnParticles(this.mesh.position, enemyColor, 30);
+        spawnParticles(this.mesh.position, 0x8B0000, 20); // Lots of blood
+        spawnParticles(this.mesh.position, 0xFFFFFF, 10);
+        
+        // Massive gib explosion
+        const gibCount = 40;
+        for(let i = 0; i < gibCount; i++) {
+          const gibSize = 0.1 + Math.random() * 0.2;
+          const gibGeo = new THREE.BoxGeometry(gibSize, gibSize, gibSize);
+          const gibMat = new THREE.MeshBasicMaterial({ 
+            color: i % 3 === 0 ? 0x8B0000 : enemyColor,
+            transparent: true
+          });
+          const gib = new THREE.Mesh(gibGeo, gibMat);
+          gib.position.copy(this.mesh.position);
+          scene.add(gib);
+          
+          const angle = (i / gibCount) * Math.PI * 2;
+          const speed = 0.5 + Math.random() * 0.3;
+          const vel = new THREE.Vector3(
+            Math.cos(angle) * speed,
+            0.4 + Math.random() * 0.4,
+            Math.sin(angle) * speed
+          );
+          
+          let life = 60;
+          const updateGib = () => {
+            life--;
+            gib.position.add(vel);
+            vel.y -= 0.025; // Gravity
+            gib.rotation.x += 0.25;
+            gib.rotation.y += 0.2;
+            gib.material.opacity = life / 60;
+            
+            if (life <= 0 || gib.position.y < 0) {
+              scene.remove(gib);
+              gib.geometry.dispose();
+              gib.material.dispose();
+            } else {
+              requestAnimationFrame(updateGib);
+            }
+          };
+          updateGib();
+        }
+        
+        // Large blood pool
+        const bloodGeo = new THREE.CircleGeometry(1.2, 16);
+        const bloodMat = new THREE.MeshBasicMaterial({ 
+          color: 0x8B0000, 
+          transparent: true,
+          opacity: 0.7,
+          side: THREE.DoubleSide
+        });
+        const bloodPool = new THREE.Mesh(bloodGeo, bloodMat);
+        bloodPool.position.copy(this.mesh.position);
+        bloodPool.position.y = 0.01;
+        bloodPool.rotation.x = -Math.PI / 2;
+        scene.add(bloodPool);
+        
+        // Fade blood
+        let life = 150;
+        const fadeBlood = () => {
+          life--;
+          bloodPool.material.opacity = (life / 150) * 0.7;
+          
+          if (life <= 0) {
+            scene.remove(bloodPool);
+            bloodPool.geometry.dispose();
+            bloodPool.material.dispose();
+          } else {
+            requestAnimationFrame(fadeBlood);
+          }
+        };
+        fadeBlood();
+      }
+      
+      dieByHeadshot(enemyColor) {
+        // Headshot: Dramatic head explosion
+        spawnParticles(this.mesh.position, enemyColor, 25);
+        spawnParticles(this.mesh.position, 0x8B0000, 15);
+        spawnParticles(this.mesh.position, 0xFFFFFF, 5);
+        
+        // Body falls (corpse)
+        const corpseGeo = new THREE.CircleGeometry(0.6, 16);
+        const corpseMat = new THREE.MeshBasicMaterial({ 
+          color: enemyColor, 
+          transparent: true,
+          opacity: 0.8,
+          side: THREE.DoubleSide
+        });
+        const corpse = new THREE.Mesh(corpseGeo, corpseMat);
+        corpse.position.copy(this.mesh.position);
+        corpse.position.y = 0.02;
+        corpse.rotation.x = -Math.PI / 2;
+        scene.add(corpse);
+        
+        // Blood splatter
+        const bloodGeo = new THREE.CircleGeometry(0.9, 16);
+        const bloodMat = new THREE.MeshBasicMaterial({ 
+          color: 0x8B0000, 
+          transparent: true,
+          opacity: 0.6,
+          side: THREE.DoubleSide
+        });
+        const bloodPool = new THREE.Mesh(bloodGeo, bloodMat);
+        bloodPool.position.copy(this.mesh.position);
+        bloodPool.position.y = 0.01;
+        bloodPool.rotation.x = -Math.PI / 2;
+        scene.add(bloodPool);
+        
+        // Extra head pieces
+        for(let i = 0; i < 10; i++) {
+          const piece = new THREE.Mesh(
+            new THREE.BoxGeometry(0.15, 0.15, 0.15),
+            new THREE.MeshBasicMaterial({ color: i % 2 === 0 ? enemyColor : 0x8B0000, transparent: true })
+          );
+          piece.position.copy(this.mesh.position);
+          piece.position.y += 0.5; // Start from head height
+          scene.add(piece);
+          
+          const vel = new THREE.Vector3(
+            (Math.random() - 0.5) * 0.4,
+            0.5 + Math.random() * 0.3,
+            (Math.random() - 0.5) * 0.4
+          );
+          
+          let life = 50;
+          const updatePiece = () => {
+            life--;
+            piece.position.add(vel);
+            vel.y -= 0.03;
+            piece.rotation.x += 0.2;
+            piece.rotation.y += 0.25;
+            piece.material.opacity = life / 50;
+            
+            if (life <= 0 || piece.position.y < 0) {
+              scene.remove(piece);
+              piece.geometry.dispose();
+              piece.material.dispose();
+            } else {
+              requestAnimationFrame(updatePiece);
+            }
+          };
+          updatePiece();
+        }
+        
+        // Fade corpse
+        let life = 120;
+        const fadeCorpse = () => {
+          life--;
+          corpse.material.opacity = (life / 120) * 0.8;
+          bloodPool.material.opacity = (life / 120) * 0.6;
+          
+          if (life <= 0) {
+            scene.remove(corpse);
+            scene.remove(bloodPool);
+            corpse.geometry.dispose();
+            corpse.material.dispose();
+            bloodPool.geometry.dispose();
+            bloodPool.material.dispose();
+          } else {
+            requestAnimationFrame(fadeCorpse);
+          }
+        };
+        fadeCorpse();
       }
     }
 
