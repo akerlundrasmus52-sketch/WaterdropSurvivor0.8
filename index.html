@@ -9760,12 +9760,12 @@
       
       // FALLBACK: Check if loading already completed before listener was registered
       // This handles race condition where module loads after loading screen completes
-      setTimeout(() => {
-        if (window.gameLoadingCompleted) {
-          console.log('Loading already completed - showing main menu via fallback');
-          showMainMenu();
-        }
-      }, 100); // Short delay to allow loadingComplete event to fire if it's about to
+      // Check immediately - the event listener is already registered and will catch
+      // any events that fire after this point
+      if (window.gameLoadingCompleted) {
+        console.log('Loading already completed - showing main menu via fallback');
+        showMainMenu();
+      }
 
       // Start Loop
       requestAnimationFrame(animate);
@@ -14062,15 +14062,9 @@
       // Try to show main menu anyway in case it's a non-critical error
       setTimeout(() => {
         try {
-          // Use existing showMainMenu function for consistent behavior
+          // Always use showMainMenu to respect the guard flag
           if (typeof showMainMenu === 'function') {
             showMainMenu();
-          } else {
-            // Fallback if showMainMenu is not accessible due to severe error
-            const mainMenu = document.getElementById('main-menu');
-            if (mainMenu) {
-              mainMenu.style.display = 'flex';
-            }
           }
         } catch(menuError) {
           console.error('Failed to show main menu fallback:', menuError);
