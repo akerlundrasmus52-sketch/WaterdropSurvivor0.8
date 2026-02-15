@@ -2333,18 +2333,18 @@
       lakeCenterZ: -30,
       lakeRadius: 18,
       // Performance optimization - Phase 1
-      // CHANGED: Increased to allow more enemies (harder difficulty)
-      maxEnemiesOnScreen: 80,
+      // CHANGED: Reduced caps to prevent 200-350s freeze bug
+      maxEnemiesOnScreen: 50,   // Reduced from 80
       // CRITICAL FIX: Entity caps to prevent freeze at 300s
-      maxProjectiles: 200,
-      maxParticles: 300,
+      maxProjectiles: 100,       // Reduced from 200
+      maxParticles: 150,         // Reduced from 300
       maxFlashLights: 20,
       maxMeteors: 10,
       maxExpGems: 100,
       maxGoldCoins: 50,
       maxDamageNumbers: 30, // DOM elements cap
       // Memory cleanup intervals
-      cleanupInterval: 5000, // Cleanup every 5 seconds (reduced from 10s for better performance)
+      cleanupInterval: 2000, // Cleanup every 2 seconds (reduced from 5s for better performance)
       emergencyCleanupThreshold: 500, // Total entities before emergency cleanup
       // Phase 2: Stat caps for balanced progression
       statCaps: {
@@ -2867,7 +2867,7 @@
     
     // Deferred disposal queue for Three.js memory management (PR #81)
     const disposalQueue = [];
-    const MAX_DISPOSALS_PER_FRAME = 50; // Increased from 10 to 50 for faster cleanup
+    const MAX_DISPOSALS_PER_FRAME = 100; // Increased from 50 to 100 for faster cleanup during heavy combat
     
     // CRITICAL FIX: Track RAF callbacks to prevent accumulation (freeze fix)
     let activeRAFCallbacks = new Set();
@@ -3154,6 +3154,8 @@
         
         // Smoke particles timer
         this.smokeTimer = 0;
+        // Track active smoke particle RAF callbacks for cleanup
+        this.activeSmokeCallbacks = [];
         
         // Pulsing glow
         const glowGeo = new THREE.SphereGeometry(0.55, 16, 16);
@@ -3477,8 +3479,9 @@
             smoke.position.copy(tipWorldPos);
             scene.add(smoke);
             
-            // Animate smoke rising
+            // Animate smoke rising with tracked RAF callback
             let smokeLife = 80;
+            let rafId = null;
             const updateSmoke = () => {
               smokeLife--;
               smoke.position.y += 0.02; // Rise up
@@ -3491,8 +3494,15 @@
                 scene.remove(smoke);
                 smoke.geometry.dispose();
                 smoke.material.dispose();
+                // Remove this RAF ID from tracking
+                const index = this.activeSmokeCallbacks.indexOf(rafId);
+                if (index > -1) this.activeSmokeCallbacks.splice(index, 1);
               } else {
-                requestAnimationFrame(updateSmoke);
+                rafId = requestAnimationFrame(updateSmoke);
+                // Track the RAF callback for cleanup
+                if (!this.activeSmokeCallbacks.includes(rafId)) {
+                  this.activeSmokeCallbacks.push(rafId);
+                }
               }
             };
             updateSmoke();
@@ -9766,6 +9776,7 @@
       // Loading screen is now handled by standalone script above
       // Listen for loading completion event to show main menu
       window.addEventListener('loadingComplete', () => {
+        console.info('[MENU] Loading complete event received');
         showMainMenu();
       });
       
@@ -9776,9 +9787,18 @@
       // Note: Both the event listener and this fallback may call showMainMenu(),
       // but the guard flag in showMainMenu() ensures it only executes once
       if (window.loadingScreenCompleted) {
-        console.info('Loading already completed - showing main menu via fallback');
+        console.info('[MENU] Loading already completed - showing main menu via fallback');
         showMainMenu();
       }
+      
+      // GUARANTEED FALLBACK: Force menu display after 2 seconds if it hasn't shown
+      // This handles cases where both the event and immediate check fail
+      setTimeout(() => {
+        if (!mainMenuInitialized) {
+          console.warn('[MENU] Menu not initialized after 2s - forcing display');
+          showMainMenu();
+        }
+      }, 2000);
 
       // Start Loop
       requestAnimationFrame(animate);
@@ -9789,13 +9809,41 @@
       // NOTE: While JavaScript is single-threaded, async callbacks can interleave between event loop ticks.
       // This guard flag pattern prevents re-execution across different async calls (event listener, fallback, error recovery).
       // The first call to reach this point sets the flag, preventing subsequent calls from executing the body.
-      if (mainMenuInitialized) return; // Already initialized, prevent duplicate calls
-      mainMenuInitialized = true;
+      if (mainMenuInitialized) {
+        console.info('[MENU] Already initialized, skipping');
+        return; // Already initialized, prevent duplicate calls
+      }
       
-      document.getElementById('main-menu').style.display = 'flex';
-      updateGoldDisplays();
-      isGameActive = false;
-      isPaused = true;
+      try {
+        console.info('[MENU] Initializing main menu');
+        
+        // Verify DOM element exists before accessing
+        const menuElement = document.getElementById('main-menu');
+        if (!menuElement) {
+          console.error('[MENU] ERROR: main-menu element not found in DOM');
+          throw new Error('main-menu element not found');
+        }
+        
+        mainMenuInitialized = true;
+        menuElement.style.display = 'flex';
+        console.info('[MENU] Menu display set to flex');
+        
+        updateGoldDisplays();
+        isGameActive = false;
+        isPaused = true;
+        
+        console.info('[MENU] Main menu initialized successfully');
+      } catch (error) {
+        console.error('[MENU] Failed to show main menu:', error);
+        // Don't set mainMenuInitialized on error so retry can occur
+        mainMenuInitialized = false;
+        
+        // Try to display a user-friendly error
+        const errorDiv = document.createElement('div');
+        errorDiv.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(255,0,0,0.8);color:white;padding:20px;border-radius:10px;z-index:9999;text-align:center;';
+        errorDiv.innerHTML = '<h2>Menu Loading Error</h2><p>Please refresh the page</p><p style="font-size:12px;">Error: ' + error.message + '</p>';
+        document.body.appendChild(errorDiv);
+      }
     }
     
     function hideMainMenu() {
@@ -12705,6 +12753,13 @@
 
       // Reset Player - Spawn near the statue at map center
       if (player) {
+        // Cancel all active smoke particle RAF callbacks to prevent memory leak
+        if (player.activeSmokeCallbacks) {
+          player.activeSmokeCallbacks.forEach(rafId => {
+            cancelAnimationFrame(rafId);
+          });
+          player.activeSmokeCallbacks = [];
+        }
         player.mesh.position.set(3, 0.5, 3); // Phase 4: Spawn next to the statue (not inside it)
         player.mesh.material.color.setHex(COLORS.player);
       }
