@@ -2219,6 +2219,8 @@
     (function() {
       let loadingInitialized = false;
       // Global flag to track if loading has completed - used by module for fallback
+      // NOTE: This flag is never reset as loading only happens once per page load.
+      // The game does not support hot reloading or client-side navigation.
       window.gameLoadingCompleted = false;
       
       function startLoadingBar() {
@@ -9674,6 +9676,8 @@
     
     // Guard flag to prevent showing main menu multiple times
     // Declared here before init() to avoid temporal dead zone issues
+    // NOTE: This flag is never reset as the game only initializes once per page load.
+    // Game restarts return to camp screen, not main menu, so reinitializing is not needed.
     let mainMenuShown = false;
 
     function init() {
