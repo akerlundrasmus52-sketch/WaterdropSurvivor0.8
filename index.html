@@ -13859,7 +13859,7 @@
         if (renderer && renderer.domElement && renderer.domElement.style.display === 'none') {
           return;
         }
-        // Still render the scene so visual effects (camera shake, particles, modals) are visible (PR #82)
+        // Render the scene for paused/game-over states so visual effects (camera shake, particles, modals) are visible (PR #82)
         renderer.render(scene, camera);
         return;
       }
