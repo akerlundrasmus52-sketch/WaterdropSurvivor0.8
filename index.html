@@ -2112,7 +2112,7 @@
       // AUDIO IMPLEMENTATION NOTES:
       // - Gun sound active with realistic Desert Eagle sound (deep .50 caliber)
       // - Other sounds muted for now (code kept for future use)
-      // - Soundtrack request noted: Neelix – "By Way to Leave"
+      // - Soundtrack request noted: Neelix - "By Way to Leave"
       //   (To be implemented in future update with proper licensing)
       
       if (!gameSettings.soundEnabled) return; // Respect sound settings
@@ -2161,33 +2161,9 @@
         osc3.start(now + 0.05);
         osc3.stop(now + 0.25);
       } else if (type === 'hit') {
-        // NOTE: Other sounds muted for now per requirements (keep code for future)
-        // Will be re-enabled later - commented out sound generation
+        // NOTE: Other sounds muted for now per requirements
+        // To re-enable, remove this return statement
         return; // Muted
-        
-        /* Original hit sound - kept for future reference
-        // Punchy hit sound with more bass
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(200, now);
-        osc.frequency.exponentialRampToValueAtTime(50, now + 0.08);
-        gain.gain.setValueAtTime(0.3, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
-        osc.start(now);
-        osc.stop(now + 0.08);
-        
-        // Add deep bass punch
-        const osc2 = audioCtx.createOscillator();
-        const gain2 = audioCtx.createGain();
-        osc2.connect(gain2);
-        gain2.connect(audioCtx.destination);
-        osc2.type = 'sine';
-        osc2.frequency.setValueAtTime(80, now);
-        osc2.frequency.exponentialRampToValueAtTime(30, now + 0.06);
-        gain2.gain.setValueAtTime(0.25, now);
-        gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
-        osc2.start(now);
-        osc2.stop(now + 0.06);
-        */
       } else if (type === 'levelup') {
         // Slow motion "Waoooo" effect - ascending with slow sweep
         osc.type = 'sine';
@@ -9548,8 +9524,6 @@
       scene.background = new THREE.Color(COLORS.bg);
       // Enhanced fog for depth - reacts to day/night cycle lighting
       scene.fog = new THREE.Fog(COLORS.bg, 20, 60);
-      // Store fog reference for dynamic updates based on lighting
-      window.sceneFog = scene.fog;
       
       // Phase 5: Initialize particle object pool for performance (100 particles pre-allocated)
       particlePool = new ObjectPool(
@@ -12931,8 +12905,8 @@
       scene.background = skyColor;
       
       // Update fog color to match sky (fog reacts to lighting)
-      if (window.sceneFog) {
-        window.sceneFog.color = skyColor;
+      if (scene.fog) {
+        scene.fog.color = skyColor;
       }
       
       // Move sun position in an arc
