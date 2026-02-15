@@ -2303,6 +2303,8 @@
     import * as THREE from 'three';
 
     // --- CONSTANTS & CONFIG ---
+    const ERROR_RECOVERY_DELAY_MS = 1000; // Delay before showing menu after error, allows user to read alert
+    
     const COLORS = {
       bg: 0xFFF0F5,
       player: 0x4FC3F7, // Light Blue - more like water droplet
@@ -14069,7 +14071,7 @@
         } catch(menuError) {
           console.error('Failed to show main menu fallback:', menuError);
         }
-      }, 1000);
+      }, ERROR_RECOVERY_DELAY_MS);
     }
 
   </script>
