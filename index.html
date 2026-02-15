@@ -1650,9 +1650,11 @@
     <div class="screen-title">⛺ CAMP</div>
     
     <!-- Camp Tabs -->
-    <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+    <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
       <button class="btn" id="camp-buildings-tab" style="padding: 10px 20px; font-size: 16px; background: #5A3A31;">BUILDINGS</button>
       <button class="btn" id="camp-skills-tab" style="padding: 10px 20px; font-size: 16px; background: #3a3a3a;">SKILL TREE</button>
+      <button class="btn" id="camp-sleep-tab" style="padding: 10px 20px; font-size: 16px; background: #3a3a3a;">💤 SLEEP</button>
+      <button class="btn" id="camp-training-tab" style="padding: 10px 20px; font-size: 16px; background: #3a3a3a;">🏋️ TRAINING</button>
     </div>
 
     <!-- Buildings Section -->
@@ -1670,6 +1672,50 @@
         Skill Points Available: 0
       </div>
       <div class="skill-tree-container" id="camp-skills-content">
+        <!-- Dynamically populated -->
+      </div>
+    </div>
+
+    <!-- Sleep Section -->
+    <div id="camp-sleep-section" style="display: none; width: 100%; max-width: 600px;">
+      <div style="color: #FFD700; font-size: 20px; margin-bottom: 15px;">💤 Rest & Prepare</div>
+      <div style="background: rgba(0,0,0,0.5); padding: 30px; border-radius: 10px; text-align: center;">
+        <p style="font-size: 18px; margin-bottom: 30px; line-height: 1.6;">
+          Choose when to start your next run. Time of day affects enemy behavior and loot chances.
+        </p>
+        <div style="display: flex; gap: 20px; justify-content: center; flex-wrap: wrap;">
+          <div id="sleep-day-option" style="flex: 1; min-width: 200px; background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); padding: 20px; border-radius: 10px; cursor: pointer; border: 3px solid #FFD700;">
+            <div style="font-size: 40px; margin-bottom: 10px;">☀️</div>
+            <div style="font-size: 20px; font-weight: bold; color: #000; margin-bottom: 10px;">DAY</div>
+            <div style="font-size: 14px; color: #333;">Better visibility, standard enemy spawns</div>
+          </div>
+          <div id="sleep-night-option" style="flex: 1; min-width: 200px; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); padding: 20px; border-radius: 10px; cursor: pointer; border: 3px solid transparent;">
+            <div style="font-size: 40px; margin-bottom: 10px;">🌙</div>
+            <div style="font-size: 20px; font-weight: bold; color: #FFF; margin-bottom: 10px;">NIGHT</div>
+            <div style="font-size: 14px; color: #AAA;">Harder enemies, +50% gold & XP</div>
+          </div>
+        </div>
+        <p style="font-size: 14px; margin-top: 20px; color: #AAA;">
+          Current selection: <span id="current-time-choice" style="color: #FFD700; font-weight: bold;">DAY</span>
+        </p>
+      </div>
+    </div>
+
+    <!-- Training Section -->
+    <div id="camp-training-section" style="display: none; width: 100%; max-width: 700px;">
+      <div style="color: #FFD700; font-size: 20px; margin-bottom: 15px;">🏋️ Training Hall</div>
+      <div style="background: rgba(0,0,0,0.5); padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+        <p style="font-size: 16px; margin-bottom: 15px;">
+          Training Points Available: <span id="training-points-display" style="color: #FFD700; font-weight: bold;">0</span>
+        </p>
+        <p style="font-size: 14px; color: #AAA; line-height: 1.6;">
+          You earn 1 training point every 24 hours. Spend gold + 1 training point to permanently increase an attribute by +1.
+        </p>
+        <p style="font-size: 12px; color: #888; margin-top: 10px;" id="next-training-point-time">
+          Next training point in: Calculating...
+        </p>
+      </div>
+      <div id="training-attributes-content" style="display: flex; flex-direction: column; gap: 15px;">
         <!-- Dynamically populated -->
       </div>
     </div>
@@ -5470,7 +5516,10 @@
         strength: 0,
         vitality: 0,
         luck: 0,
-        wisdom: 0
+        wisdom: 0,
+        // New training hall attributes
+        endurance: 0,
+        flexibility: 0
       },
       unspentAttributePoints: 0,
       // Gear system
@@ -5493,11 +5542,23 @@
       selectedCompanion: 'stormWolf', // Default companion
       // Camp System
       campBuildings: {
-        trainingGrounds: { level: 0, maxLevel: 10 },
-        armory: { level: 0, maxLevel: 10 },
-        library: { level: 0, maxLevel: 10 },
-        workshop: { level: 0, maxLevel: 10 },
-        shrine: { level: 0, maxLevel: 10 }
+        // Free buildings
+        questMission: { level: 0, maxLevel: 1, unlocked: false },
+        inventory: { level: 0, maxLevel: 1, unlocked: false },
+        campHub: { level: 0, maxLevel: 1, unlocked: false },
+        // Paid buildings
+        skillTree: { level: 0, maxLevel: 10, unlocked: false },
+        companionHouse: { level: 0, maxLevel: 10, unlocked: false },
+        forge: { level: 0, maxLevel: 10, unlocked: false },
+        armory: { level: 0, maxLevel: 10, unlocked: false },
+        trainingHall: { level: 0, maxLevel: 10, unlocked: false },
+        trashRecycle: { level: 0, maxLevel: 10, unlocked: false },
+        tempShop: { level: 0, maxLevel: 10, unlocked: false },
+        // Legacy buildings (for compatibility)
+        trainingGrounds: { level: 0, maxLevel: 10, unlocked: false },
+        library: { level: 0, maxLevel: 10, unlocked: false },
+        workshop: { level: 0, maxLevel: 10, unlocked: false },
+        shrine: { level: 0, maxLevel: 10, unlocked: false }
       },
       skillTree: {
         combatMastery: { unlocked: false, level: 0, maxLevel: 5 },
@@ -5506,7 +5567,13 @@
         quickLearner: { unlocked: false, level: 0, maxLevel: 5 },
         fortification: { unlocked: false, level: 0, maxLevel: 5 }
       },
-      skillPoints: 0
+      skillPoints: 0,
+      // Camp state
+      hasVisitedCamp: false, // Track first camp visit
+      nextRunTimeOfDay: 'day', // 'day' or 'night' - chosen from sleep option
+      // Training Hall system
+      trainingPoints: 0,
+      lastTrainingPointTime: 0 // Timestamp of last training point awarded
     };
 
     let saveData = { ...defaultSaveData };
@@ -6458,28 +6525,170 @@
 
     // --- CAMP SYSTEM ---
     const CAMP_BUILDINGS = {
-      trainingGrounds: {
-        name: 'Training Grounds',
-        icon: '🏋️',
-        description: 'Train your combat skills',
-        baseCost: 100,
-        costMultiplier: 1.5,
-        maxCost: 100000, // Prevent overflow at high levels
+      // FREE BUILDINGS (unlocked on first camp visit after first death)
+      questMission: {
+        name: 'Quest & Mission Hall',
+        icon: '📜',
+        description: 'Start main story quests and missions',
+        baseCost: 0, // Free
+        costMultiplier: 0,
+        maxCost: 0,
+        isFree: true,
+        isCore: true, // Core building, always available
         bonus: (level) => ({
-          damage: 0.05 * level, // +5% damage per level
-          attackSpeed: 0.03 * level // +3% attack speed per level
+          // No stats bonus, provides quest functionality
         })
+      },
+      inventory: {
+        name: 'Inventory Storage',
+        icon: '📦',
+        description: 'Store earned items and equipment',
+        baseCost: 0, // Free
+        costMultiplier: 0,
+        maxCost: 0,
+        isFree: true,
+        isCore: true,
+        bonus: (level) => ({
+          // No stats bonus, provides storage
+        })
+      },
+      campHub: {
+        name: 'Camp Hub',
+        icon: '🏠',
+        description: 'Central hub for all camp activities',
+        baseCost: 0, // Free
+        costMultiplier: 0,
+        maxCost: 0,
+        isFree: true,
+        isCore: true,
+        bonus: (level) => ({
+          // No stats bonus, central access point
+        })
+      },
+      
+      // PAID BUILDINGS (250g base cost unless noted)
+      skillTree: {
+        name: 'Skill Tree',
+        icon: '🌳',
+        description: 'Unlock powerful skill upgrades and abilities',
+        baseCost: 250,
+        costMultiplier: 1.8,
+        maxCost: 100000,
+        bonus: (level) => ({
+          skillPoints: Math.floor(level / 2) // +1 skill point every 2 levels
+        })
+      },
+      companionHouse: {
+        name: 'Companion House',
+        icon: '🐺',
+        description: 'House and upgrade companions. Higher levels unlock better companions',
+        baseCost: 250,
+        costMultiplier: 1.8,
+        maxCost: 100000,
+        bonus: (level) => {
+          // Unlock companions at certain levels
+          const unlocks = [];
+          if (level >= 3) unlocks.push('Uncommon companions');
+          if (level >= 5) unlocks.push('Rare companions');
+          if (level >= 7) unlocks.push('Epic companions');
+          if (level >= 10) unlocks.push('Legendary companions');
+          return {
+            companionDamage: 0.1 * level, // +10% companion damage per level
+            unlocks: unlocks.join(', ') || 'Basic companions'
+          };
+        }
+      },
+      forge: {
+        name: 'Forge',
+        icon: '⚒️',
+        description: 'Craft and upgrade weapons. Higher tiers unlock better rarities',
+        baseCost: 250,
+        costMultiplier: 1.8,
+        maxCost: 100000,
+        bonus: (level) => {
+          // Unlock crafting tiers
+          let tier = 'Common';
+          if (level >= 2) tier = 'Common, Uncommon';
+          if (level >= 4) tier = 'Common, Uncommon, Rare';
+          if (level >= 6) tier = 'Common, Uncommon, Rare, Epic';
+          if (level >= 8) tier = 'Common, Uncommon, Rare, Epic, Legendary';
+          if (level >= 10) tier = 'Common, Uncommon, Rare, Epic, Legendary, Mythic';
+          return {
+            craftingTier: tier
+          };
+        }
       },
       armory: {
         name: 'Armory',
         icon: '🛡️',
-        description: 'Strengthen your defenses',
-        baseCost: 150,
-        costMultiplier: 1.5,
+        description: 'Store and upgrade gear. Higher levels unlock better rarities',
+        baseCost: 250,
+        costMultiplier: 1.8,
+        maxCost: 100000,
+        bonus: (level) => {
+          let tier = 'Common';
+          if (level >= 2) tier = 'Uncommon';
+          if (level >= 4) tier = 'Rare';
+          if (level >= 6) tier = 'Epic';
+          if (level >= 8) tier = 'Legendary';
+          if (level >= 10) tier = 'Mythic';
+          return {
+            hp: 20 * level, // +20 HP per level
+            armor: 5 * level, // +5 armor per level
+            gearTier: tier
+          };
+        }
+      },
+      trainingHall: {
+        name: 'Training Hall',
+        icon: '🏋️',
+        description: 'Train attributes with daily training points (Strength, Endurance, Flexibility)',
+        baseCost: 250,
+        costMultiplier: 1.8,
         maxCost: 100000,
         bonus: (level) => ({
-          hp: 20 * level, // +20 HP per level
-          armor: 5 * level // +5 armor per level
+          trainingEfficiency: 0.05 * level // +5% attribute gain per level
+        })
+      },
+      
+      // ADDITIONAL BUILDINGS
+      trashRecycle: {
+        name: 'Trash & Recycle',
+        icon: '♻️',
+        description: 'Scrap old gear to materials. Fuse/infuse gear for better stats',
+        baseCost: 300,
+        costMultiplier: 1.7,
+        maxCost: 100000,
+        bonus: (level) => ({
+          recycleValue: 0.1 * level, // +10% recycle value per level
+          fusionPower: 0.05 * level // +5% fusion bonus per level
+        })
+      },
+      tempShop: {
+        name: 'Temporary Items Shop',
+        icon: '🏪',
+        description: 'Buy one-run temporary power-ups and consumables',
+        baseCost: 200,
+        costMultiplier: 1.6,
+        maxCost: 100000,
+        bonus: (level) => ({
+          shopDiscount: 0.05 * level, // +5% discount per level
+          itemVariety: level // More items available per level
+        })
+      },
+      
+      // LEGACY BUILDINGS (kept for compatibility)
+      trainingGrounds: {
+        name: 'Training Grounds (Legacy)',
+        icon: '🏋️',
+        description: 'Train your combat skills (legacy system)',
+        baseCost: 100,
+        costMultiplier: 1.5,
+        maxCost: 100000,
+        isLegacy: true, // Hidden from new players
+        bonus: (level) => ({
+          damage: 0.05 * level,
+          attackSpeed: 0.03 * level
         })
       },
       library: {
@@ -6489,10 +6698,10 @@
         baseCost: 200,
         costMultiplier: 1.5,
         maxCost: 100000,
-        skillPointLevelInterval: 3, // Award 1 skill point every 3 levels
+        skillPointLevelInterval: 3,
         bonus: (level) => ({
-          xp: 0.1 * level, // +10% XP per level
-          skillPoints: Math.floor(level / 3) // +1 skill point every 3 levels
+          xp: 0.1 * level,
+          skillPoints: Math.floor(level / 3)
         })
       },
       workshop: {
@@ -6503,8 +6712,8 @@
         costMultiplier: 1.5,
         maxCost: 100000,
         bonus: (level) => ({
-          critChance: 0.02 * level, // +2% crit chance per level
-          critDamage: 0.1 * level // +10% crit damage per level
+          critChance: 0.02 * level,
+          critDamage: 0.1 * level
         })
       },
       shrine: {
@@ -6515,8 +6724,8 @@
         costMultiplier: 1.5,
         maxCost: 100000,
         bonus: (level) => ({
-          gold: 0.1 * level, // +10% gold per level
-          regen: 0.5 * level // +0.5 HP/sec per level
+          gold: 0.1 * level,
+          regen: 0.5 * level
         })
       }
     };
@@ -6645,51 +6854,243 @@
       }
     }
 
+    // Training Hall functions
+    function updateTrainingPoints() {
+      // Award training points based on time
+      const now = Date.now();
+      if (!saveData.lastTrainingPointTime) {
+        saveData.lastTrainingPointTime = now;
+      }
+      
+      const timeSinceLastPoint = now - saveData.lastTrainingPointTime;
+      const pointsEarned = Math.floor(timeSinceLastPoint / (24 * 60 * 60 * 1000)); // 1 point per 24 hours
+      
+      if (pointsEarned > 0) {
+        saveData.trainingPoints += pointsEarned;
+        saveData.lastTrainingPointTime += pointsEarned * (24 * 60 * 60 * 1000);
+        saveSaveData();
+      }
+    }
+    
+    function getNextTrainingPointTime() {
+      if (!saveData.lastTrainingPointTime) return 'Soon';
+      const now = Date.now();
+      const nextPointTime = saveData.lastTrainingPointTime + (24 * 60 * 60 * 1000);
+      const timeRemaining = nextPointTime - now;
+      
+      if (timeRemaining <= 0) return 'Available now!';
+      
+      const hours = Math.floor(timeRemaining / (60 * 60 * 1000));
+      const minutes = Math.floor((timeRemaining % (60 * 60 * 1000)) / (60 * 1000));
+      
+      return `${hours}h ${minutes}m`;
+    }
+    
+    function updateTrainingSection() {
+      updateTrainingPoints();
+      
+      const trainingPointsDisplay = document.getElementById('training-points-display');
+      const nextPointTime = document.getElementById('next-training-point-time');
+      const attributesContent = document.getElementById('training-attributes-content');
+      
+      trainingPointsDisplay.textContent = saveData.trainingPoints;
+      nextPointTime.textContent = `Next training point in: ${getNextTrainingPointTime()}`;
+      
+      // Training cost scales: 100g for first point, +50g per point
+      const TRAINING_ATTRIBUTES = {
+        strength: {
+          name: 'Strength',
+          icon: '💪',
+          description: 'Increases damage output',
+          current: saveData.attributes.strength || 0,
+          baseCost: 100
+        },
+        endurance: {
+          name: 'Endurance',
+          icon: '🏃',
+          description: 'Increases stamina and high-speed duration',
+          current: saveData.attributes.endurance || 0,
+          baseCost: 100
+        },
+        flexibility: {
+          name: 'Flexibility',
+          icon: '🤸',
+          description: 'Improves turn speed and dodge responsiveness',
+          current: saveData.attributes.flexibility || 0,
+          baseCost: 100
+        }
+      };
+      
+      attributesContent.innerHTML = '';
+      
+      for (const [attrId, attr] of Object.entries(TRAINING_ATTRIBUTES)) {
+        const cost = attr.baseCost + (attr.current * 50);
+        const canAfford = saveData.gold >= cost && saveData.trainingPoints >= 1;
+        
+        const attrCard = document.createElement('div');
+        attrCard.style.cssText = `
+          background: rgba(0,0,0,0.5);
+          padding: 20px;
+          border-radius: 10px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          cursor: pointer;
+          border: 2px solid ${canAfford ? '#FFD700' : '#555'};
+          opacity: ${canAfford ? '1' : '0.6'};
+        `;
+        
+        attrCard.innerHTML = `
+          <div style="flex: 1;">
+            <div style="font-size: 20px; margin-bottom: 5px;">${attr.icon} ${attr.name}</div>
+            <div style="font-size: 14px; color: #AAA; margin-bottom: 10px;">${attr.description}</div>
+            <div style="font-size: 16px; color: #5DADE2;">Current: ${attr.current}</div>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-size: 18px; color: #FFD700; margin-bottom: 5px;">${cost} gold</div>
+            <div style="font-size: 14px; color: #AAA;">+ 1 Training Point</div>
+            <button class="btn" style="margin-top: 10px; padding: 8px 16px;">TRAIN</button>
+          </div>
+        `;
+        
+        attrCard.onclick = () => {
+          if (saveData.gold >= cost && saveData.trainingPoints >= 1) {
+            saveData.gold -= cost;
+            saveData.trainingPoints -= 1;
+            
+            // Initialize attributes if not present
+            if (!saveData.attributes) saveData.attributes = {};
+            if (!saveData.attributes[attrId]) saveData.attributes[attrId] = 0;
+            
+            saveData.attributes[attrId]++;
+            saveSaveData();
+            
+            playSound('levelup');
+            showStatusMessage(`${attr.name} increased to ${saveData.attributes[attrId]}!`, 2000);
+            updateTrainingSection();
+            updateGoldDisplays();
+          } else {
+            playSound('invalid');
+            if (saveData.trainingPoints < 1) {
+              showStatusMessage('Not enough training points!', 2000);
+            } else {
+              showStatusMessage('Not enough gold!', 2000);
+            }
+          }
+        };
+        
+        attributesContent.appendChild(attrCard);
+      }
+    }
+
     function updateCampScreen() {
+      // Check for first-time camp visit
+      if (!saveData.hasVisitedCamp) {
+        saveData.hasVisitedCamp = true;
+        // Unlock free buildings
+        saveData.campBuildings.questMission.unlocked = true;
+        saveData.campBuildings.questMission.level = 1;
+        saveData.campBuildings.inventory.unlocked = true;
+        saveData.campBuildings.inventory.level = 1;
+        saveData.campBuildings.campHub.unlocked = true;
+        saveData.campBuildings.campHub.level = 1;
+        saveSaveData();
+        
+        // Show welcome message
+        showStatusMessage('🎉 Welcome to Camp! Free buildings unlocked!', 3000);
+      }
+      
       // Update buildings section
       const buildingsContent = document.getElementById('camp-buildings-content');
       buildingsContent.innerHTML = '';
       
       for (const [buildingId, building] of Object.entries(CAMP_BUILDINGS)) {
         const buildingData = saveData.campBuildings[buildingId];
+        if (!buildingData) continue; // Skip if not in save data
+        
+        // Hide legacy buildings if not unlocked
+        if (building.isLegacy && !buildingData.unlocked) continue;
+        
         const cost = getBuildingCost(buildingId);
         const isMaxLevel = buildingData.level >= buildingData.maxLevel;
         const canAfford = saveData.gold >= cost;
+        const isUnlocked = buildingData.unlocked || buildingData.level > 0;
         
-        const buildingCard = document.createElement('div');
-        buildingCard.className = 'building-card';
-        if (isMaxLevel) buildingCard.classList.add('building-locked');
-        
-        const bonus = building.bonus(buildingData.level);
-        const bonusText = Object.entries(bonus)
-          .map(([key, value]) => {
-            if (key === 'skillPoints') return `${value} skill points`;
-            if (typeof value === 'number') {
-              if (value >= 1) return `+${Math.round(value)} ${key}`;
-              return `+${Math.round(value * 100)}% ${key}`;
+        // Skip locked paid buildings
+        if (!building.isFree && !isUnlocked && buildingData.level === 0) {
+          // Show as purchasable
+          const buildingCard = document.createElement('div');
+          buildingCard.className = 'building-card';
+          if (!canAfford) buildingCard.style.opacity = '0.6';
+          
+          buildingCard.innerHTML = `
+            <div class="building-header">
+              <div class="building-name">${building.icon} ${building.name}</div>
+              <div class="building-level">LOCKED</div>
+            </div>
+            <div class="building-desc">${building.description}</div>
+            <div class="building-cost">Unlock: ${building.baseCost} gold</div>
+          `;
+          
+          buildingCard.onclick = () => {
+            if (saveData.gold >= building.baseCost) {
+              saveData.gold -= building.baseCost;
+              buildingData.unlocked = true;
+              buildingData.level = 1;
+              saveSaveData();
+              updateCampScreen();
+              playSound('collect');
+              showStatusMessage(`${building.name} unlocked!`, 2000);
+            } else {
+              playSound('invalid');
+              showStatusMessage('Not enough gold!', 2000);
             }
-            return `${key}: ${value}`;
-          })
-          .join(', ');
-        
-        buildingCard.innerHTML = `
-          <div class="building-header">
-            <div class="building-name">${building.icon} ${building.name}</div>
-            <div class="building-level">Level ${buildingData.level}/${buildingData.maxLevel}</div>
-          </div>
-          <div class="building-desc">${building.description}</div>
-          <div class="building-bonus">Current: ${bonusText}</div>
-          <div class="building-cost">${isMaxLevel ? 'MAX LEVEL' : `Cost: ${cost} gold`}</div>
-        `;
-        
-        if (!isMaxLevel) {
-          buildingCard.onclick = () => upgradeCampBuilding(buildingId);
-          if (!canAfford) {
-            buildingCard.style.opacity = '0.6';
-          }
+          };
+          
+          buildingsContent.appendChild(buildingCard);
+          continue;
         }
         
-        buildingsContent.appendChild(buildingCard);
+        // Show unlocked/free buildings
+        if (isUnlocked || building.isFree) {
+          const buildingCard = document.createElement('div');
+          buildingCard.className = 'building-card';
+          if (isMaxLevel) buildingCard.classList.add('building-locked');
+          
+          const bonus = building.bonus(buildingData.level);
+          const bonusText = Object.entries(bonus)
+            .map(([key, value]) => {
+              if (key === 'skillPoints') return `${value} skill points`;
+              if (typeof value === 'number') {
+                if (value >= 1) return `+${Math.round(value)} ${key}`;
+                return `+${Math.round(value * 100)}% ${key}`;
+              }
+              return `${key}: ${value}`;
+            })
+            .filter(text => text && !text.includes('undefined'))
+            .join(', ') || 'No bonus';
+          
+          buildingCard.innerHTML = `
+            <div class="building-header">
+              <div class="building-name">${building.icon} ${building.name}</div>
+              <div class="building-level">Level ${buildingData.level}/${buildingData.maxLevel}</div>
+            </div>
+            <div class="building-desc">${building.description}</div>
+            <div class="building-bonus">Current: ${bonusText}</div>
+            <div class="building-cost">${isMaxLevel ? 'MAX LEVEL' : (building.isFree ? 'FREE' : `Cost: ${cost} gold`)}</div>
+          `;
+          
+          if (!isMaxLevel && !building.isFree && building.baseCost > 0) {
+            buildingCard.onclick = () => upgradeCampBuilding(buildingId);
+            if (!canAfford) {
+              buildingCard.style.opacity = '0.6';
+            }
+          } else if (building.isFree) {
+            buildingCard.style.border = '2px solid #FFD700';
+          }
+          
+          buildingsContent.appendChild(buildingCard);
+        }
       }
       
       // Update skills section
@@ -6721,6 +7122,24 @@
         
         skillsContent.appendChild(skillNode);
       }
+      
+      // Update sleep section
+      const dayOption = document.getElementById('sleep-day-option');
+      const nightOption = document.getElementById('sleep-night-option');
+      const currentChoice = document.getElementById('current-time-choice');
+      
+      if (saveData.nextRunTimeOfDay === 'day') {
+        dayOption.style.border = '3px solid #FFD700';
+        nightOption.style.border = '3px solid transparent';
+        currentChoice.textContent = 'DAY ☀️';
+      } else {
+        dayOption.style.border = '3px solid transparent';
+        nightOption.style.border = '3px solid #FFD700';
+        currentChoice.textContent = 'NIGHT 🌙';
+      }
+      
+      // Update training section
+      updateTrainingSection();
       
       // Update gold display
       document.getElementById('menu-gold').textContent = `GOLD: ${saveData.gold}`;
@@ -8330,16 +8749,64 @@
         playSound('waterdrop');
         document.getElementById('camp-buildings-section').style.display = 'block';
         document.getElementById('camp-skills-section').style.display = 'none';
+        document.getElementById('camp-sleep-section').style.display = 'none';
+        document.getElementById('camp-training-section').style.display = 'none';
         document.getElementById('camp-buildings-tab').style.background = '#5A3A31';
         document.getElementById('camp-skills-tab').style.background = '#3a3a3a';
+        document.getElementById('camp-sleep-tab').style.background = '#3a3a3a';
+        document.getElementById('camp-training-tab').style.background = '#3a3a3a';
       };
       
       document.getElementById('camp-skills-tab').onclick = () => {
         playSound('waterdrop');
         document.getElementById('camp-buildings-section').style.display = 'none';
         document.getElementById('camp-skills-section').style.display = 'block';
+        document.getElementById('camp-sleep-section').style.display = 'none';
+        document.getElementById('camp-training-section').style.display = 'none';
         document.getElementById('camp-buildings-tab').style.background = '#3a3a3a';
         document.getElementById('camp-skills-tab').style.background = '#5A3A31';
+        document.getElementById('camp-sleep-tab').style.background = '#3a3a3a';
+        document.getElementById('camp-training-tab').style.background = '#3a3a3a';
+      };
+      
+      document.getElementById('camp-sleep-tab').onclick = () => {
+        playSound('waterdrop');
+        document.getElementById('camp-buildings-section').style.display = 'none';
+        document.getElementById('camp-skills-section').style.display = 'none';
+        document.getElementById('camp-sleep-section').style.display = 'block';
+        document.getElementById('camp-training-section').style.display = 'none';
+        document.getElementById('camp-buildings-tab').style.background = '#3a3a3a';
+        document.getElementById('camp-skills-tab').style.background = '#3a3a3a';
+        document.getElementById('camp-sleep-tab').style.background = '#5A3A31';
+        document.getElementById('camp-training-tab').style.background = '#3a3a3a';
+      };
+      
+      document.getElementById('camp-training-tab').onclick = () => {
+        playSound('waterdrop');
+        document.getElementById('camp-buildings-section').style.display = 'none';
+        document.getElementById('camp-skills-section').style.display = 'none';
+        document.getElementById('camp-sleep-section').style.display = 'none';
+        document.getElementById('camp-training-section').style.display = 'block';
+        document.getElementById('camp-buildings-tab').style.background = '#3a3a3a';
+        document.getElementById('camp-skills-tab').style.background = '#3a3a3a';
+        document.getElementById('camp-sleep-tab').style.background = '#3a3a3a';
+        document.getElementById('camp-training-tab').style.background = '#5A3A31';
+        updateTrainingSection();
+      };
+      
+      // Sleep option handlers
+      document.getElementById('sleep-day-option').onclick = () => {
+        playSound('waterdrop');
+        saveData.nextRunTimeOfDay = 'day';
+        saveSaveData();
+        updateCampScreen();
+      };
+      
+      document.getElementById('sleep-night-option').onclick = () => {
+        playSound('waterdrop');
+        saveData.nextRunTimeOfDay = 'night';
+        saveSaveData();
+        updateCampScreen();
       };
       
       // Go to Camp from death screen
