@@ -2869,8 +2869,10 @@
       console.info('[INIT] Three.js CDN loaded successfully');
     } catch (importError) {
       console.error('[INIT] Failed to load Three.js from CDN:', importError);
-      // Set ready flag to allow loading screen to complete and fallback menu to work
-      // Don't throw or alert - just log gracefully
+      // Set ready flag to signal module load attempt completed (even though it failed)
+      // This allows loading screen to finish and fallback menu handlers to activate
+      // Note: The flag indicates "loading attempted", not "fully functional"
+      // Fallback handlers will show appropriate messages if clicked
       window.gameModuleReady = true;
       // Set THREE to null so the rest of the module is skipped
       THREE = null;
@@ -10603,9 +10605,11 @@
       // State variables (window.isPaused, window.isGameActive) are initialized at module start
       // and used consistently throughout the code to ensure fallback handlers have access
       
-      // Signal to loading screen that module is ready
+      // Signal to loading screen that module is ready (success path)
       // CRITICAL: Must be AFTER setupMenus() AND after exposing window functions
-      // This ensures fallback menu handlers have access to all required functions
+      // This ensures all game functions are available before loading completes
+      // Note: This flag is also set to true on CDN failures (line 2874) to allow
+      // loading screen to complete, but in that case fallback handlers are used
       window.gameModuleReady = true;
       console.info('[INIT] Game module fully initialized and ready');
 
@@ -15091,8 +15095,10 @@
         } catch(menuError) {
           console.error('Failed to show main menu fallback:', menuError);
         }
-      // Note: We don't set window.gameModuleReady = true on init error
-      // Only successful init() should set this flag
+      }, ERROR_RECOVERY_DELAY_MS);
+      // Note: We don't set window.gameModuleReady = true on init() errors
+      // The flag is only set on: 1) CDN failure (line 2874), 2) successful init (line 10611)
+      // Init errors are unexpected and should not signal "ready"
     }
     } // End of if (THREE) block
 
