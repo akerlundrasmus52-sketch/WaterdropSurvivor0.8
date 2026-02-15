@@ -2219,7 +2219,7 @@
     (function() {
       let loadingInitialized = false;
       // Global flag to track if loading has completed - used by module for fallback
-      window.__loadingCompleted = false;
+      window.gameLoadingCompleted = false;
       
       function startLoadingBar() {
         // Prevent duplicate initialization
@@ -2246,7 +2246,7 @@
           setTimeout(() => {
             loadingScreen.style.display = 'none';
             // Set global flag for fallback mechanism
-            window.__loadingCompleted = true;
+            window.gameLoadingCompleted = true;
             // Dispatch custom event that game init can listen to
             window.dispatchEvent(new CustomEvent('loadingComplete'));
           }, 500); // Match CSS transition duration
@@ -9761,7 +9761,7 @@
       // FALLBACK: Check if loading already completed before listener was registered
       // This handles race condition where module loads after loading screen completes
       setTimeout(() => {
-        if (window.__loadingCompleted) {
+        if (window.gameLoadingCompleted) {
           console.log('Loading already completed - showing main menu via fallback');
           showMainMenu();
         }
@@ -9771,7 +9771,12 @@
       requestAnimationFrame(animate);
     }
     
+    let mainMenuShown = false; // Guard flag to prevent showing main menu multiple times
+    
     function showMainMenu() {
+      if (mainMenuShown) return; // Already shown, prevent duplicate calls
+      mainMenuShown = true;
+      
       document.getElementById('main-menu').style.display = 'flex';
       updateGoldDisplays();
       isGameActive = false;
@@ -14057,9 +14062,15 @@
       // Try to show main menu anyway in case it's a non-critical error
       setTimeout(() => {
         try {
-          const mainMenu = document.getElementById('main-menu');
-          if (mainMenu) {
-            mainMenu.style.display = 'flex';
+          // Use existing showMainMenu function for consistent behavior
+          if (typeof showMainMenu === 'function') {
+            showMainMenu();
+          } else {
+            // Fallback if showMainMenu is not accessible due to severe error
+            const mainMenu = document.getElementById('main-menu');
+            if (mainMenu) {
+              mainMenu.style.display = 'flex';
+            }
           }
         } catch(menuError) {
           console.error('Failed to show main menu fallback:', menuError);
