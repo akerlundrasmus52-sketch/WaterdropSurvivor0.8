@@ -1117,6 +1117,11 @@
       pointer-events: none; /* Allow clicks to pass through */
       z-index: 1;
     }
+    
+    /* Hide gold on main menu - only show in inventory/forge/progression/death summary */
+    #main-menu .gold-display {
+      display: none;
+    }
 
     /* Progression Shop */
     #progression-shop {
@@ -2478,10 +2483,221 @@
     // Day/Night Cycle System - Smooth, non-blocking transitions
     let dayNightCycle = {
       enabled: true,
-      timeOfDay: 0.5, // Start at noon by default (0-1, where 0=midnight, 0.25=dawn, 0.5=noon, 0.75=dusk, 1=midnight)
+      timeOfDay: 0.2, // Start at sunrise by default (~20% up) (0-1, where 0=midnight, 0.25=dawn, 0.5=noon, 0.75=dusk, 1=midnight)
       cycleSpeed: 1 / 600, // 10 minutes for full cycle (1 / 600 seconds at 60fps)
       lastUpdateTime: 0
     };
+    
+    // Ambient Creatures System
+    let ambientCreatures = [];
+    let ambientCreatureTimer = 0;
+    
+    function updateAmbientCreatures(dt) {
+      const t = dayNightCycle.timeOfDay;
+      
+      // Update timer
+      ambientCreatureTimer += dt;
+      
+      // Spawn new creatures based on time of day
+      if (ambientCreatureTimer > 2) { // Every 2 seconds, check for spawning
+        ambientCreatureTimer = 0;
+        
+        // Day creatures (0.2 - 0.7): Birds
+        if (t >= 0.2 && t < 0.7 && ambientCreatures.length < 10) {
+          if (Math.random() < 0.3) {
+            spawnBird();
+          }
+        }
+        
+        // Dawn/Dusk (0.7 - 0.9): Fireflies
+        if ((t >= 0.7 && t < 0.9) && ambientCreatures.length < 15) {
+          if (Math.random() < 0.5) {
+            spawnFirefly();
+          }
+        }
+        
+        // Night creatures (0.9 - 1.0 OR 0.0 - 0.2): Bats and Owls
+        if ((t >= 0.9 || t < 0.2) && ambientCreatures.length < 12) {
+          if (Math.random() < 0.4) {
+            if (Math.random() < 0.7) {
+              spawnBat();
+            } else {
+              spawnOwl();
+            }
+          }
+        }
+      }
+      
+      // Update existing creatures
+      for (let i = ambientCreatures.length - 1; i >= 0; i--) {
+        const creature = ambientCreatures[i];
+        creature.life--;
+        
+        if (creature.life <= 0 || !creature.mesh.parent) {
+          // Remove creature
+          if (creature.mesh.parent) {
+            scene.remove(creature.mesh);
+          }
+          creature.mesh.geometry.dispose();
+          creature.mesh.material.dispose();
+          ambientCreatures.splice(i, 1);
+          continue;
+        }
+        
+        // Update position based on creature type
+        if (creature.type === 'bird') {
+          creature.mesh.position.x += creature.velocity.x * dt;
+          creature.mesh.position.y += Math.sin(creature.life * 0.05) * 0.01;
+          creature.mesh.position.z += creature.velocity.z * dt;
+          creature.mesh.rotation.y = Math.atan2(creature.velocity.z, creature.velocity.x);
+        } else if (creature.type === 'bat') {
+          creature.mesh.position.x += creature.velocity.x * dt;
+          creature.mesh.position.y += Math.sin(creature.life * 0.1) * 0.02;
+          creature.mesh.position.z += creature.velocity.z * dt;
+          creature.mesh.rotation.y = Math.atan2(creature.velocity.z, creature.velocity.x);
+        } else if (creature.type === 'owl') {
+          creature.mesh.position.x += creature.velocity.x * dt;
+          creature.mesh.position.y += Math.sin(creature.life * 0.03) * 0.015;
+          creature.mesh.position.z += creature.velocity.z * dt;
+          creature.mesh.rotation.y = Math.atan2(creature.velocity.z, creature.velocity.x);
+        } else if (creature.type === 'firefly') {
+          creature.mesh.position.x += Math.sin(creature.life * 0.05) * 0.02;
+          creature.mesh.position.y += Math.sin(creature.life * 0.08) * 0.01;
+          creature.mesh.position.z += Math.cos(creature.life * 0.05) * 0.02;
+          // Pulsing glow
+          const glow = 0.5 + Math.sin(creature.life * 0.15) * 0.5;
+          creature.mesh.material.opacity = glow * 0.8;
+        }
+      }
+    }
+    
+    function spawnBird() {
+      const birdGeo = new THREE.ConeGeometry(0.1, 0.2, 4);
+      const birdMat = new THREE.MeshBasicMaterial({ color: 0x8B4513 }); // Brown
+      const bird = new THREE.Mesh(birdGeo, birdMat);
+      
+      // Spawn at random edge of map
+      const edge = Math.floor(Math.random() * 4);
+      if (edge === 0) { // Top
+        bird.position.set(Math.random() * 200 - 100, 8 + Math.random() * 5, 100);
+      } else if (edge === 1) { // Right
+        bird.position.set(100, 8 + Math.random() * 5, Math.random() * 200 - 100);
+      } else if (edge === 2) { // Bottom
+        bird.position.set(Math.random() * 200 - 100, 8 + Math.random() * 5, -100);
+      } else { // Left
+        bird.position.set(-100, 8 + Math.random() * 5, Math.random() * 200 - 100);
+      }
+      
+      bird.rotation.x = Math.PI / 2;
+      scene.add(bird);
+      
+      const velocity = new THREE.Vector3(
+        (Math.random() - 0.5) * 10,
+        0,
+        (Math.random() - 0.5) * 10
+      ).normalize().multiplyScalar(8);
+      
+      ambientCreatures.push({
+        type: 'bird',
+        mesh: bird,
+        velocity: velocity,
+        life: 300
+      });
+    }
+    
+    function spawnBat() {
+      const batGeo = new THREE.ConeGeometry(0.08, 0.15, 4);
+      const batMat = new THREE.MeshBasicMaterial({ color: 0x2a2a2a }); // Dark gray
+      const bat = new THREE.Mesh(batGeo, batMat);
+      
+      const edge = Math.floor(Math.random() * 4);
+      if (edge === 0) {
+        bat.position.set(Math.random() * 200 - 100, 5 + Math.random() * 3, 100);
+      } else if (edge === 1) {
+        bat.position.set(100, 5 + Math.random() * 3, Math.random() * 200 - 100);
+      } else if (edge === 2) {
+        bat.position.set(Math.random() * 200 - 100, 5 + Math.random() * 3, -100);
+      } else {
+        bat.position.set(-100, 5 + Math.random() * 3, Math.random() * 200 - 100);
+      }
+      
+      bat.rotation.x = Math.PI / 2;
+      scene.add(bat);
+      
+      const velocity = new THREE.Vector3(
+        (Math.random() - 0.5) * 10,
+        0,
+        (Math.random() - 0.5) * 10
+      ).normalize().multiplyScalar(12);
+      
+      ambientCreatures.push({
+        type: 'bat',
+        mesh: bat,
+        velocity: velocity,
+        life: 250
+      });
+    }
+    
+    function spawnOwl() {
+      const owlGeo = new THREE.ConeGeometry(0.12, 0.25, 4);
+      const owlMat = new THREE.MeshBasicMaterial({ color: 0x8B7355 }); // Tan
+      const owl = new THREE.Mesh(owlGeo, owlMat);
+      
+      const edge = Math.floor(Math.random() * 4);
+      if (edge === 0) {
+        owl.position.set(Math.random() * 200 - 100, 6 + Math.random() * 4, 100);
+      } else if (edge === 1) {
+        owl.position.set(100, 6 + Math.random() * 4, Math.random() * 200 - 100);
+      } else if (edge === 2) {
+        owl.position.set(Math.random() * 200 - 100, 6 + Math.random() * 4, -100);
+      } else {
+        owl.position.set(-100, 6 + Math.random() * 4, Math.random() * 200 - 100);
+      }
+      
+      owl.rotation.x = Math.PI / 2;
+      scene.add(owl);
+      
+      const velocity = new THREE.Vector3(
+        (Math.random() - 0.5) * 10,
+        0,
+        (Math.random() - 0.5) * 10
+      ).normalize().multiplyScalar(6);
+      
+      ambientCreatures.push({
+        type: 'owl',
+        mesh: owl,
+        velocity: velocity,
+        life: 350
+      });
+    }
+    
+    function spawnFirefly() {
+      const fireflyGeo = new THREE.SphereGeometry(0.05, 6, 6);
+      const fireflyMat = new THREE.MeshBasicMaterial({ 
+        color: 0xFFFF00,
+        transparent: true,
+        opacity: 0.7
+      });
+      const firefly = new THREE.Mesh(fireflyGeo, fireflyMat);
+      
+      // Spawn near player
+      const offsetX = (Math.random() - 0.5) * 30;
+      const offsetZ = (Math.random() - 0.5) * 30;
+      firefly.position.set(
+        player.mesh.position.x + offsetX,
+        1 + Math.random() * 3,
+        player.mesh.position.z + offsetZ
+      );
+      
+      scene.add(firefly);
+      
+      ambientCreatures.push({
+        type: 'firefly',
+        mesh: firefly,
+        velocity: new THREE.Vector3(0, 0, 0),
+        life: 400
+      });
+    }
     
     let waveCount = 0;
     let lastWaveEndTime = 0; // Track when last wave was cleared
@@ -2755,6 +2971,54 @@
         this.cigarTip.position.set(0.28, -0.05, 0.35);
         this.mesh.add(this.cigarTip);
         
+        // Bandage accessory (white cross-shaped bandage on head)
+        const bandageGeo = new THREE.BoxGeometry(0.3, 0.05, 0.05);
+        const bandageMat = new THREE.MeshToonMaterial({ color: 0xFFFFFF }); // White
+        this.bandage = new THREE.Mesh(bandageGeo, bandageMat);
+        this.bandage.position.set(0, 0.35, 0);
+        this.mesh.add(this.bandage);
+        
+        // Vertical bandage piece
+        const bandageVertGeo = new THREE.BoxGeometry(0.05, 0.3, 0.05);
+        this.bandageVert = new THREE.Mesh(bandageVertGeo, bandageMat);
+        this.bandageVert.position.set(0, 0.35, 0);
+        this.mesh.add(this.bandageVert);
+        
+        // Eye blink animation timer
+        this.blinkTimer = 0;
+        this.blinkDuration = 0.1; // 100ms blink
+        this.nextBlinkTime = 2 + Math.random() * 3; // Random 2-5 seconds
+        this.isBlinking = false;
+        
+        // Arms (simple cylinders attached to body)
+        const armGeo = new THREE.CylinderGeometry(0.06, 0.06, 0.35, 8);
+        const limbMaterial = new THREE.MeshToonMaterial({ color: COLORS.player, opacity: 0.85, transparent: true });
+        
+        // Left arm
+        this.leftArm = new THREE.Mesh(armGeo, limbMaterial);
+        this.leftArm.position.set(-0.35, 0, 0);
+        this.leftArm.rotation.z = Math.PI / 6; // Angled outward
+        this.mesh.add(this.leftArm);
+        
+        // Right arm (holding gun)
+        this.rightArm = new THREE.Mesh(armGeo, limbMaterial);
+        this.rightArm.position.set(0.35, 0, 0);
+        this.rightArm.rotation.z = -Math.PI / 6; // Angled outward
+        this.mesh.add(this.rightArm);
+        
+        // Legs (simple cylinders below body)
+        const legGeo = new THREE.CylinderGeometry(0.08, 0.07, 0.4, 8);
+        
+        // Left leg
+        this.leftLeg = new THREE.Mesh(legGeo, limbMaterial);
+        this.leftLeg.position.set(-0.15, -0.45, 0);
+        this.mesh.add(this.leftLeg);
+        
+        // Right leg
+        this.rightLeg = new THREE.Mesh(legGeo, limbMaterial);
+        this.rightLeg.position.set(0.15, -0.45, 0);
+        this.mesh.add(this.rightLeg);
+        
         // Smoke particles timer
         this.smokeTimer = 0;
         
@@ -2964,6 +3228,23 @@
           1 + Math.sin(gameTime * 2) * 0.05
         );
         
+        // Animate arms and legs (walking animation when moving)
+        if (speedMag > 0.1) {
+          // Walking animation - swing arms and legs
+          const walkPhase = gameTime * 8; // Walking speed
+          this.leftArm.rotation.x = Math.sin(walkPhase) * 0.3;
+          this.rightArm.rotation.x = -Math.sin(walkPhase) * 0.3;
+          this.leftLeg.rotation.x = -Math.sin(walkPhase) * 0.4;
+          this.rightLeg.rotation.x = Math.sin(walkPhase) * 0.4;
+        } else {
+          // Idle - gentle sway
+          const idlePhase = gameTime * 2;
+          this.leftArm.rotation.x = Math.sin(idlePhase) * 0.1;
+          this.rightArm.rotation.x = Math.sin(idlePhase + Math.PI) * 0.1;
+          this.leftLeg.rotation.x = 0;
+          this.rightLeg.rotation.x = 0;
+        }
+        
         // Animate cigar tip (pulsing emissive glow)
         if (this.cigarTip) {
           const tipBrightness = 0.7 + Math.sin(gameTime * 8) * 0.3;
@@ -3008,6 +3289,44 @@
               }
             };
             updateSmoke();
+          }
+        }
+        
+        // Blinking eyes animation
+        this.blinkTimer += dt;
+        if (this.blinkTimer >= this.nextBlinkTime) {
+          this.isBlinking = true;
+          this.blinkTimer = 0;
+          this.nextBlinkTime = 2 + Math.random() * 3; // Next blink in 2-5 seconds
+        }
+        
+        if (this.isBlinking) {
+          // Scale eyes down vertically for blink effect
+          const blinkProgress = Math.min(1, this.blinkTimer / this.blinkDuration);
+          if (blinkProgress < 0.5) {
+            // Closing
+            const scale = 1 - (blinkProgress * 2);
+            this.leftEye.scale.y = scale;
+            this.rightEye.scale.y = scale;
+            this.leftPupil.scale.y = scale;
+            this.rightPupil.scale.y = scale;
+          } else {
+            // Opening
+            const scale = (blinkProgress - 0.5) * 2;
+            this.leftEye.scale.y = scale;
+            this.rightEye.scale.y = scale;
+            this.leftPupil.scale.y = scale;
+            this.rightPupil.scale.y = scale;
+          }
+          
+          if (blinkProgress >= 1) {
+            this.isBlinking = false;
+            this.blinkTimer = 0;
+            // Reset scale
+            this.leftEye.scale.y = 1;
+            this.rightEye.scale.y = 1;
+            this.leftPupil.scale.y = 1;
+            this.rightPupil.scale.y = 1;
           }
         }
         
@@ -3739,7 +4058,16 @@
         playSound('shoot');
       }
 
-      takeDamage(amount, isCrit = false) {
+      /**
+       * Apply damage to the enemy
+       * @param {number} amount - Damage amount
+       * @param {boolean} isCrit - Whether this is a critical hit
+       * @param {string} damageType - Type of damage: 'physical', 'fire', 'ice', 'lightning', 'shotgun', 'headshot'
+       */
+      takeDamage(amount, isCrit = false, damageType = 'physical') {
+        // Track last damage type for death effects
+        this.lastDamageType = damageType;
+        
         // Phase 5: Hit impact particles (flesh/blood) on every hit
         spawnParticles(this.mesh.position, 0x8B0000, 3); // Blood particles
         
@@ -3935,139 +4263,46 @@
           updateEiffelQuestUI();
         }
         
-        // Phase 5: Death Variety - 50% explode into pieces, 50% leave corpse sprite
-        const explodeIntoPieces = Math.random() < 0.5;
-        
-        // More dramatic explosion effect on death
+        // Determine death effect based on damage type and health when dying
+        const damageType = this.lastDamageType || 'physical';
         const enemyColor = this.mesh.material.color.getHex();
         
-        if (explodeIntoPieces) {
-          // EXPLOSION DEATH: Main explosion - ENHANCED with more particles
-          spawnParticles(this.mesh.position, enemyColor, 20); // Reduced for performance
-          spawnParticles(this.mesh.position, 0xFFFFFF, 8); // Reduced for performance
-          spawnParticles(this.mesh.position, 0x8B0000, 6); // Reduced for performance
-          
-          // Add explosion ring effect
-          const ringGeo = new THREE.RingGeometry(0.1, 0.2, 16);
-          const ringMat = new THREE.MeshBasicMaterial({ 
-            color: enemyColor, 
-            transparent: true, 
-            opacity: 0.8,
-            side: THREE.DoubleSide
-          });
-          const ring = new THREE.Mesh(ringGeo, ringMat);
-          ring.position.copy(this.mesh.position);
-          ring.position.y = 0.1;
-          ring.rotation.x = Math.PI / 2;
-          scene.add(ring);
-          
-          // Animate ring expanding and fading
-          let ringLife = 20;
-          const animateRing = () => {
-            ringLife--;
-            const scale = 1 + (20 - ringLife) * 0.3;
-            ring.scale.set(scale, scale, 1);
-            ring.material.opacity = ringLife / 20;
-            
-            if (ringLife <= 0) {
-              scene.remove(ring);
-              ring.geometry.dispose();
-              ring.material.dispose();
-            } else {
-              requestAnimationFrame(animateRing);
-            }
-          };
-          animateRing();
-          
-          // Explode into more pieces - ENHANCED
-          const pieceCount = this.isMiniBoss ? 25 : 15; // More pieces for mini-boss
-          for(let i = 0; i < pieceCount; i++) {
-            const piece = new THREE.Mesh(
-              new THREE.BoxGeometry(0.3, 0.3, 0.3),
-              new THREE.MeshBasicMaterial({ color: enemyColor, transparent: true })
-            );
-            piece.position.copy(this.mesh.position);
-            scene.add(piece);
-            
-            const angle = (i / pieceCount) * Math.PI * 2;
-            const speed = this.isMiniBoss ? 0.6 : 0.4; // Faster explosion for mini-boss
-            const vel = new THREE.Vector3(
-              Math.cos(angle) * speed,
-              0.3 + Math.random() * 0.3,
-              Math.sin(angle) * speed
-            );
-            
-            let life = 50;
-            const updatePiece = () => {
-              life--;
-              piece.position.add(vel);
-              vel.y -= 0.02; // Gravity
-              piece.rotation.x += 0.15;
-              piece.rotation.y += 0.15;
-              piece.material.opacity = life / 50;
-              
-              if (life <= 0 || piece.position.y < 0) {
-                scene.remove(piece);
-                piece.geometry.dispose();
-                piece.material.dispose();
-              } else {
-                requestAnimationFrame(updatePiece);
-              }
-            };
-            updatePiece();
-          }
+        // Special death effects based on damage type
+        if (damageType === 'fire') {
+          // Fire death: Char and ash
+          this.dieByFire(enemyColor);
+        } else if (damageType === 'ice') {
+          // Ice death: Shatter into ice shards
+          this.dieByIce(enemyColor);
+        } else if (damageType === 'lightning') {
+          // Lightning death: Blackened and smoke
+          this.dieByLightning(enemyColor);
+        } else if (damageType === 'shotgun') {
+          // Shotgun death: Massive gibs explosion
+          this.dieByShotgun(enemyColor);
+        } else if (damageType === 'headshot') {
+          // Headshot: Specific head explosion
+          this.dieByHeadshot(enemyColor);
         } else {
-          // CORPSE DEATH: Leave a corpse sprite that fades away
-          spawnParticles(this.mesh.position, enemyColor, 8); // Reduced for performance
-          spawnParticles(this.mesh.position, 0x8B0000, 4); // Reduced for performance
-          
-          // Create flat corpse sprite (flattened version of enemy)
-          const corpseGeo = new THREE.CircleGeometry(0.6, 16);
-          const corpseMat = new THREE.MeshBasicMaterial({ 
-            color: enemyColor, 
-            transparent: true,
-            opacity: 0.7,
-            side: THREE.DoubleSide
-          });
-          const corpse = new THREE.Mesh(corpseGeo, corpseMat);
-          corpse.position.copy(this.mesh.position);
-          corpse.position.y = 0.02; // Just above ground
-          corpse.rotation.x = -Math.PI / 2; // Lay flat
-          scene.add(corpse);
-          
-          // Add blood pool under corpse
-          const bloodGeo = new THREE.CircleGeometry(0.8, 16);
-          const bloodMat = new THREE.MeshBasicMaterial({ 
-            color: 0x8B0000, 
-            transparent: true,
-            opacity: 0.5,
-            side: THREE.DoubleSide
-          });
-          const bloodPool = new THREE.Mesh(bloodGeo, bloodMat);
-          bloodPool.position.copy(this.mesh.position);
-          bloodPool.position.y = 0.01; // Just above ground
-          bloodPool.rotation.x = -Math.PI / 2;
-          scene.add(bloodPool);
-          
-          // Fade out corpse over time (approximately 2 seconds)
-          let corpseLife = 120;
-          const fadeCorpse = () => {
-            corpseLife--;
-            corpse.material.opacity = (corpseLife / 120) * 0.7;
-            bloodPool.material.opacity = (corpseLife / 120) * 0.5;
-            
-            if (corpseLife <= 0) {
-              scene.remove(corpse);
-              scene.remove(bloodPool);
-              corpse.geometry.dispose();
-              corpse.material.dispose();
-              bloodPool.geometry.dispose();
-              bloodPool.material.dispose();
-            } else {
-              requestAnimationFrame(fadeCorpse);
+          // Standard death (bullet/physical)
+          this.dieStandard(enemyColor);
+        }
+        
+        // Flying enemies fall to ground
+        if (this.isFlying) {
+          const fallDuration = 60;
+          let fallTimer = 0;
+          const startY = this.mesh.position.y;
+          const fallAnim = () => {
+            if (fallTimer < fallDuration && this.mesh.parent) {
+              fallTimer++;
+              this.mesh.position.y = startY * (1 - fallTimer / fallDuration);
+              this.mesh.rotation.x += 0.1;
+              this.mesh.rotation.z += 0.15;
+              requestAnimationFrame(fallAnim);
             }
           };
-          fadeCorpse();
+          fallAnim();
         }
         
         // Screen flash on kill (dopamine boost) - stronger flash for mini-boss
@@ -4190,6 +4425,487 @@
         updateHUD();
         updateComboCounter(true); // Phase 2: Track combo on kill
         checkAchievements(); // Check for achievements after kill
+      }
+      
+      // Specialized death effects by damage type
+      dieStandard(enemyColor) {
+        // Phase 5: Death Variety - 50% explode into pieces, 50% leave corpse sprite
+        const explodeIntoPieces = Math.random() < 0.5;
+        
+        if (explodeIntoPieces) {
+          // EXPLOSION DEATH: Main explosion
+          spawnParticles(this.mesh.position, enemyColor, 20);
+          spawnParticles(this.mesh.position, 0xFFFFFF, 8);
+          spawnParticles(this.mesh.position, 0x8B0000, 6);
+          
+          // Explosion ring
+          const ringGeo = new THREE.RingGeometry(0.1, 0.2, 16);
+          const ringMat = new THREE.MeshBasicMaterial({ 
+            color: enemyColor, 
+            transparent: true, 
+            opacity: 0.8,
+            side: THREE.DoubleSide
+          });
+          const ring = new THREE.Mesh(ringGeo, ringMat);
+          ring.position.copy(this.mesh.position);
+          ring.position.y = 0.1;
+          ring.rotation.x = Math.PI / 2;
+          scene.add(ring);
+          
+          let ringLife = 20;
+          const animateRing = () => {
+            ringLife--;
+            const scale = 1 + (20 - ringLife) * 0.3;
+            ring.scale.set(scale, scale, 1);
+            ring.material.opacity = ringLife / 20;
+            
+            if (ringLife <= 0) {
+              scene.remove(ring);
+              ring.geometry.dispose();
+              ring.material.dispose();
+            } else {
+              requestAnimationFrame(animateRing);
+            }
+          };
+          animateRing();
+          
+          // Explode into pieces
+          const pieceCount = this.isMiniBoss ? 25 : 15;
+          for(let i = 0; i < pieceCount; i++) {
+            const piece = new THREE.Mesh(
+              new THREE.BoxGeometry(0.3, 0.3, 0.3),
+              new THREE.MeshBasicMaterial({ color: enemyColor, transparent: true })
+            );
+            piece.position.copy(this.mesh.position);
+            scene.add(piece);
+            
+            const angle = (i / pieceCount) * Math.PI * 2;
+            const speed = this.isMiniBoss ? 0.6 : 0.4;
+            const vel = new THREE.Vector3(
+              Math.cos(angle) * speed,
+              0.3 + Math.random() * 0.3,
+              Math.sin(angle) * speed
+            );
+            
+            let life = 50;
+            const updatePiece = () => {
+              life--;
+              piece.position.add(vel);
+              vel.y -= 0.02; // Gravity
+              piece.rotation.x += 0.15;
+              piece.rotation.y += 0.15;
+              piece.material.opacity = life / 50;
+              
+              if (life <= 0 || piece.position.y < 0) {
+                scene.remove(piece);
+                piece.geometry.dispose();
+                piece.material.dispose();
+              } else {
+                requestAnimationFrame(updatePiece);
+              }
+            };
+            updatePiece();
+          }
+        } else {
+          // CORPSE DEATH: Leave a corpse sprite
+          spawnParticles(this.mesh.position, enemyColor, 8);
+          spawnParticles(this.mesh.position, 0x8B0000, 4);
+          
+          // Corpse sprite
+          const corpseGeo = new THREE.CircleGeometry(0.6, 16);
+          const corpseMat = new THREE.MeshBasicMaterial({ 
+            color: enemyColor, 
+            transparent: true,
+            opacity: 0.7,
+            side: THREE.DoubleSide
+          });
+          const corpse = new THREE.Mesh(corpseGeo, corpseMat);
+          corpse.position.copy(this.mesh.position);
+          corpse.position.y = 0.02;
+          corpse.rotation.x = -Math.PI / 2;
+          scene.add(corpse);
+          
+          // Blood pool
+          const bloodGeo = new THREE.CircleGeometry(0.8, 16);
+          const bloodMat = new THREE.MeshBasicMaterial({ 
+            color: 0x8B0000, 
+            transparent: true,
+            opacity: 0.5,
+            side: THREE.DoubleSide
+          });
+          const bloodPool = new THREE.Mesh(bloodGeo, bloodMat);
+          bloodPool.position.copy(this.mesh.position);
+          bloodPool.position.y = 0.01;
+          bloodPool.rotation.x = -Math.PI / 2;
+          scene.add(bloodPool);
+          
+          // Fade out
+          let corpseLife = 120;
+          const fadeCorpse = () => {
+            corpseLife--;
+            corpse.material.opacity = (corpseLife / 120) * 0.7;
+            bloodPool.material.opacity = (corpseLife / 120) * 0.5;
+            
+            if (corpseLife <= 0) {
+              scene.remove(corpse);
+              scene.remove(bloodPool);
+              corpse.geometry.dispose();
+              corpse.material.dispose();
+              bloodPool.geometry.dispose();
+              bloodPool.material.dispose();
+            } else {
+              requestAnimationFrame(fadeCorpse);
+            }
+          };
+          fadeCorpse();
+        }
+      }
+      
+      dieByFire(enemyColor) {
+        // Fire death: Char and burn to ash
+        spawnParticles(this.mesh.position, 0xFF4500, 20); // Orange fire
+        spawnParticles(this.mesh.position, 0xFFFF00, 10); // Yellow flames
+        spawnParticles(this.mesh.position, 0x222222, 8); // Black smoke
+        
+        // Charred corpse
+        const corpseGeo = new THREE.CircleGeometry(0.6, 16);
+        const corpseMat = new THREE.MeshBasicMaterial({ 
+          color: 0x222222, // Charred black
+          transparent: true,
+          opacity: 0.8,
+          side: THREE.DoubleSide
+        });
+        const corpse = new THREE.Mesh(corpseGeo, corpseMat);
+        corpse.position.copy(this.mesh.position);
+        corpse.position.y = 0.02;
+        corpse.rotation.x = -Math.PI / 2;
+        scene.add(corpse);
+        
+        // Burn mark on ground
+        const burnGeo = new THREE.CircleGeometry(0.9, 16);
+        const burnMat = new THREE.MeshBasicMaterial({ 
+          color: 0x111111, 
+          transparent: true,
+          opacity: 0.6,
+          side: THREE.DoubleSide
+        });
+        const burnMark = new THREE.Mesh(burnGeo, burnMat);
+        burnMark.position.copy(this.mesh.position);
+        burnMark.position.y = 0.01;
+        burnMark.rotation.x = -Math.PI / 2;
+        scene.add(burnMark);
+        
+        // Fade to ash
+        let life = 120;
+        const fadeToAsh = () => {
+          life--;
+          corpse.material.opacity = (life / 120) * 0.8;
+          corpse.scale.multiplyScalar(0.995); // Shrink
+          
+          if (life <= 0) {
+            scene.remove(corpse);
+            scene.remove(burnMark);
+            corpse.geometry.dispose();
+            corpse.material.dispose();
+            burnMark.geometry.dispose();
+            burnMark.material.dispose();
+          } else {
+            requestAnimationFrame(fadeToAsh);
+          }
+        };
+        fadeToAsh();
+      }
+      
+      dieByIce(enemyColor) {
+        // Ice death: Shatter into ice crystals
+        spawnParticles(this.mesh.position, 0x87CEEB, 15); // Light blue ice
+        spawnParticles(this.mesh.position, 0xFFFFFF, 12); // White frost
+        
+        // Shatter into ice shards
+        const shardCount = 20;
+        for(let i = 0; i < shardCount; i++) {
+          const shardGeo = new THREE.ConeGeometry(0.1, 0.3, 4);
+          const shardMat = new THREE.MeshBasicMaterial({ 
+            color: 0xADD8E6, // Light ice blue
+            transparent: true,
+            opacity: 0.7
+          });
+          const shard = new THREE.Mesh(shardGeo, shardMat);
+          shard.position.copy(this.mesh.position);
+          scene.add(shard);
+          
+          const angle = (i / shardCount) * Math.PI * 2;
+          const vel = new THREE.Vector3(
+            Math.cos(angle) * 0.3,
+            0.4 + Math.random() * 0.2,
+            Math.sin(angle) * 0.3
+          );
+          
+          let life = 60;
+          const updateShard = () => {
+            life--;
+            shard.position.add(vel);
+            vel.y -= 0.03; // Gravity
+            shard.rotation.x += 0.2;
+            shard.rotation.z += 0.15;
+            shard.material.opacity = (life / 60) * 0.7;
+            
+            if (life <= 0 || shard.position.y < 0) {
+              scene.remove(shard);
+              shard.geometry.dispose();
+              shard.material.dispose();
+            } else {
+              requestAnimationFrame(updateShard);
+            }
+          };
+          updateShard();
+        }
+      }
+      
+      dieByLightning(enemyColor) {
+        // Lightning death: Blackened and smoking
+        spawnParticles(this.mesh.position, 0xFFFF00, 15); // Yellow lightning
+        spawnParticles(this.mesh.position, 0xFFFFFF, 10); // White flash
+        spawnParticles(this.mesh.position, 0x444444, 8); // Gray smoke
+        
+        // Blackened corpse
+        const corpseGeo = new THREE.CircleGeometry(0.6, 16);
+        const corpseMat = new THREE.MeshBasicMaterial({ 
+          color: 0x1a1a1a, // Very dark gray
+          transparent: true,
+          opacity: 0.9,
+          side: THREE.DoubleSide
+        });
+        const corpse = new THREE.Mesh(corpseGeo, corpseMat);
+        corpse.position.copy(this.mesh.position);
+        corpse.position.y = 0.02;
+        corpse.rotation.x = -Math.PI / 2;
+        scene.add(corpse);
+        
+        // Smoke particles rising
+        let smokeLife = 80;
+        const createSmoke = () => {
+          if (smokeLife > 0) {
+            smokeLife--;
+            const smokeGeo = new THREE.SphereGeometry(0.1, 6, 6);
+            const smokeMat = new THREE.MeshBasicMaterial({ 
+              color: 0x666666,
+              transparent: true,
+              opacity: 0.4
+            });
+            const smoke = new THREE.Mesh(smokeGeo, smokeMat);
+            smoke.position.copy(this.mesh.position);
+            smoke.position.y = 0.1;
+            scene.add(smoke);
+            
+            let life = 40;
+            const updateSmoke = () => {
+              life--;
+              smoke.position.y += 0.03;
+              smoke.position.x += (Math.random() - 0.5) * 0.02;
+              smoke.position.z += (Math.random() - 0.5) * 0.02;
+              smoke.scale.multiplyScalar(1.03);
+              smoke.material.opacity = (life / 40) * 0.4;
+              
+              if (life <= 0) {
+                scene.remove(smoke);
+                smoke.geometry.dispose();
+                smoke.material.dispose();
+              } else {
+                requestAnimationFrame(updateSmoke);
+              }
+            };
+            updateSmoke();
+            
+            setTimeout(createSmoke, 100);
+          }
+        };
+        createSmoke();
+        
+        // Fade corpse
+        let corpseLife = 120;
+        const fadeCorpse = () => {
+          corpseLife--;
+          corpse.material.opacity = (corpseLife / 120) * 0.9;
+          
+          if (corpseLife <= 0) {
+            scene.remove(corpse);
+            corpse.geometry.dispose();
+            corpse.material.dispose();
+          } else {
+            requestAnimationFrame(fadeCorpse);
+          }
+        };
+        fadeCorpse();
+      }
+      
+      dieByShotgun(enemyColor) {
+        // Shotgun death: Massive explosion of gibs
+        spawnParticles(this.mesh.position, enemyColor, 30);
+        spawnParticles(this.mesh.position, 0x8B0000, 20); // Lots of blood
+        spawnParticles(this.mesh.position, 0xFFFFFF, 10);
+        
+        // Massive gib explosion
+        const gibCount = 40;
+        for(let i = 0; i < gibCount; i++) {
+          const gibSize = 0.1 + Math.random() * 0.2;
+          const gibGeo = new THREE.BoxGeometry(gibSize, gibSize, gibSize);
+          const gibMat = new THREE.MeshBasicMaterial({ 
+            color: i % 3 === 0 ? 0x8B0000 : enemyColor,
+            transparent: true
+          });
+          const gib = new THREE.Mesh(gibGeo, gibMat);
+          gib.position.copy(this.mesh.position);
+          scene.add(gib);
+          
+          const angle = (i / gibCount) * Math.PI * 2;
+          const speed = 0.5 + Math.random() * 0.3;
+          const vel = new THREE.Vector3(
+            Math.cos(angle) * speed,
+            0.4 + Math.random() * 0.4,
+            Math.sin(angle) * speed
+          );
+          
+          let life = 60;
+          const updateGib = () => {
+            life--;
+            gib.position.add(vel);
+            vel.y -= 0.025; // Gravity
+            gib.rotation.x += 0.25;
+            gib.rotation.y += 0.2;
+            gib.material.opacity = life / 60;
+            
+            if (life <= 0 || gib.position.y < 0) {
+              scene.remove(gib);
+              gib.geometry.dispose();
+              gib.material.dispose();
+            } else {
+              requestAnimationFrame(updateGib);
+            }
+          };
+          updateGib();
+        }
+        
+        // Large blood pool
+        const bloodGeo = new THREE.CircleGeometry(1.2, 16);
+        const bloodMat = new THREE.MeshBasicMaterial({ 
+          color: 0x8B0000, 
+          transparent: true,
+          opacity: 0.7,
+          side: THREE.DoubleSide
+        });
+        const bloodPool = new THREE.Mesh(bloodGeo, bloodMat);
+        bloodPool.position.copy(this.mesh.position);
+        bloodPool.position.y = 0.01;
+        bloodPool.rotation.x = -Math.PI / 2;
+        scene.add(bloodPool);
+        
+        // Fade blood
+        let life = 150;
+        const fadeBlood = () => {
+          life--;
+          bloodPool.material.opacity = (life / 150) * 0.7;
+          
+          if (life <= 0) {
+            scene.remove(bloodPool);
+            bloodPool.geometry.dispose();
+            bloodPool.material.dispose();
+          } else {
+            requestAnimationFrame(fadeBlood);
+          }
+        };
+        fadeBlood();
+      }
+      
+      dieByHeadshot(enemyColor) {
+        // Headshot: Dramatic head explosion
+        spawnParticles(this.mesh.position, enemyColor, 25);
+        spawnParticles(this.mesh.position, 0x8B0000, 15);
+        spawnParticles(this.mesh.position, 0xFFFFFF, 5);
+        
+        // Body falls (corpse)
+        const corpseGeo = new THREE.CircleGeometry(0.6, 16);
+        const corpseMat = new THREE.MeshBasicMaterial({ 
+          color: enemyColor, 
+          transparent: true,
+          opacity: 0.8,
+          side: THREE.DoubleSide
+        });
+        const corpse = new THREE.Mesh(corpseGeo, corpseMat);
+        corpse.position.copy(this.mesh.position);
+        corpse.position.y = 0.02;
+        corpse.rotation.x = -Math.PI / 2;
+        scene.add(corpse);
+        
+        // Blood splatter
+        const bloodGeo = new THREE.CircleGeometry(0.9, 16);
+        const bloodMat = new THREE.MeshBasicMaterial({ 
+          color: 0x8B0000, 
+          transparent: true,
+          opacity: 0.6,
+          side: THREE.DoubleSide
+        });
+        const bloodPool = new THREE.Mesh(bloodGeo, bloodMat);
+        bloodPool.position.copy(this.mesh.position);
+        bloodPool.position.y = 0.01;
+        bloodPool.rotation.x = -Math.PI / 2;
+        scene.add(bloodPool);
+        
+        // Extra head pieces
+        for(let i = 0; i < 10; i++) {
+          const piece = new THREE.Mesh(
+            new THREE.BoxGeometry(0.15, 0.15, 0.15),
+            new THREE.MeshBasicMaterial({ color: i % 2 === 0 ? enemyColor : 0x8B0000, transparent: true })
+          );
+          piece.position.copy(this.mesh.position);
+          piece.position.y += 0.5; // Start from head height
+          scene.add(piece);
+          
+          const vel = new THREE.Vector3(
+            (Math.random() - 0.5) * 0.4,
+            0.5 + Math.random() * 0.3,
+            (Math.random() - 0.5) * 0.4
+          );
+          
+          let life = 50;
+          const updatePiece = () => {
+            life--;
+            piece.position.add(vel);
+            vel.y -= 0.03;
+            piece.rotation.x += 0.2;
+            piece.rotation.y += 0.25;
+            piece.material.opacity = life / 50;
+            
+            if (life <= 0 || piece.position.y < 0) {
+              scene.remove(piece);
+              piece.geometry.dispose();
+              piece.material.dispose();
+            } else {
+              requestAnimationFrame(updatePiece);
+            }
+          };
+          updatePiece();
+        }
+        
+        // Fade corpse
+        let life = 120;
+        const fadeCorpse = () => {
+          life--;
+          corpse.material.opacity = (life / 120) * 0.8;
+          bloodPool.material.opacity = (life / 120) * 0.6;
+          
+          if (life <= 0) {
+            scene.remove(corpse);
+            scene.remove(bloodPool);
+            corpse.geometry.dispose();
+            corpse.material.dispose();
+            bloodPool.geometry.dispose();
+            bloodPool.material.dispose();
+          } else {
+            requestAnimationFrame(fadeCorpse);
+          }
+        };
+        fadeCorpse();
       }
     }
 
@@ -11346,9 +12062,9 @@
       // Reset run loot tracking
       window.runLootGained = [];
       
-      // Set time of day based on sleep choice
+      // Set time of day based on sleep choice (default sunrise ~20% up)
       if (saveData.nextRunTimeOfDay === 'day') {
-        dayNightCycle.timeOfDay = 0.5; // Noon
+        dayNightCycle.timeOfDay = 0.2; // Sunrise (~20% sun elevation)
       } else {
         dayNightCycle.timeOfDay = 0.0; // Midnight
       }
@@ -12111,6 +12827,11 @@
       // Day/Night Cycle - Update lighting smoothly (non-blocking)
       // Runs every frame regardless of pause state for smooth visual transitions
       updateDayNightCycle(dt);
+      
+      // Update ambient creatures (birds, bats, fireflies, owls) based on time of day
+      if (isGameActive && !isPaused) {
+        updateAmbientCreatures(dt);
+      }
       
       // Frame Skip Mechanism: Determine if rendering should be skipped based on previous frame time
       // Note: This only skips the render call - game logic still runs to maintain state consistency
