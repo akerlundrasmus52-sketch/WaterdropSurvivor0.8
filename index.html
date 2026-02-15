@@ -2143,6 +2143,24 @@
     let isGameActive = false;  // Changed to false - start with menu
     let gameTime = 0;
     let gameStartTime = 0;
+    
+    // Expose game state on window object for external access and fallback handlers (acceptance criteria #2)
+    // These are kept in sync with local variables throughout the code
+    window.isPaused = false;
+    window.isGameActive = false;
+    window.gameModuleReady = false;  // Will be set true after init completes
+    
+    // Helper functions to keep window variables in sync (acceptance criteria #2)
+    function setGamePaused(paused) {
+      isPaused = paused;
+      window.isPaused = paused;
+    }
+    
+    function setGameActive(active) {
+      isGameActive = active;
+      window.isGameActive = active;
+    }
+    
     let waveCount = 0;
     let lastWaveEndTime = 0; // Track when last wave was cleared
     let windmillQuest = { active: false, timer: 0, duration: 30, windmill: null, hasCompleted: false };
@@ -6802,6 +6820,11 @@
 
       // Start Loop
       requestAnimationFrame(animate);
+      
+      // Signal that module is fully initialized (acceptance criteria #2)
+      // This MUST be last, after all handlers are attached
+      window.gameModuleReady = true;
+      console.log('[Init] Game module ready - all systems initialized');
     }
     
     function showLoadingScreen() {
@@ -6830,8 +6853,8 @@
     function showMainMenu() {
       document.getElementById('main-menu').style.display = 'flex';
       updateGoldDisplays();
-      isGameActive = false;
-      isPaused = true;
+      setGameActive(false);
+      setGamePaused(true);
     }
     
     function hideMainMenu() {
@@ -6870,10 +6893,11 @@
     function endCountdown() {
       countdownActive = false;
       
-      // Ensure game properly unpauses
-      isPaused = false;
-      isGameActive = true;
+      // Ensure game properly unpauses (use helper functions to sync window variables)
+      setGamePaused(false);
+      setGameActive(true);
       gameStartTime = Date.now();
+      console.log('[Countdown] Game started - isPaused:', isPaused, 'isGameActive:', isGameActive);
     }
     
     function showProgressionShop() {
