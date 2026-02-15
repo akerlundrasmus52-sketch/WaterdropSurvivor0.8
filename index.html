@@ -2844,14 +2844,33 @@
     })();
   </script>
 
-  <script type="module">
-    import * as THREE from 'three';
-
+  <!-- Initialize critical game state BEFORE module script -->
+  <!-- This ensures state is available even if module import fails -->
+  <script>
     // Initialize game state on window object for fallback menu handlers
     // Exposed on window (instead of module-scoped) to allow standalone menu button handlers
     // and external code to access game state. Used consistently throughout to keep in sync.
     window.isPaused = false;
     window.isGameActive = false;
+    window.gameModuleReady = false;
+    
+    console.info('[INIT] Game state initialized');
+  </script>
+
+  <script type="module">
+    // Dynamic import with error handling for CDN failures
+    let THREE;
+    try {
+      THREE = await import('three');
+      console.info('[INIT] Three.js CDN loaded successfully');
+    } catch (importError) {
+      console.error('[INIT] Failed to load Three.js from CDN:', importError);
+      const errorMsg = 'Failed to load 3D graphics library.\n\nPlease check your internet connection and refresh the page.';
+      alert(errorMsg);
+      // Set ready flag to allow fallback menu to work
+      window.gameModuleReady = true;
+      throw importError; // Re-throw to prevent further execution
+    }
 
     // --- CONSTANTS & CONFIG ---
     // Error recovery delay for accessibility (allows adequate time to read and comprehend alert)
@@ -15066,6 +15085,8 @@
           console.error('Failed to show main menu fallback:', menuError);
         }
       }, ERROR_RECOVERY_DELAY_MS);
+      // Set ready flag even on error to prevent loading screen timeout
+      window.gameModuleReady = true;
     }
 
   </script>
