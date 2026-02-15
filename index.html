@@ -7317,12 +7317,12 @@
       farmGroup.add(barn);
       
       // Phase 4: Farm fields texture/area around barn (plowed field rows)
-      const fieldMat = new THREE.MeshToonMaterial({ color: 0x654321 }); // Brown soil
+      const barnFieldMat = new THREE.MeshToonMaterial({ color: 0x654321 }); // Brown soil
       for (let row = 0; row < 6; row++) {
         for (let col = 0; col < 8; col++) {
           const fieldPlot = new THREE.Mesh(
             new THREE.PlaneGeometry(1.5, 1.5),
-            fieldMat
+            barnFieldMat
           );
           fieldPlot.rotation.x = -Math.PI / 2;
           fieldPlot.position.set(
@@ -7503,12 +7503,12 @@
       montanaGroup.add(montanaBase);
       
       // Snowy mountain peaks (3 peaks)
-      const snowMat = new THREE.MeshToonMaterial({ color: 0xFFFAFA }); // Snow white
+      const montanaSnowMat = new THREE.MeshToonMaterial({ color: 0xFFFAFA }); // Snow white
       const peakPositions = [[0, 0], [-6, -3], [6, -3]];
       peakPositions.forEach((pos, idx) => {
         const peakHeight = idx === 0 ? 12 : 8;
         const peakGeo = new THREE.ConeGeometry(4, peakHeight, 4);
-        const peak = new THREE.Mesh(peakGeo, snowMat);
+        const peak = new THREE.Mesh(peakGeo, montanaSnowMat);
         peak.position.set(pos[0], peakHeight/2 + 3, pos[1]);
         peak.castShadow = true;
         montanaGroup.add(peak);
@@ -7531,7 +7531,7 @@
         
         // Snow cap on pine
         const snowCapGeo = new THREE.ConeGeometry(1.5, 1, 6);
-        const snowCap = new THREE.Mesh(snowCapGeo, snowMat);
+        const snowCap = new THREE.Mesh(snowCapGeo, montanaSnowMat);
         snowCap.position.set(
           Math.cos(angle) * dist,
           3.5,
@@ -7970,16 +7970,12 @@
       setupMenus();
       window.addEventListener('resize', onWindowResize, false);
       
-      // Show loading screen, then main menu
-      showLoadingScreen();
-
-      // Start Loop
+      // Start Loop - begin rendering immediately (non-blocking)
       requestAnimationFrame(animate);
       
-      // Signal that module is fully initialized (acceptance criteria #2)
-      // This MUST be last, after all handlers are attached
-      window.gameModuleReady = true;
-      console.log('[Init] Game module ready - all systems initialized');
+      // Show loading screen, then main menu (acceptance criteria #1)
+      // gameModuleReady will be set after loading completes (acceptance criteria #2)
+      showLoadingScreen();
     }
     
     function showLoadingScreen() {
@@ -8010,6 +8006,14 @@
       updateGoldDisplays();
       setGameActive(false);
       setGamePaused(true);
+      
+      // Signal that module is fully initialized (acceptance criteria #2)
+      // This is set AFTER loading screen completes and main menu is shown
+      // The check ensures it's only set once during initial load (not when returning from other screens)
+      if (!window.gameModuleReady) {
+        window.gameModuleReady = true;
+        console.log('[Init] Game module ready - loading complete, main menu shown');
+      }
     }
     
     function hideMainMenu() {
