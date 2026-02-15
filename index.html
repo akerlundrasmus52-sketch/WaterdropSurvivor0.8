@@ -5597,6 +5597,15 @@
           saveData.unspentAttributePoints = saveData.unspentAttributePoints || 0;
           saveData.equippedGear = { ...defaultSaveData.equippedGear, ...(saveData.equippedGear || {}) };
           saveData.inventory = saveData.inventory || [];
+          saveData.campBuildings = { ...defaultSaveData.campBuildings, ...(saveData.campBuildings || {}) };
+          saveData.skillTree = { ...defaultSaveData.skillTree, ...(saveData.skillTree || {}) };
+          saveData.companions = { ...defaultSaveData.companions, ...(saveData.companions || {}) };
+          saveData.hasVisitedCamp = saveData.hasVisitedCamp || false;
+          saveData.nextRunTimeOfDay = saveData.nextRunTimeOfDay || 'day';
+          saveData.trainingPoints = saveData.trainingPoints || 0;
+          saveData.lastTrainingPointTime = saveData.lastTrainingPointTime || 0;
+          saveData.skillPoints = saveData.skillPoints || 0;
+          saveData.selectedCompanion = saveData.selectedCompanion || 'stormWolf';
         }
       } catch (e) {
         console.error('Failed to load save data:', e);
@@ -11003,6 +11012,11 @@
       const luck = saveData.attributes.luck || 0;
       const wisdom = saveData.attributes.wisdom || 0;
       
+      // Training hall attributes (new system)
+      const trainingStrength = saveData.attributes.strength || 0; // Already included
+      const trainingEndurance = saveData.attributes.endurance || 0;
+      const trainingFlexibility = saveData.attributes.flexibility || 0;
+      
       const attrHp = vitality * ATTRIBUTE_INFO.vitality.effects.maxHp;
       const attrRegen = vitality * ATTRIBUTE_INFO.vitality.effects.hpRegen;
       const attrAtkSpeed = dexterity * ATTRIBUTE_INFO.dexterity.effects.attackSpeed;
@@ -11010,6 +11024,12 @@
       const attrDamage = strength * ATTRIBUTE_INFO.strength.effects.damage;
       const attrCritDmg = luck * ATTRIBUTE_INFO.luck.effects.critDamage;
       const attrCdReduction = wisdom * ATTRIBUTE_INFO.wisdom.effects.cooldownReduction;
+      
+      // Training hall bonuses
+      // Endurance: +2% stamina/high-speed duration per point (interpreted as +2% move speed)
+      const enduranceMoveSpeed = trainingEndurance * 0.02;
+      // Flexibility: +1% turn/dodge responsiveness per point (armor + evasion)
+      const flexibilityArmor = trainingFlexibility * 2; // +2 armor per point
       
       // Apply gear bonuses
       const gearStats = calculateGearStats();
@@ -11028,13 +11048,13 @@
       playerStats.hp = baseHp + attrHp;
       playerStats.maxHp = baseHp + attrHp;
       playerStats.strength = baseDamage * (1 + attrDamage + gearMagicBonus);
-      playerStats.walkSpeed = baseSpeed * (1 + gearMoveSpeedBonus);
+      playerStats.walkSpeed = baseSpeed * (1 + gearMoveSpeedBonus + enduranceMoveSpeed);
       playerStats.kills = 0;
       playerStats.miniBossesDefeated = 0; // Reset mini-boss tracking
       playerStats.atkSpeed = baseAtkSpeed * (1 + attrAtkSpeed + gearAtkSpeedBonus);
       playerStats.critChance = baseCritChance + attrCritChance + gearPrecisionBonus + gearCritBonus;
       playerStats.critDmg = baseCritDmg + attrCritDmg;
-      playerStats.armor = baseArmor + gearStats.flexibility; // Flexibility gives flat armor bonus
+      playerStats.armor = baseArmor + gearStats.flexibility + flexibilityArmor; // Flexibility gives flat armor bonus
       playerStats.hpRegen = baseRegen + attrRegen;
       playerStats.gold = 0;
       waveCount = 0;
