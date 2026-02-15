@@ -2218,6 +2218,10 @@
      */
     (function() {
       let loadingInitialized = false;
+      // Global flag to track if loading screen has completed - used by module for fallback
+      // NOTE: This flag is never reset as loading only happens once per page load.
+      // The game does not support hot reloading or client-side navigation.
+      window.loadingScreenCompleted = false;
       
       function startLoadingBar() {
         // Prevent duplicate initialization
@@ -2243,6 +2247,8 @@
           loadingScreen.classList.add('fade-out');
           setTimeout(() => {
             loadingScreen.style.display = 'none';
+            // Set global flag for fallback mechanism
+            window.loadingScreenCompleted = true;
             // Dispatch custom event that game init can listen to
             window.dispatchEvent(new CustomEvent('loadingComplete'));
           }, 500); // Match CSS transition duration
@@ -2299,6 +2305,9 @@
     import * as THREE from 'three';
 
     // --- CONSTANTS & CONFIG ---
+    // Error recovery delay for accessibility (allows adequate time to read and comprehend alert)
+    const ERROR_RECOVERY_DELAY_MS = 5000; // 5 seconds for users with cognitive disabilities or slower reading speeds
+    
     const COLORS = {
       bg: 0xFFF0F5,
       player: 0x4FC3F7, // Light Blue - more like water droplet
@@ -9665,6 +9674,12 @@
     }
 
     // --- GAME LOGIC ---
+    
+    // Guard flag to prevent duplicate main menu initialization
+    // Declared here before init() to avoid temporal dead zone issues
+    // NOTE: This flag is never reset as the game only initializes once per page load.
+    // Game restarts return to camp screen, not main menu, so reinitializing is not needed.
+    let mainMenuInitialized = false;
 
     function init() {
       // Load save data first
@@ -9753,12 +9768,30 @@
       window.addEventListener('loadingComplete', () => {
         showMainMenu();
       });
+      
+      // FALLBACK: Check if loading already completed before listener was registered
+      // This handles race condition where module loads after loading screen completes
+      // Check immediately - the event listener is already registered and will catch
+      // any events that fire after this point
+      // Note: Both the event listener and this fallback may call showMainMenu(),
+      // but the guard flag in showMainMenu() ensures it only executes once
+      if (window.loadingScreenCompleted) {
+        console.info('Loading already completed - showing main menu via fallback');
+        showMainMenu();
+      }
 
       // Start Loop
       requestAnimationFrame(animate);
     }
     
     function showMainMenu() {
+      // Guard flag check and assignment
+      // NOTE: While JavaScript is single-threaded, async callbacks can interleave between event loop ticks.
+      // This guard flag pattern prevents re-execution across different async calls (event listener, fallback, error recovery).
+      // The first call to reach this point sets the flag, preventing subsequent calls from executing the body.
+      if (mainMenuInitialized) return; // Already initialized, prevent duplicate calls
+      mainMenuInitialized = true;
+      
       document.getElementById('main-menu').style.display = 'flex';
       updateGoldDisplays();
       isGameActive = false;
@@ -14033,8 +14066,27 @@
       processDisposalQueue();
     }
 
-    // Init Game
-    try { init(); } catch(e) { console.error(e); alert("Game Error: " + e.message); }
+    // Init Game with enhanced error handling
+    try { 
+      init(); 
+    } catch(e) { 
+      console.error('Game initialization error:', e);
+      // Show user-friendly error message without exposing technical details
+      const errorMsg = `The game failed to start properly.\n\nPlease refresh the page to try again. If the problem persists, try clearing your browser cache.`;
+      alert(errorMsg);
+      // Try to show main menu anyway in case it's a non-critical error
+      // NOTE: This is a best-effort recovery. The menu may not function correctly if
+      // critical initialization steps failed, but it's better than showing a black screen.
+      // Users can refresh as instructed in the error message.
+      setTimeout(() => {
+        try {
+          // Always use showMainMenu to respect the guard flag
+          showMainMenu();
+        } catch(menuError) {
+          console.error('Failed to show main menu fallback:', menuError);
+        }
+      }, ERROR_RECOVERY_DELAY_MS);
+    }
 
   </script>
 </body>
