@@ -1740,6 +1740,20 @@
         <div class="stat-text" id="windmill-hp-text" style="color: #8B4513;">WINDMILL: 600/600</div>
         <div class="stat-text" id="windmill-timer-text" style="color: #FFD700; font-size: 18px;">DEFEND: 30s</div>
       </div>
+      
+      <!-- Montana Quest UI -->
+      <div id="montana-quest-ui" style="display: none; margin-top: 10px;">
+        <div class="stat-text" style="color: #F0F8FF; font-size: 20px; text-shadow: 2px 2px 4px #000;">❄️ MONTANA QUEST ❄️</div>
+        <div class="stat-text" id="montana-kills-text" style="color: #4FC3F7; font-size: 16px;">Enemies: 0/15</div>
+        <div class="stat-text" id="montana-timer-text" style="color: #FFD700; font-size: 18px;">Time: 45s</div>
+      </div>
+      
+      <!-- Eiffel Tower Quest UI -->
+      <div id="eiffel-quest-ui" style="display: none; margin-top: 10px;">
+        <div class="stat-text" style="color: #8B7355; font-size: 20px; text-shadow: 2px 2px 4px #000;">🗼 EIFFEL QUEST 🗼</div>
+        <div class="stat-text" id="eiffel-kills-text" style="color: #4FC3F7; font-size: 16px;">Enemies: 0/25</div>
+        <div class="stat-text" id="eiffel-timer-text" style="color: #FFD700; font-size: 18px;">Time: 60s</div>
+      </div>
     </div>
     <button id="stats-btn" class="btn-small" style="position: absolute; top: 20px; right: 20px; pointer-events: auto; z-index: 100;">STATS</button>
     <button id="settings-btn" class="btn-small" style="position: absolute; top: 20px; right: 120px; pointer-events: auto; z-index: 100;">⚙️</button>
@@ -2368,6 +2382,11 @@
     let waveCount = 0;
     let lastWaveEndTime = 0; // Track when last wave was cleared
     let windmillQuest = { active: false, timer: 0, duration: 30, windmill: null, hasCompleted: false };
+    
+    // NEW BIOME QUESTS
+    let montanaQuest = { active: false, timer: 0, duration: 45, enemiesKilled: 0, requiredKills: 15, hasCompleted: false, position: { x: -80, y: 0, z: -100 } };
+    let eiffelQuest = { active: false, timer: 0, duration: 60, enemiesKilled: 0, requiredKills: 25, hasCompleted: false, position: { x: 80, y: 0, z: 50 } };
+    
     let runStartGold = 0;  // Track gold at start of run for end-of-run calculation
     let lastCleanupTime = 0; // Track last memory cleanup time
     let miniBossesSpawned = new Set(); // Track which mini-boss levels have been spawned
@@ -4034,6 +4053,14 @@
         }
         
         playerStats.kills++;
+        
+        // Track quest kills for new biome quests
+        if (montanaQuest.active) {
+          montanaQuest.enemiesKilled++;
+        }
+        if (eiffelQuest.active) {
+          eiffelQuest.enemiesKilled++;
+        }
         
         // Track mini-boss defeats for achievements
         if (this.isMiniBoss) {
@@ -6322,43 +6349,43 @@
       },
       moveSpeed: {
         name: 'Move Speed',
-        description: '+5% per level',
+        description: '+3% per level (Level 100 Balance)', // Reduced from 5%
         maxLevel: 10,
         baseCost: 75,
         costIncrease: 25,
-        effect: (level) => 0.05 * level
+        effect: (level) => 0.03 * level // Reduced from 0.05
       },
       attackDamage: {
         name: 'Attack Damage',
-        description: '+10% per level',
+        description: '+6% per level (Level 100 Balance)', // Reduced from 10%
         maxLevel: 15,
         baseCost: 100,
         costIncrease: 50,
-        effect: (level) => 0.1 * level
+        effect: (level) => 0.06 * level // Reduced from 0.1
       },
       attackSpeed: {
         name: 'Attack Speed',
-        description: '+5% per level',
+        description: '+3% per level (Level 100 Balance)', // Reduced from 5%
         maxLevel: 10,
         baseCost: 100,
         costIncrease: 50,
-        effect: (level) => 0.05 * level
+        effect: (level) => 0.03 * level // Reduced from 0.05
       },
       critChance: {
         name: 'Crit Chance',
-        description: '+2% per level',
+        description: '+1.5% per level (Level 100 Balance)', // Reduced from 2%
         maxLevel: 10,
         baseCost: 150,
         costIncrease: 50,
-        effect: (level) => 0.02 * level
+        effect: (level) => 0.015 * level // Reduced from 0.02
       },
       critDamage: {
         name: 'Crit Damage',
-        description: '+10% per level',
+        description: '+6% per level (Level 100 Balance)', // Reduced from 10%
         maxLevel: 10,
         baseCost: 150,
         costIncrease: 50,
-        effect: (level) => 0.1 * level
+        effect: (level) => 0.06 * level // Reduced from 0.1
       },
       armor: {
         name: 'Armor',
@@ -6370,11 +6397,11 @@
       },
       cooldownReduction: {
         name: 'Cooldown Reduction',
-        description: '-3% per level',
+        description: '-2% per level (Level 100 Balance)', // Reduced from 3%
         maxLevel: 10,
         baseCost: 200,
         costIncrease: 50,
-        effect: (level) => 0.03 * level
+        effect: (level) => 0.02 * level // Reduced from 0.03
       },
       goldEarned: {
         name: 'Gold Earned',
@@ -6680,13 +6707,275 @@
 
     // --- WORLD GENERATION ---
     function createWorld() {
-      // Ground - EXPANDED MAP
-      const groundGeo = new THREE.PlaneGeometry(400, 400); // Expanded from 200x200 to 400x400
+      // MULTI-BIOME MAP SYSTEM (Snow → Mountains → Fields → Desert)
+      // Expanded map to 600x600 to support biome diversity
+      // Base ground layer
+      const groundGeo = new THREE.PlaneGeometry(600, 600);
       const groundMat = new THREE.MeshToonMaterial({ color: COLORS.ground });
       const ground = new THREE.Mesh(groundGeo, groundMat);
       ground.rotation.x = -Math.PI / 2;
       ground.receiveShadow = true;
       scene.add(ground);
+      
+      // BIOME SYSTEM: Create distinct zones with smooth transitions
+      // Northern zone (-150 to -50 Z): Snowy Montana - white/light blue
+      // Mountain zone (-50 to 0 Z): Rocky mountains - gray/brown
+      // Central fields (0 to 100 Z): Green meadows - green (existing)
+      // Southern desert (100 to 150 Z): Sandy desert - yellow/tan
+      
+      // Function to create biome terrain patches
+      function createBiomePatch(x, z, size, color, height = 0.01) {
+        const patchGeo = new THREE.PlaneGeometry(size, size);
+        const patchMat = new THREE.MeshToonMaterial({ color: color });
+        const patch = new THREE.Mesh(patchGeo, patchMat);
+        patch.rotation.x = -Math.PI / 2;
+        patch.position.set(x, height, z);
+        patch.receiveShadow = true;
+        scene.add(patch);
+        return patch;
+      }
+      
+      // NORTHERN BIOME: Snowy Montana (z: -150 to -50)
+      const snowColor = 0xF0F8FF; // Alice blue - snowy
+      for (let x = -250; x <= 250; x += 50) {
+        for (let z = -150; z <= -50; z += 50) {
+          createBiomePatch(x, z, 55, snowColor, 0.02);
+        }
+      }
+      
+      // MOUNTAIN BIOME: Rocky terrain (z: -50 to 0)
+      const mountainColor = 0x808080; // Gray rocky
+      for (let x = -250; x <= 250; x += 50) {
+        for (let z = -50; z <= 0; z += 50) {
+          createBiomePatch(x, z, 55, mountainColor, 0.02);
+        }
+      }
+      
+      // SOUTHERN BIOME: Sandy Desert (z: 100 to 150)
+      const desertColor = 0xF4A460; // Sandy brown
+      for (let x = -250; x <= 250; x += 50) {
+        for (let z = 100; z <= 150; z += 50) {
+          createBiomePatch(x, z, 55, desertColor, 0.02);
+        }
+      }
+      
+      // ===== NEW BIOME LANDMARKS =====
+      
+      // SNOWY MONTANA: Welcome sign and snowy landscape features
+      const montanaGroup = new THREE.Group();
+      montanaGroup.position.set(-80, 0, -100); // Northern snowy zone
+      
+      // Montana Welcome Sign
+      const signPostGeo = new THREE.CylinderGeometry(0.3, 0.3, 4, 8);
+      const signPostMat = new THREE.MeshToonMaterial({ color: 0x8B4513 }); // Brown wood
+      const signPost = new THREE.Mesh(signPostGeo, signPostMat);
+      signPost.position.y = 2;
+      signPost.castShadow = true;
+      montanaGroup.add(signPost);
+      
+      // Sign board
+      const signBoardGeo = new THREE.BoxGeometry(8, 2, 0.3);
+      const signBoardMat = new THREE.MeshToonMaterial({ color: 0xD2B48C }); // Tan
+      const signBoard = new THREE.Mesh(signBoardGeo, signBoardMat);
+      signBoard.position.y = 4;
+      signBoard.castShadow = true;
+      montanaGroup.add(signBoard);
+      
+      // Montana text sprite
+      const montanaCanvas = document.createElement('canvas');
+      montanaCanvas.width = 512;
+      montanaCanvas.height = 128;
+      const montanaCtx = montanaCanvas.getContext('2d');
+      montanaCtx.fillStyle = '#000080'; // Dark blue
+      montanaCtx.font = 'bold 48px Arial';
+      montanaCtx.textAlign = 'center';
+      montanaCtx.textBaseline = 'middle';
+      montanaCtx.fillText('MONTANA', 256, 64);
+      const montanaTexture = new THREE.CanvasTexture(montanaCanvas);
+      const montanaSpriteMat = new THREE.SpriteMaterial({ map: montanaTexture });
+      const montanaSprite = new THREE.Sprite(montanaSpriteMat);
+      montanaSprite.scale.set(7, 1.75, 1);
+      montanaSprite.position.y = 4;
+      montanaGroup.add(montanaSprite);
+      
+      // Snow-covered pine trees around Montana sign
+      const snowPineGeo = new THREE.ConeGeometry(2, 5, 6);
+      const snowPineMat = new THREE.MeshToonMaterial({ color: 0xE0F8F7 }); // Icy white-blue
+      for (let i = 0; i < 12; i++) {
+        const angle = (i / 12) * Math.PI * 2;
+        const pine = new THREE.Mesh(snowPineGeo, snowPineMat);
+        pine.position.set(Math.cos(angle) * 12, 2.5, Math.sin(angle) * 12);
+        pine.castShadow = true;
+        montanaGroup.add(pine);
+      }
+      
+      // Snowy rocks
+      const snowRockGeo = new THREE.DodecahedronGeometry(1.5);
+      const snowRockMat = new THREE.MeshToonMaterial({ color: 0xF0F8FF });
+      for (let i = 0; i < 8; i++) {
+        const rock = new THREE.Mesh(snowRockGeo, snowRockMat);
+        rock.position.set(
+          (Math.random() - 0.5) * 25,
+          0.75,
+          (Math.random() - 0.5) * 25
+        );
+        rock.castShadow = true;
+        montanaGroup.add(rock);
+      }
+      
+      scene.add(montanaGroup);
+      
+      // Montana Quest Signpost
+      const montanaQuestSign = new THREE.Group();
+      montanaQuestSign.position.set(-80, 0, -90); // In front of Montana sign
+      
+      const mSignPoleGeo = new THREE.CylinderGeometry(0.2, 0.2, 3, 8);
+      const mSignPoleMat = new THREE.MeshToonMaterial({ color: 0x8B4513 });
+      const mSignPole = new THREE.Mesh(mSignPoleGeo, mSignPoleMat);
+      mSignPole.position.y = 1.5;
+      montanaQuestSign.add(mSignPole);
+      
+      const mSignBoardGeo = new THREE.BoxGeometry(4, 1.2, 0.2);
+      const mSignBoardMat = new THREE.MeshToonMaterial({ color: 0xD2B48C });
+      const mSignBoard = new THREE.Mesh(mSignBoardGeo, mSignBoardMat);
+      mSignBoard.position.y = 3.2;
+      montanaQuestSign.add(mSignBoard);
+      
+      const mSignCanvas = document.createElement('canvas');
+      mSignCanvas.width = 512;
+      mSignCanvas.height = 128;
+      const mSignCtx = mSignCanvas.getContext('2d');
+      mSignCtx.fillStyle = '#4169E1'; // Royal blue
+      mSignCtx.font = 'bold 52px Arial';
+      mSignCtx.textAlign = 'center';
+      mSignCtx.textBaseline = 'middle';
+      mSignCtx.fillText('QUEST HERE', 256, 64);
+      const mSignTexture = new THREE.CanvasTexture(mSignCanvas);
+      const mSignSpriteMat = new THREE.SpriteMaterial({ map: mSignTexture });
+      const mSignSprite = new THREE.Sprite(mSignSpriteMat);
+      mSignSprite.scale.set(3.5, 0.875, 1);
+      mSignSprite.position.y = 3.2;
+      montanaQuestSign.add(mSignSprite);
+      
+      scene.add(montanaQuestSign);
+      
+      // EIFFEL TOWER: Iconic Paris landmark in fields biome
+      const eiffelGroup = new THREE.Group();
+      eiffelGroup.position.set(80, 0, 50); // Eastern side of fields
+      
+      // Tower base (4 legs)
+      const legGeo = new THREE.BoxGeometry(1, 15, 1);
+      const ironMat = new THREE.MeshToonMaterial({ color: 0x8B7355 }); // Rusty brown iron
+      const legPositions = [
+        [5, 7.5, 5], [-5, 7.5, 5], [5, 7.5, -5], [-5, 7.5, -5]
+      ];
+      legPositions.forEach(pos => {
+        const leg = new THREE.Mesh(legGeo, ironMat);
+        leg.position.set(...pos);
+        leg.rotation.z = pos[0] > 0 ? -0.1 : 0.1; // Slight inward lean
+        leg.rotation.x = pos[2] > 0 ? -0.1 : 0.1;
+        leg.castShadow = true;
+        eiffelGroup.add(leg);
+      });
+      
+      // First platform
+      const platform1Geo = new THREE.BoxGeometry(12, 0.5, 12);
+      const platform1 = new THREE.Mesh(platform1Geo, ironMat);
+      platform1.position.y = 15;
+      platform1.castShadow = true;
+      eiffelGroup.add(platform1);
+      
+      // Middle section (4 tapering beams)
+      const midBeamGeo = new THREE.BoxGeometry(0.8, 12, 0.8);
+      const midPositions = [
+        [3, 21, 3], [-3, 21, 3], [3, 21, -3], [-3, 21, -3]
+      ];
+      midPositions.forEach(pos => {
+        const beam = new THREE.Mesh(midBeamGeo, ironMat);
+        beam.position.set(...pos);
+        beam.rotation.z = pos[0] > 0 ? -0.15 : 0.15;
+        beam.rotation.x = pos[2] > 0 ? -0.15 : 0.15;
+        beam.castShadow = true;
+        eiffelGroup.add(beam);
+      });
+      
+      // Second platform
+      const platform2Geo = new THREE.BoxGeometry(8, 0.5, 8);
+      const platform2 = new THREE.Mesh(platform2Geo, ironMat);
+      platform2.position.y = 27;
+      platform2.castShadow = true;
+      eiffelGroup.add(platform2);
+      
+      // Top spire
+      const spireGeo = new THREE.CylinderGeometry(0.3, 1, 10, 8);
+      const spire = new THREE.Mesh(spireGeo, ironMat);
+      spire.position.y = 32;
+      spire.castShadow = true;
+      eiffelGroup.add(spire);
+      
+      // Antenna on top
+      const antennaGeo = new THREE.CylinderGeometry(0.1, 0.1, 5, 6);
+      const antenna = new THREE.Mesh(antennaGeo, ironMat);
+      antenna.position.y = 39.5;
+      antenna.castShadow = true;
+      eiffelGroup.add(antenna);
+      
+      // Decorative cross-beams
+      for (let level = 0; level < 3; level++) {
+        const y = 5 + level * 10;
+        const size = 10 - level * 2;
+        for (let side = 0; side < 4; side++) {
+          const angle = (side / 4) * Math.PI * 2;
+          const beamGeo = new THREE.BoxGeometry(size, 0.2, 0.2);
+          const beam = new THREE.Mesh(beamGeo, ironMat);
+          beam.position.set(0, y, 0);
+          beam.rotation.y = angle;
+          eiffelGroup.add(beam);
+        }
+      }
+      
+      scene.add(eiffelGroup);
+      
+      // ===== BIOME DECORATIONS =====
+      
+      // DESERT BIOME: Cacti in southern zone
+      const cactusGeo = new THREE.CylinderGeometry(0.3, 0.3, 3, 8);
+      const cactusMat = new THREE.MeshToonMaterial({ color: 0x2F4F2F }); // Dark green
+      for (let i = 0; i < 20; i++) {
+        const cactus = new THREE.Mesh(cactusGeo, cactusMat);
+        const x = (Math.random() - 0.5) * 400;
+        const z = 100 + Math.random() * 50; // Southern desert zone
+        cactus.position.set(x, 1.5, z);
+        cactus.castShadow = true;
+        scene.add(cactus);
+        
+        // Add arms to some cacti
+        if (Math.random() < 0.5) {
+          const armGeo = new THREE.CylinderGeometry(0.2, 0.2, 1, 6);
+          const arm1 = new THREE.Mesh(armGeo, cactusMat);
+          arm1.position.set(0.5, 0.5, 0);
+          arm1.rotation.z = Math.PI / 3;
+          cactus.add(arm1);
+          
+          const arm2 = new THREE.Mesh(armGeo, cactusMat);
+          arm2.position.set(-0.5, 0.3, 0);
+          arm2.rotation.z = -Math.PI / 3;
+          cactus.add(arm2);
+        }
+      }
+      
+      // MOUNTAIN BIOME: Rocky formations
+      const rockGeo = new THREE.DodecahedronGeometry(1.5);
+      const rockMat = new THREE.MeshToonMaterial({ color: 0x696969 }); // Dim gray
+      for (let i = 0; i < 25; i++) {
+        const rock = new THREE.Mesh(rockGeo, rockMat);
+        const x = (Math.random() - 0.5) * 400;
+        const z = -50 + Math.random() * 50; // Mountain zone
+        rock.position.set(x, 0.75, z);
+        rock.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+        rock.castShadow = true;
+        scene.add(rock);
+      }
 
       // Features
       // NOTE: Old lake removed - using enhanced reflective lake defined later (line ~3747)
@@ -6752,6 +7041,13 @@
       
       // 4. Path to Windmill (40, 40) - East direction (slightly different from Stonehenge)
       createPath(rondelRadius * 0.9, rondelRadius * 0.436, 40, 40, 3);
+      
+      // NEW BIOME PATHS:
+      // 5. Path to Montana (-80, -100) - Northern direction (snowy zone)
+      createPath(0, -rondelRadius, -80, -100, 3);
+      
+      // 6. Path to Eiffel Tower (80, 50) - Eastern direction (fields)
+      createPath(rondelRadius, rondelRadius * 0.5, 80, 50, 3);
       
       // Farm Fields - Fill empty spaces with farm texture
       // Create large farm field background (performance optimized - single large mesh)
@@ -9908,6 +10204,89 @@
       updateHUD();
     }
     
+    // ===== MONTANA QUEST FUNCTIONS =====
+    function updateMontanaQuestUI() {
+      if (!montanaQuest.active) return;
+      
+      document.getElementById('montana-kills-text').innerText = `Enemies: ${montanaQuest.enemiesKilled}/${montanaQuest.requiredKills}`;
+      document.getElementById('montana-timer-text').innerText = `Time: ${Math.ceil(montanaQuest.timer)}s`;
+    }
+    
+    function startMontanaQuest() {
+      if (montanaQuest.hasCompleted || montanaQuest.active) return;
+      
+      montanaQuest.active = true;
+      montanaQuest.timer = montanaQuest.duration;
+      montanaQuest.enemiesKilled = 0;
+      
+      document.getElementById('montana-quest-ui').style.display = 'block';
+      updateMontanaQuestUI();
+      
+      createFloatingText("SURVIVE MONTANA!", new THREE.Vector3(montanaQuest.position.x, 5, montanaQuest.position.z));
+      showStatChange("Montana Quest Started!");
+    }
+    
+    function completeMontanaQuest() {
+      montanaQuest.active = false;
+      montanaQuest.hasCompleted = true;
+      document.getElementById('montana-quest-ui').style.display = 'none';
+      
+      createFloatingText("MONTANA CONQUERED!", new THREE.Vector3(montanaQuest.position.x, 5, montanaQuest.position.z));
+      
+      // Reward: +2 levels, +500 gold, +3 attribute points
+      playerStats.lvl += 2;
+      playerStats.expReq = (playerStats.lvl * 2) * GAME_CONFIG.expValue;
+      playerStats.gold += 500;
+      playerStats.attributePoints += 3;
+      
+      showStatChange("Montana Quest Complete! +2 Levels, +500 Gold, +3 Attribute Points!");
+      playSound('levelup');
+      updateHUD();
+    }
+    
+    // ===== EIFFEL TOWER QUEST FUNCTIONS =====
+    function updateEiffelQuestUI() {
+      if (!eiffelQuest.active) return;
+      
+      document.getElementById('eiffel-kills-text').innerText = `Enemies: ${eiffelQuest.enemiesKilled}/${eiffelQuest.requiredKills}`;
+      document.getElementById('eiffel-timer-text').innerText = `Time: ${Math.ceil(eiffelQuest.timer)}s`;
+    }
+    
+    function startEiffelQuest() {
+      if (eiffelQuest.hasCompleted || eiffelQuest.active) return;
+      
+      eiffelQuest.active = true;
+      eiffelQuest.timer = eiffelQuest.duration;
+      eiffelQuest.enemiesKilled = 0;
+      
+      document.getElementById('eiffel-quest-ui').style.display = 'block';
+      updateEiffelQuestUI();
+      
+      createFloatingText("DEFEND THE EIFFEL TOWER!", new THREE.Vector3(eiffelQuest.position.x, 10, eiffelQuest.position.z));
+      showStatChange("Eiffel Tower Quest Started!");
+    }
+    
+    function completeEiffelQuest() {
+      eiffelQuest.active = false;
+      eiffelQuest.hasCompleted = true;
+      document.getElementById('eiffel-quest-ui').style.display = 'none';
+      
+      createFloatingText("EIFFEL TOWER DEFENDED!", new THREE.Vector3(eiffelQuest.position.x, 10, eiffelQuest.position.z));
+      
+      // Reward: +3 levels, +1000 gold, +5 attribute points, unlock special weapon
+      playerStats.lvl += 3;
+      playerStats.expReq = (playerStats.lvl * 2) * GAME_CONFIG.expValue;
+      playerStats.gold += 1000;
+      playerStats.attributePoints += 5;
+      
+      // Boost weapon damage
+      weapons.gun.damage += 20;
+      
+      showStatChange("Eiffel Quest Complete! +3 Levels, +1000 Gold, +5 Attribute Points, +20 Gun Damage!");
+      playSound('levelup');
+      updateHUD();
+    }
+    
     // Deferred disposal functions (PR #81) - prevent frame drops from bulk cleanup
     function queueDisposal(mesh) {
       if (mesh.parent) {
@@ -10147,6 +10526,13 @@
       
       windmillQuest = { active: false, timer: 0, duration: 15, windmill: null, hasCompleted: false };
       document.getElementById('windmill-quest-ui').style.display = 'none';
+      
+      // Reset biome quests
+      montanaQuest = { active: false, timer: 0, duration: 45, enemiesKilled: 0, requiredKills: 15, hasCompleted: false, position: { x: -80, y: 0, z: -100 } };
+      document.getElementById('montana-quest-ui').style.display = 'none';
+      
+      eiffelQuest = { active: false, timer: 0, duration: 60, enemiesKilled: 0, requiredKills: 25, hasCompleted: false, position: { x: 80, y: 0, z: 50 } };
+      document.getElementById('eiffel-quest-ui').style.display = 'none';
       
       // Reset windmill HP
       if (scene) {
@@ -10957,6 +11343,28 @@
         });
       }
       
+      // Check Montana quest trigger (in northern snowy zone)
+      if (!montanaQuest.active && !montanaQuest.hasCompleted) {
+        const distToMontana = Math.sqrt(
+          Math.pow(player.mesh.position.x - montanaQuest.position.x, 2) +
+          Math.pow(player.mesh.position.z - montanaQuest.position.z, 2)
+        );
+        if (distToMontana < 20) { // Trigger radius
+          startMontanaQuest();
+        }
+      }
+      
+      // Check Eiffel Tower quest trigger
+      if (!eiffelQuest.active && !eiffelQuest.hasCompleted) {
+        const distToEiffel = Math.sqrt(
+          Math.pow(player.mesh.position.x - eiffelQuest.position.x, 2) +
+          Math.pow(player.mesh.position.z - eiffelQuest.position.z, 2)
+        );
+        if (distToEiffel < 25) { // Trigger radius
+          startEiffelQuest();
+        }
+      }
+      
       // Update windmill quest
       if (windmillQuest.active) {
         windmillQuest.timer -= dt;
@@ -10969,6 +11377,38 @@
           // Quest failed
           windmillQuest.active = false;
           document.getElementById('windmill-quest-ui').style.display = 'none';
+        }
+      }
+      
+      // Update Montana quest
+      if (montanaQuest.active) {
+        montanaQuest.timer -= dt;
+        updateMontanaQuestUI();
+        
+        if (montanaQuest.enemiesKilled >= montanaQuest.requiredKills) {
+          // Quest completed successfully
+          completeMontanaQuest();
+        } else if (montanaQuest.timer <= 0) {
+          // Quest failed
+          montanaQuest.active = false;
+          document.getElementById('montana-quest-ui').style.display = 'none';
+          showStatChange("Montana Quest Failed!");
+        }
+      }
+      
+      // Update Eiffel Tower quest
+      if (eiffelQuest.active) {
+        eiffelQuest.timer -= dt;
+        updateEiffelQuestUI();
+        
+        if (eiffelQuest.enemiesKilled >= eiffelQuest.requiredKills) {
+          // Quest completed successfully
+          completeEiffelQuest();
+        } else if (eiffelQuest.timer <= 0) {
+          // Quest failed
+          eiffelQuest.active = false;
+          document.getElementById('eiffel-quest-ui').style.display = 'none';
+          showStatChange("Eiffel Quest Failed!");
         }
       }
 
