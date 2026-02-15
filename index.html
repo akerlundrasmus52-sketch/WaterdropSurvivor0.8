@@ -861,6 +861,13 @@
       color: #fff;
       font-weight: bold;
     }
+    
+    .death-screen-buttons {
+      display: flex;
+      gap: 15px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
 
     .death-gear-item {
       display: flex;
@@ -2388,7 +2395,7 @@
         <div id="achievements-list"></div>
       </div>
       
-      <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
+      <div class="death-screen-buttons">
         <button class="btn" id="try-again-btn">🔄 TRY AGAIN</button>
         <button class="btn" id="restart-btn">🏕️ RETURN TO CAMP</button>
       </div>
@@ -10794,9 +10801,7 @@
         optionsMenu.style.display = 'none';
         isPaused = false;
         // End the current game and go to camp
-        if (isGameActive) {
-          isGameActive = false;
-        }
+        isGameActive = false;
         showCampScreen();
       });
       
