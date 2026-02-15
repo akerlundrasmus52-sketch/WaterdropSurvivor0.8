@@ -2305,8 +2305,8 @@
     import * as THREE from 'three';
 
     // --- CONSTANTS & CONFIG ---
-    // Error recovery delay increased for accessibility (allows time to read alert)
-    const ERROR_RECOVERY_DELAY_MS = 3000; // 3 seconds for users with cognitive disabilities or slower reading speeds
+    // Error recovery delay for accessibility (allows adequate time to read and comprehend alert)
+    const ERROR_RECOVERY_DELAY_MS = 5000; // 5 seconds for users with cognitive disabilities or slower reading speeds
     
     const COLORS = {
       bg: 0xFFF0F5,
@@ -9776,7 +9776,7 @@
       // Note: Both the event listener and this fallback may call showMainMenu(),
       // but the guard flag in showMainMenu() ensures it only executes once
       if (window.loadingScreenCompleted) {
-        console.log('Loading already completed - showing main menu via fallback');
+        console.info('Loading already completed - showing main menu via fallback');
         showMainMenu();
       }
 
@@ -14069,8 +14069,8 @@
       init(); 
     } catch(e) { 
       console.error('Game initialization error:', e);
-      // Show error to user
-      const errorMsg = `Game initialization failed: ${e.message}\n\nPlease refresh the page. If the problem persists, try clearing your browser cache.`;
+      // Show user-friendly error message without exposing technical details
+      const errorMsg = `The game failed to start properly.\n\nPlease refresh the page to try again. If the problem persists, try clearing your browser cache.`;
       alert(errorMsg);
       // Try to show main menu anyway in case it's a non-critical error
       setTimeout(() => {
