@@ -2869,11 +2869,15 @@
       console.info('[INIT] Three.js CDN loaded successfully');
     } catch (importError) {
       console.error('[INIT] Failed to load Three.js from CDN:', importError);
-      alert('Failed to load 3D graphics library.\n\nPlease check your internet connection and refresh the page.');
-      // Set ready flag to allow fallback menu to work
+      // Set ready flag to allow loading screen to complete and fallback menu to work
+      // Don't throw or alert - just log gracefully
       window.gameModuleReady = true;
-      throw importError; // Re-throw to prevent further execution
+      // Set THREE to null so the rest of the module is skipped
+      THREE = null;
     }
+    
+    // Only proceed if THREE.js loaded successfully
+    if (THREE) {
 
     // --- CONSTANTS & CONFIG ---
     // Error recovery delay for accessibility (allows adequate time to read and comprehend alert)
@@ -15087,10 +15091,10 @@
         } catch(menuError) {
           console.error('Failed to show main menu fallback:', menuError);
         }
-      }, ERROR_RECOVERY_DELAY_MS);
-      // Set ready flag even on error to prevent loading screen timeout
-      window.gameModuleReady = true;
+      // Note: We don't set window.gameModuleReady = true on init error
+      // Only successful init() should set this flag
     }
+    } // End of if (THREE) block
 
   </script>
 </body>
