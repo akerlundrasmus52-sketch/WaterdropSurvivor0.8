@@ -1740,6 +1740,24 @@
         <div class="stat-text" id="windmill-hp-text" style="color: #8B4513;">WINDMILL: 600/600</div>
         <div class="stat-text" id="windmill-timer-text" style="color: #FFD700; font-size: 18px;">DEFEND: 30s</div>
       </div>
+      
+      <!-- Montana Quest UI -->
+      <div id="montana-quest-ui" style="display: none; margin-top: 10px;" role="status" aria-live="polite">
+        <div class="bar-container" style="border-color: #1a237e;">
+          <div class="bar-fill" id="montana-timer-fill" style="background: linear-gradient(to right, #1a237e, #3949ab); width: 100%;"></div>
+        </div>
+        <div class="stat-text" id="montana-timer-text" style="color: #F0F8FF; font-size: 18px;" aria-label="Montana quest timer">SURVIVE: 45s</div>
+        <div class="stat-text" id="montana-kills-text" style="color: #FFD700; font-size: 16px;" aria-label="Montana quest kills">KILLS: 0/15</div>
+      </div>
+      
+      <!-- Eiffel Quest UI -->
+      <div id="eiffel-quest-ui" style="display: none; margin-top: 10px;" role="status" aria-live="polite">
+        <div class="bar-container" style="border-color: #8B7355;">
+          <div class="bar-fill" id="eiffel-timer-fill" style="background: linear-gradient(to right, #8B7355, #A0826D); width: 100%;"></div>
+        </div>
+        <div class="stat-text" id="eiffel-timer-text" style="color: #FFD700; font-size: 18px;" aria-label="Eiffel quest timer">SURVIVE: 60s</div>
+        <div class="stat-text" id="eiffel-kills-text" style="color: #FFD700; font-size: 16px;" aria-label="Eiffel quest kills">KILLS: 0/25</div>
+      </div>
     </div>
     <button id="stats-btn" class="btn-small" style="position: absolute; top: 20px; right: 20px; pointer-events: auto; z-index: 100;">STATS</button>
     <button id="settings-btn" class="btn-small" style="position: absolute; top: 20px; right: 120px; pointer-events: auto; z-index: 100;">⚙️</button>
@@ -2368,6 +2386,12 @@
     let waveCount = 0;
     let lastWaveEndTime = 0; // Track when last wave was cleared
     let windmillQuest = { active: false, timer: 0, duration: 30, windmill: null, hasCompleted: false };
+    let montanaQuest = { active: false, timer: 0, duration: 45, kills: 0, killsNeeded: 15, landmark: null, hasCompleted: false };
+    let eiffelQuest = { active: false, timer: 0, duration: 60, kills: 0, killsNeeded: 25, landmark: null, hasCompleted: false };
+    const MONTANA_QUEST_TRIGGER_DISTANCE = 15; // Proximity distance for Montana quest
+    const EIFFEL_QUEST_TRIGGER_DISTANCE = 20; // Proximity distance for Eiffel quest (larger due to taller structure)
+    let montanaLandmark = null; // Store Montana landmark reference for efficient distance checks
+    let eiffelLandmark = null; // Store Eiffel landmark reference for efficient distance checks
     let runStartGold = 0;  // Track gold at start of run for end-of-run calculation
     let lastCleanupTime = 0; // Track last memory cleanup time
     let miniBossesSpawned = new Set(); // Track which mini-boss levels have been spawned
@@ -3800,6 +3824,16 @@
 
       die() {
         this.isDead = true;
+        
+        // Track kills for active quests
+        if (montanaQuest.active) {
+          montanaQuest.kills++;
+          updateMontanaQuestUI();
+        }
+        if (eiffelQuest.active) {
+          eiffelQuest.kills++;
+          updateEiffelQuestUI();
+        }
         
         // Phase 5: Death Variety - 50% explode into pieces, 50% leave corpse sprite
         const explodeIntoPieces = Math.random() < 0.5;
@@ -6680,13 +6714,46 @@
 
     // --- WORLD GENERATION ---
     function createWorld() {
-      // Ground - EXPANDED MAP
-      const groundGeo = new THREE.PlaneGeometry(400, 400); // Expanded from 200x200 to 400x400
-      const groundMat = new THREE.MeshToonMaterial({ color: COLORS.ground });
-      const ground = new THREE.Mesh(groundGeo, groundMat);
-      ground.rotation.x = -Math.PI / 2;
-      ground.receiveShadow = true;
-      scene.add(ground);
+      // Ground - EXPANDED TO 600x600 WITH MULTI-BIOME SYSTEM
+      // Map layout: Snow (north) → Mountains → Fields (center) → Desert (south)
+      const mapSize = 600;
+      
+      // Create multiple ground planes for different biomes
+      // Snow biome (north: z < -100)
+      const snowGeo = new THREE.PlaneGeometry(mapSize, 200);
+      const snowMat = new THREE.MeshToonMaterial({ color: 0xF0F8FF }); // Alice blue (snow)
+      const snowGround = new THREE.Mesh(snowGeo, snowMat);
+      snowGround.rotation.x = -Math.PI / 2;
+      snowGround.position.set(0, 0, -200);
+      snowGround.receiveShadow = true;
+      scene.add(snowGround);
+      
+      // Mountain biome (north-center: -100 < z < 0)
+      const mountainGeo = new THREE.PlaneGeometry(mapSize, 100);
+      const mountainMat = new THREE.MeshToonMaterial({ color: 0x8B7355 }); // Brown/rocky
+      const mountainGround = new THREE.Mesh(mountainGeo, mountainMat);
+      mountainGround.rotation.x = -Math.PI / 2;
+      mountainGround.position.set(0, 0, -50);
+      mountainGround.receiveShadow = true;
+      scene.add(mountainGround);
+      
+      // Fields biome (center: 0 < z < 100) - original green grass
+      const fieldGeo = new THREE.PlaneGeometry(mapSize, 100);
+      const fieldMat = new THREE.MeshToonMaterial({ color: COLORS.ground });
+      const fieldGround = new THREE.Mesh(fieldGeo, fieldMat);
+      fieldGround.rotation.x = -Math.PI / 2;
+      fieldGround.position.set(0, 0, 50);
+      fieldGround.receiveShadow = true;
+      scene.add(fieldGround);
+      
+      // Desert biome (south: z > 100)
+      const desertGeo = new THREE.PlaneGeometry(mapSize, 200);
+      const desertMat = new THREE.MeshToonMaterial({ color: 0xEDC9AF }); // Desert sand
+      const desertGround = new THREE.Mesh(desertGeo, desertMat);
+      desertGround.rotation.x = -Math.PI / 2;
+      desertGround.position.set(0, 0, 200);
+      desertGround.receiveShadow = true;
+      scene.add(desertGround);
 
       // Features
       // NOTE: Old lake removed - using enhanced reflective lake defined later (line ~3747)
@@ -7420,6 +7487,231 @@
           scene.add(rail);
         }
       }
+
+      // Montana Landmark - Snowy area in the north (snow biome)
+      const montanaGroup = new THREE.Group();
+      montanaGroup.position.set(0, 0, -200); // North in snow biome
+      
+      // Base platform
+      const montanaBaseMat = new THREE.MeshToonMaterial({ color: 0xD3D3D3 }); // Light gray
+      const montanaBase = new THREE.Mesh(
+        new THREE.CylinderGeometry(8, 10, 3, 8),
+        montanaBaseMat
+      );
+      montanaBase.position.y = 1.5;
+      montanaBase.castShadow = true;
+      montanaGroup.add(montanaBase);
+      
+      // Snowy mountain peaks (3 peaks)
+      const snowMat = new THREE.MeshToonMaterial({ color: 0xFFFAFA }); // Snow white
+      const peakPositions = [[0, 0], [-6, -3], [6, -3]];
+      peakPositions.forEach((pos, idx) => {
+        const peakHeight = idx === 0 ? 12 : 8;
+        const peakGeo = new THREE.ConeGeometry(4, peakHeight, 4);
+        const peak = new THREE.Mesh(peakGeo, snowMat);
+        peak.position.set(pos[0], peakHeight/2 + 3, pos[1]);
+        peak.castShadow = true;
+        montanaGroup.add(peak);
+      });
+      
+      // Pine trees around base (snow-covered)
+      const snowyPineMat = new THREE.MeshToonMaterial({ color: 0x1B5E20 }); // Dark green
+      for(let i = 0; i < 8; i++) {
+        const angle = (i / 8) * Math.PI * 2;
+        const dist = 12;
+        const pineGeo = new THREE.ConeGeometry(1.5, 4, 6);
+        const pine = new THREE.Mesh(pineGeo, snowyPineMat);
+        pine.position.set(
+          Math.cos(angle) * dist,
+          2,
+          Math.sin(angle) * dist
+        );
+        pine.castShadow = true;
+        montanaGroup.add(pine);
+        
+        // Snow cap on pine
+        const snowCapGeo = new THREE.ConeGeometry(1.5, 1, 6);
+        const snowCap = new THREE.Mesh(snowCapGeo, snowMat);
+        snowCap.position.set(
+          Math.cos(angle) * dist,
+          3.5,
+          Math.sin(angle) * dist
+        );
+        montanaGroup.add(snowCap);
+      }
+      
+      // Montana text sign
+      const montanaCanvas = document.createElement('canvas');
+      montanaCanvas.width = 512;
+      montanaCanvas.height = 128;
+      const montanaCtx = montanaCanvas.getContext('2d');
+      montanaCtx.fillStyle = '#1a237e'; // Dark blue
+      montanaCtx.font = 'bold 60px Arial';
+      montanaCtx.textAlign = 'center';
+      montanaCtx.textBaseline = 'middle';
+      montanaCtx.fillText('MONTANA', 256, 64);
+      
+      const montanaTexture = new THREE.CanvasTexture(montanaCanvas);
+      const montanaSpriteMat = new THREE.SpriteMaterial({ map: montanaTexture });
+      const montanaSprite = new THREE.Sprite(montanaSpriteMat);
+      montanaSprite.scale.set(8, 2, 1);
+      montanaSprite.position.y = 15;
+      montanaGroup.add(montanaSprite);
+      
+      // Quest signpost
+      const montanaSignGeo = new THREE.BoxGeometry(5, 1.5, 0.3);
+      const montanaSignMat = new THREE.MeshToonMaterial({ color: 0xD2B48C });
+      const montanaSign = new THREE.Mesh(montanaSignGeo, montanaSignMat);
+      montanaSign.position.set(0, 2, 12);
+      montanaGroup.add(montanaSign);
+      
+      const montanaQuestCanvas = document.createElement('canvas');
+      montanaQuestCanvas.width = 512;
+      montanaQuestCanvas.height = 128;
+      const montanaQuestCtx = montanaQuestCanvas.getContext('2d');
+      montanaQuestCtx.fillStyle = '#8B0000';
+      montanaQuestCtx.font = 'bold 50px Arial';
+      montanaQuestCtx.textAlign = 'center';
+      montanaQuestCtx.textBaseline = 'middle';
+      montanaQuestCtx.fillText('QUEST HERE', 256, 64);
+      
+      const montanaQuestTexture = new THREE.CanvasTexture(montanaQuestCanvas);
+      const montanaQuestSpriteMat = new THREE.SpriteMaterial({ map: montanaQuestTexture });
+      const montanaQuestSprite = new THREE.Sprite(montanaQuestSpriteMat);
+      montanaQuestSprite.scale.set(4.5, 1.125, 1);
+      montanaQuestSprite.position.set(0, 2, 12.2);
+      montanaGroup.add(montanaQuestSprite);
+      
+      // Store reference for quest system
+      montanaGroup.userData = { 
+        isMontana: true
+      };
+      
+      scene.add(montanaGroup);
+      montanaLandmark = montanaGroup; // Store reference for efficient distance checks
+
+      // Eiffel Tower Landmark - In fields/desert transition area
+      const eiffelGroup = new THREE.Group();
+      eiffelGroup.position.set(-80, 0, 150); // South-west in desert/fields transition
+      
+      // Tower structure - 4 legs converging to top
+      const eiffelMat = new THREE.MeshPhysicalMaterial({ 
+        color: 0x8B7355, // Brown/bronze
+        metalness: 0.6,
+        roughness: 0.3
+      });
+      
+      // Base platform
+      const eiffelBaseMat = new THREE.MeshToonMaterial({ color: 0x808080 });
+      const eiffelBase = new THREE.Mesh(
+        new THREE.CylinderGeometry(12, 14, 2, 8),
+        eiffelBaseMat
+      );
+      eiffelBase.position.y = 1;
+      eiffelBase.castShadow = true;
+      eiffelGroup.add(eiffelBase);
+      
+      // Four legs (corner posts)
+      const legPositions = [
+        [10, 0, 10], [10, 0, -10], [-10, 0, 10], [-10, 0, -10]
+      ];
+      legPositions.forEach(pos => {
+        const legGeo = new THREE.CylinderGeometry(0.8, 1.2, 20, 6);
+        const leg = new THREE.Mesh(legGeo, eiffelMat);
+        leg.position.set(pos[0], 10, pos[2]);
+        // Tilt legs inward
+        const angle = Math.atan2(pos[2], pos[0]);
+        leg.rotation.z = Math.cos(angle) * 0.15;
+        leg.rotation.x = Math.sin(angle) * 0.15;
+        leg.castShadow = true;
+        eiffelGroup.add(leg);
+      });
+      
+      // Mid section (narrower)
+      const midSectionGeo = new THREE.CylinderGeometry(4, 8, 15, 8);
+      const midSection = new THREE.Mesh(midSectionGeo, eiffelMat);
+      midSection.position.y = 27.5;
+      midSection.castShadow = true;
+      eiffelGroup.add(midSection);
+      
+      // Top section (spire)
+      const topSectionGeo = new THREE.CylinderGeometry(1, 4, 20, 8);
+      const topSection = new THREE.Mesh(topSectionGeo, eiffelMat);
+      topSection.position.y = 45;
+      topSection.castShadow = true;
+      eiffelGroup.add(topSection);
+      
+      // Spire tip
+      const spireGeo = new THREE.CylinderGeometry(0.3, 1, 8, 6);
+      const spire = new THREE.Mesh(spireGeo, eiffelMat);
+      spire.position.y = 59;
+      spire.castShadow = true;
+      eiffelGroup.add(spire);
+      
+      // Cross beams for structure
+      for(let i = 0; i < 3; i++) {
+        const beamGeo = new THREE.BoxGeometry(20, 0.5, 0.5);
+        const beam1 = new THREE.Mesh(beamGeo, eiffelMat);
+        beam1.position.y = 5 + i * 8;
+        beam1.castShadow = true;
+        eiffelGroup.add(beam1);
+        
+        const beam2 = new THREE.Mesh(beamGeo, eiffelMat);
+        beam2.position.y = 5 + i * 8;
+        beam2.rotation.y = Math.PI / 2;
+        beam2.castShadow = true;
+        eiffelGroup.add(beam2);
+      }
+      
+      // Eiffel text sign
+      const eiffelCanvas = document.createElement('canvas');
+      eiffelCanvas.width = 512;
+      eiffelCanvas.height = 128;
+      const eiffelCtx = eiffelCanvas.getContext('2d');
+      eiffelCtx.fillStyle = '#8B0000';
+      eiffelCtx.font = 'bold 55px Arial';
+      eiffelCtx.textAlign = 'center';
+      eiffelCtx.textBaseline = 'middle';
+      eiffelCtx.fillText('EIFFEL TOWER', 256, 64);
+      
+      const eiffelTexture = new THREE.CanvasTexture(eiffelCanvas);
+      const eiffelSpriteMat = new THREE.SpriteMaterial({ map: eiffelTexture });
+      const eiffelSprite = new THREE.Sprite(eiffelSpriteMat);
+      eiffelSprite.scale.set(10, 2.5, 1);
+      eiffelSprite.position.y = 65;
+      eiffelGroup.add(eiffelSprite);
+      
+      // Quest signpost
+      const eiffelSignGeo = new THREE.BoxGeometry(5, 1.5, 0.3);
+      const eiffelSignMat = new THREE.MeshToonMaterial({ color: 0xD2B48C });
+      const eiffelSign = new THREE.Mesh(eiffelSignGeo, eiffelSignMat);
+      eiffelSign.position.set(0, 2, 16);
+      eiffelGroup.add(eiffelSign);
+      
+      const eiffelQuestCanvas = document.createElement('canvas');
+      eiffelQuestCanvas.width = 512;
+      eiffelQuestCanvas.height = 128;
+      const eiffelQuestCtx = eiffelQuestCanvas.getContext('2d');
+      eiffelQuestCtx.fillStyle = '#8B0000';
+      eiffelQuestCtx.font = 'bold 50px Arial';
+      eiffelQuestCtx.textAlign = 'center';
+      eiffelQuestCtx.textBaseline = 'middle';
+      eiffelQuestCtx.fillText('QUEST HERE', 256, 64);
+      
+      const eiffelQuestTexture = new THREE.CanvasTexture(eiffelQuestCanvas);
+      const eiffelQuestSpriteMat = new THREE.SpriteMaterial({ map: eiffelQuestTexture });
+      const eiffelQuestSprite = new THREE.Sprite(eiffelQuestSpriteMat);
+      eiffelQuestSprite.scale.set(4.5, 1.125, 1);
+      eiffelQuestSprite.position.set(0, 2, 16.2);
+      eiffelGroup.add(eiffelQuestSprite);
+      
+      // Store reference for quest system
+      eiffelGroup.userData = { 
+        isEiffel: true
+      };
+      
+      scene.add(eiffelGroup);
+      eiffelLandmark = eiffelGroup; // Store reference for efficient distance checks
 
       // Forest (Various tree types with better shadows)
       const trunkGeo = new THREE.CylinderGeometry(0.5, 0.7, 2, 6);
@@ -8820,22 +9112,22 @@
           id: 'str', 
           icon: '⚔️',
           title: 'MUSCLE JUICE', 
-          desc: 'Weapon Damage +15% (Base Strength Multiplier)', 
+          desc: 'Weapon Damage +6% (Level-100 Balanced)', 
           apply: () => { 
-            playerStats.strength += 0.15; 
-            showStatChange('+15% Damage');
+            playerStats.strength += 0.06; // Reduced from 0.15 to 0.06 for level-100 balance
+            showStatChange('+6% Damage');
           } 
         },
         { 
           id: 'aspd', 
           icon: '⚡',
           title: 'SPEEDY TRIGGER', 
-          desc: 'Attack Speed +15% (Faster Weapon Fire Rate)', 
+          desc: 'Attack Speed +3% (Level-100 Balanced)', 
           apply: () => { 
-            playerStats.atkSpeed += 0.15; 
-            weapons.gun.cooldown *= 0.85; 
-            weapons.doubleBarrel.cooldown *= 0.85;
-            showStatChange('+15% Attack Speed');
+            playerStats.atkSpeed += 0.03; // Reduced from 0.15 to 0.03 for level-100 balance
+            weapons.gun.cooldown *= 0.97; // Adjusted from 0.85 to 0.97
+            weapons.doubleBarrel.cooldown *= 0.97;
+            showStatChange('+3% Attack Speed');
           } 
         },
         { 
@@ -8863,10 +9155,10 @@
           id: 'crit', 
           icon: '🎯',
           title: 'CRIT MACHINE', 
-          desc: 'Critical Hit Chance +8% (Lucky Strikes)', 
+          desc: 'Critical Hit Chance +1.5% (Level-100 Balanced)', 
           apply: () => { 
-            playerStats.critChance += 0.08; 
-            showStatChange('+8% Crit Chance (Now: ' + Math.round(playerStats.critChance * 100) + '%)');
+            playerStats.critChance += 0.015; // Reduced from 0.08 to 0.015 for level-100 balance
+            showStatChange('+1.5% Crit Chance (Now: ' + Math.round(playerStats.critChance * 100) + '%)');
           } 
         },
         { 
@@ -8883,20 +9175,20 @@
           id: 'speed', 
           icon: '🏃',
           title: 'SPEEDY BOI', 
-          desc: 'Movement Speed +15% (Faster Movement)', 
+          desc: 'Movement Speed +3% (Level-100 Balanced)', 
           apply: () => { 
-            playerStats.walkSpeed *= 1.15; 
-            showStatChange('+15% Move Speed');
+            playerStats.walkSpeed *= 1.03; // Reduced from 1.15 to 1.03 for level-100 balance
+            showStatChange('+3% Move Speed');
           } 
         },
         { 
           id: 'critdmg', 
           icon: '💥',
           title: 'GLASS CANNON', 
-          desc: 'Critical Damage +30% (Stronger Crits)', 
+          desc: 'Critical Damage +6% (Level-100 Balanced)', 
           apply: () => { 
-            playerStats.critDmg += 0.3; 
-            showStatChange('+30% Crit Damage (Now: ' + Math.round(playerStats.critDmg * 100) + '%)');
+            playerStats.critDmg += 0.06; // Reduced from 0.3 to 0.06 for level-100 balance
+            showStatChange('+6% Crit Damage (Now: ' + Math.round(playerStats.critDmg * 100) + '%)');
           } 
         },
         { 
@@ -8913,17 +9205,17 @@
           id: 'cooldown', 
           icon: '⏱️',
           title: 'COOLDOWN MASTER', 
-          desc: 'All Weapon Cooldowns -5% (Faster Abilities)', 
+          desc: 'All Weapon Cooldowns -2% (Level-100 Balanced)', 
           apply: () => { 
-            weapons.gun.cooldown *= 0.95;
-            weapons.sword.cooldown *= 0.95;
-            weapons.aura.cooldown *= 0.95;
-            weapons.meteor.cooldown *= 0.95;
-            weapons.droneTurret.cooldown *= 0.95;
-            weapons.doubleBarrel.cooldown *= 0.95;
-            weapons.iceSpear.cooldown *= 0.95;
-            weapons.fireRing.cooldown *= 0.95;
-            showStatChange('All Weapon Cooldowns -5%');
+            weapons.gun.cooldown *= 0.98; // Reduced from 0.95 to 0.98 for level-100 balance
+            weapons.sword.cooldown *= 0.98;
+            weapons.aura.cooldown *= 0.98;
+            weapons.meteor.cooldown *= 0.98;
+            weapons.droneTurret.cooldown *= 0.98;
+            weapons.doubleBarrel.cooldown *= 0.98;
+            weapons.iceSpear.cooldown *= 0.98;
+            weapons.fireRing.cooldown *= 0.98;
+            showStatChange('All Weapon Cooldowns -2%');
           } 
         },
         { 
@@ -9908,6 +10200,98 @@
       updateHUD();
     }
     
+    // Montana Quest Functions
+    function updateMontanaQuestUI() {
+      if (!montanaQuest.active) return;
+      
+      const timerPct = (montanaQuest.timer / montanaQuest.duration) * 100;
+      document.getElementById('montana-timer-fill').style.width = `${Math.max(0, timerPct)}%`;
+      document.getElementById('montana-timer-text').innerText = `SURVIVE: ${Math.ceil(montanaQuest.timer)}s`;
+      document.getElementById('montana-kills-text').innerText = `KILLS: ${montanaQuest.kills}/${montanaQuest.killsNeeded}`;
+    }
+    
+    function startMontanaQuest(landmark) {
+      if (!landmark || montanaQuest.hasCompleted || montanaQuest.active) return; // Prevent race condition and validate landmark
+      
+      montanaQuest.active = true;
+      montanaQuest.timer = montanaQuest.duration;
+      montanaQuest.kills = 0;
+      montanaQuest.landmark = landmark;
+      
+      document.getElementById('montana-quest-ui').style.display = 'block';
+      updateMontanaQuestUI();
+      
+      createFloatingText("MONTANA CHALLENGE!", landmark.position);
+      createFloatingText(`SURVIVE ${montanaQuest.duration}s & KILL ${montanaQuest.killsNeeded}!`, landmark.position);
+    }
+    
+    function completeMontanaQuest() {
+      montanaQuest.active = false;
+      montanaQuest.hasCompleted = true;
+      document.getElementById('montana-quest-ui').style.display = 'none';
+      
+      createFloatingText("MONTANA COMPLETE!", montanaQuest.landmark.position);
+      
+      // Rewards: +2 levels, +500 gold, +3 attr points
+      playerStats.lvl += 2;
+      playerStats.expReq = (playerStats.lvl * 2) * GAME_CONFIG.expValue;
+      playerStats.gold += 500;
+      playerStats.attributePoints += 3;
+      
+      createFloatingText("+2 LEVELS!", player.mesh.position);
+      createFloatingText("+500 GOLD!", player.mesh.position);
+      createFloatingText("+3 ATTR POINTS!", player.mesh.position);
+      playSound('levelup');
+      updateHUD();
+    }
+    
+    // Eiffel Quest Functions
+    function updateEiffelQuestUI() {
+      if (!eiffelQuest.active) return;
+      
+      const timerPct = (eiffelQuest.timer / eiffelQuest.duration) * 100;
+      document.getElementById('eiffel-timer-fill').style.width = `${Math.max(0, timerPct)}%`;
+      document.getElementById('eiffel-timer-text').innerText = `SURVIVE: ${Math.ceil(eiffelQuest.timer)}s`;
+      document.getElementById('eiffel-kills-text').innerText = `KILLS: ${eiffelQuest.kills}/${eiffelQuest.killsNeeded}`;
+    }
+    
+    function startEiffelQuest(landmark) {
+      if (!landmark || eiffelQuest.hasCompleted || eiffelQuest.active) return; // Prevent race condition and validate landmark
+      
+      eiffelQuest.active = true;
+      eiffelQuest.timer = eiffelQuest.duration;
+      eiffelQuest.kills = 0;
+      eiffelQuest.landmark = landmark;
+      
+      document.getElementById('eiffel-quest-ui').style.display = 'block';
+      updateEiffelQuestUI();
+      
+      createFloatingText("EIFFEL CHALLENGE!", landmark.position);
+      createFloatingText(`SURVIVE ${eiffelQuest.duration}s & KILL ${eiffelQuest.killsNeeded}!`, landmark.position);
+    }
+    
+    function completeEiffelQuest() {
+      eiffelQuest.active = false;
+      eiffelQuest.hasCompleted = true;
+      document.getElementById('eiffel-quest-ui').style.display = 'none';
+      
+      createFloatingText("EIFFEL COMPLETE!", eiffelQuest.landmark.position);
+      
+      // Rewards: +3 levels, +1000 gold, +5 attr points, +20 gun damage
+      playerStats.lvl += 3;
+      playerStats.expReq = (playerStats.lvl * 2) * GAME_CONFIG.expValue;
+      playerStats.gold += 1000;
+      playerStats.attributePoints += 5;
+      weapons.gun.damage += 20;
+      
+      createFloatingText("+3 LEVELS!", player.mesh.position);
+      createFloatingText("+1000 GOLD!", player.mesh.position);
+      createFloatingText("+5 ATTR POINTS!", player.mesh.position);
+      createFloatingText("+20 GUN DAMAGE!", player.mesh.position);
+      playSound('levelup');
+      updateHUD();
+    }
+    
     // Deferred disposal functions (PR #81) - prevent frame drops from bulk cleanup
     function queueDisposal(mesh) {
       if (mesh.parent) {
@@ -10147,6 +10531,12 @@
       
       windmillQuest = { active: false, timer: 0, duration: 15, windmill: null, hasCompleted: false };
       document.getElementById('windmill-quest-ui').style.display = 'none';
+      
+      montanaQuest = { active: false, timer: 0, duration: 45, kills: 0, killsNeeded: 15, landmark: null, hasCompleted: false };
+      document.getElementById('montana-quest-ui').style.display = 'none';
+      
+      eiffelQuest = { active: false, timer: 0, duration: 60, kills: 0, killsNeeded: 25, landmark: null, hasCompleted: false };
+      document.getElementById('eiffel-quest-ui').style.display = 'none';
       
       // Reset windmill HP
       if (scene) {
@@ -10969,6 +11359,54 @@
           // Quest failed
           windmillQuest.active = false;
           document.getElementById('windmill-quest-ui').style.display = 'none';
+        }
+      }
+      
+      // Check Montana quest trigger (optimized with stored reference)
+      if (!montanaQuest.active && !montanaQuest.hasCompleted && montanaLandmark) {
+        const dist = player.mesh.position.distanceTo(montanaLandmark.position);
+        if (dist < MONTANA_QUEST_TRIGGER_DISTANCE) {
+          startMontanaQuest(montanaLandmark);
+        }
+      }
+      
+      // Update Montana quest
+      if (montanaQuest.active) {
+        montanaQuest.timer -= dt;
+        updateMontanaQuestUI();
+        
+        if (montanaQuest.timer <= 0 && montanaQuest.kills >= montanaQuest.killsNeeded) {
+          // Quest completed successfully
+          completeMontanaQuest();
+        } else if (montanaQuest.timer <= 0) {
+          // Quest failed
+          montanaQuest.active = false;
+          document.getElementById('montana-quest-ui').style.display = 'none';
+          createFloatingText("MONTANA FAILED!", montanaQuest.landmark.position);
+        }
+      }
+      
+      // Check Eiffel quest trigger (optimized with stored reference)
+      if (!eiffelQuest.active && !eiffelQuest.hasCompleted && eiffelLandmark) {
+        const dist = player.mesh.position.distanceTo(eiffelLandmark.position);
+        if (dist < EIFFEL_QUEST_TRIGGER_DISTANCE) {
+          startEiffelQuest(eiffelLandmark);
+        }
+      }
+      
+      // Update Eiffel quest
+      if (eiffelQuest.active) {
+        eiffelQuest.timer -= dt;
+        updateEiffelQuestUI();
+        
+        if (eiffelQuest.timer <= 0 && eiffelQuest.kills >= eiffelQuest.killsNeeded) {
+          // Quest completed successfully
+          completeEiffelQuest();
+        } else if (eiffelQuest.timer <= 0) {
+          // Quest failed
+          eiffelQuest.active = false;
+          document.getElementById('eiffel-quest-ui').style.display = 'none';
+          createFloatingText("EIFFEL FAILED!", eiffelQuest.landmark.position);
         }
       }
 
