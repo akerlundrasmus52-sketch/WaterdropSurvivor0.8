@@ -1808,6 +1808,14 @@
     <button id="stats-btn" class="btn-small" style="position: absolute; top: 20px; right: 20px; pointer-events: auto; z-index: 100;">STATS</button>
     <button id="settings-btn" class="btn-small" style="position: absolute; top: 20px; right: 120px; pointer-events: auto; z-index: 100;">⚙️</button>
     
+    <!-- Day/Night Cycle Clock -->
+    <div id="day-night-clock" style="position: absolute; top: 20px; right: 220px; pointer-events: none; z-index: 100;">
+      <div style="background: rgba(0,0,0,0.7); border: 2px solid #FFD700; border-radius: 50%; width: 80px; height: 80px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 0 15px rgba(0,0,0,0.5);">
+        <div id="day-night-icon" style="font-size: 32px; margin-bottom: 2px;">☀️</div>
+        <div id="day-night-time" style="font-size: 12px; color: #FFD700; font-weight: bold;">00:00</div>
+      </div>
+    </div>
+    
     <!-- PR #117: Menu button (shows in portrait mode) -->
     <button id="menu-btn" title="Menu">☰</button>
     
@@ -2438,8 +2446,8 @@
     // Day/Night Cycle System - Smooth, non-blocking transitions
     let dayNightCycle = {
       enabled: true,
-      timeOfDay: 0, // 0-1, where 0=midnight, 0.25=dawn, 0.5=noon, 0.75=dusk, 1=midnight
-      cycleSpeed: 0.000033, // Very slow cycle (about 8.3 minutes for full day/night at 60fps)
+      timeOfDay: 0.5, // Start at noon by default (0-1, where 0=midnight, 0.25=dawn, 0.5=noon, 0.75=dusk, 1=midnight)
+      cycleSpeed: 1 / 600, // 10 minutes for full cycle (1 / 600 seconds at 60fps)
       lastUpdateTime: 0
     };
     
@@ -10446,8 +10454,23 @@
       }
       
       if (comboState.count >= GODLIKE_COMBO_THRESHOLD + 1) {
+        // Fun random names after GODLIKE
+        const funNames = [
+          'xoxo', 'serious?', 'no way', 'one million combo almost', 
+          'i lost count combo', 'are you even real?', 'stop it already',
+          'ok this is ridiculous', 'somebody stop them', 'mercy please',
+          'absolute madness', 'breaking the game', 'console.log("help")',
+          'error 404: combo limit not found', 'combo.exe has stopped',
+          'infinity and beyond', 'to the moon', 'unstoppable force',
+          'immovable object met', 'game over man', 'legend has it'
+        ];
         const godlikeMultiplier = comboState.count - GODLIKE_COMBO_THRESHOLD;
-        message = isMilestone ? `GODLIKE x${godlikeMultiplier}` : `${comboState.count}x COMBO!`;
+        
+        // Rotate through fun names, wrap around
+        const nameIndex = (godlikeMultiplier - 1) % funNames.length;
+        const funName = funNames[nameIndex];
+        
+        message = isMilestone ? funName.toUpperCase() : `${comboState.count}x COMBO!`;
         comboLevel = 'mythical';
       } else if (comboState.count === GODLIKE_COMBO_THRESHOLD) {
         message = isMilestone ? 'GODLIKE' : `${comboState.count}x COMBO!`;
@@ -10954,6 +10977,13 @@
       
       // Reset run loot tracking
       window.runLootGained = [];
+      
+      // Set time of day based on sleep choice
+      if (saveData.nextRunTimeOfDay === 'day') {
+        dayNightCycle.timeOfDay = 0.5; // Noon
+      } else {
+        dayNightCycle.timeOfDay = 0.0; // Midnight
+      }
       
       // Apply permanent upgrades from save data
       const baseHp = 100 + PERMANENT_UPGRADES.maxHp.effect(saveData.upgrades.maxHp);
@@ -11583,6 +11613,27 @@
       if (dayNightCycle.timeOfDay > 1) dayNightCycle.timeOfDay -= 1;
       
       const t = dayNightCycle.timeOfDay;
+      
+      // Update UI clock
+      const hours = Math.floor(t * 24);
+      const minutes = Math.floor((t * 24 * 60) % 60);
+      const timeStr = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+      const clockTime = document.getElementById('day-night-time');
+      const clockIcon = document.getElementById('day-night-icon');
+      if (clockTime) clockTime.textContent = timeStr;
+      
+      // Update icon based on time
+      if (clockIcon) {
+        if (t >= 0.2 && t < 0.7) {
+          clockIcon.textContent = '☀️'; // Day
+        } else if (t >= 0.7 && t < 0.8) {
+          clockIcon.textContent = '🌅'; // Sunset
+        } else if (t >= 0.1 && t < 0.2) {
+          clockIcon.textContent = '🌄'; // Sunrise
+        } else {
+          clockIcon.textContent = '🌙'; // Night
+        }
+      }
       
       // Calculate sun position and lighting based on time of day
       // 0 = midnight (dark), 0.25 = sunrise, 0.5 = noon (bright), 0.75 = sunset, 1 = midnight
