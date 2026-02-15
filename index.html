@@ -1742,21 +1742,21 @@
       </div>
       
       <!-- Montana Quest UI -->
-      <div id="montana-quest-ui" style="display: none; margin-top: 10px;">
+      <div id="montana-quest-ui" style="display: none; margin-top: 10px;" role="status" aria-live="polite">
         <div class="bar-container" style="border-color: #1a237e;">
           <div class="bar-fill" id="montana-timer-fill" style="background: linear-gradient(to right, #1a237e, #3949ab); width: 100%;"></div>
         </div>
-        <div class="stat-text" id="montana-timer-text" style="color: #F0F8FF; font-size: 18px;">SURVIVE: 45s</div>
-        <div class="stat-text" id="montana-kills-text" style="color: #FFD700; font-size: 16px;">KILLS: 0/15</div>
+        <div class="stat-text" id="montana-timer-text" style="color: #F0F8FF; font-size: 18px;" aria-label="Montana quest timer">SURVIVE: 45s</div>
+        <div class="stat-text" id="montana-kills-text" style="color: #FFD700; font-size: 16px;" aria-label="Montana quest kills">KILLS: 0/15</div>
       </div>
       
       <!-- Eiffel Quest UI -->
-      <div id="eiffel-quest-ui" style="display: none; margin-top: 10px;">
+      <div id="eiffel-quest-ui" style="display: none; margin-top: 10px;" role="status" aria-live="polite">
         <div class="bar-container" style="border-color: #8B7355;">
           <div class="bar-fill" id="eiffel-timer-fill" style="background: linear-gradient(to right, #8B7355, #A0826D); width: 100%;"></div>
         </div>
-        <div class="stat-text" id="eiffel-timer-text" style="color: #FFD700; font-size: 18px;">SURVIVE: 60s</div>
-        <div class="stat-text" id="eiffel-kills-text" style="color: #FFD700; font-size: 16px;">KILLS: 0/25</div>
+        <div class="stat-text" id="eiffel-timer-text" style="color: #FFD700; font-size: 18px;" aria-label="Eiffel quest timer">SURVIVE: 60s</div>
+        <div class="stat-text" id="eiffel-kills-text" style="color: #FFD700; font-size: 16px;" aria-label="Eiffel quest kills">KILLS: 0/25</div>
       </div>
     </div>
     <button id="stats-btn" class="btn-small" style="position: absolute; top: 20px; right: 20px; pointer-events: auto; z-index: 100;">STATS</button>
@@ -2388,6 +2388,8 @@
     let windmillQuest = { active: false, timer: 0, duration: 30, windmill: null, hasCompleted: false };
     let montanaQuest = { active: false, timer: 0, duration: 45, kills: 0, killsNeeded: 15, landmark: null, hasCompleted: false };
     let eiffelQuest = { active: false, timer: 0, duration: 60, kills: 0, killsNeeded: 25, landmark: null, hasCompleted: false };
+    let montanaLandmark = null; // Store Montana landmark reference for efficient distance checks
+    let eiffelLandmark = null; // Store Eiffel landmark reference for efficient distance checks
     let runStartGold = 0;  // Track gold at start of run for end-of-run calculation
     let lastCleanupTime = 0; // Track last memory cleanup time
     let miniBossesSpawned = new Set(); // Track which mini-boss levels have been spawned
@@ -7587,6 +7589,7 @@
       };
       
       scene.add(montanaGroup);
+      montanaLandmark = montanaGroup; // Store reference for efficient distance checks
 
       // Eiffel Tower Landmark - In fields/desert transition area
       const eiffelGroup = new THREE.Group();
@@ -7712,6 +7715,7 @@
       };
       
       scene.add(eiffelGroup);
+      eiffelLandmark = eiffelGroup; // Store reference for efficient distance checks
 
       // Forest (Various tree types with better shadows)
       const trunkGeo = new THREE.CylinderGeometry(0.5, 0.7, 2, 6);
@@ -10211,7 +10215,7 @@
     }
     
     function startMontanaQuest(landmark) {
-      if (montanaQuest.hasCompleted) return;
+      if (montanaQuest.hasCompleted || montanaQuest.active) return; // Prevent race condition
       
       montanaQuest.active = true;
       montanaQuest.timer = montanaQuest.duration;
@@ -10256,7 +10260,7 @@
     }
     
     function startEiffelQuest(landmark) {
-      if (eiffelQuest.hasCompleted) return;
+      if (eiffelQuest.hasCompleted || eiffelQuest.active) return; // Prevent race condition
       
       eiffelQuest.active = true;
       eiffelQuest.timer = eiffelQuest.duration;
@@ -11362,16 +11366,12 @@
         }
       }
       
-      // Check Montana quest trigger
-      if (!montanaQuest.active && !montanaQuest.hasCompleted) {
-        scene.children.forEach(child => {
-          if (child.userData && child.userData.isMontana) {
-            const dist = player.mesh.position.distanceTo(child.position);
-            if (dist < 15) {
-              startMontanaQuest(child);
-            }
-          }
-        });
+      // Check Montana quest trigger (optimized with stored reference)
+      if (!montanaQuest.active && !montanaQuest.hasCompleted && montanaLandmark) {
+        const dist = player.mesh.position.distanceTo(montanaLandmark.position);
+        if (dist < 15) {
+          startMontanaQuest(montanaLandmark);
+        }
       }
       
       // Update Montana quest
@@ -11390,16 +11390,12 @@
         }
       }
       
-      // Check Eiffel quest trigger
-      if (!eiffelQuest.active && !eiffelQuest.hasCompleted) {
-        scene.children.forEach(child => {
-          if (child.userData && child.userData.isEiffel) {
-            const dist = player.mesh.position.distanceTo(child.position);
-            if (dist < 20) {
-              startEiffelQuest(child);
-            }
-          }
-        });
+      // Check Eiffel quest trigger (optimized with stored reference)
+      if (!eiffelQuest.active && !eiffelQuest.hasCompleted && eiffelLandmark) {
+        const dist = player.mesh.position.distanceTo(eiffelLandmark.position);
+        if (dist < 20) {
+          startEiffelQuest(eiffelLandmark);
+        }
       }
       
       // Update Eiffel quest
