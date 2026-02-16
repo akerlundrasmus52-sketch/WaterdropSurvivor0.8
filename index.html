@@ -3212,6 +3212,23 @@
     (function() {
       console.log('[Fallback] Setting up fallback menu system...');
       
+      // Constants for timing synchronization
+      const LOADING_FAILSAFE_MS = 12000; // Matches standalone loading script failsafe
+      const MODULE_READY_TIMEOUT_MS = 5000; // 50 attempts × 100ms
+      const FALLBACK_DELAY_MS = LOADING_FAILSAFE_MS + 1000; // Run 1s after failsafe
+      
+      // Error message constant
+      const MODULE_INIT_ERROR_MSG = 'Game failed to initialize. The 3D engine (THREE.js) could not be loaded.\n\n' +
+        'This usually happens due to:\n' +
+        '• Ad blockers blocking CDN resources\n' +
+        '• Network connectivity issues\n' +
+        '• Browser compatibility problems\n\n' +
+        'Please:\n' +
+        '1. Disable ad blockers for this page\n' +
+        '2. Check your internet connection\n' +
+        '3. Try refreshing the page\n' +
+        '4. Try a different browser';
+      
       // Wait for menu to be shown by loading script, then set up basic button handlers if module hasn't loaded yet
       setTimeout(function checkAndSetupFallback() {
         if (!window.gameModuleReady) {
@@ -3237,7 +3254,7 @@
           
           // Helper to show error message
           function showModuleError() {
-            alert('Game failed to initialize. The 3D engine (THREE.js) could not be loaded.\n\nThis usually happens due to:\n• Ad blockers blocking CDN resources\n• Network connectivity issues\n• Browser compatibility problems\n\nPlease:\n1. Disable ad blockers for this page\n2. Check your internet connection\n3. Try refreshing the page\n4. Try a different browser');
+            alert(MODULE_INIT_ERROR_MSG);
           }
           
           // Main menu buttons
@@ -3276,7 +3293,7 @@
           
           console.log('[Fallback] ✅ Fallback button handlers set up - buttons will show error messages');
         }
-      }, 13000); // Run after the 12-second failsafe timeout
+      }, FALLBACK_DELAY_MS); // Run 1 second after the failsafe timeout
     })();
   </script>
 
@@ -18417,9 +18434,10 @@
         console.log('[Recovery] ✅ Menu buttons set up successfully despite init failure');
       } catch(recoveryError) {
         console.error('[Recovery] ❌ Failed to set up menu buttons:', recoveryError);
+        console.error('[Recovery] Original error:', e.message);
         // Set gameModuleReady anyway so the loading screen doesn't block forever
         window.gameModuleReady = true;
-        alert('Game failed to initialize properly. Some features may not work. Please refresh the page.\n\nError: ' + e.message);
+        alert('Game failed to initialize properly. Some features may not work. Please refresh the page.');
       }
     }
 
