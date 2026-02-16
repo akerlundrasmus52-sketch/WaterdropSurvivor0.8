@@ -3212,10 +3212,10 @@
     (function() {
       console.log('[Fallback] Setting up fallback menu system...');
       
-      // Constants for timing synchronization
+      // Constants for timing synchronization with loading script
       const LOADING_FAILSAFE_MS = 12000; // Matches standalone loading script failsafe
-      const MODULE_READY_TIMEOUT_MS = 5000; // 50 attempts × 100ms
       const FALLBACK_DELAY_MS = LOADING_FAILSAFE_MS + 1000; // Run 1s after failsafe
+      // Note: Module ready timeout is 5s (50 attempts × 100ms) in loading script
       
       // Error message constant
       const MODULE_INIT_ERROR_MSG = 'Game failed to initialize. The 3D engine (THREE.js) could not be loaded.\n\n' +
@@ -3257,33 +3257,27 @@
             alert(MODULE_INIT_ERROR_MSG);
           }
           
-          // Main menu buttons
-          if (document.getElementById('start-game-btn')) {
-            document.getElementById('start-game-btn').onclick = showModuleError;
-          }
-          if (document.getElementById('camp-btn')) {
-            document.getElementById('camp-btn').onclick = showModuleError;
-          }
-          if (document.getElementById('progression-btn')) {
-            document.getElementById('progression-btn').onclick = showModuleError;
-          }
-          if (document.getElementById('attributes-btn')) {
-            document.getElementById('attributes-btn').onclick = showModuleError;
-          }
-          if (document.getElementById('gear-btn')) {
-            document.getElementById('gear-btn').onclick = showModuleError;
-          }
-          if (document.getElementById('achievements-btn')) {
-            document.getElementById('achievements-btn').onclick = showModuleError;
-          }
-          if (document.getElementById('wallet-btn')) {
-            document.getElementById('wallet-btn').onclick = showModuleError;
-          }
-          if (document.getElementById('marketplace-btn')) {
-            document.getElementById('marketplace-btn').onclick = showModuleError;
-          }
-          if (document.getElementById('credits-btn')) {
-            document.getElementById('credits-btn').onclick = function() {
+          // Main menu buttons - get elements once and reuse
+          const startGameBtn = document.getElementById('start-game-btn');
+          const campBtn = document.getElementById('camp-btn');
+          const progressionBtn = document.getElementById('progression-btn');
+          const attributesBtn = document.getElementById('attributes-btn');
+          const gearBtn = document.getElementById('gear-btn');
+          const achievementsBtn = document.getElementById('achievements-btn');
+          const walletBtn = document.getElementById('wallet-btn');
+          const marketplaceBtn = document.getElementById('marketplace-btn');
+          const creditsBtn = document.getElementById('credits-btn');
+          
+          if (startGameBtn) startGameBtn.onclick = showModuleError;
+          if (campBtn) campBtn.onclick = showModuleError;
+          if (progressionBtn) progressionBtn.onclick = showModuleError;
+          if (attributesBtn) attributesBtn.onclick = showModuleError;
+          if (gearBtn) gearBtn.onclick = showModuleError;
+          if (achievementsBtn) achievementsBtn.onclick = showModuleError;
+          if (walletBtn) walletBtn.onclick = showModuleError;
+          if (marketplaceBtn) marketplaceBtn.onclick = showModuleError;
+          if (creditsBtn) {
+            creditsBtn.onclick = function() {
               const mainMenu = document.getElementById('main-menu');
               const creditsScreen = document.getElementById('credits-screen');
               if (mainMenu) mainMenu.style.display = 'none';
@@ -18434,7 +18428,6 @@
         console.log('[Recovery] ✅ Menu buttons set up successfully despite init failure');
       } catch(recoveryError) {
         console.error('[Recovery] ❌ Failed to set up menu buttons:', recoveryError);
-        console.error('[Recovery] Original error:', e.message);
         // Set gameModuleReady anyway so the loading screen doesn't block forever
         window.gameModuleReady = true;
         alert('Game failed to initialize properly. Some features may not work. Please refresh the page.');
