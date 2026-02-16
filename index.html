@@ -7937,6 +7937,7 @@
     // FRESH START - Changed save key to force reset after comprehensive re-implementation
     const SAVE_KEY = 'waterDropSurvivorSave_v2_FreshStart';
     const SETTINGS_KEY = 'waterDropSurvivorSettings';
+    const TUTORIAL_RESET_KEY = 'tutorialResetDone_v1'; // Key to track if tutorial reset has been done
 
     const defaultSaveData = {
       gold: 0,
@@ -8116,6 +8117,15 @@
 
     function loadSaveData() {
       try {
+        // Check if tutorial reset needs to happen
+        const tutorialResetDone = localStorage.getItem(TUTORIAL_RESET_KEY);
+        if (!tutorialResetDone) {
+          // First time with new tutorial system - reset save data
+          console.log('[Tutorial] Resetting save data for fresh tutorial experience');
+          localStorage.removeItem(SAVE_KEY);
+          localStorage.setItem(TUTORIAL_RESET_KEY, 'true');
+        }
+        
         const saved = localStorage.getItem(SAVE_KEY);
         if (saved) {
           saveData = JSON.parse(saved);
@@ -10837,6 +10847,30 @@
       }
     }
 
+    function shouldBuildingGlow(buildingId) {
+      // Check if tutorial is active
+      if (!isComicQuestActive()) return false;
+      
+      // Check if this building is the target of the current comic quest
+      if (!saveData.tutorial.comicsShown.includes('quest1_death')) return false;
+      
+      // Quest 2: Skill Tree should glow
+      if (buildingId === 'skillTree' && !saveData.tutorial.comicsShown.includes('quest2_skilltree')) {
+        return !saveData.campBuildings.skillTree.unlocked;
+      }
+      
+      // Quest 3: Main Building should glow
+      if (buildingId === 'questMission' && !saveData.tutorial.comicsShown.includes('quest3_main_building')) {
+        if (saveData.tutorial.comicsShown.includes('quest2_dash_unlocked')) {
+          return true;
+        }
+      }
+      
+      // Future quests can be added here
+      
+      return false;
+    }
+    
     function updateCampScreen() {
       // Check for first-time camp visit with COMIC BOOK TUTORIAL
       if (!saveData.hasVisitedCamp && saveData.tutorial.isActive) {
@@ -10923,11 +10957,23 @@
         const canAfford = saveData.gold >= cost;
         const isUnlocked = buildingData.unlocked || buildingData.level > 0;
         
-        // Skip locked paid buildings
+        // Skip locked paid buildings in tutorial mode
         if (!building.isFree && !isUnlocked && buildingData.level === 0) {
-          // Show as purchasable
           const buildingCard = document.createElement('div');
           buildingCard.className = 'building-card';
+          
+          // Check if tutorial is active and this building should be shown as locked
+          if (isComicQuestActive()) {
+            // Add locked state styling
+            buildingCard.classList.add('building-locked-state');
+            
+            // Add glowing effect if this building should be unlocked next
+            if (shouldBuildingGlow(buildingId)) {
+              buildingCard.classList.add('building-glow-unlock');
+              buildingCard.classList.remove('building-locked-state');
+            }
+          }
+          
           if (!canAfford) buildingCard.style.opacity = '0.6';
           
           buildingCard.innerHTML = `
@@ -10940,6 +10986,23 @@
           `;
           
           buildingCard.onclick = () => {
+            // Check if building should glow (meaning it's the quest target)
+            if (shouldBuildingGlow(buildingId)) {
+              // Show comic for this building
+              if (buildingId === 'skillTree' && !saveData.tutorial.comicsShown.includes('quest2_inside_skilltree')) {
+                if (saveData.gold >= building.baseCost) {
+                  saveData.gold -= building.baseCost;
+                  buildingData.unlocked = true;
+                  buildingData.level = 1;
+                  saveSaveData();
+                  playSound('collect');
+                  // Show comic about entering skill tree
+                  showComicQuest('quest2_inside_skilltree');
+                  return;
+                }
+              }
+            }
+            
             if (saveData.gold >= building.baseCost) {
               saveData.gold -= building.baseCost;
               buildingData.unlocked = true;
@@ -13327,6 +13390,19 @@
       document.getElementById('camp-btn').onclick = () => {
         playSound('waterdrop');
         hideMainMenu();
+        
+        // COMIC BOOK TUTORIAL: Show Quest 2 comic when entering camp after first death
+        if (isComicQuestActive() && saveData.tutorial.comicsShown.includes('quest1_death') && !saveData.tutorial.comicsShown.includes('quest2_skilltree')) {
+          // Show the skill tree quest comic first
+          showComicQuest('quest2_skilltree');
+          // Then show camp screen after comic
+          setTimeout(() => {
+            document.getElementById('camp-screen').style.display = 'flex';
+            updateCampScreen();
+          }, 100);
+          return;
+        }
+        
         const showingTutorial = updateCampScreen();
         if (!showingTutorial) {
           document.getElementById('camp-screen').style.display = 'flex';
