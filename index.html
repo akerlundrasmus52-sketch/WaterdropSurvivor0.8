@@ -1652,6 +1652,38 @@
     </div>
   </div>
 
+  <!-- FRESH IMPLEMENTATION: Story Quest Welcome Modal -->
+  <div id="story-quest-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 1000; align-items: center; justify-content: center; pointer-events: auto;">
+    <div style="background: linear-gradient(to bottom, #1a3a4a 0%, #0f1f2a 100%); border: 4px solid #5DADE2; border-radius: 20px; padding: 40px; max-width: 600px; box-shadow: 0 0 30px rgba(93,173,226,0.6);">
+      <div style="color: #5DADE2; font-size: 36px; font-weight: bold; text-align: center; margin-bottom: 20px; text-shadow: 0 0 15px rgba(93,173,226,0.8);">
+        💧 WELCOME TO WATER DROP SURVIVOR 💧
+      </div>
+      <div style="color: #FFFFFF; font-size: 18px; line-height: 1.6; margin-bottom: 25px; text-align: left;">
+        <p style="margin-bottom: 15px;">
+          <strong style="color: #FFD700;">Welcome, Droplet!</strong>
+        </p>
+        <p style="margin-bottom: 15px;">
+          You've entered a <strong style="color: #5DADE2;">Roguelite Survivor</strong> game where progression is key to victory!
+        </p>
+        <p style="margin-bottom: 15px;">
+          🎯 <strong>Your Mission:</strong> Survive waves of enemies, collect XP waterdrops, level up, and unlock powerful abilities.
+        </p>
+        <p style="margin-bottom: 15px;">
+          ⛺ <strong>Permanent Progression:</strong> Return to Camp between runs to upgrade buildings, unlock skills, and grow stronger.
+        </p>
+        <p style="margin-bottom: 15px;">
+          💎 <strong>Gear & Achievements:</strong> Collect equipment, complete achievements, and master the elemental powers.
+        </p>
+        <p style="margin-bottom: 15px;">
+          🌍 <strong>Explore:</strong> Discover landmarks like the Windmill, Stonehenge, Pyramids, Eiffel Tower, and the Tesla Tower!
+        </p>
+      </div>
+      <button class="menu-btn" id="story-quest-close-btn" style="width: 100%; padding: 15px; font-size: 22px; background: linear-gradient(to bottom, #5DADE2, #3498DB); border: 3px solid #2980B9;">
+        START YOUR JOURNEY!
+      </button>
+    </div>
+  </div>
+
   <!-- Progression Shop -->
   <div id="progression-shop">
     <div class="shop-header">
@@ -2181,6 +2213,17 @@
           if (mainMenu) {
             mainMenu.style.display = 'flex';
           }
+          
+          // FRESH IMPLEMENTATION: Show Story Quest Modal on first load
+          setTimeout(function() {
+            // Access saveData through window if available (will be set by game module)
+            if (window.saveData && !window.saveData.storyQuests.welcomeShown) {
+              const storyModal = document.getElementById('story-quest-modal');
+              if (storyModal) {
+                storyModal.style.display = 'flex';
+              }
+            }
+          }, 500);
         }, 500);
       }
     })();
@@ -5007,12 +5050,62 @@
       }
       
       dieByHeadshot(enemyColor) {
-        // Headshot: Dramatic head explosion
+        // FRESH IMPLEMENTATION: Enhanced headshot with actual head detachment
+        // Headshot: Dramatic head explosion with visible detached head
         spawnParticles(this.mesh.position, enemyColor, 25);
-        spawnParticles(this.mesh.position, 0x8B0000, 15);
+        spawnParticles(this.mesh.position, 0x8B0000, 15); // Red blood
         spawnParticles(this.mesh.position, 0xFFFFFF, 5);
         
-        // Body falls (corpse)
+        // Create detached head that flies off
+        const headGeo = new THREE.SphereGeometry(0.3, 12, 12);
+        const headMat = new THREE.MeshBasicMaterial({ 
+          color: enemyColor, 
+          transparent: true,
+          opacity: 1
+        });
+        const head = new THREE.Mesh(headGeo, headMat);
+        head.position.copy(this.mesh.position);
+        head.position.y += 0.5; // Start from head height
+        scene.add(head);
+        
+        // Head velocity (flies backward and up)
+        const headVel = new THREE.Vector3(
+          (Math.random() - 0.5) * 0.6,
+          0.8 + Math.random() * 0.4, // Upward
+          (Math.random() - 0.5) * 0.6
+        );
+        
+        // Blood spray trail from neck
+        let headLife = 80;
+        const updateHead = () => {
+          headLife--;
+          head.position.add(headVel);
+          headVel.y -= 0.025; // Gravity
+          head.rotation.x += 0.15;
+          head.rotation.y += 0.2;
+          head.rotation.z += 0.1;
+          
+          // Blood trail
+          if (headLife % 3 === 0 && headLife > 20) {
+            spawnParticles(head.position, 0x8B0000, 2);
+          }
+          
+          // Fade out near end
+          if (headLife < 20) {
+            head.material.opacity = headLife / 20;
+          }
+          
+          if (headLife <= 0 || head.position.y < 0) {
+            scene.remove(head);
+            head.geometry.dispose();
+            head.material.dispose();
+          } else {
+            requestAnimationFrame(updateHead);
+          }
+        };
+        updateHead();
+        
+        // Body falls (corpse without head)
         const corpseGeo = new THREE.CircleGeometry(0.6, 16);
         const corpseMat = new THREE.MeshBasicMaterial({ 
           color: enemyColor, 
@@ -5026,12 +5119,12 @@
         corpse.rotation.x = -Math.PI / 2;
         scene.add(corpse);
         
-        // Blood splatter
-        const bloodGeo = new THREE.CircleGeometry(0.9, 16);
+        // Large blood splatter pool
+        const bloodGeo = new THREE.CircleGeometry(1.2, 16); // Larger pool
         const bloodMat = new THREE.MeshBasicMaterial({ 
           color: 0x8B0000, 
           transparent: true,
-          opacity: 0.6,
+          opacity: 0.7, // More visible
           side: THREE.DoubleSide
         });
         const bloodPool = new THREE.Mesh(bloodGeo, bloodMat);
@@ -5040,30 +5133,34 @@
         bloodPool.rotation.x = -Math.PI / 2;
         scene.add(bloodPool);
         
-        // Extra head pieces
-        for(let i = 0; i < 10; i++) {
+        // Extra gore pieces (bone/skull fragments)
+        for(let i = 0; i < 12; i++) {
+          const pieceSize = 0.1 + Math.random() * 0.1;
           const piece = new THREE.Mesh(
-            new THREE.BoxGeometry(0.15, 0.15, 0.15),
-            new THREE.MeshBasicMaterial({ color: i % 2 === 0 ? enemyColor : 0x8B0000, transparent: true })
+            new THREE.BoxGeometry(pieceSize, pieceSize, pieceSize),
+            new THREE.MeshBasicMaterial({ 
+              color: i % 3 === 0 ? 0xFFFFFF : (i % 3 === 1 ? 0x8B0000 : enemyColor), 
+              transparent: true 
+            })
           );
           piece.position.copy(this.mesh.position);
           piece.position.y += 0.5; // Start from head height
           scene.add(piece);
           
           const vel = new THREE.Vector3(
-            (Math.random() - 0.5) * 0.4,
-            0.5 + Math.random() * 0.3,
-            (Math.random() - 0.5) * 0.4
+            (Math.random() - 0.5) * 0.5,
+            0.5 + Math.random() * 0.4,
+            (Math.random() - 0.5) * 0.5
           );
           
-          let life = 50;
+          let life = 60;
           const updatePiece = () => {
             life--;
             piece.position.add(vel);
             vel.y -= 0.03;
             piece.rotation.x += 0.2;
             piece.rotation.y += 0.25;
-            piece.material.opacity = life / 50;
+            piece.material.opacity = life / 60;
             
             if (life <= 0 || piece.position.y < 0) {
               scene.remove(piece);
@@ -6809,6 +6906,9 @@
         console.error('Failed to load settings:', e);
       }
     }
+    
+    // Expose saveData to window scope for loading screen access (FRESH IMPLEMENTATION)
+    window.saveData = saveData;
 
     // --- ACHIEVEMENTS SYSTEM ---
     const ACHIEVEMENTS = {
@@ -10584,6 +10684,16 @@
       };
       
       // Reset progress button with double confirmation
+      // FRESH IMPLEMENTATION: Story Quest Modal close handler
+      document.getElementById('story-quest-close-btn').onclick = () => {
+        playSound('waterdrop');
+        // Mark as shown
+        saveData.storyQuests.welcomeShown = true;
+        saveSaveData();
+        // Close modal
+        document.getElementById('story-quest-modal').style.display = 'none';
+      };
+      
       document.getElementById('settings-reset-btn').onclick = () => {
         if (confirm('⚠️ WARNING ⚠️\n\nAre you ABSOLUTELY SURE you want to RESET ALL PROGRESS?\n\nThis will delete:\n• All permanent upgrades\n• All gold\n• All achievements\n• All gear & inventory\n• All buildings & quests\n• All companions\n• Everything will be completely wiped!\n\nThis action CANNOT be undone!')) {
           // Second confirmation
