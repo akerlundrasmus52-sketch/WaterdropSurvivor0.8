@@ -10662,6 +10662,7 @@
             updateCampScreen(); // Refresh the camp screen
             updateGoldDisplays(); // Update gold display
             document.getElementById('camp-screen').style.display = 'flex'; // Show camp screen after tutorial
+            if (!saveData.storyQuests.currentQuest) advanceQuestChain();
           }
         });
       }
