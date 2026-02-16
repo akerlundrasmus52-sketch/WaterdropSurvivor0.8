@@ -3868,8 +3868,8 @@
       // Check if device has touch support
       const hasTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
       // Check if it's likely a mobile device (small screen + touch)
-      // Use AND condition to ensure both dimensions are small (avoids false positives for tablets)
-      const isMobileDevice = hasTouch && (window.innerWidth <= MOBILE_BREAKPOINT && window.innerHeight <= MOBILE_BREAKPOINT);
+      // Use OR condition: if either dimension is small, it's likely mobile (handles portrait phones)
+      const isMobileDevice = hasTouch && (window.innerWidth <= MOBILE_BREAKPOINT || window.innerHeight <= MOBILE_BREAKPOINT);
       
       if (isMobileDevice) {
         return 'touch';
@@ -16219,9 +16219,13 @@
         gameSettings.keysPressed = keysPressed; // Store reference for game loop access
         
         window.addEventListener('keydown', (e) => {
-          // Allow skipping cinematic intro with any key press
+          // Allow skipping cinematic intro with specific keys (Space, Enter, Escape)
           if (cinematicIntroActive || countdownActive) {
-            skipToGameStart();
+            const skipKeys = [' ', 'Enter', 'Escape'];
+            if (skipKeys.includes(e.key)) {
+              skipToGameStart();
+              e.preventDefault();
+            }
             return;
           }
           
@@ -16661,8 +16665,10 @@
       if (frameCount % 60 === 0 && playerStats.hpRegen > 0 && playerStats.hp < playerStats.maxHp) {
         playerStats.hp = Math.min(playerStats.maxHp, playerStats.hp + playerStats.hpRegen);
         updateHUD();
-        // Green particle
-        spawnParticles(player.mesh.position, 0x00FF00, 2);
+        // Green particle (defensive null check)
+        if (player && player.mesh && player.mesh.position) {
+          spawnParticles(player.mesh.position, 0x00FF00, 2);
+        }
       }
 
       // Player Update (defensive null check)
