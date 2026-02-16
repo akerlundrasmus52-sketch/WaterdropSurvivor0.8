@@ -9967,6 +9967,9 @@
       // Start Loop - begin rendering immediately (non-blocking)
       requestAnimationFrame(animate);
       
+      // Start watchdog timer for freeze detection
+      startWatchdog();
+      
       // Show loading screen, then main menu (acceptance criteria #1)
       // gameModuleReady will be set after loading completes (acceptance criteria #2)
       showLoadingScreen();
@@ -13313,8 +13316,64 @@
       );
     }
     
+    // Watchdog timer for freeze detection
+    let lastRenderTime = Date.now();
+    let watchdogTimer = null;
+    
+    function startWatchdog() {
+      if (watchdogTimer) clearInterval(watchdogTimer);
+      
+      watchdogTimer = setInterval(() => {
+        const now = Date.now();
+        const timeSinceLastRender = now - lastRenderTime;
+        
+        // If more than 2 seconds since last render, game may be frozen
+        if (timeSinceLastRender > 2000 && isGameActive && !isPaused) {
+          console.error('[WATCHDOG] Game loop appears frozen! Attempting recovery...');
+          
+          // Try to recover
+          try {
+            // Clear any stuck animations
+            particles = [];
+            flashLights.forEach(light => scene.remove(light));
+            flashLights = [];
+            
+            // Limit enemies if too many
+            if (enemies.length > 50) {
+              const excess = enemies.splice(50);
+              excess.forEach(e => {
+                scene.remove(e.mesh);
+                e.mesh.geometry.dispose();
+                e.mesh.material.dispose();
+              });
+            }
+            
+            // Force render
+            if (renderer && scene && camera) {
+              renderer.render(scene, camera);
+            }
+            
+            lastRenderTime = Date.now();
+            console.log('[WATCHDOG] Recovery attempted');
+          } catch (e) {
+            console.error('[WATCHDOG] Recovery failed:', e);
+          }
+        }
+      }, 500); // Check every 500ms
+    }
+    
+    function stopWatchdog() {
+      if (watchdogTimer) {
+        clearInterval(watchdogTimer);
+        watchdogTimer = null;
+      }
+    }
+    
     function animate(time) {
       requestAnimationFrame(animate);
+      
+      // Update watchdog timer
+      lastRenderTime = Date.now();
       
       // Safety check: Ensure Three.js components are initialized before rendering (PR #82)
       if (!renderer || !scene || !camera) {
