@@ -7640,7 +7640,7 @@
           saveData.trainingPoints = saveData.trainingPoints || 0;
           saveData.lastTrainingPointTime = saveData.lastTrainingPointTime || 0;
           saveData.skillPoints = saveData.skillPoints || 0;
-          saveData.selectedCompanion = saveData.selectedCompanion !== undefined ? saveData.selectedCompanion : null;
+          saveData.selectedCompanion = saveData.selectedCompanion ?? null;
           // Story quest system (new fields)
           saveData.storyQuests = { ...defaultSaveData.storyQuests, ...(saveData.storyQuests || {}) };
           saveData.storyQuests.buildingFirstUse = { ...defaultSaveData.storyQuests.buildingFirstUse, ...(saveData.storyQuests.buildingFirstUse || {}) };
@@ -8340,7 +8340,7 @@
           } else {
             slotContent.textContent = 'Empty';
             slotCard.classList.remove('equipped');
-            slots.forEach(s => slotCard.classList.remove(`rarity-${s}`));
+            ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythical'].forEach(r => slotCard.classList.remove(`rarity-${r}`));
           }
         }
       }
@@ -9524,9 +9524,9 @@
     // Training Hall configuration
     // Real-time conversion: 10 minutes = 24h in-game
     // So 20 minutes = 48h in-game for training
-    const REAL_TIME_TO_GAME_TIME_RATIO = 24 * 60 / 10; // 24 hours = 10 minutes
+    const REAL_TIME_TO_GAME_TIME_RATIO = 24 * 60 / 10; // 24 hours = 10 minutes (ratio of 144)
     const TRAINING_SESSION_GAME_HOURS = 48; // Training takes 48 in-game hours
-    const TRAINING_SESSION_REAL_MS = (TRAINING_SESSION_GAME_HOURS / REAL_TIME_TO_GAME_TIME_RATIO) * 60 * 1000; // ~20 minutes
+    const TRAINING_SESSION_REAL_MS = (TRAINING_SESSION_GAME_HOURS * 60 * 1000) / REAL_TIME_TO_GAME_TIME_RATIO; // 48 * 60 * 1000 / 144 = 20,000ms = 20 seconds (for demo purposes - adjust as needed)
     const TRAINING_POINT_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 real hours to earn 1 training point
     const MAX_TRAINING_POINTS_PER_DAY = 2; // Limit 2 training points per in-game day
     
@@ -10086,24 +10086,23 @@
           saveData.tutorial.comicsShown.push('welcome');
           saveSaveData();
           
-          setTimeout(() => {
-            showComicPanel({
-              title: 'WATERDROP CAMP!',
-              speechBubble: '<b>You survived your first encounter!</b><br><br>Welcome to your base camp, brave water droplet. This is where heroes rest, train, and prepare for battle.',
-              soundEffect: 'WHOOSH!',
-              buttonText: 'AMAZING!',
-              onClose: () => {
-                // Unlock basic buildings after first comic
-                saveData.campBuildings.questMission.unlocked = true;
-                saveData.campBuildings.inventory.unlocked = true;
-                saveData.campBuildings.campHub.unlocked = true;
-                saveSaveData();
-                
-                // Show second comic about free rewards
-                showFirstRewardsComic();
-              }
-            });
-          }, 500);
+          // Show comic immediately (not in setTimeout) so return value works correctly
+          showComicPanel({
+            title: 'WATERDROP CAMP!',
+            speechBubble: '<b>You survived your first encounter!</b><br><br>Welcome to your base camp, brave water droplet. This is where heroes rest, train, and prepare for battle.',
+            soundEffect: 'WHOOSH!',
+            buttonText: 'AMAZING!',
+            onClose: () => {
+              // Unlock basic buildings after first comic
+              saveData.campBuildings.questMission.unlocked = true;
+              saveData.campBuildings.inventory.unlocked = true;
+              saveData.campBuildings.campHub.unlocked = true;
+              saveSaveData();
+              
+              // Show second comic about free rewards
+              showFirstRewardsComic();
+            }
+          });
           
           return true; // Signal that comic is being shown - don't show camp screen yet
         }
