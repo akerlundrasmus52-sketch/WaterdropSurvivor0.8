@@ -4147,6 +4147,16 @@
         // Track last damage type for death effects
         this.lastDamageType = damageType;
         
+        // ENHANCED: White hit flash on enemy
+        const originalColor = this.mesh.material.color.clone();
+        this.mesh.material.color.setHex(0xFFFFFF);
+        const flashTimeoutId = setTimeout(() => {
+          this.mesh.material.color.copy(originalColor);
+          const tidx = activeTimeouts.indexOf(flashTimeoutId);
+          if (tidx > -1) activeTimeouts.splice(tidx, 1);
+        }, 50);
+        activeTimeouts.push(flashTimeoutId);
+        
         // Phase 5: Hit impact particles (flesh/blood) on every hit
         spawnParticles(this.mesh.position, 0x8B0000, 3); // Blood particles
         
@@ -5048,11 +5058,56 @@
     }
 
     // Performance: Cached geometries and materials for projectiles (reused across instances)
+    // ENHANCED: Weapon-specific bullet geometries and materials
     const projectileGeometryCache = {
+      // Gun - Smaller realistic bullets
+      gunBullet: new THREE.SphereGeometry(0.15, 8, 8),
+      gunBulletGlow: new THREE.SphereGeometry(0.25, 6, 6),
+      // Shotgun - Small pellets
+      shotgunPellet: new THREE.SphereGeometry(0.1, 6, 6),
+      shotgunPelletGlow: new THREE.SphereGeometry(0.18, 6, 6),
+      // Drone - Cyan laser style
+      droneBullet: new THREE.CylinderGeometry(0.08, 0.08, 0.3, 8),
+      droneBulletGlow: new THREE.SphereGeometry(0.2, 6, 6),
+      // Generic fallback
       bullet: new THREE.SphereGeometry(0.25, 8, 8),
       bulletGlow: new THREE.SphereGeometry(0.35, 6, 6)
     };
     const projectileMaterialCache = {
+      // Gun - Yellow/orange bullets
+      gunBullet: new THREE.MeshBasicMaterial({ 
+        color: 0xFFAA00,
+        transparent: true,
+        opacity: 0.95
+      }),
+      gunBulletGlow: new THREE.MeshBasicMaterial({
+        color: 0xFFAA00,
+        transparent: true,
+        opacity: 0.3
+      }),
+      // Shotgun - Orange pellets
+      shotgunPellet: new THREE.MeshBasicMaterial({ 
+        color: 0xFF6600,
+        transparent: true,
+        opacity: 0.95
+      }),
+      shotgunPelletGlow: new THREE.MeshBasicMaterial({
+        color: 0xFF6600,
+        transparent: true,
+        opacity: 0.4
+      }),
+      // Drone - Cyan laser
+      droneBullet: new THREE.MeshBasicMaterial({ 
+        color: 0x00FFFF,
+        transparent: true,
+        opacity: 0.95
+      }),
+      droneBulletGlow: new THREE.MeshBasicMaterial({
+        color: 0x00FFFF,
+        transparent: true,
+        opacity: 0.3
+      }),
+      // Generic fallback
       bullet: new THREE.MeshBasicMaterial({ 
         color: 0xFFFF00,
         transparent: true,
@@ -5219,18 +5274,44 @@
     }
 
     class Projectile {
-      constructor(x, z, target) {
+      constructor(x, z, target, weaponType = 'gun') {
+        // ENHANCED: Weapon-specific bullet styles
+        let bulletGeo, bulletMat, glowGeo, glowMat;
+        
+        if (weaponType === 'shotgun' || this.isDoubleBarrel) {
+          // Shotgun pellets - small and fast
+          bulletGeo = projectileGeometryCache.shotgunPellet;
+          bulletMat = projectileMaterialCache.shotgunPellet;
+          glowGeo = projectileGeometryCache.shotgunPelletGlow;
+          glowMat = projectileMaterialCache.shotgunPelletGlow;
+          this.speed = 0.6; // Faster
+        } else if (weaponType === 'drone' || this.isDroneTurret) {
+          // Drone laser bullets
+          bulletGeo = projectileGeometryCache.droneBullet;
+          bulletMat = projectileMaterialCache.droneBullet;
+          glowGeo = projectileGeometryCache.droneBulletGlow;
+          glowMat = projectileMaterialCache.droneBulletGlow;
+          this.speed = 0.5;
+        } else {
+          // Gun bullets - smaller than before
+          bulletGeo = projectileGeometryCache.gunBullet;
+          bulletMat = projectileMaterialCache.gunBullet;
+          glowGeo = projectileGeometryCache.gunBulletGlow;
+          glowMat = projectileMaterialCache.gunBulletGlow;
+          this.speed = 0.4;
+        }
+        
         // Performance: Reuse cached geometry and materials instead of creating new ones
-        this.mesh = new THREE.Mesh(projectileGeometryCache.bullet, projectileMaterialCache.bullet);
+        this.mesh = new THREE.Mesh(bulletGeo, bulletMat);
         this.mesh.position.set(x, 0.5, z);
         scene.add(this.mesh);
         
         // Add glowing trail effect with cached resources
-        this.glow = new THREE.Mesh(projectileGeometryCache.bulletGlow, projectileMaterialCache.bulletGlow);
+        this.glow = new THREE.Mesh(glowGeo, glowMat);
         this.glow.position.copy(this.mesh.position);
         scene.add(this.glow);
 
-        this.speed = 0.4;
+        this.weaponType = weaponType;
         this.active = true;
         this.life = 60; // Frames
 
@@ -5306,16 +5387,50 @@
             const isCrit = Math.random() < playerStats.critChance;
             if (isCrit) dmg *= playerStats.critDmg;
             
-            enemy.takeDamage(Math.floor(dmg), isCrit);
+            enemy.takeDamage(Math.floor(dmg), isCrit, this.weaponType);
             
             // Knockback effect
             const knockbackForce = 0.5;
             enemy.mesh.position.x += this.vx * knockbackForce;
             enemy.mesh.position.z += this.vz * knockbackForce;
             
-            // Water splash effect on hit
-            spawnParticles(enemy.mesh.position, COLORS.player, 5);
+            // ENHANCED: Bloody, brutal hit effects
+            const bloodIntensity = Math.min(Math.floor(dmg / 10), 15);
+            
+            // Blood splatter - red particles
+            spawnParticles(enemy.mesh.position, 0x8B0000, bloodIntensity); // Dark red blood
+            spawnParticles(enemy.mesh.position, 0xFF0000, Math.floor(bloodIntensity * 0.6)); // Bright red
+            
+            // Brief white impact flash
             spawnParticles(enemy.mesh.position, 0xFFFFFF, 3);
+            
+            // Critical hits get extra dramatic effects
+            if (isCrit) {
+              spawnParticles(enemy.mesh.position, 0xFFD700, 8); // Gold particles for crit
+              spawnParticles(enemy.mesh.position, 0x8B0000, 10); // Extra blood
+              
+              // Brief impact light flash
+              const critLight = new THREE.PointLight(0xFFFFFF, 8, 10);
+              critLight.position.copy(enemy.mesh.position);
+              critLight.position.y += 0.5;
+              scene.add(critLight);
+              flashLights.push(critLight);
+              
+              const timeoutId = setTimeout(() => {
+                scene.remove(critLight);
+                const idx = flashLights.indexOf(critLight);
+                if (idx > -1) flashLights.splice(idx, 1);
+                const tidx = activeTimeouts.indexOf(timeoutId);
+                if (tidx > -1) activeTimeouts.splice(tidx, 1);
+              }, 100);
+              activeTimeouts.push(timeoutId);
+            }
+            
+            // Shotgun gets even messier blood effects
+            if (this.weaponType === 'shotgun' || this.isDoubleBarrel) {
+              spawnParticles(enemy.mesh.position, 0x8B0000, 15); // Massive blood spray
+              spawnParticles(enemy.mesh.position, 0xFF0000, 10);
+            }
             
             this.destroy();
             playSound('hit');
@@ -13705,10 +13820,32 @@
           // Fire based on barrels
           for(let i=0; i<weapons.gun.barrels; i++) {
             setTimeout(() => {
-              projectiles.push(new Projectile(player.mesh.position.x, player.mesh.position.z, nearest.mesh.position));
+              const proj = new Projectile(player.mesh.position.x, player.mesh.position.z, nearest.mesh.position, 'gun');
+              projectiles.push(proj);
               
-              // ENHANCED muzzle flash light effect - brighter and more dramatic
-              const flashLight = new THREE.PointLight(0xFFFFFF, 6, 20); // Increased intensity (was 4, 15)
+              // ENHANCED: 3 different muzzle flash variations
+              const flashVariation = Math.floor(Math.random() * 3);
+              let flashColor, flashIntensity, flashRange;
+              
+              if (flashVariation === 0) {
+                // Bright white flash
+                flashColor = 0xFFFFFF;
+                flashIntensity = 7;
+                flashRange = 22;
+              } else if (flashVariation === 1) {
+                // Yellow-orange flash
+                flashColor = 0xFFAA00;
+                flashIntensity = 6;
+                flashRange = 20;
+              } else {
+                // Bright yellow flash
+                flashColor = 0xFFFF00;
+                flashIntensity = 6.5;
+                flashRange = 21;
+              }
+              
+              // ENHANCED muzzle flash light effect - quality lighting
+              const flashLight = new THREE.PointLight(flashColor, flashIntensity, flashRange);
               flashLight.position.copy(player.mesh.position);
               flashLight.position.y += 1;
               scene.add(flashLight);
@@ -13724,20 +13861,27 @@
               }, 80);
               activeTimeouts.push(timeoutId);
               
-              // Gun kickback effect - slight recoil visual
+              // ENHANCED: Gun recoil animation - more noticeable
               const originalY = player.mesh.position.y;
-              player.mesh.position.y = originalY - 0.05;
+              const originalRotX = player.mesh.rotation.x;
+              player.mesh.position.y = originalY - 0.08; // Stronger kickback
+              player.mesh.rotation.x = originalRotX - 0.1; // Slight backward tilt
+              
               const kickbackTimeoutId = setTimeout(() => {
                 player.mesh.position.y = originalY;
-              }, 50);
+                player.mesh.rotation.x = originalRotX;
+                const tidx = activeTimeouts.indexOf(kickbackTimeoutId);
+                if (tidx > -1) activeTimeouts.splice(tidx, 1);
+              }, 60);
               activeTimeouts.push(kickbackTimeoutId);
               
-              // ENHANCED Muzzle flash particles (bright and intense) - Reduced for performance
-              spawnParticles(player.mesh.position, 0xFFFF00, 6); // Reduced for performance
-              spawnParticles(player.mesh.position, 0xFFFFFF, 4); // Reduced for performance
-              spawnParticles(player.mesh.position, 0xFFA500, 4); // Reduced for performance
-              // Add smoke particles
-              spawnParticles(player.mesh.position, 0x888888, 4);
+              // ENHANCED: HD Muzzle flash particles - bright and intense
+              spawnParticles(player.mesh.position, 0xFFFF00, 8); // Yellow flash
+              spawnParticles(player.mesh.position, 0xFFFFFF, 6); // White sparks
+              spawnParticles(player.mesh.position, 0xFFA500, 5); // Orange glow
+              // HD smoke particles
+              spawnParticles(player.mesh.position, 0x666666, 6); // Gray smoke
+              spawnParticles(player.mesh.position, 0x888888, 4); // Light smoke
             }, i * 100);
           }
           weapons.gun.lastShot = time;
@@ -13835,18 +13979,24 @@
             const projectile = new Projectile(
               drone.mesh.position.x, 
               drone.mesh.position.z, 
-              nearestEnemy.mesh.position
+              nearestEnemy.mesh.position,
+              'drone'
             );
             // Mark projectile as from drone turret for damage calculation
             projectile.isDroneTurret = true;
             projectiles.push(projectile);
             
-            // Small muzzle flash from drone
-            const flashLight = new THREE.PointLight(0x00FFFF, 2, 8);
+            // ENHANCED: Cyan laser flash from drone
+            const flashLight = new THREE.PointLight(0x00FFFF, 4, 10); // Cyan
             flashLight.position.copy(drone.mesh.position);
             flashLight.position.y += 0.2;
             scene.add(flashLight);
             flashLights.push(flashLight);
+            
+            // Cyan particles for sci-fi laser effect
+            spawnParticles(drone.mesh.position, 0x00FFFF, 5);
+            spawnParticles(drone.mesh.position, 0x00AAFF, 3);
+            
             const timeoutId = setTimeout(() => {
               scene.remove(flashLight);
               const idx = flashLights.indexOf(flashLight);
@@ -13879,33 +14029,35 @@
         }
 
         if (nearest) {
-          // Fire two shots with spread
+          // ENHANCED: Fire multiple pellets with wide spread (shotgun pattern)
           const baseDir = new THREE.Vector3(
             nearest.mesh.position.x - player.mesh.position.x,
             0,
             nearest.mesh.position.z - player.mesh.position.z
           ).normalize();
           
-          // Left barrel
-          const leftAngle = Math.atan2(baseDir.z, baseDir.x) - weapons.doubleBarrel.spread;
-          const leftTarget = new THREE.Vector3(
-            player.mesh.position.x + Math.cos(leftAngle) * weapons.doubleBarrel.range,
-            0,
-            player.mesh.position.z + Math.sin(leftAngle) * weapons.doubleBarrel.range
-          );
-          projectiles.push(new Projectile(player.mesh.position.x, player.mesh.position.z, leftTarget));
+          const baseAngle = Math.atan2(baseDir.z, baseDir.x);
+          const pelletCount = 6; // 6 pellets per shot
           
-          // Right barrel
-          const rightAngle = Math.atan2(baseDir.z, baseDir.x) + weapons.doubleBarrel.spread;
-          const rightTarget = new THREE.Vector3(
-            player.mesh.position.x + Math.cos(rightAngle) * weapons.doubleBarrel.range,
-            0,
-            player.mesh.position.z + Math.sin(rightAngle) * weapons.doubleBarrel.range
-          );
-          projectiles.push(new Projectile(player.mesh.position.x, player.mesh.position.z, rightTarget));
+          // Fire pellets in a spread pattern
+          for (let i = 0; i < pelletCount; i++) {
+            // Wide spread pattern
+            const spreadAngle = (Math.random() - 0.5) * weapons.doubleBarrel.spread * 2;
+            const pelletAngle = baseAngle + spreadAngle;
+            
+            const pelletTarget = new THREE.Vector3(
+              player.mesh.position.x + Math.cos(pelletAngle) * weapons.doubleBarrel.range,
+              0,
+              player.mesh.position.z + Math.sin(pelletAngle) * weapons.doubleBarrel.range
+            );
+            
+            const proj = new Projectile(player.mesh.position.x, player.mesh.position.z, pelletTarget, 'shotgun');
+            proj.isDoubleBarrel = true;
+            projectiles.push(proj);
+          }
           
-          // Effects
-          const flashLight = new THREE.PointLight(0xFFFF00, 3, 12);
+          // ENHANCED: Massive muzzle flash with orange/yellow glow
+          const flashLight = new THREE.PointLight(0xFF8800, 10, 25); // Orange, very bright
           flashLight.position.copy(player.mesh.position);
           flashLight.position.y += 1;
           scene.add(flashLight);
@@ -13916,11 +14068,28 @@
             if (idx > -1) flashLights.splice(idx, 1);
             const tidx = activeTimeouts.indexOf(timeoutId);
             if (tidx > -1) activeTimeouts.splice(tidx, 1);
-          }, 80);
+          }, 100);
           activeTimeouts.push(timeoutId);
           
-          spawnParticles(player.mesh.position, 0xFFFF00, 8);
-          spawnParticles(player.mesh.position, 0xFFFFFF, 5);
+          // ENHANCED: Heavy recoil animation
+          const originalY = player.mesh.position.y;
+          const originalRotX = player.mesh.rotation.x;
+          player.mesh.position.y = originalY - 0.15; // HEAVY kickback
+          player.mesh.rotation.x = originalRotX - 0.2; // Strong backward tilt
+          
+          const kickbackTimeoutId = setTimeout(() => {
+            player.mesh.position.y = originalY;
+            player.mesh.rotation.x = originalRotX;
+            const tidx = activeTimeouts.indexOf(kickbackTimeoutId);
+            if (tidx > -1) activeTimeouts.splice(tidx, 1);
+          }, 80);
+          activeTimeouts.push(kickbackTimeoutId);
+          
+          // ENHANCED: Massive particle effects
+          spawnParticles(player.mesh.position, 0xFF8800, 15); // Orange
+          spawnParticles(player.mesh.position, 0xFFFF00, 12); // Yellow
+          spawnParticles(player.mesh.position, 0xFFFFFF, 8);  // White
+          spawnParticles(player.mesh.position, 0x888888, 10); // Heavy smoke
           
           weapons.doubleBarrel.lastShot = time;
           playSound('doublebarrel'); // Double barrel sound
