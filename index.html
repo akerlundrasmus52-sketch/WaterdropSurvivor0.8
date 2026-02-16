@@ -7393,7 +7393,7 @@
           saveData.trainingPoints = saveData.trainingPoints || 0;
           saveData.lastTrainingPointTime = saveData.lastTrainingPointTime || 0;
           saveData.skillPoints = saveData.skillPoints || 0;
-          saveData.selectedCompanion = saveData.selectedCompanion || 'stormWolf';
+          saveData.selectedCompanion = saveData.selectedCompanion !== undefined ? saveData.selectedCompanion : null;
           // Story quest system (new fields)
           saveData.storyQuests = { ...defaultSaveData.storyQuests, ...(saveData.storyQuests || {}) };
           saveData.storyQuests.buildingFirstUse = { ...defaultSaveData.storyQuests.buildingFirstUse, ...(saveData.storyQuests.buildingFirstUse || {}) };
@@ -9688,9 +9688,130 @@
       playSound('achievement');
     }
 
+    // Tutorial system - Free rewards comic
+    function showFirstRewardsComic() {
+      if (!saveData.tutorial.comicsShown.includes('freeRewards')) {
+        saveData.tutorial.comicsShown.push('freeRewards');
+        
+        showComicPanel({
+          title: 'YOUR FIRST REWARDS!',
+          text: 'As a new hero, you deserve some starting gear:',
+          speechBubble: '💰 <b>50 Gold</b> to get you started<br>⭐ <b>1 Skill Point</b> to unlock your first ability<br>🥚 <b>A Mysterious Egg</b> - your first companion!<br>📊 <b>3 Attribute Points</b> for training',
+          soundEffect: 'KA-CHING!',
+          buttonText: 'AWESOME!',
+          onClose: () => {
+            // Give free rewards
+            if (!saveData.tutorial.freeRewardsGiven.gold) {
+              saveData.gold += 50;
+              saveData.tutorial.freeRewardsGiven.gold = true;
+            }
+            if (!saveData.tutorial.freeRewardsGiven.skillPoint) {
+              saveData.skillPoints += 1;
+              saveData.tutorial.freeRewardsGiven.skillPoint = true;
+            }
+            if (!saveData.tutorial.freeRewardsGiven.attributes) {
+              saveData.unspentAttributePoints += 3;
+              saveData.tutorial.freeRewardsGiven.attributes = true;
+            }
+            if (!saveData.tutorial.freeRewardsGiven.companionEgg) {
+              saveData.tutorial.hasReceivedEgg = true;
+              saveData.tutorial.freeRewardsGiven.companionEgg = true;
+            }
+            saveSaveData();
+            
+            // Show egg hatching comic
+            showEggHatchingComic();
+          }
+        });
+      }
+    }
+
+    // Tutorial system - Egg hatching comic
+    function showEggHatchingComic() {
+      if (!saveData.tutorial.comicsShown.includes('eggHatching')) {
+        saveData.tutorial.comicsShown.push('eggHatching');
+        
+        showComicPanel({
+          title: 'THE EGG HATCHES!',
+          thoughtBubble: 'What could be inside...?',
+          speechBubble: '<b>*CRACK* *CRACK*</b><br><br>A cute Storm Wolf pup emerges! It will fight by your side in battle.',
+          soundEffect: 'CRACK!',
+          buttonText: 'SO CUTE!',
+          onClose: () => {
+            // Hatch the egg - unlock Storm Wolf companion
+            if (!saveData.tutorial.hasHatchedEgg) {
+              saveData.companions.stormWolf.unlocked = true;
+              saveData.selectedCompanion = 'stormWolf';
+              saveData.tutorial.hasHatchedEgg = true;
+              
+              // Unlock companion house
+              saveData.campBuildings.companionHouse.unlocked = true;
+              saveSaveData();
+            }
+            
+            // Show explanation of unlocks
+            showUnlockExplanationComic();
+          }
+        });
+      }
+    }
+
+    // Tutorial system - Explain unlocking buildings
+    function showUnlockExplanationComic() {
+      if (!saveData.tutorial.comicsShown.includes('unlockExplanation')) {
+        saveData.tutorial.comicsShown.push('unlockExplanation');
+        
+        showComicPanel({
+          title: 'UNLOCK YOUR POWER!',
+          text: 'Buildings are the key to becoming stronger:',
+          speechBubble: '🏛️ <b>Skill Tree</b>: Unlock powerful abilities<br>⚒️ <b>Forge</b>: Craft better equipment<br>🏋️ <b>Training Hall</b>: Train your attributes<br>🛡️ <b>Armory</b>: Manage your gear<br><br>Complete quests or use gold to unlock them!',
+          buttonText: 'LET\'S START!',
+          onClose: () => {
+            // Mark tutorial as less active (still tracking but main intro done)
+            saveSaveData();
+            updateCampScreen(); // Refresh the camp screen
+            updateGoldDisplays(); // Update gold display
+            document.getElementById('camp-screen').style.display = 'flex'; // Show camp screen after tutorial
+          }
+        });
+      }
+    }
+
     function updateCampScreen() {
-      // Check for first-time camp visit
-      if (!saveData.hasVisitedCamp) {
+      // Check for first-time camp visit with COMIC BOOK TUTORIAL
+      if (!saveData.hasVisitedCamp && saveData.tutorial.isActive) {
+        saveData.hasVisitedCamp = true;
+        
+        // Show first comic panel - Welcome to Camp
+        if (!saveData.tutorial.comicsShown.includes('welcome')) {
+          saveData.tutorial.comicsShown.push('welcome');
+          saveSaveData();
+          
+          setTimeout(() => {
+            showComicPanel({
+              title: 'WATERDROP CAMP!',
+              speechBubble: '<b>You survived your first encounter!</b><br><br>Welcome to your base camp, brave water droplet. This is where heroes rest, train, and prepare for battle.',
+              soundEffect: 'WHOOSH!',
+              buttonText: 'AMAZING!',
+              onClose: () => {
+                // Unlock basic buildings after first comic
+                saveData.campBuildings.questMission.unlocked = true;
+                saveData.campBuildings.inventory.unlocked = true;
+                saveData.campBuildings.campHub.unlocked = true;
+                saveSaveData();
+                
+                // Show second comic about free rewards
+                showFirstRewardsComic();
+              }
+            });
+          }, 500);
+          
+          return true; // Signal that comic is being shown - don't show camp screen yet
+        }
+      }
+      
+      // Legacy first-time camp visit (if tutorial is disabled)
+      if (!saveData.hasVisitedCamp && !saveData.tutorial.isActive) {
         saveData.hasVisitedCamp = true;
         // Unlock free buildings
         saveData.campBuildings.questMission.unlocked = true;
@@ -9724,6 +9845,8 @@
         
         saveSaveData();
       }
+      
+      return false; // Normal flow - show camp screen
       
       // Update buildings section
       const buildingsContent = document.getElementById('camp-buildings-content');
@@ -11738,8 +11861,10 @@
       document.getElementById('camp-btn').onclick = () => {
         playSound('waterdrop');
         hideMainMenu();
-        updateCampScreen();
-        document.getElementById('camp-screen').style.display = 'flex';
+        const showingTutorial = updateCampScreen();
+        if (!showingTutorial) {
+          document.getElementById('camp-screen').style.display = 'flex';
+        }
       };
       
       // Back buttons
