@@ -11862,6 +11862,17 @@
             0,
             killCamData.killPosition.z + (player.mesh.position.z - killCamData.killPosition.z) * panProgress
           );
+          // Interpolate camera position to create the actual pan motion
+          const panStartPos = killCamData.originalCameraPos;
+          const panEndPosZOffset = 10; // slight forward offset for a subtle zoom effect
+          const panEndPos = new THREE.Vector3(
+            panTarget.x,
+            panStartPos.y,
+            panTarget.z + panEndPosZOffset
+          );
+          camera.position.x = panStartPos.x + (panEndPos.x - panStartPos.x) * panProgress;
+          camera.position.y = panStartPos.y + (panEndPos.y - panStartPos.y) * panProgress;
+          camera.position.z = panStartPos.z + (panEndPos.z - panStartPos.z) * panProgress;
           camera.lookAt(panTarget);
           break;
       }
