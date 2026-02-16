@@ -2876,6 +2876,9 @@
       </div>
     </div>
     
+    <!-- FRESH IMPLEMENTATION: Countdown Display for Start-of-Run -->
+    <div id="countdown-display" style="display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 120px; font-weight: bold; color: #FFD700; text-shadow: 0 0 20px rgba(255,215,0,0.8), 0 0 40px rgba(255,215,0,0.5); pointer-events: none; z-index: 200; font-family: 'M PLUS Rounded 1c', sans-serif;"></div>
+    
     <!-- PR #117: Menu button (shows in portrait mode) -->
     <button id="menu-btn" title="Menu">☰</button>
     
@@ -3680,14 +3683,15 @@
     let cinematicIntroActive = false;
     let cinematicIntroStep = 0;
     let cinematicIntroTimer = 0;
+    // FRESH IMPLEMENTATION: Enhanced cinematic intro matching requirements
     const cinematicIntroSequence = [
-      { type: 'landmark', target: 'stonehenge', duration: 3, zoom: 15 },
-      { type: 'landmark', target: 'tesla', duration: 3, zoom: 15 },
-      { type: 'landmark', target: 'windmill', duration: 3, zoom: 15 },
-      { type: 'landmark', target: 'volcano', duration: 3, zoom: 15 },
-      { type: 'zoomout', duration: 2, zoom: 50 },
-      { type: 'zoomin', duration: 1.5, zoom: 15 },
-      { type: 'cigar', duration: 2 }
+      { type: 'droneview', duration: 2, zoom: 80, angle: 'top-down' }, // Drone-like top-down view
+      { type: 'showstructures', duration: 3, zoom: 50, pan: true }, // Show structures from side
+      { type: 'zoomout', duration: 2, zoom: 100 }, // Zoom out to ~3000m equivalent
+      { type: 'zoomin', duration: 2, zoom: 15 }, // Zoom into character
+      { type: 'cigar', duration: 2, focus: 'player' }, // Character smoking
+      { type: 'gameplay', duration: 1.5, zoom: 15 }, // Transition to gameplay
+      { type: 'countdown', duration: 3 } // 3-2-1 countdown
     ];
     let introLandmarkPositions = {};
     
@@ -13368,32 +13372,55 @@
       camera.position.set(20, 20, 20); // Isometric angle
       camera.lookAt(scene.position);
 
-      // Renderer
-      renderer = new THREE.WebGLRenderer({ antialias: true });
+      // Renderer - Enhanced for 4K quality
+      renderer = new THREE.WebGLRenderer({ 
+        antialias: true,
+        powerPreference: 'high-performance',
+        precision: 'highp', // High precision for better quality
+        alpha: false
+      });
       renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Support high DPI displays
       renderer.shadowMap.enabled = true;
-      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Soft shadows
+      // FRESH IMPLEMENTATION: Enhanced rendering quality
+      renderer.outputEncoding = THREE.sRGBEncoding; // Better color accuracy
+      renderer.toneMapping = THREE.ACESFilmicToneMapping; // Cinematic look
+      renderer.toneMappingExposure = 1.2; // Slightly brighter
+      renderer.physicallyCorrectLights = true; // Realistic lighting
       document.getElementById('game-container').appendChild(renderer.domElement);
 
       // Day/Night Cycle System - Non-blocking, smooth transitions
       // Store light references for day/night cycle
-      window.ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+      // FRESH IMPLEMENTATION: Enhanced 4K-quality lighting
+      window.ambientLight = new THREE.AmbientLight(0xffffff, 0.7); // Slightly brighter
       scene.add(window.ambientLight);
 
-      // Realistic sun/moon with soft dynamic shadows
-      window.dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+      // Realistic sun/moon with soft dynamic shadows - 4K quality
+      window.dirLight = new THREE.DirectionalLight(0xffffff, 1.0); // Brighter
       window.dirLight.position.set(50, 100, 50);
       window.dirLight.castShadow = true;
-      window.dirLight.shadow.mapSize.width = 2048;
-      window.dirLight.shadow.mapSize.height = 2048;
+      // 4K shadow quality - higher resolution
+      window.dirLight.shadow.mapSize.width = 4096; // 4K shadow maps
+      window.dirLight.shadow.mapSize.height = 4096;
       window.dirLight.shadow.camera.left = -100;
       window.dirLight.shadow.camera.right = 100;
       window.dirLight.shadow.camera.top = 100;
       window.dirLight.shadow.camera.bottom = -100;
       // Soft shadow settings for realistic effect
-      window.dirLight.shadow.radius = 4; // Soft shadow blur
-      window.dirLight.shadow.bias = -0.0001; // Prevent shadow acne
+      window.dirLight.shadow.radius = 6; // Softer shadow blur for quality
+      window.dirLight.shadow.bias = -0.00005; // Prevent shadow acne
       scene.add(window.dirLight);
+      
+      // FRESH IMPLEMENTATION: Add fill light for better character definition
+      const fillLight = new THREE.DirectionalLight(0x6699FF, 0.3);
+      fillLight.position.set(-50, 50, -50);
+      scene.add(fillLight);
+      
+      // FRESH IMPLEMENTATION: Add rim light for depth
+      const rimLight = new THREE.DirectionalLight(0xFFAA44, 0.2);
+      rimLight.position.set(0, 20, -100);
+      scene.add(rimLight);
 
       // Apply graphics quality settings
       applyGraphicsQuality(gameSettings.graphicsQuality);
@@ -13514,44 +13541,90 @@
         return;
       }
       
+      const progress = Math.min(cinematicIntroTimer / currentStep.duration, 1);
+      const eased = easeInOutCubic(progress);
+      
       // Handle current step based on type
-      if (currentStep.type === 'landmark') {
-        const pos = introLandmarkPositions[currentStep.target];
-        if (pos) {
-          // Smoothly move camera to landmark
-          const progress = Math.min(cinematicIntroTimer / currentStep.duration, 1);
-          const eased = easeInOutCubic(progress);
-          
-          camera.position.x = camera.position.x + (pos.x - camera.position.x) * 0.1;
-          camera.position.y = pos.y;
-          camera.position.z = camera.position.z + (pos.z - camera.position.z) * 0.1;
-          camera.lookAt(pos.x, 0, pos.z);
-          
-          // Show description bubble
-          if (cinematicIntroTimer < DESCRIPTION_DISPLAY_TIME && progress < DESCRIPTION_PROGRESS_THRESHOLD) {
-            showLandmarkDescription(currentStep.target);
-          }
-        }
-      } else if (currentStep.type === 'zoomout') {
-        // Zoom out to show full map
-        const progress = Math.min(cinematicIntroTimer / currentStep.duration, 1);
-        camera.position.y = 20 + (50 - 20) * easeInOutCubic(progress);
-      } else if (currentStep.type === 'zoomin') {
-        // Zoom in rapidly to player
-        const progress = Math.min(cinematicIntroTimer / currentStep.duration, 1);
+      if (currentStep.type === 'droneview') {
+        // FRESH IMPLEMENTATION: Drone-like top-down view
         if (player && player.mesh) {
           const targetPos = player.mesh.position;
-          camera.position.x = camera.position.x + (targetPos.x - camera.position.x) * 0.3;
-          camera.position.y = 20 + (15 - 20) * easeInOutCubic(progress);
-          camera.position.z = camera.position.z + (targetPos.z + 20 - camera.position.z) * 0.3;
+          camera.position.x = targetPos.x;
+          camera.position.y = 80; // High altitude drone view
+          camera.position.z = targetPos.z + 5;
+          camera.lookAt(targetPos.x, 0, targetPos.z);
+        }
+      } else if (currentStep.type === 'showstructures') {
+        // FRESH IMPLEMENTATION: Show structures from side and above
+        if (player && player.mesh) {
+          const targetPos = player.mesh.position;
+          const panAngle = progress * Math.PI * 2; // 360° pan
+          const radius = 50;
+          camera.position.x = targetPos.x + Math.cos(panAngle) * radius;
+          camera.position.y = 50;
+          camera.position.z = targetPos.z + Math.sin(panAngle) * radius;
+          camera.lookAt(targetPos.x, 0, targetPos.z);
+        }
+      } else if (currentStep.type === 'zoomout') {
+        // FRESH IMPLEMENTATION: Zoom out to ~3000m equivalent (high zoom value)
+        if (player && player.mesh) {
+          const targetPos = player.mesh.position;
+          camera.position.x = targetPos.x;
+          camera.position.y = 20 + (100 - 20) * eased; // Zoom out high
+          camera.position.z = targetPos.z + 20 + (80 - 20) * eased;
+          camera.lookAt(targetPos.x, 0, targetPos.z);
+        }
+      } else if (currentStep.type === 'zoomin') {
+        // FRESH IMPLEMENTATION: Zoom into character
+        if (player && player.mesh) {
+          const targetPos = player.mesh.position;
+          camera.position.x = targetPos.x + 20 * (1 - eased);
+          camera.position.y = 100 - (100 - 20) * eased;
+          camera.position.z = targetPos.z + 100 - (100 - 20) * eased;
           camera.lookAt(targetPos.x, 0, targetPos.z);
         }
       } else if (currentStep.type === 'cigar') {
-        // Player cigar smoke animation
+        // FRESH IMPLEMENTATION: Character smoking cigar closeup
         if (player && player.mesh && cinematicIntroTimer < currentStep.duration) {
+          const targetPos = player.mesh.position;
+          // Close up on character's face
+          camera.position.x = targetPos.x + 3;
+          camera.position.y = 5;
+          camera.position.z = targetPos.z + 3;
+          camera.lookAt(targetPos.x, 1, targetPos.z);
+          
+          // Spawn smoke particles
           const smokeInterval = 0.2;
           if (Math.floor(cinematicIntroTimer / smokeInterval) > Math.floor((cinematicIntroTimer - dt) / smokeInterval)) {
-            createSmokeParticle(player.mesh.position);
+            createSmokeParticle(new THREE.Vector3(targetPos.x, targetPos.y + 0.5, targetPos.z));
+          }
+        }
+      } else if (currentStep.type === 'gameplay') {
+        // FRESH IMPLEMENTATION: Transition back to gameplay angle
+        if (player && player.mesh) {
+          const targetPos = player.mesh.position;
+          camera.position.x = targetPos.x + 20 * (1 - eased);
+          camera.position.y = 20;
+          camera.position.z = targetPos.z + 20 * (1 - eased);
+          camera.lookAt(targetPos.x, 0, targetPos.z);
+        }
+      } else if (currentStep.type === 'countdown') {
+        // FRESH IMPLEMENTATION: 3-2-1 countdown
+        const timeLeft = Math.ceil(currentStep.duration - cinematicIntroTimer);
+        if (timeLeft > 0 && timeLeft <= 3) {
+          // Display countdown number
+          const countdownEl = document.getElementById('countdown-display');
+          if (countdownEl) {
+            countdownEl.textContent = timeLeft;
+            countdownEl.style.display = 'block';
+            countdownEl.style.fontSize = '120px';
+            countdownEl.style.color = '#FFD700';
+            countdownEl.style.textShadow = '0 0 20px rgba(255,215,0,0.8)';
+          }
+        } else {
+          const countdownEl = document.getElementById('countdown-display');
+          if (countdownEl) {
+            countdownEl.style.display = 'none';
           }
         }
       }
