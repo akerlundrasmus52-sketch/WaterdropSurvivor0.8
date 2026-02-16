@@ -3860,12 +3860,15 @@
     let activeCompanion = null; // Will hold the active Companion instance
 
     // Game Settings
+    // Constants for device detection
+    const MOBILE_BREAKPOINT = 768; // Screen width/height threshold for mobile devices
+    
     // Auto-detect default control type based on device capabilities
     function detectDefaultControlType() {
       // Check if device has touch support
       const hasTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
       // Check if it's likely a mobile device (small screen + touch)
-      const isMobileDevice = hasTouch && (window.innerWidth <= 768 || window.innerHeight <= 768);
+      const isMobileDevice = hasTouch && (window.innerWidth <= MOBILE_BREAKPOINT || window.innerHeight <= MOBILE_BREAKPOINT);
       
       if (isMobileDevice) {
         return 'touch';
@@ -16166,10 +16169,15 @@
       container.addEventListener('touchend', (e) => {
         // Allow skipping cinematic intro/countdown with touch
         if (cinematicIntroActive || countdownActive) {
-          if (cinematicIntroActive) endCinematicIntro();
-          if (countdownActive) {
-            countdownActive = false;
-            startCinematicIntro();
+          // Skip directly to gameplay by ending both sequences
+          countdownActive = false;
+          if (cinematicIntroActive) {
+            endCinematicIntro();
+          } else {
+            // If only countdown is active, skip directly to game start
+            setGamePaused(false);
+            setGameActive(true);
+            gameStartTime = Date.now();
           }
           e.preventDefault();
           return;
@@ -16191,10 +16199,15 @@
       container.addEventListener('click', (e) => {
         // Allow skipping cinematic intro/countdown with click
         if (cinematicIntroActive || countdownActive) {
-          if (cinematicIntroActive) endCinematicIntro();
-          if (countdownActive) {
-            countdownActive = false;
-            startCinematicIntro();
+          // Skip directly to gameplay by ending both sequences
+          countdownActive = false;
+          if (cinematicIntroActive) {
+            endCinematicIntro();
+          } else {
+            // If only countdown is active, skip directly to game start
+            setGamePaused(false);
+            setGameActive(true);
+            gameStartTime = Date.now();
           }
           e.preventDefault();
         }
@@ -16208,11 +16221,15 @@
         window.addEventListener('keydown', (e) => {
           // Allow skipping cinematic intro with any key press
           if (cinematicIntroActive || countdownActive) {
-            // Skip intro/countdown on any key press
-            if (cinematicIntroActive) endCinematicIntro();
-            if (countdownActive) {
-              countdownActive = false;
-              startCinematicIntro();
+            // Skip directly to gameplay by ending both sequences
+            countdownActive = false;
+            if (cinematicIntroActive) {
+              endCinematicIntro();
+            } else {
+              // If only countdown is active, skip directly to game start
+              setGamePaused(false);
+              setGameActive(true);
+              gameStartTime = Date.now();
             }
             return;
           }
