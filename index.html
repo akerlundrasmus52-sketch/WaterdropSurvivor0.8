@@ -3864,7 +3864,20 @@
     const MOBILE_BREAKPOINT = 768; // Screen width/height threshold for mobile devices
     const SKIP_INTRO_KEYS = [' ', 'Enter', 'Escape']; // Keys that can skip intro/countdown
     
-    // Auto-detect default control type based on device capabilities
+    /**
+     * Auto-detects the appropriate default control type based on device capabilities.
+     * 
+     * Detection logic:
+     * 1. Checks for touch support (ontouchstart or maxTouchPoints)
+     * 2. Checks screen dimensions (uses OR: if either dimension ≤ 768px)
+     * 3. Returns 'touch' for touch-enabled devices with small screens (mobile/tablets)
+     * 4. Returns 'keyboard' for non-touch or large-screen devices (desktop/laptop)
+     * 
+     * Note: OR condition for dimensions handles portrait phones (e.g., 375x812)
+     * where only one dimension is small.
+     * 
+     * @returns {string} 'touch' for mobile devices, 'keyboard' for desktop
+     */
     function detectDefaultControlType() {
       // Check if device has touch support
       const hasTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
@@ -13056,9 +13069,9 @@
         joystickRight.y = 0;
         // Clear keyboard state when switching control types (preserve object reference)
         if (gameSettings.keysPressed) {
-          for (let key in gameSettings.keysPressed) {
+          Object.keys(gameSettings.keysPressed).forEach(key => {
             delete gameSettings.keysPressed[key];
-          }
+          });
         }
         updateControlType();
         saveSettings();
@@ -16222,6 +16235,7 @@
         if (cinematicIntroActive || countdownActive) {
           skipToGameStart();
           e.preventDefault();
+          return; // Early return for consistency with other handlers
         }
       }, { passive: false });
       
