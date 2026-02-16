@@ -204,22 +204,23 @@
     /* FRESH IMPLEMENTATION: Minimap */
     #minimap-container {
       position: absolute;
-      top: 120px;
+      bottom: 20px;
       right: 20px;
-      width: 150px;
-      height: 150px;
+      width: 100px;
+      height: 100px;
       background: rgba(0,0,0,0.85);
       border: 3px solid #FFD700;
-      border-radius: 10px;
+      border-radius: 50%;
       pointer-events: none;
       z-index: 100;
       box-shadow: 0 4px 15px rgba(0,0,0,0.8);
+      overflow: hidden;
     }
     
     #minimap-canvas {
       width: 100%;
       height: 100%;
-      border-radius: 7px;
+      border-radius: 50%;
     }
     
     /* Stats Bar - Removed (Stats accessible via Stats Button Modal only) */
@@ -2864,7 +2865,7 @@
     
     <!-- FRESH IMPLEMENTATION: Minimap -->
     <div id="minimap-container">
-      <canvas id="minimap-canvas" width="150" height="150"></canvas>
+      <canvas id="minimap-canvas" width="100" height="100"></canvas>
     </div>
     
     <!-- Day/Night Cycle Clock -->
@@ -3793,7 +3794,7 @@
     // FRESH IMPLEMENTATION: Minimap System
     let minimapCanvas = null;
     let minimapCtx = null;
-    const MINIMAP_SCALE = 150 / 200; // 150px canvas for 200 units of game world
+    const MINIMAP_SCALE = 100 / 200; // 100px canvas for 200 units of game world (round minimap)
     
     function initMinimap() {
       minimapCanvas = document.getElementById('minimap-canvas');
@@ -3815,10 +3816,17 @@
         
         const centerX = canvas.width / 2;
         const centerY = canvas.height / 2;
+        const radius = canvas.width / 2;
         
         // Clear canvas
         ctx.fillStyle = 'rgba(20, 20, 20, 0.95)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Clip to circular shape
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+        ctx.clip();
         
         // Draw grid
         ctx.strokeStyle = 'rgba(100, 100, 100, 0.3)';
@@ -3845,11 +3853,11 @@
         
         // Draw landmarks
         const landmarks = [
-          { x: 30, z: -30, color: '#1E90FF', size: 4, label: 'L' }, // Lake
-          { x: -20, z: -20, color: '#DEB887', size: 3, label: 'C' }, // Cabin
-          { x: 40, z: 40, color: '#D2B48C', size: 4, label: 'W' }, // Windmill
-          { x: -40, z: 40, color: '#888888', size: 3, label: 'M' }, // Mine
-          { x: 60, z: 60, color: '#808080', size: 5, label: 'S' } // Stonehenge
+          { x: 30, z: -30, color: '#1E90FF', size: 3, label: 'L' }, // Lake
+          { x: -20, z: -20, color: '#DEB887', size: 2, label: 'C' }, // Cabin
+          { x: 40, z: 40, color: '#D2B48C', size: 3, label: 'W' }, // Windmill
+          { x: -40, z: 40, color: '#888888', size: 2, label: 'M' }, // Mine
+          { x: 60, z: 60, color: '#808080', size: 4, label: 'S' } // Stonehenge
         ];
         
         landmarks.forEach(landmark => {
@@ -3864,7 +3872,7 @@
             
             // Draw label
             ctx.fillStyle = '#FFFFFF';
-            ctx.font = 'bold 8px Arial';
+            ctx.font = 'bold 6px Arial';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(landmark.label, screenX, screenY);
@@ -3881,7 +3889,7 @@
               
               if (screenX >= 0 && screenX <= canvas.width && screenY >= 0 && screenY <= canvas.height) {
                 ctx.beginPath();
-                ctx.arc(screenX, screenY, 2, 0, Math.PI * 2);
+                ctx.arc(screenX, screenY, 1.5, 0, Math.PI * 2);
                 ctx.fill();
               }
             }
@@ -3891,11 +3899,11 @@
         // Draw player (bright blue dot with direction indicator)
         ctx.fillStyle = '#00FFFF';
         ctx.beginPath();
-        ctx.arc(centerX, centerY, 4, 0, Math.PI * 2);
+        ctx.arc(centerX, centerY, 3, 0, Math.PI * 2);
         ctx.fill();
         
         // Draw player direction indicator
-        const dirLength = 8;
+        const dirLength = 6;
         const angle = player.mesh.rotation.y;
         const dirX = Math.sin(angle) * dirLength;
         const dirY = Math.cos(angle) * dirLength;
@@ -3907,10 +3915,15 @@
         ctx.lineTo(centerX + dirX, centerY + dirY);
         ctx.stroke();
         
-        // Draw border
+        // Restore context (remove circular clip)
+        ctx.restore();
+        
+        // Draw circular border
         ctx.strokeStyle = '#FFD700';
         ctx.lineWidth = 2;
-        ctx.strokeRect(0, 0, canvas.width, canvas.height);
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius - 1, 0, Math.PI * 2);
+        ctx.stroke();
       } catch (error) {
         console.error('Minimap rendering error (non-critical):', error);
         // Gracefully continue - minimap failure shouldn't crash the game
@@ -4200,6 +4213,137 @@
     
     let activeCompanion = null; // Will hold the active Companion instance
 
+    // Weather System - Rain, Snow, Wind Effects
+    const weatherSystem = {
+      enabled: true,
+      type: 'none', // 'none', 'rain', 'snow', 'wind'
+      intensity: 0, // 0-1
+      particles: [],
+      maxParticles: 150,
+      changeTimer: 0,
+      changeDuration: 30, // Change weather every 30 seconds
+      windDirection: new THREE.Vector2(1, 0),
+      windSpeed: 0
+    };
+    
+    function initWeatherParticles() {
+      // Pre-create weather particles for performance
+      for (let i = 0; i < weatherSystem.maxParticles; i++) {
+        const geometry = new THREE.SphereGeometry(0.05, 4, 4);
+        const material = new THREE.MeshBasicMaterial({
+          color: 0xFFFFFF,
+          transparent: true,
+          opacity: 0.7
+        });
+        const particle = new THREE.Mesh(geometry, material);
+        particle.visible = false;
+        scene.add(particle);
+        weatherSystem.particles.push({
+          mesh: particle,
+          velocity: new THREE.Vector3(),
+          active: false
+        });
+      }
+    }
+    
+    function updateWeather(dt) {
+      if (!weatherSystem.enabled || !player || !player.mesh) return;
+      
+      // Change weather periodically
+      weatherSystem.changeTimer += dt;
+      if (weatherSystem.changeTimer >= weatherSystem.changeDuration) {
+        weatherSystem.changeTimer = 0;
+        // Random weather change
+        const rand = Math.random();
+        if (rand < 0.4) {
+          weatherSystem.type = 'none';
+          weatherSystem.intensity = 0;
+        } else if (rand < 0.6) {
+          weatherSystem.type = 'rain';
+          weatherSystem.intensity = 0.3 + Math.random() * 0.5;
+        } else if (rand < 0.8) {
+          weatherSystem.type = 'snow';
+          weatherSystem.intensity = 0.2 + Math.random() * 0.4;
+        } else {
+          weatherSystem.type = 'wind';
+          weatherSystem.intensity = 0.3 + Math.random() * 0.3;
+          weatherSystem.windDirection = new THREE.Vector2(
+            Math.random() * 2 - 1,
+            Math.random() * 2 - 1
+          ).normalize();
+          weatherSystem.windSpeed = weatherSystem.intensity * 2;
+        }
+      }
+      
+      // Update active weather particles
+      const playerPos = player.mesh.position;
+      const activeCount = Math.floor(weatherSystem.intensity * weatherSystem.maxParticles);
+      
+      weatherSystem.particles.forEach((particle, i) => {
+        if (i < activeCount && weatherSystem.type !== 'none') {
+          if (!particle.active) {
+            // Activate particle
+            particle.active = true;
+            particle.mesh.visible = true;
+            // Spawn around player
+            particle.mesh.position.set(
+              playerPos.x + (Math.random() - 0.5) * 30,
+              15 + Math.random() * 5,
+              playerPos.z + (Math.random() - 0.5) * 30
+            );
+            
+            // Set particle appearance based on weather type
+            if (weatherSystem.type === 'rain') {
+              particle.mesh.material.color.setHex(0x6699FF);
+              particle.mesh.material.opacity = 0.6;
+              particle.mesh.scale.set(0.05, 0.3, 0.05);
+              particle.velocity.set(
+                Math.random() * 0.5 - 0.25,
+                -15 - Math.random() * 5,
+                Math.random() * 0.5 - 0.25
+              );
+            } else if (weatherSystem.type === 'snow') {
+              particle.mesh.material.color.setHex(0xFFFFFF);
+              particle.mesh.material.opacity = 0.8;
+              particle.mesh.scale.set(0.08, 0.08, 0.08);
+              particle.velocity.set(
+                Math.random() * 0.3 - 0.15,
+                -2 - Math.random() * 1,
+                Math.random() * 0.3 - 0.15
+              );
+            }
+          }
+          
+          // Update particle position
+          if (weatherSystem.type === 'rain' || weatherSystem.type === 'snow') {
+            particle.mesh.position.add(particle.velocity.clone().multiplyScalar(dt));
+            
+            // Add wind effect
+            if (weatherSystem.type === 'snow') {
+              particle.mesh.position.x += Math.sin(Date.now() * 0.001) * 0.1 * dt;
+              particle.mesh.position.z += Math.cos(Date.now() * 0.001) * 0.1 * dt;
+            }
+            
+            // Reset if below ground or too far from player
+            if (particle.mesh.position.y < 0.1 || 
+                particle.mesh.position.distanceTo(playerPos) > 40) {
+              particle.mesh.position.set(
+                playerPos.x + (Math.random() - 0.5) * 30,
+                15 + Math.random() * 5,
+                playerPos.z + (Math.random() - 0.5) * 30
+              );
+            }
+          }
+        } else {
+          // Deactivate particle
+          if (particle.active) {
+            particle.active = false;
+            particle.mesh.visible = false;
+          }
+        }
+      });
+    }
+
     // Game Settings
     const gameSettings = {
       autoAim: false, // Auto-aim off by default, upgradeable via attributes
@@ -4475,6 +4619,10 @@
         this.blinkDuration = 0.1; // 100ms blink
         this.nextBlinkTime = 2 + Math.random() * 3; // Random 2-5 seconds
         this.isBlinking = false;
+        
+        // FRESH IMPLEMENTATION: Breathing animation
+        this.breathingPhase = 0;
+        this.breathingSpeed = 1.5; // Breaths per second
         
         // Arms (simple cylinders attached to body)
         const armGeo = new THREE.CylinderGeometry(0.06, 0.06, 0.35, 8);
@@ -4753,12 +4901,19 @@
           this.leftLeg.rotation.x = -Math.sin(walkPhase) * 0.4;
           this.rightLeg.rotation.x = Math.sin(walkPhase) * 0.4;
         } else {
-          // Idle - gentle sway
+          // Idle - gentle sway with breathing
           const idlePhase = gameTime * 2;
           this.leftArm.rotation.x = Math.sin(idlePhase) * 0.1;
           this.rightArm.rotation.x = Math.sin(idlePhase + Math.PI) * 0.1;
           this.leftLeg.rotation.x = 0;
           this.rightLeg.rotation.x = 0;
+          
+          // FRESH IMPLEMENTATION: Breathing animation
+          this.breathingPhase += dt * this.breathingSpeed;
+          const breathScale = 1 + Math.sin(this.breathingPhase * Math.PI * 2) * 0.03;
+          this.mesh.scale.y = breathScale;
+          this.mesh.scale.x = 1 / Math.sqrt(breathScale); // Maintain volume
+          this.mesh.scale.z = 1 / Math.sqrt(breathScale);
         }
         
         // Animate cigar tip (pulsing emissive glow)
@@ -13255,6 +13410,9 @@
       // FRESH IMPLEMENTATION: Initialize minimap
       initMinimap();
       
+      // FRESH IMPLEMENTATION: Initialize weather system
+      initWeatherParticles();
+      
       // Initialize background music
       updateBackgroundMusic();
       
@@ -17290,6 +17448,9 @@
       // Update ambient creatures (birds, bats, fireflies, owls) based on time of day
       if (isGameActive && !isPaused) {
         updateAmbientCreatures(dt);
+        
+        // FRESH IMPLEMENTATION: Update weather system (rain, snow, wind)
+        updateWeather(dt);
       }
       
       // Frame Skip Mechanism: Determine if rendering should be skipped based on previous frame time
