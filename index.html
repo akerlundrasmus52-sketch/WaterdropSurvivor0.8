@@ -2901,7 +2901,7 @@
       aura: { active: false, level: 0, damage: 5, cooldown: 500, lastShot: 0, range: 3 },
       meteor: { active: false, level: 0, damage: 60, cooldown: 2500, lastShot: 0, area: 5 },
       droneTurret: { active: false, level: 0, damage: 15, cooldown: 400, lastShot: 0, range: 15, droneCount: 1 },
-      doubleBarrel: { active: false, level: 0, damage: 25, cooldown: 1200, lastShot: 0, range: 12, spread: 0.3 },
+      doubleBarrel: { active: false, level: 0, damage: 25, cooldown: 1200, lastShot: 0, range: 12, spread: 0.3, pelletCount: 6 },
       iceSpear: { active: false, level: 0, damage: 20, cooldown: 1500, lastShot: 0, range: 15, slowPercent: 0.4, slowDuration: 2000 },
       fireRing: { active: false, level: 0, damage: 8, cooldown: 800, lastShot: 0, range: 4, orbs: 3, rotationSpeed: 2 }
     };
@@ -5260,17 +5260,22 @@
 
     class Projectile {
       constructor(x, z, target, weaponType = 'gun') {
+        // Store weapon type first
+        this.weaponType = weaponType;
+        this.isDoubleBarrel = (weaponType === 'shotgun');
+        this.isDroneTurret = (weaponType === 'drone');
+        
         // ENHANCED: Weapon-specific bullet styles
         let bulletGeo, bulletMat, glowGeo, glowMat;
         
-        if (weaponType === 'shotgun' || this.isDoubleBarrel) {
+        if (this.isDoubleBarrel) {
           // Shotgun pellets - small and fast
           bulletGeo = projectileGeometryCache.shotgunPellet;
           bulletMat = projectileMaterialCache.shotgunPellet;
           glowGeo = projectileGeometryCache.shotgunPelletGlow;
           glowMat = projectileMaterialCache.shotgunPelletGlow;
           this.speed = 0.6; // Faster
-        } else if (weaponType === 'drone' || this.isDroneTurret) {
+        } else if (this.isDroneTurret) {
           // Drone laser bullets
           bulletGeo = projectileGeometryCache.droneBullet;
           bulletMat = projectileMaterialCache.droneBullet;
@@ -5296,7 +5301,6 @@
         this.glow.position.copy(this.mesh.position);
         scene.add(this.glow);
 
-        this.weaponType = weaponType;
         this.active = true;
         this.life = 60; // Frames
 
@@ -6998,6 +7002,18 @@
     window.claimAchievement = claimAchievement;
     
     // MASSIVE QUEST SYSTEM - 26 Sequential Quests (Tutorial through quests)
+    
+    // Helper function for complex quest check
+    function checkDeepDiveComplete(qp) {
+      if (!qp) return false;
+      return qp.itemsCrafted >= 5 && 
+             qp.companionsRecruited >= 2 && 
+             qp.weaponsOwned >= 3 && 
+             qp.skillsUnlocked >= 1 && 
+             qp.allBuildingsUpgraded && 
+             qp.itemsScrapped >= 1;
+    }
+    
     const QUESTS = {
       quest1: { id: 'quest1', name: 'First Steps', desc: 'Move around the map', reward: 50, check: () => saveData.questProgress && saveData.questProgress.movedDistance > 10, completed: false },
       quest2: { id: 'quest2', name: 'Target Practice', desc: 'Kill 5 enemies', reward: 75, check: () => saveData.questProgress && saveData.questProgress.enemiesKilled >= 5, completed: false },
@@ -7023,11 +7039,7 @@
       quest22: { id: 'quest22', name: 'Full Arsenal', desc: 'Own 3 different weapons', reward: 350, check: () => saveData.questProgress && saveData.questProgress.weaponsOwned >= 3, completed: false },
       quest23: { id: 'quest23', name: 'Companion Squad', desc: 'Have 2 companions', reward: 350, check: () => saveData.questProgress && saveData.questProgress.companionsRecruited >= 2, completed: false },
       quest24: { id: 'quest24', name: 'Master Crafter', desc: 'Craft 5 items total', reward: 400, check: () => saveData.questProgress && saveData.questProgress.itemsCrafted >= 5, completed: false },
-      quest25: { id: 'quest25', name: 'Deep Dive', desc: 'All buildings built, all mechanics used', reward: 500, check: () => {
-        const qp = saveData.questProgress;
-        return qp && qp.itemsCrafted >= 5 && qp.companionsRecruited >= 2 && qp.weaponsOwned >= 3 && 
-               qp.skillsUnlocked >= 1 && qp.allBuildingsUpgraded && qp.itemsScrapped >= 1;
-      }, completed: false },
+      quest25: { id: 'quest25', name: 'Deep Dive', desc: 'All buildings built, all mechanics used', reward: 500, check: () => checkDeepDiveComplete(saveData.questProgress), completed: false },
       quest26: { id: 'quest26', name: 'Secrets of the Deep', desc: 'Find the hidden treasure at the bottom of the lake', reward: 1000, legendary: true, check: () => saveData.questProgress && saveData.questProgress.treasureFound, completed: false }
     };
     
@@ -10952,15 +10964,23 @@
       }
     }
     
-    // ENHANCED: Low HP warning (red screen tint)
+    // ENHANCED: Low HP warning (red screen tint) - constants
+    const LOW_HP_THRESHOLD = 0.3;
+    const BASE_VIGNETTE_SIZE = 50;
+    const MAX_VIGNETTE_GROWTH = 150;
+    const BASE_VIGNETTE_OPACITY = 0.3;
+    const MAX_OPACITY_INCREASE = 0.5;
+    
     function updateLowHPWarning() {
       const hpPercent = playerStats.hp / playerStats.maxHp;
       const uiLayer = document.getElementById('ui-layer');
       
-      if (hpPercent < 0.3) {
+      if (hpPercent < LOW_HP_THRESHOLD) {
         // Low HP - red vignette effect
-        const intensity = (0.3 - hpPercent) / 0.3; // 0 to 1 as HP drops from 30% to 0%
-        uiLayer.style.boxShadow = `inset 0 0 ${50 + intensity * 150}px rgba(255, 0, 0, ${0.3 + intensity * 0.5})`;
+        const intensity = (LOW_HP_THRESHOLD - hpPercent) / LOW_HP_THRESHOLD; // 0 to 1 as HP drops from 30% to 0%
+        const vignetteSize = BASE_VIGNETTE_SIZE + intensity * MAX_VIGNETTE_GROWTH;
+        const vignetteOpacity = BASE_VIGNETTE_OPACITY + intensity * MAX_OPACITY_INCREASE;
+        uiLayer.style.boxShadow = `inset 0 0 ${vignetteSize}px rgba(255, 0, 0, ${vignetteOpacity})`;
       } else {
         uiLayer.style.boxShadow = 'none';
       }
@@ -14230,7 +14250,7 @@
           ).normalize();
           
           const baseAngle = Math.atan2(baseDir.z, baseDir.x);
-          const pelletCount = 6; // 6 pellets per shot
+          const pelletCount = weapons.doubleBarrel.pelletCount;
           
           // Fire pellets in a spread pattern
           for (let i = 0; i < pelletCount; i++) {
