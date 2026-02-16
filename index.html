@@ -536,7 +536,7 @@
       z-index: 1000;
       align-items: center;
       justify-content: center;
-      pointer-events: none; /* Changed from auto to none - will only be auto when display: flex */
+      pointer-events: auto;
     }
     
     .story-quest-content {
@@ -712,7 +712,7 @@
       left: 0;
       width: 100%;
       height: 100%;
-      pointer-events: none; /* Changed from auto to none - will be enabled when game starts */
+      pointer-events: auto;
       touch-action: none;
       z-index: 50;
     }
@@ -1199,7 +1199,7 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      z-index: 5000; /* Increased from 50 to ensure it's above other game elements */
+      z-index: 50; /* Lower than UI layer buttons */
     }
 
     #main-menu::before {
@@ -1432,8 +1432,19 @@
     }
 
     /* COMIC BOOK PANEL SYSTEM - 80s Style */
-    /* REMOVED: Duplicate .comic-panel-overlay definition that was blocking menu clicks.
-       The correct definition is below at line ~2060 with proper display: none default */
+    .comic-panel-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.95);
+      z-index: 10000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: fadeIn 0.4s ease-out;
+    }
 
     .comic-panel {
       max-width: 90%;
@@ -2059,11 +2070,10 @@
       z-index: 9999;
       padding: 20px;
       overflow-y: auto;
-      pointer-events: none; /* Added: Prevent blocking clicks when hidden */
     }
     
     .comic-panel-container {
-      background: #999; /* Changed from #FFF (white) to grey as per requirements */
+      background: #FFF;
       border: 8px solid #000;
       border-radius: 15px;
       box-shadow: 0 0 30px rgba(255, 215, 0, 0.8),
@@ -2296,99 +2306,6 @@
       }
     }
 
-    /* Region Display - Top Status Bar */
-    #region-display {
-      position: fixed;
-      top: 10px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(0, 0, 0, 0.7);
-      border: 2px solid rgba(93, 173, 226, 0.8);
-      border-radius: 8px;
-      padding: 8px 16px;
-      z-index: 95;
-      font-family: 'M PLUS Rounded 1c', sans-serif;
-      font-size: 14px;
-      color: #5DADE2;
-      font-weight: bold;
-      text-align: center;
-      display: none;
-      max-width: 90%;
-      box-shadow: 0 0 15px rgba(93, 173, 226, 0.4);
-      opacity: 0;
-      transition: opacity 0.5s ease-in-out;
-    }
-    
-    #region-display.active {
-      display: block;
-      opacity: 1;
-    }
-
-    /* Quest Box - Bottom Right */
-    #quest-box {
-      position: fixed;
-      bottom: 140px;
-      right: 20px;
-      background: rgba(0, 0, 0, 0.8);
-      border: 2px solid #FFD700;
-      border-radius: 8px;
-      padding: 12px 16px;
-      z-index: 100;
-      font-family: 'M PLUS Rounded 1c', sans-serif;
-      display: none;
-      max-width: 250px;
-      box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
-    }
-    
-    #quest-box.active {
-      display: block;
-    }
-    
-    #quest-box-title {
-      font-size: 12px;
-      color: #FFD700;
-      font-weight: bold;
-      margin-bottom: 6px;
-      text-transform: uppercase;
-    }
-    
-    #quest-box-objective {
-      font-size: 14px;
-      color: #FFFFFF;
-      font-weight: 500;
-    }
-    
-    #quest-box-progress {
-      font-size: 12px;
-      color: #5DADE2;
-      margin-top: 4px;
-    }
-
-    /* Minimap - Bottom Left */
-    #minimap {
-      position: fixed;
-      bottom: 140px;
-      left: 20px;
-      width: 120px;
-      height: 120px;
-      background: rgba(0, 0, 0, 0.8);
-      border: 2px solid #5DADE2;
-      border-radius: 12px;
-      z-index: 100;
-      box-shadow: 0 0 15px rgba(93, 173, 226, 0.5);
-      display: none;
-      overflow: hidden;
-    }
-    
-    #minimap.active {
-      display: block;
-    }
-    
-    #minimap-canvas {
-      width: 100%;
-      height: 100%;
-    }
-
   </style>
 </head>
 <body>
@@ -2397,9 +2314,6 @@
   <div id="loading-screen">
     <div class="loading-bar-container">
       <div class="loading-bar" id="loading-bar"></div>
-    </div>
-    <div id="loading-status" style="color: white; margin-top: 20px; font-size: 14px; text-align: center; opacity: 0.8;">
-      Loading game resources...
     </div>
   </div>
 
@@ -2413,23 +2327,6 @@
   <!-- Quest Status Bar -->
   <div id="quest-status-bar" class="quest-status-bar">
     <!-- Quest text will be dynamically updated -->
-  </div>
-
-  <!-- Region Display -->
-  <div id="region-display">
-    <!-- Region name will be dynamically updated -->
-  </div>
-
-  <!-- Quest Box - Bottom Right -->
-  <div id="quest-box">
-    <div id="quest-box-title">🗡️ ACTIVE QUEST</div>
-    <div id="quest-box-objective">No active quest</div>
-    <div id="quest-box-progress"></div>
-  </div>
-
-  <!-- Minimap - Bottom Left -->
-  <div id="minimap">
-    <canvas id="minimap-canvas" width="120" height="120"></canvas>
   </div>
 
   <!-- Main Menu -->
@@ -3046,65 +2943,13 @@
     </div>
   </div>
 
-  <!-- THREE.js Loading with CDN Fallback System -->
-  <script>
-    // Update loading status text helper (defined first, before any usage)
-    function updateLoadingStatus(message) {
-      const statusEl = document.getElementById('loading-status');
-      if (statusEl) {
-        statusEl.textContent = message;
-      } else {
-        console.warn('[Loading Status] Status element not found, message:', message);
-      }
-    }
-    
-    // Fallback for ES Module Shims if primary CDN is blocked
-    function loadShimsFallback() {
-      updateLoadingStatus('Primary CDN blocked, trying alternative sources...');
-      
-      const fallbacks = [
-        'https://unpkg.com/es-module-shims@1.8.0/dist/es-module-shims.js',
-        'https://cdn.jsdelivr.net/npm/es-module-shims@1.8.0/dist/es-module-shims.js'
-      ];
-      
-      let index = 0;
-      function tryNext() {
-        if (index >= fallbacks.length) {
-          console.error('[CDN] All ES Module Shims sources failed - THREE.js modules may not load properly');
-          updateLoadingStatus('⚠️ CDN resources blocked. Please check your ad blocker settings.');
-          return;
-        }
-        
-        updateLoadingStatus(`Loading from alternative CDN ${index + 1}/${fallbacks.length}...`);
-        
-        const script = document.createElement('script');
-        script.src = fallbacks[index];
-        script.onerror = function() {
-          console.warn(`[CDN] Fallback ${index + 1} failed: ${fallbacks[index]}`);
-          index++;
-          tryNext();
-        };
-        script.onload = function() {
-          console.log(`[CDN] ✅ ES Module Shims loaded from fallback ${index + 1}`);
-          updateLoadingStatus('Loading game engine...');
-        };
-        document.head.appendChild(script);
-      }
-      
-      tryNext();
-    }
-  </script>
-  
-  <script async src="https://ga.jspm.io/npm:es-module-shims@1.8.0/dist/es-module-shims.js" 
-          onerror="console.warn('[CDN] Primary ES Module Shims failed, trying fallback...'); loadShimsFallback()">
-  </script>
-  
-  <!-- Import Map with reliable jsDelivr CDN -->
+  <!-- Import Map for Three.js -->
+  <script async src="https://unpkg.com/es-module-shims@1.8.0/dist/es-module-shims.js" onerror="console.warn('[CDN] ES Module Shims failed to load - game requires THREE.js to function')"></script>
   <script type="importmap">
     {
       "imports": {
-        "three": "https://cdn.jsdelivr.net/npm/three@0.176.0/build/three.module.js",
-        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.176.0/examples/jsm/"
+        "three": "https://unpkg.com/three@0.176.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.176.0/examples/jsm/"
       }
     }
   </script>
@@ -3126,7 +2971,7 @@
         const resourceUrl = event.target.src || event.target.href || 'unknown';
         if (resourceUrl.includes('fonts.googleapis.com') || resourceUrl.includes('fonts.gstatic.com')) {
           console.warn('[CDN] Font resource failed to load:', resourceUrl, '- using system fonts');
-        } else if (resourceUrl.includes('unpkg.com') || resourceUrl.includes('jsdelivr.net') || resourceUrl.includes('jspm.io')) {
+        } else if (resourceUrl.includes('unpkg.com')) {
           console.warn('[CDN] CDN resource failed to load:', resourceUrl, '- attempting graceful degradation');
         } else if (resourceUrl !== 'unknown') {
           console.warn('[CDN] Resource failed to load:', resourceUrl);
@@ -3201,7 +3046,6 @@
       
       // Wait for module to signal ready, then show menu
       function waitForModuleReady() {
-        console.log('[Loading] Waiting for game module to be ready...');
         let attempts = 0;
         const maxAttempts = 50; // 50 × 100ms = 5s max wait
         
@@ -3210,13 +3054,11 @@
           
           if (window.gameModuleReady) {
             // Module is ready!
-            console.log('[Loading] ✅ Game module ready after ' + (attempts * 100) + 'ms');
             clearInterval(checkInterval);
             showMenuAfterLoading();
           } else if (attempts >= maxAttempts) {
             // Timeout - show anyway
-            console.warn('[Loading] ⚠️  Module ready timeout after 5s - showing menu anyway');
-            console.warn('[Loading] Check browser console for initialization errors');
+            console.warn('[Loading] Module ready timeout - showing menu anyway');
             clearInterval(checkInterval);
             showMenuAfterLoading();
           }
@@ -3224,7 +3066,6 @@
       }
       
       function showMenuAfterLoading() {
-        console.log('[Loading] Showing main menu...');
         const loadingScreen = document.getElementById('loading-screen');
         if (!loadingScreen) return;
         
@@ -3233,119 +3074,25 @@
         
         setTimeout(function() {
           loadingScreen.style.display = 'none';
-          console.log('[Loading] Loading screen hidden');
           
           // Show main menu (module script will handle button event listeners)
           const mainMenu = document.getElementById('main-menu');
           if (mainMenu) {
             mainMenu.style.display = 'flex';
-            console.log('[Loading] ✅ Main menu displayed');
-            console.log('[Loading] If buttons don\'t work, check console for setupMenus errors');
-          } else {
-            console.error('[Loading] ❌ Main menu element not found!');
           }
           
           // FRESH IMPLEMENTATION: Show Story Quest Modal on first load
           setTimeout(function() {
             // Access saveData through window if available (will be set by game module)
             if (window.saveData && !window.saveData.storyQuests.welcomeShown) {
-              console.log('[Loading] Showing story quest welcome modal...');
               const storyModal = document.getElementById('story-quest-modal');
               if (storyModal) {
                 storyModal.style.display = 'flex';
-                storyModal.style.pointerEvents = 'auto'; // Enable pointer events when showing modal
               }
             }
           }, 500);
         }, 500);
       }
-    })();
-  </script>
-
-  <!-- FALLBACK: Minimal menu setup for when module fails to load -->
-  <script>
-    (function() {
-      console.log('[Fallback] Setting up fallback menu system...');
-      
-      // Constants for timing synchronization with loading script
-      const LOADING_FAILSAFE_MS = 12000; // Matches standalone loading script failsafe
-      const FALLBACK_DELAY_MS = LOADING_FAILSAFE_MS + 1000; // Run 1s after failsafe
-      // Note: Module ready timeout is 5s (50 attempts × 100ms) in loading script
-      
-      // Error message constant with improved CDN troubleshooting
-      const MODULE_INIT_ERROR_MSG = 'Game failed to initialize. The 3D engine (THREE.js) could not be loaded from CDN.\n\n' +
-        'This usually happens due to:\n' +
-        '• Ad blockers or privacy extensions blocking CDN resources (jsDelivr, jspm.io, unpkg)\n' +
-        '• Corporate firewall or network restrictions\n' +
-        '• Network connectivity issues\n' +
-        '• Browser compatibility problems\n\n' +
-        'Please try:\n' +
-        '1. Temporarily disable ad blockers/privacy extensions for this page\n' +
-        '2. Add these CDNs to your allowlist: *.jsdelivr.net, *.jspm.io, *.unpkg.com\n' +
-        '3. Check your internet connection\n' +
-        '4. Try a different network (mobile data vs WiFi)\n' +
-        '5. Try a different browser (Chrome, Firefox, Safari)\n' +
-        '6. Refresh the page after making changes';
-      
-      // Wait for menu to be shown by loading script, then set up basic button handlers if module hasn't loaded yet
-      setTimeout(function checkAndSetupFallback() {
-        if (!window.gameModuleReady) {
-          console.log('[Fallback] Module not ready - setting up basic menu button handlers...');
-          
-          // Get menu element
-          const mainMenu = document.getElementById('main-menu');
-          if (!mainMenu || mainMenu.style.display !== 'flex') {
-            // Menu not shown yet, wait a bit more
-            setTimeout(checkAndSetupFallback, 500);
-            return;
-          }
-          
-          // Check if buttons already have onclick handlers (setupMenus was called)
-          const startBtn = document.getElementById('start-game-btn');
-          if (startBtn && startBtn.onclick) {
-            console.log('[Fallback] Buttons already have handlers - module loaded successfully');
-            return;
-          }
-          
-          // Set up basic button handlers as fallback
-          console.log('[Fallback] Setting up fallback button handlers...');
-          
-          // Helper to show error message
-          function showModuleError() {
-            alert(MODULE_INIT_ERROR_MSG);
-          }
-          
-          // Main menu buttons - get elements once and reuse
-          const startGameBtn = document.getElementById('start-game-btn');
-          const campBtn = document.getElementById('camp-btn');
-          const progressionBtn = document.getElementById('progression-btn');
-          const attributesBtn = document.getElementById('attributes-btn');
-          const gearBtn = document.getElementById('gear-btn');
-          const achievementsBtn = document.getElementById('achievements-btn');
-          const walletBtn = document.getElementById('wallet-btn');
-          const marketplaceBtn = document.getElementById('marketplace-btn');
-          const creditsBtn = document.getElementById('credits-btn');
-          
-          if (startGameBtn) startGameBtn.onclick = showModuleError;
-          if (campBtn) campBtn.onclick = showModuleError;
-          if (progressionBtn) progressionBtn.onclick = showModuleError;
-          if (attributesBtn) attributesBtn.onclick = showModuleError;
-          if (gearBtn) gearBtn.onclick = showModuleError;
-          if (achievementsBtn) achievementsBtn.onclick = showModuleError;
-          if (walletBtn) walletBtn.onclick = showModuleError;
-          if (marketplaceBtn) marketplaceBtn.onclick = showModuleError;
-          if (creditsBtn) {
-            creditsBtn.onclick = function() {
-              const mainMenu = document.getElementById('main-menu');
-              const creditsScreen = document.getElementById('credits-screen');
-              if (mainMenu) mainMenu.style.display = 'none';
-              if (creditsScreen) creditsScreen.style.display = 'flex';
-            };
-          }
-          
-          console.log('[Fallback] ✅ Fallback button handlers set up - buttons will show error messages');
-        }
-      }, FALLBACK_DELAY_MS); // Run 1 second after the failsafe timeout
     })();
   </script>
 
@@ -3870,58 +3617,6 @@
     ];
     let introLandmarkPositions = {};
     
-    // Region Detection System {
-    const REGIONS = {{
-      tesla: { name: 'Tesla Land', x: -80, z: -80, radius: 30, emoji: '⚡' },
-      volcano: { name: 'Volcania Region', x: -60, z: -70, radius: 25, emoji: '🌋' },
-      snowy: { name: 'Snowy Mountains', x: -70, z: 70, radius: 30, emoji: '🏔️' },
-      windmill: { name: 'Windmill Fields', x: 40, z: 40, radius: 30, emoji: '🌾' },
-      desert: { name: 'Stonehenge Region', x: 0, z: 0, radius: 25, emoji: '🗿' },
-      stonehenge: { name: 'Stonehenge Plains', x: 60, z: 60, radius: 30, emoji: '🗿' },
-      lake: { name: 'Lake District', x: 30, z: -30, radius: 25, emoji: '🌊' }
-    };
-    let currentRegion = null;
-    let regionFadeTimer = 0;
-    let otherStatusActive = false; // Track if quest/combo/notification is showing
-    
-    function detectCurrentRegion(playerX, playerZ) {
-      for (const key in REGIONS) {
-        const region = REGIONS[key];
-        const dx = playerX - region.x;
-        const dz = playerZ - region.z;
-        const dist = Math.sqrt(dx * dx + dz * dz);
-        if (dist < region.radius) {
-          return { key, ...region };
-        }
-      }
-      return null;
-    }
-    
-    function updateRegionDisplay() {
-      const regionDisplay = document.getElementById('region-display');
-      if (!regionDisplay) return;
-      
-      // Check if other status messages are active
-      const questBar = document.getElementById('quest-status-bar');
-      const comboCounter = document.getElementById('combo-counter');
-      otherStatusActive = (questBar && questBar.classList.contains('active')) || 
-                         (comboCounter && parseFloat(comboCounter.style.opacity || 0) > 0);
-      
-      if (otherStatusActive) {
-        // Hide region display when other messages are showing
-        regionDisplay.classList.remove('active');
-        return;
-      }
-      
-      // Show region if available
-      if (currentRegion) {
-        regionDisplay.textContent = `${currentRegion.emoji} ${currentRegion.name}`;
-        regionDisplay.classList.add('active');
-      } else {
-        regionDisplay.classList.remove('active');
-      }
-    }
-    
     // Gore System - Critical Hit Types
     const CRIT_TYPE = {
       NORMAL: 1,
@@ -4383,67 +4078,49 @@
         this.highlight.position.set(-0.2, 0.3, 0.2);
         this.mesh.add(this.highlight);
         
-        // Add player face: eyes (reddish, crazy-looking)
-        const eyeGeo = new THREE.SphereGeometry(0.10, 8, 8); // Slightly larger for crazy effect
-        const eyeMat = new THREE.MeshBasicMaterial({ color: 0xFFE4E1 }); // Light reddish tint
+        // Add player face: eyes (white spheres + black pupils)
+        const eyeGeo = new THREE.SphereGeometry(0.08, 8, 8);
+        const eyeMat = new THREE.MeshBasicMaterial({ color: 0xFFFFFF });
         
         this.leftEye = new THREE.Mesh(eyeGeo, eyeMat);
-        this.leftEye.position.set(-0.14, 0.12, 0.4); // Slightly wider apart
-        this.leftEye.scale.set(1.2, 1, 1); // Wider eye shape for crazy look
+        this.leftEye.position.set(-0.12, 0.1, 0.4);
         this.mesh.add(this.leftEye);
         
         this.rightEye = new THREE.Mesh(eyeGeo, eyeMat);
-        this.rightEye.position.set(0.14, 0.12, 0.4);
-        this.rightEye.scale.set(1.2, 1, 1); // Wider eye shape for crazy look
+        this.rightEye.position.set(0.12, 0.1, 0.4);
         this.mesh.add(this.rightEye);
         
-        // Pupils (reddish-black with crazy look)
-        const pupilGeo = new THREE.SphereGeometry(0.05, 8, 8); // Larger pupils
-        const pupilMat = new THREE.MeshBasicMaterial({ color: 0x8B0000 }); // Dark red pupils for intense look
+        // Pupils (black)
+        const pupilGeo = new THREE.SphereGeometry(0.04, 8, 8);
+        const pupilMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
         
         this.leftPupil = new THREE.Mesh(pupilGeo, pupilMat);
-        this.leftPupil.position.set(-0.13, 0.13, 0.46); // Slightly off-center for craziness
+        this.leftPupil.position.set(-0.12, 0.1, 0.45);
         this.mesh.add(this.leftPupil);
         
         this.rightPupil = new THREE.Mesh(pupilGeo, pupilMat);
-        this.rightPupil.position.set(0.15, 0.11, 0.46); // Different offset for asymmetry
+        this.rightPupil.position.set(0.12, 0.1, 0.45);
         this.mesh.add(this.rightPupil);
         
-        // Add eye glow for intensity
-        const eyeGlowGeo = new THREE.SphereGeometry(0.06, 8, 8);
-        const eyeGlowMat = new THREE.MeshBasicMaterial({ 
-          color: 0xFF0000, 
-          transparent: true, 
-          opacity: 0.3 
-        });
-        this.leftEyeGlow = new THREE.Mesh(eyeGlowGeo, eyeGlowMat);
-        this.leftEyeGlow.position.set(-0.13, 0.13, 0.47);
-        this.mesh.add(this.leftEyeGlow);
-        
-        this.rightEyeGlow = new THREE.Mesh(eyeGlowGeo, eyeGlowMat);
-        this.rightEyeGlow.position.set(0.15, 0.11, 0.47);
-        this.mesh.add(this.rightEyeGlow);
-        
-        // Smile (curved shape using torus segment) - more mischievous
-        const smileGeo = new THREE.TorusGeometry(0.16, 0.025, 8, 16, Math.PI * 0.8); // Slightly crooked
+        // Smile (curved shape using torus segment)
+        const smileGeo = new THREE.TorusGeometry(0.15, 0.02, 8, 16, Math.PI);
         const smileMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
         this.smile = new THREE.Mesh(smileGeo, smileMat);
-        this.smile.position.set(0.02, -0.05, 0.4); // Slight offset for asymmetric smile
+        this.smile.position.set(0, -0.05, 0.4);
         this.smile.rotation.x = Math.PI / 2;
-        this.smile.rotation.z = Math.PI + 0.1; // Slight tilt
+        this.smile.rotation.z = Math.PI;
         this.mesh.add(this.smile);
         
-        // Cigar accessory with glowing tip (EQUIPPABLE - for "Find the Cuban Cigar" quest)
+        // Cigar accessory with glowing tip
         const cigarGeo = new THREE.CylinderGeometry(0.02, 0.025, 0.25, 8);
         const cigarMat = new THREE.MeshToonMaterial({ color: 0x8B4513 }); // Brown
         this.cigar = new THREE.Mesh(cigarGeo, cigarMat);
         this.cigar.position.set(0.2, -0.1, 0.35);
         this.cigar.rotation.z = -Math.PI / 6; // Angled
-        this.cigar.visible = true; // Default visible for now, will be controlled by gear later
         this.mesh.add(this.cigar);
         
-        // Glowing cigar tip with pulsing animation
-        const tipGeo = new THREE.SphereGeometry(0.035, 8, 8); // Slightly larger for better visibility
+        // Glowing cigar tip
+        const tipGeo = new THREE.SphereGeometry(0.03, 8, 8);
         const tipMat = new THREE.MeshBasicMaterial({ 
           color: 0xFF4500, // Orange-red
           transparent: true,
@@ -4451,13 +4128,7 @@
         });
         this.cigarTip = new THREE.Mesh(tipGeo, tipMat);
         this.cigarTip.position.set(0.28, -0.05, 0.35);
-        this.cigarTip.visible = this.cigar.visible;
         this.mesh.add(this.cigarTip);
-        
-        // Cigar animation state
-        this.cigarPuffTimer = 0;
-        this.cigarPuffInterval = 3; // Puff every 3 seconds
-        this.cigarGlowPhase = 0;
         
         // Bandage accessory (white cross-shaped bandage on head)
         const bandageGeo = new THREE.BoxGeometry(0.3, 0.05, 0.05);
@@ -4545,13 +4216,6 @@
         this.targetScale = new THREE.Vector3(1, 1, 1);
         this.trailTimer = 0;
         this.wobblePhase = 0;
-        
-        // Animation state
-        this.walkPhase = 0; // For leg/arm swing animation
-        this.idlePhase = 0; // For idle breathing animation
-        this.isWalking = false;
-        this.isRunning = false;
-        this.facingAngle = 0; // Direction character is facing
         
         // Phase 5: Low health water bleed timer
         this.waterBleedTimer = 0;
@@ -4753,149 +4417,31 @@
           1 + Math.sin(gameTime * 2) * 0.05
         );
         
-        // Animate arms and legs (comprehensive animation system)
-        // Determine animation state
-        const isMoving = speedMag > 0.1;
-        this.isWalking = isMoving && speedMag < 0.15;
-        this.isRunning = isMoving && speedMag >= 0.15;
-        
-        if (this.isDashing) {
-          // Dash animation: Body stretch/squish in movement direction
-          const dashProgress = 1 - (this.dashTime / this.dashDuration);
-          const stretch = 1 + Math.sin(dashProgress * Math.PI) * 0.3;
-          
-          // Enhanced squish for dash
-          this.mesh.scale.set(
-            stretch,
-            1 / stretch,
-            stretch
-          );
-          
-          // Legs extend during dash
-          this.leftLeg.rotation.x = -0.3;
-          this.rightLeg.rotation.x = 0.3;
-          // Arms back for aerodynamics
-          this.leftArm.rotation.x = -0.5;
-          this.rightArm.rotation.x = -0.5;
-          
-        } else if (this.isRunning) {
-          // Running animation - faster leg/arm movement, body lean
-          this.walkPhase += dt * 15; // Faster phase increment for running
-          
-          // Legs: faster, more pronounced swing
-          this.leftLeg.rotation.x = -Math.sin(this.walkPhase) * 0.6;
-          this.rightLeg.rotation.x = Math.sin(this.walkPhase) * 0.6;
-          
-          // Arms: opposite to legs, more swing
-          this.leftArm.rotation.x = Math.sin(this.walkPhase) * 0.5;
-          this.rightArm.rotation.x = -Math.sin(this.walkPhase) * 0.5;
-          
-          // Body bob: up/down bounce while running
-          this.mesh.position.y = 0.5 + Math.abs(Math.sin(this.walkPhase)) * 0.08;
-          
-          // Body lean forward slightly when running
-          this.mesh.rotation.x = this.velocity.length() * 0.15;
-          
-        } else if (this.isWalking) {
-          // Walking animation - moderate leg/arm movement
-          this.walkPhase += dt * 8;
-          
-          // Legs: moderate swing
-          this.leftLeg.rotation.x = -Math.sin(this.walkPhase) * 0.4;
-          this.rightLeg.rotation.x = Math.sin(this.walkPhase) * 0.4;
-          
-          // Arms: opposite to legs
-          this.leftArm.rotation.x = Math.sin(this.walkPhase) * 0.3;
-          this.rightArm.rotation.x = -Math.sin(this.walkPhase) * 0.3;
-          
-          // Body bob: subtle up/down
-          this.mesh.position.y = 0.5 + Math.abs(Math.sin(this.walkPhase)) * 0.04;
-          
-          // No lean when walking
-          this.mesh.rotation.x = 0;
-          
-        } else {
-          // Idle animation: subtle breathing/bouncing
-          this.idlePhase += dt * 2;
-          
-          // Subtle breathing motion
-          this.mesh.scale.y = 1 + Math.sin(this.idlePhase) * 0.02;
-          this.mesh.scale.x = 1 - Math.sin(this.idlePhase) * 0.01;
-          this.mesh.scale.z = 1 - Math.sin(this.idlePhase) * 0.01;
-          
-          // Arms: gentle sway
-          this.leftArm.rotation.x = Math.sin(this.idlePhase) * 0.1;
-          this.rightArm.rotation.x = Math.sin(this.idlePhase + Math.PI) * 0.1;
-          
-          // Legs: resting position
-          this.leftLeg.rotation.x = 0;
-          this.rightLeg.rotation.x = 0;
-          
-          // Subtle body bob
-          this.mesh.position.y = 0.5 + Math.sin(this.idlePhase) * 0.02;
-          
-          // No lean
-          this.mesh.rotation.x = 0;
-          
-          // Occasional cigar puff during idle
-          this.cigarPuffTimer += dt;
-          if (this.cigarPuffTimer > this.cigarPuffInterval && this.cigar.visible) {
-            this.cigarPuffTimer = 0;
-            // Create extra smoke puff
-            for (let i = 0; i < 3; i++) {
-              setTimeout(() => {
-                if (this.cigarTip) {
-                  const tipWorldPos = new THREE.Vector3();
-                  this.cigarTip.getWorldPosition(tipWorldPos);
-                  spawnParticles(tipWorldPos, 0xAAAAAA, 2);
-                }
-              }, i * 100);
-            }
-          }
-        }
-        
-        // Smooth rotation/turning - face movement direction
-        if (isMoving) {
-          const targetAngle = Math.atan2(this.velocity.x, this.velocity.z);
-          // Smooth interpolation toward target angle
-          let angleDiff = targetAngle - this.facingAngle;
-          // Normalize to -PI to PI
-          while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
-          while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
-          // Smooth turn (20% per frame)
-          this.facingAngle += angleDiff * 0.2;
-          
-          // Apply facing angle (only if not manually aiming)
-          if (!joystickRight.active && !gameSettings.autoAim) {
-            this.mesh.rotation.y = this.facingAngle;
-          }
-        }
-        
-        // OLD CODE KEPT FOR COMPATIBILITY (will be overridden by above)
-        // Walking animation when moving
+        // Animate arms and legs (walking animation when moving)
         if (speedMag > 0.1) {
           // Walking animation - swing arms and legs
           const walkPhase = gameTime * 8; // Walking speed
-          // (Already handled above, these lines will be skipped)
+          this.leftArm.rotation.x = Math.sin(walkPhase) * 0.3;
+          this.rightArm.rotation.x = -Math.sin(walkPhase) * 0.3;
+          this.leftLeg.rotation.x = -Math.sin(walkPhase) * 0.4;
+          this.rightLeg.rotation.x = Math.sin(walkPhase) * 0.4;
         } else {
           // Idle - gentle sway
-          // (Already handled above, these lines will be skipped)
+          const idlePhase = gameTime * 2;
+          this.leftArm.rotation.x = Math.sin(idlePhase) * 0.1;
+          this.rightArm.rotation.x = Math.sin(idlePhase + Math.PI) * 0.1;
+          this.leftLeg.rotation.x = 0;
+          this.rightLeg.rotation.x = 0;
         }
         
-        // Animate cigar tip (pulsing emissive glow) and smoke
-        if (this.cigarTip && this.cigar.visible) {
-          // Cigar glow phase for pulsing effect
-          this.cigarGlowPhase += dt * 4;
-          const tipBrightness = 0.6 + Math.sin(this.cigarGlowPhase) * 0.4;
+        // Animate cigar tip (pulsing emissive glow)
+        if (this.cigarTip) {
+          const tipBrightness = 0.7 + Math.sin(gameTime * 8) * 0.3;
           this.cigarTip.material.opacity = tipBrightness;
-          
-          // Scale tip for pulsing effect
-          const tipScale = 0.9 + Math.sin(this.cigarGlowPhase) * 0.15;
-          this.cigarTip.scale.set(tipScale, tipScale, tipScale);
           
           // Enhanced cigar smoke with lighting reaction
           this.smokeTimer += dt;
-          if (this.smokeTimer > 0.25) { // Every 0.25 seconds
+          if (this.smokeTimer > 0.2) { // Every 0.2 seconds
             this.smokeTimer = 0;
             
             // Get current lighting intensity for smoke color (reacts to day/night)
@@ -4907,11 +4453,11 @@
             );
             
             // Create smoke particle
-            const smokeGeo = new THREE.SphereGeometry(0.06, 6, 6);
+            const smokeGeo = new THREE.SphereGeometry(0.05, 6, 6);
             const smokeMat = new THREE.MeshBasicMaterial({ 
               color: smokeColor,
               transparent: true,
-              opacity: 0.6
+              opacity: 0.5
             });
             const smoke = new THREE.Mesh(smokeGeo, smokeMat);
             
@@ -4925,11 +4471,11 @@
             let smokeLife = 80;
             const updateSmoke = () => {
               smokeLife--;
-              smoke.position.y += 0.025; // Rise up
-              smoke.position.x += (Math.random() - 0.5) * 0.015; // Drift
-              smoke.position.z += (Math.random() - 0.5) * 0.015;
-              smoke.scale.multiplyScalar(1.03); // Expand
-              smoke.material.opacity = (smokeLife / 80) * 0.6; // Fade out
+              smoke.position.y += 0.02; // Rise up
+              smoke.position.x += (Math.random() - 0.5) * 0.01; // Drift
+              smoke.position.z += (Math.random() - 0.5) * 0.01;
+              smoke.scale.multiplyScalar(1.02); // Expand
+              smoke.material.opacity = (smokeLife / 80) * 0.5; // Fade out
               
               if (smokeLife <= 0) {
                 scene.remove(smoke);
@@ -8571,17 +8117,6 @@
 
     function loadSaveData() {
       try {
-        // FORCE RESET FOR UI POLISH UPDATE - Fresh start required
-        const uiPolishResetKey = 'waterDropSurvivor_uiPolishReset_v1';
-        const uiPolishResetDone = localStorage.getItem(uiPolishResetKey);
-        if (!uiPolishResetDone) {
-          console.log('[UI Polish] Resetting save data for fresh UI experience');
-          localStorage.clear(); // Clear everything for fresh start
-          localStorage.setItem(uiPolishResetKey, 'true');
-          saveData = { ...defaultSaveData };
-          return; // Skip loading, use fresh defaults
-        }
-        
         // Check if tutorial reset needs to happen
         const tutorialResetDone = localStorage.getItem(TUTORIAL_RESET_KEY);
         if (!tutorialResetDone) {
@@ -10935,14 +10470,12 @@
       
       container.innerHTML = panelHTML;
       overlay.style.display = 'flex';
-      overlay.style.pointerEvents = 'auto'; // Enable pointer events when showing comic
       
       // Add click handler
       const continueBtn = document.getElementById('comic-continue-btn');
       if (continueBtn) {
         continueBtn.onclick = () => {
           overlay.style.display = 'none';
-          overlay.style.pointerEvents = 'none'; // Disable pointer events when hiding comic
           if (quest.onComplete) {
             quest.onComplete();
           }
@@ -11088,164 +10621,6 @@
         questTracker.style.display = 'block';
       } else {
         questTracker.style.display = 'none';
-      }
-      
-      // Also update the quest box (bottom-right during gameplay)
-      updateQuestBox();
-    }
-    
-    // Update Quest Box (Bottom-Right) - Shows active in-game quests
-    function updateQuestBox() {
-      const questBox = document.getElementById('quest-box');
-      if (!questBox) return;
-      
-      const objective = document.getElementById('quest-box-objective');
-      const progress = document.getElementById('quest-box-progress');
-      
-      // Check for active windmill quest
-      if (windmillQuest && windmillQuest.active) {
-        const timeLeft = Math.ceil(windmillQuest.timer);
-        const windmillHp = windmillQuest.windmill ? windmillQuest.windmill.userData.hp : 0;
-        const windmillMaxHp = windmillQuest.windmill ? windmillQuest.windmill.userData.maxHp : 1;
-        objective.textContent = 'Defend the Windmill';
-        progress.textContent = `⏱️ ${timeLeft}s | ❤️ ${Math.ceil(windmillHp)}/${windmillMaxHp}`;
-        questBox.classList.add('active');
-        return;
-      }
-      
-      // Check for active Montana quest
-      if (montanaQuest && montanaQuest.active) {
-        const timeLeft = Math.ceil(montanaQuest.timer);
-        const kills = montanaQuest.kills || 0;
-        const needed = montanaQuest.killsNeeded || 0;
-        objective.textContent = 'Defend Montana Monument';
-        progress.textContent = `⏱️ ${timeLeft}s | 💀 ${kills}/${needed}`;
-        questBox.classList.add('active');
-        return;
-      }
-      
-      // Check for active Eiffel quest
-      if (eiffelQuest && eiffelQuest.active) {
-        const timeLeft = Math.ceil(eiffelQuest.timer);
-        const collected = eiffelQuest.collected || 0;
-        const needed = eiffelQuest.collectionNeeded || 0;
-        objective.textContent = 'Collect Croissants near Eiffel';
-        progress.textContent = `⏱️ ${timeLeft}s | 🥐 ${collected}/${needed}`;
-        questBox.classList.add('active');
-        return;
-      }
-      
-      // Check for other quests (example: kill X enemies)
-      if (comboSystem && comboSystem.kills > 0 && playerStats.lvl < 10) {
-        const killsNeeded = Math.min(10, playerStats.lvl * 2 + 5);
-        objective.textContent = 'Kill Enemies';
-        progress.textContent = `💀 ${comboSystem.kills}/${killsNeeded}`;
-        questBox.classList.add('active');
-        return;
-      }
-      
-      // No active quest
-      questBox.classList.remove('active');
-    }
-    
-    // Update Minimap (Bottom-Left)
-    function updateMinimap() {
-      const minimap = document.getElementById('minimap');
-      const canvas = document.getElementById('minimap-canvas');
-      if (!minimap || !canvas || !player || !player.mesh) return;
-      
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-      
-      // Clear canvas
-      ctx.clearRect(0, 0, 120, 120);
-      
-      // Draw background
-      ctx.fillStyle = 'rgba(0, 50, 0, 0.5)';
-      ctx.fillRect(0, 0, 120, 120);
-      
-      // Map scale: 400x400 world -> 120x120 minimap (scale = 0.3)
-      const scale = 0.3;
-      const offsetX = 60; // Center of minimap
-      const offsetZ = 60;
-      
-      // Helper function to convert world coords to minimap coords
-      const toMinimapX = (worldX) => offsetX + (worldX - player.mesh.position.x) * scale;
-      const toMinimapZ = (worldZ) => offsetZ + (worldZ - player.mesh.position.z) * scale;
-      
-      // Draw landmarks (small icons)
-      const landmarks = [
-        { x: -80, z: -80, color: '#00FFFF', label: 'T' }, // Tesla
-        { x: -60, z: -70, color: '#FF4500', label: 'V' }, // Volcano
-        { x: 40, z: 40, color: '#8B4513', label: 'W' }, // Windmill
-        { x: 60, z: 60, color: '#808080', label: 'S' }, // Stonehenge
-        { x: 30, z: -30, color: '#1E90FF', label: 'L' }  // Lake
-      ];
-      
-      landmarks.forEach(landmark => {
-        const mx = toMinimapX(landmark.x);
-        const mz = toMinimapZ(landmark.z);
-        if (mx >= 0 && mx <= 120 && mz >= 0 && mz <= 120) {
-          ctx.fillStyle = landmark.color;
-          ctx.font = 'bold 10px Arial';
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillText(landmark.label, mx, mz);
-        }
-      });
-      
-      // Draw nearby enemies (red dots)
-      if (enemies && enemies.length > 0) {
-        ctx.fillStyle = '#FF0000';
-        enemies.slice(0, 30).forEach(enemy => { // Limit to 30 for performance
-          if (!enemy.mesh) return;
-          const mx = toMinimapX(enemy.mesh.position.x);
-          const mz = toMinimapZ(enemy.mesh.position.z);
-          if (mx >= 0 && mx <= 120 && mz >= 0 && mz <= 120) {
-            ctx.beginPath();
-            ctx.arc(mx, mz, 2, 0, Math.PI * 2);
-            ctx.fill();
-          }
-        });
-      }
-      
-      // Draw quest objective markers
-      if (windmillQuest && windmillQuest.active && windmillQuest.windmill) {
-        const mx = toMinimapX(windmillQuest.windmill.position.x);
-        const mz = toMinimapZ(windmillQuest.windmill.position.z);
-        if (mx >= 0 && mx <= 120 && mz >= 0 && mz <= 120) {
-          // Pulsing quest marker
-          const pulse = Math.sin(Date.now() / 200) * 0.5 + 0.5;
-          ctx.strokeStyle = `rgba(255, 215, 0, ${0.5 + pulse * 0.5})`;
-          ctx.lineWidth = 2;
-          ctx.beginPath();
-          ctx.arc(mx, mz, 4 + pulse * 2, 0, Math.PI * 2);
-          ctx.stroke();
-        }
-      }
-      
-      // Draw player (centered yellow dot)
-      ctx.fillStyle = '#FFD700';
-      ctx.beginPath();
-      ctx.arc(offsetX, offsetZ, 4, 0, Math.PI * 2);
-      ctx.fill();
-      
-      // Draw player direction indicator
-      if (player.velocity && (player.velocity.x !== 0 || player.velocity.z !== 0)) {
-        const angle = Math.atan2(player.velocity.z, player.velocity.x);
-        ctx.strokeStyle = '#FFD700';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(offsetX, offsetZ);
-        ctx.lineTo(offsetX + Math.cos(angle) * 8, offsetZ + Math.sin(angle) * 8);
-        ctx.stroke();
-      }
-      
-      // Show minimap during gameplay
-      if (isGameActive && !isPaused && !cinematicIntroActive) {
-        minimap.classList.add('active');
-      } else {
-        minimap.classList.remove('active');
       }
     }
 
@@ -13439,23 +12814,17 @@
       updateBackgroundMusic();
       
       // Listeners
-      console.log('[Init] Setting up input handlers...');
       setupInputs();
-      
-      console.log('[Init] Setting up menu event listeners...');
       setupMenus();
-      
-      console.log('[Init] Adding window resize listener...');
       window.addEventListener('resize', onWindowResize, false);
       
       // Start Loop - begin rendering immediately (non-blocking)
-      console.log('[Init] Starting animation loop...');
       requestAnimationFrame(animate);
       
       // FRESH: Signal that module is ready (standalone loading script is waiting for this)
       // Don't call showLoadingScreen - standalone script handles it
       window.gameModuleReady = true;
-      console.log('[Init] ✅ Game module ready - Three.js loaded, event listeners attached');
+      console.log('[Init] Game module ready - Three.js loaded, event listeners attached');
     }
     
     // showLoadingScreen is now handled by standalone script
@@ -13466,11 +12835,6 @@
       updateGoldDisplays();
       setGameActive(false);
       setGamePaused(true);
-      // Disable joystick when menu is shown
-      const joystickZone = document.getElementById('joystick-zone');
-      if (joystickZone) {
-        joystickZone.style.pointerEvents = 'none';
-      }
     }
     
     function hideMainMenu() {
@@ -13509,10 +12873,10 @@
     function endCountdown() {
       countdownActive = false;
       
-      // Unpause game and start spawning enemies (countdown happens after cinematic intro)
-      setGamePaused(false);
-      setGameActive(true);
-      gameStartTime = Date.now();
+      // Start cinematic intro instead of immediately unpausing
+      if (!cinematicIntroActive) {
+        startCinematicIntro();
+      }
     }
     
     // --- CINEMATIC INTRO SYSTEM ---
@@ -13551,29 +12915,14 @@
       if (currentStep.type === 'landmark') {
         const pos = introLandmarkPositions[currentStep.target];
         if (pos) {
-          // Smoothly move camera to landmark with ANGLED VIEW (30-45 degrees, NOT overhead)
+          // Smoothly move camera to landmark
           const progress = Math.min(cinematicIntroTimer / currentStep.duration, 1);
           const eased = easeInOutCubic(progress);
           
-          // Calculate angled camera position: ~35 degrees from horizontal
-          // Position camera at an angle to the side and elevated
-          const angleRad = 35 * Math.PI / 180; // 35 degree angle
-          const distanceFromLandmark = 25; // Distance from landmark
-          const heightMultiplier = Math.tan(angleRad); // Height based on angle
-          
-          // Offset camera to the side (rotate around landmark)
-          const cameraOffsetAngle = (Date.now() / 5000) % (Math.PI * 2); // Slowly rotate view
-          const targetX = pos.x + Math.cos(cameraOffsetAngle) * distanceFromLandmark;
-          const targetZ = pos.z + Math.sin(cameraOffsetAngle) * distanceFromLandmark;
-          const targetY = distanceFromLandmark * heightMultiplier; // Elevated view
-          
-          // Smooth interpolation to target
-          camera.position.x = camera.position.x + (targetX - camera.position.x) * 0.1;
-          camera.position.y = camera.position.y + (targetY - camera.position.y) * 0.1;
-          camera.position.z = camera.position.z + (targetZ - camera.position.z) * 0.1;
-          
-          // Look at landmark (slightly elevated to show structure)
-          camera.lookAt(pos.x, pos.y * 0.5, pos.z);
+          camera.position.x = camera.position.x + (pos.x - camera.position.x) * 0.1;
+          camera.position.y = pos.y;
+          camera.position.z = camera.position.z + (pos.z - camera.position.z) * 0.1;
+          camera.lookAt(pos.x, 0, pos.z);
           
           // Show description bubble
           if (cinematicIntroTimer < DESCRIPTION_DISPLAY_TIME && progress < DESCRIPTION_PROGRESS_THRESHOLD) {
@@ -13581,69 +12930,25 @@
           }
         }
       } else if (currentStep.type === 'zoomout') {
-        // Zoom out to show ENTIRE map (portrait mode - fit full 400x400 map)
+        // Zoom out to show full map
         const progress = Math.min(cinematicIntroTimer / currentStep.duration, 1);
-        const eased = easeInOutCubic(progress);
-        
-        // For portrait mode (iPhone 16 sized), camera needs to be high and centered
-        // Calculate height needed to see 400x400 world units in portrait viewport
-        const mapSize = 400;
-        const portraitAspect = 9 / 16; // Portrait ratio (narrower)
-        const fov = 50; // Camera FOV
-        const heightNeeded = (mapSize / 2) / Math.tan((fov * Math.PI / 180) / 2) / portraitAspect;
-        
-        // Position camera directly above center of map
-        camera.position.x = camera.position.x + (0 - camera.position.x) * eased * 0.5;
-        camera.position.y = 20 + (Math.min(heightNeeded, 120) - 20) * eased; // Cap at 120 for performance
-        camera.position.z = camera.position.z + (0 - camera.position.z) * eased * 0.5;
-        camera.lookAt(0, 0, 0); // Look at map center
-        
+        camera.position.y = 20 + (50 - 20) * easeInOutCubic(progress);
       } else if (currentStep.type === 'zoomin') {
-        // Zoom in VERY close to character (only character fills screen)
+        // Zoom in rapidly to player
         const progress = Math.min(cinematicIntroTimer / currentStep.duration, 1);
-        const eased = easeInOutCubic(progress);
-        
         if (player && player.mesh) {
           const targetPos = player.mesh.position;
-          
-          // Camera positioned at character's side/front (like standing next to them)
-          const sideAngle = Math.PI / 4; // 45 degrees to the side
-          const closeDistance = 2.5; // Very close
-          const eyeLevel = 0.7; // At character's eye level
-          
-          const targetX = targetPos.x + Math.cos(sideAngle) * closeDistance;
-          const targetZ = targetPos.z + Math.sin(sideAngle) * closeDistance;
-          const targetY = eyeLevel;
-          
-          // Smooth zoom in
-          camera.position.x = camera.position.x + (targetX - camera.position.x) * eased * 0.4;
-          camera.position.y = camera.position.y + (targetY - camera.position.y) * eased * 0.4;
-          camera.position.z = camera.position.z + (targetZ - camera.position.z) * eased * 0.4;
-          
-          // Look at character's face
-          camera.lookAt(targetPos.x, targetPos.y + 0.3, targetPos.z);
+          camera.position.x = camera.position.x + (targetPos.x - camera.position.x) * 0.3;
+          camera.position.y = 20 + (15 - 20) * easeInOutCubic(progress);
+          camera.position.z = camera.position.z + (targetPos.z + 20 - camera.position.z) * 0.3;
+          camera.lookAt(targetPos.x, 0, targetPos.z);
         }
-        
       } else if (currentStep.type === 'cigar') {
-        // Player takes big hit on cigar → tip glows bright → exhales smoke
+        // Player cigar smoke animation
         if (player && player.mesh && cinematicIntroTimer < currentStep.duration) {
-          const smokeInterval = 0.15; // Faster smoke during intro
-          const glowPulse = Math.sin(cinematicIntroTimer * 10) * 0.5 + 0.5;
-          
-          // Make cigar tip glow brighter during intro
-          if (player.cigarTip) {
-            player.cigarTip.material.opacity = 0.8 + glowPulse * 0.2;
-            player.cigarTip.scale.set(1.2 + glowPulse * 0.3, 1.2 + glowPulse * 0.3, 1.2 + glowPulse * 0.3);
-          }
-          
-          // Generate smoke particles
+          const smokeInterval = 0.2;
           if (Math.floor(cinematicIntroTimer / smokeInterval) > Math.floor((cinematicIntroTimer - dt) / smokeInterval)) {
-            // Exhale smoke from mouth area (lower on face)
-            const mouthPos = player.mesh.position.clone();
-            mouthPos.y += 0.1; // Mouth level
-            mouthPos.x += 0.1; // Slightly to side
-            createSmokeParticle(mouthPos);
-            createSmokeParticle(mouthPos); // Extra smoke for dramatic effect
+            createSmokeParticle(player.mesh.position);
           }
         }
       }
@@ -13658,14 +12963,11 @@
     function endCinematicIntro() {
       cinematicIntroActive = false;
       
-      // Enable joystick controls now that game is starting
-      const joystickZone = document.getElementById('joystick-zone');
-      if (joystickZone) {
-        joystickZone.style.pointerEvents = 'auto';
-      }
-      
-      // Start countdown AFTER cinematic intro (PR requirement: landmarks → zoom → smoke → countdown → enemies)
-      startCountdown();
+      // Ensure game properly unpauses (use helper functions to sync window variables)
+      setGamePaused(false);
+      setGameActive(true);
+      gameStartTime = Date.now();
+      console.log('[CinematicIntro] Intro complete - Game started - isPaused:', isPaused, 'isGameActive:', isGameActive);
     }
     
     function showLandmarkDescription(landmark) {
@@ -13914,8 +13216,6 @@
     }
     
     function setupMenus() {
-      console.log('[setupMenus] Starting menu setup...');
-      
       // Settings button
       // PR #117: Menu button and options modal handlers
       const menuBtn = document.getElementById('menu-btn');
@@ -14050,10 +13350,7 @@
       updateBackgroundMusic();
       
       // Main Menu Buttons
-      console.log('[setupMenus] Setting up main menu button handlers...');
-      
       document.getElementById('start-game-btn').onclick = () => {
-        console.log('[Button] START GAME clicked');
         playSound('waterdrop');
         
         // COMIC BOOK TUTORIAL: Show intro comic on first game start
@@ -14063,12 +13360,12 @@
           // After comic, continue with game start
           setTimeout(() => {
             resetGame();
-            startCinematicIntro(); // Start cinematic intro (PR requirement: intro → countdown → enemies)
+            startCountdown(); // Start countdown after resetting game (PR #70)
           }, 100);
         } else {
           hideMainMenu();
           resetGame();
-          startCinematicIntro(); // Start cinematic intro (PR requirement: intro → countdown → enemies)
+          startCountdown(); // Start countdown after resetting game (PR #70)
         }
       };
       
@@ -14284,9 +13581,7 @@
         saveData.storyQuests.welcomeShown = true;
         saveSaveData();
         // Close modal
-        const storyModal = document.getElementById('story-quest-modal');
-        storyModal.style.display = 'none';
-        storyModal.style.pointerEvents = 'none'; // Disable pointer events when hiding modal
+        document.getElementById('story-quest-modal').style.display = 'none';
       };
       
       document.getElementById('settings-reset-btn').onclick = () => {
@@ -14332,8 +13627,6 @@
       
       // Initialize control type UI on startup
       updateControlType();
-      
-      console.log('[setupMenus] ✅ All menu buttons and event handlers set up successfully');
     }
     
 
@@ -17627,18 +16920,6 @@
       // Player Update
       player.update(dt);
       
-      // Update region detection
-      if (player && player.mesh) {
-        const newRegion = detectCurrentRegion(player.mesh.position.x, player.mesh.position.z);
-        if (newRegion && (!currentRegion || newRegion.key !== currentRegion.key)) {
-          currentRegion = newRegion;
-          regionFadeTimer = 0;
-        } else if (!newRegion && currentRegion) {
-          currentRegion = null;
-        }
-        updateRegionDisplay();
-      }
-      
       // Check windmill quest trigger
       if (!windmillQuest.active && !windmillQuest.hasCompleted) {
         scene.children.forEach(child => {
@@ -18407,10 +17688,6 @@
       expGems = expGems.filter(g => g.active);
       goldCoins = goldCoins.filter(g => g.active);
       chests = chests.filter(c => c.active);
-      
-      // Update UI overlays (minimap, quest box)
-      updateMinimap();
-      updateQuestBox();
 
       // Phase 3: Render loop protection - wrap in try-catch to prevent freeze
       // Frame Skip Mechanism: Skip rendering if frame budget exceeded
@@ -18472,25 +17749,7 @@
     }
 
     // Init Game
-    try { 
-      init(); 
-    } catch(e) { 
-      console.error('[Game Error] Initialization failed:', e); 
-      console.error('[Game Error] Stack trace:', e.stack);
-      
-      // Critical: Even if init fails, try to set up menu buttons so UI is at least partially functional
-      try {
-        console.log('[Recovery] Attempting to set up menu buttons despite init failure...');
-        setupMenus();
-        window.gameModuleReady = true;
-        console.log('[Recovery] ✅ Menu buttons set up successfully despite init failure');
-      } catch(recoveryError) {
-        console.error('[Recovery] ❌ Failed to set up menu buttons:', recoveryError);
-        // Set gameModuleReady anyway so the loading screen doesn't block forever
-        window.gameModuleReady = true;
-        alert('Game failed to initialize properly. Some features may not work. Please refresh the page.');
-      }
-    }
+    try { init(); } catch(e) { console.error('[Game Error]', e); console.error('[Game] Initialization failed - game cannot start'); }
 
   </script>
 </body>
