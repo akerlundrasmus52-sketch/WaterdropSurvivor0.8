@@ -450,6 +450,142 @@
       }
     }
     
+    /* FRESH IMPLEMENTATION: Enhanced Notification System */
+    .enhanced-notification {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0.8);
+      background: linear-gradient(to bottom, #1a3a4a 0%, #0f1f2a 100%);
+      border: 4px solid #5DADE2;
+      border-radius: 20px;
+      padding: 30px;
+      max-width: 400px;
+      z-index: 999;
+      pointer-events: none;
+      box-shadow: 0 0 40px rgba(93,173,226,0.8);
+      animation: notification-popup 0.5s ease-out forwards;
+    }
+    
+    @keyframes notification-popup {
+      0% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.5);
+      }
+      60% {
+        transform: translate(-50%, -50%) scale(1.05);
+      }
+      100% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+      }
+    }
+    
+    .enhanced-notification.fade-out {
+      animation: notification-fadeout 0.3s ease-out forwards;
+    }
+    
+    @keyframes notification-fadeout {
+      0% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+      }
+      100% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.8);
+      }
+    }
+    
+    .notification-icon {
+      font-size: 48px;
+      text-align: center;
+      margin-bottom: 15px;
+      animation: icon-bounce 0.6s ease-out;
+    }
+    
+    @keyframes icon-bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+    
+    .notification-title {
+      color: #FFD700;
+      font-size: 24px;
+      font-weight: bold;
+      text-align: center;
+      margin-bottom: 10px;
+      text-shadow: 0 0 15px rgba(255,215,0,0.8);
+    }
+    
+    .notification-text {
+      color: #FFFFFF;
+      font-size: 16px;
+      text-align: center;
+      line-height: 1.5;
+    }
+    
+    /* Story Quest Modal Styles */
+    .story-quest-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.95);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      pointer-events: auto;
+    }
+    
+    .story-quest-content {
+      background: linear-gradient(to bottom, #1a3a4a 0%, #0f1f2a 100%);
+      border: 4px solid #5DADE2;
+      border-radius: 20px;
+      padding: 40px;
+      max-width: 600px;
+      box-shadow: 0 0 30px rgba(93,173,226,0.6);
+    }
+    
+    .story-quest-title {
+      color: #5DADE2;
+      font-size: 36px;
+      font-weight: bold;
+      text-align: center;
+      margin-bottom: 20px;
+      text-shadow: 0 0 15px rgba(93,173,226,0.8);
+    }
+    
+    .story-quest-body {
+      color: #FFFFFF;
+      font-size: 18px;
+      line-height: 1.6;
+      margin-bottom: 25px;
+      text-align: left;
+    }
+    
+    .story-quest-body p {
+      margin-bottom: 15px;
+    }
+    
+    .story-quest-body strong {
+      color: #FFD700;
+    }
+    
+    .story-quest-body strong.highlight {
+      color: #5DADE2;
+    }
+    
+    .menu-btn-primary {
+      width: 100%;
+      padding: 15px;
+      font-size: 22px;
+      background: linear-gradient(to bottom, #5DADE2, #3498DB);
+      border: 3px solid #2980B9;
+    }
+    
+    
     /* Wave Counter - Removed (was in stats bar) */
     
     
@@ -1652,6 +1788,38 @@
     </div>
   </div>
 
+  <!-- FRESH IMPLEMENTATION: Story Quest Welcome Modal -->
+  <div id="story-quest-modal" class="story-quest-modal">
+    <div class="story-quest-content">
+      <div class="story-quest-title">
+        💧 WELCOME TO WATER DROP SURVIVOR 💧
+      </div>
+      <div class="story-quest-body">
+        <p>
+          <strong>Welcome, Droplet!</strong>
+        </p>
+        <p>
+          You've entered a <strong class="highlight">Roguelite Survivor</strong> game where progression is key to victory!
+        </p>
+        <p>
+          🎯 <strong>Your Mission:</strong> Survive waves of enemies, collect XP waterdrops, level up, and unlock powerful abilities.
+        </p>
+        <p>
+          ⛺ <strong>Permanent Progression:</strong> Return to Camp between runs to upgrade buildings, unlock skills, and grow stronger.
+        </p>
+        <p>
+          💎 <strong>Gear & Achievements:</strong> Collect equipment, complete achievements, and master the elemental powers.
+        </p>
+        <p>
+          🌍 <strong>Explore:</strong> Discover landmarks like the Windmill, Stonehenge, Pyramids, Eiffel Tower, and the Tesla Tower!
+        </p>
+      </div>
+      <button class="menu-btn menu-btn-primary" id="story-quest-close-btn">
+        START YOUR JOURNEY!
+      </button>
+    </div>
+  </div>
+
   <!-- Progression Shop -->
   <div id="progression-shop">
     <div class="shop-header">
@@ -2181,6 +2349,17 @@
           if (mainMenu) {
             mainMenu.style.display = 'flex';
           }
+          
+          // FRESH IMPLEMENTATION: Show Story Quest Modal on first load
+          setTimeout(function() {
+            // Access saveData through window if available (will be set by game module)
+            if (window.saveData && !window.saveData.storyQuests.welcomeShown) {
+              const storyModal = document.getElementById('story-quest-modal');
+              if (storyModal) {
+                storyModal.style.display = 'flex';
+              }
+            }
+          }, 500);
         }, 500);
       }
     })();
@@ -2609,7 +2788,8 @@
       cometParticles: [],
       waterfalls: [],
       waterDrops: [],
-      splashes: []
+      splashes: [],
+      teslaTowers: [] // FRESH: Tesla Tower animation
     };
     let lastTime = null; // Initialize as null for proper first-frame detection (PR #82 fix)
     
@@ -5006,12 +5186,62 @@
       }
       
       dieByHeadshot(enemyColor) {
-        // Headshot: Dramatic head explosion
+        // FRESH IMPLEMENTATION: Enhanced headshot with actual head detachment
+        // Headshot: Dramatic head explosion with visible detached head
         spawnParticles(this.mesh.position, enemyColor, 25);
-        spawnParticles(this.mesh.position, 0x8B0000, 15);
+        spawnParticles(this.mesh.position, 0x8B0000, 15); // Red blood
         spawnParticles(this.mesh.position, 0xFFFFFF, 5);
         
-        // Body falls (corpse)
+        // Create detached head that flies off
+        const headGeo = new THREE.SphereGeometry(0.3, 12, 12);
+        const headMat = new THREE.MeshBasicMaterial({ 
+          color: enemyColor, 
+          transparent: true,
+          opacity: 1
+        });
+        const head = new THREE.Mesh(headGeo, headMat);
+        head.position.copy(this.mesh.position);
+        head.position.y += 0.5; // Start from head height
+        scene.add(head);
+        
+        // Head velocity (flies backward and up)
+        const headVel = new THREE.Vector3(
+          (Math.random() - 0.5) * 0.6,
+          0.8 + Math.random() * 0.4, // Upward
+          (Math.random() - 0.5) * 0.6
+        );
+        
+        // Blood spray trail from neck
+        let headLife = 80;
+        const updateHead = () => {
+          headLife--;
+          head.position.add(headVel);
+          headVel.y -= 0.025; // Gravity
+          head.rotation.x += 0.15;
+          head.rotation.y += 0.2;
+          head.rotation.z += 0.1;
+          
+          // Blood trail
+          if (headLife % 3 === 0 && headLife > 20) {
+            spawnParticles(head.position, 0x8B0000, 2);
+          }
+          
+          // Fade out near end
+          if (headLife < 20) {
+            head.material.opacity = headLife / 20;
+          }
+          
+          if (headLife <= 0 || head.position.y < 0) {
+            scene.remove(head);
+            head.geometry.dispose();
+            head.material.dispose();
+          } else {
+            requestAnimationFrame(updateHead);
+          }
+        };
+        updateHead();
+        
+        // Body falls (corpse without head)
         const corpseGeo = new THREE.CircleGeometry(0.6, 16);
         const corpseMat = new THREE.MeshBasicMaterial({ 
           color: enemyColor, 
@@ -5025,12 +5255,12 @@
         corpse.rotation.x = -Math.PI / 2;
         scene.add(corpse);
         
-        // Blood splatter
-        const bloodGeo = new THREE.CircleGeometry(0.9, 16);
+        // Large blood splatter pool
+        const bloodGeo = new THREE.CircleGeometry(1.2, 16); // Larger pool
         const bloodMat = new THREE.MeshBasicMaterial({ 
           color: 0x8B0000, 
           transparent: true,
-          opacity: 0.6,
+          opacity: 0.7, // More visible
           side: THREE.DoubleSide
         });
         const bloodPool = new THREE.Mesh(bloodGeo, bloodMat);
@@ -5039,30 +5269,34 @@
         bloodPool.rotation.x = -Math.PI / 2;
         scene.add(bloodPool);
         
-        // Extra head pieces
-        for(let i = 0; i < 10; i++) {
+        // Extra gore pieces (bone/skull fragments)
+        for(let i = 0; i < 12; i++) {
+          const pieceSize = 0.1 + Math.random() * 0.1;
           const piece = new THREE.Mesh(
-            new THREE.BoxGeometry(0.15, 0.15, 0.15),
-            new THREE.MeshBasicMaterial({ color: i % 2 === 0 ? enemyColor : 0x8B0000, transparent: true })
+            new THREE.BoxGeometry(pieceSize, pieceSize, pieceSize),
+            new THREE.MeshBasicMaterial({ 
+              color: i % 3 === 0 ? 0xFFFFFF : (i % 3 === 1 ? 0x8B0000 : enemyColor), 
+              transparent: true 
+            })
           );
           piece.position.copy(this.mesh.position);
           piece.position.y += 0.5; // Start from head height
           scene.add(piece);
           
           const vel = new THREE.Vector3(
-            (Math.random() - 0.5) * 0.4,
-            0.5 + Math.random() * 0.3,
-            (Math.random() - 0.5) * 0.4
+            (Math.random() - 0.5) * 0.5,
+            0.5 + Math.random() * 0.4,
+            (Math.random() - 0.5) * 0.5
           );
           
-          let life = 50;
+          let life = 60;
           const updatePiece = () => {
             life--;
             piece.position.add(vel);
             vel.y -= 0.03;
             piece.rotation.x += 0.2;
             piece.rotation.y += 0.25;
-            piece.material.opacity = life / 50;
+            piece.material.opacity = life / 60;
             
             if (life <= 0 || piece.position.y < 0) {
               scene.remove(piece);
@@ -6571,7 +6805,8 @@
     };
 
     // --- SAVE SYSTEM ---
-    const SAVE_KEY = 'waterDropSurvivorSave';
+    // FRESH START - Changed save key to force reset after comprehensive re-implementation
+    const SAVE_KEY = 'waterDropSurvivorSave_v2_FreshStart';
     const SETTINGS_KEY = 'waterDropSurvivorSettings';
 
     const defaultSaveData = {
@@ -6625,34 +6860,86 @@
         waterSpirit: { unlocked: false, level: 1, xp: 0 }
       },
       selectedCompanion: 'stormWolf', // Default companion
-      // Camp System
+      // Camp System - All Buildings FREE and Level 1 (Comprehensive Re-implementation)
       campBuildings: {
-        // Free buildings
-        questMission: { level: 0, maxLevel: 1, unlocked: false },
-        inventory: { level: 0, maxLevel: 1, unlocked: false },
-        campHub: { level: 0, maxLevel: 1, unlocked: false },
-        // Paid buildings
-        skillTree: { level: 0, maxLevel: 10, unlocked: false },
-        companionHouse: { level: 0, maxLevel: 10, unlocked: false },
-        forge: { level: 0, maxLevel: 10, unlocked: false },
-        armory: { level: 0, maxLevel: 10, unlocked: false },
-        trainingHall: { level: 0, maxLevel: 10, unlocked: false },
-        trashRecycle: { level: 0, maxLevel: 10, unlocked: false },
-        tempShop: { level: 0, maxLevel: 10, unlocked: false },
+        // Free buildings - all unlocked at start
+        questMission: { level: 1, maxLevel: 10, unlocked: true },
+        inventory: { level: 1, maxLevel: 10, unlocked: true },
+        campHub: { level: 1, maxLevel: 10, unlocked: true },
+        loreMaster: { level: 1, maxLevel: 10, unlocked: true }, // NEW: Lore/Story building (placeholder for future lore content - currently inactive)
+        // Previously paid buildings - now FREE at Level 1
+        skillTree: { level: 1, maxLevel: 10, unlocked: true },
+        companionHouse: { level: 1, maxLevel: 10, unlocked: true },
+        forge: { level: 1, maxLevel: 10, unlocked: true },
+        armory: { level: 1, maxLevel: 10, unlocked: true },
+        trainingHall: { level: 1, maxLevel: 10, unlocked: true },
+        trashRecycle: { level: 1, maxLevel: 10, unlocked: true },
+        tempShop: { level: 1, maxLevel: 10, unlocked: true },
         // Legacy buildings (for compatibility)
         trainingGrounds: { level: 0, maxLevel: 10, unlocked: false },
         library: { level: 0, maxLevel: 10, unlocked: false },
         workshop: { level: 0, maxLevel: 10, unlocked: false },
         shrine: { level: 0, maxLevel: 10, unlocked: false }
       },
+      // COMPREHENSIVE SKILL TREE - 48 Skills Total (Fresh Implementation)
       skillTree: {
+        // COMBAT PATH (12 skills)
         combatMastery: { unlocked: false, level: 0, maxLevel: 5 },
+        bladeDancer: { unlocked: false, level: 0, maxLevel: 3 },
+        heavyStrike: { unlocked: false, level: 0, maxLevel: 3 },
+        rapidFire: { unlocked: false, level: 0, maxLevel: 3 },
+        criticalFocus: { unlocked: false, level: 0, maxLevel: 5 },
+        armorPierce: { unlocked: false, level: 0, maxLevel: 3 },
+        multiHit: { unlocked: false, level: 0, maxLevel: 3 },
+        executioner: { unlocked: false, level: 0, maxLevel: 3 },
+        bloodlust: { unlocked: false, level: 0, maxLevel: 3 },
+        berserker: { unlocked: false, level: 0, maxLevel: 3 },
+        weaponSpecialist: { unlocked: false, level: 0, maxLevel: 5 },
+        combatVeteran: { unlocked: false, level: 0, maxLevel: 3 },
+        
+        // DEFENSE PATH (12 skills)
         survivalist: { unlocked: false, level: 0, maxLevel: 5 },
+        ironSkin: { unlocked: false, level: 0, maxLevel: 3 },
+        quickReflex: { unlocked: false, level: 0, maxLevel: 3 },
+        fortification: { unlocked: false, level: 0, maxLevel: 5 },
+        regeneration: { unlocked: false, level: 0, maxLevel: 3 },
+        lastStand: { unlocked: false, level: 0, maxLevel: 3 },
+        toughness: { unlocked: false, level: 0, maxLevel: 3 },
+        guardian: { unlocked: false, level: 0, maxLevel: 3 },
+        resilience: { unlocked: false, level: 0, maxLevel: 3 },
+        secondWind: { unlocked: false, level: 0, maxLevel: 3 },
+        endurance: { unlocked: false, level: 0, maxLevel: 5 },
+        immortal: { unlocked: false, level: 0, maxLevel: 3 },
+        
+        // UTILITY PATH (12 skills)
         wealthHunter: { unlocked: false, level: 0, maxLevel: 5 },
         quickLearner: { unlocked: false, level: 0, maxLevel: 5 },
-        fortification: { unlocked: false, level: 0, maxLevel: 5 }
+        magnetism: { unlocked: false, level: 0, maxLevel: 3 },
+        efficiency: { unlocked: false, level: 0, maxLevel: 3 },
+        scavenger: { unlocked: false, level: 0, maxLevel: 3 },
+        fortuneFinder: { unlocked: false, level: 0, maxLevel: 3 },
+        speedster: { unlocked: false, level: 0, maxLevel: 3 },
+        dashMaster: { unlocked: false, level: 0, maxLevel: 3 },
+        cooldownExpert: { unlocked: false, level: 0, maxLevel: 3 },
+        auraExpansion: { unlocked: false, level: 0, maxLevel: 3 },
+        resourceful: { unlocked: false, level: 0, maxLevel: 5 },
+        treasureHunter: { unlocked: false, level: 0, maxLevel: 3 },
+        
+        // ELEMENTAL PATH (12 skills)
+        fireMastery: { unlocked: false, level: 0, maxLevel: 3 },
+        iceMastery: { unlocked: false, level: 0, maxLevel: 3 },
+        lightningMastery: { unlocked: false, level: 0, maxLevel: 3 },
+        elementalFusion: { unlocked: false, level: 0, maxLevel: 3 },
+        pyromaniac: { unlocked: false, level: 0, maxLevel: 3 },
+        frostbite: { unlocked: false, level: 0, maxLevel: 3 },
+        stormCaller: { unlocked: false, level: 0, maxLevel: 3 },
+        elementalChain: { unlocked: false, level: 0, maxLevel: 3 },
+        manaOverflow: { unlocked: false, level: 0, maxLevel: 3 },
+        spellEcho: { unlocked: false, level: 0, maxLevel: 3 },
+        arcaneEmpowerment: { unlocked: false, level: 0, maxLevel: 5 },
+        elementalOverload: { unlocked: false, level: 0, maxLevel: 3 }
       },
-      skillPoints: 0,
+      skillPoints: 2, // Start with 2 skill points
       // Camp state
       hasVisitedCamp: false, // Track first camp visit
       nextRunTimeOfDay: 'day', // 'day' or 'night' - chosen from sleep option
@@ -6755,6 +7042,9 @@
         console.error('Failed to load settings:', e);
       }
     }
+    
+    // Expose saveData to window scope for loading screen access (FRESH IMPLEMENTATION)
+    window.saveData = saveData;
 
     // --- ACHIEVEMENTS SYSTEM ---
     const ACHIEVEMENTS = {
@@ -6890,8 +7180,9 @@
       // Award gold
       addGold(achievement.reward);
       
-      // Award attribute points
-      saveData.unspentAttributePoints += achievement.attributePoints;
+      // Award attribute points (with safety check)
+      const attributePoints = achievement.attributePoints || 0;
+      saveData.unspentAttributePoints += attributePoints;
       
       // Play sound
       playSound('coin');
@@ -6899,10 +7190,12 @@
       // Show gold bag animation
       showGoldBagAnimation(achievement.reward);
       
-      // Show attribute points notification
-      if (achievement.attributePoints > 0) {
-        showStatChange(`+${achievement.attributePoints} Attribute Point${achievement.attributePoints > 1 ? 's' : ''}! Check Attributes Menu`);
-      }
+      // FRESH IMPLEMENTATION: Show enhanced achievement notification
+      showEnhancedNotification(
+        'achievement',
+        'ACHIEVEMENT UNLOCKED!',
+        `${achievement.name} - +${achievement.reward} Gold, +${attributePoints} Attribute Point${attributePoints > 1 ? 's' : ''}!`
+      );
       
       // Save
       saveSaveData();
@@ -8687,6 +8980,9 @@
       // 4. Path to Windmill (40, 40) - East direction (slightly different from Stonehenge)
       createPath(rondelRadius * 0.9, rondelRadius * 0.436, 40, 40, 3);
       
+      // 5. Path to Tesla Tower (-80, -80) - Northwest direction
+      createPath(-rondelRadius * 0.707, -rondelRadius * 0.707, -80, -80, 3);
+      
       // Farm Fields - Fill empty spaces with farm texture
       // Create large farm field background (performance optimized - single large mesh)
       const farmFieldMat = new THREE.MeshPhysicalMaterial({ 
@@ -9583,6 +9879,98 @@
       scene.add(eiffelGroup);
       eiffelLandmark = eiffelGroup; // Store reference for efficient distance checks
 
+      // FRESH IMPLEMENTATION: Tesla Tower with Active Lightning Arcs
+      const teslaGroup = new THREE.Group();
+      teslaGroup.position.set(-80, 0, -80); // Northwest corner, distant location
+      
+      // Tower base - wider platform
+      const teslaBaseGeo = new THREE.CylinderGeometry(3, 4, 2, 8);
+      const teslaBaseMat = new THREE.MeshToonMaterial({ color: 0x555555 }); // Dark gray
+      const teslaBase = new THREE.Mesh(teslaBaseGeo, teslaBaseMat);
+      teslaBase.position.y = 1;
+      teslaBase.castShadow = true;
+      teslaGroup.add(teslaBase);
+      
+      // Main tower structure - tall metal cylinder
+      const teslaTowerGeo = new THREE.CylinderGeometry(1.2, 1.5, 25, 12);
+      const teslaTowerMat = new THREE.MeshPhysicalMaterial({ 
+        color: 0x888888, 
+        metalness: 0.8,
+        roughness: 0.3
+      });
+      const teslaTower = new THREE.Mesh(teslaTowerGeo, teslaTowerMat);
+      teslaTower.position.y = 14.5;
+      teslaTower.castShadow = true;
+      teslaGroup.add(teslaTower);
+      
+      // Support rings along tower
+      for (let i = 1; i <= 4; i++) {
+        const ringGeo = new THREE.TorusGeometry(1.5, 0.15, 8, 16);
+        const ringMat = new THREE.MeshPhysicalMaterial({ 
+          color: 0xCC8800, 
+          metalness: 0.9,
+          roughness: 0.2
+        });
+        const ring = new THREE.Mesh(ringGeo, ringMat);
+        ring.position.y = i * 5 + 2;
+        ring.rotation.x = Math.PI / 2;
+        teslaGroup.add(ring);
+      }
+      
+      // Top coil - large torus
+      const coilGeo = new THREE.TorusGeometry(2.5, 0.3, 12, 24);
+      const coilMat = new THREE.MeshPhysicalMaterial({ 
+        color: 0xFFCC00, 
+        metalness: 1.0,
+        roughness: 0.1,
+        emissive: 0xFFCC00,
+        emissiveIntensity: 0.5
+      });
+      const coil = new THREE.Mesh(coilGeo, coilMat);
+      coil.position.y = 27;
+      coil.rotation.x = Math.PI / 2;
+      teslaGroup.add(coil);
+      
+      // Central ball on top - glowing sphere
+      const ballGeo = new THREE.SphereGeometry(1, 16, 16);
+      const ballMat = new THREE.MeshBasicMaterial({ 
+        color: 0x00FFFF, 
+        emissive: 0x00FFFF,
+        emissiveIntensity: 1
+      });
+      const ball = new THREE.Mesh(ballGeo, ballMat);
+      ball.position.y = 29;
+      teslaGroup.add(ball);
+      
+      // Add glow effect around top ball
+      const glowGeo = new THREE.SphereGeometry(1.5, 16, 16);
+      const glowMat = new THREE.MeshBasicMaterial({ 
+        color: 0x00FFFF, 
+        transparent: true,
+        opacity: 0.3
+      });
+      const glow = new THREE.Mesh(glowGeo, glowMat);
+      glow.position.y = 29;
+      teslaGroup.add(glow);
+      
+      // Lightning arc points (4 ground points around tower)
+      const arcPoints = [
+        new THREE.Vector3(-80 + 8, 0.5, -80),
+        new THREE.Vector3(-80 - 8, 0.5, -80),
+        new THREE.Vector3(-80, 0.5, -80 + 8),
+        new THREE.Vector3(-80, 0.5, -80 - 8)
+      ];
+      
+      // Store Tesla Tower data for animation
+      teslaGroup.userData = { 
+        isTeslaTower: true,
+        arcPoints: arcPoints,
+        topPosition: new THREE.Vector3(-80, 29, -80),
+        arcLines: [] // Will store line meshes
+      };
+      
+      scene.add(teslaGroup);
+
       // Forest (Various tree types with better shadows)
       const trunkGeo = new THREE.CylinderGeometry(0.5, 0.7, 2, 6);
       const trunkMat = new THREE.MeshToonMaterial({ color: 0x8B4513 });
@@ -9864,7 +10252,8 @@
         cometParticles: [],
         waterfalls: [],
         waterDrops: [],
-        splashes: []
+        splashes: [],
+        teslaTowers: [] // FRESH: Tesla Tower animation
       };
       
       scene.traverse(obj => {
@@ -9876,6 +10265,7 @@
         else if (obj.userData.isWaterfall) animatedSceneObjects.waterfalls.push(obj);
         else if (obj.userData.isWaterDrop) animatedSceneObjects.waterDrops.push(obj);
         else if (obj.userData.isSplash) animatedSceneObjects.splashes.push(obj);
+        else if (obj.userData.isTeslaTower) animatedSceneObjects.teslaTowers.push(obj);
       });
     }
 
@@ -10433,6 +10823,16 @@
       };
       
       // Reset progress button with double confirmation
+      // FRESH IMPLEMENTATION: Story Quest Modal close handler
+      document.getElementById('story-quest-close-btn').onclick = () => {
+        playSound('waterdrop');
+        // Mark as shown
+        saveData.storyQuests.welcomeShown = true;
+        saveSaveData();
+        // Close modal
+        document.getElementById('story-quest-modal').style.display = 'none';
+      };
+      
       document.getElementById('settings-reset-btn').onclick = () => {
         if (confirm('⚠️ WARNING ⚠️\n\nAre you ABSOLUTELY SURE you want to RESET ALL PROGRESS?\n\nThis will delete:\n• All permanent upgrades\n• All gold\n• All achievements\n• All gear & inventory\n• All buildings & quests\n• All companions\n• Everything will be completely wiped!\n\nThis action CANNOT be undone!')) {
           // Second confirmation
@@ -12312,6 +12712,13 @@
       updateWindmillQuestUI();
       
       createFloatingText("DEFEND THE WINDMILL!", windmill.position);
+      
+      // FRESH IMPLEMENTATION: Enhanced quest notification
+      showEnhancedNotification(
+        'quest',
+        'NEW QUEST!',
+        'Defend the Windmill from enemy attacks!'
+      );
     }
     
     function completeWindmillQuest() {
@@ -12330,6 +12737,14 @@
       weapons.gun.damage += 10;
       
       createFloatingText("DOUBLE BARREL UNLOCKED!", player.mesh.position);
+      
+      // FRESH IMPLEMENTATION: Enhanced unlock notification
+      showEnhancedNotification(
+        'unlock',
+        'WEAPON UNLOCKED!',
+        'Double Barrel Gun - Increased damage and firepower!'
+      );
+      
       playSound('levelup');
       updateHUD();
     }
@@ -12530,6 +12945,59 @@
           processStatNotificationQueue();
         }, 400);
       }, 1200);
+    }
+    
+    // FRESH IMPLEMENTATION: Enhanced Notification System
+    function showEnhancedNotification(type, title, message) {
+      // Create notification element
+      const notification = document.createElement('div');
+      notification.className = 'enhanced-notification';
+      
+      // Icon based on type
+      let icon = '';
+      let borderColor = '#5DADE2';
+      switch(type) {
+        case 'quest':
+          icon = '📜';
+          borderColor = '#FFD700';
+          break;
+        case 'achievement':
+          icon = '🏆';
+          borderColor = '#F39C12';
+          break;
+        case 'attribute':
+          icon = '⭐';
+          borderColor = '#9B59B6';
+          break;
+        case 'unlock':
+          icon = '🔓';
+          borderColor = '#2ECC71';
+          break;
+        default:
+          icon = '💧';
+      }
+      
+      notification.style.borderColor = borderColor;
+      notification.innerHTML = `
+        <div class="notification-icon">${icon}</div>
+        <div class="notification-title">${title}</div>
+        <div class="notification-text">${message}</div>
+      `;
+      
+      document.body.appendChild(notification);
+      
+      // Play sound
+      playSound('waterdrop');
+      
+      // Auto-remove after 3 seconds
+      setTimeout(() => {
+        notification.classList.add('fade-out');
+        setTimeout(() => {
+          if (notification.parentNode) {
+            notification.parentNode.removeChild(notification);
+          }
+        }, 300);
+      }, 3000);
     }
 
     function gameOver() {
@@ -14111,6 +14579,70 @@
         const scale = 1 + Math.sin(obj.userData.phase) * 0.3;
         obj.scale.set(scale, 1, scale);
         obj.material.opacity = 0.4 + Math.sin(obj.userData.phase) * 0.2;
+      });
+      
+      // FRESH IMPLEMENTATION: Tesla Tower Lightning Arcs Animation
+      animatedSceneObjects.teslaTowers.forEach(tower => {
+        if (!tower.userData.arcTimer) tower.userData.arcTimer = 0;
+        tower.userData.arcTimer += dt;
+        
+        // Create new lightning arc every 1.5 seconds
+        if (tower.userData.arcTimer > 1.5) {
+          tower.userData.arcTimer = 0;
+          
+          // Clear old arcs
+          if (tower.userData.arcLines && tower.userData.arcLines.length > 0) {
+            tower.userData.arcLines.forEach(line => {
+              scene.remove(line);
+              if (line.geometry) line.geometry.dispose();
+              if (line.material) line.material.dispose();
+            });
+            tower.userData.arcLines = [];
+          }
+          
+          // Create new lightning arcs to random ground points
+          const numArcs = Math.floor(Math.random() * 2) + 2; // 2-3 arcs
+          for (let i = 0; i < numArcs; i++) {
+            const targetPoint = tower.userData.arcPoints[Math.floor(Math.random() * tower.userData.arcPoints.length)];
+            
+            // Create jagged lightning path
+            const points = [];
+            const segments = 8;
+            const start = tower.userData.topPosition.clone();
+            const end = targetPoint.clone();
+            
+            points.push(start);
+            for (let j = 1; j < segments; j++) {
+              const t = j / segments;
+              const mid = new THREE.Vector3().lerpVectors(start, end, t);
+              // Add random jitter
+              mid.x += (Math.random() - 0.5) * 3;
+              mid.z += (Math.random() - 0.5) * 3;
+              points.push(mid);
+            }
+            points.push(end);
+            
+            // Create line (Note: linewidth has no effect in WebGL, arcs will be 1-pixel lines)
+            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+            const material = new THREE.LineBasicMaterial({ 
+              color: 0x00FFFF, 
+              transparent: true,
+              opacity: 0.8
+            });
+            const line = new THREE.Line(geometry, material);
+            scene.add(line);
+            tower.userData.arcLines.push(line);
+          }
+        }
+        
+        // Fade out arcs over time
+        if (tower.userData.arcLines && tower.userData.arcLines.length > 0) {
+          const fadeProgress = tower.userData.arcTimer / 1.5;
+          const opacity = Math.max(0, 0.8 - fadeProgress * 0.8);
+          tower.userData.arcLines.forEach(line => {
+            if (line.material) line.material.opacity = opacity;
+          });
+        }
       });
 
       // Cleanup and memory management (run every 3 seconds to avoid performance issues)
