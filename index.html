@@ -173,9 +173,8 @@
     /* FRESH IMPLEMENTATION: Region Display */
     #region-display {
       position: absolute;
-      bottom: 150px;
-      left: 50%;
-      transform: translateX(-50%);
+      bottom: 30px;
+      left: 20px;
       background: linear-gradient(135deg, rgba(0,0,0,0.85), rgba(30,30,30,0.9));
       border: 2px solid #FFD700;
       border-radius: 15px;
@@ -2761,7 +2760,7 @@
       
       <div class="settings-item">
         <label for="auto-aim-checkbox">Auto-Aim</label>
-        <input type="checkbox" id="auto-aim-checkbox" checked>
+        <input type="checkbox" id="auto-aim-checkbox">
       </div>
       
       <div class="settings-item">
@@ -5929,11 +5928,12 @@
         this.hp -= finalAmount;
         createDamageNumber(Math.floor(finalAmount), this.mesh.position, isCrit);
         
-        // White hit flash effect (50ms) - FRESH IMPLEMENTATION
+        // Hit flash effect (50ms) - FRESH IMPLEMENTATION: Use red blood flash instead of white
         const originalColor = this.mesh.material.color.clone();
-        this.mesh.material.color.setHex(0xFFFFFF); // White flash
+        const bloodRed = 0x8B0000; // Dark red blood color
+        this.mesh.material.color.setHex(bloodRed); // Blood flash instead of white
         setTimeout(() => {
-          if (this.mesh && this.mesh.material) {
+          if (this.mesh && this.mesh.material && !this.isDead) {
             this.mesh.material.color.copy(originalColor);
           }
         }, 50);
@@ -6074,9 +6074,10 @@
           playSound('hit');
         }
         
-        // Flash
+        // Flash - use blood red instead of white to avoid freeze issue
         const oldColor = this.mesh.material.color.getHex();
-        this.mesh.material.color.setHex(0xFFFFFF);
+        const bloodRed = 0x8B0000; // Dark red blood color
+        this.mesh.material.color.setHex(bloodRed);
         
         // Enhanced splash particles using enemy's own color
         const enemyColor = oldColor;
@@ -6086,17 +6087,23 @@
         // Additional impact particles
         if (isCrit) {
           spawnParticles(this.mesh.position, enemyColor, 5);
-          spawnParticles(this.mesh.position, 0xFFFFFF, 3);
+          spawnParticles(this.mesh.position, 0xFF6347, 3); // Tomato red instead of white
         }
         
         // Enhanced squishy deformation on hit
         const squishScale = isCrit ? 0.7 : 0.85;
         this.mesh.scale.set(squishScale, 1.3, squishScale);
         setTimeout(() => {
-          this.mesh.scale.set(1, 1, 1);
+          if (this.mesh && !this.isDead) {
+            this.mesh.scale.set(1, 1, 1);
+          }
         }, 100);
         
-        setTimeout(() => this.mesh.material.color.setHex(oldColor), 50);
+        setTimeout(() => {
+          if (this.mesh && this.mesh.material && !this.isDead) {
+            this.mesh.material.color.setHex(oldColor);
+          }
+        }, 50);
 
         if (this.hp <= 0) {
           this.die();
@@ -6171,14 +6178,20 @@
         document.body.appendChild(flash);
         setTimeout(() => flash.remove(), this.isMiniBoss ? 100 : 50);
         
+        // CRITICAL FIX: Save position before removing mesh
+        const deathPosition = {
+          x: this.mesh.position.x,
+          z: this.mesh.position.z
+        };
+        
         scene.remove(this.mesh);
         this.mesh.geometry.dispose();
         this.mesh.material.dispose();
         
-        // Drop EXP
+        // Drop EXP - ALWAYS (using saved position)
         const expMultiplier = this.isMiniBoss ? 3 : 1;
         for (let i = 0; i < expMultiplier; i++) {
-          spawnExp(this.mesh.position.x, this.mesh.position.z);
+          spawnExp(deathPosition.x, deathPosition.z);
         }
         
         // PR #117: Drop GOLD - Reduced drop rate (chest-like rarity), bigger amounts
@@ -6221,9 +6234,9 @@
           }
         }
         
-        // Only spawn gold if amount > 0
+        // Only spawn gold if amount > 0 (using saved position)
         if (goldAmount > 0) {
-          spawnGold(this.mesh.position.x, this.mesh.position.z, goldAmount);
+          spawnGold(deathPosition.x, deathPosition.z, goldAmount);
         }
         
         // Phase 1: Gear drop system - enemies have a chance to drop gear
@@ -6241,7 +6254,7 @@
           saveData.inventory.push(newGear);
           saveSaveData();
           
-          // Show notification
+          // Show notification (using saved position)
           const rarityColors = {
             common: '#AAAAAA',
             uncommon: '#00FF00',
@@ -6249,7 +6262,9 @@
             epic: '#9B59B6',
             legendary: '#F39C12'
           };
-          createFloatingText(`+${newGear.name}`, this.mesh.position, rarityColors[newGear.rarity] || '#FFFFFF');
+          // Create a position vector for the floating text
+          const dropPos = new THREE.Vector3(deathPosition.x, 0.5, deathPosition.z);
+          createFloatingText(`+${newGear.name}`, dropPos, rarityColors[newGear.rarity] || '#FFFFFF');
           playSound('coin');
           
           console.log('[Phase 1 Gear Drop]', newGear.name, '-', newGear.rarity);
@@ -6257,7 +6272,7 @@
         
         playerStats.kills++;
         
-        // Track side challenge progress
+        // Track side challenge progress (using saved position)
         if (saveData.sideChallenges.kill10Enemies && !saveData.sideChallenges.kill10Enemies.completed) {
           saveData.sideChallenges.kill10Enemies.progress++;
           if (saveData.sideChallenges.kill10Enemies.progress >= saveData.sideChallenges.kill10Enemies.target) {
@@ -6265,14 +6280,16 @@
             // Award gold before saving to prevent loss on crash
             saveData.gold += 50;
             saveSaveData();
-            createFloatingText("Side Quest Complete: Kill 10 Enemies! +50 Gold", this.mesh.position, '#FFD700');
+            const questPos = new THREE.Vector3(deathPosition.x, 0.5, deathPosition.z);
+            createFloatingText("Side Quest Complete: Kill 10 Enemies! +50 Gold", questPos, '#FFD700');
           }
         }
         
-        // Track mini-boss defeats for achievements
+        // Track mini-boss defeats for achievements (using saved position)
         if (this.isMiniBoss) {
           playerStats.miniBossesDefeated++;
-          createFloatingText("MINI-BOSS DEFEATED! 🏆", this.mesh.position);
+          const bossPos = new THREE.Vector3(deathPosition.x, 0.5, deathPosition.z);
+          createFloatingText("MINI-BOSS DEFEATED! 🏆", bossPos);
         }
         
         updateHUD();
