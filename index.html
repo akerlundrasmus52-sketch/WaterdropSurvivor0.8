@@ -11842,6 +11842,7 @@
           const centerPos = killCamData.killPosition.clone();
           camera.position.x = centerPos.x + Math.cos(angle) * radius;
           camera.position.z = centerPos.z + Math.sin(angle) * radius;
+          camera.position.y = killCamData.originalCameraPos.y;
           camera.lookAt(centerPos.x, 0, centerPos.z);
           break;
           
