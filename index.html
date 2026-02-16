@@ -1542,287 +1542,6 @@
       height: 200px;
     }
 
-    /* COMIC BOOK PANEL SYSTEM - 80s Style */
-    .comic-panel-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.95);
-      z-index: 10000;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      animation: fadeIn 0.4s ease-out;
-    }
-
-    .comic-panel {
-      max-width: 90%;
-      max-height: 90%;
-      background: #FFFACD;
-      border: 8px solid #000;
-      box-shadow: 
-        0 0 0 4px #FFD700,
-        0 0 0 8px #000,
-        0 10px 30px rgba(0,0,0,0.7);
-      padding: 20px;
-      position: relative;
-      animation: comicPanelPop 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-    }
-
-    @keyframes comicPanelPop {
-      0% {
-        opacity: 0;
-        transform: scale(0.3) rotate(-5deg);
-      }
-      50% {
-        transform: scale(1.05) rotate(2deg);
-      }
-      100% {
-        opacity: 1;
-        transform: scale(1) rotate(0deg);
-      }
-    }
-
-    .comic-panel-border {
-      border: 3px dashed #000;
-      padding: 15px;
-      background: 
-        repeating-linear-gradient(
-          45deg,
-          transparent,
-          transparent 10px,
-          rgba(255,215,0,0.1) 10px,
-          rgba(255,215,0,0.1) 20px
-        );
-    }
-
-    .comic-panel-title {
-      font-size: 32px;
-      font-weight: 900;
-      color: #000;
-      text-align: center;
-      text-transform: uppercase;
-      letter-spacing: 3px;
-      margin-bottom: 20px;
-      text-shadow: 
-        3px 3px 0 #FFD700,
-        -1px -1px 0 #FFD700,
-        1px -1px 0 #FFD700,
-        -1px 1px 0 #FFD700,
-        1px 1px 0 #FFD700;
-      transform: skew(-2deg);
-    }
-
-    .comic-panel-image {
-      width: 100%;
-      max-width: 400px;
-      margin: 0 auto 20px;
-      border: 5px solid #000;
-      box-shadow: 0 5px 15px rgba(0,0,0,0.4);
-    }
-
-    .comic-speech-bubble {
-      position: relative;
-      background: #FFF;
-      border: 4px solid #000;
-      border-radius: 20px;
-      padding: 20px;
-      margin: 15px 0;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-    }
-
-    .comic-speech-bubble::before {
-      content: '';
-      position: absolute;
-      bottom: -20px;
-      left: 30px;
-      width: 0;
-      height: 0;
-      border-left: 20px solid transparent;
-      border-right: 0px solid transparent;
-      border-top: 20px solid #000;
-    }
-
-    .comic-speech-bubble::after {
-      content: '';
-      position: absolute;
-      bottom: -12px;
-      left: 34px;
-      width: 0;
-      height: 0;
-      border-left: 16px solid transparent;
-      border-right: 0px solid transparent;
-      border-top: 16px solid #FFF;
-    }
-
-    .comic-thought-bubble {
-      position: relative;
-      background: #FFF;
-      border: 4px solid #000;
-      border-radius: 50px;
-      padding: 20px 30px;
-      margin: 15px 0;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-    }
-
-    .comic-thought-bubble::before {
-      content: '';
-      position: absolute;
-      bottom: -30px;
-      left: 40px;
-      width: 20px;
-      height: 20px;
-      background: #FFF;
-      border: 4px solid #000;
-      border-radius: 50%;
-    }
-
-    .comic-thought-bubble::after {
-      content: '';
-      position: absolute;
-      bottom: -50px;
-      left: 50px;
-      width: 12px;
-      height: 12px;
-      background: #FFF;
-      border: 4px solid #000;
-      border-radius: 50%;
-    }
-
-    .comic-panel-text {
-      font-size: 18px;
-      line-height: 1.6;
-      color: #000;
-      font-weight: 600;
-      margin: 10px 0;
-    }
-
-    .comic-panel-button {
-      display: block;
-      margin: 20px auto 0;
-      background: #FF0000;
-      color: #FFF;
-      border: 4px solid #000;
-      padding: 15px 40px;
-      font-size: 22px;
-      font-weight: 900;
-      text-transform: uppercase;
-      cursor: pointer;
-      box-shadow: 
-        0 6px 0 #8B0000,
-        0 8px 15px rgba(0,0,0,0.4);
-      transition: all 0.1s ease;
-      letter-spacing: 2px;
-    }
-
-    .comic-panel-button:hover {
-      transform: translateY(2px);
-      box-shadow: 
-        0 4px 0 #8B0000,
-        0 6px 12px rgba(0,0,0,0.4);
-    }
-
-    .comic-panel-button:active {
-      transform: translateY(6px);
-      box-shadow: 
-        0 0px 0 #8B0000,
-        0 2px 8px rgba(0,0,0,0.4);
-    }
-
-    .comic-sound-effect {
-      font-size: 48px;
-      font-weight: 900;
-      color: #FF0000;
-      text-align: center;
-      text-transform: uppercase;
-      letter-spacing: 5px;
-      margin: 15px 0;
-      text-shadow: 
-        3px 3px 0 #FFD700,
-        6px 6px 0 #000;
-      transform: rotate(-5deg);
-      animation: comicShake 0.5s infinite alternate;
-    }
-
-    @keyframes comicShake {
-      0% { transform: rotate(-5deg) scale(1); }
-      100% { transform: rotate(5deg) scale(1.05); }
-    }
-
-    /* Equipment Slot Cards */
-    .equipment-slot-card {
-      background: linear-gradient(135deg, #2a3a4a 0%, #1a2a3a 100%);
-      border: 3px solid #555;
-      border-radius: 15px;
-      padding: 15px;
-      text-align: center;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      position: relative;
-    }
-
-    .equipment-slot-card:hover {
-      border-color: #F39C12;
-      box-shadow: 0 0 20px rgba(243,156,18,0.5);
-      transform: translateY(-5px);
-    }
-
-    .equipment-slot-card.equipped {
-      border-color: #00FF00;
-      box-shadow: 0 0 15px rgba(0,255,0,0.4);
-    }
-
-    .equipment-slot-icon {
-      font-size: 48px;
-      margin-bottom: 10px;
-      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
-    }
-
-    .equipment-slot-name {
-      font-size: 14px;
-      font-weight: bold;
-      color: #FFD700;
-      margin-bottom: 8px;
-      letter-spacing: 1px;
-    }
-
-    .equipment-slot-item {
-      font-size: 12px;
-      color: #AAA;
-      min-height: 40px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    /* Rarity Border Colors */
-    .rarity-common {
-      border-color: #FFFFFF !important;
-    }
-
-    .rarity-uncommon {
-      border-color: #1EFF00 !important;
-    }
-
-    .rarity-rare {
-      border-color: #0070DD !important;
-    }
-
-    .rarity-epic {
-      border-color: #A335EE !important;
-    }
-
-    .rarity-legendary {
-      border-color: #FF8000 !important;
-    }
-
-    .rarity-mythical {
-      border-color: #E6CC80 !important;
-      box-shadow: 0 0 20px rgba(230,204,128,0.6) !important;
-    }
-
     .back-btn {
       position: fixed;
       bottom: 20px;
@@ -2191,12 +1910,7 @@
       <button class="menu-btn" id="attributes-btn" style="position: relative;">ATTRIBUTES</button>
       <button class="menu-btn" id="gear-btn">GEAR & EQUIPMENT</button>
       <button class="menu-btn" id="achievements-btn">ACHIEVEMENTS</button>
-      <button class="menu-btn" id="wallet-btn">💰 WALLET</button>
-      <button class="menu-btn" id="marketplace-btn">🛒 MARKETPLACE</button>
       <button class="menu-btn" id="credits-btn">CREDITS</button>
-    </div>
-    <div style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); color: #FFD700; font-size: 14px; text-shadow: 0 0 10px rgba(255,215,0,0.5);">
-      Premium Game - $0.99 | No Ads
     </div>
   </div>
 
@@ -2266,80 +1980,22 @@
   </div>
 
   <!-- Gear & Equipment Screen -->
-  <!-- Gear & Equipment Screen - Enhanced UI with Character Model -->
   <div id="gear-screen" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 20; overflow-y: auto; flex-direction: column; align-items: center; justify-content: flex-start; padding: 20px;">
-    <div class="screen-title" style="color: #F39C12; font-size: 36px; margin: 20px 0; text-shadow: 0 0 10px rgba(243,156,18,0.8);">⚔️ EQUIPMENT</div>
+    <div class="screen-title" style="color: #F39C12; font-size: 36px; margin: 20px 0; text-shadow: 0 0 10px rgba(243,156,18,0.8);">GEAR & EQUIPMENT</div>
+    <div style="color: #FFD700; font-size: 18px; margin-bottom: 10px;">Equip gear to boost your attributes</div>
     
-    <!-- Main Equipment Layout: Character + Slots + Inventory -->
-    <div style="display: flex; gap: 20px; width: 100%; max-width: 1200px; margin: 0 auto; flex-wrap: wrap; justify-content: center;">
-      
-      <!-- Left: Equipment Slots (3 slots) -->
-      <div style="flex: 0 0 200px; display: flex; flex-direction: column; gap: 15px;">
-        <div class="equipment-slot-card" data-slot="helmet">
-          <div class="equipment-slot-icon">🪖</div>
-          <div class="equipment-slot-name">HELMET</div>
-          <div class="equipment-slot-item" id="slot-helmet-content">Empty</div>
-        </div>
-        <div class="equipment-slot-card" data-slot="weapon">
-          <div class="equipment-slot-icon">⚔️</div>
-          <div class="equipment-slot-name">WEAPON</div>
-          <div class="equipment-slot-item" id="slot-weapon-content">Empty</div>
-        </div>
-        <div class="equipment-slot-card" data-slot="ring">
-          <div class="equipment-slot-icon">💍</div>
-          <div class="equipment-slot-name">RING</div>
-          <div class="equipment-slot-item" id="slot-ring-content">Empty</div>
-        </div>
-      </div>
-      
-      <!-- Center: Character Model -->
-      <div style="flex: 0 0 300px; display: flex; flex-direction: column; align-items: center;">
-        <div id="character-display" style="position: relative; width: 250px; height: 300px; background: linear-gradient(135deg, #1a3a4a 0%, #0a1a2a 100%); border: 4px solid #F39C12; border-radius: 20px; display: flex; align-items: center; justify-content: center; margin-bottom: 15px; box-shadow: 0 0 30px rgba(243,156,18,0.5);">
-          <!-- Waterdrop Character -->
-          <div id="waterdrop-character" style="width: 120px; height: 150px; background: linear-gradient(135deg, #4FC3F7 0%, #29B6F6 50%, #039BE5 100%); border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%; box-shadow: 0 10px 30px rgba(79,195,247,0.5); position: relative;">
-            <!-- Equipment Visual Overlays -->
-            <div id="helmet-visual" class="equipment-visual" style="display: none; position: absolute; top: -10px; left: 50%; transform: translateX(-50%); width: 80%; height: 30px; background: linear-gradient(to bottom, #8B4513, #A0522D); border-radius: 50% 50% 0 0; border: 2px solid #000;"></div>
-            <div id="armor-visual" class="equipment-visual" style="display: none; position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); width: 90%; height: 50%; background: linear-gradient(135deg, #708090, #A9A9A9); border-radius: 10px; border: 2px solid #000; opacity: 0.8;"></div>
-            <div id="boots-visual" class="equipment-visual" style="display: none; position: absolute; bottom: -5px; left: 50%; transform: translateX(-50%); width: 70%; height: 20px; background: linear-gradient(to top, #654321, #8B4513); border-radius: 0 0 20px 20px; border: 2px solid #000;"></div>
-          </div>
-        </div>
-        <!-- Gear Stats Display -->
-        <div style="background: linear-gradient(to bottom, #2a3a4a, #1a2a3a); border: 2px solid #F39C12; border-radius: 10px; padding: 10px; width: 100%;">
-          <div style="color: #F39C12; font-size: 14px; font-weight: bold; margin-bottom: 8px; text-align: center;">Total Bonuses:</div>
-          <div id="gear-stats-content" style="font-size: 12px; color: #FFF; display: grid; grid-template-columns: 1fr 1fr; gap: 5px;">
-            <!-- Dynamically populated -->
-          </div>
-        </div>
-      </div>
-      
-      <!-- Right: Equipment Slots (3 slots) -->
-      <div style="flex: 0 0 200px; display: flex; flex-direction: column; gap: 15px;">
-        <div class="equipment-slot-card" data-slot="armor">
-          <div class="equipment-slot-icon">🛡️</div>
-          <div class="equipment-slot-name">ARMOR</div>
-          <div class="equipment-slot-item" id="slot-armor-content">Empty</div>
-        </div>
-        <div class="equipment-slot-card" data-slot="boots">
-          <div class="equipment-slot-icon">👢</div>
-          <div class="equipment-slot-name">BOOTS</div>
-          <div class="equipment-slot-item" id="slot-boots-content">Empty</div>
-        </div>
-        <div class="equipment-slot-card" data-slot="amulet">
-          <div class="equipment-slot-icon">📿</div>
-          <div class="equipment-slot-name">AMULET</div>
-          <div class="equipment-slot-item" id="slot-amulet-content">Empty</div>
-        </div>
-      </div>
-    </div>
-    
-    <!-- Bottom: Inventory -->
-    <div style="width: 100%; max-width: 1200px; margin-top: 30px;">
-      <div style="color: #FFD700; font-size: 24px; margin-bottom: 15px; text-align: center;">📦 INVENTORY</div>
-      <div id="gear-content" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; max-height: 400px; overflow-y: auto; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 10px; border: 2px solid #444;">
+    <!-- Gear Stats Display -->
+    <div id="gear-stats-display" style="background: linear-gradient(to bottom, #2a3a4a, #1a2a3a); border: 3px solid #F39C12; border-radius: 15px; padding: 15px; margin-bottom: 20px; width: 100%; max-width: 700px;">
+      <div style="color: #F39C12; font-size: 20px; font-weight: bold; margin-bottom: 10px;">Current Gear Bonuses:</div>
+      <div id="gear-stats-content" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;">
         <!-- Dynamically populated -->
       </div>
     </div>
     
+    <!-- Gear Slots -->
+    <div class="screen-content" id="gear-content" style="display: grid; gap: 15px; width: 100%; max-width: 900px; margin: 0 auto;">
+      <!-- Dynamically populated -->
+    </div>
     <button class="back-btn" id="gear-back-btn" style="margin-top: 20px;">BACK TO MENU</button>
   </div>
 
@@ -2350,116 +2006,6 @@
       <p>Made by Timmy Durell aka - TimmieTooth</p>
     </div>
     <button class="back-btn" id="credits-back-btn">BACK TO MENU</button>
-  </div>
-
-  <!-- Wallet Screen (Crypto UI Placeholder) -->
-  <div id="wallet-screen" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 20; overflow-y: auto; flex-direction: column; align-items: center; justify-content: flex-start; padding: 20px;">
-    <div class="screen-title" style="color: #FFD700; font-size: 36px; margin: 20px 0; text-shadow: 0 0 10px rgba(255,215,0,0.8);">💰 WATERCOIN WALLET</div>
-    <div style="color: #AAA; font-size: 16px; margin-bottom: 30px;">Solana-based WaterCoin Integration (UI Placeholder)</div>
-    
-    <!-- Wallet Balance -->
-    <div style="background: linear-gradient(135deg, #1a3a4a 0%, #0a1a2a 100%); border: 4px solid #FFD700; border-radius: 20px; padding: 30px; width: 100%; max-width: 600px; margin-bottom: 30px; box-shadow: 0 0 30px rgba(255,215,0,0.5);">
-      <div style="color: #AAA; font-size: 14px; margin-bottom: 10px;">Your Balance</div>
-      <div style="color: #FFD700; font-size: 48px; font-weight: bold; margin-bottom: 10px;">0.00 WCOIN</div>
-      <div style="color: #888; font-size: 12px;">≈ $0.00 USD</div>
-    </div>
-    
-    <!-- Wallet Actions -->
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; width: 100%; max-width: 800px; margin-bottom: 30px;">
-      <div class="equipment-slot-card" style="cursor: pointer;">
-        <div class="equipment-slot-icon">📥</div>
-        <div class="equipment-slot-name">DEPOSIT</div>
-        <div style="font-size: 14px; color: #AAA; margin-top: 10px;">Transfer WaterCoin from your Solana wallet</div>
-      </div>
-      <div class="equipment-slot-card" style="cursor: pointer;">
-        <div class="equipment-slot-icon">📤</div>
-        <div class="equipment-slot-name">WITHDRAW</div>
-        <div style="font-size: 14px; color: #AAA; margin-top: 10px;">Transfer WaterCoin to your Solana wallet</div>
-      </div>
-      <div class="equipment-slot-card" style="cursor: pointer;">
-        <div class="equipment-slot-icon">📊</div>
-        <div class="equipment-slot-name">STAKE</div>
-        <div style="font-size: 14px; color: #AAA; margin-top: 10px;">Earn rewards by staking WaterCoin</div>
-      </div>
-    </div>
-    
-    <!-- NFT Minting -->
-    <div style="background: linear-gradient(to bottom, #2a3a4a, #1a2a3a); border: 3px solid #9B59B6; border-radius: 15px; padding: 25px; width: 100%; max-width: 800px; margin-bottom: 20px;">
-      <div style="color: #9B59B6; font-size: 24px; font-weight: bold; margin-bottom: 15px;">🎨 NFT MINTING</div>
-      <div style="color: #CCC; font-size: 14px; line-height: 1.6; margin-bottom: 20px;">
-        Mint your character as an NFT! This creates a unique token on Solana blockchain with your current stats, gear, and achievements.
-      </div>
-      <button class="equipment-slot-card" style="width: 100%; padding: 20px; cursor: pointer; border-color: #9B59B6;">
-        <div style="font-size: 32px; margin-bottom: 10px;">⚡</div>
-        <div style="color: #9B59B6; font-size: 18px; font-weight: bold;">MINT CHARACTER NFT</div>
-        <div style="font-size: 12px; color: #888; margin-top: 10px;">Cost: 0.1 SOL + Gas Fees</div>
-      </button>
-    </div>
-    
-    <div style="background: rgba(255,215,0,0.1); border: 2px solid #FFD700; border-radius: 10px; padding: 15px; max-width: 800px; margin-bottom: 20px;">
-      <div style="color: #FFD700; font-size: 14px; font-weight: bold; margin-bottom: 8px;">ℹ️ NOTE: UI PLACEHOLDER</div>
-      <div style="color: #AAA; font-size: 12px; line-height: 1.5;">
-        This is a placeholder interface for WaterCoin integration. Actual blockchain functionality requires Solana wallet connection and smart contract deployment.
-      </div>
-    </div>
-    
-    <button class="back-btn" id="wallet-back-btn">BACK TO MENU</button>
-  </div>
-
-  <!-- Marketplace Screen (Trading UI Placeholder) -->
-  <div id="marketplace-screen" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 20; overflow-y: auto; flex-direction: column; align-items: center; justify-content: flex-start; padding: 20px;">
-    <div class="screen-title" style="color: #5DADE2; font-size: 36px; margin: 20px 0; text-shadow: 0 0 10px rgba(93,173,226,0.8);">🛒 MARKETPLACE</div>
-    <div style="color: #AAA; font-size: 16px; margin-bottom: 30px;">Trade Equipment & Items with Other Players</div>
-    
-    <!-- Marketplace Tabs -->
-    <div style="display: flex; gap: 15px; margin-bottom: 25px;">
-      <button class="btn" style="padding: 12px 24px; background: #5DADE2;">BUY</button>
-      <button class="btn" style="padding: 12px 24px; background: #3a3a3a;">SELL</button>
-      <button class="btn" style="padding: 12px 24px; background: #3a3a3a;">MY LISTINGS</button>
-    </div>
-    
-    <!-- Featured Items -->
-    <div style="width: 100%; max-width: 1200px;">
-      <div style="color: #FFD700; font-size: 22px; margin-bottom: 20px;">⭐ Featured Items</div>
-      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; margin-bottom: 40px;">
-        <!-- Sample Item 1 -->
-        <div class="equipment-slot-card rarity-legendary" style="cursor: pointer;">
-          <div style="font-size: 48px; margin-bottom: 10px;">⚔️</div>
-          <div style="color: #FF8000; font-size: 18px; font-weight: bold; margin-bottom: 8px;">Dragon Slayer Sword</div>
-          <div style="font-size: 12px; color: #AAA; margin-bottom: 10px;">Legendary Weapon</div>
-          <div style="font-size: 14px; color: #90ee90; margin-bottom: 15px;">+50 Damage<br>+25 Critical</div>
-          <div style="color: #FFD700; font-size: 16px; font-weight: bold;">2.5 WCOIN</div>
-          <div style="font-size: 11px; color: #888; margin-top: 5px;">Seller: DragonHunter92</div>
-        </div>
-        <!-- Sample Item 2 -->
-        <div class="equipment-slot-card rarity-epic" style="cursor: pointer;">
-          <div style="font-size: 48px; margin-bottom: 10px;">🛡️</div>
-          <div style="color: #A335EE; font-size: 18px; font-weight: bold; margin-bottom: 8px;">Titanium Plate Armor</div>
-          <div style="font-size: 12px; color: #AAA; margin-bottom: 10px;">Epic Armor</div>
-          <div style="font-size: 14px; color: #90ee90; margin-bottom: 15px;">+40 Defense<br>+20 HP</div>
-          <div style="color: #FFD700; font-size: 16px; font-weight: bold;">1.8 WCOIN</div>
-          <div style="font-size: 11px; color: #888; margin-top: 5px;">Seller: TankMaster</div>
-        </div>
-        <!-- Sample Item 3 -->
-        <div class="equipment-slot-card rarity-mythical" style="cursor: pointer;">
-          <div style="font-size: 48px; margin-bottom: 10px;">📿</div>
-          <div style="color: #E6CC80; font-size: 18px; font-weight: bold; margin-bottom: 8px;">Amulet of Eternity</div>
-          <div style="font-size: 12px; color: #AAA; margin-bottom: 10px;">Mythical Amulet</div>
-          <div style="font-size: 14px; color: #90ee90; margin-bottom: 15px;">+100 Magic<br>+50 Luck</div>
-          <div style="color: #FFD700; font-size: 16px; font-weight: bold;">10.0 WCOIN</div>
-          <div style="font-size: 11px; color: #888; margin-top: 5px;">Seller: MysticWizard</div>
-        </div>
-      </div>
-    </div>
-    
-    <div style="background: rgba(93,173,226,0.1); border: 2px solid #5DADE2; border-radius: 10px; padding: 15px; max-width: 800px; margin-bottom: 20px;">
-      <div style="color: #5DADE2; font-size: 14px; font-weight: bold; margin-bottom: 8px;">ℹ️ NOTE: UI PLACEHOLDER</div>
-      <div style="color: #AAA; font-size: 12px; line-height: 1.5;">
-        This is a placeholder marketplace interface. Actual trading functionality requires backend server, database, and WaterCoin smart contracts on Solana.
-      </div>
-    </div>
-    
-    <button class="back-btn" id="marketplace-back-btn">BACK TO MENU</button>
   </div>
 
   <!-- Camp Screen -->
@@ -2526,9 +2072,7 @@
           Training Points Available: <span id="training-points-display" style="color: #FFD700; font-weight: bold;">0</span>
         </p>
         <p style="font-size: 14px; color: #AAA; line-height: 1.6;">
-          <b>Training Sessions:</b> Each training session takes <span style="color: #FFD700;">48 in-game hours</span> (~20 real minutes).<br>
-          <b>Earning Points:</b> You earn 1 training point every 24 real hours (max 2 per in-game day).<br>
-          <b>Cost:</b> Spend gold + 1 training point to permanently increase an attribute by +1.
+          You earn 1 training point every 24 hours. Spend gold + 1 training point to permanently increase an attribute by +1.
         </p>
         <p style="font-size: 12px; color: #888; margin-top: 10px;" id="next-training-point-time">
           Next training point in: Calculating...
@@ -8082,26 +7626,26 @@
       inventory: [],
       // Phase 5: Companion System
       companions: {
-        stormWolf: { unlocked: false, level: 1, xp: 0 }, // Locked initially - receive as egg reward
+        stormWolf: { unlocked: true, level: 1, xp: 0 },
         skyFalcon: { unlocked: false, level: 1, xp: 0 },
         waterSpirit: { unlocked: false, level: 1, xp: 0 }
       },
-      selectedCompanion: null, // No companion at start
-      // Camp System - All Buildings LOCKED by default for Tutorial (unlock through quests)
+      selectedCompanion: 'stormWolf', // Default companion
+      // Camp System - All Buildings FREE and Level 1 (Comprehensive Re-implementation)
       campBuildings: {
-        // Free buildings - unlocked via tutorial
-        questMission: { level: 1, maxLevel: 10, unlocked: false },
-        inventory: { level: 1, maxLevel: 10, unlocked: false },
-        campHub: { level: 1, maxLevel: 10, unlocked: false },
-        loreMaster: { level: 1, maxLevel: 10, unlocked: false }, // NEW: Lore/Story building (placeholder for future lore content - currently inactive)
-        // Paid buildings - unlocked via quest progression
-        skillTree: { level: 1, maxLevel: 10, unlocked: false },
-        companionHouse: { level: 1, maxLevel: 10, unlocked: false },
-        forge: { level: 1, maxLevel: 10, unlocked: false },
-        armory: { level: 1, maxLevel: 10, unlocked: false },
-        trainingHall: { level: 1, maxLevel: 10, unlocked: false },
-        trashRecycle: { level: 1, maxLevel: 10, unlocked: false },
-        tempShop: { level: 1, maxLevel: 10, unlocked: false },
+        // Free buildings - all unlocked at start
+        questMission: { level: 1, maxLevel: 10, unlocked: true },
+        inventory: { level: 1, maxLevel: 10, unlocked: true },
+        campHub: { level: 1, maxLevel: 10, unlocked: true },
+        loreMaster: { level: 1, maxLevel: 10, unlocked: true }, // NEW: Lore/Story building (placeholder for future lore content - currently inactive)
+        // Previously paid buildings - now FREE at Level 1
+        skillTree: { level: 1, maxLevel: 10, unlocked: true },
+        companionHouse: { level: 1, maxLevel: 10, unlocked: true },
+        forge: { level: 1, maxLevel: 10, unlocked: true },
+        armory: { level: 1, maxLevel: 10, unlocked: true },
+        trainingHall: { level: 1, maxLevel: 10, unlocked: true },
+        trashRecycle: { level: 1, maxLevel: 10, unlocked: true },
+        tempShop: { level: 1, maxLevel: 10, unlocked: true },
         // Legacy buildings (for compatibility)
         trainingGrounds: { level: 0, maxLevel: 10, unlocked: false },
         library: { level: 0, maxLevel: 10, unlocked: false },
@@ -8166,7 +7710,7 @@
         arcaneEmpowerment: { unlocked: false, level: 0, maxLevel: 5 },
         elementalOverload: { unlocked: false, level: 0, maxLevel: 3 }
       },
-      skillPoints: 0, // Start with 0 skill points (earn first one as tutorial reward)
+      skillPoints: 2, // Start with 2 skill points
       // Camp state
       hasVisitedCamp: false, // Track first camp visit
       nextRunTimeOfDay: 'day', // 'day' or 'night' - chosen from sleep option
@@ -8188,20 +7732,6 @@
           companionHouse: false,
           trainingHall: false,
           tempShop: false
-        }
-      },
-      // Tutorial System - Comic Book Style
-      tutorial: {
-        isActive: true, // Tutorial is active for new players
-        comicsShown: [], // List of comic panels already shown
-        firstRunCompleted: false, // First run died or level up
-        hasReceivedEgg: false, // Received companion egg
-        hasHatchedEgg: false, // Hatched the egg
-        freeRewardsGiven: {
-          gold: false,
-          skillPoint: false,
-          companionEgg: false,
-          attributes: false
         }
       },
       // Side challenges
@@ -8231,15 +7761,11 @@
           saveData.trainingPoints = saveData.trainingPoints || 0;
           saveData.lastTrainingPointTime = saveData.lastTrainingPointTime || 0;
           saveData.skillPoints = saveData.skillPoints || 0;
-          saveData.selectedCompanion = saveData.selectedCompanion ?? null;
+          saveData.selectedCompanion = saveData.selectedCompanion || 'stormWolf';
           // Story quest system (new fields)
           saveData.storyQuests = { ...defaultSaveData.storyQuests, ...(saveData.storyQuests || {}) };
           saveData.storyQuests.buildingFirstUse = { ...defaultSaveData.storyQuests.buildingFirstUse, ...(saveData.storyQuests.buildingFirstUse || {}) };
           saveData.sideChallenges = { ...defaultSaveData.sideChallenges, ...(saveData.sideChallenges || {}) };
-          // Tutorial system (new fields)
-          saveData.tutorial = { ...defaultSaveData.tutorial, ...(saveData.tutorial || {}) };
-          saveData.tutorial.freeRewardsGiven = { ...defaultSaveData.tutorial.freeRewardsGiven, ...(saveData.tutorial?.freeRewardsGiven || {}) };
-          saveData.tutorial.comicsShown = saveData.tutorial?.comicsShown || [];
         }
       } catch (e) {
         console.error('Failed to load save data:', e);
@@ -8901,114 +8427,90 @@
       // Calculate total gear bonuses
       const gearStats = calculateGearStats();
       
-      // Update stats display (compact version)
+      // Update stats display
       let statsHtml = '';
       for (const statKey in GEAR_ATTRIBUTES) {
         const stat = GEAR_ATTRIBUTES[statKey];
         const value = gearStats[statKey] || 0;
-        if (value > 0) {
-          statsHtml += `<div style="color: ${stat.color}; font-size: 11px;"><span style="font-size: 14px;">${stat.icon}</span> +${value}</div>`;
-        }
-      }
-      statsContent.innerHTML = statsHtml || '<div style="color: #777; text-align: center; grid-column: 1 / -1;">No bonuses</div>';
-      
-      // Update equipment slot displays
-      const slots = ['helmet', 'weapon', 'ring', 'armor', 'boots', 'amulet'];
-      for (const slotKey of slots) {
-        const equippedId = saveData.equippedGear[slotKey];
-        const equippedGear = equippedId ? saveData.inventory.find(g => g.id === equippedId) : null;
-        const slotContent = document.getElementById(`slot-${slotKey}-content`);
-        const slotCard = document.querySelector(`.equipment-slot-card[data-slot="${slotKey}"]`);
-        
-        if (slotContent && slotCard) {
-          if (equippedGear) {
-            slotContent.innerHTML = `
-              <div style="color: ${getRarityColor(equippedGear.rarity)}; font-weight: bold; margin-bottom: 5px;">${equippedGear.name}</div>
-              <div style="font-size: 10px; color: #999;">${Object.entries(equippedGear.stats).map(([stat, val]) => `+${val} ${GEAR_ATTRIBUTES[stat].icon}`).join(' ')}</div>
-            `;
-            slotCard.classList.add('equipped');
-            slotCard.classList.add(`rarity-${equippedGear.rarity}`);
-          } else {
-            slotContent.textContent = 'Empty';
-            slotCard.classList.remove('equipped');
-            ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythical'].forEach(r => slotCard.classList.remove(`rarity-${r}`));
-          }
-        }
-      }
-      
-      // Update character visuals
-      updateCharacterVisuals();
-      
-      // Update inventory grid
-      let inventoryHtml = '';
-      for (const gear of saveData.inventory) {
-        const isEquipped = Object.values(saveData.equippedGear).includes(gear.id);
-        inventoryHtml += `
-          <div class="equipment-slot-card rarity-${gear.rarity}" style="cursor: pointer; ${isEquipped ? 'opacity: 0.6;' : ''}" onclick="handleGearClick('${gear.id}')">
-            <div style="font-size: 32px; margin-bottom: 8px;">${getGearIcon(gear.type)}</div>
-            <div style="color: ${getRarityColor(gear.rarity)}; font-size: 14px; font-weight: bold; margin-bottom: 5px;">${gear.name}</div>
-            <div style="font-size: 11px; color: #AAA; margin-bottom: 8px;">${gear.description}</div>
-            <div style="font-size: 10px; color: #90ee90;">
-              ${Object.entries(gear.stats).map(([stat, val]) => `<div>+${val} ${GEAR_ATTRIBUTES[stat].name}</div>`).join('')}
+        statsHtml += `
+          <div style="display: flex; align-items: center; gap: 10px; padding: 5px;">
+            <span style="font-size: 24px;">${stat.icon}</span>
+            <div>
+              <div style="color: ${stat.color}; font-size: 14px; font-weight: bold;">${stat.name}</div>
+              <div style="color: #FFD700; font-size: 16px; font-weight: bold;">+${value}</div>
             </div>
-            ${isEquipped ? '<div style="color: #0F0; font-size: 12px; margin-top: 8px;">✓ EQUIPPED</div>' : ''}
           </div>
         `;
       }
-      content.innerHTML = inventoryHtml || '<div style="color: #777; text-align: center; padding: 40px; grid-column: 1 / -1;">No items in inventory</div>';
-    }
-
-    function getGearIcon(type) {
-      const icons = {
-        weapon: '⚔️',
-        armor: '🛡️',
-        helmet: '🪖',
-        boots: '👢',
-        ring: '💍',
-        amulet: '📿'
-      };
-      return icons[type] || '❓';
-    }
-
-    function updateCharacterVisuals() {
-      // Show/hide visual overlays based on equipped gear
-      const helmetVisual = document.getElementById('helmet-visual');
-      const armorVisual = document.getElementById('armor-visual');
-      const bootsVisual = document.getElementById('boots-visual');
+      statsContent.innerHTML = statsHtml;
       
-      if (helmetVisual) {
-        helmetVisual.style.display = saveData.equippedGear.helmet ? 'block' : 'none';
-      }
-      if (armorVisual) {
-        armorVisual.style.display = saveData.equippedGear.armor ? 'block' : 'none';
-      }
-      if (bootsVisual) {
-        bootsVisual.style.display = saveData.equippedGear.boots ? 'block' : 'none';
-      }
-    }
-
-    function handleGearClick(gearId) {
-      const gear = saveData.inventory.find(g => g.id === gearId);
-      if (!gear) return;
+      // Phase 1: Build gear slots display for all 6 slots
+      let html = '';
       
-      const isEquipped = Object.values(saveData.equippedGear).includes(gearId);
+      const slots = [
+        { key: 'weapon', name: 'Weapon', icon: '⚔️' },
+        { key: 'armor', name: 'Armor', icon: '🛡️' },
+        { key: 'helmet', name: 'Helmet', icon: '⛑️' },
+        { key: 'boots', name: 'Boots', icon: '👢' },
+        { key: 'ring', name: 'Ring', icon: '💍' },
+        { key: 'amulet', name: 'Amulet', icon: '📿' }
+      ];
       
-      if (isEquipped) {
-        // Unequip
-        for (const slot in saveData.equippedGear) {
-          if (saveData.equippedGear[slot] === gearId) {
-            saveData.equippedGear[slot] = null;
-            break;
-          }
-        }
-      } else {
-        // Equip to appropriate slot
-        saveData.equippedGear[gear.type] = gearId;
+      for (const slot of slots) {
+        const equippedId = saveData.equippedGear[slot.key];
+        const equippedGear = equippedId ? saveData.inventory.find(g => g.id === equippedId) : null;
+        
+        html += `
+          <div style="background: linear-gradient(to bottom, #2a3a4a, #1a2a3a); border: 3px solid #F39C12; border-radius: 15px; padding: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 32px;">${slot.icon}</span>
+                <div style="color: #F39C12; font-size: 20px; font-weight: bold;">${slot.name}</div>
+              </div>
+            </div>
+            ${equippedGear ? `
+              <div style="background: rgba(0,0,0,0.3); border: 2px solid ${getRarityColor(equippedGear.rarity)}; border-radius: 10px; padding: 15px;">
+                <div style="color: ${getRarityColor(equippedGear.rarity)}; font-size: 18px; font-weight: bold; margin-bottom: 5px;">
+                  ${equippedGear.name}
+                </div>
+                <div style="color: #aaa; font-size: 13px; margin-bottom: 10px;">${equippedGear.description}</div>
+                <div style="margin-bottom: 10px;">
+                  ${Object.entries(equippedGear.stats).map(([stat, val]) => `
+                    <div style="color: #90ee90; font-size: 13px;">• ${GEAR_ATTRIBUTES[stat].name}: +${val}</div>
+                  `).join('')}
+                </div>
+                <button onclick="unequipGear('${slot.key}')" style="padding: 8px 15px; background: linear-gradient(to bottom, #c0392b, #a93226); color: white; border: 2px solid #e74c3c; border-radius: 8px; cursor: pointer; font-weight: bold;">UNEQUIP</button>
+              </div>
+            ` : `
+              <div style="color: #777; font-size: 14px; text-align: center; padding: 20px;">
+                Empty Slot
+              </div>
+            `}
+            <div style="margin-top: 15px;">
+              <div style="color: #5DADE2; font-size: 16px; font-weight: bold; margin-bottom: 10px;">Available Gear:</div>
+              <div style="display: grid; gap: 10px; max-height: 200px; overflow-y: auto;">
+                ${saveData.inventory.filter(g => {
+                  const gearType = g.type === 'accessory' ? (slot.key === 'accessory1' || slot.key === 'accessory2') : g.type === slot.key;
+                  const notEquipped = g.id !== equippedId;
+                  return gearType && notEquipped;
+                }).map(gear => `
+                  <div style="background: rgba(0,0,0,0.4); border: 2px solid ${getRarityColor(gear.rarity)}; border-radius: 8px; padding: 10px; cursor: pointer;" onclick="equipGear('${slot.key}', '${gear.id}')">
+                    <div style="color: ${getRarityColor(gear.rarity)}; font-size: 14px; font-weight: bold;">${gear.name}</div>
+                    <div style="color: #999; font-size: 11px;">${gear.description}</div>
+                    <div style="margin-top: 5px;">
+                      ${Object.entries(gear.stats).map(([stat, val]) => `
+                        <span style="color: #90ee90; font-size: 11px; margin-right: 10px;">+${val} ${GEAR_ATTRIBUTES[stat].icon}</span>
+                      `).join('')}
+                    </div>
+                  </div>
+                `).join('') || '<div style="color: #777; font-size: 12px; padding: 10px;">No available gear for this slot</div>'}
+              </div>
+            </div>
+          </div>
+        `;
       }
       
-      saveSaveData();
-      playSound('waterdrop');
-      updateGearScreen();
+      content.innerHTML = html;
     }
 
     function getRarityColor(rarity) {
@@ -10112,14 +9614,7 @@
     }
 
     // Training Hall constants
-    // Training Hall configuration
-    // Real-time conversion: 10 minutes = 24h in-game
-    // So 20 minutes = 48h in-game for training
-    const REAL_TIME_TO_GAME_TIME_RATIO = 24 * 60 / 10; // 24 hours = 10 minutes (ratio of 144)
-    const TRAINING_SESSION_GAME_HOURS = 48; // Training takes 48 in-game hours
-    const TRAINING_SESSION_REAL_MS = (TRAINING_SESSION_GAME_HOURS * 60 * 1000) / REAL_TIME_TO_GAME_TIME_RATIO; // 48 * 60 * 1000 / 144 = 20,000ms = 20 seconds (for demo purposes - adjust as needed)
-    const TRAINING_POINT_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 real hours to earn 1 training point
-    const MAX_TRAINING_POINTS_PER_DAY = 2; // Limit 2 training points per in-game day
+    const TRAINING_POINT_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours
     
     // Fun combo names (defined once to avoid recreation)
     const FUN_COMBO_NAMES = [
@@ -10176,46 +9671,25 @@
       
       // Training cost scales: 100g for first point, +50g per point
       const TRAINING_ATTRIBUTES = {
-        dexterity: {
-          name: 'Dexterity',
-          icon: '🎯',
-          description: 'Increases accuracy and critical hit chance',
-          current: saveData.attributes.dexterity || 0,
+        strength: {
+          name: 'Strength',
+          icon: '💪',
+          description: 'Increases damage output',
+          current: saveData.attributes.strength || 0,
           baseCost: 100
         },
-        vitality: {
-          name: 'Vitality',
-          icon: '❤️',
-          description: 'Increases max health and health regeneration',
-          current: saveData.attributes.vitality || 0,
-          baseCost: 100
-        },
-        luck: {
-          name: 'Luck',
-          icon: '🍀',
-          description: 'Improves loot quality and drop rates',
-          current: saveData.attributes.luck || 0,
+        endurance: {
+          name: 'Endurance',
+          icon: '🏃',
+          description: 'Increases stamina and high-speed duration',
+          current: saveData.attributes.endurance || 0,
           baseCost: 100
         },
         flexibility: {
-          name: 'Flexibility (Speed)',
-          icon: '⚡',
-          description: 'Increases movement speed and dodge ability',
+          name: 'Flexibility',
+          icon: '🤸',
+          description: 'Improves turn speed and dodge responsiveness',
           current: saveData.attributes.flexibility || 0,
-          baseCost: 100
-        },
-        wisdom: {
-          name: 'Magic',
-          icon: '🔮',
-          description: 'Increases magical damage and mana',
-          current: saveData.attributes.wisdom || 0,
-          baseCost: 100
-        },
-        strength: {
-          name: 'Physics (Strength)',
-          icon: '💪',
-          description: 'Increases physical damage and knockback',
-          current: saveData.attributes.strength || 0,
           baseCost: 100
         }
       };
@@ -10493,214 +9967,9 @@
       document.body.appendChild(overlay);
     }
 
-    // --- COMIC BOOK PANEL SYSTEM ---
-    function showComicPanel(config) {
-      const {
-        title = 'STORY',
-        text = '',
-        speechBubble = null,
-        thoughtBubble = null,
-        soundEffect = null,
-        buttonText = 'CONTINUE!',
-        onClose = null
-      } = config;
-
-      // Create overlay
-      const overlay = document.createElement('div');
-      overlay.className = 'comic-panel-overlay';
-
-      // Create panel
-      const panel = document.createElement('div');
-      panel.className = 'comic-panel';
-
-      // Create border
-      const border = document.createElement('div');
-      border.className = 'comic-panel-border';
-
-      // Title
-      const titleEl = document.createElement('div');
-      titleEl.className = 'comic-panel-title';
-      titleEl.textContent = title;
-      border.appendChild(titleEl);
-
-      // Main text
-      if (text) {
-        const textEl = document.createElement('div');
-        textEl.className = 'comic-panel-text';
-        textEl.innerHTML = text;
-        border.appendChild(textEl);
-      }
-
-      // Sound effect
-      if (soundEffect) {
-        const soundEl = document.createElement('div');
-        soundEl.className = 'comic-sound-effect';
-        soundEl.textContent = soundEffect;
-        border.appendChild(soundEl);
-      }
-
-      // Speech bubble
-      if (speechBubble) {
-        const speechEl = document.createElement('div');
-        speechEl.className = 'comic-speech-bubble';
-        const speechTextEl = document.createElement('div');
-        speechTextEl.className = 'comic-panel-text';
-        speechTextEl.innerHTML = speechBubble;
-        speechEl.appendChild(speechTextEl);
-        border.appendChild(speechEl);
-      }
-
-      // Thought bubble
-      if (thoughtBubble) {
-        const thoughtEl = document.createElement('div');
-        thoughtEl.className = 'comic-thought-bubble';
-        const thoughtTextEl = document.createElement('div');
-        thoughtTextEl.className = 'comic-panel-text';
-        thoughtTextEl.innerHTML = thoughtBubble;
-        thoughtEl.appendChild(thoughtTextEl);
-        border.appendChild(thoughtEl);
-      }
-
-      // Button
-      const button = document.createElement('button');
-      button.className = 'comic-panel-button';
-      button.textContent = buttonText;
-      button.onclick = () => {
-        document.body.removeChild(overlay);
-        if (onClose) onClose();
-      };
-      border.appendChild(button);
-
-      panel.appendChild(border);
-      overlay.appendChild(panel);
-      document.body.appendChild(overlay);
-      
-      playSound('achievement');
-    }
-
-    // Tutorial system - Free rewards comic
-    function showFirstRewardsComic() {
-      if (!saveData.tutorial.comicsShown.includes('freeRewards')) {
-        saveData.tutorial.comicsShown.push('freeRewards');
-        
-        showComicPanel({
-          title: 'YOUR FIRST REWARDS!',
-          text: 'As a new hero, you deserve some starting gear:',
-          speechBubble: '💰 <b>50 Gold</b> to get you started<br>⭐ <b>1 Skill Point</b> to unlock your first ability<br>🥚 <b>A Mysterious Egg</b> - your first companion!<br>📊 <b>3 Attribute Points</b> for training',
-          soundEffect: 'KA-CHING!',
-          buttonText: 'AWESOME!',
-          onClose: () => {
-            // Give free rewards
-            if (!saveData.tutorial.freeRewardsGiven.gold) {
-              saveData.gold += 50;
-              saveData.tutorial.freeRewardsGiven.gold = true;
-            }
-            if (!saveData.tutorial.freeRewardsGiven.skillPoint) {
-              saveData.skillPoints += 1;
-              saveData.tutorial.freeRewardsGiven.skillPoint = true;
-            }
-            if (!saveData.tutorial.freeRewardsGiven.attributes) {
-              saveData.unspentAttributePoints += 3;
-              saveData.tutorial.freeRewardsGiven.attributes = true;
-            }
-            if (!saveData.tutorial.freeRewardsGiven.companionEgg) {
-              saveData.tutorial.hasReceivedEgg = true;
-              saveData.tutorial.freeRewardsGiven.companionEgg = true;
-            }
-            saveSaveData();
-            
-            // Show egg hatching comic
-            showEggHatchingComic();
-          }
-        });
-      }
-    }
-
-    // Tutorial system - Egg hatching comic
-    function showEggHatchingComic() {
-      if (!saveData.tutorial.comicsShown.includes('eggHatching')) {
-        saveData.tutorial.comicsShown.push('eggHatching');
-        
-        showComicPanel({
-          title: 'THE EGG HATCHES!',
-          thoughtBubble: 'What could be inside...?',
-          speechBubble: '<b>*CRACK* *CRACK*</b><br><br>A cute Storm Wolf pup emerges! It will fight by your side in battle.',
-          soundEffect: 'CRACK!',
-          buttonText: 'SO CUTE!',
-          onClose: () => {
-            // Hatch the egg - unlock Storm Wolf companion
-            if (!saveData.tutorial.hasHatchedEgg) {
-              saveData.companions.stormWolf.unlocked = true;
-              saveData.selectedCompanion = 'stormWolf';
-              saveData.tutorial.hasHatchedEgg = true;
-              
-              // Unlock companion house
-              saveData.campBuildings.companionHouse.unlocked = true;
-              saveSaveData();
-            }
-            
-            // Show explanation of unlocks
-            showUnlockExplanationComic();
-          }
-        });
-      }
-    }
-
-    // Tutorial system - Explain unlocking buildings
-    function showUnlockExplanationComic() {
-      if (!saveData.tutorial.comicsShown.includes('unlockExplanation')) {
-        saveData.tutorial.comicsShown.push('unlockExplanation');
-        
-        showComicPanel({
-          title: 'UNLOCK YOUR POWER!',
-          text: 'Buildings are the key to becoming stronger:',
-          speechBubble: '🏛️ <b>Skill Tree</b>: Unlock powerful abilities<br>⚒️ <b>Forge</b>: Craft better equipment<br>🏋️ <b>Training Hall</b>: Train your attributes<br>🛡️ <b>Armory</b>: Manage your gear<br><br>Complete quests or use gold to unlock them!',
-          buttonText: 'LET\'S START!',
-          onClose: () => {
-            // Mark tutorial as less active (still tracking but main intro done)
-            saveSaveData();
-            updateCampScreen(); // Refresh the camp screen
-            updateGoldDisplays(); // Update gold display
-            document.getElementById('camp-screen').style.display = 'flex'; // Show camp screen after tutorial
-          }
-        });
-      }
-    }
-
     function updateCampScreen() {
-      // Check for first-time camp visit with COMIC BOOK TUTORIAL
-      if (!saveData.hasVisitedCamp && saveData.tutorial.isActive) {
-        saveData.hasVisitedCamp = true;
-        
-        // Show first comic panel - Welcome to Camp
-        if (!saveData.tutorial.comicsShown.includes('welcome')) {
-          saveData.tutorial.comicsShown.push('welcome');
-          saveSaveData();
-          
-          // Show comic immediately (not in setTimeout) so return value works correctly
-          showComicPanel({
-            title: 'WATERDROP CAMP!',
-            speechBubble: '<b>You survived your first encounter!</b><br><br>Welcome to your base camp, brave water droplet. This is where heroes rest, train, and prepare for battle.',
-            soundEffect: 'WHOOSH!',
-            buttonText: 'AMAZING!',
-            onClose: () => {
-              // Unlock basic buildings after first comic
-              saveData.campBuildings.questMission.unlocked = true;
-              saveData.campBuildings.inventory.unlocked = true;
-              saveData.campBuildings.campHub.unlocked = true;
-              saveSaveData();
-              
-              // Show second comic about free rewards
-              showFirstRewardsComic();
-            }
-          });
-          
-          return true; // Signal that comic is being shown - don't show camp screen yet
-        }
-      }
-      
-      // Legacy first-time camp visit (if tutorial is disabled)
-      if (!saveData.hasVisitedCamp && !saveData.tutorial.isActive) {
+      // Check for first-time camp visit
+      if (!saveData.hasVisitedCamp) {
         saveData.hasVisitedCamp = true;
         // Unlock free buildings
         saveData.campBuildings.questMission.unlocked = true;
@@ -10734,8 +10003,6 @@
         
         saveSaveData();
       }
-      
-      return false; // Normal flow - show camp screen
       
       // Update buildings section
       const buildingsContent = document.getElementById('camp-buildings-content');
@@ -13165,25 +12432,11 @@
         document.getElementById('credits-screen').style.display = 'flex';
       };
       
-      document.getElementById('wallet-btn').onclick = () => {
-        playSound('waterdrop');
-        hideMainMenu();
-        document.getElementById('wallet-screen').style.display = 'flex';
-      };
-      
-      document.getElementById('marketplace-btn').onclick = () => {
-        playSound('waterdrop');
-        hideMainMenu();
-        document.getElementById('marketplace-screen').style.display = 'flex';
-      };
-      
       document.getElementById('camp-btn').onclick = () => {
         playSound('waterdrop');
         hideMainMenu();
-        const showingTutorial = updateCampScreen();
-        if (!showingTutorial) {
-          document.getElementById('camp-screen').style.display = 'flex';
-        }
+        updateCampScreen();
+        document.getElementById('camp-screen').style.display = 'flex';
       };
       
       // Pre-Map Continue Button - handler set up in standalone script
@@ -13217,18 +12470,6 @@
       document.getElementById('credits-back-btn').onclick = () => {
         playSound('waterdrop');
         document.getElementById('credits-screen').style.display = 'none';
-        showMainMenu();
-      };
-      
-      document.getElementById('wallet-back-btn').onclick = () => {
-        playSound('waterdrop');
-        document.getElementById('wallet-screen').style.display = 'none';
-        showMainMenu();
-      };
-      
-      document.getElementById('marketplace-back-btn').onclick = () => {
-        playSound('waterdrop');
-        document.getElementById('marketplace-screen').style.display = 'none';
         showMainMenu();
       };
       
