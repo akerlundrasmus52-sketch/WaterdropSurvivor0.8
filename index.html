@@ -1879,7 +1879,7 @@
     <button id="settings-btn" class="btn-small" style="position: absolute; top: 20px; right: 120px; pointer-events: auto; z-index: 100;">⚙️</button>
     
     <!-- Day/Night Cycle Clock -->
-    <div id="day-night-clock" style="position: absolute; top: 20px; right: 220px; pointer-events: none; z-index: 100;">
+    <div id="day-night-clock" style="position: absolute; top: 20px; left: 50%; transform: translateX(-50%); pointer-events: none; z-index: 100;">
       <div style="background: rgba(0,0,0,0.7); border: 2px solid #FFD700; border-radius: 50%; width: 80px; height: 80px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 0 15px rgba(0,0,0,0.5);">
         <div id="day-night-icon" style="font-size: 32px; margin-bottom: 2px;">☀️</div>
         <div id="day-night-time" style="font-size: 12px; color: #FFD700; font-weight: bold;">00:00</div>
@@ -4130,8 +4130,9 @@
         // Track last damage type for death effects
         this.lastDamageType = damageType;
         
-        // Phase 5: Hit impact particles (flesh/blood) on every hit
-        spawnParticles(this.mesh.position, 0x8B0000, 3); // Blood particles
+        // Phase 5: Hit impact particles (flesh/blood) on every hit - ENHANCED: Scale with damage
+        const bloodParticleCount = Math.min(3 + Math.floor(amount / 10), 15); // 3-15 particles based on damage
+        spawnParticles(this.mesh.position, 0x8B0000, bloodParticleCount); // Blood particles scale with damage
         
         // Phase 3: Apply armor reduction for MiniBoss
         let finalAmount = amount;
@@ -4146,6 +4147,15 @@
         const oldHp = this.hp;
         this.hp -= finalAmount;
         createDamageNumber(Math.floor(finalAmount), this.mesh.position, isCrit);
+        
+        // White hit flash effect (50ms) - FRESH IMPLEMENTATION
+        const originalColor = this.mesh.material.color.clone();
+        this.mesh.material.color.setHex(0xFFFFFF); // White flash
+        setTimeout(() => {
+          if (this.mesh && this.mesh.material) {
+            this.mesh.material.color.copy(originalColor);
+          }
+        }, 50);
         
         const hpPercent = this.hp / this.maxHp;
         const oldHpPercent = oldHp / this.maxHp;
