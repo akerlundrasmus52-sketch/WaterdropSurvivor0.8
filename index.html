@@ -3711,7 +3711,27 @@
     let cameraZoom = { current: 15, target: 15, speed: 2 };
     let cameraTargetPos = null;
     
+    // FRESH IMPLEMENTATION: Red Eyes Feature Constants
+    const RED_EYES_CONFIG = {
+      HEALTH_THRESHOLD: 0.3,           // Activate when health < 30%
+      DAMAGE_THRESHOLD: 20,            // Activate when taking >20 damage
+      ACTIVATION_CHANCE: 0.4,          // 40% chance on trigger
+      EPIC_COMBO_THRESHOLD: 10,        // Activate on 10+ combo
+      EPIC_DURATION: 4.0,              // Duration for epic moments (seconds)
+      DAMAGE_DURATION: 3.0,            // Duration on damage (seconds)
+      GLOW_LEFT_OFFSET: { x: -0.115, y: 0.105, z: 0.45 },  // Asymmetric left eye glow position
+      GLOW_RIGHT_OFFSET: { x: 0.125, y: 0.095, z: 0.45 },  // Asymmetric right eye glow position
+      PUPIL_COLOR: 0x8B0000,           // Dark red color
+      CINEMATIC_CHANCE: 0.3            // 30% chance during cinematic moments
+    };
+    
+    // FRESH IMPLEMENTATION: Camera Constants
+    const CAMERA_CONFIG = {
+      RESET_DELAY_MS: 500              // Delay before resetting camera after cinematic
+    };
+    
     // FRESH IMPLEMENTATION: Region Display System
+    // Coordinate system: (0, 0) is spawn area center, positive X is east, positive Z is north
     const MAP_REGIONS = {
       spawn: { name: 'Spawn Area', icon: '🏠', bounds: { x: 0, z: 0, radius: 15 }, color: '#5DADE2' },
       lake: { name: 'Crystal Lake', icon: '💧', bounds: { x: 30, z: -30, radius: 20 }, color: '#1E90FF' },
@@ -4373,7 +4393,7 @@
         try {
           const glowGeo = new THREE.SphereGeometry(0.09, 8, 8);
           const glowMat = new THREE.MeshBasicMaterial({
-            color: 0x8B0000, // Dark red
+            color: RED_EYES_CONFIG.PUPIL_COLOR,
             transparent: true,
             opacity: 0.6,
             side: THREE.BackSide
@@ -4381,12 +4401,20 @@
           
           // Left eye glow - slightly asymmetric for intensity
           this.redEyesGlowLeft = new THREE.Mesh(glowGeo, glowMat.clone());
-          this.redEyesGlowLeft.position.set(-0.115, 0.105, 0.45); // Slightly offset
+          this.redEyesGlowLeft.position.set(
+            RED_EYES_CONFIG.GLOW_LEFT_OFFSET.x,
+            RED_EYES_CONFIG.GLOW_LEFT_OFFSET.y,
+            RED_EYES_CONFIG.GLOW_LEFT_OFFSET.z
+          );
           this.redEyesGlowLeft.visible = false;
           
           // Right eye glow - asymmetric positioning
           this.redEyesGlowRight = new THREE.Mesh(glowGeo, glowMat.clone());
-          this.redEyesGlowRight.position.set(0.125, 0.095, 0.45); // Different offset
+          this.redEyesGlowRight.position.set(
+            RED_EYES_CONFIG.GLOW_RIGHT_OFFSET.x,
+            RED_EYES_CONFIG.GLOW_RIGHT_OFFSET.y,
+            RED_EYES_CONFIG.GLOW_RIGHT_OFFSET.z
+          );
           this.redEyesGlowRight.visible = false;
           
           // Safely add to mesh only if glows were created
@@ -4832,10 +4860,10 @@
           
           // Null-safe pupil color change
           if (this.leftPupil && this.leftPupil.material) {
-            this.leftPupil.material.color.setHex(0x8B0000); // Dark red
+            this.leftPupil.material.color.setHex(RED_EYES_CONFIG.PUPIL_COLOR);
           }
           if (this.rightPupil && this.rightPupil.material) {
-            this.rightPupil.material.color.setHex(0x8B0000); // Dark red
+            this.rightPupil.material.color.setHex(RED_EYES_CONFIG.PUPIL_COLOR);
           }
           
           // Null-safe glow effect with pulsing
@@ -5000,10 +5028,10 @@
         
         // FRESH IMPLEMENTATION: Activate red eyes when taking heavy damage or at low health
         const healthPercent = playerStats.hp / playerStats.maxHp;
-        if (healthPercent < 0.3 || reduced > 20) {
+        if (healthPercent < RED_EYES_CONFIG.HEALTH_THRESHOLD || reduced > RED_EYES_CONFIG.DAMAGE_THRESHOLD) {
           // Activate red eyes for dramatic effect
-          if (this.activateRedEyes && Math.random() < 0.4) {
-            this.activateRedEyes(3.0); // 3 seconds duration
+          if (this.activateRedEyes && Math.random() < RED_EYES_CONFIG.ACTIVATION_CHANCE) {
+            this.activateRedEyes(RED_EYES_CONFIG.DAMAGE_DURATION);
           }
         }
         
@@ -5150,10 +5178,10 @@
           
           // Immediate color change (null-safe)
           if (this.leftPupil.material) {
-            this.leftPupil.material.color.setHex(0x8B0000);
+            this.leftPupil.material.color.setHex(RED_EYES_CONFIG.PUPIL_COLOR);
           }
           if (this.rightPupil.material) {
-            this.rightPupil.material.color.setHex(0x8B0000);
+            this.rightPupil.material.color.setHex(RED_EYES_CONFIG.PUPIL_COLOR);
           }
           
           // Show glow (null-safe)
@@ -13482,7 +13510,7 @@
       }
       
       // Activate red eyes during dramatic moments if player exists
-      if (player && player.activateRedEyes && Math.random() < 0.3) {
+      if (player && player.activateRedEyes && Math.random() < RED_EYES_CONFIG.CINEMATIC_CHANCE) {
         player.activateRedEyes(cinematicCamera.duration);
       }
     }
@@ -13525,7 +13553,7 @@
         if (cinematicCamera.type === 'focus') {
           setTimeout(() => {
             cameraTargetPos = null;
-          }, 500);
+          }, CAMERA_CONFIG.RESET_DELAY_MS);
         }
       }
     }
@@ -15752,9 +15780,9 @@
         comboState.lastKillTime = currentTime;
         
         // FRESH IMPLEMENTATION: Activate red eyes on high combos
-        if (comboState.count >= 10 && player && player.activateRedEyes) {
+        if (comboState.count >= RED_EYES_CONFIG.EPIC_COMBO_THRESHOLD && player && player.activateRedEyes) {
           // Activate red eyes for epic combos
-          player.activateRedEyes(4.0); // 4 seconds for epic moments
+          player.activateRedEyes(RED_EYES_CONFIG.EPIC_DURATION);
         }
         
         // Show combo if 5+ kills (updated to start at 5)
