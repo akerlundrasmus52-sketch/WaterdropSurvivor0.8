@@ -144,6 +144,18 @@
       margin-top: 8px;
     }
     
+    /* Quest Arrow Guidance */
+    #quest-arrow {
+      display: none;
+      position: absolute;
+      font-size: 48px;
+      color: #FFD700;
+      text-shadow: 0 0 20px rgba(255,215,0,1), 0 0 40px rgba(255,215,0,0.6);
+      pointer-events: none;
+      z-index: 50;
+      animation: questArrowPulse 1.5s ease-in-out infinite;
+    }
+    
     /* Stats Bar - Removed (Stats accessible via Stats Button Modal only) */
     
     /* Combo Counter - Red/Black Theme */
@@ -740,6 +752,17 @@
       50% {
         opacity: 0.6;
         transform: scale(1.2);
+      }
+    }
+    
+    @keyframes questArrowPulse {
+      0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+      50% {
+        opacity: 0.7;
+        transform: scale(1.15);
       }
     }
     
@@ -1602,7 +1625,7 @@
 
   <!-- Main Menu -->
   <div id="main-menu">
-    <div class="gold-display" id="menu-gold">GOLD: 0</div>
+    <!-- Gold display removed from main menu per requirements - only show in camp/progression/death -->
     <div class="menu-title">WATER DROP SURVIVOR</div>
     <div class="menu-buttons">
       <button class="menu-btn" id="start-game-btn">START GAME</button>
@@ -1819,6 +1842,9 @@
       
       <!-- Active Quest Tracker (Camp Only) -->
       <div class="stat-text" id="quest-tracker" style="display: none; color: #FFD700; text-shadow: 0 0 8px rgba(255,215,0,0.8), 1px 1px 2px rgba(0,0,0,0.8); font-size: 14px; margin-top: 5px; background: rgba(0,0,0,0.7); padding: 5px 10px; border-radius: 5px; border: 1px solid #FFD700;"></div>
+      
+      <!-- Quest Arrow Guidance (in-game) -->
+      <div id="quest-arrow">❗➤</div>
       
       <!-- Combo Timer Display -->
       <div class="stat-text" id="combo-timer"></div>
@@ -5460,9 +5486,21 @@
     }
 
     class Particle {
+      static MAX_LIFETIME = 30; // Frames until particle fades out
+      static INITIAL_OPACITY = 0.8; // Maximum opacity for particles
+      
       constructor(pos, color) {
         const geo = new THREE.BoxGeometry(0.2, 0.2, 0.2);
-        const mat = new THREE.MeshBasicMaterial({ color: color });
+        // Changed to MeshPhysicalMaterial for light reactivity (smoke/fog effects)
+        const mat = new THREE.MeshPhysicalMaterial({ 
+          color: color,
+          transparent: true,
+          opacity: Particle.INITIAL_OPACITY,
+          emissive: color,
+          emissiveIntensity: 0.2,
+          roughness: 0.8,
+          metalness: 0.1
+        });
         this.mesh = new THREE.Mesh(geo, mat);
         this.mesh.position.copy(pos);
         
@@ -5473,13 +5511,14 @@
         );
         
         scene.add(this.mesh);
-        this.life = 30;
+        this.life = Particle.MAX_LIFETIME;
       }
       
       reset(pos, color) {
         // Reuse existing particle
         this.mesh.position.copy(pos);
         this.mesh.material.color.setHex(color);
+        this.mesh.material.emissive.setHex(color);
         this.vel.set(
           (Math.random() - 0.5) * 0.3,
           Math.random() * 0.3,
@@ -5488,7 +5527,7 @@
         this.mesh.rotation.set(0, 0, 0);
         this.mesh.visible = true;
         scene.add(this.mesh);
-        this.life = 30;
+        this.life = Particle.MAX_LIFETIME;
       }
       
       update() {
@@ -5497,6 +5536,9 @@
         this.vel.y -= 0.02; // Gravity
         this.mesh.rotation.x += 0.1;
         this.mesh.rotation.y += 0.1;
+        
+        // Fade out based on life remaining (more realistic smoke/fog effect)
+        this.mesh.material.opacity = (this.life / Particle.MAX_LIFETIME) * Particle.INITIAL_OPACITY;
         
         if (this.mesh.position.y < 0) {
           this.mesh.position.y = 0;
@@ -7690,8 +7732,12 @@
         return;
       }
       
-      if (saveData.skillPoints >= skill.cost) {
-        saveData.skillPoints -= skill.cost;
+      // Check if this is the first skill purchase (make it free)
+      const isFirstSkill = !saveData.storyQuests?.buildingFirstUse?.skillTree;
+      const costToCharge = isFirstSkill ? 0 : skill.cost;
+      
+      if (saveData.skillPoints >= costToCharge) {
+        saveData.skillPoints -= costToCharge;
         if (!skillData.unlocked) {
           skillData.unlocked = true;
         }
@@ -7700,7 +7746,12 @@
         saveSaveData();
         updateCampScreen();
         playSound('collect');
-        showStatusMessage(`${skill.name} leveled up!`, 2000);
+        
+        if (isFirstSkill) {
+          showStatusMessage(`${skill.name} unlocked FREE! (First skill bonus)`, 3000);
+        } else {
+          showStatusMessage(`${skill.name} leveled up!`, 2000);
+        }
         
         // Quest progression: first skill unlock
         if (!saveData.storyQuests.buildingFirstUse.skillTree) {
@@ -8266,8 +8317,9 @@
       // Update quest tracker
       updateQuestTracker();
       
-      // Update gold display
-      document.getElementById('menu-gold').textContent = `GOLD: ${saveData.gold}`;
+      // Update gold display (not on main menu per requirements - only in progression/camp/death)
+      const menuGold = document.getElementById('menu-gold');
+      if (menuGold) menuGold.textContent = `GOLD: ${saveData.gold}`;
     }
 
     // --- WORLD GENERATION ---
@@ -8991,15 +9043,18 @@
       const enhancedLakeGeo = new THREE.CircleGeometry(18, 32);
       const enhancedLakeMat = new THREE.MeshPhysicalMaterial({ 
         color: COLORS.lake,
-        metalness: 0.3, // Reduced for more natural water look
-        roughness: 0.2, // Slightly rougher for less distortion
+        metalness: 0.5, // Increased for better reflectivity
+        roughness: 0.1, // Decreased for smoother, clearer reflections
         transparent: true,
-        opacity: 0.85, // Slightly more transparent
-        reflectivity: 0.8 // Reduced for more natural reflections
+        opacity: 0.85,
+        reflectivity: 0.9, // Increased for enhanced water reflections
+        clearcoat: 1.0, // Add clearcoat for wet surface look
+        clearcoatRoughness: 0.1 // Smooth clearcoat for better reflections
       });
       const enhancedLake = new THREE.Mesh(enhancedLakeGeo, enhancedLakeMat);
       enhancedLake.rotation.x = -Math.PI / 2;
       enhancedLake.position.set(30, 0.01, -30);
+      enhancedLake.receiveShadow = true; // Receive shadows for better depth
       scene.add(enhancedLake);
       
       // Sun sparkles on lake
@@ -10351,6 +10406,17 @@
 
     function levelUp() {
       isPaused = true;
+      
+      // Pause combo timer during level-up (only if combo is still active)
+      if (comboState.lastKillTime && comboState.count >= 5) {
+        const currentTime = Date.now();
+        const timeSinceLastKill = currentTime - comboState.lastKillTime;
+        // Only pause if combo hasn't expired yet
+        if (timeSinceLastKill < comboState.comboWindow) {
+          comboState.pausedAt = currentTime;
+        }
+      }
+      
       playerStats.lvl++;
       playerStats.exp -= playerStats.expReq;
       
@@ -11485,6 +11551,14 @@
           modal.querySelector('h2').innerText = 'LEVEL UP!';
           modal.querySelector('h2').style.fontSize = '32px';
           isPaused = false;
+          
+          // Resume combo timer after level-up
+          if (comboState.pausedAt) {
+            const pauseDuration = Date.now() - comboState.pausedAt;
+            comboState.lastKillTime += pauseDuration;
+            comboState.pausedAt = null;
+          }
+          
           updateHUD();
           
           // Re-enable pointer events after closing (for next level up)
