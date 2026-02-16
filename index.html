@@ -1641,7 +1641,6 @@
       <button class="menu-btn" id="gear-btn">GEAR & EQUIPMENT</button>
       <button class="menu-btn" id="achievements-btn">ACHIEVEMENTS</button>
       <button class="menu-btn" id="credits-btn">CREDITS</button>
-      <button class="menu-btn" id="quit-game-btn" style="margin-top: 20px; background: #8B0000;">🚪 QUIT GAME</button>
     </div>
   </div>
 
@@ -2162,21 +2161,35 @@
         setTimeout(() => {
           loadingScreen.style.display = 'none';
           
-          // Show main menu if the module hasn't already done so
-          const mainMenu = document.getElementById('main-menu');
-          if (mainMenu && mainMenu.style.display !== 'flex') {
-            mainMenu.style.display = 'flex';
-            console.log('[Loading] Main menu shown by standalone script');
-            
-            // Try to call showMainMenu if it exists (exported by module to window)
-            try {
-              if (typeof window.showMainMenu === 'function') {
-                window.showMainMenu();
+          // CRITICAL FIX: Wait for module to be ready before showing menu
+          // This ensures event listeners are attached before the menu becomes interactive
+          const waitForModule = () => {
+            // Check if module has initialized and attached event listeners
+            if (window.gameModuleReady) {
+              console.log('[Loading] Module ready, showing main menu');
+              const mainMenu = document.getElementById('main-menu');
+              if (mainMenu && mainMenu.style.display !== 'flex') {
+                mainMenu.style.display = 'flex';
+                console.log('[Loading] Main menu shown by standalone script');
+                
+                // Call showMainMenu to ensure proper state initialization
+                try {
+                  if (typeof window.showMainMenu === 'function') {
+                    window.showMainMenu();
+                  }
+                } catch (e) {
+                  console.log('[Loading] showMainMenu error:', e.message);
+                }
               }
-            } catch (e) {
-              console.log('[Loading] showMainMenu not available yet:', e.message);
+            } else {
+              // Module not ready yet, wait and try again
+              console.log('[Loading] Module not ready, waiting...');
+              setTimeout(waitForModule, 100);
             }
-          }
+          };
+          
+          // Start waiting for module to be ready
+          waitForModule();
         }, FADE_OUT_DURATION); // Match fade-out transition duration
       }
       
@@ -10342,6 +10355,11 @@
       setupMenus();
       window.addEventListener('resize', onWindowResize, false);
       
+      // Signal that module event listeners are attached and ready
+      // This flag tells the standalone loading script it's safe to show the menu
+      window.gameModuleReady = true;
+      console.log('[Init] Module ready - event listeners attached');
+      
       // Start Loop - begin rendering immediately (non-blocking)
       requestAnimationFrame(animate);
       
@@ -10349,7 +10367,6 @@
       startWatchdog();
       
       // Show loading screen, then main menu (acceptance criteria #1)
-      // gameModuleReady will be set after loading completes (acceptance criteria #2)
       showLoadingScreen();
     }
     
@@ -10390,14 +10407,6 @@
       updateGoldDisplays();
       setGameActive(false);
       setGamePaused(true);
-      
-      // Signal that module is fully initialized (acceptance criteria #2)
-      // This is set AFTER loading screen completes and main menu is shown
-      // The check ensures it's only set once during initial load (not when returning from other screens)
-      if (!window.gameModuleReady) {
-        window.gameModuleReady = true;
-        console.log('[Init] Game module ready - loading complete, main menu shown');
-      }
     }
     
     // Export showMainMenu to global scope for standalone loading script
@@ -10693,17 +10702,6 @@
           saveData.questProgress.campVisits++;
           checkQuestCompletion();
           updateQuestDisplay();
-        }
-      };
-      
-      // Quit Game button (closes window/tab)
-      document.getElementById('quit-game-btn').onclick = () => {
-        if (confirm('Are you sure you want to quit the game?')) {
-          // Attempt to close the window (works if opened by script)
-          window.close();
-          // window.close() only works for windows opened by script
-          // For browser tabs, show message asking user to close manually
-          alert('Please close this tab/window manually.');
         }
       };
       
