@@ -10963,10 +10963,10 @@
       // Check for active Eiffel quest
       if (eiffelQuest && eiffelQuest.active) {
         const timeLeft = Math.ceil(eiffelQuest.timer);
-        const collected = eiffelQuest.collected || 0;
-        const needed = eiffelQuest.collectionNeeded || 0;
+        const kills = eiffelQuest.kills || 0;
+        const needed = eiffelQuest.killsNeeded || 0;
         objective.textContent = 'Collect Croissants near Eiffel';
-        progress.textContent = `⏱️ ${timeLeft}s | 🥐 ${collected}/${needed}`;
+        progress.textContent = `⏱️ ${timeLeft}s | 🥐 ${kills}/${needed}`;
         questBox.classList.add('active');
         return;
       }
