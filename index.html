@@ -3043,13 +3043,49 @@
     </div>
   </div>
 
-  <!-- Import Map for Three.js -->
-  <script async src="https://unpkg.com/es-module-shims@1.8.0/dist/es-module-shims.js" onerror="console.warn('[CDN] ES Module Shims failed to load - game requires THREE.js to function')"></script>
+  <!-- THREE.js Loading with CDN Fallback System -->
+  <script async src="https://ga.jspm.io/npm:es-module-shims@1.8.0/dist/es-module-shims.js" 
+          onerror="console.warn('[CDN] Primary ES Module Shims failed, trying fallback...'); loadShimsFallback()">
+  </script>
+  <script>
+    // Fallback for ES Module Shims if primary CDN is blocked
+    function loadShimsFallback() {
+      const fallbacks = [
+        'https://unpkg.com/es-module-shims@1.8.0/dist/es-module-shims.js',
+        'https://cdn.jsdelivr.net/npm/es-module-shims@1.8.0/dist/es-module-shims.js'
+      ];
+      
+      let index = 0;
+      function tryNext() {
+        if (index >= fallbacks.length) {
+          console.error('[CDN] All ES Module Shims sources failed - THREE.js modules may not load properly');
+          return;
+        }
+        
+        const script = document.createElement('script');
+        script.async = true;
+        script.src = fallbacks[index];
+        script.onerror = function() {
+          console.warn(`[CDN] Fallback ${index + 1} failed: ${fallbacks[index]}`);
+          index++;
+          tryNext();
+        };
+        script.onload = function() {
+          console.log(`[CDN] ✅ ES Module Shims loaded from fallback ${index + 1}`);
+        };
+        document.head.appendChild(script);
+      }
+      
+      tryNext();
+    }
+  </script>
+  
+  <!-- Import Map with reliable jsDelivr CDN -->
   <script type="importmap">
     {
       "imports": {
-        "three": "https://unpkg.com/three@0.176.0/build/three.module.js",
-        "three/addons/": "https://unpkg.com/three@0.176.0/examples/jsm/"
+        "three": "https://cdn.jsdelivr.net/npm/three@0.176.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.176.0/examples/jsm/"
       }
     }
   </script>
@@ -3071,7 +3107,7 @@
         const resourceUrl = event.target.src || event.target.href || 'unknown';
         if (resourceUrl.includes('fonts.googleapis.com') || resourceUrl.includes('fonts.gstatic.com')) {
           console.warn('[CDN] Font resource failed to load:', resourceUrl, '- using system fonts');
-        } else if (resourceUrl.includes('unpkg.com')) {
+        } else if (resourceUrl.includes('unpkg.com') || resourceUrl.includes('jsdelivr.net') || resourceUrl.includes('jspm.io')) {
           console.warn('[CDN] CDN resource failed to load:', resourceUrl, '- attempting graceful degradation');
         } else if (resourceUrl !== 'unknown') {
           console.warn('[CDN] Resource failed to load:', resourceUrl);
@@ -3217,17 +3253,20 @@
       const FALLBACK_DELAY_MS = LOADING_FAILSAFE_MS + 1000; // Run 1s after failsafe
       // Note: Module ready timeout is 5s (50 attempts × 100ms) in loading script
       
-      // Error message constant
-      const MODULE_INIT_ERROR_MSG = 'Game failed to initialize. The 3D engine (THREE.js) could not be loaded.\n\n' +
+      // Error message constant with improved CDN troubleshooting
+      const MODULE_INIT_ERROR_MSG = 'Game failed to initialize. The 3D engine (THREE.js) could not be loaded from CDN.\n\n' +
         'This usually happens due to:\n' +
-        '• Ad blockers blocking CDN resources\n' +
+        '• Ad blockers or privacy extensions blocking CDN resources (jsDelivr, unpkg)\n' +
+        '• Corporate firewall or network restrictions\n' +
         '• Network connectivity issues\n' +
         '• Browser compatibility problems\n\n' +
-        'Please:\n' +
-        '1. Disable ad blockers for this page\n' +
-        '2. Check your internet connection\n' +
-        '3. Try refreshing the page\n' +
-        '4. Try a different browser';
+        'Please try:\n' +
+        '1. Temporarily disable ad blockers/privacy extensions for this page\n' +
+        '2. Add *.jsdelivr.net and *.unpkg.com to your allowlist\n' +
+        '3. Check your internet connection\n' +
+        '4. Try a different network (mobile data vs WiFi)\n' +
+        '5. Try a different browser (Chrome, Firefox, Safari)\n' +
+        '6. Refresh the page after making changes';
       
       // Wait for menu to be shown by loading script, then set up basic button handlers if module hasn't loaded yet
       setTimeout(function checkAndSetupFallback() {
