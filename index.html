@@ -11725,10 +11725,24 @@
     }
 
     // Kill Cam System - Diverse kill animations with camera effects
+    const KILL_CAM_CONSTANTS = {
+      REGULAR_ENEMY_CHANCE: 0.15,
+      ZOOM_IN_INTENSITY: 0.3,
+      SLOW_MOTION_ZOOM: 0.15,
+      SHAKE_ZOOM_INTENSITY: 0.4,
+      ROTATE_CAM_RADIUS: 20,
+      KILL_MESSAGES: ['ELIMINATED!', 'DESTROYED!', 'ANNIHILATED!', 'OBLITERATED!']
+    };
+    
+    function getRandomKillMessage() {
+      const messages = KILL_CAM_CONSTANTS.KILL_MESSAGES;
+      return messages[Math.floor(Math.random() * messages.length)];
+    }
+    
     function triggerKillCam(enemyPosition, isMiniBoss = false, damageType = 'physical') {
       // Only trigger for mini-bosses or randomly (15% chance for regular enemies)
-      const shouldTrigger = isMiniBoss || Math.random() < 0.15;
-      if (!shouldTrigger || killCamActive) return;
+      const shouldActivateKillCam = isMiniBoss || Math.random() < KILL_CAM_CONSTANTS.REGULAR_ENEMY_CHANCE;
+      if (!shouldActivateKillCam || killCamActive) return;
       
       // Select random kill cam animation type
       const killCamTypes = [
@@ -11782,7 +11796,7 @@
       killText.style.fontWeight = '900';
       killText.style.textShadow = '0 0 10px rgba(0,0,0,0.8), 0 0 20px rgba(255,0,0,0.5)';
       killText.style.fontFamily = "'M PLUS Rounded 1c', sans-serif";
-      killText.textContent = isMiniBoss ? '⚡ BOSS DOWN! ⚡' : ['ELIMINATED!', 'DESTROYED!', 'ANNIHILATED!', 'OBLITERATED!'][Math.floor(Math.random() * 4)];
+      killText.textContent = isMiniBoss ? '⚡ BOSS DOWN! ⚡' : getRandomKillMessage();
       killText.style.opacity = '0';
       killText.style.animation = 'killTextAppear 0.3s ease-out forwards';
       overlay.appendChild(killText);
@@ -11805,7 +11819,7 @@
       switch (killCamType) {
         case 'zoom_in':
           // Zoom camera towards kill position
-          const zoomFactor = 1 - (progress * 0.3); // Zoom in 30%
+          const zoomFactor = 1 - (progress * KILL_CAM_CONSTANTS.ZOOM_IN_INTENSITY);
           const targetPos = killCamData.killPosition.clone();
           camera.position.x = killCamData.originalCameraPos.x + (targetPos.x - killCamData.originalCameraPos.x) * progress;
           camera.position.z = killCamData.originalCameraPos.z + ((targetPos.z + 15 * zoomFactor) - killCamData.originalCameraPos.z) * progress;
@@ -11815,14 +11829,14 @@
         case 'slow_motion':
           // Slow motion is handled by time scale (visual effect only)
           // Add subtle zoom
-          const slowZoom = 1 - (Math.sin(progress * Math.PI) * 0.15);
+          const slowZoom = 1 - (Math.sin(progress * Math.PI) * KILL_CAM_CONSTANTS.SLOW_MOTION_ZOOM);
           camera.position.z = killCamData.originalCameraPos.z * slowZoom;
           break;
           
         case 'rotate':
           // Rotate camera around kill position
           const angle = progress * Math.PI * 0.5; // 90 degree rotation
-          const radius = 20;
+          const radius = KILL_CAM_CONSTANTS.ROTATE_CAM_RADIUS;
           const centerPos = killCamData.killPosition.clone();
           camera.position.x = centerPos.x + Math.cos(angle) * radius;
           camera.position.z = centerPos.z + Math.sin(angle) * radius;
@@ -11832,7 +11846,7 @@
         case 'shake_zoom':
           // Intense shake with zoom
           const shakeIntensity = (1 - progress) * 2;
-          const zoomIn = 1 - (progress * 0.4);
+          const zoomIn = 1 - (progress * KILL_CAM_CONSTANTS.SHAKE_ZOOM_INTENSITY);
           camera.position.x = killCamData.originalCameraPos.x + (Math.random() - 0.5) * shakeIntensity;
           camera.position.y = killCamData.originalCameraPos.y + (Math.random() - 0.5) * shakeIntensity;
           camera.position.z = killCamData.originalCameraPos.z * zoomIn + (Math.random() - 0.5) * shakeIntensity;
