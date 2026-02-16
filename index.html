@@ -2398,6 +2398,9 @@
     <div class="loading-bar-container">
       <div class="loading-bar" id="loading-bar"></div>
     </div>
+    <div id="loading-status" style="color: white; margin-top: 20px; font-size: 14px; text-align: center; opacity: 0.8;">
+      Loading game resources...
+    </div>
   </div>
 
   <!-- Comic Panel Overlay -->
@@ -3048,8 +3051,18 @@
           onerror="console.warn('[CDN] Primary ES Module Shims failed, trying fallback...'); loadShimsFallback()">
   </script>
   <script>
+    // Update loading status text helper
+    function updateLoadingStatus(message) {
+      const statusEl = document.getElementById('loading-status');
+      if (statusEl) {
+        statusEl.textContent = message;
+      }
+    }
+    
     // Fallback for ES Module Shims if primary CDN is blocked
     function loadShimsFallback() {
+      updateLoadingStatus('Primary CDN blocked, trying alternative sources...');
+      
       const fallbacks = [
         'https://unpkg.com/es-module-shims@1.8.0/dist/es-module-shims.js',
         'https://cdn.jsdelivr.net/npm/es-module-shims@1.8.0/dist/es-module-shims.js'
@@ -3059,8 +3072,11 @@
       function tryNext() {
         if (index >= fallbacks.length) {
           console.error('[CDN] All ES Module Shims sources failed - THREE.js modules may not load properly');
+          updateLoadingStatus('⚠️ CDN resources blocked. Please check your ad blocker settings.');
           return;
         }
+        
+        updateLoadingStatus(`Loading from alternative CDN ${index + 1}/${fallbacks.length}...`);
         
         const script = document.createElement('script');
         script.async = true;
@@ -3072,6 +3088,7 @@
         };
         script.onload = function() {
           console.log(`[CDN] ✅ ES Module Shims loaded from fallback ${index + 1}`);
+          updateLoadingStatus('Loading game engine...');
         };
         document.head.appendChild(script);
       }
