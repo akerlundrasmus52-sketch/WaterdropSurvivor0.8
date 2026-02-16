@@ -14,3 +14,9 @@ Thumbs.db
 node_modules/
 package.json
 package-lock.json
+
+# Documentation and Summary Files
+*.md
+!README.md
+*.png
+*.mp4
