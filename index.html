@@ -2891,7 +2891,7 @@
       aura: { active: false, level: 0, damage: 5, cooldown: 500, lastShot: 0, range: 3 },
       meteor: { active: false, level: 0, damage: 60, cooldown: 2500, lastShot: 0, area: 5 },
       droneTurret: { active: false, level: 0, damage: 15, cooldown: 400, lastShot: 0, range: 15, droneCount: 1 },
-      doubleBarrel: { active: false, level: 0, damage: 25, cooldown: 1200, lastShot: 0, range: 12, spread: 0.3 },
+      doubleBarrel: { active: false, level: 0, damage: 25, cooldown: 1200, lastShot: 0, range: 12, spread: 0.3, pelletCount: 6 },
       iceSpear: { active: false, level: 0, damage: 20, cooldown: 1500, lastShot: 0, range: 15, slowPercent: 0.4, slowDuration: 2000 },
       fireRing: { active: false, level: 0, damage: 8, cooldown: 800, lastShot: 0, range: 4, orbs: 3, rotationSpeed: 2 }
     };
@@ -3503,6 +3503,10 @@
         updateHUD();
         playSound('hit');
         
+        // ENHANCED: Screen shake based on damage
+        const shakeIntensity = Math.min(reduced / 30, 1); // Scale with damage
+        screenShake(0.2 + shakeIntensity * 0.3, 150 + shakeIntensity * 100);
+        
         // Trigger waterdrop UI attack animation
         const waterdropContainer = document.getElementById('waterdrop-container');
         if (waterdropContainer) {
@@ -3568,31 +3572,6 @@
             this.mesh.scale.set(1, 1, 1);
           }, 50);
         }, 50);
-        
-        // Enhanced screen shake on damage
-        const originalCameraPos = { 
-          x: camera.position.x, 
-          y: camera.position.y, 
-          z: camera.position.z 
-        };
-        let shakeTime = 0;
-        const shakeDuration = 0.25; // Slightly longer (was 0.2)
-        
-        const shakeAnim = () => {
-          shakeTime += 0.016;
-          if (shakeTime < shakeDuration) {
-            const intensity = (1 - shakeTime / shakeDuration) * 0.7; // More intense (was 0.5)
-            camera.position.x = originalCameraPos.x + (Math.random() - 0.5) * intensity;
-            camera.position.y = originalCameraPos.y + (Math.random() - 0.5) * intensity;
-            camera.position.z = originalCameraPos.z + (Math.random() - 0.5) * intensity;
-            requestAnimationFrame(shakeAnim);
-          } else {
-            camera.position.x = originalCameraPos.x;
-            camera.position.y = originalCameraPos.y;
-            camera.position.z = originalCameraPos.z;
-          }
-        };
-        shakeAnim();
 
         if (playerStats.hp <= 0) {
           // ENHANCED Death splash: more particles + ground pool with fade
@@ -4137,6 +4116,16 @@
         // Track last damage type for death effects
         this.lastDamageType = damageType;
         
+        // ENHANCED: White hit flash on enemy
+        const originalColor = this.mesh.material.color.clone();
+        this.mesh.material.color.setHex(0xFFFFFF);
+        const flashTimeoutId = setTimeout(() => {
+          this.mesh.material.color.copy(originalColor);
+          const tidx = activeTimeouts.indexOf(flashTimeoutId);
+          if (tidx > -1) activeTimeouts.splice(tidx, 1);
+        }, 50);
+        activeTimeouts.push(flashTimeoutId);
+        
         // Phase 5: Hit impact particles (flesh/blood) on every hit
         spawnParticles(this.mesh.position, 0x8B0000, 3); // Blood particles
         
@@ -4330,6 +4319,12 @@
         if (eiffelQuest.active) {
           eiffelQuest.kills++;
           updateEiffelQuestUI();
+        }
+        
+        // QUEST SYSTEM: Track enemy kills
+        if (saveData.questProgress) {
+          saveData.questProgress.enemiesKilled++;
+          checkQuestCompletion();
         }
         
         // Determine death effect based on damage type and health when dying
@@ -5038,11 +5033,56 @@
     }
 
     // Performance: Cached geometries and materials for projectiles (reused across instances)
+    // ENHANCED: Weapon-specific bullet geometries and materials
     const projectileGeometryCache = {
+      // Gun - Smaller realistic bullets
+      gunBullet: new THREE.SphereGeometry(0.15, 8, 8),
+      gunBulletGlow: new THREE.SphereGeometry(0.25, 6, 6),
+      // Shotgun - Small pellets
+      shotgunPellet: new THREE.SphereGeometry(0.1, 6, 6),
+      shotgunPelletGlow: new THREE.SphereGeometry(0.18, 6, 6),
+      // Drone - Cyan laser style
+      droneBullet: new THREE.CylinderGeometry(0.08, 0.08, 0.3, 8),
+      droneBulletGlow: new THREE.SphereGeometry(0.2, 6, 6),
+      // Generic fallback
       bullet: new THREE.SphereGeometry(0.25, 8, 8),
       bulletGlow: new THREE.SphereGeometry(0.35, 6, 6)
     };
     const projectileMaterialCache = {
+      // Gun - Yellow/orange bullets
+      gunBullet: new THREE.MeshBasicMaterial({ 
+        color: 0xFFAA00,
+        transparent: true,
+        opacity: 0.95
+      }),
+      gunBulletGlow: new THREE.MeshBasicMaterial({
+        color: 0xFFAA00,
+        transparent: true,
+        opacity: 0.3
+      }),
+      // Shotgun - Orange pellets
+      shotgunPellet: new THREE.MeshBasicMaterial({ 
+        color: 0xFF6600,
+        transparent: true,
+        opacity: 0.95
+      }),
+      shotgunPelletGlow: new THREE.MeshBasicMaterial({
+        color: 0xFF6600,
+        transparent: true,
+        opacity: 0.4
+      }),
+      // Drone - Cyan laser
+      droneBullet: new THREE.MeshBasicMaterial({ 
+        color: 0x00FFFF,
+        transparent: true,
+        opacity: 0.95
+      }),
+      droneBulletGlow: new THREE.MeshBasicMaterial({
+        color: 0x00FFFF,
+        transparent: true,
+        opacity: 0.3
+      }),
+      // Generic fallback
       bullet: new THREE.MeshBasicMaterial({ 
         color: 0xFFFF00,
         transparent: true,
@@ -5209,18 +5249,48 @@
     }
 
     class Projectile {
-      constructor(x, z, target) {
+      constructor(x, z, target, weaponType = 'gun') {
+        // Store weapon type first
+        this.weaponType = weaponType;
+        this.isDoubleBarrel = (weaponType === 'shotgun');
+        this.isDroneTurret = (weaponType === 'drone');
+        
+        // ENHANCED: Weapon-specific bullet styles
+        let bulletGeo, bulletMat, glowGeo, glowMat;
+        
+        if (this.isDoubleBarrel) {
+          // Shotgun pellets - small and fast
+          bulletGeo = projectileGeometryCache.shotgunPellet;
+          bulletMat = projectileMaterialCache.shotgunPellet;
+          glowGeo = projectileGeometryCache.shotgunPelletGlow;
+          glowMat = projectileMaterialCache.shotgunPelletGlow;
+          this.speed = 0.6; // Faster
+        } else if (this.isDroneTurret) {
+          // Drone laser bullets
+          bulletGeo = projectileGeometryCache.droneBullet;
+          bulletMat = projectileMaterialCache.droneBullet;
+          glowGeo = projectileGeometryCache.droneBulletGlow;
+          glowMat = projectileMaterialCache.droneBulletGlow;
+          this.speed = 0.5;
+        } else {
+          // Gun bullets - smaller than before
+          bulletGeo = projectileGeometryCache.gunBullet;
+          bulletMat = projectileMaterialCache.gunBullet;
+          glowGeo = projectileGeometryCache.gunBulletGlow;
+          glowMat = projectileMaterialCache.gunBulletGlow;
+          this.speed = 0.4;
+        }
+        
         // Performance: Reuse cached geometry and materials instead of creating new ones
-        this.mesh = new THREE.Mesh(projectileGeometryCache.bullet, projectileMaterialCache.bullet);
+        this.mesh = new THREE.Mesh(bulletGeo, bulletMat);
         this.mesh.position.set(x, 0.5, z);
         scene.add(this.mesh);
         
         // Add glowing trail effect with cached resources
-        this.glow = new THREE.Mesh(projectileGeometryCache.bulletGlow, projectileMaterialCache.bulletGlow);
+        this.glow = new THREE.Mesh(glowGeo, glowMat);
         this.glow.position.copy(this.mesh.position);
         scene.add(this.glow);
 
-        this.speed = 0.4;
         this.active = true;
         this.life = 60; // Frames
 
@@ -5296,16 +5366,50 @@
             const isCrit = Math.random() < playerStats.critChance;
             if (isCrit) dmg *= playerStats.critDmg;
             
-            enemy.takeDamage(Math.floor(dmg), isCrit);
+            enemy.takeDamage(Math.floor(dmg), isCrit, this.weaponType);
             
             // Knockback effect
             const knockbackForce = 0.5;
             enemy.mesh.position.x += this.vx * knockbackForce;
             enemy.mesh.position.z += this.vz * knockbackForce;
             
-            // Water splash effect on hit
-            spawnParticles(enemy.mesh.position, COLORS.player, 5);
+            // ENHANCED: Bloody, brutal hit effects
+            const bloodIntensity = Math.min(Math.floor(dmg / 10), 15);
+            
+            // Blood splatter - red particles
+            spawnParticles(enemy.mesh.position, 0x8B0000, bloodIntensity); // Dark red blood
+            spawnParticles(enemy.mesh.position, 0xFF0000, Math.floor(bloodIntensity * 0.6)); // Bright red
+            
+            // Brief white impact flash
             spawnParticles(enemy.mesh.position, 0xFFFFFF, 3);
+            
+            // Critical hits get extra dramatic effects
+            if (isCrit) {
+              spawnParticles(enemy.mesh.position, 0xFFD700, 8); // Gold particles for crit
+              spawnParticles(enemy.mesh.position, 0x8B0000, 10); // Extra blood
+              
+              // Brief impact light flash
+              const critLight = new THREE.PointLight(0xFFFFFF, 8, 10);
+              critLight.position.copy(enemy.mesh.position);
+              critLight.position.y += 0.5;
+              scene.add(critLight);
+              flashLights.push(critLight);
+              
+              const timeoutId = setTimeout(() => {
+                scene.remove(critLight);
+                const idx = flashLights.indexOf(critLight);
+                if (idx > -1) flashLights.splice(idx, 1);
+                const tidx = activeTimeouts.indexOf(timeoutId);
+                if (tidx > -1) activeTimeouts.splice(tidx, 1);
+              }, 100);
+              activeTimeouts.push(timeoutId);
+            }
+            
+            // Shotgun gets even messier blood effects
+            if (this.weaponType === 'shotgun' || this.isDoubleBarrel) {
+              spawnParticles(enemy.mesh.position, 0x8B0000, 15); // Massive blood spray
+              spawnParticles(enemy.mesh.position, 0xFF0000, 10);
+            }
             
             this.destroy();
             playSound('hit');
@@ -5630,6 +5734,9 @@
         this.shadow.geometry.dispose();
         this.shadow.material.dispose();
         
+        // ENHANCED: Screen shake on meteor impact
+        screenShake(0.5, 300);
+        
         // AOE Damage
         const range = weapons.meteor.area;
         const dmg = weapons.meteor.damage * playerStats.strength;
@@ -5641,9 +5748,25 @@
           }
         });
         
-        // Visuals
-        spawnParticles(this.target, 0xFF4500, 10);
-        spawnParticles(this.target, 0xFFFF00, 5);
+        // ENHANCED: Premium explosion visuals
+        spawnParticles(this.target, 0xFF4500, 15); // Orange fire
+        spawnParticles(this.target, 0xFFFF00, 10); // Yellow flames
+        spawnParticles(this.target, 0xFF0000, 8); // Red fire
+        spawnParticles(this.target, 0x888888, 12); // Smoke
+        
+        // Explosion light flash
+        const explosionLight = new THREE.PointLight(0xFF4500, 15, 25);
+        explosionLight.position.copy(this.target);
+        explosionLight.position.y += 1;
+        scene.add(explosionLight);
+        
+        const timeoutId = setTimeout(() => {
+          scene.remove(explosionLight);
+          const tidx = activeTimeouts.indexOf(timeoutId);
+          if (tidx > -1) activeTimeouts.splice(tidx, 1);
+        }, 150);
+        activeTimeouts.push(timeoutId);
+        
         playSound('meteor'); // Explosive boom sound
       }
     }
@@ -6664,6 +6787,9 @@
         console.error('Failed to load save data:', e);
         saveData = { ...defaultSaveData };
       }
+      
+      // Initialize quest progress
+      initQuestProgress();
     }
 
     function saveSaveData() {
@@ -6864,6 +6990,144 @@
     
     // Expose to global scope for onclick handlers
     window.claimAchievement = claimAchievement;
+    
+    // MASSIVE QUEST SYSTEM - 26 Sequential Quests (Tutorial through quests)
+    
+    // Helper function for complex quest check
+    function checkDeepDiveComplete(qp) {
+      if (!qp) return false;
+      return qp.itemsCrafted >= 5 && 
+             qp.companionsRecruited >= 2 && 
+             qp.weaponsOwned >= 3 && 
+             qp.skillsUnlocked >= 1 && 
+             qp.allBuildingsUpgraded && 
+             qp.itemsScrapped >= 1;
+    }
+    
+    const QUESTS = {
+      quest1: { id: 'quest1', name: 'First Steps', desc: 'Move around the map', reward: 50, check: () => saveData.questProgress && saveData.questProgress.movedDistance > 10, completed: false },
+      quest2: { id: 'quest2', name: 'Target Practice', desc: 'Kill 5 enemies', reward: 75, check: () => saveData.questProgress && saveData.questProgress.enemiesKilled >= 5, completed: false },
+      quest3: { id: 'quest3', name: 'Survival Basics', desc: 'Survive for 60 seconds', reward: 100, check: () => saveData.questProgress && saveData.questProgress.survivalTime >= 60, completed: false },
+      quest4: { id: 'quest4', name: 'Level Up', desc: 'Reach level 3', reward: 100, check: () => saveData.questProgress && saveData.questProgress.maxLevel >= 3, completed: false },
+      quest5: { id: 'quest5', name: 'Return to Camp', desc: 'Go back to camp after a run', reward: 125, check: () => saveData.questProgress && saveData.questProgress.campVisits >= 1, completed: false },
+      quest6: { id: 'quest6', name: 'Foundation', desc: 'Build the Main Building', reward: 150, check: () => saveData.camp && saveData.camp.mainBuilding && saveData.camp.mainBuilding.level >= 1, completed: false },
+      quest7: { id: 'quest7', name: 'Arms Race', desc: 'Build the Forge', reward: 150, check: () => saveData.camp && saveData.camp.forge && saveData.camp.forge.level >= 1, completed: false },
+      quest8: { id: 'quest8', name: 'Suited Up', desc: 'Build the Armory', reward: 150, check: () => saveData.camp && saveData.camp.armory && saveData.camp.armory.level >= 1, completed: false },
+      quest9: { id: 'quest9', name: 'First Craft', desc: 'Craft your first weapon at the Forge', reward: 175, check: () => saveData.questProgress && saveData.questProgress.itemsCrafted >= 1, completed: false },
+      quest10: { id: 'quest10', name: 'Gear Up', desc: 'Equip an item in the Armory', reward: 175, check: () => saveData.questProgress && saveData.questProgress.itemsEquipped >= 1, completed: false },
+      quest11: { id: 'quest11', name: 'Waste Not', desc: 'Build the Recycle/Scrap building', reward: 200, check: () => saveData.camp && saveData.camp.recycler && saveData.camp.recycler.level >= 1, completed: false },
+      quest12: { id: 'quest12', name: 'Break It Down', desc: 'Scrap an item for materials', reward: 200, check: () => saveData.questProgress && saveData.questProgress.itemsScrapped >= 1, completed: false },
+      quest13: { id: 'quest13', name: 'New Friends', desc: 'Build the Companion House', reward: 225, check: () => saveData.camp && saveData.camp.companionHouse && saveData.camp.companionHouse.level >= 1, completed: false },
+      quest14: { id: 'quest14', name: 'Recruit', desc: 'Recruit your first companion', reward: 225, check: () => saveData.questProgress && saveData.questProgress.companionsRecruited >= 1, completed: false },
+      quest15: { id: 'quest15', name: 'Training Day', desc: 'Build the Training Hall', reward: 250, check: () => saveData.camp && saveData.camp.trainingHall && saveData.camp.trainingHall.level >= 1, completed: false },
+      quest16: { id: 'quest16', name: 'Push Limits', desc: 'Use the Training Hall to boost a stat', reward: 250, check: () => saveData.questProgress && saveData.questProgress.statsTraining >= 1, completed: false },
+      quest17: { id: 'quest17', name: 'Knowledge Tree', desc: 'Open the Skill Tree', reward: 275, check: () => saveData.questProgress && saveData.questProgress.skillTreeOpened, completed: false },
+      quest18: { id: 'quest18', name: 'First Skill', desc: 'Unlock your first skill (free)', reward: 275, check: () => saveData.questProgress && saveData.questProgress.skillsUnlocked >= 1, completed: false },
+      quest19: { id: 'quest19', name: 'Upgrade Path', desc: 'Upgrade any building to level 2', reward: 300, check: () => saveData.questProgress && saveData.questProgress.buildingsUpgraded >= 1, completed: false },
+      quest20: { id: 'quest20', name: 'Upgrade Everything', desc: 'Upgrade all buildings at least once', reward: 400, check: () => saveData.questProgress && saveData.questProgress.allBuildingsUpgraded, completed: false },
+      quest21: { id: 'quest21', name: 'Attribute Points', desc: 'Spend attribute points for the first time', reward: 300, check: () => saveData.questProgress && saveData.questProgress.attributesSpent >= 1, completed: false },
+      quest22: { id: 'quest22', name: 'Full Arsenal', desc: 'Own 3 different weapons', reward: 350, check: () => saveData.questProgress && saveData.questProgress.weaponsOwned >= 3, completed: false },
+      quest23: { id: 'quest23', name: 'Companion Squad', desc: 'Have 2 companions', reward: 350, check: () => saveData.questProgress && saveData.questProgress.companionsRecruited >= 2, completed: false },
+      quest24: { id: 'quest24', name: 'Master Crafter', desc: 'Craft 5 items total', reward: 400, check: () => saveData.questProgress && saveData.questProgress.itemsCrafted >= 5, completed: false },
+      quest25: { id: 'quest25', name: 'Deep Dive', desc: 'All buildings built, all mechanics used', reward: 500, check: () => checkDeepDiveComplete(saveData.questProgress), completed: false },
+      quest26: { id: 'quest26', name: 'Secrets of the Deep', desc: 'Find the hidden treasure at the bottom of the lake', reward: 1000, legendary: true, check: () => saveData.questProgress && saveData.questProgress.treasureFound, completed: false }
+    };
+    
+    // Initialize quest progress if not exists
+    function initQuestProgress() {
+      if (!saveData.questProgress) {
+        saveData.questProgress = {
+          movedDistance: 0,
+          enemiesKilled: 0,
+          survivalTime: 0,
+          maxLevel: 0,
+          campVisits: 0,
+          itemsCrafted: 0,
+          itemsEquipped: 0,
+          itemsScrapped: 0,
+          companionsRecruited: 0,
+          statsTraining: 0,
+          skillTreeOpened: false,
+          skillsUnlocked: 0,
+          buildingsUpgraded: 0,
+          allBuildingsUpgraded: false,
+          attributesSpent: 0,
+          weaponsOwned: 0,
+          treasureFound: false,
+          lakeDiveAvailable: false
+        };
+      }
+      if (!saveData.completedQuests) saveData.completedQuests = [];
+    }
+    
+    // Get current active quest
+    function getCurrentQuest() {
+      for (let i = 1; i <= 26; i++) {
+        const questId = `quest${i}`;
+        if (!saveData.completedQuests.includes(questId)) {
+          return QUESTS[questId];
+        }
+      }
+      return null; // All quests complete
+    }
+    
+    // Check and complete quests
+    function checkQuestCompletion() {
+      const currentQuest = getCurrentQuest();
+      if (!currentQuest) return;
+      
+      if (currentQuest.check() && !saveData.completedQuests.includes(currentQuest.id)) {
+        // Quest completed!
+        saveData.completedQuests.push(currentQuest.id);
+        addGold(currentQuest.reward);
+        
+        const message = currentQuest.legendary ? 
+          `⭐ LEGENDARY QUEST COMPLETE: ${currentQuest.name}! +${currentQuest.reward} Gold` :
+          `✓ QUEST COMPLETE: ${currentQuest.name}! +${currentQuest.reward} Gold`;
+        
+        showStatChange(message);
+        playSound('coin');
+        
+        // Special: Quest 25 unlocks Quest 26 (lake dive)
+        if (currentQuest.id === 'quest25') {
+          saveData.questProgress.lakeDiveAvailable = true;
+          showStatChange('🌊 The lake calls to you... Something awaits at the bottom.');
+        }
+        
+        saveSaveData();
+        updateQuestDisplay();
+      }
+    }
+    
+    // Update quest display in UI
+    function updateQuestDisplay() {
+      const currentQuest = getCurrentQuest();
+      const questTracker = document.getElementById('quest-tracker');
+      
+      if (currentQuest && questTracker) {
+        questTracker.style.display = 'block';
+        questTracker.textContent = `📜 Quest: ${currentQuest.name} - ${currentQuest.desc}`;
+      } else if (questTracker) {
+        if (saveData.completedQuests && saveData.completedQuests.length === 26) {
+          questTracker.textContent = '⭐ ALL QUESTS COMPLETE!';
+        } else {
+          questTracker.style.display = 'none';
+        }
+      }
+    }
+    
+    // Track quest progress during gameplay
+    function trackQuestProgress() {
+      const qp = saveData.questProgress;
+      if (!qp) return;
+      
+      // Track level
+      if (playerStats.lvl > qp.maxLevel) qp.maxLevel = playerStats.lvl;
+      
+      // Track survival time (updated in game loop)
+      // Track kills (updated when enemy dies)
+      // Track movement (updated in player movement)
+    }
 
     function showGoldBagAnimation(amount) {
       const bag = document.createElement('div');
@@ -10305,6 +10569,13 @@
         hideMainMenu();
         updateCampScreen();
         document.getElementById('camp-screen').style.display = 'flex';
+        
+        // QUEST SYSTEM: Track camp visits
+        if (saveData.questProgress) {
+          saveData.questProgress.campVisits++;
+          checkQuestCompletion();
+          updateQuestDisplay();
+        }
       };
       
       // Quit Game button (closes window/tab)
@@ -10653,6 +10924,55 @@
         const particle = particlePool.get();
         particle.reset(pos, color);
         particles.push(particle);
+      }
+    }
+    
+    // ENHANCED: Screen shake effect
+    let cameraShakeIntensity = 0;
+    let cameraShakeDuration = 0;
+    function screenShake(intensity = 0.3, duration = 200) {
+      cameraShakeIntensity = intensity;
+      cameraShakeDuration = duration;
+    }
+    
+    function updateScreenShake() {
+      if (cameraShakeDuration > 0 && camera) {
+        const shakeX = (Math.random() - 0.5) * cameraShakeIntensity;
+        const shakeY = (Math.random() - 0.5) * cameraShakeIntensity;
+        const shakeZ = (Math.random() - 0.5) * cameraShakeIntensity;
+        
+        camera.position.x = 20 + shakeX;
+        camera.position.y = 20 + shakeY;
+        camera.position.z = 20 + shakeZ;
+        
+        cameraShakeDuration -= 16; // Approx frame time
+        
+        if (cameraShakeDuration <= 0) {
+          // Reset camera to original position
+          camera.position.set(20, 20, 20);
+        }
+      }
+    }
+    
+    // ENHANCED: Low HP warning (red screen tint) - constants
+    const LOW_HP_THRESHOLD = 0.3;
+    const BASE_VIGNETTE_SIZE = 50;
+    const MAX_VIGNETTE_GROWTH = 150;
+    const BASE_VIGNETTE_OPACITY = 0.3;
+    const MAX_OPACITY_INCREASE = 0.5;
+    
+    function updateLowHPWarning() {
+      const hpPercent = playerStats.hp / playerStats.maxHp;
+      const uiLayer = document.getElementById('ui-layer');
+      
+      if (hpPercent < LOW_HP_THRESHOLD) {
+        // Low HP - red vignette effect
+        const intensity = (LOW_HP_THRESHOLD - hpPercent) / LOW_HP_THRESHOLD; // 0 to 1 as HP drops from 30% to 0%
+        const vignetteSize = BASE_VIGNETTE_SIZE + intensity * MAX_VIGNETTE_GROWTH;
+        const vignetteOpacity = BASE_VIGNETTE_OPACITY + intensity * MAX_OPACITY_INCREASE;
+        uiLayer.style.boxShadow = `inset 0 0 ${vignetteSize}px rgba(255, 0, 0, ${vignetteOpacity})`;
+      } else {
+        uiLayer.style.boxShadow = 'none';
       }
     }
 
@@ -12545,6 +12865,14 @@
       // Track items gained this run (initialize if not present)
       if (!window.runLootGained) window.runLootGained = [];
       
+      // QUEST SYSTEM: Track survival time and update progress
+      if (saveData.questProgress) {
+        if (survivalTime > saveData.questProgress.survivalTime) {
+          saveData.questProgress.survivalTime = survivalTime;
+        }
+        checkQuestCompletion();
+      }
+      
       // Update save data
       saveData.totalRuns++;
       if (survivalTime > saveData.bestTime) saveData.bestTime = survivalTime;
@@ -13545,14 +13873,14 @@
         }
       }
 
-      // Spawn Logic - Only spawn new wave if previous wave is cleared
+      // Spawn Logic - Only spawn new wave if previous wave is cleared AND countdown is done
       frameCount++;
       const aliveEnemies = enemies.filter(e => !e.isDead).length;
       const timeSinceLastWave = frameCount - lastWaveEndTime;
       const minWaveDelay = Math.floor(GAME_CONFIG.waveInterval * 0.6); // 60% of wave interval (3 seconds at 60fps)
       
-      // Spawn new wave if: interval passed AND (no enemies alive OR enough time since last spawn)
-      if (frameCount % GAME_CONFIG.waveInterval === 0 && (aliveEnemies === 0 || timeSinceLastWave > GAME_CONFIG.waveInterval)) {
+      // ENHANCED: Don't spawn enemies during countdown
+      if (!countdownActive && frameCount % GAME_CONFIG.waveInterval === 0 && (aliveEnemies === 0 || timeSinceLastWave > GAME_CONFIG.waveInterval)) {
         lastWaveEndTime = frameCount; // Update last wave time on every spawn
         const spawnStartTime = performance.now();
         spawnWave();
@@ -13695,10 +14023,32 @@
           // Fire based on barrels
           for(let i=0; i<weapons.gun.barrels; i++) {
             setTimeout(() => {
-              projectiles.push(new Projectile(player.mesh.position.x, player.mesh.position.z, nearest.mesh.position));
+              const proj = new Projectile(player.mesh.position.x, player.mesh.position.z, nearest.mesh.position, 'gun');
+              projectiles.push(proj);
               
-              // ENHANCED muzzle flash light effect - brighter and more dramatic
-              const flashLight = new THREE.PointLight(0xFFFFFF, 6, 20); // Increased intensity (was 4, 15)
+              // ENHANCED: 3 different muzzle flash variations
+              const flashVariation = Math.floor(Math.random() * 3);
+              let flashColor, flashIntensity, flashRange;
+              
+              if (flashVariation === 0) {
+                // Bright white flash
+                flashColor = 0xFFFFFF;
+                flashIntensity = 7;
+                flashRange = 22;
+              } else if (flashVariation === 1) {
+                // Yellow-orange flash
+                flashColor = 0xFFAA00;
+                flashIntensity = 6;
+                flashRange = 20;
+              } else {
+                // Bright yellow flash
+                flashColor = 0xFFFF00;
+                flashIntensity = 6.5;
+                flashRange = 21;
+              }
+              
+              // ENHANCED muzzle flash light effect - quality lighting
+              const flashLight = new THREE.PointLight(flashColor, flashIntensity, flashRange);
               flashLight.position.copy(player.mesh.position);
               flashLight.position.y += 1;
               scene.add(flashLight);
@@ -13714,20 +14064,27 @@
               }, 80);
               activeTimeouts.push(timeoutId);
               
-              // Gun kickback effect - slight recoil visual
+              // ENHANCED: Gun recoil animation - more noticeable
               const originalY = player.mesh.position.y;
-              player.mesh.position.y = originalY - 0.05;
+              const originalRotX = player.mesh.rotation.x;
+              player.mesh.position.y = originalY - 0.08; // Stronger kickback
+              player.mesh.rotation.x = originalRotX - 0.1; // Slight backward tilt
+              
               const kickbackTimeoutId = setTimeout(() => {
                 player.mesh.position.y = originalY;
-              }, 50);
+                player.mesh.rotation.x = originalRotX;
+                const tidx = activeTimeouts.indexOf(kickbackTimeoutId);
+                if (tidx > -1) activeTimeouts.splice(tidx, 1);
+              }, 60);
               activeTimeouts.push(kickbackTimeoutId);
               
-              // ENHANCED Muzzle flash particles (bright and intense) - Reduced for performance
-              spawnParticles(player.mesh.position, 0xFFFF00, 6); // Reduced for performance
-              spawnParticles(player.mesh.position, 0xFFFFFF, 4); // Reduced for performance
-              spawnParticles(player.mesh.position, 0xFFA500, 4); // Reduced for performance
-              // Add smoke particles
-              spawnParticles(player.mesh.position, 0x888888, 4);
+              // ENHANCED: HD Muzzle flash particles - bright and intense
+              spawnParticles(player.mesh.position, 0xFFFF00, 8); // Yellow flash
+              spawnParticles(player.mesh.position, 0xFFFFFF, 6); // White sparks
+              spawnParticles(player.mesh.position, 0xFFA500, 5); // Orange glow
+              // HD smoke particles
+              spawnParticles(player.mesh.position, 0x666666, 6); // Gray smoke
+              spawnParticles(player.mesh.position, 0x888888, 4); // Light smoke
             }, i * 100);
           }
           weapons.gun.lastShot = time;
@@ -13825,18 +14182,24 @@
             const projectile = new Projectile(
               drone.mesh.position.x, 
               drone.mesh.position.z, 
-              nearestEnemy.mesh.position
+              nearestEnemy.mesh.position,
+              'drone'
             );
             // Mark projectile as from drone turret for damage calculation
             projectile.isDroneTurret = true;
             projectiles.push(projectile);
             
-            // Small muzzle flash from drone
-            const flashLight = new THREE.PointLight(0x00FFFF, 2, 8);
+            // ENHANCED: Cyan laser flash from drone
+            const flashLight = new THREE.PointLight(0x00FFFF, 4, 10); // Cyan
             flashLight.position.copy(drone.mesh.position);
             flashLight.position.y += 0.2;
             scene.add(flashLight);
             flashLights.push(flashLight);
+            
+            // Cyan particles for sci-fi laser effect
+            spawnParticles(drone.mesh.position, 0x00FFFF, 5);
+            spawnParticles(drone.mesh.position, 0x00AAFF, 3);
+            
             const timeoutId = setTimeout(() => {
               scene.remove(flashLight);
               const idx = flashLights.indexOf(flashLight);
@@ -13869,33 +14232,35 @@
         }
 
         if (nearest) {
-          // Fire two shots with spread
+          // ENHANCED: Fire multiple pellets with wide spread (shotgun pattern)
           const baseDir = new THREE.Vector3(
             nearest.mesh.position.x - player.mesh.position.x,
             0,
             nearest.mesh.position.z - player.mesh.position.z
           ).normalize();
           
-          // Left barrel
-          const leftAngle = Math.atan2(baseDir.z, baseDir.x) - weapons.doubleBarrel.spread;
-          const leftTarget = new THREE.Vector3(
-            player.mesh.position.x + Math.cos(leftAngle) * weapons.doubleBarrel.range,
-            0,
-            player.mesh.position.z + Math.sin(leftAngle) * weapons.doubleBarrel.range
-          );
-          projectiles.push(new Projectile(player.mesh.position.x, player.mesh.position.z, leftTarget));
+          const baseAngle = Math.atan2(baseDir.z, baseDir.x);
+          const pelletCount = weapons.doubleBarrel.pelletCount;
           
-          // Right barrel
-          const rightAngle = Math.atan2(baseDir.z, baseDir.x) + weapons.doubleBarrel.spread;
-          const rightTarget = new THREE.Vector3(
-            player.mesh.position.x + Math.cos(rightAngle) * weapons.doubleBarrel.range,
-            0,
-            player.mesh.position.z + Math.sin(rightAngle) * weapons.doubleBarrel.range
-          );
-          projectiles.push(new Projectile(player.mesh.position.x, player.mesh.position.z, rightTarget));
+          // Fire pellets in a spread pattern
+          for (let i = 0; i < pelletCount; i++) {
+            // Wide spread pattern
+            const spreadAngle = (Math.random() - 0.5) * weapons.doubleBarrel.spread * 2;
+            const pelletAngle = baseAngle + spreadAngle;
+            
+            const pelletTarget = new THREE.Vector3(
+              player.mesh.position.x + Math.cos(pelletAngle) * weapons.doubleBarrel.range,
+              0,
+              player.mesh.position.z + Math.sin(pelletAngle) * weapons.doubleBarrel.range
+            );
+            
+            const proj = new Projectile(player.mesh.position.x, player.mesh.position.z, pelletTarget, 'shotgun');
+            proj.isDoubleBarrel = true;
+            projectiles.push(proj);
+          }
           
-          // Effects
-          const flashLight = new THREE.PointLight(0xFFFF00, 3, 12);
+          // ENHANCED: Massive muzzle flash with orange/yellow glow
+          const flashLight = new THREE.PointLight(0xFF8800, 10, 25); // Orange, very bright
           flashLight.position.copy(player.mesh.position);
           flashLight.position.y += 1;
           scene.add(flashLight);
@@ -13906,11 +14271,28 @@
             if (idx > -1) flashLights.splice(idx, 1);
             const tidx = activeTimeouts.indexOf(timeoutId);
             if (tidx > -1) activeTimeouts.splice(tidx, 1);
-          }, 80);
+          }, 100);
           activeTimeouts.push(timeoutId);
           
-          spawnParticles(player.mesh.position, 0xFFFF00, 8);
-          spawnParticles(player.mesh.position, 0xFFFFFF, 5);
+          // ENHANCED: Heavy recoil animation
+          const originalY = player.mesh.position.y;
+          const originalRotX = player.mesh.rotation.x;
+          player.mesh.position.y = originalY - 0.15; // HEAVY kickback
+          player.mesh.rotation.x = originalRotX - 0.2; // Strong backward tilt
+          
+          const kickbackTimeoutId = setTimeout(() => {
+            player.mesh.position.y = originalY;
+            player.mesh.rotation.x = originalRotX;
+            const tidx = activeTimeouts.indexOf(kickbackTimeoutId);
+            if (tidx > -1) activeTimeouts.splice(tidx, 1);
+          }, 80);
+          activeTimeouts.push(kickbackTimeoutId);
+          
+          // ENHANCED: Massive particle effects
+          spawnParticles(player.mesh.position, 0xFF8800, 15); // Orange
+          spawnParticles(player.mesh.position, 0xFFFF00, 12); // Yellow
+          spawnParticles(player.mesh.position, 0xFFFFFF, 8);  // White
+          spawnParticles(player.mesh.position, 0x888888, 10); // Heavy smoke
           
           weapons.doubleBarrel.lastShot = time;
           playSound('doublebarrel'); // Double barrel sound
@@ -14147,6 +14529,10 @@
       expGems = expGems.filter(g => g.active);
       goldCoins = goldCoins.filter(g => g.active);
       chests = chests.filter(c => c.active);
+      
+      // ENHANCED: Update screen shake and low HP warning
+      updateScreenShake();
+      updateLowHPWarning();
 
       // Phase 3: Render loop protection - wrap in try-catch to prevent freeze
       // Frame Skip Mechanism: Skip rendering if frame budget exceeded
