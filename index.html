@@ -4678,9 +4678,25 @@
           this.idlePhase += dt * 2;
           
           // Subtle breathing motion
-          this.mesh.scale.y = 1 + Math.sin(this.idlePhase) * 0.02;
-          this.mesh.scale.x = 1 - Math.sin(this.idlePhase) * 0.01;
-          this.mesh.scale.z = 1 - Math.sin(this.idlePhase) * 0.01;
+          // Compose idle breathing scale multiplicatively with existing scale (e.g., wobble/dash)
+          if (this.idleScaleFactorX === undefined) this.idleScaleFactorX = 1;
+          if (this.idleScaleFactorY === undefined) this.idleScaleFactorY = 1;
+          if (this.idleScaleFactorZ === undefined) this.idleScaleFactorZ = 1;
+          
+          // Remove previous frame's idle scaling so we don't accumulate over time
+          this.mesh.scale.x /= this.idleScaleFactorX;
+          this.mesh.scale.y /= this.idleScaleFactorY;
+          this.mesh.scale.z /= this.idleScaleFactorZ;
+          
+          // Compute new idle scale factors
+          this.idleScaleFactorY = 1 + Math.sin(this.idlePhase) * 0.02;
+          this.idleScaleFactorX = 1 - Math.sin(this.idlePhase) * 0.01;
+          this.idleScaleFactorZ = 1 - Math.sin(this.idlePhase) * 0.01;
+          
+          // Apply new idle scaling on top of the existing (wobble/dash) scale
+          this.mesh.scale.x *= this.idleScaleFactorX;
+          this.mesh.scale.y *= this.idleScaleFactorY;
+          this.mesh.scale.z *= this.idleScaleFactorZ;
           
           // Arms: gentle sway
           this.leftArm.rotation.x = Math.sin(this.idlePhase) * 0.1;
