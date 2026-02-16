@@ -11447,6 +11447,81 @@
     }
     
     function createLevelUpEffects() {
+      // ADVANCED: Mage Aura Effect - Pushes dust/fog away from character
+      // Create expanding aura ring with particle push
+      for(let i=0; i<80; i++) {
+        const angle = (i / 80) * Math.PI * 2;
+        const distance = 0.5 + Math.random() * 1.5;
+        
+        // Dust/fog particles being pushed away
+        const dustGeo = new THREE.SphereGeometry(0.15, 6, 6);
+        const dustMat = new THREE.MeshBasicMaterial({ 
+          color: 0xCCCCCC, // Light gray dust
+          transparent: true,
+          opacity: 0.6
+        });
+        const dust = new THREE.Mesh(dustGeo, dustMat);
+        dust.position.copy(player.mesh.position);
+        dust.position.y += 0.2;
+        scene.add(dust);
+        
+        // Push outward with decreasing speed
+        const speed = 0.4 + Math.random() * 0.3;
+        const vel = new THREE.Vector3(
+          Math.cos(angle) * speed,
+          0.1 + Math.random() * 0.2, // Slight upward
+          Math.sin(angle) * speed
+        );
+        
+        let dustLife = 60;
+        const updateDust = () => {
+          dustLife--;
+          dust.position.add(vel);
+          vel.multiplyScalar(0.95); // Decelerate
+          vel.y -= 0.01; // Slight gravity
+          dust.scale.multiplyScalar(1.03); // Expand
+          dust.material.opacity = (dustLife / 60) * 0.6;
+          
+          if (dustLife <= 0 || dust.position.y < 0.1) {
+            scene.remove(dust);
+            dust.geometry.dispose();
+            dust.material.dispose();
+          } else {
+            requestAnimationFrame(updateDust);
+          }
+        };
+        updateDust();
+      }
+      
+      // Magical aura glow around player
+      const auraGeo = new THREE.SphereGeometry(1.5, 16, 16);
+      const auraMat = new THREE.MeshBasicMaterial({ 
+        color: 0x5DADE2,
+        transparent: true,
+        opacity: 0.4,
+        side: THREE.BackSide
+      });
+      const aura = new THREE.Mesh(auraGeo, auraMat);
+      aura.position.copy(player.mesh.position);
+      scene.add(aura);
+      
+      let auraLife = 60;
+      const updateAura = () => {
+        auraLife--;
+        aura.scale.multiplyScalar(1.08); // Expand rapidly
+        aura.material.opacity = (auraLife / 60) * 0.4;
+        aura.rotation.y += 0.1;
+        
+        if (auraLife <= 0) {
+          scene.remove(aura);
+          aura.geometry.dispose();
+          aura.material.dispose();
+        } else {
+          requestAnimationFrame(updateAura);
+        }
+      };
+      updateAura();
+      
       // Water Fountain Effect - 60 water droplet particles explode from character
       for(let i=0; i<60; i++) {
         const angle = (i / 60) * Math.PI * 2;
@@ -11492,36 +11567,37 @@
         updateDroplet();
       }
       
-      // Expanding splash ring on ground
-      const ringGeo = new THREE.RingGeometry(0.5, 1, 16); // Reduced segments for performance
-      const ringMat = new THREE.MeshBasicMaterial({ 
+      // NO DEATH RING - Requirements say to remove explosion ring
+      // Instead, add subtle ground ripple
+      const rippleGeo = new THREE.RingGeometry(0.5, 0.7, 32);
+      const rippleMat = new THREE.MeshBasicMaterial({ 
         color: COLORS.player,
         transparent: true,
-        opacity: 0.8,
+        opacity: 0.5,
         side: THREE.DoubleSide
       });
-      const ring = new THREE.Mesh(ringGeo, ringMat);
-      ring.position.copy(player.mesh.position);
-      ring.position.y = 0.05;
-      ring.rotation.x = -Math.PI / 2;
-      scene.add(ring);
+      const ripple = new THREE.Mesh(rippleGeo, rippleMat);
+      ripple.position.copy(player.mesh.position);
+      ripple.position.y = 0.02;
+      ripple.rotation.x = -Math.PI / 2;
+      scene.add(ripple);
       
-      let ringLife = 60;
-      const updateRing = () => {
-        ringLife--;
-        const scale = 1 + (60 - ringLife) * 0.15;
-        ring.scale.set(scale, scale, 1);
-        ring.material.opacity = ringLife / 60;
+      let rippleLife = 40;
+      const updateRipple = () => {
+        rippleLife--;
+        const scale = 1 + (40 - rippleLife) * 0.2;
+        ripple.scale.set(scale, scale, 1);
+        ripple.material.opacity = (rippleLife / 40) * 0.5;
         
-        if (ringLife <= 0) {
-          scene.remove(ring);
-          ring.geometry.dispose();
-          ring.material.dispose();
+        if (rippleLife <= 0) {
+          scene.remove(ripple);
+          ripple.geometry.dispose();
+          ripple.material.dispose();
         } else {
-          requestAnimationFrame(updateRing);
+          requestAnimationFrame(updateRipple);
         }
       };
-      updateRing();
+      updateRipple();
       
       // Fountain/explosion of "LEVEL UP" text particles from player's head
       const texts = ["L", "E", "V", "E", "L", " ", "U", "P", "!"];
