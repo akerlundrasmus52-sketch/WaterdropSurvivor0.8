@@ -13021,8 +13021,12 @@
         joystickRight.active = false;
         joystickRight.x = 0;
         joystickRight.y = 0;
-        // Clear keyboard state when switching control types
-        gameSettings.keysPressed = {};
+        // Clear keyboard state when switching control types (preserve object reference)
+        if (gameSettings.keysPressed) {
+          for (let key in gameSettings.keysPressed) {
+            delete gameSettings.keysPressed[key];
+          }
+        }
         updateControlType();
         saveSettings();
       };
@@ -15962,6 +15966,12 @@
       const joystickInnerRight = document.getElementById('joystick-inner-right');
       const container = document.getElementById('game-container');
       
+      // Defensive null checks for input elements
+      if (!zone || !joystickOuter || !joystickInner || !joystickOuterRight || !joystickInnerRight || !container) {
+        console.warn('Input elements not found. Skipping input setup.');
+        return;
+      }
+      
       let touchStartX = 0;
       let touchStartY = 0;
       let touchStartTime = 0;
@@ -16505,7 +16515,7 @@
         return;
       }
 
-      if (isPaused || isGameOver || !isGameActive) {
+      if (isPaused || isGameOver) {
         // Still render the scene so visual effects (camera shake, particles, modals) are visible (PR #82)
         renderer.render(scene, camera);
         return;
@@ -16647,8 +16657,10 @@
         spawnParticles(player.mesh.position, 0x00FF00, 2);
       }
 
-      // Player Update
-      player.update(dt);
+      // Player Update (defensive null check)
+      if (player && player.update) {
+        player.update(dt);
+      }
       
       // Check windmill quest trigger
       if (!windmillQuest.active && !windmillQuest.hasCompleted) {
