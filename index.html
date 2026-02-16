@@ -3513,6 +3513,10 @@
         updateHUD();
         playSound('hit');
         
+        // ENHANCED: Screen shake based on damage
+        const shakeIntensity = Math.min(reduced / 30, 1); // Scale with damage
+        screenShake(0.2 + shakeIntensity * 0.3, 150 + shakeIntensity * 100);
+        
         // Trigger waterdrop UI attack animation
         const waterdropContainer = document.getElementById('waterdrop-container');
         if (waterdropContainer) {
@@ -3578,31 +3582,6 @@
             this.mesh.scale.set(1, 1, 1);
           }, 50);
         }, 50);
-        
-        // Enhanced screen shake on damage
-        const originalCameraPos = { 
-          x: camera.position.x, 
-          y: camera.position.y, 
-          z: camera.position.z 
-        };
-        let shakeTime = 0;
-        const shakeDuration = 0.25; // Slightly longer (was 0.2)
-        
-        const shakeAnim = () => {
-          shakeTime += 0.016;
-          if (shakeTime < shakeDuration) {
-            const intensity = (1 - shakeTime / shakeDuration) * 0.7; // More intense (was 0.5)
-            camera.position.x = originalCameraPos.x + (Math.random() - 0.5) * intensity;
-            camera.position.y = originalCameraPos.y + (Math.random() - 0.5) * intensity;
-            camera.position.z = originalCameraPos.z + (Math.random() - 0.5) * intensity;
-            requestAnimationFrame(shakeAnim);
-          } else {
-            camera.position.x = originalCameraPos.x;
-            camera.position.y = originalCameraPos.y;
-            camera.position.z = originalCameraPos.z;
-          }
-        };
-        shakeAnim();
 
         if (playerStats.hp <= 0) {
           // ENHANCED Death splash: more particles + ground pool with fade
@@ -5761,6 +5740,9 @@
         this.shadow.geometry.dispose();
         this.shadow.material.dispose();
         
+        // ENHANCED: Screen shake on meteor impact
+        screenShake(0.5, 300);
+        
         // AOE Damage
         const range = weapons.meteor.area;
         const dmg = weapons.meteor.damage * playerStats.strength;
@@ -5772,9 +5754,25 @@
           }
         });
         
-        // Visuals
-        spawnParticles(this.target, 0xFF4500, 10);
-        spawnParticles(this.target, 0xFFFF00, 5);
+        // ENHANCED: Premium explosion visuals
+        spawnParticles(this.target, 0xFF4500, 15); // Orange fire
+        spawnParticles(this.target, 0xFFFF00, 10); // Yellow flames
+        spawnParticles(this.target, 0xFF0000, 8); // Red fire
+        spawnParticles(this.target, 0x888888, 12); // Smoke
+        
+        // Explosion light flash
+        const explosionLight = new THREE.PointLight(0xFF4500, 15, 25);
+        explosionLight.position.copy(this.target);
+        explosionLight.position.y += 1;
+        scene.add(explosionLight);
+        
+        const timeoutId = setTimeout(() => {
+          scene.remove(explosionLight);
+          const tidx = activeTimeouts.indexOf(timeoutId);
+          if (tidx > -1) activeTimeouts.splice(tidx, 1);
+        }, 150);
+        activeTimeouts.push(timeoutId);
+        
         playSound('meteor'); // Explosive boom sound
       }
     }
@@ -10926,6 +10924,47 @@
         particles.push(particle);
       }
     }
+    
+    // ENHANCED: Screen shake effect
+    let cameraShakeIntensity = 0;
+    let cameraShakeDuration = 0;
+    function screenShake(intensity = 0.3, duration = 200) {
+      cameraShakeIntensity = intensity;
+      cameraShakeDuration = duration;
+    }
+    
+    function updateScreenShake() {
+      if (cameraShakeDuration > 0 && camera) {
+        const shakeX = (Math.random() - 0.5) * cameraShakeIntensity;
+        const shakeY = (Math.random() - 0.5) * cameraShakeIntensity;
+        const shakeZ = (Math.random() - 0.5) * cameraShakeIntensity;
+        
+        camera.position.x = 20 + shakeX;
+        camera.position.y = 20 + shakeY;
+        camera.position.z = 20 + shakeZ;
+        
+        cameraShakeDuration -= 16; // Approx frame time
+        
+        if (cameraShakeDuration <= 0) {
+          // Reset camera to original position
+          camera.position.set(20, 20, 20);
+        }
+      }
+    }
+    
+    // ENHANCED: Low HP warning (red screen tint)
+    function updateLowHPWarning() {
+      const hpPercent = playerStats.hp / playerStats.maxHp;
+      const uiLayer = document.getElementById('ui-layer');
+      
+      if (hpPercent < 0.3) {
+        // Low HP - red vignette effect
+        const intensity = (0.3 - hpPercent) / 0.3; // 0 to 1 as HP drops from 30% to 0%
+        uiLayer.style.boxShadow = `inset 0 0 ${50 + intensity * 150}px rgba(255, 0, 0, ${0.3 + intensity * 0.5})`;
+      } else {
+        uiLayer.style.boxShadow = 'none';
+      }
+    }
 
     function spawnExp(x, z) {
       expGems.push(new ExpGem(x, z));
@@ -14480,6 +14519,10 @@
       expGems = expGems.filter(g => g.active);
       goldCoins = goldCoins.filter(g => g.active);
       chests = chests.filter(c => c.active);
+      
+      // ENHANCED: Update screen shake and low HP warning
+      updateScreenShake();
+      updateLowHPWarning();
 
       // Phase 3: Render loop protection - wrap in try-catch to prevent freeze
       // Frame Skip Mechanism: Skip rendering if frame budget exceeded
