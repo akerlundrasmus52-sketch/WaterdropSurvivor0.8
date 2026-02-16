@@ -462,7 +462,7 @@
       text-shadow: 0 0 8px rgba(255,215,0,0.6);
     }
     
-    /* PR #117: Menu button */
+    /* PR #117: Menu button - ALWAYS VISIBLE */
     #menu-btn {
       position: absolute;
       top: 20px;
@@ -478,7 +478,7 @@
       z-index: 100;
       box-shadow: 0 4px 0 #2a1a11, 0 6px 12px rgba(0,0,0,0.5);
       transition: all 0.2s;
-      display: none; /* Hidden in landscape, shown in portrait */
+      display: flex !important; /* ALWAYS visible - both portrait and landscape */
       align-items: center;
       justify-content: center;
       color: #FFD700;
@@ -1588,9 +1588,7 @@
         display: none !important;
       }
       
-      #menu-btn {
-        display: flex !important;
-      }
+      /* Menu button already always visible - no need for portrait-specific rule */
     }
 
     @media (orientation: landscape) {
@@ -1786,7 +1784,7 @@
       
       <div class="settings-item">
         <label for="auto-aim-checkbox">Auto-Aim</label>
-        <input type="checkbox" id="auto-aim-checkbox" checked>
+        <input type="checkbox" id="auto-aim-checkbox">
       </div>
       
       <div class="settings-item">
@@ -1811,6 +1809,7 @@
       <div class="settings-item">
         <label for="quality-select">Graphics Quality</label>
         <select id="quality-select">
+          <option value="auto">Auto-Detect (Recommended)</option>
           <option value="low">Low (Better Performance)</option>
           <option value="medium">Medium (Balanced)</option>
           <option value="high">High (Better Visuals)</option>
@@ -1988,16 +1987,15 @@
     </div>
   </div>
   
-  <!-- PR #117: Options Menu Modal -->
+  <!-- PR #117: Options Menu Modal - EXIT MOVED TO SETTINGS -->
   <div id="options-menu">
     <div class="options-content">
       <h2 class="options-title">OPTIONS</h2>
       <div class="options-buttons">
-        <button class="btn-small" id="options-stats-btn">STATS</button>
+        <button class="btn-small" id="options-stats-btn">📊 STATS</button>
         <button class="btn-small" id="options-settings-btn">⚙️ SETTINGS</button>
         <button class="btn-small" id="options-camp-btn">⛺ GO TO CAMP</button>
-        <button class="btn-small" id="options-exit-btn">🚪 EXIT TO MENU</button>
-        <button class="btn-small" id="close-options-btn">CLOSE</button>
+        <button class="btn-small" id="close-options-btn">❌ CLOSE</button>
       </div>
     </div>
   </div>
@@ -2819,7 +2817,7 @@
       controlType: 'touch', // 'touch', 'keyboard', 'gamepad'
       soundEnabled: true,
       musicEnabled: true,
-      graphicsQuality: 'medium', // 'low', 'medium', 'high'
+      graphicsQuality: 'auto', // 'auto', 'low', 'medium', 'high' - auto-detect by default
       isPortrait: null,
       inputListenersRegistered: false
     };
@@ -9786,7 +9784,64 @@
     }
 
     // Apply graphics quality settings
+    // Auto-detect graphics quality based on device capabilities
+    function detectGraphicsQuality() {
+      // Get device specs
+      const width = window.innerWidth || screen.width;
+      const height = window.innerHeight || screen.height;
+      const pixelRatio = window.devicePixelRatio || 1;
+      const totalPixels = width * height * pixelRatio;
+      
+      // Check for hardware concurrency (CPU cores)
+      const cores = navigator.hardwareConcurrency || 2;
+      
+      // Check GPU via WebGL
+      let gpuTier = 'low';
+      try {
+        const canvas = document.createElement('canvas');
+        const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+        if (gl) {
+          const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+          if (debugInfo) {
+            const renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL).toLowerCase();
+            // High-end GPUs
+            if (renderer.includes('nvidia') || renderer.includes('geforce') || 
+                renderer.includes('radeon') || renderer.includes('amd') ||
+                renderer.includes('apple') || renderer.includes('m1') || renderer.includes('m2')) {
+              gpuTier = 'high';
+            }
+            // Mid-range integrated graphics
+            else if (renderer.includes('intel') || renderer.includes('iris')) {
+              gpuTier = 'medium';
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('Could not detect GPU:', e);
+      }
+      
+      // Decision matrix
+      // High: Good GPU + High res + Multi-core
+      if (gpuTier === 'high' && totalPixels > 2000000 && cores >= 4) {
+        return 'high';
+      }
+      // Medium: Mid GPU or decent specs
+      else if (gpuTier === 'medium' || (totalPixels > 1000000 && cores >= 2)) {
+        return 'medium';
+      }
+      // Low: Basic device or mobile
+      else {
+        return 'low';
+      }
+    }
+    
     function applyGraphicsQuality(quality) {
+      // Handle auto-detect
+      if (quality === 'auto') {
+        quality = detectGraphicsQuality();
+        console.log(`[Graphics Quality] Auto-detected: ${quality}`);
+      }
+      
       if (!renderer || !window.dirLight) {
         console.warn('[Graphics Quality] Cannot apply settings: renderer or dirLight not initialized. Call after init() completes.');
         return;
@@ -10093,22 +10148,23 @@
         playSound('waterdrop');
       });
       
-      // Exit to Main Menu from in-game
-      const optionsExitBtn = document.getElementById('options-exit-btn');
-      optionsExitBtn.addEventListener('click', () => {
-        if (confirm('Exit to main menu? Your progress in this run will be lost.')) {
-          optionsMenu.style.display = 'none';
-          resetGame();
-          showMainMenu();
-          playSound('waterdrop');
-        }
-      });
-      
       optionsSettingsBtn.addEventListener('click', () => {
         optionsMenu.style.display = 'none';
         isPaused = true;
         // Open settings modal
         document.getElementById('settings-modal').style.display = 'flex';
+      });
+      
+      // Exit to Main Menu from settings (moved from options menu)
+      const settingsExitBtn = document.getElementById('settings-exit-btn');
+      settingsExitBtn.addEventListener('click', () => {
+        if (confirm('Exit to main menu? Your progress in this run will be lost.')) {
+          document.getElementById('settings-modal').style.display = 'none';
+          optionsMenu.style.display = 'none';
+          resetGame();
+          showMainMenu();
+          playSound('waterdrop');
+        }
       });
       
       document.getElementById('settings-btn').onclick = () => {
