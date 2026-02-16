@@ -3860,9 +3860,24 @@
     let activeCompanion = null; // Will hold the active Companion instance
 
     // Game Settings
+    // Auto-detect default control type based on device capabilities
+    function detectDefaultControlType() {
+      // Check if device has touch support
+      const hasTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+      // Check if it's likely a mobile device (small screen + touch)
+      const isMobileDevice = hasTouch && (window.innerWidth <= 768 || window.innerHeight <= 768);
+      
+      if (isMobileDevice) {
+        return 'touch';
+      } else {
+        // Desktop/laptop defaults to keyboard
+        return 'keyboard';
+      }
+    }
+
     const gameSettings = {
       autoAim: false, // Auto-aim off by default, upgradeable via attributes
-      controlType: 'touch', // 'touch', 'keyboard', 'gamepad'
+      controlType: detectDefaultControlType(), // Auto-detect: 'touch' for mobile, 'keyboard' for desktop
       soundEnabled: true,
       musicEnabled: true,
       graphicsQuality: 'medium', // 'low', 'medium', 'high'
@@ -16139,6 +16154,17 @@
       }, { passive: false });
 
       container.addEventListener('touchend', (e) => {
+        // Allow skipping cinematic intro/countdown with touch
+        if (cinematicIntroActive || countdownActive) {
+          if (cinematicIntroActive) endCinematicIntro();
+          if (countdownActive) {
+            countdownActive = false;
+            startCinematicIntro();
+          }
+          e.preventDefault();
+          return;
+        }
+        
         const t = e.changedTouches[0];
         const dx = t.clientX - touchStartX;
         const dy = t.clientY - touchStartY;
@@ -16151,13 +16177,38 @@
         }
       }, { passive: false });
       
+      // Click handler for skipping intro on desktop
+      container.addEventListener('click', (e) => {
+        // Allow skipping cinematic intro/countdown with click
+        if (cinematicIntroActive || countdownActive) {
+          if (cinematicIntroActive) endCinematicIntro();
+          if (countdownActive) {
+            countdownActive = false;
+            startCinematicIntro();
+          }
+          e.preventDefault();
+        }
+      }, { passive: false });
+      
       // Keyboard Controls (WASD for movement, mouse for aiming) - only register once
       if (!gameSettings.inputListenersRegistered) {
         const keysPressed = {};
         gameSettings.keysPressed = keysPressed; // Store reference for game loop access
         
         window.addEventListener('keydown', (e) => {
-          if (!isGameActive || isPaused || isGameOver) return;
+          // Allow skipping cinematic intro with any key press
+          if (cinematicIntroActive || countdownActive) {
+            // Skip intro/countdown on any key press
+            if (cinematicIntroActive) endCinematicIntro();
+            if (countdownActive) {
+              countdownActive = false;
+              startCinematicIntro();
+            }
+            return;
+          }
+          
+          // Allow keyboard input during gameplay, but not during pause/gameover
+          if (isPaused || isGameOver) return;
           if (gameSettings.controlType !== 'keyboard') return;
           keysPressed[e.key.toLowerCase()] = true;
           
