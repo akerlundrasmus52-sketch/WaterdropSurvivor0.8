@@ -5280,7 +5280,8 @@
         // DEFENSIVE: Validate mesh before proceeding with death sequence
         if (!this.mesh || !this.mesh.material) {
           console.error('Enemy.die() called but mesh or material is null');
-          // Don't mark as dead - let normal cleanup handle this
+          // Mark as dead to prevent further calls and allow cleanup by filter
+          this.isDead = true;
           return;
         }
         
@@ -5470,7 +5471,7 @@
         // Death animations create their own meshes and don't reference this.mesh after init
         const timeoutId = setTimeout(() => {
           // DEFENSIVE: Check scene still exists before disposal (handles game reset/cleanup)
-          if (typeof scene === 'undefined' || !scene) {
+          if (!scene) {
             return;
           }
           if (meshToRemove && meshToRemove.parent) {
