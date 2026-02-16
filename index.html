@@ -4657,6 +4657,44 @@
         this.rightLeg.position.set(0.15, -0.45, 0);
         this.mesh.add(this.rightLeg);
         
+        // FRESH IMPLEMENTATION: Gun model attached to right arm
+        const gunGroup = new THREE.Group();
+        
+        // Gun barrel
+        const barrelGeo = new THREE.CylinderGeometry(0.04, 0.04, 0.3, 8);
+        const gunMat = new THREE.MeshToonMaterial({ color: 0x444444 }); // Dark gray metal
+        const barrel = new THREE.Mesh(barrelGeo, gunMat);
+        barrel.rotation.z = Math.PI / 2; // Horizontal
+        barrel.position.set(0.15, 0, 0);
+        gunGroup.add(barrel);
+        
+        // Gun handle/grip
+        const handleGeo = new THREE.BoxGeometry(0.06, 0.15, 0.05);
+        const handleMat = new THREE.MeshToonMaterial({ color: 0x8B4513 }); // Brown grip
+        const handle = new THREE.Mesh(handleGeo, handleMat);
+        handle.position.set(0, -0.1, 0);
+        gunGroup.add(handle);
+        
+        // Gun body/chamber
+        const bodyGeo = new THREE.BoxGeometry(0.12, 0.08, 0.08);
+        const body = new THREE.Mesh(bodyGeo, gunMat);
+        body.position.set(0.06, -0.02, 0);
+        gunGroup.add(body);
+        
+        // Muzzle tip (for muzzle flash positioning)
+        const muzzleGeo = new THREE.CylinderGeometry(0.05, 0.04, 0.02, 8);
+        const muzzleMat = new THREE.MeshToonMaterial({ color: 0x666666 }); // Lighter gray
+        const muzzle = new THREE.Mesh(muzzleGeo, muzzleMat);
+        muzzle.rotation.z = Math.PI / 2;
+        muzzle.position.set(0.3, 0, 0);
+        gunGroup.add(muzzle);
+        
+        // Position gun near right arm
+        gunGroup.position.set(0.45, -0.05, 0.2);
+        gunGroup.rotation.y = -Math.PI / 6; // Angled forward
+        this.gun = gunGroup;
+        this.mesh.add(this.gun);
+        
         // Smoke particles timer
         this.smokeTimer = 0;
         
@@ -4922,14 +4960,29 @@
           this.mesh.scale.z = 1 / Math.sqrt(breathScale);
         }
         
-        // Animate cigar tip (pulsing emissive glow)
+        // Animate cigar tip (pulsing emissive glow synced with breathing)
         if (this.cigarTip) {
-          const tipBrightness = 0.7 + Math.sin(gameTime * 8) * 0.3;
+          // ENHANCED: Sync cigar glow with breathing cycle
+          const breathCycle = Math.sin(this.breathingPhase * Math.PI * 2);
+          const inhaling = breathCycle > 0; // Positive = inhaling, negative = exhaling
+          
+          // Cigar glows brighter on inhale
+          const tipBrightness = inhaling 
+            ? (0.8 + breathCycle * 0.2) // Brighter during inhale (0.8-1.0)
+            : (0.5 + Math.abs(breathCycle) * 0.3); // Dimmer during exhale (0.5-0.8)
           this.cigarTip.material.opacity = tipBrightness;
           
-          // Enhanced cigar smoke with lighting reaction
+          // Change cigar tip color based on intensity
+          const glowIntensity = inhaling ? 0.3 + breathCycle * 0.2 : 0.1;
+          this.cigarTip.material.emissive = new THREE.Color(0xFF4500);
+          this.cigarTip.material.emissiveIntensity = glowIntensity;
+          
+          // Enhanced cigar smoke with lighting reaction and exhale effect
           this.smokeTimer += dt;
-          if (this.smokeTimer > 0.2) { // Every 0.2 seconds
+          // Exhale smoke more frequently (every 0.15s during exhale, 0.3s during inhale)
+          const smokeInterval = !inhaling && breathCycle < -0.3 ? 0.1 : 0.25;
+          
+          if (this.smokeTimer > smokeInterval) {
             this.smokeTimer = 0;
             
             // Get current lighting intensity for smoke color (reacts to day/night)
@@ -4940,40 +4993,60 @@
               lightIntensity
             );
             
-            // Create smoke particle
-            const smokeGeo = new THREE.SphereGeometry(0.05, 6, 6);
-            const smokeMat = new THREE.MeshBasicMaterial({ 
-              color: smokeColor,
-              transparent: true,
-              opacity: 0.5
-            });
-            const smoke = new THREE.Mesh(smokeGeo, smokeMat);
+            // Determine if this is exhale smoke (thicker, from nose/mouth area)
+            const isExhale = !inhaling && breathCycle < -0.3;
+            const numSmokePuffs = isExhale ? 3 : 1; // More smoke on exhale
             
-            // Position at cigar tip
-            const tipWorldPos = new THREE.Vector3();
-            this.cigarTip.getWorldPosition(tipWorldPos);
-            smoke.position.copy(tipWorldPos);
-            scene.add(smoke);
-            
-            // Animate smoke rising
-            let smokeLife = 80;
-            const updateSmoke = () => {
-              smokeLife--;
-              smoke.position.y += 0.02; // Rise up
-              smoke.position.x += (Math.random() - 0.5) * 0.01; // Drift
-              smoke.position.z += (Math.random() - 0.5) * 0.01;
-              smoke.scale.multiplyScalar(1.02); // Expand
-              smoke.material.opacity = (smokeLife / 80) * 0.5; // Fade out
+            for (let i = 0; i < numSmokePuffs; i++) {
+              // Create smoke particle
+              const smokeSize = isExhale ? 0.08 + Math.random() * 0.04 : 0.05;
+              const smokeGeo = new THREE.SphereGeometry(smokeSize, 6, 6);
+              const smokeMat = new THREE.MeshBasicMaterial({ 
+                color: smokeColor,
+                transparent: true,
+                opacity: isExhale ? 0.7 : 0.5
+              });
+              const smoke = new THREE.Mesh(smokeGeo, smokeMat);
               
-              if (smokeLife <= 0) {
-                scene.remove(smoke);
-                smoke.geometry.dispose();
-                smoke.material.dispose();
+              // Position based on whether it's exhale or cigar smoke
+              if (isExhale) {
+                // Exhale from nose/mouth area (front of face)
+                const nosePos = new THREE.Vector3(
+                  Math.random() * 0.1 - 0.05, // Slight random spread
+                  0.05 + Math.random() * 0.1, // Around nose/mouth height
+                  0.45 // Front of face
+                );
+                nosePos.applyMatrix4(this.mesh.matrixWorld);
+                smoke.position.copy(nosePos);
               } else {
-                requestAnimationFrame(updateSmoke);
+                // Regular smoke from cigar tip
+                const tipWorldPos = new THREE.Vector3();
+                this.cigarTip.getWorldPosition(tipWorldPos);
+                smoke.position.copy(tipWorldPos);
               }
-            };
-            updateSmoke();
+              scene.add(smoke);
+              
+              // Animate smoke rising
+              const smokeLife = isExhale ? 100 : 80;
+              let currentSmokeLife = smokeLife;
+              const updateSmoke = () => {
+                currentSmokeLife--;
+                smoke.position.y += isExhale ? 0.025 : 0.02; // Exhale rises faster
+                smoke.position.x += (Math.random() - 0.5) * (isExhale ? 0.02 : 0.01); // More drift on exhale
+                smoke.position.z += (Math.random() - 0.5) * (isExhale ? 0.02 : 0.01);
+                smoke.scale.multiplyScalar(isExhale ? 1.03 : 1.02); // Expand faster on exhale
+                smoke.material.opacity = (currentSmokeLife / smokeLife) * (isExhale ? 0.7 : 0.5); // Fade out
+                
+                if (currentSmokeLife <= 0) {
+                  scene.remove(smoke);
+                  smoke.geometry.dispose();
+                  smoke.material.dispose();
+                } else {
+                  requestAnimationFrame(updateSmoke);
+                }
+              };
+              updateSmoke();
+            }
           }
         }
         
@@ -4985,7 +5058,7 @@
           this.nextBlinkTime = 2 + Math.random() * 3; // Next blink in 2-5 seconds
         }
         
-        if (this.isBlinking) {
+        if (this.isBlinking && !this.eyesClosedForShooting) {
           // Scale eyes down vertically for blink effect
           const blinkProgress = Math.min(1, this.blinkTimer / this.blinkDuration);
           if (blinkProgress < 0.5) {
@@ -5007,9 +5080,10 @@
           if (blinkProgress >= 1) {
             this.isBlinking = false;
             this.blinkTimer = 0;
-            // Reset scale
-            this.leftEye.scale.y = 1;
-            this.rightEye.scale.y = 1;
+            // Reset scale (unless eyes are closed for shooting)
+            if (!this.eyesClosedForShooting) {
+              this.leftEye.scale.y = 1;
+              this.rightEye.scale.y = 1;
             this.leftPupil.scale.y = 1;
             this.rightPupil.scale.y = 1;
           }
@@ -17831,6 +17905,28 @@
         }
 
         if (nearest) {
+          // FRESH IMPLEMENTATION: Close eyes while shooting (add eye closing state)
+          if (player.leftEye && player.rightEye) {
+            player.eyesClosedForShooting = true;
+            player.leftEye.scale.y = 0.2; // Nearly closed
+            player.rightEye.scale.y = 0.2;
+            player.leftPupil.scale.y = 0.2;
+            player.rightPupil.scale.y = 0.2;
+            
+            // Reset eyes after brief moment
+            setTimeout(() => {
+              if (player.leftEye && player.rightEye) {
+                player.eyesClosedForShooting = false;
+                if (!player.isBlinking) { // Don't interfere with blinking
+                  player.leftEye.scale.y = 1;
+                  player.rightEye.scale.y = 1;
+                  player.leftPupil.scale.y = 1;
+                  player.rightPupil.scale.y = 1;
+                }
+              }
+            }, 100); // Eyes closed for 100ms
+          }
+          
           // Fire based on barrels
           for(let i=0; i<weapons.gun.barrels; i++) {
             setTimeout(() => {
