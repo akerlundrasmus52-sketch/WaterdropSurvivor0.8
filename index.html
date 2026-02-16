@@ -5462,10 +5462,20 @@
         // FRESH IMPLEMENTATION: Enhanced headshot with actual head detachment
         // Headshot: Dramatic head explosion with visible detached head
         spawnParticles(this.mesh.position, enemyColor, 25);
-        spawnParticles(this.mesh.position, 0x8B0000, 15); // Red blood
+        spawnParticles(this.mesh.position, 0xDC143C, 20); // Crimson blood (not white!)
+        spawnParticles(this.mesh.position, 0x8B0000, 15); // Dark red blood
         spawnParticles(this.mesh.position, 0xFFFFFF, 5);
         
-        // Create detached head that flies off
+        // Blood stream particles (continuous stream effect)
+        for (let i = 0; i < 8; i++) {
+          setTimeout(() => {
+            const streamPos = this.mesh.position.clone();
+            streamPos.y += 0.8;
+            spawnParticles(streamPos, 0xDC143C, 5);
+          }, i * 50);
+        }
+        
+        // Create detached head that flies off with enhanced rotation
         const headGeo = new THREE.SphereGeometry(0.3, 12, 12);
         const headMat = new THREE.MeshBasicMaterial({ 
           color: enemyColor, 
@@ -5477,12 +5487,19 @@
         head.position.y += 0.5; // Start from head height
         scene.add(head);
         
-        // Head velocity (flies backward and up)
+        // Head velocity (flies backward and up with spin)
         const headVel = new THREE.Vector3(
           (Math.random() - 0.5) * 0.6,
           0.8 + Math.random() * 0.4, // Upward
           (Math.random() - 0.5) * 0.6
         );
+        
+        // Enhanced rotation speeds for dramatic spinning
+        const rotSpeed = {
+          x: 0.15 + Math.random() * 0.1,
+          y: 0.2 + Math.random() * 0.15,
+          z: 0.1 + Math.random() * 0.1
+        };
         
         // Blood spray trail from neck
         let headLife = 80;
@@ -5490,13 +5507,16 @@
           headLife--;
           head.position.add(headVel);
           headVel.y -= 0.025; // Gravity
-          head.rotation.x += 0.15;
-          head.rotation.y += 0.2;
-          head.rotation.z += 0.1;
           
-          // Blood trail
-          if (headLife % 3 === 0 && headLife > 20) {
-            spawnParticles(head.position, 0x8B0000, 2);
+          // Enhanced rotation with varying speeds for more dramatic effect
+          head.rotation.x += rotSpeed.x;
+          head.rotation.y += rotSpeed.y;
+          head.rotation.z += rotSpeed.z;
+          
+          // Blood stream trail from severed neck
+          if (headLife % 2 === 0 && headLife > 20) {
+            // Crimson blood, not white!
+            spawnParticles(head.position, 0xDC143C, 3);
           }
           
           // Fade out near end
@@ -5528,10 +5548,10 @@
         corpse.rotation.x = -Math.PI / 2;
         scene.add(corpse);
         
-        // Large blood splatter pool
+        // Large blood splatter pool (crimson, not white!)
         const bloodGeo = new THREE.CircleGeometry(1.2, 16); // Larger pool
         const bloodMat = new THREE.MeshBasicMaterial({ 
-          color: 0x8B0000, 
+          color: 0xDC143C, // Crimson blood
           transparent: true,
           opacity: 0.7, // More visible
           side: THREE.DoubleSide
@@ -5542,7 +5562,7 @@
         bloodPool.rotation.x = -Math.PI / 2;
         scene.add(bloodPool);
         
-        // Extra gore pieces (bone/skull fragments)
+        // Extra gore pieces (bone/skull fragments) with proper coloring
         for(let i = 0; i < 12; i++) {
           const pieceSize = 0.1 + Math.random() * 0.1;
           const piece = new THREE.Mesh(
