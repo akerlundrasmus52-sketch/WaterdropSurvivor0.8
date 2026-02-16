@@ -2859,7 +2859,9 @@
       lakeCenterZ: -30,
       lakeRadius: 18,
       // Performance optimization - Phase 1
-      maxEnemiesOnScreen: 50
+      maxEnemiesOnScreen: 50,
+      // Enemy death cleanup delay (ms) - allows animations to capture initial state
+      meshDisposalDelayMs: 100
     };
 
     // --- AUDIO SYSTEM (Oscillators) ---
@@ -5273,7 +5275,7 @@
       }
 
       die() {
-        // DEFENSIVE: Store position before any operations to prevent null reference
+        // DEFENSIVE: Validate mesh before proceeding with death sequence
         if (!this.mesh || !this.mesh.material) {
           console.error('Enemy.die() called but mesh or material is null');
           // Don't mark as dead - let normal cleanup handle this
@@ -5281,6 +5283,7 @@
         }
         
         this.isDead = true;
+        // Store position before any operations to prevent null reference during drops/text
         const deathPosition = this.mesh.position.clone();
         
         // Track kills for active quests
@@ -5459,7 +5462,7 @@
         checkAchievements(); // Check for achievements after kill
         
         // CRITICAL FIX: Remove and dispose mesh LAST, after all operations complete
-        // Delay 100ms to ensure:
+        // Delay to ensure:
         // 1. All EXP/gold/text spawns complete (they use deathPosition, not this.mesh)
         // 2. Death animation methods have captured initial mesh.position via clone()
         // Death animations create their own meshes and don't reference this.mesh after init
@@ -5473,7 +5476,7 @@
           if (materialToDispose) {
             materialToDispose.dispose();
           }
-        }, 100);
+        }, GAME_CONFIG.meshDisposalDelayMs);
       }
       
       // Specialized death effects by damage type
@@ -7097,8 +7100,8 @@
         this.bobPhase += 0.05;
         this.mesh.position.y = 0.5 + Math.sin(this.bobPhase) * 0.1;
         
-        // Sparkle effect on shell - DEFENSIVE: Check material and emissiveIntensity exist
-        if (this.mesh.material && typeof this.mesh.material.emissiveIntensity !== 'undefined') {
+        // Sparkle effect on shell - DEFENSIVE: Check material has emissiveIntensity property
+        if (this.mesh.material && 'emissiveIntensity' in this.mesh.material) {
           this.sparklePhase += 0.1;
           this.mesh.material.emissiveIntensity = 0.3 + Math.sin(this.sparklePhase) * 0.2;
         }
