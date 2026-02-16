@@ -656,7 +656,7 @@
       color: #5DADE2;
     }
     
-    /* Comic Book Tutorial Modal */
+    /* Comic Book Tutorial Modal - Batman 80s Theme */
     .comic-tutorial-modal {
       display: none;
       position: fixed;
@@ -664,7 +664,7 @@
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(0,0,0,0.95);
+      background: rgba(0,0,0,0.98);
       z-index: 2000;
       align-items: center;
       justify-content: center;
@@ -673,93 +673,103 @@
     }
     
     .comic-panel {
-      background: linear-gradient(135deg, #2C3E50 0%, #1a252f 100%);
-      border: 6px solid #FFD700;
+      background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%);
+      border: 8px solid #FFD700;
       border-radius: 15px;
-      padding: 35px;
-      max-width: 550px;
+      padding: 40px;
+      max-width: 600px;
       width: 90%;
       max-height: 85vh;
       overflow-y: auto;
-      box-shadow: 0 0 40px rgba(255,215,0,0.8),
-                  inset 0 0 20px rgba(0,0,0,0.5);
+      box-shadow: 0 0 60px rgba(255,215,0,0.9),
+                  0 0 30px rgba(255,215,0,0.6),
+                  inset 0 0 40px rgba(0,0,0,0.9);
       position: relative;
-      /* Comic book effect with dotted pattern */
+      /* Batman 80s comic halftone pattern */
       background-image: 
-        radial-gradient(circle at 2px 2px, rgba(255,255,255,0.05) 1px, transparent 1px);
-      background-size: 20px 20px;
+        radial-gradient(circle at 3px 3px, rgba(255,215,0,0.08) 2px, transparent 2px);
+      background-size: 15px 15px;
     }
     
     .comic-panel::before {
       content: '';
       position: absolute;
-      top: -10px;
-      left: -10px;
-      right: -10px;
-      bottom: -10px;
-      background: linear-gradient(45deg, #FFD700 0%, #FFA500 100%);
+      top: -12px;
+      left: -12px;
+      right: -12px;
+      bottom: -12px;
+      background: linear-gradient(45deg, #FFD700 0%, #FFA500 50%, #FFD700 100%);
       border-radius: 20px;
       z-index: -1;
-      opacity: 0.3;
+      opacity: 0.5;
+      animation: pulse 2s infinite;
     }
     
     .comic-title {
       color: #FFD700;
-      font-size: 42px;
+      font-size: 48px;
       font-weight: 900;
       text-align: center;
-      margin-bottom: 20px;
+      margin-bottom: 25px;
       text-shadow: 
-        3px 3px 0 #000,
-        -2px -2px 0 #000,
-        2px -2px 0 #000,
-        -2px 2px 0 #000,
-        0 0 20px rgba(255,215,0,0.8);
-      letter-spacing: 2px;
+        4px 4px 0 #000,
+        -3px -3px 0 #000,
+        3px -3px 0 #000,
+        -3px 3px 0 #000,
+        0 0 30px rgba(255,215,0,1),
+        0 0 15px rgba(255,215,0,0.8);
+      letter-spacing: 3px;
       text-transform: uppercase;
+      font-family: 'Impact', 'Arial Black', sans-serif;
     }
     
     .comic-text {
       color: #FFFFFF;
-      font-size: 20px;
-      line-height: 1.8;
-      margin-bottom: 25px;
+      font-size: 22px;
+      line-height: 1.9;
+      margin-bottom: 30px;
       text-align: center;
-      text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+      text-shadow: 3px 3px 6px rgba(0,0,0,1);
+      font-weight: 500;
     }
     
     .comic-text strong {
       color: #FFD700;
       font-weight: 900;
-      text-shadow: 0 0 10px rgba(255,215,0,0.6);
+      text-shadow: 0 0 15px rgba(255,215,0,0.8),
+                   2px 2px 4px rgba(0,0,0,1);
     }
     
     .comic-action {
-      background: linear-gradient(to bottom, #5DADE2 0%, #3498DB 100%);
-      color: #FFFFFF;
-      font-size: 22px;
-      font-weight: bold;
-      padding: 15px 40px;
-      border: 4px solid #2980B9;
-      border-radius: 10px;
+      background: linear-gradient(to bottom, #FFD700 0%, #FFA500 100%);
+      color: #000000;
+      font-size: 24px;
+      font-weight: 900;
+      padding: 18px 45px;
+      border: 5px solid #000;
+      border-radius: 12px;
       cursor: pointer;
       text-align: center;
       text-transform: uppercase;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.8),
+                  0 0 20px rgba(255,215,0,0.6);
       transition: all 0.2s;
       display: block;
       margin: 0 auto;
+      letter-spacing: 2px;
     }
     
     .comic-action:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(0,0,0,0.7);
-      background: linear-gradient(to bottom, #6CB8E8 0%, #4AA3DD 100%);
+      transform: translateY(-3px);
+      box-shadow: 0 8px 25px rgba(0,0,0,0.9),
+                  0 0 30px rgba(255,215,0,0.8);
+      background: linear-gradient(to bottom, #FFED4E 0%, #FFB52E 100%);
     }
     
     .comic-action:active {
       transform: translateY(0);
-      box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+      box-shadow: 0 3px 15px rgba(0,0,0,0.7),
+                  0 0 15px rgba(255,215,0,0.5);
     }
     
     .menu-btn-primary {
@@ -2695,7 +2705,7 @@
         let progress = 0;
         let progressInterval;
         
-        // Animate loading bar from 0% to 100% over ~8 seconds
+        // Animate loading bar from 0% to 100% over ~5 seconds (reduced from 8s)
         function updateProgress() {
           progress += 5; // 5% per step
           loadingBar.style.width = progress + '%';
@@ -2710,7 +2720,7 @@
         }
         
         // Start progress animation
-        progressInterval = setInterval(updateProgress, 400); // 20 steps × 400ms = 8s
+        progressInterval = setInterval(updateProgress, 250); // 20 steps × 250ms = 5s
         
         // 12-second failsafe timeout - show menu anyway if module fails to load
         setTimeout(function() {
@@ -3244,7 +3254,7 @@
     // Day/Night Cycle System - Smooth, non-blocking transitions
     let dayNightCycle = {
       enabled: true,
-      timeOfDay: 0.01, // Start at dawn (1% - very early morning) for enhanced realism (0-1, where 0=midnight, 0.25=dawn, 0.5=noon, 0.75=dusk, 1=midnight)
+      timeOfDay: 0.25, // Start at dawn (6 AM / 25% through day cycle) (0-1, where 0=midnight, 0.25=dawn, 0.5=noon, 0.75=dusk, 1=midnight)
       cycleSpeed: 1 / 600, // 10 minutes for full cycle (1 / 600 seconds at 60fps)
       lastUpdateTime: 0
     };
@@ -11381,6 +11391,17 @@
         optionsMenu.style.display = 'none';
         isPaused = true;
         updateCampScreen();
+        
+        // Ensure buildings tab is selected (not sleep/day-night selection)
+        document.getElementById('camp-buildings-section').style.display = 'block';
+        document.getElementById('camp-skills-section').style.display = 'none';
+        document.getElementById('camp-sleep-section').style.display = 'none';
+        document.getElementById('camp-training-section').style.display = 'none';
+        document.getElementById('camp-buildings-tab').style.background = '#5A3A31';
+        document.getElementById('camp-skills-tab').style.background = '#3a3a3a';
+        document.getElementById('camp-sleep-tab').style.background = '#3a3a3a';
+        document.getElementById('camp-training-tab').style.background = '#3a3a3a';
+        
         document.getElementById('camp-screen').style.display = 'flex';
         playSound('waterdrop');
       });
@@ -14029,30 +14050,30 @@
       switch(step) {
         case 'first_death':
           tutorialData = {
-            title: 'FIRST DEATH!',
-            text: 'Your journey begins with failure, but <strong>that\'s how you learn!</strong><br><br>To unlock your full potential, you must return to the <strong>CAMP</strong> and interact with the buildings there.<br><br>Progression is <strong>locked</strong> until you visit the camp!',
-            button: 'GO TO CAMP'
+            title: '⚡ DROPLET DOWN! ⚡',
+            text: '<strong style="color:#FFD700;">YOUR JOURNEY BEGINS NOW...</strong><br><br>Every hero falls. But only the <strong>BRAVE</strong> rise again!<br><br>Return to the <strong>⛺ CAMP</strong> to unlock your true potential.<br><br><strong>WARNING:</strong> Your progression is LOCKED until you complete your training!',
+            button: '⚡ ENTER CAMP ⚡'
           };
           break;
         case 'unlock_dash':
           tutorialData = {
-            title: 'UNLOCK DASH!',
-            text: 'Welcome to the Camp!<br><br>Go to the <strong>SKILL TREE</strong> building and unlock the <strong>DASH</strong> ability.<br><br>This will help you survive longer by dodging enemy attacks!',
-            button: 'GOT IT!'
+            title: '🎯 TRAINING PROTOCOL 1 🎯',
+            text: '<strong>MISSION:</strong> Master Evasion<br><br>Navigate to the <strong>SKILL TREE</strong> building and unlock the <strong>DASH</strong> ability.<br><br>This combat maneuver is <strong>ESSENTIAL</strong> for survival against overwhelming enemy forces!<br><br><strong>⚠️ DO NOT PROCEED WITHOUT COMPLETING THIS STEP ⚠️</strong>',
+            button: '✓ ACKNOWLEDGED'
           };
           break;
         case 'unlock_headshot':
           tutorialData = {
-            title: 'UNLOCK HEADSHOT!',
-            text: 'Great job! Now unlock the <strong>HEADSHOT</strong> skill to deal massive damage to enemies.<br><br>Combine <strong>DASH</strong> and <strong>HEADSHOT</strong> to become unstoppable!',
-            button: 'UNDERSTOOD!'
+            title: '🎯 TRAINING PROTOCOL 2 🎯',
+            text: '<strong>EXCELLENT WORK, DROPLET!</strong><br><br><strong>NEXT MISSION:</strong> Master Precision Combat<br><br>Return to the <strong>SKILL TREE</strong> and unlock a <strong>HEADSHOT/CRITICAL</strong> skill.<br><br>Combine DASH and PRECISION to become an <strong>UNSTOPPABLE FORCE!</strong><br><br><strong>⚠️ COMPLETE THIS TO FINISH TRAINING ⚠️</strong>',
+            button: '✓ ON MY WAY'
           };
           break;
         case 'tutorial_complete':
           tutorialData = {
-            title: 'TUTORIAL COMPLETE!',
-            text: 'You\'ve learned the basics!<br><br>Continue exploring the camp to unlock more buildings, upgrade your stats, and collect powerful equipment.<br><br><strong>Good luck, Droplet!</strong>',
-            button: 'LET\'S GO!'
+            title: '⚡ TRAINING COMPLETE! ⚡',
+            text: '<strong style="font-size:28px;">CONGRATULATIONS, DROPLET!</strong><br><br>You have proven yourself worthy!<br><br>The camp is yours to explore. Unlock buildings, upgrade your arsenal, and prepare for the challenges ahead.<br><br><strong>THE NIGHT IS DARK... BUT YOU ARE READY!</strong><br><br>🦇 <em>Justice awaits no one...</em> 🦇',
+            button: '⚡ BECOME LEGEND ⚡'
           };
           break;
       }
@@ -14268,11 +14289,14 @@
       // Reset run loot tracking
       window.runLootGained = [];
       
-      // Set time of day based on sleep choice (default dawn at 1% for enhanced realism)
+      // Set time of day based on sleep choice
       if (saveData.nextRunTimeOfDay === 'day') {
-        dayNightCycle.timeOfDay = 0.01; // Dawn (1% - very early morning for realistic lighting)
+        dayNightCycle.timeOfDay = 0.25; // Dawn (6 AM - clear daytime start)
+      } else if (saveData.nextRunTimeOfDay === 'night') {
+        dayNightCycle.timeOfDay = 0.0; // Midnight (clear nighttime start)
       } else {
-        dayNightCycle.timeOfDay = 0.0; // Midnight
+        // Default to day if not set
+        dayNightCycle.timeOfDay = 0.25;
       }
       
       // Apply permanent upgrades from save data
