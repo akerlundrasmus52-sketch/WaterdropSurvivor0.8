@@ -2585,6 +2585,42 @@
         gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
         osc2.start(now);
         osc2.stop(now + 0.2);
+      } else if (type === 'headshot') {
+        // ADVANCED: Dramatic headshot sound - skull crack + splatter
+        // Sharp crack sound
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(2000, now);
+        osc.frequency.exponentialRampToValueAtTime(80, now + 0.15);
+        gain.gain.setValueAtTime(0.35, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+        osc.start(now);
+        osc.stop(now + 0.18);
+        
+        // Wet splatter sound
+        const osc2 = audioCtx.createOscillator();
+        const gain2 = audioCtx.createGain();
+        osc2.connect(gain2);
+        gain2.connect(audioCtx.destination);
+        osc2.type = 'sawtooth';
+        osc2.frequency.setValueAtTime(300, now + 0.05);
+        osc2.frequency.exponentialRampToValueAtTime(60, now + 0.25);
+        gain2.gain.setValueAtTime(0.25, now + 0.05);
+        gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+        osc2.start(now + 0.05);
+        osc2.stop(now + 0.3);
+        
+        // Deep thud
+        const osc3 = audioCtx.createOscillator();
+        const gain3 = audioCtx.createGain();
+        osc3.connect(gain3);
+        gain3.connect(audioCtx.destination);
+        osc3.type = 'sine';
+        osc3.frequency.setValueAtTime(100, now + 0.1);
+        osc3.frequency.exponentialRampToValueAtTime(40, now + 0.35);
+        gain3.gain.setValueAtTime(0.3, now + 0.1);
+        gain3.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+        osc3.start(now + 0.1);
+        osc3.stop(now + 0.4);
       } else if (type === 'splash') {
         // Water splash sound
         osc.type = 'sine';
@@ -4461,10 +4497,52 @@
        * @param {number} amount - Damage amount
        * @param {boolean} isCrit - Whether this is a critical hit
        * @param {string} damageType - Type of damage: 'physical', 'fire', 'ice', 'lightning', 'shotgun', 'headshot'
+       * @param {boolean} isHeadshot - Whether this is a headshot (double-crit)
        */
-      takeDamage(amount, isCrit = false, damageType = 'physical') {
+      takeDamage(amount, isCrit = false, damageType = 'physical', isHeadshot = false) {
         // Track last damage type for death effects
         this.lastDamageType = damageType;
+        this.lastWasHeadshot = isHeadshot;
+        
+        // ADVANCED: Enhanced blood spurting on headshots
+        if (isHeadshot) {
+          // Massive blood fountain
+          for (let i = 0; i < 50; i++) {
+            const particle = new THREE.Mesh(
+              new THREE.SphereGeometry(0.05, 4, 4),
+              new THREE.MeshBasicMaterial({ color: 0x8B0000, transparent: true })
+            );
+            particle.position.copy(this.mesh.position);
+            particle.position.y += 0.5; // From head position
+            scene.add(particle);
+            
+            // Explosive outward velocity
+            const angle = Math.random() * Math.PI * 2;
+            const speed = Math.random() * 0.3 + 0.2;
+            const vx = Math.cos(angle) * speed;
+            const vz = Math.sin(angle) * speed;
+            const vy = Math.random() * 0.4 + 0.3; // Upward spray
+            
+            let life = 60;
+            const animate = () => {
+              life--;
+              particle.position.x += vx * 0.05;
+              particle.position.z += vz * 0.05;
+              particle.position.y += vy * 0.05;
+              vy -= 0.02; // Gravity
+              particle.material.opacity = life / 60;
+              
+              if (life <= 0 || particle.position.y < 0.1) {
+                scene.remove(particle);
+                particle.geometry.dispose();
+                particle.material.dispose();
+              } else {
+                requestAnimationFrame(animate);
+              }
+            };
+            animate();
+          }
+        }
         
         // Phase 5: Hit impact particles (flesh/blood) on every hit - ENHANCED: Scale with damage
         const bloodParticleCount = Math.min(3 + Math.floor(amount / 10), 15); // 3-15 particles based on damage
@@ -5220,6 +5298,63 @@
           (Math.random() - 0.5) * 0.6
         );
         
+        // ADVANCED: Add visible limbs (arms/legs) that detach on headshot
+        const limbsToCreate = [
+          { type: 'arm', size: [0.12, 0.4, 0.12], pos: [-0.3, 0, 0] },
+          { type: 'arm', size: [0.12, 0.4, 0.12], pos: [0.3, 0, 0] },
+          { type: 'leg', size: [0.15, 0.5, 0.15], pos: [-0.15, -0.3, 0] },
+          { type: 'leg', size: [0.15, 0.5, 0.15], pos: [0.15, -0.3, 0] }
+        ];
+        
+        limbsToCreate.forEach(limbData => {
+          const limbGeo = new THREE.BoxGeometry(...limbData.size);
+          const limbMat = new THREE.MeshBasicMaterial({ 
+            color: enemyColor, 
+            transparent: true 
+          });
+          const limb = new THREE.Mesh(limbGeo, limbMat);
+          limb.position.copy(this.mesh.position);
+          limb.position.x += limbData.pos[0];
+          limb.position.y += limbData.pos[1];
+          limb.position.z += limbData.pos[2];
+          scene.add(limb);
+          
+          // Limb physics
+          const limbVel = new THREE.Vector3(
+            limbData.pos[0] * 1.5 + (Math.random() - 0.5) * 0.3,
+            0.4 + Math.random() * 0.3,
+            (Math.random() - 0.5) * 0.3
+          );
+          
+          let limbLife = 90;
+          const updateLimb = () => {
+            limbLife--;
+            limb.position.add(limbVel);
+            limbVel.y -= 0.02; // Gravity
+            limb.rotation.x += 0.1;
+            limb.rotation.y += 0.15;
+            limb.rotation.z += 0.08;
+            
+            // Blood spray from stump
+            if (limbLife % 5 === 0 && limbLife > 30) {
+              spawnParticles(limb.position, 0x8B0000, 1);
+            }
+            
+            if (limbLife < 30) {
+              limb.material.opacity = limbLife / 30;
+            }
+            
+            if (limbLife <= 0 || limb.position.y < 0) {
+              scene.remove(limb);
+              limb.geometry.dispose();
+              limb.material.dispose();
+            } else {
+              requestAnimationFrame(updateLimb);
+            }
+          };
+          updateLimb();
+        });
+        
         // Blood spray trail from neck
         let headLife = 80;
         const updateHead = () => {
@@ -5250,7 +5385,7 @@
         };
         updateHead();
         
-        // Body falls (corpse without head)
+        // Body falls (corpse without head - now just torso)
         const corpseGeo = new THREE.CircleGeometry(0.6, 16);
         const corpseMat = new THREE.MeshBasicMaterial({ 
           color: enemyColor, 
@@ -5599,7 +5734,20 @@
             const isCrit = Math.random() < playerStats.critChance;
             if (isCrit) dmg *= playerStats.critDmg;
             
-            enemy.takeDamage(Math.floor(dmg), isCrit);
+            // ADVANCED: Double-crit headshot system
+            // If crit hits, roll for headshot (luck-based, starts at 0% + 1% per luck point)
+            let isHeadshot = false;
+            let damageType = 'physical';
+            if (isCrit) {
+              const headshotChance = (playerStats.luck || 0) * 0.01; // 1% per luck point
+              isHeadshot = Math.random() < headshotChance;
+              if (isHeadshot) {
+                dmg *= 3; // Triple damage on headshot
+                damageType = 'headshot';
+              }
+            }
+            
+            enemy.takeDamage(Math.floor(dmg), isCrit, damageType, isHeadshot);
             
             // FRESH: Critical hit effects - gold particles, brief light flash
             if (isCrit) {
@@ -5614,6 +5762,29 @@
               setTimeout(() => {
                 scene.remove(critLight);
               }, 150);
+            }
+            
+            // ADVANCED: Headshot effects - massive visual feedback
+            if (isHeadshot) {
+              // Explosive headshot effects
+              spawnParticles(enemy.mesh.position, 0xFF0000, 30); // Red blood explosion
+              spawnParticles(enemy.mesh.position, 0x8B0000, 20); // Dark red
+              spawnParticles(enemy.mesh.position, 0xFFFFFF, 15); // White flash
+              
+              // Show "HEADSHOT" text in status bar
+              showStatusMessage('💀 HEADSHOT! 💀', 2000, '#FF0000');
+              
+              // Dramatic light flash
+              const headshotLight = new THREE.PointLight(0xFF0000, 15, 20);
+              headshotLight.position.copy(enemy.mesh.position);
+              headshotLight.position.y += 2;
+              scene.add(headshotLight);
+              setTimeout(() => {
+                scene.remove(headshotLight);
+              }, 200);
+              
+              // Play special sound
+              playSound('headshot');
             }
             
             // Knockback effect
