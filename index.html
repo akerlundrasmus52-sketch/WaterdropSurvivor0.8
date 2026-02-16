@@ -2078,6 +2078,107 @@
     });
   </script>
 
+  <!-- Standalone Loading Script (Non-Module) -->
+  <!-- This script runs immediately and independently of Three.js/module loading -->
+  <script>
+    (function() {
+      console.log('[Loading] Standalone loading script starting...');
+      
+      const loadingScreen = document.getElementById('loading-screen');
+      const loadingBar = document.getElementById('loading-bar');
+      
+      if (!loadingScreen || !loadingBar) {
+        console.error('[Loading] Loading screen elements not found');
+        return;
+      }
+      
+      let progress = 0;
+      const totalIterations = 20;
+      const intervalDuration = 400; // ms
+      const progressIncrement = 100 / totalIterations; // 5% per iteration
+      
+      // Animate loading bar from 0% to 100% over ~8 seconds
+      const loadingInterval = setInterval(() => {
+        progress += progressIncrement;
+        if (progress > 100) progress = 100;
+        
+        loadingBar.style.width = progress + '%';
+        
+        if (progress >= 100) {
+          clearInterval(loadingInterval);
+          console.log('[Loading] Loading bar animation complete (100%)');
+          
+          // Set flag to indicate standalone loading is complete
+          window.loadingComplete = true;
+          
+          // Wait briefly before transitioning to menu
+          setTimeout(() => {
+            transitionToMenu();
+          }, 600);
+        }
+      }, intervalDuration);
+      
+      // 12-second failsafe timeout
+      const failsafeTimeout = setTimeout(() => {
+        console.log('[Loading Failsafe] Checking if module loaded...');
+        
+        // If module hasn't signaled ready, force show menu
+        if (!window.gameModuleReady) {
+          console.warn('[Loading Failsafe] Module did not load in time, showing menu anyway');
+          
+          // Clear the loading interval if still running
+          clearInterval(loadingInterval);
+          
+          // Force loading bar to 100%
+          loadingBar.style.width = '100%';
+          window.loadingComplete = true;
+          
+          // Force transition to menu
+          setTimeout(() => {
+            transitionToMenu();
+          }, 300);
+        } else {
+          console.log('[Loading Failsafe] Module loaded successfully, no intervention needed');
+        }
+      }, 12000); // 12 seconds
+      
+      function transitionToMenu() {
+        // Don't transition if we've already done so
+        if (loadingScreen.style.display === 'none') {
+          console.log('[Loading] Already transitioned to menu, skipping');
+          return;
+        }
+        
+        console.log('[Loading] Transitioning to main menu...');
+        
+        // Fade out loading screen
+        loadingScreen.classList.add('fade-out');
+        
+        setTimeout(() => {
+          loadingScreen.style.display = 'none';
+          
+          // Show main menu if the module hasn't already done so
+          const mainMenu = document.getElementById('main-menu');
+          if (mainMenu && mainMenu.style.display !== 'flex') {
+            mainMenu.style.display = 'flex';
+            console.log('[Loading] Main menu shown by standalone script');
+            
+            // Try to call showMainMenu if it exists (defined in module)
+            try {
+              if (typeof showMainMenu === 'function') {
+                showMainMenu();
+              }
+            } catch (e) {
+              console.log('[Loading] showMainMenu not available yet:', e.message);
+            }
+          }
+        }, 500); // Match fade-out transition duration
+      }
+      
+      console.log('[Loading] Standalone loading script initialized (8s animation + 12s failsafe)');
+    })();
+  </script>
+
   <script type="module">
     import * as THREE from 'three';
 
@@ -9984,6 +10085,15 @@
     }
     
     function showLoadingScreen() {
+      // Check if standalone loading script already handled loading
+      if (window.loadingComplete) {
+        console.log('[Init] Standalone loading script already handled loading, skipping duplicate logic');
+        // Just show the main menu directly
+        showMainMenu();
+        return;
+      }
+      
+      console.log('[Init] Module loading screen animation starting (standalone script not detected)');
       const loadingScreen = document.getElementById('loading-screen');
       const loadingBar = document.getElementById('loading-bar');
       let progress = 0;
