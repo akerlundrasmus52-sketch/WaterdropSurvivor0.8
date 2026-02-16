@@ -2306,6 +2306,99 @@
       }
     }
 
+    /* Region Display - Top Status Bar */
+    #region-display {
+      position: fixed;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.7);
+      border: 2px solid rgba(93, 173, 226, 0.8);
+      border-radius: 8px;
+      padding: 8px 16px;
+      z-index: 95;
+      font-family: 'M PLUS Rounded 1c', sans-serif;
+      font-size: 14px;
+      color: #5DADE2;
+      font-weight: bold;
+      text-align: center;
+      display: none;
+      max-width: 90%;
+      box-shadow: 0 0 15px rgba(93, 173, 226, 0.4);
+      opacity: 0;
+      transition: opacity 0.5s ease-in-out;
+    }
+    
+    #region-display.active {
+      display: block;
+      opacity: 1;
+    }
+
+    /* Quest Box - Bottom Right */
+    #quest-box {
+      position: fixed;
+      bottom: 140px;
+      right: 20px;
+      background: rgba(0, 0, 0, 0.8);
+      border: 2px solid #FFD700;
+      border-radius: 8px;
+      padding: 12px 16px;
+      z-index: 100;
+      font-family: 'M PLUS Rounded 1c', sans-serif;
+      display: none;
+      max-width: 250px;
+      box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
+    }
+    
+    #quest-box.active {
+      display: block;
+    }
+    
+    #quest-box-title {
+      font-size: 12px;
+      color: #FFD700;
+      font-weight: bold;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+    }
+    
+    #quest-box-objective {
+      font-size: 14px;
+      color: #FFFFFF;
+      font-weight: 500;
+    }
+    
+    #quest-box-progress {
+      font-size: 12px;
+      color: #5DADE2;
+      margin-top: 4px;
+    }
+
+    /* Minimap - Bottom Left */
+    #minimap {
+      position: fixed;
+      bottom: 140px;
+      left: 20px;
+      width: 120px;
+      height: 120px;
+      background: rgba(0, 0, 0, 0.8);
+      border: 2px solid #5DADE2;
+      border-radius: 12px;
+      z-index: 100;
+      box-shadow: 0 0 15px rgba(93, 173, 226, 0.5);
+      display: none;
+      overflow: hidden;
+    }
+    
+    #minimap.active {
+      display: block;
+    }
+    
+    #minimap-canvas {
+      width: 100%;
+      height: 100%;
+    }
+
   </style>
 </head>
 <body>
@@ -2327,6 +2420,23 @@
   <!-- Quest Status Bar -->
   <div id="quest-status-bar" class="quest-status-bar">
     <!-- Quest text will be dynamically updated -->
+  </div>
+
+  <!-- Region Display -->
+  <div id="region-display">
+    <!-- Region name will be dynamically updated -->
+  </div>
+
+  <!-- Quest Box - Bottom Right -->
+  <div id="quest-box">
+    <div id="quest-box-title">🗡️ ACTIVE QUEST</div>
+    <div id="quest-box-objective">No active quest</div>
+    <div id="quest-box-progress"></div>
+  </div>
+
+  <!-- Minimap - Bottom Left -->
+  <div id="minimap">
+    <canvas id="minimap-canvas" width="120" height="120"></canvas>
   </div>
 
   <!-- Main Menu -->
@@ -3617,6 +3727,58 @@
     ];
     let introLandmarkPositions = {};
     
+    // Region Detection System
+    const REGIONS = {
+      tesla: { name: 'Tesla Land', x: -80, z: -80, radius: 30, emoji: '⚡' },
+      volcano: { name: 'Volcania Region', x: -60, z: -70, radius: 25, emoji: '🌋' },
+      snowy: { name: 'Snowy Mountains', x: -70, z: 70, radius: 30, emoji: '🏔️' },
+      windmill: { name: 'Windmill Fields', x: 40, z: 40, radius: 30, emoji: '🌾' },
+      desert: { name: 'Desert of Emptiness', x: 0, z: 0, radius: 25, emoji: '🏜️' },
+      stonehenge: { name: 'Stonehenge Plains', x: 60, z: 60, radius: 30, emoji: '🗿' },
+      lake: { name: 'Lake District', x: 30, z: -30, radius: 25, emoji: '🌊' }
+    };
+    let currentRegion = null;
+    let regionFadeTimer = 0;
+    let otherStatusActive = false; // Track if quest/combo/notification is showing
+    
+    function detectCurrentRegion(playerX, playerZ) {
+      for (const key in REGIONS) {
+        const region = REGIONS[key];
+        const dx = playerX - region.x;
+        const dz = playerZ - region.z;
+        const dist = Math.sqrt(dx * dx + dz * dz);
+        if (dist < region.radius) {
+          return { key, ...region };
+        }
+      }
+      return null;
+    }
+    
+    function updateRegionDisplay() {
+      const regionDisplay = document.getElementById('region-display');
+      if (!regionDisplay) return;
+      
+      // Check if other status messages are active
+      const questBar = document.getElementById('quest-status-bar');
+      const comboCounter = document.getElementById('combo-counter');
+      otherStatusActive = (questBar && questBar.classList.contains('active')) || 
+                         (comboCounter && parseFloat(comboCounter.style.opacity || 0) > 0);
+      
+      if (otherStatusActive) {
+        // Hide region display when other messages are showing
+        regionDisplay.classList.remove('active');
+        return;
+      }
+      
+      // Show region if available
+      if (currentRegion) {
+        regionDisplay.textContent = `${currentRegion.emoji} ${currentRegion.name}`;
+        regionDisplay.classList.add('active');
+      } else {
+        regionDisplay.classList.remove('active');
+      }
+    }
+    
     // Gore System - Critical Hit Types
     const CRIT_TYPE = {
       NORMAL: 1,
@@ -4078,49 +4240,67 @@
         this.highlight.position.set(-0.2, 0.3, 0.2);
         this.mesh.add(this.highlight);
         
-        // Add player face: eyes (white spheres + black pupils)
-        const eyeGeo = new THREE.SphereGeometry(0.08, 8, 8);
-        const eyeMat = new THREE.MeshBasicMaterial({ color: 0xFFFFFF });
+        // Add player face: eyes (reddish, crazy-looking)
+        const eyeGeo = new THREE.SphereGeometry(0.10, 8, 8); // Slightly larger for crazy effect
+        const eyeMat = new THREE.MeshBasicMaterial({ color: 0xFFE4E1 }); // Light reddish tint
         
         this.leftEye = new THREE.Mesh(eyeGeo, eyeMat);
-        this.leftEye.position.set(-0.12, 0.1, 0.4);
+        this.leftEye.position.set(-0.14, 0.12, 0.4); // Slightly wider apart
+        this.leftEye.scale.set(1.2, 1, 1); // Wider eye shape for crazy look
         this.mesh.add(this.leftEye);
         
         this.rightEye = new THREE.Mesh(eyeGeo, eyeMat);
-        this.rightEye.position.set(0.12, 0.1, 0.4);
+        this.rightEye.position.set(0.14, 0.12, 0.4);
+        this.rightEye.scale.set(1.2, 1, 1); // Wider eye shape for crazy look
         this.mesh.add(this.rightEye);
         
-        // Pupils (black)
-        const pupilGeo = new THREE.SphereGeometry(0.04, 8, 8);
-        const pupilMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+        // Pupils (reddish-black with crazy look)
+        const pupilGeo = new THREE.SphereGeometry(0.05, 8, 8); // Larger pupils
+        const pupilMat = new THREE.MeshBasicMaterial({ color: 0x8B0000 }); // Dark red pupils for intense look
         
         this.leftPupil = new THREE.Mesh(pupilGeo, pupilMat);
-        this.leftPupil.position.set(-0.12, 0.1, 0.45);
+        this.leftPupil.position.set(-0.13, 0.13, 0.46); // Slightly off-center for craziness
         this.mesh.add(this.leftPupil);
         
         this.rightPupil = new THREE.Mesh(pupilGeo, pupilMat);
-        this.rightPupil.position.set(0.12, 0.1, 0.45);
+        this.rightPupil.position.set(0.15, 0.11, 0.46); // Different offset for asymmetry
         this.mesh.add(this.rightPupil);
         
-        // Smile (curved shape using torus segment)
-        const smileGeo = new THREE.TorusGeometry(0.15, 0.02, 8, 16, Math.PI);
+        // Add eye glow for intensity
+        const eyeGlowGeo = new THREE.SphereGeometry(0.06, 8, 8);
+        const eyeGlowMat = new THREE.MeshBasicMaterial({ 
+          color: 0xFF0000, 
+          transparent: true, 
+          opacity: 0.3 
+        });
+        this.leftEyeGlow = new THREE.Mesh(eyeGlowGeo, eyeGlowMat);
+        this.leftEyeGlow.position.set(-0.13, 0.13, 0.47);
+        this.mesh.add(this.leftEyeGlow);
+        
+        this.rightEyeGlow = new THREE.Mesh(eyeGlowGeo, eyeGlowMat);
+        this.rightEyeGlow.position.set(0.15, 0.11, 0.47);
+        this.mesh.add(this.rightEyeGlow);
+        
+        // Smile (curved shape using torus segment) - more mischievous
+        const smileGeo = new THREE.TorusGeometry(0.16, 0.025, 8, 16, Math.PI * 0.8); // Slightly crooked
         const smileMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
         this.smile = new THREE.Mesh(smileGeo, smileMat);
-        this.smile.position.set(0, -0.05, 0.4);
+        this.smile.position.set(0.02, -0.05, 0.4); // Slight offset for asymmetric smile
         this.smile.rotation.x = Math.PI / 2;
-        this.smile.rotation.z = Math.PI;
+        this.smile.rotation.z = Math.PI + 0.1; // Slight tilt
         this.mesh.add(this.smile);
         
-        // Cigar accessory with glowing tip
+        // Cigar accessory with glowing tip (EQUIPPABLE - for "Find the Cuban Cigar" quest)
         const cigarGeo = new THREE.CylinderGeometry(0.02, 0.025, 0.25, 8);
         const cigarMat = new THREE.MeshToonMaterial({ color: 0x8B4513 }); // Brown
         this.cigar = new THREE.Mesh(cigarGeo, cigarMat);
         this.cigar.position.set(0.2, -0.1, 0.35);
         this.cigar.rotation.z = -Math.PI / 6; // Angled
+        this.cigar.visible = true; // Default visible for now, will be controlled by gear later
         this.mesh.add(this.cigar);
         
-        // Glowing cigar tip
-        const tipGeo = new THREE.SphereGeometry(0.03, 8, 8);
+        // Glowing cigar tip with pulsing animation
+        const tipGeo = new THREE.SphereGeometry(0.035, 8, 8); // Slightly larger for better visibility
         const tipMat = new THREE.MeshBasicMaterial({ 
           color: 0xFF4500, // Orange-red
           transparent: true,
@@ -4128,7 +4308,13 @@
         });
         this.cigarTip = new THREE.Mesh(tipGeo, tipMat);
         this.cigarTip.position.set(0.28, -0.05, 0.35);
+        this.cigarTip.visible = this.cigar.visible;
         this.mesh.add(this.cigarTip);
+        
+        // Cigar animation state
+        this.cigarPuffTimer = 0;
+        this.cigarPuffInterval = 3; // Puff every 3 seconds
+        this.cigarGlowPhase = 0;
         
         // Bandage accessory (white cross-shaped bandage on head)
         const bandageGeo = new THREE.BoxGeometry(0.3, 0.05, 0.05);
@@ -4216,6 +4402,13 @@
         this.targetScale = new THREE.Vector3(1, 1, 1);
         this.trailTimer = 0;
         this.wobblePhase = 0;
+        
+        // Animation state
+        this.walkPhase = 0; // For leg/arm swing animation
+        this.idlePhase = 0; // For idle breathing animation
+        this.isWalking = false;
+        this.isRunning = false;
+        this.facingAngle = 0; // Direction character is facing
         
         // Phase 5: Low health water bleed timer
         this.waterBleedTimer = 0;
@@ -10622,6 +10815,164 @@
       } else {
         questTracker.style.display = 'none';
       }
+      
+      // Also update the quest box (bottom-right during gameplay)
+      updateQuestBox();
+    }
+    
+    // Update Quest Box (Bottom-Right) - Shows active in-game quests
+    function updateQuestBox() {
+      const questBox = document.getElementById('quest-box');
+      if (!questBox) return;
+      
+      const objective = document.getElementById('quest-box-objective');
+      const progress = document.getElementById('quest-box-progress');
+      
+      // Check for active windmill quest
+      if (windmillQuest && windmillQuest.active) {
+        const timeLeft = Math.ceil(windmillQuest.timer);
+        const windmillHp = windmillQuest.windmill ? windmillQuest.windmill.userData.hp : 0;
+        const windmillMaxHp = windmillQuest.windmill ? windmillQuest.windmill.userData.maxHp : 1;
+        objective.textContent = 'Defend the Windmill';
+        progress.textContent = `⏱️ ${timeLeft}s | ❤️ ${Math.ceil(windmillHp)}/${windmillMaxHp}`;
+        questBox.classList.add('active');
+        return;
+      }
+      
+      // Check for active Montana quest
+      if (montanaQuest && montanaQuest.active) {
+        const timeLeft = Math.ceil(montanaQuest.timer);
+        const kills = montanaQuest.kills || 0;
+        const needed = montanaQuest.killsNeeded || 0;
+        objective.textContent = 'Defend Montana Monument';
+        progress.textContent = `⏱️ ${timeLeft}s | 💀 ${kills}/${needed}`;
+        questBox.classList.add('active');
+        return;
+      }
+      
+      // Check for active Eiffel quest
+      if (eiffelQuest && eiffelQuest.active) {
+        const timeLeft = Math.ceil(eiffelQuest.timer);
+        const collected = eiffelQuest.collected || 0;
+        const needed = eiffelQuest.collectionNeeded || 0;
+        objective.textContent = 'Collect Croissants near Eiffel';
+        progress.textContent = `⏱️ ${timeLeft}s | 🥐 ${collected}/${needed}`;
+        questBox.classList.add('active');
+        return;
+      }
+      
+      // Check for other quests (example: kill X enemies)
+      if (comboSystem && comboSystem.kills > 0 && playerStats.lvl < 10) {
+        const killsNeeded = Math.min(10, playerStats.lvl * 2 + 5);
+        objective.textContent = 'Kill Enemies';
+        progress.textContent = `💀 ${comboSystem.kills}/${killsNeeded}`;
+        questBox.classList.add('active');
+        return;
+      }
+      
+      // No active quest
+      questBox.classList.remove('active');
+    }
+    
+    // Update Minimap (Bottom-Left)
+    function updateMinimap() {
+      const minimap = document.getElementById('minimap');
+      const canvas = document.getElementById('minimap-canvas');
+      if (!minimap || !canvas || !player || !player.mesh) return;
+      
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      
+      // Clear canvas
+      ctx.clearRect(0, 0, 120, 120);
+      
+      // Draw background
+      ctx.fillStyle = 'rgba(0, 50, 0, 0.5)';
+      ctx.fillRect(0, 0, 120, 120);
+      
+      // Map scale: 400x400 world -> 120x120 minimap (scale = 0.3)
+      const scale = 0.3;
+      const offsetX = 60; // Center of minimap
+      const offsetZ = 60;
+      
+      // Helper function to convert world coords to minimap coords
+      const toMinimapX = (worldX) => offsetX + (worldX - player.mesh.position.x) * scale;
+      const toMinimapZ = (worldZ) => offsetZ + (worldZ - player.mesh.position.z) * scale;
+      
+      // Draw landmarks (small icons)
+      const landmarks = [
+        { x: -80, z: -80, color: '#00FFFF', label: 'T' }, // Tesla
+        { x: -60, z: -70, color: '#FF4500', label: 'V' }, // Volcano
+        { x: 40, z: 40, color: '#8B4513', label: 'W' }, // Windmill
+        { x: 60, z: 60, color: '#808080', label: 'S' }, // Stonehenge
+        { x: 30, z: -30, color: '#1E90FF', label: 'L' }  // Lake
+      ];
+      
+      landmarks.forEach(landmark => {
+        const mx = toMinimapX(landmark.x);
+        const mz = toMinimapZ(landmark.z);
+        if (mx >= 0 && mx <= 120 && mz >= 0 && mz <= 120) {
+          ctx.fillStyle = landmark.color;
+          ctx.font = 'bold 10px Arial';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(landmark.label, mx, mz);
+        }
+      });
+      
+      // Draw nearby enemies (red dots)
+      if (enemies && enemies.length > 0) {
+        ctx.fillStyle = '#FF0000';
+        enemies.slice(0, 30).forEach(enemy => { // Limit to 30 for performance
+          if (!enemy.mesh) return;
+          const mx = toMinimapX(enemy.mesh.position.x);
+          const mz = toMinimapZ(enemy.mesh.position.z);
+          if (mx >= 0 && mx <= 120 && mz >= 0 && mz <= 120) {
+            ctx.beginPath();
+            ctx.arc(mx, mz, 2, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        });
+      }
+      
+      // Draw quest objective markers
+      if (windmillQuest && windmillQuest.active && windmillQuest.windmill) {
+        const mx = toMinimapX(windmillQuest.windmill.position.x);
+        const mz = toMinimapZ(windmillQuest.windmill.position.z);
+        if (mx >= 0 && mx <= 120 && mz >= 0 && mz <= 120) {
+          // Pulsing quest marker
+          const pulse = Math.sin(Date.now() / 200) * 0.5 + 0.5;
+          ctx.strokeStyle = `rgba(255, 215, 0, ${0.5 + pulse * 0.5})`;
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(mx, mz, 4 + pulse * 2, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+      }
+      
+      // Draw player (centered yellow dot)
+      ctx.fillStyle = '#FFD700';
+      ctx.beginPath();
+      ctx.arc(offsetX, offsetZ, 4, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Draw player direction indicator
+      if (player.velocity && (player.velocity.x !== 0 || player.velocity.z !== 0)) {
+        const angle = Math.atan2(player.velocity.z, player.velocity.x);
+        ctx.strokeStyle = '#FFD700';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(offsetX, offsetZ);
+        ctx.lineTo(offsetX + Math.cos(angle) * 8, offsetZ + Math.sin(angle) * 8);
+        ctx.stroke();
+      }
+      
+      // Show minimap during gameplay
+      if (isGameActive && !isPaused && !cinematicIntroActive) {
+        minimap.classList.add('active');
+      } else {
+        minimap.classList.remove('active');
+      }
     }
 
     // --- STORY QUEST POPUP SYSTEM ---
@@ -16920,6 +17271,18 @@
       // Player Update
       player.update(dt);
       
+      // Update region detection
+      if (player && player.mesh) {
+        const newRegion = detectCurrentRegion(player.mesh.position.x, player.mesh.position.z);
+        if (newRegion && (!currentRegion || newRegion.key !== currentRegion.key)) {
+          currentRegion = newRegion;
+          regionFadeTimer = 0;
+        } else if (!newRegion && currentRegion) {
+          currentRegion = null;
+        }
+        updateRegionDisplay();
+      }
+      
       // Check windmill quest trigger
       if (!windmillQuest.active && !windmillQuest.hasCompleted) {
         scene.children.forEach(child => {
@@ -17688,6 +18051,10 @@
       expGems = expGems.filter(g => g.active);
       goldCoins = goldCoins.filter(g => g.active);
       chests = chests.filter(c => c.active);
+      
+      // Update UI overlays (minimap, quest box)
+      updateMinimap();
+      updateQuestBox();
 
       // Phase 3: Render loop protection - wrap in try-catch to prevent freeze
       // Frame Skip Mechanism: Skip rendering if frame budget exceeded
