@@ -653,6 +653,109 @@
       color: #5DADE2;
     }
     
+    /* Comic Book Tutorial Modal */
+    .comic-tutorial-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.95);
+      z-index: 2000;
+      align-items: center;
+      justify-content: center;
+      pointer-events: auto;
+      animation: fadeIn 0.3s ease-out;
+    }
+    
+    .comic-panel {
+      background: linear-gradient(135deg, #2C3E50 0%, #1a252f 100%);
+      border: 6px solid #FFD700;
+      border-radius: 15px;
+      padding: 35px;
+      max-width: 550px;
+      box-shadow: 0 0 40px rgba(255,215,0,0.8),
+                  inset 0 0 20px rgba(0,0,0,0.5);
+      position: relative;
+      /* Comic book effect with dotted pattern */
+      background-image: 
+        radial-gradient(circle at 2px 2px, rgba(255,255,255,0.05) 1px, transparent 1px);
+      background-size: 20px 20px;
+    }
+    
+    .comic-panel::before {
+      content: '';
+      position: absolute;
+      top: -10px;
+      left: -10px;
+      right: -10px;
+      bottom: -10px;
+      background: linear-gradient(45deg, #FFD700 0%, #FFA500 100%);
+      border-radius: 20px;
+      z-index: -1;
+      opacity: 0.3;
+    }
+    
+    .comic-title {
+      color: #FFD700;
+      font-size: 42px;
+      font-weight: 900;
+      text-align: center;
+      margin-bottom: 20px;
+      text-shadow: 
+        3px 3px 0 #000,
+        -2px -2px 0 #000,
+        2px -2px 0 #000,
+        -2px 2px 0 #000,
+        0 0 20px rgba(255,215,0,0.8);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+    
+    .comic-text {
+      color: #FFFFFF;
+      font-size: 20px;
+      line-height: 1.8;
+      margin-bottom: 25px;
+      text-align: center;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+    }
+    
+    .comic-text strong {
+      color: #FFD700;
+      font-weight: 900;
+      text-shadow: 0 0 10px rgba(255,215,0,0.6);
+    }
+    
+    .comic-action {
+      background: linear-gradient(to bottom, #5DADE2 0%, #3498DB 100%);
+      color: #FFFFFF;
+      font-size: 22px;
+      font-weight: bold;
+      padding: 15px 40px;
+      border: 4px solid #2980B9;
+      border-radius: 10px;
+      cursor: pointer;
+      text-align: center;
+      text-transform: uppercase;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+      transition: all 0.2s;
+      display: block;
+      margin: 0 auto;
+    }
+    
+    .comic-action:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.7);
+      background: linear-gradient(to bottom, #6CB8E8 0%, #4AA3DD 100%);
+    }
+    
+    .comic-action:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+    }
+    
     .menu-btn-primary {
       width: 100%;
       padding: 15px;
@@ -1885,6 +1988,25 @@
         </p>
         <p>
           💎 <strong>Gear & Achievements:</strong> Collect equipment, complete achievements, and master the elemental powers.
+        </p>
+      </div>
+      <button class="menu-btn menu-btn-primary" id="story-quest-close-btn">
+        LET'S GO!
+      </button>
+    </div>
+  </div>
+
+  <!-- Comic Book Tutorial Modal -->
+  <div id="comic-tutorial-modal" class="comic-tutorial-modal">
+    <div class="comic-panel">
+      <div class="comic-title" id="comic-title">FIRST DEATH!</div>
+      <div class="comic-text" id="comic-text">
+        Your journey begins with failure, but <strong>that's how you learn!</strong><br><br>
+        To unlock your full potential, you must return to the <strong>CAMP</strong> and interact with the buildings there.
+      </div>
+      <button class="comic-action" id="comic-action-btn">CONTINUE</button>
+    </div>
+  </div>
         </p>
         <p>
           🌍 <strong>Explore:</strong> Discover landmarks like the Windmill, Stonehenge, Pyramids, Eiffel Tower, and the Tesla Tower!
@@ -7114,6 +7236,15 @@
           tempShop: false
         }
       },
+      // Tutorial/Onboarding system (comic book style)
+      tutorial: {
+        completed: false,
+        firstDeath: false,
+        campVisited: false,
+        dashUnlocked: false,
+        headshotUnlocked: false,
+        currentStep: 'waiting_first_death' // Steps: waiting_first_death, show_death_tutorial, go_to_camp, unlock_dash, unlock_headshot, completed
+      },
       // Side challenges
       sideChallenges: {
         kill10Enemies: { completed: false, progress: 0, target: 10 }
@@ -7146,6 +7277,8 @@
           saveData.storyQuests = { ...defaultSaveData.storyQuests, ...(saveData.storyQuests || {}) };
           saveData.storyQuests.buildingFirstUse = { ...defaultSaveData.storyQuests.buildingFirstUse, ...(saveData.storyQuests.buildingFirstUse || {}) };
           saveData.sideChallenges = { ...defaultSaveData.sideChallenges, ...(saveData.sideChallenges || {}) };
+          // Tutorial system (new fields)
+          saveData.tutorial = { ...defaultSaveData.tutorial, ...(saveData.tutorial || {}) };
         }
       } catch (e) {
         console.error('Failed to load save data:', e);
@@ -8458,6 +8591,34 @@
         if (!saveData.storyQuests.buildingFirstUse.skillTree) {
           saveData.storyQuests.buildingFirstUse.skillTree = true;
           progressQuest('useSkillTree', true);
+        }
+        
+        // Tutorial: Check if dash was unlocked
+        if (!saveData.tutorial) {
+          saveData.tutorial = {
+            completed: false,
+            firstDeath: false,
+            campVisited: false,
+            dashUnlocked: false,
+            headshotUnlocked: false,
+            currentStep: 'waiting_first_death'
+          };
+        }
+        
+        if (skillId === 'dashMaster' && saveData.tutorial.currentStep === 'unlock_dash' && !saveData.tutorial.dashUnlocked) {
+          saveData.tutorial.dashUnlocked = true;
+          saveData.tutorial.currentStep = 'unlock_headshot';
+          saveSaveData();
+          setTimeout(() => {
+            showComicTutorial('unlock_headshot');
+          }, 1000);
+        } else if ((skillId === 'criticalFocus' || skillId === 'executioner') && saveData.tutorial.currentStep === 'unlock_headshot' && !saveData.tutorial.headshotUnlocked) {
+          // Accept any crit/headshot related skill
+          saveData.tutorial.headshotUnlocked = true;
+          saveSaveData();
+          setTimeout(() => {
+            showComicTutorial('tutorial_complete');
+          }, 1000);
         }
       } else {
         playSound('invalid');
@@ -10846,6 +11007,28 @@
         hideMainMenu();
         updateCampScreen();
         document.getElementById('camp-screen').style.display = 'flex';
+        
+        // Tutorial: Check if player visited camp for first time after first death
+        if (!saveData.tutorial) {
+          saveData.tutorial = {
+            completed: false,
+            firstDeath: false,
+            campVisited: false,
+            dashUnlocked: false,
+            headshotUnlocked: false,
+            currentStep: 'waiting_first_death'
+          };
+        }
+        
+        if (saveData.tutorial.currentStep === 'go_to_camp' && !saveData.tutorial.campVisited) {
+          saveData.tutorial.campVisited = true;
+          saveData.tutorial.currentStep = 'unlock_dash';
+          saveSaveData();
+          // Show tutorial about unlocking dash
+          setTimeout(() => {
+            showComicTutorial('unlock_dash');
+          }, 500);
+        }
       };
       
       // Back buttons
@@ -13129,6 +13312,76 @@
     // Stat Notification Queue System - Red/Black Theme
     const statNotificationQueue = [];
     let isShowingNotification = false;
+    
+    // Comic Book Tutorial System
+    function showComicTutorial(step) {
+      const modal = document.getElementById('comic-tutorial-modal');
+      const title = document.getElementById('comic-title');
+      const text = document.getElementById('comic-text');
+      const btn = document.getElementById('comic-action-btn');
+      
+      if (!modal || !title || !text || !btn) return;
+      
+      let tutorialData = {};
+      
+      switch(step) {
+        case 'first_death':
+          tutorialData = {
+            title: 'FIRST DEATH!',
+            text: 'Your journey begins with failure, but <strong>that\'s how you learn!</strong><br><br>To unlock your full potential, you must return to the <strong>CAMP</strong> and interact with the buildings there.<br><br>Progression is <strong>locked</strong> until you visit the camp!',
+            button: 'GO TO CAMP'
+          };
+          break;
+        case 'unlock_dash':
+          tutorialData = {
+            title: 'UNLOCK DASH!',
+            text: 'Welcome to the Camp!<br><br>Go to the <strong>SKILL TREE</strong> building and unlock the <strong>DASH</strong> ability.<br><br>This will help you survive longer by dodging enemy attacks!',
+            button: 'GOT IT!'
+          };
+          break;
+        case 'unlock_headshot':
+          tutorialData = {
+            title: 'UNLOCK HEADSHOT!',
+            text: 'Great job! Now unlock the <strong>HEADSHOT</strong> skill to deal massive damage to enemies.<br><br>Combine <strong>DASH</strong> and <strong>HEADSHOT</strong> to become unstoppable!',
+            button: 'UNDERSTOOD!'
+          };
+          break;
+        case 'tutorial_complete':
+          tutorialData = {
+            title: 'TUTORIAL COMPLETE!',
+            text: 'You\'ve learned the basics!<br><br>Continue exploring the camp to unlock more buildings, upgrade your stats, and collect powerful equipment.<br><br><strong>Good luck, Droplet!</strong>',
+            button: 'LET\'S GO!'
+          };
+          break;
+      }
+      
+      title.textContent = tutorialData.title;
+      text.innerHTML = tutorialData.text;
+      btn.textContent = tutorialData.button;
+      
+      modal.style.display = 'flex';
+      
+      // Handle button click
+      btn.onclick = () => {
+        modal.style.display = 'none';
+        
+        // Update tutorial state
+        if (step === 'first_death') {
+          saveData.tutorial.currentStep = 'go_to_camp';
+          saveSaveData();
+        } else if (step === 'unlock_dash') {
+          saveData.tutorial.currentStep = 'unlock_dash';
+          saveSaveData();
+        } else if (step === 'unlock_headshot') {
+          saveData.tutorial.currentStep = 'unlock_headshot';
+          saveSaveData();
+        } else if (step === 'tutorial_complete') {
+          saveData.tutorial.completed = true;
+          saveData.tutorial.currentStep = 'completed';
+          saveSaveData();
+        }
+      };
+    }
 
     function showStatChange(text, level = 'normal') {
       // Add to queue with level
@@ -13247,6 +13500,29 @@
       saveData.totalRuns++;
       if (survivalTime > saveData.bestTime) saveData.bestTime = survivalTime;
       if (playerStats.kills > saveData.bestKills) saveData.bestKills = playerStats.kills;
+      
+      // Tutorial: Check for first death
+      if (!saveData.tutorial) {
+        saveData.tutorial = {
+          completed: false,
+          firstDeath: false,
+          campVisited: false,
+          dashUnlocked: false,
+          headshotUnlocked: false,
+          currentStep: 'waiting_first_death'
+        };
+      }
+      
+      if (!saveData.tutorial.firstDeath && saveData.tutorial.currentStep === 'waiting_first_death') {
+        saveData.tutorial.firstDeath = true;
+        saveData.tutorial.currentStep = 'show_death_tutorial';
+        saveSaveData();
+        // Show comic tutorial after a brief delay
+        setTimeout(() => {
+          showComicTutorial('first_death');
+        }, 1000);
+      }
+      
       saveSaveData();
       
       // Quest progression: first run completed
