@@ -204,22 +204,23 @@
     /* FRESH IMPLEMENTATION: Minimap */
     #minimap-container {
       position: absolute;
-      top: 120px;
+      bottom: 20px;
       right: 20px;
-      width: 150px;
-      height: 150px;
+      width: 100px;
+      height: 100px;
       background: rgba(0,0,0,0.85);
       border: 3px solid #FFD700;
-      border-radius: 10px;
+      border-radius: 50%;
       pointer-events: none;
       z-index: 100;
       box-shadow: 0 4px 15px rgba(0,0,0,0.8);
+      overflow: hidden;
     }
     
     #minimap-canvas {
       width: 100%;
       height: 100%;
-      border-radius: 7px;
+      border-radius: 50%;
     }
     
     /* Stats Bar - Removed (Stats accessible via Stats Button Modal only) */
@@ -2864,7 +2865,7 @@
     
     <!-- FRESH IMPLEMENTATION: Minimap -->
     <div id="minimap-container">
-      <canvas id="minimap-canvas" width="150" height="150"></canvas>
+      <canvas id="minimap-canvas" width="100" height="100"></canvas>
     </div>
     
     <!-- Day/Night Cycle Clock -->
@@ -2874,6 +2875,9 @@
         <div id="day-night-time" style="font-size: 12px; color: #FFD700; font-weight: bold;">00:00</div>
       </div>
     </div>
+    
+    <!-- FRESH IMPLEMENTATION: Countdown Display for Start-of-Run -->
+    <div id="countdown-display" style="display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 120px; font-weight: bold; color: #FFD700; text-shadow: 0 0 20px rgba(255,215,0,0.8), 0 0 40px rgba(255,215,0,0.5); pointer-events: none; z-index: 200; font-family: 'M PLUS Rounded 1c', sans-serif;"></div>
     
     <!-- PR #117: Menu button (shows in portrait mode) -->
     <button id="menu-btn" title="Menu">☰</button>
@@ -3679,14 +3683,15 @@
     let cinematicIntroActive = false;
     let cinematicIntroStep = 0;
     let cinematicIntroTimer = 0;
+    // FRESH IMPLEMENTATION: Enhanced cinematic intro matching requirements
     const cinematicIntroSequence = [
-      { type: 'landmark', target: 'stonehenge', duration: 3, zoom: 15 },
-      { type: 'landmark', target: 'tesla', duration: 3, zoom: 15 },
-      { type: 'landmark', target: 'windmill', duration: 3, zoom: 15 },
-      { type: 'landmark', target: 'volcano', duration: 3, zoom: 15 },
-      { type: 'zoomout', duration: 2, zoom: 50 },
-      { type: 'zoomin', duration: 1.5, zoom: 15 },
-      { type: 'cigar', duration: 2 }
+      { type: 'droneview', duration: 2 },
+      { type: 'showstructures', duration: 3 },
+      { type: 'zoomout', duration: 2 },
+      { type: 'zoomin', duration: 2 },
+      { type: 'cigar', duration: 2 },
+      { type: 'gameplay', duration: 1.5 },
+      { type: 'countdown', duration: 3 }
     ];
     let introLandmarkPositions = {};
     
@@ -3793,7 +3798,7 @@
     // FRESH IMPLEMENTATION: Minimap System
     let minimapCanvas = null;
     let minimapCtx = null;
-    const MINIMAP_SCALE = 150 / 200; // 150px canvas for 200 units of game world
+    const MINIMAP_SCALE = 100 / 200; // 100px canvas for 200 units of game world (round minimap)
     
     function initMinimap() {
       minimapCanvas = document.getElementById('minimap-canvas');
@@ -3815,10 +3820,17 @@
         
         const centerX = canvas.width / 2;
         const centerY = canvas.height / 2;
+        const radius = canvas.width / 2;
         
         // Clear canvas
         ctx.fillStyle = 'rgba(20, 20, 20, 0.95)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Clip to circular shape
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+        ctx.clip();
         
         // Draw grid
         ctx.strokeStyle = 'rgba(100, 100, 100, 0.3)';
@@ -3845,11 +3857,11 @@
         
         // Draw landmarks
         const landmarks = [
-          { x: 30, z: -30, color: '#1E90FF', size: 4, label: 'L' }, // Lake
-          { x: -20, z: -20, color: '#DEB887', size: 3, label: 'C' }, // Cabin
-          { x: 40, z: 40, color: '#D2B48C', size: 4, label: 'W' }, // Windmill
-          { x: -40, z: 40, color: '#888888', size: 3, label: 'M' }, // Mine
-          { x: 60, z: 60, color: '#808080', size: 5, label: 'S' } // Stonehenge
+          { x: 30, z: -30, color: '#1E90FF', size: 3, label: 'L' }, // Lake
+          { x: -20, z: -20, color: '#DEB887', size: 2, label: 'C' }, // Cabin
+          { x: 40, z: 40, color: '#D2B48C', size: 3, label: 'W' }, // Windmill
+          { x: -40, z: 40, color: '#888888', size: 2, label: 'M' }, // Mine
+          { x: 60, z: 60, color: '#808080', size: 4, label: 'S' } // Stonehenge
         ];
         
         landmarks.forEach(landmark => {
@@ -3864,7 +3876,7 @@
             
             // Draw label
             ctx.fillStyle = '#FFFFFF';
-            ctx.font = 'bold 8px Arial';
+            ctx.font = 'bold 6px Arial';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(landmark.label, screenX, screenY);
@@ -3881,7 +3893,7 @@
               
               if (screenX >= 0 && screenX <= canvas.width && screenY >= 0 && screenY <= canvas.height) {
                 ctx.beginPath();
-                ctx.arc(screenX, screenY, 2, 0, Math.PI * 2);
+                ctx.arc(screenX, screenY, 1.5, 0, Math.PI * 2);
                 ctx.fill();
               }
             }
@@ -3891,11 +3903,11 @@
         // Draw player (bright blue dot with direction indicator)
         ctx.fillStyle = '#00FFFF';
         ctx.beginPath();
-        ctx.arc(centerX, centerY, 4, 0, Math.PI * 2);
+        ctx.arc(centerX, centerY, 3, 0, Math.PI * 2);
         ctx.fill();
         
         // Draw player direction indicator
-        const dirLength = 8;
+        const dirLength = 6;
         const angle = player.mesh.rotation.y;
         const dirX = Math.sin(angle) * dirLength;
         const dirY = Math.cos(angle) * dirLength;
@@ -3907,10 +3919,15 @@
         ctx.lineTo(centerX + dirX, centerY + dirY);
         ctx.stroke();
         
-        // Draw border
+        // Restore context (remove circular clip)
+        ctx.restore();
+        
+        // Draw circular border
         ctx.strokeStyle = '#FFD700';
         ctx.lineWidth = 2;
-        ctx.strokeRect(0, 0, canvas.width, canvas.height);
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius - 1, 0, Math.PI * 2);
+        ctx.stroke();
       } catch (error) {
         console.error('Minimap rendering error (non-critical):', error);
         // Gracefully continue - minimap failure shouldn't crash the game
@@ -4200,6 +4217,138 @@
     
     let activeCompanion = null; // Will hold the active Companion instance
 
+    // Weather System - Rain, Snow, Wind Effects
+    const weatherSystem = {
+      enabled: true,
+      type: 'none', // 'none', 'rain', 'snow', 'wind'
+      intensity: 0, // 0-1
+      particles: [],
+      maxParticles: 150,
+      changeTimer: 0,
+      changeDuration: 30, // Change weather every 30 seconds
+      windDirection: new THREE.Vector2(1, 0),
+      windSpeed: 0
+    };
+    
+    function initWeatherParticles() {
+      // Pre-create weather particles for performance
+      for (let i = 0; i < weatherSystem.maxParticles; i++) {
+        const geometry = new THREE.SphereGeometry(0.05, 4, 4);
+        const material = new THREE.MeshBasicMaterial({
+          color: 0xFFFFFF,
+          transparent: true,
+          opacity: 0.7
+        });
+        const particle = new THREE.Mesh(geometry, material);
+        particle.visible = false;
+        scene.add(particle);
+        weatherSystem.particles.push({
+          mesh: particle,
+          velocity: new THREE.Vector3(),
+          active: false
+        });
+      }
+    }
+    
+    function updateWeather(dt) {
+      if (!weatherSystem.enabled || !player || !player.mesh) return;
+      
+      // Change weather periodically
+      weatherSystem.changeTimer += dt;
+      if (weatherSystem.changeTimer >= weatherSystem.changeDuration) {
+        weatherSystem.changeTimer = 0;
+        // Random weather change
+        const rand = Math.random();
+        if (rand < 0.4) {
+          weatherSystem.type = 'none';
+          weatherSystem.intensity = 0;
+        } else if (rand < 0.6) {
+          weatherSystem.type = 'rain';
+          weatherSystem.intensity = 0.3 + Math.random() * 0.5;
+        } else if (rand < 0.8) {
+          weatherSystem.type = 'snow';
+          weatherSystem.intensity = 0.2 + Math.random() * 0.4;
+        } else {
+          weatherSystem.type = 'wind';
+          weatherSystem.intensity = 0.3 + Math.random() * 0.3;
+          weatherSystem.windDirection = new THREE.Vector2(
+            Math.random() * 2 - 1,
+            Math.random() * 2 - 1
+          ).normalize();
+          weatherSystem.windSpeed = weatherSystem.intensity * 2;
+        }
+      }
+      
+      // Update active weather particles
+      const playerPos = player.mesh.position;
+      const activeCount = Math.floor(weatherSystem.intensity * weatherSystem.maxParticles);
+      const currentTime = Date.now() * 0.001; // Calculate once for performance
+      
+      weatherSystem.particles.forEach((particle, i) => {
+        if (i < activeCount && weatherSystem.type !== 'none') {
+          if (!particle.active) {
+            // Activate particle
+            particle.active = true;
+            particle.mesh.visible = true;
+            // Spawn around player
+            particle.mesh.position.set(
+              playerPos.x + (Math.random() - 0.5) * 30,
+              15 + Math.random() * 5,
+              playerPos.z + (Math.random() - 0.5) * 30
+            );
+            
+            // Set particle appearance based on weather type
+            if (weatherSystem.type === 'rain') {
+              particle.mesh.material.color.setHex(0x6699FF);
+              particle.mesh.material.opacity = 0.6;
+              particle.mesh.scale.set(0.05, 0.3, 0.05);
+              particle.velocity.set(
+                Math.random() * 0.5 - 0.25,
+                -15 - Math.random() * 5,
+                Math.random() * 0.5 - 0.25
+              );
+            } else if (weatherSystem.type === 'snow') {
+              particle.mesh.material.color.setHex(0xFFFFFF);
+              particle.mesh.material.opacity = 0.8;
+              particle.mesh.scale.set(0.08, 0.08, 0.08);
+              particle.velocity.set(
+                Math.random() * 0.3 - 0.15,
+                -2 - Math.random() * 1,
+                Math.random() * 0.3 - 0.15
+              );
+            }
+          }
+          
+          // Update particle position
+          if (weatherSystem.type === 'rain' || weatherSystem.type === 'snow') {
+            particle.mesh.position.add(particle.velocity.clone().multiplyScalar(dt));
+            
+            // Add wind effect using currentTime
+            if (weatherSystem.type === 'snow') {
+              particle.mesh.position.x += Math.sin(currentTime) * 0.1 * dt;
+              particle.mesh.position.z += Math.cos(currentTime) * 0.1 * dt;
+            }
+            
+            // Reset if below ground or too far from player
+            if (particle.mesh.position.y < 0.1 || 
+                particle.mesh.position.distanceTo(playerPos) > 40) {
+              particle.mesh.position.set(
+                playerPos.x + (Math.random() - 0.5) * 30,
+                15 + Math.random() * 5,
+                playerPos.z + (Math.random() - 0.5) * 30
+              );
+            }
+          }
+        } else {
+          // Deactivate particle
+          if (particle.active) {
+            particle.active = false;
+            particle.mesh.visible = false;
+          }
+        }
+      });
+    }
+
     // Game Settings
     const gameSettings = {
       autoAim: false, // Auto-aim off by default, upgradeable via attributes
@@ -4475,6 +4624,10 @@
         this.blinkDuration = 0.1; // 100ms blink
         this.nextBlinkTime = 2 + Math.random() * 3; // Random 2-5 seconds
         this.isBlinking = false;
+        
+        // FRESH IMPLEMENTATION: Breathing animation
+        this.breathingPhase = 0;
+        this.breathingSpeed = 1.5; // Breaths per second
         
         // Arms (simple cylinders attached to body)
         const armGeo = new THREE.CylinderGeometry(0.06, 0.06, 0.35, 8);
@@ -4753,12 +4906,21 @@
           this.leftLeg.rotation.x = -Math.sin(walkPhase) * 0.4;
           this.rightLeg.rotation.x = Math.sin(walkPhase) * 0.4;
         } else {
-          // Idle - gentle sway
+          // Idle - gentle sway with breathing
           const idlePhase = gameTime * 2;
           this.leftArm.rotation.x = Math.sin(idlePhase) * 0.1;
           this.rightArm.rotation.x = Math.sin(idlePhase + Math.PI) * 0.1;
           this.leftLeg.rotation.x = 0;
           this.rightLeg.rotation.x = 0;
+          
+          // FRESH IMPLEMENTATION: Breathing animation
+          // Note: Direct scale modification is intentional for water droplet "breathing" effect
+          // Water droplets naturally expand/contract, this simulates that behavior
+          this.breathingPhase += dt * this.breathingSpeed;
+          const breathScale = 1 + Math.sin(this.breathingPhase * Math.PI * 2) * 0.03;
+          this.mesh.scale.y = breathScale;
+          this.mesh.scale.x = 1 / Math.sqrt(breathScale); // Maintain volume
+          this.mesh.scale.z = 1 / Math.sqrt(breathScale);
         }
         
         // Animate cigar tip (pulsing emissive glow)
@@ -13213,32 +13375,55 @@
       camera.position.set(20, 20, 20); // Isometric angle
       camera.lookAt(scene.position);
 
-      // Renderer
-      renderer = new THREE.WebGLRenderer({ antialias: true });
+      // Renderer - Enhanced for 4K quality
+      renderer = new THREE.WebGLRenderer({ 
+        antialias: true,
+        powerPreference: 'high-performance',
+        precision: 'highp', // High precision for better quality
+        alpha: false
+      });
       renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Support high DPI displays
       renderer.shadowMap.enabled = true;
-      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Soft shadows
+      // FRESH IMPLEMENTATION: Enhanced rendering quality
+      renderer.outputEncoding = THREE.sRGBEncoding; // Better color accuracy
+      renderer.toneMapping = THREE.ACESFilmicToneMapping; // Cinematic look
+      renderer.toneMappingExposure = 1.2; // Slightly brighter
+      renderer.physicallyCorrectLights = true; // Realistic lighting
       document.getElementById('game-container').appendChild(renderer.domElement);
 
       // Day/Night Cycle System - Non-blocking, smooth transitions
       // Store light references for day/night cycle
-      window.ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+      // FRESH IMPLEMENTATION: Enhanced 4K-quality lighting
+      window.ambientLight = new THREE.AmbientLight(0xffffff, 0.7); // Slightly brighter
       scene.add(window.ambientLight);
 
-      // Realistic sun/moon with soft dynamic shadows
-      window.dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+      // Realistic sun/moon with soft dynamic shadows - 4K quality
+      window.dirLight = new THREE.DirectionalLight(0xffffff, 1.0); // Brighter
       window.dirLight.position.set(50, 100, 50);
       window.dirLight.castShadow = true;
-      window.dirLight.shadow.mapSize.width = 2048;
-      window.dirLight.shadow.mapSize.height = 2048;
+      // 4K shadow quality - higher resolution
+      window.dirLight.shadow.mapSize.width = 4096; // 4K shadow maps
+      window.dirLight.shadow.mapSize.height = 4096;
       window.dirLight.shadow.camera.left = -100;
       window.dirLight.shadow.camera.right = 100;
       window.dirLight.shadow.camera.top = 100;
       window.dirLight.shadow.camera.bottom = -100;
       // Soft shadow settings for realistic effect
-      window.dirLight.shadow.radius = 4; // Soft shadow blur
-      window.dirLight.shadow.bias = -0.0001; // Prevent shadow acne
+      window.dirLight.shadow.radius = 6; // Softer shadow blur for quality
+      window.dirLight.shadow.bias = -0.00005; // Prevent shadow acne
       scene.add(window.dirLight);
+      
+      // FRESH IMPLEMENTATION: Add fill light for better character definition
+      const fillLight = new THREE.DirectionalLight(0x6699FF, 0.3);
+      fillLight.position.set(-50, 50, -50);
+      scene.add(fillLight);
+      
+      // FRESH IMPLEMENTATION: Add rim light for depth
+      const rimLight = new THREE.DirectionalLight(0xFFAA44, 0.2);
+      rimLight.position.set(0, 20, -100);
+      scene.add(rimLight);
 
       // Apply graphics quality settings
       applyGraphicsQuality(gameSettings.graphicsQuality);
@@ -13254,6 +13439,9 @@
       
       // FRESH IMPLEMENTATION: Initialize minimap
       initMinimap();
+      
+      // FRESH IMPLEMENTATION: Initialize weather system
+      initWeatherParticles();
       
       // Initialize background music
       updateBackgroundMusic();
@@ -13356,44 +13544,90 @@
         return;
       }
       
+      const progress = Math.min(cinematicIntroTimer / currentStep.duration, 1);
+      const eased = easeInOutCubic(progress);
+      
       // Handle current step based on type
-      if (currentStep.type === 'landmark') {
-        const pos = introLandmarkPositions[currentStep.target];
-        if (pos) {
-          // Smoothly move camera to landmark
-          const progress = Math.min(cinematicIntroTimer / currentStep.duration, 1);
-          const eased = easeInOutCubic(progress);
-          
-          camera.position.x = camera.position.x + (pos.x - camera.position.x) * 0.1;
-          camera.position.y = pos.y;
-          camera.position.z = camera.position.z + (pos.z - camera.position.z) * 0.1;
-          camera.lookAt(pos.x, 0, pos.z);
-          
-          // Show description bubble
-          if (cinematicIntroTimer < DESCRIPTION_DISPLAY_TIME && progress < DESCRIPTION_PROGRESS_THRESHOLD) {
-            showLandmarkDescription(currentStep.target);
-          }
-        }
-      } else if (currentStep.type === 'zoomout') {
-        // Zoom out to show full map
-        const progress = Math.min(cinematicIntroTimer / currentStep.duration, 1);
-        camera.position.y = 20 + (50 - 20) * easeInOutCubic(progress);
-      } else if (currentStep.type === 'zoomin') {
-        // Zoom in rapidly to player
-        const progress = Math.min(cinematicIntroTimer / currentStep.duration, 1);
+      if (currentStep.type === 'droneview') {
+        // FRESH IMPLEMENTATION: Drone-like top-down view
         if (player && player.mesh) {
           const targetPos = player.mesh.position;
-          camera.position.x = camera.position.x + (targetPos.x - camera.position.x) * 0.3;
-          camera.position.y = 20 + (15 - 20) * easeInOutCubic(progress);
-          camera.position.z = camera.position.z + (targetPos.z + 20 - camera.position.z) * 0.3;
+          camera.position.x = targetPos.x;
+          camera.position.y = 80; // High altitude drone view
+          camera.position.z = targetPos.z + 5;
+          camera.lookAt(targetPos.x, 0, targetPos.z);
+        }
+      } else if (currentStep.type === 'showstructures') {
+        // FRESH IMPLEMENTATION: Show structures from side and above
+        if (player && player.mesh) {
+          const targetPos = player.mesh.position;
+          const panAngle = progress * Math.PI * 2; // 360° pan
+          const radius = 50;
+          camera.position.x = targetPos.x + Math.cos(panAngle) * radius;
+          camera.position.y = 50;
+          camera.position.z = targetPos.z + Math.sin(panAngle) * radius;
+          camera.lookAt(targetPos.x, 0, targetPos.z);
+        }
+      } else if (currentStep.type === 'zoomout') {
+        // FRESH IMPLEMENTATION: Zoom out to ~3000m equivalent (high zoom value)
+        if (player && player.mesh) {
+          const targetPos = player.mesh.position;
+          camera.position.x = targetPos.x;
+          camera.position.y = 20 + (100 - 20) * eased; // Zoom out high
+          camera.position.z = targetPos.z + 20 + (80 - 20) * eased;
+          camera.lookAt(targetPos.x, 0, targetPos.z);
+        }
+      } else if (currentStep.type === 'zoomin') {
+        // FRESH IMPLEMENTATION: Zoom into character
+        if (player && player.mesh) {
+          const targetPos = player.mesh.position;
+          camera.position.x = targetPos.x + 20 * (1 - eased);
+          camera.position.y = 100 - (100 - 20) * eased;
+          camera.position.z = targetPos.z + 100 - (100 - 20) * eased;
           camera.lookAt(targetPos.x, 0, targetPos.z);
         }
       } else if (currentStep.type === 'cigar') {
-        // Player cigar smoke animation
+        // FRESH IMPLEMENTATION: Character smoking cigar closeup
         if (player && player.mesh && cinematicIntroTimer < currentStep.duration) {
+          const targetPos = player.mesh.position;
+          // Close up on character's face
+          camera.position.x = targetPos.x + 3;
+          camera.position.y = 5;
+          camera.position.z = targetPos.z + 3;
+          camera.lookAt(targetPos.x, 1, targetPos.z);
+          
+          // Spawn smoke particles
           const smokeInterval = 0.2;
           if (Math.floor(cinematicIntroTimer / smokeInterval) > Math.floor((cinematicIntroTimer - dt) / smokeInterval)) {
-            createSmokeParticle(player.mesh.position);
+            createSmokeParticle(new THREE.Vector3(targetPos.x, targetPos.y + 0.5, targetPos.z));
+          }
+        }
+      } else if (currentStep.type === 'gameplay') {
+        // FRESH IMPLEMENTATION: Transition back to gameplay angle
+        if (player && player.mesh) {
+          const targetPos = player.mesh.position;
+          camera.position.x = targetPos.x + 20 * (1 - eased);
+          camera.position.y = 20;
+          camera.position.z = targetPos.z + 20 * (1 - eased);
+          camera.lookAt(targetPos.x, 0, targetPos.z);
+        }
+      } else if (currentStep.type === 'countdown') {
+        // FRESH IMPLEMENTATION: 3-2-1 countdown
+        const timeLeft = Math.ceil(currentStep.duration - cinematicIntroTimer);
+        if (timeLeft > 0 && timeLeft <= 3) {
+          // Display countdown number
+          const countdownEl = document.getElementById('countdown-display');
+          if (countdownEl) {
+            countdownEl.textContent = timeLeft;
+            countdownEl.style.display = 'block';
+            countdownEl.style.fontSize = '120px';
+            countdownEl.style.color = '#FFD700';
+            countdownEl.style.textShadow = '0 0 20px rgba(255,215,0,0.8)';
+          }
+        } else {
+          const countdownEl = document.getElementById('countdown-display');
+          if (countdownEl) {
+            countdownEl.style.display = 'none';
           }
         }
       }
@@ -17290,6 +17524,9 @@
       // Update ambient creatures (birds, bats, fireflies, owls) based on time of day
       if (isGameActive && !isPaused) {
         updateAmbientCreatures(dt);
+        
+        // FRESH IMPLEMENTATION: Update weather system (rain, snow, wind)
+        updateWeather(dt);
       }
       
       // Frame Skip Mechanism: Determine if rendering should be skipped based on previous frame time
