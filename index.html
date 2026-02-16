@@ -13351,7 +13351,7 @@
     function endCountdown() {
       countdownActive = false;
       
-      // Unpause game and start spawning enemies (cinematic intro already completed)
+      // Unpause game and start spawning enemies (countdown happens after cinematic intro)
       setGamePaused(false);
       setGameActive(true);
       gameStartTime = Date.now();
