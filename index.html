@@ -3290,7 +3290,8 @@
       waterfalls: [],
       waterDrops: [],
       splashes: [],
-      teslaTowers: [] // FRESH: Tesla Tower animation
+      teslaTowers: [], // FRESH: Tesla Tower animation
+      volcano: null // VISUAL POLISH: Volcano animation
     };
     let lastTime = null; // Initialize as null for proper first-frame detection (PR #82 fix)
     
@@ -3332,6 +3333,44 @@
       cycleSpeed: 1 / 600, // 10 minutes for full cycle (1 / 600 seconds at 60fps)
       lastUpdateTime: 0
     };
+    
+    // --- VISUAL POLISH: NEW SYSTEMS ---
+    
+    // Cinematic Intro System
+    let cinematicIntroActive = false;
+    let cinematicIntroStep = 0;
+    let cinematicIntroTimer = 0;
+    const cinematicIntroSequence = [
+      { type: 'landmark', target: 'stonehenge', duration: 3, zoom: 15 },
+      { type: 'landmark', target: 'tesla', duration: 3, zoom: 15 },
+      { type: 'landmark', target: 'windmill', duration: 3, zoom: 15 },
+      { type: 'landmark', target: 'volcano', duration: 3, zoom: 15 },
+      { type: 'zoomout', duration: 2, zoom: 50 },
+      { type: 'zoomin', duration: 1.5, zoom: 15 },
+      { type: 'cigar', duration: 2 }
+    ];
+    let introLandmarkPositions = {};
+    
+    // Gore System - Critical Hit Types
+    const CRIT_TYPE = {
+      NORMAL: 1,
+      CRITICAL: 2,
+      SUPER_CRITICAL: 3,
+      HEADSHOT: 4
+    };
+    
+    // Destructible Environment System
+    let destructibleObjects = [];
+    
+    // Dynamic Map Events
+    let volcanoParticles = [];
+    let lightningTimer = 0;
+    let avalancheActive = false;
+    
+    // Enhanced Camera System
+    let cameraShake = { intensity: 0, duration: 0 };
+    let cameraZoom = { current: 15, target: 15, speed: 2 };
+    let cameraTargetPos = null;
     
     // Ambient Creatures System
     let ambientCreatures = [];
@@ -3405,6 +3444,14 @@
           creature.mesh.position.y += Math.sin(creature.life * 0.03) * 0.015;
           creature.mesh.position.z += creature.velocity.z * dt;
           creature.mesh.rotation.y = Math.atan2(creature.velocity.z, creature.velocity.x);
+          
+          // VISUAL POLISH: Owl hooting sound (scary at night)
+          if (!creature.lastHootTime) creature.lastHootTime = 0;
+          creature.lastHootTime += dt;
+          if (creature.lastHootTime > 8 + Math.random() * 10) {
+            creature.lastHootTime = 0;
+            playOwlHoot();
+          }
         } else if (creature.type === 'firefly') {
           creature.mesh.position.x += Math.sin(creature.life * 0.05) * 0.02;
           creature.mesh.position.y += Math.sin(creature.life * 0.08) * 0.01;
@@ -4281,10 +4328,24 @@
           }
         }
 
-        // Camera Follow
-        camera.position.x = this.mesh.position.x;
-        camera.position.z = this.mesh.position.z + 20; // Isometric offset
-        camera.lookAt(this.mesh.position);
+        // Camera Follow with smooth zoom and targeting
+        // Interpolate current zoom to target zoom
+        cameraZoom.current += (cameraZoom.target - cameraZoom.current) * cameraZoom.speed * dt;
+        
+        // Determine camera target (either player or special target)
+        let targetPos = this.mesh.position;
+        if (cameraTargetPos) {
+          // Smooth interpolation to special target
+          targetPos = new THREE.Vector3(
+            this.mesh.position.x + (cameraTargetPos.x - this.mesh.position.x) * 0.3,
+            0,
+            this.mesh.position.z + (cameraTargetPos.z - this.mesh.position.z) * 0.3
+          );
+        }
+        
+        camera.position.x = targetPos.x;
+        camera.position.z = targetPos.z + cameraZoom.current; // Dynamic zoom offset
+        camera.lookAt(targetPos);
 
         // Bounds (Map is 400x400, from -200 to 200)
         this.mesh.position.x = Math.max(-195, Math.min(195, this.mesh.position.x));
@@ -5371,16 +5432,110 @@
       
       // Specialized death effects by damage type
       dieStandard(enemyColor) {
-        // Phase 5: Death Variety - 50% explode into pieces, 50% leave corpse sprite
-        const explodeIntoPieces = Math.random() < 0.5;
+        // Enhanced death animations with physics
+        const deathType = Math.random();
         
-        if (explodeIntoPieces) {
-          // EXPLOSION DEATH: Main explosion (death ring removed per requirements)
+        // Play gore sounds
+        playGoreSound('flesh_rip');
+        if (Math.random() < 0.5) playGoreSound('blood_splatter');
+        
+        if (deathType < 0.25) {
+          // FALL AND CRAWL: Enemy falls, twitches, and crawls
+          const fallingEnemy = this.mesh.clone();
+          fallingEnemy.position.copy(this.mesh.position);
+          scene.add(fallingEnemy);
+          
+          let crawlLife = 90;
+          let crawlDir = new THREE.Vector3(
+            (Math.random() - 0.5) * 0.02,
+            0,
+            (Math.random() - 0.5) * 0.02
+          );
+          
+          const crawlAnim = () => {
+            crawlLife--;
+            
+            // Crawl movement (first 45 frames)
+            if (crawlLife > 45) {
+              fallingEnemy.position.add(crawlDir);
+              fallingEnemy.rotation.z += 0.05; // Rolling motion
+              
+              // Blood trail while crawling
+              if (crawlLife % 10 === 0) {
+                spawnParticles(fallingEnemy.position, 0x8B0000, 2);
+              }
+            } else {
+              // Twitching (last 45 frames)
+              fallingEnemy.scale.set(
+                1 + Math.sin(crawlLife * 0.5) * 0.1,
+                1 + Math.cos(crawlLife * 0.5) * 0.1,
+                1
+              );
+            }
+            
+            fallingEnemy.material.opacity = crawlLife / 90;
+            
+            if (crawlLife <= 0) {
+              scene.remove(fallingEnemy);
+              fallingEnemy.geometry.dispose();
+              fallingEnemy.material.dispose();
+            } else {
+              requestAnimationFrame(crawlAnim);
+            }
+          };
+          crawlAnim();
+          
+          // Blood pool
+          this.createBloodPool(this.mesh.position, 1.0);
+          
+        } else if (deathType < 0.5) {
+          // HOLD THROAT: Enemy grabs throat and falls
+          const throatEnemy = this.mesh.clone();
+          throatEnemy.position.copy(this.mesh.position);
+          scene.add(throatEnemy);
+          
+          let throatLife = 60;
+          const throatAnim = () => {
+            throatLife--;
+            
+            // Shaking motion
+            throatEnemy.position.x += (Math.random() - 0.5) * 0.03;
+            throatEnemy.position.z += (Math.random() - 0.5) * 0.03;
+            
+            // Slowly fall
+            if (throatLife > 30) {
+              throatEnemy.position.y -= 0.01;
+            }
+            
+            // Blood spurts from throat
+            if (throatLife % 8 === 0 && throatLife > 20) {
+              spawnParticles(throatEnemy.position, 0x8B0000, 3);
+              playGoreSound('blood_splatter');
+            }
+            
+            throatEnemy.material.opacity = throatLife / 60;
+            
+            if (throatLife <= 0) {
+              scene.remove(throatEnemy);
+              throatEnemy.geometry.dispose();
+              throatEnemy.material.dispose();
+            } else {
+              requestAnimationFrame(throatAnim);
+            }
+          };
+          throatAnim();
+          
+          // Blood pool
+          this.createBloodPool(this.mesh.position, 1.2);
+          
+        } else if (deathType < 0.75) {
+          // EXPLOSION DEATH: Explode into pieces (NO death ring)
           spawnParticles(this.mesh.position, enemyColor, 20);
           spawnParticles(this.mesh.position, 0xFFFFFF, 8);
-          spawnParticles(this.mesh.position, 0x8B0000, 6);
+          spawnParticles(this.mesh.position, 0x8B0000, 12);
+          playGoreSound('bone_crunch');
           
-          // Explode into pieces (NO death ring)
+          // Explode into pieces
           const pieceCount = this.isMiniBoss ? 25 : 15;
           for(let i = 0; i < pieceCount; i++) {
             const piece = new THREE.Mesh(
@@ -5417,10 +5572,14 @@
             };
             updatePiece();
           }
+          
+          // Blood pool
+          this.createBloodPool(this.mesh.position, 1.5);
+          
         } else {
-          // CORPSE DEATH: Leave a corpse sprite
+          // CORPSE DEATH: Leave a corpse sprite with blood pool
           spawnParticles(this.mesh.position, enemyColor, 8);
-          spawnParticles(this.mesh.position, 0x8B0000, 4);
+          spawnParticles(this.mesh.position, 0x8B0000, 6);
           
           // Corpse sprite
           const corpseGeo = new THREE.CircleGeometry(0.6, 16);
@@ -5437,39 +5596,56 @@
           scene.add(corpse);
           
           // Blood pool
-          const bloodGeo = new THREE.CircleGeometry(0.8, 16);
-          const bloodMat = new THREE.MeshBasicMaterial({ 
-            color: 0x8B0000, 
-            transparent: true,
-            opacity: 0.5,
-            side: THREE.DoubleSide
-          });
-          const bloodPool = new THREE.Mesh(bloodGeo, bloodMat);
-          bloodPool.position.copy(this.mesh.position);
-          bloodPool.position.y = 0.01;
-          bloodPool.rotation.x = -Math.PI / 2;
-          scene.add(bloodPool);
+          this.createBloodPool(this.mesh.position, 1.0);
           
           // Fade out
           let corpseLife = 120;
           const fadeCorpse = () => {
             corpseLife--;
             corpse.material.opacity = (corpseLife / 120) * 0.7;
-            bloodPool.material.opacity = (corpseLife / 120) * 0.5;
             
             if (corpseLife <= 0) {
               scene.remove(corpse);
-              scene.remove(bloodPool);
               corpse.geometry.dispose();
               corpse.material.dispose();
-              bloodPool.geometry.dispose();
-              bloodPool.material.dispose();
             } else {
               requestAnimationFrame(fadeCorpse);
             }
           };
           fadeCorpse();
         }
+      }
+      
+      // Helper function to create blood pools
+      createBloodPool(position, size) {
+        const bloodGeo = new THREE.CircleGeometry(size * 0.8, 16);
+        const bloodMat = new THREE.MeshBasicMaterial({ 
+          color: 0x8B0000, 
+          transparent: true,
+          opacity: 0.6,
+          side: THREE.DoubleSide
+        });
+        const bloodPool = new THREE.Mesh(bloodGeo, bloodMat);
+        bloodPool.position.copy(position);
+        bloodPool.position.y = 0.01;
+        bloodPool.rotation.x = -Math.PI / 2;
+        scene.add(bloodPool);
+        
+        // Fade out
+        let poolLife = 150;
+        const fadePool = () => {
+          poolLife--;
+          bloodPool.material.opacity = (poolLife / 150) * 0.6;
+          
+          if (poolLife <= 0) {
+            scene.remove(bloodPool);
+            bloodPool.geometry.dispose();
+            bloodPool.material.dispose();
+          } else {
+            requestAnimationFrame(fadePool);
+          }
+        };
+        fadePool();
       }
       
       dieByFire(enemyColor) {
@@ -6188,13 +6364,34 @@
             }
             
             const isCrit = Math.random() < playerStats.critChance;
-            if (isCrit) dmg *= playerStats.critDmg;
+            let critType = CRIT_TYPE.NORMAL;
             
-            // ADVANCED: Double-crit headshot system
-            // If crit hits, roll for headshot (luck-based, starts at 0% + 1% per luck point, capped at 50%)
+            if (isCrit) {
+              // Roll for critical type
+              const critRoll = Math.random();
+              if (critRoll < 0.05) { // 5% chance for headshot
+                critType = CRIT_TYPE.HEADSHOT;
+                dmg *= playerStats.critDmg * playerStats.critDmg; // Critical x Critical
+              } else if (critRoll < 0.15) { // 10% chance for super critical
+                critType = CRIT_TYPE.SUPER_CRITICAL;
+                dmg *= playerStats.critDmg * 2; // Critical x 2
+              } else {
+                critType = CRIT_TYPE.CRITICAL;
+                dmg *= playerStats.critDmg;
+              }
+            }
+            
+            // ADVANCED: Double-crit headshot system (keep original headshot logic for compatibility)
             let isHeadshot = false;
             let damageType = 'physical';
-            if (isCrit) {
+            if (critType === CRIT_TYPE.HEADSHOT) {
+              isHeadshot = true;
+              damageType = 'headshot';
+              // Headshot is instant kill for most enemies
+              if (!enemy.isMiniBoss) {
+                dmg = enemy.hp * 10; // Overkill damage
+              }
+            } else if (isCrit) {
               const headshotChance = Math.min((playerStats.luck || 0) * 0.01, 0.5); // Cap at 50%
               isHeadshot = Math.random() < headshotChance;
               if (isHeadshot) {
@@ -6205,8 +6402,38 @@
             
             enemy.takeDamage(Math.floor(dmg), isCrit, damageType, isHeadshot);
             
-            // FRESH: Critical hit effects - gold particles, brief light flash
-            if (isCrit) {
+            // FRESH: Enhanced critical hit effects based on crit type
+            if (critType === CRIT_TYPE.HEADSHOT) {
+              // Headshot: Massive explosion of particles
+              spawnParticles(enemy.mesh.position, 0xFF0000, 40); // Red explosion
+              spawnParticles(enemy.mesh.position, 0x8B0000, 30); // Dark red
+              playSound('explosion');
+              createCameraShake(0.5, 0.3);
+              
+              // Massive flash
+              const headshotLight = new THREE.PointLight(0xFF0000, 15, 25);
+              headshotLight.position.copy(enemy.mesh.position);
+              headshotLight.position.y += 1;
+              scene.add(headshotLight);
+              setTimeout(() => {
+                scene.remove(headshotLight);
+              }, 200);
+            } else if (critType === CRIT_TYPE.SUPER_CRITICAL) {
+              // Super Critical: Enhanced effects
+              spawnParticles(enemy.mesh.position, 0xFFD700, 25); // Gold
+              spawnParticles(enemy.mesh.position, 0xFF4500, 20); // Orange-red
+              playSound('crit');
+              createCameraShake(0.3, 0.2);
+              
+              const superCritLight = new THREE.PointLight(0xFF4500, 10, 20);
+              superCritLight.position.copy(enemy.mesh.position);
+              superCritLight.position.y += 1;
+              scene.add(superCritLight);
+              setTimeout(() => {
+                scene.remove(superCritLight);
+              }, 175);
+            } else if (isCrit) {
+              // Regular crit
               spawnParticles(enemy.mesh.position, 0xFFD700, 15); // Gold particles
               spawnParticles(enemy.mesh.position, 0xFFA500, 10); // Orange particles
               
@@ -11437,6 +11664,56 @@
       
       scene.add(teslaGroup);
 
+      // VISUAL POLISH: Active Volcano
+      const volcanoGroup = new THREE.Group();
+      volcanoGroup.position.set(-60, 0, -70); // Southwest area, distant
+      
+      // Volcano base - large cone
+      const volcanoBaseGeo = new THREE.ConeGeometry(10, 20, 8);
+      const volcanoBaseMat = new THREE.MeshToonMaterial({ color: 0x4A4A4A }); // Dark gray
+      const volcanoBase = new THREE.Mesh(volcanoBaseGeo, volcanoBaseMat);
+      volcanoBase.position.y = 10;
+      volcanoBase.castShadow = true;
+      volcanoGroup.add(volcanoBase);
+      
+      // Volcano crater rim - torus at top
+      const craterRimGeo = new THREE.TorusGeometry(3, 0.8, 8, 16);
+      const craterRimMat = new THREE.MeshToonMaterial({ color: 0x8B4513 }); // Brown
+      const craterRim = new THREE.Mesh(craterRimGeo, craterRimMat);
+      craterRim.position.y = 20;
+      craterRim.rotation.x = Math.PI / 2;
+      volcanoGroup.add(craterRim);
+      
+      // Lava glow inside crater
+      const lavaGeo = new THREE.CircleGeometry(2.5, 16);
+      const lavaMat = new THREE.MeshBasicMaterial({ 
+        color: 0xFF4500, 
+        emissive: 0xFF4500,
+        emissiveIntensity: 1
+      });
+      const lava = new THREE.Mesh(lavaGeo, lavaMat);
+      lava.position.y = 19.5;
+      lava.rotation.x = -Math.PI / 2;
+      volcanoGroup.add(lava);
+      
+      // Volcano glow light
+      const volcanoLight = new THREE.PointLight(0xFF4500, 3, 30);
+      volcanoLight.position.set(0, 20, 0);
+      volcanoGroup.add(volcanoLight);
+      
+      // Store volcano data for animation
+      volcanoGroup.userData = {
+        isVolcano: true,
+        lava: lava,
+        light: volcanoLight,
+        particleTimer: 0
+      };
+      
+      scene.add(volcanoGroup);
+      
+      // Cache volcano for animation
+      animatedSceneObjects.volcano = volcanoGroup;
+
       // Forest (Various tree types with better shadows)
       const trunkGeo = new THREE.CylinderGeometry(0.5, 0.7, 2, 6);
       const trunkMat = new THREE.MeshToonMaterial({ color: 0x8B4513 });
@@ -11529,6 +11806,64 @@
           scene.add(group);
         }
       }
+      
+      // VISUAL POLISH: Add fences with birds sitting on them
+      const fencePositions = [
+        { x: -20, z: 50 },
+        { x: 10, z: 55 },
+        { x: -35, z: 30 },
+        { x: 20, z: -50 },
+        { x: -50, z: -20 }
+      ];
+      
+      fencePositions.forEach(pos => {
+        const fenceGroup = new THREE.Group();
+        
+        // Fence posts and rails
+        const postGeo = new THREE.BoxGeometry(0.3, 2, 0.3);
+        const railGeo = new THREE.BoxGeometry(10, 0.2, 0.2);
+        const fenceMat = new THREE.MeshToonMaterial({ color: 0x8B4513 }); // Brown wood
+        
+        // Posts
+        for (let i = 0; i < 4; i++) {
+          const post = new THREE.Mesh(postGeo, fenceMat);
+          post.position.set((i - 1.5) * 3.3, 1, 0);
+          post.castShadow = true;
+          fenceGroup.add(post);
+        }
+        
+        // Rails
+        const rail1 = new THREE.Mesh(railGeo, fenceMat);
+        rail1.position.set(0, 0.8, 0);
+        fenceGroup.add(rail1);
+        
+        const rail2 = new THREE.Mesh(railGeo, fenceMat);
+        rail2.position.set(0, 1.5, 0);
+        fenceGroup.add(rail2);
+        
+        fenceGroup.position.set(pos.x, 0, pos.z);
+        fenceGroup.rotation.y = Math.random() * Math.PI * 2; // Random rotation
+        scene.add(fenceGroup);
+        
+        // Add bird sitting on fence
+        const birdGeo = new THREE.ConeGeometry(0.15, 0.25, 4);
+        const birdMat = new THREE.MeshBasicMaterial({ color: 0x8B4513 }); // Brown
+        const bird = new THREE.Mesh(birdGeo, birdMat);
+        bird.position.set(pos.x + (Math.random() - 0.5) * 4, 2.2, pos.z);
+        bird.rotation.x = Math.PI / 2;
+        bird.rotation.z = Math.random() * Math.PI * 2;
+        scene.add(bird);
+        
+        // Store bird with fence reference for later interaction
+        bird.userData = {
+          isBirdOnFence: true,
+          originalPos: bird.position.clone(),
+          hasFlownAway: false
+        };
+        
+        animatedSceneObjects.birdsOnFences = animatedSceneObjects.birdsOnFences || [];
+        animatedSceneObjects.birdsOnFences.push(bird);
+      });
       
       // Waterfall from cliff into lake
       const waterfallGroup2 = new THREE.Group();
@@ -11914,11 +12249,286 @@
     function endCountdown() {
       countdownActive = false;
       
+      // Start cinematic intro instead of immediately unpausing
+      if (!cinematicIntroActive) {
+        startCinematicIntro();
+      }
+    }
+    
+    // --- CINEMATIC INTRO SYSTEM ---
+    function startCinematicIntro() {
+      cinematicIntroActive = true;
+      cinematicIntroStep = 0;
+      cinematicIntroTimer = 0;
+      
+      // Store landmark positions for camera
+      introLandmarkPositions = {
+        stonehenge: { x: 60, y: 20, z: 60 },
+        tesla: { x: -80, y: 30, z: -80 },
+        windmill: { x: 40, y: 15, z: 40 },
+        volcano: { x: -60, y: 25, z: -70 }
+      };
+      
+      // Debug logging removed for production
+    }
+    
+    // Constants for cinematic intro
+    const DESCRIPTION_DISPLAY_TIME = 0.5;
+    const DESCRIPTION_PROGRESS_THRESHOLD = 0.2;
+    
+    function updateCinematicIntro(dt) {
+      if (!cinematicIntroActive) return;
+      
+      cinematicIntroTimer += dt;
+      const currentStep = cinematicIntroSequence[cinematicIntroStep];
+      
+      if (!currentStep) {
+        endCinematicIntro();
+        return;
+      }
+      
+      // Handle current step based on type
+      if (currentStep.type === 'landmark') {
+        const pos = introLandmarkPositions[currentStep.target];
+        if (pos) {
+          // Smoothly move camera to landmark
+          const progress = Math.min(cinematicIntroTimer / currentStep.duration, 1);
+          const eased = easeInOutCubic(progress);
+          
+          camera.position.x = camera.position.x + (pos.x - camera.position.x) * 0.1;
+          camera.position.y = pos.y;
+          camera.position.z = camera.position.z + (pos.z - camera.position.z) * 0.1;
+          camera.lookAt(pos.x, 0, pos.z);
+          
+          // Show description bubble
+          if (cinematicIntroTimer < DESCRIPTION_DISPLAY_TIME && progress < DESCRIPTION_PROGRESS_THRESHOLD) {
+            showLandmarkDescription(currentStep.target);
+          }
+        }
+      } else if (currentStep.type === 'zoomout') {
+        // Zoom out to show full map
+        const progress = Math.min(cinematicIntroTimer / currentStep.duration, 1);
+        camera.position.y = 20 + (50 - 20) * easeInOutCubic(progress);
+      } else if (currentStep.type === 'zoomin') {
+        // Zoom in rapidly to player
+        const progress = Math.min(cinematicIntroTimer / currentStep.duration, 1);
+        if (player && player.mesh) {
+          const targetPos = player.mesh.position;
+          camera.position.x = camera.position.x + (targetPos.x - camera.position.x) * 0.3;
+          camera.position.y = 20 + (15 - 20) * easeInOutCubic(progress);
+          camera.position.z = camera.position.z + (targetPos.z + 20 - camera.position.z) * 0.3;
+          camera.lookAt(targetPos.x, 0, targetPos.z);
+        }
+      } else if (currentStep.type === 'cigar') {
+        // Player cigar smoke animation
+        if (player && player.mesh && cinematicIntroTimer < currentStep.duration) {
+          const smokeInterval = 0.2;
+          if (Math.floor(cinematicIntroTimer / smokeInterval) > Math.floor((cinematicIntroTimer - dt) / smokeInterval)) {
+            createSmokeParticle(player.mesh.position);
+          }
+        }
+      }
+      
+      // Check if current step is complete
+      if (cinematicIntroTimer >= currentStep.duration) {
+        cinematicIntroStep++;
+        cinematicIntroTimer = 0;
+      }
+    }
+    
+    function endCinematicIntro() {
+      cinematicIntroActive = false;
+      
       // Ensure game properly unpauses (use helper functions to sync window variables)
       setGamePaused(false);
       setGameActive(true);
       gameStartTime = Date.now();
-      console.log('[Countdown] Game started - isPaused:', isPaused, 'isGameActive:', isGameActive);
+      console.log('[CinematicIntro] Intro complete - Game started - isPaused:', isPaused, 'isGameActive:', isGameActive);
+    }
+    
+    function showLandmarkDescription(landmark) {
+      const descriptions = {
+        stonehenge: '🗿 Ancient Stonehenge - Mystical Power',
+        tesla: '⚡ Tesla Tower - Crackling Energy',
+        windmill: '🌾 The Windmill - Peaceful Settlement',
+        volcano: '🌋 Active Volcano - Primal Force'
+      };
+      
+      const desc = descriptions[landmark];
+      if (desc) {
+        showStatChange(desc);
+      }
+    }
+    
+    function createSmokeParticle(pos) {
+      const smokeParticle = particlePool.acquire();
+      if (smokeParticle) {
+        smokeParticle.mesh.position.set(pos.x, pos.y + 2, pos.z);
+        smokeParticle.velocity.set(
+          (Math.random() - 0.5) * 0.5,
+          Math.random() * 0.5 + 0.5,
+          (Math.random() - 0.5) * 0.5
+        );
+        smokeParticle.lifetime = 2;
+        smokeParticle.mesh.material.color.setHex(0xAAAAAA);
+        smokeParticle.mesh.material.opacity = 0.6;
+        smokeParticle.mesh.scale.set(0.3, 0.3, 0.3);
+        smokeParticle.mesh.visible = true;
+        particles.push(smokeParticle);
+      }
+    }
+    
+    function easeInOutCubic(t) {
+      return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    }
+    
+    // --- CAMERA SHAKE SYSTEM ---
+    function createCameraShake(intensity, duration) {
+      cameraShake.intensity = intensity;
+      cameraShake.duration = duration;
+    }
+    
+    function updateCameraShake(dt) {
+      if (cameraShake.duration > 0) {
+        cameraShake.duration -= dt;
+        
+        // Apply random shake to camera
+        const shake = cameraShake.intensity * Math.min(cameraShake.duration, 1);
+        camera.position.x += (Math.random() - 0.5) * shake;
+        camera.position.y += (Math.random() - 0.5) * shake;
+        camera.position.z += (Math.random() - 0.5) * shake;
+      }
+    }
+    
+    // --- GORE SOUND EFFECTS ---
+    function playGoreSound(type) {
+      if (!gameSettings.soundEnabled) return;
+      
+      const audioCtx = getAudioContext();
+      if (!audioCtx) return;
+      
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      
+      if (type === 'flesh_rip') {
+        osc.type = 'sawtooth';
+        osc.frequency.value = 80 + Math.random() * 40;
+        gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+      } else if (type === 'bone_crunch') {
+        osc.type = 'square';
+        osc.frequency.value = 60 + Math.random() * 30;
+        gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+      } else if (type === 'blood_splatter') {
+        osc.type = 'sine';
+        osc.frequency.value = 200 + Math.random() * 100;
+        gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+      }
+      
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.5);
+    }
+    
+    // --- LIGHTNING STRIKE SYSTEM ---
+    function createLightningStrike() {
+      if (!player || !player.mesh) return;
+      
+      // Random position near player
+      const strikePos = new THREE.Vector3(
+        player.mesh.position.x + (Math.random() - 0.5) * 40,
+        0,
+        player.mesh.position.z + (Math.random() - 0.5) * 40
+      );
+      
+      // Create lightning bolt from sky
+      const points = [];
+      const startY = 50;
+      const segments = 12;
+      
+      points.push(new THREE.Vector3(strikePos.x, startY, strikePos.z));
+      for (let i = 1; i < segments; i++) {
+        const t = i / segments;
+        points.push(new THREE.Vector3(
+          strikePos.x + (Math.random() - 0.5) * 3,
+          startY * (1 - t),
+          strikePos.z + (Math.random() - 0.5) * 3
+        ));
+      }
+      points.push(strikePos);
+      
+      const geometry = new THREE.BufferGeometry().setFromPoints(points);
+      const material = new THREE.LineBasicMaterial({ 
+        color: 0xFFFFFF, 
+        transparent: true,
+        opacity: 1
+      });
+      const lightning = new THREE.Line(geometry, material);
+      scene.add(lightning);
+      
+      // Flash light
+      const flash = new THREE.PointLight(0xFFFFFF, 15, 50);
+      flash.position.copy(strikePos);
+      flash.position.y = 25;
+      scene.add(flash);
+      
+      // Thunder sound
+      playSound('explosion');
+      
+      // Screen flash
+      const flashDiv = document.createElement('div');
+      flashDiv.style.position = 'fixed';
+      flashDiv.style.top = '0';
+      flashDiv.style.left = '0';
+      flashDiv.style.width = '100%';
+      flashDiv.style.height = '100%';
+      flashDiv.style.background = 'rgba(255, 255, 255, 0.4)';
+      flashDiv.style.pointerEvents = 'none';
+      flashDiv.style.zIndex = '500';
+      document.body.appendChild(flashDiv);
+      
+      // Camera shake
+      createCameraShake(0.4, 0.3);
+      
+      // Ground impact particles
+      spawnParticles(strikePos, 0xFFFFFF, 20);
+      spawnParticles(strikePos, 0x00FFFF, 15);
+      
+      // Cleanup after 200ms
+      setTimeout(() => {
+        scene.remove(lightning);
+        scene.remove(flash);
+        flashDiv.remove();
+        if (lightning.geometry) lightning.geometry.dispose();
+        if (lightning.material) lightning.material.dispose();
+      }, 200);
+    }
+    
+    // --- OWL HOOT SOUND ---
+    function playOwlHoot() {
+      if (!gameSettings.soundEnabled) return;
+      
+      const audioCtx = getAudioContext();
+      if (!audioCtx) return;
+      
+      // Owl hoot: Low frequency oscillation (spooky)
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(200, audioCtx.currentTime + 0.4);
+      
+      gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.8);
+      
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.8);
     }
     
     function showProgressionShop() {
@@ -12396,8 +13006,40 @@
         const dist = 28;
         const ex = player.mesh.position.x + Math.cos(angle) * dist;
         const ez = player.mesh.position.z + Math.sin(angle) * dist;
-        enemies.push(new Enemy(10, ex, ez, playerStats.lvl));
+        const miniBoss = new Enemy(10, ex, ez, playerStats.lvl);
+        enemies.push(miniBoss);
         createFloatingText("MINI-BOSS INCOMING!", player.mesh.position);
+        
+        // VISUAL POLISH: Camera zoom out to show miniboss spawn
+        cameraZoom.target = 25; // Zoom out
+        cameraTargetPos = new THREE.Vector3(
+          (player.mesh.position.x + ex) / 2,
+          0,
+          (player.mesh.position.z + ez) / 2
+        );
+        
+        // Dramatic effects
+        createCameraShake(0.6, 0.5);
+        playSound('explosion');
+        
+        // Screen flash
+        const flashDiv = document.createElement('div');
+        flashDiv.style.position = 'fixed';
+        flashDiv.style.top = '0';
+        flashDiv.style.left = '0';
+        flashDiv.style.width = '100%';
+        flashDiv.style.height = '100%';
+        flashDiv.style.background = 'rgba(255, 215, 0, 0.3)';
+        flashDiv.style.pointerEvents = 'none';
+        flashDiv.style.zIndex = '500';
+        document.body.appendChild(flashDiv);
+        setTimeout(() => flashDiv.remove(), 300);
+        
+        // Reset camera after 3 seconds
+        setTimeout(() => {
+          cameraZoom.target = 15;
+          cameraTargetPos = null;
+        }, 3000);
         
         // Spawn 1-2 regular enemies with the mini-boss (reduced from 2-3)
         const supportCount = 1 + Math.floor(Math.random() * 2);
@@ -15461,9 +16103,16 @@
         }
       }
       
-      // Handle countdown sequence (PR #70)
+      // Handle countdown sequence (PR #70) and cinematic intro
       if (countdownActive) {
         // During countdown, still render but don't update game logic
+        renderer.render(scene, camera);
+        return;
+      }
+      
+      // Handle cinematic intro sequence
+      if (cinematicIntroActive) {
+        updateCinematicIntro(dt);
         renderer.render(scene, camera);
         return;
       }
@@ -16212,6 +16861,127 @@
           });
         }
       });
+
+      // VISUAL POLISH: Volcano Animation (smoke and lava particles)
+      if (animatedSceneObjects.volcano) {
+        const volcano = animatedSceneObjects.volcano;
+        const userData = volcano.userData;
+        
+        if (!userData.particleTimer) userData.particleTimer = 0;
+        userData.particleTimer += dt;
+        
+        // Emit smoke/lava particles periodically
+        if (userData.particleTimer > 0.2) {
+          userData.particleTimer = 0;
+          
+          // Smoke particles
+          const smokeCount = Math.floor(Math.random() * 2) + 1;
+          for (let i = 0; i < smokeCount; i++) {
+            const particle = particlePool.acquire();
+            if (particle) {
+              particle.mesh.position.set(
+                volcano.position.x + (Math.random() - 0.5) * 2,
+                volcano.position.y + 20,
+                volcano.position.z + (Math.random() - 0.5) * 2
+              );
+              particle.velocity.set(
+                (Math.random() - 0.5) * 0.3,
+                Math.random() * 0.8 + 0.5,
+                (Math.random() - 0.5) * 0.3
+              );
+              particle.lifetime = 3 + Math.random() * 2;
+              particle.mesh.material.color.setHex(0x555555);
+              particle.mesh.material.opacity = 0.4;
+              particle.mesh.scale.set(0.5, 0.5, 0.5);
+              particle.mesh.visible = true;
+              particles.push(particle);
+            }
+          }
+          
+          // Occasional lava particle
+          if (Math.random() < 0.3) {
+            const particle = particlePool.acquire();
+            if (particle) {
+              particle.mesh.position.set(
+                volcano.position.x + (Math.random() - 0.5) * 1,
+                volcano.position.y + 19.5,
+                volcano.position.z + (Math.random() - 0.5) * 1
+              );
+              particle.velocity.set(
+                (Math.random() - 0.5) * 0.4,
+                Math.random() * 1.2 + 0.8,
+                (Math.random() - 0.5) * 0.4
+              );
+              particle.lifetime = 2;
+              particle.mesh.material.color.setHex(0xFF4500);
+              particle.mesh.material.opacity = 0.8;
+              particle.mesh.scale.set(0.3, 0.3, 0.3);
+              particle.mesh.visible = true;
+              particles.push(particle);
+            }
+          }
+        }
+        
+        // Pulsing lava glow
+        if (userData.lava && userData.light) {
+          const pulse = Math.sin(gameTime * 2) * 0.3 + 0.7;
+          userData.lava.material.emissiveIntensity = pulse;
+          userData.light.intensity = 2 + pulse * 2;
+        }
+      }
+      
+      // VISUAL POLISH: Birds on fences fly away when player approaches
+      if (animatedSceneObjects.birdsOnFences && player && player.mesh) {
+        animatedSceneObjects.birdsOnFences.forEach(bird => {
+          if (!bird.userData.hasFlownAway) {
+            const dist = bird.position.distanceTo(player.mesh.position);
+            
+            if (dist < 8) {
+              // Player is close - bird flies away!
+              bird.userData.hasFlownAway = true;
+              
+              // Create flying animation
+              const flyVelocity = new THREE.Vector3(
+                (Math.random() - 0.5) * 15,
+                8 + Math.random() * 5,
+                (Math.random() - 0.5) * 15
+              );
+              
+              let flyLife = 120;
+              const flyAway = () => {
+                flyLife--;
+                bird.position.add(flyVelocity.clone().multiplyScalar(0.05));
+                flyVelocity.y -= 0.1; // Gravity
+                bird.rotation.z += 0.1; // Flapping motion
+                
+                if (flyLife <= 0 || bird.position.y < 0) {
+                  scene.remove(bird);
+                  if (bird.geometry) bird.geometry.dispose();
+                  if (bird.material) bird.material.dispose();
+                } else {
+                  requestAnimationFrame(flyAway);
+                }
+              };
+              flyAway();
+            }
+          }
+        });
+        
+        // Clean up flown-away birds from array
+        animatedSceneObjects.birdsOnFences = animatedSceneObjects.birdsOnFences.filter(
+          bird => !bird.userData.hasFlownAway || bird.parent
+        );
+      }
+      
+      // VISUAL POLISH: Update camera shake
+      updateCameraShake(dt);
+      
+      // VISUAL POLISH: Lightning strikes during storms (random periodic)
+      lightningTimer += dt;
+      if (lightningTimer > 15 + Math.random() * 10) {
+        lightningTimer = 0;
+        createLightningStrike();
+      }
 
       // Cleanup and memory management (run every 3 seconds to avoid performance issues)
       enemies = enemies.filter(e => !e.isDead);
