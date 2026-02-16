@@ -268,9 +268,15 @@
       height: 110px;
       position: relative;
       margin-bottom: 15px;
-      filter: drop-shadow(0 3px 8px rgba(0,0,0,0.5)) drop-shadow(0 0 15px rgba(93,173,226,0.4));
+      /* 3D appearance with stronger shadow and depth */
+      filter: drop-shadow(0 5px 12px rgba(0,0,0,0.7)) 
+              drop-shadow(0 0 20px rgba(93,173,226,0.5))
+              drop-shadow(0 8px 20px rgba(0,0,0,0.4));
       transition: transform 0.15s ease-out;
       animation: waterdrop-bubble 2.5s ease-in-out infinite;
+      /* 3D transform perspective */
+      transform-style: preserve-3d;
+      perspective: 1000px;
     }
     
     #waterdrop-container.grow {
@@ -327,13 +333,29 @@
     
     #waterdrop-exp-fill {
       transition: y 0.3s ease-out, height 0.3s ease-out;
-      animation: water-shimmer 3s ease-in-out infinite;
+      animation: water-shimmer 3s ease-in-out infinite, water-wave 2s ease-in-out infinite;
     }
     
-    /* Add shimmer effect to the EXP fill for extra squishiness */
+    /* Enhanced shimmer effect for 3D water appearance */
     @keyframes water-shimmer {
-      0%, 100% { opacity: 0.9; }
-      50% { opacity: 0.95; }
+      0%, 100% { opacity: 0.85; }
+      50% { opacity: 1.0; }
+    }
+    
+    /* Wave animation that activates on XP progress */
+    @keyframes water-wave {
+      0%, 100% { 
+        transform: translateY(0) scaleY(1);
+      }
+      25% { 
+        transform: translateY(-2px) scaleY(1.02);
+      }
+      50% { 
+        transform: translateY(0) scaleY(1);
+      }
+      75% { 
+        transform: translateY(2px) scaleY(0.98);
+      }
     }
     
     #waterdrop-level-text {
@@ -351,6 +373,60 @@
     
     #bottom-exp-text {
       display: none;
+    }
+    
+    /* Round Minimap - Bottom Right Corner */
+    #minimap-container {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      border: 3px solid #FFD700;
+      background: radial-gradient(circle at center, rgba(20,20,20,0.9), rgba(0,0,0,0.95));
+      overflow: hidden;
+      pointer-events: none;
+      z-index: 100;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.8),
+                  0 0 25px rgba(255,215,0,0.3),
+                  inset -2px -2px 8px rgba(0,0,0,0.6),
+                  inset 2px 2px 8px rgba(255,255,255,0.1);
+      transform-style: preserve-3d;
+    }
+    
+    #minimap {
+      width: 100%;
+      height: 100%;
+      position: relative;
+    }
+    
+    .minimap-dot {
+      position: absolute;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+    }
+    
+    .minimap-player {
+      width: 8px;
+      height: 8px;
+      background: #5DADE2;
+      box-shadow: 0 0 8px rgba(93,173,226,0.8);
+      z-index: 10;
+    }
+    
+    .minimap-enemy {
+      width: 4px;
+      height: 4px;
+      background: #FF4444;
+      box-shadow: 0 0 4px rgba(255,68,68,0.6);
+    }
+    
+    .minimap-landmark {
+      width: 6px;
+      height: 6px;
+      background: #FFD700;
+      box-shadow: 0 0 6px rgba(255,215,0,0.8);
     }
     
     /* Stat Notification Queue - Red/Black Dominant */
@@ -575,6 +651,109 @@
     
     .story-quest-body strong.highlight {
       color: #5DADE2;
+    }
+    
+    /* Comic Book Tutorial Modal */
+    .comic-tutorial-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.95);
+      z-index: 2000;
+      align-items: center;
+      justify-content: center;
+      pointer-events: auto;
+      animation: fadeIn 0.3s ease-out;
+    }
+    
+    .comic-panel {
+      background: linear-gradient(135deg, #2C3E50 0%, #1a252f 100%);
+      border: 6px solid #FFD700;
+      border-radius: 15px;
+      padding: 35px;
+      max-width: 550px;
+      box-shadow: 0 0 40px rgba(255,215,0,0.8),
+                  inset 0 0 20px rgba(0,0,0,0.5);
+      position: relative;
+      /* Comic book effect with dotted pattern */
+      background-image: 
+        radial-gradient(circle at 2px 2px, rgba(255,255,255,0.05) 1px, transparent 1px);
+      background-size: 20px 20px;
+    }
+    
+    .comic-panel::before {
+      content: '';
+      position: absolute;
+      top: -10px;
+      left: -10px;
+      right: -10px;
+      bottom: -10px;
+      background: linear-gradient(45deg, #FFD700 0%, #FFA500 100%);
+      border-radius: 20px;
+      z-index: -1;
+      opacity: 0.3;
+    }
+    
+    .comic-title {
+      color: #FFD700;
+      font-size: 42px;
+      font-weight: 900;
+      text-align: center;
+      margin-bottom: 20px;
+      text-shadow: 
+        3px 3px 0 #000,
+        -2px -2px 0 #000,
+        2px -2px 0 #000,
+        -2px 2px 0 #000,
+        0 0 20px rgba(255,215,0,0.8);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+    
+    .comic-text {
+      color: #FFFFFF;
+      font-size: 20px;
+      line-height: 1.8;
+      margin-bottom: 25px;
+      text-align: center;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+    }
+    
+    .comic-text strong {
+      color: #FFD700;
+      font-weight: 900;
+      text-shadow: 0 0 10px rgba(255,215,0,0.6);
+    }
+    
+    .comic-action {
+      background: linear-gradient(to bottom, #5DADE2 0%, #3498DB 100%);
+      color: #FFFFFF;
+      font-size: 22px;
+      font-weight: bold;
+      padding: 15px 40px;
+      border: 4px solid #2980B9;
+      border-radius: 10px;
+      cursor: pointer;
+      text-align: center;
+      text-transform: uppercase;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+      transition: all 0.2s;
+      display: block;
+      margin: 0 auto;
+    }
+    
+    .comic-action:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.7);
+      background: linear-gradient(to bottom, #6CB8E8 0%, #4AA3DD 100%);
+    }
+    
+    .comic-action:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 10px rgba(0,0,0,0.5);
     }
     
     .menu-btn-primary {
@@ -1810,12 +1989,26 @@
         <p>
           💎 <strong>Gear & Achievements:</strong> Collect equipment, complete achievements, and master the elemental powers.
         </p>
-        <p>
-          🌍 <strong>Explore:</strong> Discover landmarks like the Windmill, Stonehenge, Pyramids, Eiffel Tower, and the Tesla Tower!
-        </p>
       </div>
       <button class="menu-btn menu-btn-primary" id="story-quest-close-btn">
-        START YOUR JOURNEY!
+        LET'S GO!
+      </button>
+    </div>
+  </div>
+
+  <!-- Comic Book Tutorial Modal -->
+  <div id="comic-tutorial-modal" class="comic-tutorial-modal">
+    <div class="comic-panel">
+      <div class="comic-title" id="comic-title">FIRST DEATH!</div>
+      <div class="comic-text" id="comic-text">
+        Your journey begins with failure, but <strong>that's how you learn!</strong><br><br>
+        To unlock your full potential, you must return to the <strong>CAMP</strong> and interact with the buildings there.
+      </div>
+      <button class="comic-action" id="comic-action-btn">CONTINUE</button>
+    </div>
+  </div>
+
+  <!-- Main Menu -->
       </button>
     </div>
   </div>
@@ -2063,11 +2256,24 @@
     <button id="stats-btn" class="btn-small" style="position: absolute; top: 20px; right: 20px; pointer-events: auto; z-index: 100;">STATS</button>
     <button id="settings-btn" class="btn-small" style="position: absolute; top: 20px; right: 120px; pointer-events: auto; z-index: 100;">⚙️</button>
     
-    <!-- Day/Night Cycle Clock -->
+    <!-- Day/Night Cycle Clock - Enhanced 3D appearance -->
     <div id="day-night-clock" style="position: absolute; top: 20px; left: 50%; transform: translateX(-50%); pointer-events: none; z-index: 100;">
-      <div style="background: rgba(0,0,0,0.7); border: 2px solid #FFD700; border-radius: 50%; width: 80px; height: 80px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 0 15px rgba(0,0,0,0.5);">
-        <div id="day-night-icon" style="font-size: 32px; margin-bottom: 2px;">☀️</div>
-        <div id="day-night-time" style="font-size: 12px; color: #FFD700; font-weight: bold;">00:00</div>
+      <div style="background: radial-gradient(circle at 30% 30%, rgba(40,40,40,0.9), rgba(0,0,0,0.8)); 
+                  border: 3px solid #FFD700; 
+                  border-radius: 50%; 
+                  width: 80px; 
+                  height: 80px; 
+                  display: flex; 
+                  flex-direction: column; 
+                  align-items: center; 
+                  justify-content: center; 
+                  box-shadow: 0 4px 20px rgba(0,0,0,0.7), 
+                              0 0 25px rgba(255,215,0,0.4),
+                              inset -2px -2px 8px rgba(0,0,0,0.5),
+                              inset 2px 2px 8px rgba(255,255,255,0.1);
+                  transform-style: preserve-3d;">
+        <div id="day-night-icon" style="font-size: 36px; margin-bottom: 2px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));">☀️</div>
+        <div id="day-night-time" style="font-size: 12px; color: #FFD700; font-weight: bold; text-shadow: 0 0 8px rgba(255,215,0,0.6), 1px 1px 2px rgba(0,0,0,0.8);">00:00</div>
       </div>
     </div>
     
@@ -2076,6 +2282,11 @@
     
     <!-- Equipment Button -->
     <button id="equipment-btn" title="Equipment">⚔️</button>
+    
+    <!-- Round Minimap - Bottom Right Corner -->
+    <div id="minimap-container">
+      <div id="minimap"></div>
+    </div>
     
     <!-- Combo Counter - Red/Black Theme -->
     <div id="combo-counter">
@@ -3264,9 +3475,9 @@
         this.highlight.position.set(-0.2, 0.3, 0.2);
         this.mesh.add(this.highlight);
         
-        // Add player face: eyes (white spheres + black pupils)
+        // Add player face: eyes with RED glowing appearance (matching load screen)
         const eyeGeo = new THREE.SphereGeometry(0.08, 8, 8);
-        const eyeMat = new THREE.MeshBasicMaterial({ color: 0xFFFFFF });
+        const eyeMat = new THREE.MeshBasicMaterial({ color: 0xFF0000 }); // RED eyes
         
         this.leftEye = new THREE.Mesh(eyeGeo, eyeMat);
         this.leftEye.position.set(-0.12, 0.1, 0.4);
@@ -3276,9 +3487,9 @@
         this.rightEye.position.set(0.12, 0.1, 0.4);
         this.mesh.add(this.rightEye);
         
-        // Pupils (black)
+        // Pupils (darker red for depth)
         const pupilGeo = new THREE.SphereGeometry(0.04, 8, 8);
-        const pupilMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+        const pupilMat = new THREE.MeshBasicMaterial({ color: 0x8B0000 }); // Dark red
         
         this.leftPupil = new THREE.Mesh(pupilGeo, pupilMat);
         this.leftPupil.position.set(-0.12, 0.1, 0.45);
@@ -3351,6 +3562,29 @@
         this.rightArm.rotation.z = -Math.PI / 6; // Angled outward
         this.mesh.add(this.rightArm);
         
+        // Gun visual (held by right arm)
+        const gunBodyGeo = new THREE.BoxGeometry(0.08, 0.12, 0.25);
+        const gunMat = new THREE.MeshToonMaterial({ color: 0x222222 }); // Dark gray gun body
+        this.gunBody = new THREE.Mesh(gunBodyGeo, gunMat);
+        this.gunBody.position.set(0.4, -0.1, 0.3);
+        this.mesh.add(this.gunBody);
+        
+        // Gun barrel
+        const barrelGeo = new THREE.CylinderGeometry(0.025, 0.025, 0.2, 8);
+        const barrelMat = new THREE.MeshToonMaterial({ color: 0x111111 }); // Black barrel
+        this.gunBarrel = new THREE.Mesh(barrelGeo, barrelMat);
+        this.gunBarrel.rotation.x = Math.PI / 2;
+        this.gunBarrel.position.set(0.4, -0.1, 0.45);
+        this.mesh.add(this.gunBarrel);
+        
+        // Gun handle
+        const handleGeo = new THREE.BoxGeometry(0.05, 0.15, 0.08);
+        const handleMat = new THREE.MeshToonMaterial({ color: 0x8B4513 }); // Brown handle
+        this.gunHandle = new THREE.Mesh(handleGeo, handleMat);
+        this.gunHandle.position.set(0.4, -0.2, 0.25);
+        this.gunHandle.rotation.z = -Math.PI / 6;
+        this.mesh.add(this.gunHandle);
+        
         // Legs (simple cylinders below body)
         const legGeo = new THREE.CylinderGeometry(0.08, 0.07, 0.4, 8);
         
@@ -3366,6 +3600,11 @@
         
         // Smoke particles timer
         this.smokeTimer = 0;
+        
+        // Breathing animation states (breath-in with cigar glow, breath-out with smoke)
+        this.breathTimer = 0;
+        this.breathCycle = 4.0; // 4 seconds per breath cycle
+        this.isBreathingIn = false;
         
         // Pulsing glow
         const glowGeo = new THREE.SphereGeometry(0.55, 16, 16);
@@ -3416,6 +3655,9 @@
         this.invulnerable = false;
         this.invulnerabilityTime = 0;
         this.invulnerabilityDuration = 0.5; // 500ms of invulnerability after taking damage
+        
+        // Store base scale for breathing animation efficiency
+        this.baseScale = 1.0;
       }
 
       update(dt) {
@@ -3620,58 +3862,90 @@
           this.rightLeg.rotation.x = 0;
         }
         
-        // Animate cigar tip (pulsing emissive glow)
+        // Animate cigar tip with breathing animation (breath-in/breath-out cycle)
         if (this.cigarTip) {
-          const tipBrightness = 0.7 + Math.sin(gameTime * 8) * 0.3;
-          this.cigarTip.material.opacity = tipBrightness;
+          // Breathing animation cycle
+          this.breathTimer += dt;
+          const breathPhase = (this.breathTimer % this.breathCycle) / this.breathCycle; // 0 to 1
           
-          // Enhanced cigar smoke with lighting reaction
-          this.smokeTimer += dt;
-          if (this.smokeTimer > 0.2) { // Every 0.2 seconds
-            this.smokeTimer = 0;
+          // Breath-in: 0 to 0.4 (1.6s), Hold: 0.4 to 0.5 (0.4s), Breath-out: 0.5 to 1.0 (2s)
+          if (breathPhase < 0.4) {
+            // Breathing in - cigar tip glows brighter
+            this.isBreathingIn = true;
+            const inhaleProgress = breathPhase / 0.4;
+            const tipBrightness = 0.7 + inhaleProgress * 0.3 + Math.sin(gameTime * 8) * 0.1;
+            this.cigarTip.material.opacity = tipBrightness;
+            this.cigarTip.scale.set(1 + inhaleProgress * 0.3, 1 + inhaleProgress * 0.3, 1 + inhaleProgress * 0.3);
             
-            // Get current lighting intensity for smoke color (reacts to day/night)
-            const lightIntensity = window.dirLight ? window.dirLight.intensity : 0.8;
-            const smokeColor = new THREE.Color().lerpColors(
-              new THREE.Color(0x555555), // Dark gray in night
-              new THREE.Color(0xCCCCCC), // Light gray in day
-              lightIntensity
-            );
+            // Subtle body scaling during inhale - efficient approach
+            const targetScale = this.baseScale * (1 + inhaleProgress * 0.05);
+            this.mesh.scale.set(targetScale, targetScale, targetScale);
+          } else if (breathPhase < 0.5) {
+            // Holding breath
+            this.isBreathingIn = false;
+            this.cigarTip.material.opacity = 1.0;
+            this.cigarTip.scale.set(1.3, 1.3, 1.3);
+            this.mesh.scale.set(this.baseScale * 1.05, this.baseScale * 1.05, this.baseScale * 1.05);
+          } else {
+            // Breathing out - emit smoke from mouth
+            this.isBreathingIn = false;
+            const exhaleProgress = (breathPhase - 0.5) / 0.5;
+            const tipBrightness = 1.0 - exhaleProgress * 0.3 + Math.sin(gameTime * 8) * 0.1;
+            const targetScale = this.baseScale * (1.05 - exhaleProgress * 0.05);
+            this.mesh.scale.set(targetScale, targetScale, targetScale);
+            this.cigarTip.material.opacity = tipBrightness;
+            this.cigarTip.scale.set(1.3 - exhaleProgress * 0.3, 1.3 - exhaleProgress * 0.3, 1.3 - exhaleProgress * 0.3);
             
-            // Create smoke particle
-            const smokeGeo = new THREE.SphereGeometry(0.05, 6, 6);
-            const smokeMat = new THREE.MeshBasicMaterial({ 
-              color: smokeColor,
-              transparent: true,
-              opacity: 0.5
-            });
-            const smoke = new THREE.Mesh(smokeGeo, smokeMat);
-            
-            // Position at cigar tip
-            const tipWorldPos = new THREE.Vector3();
-            this.cigarTip.getWorldPosition(tipWorldPos);
-            smoke.position.copy(tipWorldPos);
-            scene.add(smoke);
-            
-            // Animate smoke rising
-            let smokeLife = 80;
-            const updateSmoke = () => {
-              smokeLife--;
-              smoke.position.y += 0.02; // Rise up
-              smoke.position.x += (Math.random() - 0.5) * 0.01; // Drift
-              smoke.position.z += (Math.random() - 0.5) * 0.01;
-              smoke.scale.multiplyScalar(1.02); // Expand
-              smoke.material.opacity = (smokeLife / 80) * 0.5; // Fade out
+            // Emit smoke from mouth during exhale
+            this.smokeTimer += dt;
+            if (this.smokeTimer > 0.15) { // Faster smoke during exhale
+              this.smokeTimer = 0;
               
-              if (smokeLife <= 0) {
-                scene.remove(smoke);
-                smoke.geometry.dispose();
-                smoke.material.dispose();
-              } else {
-                requestAnimationFrame(updateSmoke);
-              }
-            };
-            updateSmoke();
+              // Get current lighting intensity for smoke color
+              const lightIntensity = window.dirLight ? window.dirLight.intensity : 0.8;
+              const smokeColor = new THREE.Color().lerpColors(
+                new THREE.Color(0x555555), // Dark gray in night
+                new THREE.Color(0xCCCCCC), // Light gray in day
+                lightIntensity
+              );
+              
+              // Create smoke particle from mouth
+              const smokeGeo = new THREE.SphereGeometry(0.08, 6, 6);
+              const smokeMat = new THREE.MeshBasicMaterial({ 
+                color: smokeColor,
+                transparent: true,
+                opacity: 0.6
+              });
+              const smoke = new THREE.Mesh(smokeGeo, smokeMat);
+              
+              // Position at mouth (slightly in front of face)
+              smoke.position.set(
+                this.mesh.position.x,
+                this.mesh.position.y - 0.05,
+                this.mesh.position.z + 0.45
+              );
+              scene.add(smoke);
+              
+              // Animate smoke rising and drifting forward
+              let smokeLife = 100;
+              const updateSmoke = () => {
+                smokeLife--;
+                smoke.position.y += 0.02; // Rise up
+                smoke.position.z += 0.03; // Drift forward
+                smoke.position.x += (Math.random() - 0.5) * 0.02; // Random drift
+                smoke.scale.multiplyScalar(1.03); // Expand faster
+                smoke.material.opacity = (smokeLife / 100) * 0.6; // Fade out
+                
+                if (smokeLife <= 0) {
+                  scene.remove(smoke);
+                  smoke.geometry.dispose();
+                  smoke.material.dispose();
+                } else {
+                  requestAnimationFrame(updateSmoke);
+                }
+              };
+              updateSmoke();
+            }
           }
         }
         
@@ -5189,10 +5463,20 @@
         // FRESH IMPLEMENTATION: Enhanced headshot with actual head detachment
         // Headshot: Dramatic head explosion with visible detached head
         spawnParticles(this.mesh.position, enemyColor, 25);
-        spawnParticles(this.mesh.position, 0x8B0000, 15); // Red blood
+        spawnParticles(this.mesh.position, 0xDC143C, 20); // Crimson blood (not white!)
+        spawnParticles(this.mesh.position, 0x8B0000, 15); // Dark red blood
         spawnParticles(this.mesh.position, 0xFFFFFF, 5);
         
-        // Create detached head that flies off
+        // Blood stream particles (continuous stream effect)
+        for (let i = 0; i < 8; i++) {
+          setTimeout(() => {
+            const streamPos = this.mesh.position.clone();
+            streamPos.y += 0.8;
+            spawnParticles(streamPos, 0xDC143C, 5);
+          }, i * 50);
+        }
+        
+        // Create detached head that flies off with enhanced rotation
         const headGeo = new THREE.SphereGeometry(0.3, 12, 12);
         const headMat = new THREE.MeshBasicMaterial({ 
           color: enemyColor, 
@@ -5204,12 +5488,19 @@
         head.position.y += 0.5; // Start from head height
         scene.add(head);
         
-        // Head velocity (flies backward and up)
+        // Head velocity (flies backward and up with spin)
         const headVel = new THREE.Vector3(
           (Math.random() - 0.5) * 0.6,
           0.8 + Math.random() * 0.4, // Upward
           (Math.random() - 0.5) * 0.6
         );
+        
+        // Enhanced rotation speeds for dramatic spinning
+        const rotSpeed = {
+          x: 0.15 + Math.random() * 0.1,
+          y: 0.2 + Math.random() * 0.15,
+          z: 0.1 + Math.random() * 0.1
+        };
         
         // Blood spray trail from neck
         let headLife = 80;
@@ -5217,13 +5508,16 @@
           headLife--;
           head.position.add(headVel);
           headVel.y -= 0.025; // Gravity
-          head.rotation.x += 0.15;
-          head.rotation.y += 0.2;
-          head.rotation.z += 0.1;
           
-          // Blood trail
-          if (headLife % 3 === 0 && headLife > 20) {
-            spawnParticles(head.position, 0x8B0000, 2);
+          // Enhanced rotation with varying speeds for more dramatic effect
+          head.rotation.x += rotSpeed.x;
+          head.rotation.y += rotSpeed.y;
+          head.rotation.z += rotSpeed.z;
+          
+          // Blood stream trail from severed neck
+          if (headLife % 2 === 0 && headLife > 20) {
+            // Crimson blood, not white!
+            spawnParticles(head.position, 0xDC143C, 3);
           }
           
           // Fade out near end
@@ -5255,10 +5549,10 @@
         corpse.rotation.x = -Math.PI / 2;
         scene.add(corpse);
         
-        // Large blood splatter pool
+        // Large blood splatter pool (crimson, not white!)
         const bloodGeo = new THREE.CircleGeometry(1.2, 16); // Larger pool
         const bloodMat = new THREE.MeshBasicMaterial({ 
-          color: 0x8B0000, 
+          color: 0xDC143C, // Crimson blood
           transparent: true,
           opacity: 0.7, // More visible
           side: THREE.DoubleSide
@@ -5269,7 +5563,7 @@
         bloodPool.rotation.x = -Math.PI / 2;
         scene.add(bloodPool);
         
-        // Extra gore pieces (bone/skull fragments)
+        // Extra gore pieces (bone/skull fragments) with proper coloring
         for(let i = 0; i < 12; i++) {
           const pieceSize = 0.1 + Math.random() * 0.1;
           const piece = new THREE.Mesh(
@@ -6963,6 +7257,27 @@
           tempShop: false
         }
       },
+      // Tutorial/Onboarding system (comic book style)
+      tutorial: {
+        completed: false,
+        firstDeath: false,
+        campVisited: false,
+        dashUnlocked: false,
+        headshotUnlocked: false,
+        currentStep: 'waiting_first_death' // Steps: waiting_first_death, show_death_tutorial, go_to_camp, unlock_dash, unlock_headshot, completed
+      },
+      // Lore Collection system
+      loreUnlocked: {
+        landmarks: [],
+        enemies: [],
+        bosses: [],
+        buildings: []
+      },
+      // Extended milestone quests
+      extendedQuests: {
+        legendaryCigar: { started: false, completed: false, foundCigar: false },
+        companionEgg: { started: false, completed: false, eggHatched: false, ceremonyDone: false }
+      },
       // Side challenges
       sideChallenges: {
         kill10Enemies: { completed: false, progress: 0, target: 10 }
@@ -6995,6 +7310,8 @@
           saveData.storyQuests = { ...defaultSaveData.storyQuests, ...(saveData.storyQuests || {}) };
           saveData.storyQuests.buildingFirstUse = { ...defaultSaveData.storyQuests.buildingFirstUse, ...(saveData.storyQuests.buildingFirstUse || {}) };
           saveData.sideChallenges = { ...defaultSaveData.sideChallenges, ...(saveData.sideChallenges || {}) };
+          // Tutorial system (new fields)
+          saveData.tutorial = { ...defaultSaveData.tutorial, ...(saveData.tutorial || {}) };
         }
       } catch (e) {
         console.error('Failed to load save data:', e);
@@ -7967,7 +8284,96 @@
       const currentLevel = saveData.upgrades[upgradeKey];
       return upgrade.baseCost + (currentLevel * upgrade.costIncrease);
     }
-
+    
+    // --- LORE SYSTEM ---
+    const LORE_DATABASE = {
+      landmarks: {
+        windmill: {
+          name: 'The Forgotten Windmill',
+          icon: '🏚️',
+          description: 'An ancient windmill that once powered a thriving village. Now it stands as a monument to a forgotten time.',
+          unlockCondition: 'Defeat the Windmill Boss',
+          story: 'Legend says this windmill was built by the first settlers who discovered the water droplets\' mystical properties. The machinery inside still turns, grinding something unseen...'
+        },
+        montana: {
+          name: 'Montana Memorial',
+          icon: '🗿',
+          description: 'A massive stone statue honoring the fallen warriors of the Great Water War.',
+          unlockCondition: 'Complete Montana Quest',
+          story: 'The Montana stands watch over the battlefield where water droplets first united against the cube invasion. Its eyes are said to glow blue during the full moon.'
+        },
+        eiffel: {
+          name: 'Eiffel Energy Tower',
+          icon: '🗼',
+          description: 'A towering structure that harnesses electrical energy from storm clouds.',
+          unlockCondition: 'Complete Eiffel Tower Quest',
+          story: 'Built by a genius engineer who sought to weaponize lightning itself. The tower still crackles with power, attracting the most dangerous enemies.'
+        },
+        stonehenge: {
+          name: 'Ancient Stonehenge',
+          icon: '⭕',
+          description: 'A mysterious circle of ancient stones that pulse with unknown energy.',
+          unlockCondition: 'Discover Stonehenge',
+          story: 'These stones predate even the water droplets. Some say they are portals to other realms, while others believe they hold the secret to immortality...'
+        },
+        pyramids: {
+          name: 'Desert Pyramids',
+          icon: '🔺',
+          description: 'Three massive pyramids that hide ancient treasures and deadly traps.',
+          unlockCondition: 'Explore the Desert',
+          story: 'Built by an advanced civilization that worshipped the sun. Deep within lies the legendary Eternal Cigar, said to grant unlimited power.'
+        }
+      },
+      enemies: {
+        square: {
+          name: 'Cube Soldier',
+          icon: '🟥',
+          description: 'Basic geometric enemies that hunt in swarms.',
+          story: 'Created from crystallized anger, these cubes seek to absorb all water to feed their master.'
+        },
+        triangle: {
+          name: 'Spike Warrior',
+          icon: '🔺',
+          description: 'Sharp and aggressive, they attack with piercing precision.',
+          story: 'Formed from shattered weapons of fallen heroes, they carry the rage of those who fell before you.'
+        },
+        round: {
+          name: 'Sphere Hunter',
+          icon: '🔵',
+          description: 'Fast-moving orbs that roll through the battlefield.',
+          story: 'Born from compressed emotions, these spheres are drawn to the tears of water droplets.'
+        }
+      },
+      bosses: {
+        windmillBoss: {
+          name: 'The Grinder',
+          icon: '⚙️',
+          description: 'A massive mechanical horror powered by the windmill itself.',
+          story: 'The corrupted soul of the windmill\'s creator, trapped in eternal machinery.'
+        }
+      },
+      buildings: {
+        skillTree: {
+          name: 'Tree of Knowledge',
+          icon: '🌳',
+          description: 'An ancient tree that grants wisdom and power to those who study its branches.',
+          story: 'This tree grew from a single water droplet that absorbed centuries of knowledge. Each skill you unlock is a branch of understanding.'
+        },
+        forge: {
+          name: 'The Eternal Forge',
+          icon: '🔨',
+          description: 'A forge that never cools, capable of crafting legendary equipment.',
+          story: 'Fueled by the heat of a thousand defeated enemies, this forge can shape even the hardest materials.'
+        },
+        companionHouse: {
+          name: 'Companion Sanctuary',
+          icon: '🏡',
+          description: 'A safe haven where loyal companions rest and grow stronger.',
+          story: 'Built on the site where the first water droplet befriended a wild beast. The bond forged here is unbreakable.'
+        }
+      }
+    };
+    
     // --- CAMP SYSTEM ---
     const CAMP_BUILDINGS = {
       // FREE BUILDINGS (unlocked on first camp visit after first death)
@@ -8308,6 +8714,34 @@
           saveData.storyQuests.buildingFirstUse.skillTree = true;
           progressQuest('useSkillTree', true);
         }
+        
+        // Tutorial: Check if dash was unlocked
+        if (!saveData.tutorial) {
+          saveData.tutorial = {
+            completed: false,
+            firstDeath: false,
+            campVisited: false,
+            dashUnlocked: false,
+            headshotUnlocked: false,
+            currentStep: 'waiting_first_death'
+          };
+        }
+        
+        if (skillId === 'dashMaster' && saveData.tutorial.currentStep === 'unlock_dash' && !saveData.tutorial.dashUnlocked) {
+          saveData.tutorial.dashUnlocked = true;
+          saveData.tutorial.currentStep = 'unlock_headshot';
+          saveSaveData();
+          setTimeout(() => {
+            showComicTutorial('unlock_headshot');
+          }, 1000);
+        } else if ((skillId === 'criticalFocus' || skillId === 'executioner') && saveData.tutorial.currentStep === 'unlock_headshot' && !saveData.tutorial.headshotUnlocked) {
+          // Accept any crit/headshot related skill
+          saveData.tutorial.headshotUnlocked = true;
+          saveSaveData();
+          setTimeout(() => {
+            showComicTutorial('tutorial_complete');
+          }, 1000);
+        }
       } else {
         playSound('invalid');
         showStatusMessage('Not enough skill points!', 2000);
@@ -8619,6 +9053,104 @@
     }
 
     // --- STORY QUEST POPUP SYSTEM ---
+    
+    // Lore unlocking system
+    function unlockLore(category, id) {
+      if (!saveData.loreUnlocked) {
+        saveData.loreUnlocked = { landmarks: [], enemies: [], bosses: [], buildings: [] };
+      }
+      
+      if (!saveData.loreUnlocked[category].includes(id)) {
+        saveData.loreUnlocked[category].push(id);
+        saveSaveData();
+        
+        const loreData = LORE_DATABASE[category][id];
+        if (loreData) {
+          showStatChange(`📖 Lore Unlocked: ${loreData.name}`);
+          
+          // Show a lore popup after a short delay
+          setTimeout(() => {
+            showLorePopup(loreData);
+          }, 1000);
+        }
+      }
+    }
+    
+    function showLorePopup(loreData) {
+      const modal = document.getElementById('comic-tutorial-modal');
+      const title = document.getElementById('comic-title');
+      const text = document.getElementById('comic-text');
+      const btn = document.getElementById('comic-action-btn');
+      
+      if (!modal || !title || !text || !btn) return;
+      
+      title.textContent = `${loreData.icon} ${loreData.name}`;
+      text.innerHTML = `<strong>${loreData.description}</strong><br><br>${loreData.story}`;
+      btn.textContent = 'CLOSE';
+      
+      modal.style.display = 'flex';
+      
+      btn.onclick = () => {
+        modal.style.display = 'none';
+      };
+    }
+    
+    // Extended quest system
+    function checkLegendaryCigarQuest() {
+      if (!saveData.extendedQuests) {
+        saveData.extendedQuests = {
+          legendaryCigar: { started: false, completed: false, foundCigar: false },
+          companionEgg: { started: false, completed: false, eggHatched: false, ceremonyDone: false }
+        };
+      }
+      
+      // Start quest when player visits Stonehenge area
+      if (player && !saveData.extendedQuests.legendaryCigar.started) {
+        const stonehengePos = { x: -60, z: 60 };
+        const dist = Math.sqrt(
+          Math.pow(player.mesh.position.x - stonehengePos.x, 2) +
+          Math.pow(player.mesh.position.z - stonehengePos.z, 2)
+        );
+        
+        if (dist < 20) {
+          saveData.extendedQuests.legendaryCigar.started = true;
+          saveSaveData();
+          showQuestPopup(
+            '🚬 Quest: The Legendary Cigar',
+            'You sense something powerful near Stonehenge...<br><br>Ancient legends speak of an <strong>Eternal Cigar</strong> hidden within these mystical stones. It\'s said to grant immense power to those worthy enough to find it!<br><br><b>Objective:</b> Search around Stonehenge for the legendary cigar',
+            'I\'ll find it!'
+          );
+        }
+      }
+      
+      // Check if player found the cigar (near center of stonehenge)
+      if (saveData.extendedQuests.legendaryCigar.started && !saveData.extendedQuests.legendaryCigar.foundCigar) {
+        const cigarPos = { x: -60, z: 60 }; // Exact center
+        const dist = Math.sqrt(
+          Math.pow(player.mesh.position.x - cigarPos.x, 2) +
+          Math.pow(player.mesh.position.z - cigarPos.z, 2)
+        );
+        
+        if (dist < 3) {
+          saveData.extendedQuests.legendaryCigar.foundCigar = true;
+          saveData.extendedQuests.legendaryCigar.completed = true;
+          saveSaveData();
+          
+          // Note: The bonus is applied this run only - stored in saveData for permanent tracking
+          // On future runs, check saveData.extendedQuests.legendaryCigar.completed in resetGame
+          
+          showQuestPopup(
+            '🚬 Legendary Cigar Found!',
+            '<strong>You\'ve discovered the Eternal Cigar!</strong><br><br>A surge of power flows through you. Your attacks feel stronger, your movements more precise.<br><br><b>Reward:</b> +50% Permanent Damage!<br><br>The cigar glows with an otherworldly light, forever enhancing your combat prowess.',
+            'AMAZING!'
+          );
+          
+          // Unlock lore
+          unlockLore('landmarks', 'stonehenge');
+        }
+      }
+    }
+    
     function showQuestPopup(title, message, buttonText = 'Got it!', onClose = null) {
       // Create popup overlay
       const overlay = document.createElement('div');
@@ -10695,6 +11227,28 @@
         hideMainMenu();
         updateCampScreen();
         document.getElementById('camp-screen').style.display = 'flex';
+        
+        // Tutorial: Check if player visited camp for first time after first death
+        if (!saveData.tutorial) {
+          saveData.tutorial = {
+            completed: false,
+            firstDeath: false,
+            campVisited: false,
+            dashUnlocked: false,
+            headshotUnlocked: false,
+            currentStep: 'waiting_first_death'
+          };
+        }
+        
+        if (saveData.tutorial.currentStep === 'go_to_camp' && !saveData.tutorial.campVisited) {
+          saveData.tutorial.campVisited = true;
+          saveData.tutorial.currentStep = 'unlock_dash';
+          saveSaveData();
+          // Show tutorial about unlocking dash
+          setTimeout(() => {
+            showComicTutorial('unlock_dash');
+          }, 500);
+        }
       };
       
       // Back buttons
@@ -12334,6 +12888,92 @@
       const fillY = WATERDROP_SVG_HEIGHT - fillHeight;
       waterdropFill.setAttribute('y', fillY);
       waterdropFill.setAttribute('height', fillHeight);
+      
+      // Update minimap
+      updateMinimap();
+    }
+    
+    // Minimap update function (with throttling for performance)
+    let minimapLastUpdate = 0;
+    const MINIMAP_UPDATE_INTERVAL = 200; // Update every 200ms instead of every frame
+    
+    function updateMinimap() {
+      if (!player || !player.mesh) return;
+      
+      const minimap = document.getElementById('minimap');
+      if (!minimap) return;
+      
+      // Throttle updates to every 200ms
+      const now = Date.now();
+      if (now - minimapLastUpdate < MINIMAP_UPDATE_INTERVAL) return;
+      minimapLastUpdate = now;
+      
+      // Clear previous dots
+      minimap.innerHTML = '';
+      
+      // Minimap scale - shows area of 100x100 units
+      const mapSize = 100;
+      const minimapSize = 120; // pixels
+      
+      // Add player dot (center)
+      const playerDot = document.createElement('div');
+      playerDot.className = 'minimap-dot minimap-player';
+      playerDot.style.left = '50%';
+      playerDot.style.top = '50%';
+      minimap.appendChild(playerDot);
+      
+      // Add enemy dots (up to 20 closest enemies) - optimized
+      if (enemies && enemies.length > 0) {
+        const sortedEnemies = enemies
+          .filter(e => e && !e.isDead)
+          .map(e => ({
+            enemy: e,
+            dist: player.mesh.position.distanceTo(e.mesh.position)
+          }))
+          .sort((a, b) => a.dist - b.dist)
+          .slice(0, 20);
+        
+        sortedEnemies.forEach(({enemy}) => {
+          const dx = enemy.mesh.position.x - player.mesh.position.x;
+          const dz = enemy.mesh.position.z - player.mesh.position.z;
+          
+          // Only show enemies within map range
+          if (Math.abs(dx) < mapSize / 2 && Math.abs(dz) < mapSize / 2) {
+            const mapX = 50 + (dx / mapSize) * 100; // percentage
+            const mapZ = 50 + (dz / mapSize) * 100; // percentage
+            
+            const enemyDot = document.createElement('div');
+            enemyDot.className = 'minimap-dot minimap-enemy';
+            enemyDot.style.left = `${mapX}%`;
+            enemyDot.style.top = `${mapZ}%`;
+            minimap.appendChild(enemyDot);
+          }
+        });
+      }
+      
+      // Add landmark dots (windmill, montana, eiffel, stonehenge if they exist)
+      const landmarks = [
+        { pos: { x: 60, z: 40 }, name: 'windmill' },
+        { pos: { x: -50, z: -50 }, name: 'montana' },
+        { pos: { x: 70, z: -60 }, name: 'eiffel' },
+        { pos: { x: -60, z: 60 }, name: 'stonehenge' }
+      ];
+      
+      landmarks.forEach(landmark => {
+        const dx = landmark.pos.x - player.mesh.position.x;
+        const dz = landmark.pos.z - player.mesh.position.z;
+        
+        if (Math.abs(dx) < mapSize / 2 && Math.abs(dz) < mapSize / 2) {
+          const mapX = 50 + (dx / mapSize) * 100;
+          const mapZ = 50 + (dz / mapSize) * 100;
+          
+          const landmarkDot = document.createElement('div');
+          landmarkDot.className = 'minimap-dot minimap-landmark';
+          landmarkDot.style.left = `${mapX}%`;
+          landmarkDot.style.top = `${mapZ}%`;
+          minimap.appendChild(landmarkDot);
+        }
+      });
     }
     
     // Stats Bar removed - Users access stats via STATS button modal
@@ -12745,6 +13385,10 @@
         'Double Barrel Gun - Increased damage and firepower!'
       );
       
+      // Unlock lore
+      unlockLore('landmarks', 'windmill');
+      unlockLore('bosses', 'windmillBoss');
+      
       playSound('levelup');
       updateHUD();
     }
@@ -12790,6 +13434,10 @@
       createFloatingText("+2 LEVELS!", player.mesh.position);
       createFloatingText("+500 GOLD!", player.mesh.position);
       createFloatingText("+3 ATTR POINTS!", player.mesh.position);
+      
+      // Unlock lore
+      unlockLore('landmarks', 'montana');
+      
       playSound('levelup');
       updateHUD();
     }
@@ -12900,6 +13548,76 @@
     // Stat Notification Queue System - Red/Black Theme
     const statNotificationQueue = [];
     let isShowingNotification = false;
+    
+    // Comic Book Tutorial System
+    function showComicTutorial(step) {
+      const modal = document.getElementById('comic-tutorial-modal');
+      const title = document.getElementById('comic-title');
+      const text = document.getElementById('comic-text');
+      const btn = document.getElementById('comic-action-btn');
+      
+      if (!modal || !title || !text || !btn) return;
+      
+      let tutorialData = {};
+      
+      switch(step) {
+        case 'first_death':
+          tutorialData = {
+            title: 'FIRST DEATH!',
+            text: 'Your journey begins with failure, but <strong>that\'s how you learn!</strong><br><br>To unlock your full potential, you must return to the <strong>CAMP</strong> and interact with the buildings there.<br><br>Progression is <strong>locked</strong> until you visit the camp!',
+            button: 'GO TO CAMP'
+          };
+          break;
+        case 'unlock_dash':
+          tutorialData = {
+            title: 'UNLOCK DASH!',
+            text: 'Welcome to the Camp!<br><br>Go to the <strong>SKILL TREE</strong> building and unlock the <strong>DASH</strong> ability.<br><br>This will help you survive longer by dodging enemy attacks!',
+            button: 'GOT IT!'
+          };
+          break;
+        case 'unlock_headshot':
+          tutorialData = {
+            title: 'UNLOCK HEADSHOT!',
+            text: 'Great job! Now unlock the <strong>HEADSHOT</strong> skill to deal massive damage to enemies.<br><br>Combine <strong>DASH</strong> and <strong>HEADSHOT</strong> to become unstoppable!',
+            button: 'UNDERSTOOD!'
+          };
+          break;
+        case 'tutorial_complete':
+          tutorialData = {
+            title: 'TUTORIAL COMPLETE!',
+            text: 'You\'ve learned the basics!<br><br>Continue exploring the camp to unlock more buildings, upgrade your stats, and collect powerful equipment.<br><br><strong>Good luck, Droplet!</strong>',
+            button: 'LET\'S GO!'
+          };
+          break;
+      }
+      
+      title.textContent = tutorialData.title;
+      text.innerHTML = tutorialData.text;
+      btn.textContent = tutorialData.button;
+      
+      modal.style.display = 'flex';
+      
+      // Handle button click
+      btn.onclick = () => {
+        modal.style.display = 'none';
+        
+        // Update tutorial state
+        if (step === 'first_death') {
+          saveData.tutorial.currentStep = 'go_to_camp';
+          saveSaveData();
+        } else if (step === 'unlock_dash') {
+          saveData.tutorial.currentStep = 'unlock_dash';
+          saveSaveData();
+        } else if (step === 'unlock_headshot') {
+          saveData.tutorial.currentStep = 'unlock_headshot';
+          saveSaveData();
+        } else if (step === 'tutorial_complete') {
+          saveData.tutorial.completed = true;
+          saveData.tutorial.currentStep = 'completed';
+          saveSaveData();
+        }
+      };
+    }
 
     function showStatChange(text, level = 'normal') {
       // Add to queue with level
@@ -13018,6 +13736,29 @@
       saveData.totalRuns++;
       if (survivalTime > saveData.bestTime) saveData.bestTime = survivalTime;
       if (playerStats.kills > saveData.bestKills) saveData.bestKills = playerStats.kills;
+      
+      // Tutorial: Check for first death
+      if (!saveData.tutorial) {
+        saveData.tutorial = {
+          completed: false,
+          firstDeath: false,
+          campVisited: false,
+          dashUnlocked: false,
+          headshotUnlocked: false,
+          currentStep: 'waiting_first_death'
+        };
+      }
+      
+      if (!saveData.tutorial.firstDeath && saveData.tutorial.currentStep === 'waiting_first_death') {
+        saveData.tutorial.firstDeath = true;
+        saveData.tutorial.currentStep = 'show_death_tutorial';
+        saveSaveData();
+        // Show comic tutorial after a brief delay
+        setTimeout(() => {
+          showComicTutorial('first_death');
+        }, 1000);
+      }
+      
       saveSaveData();
       
       // Quest progression: first run completed
@@ -13121,7 +13862,11 @@
       playerStats.expReq = GAME_CONFIG.baseExpReq;
       playerStats.hp = baseHp + attrHp;
       playerStats.maxHp = baseHp + attrHp;
-      playerStats.strength = baseDamage * (1 + attrDamage + gearMagicBonus);
+      
+      // Apply legendary cigar bonus if unlocked
+      const cigarBonus = (saveData.extendedQuests && saveData.extendedQuests.legendaryCigar && saveData.extendedQuests.legendaryCigar.completed) ? 1.5 : 1.0;
+      playerStats.strength = baseDamage * (1 + attrDamage + gearMagicBonus) * cigarBonus;
+      
       playerStats.walkSpeed = baseSpeed * (1 + gearMoveSpeedBonus + enduranceMoveSpeed);
       playerStats.kills = 0;
       playerStats.miniBossesDefeated = 0; // Reset mini-boss tracking
@@ -14044,6 +14789,11 @@
 
       // Player Update
       player.update(dt);
+      
+      // Check legendary cigar quest
+      if (isGameActive && !isPaused) {
+        checkLegendaryCigarQuest();
+      }
       
       // Check windmill quest trigger
       if (!windmillQuest.active && !windmillQuest.hasCompleted) {
