@@ -1625,7 +1625,7 @@
 
   <!-- Main Menu -->
   <div id="main-menu">
-    <!-- Gold display removed from main menu per requirements - only show in inventory/forge/progression/death -->
+    <!-- Gold display removed from main menu per requirements - only show in camp/progression/death -->
     <div class="menu-title">WATER DROP SURVIVOR</div>
     <div class="menu-buttons">
       <button class="menu-btn" id="start-game-btn">START GAME</button>
@@ -5487,6 +5487,7 @@
 
     class Particle {
       static MAX_LIFETIME = 30; // Frames until particle fades out
+      static INITIAL_OPACITY = 0.8; // Maximum opacity for particles
       
       constructor(pos, color) {
         const geo = new THREE.BoxGeometry(0.2, 0.2, 0.2);
@@ -5494,7 +5495,7 @@
         const mat = new THREE.MeshPhysicalMaterial({ 
           color: color,
           transparent: true,
-          opacity: 0.8,
+          opacity: Particle.INITIAL_OPACITY,
           emissive: color,
           emissiveIntensity: 0.2,
           roughness: 0.8,
@@ -5537,7 +5538,7 @@
         this.mesh.rotation.y += 0.1;
         
         // Fade out based on life remaining (more realistic smoke/fog effect)
-        this.mesh.material.opacity = Math.min(0.8, this.life / Particle.MAX_LIFETIME);
+        this.mesh.material.opacity = (this.life / Particle.MAX_LIFETIME) * Particle.INITIAL_OPACITY;
         
         if (this.mesh.position.y < 0) {
           this.mesh.position.y = 0;
@@ -7732,7 +7733,7 @@
       }
       
       // Check if this is the first skill purchase (make it free)
-      const isFirstSkill = saveData.storyQuests?.buildingFirstUse?.skillTree ? false : true;
+      const isFirstSkill = !saveData.storyQuests?.buildingFirstUse?.skillTree;
       const costToCharge = isFirstSkill ? 0 : skill.cost;
       
       if (saveData.skillPoints >= costToCharge) {
@@ -10412,7 +10413,7 @@
         const timeSinceLastKill = currentTime - comboState.lastKillTime;
         // Only pause if combo hasn't expired yet
         if (timeSinceLastKill < comboState.comboWindow) {
-          comboState.pausedAt = Date.now();
+          comboState.pausedAt = currentTime;
         }
       }
       
