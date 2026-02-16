@@ -15075,7 +15075,16 @@
       updateKillCam(dt);
 
       // Player Update
-      player.update(dt);
+      if (killCamActive) {
+        // Preserve kill cam camera position from being overridden by player.update
+        const prevCamX = camera.position.x;
+        const prevCamZ = camera.position.z;
+        player.update(dt);
+        camera.position.x = prevCamX;
+        camera.position.z = prevCamZ;
+      } else {
+        player.update(dt);
+      }
       
       // Check legendary cigar quest
       if (isGameActive && !isPaused) {
