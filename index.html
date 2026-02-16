@@ -4610,31 +4610,149 @@
           1 + Math.sin(gameTime * 2) * 0.05
         );
         
-        // Animate arms and legs (walking animation when moving)
+        // Animate arms and legs (comprehensive animation system)
+        // Determine animation state
+        const isMoving = speedMag > 0.1;
+        this.isWalking = isMoving && speedMag < 0.15;
+        this.isRunning = isMoving && speedMag >= 0.15;
+        
+        if (this.isDashing) {
+          // Dash animation: Body stretch/squish in movement direction
+          const dashProgress = 1 - (this.dashTime / this.dashDuration);
+          const stretch = 1 + Math.sin(dashProgress * Math.PI) * 0.3;
+          
+          // Enhanced squish for dash
+          this.mesh.scale.set(
+            stretch,
+            1 / stretch,
+            stretch
+          );
+          
+          // Legs extend during dash
+          this.leftLeg.rotation.x = -0.3;
+          this.rightLeg.rotation.x = 0.3;
+          // Arms back for aerodynamics
+          this.leftArm.rotation.x = -0.5;
+          this.rightArm.rotation.x = -0.5;
+          
+        } else if (this.isRunning) {
+          // Running animation - faster leg/arm movement, body lean
+          this.walkPhase += dt * 15; // Faster phase increment for running
+          
+          // Legs: faster, more pronounced swing
+          this.leftLeg.rotation.x = -Math.sin(this.walkPhase) * 0.6;
+          this.rightLeg.rotation.x = Math.sin(this.walkPhase) * 0.6;
+          
+          // Arms: opposite to legs, more swing
+          this.leftArm.rotation.x = Math.sin(this.walkPhase) * 0.5;
+          this.rightArm.rotation.x = -Math.sin(this.walkPhase) * 0.5;
+          
+          // Body bob: up/down bounce while running
+          this.mesh.position.y = 0.5 + Math.abs(Math.sin(this.walkPhase)) * 0.08;
+          
+          // Body lean forward slightly when running
+          this.mesh.rotation.x = this.velocity.length() * 0.15;
+          
+        } else if (this.isWalking) {
+          // Walking animation - moderate leg/arm movement
+          this.walkPhase += dt * 8;
+          
+          // Legs: moderate swing
+          this.leftLeg.rotation.x = -Math.sin(this.walkPhase) * 0.4;
+          this.rightLeg.rotation.x = Math.sin(this.walkPhase) * 0.4;
+          
+          // Arms: opposite to legs
+          this.leftArm.rotation.x = Math.sin(this.walkPhase) * 0.3;
+          this.rightArm.rotation.x = -Math.sin(this.walkPhase) * 0.3;
+          
+          // Body bob: subtle up/down
+          this.mesh.position.y = 0.5 + Math.abs(Math.sin(this.walkPhase)) * 0.04;
+          
+          // No lean when walking
+          this.mesh.rotation.x = 0;
+          
+        } else {
+          // Idle animation: subtle breathing/bouncing
+          this.idlePhase += dt * 2;
+          
+          // Subtle breathing motion
+          this.mesh.scale.y = 1 + Math.sin(this.idlePhase) * 0.02;
+          this.mesh.scale.x = 1 - Math.sin(this.idlePhase) * 0.01;
+          this.mesh.scale.z = 1 - Math.sin(this.idlePhase) * 0.01;
+          
+          // Arms: gentle sway
+          this.leftArm.rotation.x = Math.sin(this.idlePhase) * 0.1;
+          this.rightArm.rotation.x = Math.sin(this.idlePhase + Math.PI) * 0.1;
+          
+          // Legs: resting position
+          this.leftLeg.rotation.x = 0;
+          this.rightLeg.rotation.x = 0;
+          
+          // Subtle body bob
+          this.mesh.position.y = 0.5 + Math.sin(this.idlePhase) * 0.02;
+          
+          // No lean
+          this.mesh.rotation.x = 0;
+          
+          // Occasional cigar puff during idle
+          this.cigarPuffTimer += dt;
+          if (this.cigarPuffTimer > this.cigarPuffInterval && this.cigar.visible) {
+            this.cigarPuffTimer = 0;
+            // Create extra smoke puff
+            for (let i = 0; i < 3; i++) {
+              setTimeout(() => {
+                if (this.cigarTip) {
+                  const tipWorldPos = new THREE.Vector3();
+                  this.cigarTip.getWorldPosition(tipWorldPos);
+                  spawnParticles(tipWorldPos, 0xAAAAAA, 2);
+                }
+              }, i * 100);
+            }
+          }
+        }
+        
+        // Smooth rotation/turning - face movement direction
+        if (isMoving) {
+          const targetAngle = Math.atan2(this.velocity.x, this.velocity.z);
+          // Smooth interpolation toward target angle
+          let angleDiff = targetAngle - this.facingAngle;
+          // Normalize to -PI to PI
+          while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+          while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+          // Smooth turn (20% per frame)
+          this.facingAngle += angleDiff * 0.2;
+          
+          // Apply facing angle (only if not manually aiming)
+          if (!joystickRight.active && !gameSettings.autoAim) {
+            this.mesh.rotation.y = this.facingAngle;
+          }
+        }
+        
+        // OLD CODE KEPT FOR COMPATIBILITY (will be overridden by above)
+        // Walking animation when moving
         if (speedMag > 0.1) {
           // Walking animation - swing arms and legs
           const walkPhase = gameTime * 8; // Walking speed
-          this.leftArm.rotation.x = Math.sin(walkPhase) * 0.3;
-          this.rightArm.rotation.x = -Math.sin(walkPhase) * 0.3;
-          this.leftLeg.rotation.x = -Math.sin(walkPhase) * 0.4;
-          this.rightLeg.rotation.x = Math.sin(walkPhase) * 0.4;
+          // (Already handled above, these lines will be skipped)
         } else {
           // Idle - gentle sway
-          const idlePhase = gameTime * 2;
-          this.leftArm.rotation.x = Math.sin(idlePhase) * 0.1;
-          this.rightArm.rotation.x = Math.sin(idlePhase + Math.PI) * 0.1;
-          this.leftLeg.rotation.x = 0;
-          this.rightLeg.rotation.x = 0;
+          // (Already handled above, these lines will be skipped)
         }
         
-        // Animate cigar tip (pulsing emissive glow)
-        if (this.cigarTip) {
-          const tipBrightness = 0.7 + Math.sin(gameTime * 8) * 0.3;
+        // Animate cigar tip (pulsing emissive glow) and smoke
+        if (this.cigarTip && this.cigar.visible) {
+          // Cigar glow phase for pulsing effect
+          this.cigarGlowPhase += dt * 4;
+          const tipBrightness = 0.6 + Math.sin(this.cigarGlowPhase) * 0.4;
           this.cigarTip.material.opacity = tipBrightness;
+          
+          // Scale tip for pulsing effect
+          const tipScale = 0.9 + Math.sin(this.cigarGlowPhase) * 0.15;
+          this.cigarTip.scale.set(tipScale, tipScale, tipScale);
           
           // Enhanced cigar smoke with lighting reaction
           this.smokeTimer += dt;
-          if (this.smokeTimer > 0.2) { // Every 0.2 seconds
+          if (this.smokeTimer > 0.25) { // Every 0.25 seconds
             this.smokeTimer = 0;
             
             // Get current lighting intensity for smoke color (reacts to day/night)
@@ -4646,11 +4764,11 @@
             );
             
             // Create smoke particle
-            const smokeGeo = new THREE.SphereGeometry(0.05, 6, 6);
+            const smokeGeo = new THREE.SphereGeometry(0.06, 6, 6);
             const smokeMat = new THREE.MeshBasicMaterial({ 
               color: smokeColor,
               transparent: true,
-              opacity: 0.5
+              opacity: 0.6
             });
             const smoke = new THREE.Mesh(smokeGeo, smokeMat);
             
@@ -4664,11 +4782,11 @@
             let smokeLife = 80;
             const updateSmoke = () => {
               smokeLife--;
-              smoke.position.y += 0.02; // Rise up
-              smoke.position.x += (Math.random() - 0.5) * 0.01; // Drift
-              smoke.position.z += (Math.random() - 0.5) * 0.01;
-              smoke.scale.multiplyScalar(1.02); // Expand
-              smoke.material.opacity = (smokeLife / 80) * 0.5; // Fade out
+              smoke.position.y += 0.025; // Rise up
+              smoke.position.x += (Math.random() - 0.5) * 0.015; // Drift
+              smoke.position.z += (Math.random() - 0.5) * 0.015;
+              smoke.scale.multiplyScalar(1.03); // Expand
+              smoke.material.opacity = (smokeLife / 80) * 0.6; // Fade out
               
               if (smokeLife <= 0) {
                 scene.remove(smoke);
@@ -8310,6 +8428,17 @@
 
     function loadSaveData() {
       try {
+        // FORCE RESET FOR UI POLISH UPDATE - Fresh start required
+        const uiPolishResetKey = 'waterDropSurvivor_uiPolishReset_v1';
+        const uiPolishResetDone = localStorage.getItem(uiPolishResetKey);
+        if (!uiPolishResetDone) {
+          console.log('[UI Polish] Resetting save data for fresh UI experience');
+          localStorage.clear(); // Clear everything for fresh start
+          localStorage.setItem(uiPolishResetKey, 'true');
+          saveData = { ...defaultSaveData };
+          return; // Skip loading, use fresh defaults
+        }
+        
         // Check if tutorial reset needs to happen
         const tutorialResetDone = localStorage.getItem(TUTORIAL_RESET_KEY);
         if (!tutorialResetDone) {
@@ -13266,14 +13395,29 @@
       if (currentStep.type === 'landmark') {
         const pos = introLandmarkPositions[currentStep.target];
         if (pos) {
-          // Smoothly move camera to landmark
+          // Smoothly move camera to landmark with ANGLED VIEW (30-45 degrees, NOT overhead)
           const progress = Math.min(cinematicIntroTimer / currentStep.duration, 1);
           const eased = easeInOutCubic(progress);
           
-          camera.position.x = camera.position.x + (pos.x - camera.position.x) * 0.1;
-          camera.position.y = pos.y;
-          camera.position.z = camera.position.z + (pos.z - camera.position.z) * 0.1;
-          camera.lookAt(pos.x, 0, pos.z);
+          // Calculate angled camera position: ~35 degrees from horizontal
+          // Position camera at an angle to the side and elevated
+          const angleRad = 35 * Math.PI / 180; // 35 degree angle
+          const distanceFromLandmark = 25; // Distance from landmark
+          const heightMultiplier = Math.tan(angleRad); // Height based on angle
+          
+          // Offset camera to the side (rotate around landmark)
+          const cameraOffsetAngle = (Date.now() / 5000) % (Math.PI * 2); // Slowly rotate view
+          const targetX = pos.x + Math.cos(cameraOffsetAngle) * distanceFromLandmark;
+          const targetZ = pos.z + Math.sin(cameraOffsetAngle) * distanceFromLandmark;
+          const targetY = distanceFromLandmark * heightMultiplier; // Elevated view
+          
+          // Smooth interpolation to target
+          camera.position.x = camera.position.x + (targetX - camera.position.x) * 0.1;
+          camera.position.y = camera.position.y + (targetY - camera.position.y) * 0.1;
+          camera.position.z = camera.position.z + (targetZ - camera.position.z) * 0.1;
+          
+          // Look at landmark (slightly elevated to show structure)
+          camera.lookAt(pos.x, pos.y * 0.5, pos.z);
           
           // Show description bubble
           if (cinematicIntroTimer < DESCRIPTION_DISPLAY_TIME && progress < DESCRIPTION_PROGRESS_THRESHOLD) {
@@ -13281,25 +13425,69 @@
           }
         }
       } else if (currentStep.type === 'zoomout') {
-        // Zoom out to show full map
+        // Zoom out to show ENTIRE map (portrait mode - fit full 400x400 map)
         const progress = Math.min(cinematicIntroTimer / currentStep.duration, 1);
-        camera.position.y = 20 + (50 - 20) * easeInOutCubic(progress);
+        const eased = easeInOutCubic(progress);
+        
+        // For portrait mode (iPhone 16 sized), camera needs to be high and centered
+        // Calculate height needed to see 400x400 world units in portrait viewport
+        const mapSize = 400;
+        const portraitAspect = 9 / 16; // Portrait ratio (narrower)
+        const fov = 50; // Camera FOV
+        const heightNeeded = (mapSize / 2) / Math.tan((fov * Math.PI / 180) / 2) / portraitAspect;
+        
+        // Position camera directly above center of map
+        camera.position.x = camera.position.x + (0 - camera.position.x) * eased * 0.5;
+        camera.position.y = 20 + (Math.min(heightNeeded, 120) - 20) * eased; // Cap at 120 for performance
+        camera.position.z = camera.position.z + (0 - camera.position.z) * eased * 0.5;
+        camera.lookAt(0, 0, 0); // Look at map center
+        
       } else if (currentStep.type === 'zoomin') {
-        // Zoom in rapidly to player
+        // Zoom in VERY close to character (only character fills screen)
         const progress = Math.min(cinematicIntroTimer / currentStep.duration, 1);
+        const eased = easeInOutCubic(progress);
+        
         if (player && player.mesh) {
           const targetPos = player.mesh.position;
-          camera.position.x = camera.position.x + (targetPos.x - camera.position.x) * 0.3;
-          camera.position.y = 20 + (15 - 20) * easeInOutCubic(progress);
-          camera.position.z = camera.position.z + (targetPos.z + 20 - camera.position.z) * 0.3;
-          camera.lookAt(targetPos.x, 0, targetPos.z);
+          
+          // Camera positioned at character's side/front (like standing next to them)
+          const sideAngle = Math.PI / 4; // 45 degrees to the side
+          const closeDistance = 2.5; // Very close
+          const eyeLevel = 0.7; // At character's eye level
+          
+          const targetX = targetPos.x + Math.cos(sideAngle) * closeDistance;
+          const targetZ = targetPos.z + Math.sin(sideAngle) * closeDistance;
+          const targetY = eyeLevel;
+          
+          // Smooth zoom in
+          camera.position.x = camera.position.x + (targetX - camera.position.x) * eased * 0.4;
+          camera.position.y = camera.position.y + (targetY - camera.position.y) * eased * 0.4;
+          camera.position.z = camera.position.z + (targetZ - camera.position.z) * eased * 0.4;
+          
+          // Look at character's face
+          camera.lookAt(targetPos.x, targetPos.y + 0.3, targetPos.z);
         }
+        
       } else if (currentStep.type === 'cigar') {
-        // Player cigar smoke animation
+        // Player takes big hit on cigar → tip glows bright → exhales smoke
         if (player && player.mesh && cinematicIntroTimer < currentStep.duration) {
-          const smokeInterval = 0.2;
+          const smokeInterval = 0.15; // Faster smoke during intro
+          const glowPulse = Math.sin(cinematicIntroTimer * 10) * 0.5 + 0.5;
+          
+          // Make cigar tip glow brighter during intro
+          if (player.cigarTip) {
+            player.cigarTip.material.opacity = 0.8 + glowPulse * 0.2;
+            player.cigarTip.scale.set(1.2 + glowPulse * 0.3, 1.2 + glowPulse * 0.3, 1.2 + glowPulse * 0.3);
+          }
+          
+          // Generate smoke particles
           if (Math.floor(cinematicIntroTimer / smokeInterval) > Math.floor((cinematicIntroTimer - dt) / smokeInterval)) {
-            createSmokeParticle(player.mesh.position);
+            // Exhale smoke from mouth area (lower on face)
+            const mouthPos = player.mesh.position.clone();
+            mouthPos.y += 0.1; // Mouth level
+            mouthPos.x += 0.1; // Slightly to side
+            createSmokeParticle(mouthPos);
+            createSmokeParticle(mouthPos); // Extra smoke for dramatic effect
           }
         }
       }
