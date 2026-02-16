@@ -13422,17 +13422,24 @@
         const progress = Math.min(cinematicIntroTimer / currentStep.duration, 1);
         const eased = easeInOutCubic(progress);
         
-        // For portrait mode (iPhone 16 sized), camera needs to be high and centered
-        // Calculate height needed to see 400x400 world units in portrait viewport
+        // For orthographic camera: adjust zoom so that the entire 400x400 map fits in view
         const mapSize = 400;
-        const portraitAspect = 9 / 16; // Portrait ratio (narrower)
-        const fov = 50; // Camera FOV
-        const heightNeeded = (mapSize / 2) / Math.tan((fov * Math.PI / 180) / 2) / portraitAspect;
+        const frustumWidth = camera.right - camera.left;
+        const frustumHeight = camera.top - camera.bottom;
+        const zoomToFitWidth = frustumWidth / mapSize;
+        const zoomToFitHeight = frustumHeight / mapSize;
+        const targetZoom = Math.min(zoomToFitWidth, zoomToFitHeight);
         
-        // Position camera directly above center of map
+        // Smoothly move camera directly above center of map
         camera.position.x = camera.position.x + (0 - camera.position.x) * eased * 0.5;
-        camera.position.y = MIN_CAMERA_HEIGHT + (Math.min(heightNeeded, MAX_CAMERA_HEIGHT) - MIN_CAMERA_HEIGHT) * eased;
         camera.position.z = camera.position.z + (0 - camera.position.z) * eased * 0.5;
+        // Maintain a reasonable fixed height; for orthographic cameras, height does not affect zoom
+        camera.position.y = MIN_CAMERA_HEIGHT;
+        
+        // Smoothly interpolate zoom towards the value that fits the whole map
+        camera.zoom = camera.zoom + (targetZoom - camera.zoom) * eased;
+        camera.updateProjectionMatrix();
+        
         camera.lookAt(0, 0, 0); // Look at map center
         
       } else if (currentStep.type === 'zoomin') {
