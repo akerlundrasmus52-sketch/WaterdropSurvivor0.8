@@ -621,6 +621,9 @@
       border-radius: 20px;
       padding: 40px;
       max-width: 600px;
+      width: 90%;
+      max-height: 90vh;
+      overflow-y: auto;
       box-shadow: 0 0 30px rgba(93,173,226,0.6);
     }
     
@@ -675,6 +678,9 @@
       border-radius: 15px;
       padding: 35px;
       max-width: 550px;
+      width: 90%;
+      max-height: 85vh;
+      overflow-y: auto;
       box-shadow: 0 0 40px rgba(255,215,0,0.8),
                   inset 0 0 20px rgba(0,0,0,0.5);
       position: relative;
@@ -1420,11 +1426,13 @@
       transform: translateX(-50%);
     }
 
-    #start-game-btn { top: 50.25%; } /* Moved 3.5% lower from 46.75% */
-    #camp-btn { top: 54.75%; } /* New camp button */
-    #progression-btn { top: 59.75%; } /* Adjusted spacing - reduced from 61.25% */
-    #achievements-btn { top: 69.25%; } /* Adjusted spacing - reduced from 72.25% */
-    #credits-btn { top: min(78.75%, calc(100% - 60px)); } /* Adjusted spacing - reduced from 82.75% */
+    #start-game-btn { top: 42%; } /* Adjusted for 7 buttons */
+    #camp-btn { top: 48%; } /* Adjusted for 7 buttons */
+    #progression-btn { top: 54%; } /* Adjusted for 7 buttons */
+    #attributes-btn { top: 60%; } /* Added missing position */
+    #gear-btn { top: 66%; } /* Added missing position */
+    #achievements-btn { top: 72%; } /* Adjusted for 7 buttons */
+    #credits-btn { top: min(78%, calc(100% - 60px)); } /* Adjusted for 7 buttons */
 
     .menu-btn::before {
       content: '';
@@ -1920,6 +1928,33 @@
       #menu-btn {
         display: flex !important;
       }
+      
+      /* Reduce padding on small portrait screens */
+      .story-quest-content {
+        padding: 20px;
+      }
+      
+      .comic-panel {
+        padding: 20px;
+        border-width: 4px;
+      }
+      
+      .comic-title {
+        font-size: 28px;
+      }
+      
+      .story-quest-title {
+        font-size: 28px;
+      }
+      
+      .story-quest-body {
+        font-size: 16px;
+      }
+      
+      .menu-title {
+        font-size: 32px;
+        margin-bottom: 20px;
+      }
     }
 
     @media (orientation: landscape) {
@@ -1938,6 +1973,139 @@
         padding: 8px;
         flex-direction: row;
         justify-content: space-between;
+      }
+    }
+    
+    /* iPhone 16 Pro Max and similar large phones (430x932 portrait) */
+    @media (max-width: 430px) and (orientation: portrait) {
+      .story-quest-content,
+      .comic-panel,
+      .settings-container {
+        padding: 15px;
+        width: 95%;
+      }
+      
+      .story-quest-title,
+      .comic-title {
+        font-size: 24px;
+      }
+      
+      .story-quest-body,
+      .comic-text {
+        font-size: 14px;
+      }
+      
+      .menu-btn {
+        width: 220px;
+        height: 45px;
+      }
+      
+      .menu-btn:active::before {
+        width: 220px;
+        height: 220px;
+      }
+    }
+    
+    /* iPhone 16 and similar standard phones (393x852 portrait) */
+    @media (max-width: 393px) and (orientation: portrait) {
+      .story-quest-content,
+      .comic-panel {
+        padding: 12px;
+      }
+      
+      .story-quest-title,
+      .comic-title {
+        font-size: 22px;
+        margin-bottom: 12px;
+      }
+      
+      .menu-btn {
+        width: 200px;
+        height: 40px;
+      }
+      
+      .menu-btn:active::before {
+        width: 200px;
+        height: 200px;
+      }
+    }
+    
+    /* Small phones (360px and below) */
+    @media (max-width: 360px) {
+      .story-quest-content,
+      .comic-panel,
+      .settings-container {
+        padding: 10px;
+        width: 98%;
+      }
+      
+      .story-quest-title,
+      .comic-title {
+        font-size: 20px;
+        margin-bottom: 10px;
+      }
+      
+      .story-quest-body,
+      .comic-text {
+        font-size: 13px;
+        line-height: 1.4;
+      }
+      
+      .menu-btn {
+        width: 180px;
+        height: 38px;
+      }
+      
+      .menu-btn:active::before {
+        width: 180px;
+        height: 180px;
+      }
+      
+      .screen-title {
+        font-size: 28px;
+      }
+      
+      .screen-content {
+        font-size: 14px;
+      }
+    }
+    
+    /* Tablets (768px - 1024px) */
+    @media (min-width: 768px) and (max-width: 1024px) {
+      .story-quest-content,
+      .comic-panel {
+        max-width: 700px;
+        padding: 50px;
+      }
+      
+      .menu-btn {
+        width: 320px;
+        height: 60px;
+      }
+      
+      .menu-btn:active::before {
+        width: 320px;
+        height: 320px;
+      }
+    }
+    
+    /* Large screens (desktop) */
+    @media (min-width: 1024px) {
+      .story-quest-content,
+      .comic-panel {
+        max-width: 800px;
+      }
+    }
+    
+    /* Ensure main menu scrolls on very small screens */
+    @media (max-height: 700px) {
+      #main-menu {
+        overflow-y: auto;
+      }
+      
+      .menu-buttons {
+        position: relative;
+        min-height: 100vh;
       }
     }
     
