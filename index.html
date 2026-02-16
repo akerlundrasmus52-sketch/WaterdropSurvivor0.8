@@ -524,6 +524,67 @@
       line-height: 1.5;
     }
     
+    /* Story Quest Modal Styles */
+    .story-quest-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.95);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      pointer-events: auto;
+    }
+    
+    .story-quest-content {
+      background: linear-gradient(to bottom, #1a3a4a 0%, #0f1f2a 100%);
+      border: 4px solid #5DADE2;
+      border-radius: 20px;
+      padding: 40px;
+      max-width: 600px;
+      box-shadow: 0 0 30px rgba(93,173,226,0.6);
+    }
+    
+    .story-quest-title {
+      color: #5DADE2;
+      font-size: 36px;
+      font-weight: bold;
+      text-align: center;
+      margin-bottom: 20px;
+      text-shadow: 0 0 15px rgba(93,173,226,0.8);
+    }
+    
+    .story-quest-body {
+      color: #FFFFFF;
+      font-size: 18px;
+      line-height: 1.6;
+      margin-bottom: 25px;
+      text-align: left;
+    }
+    
+    .story-quest-body p {
+      margin-bottom: 15px;
+    }
+    
+    .story-quest-body strong {
+      color: #FFD700;
+    }
+    
+    .story-quest-body strong.highlight {
+      color: #5DADE2;
+    }
+    
+    .menu-btn-primary {
+      width: 100%;
+      padding: 15px;
+      font-size: 22px;
+      background: linear-gradient(to bottom, #5DADE2, #3498DB);
+      border: 3px solid #2980B9;
+    }
+    
     
     /* Wave Counter - Removed (was in stats bar) */
     
@@ -1728,32 +1789,32 @@
   </div>
 
   <!-- FRESH IMPLEMENTATION: Story Quest Welcome Modal -->
-  <div id="story-quest-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 1000; align-items: center; justify-content: center; pointer-events: auto;">
-    <div style="background: linear-gradient(to bottom, #1a3a4a 0%, #0f1f2a 100%); border: 4px solid #5DADE2; border-radius: 20px; padding: 40px; max-width: 600px; box-shadow: 0 0 30px rgba(93,173,226,0.6);">
-      <div style="color: #5DADE2; font-size: 36px; font-weight: bold; text-align: center; margin-bottom: 20px; text-shadow: 0 0 15px rgba(93,173,226,0.8);">
+  <div id="story-quest-modal" class="story-quest-modal">
+    <div class="story-quest-content">
+      <div class="story-quest-title">
         💧 WELCOME TO WATER DROP SURVIVOR 💧
       </div>
-      <div style="color: #FFFFFF; font-size: 18px; line-height: 1.6; margin-bottom: 25px; text-align: left;">
-        <p style="margin-bottom: 15px;">
-          <strong style="color: #FFD700;">Welcome, Droplet!</strong>
+      <div class="story-quest-body">
+        <p>
+          <strong>Welcome, Droplet!</strong>
         </p>
-        <p style="margin-bottom: 15px;">
-          You've entered a <strong style="color: #5DADE2;">Roguelite Survivor</strong> game where progression is key to victory!
+        <p>
+          You've entered a <strong class="highlight">Roguelite Survivor</strong> game where progression is key to victory!
         </p>
-        <p style="margin-bottom: 15px;">
+        <p>
           🎯 <strong>Your Mission:</strong> Survive waves of enemies, collect XP waterdrops, level up, and unlock powerful abilities.
         </p>
-        <p style="margin-bottom: 15px;">
+        <p>
           ⛺ <strong>Permanent Progression:</strong> Return to Camp between runs to upgrade buildings, unlock skills, and grow stronger.
         </p>
-        <p style="margin-bottom: 15px;">
+        <p>
           💎 <strong>Gear & Achievements:</strong> Collect equipment, complete achievements, and master the elemental powers.
         </p>
-        <p style="margin-bottom: 15px;">
+        <p>
           🌍 <strong>Explore:</strong> Discover landmarks like the Windmill, Stonehenge, Pyramids, Eiffel Tower, and the Tesla Tower!
         </p>
       </div>
-      <button class="menu-btn" id="story-quest-close-btn" style="width: 100%; padding: 15px; font-size: 22px; background: linear-gradient(to bottom, #5DADE2, #3498DB); border: 3px solid #2980B9;">
+      <button class="menu-btn menu-btn-primary" id="story-quest-close-btn">
         START YOUR JOURNEY!
       </button>
     </div>
@@ -6805,7 +6866,7 @@
         questMission: { level: 1, maxLevel: 10, unlocked: true },
         inventory: { level: 1, maxLevel: 10, unlocked: true },
         campHub: { level: 1, maxLevel: 10, unlocked: true },
-        loreMaster: { level: 1, maxLevel: 10, unlocked: true }, // NEW: Lore building
+        loreMaster: { level: 1, maxLevel: 10, unlocked: true }, // NEW: Lore/Story building (placeholder for future lore content - currently inactive)
         // Previously paid buildings - now FREE at Level 1
         skillTree: { level: 1, maxLevel: 10, unlocked: true },
         companionHouse: { level: 1, maxLevel: 10, unlocked: true },
@@ -7119,8 +7180,9 @@
       // Award gold
       addGold(achievement.reward);
       
-      // Award attribute points
-      saveData.unspentAttributePoints += achievement.attributePoints;
+      // Award attribute points (with safety check)
+      const attributePoints = achievement.attributePoints || 0;
+      saveData.unspentAttributePoints += attributePoints;
       
       // Play sound
       playSound('coin');
@@ -7132,7 +7194,7 @@
       showEnhancedNotification(
         'achievement',
         'ACHIEVEMENT UNLOCKED!',
-        `${achievement.name} - +${achievement.reward} Gold, +${achievement.attributePoints} Attribute Point${achievement.attributePoints > 1 ? 's' : ''}!`
+        `${achievement.name} - +${achievement.reward} Gold, +${attributePoints} Attribute Point${attributePoints > 1 ? 's' : ''}!`
       );
       
       // Save
@@ -14560,11 +14622,10 @@
             }
             points.push(end);
             
-            // Create line
+            // Create line (Note: linewidth has no effect in WebGL, arcs will be 1-pixel lines)
             const geometry = new THREE.BufferGeometry().setFromPoints(points);
             const material = new THREE.LineBasicMaterial({ 
               color: 0x00FFFF, 
-              linewidth: 3,
               transparent: true,
               opacity: 0.8
             });
