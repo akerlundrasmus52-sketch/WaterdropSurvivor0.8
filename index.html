@@ -2294,7 +2294,9 @@
           Training Points Available: <span id="training-points-display" style="color: #FFD700; font-weight: bold;">0</span>
         </p>
         <p style="font-size: 14px; color: #AAA; line-height: 1.6;">
-          You earn 1 training point every 24 hours. Spend gold + 1 training point to permanently increase an attribute by +1.
+          <b>Training Sessions:</b> Each training session takes <span style="color: #FFD700;">48 in-game hours</span> (~20 real minutes).<br>
+          <b>Earning Points:</b> You earn 1 training point every 24 real hours (max 2 per in-game day).<br>
+          <b>Cost:</b> Spend gold + 1 training point to permanently increase an attribute by +1.
         </p>
         <p style="font-size: 12px; color: #888; margin-top: 10px;" id="next-training-point-time">
           Next training point in: Calculating...
@@ -9404,7 +9406,14 @@
     }
 
     // Training Hall constants
-    const TRAINING_POINT_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours
+    // Training Hall configuration
+    // Real-time conversion: 10 minutes = 24h in-game
+    // So 20 minutes = 48h in-game for training
+    const REAL_TIME_TO_GAME_TIME_RATIO = 24 * 60 / 10; // 24 hours = 10 minutes
+    const TRAINING_SESSION_GAME_HOURS = 48; // Training takes 48 in-game hours
+    const TRAINING_SESSION_REAL_MS = (TRAINING_SESSION_GAME_HOURS / REAL_TIME_TO_GAME_TIME_RATIO) * 60 * 1000; // ~20 minutes
+    const TRAINING_POINT_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 real hours to earn 1 training point
+    const MAX_TRAINING_POINTS_PER_DAY = 2; // Limit 2 training points per in-game day
     
     // Fun combo names (defined once to avoid recreation)
     const FUN_COMBO_NAMES = [
@@ -9461,25 +9470,46 @@
       
       // Training cost scales: 100g for first point, +50g per point
       const TRAINING_ATTRIBUTES = {
-        strength: {
-          name: 'Strength',
-          icon: '💪',
-          description: 'Increases damage output',
-          current: saveData.attributes.strength || 0,
+        dexterity: {
+          name: 'Dexterity',
+          icon: '🎯',
+          description: 'Increases accuracy and critical hit chance',
+          current: saveData.attributes.dexterity || 0,
           baseCost: 100
         },
-        endurance: {
-          name: 'Endurance',
-          icon: '🏃',
-          description: 'Increases stamina and high-speed duration',
-          current: saveData.attributes.endurance || 0,
+        vitality: {
+          name: 'Vitality',
+          icon: '❤️',
+          description: 'Increases max health and health regeneration',
+          current: saveData.attributes.vitality || 0,
+          baseCost: 100
+        },
+        luck: {
+          name: 'Luck',
+          icon: '🍀',
+          description: 'Improves loot quality and drop rates',
+          current: saveData.attributes.luck || 0,
           baseCost: 100
         },
         flexibility: {
-          name: 'Flexibility',
-          icon: '🤸',
-          description: 'Improves turn speed and dodge responsiveness',
+          name: 'Flexibility (Speed)',
+          icon: '⚡',
+          description: 'Increases movement speed and dodge ability',
           current: saveData.attributes.flexibility || 0,
+          baseCost: 100
+        },
+        wisdom: {
+          name: 'Magic',
+          icon: '🔮',
+          description: 'Increases magical damage and mana',
+          current: saveData.attributes.wisdom || 0,
+          baseCost: 100
+        },
+        strength: {
+          name: 'Physics (Strength)',
+          icon: '💪',
+          description: 'Increases physical damage and knockback',
+          current: saveData.attributes.strength || 0,
           baseCost: 100
         }
       };
