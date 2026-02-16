@@ -4856,6 +4856,7 @@
         spawnParticles(this.mesh.position, 0xFFFFFF, 5);
         
         // DETACHED HEAD as separate physics object (NEW FEATURE)
+        const HEAD_GROUND_OFFSET = 0.35; // Ground collision threshold for detached head
         const headGeo = new THREE.SphereGeometry(0.35, 12, 12);
         const headMat = new THREE.MeshBasicMaterial({ 
           color: enemyColor, 
@@ -4891,8 +4892,8 @@
           detachedHead.rotation.z += 0.15;
           
           // Ground collision with bounce
-          if (detachedHead.position.y <= 0.35 && headVel.y < 0) {
-            detachedHead.position.y = 0.35;
+          if (detachedHead.position.y <= HEAD_GROUND_OFFSET && headVel.y < 0) {
+            detachedHead.position.y = HEAD_GROUND_OFFSET;
             headVel.y *= -0.4; // Bounce with damping
             headVel.x *= 0.7;  // Friction
             headVel.z *= 0.7;
@@ -5308,6 +5309,8 @@
         
         // NEW FEATURE: Collision Check with Destroyable Props (trees, barrels, crates)
         if (this.active) { // Only check if projectile still active after enemy check
+          const DAMAGE_DARKENING_FACTOR = 0.7; // Color darkening on damage
+          
           scene.traverse((obj) => {
             if (!obj.userData || !obj.userData.isDestructible || !this.active) return;
             
@@ -5328,13 +5331,13 @@
                 
                 if (obj.userData.type === 'tree') {
                   // Darken tree
-                  if (obj.userData.trunk) obj.userData.trunk.material.color.multiplyScalar(0.7);
-                  if (obj.userData.leaves) obj.userData.leaves.material.color.multiplyScalar(0.7);
+                  if (obj.userData.trunk) obj.userData.trunk.material.color.multiplyScalar(DAMAGE_DARKENING_FACTOR);
+                  if (obj.userData.leaves) obj.userData.leaves.material.color.multiplyScalar(DAMAGE_DARKENING_FACTOR);
                   // Spawn wood chips
                   spawnParticles(obj.position, 0x8B4513, 5);
                 } else {
                   // Darken barrel/crate
-                  obj.material.color.multiplyScalar(0.7);
+                  obj.material.color.multiplyScalar(DAMAGE_DARKENING_FACTOR);
                   spawnParticles(obj.position, obj.material.color.getHex(), 3);
                 }
               }
@@ -5345,7 +5348,7 @@
                 
                 if (obj.userData.type === 'tree') {
                   // Tree starts falling
-                  if (obj.userData.trunk) obj.userData.trunk.material.color.multiplyScalar(0.7);
+                  if (obj.userData.trunk) obj.userData.trunk.material.color.multiplyScalar(DAMAGE_DARKENING_FACTOR);
                   if (obj.userData.leaves) obj.userData.leaves.scale.multiplyScalar(0.8);
                   spawnParticles(obj.position, 0x8B4513, 8);
                 } else {
@@ -5360,7 +5363,10 @@
                 obj.userData.stage = 3;
                 
                 // Spawn destruction debris
-                const debrisColor = obj.userData.type === 'tree' ? 0x8B4513 : obj.material.color.getHex();
+                // For trees, get color from trunk; for barrels/crates, use material color
+                const debrisColor = obj.userData.type === 'tree' && obj.userData.trunk 
+                  ? obj.userData.trunk.material.color.getHex() 
+                  : obj.material.color.getHex();
                 const debrisCount = obj.userData.type === 'tree' ? 15 : 10;
                 
                 for (let i = 0; i < debrisCount; i++) {
@@ -9628,9 +9634,10 @@
       
       // Destroyable Barrels (NEW FEATURE)
       const barrelGeo = new THREE.CylinderGeometry(0.4, 0.4, 0.8, 8);
-      const barrelMat = new THREE.MeshToonMaterial({ color: 0x8B4513 }); // Brown
       
       for (let i = 0; i < 30; i++) {
+        // Clone material for each barrel to avoid shared color modifications
+        const barrelMat = new THREE.MeshToonMaterial({ color: 0x8B4513 }); // Brown
         const barrel = new THREE.Mesh(barrelGeo, barrelMat);
         barrel.castShadow = true;
         barrel.receiveShadow = true;
@@ -9654,9 +9661,10 @@
       
       // Destroyable Crates (NEW FEATURE)
       const crateGeo = new THREE.BoxGeometry(0.8, 0.8, 0.8);
-      const crateMat = new THREE.MeshToonMaterial({ color: 0xD2691E }); // Tan/wood
       
       for (let i = 0; i < 25; i++) {
+        // Clone material for each crate to avoid shared color modifications
+        const crateMat = new THREE.MeshToonMaterial({ color: 0xD2691E }); // Tan/wood
         const crate = new THREE.Mesh(crateGeo, crateMat);
         crate.castShadow = true;
         crate.receiveShadow = true;
