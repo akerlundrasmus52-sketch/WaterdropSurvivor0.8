@@ -5735,11 +5735,11 @@
             if (isCrit) dmg *= playerStats.critDmg;
             
             // ADVANCED: Double-crit headshot system
-            // If crit hits, roll for headshot (luck-based, starts at 0% + 1% per luck point)
+            // If crit hits, roll for headshot (luck-based, starts at 0% + 1% per luck point, capped at 50%)
             let isHeadshot = false;
             let damageType = 'physical';
             if (isCrit) {
-              const headshotChance = (playerStats.luck || 0) * 0.01; // 1% per luck point
+              const headshotChance = Math.min((playerStats.luck || 0) * 0.01, 0.5); // Cap at 50%
               isHeadshot = Math.random() < headshotChance;
               if (isHeadshot) {
                 dmg *= 3; // Triple damage on headshot
@@ -8989,27 +8989,36 @@
       }
       
       // Deduct points BEFORE applying (prevents double-click exploit)
+      const previousPoints = saveData.skillPoints;
       saveData.skillPoints -= costToCharge;
       
-      if (!skillData.unlocked) {
-        skillData.unlocked = true;
-      }
-      skillData.level++;
-      
-      saveSaveData();
-      updateCampScreen();
-      playSound('collect');
-      
-      if (isFirstSkill) {
-        showStatusMessage(`${skill.name} unlocked FREE! (First skill bonus)`, 3000);
-      } else {
-        showStatusMessage(`${skill.name} leveled up to ${skillData.level}/${skill.maxLevel}!`, 2000);
-      }
-      
-      // Quest progression: first skill unlock
-      if (!saveData.storyQuests.buildingFirstUse.skillTree) {
-        saveData.storyQuests.buildingFirstUse.skillTree = true;
-        progressQuest('useSkillTree', true);
+      try {
+        if (!skillData.unlocked) {
+          skillData.unlocked = true;
+        }
+        skillData.level++;
+        
+        saveSaveData();
+        updateCampScreen();
+        playSound('collect');
+        
+        if (isFirstSkill) {
+          showStatusMessage(`${skill.name} unlocked FREE! (First skill bonus)`, 3000);
+        } else {
+          showStatusMessage(`${skill.name} leveled up to ${skillData.level}/${skill.maxLevel}!`, 2000);
+        }
+        
+        // Quest progression: first skill unlock
+        if (!saveData.storyQuests.buildingFirstUse.skillTree) {
+          saveData.storyQuests.buildingFirstUse.skillTree = true;
+          progressQuest('useSkillTree', true);
+        }
+      } catch (error) {
+        // Restore points on error
+        saveData.skillPoints = previousPoints;
+        console.error('Error unlocking skill:', error);
+        showStatusMessage('Error unlocking skill!', 2000);
+        playSound('invalid');
       }
     }
 
