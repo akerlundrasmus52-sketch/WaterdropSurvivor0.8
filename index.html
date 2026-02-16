@@ -5278,6 +5278,8 @@
         // DEFENSIVE: Store position before any operations to prevent null reference
         if (!this.mesh || !this.mesh.material) {
           console.error('Enemy.die() called but mesh or material is null');
+          // Reset isDead to allow cleanup by filter
+          this.isDead = false;
           return;
         }
         const deathPosition = this.mesh.position.clone();
@@ -5458,7 +5460,10 @@
         checkAchievements(); // Check for achievements after kill
         
         // CRITICAL FIX: Remove and dispose mesh LAST, after all operations complete
-        // Delay slightly to allow any in-progress animations to capture initial state
+        // Delay 100ms to ensure:
+        // 1. All EXP/gold/text spawns complete (they use deathPosition, not this.mesh)
+        // 2. Death animation methods have captured initial mesh.position via clone()
+        // Death animations create their own meshes and don't reference this.mesh after init
         setTimeout(() => {
           if (meshToRemove && meshToRemove.parent) {
             scene.remove(meshToRemove);
@@ -5469,7 +5474,7 @@
           if (materialToDispose) {
             materialToDispose.dispose();
           }
-        }, 100); // 100ms delay to ensure all initial spawn operations complete
+        }, 100);
       }
       
       // Specialized death effects by damage type
@@ -7071,7 +7076,11 @@
         // DEFENSIVE: Ensure mesh exists before operating on it
         if (!this.mesh || !this.mesh.position) {
           console.error('ExpGem.update() called but mesh or position is null');
+          // Clean up and deactivate
           this.active = false;
+          if (this.mesh && this.mesh.parent) {
+            scene.remove(this.mesh);
+          }
           return;
         }
 
@@ -7091,7 +7100,7 @@
         }
         
         // Animate water fill (pulsing/sloshing effect) - DEFENSIVE: Check waterFill exists
-        if (this.waterFill && this.waterFill.scale && this.waterFill.position) {
+        if (this.waterFill) {
           this.fillPhase += 0.05;
           const fillAmount = 0.5 + Math.sin(this.fillPhase) * 0.1; // Pulse between 0.4 and 0.6
           this.waterFill.scale.y = fillAmount;
