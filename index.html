@@ -17478,7 +17478,6 @@
         const newRegion = detectCurrentRegion(player.mesh.position.x, player.mesh.position.z);
         if (newRegion && (!currentRegion || newRegion.key !== currentRegion.key)) {
           currentRegion = newRegion;
-          regionFadeTimer = 0;
         } else if (!newRegion && currentRegion) {
           currentRegion = null;
         }
