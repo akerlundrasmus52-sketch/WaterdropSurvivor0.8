@@ -1431,6 +1431,215 @@
       height: 200px;
     }
 
+    /* COMIC BOOK PANEL SYSTEM - 80s Style */
+    .comic-panel-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.95);
+      z-index: 10000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: fadeIn 0.4s ease-out;
+    }
+
+    .comic-panel {
+      max-width: 90%;
+      max-height: 90%;
+      background: #FFFACD;
+      border: 8px solid #000;
+      box-shadow: 
+        0 0 0 4px #FFD700,
+        0 0 0 8px #000,
+        0 10px 30px rgba(0,0,0,0.7);
+      padding: 20px;
+      position: relative;
+      animation: comicPanelPop 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    }
+
+    @keyframes comicPanelPop {
+      0% {
+        opacity: 0;
+        transform: scale(0.3) rotate(-5deg);
+      }
+      50% {
+        transform: scale(1.05) rotate(2deg);
+      }
+      100% {
+        opacity: 1;
+        transform: scale(1) rotate(0deg);
+      }
+    }
+
+    .comic-panel-border {
+      border: 3px dashed #000;
+      padding: 15px;
+      background: 
+        repeating-linear-gradient(
+          45deg,
+          transparent,
+          transparent 10px,
+          rgba(255,215,0,0.1) 10px,
+          rgba(255,215,0,0.1) 20px
+        );
+    }
+
+    .comic-panel-title {
+      font-size: 32px;
+      font-weight: 900;
+      color: #000;
+      text-align: center;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      margin-bottom: 20px;
+      text-shadow: 
+        3px 3px 0 #FFD700,
+        -1px -1px 0 #FFD700,
+        1px -1px 0 #FFD700,
+        -1px 1px 0 #FFD700,
+        1px 1px 0 #FFD700;
+      transform: skew(-2deg);
+    }
+
+    .comic-panel-image {
+      width: 100%;
+      max-width: 400px;
+      margin: 0 auto 20px;
+      border: 5px solid #000;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.4);
+    }
+
+    .comic-speech-bubble {
+      position: relative;
+      background: #FFF;
+      border: 4px solid #000;
+      border-radius: 20px;
+      padding: 20px;
+      margin: 15px 0;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    }
+
+    .comic-speech-bubble::before {
+      content: '';
+      position: absolute;
+      bottom: -20px;
+      left: 30px;
+      width: 0;
+      height: 0;
+      border-left: 20px solid transparent;
+      border-right: 0px solid transparent;
+      border-top: 20px solid #000;
+    }
+
+    .comic-speech-bubble::after {
+      content: '';
+      position: absolute;
+      bottom: -12px;
+      left: 34px;
+      width: 0;
+      height: 0;
+      border-left: 16px solid transparent;
+      border-right: 0px solid transparent;
+      border-top: 16px solid #FFF;
+    }
+
+    .comic-thought-bubble {
+      position: relative;
+      background: #FFF;
+      border: 4px solid #000;
+      border-radius: 50px;
+      padding: 20px 30px;
+      margin: 15px 0;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    }
+
+    .comic-thought-bubble::before {
+      content: '';
+      position: absolute;
+      bottom: -30px;
+      left: 40px;
+      width: 20px;
+      height: 20px;
+      background: #FFF;
+      border: 4px solid #000;
+      border-radius: 50%;
+    }
+
+    .comic-thought-bubble::after {
+      content: '';
+      position: absolute;
+      bottom: -50px;
+      left: 50px;
+      width: 12px;
+      height: 12px;
+      background: #FFF;
+      border: 4px solid #000;
+      border-radius: 50%;
+    }
+
+    .comic-panel-text {
+      font-size: 18px;
+      line-height: 1.6;
+      color: #000;
+      font-weight: 600;
+      margin: 10px 0;
+    }
+
+    .comic-panel-button {
+      display: block;
+      margin: 20px auto 0;
+      background: #FF0000;
+      color: #FFF;
+      border: 4px solid #000;
+      padding: 15px 40px;
+      font-size: 22px;
+      font-weight: 900;
+      text-transform: uppercase;
+      cursor: pointer;
+      box-shadow: 
+        0 6px 0 #8B0000,
+        0 8px 15px rgba(0,0,0,0.4);
+      transition: all 0.1s ease;
+      letter-spacing: 2px;
+    }
+
+    .comic-panel-button:hover {
+      transform: translateY(2px);
+      box-shadow: 
+        0 4px 0 #8B0000,
+        0 6px 12px rgba(0,0,0,0.4);
+    }
+
+    .comic-panel-button:active {
+      transform: translateY(6px);
+      box-shadow: 
+        0 0px 0 #8B0000,
+        0 2px 8px rgba(0,0,0,0.4);
+    }
+
+    .comic-sound-effect {
+      font-size: 48px;
+      font-weight: 900;
+      color: #FF0000;
+      text-align: center;
+      text-transform: uppercase;
+      letter-spacing: 5px;
+      margin: 15px 0;
+      text-shadow: 
+        3px 3px 0 #FFD700,
+        6px 6px 0 #000;
+      transform: rotate(-5deg);
+      animation: comicShake 0.5s infinite alternate;
+    }
+
+    @keyframes comicShake {
+      0% { transform: rotate(-5deg) scale(1); }
+      100% { transform: rotate(5deg) scale(1.05); }
+    }
+
     .back-btn {
       position: fixed;
       bottom: 20px;
@@ -7035,26 +7244,26 @@
       inventory: [],
       // Phase 5: Companion System
       companions: {
-        stormWolf: { unlocked: true, level: 1, xp: 0 },
+        stormWolf: { unlocked: false, level: 1, xp: 0 }, // Locked initially - receive as egg reward
         skyFalcon: { unlocked: false, level: 1, xp: 0 },
         waterSpirit: { unlocked: false, level: 1, xp: 0 }
       },
-      selectedCompanion: 'stormWolf', // Default companion
-      // Camp System - All Buildings FREE and Level 1 (Comprehensive Re-implementation)
+      selectedCompanion: null, // No companion at start
+      // Camp System - All Buildings LOCKED by default for Tutorial (unlock through quests)
       campBuildings: {
-        // Free buildings - all unlocked at start
-        questMission: { level: 1, maxLevel: 10, unlocked: true },
-        inventory: { level: 1, maxLevel: 10, unlocked: true },
-        campHub: { level: 1, maxLevel: 10, unlocked: true },
-        loreMaster: { level: 1, maxLevel: 10, unlocked: true }, // NEW: Lore/Story building (placeholder for future lore content - currently inactive)
-        // Previously paid buildings - now FREE at Level 1
-        skillTree: { level: 1, maxLevel: 10, unlocked: true },
-        companionHouse: { level: 1, maxLevel: 10, unlocked: true },
-        forge: { level: 1, maxLevel: 10, unlocked: true },
-        armory: { level: 1, maxLevel: 10, unlocked: true },
-        trainingHall: { level: 1, maxLevel: 10, unlocked: true },
-        trashRecycle: { level: 1, maxLevel: 10, unlocked: true },
-        tempShop: { level: 1, maxLevel: 10, unlocked: true },
+        // Free buildings - unlocked via tutorial
+        questMission: { level: 1, maxLevel: 10, unlocked: false },
+        inventory: { level: 1, maxLevel: 10, unlocked: false },
+        campHub: { level: 1, maxLevel: 10, unlocked: false },
+        loreMaster: { level: 1, maxLevel: 10, unlocked: false }, // NEW: Lore/Story building (placeholder for future lore content - currently inactive)
+        // Paid buildings - unlocked via quest progression
+        skillTree: { level: 1, maxLevel: 10, unlocked: false },
+        companionHouse: { level: 1, maxLevel: 10, unlocked: false },
+        forge: { level: 1, maxLevel: 10, unlocked: false },
+        armory: { level: 1, maxLevel: 10, unlocked: false },
+        trainingHall: { level: 1, maxLevel: 10, unlocked: false },
+        trashRecycle: { level: 1, maxLevel: 10, unlocked: false },
+        tempShop: { level: 1, maxLevel: 10, unlocked: false },
         // Legacy buildings (for compatibility)
         trainingGrounds: { level: 0, maxLevel: 10, unlocked: false },
         library: { level: 0, maxLevel: 10, unlocked: false },
@@ -7119,7 +7328,7 @@
         arcaneEmpowerment: { unlocked: false, level: 0, maxLevel: 5 },
         elementalOverload: { unlocked: false, level: 0, maxLevel: 3 }
       },
-      skillPoints: 2, // Start with 2 skill points
+      skillPoints: 0, // Start with 0 skill points (earn first one as tutorial reward)
       // Camp state
       hasVisitedCamp: false, // Track first camp visit
       nextRunTimeOfDay: 'day', // 'day' or 'night' - chosen from sleep option
@@ -7141,6 +7350,20 @@
           companionHouse: false,
           trainingHall: false,
           tempShop: false
+        }
+      },
+      // Tutorial System - Comic Book Style
+      tutorial: {
+        isActive: true, // Tutorial is active for new players
+        comicsShown: [], // List of comic panels already shown
+        firstRunCompleted: false, // First run died or level up
+        hasReceivedEgg: false, // Received companion egg
+        hasHatchedEgg: false, // Hatched the egg
+        freeRewardsGiven: {
+          gold: false,
+          skillPoint: false,
+          companionEgg: false,
+          attributes: false
         }
       },
       // Side challenges
@@ -7175,6 +7398,10 @@
           saveData.storyQuests = { ...defaultSaveData.storyQuests, ...(saveData.storyQuests || {}) };
           saveData.storyQuests.buildingFirstUse = { ...defaultSaveData.storyQuests.buildingFirstUse, ...(saveData.storyQuests.buildingFirstUse || {}) };
           saveData.sideChallenges = { ...defaultSaveData.sideChallenges, ...(saveData.sideChallenges || {}) };
+          // Tutorial system (new fields)
+          saveData.tutorial = { ...defaultSaveData.tutorial, ...(saveData.tutorial || {}) };
+          saveData.tutorial.freeRewardsGiven = { ...defaultSaveData.tutorial.freeRewardsGiven, ...(saveData.tutorial?.freeRewardsGiven || {}) };
+          saveData.tutorial.comicsShown = saveData.tutorial?.comicsShown || [];
         }
       } catch (e) {
         console.error('Failed to load save data:', e);
@@ -9374,6 +9601,91 @@
       
       overlay.appendChild(popup);
       document.body.appendChild(overlay);
+    }
+
+    // --- COMIC BOOK PANEL SYSTEM ---
+    function showComicPanel(config) {
+      const {
+        title = 'STORY',
+        text = '',
+        speechBubble = null,
+        thoughtBubble = null,
+        soundEffect = null,
+        buttonText = 'CONTINUE!',
+        onClose = null
+      } = config;
+
+      // Create overlay
+      const overlay = document.createElement('div');
+      overlay.className = 'comic-panel-overlay';
+
+      // Create panel
+      const panel = document.createElement('div');
+      panel.className = 'comic-panel';
+
+      // Create border
+      const border = document.createElement('div');
+      border.className = 'comic-panel-border';
+
+      // Title
+      const titleEl = document.createElement('div');
+      titleEl.className = 'comic-panel-title';
+      titleEl.textContent = title;
+      border.appendChild(titleEl);
+
+      // Main text
+      if (text) {
+        const textEl = document.createElement('div');
+        textEl.className = 'comic-panel-text';
+        textEl.innerHTML = text;
+        border.appendChild(textEl);
+      }
+
+      // Sound effect
+      if (soundEffect) {
+        const soundEl = document.createElement('div');
+        soundEl.className = 'comic-sound-effect';
+        soundEl.textContent = soundEffect;
+        border.appendChild(soundEl);
+      }
+
+      // Speech bubble
+      if (speechBubble) {
+        const speechEl = document.createElement('div');
+        speechEl.className = 'comic-speech-bubble';
+        const speechTextEl = document.createElement('div');
+        speechTextEl.className = 'comic-panel-text';
+        speechTextEl.innerHTML = speechBubble;
+        speechEl.appendChild(speechTextEl);
+        border.appendChild(speechEl);
+      }
+
+      // Thought bubble
+      if (thoughtBubble) {
+        const thoughtEl = document.createElement('div');
+        thoughtEl.className = 'comic-thought-bubble';
+        const thoughtTextEl = document.createElement('div');
+        thoughtTextEl.className = 'comic-panel-text';
+        thoughtTextEl.innerHTML = thoughtBubble;
+        thoughtEl.appendChild(thoughtTextEl);
+        border.appendChild(thoughtEl);
+      }
+
+      // Button
+      const button = document.createElement('button');
+      button.className = 'comic-panel-button';
+      button.textContent = buttonText;
+      button.onclick = () => {
+        document.body.removeChild(overlay);
+        if (onClose) onClose();
+      };
+      border.appendChild(button);
+
+      panel.appendChild(border);
+      overlay.appendChild(panel);
+      document.body.appendChild(overlay);
+      
+      playSound('achievement');
     }
 
     function updateCampScreen() {
