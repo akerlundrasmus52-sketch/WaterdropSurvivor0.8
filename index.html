@@ -5017,6 +5017,12 @@
        * @param {boolean} isHeadshot - Whether this is a headshot (double-crit)
        */
       takeDamage(amount, isCrit = false, damageType = 'physical', isHeadshot = false) {
+        // DEFENSIVE: Ensure mesh and material exist before processing damage
+        if (!this.mesh || !this.mesh.material) {
+          console.error('Enemy.takeDamage() called but mesh or material is null');
+          return;
+        }
+        
         // Track last damage type for death effects
         this.lastDamageType = damageType;
         this.lastWasHeadshot = isHeadshot;
@@ -5079,14 +5085,17 @@
         this.hp -= finalAmount;
         createDamageNumber(Math.floor(finalAmount), this.mesh.position, isCrit);
         
-        // White hit flash effect (50ms) - FRESH IMPLEMENTATION
-        const originalColor = this.mesh.material.color.clone();
-        this.mesh.material.color.setHex(0xFFFFFF); // White flash
-        setTimeout(() => {
-          if (this.mesh && this.mesh.material) {
-            this.mesh.material.color.copy(originalColor);
-          }
-        }, 50);
+        // White hit flash effect (50ms) - DEFENSIVE: Check mesh exists before color manipulation
+        if (this.mesh && this.mesh.material && this.mesh.material.color) {
+          const originalColor = this.mesh.material.color.clone();
+          this.mesh.material.color.setHex(0xFFFFFF); // White flash
+          setTimeout(() => {
+            // DEFENSIVE: Double-check mesh still exists after timeout
+            if (this.mesh && this.mesh.material && this.mesh.material.color) {
+              this.mesh.material.color.copy(originalColor);
+            }
+          }, 50);
+        }
         
         const hpPercent = this.hp / this.maxHp;
         const oldHpPercent = oldHp / this.maxHp;
@@ -5224,29 +5233,39 @@
           playSound('hit');
         }
         
-        // Flash
-        const oldColor = this.mesh.material.color.getHex();
-        this.mesh.material.color.setHex(0xFFFFFF);
-        
-        // Enhanced splash particles using enemy's own color
-        const enemyColor = oldColor;
-        const particleCount = isCrit ? 8 : 3;
-        spawnParticles(this.mesh.position, enemyColor, particleCount);
-        
-        // Additional impact particles
-        if (isCrit) {
-          spawnParticles(this.mesh.position, enemyColor, 5);
-          spawnParticles(this.mesh.position, 0xFFFFFF, 3);
+        // Flash - DEFENSIVE: Check mesh exists
+        if (this.mesh && this.mesh.material && this.mesh.material.color) {
+          const oldColor = this.mesh.material.color.getHex();
+          this.mesh.material.color.setHex(0xFFFFFF);
+          
+          // Enhanced splash particles using enemy's own color
+          const enemyColor = oldColor;
+          const particleCount = isCrit ? 8 : 3;
+          spawnParticles(this.mesh.position, enemyColor, particleCount);
+          
+          // Additional impact particles
+          if (isCrit) {
+            spawnParticles(this.mesh.position, enemyColor, 5);
+            spawnParticles(this.mesh.position, 0xFFFFFF, 3);
+          }
+          
+          // Enhanced squishy deformation on hit
+          const squishScale = isCrit ? 0.7 : 0.85;
+          this.mesh.scale.set(squishScale, 1.3, squishScale);
+          setTimeout(() => {
+            // DEFENSIVE: Check mesh still exists
+            if (this.mesh && this.mesh.scale) {
+              this.mesh.scale.set(1, 1, 1);
+            }
+          }, 100);
+          
+          setTimeout(() => {
+            // DEFENSIVE: Check mesh still exists before restoring color
+            if (this.mesh && this.mesh.material && this.mesh.material.color) {
+              this.mesh.material.color.setHex(oldColor);
+            }
+          }, 50);
         }
-        
-        // Enhanced squishy deformation on hit
-        const squishScale = isCrit ? 0.7 : 0.85;
-        this.mesh.scale.set(squishScale, 1.3, squishScale);
-        setTimeout(() => {
-          this.mesh.scale.set(1, 1, 1);
-        }, 100);
-        
-        setTimeout(() => this.mesh.material.color.setHex(oldColor), 50);
 
         if (this.hp <= 0) {
           this.die();
@@ -5255,6 +5274,13 @@
 
       die() {
         this.isDead = true;
+        
+        // DEFENSIVE: Store position before any operations to prevent null reference
+        if (!this.mesh || !this.mesh.material) {
+          console.error('Enemy.die() called but mesh or material is null');
+          return;
+        }
+        const deathPosition = this.mesh.position.clone();
         
         // Track kills for active quests
         if (montanaQuest.active) {
@@ -5297,7 +5323,7 @@
           let fallTimer = 0;
           const startY = this.mesh.position.y;
           const fallAnim = () => {
-            if (fallTimer < fallDuration && this.mesh.parent) {
+            if (fallTimer < fallDuration && this.mesh && this.mesh.parent) {
               fallTimer++;
               this.mesh.position.y = startY * (1 - fallTimer / fallDuration);
               this.mesh.rotation.x += 0.1;
@@ -5321,14 +5347,16 @@
         document.body.appendChild(flash);
         setTimeout(() => flash.remove(), this.isMiniBoss ? 100 : 50);
         
-        scene.remove(this.mesh);
-        this.mesh.geometry.dispose();
-        this.mesh.material.dispose();
+        // CRITICAL FIX: Remove mesh AFTER using position for drops/text
+        // Store mesh references for cleanup
+        const meshToRemove = this.mesh;
+        const geometryToDispose = this.mesh.geometry;
+        const materialToDispose = this.mesh.material;
         
-        // Drop EXP
+        // Drop EXP using stored position
         const expMultiplier = this.isMiniBoss ? 3 : 1;
         for (let i = 0; i < expMultiplier; i++) {
-          spawnExp(this.mesh.position.x, this.mesh.position.z);
+          spawnExp(deathPosition.x, deathPosition.z);
         }
         
         // PR #117: Drop GOLD - Reduced drop rate (chest-like rarity), bigger amounts
@@ -5373,7 +5401,7 @@
         
         // Only spawn gold if amount > 0
         if (goldAmount > 0) {
-          spawnGold(this.mesh.position.x, this.mesh.position.z, goldAmount);
+          spawnGold(deathPosition.x, deathPosition.z, goldAmount);
         }
         
         // Phase 1: Gear drop system - enemies have a chance to drop gear
@@ -5391,7 +5419,7 @@
           saveData.inventory.push(newGear);
           saveSaveData();
           
-          // Show notification
+          // Show notification using stored position
           const rarityColors = {
             common: '#AAAAAA',
             uncommon: '#00FF00',
@@ -5399,7 +5427,7 @@
             epic: '#9B59B6',
             legendary: '#F39C12'
           };
-          createFloatingText(`+${newGear.name}`, this.mesh.position, rarityColors[newGear.rarity] || '#FFFFFF');
+          createFloatingText(`+${newGear.name}`, deathPosition, rarityColors[newGear.rarity] || '#FFFFFF');
           playSound('coin');
           
           console.log('[Phase 1 Gear Drop]', newGear.name, '-', newGear.rarity);
@@ -5415,23 +5443,43 @@
             // Award gold before saving to prevent loss on crash
             saveData.gold += 50;
             saveSaveData();
-            createFloatingText("Side Quest Complete: Kill 10 Enemies! +50 Gold", this.mesh.position, '#FFD700');
+            createFloatingText("Side Quest Complete: Kill 10 Enemies! +50 Gold", deathPosition, '#FFD700');
           }
         }
         
         // Track mini-boss defeats for achievements
         if (this.isMiniBoss) {
           playerStats.miniBossesDefeated++;
-          createFloatingText("MINI-BOSS DEFEATED! 🏆", this.mesh.position);
+          createFloatingText("MINI-BOSS DEFEATED! 🏆", deathPosition);
         }
         
         updateHUD();
         updateComboCounter(true); // Phase 2: Track combo on kill
         checkAchievements(); // Check for achievements after kill
+        
+        // CRITICAL FIX: Remove and dispose mesh LAST, after all operations complete
+        // Delay slightly to allow any in-progress animations to capture initial state
+        setTimeout(() => {
+          if (meshToRemove && meshToRemove.parent) {
+            scene.remove(meshToRemove);
+          }
+          if (geometryToDispose) {
+            geometryToDispose.dispose();
+          }
+          if (materialToDispose) {
+            materialToDispose.dispose();
+          }
+        }, 100); // 100ms delay to ensure all initial spawn operations complete
       }
       
       // Specialized death effects by damage type
       dieStandard(enemyColor) {
+        // DEFENSIVE: Ensure mesh exists before accessing position
+        if (!this.mesh || !this.mesh.position) {
+          console.error('dieStandard() called but mesh or position is null');
+          return;
+        }
+        
         // Enhanced death animations with physics
         const deathType = Math.random();
         
@@ -5649,6 +5697,12 @@
       }
       
       dieByFire(enemyColor) {
+        // DEFENSIVE: Ensure mesh exists before accessing position
+        if (!this.mesh || !this.mesh.position) {
+          console.error('dieByFire() called but mesh or position is null');
+          return;
+        }
+        
         // Fire death: Char and burn to ash
         spawnParticles(this.mesh.position, 0xFF4500, 20); // Orange fire
         spawnParticles(this.mesh.position, 0xFFFF00, 10); // Yellow flames
@@ -5704,6 +5758,12 @@
       }
       
       dieByIce(enemyColor) {
+        // DEFENSIVE: Ensure mesh exists before accessing position
+        if (!this.mesh || !this.mesh.position) {
+          console.error('dieByIce() called but mesh or position is null');
+          return;
+        }
+        
         // Ice death: Shatter into ice crystals
         spawnParticles(this.mesh.position, 0x87CEEB, 15); // Light blue ice
         spawnParticles(this.mesh.position, 0xFFFFFF, 12); // White frost
@@ -5750,6 +5810,12 @@
       }
       
       dieByLightning(enemyColor) {
+        // DEFENSIVE: Ensure mesh exists before accessing position
+        if (!this.mesh || !this.mesh.position) {
+          console.error('dieByLightning() called but mesh or position is null');
+          return;
+        }
+        
         // Lightning death: Blackened and smoking
         spawnParticles(this.mesh.position, 0xFFFF00, 15); // Yellow lightning
         spawnParticles(this.mesh.position, 0xFFFFFF, 10); // White flash
@@ -5827,6 +5893,12 @@
       }
       
       dieByShotgun(enemyColor) {
+        // DEFENSIVE: Ensure mesh exists before accessing position
+        if (!this.mesh || !this.mesh.position) {
+          console.error('dieByShotgun() called but mesh or position is null');
+          return;
+        }
+        
         // Shotgun death: Massive explosion of gibs
         spawnParticles(this.mesh.position, enemyColor, 30);
         spawnParticles(this.mesh.position, 0x8B0000, 20); // Lots of blood
@@ -5905,6 +5977,12 @@
       }
       
       dieByHeadshot(enemyColor) {
+        // DEFENSIVE: Ensure mesh exists before accessing position
+        if (!this.mesh || !this.mesh.position) {
+          console.error('dieByHeadshot() called but mesh or position is null');
+          return;
+        }
+        
         // FRESH IMPLEMENTATION: Enhanced headshot with actual head detachment
         // Headshot: Dramatic head explosion with visible detached head
         spawnParticles(this.mesh.position, enemyColor, 25);
@@ -6989,6 +7067,13 @@
 
       update(playerPos) {
         if (!this.active) return;
+        
+        // DEFENSIVE: Ensure mesh exists before operating on it
+        if (!this.mesh || !this.mesh.position) {
+          console.error('ExpGem.update() called but mesh or position is null');
+          this.active = false;
+          return;
+        }
 
         // FRESH: Spin with randomized speeds and directions (each XP drop unique)
         this.mesh.rotation.z += this.rotSpeed;
@@ -6999,15 +7084,19 @@
         this.bobPhase += 0.05;
         this.mesh.position.y = 0.5 + Math.sin(this.bobPhase) * 0.1;
         
-        // Sparkle effect on shell
-        this.sparklePhase += 0.1;
-        this.mesh.material.emissiveIntensity = 0.3 + Math.sin(this.sparklePhase) * 0.2;
+        // Sparkle effect on shell - DEFENSIVE: Check material exists
+        if (this.mesh.material) {
+          this.sparklePhase += 0.1;
+          this.mesh.material.emissiveIntensity = 0.3 + Math.sin(this.sparklePhase) * 0.2;
+        }
         
-        // Animate water fill (pulsing/sloshing effect)
-        this.fillPhase += 0.05;
-        const fillAmount = 0.5 + Math.sin(this.fillPhase) * 0.1; // Pulse between 0.4 and 0.6
-        this.waterFill.scale.y = fillAmount;
-        this.waterFill.position.y = -0.1 + (0.5 - fillAmount) * 0.15; // Adjust position as it fills
+        // Animate water fill (pulsing/sloshing effect) - DEFENSIVE: Check waterFill exists
+        if (this.waterFill && this.waterFill.scale && this.waterFill.position) {
+          this.fillPhase += 0.05;
+          const fillAmount = 0.5 + Math.sin(this.fillPhase) * 0.1; // Pulse between 0.4 and 0.6
+          this.waterFill.scale.y = fillAmount;
+          this.waterFill.position.y = -0.1 + (0.5 - fillAmount) * 0.15; // Adjust position as it fills
+        }
 
         // Magnet
         const dx = playerPos.x - this.mesh.position.x;
@@ -7031,6 +7120,12 @@
 
       collect() {
         this.active = false;
+        
+        // DEFENSIVE: Ensure mesh exists before collecting
+        if (!this.mesh || !this.mesh.position) {
+          console.error('ExpGem.collect() called but mesh or position is null');
+          return;
+        }
         
         // SPLASH EFFECT when collected - blue star-burst (PR #117)
         const splashPos = this.mesh.position.clone();
@@ -7088,9 +7183,18 @@
         document.body.appendChild(flash);
         setTimeout(() => flash.remove(), 100);
         
-        scene.remove(this.mesh);
-        this.mesh.geometry.dispose();
-        this.mesh.material.dispose();
+        // DEFENSIVE: Safe disposal with null checks
+        if (this.mesh) {
+          if (this.mesh.parent) {
+            scene.remove(this.mesh);
+          }
+          if (this.mesh.geometry) {
+            this.mesh.geometry.dispose();
+          }
+          if (this.mesh.material) {
+            this.mesh.material.dispose();
+          }
+        }
         
         addExp(this.value);
         playSound('collect');
