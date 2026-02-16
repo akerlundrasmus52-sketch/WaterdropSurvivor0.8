@@ -170,58 +170,6 @@
       animation: questArrowPulse 1.5s ease-in-out infinite;
     }
     
-    /* FRESH IMPLEMENTATION: Region Display */
-    #region-display {
-      position: absolute;
-      bottom: 30px;
-      left: 20px;
-      background: linear-gradient(135deg, rgba(0,0,0,0.85), rgba(30,30,30,0.9));
-      border: 2px solid #FFD700;
-      border-radius: 15px;
-      padding: 12px 24px;
-      font-size: 20px;
-      font-weight: bold;
-      color: #FFD700;
-      text-shadow: 0 0 10px rgba(255,215,0,0.8), 2px 2px 4px rgba(0,0,0,0.9);
-      pointer-events: none;
-      z-index: 50;
-      opacity: 0;
-      transition: opacity 0.5s ease-in-out;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.7), 0 0 20px rgba(255,215,0,0.3);
-    }
-    
-    #region-display.show {
-      opacity: 1;
-    }
-    
-    #region-display .region-icon {
-      display: inline-block;
-      margin-right: 8px;
-      font-size: 24px;
-    }
-    
-    /* FRESH IMPLEMENTATION: Minimap */
-    #minimap-container {
-      position: absolute;
-      bottom: 20px;
-      right: 20px;
-      width: 100px;
-      height: 100px;
-      background: rgba(0,0,0,0.85);
-      border: 3px solid #FFD700;
-      border-radius: 50%;
-      pointer-events: none;
-      z-index: 100;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.8);
-      overflow: hidden;
-    }
-    
-    #minimap-canvas {
-      width: 100%;
-      height: 100%;
-      border-radius: 50%;
-    }
-    
     /* Stats Bar - Removed (Stats accessible via Stats Button Modal only) */
     
     /* Combo Counter - Red/Black Theme */
@@ -974,16 +922,6 @@
       50% {
         opacity: 0.7;
         transform: scale(1.15);
-      }
-    }
-    
-    /* FRESH IMPLEMENTATION: Quest pulse animation */
-    @keyframes questPulse {
-      0%, 100% {
-        box-shadow: 0 0 5px rgba(255,215,0,0.3);
-      }
-      50% {
-        box-shadow: 0 0 15px rgba(255,215,0,0.6);
       }
     }
     
@@ -2760,8 +2698,7 @@
       
       <div class="settings-item">
         <label for="auto-aim-checkbox">Auto-Aim</label>
-        <!-- Default: unchecked - manual aiming until auto-aim skill is unlocked per Big Update requirements -->
-        <input type="checkbox" id="auto-aim-checkbox">
+        <input type="checkbox" id="auto-aim-checkbox" checked>
       </div>
       
       <div class="settings-item">
@@ -2824,12 +2761,6 @@
       <!-- Quest Arrow Guidance (in-game) -->
       <div id="quest-arrow">❗➤</div>
       
-      <!-- FRESH IMPLEMENTATION: Region Display -->
-      <div id="region-display">
-        <span class="region-icon"></span>
-        <span class="region-name"></span>
-      </div>
-      
       <!-- Combo Timer Display -->
       <div class="stat-text" id="combo-timer"></div>
       
@@ -2863,11 +2794,6 @@
     <button id="stats-btn" class="btn-small" style="position: absolute; top: 20px; right: 20px; pointer-events: auto; z-index: 100;">STATS</button>
     <button id="settings-btn" class="btn-small" style="position: absolute; top: 20px; right: 120px; pointer-events: auto; z-index: 100;">⚙️</button>
     
-    <!-- FRESH IMPLEMENTATION: Minimap -->
-    <div id="minimap-container">
-      <canvas id="minimap-canvas" width="100" height="100"></canvas>
-    </div>
-    
     <!-- Day/Night Cycle Clock -->
     <div id="day-night-clock" style="position: absolute; top: 20px; left: 50%; transform: translateX(-50%); pointer-events: none; z-index: 100;">
       <div style="background: rgba(0,0,0,0.7); border: 2px solid #FFD700; border-radius: 50%; width: 80px; height: 80px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 0 15px rgba(0,0,0,0.5);">
@@ -2875,9 +2801,6 @@
         <div id="day-night-time" style="font-size: 12px; color: #FFD700; font-weight: bold;">00:00</div>
       </div>
     </div>
-    
-    <!-- FRESH IMPLEMENTATION: Countdown Display for Start-of-Run -->
-    <div id="countdown-display" style="display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 120px; font-weight: bold; color: #FFD700; text-shadow: 0 0 20px rgba(255,215,0,0.8), 0 0 40px rgba(255,215,0,0.5); pointer-events: none; z-index: 200; font-family: 'M PLUS Rounded 1c', sans-serif;"></div>
     
     <!-- PR #117: Menu button (shows in portrait mode) -->
     <button id="menu-btn" title="Menu">☰</button>
@@ -3189,8 +3112,6 @@
       cabin: 0xDEB887, // Burlywood
       farmland: 0xF0E68C, // Khaki
       exp: 0x5DADE2, // Light Blue (Matching EXP bar)
-      bloodRed: 0x8B0000, // Dark red for blood effects
-      tomatoRed: 0xFF6347, // Tomato red for particles
     };
 
     const GAME_CONFIG = {
@@ -3685,15 +3606,14 @@
     let cinematicIntroActive = false;
     let cinematicIntroStep = 0;
     let cinematicIntroTimer = 0;
-    // FRESH IMPLEMENTATION: Enhanced cinematic intro matching requirements
     const cinematicIntroSequence = [
-      { type: 'droneview', duration: 2 },
-      { type: 'showstructures', duration: 3 },
-      { type: 'zoomout', duration: 2 },
-      { type: 'zoomin', duration: 2 },
-      { type: 'cigar', duration: 2 },
-      { type: 'gameplay', duration: 1.5 },
-      { type: 'countdown', duration: 3 }
+      { type: 'landmark', target: 'stonehenge', duration: 3, zoom: 15 },
+      { type: 'landmark', target: 'tesla', duration: 3, zoom: 15 },
+      { type: 'landmark', target: 'windmill', duration: 3, zoom: 15 },
+      { type: 'landmark', target: 'volcano', duration: 3, zoom: 15 },
+      { type: 'zoomout', duration: 2, zoom: 50 },
+      { type: 'zoomin', duration: 1.5, zoom: 15 },
+      { type: 'cigar', duration: 2 }
     ];
     let introLandmarkPositions = {};
     
@@ -3717,224 +3637,6 @@
     let cameraShake = { intensity: 0, duration: 0 };
     let cameraZoom = { current: 15, target: 15, speed: 2 };
     let cameraTargetPos = null;
-    
-    // FRESH IMPLEMENTATION: Red Eyes Feature Constants
-    const RED_EYES_CONFIG = {
-      HEALTH_THRESHOLD: 0.3,           // Activate when health < 30%
-      DAMAGE_THRESHOLD: 20,            // Activate when taking >20 damage
-      ACTIVATION_CHANCE: 0.4,          // 40% chance on trigger
-      EPIC_COMBO_THRESHOLD: 10,        // Activate on 10+ combo
-      EPIC_DURATION: 4.0,              // Duration for epic moments (seconds)
-      DAMAGE_DURATION: 3.0,            // Duration on damage (seconds)
-      GLOW_LEFT_OFFSET: { x: -0.115, y: 0.105, z: 0.45 },  // Asymmetric left eye glow position
-      GLOW_RIGHT_OFFSET: { x: 0.125, y: 0.095, z: 0.45 },  // Asymmetric right eye glow position
-      PUPIL_COLOR: 0x8B0000,           // Dark red color
-      CINEMATIC_CHANCE: 0.3            // 30% chance during cinematic moments
-    };
-    
-    // FRESH IMPLEMENTATION: Camera Constants
-    const CAMERA_CONFIG = {
-      RESET_DELAY_MS: 500              // Delay before resetting camera after cinematic
-    };
-    
-    // FRESH IMPLEMENTATION: Region Display System
-    // Coordinate system: (0, 0) is spawn area center, positive X is east, positive Z is north
-    const MAP_REGIONS = {
-      spawn: { name: 'Spawn Area', icon: '🏠', bounds: { x: 0, z: 0, radius: 15 }, color: '#5DADE2' },
-      lake: { name: 'Crystal Lake', icon: '💧', bounds: { x: 30, z: -30, radius: 20 }, color: '#1E90FF' },
-      cabin: { name: 'Forest Cabin', icon: '🏚️', bounds: { x: -20, z: -20, radius: 12 }, color: '#DEB887' },
-      windmill: { name: 'Windmill Plains', icon: '🎡', bounds: { x: 40, z: 40, radius: 15 }, color: '#D2B48C' },
-      mine: { name: 'Dark Mine', icon: '⛏️', bounds: { x: -40, z: 40, radius: 12 }, color: '#555555' },
-      stonehenge: { name: 'Ancient Stones', icon: '🗿', bounds: { x: 60, z: 60, radius: 20 }, color: '#808080' },
-      forest: { name: 'Deep Forest', icon: '🌲', bounds: null, color: '#228B22' } // Default region
-    };
-    
-    let currentRegion = 'spawn';
-    let regionDisplayTimeout = null;
-    
-    function updateRegionDisplay() {
-      if (!player || !player.mesh) return;
-      
-      const px = player.mesh.position.x;
-      const pz = player.mesh.position.z;
-      let newRegion = 'forest'; // Default
-      
-      // Check each region (priority order matters - specific regions first)
-      for (const [key, region] of Object.entries(MAP_REGIONS)) {
-        if (region.bounds && region.bounds.radius) {
-          const dx = px - region.bounds.x;
-          const dz = pz - region.bounds.z;
-          const dist = Math.sqrt(dx * dx + dz * dz);
-          
-          if (dist < region.bounds.radius) {
-            newRegion = key;
-            break;
-          }
-        }
-      }
-      
-      // Update display if region changed
-      if (newRegion !== currentRegion) {
-        currentRegion = newRegion;
-        const regionData = MAP_REGIONS[currentRegion];
-        const regionDisplay = document.getElementById('region-display');
-        const regionIcon = regionDisplay.querySelector('.region-icon');
-        const regionName = regionDisplay.querySelector('.region-name');
-        
-        if (regionDisplay && regionIcon && regionName) {
-          regionIcon.textContent = regionData.icon;
-          regionName.textContent = regionData.name;
-          regionDisplay.style.borderColor = regionData.color;
-          regionDisplay.style.color = regionData.color;
-          regionDisplay.classList.add('show');
-          
-          // Auto-hide after 3 seconds
-          if (regionDisplayTimeout) clearTimeout(regionDisplayTimeout);
-          regionDisplayTimeout = setTimeout(() => {
-            if (regionDisplay) regionDisplay.classList.remove('show');
-          }, 3000);
-        }
-      }
-    }
-    
-    // FRESH IMPLEMENTATION: Minimap System
-    let minimapCanvas = null;
-    let minimapCtx = null;
-    const MINIMAP_SCALE = 100 / 200; // 100px canvas for 200 units of game world (round minimap)
-    
-    function initMinimap() {
-      minimapCanvas = document.getElementById('minimap-canvas');
-      if (minimapCanvas) {
-        minimapCtx = minimapCanvas.getContext('2d');
-      }
-    }
-    
-    function updateMinimap() {
-      // Defensive try-catch for safety
-      try {
-        if (!minimapCtx || !player || !player.mesh) return;
-        
-        const canvas = minimapCanvas;
-        const ctx = minimapCtx;
-        
-        // Null check for canvas
-        if (!canvas || !canvas.width || !canvas.height) return;
-        
-        const centerX = canvas.width / 2;
-        const centerY = canvas.height / 2;
-        const radius = canvas.width / 2;
-        
-        // Clear canvas
-        ctx.fillStyle = 'rgba(20, 20, 20, 0.95)';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        // Clip to circular shape
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-        ctx.clip();
-        
-        // Draw grid
-        ctx.strokeStyle = 'rgba(100, 100, 100, 0.3)';
-        ctx.lineWidth = 1;
-        const gridSize = 20;
-        for (let i = -100; i <= 100; i += gridSize) {
-          const screenX = centerX + (i - player.mesh.position.x) * MINIMAP_SCALE;
-          const screenY = centerY + (i - player.mesh.position.z) * MINIMAP_SCALE;
-          
-          if (screenX >= 0 && screenX <= canvas.width) {
-            ctx.beginPath();
-            ctx.moveTo(screenX, 0);
-            ctx.lineTo(screenX, canvas.height);
-            ctx.stroke();
-          }
-          
-          if (screenY >= 0 && screenY <= canvas.height) {
-            ctx.beginPath();
-            ctx.moveTo(0, screenY);
-            ctx.lineTo(canvas.width, screenY);
-            ctx.stroke();
-          }
-        }
-        
-        // Draw landmarks
-        const landmarks = [
-          { x: 30, z: -30, color: '#1E90FF', size: 3, label: 'L' }, // Lake
-          { x: -20, z: -20, color: '#DEB887', size: 2, label: 'C' }, // Cabin
-          { x: 40, z: 40, color: '#D2B48C', size: 3, label: 'W' }, // Windmill
-          { x: -40, z: 40, color: '#888888', size: 2, label: 'M' }, // Mine
-          { x: 60, z: 60, color: '#808080', size: 4, label: 'S' } // Stonehenge
-        ];
-        
-        landmarks.forEach(landmark => {
-          const screenX = centerX + (landmark.x - player.mesh.position.x) * MINIMAP_SCALE;
-          const screenY = centerY + (landmark.z - player.mesh.position.z) * MINIMAP_SCALE;
-          
-          if (screenX >= 0 && screenX <= canvas.width && screenY >= 0 && screenY <= canvas.height) {
-            ctx.fillStyle = landmark.color;
-            ctx.beginPath();
-            ctx.arc(screenX, screenY, landmark.size, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // Draw label
-            ctx.fillStyle = '#FFFFFF';
-            ctx.font = 'bold 6px Arial';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(landmark.label, screenX, screenY);
-          }
-        });
-        
-        // Draw enemies (red dots) - with null safety
-        if (enemies && Array.isArray(enemies)) {
-          ctx.fillStyle = '#FF0000';
-          enemies.forEach(enemy => {
-            if (enemy && enemy.mesh && enemy.mesh.position) {
-              const screenX = centerX + (enemy.mesh.position.x - player.mesh.position.x) * MINIMAP_SCALE;
-              const screenY = centerY + (enemy.mesh.position.z - player.mesh.position.z) * MINIMAP_SCALE;
-              
-              if (screenX >= 0 && screenX <= canvas.width && screenY >= 0 && screenY <= canvas.height) {
-                ctx.beginPath();
-                ctx.arc(screenX, screenY, 1.5, 0, Math.PI * 2);
-                ctx.fill();
-              }
-            }
-          });
-        }
-        
-        // Draw player (bright blue dot with direction indicator)
-        ctx.fillStyle = '#00FFFF';
-        ctx.beginPath();
-        ctx.arc(centerX, centerY, 3, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Draw player direction indicator
-        const dirLength = 6;
-        const angle = player.mesh.rotation.y;
-        const dirX = Math.sin(angle) * dirLength;
-        const dirY = Math.cos(angle) * dirLength;
-        
-        ctx.strokeStyle = '#00FFFF';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(centerX, centerY);
-        ctx.lineTo(centerX + dirX, centerY + dirY);
-        ctx.stroke();
-        
-        // Restore context (remove circular clip)
-        ctx.restore();
-        
-        // Draw circular border
-        ctx.strokeStyle = '#FFD700';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(centerX, centerY, radius - 1, 0, Math.PI * 2);
-        ctx.stroke();
-      } catch (error) {
-        console.error('Minimap rendering error (non-critical):', error);
-        // Gracefully continue - minimap failure shouldn't crash the game
-      }
-    }
     
     // Ambient Creatures System
     let ambientCreatures = [];
@@ -4219,138 +3921,6 @@
     
     let activeCompanion = null; // Will hold the active Companion instance
 
-    // Weather System - Rain, Snow, Wind Effects
-    const weatherSystem = {
-      enabled: true,
-      type: 'none', // 'none', 'rain', 'snow', 'wind'
-      intensity: 0, // 0-1
-      particles: [],
-      maxParticles: 150,
-      changeTimer: 0,
-      changeDuration: 30, // Change weather every 30 seconds
-      windDirection: new THREE.Vector2(1, 0),
-      windSpeed: 0
-    };
-    
-    function initWeatherParticles() {
-      // Pre-create weather particles for performance
-      for (let i = 0; i < weatherSystem.maxParticles; i++) {
-        const geometry = new THREE.SphereGeometry(0.05, 4, 4);
-        const material = new THREE.MeshBasicMaterial({
-          color: 0xFFFFFF,
-          transparent: true,
-          opacity: 0.7
-        });
-        const particle = new THREE.Mesh(geometry, material);
-        particle.visible = false;
-        scene.add(particle);
-        weatherSystem.particles.push({
-          mesh: particle,
-          velocity: new THREE.Vector3(),
-          active: false
-        });
-      }
-    }
-    
-    function updateWeather(dt) {
-      if (!weatherSystem.enabled || !player || !player.mesh) return;
-      
-      // Change weather periodically
-      weatherSystem.changeTimer += dt;
-      if (weatherSystem.changeTimer >= weatherSystem.changeDuration) {
-        weatherSystem.changeTimer = 0;
-        // Random weather change
-        const rand = Math.random();
-        if (rand < 0.4) {
-          weatherSystem.type = 'none';
-          weatherSystem.intensity = 0;
-        } else if (rand < 0.6) {
-          weatherSystem.type = 'rain';
-          weatherSystem.intensity = 0.3 + Math.random() * 0.5;
-        } else if (rand < 0.8) {
-          weatherSystem.type = 'snow';
-          weatherSystem.intensity = 0.2 + Math.random() * 0.4;
-        } else {
-          weatherSystem.type = 'wind';
-          weatherSystem.intensity = 0.3 + Math.random() * 0.3;
-          weatherSystem.windDirection = new THREE.Vector2(
-            Math.random() * 2 - 1,
-            Math.random() * 2 - 1
-          ).normalize();
-          weatherSystem.windSpeed = weatherSystem.intensity * 2;
-        }
-      }
-      
-      // Update active weather particles
-      const playerPos = player.mesh.position;
-      const activeCount = Math.floor(weatherSystem.intensity * weatherSystem.maxParticles);
-      const currentTime = Date.now() * 0.001; // Calculate once for performance
-      
-      weatherSystem.particles.forEach((particle, i) => {
-        if (i < activeCount && weatherSystem.type !== 'none') {
-          if (!particle.active) {
-            // Activate particle
-            particle.active = true;
-            particle.mesh.visible = true;
-            // Spawn around player
-            particle.mesh.position.set(
-              playerPos.x + (Math.random() - 0.5) * 30,
-              15 + Math.random() * 5,
-              playerPos.z + (Math.random() - 0.5) * 30
-            );
-            
-            // Set particle appearance based on weather type
-            if (weatherSystem.type === 'rain') {
-              particle.mesh.material.color.setHex(0x6699FF);
-              particle.mesh.material.opacity = 0.6;
-              particle.mesh.scale.set(0.05, 0.3, 0.05);
-              particle.velocity.set(
-                Math.random() * 0.5 - 0.25,
-                -15 - Math.random() * 5,
-                Math.random() * 0.5 - 0.25
-              );
-            } else if (weatherSystem.type === 'snow') {
-              particle.mesh.material.color.setHex(0xFFFFFF);
-              particle.mesh.material.opacity = 0.8;
-              particle.mesh.scale.set(0.08, 0.08, 0.08);
-              particle.velocity.set(
-                Math.random() * 0.3 - 0.15,
-                -2 - Math.random() * 1,
-                Math.random() * 0.3 - 0.15
-              );
-            }
-          }
-          
-          // Update particle position
-          if (weatherSystem.type === 'rain' || weatherSystem.type === 'snow') {
-            particle.mesh.position.add(particle.velocity.clone().multiplyScalar(dt));
-            
-            // Add wind effect using currentTime
-            if (weatherSystem.type === 'snow') {
-              particle.mesh.position.x += Math.sin(currentTime) * 0.1 * dt;
-              particle.mesh.position.z += Math.cos(currentTime) * 0.1 * dt;
-            }
-            
-            // Reset if below ground or too far from player
-            if (particle.mesh.position.y < 0.1 || 
-                particle.mesh.position.distanceTo(playerPos) > 40) {
-              particle.mesh.position.set(
-                playerPos.x + (Math.random() - 0.5) * 30,
-                15 + Math.random() * 5,
-                playerPos.z + (Math.random() - 0.5) * 30
-              );
-            }
-          }
-        } else {
-          // Deactivate particle
-          if (particle.active) {
-            particle.active = false;
-            particle.mesh.visible = false;
-          }
-        }
-      });
-    }
-
     // Game Settings
     const gameSettings = {
       autoAim: false, // Auto-aim off by default, upgradeable via attributes
@@ -4532,54 +4102,6 @@
         this.rightPupil.position.set(0.12, 0.1, 0.45);
         this.mesh.add(this.rightPupil);
         
-        // FRESH IMPLEMENTATION: RED EYES FEATURE (with safe rendering)
-        // Initialize red eyes state (null-safe)
-        this.redEyesActive = false;
-        this.redEyesTimer = 0;
-        this.redEyesDuration = 0;
-        this.redEyesGlowLeft = null;
-        this.redEyesGlowRight = null;
-        
-        // Pre-create glow meshes safely (defensive coding)
-        try {
-          const glowGeo = new THREE.SphereGeometry(0.09, 8, 8);
-          const glowMat = new THREE.MeshBasicMaterial({
-            color: RED_EYES_CONFIG.PUPIL_COLOR,
-            transparent: true,
-            opacity: 0.6,
-            side: THREE.BackSide
-          });
-          
-          // Left eye glow - slightly asymmetric for intensity
-          this.redEyesGlowLeft = new THREE.Mesh(glowGeo, glowMat.clone());
-          this.redEyesGlowLeft.position.set(
-            RED_EYES_CONFIG.GLOW_LEFT_OFFSET.x,
-            RED_EYES_CONFIG.GLOW_LEFT_OFFSET.y,
-            RED_EYES_CONFIG.GLOW_LEFT_OFFSET.z
-          );
-          this.redEyesGlowLeft.visible = false;
-          
-          // Right eye glow - asymmetric positioning
-          this.redEyesGlowRight = new THREE.Mesh(glowGeo, glowMat.clone());
-          this.redEyesGlowRight.position.set(
-            RED_EYES_CONFIG.GLOW_RIGHT_OFFSET.x,
-            RED_EYES_CONFIG.GLOW_RIGHT_OFFSET.y,
-            RED_EYES_CONFIG.GLOW_RIGHT_OFFSET.z
-          );
-          this.redEyesGlowRight.visible = false;
-          
-          // Safely add to mesh only if glows were created
-          if (this.mesh && this.redEyesGlowLeft && this.redEyesGlowRight) {
-            this.mesh.add(this.redEyesGlowLeft);
-            this.mesh.add(this.redEyesGlowRight);
-          }
-        } catch (error) {
-          console.warn('Failed to create red eyes glow effect:', error);
-          // Graceful fallback - red eyes will simply not show glow
-          this.redEyesGlowLeft = null;
-          this.redEyesGlowRight = null;
-        }
-        
         // Smile (curved shape using torus segment)
         const smileGeo = new THREE.TorusGeometry(0.15, 0.02, 8, 16, Math.PI);
         const smileMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
@@ -4627,10 +4149,6 @@
         this.nextBlinkTime = 2 + Math.random() * 3; // Random 2-5 seconds
         this.isBlinking = false;
         
-        // FRESH IMPLEMENTATION: Breathing animation
-        this.breathingPhase = 0;
-        this.breathingSpeed = 1.5; // Breaths per second
-        
         // Arms (simple cylinders attached to body)
         const armGeo = new THREE.CylinderGeometry(0.06, 0.06, 0.35, 8);
         const limbMaterial = new THREE.MeshToonMaterial({ color: COLORS.player, opacity: 0.85, transparent: true });
@@ -4659,44 +4177,6 @@
         this.rightLeg = new THREE.Mesh(legGeo, limbMaterial);
         this.rightLeg.position.set(0.15, -0.45, 0);
         this.mesh.add(this.rightLeg);
-        
-        // FRESH IMPLEMENTATION: Gun model attached to right arm
-        const gunGroup = new THREE.Group();
-        
-        // Gun barrel
-        const barrelGeo = new THREE.CylinderGeometry(0.04, 0.04, 0.3, 8);
-        const gunMat = new THREE.MeshToonMaterial({ color: 0x444444 }); // Dark gray metal
-        const barrel = new THREE.Mesh(barrelGeo, gunMat);
-        barrel.rotation.z = Math.PI / 2; // Horizontal
-        barrel.position.set(0.15, 0, 0);
-        gunGroup.add(barrel);
-        
-        // Gun handle/grip
-        const handleGeo = new THREE.BoxGeometry(0.06, 0.15, 0.05);
-        const handleMat = new THREE.MeshToonMaterial({ color: 0x8B4513 }); // Brown grip
-        const handle = new THREE.Mesh(handleGeo, handleMat);
-        handle.position.set(0, -0.1, 0);
-        gunGroup.add(handle);
-        
-        // Gun body/chamber
-        const bodyGeo = new THREE.BoxGeometry(0.12, 0.08, 0.08);
-        const body = new THREE.Mesh(bodyGeo, gunMat);
-        body.position.set(0.06, -0.02, 0);
-        gunGroup.add(body);
-        
-        // Muzzle tip (for muzzle flash positioning)
-        const muzzleGeo = new THREE.CylinderGeometry(0.05, 0.04, 0.02, 8);
-        const muzzleMat = new THREE.MeshToonMaterial({ color: 0x666666 }); // Lighter gray
-        const muzzle = new THREE.Mesh(muzzleGeo, muzzleMat);
-        muzzle.rotation.z = Math.PI / 2;
-        muzzle.position.set(0.3, 0, 0);
-        gunGroup.add(muzzle);
-        
-        // Position gun near right arm
-        gunGroup.position.set(0.45, -0.05, 0.2);
-        gunGroup.rotation.y = -Math.PI / 6; // Angled forward
-        this.gun = gunGroup;
-        this.mesh.add(this.gun);
         
         // Smoke particles timer
         this.smokeTimer = 0;
@@ -4946,46 +4426,22 @@
           this.leftLeg.rotation.x = -Math.sin(walkPhase) * 0.4;
           this.rightLeg.rotation.x = Math.sin(walkPhase) * 0.4;
         } else {
-          // Idle - gentle sway with breathing
+          // Idle - gentle sway
           const idlePhase = gameTime * 2;
           this.leftArm.rotation.x = Math.sin(idlePhase) * 0.1;
           this.rightArm.rotation.x = Math.sin(idlePhase + Math.PI) * 0.1;
           this.leftLeg.rotation.x = 0;
           this.rightLeg.rotation.x = 0;
-          
-          // FRESH IMPLEMENTATION: Breathing animation
-          // Note: Direct scale modification is intentional for water droplet "breathing" effect
-          // Water droplets naturally expand/contract, this simulates that behavior
-          this.breathingPhase += dt * this.breathingSpeed;
-          const breathScale = 1 + Math.sin(this.breathingPhase * Math.PI * 2) * 0.03;
-          this.mesh.scale.y = breathScale;
-          this.mesh.scale.x = 1 / Math.sqrt(breathScale); // Maintain volume
-          this.mesh.scale.z = 1 / Math.sqrt(breathScale);
         }
         
-        // Animate cigar tip (pulsing emissive glow synced with breathing)
+        // Animate cigar tip (pulsing emissive glow)
         if (this.cigarTip) {
-          // ENHANCED: Sync cigar glow with breathing cycle
-          const breathCycle = Math.sin(this.breathingPhase * Math.PI * 2);
-          const inhaling = breathCycle > 0; // Positive = inhaling, negative = exhaling
-          
-          // Cigar glows brighter on inhale
-          const tipBrightness = inhaling 
-            ? (0.8 + breathCycle * 0.2) // Brighter during inhale (0.8-1.0)
-            : (0.5 + Math.abs(breathCycle) * 0.3); // Dimmer during exhale (0.5-0.8)
+          const tipBrightness = 0.7 + Math.sin(gameTime * 8) * 0.3;
           this.cigarTip.material.opacity = tipBrightness;
           
-          // Change cigar tip color based on intensity
-          const glowIntensity = inhaling ? 0.3 + breathCycle * 0.2 : 0.1;
-          this.cigarTip.material.emissive = new THREE.Color(0xFF4500);
-          this.cigarTip.material.emissiveIntensity = glowIntensity;
-          
-          // Enhanced cigar smoke with lighting reaction and exhale effect
+          // Enhanced cigar smoke with lighting reaction
           this.smokeTimer += dt;
-          // Exhale smoke more frequently (every 0.15s during exhale, 0.3s during inhale)
-          const smokeInterval = !inhaling && breathCycle < -0.3 ? 0.1 : 0.25;
-          
-          if (this.smokeTimer > smokeInterval) {
+          if (this.smokeTimer > 0.2) { // Every 0.2 seconds
             this.smokeTimer = 0;
             
             // Get current lighting intensity for smoke color (reacts to day/night)
@@ -4996,60 +4452,40 @@
               lightIntensity
             );
             
-            // Determine if this is exhale smoke (thicker, from nose/mouth area)
-            const isExhale = !inhaling && breathCycle < -0.3;
-            const numSmokePuffs = isExhale ? 3 : 1; // More smoke on exhale
+            // Create smoke particle
+            const smokeGeo = new THREE.SphereGeometry(0.05, 6, 6);
+            const smokeMat = new THREE.MeshBasicMaterial({ 
+              color: smokeColor,
+              transparent: true,
+              opacity: 0.5
+            });
+            const smoke = new THREE.Mesh(smokeGeo, smokeMat);
             
-            for (let i = 0; i < numSmokePuffs; i++) {
-              // Create smoke particle
-              const smokeSize = isExhale ? 0.08 + Math.random() * 0.04 : 0.05;
-              const smokeGeo = new THREE.SphereGeometry(smokeSize, 6, 6);
-              const smokeMat = new THREE.MeshBasicMaterial({ 
-                color: smokeColor,
-                transparent: true,
-                opacity: isExhale ? 0.7 : 0.5
-              });
-              const smoke = new THREE.Mesh(smokeGeo, smokeMat);
+            // Position at cigar tip
+            const tipWorldPos = new THREE.Vector3();
+            this.cigarTip.getWorldPosition(tipWorldPos);
+            smoke.position.copy(tipWorldPos);
+            scene.add(smoke);
+            
+            // Animate smoke rising
+            let smokeLife = 80;
+            const updateSmoke = () => {
+              smokeLife--;
+              smoke.position.y += 0.02; // Rise up
+              smoke.position.x += (Math.random() - 0.5) * 0.01; // Drift
+              smoke.position.z += (Math.random() - 0.5) * 0.01;
+              smoke.scale.multiplyScalar(1.02); // Expand
+              smoke.material.opacity = (smokeLife / 80) * 0.5; // Fade out
               
-              // Position based on whether it's exhale or cigar smoke
-              if (isExhale) {
-                // Exhale from nose/mouth area (front of face)
-                const nosePos = new THREE.Vector3(
-                  Math.random() * 0.1 - 0.05, // Slight random spread
-                  0.05 + Math.random() * 0.1, // Around nose/mouth height
-                  0.45 // Front of face
-                );
-                nosePos.applyMatrix4(this.mesh.matrixWorld);
-                smoke.position.copy(nosePos);
+              if (smokeLife <= 0) {
+                scene.remove(smoke);
+                smoke.geometry.dispose();
+                smoke.material.dispose();
               } else {
-                // Regular smoke from cigar tip
-                const tipWorldPos = new THREE.Vector3();
-                this.cigarTip.getWorldPosition(tipWorldPos);
-                smoke.position.copy(tipWorldPos);
+                requestAnimationFrame(updateSmoke);
               }
-              scene.add(smoke);
-              
-              // Animate smoke rising
-              const smokeLife = isExhale ? 100 : 80;
-              let currentSmokeLife = smokeLife;
-              const updateSmoke = () => {
-                currentSmokeLife--;
-                smoke.position.y += isExhale ? 0.025 : 0.02; // Exhale rises faster
-                smoke.position.x += (Math.random() - 0.5) * (isExhale ? 0.02 : 0.01); // More drift on exhale
-                smoke.position.z += (Math.random() - 0.5) * (isExhale ? 0.02 : 0.01);
-                smoke.scale.multiplyScalar(isExhale ? 1.03 : 1.02); // Expand faster on exhale
-                smoke.material.opacity = (currentSmokeLife / smokeLife) * (isExhale ? 0.7 : 0.5); // Fade out
-                
-                if (currentSmokeLife <= 0) {
-                  scene.remove(smoke);
-                  smoke.geometry.dispose();
-                  smoke.material.dispose();
-                } else {
-                  requestAnimationFrame(updateSmoke);
-                }
-              };
-              updateSmoke();
-            }
+            };
+            updateSmoke();
           }
         }
         
@@ -5061,7 +4497,7 @@
           this.nextBlinkTime = 2 + Math.random() * 3; // Next blink in 2-5 seconds
         }
         
-        if (this.isBlinking && !this.eyesClosedForShooting) {
+        if (this.isBlinking) {
           // Scale eyes down vertically for blink effect
           const blinkProgress = Math.min(1, this.blinkTimer / this.blinkDuration);
           if (blinkProgress < 0.5) {
@@ -5083,62 +4519,11 @@
           if (blinkProgress >= 1) {
             this.isBlinking = false;
             this.blinkTimer = 0;
-            // Reset scale (unless eyes are closed for shooting)
-            if (!this.eyesClosedForShooting) {
-              this.leftEye.scale.y = 1;
-              this.rightEye.scale.y = 1;
+            // Reset scale
+            this.leftEye.scale.y = 1;
+            this.rightEye.scale.y = 1;
             this.leftPupil.scale.y = 1;
             this.rightPupil.scale.y = 1;
-          }
-        }
-        
-        // FRESH IMPLEMENTATION: RED EYES FEATURE UPDATE (safe with null checks)
-        if (this.redEyesActive) {
-          this.redEyesTimer += dt;
-          
-          // Null-safe pupil color change
-          if (this.leftPupil && this.leftPupil.material) {
-            this.leftPupil.material.color.setHex(RED_EYES_CONFIG.PUPIL_COLOR);
-          }
-          if (this.rightPupil && this.rightPupil.material) {
-            this.rightPupil.material.color.setHex(RED_EYES_CONFIG.PUPIL_COLOR);
-          }
-          
-          // Null-safe glow effect with pulsing
-          const glowIntensity = 0.6 + Math.sin(gameTime * 6) * 0.3;
-          if (this.redEyesGlowLeft && this.redEyesGlowLeft.material) {
-            this.redEyesGlowLeft.visible = true;
-            this.redEyesGlowLeft.material.opacity = glowIntensity;
-            // Asymmetric scale pulsing for intensity
-            const scaleL = 1.0 + Math.sin(gameTime * 6) * 0.2;
-            this.redEyesGlowLeft.scale.set(scaleL, scaleL, scaleL);
-          }
-          if (this.redEyesGlowRight && this.redEyesGlowRight.material) {
-            this.redEyesGlowRight.visible = true;
-            this.redEyesGlowRight.material.opacity = glowIntensity * 0.9; // Slightly different
-            // Asymmetric scale pulsing
-            const scaleR = 1.0 + Math.sin(gameTime * 6 + 0.5) * 0.25; // Phase offset
-            this.redEyesGlowRight.scale.set(scaleR, scaleR, scaleR);
-          }
-          
-          // Deactivate after duration
-          if (this.redEyesTimer >= this.redEyesDuration) {
-            this.redEyesActive = false;
-            this.redEyesTimer = 0;
-            
-            // Reset to normal (null-safe)
-            if (this.leftPupil && this.leftPupil.material) {
-              this.leftPupil.material.color.setHex(0x000000); // Black
-            }
-            if (this.rightPupil && this.rightPupil.material) {
-              this.rightPupil.material.color.setHex(0x000000); // Black
-            }
-            if (this.redEyesGlowLeft) {
-              this.redEyesGlowLeft.visible = false;
-            }
-            if (this.redEyesGlowRight) {
-              this.redEyesGlowRight.visible = false;
-            }
           }
         }
         
@@ -5263,15 +4648,6 @@
         playerStats.hp -= reduced;
         updateHUD();
         playSound('hit');
-        
-        // FRESH IMPLEMENTATION: Activate red eyes when taking heavy damage or at low health
-        const healthPercent = playerStats.hp / playerStats.maxHp;
-        if (healthPercent < RED_EYES_CONFIG.HEALTH_THRESHOLD || reduced > RED_EYES_CONFIG.DAMAGE_THRESHOLD) {
-          // Activate red eyes for dramatic effect
-          if (this.activateRedEyes && Math.random() < RED_EYES_CONFIG.ACTIVATION_CHANCE) {
-            this.activateRedEyes(RED_EYES_CONFIG.DAMAGE_DURATION);
-          }
-        }
         
         // Trigger waterdrop UI attack animation
         const waterdropContainer = document.getElementById('waterdrop-container');
@@ -5398,42 +4774,6 @@
           setTimeout(fadePool, 500);
           
           gameOver();
-        }
-      }
-      
-      // FRESH IMPLEMENTATION: Method to activate red eyes (safe with null checks)
-      activateRedEyes(duration = 5.0) {
-        try {
-          // Defensive check - only activate if meshes exist
-          if (!this.leftPupil || !this.rightPupil) {
-            console.warn('Cannot activate red eyes - pupil meshes not found');
-            return false;
-          }
-          
-          this.redEyesActive = true;
-          this.redEyesTimer = 0;
-          this.redEyesDuration = duration;
-          
-          // Immediate color change (null-safe)
-          if (this.leftPupil.material) {
-            this.leftPupil.material.color.setHex(RED_EYES_CONFIG.PUPIL_COLOR);
-          }
-          if (this.rightPupil.material) {
-            this.rightPupil.material.color.setHex(RED_EYES_CONFIG.PUPIL_COLOR);
-          }
-          
-          // Show glow (null-safe)
-          if (this.redEyesGlowLeft) {
-            this.redEyesGlowLeft.visible = true;
-          }
-          if (this.redEyesGlowRight) {
-            this.redEyesGlowRight.visible = true;
-          }
-          
-          return true;
-        } catch (error) {
-          console.error('Failed to activate red eyes:', error);
-          return false;
         }
       }
     }
@@ -6005,12 +5345,11 @@
         this.hp -= finalAmount;
         createDamageNumber(Math.floor(finalAmount), this.mesh.position, isCrit);
         
-        // Hit flash effect (50ms) - FRESH IMPLEMENTATION: Use red blood flash instead of white
+        // White hit flash effect (50ms) - FRESH IMPLEMENTATION
         const originalColor = this.mesh.material.color.clone();
-        const bloodRed = COLORS.bloodRed; // Use named constant
-        this.mesh.material.color.setHex(bloodRed); // Blood flash instead of white
+        this.mesh.material.color.setHex(0xFFFFFF); // White flash
         setTimeout(() => {
-          if (this.mesh && this.mesh.material && !this.isDead) {
+          if (this.mesh && this.mesh.material) {
             this.mesh.material.color.copy(originalColor);
           }
         }, 50);
@@ -6151,10 +5490,9 @@
           playSound('hit');
         }
         
-        // Flash - use blood red instead of white to avoid freeze issue
+        // Flash
         const oldColor = this.mesh.material.color.getHex();
-        const bloodRed = COLORS.bloodRed; // Use named constant
-        this.mesh.material.color.setHex(bloodRed);
+        this.mesh.material.color.setHex(0xFFFFFF);
         
         // Enhanced splash particles using enemy's own color
         const enemyColor = oldColor;
@@ -6164,23 +5502,17 @@
         // Additional impact particles
         if (isCrit) {
           spawnParticles(this.mesh.position, enemyColor, 5);
-          spawnParticles(this.mesh.position, COLORS.tomatoRed, 3); // Use named constant
+          spawnParticles(this.mesh.position, 0xFFFFFF, 3);
         }
         
         // Enhanced squishy deformation on hit
         const squishScale = isCrit ? 0.7 : 0.85;
         this.mesh.scale.set(squishScale, 1.3, squishScale);
         setTimeout(() => {
-          if (this.mesh && !this.isDead) {
-            this.mesh.scale.set(1, 1, 1);
-          }
+          this.mesh.scale.set(1, 1, 1);
         }, 100);
         
-        setTimeout(() => {
-          if (this.mesh && this.mesh.material && !this.isDead) {
-            this.mesh.material.color.setHex(oldColor);
-          }
-        }, 50);
+        setTimeout(() => this.mesh.material.color.setHex(oldColor), 50);
 
         if (this.hp <= 0) {
           this.die();
@@ -6255,21 +5587,14 @@
         document.body.appendChild(flash);
         setTimeout(() => flash.remove(), this.isMiniBoss ? 100 : 50);
         
-        // CRITICAL FIX: Save position before removing mesh
-        const deathPosition = {
-          x: this.mesh.position.x,
-          z: this.mesh.position.z
-        };
-        const { x: deathX, z: deathZ } = deathPosition; // Destructure for cleaner code
-        
         scene.remove(this.mesh);
         this.mesh.geometry.dispose();
         this.mesh.material.dispose();
         
-        // Drop EXP - ALWAYS (using saved position)
+        // Drop EXP
         const expMultiplier = this.isMiniBoss ? 3 : 1;
         for (let i = 0; i < expMultiplier; i++) {
-          spawnExp(deathX, deathZ);
+          spawnExp(this.mesh.position.x, this.mesh.position.z);
         }
         
         // PR #117: Drop GOLD - Reduced drop rate (chest-like rarity), bigger amounts
@@ -6312,9 +5637,9 @@
           }
         }
         
-        // Only spawn gold if amount > 0 (using saved position)
+        // Only spawn gold if amount > 0
         if (goldAmount > 0) {
-          spawnGold(deathX, deathZ, goldAmount);
+          spawnGold(this.mesh.position.x, this.mesh.position.z, goldAmount);
         }
         
         // Phase 1: Gear drop system - enemies have a chance to drop gear
@@ -6332,7 +5657,7 @@
           saveData.inventory.push(newGear);
           saveSaveData();
           
-          // Show notification (using saved position)
+          // Show notification
           const rarityColors = {
             common: '#AAAAAA',
             uncommon: '#00FF00',
@@ -6340,9 +5665,7 @@
             epic: '#9B59B6',
             legendary: '#F39C12'
           };
-          // Create a position vector for the floating text
-          const dropPos = new THREE.Vector3(deathX, 0.5, deathZ);
-          createFloatingText(`+${newGear.name}`, dropPos, rarityColors[newGear.rarity] || '#FFFFFF');
+          createFloatingText(`+${newGear.name}`, this.mesh.position, rarityColors[newGear.rarity] || '#FFFFFF');
           playSound('coin');
           
           console.log('[Phase 1 Gear Drop]', newGear.name, '-', newGear.rarity);
@@ -6350,7 +5673,7 @@
         
         playerStats.kills++;
         
-        // Track side challenge progress (using saved position)
+        // Track side challenge progress
         if (saveData.sideChallenges.kill10Enemies && !saveData.sideChallenges.kill10Enemies.completed) {
           saveData.sideChallenges.kill10Enemies.progress++;
           if (saveData.sideChallenges.kill10Enemies.progress >= saveData.sideChallenges.kill10Enemies.target) {
@@ -6358,16 +5681,14 @@
             // Award gold before saving to prevent loss on crash
             saveData.gold += 50;
             saveSaveData();
-            const questPos = new THREE.Vector3(deathX, 0.5, deathZ);
-            createFloatingText("Side Quest Complete: Kill 10 Enemies! +50 Gold", questPos, '#FFD700');
+            createFloatingText("Side Quest Complete: Kill 10 Enemies! +50 Gold", this.mesh.position, '#FFD700');
           }
         }
         
-        // Track mini-boss defeats for achievements (using saved position)
+        // Track mini-boss defeats for achievements
         if (this.isMiniBoss) {
           playerStats.miniBossesDefeated++;
-          const bossPos = new THREE.Vector3(deathX, 0.5, deathZ);
-          createFloatingText("MINI-BOSS DEFEATED! 🏆", bossPos);
+          createFloatingText("MINI-BOSS DEFEATED! 🏆", this.mesh.position);
         }
         
         updateHUD();
@@ -11282,45 +10603,25 @@
         return;
       }
       
-      // FRESH IMPLEMENTATION: Enhanced quest descriptions with progress
+      // Quest descriptions
       const questDescriptions = {
-        'firstRun': '📜 Quest: Start your first run! 🎮',
-        'unlockSkillTree': '📜 Quest: Unlock Skill Tree (250g) 🌳',
-        'useSkillTree': '📜 Quest: Learn your first skill ⭐',
-        'unlockForge': '📜 Quest: Unlock Forge (250g) ⚒️',
-        'useForge': '📜 Quest: Craft your first weapon 🔨',
-        'unlockRecycle': '📜 Quest: Unlock Trash & Recycle (300g) ♻️',
-        'useRecycle': '📜 Quest: Scrap an item 🗑️',
-        'unlockArmory': '📜 Quest: Unlock Armory (250g) 🛡️',
-        'useArmory': '📜 Quest: Equip gear at Armory ⚔️'
+        'firstRun': '📜 Quest: Start your first run!',
+        'unlockSkillTree': '📜 Quest: Unlock Skill Tree (250g)',
+        'useSkillTree': '📜 Quest: Learn your first skill',
+        'unlockForge': '📜 Quest: Unlock Forge (250g)',
+        'useForge': '📜 Quest: Craft your first weapon',
+        'unlockRecycle': '📜 Quest: Unlock Trash & Recycle (300g)',
+        'useRecycle': '📜 Quest: Scrap an item',
+        'unlockArmory': '📜 Quest: Unlock Armory (250g)',
+        'useArmory': '📜 Quest: Equip gear at Armory'
       };
       
       if (questDescriptions[currentQuest]) {
         questTracker.textContent = questDescriptions[currentQuest];
         questTracker.style.display = 'block';
-        
-        // FRESH IMPLEMENTATION: Add pulsing animation for active quest
-        questTracker.style.animation = 'questPulse 2s ease-in-out infinite';
       } else {
         questTracker.style.display = 'none';
       }
-    }
-    
-    // FRESH IMPLEMENTATION: Quest notification system
-    function showQuestProgress(questName, current, total) {
-      const statusMsg = document.getElementById('status-message');
-      if (!statusMsg) return;
-      
-      const percentage = Math.floor((current / total) * 100);
-      statusMsg.textContent = `📜 ${questName}: ${current}/${total} (${percentage}%)`;
-      statusMsg.style.color = '#FFD700';
-      
-      // Auto-hide after 3 seconds
-      setTimeout(() => {
-        if (statusMsg.textContent.includes(questName)) {
-          statusMsg.textContent = '';
-        }
-      }, 3000);
     }
 
     // --- STORY QUEST POPUP SYSTEM ---
@@ -13470,55 +12771,32 @@
       camera.position.set(20, 20, 20); // Isometric angle
       camera.lookAt(scene.position);
 
-      // Renderer - Enhanced for 4K quality
-      renderer = new THREE.WebGLRenderer({ 
-        antialias: true,
-        powerPreference: 'high-performance',
-        precision: 'highp', // High precision for better quality
-        alpha: false
-      });
+      // Renderer
+      renderer = new THREE.WebGLRenderer({ antialias: true });
       renderer.setSize(window.innerWidth, window.innerHeight);
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Support high DPI displays
       renderer.shadowMap.enabled = true;
-      renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Soft shadows
-      // FRESH IMPLEMENTATION: Enhanced rendering quality
-      renderer.outputEncoding = THREE.sRGBEncoding; // Better color accuracy
-      renderer.toneMapping = THREE.ACESFilmicToneMapping; // Cinematic look
-      renderer.toneMappingExposure = 1.2; // Slightly brighter
-      renderer.physicallyCorrectLights = true; // Realistic lighting
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
       document.getElementById('game-container').appendChild(renderer.domElement);
 
       // Day/Night Cycle System - Non-blocking, smooth transitions
       // Store light references for day/night cycle
-      // FRESH IMPLEMENTATION: Enhanced 4K-quality lighting
-      window.ambientLight = new THREE.AmbientLight(0xffffff, 0.7); // Slightly brighter
+      window.ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
       scene.add(window.ambientLight);
 
-      // Realistic sun/moon with soft dynamic shadows - 4K quality
-      window.dirLight = new THREE.DirectionalLight(0xffffff, 1.0); // Brighter
+      // Realistic sun/moon with soft dynamic shadows
+      window.dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
       window.dirLight.position.set(50, 100, 50);
       window.dirLight.castShadow = true;
-      // 4K shadow quality - higher resolution
-      window.dirLight.shadow.mapSize.width = 4096; // 4K shadow maps
-      window.dirLight.shadow.mapSize.height = 4096;
+      window.dirLight.shadow.mapSize.width = 2048;
+      window.dirLight.shadow.mapSize.height = 2048;
       window.dirLight.shadow.camera.left = -100;
       window.dirLight.shadow.camera.right = 100;
       window.dirLight.shadow.camera.top = 100;
       window.dirLight.shadow.camera.bottom = -100;
       // Soft shadow settings for realistic effect
-      window.dirLight.shadow.radius = 6; // Softer shadow blur for quality
-      window.dirLight.shadow.bias = -0.00005; // Prevent shadow acne
+      window.dirLight.shadow.radius = 4; // Soft shadow blur
+      window.dirLight.shadow.bias = -0.0001; // Prevent shadow acne
       scene.add(window.dirLight);
-      
-      // FRESH IMPLEMENTATION: Add fill light for better character definition
-      const fillLight = new THREE.DirectionalLight(0x6699FF, 0.3);
-      fillLight.position.set(-50, 50, -50);
-      scene.add(fillLight);
-      
-      // FRESH IMPLEMENTATION: Add rim light for depth
-      const rimLight = new THREE.DirectionalLight(0xFFAA44, 0.2);
-      rimLight.position.set(0, 20, -100);
-      scene.add(rimLight);
 
       // Apply graphics quality settings
       applyGraphicsQuality(gameSettings.graphicsQuality);
@@ -13531,12 +12809,6 @@
       
       // Initialize gear system
       initializeGear();
-      
-      // FRESH IMPLEMENTATION: Initialize minimap
-      initMinimap();
-      
-      // FRESH IMPLEMENTATION: Initialize weather system
-      initWeatherParticles();
       
       // Initialize background music
       updateBackgroundMusic();
@@ -13639,91 +12911,44 @@
         return;
       }
       
-      const progress = Math.min(cinematicIntroTimer / currentStep.duration, 1);
-      const eased = easeInOutCubic(progress);
-      
       // Handle current step based on type
-      if (currentStep.type === 'droneview') {
-        // FRESH IMPLEMENTATION: Drone-like top-down view
-        if (player && player.mesh) {
-          const targetPos = player.mesh.position;
-          camera.position.x = targetPos.x;
-          camera.position.y = 80; // High altitude drone view
-          camera.position.z = targetPos.z + 5;
-          camera.lookAt(targetPos.x, 0, targetPos.z);
-        }
-      } else if (currentStep.type === 'showstructures') {
-        // FRESH IMPLEMENTATION: Show structures from steeper side+up angle as specified
-        if (player && player.mesh) {
-          const targetPos = player.mesh.position;
-          const panAngle = progress * Math.PI * 2; // 360° pan
-          const radius = 50;
-          camera.position.x = targetPos.x + Math.cos(panAngle) * radius;
-          camera.position.y = 65; // Steeper angle - higher up
-          camera.position.z = targetPos.z + Math.sin(panAngle) * radius;
-          // Look at slightly above ground for better landmark view
-          camera.lookAt(targetPos.x, 5, targetPos.z);
+      if (currentStep.type === 'landmark') {
+        const pos = introLandmarkPositions[currentStep.target];
+        if (pos) {
+          // Smoothly move camera to landmark
+          const progress = Math.min(cinematicIntroTimer / currentStep.duration, 1);
+          const eased = easeInOutCubic(progress);
+          
+          camera.position.x = camera.position.x + (pos.x - camera.position.x) * 0.1;
+          camera.position.y = pos.y;
+          camera.position.z = camera.position.z + (pos.z - camera.position.z) * 0.1;
+          camera.lookAt(pos.x, 0, pos.z);
+          
+          // Show description bubble
+          if (cinematicIntroTimer < DESCRIPTION_DISPLAY_TIME && progress < DESCRIPTION_PROGRESS_THRESHOLD) {
+            showLandmarkDescription(currentStep.target);
+          }
         }
       } else if (currentStep.type === 'zoomout') {
-        // FRESH IMPLEMENTATION: Zoom way out to "whole map" feel (~3000m equivalent)
-        if (player && player.mesh) {
-          const targetPos = player.mesh.position;
-          camera.position.x = targetPos.x;
-          camera.position.y = 20 + (150 - 20) * eased; // Zoom way out - higher altitude
-          camera.position.z = targetPos.z + 20 + (120 - 20) * eased; // Further back for whole map view
-          camera.lookAt(targetPos.x, 0, targetPos.z);
-        }
+        // Zoom out to show full map
+        const progress = Math.min(cinematicIntroTimer / currentStep.duration, 1);
+        camera.position.y = 20 + (50 - 20) * easeInOutCubic(progress);
       } else if (currentStep.type === 'zoomin') {
-        // FRESH IMPLEMENTATION: Zoom into character
+        // Zoom in rapidly to player
+        const progress = Math.min(cinematicIntroTimer / currentStep.duration, 1);
         if (player && player.mesh) {
           const targetPos = player.mesh.position;
-          camera.position.x = targetPos.x + 20 * (1 - eased);
-          camera.position.y = 100 - (100 - 20) * eased;
-          camera.position.z = targetPos.z + 100 - (100 - 20) * eased;
+          camera.position.x = camera.position.x + (targetPos.x - camera.position.x) * 0.3;
+          camera.position.y = 20 + (15 - 20) * easeInOutCubic(progress);
+          camera.position.z = camera.position.z + (targetPos.z + 20 - camera.position.z) * 0.3;
           camera.lookAt(targetPos.x, 0, targetPos.z);
         }
       } else if (currentStep.type === 'cigar') {
-        // FRESH IMPLEMENTATION: Character smoking cigar closeup
+        // Player cigar smoke animation
         if (player && player.mesh && cinematicIntroTimer < currentStep.duration) {
-          const targetPos = player.mesh.position;
-          // Close up on character's face
-          camera.position.x = targetPos.x + 3;
-          camera.position.y = 5;
-          camera.position.z = targetPos.z + 3;
-          camera.lookAt(targetPos.x, 1, targetPos.z);
-          
-          // Spawn smoke particles
           const smokeInterval = 0.2;
           if (Math.floor(cinematicIntroTimer / smokeInterval) > Math.floor((cinematicIntroTimer - dt) / smokeInterval)) {
-            createSmokeParticle(new THREE.Vector3(targetPos.x, targetPos.y + 0.5, targetPos.z));
-          }
-        }
-      } else if (currentStep.type === 'gameplay') {
-        // FRESH IMPLEMENTATION: Transition back to gameplay angle
-        if (player && player.mesh) {
-          const targetPos = player.mesh.position;
-          camera.position.x = targetPos.x + 20 * (1 - eased);
-          camera.position.y = 20;
-          camera.position.z = targetPos.z + 20 * (1 - eased);
-          camera.lookAt(targetPos.x, 0, targetPos.z);
-        }
-      } else if (currentStep.type === 'countdown') {
-        // FRESH IMPLEMENTATION: 3-2-1 countdown
-        const timeLeft = Math.ceil(currentStep.duration - cinematicIntroTimer);
-        if (timeLeft > 0 && timeLeft <= 3) {
-          // Display countdown number
-          const countdownEl = document.getElementById('countdown-display');
-          if (countdownEl) {
-            countdownEl.textContent = timeLeft;
-            countdownEl.style.display = 'block';
-            countdownEl.style.fontSize = '120px';
-            countdownEl.style.color = '#FFD700';
-            countdownEl.style.textShadow = '0 0 20px rgba(255,215,0,0.8)';
-          }
-        } else {
-          const countdownEl = document.getElementById('countdown-display');
-          if (countdownEl) {
-            countdownEl.style.display = 'none';
+            createSmokeParticle(player.mesh.position);
           }
         }
       }
@@ -13743,13 +12968,6 @@
       setGameActive(true);
       gameStartTime = Date.now();
       console.log('[CinematicIntro] Intro complete - Game started - isPaused:', isPaused, 'isGameActive:', isGameActive);
-      
-      // FRESH IMPLEMENTATION: Show initial "Kill 10 Enemies" quest notification
-      setTimeout(() => {
-        if (!saveData.sideChallenges.kill10Enemies.completed) {
-          showStatusMessage('📜 QUEST: Kill 10 Enemies for +50 Gold!', 5000, '#FFD700');
-        }
-      }, 1000);
     }
     
     function showLandmarkDescription(landmark) {
@@ -13803,95 +13021,6 @@
         camera.position.x += (Math.random() - 0.5) * shake;
         camera.position.y += (Math.random() - 0.5) * shake;
         camera.position.z += (Math.random() - 0.5) * shake;
-      }
-    }
-    
-    // FRESH IMPLEMENTATION: CINEMATIC CAMERA SYSTEM
-    let cinematicCamera = {
-      active: false,
-      type: null, // 'zoom', 'pan', 'focus', 'dramatic'
-      startTime: 0,
-      duration: 0,
-      startZoom: 15,
-      targetZoom: 15,
-      startPos: null,
-      targetPos: null,
-      easing: 'smooth' // 'smooth', 'linear', 'ease-in', 'ease-out'
-    };
-    
-    // Activate cinematic camera effect
-    function activateCinematicCamera(type, options = {}) {
-      cinematicCamera.active = true;
-      cinematicCamera.type = type;
-      cinematicCamera.startTime = gameTime;
-      cinematicCamera.duration = options.duration || 2.0;
-      cinematicCamera.easing = options.easing || 'smooth';
-      
-      // Store starting values
-      cinematicCamera.startZoom = cameraZoom.current;
-      
-      if (type === 'zoom_in') {
-        cinematicCamera.targetZoom = options.zoom || 8;
-        cameraZoom.speed = 1; // Slower for cinematic effect
-      } else if (type === 'zoom_out') {
-        cinematicCamera.targetZoom = options.zoom || 25;
-        cameraZoom.speed = 1;
-      } else if (type === 'focus') {
-        // Focus on specific position
-        cinematicCamera.targetPos = options.target || null;
-        cinematicCamera.targetZoom = options.zoom || 12;
-      } else if (type === 'dramatic_angle') {
-        // Dramatic camera angle for special events
-        cinematicCamera.targetZoom = options.zoom || 10;
-        // Could add camera tilt here if needed
-      }
-      
-      // Activate red eyes during dramatic moments if player exists
-      if (player && player.activateRedEyes && Math.random() < RED_EYES_CONFIG.CINEMATIC_CHANCE) {
-        player.activateRedEyes(cinematicCamera.duration);
-      }
-    }
-    
-    // Update cinematic camera
-    function updateCinematicCamera(dt) {
-      if (!cinematicCamera.active) return;
-      
-      const elapsed = gameTime - cinematicCamera.startTime;
-      const progress = Math.min(elapsed / cinematicCamera.duration, 1);
-      
-      // Apply easing
-      let t = progress;
-      if (cinematicCamera.easing === 'smooth') {
-        t = t * t * (3 - 2 * t); // Smoothstep
-      } else if (cinematicCamera.easing === 'ease-in') {
-        t = t * t;
-      } else if (cinematicCamera.easing === 'ease-out') {
-        t = 1 - (1 - t) * (1 - t);
-      }
-      
-      // Update zoom
-      if (cinematicCamera.targetZoom !== cinematicCamera.startZoom) {
-        cameraZoom.target = cinematicCamera.startZoom + 
-          (cinematicCamera.targetZoom - cinematicCamera.startZoom) * t;
-      }
-      
-      // Update focus position
-      if (cinematicCamera.targetPos) {
-        cameraTargetPos = cinematicCamera.targetPos;
-      }
-      
-      // End cinematic
-      if (progress >= 1) {
-        cinematicCamera.active = false;
-        cinematicCamera.type = null;
-        cameraZoom.speed = 2; // Reset to normal speed
-        
-        // Reset camera target after some types
-        if (cinematicCamera.type === 'focus') {
-          setTimeout(() => {
-            cameraTargetPos = null;
-          }, CAMERA_CONFIG.RESET_DELAY_MS);
-        }
       }
     }
     
@@ -14794,16 +13923,8 @@
       playerStats.lvl++;
       playerStats.exp -= playerStats.expReq;
       
-      // FRESH IMPLEMENTATION: Cinematic camera for major milestones
-      if (playerStats.lvl % 10 === 0) {
-        activateCinematicCamera('zoom_in', { duration: 1.5, zoom: 10, easing: 'smooth' });
-      }
-      
       // Victory condition: Reaching level 150
       if (playerStats.lvl === 150) {
-        // FRESH IMPLEMENTATION: Epic victory cinematic
-        activateCinematicCamera('dramatic_angle', { duration: 3, zoom: 8, easing: 'ease-out' });
-        
         setTimeout(() => {
           showStatChange('🎉 ULTIMATE VICTORY! You reached Level 150! 🎉');
           setTimeout(() => {
@@ -14927,16 +14048,6 @@
     }
     
     function createLevelUpEffects() {
-      // FRESH IMPLEMENTATION: Spawn 2-5 XP drops outward as specified in Big Update requirements
-      const numDrops = 2 + Math.floor(Math.random() * 4); // 2-5 drops
-      for (let i = 0; i < numDrops; i++) {
-        const angle = (i / numDrops) * Math.PI * 2 + Math.random() * 0.3; // Spread evenly with slight randomness
-        const distance = 3 + Math.random() * 2; // 3-5 units away
-        const dropX = player.mesh.position.x + Math.cos(angle) * distance;
-        const dropZ = player.mesh.position.z + Math.sin(angle) * distance;
-        spawnExp(dropX, dropZ);
-      }
-      
       // ADVANCED: Mage Aura Effect - Pushes dust/fog away from character
       // Create expanding aura ring with particle push
       for(let i=0; i<80; i++) {
@@ -16125,12 +15236,6 @@
           comboState.shownMilestones = []; // Reset shown milestones when combo breaks
         }
         comboState.lastKillTime = currentTime;
-        
-        // FRESH IMPLEMENTATION: Activate red eyes on high combos
-        if (comboState.count >= RED_EYES_CONFIG.EPIC_COMBO_THRESHOLD && player && player.activateRedEyes) {
-          // Activate red eyes for epic combos
-          player.activateRedEyes(RED_EYES_CONFIG.EPIC_DURATION);
-        }
         
         // Show combo if 5+ kills (updated to start at 5)
         if (comboState.count >= 5) {
@@ -17637,9 +16742,6 @@
       // Update ambient creatures (birds, bats, fireflies, owls) based on time of day
       if (isGameActive && !isPaused) {
         updateAmbientCreatures(dt);
-        
-        // FRESH IMPLEMENTATION: Update weather system (rain, snow, wind)
-        updateWeather(dt);
       }
       
       // Frame Skip Mechanism: Determine if rendering should be skipped based on previous frame time
@@ -17917,28 +17019,6 @@
         }
 
         if (nearest) {
-          // FRESH IMPLEMENTATION: Close eyes while shooting (add eye closing state)
-          if (player.leftEye && player.rightEye) {
-            player.eyesClosedForShooting = true;
-            player.leftEye.scale.y = 0.2; // Nearly closed
-            player.rightEye.scale.y = 0.2;
-            player.leftPupil.scale.y = 0.2;
-            player.rightPupil.scale.y = 0.2;
-            
-            // Reset eyes after brief moment
-            setTimeout(() => {
-              if (player.leftEye && player.rightEye) {
-                player.eyesClosedForShooting = false;
-                if (!player.isBlinking) { // Don't interfere with blinking
-                  player.leftEye.scale.y = 1;
-                  player.rightEye.scale.y = 1;
-                  player.leftPupil.scale.y = 1;
-                  player.rightPupil.scale.y = 1;
-                }
-              }
-            }, 100); // Eyes closed for 100ms
-          }
-          
           // Fire based on barrels
           for(let i=0; i<weapons.gun.barrels; i++) {
             setTimeout(() => {
@@ -18553,15 +17633,6 @@
       
       // VISUAL POLISH: Update camera shake
       updateCameraShake(dt);
-      
-      // FRESH IMPLEMENTATION: Update cinematic camera
-      updateCinematicCamera(dt);
-      
-      // FRESH IMPLEMENTATION: Update region display
-      updateRegionDisplay();
-      
-      // FRESH IMPLEMENTATION: Update minimap
-      updateMinimap();
       
       // VISUAL POLISH: Lightning strikes during storms (random periodic)
       lightningTimer += dt;
