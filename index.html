@@ -3868,7 +3868,8 @@
       // Check if device has touch support
       const hasTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
       // Check if it's likely a mobile device (small screen + touch)
-      const isMobileDevice = hasTouch && (window.innerWidth <= MOBILE_BREAKPOINT || window.innerHeight <= MOBILE_BREAKPOINT);
+      // Use AND condition to ensure both dimensions are small (avoids false positives for tablets)
+      const isMobileDevice = hasTouch && (window.innerWidth <= MOBILE_BREAKPOINT && window.innerHeight <= MOBILE_BREAKPOINT);
       
       if (isMobileDevice) {
         return 'touch';
@@ -12699,6 +12700,23 @@
       console.log('[CinematicIntro] Intro complete - Game started - isPaused:', isPaused, 'isGameActive:', isGameActive);
     }
     
+    // Shared function to skip intro/countdown and start game immediately
+    function skipToGameStart() {
+      const wasCountdownActive = countdownActive;
+      const wasCinematicActive = cinematicIntroActive;
+      
+      // Clear both sequences
+      countdownActive = false;
+      cinematicIntroActive = false;
+      
+      // Start the game
+      setGamePaused(false);
+      setGameActive(true);
+      gameStartTime = Date.now();
+      
+      console.log('[Skip] Skipped to game start - countdown:', wasCountdownActive, 'cinematic:', wasCinematicActive);
+    }
+    
     function showLandmarkDescription(landmark) {
       const descriptions = {
         stonehenge: '🗿 Ancient Stonehenge - Mystical Power',
@@ -16169,16 +16187,7 @@
       container.addEventListener('touchend', (e) => {
         // Allow skipping cinematic intro/countdown with touch
         if (cinematicIntroActive || countdownActive) {
-          // Skip directly to gameplay by ending both sequences
-          countdownActive = false;
-          if (cinematicIntroActive) {
-            endCinematicIntro();
-          } else {
-            // If only countdown is active, skip directly to game start
-            setGamePaused(false);
-            setGameActive(true);
-            gameStartTime = Date.now();
-          }
+          skipToGameStart();
           e.preventDefault();
           return;
         }
@@ -16199,16 +16208,7 @@
       container.addEventListener('click', (e) => {
         // Allow skipping cinematic intro/countdown with click
         if (cinematicIntroActive || countdownActive) {
-          // Skip directly to gameplay by ending both sequences
-          countdownActive = false;
-          if (cinematicIntroActive) {
-            endCinematicIntro();
-          } else {
-            // If only countdown is active, skip directly to game start
-            setGamePaused(false);
-            setGameActive(true);
-            gameStartTime = Date.now();
-          }
+          skipToGameStart();
           e.preventDefault();
         }
       }, { passive: false });
@@ -16221,16 +16221,7 @@
         window.addEventListener('keydown', (e) => {
           // Allow skipping cinematic intro with any key press
           if (cinematicIntroActive || countdownActive) {
-            // Skip directly to gameplay by ending both sequences
-            countdownActive = false;
-            if (cinematicIntroActive) {
-              endCinematicIntro();
-            } else {
-              // If only countdown is active, skip directly to game start
-              setGamePaused(false);
-              setGameActive(true);
-              gameStartTime = Date.now();
-            }
+            skipToGameStart();
             return;
           }
           
