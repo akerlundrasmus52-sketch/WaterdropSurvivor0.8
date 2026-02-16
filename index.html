@@ -1640,6 +1640,78 @@
       100% { transform: rotate(5deg) scale(1.05); }
     }
 
+    /* Equipment Slot Cards */
+    .equipment-slot-card {
+      background: linear-gradient(135deg, #2a3a4a 0%, #1a2a3a 100%);
+      border: 3px solid #555;
+      border-radius: 15px;
+      padding: 15px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+    }
+
+    .equipment-slot-card:hover {
+      border-color: #F39C12;
+      box-shadow: 0 0 20px rgba(243,156,18,0.5);
+      transform: translateY(-5px);
+    }
+
+    .equipment-slot-card.equipped {
+      border-color: #00FF00;
+      box-shadow: 0 0 15px rgba(0,255,0,0.4);
+    }
+
+    .equipment-slot-icon {
+      font-size: 48px;
+      margin-bottom: 10px;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+    }
+
+    .equipment-slot-name {
+      font-size: 14px;
+      font-weight: bold;
+      color: #FFD700;
+      margin-bottom: 8px;
+      letter-spacing: 1px;
+    }
+
+    .equipment-slot-item {
+      font-size: 12px;
+      color: #AAA;
+      min-height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Rarity Border Colors */
+    .rarity-common {
+      border-color: #FFFFFF !important;
+    }
+
+    .rarity-uncommon {
+      border-color: #1EFF00 !important;
+    }
+
+    .rarity-rare {
+      border-color: #0070DD !important;
+    }
+
+    .rarity-epic {
+      border-color: #A335EE !important;
+    }
+
+    .rarity-legendary {
+      border-color: #FF8000 !important;
+    }
+
+    .rarity-mythical {
+      border-color: #E6CC80 !important;
+      box-shadow: 0 0 20px rgba(230,204,128,0.6) !important;
+    }
+
     .back-btn {
       position: fixed;
       bottom: 20px;
@@ -2072,22 +2144,80 @@
   </div>
 
   <!-- Gear & Equipment Screen -->
+  <!-- Gear & Equipment Screen - Enhanced UI with Character Model -->
   <div id="gear-screen" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 20; overflow-y: auto; flex-direction: column; align-items: center; justify-content: flex-start; padding: 20px;">
-    <div class="screen-title" style="color: #F39C12; font-size: 36px; margin: 20px 0; text-shadow: 0 0 10px rgba(243,156,18,0.8);">GEAR & EQUIPMENT</div>
-    <div style="color: #FFD700; font-size: 18px; margin-bottom: 10px;">Equip gear to boost your attributes</div>
+    <div class="screen-title" style="color: #F39C12; font-size: 36px; margin: 20px 0; text-shadow: 0 0 10px rgba(243,156,18,0.8);">⚔️ EQUIPMENT</div>
     
-    <!-- Gear Stats Display -->
-    <div id="gear-stats-display" style="background: linear-gradient(to bottom, #2a3a4a, #1a2a3a); border: 3px solid #F39C12; border-radius: 15px; padding: 15px; margin-bottom: 20px; width: 100%; max-width: 700px;">
-      <div style="color: #F39C12; font-size: 20px; font-weight: bold; margin-bottom: 10px;">Current Gear Bonuses:</div>
-      <div id="gear-stats-content" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;">
+    <!-- Main Equipment Layout: Character + Slots + Inventory -->
+    <div style="display: flex; gap: 20px; width: 100%; max-width: 1200px; margin: 0 auto; flex-wrap: wrap; justify-content: center;">
+      
+      <!-- Left: Equipment Slots (3 slots) -->
+      <div style="flex: 0 0 200px; display: flex; flex-direction: column; gap: 15px;">
+        <div class="equipment-slot-card" data-slot="helmet">
+          <div class="equipment-slot-icon">🪖</div>
+          <div class="equipment-slot-name">HELMET</div>
+          <div class="equipment-slot-item" id="slot-helmet-content">Empty</div>
+        </div>
+        <div class="equipment-slot-card" data-slot="weapon">
+          <div class="equipment-slot-icon">⚔️</div>
+          <div class="equipment-slot-name">WEAPON</div>
+          <div class="equipment-slot-item" id="slot-weapon-content">Empty</div>
+        </div>
+        <div class="equipment-slot-card" data-slot="ring">
+          <div class="equipment-slot-icon">💍</div>
+          <div class="equipment-slot-name">RING</div>
+          <div class="equipment-slot-item" id="slot-ring-content">Empty</div>
+        </div>
+      </div>
+      
+      <!-- Center: Character Model -->
+      <div style="flex: 0 0 300px; display: flex; flex-direction: column; align-items: center;">
+        <div id="character-display" style="position: relative; width: 250px; height: 300px; background: linear-gradient(135deg, #1a3a4a 0%, #0a1a2a 100%); border: 4px solid #F39C12; border-radius: 20px; display: flex; align-items: center; justify-content: center; margin-bottom: 15px; box-shadow: 0 0 30px rgba(243,156,18,0.5);">
+          <!-- Waterdrop Character -->
+          <div id="waterdrop-character" style="width: 120px; height: 150px; background: linear-gradient(135deg, #4FC3F7 0%, #29B6F6 50%, #039BE5 100%); border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%; box-shadow: 0 10px 30px rgba(79,195,247,0.5); position: relative;">
+            <!-- Equipment Visual Overlays -->
+            <div id="helmet-visual" class="equipment-visual" style="display: none; position: absolute; top: -10px; left: 50%; transform: translateX(-50%); width: 80%; height: 30px; background: linear-gradient(to bottom, #8B4513, #A0522D); border-radius: 50% 50% 0 0; border: 2px solid #000;"></div>
+            <div id="armor-visual" class="equipment-visual" style="display: none; position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); width: 90%; height: 50%; background: linear-gradient(135deg, #708090, #A9A9A9); border-radius: 10px; border: 2px solid #000; opacity: 0.8;"></div>
+            <div id="boots-visual" class="equipment-visual" style="display: none; position: absolute; bottom: -5px; left: 50%; transform: translateX(-50%); width: 70%; height: 20px; background: linear-gradient(to top, #654321, #8B4513); border-radius: 0 0 20px 20px; border: 2px solid #000;"></div>
+          </div>
+        </div>
+        <!-- Gear Stats Display -->
+        <div style="background: linear-gradient(to bottom, #2a3a4a, #1a2a3a); border: 2px solid #F39C12; border-radius: 10px; padding: 10px; width: 100%;">
+          <div style="color: #F39C12; font-size: 14px; font-weight: bold; margin-bottom: 8px; text-align: center;">Total Bonuses:</div>
+          <div id="gear-stats-content" style="font-size: 12px; color: #FFF; display: grid; grid-template-columns: 1fr 1fr; gap: 5px;">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+      </div>
+      
+      <!-- Right: Equipment Slots (3 slots) -->
+      <div style="flex: 0 0 200px; display: flex; flex-direction: column; gap: 15px;">
+        <div class="equipment-slot-card" data-slot="armor">
+          <div class="equipment-slot-icon">🛡️</div>
+          <div class="equipment-slot-name">ARMOR</div>
+          <div class="equipment-slot-item" id="slot-armor-content">Empty</div>
+        </div>
+        <div class="equipment-slot-card" data-slot="boots">
+          <div class="equipment-slot-icon">👢</div>
+          <div class="equipment-slot-name">BOOTS</div>
+          <div class="equipment-slot-item" id="slot-boots-content">Empty</div>
+        </div>
+        <div class="equipment-slot-card" data-slot="amulet">
+          <div class="equipment-slot-icon">📿</div>
+          <div class="equipment-slot-name">AMULET</div>
+          <div class="equipment-slot-item" id="slot-amulet-content">Empty</div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Bottom: Inventory -->
+    <div style="width: 100%; max-width: 1200px; margin-top: 30px;">
+      <div style="color: #FFD700; font-size: 24px; margin-bottom: 15px; text-align: center;">📦 INVENTORY</div>
+      <div id="gear-content" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; max-height: 400px; overflow-y: auto; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 10px; border: 2px solid #444;">
         <!-- Dynamically populated -->
       </div>
     </div>
     
-    <!-- Gear Slots -->
-    <div class="screen-content" id="gear-content" style="display: grid; gap: 15px; width: 100%; max-width: 900px; margin: 0 auto;">
-      <!-- Dynamically populated -->
-    </div>
     <button class="back-btn" id="gear-back-btn" style="margin-top: 20px;">BACK TO MENU</button>
   </div>
 
@@ -8063,90 +8193,114 @@
       // Calculate total gear bonuses
       const gearStats = calculateGearStats();
       
-      // Update stats display
+      // Update stats display (compact version)
       let statsHtml = '';
       for (const statKey in GEAR_ATTRIBUTES) {
         const stat = GEAR_ATTRIBUTES[statKey];
         const value = gearStats[statKey] || 0;
-        statsHtml += `
-          <div style="display: flex; align-items: center; gap: 10px; padding: 5px;">
-            <span style="font-size: 24px;">${stat.icon}</span>
-            <div>
-              <div style="color: ${stat.color}; font-size: 14px; font-weight: bold;">${stat.name}</div>
-              <div style="color: #FFD700; font-size: 16px; font-weight: bold;">+${value}</div>
-            </div>
-          </div>
-        `;
+        if (value > 0) {
+          statsHtml += `<div style="color: ${stat.color}; font-size: 11px;"><span style="font-size: 14px;">${stat.icon}</span> +${value}</div>`;
+        }
       }
-      statsContent.innerHTML = statsHtml;
+      statsContent.innerHTML = statsHtml || '<div style="color: #777; text-align: center; grid-column: 1 / -1;">No bonuses</div>';
       
-      // Phase 1: Build gear slots display for all 6 slots
-      let html = '';
-      
-      const slots = [
-        { key: 'weapon', name: 'Weapon', icon: '⚔️' },
-        { key: 'armor', name: 'Armor', icon: '🛡️' },
-        { key: 'helmet', name: 'Helmet', icon: '⛑️' },
-        { key: 'boots', name: 'Boots', icon: '👢' },
-        { key: 'ring', name: 'Ring', icon: '💍' },
-        { key: 'amulet', name: 'Amulet', icon: '📿' }
-      ];
-      
-      for (const slot of slots) {
-        const equippedId = saveData.equippedGear[slot.key];
+      // Update equipment slot displays
+      const slots = ['helmet', 'weapon', 'ring', 'armor', 'boots', 'amulet'];
+      for (const slotKey of slots) {
+        const equippedId = saveData.equippedGear[slotKey];
         const equippedGear = equippedId ? saveData.inventory.find(g => g.id === equippedId) : null;
+        const slotContent = document.getElementById(`slot-${slotKey}-content`);
+        const slotCard = document.querySelector(`.equipment-slot-card[data-slot="${slotKey}"]`);
         
-        html += `
-          <div style="background: linear-gradient(to bottom, #2a3a4a, #1a2a3a); border: 3px solid #F39C12; border-radius: 15px; padding: 20px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-              <div style="display: flex; align-items: center; gap: 10px;">
-                <span style="font-size: 32px;">${slot.icon}</span>
-                <div style="color: #F39C12; font-size: 20px; font-weight: bold;">${slot.name}</div>
-              </div>
+        if (slotContent && slotCard) {
+          if (equippedGear) {
+            slotContent.innerHTML = `
+              <div style="color: ${getRarityColor(equippedGear.rarity)}; font-weight: bold; margin-bottom: 5px;">${equippedGear.name}</div>
+              <div style="font-size: 10px; color: #999;">${Object.entries(equippedGear.stats).map(([stat, val]) => `+${val} ${GEAR_ATTRIBUTES[stat].icon}`).join(' ')}</div>
+            `;
+            slotCard.classList.add('equipped');
+            slotCard.classList.add(`rarity-${equippedGear.rarity}`);
+          } else {
+            slotContent.textContent = 'Empty';
+            slotCard.classList.remove('equipped');
+            slots.forEach(s => slotCard.classList.remove(`rarity-${s}`));
+          }
+        }
+      }
+      
+      // Update character visuals
+      updateCharacterVisuals();
+      
+      // Update inventory grid
+      let inventoryHtml = '';
+      for (const gear of saveData.inventory) {
+        const isEquipped = Object.values(saveData.equippedGear).includes(gear.id);
+        inventoryHtml += `
+          <div class="equipment-slot-card rarity-${gear.rarity}" style="cursor: pointer; ${isEquipped ? 'opacity: 0.6;' : ''}" onclick="handleGearClick('${gear.id}')">
+            <div style="font-size: 32px; margin-bottom: 8px;">${getGearIcon(gear.type)}</div>
+            <div style="color: ${getRarityColor(gear.rarity)}; font-size: 14px; font-weight: bold; margin-bottom: 5px;">${gear.name}</div>
+            <div style="font-size: 11px; color: #AAA; margin-bottom: 8px;">${gear.description}</div>
+            <div style="font-size: 10px; color: #90ee90;">
+              ${Object.entries(gear.stats).map(([stat, val]) => `<div>+${val} ${GEAR_ATTRIBUTES[stat].name}</div>`).join('')}
             </div>
-            ${equippedGear ? `
-              <div style="background: rgba(0,0,0,0.3); border: 2px solid ${getRarityColor(equippedGear.rarity)}; border-radius: 10px; padding: 15px;">
-                <div style="color: ${getRarityColor(equippedGear.rarity)}; font-size: 18px; font-weight: bold; margin-bottom: 5px;">
-                  ${equippedGear.name}
-                </div>
-                <div style="color: #aaa; font-size: 13px; margin-bottom: 10px;">${equippedGear.description}</div>
-                <div style="margin-bottom: 10px;">
-                  ${Object.entries(equippedGear.stats).map(([stat, val]) => `
-                    <div style="color: #90ee90; font-size: 13px;">• ${GEAR_ATTRIBUTES[stat].name}: +${val}</div>
-                  `).join('')}
-                </div>
-                <button onclick="unequipGear('${slot.key}')" style="padding: 8px 15px; background: linear-gradient(to bottom, #c0392b, #a93226); color: white; border: 2px solid #e74c3c; border-radius: 8px; cursor: pointer; font-weight: bold;">UNEQUIP</button>
-              </div>
-            ` : `
-              <div style="color: #777; font-size: 14px; text-align: center; padding: 20px;">
-                Empty Slot
-              </div>
-            `}
-            <div style="margin-top: 15px;">
-              <div style="color: #5DADE2; font-size: 16px; font-weight: bold; margin-bottom: 10px;">Available Gear:</div>
-              <div style="display: grid; gap: 10px; max-height: 200px; overflow-y: auto;">
-                ${saveData.inventory.filter(g => {
-                  const gearType = g.type === 'accessory' ? (slot.key === 'accessory1' || slot.key === 'accessory2') : g.type === slot.key;
-                  const notEquipped = g.id !== equippedId;
-                  return gearType && notEquipped;
-                }).map(gear => `
-                  <div style="background: rgba(0,0,0,0.4); border: 2px solid ${getRarityColor(gear.rarity)}; border-radius: 8px; padding: 10px; cursor: pointer;" onclick="equipGear('${slot.key}', '${gear.id}')">
-                    <div style="color: ${getRarityColor(gear.rarity)}; font-size: 14px; font-weight: bold;">${gear.name}</div>
-                    <div style="color: #999; font-size: 11px;">${gear.description}</div>
-                    <div style="margin-top: 5px;">
-                      ${Object.entries(gear.stats).map(([stat, val]) => `
-                        <span style="color: #90ee90; font-size: 11px; margin-right: 10px;">+${val} ${GEAR_ATTRIBUTES[stat].icon}</span>
-                      `).join('')}
-                    </div>
-                  </div>
-                `).join('') || '<div style="color: #777; font-size: 12px; padding: 10px;">No available gear for this slot</div>'}
-              </div>
-            </div>
+            ${isEquipped ? '<div style="color: #0F0; font-size: 12px; margin-top: 8px;">✓ EQUIPPED</div>' : ''}
           </div>
         `;
       }
+      content.innerHTML = inventoryHtml || '<div style="color: #777; text-align: center; padding: 40px; grid-column: 1 / -1;">No items in inventory</div>';
+    }
+
+    function getGearIcon(type) {
+      const icons = {
+        weapon: '⚔️',
+        armor: '🛡️',
+        helmet: '🪖',
+        boots: '👢',
+        ring: '💍',
+        amulet: '📿'
+      };
+      return icons[type] || '❓';
+    }
+
+    function updateCharacterVisuals() {
+      // Show/hide visual overlays based on equipped gear
+      const helmetVisual = document.getElementById('helmet-visual');
+      const armorVisual = document.getElementById('armor-visual');
+      const bootsVisual = document.getElementById('boots-visual');
       
-      content.innerHTML = html;
+      if (helmetVisual) {
+        helmetVisual.style.display = saveData.equippedGear.helmet ? 'block' : 'none';
+      }
+      if (armorVisual) {
+        armorVisual.style.display = saveData.equippedGear.armor ? 'block' : 'none';
+      }
+      if (bootsVisual) {
+        bootsVisual.style.display = saveData.equippedGear.boots ? 'block' : 'none';
+      }
+    }
+
+    function handleGearClick(gearId) {
+      const gear = saveData.inventory.find(g => g.id === gearId);
+      if (!gear) return;
+      
+      const isEquipped = Object.values(saveData.equippedGear).includes(gearId);
+      
+      if (isEquipped) {
+        // Unequip
+        for (const slot in saveData.equippedGear) {
+          if (saveData.equippedGear[slot] === gearId) {
+            saveData.equippedGear[slot] = null;
+            break;
+          }
+        }
+      } else {
+        // Equip to appropriate slot
+        saveData.equippedGear[gear.type] = gearId;
+      }
+      
+      saveSaveData();
+      playSound('waterdrop');
+      updateGearScreen();
     }
 
     function getRarityColor(rarity) {
