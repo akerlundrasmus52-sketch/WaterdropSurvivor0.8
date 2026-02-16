@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+455496b8ecc184)<!DOCTYPE html>
 <html>
 <head>
   <!--
@@ -57,9 +57,6 @@
       touch-action: none;
       user-select: none;
       -webkit-user-select: none;
-      width: 100vw;
-      height: 100vh;
-      position: fixed; /* Prevent scrolling on desktop */
     }
 
     #game-container {
@@ -69,19 +66,6 @@
       width: 100%;
       height: 100%;
       z-index: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: #000;
-    }
-    
-    #game-container canvas {
-      display: block;
-      max-width: 100vw;
-      max-height: 100vh;
-      width: 100%;
-      height: 100%;
-      object-fit: contain; /* Fit canvas to screen without distortion */
     }
 
     #ui-layer {
@@ -237,6 +221,16 @@
       font-size: 14px;
       font-weight: bold;
       margin-top: 3px;
+    }
+      0% {
+        opacity: 1;
+        transform: scale(1);
+      }
+      100% {
+        opacity: 0;
+        transform: scale(0.8) translateY(-50px); /* Float upward when fading */
+      }
+    }
     }
     
     /* New Bottom Layout: Waterdrop Level Display with EXP filling, Traditional EXP Bar */
@@ -468,7 +462,7 @@
       text-shadow: 0 0 8px rgba(255,215,0,0.6);
     }
     
-    /* PR #117: Menu button - ALWAYS VISIBLE */
+    /* PR #117: Menu button */
     #menu-btn {
       position: absolute;
       top: 20px;
@@ -484,7 +478,7 @@
       z-index: 100;
       box-shadow: 0 4px 0 #2a1a11, 0 6px 12px rgba(0,0,0,0.5);
       transition: all 0.2s;
-      display: flex !important; /* ALWAYS visible - both portrait and landscape */
+      display: none; /* Hidden in landscape, shown in portrait */
       align-items: center;
       justify-content: center;
       color: #FFD700;
@@ -1339,7 +1333,6 @@
       align-items: center;
       justify-content: flex-start;
       overflow-y: auto;
-      overflow-x: hidden; /* Prevent horizontal scrolling */
       z-index: 50; /* Lower than UI layer buttons */
       padding: 40px 40px 100px 40px;
     }
@@ -1365,14 +1358,13 @@
       border: 3px solid #8B4513;
       border-radius: 15px;
       padding: 20px;
-      margin: 15px auto; /* Center with auto margins */
+      margin: 15px 0;
       cursor: pointer;
       transition: all 0.2s ease;
       box-shadow: 0 4px 8px rgba(0,0,0,0.5);
       text-align: left;
       max-width: 700px;
-      width: calc(100% - 40px); /* Account for padding */
-      box-sizing: border-box;
+      width: 100%;
     }
 
     .building-card:hover {
@@ -1596,7 +1588,9 @@
         display: none !important;
       }
       
-      /* Menu button already always visible - no need for portrait-specific rule */
+      #menu-btn {
+        display: flex !important;
+      }
     }
 
     @media (orientation: landscape) {
@@ -1641,6 +1635,7 @@
       <button class="menu-btn" id="gear-btn">GEAR & EQUIPMENT</button>
       <button class="menu-btn" id="achievements-btn">ACHIEVEMENTS</button>
       <button class="menu-btn" id="credits-btn">CREDITS</button>
+      <button class="menu-btn" id="quit-game-btn" style="margin-top: 20px; background: #8B0000;">🚪 QUIT GAME</button>
     </div>
   </div>
 
@@ -1791,7 +1786,7 @@
       
       <div class="settings-item">
         <label for="auto-aim-checkbox">Auto-Aim</label>
-        <input type="checkbox" id="auto-aim-checkbox">
+        <input type="checkbox" id="auto-aim-checkbox" checked>
       </div>
       
       <div class="settings-item">
@@ -1816,7 +1811,6 @@
       <div class="settings-item">
         <label for="quality-select">Graphics Quality</label>
         <select id="quality-select">
-          <option value="auto">Auto-Detect (Recommended)</option>
           <option value="low">Low (Better Performance)</option>
           <option value="medium">Medium (Balanced)</option>
           <option value="high">High (Better Visuals)</option>
@@ -1994,15 +1988,16 @@
     </div>
   </div>
   
-  <!-- PR #117: Options Menu Modal - EXIT MOVED TO SETTINGS -->
+  <!-- PR #117: Options Menu Modal -->
   <div id="options-menu">
     <div class="options-content">
       <h2 class="options-title">OPTIONS</h2>
       <div class="options-buttons">
-        <button class="btn-small" id="options-stats-btn">📊 STATS</button>
+        <button class="btn-small" id="options-stats-btn">STATS</button>
         <button class="btn-small" id="options-settings-btn">⚙️ SETTINGS</button>
         <button class="btn-small" id="options-camp-btn">⛺ GO TO CAMP</button>
-        <button class="btn-small" id="close-options-btn">❌ CLOSE</button>
+        <button class="btn-small" id="options-exit-btn">🚪 EXIT TO MENU</button>
+        <button class="btn-small" id="close-options-btn">CLOSE</button>
       </div>
     </div>
   </div>
@@ -2075,143 +2070,6 @@
       console.error('[Error] Unhandled promise rejection:', event.reason);
       event.preventDefault(); // Prevent default alert behavior
     });
-  </script>
-
-  <!-- Standalone Loading Script (Non-Module) -->
-  <!-- This script runs immediately and independently of Three.js/module loading -->
-  <script>
-    (function() {
-      console.log('[Loading] Standalone loading script starting...');
-      
-      const loadingScreen = document.getElementById('loading-screen');
-      const loadingBar = document.getElementById('loading-bar');
-      
-      if (!loadingScreen || !loadingBar) {
-        console.error('[Loading] Loading screen elements not found');
-        return;
-      }
-      
-      // Configuration constants
-      const totalIterations = 20;
-      const intervalDuration = 400; // ms - each iteration takes 400ms
-      const progressIncrement = 100 / totalIterations; // 5% per iteration
-      const MENU_TRANSITION_DELAY = 600; // ms - brief pause before menu transition for visual smoothness
-      const FADE_OUT_DURATION = 500; // ms - matches CSS transition duration in .loading-screen.fade-out
-      
-      let progress = 0;
-      
-      // Animate loading bar from 0% to 100% over ~8 seconds (20 × 400ms)
-      const loadingInterval = setInterval(() => {
-        progress += progressIncrement;
-        if (progress > 100) progress = 100;
-        
-        loadingBar.style.width = progress + '%';
-        
-        if (progress >= 100) {
-          clearInterval(loadingInterval);
-          console.log('[Loading] Loading bar animation complete (100%)');
-          
-          // Set flag to indicate standalone loading is complete
-          window.loadingComplete = true;
-          
-          // Brief pause before transitioning to let the 100% state be visible
-          setTimeout(() => {
-            transitionToMenu();
-          }, MENU_TRANSITION_DELAY);
-        }
-      }, intervalDuration);
-      
-      // 12-second failsafe timeout - ensures game is accessible even if Three.js never loads
-      const failsafeTimeout = setTimeout(() => {
-        console.log('[Loading Failsafe] Checking if module loaded...');
-        
-        // If module hasn't signaled ready, force show menu
-        if (!window.gameModuleReady) {
-          console.warn('[Loading Failsafe] Module did not load in time, showing menu anyway');
-          
-          // Clear the loading interval if still running
-          clearInterval(loadingInterval);
-          
-          // Force loading bar to 100%
-          loadingBar.style.width = '100%';
-          window.loadingComplete = true;
-          
-          // Faster transition in failsafe mode (no need to wait since we're already past deadline)
-          setTimeout(() => {
-            transitionToMenu();
-          }, MENU_TRANSITION_DELAY);
-        } else {
-          console.log('[Loading Failsafe] Module loaded successfully, no intervention needed');
-        }
-      }, 12000); // 12 seconds
-      
-      function transitionToMenu() {
-        // Don't transition if we've already done so
-        if (loadingScreen.style.display === 'none') {
-          console.log('[Loading] Already transitioned to menu, skipping');
-          return;
-        }
-        
-        console.log('[Loading] Transitioning to main menu...');
-        
-        // Fade out loading screen
-        loadingScreen.classList.add('fade-out');
-        
-        // Wait for fade-out animation to complete
-        setTimeout(() => {
-          loadingScreen.style.display = 'none';
-          
-          // CRITICAL FIX: Wait for module to be ready before showing menu
-          // This ensures event listeners are attached before the menu becomes interactive
-          const POLL_INTERVAL_MS = 100; // Check every 100ms
-          const MAX_POLL_ATTEMPTS = 50; // 50 * 100ms = 5 seconds max wait after fade
-          let pollAttempts = 0;
-          
-          const waitForModule = () => {
-            pollAttempts++;
-            
-            // Check if module has initialized and attached event listeners
-            if (window.gameModuleReady) {
-              console.log('[Loading] Module ready, showing main menu');
-              const mainMenu = document.getElementById('main-menu');
-              if (mainMenu && mainMenu.style.display !== 'flex') {
-                mainMenu.style.display = 'flex';
-                console.log('[Loading] Main menu shown by standalone script');
-                
-                // Call showMainMenu to ensure proper state initialization
-                try {
-                  if (typeof window.showMainMenu === 'function') {
-                    window.showMainMenu();
-                  }
-                } catch (e) {
-                  console.log('[Loading] showMainMenu error:', e.message);
-                }
-              }
-            } else if (pollAttempts < MAX_POLL_ATTEMPTS) {
-              // Module not ready yet, wait and try again (but not forever)
-              // Log only every 10th attempt to reduce console noise
-              if (pollAttempts % 10 === 0) {
-                console.log('[Loading] Module not ready, waiting... (' + pollAttempts + '/' + MAX_POLL_ATTEMPTS + ')');
-              }
-              setTimeout(waitForModule, POLL_INTERVAL_MS);
-            } else {
-              // Give up after max attempts and show menu anyway (graceful degradation)
-              console.warn('[Loading] Module did not become ready after ' + (MAX_POLL_ATTEMPTS * POLL_INTERVAL_MS) + 'ms, showing menu anyway');
-              const mainMenu = document.getElementById('main-menu');
-              if (mainMenu && mainMenu.style.display !== 'flex') {
-                mainMenu.style.display = 'flex';
-                console.log('[Loading] Main menu shown without module (degraded mode)');
-              }
-            }
-          };
-          
-          // Start waiting for module to be ready
-          waitForModule();
-        }, FADE_OUT_DURATION); // Match fade-out transition duration
-      }
-      
-      console.log('[Loading] Standalone loading script initialized (8s animation + 12s failsafe)');
-    })();
   </script>
 
   <script type="module">
@@ -2961,7 +2819,7 @@
       controlType: 'touch', // 'touch', 'keyboard', 'gamepad'
       soundEnabled: true,
       musicEnabled: true,
-      graphicsQuality: 'auto', // 'auto', 'low', 'medium', 'high' - auto-detect by default
+      graphicsQuality: 'medium', // 'low', 'medium', 'high'
       isPortrait: null,
       inputListenersRegistered: false
     };
@@ -3027,7 +2885,7 @@
       aura: { active: false, level: 0, damage: 5, cooldown: 500, lastShot: 0, range: 3 },
       meteor: { active: false, level: 0, damage: 60, cooldown: 2500, lastShot: 0, area: 5 },
       droneTurret: { active: false, level: 0, damage: 15, cooldown: 400, lastShot: 0, range: 15, droneCount: 1 },
-      doubleBarrel: { active: false, level: 0, damage: 25, cooldown: 1200, lastShot: 0, range: 12, spread: 0.3, pelletCount: 6 },
+      doubleBarrel: { active: false, level: 0, damage: 25, cooldown: 1200, lastShot: 0, range: 12, spread: 0.3 },
       iceSpear: { active: false, level: 0, damage: 20, cooldown: 1500, lastShot: 0, range: 15, slowPercent: 0.4, slowDuration: 2000 },
       fireRing: { active: false, level: 0, damage: 8, cooldown: 800, lastShot: 0, range: 4, orbs: 3, rotationSpeed: 2 }
     };
@@ -3639,10 +3497,6 @@
         updateHUD();
         playSound('hit');
         
-        // ENHANCED: Screen shake based on damage
-        const shakeIntensity = Math.min(reduced / 30, 1); // Scale with damage
-        screenShake(0.2 + shakeIntensity * 0.3, 150 + shakeIntensity * 100);
-        
         // Trigger waterdrop UI attack animation
         const waterdropContainer = document.getElementById('waterdrop-container');
         if (waterdropContainer) {
@@ -3708,6 +3562,31 @@
             this.mesh.scale.set(1, 1, 1);
           }, 50);
         }, 50);
+        
+        // Enhanced screen shake on damage
+        const originalCameraPos = { 
+          x: camera.position.x, 
+          y: camera.position.y, 
+          z: camera.position.z 
+        };
+        let shakeTime = 0;
+        const shakeDuration = 0.25; // Slightly longer (was 0.2)
+        
+        const shakeAnim = () => {
+          shakeTime += 0.016;
+          if (shakeTime < shakeDuration) {
+            const intensity = (1 - shakeTime / shakeDuration) * 0.7; // More intense (was 0.5)
+            camera.position.x = originalCameraPos.x + (Math.random() - 0.5) * intensity;
+            camera.position.y = originalCameraPos.y + (Math.random() - 0.5) * intensity;
+            camera.position.z = originalCameraPos.z + (Math.random() - 0.5) * intensity;
+            requestAnimationFrame(shakeAnim);
+          } else {
+            camera.position.x = originalCameraPos.x;
+            camera.position.y = originalCameraPos.y;
+            camera.position.z = originalCameraPos.z;
+          }
+        };
+        shakeAnim();
 
         if (playerStats.hp <= 0) {
           // ENHANCED Death splash: more particles + ground pool with fade
@@ -4252,16 +4131,6 @@
         // Track last damage type for death effects
         this.lastDamageType = damageType;
         
-        // ENHANCED: White hit flash on enemy
-        const originalColor = this.mesh.material.color.clone();
-        this.mesh.material.color.setHex(0xFFFFFF);
-        const flashTimeoutId = setTimeout(() => {
-          this.mesh.material.color.copy(originalColor);
-          const tidx = activeTimeouts.indexOf(flashTimeoutId);
-          if (tidx > -1) activeTimeouts.splice(tidx, 1);
-        }, 50);
-        activeTimeouts.push(flashTimeoutId);
-        
         // Phase 5: Hit impact particles (flesh/blood) on every hit
         spawnParticles(this.mesh.position, 0x8B0000, 3); // Blood particles
         
@@ -4455,12 +4324,6 @@
         if (eiffelQuest.active) {
           eiffelQuest.kills++;
           updateEiffelQuestUI();
-        }
-        
-        // QUEST SYSTEM: Track enemy kills
-        if (saveData.questProgress) {
-          saveData.questProgress.enemiesKilled++;
-          checkQuestCompletion();
         }
         
         // Determine death effect based on damage type and health when dying
@@ -4992,96 +4855,6 @@
         spawnParticles(this.mesh.position, 0x8B0000, 15);
         spawnParticles(this.mesh.position, 0xFFFFFF, 5);
         
-        // DETACHED HEAD as separate physics object (NEW FEATURE)
-        const HEAD_GROUND_OFFSET = 0.35; // Ground collision threshold for detached head
-        const headGeo = new THREE.SphereGeometry(0.35, 12, 12);
-        const headMat = new THREE.MeshBasicMaterial({ 
-          color: enemyColor, 
-          transparent: true 
-        });
-        const detachedHead = new THREE.Mesh(headGeo, headMat);
-        detachedHead.position.copy(this.mesh.position);
-        detachedHead.position.y = 0.8; // Start at head height
-        scene.add(detachedHead);
-        
-        // Random launch velocity (flies off realistically)
-        const headVel = new THREE.Vector3(
-          (Math.random() - 0.5) * 0.6, // Random horizontal direction
-          0.7 + Math.random() * 0.4,    // Upward initial velocity
-          (Math.random() - 0.5) * 0.6
-        );
-        
-        // Physics simulation for detached head
-        let headLife = 80;
-        let bounces = 0;
-        const updateHead = () => {
-          headLife--;
-          
-          // Apply velocity
-          detachedHead.position.add(headVel);
-          
-          // Gravity
-          headVel.y -= 0.025;
-          
-          // Rotation (tumbling through air)
-          detachedHead.rotation.x += 0.18;
-          detachedHead.rotation.y += 0.22;
-          detachedHead.rotation.z += 0.15;
-          
-          // Ground collision with bounce
-          if (detachedHead.position.y <= HEAD_GROUND_OFFSET && headVel.y < 0) {
-            detachedHead.position.y = HEAD_GROUND_OFFSET;
-            headVel.y *= -0.4; // Bounce with damping
-            headVel.x *= 0.7;  // Friction
-            headVel.z *= 0.7;
-            bounces++;
-            
-            // Blood splatter on bounce
-            if (bounces <= 2) {
-              const bounceBlood = new THREE.CircleGeometry(0.3 + bounces * 0.1, 12);
-              const bounceMat = new THREE.MeshBasicMaterial({ 
-                color: 0x8B0000, 
-                transparent: true,
-                opacity: 0.5,
-                side: THREE.DoubleSide
-              });
-              const bloodSplat = new THREE.Mesh(bounceBlood, bounceMat);
-              bloodSplat.position.set(detachedHead.position.x, 0.01, detachedHead.position.z);
-              bloodSplat.rotation.x = -Math.PI / 2;
-              scene.add(bloodSplat);
-              
-              // Fade blood splat
-              let splatLife = 100;
-              const fadeSplat = () => {
-                splatLife--;
-                bloodSplat.material.opacity = (splatLife / 100) * 0.5;
-                if (splatLife <= 0) {
-                  scene.remove(bloodSplat);
-                  bloodSplat.geometry.dispose();
-                  bloodSplat.material.dispose();
-                } else {
-                  requestAnimationFrame(fadeSplat);
-                }
-              };
-              fadeSplat();
-            }
-          }
-          
-          // Fade and remove
-          if (headLife < 40) {
-            detachedHead.material.opacity = headLife / 40;
-          }
-          
-          if (headLife <= 0 || (bounces > 3 && Math.abs(headVel.y) < 0.05)) {
-            scene.remove(detachedHead);
-            detachedHead.geometry.dispose();
-            detachedHead.material.dispose();
-          } else {
-            requestAnimationFrame(updateHead);
-          }
-        };
-        updateHead();
-        
         // Body falls (corpse)
         const corpseGeo = new THREE.CircleGeometry(0.6, 16);
         const corpseMat = new THREE.MeshBasicMaterial({ 
@@ -5096,7 +4869,7 @@
         corpse.rotation.x = -Math.PI / 2;
         scene.add(corpse);
         
-        // Blood splatter at death position
+        // Blood splatter
         const bloodGeo = new THREE.CircleGeometry(0.9, 16);
         const bloodMat = new THREE.MeshBasicMaterial({ 
           color: 0x8B0000, 
@@ -5110,8 +4883,8 @@
         bloodPool.rotation.x = -Math.PI / 2;
         scene.add(bloodPool);
         
-        // Extra head pieces (reduced count since we have detached head now)
-        for(let i = 0; i < 6; i++) {
+        // Extra head pieces
+        for(let i = 0; i < 10; i++) {
           const piece = new THREE.Mesh(
             new THREE.BoxGeometry(0.15, 0.15, 0.15),
             new THREE.MeshBasicMaterial({ color: i % 2 === 0 ? enemyColor : 0x8B0000, transparent: true })
@@ -5169,56 +4942,11 @@
     }
 
     // Performance: Cached geometries and materials for projectiles (reused across instances)
-    // ENHANCED: Weapon-specific bullet geometries and materials
     const projectileGeometryCache = {
-      // Gun - Smaller realistic bullets
-      gunBullet: new THREE.SphereGeometry(0.15, 8, 8),
-      gunBulletGlow: new THREE.SphereGeometry(0.25, 6, 6),
-      // Shotgun - Small pellets
-      shotgunPellet: new THREE.SphereGeometry(0.1, 6, 6),
-      shotgunPelletGlow: new THREE.SphereGeometry(0.18, 6, 6),
-      // Drone - Cyan laser style
-      droneBullet: new THREE.CylinderGeometry(0.08, 0.08, 0.3, 8),
-      droneBulletGlow: new THREE.SphereGeometry(0.2, 6, 6),
-      // Generic fallback
       bullet: new THREE.SphereGeometry(0.25, 8, 8),
       bulletGlow: new THREE.SphereGeometry(0.35, 6, 6)
     };
     const projectileMaterialCache = {
-      // Gun - Yellow/orange bullets
-      gunBullet: new THREE.MeshBasicMaterial({ 
-        color: 0xFFAA00,
-        transparent: true,
-        opacity: 0.95
-      }),
-      gunBulletGlow: new THREE.MeshBasicMaterial({
-        color: 0xFFAA00,
-        transparent: true,
-        opacity: 0.3
-      }),
-      // Shotgun - Orange pellets
-      shotgunPellet: new THREE.MeshBasicMaterial({ 
-        color: 0xFF6600,
-        transparent: true,
-        opacity: 0.95
-      }),
-      shotgunPelletGlow: new THREE.MeshBasicMaterial({
-        color: 0xFF6600,
-        transparent: true,
-        opacity: 0.4
-      }),
-      // Drone - Cyan laser
-      droneBullet: new THREE.MeshBasicMaterial({ 
-        color: 0x00FFFF,
-        transparent: true,
-        opacity: 0.95
-      }),
-      droneBulletGlow: new THREE.MeshBasicMaterial({
-        color: 0x00FFFF,
-        transparent: true,
-        opacity: 0.3
-      }),
-      // Generic fallback
       bullet: new THREE.MeshBasicMaterial({ 
         color: 0xFFFF00,
         transparent: true,
@@ -5385,48 +5113,18 @@
     }
 
     class Projectile {
-      constructor(x, z, target, weaponType = 'gun') {
-        // Store weapon type first
-        this.weaponType = weaponType;
-        this.isDoubleBarrel = (weaponType === 'shotgun');
-        this.isDroneTurret = (weaponType === 'drone');
-        
-        // ENHANCED: Weapon-specific bullet styles
-        let bulletGeo, bulletMat, glowGeo, glowMat;
-        
-        if (this.isDoubleBarrel) {
-          // Shotgun pellets - small and fast
-          bulletGeo = projectileGeometryCache.shotgunPellet;
-          bulletMat = projectileMaterialCache.shotgunPellet;
-          glowGeo = projectileGeometryCache.shotgunPelletGlow;
-          glowMat = projectileMaterialCache.shotgunPelletGlow;
-          this.speed = 0.6; // Faster
-        } else if (this.isDroneTurret) {
-          // Drone laser bullets
-          bulletGeo = projectileGeometryCache.droneBullet;
-          bulletMat = projectileMaterialCache.droneBullet;
-          glowGeo = projectileGeometryCache.droneBulletGlow;
-          glowMat = projectileMaterialCache.droneBulletGlow;
-          this.speed = 0.5;
-        } else {
-          // Gun bullets - smaller than before
-          bulletGeo = projectileGeometryCache.gunBullet;
-          bulletMat = projectileMaterialCache.gunBullet;
-          glowGeo = projectileGeometryCache.gunBulletGlow;
-          glowMat = projectileMaterialCache.gunBulletGlow;
-          this.speed = 0.4;
-        }
-        
+      constructor(x, z, target) {
         // Performance: Reuse cached geometry and materials instead of creating new ones
-        this.mesh = new THREE.Mesh(bulletGeo, bulletMat);
+        this.mesh = new THREE.Mesh(projectileGeometryCache.bullet, projectileMaterialCache.bullet);
         this.mesh.position.set(x, 0.5, z);
         scene.add(this.mesh);
         
         // Add glowing trail effect with cached resources
-        this.glow = new THREE.Mesh(glowGeo, glowMat);
+        this.glow = new THREE.Mesh(projectileGeometryCache.bulletGlow, projectileMaterialCache.bulletGlow);
         this.glow.position.copy(this.mesh.position);
         scene.add(this.glow);
 
+        this.speed = 0.4;
         this.active = true;
         this.life = 60; // Frames
 
@@ -5480,7 +5178,7 @@
           return;
         }
 
-        // Collision Check with Enemies
+        // Collision Check
         for (let enemy of enemies) {
           if (enemy.isDead) continue;
           const dx = this.mesh.position.x - enemy.mesh.position.x;
@@ -5502,166 +5200,21 @@
             const isCrit = Math.random() < playerStats.critChance;
             if (isCrit) dmg *= playerStats.critDmg;
             
-            enemy.takeDamage(Math.floor(dmg), isCrit, this.weaponType);
+            enemy.takeDamage(Math.floor(dmg), isCrit);
             
             // Knockback effect
             const knockbackForce = 0.5;
             enemy.mesh.position.x += this.vx * knockbackForce;
             enemy.mesh.position.z += this.vz * knockbackForce;
             
-            // ENHANCED: Bloody, brutal hit effects
-            const bloodIntensity = Math.min(Math.floor(dmg / 10), 15);
-            
-            // Blood splatter - red particles
-            spawnParticles(enemy.mesh.position, 0x8B0000, bloodIntensity); // Dark red blood
-            spawnParticles(enemy.mesh.position, 0xFF0000, Math.floor(bloodIntensity * 0.6)); // Bright red
-            
-            // Brief white impact flash
+            // Water splash effect on hit
+            spawnParticles(enemy.mesh.position, COLORS.player, 5);
             spawnParticles(enemy.mesh.position, 0xFFFFFF, 3);
-            
-            // Critical hits get extra dramatic effects
-            if (isCrit) {
-              spawnParticles(enemy.mesh.position, 0xFFD700, 8); // Gold particles for crit
-              spawnParticles(enemy.mesh.position, 0x8B0000, 10); // Extra blood
-              
-              // Brief impact light flash
-              const critLight = new THREE.PointLight(0xFFFFFF, 8, 10);
-              critLight.position.copy(enemy.mesh.position);
-              critLight.position.y += 0.5;
-              scene.add(critLight);
-              flashLights.push(critLight);
-              
-              const timeoutId = setTimeout(() => {
-                scene.remove(critLight);
-                const idx = flashLights.indexOf(critLight);
-                if (idx > -1) flashLights.splice(idx, 1);
-                const tidx = activeTimeouts.indexOf(timeoutId);
-                if (tidx > -1) activeTimeouts.splice(tidx, 1);
-              }, 100);
-              activeTimeouts.push(timeoutId);
-            }
-            
-            // Shotgun gets even messier blood effects
-            if (this.weaponType === 'shotgun' || this.isDoubleBarrel) {
-              spawnParticles(enemy.mesh.position, 0x8B0000, 15); // Massive blood spray
-              spawnParticles(enemy.mesh.position, 0xFF0000, 10);
-            }
             
             this.destroy();
             playSound('hit');
             break;
           }
-        }
-        
-        // NEW FEATURE: Collision Check with Destroyable Props (trees, barrels, crates)
-        if (this.active) { // Only check if projectile still active after enemy check
-          const DAMAGE_DARKENING_FACTOR = 0.7; // Color darkening on damage
-          
-          scene.traverse((obj) => {
-            if (!obj.userData || !obj.userData.isDestructible || !this.active) return;
-            
-            const dx = this.mesh.position.x - obj.position.x;
-            const dz = this.mesh.position.z - obj.position.z;
-            const hitDist = obj.userData.type === 'tree' ? 2 : 0.8; // Trees have larger hitbox
-            
-            if (dx*dx + dz*dz < hitDist*hitDist) {
-              // Damage the prop
-              const damage = 5; // Fixed damage to props
-              obj.userData.hp -= damage;
-              
-              const hpPercent = obj.userData.hp / obj.userData.maxHp;
-              
-              // Stage 1: 50% HP - Damaged appearance
-              if (hpPercent <= 0.5 && obj.userData.stage === 0) {
-                obj.userData.stage = 1;
-                
-                if (obj.userData.type === 'tree') {
-                  // Darken tree
-                  if (obj.userData.trunk) obj.userData.trunk.material.color.multiplyScalar(DAMAGE_DARKENING_FACTOR);
-                  if (obj.userData.leaves) obj.userData.leaves.material.color.multiplyScalar(DAMAGE_DARKENING_FACTOR);
-                  // Spawn wood chips
-                  spawnParticles(obj.position, 0x8B4513, 5);
-                } else {
-                  // Darken barrel/crate
-                  obj.material.color.multiplyScalar(DAMAGE_DARKENING_FACTOR);
-                  spawnParticles(obj.position, obj.material.color.getHex(), 3);
-                }
-              }
-              
-              // Stage 2: 25% HP - Critical damage
-              if (hpPercent <= 0.25 && obj.userData.stage === 1) {
-                obj.userData.stage = 2;
-                
-                if (obj.userData.type === 'tree') {
-                  // Tree starts falling
-                  if (obj.userData.trunk) obj.userData.trunk.material.color.multiplyScalar(DAMAGE_DARKENING_FACTOR);
-                  if (obj.userData.leaves) obj.userData.leaves.scale.multiplyScalar(0.8);
-                  spawnParticles(obj.position, 0x8B4513, 8);
-                } else {
-                  // Crack/break barrel/crate
-                  obj.scale.multiplyScalar(0.85);
-                  spawnParticles(obj.position, obj.material.color.getHex(), 5);
-                }
-              }
-              
-              // Stage 3: Destroyed
-              if (obj.userData.hp <= 0 && obj.userData.stage !== 3) {
-                obj.userData.stage = 3;
-                
-                // Spawn destruction debris
-                // For trees, get color from trunk; for barrels/crates, use material color
-                const debrisColor = obj.userData.type === 'tree' && obj.userData.trunk 
-                  ? obj.userData.trunk.material.color.getHex() 
-                  : obj.material.color.getHex();
-                const debrisCount = obj.userData.type === 'tree' ? 15 : 10;
-                
-                for (let i = 0; i < debrisCount; i++) {
-                  const debris = new THREE.Mesh(
-                    new THREE.BoxGeometry(0.2, 0.2, 0.2),
-                    new THREE.MeshBasicMaterial({ color: debrisColor, transparent: true })
-                  );
-                  debris.position.copy(obj.position);
-                  debris.position.y += Math.random() * 1;
-                  scene.add(debris);
-                  
-                  const vel = new THREE.Vector3(
-                    (Math.random() - 0.5) * 0.4,
-                    Math.random() * 0.5,
-                    (Math.random() - 0.5) * 0.4
-                  );
-                  
-                  let life = 60;
-                  const updateDebris = () => {
-                    life--;
-                    debris.position.add(vel);
-                    vel.y -= 0.02; // Gravity
-                    debris.rotation.x += 0.1;
-                    debris.rotation.y += 0.1;
-                    debris.material.opacity = life / 60;
-                    
-                    if (life <= 0 || debris.position.y < 0) {
-                      scene.remove(debris);
-                      debris.geometry.dispose();
-                      debris.material.dispose();
-                    } else {
-                      requestAnimationFrame(updateDebris);
-                    }
-                  };
-                  updateDebris();
-                }
-                
-                spawnParticles(obj.position, debrisColor, 12);
-                
-                // Remove the destroyed object
-                scene.remove(obj);
-                if (obj.geometry) obj.geometry.dispose();
-                if (obj.material) obj.material.dispose();
-              }
-              
-              this.destroy();
-              playSound('hit');
-            }
-          });
         }
       }
 
@@ -5870,9 +5423,6 @@
         this.shadow.geometry.dispose();
         this.shadow.material.dispose();
         
-        // ENHANCED: Screen shake on meteor impact
-        screenShake(0.5, 300);
-        
         // AOE Damage
         const range = weapons.meteor.area;
         const dmg = weapons.meteor.damage * playerStats.strength;
@@ -5884,25 +5434,9 @@
           }
         });
         
-        // ENHANCED: Premium explosion visuals
-        spawnParticles(this.target, 0xFF4500, 15); // Orange fire
-        spawnParticles(this.target, 0xFFFF00, 10); // Yellow flames
-        spawnParticles(this.target, 0xFF0000, 8); // Red fire
-        spawnParticles(this.target, 0x888888, 12); // Smoke
-        
-        // Explosion light flash
-        const explosionLight = new THREE.PointLight(0xFF4500, 15, 25);
-        explosionLight.position.copy(this.target);
-        explosionLight.position.y += 1;
-        scene.add(explosionLight);
-        
-        const timeoutId = setTimeout(() => {
-          scene.remove(explosionLight);
-          const tidx = activeTimeouts.indexOf(timeoutId);
-          if (tidx > -1) activeTimeouts.splice(tidx, 1);
-        }, 150);
-        activeTimeouts.push(timeoutId);
-        
+        // Visuals
+        spawnParticles(this.target, 0xFF4500, 10);
+        spawnParticles(this.target, 0xFFFF00, 5);
         playSound('meteor'); // Explosive boom sound
       }
     }
@@ -6092,9 +5626,8 @@
         this.mesh.add(this.waterFill);
         
         this.active = true;
-        // Varied 360-degree rotations - randomized speed and direction
-        this.rotSpeed = (Math.random() * 0.10 + 0.05) * (Math.random() < 0.5 ? 1 : -1); // 0.05-0.15, either direction
-        this.rotSpeedY = (Math.random() * 0.07 + 0.03) * (Math.random() < 0.5 ? 1 : -1); // 0.03-0.10, either direction
+        this.rotSpeed = 0.08; // Steady 360-degree rotation
+        this.rotSpeedY = 0.05; // Separate axis rotation
         this.bobPhase = Math.random() * Math.PI * 2;
         this.sparklePhase = Math.random() * Math.PI * 2;
         this.fillPhase = 0; // Water fill animation
@@ -6923,9 +6456,6 @@
         console.error('Failed to load save data:', e);
         saveData = { ...defaultSaveData };
       }
-      
-      // Initialize quest progress
-      initQuestProgress();
     }
 
     function saveSaveData() {
@@ -7126,144 +6656,6 @@
     
     // Expose to global scope for onclick handlers
     window.claimAchievement = claimAchievement;
-    
-    // MASSIVE QUEST SYSTEM - 26 Sequential Quests (Tutorial through quests)
-    
-    // Helper function for complex quest check
-    function checkDeepDiveComplete(qp) {
-      if (!qp) return false;
-      return qp.itemsCrafted >= 5 && 
-             qp.companionsRecruited >= 2 && 
-             qp.weaponsOwned >= 3 && 
-             qp.skillsUnlocked >= 1 && 
-             qp.allBuildingsUpgraded && 
-             qp.itemsScrapped >= 1;
-    }
-    
-    const QUESTS = {
-      quest1: { id: 'quest1', name: 'First Steps', desc: 'Move around the map', reward: 50, check: () => saveData.questProgress && saveData.questProgress.movedDistance > 10, completed: false },
-      quest2: { id: 'quest2', name: 'Target Practice', desc: 'Kill 5 enemies', reward: 75, check: () => saveData.questProgress && saveData.questProgress.enemiesKilled >= 5, completed: false },
-      quest3: { id: 'quest3', name: 'Survival Basics', desc: 'Survive for 60 seconds', reward: 100, check: () => saveData.questProgress && saveData.questProgress.survivalTime >= 60, completed: false },
-      quest4: { id: 'quest4', name: 'Level Up', desc: 'Reach level 3', reward: 100, check: () => saveData.questProgress && saveData.questProgress.maxLevel >= 3, completed: false },
-      quest5: { id: 'quest5', name: 'Return to Camp', desc: 'Go back to camp after a run', reward: 125, check: () => saveData.questProgress && saveData.questProgress.campVisits >= 1, completed: false },
-      quest6: { id: 'quest6', name: 'Foundation', desc: 'Build the Main Building', reward: 150, check: () => saveData.camp && saveData.camp.mainBuilding && saveData.camp.mainBuilding.level >= 1, completed: false },
-      quest7: { id: 'quest7', name: 'Arms Race', desc: 'Build the Forge', reward: 150, check: () => saveData.camp && saveData.camp.forge && saveData.camp.forge.level >= 1, completed: false },
-      quest8: { id: 'quest8', name: 'Suited Up', desc: 'Build the Armory', reward: 150, check: () => saveData.camp && saveData.camp.armory && saveData.camp.armory.level >= 1, completed: false },
-      quest9: { id: 'quest9', name: 'First Craft', desc: 'Craft your first weapon at the Forge', reward: 175, check: () => saveData.questProgress && saveData.questProgress.itemsCrafted >= 1, completed: false },
-      quest10: { id: 'quest10', name: 'Gear Up', desc: 'Equip an item in the Armory', reward: 175, check: () => saveData.questProgress && saveData.questProgress.itemsEquipped >= 1, completed: false },
-      quest11: { id: 'quest11', name: 'Waste Not', desc: 'Build the Recycle/Scrap building', reward: 200, check: () => saveData.camp && saveData.camp.recycler && saveData.camp.recycler.level >= 1, completed: false },
-      quest12: { id: 'quest12', name: 'Break It Down', desc: 'Scrap an item for materials', reward: 200, check: () => saveData.questProgress && saveData.questProgress.itemsScrapped >= 1, completed: false },
-      quest13: { id: 'quest13', name: 'New Friends', desc: 'Build the Companion House', reward: 225, check: () => saveData.camp && saveData.camp.companionHouse && saveData.camp.companionHouse.level >= 1, completed: false },
-      quest14: { id: 'quest14', name: 'Recruit', desc: 'Recruit your first companion', reward: 225, check: () => saveData.questProgress && saveData.questProgress.companionsRecruited >= 1, completed: false },
-      quest15: { id: 'quest15', name: 'Training Day', desc: 'Build the Training Hall', reward: 250, check: () => saveData.camp && saveData.camp.trainingHall && saveData.camp.trainingHall.level >= 1, completed: false },
-      quest16: { id: 'quest16', name: 'Push Limits', desc: 'Use the Training Hall to boost a stat', reward: 250, check: () => saveData.questProgress && saveData.questProgress.statsTraining >= 1, completed: false },
-      quest17: { id: 'quest17', name: 'Knowledge Tree', desc: 'Open the Skill Tree', reward: 275, check: () => saveData.questProgress && saveData.questProgress.skillTreeOpened, completed: false },
-      quest18: { id: 'quest18', name: 'First Skill', desc: 'Unlock your first skill (free)', reward: 275, check: () => saveData.questProgress && saveData.questProgress.skillsUnlocked >= 1, completed: false },
-      quest19: { id: 'quest19', name: 'Upgrade Path', desc: 'Upgrade any building to level 2', reward: 300, check: () => saveData.questProgress && saveData.questProgress.buildingsUpgraded >= 1, completed: false },
-      quest20: { id: 'quest20', name: 'Upgrade Everything', desc: 'Upgrade all buildings at least once', reward: 400, check: () => saveData.questProgress && saveData.questProgress.allBuildingsUpgraded, completed: false },
-      quest21: { id: 'quest21', name: 'Attribute Points', desc: 'Spend attribute points for the first time', reward: 300, check: () => saveData.questProgress && saveData.questProgress.attributesSpent >= 1, completed: false },
-      quest22: { id: 'quest22', name: 'Full Arsenal', desc: 'Own 3 different weapons', reward: 350, check: () => saveData.questProgress && saveData.questProgress.weaponsOwned >= 3, completed: false },
-      quest23: { id: 'quest23', name: 'Companion Squad', desc: 'Have 2 companions', reward: 350, check: () => saveData.questProgress && saveData.questProgress.companionsRecruited >= 2, completed: false },
-      quest24: { id: 'quest24', name: 'Master Crafter', desc: 'Craft 5 items total', reward: 400, check: () => saveData.questProgress && saveData.questProgress.itemsCrafted >= 5, completed: false },
-      quest25: { id: 'quest25', name: 'Deep Dive', desc: 'All buildings built, all mechanics used', reward: 500, check: () => checkDeepDiveComplete(saveData.questProgress), completed: false },
-      quest26: { id: 'quest26', name: 'Secrets of the Deep', desc: 'Find the hidden treasure at the bottom of the lake', reward: 1000, legendary: true, check: () => saveData.questProgress && saveData.questProgress.treasureFound, completed: false }
-    };
-    
-    // Initialize quest progress if not exists
-    function initQuestProgress() {
-      if (!saveData.questProgress) {
-        saveData.questProgress = {
-          movedDistance: 0,
-          enemiesKilled: 0,
-          survivalTime: 0,
-          maxLevel: 0,
-          campVisits: 0,
-          itemsCrafted: 0,
-          itemsEquipped: 0,
-          itemsScrapped: 0,
-          companionsRecruited: 0,
-          statsTraining: 0,
-          skillTreeOpened: false,
-          skillsUnlocked: 0,
-          buildingsUpgraded: 0,
-          allBuildingsUpgraded: false,
-          attributesSpent: 0,
-          weaponsOwned: 0,
-          treasureFound: false,
-          lakeDiveAvailable: false
-        };
-      }
-      if (!saveData.completedQuests) saveData.completedQuests = [];
-    }
-    
-    // Get current active quest
-    function getCurrentQuest() {
-      for (let i = 1; i <= 26; i++) {
-        const questId = `quest${i}`;
-        if (!saveData.completedQuests.includes(questId)) {
-          return QUESTS[questId];
-        }
-      }
-      return null; // All quests complete
-    }
-    
-    // Check and complete quests
-    function checkQuestCompletion() {
-      const currentQuest = getCurrentQuest();
-      if (!currentQuest) return;
-      
-      if (currentQuest.check() && !saveData.completedQuests.includes(currentQuest.id)) {
-        // Quest completed!
-        saveData.completedQuests.push(currentQuest.id);
-        addGold(currentQuest.reward);
-        
-        const message = currentQuest.legendary ? 
-          `⭐ LEGENDARY QUEST COMPLETE: ${currentQuest.name}! +${currentQuest.reward} Gold` :
-          `✓ QUEST COMPLETE: ${currentQuest.name}! +${currentQuest.reward} Gold`;
-        
-        showStatChange(message);
-        playSound('coin');
-        
-        // Special: Quest 25 unlocks Quest 26 (lake dive)
-        if (currentQuest.id === 'quest25') {
-          saveData.questProgress.lakeDiveAvailable = true;
-          showStatChange('🌊 The lake calls to you... Something awaits at the bottom.');
-        }
-        
-        saveSaveData();
-        updateQuestDisplay();
-      }
-    }
-    
-    // Update quest display in UI
-    function updateQuestDisplay() {
-      const currentQuest = getCurrentQuest();
-      const questTracker = document.getElementById('quest-tracker');
-      
-      if (currentQuest && questTracker) {
-        questTracker.style.display = 'block';
-        questTracker.textContent = `📜 Quest: ${currentQuest.name} - ${currentQuest.desc}`;
-      } else if (questTracker) {
-        if (saveData.completedQuests && saveData.completedQuests.length === 26) {
-          questTracker.textContent = '⭐ ALL QUESTS COMPLETE!';
-        } else {
-          questTracker.style.display = 'none';
-        }
-      }
-    }
-    
-    // Track quest progress during gameplay
-    function trackQuestProgress() {
-      const qp = saveData.questProgress;
-      if (!qp) return;
-      
-      // Track level
-      if (playerStats.lvl > qp.maxLevel) qp.maxLevel = playerStats.lvl;
-      
-      // Track survival time (updated in game loop)
-      // Track kills (updated when enemy dies)
-      // Track movement (updated in player movement)
-    }
 
     function showGoldBagAnimation(amount) {
       const bag = document.createElement('div');
@@ -9980,17 +9372,6 @@
         group.add(leaves);
         group.add(shadow);
         
-        // Make trees destroyable with HP system (NEW FEATURE)
-        group.userData = {
-          isDestructible: true,
-          type: 'tree',
-          hp: 50,
-          maxHp: 50,
-          stage: 0, // 0=healthy, 1=damaged (50%), 2=critical (25%), 3=destroyed
-          trunk: trunk,
-          leaves: leaves
-        };
-        
         // Random pos in forest area and spread across map
         // Lake exclusion zone constants
         const LAKE_CENTER_X = 30;
@@ -10036,61 +9417,6 @@
           group.position.set(tx, 0, tz);
           scene.add(group);
         }
-      }
-      
-      // Destroyable Barrels (NEW FEATURE)
-      const barrelGeo = new THREE.CylinderGeometry(0.4, 0.4, 0.8, 8);
-      
-      for (let i = 0; i < 30; i++) {
-        // Clone material for each barrel to avoid shared color modifications
-        const barrelMat = new THREE.MeshToonMaterial({ color: 0x8B4513 }); // Brown
-        const barrel = new THREE.Mesh(barrelGeo, barrelMat);
-        barrel.castShadow = true;
-        barrel.receiveShadow = true;
-        
-        // Random position across map
-        const bx = (Math.random() * 150) - 75;
-        const bz = (Math.random() * 150) - 75;
-        barrel.position.set(bx, 0.4, bz);
-        
-        // Make barrels destroyable
-        barrel.userData = {
-          isDestructible: true,
-          type: 'barrel',
-          hp: 20,
-          maxHp: 20,
-          stage: 0
-        };
-        
-        scene.add(barrel);
-      }
-      
-      // Destroyable Crates (NEW FEATURE)
-      const crateGeo = new THREE.BoxGeometry(0.8, 0.8, 0.8);
-      
-      for (let i = 0; i < 25; i++) {
-        // Clone material for each crate to avoid shared color modifications
-        const crateMat = new THREE.MeshToonMaterial({ color: 0xD2691E }); // Tan/wood
-        const crate = new THREE.Mesh(crateGeo, crateMat);
-        crate.castShadow = true;
-        crate.receiveShadow = true;
-        
-        // Random position across map
-        const cx = (Math.random() * 150) - 75;
-        const cz = (Math.random() * 150) - 75;
-        crate.position.set(cx, 0.4, cz);
-        crate.rotation.y = Math.random() * Math.PI * 2;
-        
-        // Make crates destroyable
-        crate.userData = {
-          isDestructible: true,
-          type: 'crate',
-          hp: 15,
-          maxHp: 15,
-          stage: 0
-        };
-        
-        scene.add(crate);
       }
       
       // Waterfall from cliff into lake
@@ -10192,64 +9518,7 @@
     }
 
     // Apply graphics quality settings
-    // Auto-detect graphics quality based on device capabilities
-    function detectGraphicsQuality() {
-      // Get device specs
-      const width = window.innerWidth || screen.width;
-      const height = window.innerHeight || screen.height;
-      const pixelRatio = window.devicePixelRatio || 1;
-      const totalPixels = width * height * pixelRatio;
-      
-      // Check for hardware concurrency (CPU cores)
-      const cores = navigator.hardwareConcurrency || 2;
-      
-      // Check GPU via WebGL
-      let gpuTier = 'low';
-      try {
-        const canvas = document.createElement('canvas');
-        const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-        if (gl) {
-          const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
-          if (debugInfo) {
-            const renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL).toLowerCase();
-            // High-end GPUs
-            if (renderer.includes('nvidia') || renderer.includes('geforce') || 
-                renderer.includes('radeon') || renderer.includes('amd') ||
-                renderer.includes('apple') || renderer.includes('m1') || renderer.includes('m2')) {
-              gpuTier = 'high';
-            }
-            // Mid-range integrated graphics
-            else if (renderer.includes('intel') || renderer.includes('iris')) {
-              gpuTier = 'medium';
-            }
-          }
-        }
-      } catch (e) {
-        console.warn('Could not detect GPU:', e);
-      }
-      
-      // Decision matrix
-      // High: Good GPU + High res + Multi-core
-      if (gpuTier === 'high' && totalPixels > 2000000 && cores >= 4) {
-        return 'high';
-      }
-      // Medium: Mid GPU or decent specs
-      else if (gpuTier === 'medium' || (totalPixels > 1000000 && cores >= 2)) {
-        return 'medium';
-      }
-      // Low: Basic device or mobile
-      else {
-        return 'low';
-      }
-    }
-    
     function applyGraphicsQuality(quality) {
-      // Handle auto-detect
-      if (quality === 'auto') {
-        quality = detectGraphicsQuality();
-        console.log(`[Graphics Quality] Auto-detected: ${quality}`);
-      }
-      
       if (!renderer || !window.dirLight) {
         console.warn('[Graphics Quality] Cannot apply settings: renderer or dirLight not initialized. Call after init() completes.');
         return;
@@ -10372,31 +9641,15 @@
       setupMenus();
       window.addEventListener('resize', onWindowResize, false);
       
-      // Signal that module event listeners are attached and ready
-      // This flag tells the standalone loading script it's safe to show the menu
-      window.gameModuleReady = true;
-      console.log('[Init] Module ready - event listeners attached');
-      
       // Start Loop - begin rendering immediately (non-blocking)
       requestAnimationFrame(animate);
       
-      // Start watchdog timer for freeze detection
-      startWatchdog();
-      
       // Show loading screen, then main menu (acceptance criteria #1)
+      // gameModuleReady will be set after loading completes (acceptance criteria #2)
       showLoadingScreen();
     }
     
     function showLoadingScreen() {
-      // Check if standalone loading script already handled loading
-      if (window.loadingComplete) {
-        console.log('[Init] Standalone loading script already handled loading, skipping duplicate logic');
-        // Just show the main menu directly
-        showMainMenu();
-        return;
-      }
-      
-      console.log('[Init] Module loading screen animation starting (standalone script not detected)');
       const loadingScreen = document.getElementById('loading-screen');
       const loadingBar = document.getElementById('loading-bar');
       let progress = 0;
@@ -10424,10 +9677,15 @@
       updateGoldDisplays();
       setGameActive(false);
       setGamePaused(true);
+      
+      // Signal that module is fully initialized (acceptance criteria #2)
+      // This is set AFTER loading screen completes and main menu is shown
+      // The check ensures it's only set once during initial load (not when returning from other screens)
+      if (!window.gameModuleReady) {
+        window.gameModuleReady = true;
+        console.log('[Init] Game module ready - loading complete, main menu shown');
+      }
     }
-    
-    // Export showMainMenu to global scope for standalone loading script
-    window.showMainMenu = showMainMenu;
     
     function hideMainMenu() {
       document.getElementById('main-menu').style.display = 'none';
@@ -10567,23 +9825,22 @@
         playSound('waterdrop');
       });
       
-      optionsSettingsBtn.addEventListener('click', () => {
-        optionsMenu.style.display = 'none';
-        isPaused = true;
-        // Open settings modal
-        document.getElementById('settings-modal').style.display = 'flex';
-      });
-      
-      // Exit to Main Menu from settings (moved from options menu)
-      const settingsExitBtn = document.getElementById('settings-exit-btn');
-      settingsExitBtn.addEventListener('click', () => {
+      // Exit to Main Menu from in-game
+      const optionsExitBtn = document.getElementById('options-exit-btn');
+      optionsExitBtn.addEventListener('click', () => {
         if (confirm('Exit to main menu? Your progress in this run will be lost.')) {
-          document.getElementById('settings-modal').style.display = 'none';
           optionsMenu.style.display = 'none';
           resetGame();
           showMainMenu();
           playSound('waterdrop');
         }
+      });
+      
+      optionsSettingsBtn.addEventListener('click', () => {
+        optionsMenu.style.display = 'none';
+        isPaused = true;
+        // Open settings modal
+        document.getElementById('settings-modal').style.display = 'flex';
       });
       
       document.getElementById('settings-btn').onclick = () => {
@@ -10713,12 +9970,16 @@
         hideMainMenu();
         updateCampScreen();
         document.getElementById('camp-screen').style.display = 'flex';
-        
-        // QUEST SYSTEM: Track camp visits
-        if (saveData.questProgress) {
-          saveData.questProgress.campVisits++;
-          checkQuestCompletion();
-          updateQuestDisplay();
+      };
+      
+      // Quit Game button (closes window/tab)
+      document.getElementById('quit-game-btn').onclick = () => {
+        if (confirm('Are you sure you want to quit the game?')) {
+          // Attempt to close the window (works if opened by script)
+          window.close();
+          // window.close() only works for windows opened by script
+          // For browser tabs, show message asking user to close manually
+          alert('Please close this tab/window manually.');
         }
       };
       
@@ -11057,55 +10318,6 @@
         const particle = particlePool.get();
         particle.reset(pos, color);
         particles.push(particle);
-      }
-    }
-    
-    // ENHANCED: Screen shake effect
-    let cameraShakeIntensity = 0;
-    let cameraShakeDuration = 0;
-    function screenShake(intensity = 0.3, duration = 200) {
-      cameraShakeIntensity = intensity;
-      cameraShakeDuration = duration;
-    }
-    
-    function updateScreenShake() {
-      if (cameraShakeDuration > 0 && camera) {
-        const shakeX = (Math.random() - 0.5) * cameraShakeIntensity;
-        const shakeY = (Math.random() - 0.5) * cameraShakeIntensity;
-        const shakeZ = (Math.random() - 0.5) * cameraShakeIntensity;
-        
-        camera.position.x = 20 + shakeX;
-        camera.position.y = 20 + shakeY;
-        camera.position.z = 20 + shakeZ;
-        
-        cameraShakeDuration -= 16; // Approx frame time
-        
-        if (cameraShakeDuration <= 0) {
-          // Reset camera to original position
-          camera.position.set(20, 20, 20);
-        }
-      }
-    }
-    
-    // ENHANCED: Low HP warning (red screen tint) - constants
-    const LOW_HP_THRESHOLD = 0.3;
-    const BASE_VIGNETTE_SIZE = 50;
-    const MAX_VIGNETTE_GROWTH = 150;
-    const BASE_VIGNETTE_OPACITY = 0.3;
-    const MAX_OPACITY_INCREASE = 0.5;
-    
-    function updateLowHPWarning() {
-      const hpPercent = playerStats.hp / playerStats.maxHp;
-      const uiLayer = document.getElementById('ui-layer');
-      
-      if (hpPercent < LOW_HP_THRESHOLD) {
-        // Low HP - red vignette effect
-        const intensity = (LOW_HP_THRESHOLD - hpPercent) / LOW_HP_THRESHOLD; // 0 to 1 as HP drops from 30% to 0%
-        const vignetteSize = BASE_VIGNETTE_SIZE + intensity * MAX_VIGNETTE_GROWTH;
-        const vignetteOpacity = BASE_VIGNETTE_OPACITY + intensity * MAX_OPACITY_INCREASE;
-        uiLayer.style.boxShadow = `inset 0 0 ${vignetteSize}px rgba(255, 0, 0, ${vignetteOpacity})`;
-      } else {
-        uiLayer.style.boxShadow = 'none';
       }
     }
 
@@ -12998,14 +12210,6 @@
       // Track items gained this run (initialize if not present)
       if (!window.runLootGained) window.runLootGained = [];
       
-      // QUEST SYSTEM: Track survival time and update progress
-      if (saveData.questProgress) {
-        if (survivalTime > saveData.questProgress.survivalTime) {
-          saveData.questProgress.survivalTime = survivalTime;
-        }
-        checkQuestCompletion();
-      }
-      
       // Update save data
       saveData.totalRuns++;
       if (survivalTime > saveData.bestTime) saveData.bestTime = survivalTime;
@@ -13785,64 +12989,8 @@
       );
     }
     
-    // Watchdog timer for freeze detection
-    let lastRenderTime = Date.now();
-    let watchdogTimer = null;
-    
-    function startWatchdog() {
-      if (watchdogTimer) clearInterval(watchdogTimer);
-      
-      watchdogTimer = setInterval(() => {
-        const now = Date.now();
-        const timeSinceLastRender = now - lastRenderTime;
-        
-        // If more than 2 seconds since last render, game may be frozen
-        if (timeSinceLastRender > 2000 && isGameActive && !isPaused) {
-          console.error('[WATCHDOG] Game loop appears frozen! Attempting recovery...');
-          
-          // Try to recover
-          try {
-            // Clear any stuck animations
-            particles = [];
-            flashLights.forEach(light => scene.remove(light));
-            flashLights = [];
-            
-            // Limit enemies if too many
-            if (enemies.length > 50) {
-              const excess = enemies.splice(50);
-              excess.forEach(e => {
-                scene.remove(e.mesh);
-                e.mesh.geometry.dispose();
-                e.mesh.material.dispose();
-              });
-            }
-            
-            // Force render
-            if (renderer && scene && camera) {
-              renderer.render(scene, camera);
-            }
-            
-            lastRenderTime = Date.now();
-            console.log('[WATCHDOG] Recovery attempted');
-          } catch (e) {
-            console.error('[WATCHDOG] Recovery failed:', e);
-          }
-        }
-      }, 500); // Check every 500ms
-    }
-    
-    function stopWatchdog() {
-      if (watchdogTimer) {
-        clearInterval(watchdogTimer);
-        watchdogTimer = null;
-      }
-    }
-    
     function animate(time) {
       requestAnimationFrame(animate);
-      
-      // Update watchdog timer
-      lastRenderTime = Date.now();
       
       // Safety check: Ensure Three.js components are initialized before rendering (PR #82)
       if (!renderer || !scene || !camera) {
@@ -14006,14 +13154,14 @@
         }
       }
 
-      // Spawn Logic - Only spawn new wave if previous wave is cleared AND countdown is done
+      // Spawn Logic - Only spawn new wave if previous wave is cleared
       frameCount++;
       const aliveEnemies = enemies.filter(e => !e.isDead).length;
       const timeSinceLastWave = frameCount - lastWaveEndTime;
       const minWaveDelay = Math.floor(GAME_CONFIG.waveInterval * 0.6); // 60% of wave interval (3 seconds at 60fps)
       
-      // ENHANCED: Don't spawn enemies during countdown
-      if (!countdownActive && frameCount % GAME_CONFIG.waveInterval === 0 && (aliveEnemies === 0 || timeSinceLastWave > GAME_CONFIG.waveInterval)) {
+      // Spawn new wave if: interval passed AND (no enemies alive OR enough time since last spawn)
+      if (frameCount % GAME_CONFIG.waveInterval === 0 && (aliveEnemies === 0 || timeSinceLastWave > GAME_CONFIG.waveInterval)) {
         lastWaveEndTime = frameCount; // Update last wave time on every spawn
         const spawnStartTime = performance.now();
         spawnWave();
@@ -14156,32 +13304,10 @@
           // Fire based on barrels
           for(let i=0; i<weapons.gun.barrels; i++) {
             setTimeout(() => {
-              const proj = new Projectile(player.mesh.position.x, player.mesh.position.z, nearest.mesh.position, 'gun');
-              projectiles.push(proj);
+              projectiles.push(new Projectile(player.mesh.position.x, player.mesh.position.z, nearest.mesh.position));
               
-              // ENHANCED: 3 different muzzle flash variations
-              const flashVariation = Math.floor(Math.random() * 3);
-              let flashColor, flashIntensity, flashRange;
-              
-              if (flashVariation === 0) {
-                // Bright white flash
-                flashColor = 0xFFFFFF;
-                flashIntensity = 7;
-                flashRange = 22;
-              } else if (flashVariation === 1) {
-                // Yellow-orange flash
-                flashColor = 0xFFAA00;
-                flashIntensity = 6;
-                flashRange = 20;
-              } else {
-                // Bright yellow flash
-                flashColor = 0xFFFF00;
-                flashIntensity = 6.5;
-                flashRange = 21;
-              }
-              
-              // ENHANCED muzzle flash light effect - quality lighting
-              const flashLight = new THREE.PointLight(flashColor, flashIntensity, flashRange);
+              // ENHANCED muzzle flash light effect - brighter and more dramatic
+              const flashLight = new THREE.PointLight(0xFFFFFF, 6, 20); // Increased intensity (was 4, 15)
               flashLight.position.copy(player.mesh.position);
               flashLight.position.y += 1;
               scene.add(flashLight);
@@ -14197,27 +13323,20 @@
               }, 80);
               activeTimeouts.push(timeoutId);
               
-              // ENHANCED: Gun recoil animation - more noticeable
+              // Gun kickback effect - slight recoil visual
               const originalY = player.mesh.position.y;
-              const originalRotX = player.mesh.rotation.x;
-              player.mesh.position.y = originalY - 0.08; // Stronger kickback
-              player.mesh.rotation.x = originalRotX - 0.1; // Slight backward tilt
-              
+              player.mesh.position.y = originalY - 0.05;
               const kickbackTimeoutId = setTimeout(() => {
                 player.mesh.position.y = originalY;
-                player.mesh.rotation.x = originalRotX;
-                const tidx = activeTimeouts.indexOf(kickbackTimeoutId);
-                if (tidx > -1) activeTimeouts.splice(tidx, 1);
-              }, 60);
+              }, 50);
               activeTimeouts.push(kickbackTimeoutId);
               
-              // ENHANCED: HD Muzzle flash particles - bright and intense
-              spawnParticles(player.mesh.position, 0xFFFF00, 8); // Yellow flash
-              spawnParticles(player.mesh.position, 0xFFFFFF, 6); // White sparks
-              spawnParticles(player.mesh.position, 0xFFA500, 5); // Orange glow
-              // HD smoke particles
-              spawnParticles(player.mesh.position, 0x666666, 6); // Gray smoke
-              spawnParticles(player.mesh.position, 0x888888, 4); // Light smoke
+              // ENHANCED Muzzle flash particles (bright and intense) - Reduced for performance
+              spawnParticles(player.mesh.position, 0xFFFF00, 6); // Reduced for performance
+              spawnParticles(player.mesh.position, 0xFFFFFF, 4); // Reduced for performance
+              spawnParticles(player.mesh.position, 0xFFA500, 4); // Reduced for performance
+              // Add smoke particles
+              spawnParticles(player.mesh.position, 0x888888, 4);
             }, i * 100);
           }
           weapons.gun.lastShot = time;
@@ -14315,24 +13434,18 @@
             const projectile = new Projectile(
               drone.mesh.position.x, 
               drone.mesh.position.z, 
-              nearestEnemy.mesh.position,
-              'drone'
+              nearestEnemy.mesh.position
             );
             // Mark projectile as from drone turret for damage calculation
             projectile.isDroneTurret = true;
             projectiles.push(projectile);
             
-            // ENHANCED: Cyan laser flash from drone
-            const flashLight = new THREE.PointLight(0x00FFFF, 4, 10); // Cyan
+            // Small muzzle flash from drone
+            const flashLight = new THREE.PointLight(0x00FFFF, 2, 8);
             flashLight.position.copy(drone.mesh.position);
             flashLight.position.y += 0.2;
             scene.add(flashLight);
             flashLights.push(flashLight);
-            
-            // Cyan particles for sci-fi laser effect
-            spawnParticles(drone.mesh.position, 0x00FFFF, 5);
-            spawnParticles(drone.mesh.position, 0x00AAFF, 3);
-            
             const timeoutId = setTimeout(() => {
               scene.remove(flashLight);
               const idx = flashLights.indexOf(flashLight);
@@ -14365,35 +13478,33 @@
         }
 
         if (nearest) {
-          // ENHANCED: Fire multiple pellets with wide spread (shotgun pattern)
+          // Fire two shots with spread
           const baseDir = new THREE.Vector3(
             nearest.mesh.position.x - player.mesh.position.x,
             0,
             nearest.mesh.position.z - player.mesh.position.z
           ).normalize();
           
-          const baseAngle = Math.atan2(baseDir.z, baseDir.x);
-          const pelletCount = weapons.doubleBarrel.pelletCount;
+          // Left barrel
+          const leftAngle = Math.atan2(baseDir.z, baseDir.x) - weapons.doubleBarrel.spread;
+          const leftTarget = new THREE.Vector3(
+            player.mesh.position.x + Math.cos(leftAngle) * weapons.doubleBarrel.range,
+            0,
+            player.mesh.position.z + Math.sin(leftAngle) * weapons.doubleBarrel.range
+          );
+          projectiles.push(new Projectile(player.mesh.position.x, player.mesh.position.z, leftTarget));
           
-          // Fire pellets in a spread pattern
-          for (let i = 0; i < pelletCount; i++) {
-            // Wide spread pattern
-            const spreadAngle = (Math.random() - 0.5) * weapons.doubleBarrel.spread * 2;
-            const pelletAngle = baseAngle + spreadAngle;
-            
-            const pelletTarget = new THREE.Vector3(
-              player.mesh.position.x + Math.cos(pelletAngle) * weapons.doubleBarrel.range,
-              0,
-              player.mesh.position.z + Math.sin(pelletAngle) * weapons.doubleBarrel.range
-            );
-            
-            const proj = new Projectile(player.mesh.position.x, player.mesh.position.z, pelletTarget, 'shotgun');
-            proj.isDoubleBarrel = true;
-            projectiles.push(proj);
-          }
+          // Right barrel
+          const rightAngle = Math.atan2(baseDir.z, baseDir.x) + weapons.doubleBarrel.spread;
+          const rightTarget = new THREE.Vector3(
+            player.mesh.position.x + Math.cos(rightAngle) * weapons.doubleBarrel.range,
+            0,
+            player.mesh.position.z + Math.sin(rightAngle) * weapons.doubleBarrel.range
+          );
+          projectiles.push(new Projectile(player.mesh.position.x, player.mesh.position.z, rightTarget));
           
-          // ENHANCED: Massive muzzle flash with orange/yellow glow
-          const flashLight = new THREE.PointLight(0xFF8800, 10, 25); // Orange, very bright
+          // Effects
+          const flashLight = new THREE.PointLight(0xFFFF00, 3, 12);
           flashLight.position.copy(player.mesh.position);
           flashLight.position.y += 1;
           scene.add(flashLight);
@@ -14404,28 +13515,11 @@
             if (idx > -1) flashLights.splice(idx, 1);
             const tidx = activeTimeouts.indexOf(timeoutId);
             if (tidx > -1) activeTimeouts.splice(tidx, 1);
-          }, 100);
+          }, 80);
           activeTimeouts.push(timeoutId);
           
-          // ENHANCED: Heavy recoil animation
-          const originalY = player.mesh.position.y;
-          const originalRotX = player.mesh.rotation.x;
-          player.mesh.position.y = originalY - 0.15; // HEAVY kickback
-          player.mesh.rotation.x = originalRotX - 0.2; // Strong backward tilt
-          
-          const kickbackTimeoutId = setTimeout(() => {
-            player.mesh.position.y = originalY;
-            player.mesh.rotation.x = originalRotX;
-            const tidx = activeTimeouts.indexOf(kickbackTimeoutId);
-            if (tidx > -1) activeTimeouts.splice(tidx, 1);
-          }, 80);
-          activeTimeouts.push(kickbackTimeoutId);
-          
-          // ENHANCED: Massive particle effects
-          spawnParticles(player.mesh.position, 0xFF8800, 15); // Orange
-          spawnParticles(player.mesh.position, 0xFFFF00, 12); // Yellow
-          spawnParticles(player.mesh.position, 0xFFFFFF, 8);  // White
-          spawnParticles(player.mesh.position, 0x888888, 10); // Heavy smoke
+          spawnParticles(player.mesh.position, 0xFFFF00, 8);
+          spawnParticles(player.mesh.position, 0xFFFFFF, 5);
           
           weapons.doubleBarrel.lastShot = time;
           playSound('doublebarrel'); // Double barrel sound
@@ -14662,10 +13756,6 @@
       expGems = expGems.filter(g => g.active);
       goldCoins = goldCoins.filter(g => g.active);
       chests = chests.filter(c => c.active);
-      
-      // ENHANCED: Update screen shake and low HP warning
-      updateScreenShake();
-      updateLowHPWarning();
 
       // Phase 3: Render loop protection - wrap in try-catch to prevent freeze
       // Frame Skip Mechanism: Skip rendering if frame budget exceeded
