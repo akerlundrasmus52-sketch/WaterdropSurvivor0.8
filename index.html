@@ -9953,7 +9953,7 @@
       }
     }
 
-    function unlockSkill(skillId) {
+    function unlockSkill(skillId, isTutorialFree = false) {
       const skill = SKILL_TREE[skillId];
       const skillData = saveData.skillTree[skillId];
       
@@ -9968,7 +9968,8 @@
       }
       
       // ADVANCED: Check if required skill is unlocked (dependency system)
-      if (skill.requires) {
+      // Skip requirement check for tutorial free skills
+      if (skill.requires && !isTutorialFree) {
         const requiredSkill = saveData.skillTree[skill.requires];
         if (!requiredSkill || !requiredSkill.unlocked || requiredSkill.level < 1) {
           const reqSkillName = SKILL_TREE[skill.requires]?.name || skill.requires;
@@ -9978,9 +9979,9 @@
         }
       }
       
-      // Check if this is the first skill purchase (make it free)
+      // Check if this is the first skill purchase (make it free) or tutorial free
       const isFirstSkill = !saveData.storyQuests?.buildingFirstUse?.skillTree;
-      const costToCharge = isFirstSkill ? 0 : skill.cost;
+      const costToCharge = (isFirstSkill || isTutorialFree) ? 0 : skill.cost;
       
       // ADVANCED: Prevent upgrade bug - strict point check
       if (saveData.skillPoints < costToCharge) {
@@ -10003,8 +10004,8 @@
         updateCampScreen();
         playSound('collect');
         
-        if (isFirstSkill) {
-          showStatusMessage(`${skill.name} unlocked FREE! (First skill bonus)`, 3000);
+        if (isFirstSkill || isTutorialFree) {
+          showStatusMessage(`${skill.name} unlocked FREE! ${isTutorialFree ? '(Tutorial bonus)' : '(First skill bonus)'}`, 3000);
         } else {
           showStatusMessage(`${skill.name} leveled up to ${skillData.level}/${skill.maxLevel}!`, 2000);
         }
@@ -11112,9 +11113,24 @@
         skillNode.className = 'skill-node';
         if (skillData.unlocked) skillNode.classList.add('unlocked');
         
+        // COMIC BOOK TUTORIAL: Highlight dash skill (dashMaster) when it should be unlocked
+        const shouldGlowDash = isComicQuestActive() && 
+                               saveData.tutorial.comicsShown.includes('quest2_inside_skilltree') && 
+                               !saveData.tutorial.comicsShown.includes('quest2_dash_unlocked') &&
+                               skillId === 'dashMaster' &&
+                               !skillData.unlocked;
+        
+        if (shouldGlowDash) {
+          skillNode.classList.add('building-glow-unlock');
+          // Make first skill free for tutorial
+          saveData.skillPoints = Math.max(1, saveData.skillPoints);
+        }
+        
         // ADVANCED: Visual locked state for dependencies and max level
         if (!requirementsMet || (!canAfford && !skillData.unlocked) || isMaxLevel) {
-          skillNode.classList.add('locked');
+          if (!shouldGlowDash) {
+            skillNode.classList.add('locked');
+          }
         }
         
         // Display tier badge
@@ -11126,11 +11142,22 @@
           <div class="skill-desc">${skill.description}</div>
           ${requirementText ? `<div style="font-size: 11px; color: #ff6b6b; margin: 3px 0;">${requirementText}</div>` : ''}
           <div style="font-size: 12px; color: #5DADE2; margin: 5px 0;">Level ${skillData.level}/${skill.maxLevel}</div>
-          <div class="skill-cost">${isMaxLevel ? 'MAX' : `${skill.cost} SP`}</div>
+          <div class="skill-cost">${isMaxLevel ? 'MAX' : (shouldGlowDash ? 'FREE!' : `${skill.cost} SP`)}</div>
         `;
         
-        if (!isMaxLevel && requirementsMet) {
-          skillNode.onclick = () => unlockSkill(skillId);
+        if (!isMaxLevel && (requirementsMet || shouldGlowDash)) {
+          skillNode.onclick = () => {
+            if (shouldGlowDash) {
+              // Unlock dash for free in tutorial
+              unlockSkill(skillId, true); // Pass true to make it free
+              // Show dash unlocked comic
+              setTimeout(() => {
+                showComicQuest('quest2_dash_unlocked');
+              }, 500);
+            } else {
+              unlockSkill(skillId);
+            }
+          };
         }
         
         skillsContent.appendChild(skillNode);
