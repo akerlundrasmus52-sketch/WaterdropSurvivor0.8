@@ -12464,10 +12464,10 @@
       document.getElementById('main-menu').style.display = 'none';
     }
     
-    // Pre-Map Screen System
-    let preMapTimer = null;
+    // Pre-Map Screen System (made global for accessibility)
+    window.preMapTimer = null;
     
-    function showPreMapScreen() {
+    window.showPreMapScreen = function() {
       const preMapScreen = document.getElementById('pre-map-screen');
       preMapScreen.style.display = 'flex';
       
@@ -12476,12 +12476,12 @@
       preMapScreen.classList.add('show');
       
       // Auto-advance after 10 seconds (defensive fallback)
-      preMapTimer = setTimeout(() => {
-        continueFromPreMap();
+      window.preMapTimer = setTimeout(() => {
+        window.continueFromPreMap();
       }, 10000);
-    }
+    };
     
-    function hidePreMapScreen() {
+    window.hidePreMapScreen = function() {
       const preMapScreen = document.getElementById('pre-map-screen');
       preMapScreen.classList.remove('show');
       
@@ -12491,20 +12491,20 @@
       }, 500);
       
       // Clear timer if it exists
-      if (preMapTimer) {
-        clearTimeout(preMapTimer);
-        preMapTimer = null;
+      if (window.preMapTimer) {
+        clearTimeout(window.preMapTimer);
+        window.preMapTimer = null;
       }
-    }
+    };
     
-    function continueFromPreMap() {
+    window.continueFromPreMap = function() {
       playSound('waterdrop');
-      hidePreMapScreen();
+      window.hidePreMapScreen();
       
       // Proceed with game initialization
       resetGame();
       startCountdown();
-    }
+    };
     
     // Countdown system (PR #70-71)
     function startCountdown() {
@@ -13018,7 +13018,7 @@
       document.getElementById('start-game-btn').onclick = () => {
         playSound('waterdrop');
         hideMainMenu();
-        showPreMapScreen(); // Show pre-map screen with Continue button
+        window.showPreMapScreen(); // Show pre-map screen with Continue button (use window reference)
       };
       
       document.getElementById('progression-btn').onclick = () => {
@@ -13077,7 +13077,7 @@
       
       // Pre-Map Continue Button
       document.getElementById('pre-map-continue-btn').onclick = () => {
-        continueFromPreMap();
+        window.continueFromPreMap(); // Use window reference
       };
       
       // Back buttons
