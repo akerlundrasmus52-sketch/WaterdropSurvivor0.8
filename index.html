@@ -1,4 +1,4 @@
-455496b8ecc184)<!DOCTYPE html>
+<!DOCTYPE html>
 <html>
 <head>
   <!--
@@ -79,6 +79,20 @@
       display: flex;
       flex-direction: column;
       justify-content: space-between;
+    }
+    
+    /* FRESH IMPLEMENTATION: Low HP warning vignette */
+    #low-hp-vignette {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 9;
+      background: radial-gradient(circle at center, transparent 30%, rgba(139, 0, 0, 0.4) 100%);
+      opacity: 0;
+      transition: opacity 0.3s;
     }
 
     /* HUD */
@@ -1635,7 +1649,6 @@
       <button class="menu-btn" id="gear-btn">GEAR & EQUIPMENT</button>
       <button class="menu-btn" id="achievements-btn">ACHIEVEMENTS</button>
       <button class="menu-btn" id="credits-btn">CREDITS</button>
-      <button class="menu-btn" id="quit-game-btn" style="margin-top: 20px; background: #8B0000;">🚪 QUIT GAME</button>
     </div>
   </div>
 
@@ -1824,6 +1837,9 @@
 
   <div id="game-container"></div>
 
+  <!-- FRESH: Low HP warning vignette -->
+  <div id="low-hp-vignette"></div>
+
   <div id="ui-layer">
     <div class="hud-top">
       <div class="bar-container" id="hp-bar-container">
@@ -1880,7 +1896,7 @@
     <button id="settings-btn" class="btn-small" style="position: absolute; top: 20px; right: 120px; pointer-events: auto; z-index: 100;">⚙️</button>
     
     <!-- Day/Night Cycle Clock -->
-    <div id="day-night-clock" style="position: absolute; top: 20px; right: 220px; pointer-events: none; z-index: 100;">
+    <div id="day-night-clock" style="position: absolute; top: 20px; left: 50%; transform: translateX(-50%); pointer-events: none; z-index: 100;">
       <div style="background: rgba(0,0,0,0.7); border: 2px solid #FFD700; border-radius: 50%; width: 80px; height: 80px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 0 15px rgba(0,0,0,0.5);">
         <div id="day-night-icon" style="font-size: 32px; margin-bottom: 2px;">☀️</div>
         <div id="day-night-time" style="font-size: 12px; color: #FFD700; font-weight: bold;">00:00</div>
@@ -2070,6 +2086,104 @@
       console.error('[Error] Unhandled promise rejection:', event.reason);
       event.preventDefault(); // Prevent default alert behavior
     });
+  </script>
+
+  <!-- FRESH IMPLEMENTATION: Standalone loading script (non-module) -->
+  <script>
+    // Standalone loading script - runs independently before module loads
+    // Prevents race condition where buttons don't work because event listeners aren't attached yet
+    
+    (function() {
+      // Initialize flags
+      window.gameModuleReady = false;
+      window.loadingComplete = false;
+      
+      // Wait for DOM to be ready
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initLoading);
+      } else {
+        initLoading();
+      }
+      
+      function initLoading() {
+        const loadingScreen = document.getElementById('loading-screen');
+        const loadingBar = document.getElementById('loading-bar');
+        
+        if (!loadingScreen || !loadingBar) {
+          console.error('[Loading] Loading elements not found');
+          return;
+        }
+        
+        let progress = 0;
+        let progressInterval;
+        
+        // Animate loading bar from 0% to 100% over ~8 seconds
+        function updateProgress() {
+          progress += 5; // 5% per step
+          loadingBar.style.width = progress + '%';
+          
+          if (progress >= 100) {
+            clearInterval(progressInterval);
+            window.loadingComplete = true;
+            
+            // Wait for module to be ready before showing menu
+            waitForModuleReady();
+          }
+        }
+        
+        // Start progress animation
+        progressInterval = setInterval(updateProgress, 400); // 20 steps × 400ms = 8s
+        
+        // 12-second failsafe timeout - show menu anyway if module fails to load
+        setTimeout(function() {
+          if (!window.gameModuleReady) {
+            console.warn('[Loading] Failsafe timeout - showing menu without module ready signal');
+            clearInterval(progressInterval);
+            window.loadingComplete = true;
+            showMenuAfterLoading();
+          }
+        }, 12000);
+      }
+      
+      // Wait for module to signal ready, then show menu
+      function waitForModuleReady() {
+        let attempts = 0;
+        const maxAttempts = 50; // 50 × 100ms = 5s max wait
+        
+        const checkInterval = setInterval(function() {
+          attempts++;
+          
+          if (window.gameModuleReady) {
+            // Module is ready!
+            clearInterval(checkInterval);
+            showMenuAfterLoading();
+          } else if (attempts >= maxAttempts) {
+            // Timeout - show anyway
+            console.warn('[Loading] Module ready timeout - showing menu anyway');
+            clearInterval(checkInterval);
+            showMenuAfterLoading();
+          }
+        }, 100);
+      }
+      
+      function showMenuAfterLoading() {
+        const loadingScreen = document.getElementById('loading-screen');
+        if (!loadingScreen) return;
+        
+        // Fade out loading screen
+        loadingScreen.classList.add('fade-out');
+        
+        setTimeout(function() {
+          loadingScreen.style.display = 'none';
+          
+          // Show main menu (module script will handle button event listeners)
+          const mainMenu = document.getElementById('main-menu');
+          if (mainMenu) {
+            mainMenu.style.display = 'flex';
+          }
+        }, 500);
+      }
+    })();
   </script>
 
   <script type="module">
@@ -3212,7 +3326,37 @@
           // Rotation/Aiming with RIGHT stick (independent of movement)
           if (joystickRight.active) {
             // Manual aim: Turn to face the direction of right stick
-            const angle = Math.atan2(joystickRight.x, joystickRight.y);
+            let angle = Math.atan2(joystickRight.x, joystickRight.y);
+            
+            // FRESH: Precision aiming - 15% nudge toward nearest enemy when right joystick active
+            if (enemies && enemies.length > 0) {
+              let nearestEnemy = null;
+              let minDist = Infinity;
+              enemies.forEach(e => {
+                if (e && !e.isDead) {
+                  const dist = this.mesh.position.distanceTo(e.mesh.position);
+                  if (dist < minDist && dist < 15) { // Only nudge if enemy within reasonable range
+                    minDist = dist;
+                    nearestEnemy = e;
+                  }
+                }
+              });
+              
+              if (nearestEnemy) {
+                const dx = nearestEnemy.mesh.position.x - this.mesh.position.x;
+                const dz = nearestEnemy.mesh.position.z - this.mesh.position.z;
+                const enemyAngle = Math.atan2(dx, dz);
+                
+                // Blend 85% player input + 15% toward enemy (subtle magnetism)
+                let angleDiff = enemyAngle - angle;
+                // Normalize angle difference to -PI to PI
+                while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+                while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+                
+                angle = angle + angleDiff * 0.15; // 15% nudge
+              }
+            }
+            
             this.mesh.rotation.y = angle;
           } else if (gameSettings.autoAim && enemies && enemies.length > 0) {
             // Auto-aim when enabled (works in any orientation)
@@ -3563,19 +3707,21 @@
           }, 50);
         }, 50);
         
-        // Enhanced screen shake on damage
+        // FRESH IMPLEMENTATION: Screen shake scales with damage amount
         const originalCameraPos = { 
           x: camera.position.x, 
           y: camera.position.y, 
           z: camera.position.z 
         };
         let shakeTime = 0;
-        const shakeDuration = 0.25; // Slightly longer (was 0.2)
+        const shakeDuration = 0.25 + (reduced / 100) * 0.15; // Duration scales with damage
         
         const shakeAnim = () => {
           shakeTime += 0.016;
           if (shakeTime < shakeDuration) {
-            const intensity = (1 - shakeTime / shakeDuration) * 0.7; // More intense (was 0.5)
+            // Intensity scales with damage (0.5 base + up to 0.5 more based on damage)
+            const baseIntensity = 0.5 + Math.min(reduced / 50, 1) * 0.5;
+            const intensity = (1 - shakeTime / shakeDuration) * baseIntensity;
             camera.position.x = originalCameraPos.x + (Math.random() - 0.5) * intensity;
             camera.position.y = originalCameraPos.y + (Math.random() - 0.5) * intensity;
             camera.position.z = originalCameraPos.z + (Math.random() - 0.5) * intensity;
@@ -4131,8 +4277,9 @@
         // Track last damage type for death effects
         this.lastDamageType = damageType;
         
-        // Phase 5: Hit impact particles (flesh/blood) on every hit
-        spawnParticles(this.mesh.position, 0x8B0000, 3); // Blood particles
+        // Phase 5: Hit impact particles (flesh/blood) on every hit - ENHANCED: Scale with damage
+        const bloodParticleCount = Math.min(3 + Math.floor(amount / 10), 15); // 3-15 particles based on damage
+        spawnParticles(this.mesh.position, 0x8B0000, bloodParticleCount); // Blood particles scale with damage
         
         // Phase 3: Apply armor reduction for MiniBoss
         let finalAmount = amount;
@@ -4147,6 +4294,15 @@
         const oldHp = this.hp;
         this.hp -= finalAmount;
         createDamageNumber(Math.floor(finalAmount), this.mesh.position, isCrit);
+        
+        // White hit flash effect (50ms) - FRESH IMPLEMENTATION
+        const originalColor = this.mesh.material.color.clone();
+        this.mesh.material.color.setHex(0xFFFFFF); // White flash
+        setTimeout(() => {
+          if (this.mesh && this.mesh.material) {
+            this.mesh.material.color.copy(originalColor);
+          }
+        }, 50);
         
         const hpPercent = this.hp / this.maxHp;
         const oldHpPercent = oldHp / this.maxHp;
@@ -5202,6 +5358,21 @@
             
             enemy.takeDamage(Math.floor(dmg), isCrit);
             
+            // FRESH: Critical hit effects - gold particles, brief light flash
+            if (isCrit) {
+              spawnParticles(enemy.mesh.position, 0xFFD700, 15); // Gold particles
+              spawnParticles(enemy.mesh.position, 0xFFA500, 10); // Orange particles
+              
+              // Brief golden light flash
+              const critLight = new THREE.PointLight(0xFFD700, 8, 15);
+              critLight.position.copy(enemy.mesh.position);
+              critLight.position.y += 1;
+              scene.add(critLight);
+              setTimeout(() => {
+                scene.remove(critLight);
+              }, 150);
+            }
+            
             // Knockback effect
             const knockbackForce = 0.5;
             enemy.mesh.position.x += this.vx * knockbackForce;
@@ -5214,6 +5385,89 @@
             this.destroy();
             playSound('hit');
             break;
+          }
+        }
+        
+        // FRESH IMPLEMENTATION: Destructible Props Collision
+        if (window.destructibleProps) {
+          for (let prop of window.destructibleProps) {
+            if (prop.destroyed) continue;
+            const dx = this.mesh.position.x - prop.mesh.position.x;
+            const dz = this.mesh.position.z - prop.mesh.position.z;
+            if (dx*dx + dz*dz < 1.5) { // Hit radius for props
+              // Calculate damage (use base weapon damage)
+              let dmg = weapons.gun.damage * playerStats.damage * playerStats.strength * 0.5; // Half damage to props
+              
+              if (weapons.doubleBarrel.active && this.isDoubleBarrel) {
+                dmg = weapons.doubleBarrel.damage * playerStats.damage * playerStats.strength * 0.5;
+              }
+              
+              if (weapons.droneTurret.active && this.isDroneTurret) {
+                dmg = weapons.droneTurret.damage * playerStats.damage * playerStats.strength * 0.5;
+              }
+              
+              prop.hp -= dmg;
+              
+              // Visual damage stages
+              const hpPercent = prop.hp / prop.maxHp;
+              
+              if (hpPercent <= 0.5 && hpPercent > 0.25 && !prop.darkenedStage1) {
+                // 50% HP: Darken (only once)
+                prop.darkenedStage1 = true;
+                if (prop.type === 'tree') {
+                  prop.mesh.userData.trunk.material.color.copy(prop.originalColor.trunk).multiplyScalar(0.8);
+                  prop.mesh.userData.leaves.material.color.copy(prop.originalColor.leaves).multiplyScalar(0.8);
+                } else {
+                  prop.mesh.material.color.copy(prop.originalColor).multiplyScalar(0.8);
+                }
+              } else if (hpPercent <= 0.25 && hpPercent > 0 && !prop.darkenedStage2) {
+                // 25% HP: Darken more + Shrink (only once)
+                prop.darkenedStage2 = true;
+                if (prop.type === 'tree') {
+                  prop.mesh.userData.trunk.material.color.copy(prop.originalColor.trunk).multiplyScalar(0.6);
+                  prop.mesh.userData.leaves.material.color.copy(prop.originalColor.leaves).multiplyScalar(0.6);
+                } else {
+                  prop.mesh.material.color.copy(prop.originalColor).multiplyScalar(0.6);
+                }
+                prop.mesh.scale.copy(prop.originalScale).multiplyScalar(0.8);
+              } else if (prop.hp <= 0) {
+                // 0 HP: Destroy with debris
+                prop.destroyed = true;
+                
+                // Explosion effect based on type
+                if (prop.type === 'barrel') {
+                  // Barrel explodes
+                  spawnParticles(prop.mesh.position, 0xFF4500, 30); // Orange explosion
+                  spawnParticles(prop.mesh.position, 0xFFFF00, 15); // Yellow fire
+                  playSound('hit');
+                } else if (prop.type === 'tree') {
+                  // Tree breaks apart
+                  spawnParticles(prop.mesh.position, 0x8B4513, 20); // Brown wood
+                  spawnParticles(prop.mesh.position, 0x228B22, 15); // Green leaves
+                } else if (prop.type === 'crate') {
+                  // Crate breaks
+                  spawnParticles(prop.mesh.position, 0xD2691E, 20); // Wood particles
+                }
+                
+                // Remove from scene
+                scene.remove(prop.mesh);
+                if (prop.mesh.userData.trunk) {
+                  prop.mesh.userData.trunk.geometry.dispose();
+                  prop.mesh.userData.trunk.material.dispose();
+                  prop.mesh.userData.leaves.geometry.dispose();
+                  prop.mesh.userData.leaves.material.dispose();
+                } else {
+                  prop.mesh.geometry.dispose();
+                  prop.mesh.material.dispose();
+                }
+              }
+              
+              // Small particle effect on hit
+              spawnParticles(prop.mesh.position, 0x888888, 3);
+              
+              this.destroy();
+              break;
+            }
           }
         }
       }
@@ -5626,8 +5880,10 @@
         this.mesh.add(this.waterFill);
         
         this.active = true;
-        this.rotSpeed = 0.08; // Steady 360-degree rotation
-        this.rotSpeedY = 0.05; // Separate axis rotation
+        // FRESH: Randomized rotation speed and direction for each XP drop
+        this.rotSpeed = (Math.random() * 0.12 + 0.04) * (Math.random() < 0.5 ? 1 : -1); // 0.04-0.16, random direction
+        this.rotSpeedY = (Math.random() * 0.08 + 0.02) * (Math.random() < 0.5 ? 1 : -1); // 0.02-0.10, random direction
+        this.rotSpeedX = (Math.random() * 0.06 + 0.01) * (Math.random() < 0.5 ? 1 : -1); // 0.01-0.07, random direction
         this.bobPhase = Math.random() * Math.PI * 2;
         this.sparklePhase = Math.random() * Math.PI * 2;
         this.fillPhase = 0; // Water fill animation
@@ -5637,9 +5893,10 @@
       update(playerPos) {
         if (!this.active) return;
 
-        // Spin 360 degrees like Earth (varied rotation)
+        // FRESH: Spin with randomized speeds and directions (each XP drop unique)
         this.mesh.rotation.z += this.rotSpeed;
         this.mesh.rotation.y += this.rotSpeedY;
+        this.mesh.rotation.x += this.rotSpeedX;
         
         // Bob up and down
         this.bobPhase += 0.05;
@@ -9490,6 +9747,111 @@
         flower.rotation.x = -Math.PI/2;
         scene.add(flower);
       }
+      
+      // FRESH IMPLEMENTATION: Destructible Environment System
+      // Trees (120), Barrels (30), Crates (25) with HP and damage stages
+      window.destructibleProps = [];
+      
+      // Helper function to create a destructible prop
+      function createDestructibleProp(type, position) {
+        let mesh, hp, maxHp;
+        
+        if (type === 'tree') {
+          // Tree: trunk + leaves
+          const trunkGeo = new THREE.CylinderGeometry(0.3, 0.4, 3, 8);
+          const trunkMat = new THREE.MeshToonMaterial({ color: 0x8B4513 });
+          const trunk = new THREE.Mesh(trunkGeo, trunkMat.clone()); // Clone material for individual instances
+          trunk.position.y = 1.5;
+          trunk.castShadow = true;
+          
+          const leavesGeo = new THREE.SphereGeometry(1.5, 8, 8);
+          const leavesMat = new THREE.MeshToonMaterial({ color: 0x228B22 });
+          const leaves = new THREE.Mesh(leavesGeo, leavesMat.clone()); // Clone material
+          leaves.position.y = 3.5;
+          leaves.castShadow = true;
+          
+          const treeGroup = new THREE.Group();
+          treeGroup.add(trunk);
+          treeGroup.add(leaves);
+          treeGroup.position.copy(position);
+          scene.add(treeGroup);
+          
+          mesh = treeGroup;
+          hp = 50;
+          maxHp = 50;
+          mesh.userData.trunk = trunk;
+          mesh.userData.leaves = leaves;
+        } else if (type === 'barrel') {
+          // Barrel: cylinder
+          const barrelGeo = new THREE.CylinderGeometry(0.4, 0.4, 1, 8);
+          const barrelMat = new THREE.MeshToonMaterial({ color: 0xA0522D });
+          mesh = new THREE.Mesh(barrelGeo, barrelMat.clone()); // Clone material
+          mesh.position.copy(position);
+          mesh.position.y = 0.5;
+          mesh.castShadow = true;
+          scene.add(mesh);
+          
+          hp = 20;
+          maxHp = 20;
+        } else if (type === 'crate') {
+          // Crate: box
+          const crateGeo = new THREE.BoxGeometry(1, 1, 1);
+          const crateMat = new THREE.MeshToonMaterial({ color: 0xD2691E });
+          mesh = new THREE.Mesh(crateGeo, crateMat.clone()); // Clone material
+          mesh.position.copy(position);
+          mesh.position.y = 0.5;
+          mesh.castShadow = true;
+          scene.add(mesh);
+          
+          hp = 15;
+          maxHp = 15;
+        }
+        
+        return {
+          type: type,
+          mesh: mesh,
+          hp: hp,
+          maxHp: maxHp,
+          destroyed: false,
+          originalScale: mesh.scale.clone(),
+          originalColor: type === 'tree' ? 
+            { trunk: mesh.userData.trunk.material.color.clone(), leaves: mesh.userData.leaves.material.color.clone() } :
+            mesh.material.color.clone()
+        };
+      }
+      
+      // Spawn Trees (120) - scattered across the map
+      for (let i = 0; i < 120; i++) {
+        const x = (Math.random() - 0.5) * 250; // Spread across map
+        const z = (Math.random() - 0.5) * 250;
+        // Avoid spawning too close to center (player start)
+        if (Math.abs(x) < 15 && Math.abs(z) < 15) continue;
+        
+        const tree = createDestructibleProp('tree', new THREE.Vector3(x, 0, z));
+        window.destructibleProps.push(tree);
+      }
+      
+      // Spawn Barrels (30) - near landmarks and paths
+      for (let i = 0; i < 30; i++) {
+        const x = (Math.random() - 0.5) * 200;
+        const z = (Math.random() - 0.5) * 200;
+        // Avoid spawning too close to center
+        if (Math.abs(x) < 15 && Math.abs(z) < 15) continue;
+        
+        const barrel = createDestructibleProp('barrel', new THREE.Vector3(x, 0, z));
+        window.destructibleProps.push(barrel);
+      }
+      
+      // Spawn Crates (25) - scattered around
+      for (let i = 0; i < 25; i++) {
+        const x = (Math.random() - 0.5) * 200;
+        const z = (Math.random() - 0.5) * 200;
+        // Avoid spawning too close to center
+        if (Math.abs(x) < 15 && Math.abs(z) < 15) continue;
+        
+        const crate = createDestructibleProp('crate', new THREE.Vector3(x, 0, z));
+        window.destructibleProps.push(crate);
+      }
     }
 
     // Performance: Cache animated objects to avoid scene.traverse() every frame
@@ -9644,47 +10006,20 @@
       // Start Loop - begin rendering immediately (non-blocking)
       requestAnimationFrame(animate);
       
-      // Show loading screen, then main menu (acceptance criteria #1)
-      // gameModuleReady will be set after loading completes (acceptance criteria #2)
-      showLoadingScreen();
+      // FRESH: Signal that module is ready (standalone loading script is waiting for this)
+      // Don't call showLoadingScreen - standalone script handles it
+      window.gameModuleReady = true;
+      console.log('[Init] Game module ready - Three.js loaded, event listeners attached');
     }
     
-    function showLoadingScreen() {
-      const loadingScreen = document.getElementById('loading-screen');
-      const loadingBar = document.getElementById('loading-bar');
-      let progress = 0;
-      
-      // Extended loading duration: 20 iterations × 400ms = 8000ms (8 seconds total)
-      const interval = setInterval(() => {
-        progress += 5;
-        loadingBar.style.width = progress + '%';
-        
-        if (progress >= 100) {
-          clearInterval(interval);
-          setTimeout(() => {
-            loadingScreen.classList.add('fade-out');
-            setTimeout(() => {
-              loadingScreen.style.display = 'none';
-              showMainMenu();
-            }, 500);
-          }, 600); // Extended delay before fade
-        }
-      }, 400); // Slower progress updates for longer duration
-    }
+    // showLoadingScreen is now handled by standalone script
+    // Keeping showMainMenu for internal use (e.g., returning from game to menu)
     
     function showMainMenu() {
       document.getElementById('main-menu').style.display = 'flex';
       updateGoldDisplays();
       setGameActive(false);
       setGamePaused(true);
-      
-      // Signal that module is fully initialized (acceptance criteria #2)
-      // This is set AFTER loading screen completes and main menu is shown
-      // The check ensures it's only set once during initial load (not when returning from other screens)
-      if (!window.gameModuleReady) {
-        window.gameModuleReady = true;
-        console.log('[Init] Game module ready - loading complete, main menu shown');
-      }
     }
     
     function hideMainMenu() {
@@ -9970,17 +10305,6 @@
         hideMainMenu();
         updateCampScreen();
         document.getElementById('camp-screen').style.display = 'flex';
-      };
-      
-      // Quit Game button (closes window/tab)
-      document.getElementById('quit-game-btn').onclick = () => {
-        if (confirm('Are you sure you want to quit the game?')) {
-          // Attempt to close the window (works if opened by script)
-          window.close();
-          // window.close() only works for windows opened by script
-          // For browser tabs, show message asking user to close manually
-          alert('Please close this tab/window manually.');
-        }
       };
       
       // Back buttons
@@ -11580,6 +11904,18 @@
       document.getElementById('hp-fill').style.width = `${Math.max(0, hpPct)}%`;
       document.getElementById('hp-text').innerText = `HP: ${Math.max(0, Math.ceil(playerStats.hp))}/${playerStats.maxHp}`;
       
+      // FRESH: Low HP warning vignette when HP < 30%
+      const lowHpVignette = document.getElementById('low-hp-vignette');
+      if (lowHpVignette) {
+        if (hpPct < 30 && hpPct > 0) {
+          // Show vignette, opacity scales with how low HP is (more intense as HP drops)
+          const vignetteOpacity = (30 - hpPct) / 30; // 0 at 30%, 1 at 0%
+          lowHpVignette.style.opacity = vignetteOpacity;
+        } else {
+          lowHpVignette.style.opacity = '0';
+        }
+      }
+      
       const expPct = (playerStats.exp / playerStats.expReq) * 100;
       // Update old EXP bar (hidden but keep for compatibility)
       document.getElementById('exp-fill').style.width = `${Math.min(100, expPct)}%`;
@@ -12891,7 +13227,46 @@
       spawnCount: 0,
       renderCount: 0,
       lastEnemyCount: 0,
-      cumulativeFrameTime: 0 // Track cumulative time for accurate average
+      cumulativeFrameTime: 0, // Track cumulative time for accurate average
+      // FRESH: FPS watchdog - rolling 10-frame average
+      recentFrameTimes: [],
+      rollingAvgFPS: 60,
+      particleThrottleActive: false
+    };
+    
+    // FRESH: FPS Watchdog - Update rolling average and throttle particles if needed
+    function updateFPSWatchdog(frameTime) {
+      // Add current frame time to rolling window
+      performanceLog.recentFrameTimes.push(frameTime);
+      
+      // Keep only last 10 frames
+      if (performanceLog.recentFrameTimes.length > 10) {
+        performanceLog.recentFrameTimes.shift();
+      }
+      
+      // Calculate rolling average FPS
+      if (performanceLog.recentFrameTimes.length === 10) {
+        const avgFrameTime = performanceLog.recentFrameTimes.reduce((a, b) => a + b, 0) / 10;
+        performanceLog.rollingAvgFPS = 1000 / avgFrameTime; // Convert ms to FPS
+        
+        // Throttle particles if FPS < 30
+        if (performanceLog.rollingAvgFPS < 30 && !performanceLog.particleThrottleActive) {
+          performanceLog.particleThrottleActive = true;
+          console.warn(`FPS watchdog: FPS below 30 (${performanceLog.rollingAvgFPS.toFixed(1)}), throttling particles to 50%`);
+        } else if (performanceLog.rollingAvgFPS >= 35 && performanceLog.particleThrottleActive) {
+          // Restore particles when FPS recovers above 35 (hysteresis to prevent flapping)
+          performanceLog.particleThrottleActive = false;
+          console.log(`FPS watchdog: FPS recovered (${performanceLog.rollingAvgFPS.toFixed(1)}), restoring particles`);
+        }
+      }
+    }
+    
+    // Enhance spawnParticles to respect throttle
+    const originalSpawnParticles = spawnParticles;
+    spawnParticles = function(position, color, count) {
+      // Apply throttle if active (50% reduction)
+      const adjustedCount = performanceLog.particleThrottleActive ? Math.ceil(count * 0.5) : count;
+      return originalSpawnParticles(position, color, adjustedCount);
     };
     
     // Day/Night Cycle Update - Non-blocking, smooth lighting transitions
@@ -13306,8 +13681,27 @@
             setTimeout(() => {
               projectiles.push(new Projectile(player.mesh.position.x, player.mesh.position.z, nearest.mesh.position));
               
-              // ENHANCED muzzle flash light effect - brighter and more dramatic
-              const flashLight = new THREE.PointLight(0xFFFFFF, 6, 20); // Increased intensity (was 4, 15)
+              // ENHANCED muzzle flash light effect - 3 variations (FRESH)
+              const flashVariation = i % 3;
+              let flashColor, flashIntensity, flashRadius;
+              if (flashVariation === 0) {
+                // Bright white flash
+                flashColor = 0xFFFFFF;
+                flashIntensity = 6;
+                flashRadius = 20;
+              } else if (flashVariation === 1) {
+                // Yellow-orange flash
+                flashColor = 0xFFCC00;
+                flashIntensity = 5.5;
+                flashRadius = 18;
+              } else {
+                // Blue-white flash (hotter burn)
+                flashColor = 0xCCFFFF;
+                flashIntensity = 6.5;
+                flashRadius = 22;
+              }
+              
+              const flashLight = new THREE.PointLight(flashColor, flashIntensity, flashRadius);
               flashLight.position.copy(player.mesh.position);
               flashLight.position.y += 1;
               scene.add(flashLight);
@@ -13462,7 +13856,7 @@
         weapons.droneTurret.lastShot = time;
       }
 
-      // 6. DOUBLE BARREL
+      // 6. DOUBLE BARREL - ENHANCED with 6-pellet spread, heavy recoil, orange/yellow flash
       if (weapons.doubleBarrel.active && time - weapons.doubleBarrel.lastShot > weapons.doubleBarrel.cooldown) {
         // Find nearest enemy
         let nearest = null;
@@ -13478,33 +13872,40 @@
         }
 
         if (nearest) {
-          // Fire two shots with spread
+          // Fire 6 pellets with spread (shotgun pattern)
           const baseDir = new THREE.Vector3(
             nearest.mesh.position.x - player.mesh.position.x,
             0,
             nearest.mesh.position.z - player.mesh.position.z
           ).normalize();
           
-          // Left barrel
-          const leftAngle = Math.atan2(baseDir.z, baseDir.x) - weapons.doubleBarrel.spread;
-          const leftTarget = new THREE.Vector3(
-            player.mesh.position.x + Math.cos(leftAngle) * weapons.doubleBarrel.range,
-            0,
-            player.mesh.position.z + Math.sin(leftAngle) * weapons.doubleBarrel.range
-          );
-          projectiles.push(new Projectile(player.mesh.position.x, player.mesh.position.z, leftTarget));
+          const baseAngle = Math.atan2(baseDir.z, baseDir.x);
+          const spreadAngle = weapons.doubleBarrel.spread;
           
-          // Right barrel
-          const rightAngle = Math.atan2(baseDir.z, baseDir.x) + weapons.doubleBarrel.spread;
-          const rightTarget = new THREE.Vector3(
-            player.mesh.position.x + Math.cos(rightAngle) * weapons.doubleBarrel.range,
-            0,
-            player.mesh.position.z + Math.sin(rightAngle) * weapons.doubleBarrel.range
-          );
-          projectiles.push(new Projectile(player.mesh.position.x, player.mesh.position.z, rightTarget));
+          // Create 6 pellets in a spread pattern
+          for (let i = 0; i < 6; i++) {
+            const angle = baseAngle + (Math.random() - 0.5) * spreadAngle * 2;
+            const target = new THREE.Vector3(
+              player.mesh.position.x + Math.cos(angle) * weapons.doubleBarrel.range,
+              0,
+              player.mesh.position.z + Math.sin(angle) * weapons.doubleBarrel.range
+            );
+            const pellet = new Projectile(player.mesh.position.x, player.mesh.position.z, target);
+            pellet.isDoubleBarrel = true;
+            pellet.speed = 0.6; // Faster projectiles for shotgun
+            projectiles.push(pellet);
+          }
           
-          // Effects
-          const flashLight = new THREE.PointLight(0xFFFF00, 3, 12);
+          // HEAVY RECOIL - much stronger than pistol
+          const originalY = player.mesh.position.y;
+          player.mesh.position.y = originalY - 0.15; // 3x stronger than pistol
+          const kickbackTimeoutId = setTimeout(() => {
+            player.mesh.position.y = originalY;
+          }, 100);
+          activeTimeouts.push(kickbackTimeoutId);
+          
+          // Orange/yellow muzzle flash (shotgun characteristic)
+          const flashLight = new THREE.PointLight(0xFFA500, 8, 18); // Orange, brighter, wider
           flashLight.position.copy(player.mesh.position);
           flashLight.position.y += 1;
           scene.add(flashLight);
@@ -13515,11 +13916,14 @@
             if (idx > -1) flashLights.splice(idx, 1);
             const tidx = activeTimeouts.indexOf(timeoutId);
             if (tidx > -1) activeTimeouts.splice(tidx, 1);
-          }, 80);
+          }, 100);
           activeTimeouts.push(timeoutId);
           
-          spawnParticles(player.mesh.position, 0xFFFF00, 8);
-          spawnParticles(player.mesh.position, 0xFFFFFF, 5);
+          // Orange/yellow particles for shotgun blast
+          spawnParticles(player.mesh.position, 0xFFA500, 12); // Orange
+          spawnParticles(player.mesh.position, 0xFFFF00, 10); // Yellow
+          spawnParticles(player.mesh.position, 0xFFFFFF, 6); // White
+          spawnParticles(player.mesh.position, 0x888888, 8); // Smoke
           
           weapons.doubleBarrel.lastShot = time;
           playSound('doublebarrel'); // Double barrel sound
@@ -13781,6 +14185,9 @@
       const totalFrameTime = frameEndTime - frameStartTime;
       performanceLog.totalFrameTime = totalFrameTime;
       performanceLog.frameCount++;
+      
+      // FRESH: Update FPS watchdog with current frame time
+      updateFPSWatchdog(totalFrameTime);
       
       // Log slow frames
       if (totalFrameTime > FRAME_TIME_BUDGET) {
