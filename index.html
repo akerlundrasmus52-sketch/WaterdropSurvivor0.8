@@ -12269,8 +12269,12 @@
         volcano: { x: -60, y: 25, z: -70 }
       };
       
-      console.log('[CinematicIntro] Starting intro sequence');
+      // Debug logging removed for production
     }
+    
+    // Constants for cinematic intro
+    const DESCRIPTION_DISPLAY_TIME = 0.5;
+    const DESCRIPTION_PROGRESS_THRESHOLD = 0.2;
     
     function updateCinematicIntro(dt) {
       if (!cinematicIntroActive) return;
@@ -12297,7 +12301,7 @@
           camera.lookAt(pos.x, 0, pos.z);
           
           // Show description bubble
-          if (cinematicIntroTimer < 0.5 && progress < 0.2) {
+          if (cinematicIntroTimer < DESCRIPTION_DISPLAY_TIME && progress < DESCRIPTION_PROGRESS_THRESHOLD) {
             showLandmarkDescription(currentStep.target);
           }
         }
@@ -16973,7 +16977,6 @@
       updateCameraShake(dt);
       
       // VISUAL POLISH: Lightning strikes during storms (random periodic)
-      if (!lightningTimer) lightningTimer = 0;
       lightningTimer += dt;
       if (lightningTimer > 15 + Math.random() * 10) {
         lightningTimer = 0;
