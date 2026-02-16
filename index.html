@@ -5022,6 +5022,8 @@
         // DEFENSIVE: Ensure mesh and material exist before processing damage
         if (!this.mesh || !this.mesh.material) {
           console.error('Enemy.takeDamage() called but mesh or material is null');
+          // Mark as dead to prevent further damage processing
+          this.isDead = true;
           return;
         }
         
@@ -5466,7 +5468,11 @@
         // 1. All EXP/gold/text spawns complete (they use deathPosition, not this.mesh)
         // 2. Death animation methods have captured initial mesh.position via clone()
         // Death animations create their own meshes and don't reference this.mesh after init
-        setTimeout(() => {
+        const timeoutId = setTimeout(() => {
+          // DEFENSIVE: Check scene still exists before disposal (handles game reset/cleanup)
+          if (typeof scene === 'undefined' || !scene) {
+            return;
+          }
           if (meshToRemove && meshToRemove.parent) {
             scene.remove(meshToRemove);
           }
@@ -5477,6 +5483,9 @@
             materialToDispose.dispose();
           }
         }, GAME_CONFIG.meshDisposalDelayMs);
+        
+        // Store timeout ID for potential early cleanup
+        this.disposalTimeoutId = timeoutId;
       }
       
       // Specialized death effects by damage type
