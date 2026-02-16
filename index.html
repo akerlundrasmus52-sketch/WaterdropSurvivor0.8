@@ -2533,7 +2533,7 @@
     // Day/Night Cycle System - Smooth, non-blocking transitions
     let dayNightCycle = {
       enabled: true,
-      timeOfDay: 0.2, // Start at sunrise by default (~20% up) (0-1, where 0=midnight, 0.25=dawn, 0.5=noon, 0.75=dusk, 1=midnight)
+      timeOfDay: 0.01, // Start at dawn (1% - very early morning) for enhanced realism (0-1, where 0=midnight, 0.25=dawn, 0.5=noon, 0.75=dusk, 1=midnight)
       cycleSpeed: 1 / 600, // 10 minutes for full cycle (1 / 600 seconds at 60fps)
       lastUpdateTime: 0
     };
@@ -10110,25 +10110,21 @@
       
       // Reset progress button with double confirmation
       document.getElementById('settings-reset-btn').onclick = () => {
-        if (confirm('⚠️ WARNING ⚠️\n\nAre you ABSOLUTELY SURE you want to RESET ALL PROGRESS?\n\nThis will delete:\n• All permanent upgrades\n• All gold\n• All achievements\n\nThis action CANNOT be undone!')) {
+        if (confirm('⚠️ WARNING ⚠️\n\nAre you ABSOLUTELY SURE you want to RESET ALL PROGRESS?\n\nThis will delete:\n• All permanent upgrades\n• All gold\n• All achievements\n• All gear & inventory\n• All buildings & quests\n• All companions\n• Everything will be completely wiped!\n\nThis action CANNOT be undone!')) {
           // Second confirmation
           if (confirm('FINAL CONFIRMATION\n\nThis is your LAST CHANCE!\n\nDo you really want to DELETE EVERYTHING?\n\nClick OK to permanently reset, or Cancel to keep your progress.')) {
-            // Reset all save data
-            saveData = {
-              gold: 0,
-              upgrades: {
-                maxHp: 0,
-                hpRegen: 0,
-                moveSpeed: 0,
-                attackDamage: 0,
-                attackSpeed: 0,
-                critChance: 0,
-                critDamage: 0,
-                armor: 0,
-                cooldownReduction: 0
-              },
-              achievements: []
-            };
+            // Completely clear localStorage to ensure fresh start
+            try {
+              localStorage.removeItem(SAVE_KEY);
+              localStorage.removeItem(SETTINGS_KEY);
+            } catch (e) {
+              console.warn('Failed to remove localStorage items:', e);
+            }
+            
+            // Reset to default save data (complete fresh start)
+            saveData = JSON.parse(JSON.stringify(defaultSaveData));
+            
+            // Save the fresh state
             saveSaveData();
             
             // Reset game and return to menu
@@ -10138,7 +10134,7 @@
             showMainMenu();
             updateShopUI();
             
-            alert('✅ All progress has been reset!');
+            alert('✅ All progress has been completely reset! The game will start fresh on your next playthrough.');
             playSound('hit');
           }
         }
@@ -12261,9 +12257,9 @@
       // Reset run loot tracking
       window.runLootGained = [];
       
-      // Set time of day based on sleep choice (default sunrise ~20% up)
+      // Set time of day based on sleep choice (default dawn at 1% for enhanced realism)
       if (saveData.nextRunTimeOfDay === 'day') {
-        dayNightCycle.timeOfDay = 0.2; // Sunrise (~20% sun elevation)
+        dayNightCycle.timeOfDay = 0.01; // Dawn (1% - very early morning for realistic lighting)
       } else {
         dayNightCycle.timeOfDay = 0.0; // Midnight
       }
