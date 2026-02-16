@@ -3860,9 +3860,41 @@
     let activeCompanion = null; // Will hold the active Companion instance
 
     // Game Settings
+    // Constants for device detection
+    const MOBILE_BREAKPOINT = 768; // Screen width/height threshold for mobile devices
+    const SKIP_INTRO_KEYS = [' ', 'Enter', 'Escape']; // Keys that can skip intro/countdown
+    
+    /**
+     * Auto-detects the appropriate default control type based on device capabilities.
+     * 
+     * Detection logic:
+     * 1. Checks for touch support (ontouchstart or maxTouchPoints)
+     * 2. Checks screen dimensions (uses OR: if either dimension ≤ 768px)
+     * 3. Returns 'touch' for touch-enabled devices with small screens (mobile/tablets)
+     * 4. Returns 'keyboard' for non-touch or large-screen devices (desktop/laptop)
+     * 
+     * Note: OR condition for dimensions handles portrait phones (e.g., 375x812)
+     * where only one dimension is small.
+     * 
+     * @returns {string} 'touch' for mobile devices, 'keyboard' for desktop
+     */
+    function detectDefaultControlType() {
+      // Check if device has touch support
+      const hasTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+      // Check if it's likely a mobile device (small screen + touch)
+      // Use OR condition: if either dimension is small, it's likely mobile (handles portrait phones)
+      const isMobileDevice = hasTouch && (window.innerWidth <= MOBILE_BREAKPOINT || window.innerHeight <= MOBILE_BREAKPOINT);
+      
+      if (isMobileDevice) {
+        return 'touch';
+      }
+      // Desktop/laptop defaults to keyboard
+      return 'keyboard';
+    }
+
     const gameSettings = {
       autoAim: false, // Auto-aim off by default, upgradeable via attributes
-      controlType: 'touch', // 'touch', 'keyboard', 'gamepad'
+      controlType: detectDefaultControlType(), // Auto-detect: 'touch' for mobile, 'keyboard' for desktop
       soundEnabled: true,
       musicEnabled: true,
       graphicsQuality: 'medium', // 'low', 'medium', 'high'
@@ -12681,6 +12713,35 @@
       console.log('[CinematicIntro] Intro complete - Game started - isPaused:', isPaused, 'isGameActive:', isGameActive);
     }
     
+    /**
+     * Skips the intro/countdown sequences and starts the game immediately.
+     * 
+     * Should be called when:
+     * - User presses Space/Enter/Escape during intro/countdown
+     * - User clicks/touches the screen during intro/countdown
+     * 
+     * Side effects:
+     * - Clears countdownActive and cinematicIntroActive flags
+     * - Unpauses the game (isPaused = false)
+     * - Sets game as active (isGameActive = true)
+     * - Initializes game start time
+     */
+    function skipToGameStart() {
+      const wasCountdownActive = countdownActive;
+      const wasCinematicActive = cinematicIntroActive;
+      
+      // Clear both sequences
+      countdownActive = false;
+      cinematicIntroActive = false;
+      
+      // Start the game
+      setGamePaused(false);
+      setGameActive(true);
+      gameStartTime = Date.now();
+      
+      console.log('[Skip] Skipped to game start - countdown:', wasCountdownActive, 'cinematic:', wasCinematicActive);
+    }
+    
     function showLandmarkDescription(landmark) {
       const descriptions = {
         stonehenge: '🗿 Ancient Stonehenge - Mystical Power',
@@ -13006,8 +13067,12 @@
         joystickRight.active = false;
         joystickRight.x = 0;
         joystickRight.y = 0;
-        // Clear keyboard state when switching control types
-        gameSettings.keysPressed = {};
+        // Clear keyboard state when switching control types (preserve object reference)
+        if (gameSettings.keysPressed) {
+          Object.keys(gameSettings.keysPressed).forEach(key => {
+            delete gameSettings.keysPressed[key];
+          });
+        }
         updateControlType();
         saveSettings();
       };
@@ -15947,6 +16012,12 @@
       const joystickInnerRight = document.getElementById('joystick-inner-right');
       const container = document.getElementById('game-container');
       
+      // Defensive null checks for input elements
+      if (!zone || !joystickOuter || !joystickInner || !joystickOuterRight || !joystickInnerRight || !container) {
+        console.warn('Input elements not found. Skipping input setup.');
+        return;
+      }
+      
       let touchStartX = 0;
       let touchStartY = 0;
       let touchStartTime = 0;
@@ -16139,6 +16210,13 @@
       }, { passive: false });
 
       container.addEventListener('touchend', (e) => {
+        // Allow skipping cinematic intro/countdown with touch
+        if (cinematicIntroActive || countdownActive) {
+          skipToGameStart();
+          e.preventDefault();
+          return;
+        }
+        
         const t = e.changedTouches[0];
         const dx = t.clientX - touchStartX;
         const dy = t.clientY - touchStartY;
@@ -16151,13 +16229,33 @@
         }
       }, { passive: false });
       
+      // Click handler for skipping intro on desktop
+      container.addEventListener('click', (e) => {
+        // Allow skipping cinematic intro/countdown with click
+        if (cinematicIntroActive || countdownActive) {
+          skipToGameStart();
+          e.preventDefault();
+          return;
+        }
+      }, { passive: false });
+      
       // Keyboard Controls (WASD for movement, mouse for aiming) - only register once
       if (!gameSettings.inputListenersRegistered) {
         const keysPressed = {};
         gameSettings.keysPressed = keysPressed; // Store reference for game loop access
         
         window.addEventListener('keydown', (e) => {
-          if (!isGameActive || isPaused || isGameOver) return;
+          // During intro/countdown, only allow skip keys
+          if (cinematicIntroActive || countdownActive) {
+            e.preventDefault(); // Prevent default browser actions for all keys
+            if (SKIP_INTRO_KEYS.includes(e.key)) {
+              skipToGameStart();
+            }
+            return;
+          }
+          
+          // Allow keyboard input during gameplay, but not during pause/gameover
+          if (isPaused || isGameOver) return;
           if (gameSettings.controlType !== 'keyboard') return;
           keysPressed[e.key.toLowerCase()] = true;
           
@@ -16454,7 +16552,7 @@
         return;
       }
 
-      if (isPaused || isGameOver || !isGameActive) {
+      if (isPaused || isGameOver) {
         // Still render the scene so visual effects (camera shake, particles, modals) are visible (PR #82)
         renderer.render(scene, camera);
         return;
@@ -16592,12 +16690,16 @@
       if (frameCount % 60 === 0 && playerStats.hpRegen > 0 && playerStats.hp < playerStats.maxHp) {
         playerStats.hp = Math.min(playerStats.maxHp, playerStats.hp + playerStats.hpRegen);
         updateHUD();
-        // Green particle
-        spawnParticles(player.mesh.position, 0x00FF00, 2);
+        // Green particle (defensive null check)
+        if (player && player.mesh && player.mesh.position) {
+          spawnParticles(player.mesh.position, 0x00FF00, 2);
+        }
       }
 
-      // Player Update
-      player.update(dt);
+      // Player Update (defensive null check)
+      if (player && player.update) {
+        player.update(dt);
+      }
       
       // Check windmill quest trigger
       if (!windmillQuest.active && !windmillQuest.hasCompleted) {
