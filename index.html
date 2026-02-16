@@ -2760,6 +2760,7 @@
       
       <div class="settings-item">
         <label for="auto-aim-checkbox">Auto-Aim</label>
+        <!-- Default: unchecked - manual aiming until auto-aim skill is unlocked per Big Update requirements -->
         <input type="checkbox" id="auto-aim-checkbox">
       </div>
       
@@ -3188,6 +3189,8 @@
       cabin: 0xDEB887, // Burlywood
       farmland: 0xF0E68C, // Khaki
       exp: 0x5DADE2, // Light Blue (Matching EXP bar)
+      bloodRed: 0x8B0000, // Dark red for blood effects
+      tomatoRed: 0xFF6347, // Tomato red for particles
     };
 
     const GAME_CONFIG = {
@@ -6004,7 +6007,7 @@
         
         // Hit flash effect (50ms) - FRESH IMPLEMENTATION: Use red blood flash instead of white
         const originalColor = this.mesh.material.color.clone();
-        const bloodRed = 0x8B0000; // Dark red blood color
+        const bloodRed = COLORS.bloodRed; // Use named constant
         this.mesh.material.color.setHex(bloodRed); // Blood flash instead of white
         setTimeout(() => {
           if (this.mesh && this.mesh.material && !this.isDead) {
@@ -6150,7 +6153,7 @@
         
         // Flash - use blood red instead of white to avoid freeze issue
         const oldColor = this.mesh.material.color.getHex();
-        const bloodRed = 0x8B0000; // Dark red blood color
+        const bloodRed = COLORS.bloodRed; // Use named constant
         this.mesh.material.color.setHex(bloodRed);
         
         // Enhanced splash particles using enemy's own color
@@ -6161,7 +6164,7 @@
         // Additional impact particles
         if (isCrit) {
           spawnParticles(this.mesh.position, enemyColor, 5);
-          spawnParticles(this.mesh.position, 0xFF6347, 3); // Tomato red instead of white
+          spawnParticles(this.mesh.position, COLORS.tomatoRed, 3); // Use named constant
         }
         
         // Enhanced squishy deformation on hit
@@ -6257,6 +6260,7 @@
           x: this.mesh.position.x,
           z: this.mesh.position.z
         };
+        const { x: deathX, z: deathZ } = deathPosition; // Destructure for cleaner code
         
         scene.remove(this.mesh);
         this.mesh.geometry.dispose();
@@ -6265,7 +6269,7 @@
         // Drop EXP - ALWAYS (using saved position)
         const expMultiplier = this.isMiniBoss ? 3 : 1;
         for (let i = 0; i < expMultiplier; i++) {
-          spawnExp(deathPosition.x, deathPosition.z);
+          spawnExp(deathX, deathZ);
         }
         
         // PR #117: Drop GOLD - Reduced drop rate (chest-like rarity), bigger amounts
@@ -6310,7 +6314,7 @@
         
         // Only spawn gold if amount > 0 (using saved position)
         if (goldAmount > 0) {
-          spawnGold(deathPosition.x, deathPosition.z, goldAmount);
+          spawnGold(deathX, deathZ, goldAmount);
         }
         
         // Phase 1: Gear drop system - enemies have a chance to drop gear
@@ -6337,7 +6341,7 @@
             legendary: '#F39C12'
           };
           // Create a position vector for the floating text
-          const dropPos = new THREE.Vector3(deathPosition.x, 0.5, deathPosition.z);
+          const dropPos = new THREE.Vector3(deathX, 0.5, deathZ);
           createFloatingText(`+${newGear.name}`, dropPos, rarityColors[newGear.rarity] || '#FFFFFF');
           playSound('coin');
           
@@ -6354,7 +6358,7 @@
             // Award gold before saving to prevent loss on crash
             saveData.gold += 50;
             saveSaveData();
-            const questPos = new THREE.Vector3(deathPosition.x, 0.5, deathPosition.z);
+            const questPos = new THREE.Vector3(deathX, 0.5, deathZ);
             createFloatingText("Side Quest Complete: Kill 10 Enemies! +50 Gold", questPos, '#FFD700');
           }
         }
@@ -6362,7 +6366,7 @@
         // Track mini-boss defeats for achievements (using saved position)
         if (this.isMiniBoss) {
           playerStats.miniBossesDefeated++;
-          const bossPos = new THREE.Vector3(deathPosition.x, 0.5, deathPosition.z);
+          const bossPos = new THREE.Vector3(deathX, 0.5, deathZ);
           createFloatingText("MINI-BOSS DEFEATED! 🏆", bossPos);
         }
         
