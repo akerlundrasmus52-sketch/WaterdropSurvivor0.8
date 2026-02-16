@@ -3685,13 +3685,13 @@
     let cinematicIntroTimer = 0;
     // FRESH IMPLEMENTATION: Enhanced cinematic intro matching requirements
     const cinematicIntroSequence = [
-      { type: 'droneview', duration: 2, zoom: 80, angle: 'top-down' }, // Drone-like top-down view
-      { type: 'showstructures', duration: 3, zoom: 50, pan: true }, // Show structures from side
-      { type: 'zoomout', duration: 2, zoom: 100 }, // Zoom out to ~3000m equivalent
-      { type: 'zoomin', duration: 2, zoom: 15 }, // Zoom into character
-      { type: 'cigar', duration: 2, focus: 'player' }, // Character smoking
-      { type: 'gameplay', duration: 1.5, zoom: 15 }, // Transition to gameplay
-      { type: 'countdown', duration: 3 } // 3-2-1 countdown
+      { type: 'droneview', duration: 2 },
+      { type: 'showstructures', duration: 3 },
+      { type: 'zoomout', duration: 2 },
+      { type: 'zoomin', duration: 2 },
+      { type: 'cigar', duration: 2 },
+      { type: 'gameplay', duration: 1.5 },
+      { type: 'countdown', duration: 3 }
     ];
     let introLandmarkPositions = {};
     
@@ -4282,6 +4282,7 @@
       // Update active weather particles
       const playerPos = player.mesh.position;
       const activeCount = Math.floor(weatherSystem.intensity * weatherSystem.maxParticles);
+      const currentTime = Date.now() * 0.001; // Calculate once for performance
       
       weatherSystem.particles.forEach((particle, i) => {
         if (i < activeCount && weatherSystem.type !== 'none') {
@@ -4322,10 +4323,10 @@
           if (weatherSystem.type === 'rain' || weatherSystem.type === 'snow') {
             particle.mesh.position.add(particle.velocity.clone().multiplyScalar(dt));
             
-            // Add wind effect
+            // Add wind effect using currentTime
             if (weatherSystem.type === 'snow') {
-              particle.mesh.position.x += Math.sin(Date.now() * 0.001) * 0.1 * dt;
-              particle.mesh.position.z += Math.cos(Date.now() * 0.001) * 0.1 * dt;
+              particle.mesh.position.x += Math.sin(currentTime) * 0.1 * dt;
+              particle.mesh.position.z += Math.cos(currentTime) * 0.1 * dt;
             }
             
             // Reset if below ground or too far from player
@@ -4913,6 +4914,8 @@
           this.rightLeg.rotation.x = 0;
           
           // FRESH IMPLEMENTATION: Breathing animation
+          // Note: Direct scale modification is intentional for water droplet "breathing" effect
+          // Water droplets naturally expand/contract, this simulates that behavior
           this.breathingPhase += dt * this.breathingSpeed;
           const breathScale = 1 + Math.sin(this.breathingPhase * Math.PI * 2) * 0.03;
           this.mesh.scale.y = breathScale;
