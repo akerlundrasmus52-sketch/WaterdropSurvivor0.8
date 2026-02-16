@@ -2493,6 +2493,7 @@
       <!-- Upgrade cards will be added dynamically -->
     </div>
     <button class="back-btn" id="shop-back-btn">BACK TO MENU</button>
+    <button class="back-btn" id="shop-camp-btn" style="margin-top: 10px; background: linear-gradient(to bottom, #5A3A31, #4A2A21);">⛺ BACK TO CAMP</button>
   </div>
 
   <!-- Achievements Screen -->
@@ -2514,6 +2515,7 @@
       <!-- Dynamically populated -->
     </div>
     <button class="back-btn" id="attributes-back-btn" style="margin-top: 20px;">BACK TO MENU</button>
+    <button class="back-btn" id="attributes-camp-btn" style="margin-top: 10px; background: linear-gradient(to bottom, #5A3A31, #4A2A21);">⛺ BACK TO CAMP</button>
   </div>
 
   <!-- Gear & Equipment Screen -->
@@ -2592,6 +2594,7 @@
     </div>
     
     <button class="back-btn" id="gear-back-btn" style="margin-top: 20px;">BACK TO MENU</button>
+    <button class="back-btn" id="gear-camp-btn" style="margin-top: 10px; background: linear-gradient(to bottom, #5A3A31, #4A2A21);">⛺ BACK TO CAMP</button>
   </div>
 
   <!-- Credits Screen -->
@@ -2800,8 +2803,9 @@
       
       <div class="settings-item">
         <label for="auto-aim-checkbox">Auto-Aim</label>
-        <!-- Default: unchecked - manual aiming until auto-aim skill is unlocked per Big Update requirements -->
-        <input type="checkbox" id="auto-aim-checkbox">
+        <!-- Default: unchecked and disabled - manual aiming until auto-aim skill is unlocked per Big Update requirements -->
+        <input type="checkbox" id="auto-aim-checkbox" disabled>
+        <span id="auto-aim-lock-msg" style="font-size: 11px; color: #ff6b6b; display: block; margin-top: 5px;">Locked: Unlock "Auto-Aim Assist" skill in Skill Tree</span>
       </div>
       
       <div class="settings-item">
@@ -8769,6 +8773,7 @@
         fortuneFinder: { unlocked: false, level: 0, maxLevel: 3 },
         speedster: { unlocked: false, level: 0, maxLevel: 3 },
         dashMaster: { unlocked: false, level: 0, maxLevel: 3 },
+        autoAim: { unlocked: false, level: 0, maxLevel: 1 },
         cooldownExpert: { unlocked: false, level: 0, maxLevel: 3 },
         auraExpansion: { unlocked: false, level: 0, maxLevel: 3 },
         resourceful: { unlocked: false, level: 0, maxLevel: 5 },
@@ -10446,6 +10451,17 @@
         bonus: (level) => ({
           dashDistance: 0.2 * level,
           dashCooldown: -0.2 * level
+        })
+      },
+      autoAim: {
+        name: 'Auto-Aim Assist',
+        description: 'Unlocks auto-aim targeting system',
+        cost: 2,
+        maxLevel: 1,
+        requires: 'quickLearner',
+        tier: 2,
+        bonus: (level) => ({
+          autoAimUnlocked: level > 0
         })
       },
       cooldownExpert: {
@@ -14406,8 +14422,20 @@
 
       // Sync settings UI controls with current gameSettings state
       const autoAimCheckbox = document.getElementById('auto-aim-checkbox');
+      const autoAimLockMsg = document.getElementById('auto-aim-lock-msg');
       if (autoAimCheckbox) {
-        autoAimCheckbox.checked = !!gameSettings.autoAim;
+        // Check if auto-aim skill is unlocked
+        const autoAimUnlocked = saveData.skillTree?.autoAim?.unlocked && saveData.skillTree.autoAim.level > 0;
+        if (autoAimUnlocked) {
+          autoAimCheckbox.disabled = false;
+          autoAimCheckbox.checked = !!gameSettings.autoAim;
+          if (autoAimLockMsg) autoAimLockMsg.style.display = 'none';
+        } else {
+          autoAimCheckbox.disabled = true;
+          autoAimCheckbox.checked = false;
+          gameSettings.autoAim = false; // Force off if not unlocked
+          if (autoAimLockMsg) autoAimLockMsg.style.display = 'block';
+        }
       }
 
       const controlTypeSelect = document.getElementById('control-type-select');
@@ -14570,6 +14598,23 @@
         document.getElementById('camp-screen').style.display = 'none';
         showMainMenu();
       };
+      
+      // Camp navigation buttons from building screens
+      const campBtns = ['shop-camp-btn', 'attributes-camp-btn', 'gear-camp-btn'];
+      campBtns.forEach(btnId => {
+        const btn = document.getElementById(btnId);
+        if (btn) {
+          btn.onclick = () => {
+            playSound('waterdrop');
+            // Hide all screens
+            document.getElementById('progression-shop').style.display = 'none';
+            document.getElementById('attributes-screen').style.display = 'none';
+            document.getElementById('gear-screen').style.display = 'none';
+            // Show camp
+            showCampScreen();
+          };
+        }
+      });
       
       // Camp tab switching
       document.getElementById('camp-buildings-tab').onclick = () => {
