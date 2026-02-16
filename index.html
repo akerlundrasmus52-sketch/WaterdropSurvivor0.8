@@ -3047,15 +3047,14 @@
   </div>
 
   <!-- THREE.js Loading with CDN Fallback System -->
-  <script async src="https://ga.jspm.io/npm:es-module-shims@1.8.0/dist/es-module-shims.js" 
-          onerror="console.warn('[CDN] Primary ES Module Shims failed, trying fallback...'); loadShimsFallback()">
-  </script>
   <script>
-    // Update loading status text helper
+    // Update loading status text helper (defined first, before any usage)
     function updateLoadingStatus(message) {
       const statusEl = document.getElementById('loading-status');
       if (statusEl) {
         statusEl.textContent = message;
+      } else {
+        console.warn('[Loading Status] Status element not found, message:', message);
       }
     }
     
@@ -3079,7 +3078,6 @@
         updateLoadingStatus(`Loading from alternative CDN ${index + 1}/${fallbacks.length}...`);
         
         const script = document.createElement('script');
-        script.async = true;
         script.src = fallbacks[index];
         script.onerror = function() {
           console.warn(`[CDN] Fallback ${index + 1} failed: ${fallbacks[index]}`);
@@ -3095,6 +3093,10 @@
       
       tryNext();
     }
+  </script>
+  
+  <script async src="https://ga.jspm.io/npm:es-module-shims@1.8.0/dist/es-module-shims.js" 
+          onerror="console.warn('[CDN] Primary ES Module Shims failed, trying fallback...'); loadShimsFallback()">
   </script>
   
   <!-- Import Map with reliable jsDelivr CDN -->
@@ -3273,13 +3275,13 @@
       // Error message constant with improved CDN troubleshooting
       const MODULE_INIT_ERROR_MSG = 'Game failed to initialize. The 3D engine (THREE.js) could not be loaded from CDN.\n\n' +
         'This usually happens due to:\n' +
-        '• Ad blockers or privacy extensions blocking CDN resources (jsDelivr, unpkg)\n' +
+        '• Ad blockers or privacy extensions blocking CDN resources (jsDelivr, jspm.io, unpkg)\n' +
         '• Corporate firewall or network restrictions\n' +
         '• Network connectivity issues\n' +
         '• Browser compatibility problems\n\n' +
         'Please try:\n' +
         '1. Temporarily disable ad blockers/privacy extensions for this page\n' +
-        '2. Add *.jsdelivr.net and *.unpkg.com to your allowlist\n' +
+        '2. Add these CDNs to your allowlist: *.jsdelivr.net, *.jspm.io, *.unpkg.com\n' +
         '3. Check your internet connection\n' +
         '4. Try a different network (mobile data vs WiFi)\n' +
         '5. Try a different browser (Chrome, Firefox, Safari)\n' +
