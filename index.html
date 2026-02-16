@@ -80,6 +80,20 @@
       flex-direction: column;
       justify-content: space-between;
     }
+    
+    /* FRESH IMPLEMENTATION: Low HP warning vignette */
+    #low-hp-vignette {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 9;
+      background: radial-gradient(circle at center, transparent 30%, rgba(139, 0, 0, 0.4) 100%);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
 
     /* HUD */
     .hud-top {
@@ -1823,6 +1837,9 @@
 
   <div id="game-container"></div>
 
+  <!-- FRESH: Low HP warning vignette -->
+  <div id="low-hp-vignette"></div>
+
   <div id="ui-layer">
     <div class="hud-top">
       <div class="bar-container" id="hp-bar-container">
@@ -3562,19 +3579,21 @@
           }, 50);
         }, 50);
         
-        // Enhanced screen shake on damage
+        // FRESH IMPLEMENTATION: Screen shake scales with damage amount
         const originalCameraPos = { 
           x: camera.position.x, 
           y: camera.position.y, 
           z: camera.position.z 
         };
         let shakeTime = 0;
-        const shakeDuration = 0.25; // Slightly longer (was 0.2)
+        const shakeDuration = 0.25 + (reduced / 100) * 0.15; // Duration scales with damage
         
         const shakeAnim = () => {
           shakeTime += 0.016;
           if (shakeTime < shakeDuration) {
-            const intensity = (1 - shakeTime / shakeDuration) * 0.7; // More intense (was 0.5)
+            // Intensity scales with damage (0.5 base + up to 0.5 more based on damage)
+            const baseIntensity = 0.5 + Math.min(reduced / 50, 1) * 0.5;
+            const intensity = (1 - shakeTime / shakeDuration) * baseIntensity;
             camera.position.x = originalCameraPos.x + (Math.random() - 0.5) * intensity;
             camera.position.y = originalCameraPos.y + (Math.random() - 0.5) * intensity;
             camera.position.z = originalCameraPos.z + (Math.random() - 0.5) * intensity;
@@ -5210,6 +5229,21 @@
             if (isCrit) dmg *= playerStats.critDmg;
             
             enemy.takeDamage(Math.floor(dmg), isCrit);
+            
+            // FRESH: Critical hit effects - gold particles, brief light flash
+            if (isCrit) {
+              spawnParticles(enemy.mesh.position, 0xFFD700, 15); // Gold particles
+              spawnParticles(enemy.mesh.position, 0xFFA500, 10); // Orange particles
+              
+              // Brief golden light flash
+              const critLight = new THREE.PointLight(0xFFD700, 8, 15);
+              critLight.position.copy(enemy.mesh.position);
+              critLight.position.y += 1;
+              scene.add(critLight);
+              setTimeout(() => {
+                scene.remove(critLight);
+              }, 150);
+            }
             
             // Knockback effect
             const knockbackForce = 0.5;
@@ -11758,6 +11792,18 @@
       document.getElementById('hp-fill').style.width = `${Math.max(0, hpPct)}%`;
       document.getElementById('hp-text').innerText = `HP: ${Math.max(0, Math.ceil(playerStats.hp))}/${playerStats.maxHp}`;
       
+      // FRESH: Low HP warning vignette when HP < 30%
+      const lowHpVignette = document.getElementById('low-hp-vignette');
+      if (lowHpVignette) {
+        if (hpPct < 30 && hpPct > 0) {
+          // Show vignette, opacity scales with how low HP is (more intense as HP drops)
+          const vignetteOpacity = (30 - hpPct) / 30; // 0 at 30%, 1 at 0%
+          lowHpVignette.style.opacity = vignetteOpacity;
+        } else {
+          lowHpVignette.style.opacity = '0';
+        }
+      }
+      
       const expPct = (playerStats.exp / playerStats.expReq) * 100;
       // Update old EXP bar (hidden but keep for compatibility)
       document.getElementById('exp-fill').style.width = `${Math.min(100, expPct)}%`;
@@ -13484,8 +13530,27 @@
             setTimeout(() => {
               projectiles.push(new Projectile(player.mesh.position.x, player.mesh.position.z, nearest.mesh.position));
               
-              // ENHANCED muzzle flash light effect - brighter and more dramatic
-              const flashLight = new THREE.PointLight(0xFFFFFF, 6, 20); // Increased intensity (was 4, 15)
+              // ENHANCED muzzle flash light effect - 3 variations (FRESH)
+              const flashVariation = i % 3;
+              let flashColor, flashIntensity, flashRadius;
+              if (flashVariation === 0) {
+                // Bright white flash
+                flashColor = 0xFFFFFF;
+                flashIntensity = 6;
+                flashRadius = 20;
+              } else if (flashVariation === 1) {
+                // Yellow-orange flash
+                flashColor = 0xFFCC00;
+                flashIntensity = 5.5;
+                flashRadius = 18;
+              } else {
+                // Blue-white flash (hotter burn)
+                flashColor = 0xCCFFFF;
+                flashIntensity = 6.5;
+                flashRadius = 22;
+              }
+              
+              const flashLight = new THREE.PointLight(flashColor, flashIntensity, flashRadius);
               flashLight.position.copy(player.mesh.position);
               flashLight.position.y += 1;
               scene.add(flashLight);
@@ -13640,7 +13705,7 @@
         weapons.droneTurret.lastShot = time;
       }
 
-      // 6. DOUBLE BARREL
+      // 6. DOUBLE BARREL - ENHANCED with 6-pellet spread, heavy recoil, orange/yellow flash
       if (weapons.doubleBarrel.active && time - weapons.doubleBarrel.lastShot > weapons.doubleBarrel.cooldown) {
         // Find nearest enemy
         let nearest = null;
@@ -13656,33 +13721,40 @@
         }
 
         if (nearest) {
-          // Fire two shots with spread
+          // Fire 6 pellets with spread (shotgun pattern)
           const baseDir = new THREE.Vector3(
             nearest.mesh.position.x - player.mesh.position.x,
             0,
             nearest.mesh.position.z - player.mesh.position.z
           ).normalize();
           
-          // Left barrel
-          const leftAngle = Math.atan2(baseDir.z, baseDir.x) - weapons.doubleBarrel.spread;
-          const leftTarget = new THREE.Vector3(
-            player.mesh.position.x + Math.cos(leftAngle) * weapons.doubleBarrel.range,
-            0,
-            player.mesh.position.z + Math.sin(leftAngle) * weapons.doubleBarrel.range
-          );
-          projectiles.push(new Projectile(player.mesh.position.x, player.mesh.position.z, leftTarget));
+          const baseAngle = Math.atan2(baseDir.z, baseDir.x);
+          const spreadAngle = weapons.doubleBarrel.spread;
           
-          // Right barrel
-          const rightAngle = Math.atan2(baseDir.z, baseDir.x) + weapons.doubleBarrel.spread;
-          const rightTarget = new THREE.Vector3(
-            player.mesh.position.x + Math.cos(rightAngle) * weapons.doubleBarrel.range,
-            0,
-            player.mesh.position.z + Math.sin(rightAngle) * weapons.doubleBarrel.range
-          );
-          projectiles.push(new Projectile(player.mesh.position.x, player.mesh.position.z, rightTarget));
+          // Create 6 pellets in a spread pattern
+          for (let i = 0; i < 6; i++) {
+            const angle = baseAngle + (Math.random() - 0.5) * spreadAngle * 2;
+            const target = new THREE.Vector3(
+              player.mesh.position.x + Math.cos(angle) * weapons.doubleBarrel.range,
+              0,
+              player.mesh.position.z + Math.sin(angle) * weapons.doubleBarrel.range
+            );
+            const pellet = new Projectile(player.mesh.position.x, player.mesh.position.z, target);
+            pellet.isDoubleBarrel = true;
+            pellet.speed = 0.6; // Faster projectiles for shotgun
+            projectiles.push(pellet);
+          }
           
-          // Effects
-          const flashLight = new THREE.PointLight(0xFFFF00, 3, 12);
+          // HEAVY RECOIL - much stronger than pistol
+          const originalY = player.mesh.position.y;
+          player.mesh.position.y = originalY - 0.15; // 3x stronger than pistol
+          const kickbackTimeoutId = setTimeout(() => {
+            player.mesh.position.y = originalY;
+          }, 100);
+          activeTimeouts.push(kickbackTimeoutId);
+          
+          // Orange/yellow muzzle flash (shotgun characteristic)
+          const flashLight = new THREE.PointLight(0xFFA500, 8, 18); // Orange, brighter, wider
           flashLight.position.copy(player.mesh.position);
           flashLight.position.y += 1;
           scene.add(flashLight);
@@ -13693,11 +13765,14 @@
             if (idx > -1) flashLights.splice(idx, 1);
             const tidx = activeTimeouts.indexOf(timeoutId);
             if (tidx > -1) activeTimeouts.splice(tidx, 1);
-          }, 80);
+          }, 100);
           activeTimeouts.push(timeoutId);
           
-          spawnParticles(player.mesh.position, 0xFFFF00, 8);
-          spawnParticles(player.mesh.position, 0xFFFFFF, 5);
+          // Orange/yellow particles for shotgun blast
+          spawnParticles(player.mesh.position, 0xFFA500, 12); // Orange
+          spawnParticles(player.mesh.position, 0xFFFF00, 10); // Yellow
+          spawnParticles(player.mesh.position, 0xFFFFFF, 6); // White
+          spawnParticles(player.mesh.position, 0x888888, 8); // Smoke
           
           weapons.doubleBarrel.lastShot = time;
           playSound('doublebarrel'); // Double barrel sound
