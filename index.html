@@ -4716,15 +4716,13 @@
           this.cigarPuffTimer += dt;
           if (this.cigarPuffTimer > this.cigarPuffInterval && this.cigar.visible) {
             this.cigarPuffTimer = 0;
-            // Create extra smoke puff
+            // Create extra smoke puff (spawned immediately to avoid setTimeout in animation loop)
             for (let i = 0; i < 3; i++) {
-              setTimeout(() => {
-                if (this.cigarTip) {
-                  const tipWorldPos = new THREE.Vector3();
-                  this.cigarTip.getWorldPosition(tipWorldPos);
-                  spawnParticles(tipWorldPos, 0xAAAAAA, 2);
-                }
-              }, i * 100);
+              if (this.cigarTip) {
+                const tipWorldPos = new THREE.Vector3();
+                this.cigarTip.getWorldPosition(tipWorldPos);
+                spawnParticles(tipWorldPos, 0xAAAAAA, 2);
+              }
             }
           }
         }
