@@ -2052,260 +2052,6 @@
       }
     }
 
-    /* ========================================
-       COMIC BOOK TUTORIAL SYSTEM STYLES
-       ======================================== */
-    
-    /* Comic Panel Overlay */
-    .comic-panel-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.95);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 9999;
-      padding: 20px;
-      overflow-y: auto;
-    }
-    
-    .comic-panel-container {
-      background: #FFF;
-      border: 8px solid #000;
-      border-radius: 15px;
-      box-shadow: 0 0 30px rgba(255, 215, 0, 0.8),
-                  inset 0 0 20px rgba(255, 215, 0, 0.2);
-      max-width: 600px;
-      width: 100%;
-      padding: 30px;
-      position: relative;
-      animation: comicPanelZoom 0.3s ease-out;
-    }
-    
-    @keyframes comicPanelZoom {
-      0% {
-        transform: scale(0.5);
-        opacity: 0;
-      }
-      100% {
-        transform: scale(1);
-        opacity: 1;
-      }
-    }
-    
-    .comic-panel-title {
-      font-family: 'M PLUS Rounded 1c', sans-serif;
-      font-size: 32px;
-      font-weight: 900;
-      color: #FF1744;
-      text-align: center;
-      text-transform: uppercase;
-      margin-bottom: 20px;
-      text-shadow: 3px 3px 0 #000,
-                   -1px -1px 0 #000,
-                   1px -1px 0 #000,
-                   -1px 1px 0 #000;
-      letter-spacing: 2px;
-    }
-    
-    .comic-panel-image {
-      width: 100%;
-      border: 4px solid #000;
-      border-radius: 8px;
-      margin-bottom: 20px;
-    }
-    
-    .comic-speech-bubble {
-      background: #FFF;
-      border: 4px solid #000;
-      border-radius: 20px;
-      padding: 20px;
-      margin: 15px 0;
-      position: relative;
-      font-family: 'M PLUS Rounded 1c', sans-serif;
-      font-size: 18px;
-      line-height: 1.6;
-      color: #000;
-      box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.3);
-    }
-    
-    .comic-speech-bubble::before {
-      content: '';
-      position: absolute;
-      bottom: -20px;
-      left: 30px;
-      width: 0;
-      height: 0;
-      border-left: 20px solid transparent;
-      border-right: 20px solid transparent;
-      border-top: 20px solid #000;
-    }
-    
-    .comic-speech-bubble::after {
-      content: '';
-      position: absolute;
-      bottom: -14px;
-      left: 34px;
-      width: 0;
-      height: 0;
-      border-left: 16px solid transparent;
-      border-right: 16px solid transparent;
-      border-top: 16px solid #FFF;
-    }
-    
-    .comic-thought-bubble {
-      background: #FFF;
-      border: 4px solid #000;
-      border-radius: 50px;
-      padding: 20px;
-      margin: 15px 0;
-      position: relative;
-      font-family: 'M PLUS Rounded 1c', sans-serif;
-      font-size: 18px;
-      line-height: 1.6;
-      color: #000;
-      box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.3);
-    }
-    
-    .comic-thought-bubble::before {
-      content: '○';
-      position: absolute;
-      bottom: -30px;
-      left: 40px;
-      font-size: 30px;
-      color: #000;
-    }
-    
-    .comic-thought-bubble::after {
-      content: '○';
-      position: absolute;
-      bottom: -50px;
-      left: 50px;
-      font-size: 20px;
-      color: #000;
-    }
-    
-    .comic-panel-text {
-      font-family: 'M PLUS Rounded 1c', sans-serif;
-      font-size: 18px;
-      line-height: 1.8;
-      color: #000;
-      margin: 15px 0;
-    }
-    
-    .comic-panel-text strong {
-      color: #FF1744;
-      font-weight: 900;
-    }
-    
-    .comic-panel-continue {
-      display: block;
-      width: 100%;
-      padding: 15px 30px;
-      font-family: 'M PLUS Rounded 1c', sans-serif;
-      font-size: 22px;
-      font-weight: 900;
-      background: linear-gradient(135deg, #FFD700, #FFA500);
-      color: #000;
-      border: 4px solid #000;
-      border-radius: 10px;
-      cursor: pointer;
-      margin-top: 20px;
-      text-transform: uppercase;
-      box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.3);
-      transition: all 0.1s ease;
-    }
-    
-    .comic-panel-continue:hover {
-      background: linear-gradient(135deg, #FFA500, #FFD700);
-      transform: translateY(-2px);
-      box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.4);
-    }
-    
-    .comic-panel-continue:active {
-      transform: translateY(2px);
-      box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.3);
-    }
-    
-    /* Building Lock/Unlock System */
-    .building-locked-state {
-      opacity: 0.3;
-      filter: grayscale(100%);
-      pointer-events: none;
-      position: relative;
-    }
-    
-    .building-locked-state::after {
-      content: '🔒';
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      font-size: 48px;
-      opacity: 0.8;
-    }
-    
-    .building-glow-unlock {
-      animation: buildingGlow 1.5s ease-in-out infinite;
-      box-shadow: 0 0 30px rgba(255, 215, 0, 1),
-                  0 0 50px rgba(255, 215, 0, 0.6),
-                  inset 0 0 20px rgba(255, 215, 0, 0.3);
-      border: 3px solid #FFD700 !important;
-    }
-    
-    @keyframes buildingGlow {
-      0%, 100% {
-        box-shadow: 0 0 20px rgba(255, 215, 0, 0.8),
-                    0 0 40px rgba(255, 215, 0, 0.4),
-                    inset 0 0 15px rgba(255, 215, 0, 0.2);
-      }
-      50% {
-        box-shadow: 0 0 40px rgba(255, 215, 0, 1),
-                    0 0 80px rgba(255, 215, 0, 0.6),
-                    inset 0 0 30px rgba(255, 215, 0, 0.4);
-      }
-    }
-    
-    /* Quest Status Bar */
-    .quest-status-bar {
-      position: fixed;
-      top: 10px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(0, 0, 0, 0.9);
-      border: 3px solid #FFD700;
-      border-radius: 10px;
-      padding: 10px 20px;
-      z-index: 100;
-      font-family: 'M PLUS Rounded 1c', sans-serif;
-      font-size: 16px;
-      color: #FFD700;
-      font-weight: bold;
-      text-align: center;
-      display: none;
-      max-width: 90%;
-      box-shadow: 0 0 20px rgba(255, 215, 0, 0.6);
-    }
-    
-    .quest-status-bar.active {
-      display: block;
-      animation: questPulse 2s ease-in-out infinite;
-    }
-    
-    @keyframes questPulse {
-      0%, 100% {
-        border-color: #FFD700;
-        box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
-      }
-      50% {
-        border-color: #FFA500;
-        box-shadow: 0 0 30px rgba(255, 215, 0, 0.8);
-      }
-    }
-
   </style>
 </head>
 <body>
@@ -2315,18 +2061,6 @@
     <div class="loading-bar-container">
       <div class="loading-bar" id="loading-bar"></div>
     </div>
-  </div>
-
-  <!-- Comic Panel Overlay -->
-  <div id="comic-panel-overlay" class="comic-panel-overlay">
-    <div class="comic-panel-container" id="comic-panel-container">
-      <!-- Content will be dynamically inserted -->
-    </div>
-  </div>
-
-  <!-- Quest Status Bar -->
-  <div id="quest-status-bar" class="quest-status-bar">
-    <!-- Quest text will be dynamically updated -->
   </div>
 
   <!-- Main Menu -->
@@ -7937,7 +7671,6 @@
     // FRESH START - Changed save key to force reset after comprehensive re-implementation
     const SAVE_KEY = 'waterDropSurvivorSave_v2_FreshStart';
     const SETTINGS_KEY = 'waterDropSurvivorSettings';
-    const TUTORIAL_RESET_KEY = 'tutorialResetDone_v1'; // Key to track if tutorial reset has been done
 
     const defaultSaveData = {
       gold: 0,
@@ -8117,15 +7850,6 @@
 
     function loadSaveData() {
       try {
-        // Check if tutorial reset needs to happen
-        const tutorialResetDone = localStorage.getItem(TUTORIAL_RESET_KEY);
-        if (!tutorialResetDone) {
-          // First time with new tutorial system - reset save data
-          console.log('[Tutorial] Resetting save data for fresh tutorial experience');
-          localStorage.removeItem(SAVE_KEY);
-          localStorage.setItem(TUTORIAL_RESET_KEY, 'true');
-        }
-        
         const saved = localStorage.getItem(SAVE_KEY);
         if (saved) {
           saveData = JSON.parse(saved);
@@ -9953,7 +9677,7 @@
       }
     }
 
-    function unlockSkill(skillId, isTutorialFree = false) {
+    function unlockSkill(skillId) {
       const skill = SKILL_TREE[skillId];
       const skillData = saveData.skillTree[skillId];
       
@@ -9968,8 +9692,7 @@
       }
       
       // ADVANCED: Check if required skill is unlocked (dependency system)
-      // Skip requirement check for tutorial free skills
-      if (skill.requires && !isTutorialFree) {
+      if (skill.requires) {
         const requiredSkill = saveData.skillTree[skill.requires];
         if (!requiredSkill || !requiredSkill.unlocked || requiredSkill.level < 1) {
           const reqSkillName = SKILL_TREE[skill.requires]?.name || skill.requires;
@@ -9979,9 +9702,9 @@
         }
       }
       
-      // Check if this is the first skill purchase (make it free) or tutorial free
+      // Check if this is the first skill purchase (make it free)
       const isFirstSkill = !saveData.storyQuests?.buildingFirstUse?.skillTree;
-      const costToCharge = (isFirstSkill || isTutorialFree) ? 0 : skill.cost;
+      const costToCharge = isFirstSkill ? 0 : skill.cost;
       
       // ADVANCED: Prevent upgrade bug - strict point check
       if (saveData.skillPoints < costToCharge) {
@@ -10004,8 +9727,8 @@
         updateCampScreen();
         playSound('collect');
         
-        if (isFirstSkill || isTutorialFree) {
-          showStatusMessage(`${skill.name} unlocked FREE! ${isTutorialFree ? '(Tutorial bonus)' : '(First skill bonus)'}`, 3000);
+        if (isFirstSkill) {
+          showStatusMessage(`${skill.name} unlocked FREE! (First skill bonus)`, 3000);
         } else {
           showStatusMessage(`${skill.name} leveled up to ${skillData.level}/${skill.maxLevel}!`, 2000);
         }
@@ -10234,274 +9957,6 @@
     }
     
     // Advance to next quest in story chain
-    // ========================================
-    // COMIC BOOK TUTORIAL SYSTEM
-    // ========================================
-    
-    const COMIC_QUESTS = {
-      quest1_intro: {
-        id: 'quest1_intro',
-        title: 'SURVIVE THE FIRST WAVE!',
-        panels: [
-          {
-            type: 'speech',
-            text: 'Welcome, Waterdrop! This world is dangerous. You start WEAK - only 1 in every stat. Your gun needs 5-7 hits to kill each enemy.',
-            character: 'narrator'
-          },
-          {
-            type: 'speech',
-            text: 'This first wave is DESIGNED to be impossible. You\'re supposed to die! It\'s part of the tutorial. Go ahead and START YOUR FIRST RUN!',
-            character: 'narrator'
-          }
-        ],
-        onComplete: () => {
-          // Mark first comic shown
-          saveData.tutorial.comicsShown.push('quest1_intro');
-          saveSaveData();
-        }
-      },
-      quest1_death: {
-        id: 'quest1_death',
-        title: 'PATCHED UP!',
-        panels: [
-          {
-            type: 'speech',
-            text: 'That was supposed to happen! You haven\'t upgraded yourself yet. Just keep reading to grow bigger and understand that this game is WAY more advanced and complex than most games.',
-            character: 'narrator'
-          },
-          {
-            type: 'speech',
-            text: 'In fact, you\'re gonna see that this game is really deep. We start your journey with the Camp.',
-            character: 'narrator'
-          }
-        ],
-        onComplete: () => {
-          saveData.tutorial.comicsShown.push('quest1_death');
-          saveData.storyQuests.completedQuests.push('firstRun');
-          saveSaveData();
-          // Advance to next quest
-          setTimeout(() => showComicQuest('quest2_skilltree'), 500);
-        }
-      },
-      quest2_skilltree: {
-        id: 'quest2_skilltree',
-        title: 'UNLOCK THE SKILL TREE!',
-        panels: [
-          {
-            type: 'speech',
-            text: 'Look at your Camp! ALL buildings are darkened and locked except the Skill Tree - it\'s GLOWING with golden edges!',
-            character: 'narrator'
-          },
-          {
-            type: 'speech',
-            text: 'Click on the Skill Tree building to unlock it!',
-            character: 'narrator'
-          }
-        ],
-        onComplete: () => {
-          saveData.tutorial.comicsShown.push('quest2_skilltree');
-          saveSaveData();
-          showQuestStatus('Click on the Skill Tree building');
-        }
-      },
-      quest2_inside_skilltree: {
-        id: 'quest2_inside_skilltree',
-        title: 'TREE OF LIFE!',
-        panels: [
-          {
-            type: 'speech',
-            text: 'BOOM! You unlocked the Tree of Life! It has a skill tree inside. Let\'s look at that now.',
-            character: 'narrator'
-          },
-          {
-            type: 'speech',
-            text: 'The DASH skill is highlighted! Unlock it for FREE as your first skill!',
-            character: 'narrator'
-          }
-        ],
-        onComplete: () => {
-          saveData.tutorial.comicsShown.push('quest2_inside_skilltree');
-          saveSaveData();
-          showQuestStatus('Unlock the Dash skill (FREE!)');
-        }
-      },
-      quest2_dash_unlocked: {
-        id: 'quest2_dash_unlocked',
-        title: 'BAAM! DASH POWER!',
-        panels: [
-          {
-            type: 'speech',
-            text: 'BAAM! You can now DASH! Swipe on the left joystick to dash in that direction!',
-            character: 'narrator'
-          },
-          {
-            type: 'speech',
-            text: 'Now go back outside to the campfire.',
-            character: 'narrator'
-          }
-        ],
-        onComplete: () => {
-          saveData.tutorial.comicsShown.push('quest2_dash_unlocked');
-          saveData.storyQuests.completedQuests.push('useSkillTree');
-          saveSaveData();
-          showQuestStatus('Go back to the campfire');
-        }
-      },
-      quest3_main_building: {
-        id: 'quest3_main_building',
-        title: 'THE MAIN BUILDING',
-        panels: [
-          {
-            type: 'speech',
-            text: 'The Main Building has quests, challenges, and things you need to look at to know what to do next.',
-            character: 'narrator'
-          },
-          {
-            type: 'speech',
-            text: 'See that GLOWING EDGE? Click on the Main Building to unlock it!',
-            character: 'narrator'
-          }
-        ],
-        onComplete: () => {
-          saveData.tutorial.comicsShown.push('quest3_main_building');
-          saveSaveData();
-          showQuestStatus('Click on the Main Building and unlock it');
-        }
-      },
-      quest4_first_real_run: {
-        id: 'quest4_first_real_run',
-        title: 'FIRST REAL RUN!',
-        panels: [
-          {
-            type: 'speech',
-            text: 'Time for your first REAL run! Press New Run and get ready.',
-            character: 'narrator'
-          },
-          {
-            type: 'speech',
-            text: 'Your objective: Kill 10 enemies before you die. If you fail, just try again! Level up and come back stronger.',
-            character: 'narrator'
-          }
-        ],
-        onComplete: () => {
-          saveData.tutorial.comicsShown.push('quest4_first_real_run');
-          saveSaveData();
-          showQuestStatus('Kill 10 enemies before you die');
-        }
-      },
-      quest5_attributes: {
-        id: 'quest5_attributes',
-        title: 'UNLOCK ATTRIBUTES!',
-        panels: [
-          {
-            type: 'speech',
-            text: 'Excellent work! The Attributes building is now glowing. Click on it to unlock it!',
-            character: 'narrator'
-          },
-          {
-            type: 'speech',
-            text: 'You got 3 talent points! Spend them on attributes: Dexterity (attack speed, crit), Strength (damage), Vitality (HP), Flexibility (speed), Luck (gold), or Magic (skills).',
-            character: 'narrator'
-          }
-        ],
-        onComplete: () => {
-          saveData.tutorial.comicsShown.push('quest5_attributes');
-          // Give 3 attribute points as reward
-          saveData.unspentAttributePoints = (saveData.unspentAttributePoints || 0) + 3;
-          saveSaveData();
-          showQuestStatus('Spend your 3 attribute points');
-        }
-      }
-    };
-    
-    function showComicQuest(questId) {
-      const quest = COMIC_QUESTS[questId];
-      if (!quest) {
-        console.error('Comic quest not found:', questId);
-        return;
-      }
-      
-      // Check if already shown
-      if (saveData.tutorial.comicsShown.includes(questId)) {
-        console.log('Comic already shown:', questId);
-        return;
-      }
-      
-      const overlay = document.getElementById('comic-panel-overlay');
-      const container = document.getElementById('comic-panel-container');
-      
-      if (!overlay || !container) {
-        console.error('Comic panel elements not found');
-        return;
-      }
-      
-      // Build panel content
-      let panelHTML = `<div class="comic-panel-title">${quest.title}</div>`;
-      
-      // Add each panel
-      quest.panels.forEach((panel, index) => {
-        if (panel.type === 'speech') {
-          panelHTML += `
-            <div class="comic-speech-bubble">
-              ${panel.text}
-            </div>
-          `;
-        } else if (panel.type === 'thought') {
-          panelHTML += `
-            <div class="comic-thought-bubble">
-              ${panel.text}
-            </div>
-          `;
-        } else {
-          panelHTML += `
-            <div class="comic-panel-text">
-              ${panel.text}
-            </div>
-          `;
-        }
-      });
-      
-      // Add continue button
-      panelHTML += `
-        <button class="comic-panel-continue" id="comic-continue-btn">
-          CONTINUE
-        </button>
-      `;
-      
-      container.innerHTML = panelHTML;
-      overlay.style.display = 'flex';
-      
-      // Add click handler
-      const continueBtn = document.getElementById('comic-continue-btn');
-      if (continueBtn) {
-        continueBtn.onclick = () => {
-          overlay.style.display = 'none';
-          if (quest.onComplete) {
-            quest.onComplete();
-          }
-        };
-      }
-    }
-    
-    function showQuestStatus(text) {
-      const questBar = document.getElementById('quest-status-bar');
-      if (questBar) {
-        questBar.textContent = text;
-        questBar.classList.add('active');
-      }
-    }
-    
-    function hideQuestStatus() {
-      const questBar = document.getElementById('quest-status-bar');
-      if (questBar) {
-        questBar.classList.remove('active');
-      }
-    }
-    
-    function isComicQuestActive() {
-      return saveData.tutorial.isActive && !saveData.tutorial.comicsShown.includes('quest5_attributes');
-    }
-
     function advanceQuestChain() {
       const completed = saveData.storyQuests.completedQuests;
       
@@ -10848,30 +10303,6 @@
       }
     }
 
-    function shouldBuildingGlow(buildingId) {
-      // Check if tutorial is active
-      if (!isComicQuestActive()) return false;
-      
-      // Check if this building is the target of the current comic quest
-      if (!saveData.tutorial.comicsShown.includes('quest1_death')) return false;
-      
-      // Quest 2: Skill Tree should glow
-      if (buildingId === 'skillTree' && !saveData.tutorial.comicsShown.includes('quest2_skilltree')) {
-        return !saveData.campBuildings.skillTree.unlocked;
-      }
-      
-      // Quest 3: Main Building should glow
-      if (buildingId === 'questMission' && !saveData.tutorial.comicsShown.includes('quest3_main_building')) {
-        if (saveData.tutorial.comicsShown.includes('quest2_dash_unlocked')) {
-          return true;
-        }
-      }
-      
-      // Future quests can be added here
-      
-      return false;
-    }
-    
     function updateCampScreen() {
       // Check for first-time camp visit with COMIC BOOK TUTORIAL
       if (!saveData.hasVisitedCamp && saveData.tutorial.isActive) {
@@ -10958,23 +10389,11 @@
         const canAfford = saveData.gold >= cost;
         const isUnlocked = buildingData.unlocked || buildingData.level > 0;
         
-        // Skip locked paid buildings in tutorial mode
+        // Skip locked paid buildings
         if (!building.isFree && !isUnlocked && buildingData.level === 0) {
+          // Show as purchasable
           const buildingCard = document.createElement('div');
           buildingCard.className = 'building-card';
-          
-          // Check if tutorial is active and this building should be shown as locked
-          if (isComicQuestActive()) {
-            // Add locked state styling
-            buildingCard.classList.add('building-locked-state');
-            
-            // Add glowing effect if this building should be unlocked next
-            if (shouldBuildingGlow(buildingId)) {
-              buildingCard.classList.add('building-glow-unlock');
-              buildingCard.classList.remove('building-locked-state');
-            }
-          }
-          
           if (!canAfford) buildingCard.style.opacity = '0.6';
           
           buildingCard.innerHTML = `
@@ -10987,23 +10406,6 @@
           `;
           
           buildingCard.onclick = () => {
-            // Check if building should glow (meaning it's the quest target)
-            if (shouldBuildingGlow(buildingId)) {
-              // Show comic for this building
-              if (buildingId === 'skillTree' && !saveData.tutorial.comicsShown.includes('quest2_inside_skilltree')) {
-                if (saveData.gold >= building.baseCost) {
-                  saveData.gold -= building.baseCost;
-                  buildingData.unlocked = true;
-                  buildingData.level = 1;
-                  saveSaveData();
-                  playSound('collect');
-                  // Show comic about entering skill tree
-                  showComicQuest('quest2_inside_skilltree');
-                  return;
-                }
-              }
-            }
-            
             if (saveData.gold >= building.baseCost) {
               saveData.gold -= building.baseCost;
               buildingData.unlocked = true;
@@ -11113,24 +10515,9 @@
         skillNode.className = 'skill-node';
         if (skillData.unlocked) skillNode.classList.add('unlocked');
         
-        // COMIC BOOK TUTORIAL: Highlight dash skill (dashMaster) when it should be unlocked
-        const shouldGlowDash = isComicQuestActive() && 
-                               saveData.tutorial.comicsShown.includes('quest2_inside_skilltree') && 
-                               !saveData.tutorial.comicsShown.includes('quest2_dash_unlocked') &&
-                               skillId === 'dashMaster' &&
-                               !skillData.unlocked;
-        
-        if (shouldGlowDash) {
-          skillNode.classList.add('building-glow-unlock');
-          // Make first skill free for tutorial
-          saveData.skillPoints = Math.max(1, saveData.skillPoints);
-        }
-        
         // ADVANCED: Visual locked state for dependencies and max level
         if (!requirementsMet || (!canAfford && !skillData.unlocked) || isMaxLevel) {
-          if (!shouldGlowDash) {
-            skillNode.classList.add('locked');
-          }
+          skillNode.classList.add('locked');
         }
         
         // Display tier badge
@@ -11142,22 +10529,11 @@
           <div class="skill-desc">${skill.description}</div>
           ${requirementText ? `<div style="font-size: 11px; color: #ff6b6b; margin: 3px 0;">${requirementText}</div>` : ''}
           <div style="font-size: 12px; color: #5DADE2; margin: 5px 0;">Level ${skillData.level}/${skill.maxLevel}</div>
-          <div class="skill-cost">${isMaxLevel ? 'MAX' : (shouldGlowDash ? 'FREE!' : `${skill.cost} SP`)}</div>
+          <div class="skill-cost">${isMaxLevel ? 'MAX' : `${skill.cost} SP`}</div>
         `;
         
-        if (!isMaxLevel && (requirementsMet || shouldGlowDash)) {
-          skillNode.onclick = () => {
-            if (shouldGlowDash) {
-              // Unlock dash for free in tutorial
-              unlockSkill(skillId, true); // Pass true to make it free
-              // Show dash unlocked comic
-              setTimeout(() => {
-                showComicQuest('quest2_dash_unlocked');
-              }, 500);
-            } else {
-              unlockSkill(skillId);
-            }
-          };
+        if (!isMaxLevel && requirementsMet) {
+          skillNode.onclick = () => unlockSkill(skillId);
         }
         
         skillsContent.appendChild(skillNode);
@@ -13352,21 +12728,9 @@
       // Main Menu Buttons
       document.getElementById('start-game-btn').onclick = () => {
         playSound('waterdrop');
-        
-        // COMIC BOOK TUTORIAL: Show intro comic on first game start
-        if (isComicQuestActive() && !saveData.tutorial.comicsShown.includes('quest1_intro')) {
-          hideMainMenu();
-          showComicQuest('quest1_intro');
-          // After comic, continue with game start
-          setTimeout(() => {
-            resetGame();
-            startCountdown(); // Start countdown after resetting game (PR #70)
-          }, 100);
-        } else {
-          hideMainMenu();
-          resetGame();
-          startCountdown(); // Start countdown after resetting game (PR #70)
-        }
+        hideMainMenu();
+        resetGame();
+        startCountdown(); // Start countdown after resetting game (PR #70)
       };
       
       document.getElementById('progression-btn').onclick = () => {
@@ -13417,19 +12781,6 @@
       document.getElementById('camp-btn').onclick = () => {
         playSound('waterdrop');
         hideMainMenu();
-        
-        // COMIC BOOK TUTORIAL: Show Quest 2 comic when entering camp after first death
-        if (isComicQuestActive() && saveData.tutorial.comicsShown.includes('quest1_death') && !saveData.tutorial.comicsShown.includes('quest2_skilltree')) {
-          // Show the skill tree quest comic first
-          showComicQuest('quest2_skilltree');
-          // Then show camp screen after comic
-          setTimeout(() => {
-            document.getElementById('camp-screen').style.display = 'flex';
-            updateCampScreen();
-          }, 100);
-          return;
-        }
-        
         const showingTutorial = updateCampScreen();
         if (!showingTutorial) {
           document.getElementById('camp-screen').style.display = 'flex';
@@ -15882,15 +15233,6 @@
       // Quest progression: first run completed
       if (saveData.storyQuests.currentQuest === 'firstRun') {
         progressQuest('firstRun', true);
-      }
-      
-      // COMIC BOOK TUTORIAL: Show death comic after first run
-      if (isComicQuestActive() && !saveData.tutorial.comicsShown.includes('quest1_death') && saveData.totalRuns === 1) {
-        // Show death comic instead of game over screen
-        setTimeout(() => {
-          showComicQuest('quest1_death');
-        }, 1000);
-        return; // Don't show normal game over screen
       }
       
       // Display game over screen
