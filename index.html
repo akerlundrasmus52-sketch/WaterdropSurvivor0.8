@@ -268,9 +268,15 @@
       height: 110px;
       position: relative;
       margin-bottom: 15px;
-      filter: drop-shadow(0 3px 8px rgba(0,0,0,0.5)) drop-shadow(0 0 15px rgba(93,173,226,0.4));
+      /* 3D appearance with stronger shadow and depth */
+      filter: drop-shadow(0 5px 12px rgba(0,0,0,0.7)) 
+              drop-shadow(0 0 20px rgba(93,173,226,0.5))
+              drop-shadow(0 8px 20px rgba(0,0,0,0.4));
       transition: transform 0.15s ease-out;
       animation: waterdrop-bubble 2.5s ease-in-out infinite;
+      /* 3D transform perspective */
+      transform-style: preserve-3d;
+      perspective: 1000px;
     }
     
     #waterdrop-container.grow {
@@ -327,13 +333,29 @@
     
     #waterdrop-exp-fill {
       transition: y 0.3s ease-out, height 0.3s ease-out;
-      animation: water-shimmer 3s ease-in-out infinite;
+      animation: water-shimmer 3s ease-in-out infinite, water-wave 2s ease-in-out infinite;
     }
     
-    /* Add shimmer effect to the EXP fill for extra squishiness */
+    /* Enhanced shimmer effect for 3D water appearance */
     @keyframes water-shimmer {
-      0%, 100% { opacity: 0.9; }
-      50% { opacity: 0.95; }
+      0%, 100% { opacity: 0.85; }
+      50% { opacity: 1.0; }
+    }
+    
+    /* Wave animation that activates on XP progress */
+    @keyframes water-wave {
+      0%, 100% { 
+        transform: translateY(0) scaleY(1);
+      }
+      25% { 
+        transform: translateY(-2px) scaleY(1.02);
+      }
+      50% { 
+        transform: translateY(0) scaleY(1);
+      }
+      75% { 
+        transform: translateY(2px) scaleY(0.98);
+      }
     }
     
     #waterdrop-level-text {
@@ -351,6 +373,60 @@
     
     #bottom-exp-text {
       display: none;
+    }
+    
+    /* Round Minimap - Bottom Right Corner */
+    #minimap-container {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      border: 3px solid #FFD700;
+      background: radial-gradient(circle at center, rgba(20,20,20,0.9), rgba(0,0,0,0.95));
+      overflow: hidden;
+      pointer-events: none;
+      z-index: 100;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.8),
+                  0 0 25px rgba(255,215,0,0.3),
+                  inset -2px -2px 8px rgba(0,0,0,0.6),
+                  inset 2px 2px 8px rgba(255,255,255,0.1);
+      transform-style: preserve-3d;
+    }
+    
+    #minimap {
+      width: 100%;
+      height: 100%;
+      position: relative;
+    }
+    
+    .minimap-dot {
+      position: absolute;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+    }
+    
+    .minimap-player {
+      width: 8px;
+      height: 8px;
+      background: #5DADE2;
+      box-shadow: 0 0 8px rgba(93,173,226,0.8);
+      z-index: 10;
+    }
+    
+    .minimap-enemy {
+      width: 4px;
+      height: 4px;
+      background: #FF4444;
+      box-shadow: 0 0 4px rgba(255,68,68,0.6);
+    }
+    
+    .minimap-landmark {
+      width: 6px;
+      height: 6px;
+      background: #FFD700;
+      box-shadow: 0 0 6px rgba(255,215,0,0.8);
     }
     
     /* Stat Notification Queue - Red/Black Dominant */
@@ -2063,11 +2139,24 @@
     <button id="stats-btn" class="btn-small" style="position: absolute; top: 20px; right: 20px; pointer-events: auto; z-index: 100;">STATS</button>
     <button id="settings-btn" class="btn-small" style="position: absolute; top: 20px; right: 120px; pointer-events: auto; z-index: 100;">⚙️</button>
     
-    <!-- Day/Night Cycle Clock -->
+    <!-- Day/Night Cycle Clock - Enhanced 3D appearance -->
     <div id="day-night-clock" style="position: absolute; top: 20px; left: 50%; transform: translateX(-50%); pointer-events: none; z-index: 100;">
-      <div style="background: rgba(0,0,0,0.7); border: 2px solid #FFD700; border-radius: 50%; width: 80px; height: 80px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 0 15px rgba(0,0,0,0.5);">
-        <div id="day-night-icon" style="font-size: 32px; margin-bottom: 2px;">☀️</div>
-        <div id="day-night-time" style="font-size: 12px; color: #FFD700; font-weight: bold;">00:00</div>
+      <div style="background: radial-gradient(circle at 30% 30%, rgba(40,40,40,0.9), rgba(0,0,0,0.8)); 
+                  border: 3px solid #FFD700; 
+                  border-radius: 50%; 
+                  width: 80px; 
+                  height: 80px; 
+                  display: flex; 
+                  flex-direction: column; 
+                  align-items: center; 
+                  justify-content: center; 
+                  box-shadow: 0 4px 20px rgba(0,0,0,0.7), 
+                              0 0 25px rgba(255,215,0,0.4),
+                              inset -2px -2px 8px rgba(0,0,0,0.5),
+                              inset 2px 2px 8px rgba(255,255,255,0.1);
+                  transform-style: preserve-3d;">
+        <div id="day-night-icon" style="font-size: 36px; margin-bottom: 2px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));">☀️</div>
+        <div id="day-night-time" style="font-size: 12px; color: #FFD700; font-weight: bold; text-shadow: 0 0 8px rgba(255,215,0,0.6), 1px 1px 2px rgba(0,0,0,0.8);">00:00</div>
       </div>
     </div>
     
@@ -2076,6 +2165,11 @@
     
     <!-- Equipment Button -->
     <button id="equipment-btn" title="Equipment">⚔️</button>
+    
+    <!-- Round Minimap - Bottom Right Corner -->
+    <div id="minimap-container">
+      <div id="minimap"></div>
+    </div>
     
     <!-- Combo Counter - Red/Black Theme -->
     <div id="combo-counter">
@@ -3264,9 +3358,9 @@
         this.highlight.position.set(-0.2, 0.3, 0.2);
         this.mesh.add(this.highlight);
         
-        // Add player face: eyes (white spheres + black pupils)
+        // Add player face: eyes with RED glowing appearance (matching load screen)
         const eyeGeo = new THREE.SphereGeometry(0.08, 8, 8);
-        const eyeMat = new THREE.MeshBasicMaterial({ color: 0xFFFFFF });
+        const eyeMat = new THREE.MeshBasicMaterial({ color: 0xFF0000 }); // RED eyes
         
         this.leftEye = new THREE.Mesh(eyeGeo, eyeMat);
         this.leftEye.position.set(-0.12, 0.1, 0.4);
@@ -3276,9 +3370,9 @@
         this.rightEye.position.set(0.12, 0.1, 0.4);
         this.mesh.add(this.rightEye);
         
-        // Pupils (black)
+        // Pupils (darker red for depth)
         const pupilGeo = new THREE.SphereGeometry(0.04, 8, 8);
-        const pupilMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+        const pupilMat = new THREE.MeshBasicMaterial({ color: 0x8B0000 }); // Dark red
         
         this.leftPupil = new THREE.Mesh(pupilGeo, pupilMat);
         this.leftPupil.position.set(-0.12, 0.1, 0.45);
@@ -3351,6 +3445,29 @@
         this.rightArm.rotation.z = -Math.PI / 6; // Angled outward
         this.mesh.add(this.rightArm);
         
+        // Gun visual (held by right arm)
+        const gunBodyGeo = new THREE.BoxGeometry(0.08, 0.12, 0.25);
+        const gunMat = new THREE.MeshToonMaterial({ color: 0x222222 }); // Dark gray gun body
+        this.gunBody = new THREE.Mesh(gunBodyGeo, gunMat);
+        this.gunBody.position.set(0.4, -0.1, 0.3);
+        this.mesh.add(this.gunBody);
+        
+        // Gun barrel
+        const barrelGeo = new THREE.CylinderGeometry(0.025, 0.025, 0.2, 8);
+        const barrelMat = new THREE.MeshToonMaterial({ color: 0x111111 }); // Black barrel
+        this.gunBarrel = new THREE.Mesh(barrelGeo, barrelMat);
+        this.gunBarrel.rotation.x = Math.PI / 2;
+        this.gunBarrel.position.set(0.4, -0.1, 0.45);
+        this.mesh.add(this.gunBarrel);
+        
+        // Gun handle
+        const handleGeo = new THREE.BoxGeometry(0.05, 0.15, 0.08);
+        const handleMat = new THREE.MeshToonMaterial({ color: 0x8B4513 }); // Brown handle
+        this.gunHandle = new THREE.Mesh(handleGeo, handleMat);
+        this.gunHandle.position.set(0.4, -0.2, 0.25);
+        this.gunHandle.rotation.z = -Math.PI / 6;
+        this.mesh.add(this.gunHandle);
+        
         // Legs (simple cylinders below body)
         const legGeo = new THREE.CylinderGeometry(0.08, 0.07, 0.4, 8);
         
@@ -3366,6 +3483,11 @@
         
         // Smoke particles timer
         this.smokeTimer = 0;
+        
+        // Breathing animation states (breath-in with cigar glow, breath-out with smoke)
+        this.breathTimer = 0;
+        this.breathCycle = 4.0; // 4 seconds per breath cycle
+        this.isBreathingIn = false;
         
         // Pulsing glow
         const glowGeo = new THREE.SphereGeometry(0.55, 16, 16);
@@ -3620,58 +3742,87 @@
           this.rightLeg.rotation.x = 0;
         }
         
-        // Animate cigar tip (pulsing emissive glow)
+        // Animate cigar tip with breathing animation (breath-in/breath-out cycle)
         if (this.cigarTip) {
-          const tipBrightness = 0.7 + Math.sin(gameTime * 8) * 0.3;
-          this.cigarTip.material.opacity = tipBrightness;
+          // Breathing animation cycle
+          this.breathTimer += dt;
+          const breathPhase = (this.breathTimer % this.breathCycle) / this.breathCycle; // 0 to 1
           
-          // Enhanced cigar smoke with lighting reaction
-          this.smokeTimer += dt;
-          if (this.smokeTimer > 0.2) { // Every 0.2 seconds
-            this.smokeTimer = 0;
+          // Breath-in: 0 to 0.4 (1.6s), Hold: 0.4 to 0.5 (0.4s), Breath-out: 0.5 to 1.0 (2s)
+          if (breathPhase < 0.4) {
+            // Breathing in - cigar tip glows brighter
+            this.isBreathingIn = true;
+            const inhaleProgress = breathPhase / 0.4;
+            const tipBrightness = 0.7 + inhaleProgress * 0.3 + Math.sin(gameTime * 8) * 0.1;
+            this.cigarTip.material.opacity = tipBrightness;
+            this.cigarTip.scale.set(1 + inhaleProgress * 0.3, 1 + inhaleProgress * 0.3, 1 + inhaleProgress * 0.3);
             
-            // Get current lighting intensity for smoke color (reacts to day/night)
-            const lightIntensity = window.dirLight ? window.dirLight.intensity : 0.8;
-            const smokeColor = new THREE.Color().lerpColors(
-              new THREE.Color(0x555555), // Dark gray in night
-              new THREE.Color(0xCCCCCC), // Light gray in day
-              lightIntensity
-            );
+            // Subtle body scaling during inhale
+            const bodyScale = 1 + inhaleProgress * 0.05;
+            this.mesh.scale.multiplyScalar(bodyScale / this.mesh.scale.x);
+          } else if (breathPhase < 0.5) {
+            // Holding breath
+            this.isBreathingIn = false;
+            this.cigarTip.material.opacity = 1.0;
+            this.cigarTip.scale.set(1.3, 1.3, 1.3);
+          } else {
+            // Breathing out - emit smoke from mouth
+            this.isBreathingIn = false;
+            const exhaleProgress = (breathPhase - 0.5) / 0.5;
+            const tipBrightness = 1.0 - exhaleProgress * 0.3 + Math.sin(gameTime * 8) * 0.1;
+            this.cigarTip.material.opacity = tipBrightness;
+            this.cigarTip.scale.set(1.3 - exhaleProgress * 0.3, 1.3 - exhaleProgress * 0.3, 1.3 - exhaleProgress * 0.3);
             
-            // Create smoke particle
-            const smokeGeo = new THREE.SphereGeometry(0.05, 6, 6);
-            const smokeMat = new THREE.MeshBasicMaterial({ 
-              color: smokeColor,
-              transparent: true,
-              opacity: 0.5
-            });
-            const smoke = new THREE.Mesh(smokeGeo, smokeMat);
-            
-            // Position at cigar tip
-            const tipWorldPos = new THREE.Vector3();
-            this.cigarTip.getWorldPosition(tipWorldPos);
-            smoke.position.copy(tipWorldPos);
-            scene.add(smoke);
-            
-            // Animate smoke rising
-            let smokeLife = 80;
-            const updateSmoke = () => {
-              smokeLife--;
-              smoke.position.y += 0.02; // Rise up
-              smoke.position.x += (Math.random() - 0.5) * 0.01; // Drift
-              smoke.position.z += (Math.random() - 0.5) * 0.01;
-              smoke.scale.multiplyScalar(1.02); // Expand
-              smoke.material.opacity = (smokeLife / 80) * 0.5; // Fade out
+            // Emit smoke from mouth during exhale
+            this.smokeTimer += dt;
+            if (this.smokeTimer > 0.15) { // Faster smoke during exhale
+              this.smokeTimer = 0;
               
-              if (smokeLife <= 0) {
-                scene.remove(smoke);
-                smoke.geometry.dispose();
-                smoke.material.dispose();
-              } else {
-                requestAnimationFrame(updateSmoke);
-              }
-            };
-            updateSmoke();
+              // Get current lighting intensity for smoke color
+              const lightIntensity = window.dirLight ? window.dirLight.intensity : 0.8;
+              const smokeColor = new THREE.Color().lerpColors(
+                new THREE.Color(0x555555), // Dark gray in night
+                new THREE.Color(0xCCCCCC), // Light gray in day
+                lightIntensity
+              );
+              
+              // Create smoke particle from mouth
+              const smokeGeo = new THREE.SphereGeometry(0.08, 6, 6);
+              const smokeMat = new THREE.MeshBasicMaterial({ 
+                color: smokeColor,
+                transparent: true,
+                opacity: 0.6
+              });
+              const smoke = new THREE.Mesh(smokeGeo, smokeMat);
+              
+              // Position at mouth (slightly in front of face)
+              smoke.position.set(
+                this.mesh.position.x,
+                this.mesh.position.y - 0.05,
+                this.mesh.position.z + 0.45
+              );
+              scene.add(smoke);
+              
+              // Animate smoke rising and drifting forward
+              let smokeLife = 100;
+              const updateSmoke = () => {
+                smokeLife--;
+                smoke.position.y += 0.02; // Rise up
+                smoke.position.z += 0.03; // Drift forward
+                smoke.position.x += (Math.random() - 0.5) * 0.02; // Random drift
+                smoke.scale.multiplyScalar(1.03); // Expand faster
+                smoke.material.opacity = (smokeLife / 100) * 0.6; // Fade out
+                
+                if (smokeLife <= 0) {
+                  scene.remove(smoke);
+                  smoke.geometry.dispose();
+                  smoke.material.dispose();
+                } else {
+                  requestAnimationFrame(updateSmoke);
+                }
+              };
+              updateSmoke();
+            }
           }
         }
         
@@ -12334,6 +12485,84 @@
       const fillY = WATERDROP_SVG_HEIGHT - fillHeight;
       waterdropFill.setAttribute('y', fillY);
       waterdropFill.setAttribute('height', fillHeight);
+      
+      // Update minimap
+      updateMinimap();
+    }
+    
+    // Minimap update function
+    function updateMinimap() {
+      if (!player || !player.mesh) return;
+      
+      const minimap = document.getElementById('minimap');
+      if (!minimap) return;
+      
+      // Clear previous dots
+      minimap.innerHTML = '';
+      
+      // Minimap scale - shows area of 100x100 units
+      const mapSize = 100;
+      const minimapSize = 120; // pixels
+      
+      // Add player dot (center)
+      const playerDot = document.createElement('div');
+      playerDot.className = 'minimap-dot minimap-player';
+      playerDot.style.left = '50%';
+      playerDot.style.top = '50%';
+      minimap.appendChild(playerDot);
+      
+      // Add enemy dots (up to 20 closest enemies)
+      if (enemies && enemies.length > 0) {
+        const sortedEnemies = enemies
+          .filter(e => e && !e.isDead)
+          .map(e => ({
+            enemy: e,
+            dist: player.mesh.position.distanceTo(e.mesh.position)
+          }))
+          .sort((a, b) => a.dist - b.dist)
+          .slice(0, 20);
+        
+        sortedEnemies.forEach(({enemy}) => {
+          const dx = enemy.mesh.position.x - player.mesh.position.x;
+          const dz = enemy.mesh.position.z - player.mesh.position.z;
+          
+          // Only show enemies within map range
+          if (Math.abs(dx) < mapSize / 2 && Math.abs(dz) < mapSize / 2) {
+            const mapX = 50 + (dx / mapSize) * 100; // percentage
+            const mapZ = 50 + (dz / mapSize) * 100; // percentage
+            
+            const enemyDot = document.createElement('div');
+            enemyDot.className = 'minimap-dot minimap-enemy';
+            enemyDot.style.left = `${mapX}%`;
+            enemyDot.style.top = `${mapZ}%`;
+            minimap.appendChild(enemyDot);
+          }
+        });
+      }
+      
+      // Add landmark dots (windmill, montana, eiffel, stonehenge if they exist)
+      const landmarks = [
+        { pos: { x: 60, z: 40 }, name: 'windmill' },
+        { pos: { x: -50, z: -50 }, name: 'montana' },
+        { pos: { x: 70, z: -60 }, name: 'eiffel' },
+        { pos: { x: -60, z: 60 }, name: 'stonehenge' }
+      ];
+      
+      landmarks.forEach(landmark => {
+        const dx = landmark.pos.x - player.mesh.position.x;
+        const dz = landmark.pos.z - player.mesh.position.z;
+        
+        if (Math.abs(dx) < mapSize / 2 && Math.abs(dz) < mapSize / 2) {
+          const mapX = 50 + (dx / mapSize) * 100;
+          const mapZ = 50 + (dz / mapSize) * 100;
+          
+          const landmarkDot = document.createElement('div');
+          landmarkDot.className = 'minimap-dot minimap-landmark';
+          landmarkDot.style.left = `${mapX}%`;
+          landmarkDot.style.top = `${mapZ}%`;
+          minimap.appendChild(landmarkDot);
+        }
+      });
     }
     
     // Stats Bar removed - Users access stats via STATS button modal
