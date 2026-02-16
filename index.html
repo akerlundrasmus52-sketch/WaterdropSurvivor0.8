@@ -1493,7 +1493,7 @@
       height: 200px;
     }
 
-    /* COMIC BOOK PANEL SYSTEM - 80s Style */
+    /* COMIC BOOK PANEL SYSTEM - 80s Batman Style */
     .comic-panel-overlay {
       position: fixed;
       top: 0;
@@ -1511,12 +1511,13 @@
     .comic-panel {
       max-width: 90%;
       max-height: 90%;
-      background: #FFFACD;
+      background: linear-gradient(135deg, #B8B8B8 0%, #9E9E9E 50%, #B8B8B8 100%);
       border: 8px solid #000;
       box-shadow: 
         0 0 0 4px #FFD700,
         0 0 0 8px #000,
-        0 10px 30px rgba(0,0,0,0.7);
+        0 10px 30px rgba(0,0,0,0.7),
+        inset 0 0 50px rgba(255,255,255,0.1);
       padding: 20px;
       position: relative;
       animation: comicPanelPop 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
@@ -1544,26 +1545,27 @@
           45deg,
           transparent,
           transparent 10px,
-          rgba(255,215,0,0.1) 10px,
-          rgba(255,215,0,0.1) 20px
+          rgba(255,255,255,0.05) 10px,
+          rgba(255,255,255,0.05) 20px
         );
     }
 
     .comic-panel-title {
       font-size: 32px;
       font-weight: 900;
-      color: #000;
+      color: #FFF;
       text-align: center;
       text-transform: uppercase;
       letter-spacing: 3px;
       margin-bottom: 20px;
       text-shadow: 
-        3px 3px 0 #FFD700,
-        -1px -1px 0 #FFD700,
-        1px -1px 0 #FFD700,
-        -1px 1px 0 #FFD700,
-        1px 1px 0 #FFD700;
+        3px 3px 0 #000,
+        -2px -2px 0 #000,
+        2px -2px 0 #000,
+        -2px 2px 0 #000,
+        0 0 10px rgba(255,215,0,0.5);
       transform: skew(-2deg);
+      font-family: 'M PLUS Rounded 1c', sans-serif;
     }
 
     .comic-panel-image {
@@ -1582,6 +1584,11 @@
       padding: 20px;
       margin: 15px 0;
       box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+      font-family: 'M PLUS Rounded 1c', sans-serif;
+      font-size: 18px;
+      line-height: 1.6;
+      color: #000;
+      font-weight: 500;
     }
 
     .comic-speech-bubble::before {
@@ -1676,6 +1683,39 @@
     }
 
     .comic-panel-button:active {
+      transform: translateY(6px);
+      box-shadow: 
+        0 0px 0 #8B0000,
+        0 2px 8px rgba(0,0,0,0.4);
+    }
+
+    .comic-panel-continue {
+      display: block;
+      margin: 20px auto 0;
+      background: #FF0000;
+      color: #FFF;
+      border: 4px solid #000;
+      padding: 15px 40px;
+      font-size: 22px;
+      font-weight: 900;
+      text-transform: uppercase;
+      cursor: pointer;
+      box-shadow: 
+        0 6px 0 #8B0000,
+        0 8px 15px rgba(0,0,0,0.4);
+      transition: all 0.1s ease;
+      letter-spacing: 2px;
+      font-family: 'M PLUS Rounded 1c', sans-serif;
+    }
+
+    .comic-panel-continue:hover {
+      transform: translateY(2px);
+      box-shadow: 
+        0 4px 0 #8B0000,
+        0 6px 12px rgba(0,0,0,0.4);
+    }
+
+    .comic-panel-continue:active {
       transform: translateY(6px);
       box-shadow: 
         0 0px 0 #8B0000,
@@ -11090,6 +11130,178 @@
           saveSaveData();
           showQuestStatus('Spend your 3 attribute points');
         }
+      },
+      quest6_progression: {
+        id: 'quest6_progression',
+        title: 'PROGRESSION BUILDING!',
+        panels: [
+          {
+            type: 'speech',
+            text: 'Time to unlock PERMANENT UPGRADES! The Progression Building lets you boost your core stats: HP, Attack, Attack Speed, and Critical hits!',
+            character: 'narrator'
+          },
+          {
+            type: 'speech',
+            text: 'Click the glowing Progression Building and purchase your first upgrade. Each upgrade makes you STRONGER for ALL future runs!',
+            character: 'narrator'
+          }
+        ],
+        onComplete: () => {
+          saveData.tutorial.comicsShown.push('quest6_progression');
+          saveSaveData();
+          showQuestStatus('Unlock and use the Progression Building');
+        }
+      },
+      quest7_inventory: {
+        id: 'quest7_inventory',
+        title: 'INVENTORY & GEAR!',
+        panels: [
+          {
+            type: 'speech',
+            text: 'The Inventory Building is ready! This is where you manage your equipment and items.',
+            character: 'narrator'
+          },
+          {
+            type: 'speech',
+            text: 'Here\'s a FREE CIGAR for you! Equip it to see stat bonuses. Check your inventory regularly for loot from your runs!',
+            character: 'narrator'
+          }
+        ],
+        onComplete: () => {
+          saveData.tutorial.comicsShown.push('quest7_inventory');
+          // Give free cigar item
+          if (!saveData.inventory) saveData.inventory = [];
+          saveData.inventory.push({
+            id: 'cigar',
+            name: 'Lucky Cigar',
+            type: 'accessory',
+            rarity: 'uncommon',
+            stats: { luck: 5, critChance: 0.03 }
+          });
+          saveSaveData();
+          showQuestStatus('Equip your Lucky Cigar in the Inventory');
+        }
+      },
+      quest8_lore: {
+        id: 'quest8_lore',
+        title: 'LORE & KNOWLEDGE!',
+        panels: [
+          {
+            type: 'speech',
+            text: 'Knowledge is power! The Lore Building contains enemy information, story fragments, and survival tips.',
+            character: 'narrator'
+          },
+          {
+            type: 'speech',
+            text: 'Visit the Lore Building to learn about the water organisms you\'ll face. Understanding your enemies gives you the edge!',
+            character: 'narrator'
+          }
+        ],
+        onComplete: () => {
+          saveData.tutorial.comicsShown.push('quest8_lore');
+          saveSaveData();
+          showQuestStatus('Visit the Lore Building');
+        }
+      },
+      death_first: {
+        id: 'death_first',
+        title: 'THAT WAS SUPPOSED TO HAPPEN!',
+        panels: [
+          {
+            type: 'speech',
+            text: 'Hey, you died! But that\'s OKAY - death is part of the journey in a roguelite game.',
+            character: 'narrator'
+          },
+          {
+            type: 'speech',
+            text: 'Every death makes you stronger. You keep your gold, unlocks, and upgrades. Head back to camp and power up!',
+            character: 'narrator'
+          }
+        ],
+        onComplete: () => {
+          saveData.tutorial.comicsShown.push('death_first');
+          saveSaveData();
+        }
+      },
+      death_second: {
+        id: 'death_second',
+        title: 'BACK FOR MORE!',
+        panels: [
+          {
+            type: 'speech',
+            text: 'Second death! You\'re getting the hang of this. Remember: each run teaches you enemy patterns and map layouts.',
+            character: 'narrator'
+          },
+          {
+            type: 'speech',
+            text: 'Tip: Focus on dodging enemy attacks while your weapons do the work. Positioning is EVERYTHING!',
+            character: 'narrator'
+          }
+        ],
+        onComplete: () => {
+          saveData.tutorial.comicsShown.push('death_second');
+          saveSaveData();
+        }
+      },
+      death_third: {
+        id: 'death_third',
+        title: 'KEEP PUSHING!',
+        panels: [
+          {
+            type: 'speech',
+            text: 'Three deaths and still fighting! That\'s the spirit. The water organisms are tough, but you\'re learning.',
+            character: 'narrator'
+          },
+          {
+            type: 'speech',
+            text: 'Don\'t forget to upgrade between runs. Even small upgrades add up to BIG power gains!',
+            character: 'narrator'
+          }
+        ],
+        onComplete: () => {
+          saveData.tutorial.comicsShown.push('death_third');
+          saveSaveData();
+        }
+      },
+      pre_run_day: {
+        id: 'pre_run_day',
+        title: 'DAWN BREAKS!',
+        panels: [
+          {
+            type: 'speech',
+            text: 'You chose to start during the DAY. The sun illuminates the wetlands, making enemies easier to spot.',
+            character: 'narrator'
+          },
+          {
+            type: 'speech',
+            text: 'Day runs are perfect for learning. Standard difficulty, normal rewards. Get out there and survive!',
+            character: 'narrator'
+          }
+        ],
+        onComplete: () => {
+          saveData.tutorial.comicsShown.push('pre_run_day');
+          saveSaveData();
+        }
+      },
+      pre_run_night: {
+        id: 'pre_run_night',
+        title: 'DARKNESS FALLS!',
+        panels: [
+          {
+            type: 'speech',
+            text: 'You chose NIGHT MODE! The darkness hides dangerous water organisms... but greater rewards await.',
+            character: 'narrator'
+          },
+          {
+            type: 'speech',
+            text: '+50% Gold and XP during night runs! High risk, high reward. Stay alert - enemies are tougher after dark!',
+            character: 'narrator'
+          }
+        ],
+        onComplete: () => {
+          saveData.tutorial.comicsShown.push('pre_run_night');
+          saveSaveData();
+        }
       }
     };
     
@@ -11114,8 +11326,9 @@
         return;
       }
       
-      // Build panel content
-      let panelHTML = `<div class="comic-panel-title">${quest.title}</div>`;
+      // Build panel content wrapped in comic-panel div
+      let panelHTML = `<div class="comic-panel"><div class="comic-panel-border">`;
+      panelHTML += `<div class="comic-panel-title">${quest.title}</div>`;
       
       // Add each panel
       quest.panels.forEach((panel, index) => {
@@ -11146,6 +11359,8 @@
           CONTINUE
         </button>
       `;
+      
+      panelHTML += `</div></div>`; // Close border and panel divs
       
       container.innerHTML = panelHTML;
       overlay.style.display = 'flex';
