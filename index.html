@@ -536,7 +536,7 @@
       z-index: 1000;
       align-items: center;
       justify-content: center;
-      pointer-events: auto;
+      pointer-events: none; /* Changed from auto to none - will only be auto when display: flex */
     }
     
     .story-quest-content {
@@ -712,7 +712,7 @@
       left: 0;
       width: 100%;
       height: 100%;
-      pointer-events: auto;
+      pointer-events: none; /* Changed from auto to none - will be enabled when game starts */
       touch-action: none;
       z-index: 50;
     }
@@ -1199,7 +1199,7 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      z-index: 50; /* Lower than UI layer buttons */
+      z-index: 5000; /* Increased from 50 to ensure it's above other game elements */
     }
 
     #main-menu::before {
@@ -1432,19 +1432,8 @@
     }
 
     /* COMIC BOOK PANEL SYSTEM - 80s Style */
-    .comic-panel-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.95);
-      z-index: 10000;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      animation: fadeIn 0.4s ease-out;
-    }
+    /* REMOVED: Duplicate .comic-panel-overlay definition that was blocking menu clicks.
+       The correct definition is below at line ~2060 with proper display: none default */
 
     .comic-panel {
       max-width: 90%;
@@ -2070,6 +2059,7 @@
       z-index: 9999;
       padding: 20px;
       overflow-y: auto;
+      pointer-events: none; /* Added: Prevent blocking clicks when hidden */
     }
     
     .comic-panel-container {
@@ -3198,6 +3188,7 @@
               const storyModal = document.getElementById('story-quest-modal');
               if (storyModal) {
                 storyModal.style.display = 'flex';
+                storyModal.style.pointerEvents = 'auto'; // Enable pointer events when showing modal
               }
             }
           }, 500);
@@ -10792,12 +10783,14 @@
       
       container.innerHTML = panelHTML;
       overlay.style.display = 'flex';
+      overlay.style.pointerEvents = 'auto'; // Enable pointer events when showing comic
       
       // Add click handler
       const continueBtn = document.getElementById('comic-continue-btn');
       if (continueBtn) {
         continueBtn.onclick = () => {
           overlay.style.display = 'none';
+          overlay.style.pointerEvents = 'none'; // Disable pointer events when hiding comic
           if (quest.onComplete) {
             quest.onComplete();
           }
@@ -13315,6 +13308,11 @@
       updateGoldDisplays();
       setGameActive(false);
       setGamePaused(true);
+      // Disable joystick when menu is shown
+      const joystickZone = document.getElementById('joystick-zone');
+      if (joystickZone) {
+        joystickZone.style.pointerEvents = 'none';
+      }
     }
     
     function hideMainMenu() {
@@ -13501,6 +13499,12 @@
     
     function endCinematicIntro() {
       cinematicIntroActive = false;
+      
+      // Enable joystick controls now that game is starting
+      const joystickZone = document.getElementById('joystick-zone');
+      if (joystickZone) {
+        joystickZone.style.pointerEvents = 'auto';
+      }
       
       // Ensure game properly unpauses (use helper functions to sync window variables)
       setGamePaused(false);
@@ -14120,7 +14124,9 @@
         saveData.storyQuests.welcomeShown = true;
         saveSaveData();
         // Close modal
-        document.getElementById('story-quest-modal').style.display = 'none';
+        const storyModal = document.getElementById('story-quest-modal');
+        storyModal.style.display = 'none';
+        storyModal.style.pointerEvents = 'none'; // Disable pointer events when hiding modal
       };
       
       document.getElementById('settings-reset-btn').onclick = () => {
