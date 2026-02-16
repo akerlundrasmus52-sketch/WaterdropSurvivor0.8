@@ -2088,6 +2088,104 @@
     });
   </script>
 
+  <!-- FRESH IMPLEMENTATION: Standalone loading script (non-module) -->
+  <script>
+    // Standalone loading script - runs independently before module loads
+    // Prevents race condition where buttons don't work because event listeners aren't attached yet
+    
+    (function() {
+      // Initialize flags
+      window.gameModuleReady = false;
+      window.loadingComplete = false;
+      
+      // Wait for DOM to be ready
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initLoading);
+      } else {
+        initLoading();
+      }
+      
+      function initLoading() {
+        const loadingScreen = document.getElementById('loading-screen');
+        const loadingBar = document.getElementById('loading-bar');
+        
+        if (!loadingScreen || !loadingBar) {
+          console.error('[Loading] Loading elements not found');
+          return;
+        }
+        
+        let progress = 0;
+        let progressInterval;
+        
+        // Animate loading bar from 0% to 100% over ~8 seconds
+        function updateProgress() {
+          progress += 5; // 5% per step
+          loadingBar.style.width = progress + '%';
+          
+          if (progress >= 100) {
+            clearInterval(progressInterval);
+            window.loadingComplete = true;
+            
+            // Wait for module to be ready before showing menu
+            waitForModuleReady();
+          }
+        }
+        
+        // Start progress animation
+        progressInterval = setInterval(updateProgress, 400); // 20 steps × 400ms = 8s
+        
+        // 12-second failsafe timeout - show menu anyway if module fails to load
+        setTimeout(function() {
+          if (!window.gameModuleReady) {
+            console.warn('[Loading] Failsafe timeout - showing menu without module ready signal');
+            clearInterval(progressInterval);
+            window.loadingComplete = true;
+            showMenuAfterLoading();
+          }
+        }, 12000);
+      }
+      
+      // Wait for module to signal ready, then show menu
+      function waitForModuleReady() {
+        let attempts = 0;
+        const maxAttempts = 50; // 50 × 100ms = 5s max wait
+        
+        const checkInterval = setInterval(function() {
+          attempts++;
+          
+          if (window.gameModuleReady) {
+            // Module is ready!
+            clearInterval(checkInterval);
+            showMenuAfterLoading();
+          } else if (attempts >= maxAttempts) {
+            // Timeout - show anyway
+            console.warn('[Loading] Module ready timeout - showing menu anyway');
+            clearInterval(checkInterval);
+            showMenuAfterLoading();
+          }
+        }, 100);
+      }
+      
+      function showMenuAfterLoading() {
+        const loadingScreen = document.getElementById('loading-screen');
+        if (!loadingScreen) return;
+        
+        // Fade out loading screen
+        loadingScreen.classList.add('fade-out');
+        
+        setTimeout(function() {
+          loadingScreen.style.display = 'none';
+          
+          // Show main menu (module script will handle button event listeners)
+          const mainMenu = document.getElementById('main-menu');
+          if (mainMenu) {
+            mainMenu.style.display = 'flex';
+          }
+        }, 500);
+      }
+    })();
+  </script>
+
   <script type="module">
     import * as THREE from 'three';
 
@@ -3228,7 +3326,37 @@
           // Rotation/Aiming with RIGHT stick (independent of movement)
           if (joystickRight.active) {
             // Manual aim: Turn to face the direction of right stick
-            const angle = Math.atan2(joystickRight.x, joystickRight.y);
+            let angle = Math.atan2(joystickRight.x, joystickRight.y);
+            
+            // FRESH: Precision aiming - 15% nudge toward nearest enemy when right joystick active
+            if (enemies && enemies.length > 0) {
+              let nearestEnemy = null;
+              let minDist = Infinity;
+              enemies.forEach(e => {
+                if (e && !e.isDead) {
+                  const dist = this.mesh.position.distanceTo(e.mesh.position);
+                  if (dist < minDist && dist < 15) { // Only nudge if enemy within reasonable range
+                    minDist = dist;
+                    nearestEnemy = e;
+                  }
+                }
+              });
+              
+              if (nearestEnemy) {
+                const dx = nearestEnemy.mesh.position.x - this.mesh.position.x;
+                const dz = nearestEnemy.mesh.position.z - this.mesh.position.z;
+                const enemyAngle = Math.atan2(dx, dz);
+                
+                // Blend 85% player input + 15% toward enemy (subtle magnetism)
+                let angleDiff = enemyAngle - angle;
+                // Normalize angle difference to -PI to PI
+                while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+                while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+                
+                angle = angle + angleDiff * 0.15; // 15% nudge
+              }
+            }
+            
             this.mesh.rotation.y = angle;
           } else if (gameSettings.autoAim && enemies && enemies.length > 0) {
             // Auto-aim when enabled (works in any orientation)
@@ -5744,8 +5872,10 @@
         this.mesh.add(this.waterFill);
         
         this.active = true;
-        this.rotSpeed = 0.08; // Steady 360-degree rotation
-        this.rotSpeedY = 0.05; // Separate axis rotation
+        // FRESH: Randomized rotation speed and direction for each XP drop
+        this.rotSpeed = (Math.random() * 0.12 + 0.04) * (Math.random() < 0.5 ? 1 : -1); // 0.04-0.16, random direction
+        this.rotSpeedY = (Math.random() * 0.08 + 0.02) * (Math.random() < 0.5 ? 1 : -1); // 0.02-0.10, random direction
+        this.rotSpeedX = (Math.random() * 0.06 + 0.01) * (Math.random() < 0.5 ? 1 : -1); // 0.01-0.07, random direction
         this.bobPhase = Math.random() * Math.PI * 2;
         this.sparklePhase = Math.random() * Math.PI * 2;
         this.fillPhase = 0; // Water fill animation
@@ -5755,9 +5885,10 @@
       update(playerPos) {
         if (!this.active) return;
 
-        // Spin 360 degrees like Earth (varied rotation)
+        // FRESH: Spin with randomized speeds and directions (each XP drop unique)
         this.mesh.rotation.z += this.rotSpeed;
         this.mesh.rotation.y += this.rotSpeedY;
+        this.mesh.rotation.x += this.rotSpeedX;
         
         // Bob up and down
         this.bobPhase += 0.05;
@@ -9867,47 +9998,20 @@
       // Start Loop - begin rendering immediately (non-blocking)
       requestAnimationFrame(animate);
       
-      // Show loading screen, then main menu (acceptance criteria #1)
-      // gameModuleReady will be set after loading completes (acceptance criteria #2)
-      showLoadingScreen();
+      // FRESH: Signal that module is ready (standalone loading script is waiting for this)
+      // Don't call showLoadingScreen - standalone script handles it
+      window.gameModuleReady = true;
+      console.log('[Init] Game module ready - Three.js loaded, event listeners attached');
     }
     
-    function showLoadingScreen() {
-      const loadingScreen = document.getElementById('loading-screen');
-      const loadingBar = document.getElementById('loading-bar');
-      let progress = 0;
-      
-      // Extended loading duration: 20 iterations × 400ms = 8000ms (8 seconds total)
-      const interval = setInterval(() => {
-        progress += 5;
-        loadingBar.style.width = progress + '%';
-        
-        if (progress >= 100) {
-          clearInterval(interval);
-          setTimeout(() => {
-            loadingScreen.classList.add('fade-out');
-            setTimeout(() => {
-              loadingScreen.style.display = 'none';
-              showMainMenu();
-            }, 500);
-          }, 600); // Extended delay before fade
-        }
-      }, 400); // Slower progress updates for longer duration
-    }
+    // showLoadingScreen is now handled by standalone script
+    // Keeping showMainMenu for internal use (e.g., returning from game to menu)
     
     function showMainMenu() {
       document.getElementById('main-menu').style.display = 'flex';
       updateGoldDisplays();
       setGameActive(false);
       setGamePaused(true);
-      
-      // Signal that module is fully initialized (acceptance criteria #2)
-      // This is set AFTER loading screen completes and main menu is shown
-      // The check ensures it's only set once during initial load (not when returning from other screens)
-      if (!window.gameModuleReady) {
-        window.gameModuleReady = true;
-        console.log('[Init] Game module ready - loading complete, main menu shown');
-      }
     }
     
     function hideMainMenu() {
@@ -13115,7 +13219,46 @@
       spawnCount: 0,
       renderCount: 0,
       lastEnemyCount: 0,
-      cumulativeFrameTime: 0 // Track cumulative time for accurate average
+      cumulativeFrameTime: 0, // Track cumulative time for accurate average
+      // FRESH: FPS watchdog - rolling 10-frame average
+      recentFrameTimes: [],
+      rollingAvgFPS: 60,
+      particleThrottleActive: false
+    };
+    
+    // FRESH: FPS Watchdog - Update rolling average and throttle particles if needed
+    function updateFPSWatchdog(frameTime) {
+      // Add current frame time to rolling window
+      performanceLog.recentFrameTimes.push(frameTime);
+      
+      // Keep only last 10 frames
+      if (performanceLog.recentFrameTimes.length > 10) {
+        performanceLog.recentFrameTimes.shift();
+      }
+      
+      // Calculate rolling average FPS
+      if (performanceLog.recentFrameTimes.length === 10) {
+        const avgFrameTime = performanceLog.recentFrameTimes.reduce((a, b) => a + b, 0) / 10;
+        performanceLog.rollingAvgFPS = 1000 / avgFrameTime; // Convert ms to FPS
+        
+        // Throttle particles if FPS < 30
+        if (performanceLog.rollingAvgFPS < 30 && !performanceLog.particleThrottleActive) {
+          performanceLog.particleThrottleActive = true;
+          console.warn(`FPS watchdog: FPS below 30 (${performanceLog.rollingAvgFPS.toFixed(1)}), throttling particles to 50%`);
+        } else if (performanceLog.rollingAvgFPS >= 35 && performanceLog.particleThrottleActive) {
+          // Restore particles when FPS recovers above 35 (hysteresis to prevent flapping)
+          performanceLog.particleThrottleActive = false;
+          console.log(`FPS watchdog: FPS recovered (${performanceLog.rollingAvgFPS.toFixed(1)}), restoring particles`);
+        }
+      }
+    }
+    
+    // Enhance spawnParticles to respect throttle
+    const originalSpawnParticles = spawnParticles;
+    spawnParticles = function(position, color, count) {
+      // Apply throttle if active (50% reduction)
+      const adjustedCount = performanceLog.particleThrottleActive ? Math.ceil(count * 0.5) : count;
+      return originalSpawnParticles(position, color, adjustedCount);
     };
     
     // Day/Night Cycle Update - Non-blocking, smooth lighting transitions
@@ -14034,6 +14177,9 @@
       const totalFrameTime = frameEndTime - frameStartTime;
       performanceLog.totalFrameTime = totalFrameTime;
       performanceLog.frameCount++;
+      
+      // FRESH: Update FPS watchdog with current frame time
+      updateFPSWatchdog(totalFrameTime);
       
       // Log slow frames
       if (totalFrameTime > FRAME_TIME_BUDGET) {
