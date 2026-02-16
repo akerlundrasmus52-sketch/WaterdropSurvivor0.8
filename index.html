@@ -5411,16 +5411,24 @@
               // Visual damage stages
               const hpPercent = prop.hp / prop.maxHp;
               
-              if (hpPercent <= 0.5 && hpPercent > 0.25) {
-                // 50% HP: Darken
+              if (hpPercent <= 0.5 && hpPercent > 0.25 && !prop.darkenedStage1) {
+                // 50% HP: Darken (only once)
+                prop.darkenedStage1 = true;
                 if (prop.type === 'tree') {
-                  prop.mesh.userData.trunk.material.color.multiplyScalar(0.9);
-                  prop.mesh.userData.leaves.material.color.multiplyScalar(0.9);
+                  prop.mesh.userData.trunk.material.color.copy(prop.originalColor.trunk).multiplyScalar(0.8);
+                  prop.mesh.userData.leaves.material.color.copy(prop.originalColor.leaves).multiplyScalar(0.8);
                 } else {
-                  prop.mesh.material.color.multiplyScalar(0.9);
+                  prop.mesh.material.color.copy(prop.originalColor).multiplyScalar(0.8);
                 }
-              } else if (hpPercent <= 0.25 && hpPercent > 0) {
-                // 25% HP: Shrink
+              } else if (hpPercent <= 0.25 && hpPercent > 0 && !prop.darkenedStage2) {
+                // 25% HP: Darken more + Shrink (only once)
+                prop.darkenedStage2 = true;
+                if (prop.type === 'tree') {
+                  prop.mesh.userData.trunk.material.color.copy(prop.originalColor.trunk).multiplyScalar(0.6);
+                  prop.mesh.userData.leaves.material.color.copy(prop.originalColor.leaves).multiplyScalar(0.6);
+                } else {
+                  prop.mesh.material.color.copy(prop.originalColor).multiplyScalar(0.6);
+                }
                 prop.mesh.scale.copy(prop.originalScale).multiplyScalar(0.8);
               } else if (prop.hp <= 0) {
                 // 0 HP: Destroy with debris
