@@ -2951,6 +2951,10 @@
   <script>
     // Pre-Map Screen System - Global functions available immediately
     (function() {
+      // Constants
+      const AUTO_ADVANCE_DELAY_MS = 10000; // 10 seconds
+      const WATERDROP_SOUND = 'waterdrop';
+      
       window.preMapTimer = null;
       
       window.showPreMapScreen = function() {
@@ -2971,7 +2975,7 @@
           if (typeof window.continueFromPreMap === 'function') {
             window.continueFromPreMap();
           }
-        }, 10000);
+        }, AUTO_ADVANCE_DELAY_MS);
       };
       
       window.hidePreMapScreen = function() {
@@ -2995,7 +2999,7 @@
       window.continueFromPreMap = function() {
         // Play sound if available
         if (typeof playSound === 'function') {
-          playSound('waterdrop');
+          playSound(WATERDROP_SOUND);
         }
         
         window.hidePreMapScreen();
