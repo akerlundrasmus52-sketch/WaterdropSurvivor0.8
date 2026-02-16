@@ -2163,8 +2163,9 @@
           
           // CRITICAL FIX: Wait for module to be ready before showing menu
           // This ensures event listeners are attached before the menu becomes interactive
-          let pollAttempts = 0;
+          const POLL_INTERVAL_MS = 100; // Check every 100ms
           const MAX_POLL_ATTEMPTS = 50; // 50 * 100ms = 5 seconds max wait after fade
+          let pollAttempts = 0;
           
           const waitForModule = () => {
             pollAttempts++;
@@ -2188,11 +2189,14 @@
               }
             } else if (pollAttempts < MAX_POLL_ATTEMPTS) {
               // Module not ready yet, wait and try again (but not forever)
-              console.log('[Loading] Module not ready, waiting... (' + pollAttempts + '/' + MAX_POLL_ATTEMPTS + ')');
-              setTimeout(waitForModule, 100);
+              // Log only every 10th attempt to reduce console noise
+              if (pollAttempts % 10 === 0) {
+                console.log('[Loading] Module not ready, waiting... (' + pollAttempts + '/' + MAX_POLL_ATTEMPTS + ')');
+              }
+              setTimeout(waitForModule, POLL_INTERVAL_MS);
             } else {
               // Give up after max attempts and show menu anyway (graceful degradation)
-              console.warn('[Loading] Module did not become ready after ' + (MAX_POLL_ATTEMPTS * 100) + 'ms, showing menu anyway');
+              console.warn('[Loading] Module did not become ready after ' + (MAX_POLL_ATTEMPTS * POLL_INTERVAL_MS) + 'ms, showing menu anyway');
               const mainMenu = document.getElementById('main-menu');
               if (mainMenu && mainMenu.style.display !== 'flex') {
                 mainMenu.style.display = 'flex';
