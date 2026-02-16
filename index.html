@@ -543,33 +543,30 @@
       background: linear-gradient(to bottom, #1a3a4a 0%, #0f1f2a 100%);
       border: 4px solid #5DADE2;
       border-radius: 20px;
-      padding: 30px 20px;
-      width: 90%;
-      max-width: 400px;
-      max-height: 80vh;
-      overflow-y: auto;
+      padding: 40px;
+      max-width: 600px;
       box-shadow: 0 0 30px rgba(93,173,226,0.6);
     }
     
     .story-quest-title {
       color: #5DADE2;
-      font-size: 28px;
+      font-size: 36px;
       font-weight: bold;
       text-align: center;
-      margin-bottom: 15px;
+      margin-bottom: 20px;
       text-shadow: 0 0 15px rgba(93,173,226,0.8);
     }
     
     .story-quest-body {
       color: #FFFFFF;
-      font-size: 16px;
-      line-height: 1.5;
-      margin-bottom: 20px;
+      font-size: 18px;
+      line-height: 1.6;
+      margin-bottom: 25px;
       text-align: left;
     }
     
     .story-quest-body p {
-      margin-bottom: 12px;
+      margin-bottom: 15px;
     }
     
     .story-quest-body strong {
@@ -582,16 +579,10 @@
     
     .menu-btn-primary {
       width: 100%;
-      padding: 12px;
-      font-size: 20px;
-      font-weight: bold;
+      padding: 15px;
+      font-size: 22px;
       background: linear-gradient(to bottom, #5DADE2, #3498DB);
       border: 3px solid #2980B9;
-      cursor: pointer;
-      color: white;
-      border-radius: 10px;
-      box-shadow: 0 4px 0 #2980B9, 0 6px 12px rgba(0,0,0,0.5);
-      transition: all 0.2s;
     }
     
     
@@ -2585,42 +2576,6 @@
         gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
         osc2.start(now);
         osc2.stop(now + 0.2);
-      } else if (type === 'headshot') {
-        // ADVANCED: Dramatic headshot sound - skull crack + splatter
-        // Sharp crack sound
-        osc.type = 'square';
-        osc.frequency.setValueAtTime(2000, now);
-        osc.frequency.exponentialRampToValueAtTime(80, now + 0.15);
-        gain.gain.setValueAtTime(0.35, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
-        osc.start(now);
-        osc.stop(now + 0.18);
-        
-        // Wet splatter sound
-        const osc2 = audioCtx.createOscillator();
-        const gain2 = audioCtx.createGain();
-        osc2.connect(gain2);
-        gain2.connect(audioCtx.destination);
-        osc2.type = 'sawtooth';
-        osc2.frequency.setValueAtTime(300, now + 0.05);
-        osc2.frequency.exponentialRampToValueAtTime(60, now + 0.25);
-        gain2.gain.setValueAtTime(0.25, now + 0.05);
-        gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
-        osc2.start(now + 0.05);
-        osc2.stop(now + 0.3);
-        
-        // Deep thud
-        const osc3 = audioCtx.createOscillator();
-        const gain3 = audioCtx.createGain();
-        osc3.connect(gain3);
-        gain3.connect(audioCtx.destination);
-        osc3.type = 'sine';
-        osc3.frequency.setValueAtTime(100, now + 0.1);
-        osc3.frequency.exponentialRampToValueAtTime(40, now + 0.35);
-        gain3.gain.setValueAtTime(0.3, now + 0.1);
-        gain3.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
-        osc3.start(now + 0.1);
-        osc3.stop(now + 0.4);
       } else if (type === 'splash') {
         // Water splash sound
         osc.type = 'sine';
@@ -4497,52 +4452,10 @@
        * @param {number} amount - Damage amount
        * @param {boolean} isCrit - Whether this is a critical hit
        * @param {string} damageType - Type of damage: 'physical', 'fire', 'ice', 'lightning', 'shotgun', 'headshot'
-       * @param {boolean} isHeadshot - Whether this is a headshot (double-crit)
        */
-      takeDamage(amount, isCrit = false, damageType = 'physical', isHeadshot = false) {
+      takeDamage(amount, isCrit = false, damageType = 'physical') {
         // Track last damage type for death effects
         this.lastDamageType = damageType;
-        this.lastWasHeadshot = isHeadshot;
-        
-        // ADVANCED: Enhanced blood spurting on headshots
-        if (isHeadshot) {
-          // Massive blood fountain
-          for (let i = 0; i < 50; i++) {
-            const particle = new THREE.Mesh(
-              new THREE.SphereGeometry(0.05, 4, 4),
-              new THREE.MeshBasicMaterial({ color: 0x8B0000, transparent: true })
-            );
-            particle.position.copy(this.mesh.position);
-            particle.position.y += 0.5; // From head position
-            scene.add(particle);
-            
-            // Explosive outward velocity
-            const angle = Math.random() * Math.PI * 2;
-            const speed = Math.random() * 0.3 + 0.2;
-            const vx = Math.cos(angle) * speed;
-            const vz = Math.sin(angle) * speed;
-            const vy = Math.random() * 0.4 + 0.3; // Upward spray
-            
-            let life = 60;
-            const animate = () => {
-              life--;
-              particle.position.x += vx * 0.05;
-              particle.position.z += vz * 0.05;
-              particle.position.y += vy * 0.05;
-              vy -= 0.02; // Gravity
-              particle.material.opacity = life / 60;
-              
-              if (life <= 0 || particle.position.y < 0.1) {
-                scene.remove(particle);
-                particle.geometry.dispose();
-                particle.material.dispose();
-              } else {
-                requestAnimationFrame(animate);
-              }
-            };
-            animate();
-          }
-        }
         
         // Phase 5: Hit impact particles (flesh/blood) on every hit - ENHANCED: Scale with damage
         const bloodParticleCount = Math.min(3 + Math.floor(amount / 10), 15); // 3-15 particles based on damage
@@ -5298,63 +5211,6 @@
           (Math.random() - 0.5) * 0.6
         );
         
-        // ADVANCED: Add visible limbs (arms/legs) that detach on headshot
-        const limbsToCreate = [
-          { type: 'arm', size: [0.12, 0.4, 0.12], pos: [-0.3, 0, 0] },
-          { type: 'arm', size: [0.12, 0.4, 0.12], pos: [0.3, 0, 0] },
-          { type: 'leg', size: [0.15, 0.5, 0.15], pos: [-0.15, -0.3, 0] },
-          { type: 'leg', size: [0.15, 0.5, 0.15], pos: [0.15, -0.3, 0] }
-        ];
-        
-        limbsToCreate.forEach(limbData => {
-          const limbGeo = new THREE.BoxGeometry(...limbData.size);
-          const limbMat = new THREE.MeshBasicMaterial({ 
-            color: enemyColor, 
-            transparent: true 
-          });
-          const limb = new THREE.Mesh(limbGeo, limbMat);
-          limb.position.copy(this.mesh.position);
-          limb.position.x += limbData.pos[0];
-          limb.position.y += limbData.pos[1];
-          limb.position.z += limbData.pos[2];
-          scene.add(limb);
-          
-          // Limb physics
-          const limbVel = new THREE.Vector3(
-            limbData.pos[0] * 1.5 + (Math.random() - 0.5) * 0.3,
-            0.4 + Math.random() * 0.3,
-            (Math.random() - 0.5) * 0.3
-          );
-          
-          let limbLife = 90;
-          const updateLimb = () => {
-            limbLife--;
-            limb.position.add(limbVel);
-            limbVel.y -= 0.02; // Gravity
-            limb.rotation.x += 0.1;
-            limb.rotation.y += 0.15;
-            limb.rotation.z += 0.08;
-            
-            // Blood spray from stump
-            if (limbLife % 5 === 0 && limbLife > 30) {
-              spawnParticles(limb.position, 0x8B0000, 1);
-            }
-            
-            if (limbLife < 30) {
-              limb.material.opacity = limbLife / 30;
-            }
-            
-            if (limbLife <= 0 || limb.position.y < 0) {
-              scene.remove(limb);
-              limb.geometry.dispose();
-              limb.material.dispose();
-            } else {
-              requestAnimationFrame(updateLimb);
-            }
-          };
-          updateLimb();
-        });
-        
         // Blood spray trail from neck
         let headLife = 80;
         const updateHead = () => {
@@ -5385,7 +5241,7 @@
         };
         updateHead();
         
-        // Body falls (corpse without head - now just torso)
+        // Body falls (corpse without head)
         const corpseGeo = new THREE.CircleGeometry(0.6, 16);
         const corpseMat = new THREE.MeshBasicMaterial({ 
           color: enemyColor, 
@@ -5734,20 +5590,7 @@
             const isCrit = Math.random() < playerStats.critChance;
             if (isCrit) dmg *= playerStats.critDmg;
             
-            // ADVANCED: Double-crit headshot system
-            // If crit hits, roll for headshot (luck-based, starts at 0% + 1% per luck point, capped at 50%)
-            let isHeadshot = false;
-            let damageType = 'physical';
-            if (isCrit) {
-              const headshotChance = Math.min((playerStats.luck || 0) * 0.01, 0.5); // Cap at 50%
-              isHeadshot = Math.random() < headshotChance;
-              if (isHeadshot) {
-                dmg *= 3; // Triple damage on headshot
-                damageType = 'headshot';
-              }
-            }
-            
-            enemy.takeDamage(Math.floor(dmg), isCrit, damageType, isHeadshot);
+            enemy.takeDamage(Math.floor(dmg), isCrit);
             
             // FRESH: Critical hit effects - gold particles, brief light flash
             if (isCrit) {
@@ -5762,29 +5605,6 @@
               setTimeout(() => {
                 scene.remove(critLight);
               }, 150);
-            }
-            
-            // ADVANCED: Headshot effects - massive visual feedback
-            if (isHeadshot) {
-              // Explosive headshot effects
-              spawnParticles(enemy.mesh.position, 0xFF0000, 30); // Red blood explosion
-              spawnParticles(enemy.mesh.position, 0x8B0000, 20); // Dark red
-              spawnParticles(enemy.mesh.position, 0xFFFFFF, 15); // White flash
-              
-              // Show "HEADSHOT" text in status bar
-              showStatusMessage('💀 HEADSHOT! 💀', 2000, '#FF0000');
-              
-              // Dramatic light flash
-              const headshotLight = new THREE.PointLight(0xFF0000, 15, 20);
-              headshotLight.position.copy(enemy.mesh.position);
-              headshotLight.position.y += 2;
-              scene.add(headshotLight);
-              setTimeout(() => {
-                scene.remove(headshotLight);
-              }, 200);
-              
-              // Play special sound
-              playSound('headshot');
             }
             
             // Knockback effect
@@ -8356,294 +8176,34 @@
     };
 
     const SKILL_TREE = {
-      // COMBAT PATH (12 skills) - Tier 1 starter
       combatMastery: {
         name: 'Combat Mastery',
-        description: '+10% damage, +5% crit chance per level',
+        description: '+10% damage, +5% crit chance',
         cost: 1,
         maxLevel: 5,
         requires: null,
-        tier: 1,
         bonus: (level) => ({
           damage: 0.1 * level,
           critChance: 0.05 * level
         })
       },
-      bladeDancer: {
-        name: 'Blade Dancer',
-        description: '+15% melee damage, +10% attack speed',
-        cost: 2,
-        maxLevel: 3,
-        requires: 'combatMastery',
-        tier: 2,
-        bonus: (level) => ({
-          meleeDamage: 0.15 * level,
-          attackSpeed: 0.1 * level
-        })
-      },
-      heavyStrike: {
-        name: 'Heavy Strike',
-        description: '+20% single-hit damage, -5% attack speed',
-        cost: 2,
-        maxLevel: 3,
-        requires: 'combatMastery',
-        tier: 2,
-        bonus: (level) => ({
-          damage: 0.2 * level,
-          attackSpeed: -0.05 * level
-        })
-      },
-      rapidFire: {
-        name: 'Rapid Fire',
-        description: '+15% attack speed, +10% projectile speed',
-        cost: 2,
-        maxLevel: 3,
-        requires: 'combatMastery',
-        tier: 2,
-        bonus: (level) => ({
-          attackSpeed: 0.15 * level,
-          projectileSpeed: 0.1 * level
-        })
-      },
-      criticalFocus: {
-        name: 'Critical Focus',
-        description: '+10% crit chance, +20% crit damage',
-        cost: 3,
-        maxLevel: 5,
-        requires: 'bladeDancer',
-        tier: 3,
-        bonus: (level) => ({
-          critChance: 0.1 * level,
-          critDmg: 0.2 * level
-        })
-      },
-      armorPierce: {
-        name: 'Armor Pierce',
-        description: 'Ignore 15% enemy armor',
-        cost: 3,
-        maxLevel: 3,
-        requires: 'heavyStrike',
-        tier: 3,
-        bonus: (level) => ({
-          armorPierce: 0.15 * level
-        })
-      },
-      multiHit: {
-        name: 'Multi-Hit',
-        description: '10% chance to hit twice',
-        cost: 3,
-        maxLevel: 3,
-        requires: 'rapidFire',
-        tier: 3,
-        bonus: (level) => ({
-          multiHitChance: 0.1 * level
-        })
-      },
-      executioner: {
-        name: 'Executioner',
-        description: '+30% damage to enemies below 25% HP',
-        cost: 4,
-        maxLevel: 3,
-        requires: 'criticalFocus',
-        tier: 4,
-        bonus: (level) => ({
-          executeDamage: 0.3 * level
-        })
-      },
-      bloodlust: {
-        name: 'Bloodlust',
-        description: '+5% damage per kill (stacks to 50%)',
-        cost: 4,
-        maxLevel: 3,
-        requires: 'armorPierce',
-        tier: 4,
-        bonus: (level) => ({
-          bloodlustStacks: 5 * level
-        })
-      },
-      berserker: {
-        name: 'Berserker',
-        description: '+10% damage when below 50% HP',
-        cost: 4,
-        maxLevel: 3,
-        requires: 'multiHit',
-        tier: 4,
-        bonus: (level) => ({
-          berserkerDamage: 0.1 * level
-        })
-      },
-      weaponSpecialist: {
-        name: 'Weapon Specialist',
-        description: '+15% damage with all weapons',
-        cost: 5,
-        maxLevel: 5,
-        requires: 'executioner',
-        tier: 5,
-        bonus: (level) => ({
-          weaponDamage: 0.15 * level
-        })
-      },
-      combatVeteran: {
-        name: 'Combat Veteran',
-        description: '+25% all damage, +10% crit',
-        cost: 5,
-        maxLevel: 3,
-        requires: 'weaponSpecialist',
-        tier: 6,
-        bonus: (level) => ({
-          damage: 0.25 * level,
-          critChance: 0.1 * level
-        })
-      },
-
-      // DEFENSE PATH (12 skills) - Tier 1 starter
       survivalist: {
         name: 'Survivalist',
-        description: '+15 HP, +1 HP/sec regen per level',
+        description: '+15 HP, +1 HP/sec regen',
         cost: 1,
         maxLevel: 5,
         requires: null,
-        tier: 1,
         bonus: (level) => ({
           hp: 15 * level,
           regen: 1 * level
         })
       },
-      ironSkin: {
-        name: 'Iron Skin',
-        description: '+10 armor, +5% damage reduction',
-        cost: 2,
-        maxLevel: 3,
-        requires: 'survivalist',
-        tier: 2,
-        bonus: (level) => ({
-          armor: 10 * level,
-          damageReduction: 0.05 * level
-        })
-      },
-      quickReflex: {
-        name: 'Quick Reflex',
-        description: '+10% dodge chance',
-        cost: 2,
-        maxLevel: 3,
-        requires: 'survivalist',
-        tier: 2,
-        bonus: (level) => ({
-          dodge: 0.1 * level
-        })
-      },
-      fortification: {
-        name: 'Fortification',
-        description: '+10 armor, +5% damage reduction per level',
-        cost: 1,
-        maxLevel: 5,
-        requires: null,
-        tier: 1,
-        bonus: (level) => ({
-          armor: 10 * level,
-          damageReduction: 0.05 * level
-        })
-      },
-      regeneration: {
-        name: 'Regeneration',
-        description: '+2 HP/sec regen',
-        cost: 3,
-        maxLevel: 3,
-        requires: 'ironSkin',
-        tier: 3,
-        bonus: (level) => ({
-          regen: 2 * level
-        })
-      },
-      lastStand: {
-        name: 'Last Stand',
-        description: 'Survive fatal blow with 1 HP (1/run)',
-        cost: 3,
-        maxLevel: 3,
-        requires: 'quickReflex',
-        tier: 3,
-        bonus: (level) => ({
-          lastStandCharges: 1 * level
-        })
-      },
-      toughness: {
-        name: 'Toughness',
-        description: '+20 max HP, +3 armor',
-        cost: 3,
-        maxLevel: 3,
-        requires: 'fortification',
-        tier: 3,
-        bonus: (level) => ({
-          hp: 20 * level,
-          armor: 3 * level
-        })
-      },
-      guardian: {
-        name: 'Guardian',
-        description: 'Reduce damage taken by 10%',
-        cost: 4,
-        maxLevel: 3,
-        requires: 'regeneration',
-        tier: 4,
-        bonus: (level) => ({
-          damageReduction: 0.1 * level
-        })
-      },
-      resilience: {
-        name: 'Resilience',
-        description: '+15% max HP',
-        cost: 4,
-        maxLevel: 3,
-        requires: 'lastStand',
-        tier: 4,
-        bonus: (level) => ({
-          hpMultiplier: 0.15 * level
-        })
-      },
-      secondWind: {
-        name: 'Second Wind',
-        description: 'Heal 20% HP on level up',
-        cost: 4,
-        maxLevel: 3,
-        requires: 'toughness',
-        tier: 4,
-        bonus: (level) => ({
-          levelUpHeal: 0.2 * level
-        })
-      },
-      endurance: {
-        name: 'Endurance',
-        description: '+25 max HP, +5 armor',
-        cost: 5,
-        maxLevel: 5,
-        requires: 'guardian',
-        tier: 5,
-        bonus: (level) => ({
-          hp: 25 * level,
-          armor: 5 * level
-        })
-      },
-      immortal: {
-        name: 'Immortal',
-        description: '+50 max HP, +10% all resistances',
-        cost: 5,
-        maxLevel: 3,
-        requires: 'endurance',
-        tier: 6,
-        bonus: (level) => ({
-          hp: 50 * level,
-          allResist: 0.1 * level
-        })
-      },
-
-      // UTILITY PATH (12 skills) - Tier 1 starters
       wealthHunter: {
         name: 'Wealth Hunter',
-        description: '+15% gold gain, +10% XP gain per level',
+        description: '+15% gold gain, +10% XP gain',
         cost: 1,
         maxLevel: 5,
         requires: null,
-        tier: 1,
         bonus: (level) => ({
           gold: 0.15 * level,
           xp: 0.1 * level
@@ -8651,263 +8211,24 @@
       },
       quickLearner: {
         name: 'Quick Learner',
-        description: '+20% XP gain, -5% cooldown per level',
+        description: '+20% XP gain, -5% cooldown',
         cost: 1,
         maxLevel: 5,
         requires: null,
-        tier: 1,
         bonus: (level) => ({
           xp: 0.2 * level,
           cooldown: 0.05 * level
         })
       },
-      magnetism: {
-        name: 'Magnetism',
-        description: '+30% pickup range',
-        cost: 2,
-        maxLevel: 3,
-        requires: 'wealthHunter',
-        tier: 2,
-        bonus: (level) => ({
-          pickupRange: 0.3 * level
-        })
-      },
-      efficiency: {
-        name: 'Efficiency',
-        description: '-10% cooldown on all abilities',
-        cost: 2,
-        maxLevel: 3,
-        requires: 'quickLearner',
-        tier: 2,
-        bonus: (level) => ({
-          cooldown: 0.1 * level
-        })
-      },
-      scavenger: {
-        name: 'Scavenger',
-        description: '+20% drop rate',
-        cost: 3,
-        maxLevel: 3,
-        requires: 'magnetism',
-        tier: 3,
-        bonus: (level) => ({
-          dropRate: 0.2 * level
-        })
-      },
-      fortuneFinder: {
-        name: 'Fortune Finder',
-        description: '+25% gold from enemies',
-        cost: 3,
-        maxLevel: 3,
-        requires: 'wealthHunter',
-        tier: 3,
-        bonus: (level) => ({
-          gold: 0.25 * level
-        })
-      },
-      speedster: {
-        name: 'Speedster',
-        description: '+10% movement speed',
-        cost: 3,
-        maxLevel: 3,
-        requires: 'efficiency',
-        tier: 3,
-        bonus: (level) => ({
-          moveSpeed: 0.1 * level
-        })
-      },
-      dashMaster: {
-        name: 'Dash Master',
-        description: '+20% dash distance, -20% dash cooldown',
-        cost: 4,
-        maxLevel: 3,
-        requires: 'speedster',
-        tier: 4,
-        bonus: (level) => ({
-          dashDistance: 0.2 * level,
-          dashCooldown: -0.2 * level
-        })
-      },
-      cooldownExpert: {
-        name: 'Cooldown Expert',
-        description: '-15% all cooldowns',
-        cost: 4,
-        maxLevel: 3,
-        requires: 'efficiency',
-        tier: 4,
-        bonus: (level) => ({
-          cooldown: 0.15 * level
-        })
-      },
-      auraExpansion: {
-        name: 'Aura Expansion',
-        description: '+20% aura/area effect range',
-        cost: 4,
-        maxLevel: 3,
-        requires: 'scavenger',
-        tier: 4,
-        bonus: (level) => ({
-          auraRange: 0.2 * level
-        })
-      },
-      resourceful: {
-        name: 'Resourceful',
-        description: '+30% XP, +30% gold',
-        cost: 5,
+      fortification: {
+        name: 'Fortification',
+        description: '+10 armor, +5% damage reduction',
+        cost: 1,
         maxLevel: 5,
-        requires: 'fortuneFinder',
-        tier: 5,
+        requires: null,
         bonus: (level) => ({
-          xp: 0.3 * level,
-          gold: 0.3 * level
-        })
-      },
-      treasureHunter: {
-        name: 'Treasure Hunter',
-        description: '+50% rare drop chance',
-        cost: 5,
-        maxLevel: 3,
-        requires: 'resourceful',
-        tier: 6,
-        bonus: (level) => ({
-          rareDrops: 0.5 * level
-        })
-      },
-
-      // ELEMENTAL PATH (12 skills) - Advanced tree
-      fireMastery: {
-        name: 'Fire Mastery',
-        description: '+20% fire damage',
-        cost: 2,
-        maxLevel: 3,
-        requires: 'combatMastery',
-        tier: 2,
-        bonus: (level) => ({
-          fireDamage: 0.2 * level
-        })
-      },
-      iceMastery: {
-        name: 'Ice Mastery',
-        description: '+20% ice damage, +10% slow effect',
-        cost: 2,
-        maxLevel: 3,
-        requires: 'combatMastery',
-        tier: 2,
-        bonus: (level) => ({
-          iceDamage: 0.2 * level,
-          slowEffect: 0.1 * level
-        })
-      },
-      lightningMastery: {
-        name: 'Lightning Mastery',
-        description: '+20% lightning damage',
-        cost: 2,
-        maxLevel: 3,
-        requires: 'combatMastery',
-        tier: 2,
-        bonus: (level) => ({
-          lightningDamage: 0.2 * level
-        })
-      },
-      elementalFusion: {
-        name: 'Elemental Fusion',
-        description: '+15% all elemental damage',
-        cost: 3,
-        maxLevel: 3,
-        requires: 'fireMastery',
-        tier: 3,
-        bonus: (level) => ({
-          elementalDamage: 0.15 * level
-        })
-      },
-      pyromaniac: {
-        name: 'Pyromaniac',
-        description: 'Fire applies burn (10% dmg/sec for 3s)',
-        cost: 3,
-        maxLevel: 3,
-        requires: 'fireMastery',
-        tier: 3,
-        bonus: (level) => ({
-          burnDamage: 0.1 * level,
-          burnDuration: 3
-        })
-      },
-      frostbite: {
-        name: 'Frostbite',
-        description: 'Ice slows by additional 20%',
-        cost: 3,
-        maxLevel: 3,
-        requires: 'iceMastery',
-        tier: 3,
-        bonus: (level) => ({
-          slowEffect: 0.2 * level
-        })
-      },
-      stormCaller: {
-        name: 'Storm Caller',
-        description: 'Lightning chains to 1 more enemy',
-        cost: 3,
-        maxLevel: 3,
-        requires: 'lightningMastery',
-        tier: 3,
-        bonus: (level) => ({
-          chainTargets: 1 * level
-        })
-      },
-      elementalChain: {
-        name: 'Elemental Chain',
-        description: 'Elemental hits chain 50% dmg',
-        cost: 4,
-        maxLevel: 3,
-        requires: 'elementalFusion',
-        tier: 4,
-        bonus: (level) => ({
-          chainDamage: 0.5 * level
-        })
-      },
-      manaOverflow: {
-        name: 'Mana Overflow',
-        description: '-20% elemental ability cooldowns',
-        cost: 4,
-        maxLevel: 3,
-        requires: 'pyromaniac',
-        tier: 4,
-        bonus: (level) => ({
-          elementalCooldown: -0.2 * level
-        })
-      },
-      spellEcho: {
-        name: 'Spell Echo',
-        description: '15% chance to cast twice',
-        cost: 4,
-        maxLevel: 3,
-        requires: 'stormCaller',
-        tier: 4,
-        bonus: (level) => ({
-          doublecastChance: 0.15 * level
-        })
-      },
-      arcaneEmpowerment: {
-        name: 'Arcane Empowerment',
-        description: '+30% all elemental damage',
-        cost: 5,
-        maxLevel: 5,
-        requires: 'elementalChain',
-        tier: 5,
-        bonus: (level) => ({
-          elementalDamage: 0.3 * level
-        })
-      },
-      elementalOverload: {
-        name: 'Elemental Overload',
-        description: '+50% elemental dmg, elements always crit',
-        cost: 5,
-        maxLevel: 3,
-        requires: 'arcaneEmpowerment',
-        tier: 6,
-        bonus: (level) => ({
-          elementalDamage: 0.5 * level,
-          elementalCrit: 1.0
+          armor: 10 * level,
+          damageReduction: 0.05 * level
         })
       }
     };
@@ -8956,43 +8277,17 @@
       const skill = SKILL_TREE[skillId];
       const skillData = saveData.skillTree[skillId];
       
-      if (!skill) {
-        showStatusMessage('Skill not found!', 2000);
-        return;
-      }
-      
       if (skillData.level >= skill.maxLevel) {
         showStatusMessage('Skill is at max level!', 2000);
         return;
-      }
-      
-      // ADVANCED: Check if required skill is unlocked (dependency system)
-      if (skill.requires) {
-        const requiredSkill = saveData.skillTree[skill.requires];
-        if (!requiredSkill || !requiredSkill.unlocked || requiredSkill.level < 1) {
-          const reqSkillName = SKILL_TREE[skill.requires]?.name || skill.requires;
-          showStatusMessage(`Requires ${reqSkillName} first!`, 3000);
-          playSound('invalid');
-          return;
-        }
       }
       
       // Check if this is the first skill purchase (make it free)
       const isFirstSkill = !saveData.storyQuests?.buildingFirstUse?.skillTree;
       const costToCharge = isFirstSkill ? 0 : skill.cost;
       
-      // ADVANCED: Prevent upgrade bug - strict point check
-      if (saveData.skillPoints < costToCharge) {
-        playSound('invalid');
-        showStatusMessage('Not enough skill points!', 2000);
-        return;
-      }
-      
-      // Deduct points BEFORE applying (prevents double-click exploit)
-      const previousPoints = saveData.skillPoints;
-      saveData.skillPoints -= costToCharge;
-      
-      try {
+      if (saveData.skillPoints >= costToCharge) {
+        saveData.skillPoints -= costToCharge;
         if (!skillData.unlocked) {
           skillData.unlocked = true;
         }
@@ -9005,7 +8300,7 @@
         if (isFirstSkill) {
           showStatusMessage(`${skill.name} unlocked FREE! (First skill bonus)`, 3000);
         } else {
-          showStatusMessage(`${skill.name} leveled up to ${skillData.level}/${skill.maxLevel}!`, 2000);
+          showStatusMessage(`${skill.name} leveled up!`, 2000);
         }
         
         // Quest progression: first skill unlock
@@ -9013,12 +8308,9 @@
           saveData.storyQuests.buildingFirstUse.skillTree = true;
           progressQuest('useSkillTree', true);
         }
-      } catch (error) {
-        // Restore points on error
-        saveData.skillPoints = previousPoints;
-        console.error('Error unlocking skill:', error);
-        showStatusMessage('Error unlocking skill!', 2000);
+      } else {
         playSound('invalid');
+        showStatusMessage('Not enough skill points!', 2000);
       }
     }
 
@@ -9350,19 +8642,17 @@
         background: linear-gradient(to bottom, #2a3a4a, #1a2a3a);
         border: 3px solid #FFD700;
         border-radius: 20px;
-        padding: 30px 20px;
-        max-width: 400px;
+        padding: 30px;
+        max-width: 500px;
         width: 90%;
-        max-height: 80vh;
-        overflow-y: auto;
         text-align: center;
         animation: popIn 0.3s ease-out;
         box-shadow: 0 0 30px rgba(255,215,0,0.5);
       `;
       
       popup.innerHTML = `
-        <div style="font-size: 24px; color: #FFD700; font-weight: bold; margin-bottom: 15px;">${title}</div>
-        <div style="font-size: 16px; color: #FFF; line-height: 1.5; margin-bottom: 20px;">${message}</div>
+        <div style="font-size: 28px; color: #FFD700; font-weight: bold; margin-bottom: 20px;">${title}</div>
+        <div style="font-size: 18px; color: #FFF; line-height: 1.6; margin-bottom: 30px;">${message}</div>
         <button class="btn" style="font-size: 18px; padding: 12px 30px; background: #FFD700; color: #000;">${buttonText}</button>
       `;
       
@@ -9534,45 +8824,22 @@
       
       for (const [skillId, skill] of Object.entries(SKILL_TREE)) {
         const skillData = saveData.skillTree[skillId];
-        if (!skillData) continue; // Skip if not in save data
-        
         const isMaxLevel = skillData.level >= skill.maxLevel;
         const canAfford = saveData.skillPoints >= skill.cost;
-        
-        // ADVANCED: Check if requirements are met (dependency system)
-        let requirementsMet = true;
-        let requirementText = '';
-        if (skill.requires) {
-          const requiredSkill = saveData.skillTree[skill.requires];
-          if (!requiredSkill || !requiredSkill.unlocked || requiredSkill.level < 1) {
-            requirementsMet = false;
-            const reqSkillName = SKILL_TREE[skill.requires]?.name || skill.requires;
-            requirementText = `Requires: ${reqSkillName}`;
-          }
-        }
         
         const skillNode = document.createElement('div');
         skillNode.className = 'skill-node';
         if (skillData.unlocked) skillNode.classList.add('unlocked');
-        
-        // ADVANCED: Visual locked state for dependencies and max level
-        if (!requirementsMet || (!canAfford && !skillData.unlocked) || isMaxLevel) {
-          skillNode.classList.add('locked');
-        }
-        
-        // Display tier badge
-        const tierBadge = skill.tier ? `<div style="font-size: 10px; color: #888; margin-bottom: 5px;">Tier ${skill.tier}</div>` : '';
+        if (!canAfford || isMaxLevel) skillNode.classList.add('locked');
         
         skillNode.innerHTML = `
-          ${tierBadge}
           <div class="skill-name">${skill.name}</div>
           <div class="skill-desc">${skill.description}</div>
-          ${requirementText ? `<div style="font-size: 11px; color: #ff6b6b; margin: 3px 0;">${requirementText}</div>` : ''}
           <div style="font-size: 12px; color: #5DADE2; margin: 5px 0;">Level ${skillData.level}/${skill.maxLevel}</div>
           <div class="skill-cost">${isMaxLevel ? 'MAX' : `${skill.cost} SP`}</div>
         `;
         
-        if (!isMaxLevel && requirementsMet) {
+        if (!isMaxLevel) {
           skillNode.onclick = () => unlockSkill(skillId);
         }
         
@@ -11998,81 +11265,6 @@
     }
     
     function createLevelUpEffects() {
-      // ADVANCED: Mage Aura Effect - Pushes dust/fog away from character
-      // Create expanding aura ring with particle push
-      for(let i=0; i<80; i++) {
-        const angle = (i / 80) * Math.PI * 2;
-        const distance = 0.5 + Math.random() * 1.5;
-        
-        // Dust/fog particles being pushed away
-        const dustGeo = new THREE.SphereGeometry(0.15, 6, 6);
-        const dustMat = new THREE.MeshBasicMaterial({ 
-          color: 0xCCCCCC, // Light gray dust
-          transparent: true,
-          opacity: 0.6
-        });
-        const dust = new THREE.Mesh(dustGeo, dustMat);
-        dust.position.copy(player.mesh.position);
-        dust.position.y += 0.2;
-        scene.add(dust);
-        
-        // Push outward with decreasing speed
-        const speed = 0.4 + Math.random() * 0.3;
-        const vel = new THREE.Vector3(
-          Math.cos(angle) * speed,
-          0.1 + Math.random() * 0.2, // Slight upward
-          Math.sin(angle) * speed
-        );
-        
-        let dustLife = 60;
-        const updateDust = () => {
-          dustLife--;
-          dust.position.add(vel);
-          vel.multiplyScalar(0.95); // Decelerate
-          vel.y -= 0.01; // Slight gravity
-          dust.scale.multiplyScalar(1.03); // Expand
-          dust.material.opacity = (dustLife / 60) * 0.6;
-          
-          if (dustLife <= 0 || dust.position.y < 0.1) {
-            scene.remove(dust);
-            dust.geometry.dispose();
-            dust.material.dispose();
-          } else {
-            requestAnimationFrame(updateDust);
-          }
-        };
-        updateDust();
-      }
-      
-      // Magical aura glow around player
-      const auraGeo = new THREE.SphereGeometry(1.5, 16, 16);
-      const auraMat = new THREE.MeshBasicMaterial({ 
-        color: 0x5DADE2,
-        transparent: true,
-        opacity: 0.4,
-        side: THREE.BackSide
-      });
-      const aura = new THREE.Mesh(auraGeo, auraMat);
-      aura.position.copy(player.mesh.position);
-      scene.add(aura);
-      
-      let auraLife = 60;
-      const updateAura = () => {
-        auraLife--;
-        aura.scale.multiplyScalar(1.08); // Expand rapidly
-        aura.material.opacity = (auraLife / 60) * 0.4;
-        aura.rotation.y += 0.1;
-        
-        if (auraLife <= 0) {
-          scene.remove(aura);
-          aura.geometry.dispose();
-          aura.material.dispose();
-        } else {
-          requestAnimationFrame(updateAura);
-        }
-      };
-      updateAura();
-      
       // Water Fountain Effect - 60 water droplet particles explode from character
       for(let i=0; i<60; i++) {
         const angle = (i / 60) * Math.PI * 2;
@@ -12118,37 +11310,36 @@
         updateDroplet();
       }
       
-      // NO DEATH RING - Requirements say to remove explosion ring
-      // Instead, add subtle ground ripple
-      const rippleGeo = new THREE.RingGeometry(0.5, 0.7, 32);
-      const rippleMat = new THREE.MeshBasicMaterial({ 
+      // Expanding splash ring on ground
+      const ringGeo = new THREE.RingGeometry(0.5, 1, 16); // Reduced segments for performance
+      const ringMat = new THREE.MeshBasicMaterial({ 
         color: COLORS.player,
         transparent: true,
-        opacity: 0.5,
+        opacity: 0.8,
         side: THREE.DoubleSide
       });
-      const ripple = new THREE.Mesh(rippleGeo, rippleMat);
-      ripple.position.copy(player.mesh.position);
-      ripple.position.y = 0.02;
-      ripple.rotation.x = -Math.PI / 2;
-      scene.add(ripple);
+      const ring = new THREE.Mesh(ringGeo, ringMat);
+      ring.position.copy(player.mesh.position);
+      ring.position.y = 0.05;
+      ring.rotation.x = -Math.PI / 2;
+      scene.add(ring);
       
-      let rippleLife = 40;
-      const updateRipple = () => {
-        rippleLife--;
-        const scale = 1 + (40 - rippleLife) * 0.2;
-        ripple.scale.set(scale, scale, 1);
-        ripple.material.opacity = (rippleLife / 40) * 0.5;
+      let ringLife = 60;
+      const updateRing = () => {
+        ringLife--;
+        const scale = 1 + (60 - ringLife) * 0.15;
+        ring.scale.set(scale, scale, 1);
+        ring.material.opacity = ringLife / 60;
         
-        if (rippleLife <= 0) {
-          scene.remove(ripple);
-          ripple.geometry.dispose();
-          ripple.material.dispose();
+        if (ringLife <= 0) {
+          scene.remove(ring);
+          ring.geometry.dispose();
+          ring.material.dispose();
         } else {
-          requestAnimationFrame(updateRipple);
+          requestAnimationFrame(updateRing);
         }
       };
-      updateRipple();
+      updateRing();
       
       // Fountain/explosion of "LEVEL UP" text particles from player's head
       const texts = ["L", "E", "V", "E", "L", " ", "U", "P", "!"];
