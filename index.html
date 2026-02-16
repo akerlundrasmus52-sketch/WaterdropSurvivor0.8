@@ -2092,12 +2092,16 @@
         return;
       }
       
-      let progress = 0;
+      // Configuration constants
       const totalIterations = 20;
-      const intervalDuration = 400; // ms
+      const intervalDuration = 400; // ms - each iteration takes 400ms
       const progressIncrement = 100 / totalIterations; // 5% per iteration
+      const MENU_TRANSITION_DELAY = 600; // ms - brief pause before menu transition for visual smoothness
+      const FADE_OUT_DURATION = 500; // ms - matches CSS transition duration in .loading-screen.fade-out
       
-      // Animate loading bar from 0% to 100% over ~8 seconds
+      let progress = 0;
+      
+      // Animate loading bar from 0% to 100% over ~8 seconds (20 × 400ms)
       const loadingInterval = setInterval(() => {
         progress += progressIncrement;
         if (progress > 100) progress = 100;
@@ -2111,14 +2115,14 @@
           // Set flag to indicate standalone loading is complete
           window.loadingComplete = true;
           
-          // Wait briefly before transitioning to menu
+          // Brief pause before transitioning to let the 100% state be visible
           setTimeout(() => {
             transitionToMenu();
-          }, 600);
+          }, MENU_TRANSITION_DELAY);
         }
       }, intervalDuration);
       
-      // 12-second failsafe timeout
+      // 12-second failsafe timeout - ensures game is accessible even if Three.js never loads
       const failsafeTimeout = setTimeout(() => {
         console.log('[Loading Failsafe] Checking if module loaded...');
         
@@ -2133,10 +2137,10 @@
           loadingBar.style.width = '100%';
           window.loadingComplete = true;
           
-          // Force transition to menu
+          // Faster transition in failsafe mode (no need to wait since we're already past deadline)
           setTimeout(() => {
             transitionToMenu();
-          }, 300);
+          }, MENU_TRANSITION_DELAY);
         } else {
           console.log('[Loading Failsafe] Module loaded successfully, no intervention needed');
         }
@@ -2154,6 +2158,7 @@
         // Fade out loading screen
         loadingScreen.classList.add('fade-out');
         
+        // Wait for fade-out animation to complete
         setTimeout(() => {
           loadingScreen.style.display = 'none';
           
@@ -2163,16 +2168,16 @@
             mainMenu.style.display = 'flex';
             console.log('[Loading] Main menu shown by standalone script');
             
-            // Try to call showMainMenu if it exists (defined in module)
+            // Try to call showMainMenu if it exists (exported by module to window)
             try {
-              if (typeof showMainMenu === 'function') {
-                showMainMenu();
+              if (typeof window.showMainMenu === 'function') {
+                window.showMainMenu();
               }
             } catch (e) {
               console.log('[Loading] showMainMenu not available yet:', e.message);
             }
           }
-        }, 500); // Match fade-out transition duration
+        }, FADE_OUT_DURATION); // Match fade-out transition duration
       }
       
       console.log('[Loading] Standalone loading script initialized (8s animation + 12s failsafe)');
@@ -10130,6 +10135,9 @@
         console.log('[Init] Game module ready - loading complete, main menu shown');
       }
     }
+    
+    // Export showMainMenu to global scope for standalone loading script
+    window.showMainMenu = showMainMenu;
     
     function hideMainMenu() {
       document.getElementById('main-menu').style.display = 'none';
