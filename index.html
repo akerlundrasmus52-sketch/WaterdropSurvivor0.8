@@ -3728,6 +3728,8 @@
     let introLandmarkPositions = {};
     
     // Region Detection System
+    // Coordinates are in world space: center of map is (0,0), map is 400x400 units
+    // x: -200 to +200, z: -200 to +200
     const REGIONS = {
       tesla: { name: 'Tesla Land', x: -80, z: -80, radius: 30, emoji: '⚡' },
       volcano: { name: 'Volcania Region', x: -60, z: -70, radius: 25, emoji: '🌋' },
@@ -4713,14 +4715,15 @@
         
         // Smooth rotation/turning - face movement direction
         if (isMoving) {
+          const TURN_SMOOTHNESS = 0.2; // Interpolation factor for smooth turning (0-1)
           const targetAngle = Math.atan2(this.velocity.x, this.velocity.z);
           // Smooth interpolation toward target angle
           let angleDiff = targetAngle - this.facingAngle;
           // Normalize to -PI to PI
           while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
           while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
-          // Smooth turn (20% per frame)
-          this.facingAngle += angleDiff * 0.2;
+          // Smooth turn
+          this.facingAngle += angleDiff * TURN_SMOOTHNESS;
           
           // Apply facing angle (only if not manually aiming)
           if (!joystickRight.active && !gameSettings.autoAim) {
@@ -10990,17 +10993,22 @@
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
       
+      // Minimap configuration
+      const MINIMAP_SIZE = 120; // Canvas size in pixels
+      const MINIMAP_SCALE = 0.3; // World to minimap scale
+      const MAX_MINIMAP_ENEMIES = 30; // Performance limit for enemy dots
+      
       // Clear canvas
-      ctx.clearRect(0, 0, 120, 120);
+      ctx.clearRect(0, 0, MINIMAP_SIZE, MINIMAP_SIZE);
       
       // Draw background
       ctx.fillStyle = 'rgba(0, 50, 0, 0.5)';
-      ctx.fillRect(0, 0, 120, 120);
+      ctx.fillRect(0, 0, MINIMAP_SIZE, MINIMAP_SIZE);
       
       // Map scale: 400x400 world -> 120x120 minimap (scale = 0.3)
-      const scale = 0.3;
-      const offsetX = 60; // Center of minimap
-      const offsetZ = 60;
+      const scale = MINIMAP_SCALE;
+      const offsetX = MINIMAP_SIZE / 2; // Center of minimap
+      const offsetZ = MINIMAP_SIZE / 2;
       
       // Helper function to convert world coords to minimap coords
       const toMinimapX = (worldX) => offsetX + (worldX - player.mesh.position.x) * scale;
@@ -11018,7 +11026,7 @@
       landmarks.forEach(landmark => {
         const mx = toMinimapX(landmark.x);
         const mz = toMinimapZ(landmark.z);
-        if (mx >= 0 && mx <= 120 && mz >= 0 && mz <= 120) {
+        if (mx >= 0 && mx <= MINIMAP_SIZE && mz >= 0 && mz <= MINIMAP_SIZE) {
           ctx.fillStyle = landmark.color;
           ctx.font = 'bold 10px Arial';
           ctx.textAlign = 'center';
@@ -11030,11 +11038,11 @@
       // Draw nearby enemies (red dots)
       if (enemies && enemies.length > 0) {
         ctx.fillStyle = '#FF0000';
-        enemies.slice(0, 30).forEach(enemy => { // Limit to 30 for performance
+        enemies.slice(0, MAX_MINIMAP_ENEMIES).forEach(enemy => { // Limit for performance
           if (!enemy.mesh) return;
           const mx = toMinimapX(enemy.mesh.position.x);
           const mz = toMinimapZ(enemy.mesh.position.z);
-          if (mx >= 0 && mx <= 120 && mz >= 0 && mz <= 120) {
+          if (mx >= 0 && mx <= MINIMAP_SIZE && mz >= 0 && mz <= MINIMAP_SIZE) {
             ctx.beginPath();
             ctx.arc(mx, mz, 2, 0, Math.PI * 2);
             ctx.fill();
@@ -11046,7 +11054,7 @@
       if (windmillQuest && windmillQuest.active && windmillQuest.windmill) {
         const mx = toMinimapX(windmillQuest.windmill.position.x);
         const mz = toMinimapZ(windmillQuest.windmill.position.z);
-        if (mx >= 0 && mx <= 120 && mz >= 0 && mz <= 120) {
+        if (mx >= 0 && mx <= MINIMAP_SIZE && mz >= 0 && mz <= MINIMAP_SIZE) {
           // Pulsing quest marker
           const pulse = Math.sin(Date.now() / 200) * 0.5 + 0.5;
           ctx.strokeStyle = `rgba(255, 215, 0, ${0.5 + pulse * 0.5})`;
@@ -13369,6 +13377,14 @@
         return;
       }
       
+      // Cinematic intro camera configuration
+      const CINEMATIC_CAMERA_ANGLE = 35; // Degrees from horizontal (30-45 range for cinematic view)
+      const CINEMATIC_CAMERA_DISTANCE = 25; // Distance from landmark
+      const CINEMATIC_CLOSEUP_DISTANCE = 2.5; // Very close zoom distance
+      const CHARACTER_EYE_LEVEL = 0.7; // Character eye level height
+      const MAX_CAMERA_HEIGHT = 120; // Performance cap for camera height
+      const MIN_CAMERA_HEIGHT = 20; // Minimum camera height
+      
       // Handle current step based on type
       if (currentStep.type === 'landmark') {
         const pos = introLandmarkPositions[currentStep.target];
@@ -13377,10 +13393,9 @@
           const progress = Math.min(cinematicIntroTimer / currentStep.duration, 1);
           const eased = easeInOutCubic(progress);
           
-          // Calculate angled camera position: ~35 degrees from horizontal
-          // Position camera at an angle to the side and elevated
-          const angleRad = 35 * Math.PI / 180; // 35 degree angle
-          const distanceFromLandmark = 25; // Distance from landmark
+          // Calculate angled camera position
+          const angleRad = CINEMATIC_CAMERA_ANGLE * Math.PI / 180;
+          const distanceFromLandmark = CINEMATIC_CAMERA_DISTANCE;
           const heightMultiplier = Math.tan(angleRad); // Height based on angle
           
           // Offset camera to the side (rotate around landmark)
@@ -13416,7 +13431,7 @@
         
         // Position camera directly above center of map
         camera.position.x = camera.position.x + (0 - camera.position.x) * eased * 0.5;
-        camera.position.y = 20 + (Math.min(heightNeeded, 120) - 20) * eased; // Cap at 120 for performance
+        camera.position.y = MIN_CAMERA_HEIGHT + (Math.min(heightNeeded, MAX_CAMERA_HEIGHT) - MIN_CAMERA_HEIGHT) * eased;
         camera.position.z = camera.position.z + (0 - camera.position.z) * eased * 0.5;
         camera.lookAt(0, 0, 0); // Look at map center
         
@@ -13430,8 +13445,8 @@
           
           // Camera positioned at character's side/front (like standing next to them)
           const sideAngle = Math.PI / 4; // 45 degrees to the side
-          const closeDistance = 2.5; // Very close
-          const eyeLevel = 0.7; // At character's eye level
+          const closeDistance = CINEMATIC_CLOSEUP_DISTANCE;
+          const eyeLevel = CHARACTER_EYE_LEVEL;
           
           const targetX = targetPos.x + Math.cos(sideAngle) * closeDistance;
           const targetZ = targetPos.z + Math.sin(sideAngle) * closeDistance;
