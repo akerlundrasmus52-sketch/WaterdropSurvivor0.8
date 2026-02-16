@@ -13351,10 +13351,10 @@
     function endCountdown() {
       countdownActive = false;
       
-      // Start cinematic intro instead of immediately unpausing
-      if (!cinematicIntroActive) {
-        startCinematicIntro();
-      }
+      // Unpause game and start spawning enemies (cinematic intro already completed)
+      setGamePaused(false);
+      setGameActive(true);
+      gameStartTime = Date.now();
     }
     
     // --- CINEMATIC INTRO SYSTEM ---
@@ -13506,11 +13506,8 @@
         joystickZone.style.pointerEvents = 'auto';
       }
       
-      // Ensure game properly unpauses (use helper functions to sync window variables)
-      setGamePaused(false);
-      setGameActive(true);
-      gameStartTime = Date.now();
-      console.log('[CinematicIntro] Intro complete - Game started - isPaused:', isPaused, 'isGameActive:', isGameActive);
+      // Start countdown AFTER cinematic intro (PR requirement: landmarks → zoom → smoke → countdown → enemies)
+      startCountdown();
     }
     
     function showLandmarkDescription(landmark) {
@@ -13903,12 +13900,12 @@
           // After comic, continue with game start
           setTimeout(() => {
             resetGame();
-            startCountdown(); // Start countdown after resetting game (PR #70)
+            startCinematicIntro(); // Start cinematic intro (PR requirement: intro → countdown → enemies)
           }, 100);
         } else {
           hideMainMenu();
           resetGame();
-          startCountdown(); // Start countdown after resetting game (PR #70)
+          startCinematicIntro(); // Start cinematic intro (PR requirement: intro → countdown → enemies)
         }
       };
       
