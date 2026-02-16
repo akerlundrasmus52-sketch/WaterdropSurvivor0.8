@@ -90,8 +90,8 @@ The attribute system already matches requirements:
 - ⏳ Camera zoom: 100% portrait, 50% landscape
 
 ### Startup Fixes
-- ⏳ Loading screen 12s timeout
-- ⏳ Standalone loading script
+- ✅ Loading screen 12s timeout
+- ✅ Standalone loading script
 - ⏳ Fix animation loop first frame
 - ⏳ showMainMenu() hides game UI buttons
 - ⏳ hideMainMenu() restores game UI buttons
