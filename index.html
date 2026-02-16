@@ -7245,6 +7245,18 @@
         headshotUnlocked: false,
         currentStep: 'waiting_first_death' // Steps: waiting_first_death, show_death_tutorial, go_to_camp, unlock_dash, unlock_headshot, completed
       },
+      // Lore Collection system
+      loreUnlocked: {
+        landmarks: [],
+        enemies: [],
+        bosses: [],
+        buildings: []
+      },
+      // Extended milestone quests
+      extendedQuests: {
+        legendaryCigar: { started: false, completed: false, foundCigar: false },
+        companionEgg: { started: false, completed: false, eggHatched: false, ceremonyDone: false }
+      },
       // Side challenges
       sideChallenges: {
         kill10Enemies: { completed: false, progress: 0, target: 10 }
@@ -8251,7 +8263,96 @@
       const currentLevel = saveData.upgrades[upgradeKey];
       return upgrade.baseCost + (currentLevel * upgrade.costIncrease);
     }
-
+    
+    // --- LORE SYSTEM ---
+    const LORE_DATABASE = {
+      landmarks: {
+        windmill: {
+          name: 'The Forgotten Windmill',
+          icon: '🏚️',
+          description: 'An ancient windmill that once powered a thriving village. Now it stands as a monument to a forgotten time.',
+          unlockCondition: 'Defeat the Windmill Boss',
+          story: 'Legend says this windmill was built by the first settlers who discovered the water droplets\' mystical properties. The machinery inside still turns, grinding something unseen...'
+        },
+        montana: {
+          name: 'Montana Memorial',
+          icon: '🗿',
+          description: 'A massive stone statue honoring the fallen warriors of the Great Water War.',
+          unlockCondition: 'Complete Montana Quest',
+          story: 'The Montana stands watch over the battlefield where water droplets first united against the cube invasion. Its eyes are said to glow blue during the full moon.'
+        },
+        eiffel: {
+          name: 'Eiffel Energy Tower',
+          icon: '🗼',
+          description: 'A towering structure that harnesses electrical energy from storm clouds.',
+          unlockCondition: 'Complete Eiffel Tower Quest',
+          story: 'Built by a genius engineer who sought to weaponize lightning itself. The tower still crackles with power, attracting the most dangerous enemies.'
+        },
+        stonehenge: {
+          name: 'Ancient Stonehenge',
+          icon: '⭕',
+          description: 'A mysterious circle of ancient stones that pulse with unknown energy.',
+          unlockCondition: 'Discover Stonehenge',
+          story: 'These stones predate even the water droplets. Some say they are portals to other realms, while others believe they hold the secret to immortality...'
+        },
+        pyramids: {
+          name: 'Desert Pyramids',
+          icon: '🔺',
+          description: 'Three massive pyramids that hide ancient treasures and deadly traps.',
+          unlockCondition: 'Explore the Desert',
+          story: 'Built by an advanced civilization that worshipped the sun. Deep within lies the legendary Eternal Cigar, said to grant unlimited power.'
+        }
+      },
+      enemies: {
+        square: {
+          name: 'Cube Soldier',
+          icon: '🟥',
+          description: 'Basic geometric enemies that hunt in swarms.',
+          story: 'Created from crystallized anger, these cubes seek to absorb all water to feed their master.'
+        },
+        triangle: {
+          name: 'Spike Warrior',
+          icon: '🔺',
+          description: 'Sharp and aggressive, they attack with piercing precision.',
+          story: 'Formed from shattered weapons of fallen heroes, they carry the rage of those who fell before you.'
+        },
+        round: {
+          name: 'Sphere Hunter',
+          icon: '🔵',
+          description: 'Fast-moving orbs that roll through the battlefield.',
+          story: 'Born from compressed emotions, these spheres are drawn to the tears of water droplets.'
+        }
+      },
+      bosses: {
+        windmillBoss: {
+          name: 'The Grinder',
+          icon: '⚙️',
+          description: 'A massive mechanical horror powered by the windmill itself.',
+          story: 'The corrupted soul of the windmill\'s creator, trapped in eternal machinery.'
+        }
+      },
+      buildings: {
+        skillTree: {
+          name: 'Tree of Knowledge',
+          icon: '🌳',
+          description: 'An ancient tree that grants wisdom and power to those who study its branches.',
+          story: 'This tree grew from a single water droplet that absorbed centuries of knowledge. Each skill you unlock is a branch of understanding.'
+        },
+        forge: {
+          name: 'The Eternal Forge',
+          icon: '🔨',
+          description: 'A forge that never cools, capable of crafting legendary equipment.',
+          story: 'Fueled by the heat of a thousand defeated enemies, this forge can shape even the hardest materials.'
+        },
+        companionHouse: {
+          name: 'Companion Sanctuary',
+          icon: '🏡',
+          description: 'A safe haven where loyal companions rest and grow stronger.',
+          story: 'Built on the site where the first water droplet befriended a wild beast. The bond forged here is unbreakable.'
+        }
+      }
+    };
+    
     // --- CAMP SYSTEM ---
     const CAMP_BUILDINGS = {
       // FREE BUILDINGS (unlocked on first camp visit after first death)
@@ -8931,6 +9032,103 @@
     }
 
     // --- STORY QUEST POPUP SYSTEM ---
+    
+    // Lore unlocking system
+    function unlockLore(category, id) {
+      if (!saveData.loreUnlocked) {
+        saveData.loreUnlocked = { landmarks: [], enemies: [], bosses: [], buildings: [] };
+      }
+      
+      if (!saveData.loreUnlocked[category].includes(id)) {
+        saveData.loreUnlocked[category].push(id);
+        saveSaveData();
+        
+        const loreData = LORE_DATABASE[category][id];
+        if (loreData) {
+          showStatChange(`📖 Lore Unlocked: ${loreData.name}`);
+          
+          // Show a lore popup after a short delay
+          setTimeout(() => {
+            showLorePopup(loreData);
+          }, 1000);
+        }
+      }
+    }
+    
+    function showLorePopup(loreData) {
+      const modal = document.getElementById('comic-tutorial-modal');
+      const title = document.getElementById('comic-title');
+      const text = document.getElementById('comic-text');
+      const btn = document.getElementById('comic-action-btn');
+      
+      if (!modal || !title || !text || !btn) return;
+      
+      title.textContent = `${loreData.icon} ${loreData.name}`;
+      text.innerHTML = `<strong>${loreData.description}</strong><br><br>${loreData.story}`;
+      btn.textContent = 'CLOSE';
+      
+      modal.style.display = 'flex';
+      
+      btn.onclick = () => {
+        modal.style.display = 'none';
+      };
+    }
+    
+    // Extended quest system
+    function checkLegendaryCigarQuest() {
+      if (!saveData.extendedQuests) {
+        saveData.extendedQuests = {
+          legendaryCigar: { started: false, completed: false, foundCigar: false },
+          companionEgg: { started: false, completed: false, eggHatched: false, ceremonyDone: false }
+        };
+      }
+      
+      // Start quest when player visits Stonehenge area
+      if (player && !saveData.extendedQuests.legendaryCigar.started) {
+        const stonehengePos = { x: -60, z: 60 };
+        const dist = Math.sqrt(
+          Math.pow(player.mesh.position.x - stonehengePos.x, 2) +
+          Math.pow(player.mesh.position.z - stonehengePos.z, 2)
+        );
+        
+        if (dist < 20) {
+          saveData.extendedQuests.legendaryCigar.started = true;
+          saveSaveData();
+          showQuestPopup(
+            '🚬 Quest: The Legendary Cigar',
+            'You sense something powerful near Stonehenge...<br><br>Ancient legends speak of an <strong>Eternal Cigar</strong> hidden within these mystical stones. It\'s said to grant immense power to those worthy enough to find it!<br><br><b>Objective:</b> Search around Stonehenge for the legendary cigar',
+            'I\'ll find it!'
+          );
+        }
+      }
+      
+      // Check if player found the cigar (near center of stonehenge)
+      if (saveData.extendedQuests.legendaryCigar.started && !saveData.extendedQuests.legendaryCigar.foundCigar) {
+        const cigarPos = { x: -60, z: 60 }; // Exact center
+        const dist = Math.sqrt(
+          Math.pow(player.mesh.position.x - cigarPos.x, 2) +
+          Math.pow(player.mesh.position.z - cigarPos.z, 2)
+        );
+        
+        if (dist < 3) {
+          saveData.extendedQuests.legendaryCigar.foundCigar = true;
+          saveData.extendedQuests.legendaryCigar.completed = true;
+          // Grant permanent bonus
+          playerStats.damage *= 1.5; // 50% permanent damage boost
+          saveSaveData();
+          
+          showQuestPopup(
+            '🚬 Legendary Cigar Found!',
+            '<strong>You\'ve discovered the Eternal Cigar!</strong><br><br>A surge of power flows through you. Your attacks feel stronger, your movements more precise.<br><br><b>Reward:</b> +50% Permanent Damage!<br><br>The cigar glows with an otherworldly light, forever enhancing your combat prowess.',
+            'AMAZING!'
+          );
+          
+          // Unlock lore
+          unlockLore('landmarks', 'stonehenge');
+        }
+      }
+    }
+    
     function showQuestPopup(title, message, buttonText = 'Got it!', onClose = null) {
       // Create popup overlay
       const overlay = document.createElement('div');
@@ -13157,6 +13355,10 @@
         'Double Barrel Gun - Increased damage and firepower!'
       );
       
+      // Unlock lore
+      unlockLore('landmarks', 'windmill');
+      unlockLore('bosses', 'windmillBoss');
+      
       playSound('levelup');
       updateHUD();
     }
@@ -13202,6 +13404,10 @@
       createFloatingText("+2 LEVELS!", player.mesh.position);
       createFloatingText("+500 GOLD!", player.mesh.position);
       createFloatingText("+3 ATTR POINTS!", player.mesh.position);
+      
+      // Unlock lore
+      unlockLore('landmarks', 'montana');
+      
       playSound('levelup');
       updateHUD();
     }
@@ -14549,6 +14755,11 @@
 
       // Player Update
       player.update(dt);
+      
+      // Check legendary cigar quest
+      if (isGameActive && !isPaused) {
+        checkLegendaryCigarQuest();
+      }
       
       // Check windmill quest trigger
       if (!windmillQuest.active && !windmillQuest.hasCompleted) {
