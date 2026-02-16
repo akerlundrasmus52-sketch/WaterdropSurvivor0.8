@@ -16235,7 +16235,7 @@
         if (cinematicIntroActive || countdownActive) {
           skipToGameStart();
           e.preventDefault();
-          return; // Early return for consistency with other handlers
+          return;
         }
       }, { passive: false });
       
@@ -16245,11 +16245,11 @@
         gameSettings.keysPressed = keysPressed; // Store reference for game loop access
         
         window.addEventListener('keydown', (e) => {
-          // Allow skipping cinematic intro with specific keys
+          // During intro/countdown, only allow skip keys
           if (cinematicIntroActive || countdownActive) {
+            e.preventDefault(); // Prevent default browser actions for all keys
             if (SKIP_INTRO_KEYS.includes(e.key)) {
               skipToGameStart();
-              e.preventDefault();
             }
             return;
           }
