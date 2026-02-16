@@ -2947,6 +2947,87 @@
     })();
   </script>
 
+  <!-- Pre-Map Screen Script (Standalone - not dependent on THREE.js module) -->
+  <script>
+    // Pre-Map Screen System - Global functions available immediately
+    (function() {
+      window.preMapTimer = null;
+      
+      window.showPreMapScreen = function() {
+        const preMapScreen = document.getElementById('pre-map-screen');
+        if (!preMapScreen) {
+          console.error('[Pre-Map] Screen element not found');
+          return;
+        }
+        
+        preMapScreen.style.display = 'flex';
+        
+        // Force reflow to enable CSS transition
+        preMapScreen.offsetHeight;
+        preMapScreen.classList.add('show');
+        
+        // Auto-advance after 10 seconds (defensive fallback)
+        window.preMapTimer = setTimeout(() => {
+          if (typeof window.continueFromPreMap === 'function') {
+            window.continueFromPreMap();
+          }
+        }, 10000);
+      };
+      
+      window.hidePreMapScreen = function() {
+        const preMapScreen = document.getElementById('pre-map-screen');
+        if (!preMapScreen) return;
+        
+        preMapScreen.classList.remove('show');
+        
+        // Hide after fade-out transition
+        setTimeout(() => {
+          preMapScreen.style.display = 'none';
+        }, 500);
+        
+        // Clear timer if it exists
+        if (window.preMapTimer) {
+          clearTimeout(window.preMapTimer);
+          window.preMapTimer = null;
+        }
+      };
+      
+      window.continueFromPreMap = function() {
+        // Play sound if available
+        if (typeof playSound === 'function') {
+          playSound('waterdrop');
+        }
+        
+        window.hidePreMapScreen();
+        
+        // Proceed with game initialization if functions exist
+        if (typeof resetGame === 'function' && typeof startCountdown === 'function') {
+          resetGame();
+          startCountdown();
+        } else {
+          console.warn('[Pre-Map] Game functions not yet available');
+        }
+      };
+      
+      // Set up Continue button click handler once DOM is ready
+      function setupContinueButton() {
+        const continueBtn = document.getElementById('pre-map-continue-btn');
+        if (continueBtn) {
+          continueBtn.onclick = function() {
+            window.continueFromPreMap();
+          };
+        }
+      }
+      
+      // Wait for DOM to be ready
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', setupContinueButton);
+      } else {
+        setupContinueButton();
+      }
+    })();
+  </script>
+
   <script type="module">
     import * as THREE from 'three';
 
@@ -12464,47 +12545,8 @@
       document.getElementById('main-menu').style.display = 'none';
     }
     
-    // Pre-Map Screen System (made global for accessibility)
-    window.preMapTimer = null;
-    
-    window.showPreMapScreen = function() {
-      const preMapScreen = document.getElementById('pre-map-screen');
-      preMapScreen.style.display = 'flex';
-      
-      // Force reflow to enable CSS transition
-      preMapScreen.offsetHeight;
-      preMapScreen.classList.add('show');
-      
-      // Auto-advance after 10 seconds (defensive fallback)
-      window.preMapTimer = setTimeout(() => {
-        window.continueFromPreMap();
-      }, 10000);
-    };
-    
-    window.hidePreMapScreen = function() {
-      const preMapScreen = document.getElementById('pre-map-screen');
-      preMapScreen.classList.remove('show');
-      
-      // Hide after fade-out transition
-      setTimeout(() => {
-        preMapScreen.style.display = 'none';
-      }, 500);
-      
-      // Clear timer if it exists
-      if (window.preMapTimer) {
-        clearTimeout(window.preMapTimer);
-        window.preMapTimer = null;
-      }
-    };
-    
-    window.continueFromPreMap = function() {
-      playSound('waterdrop');
-      window.hidePreMapScreen();
-      
-      // Proceed with game initialization
-      resetGame();
-      startCountdown();
-    };
+    // Pre-Map Screen System - functions defined in standalone script before module
+    // (No duplicate definitions needed here, already globally available)
     
     // Countdown system (PR #70-71)
     function startCountdown() {
@@ -13075,10 +13117,8 @@
         }
       };
       
-      // Pre-Map Continue Button
-      document.getElementById('pre-map-continue-btn').onclick = () => {
-        window.continueFromPreMap(); // Use window reference
-      };
+      // Pre-Map Continue Button - handler set up in standalone script
+      // (No duplicate handler needed here)
       
       // Back buttons
       document.getElementById('shop-back-btn').onclick = () => {
