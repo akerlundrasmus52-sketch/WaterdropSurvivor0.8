@@ -5225,6 +5225,81 @@
             break;
           }
         }
+        
+        // FRESH IMPLEMENTATION: Destructible Props Collision
+        if (window.destructibleProps) {
+          for (let prop of window.destructibleProps) {
+            if (prop.destroyed) continue;
+            const dx = this.mesh.position.x - prop.mesh.position.x;
+            const dz = this.mesh.position.z - prop.mesh.position.z;
+            if (dx*dx + dz*dz < 1.5) { // Hit radius for props
+              // Calculate damage (use base weapon damage)
+              let dmg = weapons.gun.damage * playerStats.damage * playerStats.strength * 0.5; // Half damage to props
+              
+              if (weapons.doubleBarrel.active && this.isDoubleBarrel) {
+                dmg = weapons.doubleBarrel.damage * playerStats.damage * playerStats.strength * 0.5;
+              }
+              
+              if (weapons.droneTurret.active && this.isDroneTurret) {
+                dmg = weapons.droneTurret.damage * playerStats.damage * playerStats.strength * 0.5;
+              }
+              
+              prop.hp -= dmg;
+              
+              // Visual damage stages
+              const hpPercent = prop.hp / prop.maxHp;
+              
+              if (hpPercent <= 0.5 && hpPercent > 0.25) {
+                // 50% HP: Darken
+                if (prop.type === 'tree') {
+                  prop.mesh.userData.trunk.material.color.multiplyScalar(0.9);
+                  prop.mesh.userData.leaves.material.color.multiplyScalar(0.9);
+                } else {
+                  prop.mesh.material.color.multiplyScalar(0.9);
+                }
+              } else if (hpPercent <= 0.25 && hpPercent > 0) {
+                // 25% HP: Shrink
+                prop.mesh.scale.copy(prop.originalScale).multiplyScalar(0.8);
+              } else if (prop.hp <= 0) {
+                // 0 HP: Destroy with debris
+                prop.destroyed = true;
+                
+                // Explosion effect based on type
+                if (prop.type === 'barrel') {
+                  // Barrel explodes
+                  spawnParticles(prop.mesh.position, 0xFF4500, 30); // Orange explosion
+                  spawnParticles(prop.mesh.position, 0xFFFF00, 15); // Yellow fire
+                  playSound('hit');
+                } else if (prop.type === 'tree') {
+                  // Tree breaks apart
+                  spawnParticles(prop.mesh.position, 0x8B4513, 20); // Brown wood
+                  spawnParticles(prop.mesh.position, 0x228B22, 15); // Green leaves
+                } else if (prop.type === 'crate') {
+                  // Crate breaks
+                  spawnParticles(prop.mesh.position, 0xD2691E, 20); // Wood particles
+                }
+                
+                // Remove from scene
+                scene.remove(prop.mesh);
+                if (prop.mesh.userData.trunk) {
+                  prop.mesh.userData.trunk.geometry.dispose();
+                  prop.mesh.userData.trunk.material.dispose();
+                  prop.mesh.userData.leaves.geometry.dispose();
+                  prop.mesh.userData.leaves.material.dispose();
+                } else {
+                  prop.mesh.geometry.dispose();
+                  prop.mesh.material.dispose();
+                }
+              }
+              
+              // Small particle effect on hit
+              spawnParticles(prop.mesh.position, 0x888888, 3);
+              
+              this.destroy();
+              break;
+            }
+          }
+        }
       }
 
       destroy() {
@@ -9498,6 +9573,111 @@
         );
         flower.rotation.x = -Math.PI/2;
         scene.add(flower);
+      }
+      
+      // FRESH IMPLEMENTATION: Destructible Environment System
+      // Trees (120), Barrels (30), Crates (25) with HP and damage stages
+      window.destructibleProps = [];
+      
+      // Helper function to create a destructible prop
+      function createDestructibleProp(type, position) {
+        let mesh, hp, maxHp;
+        
+        if (type === 'tree') {
+          // Tree: trunk + leaves
+          const trunkGeo = new THREE.CylinderGeometry(0.3, 0.4, 3, 8);
+          const trunkMat = new THREE.MeshToonMaterial({ color: 0x8B4513 });
+          const trunk = new THREE.Mesh(trunkGeo, trunkMat.clone()); // Clone material for individual instances
+          trunk.position.y = 1.5;
+          trunk.castShadow = true;
+          
+          const leavesGeo = new THREE.SphereGeometry(1.5, 8, 8);
+          const leavesMat = new THREE.MeshToonMaterial({ color: 0x228B22 });
+          const leaves = new THREE.Mesh(leavesGeo, leavesMat.clone()); // Clone material
+          leaves.position.y = 3.5;
+          leaves.castShadow = true;
+          
+          const treeGroup = new THREE.Group();
+          treeGroup.add(trunk);
+          treeGroup.add(leaves);
+          treeGroup.position.copy(position);
+          scene.add(treeGroup);
+          
+          mesh = treeGroup;
+          hp = 50;
+          maxHp = 50;
+          mesh.userData.trunk = trunk;
+          mesh.userData.leaves = leaves;
+        } else if (type === 'barrel') {
+          // Barrel: cylinder
+          const barrelGeo = new THREE.CylinderGeometry(0.4, 0.4, 1, 8);
+          const barrelMat = new THREE.MeshToonMaterial({ color: 0xA0522D });
+          mesh = new THREE.Mesh(barrelGeo, barrelMat.clone()); // Clone material
+          mesh.position.copy(position);
+          mesh.position.y = 0.5;
+          mesh.castShadow = true;
+          scene.add(mesh);
+          
+          hp = 20;
+          maxHp = 20;
+        } else if (type === 'crate') {
+          // Crate: box
+          const crateGeo = new THREE.BoxGeometry(1, 1, 1);
+          const crateMat = new THREE.MeshToonMaterial({ color: 0xD2691E });
+          mesh = new THREE.Mesh(crateGeo, crateMat.clone()); // Clone material
+          mesh.position.copy(position);
+          mesh.position.y = 0.5;
+          mesh.castShadow = true;
+          scene.add(mesh);
+          
+          hp = 15;
+          maxHp = 15;
+        }
+        
+        return {
+          type: type,
+          mesh: mesh,
+          hp: hp,
+          maxHp: maxHp,
+          destroyed: false,
+          originalScale: mesh.scale.clone(),
+          originalColor: type === 'tree' ? 
+            { trunk: mesh.userData.trunk.material.color.clone(), leaves: mesh.userData.leaves.material.color.clone() } :
+            mesh.material.color.clone()
+        };
+      }
+      
+      // Spawn Trees (120) - scattered across the map
+      for (let i = 0; i < 120; i++) {
+        const x = (Math.random() - 0.5) * 250; // Spread across map
+        const z = (Math.random() - 0.5) * 250;
+        // Avoid spawning too close to center (player start)
+        if (Math.abs(x) < 15 && Math.abs(z) < 15) continue;
+        
+        const tree = createDestructibleProp('tree', new THREE.Vector3(x, 0, z));
+        window.destructibleProps.push(tree);
+      }
+      
+      // Spawn Barrels (30) - near landmarks and paths
+      for (let i = 0; i < 30; i++) {
+        const x = (Math.random() - 0.5) * 200;
+        const z = (Math.random() - 0.5) * 200;
+        // Avoid spawning too close to center
+        if (Math.abs(x) < 15 && Math.abs(z) < 15) continue;
+        
+        const barrel = createDestructibleProp('barrel', new THREE.Vector3(x, 0, z));
+        window.destructibleProps.push(barrel);
+      }
+      
+      // Spawn Crates (25) - scattered around
+      for (let i = 0; i < 25; i++) {
+        const x = (Math.random() - 0.5) * 200;
+        const z = (Math.random() - 0.5) * 200;
+        // Avoid spawning too close to center
+        if (Math.abs(x) < 15 && Math.abs(z) < 15) continue;
+        
+        const crate = createDestructibleProp('crate', new THREE.Vector3(x, 0, z));
+        window.destructibleProps.push(crate);
       }
     }
 
