@@ -13649,23 +13649,24 @@
           camera.lookAt(targetPos.x, 0, targetPos.z);
         }
       } else if (currentStep.type === 'showstructures') {
-        // FRESH IMPLEMENTATION: Show structures from side and above
+        // FRESH IMPLEMENTATION: Show structures from steeper side+up angle as specified
         if (player && player.mesh) {
           const targetPos = player.mesh.position;
           const panAngle = progress * Math.PI * 2; // 360° pan
           const radius = 50;
           camera.position.x = targetPos.x + Math.cos(panAngle) * radius;
-          camera.position.y = 50;
+          camera.position.y = 65; // Steeper angle - higher up
           camera.position.z = targetPos.z + Math.sin(panAngle) * radius;
-          camera.lookAt(targetPos.x, 0, targetPos.z);
+          // Look at slightly above ground for better landmark view
+          camera.lookAt(targetPos.x, 5, targetPos.z);
         }
       } else if (currentStep.type === 'zoomout') {
-        // FRESH IMPLEMENTATION: Zoom out to ~3000m equivalent (high zoom value)
+        // FRESH IMPLEMENTATION: Zoom way out to "whole map" feel (~3000m equivalent)
         if (player && player.mesh) {
           const targetPos = player.mesh.position;
           camera.position.x = targetPos.x;
-          camera.position.y = 20 + (100 - 20) * eased; // Zoom out high
-          camera.position.z = targetPos.z + 20 + (80 - 20) * eased;
+          camera.position.y = 20 + (150 - 20) * eased; // Zoom way out - higher altitude
+          camera.position.z = targetPos.z + 20 + (120 - 20) * eased; // Further back for whole map view
           camera.lookAt(targetPos.x, 0, targetPos.z);
         }
       } else if (currentStep.type === 'zoomin') {
@@ -13738,6 +13739,13 @@
       setGameActive(true);
       gameStartTime = Date.now();
       console.log('[CinematicIntro] Intro complete - Game started - isPaused:', isPaused, 'isGameActive:', isGameActive);
+      
+      // FRESH IMPLEMENTATION: Show initial "Kill 10 Enemies" quest notification
+      setTimeout(() => {
+        if (!saveData.sideChallenges.kill10Enemies.completed) {
+          showStatusMessage('📜 QUEST: Kill 10 Enemies for +50 Gold!', 5000, '#FFD700');
+        }
+      }, 1000);
     }
     
     function showLandmarkDescription(landmark) {
