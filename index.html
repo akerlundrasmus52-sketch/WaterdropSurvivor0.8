@@ -3783,106 +3783,118 @@
     }
     
     function updateMinimap() {
-      if (!minimapCtx || !player || !player.mesh) return;
-      
-      const canvas = minimapCanvas;
-      const ctx = minimapCtx;
-      const centerX = canvas.width / 2;
-      const centerY = canvas.height / 2;
-      
-      // Clear canvas
-      ctx.fillStyle = 'rgba(20, 20, 20, 0.95)';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      
-      // Draw grid
-      ctx.strokeStyle = 'rgba(100, 100, 100, 0.3)';
-      ctx.lineWidth = 1;
-      const gridSize = 20;
-      for (let i = -100; i <= 100; i += gridSize) {
-        const screenX = centerX + (i - player.mesh.position.x) * MINIMAP_SCALE;
-        const screenY = centerY + (i - player.mesh.position.z) * MINIMAP_SCALE;
+      // Defensive try-catch for safety
+      try {
+        if (!minimapCtx || !player || !player.mesh) return;
         
-        if (screenX >= 0 && screenX <= canvas.width) {
-          ctx.beginPath();
-          ctx.moveTo(screenX, 0);
-          ctx.lineTo(screenX, canvas.height);
-          ctx.stroke();
-        }
+        const canvas = minimapCanvas;
+        const ctx = minimapCtx;
         
-        if (screenY >= 0 && screenY <= canvas.height) {
-          ctx.beginPath();
-          ctx.moveTo(0, screenY);
-          ctx.lineTo(canvas.width, screenY);
-          ctx.stroke();
-        }
-      }
-      
-      // Draw landmarks
-      const landmarks = [
-        { x: 30, z: -30, color: '#1E90FF', size: 4, label: 'L' }, // Lake
-        { x: -20, z: -20, color: '#DEB887', size: 3, label: 'C' }, // Cabin
-        { x: 40, z: 40, color: '#D2B48C', size: 4, label: 'W' }, // Windmill
-        { x: -40, z: 40, color: '#888888', size: 3, label: 'M' }, // Mine
-        { x: 60, z: 60, color: '#808080', size: 5, label: 'S' } // Stonehenge
-      ];
-      
-      landmarks.forEach(landmark => {
-        const screenX = centerX + (landmark.x - player.mesh.position.x) * MINIMAP_SCALE;
-        const screenY = centerY + (landmark.z - player.mesh.position.z) * MINIMAP_SCALE;
+        // Null check for canvas
+        if (!canvas || !canvas.width || !canvas.height) return;
         
-        if (screenX >= 0 && screenX <= canvas.width && screenY >= 0 && screenY <= canvas.height) {
-          ctx.fillStyle = landmark.color;
-          ctx.beginPath();
-          ctx.arc(screenX, screenY, landmark.size, 0, Math.PI * 2);
-          ctx.fill();
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        
+        // Clear canvas
+        ctx.fillStyle = 'rgba(20, 20, 20, 0.95)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Draw grid
+        ctx.strokeStyle = 'rgba(100, 100, 100, 0.3)';
+        ctx.lineWidth = 1;
+        const gridSize = 20;
+        for (let i = -100; i <= 100; i += gridSize) {
+          const screenX = centerX + (i - player.mesh.position.x) * MINIMAP_SCALE;
+          const screenY = centerY + (i - player.mesh.position.z) * MINIMAP_SCALE;
           
-          // Draw label
-          ctx.fillStyle = '#FFFFFF';
-          ctx.font = 'bold 8px Arial';
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillText(landmark.label, screenX, screenY);
-        }
-      });
-      
-      // Draw enemies (red dots)
-      ctx.fillStyle = '#FF0000';
-      enemies.forEach(enemy => {
-        if (enemy.mesh && enemy.mesh.position) {
-          const screenX = centerX + (enemy.mesh.position.x - player.mesh.position.x) * MINIMAP_SCALE;
-          const screenY = centerY + (enemy.mesh.position.z - player.mesh.position.z) * MINIMAP_SCALE;
-          
-          if (screenX >= 0 && screenX <= canvas.width && screenY >= 0 && screenY <= canvas.height) {
+          if (screenX >= 0 && screenX <= canvas.width) {
             ctx.beginPath();
-            ctx.arc(screenX, screenY, 2, 0, Math.PI * 2);
-            ctx.fill();
+            ctx.moveTo(screenX, 0);
+            ctx.lineTo(screenX, canvas.height);
+            ctx.stroke();
+          }
+          
+          if (screenY >= 0 && screenY <= canvas.height) {
+            ctx.beginPath();
+            ctx.moveTo(0, screenY);
+            ctx.lineTo(canvas.width, screenY);
+            ctx.stroke();
           }
         }
-      });
-      
-      // Draw player (bright blue dot with direction indicator)
-      ctx.fillStyle = '#00FFFF';
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, 4, 0, Math.PI * 2);
-      ctx.fill();
-      
-      // Draw player direction indicator
-      const dirLength = 8;
-      const angle = player.mesh.rotation.y;
-      const dirX = Math.sin(angle) * dirLength;
-      const dirY = Math.cos(angle) * dirLength;
-      
-      ctx.strokeStyle = '#00FFFF';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(centerX, centerY);
-      ctx.lineTo(centerX + dirX, centerY + dirY);
-      ctx.stroke();
-      
-      // Draw border
-      ctx.strokeStyle = '#FFD700';
-      ctx.lineWidth = 2;
-      ctx.strokeRect(0, 0, canvas.width, canvas.height);
+        
+        // Draw landmarks
+        const landmarks = [
+          { x: 30, z: -30, color: '#1E90FF', size: 4, label: 'L' }, // Lake
+          { x: -20, z: -20, color: '#DEB887', size: 3, label: 'C' }, // Cabin
+          { x: 40, z: 40, color: '#D2B48C', size: 4, label: 'W' }, // Windmill
+          { x: -40, z: 40, color: '#888888', size: 3, label: 'M' }, // Mine
+          { x: 60, z: 60, color: '#808080', size: 5, label: 'S' } // Stonehenge
+        ];
+        
+        landmarks.forEach(landmark => {
+          const screenX = centerX + (landmark.x - player.mesh.position.x) * MINIMAP_SCALE;
+          const screenY = centerY + (landmark.z - player.mesh.position.z) * MINIMAP_SCALE;
+          
+          if (screenX >= 0 && screenX <= canvas.width && screenY >= 0 && screenY <= canvas.height) {
+            ctx.fillStyle = landmark.color;
+            ctx.beginPath();
+            ctx.arc(screenX, screenY, landmark.size, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Draw label
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = 'bold 8px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(landmark.label, screenX, screenY);
+          }
+        });
+        
+        // Draw enemies (red dots) - with null safety
+        if (enemies && Array.isArray(enemies)) {
+          ctx.fillStyle = '#FF0000';
+          enemies.forEach(enemy => {
+            if (enemy && enemy.mesh && enemy.mesh.position) {
+              const screenX = centerX + (enemy.mesh.position.x - player.mesh.position.x) * MINIMAP_SCALE;
+              const screenY = centerY + (enemy.mesh.position.z - player.mesh.position.z) * MINIMAP_SCALE;
+              
+              if (screenX >= 0 && screenX <= canvas.width && screenY >= 0 && screenY <= canvas.height) {
+                ctx.beginPath();
+                ctx.arc(screenX, screenY, 2, 0, Math.PI * 2);
+                ctx.fill();
+              }
+            }
+          });
+        }
+        
+        // Draw player (bright blue dot with direction indicator)
+        ctx.fillStyle = '#00FFFF';
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, 4, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Draw player direction indicator
+        const dirLength = 8;
+        const angle = player.mesh.rotation.y;
+        const dirX = Math.sin(angle) * dirLength;
+        const dirY = Math.cos(angle) * dirLength;
+        
+        ctx.strokeStyle = '#00FFFF';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(centerX, centerY);
+        ctx.lineTo(centerX + dirX, centerY + dirY);
+        ctx.stroke();
+        
+        // Draw border
+        ctx.strokeStyle = '#FFD700';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(0, 0, canvas.width, canvas.height);
+      } catch (error) {
+        console.error('Minimap rendering error (non-critical):', error);
+        // Gracefully continue - minimap failure shouldn't crash the game
+      }
     }
     
     // Ambient Creatures System
@@ -4985,6 +4997,15 @@
         playerStats.hp -= reduced;
         updateHUD();
         playSound('hit');
+        
+        // FRESH IMPLEMENTATION: Activate red eyes when taking heavy damage or at low health
+        const healthPercent = playerStats.hp / playerStats.maxHp;
+        if (healthPercent < 0.3 || reduced > 20) {
+          // Activate red eyes for dramatic effect
+          if (this.activateRedEyes && Math.random() < 0.4) {
+            this.activateRedEyes(3.0); // 3 seconds duration
+          }
+        }
         
         // Trigger waterdrop UI attack animation
         const waterdropContainer = document.getElementById('waterdrop-container');
@@ -15729,6 +15750,12 @@
           comboState.shownMilestones = []; // Reset shown milestones when combo breaks
         }
         comboState.lastKillTime = currentTime;
+        
+        // FRESH IMPLEMENTATION: Activate red eyes on high combos
+        if (comboState.count >= 10 && player && player.activateRedEyes) {
+          // Activate red eyes for epic combos
+          player.activateRedEyes(4.0); // 4 seconds for epic moments
+        }
         
         // Show combo if 5+ kills (updated to start at 5)
         if (comboState.count >= 5) {
