@@ -3862,6 +3862,7 @@
     // Game Settings
     // Constants for device detection
     const MOBILE_BREAKPOINT = 768; // Screen width/height threshold for mobile devices
+    const SKIP_INTRO_KEYS = [' ', 'Enter', 'Escape']; // Keys that can skip intro/countdown
     
     // Auto-detect default control type based on device capabilities
     function detectDefaultControlType() {
@@ -3873,10 +3874,9 @@
       
       if (isMobileDevice) {
         return 'touch';
-      } else {
-        // Desktop/laptop defaults to keyboard
-        return 'keyboard';
       }
+      // Desktop/laptop defaults to keyboard
+      return 'keyboard';
     }
 
     const gameSettings = {
@@ -12700,7 +12700,19 @@
       console.log('[CinematicIntro] Intro complete - Game started - isPaused:', isPaused, 'isGameActive:', isGameActive);
     }
     
-    // Shared function to skip intro/countdown and start game immediately
+    /**
+     * Skips the intro/countdown sequences and starts the game immediately.
+     * 
+     * Should be called when:
+     * - User presses Space/Enter/Escape during intro/countdown
+     * - User clicks/touches the screen during intro/countdown
+     * 
+     * Side effects:
+     * - Clears countdownActive and cinematicIntroActive flags
+     * - Unpauses the game (isPaused = false)
+     * - Sets game as active (isGameActive = true)
+     * - Initializes game start time
+     */
     function skipToGameStart() {
       const wasCountdownActive = countdownActive;
       const wasCinematicActive = cinematicIntroActive;
@@ -16219,10 +16231,9 @@
         gameSettings.keysPressed = keysPressed; // Store reference for game loop access
         
         window.addEventListener('keydown', (e) => {
-          // Allow skipping cinematic intro with specific keys (Space, Enter, Escape)
+          // Allow skipping cinematic intro with specific keys
           if (cinematicIntroActive || countdownActive) {
-            const skipKeys = [' ', 'Enter', 'Escape'];
-            if (skipKeys.includes(e.key)) {
+            if (SKIP_INTRO_KEYS.includes(e.key)) {
               skipToGameStart();
               e.preventDefault();
             }
