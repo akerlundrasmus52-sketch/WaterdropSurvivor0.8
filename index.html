@@ -4855,6 +4855,96 @@
         spawnParticles(this.mesh.position, 0x8B0000, 15);
         spawnParticles(this.mesh.position, 0xFFFFFF, 5);
         
+        // DETACHED HEAD as separate physics object (NEW FEATURE)
+        const HEAD_GROUND_OFFSET = 0.35; // Ground collision threshold for detached head
+        const headGeo = new THREE.SphereGeometry(0.35, 12, 12);
+        const headMat = new THREE.MeshBasicMaterial({ 
+          color: enemyColor, 
+          transparent: true 
+        });
+        const detachedHead = new THREE.Mesh(headGeo, headMat);
+        detachedHead.position.copy(this.mesh.position);
+        detachedHead.position.y = 0.8; // Start at head height
+        scene.add(detachedHead);
+        
+        // Random launch velocity (flies off realistically)
+        const headVel = new THREE.Vector3(
+          (Math.random() - 0.5) * 0.6, // Random horizontal direction
+          0.7 + Math.random() * 0.4,    // Upward initial velocity
+          (Math.random() - 0.5) * 0.6
+        );
+        
+        // Physics simulation for detached head
+        let headLife = 80;
+        let bounces = 0;
+        const updateHead = () => {
+          headLife--;
+          
+          // Apply velocity
+          detachedHead.position.add(headVel);
+          
+          // Gravity
+          headVel.y -= 0.025;
+          
+          // Rotation (tumbling through air)
+          detachedHead.rotation.x += 0.18;
+          detachedHead.rotation.y += 0.22;
+          detachedHead.rotation.z += 0.15;
+          
+          // Ground collision with bounce
+          if (detachedHead.position.y <= HEAD_GROUND_OFFSET && headVel.y < 0) {
+            detachedHead.position.y = HEAD_GROUND_OFFSET;
+            headVel.y *= -0.4; // Bounce with damping
+            headVel.x *= 0.7;  // Friction
+            headVel.z *= 0.7;
+            bounces++;
+            
+            // Blood splatter on bounce
+            if (bounces <= 2) {
+              const bounceBlood = new THREE.CircleGeometry(0.3 + bounces * 0.1, 12);
+              const bounceMat = new THREE.MeshBasicMaterial({ 
+                color: 0x8B0000, 
+                transparent: true,
+                opacity: 0.5,
+                side: THREE.DoubleSide
+              });
+              const bloodSplat = new THREE.Mesh(bounceBlood, bounceMat);
+              bloodSplat.position.set(detachedHead.position.x, 0.01, detachedHead.position.z);
+              bloodSplat.rotation.x = -Math.PI / 2;
+              scene.add(bloodSplat);
+              
+              // Fade blood splat
+              let splatLife = 100;
+              const fadeSplat = () => {
+                splatLife--;
+                bloodSplat.material.opacity = (splatLife / 100) * 0.5;
+                if (splatLife <= 0) {
+                  scene.remove(bloodSplat);
+                  bloodSplat.geometry.dispose();
+                  bloodSplat.material.dispose();
+                } else {
+                  requestAnimationFrame(fadeSplat);
+                }
+              };
+              fadeSplat();
+            }
+          }
+          
+          // Fade and remove
+          if (headLife < 40) {
+            detachedHead.material.opacity = headLife / 40;
+          }
+          
+          if (headLife <= 0 || (bounces > 3 && Math.abs(headVel.y) < 0.05)) {
+            scene.remove(detachedHead);
+            detachedHead.geometry.dispose();
+            detachedHead.material.dispose();
+          } else {
+            requestAnimationFrame(updateHead);
+          }
+        };
+        updateHead();
+        
         // Body falls (corpse)
         const corpseGeo = new THREE.CircleGeometry(0.6, 16);
         const corpseMat = new THREE.MeshBasicMaterial({ 
@@ -4869,7 +4959,7 @@
         corpse.rotation.x = -Math.PI / 2;
         scene.add(corpse);
         
-        // Blood splatter
+        // Blood splatter at death position
         const bloodGeo = new THREE.CircleGeometry(0.9, 16);
         const bloodMat = new THREE.MeshBasicMaterial({ 
           color: 0x8B0000, 
@@ -4883,8 +4973,8 @@
         bloodPool.rotation.x = -Math.PI / 2;
         scene.add(bloodPool);
         
-        // Extra head pieces
-        for(let i = 0; i < 10; i++) {
+        // Extra head pieces (reduced count since we have detached head now)
+        for(let i = 0; i < 6; i++) {
           const piece = new THREE.Mesh(
             new THREE.BoxGeometry(0.15, 0.15, 0.15),
             new THREE.MeshBasicMaterial({ color: i % 2 === 0 ? enemyColor : 0x8B0000, transparent: true })
@@ -5178,7 +5268,7 @@
           return;
         }
 
-        // Collision Check
+        // Collision Check with Enemies
         for (let enemy of enemies) {
           if (enemy.isDead) continue;
           const dx = this.mesh.position.x - enemy.mesh.position.x;
@@ -5215,6 +5305,117 @@
             playSound('hit');
             break;
           }
+        }
+        
+        // NEW FEATURE: Collision Check with Destroyable Props (trees, barrels, crates)
+        if (this.active) { // Only check if projectile still active after enemy check
+          const DAMAGE_DARKENING_FACTOR = 0.7; // Color darkening on damage
+          
+          scene.traverse((obj) => {
+            if (!obj.userData || !obj.userData.isDestructible || !this.active) return;
+            
+            const dx = this.mesh.position.x - obj.position.x;
+            const dz = this.mesh.position.z - obj.position.z;
+            const hitDist = obj.userData.type === 'tree' ? 2 : 0.8; // Trees have larger hitbox
+            
+            if (dx*dx + dz*dz < hitDist*hitDist) {
+              // Damage the prop
+              const damage = 5; // Fixed damage to props
+              obj.userData.hp -= damage;
+              
+              const hpPercent = obj.userData.hp / obj.userData.maxHp;
+              
+              // Stage 1: 50% HP - Damaged appearance
+              if (hpPercent <= 0.5 && obj.userData.stage === 0) {
+                obj.userData.stage = 1;
+                
+                if (obj.userData.type === 'tree') {
+                  // Darken tree
+                  if (obj.userData.trunk) obj.userData.trunk.material.color.multiplyScalar(DAMAGE_DARKENING_FACTOR);
+                  if (obj.userData.leaves) obj.userData.leaves.material.color.multiplyScalar(DAMAGE_DARKENING_FACTOR);
+                  // Spawn wood chips
+                  spawnParticles(obj.position, 0x8B4513, 5);
+                } else {
+                  // Darken barrel/crate
+                  obj.material.color.multiplyScalar(DAMAGE_DARKENING_FACTOR);
+                  spawnParticles(obj.position, obj.material.color.getHex(), 3);
+                }
+              }
+              
+              // Stage 2: 25% HP - Critical damage
+              if (hpPercent <= 0.25 && obj.userData.stage === 1) {
+                obj.userData.stage = 2;
+                
+                if (obj.userData.type === 'tree') {
+                  // Tree starts falling
+                  if (obj.userData.trunk) obj.userData.trunk.material.color.multiplyScalar(DAMAGE_DARKENING_FACTOR);
+                  if (obj.userData.leaves) obj.userData.leaves.scale.multiplyScalar(0.8);
+                  spawnParticles(obj.position, 0x8B4513, 8);
+                } else {
+                  // Crack/break barrel/crate
+                  obj.scale.multiplyScalar(0.85);
+                  spawnParticles(obj.position, obj.material.color.getHex(), 5);
+                }
+              }
+              
+              // Stage 3: Destroyed
+              if (obj.userData.hp <= 0 && obj.userData.stage !== 3) {
+                obj.userData.stage = 3;
+                
+                // Spawn destruction debris
+                // For trees, get color from trunk; for barrels/crates, use material color
+                const debrisColor = obj.userData.type === 'tree' && obj.userData.trunk 
+                  ? obj.userData.trunk.material.color.getHex() 
+                  : obj.material.color.getHex();
+                const debrisCount = obj.userData.type === 'tree' ? 15 : 10;
+                
+                for (let i = 0; i < debrisCount; i++) {
+                  const debris = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.2, 0.2, 0.2),
+                    new THREE.MeshBasicMaterial({ color: debrisColor, transparent: true })
+                  );
+                  debris.position.copy(obj.position);
+                  debris.position.y += Math.random() * 1;
+                  scene.add(debris);
+                  
+                  const vel = new THREE.Vector3(
+                    (Math.random() - 0.5) * 0.4,
+                    Math.random() * 0.5,
+                    (Math.random() - 0.5) * 0.4
+                  );
+                  
+                  let life = 60;
+                  const updateDebris = () => {
+                    life--;
+                    debris.position.add(vel);
+                    vel.y -= 0.02; // Gravity
+                    debris.rotation.x += 0.1;
+                    debris.rotation.y += 0.1;
+                    debris.material.opacity = life / 60;
+                    
+                    if (life <= 0 || debris.position.y < 0) {
+                      scene.remove(debris);
+                      debris.geometry.dispose();
+                      debris.material.dispose();
+                    } else {
+                      requestAnimationFrame(updateDebris);
+                    }
+                  };
+                  updateDebris();
+                }
+                
+                spawnParticles(obj.position, debrisColor, 12);
+                
+                // Remove the destroyed object
+                scene.remove(obj);
+                if (obj.geometry) obj.geometry.dispose();
+                if (obj.material) obj.material.dispose();
+              }
+              
+              this.destroy();
+              playSound('hit');
+            }
+          });
         }
       }
 
@@ -5626,8 +5827,9 @@
         this.mesh.add(this.waterFill);
         
         this.active = true;
-        this.rotSpeed = 0.08; // Steady 360-degree rotation
-        this.rotSpeedY = 0.05; // Separate axis rotation
+        // Varied 360-degree rotations - randomized speed and direction
+        this.rotSpeed = (Math.random() * 0.10 + 0.05) * (Math.random() < 0.5 ? 1 : -1); // 0.05-0.15, either direction
+        this.rotSpeedY = (Math.random() * 0.07 + 0.03) * (Math.random() < 0.5 ? 1 : -1); // 0.03-0.10, either direction
         this.bobPhase = Math.random() * Math.PI * 2;
         this.sparklePhase = Math.random() * Math.PI * 2;
         this.fillPhase = 0; // Water fill animation
@@ -9372,6 +9574,17 @@
         group.add(leaves);
         group.add(shadow);
         
+        // Make trees destroyable with HP system (NEW FEATURE)
+        group.userData = {
+          isDestructible: true,
+          type: 'tree',
+          hp: 50,
+          maxHp: 50,
+          stage: 0, // 0=healthy, 1=damaged (50%), 2=critical (25%), 3=destroyed
+          trunk: trunk,
+          leaves: leaves
+        };
+        
         // Random pos in forest area and spread across map
         // Lake exclusion zone constants
         const LAKE_CENTER_X = 30;
@@ -9417,6 +9630,61 @@
           group.position.set(tx, 0, tz);
           scene.add(group);
         }
+      }
+      
+      // Destroyable Barrels (NEW FEATURE)
+      const barrelGeo = new THREE.CylinderGeometry(0.4, 0.4, 0.8, 8);
+      
+      for (let i = 0; i < 30; i++) {
+        // Clone material for each barrel to avoid shared color modifications
+        const barrelMat = new THREE.MeshToonMaterial({ color: 0x8B4513 }); // Brown
+        const barrel = new THREE.Mesh(barrelGeo, barrelMat);
+        barrel.castShadow = true;
+        barrel.receiveShadow = true;
+        
+        // Random position across map
+        const bx = (Math.random() * 150) - 75;
+        const bz = (Math.random() * 150) - 75;
+        barrel.position.set(bx, 0.4, bz);
+        
+        // Make barrels destroyable
+        barrel.userData = {
+          isDestructible: true,
+          type: 'barrel',
+          hp: 20,
+          maxHp: 20,
+          stage: 0
+        };
+        
+        scene.add(barrel);
+      }
+      
+      // Destroyable Crates (NEW FEATURE)
+      const crateGeo = new THREE.BoxGeometry(0.8, 0.8, 0.8);
+      
+      for (let i = 0; i < 25; i++) {
+        // Clone material for each crate to avoid shared color modifications
+        const crateMat = new THREE.MeshToonMaterial({ color: 0xD2691E }); // Tan/wood
+        const crate = new THREE.Mesh(crateGeo, crateMat);
+        crate.castShadow = true;
+        crate.receiveShadow = true;
+        
+        // Random position across map
+        const cx = (Math.random() * 150) - 75;
+        const cz = (Math.random() * 150) - 75;
+        crate.position.set(cx, 0.4, cz);
+        crate.rotation.y = Math.random() * Math.PI * 2;
+        
+        // Make crates destroyable
+        crate.userData = {
+          isDestructible: true,
+          type: 'crate',
+          hp: 15,
+          maxHp: 15,
+          stage: 0
+        };
+        
+        scene.add(crate);
       }
       
       // Waterfall from cliff into lake
