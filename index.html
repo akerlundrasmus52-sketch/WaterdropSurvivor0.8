@@ -14293,7 +14293,7 @@
       if (saveData.nextRunTimeOfDay === 'day') {
         dayNightCycle.timeOfDay = 0.25; // Dawn (6 AM - clear daytime start)
       } else if (saveData.nextRunTimeOfDay === 'night') {
-        dayNightCycle.timeOfDay = 0.0; // Midnight (clear nighttime start)
+        dayNightCycle.timeOfDay = 0.00; // Midnight (clear nighttime start)
       } else {
         // Default to day if not set
         dayNightCycle.timeOfDay = 0.25;
