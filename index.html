@@ -1,4 +1,4 @@
-455496b8ecc184)<!DOCTYPE html>
+<!DOCTYPE html>
 <html>
 <head>
   <!--
@@ -1635,7 +1635,6 @@
       <button class="menu-btn" id="gear-btn">GEAR & EQUIPMENT</button>
       <button class="menu-btn" id="achievements-btn">ACHIEVEMENTS</button>
       <button class="menu-btn" id="credits-btn">CREDITS</button>
-      <button class="menu-btn" id="quit-game-btn" style="margin-top: 20px; background: #8B0000;">🚪 QUIT GAME</button>
     </div>
   </div>
 
@@ -9970,17 +9969,6 @@
         hideMainMenu();
         updateCampScreen();
         document.getElementById('camp-screen').style.display = 'flex';
-      };
-      
-      // Quit Game button (closes window/tab)
-      document.getElementById('quit-game-btn').onclick = () => {
-        if (confirm('Are you sure you want to quit the game?')) {
-          // Attempt to close the window (works if opened by script)
-          window.close();
-          // window.close() only works for windows opened by script
-          // For browser tabs, show message asking user to close manually
-          alert('Please close this tab/window manually.');
-        }
       };
       
       // Back buttons
