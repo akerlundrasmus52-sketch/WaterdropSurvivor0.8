@@ -170,6 +170,58 @@
       animation: questArrowPulse 1.5s ease-in-out infinite;
     }
     
+    /* FRESH IMPLEMENTATION: Region Display */
+    #region-display {
+      position: absolute;
+      bottom: 150px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: linear-gradient(135deg, rgba(0,0,0,0.85), rgba(30,30,30,0.9));
+      border: 2px solid #FFD700;
+      border-radius: 15px;
+      padding: 12px 24px;
+      font-size: 20px;
+      font-weight: bold;
+      color: #FFD700;
+      text-shadow: 0 0 10px rgba(255,215,0,0.8), 2px 2px 4px rgba(0,0,0,0.9);
+      pointer-events: none;
+      z-index: 50;
+      opacity: 0;
+      transition: opacity 0.5s ease-in-out;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.7), 0 0 20px rgba(255,215,0,0.3);
+    }
+    
+    #region-display.show {
+      opacity: 1;
+    }
+    
+    #region-display .region-icon {
+      display: inline-block;
+      margin-right: 8px;
+      font-size: 24px;
+    }
+    
+    /* FRESH IMPLEMENTATION: Minimap */
+    #minimap-container {
+      position: absolute;
+      top: 120px;
+      right: 20px;
+      width: 150px;
+      height: 150px;
+      background: rgba(0,0,0,0.85);
+      border: 3px solid #FFD700;
+      border-radius: 10px;
+      pointer-events: none;
+      z-index: 100;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.8);
+    }
+    
+    #minimap-canvas {
+      width: 100%;
+      height: 100%;
+      border-radius: 7px;
+    }
+    
     /* Stats Bar - Removed (Stats accessible via Stats Button Modal only) */
     
     /* Combo Counter - Red/Black Theme */
@@ -922,6 +974,16 @@
       50% {
         opacity: 0.7;
         transform: scale(1.15);
+      }
+    }
+    
+    /* FRESH IMPLEMENTATION: Quest pulse animation */
+    @keyframes questPulse {
+      0%, 100% {
+        box-shadow: 0 0 5px rgba(255,215,0,0.3);
+      }
+      50% {
+        box-shadow: 0 0 15px rgba(255,215,0,0.6);
       }
     }
     
@@ -2761,6 +2823,12 @@
       <!-- Quest Arrow Guidance (in-game) -->
       <div id="quest-arrow">❗➤</div>
       
+      <!-- FRESH IMPLEMENTATION: Region Display -->
+      <div id="region-display">
+        <span class="region-icon"></span>
+        <span class="region-name"></span>
+      </div>
+      
       <!-- Combo Timer Display -->
       <div class="stat-text" id="combo-timer"></div>
       
@@ -2793,6 +2861,11 @@
     </div>
     <button id="stats-btn" class="btn-small" style="position: absolute; top: 20px; right: 20px; pointer-events: auto; z-index: 100;">STATS</button>
     <button id="settings-btn" class="btn-small" style="position: absolute; top: 20px; right: 120px; pointer-events: auto; z-index: 100;">⚙️</button>
+    
+    <!-- FRESH IMPLEMENTATION: Minimap -->
+    <div id="minimap-container">
+      <canvas id="minimap-canvas" width="150" height="150"></canvas>
+    </div>
     
     <!-- Day/Night Cycle Clock -->
     <div id="day-night-clock" style="position: absolute; top: 20px; left: 50%; transform: translateX(-50%); pointer-events: none; z-index: 100;">
@@ -3638,6 +3711,180 @@
     let cameraZoom = { current: 15, target: 15, speed: 2 };
     let cameraTargetPos = null;
     
+    // FRESH IMPLEMENTATION: Region Display System
+    const MAP_REGIONS = {
+      spawn: { name: 'Spawn Area', icon: '🏠', bounds: { x: 0, z: 0, radius: 15 }, color: '#5DADE2' },
+      lake: { name: 'Crystal Lake', icon: '💧', bounds: { x: 30, z: -30, radius: 20 }, color: '#1E90FF' },
+      cabin: { name: 'Forest Cabin', icon: '🏚️', bounds: { x: -20, z: -20, radius: 12 }, color: '#DEB887' },
+      windmill: { name: 'Windmill Plains', icon: '🎡', bounds: { x: 40, z: 40, radius: 15 }, color: '#D2B48C' },
+      mine: { name: 'Dark Mine', icon: '⛏️', bounds: { x: -40, z: 40, radius: 12 }, color: '#555555' },
+      stonehenge: { name: 'Ancient Stones', icon: '🗿', bounds: { x: 60, z: 60, radius: 20 }, color: '#808080' },
+      forest: { name: 'Deep Forest', icon: '🌲', bounds: null, color: '#228B22' } // Default region
+    };
+    
+    let currentRegion = 'spawn';
+    let regionDisplayTimeout = null;
+    
+    function updateRegionDisplay() {
+      if (!player || !player.mesh) return;
+      
+      const px = player.mesh.position.x;
+      const pz = player.mesh.position.z;
+      let newRegion = 'forest'; // Default
+      
+      // Check each region (priority order matters - specific regions first)
+      for (const [key, region] of Object.entries(MAP_REGIONS)) {
+        if (region.bounds && region.bounds.radius) {
+          const dx = px - region.bounds.x;
+          const dz = pz - region.bounds.z;
+          const dist = Math.sqrt(dx * dx + dz * dz);
+          
+          if (dist < region.bounds.radius) {
+            newRegion = key;
+            break;
+          }
+        }
+      }
+      
+      // Update display if region changed
+      if (newRegion !== currentRegion) {
+        currentRegion = newRegion;
+        const regionData = MAP_REGIONS[currentRegion];
+        const regionDisplay = document.getElementById('region-display');
+        const regionIcon = regionDisplay.querySelector('.region-icon');
+        const regionName = regionDisplay.querySelector('.region-name');
+        
+        if (regionDisplay && regionIcon && regionName) {
+          regionIcon.textContent = regionData.icon;
+          regionName.textContent = regionData.name;
+          regionDisplay.style.borderColor = regionData.color;
+          regionDisplay.style.color = regionData.color;
+          regionDisplay.classList.add('show');
+          
+          // Auto-hide after 3 seconds
+          if (regionDisplayTimeout) clearTimeout(regionDisplayTimeout);
+          regionDisplayTimeout = setTimeout(() => {
+            if (regionDisplay) regionDisplay.classList.remove('show');
+          }, 3000);
+        }
+      }
+    }
+    
+    // FRESH IMPLEMENTATION: Minimap System
+    let minimapCanvas = null;
+    let minimapCtx = null;
+    const MINIMAP_SCALE = 150 / 200; // 150px canvas for 200 units of game world
+    
+    function initMinimap() {
+      minimapCanvas = document.getElementById('minimap-canvas');
+      if (minimapCanvas) {
+        minimapCtx = minimapCanvas.getContext('2d');
+      }
+    }
+    
+    function updateMinimap() {
+      if (!minimapCtx || !player || !player.mesh) return;
+      
+      const canvas = minimapCanvas;
+      const ctx = minimapCtx;
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2;
+      
+      // Clear canvas
+      ctx.fillStyle = 'rgba(20, 20, 20, 0.95)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      // Draw grid
+      ctx.strokeStyle = 'rgba(100, 100, 100, 0.3)';
+      ctx.lineWidth = 1;
+      const gridSize = 20;
+      for (let i = -100; i <= 100; i += gridSize) {
+        const screenX = centerX + (i - player.mesh.position.x) * MINIMAP_SCALE;
+        const screenY = centerY + (i - player.mesh.position.z) * MINIMAP_SCALE;
+        
+        if (screenX >= 0 && screenX <= canvas.width) {
+          ctx.beginPath();
+          ctx.moveTo(screenX, 0);
+          ctx.lineTo(screenX, canvas.height);
+          ctx.stroke();
+        }
+        
+        if (screenY >= 0 && screenY <= canvas.height) {
+          ctx.beginPath();
+          ctx.moveTo(0, screenY);
+          ctx.lineTo(canvas.width, screenY);
+          ctx.stroke();
+        }
+      }
+      
+      // Draw landmarks
+      const landmarks = [
+        { x: 30, z: -30, color: '#1E90FF', size: 4, label: 'L' }, // Lake
+        { x: -20, z: -20, color: '#DEB887', size: 3, label: 'C' }, // Cabin
+        { x: 40, z: 40, color: '#D2B48C', size: 4, label: 'W' }, // Windmill
+        { x: -40, z: 40, color: '#888888', size: 3, label: 'M' }, // Mine
+        { x: 60, z: 60, color: '#808080', size: 5, label: 'S' } // Stonehenge
+      ];
+      
+      landmarks.forEach(landmark => {
+        const screenX = centerX + (landmark.x - player.mesh.position.x) * MINIMAP_SCALE;
+        const screenY = centerY + (landmark.z - player.mesh.position.z) * MINIMAP_SCALE;
+        
+        if (screenX >= 0 && screenX <= canvas.width && screenY >= 0 && screenY <= canvas.height) {
+          ctx.fillStyle = landmark.color;
+          ctx.beginPath();
+          ctx.arc(screenX, screenY, landmark.size, 0, Math.PI * 2);
+          ctx.fill();
+          
+          // Draw label
+          ctx.fillStyle = '#FFFFFF';
+          ctx.font = 'bold 8px Arial';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(landmark.label, screenX, screenY);
+        }
+      });
+      
+      // Draw enemies (red dots)
+      ctx.fillStyle = '#FF0000';
+      enemies.forEach(enemy => {
+        if (enemy.mesh && enemy.mesh.position) {
+          const screenX = centerX + (enemy.mesh.position.x - player.mesh.position.x) * MINIMAP_SCALE;
+          const screenY = centerY + (enemy.mesh.position.z - player.mesh.position.z) * MINIMAP_SCALE;
+          
+          if (screenX >= 0 && screenX <= canvas.width && screenY >= 0 && screenY <= canvas.height) {
+            ctx.beginPath();
+            ctx.arc(screenX, screenY, 2, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      });
+      
+      // Draw player (bright blue dot with direction indicator)
+      ctx.fillStyle = '#00FFFF';
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, 4, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Draw player direction indicator
+      const dirLength = 8;
+      const angle = player.mesh.rotation.y;
+      const dirX = Math.sin(angle) * dirLength;
+      const dirY = Math.cos(angle) * dirLength;
+      
+      ctx.strokeStyle = '#00FFFF';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(centerX, centerY);
+      ctx.lineTo(centerX + dirX, centerY + dirY);
+      ctx.stroke();
+      
+      // Draw border
+      ctx.strokeStyle = '#FFD700';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(0, 0, canvas.width, canvas.height);
+    }
+    
     // Ambient Creatures System
     let ambientCreatures = [];
     let ambientCreatureTimer = 0;
@@ -4102,6 +4349,46 @@
         this.rightPupil.position.set(0.12, 0.1, 0.45);
         this.mesh.add(this.rightPupil);
         
+        // FRESH IMPLEMENTATION: RED EYES FEATURE (with safe rendering)
+        // Initialize red eyes state (null-safe)
+        this.redEyesActive = false;
+        this.redEyesTimer = 0;
+        this.redEyesDuration = 0;
+        this.redEyesGlowLeft = null;
+        this.redEyesGlowRight = null;
+        
+        // Pre-create glow meshes safely (defensive coding)
+        try {
+          const glowGeo = new THREE.SphereGeometry(0.09, 8, 8);
+          const glowMat = new THREE.MeshBasicMaterial({
+            color: 0x8B0000, // Dark red
+            transparent: true,
+            opacity: 0.6,
+            side: THREE.BackSide
+          });
+          
+          // Left eye glow - slightly asymmetric for intensity
+          this.redEyesGlowLeft = new THREE.Mesh(glowGeo, glowMat.clone());
+          this.redEyesGlowLeft.position.set(-0.115, 0.105, 0.45); // Slightly offset
+          this.redEyesGlowLeft.visible = false;
+          
+          // Right eye glow - asymmetric positioning
+          this.redEyesGlowRight = new THREE.Mesh(glowGeo, glowMat.clone());
+          this.redEyesGlowRight.position.set(0.125, 0.095, 0.45); // Different offset
+          this.redEyesGlowRight.visible = false;
+          
+          // Safely add to mesh only if glows were created
+          if (this.mesh && this.redEyesGlowLeft && this.redEyesGlowRight) {
+            this.mesh.add(this.redEyesGlowLeft);
+            this.mesh.add(this.redEyesGlowRight);
+          }
+        } catch (error) {
+          console.warn('Failed to create red eyes glow effect:', error);
+          // Graceful fallback - red eyes will simply not show glow
+          this.redEyesGlowLeft = null;
+          this.redEyesGlowRight = null;
+        }
+        
         // Smile (curved shape using torus segment)
         const smileGeo = new THREE.TorusGeometry(0.15, 0.02, 8, 16, Math.PI);
         const smileMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
@@ -4527,6 +4814,56 @@
           }
         }
         
+        // FRESH IMPLEMENTATION: RED EYES FEATURE UPDATE (safe with null checks)
+        if (this.redEyesActive) {
+          this.redEyesTimer += dt;
+          
+          // Null-safe pupil color change
+          if (this.leftPupil && this.leftPupil.material) {
+            this.leftPupil.material.color.setHex(0x8B0000); // Dark red
+          }
+          if (this.rightPupil && this.rightPupil.material) {
+            this.rightPupil.material.color.setHex(0x8B0000); // Dark red
+          }
+          
+          // Null-safe glow effect with pulsing
+          const glowIntensity = 0.6 + Math.sin(gameTime * 6) * 0.3;
+          if (this.redEyesGlowLeft && this.redEyesGlowLeft.material) {
+            this.redEyesGlowLeft.visible = true;
+            this.redEyesGlowLeft.material.opacity = glowIntensity;
+            // Asymmetric scale pulsing for intensity
+            const scaleL = 1.0 + Math.sin(gameTime * 6) * 0.2;
+            this.redEyesGlowLeft.scale.set(scaleL, scaleL, scaleL);
+          }
+          if (this.redEyesGlowRight && this.redEyesGlowRight.material) {
+            this.redEyesGlowRight.visible = true;
+            this.redEyesGlowRight.material.opacity = glowIntensity * 0.9; // Slightly different
+            // Asymmetric scale pulsing
+            const scaleR = 1.0 + Math.sin(gameTime * 6 + 0.5) * 0.25; // Phase offset
+            this.redEyesGlowRight.scale.set(scaleR, scaleR, scaleR);
+          }
+          
+          // Deactivate after duration
+          if (this.redEyesTimer >= this.redEyesDuration) {
+            this.redEyesActive = false;
+            this.redEyesTimer = 0;
+            
+            // Reset to normal (null-safe)
+            if (this.leftPupil && this.leftPupil.material) {
+              this.leftPupil.material.color.setHex(0x000000); // Black
+            }
+            if (this.rightPupil && this.rightPupil.material) {
+              this.rightPupil.material.color.setHex(0x000000); // Black
+            }
+            if (this.redEyesGlowLeft) {
+              this.redEyesGlowLeft.visible = false;
+            }
+            if (this.redEyesGlowRight) {
+              this.redEyesGlowRight.visible = false;
+            }
+          }
+        }
+        
         // Update aura circle
         if (weapons.aura.active) {
           this.auraCircle.visible = true;
@@ -4774,6 +5111,42 @@
           setTimeout(fadePool, 500);
           
           gameOver();
+        }
+      }
+      
+      // FRESH IMPLEMENTATION: Method to activate red eyes (safe with null checks)
+      activateRedEyes(duration = 5.0) {
+        try {
+          // Defensive check - only activate if meshes exist
+          if (!this.leftPupil || !this.rightPupil) {
+            console.warn('Cannot activate red eyes - pupil meshes not found');
+            return false;
+          }
+          
+          this.redEyesActive = true;
+          this.redEyesTimer = 0;
+          this.redEyesDuration = duration;
+          
+          // Immediate color change (null-safe)
+          if (this.leftPupil.material) {
+            this.leftPupil.material.color.setHex(0x8B0000);
+          }
+          if (this.rightPupil.material) {
+            this.rightPupil.material.color.setHex(0x8B0000);
+          }
+          
+          // Show glow (null-safe)
+          if (this.redEyesGlowLeft) {
+            this.redEyesGlowLeft.visible = true;
+          }
+          if (this.redEyesGlowRight) {
+            this.redEyesGlowRight.visible = true;
+          }
+          
+          return true;
+        } catch (error) {
+          console.error('Failed to activate red eyes:', error);
+          return false;
         }
       }
     }
@@ -10603,25 +10976,45 @@
         return;
       }
       
-      // Quest descriptions
+      // FRESH IMPLEMENTATION: Enhanced quest descriptions with progress
       const questDescriptions = {
-        'firstRun': '📜 Quest: Start your first run!',
-        'unlockSkillTree': '📜 Quest: Unlock Skill Tree (250g)',
-        'useSkillTree': '📜 Quest: Learn your first skill',
-        'unlockForge': '📜 Quest: Unlock Forge (250g)',
-        'useForge': '📜 Quest: Craft your first weapon',
-        'unlockRecycle': '📜 Quest: Unlock Trash & Recycle (300g)',
-        'useRecycle': '📜 Quest: Scrap an item',
-        'unlockArmory': '📜 Quest: Unlock Armory (250g)',
-        'useArmory': '📜 Quest: Equip gear at Armory'
+        'firstRun': '📜 Quest: Start your first run! 🎮',
+        'unlockSkillTree': '📜 Quest: Unlock Skill Tree (250g) 🌳',
+        'useSkillTree': '📜 Quest: Learn your first skill ⭐',
+        'unlockForge': '📜 Quest: Unlock Forge (250g) ⚒️',
+        'useForge': '📜 Quest: Craft your first weapon 🔨',
+        'unlockRecycle': '📜 Quest: Unlock Trash & Recycle (300g) ♻️',
+        'useRecycle': '📜 Quest: Scrap an item 🗑️',
+        'unlockArmory': '📜 Quest: Unlock Armory (250g) 🛡️',
+        'useArmory': '📜 Quest: Equip gear at Armory ⚔️'
       };
       
       if (questDescriptions[currentQuest]) {
         questTracker.textContent = questDescriptions[currentQuest];
         questTracker.style.display = 'block';
+        
+        // FRESH IMPLEMENTATION: Add pulsing animation for active quest
+        questTracker.style.animation = 'questPulse 2s ease-in-out infinite';
       } else {
         questTracker.style.display = 'none';
       }
+    }
+    
+    // FRESH IMPLEMENTATION: Quest notification system
+    function showQuestProgress(questName, current, total) {
+      const statusMsg = document.getElementById('status-message');
+      if (!statusMsg) return;
+      
+      const percentage = Math.floor((current / total) * 100);
+      statusMsg.textContent = `📜 ${questName}: ${current}/${total} (${percentage}%)`;
+      statusMsg.style.color = '#FFD700';
+      
+      // Auto-hide after 3 seconds
+      setTimeout(() => {
+        if (statusMsg.textContent.includes(questName)) {
+          statusMsg.textContent = '';
+        }
+      }, 3000);
     }
 
     // --- STORY QUEST POPUP SYSTEM ---
@@ -12810,6 +13203,9 @@
       // Initialize gear system
       initializeGear();
       
+      // FRESH IMPLEMENTATION: Initialize minimap
+      initMinimap();
+      
       // Initialize background music
       updateBackgroundMusic();
       
@@ -13021,6 +13417,95 @@
         camera.position.x += (Math.random() - 0.5) * shake;
         camera.position.y += (Math.random() - 0.5) * shake;
         camera.position.z += (Math.random() - 0.5) * shake;
+      }
+    }
+    
+    // FRESH IMPLEMENTATION: CINEMATIC CAMERA SYSTEM
+    let cinematicCamera = {
+      active: false,
+      type: null, // 'zoom', 'pan', 'focus', 'dramatic'
+      startTime: 0,
+      duration: 0,
+      startZoom: 15,
+      targetZoom: 15,
+      startPos: null,
+      targetPos: null,
+      easing: 'smooth' // 'smooth', 'linear', 'ease-in', 'ease-out'
+    };
+    
+    // Activate cinematic camera effect
+    function activateCinematicCamera(type, options = {}) {
+      cinematicCamera.active = true;
+      cinematicCamera.type = type;
+      cinematicCamera.startTime = gameTime;
+      cinematicCamera.duration = options.duration || 2.0;
+      cinematicCamera.easing = options.easing || 'smooth';
+      
+      // Store starting values
+      cinematicCamera.startZoom = cameraZoom.current;
+      
+      if (type === 'zoom_in') {
+        cinematicCamera.targetZoom = options.zoom || 8;
+        cameraZoom.speed = 1; // Slower for cinematic effect
+      } else if (type === 'zoom_out') {
+        cinematicCamera.targetZoom = options.zoom || 25;
+        cameraZoom.speed = 1;
+      } else if (type === 'focus') {
+        // Focus on specific position
+        cinematicCamera.targetPos = options.target || null;
+        cinematicCamera.targetZoom = options.zoom || 12;
+      } else if (type === 'dramatic_angle') {
+        // Dramatic camera angle for special events
+        cinematicCamera.targetZoom = options.zoom || 10;
+        // Could add camera tilt here if needed
+      }
+      
+      // Activate red eyes during dramatic moments if player exists
+      if (player && player.activateRedEyes && Math.random() < 0.3) {
+        player.activateRedEyes(cinematicCamera.duration);
+      }
+    }
+    
+    // Update cinematic camera
+    function updateCinematicCamera(dt) {
+      if (!cinematicCamera.active) return;
+      
+      const elapsed = gameTime - cinematicCamera.startTime;
+      const progress = Math.min(elapsed / cinematicCamera.duration, 1);
+      
+      // Apply easing
+      let t = progress;
+      if (cinematicCamera.easing === 'smooth') {
+        t = t * t * (3 - 2 * t); // Smoothstep
+      } else if (cinematicCamera.easing === 'ease-in') {
+        t = t * t;
+      } else if (cinematicCamera.easing === 'ease-out') {
+        t = 1 - (1 - t) * (1 - t);
+      }
+      
+      // Update zoom
+      if (cinematicCamera.targetZoom !== cinematicCamera.startZoom) {
+        cameraZoom.target = cinematicCamera.startZoom + 
+          (cinematicCamera.targetZoom - cinematicCamera.startZoom) * t;
+      }
+      
+      // Update focus position
+      if (cinematicCamera.targetPos) {
+        cameraTargetPos = cinematicCamera.targetPos;
+      }
+      
+      // End cinematic
+      if (progress >= 1) {
+        cinematicCamera.active = false;
+        cinematicCamera.type = null;
+        cameraZoom.speed = 2; // Reset to normal speed
+        
+        // Reset camera target after some types
+        if (cinematicCamera.type === 'focus') {
+          setTimeout(() => {
+            cameraTargetPos = null;
+          }, 500);
+        }
       }
     }
     
@@ -13923,8 +14408,16 @@
       playerStats.lvl++;
       playerStats.exp -= playerStats.expReq;
       
+      // FRESH IMPLEMENTATION: Cinematic camera for major milestones
+      if (playerStats.lvl % 10 === 0) {
+        activateCinematicCamera('zoom_in', { duration: 1.5, zoom: 10, easing: 'smooth' });
+      }
+      
       // Victory condition: Reaching level 150
       if (playerStats.lvl === 150) {
+        // FRESH IMPLEMENTATION: Epic victory cinematic
+        activateCinematicCamera('dramatic_angle', { duration: 3, zoom: 8, easing: 'ease-out' });
+        
         setTimeout(() => {
           showStatChange('🎉 ULTIMATE VICTORY! You reached Level 150! 🎉');
           setTimeout(() => {
@@ -17633,6 +18126,15 @@
       
       // VISUAL POLISH: Update camera shake
       updateCameraShake(dt);
+      
+      // FRESH IMPLEMENTATION: Update cinematic camera
+      updateCinematicCamera(dt);
+      
+      // FRESH IMPLEMENTATION: Update region display
+      updateRegionDisplay();
+      
+      // FRESH IMPLEMENTATION: Update minimap
+      updateMinimap();
       
       // VISUAL POLISH: Lightning strikes during storms (random periodic)
       lightningTimer += dt;
