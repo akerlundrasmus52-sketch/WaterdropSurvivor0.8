@@ -11185,8 +11185,10 @@
         ],
         onComplete: () => {
           saveData.tutorial.comicsShown.push('quest7_inventory');
-          // Give free cigar item
-          if (!saveData.inventory) saveData.inventory = [];
+          // Give free cigar item - ensure inventory exists
+          if (!Array.isArray(saveData.inventory)) {
+            saveData.inventory = [];
+          }
           saveData.inventory.push({
             id: 'cigar',
             name: 'Lucky Cigar',
@@ -14424,8 +14426,8 @@
       const autoAimCheckbox = document.getElementById('auto-aim-checkbox');
       const autoAimLockMsg = document.getElementById('auto-aim-lock-msg');
       if (autoAimCheckbox) {
-        // Check if auto-aim skill is unlocked
-        const autoAimUnlocked = saveData.skillTree?.autoAim?.unlocked && saveData.skillTree.autoAim.level > 0;
+        // Check if auto-aim skill is unlocked - use optional chaining for safety
+        const autoAimUnlocked = saveData.skillTree?.autoAim?.unlocked && saveData.skillTree?.autoAim?.level > 0;
         if (autoAimUnlocked) {
           autoAimCheckbox.disabled = false;
           autoAimCheckbox.checked = !!gameSettings.autoAim;
@@ -14599,6 +14601,15 @@
         showMainMenu();
       };
       
+      // Helper function to hide all building screens
+      function hideAllBuildingScreens() {
+        const screens = ['progression-shop', 'attributes-screen', 'gear-screen'];
+        screens.forEach(screenId => {
+          const screen = document.getElementById(screenId);
+          if (screen) screen.style.display = 'none';
+        });
+      }
+      
       // Camp navigation buttons from building screens
       const campBtns = ['shop-camp-btn', 'attributes-camp-btn', 'gear-camp-btn'];
       campBtns.forEach(btnId => {
@@ -14606,11 +14617,7 @@
         if (btn) {
           btn.onclick = () => {
             playSound('waterdrop');
-            // Hide all screens
-            document.getElementById('progression-shop').style.display = 'none';
-            document.getElementById('attributes-screen').style.display = 'none';
-            document.getElementById('gear-screen').style.display = 'none';
-            // Show camp
+            hideAllBuildingScreens();
             showCampScreen();
           };
         }
