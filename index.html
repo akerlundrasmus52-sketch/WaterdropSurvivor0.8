@@ -536,7 +536,7 @@
       z-index: 1000;
       align-items: center;
       justify-content: center;
-      pointer-events: auto;
+      pointer-events: none; /* Changed from auto to none - will only be auto when display: flex */
     }
     
     .story-quest-content {
@@ -712,7 +712,7 @@
       left: 0;
       width: 100%;
       height: 100%;
-      pointer-events: auto;
+      pointer-events: none; /* Changed from auto to none - will be enabled when game starts */
       touch-action: none;
       z-index: 50;
     }
@@ -1199,7 +1199,7 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      z-index: 50; /* Lower than UI layer buttons */
+      z-index: 5000; /* Increased from 50 to ensure it's above other game elements */
     }
 
     #main-menu::before {
@@ -1432,19 +1432,8 @@
     }
 
     /* COMIC BOOK PANEL SYSTEM - 80s Style */
-    .comic-panel-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.95);
-      z-index: 10000;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      animation: fadeIn 0.4s ease-out;
-    }
+    /* REMOVED: Duplicate .comic-panel-overlay definition that was blocking menu clicks.
+       The correct definition is below at line ~2060 with proper display: none default */
 
     .comic-panel {
       max-width: 90%;
@@ -2070,10 +2059,11 @@
       z-index: 9999;
       padding: 20px;
       overflow-y: auto;
+      pointer-events: none; /* Added: Prevent blocking clicks when hidden */
     }
     
     .comic-panel-container {
-      background: #FFF;
+      background: #999; /* Changed from #FFF (white) to grey as per requirements */
       border: 8px solid #000;
       border-radius: 15px;
       box-shadow: 0 0 30px rgba(255, 215, 0, 0.8),
@@ -3198,6 +3188,7 @@
               const storyModal = document.getElementById('story-quest-modal');
               if (storyModal) {
                 storyModal.style.display = 'flex';
+                storyModal.style.pointerEvents = 'auto'; // Enable pointer events when showing modal
               }
             }
           }, 500);
@@ -3733,7 +3724,7 @@
       volcano: { name: 'Volcania Region', x: -60, z: -70, radius: 25, emoji: '🌋' },
       snowy: { name: 'Snowy Mountains', x: -70, z: 70, radius: 30, emoji: '🏔️' },
       windmill: { name: 'Windmill Fields', x: 40, z: 40, radius: 30, emoji: '🌾' },
-      desert: { name: 'Desert of Emptiness', x: 0, z: 0, radius: 25, emoji: '🏜️' },
+      desert: { name: 'Stonehenge Region', x: 0, z: 0, radius: 25, emoji: '🗿' },
       stonehenge: { name: 'Stonehenge Plains', x: 60, z: 60, radius: 30, emoji: '🗿' },
       lake: { name: 'Lake District', x: 30, z: -30, radius: 25, emoji: '🌊' }
     };
@@ -10792,12 +10783,14 @@
       
       container.innerHTML = panelHTML;
       overlay.style.display = 'flex';
+      overlay.style.pointerEvents = 'auto'; // Enable pointer events when showing comic
       
       // Add click handler
       const continueBtn = document.getElementById('comic-continue-btn');
       if (continueBtn) {
         continueBtn.onclick = () => {
           overlay.style.display = 'none';
+          overlay.style.pointerEvents = 'none'; // Disable pointer events when hiding comic
           if (quest.onComplete) {
             quest.onComplete();
           }
@@ -13315,6 +13308,11 @@
       updateGoldDisplays();
       setGameActive(false);
       setGamePaused(true);
+      // Disable joystick when menu is shown
+      const joystickZone = document.getElementById('joystick-zone');
+      if (joystickZone) {
+        joystickZone.style.pointerEvents = 'none';
+      }
     }
     
     function hideMainMenu() {
@@ -13353,10 +13351,10 @@
     function endCountdown() {
       countdownActive = false;
       
-      // Start cinematic intro instead of immediately unpausing
-      if (!cinematicIntroActive) {
-        startCinematicIntro();
-      }
+      // Unpause game and start spawning enemies (countdown happens after cinematic intro)
+      setGamePaused(false);
+      setGameActive(true);
+      gameStartTime = Date.now();
     }
     
     // --- CINEMATIC INTRO SYSTEM ---
@@ -13502,11 +13500,14 @@
     function endCinematicIntro() {
       cinematicIntroActive = false;
       
-      // Ensure game properly unpauses (use helper functions to sync window variables)
-      setGamePaused(false);
-      setGameActive(true);
-      gameStartTime = Date.now();
-      console.log('[CinematicIntro] Intro complete - Game started - isPaused:', isPaused, 'isGameActive:', isGameActive);
+      // Enable joystick controls now that game is starting
+      const joystickZone = document.getElementById('joystick-zone');
+      if (joystickZone) {
+        joystickZone.style.pointerEvents = 'auto';
+      }
+      
+      // Start countdown AFTER cinematic intro (PR requirement: landmarks → zoom → smoke → countdown → enemies)
+      startCountdown();
     }
     
     function showLandmarkDescription(landmark) {
@@ -13899,12 +13900,12 @@
           // After comic, continue with game start
           setTimeout(() => {
             resetGame();
-            startCountdown(); // Start countdown after resetting game (PR #70)
+            startCinematicIntro(); // Start cinematic intro (PR requirement: intro → countdown → enemies)
           }, 100);
         } else {
           hideMainMenu();
           resetGame();
-          startCountdown(); // Start countdown after resetting game (PR #70)
+          startCinematicIntro(); // Start cinematic intro (PR requirement: intro → countdown → enemies)
         }
       };
       
@@ -14120,7 +14121,9 @@
         saveData.storyQuests.welcomeShown = true;
         saveSaveData();
         // Close modal
-        document.getElementById('story-quest-modal').style.display = 'none';
+        const storyModal = document.getElementById('story-quest-modal');
+        storyModal.style.display = 'none';
+        storyModal.style.pointerEvents = 'none'; // Disable pointer events when hiding modal
       };
       
       document.getElementById('settings-reset-btn').onclick = () => {
