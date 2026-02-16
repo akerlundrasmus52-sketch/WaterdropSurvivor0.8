@@ -11830,6 +11830,8 @@
           // Slow motion is handled by time scale (visual effect only)
           // Add subtle zoom
           const slowZoom = 1 - (Math.sin(progress * Math.PI) * KILL_CAM_CONSTANTS.SLOW_MOTION_ZOOM);
+          camera.position.x = killCamData.originalCameraPos.x;
+          camera.position.y = killCamData.originalCameraPos.y;
           camera.position.z = killCamData.originalCameraPos.z * slowZoom;
           break;
           
