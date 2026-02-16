@@ -3207,6 +3207,79 @@
     })();
   </script>
 
+  <!-- FALLBACK: Minimal menu setup for when module fails to load -->
+  <script>
+    (function() {
+      console.log('[Fallback] Setting up fallback menu system...');
+      
+      // Wait for menu to be shown by loading script, then set up basic button handlers if module hasn't loaded yet
+      setTimeout(function checkAndSetupFallback() {
+        if (!window.gameModuleReady) {
+          console.log('[Fallback] Module not ready - setting up basic menu button handlers...');
+          
+          // Get menu element
+          const mainMenu = document.getElementById('main-menu');
+          if (!mainMenu || mainMenu.style.display !== 'flex') {
+            // Menu not shown yet, wait a bit more
+            setTimeout(checkAndSetupFallback, 500);
+            return;
+          }
+          
+          // Check if buttons already have onclick handlers (setupMenus was called)
+          const startBtn = document.getElementById('start-game-btn');
+          if (startBtn && startBtn.onclick) {
+            console.log('[Fallback] Buttons already have handlers - module loaded successfully');
+            return;
+          }
+          
+          // Set up basic button handlers as fallback
+          console.log('[Fallback] Setting up fallback button handlers...');
+          
+          // Helper to show error message
+          function showModuleError() {
+            alert('Game failed to initialize. The 3D engine (THREE.js) could not be loaded.\n\nThis usually happens due to:\n• Ad blockers blocking CDN resources\n• Network connectivity issues\n• Browser compatibility problems\n\nPlease:\n1. Disable ad blockers for this page\n2. Check your internet connection\n3. Try refreshing the page\n4. Try a different browser');
+          }
+          
+          // Main menu buttons
+          if (document.getElementById('start-game-btn')) {
+            document.getElementById('start-game-btn').onclick = showModuleError;
+          }
+          if (document.getElementById('camp-btn')) {
+            document.getElementById('camp-btn').onclick = showModuleError;
+          }
+          if (document.getElementById('progression-btn')) {
+            document.getElementById('progression-btn').onclick = showModuleError;
+          }
+          if (document.getElementById('attributes-btn')) {
+            document.getElementById('attributes-btn').onclick = showModuleError;
+          }
+          if (document.getElementById('gear-btn')) {
+            document.getElementById('gear-btn').onclick = showModuleError;
+          }
+          if (document.getElementById('achievements-btn')) {
+            document.getElementById('achievements-btn').onclick = showModuleError;
+          }
+          if (document.getElementById('wallet-btn')) {
+            document.getElementById('wallet-btn').onclick = showModuleError;
+          }
+          if (document.getElementById('marketplace-btn')) {
+            document.getElementById('marketplace-btn').onclick = showModuleError;
+          }
+          if (document.getElementById('credits-btn')) {
+            document.getElementById('credits-btn').onclick = function() {
+              const mainMenu = document.getElementById('main-menu');
+              const creditsScreen = document.getElementById('credits-screen');
+              if (mainMenu) mainMenu.style.display = 'none';
+              if (creditsScreen) creditsScreen.style.display = 'flex';
+            };
+          }
+          
+          console.log('[Fallback] ✅ Fallback button handlers set up - buttons will show error messages');
+        }
+      }, 13000); // Run after the 12-second failsafe timeout
+    })();
+  </script>
+
   <script type="module">
     import * as THREE from 'three';
 
