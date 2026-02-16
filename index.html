@@ -8356,34 +8356,294 @@
     };
 
     const SKILL_TREE = {
+      // COMBAT PATH (12 skills) - Tier 1 starter
       combatMastery: {
         name: 'Combat Mastery',
-        description: '+10% damage, +5% crit chance',
+        description: '+10% damage, +5% crit chance per level',
         cost: 1,
         maxLevel: 5,
         requires: null,
+        tier: 1,
         bonus: (level) => ({
           damage: 0.1 * level,
           critChance: 0.05 * level
         })
       },
+      bladeDancer: {
+        name: 'Blade Dancer',
+        description: '+15% melee damage, +10% attack speed',
+        cost: 2,
+        maxLevel: 3,
+        requires: 'combatMastery',
+        tier: 2,
+        bonus: (level) => ({
+          meleeDamage: 0.15 * level,
+          attackSpeed: 0.1 * level
+        })
+      },
+      heavyStrike: {
+        name: 'Heavy Strike',
+        description: '+20% single-hit damage, -5% attack speed',
+        cost: 2,
+        maxLevel: 3,
+        requires: 'combatMastery',
+        tier: 2,
+        bonus: (level) => ({
+          damage: 0.2 * level,
+          attackSpeed: -0.05 * level
+        })
+      },
+      rapidFire: {
+        name: 'Rapid Fire',
+        description: '+15% attack speed, +10% projectile speed',
+        cost: 2,
+        maxLevel: 3,
+        requires: 'combatMastery',
+        tier: 2,
+        bonus: (level) => ({
+          attackSpeed: 0.15 * level,
+          projectileSpeed: 0.1 * level
+        })
+      },
+      criticalFocus: {
+        name: 'Critical Focus',
+        description: '+10% crit chance, +20% crit damage',
+        cost: 3,
+        maxLevel: 5,
+        requires: 'bladeDancer',
+        tier: 3,
+        bonus: (level) => ({
+          critChance: 0.1 * level,
+          critDmg: 0.2 * level
+        })
+      },
+      armorPierce: {
+        name: 'Armor Pierce',
+        description: 'Ignore 15% enemy armor',
+        cost: 3,
+        maxLevel: 3,
+        requires: 'heavyStrike',
+        tier: 3,
+        bonus: (level) => ({
+          armorPierce: 0.15 * level
+        })
+      },
+      multiHit: {
+        name: 'Multi-Hit',
+        description: '10% chance to hit twice',
+        cost: 3,
+        maxLevel: 3,
+        requires: 'rapidFire',
+        tier: 3,
+        bonus: (level) => ({
+          multiHitChance: 0.1 * level
+        })
+      },
+      executioner: {
+        name: 'Executioner',
+        description: '+30% damage to enemies below 25% HP',
+        cost: 4,
+        maxLevel: 3,
+        requires: 'criticalFocus',
+        tier: 4,
+        bonus: (level) => ({
+          executeDamage: 0.3 * level
+        })
+      },
+      bloodlust: {
+        name: 'Bloodlust',
+        description: '+5% damage per kill (stacks to 50%)',
+        cost: 4,
+        maxLevel: 3,
+        requires: 'armorPierce',
+        tier: 4,
+        bonus: (level) => ({
+          bloodlustStacks: 5 * level
+        })
+      },
+      berserker: {
+        name: 'Berserker',
+        description: '+10% damage when below 50% HP',
+        cost: 4,
+        maxLevel: 3,
+        requires: 'multiHit',
+        tier: 4,
+        bonus: (level) => ({
+          berserkerDamage: 0.1 * level
+        })
+      },
+      weaponSpecialist: {
+        name: 'Weapon Specialist',
+        description: '+15% damage with all weapons',
+        cost: 5,
+        maxLevel: 5,
+        requires: 'executioner',
+        tier: 5,
+        bonus: (level) => ({
+          weaponDamage: 0.15 * level
+        })
+      },
+      combatVeteran: {
+        name: 'Combat Veteran',
+        description: '+25% all damage, +10% crit',
+        cost: 5,
+        maxLevel: 3,
+        requires: 'weaponSpecialist',
+        tier: 6,
+        bonus: (level) => ({
+          damage: 0.25 * level,
+          critChance: 0.1 * level
+        })
+      },
+
+      // DEFENSE PATH (12 skills) - Tier 1 starter
       survivalist: {
         name: 'Survivalist',
-        description: '+15 HP, +1 HP/sec regen',
+        description: '+15 HP, +1 HP/sec regen per level',
         cost: 1,
         maxLevel: 5,
         requires: null,
+        tier: 1,
         bonus: (level) => ({
           hp: 15 * level,
           regen: 1 * level
         })
       },
-      wealthHunter: {
-        name: 'Wealth Hunter',
-        description: '+15% gold gain, +10% XP gain',
+      ironSkin: {
+        name: 'Iron Skin',
+        description: '+10 armor, +5% damage reduction',
+        cost: 2,
+        maxLevel: 3,
+        requires: 'survivalist',
+        tier: 2,
+        bonus: (level) => ({
+          armor: 10 * level,
+          damageReduction: 0.05 * level
+        })
+      },
+      quickReflex: {
+        name: 'Quick Reflex',
+        description: '+10% dodge chance',
+        cost: 2,
+        maxLevel: 3,
+        requires: 'survivalist',
+        tier: 2,
+        bonus: (level) => ({
+          dodge: 0.1 * level
+        })
+      },
+      fortification: {
+        name: 'Fortification',
+        description: '+10 armor, +5% damage reduction per level',
         cost: 1,
         maxLevel: 5,
         requires: null,
+        tier: 1,
+        bonus: (level) => ({
+          armor: 10 * level,
+          damageReduction: 0.05 * level
+        })
+      },
+      regeneration: {
+        name: 'Regeneration',
+        description: '+2 HP/sec regen',
+        cost: 3,
+        maxLevel: 3,
+        requires: 'ironSkin',
+        tier: 3,
+        bonus: (level) => ({
+          regen: 2 * level
+        })
+      },
+      lastStand: {
+        name: 'Last Stand',
+        description: 'Survive fatal blow with 1 HP (1/run)',
+        cost: 3,
+        maxLevel: 3,
+        requires: 'quickReflex',
+        tier: 3,
+        bonus: (level) => ({
+          lastStandCharges: 1 * level
+        })
+      },
+      toughness: {
+        name: 'Toughness',
+        description: '+20 max HP, +3 armor',
+        cost: 3,
+        maxLevel: 3,
+        requires: 'fortification',
+        tier: 3,
+        bonus: (level) => ({
+          hp: 20 * level,
+          armor: 3 * level
+        })
+      },
+      guardian: {
+        name: 'Guardian',
+        description: 'Reduce damage taken by 10%',
+        cost: 4,
+        maxLevel: 3,
+        requires: 'regeneration',
+        tier: 4,
+        bonus: (level) => ({
+          damageReduction: 0.1 * level
+        })
+      },
+      resilience: {
+        name: 'Resilience',
+        description: '+15% max HP',
+        cost: 4,
+        maxLevel: 3,
+        requires: 'lastStand',
+        tier: 4,
+        bonus: (level) => ({
+          hpMultiplier: 0.15 * level
+        })
+      },
+      secondWind: {
+        name: 'Second Wind',
+        description: 'Heal 20% HP on level up',
+        cost: 4,
+        maxLevel: 3,
+        requires: 'toughness',
+        tier: 4,
+        bonus: (level) => ({
+          levelUpHeal: 0.2 * level
+        })
+      },
+      endurance: {
+        name: 'Endurance',
+        description: '+25 max HP, +5 armor',
+        cost: 5,
+        maxLevel: 5,
+        requires: 'guardian',
+        tier: 5,
+        bonus: (level) => ({
+          hp: 25 * level,
+          armor: 5 * level
+        })
+      },
+      immortal: {
+        name: 'Immortal',
+        description: '+50 max HP, +10% all resistances',
+        cost: 5,
+        maxLevel: 3,
+        requires: 'endurance',
+        tier: 6,
+        bonus: (level) => ({
+          hp: 50 * level,
+          allResist: 0.1 * level
+        })
+      },
+
+      // UTILITY PATH (12 skills) - Tier 1 starters
+      wealthHunter: {
+        name: 'Wealth Hunter',
+        description: '+15% gold gain, +10% XP gain per level',
+        cost: 1,
+        maxLevel: 5,
+        requires: null,
+        tier: 1,
         bonus: (level) => ({
           gold: 0.15 * level,
           xp: 0.1 * level
@@ -8391,24 +8651,263 @@
       },
       quickLearner: {
         name: 'Quick Learner',
-        description: '+20% XP gain, -5% cooldown',
+        description: '+20% XP gain, -5% cooldown per level',
         cost: 1,
         maxLevel: 5,
         requires: null,
+        tier: 1,
         bonus: (level) => ({
           xp: 0.2 * level,
           cooldown: 0.05 * level
         })
       },
-      fortification: {
-        name: 'Fortification',
-        description: '+10 armor, +5% damage reduction',
-        cost: 1,
-        maxLevel: 5,
-        requires: null,
+      magnetism: {
+        name: 'Magnetism',
+        description: '+30% pickup range',
+        cost: 2,
+        maxLevel: 3,
+        requires: 'wealthHunter',
+        tier: 2,
         bonus: (level) => ({
-          armor: 10 * level,
-          damageReduction: 0.05 * level
+          pickupRange: 0.3 * level
+        })
+      },
+      efficiency: {
+        name: 'Efficiency',
+        description: '-10% cooldown on all abilities',
+        cost: 2,
+        maxLevel: 3,
+        requires: 'quickLearner',
+        tier: 2,
+        bonus: (level) => ({
+          cooldown: 0.1 * level
+        })
+      },
+      scavenger: {
+        name: 'Scavenger',
+        description: '+20% drop rate',
+        cost: 3,
+        maxLevel: 3,
+        requires: 'magnetism',
+        tier: 3,
+        bonus: (level) => ({
+          dropRate: 0.2 * level
+        })
+      },
+      fortuneFinder: {
+        name: 'Fortune Finder',
+        description: '+25% gold from enemies',
+        cost: 3,
+        maxLevel: 3,
+        requires: 'wealthHunter',
+        tier: 3,
+        bonus: (level) => ({
+          gold: 0.25 * level
+        })
+      },
+      speedster: {
+        name: 'Speedster',
+        description: '+10% movement speed',
+        cost: 3,
+        maxLevel: 3,
+        requires: 'efficiency',
+        tier: 3,
+        bonus: (level) => ({
+          moveSpeed: 0.1 * level
+        })
+      },
+      dashMaster: {
+        name: 'Dash Master',
+        description: '+20% dash distance, -20% dash cooldown',
+        cost: 4,
+        maxLevel: 3,
+        requires: 'speedster',
+        tier: 4,
+        bonus: (level) => ({
+          dashDistance: 0.2 * level,
+          dashCooldown: -0.2 * level
+        })
+      },
+      cooldownExpert: {
+        name: 'Cooldown Expert',
+        description: '-15% all cooldowns',
+        cost: 4,
+        maxLevel: 3,
+        requires: 'efficiency',
+        tier: 4,
+        bonus: (level) => ({
+          cooldown: 0.15 * level
+        })
+      },
+      auraExpansion: {
+        name: 'Aura Expansion',
+        description: '+20% aura/area effect range',
+        cost: 4,
+        maxLevel: 3,
+        requires: 'scavenger',
+        tier: 4,
+        bonus: (level) => ({
+          auraRange: 0.2 * level
+        })
+      },
+      resourceful: {
+        name: 'Resourceful',
+        description: '+30% XP, +30% gold',
+        cost: 5,
+        maxLevel: 5,
+        requires: 'fortuneFinder',
+        tier: 5,
+        bonus: (level) => ({
+          xp: 0.3 * level,
+          gold: 0.3 * level
+        })
+      },
+      treasureHunter: {
+        name: 'Treasure Hunter',
+        description: '+50% rare drop chance',
+        cost: 5,
+        maxLevel: 3,
+        requires: 'resourceful',
+        tier: 6,
+        bonus: (level) => ({
+          rareDrops: 0.5 * level
+        })
+      },
+
+      // ELEMENTAL PATH (12 skills) - Advanced tree
+      fireMastery: {
+        name: 'Fire Mastery',
+        description: '+20% fire damage',
+        cost: 2,
+        maxLevel: 3,
+        requires: 'combatMastery',
+        tier: 2,
+        bonus: (level) => ({
+          fireDamage: 0.2 * level
+        })
+      },
+      iceMastery: {
+        name: 'Ice Mastery',
+        description: '+20% ice damage, +10% slow effect',
+        cost: 2,
+        maxLevel: 3,
+        requires: 'combatMastery',
+        tier: 2,
+        bonus: (level) => ({
+          iceDamage: 0.2 * level,
+          slowEffect: 0.1 * level
+        })
+      },
+      lightningMastery: {
+        name: 'Lightning Mastery',
+        description: '+20% lightning damage',
+        cost: 2,
+        maxLevel: 3,
+        requires: 'combatMastery',
+        tier: 2,
+        bonus: (level) => ({
+          lightningDamage: 0.2 * level
+        })
+      },
+      elementalFusion: {
+        name: 'Elemental Fusion',
+        description: '+15% all elemental damage',
+        cost: 3,
+        maxLevel: 3,
+        requires: 'fireMastery',
+        tier: 3,
+        bonus: (level) => ({
+          elementalDamage: 0.15 * level
+        })
+      },
+      pyromaniac: {
+        name: 'Pyromaniac',
+        description: 'Fire applies burn (10% dmg/sec for 3s)',
+        cost: 3,
+        maxLevel: 3,
+        requires: 'fireMastery',
+        tier: 3,
+        bonus: (level) => ({
+          burnDamage: 0.1 * level,
+          burnDuration: 3
+        })
+      },
+      frostbite: {
+        name: 'Frostbite',
+        description: 'Ice slows by additional 20%',
+        cost: 3,
+        maxLevel: 3,
+        requires: 'iceMastery',
+        tier: 3,
+        bonus: (level) => ({
+          slowEffect: 0.2 * level
+        })
+      },
+      stormCaller: {
+        name: 'Storm Caller',
+        description: 'Lightning chains to 1 more enemy',
+        cost: 3,
+        maxLevel: 3,
+        requires: 'lightningMastery',
+        tier: 3,
+        bonus: (level) => ({
+          chainTargets: 1 * level
+        })
+      },
+      elementalChain: {
+        name: 'Elemental Chain',
+        description: 'Elemental hits chain 50% dmg',
+        cost: 4,
+        maxLevel: 3,
+        requires: 'elementalFusion',
+        tier: 4,
+        bonus: (level) => ({
+          chainDamage: 0.5 * level
+        })
+      },
+      manaOverflow: {
+        name: 'Mana Overflow',
+        description: '-20% elemental ability cooldowns',
+        cost: 4,
+        maxLevel: 3,
+        requires: 'pyromaniac',
+        tier: 4,
+        bonus: (level) => ({
+          elementalCooldown: -0.2 * level
+        })
+      },
+      spellEcho: {
+        name: 'Spell Echo',
+        description: '15% chance to cast twice',
+        cost: 4,
+        maxLevel: 3,
+        requires: 'stormCaller',
+        tier: 4,
+        bonus: (level) => ({
+          doublecastChance: 0.15 * level
+        })
+      },
+      arcaneEmpowerment: {
+        name: 'Arcane Empowerment',
+        description: '+30% all elemental damage',
+        cost: 5,
+        maxLevel: 5,
+        requires: 'elementalChain',
+        tier: 5,
+        bonus: (level) => ({
+          elementalDamage: 0.3 * level
+        })
+      },
+      elementalOverload: {
+        name: 'Elemental Overload',
+        description: '+50% elemental dmg, elements always crit',
+        cost: 5,
+        maxLevel: 3,
+        requires: 'arcaneEmpowerment',
+        tier: 6,
+        bonus: (level) => ({
+          elementalDamage: 0.5 * level,
+          elementalCrit: 1.0
         })
       }
     };
@@ -8457,40 +8956,60 @@
       const skill = SKILL_TREE[skillId];
       const skillData = saveData.skillTree[skillId];
       
+      if (!skill) {
+        showStatusMessage('Skill not found!', 2000);
+        return;
+      }
+      
       if (skillData.level >= skill.maxLevel) {
         showStatusMessage('Skill is at max level!', 2000);
         return;
+      }
+      
+      // ADVANCED: Check if required skill is unlocked (dependency system)
+      if (skill.requires) {
+        const requiredSkill = saveData.skillTree[skill.requires];
+        if (!requiredSkill || !requiredSkill.unlocked || requiredSkill.level < 1) {
+          const reqSkillName = SKILL_TREE[skill.requires]?.name || skill.requires;
+          showStatusMessage(`Requires ${reqSkillName} first!`, 3000);
+          playSound('invalid');
+          return;
+        }
       }
       
       // Check if this is the first skill purchase (make it free)
       const isFirstSkill = !saveData.storyQuests?.buildingFirstUse?.skillTree;
       const costToCharge = isFirstSkill ? 0 : skill.cost;
       
-      if (saveData.skillPoints >= costToCharge) {
-        saveData.skillPoints -= costToCharge;
-        if (!skillData.unlocked) {
-          skillData.unlocked = true;
-        }
-        skillData.level++;
-        
-        saveSaveData();
-        updateCampScreen();
-        playSound('collect');
-        
-        if (isFirstSkill) {
-          showStatusMessage(`${skill.name} unlocked FREE! (First skill bonus)`, 3000);
-        } else {
-          showStatusMessage(`${skill.name} leveled up!`, 2000);
-        }
-        
-        // Quest progression: first skill unlock
-        if (!saveData.storyQuests.buildingFirstUse.skillTree) {
-          saveData.storyQuests.buildingFirstUse.skillTree = true;
-          progressQuest('useSkillTree', true);
-        }
-      } else {
+      // ADVANCED: Prevent upgrade bug - strict point check
+      if (saveData.skillPoints < costToCharge) {
         playSound('invalid');
         showStatusMessage('Not enough skill points!', 2000);
+        return;
+      }
+      
+      // Deduct points BEFORE applying (prevents double-click exploit)
+      saveData.skillPoints -= costToCharge;
+      
+      if (!skillData.unlocked) {
+        skillData.unlocked = true;
+      }
+      skillData.level++;
+      
+      saveSaveData();
+      updateCampScreen();
+      playSound('collect');
+      
+      if (isFirstSkill) {
+        showStatusMessage(`${skill.name} unlocked FREE! (First skill bonus)`, 3000);
+      } else {
+        showStatusMessage(`${skill.name} leveled up to ${skillData.level}/${skill.maxLevel}!`, 2000);
+      }
+      
+      // Quest progression: first skill unlock
+      if (!saveData.storyQuests.buildingFirstUse.skillTree) {
+        saveData.storyQuests.buildingFirstUse.skillTree = true;
+        progressQuest('useSkillTree', true);
       }
     }
 
@@ -9006,22 +9525,45 @@
       
       for (const [skillId, skill] of Object.entries(SKILL_TREE)) {
         const skillData = saveData.skillTree[skillId];
+        if (!skillData) continue; // Skip if not in save data
+        
         const isMaxLevel = skillData.level >= skill.maxLevel;
         const canAfford = saveData.skillPoints >= skill.cost;
+        
+        // ADVANCED: Check if requirements are met (dependency system)
+        let requirementsMet = true;
+        let requirementText = '';
+        if (skill.requires) {
+          const requiredSkill = saveData.skillTree[skill.requires];
+          if (!requiredSkill || !requiredSkill.unlocked || requiredSkill.level < 1) {
+            requirementsMet = false;
+            const reqSkillName = SKILL_TREE[skill.requires]?.name || skill.requires;
+            requirementText = `Requires: ${reqSkillName}`;
+          }
+        }
         
         const skillNode = document.createElement('div');
         skillNode.className = 'skill-node';
         if (skillData.unlocked) skillNode.classList.add('unlocked');
-        if (!canAfford || isMaxLevel) skillNode.classList.add('locked');
+        
+        // ADVANCED: Visual locked state for dependencies and max level
+        if (!requirementsMet || (!canAfford && !skillData.unlocked) || isMaxLevel) {
+          skillNode.classList.add('locked');
+        }
+        
+        // Display tier badge
+        const tierBadge = skill.tier ? `<div style="font-size: 10px; color: #888; margin-bottom: 5px;">Tier ${skill.tier}</div>` : '';
         
         skillNode.innerHTML = `
+          ${tierBadge}
           <div class="skill-name">${skill.name}</div>
           <div class="skill-desc">${skill.description}</div>
+          ${requirementText ? `<div style="font-size: 11px; color: #ff6b6b; margin: 3px 0;">${requirementText}</div>` : ''}
           <div style="font-size: 12px; color: #5DADE2; margin: 5px 0;">Level ${skillData.level}/${skill.maxLevel}</div>
           <div class="skill-cost">${isMaxLevel ? 'MAX' : `${skill.cost} SP`}</div>
         `;
         
-        if (!isMaxLevel) {
+        if (!isMaxLevel && requirementsMet) {
           skillNode.onclick = () => unlockSkill(skillId);
         }
         
