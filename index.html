@@ -4328,10 +4328,24 @@
           }
         }
 
-        // Camera Follow
-        camera.position.x = this.mesh.position.x;
-        camera.position.z = this.mesh.position.z + 20; // Isometric offset
-        camera.lookAt(this.mesh.position);
+        // Camera Follow with smooth zoom and targeting
+        // Interpolate current zoom to target zoom
+        cameraZoom.current += (cameraZoom.target - cameraZoom.current) * cameraZoom.speed * dt;
+        
+        // Determine camera target (either player or special target)
+        let targetPos = this.mesh.position;
+        if (cameraTargetPos) {
+          // Smooth interpolation to special target
+          targetPos = new THREE.Vector3(
+            this.mesh.position.x + (cameraTargetPos.x - this.mesh.position.x) * 0.3,
+            0,
+            this.mesh.position.z + (cameraTargetPos.z - this.mesh.position.z) * 0.3
+          );
+        }
+        
+        camera.position.x = targetPos.x;
+        camera.position.z = targetPos.z + cameraZoom.current; // Dynamic zoom offset
+        camera.lookAt(targetPos);
 
         // Bounds (Map is 400x400, from -200 to 200)
         this.mesh.position.x = Math.max(-195, Math.min(195, this.mesh.position.x));
@@ -12988,8 +13002,40 @@
         const dist = 28;
         const ex = player.mesh.position.x + Math.cos(angle) * dist;
         const ez = player.mesh.position.z + Math.sin(angle) * dist;
-        enemies.push(new Enemy(10, ex, ez, playerStats.lvl));
+        const miniBoss = new Enemy(10, ex, ez, playerStats.lvl);
+        enemies.push(miniBoss);
         createFloatingText("MINI-BOSS INCOMING!", player.mesh.position);
+        
+        // VISUAL POLISH: Camera zoom out to show miniboss spawn
+        cameraZoom.target = 25; // Zoom out
+        cameraTargetPos = new THREE.Vector3(
+          (player.mesh.position.x + ex) / 2,
+          0,
+          (player.mesh.position.z + ez) / 2
+        );
+        
+        // Dramatic effects
+        createCameraShake(0.6, 0.5);
+        playSound('explosion');
+        
+        // Screen flash
+        const flashDiv = document.createElement('div');
+        flashDiv.style.position = 'fixed';
+        flashDiv.style.top = '0';
+        flashDiv.style.left = '0';
+        flashDiv.style.width = '100%';
+        flashDiv.style.height = '100%';
+        flashDiv.style.background = 'rgba(255, 215, 0, 0.3)';
+        flashDiv.style.pointerEvents = 'none';
+        flashDiv.style.zIndex = '500';
+        document.body.appendChild(flashDiv);
+        setTimeout(() => flashDiv.remove(), 300);
+        
+        // Reset camera after 3 seconds
+        setTimeout(() => {
+          cameraZoom.target = 15;
+          cameraTargetPos = null;
+        }, 3000);
         
         // Spawn 1-2 regular enemies with the mini-boss (reduced from 2-3)
         const supportCount = 1 + Math.floor(Math.random() * 2);
