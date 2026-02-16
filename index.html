@@ -1940,6 +1940,37 @@
         justify-content: space-between;
       }
     }
+    
+    /* Kill Cam Animations */
+    @keyframes killCamPulse {
+      0% {
+        opacity: 0;
+        transform: scale(1.1);
+      }
+      50% {
+        opacity: 1;
+        transform: scale(1);
+      }
+      100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+    
+    @keyframes killTextAppear {
+      0% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.5);
+      }
+      50% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1.2);
+      }
+      100% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+      }
+    }
 
   </style>
 </head>
@@ -3017,6 +3048,13 @@
     let isGameActive = false;  // Changed to false - start with menu
     let gameTime = 0;
     let gameStartTime = 0;
+    
+    // Kill Cam System - Diverse animations on enemy death
+    let killCamActive = false;
+    let killCamTimer = 0;
+    let killCamDuration = 0;
+    let killCamType = null;
+    let killCamData = {};
     
     // Expose game state on window object for external access and fallback handlers (acceptance criteria #2)
     // These are kept in sync with local variables throughout the code
@@ -4749,15 +4787,6 @@
         this.hp -= finalAmount;
         createDamageNumber(Math.floor(finalAmount), this.mesh.position, isCrit);
         
-        // White hit flash effect (50ms) - FRESH IMPLEMENTATION
-        const originalColor = this.mesh.material.color.clone();
-        this.mesh.material.color.setHex(0xFFFFFF); // White flash
-        setTimeout(() => {
-          if (this.mesh && this.mesh.material) {
-            this.mesh.material.color.copy(originalColor);
-          }
-        }, 50);
-        
         const hpPercent = this.hp / this.maxHp;
         const oldHpPercent = oldHp / this.maxHp;
         
@@ -4894,12 +4923,8 @@
           playSound('hit');
         }
         
-        // Flash
-        const oldColor = this.mesh.material.color.getHex();
-        this.mesh.material.color.setHex(0xFFFFFF);
-        
         // Enhanced splash particles using enemy's own color
-        const enemyColor = oldColor;
+        const enemyColor = this.mesh.material.color.getHex();
         const particleCount = isCrit ? 8 : 3;
         spawnParticles(this.mesh.position, enemyColor, particleCount);
         
@@ -4915,8 +4940,6 @@
         setTimeout(() => {
           this.mesh.scale.set(1, 1, 1);
         }, 100);
-        
-        setTimeout(() => this.mesh.material.color.setHex(oldColor), 50);
 
         if (this.hp <= 0) {
           this.die();
@@ -4939,6 +4962,9 @@
         // Determine death effect based on damage type and health when dying
         const damageType = this.lastDamageType || 'physical';
         const enemyColor = this.mesh.material.color.getHex();
+        
+        // Trigger kill cam effect for varied visual feedback
+        triggerKillCam(this.mesh.position, this.isMiniBoss, damageType);
         
         // Special death effects based on damage type
         if (damageType === 'fire') {
@@ -11589,6 +11615,141 @@
       }
     }
 
+    // Kill Cam System - Diverse kill animations with camera effects
+    function triggerKillCam(enemyPosition, isMiniBoss = false, damageType = 'physical') {
+      // Only trigger for mini-bosses or randomly (15% chance for regular enemies)
+      const shouldTrigger = isMiniBoss || Math.random() < 0.15;
+      if (!shouldTrigger || killCamActive) return;
+      
+      // Select random kill cam animation type
+      const killCamTypes = [
+        'zoom_in',      // Zoom camera towards kill
+        'slow_motion',  // Brief slow-motion effect
+        'rotate',       // Camera rotates around kill
+        'shake_zoom',   // Intense shake with zoom
+        'dramatic_pan'  // Pan and zoom combo
+      ];
+      
+      killCamType = killCamTypes[Math.floor(Math.random() * killCamTypes.length)];
+      killCamActive = true;
+      killCamTimer = 0;
+      killCamDuration = isMiniBoss ? 1.2 : 0.6; // Longer for mini-boss
+      
+      // Store camera's current state
+      killCamData.originalCameraPos = camera.position.clone();
+      killCamData.originalCameraTarget = new THREE.Vector3(player.mesh.position.x, 0, player.mesh.position.z);
+      killCamData.killPosition = enemyPosition.clone();
+      killCamData.isMiniBoss = isMiniBoss;
+      killCamData.damageType = damageType;
+      
+      // Create visual overlay effect
+      createKillCamOverlay(isMiniBoss);
+    }
+    
+    function createKillCamOverlay(isMiniBoss) {
+      const overlay = document.createElement('div');
+      overlay.id = 'kill-cam-overlay';
+      overlay.style.position = 'fixed';
+      overlay.style.top = '0';
+      overlay.style.left = '0';
+      overlay.style.width = '100%';
+      overlay.style.height = '100%';
+      overlay.style.pointerEvents = 'none';
+      overlay.style.zIndex = '499';
+      overlay.style.background = 'radial-gradient(circle at center, transparent 40%, rgba(0,0,0,0.3) 100%)';
+      overlay.style.border = isMiniBoss ? '4px solid rgba(255, 215, 0, 0.6)' : '2px solid rgba(255, 255, 255, 0.3)';
+      overlay.style.boxSizing = 'border-box';
+      overlay.style.animation = 'killCamPulse 0.3s ease-in-out';
+      document.body.appendChild(overlay);
+      
+      // Add kill text
+      const killText = document.createElement('div');
+      killText.style.position = 'absolute';
+      killText.style.top = '50%';
+      killText.style.left = '50%';
+      killText.style.transform = 'translate(-50%, -50%)';
+      killText.style.color = isMiniBoss ? '#FFD700' : '#FF0000';
+      killText.style.fontSize = isMiniBoss ? '48px' : '36px';
+      killText.style.fontWeight = '900';
+      killText.style.textShadow = '0 0 10px rgba(0,0,0,0.8), 0 0 20px rgba(255,0,0,0.5)';
+      killText.style.fontFamily = "'M PLUS Rounded 1c', sans-serif";
+      killText.textContent = isMiniBoss ? '⚡ BOSS DOWN! ⚡' : ['ELIMINATED!', 'DESTROYED!', 'ANNIHILATED!', 'OBLITERATED!'][Math.floor(Math.random() * 4)];
+      killText.style.opacity = '0';
+      killText.style.animation = 'killTextAppear 0.3s ease-out forwards';
+      overlay.appendChild(killText);
+      
+      // Remove after duration
+      setTimeout(() => {
+        if (overlay.parentElement) {
+          overlay.remove();
+        }
+      }, killCamDuration * 1000);
+    }
+    
+    function updateKillCam(dt) {
+      if (!killCamActive) return;
+      
+      killCamTimer += dt;
+      const progress = Math.min(killCamTimer / killCamDuration, 1);
+      
+      // Apply different camera effects based on type
+      switch (killCamType) {
+        case 'zoom_in':
+          // Zoom camera towards kill position
+          const zoomFactor = 1 - (progress * 0.3); // Zoom in 30%
+          const targetPos = killCamData.killPosition.clone();
+          camera.position.x = killCamData.originalCameraPos.x + (targetPos.x - killCamData.originalCameraPos.x) * progress;
+          camera.position.z = killCamData.originalCameraPos.z + ((targetPos.z + 15 * zoomFactor) - killCamData.originalCameraPos.z) * progress;
+          camera.lookAt(targetPos.x, 0, targetPos.z);
+          break;
+          
+        case 'slow_motion':
+          // Slow motion is handled by time scale (visual effect only)
+          // Add subtle zoom
+          const slowZoom = 1 - (Math.sin(progress * Math.PI) * 0.15);
+          camera.position.z = killCamData.originalCameraPos.z * slowZoom;
+          break;
+          
+        case 'rotate':
+          // Rotate camera around kill position
+          const angle = progress * Math.PI * 0.5; // 90 degree rotation
+          const radius = 20;
+          const centerPos = killCamData.killPosition.clone();
+          camera.position.x = centerPos.x + Math.cos(angle) * radius;
+          camera.position.z = centerPos.z + Math.sin(angle) * radius;
+          camera.lookAt(centerPos.x, 0, centerPos.z);
+          break;
+          
+        case 'shake_zoom':
+          // Intense shake with zoom
+          const shakeIntensity = (1 - progress) * 2;
+          const zoomIn = 1 - (progress * 0.4);
+          camera.position.x = killCamData.originalCameraPos.x + (Math.random() - 0.5) * shakeIntensity;
+          camera.position.y = killCamData.originalCameraPos.y + (Math.random() - 0.5) * shakeIntensity;
+          camera.position.z = killCamData.originalCameraPos.z * zoomIn + (Math.random() - 0.5) * shakeIntensity;
+          break;
+          
+        case 'dramatic_pan':
+          // Pan from enemy to player with zoom
+          const panProgress = Math.min(progress * 1.5, 1);
+          const panTarget = new THREE.Vector3(
+            killCamData.killPosition.x + (player.mesh.position.x - killCamData.killPosition.x) * panProgress,
+            0,
+            killCamData.killPosition.z + (player.mesh.position.z - killCamData.killPosition.z) * panProgress
+          );
+          camera.lookAt(panTarget);
+          break;
+      }
+      
+      // End kill cam
+      if (progress >= 1) {
+        killCamActive = false;
+        // Smoothly return camera to normal position
+        camera.position.copy(killCamData.originalCameraPos);
+        camera.lookAt(killCamData.originalCameraTarget);
+      }
+    }
+
     // Phase 5: Updated to use Object Pool for performance
     function spawnParticles(pos, color, count) {
       if (!particlePool) return; // Safety check
@@ -14786,6 +14947,9 @@
         // Green particle
         spawnParticles(player.mesh.position, 0x00FF00, 2);
       }
+
+      // Update Kill Cam effects
+      updateKillCam(dt);
 
       // Player Update
       player.update(dt);
