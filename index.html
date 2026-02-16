@@ -14841,6 +14841,16 @@
     }
     
     function createLevelUpEffects() {
+      // FRESH IMPLEMENTATION: Spawn 2-5 XP drops outward as specified in Big Update requirements
+      const numDrops = 2 + Math.floor(Math.random() * 4); // 2-5 drops
+      for (let i = 0; i < numDrops; i++) {
+        const angle = (i / numDrops) * Math.PI * 2 + Math.random() * 0.3; // Spread evenly with slight randomness
+        const distance = 3 + Math.random() * 2; // 3-5 units away
+        const dropX = player.mesh.position.x + Math.cos(angle) * distance;
+        const dropZ = player.mesh.position.z + Math.sin(angle) * distance;
+        spawnExp(dropX, dropZ);
+      }
+      
       // ADVANCED: Mage Aura Effect - Pushes dust/fog away from character
       // Create expanding aura ring with particle push
       for(let i=0; i<80; i++) {
