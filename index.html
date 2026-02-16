@@ -2163,7 +2163,12 @@
           
           // CRITICAL FIX: Wait for module to be ready before showing menu
           // This ensures event listeners are attached before the menu becomes interactive
+          let pollAttempts = 0;
+          const MAX_POLL_ATTEMPTS = 50; // 50 * 100ms = 5 seconds max wait after fade
+          
           const waitForModule = () => {
+            pollAttempts++;
+            
             // Check if module has initialized and attached event listeners
             if (window.gameModuleReady) {
               console.log('[Loading] Module ready, showing main menu');
@@ -2181,10 +2186,18 @@
                   console.log('[Loading] showMainMenu error:', e.message);
                 }
               }
-            } else {
-              // Module not ready yet, wait and try again
-              console.log('[Loading] Module not ready, waiting...');
+            } else if (pollAttempts < MAX_POLL_ATTEMPTS) {
+              // Module not ready yet, wait and try again (but not forever)
+              console.log('[Loading] Module not ready, waiting... (' + pollAttempts + '/' + MAX_POLL_ATTEMPTS + ')');
               setTimeout(waitForModule, 100);
+            } else {
+              // Give up after max attempts and show menu anyway (graceful degradation)
+              console.warn('[Loading] Module did not become ready after ' + (MAX_POLL_ATTEMPTS * 100) + 'ms, showing menu anyway');
+              const mainMenu = document.getElementById('main-menu');
+              if (mainMenu && mainMenu.style.display !== 'flex') {
+                mainMenu.style.display = 'flex';
+                console.log('[Loading] Main menu shown without module (degraded mode)');
+              }
             }
           };
           
