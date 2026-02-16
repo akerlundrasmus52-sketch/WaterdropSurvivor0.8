@@ -3146,6 +3146,7 @@
       
       // Wait for module to signal ready, then show menu
       function waitForModuleReady() {
+        console.log('[Loading] Waiting for game module to be ready...');
         let attempts = 0;
         const maxAttempts = 50; // 50 × 100ms = 5s max wait
         
@@ -3154,11 +3155,13 @@
           
           if (window.gameModuleReady) {
             // Module is ready!
+            console.log('[Loading] ✅ Game module ready after ' + (attempts * 100) + 'ms');
             clearInterval(checkInterval);
             showMenuAfterLoading();
           } else if (attempts >= maxAttempts) {
             // Timeout - show anyway
-            console.warn('[Loading] Module ready timeout - showing menu anyway');
+            console.warn('[Loading] ⚠️  Module ready timeout after 5s - showing menu anyway');
+            console.warn('[Loading] Check browser console for initialization errors');
             clearInterval(checkInterval);
             showMenuAfterLoading();
           }
@@ -3166,6 +3169,7 @@
       }
       
       function showMenuAfterLoading() {
+        console.log('[Loading] Showing main menu...');
         const loadingScreen = document.getElementById('loading-screen');
         if (!loadingScreen) return;
         
@@ -3174,17 +3178,23 @@
         
         setTimeout(function() {
           loadingScreen.style.display = 'none';
+          console.log('[Loading] Loading screen hidden');
           
           // Show main menu (module script will handle button event listeners)
           const mainMenu = document.getElementById('main-menu');
           if (mainMenu) {
             mainMenu.style.display = 'flex';
+            console.log('[Loading] ✅ Main menu displayed');
+            console.log('[Loading] If buttons don\'t work, check console for setupMenus errors');
+          } else {
+            console.error('[Loading] ❌ Main menu element not found!');
           }
           
           // FRESH IMPLEMENTATION: Show Story Quest Modal on first load
           setTimeout(function() {
             // Access saveData through window if available (will be set by game module)
             if (window.saveData && !window.saveData.storyQuests.welcomeShown) {
+              console.log('[Loading] Showing story quest welcome modal...');
               const storyModal = document.getElementById('story-quest-modal');
               if (storyModal) {
                 storyModal.style.display = 'flex';
@@ -13287,17 +13297,23 @@
       updateBackgroundMusic();
       
       // Listeners
+      console.log('[Init] Setting up input handlers...');
       setupInputs();
+      
+      console.log('[Init] Setting up menu event listeners...');
       setupMenus();
+      
+      console.log('[Init] Adding window resize listener...');
       window.addEventListener('resize', onWindowResize, false);
       
       // Start Loop - begin rendering immediately (non-blocking)
+      console.log('[Init] Starting animation loop...');
       requestAnimationFrame(animate);
       
       // FRESH: Signal that module is ready (standalone loading script is waiting for this)
       // Don't call showLoadingScreen - standalone script handles it
       window.gameModuleReady = true;
-      console.log('[Init] Game module ready - Three.js loaded, event listeners attached');
+      console.log('[Init] ✅ Game module ready - Three.js loaded, event listeners attached');
     }
     
     // showLoadingScreen is now handled by standalone script
@@ -13756,6 +13772,8 @@
     }
     
     function setupMenus() {
+      console.log('[setupMenus] Starting menu setup...');
+      
       // Settings button
       // PR #117: Menu button and options modal handlers
       const menuBtn = document.getElementById('menu-btn');
@@ -13890,7 +13908,10 @@
       updateBackgroundMusic();
       
       // Main Menu Buttons
+      console.log('[setupMenus] Setting up main menu button handlers...');
+      
       document.getElementById('start-game-btn').onclick = () => {
+        console.log('[Button] START GAME clicked');
         playSound('waterdrop');
         
         // COMIC BOOK TUTORIAL: Show intro comic on first game start
@@ -14169,6 +14190,8 @@
       
       // Initialize control type UI on startup
       updateControlType();
+      
+      console.log('[setupMenus] ✅ All menu buttons and event handlers set up successfully');
     }
     
 
@@ -18307,7 +18330,25 @@
     }
 
     // Init Game
-    try { init(); } catch(e) { console.error('[Game Error]', e); console.error('[Game] Initialization failed - game cannot start'); }
+    try { 
+      init(); 
+    } catch(e) { 
+      console.error('[Game Error] Initialization failed:', e); 
+      console.error('[Game Error] Stack trace:', e.stack);
+      
+      // Critical: Even if init fails, try to set up menu buttons so UI is at least partially functional
+      try {
+        console.log('[Recovery] Attempting to set up menu buttons despite init failure...');
+        setupMenus();
+        window.gameModuleReady = true;
+        console.log('[Recovery] ✅ Menu buttons set up successfully despite init failure');
+      } catch(recoveryError) {
+        console.error('[Recovery] ❌ Failed to set up menu buttons:', recoveryError);
+        // Set gameModuleReady anyway so the loading screen doesn't block forever
+        window.gameModuleReady = true;
+        alert('Game failed to initialize properly. Some features may not work. Please refresh the page.\n\nError: ' + e.message);
+      }
+    }
 
   </script>
 </body>
