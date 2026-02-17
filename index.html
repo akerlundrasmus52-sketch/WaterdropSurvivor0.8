@@ -14190,8 +14190,8 @@
         choices = perkChoices.sort(() => 0.5 - Math.random()).slice(0, 3);
       }
       else {
-        // Random 4
-        choices = commonUpgrades.sort(() => 0.5 - Math.random()).slice(0, 4);
+        // Random 6 upgrades for regular level-ups (increased from 4 for better variety and balance)
+        choices = commonUpgrades.sort(() => 0.5 - Math.random()).slice(0, 6);
       }
 
       choices.forEach((u, index) => {
