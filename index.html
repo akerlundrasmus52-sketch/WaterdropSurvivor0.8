@@ -9759,6 +9759,17 @@
         
         showStatusMessage(`${skill.name} leveled up!`, 2000);
         
+        // QUEST 2: Track skill point spending for tutorial quest
+        if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest2_spendSkills') {
+          // Count total skill points spent (each level = 1 point)
+          const totalSkillsUnlocked = Object.values(saveData.skillTree).filter(s => s.level > 0).length;
+          
+          if (totalSkillsUnlocked >= 2) {
+            // Completed quest 2: spent 2 skill points
+            progressTutorialQuest('quest2_spendSkills', true);
+          }
+        }
+        
         // Quest progression: Track skill unlocks for tutorial quest
         if (saveData.storyQuests.currentQuest === 'useSkillTree') {
           // Count how many skills have been unlocked (use level > 0 as canonical check)
@@ -9933,6 +9944,17 @@
             showStatusMessage(`${attr.name} increased to ${saveData.attributes[attrId]}!`, 2000);
             updateTrainingSection();
             updateGoldDisplays();
+            
+            // QUEST 3: Track attribute purchase for tutorial quest
+            if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest3_buyProgression') {
+              // Count total attribute levels purchased
+              const totalAttrLevels = Object.values(saveData.attributes || {}).reduce((sum, val) => sum + val, 0);
+              
+              if (totalAttrLevels >= 1) {
+                // Completed quest 3: bought 1 progression upgrade
+                progressTutorialQuest('quest3_buyProgression', true);
+              }
+            }
           } else {
             playSound('invalid');
             if (saveData.trainingPoints < 1) {
@@ -10623,6 +10645,11 @@
               } else if (buildingId === 'trainingHall' && saveData.storyQuests.currentQuest === 'unlockTrainingHall') {
                 progressQuest('unlockTrainingHall', true);
               }
+              
+              // QUEST 5: Mark quest as complete when companion house is opened
+              if (buildingId === 'companionHouse' && saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest5_breedCompanion') {
+                progressTutorialQuest('quest5_breedCompanion', true);
+              }
             } else {
               playSound('invalid');
               showStatusMessage('Complete quests to unlock this building!', 2000);
@@ -11085,6 +11112,55 @@
       stonehengeGroup.add(altar);
       
       scene.add(stonehengeGroup);
+      
+      // QUEST 6: Stonehenge Chest - Blue glowing chest for cigar quest
+      const stonehengeChestGroup = new THREE.Group();
+      
+      // Chest body (blue rarity)
+      const stoneChestGeo = new THREE.BoxGeometry(0.6, 0.5, 0.5);
+      const stoneChestMat = new THREE.MeshPhysicalMaterial({ 
+        color: 0x4169E1, // Royal blue
+        transparent: true,
+        opacity: 0.95,
+        metalness: 0.9,
+        roughness: 0.2,
+        emissive: 0x4169E1,
+        emissiveIntensity: 0.6
+      });
+      const stoneChest = new THREE.Mesh(stoneChestGeo, stoneChestMat);
+      stoneChest.position.y = 0.25;
+      stoneChest.castShadow = true;
+      stonehengeChestGroup.add(stoneChest);
+      
+      // Chest lid (slightly open)
+      const stoneLidGeo = new THREE.BoxGeometry(0.62, 0.12, 0.52);
+      const stoneLidMat = new THREE.MeshPhysicalMaterial({ 
+        color: 0x1E90FF, // Dodger blue
+        metalness: 0.8,
+        roughness: 0.3,
+        emissive: 0x4169E1,
+        emissiveIntensity: 0.4
+      });
+      const stoneLid = new THREE.Mesh(stoneLidGeo, stoneLidMat);
+      stoneLid.position.set(0, 0.5, -0.12);
+      stoneLid.rotation.x = -0.4; // Open to show blue light
+      stoneLid.castShadow = true;
+      stonehengeChestGroup.add(stoneLid);
+      
+      // Blue glow light from inside
+      const blueGlowLight = new THREE.PointLight(0x4169E1, 3, 5);
+      blueGlowLight.position.set(0, 0.3, 0);
+      stonehengeChestGroup.add(blueGlowLight);
+      
+      // Position on altar
+      stonehengeChestGroup.position.set(60, 1, 60); // On top of Stonehenge altar
+      stonehengeChestGroup.userData = { 
+        isStonehengeChest: true, 
+        questItem: true,
+        pickupRadius: 3 // 3 units proximity to auto-pickup
+      };
+      scene.add(stonehengeChestGroup);
+      window.stonehengeChest = stonehengeChestGroup; // Store reference for proximity check
 
       // Mayan Pyramid - Stepped pyramid - MADE MORE VISIBLE
       const mayanGroup = new THREE.Group();
@@ -14130,6 +14206,11 @@
               weapons.sword.active = true;
               weapons.sword.level = 1;
               showStatChange('New Weapon: Sword');
+              
+              // QUEST 8: Track weapon unlock
+              if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest8_newWeapon') {
+                progressTutorialQuest('quest8_newWeapon', true);
+              }
             } 
           },
           { 
@@ -14141,6 +14222,11 @@
               weapons.aura.active = true;
               weapons.aura.level = 1;
               showStatChange('New Weapon: Aura');
+              
+              // QUEST 8: Track weapon unlock
+              if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest8_newWeapon') {
+                progressTutorialQuest('quest8_newWeapon', true);
+              }
             } 
           },
           { 
@@ -14152,6 +14238,11 @@
               weapons.meteor.active = true;
               weapons.meteor.level = 1;
               showStatChange('New Weapon: Meteor');
+              
+              // QUEST 8: Track weapon unlock
+              if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest8_newWeapon') {
+                progressTutorialQuest('quest8_newWeapon', true);
+              }
             } 
           },
           { 
@@ -14166,6 +14257,11 @@
               droneTurrets.push(drone);
               startDroneHum(); // Start continuous drone sound
               showStatChange('New Weapon: Drone Turret');
+              
+              // QUEST 8: Track weapon unlock
+              if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest8_newWeapon') {
+                progressTutorialQuest('quest8_newWeapon', true);
+              }
               
               // Visual effect when unlocked
               for(let i=0; i<6; i++) {
@@ -14198,6 +14294,11 @@
               weapons.doubleBarrel.active = true;
               weapons.doubleBarrel.level = 1;
               showStatChange('New Weapon: Double Barrel');
+              
+              // QUEST 8: Track weapon unlock
+              if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest8_newWeapon') {
+                progressTutorialQuest('quest8_newWeapon', true);
+              }
             } 
           },
           { 
@@ -14209,6 +14310,11 @@
               weapons.iceSpear.active = true;
               weapons.iceSpear.level = 1;
               showStatChange('New Weapon: Ice Spear');
+              
+              // QUEST 8: Track weapon unlock
+              if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest8_newWeapon') {
+                progressTutorialQuest('quest8_newWeapon', true);
+              }
             } 
           },
           { 
@@ -14220,6 +14326,11 @@
               weapons.fireRing.active = true;
               weapons.fireRing.level = 1;
               showStatChange('New Weapon: Fire Ring');
+              
+              // QUEST 8: Track weapon unlock
+              if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest8_newWeapon') {
+                progressTutorialQuest('quest8_newWeapon', true);
+              }
             } 
           }
         ];
@@ -16492,6 +16603,49 @@
       // Check legendary cigar quest
       if (isGameActive && !isPaused) {
         checkLegendaryCigarQuest();
+      }
+      
+      // QUEST 6: Check Stonehenge chest proximity
+      if (window.stonehengeChest && 
+          saveData.tutorialQuests && 
+          saveData.tutorialQuests.currentQuest === 'quest6_stonehengeChest' &&
+          isGameActive && !isPaused) {
+        const dist = player.mesh.position.distanceTo(window.stonehengeChest.position);
+        if (dist < window.stonehengeChest.userData.pickupRadius) {
+          // Player found the chest!
+          scene.remove(window.stonehengeChest);
+          window.stonehengeChest = null;
+          
+          // Show item card popup
+          showQuestPopup(
+            '🎁 Treasure Found!',
+            '<div style="text-align: center;"><div style="font-size: 48px; margin: 10px 0;">🚬</div><div style="color: #4169E1; font-size: 24px; font-weight: bold;">CIGAR</div><div style="color: #FFD700; font-size: 18px;">★★★ RARE ★★★</div><div style="margin: 15px 0; font-size: 16px;">+1 Strength<br>+1 Speed<br>+1 Precision</div><div style="color: #4169E1;">Gear Building Unlocked!</div></div>',
+            'Equip!',
+            () => {
+              // Complete quest 6 (auto-claim)
+              progressTutorialQuest('quest6_stonehengeChest', true);
+              
+              // Show blue particle effect at pickup location
+              for (let i = 0; i < 15; i++) {
+                const angle = (i / 15) * Math.PI * 2;
+                const speed = 2 + Math.random() * 2;
+                const particle = particlePool.get();
+                if (particle) {
+                  particle.mesh.position.copy(window.stonehengeChest ? window.stonehengeChest.position : player.mesh.position);
+                  particle.velocity.set(
+                    Math.cos(angle) * speed,
+                    3 + Math.random() * 2,
+                    Math.sin(angle) * speed
+                  );
+                  particle.mesh.material.color.setHex(0x4169E1); // Blue
+                  particle.mesh.visible = true;
+                  particle.active = true;
+                  particle.life = 1.0;
+                }
+              }
+            }
+          );
+        }
       }
       
       // Check windmill quest trigger
