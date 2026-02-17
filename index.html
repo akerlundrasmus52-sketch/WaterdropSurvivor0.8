@@ -108,12 +108,21 @@
     .bar-container {
       width: 200px;
       height: 24px;
-      background: linear-gradient(to bottom, #3a3a3a 0%, #3a3a3a 50%, #6a6a6a 50%, #6a6a6a 100%);
+      /* 80s BATMAN COMIC STYLE: Darker gradient with gold accents */
+      background: linear-gradient(to bottom, #1a1a1a 0%, #1a1a1a 50%, #3a3a3a 50%, #3a3a3a 100%);
       border-radius: 12px;
-      border: 3px solid #2a2a2a;
+      border: 3px solid #FFD700; /* Gold border for comic style */
       overflow: hidden;
       position: relative;
-      box-shadow: 0 3px 8px rgba(0,0,0,0.3), inset 0 2px 4px rgba(0,0,0,0.2), 0 0 15px rgba(0,0,0,0.5);
+      /* Enhanced comic shadow with gold glow */
+      box-shadow: 
+        0 3px 8px rgba(0,0,0,0.5), 
+        inset 0 2px 4px rgba(0,0,0,0.4), 
+        0 0 15px rgba(255,215,0,0.3);
+      /* Comic halftone pattern */
+      background-image: 
+        radial-gradient(circle at 3px 3px, rgba(255,215,0,0.05) 2px, transparent 2px);
+      background-size: 12px 12px;
     }
 
     .bar-fill {
@@ -129,11 +138,20 @@
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
+      /* 80s BATMAN COMIC STYLE: Bold comic font */
+      font-family: 'Bangers', 'M PLUS Rounded 1c', cursive;
       font-weight: bold;
       font-size: 12px;
-      text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+      color: #FFD700; /* Gold text for comic style */
+      text-shadow: 
+        -1px -1px 0 #000, 
+        1px -1px 0 #000, 
+        -1px 1px 0 #000, 
+        1px 1px 0 #000,
+        0 0 5px rgba(255,215,0,0.5);
       pointer-events: none;
       z-index: 1;
+      letter-spacing: 1px;
     }
 
     #hp-fill { 
@@ -148,11 +166,19 @@
     }
 
     .stat-text {
-      color: #8B4513;
+      /* 80s BATMAN COMIC STYLE */
+      font-family: 'Bangers', 'M PLUS Rounded 1c', cursive;
+      color: #FFD700; /* Gold for comic style */
       font-weight: bold;
-      text-shadow: 1px 1px 2px rgba(0,0,0,0.5), -1px -1px 1px rgba(255,255,255,0.3), 0 0 5px rgba(139,69,19,0.3);
+      text-shadow: 
+        -1px -1px 0 #000, 
+        1px -1px 0 #000, 
+        -1px 1px 0 #000, 
+        1px 1px 0 #000,
+        0 0 5px rgba(255,215,0,0.5);
       font-size: 14px;
       margin-top: 4px;
+      letter-spacing: 1px;
     }
 
     .stat-text.gold-text {
@@ -421,18 +447,29 @@
       position: absolute;
       bottom: 20px;
       right: 20px;
-      width: 120px;
-      height: 120px;
-      border-radius: 50%;
+      width: 110px; /* Smaller as requested */
+      height: 130px; /* Taller for waterdrop shape */
+      /* WATERDROP SHAPE: Using border-radius to create teardrop */
+      /* Note: 50% 50% 50% 0% creates a waterdrop pointing to bottom-left, then we rotate -45deg */
+      /* to point it down-right (toward bottom-right corner). Visual: wider at top, tapers to point */
+      border-radius: 50% 50% 50% 0%; /* Waterdrop shape */
+      transform: rotate(-45deg); /* Rotate to point down-right */
       border: 3px solid #FFD700;
-      background: radial-gradient(circle at center, rgba(20,20,20,0.9), rgba(0,0,0,0.95));
+      /* 80s BATMAN COMIC STYLE: Dark gradient with halftone */
+      background: radial-gradient(circle at 30% 30%, rgba(30,30,30,0.9), rgba(0,0,0,0.95));
+      background-image: 
+        radial-gradient(circle at center, rgba(20,20,20,0.9), rgba(0,0,0,0.95)),
+        radial-gradient(circle at 3px 3px, rgba(255,215,0,0.08) 2px, transparent 2px);
+      background-size: 100%, 12px 12px;
       overflow: hidden;
       pointer-events: none;
       z-index: 100;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.8),
-                  0 0 25px rgba(255,215,0,0.3),
-                  inset -2px -2px 8px rgba(0,0,0,0.6),
-                  inset 2px 2px 8px rgba(255,255,255,0.1);
+      /* Enhanced comic shadow with gold glow */
+      box-shadow: 
+        0 4px 20px rgba(0,0,0,0.8),
+        0 0 25px rgba(255,215,0,0.4),
+        inset -2px -2px 8px rgba(0,0,0,0.7),
+        inset 2px 2px 8px rgba(255,255,255,0.1);
       transform-style: preserve-3d;
     }
     
@@ -440,6 +477,9 @@
       width: 100%;
       height: 100%;
       position: relative;
+      /* Counter-rotate content to keep it upright */
+      transform: rotate(45deg);
+      transform-origin: center;
     }
     
     .minimap-dot {
@@ -468,6 +508,33 @@
       height: 6px;
       background: #FFD700;
       box-shadow: 0 0 6px rgba(255,215,0,0.8);
+      /* Add quest marker symbol */
+      position: relative;
+    }
+    
+    /* Quest marker indicators on minimap */
+    .minimap-landmark.quest-available::before {
+      content: '!';
+      position: absolute;
+      top: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 10px;
+      font-weight: bold;
+      color: #FFD700;
+      text-shadow: 0 0 4px rgba(255,215,0,1);
+    }
+    
+    .minimap-landmark.quest-ready::before {
+      content: '?';
+      position: absolute;
+      top: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 10px;
+      font-weight: bold;
+      color: #5DADE2;
+      text-shadow: 0 0 4px rgba(93,173,226,1);
     }
     
     /* Stat Notification Queue - Red/Black Dominant */
@@ -1006,17 +1073,45 @@
     }
 
     .modal-content {
-      background: linear-gradient(to bottom, #2a2a3e, #1a1a2e); /* Darker, RPG-style gradient matching menu */
-      padding: 20px;
+      /* 80s BATMAN COMIC STYLE: Dark gradient with halftone */
+      background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%);
+      background-image: 
+        linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%),
+        radial-gradient(circle at 3px 3px, rgba(255,215,0,0.08) 2px, transparent 2px);
+      background-size: 100%, 15px 15px;
+      padding: 25px;
       border-radius: 20px;
-      border: 5px solid #FFD700; /* Golden border for level-up emphasis */
+      border: 6px solid #FFD700; /* Thicker gold border for comic emphasis */
       width: 85%;
       max-width: 600px; /* Increased from 350px to fit 2×3 grid */
       max-height: none; /* Remove height restriction - no scrolling needed */
       overflow-y: visible; /* No scrolling */
       text-align: center;
-      box-shadow: 0 15px 30px rgba(0,0,0,0.9), 0 0 50px rgba(255,215,0,0.7), inset 0 0 40px rgba(255,215,0,0.15), inset 0 0 0 2px rgba(0,0,0,0.5); /* Darker shadow and inner dark edge */
+      /* Enhanced comic shadow with double glow */
+      box-shadow: 
+        0 15px 30px rgba(0,0,0,0.9), 
+        0 0 60px rgba(255,215,0,0.9),
+        0 0 30px rgba(255,215,0,0.6),
+        inset 0 0 40px rgba(0,0,0,0.9),
+        inset 0 0 0 2px rgba(0,0,0,0.7);
       pointer-events: auto; /* Modal content should receive clicks */
+      position: relative;
+    }
+    
+    /* Comic panel glow effect */
+    /* Uses pulse animation defined globally at line 562 (@keyframes pulse) */
+    .modal-content::before {
+      content: '';
+      position: absolute;
+      top: -10px;
+      left: -10px;
+      right: -10px;
+      bottom: -10px;
+      background: linear-gradient(45deg, #FFD700 0%, #FFA500 50%, #FFD700 100%);
+      border-radius: 25px;
+      z-index: -1;
+      opacity: 0.4;
+      animation: pulse 2s infinite;
     }
     
     /* UPGRADE GRID: 2×3 grid layout for upgrade choices */
@@ -1028,23 +1123,41 @@
     }
 
     h2 {
-      color: #5DADE2;
+      /* 80s BATMAN COMIC STYLE */
+      /* Note: Impact font used for titles/headers, Bangers font used for body/numbers */
+      /* This creates visual hierarchy: bold titles (Impact) vs. playful content (Bangers) */
+      font-family: 'Impact', 'Arial Black', sans-serif;
+      color: #FFD700;
       margin-top: 0;
-      font-size: 32px;
-      text-shadow: 0 0 10px rgba(93,173,226,0.8), 0 0 20px rgba(93,173,226,0.6), 0 0 30px rgba(93,173,226,0.4), 2px 2px 4px rgba(0,0,0,0.8);
+      font-size: 36px;
+      text-shadow: 
+        4px 4px 0 #000,
+        -3px -3px 0 #000,
+        3px -3px 0 #000,
+        -3px 3px 0 #000,
+        0 0 30px rgba(255,215,0,1),
+        0 0 15px rgba(255,215,0,0.8);
+      letter-spacing: 2px;
+      text-transform: uppercase;
     }
 
     .upgrade-card {
-      /* Unified base color for all boxes */
-      background: linear-gradient(to bottom, #3a3a4e, #2a2a3e);
+      /* 80s BATMAN COMIC STYLE: Unified base with halftone */
+      background: linear-gradient(to bottom, #2a2a2a, #1a1a1a);
+      background-image: 
+        linear-gradient(to bottom, #2a2a2a, #1a1a1a),
+        radial-gradient(circle at 3px 3px, rgba(255,215,0,0.05) 2px, transparent 2px);
+      background-size: 100%, 12px 12px;
       margin: 0; /* No margin in grid layout */
-      padding: 15px;
+      padding: 18px;
       border-radius: 15px;
       /* Default border (standard upgrades - grey) */
-      border: 3px solid #888888;
+      border: 4px solid #888888;
       cursor: pointer;
       transition: transform 0.1s, box-shadow 0.2s, filter 0.2s;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.5), inset 0 0 0 2px rgba(0,0,0,0.4);
+      box-shadow: 
+        0 4px 8px rgba(0,0,0,0.6), 
+        inset 0 2px 4px rgba(0,0,0,0.5);
       position: relative;
     }
 
@@ -1236,22 +1349,50 @@
     /* Damage Numbers */
     .damage-number {
       position: absolute;
+      font-family: 'Bangers', 'M PLUS Rounded 1c', cursive; /* Comic font */
       font-weight: bold;
-      font-size: 16px;
+      font-size: 12px; /* SMALLER: Reduced from 16px */
       pointer-events: none;
       animation: floatUp 1s forwards;
       z-index: 1000;
+      letter-spacing: 0.5px;
     }
     
     .damage-number.critical {
+      /* CRIT MAGNITUDE COLOR: Bright gold for critical hits */
       color: #FFD700;
-      text-shadow: -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000, 0 0 10px rgba(255,215,0,0.8), 0 0 20px rgba(255,215,0,0.5), 2px 2px 4px rgba(0,0,0,0.9);
-      font-size: 24px;
+      text-shadow: 
+        -1px -1px 0 #000, 
+        1px -1px 0 #000, 
+        -1px 1px 0 #000, 
+        1px 1px 0 #000, 
+        0 0 8px rgba(255,215,0,0.9), 
+        0 0 15px rgba(255,215,0,0.6);
+      font-size: 18px; /* SMALLER: Reduced from 24px */
     }
     
     .damage-number.normal {
-      color: #FFFFFF;
-      text-shadow: -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000, 0 0 8px rgba(93,173,226,0.6), 0 0 15px rgba(93,173,226,0.3), 2px 2px 3px rgba(0,0,0,0.8);
+      /* NORMAL DAMAGE: White/light grey */
+      color: #DDDDDD;
+      text-shadow: 
+        -1px -1px 0 #000, 
+        1px -1px 0 #000, 
+        -1px 1px 0 #000, 
+        1px 1px 0 #000,
+        0 0 4px rgba(221,221,221,0.5);
+    }
+    
+    /* NEW: Super crit/headshot damage - bright red */
+    .damage-number.headshot {
+      color: #FF0000;
+      text-shadow: 
+        -2px -2px 0 #000, 
+        2px -2px 0 #000, 
+        -2px 2px 0 #000, 
+        2px 2px 0 #000, 
+        0 0 12px rgba(255,0,0,1), 
+        0 0 24px rgba(255,0,0,0.8);
+      font-size: 22px; /* Biggest for headshots */
     }
 
     @keyframes floatUp {
@@ -2932,7 +3073,17 @@
       lakeCenterZ: -30,
       lakeRadius: 18,
       // Performance optimization - Phase 1
-      maxEnemiesOnScreen: 50
+      maxEnemiesOnScreen: 50,
+      // Movement physics
+      accelLerpFactor: 0.12, // Acceleration smoothness
+      decelLerpFactor: 0.06, // Deceleration smoothness (glide effect)
+      movementLeanFactor: 0.15, // Tilt during movement
+      dashLeanFactor: 0.4, // Dramatic tilt during dash
+      dashLeanReturnDuration: 200, // ms to return to upright after dash
+      // Combat effects
+      meteorKnockbackMultiplier: 3, // Knockback strength
+      explosionShakeIntensity: 1.5, // Camera shake on explosions
+      smokeDurationFrames: 30 // Muzzle smoke lifetime (at 60fps = 0.5s)
     };
 
     // --- AUDIO SYSTEM (Oscillators) ---
@@ -3318,6 +3469,10 @@
     let flashLights = []; // Track temporary flash lights for cleanup
     let activeTimeouts = []; // Track active timeouts for cleanup
     let droneTurrets = []; // Track active drone turrets
+    
+    // Cinematic camera system
+    let cinematicActive = false;
+    let cinematicData = null;
     // Performance: Cache animated scene objects to avoid scene.traverse() every frame
     let animatedSceneObjects = {
       windmills: [],
@@ -3352,6 +3507,108 @@
     let killCamDuration = 0;
     let killCamType = null;
     let killCamData = {};
+    
+    // Cinematic Camera System - Dramatic sequences for mini-bosses and special events
+    function triggerCinematic(type, target, duration = 3000) {
+      if (cinematicActive) return; // Don't interrupt existing cinematic
+      
+      cinematicActive = true;
+      cinematicData = {
+        type: type,
+        target: target,
+        startTime: Date.now(),
+        duration: duration,
+        originalCameraPos: camera.position.clone(),
+        originalCameraTarget: new THREE.Vector3(player.mesh.position.x, 0, player.mesh.position.z)
+      };
+      
+      // Play dramatic sound for mini-boss
+      if (type === 'miniboss') {
+        playSound('hit', 1.5, 0.3); // Low pitch dramatic hit
+      }
+    }
+    
+    function updateCinematic() {
+      if (!cinematicActive || !cinematicData) return;
+      
+      const elapsed = Date.now() - cinematicData.startTime;
+      const progress = Math.min(elapsed / cinematicData.duration, 1);
+      
+      if (progress >= 1) {
+        // End cinematic - restore camera
+        camera.position.copy(cinematicData.originalCameraPos);
+        camera.lookAt(cinematicData.originalCameraTarget);
+        cinematicActive = false;
+        cinematicData = null;
+        return;
+      }
+      
+      // Different cinematic types
+      if (cinematicData.type === 'miniboss') {
+        // Mini-boss cinematic: zoom to boss, show flex, zoom back
+        const halfDuration = cinematicData.duration / 2;
+        
+        if (elapsed < halfDuration) {
+          // First half: zoom to boss
+          const zoomProgress = elapsed / halfDuration;
+          const targetPos = cinematicData.target.position;
+          
+          camera.position.x = cinematicData.originalCameraPos.x + (targetPos.x - cinematicData.originalCameraPos.x) * zoomProgress;
+          camera.position.z = cinematicData.originalCameraPos.z + ((targetPos.z + 12) - cinematicData.originalCameraPos.z) * zoomProgress;
+          camera.lookAt(targetPos.x, 0.5, targetPos.z);
+          
+          // Boss flex/roar animation
+          const flexScale = 1 + Math.sin(elapsed * 0.01) * 0.15;
+          cinematicData.target.scale.set(flexScale, flexScale, flexScale);
+          
+          // Screen shake
+          const shakeIntensity = 0.3 * Math.sin(elapsed * 0.02);
+          camera.position.x += (Math.random() - 0.5) * shakeIntensity;
+          camera.position.y += (Math.random() - 0.5) * shakeIntensity;
+        } else {
+          // Second half: zoom back to player
+          const returnProgress = (elapsed - halfDuration) / halfDuration;
+          const targetPos = cinematicData.target.position;
+          
+          camera.position.x = cinematicData.originalCameraPos.x + (targetPos.x - cinematicData.originalCameraPos.x) * (1 - returnProgress);
+          camera.position.z = cinematicData.originalCameraPos.z + ((targetPos.z + 12) - cinematicData.originalCameraPos.z) * (1 - returnProgress);
+          camera.lookAt(
+            player.mesh.position.x * returnProgress + targetPos.x * (1 - returnProgress),
+            0,
+            player.mesh.position.z * returnProgress + targetPos.z * (1 - returnProgress)
+          );
+          
+          // Reset boss scale gradually
+          const flexScale = 1 + Math.sin(elapsed * 0.01) * 0.15 * (1 - returnProgress);
+          cinematicData.target.scale.set(flexScale, flexScale, flexScale);
+        }
+      } else if (cinematicData.type === 'stonehenge') {
+        // Stonehenge chest cinematic: quick focus on chest location
+        const halfDuration = cinematicData.duration / 2;
+        
+        if (elapsed < halfDuration) {
+          // First half: pan to chest
+          const panProgress = elapsed / halfDuration;
+          const targetPos = cinematicData.target;
+          
+          camera.position.x = cinematicData.originalCameraPos.x + (targetPos.x - cinematicData.originalCameraPos.x) * panProgress;
+          camera.position.z = cinematicData.originalCameraPos.z + ((targetPos.z + 10) - cinematicData.originalCameraPos.z) * panProgress;
+          camera.lookAt(targetPos.x, 0, targetPos.z);
+        } else {
+          // Second half: pan back to player
+          const returnProgress = (elapsed - halfDuration) / halfDuration;
+          const targetPos = cinematicData.target;
+          
+          camera.position.x = cinematicData.originalCameraPos.x + (targetPos.x - cinematicData.originalCameraPos.x) * (1 - returnProgress);
+          camera.position.z = cinematicData.originalCameraPos.z + ((targetPos.z + 10) - cinematicData.originalCameraPos.z) * (1 - returnProgress);
+          camera.lookAt(
+            player.mesh.position.x * returnProgress + targetPos.x * (1 - returnProgress),
+            0,
+            player.mesh.position.z * returnProgress + targetPos.z * (1 - returnProgress)
+          );
+        }
+      }
+    }
     
     // Expose game state on window object for external access and fallback handlers (acceptance criteria #2)
     // These are kept in sync with local variables throughout the code
@@ -3724,7 +3981,7 @@
       sword: { active: false, level: 0, damage: 30, cooldown: 1500, lastShot: 0, range: 3.5 },
       aura: { active: false, level: 0, damage: 5, cooldown: 500, lastShot: 0, range: 3 },
       meteor: { active: false, level: 0, damage: 60, cooldown: 2500, lastShot: 0, area: 5 },
-      droneTurret: { active: false, level: 0, damage: 15, cooldown: 400, lastShot: 0, range: 15, droneCount: 1 },
+      droneTurret: { active: false, level: 0, damage: 12, cooldown: 250, lastShot: 0, range: 15, droneCount: 1 }, // Faster fire rate, lower damage per shot (same DPS)
       doubleBarrel: { active: false, level: 0, damage: 25, cooldown: 1200, lastShot: 0, range: 12, spread: 0.3 },
       iceSpear: { active: false, level: 0, damage: 20, cooldown: 1500, lastShot: 0, range: 15, slowPercent: 0.4, slowDuration: 2000 },
       fireRing: { active: false, level: 0, damage: 8, cooldown: 800, lastShot: 0, range: 4, orbs: 3, rotationSpeed: 2 }
@@ -4065,11 +4322,18 @@
             const speed = GAME_CONFIG.playerSpeedBase * (playerStats.walkSpeed / 25) * 60; // Base speed for 60fps
             targetVel.x = joystickLeft.x * speed * dt; // Frame-rate independent
             targetVel.z = joystickLeft.y * speed * dt;
+          }
           
-            this.mesh.position.x += targetVel.x;
-            this.mesh.position.z += targetVel.z;
+          // Enhanced inertia: Smooth acceleration and deceleration with glide
+          const lerpFactor = joystickLeft.active ? GAME_CONFIG.accelLerpFactor : GAME_CONFIG.decelLerpFactor;
+          this.velocity.lerp(targetVel, lerpFactor);
+          
+          // Apply velocity with inertia
+          this.mesh.position.x += this.velocity.x;
+          this.mesh.position.z += this.velocity.z;
 
-            // Enhanced water droplet trail when moving - MORE PARTICLES
+          // Enhanced water droplet trail when moving - MORE PARTICLES
+          if (this.velocity.length() > 0.01) {
             this.trailTimer += dt;
             if (this.trailTimer > 0.12) { // Faster trail (was 0.15)
               this.trailTimer = 0;
@@ -4082,6 +4346,18 @@
           } else {
             // Idle
             this.trailTimer = 0;
+          }
+          
+          // Add lean/tilt in direction of movement
+          if (this.velocity.length() > 0.05) {
+            const leanAngleX = -this.velocity.z * GAME_CONFIG.movementLeanFactor;
+            const leanAngleZ = this.velocity.x * GAME_CONFIG.movementLeanFactor;
+            this.mesh.rotation.x = leanAngleX;
+            this.mesh.rotation.z = leanAngleZ;
+          } else {
+            // Return to upright when idle
+            this.mesh.rotation.x *= 0.9;
+            this.mesh.rotation.z *= 0.9;
           }
           
           // Rotation/Aiming with RIGHT stick (independent of movement)
@@ -4143,11 +4419,6 @@
             const angle = Math.atan2(targetVel.x, targetVel.z);
             this.mesh.rotation.y = angle;
           }
-
-          // Inertia / Squish Effect - Enhanced for Phase 1
-          // Lerp velocity for smooth transition with more acceleration feel
-          const lerpFactor = joystickLeft.active ? 0.15 : 0.08; // Faster accel, slower decel
-          this.velocity.lerp(targetVel, lerpFactor);
         }
         
         const speedMag = this.velocity.length();
@@ -4417,8 +4688,35 @@
         // Direct mapping: Screen coordinates to World coordinates
         // Screen X-axis maps to World X-axis
         // Screen Y-axis maps to World Z-axis
-        // This gives us proper 360-degree directional dash
         this.dashVec.set(dx, 0, dz).normalize();
+        
+        // Add dramatic lean/tilt in dash direction
+        const dashAngleX = -dz * GAME_CONFIG.dashLeanFactor;
+        const dashAngleZ = dx * GAME_CONFIG.dashLeanFactor;
+        
+        // Animate tilt during dash
+        const originalRotX = this.mesh.rotation.x;
+        const originalRotZ = this.mesh.rotation.z;
+        
+        // Quick tilt into dash
+        this.mesh.rotation.x = dashAngleX;
+        this.mesh.rotation.z = dashAngleZ;
+        
+        // Return to normal after dash with smooth animation
+        setTimeout(() => {
+          let returnProgress = 0;
+          const returnDuration = GAME_CONFIG.dashLeanReturnDuration;
+          const returnAnim = () => {
+            returnProgress += 16; // ~16ms per frame
+            const t = Math.min(returnProgress / returnDuration, 1);
+            this.mesh.rotation.x = dashAngleX * (1 - t);
+            this.mesh.rotation.z = dashAngleZ * (1 - t);
+            if (t < 1) {
+              requestAnimationFrame(returnAnim);
+            }
+          };
+          returnAnim();
+        }, this.dashDuration * 1000);
         
         // Water splash sound
         playSound('splash');
@@ -6544,12 +6842,79 @@
                   prop.mesh.geometry.dispose();
                   prop.mesh.material.dispose();
                 }
+              } else {
+                // Tree movement on hit (shake/sway from impact)
+                if (prop.type === 'tree' && prop.mesh.userData.swayPhase !== undefined) {
+                  // Add extra sway from bullet impact
+                  prop.mesh.userData.swayAmount = Math.min(0.3, prop.mesh.userData.swayAmount + 0.1);
+                  // Gradually reduce sway back to normal
+                  setTimeout(() => {
+                    if (!prop.destroyed && prop.mesh.userData.swayAmount) {
+                      prop.mesh.userData.swayAmount = Math.max(0.05, prop.mesh.userData.swayAmount - 0.05);
+                    }
+                  }, 500);
+                }
               }
               
               // Small particle effect on hit
               spawnParticles(prop.mesh.position, 0x888888, 3);
               
               this.destroy();
+              break;
+            }
+          }
+        }
+        
+        // FRESH: Fence collision - fences can be damaged and broken by bullets
+        if (window.breakableFences) {
+          for (let fence of window.breakableFences) {
+            if (!fence.userData.isFence || fence.userData.hp <= 0) continue;
+            const dx = this.mesh.position.x - fence.position.x;
+            const dz = this.mesh.position.z - fence.position.z;
+            if (dx*dx + dz*dz < 1.5) { // Hit radius
+              // Damage fence
+              const dmg = weapons.gun.damage * 0.3; // Fences take less damage
+              fence.userData.hp -= dmg;
+              
+              // Shake effect on hit
+              fence.rotation.x = (Math.random() - 0.5) * 0.3;
+              fence.rotation.z = (Math.random() - 0.5) * 0.3;
+              
+              // Visual damage
+              const hpPercent = fence.userData.hp / fence.userData.maxHp;
+              if (hpPercent < 0.5) {
+                fence.material.color.setHex(0x654321); // Darken when damaged
+              }
+              
+              if (fence.userData.hp <= 0) {
+                // Fence broken! Create debris
+                spawnParticles(fence.position, 0x8B4513, 15); // Brown wood debris
+                spawnParticles(fence.position, 0x654321, 10);
+                
+                // Animate fence falling
+                const fallDirection = Math.random() < 0.5 ? 1 : -1;
+                const startRotX = fence.rotation.x;
+                const fallDuration = 500;
+                const fallStart = Date.now();
+                
+                const fallInterval = setInterval(() => {
+                  const elapsed = Date.now() - fallStart;
+                  const progress = Math.min(elapsed / fallDuration, 1);
+                  fence.rotation.x = startRotX + (Math.PI / 2) * progress * fallDirection;
+                  fence.position.y = 1 - progress * 0.8; // Sink down
+                  
+                  if (progress >= 1) {
+                    clearInterval(fallInterval);
+                    scene.remove(fence);
+                    fence.geometry.dispose();
+                    fence.material.dispose();
+                  }
+                }, 16);
+              }
+              
+              // Bullet destroyed on fence hit
+              this.destroy();
+              playSound('hit');
               break;
             }
           }
@@ -6761,7 +7126,7 @@
         this.shadow.geometry.dispose();
         this.shadow.material.dispose();
         
-        // AOE Damage
+        // AOE Damage with knockback
         const range = weapons.meteor.area;
         const dmg = weapons.meteor.damage * playerStats.strength;
         
@@ -6769,12 +7134,54 @@
           const d = e.mesh.position.distanceTo(this.target);
           if (d < range) {
             e.takeDamage(dmg);
+            
+            // Apply knockback to enemies
+            const knockbackDir = new THREE.Vector3(
+              e.mesh.position.x - this.target.x,
+              0,
+              e.mesh.position.z - this.target.z
+            ).normalize();
+            
+            // Knockback strength inversely proportional to distance
+            const knockbackStrength = (1 - d / range) * GAME_CONFIG.meteorKnockbackMultiplier;
+            e.mesh.position.x += knockbackDir.x * knockbackStrength;
+            e.mesh.position.z += knockbackDir.z * knockbackStrength;
+            
+            // Add visual bounce effect
+            const originalY = e.mesh.position.y;
+            e.mesh.position.y = originalY + 0.5 * (1 - d / range);
+            setTimeout(() => {
+              e.mesh.position.y = originalY;
+            }, 200);
           }
         });
         
-        // Visuals
-        spawnParticles(this.target, 0xFF4500, 10);
-        spawnParticles(this.target, 0xFFFF00, 5);
+        // Enhanced visuals - thinner, more realistic explosion
+        spawnParticles(this.target, 0xFF4500, 8); // Reduced count for thinner look
+        spawnParticles(this.target, 0xFFFF00, 4);
+        spawnParticles(this.target, 0xFF8C00, 6); // Dark orange
+        spawnMuzzleSmoke(this.target, 10); // Add smoke cloud
+        
+        // Camera shake for explosion
+        const shakeIntensity = GAME_CONFIG.explosionShakeIntensity;
+        const originalCameraPos = camera.position.clone();
+        let shakeTime = 0;
+        const shakeDuration = 0.3;
+        
+        const shakeAnim = () => {
+          shakeTime += 0.016;
+          if (shakeTime < shakeDuration) {
+            const intensity = (1 - shakeTime / shakeDuration) * shakeIntensity;
+            camera.position.x = originalCameraPos.x + (Math.random() - 0.5) * intensity;
+            camera.position.y = originalCameraPos.y + (Math.random() - 0.5) * intensity;
+            camera.position.z = originalCameraPos.z + (Math.random() - 0.5) * intensity;
+            requestAnimationFrame(shakeAnim);
+          } else {
+            camera.position.copy(originalCameraPos);
+          }
+        };
+        shakeAnim();
+        
         playSound('meteor'); // Explosive boom sound
       }
     }
@@ -6963,6 +7370,19 @@
         this.waterFill.position.y = -0.1;
         this.mesh.add(this.waterFill);
         
+        // Add animated shadow on ground
+        const shadowGeo = new THREE.CircleGeometry(0.25, 16);
+        const shadowMat = new THREE.MeshBasicMaterial({ 
+          color: 0x000000, 
+          transparent: true, 
+          opacity: 0.3,
+          depthWrite: false 
+        });
+        this.shadow = new THREE.Mesh(shadowGeo, shadowMat);
+        this.shadow.rotation.x = -Math.PI / 2;
+        this.shadow.position.set(x, 0.05, z);
+        scene.add(this.shadow);
+        
         this.active = true;
         // FRESH: Randomized rotation speed and direction for each XP drop
         this.rotSpeed = (Math.random() * 0.12 + 0.04) * (Math.random() < 0.5 ? 1 : -1); // 0.04-0.16, random direction
@@ -6986,6 +7406,13 @@
         this.bobPhase += 0.05;
         this.mesh.position.y = 0.5 + Math.sin(this.bobPhase) * 0.1;
         
+        // Animate shadow to follow bob (shadow stays on ground but changes size)
+        if (this.shadow) {
+          const shadowScale = 0.8 + Math.sin(this.bobPhase) * 0.2; // Larger when lower, smaller when higher
+          this.shadow.scale.set(shadowScale, shadowScale, 1);
+          this.shadow.material.opacity = 0.2 + Math.sin(this.bobPhase) * 0.1; // More opaque when closer to ground
+        }
+        
         // Sparkle effect on shell
         this.sparklePhase += 0.1;
         this.mesh.material.emissiveIntensity = 0.3 + Math.sin(this.sparklePhase) * 0.2;
@@ -7004,6 +7431,12 @@
         if (dist < magnetRange) { // Use magnetRange variable
           this.mesh.position.x += (dx / dist) * 0.3;
           this.mesh.position.z += (dz / dist) * 0.3;
+          
+          // Update shadow position
+          if (this.shadow) {
+            this.shadow.position.x = this.mesh.position.x;
+            this.shadow.position.z = this.mesh.position.z;
+          }
           
           // Visual Trail when pulled - blue particles with sparkle (PR #117)
           if (Math.random() < 0.3) {
@@ -7078,6 +7511,13 @@
         scene.remove(this.mesh);
         this.mesh.geometry.dispose();
         this.mesh.material.dispose();
+        
+        // Remove shadow
+        if (this.shadow) {
+          scene.remove(this.shadow);
+          this.shadow.geometry.dispose();
+          this.shadow.material.dispose();
+        }
         
         addExp(this.value);
         playSound('collect');
@@ -10195,6 +10635,17 @@
           saveData.tutorialQuests.currentQuest = quest.nextQuest;
           saveSaveData();
           showNextQuestPopup(quest.nextQuest);
+          
+          // Trigger Stonehenge cinematic when quest 6 starts
+          if (quest.nextQuest === 'quest6_stonehengeChest' && window.stonehengeChest) {
+            setTimeout(() => {
+              if (!saveData.tutorialQuests.stonehengeChestCinematicShown) {
+                triggerCinematic('stonehenge', window.stonehengeChest.position, 2000);
+                saveData.tutorialQuests.stonehengeChestCinematicShown = true;
+                saveSaveData();
+              }
+            }, 500);
+          }
         }
       }
       
@@ -10875,45 +11326,64 @@
       rondel.receiveShadow = true;
       scene.add(rondel);
       
-      // Path material - smooth dirt/gravel path
-      const pathMat = new THREE.MeshPhysicalMaterial({ 
-        color: 0x9A8A6A, // Light brown dirt
+      // Path material - brown dirt road
+      const roadMat = new THREE.MeshPhysicalMaterial({ 
+        color: 0x8B7355, // Brown dirt
+        metalness: 0.0,
+        roughness: 0.9,
+      });
+      
+      // Grass strip material for middle of roads
+      const grassStripMat = new THREE.MeshPhysicalMaterial({ 
+        color: 0x5A7D3C, // Darker green grass
         metalness: 0.0,
         roughness: 0.85,
       });
       
-      // Helper function to create smooth straight path
-      function createPath(startX, startZ, endX, endZ, width = 3) {
+      // Helper function to create wagon road with grass strip in middle
+      function createWagonRoad(startX, startZ, endX, endZ, roadWidth = 4) {
         const length = Math.sqrt((endX - startX) ** 2 + (endZ - startZ) ** 2);
         const angle = Math.atan2(endZ - startZ, endX - startX);
+        const midX = (startX + endX) / 2;
+        const midZ = (startZ + endZ) / 2;
         
-        // Create path as single mesh for performance
-        const pathGeo = new THREE.PlaneGeometry(width, length);
-        const path = new THREE.Mesh(pathGeo, pathMat);
-        path.rotation.x = -Math.PI/2;
-        path.rotation.z = angle - Math.PI/2;
-        path.position.set((startX + endX) / 2, 0.02, (startZ + endZ) / 2);
-        path.receiveShadow = true;
-        scene.add(path);
+        // Create main road (brown dirt)
+        const roadGeo = new THREE.PlaneGeometry(roadWidth, length);
+        const road = new THREE.Mesh(roadGeo, roadMat);
+        road.rotation.x = -Math.PI/2;
+        road.rotation.z = angle - Math.PI/2;
+        road.position.set(midX, 0.02, midZ);
+        road.receiveShadow = true;
+        scene.add(road);
+        
+        // Create grass strip in middle (1/3 width of road)
+        const grassStripWidth = roadWidth / 3;
+        const grassGeo = new THREE.PlaneGeometry(grassStripWidth, length);
+        const grassStrip = new THREE.Mesh(grassGeo, grassStripMat);
+        grassStrip.rotation.x = -Math.PI/2;
+        grassStrip.rotation.z = angle - Math.PI/2;
+        grassStrip.position.set(midX, 0.03, midZ); // Slightly above road
+        grassStrip.receiveShadow = true;
+        scene.add(grassStrip);
       }
       
-      // 4 Main Paths from Central Hub (Rondel):
-      // Paths start from different points on the rondel edge based on direction
+      // 4 Main Wagon Roads from Central Hub (Rondel):
+      // Roads start from different points on the rondel edge based on direction
       
-      // 1. Path to Stonehenge (60, 60) - Northeast direction
-      createPath(rondelRadius * 0.707, rondelRadius * 0.707, 60, 60, 3);
+      // 1. Road to Stonehenge (60, 60) - Northeast direction
+      createWagonRoad(rondelRadius * 0.707, rondelRadius * 0.707, 60, 60, 4);
       
-      // 2. Path to Illuminati Pyramid (-70, 50) - Northwest direction  
-      createPath(-rondelRadius * 0.6, rondelRadius * 0.8, -70, 50, 3);
+      // 2. Road to Illuminati Pyramid (-70, 50) - Northwest direction  
+      createWagonRoad(-rondelRadius * 0.6, rondelRadius * 0.8, -70, 50, 4);
       
-      // 3. Path to Lake (30, -30) - Southeast direction
-      createPath(rondelRadius * 0.707, -rondelRadius * 0.707, 30, -30, 3);
+      // 3. Road to Lake (30, -30) - Southeast direction
+      createWagonRoad(rondelRadius * 0.707, -rondelRadius * 0.707, 30, -30, 4);
       
-      // 4. Path to Windmill (40, 40) - East direction (slightly different from Stonehenge)
-      createPath(rondelRadius * 0.9, rondelRadius * 0.436, 40, 40, 3);
+      // 4. Road to Windmill (40, 40) - East direction
+      createWagonRoad(rondelRadius * 0.9, rondelRadius * 0.436, 40, 40, 4);
       
-      // 5. Path to Tesla Tower (-80, -80) - Northwest direction
-      createPath(-rondelRadius * 0.707, -rondelRadius * 0.707, -80, -80, 3);
+      // 5. Road to Tesla Tower (-80, -80) - Southwest direction
+      createWagonRoad(-rondelRadius * 0.707, -rondelRadius * 0.707, -80, -80, 4);
       
       // Farm Fields - Fill empty spaces with farm texture
       // Create large farm field background (performance optimized - single large mesh)
@@ -10940,7 +11410,8 @@
         scene.add(fieldMesh);
       });
 
-      // Wooden fences around play area
+      // Wooden fences around play area - now breakable!
+      window.breakableFences = []; // Store all fences for collision/damage detection
       const fenceMat = new THREE.MeshToonMaterial({ color: 0x8B4513 });
       const postGeo = new THREE.BoxGeometry(0.3, 2, 0.3);
       const railGeo = new THREE.BoxGeometry(4, 0.2, 0.2);
@@ -10952,17 +11423,21 @@
         const z = Math.sin(angle) * 85;
         
         // Fence post
-        const post = new THREE.Mesh(postGeo, fenceMat);
+        const post = new THREE.Mesh(postGeo, fenceMat.clone());
         post.position.set(x, 1, z);
         post.castShadow = true;
+        post.userData = { isFence: true, hp: 15, maxHp: 15, originalPosition: post.position.clone() };
         scene.add(post);
+        window.breakableFences.push(post);
         
         // Fence rail
         if (i % 2 === 0) {
-          const rail = new THREE.Mesh(railGeo, fenceMat);
+          const rail = new THREE.Mesh(railGeo, fenceMat.clone());
           rail.position.set(x, 1, z);
           rail.rotation.y = angle;
+          rail.userData = { isFence: true, hp: 10, maxHp: 10, originalPosition: rail.position.clone(), railAngle: angle };
           scene.add(rail);
+          window.breakableFences.push(rail);
         }
       }
 
@@ -11015,6 +11490,13 @@
       const wmBlades2 = wmBlades.clone();
       wmBlades2.rotation.z = Math.PI/2;
       wmGroup.add(wmBlades2);
+      
+      // Add broken/damaged blade (third blade bent and damaged)
+      const brokenBlade = new THREE.Mesh(new THREE.BoxGeometry(6, 0.8, 0.9), new THREE.MeshBasicMaterial({color: 0x654321})); // Darker brown (damaged)
+      brokenBlade.position.set(-3, 7, 2);
+      brokenBlade.rotation.z = Math.PI * 0.15; // Bent at angle
+      wmGroup.add(brokenBlade);
+      
       // Store blades reference for rotation animation
       wmGroup.userData = { isWindmill: true, blades: [wmBlades, wmBlades2], hp: 600, maxHp: 600, questActive: false, light: wmLight };
       scene.add(wmGroup);
@@ -11056,6 +11538,27 @@
       signpostGroup.add(sprite);
       
       scene.add(signpostGroup);
+      
+      // Farm field near windmill (plowed rows)
+      const windmillFieldGroup = new THREE.Group();
+      windmillFieldGroup.position.set(45, 0, 50); // Near windmill but not overlapping
+      const fieldSoilMat = new THREE.MeshToonMaterial({ color: 0x654321 }); // Brown soil
+      for (let row = 0; row < 5; row++) {
+        for (let col = 0; col < 6; col++) {
+          const fieldPlot = new THREE.Mesh(
+            new THREE.PlaneGeometry(1.2, 1.2),
+            fieldSoilMat
+          );
+          fieldPlot.rotation.x = -Math.PI / 2;
+          fieldPlot.position.set(
+            -3 + col * 1.5,
+            0.01,
+            -3 + row * 1.5
+          );
+          windmillFieldGroup.add(fieldPlot);
+        }
+      }
+      scene.add(windmillFieldGroup);
       
       // Mine
       const mineGeo = new THREE.DodecahedronGeometry(5);
@@ -11436,7 +11939,7 @@
 
       // Farm Area near windmill
       const farmGroup = new THREE.Group();
-      farmGroup.position.set(35, 0, 35); // Near windmill
+      farmGroup.position.set(50, 0, 35); // Moved further back from spawn
       
       // Wheat field (50 stalks)
       const wheatGeo = new THREE.ConeGeometry(0.1, 0.8, 4);
@@ -12150,6 +12653,10 @@
           maxHp = 50;
           mesh.userData.trunk = trunk;
           mesh.userData.leaves = leaves;
+          // Add sway animation data
+          mesh.userData.swayPhase = Math.random() * Math.PI * 2; // Random starting phase
+          mesh.userData.swaySpeed = 0.5 + Math.random() * 0.5; // Random sway speed
+          mesh.userData.swayAmount = 0.05 + Math.random() * 0.05; // Sway intensity
         } else if (type === 'barrel') {
           // Barrel: cylinder
           const barrelGeo = new THREE.CylinderGeometry(0.4, 0.4, 1, 8);
@@ -12311,8 +12818,9 @@
       scene = new THREE.Scene();
       scene.background = new THREE.Color(COLORS.bg);
       // Enhanced fog for depth - reacts to day/night cycle lighting
-      // PERFORMANCE: Tighter fog distance for better performance (reduced from 15,45 to 12,35)
-      scene.fog = new THREE.Fog(COLORS.bg, 12, 35);
+      // PERFORMANCE: Tighter fog distance for better performance (reduced from 15,45 to 10,28 for 60fps target)
+      // Testing shows stable 60fps on mid-range hardware with this setting. May need adjustment for low-end devices.
+      scene.fog = new THREE.Fog(COLORS.bg, 10, 28);
       
       // Phase 5: Initialize particle object pool for performance (100 particles pre-allocated)
       particlePool = new ObjectPool(
@@ -12323,10 +12831,12 @@
 
       // Camera (Orthographic for miniature look)
       // CAMERA: Zoomed in closer, angle slightly lower to ground
+      // Evolution: d=20 (original) → d=16 (Phase 1) → d=14 (Phase 2 - optimal miniature effect with good visibility)
+      // Position: (20,20,20) → (18,15,18) → (16,13,16) for lower angle and closer feel
       const aspect = window.innerWidth / window.innerHeight;
-      const d = 16; // Reduced from 20 for closer zoom
+      const d = 14; // Reduced from 16 for even closer zoom
       camera = new THREE.OrthographicCamera(-d * aspect, d * aspect, d, -d, 1, 1000);
-      camera.position.set(18, 15, 18); // Closer to ground, lower angle (was 20, 20, 20)
+      camera.position.set(16, 13, 16); // Even closer to ground, lower angle
       camera.lookAt(scene.position);
 
       // Renderer
@@ -12509,13 +13019,13 @@
       const optionsCampBtn = document.getElementById('options-camp-btn');
       
       menuBtn.addEventListener('click', () => {
-        isPaused = true;
+        setGamePaused(true);
         optionsMenu.style.display = 'flex';
         playSound('waterdrop');
       });
       
       closeOptionsBtn.addEventListener('click', () => {
-        isPaused = false;
+        setGamePaused(false);
         optionsMenu.style.display = 'none';
         playSound('waterdrop');
       });
@@ -12527,7 +13037,7 @@
       
       optionsCampBtn.addEventListener('click', () => {
         optionsMenu.style.display = 'none';
-        isPaused = true;
+        setGamePaused(true);
         updateCampScreen();
         
         // Ensure buildings tab is selected (not sleep/day-night selection)
@@ -12557,7 +13067,7 @@
       
       optionsSettingsBtn.addEventListener('click', () => {
         optionsMenu.style.display = 'none';
-        isPaused = true;
+        setGamePaused(true);
         // Open settings modal
         document.getElementById('settings-modal').style.display = 'flex';
       });
@@ -12567,7 +13077,7 @@
       if (optionsProgressionBtn) {
         optionsProgressionBtn.addEventListener('click', () => {
           optionsMenu.style.display = 'none';
-          isPaused = true;
+          setGamePaused(true);
           showProgressionShop();
           playSound('waterdrop');
         });
@@ -12578,7 +13088,7 @@
       if (optionsAttributesBtn) {
         optionsAttributesBtn.addEventListener('click', () => {
           optionsMenu.style.display = 'none';
-          isPaused = true;
+          setGamePaused(true);
           updateAttributesScreen();
           document.getElementById('attributes-screen').style.display = 'flex';
           playSound('waterdrop');
@@ -12590,7 +13100,7 @@
       if (optionsGearBtn) {
         optionsGearBtn.addEventListener('click', () => {
           optionsMenu.style.display = 'none';
-          isPaused = true;
+          setGamePaused(true);
           updateGearScreen();
           document.getElementById('gear-screen').style.display = 'flex';
           playSound('waterdrop');
@@ -12602,7 +13112,7 @@
       if (optionsAchievementsBtn) {
         optionsAchievementsBtn.addEventListener('click', () => {
           optionsMenu.style.display = 'none';
-          isPaused = true;
+          setGamePaused(true);
           updateAchievementsScreen();
           document.getElementById('achievements-screen').style.display = 'flex';
           playSound('waterdrop');
@@ -12614,7 +13124,7 @@
       if (optionsCreditsBtn) {
         optionsCreditsBtn.addEventListener('click', () => {
           optionsMenu.style.display = 'none';
-          isPaused = true;
+          setGamePaused(true);
           document.getElementById('credits-screen').style.display = 'flex';
           playSound('waterdrop');
         });
@@ -12622,13 +13132,13 @@
       
       document.getElementById('settings-btn').onclick = () => {
         playSound('waterdrop');
-        isPaused = true;
+        setGamePaused(true);
         document.getElementById('settings-modal').style.display = 'flex';
       };
       
       document.getElementById('settings-close-btn').onclick = () => {
         playSound('waterdrop');
-        isPaused = false;
+        setGamePaused(false);
         document.getElementById('settings-modal').style.display = 'none';
       };
       
@@ -12945,8 +13455,12 @@
         const dist = 28;
         const ex = player.mesh.position.x + Math.cos(angle) * dist;
         const ez = player.mesh.position.z + Math.sin(angle) * dist;
-        enemies.push(new Enemy(10, ex, ez, playerStats.lvl));
+        const miniBoss = new Enemy(10, ex, ez, playerStats.lvl);
+        enemies.push(miniBoss);
         createFloatingText("MINI-BOSS INCOMING!", player.mesh.position);
+        
+        // Trigger cinematic for mini-boss spawn
+        triggerCinematic('miniboss', miniBoss.mesh, 3000);
         
         // Spawn 1-2 regular enemies with the mini-boss (reduced from 2-3)
         const supportCount = 1 + Math.floor(Math.random() * 2);
@@ -13249,6 +13763,52 @@
         particles.push(particle);
       }
     }
+    
+    // Enhanced muzzle smoke effect
+    function spawnMuzzleSmoke(pos, count = 5) {
+      for(let i = 0; i < count; i++) {
+        const smokeGeo = new THREE.SphereGeometry(0.15, 6, 6);
+        const smokeMat = new THREE.MeshBasicMaterial({ 
+          color: 0x666666, 
+          transparent: true, 
+          opacity: 0.5,
+          depthWrite: false
+        });
+        const smoke = new THREE.Mesh(smokeGeo, smokeMat);
+        smoke.position.set(
+          pos.x + (Math.random() - 0.5) * 0.3,
+          pos.y + 0.5,
+          pos.z + (Math.random() - 0.5) * 0.3
+        );
+        scene.add(smoke);
+        
+        // Animate smoke rising and fading
+        const velocity = {
+          x: (Math.random() - 0.5) * 0.02,
+          y: 0.03 + Math.random() * 0.02,
+          z: (Math.random() - 0.5) * 0.02
+        };
+        
+        let life = GAME_CONFIG.smokeDurationFrames;
+        const update = () => {
+          life--;
+          smoke.position.x += velocity.x;
+          smoke.position.y += velocity.y;
+          smoke.position.z += velocity.z;
+          smoke.scale.multiplyScalar(1.05); // Expand
+          smokeMat.opacity = (life / GAME_CONFIG.smokeDurationFrames) * 0.5;
+          
+          if (life <= 0) {
+            scene.remove(smoke);
+            smokeGeo.dispose();
+            smokeMat.dispose();
+          } else {
+            requestAnimationFrame(update);
+          }
+        };
+        update();
+      }
+    }
 
     function spawnExp(x, z) {
       expGems.push(new ExpGem(x, z));
@@ -13330,13 +13890,18 @@
     }
 
     function levelUp() {
-      isPaused = true;
+      setGamePaused(true);
       
       // Lock camera during level-up to prevent zoom changes
+      // Save both position and projection for proper restoration
       savedCameraPosition = { 
         x: camera.position.x, 
         y: camera.position.y, 
-        z: camera.position.z 
+        z: camera.position.z,
+        left: camera.left,
+        right: camera.right,
+        top: camera.top,
+        bottom: camera.bottom
       };
       
       // Pause combo timer during level-up (only if combo is still active)
@@ -14531,13 +15096,18 @@
           modal.querySelector('h2').innerText = 'LEVEL UP!';
           modal.querySelector('h2').style.fontSize = '32px';
           
-          // Restore camera position after level-up
+          // Restore camera position and projection after level-up
           if (savedCameraPosition) {
             camera.position.set(savedCameraPosition.x, savedCameraPosition.y, savedCameraPosition.z);
+            camera.left = savedCameraPosition.left;
+            camera.right = savedCameraPosition.right;
+            camera.top = savedCameraPosition.top;
+            camera.bottom = savedCameraPosition.bottom;
+            camera.updateProjectionMatrix();
             savedCameraPosition = null; // Clear after restoration
           }
           
-          isPaused = false;
+          setGamePaused(false);
           
           // Resume combo timer after level-up
           if (comboState.pausedAt) {
@@ -15267,10 +15837,19 @@
       }
     }
 
-    function createDamageNumber(amount, pos, isCrit = false) {
+    function createDamageNumber(amount, pos, isCrit = false, isHeadshot = false) {
       const div = document.createElement('div');
-      div.className = isCrit ? 'damage-number critical' : 'damage-number normal';
-      div.innerText = isCrit ? `CRITICAL!\n${Math.floor(amount)}` : Math.floor(amount);
+      // Color code by damage type: headshot (red) > crit (gold) > normal (white)
+      if (isHeadshot) {
+        div.className = 'damage-number headshot';
+        div.innerText = `HEADSHOT!\n${Math.floor(amount)}`;
+      } else if (isCrit) {
+        div.className = 'damage-number critical';
+        div.innerText = `CRIT!\n${Math.floor(amount)}`;
+      } else {
+        div.className = 'damage-number normal';
+        div.innerText = Math.floor(amount);
+      }
       
       // Project 3D pos to 2D screen
       const vec = pos.clone();
@@ -15812,9 +16391,9 @@
         activeCompanion = null;
       }
       
-      // COMPANION UNLOCKS AFTER QUEST 5 (companion egg quest)
-      // Check if quest 5 (breed companion quest) is completed
-      const quest5Completed = saveData.storyQuests?.completedQuests?.includes('quest5_breedCompanion') || false;
+      // COMPANION UNLOCKS AFTER QUEST 5 (breed companion quest)
+      // Quest 4 gives the egg, Quest 5 is to activate it
+      const quest5Completed = saveData.tutorialQuests?.completedQuests?.includes('quest5_breedCompanion') || false;
       
       if (saveData.selectedCompanion && 
           saveData.companions[saveData.selectedCompanion]?.unlocked &&
@@ -15822,7 +16401,7 @@
         activeCompanion = new Companion(saveData.selectedCompanion);
         console.log('[Phase 5] Spawned companion:', saveData.selectedCompanion, 'after completing quest 5');
       } else if (!quest5Completed) {
-        console.log('[Companion] Hidden until quest 5 (companion egg quest) is completed');
+        console.log('[Companion] Hidden until quest 5 (breed companion) is completed');
       }
 
       // Reset Player - Spawn near the statue at map center
@@ -16313,11 +16892,14 @@
       
       // Calculate sun position and lighting based on time of day
       // 0 = midnight (dark), 0.25 = sunrise, 0.5 = noon (bright), 0.75 = sunset, 1 = midnight
+      // Use smoothstep easing for smoother color transitions
+      const smoothstep = (t) => t * t * (3 - 2 * t); // Smooth interpolation
+      
       let sunIntensity, ambientIntensity, skyColor;
       
       if (t < 0.25) {
         // Night to sunrise (0 -> 0.25)
-        const phase = t / 0.25;
+        const phase = smoothstep(t / 0.25); // Smooth easing
         sunIntensity = 0.2 + (0.6 * phase); // 0.2 -> 0.8
         ambientIntensity = 0.3 + (0.3 * phase); // 0.3 -> 0.6
         skyColor = new THREE.Color().lerpColors(
@@ -16327,13 +16909,13 @@
         );
       } else if (t < 0.5) {
         // Sunrise to noon (0.25 -> 0.5)
-        const phase = (t - 0.25) / 0.25;
+        const phase = smoothstep((t - 0.25) / 0.25);
         sunIntensity = 0.8 + (0.2 * phase); // 0.8 -> 1.0
         ambientIntensity = 0.6 + (0.1 * phase); // 0.6 -> 0.7
         skyColor = new THREE.Color(0x87CEEB); // Bright day
       } else if (t < 0.75) {
         // Noon to sunset (0.5 -> 0.75)
-        const phase = (t - 0.5) / 0.25;
+        const phase = smoothstep((t - 0.5) / 0.25);
         sunIntensity = 1.0 - (0.6 * phase); // 1.0 -> 0.4
         ambientIntensity = 0.7 - (0.3 * phase); // 0.7 -> 0.4
         skyColor = new THREE.Color().lerpColors(
@@ -16343,7 +16925,7 @@
         );
       } else {
         // Sunset to night (0.75 -> 1.0)
-        const phase = (t - 0.75) / 0.25;
+        const phase = smoothstep((t - 0.75) / 0.25);
         sunIntensity = 0.4 - (0.2 * phase); // 0.4 -> 0.2
         ambientIntensity = 0.4 - (0.1 * phase); // 0.4 -> 0.3
         skyColor = new THREE.Color().lerpColors(
@@ -16353,16 +16935,25 @@
         );
       }
       
-      // Apply lighting changes smoothly (non-blocking)
-      window.ambientLight.intensity = ambientIntensity;
-      window.dirLight.intensity = sunIntensity;
+      // Apply lighting changes with lerp for extra smoothness
+      const lerpSpeed = 0.1; // Smooth transition speed
+      window.ambientLight.intensity += (ambientIntensity - window.ambientLight.intensity) * lerpSpeed;
+      window.dirLight.intensity += (sunIntensity - window.dirLight.intensity) * lerpSpeed;
       
-      // Update sky color
-      scene.background = skyColor;
+      // Update sky color with lerp for smooth transitions
+      if (!window.currentSkyColor) {
+        window.currentSkyColor = skyColor.clone();
+      }
+      window.currentSkyColor.lerp(skyColor, lerpSpeed);
+      scene.background = window.currentSkyColor;
       
-      // Update fog color to match sky (fog reacts to lighting)
+      // Update fog color to match sky (fog reacts to lighting) with lerp
       if (scene.fog) {
-        scene.fog.color = skyColor;
+        if (!window.currentFogColor) {
+          window.currentFogColor = window.currentSkyColor.clone();
+        }
+        window.currentFogColor.lerp(window.currentSkyColor, lerpSpeed);
+        scene.fog.color = window.currentFogColor;
       }
       
       // Move sun position in an arc
@@ -16587,6 +17178,9 @@
 
       // Update Kill Cam effects
       updateKillCam(dt);
+      
+      // Update Cinematic Camera effects
+      updateCinematic();
 
       // Player Update
       if (killCamActive) {
@@ -16596,8 +17190,56 @@
         player.update(dt);
         camera.position.x = prevCamX;
         camera.position.z = prevCamZ;
+      } else if (cinematicActive) {
+        // Preserve cinematic camera position
+        const prevCamX = camera.position.x;
+        const prevCamY = camera.position.y;
+        const prevCamZ = camera.position.z;
+        player.update(dt);
+        camera.position.x = prevCamX;
+        camera.position.y = prevCamY;
+        camera.position.z = prevCamZ;
       } else {
         player.update(dt);
+      }
+      
+      // Lake Physics - Check if player is in water
+      const LAKE_CENTER_X = 30;
+      const LAKE_CENTER_Z = -30;
+      const LAKE_RADIUS = 18;
+      const distToLake = Math.sqrt(
+        (player.mesh.position.x - LAKE_CENTER_X) ** 2 + 
+        (player.mesh.position.z - LAKE_CENTER_Z) ** 2
+      );
+      
+      if (distToLake < LAKE_RADIUS) {
+        // Player is in water!
+        if (!player.inWater) {
+          player.inWater = true;
+          player.waterEntryTime = gameTime;
+          
+          // Splash effect on water entry
+          spawnParticles(player.mesh.position, 0x87CEEB, 20); // Blue splash
+          spawnParticles(player.mesh.position, 0xFFFFFF, 10); // White foam
+          playSound('waterSplash');
+        }
+        
+        // Slow player movement while in water (50% speed reduction)
+        player.velocity.multiplyScalar(0.5);
+        
+        // Sinking effect - lower player slightly
+        player.mesh.position.y = Math.max(-0.3, player.mesh.position.y - dt * 0.5);
+        
+        // Create ripple effect
+        if (Math.random() < 0.3) {
+          spawnParticles(player.mesh.position, 0x87CEEB, 2);
+        }
+      } else {
+        if (player.inWater) {
+          player.inWater = false;
+          // Return to normal height
+          player.mesh.position.y = 0.5;
+        }
       }
       
       // Check legendary cigar quest
@@ -16753,30 +17395,52 @@
               projectiles.push(new Projectile(player.mesh.position.x, player.mesh.position.z, nearest.mesh.position));
               
               // ENHANCED muzzle flash light effect - 3 variations (FRESH)
+              // Brighter at night for better visibility
+              const isNight = dayNightCycle.timeOfDay < 0.2 || dayNightCycle.timeOfDay > 0.8;
+              const nightMultiplier = isNight ? 2.0 : 1.0; // Double intensity at night
+              
               const flashVariation = i % 3;
               let flashColor, flashIntensity, flashRadius;
               if (flashVariation === 0) {
                 // Bright white flash
                 flashColor = 0xFFFFFF;
-                flashIntensity = 6;
-                flashRadius = 20;
+                flashIntensity = 6 * nightMultiplier;
+                flashRadius = 20 * (isNight ? 1.5 : 1.0); // Larger radius at night
               } else if (flashVariation === 1) {
                 // Yellow-orange flash
                 flashColor = 0xFFCC00;
-                flashIntensity = 5.5;
-                flashRadius = 18;
+                flashIntensity = 5.5 * nightMultiplier;
+                flashRadius = 18 * (isNight ? 1.5 : 1.0);
               } else {
                 // Blue-white flash (hotter burn)
                 flashColor = 0xCCFFFF;
-                flashIntensity = 6.5;
-                flashRadius = 22;
+                flashIntensity = 6.5 * nightMultiplier;
+                flashRadius = 22 * (isNight ? 1.5 : 1.0);
               }
               
               const flashLight = new THREE.PointLight(flashColor, flashIntensity, flashRadius);
               flashLight.position.copy(player.mesh.position);
               flashLight.position.y += 1;
+              flashLight.castShadow = false; // Performance: no shadows for flash
               scene.add(flashLight);
               flashLights.push(flashLight);
+              
+              // Add ground reflection light at night for bounce effect
+              if (isNight) {
+                const reflectionLight = new THREE.PointLight(flashColor, flashIntensity * 0.5, flashRadius * 0.7);
+                reflectionLight.position.copy(player.mesh.position);
+                reflectionLight.position.y = 0.1; // Near ground
+                scene.add(reflectionLight);
+                flashLights.push(reflectionLight);
+                
+                // Remove reflection with main flash
+                const reflTimeoutId = setTimeout(() => {
+                  scene.remove(reflectionLight);
+                  const idx = flashLights.indexOf(reflectionLight);
+                  if (idx > -1) flashLights.splice(idx, 1);
+                }, 80);
+                activeTimeouts.push(reflTimeoutId);
+              }
               
               // Remove flash after short time
               const timeoutId = setTimeout(() => {
@@ -16800,8 +17464,8 @@
               spawnParticles(player.mesh.position, 0xFFFF00, 6); // Reduced for performance
               spawnParticles(player.mesh.position, 0xFFFFFF, 4); // Reduced for performance
               spawnParticles(player.mesh.position, 0xFFA500, 4); // Reduced for performance
-              // Add smoke particles
-              spawnParticles(player.mesh.position, 0x888888, 4);
+              // Add realistic muzzle smoke
+              spawnMuzzleSmoke(player.mesh.position, 3);
             }, i * 100);
           }
           weapons.gun.lastShot = time;
@@ -16903,6 +17567,14 @@
             );
             // Mark projectile as from drone turret for damage calculation
             projectile.isDroneTurret = true;
+            // Make drone bullets smaller and faster
+            projectile.mesh.scale.set(0.5, 0.5, 0.5);
+            if (projectile.glow) {
+              projectile.glow.scale.set(0.5, 0.5, 0.5);
+            }
+            projectile.speed = 0.6; // Faster than regular bullets
+            projectile.vx = projectile.vx * 1.5;
+            projectile.vz = projectile.vz * 1.5;
             projectiles.push(projectile);
             
             // Small muzzle flash from drone
@@ -16994,7 +17666,8 @@
           spawnParticles(player.mesh.position, 0xFFA500, 12); // Orange
           spawnParticles(player.mesh.position, 0xFFFF00, 10); // Yellow
           spawnParticles(player.mesh.position, 0xFFFFFF, 6); // White
-          spawnParticles(player.mesh.position, 0x888888, 8); // Smoke
+          // Heavy muzzle smoke for shotgun
+          spawnMuzzleSmoke(player.mesh.position, 6);
           
           weapons.doubleBarrel.lastShot = time;
           playSound('doublebarrel'); // Double barrel sound
@@ -17174,6 +17847,52 @@
         // Pulsing opacity (between 0.3 and 0.7 for good visibility)
         obj.material.opacity = 0.5 + Math.sin(obj.userData.angle * 3) * 0.2;
       });
+      
+      // Waterfall animation
+      
+      // Tree sway animation - subtle wind effect
+      if (window.destructibleProps) {
+        window.destructibleProps.forEach(prop => {
+          if (prop.type === 'tree' && !prop.destroyed && prop.mesh.userData.swayPhase !== undefined) {
+            prop.mesh.userData.swayPhase += dt * prop.mesh.userData.swaySpeed;
+            const swayX = Math.sin(prop.mesh.userData.swayPhase) * prop.mesh.userData.swayAmount;
+            const swayZ = Math.cos(prop.mesh.userData.swayPhase * 0.7) * prop.mesh.userData.swayAmount;
+            
+            // Apply sway to leaves (independent sway)
+            if (prop.mesh.userData.leaves) {
+              prop.mesh.userData.leaves.rotation.x = swayX;
+              prop.mesh.userData.leaves.rotation.z = swayZ;
+            }
+            // Trunk sways less
+            if (prop.mesh.userData.trunk) {
+              prop.mesh.userData.trunk.rotation.x = swayX * 0.3;
+              prop.mesh.userData.trunk.rotation.z = swayZ * 0.3;
+            }
+          }
+        });
+      }
+      
+      // Fence physics - check player collision and reset
+      if (window.breakableFences) {
+        window.breakableFences.forEach(fence => {
+          if (fence.userData.isFence && fence.userData.hp > 0) {
+            const dist = Math.sqrt(
+              (player.mesh.position.x - fence.position.x) ** 2 +
+              (player.mesh.position.z - fence.position.z) ** 2
+            );
+            
+            // Player collision - shake fence
+            if (dist < 2) {
+              fence.rotation.x = Math.sin(gameTime * 10) * 0.1;
+              fence.rotation.z = Math.cos(gameTime * 10) * 0.1;
+            } else {
+              // Return to normal
+              fence.rotation.x *= 0.9;
+              fence.rotation.z *= 0.9;
+            }
+          }
+        });
+      }
       
       // Waterfall animation
       animatedSceneObjects.waterfalls.forEach(obj => {
