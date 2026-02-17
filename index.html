@@ -982,12 +982,20 @@
       border-radius: 20px;
       border: 5px solid #FFD700; /* Golden border for level-up emphasis */
       width: 85%;
-      max-width: 350px;
+      max-width: 600px; /* Increased from 350px to fit 2×3 grid */
       max-height: none; /* Remove height restriction - no scrolling needed */
       overflow-y: visible; /* No scrolling */
       text-align: center;
       box-shadow: 0 15px 30px rgba(0,0,0,0.9), 0 0 50px rgba(255,215,0,0.7), inset 0 0 40px rgba(255,215,0,0.15), inset 0 0 0 2px rgba(0,0,0,0.5); /* Darker shadow and inner dark edge */
       pointer-events: auto; /* Modal content should receive clicks */
+    }
+    
+    /* UPGRADE GRID: 2×3 grid layout for upgrade choices */
+    #upgrade-list {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr); /* 2 columns */
+      gap: 15px;
+      margin-top: 15px;
     }
 
     h2 {
@@ -1000,7 +1008,7 @@
     .upgrade-card {
       /* Unified base color for all boxes */
       background: linear-gradient(to bottom, #3a3a4e, #2a2a3e);
-      margin: 10px 0;
+      margin: 0; /* No margin in grid layout */
       padding: 15px;
       border-radius: 15px;
       /* Default border (standard upgrades - grey) */
@@ -13961,8 +13969,8 @@
         // Phase 3: Shuffle and limit to 4 choices (was 3) for more diverse alternatives
         choices = choices.sort(() => 0.5 - Math.random()).slice(0, 4);
       }
-      // Level 5: Choose Secondary Weapon
-      else if (playerStats.lvl === 5) {
+      // WEAPON UPGRADE TIMING: Level 3-4 for weapon unlock (was level 5)
+      else if (playerStats.lvl === 3 || playerStats.lvl === 4) {
         choices = [
           { 
             id: 'sword', 
@@ -14193,8 +14201,8 @@
         choices = perkChoices.sort(() => 0.5 - Math.random()).slice(0, 3);
       }
       else {
-        // Random 4
-        choices = commonUpgrades.sort(() => 0.5 - Math.random()).slice(0, 4);
+        // UPGRADE GRID: Show 6 random choices instead of 4 for 2×3 grid
+        choices = commonUpgrades.sort(() => 0.5 - Math.random()).slice(0, 6);
       }
 
       choices.forEach((u, index) => {
@@ -15473,9 +15481,17 @@
         activeCompanion = null;
       }
       
-      if (saveData.selectedCompanion && saveData.companions[saveData.selectedCompanion]?.unlocked) {
+      // COMPANION VISIBILITY FIX: Only spawn companion after quest ~12 (all camp buildings unlocked)
+      const questsCompleted = saveData.storyQuests?.completedQuests?.length || 0;
+      const companionUnlockThreshold = 12;
+      
+      if (saveData.selectedCompanion && 
+          saveData.companions[saveData.selectedCompanion]?.unlocked &&
+          questsCompleted >= companionUnlockThreshold) {
         activeCompanion = new Companion(saveData.selectedCompanion);
-        console.log('[Phase 5] Spawned companion:', saveData.selectedCompanion);
+        console.log('[Phase 5] Spawned companion:', saveData.selectedCompanion, 'after', questsCompleted, 'quests');
+      } else if (questsCompleted < companionUnlockThreshold) {
+        console.log('[Companion] Hidden until quest', companionUnlockThreshold, '(current:', questsCompleted, 'quests completed)');
       }
 
       // Reset Player - Spawn near the statue at map center
