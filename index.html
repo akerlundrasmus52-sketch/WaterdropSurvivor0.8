@@ -526,6 +526,24 @@
       }
     }
     
+    /* Quest indicator animation */
+    .quest-indicator {
+      color: #FF4444;
+      font-size: 24px;
+      animation: pulse 1s infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+      50% {
+        opacity: 0.7;
+        transform: scale(1.1);
+      }
+    }
+    
     /* FRESH IMPLEMENTATION: Enhanced Notification System */
     .enhanced-notification {
       position: fixed;
@@ -9041,8 +9059,8 @@
         
         // Quest progression: Track skill unlocks for tutorial quest
         if (saveData.storyQuests.currentQuest === 'useSkillTree') {
-          // Count how many skills have been unlocked
-          const unlockedSkillsCount = Object.values(saveData.skillTree).filter(s => s.unlocked || s.level > 0).length;
+          // Count how many skills have been unlocked (use level > 0 as canonical check)
+          const unlockedSkillsCount = Object.values(saveData.skillTree).filter(s => s.level > 0).length;
           
           if (unlockedSkillsCount >= 2) {
             // Completed the demonstration quest
@@ -9683,15 +9701,18 @@
         
         // Skip locked paid buildings - show them with quest unlock requirement
         if (!building.isFree && !isUnlocked && buildingData.level === 0) {
-          // Check if there's an active quest to unlock this building
-          const hasUnlockQuest = hasQuestForBuilding(buildingId) && 
-            (saveData.storyQuests.currentQuest === `unlock${buildingId.charAt(0).toUpperCase() + buildingId.slice(1)}` ||
-             saveData.storyQuests.currentQuest === 'unlockSkillTree' && buildingId === 'skillTree' ||
-             saveData.storyQuests.currentQuest === 'unlockForge' && buildingId === 'forge' ||
-             saveData.storyQuests.currentQuest === 'unlockRecycle' && buildingId === 'trashRecycle' ||
-             saveData.storyQuests.currentQuest === 'unlockArmory' && buildingId === 'armory' ||
-             saveData.storyQuests.currentQuest === 'unlockCompanionHouse' && buildingId === 'companionHouse' ||
-             saveData.storyQuests.currentQuest === 'unlockTrainingHall' && buildingId === 'trainingHall');
+          // Map building IDs to their unlock quest names
+          const buildingUnlockQuests = {
+            'skillTree': 'unlockSkillTree',
+            'forge': 'unlockForge',
+            'trashRecycle': 'unlockRecycle',
+            'armory': 'unlockArmory',
+            'companionHouse': 'unlockCompanionHouse',
+            'trainingHall': 'unlockTrainingHall'
+          };
+          
+          const hasUnlockQuest = buildingUnlockQuests[buildingId] && 
+                                  saveData.storyQuests.currentQuest === buildingUnlockQuests[buildingId];
           
           const buildingCard = document.createElement('div');
           buildingCard.className = 'building-card';
@@ -9699,7 +9720,7 @@
           
           buildingCard.innerHTML = `
             <div class="building-header">
-              <div class="building-name">${building.icon} ${building.name}${hasUnlockQuest ? ' <span style="color: #FF4444; font-size: 24px; animation: pulse 1s infinite;">!</span>' : ''}</div>
+              <div class="building-name">${building.icon} ${building.name}${hasUnlockQuest ? ' <span class="quest-indicator">!</span>' : ''}</div>
               <div class="building-level">LOCKED</div>
             </div>
             <div class="building-desc">${building.description}</div>
@@ -9769,7 +9790,7 @@
           
            buildingCard.innerHTML = `
              <div class="building-header">
-               <div class="building-name">${building.icon} ${building.name}${hasQuestForBuilding(buildingId) ? ' <span style="color: #FF4444; font-size: 24px; animation: pulse 1s infinite;">!</span>' : ''}</div>
+               <div class="building-name">${building.icon} ${building.name}${hasQuestForBuilding(buildingId) ? ' <span class="quest-indicator">!</span>' : ''}</div>
                <div class="building-level">Level ${buildingData.level}/${buildingData.maxLevel}</div>
              </div>
              <div class="building-desc">${building.description}</div>
