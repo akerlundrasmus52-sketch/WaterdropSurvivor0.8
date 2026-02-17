@@ -190,7 +190,7 @@
     #combo-text {
       /* COMIC STYLING: 80s Batman comic font, smaller size */
       font-family: 'Bangers', 'M PLUS Rounded 1c', cursive;
-      font-size: 24px; /* Reduced from 28px - smaller comic text */
+      font-size: 20px; /* Reduced from 28px (originally) then 24px to 20px for better mobile visibility */
       font-weight: 900;
       color: #FF0000;
       letter-spacing: 2px; /* Comic book spacing */
@@ -248,7 +248,36 @@
       font-weight: bold;
       margin-top: 3px;
     }
+    
+    /* Quest Notification Bubble */
+    .quest-notification {
+      font-family: 'Bangers', 'M PLUS Rounded 1c', cursive;
+      font-size: 18px;
+      color: #333;
+      background: white;
+      border-radius: 15px;
+      padding: 10px 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      text-align: center;
+      animation: bubble-bounce 0.5s ease-out;
+    }
+    
+    @keyframes bubble-bounce {
       0% {
+        transform: scale(0.5) translateY(20px);
+        opacity: 0;
+      }
+      60% {
+        transform: scale(1.1) translateY(0);
+        opacity: 1;
+      }
+      100% {
+        transform: scale(1) translateY(0);
+        opacity: 1;
+      }
+    }
+    
+    @keyframes combo-fade {
         opacity: 1;
         transform: scale(1);
       }
@@ -1706,10 +1735,10 @@
     /* Credits/Achievements Screens */
     #credits-screen, #achievements-screen, #camp-screen {
       position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
+      top: 5%; /* Shifted down 5% for iPhone 16 */
+      left: 5%; /* Shifted right 5% for iPhone 16 */
+      width: 90%; /* Reduced from 100% to account for shift */
+      height: 90%; /* Reduced from 100% to account for shift */
       background: linear-gradient(to bottom, #1a1a2e, #16213e);
       display: none;
       flex-direction: column;
@@ -3277,6 +3306,7 @@
     // --- GAME STATE ---
     let scene, camera, renderer;
     let player;
+    let savedCameraPosition = null; // Camera position saved during level-up
     let enemies = [];
     let projectiles = [];
     let expGems = [];
@@ -6351,13 +6381,60 @@
               dmg = weapons.droneTurret.damage * playerStats.damage * playerStats.strength;
             }
             
+            // HEADSHOT SYSTEM: Double-crit check for headshot (instant kill)
             const isCrit = Math.random() < playerStats.critChance;
-            if (isCrit) dmg *= playerStats.critDmg;
+            const isDoubleCrit = isCrit && Math.random() < playerStats.critChance; // Second crit check
             
-            enemy.takeDamage(Math.floor(dmg), isCrit);
-            
-            // FRESH: Critical hit effects - gold particles, brief light flash
-            if (isCrit) {
+            if (isDoubleCrit) {
+              // HEADSHOT! Instant kill
+              enemy.hp = 0;
+              
+              // Create floating HEADSHOT text
+              const div = document.createElement('div');
+              div.style.position = 'absolute';
+              div.style.color = '#FF0000';
+              div.style.fontSize = '32px';
+              div.style.fontWeight = 'bold';
+              div.style.fontFamily = 'Bangers, cursive';
+              div.style.textShadow = '0 0 20px #FF0000, 2px 2px 4px #000';
+              div.style.pointerEvents = 'none';
+              div.style.zIndex = '1000';
+              div.innerText = 'HEADSHOT!';
+              
+              const vec = enemy.mesh.position.clone();
+              vec.y += 2;
+              vec.project(camera);
+              
+              // Convert NDC (-1 to 1) to screen coordinates (0 to width/height)
+              const NDC_CENTER_OFFSET = 0.5; // Offset to center NDC coordinates
+              const x = (vec.x * NDC_CENTER_OFFSET + NDC_CENTER_OFFSET) * window.innerWidth;
+              const y = (-(vec.y * NDC_CENTER_OFFSET) + NDC_CENTER_OFFSET) * window.innerHeight;
+              
+              div.style.left = `${x}px`;
+              div.style.top = `${y}px`;
+              div.style.transform = 'translate(-50%, -50%)';
+              
+              document.body.appendChild(div);
+              setTimeout(() => div.remove(), 1500);
+              
+              // Blood particle effect
+              spawnParticles(enemy.mesh.position, 0x8B0000, 30); // Dark red blood
+              spawnParticles(enemy.mesh.position, 0xFF0000, 20); // Bright red blood
+              
+              // Flash effect
+              const headshotLight = new THREE.PointLight(0xFF0000, 12, 20);
+              headshotLight.position.copy(enemy.mesh.position);
+              headshotLight.position.y += 2;
+              scene.add(headshotLight);
+              setTimeout(() => {
+                scene.remove(headshotLight);
+              }, 200);
+            } else if (isCrit) {
+              // Normal crit
+              dmg *= playerStats.critDmg;
+              enemy.takeDamage(Math.floor(dmg), isCrit);
+              
+              // FRESH: Critical hit effects - gold particles, brief light flash
               spawnParticles(enemy.mesh.position, 0xFFD700, 15); // Gold particles
               spawnParticles(enemy.mesh.position, 0xFFA500, 10); // Orange particles
               
@@ -6369,6 +6446,9 @@
               setTimeout(() => {
                 scene.remove(critLight);
               }, 150);
+            } else {
+              // Normal hit (explicitly false for clarity)
+              enemy.takeDamage(Math.floor(dmg), false);
             }
             
             // Knockback effect
@@ -12129,8 +12209,8 @@
       scene = new THREE.Scene();
       scene.background = new THREE.Color(COLORS.bg);
       // Enhanced fog for depth - reacts to day/night cycle lighting
-      // PERFORMANCE: Tighter fog distance for better performance
-      scene.fog = new THREE.Fog(COLORS.bg, 15, 45);
+      // PERFORMANCE: Tighter fog distance for better performance (reduced from 15,45 to 12,35)
+      scene.fog = new THREE.Fog(COLORS.bg, 12, 35);
       
       // Phase 5: Initialize particle object pool for performance (100 particles pre-allocated)
       particlePool = new ObjectPool(
@@ -13150,6 +13230,13 @@
     function levelUp() {
       isPaused = true;
       
+      // Lock camera during level-up to prevent zoom changes
+      savedCameraPosition = { 
+        x: camera.position.x, 
+        y: camera.position.y, 
+        z: camera.position.z 
+      };
+      
       // Pause combo timer during level-up (only if combo is still active)
       if (comboState.lastKillTime && comboState.count >= 5) {
         const currentTime = Date.now();
@@ -13827,8 +13914,8 @@
 
       // --- SPECIAL LEVELS ---
       
-      // Levels 4, 9, 17: WEAPON UPGRADE LEVELS
-      if ([4, 9, 17].includes(playerStats.lvl)) {
+      // Levels 3, 4, 9, 17: WEAPON UPGRADE LEVELS (added level 3 and 4)
+      if ([3, 4, 9, 17].includes(playerStats.lvl)) {
         modal.querySelector('h2').innerText = 'WEAPON UPGRADE!';
         modal.querySelector('h2').style.fontSize = '36px';
         
@@ -13994,12 +14081,19 @@
         // Phase 3: Add more stat upgrades for diversity (was 2, now 3)
         choices.push(...commonUpgrades.sort(() => 0.5 - Math.random()).slice(0, 3));
         
-        // Phase 3: Shuffle and limit to 4 choices (was 3) for more diverse alternatives
-        choices = choices.sort(() => 0.5 - Math.random()).slice(0, 4);
+        // ALWAYS SHOW 6 CHOICES: Shuffle and ensure exactly 6 choices in 2×3 grid
+        choices = choices.sort(() => 0.5 - Math.random()).slice(0, 6);
+        // If we have less than 6, fill with common upgrades (use Set for O(n) lookup)
+        if (choices.length < 6) {
+          const existingIds = new Set(choices.map(c => c.id));
+          const additionalUpgrades = commonUpgrades.filter(u => !existingIds.has(u.id));
+          const needed = 6 - choices.length;
+          choices.push(...additionalUpgrades.slice(0, needed));
+        }
       }
-      // WEAPON UPGRADE TIMING: Level 3 for weapon unlock (was level 5)
-      // Only show once at level 3 to avoid duplicate weapon selection
-      else if (playerStats.lvl === 3) {
+      // WEAPON UNLOCK: Level 5 for new weapon unlock (levels 3-4 have weapon upgrade opportunities)
+      // Only show once at level 5 to avoid duplicate weapon selection
+      else if (playerStats.lvl === 5) {
         choices = [
           { 
             id: 'sword', 
@@ -14104,7 +14198,7 @@
           }
         ];
       }
-      // Level 10: CLASS SELECTION
+      // Level 10: CLASS SELECTION - ALWAYS SHOW 6 CHOICES
       else if (playerStats.lvl === 10) {
         modal.querySelector('h2').innerText = 'CHOOSE YOUR CLASS';
         modal.querySelector('h2').style.fontSize = '42px';
@@ -14162,8 +14256,11 @@
             } 
           }
         ];
+        // Fill with common upgrades to reach 6 choices
+        const classSelectionFillers = commonUpgrades.sort(() => 0.5 - Math.random()).slice(0, 2);
+        choices.push(...classSelectionFillers);
       } 
-      // Level 12, 18, 25: PERK UNLOCKS
+      // Level 12, 18, 25: PERK UNLOCKS - ALWAYS SHOW 6 CHOICES
       else if ([12, 18, 25].includes(playerStats.lvl)) {
         modal.querySelector('h2').innerText = 'PERK UNLOCK!';
         modal.querySelector('h2').style.fontSize = '40px';
@@ -14226,11 +14323,13 @@
           }
         ];
         
-        // Randomly select 3 perks
+        // ALWAYS SHOW 6 CHOICES: Select perks and fill with common upgrades
         choices = perkChoices.sort(() => 0.5 - Math.random()).slice(0, 3);
+        const perkUnlockFillers = commonUpgrades.sort(() => 0.5 - Math.random()).slice(0, 3);
+        choices.push(...perkUnlockFillers);
       }
       else {
-        // UPGRADE GRID: Show 6 random choices instead of 4 for 2×3 grid
+        // ALWAYS SHOW 6 CHOICES: Show 6 random choices for 2×3 grid
         choices = commonUpgrades.sort(() => 0.5 - Math.random()).slice(0, 6);
       }
 
@@ -14294,6 +14393,13 @@
           modal.style.display = 'none';
           modal.querySelector('h2').innerText = 'LEVEL UP!';
           modal.querySelector('h2').style.fontSize = '32px';
+          
+          // Restore camera position after level-up
+          if (savedCameraPosition) {
+            camera.position.set(savedCameraPosition.x, savedCameraPosition.y, savedCameraPosition.z);
+            savedCameraPosition = null; // Clear after restoration
+          }
+          
           isPaused = false;
           
           // Resume combo timer after level-up
@@ -15547,17 +15653,17 @@
         activeCompanion = null;
       }
       
-      // COMPANION VISIBILITY FIX: Only spawn companion after quest ~12 (all camp buildings unlocked)
-      const questsCompleted = saveData.storyQuests?.completedQuests?.length || 0;
-      const companionUnlockThreshold = 12;
+      // COMPANION UNLOCKS AFTER QUEST 5 (companion egg quest)
+      // Check if quest 5 (breed companion quest) is completed
+      const quest5Completed = saveData.storyQuests?.completedQuests?.includes('quest5_breedCompanion') || false;
       
       if (saveData.selectedCompanion && 
           saveData.companions[saveData.selectedCompanion]?.unlocked &&
-          questsCompleted >= companionUnlockThreshold) {
+          quest5Completed) {
         activeCompanion = new Companion(saveData.selectedCompanion);
-        console.log('[Phase 5] Spawned companion:', saveData.selectedCompanion, 'after', questsCompleted, 'quests');
-      } else if (questsCompleted < companionUnlockThreshold) {
-        console.log('[Companion] Hidden until quest', companionUnlockThreshold, '(current:', questsCompleted, 'quests completed)');
+        console.log('[Phase 5] Spawned companion:', saveData.selectedCompanion, 'after completing quest 5');
+      } else if (!quest5Completed) {
+        console.log('[Companion] Hidden until quest 5 (companion egg quest) is completed');
       }
 
       // Reset Player - Spawn near the statue at map center
@@ -16771,7 +16877,18 @@
       chests.forEach(c => c.update(player.mesh.position));
       
       // Phase 5: Update particles and release back to pool when dead
+      // PERFORMANCE: Cull particles beyond fog distance (35 units)
+      const FOG_DISTANCE = 35;
       particles = particles.filter(p => {
+        // Cull particles beyond fog distance
+        const distToPlayer = p.mesh.position.distanceTo(player.mesh.position);
+        if (distToPlayer > FOG_DISTANCE) {
+          if (particlePool) {
+            particlePool.release(p);
+          }
+          return false;
+        }
+        
         const alive = p.update();
         if (!alive && particlePool) {
           particlePool.release(p);
