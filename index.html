@@ -10705,45 +10705,84 @@
       rondel.receiveShadow = true;
       scene.add(rondel);
       
-      // Path material - smooth dirt/gravel path
-      const pathMat = new THREE.MeshPhysicalMaterial({ 
-        color: 0x9A8A6A, // Light brown dirt
+      // Path materials - wagon road with gravel and grass
+      const gravelMat = new THREE.MeshPhysicalMaterial({ 
+        color: 0x8B7355, // Brown gravel
+        metalness: 0.0,
+        roughness: 0.9,
+      });
+      
+      const grassMiddleMat = new THREE.MeshPhysicalMaterial({ 
+        color: 0x6B8E23, // Olive green grass
         metalness: 0.0,
         roughness: 0.85,
       });
       
-      // Helper function to create smooth straight path
-      function createPath(startX, startZ, endX, endZ, width = 3) {
+      // Helper function to create wagon road with gravel and grass in middle
+      function createPath(startX, startZ, endX, endZ, width = 4) {
         const length = Math.sqrt((endX - startX) ** 2 + (endZ - startZ) ** 2);
         const angle = Math.atan2(endZ - startZ, endX - startX);
+        const centerX = (startX + endX) / 2;
+        const centerZ = (startZ + endZ) / 2;
         
-        // Create path as single mesh for performance
-        const pathGeo = new THREE.PlaneGeometry(width, length);
-        const path = new THREE.Mesh(pathGeo, pathMat);
-        path.rotation.x = -Math.PI/2;
-        path.rotation.z = angle - Math.PI/2;
-        path.position.set((startX + endX) / 2, 0.02, (startZ + endZ) / 2);
-        path.receiveShadow = true;
-        scene.add(path);
+        // Create wagon tracks (gravel) on each side - 2 tracks
+        const trackWidth = width * 0.3; // Each track is 30% of total width
+        const trackSeparation = width * 0.4; // Separation between tracks
+        
+        // Left gravel track
+        const leftTrackGeo = new THREE.PlaneGeometry(trackWidth, length);
+        const leftTrack = new THREE.Mesh(leftTrackGeo, gravelMat);
+        leftTrack.rotation.x = -Math.PI/2;
+        leftTrack.rotation.z = angle - Math.PI/2;
+        leftTrack.position.set(
+          centerX - Math.sin(angle) * trackSeparation / 2,
+          0.02,
+          centerZ + Math.cos(angle) * trackSeparation / 2
+        );
+        leftTrack.receiveShadow = true;
+        scene.add(leftTrack);
+        
+        // Right gravel track
+        const rightTrackGeo = new THREE.PlaneGeometry(trackWidth, length);
+        const rightTrack = new THREE.Mesh(rightTrackGeo, gravelMat);
+        rightTrack.rotation.x = -Math.PI/2;
+        rightTrack.rotation.z = angle - Math.PI/2;
+        rightTrack.position.set(
+          centerX + Math.sin(angle) * trackSeparation / 2,
+          0.02,
+          centerZ - Math.cos(angle) * trackSeparation / 2
+        );
+        rightTrack.receiveShadow = true;
+        scene.add(rightTrack);
+        
+        // Grass in the middle
+        const grassWidth = trackSeparation - trackWidth * 0.5; // Grass between tracks
+        const grassGeo = new THREE.PlaneGeometry(grassWidth, length);
+        const grass = new THREE.Mesh(grassGeo, grassMiddleMat);
+        grass.rotation.x = -Math.PI/2;
+        grass.rotation.z = angle - Math.PI/2;
+        grass.position.set(centerX, 0.01, centerZ);
+        grass.receiveShadow = true;
+        scene.add(grass);
       }
       
       // 4 Main Paths from Central Hub (Rondel):
       // Paths start from different points on the rondel edge based on direction
       
       // 1. Path to Stonehenge (60, 60) - Northeast direction
-      createPath(rondelRadius * 0.707, rondelRadius * 0.707, 60, 60, 3);
+      createPath(rondelRadius * 0.707, rondelRadius * 0.707, 60, 60, 5);
       
       // 2. Path to Illuminati Pyramid (-70, 50) - Northwest direction  
-      createPath(-rondelRadius * 0.6, rondelRadius * 0.8, -70, 50, 3);
+      createPath(-rondelRadius * 0.6, rondelRadius * 0.8, -70, 50, 5);
       
       // 3. Path to Lake (30, -30) - Southeast direction
-      createPath(rondelRadius * 0.707, -rondelRadius * 0.707, 30, -30, 3);
+      createPath(rondelRadius * 0.707, -rondelRadius * 0.707, 30, -30, 5);
       
       // 4. Path to Windmill (40, 40) - East direction (slightly different from Stonehenge)
-      createPath(rondelRadius * 0.9, rondelRadius * 0.436, 40, 40, 3);
+      createPath(rondelRadius * 0.9, rondelRadius * 0.436, 40, 40, 5);
       
       // 5. Path to Tesla Tower (-80, -80) - Northwest direction
-      createPath(-rondelRadius * 0.707, -rondelRadius * 0.707, -80, -80, 3);
+      createPath(-rondelRadius * 0.707, -rondelRadius * 0.707, -80, -80, 5);
       
       // Farm Fields - Fill empty spaces with farm texture
       // Create large farm field background (performance optimized - single large mesh)
