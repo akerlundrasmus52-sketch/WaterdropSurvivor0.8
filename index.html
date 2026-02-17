@@ -190,7 +190,7 @@
     #combo-text {
       /* COMIC STYLING: 80s Batman comic font, smaller size */
       font-family: 'Bangers', 'M PLUS Rounded 1c', cursive;
-      font-size: 24px; /* Reduced from 28px - smaller comic text */
+      font-size: 20px; /* Reduced from 28px (originally) then 24px to 20px for better mobile visibility */
       font-weight: 900;
       color: #FF0000;
       letter-spacing: 2px; /* Comic book spacing */
@@ -248,7 +248,36 @@
       font-weight: bold;
       margin-top: 3px;
     }
+    
+    /* Quest Notification Bubble */
+    .quest-notification {
+      font-family: 'Bangers', 'M PLUS Rounded 1c', cursive;
+      font-size: 18px;
+      color: #333;
+      background: white;
+      border-radius: 15px;
+      padding: 10px 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      text-align: center;
+      animation: bubble-bounce 0.5s ease-out;
+    }
+    
+    @keyframes bubble-bounce {
       0% {
+        transform: scale(0.5) translateY(20px);
+        opacity: 0;
+      }
+      60% {
+        transform: scale(1.1) translateY(0);
+        opacity: 1;
+      }
+      100% {
+        transform: scale(1) translateY(0);
+        opacity: 1;
+      }
+    }
+    
+    @keyframes combo-fade {
         opacity: 1;
         transform: scale(1);
       }
@@ -1706,10 +1735,10 @@
     /* Credits/Achievements Screens */
     #credits-screen, #achievements-screen, #camp-screen {
       position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
+      top: 5%; /* Shifted down 5% for iPhone 16 */
+      left: 5%; /* Shifted right 5% for iPhone 16 */
+      width: 90%; /* Reduced from 100% to account for shift */
+      height: 90%; /* Reduced from 100% to account for shift */
       background: linear-gradient(to bottom, #1a1a2e, #16213e);
       display: none;
       flex-direction: column;
@@ -3277,6 +3306,7 @@
     // --- GAME STATE ---
     let scene, camera, renderer;
     let player;
+    let savedCameraPosition = null; // Camera position saved during level-up
     let enemies = [];
     let projectiles = [];
     let expGems = [];
@@ -5433,9 +5463,15 @@
         
         playerStats.kills++;
         
-        // Quest progression: first kill completes first run quest (>= 1 to handle any first kill)
-        if (saveData.storyQuests.currentQuest === 'firstRun' && playerStats.kills >= 1) {
-          progressQuest('firstRun', true);
+        // Tutorial Quest: Track kills this run
+        if (saveData.tutorialQuests) {
+          saveData.tutorialQuests.killsThisRun = playerStats.kills;
+          
+          // Quest 1: Kill 3 enemies
+          const currentQuest = getCurrentQuest();
+          if (currentQuest && currentQuest.id === 'quest1_kill3' && playerStats.kills >= 3) {
+            progressTutorialQuest('quest1_kill3', true);
+          }
         }
         
         // Track side challenge progress
@@ -6351,13 +6387,60 @@
               dmg = weapons.droneTurret.damage * playerStats.damage * playerStats.strength;
             }
             
+            // HEADSHOT SYSTEM: Double-crit check for headshot (instant kill)
             const isCrit = Math.random() < playerStats.critChance;
-            if (isCrit) dmg *= playerStats.critDmg;
+            const isDoubleCrit = isCrit && Math.random() < playerStats.critChance; // Second crit check
             
-            enemy.takeDamage(Math.floor(dmg), isCrit);
-            
-            // FRESH: Critical hit effects - gold particles, brief light flash
-            if (isCrit) {
+            if (isDoubleCrit) {
+              // HEADSHOT! Instant kill
+              enemy.hp = 0;
+              
+              // Create floating HEADSHOT text
+              const div = document.createElement('div');
+              div.style.position = 'absolute';
+              div.style.color = '#FF0000';
+              div.style.fontSize = '32px';
+              div.style.fontWeight = 'bold';
+              div.style.fontFamily = 'Bangers, cursive';
+              div.style.textShadow = '0 0 20px #FF0000, 2px 2px 4px #000';
+              div.style.pointerEvents = 'none';
+              div.style.zIndex = '1000';
+              div.innerText = 'HEADSHOT!';
+              
+              const vec = enemy.mesh.position.clone();
+              vec.y += 2;
+              vec.project(camera);
+              
+              // Convert NDC (-1 to 1) to screen coordinates (0 to width/height)
+              const NDC_CENTER_OFFSET = 0.5; // Offset to center NDC coordinates
+              const x = (vec.x * NDC_CENTER_OFFSET + NDC_CENTER_OFFSET) * window.innerWidth;
+              const y = (-(vec.y * NDC_CENTER_OFFSET) + NDC_CENTER_OFFSET) * window.innerHeight;
+              
+              div.style.left = `${x}px`;
+              div.style.top = `${y}px`;
+              div.style.transform = 'translate(-50%, -50%)';
+              
+              document.body.appendChild(div);
+              setTimeout(() => div.remove(), 1500);
+              
+              // Blood particle effect
+              spawnParticles(enemy.mesh.position, 0x8B0000, 30); // Dark red blood
+              spawnParticles(enemy.mesh.position, 0xFF0000, 20); // Bright red blood
+              
+              // Flash effect
+              const headshotLight = new THREE.PointLight(0xFF0000, 12, 20);
+              headshotLight.position.copy(enemy.mesh.position);
+              headshotLight.position.y += 2;
+              scene.add(headshotLight);
+              setTimeout(() => {
+                scene.remove(headshotLight);
+              }, 200);
+            } else if (isCrit) {
+              // Normal crit
+              dmg *= playerStats.critDmg;
+              enemy.takeDamage(Math.floor(dmg), isCrit);
+              
+              // FRESH: Critical hit effects - gold particles, brief light flash
               spawnParticles(enemy.mesh.position, 0xFFD700, 15); // Gold particles
               spawnParticles(enemy.mesh.position, 0xFFA500, 10); // Orange particles
               
@@ -6369,6 +6452,9 @@
               setTimeout(() => {
                 scene.remove(critLight);
               }, 150);
+            } else {
+              // Normal hit (explicitly false for clarity)
+              enemy.takeDamage(Math.floor(dmg), false);
             }
             
             // Knockback effect
@@ -7713,15 +7799,27 @@
       // Training Hall system
       trainingPoints: 0,
       lastTrainingPointTime: 0, // Timestamp of last training point awarded
-      // Story Quest System - NEW: Quest claiming mechanic
+      // Tutorial Quest System - 8-Quest Tutorial Flow
+      tutorialQuests: {
+        currentQuest: null, // Current active quest ID
+        completedQuests: [], // Array of completed quest IDs
+        questProgress: {}, // Object tracking progress for each quest
+        readyToClaim: [], // Array of quest IDs ready to claim
+        firstDeathShown: false,
+        secondRunCompleted: false, // For achievements building unlock
+        killsThisRun: 0, // Track kills per run (reset on new run)
+        survivalTimeThisRun: 0, // Track survival time per run
+        stonengengeChestFound: false // Quest 6 specific
+      },
+      // Legacy quest data (keep for backward compatibility)
       storyQuests: {
-        welcomeShown: false, // First camp popup shown
-        mainBuildingUnlocked: false, // Main/Quest building unlocked
-        currentQuest: null, // Current active story quest
-        completedQuests: [], // List of completed AND CLAIMED quest IDs
-        readyToClaimQuests: [], // List of quests completed but not yet claimed
-        questProgress: {}, // Progress tracking for active quests
-        buildingFirstUse: { // Track first-time use of each building
+        welcomeShown: false,
+        mainBuildingUnlocked: false,
+        currentQuest: null,
+        completedQuests: [],
+        readyToClaimQuests: [],
+        questProgress: {},
+        buildingFirstUse: {
           skillTree: false,
           forge: false,
           armory: false,
@@ -7730,7 +7828,7 @@
           trainingHall: false,
           tempShop: false
         },
-        questNotifications: {} // Track if quest building has been interacted with (to hide !)
+        questNotifications: {}
       },
       // Tutorial/Onboarding system (comic book style)
       tutorial: {
@@ -7783,9 +7881,11 @@
           saveData.lastTrainingPointTime = saveData.lastTrainingPointTime || 0;
           saveData.skillPoints = saveData.skillPoints || 0;
           saveData.selectedCompanion = saveData.selectedCompanion || 'stormWolf';
-          // Story quest system (new fields)
+          // Story quest system (legacy fields)
           saveData.storyQuests = { ...defaultSaveData.storyQuests, ...(saveData.storyQuests || {}) };
           saveData.storyQuests.buildingFirstUse = { ...defaultSaveData.storyQuests.buildingFirstUse, ...(saveData.storyQuests.buildingFirstUse || {}) };
+          // Tutorial quest system (new)
+          saveData.tutorialQuests = { ...defaultSaveData.tutorialQuests, ...(saveData.tutorialQuests || {}) };
           saveData.sideChallenges = { ...defaultSaveData.sideChallenges, ...(saveData.sideChallenges || {}) };
           // Tutorial system (new fields)
           saveData.tutorial = { ...defaultSaveData.tutorial, ...(saveData.tutorial || {}) };
@@ -9659,6 +9759,17 @@
         
         showStatusMessage(`${skill.name} leveled up!`, 2000);
         
+        // QUEST 2: Track skill point spending for tutorial quest
+        if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest2_spendSkills') {
+          // Count total skill points spent (each level = 1 point)
+          const totalSkillsUnlocked = Object.values(saveData.skillTree).filter(s => s.level > 0).length;
+          
+          if (totalSkillsUnlocked >= 2) {
+            // Completed quest 2: spent 2 skill points
+            progressTutorialQuest('quest2_spendSkills', true);
+          }
+        }
+        
         // Quest progression: Track skill unlocks for tutorial quest
         if (saveData.storyQuests.currentQuest === 'useSkillTree') {
           // Count how many skills have been unlocked (use level > 0 as canonical check)
@@ -9833,6 +9944,17 @@
             showStatusMessage(`${attr.name} increased to ${saveData.attributes[attrId]}!`, 2000);
             updateTrainingSection();
             updateGoldDisplays();
+            
+            // QUEST 3: Track attribute purchase for tutorial quest
+            if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest3_buyProgression') {
+              // Count total attribute levels purchased
+              const totalAttrLevels = Object.values(saveData.attributes || {}).reduce((sum, val) => sum + val, 0);
+              
+              if (totalAttrLevels >= 1) {
+                // Completed quest 3: bought 1 progression upgrade
+                progressTutorialQuest('quest3_buyProgression', true);
+              }
+            }
           } else {
             playSound('invalid');
             if (saveData.trainingPoints < 1) {
@@ -9847,249 +9969,272 @@
       }
     }
 
-    // --- STORY QUEST SYSTEM ---
-    // Check if a building has an active quest
-    function hasQuestForBuilding(buildingId) {
-      const currentQuest = saveData.storyQuests.currentQuest;
-      if (!currentQuest) return false;
-      
-      // Map quests to buildings
-      const questBuildingMap = {
-        'unlockSkillTree': 'skillTree',
-        'useSkillTree': 'skillTree',
-        'useForge': 'forge',
-        'useRecycle': 'trashRecycle',
-        'useArmory': 'armory',
-        'useCompanionHouse': 'companionHouse',
-        'useTrainingHall': 'trainingHall',
-        'useTempShop': 'tempShop'
-      };
-      
-      return questBuildingMap[currentQuest] === buildingId;
+    // --- TUTORIAL QUEST SYSTEM (8-Quest Flow) ---
+    
+    // Quest definitions
+    const TUTORIAL_QUESTS = {
+      firstRunDeath: {
+        id: 'firstRunDeath',
+        name: 'First Death Tutorial',
+        description: 'Your first death triggers the tutorial',
+        objectives: 'Die in your first run',
+        rewardGold: 0,
+        rewardSkillPoints: 0,
+        unlockBuilding: 'questMission', // Already unlocked by default
+        autoClaim: true,
+        triggerOnDeath: true,
+        nextQuest: 'quest1_kill3'
+      },
+      quest1_kill3: {
+        id: 'quest1_kill3',
+        name: 'Kill 3 Enemies',
+        description: 'Start a new run and kill 3 enemies',
+        objectives: 'Kill 3 enemies in one run',
+        claim: 'Main Building',
+        rewardGold: 200,
+        rewardSkillPoints: 2,
+        unlockBuilding: 'skillTree',
+        nextQuest: 'quest2_spendSkills'
+      },
+      quest2_spendSkills: {
+        id: 'quest2_spendSkills',
+        name: 'Spend Skill Points',
+        description: 'Spend 2 skill points on Dash + Headshot Chain',
+        objectives: 'Unlock 2 specific skills',
+        claim: 'Main Building',
+        rewardGold: 0,
+        rewardSkillPoints: 0,
+        unlockBuilding: 'trainingHall', // Progression Building (Training Hall serves as attribute/progression)
+        nextQuest: 'quest3_buyProgression'
+      },
+      quest3_buyProgression: {
+        id: 'quest3_buyProgression',
+        name: 'Buy Progression',
+        description: 'Buy 1 progression upgrade',
+        objectives: 'Purchase any attribute upgrade',
+        claim: 'Main Building',
+        rewardGold: 0,
+        rewardSkillPoints: 0,
+        message: 'Great! You\'re getting stronger!',
+        nextQuest: 'quest4_kill10'
+      },
+      quest4_kill10: {
+        id: 'quest4_kill10',
+        name: 'Kill 10 Enemies',
+        description: 'Kill 10 enemies in one run',
+        objectives: 'Kill 10 enemies',
+        triggerOnDeath: true, // Reward given when player dies after completing objective
+        rewardGold: 0,
+        rewardSkillPoints: 0,
+        unlockBuilding: 'companionHouse',
+        companionEgg: true, // Give companion egg
+        nextQuest: 'quest5_breedCompanion'
+      },
+      quest5_breedCompanion: {
+        id: 'quest5_breedCompanion',
+        name: 'Breed Companion',
+        description: 'Visit Companion Building and activate your companion',
+        objectives: 'Activate/breed companion',
+        claim: 'Main Building',
+        rewardGold: 0,
+        rewardSkillPoints: 0,
+        message: 'Companion activated! They will fight by your side!',
+        nextQuest: 'quest6_stonehengeChest'
+      },
+      quest6_stonehengeChest: {
+        id: 'quest6_stonehengeChest',
+        name: 'Find Stonehenge Chest',
+        description: 'Find the Stonehenge chest on the map',
+        objectives: 'Find and open Stonehenge chest',
+        autoClaim: true, // Completes on pickup
+        rewardGold: 0,
+        rewardSkillPoints: 0,
+        unlockBuilding: 'armory', // Gear Building
+        giveItem: { name: 'Cigar', rarity: 'rare', stats: { strength: 1, speed: 1, precision: 1 } },
+        autoEquip: true,
+        nextQuest: 'quest7_survive2min'
+      },
+      quest7_survive2min: {
+        id: 'quest7_survive2min',
+        name: 'Survive 2 Minutes',
+        description: 'Survive for 2 minutes in a run',
+        objectives: 'Survive 120 seconds',
+        triggerOnDeath: true,
+        rewardGold: 0,
+        rewardSkillPoints: 0,
+        rewardAttributePoints: 3,
+        unlockBuilding: 'forge', // Attributes Building (using forge as placeholder)
+        nextQuest: 'quest8_newWeapon'
+      },
+      quest8_newWeapon: {
+        id: 'quest8_newWeapon',
+        name: 'Get New Weapon',
+        description: 'Unlock a new weapon in your next run',
+        objectives: 'Unlock any new weapon during a run',
+        claim: 'Main Building',
+        rewardGold: 0,
+        rewardSkillPoints: 0,
+        message: 'Tutorial Complete! You\'re ready to survive!',
+        nextQuest: null // Tutorial complete
+      }
+    };
+    
+    // Get current quest object
+    function getCurrentQuest() {
+      const questId = saveData.tutorialQuests.currentQuest;
+      return questId ? TUTORIAL_QUESTS[questId] : null;
     }
     
-    // Progress quest based on game events - UPDATED: Mark as ready to claim instead of auto-completing
-    function progressQuest(questId, completed = false) {
-      if (saveData.storyQuests.currentQuest !== questId) return;
+    // Check if a building has an active quest
+    function hasQuestForBuilding(buildingId) {
+      // Legacy support
+      return false;
+    }
+    
+    // Progress tutorial quest
+    function progressTutorialQuest(questId, completed = false) {
+      if (saveData.tutorialQuests.currentQuest !== questId) return;
+      
+      const quest = TUTORIAL_QUESTS[questId];
+      if (!quest) return;
       
       if (completed) {
-        // NEW: Mark quest as ready to claim instead of completed
-        if (!saveData.storyQuests.readyToClaimQuests) {
-          saveData.storyQuests.readyToClaimQuests = [];
+        // Auto-claim quests complete immediately
+        if (quest.autoClaim) {
+          claimTutorialQuest(questId);
+        } else {
+          // Mark quest as ready to claim
+          if (!saveData.tutorialQuests.readyToClaim.includes(questId)) {
+            saveData.tutorialQuests.readyToClaim.push(questId);
+          }
+          
+          // Clear current quest
+          saveData.tutorialQuests.currentQuest = null;
+          
+          // Show notification
+          showStatChange('📜 Quest Complete! Return to Main Building to claim!');
         }
-        if (!saveData.storyQuests.readyToClaimQuests.includes(questId)) {
-          saveData.storyQuests.readyToClaimQuests.push(questId);
-        }
-        
-        // Clear current quest - no new quest starts until this one is claimed
-        saveData.storyQuests.currentQuest = null;
-        
-        // Show notification to go to main building to claim
-        showStatChange('🏛️ Quest Complete! Return to the Quest Hall to claim your reward!');
         
         saveSaveData();
       }
     }
     
-    // NEW: Claim a completed quest in the main building
-    function claimQuest(questId) {
-      if (!saveData.storyQuests.readyToClaimQuests) {
-        saveData.storyQuests.readyToClaimQuests = [];
-      }
-      if (!saveData.storyQuests.readyToClaimQuests.includes(questId)) return;
+    // Claim a tutorial quest
+    function claimTutorialQuest(questId) {
+      const quest = TUTORIAL_QUESTS[questId];
+      if (!quest) return;
       
       // Remove from ready to claim
-      const index = saveData.storyQuests.readyToClaimQuests.indexOf(questId);
+      const index = saveData.tutorialQuests.readyToClaim.indexOf(questId);
       if (index > -1) {
-        saveData.storyQuests.readyToClaimQuests.splice(index, 1);
+        saveData.tutorialQuests.readyToClaim.splice(index, 1);
       }
       
-      // Add to completed quests
-      if (!saveData.storyQuests.completedQuests.includes(questId)) {
-        saveData.storyQuests.completedQuests.push(questId);
+      // Add to completed
+      if (!saveData.tutorialQuests.completedQuests.includes(questId)) {
+        saveData.tutorialQuests.completedQuests.push(questId);
       }
       
-      // Quest rewards (skill points and building unlocks)
-      const questRewards = {
-        'firstRun': { skillPoints: 0, message: 'First run complete! Skill Menu will unlock after Quest 2.', unlockBuilding: null },
-        'useSkillTree': { skillPoints: 2, unlockBuilding: null, message: 'Skills activated! +2 Skill Points!' },
-        'discoverLakeChest': { skillPoints: 2, unlockBuilding: 'inventory', message: 'Inventory unlocked! +2 Skill Points!' },
-        'unlockSkillTree': { unlockBuilding: 'skillTree', message: 'Skill Tree unlocked!' },
-        'upgradeSkillTree': { skillPoints: 1, message: '+1 Skill Point!' },
-        'unlockForge': { skillPoints: 1, unlockBuilding: 'forge', message: 'Forge unlocked! +1 Skill Point!' },
-        'equipGear': { skillPoints: 1, message: '+1 Skill Point!' },
-        'unlockRecycle': { skillPoints: 1, unlockBuilding: 'trashRecycle', message: 'Trash & Recycle unlocked! +1 Skill Point!' },
-        'unlockArmory': { skillPoints: 1, unlockBuilding: 'armory', message: 'Armory unlocked! +1 Skill Point!' },
-        'unlockCompanionHouse': { skillPoints: 1, unlockBuilding: 'companionHouse', message: 'Companion House unlocked! +1 Skill Point!' },
-        'unlockTrainingHall': { skillPoints: 2, unlockBuilding: 'trainingHall', message: 'Training Hall unlocked! +2 Skill Points!' },
-        'survive60Seconds': { skillPoints: 2, message: '+2 Skill Points!' },
-        'kill50Enemies': { skillPoints: 2, message: '+2 Skill Points!' },
-        'upgradeAnyBuildingTo3': { skillPoints: 2, message: '+2 Skill Points!' }
-      };
+      // Give rewards
+      if (quest.rewardGold) {
+        saveData.gold += quest.rewardGold;
+      }
+      if (quest.rewardSkillPoints) {
+        saveData.skillPoints += quest.rewardSkillPoints;
+      }
+      if (quest.rewardAttributePoints) {
+        saveData.trainingPoints = (saveData.trainingPoints || 0) + quest.rewardAttributePoints;
+      }
       
-      const reward = questRewards[questId];
-      if (reward) {
-        // Award skill points
-        if (reward.skillPoints) {
-          saveData.skillPoints += reward.skillPoints;
+      // Unlock building
+      if (quest.unlockBuilding && saveData.campBuildings[quest.unlockBuilding]) {
+        saveData.campBuildings[quest.unlockBuilding].unlocked = true;
+        if (saveData.campBuildings[quest.unlockBuilding].level === 0) {
+          saveData.campBuildings[quest.unlockBuilding].level = 1;
         }
-        
-        // Unlock building
-        if (reward.unlockBuilding && saveData.campBuildings[reward.unlockBuilding]) {
-          saveData.campBuildings[reward.unlockBuilding].unlocked = true;
-          saveData.campBuildings[reward.unlockBuilding].level = 1; // Start at level 1
-          
-          // Mark building as having a new notification
-          if (!saveData.storyQuests.questNotifications) {
-            saveData.storyQuests.questNotifications = {};
-          }
-          saveData.storyQuests.questNotifications[reward.unlockBuilding] = true;
+      }
+      
+      // Give companion egg
+      if (quest.companionEgg) {
+        // Companion is already unlocked in save data by default, just make sure
+        if (saveData.companions && saveData.companions.stormWolf) {
+          saveData.companions.stormWolf.unlocked = true;
         }
-        
-        // Show reward message
+      }
+      
+      // Give item
+      if (quest.giveItem) {
+        saveData.inventory.push(quest.giveItem);
+        if (quest.autoEquip && saveData.equippedGear) {
+          // Auto-equip in first slot
+          saveData.equippedGear[0] = quest.giveItem;
+        }
+      }
+      
+      // Show reward message
+      const message = quest.message || `Quest Complete! ${quest.rewardGold ? `+${quest.rewardGold} gold` : ''} ${quest.rewardSkillPoints ? `+${quest.rewardSkillPoints} skill points` : ''}`;
+      
+      if (!quest.autoClaim) {
         showQuestPopup(
           '✨ Quest Claimed!',
-          reward.message,
+          message,
           'Awesome!',
           () => {
-            // After claiming, advance to next quest
-            advanceQuestChain();
+            // Start next quest
+            if (quest.nextQuest) {
+              saveData.tutorialQuests.currentQuest = quest.nextQuest;
+              saveSaveData();
+              showNextQuestPopup(quest.nextQuest);
+            }
             updateCampScreen();
           }
         );
+      } else {
+        // Auto-claim: just advance
+        if (quest.nextQuest) {
+          saveData.tutorialQuests.currentQuest = quest.nextQuest;
+          saveSaveData();
+          showNextQuestPopup(quest.nextQuest);
+        }
       }
       
       saveSaveData();
     }
     
-    // Advance to next quest in story chain - UPDATED: New quest order with claiming mechanic
-    function advanceQuestChain() {
-      const completed = saveData.storyQuests.completedQuests;
+    // Show next quest popup
+    function showNextQuestPopup(questId) {
+      const quest = TUTORIAL_QUESTS[questId];
+      if (!quest) return;
       
-      // Quest chain progression with quest-driven building unlocks
-      // Quest 1: Kill One Enemy (Active during first run)
-      if (!completed.includes('firstRun') && !saveData.storyQuests.currentQuest) {
-        saveData.storyQuests.currentQuest = 'firstRun';
-        saveSaveData();
-        showQuestPopup(
-          '📜 Quest 1: Kill One Enemy',
-          'Welcome to the camp! Start your first run and kill one enemy. This is your first step to survival!<br><br><b>Objective:</b> Kill one enemy during a run<br><b>Note:</b> Return to the Quest Hall after your run to claim this quest.',
-          'Start My First Run!'
-        );
-      } 
-      // Quest 2: Activate and Claim Two Skills (Unlocks after Quest 1 is claimed)
-      else if (completed.includes('firstRun') && !completed.includes('useSkillTree')) {
-        // First unlock the skill tree building for Quest 2
-        if (!saveData.campBuildings.skillTree.unlocked) {
-          saveData.campBuildings.skillTree.unlocked = true;
-          saveData.campBuildings.skillTree.level = 1;
-          // Mark skill tree as having a new notification
-          if (!saveData.storyQuests.questNotifications) {
-            saveData.storyQuests.questNotifications = {};
-          }
-          saveData.storyQuests.questNotifications.skillTree = true;
-        }
-        
-        // Award 2 skill points for this quest
-        if (!saveData.questSkillPointsAwarded) {
-          saveData.questSkillPointsAwarded = {};
-        }
-        if (!saveData.questSkillPointsAwarded.quest2Start) {
-          saveData.skillPoints = (saveData.skillPoints || 0) + 2;
-          saveData.questSkillPointsAwarded.quest2Start = true;
-        }
-        
-        saveData.storyQuests.currentQuest = 'useSkillTree';
-        saveSaveData();
-        showQuestPopup(
-          '📜 Quest 2: Activate and Claim Two Skills',
-          'Great job on your first kill! The Skill Tree building is now unlocked. You have been awarded 2 skill points.<br><br><b>Objective:</b> Visit the Skill Tree tab in camp and activate 2 skills<br><b>Reward:</b> More skill points!',
-          'Let\'s Learn!'
-        );
-      }
-      // Subsequent quests...
-      else if (completed.includes('useSkillTree') && !completed.includes('unlockForge')) {
-        // Quest 3: Unlock Forge
-        saveData.storyQuests.currentQuest = 'unlockForge';
-        saveSaveData();
-        showQuestPopup(
-          '📜 Quest: Forge Your Arsenal',
-          'Unlock the Forge to increase your crafting capabilities! Higher forge levels unlock better gear tiers.<br><br><b>Objective:</b> Click "Unlock" on the Forge building (FREE via quest)<br><b>Reward:</b> Forge Building unlocked + 1 Skill Point',
-          'To the Forge!'
-        );
-      } else if (completed.includes('unlockForge') && !completed.includes('unlockArmory')) {
-        // Quest 4: Unlock Armory
-        saveData.storyQuests.currentQuest = 'unlockArmory';
-        saveSaveData();
-        showQuestPopup(
-          '📜 Quest: Gear Up',
-          'Unlock the Armory to manage and upgrade your equipment! It provides HP and armor bonuses.<br><br><b>Objective:</b> Click "Unlock" on Armory (FREE via quest)<br><b>Reward:</b> Armory Building unlocked + 1 Skill Point',
-          'To the Armory!'
-        );
-      } else if (completed.includes('unlockArmory') && !completed.includes('unlockRecycle')) {
-        // Quest 5: Unlock Trash & Recycle
-        saveData.storyQuests.currentQuest = 'unlockRecycle';
-        saveSaveData();
-        showQuestPopup(
-          '📜 Quest: Recycling Power',
-          'Unlock Trash & Recycle to increase recycling efficiency and fusion power!<br><br><b>Objective:</b> Click "Unlock" on Trash & Recycle (FREE via quest)<br><b>Reward:</b> Trash & Recycle Building unlocked + 1 Skill Point',
-          'Let\'s Recycle!'
-        );
-      } else if (completed.includes('unlockRecycle') && !completed.includes('unlockCompanionHouse')) {
-        // Quest 6: Unlock Companion House
-        saveData.storyQuests.currentQuest = 'unlockCompanionHouse';
-        saveSaveData();
-        showQuestPopup(
-          '📜 Quest: Find a Companion',
-          'Unlock the Companion House to boost your companion\'s power!<br><br><b>Objective:</b> Click "Unlock" on Companion House (FREE via quest)<br><b>Reward:</b> Companion House unlocked + 1 Skill Point',
-          'Get a Companion!'
-        );
-      } else if (completed.includes('unlockCompanionHouse') && !completed.includes('unlockTrainingHall')) {
-        // Quest 7: Unlock Training Hall
-        saveData.storyQuests.currentQuest = 'unlockTrainingHall';
-        saveSaveData();
-        showQuestPopup(
-          '📜 Quest: Train Harder',
-          'Unlock the Training Hall to improve your training efficiency!<br><br><b>Objective:</b> Click "Unlock" on Training Hall (FREE via quest)<br><b>Reward:</b> Training Hall unlocked + 2 Skill Points',
-          'To Training!'
-        );
-      } else if (completed.includes('unlockTrainingHall') && !completed.includes('survive60Seconds')) {
-        // Quest 8: Survival challenge for skill points
-        saveData.storyQuests.currentQuest = 'survive60Seconds';
-        saveSaveData();
-        showQuestPopup(
-          '📜 Quest: Survival Test',
-          'Now that you know the basics, prove your skills by surviving 60 seconds in a run!<br><br><b>Objective:</b> Survive for 60 seconds in a single run<br><b>Reward:</b> 2 Skill Points',
-          'Challenge Accepted!'
-        );
-      } else if (completed.includes('survive60Seconds') && !completed.includes('kill50Enemies')) {
-        // Quest 9: Combat challenge
-        saveData.storyQuests.currentQuest = 'kill50Enemies';
-        saveSaveData();
-        showQuestPopup(
-          '📜 Quest: Warrior\'s Path',
-          'Show your combat prowess by defeating 50 enemies total (across all runs)!<br><br><b>Objective:</b> Kill 50 enemies (cumulative)<br><b>Reward:</b> 2 Skill Points',
-          'To Battle!'
-        );
-      } else if (completed.includes('kill50Enemies') && !completed.includes('upgradeAnyBuildingTo3')) {
-        // Quest 10: Building mastery
-        saveData.storyQuests.currentQuest = 'upgradeAnyBuildingTo3';
-        saveSaveData();
-        showQuestPopup(
-          '📜 Quest: Master Builder',
-          'Upgrade any building to level 3 to master building progression!<br><br><b>Objective:</b> Upgrade any building to Level 3<br><b>Reward:</b> 2 Skill Points',
-          'Build Strong!'
-        );
-      } else if (completed.includes('upgradeAnyBuildingTo3')) {
-        // End of main quest chain - show completion message
-        if (!completed.includes('mainQuestComplete')) {
-          saveData.storyQuests.completedQuests.push('mainQuestComplete');
+      showQuestPopup(
+        `📜 ${quest.name}`,
+        `${quest.description}<br><br><b>Objective:</b> ${quest.objectives}${quest.claim ? `<br><b>Claim:</b> ${quest.claim}` : ''}`,
+        'Got it!'
+      );
+    }
+    
+    // Legacy function for backward compatibility
+    function progressQuest(questId, completed = false) {
+      // Forward to tutorial quest system
+      progressTutorialQuest(questId, completed);
+    }
+    
+    // Legacy function for backward compatibility  
+    function claimQuest(questId) {
+      // Forward to tutorial quest system
+      claimTutorialQuest(questId);
+    }
+    
+    // Advance to next quest in story chain
+    function advanceQuestChain() {
+      const completed = saveData.tutorialQuests.completedQuests;
+      
+      // Start first quest if no quest active
+      if (!saveData.tutorialQuests.currentQuest && completed.length === 0) {
+        // First quest starts after first death
+        if (saveData.tutorialQuests.firstDeathShown) {
+          saveData.tutorialQuests.currentQuest = 'quest1_kill3';
           saveSaveData();
-          showQuestPopup(
-            '🎉 Tutorial Complete!',
-            'Congratulations! You\'ve completed the main tutorial quest chain. You now understand all the core game mechanics.<br><br>Continue exploring, upgrading, and surviving. More quests and challenges await!<br><br><b>Tip:</b> Keep earning gold to upgrade buildings and unlock more powerful skills!',
-            'Amazing!'
-          );
         }
       }
     }
@@ -10099,36 +10244,14 @@
       const questTracker = document.getElementById('quest-tracker');
       if (!questTracker) return;
       
-      const currentQuest = saveData.storyQuests.currentQuest;
+      const currentQuest = getCurrentQuest();
       if (!currentQuest) {
         questTracker.style.display = 'none';
         return;
       }
       
-      // Quest descriptions
-      const questDescriptions = {
-        'firstRun': '📜 Quest: Start your first run!',
-        'discoverLakeChest': '📜 Quest: Find your first item drop',
-        'unlockSkillTree': '📜 Quest: Unlock Skill Tree (FREE)',
-        'useSkillTree': '📜 Quest: Learn 2 skills',
-        'upgradeSkillTree': '📜 Quest: Upgrade Skill Tree to Level 2',
-        'unlockForge': '📜 Quest: Unlock Forge (FREE)',
-        'unlockArmory': '📜 Quest: Unlock Armory (FREE)',
-        'equipGear': '📜 Quest: Equip an item',
-        'unlockRecycle': '📜 Quest: Unlock Trash & Recycle (FREE)',
-        'unlockCompanionHouse': '📜 Quest: Unlock Companion House (FREE)',
-        'unlockTrainingHall': '📜 Quest: Unlock Training Hall (FREE)',
-        'survive60Seconds': '📜 Quest: Survive 60 seconds',
-        'kill50Enemies': '📜 Quest: Kill 50 enemies (total)',
-        'upgradeAnyBuildingTo3': '📜 Quest: Upgrade any building to Level 3'
-      };
-      
-      if (questDescriptions[currentQuest]) {
-        questTracker.textContent = questDescriptions[currentQuest];
-        questTracker.style.display = 'block';
-      } else {
-        questTracker.style.display = 'none';
-      }
+      questTracker.textContent = `📜 ${currentQuest.name}`;
+      questTracker.style.display = 'block';
     }
 
     // --- STORY QUEST POPUP SYSTEM ---
@@ -10332,29 +10455,32 @@
       `;
       
       let content = `
-        <div style="font-size: 28px; color: #FFD700; font-weight: bold; margin-bottom: 20px;">📜 Quest & Mission Hall</div>
-        <div style="font-size: 16px; color: #AAA; margin-bottom: 30px;">Claim completed quests to unlock rewards and progress to the next quest!</div>
+        <div style="font-size: 28px; color: #FFD700; font-weight: bold; margin-bottom: 20px;">📜 Main Building</div>
+        <div style="font-size: 16px; color: #AAA; margin-bottom: 30px;">Claim completed quests to unlock rewards and progress!</div>
       `;
       
-      // Initialize arrays if they don't exist
-      if (!saveData.storyQuests.readyToClaimQuests) {
-        saveData.storyQuests.readyToClaimQuests = [];
+      // Initialize tutorial quest arrays if they don't exist
+      if (!saveData.tutorialQuests.readyToClaim) {
+        saveData.tutorialQuests.readyToClaim = [];
       }
-      if (!saveData.storyQuests.completedQuests) {
-        saveData.storyQuests.completedQuests = [];
+      if (!saveData.tutorialQuests.completedQuests) {
+        saveData.tutorialQuests.completedQuests = [];
       }
       
       // Show ready-to-claim quests
-      if (saveData.storyQuests.readyToClaimQuests.length > 0) {
+      if (saveData.tutorialQuests.readyToClaim.length > 0) {
         content += `<div style="text-align: left; margin-bottom: 20px;">`;
         content += `<div style="font-size: 20px; color: #FFD700; margin-bottom: 15px;">✨ Ready to Claim:</div>`;
         
-        saveData.storyQuests.readyToClaimQuests.forEach(questId => {
-          const questName = questNames[questId] || questId;
+        saveData.tutorialQuests.readyToClaim.forEach(questId => {
+          const quest = TUTORIAL_QUESTS[questId];
+          if (!quest) return;
+          
           content += `
             <div style="background: rgba(255,215,0,0.1); border: 2px solid #FFD700; border-radius: 10px; padding: 15px; margin-bottom: 10px;">
-              <div style="font-size: 18px; color: #FFD700; margin-bottom: 10px;">${questName}</div>
-              <button class="btn" onclick="claimQuest('${questId}'); document.body.querySelector('[data-quest-hall-overlay]').remove();" 
+              <div style="font-size: 18px; color: #FFD700; margin-bottom: 5px;">${quest.name}</div>
+              <div style="font-size: 14px; color: #AAA; margin-bottom: 10px;">${quest.description}</div>
+              <button class="btn" onclick="claimTutorialQuest('${questId}'); document.body.querySelector('[data-quest-hall-overlay]').remove();" 
                       style="font-size: 16px; padding: 10px 20px; background: #FFD700; color: #000;">
                 Claim Reward
               </button>
@@ -10367,13 +10493,15 @@
       }
       
       // Show active quest
-      if (saveData.storyQuests.currentQuest) {
-        const currentQuestName = questNames[saveData.storyQuests.currentQuest] || saveData.storyQuests.currentQuest;
+      const currentQuest = getCurrentQuest();
+      if (currentQuest) {
         content += `
           <div style="text-align: left; margin-bottom: 20px;">
             <div style="font-size: 20px; color: #5DADE2; margin-bottom: 15px;">📍 Active Quest:</div>
             <div style="background: rgba(93,173,226,0.1); border: 2px solid #5DADE2; border-radius: 10px; padding: 15px;">
-              <div style="font-size: 18px; color: #5DADE2;">${currentQuestName}</div>
+              <div style="font-size: 18px; color: #5DADE2; margin-bottom: 5px;">${currentQuest.name}</div>
+              <div style="font-size: 14px; color: #AAA;">${currentQuest.description}</div>
+              <div style="font-size: 12px; color: #777; margin-top: 5px;">Objective: ${currentQuest.objectives}</div>
             </div>
           </div>
         `;
@@ -10382,7 +10510,7 @@
       // Show completed quests count
       content += `
         <div style="font-size: 14px; color: #AAA; margin-top: 20px;">
-          Completed Quests: ${saveData.storyQuests.completedQuests.length}
+          Completed Quests: ${saveData.tutorialQuests.completedQuests.length} / 8
         </div>
       `;
       
@@ -10517,6 +10645,11 @@
               } else if (buildingId === 'trainingHall' && saveData.storyQuests.currentQuest === 'unlockTrainingHall') {
                 progressQuest('unlockTrainingHall', true);
               }
+              
+              // QUEST 5: Mark quest as complete when companion house is opened
+              if (buildingId === 'companionHouse' && saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest5_breedCompanion') {
+                progressTutorialQuest('quest5_breedCompanion', true);
+              }
             } else {
               playSound('invalid');
               showStatusMessage('Complete quests to unlock this building!', 2000);
@@ -10556,7 +10689,7 @@
             .join(', ') || 'Utility building';
           
           // NEW: Check if building has a notification
-          const hasNotification = (buildingId === 'questMission' && saveData.storyQuests.readyToClaimQuests && saveData.storyQuests.readyToClaimQuests.length > 0) ||
+          const hasNotification = (buildingId === 'questMission' && saveData.tutorialQuests.readyToClaim && saveData.tutorialQuests.readyToClaim.length > 0) ||
                                  (saveData.storyQuests.questNotifications && saveData.storyQuests.questNotifications[buildingId]);
           
           // NEW: For locked free buildings, show them as locked
@@ -10979,6 +11112,55 @@
       stonehengeGroup.add(altar);
       
       scene.add(stonehengeGroup);
+      
+      // QUEST 6: Stonehenge Chest - Blue glowing chest for cigar quest
+      const stonehengeChestGroup = new THREE.Group();
+      
+      // Chest body (blue rarity)
+      const stoneChestGeo = new THREE.BoxGeometry(0.6, 0.5, 0.5);
+      const stoneChestMat = new THREE.MeshPhysicalMaterial({ 
+        color: 0x4169E1, // Royal blue
+        transparent: true,
+        opacity: 0.95,
+        metalness: 0.9,
+        roughness: 0.2,
+        emissive: 0x4169E1,
+        emissiveIntensity: 0.6
+      });
+      const stoneChest = new THREE.Mesh(stoneChestGeo, stoneChestMat);
+      stoneChest.position.y = 0.25;
+      stoneChest.castShadow = true;
+      stonehengeChestGroup.add(stoneChest);
+      
+      // Chest lid (slightly open)
+      const stoneLidGeo = new THREE.BoxGeometry(0.62, 0.12, 0.52);
+      const stoneLidMat = new THREE.MeshPhysicalMaterial({ 
+        color: 0x1E90FF, // Dodger blue
+        metalness: 0.8,
+        roughness: 0.3,
+        emissive: 0x4169E1,
+        emissiveIntensity: 0.4
+      });
+      const stoneLid = new THREE.Mesh(stoneLidGeo, stoneLidMat);
+      stoneLid.position.set(0, 0.5, -0.12);
+      stoneLid.rotation.x = -0.4; // Open to show blue light
+      stoneLid.castShadow = true;
+      stonehengeChestGroup.add(stoneLid);
+      
+      // Blue glow light from inside
+      const blueGlowLight = new THREE.PointLight(0x4169E1, 3, 5);
+      blueGlowLight.position.set(0, 0.3, 0);
+      stonehengeChestGroup.add(blueGlowLight);
+      
+      // Position on altar
+      stonehengeChestGroup.position.set(60, 1, 60); // On top of Stonehenge altar
+      stonehengeChestGroup.userData = { 
+        isStonehengeChest: true, 
+        questItem: true,
+        pickupRadius: 3 // 3 units proximity to auto-pickup
+      };
+      scene.add(stonehengeChestGroup);
+      window.stonehengeChest = stonehengeChestGroup; // Store reference for proximity check
 
       // Mayan Pyramid - Stepped pyramid - MADE MORE VISIBLE
       const mayanGroup = new THREE.Group();
@@ -12129,8 +12311,8 @@
       scene = new THREE.Scene();
       scene.background = new THREE.Color(COLORS.bg);
       // Enhanced fog for depth - reacts to day/night cycle lighting
-      // PERFORMANCE: Tighter fog distance for better performance
-      scene.fog = new THREE.Fog(COLORS.bg, 15, 45);
+      // PERFORMANCE: Tighter fog distance for better performance (reduced from 15,45 to 12,35)
+      scene.fog = new THREE.Fog(COLORS.bg, 12, 35);
       
       // Phase 5: Initialize particle object pool for performance (100 particles pre-allocated)
       particlePool = new ObjectPool(
@@ -13150,6 +13332,13 @@
     function levelUp() {
       isPaused = true;
       
+      // Lock camera during level-up to prevent zoom changes
+      savedCameraPosition = { 
+        x: camera.position.x, 
+        y: camera.position.y, 
+        z: camera.position.z 
+      };
+      
       // Pause combo timer during level-up (only if combo is still active)
       if (comboState.lastKillTime && comboState.count >= 5) {
         const currentTime = Date.now();
@@ -13827,8 +14016,8 @@
 
       // --- SPECIAL LEVELS ---
       
-      // Levels 4, 9, 17: WEAPON UPGRADE LEVELS
-      if ([4, 9, 17].includes(playerStats.lvl)) {
+      // Levels 3, 4, 9, 17: WEAPON UPGRADE LEVELS (added level 3 and 4)
+      if ([3, 4, 9, 17].includes(playerStats.lvl)) {
         modal.querySelector('h2').innerText = 'WEAPON UPGRADE!';
         modal.querySelector('h2').style.fontSize = '36px';
         
@@ -13994,12 +14183,19 @@
         // Phase 3: Add more stat upgrades for diversity (was 2, now 3)
         choices.push(...commonUpgrades.sort(() => 0.5 - Math.random()).slice(0, 3));
         
-        // Phase 3: Shuffle and limit to 4 choices (was 3) for more diverse alternatives
-        choices = choices.sort(() => 0.5 - Math.random()).slice(0, 4);
+        // ALWAYS SHOW 6 CHOICES: Shuffle and ensure exactly 6 choices in 2×3 grid
+        choices = choices.sort(() => 0.5 - Math.random()).slice(0, 6);
+        // If we have less than 6, fill with common upgrades (use Set for O(n) lookup)
+        if (choices.length < 6) {
+          const existingIds = new Set(choices.map(c => c.id));
+          const additionalUpgrades = commonUpgrades.filter(u => !existingIds.has(u.id));
+          const needed = 6 - choices.length;
+          choices.push(...additionalUpgrades.slice(0, needed));
+        }
       }
-      // WEAPON UPGRADE TIMING: Level 3 for weapon unlock (was level 5)
-      // Only show once at level 3 to avoid duplicate weapon selection
-      else if (playerStats.lvl === 3) {
+      // WEAPON UNLOCK: Level 5 for new weapon unlock (levels 3-4 have weapon upgrade opportunities)
+      // Only show once at level 5 to avoid duplicate weapon selection
+      else if (playerStats.lvl === 5) {
         choices = [
           { 
             id: 'sword', 
@@ -14010,6 +14206,11 @@
               weapons.sword.active = true;
               weapons.sword.level = 1;
               showStatChange('New Weapon: Sword');
+              
+              // QUEST 8: Track weapon unlock
+              if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest8_newWeapon') {
+                progressTutorialQuest('quest8_newWeapon', true);
+              }
             } 
           },
           { 
@@ -14021,6 +14222,11 @@
               weapons.aura.active = true;
               weapons.aura.level = 1;
               showStatChange('New Weapon: Aura');
+              
+              // QUEST 8: Track weapon unlock
+              if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest8_newWeapon') {
+                progressTutorialQuest('quest8_newWeapon', true);
+              }
             } 
           },
           { 
@@ -14032,6 +14238,11 @@
               weapons.meteor.active = true;
               weapons.meteor.level = 1;
               showStatChange('New Weapon: Meteor');
+              
+              // QUEST 8: Track weapon unlock
+              if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest8_newWeapon') {
+                progressTutorialQuest('quest8_newWeapon', true);
+              }
             } 
           },
           { 
@@ -14046,6 +14257,11 @@
               droneTurrets.push(drone);
               startDroneHum(); // Start continuous drone sound
               showStatChange('New Weapon: Drone Turret');
+              
+              // QUEST 8: Track weapon unlock
+              if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest8_newWeapon') {
+                progressTutorialQuest('quest8_newWeapon', true);
+              }
               
               // Visual effect when unlocked
               for(let i=0; i<6; i++) {
@@ -14078,6 +14294,11 @@
               weapons.doubleBarrel.active = true;
               weapons.doubleBarrel.level = 1;
               showStatChange('New Weapon: Double Barrel');
+              
+              // QUEST 8: Track weapon unlock
+              if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest8_newWeapon') {
+                progressTutorialQuest('quest8_newWeapon', true);
+              }
             } 
           },
           { 
@@ -14089,6 +14310,11 @@
               weapons.iceSpear.active = true;
               weapons.iceSpear.level = 1;
               showStatChange('New Weapon: Ice Spear');
+              
+              // QUEST 8: Track weapon unlock
+              if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest8_newWeapon') {
+                progressTutorialQuest('quest8_newWeapon', true);
+              }
             } 
           },
           { 
@@ -14100,11 +14326,16 @@
               weapons.fireRing.active = true;
               weapons.fireRing.level = 1;
               showStatChange('New Weapon: Fire Ring');
+              
+              // QUEST 8: Track weapon unlock
+              if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest8_newWeapon') {
+                progressTutorialQuest('quest8_newWeapon', true);
+              }
             } 
           }
         ];
       }
-      // Level 10: CLASS SELECTION
+      // Level 10: CLASS SELECTION - ALWAYS SHOW 6 CHOICES
       else if (playerStats.lvl === 10) {
         modal.querySelector('h2').innerText = 'CHOOSE YOUR CLASS';
         modal.querySelector('h2').style.fontSize = '42px';
@@ -14162,8 +14393,11 @@
             } 
           }
         ];
+        // Fill with common upgrades to reach 6 choices
+        const classSelectionFillers = commonUpgrades.sort(() => 0.5 - Math.random()).slice(0, 2);
+        choices.push(...classSelectionFillers);
       } 
-      // Level 12, 18, 25: PERK UNLOCKS
+      // Level 12, 18, 25: PERK UNLOCKS - ALWAYS SHOW 6 CHOICES
       else if ([12, 18, 25].includes(playerStats.lvl)) {
         modal.querySelector('h2').innerText = 'PERK UNLOCK!';
         modal.querySelector('h2').style.fontSize = '40px';
@@ -14226,11 +14460,13 @@
           }
         ];
         
-        // Randomly select 3 perks
+        // ALWAYS SHOW 6 CHOICES: Select perks and fill with common upgrades
         choices = perkChoices.sort(() => 0.5 - Math.random()).slice(0, 3);
+        const perkUnlockFillers = commonUpgrades.sort(() => 0.5 - Math.random()).slice(0, 3);
+        choices.push(...perkUnlockFillers);
       }
       else {
-        // UPGRADE GRID: Show 6 random choices instead of 4 for 2×3 grid
+        // ALWAYS SHOW 6 CHOICES: Show 6 random choices for 2×3 grid
         choices = commonUpgrades.sort(() => 0.5 - Math.random()).slice(0, 6);
       }
 
@@ -14294,6 +14530,13 @@
           modal.style.display = 'none';
           modal.querySelector('h2').innerText = 'LEVEL UP!';
           modal.querySelector('h2').style.fontSize = '32px';
+          
+          // Restore camera position after level-up
+          if (savedCameraPosition) {
+            camera.position.set(savedCameraPosition.x, savedCameraPosition.y, savedCameraPosition.z);
+            savedCameraPosition = null; // Clear after restoration
+          }
+          
           isPaused = false;
           
           // Resume combo timer after level-up
@@ -15245,39 +15488,55 @@
       if (survivalTime > saveData.bestTime) saveData.bestTime = survivalTime;
       if (playerStats.kills > saveData.bestKills) saveData.bestKills = playerStats.kills;
       
-      // Tutorial: Check for first death
-      if (!saveData.tutorial) {
-        saveData.tutorial = {
-          completed: false,
-          firstDeath: false,
-          campVisited: false,
-          dashUnlocked: false,
-          headshotUnlocked: false,
-          currentStep: 'waiting_first_death'
+      // Tutorial Quest: Check for first death
+      if (!saveData.tutorialQuests) {
+        saveData.tutorialQuests = {
+          currentQuest: null,
+          completedQuests: [],
+          questProgress: {},
+          readyToClaim: [],
+          firstDeathShown: false,
+          secondRunCompleted: false,
+          killsThisRun: 0,
+          survivalTimeThisRun: 0,
+          stonenhengeChestFound: false
         };
       }
       
-      if (!saveData.tutorial.firstDeath && saveData.tutorial.currentStep === 'waiting_first_death') {
-        saveData.tutorial.firstDeath = true;
-        saveData.tutorial.currentStep = 'show_death_tutorial';
+      if (!saveData.tutorialQuests.firstDeathShown) {
+        saveData.tutorialQuests.firstDeathShown = true;
         saveSaveData();
-        // Show comic tutorial after a brief delay
+        // Show first death tutorial after a brief delay
         setTimeout(() => {
           showComicTutorial('first_death');
+          // Start quest 1 after first death
+          setTimeout(() => {
+            saveData.tutorialQuests.currentQuest = 'quest1_kill3';
+            saveSaveData();
+            showNextQuestPopup('quest1_kill3');
+          }, 1000);
         }, 1000);
       }
       
+      // Tutorial: Check for quest completion on death
+      const currentQuest = getCurrentQuest();
+      if (currentQuest && currentQuest.triggerOnDeath) {
+        // Quest 4: Kill 10 enemies
+        if (currentQuest.id === 'quest4_kill10' && saveData.tutorialQuests.killsThisRun >= 10) {
+          progressTutorialQuest('quest4_kill10', true);
+        }
+        // Quest 7: Survive 2 minutes
+        if (currentQuest.id === 'quest7_survive2min' && saveData.tutorialQuests.survivalTimeThisRun >= 120) {
+          progressTutorialQuest('quest7_survive2min', true);
+        }
+      }
+      
+      // Mark second run completed (for achievements unlock)
+      if (saveData.totalRuns >= 2) {
+        saveData.tutorialQuests.secondRunCompleted = true;
+      }
+      
       saveSaveData();
-      
-      // Quest progression: survival time quest
-      if (saveData.storyQuests.currentQuest === 'survive60Seconds' && survivalTime >= 60) {
-        progressQuest('survive60Seconds', true);
-      }
-      
-      // Quest progression: kill count quest  
-      if (saveData.storyQuests.currentQuest === 'kill50Enemies' && saveData.totalKills >= 50) {
-        progressQuest('kill50Enemies', true);
-      }
       
       // Display game over screen
       document.getElementById('gameover-screen').style.display = 'flex';
@@ -15401,6 +15660,12 @@
       miniBossesSpawned.clear(); // Reset mini-boss tracking
       gameStartTime = Date.now();
       runStartGold = saveData.gold;
+      
+      // Reset tutorial quest progress for this run
+      if (saveData.tutorialQuests) {
+        saveData.tutorialQuests.killsThisRun = 0;
+        saveData.tutorialQuests.survivalTimeThisRun = 0;
+      }
       
       // Reset player invulnerability state
       if (player) {
@@ -15547,17 +15812,17 @@
         activeCompanion = null;
       }
       
-      // COMPANION VISIBILITY FIX: Only spawn companion after quest ~12 (all camp buildings unlocked)
-      const questsCompleted = saveData.storyQuests?.completedQuests?.length || 0;
-      const companionUnlockThreshold = 12;
+      // COMPANION UNLOCKS AFTER QUEST 5 (companion egg quest)
+      // Check if quest 5 (breed companion quest) is completed
+      const quest5Completed = saveData.storyQuests?.completedQuests?.includes('quest5_breedCompanion') || false;
       
       if (saveData.selectedCompanion && 
           saveData.companions[saveData.selectedCompanion]?.unlocked &&
-          questsCompleted >= companionUnlockThreshold) {
+          quest5Completed) {
         activeCompanion = new Companion(saveData.selectedCompanion);
-        console.log('[Phase 5] Spawned companion:', saveData.selectedCompanion, 'after', questsCompleted, 'quests');
-      } else if (questsCompleted < companionUnlockThreshold) {
-        console.log('[Companion] Hidden until quest', companionUnlockThreshold, '(current:', questsCompleted, 'quests completed)');
+        console.log('[Phase 5] Spawned companion:', saveData.selectedCompanion, 'after completing quest 5');
+      } else if (!quest5Completed) {
+        console.log('[Companion] Hidden until quest 5 (companion egg quest) is completed');
       }
 
       // Reset Player - Spawn near the statue at map center
@@ -15587,6 +15852,11 @@
         // Calculate current run time
         const currentRunTime = isGameActive ? Math.floor((Date.now() - gameStartTime) / 1000) : 0;
         const goldThisRun = playerStats.gold - runStartGold;
+        
+        // Update tutorial quest progress
+        if (saveData.tutorialQuests && isGameActive) {
+          saveData.tutorialQuests.survivalTimeThisRun = currentRunTime;
+        }
         
         // Get permanent upgrade bonuses
         const permMaxHp = PERMANENT_UPGRADES.maxHp.effect(saveData.upgrades.maxHp);
@@ -16335,6 +16605,49 @@
         checkLegendaryCigarQuest();
       }
       
+      // QUEST 6: Check Stonehenge chest proximity
+      if (window.stonehengeChest && 
+          saveData.tutorialQuests && 
+          saveData.tutorialQuests.currentQuest === 'quest6_stonehengeChest' &&
+          isGameActive && !isPaused) {
+        const dist = player.mesh.position.distanceTo(window.stonehengeChest.position);
+        if (dist < window.stonehengeChest.userData.pickupRadius) {
+          // Player found the chest!
+          scene.remove(window.stonehengeChest);
+          window.stonehengeChest = null;
+          
+          // Show item card popup
+          showQuestPopup(
+            '🎁 Treasure Found!',
+            '<div style="text-align: center;"><div style="font-size: 48px; margin: 10px 0;">🚬</div><div style="color: #4169E1; font-size: 24px; font-weight: bold;">CIGAR</div><div style="color: #FFD700; font-size: 18px;">★★★ RARE ★★★</div><div style="margin: 15px 0; font-size: 16px;">+1 Strength<br>+1 Speed<br>+1 Precision</div><div style="color: #4169E1;">Gear Building Unlocked!</div></div>',
+            'Equip!',
+            () => {
+              // Complete quest 6 (auto-claim)
+              progressTutorialQuest('quest6_stonehengeChest', true);
+              
+              // Show blue particle effect at pickup location
+              for (let i = 0; i < 15; i++) {
+                const angle = (i / 15) * Math.PI * 2;
+                const speed = 2 + Math.random() * 2;
+                const particle = particlePool.get();
+                if (particle) {
+                  particle.mesh.position.copy(window.stonehengeChest ? window.stonehengeChest.position : player.mesh.position);
+                  particle.velocity.set(
+                    Math.cos(angle) * speed,
+                    3 + Math.random() * 2,
+                    Math.sin(angle) * speed
+                  );
+                  particle.mesh.material.color.setHex(0x4169E1); // Blue
+                  particle.mesh.visible = true;
+                  particle.active = true;
+                  particle.life = 1.0;
+                }
+              }
+            }
+          );
+        }
+      }
+      
       // Check windmill quest trigger
       if (!windmillQuest.active && !windmillQuest.hasCompleted) {
         scene.children.forEach(child => {
@@ -16771,7 +17084,18 @@
       chests.forEach(c => c.update(player.mesh.position));
       
       // Phase 5: Update particles and release back to pool when dead
+      // PERFORMANCE: Cull particles beyond fog distance (35 units)
+      const FOG_DISTANCE = 35;
       particles = particles.filter(p => {
+        // Cull particles beyond fog distance
+        const distToPlayer = p.mesh.position.distanceTo(player.mesh.position);
+        if (distToPlayer > FOG_DISTANCE) {
+          if (particlePool) {
+            particlePool.release(p);
+          }
+          return false;
+        }
+        
         const alive = p.update();
         if (!alive && particlePool) {
           particlePool.release(p);
