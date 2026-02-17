@@ -10534,14 +10534,17 @@
           const hasNotification = (buildingId === 'questMission' && saveData.storyQuests.readyToClaimQuests && saveData.storyQuests.readyToClaimQuests.length > 0) ||
                                  (saveData.storyQuests.questNotifications && saveData.storyQuests.questNotifications[buildingId]);
           
+          // NEW: For locked free buildings, show them as locked
+          const isLockedFree = building.isFree && !isUnlocked;
+          
            buildingCard.innerHTML = `
              <div class="building-header">
                <div class="building-name">${building.icon} ${building.name}${hasNotification ? ' <span class="quest-indicator">!</span>' : ''}${hasQuestForBuilding(buildingId) ? ' <span class="quest-indicator">!</span>' : ''}</div>
-               <div class="building-level">Level ${buildingData.level}/${buildingData.maxLevel}</div>
+               <div class="building-level">${isLockedFree ? 'LOCKED' : `Level ${buildingData.level}/${buildingData.maxLevel}`}</div>
              </div>
              <div class="building-desc">${building.description}</div>
              <div class="building-bonus">Current: ${bonusText}</div>
-            <div class="building-cost">${isMaxLevel ? 'MAX LEVEL' : (building.isFree ? 'FREE' : `Cost: ${cost} gold`)}</div>
+            <div class="building-cost">${isLockedFree ? 'Unlock via Quest' : (isMaxLevel ? 'MAX LEVEL' : (building.isFree ? 'FREE' : `Cost: ${cost} gold`))}</div>
           `;
           
           if (!isMaxLevel && !building.isFree && building.baseCost > 0) {
@@ -10551,29 +10554,35 @@
             }
           } else if (building.isFree) {
             buildingCard.style.border = '2px solid #FFD700';
-            // NEW: Add click handler for free buildings
-            if (buildingId === 'questMission') {
-              buildingCard.onclick = () => showQuestHall();
-              buildingCard.style.cursor = 'pointer';
-            } else if (buildingId === 'skillTree') {
-              // Clear notification when clicking on skill tree
-              buildingCard.onclick = () => {
-                if (saveData.storyQuests.questNotifications) {
-                  saveData.storyQuests.questNotifications.skillTree = false;
+            
+            // NEW: Locked free buildings should be dimmed and not clickable
+            if (isLockedFree) {
+              buildingCard.style.opacity = '0.6';
+            } else {
+              // NEW: Add click handler for unlocked free buildings only
+              if (buildingId === 'questMission') {
+                buildingCard.onclick = () => showQuestHall();
+                buildingCard.style.cursor = 'pointer';
+              } else if (buildingId === 'skillTree') {
+                // Clear notification when clicking on skill tree
+                buildingCard.onclick = () => {
+                  if (saveData.storyQuests.questNotifications) {
+                    saveData.storyQuests.questNotifications.skillTree = false;
+                    saveSaveData();
+                  }
+                  // Switch to skill tree tab
+                  document.getElementById('camp-skills-tab').click();
+                };
+                buildingCard.style.cursor = 'pointer';
+              } else if (saveData.storyQuests.questNotifications && saveData.storyQuests.questNotifications[buildingId]) {
+                // Clear notification on click for other buildings
+                buildingCard.onclick = () => {
+                  saveData.storyQuests.questNotifications[buildingId] = false;
                   saveSaveData();
-                }
-                // Switch to skill tree tab
-                document.getElementById('camp-skills-tab').click();
-              };
-              buildingCard.style.cursor = 'pointer';
-            } else if (saveData.storyQuests.questNotifications && saveData.storyQuests.questNotifications[buildingId]) {
-              // Clear notification on click for other buildings
-              buildingCard.onclick = () => {
-                saveData.storyQuests.questNotifications[buildingId] = false;
-                saveSaveData();
-                updateCampScreen();
-              };
-              buildingCard.style.cursor = 'pointer';
+                  updateCampScreen();
+                };
+                buildingCard.style.cursor = 'pointer';
+              }
             }
           }
           
