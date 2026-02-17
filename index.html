@@ -2719,8 +2719,8 @@
     </div>
   </div>
 
-  <!-- Import Map for Three.js -->
-  <script async src="https://unpkg.com/es-module-shims@1.8.0/dist/es-module-shims.js" onerror="console.warn('[CDN] ES Module Shims failed to load - game requires THREE.js to function')"></script>
+  <!-- Import Map for Three.js with CDN Fallback -->
+  <script async src="https://unpkg.com/es-module-shims@1.8.0/dist/es-module-shims.js" onerror="console.warn('[CDN] ES Module Shims failed to load - using fallback')"></script>
   <script type="importmap">
     {
       "imports": {
@@ -2728,6 +2728,45 @@
         "three/addons/": "https://unpkg.com/three@0.176.0/examples/jsm/"
       }
     }
+  </script>
+  
+  <!-- THREE.js CDN Fallback: Load from alternative CDN if unpkg fails -->
+  <script type="module">
+    // Test if THREE.js loaded successfully from primary CDN
+    (async function() {
+      let threeLoaded = false;
+      try {
+        await import('three');
+        threeLoaded = true;
+        console.log('[CDN] THREE.js loaded successfully from unpkg.com');
+      } catch (error) {
+        console.warn('[CDN] Primary CDN (unpkg.com) failed, attempting fallback to cdn.jsdelivr.net');
+        
+        // Fallback: Dynamically create new importmap with alternative CDN
+        try {
+          const importMapFallback = document.createElement('script');
+          importMapFallback.type = 'importmap';
+          importMapFallback.textContent = JSON.stringify({
+            "imports": {
+              "three": "https://cdn.jsdelivr.net/npm/three@0.176.0/build/three.module.js",
+              "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.176.0/examples/jsm/"
+            }
+          });
+          document.head.appendChild(importMapFallback);
+          
+          // Test fallback
+          await import('three');
+          console.log('[CDN] THREE.js loaded successfully from fallback CDN (jsdelivr.net)');
+        } catch (fallbackError) {
+          console.error('[CDN] Both primary and fallback CDNs failed. Game cannot initialize without THREE.js');
+          // Show user-friendly error message
+          const loadingScreen = document.getElementById('loading-screen');
+          if (loadingScreen) {
+            loadingScreen.innerHTML = '<div style="color: white; text-align: center; padding: 20px;"><h2>⚠️ Connection Error</h2><p>Unable to load required game resources. Please check your internet connection and refresh the page.</p></div>';
+          }
+        }
+      }
+    })();
   </script>
 
   <!-- CDN Error Logging (Non-blocking) -->
@@ -3341,7 +3380,7 @@
     // Day/Night Cycle System - Smooth, non-blocking transitions
     let dayNightCycle = {
       enabled: true,
-      timeOfDay: 0.25, // Start at dawn (6 AM / 25% through day cycle) (0-1, where 0=midnight, 0.25=dawn, 0.5=noon, 0.75=dusk, 1=midnight)
+      timeOfDay: 0.27, // Start at first sunrise (6:30 AM / 27% through day cycle) - Changed from 0.25
       cycleSpeed: 1 / 600, // 10 minutes for full cycle (1 / 600 seconds at 60fps)
       lastUpdateTime: 0
     };
@@ -3778,9 +3817,9 @@
         this.highlight.position.set(-0.2, 0.3, 0.2);
         this.mesh.add(this.highlight);
         
-        // Add player face: eyes with RED glowing appearance (matching load screen)
+        // Add player face: eyes WHITE by default, turn RED on rage (combo >= 5)
         const eyeGeo = new THREE.SphereGeometry(0.08, 8, 8);
-        const eyeMat = new THREE.MeshBasicMaterial({ color: 0xFF0000 }); // RED eyes
+        const eyeMat = new THREE.MeshBasicMaterial({ color: 0xFFFFFF }); // WHITE eyes (default)
         
         this.leftEye = new THREE.Mesh(eyeGeo, eyeMat);
         this.leftEye.position.set(-0.12, 0.1, 0.4);
@@ -3790,9 +3829,9 @@
         this.rightEye.position.set(0.12, 0.1, 0.4);
         this.mesh.add(this.rightEye);
         
-        // Pupils (darker red for depth)
+        // Pupils (black for contrast)
         const pupilGeo = new THREE.SphereGeometry(0.04, 8, 8);
-        const pupilMat = new THREE.MeshBasicMaterial({ color: 0x8B0000 }); // Dark red
+        const pupilMat = new THREE.MeshBasicMaterial({ color: 0x000000 }); // Black pupils
         
         this.leftPupil = new THREE.Mesh(pupilGeo, pupilMat);
         this.leftPupil.position.set(-0.12, 0.1, 0.45);
@@ -4291,6 +4330,26 @@
             this.rightEye.scale.y = 1;
             this.leftPupil.scale.y = 1;
             this.rightPupil.scale.y = 1;
+          }
+        }
+        
+        // ENHANCED: Eye color change on rage (combo >= 5)
+        // Eyes turn RED when combo >= 5, WHITE otherwise
+        if (typeof comboState !== 'undefined' && comboState.count >= 5) {
+          // RAGE MODE - Red eyes
+          if (this.leftEye.material.color.getHex() !== 0xFF0000) {
+            this.leftEye.material.color.setHex(0xFF0000); // Red
+            this.rightEye.material.color.setHex(0xFF0000); // Red
+            this.leftPupil.material.color.setHex(0x8B0000); // Dark red
+            this.rightPupil.material.color.setHex(0x8B0000); // Dark red
+          }
+        } else {
+          // NORMAL MODE - White eyes
+          if (this.leftEye.material.color.getHex() !== 0xFFFFFF) {
+            this.leftEye.material.color.setHex(0xFFFFFF); // White
+            this.rightEye.material.color.setHex(0xFFFFFF); // White
+            this.leftPupil.material.color.setHex(0x000000); // Black
+            this.rightPupil.material.color.setHex(0x000000); // Black
           }
         }
         
@@ -5461,14 +5520,20 @@
       
       // Specialized death effects by damage type
       dieStandard(enemyColor) {
-        // Phase 5: Death Variety - Multiple death animation variations
+        // ENHANCED GORE: Phase 5 Death Variety with extreme violence effects
         const deathVariation = Math.random();
         
+        // ENHANCED: Blood mist on all deaths
+        this.spawnBloodMist(enemyColor);
+        
         if (deathVariation < 0.25) {
-          // EXPLOSION DEATH: Main explosion (death ring removed per requirements)
+          // EXPLOSION DEATH with SEVERED PARTS
           spawnParticles(this.mesh.position, enemyColor, 20);
           spawnParticles(this.mesh.position, 0xFFFFFF, 8);
           spawnParticles(this.mesh.position, 0x8B0000, 6);
+          
+          // ENHANCED: Severed head
+          this.spawnSeveredHead(enemyColor);
           
           // Explode into pieces (NO death ring)
           const pieceCount = this.isMiniBoss ? 25 : 15;
@@ -5508,7 +5573,7 @@
             updatePiece();
           }
         } else if (deathVariation < 0.5) {
-          // CORPSE DEATH: Leave a corpse sprite with blood pool
+          // CORPSE DEATH: Leave a corpse sprite with VARIABLE BLOOD POOL
           spawnParticles(this.mesh.position, enemyColor, 8);
           spawnParticles(this.mesh.position, 0x8B0000, 4);
           
@@ -5526,8 +5591,9 @@
           corpse.rotation.x = -Math.PI / 2;
           scene.add(corpse);
           
-          // Blood pool
-          const bloodGeo = new THREE.CircleGeometry(0.8, 16);
+          // ENHANCED: Variable blood pool size (0.6-1.2 radius)
+          const poolSize = 0.6 + Math.random() * 0.6;
+          const bloodGeo = new THREE.CircleGeometry(poolSize, 16);
           const bloodMat = new THREE.MeshBasicMaterial({ 
             color: 0x8B0000, 
             transparent: true,
@@ -5560,9 +5626,12 @@
           };
           fadeCorpse();
         } else if (deathVariation < 0.75) {
-          // DISINTEGRATION DEATH: Enemy dissolves into particles
+          // DISINTEGRATION DEATH: Enemy dissolves into particles with LIMB LOSS
           spawnParticles(this.mesh.position, enemyColor, 30);
           spawnParticles(this.mesh.position, 0x444444, 10); // Dark particles
+          
+          // ENHANCED: Severed limbs fly off
+          this.spawnSeveredLimbs(enemyColor, 3);
           
           // Create dissolving pieces that shrink as they fall
           for(let i = 0; i < 12; i++) {
@@ -5598,9 +5667,12 @@
             updatePiece();
           }
         } else {
-          // SPLATTER DEATH: Dramatic blood splatter effect
+          // SPLATTER DEATH: Dramatic blood splatter effect with LARGE/SMALL DROPS
           spawnParticles(this.mesh.position, 0x8B0000, 25); // Lots of blood
           spawnParticles(this.mesh.position, enemyColor, 10);
+          
+          // ENHANCED: Large and small blood drops
+          this.spawnBloodDrops(15);
           
           // Create blood splatter marks in random directions
           for(let i = 0; i < 8; i++) {
@@ -5668,6 +5740,184 @@
             }
           };
           fadeCorpse();
+        }
+      }
+      
+      // ENHANCED GORE: Blood mist effect
+      spawnBloodMist(enemyColor) {
+        const mistParticles = 20;
+        for (let i = 0; i < mistParticles; i++) {
+          const mist = new THREE.Mesh(
+            new THREE.SphereGeometry(0.1, 6, 6),
+            new THREE.MeshBasicMaterial({
+              color: 0x8B0000,
+              transparent: true,
+              opacity: 0.4
+            })
+          );
+          mist.position.copy(this.mesh.position);
+          scene.add(mist);
+          
+          const vel = new THREE.Vector3(
+            (Math.random() - 0.5) * 0.15,
+            Math.random() * 0.1 + 0.05,
+            (Math.random() - 0.5) * 0.15
+          );
+          
+          let life = 30;
+          const updateMist = () => {
+            life--;
+            mist.position.add(vel);
+            vel.multiplyScalar(0.95); // Slow down
+            mist.scale.multiplyScalar(1.05); // Expand
+            mist.material.opacity = (life / 30) * 0.4;
+            
+            if (life <= 0) {
+              scene.remove(mist);
+              mist.geometry.dispose();
+              mist.material.dispose();
+            } else {
+              requestAnimationFrame(updateMist);
+            }
+          };
+          updateMist();
+        }
+      }
+      
+      // ENHANCED GORE: Severed head
+      spawnSeveredHead(enemyColor) {
+        const head = new THREE.Mesh(
+          new THREE.SphereGeometry(0.3, 8, 8),
+          new THREE.MeshBasicMaterial({ color: enemyColor })
+        );
+        head.position.copy(this.mesh.position);
+        scene.add(head);
+        
+        const vel = new THREE.Vector3(
+          (Math.random() - 0.5) * 0.4,
+          0.5 + Math.random() * 0.3,
+          (Math.random() - 0.5) * 0.4
+        );
+        
+        let life = 80;
+        const updateHead = () => {
+          life--;
+          head.position.add(vel);
+          vel.y -= 0.025; // Gravity
+          head.rotation.x += 0.2;
+          head.rotation.y += 0.15;
+          
+          // Leave blood trail
+          if (life % 5 === 0) {
+            spawnParticles(head.position, 0x8B0000, 1);
+          }
+          
+          if (life <= 0 || head.position.y < 0) {
+            scene.remove(head);
+            head.geometry.dispose();
+            head.material.dispose();
+          } else {
+            requestAnimationFrame(updateHead);
+          }
+        };
+        updateHead();
+      }
+      
+      // ENHANCED GORE: Severed limbs
+      spawnSeveredLimbs(enemyColor, count) {
+        for (let i = 0; i < count; i++) {
+          const limb = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.1, 0.08, 0.4, 6),
+            new THREE.MeshBasicMaterial({ color: enemyColor })
+          );
+          limb.position.copy(this.mesh.position);
+          scene.add(limb);
+          
+          const vel = new THREE.Vector3(
+            (Math.random() - 0.5) * 0.35,
+            0.3 + Math.random() * 0.2,
+            (Math.random() - 0.5) * 0.35
+          );
+          
+          let life = 70;
+          const updateLimb = () => {
+            life--;
+            limb.position.add(vel);
+            vel.y -= 0.02; // Gravity
+            limb.rotation.x += 0.18;
+            limb.rotation.z += 0.12;
+            
+            if (life <= 0 || limb.position.y < 0) {
+              scene.remove(limb);
+              limb.geometry.dispose();
+              limb.material.dispose();
+            } else {
+              requestAnimationFrame(updateLimb);
+            }
+          };
+          updateLimb();
+        }
+      }
+      
+      // ENHANCED GORE: Large and small blood drops
+      spawnBloodDrops(count) {
+        // Gore effect constants
+        const LARGE_DROP_PROBABILITY = 0.3; // 30% large drops
+        const LARGE_DROP_SIZE = 0.15;
+        const SMALL_DROP_SIZE = 0.08;
+        
+        for (let i = 0; i < count; i++) {
+          const size = Math.random() < LARGE_DROP_PROBABILITY ? LARGE_DROP_SIZE : SMALL_DROP_SIZE;
+          const drop = new THREE.Mesh(
+            new THREE.SphereGeometry(size, 6, 6),
+            new THREE.MeshBasicMaterial({ color: 0x8B0000 })
+          );
+          drop.position.copy(this.mesh.position);
+          scene.add(drop);
+          
+          const vel = new THREE.Vector3(
+            (Math.random() - 0.5) * 0.3,
+            Math.random() * 0.35 + 0.15,
+            (Math.random() - 0.5) * 0.3
+          );
+          
+          let life = 50;
+          const updateDrop = () => {
+            life--;
+            drop.position.add(vel);
+            vel.y -= 0.03; // Gravity
+            
+            if (life <= 0 || drop.position.y < 0.1) {
+              // Create small blood splat on ground
+              if (drop.position.y < 0.1) {
+                const splat = new THREE.Mesh(
+                  new THREE.CircleGeometry(size * 1.5, 8),
+                  new THREE.MeshBasicMaterial({
+                    color: 0x8B0000,
+                    transparent: true,
+                    opacity: 0.6,
+                    side: THREE.DoubleSide
+                  })
+                );
+                splat.position.set(drop.position.x, 0.01, drop.position.z);
+                splat.rotation.x = -Math.PI / 2;
+                scene.add(splat);
+                
+                setTimeout(() => {
+                  scene.remove(splat);
+                  splat.geometry.dispose();
+                  splat.material.dispose();
+                }, 5000);
+              }
+              
+              scene.remove(drop);
+              drop.geometry.dispose();
+              drop.material.dispose();
+            } else {
+              requestAnimationFrame(updateDrop);
+            }
+          };
+          updateDrop();
         }
       }
       
@@ -6095,8 +6345,8 @@
 
     // Performance: Cached geometries and materials for projectiles (reused across instances)
     const projectileGeometryCache = {
-      bullet: new THREE.SphereGeometry(0.25, 8, 8),
-      bulletGlow: new THREE.SphereGeometry(0.35, 6, 6)
+      bullet: new THREE.SphereGeometry(0.15, 8, 8), // Reduced from 0.25 - smaller bullets
+      bulletGlow: new THREE.SphereGeometry(0.22, 6, 6) // Reduced from 0.35 - smaller glow
     };
     const projectileMaterialCache = {
       bullet: new THREE.MeshBasicMaterial({ 
@@ -7373,6 +7623,41 @@
         this.lid.position.set(0, 0.35, 0);
         this.mesh.add(this.lid);
         
+        // ENHANCED: Add glowing cracks that leak colored light by rarity
+        // Create crack lines using thin boxes as visual cracks
+        for (let i = 0; i < 3; i++) {
+          const crackGeo = new THREE.BoxGeometry(0.6, 0.02, 0.02);
+          const crackMat = new THREE.MeshBasicMaterial({
+            color: props.lightColor,
+            transparent: true,
+            opacity: 0.8
+          });
+          const crack = new THREE.Mesh(crackGeo, crackMat);
+          crack.position.set(
+            (Math.random() - 0.5) * 0.3,
+            (Math.random() - 0.5) * 0.4,
+            0.31 // Front face
+          );
+          crack.rotation.z = (Math.random() - 0.5) * 0.5;
+          this.mesh.add(crack);
+          
+          // Add matching crack on back
+          const crackBack = crack.clone();
+          crackBack.position.z = -0.31;
+          this.mesh.add(crackBack);
+          
+          // Side cracks
+          const crackSide1 = new THREE.Mesh(crackGeo.clone(), crackMat.clone());
+          crackSide1.position.set(0.31, (Math.random() - 0.5) * 0.4, (Math.random() - 0.5) * 0.3);
+          crackSide1.rotation.y = Math.PI / 2;
+          crackSide1.rotation.z = (Math.random() - 0.5) * 0.5;
+          this.mesh.add(crackSide1);
+          
+          const crackSide2 = crackSide1.clone();
+          crackSide2.position.x = -0.31;
+          this.mesh.add(crackSide2);
+        }
+        
         this.active = true;
         this.opened = false;
         this.collectRange = 1.5;
@@ -7382,7 +7667,7 @@
         spawnParticles(this.mesh.position, props.particleColor, 8); // Reduced for performance
         spawnParticles(this.mesh.position, 0xFFFFFF, 4); // Reduced for performance
         
-        // Add glowing light effect with tier-specific color
+        // ENHANCED: Add glowing light effect with tier-specific color that leaks from cracks
         const glowLight = new THREE.PointLight(props.lightColor, props.intensity, 6);
         glowLight.position.copy(this.mesh.position);
         glowLight.position.y += 0.5;
@@ -7467,6 +7752,19 @@
       }
       
       giveReward() {
+        // ENHANCED: Special rewards for rare chests - Double Barrel weapon unlock
+        if (this.tier === 'rare' || this.tier === 'epic' || this.tier === 'mythical') {
+          // 50% chance to give Double Barrel weapon for rare+ chests
+          if (Math.random() < 0.5 && !weapons.doubleBarrel.active) {
+            weapons.doubleBarrel.active = true;
+            createFloatingText('Double Barrel Unlocked!', this.mesh.position, '#0080FF');
+            showStatChange('RARE CHEST: Double Barrel Shotgun Unlocked!');
+            playSound('levelUp');
+            spawnParticles(this.mesh.position, 0x0080FF, 20);
+            return; // Skip normal rewards
+          }
+        }
+        
         // Determine reward type
         const rand = Math.random();
         
@@ -16088,29 +16386,35 @@
       
       // Calculate sun position and lighting based on time of day
       // 0 = midnight (dark), 0.25 = sunrise, 0.5 = noon (bright), 0.75 = sunset, 1 = midnight
+      // ENHANCED: Stronger contrast, morning fog, darker afternoons, moonlight at night
       let sunIntensity, ambientIntensity, skyColor;
+      
+      // Morning fog period (6:30-7:30 = 0.27-0.31)
+      const isMorningFog = (t >= 0.27 && t <= 0.31);
       
       if (t < 0.25) {
         // Night to sunrise (0 -> 0.25)
         const phase = t / 0.25;
-        sunIntensity = 0.2 + (0.6 * phase); // 0.2 -> 0.8
-        ambientIntensity = 0.3 + (0.3 * phase); // 0.3 -> 0.6
+        // ENHANCED: Stronger moonlight at night (0.4 instead of 0.2)
+        sunIntensity = 0.4 + (0.5 * phase); // 0.4 -> 0.9
+        ambientIntensity = 0.25 + (0.35 * phase); // 0.25 -> 0.6
         skyColor = new THREE.Color().lerpColors(
-          new THREE.Color(0x1a1a2e), // Dark blue night
+          new THREE.Color(0x0a0a1a), // Darker night sky
           new THREE.Color(0x87CEEB), // Light blue day
           phase
         );
       } else if (t < 0.5) {
         // Sunrise to noon (0.25 -> 0.5)
         const phase = (t - 0.25) / 0.25;
-        sunIntensity = 0.8 + (0.2 * phase); // 0.8 -> 1.0
-        ambientIntensity = 0.6 + (0.1 * phase); // 0.6 -> 0.7
+        sunIntensity = 0.9 + (0.2 * phase); // 0.9 -> 1.1 (brighter at noon)
+        ambientIntensity = 0.6 + (0.2 * phase); // 0.6 -> 0.8
         skyColor = new THREE.Color(0x87CEEB); // Bright day
       } else if (t < 0.75) {
         // Noon to sunset (0.5 -> 0.75)
+        // ENHANCED: Darker afternoons (stronger decrease)
         const phase = (t - 0.5) / 0.25;
-        sunIntensity = 1.0 - (0.6 * phase); // 1.0 -> 0.4
-        ambientIntensity = 0.7 - (0.3 * phase); // 0.7 -> 0.4
+        sunIntensity = 1.1 - (0.8 * phase); // 1.1 -> 0.3 (darker)
+        ambientIntensity = 0.8 - (0.5 * phase); // 0.8 -> 0.3 (darker)
         skyColor = new THREE.Color().lerpColors(
           new THREE.Color(0x87CEEB), // Day blue
           new THREE.Color(0xFF6B35), // Sunset orange
@@ -16119,11 +16423,11 @@
       } else {
         // Sunset to night (0.75 -> 1.0)
         const phase = (t - 0.75) / 0.25;
-        sunIntensity = 0.4 - (0.2 * phase); // 0.4 -> 0.2
-        ambientIntensity = 0.4 - (0.1 * phase); // 0.4 -> 0.3
+        sunIntensity = 0.3 + (0.1 * phase); // 0.3 -> 0.4 (moonlight)
+        ambientIntensity = 0.3 - (0.05 * phase); // 0.3 -> 0.25
         skyColor = new THREE.Color().lerpColors(
           new THREE.Color(0xFF6B35), // Sunset orange
-          new THREE.Color(0x1a1a2e), // Night dark blue
+          new THREE.Color(0x0a0a1a), // Darker night
           phase
         );
       }
@@ -16132,12 +16436,35 @@
       window.ambientLight.intensity = ambientIntensity;
       window.dirLight.intensity = sunIntensity;
       
+      // ENHANCED: Moonlight color at night (bluish tint)
+      if (t < 0.15 || t > 0.85) {
+        window.dirLight.color.setHex(0xadd8e6); // Light blue moonlight
+      } else {
+        window.dirLight.color.setHex(0xffffff); // White sunlight
+      }
+      
       // Update sky color
       scene.background = skyColor;
       
-      // Update fog color to match sky (fog reacts to lighting)
-      if (scene.fog) {
+      // ENHANCED: Morning fog (6:30-7:30)
+      if (isMorningFog) {
+        if (!scene.fog) {
+          scene.fog = new THREE.Fog(skyColor, 20, 100); // Light fog
+        }
+        // Gradually increase/decrease fog during morning period
+        const fogPhase = (t - 0.27) / 0.04; // 0 to 1 over fog period
+        const fogDensity = Math.sin(fogPhase * Math.PI); // 0 -> 1 -> 0 (peak at middle)
+        scene.fog.near = 20 - (10 * fogDensity); // 20 -> 10 -> 20
+        scene.fog.far = 100 - (30 * fogDensity); // 100 -> 70 -> 100
         scene.fog.color = skyColor;
+      } else {
+        // Update fog color to match sky (fog reacts to lighting)
+        if (scene.fog) {
+          scene.fog.color = skyColor;
+          // Standard fog settings outside morning
+          scene.fog.near = 30;
+          scene.fog.far = 150;
+        }
       }
       
       // Move sun position in an arc
@@ -16850,7 +17177,7 @@
         c.material.opacity = 0.3 + Math.sin(c.userData.phase) * 0.2;
       });
       
-      // Lake sparkles animation
+      // Lake sparkles animation - ENHANCED: Reflect sun/moon based on time of day
       animatedSceneObjects.sparkles.forEach(c => {
         c.userData.phase += 0.02 * c.userData.speed;
         c.material.opacity = 0.3 + Math.abs(Math.sin(c.userData.phase)) * 0.7;
@@ -16859,6 +17186,22 @@
           1,
           1 + Math.sin(c.userData.phase * 2) * 0.5
         );
+        
+        // ENHANCED: Change sparkle color based on time of day (sun = white/gold, moon = blue)
+        const t = dayNightCycle.timeOfDay;
+        if (t < 0.15 || t > 0.85) {
+          // Night - moonlight sparkles (bluish)
+          c.material.color.setHex(0xADD8E6); // Light blue
+        } else if (t >= 0.15 && t < 0.3) {
+          // Sunrise - orange sparkles
+          c.material.color.setHex(0xFFAA00); // Orange
+        } else if (t >= 0.7 && t < 0.85) {
+          // Sunset - red/gold sparkles
+          c.material.color.setHex(0xFF6B35); // Red-orange
+        } else {
+          // Day - bright white/gold sparkles
+          c.material.color.setHex(0xFFFFFF); // White
+        }
       });
       
       // Crystal tower animation
