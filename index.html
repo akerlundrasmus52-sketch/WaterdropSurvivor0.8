@@ -1344,22 +1344,50 @@
     /* Damage Numbers */
     .damage-number {
       position: absolute;
+      font-family: 'Bangers', 'M PLUS Rounded 1c', cursive; /* Comic font */
       font-weight: bold;
-      font-size: 16px;
+      font-size: 12px; /* SMALLER: Reduced from 16px */
       pointer-events: none;
       animation: floatUp 1s forwards;
       z-index: 1000;
+      letter-spacing: 0.5px;
     }
     
     .damage-number.critical {
+      /* CRIT MAGNITUDE COLOR: Bright gold for critical hits */
       color: #FFD700;
-      text-shadow: -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000, 0 0 10px rgba(255,215,0,0.8), 0 0 20px rgba(255,215,0,0.5), 2px 2px 4px rgba(0,0,0,0.9);
-      font-size: 24px;
+      text-shadow: 
+        -1px -1px 0 #000, 
+        1px -1px 0 #000, 
+        -1px 1px 0 #000, 
+        1px 1px 0 #000, 
+        0 0 8px rgba(255,215,0,0.9), 
+        0 0 15px rgba(255,215,0,0.6);
+      font-size: 18px; /* SMALLER: Reduced from 24px */
     }
     
     .damage-number.normal {
-      color: #FFFFFF;
-      text-shadow: -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000, 0 0 8px rgba(93,173,226,0.6), 0 0 15px rgba(93,173,226,0.3), 2px 2px 3px rgba(0,0,0,0.8);
+      /* NORMAL DAMAGE: White/light grey */
+      color: #DDDDDD;
+      text-shadow: 
+        -1px -1px 0 #000, 
+        1px -1px 0 #000, 
+        -1px 1px 0 #000, 
+        1px 1px 0 #000,
+        0 0 4px rgba(221,221,221,0.5);
+    }
+    
+    /* NEW: Super crit/headshot damage - bright red */
+    .damage-number.headshot {
+      color: #FF0000;
+      text-shadow: 
+        -2px -2px 0 #000, 
+        2px -2px 0 #000, 
+        -2px 2px 0 #000, 
+        2px 2px 0 #000, 
+        0 0 12px rgba(255,0,0,1), 
+        0 0 24px rgba(255,0,0,0.8);
+      font-size: 22px; /* Biggest for headshots */
     }
 
     @keyframes floatUp {
@@ -15385,10 +15413,19 @@
       }
     }
 
-    function createDamageNumber(amount, pos, isCrit = false) {
+    function createDamageNumber(amount, pos, isCrit = false, isHeadshot = false) {
       const div = document.createElement('div');
-      div.className = isCrit ? 'damage-number critical' : 'damage-number normal';
-      div.innerText = isCrit ? `CRITICAL!\n${Math.floor(amount)}` : Math.floor(amount);
+      // Color code by damage type: headshot (red) > crit (gold) > normal (white)
+      if (isHeadshot) {
+        div.className = 'damage-number headshot';
+        div.innerText = `HEADSHOT!\n${Math.floor(amount)}`;
+      } else if (isCrit) {
+        div.className = 'damage-number critical';
+        div.innerText = `CRIT!\n${Math.floor(amount)}`;
+      } else {
+        div.className = 'damage-number normal';
+        div.innerText = Math.floor(amount);
+      }
       
       // Project 3D pos to 2D screen
       const vec = pos.clone();
