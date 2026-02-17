@@ -448,9 +448,9 @@
       bottom: 30px;
       right: 30px;
       width: 90px; /* Smaller - more compact */
-      height: 105px; /* Nearly round waterdrop shape */
-      /* WATERDROP SHAPE: Nearly round with slight point at bottom */
-      border-radius: 50% 50% 50% 45%; /* Nearly circular waterdrop */
+      height: 105px; /* Nearly round/circular shape */
+      /* WATERDROP SHAPE: Nearly round with subtle waterdrop hint */
+      border-radius: 50% 50% 50% 45%; /* Rounded with slightly less rounded bottom-right for subtle waterdrop effect */
       transform: rotate(0deg); /* No rotation - standard orientation */
       border: 3px solid #FFD700;
       /* 80s BATMAN COMIC STYLE: Dark gradient with halftone */
@@ -3180,7 +3180,7 @@
         osc.frequency.exponentialRampToValueAtTime(600, now + 0.1);
         osc.frequency.exponentialRampToValueAtTime(900, now + 0.2);
         gain.gain.setValueAtTime(0.35, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+        gain.gain.linearRampToValueAtTime(0, now + 0.3); // Linear fade to zero
         osc.start(now);
         osc.stop(now + 0.3);
         
@@ -3193,7 +3193,7 @@
         osc2.frequency.setValueAtTime(120, now);
         osc2.frequency.exponentialRampToValueAtTime(250, now + 0.15);
         gain2.gain.setValueAtTime(0.3, now);
-        gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+        gain2.gain.linearRampToValueAtTime(0, now + 0.25); // Linear fade to zero
         osc2.start(now);
         osc2.stop(now + 0.25);
         
@@ -3206,7 +3206,7 @@
         osc3.frequency.setValueAtTime(450, now + 0.05);
         osc3.frequency.exponentialRampToValueAtTime(1200, now + 0.25);
         gain3.gain.setValueAtTime(0.2, now + 0.05);
-        gain3.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+        gain3.gain.linearRampToValueAtTime(0, now + 0.3); // Linear fade to zero
         osc3.start(now + 0.05);
         osc3.stop(now + 0.3);
       } else if (type === 'upgrade') {
