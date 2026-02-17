@@ -48,7 +48,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700;800;900&display=swap" rel="stylesheet">
   <!-- COMIC FONT: 80s Batman comic-style font for combo/notifications -->
-  <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Creepster&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Bangers&display=swap" rel="stylesheet">
   <style>
     body {
       margin: 0;
@@ -1718,9 +1718,10 @@
       overflow-y: auto;
       z-index: 50; /* Lower than UI layer buttons */
       /* IPHONE 16 OPTIMIZATION: Adjust padding for safe area, shift left/up for full visibility */
-      padding: max(20px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) max(80px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
-      padding-left: max(30px, env(safe-area-inset-left)); /* Shift slightly left */
       padding-top: max(30px, env(safe-area-inset-top)); /* Shift slightly up */
+      padding-right: max(20px, env(safe-area-inset-right));
+      padding-bottom: max(80px, env(safe-area-inset-bottom));
+      padding-left: max(30px, env(safe-area-inset-left)); /* Shift slightly left */
     }
 
     .screen-title {
@@ -2149,7 +2150,7 @@
       
       #region-display {
         right: 50%;
-        transform: translate(50%, 140px);
+        transform: translateX(50%) translateY(140px); /* Combine transforms to preserve both */
       }
     }
     
@@ -2537,7 +2538,7 @@
     <div id="day-night-clock" style="position: absolute; top: 20px; left: 50%; transform: translateX(-50%); pointer-events: none; z-index: 100;">
       <div style="background: radial-gradient(circle at 30% 30%, rgba(40,40,40,0.9), rgba(0,0,0,0.8)); 
                   border: 3px solid #FFD700; 
-                  border-radius: 50% 50% 50% 0; /* WATERDROP SHAPE: teardrop with pointed bottom-left */
+                  border-radius: 50% 50% 50% 0; /* WATERDROP SHAPE: teardrop with pointed bottom-right */
                   width: 80px; 
                   height: 80px; 
                   display: flex; 
@@ -13996,8 +13997,9 @@
         // Phase 3: Shuffle and limit to 4 choices (was 3) for more diverse alternatives
         choices = choices.sort(() => 0.5 - Math.random()).slice(0, 4);
       }
-      // WEAPON UPGRADE TIMING: Level 3-4 for weapon unlock (was level 5)
-      else if (playerStats.lvl === 3 || playerStats.lvl === 4) {
+      // WEAPON UPGRADE TIMING: Level 3 for weapon unlock (was level 5)
+      // Only show once at level 3 to avoid duplicate weapon selection
+      else if (playerStats.lvl === 3) {
         choices = [
           { 
             id: 'sword', 
