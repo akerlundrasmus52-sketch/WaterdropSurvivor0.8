@@ -2730,7 +2730,7 @@
     }
   </script>
   
-  <!-- THREE.js CDN Fallback: Load from alternative CDN if unpkg fails -->
+  <!-- THREE.js CDN Fallback: Load from alternative CDN if unpkg fails, then local fallback -->
   <script type="module">
     // Test if THREE.js loaded successfully from primary CDN
     (async function() {
@@ -2742,7 +2742,7 @@
       } catch (error) {
         console.warn('[CDN] Primary CDN (unpkg.com) failed, attempting fallback to cdn.jsdelivr.net');
         
-        // Fallback: Dynamically create new importmap with alternative CDN
+        // Fallback 1: Dynamically create new importmap with alternative CDN
         try {
           const importMapFallback = document.createElement('script');
           importMapFallback.type = 'importmap';
@@ -2754,15 +2754,53 @@
           });
           document.head.appendChild(importMapFallback);
           
-          // Test fallback
+          // Test fallback CDN
           await import('three');
           console.log('[CDN] THREE.js loaded successfully from fallback CDN (jsdelivr.net)');
         } catch (fallbackError) {
-          console.error('[CDN] Both primary and fallback CDNs failed. Game cannot initialize without THREE.js');
-          // Show user-friendly error message
-          const loadingScreen = document.getElementById('loading-screen');
-          if (loadingScreen) {
-            loadingScreen.innerHTML = '<div style="color: white; text-align: center; padding: 20px;"><h2>⚠️ Connection Error</h2><p>Unable to load required game resources. Please check your internet connection and refresh the page.</p></div>';
+          console.warn('[CDN] Both CDNs failed, attempting local fallback from vendor/three.module.js');
+          
+          // Fallback 2: Load from local vendor directory
+          try {
+            const importMapLocal = document.createElement('script');
+            importMapLocal.type = 'importmap';
+            importMapLocal.textContent = JSON.stringify({
+              "imports": {
+                "three": "./vendor/three.module.js"
+              }
+            });
+            document.head.appendChild(importMapLocal);
+            
+            // Test local fallback
+            await import('three');
+            console.log('[Local] THREE.js loaded successfully from local vendor directory (offline mode)');
+          } catch (localError) {
+            console.error('[Error] All THREE.js loading attempts failed (CDNs and local fallback)');
+            // Show enhanced user-friendly error message
+            const loadingScreen = document.getElementById('loading-screen');
+            if (loadingScreen) {
+              loadingScreen.innerHTML = `
+                <div style="color: white; text-align: center; padding: 20px; max-width: 600px; margin: auto;">
+                  <h2>⚠️ Unable to Load Game Resources</h2>
+                  <p>The game failed to load THREE.js library from all sources:</p>
+                  <ul style="text-align: left; display: inline-block; margin: 20px auto;">
+                    <li>Primary CDN (unpkg.com) - Failed</li>
+                    <li>Fallback CDN (jsdelivr.net) - Failed</li>
+                    <li>Local fallback (vendor/three.module.js) - Failed</li>
+                  </ul>
+                  <p><strong>Troubleshooting:</strong></p>
+                  <ul style="text-align: left; display: inline-block; margin: 10px auto;">
+                    <li>Check your internet connection</li>
+                    <li>Try disabling ad blockers or VPN</li>
+                    <li>Refresh the page (Ctrl+R or Cmd+R)</li>
+                    <li>Clear browser cache and try again</li>
+                  </ul>
+                  <button onclick="location.reload()" style="margin-top: 20px; padding: 10px 20px; font-size: 16px; cursor: pointer; background: #4FC3F7; color: white; border: none; border-radius: 5px;">
+                    Retry
+                  </button>
+                </div>
+              `;
+            }
           }
         }
       }
