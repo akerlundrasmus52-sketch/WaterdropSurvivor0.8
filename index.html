@@ -8489,10 +8489,9 @@
       saveSaveData();
       updateGearScreen();
       
-      // Quest progression: first time using armory
-      if (!saveData.storyQuests.buildingFirstUse.armory && saveData.storyQuests.currentQuest === 'useArmory') {
-        saveData.storyQuests.buildingFirstUse.armory = true;
-        progressQuest('useArmory', true);
+      // Quest progression: first time equipping gear
+      if (saveData.storyQuests.currentQuest === 'equipGear') {
+        progressQuest('equipGear', true);
       }
     }
 
@@ -9262,16 +9261,12 @@
           'discoverLakeChest': { skillPoints: 2, unlockBuilding: 'inventory', message: 'Inventory unlocked! +2 Skill Points!' },
           'unlockSkillTree': { unlockBuilding: 'skillTree', message: 'Skill Tree unlocked!' },
           'upgradeSkillTree': { skillPoints: 1, message: '+1 Skill Point!' },
-          'unlockForge': { unlockBuilding: 'forge', message: 'Forge unlocked!' },
-          'useForge': { skillPoints: 1, message: '+1 Skill Point!' },
-          'unlockRecycle': { unlockBuilding: 'trashRecycle', message: 'Trash & Recycle unlocked!' },
-          'useRecycle': { skillPoints: 1, message: '+1 Skill Point!' },
-          'unlockArmory': { unlockBuilding: 'armory', message: 'Armory unlocked!' },
-          'useArmory': { skillPoints: 1, message: '+1 Skill Point!' },
-          'unlockCompanionHouse': { unlockBuilding: 'companionHouse', message: 'Companion House unlocked!' },
-          'useCompanionHouse': { skillPoints: 1, message: '+1 Skill Point!' },
-          'unlockTrainingHall': { unlockBuilding: 'trainingHall', message: 'Training Hall unlocked!' },
-          'useTrainingHall': { skillPoints: 2, message: '+2 Skill Points!' },
+          'unlockForge': { skillPoints: 1, unlockBuilding: 'forge', message: 'Forge unlocked! +1 Skill Point!' },
+          'equipGear': { skillPoints: 1, message: '+1 Skill Point!' },
+          'unlockRecycle': { skillPoints: 1, unlockBuilding: 'trashRecycle', message: 'Trash & Recycle unlocked! +1 Skill Point!' },
+          'unlockArmory': { skillPoints: 1, unlockBuilding: 'armory', message: 'Armory unlocked! +1 Skill Point!' },
+          'unlockCompanionHouse': { skillPoints: 1, unlockBuilding: 'companionHouse', message: 'Companion House unlocked! +1 Skill Point!' },
+          'unlockTrainingHall': { skillPoints: 2, unlockBuilding: 'trainingHall', message: 'Training Hall unlocked! +2 Skill Points!' },
           'survive60Seconds': { skillPoints: 2, message: '+2 Skill Points!' },
           'kill50Enemies': { skillPoints: 2, message: '+2 Skill Points!' },
           'upgradeAnyBuildingTo3': { skillPoints: 2, message: '+2 Skill Points!' }
@@ -9361,92 +9356,56 @@
         saveSaveData();
         showQuestPopup(
           '📜 Quest: Forge Your Arsenal',
-          'Time to unlock the Forge to craft powerful weapons!<br><br><b>Objective:</b> Click "Unlock" on the Forge building (FREE via quest)<br><b>Reward:</b> Forge Building unlocked',
+          'Unlock the Forge to increase your crafting capabilities! Higher forge levels unlock better gear tiers.<br><br><b>Objective:</b> Click "Unlock" on the Forge building (FREE via quest)<br><b>Reward:</b> Forge Building unlocked + 1 Skill Point',
           'To the Forge!'
         );
-      } else if (completed.includes('unlockForge') && !completed.includes('useForge') && !saveData.storyQuests.buildingFirstUse.forge) {
-        // Quest 7: Craft first weapon
-        saveData.storyQuests.currentQuest = 'useForge';
-        saveSaveData();
-        showQuestPopup(
-          '📜 Quest: Craft Your First Weapon',
-          'Use the Forge to craft your first weapon upgrade!<br><br><b>Objective:</b> Craft any weapon at the Forge<br><b>Reward:</b> 1 Skill Point',
-          'Let\'s Craft!'
-        );
-      } else if (completed.includes('useForge') && !completed.includes('unlockRecycle')) {
-        // Quest 8: Unlock Trash & Recycle
-        saveData.storyQuests.currentQuest = 'unlockRecycle';
-        saveSaveData();
-        showQuestPopup(
-          '📜 Quest: Recycling Power',
-          'Unlock Trash & Recycle to convert unwanted gear into materials!<br><br><b>Objective:</b> Click "Unlock" on Trash & Recycle (FREE via quest)<br><b>Reward:</b> Trash & Recycle Building unlocked',
-          'Let\'s Recycle!'
-        );
-      } else if (completed.includes('unlockRecycle') && !completed.includes('useRecycle') && !saveData.storyQuests.buildingFirstUse.trashRecycle) {
-        // Quest 9: Recycle first item
-        saveData.storyQuests.currentQuest = 'useRecycle';
-        saveSaveData();
-        showQuestPopup(
-          '📜 Quest: Scrap for Materials',
-          'Time to turn old gear into useful materials!<br><br><b>Objective:</b> Scrap any item at Trash & Recycle<br><b>Reward:</b> 1 Skill Point',
-          'Let\'s Scrap!'
-        );
-      } else if (completed.includes('useRecycle') && !completed.includes('unlockArmory')) {
-        // Quest 10: Unlock Armory
+      } else if (completed.includes('unlockForge') && !completed.includes('unlockArmory')) {
+        // Quest 7: Unlock Armory
         saveData.storyQuests.currentQuest = 'unlockArmory';
         saveSaveData();
         showQuestPopup(
           '📜 Quest: Gear Up',
-          'Unlock the Armory to manage and upgrade your equipment!<br><br><b>Objective:</b> Click "Unlock" on Armory (FREE via quest)<br><b>Reward:</b> Armory Building unlocked',
+          'Unlock the Armory to manage and upgrade your equipment! It provides HP and armor bonuses.<br><br><b>Objective:</b> Click "Unlock" on Armory (FREE via quest)<br><b>Reward:</b> Armory Building unlocked + 1 Skill Point',
           'To the Armory!'
         );
-      } else if (completed.includes('unlockArmory') && !completed.includes('useArmory') && !saveData.storyQuests.buildingFirstUse.armory) {
-        // Quest 11: Equip/infuse gear
-        saveData.storyQuests.currentQuest = 'useArmory';
+      } else if (completed.includes('unlockArmory') && !completed.includes('equipGear')) {
+        // Quest 8: Equip gear for the first time
+        saveData.storyQuests.currentQuest = 'equipGear';
         saveSaveData();
         showQuestPopup(
-          '📜 Quest: Equip Your Gear',
-          'Visit the Armory to equip or upgrade your gear!<br><br><b>Objective:</b> Equip or infuse any item at the Armory<br><b>Reward:</b> 1 Skill Point',
+          '📜 Quest: Equip Your First Item',
+          'You have items in your inventory! Open the Gear menu (sword icon) and equip an item.<br><br><b>Objective:</b> Equip any item from your inventory<br><b>Reward:</b> 1 Skill Point',
           'Gear Up!'
         );
-      } else if (completed.includes('useArmory') && !completed.includes('unlockCompanionHouse')) {
-        // Quest 12: Unlock Companion House
+      } else if (completed.includes('equipGear') && !completed.includes('unlockRecycle')) {
+        // Quest 9: Unlock Trash & Recycle
+        saveData.storyQuests.currentQuest = 'unlockRecycle';
+        saveSaveData();
+        showQuestPopup(
+          '📜 Quest: Recycling Power',
+          'Unlock Trash & Recycle to increase recycling efficiency and fusion power!<br><br><b>Objective:</b> Click "Unlock" on Trash & Recycle (FREE via quest)<br><b>Reward:</b> Trash & Recycle Building unlocked + 1 Skill Point',
+          'Let\'s Recycle!'
+        );
+      } else if (completed.includes('unlockRecycle') && !completed.includes('unlockCompanionHouse')) {
+        // Quest 10: Unlock Companion House
         saveData.storyQuests.currentQuest = 'unlockCompanionHouse';
         saveSaveData();
         showQuestPopup(
           '📜 Quest: Find a Companion',
-          'Unlock the Companion House to get allies who fight by your side!<br><br><b>Objective:</b> Click "Unlock" on Companion House (FREE via quest)<br><b>Reward:</b> Companion House unlocked',
+          'Unlock the Companion House to boost your companion\'s power!<br><br><b>Objective:</b> Click "Unlock" on Companion House (FREE via quest)<br><b>Reward:</b> Companion House unlocked + 1 Skill Point',
           'Get a Companion!'
         );
-      } else if (completed.includes('unlockCompanionHouse') && !completed.includes('useCompanionHouse') && !saveData.storyQuests.buildingFirstUse.companionHouse) {
-        // Quest 13: Select companion
-        saveData.storyQuests.currentQuest = 'useCompanionHouse';
-        saveSaveData();
-        showQuestPopup(
-          '📜 Quest: Choose Your Companion',
-          'Select a companion to join you on your adventures!<br><br><b>Objective:</b> Select a companion at the Companion House<br><b>Reward:</b> 1 Skill Point',
-          'Choose Wisely!'
-        );
-      } else if (completed.includes('useCompanionHouse') && !completed.includes('unlockTrainingHall')) {
-        // Quest 14: Unlock Training Hall
+      } else if (completed.includes('unlockCompanionHouse') && !completed.includes('unlockTrainingHall')) {
+        // Quest 11: Unlock Training Hall
         saveData.storyQuests.currentQuest = 'unlockTrainingHall';
         saveSaveData();
         showQuestPopup(
           '📜 Quest: Train Harder',
-          'Unlock the Training Hall to boost your combat abilities!<br><br><b>Objective:</b> Click "Unlock" on Training Hall (FREE via quest)<br><b>Reward:</b> Training Hall unlocked',
+          'Unlock the Training Hall to improve your training efficiency!<br><br><b>Objective:</b> Click "Unlock" on Training Hall (FREE via quest)<br><b>Reward:</b> Training Hall unlocked + 2 Skill Points',
           'To Training!'
         );
-      } else if (completed.includes('unlockTrainingHall') && !completed.includes('useTrainingHall') && !saveData.storyQuests.buildingFirstUse.trainingHall) {
-        // Quest 15: Use training hall
-        saveData.storyQuests.currentQuest = 'useTrainingHall';
-        saveSaveData();
-        showQuestPopup(
-          '📜 Quest: Start Training',
-          'Use the Training Hall to improve your stats!<br><br><b>Objective:</b> Train any attribute at the Training Hall<br><b>Reward:</b> 2 Skill Points',
-          'Let\'s Train!'
-        );
-      } else if (completed.includes('useTrainingHall') && !completed.includes('survive60Seconds')) {
-        // Quest 16: Survival challenge for skill points
+      } else if (completed.includes('unlockTrainingHall') && !completed.includes('survive60Seconds')) {
+        // Quest 12: Survival challenge for skill points
         saveData.storyQuests.currentQuest = 'survive60Seconds';
         saveSaveData();
         showQuestPopup(
@@ -9455,7 +9414,7 @@
           'Challenge Accepted!'
         );
       } else if (completed.includes('survive60Seconds') && !completed.includes('kill50Enemies')) {
-        // Quest 17: Combat challenge
+        // Quest 13: Combat challenge
         saveData.storyQuests.currentQuest = 'kill50Enemies';
         saveSaveData();
         showQuestPopup(
@@ -9464,7 +9423,7 @@
           'To Battle!'
         );
       } else if (completed.includes('kill50Enemies') && !completed.includes('upgradeAnyBuildingTo3')) {
-        // Quest 18: Building mastery
+        // Quest 14: Building mastery
         saveData.storyQuests.currentQuest = 'upgradeAnyBuildingTo3';
         saveSaveData();
         showQuestPopup(
@@ -9500,20 +9459,16 @@
       // Quest descriptions
       const questDescriptions = {
         'firstRun': '📜 Quest: Start your first run!',
-        'discoverLakeChest': '📜 Quest: Find the Lake Chest',
+        'discoverLakeChest': '📜 Quest: Find your first item drop',
         'unlockSkillTree': '📜 Quest: Unlock Skill Tree (FREE)',
         'useSkillTree': '📜 Quest: Learn 2 skills',
         'upgradeSkillTree': '📜 Quest: Upgrade Skill Tree to Level 2',
         'unlockForge': '📜 Quest: Unlock Forge (FREE)',
-        'useForge': '📜 Quest: Craft your first weapon',
-        'unlockRecycle': '📜 Quest: Unlock Trash & Recycle (FREE)',
-        'useRecycle': '📜 Quest: Scrap an item',
         'unlockArmory': '📜 Quest: Unlock Armory (FREE)',
-        'useArmory': '📜 Quest: Equip gear at Armory',
+        'equipGear': '📜 Quest: Equip an item',
+        'unlockRecycle': '📜 Quest: Unlock Trash & Recycle (FREE)',
         'unlockCompanionHouse': '📜 Quest: Unlock Companion House (FREE)',
-        'useCompanionHouse': '📜 Quest: Choose a companion',
         'unlockTrainingHall': '📜 Quest: Unlock Training Hall (FREE)',
-        'useTrainingHall': '📜 Quest: Train an attribute',
         'survive60Seconds': '📜 Quest: Survive 60 seconds',
         'kill50Enemies': '📜 Quest: Kill 50 enemies (total)',
         'upgradeAnyBuildingTo3': '📜 Quest: Upgrade any building to Level 3'
