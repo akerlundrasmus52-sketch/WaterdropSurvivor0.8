@@ -859,6 +859,29 @@
       box-shadow: 0 2px 0 #2a1a11, 0 4px 8px rgba(0,0,0,0.4);
     }
     
+    /* Current Region Display */
+    #current-region-display {
+      position: absolute;
+      top: 80px;
+      right: 20px;
+      background: radial-gradient(circle at 30% 30%, rgba(40,40,40,0.95), rgba(0,0,0,0.9));
+      border: 2px solid #FFD700;
+      border-radius: 8px;
+      padding: 8px 16px;
+      pointer-events: none;
+      z-index: 100;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.7), 0 0 20px rgba(255,215,0,0.3);
+    }
+    
+    #region-name {
+      font-size: 14px;
+      font-weight: bold;
+      color: #FFD700;
+      text-shadow: 0 0 8px rgba(255,215,0,0.6), 1px 1px 2px rgba(0,0,0,0.8);
+      text-align: center;
+      white-space: nowrap;
+    }
+    
     /* PR #117: Options Menu Modal */
     #options-menu {
       display: none;
@@ -1952,6 +1975,14 @@
         display: flex !important;
       }
       
+      /* Center minimap at bottom-middle in portrait mode */
+      #minimap-container {
+        left: 50%;
+        right: auto;
+        bottom: 150px;
+        transform: translateX(-50%);
+      }
+      
       /* Reduce padding on small portrait screens */
       .story-quest-content {
         padding: 20px;
@@ -2475,11 +2506,11 @@
     
     <!-- Day/Night Cycle Clock - Enhanced 3D appearance -->
     <div id="day-night-clock" style="position: absolute; top: 20px; left: 50%; transform: translateX(-50%); pointer-events: none; z-index: 100;">
-      <div style="background: radial-gradient(circle at 30% 30%, rgba(40,40,40,0.9), rgba(0,0,0,0.8)); 
+      <div id="day-night-clock-shape" style="background: radial-gradient(circle at 30% 30%, rgba(40,40,40,0.9), rgba(0,0,0,0.8)); 
                   border: 3px solid #FFD700; 
-                  border-radius: 50%; 
-                  width: 80px; 
-                  height: 80px; 
+                  border-radius: 50% 50% 50% 0;
+                  width: 72px; 
+                  height: 72px; 
                   display: flex; 
                   flex-direction: column; 
                   align-items: center; 
@@ -2488,9 +2519,12 @@
                               0 0 25px rgba(255,215,0,0.4),
                               inset -2px -2px 8px rgba(0,0,0,0.5),
                               inset 2px 2px 8px rgba(255,255,255,0.1);
-                  transform-style: preserve-3d;">
-        <div id="day-night-icon" style="font-size: 36px; margin-bottom: 2px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));">☀️</div>
-        <div id="day-night-time" style="font-size: 12px; color: #FFD700; font-weight: bold; text-shadow: 0 0 8px rgba(255,215,0,0.6), 1px 1px 2px rgba(0,0,0,0.8);">00:00</div>
+                  transform-style: preserve-3d;
+                  transform: rotate(-45deg);">
+        <div style="transform: rotate(45deg); display: flex; flex-direction: column; align-items: center; justify-content: center;">
+          <div id="day-night-icon" style="font-size: 32px; margin-bottom: 2px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));">☀️</div>
+          <div id="day-night-time" style="font-size: 11px; color: #FFD700; font-weight: bold; text-shadow: 0 0 8px rgba(255,215,0,0.6), 1px 1px 2px rgba(0,0,0,0.8);">00:00</div>
+        </div>
       </div>
     </div>
     
@@ -2499,6 +2533,11 @@
     
     <!-- Equipment Button -->
     <button id="equipment-btn" title="Equipment">⚔️</button>
+    
+    <!-- Current Region Display -->
+    <div id="current-region-display">
+      <div id="region-name">Spawn Area</div>
+    </div>
     
     <!-- Round Minimap - Bottom Right Corner -->
     <div id="minimap-container">
@@ -15916,6 +15955,60 @@
           clockIcon.textContent = '🌙'; // Night
         }
       }
+    
+    // Function to get current region based on player position
+    function getCurrentRegion(x, z) {
+      // Check for specific landmarks first (small radius)
+      // Windmill: around (40, 40)
+      const distToWindmill = Math.sqrt(Math.pow(x - 40, 2) + Math.pow(z - 40, 2));
+      if (distToWindmill < 20) return 'Windmill';
+      
+      // Mine: around (-40, 40)
+      const distToMine = Math.sqrt(Math.pow(x + 40, 2) + Math.pow(z - 40, 2));
+      if (distToMine < 20) return 'Mine';
+      
+      // Stonehenge: around (-60, -20)
+      const distToStonehenge = Math.sqrt(Math.pow(x + 60, 2) + Math.pow(z + 20, 2));
+      if (distToStonehenge < 25) return 'Stonehenge';
+      
+      // Pyramid: around (50, -50)
+      const distToPyramid = Math.sqrt(Math.pow(x - 50, 2) + Math.pow(z + 50, 2));
+      if (distToPyramid < 25) return 'Pyramid';
+      
+      // Montana: around (0, -200) - North in snow biome
+      const distToMontana = Math.sqrt(Math.pow(x, 2) + Math.pow(z + 200, 2));
+      if (distToMontana < 30) return 'Montana Monument';
+      
+      // Eiffel: check if exists and get position
+      const distToEiffel = Math.sqrt(Math.pow(x - 120, 2) + Math.pow(z + 120, 2));
+      if (distToEiffel < 30) return 'Eiffel Tower';
+      
+      // Lake: around (0, 0) approximate center
+      const distToLake = Math.sqrt(Math.pow(x, 2) + Math.pow(z, 2));
+      if (distToLake < 25) return 'Lake';
+      
+      // Spawn area (center, small radius)
+      if (Math.abs(x) < 15 && Math.abs(z) < 15) return 'Spawn Area';
+      
+      // Then check for biomes (larger areas)
+      if (z < -100) return 'Snow Biome'; // North
+      if (z >= -100 && z < 0) return 'Mountain Biome'; // North-center
+      if (z >= 0 && z < 100) return 'Fields'; // Center
+      if (z >= 100) return 'Desert Biome'; // South
+      
+      return 'Wilderness';
+    }
+    
+    // Function to update region display
+    function updateRegionDisplay() {
+      if (!player || !player.mesh) return;
+      
+      const regionName = getCurrentRegion(player.mesh.position.x, player.mesh.position.z);
+      const regionElement = document.getElementById('region-name');
+      if (regionElement && regionElement.textContent !== regionName) {
+        regionElement.textContent = regionName;
+      }
+    }
       
       // Calculate sun position and lighting based on time of day
       // 0 = midnight (dark), 0.25 = sunrise, 0.5 = noon (bright), 0.75 = sunset, 1 = midnight
@@ -16019,6 +16112,9 @@
       // Day/Night Cycle - Update lighting smoothly (non-blocking)
       // Runs every frame regardless of pause state for smooth visual transitions
       updateDayNightCycle(dt);
+      
+      // Update region display based on player position
+      updateRegionDisplay();
       
       // Update ambient creatures (birds, bats, fireflies, owls) based on time of day
       if (isGameActive && !isPaused) {
