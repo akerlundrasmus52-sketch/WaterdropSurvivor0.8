@@ -108,12 +108,21 @@
     .bar-container {
       width: 200px;
       height: 24px;
-      background: linear-gradient(to bottom, #3a3a3a 0%, #3a3a3a 50%, #6a6a6a 50%, #6a6a6a 100%);
+      /* 80s BATMAN COMIC STYLE: Darker gradient with gold accents */
+      background: linear-gradient(to bottom, #1a1a1a 0%, #1a1a1a 50%, #3a3a3a 50%, #3a3a3a 100%);
       border-radius: 12px;
-      border: 3px solid #2a2a2a;
+      border: 3px solid #FFD700; /* Gold border for comic style */
       overflow: hidden;
       position: relative;
-      box-shadow: 0 3px 8px rgba(0,0,0,0.3), inset 0 2px 4px rgba(0,0,0,0.2), 0 0 15px rgba(0,0,0,0.5);
+      /* Enhanced comic shadow with gold glow */
+      box-shadow: 
+        0 3px 8px rgba(0,0,0,0.5), 
+        inset 0 2px 4px rgba(0,0,0,0.4), 
+        0 0 15px rgba(255,215,0,0.3);
+      /* Comic halftone pattern */
+      background-image: 
+        radial-gradient(circle at 3px 3px, rgba(255,215,0,0.05) 2px, transparent 2px);
+      background-size: 12px 12px;
     }
 
     .bar-fill {
@@ -129,11 +138,20 @@
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
+      /* 80s BATMAN COMIC STYLE: Bold comic font */
+      font-family: 'Bangers', 'M PLUS Rounded 1c', cursive;
       font-weight: bold;
       font-size: 12px;
-      text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+      color: #FFD700; /* Gold text for comic style */
+      text-shadow: 
+        -1px -1px 0 #000, 
+        1px -1px 0 #000, 
+        -1px 1px 0 #000, 
+        1px 1px 0 #000,
+        0 0 5px rgba(255,215,0,0.5);
       pointer-events: none;
       z-index: 1;
+      letter-spacing: 1px;
     }
 
     #hp-fill { 
@@ -148,11 +166,19 @@
     }
 
     .stat-text {
-      color: #8B4513;
+      /* 80s BATMAN COMIC STYLE */
+      font-family: 'Bangers', 'M PLUS Rounded 1c', cursive;
+      color: #FFD700; /* Gold for comic style */
       font-weight: bold;
-      text-shadow: 1px 1px 2px rgba(0,0,0,0.5), -1px -1px 1px rgba(255,255,255,0.3), 0 0 5px rgba(139,69,19,0.3);
+      text-shadow: 
+        -1px -1px 0 #000, 
+        1px -1px 0 #000, 
+        -1px 1px 0 #000, 
+        1px 1px 0 #000,
+        0 0 5px rgba(255,215,0,0.5);
       font-size: 14px;
       margin-top: 4px;
+      letter-spacing: 1px;
     }
 
     .stat-text.gold-text {
@@ -421,18 +447,27 @@
       position: absolute;
       bottom: 20px;
       right: 20px;
-      width: 120px;
-      height: 120px;
-      border-radius: 50%;
+      width: 110px; /* Smaller as requested */
+      height: 130px; /* Taller for waterdrop shape */
+      /* WATERDROP SHAPE: Using border-radius to create teardrop */
+      border-radius: 50% 50% 50% 0%; /* Waterdrop shape */
+      transform: rotate(-45deg); /* Rotate to point down-right */
       border: 3px solid #FFD700;
-      background: radial-gradient(circle at center, rgba(20,20,20,0.9), rgba(0,0,0,0.95));
+      /* 80s BATMAN COMIC STYLE: Dark gradient with halftone */
+      background: radial-gradient(circle at 30% 30%, rgba(30,30,30,0.9), rgba(0,0,0,0.95));
+      background-image: 
+        radial-gradient(circle at center, rgba(20,20,20,0.9), rgba(0,0,0,0.95)),
+        radial-gradient(circle at 3px 3px, rgba(255,215,0,0.08) 2px, transparent 2px);
+      background-size: 100%, 12px 12px;
       overflow: hidden;
       pointer-events: none;
       z-index: 100;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.8),
-                  0 0 25px rgba(255,215,0,0.3),
-                  inset -2px -2px 8px rgba(0,0,0,0.6),
-                  inset 2px 2px 8px rgba(255,255,255,0.1);
+      /* Enhanced comic shadow with gold glow */
+      box-shadow: 
+        0 4px 20px rgba(0,0,0,0.8),
+        0 0 25px rgba(255,215,0,0.4),
+        inset -2px -2px 8px rgba(0,0,0,0.7),
+        inset 2px 2px 8px rgba(255,255,255,0.1);
       transform-style: preserve-3d;
     }
     
@@ -440,6 +475,9 @@
       width: 100%;
       height: 100%;
       position: relative;
+      /* Counter-rotate content to keep it upright */
+      transform: rotate(45deg);
+      transform-origin: center;
     }
     
     .minimap-dot {
@@ -468,6 +506,33 @@
       height: 6px;
       background: #FFD700;
       box-shadow: 0 0 6px rgba(255,215,0,0.8);
+      /* Add quest marker symbol */
+      position: relative;
+    }
+    
+    /* Quest marker indicators on minimap */
+    .minimap-landmark.quest-available::before {
+      content: '!';
+      position: absolute;
+      top: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 10px;
+      font-weight: bold;
+      color: #FFD700;
+      text-shadow: 0 0 4px rgba(255,215,0,1);
+    }
+    
+    .minimap-landmark.quest-ready::before {
+      content: '?';
+      position: absolute;
+      top: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 10px;
+      font-weight: bold;
+      color: #5DADE2;
+      text-shadow: 0 0 4px rgba(93,173,226,1);
     }
     
     /* Stat Notification Queue - Red/Black Dominant */
@@ -1006,17 +1071,44 @@
     }
 
     .modal-content {
-      background: linear-gradient(to bottom, #2a2a3e, #1a1a2e); /* Darker, RPG-style gradient matching menu */
-      padding: 20px;
+      /* 80s BATMAN COMIC STYLE: Dark gradient with halftone */
+      background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%);
+      background-image: 
+        linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%),
+        radial-gradient(circle at 3px 3px, rgba(255,215,0,0.08) 2px, transparent 2px);
+      background-size: 100%, 15px 15px;
+      padding: 25px;
       border-radius: 20px;
-      border: 5px solid #FFD700; /* Golden border for level-up emphasis */
+      border: 6px solid #FFD700; /* Thicker gold border for comic emphasis */
       width: 85%;
       max-width: 600px; /* Increased from 350px to fit 2×3 grid */
       max-height: none; /* Remove height restriction - no scrolling needed */
       overflow-y: visible; /* No scrolling */
       text-align: center;
-      box-shadow: 0 15px 30px rgba(0,0,0,0.9), 0 0 50px rgba(255,215,0,0.7), inset 0 0 40px rgba(255,215,0,0.15), inset 0 0 0 2px rgba(0,0,0,0.5); /* Darker shadow and inner dark edge */
+      /* Enhanced comic shadow with double glow */
+      box-shadow: 
+        0 15px 30px rgba(0,0,0,0.9), 
+        0 0 60px rgba(255,215,0,0.9),
+        0 0 30px rgba(255,215,0,0.6),
+        inset 0 0 40px rgba(0,0,0,0.9),
+        inset 0 0 0 2px rgba(0,0,0,0.7);
       pointer-events: auto; /* Modal content should receive clicks */
+      position: relative;
+    }
+    
+    /* Comic panel glow effect */
+    .modal-content::before {
+      content: '';
+      position: absolute;
+      top: -10px;
+      left: -10px;
+      right: -10px;
+      bottom: -10px;
+      background: linear-gradient(45deg, #FFD700 0%, #FFA500 50%, #FFD700 100%);
+      border-radius: 25px;
+      z-index: -1;
+      opacity: 0.4;
+      animation: pulse 2s infinite;
     }
     
     /* UPGRADE GRID: 2×3 grid layout for upgrade choices */
@@ -1028,23 +1120,39 @@
     }
 
     h2 {
-      color: #5DADE2;
+      /* 80s BATMAN COMIC STYLE */
+      font-family: 'Impact', 'Arial Black', sans-serif;
+      color: #FFD700;
       margin-top: 0;
-      font-size: 32px;
-      text-shadow: 0 0 10px rgba(93,173,226,0.8), 0 0 20px rgba(93,173,226,0.6), 0 0 30px rgba(93,173,226,0.4), 2px 2px 4px rgba(0,0,0,0.8);
+      font-size: 36px;
+      text-shadow: 
+        4px 4px 0 #000,
+        -3px -3px 0 #000,
+        3px -3px 0 #000,
+        -3px 3px 0 #000,
+        0 0 30px rgba(255,215,0,1),
+        0 0 15px rgba(255,215,0,0.8);
+      letter-spacing: 2px;
+      text-transform: uppercase;
     }
 
     .upgrade-card {
-      /* Unified base color for all boxes */
-      background: linear-gradient(to bottom, #3a3a4e, #2a2a3e);
+      /* 80s BATMAN COMIC STYLE: Unified base with halftone */
+      background: linear-gradient(to bottom, #2a2a2a, #1a1a1a);
+      background-image: 
+        linear-gradient(to bottom, #2a2a2a, #1a1a1a),
+        radial-gradient(circle at 3px 3px, rgba(255,215,0,0.05) 2px, transparent 2px);
+      background-size: 100%, 12px 12px;
       margin: 0; /* No margin in grid layout */
-      padding: 15px;
+      padding: 18px;
       border-radius: 15px;
       /* Default border (standard upgrades - grey) */
-      border: 3px solid #888888;
+      border: 4px solid #888888;
       cursor: pointer;
       transition: transform 0.1s, box-shadow 0.2s, filter 0.2s;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.5), inset 0 0 0 2px rgba(0,0,0,0.4);
+      box-shadow: 
+        0 4px 8px rgba(0,0,0,0.6), 
+        inset 0 2px 4px rgba(0,0,0,0.5);
       position: relative;
     }
 
