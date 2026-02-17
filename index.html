@@ -3073,7 +3073,17 @@
       lakeCenterZ: -30,
       lakeRadius: 18,
       // Performance optimization - Phase 1
-      maxEnemiesOnScreen: 50
+      maxEnemiesOnScreen: 50,
+      // Movement physics
+      accelLerpFactor: 0.12, // Acceleration smoothness
+      decelLerpFactor: 0.06, // Deceleration smoothness (glide effect)
+      movementLeanFactor: 0.15, // Tilt during movement
+      dashLeanFactor: 0.4, // Dramatic tilt during dash
+      dashLeanReturnDuration: 200, // ms to return to upright after dash
+      // Combat effects
+      meteorKnockbackMultiplier: 3, // Knockback strength
+      explosionShakeIntensity: 1.5, // Camera shake on explosions
+      smokeDurationFrames: 30 // Muzzle smoke lifetime (at 60fps = 0.5s)
     };
 
     // --- AUDIO SYSTEM (Oscillators) ---
@@ -4315,7 +4325,7 @@
           }
           
           // Enhanced inertia: Smooth acceleration and deceleration with glide
-          const lerpFactor = joystickLeft.active ? 0.12 : 0.06; // Smoother accel, even smoother decel for glide
+          const lerpFactor = joystickLeft.active ? GAME_CONFIG.accelLerpFactor : GAME_CONFIG.decelLerpFactor;
           this.velocity.lerp(targetVel, lerpFactor);
           
           // Apply velocity with inertia
@@ -4340,8 +4350,8 @@
           
           // Add lean/tilt in direction of movement
           if (this.velocity.length() > 0.05) {
-            const leanAngleX = -this.velocity.z * 0.15; // Tilt forward/back based on Z velocity
-            const leanAngleZ = this.velocity.x * 0.15;  // Tilt left/right based on X velocity
+            const leanAngleX = -this.velocity.z * GAME_CONFIG.movementLeanFactor;
+            const leanAngleZ = this.velocity.x * GAME_CONFIG.movementLeanFactor;
             this.mesh.rotation.x = leanAngleX;
             this.mesh.rotation.z = leanAngleZ;
           } else {
@@ -4681,8 +4691,8 @@
         this.dashVec.set(dx, 0, dz).normalize();
         
         // Add dramatic lean/tilt in dash direction
-        const dashAngleX = -dz * 0.4; // Tilt forward/back based on dash Z
-        const dashAngleZ = dx * 0.4;  // Tilt left/right based on dash X
+        const dashAngleX = -dz * GAME_CONFIG.dashLeanFactor;
+        const dashAngleZ = dx * GAME_CONFIG.dashLeanFactor;
         
         // Animate tilt during dash
         const originalRotX = this.mesh.rotation.x;
@@ -4695,7 +4705,7 @@
         // Return to normal after dash with smooth animation
         setTimeout(() => {
           let returnProgress = 0;
-          const returnDuration = 200; // ms
+          const returnDuration = GAME_CONFIG.dashLeanReturnDuration;
           const returnAnim = () => {
             returnProgress += 16; // ~16ms per frame
             const t = Math.min(returnProgress / returnDuration, 1);
@@ -7066,7 +7076,7 @@
             ).normalize();
             
             // Knockback strength inversely proportional to distance
-            const knockbackStrength = (1 - d / range) * 3;
+            const knockbackStrength = (1 - d / range) * GAME_CONFIG.meteorKnockbackMultiplier;
             e.mesh.position.x += knockbackDir.x * knockbackStrength;
             e.mesh.position.z += knockbackDir.z * knockbackStrength;
             
@@ -7086,7 +7096,7 @@
         spawnMuzzleSmoke(this.target, 10); // Add smoke cloud
         
         // Camera shake for explosion
-        const shakeIntensity = 1.5;
+        const shakeIntensity = GAME_CONFIG.explosionShakeIntensity;
         const originalCameraPos = camera.position.clone();
         let shakeTime = 0;
         const shakeDuration = 0.3;
@@ -13656,14 +13666,14 @@
           z: (Math.random() - 0.5) * 0.02
         };
         
-        let life = 30; // ~0.5 seconds at 60fps
+        let life = GAME_CONFIG.smokeDurationFrames;
         const update = () => {
           life--;
           smoke.position.x += velocity.x;
           smoke.position.y += velocity.y;
           smoke.position.z += velocity.z;
           smoke.scale.multiplyScalar(1.05); // Expand
-          smokeMat.opacity = (life / 30) * 0.5;
+          smokeMat.opacity = (life / GAME_CONFIG.smokeDurationFrames) * 0.5;
           
           if (life <= 0) {
             scene.remove(smoke);
