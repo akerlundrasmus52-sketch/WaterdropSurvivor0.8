@@ -859,6 +859,78 @@
       box-shadow: 0 2px 0 #2a1a11, 0 4px 8px rgba(0,0,0,0.4);
     }
     
+    /* Current Region Display */
+    #current-region-display {
+      position: absolute;
+      top: 80px;
+      right: 20px;
+      background: radial-gradient(circle at 30% 30%, rgba(40,40,40,0.95), rgba(0,0,0,0.9));
+      border: 2px solid #FFD700;
+      border-radius: 8px;
+      padding: 8px 16px;
+      pointer-events: none;
+      z-index: 100;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.7), 0 0 20px rgba(255,215,0,0.3);
+    }
+    
+    #region-name {
+      font-size: 14px;
+      font-weight: bold;
+      color: #FFD700;
+      text-shadow: 0 0 8px rgba(255,215,0,0.6), 1px 1px 2px rgba(0,0,0,0.8);
+      text-align: center;
+      white-space: nowrap;
+    }
+    
+    /* Day/Night Clock - Waterdrop Shape */
+    #day-night-clock {
+      position: absolute;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      pointer-events: none;
+      z-index: 100;
+    }
+    
+    #day-night-clock-shape {
+      background: radial-gradient(circle at 30% 30%, rgba(40,40,40,0.9), rgba(0,0,0,0.8));
+      border: 3px solid #FFD700;
+      border-radius: 50% 50% 50% 0;
+      width: 72px;
+      height: 72px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.7), 
+                  0 0 25px rgba(255,215,0,0.4),
+                  inset -2px -2px 8px rgba(0,0,0,0.5),
+                  inset 2px 2px 8px rgba(255,255,255,0.1);
+      transform-style: preserve-3d;
+      transform: rotate(-45deg);
+    }
+    
+    #day-night-clock-content {
+      transform: rotate(45deg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    #day-night-icon {
+      font-size: 32px;
+      margin-bottom: 2px;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+    }
+    
+    #day-night-time {
+      font-size: 11px;
+      color: #FFD700;
+      font-weight: bold;
+      text-shadow: 0 0 8px rgba(255,215,0,0.6), 1px 1px 2px rgba(0,0,0,0.8);
+    }
+    
     /* PR #117: Options Menu Modal */
     #options-menu {
       display: none;
@@ -1952,6 +2024,14 @@
         display: flex !important;
       }
       
+      /* Center minimap at bottom-middle in portrait mode */
+      #minimap-container {
+        left: 50%;
+        right: auto;
+        bottom: 150px;
+        transform: translateX(-50%);
+      }
+      
       /* Reduce padding on small portrait screens */
       .story-quest-content {
         padding: 20px;
@@ -2474,23 +2554,12 @@
     <button id="settings-btn" class="btn-small" style="position: absolute; top: 20px; right: 120px; pointer-events: auto; z-index: 100;">⚙️</button>
     
     <!-- Day/Night Cycle Clock - Enhanced 3D appearance -->
-    <div id="day-night-clock" style="position: absolute; top: 20px; left: 50%; transform: translateX(-50%); pointer-events: none; z-index: 100;">
-      <div style="background: radial-gradient(circle at 30% 30%, rgba(40,40,40,0.9), rgba(0,0,0,0.8)); 
-                  border: 3px solid #FFD700; 
-                  border-radius: 50%; 
-                  width: 80px; 
-                  height: 80px; 
-                  display: flex; 
-                  flex-direction: column; 
-                  align-items: center; 
-                  justify-content: center; 
-                  box-shadow: 0 4px 20px rgba(0,0,0,0.7), 
-                              0 0 25px rgba(255,215,0,0.4),
-                              inset -2px -2px 8px rgba(0,0,0,0.5),
-                              inset 2px 2px 8px rgba(255,255,255,0.1);
-                  transform-style: preserve-3d;">
-        <div id="day-night-icon" style="font-size: 36px; margin-bottom: 2px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));">☀️</div>
-        <div id="day-night-time" style="font-size: 12px; color: #FFD700; font-weight: bold; text-shadow: 0 0 8px rgba(255,215,0,0.6), 1px 1px 2px rgba(0,0,0,0.8);">00:00</div>
+    <div id="day-night-clock">
+      <div id="day-night-clock-shape">
+        <div id="day-night-clock-content">
+          <div id="day-night-icon">☀️</div>
+          <div id="day-night-time">00:00</div>
+        </div>
       </div>
     </div>
     
@@ -2499,6 +2568,11 @@
     
     <!-- Equipment Button -->
     <button id="equipment-btn" title="Equipment">⚔️</button>
+    
+    <!-- Current Region Display -->
+    <div id="current-region-display">
+      <div id="region-name">Spawn Area</div>
+    </div>
     
     <!-- Round Minimap - Bottom Right Corner -->
     <div id="minimap-container">
@@ -10666,45 +10740,84 @@
       rondel.receiveShadow = true;
       scene.add(rondel);
       
-      // Path material - smooth dirt/gravel path
-      const pathMat = new THREE.MeshPhysicalMaterial({ 
-        color: 0x9A8A6A, // Light brown dirt
+      // Path materials - wagon road with gravel and grass
+      const gravelMat = new THREE.MeshPhysicalMaterial({ 
+        color: 0x8B7355, // Brown gravel
+        metalness: 0.0,
+        roughness: 0.9,
+      });
+      
+      const grassMiddleMat = new THREE.MeshPhysicalMaterial({ 
+        color: 0x6B8E23, // Olive green grass
         metalness: 0.0,
         roughness: 0.85,
       });
       
-      // Helper function to create smooth straight path
-      function createPath(startX, startZ, endX, endZ, width = 3) {
+      // Helper function to create wagon road with gravel and grass in middle
+      function createPath(startX, startZ, endX, endZ, width = 4) {
         const length = Math.sqrt((endX - startX) ** 2 + (endZ - startZ) ** 2);
         const angle = Math.atan2(endZ - startZ, endX - startX);
+        const centerX = (startX + endX) / 2;
+        const centerZ = (startZ + endZ) / 2;
         
-        // Create path as single mesh for performance
-        const pathGeo = new THREE.PlaneGeometry(width, length);
-        const path = new THREE.Mesh(pathGeo, pathMat);
-        path.rotation.x = -Math.PI/2;
-        path.rotation.z = angle - Math.PI/2;
-        path.position.set((startX + endX) / 2, 0.02, (startZ + endZ) / 2);
-        path.receiveShadow = true;
-        scene.add(path);
+        // Create wagon tracks (gravel) on each side - 2 tracks
+        const trackWidth = width * 0.3; // Each track is 30% of total width
+        const trackSeparation = width * 0.4; // Separation between tracks
+        
+        // Left gravel track
+        const leftTrackGeo = new THREE.PlaneGeometry(trackWidth, length);
+        const leftTrack = new THREE.Mesh(leftTrackGeo, gravelMat);
+        leftTrack.rotation.x = -Math.PI/2;
+        leftTrack.rotation.z = angle - Math.PI/2;
+        leftTrack.position.set(
+          centerX - Math.sin(angle) * trackSeparation / 2,
+          0.02,
+          centerZ + Math.cos(angle) * trackSeparation / 2
+        );
+        leftTrack.receiveShadow = true;
+        scene.add(leftTrack);
+        
+        // Right gravel track
+        const rightTrackGeo = new THREE.PlaneGeometry(trackWidth, length);
+        const rightTrack = new THREE.Mesh(rightTrackGeo, gravelMat);
+        rightTrack.rotation.x = -Math.PI/2;
+        rightTrack.rotation.z = angle - Math.PI/2;
+        rightTrack.position.set(
+          centerX + Math.sin(angle) * trackSeparation / 2,
+          0.02,
+          centerZ - Math.cos(angle) * trackSeparation / 2
+        );
+        rightTrack.receiveShadow = true;
+        scene.add(rightTrack);
+        
+        // Grass in the middle
+        const grassWidth = trackSeparation - trackWidth; // Grass between tracks
+        const grassGeo = new THREE.PlaneGeometry(grassWidth, length);
+        const grass = new THREE.Mesh(grassGeo, grassMiddleMat);
+        grass.rotation.x = -Math.PI/2;
+        grass.rotation.z = angle - Math.PI/2;
+        grass.position.set(centerX, 0.01, centerZ);
+        grass.receiveShadow = true;
+        scene.add(grass);
       }
       
       // 4 Main Paths from Central Hub (Rondel):
       // Paths start from different points on the rondel edge based on direction
       
       // 1. Path to Stonehenge (60, 60) - Northeast direction
-      createPath(rondelRadius * 0.707, rondelRadius * 0.707, 60, 60, 3);
+      createPath(rondelRadius * 0.707, rondelRadius * 0.707, 60, 60, 5);
       
       // 2. Path to Illuminati Pyramid (-70, 50) - Northwest direction  
-      createPath(-rondelRadius * 0.6, rondelRadius * 0.8, -70, 50, 3);
+      createPath(-rondelRadius * 0.6, rondelRadius * 0.8, -70, 50, 5);
       
       // 3. Path to Lake (30, -30) - Southeast direction
-      createPath(rondelRadius * 0.707, -rondelRadius * 0.707, 30, -30, 3);
+      createPath(rondelRadius * 0.707, -rondelRadius * 0.707, 30, -30, 5);
       
       // 4. Path to Windmill (40, 40) - East direction (slightly different from Stonehenge)
-      createPath(rondelRadius * 0.9, rondelRadius * 0.436, 40, 40, 3);
+      createPath(rondelRadius * 0.9, rondelRadius * 0.436, 40, 40, 5);
       
       // 5. Path to Tesla Tower (-80, -80) - Northwest direction
-      createPath(-rondelRadius * 0.707, -rondelRadius * 0.707, -80, -80, 3);
+      createPath(-rondelRadius * 0.707, -rondelRadius * 0.707, -80, -80, 5);
       
       // Farm Fields - Fill empty spaces with farm texture
       // Create large farm field background (performance optimized - single large mesh)
@@ -14151,8 +14264,8 @@
         choices = perkChoices.sort(() => 0.5 - Math.random()).slice(0, 3);
       }
       else {
-        // Random 4
-        choices = commonUpgrades.sort(() => 0.5 - Math.random()).slice(0, 4);
+        // Random 6 upgrades for regular level-ups (increased from 4 for better variety and balance)
+        choices = commonUpgrades.sort(() => 0.5 - Math.random()).slice(0, 6);
       }
 
       choices.forEach((u, index) => {
@@ -15916,6 +16029,62 @@
           clockIcon.textContent = '🌙'; // Night
         }
       }
+    
+    // Function to get current region based on player position (optimized with squared distances)
+    function getCurrentRegion(x, z) {
+      // Check for specific landmarks first (small radius)
+      // Using squared distances to avoid expensive sqrt operations
+      
+      // Windmill: around (40, 40)
+      const distSqToWindmill = Math.pow(x - 40, 2) + Math.pow(z - 40, 2);
+      if (distSqToWindmill < 400) return 'Windmill'; // 20^2 = 400
+      
+      // Mine: around (-40, 40)
+      const distSqToMine = Math.pow(x + 40, 2) + Math.pow(z - 40, 2);
+      if (distSqToMine < 400) return 'Mine'; // 20^2 = 400
+      
+      // Stonehenge: around (60, 60) - actual position from createPath
+      const distSqToStonehenge = Math.pow(x - 60, 2) + Math.pow(z - 60, 2);
+      if (distSqToStonehenge < 625) return 'Stonehenge'; // 25^2 = 625
+      
+      // Pyramid: around (-70, 50) - actual position from createPath
+      const distSqToPyramid = Math.pow(x + 70, 2) + Math.pow(z - 50, 2);
+      if (distSqToPyramid < 625) return 'Pyramid'; // 25^2 = 625
+      
+      // Montana: around (0, -200) - North in snow biome
+      const distSqToMontana = Math.pow(x, 2) + Math.pow(z + 200, 2);
+      if (distSqToMontana < 900) return 'Montana Monument'; // 30^2 = 900
+      
+      // Eiffel: around (120, 120) - approximate location
+      const distSqToEiffel = Math.pow(x - 120, 2) + Math.pow(z - 120, 2);
+      if (distSqToEiffel < 900) return 'Eiffel Tower'; // 30^2 = 900
+      
+      // Lake: around (30, -30) - actual position from createPath
+      const distSqToLake = Math.pow(x - 30, 2) + Math.pow(z + 30, 2);
+      if (distSqToLake < 625) return 'Lake'; // 25^2 = 625
+      
+      // Spawn area (center, small radius)
+      if (Math.abs(x) < 15 && Math.abs(z) < 15) return 'Spawn Area';
+      
+      // Then check for biomes (larger areas)
+      if (z < -100) return 'Snow Biome'; // North
+      if (z >= -100 && z < 0) return 'Mountain Biome'; // North-center
+      if (z >= 0 && z < 100) return 'Fields'; // Center
+      if (z >= 100) return 'Desert Biome'; // South
+      
+      return 'Wilderness';
+    }
+    
+    // Function to update region display
+    function updateRegionDisplay() {
+      if (!player || !player.mesh) return;
+      
+      const regionName = getCurrentRegion(player.mesh.position.x, player.mesh.position.z);
+      const regionElement = document.getElementById('region-name');
+      if (regionElement && regionElement.textContent !== regionName) {
+        regionElement.textContent = regionName;
+      }
+    }
       
       // Calculate sun position and lighting based on time of day
       // 0 = midnight (dark), 0.25 = sunrise, 0.5 = noon (bright), 0.75 = sunset, 1 = midnight
@@ -16019,6 +16188,9 @@
       // Day/Night Cycle - Update lighting smoothly (non-blocking)
       // Runs every frame regardless of pause state for smooth visual transitions
       updateDayNightCycle(dt);
+      
+      // Update region display based on player position
+      updateRegionDisplay();
       
       // Update ambient creatures (birds, bats, fireflies, owls) based on time of day
       if (isGameActive && !isPaused) {
