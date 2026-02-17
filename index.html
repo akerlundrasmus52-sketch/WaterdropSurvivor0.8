@@ -47,6 +47,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+  <!-- COMIC FONT: 80s Batman comic-style font for combo/notifications -->
+  <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Creepster&display=swap" rel="stylesheet">
   <style>
     body {
       margin: 0;
@@ -186,9 +188,12 @@
     }
     
     #combo-text {
-      font-size: 28px; /* Reduced from 48px for smaller text */
+      /* COMIC STYLING: 80s Batman comic font, smaller size */
+      font-family: 'Bangers', 'M PLUS Rounded 1c', cursive;
+      font-size: 24px; /* Reduced from 28px - smaller comic text */
       font-weight: 900;
       color: #FF0000;
+      letter-spacing: 2px; /* Comic book spacing */
       text-shadow: 
         2px 2px 0 #000,
         -1px -1px 0 #000,
@@ -197,12 +202,19 @@
         0 0 10px rgba(255,0,0,0.9),
         0 0 20px rgba(255,0,0,0.7);
       animation: combo-bubble 0.5s ease-out;
+      /* Comic bubble treatment */
+      background: radial-gradient(ellipse at center, rgba(255,255,255,0.15) 0%, transparent 70%);
+      padding: 5px 10px;
+      border-radius: 10px;
     }
     
     #combo-multiplier {
-      font-size: 16px; /* Reduced from 24px to match smaller text */
+      /* COMIC STYLING: Matches combo text style */
+      font-family: 'Bangers', 'M PLUS Rounded 1c', cursive;
+      font-size: 14px; /* Reduced from 16px to match smaller text */
       font-weight: bold;
       color: #8B0000;
+      letter-spacing: 1px;
       text-shadow: 
         1px 1px 0 #000,
         -1px -1px 0 #000,
@@ -441,14 +453,17 @@
     }
     
     .stat-notification {
+      /* COMIC STYLING: Batman 80s comic-style notification bubbles */
+      font-family: 'Bangers', 'M PLUS Rounded 1c', cursive;
       background: linear-gradient(to bottom, #3a3a3a 0%, #3a3a3a 50%, #6a6a6a 50%, #6a6a6a 100%);
-      border: 3px solid #2a2a2a;
+      border: 3px solid #FFD700; /* Gold border for comic pop */
       border-radius: 20px;
       padding: 10px 18px;
       margin-bottom: 10px;
-      font-size: 15px;
+      font-size: 14px; /* Smaller comic text */
       font-weight: bold;
       color: #FFD700;
+      letter-spacing: 1px; /* Comic spacing */
       text-shadow: 
         -1px -1px 0 #000, 
         1px -1px 0 #000, 
@@ -458,7 +473,7 @@
       box-shadow: 
         0 3px 8px rgba(0,0,0,0.3), 
         inset 0 2px 4px rgba(0,0,0,0.2), 
-        0 0 15px rgba(0,0,0,0.5);
+        0 0 15px rgba(255,215,0,0.3); /* Golden glow */
       animation: stat-float-in-right 0.4s ease-out;
       display: inline-block;
       max-width: fit-content;
@@ -1694,7 +1709,10 @@
       justify-content: flex-start;
       overflow-y: auto;
       z-index: 50; /* Lower than UI layer buttons */
-      padding: 40px 40px 100px 40px;
+      /* IPHONE 16 OPTIMIZATION: Adjust padding for safe area, shift left/up for full visibility */
+      padding: max(20px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) max(80px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
+      padding-left: max(30px, env(safe-area-inset-left)); /* Shift slightly left */
+      padding-top: max(30px, env(safe-area-inset-top)); /* Shift slightly up */
     }
 
     .screen-title {
@@ -2090,6 +2108,28 @@
       
       .screen-content {
         font-size: 14px;
+      }
+    }
+    
+    /* iPhone 16 Specific (393px x 852px) and similar sizes */
+    @media (max-width: 430px) and (max-height: 932px) {
+      /* IPHONE 16 OPTIMIZATION: Ensure full UI visibility */
+      .building-card {
+        padding: 15px;
+        margin: 10px 0;
+      }
+      
+      #camp-screen, #credits-screen, #achievements-screen {
+        padding-bottom: max(100px, env(safe-area-inset-bottom) + 60px);
+      }
+      
+      .screen-title {
+        font-size: 24px;
+        margin-bottom: 15px;
+      }
+      
+      .btn {
+        min-height: 44px; /* iOS touch target minimum */
       }
     }
     
@@ -12053,7 +12093,8 @@
       scene = new THREE.Scene();
       scene.background = new THREE.Color(COLORS.bg);
       // Enhanced fog for depth - reacts to day/night cycle lighting
-      scene.fog = new THREE.Fog(COLORS.bg, 20, 60);
+      // PERFORMANCE: Tighter fog distance for better performance
+      scene.fog = new THREE.Fog(COLORS.bg, 15, 45);
       
       // Phase 5: Initialize particle object pool for performance (100 particles pre-allocated)
       particlePool = new ObjectPool(
@@ -12063,10 +12104,11 @@
       );
 
       // Camera (Orthographic for miniature look)
+      // CAMERA: Zoomed in closer, angle slightly lower to ground
       const aspect = window.innerWidth / window.innerHeight;
-      const d = 20;
+      const d = 16; // Reduced from 20 for closer zoom
       camera = new THREE.OrthographicCamera(-d * aspect, d * aspect, d, -d, 1, 1000);
-      camera.position.set(20, 20, 20); // Isometric angle
+      camera.position.set(18, 15, 18); // Closer to ground, lower angle (was 20, 20, 20)
       camera.lookAt(scene.position);
 
       // Renderer
