@@ -1454,13 +1454,8 @@
       transform: translateX(-50%);
     }
 
-    #start-game-btn { top: 42%; } /* Adjusted for 7 buttons */
-    #camp-btn { top: 48%; } /* Adjusted for 7 buttons */
-    #progression-btn { top: 54%; } /* Adjusted for 7 buttons */
-    #attributes-btn { top: 60%; } /* Added missing position */
-    #gear-btn { top: 66%; } /* Added missing position */
-    #achievements-btn { top: 72%; } /* Adjusted for 7 buttons */
-    #credits-btn { top: min(78%, calc(100% - 60px)); } /* Adjusted for 7 buttons */
+    #start-game-btn { top: 48%; } /* Adjusted for 2 buttons */
+    #camp-btn { top: 54%; } /* Adjusted for 2 buttons */
 
     .menu-btn::before {
       content: '';
@@ -2186,11 +2181,6 @@
     <div class="menu-buttons">
       <button class="menu-btn" id="start-game-btn">START GAME</button>
       <button class="menu-btn" id="camp-btn">⛺ CAMP</button>
-      <button class="menu-btn" id="progression-btn">PROGRESSION</button>
-      <button class="menu-btn" id="attributes-btn" style="position: relative;">ATTRIBUTES</button>
-      <button class="menu-btn" id="gear-btn">GEAR & EQUIPMENT</button>
-      <button class="menu-btn" id="achievements-btn">ACHIEVEMENTS</button>
-      <button class="menu-btn" id="credits-btn">CREDITS</button>
     </div>
   </div>
 
@@ -2218,7 +2208,7 @@
         </p>
       </div>
       <button class="menu-btn menu-btn-primary" id="story-quest-close-btn">
-        LET'S GO!
+        OK
       </button>
     </div>
   </div>
@@ -2616,7 +2606,12 @@
       <h2 class="options-title">OPTIONS</h2>
       <div class="options-buttons">
         <button class="btn-small" id="options-stats-btn">STATS</button>
+        <button class="btn-small" id="options-progression-btn">PROGRESSION</button>
+        <button class="btn-small" id="options-attributes-btn">ATTRIBUTES</button>
+        <button class="btn-small" id="options-gear-btn">GEAR & EQUIPMENT</button>
+        <button class="btn-small" id="options-achievements-btn">ACHIEVEMENTS</button>
         <button class="btn-small" id="options-settings-btn">⚙️ SETTINGS</button>
+        <button class="btn-small" id="options-credits-btn">CREDITS</button>
         <button class="btn-small" id="options-camp-btn">⛺ GO TO CAMP</button>
         <button class="btn-small" id="options-exit-btn">🚪 EXIT TO MENU</button>
         <button class="btn-small" id="close-options-btn">CLOSE</button>
@@ -5306,6 +5301,11 @@
         }
         
         playerStats.kills++;
+        
+        // Quest progression: first kill completes first run quest (>= 1 to handle any first kill)
+        if (saveData.storyQuests.currentQuest === 'firstRun' && playerStats.kills >= 1) {
+          progressQuest('firstRun', true);
+        }
         
         // Track side challenge progress
         if (saveData.sideChallenges.kill10Enemies && !saveData.sideChallenges.kill10Enemies.completed) {
@@ -9329,7 +9329,7 @@
         saveSaveData();
         showQuestPopup(
           '📜 Quest: First Steps',
-          'Welcome to the camp! Start your first run and experience the gameplay. Don\'t worry about dying - it\'s part of the learning process!<br><br><b>Objective:</b> Start a run and survive as long as you can',
+          'Welcome to the camp! Start your first run and kill one enemy before proceeding. This will unlock the skill tree for your next run!<br><br><b>Objective:</b> Kill one enemy',
           'Start My First Run!'
         );
       } else if (completed.includes('firstRun') && !completed.includes('discoverLakeChest')) {
@@ -11574,6 +11574,64 @@
         document.getElementById('settings-modal').style.display = 'flex';
       });
       
+      // Options menu - Progression button
+      const optionsProgressionBtn = document.getElementById('options-progression-btn');
+      if (optionsProgressionBtn) {
+        optionsProgressionBtn.addEventListener('click', () => {
+          optionsMenu.style.display = 'none';
+          isPaused = true;
+          showProgressionShop();
+          playSound('waterdrop');
+        });
+      }
+      
+      // Options menu - Attributes button
+      const optionsAttributesBtn = document.getElementById('options-attributes-btn');
+      if (optionsAttributesBtn) {
+        optionsAttributesBtn.addEventListener('click', () => {
+          optionsMenu.style.display = 'none';
+          isPaused = true;
+          updateAttributesScreen();
+          document.getElementById('attributes-screen').style.display = 'flex';
+          playSound('waterdrop');
+        });
+      }
+      
+      // Options menu - Gear button
+      const optionsGearBtn = document.getElementById('options-gear-btn');
+      if (optionsGearBtn) {
+        optionsGearBtn.addEventListener('click', () => {
+          optionsMenu.style.display = 'none';
+          isPaused = true;
+          updateGearScreen();
+          document.getElementById('gear-screen').style.display = 'flex';
+          playSound('waterdrop');
+        });
+      }
+      
+      // Options menu - Achievements button
+      const optionsAchievementsBtn = document.getElementById('options-achievements-btn');
+      if (optionsAchievementsBtn) {
+        optionsAchievementsBtn.addEventListener('click', () => {
+          optionsMenu.style.display = 'none';
+          isPaused = true;
+          updateAchievementsScreen();
+          document.getElementById('achievements-screen').style.display = 'flex';
+          playSound('waterdrop');
+        });
+      }
+      
+      // Options menu - Credits button
+      const optionsCreditsBtn = document.getElementById('options-credits-btn');
+      if (optionsCreditsBtn) {
+        optionsCreditsBtn.addEventListener('click', () => {
+          optionsMenu.style.display = 'none';
+          isPaused = true;
+          document.getElementById('credits-screen').style.display = 'flex';
+          playSound('waterdrop');
+        });
+      }
+      
       document.getElementById('settings-btn').onclick = () => {
         playSound('waterdrop');
         isPaused = true;
@@ -11661,39 +11719,6 @@
         hideMainMenu();
         resetGame();
         startCountdown(); // Start countdown after resetting game (PR #70)
-      };
-      
-      document.getElementById('progression-btn').onclick = () => {
-        playSound('waterdrop');
-        hideMainMenu();
-        showProgressionShop();
-      };
-      
-      document.getElementById('achievements-btn').onclick = () => {
-        playSound('waterdrop');
-        hideMainMenu();
-        updateAchievementsScreen();
-        document.getElementById('achievements-screen').style.display = 'flex';
-      };
-      
-      document.getElementById('attributes-btn').onclick = () => {
-        playSound('waterdrop');
-        hideMainMenu();
-        updateAttributesScreen();
-        document.getElementById('attributes-screen').style.display = 'flex';
-      };
-      
-      document.getElementById('gear-btn').onclick = () => {
-        playSound('waterdrop');
-        hideMainMenu();
-        updateGearScreen();
-        document.getElementById('gear-screen').style.display = 'flex';
-      };
-      
-      document.getElementById('credits-btn').onclick = () => {
-        playSound('waterdrop');
-        hideMainMenu();
-        document.getElementById('credits-screen').style.display = 'flex';
       };
       
       document.getElementById('camp-btn').onclick = () => {
@@ -12070,7 +12095,7 @@
       SLOW_MOTION_ZOOM: 0.15,
       SHAKE_ZOOM_INTENSITY: 0.4,
       ROTATE_CAM_RADIUS: 20,
-      KILL_MESSAGES: ['ELIMINATED!', 'DESTROYED!', 'ANNIHILATED!', 'OBLITERATED!']
+      KILL_MESSAGES: ['ELIMINATED!', 'ANNIHILATED!', 'OBLITERATED!']
     };
     
     function getRandomKillMessage() {
@@ -14398,11 +14423,6 @@
       }
       
       saveSaveData();
-      
-      // Quest progression: first run completed
-      if (saveData.storyQuests.currentQuest === 'firstRun') {
-        progressQuest('firstRun', true);
-      }
       
       // Quest progression: survival time quest
       if (saveData.storyQuests.currentQuest === 'survive60Seconds' && survivalTime >= 60) {
