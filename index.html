@@ -12311,8 +12311,8 @@
       scene = new THREE.Scene();
       scene.background = new THREE.Color(COLORS.bg);
       // Enhanced fog for depth - reacts to day/night cycle lighting
-      // PERFORMANCE: Tighter fog distance for better performance (reduced from 15,45 to 12,35)
-      scene.fog = new THREE.Fog(COLORS.bg, 12, 35);
+      // PERFORMANCE: Tighter fog distance for better performance (reduced from 15,45 to 10,28 for 60fps target)
+      scene.fog = new THREE.Fog(COLORS.bg, 10, 28);
       
       // Phase 5: Initialize particle object pool for performance (100 particles pre-allocated)
       particlePool = new ObjectPool(
