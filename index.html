@@ -12324,9 +12324,9 @@
       // Camera (Orthographic for miniature look)
       // CAMERA: Zoomed in closer, angle slightly lower to ground
       const aspect = window.innerWidth / window.innerHeight;
-      const d = 16; // Reduced from 20 for closer zoom
+      const d = 14; // Reduced from 16 for even closer zoom (was 20 originally, then 16)
       camera = new THREE.OrthographicCamera(-d * aspect, d * aspect, d, -d, 1, 1000);
-      camera.position.set(18, 15, 18); // Closer to ground, lower angle (was 20, 20, 20)
+      camera.position.set(16, 13, 16); // Even closer to ground, lower angle (was 18,15,18, originally 20,20,20)
       camera.lookAt(scene.position);
 
       // Renderer
@@ -12509,13 +12509,13 @@
       const optionsCampBtn = document.getElementById('options-camp-btn');
       
       menuBtn.addEventListener('click', () => {
-        isPaused = true;
+        setGamePaused(true);
         optionsMenu.style.display = 'flex';
         playSound('waterdrop');
       });
       
       closeOptionsBtn.addEventListener('click', () => {
-        isPaused = false;
+        setGamePaused(false);
         optionsMenu.style.display = 'none';
         playSound('waterdrop');
       });
@@ -12527,7 +12527,7 @@
       
       optionsCampBtn.addEventListener('click', () => {
         optionsMenu.style.display = 'none';
-        isPaused = true;
+        setGamePaused(true);
         updateCampScreen();
         
         // Ensure buildings tab is selected (not sleep/day-night selection)
@@ -12557,7 +12557,7 @@
       
       optionsSettingsBtn.addEventListener('click', () => {
         optionsMenu.style.display = 'none';
-        isPaused = true;
+        setGamePaused(true);
         // Open settings modal
         document.getElementById('settings-modal').style.display = 'flex';
       });
@@ -12567,7 +12567,7 @@
       if (optionsProgressionBtn) {
         optionsProgressionBtn.addEventListener('click', () => {
           optionsMenu.style.display = 'none';
-          isPaused = true;
+          setGamePaused(true);
           showProgressionShop();
           playSound('waterdrop');
         });
@@ -12578,7 +12578,7 @@
       if (optionsAttributesBtn) {
         optionsAttributesBtn.addEventListener('click', () => {
           optionsMenu.style.display = 'none';
-          isPaused = true;
+          setGamePaused(true);
           updateAttributesScreen();
           document.getElementById('attributes-screen').style.display = 'flex';
           playSound('waterdrop');
@@ -12590,7 +12590,7 @@
       if (optionsGearBtn) {
         optionsGearBtn.addEventListener('click', () => {
           optionsMenu.style.display = 'none';
-          isPaused = true;
+          setGamePaused(true);
           updateGearScreen();
           document.getElementById('gear-screen').style.display = 'flex';
           playSound('waterdrop');
@@ -12602,7 +12602,7 @@
       if (optionsAchievementsBtn) {
         optionsAchievementsBtn.addEventListener('click', () => {
           optionsMenu.style.display = 'none';
-          isPaused = true;
+          setGamePaused(true);
           updateAchievementsScreen();
           document.getElementById('achievements-screen').style.display = 'flex';
           playSound('waterdrop');
@@ -12614,7 +12614,7 @@
       if (optionsCreditsBtn) {
         optionsCreditsBtn.addEventListener('click', () => {
           optionsMenu.style.display = 'none';
-          isPaused = true;
+          setGamePaused(true);
           document.getElementById('credits-screen').style.display = 'flex';
           playSound('waterdrop');
         });
@@ -12622,13 +12622,13 @@
       
       document.getElementById('settings-btn').onclick = () => {
         playSound('waterdrop');
-        isPaused = true;
+        setGamePaused(true);
         document.getElementById('settings-modal').style.display = 'flex';
       };
       
       document.getElementById('settings-close-btn').onclick = () => {
         playSound('waterdrop');
-        isPaused = false;
+        setGamePaused(false);
         document.getElementById('settings-modal').style.display = 'none';
       };
       
@@ -13330,13 +13330,18 @@
     }
 
     function levelUp() {
-      isPaused = true;
+      setGamePaused(true);
       
       // Lock camera during level-up to prevent zoom changes
+      // Save both position and projection for proper restoration
       savedCameraPosition = { 
         x: camera.position.x, 
         y: camera.position.y, 
-        z: camera.position.z 
+        z: camera.position.z,
+        left: camera.left,
+        right: camera.right,
+        top: camera.top,
+        bottom: camera.bottom
       };
       
       // Pause combo timer during level-up (only if combo is still active)
@@ -14531,13 +14536,18 @@
           modal.querySelector('h2').innerText = 'LEVEL UP!';
           modal.querySelector('h2').style.fontSize = '32px';
           
-          // Restore camera position after level-up
+          // Restore camera position and projection after level-up
           if (savedCameraPosition) {
             camera.position.set(savedCameraPosition.x, savedCameraPosition.y, savedCameraPosition.z);
+            camera.left = savedCameraPosition.left;
+            camera.right = savedCameraPosition.right;
+            camera.top = savedCameraPosition.top;
+            camera.bottom = savedCameraPosition.bottom;
+            camera.updateProjectionMatrix();
             savedCameraPosition = null; // Clear after restoration
           }
           
-          isPaused = false;
+          setGamePaused(false);
           
           // Resume combo timer after level-up
           if (comboState.pausedAt) {
