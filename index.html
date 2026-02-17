@@ -2139,6 +2139,18 @@
       .btn {
         min-height: 44px; /* iOS touch target minimum */
       }
+      
+      /* CENTER MINIMAP IN PORTRAIT MODE */
+      #minimap-container {
+        right: 50%;
+        transform: translateX(50%);
+        bottom: 150px; /* Move up to avoid bottom UI */
+      }
+      
+      #region-display {
+        right: 50%;
+        transform: translate(50%, 140px);
+      }
     }
     
     /* Tablets (768px - 1024px) */
@@ -2521,11 +2533,11 @@
     <button id="stats-btn" class="btn-small" style="position: absolute; top: 20px; right: 20px; pointer-events: auto; z-index: 100;">STATS</button>
     <button id="settings-btn" class="btn-small" style="position: absolute; top: 20px; right: 120px; pointer-events: auto; z-index: 100;">⚙️</button>
     
-    <!-- Day/Night Cycle Clock - Enhanced 3D appearance -->
+    <!-- Day/Night Cycle Clock - WATERDROP SHAPED (80s theme) -->
     <div id="day-night-clock" style="position: absolute; top: 20px; left: 50%; transform: translateX(-50%); pointer-events: none; z-index: 100;">
       <div style="background: radial-gradient(circle at 30% 30%, rgba(40,40,40,0.9), rgba(0,0,0,0.8)); 
                   border: 3px solid #FFD700; 
-                  border-radius: 50%; 
+                  border-radius: 50% 50% 50% 0; /* WATERDROP SHAPE: teardrop with pointed bottom-left */
                   width: 80px; 
                   height: 80px; 
                   display: flex; 
@@ -2536,9 +2548,12 @@
                               0 0 25px rgba(255,215,0,0.4),
                               inset -2px -2px 8px rgba(0,0,0,0.5),
                               inset 2px 2px 8px rgba(255,255,255,0.1);
-                  transform-style: preserve-3d;">
-        <div id="day-night-icon" style="font-size: 36px; margin-bottom: 2px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));">☀️</div>
-        <div id="day-night-time" style="font-size: 12px; color: #FFD700; font-weight: bold; text-shadow: 0 0 8px rgba(255,215,0,0.6), 1px 1px 2px rgba(0,0,0,0.8);">00:00</div>
+                  transform-style: preserve-3d;
+                  transform: rotate(-45deg);"> <!-- Rotate to orient teardrop downward -->
+        <div style="transform: rotate(45deg); display: flex; flex-direction: column; align-items: center;"> <!-- Counter-rotate content -->
+          <div id="day-night-icon" style="font-size: 36px; margin-bottom: 2px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));">☀️</div>
+          <div id="day-night-time" style="font-size: 12px; color: #FFD700; font-weight: bold; text-shadow: 0 0 8px rgba(255,215,0,0.6), 1px 1px 2px rgba(0,0,0,0.8);">00:00</div>
+        </div>
       </div>
     </div>
     
@@ -2551,6 +2566,18 @@
     <!-- Round Minimap - Bottom Right Corner -->
     <div id="minimap-container">
       <div id="minimap"></div>
+    </div>
+    
+    <!-- REGION DISPLAY INDICATOR (below minimap) -->
+    <div id="region-display" style="position: absolute; bottom: 20px; right: 20px; transform: translateY(140px); 
+                                     background: linear-gradient(to bottom, rgba(40,40,40,0.9), rgba(0,0,0,0.8));
+                                     border: 2px solid #FFD700; border-radius: 10px; padding: 8px 15px;
+                                     font-size: 14px; color: #FFD700; font-weight: bold; z-index: 99;
+                                     text-shadow: 0 0 8px rgba(255,215,0,0.6), 1px 1px 2px rgba(0,0,0,0.8);
+                                     box-shadow: 0 4px 15px rgba(0,0,0,0.7), 0 0 20px rgba(255,215,0,0.3);
+                                     pointer-events: none; text-align: center; min-width: 100px;">
+      <div style="font-size: 10px; color: #AAA; margin-bottom: 2px;">REGION</div>
+      <div id="region-name">Forest</div>
     </div>
     
     <!-- Combo Counter - Red/Black Theme -->
@@ -14332,6 +14359,43 @@
       
       // Update minimap
       updateMinimap();
+      
+      // REGION DISPLAY: Update current region based on player position
+      updateRegionDisplay();
+    }
+    
+    // Region display update function
+    function updateRegionDisplay() {
+      if (!player || !player.mesh) return;
+      
+      const regionNameEl = document.getElementById('region-name');
+      if (!regionNameEl) return;
+      
+      const px = player.mesh.position.x;
+      const pz = player.mesh.position.z;
+      
+      // Define regions based on map areas
+      let region = 'Forest'; // Default
+      
+      if (Math.abs(px) < 15 && Math.abs(pz) < 15) {
+        region = 'Central Plaza';
+      } else if (px > 50 && pz > 50) {
+        region = 'Stonehenge';
+      } else if (px > 35 && pz > 35 && px < 50 && pz < 50) {
+        region = 'Windmill';
+      } else if (px < -30 && pz < -30) {
+        region = 'Dark Woods';
+      } else if (Math.abs(px - 30) < 15 && Math.abs(pz) < 15) {
+        region = 'Eastern Forest';
+      } else if (Math.abs(px + 30) < 15 && Math.abs(pz) < 15) {
+        region = 'Western Forest';
+      } else if (Math.abs(px) < 15 && pz > 20) {
+        region = 'Northern Plains';
+      } else if (Math.abs(px) < 15 && pz < -20) {
+        region = 'Southern Woods';
+      }
+      
+      regionNameEl.textContent = region;
     }
     
     // Minimap update function (with throttling for performance)
