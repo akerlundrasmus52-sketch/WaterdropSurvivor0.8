@@ -15822,9 +15822,9 @@
         activeCompanion = null;
       }
       
-      // COMPANION UNLOCKS AFTER QUEST 5 (companion egg quest)
-      // Check if quest 5 (breed companion quest) is completed
-      const quest5Completed = saveData.storyQuests?.completedQuests?.includes('quest5_breedCompanion') || false;
+      // COMPANION UNLOCKS AFTER QUEST 5 (breed companion quest)
+      // Quest 4 gives the egg, Quest 5 is to activate it
+      const quest5Completed = saveData.tutorialQuests?.completedQuests?.includes('quest5_breedCompanion') || false;
       
       if (saveData.selectedCompanion && 
           saveData.companions[saveData.selectedCompanion]?.unlocked &&
@@ -15832,7 +15832,7 @@
         activeCompanion = new Companion(saveData.selectedCompanion);
         console.log('[Phase 5] Spawned companion:', saveData.selectedCompanion, 'after completing quest 5');
       } else if (!quest5Completed) {
-        console.log('[Companion] Hidden until quest 5 (companion egg quest) is completed');
+        console.log('[Companion] Hidden until quest 5 (breed companion) is completed');
       }
 
       // Reset Player - Spawn near the statue at map center
