@@ -7632,6 +7632,8 @@
       // Camp state
       hasVisitedCamp: false, // Track first camp visit
       nextRunTimeOfDay: 'day', // 'day' or 'night' - chosen from sleep option
+      lastDeathHour: 6, // Track hour of day for time progression (0-23, starts at 6 AM)
+      runCount: 0, // Track total number of runs for time progression
       // Training Hall system
       trainingPoints: 0,
       lastTrainingPointTime: 0, // Timestamp of last training point awarded
@@ -7697,6 +7699,8 @@
           saveData.companions = { ...defaultSaveData.companions, ...(saveData.companions || {}) };
           saveData.hasVisitedCamp = saveData.hasVisitedCamp || false;
           saveData.nextRunTimeOfDay = saveData.nextRunTimeOfDay || 'day';
+          saveData.lastDeathHour = saveData.lastDeathHour || 6; // Default to 6 AM
+          saveData.runCount = saveData.runCount || 0;
           saveData.trainingPoints = saveData.trainingPoints || 0;
           saveData.lastTrainingPointTime = saveData.lastTrainingPointTime || 0;
           saveData.skillPoints = saveData.skillPoints || 0;
@@ -12166,8 +12170,8 @@
     }
     
     function triggerKillCam(enemyPosition, isMiniBoss = false, damageType = 'physical') {
-      // Only trigger for mini-bosses or randomly (15% chance for regular enemies)
-      const shouldActivateKillCam = isMiniBoss || Math.random() < KILL_CAM_CONSTANTS.REGULAR_ENEMY_CHANCE;
+      // UPDATED: Only trigger for mini-bosses, disabled for regular enemies to avoid camera shifts
+      const shouldActivateKillCam = isMiniBoss;
       if (!shouldActivateKillCam || killCamActive) return;
       
       // Select random kill cam animation type
@@ -14532,15 +14536,17 @@
       // Reset run loot tracking
       window.runLootGained = [];
       
-      // Set time of day based on sleep choice
-      if (saveData.nextRunTimeOfDay === 'day') {
-        dayNightCycle.timeOfDay = 0.25; // Dawn (6 AM - clear daytime start)
-      } else if (saveData.nextRunTimeOfDay === 'night') {
-        dayNightCycle.timeOfDay = 0.00; // Midnight (clear nighttime start)
-      } else {
-        // Default to day if not set
-        dayNightCycle.timeOfDay = 0.25;
-      }
+      // UPDATED: Time progression system - start at early morning, +1 hour per run
+      saveData.runCount = (saveData.runCount || 0) + 1;
+      const startHour = (saveData.lastDeathHour || 6) + 1; // Start 1 hour after previous death
+      const normalizedHour = startHour % 24; // Wrap around 24 hours
+      saveData.lastDeathHour = normalizedHour; // Save for next run
+      
+      // Convert hour (0-23) to timeOfDay (0-1)
+      // 0 = midnight, 6 = dawn, 12 = noon, 18 = dusk
+      dayNightCycle.timeOfDay = normalizedHour / 24;
+      
+      saveSaveData(); // Save the updated hour
       
       // Apply permanent upgrades from save data
       const baseHp = 100 + PERMANENT_UPGRADES.maxHp.effect(saveData.upgrades.maxHp);
