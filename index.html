@@ -2874,6 +2874,9 @@
 
   <script type="module">
     // Import THREE.js with fallback handling
+    // Version constant for consistency across all sources
+    const THREE_VERSION = '0.176.0';
+    
     let THREE;
     try {
       // Try primary CDN via import map
@@ -2883,12 +2886,12 @@
       console.warn('[Import] Primary CDN failed, trying jsdelivr fallback');
       try {
         // Try fallback CDN with direct URL
-        THREE = await import('https://cdn.jsdelivr.net/npm/three@0.176.0/build/three.module.js');
+        THREE = await import(`https://cdn.jsdelivr.net/npm/three@${THREE_VERSION}/build/three.module.js`);
         console.log('[Import] THREE.js imported successfully from fallback CDN (jsdelivr.net)');
       } catch (fallbackError) {
         console.warn('[Import] Fallback CDN failed, trying local vendor file');
         try {
-          // Try local vendor fallback
+          // Try local vendor fallback (path relative to index.html: ./vendor/three.module.js)
           THREE = await import('./vendor/three.module.js');
           console.log('[Import] THREE.js imported successfully from local vendor directory (offline mode)');
         } catch (localError) {
@@ -2912,11 +2915,16 @@
                   <li>Refresh the page (Ctrl+R or Cmd+R)</li>
                   <li>Clear browser cache and try again</li>
                 </ul>
-                <button onclick="location.reload()" style="margin-top: 20px; padding: 10px 20px; font-size: 16px; cursor: pointer; background: #4FC3F7; color: white; border: none; border-radius: 5px;">
+                <button id="retry-load-btn" style="margin-top: 20px; padding: 10px 20px; font-size: 16px; cursor: pointer; background: #4FC3F7; color: white; border: none; border-radius: 5px;">
                   Retry
                 </button>
               </div>
             `;
+            // Add event listener for retry button
+            const retryBtn = document.getElementById('retry-load-btn');
+            if (retryBtn) {
+              retryBtn.addEventListener('click', () => location.reload());
+            }
           }
           throw new Error('Failed to load THREE.js from all sources');
         }
