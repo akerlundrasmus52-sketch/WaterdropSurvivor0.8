@@ -12628,7 +12628,8 @@
     }
     
     function triggerKillCam(enemyPosition, isMiniBoss = false, damageType = 'physical') {
-      // UPDATED: Only trigger for mini-bosses, disabled for regular enemies to avoid camera shifts
+      // UPDATED: Only trigger for mini-bosses to prevent disorienting camera movements during regular combat
+      // This improves player focus and reduces motion sickness from frequent camera shifts
       const shouldActivateKillCam = isMiniBoss;
       if (!shouldActivateKillCam || killCamActive) return;
       
@@ -14994,7 +14995,9 @@
       // Reset run loot tracking
       window.runLootGained = [];
       
-      // UPDATED: Time progression system - start at early morning, +1 hour per run
+      // UPDATED: Time progression system
+      // Each run starts 1 hour later than the previous death time
+      // First run starts at 6 AM (default), subsequent runs progress through the 24-hour cycle
       saveData.runCount = (saveData.runCount || 0) + 1;
       const startHour = (saveData.lastDeathHour || 6) + 1; // Start 1 hour after previous death
       const normalizedHour = startHour % 24; // Wrap around 24 hours
