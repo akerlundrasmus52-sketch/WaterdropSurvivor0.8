@@ -7551,13 +7551,13 @@
       selectedCompanion: 'stormWolf', // Default companion
       // Camp System - Quest-Driven Building Unlock System
       campBuildings: {
-        // Core buildings - always unlocked (free)
+        // Core buildings - NEW: Only Quest Mission Hall unlocked initially
         questMission: { level: 1, maxLevel: 10, unlocked: true },
-        inventory: { level: 0, maxLevel: 10, unlocked: false }, // Unlock via lake chest quest
-        campHub: { level: 1, maxLevel: 10, unlocked: true },
-        loreMaster: { level: 1, maxLevel: 10, unlocked: true }, // NEW: Lore/Story building (placeholder for future lore content - currently inactive)
+        inventory: { level: 0, maxLevel: 10, unlocked: false }, // Unlock via quest
+        campHub: { level: 0, maxLevel: 10, unlocked: false }, // Initially locked
+        loreMaster: { level: 0, maxLevel: 10, unlocked: false }, // Initially locked (placeholder for future lore content)
         // Quest-unlockable buildings - locked initially, unlock through quest progression
-        skillTree: { level: 0, maxLevel: 10, unlocked: false }, // Unlock via tutorial quest
+        skillTree: { level: 0, maxLevel: 10, unlocked: false }, // Unlock after Quest 1 is claimed
         companionHouse: { level: 0, maxLevel: 10, unlocked: false }, // Unlock via quest
         forge: { level: 0, maxLevel: 10, unlocked: false }, // Unlock via quest
         armory: { level: 0, maxLevel: 10, unlocked: false }, // Unlock via quest
@@ -7637,12 +7637,13 @@
       // Training Hall system
       trainingPoints: 0,
       lastTrainingPointTime: 0, // Timestamp of last training point awarded
-      // Story Quest System
+      // Story Quest System - NEW: Quest claiming mechanic
       storyQuests: {
         welcomeShown: false, // First camp popup shown
         mainBuildingUnlocked: false, // Main/Quest building unlocked
         currentQuest: null, // Current active story quest
-        completedQuests: [], // List of completed quest IDs
+        completedQuests: [], // List of completed AND CLAIMED quest IDs
+        readyToClaimQuests: [], // List of quests completed but not yet claimed
         questProgress: {}, // Progress tracking for active quests
         buildingFirstUse: { // Track first-time use of each building
           skillTree: false,
@@ -7652,7 +7653,8 @@
           companionHouse: false,
           trainingHall: false,
           tempShop: false
-        }
+        },
+        questNotifications: {} // Track if quest building has been interacted with (to hide !)
       },
       // Tutorial/Onboarding system (comic book style)
       tutorial: {
@@ -9790,110 +9792,148 @@
       return questBuildingMap[currentQuest] === buildingId;
     }
     
-    // Progress quest based on game events
+    // Progress quest based on game events - UPDATED: Mark as ready to claim instead of auto-completing
     function progressQuest(questId, completed = false) {
       if (saveData.storyQuests.currentQuest !== questId) return;
       
       if (completed) {
-        saveData.storyQuests.completedQuests.push(questId);
-        saveData.storyQuests.currentQuest = null;
-        
-        // Quest rewards (skill points and building unlocks)
-        const questRewards = {
-          'discoverLakeChest': { skillPoints: 2, unlockBuilding: 'inventory', message: 'Inventory unlocked! +2 Skill Points!' },
-          'unlockSkillTree': { unlockBuilding: 'skillTree', message: 'Skill Tree unlocked!' },
-          'upgradeSkillTree': { skillPoints: 1, message: '+1 Skill Point!' },
-          'unlockForge': { skillPoints: 1, unlockBuilding: 'forge', message: 'Forge unlocked! +1 Skill Point!' },
-          'equipGear': { skillPoints: 1, message: '+1 Skill Point!' },
-          'unlockRecycle': { skillPoints: 1, unlockBuilding: 'trashRecycle', message: 'Trash & Recycle unlocked! +1 Skill Point!' },
-          'unlockArmory': { skillPoints: 1, unlockBuilding: 'armory', message: 'Armory unlocked! +1 Skill Point!' },
-          'unlockCompanionHouse': { skillPoints: 1, unlockBuilding: 'companionHouse', message: 'Companion House unlocked! +1 Skill Point!' },
-          'unlockTrainingHall': { skillPoints: 2, unlockBuilding: 'trainingHall', message: 'Training Hall unlocked! +2 Skill Points!' },
-          'survive60Seconds': { skillPoints: 2, message: '+2 Skill Points!' },
-          'kill50Enemies': { skillPoints: 2, message: '+2 Skill Points!' },
-          'upgradeAnyBuildingTo3': { skillPoints: 2, message: '+2 Skill Points!' }
-        };
-        
-        const reward = questRewards[questId];
-        if (reward) {
-          // Award skill points
-          if (reward.skillPoints) {
-            saveData.skillPoints += reward.skillPoints;
-            showStatChange(`🌟 ${reward.message}`);
-          }
-          
-          // Unlock building
-          if (reward.unlockBuilding && saveData.campBuildings[reward.unlockBuilding]) {
-            saveData.campBuildings[reward.unlockBuilding].unlocked = true;
-            saveData.campBuildings[reward.unlockBuilding].level = 1; // Start at level 1
-            if (!reward.skillPoints) {
-              showStatChange(`🏗️ ${reward.message}`);
-            }
-          }
+        // NEW: Mark quest as ready to claim instead of completed
+        if (!saveData.storyQuests.readyToClaimQuests) {
+          saveData.storyQuests.readyToClaimQuests = [];
+        }
+        if (!saveData.storyQuests.readyToClaimQuests.includes(questId)) {
+          saveData.storyQuests.readyToClaimQuests.push(questId);
         }
         
-        saveSaveData();
+        // Clear current quest - no new quest starts until this one is claimed
+        saveData.storyQuests.currentQuest = null;
         
-        // Delay to allow UI to update before showing next quest popup
-        const QUEST_ADVANCE_DELAY_MS = 1500;
-        setTimeout(() => {
-          advanceQuestChain();
-        }, QUEST_ADVANCE_DELAY_MS);
+        // Show notification to go to main building to claim
+        showStatChange('🏛️ Quest Complete! Return to the Quest Hall to claim your reward!');
+        
+        saveSaveData();
       }
     }
     
-    // Advance to next quest in story chain
+    // NEW: Claim a completed quest in the main building
+    function claimQuest(questId) {
+      if (!saveData.storyQuests.readyToClaimQuests) {
+        saveData.storyQuests.readyToClaimQuests = [];
+      }
+      if (!saveData.storyQuests.readyToClaimQuests.includes(questId)) return;
+      
+      // Remove from ready to claim
+      const index = saveData.storyQuests.readyToClaimQuests.indexOf(questId);
+      if (index > -1) {
+        saveData.storyQuests.readyToClaimQuests.splice(index, 1);
+      }
+      
+      // Add to completed quests
+      if (!saveData.storyQuests.completedQuests.includes(questId)) {
+        saveData.storyQuests.completedQuests.push(questId);
+      }
+      
+      // Quest rewards (skill points and building unlocks)
+      const questRewards = {
+        'firstRun': { skillPoints: 0, message: 'First run complete! Skill Menu will unlock after Quest 2.', unlockBuilding: null },
+        'useSkillTree': { skillPoints: 2, unlockBuilding: null, message: 'Skills activated! +2 Skill Points!' },
+        'discoverLakeChest': { skillPoints: 2, unlockBuilding: 'inventory', message: 'Inventory unlocked! +2 Skill Points!' },
+        'unlockSkillTree': { unlockBuilding: 'skillTree', message: 'Skill Tree unlocked!' },
+        'upgradeSkillTree': { skillPoints: 1, message: '+1 Skill Point!' },
+        'unlockForge': { skillPoints: 1, unlockBuilding: 'forge', message: 'Forge unlocked! +1 Skill Point!' },
+        'equipGear': { skillPoints: 1, message: '+1 Skill Point!' },
+        'unlockRecycle': { skillPoints: 1, unlockBuilding: 'trashRecycle', message: 'Trash & Recycle unlocked! +1 Skill Point!' },
+        'unlockArmory': { skillPoints: 1, unlockBuilding: 'armory', message: 'Armory unlocked! +1 Skill Point!' },
+        'unlockCompanionHouse': { skillPoints: 1, unlockBuilding: 'companionHouse', message: 'Companion House unlocked! +1 Skill Point!' },
+        'unlockTrainingHall': { skillPoints: 2, unlockBuilding: 'trainingHall', message: 'Training Hall unlocked! +2 Skill Points!' },
+        'survive60Seconds': { skillPoints: 2, message: '+2 Skill Points!' },
+        'kill50Enemies': { skillPoints: 2, message: '+2 Skill Points!' },
+        'upgradeAnyBuildingTo3': { skillPoints: 2, message: '+2 Skill Points!' }
+      };
+      
+      const reward = questRewards[questId];
+      if (reward) {
+        // Award skill points
+        if (reward.skillPoints) {
+          saveData.skillPoints += reward.skillPoints;
+        }
+        
+        // Unlock building
+        if (reward.unlockBuilding && saveData.campBuildings[reward.unlockBuilding]) {
+          saveData.campBuildings[reward.unlockBuilding].unlocked = true;
+          saveData.campBuildings[reward.unlockBuilding].level = 1; // Start at level 1
+          
+          // Mark building as having a new notification
+          if (!saveData.storyQuests.questNotifications) {
+            saveData.storyQuests.questNotifications = {};
+          }
+          saveData.storyQuests.questNotifications[reward.unlockBuilding] = true;
+        }
+        
+        // Show reward message
+        showQuestPopup(
+          '✨ Quest Claimed!',
+          reward.message,
+          'Awesome!',
+          () => {
+            // After claiming, advance to next quest
+            advanceQuestChain();
+            updateCampScreen();
+          }
+        );
+      }
+      
+      saveSaveData();
+    }
+    
+    // Advance to next quest in story chain - UPDATED: New quest order with claiming mechanic
     function advanceQuestChain() {
       const completed = saveData.storyQuests.completedQuests;
       
       // Quest chain progression with quest-driven building unlocks
+      // Quest 1: Kill One Enemy (Active during first run)
       if (!completed.includes('firstRun') && !saveData.storyQuests.currentQuest) {
-        // Quest 1: Start a run and die
         saveData.storyQuests.currentQuest = 'firstRun';
         saveSaveData();
         showQuestPopup(
-          '📜 Quest: First Steps',
-          'Welcome to the camp! Start your first run and kill one enemy before proceeding. This will unlock the skill tree for your next run!<br><br><b>Objective:</b> Kill one enemy',
+          '📜 Quest 1: Kill One Enemy',
+          'Welcome to the camp! Start your first run and kill one enemy. This is your first step to survival!<br><br><b>Objective:</b> Kill one enemy during a run<br><b>Note:</b> Return to the Quest Hall after your run to claim this quest.',
           'Start My First Run!'
         );
-      } else if (completed.includes('firstRun') && !completed.includes('discoverLakeChest')) {
-        // Quest 2: Discover Lake Chest (unlocks inventory)
-        saveData.storyQuests.currentQuest = 'discoverLakeChest';
-        saveSaveData();
-        showQuestPopup(
-          '📜 Quest: The Lake\'s Secret',
-          'There\'s a mysterious chest near the lake that contains valuable items. Go explore and find it!<br><br><b>Objective:</b> Find and open the Lake Chest<br><b>Reward:</b> Unlock Inventory Building + 2 Skill Points',
-          'Let\'s Go!'
-        );
-      } else if (completed.includes('discoverLakeChest') && !completed.includes('unlockSkillTree')) {
-        // Quest 3: Unlock Skill Tree (building unlocked via quest, not gold)
-        saveData.storyQuests.currentQuest = 'unlockSkillTree';
-        saveSaveData();
-        showQuestPopup(
-          '📜 Quest: Path to Power',
-          'You\'ve earned some skill points! It\'s time to unlock the Skill Tree to learn powerful abilities.<br><br><b>Objective:</b> Click "Unlock" on the Skill Tree building (FREE via quest)<br><b>Reward:</b> Skill Tree Building unlocked',
-          'Got it!'
-        );
-      } else if (completed.includes('unlockSkillTree') && !completed.includes('useSkillTree') && !saveData.storyQuests.buildingFirstUse.skillTree) {
-        // Quest 4: Use Skill Tree (unlock first skill) - demonstrates upgrade mechanics
+      } 
+      // Quest 2: Activate and Claim Two Skills (Unlocks after Quest 1 is claimed)
+      else if (completed.includes('firstRun') && !completed.includes('useSkillTree')) {
+        // First unlock the skill tree building for Quest 2
+        if (!saveData.campBuildings.skillTree.unlocked) {
+          saveData.campBuildings.skillTree.unlocked = true;
+          saveData.campBuildings.skillTree.level = 1;
+          // Mark skill tree as having a new notification
+          if (!saveData.storyQuests.questNotifications) {
+            saveData.storyQuests.questNotifications = {};
+          }
+          saveData.storyQuests.questNotifications.skillTree = true;
+        }
+        
+        // Award 2 skill points for this quest
+        if (!saveData.questSkillPointsAwarded) {
+          saveData.questSkillPointsAwarded = {};
+        }
+        if (!saveData.questSkillPointsAwarded.quest2Start) {
+          saveData.skillPoints = (saveData.skillPoints || 0) + 2;
+          saveData.questSkillPointsAwarded.quest2Start = true;
+        }
+        
         saveData.storyQuests.currentQuest = 'useSkillTree';
         saveSaveData();
         showQuestPopup(
-          '📜 Quest: Learn Your First Skill',
-          'The Skill Tree is unlocked! Use your 2 skill points to unlock your first skills. This demonstrates how upgrades work.<br><br><b>Objective:</b> Unlock 2 skills in the Skill Tree<br><b>Note:</b> These are demonstration points - earn more through quests!',
+          '📜 Quest 2: Activate and Claim Two Skills',
+          'Great job on your first kill! The Skill Tree building is now unlocked. You have been awarded 2 skill points.<br><br><b>Objective:</b> Visit the Skill Tree tab in camp and activate 2 skills<br><b>Reward:</b> More skill points!',
           'Let\'s Learn!'
         );
-      } else if (completed.includes('useSkillTree') && !completed.includes('upgradeSkillTree')) {
-        // Quest 5: Upgrade Skill Tree building (demonstrates building upgrades)
-        saveData.storyQuests.currentQuest = 'upgradeSkillTree';
-        saveSaveData();
-        showQuestPopup(
-          '📜 Quest: Strengthen the Tree',
-          'Upgrade the Skill Tree building to level 2 to understand how building upgrades work.<br><br><b>Objective:</b> Upgrade Skill Tree to Level 2<br><b>Reward:</b> 1 Skill Point',
-          'Let\'s Upgrade!'
-        );
-      } else if (completed.includes('upgradeSkillTree') && !completed.includes('unlockForge')) {
-        // Quest 6: Unlock Forge
+      }
+      // Subsequent quests...
+      else if (completed.includes('useSkillTree') && !completed.includes('unlockForge')) {
+        // Quest 3: Unlock Forge
         saveData.storyQuests.currentQuest = 'unlockForge';
         saveSaveData();
         showQuestPopup(
@@ -9902,7 +9942,7 @@
           'To the Forge!'
         );
       } else if (completed.includes('unlockForge') && !completed.includes('unlockArmory')) {
-        // Quest 7: Unlock Armory
+        // Quest 4: Unlock Armory
         saveData.storyQuests.currentQuest = 'unlockArmory';
         saveSaveData();
         showQuestPopup(
@@ -9910,17 +9950,8 @@
           'Unlock the Armory to manage and upgrade your equipment! It provides HP and armor bonuses.<br><br><b>Objective:</b> Click "Unlock" on Armory (FREE via quest)<br><b>Reward:</b> Armory Building unlocked + 1 Skill Point',
           'To the Armory!'
         );
-      } else if (completed.includes('unlockArmory') && !completed.includes('equipGear')) {
-        // Quest 8: Equip gear for the first time
-        saveData.storyQuests.currentQuest = 'equipGear';
-        saveSaveData();
-        showQuestPopup(
-          '📜 Quest: Equip Your First Item',
-          'You have items in your inventory! Open the Gear menu (sword icon) and equip an item.<br><br><b>Objective:</b> Equip any item from your inventory<br><b>Reward:</b> 1 Skill Point',
-          'Gear Up!'
-        );
-      } else if (completed.includes('equipGear') && !completed.includes('unlockRecycle')) {
-        // Quest 9: Unlock Trash & Recycle
+      } else if (completed.includes('unlockArmory') && !completed.includes('unlockRecycle')) {
+        // Quest 5: Unlock Trash & Recycle
         saveData.storyQuests.currentQuest = 'unlockRecycle';
         saveSaveData();
         showQuestPopup(
@@ -9929,11 +9960,50 @@
           'Let\'s Recycle!'
         );
       } else if (completed.includes('unlockRecycle') && !completed.includes('unlockCompanionHouse')) {
-        // Quest 10: Unlock Companion House
+        // Quest 6: Unlock Companion House
         saveData.storyQuests.currentQuest = 'unlockCompanionHouse';
         saveSaveData();
         showQuestPopup(
           '📜 Quest: Find a Companion',
+          'Unlock the Companion House to boost your companion\'s power!<br><br><b>Objective:</b> Click "Unlock" on Companion House (FREE via quest)<br><b>Reward:</b> Companion House unlocked + 1 Skill Point',
+          'Get a Companion!'
+        );
+      } else if (completed.includes('unlockCompanionHouse') && !completed.includes('unlockTrainingHall')) {
+        // Quest 7: Unlock Training Hall
+        saveData.storyQuests.currentQuest = 'unlockTrainingHall';
+        saveSaveData();
+        showQuestPopup(
+          '📜 Quest: Train Harder',
+          'Unlock the Training Hall to improve your training efficiency!<br><br><b>Objective:</b> Click "Unlock" on Training Hall (FREE via quest)<br><b>Reward:</b> Training Hall unlocked + 2 Skill Points',
+          'To Training!'
+        );
+      } else if (completed.includes('unlockTrainingHall') && !completed.includes('survive60Seconds')) {
+        // Quest 8: Survival challenge for skill points
+        saveData.storyQuests.currentQuest = 'survive60Seconds';
+        saveSaveData();
+        showQuestPopup(
+          '📜 Quest: Survival Test',
+          'Now that you know the basics, prove your skills by surviving 60 seconds in a run!<br><br><b>Objective:</b> Survive for 60 seconds in a single run<br><b>Reward:</b> 2 Skill Points',
+          'Challenge Accepted!'
+        );
+      } else if (completed.includes('survive60Seconds') && !completed.includes('kill50Enemies')) {
+        // Quest 9: Combat challenge
+        saveData.storyQuests.currentQuest = 'kill50Enemies';
+        saveSaveData();
+        showQuestPopup(
+          '📜 Quest: Warrior\'s Path',
+          'Show your combat prowess by defeating 50 enemies total (across all runs)!<br><br><b>Objective:</b> Kill 50 enemies (cumulative)<br><b>Reward:</b> 2 Skill Points',
+          'To Battle!'
+        );
+      } else if (completed.includes('kill50Enemies') && !completed.includes('upgradeAnyBuildingTo3')) {
+        // Quest 10: Building mastery
+        saveData.storyQuests.currentQuest = 'upgradeAnyBuildingTo3';
+        saveSaveData();
+        showQuestPopup(
+          '📜 Quest: Master Builder',
+          'Upgrade any building to level 3 to master building progression!<br><br><b>Objective:</b> Upgrade any building to Level 3<br><b>Reward:</b> 2 Skill Points',
+          'Build Strong!'
+        );
           'Unlock the Companion House to boost your companion\'s power!<br><br><b>Objective:</b> Click "Unlock" on Companion House (FREE via quest)<br><b>Reward:</b> Companion House unlocked + 1 Skill Point',
           'Get a Companion!'
         );
@@ -10170,17 +10240,160 @@
       document.body.appendChild(overlay);
     }
 
+    // NEW: Show Quest Hall UI for claiming completed quests
+    function showQuestHall() {
+      // Clear quest notification for the main building
+      if (!saveData.storyQuests.questNotifications) {
+        saveData.storyQuests.questNotifications = {};
+      }
+      saveData.storyQuests.questNotifications.questMission = false;
+      saveSaveData();
+      
+      const overlay = document.createElement('div');
+      overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.9);
+        z-index: 150;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        animation: fadeIn 0.3s ease-out;
+        overflow-y: auto;
+      `;
+      
+      const panel = document.createElement('div');
+      panel.style.cssText = `
+        background: linear-gradient(to bottom, #2a3a4a, #1a2a3a);
+        border: 3px solid #FFD700;
+        border-radius: 20px;
+        padding: 30px;
+        max-width: 600px;
+        width: 90%;
+        max-height: 80vh;
+        overflow-y: auto;
+        text-align: center;
+        animation: popIn 0.3s ease-out;
+        box-shadow: 0 0 30px rgba(255,215,0,0.5);
+      `;
+      
+      let content = `
+        <div style="font-size: 28px; color: #FFD700; font-weight: bold; margin-bottom: 20px;">📜 Quest & Mission Hall</div>
+        <div style="font-size: 16px; color: #AAA; margin-bottom: 30px;">Claim completed quests to unlock rewards and progress to the next quest!</div>
+      `;
+      
+      // Initialize arrays if they don't exist
+      if (!saveData.storyQuests.readyToClaimQuests) {
+        saveData.storyQuests.readyToClaimQuests = [];
+      }
+      if (!saveData.storyQuests.completedQuests) {
+        saveData.storyQuests.completedQuests = [];
+      }
+      
+      // Show ready-to-claim quests
+      if (saveData.storyQuests.readyToClaimQuests.length > 0) {
+        content += `<div style="text-align: left; margin-bottom: 20px;">`;
+        content += `<div style="font-size: 20px; color: #FFD700; margin-bottom: 15px;">✨ Ready to Claim:</div>`;
+        
+        const questNames = {
+          'firstRun': 'Quest 1: Kill One Enemy',
+          'useSkillTree': 'Quest 2: Activate and Claim Two Skills',
+          'unlockForge': 'Quest 3: Unlock Forge',
+          'unlockArmory': 'Quest 4: Unlock Armory',
+          'unlockRecycle': 'Quest 5: Unlock Trash & Recycle',
+          'unlockCompanionHouse': 'Quest 6: Unlock Companion House',
+          'unlockTrainingHall': 'Quest 7: Unlock Training Hall',
+          'survive60Seconds': 'Quest 8: Survive 60 Seconds',
+          'kill50Enemies': 'Quest 9: Kill 50 Enemies',
+          'upgradeAnyBuildingTo3': 'Quest 10: Upgrade Building to Level 3'
+        };
+        
+        saveData.storyQuests.readyToClaimQuests.forEach(questId => {
+          const questName = questNames[questId] || questId;
+          content += `
+            <div style="background: rgba(255,215,0,0.1); border: 2px solid #FFD700; border-radius: 10px; padding: 15px; margin-bottom: 10px;">
+              <div style="font-size: 18px; color: #FFD700; margin-bottom: 10px;">${questName}</div>
+              <button class="btn" onclick="claimQuest('${questId}'); document.body.querySelector('[data-quest-hall-overlay]').remove();" 
+                      style="font-size: 16px; padding: 10px 20px; background: #FFD700; color: #000;">
+                Claim Reward
+              </button>
+            </div>
+          `;
+        });
+        content += `</div>`;
+      } else {
+        content += `<div style="font-size: 16px; color: #888; margin-bottom: 20px;">No quests ready to claim. Complete your active quest!</div>`;
+      }
+      
+      // Show active quest
+      if (saveData.storyQuests.currentQuest) {
+        const questNames = {
+          'firstRun': 'Quest 1: Kill One Enemy',
+          'useSkillTree': 'Quest 2: Activate and Claim Two Skills',
+          'unlockForge': 'Quest 3: Unlock Forge',
+          'unlockArmory': 'Quest 4: Unlock Armory',
+          'unlockRecycle': 'Quest 5: Unlock Trash & Recycle',
+          'unlockCompanionHouse': 'Quest 6: Unlock Companion House',
+          'unlockTrainingHall': 'Quest 7: Unlock Training Hall',
+          'survive60Seconds': 'Quest 8: Survive 60 Seconds',
+          'kill50Enemies': 'Quest 9: Kill 50 Enemies',
+          'upgradeAnyBuildingTo3': 'Quest 10: Upgrade Building to Level 3'
+        };
+        
+        const currentQuestName = questNames[saveData.storyQuests.currentQuest] || saveData.storyQuests.currentQuest;
+        content += `
+          <div style="text-align: left; margin-bottom: 20px;">
+            <div style="font-size: 20px; color: #5DADE2; margin-bottom: 15px;">📍 Active Quest:</div>
+            <div style="background: rgba(93,173,226,0.1); border: 2px solid #5DADE2; border-radius: 10px; padding: 15px;">
+              <div style="font-size: 18px; color: #5DADE2;">${currentQuestName}</div>
+            </div>
+          </div>
+        `;
+      }
+      
+      // Show completed quests count
+      content += `
+        <div style="font-size: 14px; color: #AAA; margin-top: 20px;">
+          Completed Quests: ${saveData.storyQuests.completedQuests.length}
+        </div>
+      `;
+      
+      // Close button
+      content += `
+        <button class="btn" style="margin-top: 20px; font-size: 16px; padding: 10px 30px; background: #888; color: #FFF;">
+          Close
+        </button>
+      `;
+      
+      panel.innerHTML = content;
+      overlay.setAttribute('data-quest-hall-overlay', 'true');
+      
+      // Close button handler
+      const closeBtn = panel.querySelector('.btn[style*="background: #888"]');
+      closeBtn.onclick = () => {
+        document.body.removeChild(overlay);
+        updateCampScreen(); // Refresh camp to remove ! notification
+      };
+      
+      overlay.appendChild(panel);
+      document.body.appendChild(overlay);
+    }
+
     function updateCampScreen() {
       // Check for first-time camp visit
       if (!saveData.hasVisitedCamp) {
         saveData.hasVisitedCamp = true;
-        // Unlock free buildings
+        // NEW: Only unlock Quest/Mission Hall initially - all other buildings locked
         saveData.campBuildings.questMission.unlocked = true;
         saveData.campBuildings.questMission.level = 1;
-        saveData.campBuildings.inventory.unlocked = true;
-        saveData.campBuildings.inventory.level = 1;
-        saveData.campBuildings.campHub.unlocked = true;
-        saveData.campBuildings.campHub.level = 1;
+        // Keep other free buildings locked initially
+        saveData.campBuildings.inventory.unlocked = false;
+        saveData.campBuildings.inventory.level = 0;
+        saveData.campBuildings.campHub.unlocked = false;
+        saveData.campBuildings.campHub.level = 0;
         
         // Show first-time welcome popup
         if (!saveData.storyQuests.welcomeShown) {
@@ -10197,6 +10410,11 @@
                 // Set the first quest
                 if (!saveData.storyQuests.currentQuest) {
                   saveData.storyQuests.currentQuest = 'firstRun';
+                  // Mark main building with notification
+                  if (!saveData.storyQuests.questNotifications) {
+                    saveData.storyQuests.questNotifications = {};
+                  }
+                  saveData.storyQuests.questNotifications.questMission = true;
                   saveSaveData();
                 }
               }
@@ -10312,9 +10530,13 @@
             .filter(text => text !== null && text !== undefined)
             .join(', ') || 'Utility building';
           
+          // NEW: Check if building has a notification
+          const hasNotification = (buildingId === 'questMission' && saveData.storyQuests.readyToClaimQuests && saveData.storyQuests.readyToClaimQuests.length > 0) ||
+                                 (saveData.storyQuests.questNotifications && saveData.storyQuests.questNotifications[buildingId]);
+          
            buildingCard.innerHTML = `
              <div class="building-header">
-               <div class="building-name">${building.icon} ${building.name}${hasQuestForBuilding(buildingId) ? ' <span class="quest-indicator">!</span>' : ''}</div>
+               <div class="building-name">${building.icon} ${building.name}${hasNotification ? ' <span class="quest-indicator">!</span>' : ''}${hasQuestForBuilding(buildingId) ? ' <span class="quest-indicator">!</span>' : ''}</div>
                <div class="building-level">Level ${buildingData.level}/${buildingData.maxLevel}</div>
              </div>
              <div class="building-desc">${building.description}</div>
@@ -10329,6 +10551,30 @@
             }
           } else if (building.isFree) {
             buildingCard.style.border = '2px solid #FFD700';
+            // NEW: Add click handler for free buildings
+            if (buildingId === 'questMission') {
+              buildingCard.onclick = () => showQuestHall();
+              buildingCard.style.cursor = 'pointer';
+            } else if (buildingId === 'skillTree') {
+              // Clear notification when clicking on skill tree
+              buildingCard.onclick = () => {
+                if (saveData.storyQuests.questNotifications) {
+                  saveData.storyQuests.questNotifications.skillTree = false;
+                  saveSaveData();
+                }
+                // Switch to skill tree tab
+                document.getElementById('camp-skills-tab').click();
+              };
+              buildingCard.style.cursor = 'pointer';
+            } else if (saveData.storyQuests.questNotifications && saveData.storyQuests.questNotifications[buildingId]) {
+              // Clear notification on click for other buildings
+              buildingCard.onclick = () => {
+                saveData.storyQuests.questNotifications[buildingId] = false;
+                saveSaveData();
+                updateCampScreen();
+              };
+              buildingCard.style.cursor = 'pointer';
+            }
           }
           
           buildingsContent.appendChild(buildingCard);
