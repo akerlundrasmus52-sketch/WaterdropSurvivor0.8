@@ -1124,15 +1124,17 @@
       /* 80s BATMAN COMIC STYLE */
       /* Note: Impact font used for titles/headers, Bangers font used for body/numbers */
       /* This creates visual hierarchy: bold titles (Impact) vs. playful content (Bangers) */
+      /* TYPOGRAPHY FIX: Slightly thinner headlines */
       font-family: 'Impact', 'Arial Black', sans-serif;
+      font-weight: 600; /* Slightly thinner than default bold (700) */
       color: #FFD700;
       margin-top: 0;
       font-size: 36px;
       text-shadow: 
-        4px 4px 0 #000,
-        -3px -3px 0 #000,
-        3px -3px 0 #000,
-        -3px 3px 0 #000,
+        3px 3px 0 #000,  /* Reduced from 4px for thinner look */
+        -2px -2px 0 #000, /* Reduced from 3px */
+        2px -2px 0 #000,  /* Reduced from 3px */
+        -2px 2px 0 #000,  /* Reduced from 3px */
         0 0 30px rgba(255,215,0,1),
         0 0 15px rgba(255,215,0,0.8);
       letter-spacing: 2px;
@@ -1645,8 +1647,8 @@
       transform: translateX(-50%);
     }
 
-    #start-game-btn { top: 48%; } /* Adjusted for 2 buttons */
-    #camp-btn { top: 54%; } /* Adjusted for 2 buttons */
+    #start-game-btn { top: 70%; } /* MENU FIX: Placed above title image (lower on screen) */
+    #camp-btn { top: 78%; } /* MENU FIX: Placed below START button */
 
     .menu-btn::before {
       content: '';
