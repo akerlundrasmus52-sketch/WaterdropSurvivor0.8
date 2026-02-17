@@ -10210,6 +10210,20 @@
       saveData.storyQuests.questNotifications.questMission = false;
       saveSaveData();
       
+      // Quest ID to display name mapping
+      const questNames = {
+        'firstRun': 'Quest 1: Kill One Enemy',
+        'useSkillTree': 'Quest 2: Activate and Claim Two Skills',
+        'unlockForge': 'Quest 3: Unlock Forge',
+        'unlockArmory': 'Quest 4: Unlock Armory',
+        'unlockRecycle': 'Quest 5: Unlock Trash & Recycle',
+        'unlockCompanionHouse': 'Quest 6: Unlock Companion House',
+        'unlockTrainingHall': 'Quest 7: Unlock Training Hall',
+        'survive60Seconds': 'Quest 8: Survive 60 Seconds',
+        'kill50Enemies': 'Quest 9: Kill 50 Enemies',
+        'upgradeAnyBuildingTo3': 'Quest 10: Upgrade Building to Level 3'
+      };
+      
       const overlay = document.createElement('div');
       overlay.style.cssText = `
         position: fixed;
@@ -10259,19 +10273,6 @@
         content += `<div style="text-align: left; margin-bottom: 20px;">`;
         content += `<div style="font-size: 20px; color: #FFD700; margin-bottom: 15px;">✨ Ready to Claim:</div>`;
         
-        const questNames = {
-          'firstRun': 'Quest 1: Kill One Enemy',
-          'useSkillTree': 'Quest 2: Activate and Claim Two Skills',
-          'unlockForge': 'Quest 3: Unlock Forge',
-          'unlockArmory': 'Quest 4: Unlock Armory',
-          'unlockRecycle': 'Quest 5: Unlock Trash & Recycle',
-          'unlockCompanionHouse': 'Quest 6: Unlock Companion House',
-          'unlockTrainingHall': 'Quest 7: Unlock Training Hall',
-          'survive60Seconds': 'Quest 8: Survive 60 Seconds',
-          'kill50Enemies': 'Quest 9: Kill 50 Enemies',
-          'upgradeAnyBuildingTo3': 'Quest 10: Upgrade Building to Level 3'
-        };
-        
         saveData.storyQuests.readyToClaimQuests.forEach(questId => {
           const questName = questNames[questId] || questId;
           content += `
@@ -10291,19 +10292,6 @@
       
       // Show active quest
       if (saveData.storyQuests.currentQuest) {
-        const questNames = {
-          'firstRun': 'Quest 1: Kill One Enemy',
-          'useSkillTree': 'Quest 2: Activate and Claim Two Skills',
-          'unlockForge': 'Quest 3: Unlock Forge',
-          'unlockArmory': 'Quest 4: Unlock Armory',
-          'unlockRecycle': 'Quest 5: Unlock Trash & Recycle',
-          'unlockCompanionHouse': 'Quest 6: Unlock Companion House',
-          'unlockTrainingHall': 'Quest 7: Unlock Training Hall',
-          'survive60Seconds': 'Quest 8: Survive 60 Seconds',
-          'kill50Enemies': 'Quest 9: Kill 50 Enemies',
-          'upgradeAnyBuildingTo3': 'Quest 10: Upgrade Building to Level 3'
-        };
-        
         const currentQuestName = questNames[saveData.storyQuests.currentQuest] || saveData.storyQuests.currentQuest;
         content += `
           <div style="text-align: left; margin-bottom: 20px;">
