@@ -2719,7 +2719,7 @@
     </div>
   </div>
 
-  <!-- Import Map for Three.js with CDN Fallback -->
+  <!-- Import Map for Three.js - will be updated by fallback detection -->
   <script async src="https://unpkg.com/es-module-shims@1.8.0/dist/es-module-shims.js" onerror="console.warn('[CDN] ES Module Shims failed to load - using fallback')"></script>
   <script type="importmap">
     {
@@ -2730,83 +2730,6 @@
     }
   </script>
   
-  <!-- THREE.js CDN Fallback: Load from alternative CDN if unpkg fails, then local fallback -->
-  <script type="module">
-    // Test if THREE.js loaded successfully from primary CDN
-    (async function() {
-      let threeLoaded = false;
-      try {
-        await import('three');
-        threeLoaded = true;
-        console.log('[CDN] THREE.js loaded successfully from unpkg.com');
-      } catch (error) {
-        console.warn('[CDN] Primary CDN (unpkg.com) failed, attempting fallback to cdn.jsdelivr.net');
-        
-        // Fallback 1: Dynamically create new importmap with alternative CDN
-        try {
-          const importMapFallback = document.createElement('script');
-          importMapFallback.type = 'importmap';
-          importMapFallback.textContent = JSON.stringify({
-            "imports": {
-              "three": "https://cdn.jsdelivr.net/npm/three@0.176.0/build/three.module.js",
-              "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.176.0/examples/jsm/"
-            }
-          });
-          document.head.appendChild(importMapFallback);
-          
-          // Test fallback CDN
-          await import('three');
-          console.log('[CDN] THREE.js loaded successfully from fallback CDN (jsdelivr.net)');
-        } catch (fallbackError) {
-          console.warn('[CDN] Both CDNs failed, attempting local fallback from vendor/three.module.js');
-          
-          // Fallback 2: Load from local vendor directory
-          try {
-            const importMapLocal = document.createElement('script');
-            importMapLocal.type = 'importmap';
-            importMapLocal.textContent = JSON.stringify({
-              "imports": {
-                "three": "./vendor/three.module.js"
-              }
-            });
-            document.head.appendChild(importMapLocal);
-            
-            // Test local fallback
-            await import('three');
-            console.log('[Local] THREE.js loaded successfully from local vendor directory (offline mode)');
-          } catch (localError) {
-            console.error('[Error] All THREE.js loading attempts failed (CDNs and local fallback)');
-            // Show enhanced user-friendly error message
-            const loadingScreen = document.getElementById('loading-screen');
-            if (loadingScreen) {
-              loadingScreen.innerHTML = `
-                <div style="color: white; text-align: center; padding: 20px; max-width: 600px; margin: auto;">
-                  <h2>⚠️ Unable to Load Game Resources</h2>
-                  <p>The game failed to load THREE.js library from all sources:</p>
-                  <ul style="text-align: left; display: inline-block; margin: 20px auto;">
-                    <li>Primary CDN (unpkg.com) - Failed</li>
-                    <li>Fallback CDN (jsdelivr.net) - Failed</li>
-                    <li>Local fallback (vendor/three.module.js) - Failed</li>
-                  </ul>
-                  <p><strong>Troubleshooting:</strong></p>
-                  <ul style="text-align: left; display: inline-block; margin: 10px auto;">
-                    <li>Check your internet connection</li>
-                    <li>Try disabling ad blockers or VPN</li>
-                    <li>Refresh the page (Ctrl+R or Cmd+R)</li>
-                    <li>Clear browser cache and try again</li>
-                  </ul>
-                  <button onclick="location.reload()" style="margin-top: 20px; padding: 10px 20px; font-size: 16px; cursor: pointer; background: #4FC3F7; color: white; border: none; border-radius: 5px;">
-                    Retry
-                  </button>
-                </div>
-              `;
-            }
-          }
-        }
-      }
-    })();
-  </script>
-
   <!-- CDN Error Logging (Non-blocking) -->
   <script>
     // Monitor font loading and log errors gracefully
@@ -2950,7 +2873,55 @@
   </script>
 
   <script type="module">
-    import * as THREE from 'three';
+    // Import THREE.js with fallback handling
+    let THREE;
+    try {
+      // Try primary CDN via import map
+      THREE = await import('three');
+      console.log('[Import] THREE.js imported successfully from primary CDN');
+    } catch (error) {
+      console.warn('[Import] Primary CDN failed, trying jsdelivr fallback');
+      try {
+        // Try fallback CDN with direct URL
+        THREE = await import('https://cdn.jsdelivr.net/npm/three@0.176.0/build/three.module.js');
+        console.log('[Import] THREE.js imported successfully from fallback CDN (jsdelivr.net)');
+      } catch (fallbackError) {
+        console.warn('[Import] Fallback CDN failed, trying local vendor file');
+        try {
+          // Try local vendor fallback
+          THREE = await import('./vendor/three.module.js');
+          console.log('[Import] THREE.js imported successfully from local vendor directory (offline mode)');
+        } catch (localError) {
+          console.error('[Import] All THREE.js import attempts failed');
+          // Show error message
+          const loadingScreen = document.getElementById('loading-screen');
+          if (loadingScreen) {
+            loadingScreen.innerHTML = `
+              <div style="color: white; text-align: center; padding: 20px; max-width: 600px; margin: auto;">
+                <h2>⚠️ Unable to Load Game Resources</h2>
+                <p>The game failed to load THREE.js library from all sources:</p>
+                <ul style="text-align: left; display: inline-block; margin: 20px auto;">
+                  <li>Primary CDN (unpkg.com) - Failed</li>
+                  <li>Fallback CDN (jsdelivr.net) - Failed</li>
+                  <li>Local fallback (vendor/three.module.js) - Failed</li>
+                </ul>
+                <p><strong>Troubleshooting:</strong></p>
+                <ul style="text-align: left; display: inline-block; margin: 10px auto;">
+                  <li>Check your internet connection</li>
+                  <li>Try disabling ad blockers or VPN</li>
+                  <li>Refresh the page (Ctrl+R or Cmd+R)</li>
+                  <li>Clear browser cache and try again</li>
+                </ul>
+                <button onclick="location.reload()" style="margin-top: 20px; padding: 10px 20px; font-size: 16px; cursor: pointer; background: #4FC3F7; color: white; border: none; border-radius: 5px;">
+                  Retry
+                </button>
+              </div>
+            `;
+          }
+          throw new Error('Failed to load THREE.js from all sources');
+        }
+      }
+    }
 
     // --- CONSTANTS & CONFIG ---
     const COLORS = {
