@@ -2733,38 +2733,40 @@
   <!-- THREE.js CDN Fallback: Load from alternative CDN if unpkg fails -->
   <script type="module">
     // Test if THREE.js loaded successfully from primary CDN
-    let threeLoaded = false;
-    try {
-      await import('three');
-      threeLoaded = true;
-      console.log('[CDN] THREE.js loaded successfully from unpkg.com');
-    } catch (error) {
-      console.warn('[CDN] Primary CDN (unpkg.com) failed, attempting fallback to cdn.jsdelivr.net');
-      
-      // Fallback: Dynamically create new importmap with alternative CDN
+    (async function() {
+      let threeLoaded = false;
       try {
-        const importMapFallback = document.createElement('script');
-        importMapFallback.type = 'importmap';
-        importMapFallback.textContent = JSON.stringify({
-          "imports": {
-            "three": "https://cdn.jsdelivr.net/npm/three@0.176.0/build/three.module.js",
-            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.176.0/examples/jsm/"
-          }
-        });
-        document.head.appendChild(importMapFallback);
-        
-        // Test fallback
         await import('three');
-        console.log('[CDN] THREE.js loaded successfully from fallback CDN (jsdelivr.net)');
-      } catch (fallbackError) {
-        console.error('[CDN] Both primary and fallback CDNs failed. Game cannot initialize without THREE.js');
-        // Show user-friendly error message
-        const loadingScreen = document.getElementById('loading-screen');
-        if (loadingScreen) {
-          loadingScreen.innerHTML = '<div style="color: white; text-align: center; padding: 20px;"><h2>⚠️ Connection Error</h2><p>Unable to load required game resources. Please check your internet connection and refresh the page.</p></div>';
+        threeLoaded = true;
+        console.log('[CDN] THREE.js loaded successfully from unpkg.com');
+      } catch (error) {
+        console.warn('[CDN] Primary CDN (unpkg.com) failed, attempting fallback to cdn.jsdelivr.net');
+        
+        // Fallback: Dynamically create new importmap with alternative CDN
+        try {
+          const importMapFallback = document.createElement('script');
+          importMapFallback.type = 'importmap';
+          importMapFallback.textContent = JSON.stringify({
+            "imports": {
+              "three": "https://cdn.jsdelivr.net/npm/three@0.176.0/build/three.module.js",
+              "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.176.0/examples/jsm/"
+            }
+          });
+          document.head.appendChild(importMapFallback);
+          
+          // Test fallback
+          await import('three');
+          console.log('[CDN] THREE.js loaded successfully from fallback CDN (jsdelivr.net)');
+        } catch (fallbackError) {
+          console.error('[CDN] Both primary and fallback CDNs failed. Game cannot initialize without THREE.js');
+          // Show user-friendly error message
+          const loadingScreen = document.getElementById('loading-screen');
+          if (loadingScreen) {
+            loadingScreen.innerHTML = '<div style="color: white; text-align: center; padding: 20px;"><h2>⚠️ Connection Error</h2><p>Unable to load required game resources. Please check your internet connection and refresh the page.</p></div>';
+          }
         }
       }
-    }
+    })();
   </script>
 
   <!-- CDN Error Logging (Non-blocking) -->
@@ -5859,8 +5861,13 @@
       
       // ENHANCED GORE: Large and small blood drops
       spawnBloodDrops(count) {
+        // Gore effect constants
+        const LARGE_DROP_PROBABILITY = 0.3; // 30% large drops
+        const LARGE_DROP_SIZE = 0.15;
+        const SMALL_DROP_SIZE = 0.08;
+        
         for (let i = 0; i < count; i++) {
-          const size = Math.random() < 0.3 ? 0.15 : 0.08; // 30% large, 70% small
+          const size = Math.random() < LARGE_DROP_PROBABILITY ? LARGE_DROP_SIZE : SMALL_DROP_SIZE;
           const drop = new THREE.Mesh(
             new THREE.SphereGeometry(size, 6, 6),
             new THREE.MeshBasicMaterial({ color: 0x8B0000 })
@@ -7745,7 +7752,7 @@
       }
       
       giveReward() {
-        // ENHANCED: Special rewards for rare chests - Double Barrel + Windmill reward
+        // ENHANCED: Special rewards for rare chests - Double Barrel weapon unlock
         if (this.tier === 'rare' || this.tier === 'epic' || this.tier === 'mythical') {
           // 50% chance to give Double Barrel weapon for rare+ chests
           if (Math.random() < 0.5 && !weapons.doubleBarrel.active) {
@@ -7754,14 +7761,6 @@
             showStatChange('RARE CHEST: Double Barrel Shotgun Unlocked!');
             playSound('levelUp');
             spawnParticles(this.mesh.position, 0x0080FF, 20);
-            
-            // Also give windmill reward as bonus
-            if (windmillQuest.completed && !windmillQuest.rewardGiven) {
-              const windmillGold = 200;
-              addGold(windmillGold);
-              createFloatingText(`Windmill Bonus: +${windmillGold} Gold!`, this.mesh.position, '#FFD700');
-              windmillQuest.rewardGiven = true;
-            }
             return; // Skip normal rewards
           }
         }
@@ -17178,7 +17177,7 @@
         c.material.opacity = 0.3 + Math.sin(c.userData.phase) * 0.2;
       });
       
-      // Lake sparkles animation
+      // Lake sparkles animation - ENHANCED: Reflect sun/moon based on time of day
       animatedSceneObjects.sparkles.forEach(c => {
         c.userData.phase += 0.02 * c.userData.speed;
         c.material.opacity = 0.3 + Math.abs(Math.sin(c.userData.phase)) * 0.7;
@@ -17187,6 +17186,22 @@
           1,
           1 + Math.sin(c.userData.phase * 2) * 0.5
         );
+        
+        // ENHANCED: Change sparkle color based on time of day (sun = white/gold, moon = blue)
+        const t = dayNightCycle.timeOfDay;
+        if (t < 0.15 || t > 0.85) {
+          // Night - moonlight sparkles (bluish)
+          c.material.color.setHex(0xADD8E6); // Light blue
+        } else if (t >= 0.15 && t < 0.3) {
+          // Sunrise - orange sparkles
+          c.material.color.setHex(0xFFAA00); // Orange
+        } else if (t >= 0.7 && t < 0.85) {
+          // Sunset - red/gold sparkles
+          c.material.color.setHex(0xFF6B35); // Red-orange
+        } else {
+          // Day - bright white/gold sparkles
+          c.material.color.setHex(0xFFFFFF); // White
+        }
       });
       
       // Crystal tower animation
