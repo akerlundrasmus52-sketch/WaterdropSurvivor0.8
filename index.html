@@ -6842,12 +6842,79 @@
                   prop.mesh.geometry.dispose();
                   prop.mesh.material.dispose();
                 }
+              } else {
+                // Tree movement on hit (shake/sway from impact)
+                if (prop.type === 'tree' && prop.mesh.userData.swayPhase !== undefined) {
+                  // Add extra sway from bullet impact
+                  prop.mesh.userData.swayAmount = Math.min(0.3, prop.mesh.userData.swayAmount + 0.1);
+                  // Gradually reduce sway back to normal
+                  setTimeout(() => {
+                    if (!prop.destroyed && prop.mesh.userData.swayAmount) {
+                      prop.mesh.userData.swayAmount = Math.max(0.05, prop.mesh.userData.swayAmount - 0.05);
+                    }
+                  }, 500);
+                }
               }
               
               // Small particle effect on hit
               spawnParticles(prop.mesh.position, 0x888888, 3);
               
               this.destroy();
+              break;
+            }
+          }
+        }
+        
+        // FRESH: Fence collision - fences can be damaged and broken by bullets
+        if (window.breakableFences) {
+          for (let fence of window.breakableFences) {
+            if (!fence.userData.isFence || fence.userData.hp <= 0) continue;
+            const dx = this.mesh.position.x - fence.position.x;
+            const dz = this.mesh.position.z - fence.position.z;
+            if (dx*dx + dz*dz < 1.5) { // Hit radius
+              // Damage fence
+              const dmg = weapons.gun.damage * 0.3; // Fences take less damage
+              fence.userData.hp -= dmg;
+              
+              // Shake effect on hit
+              fence.rotation.x = (Math.random() - 0.5) * 0.3;
+              fence.rotation.z = (Math.random() - 0.5) * 0.3;
+              
+              // Visual damage
+              const hpPercent = fence.userData.hp / fence.userData.maxHp;
+              if (hpPercent < 0.5) {
+                fence.material.color.setHex(0x654321); // Darken when damaged
+              }
+              
+              if (fence.userData.hp <= 0) {
+                // Fence broken! Create debris
+                spawnParticles(fence.position, 0x8B4513, 15); // Brown wood debris
+                spawnParticles(fence.position, 0x654321, 10);
+                
+                // Animate fence falling
+                const fallDirection = Math.random() < 0.5 ? 1 : -1;
+                const startRotX = fence.rotation.x;
+                const fallDuration = 500;
+                const fallStart = Date.now();
+                
+                const fallInterval = setInterval(() => {
+                  const elapsed = Date.now() - fallStart;
+                  const progress = Math.min(elapsed / fallDuration, 1);
+                  fence.rotation.x = startRotX + (Math.PI / 2) * progress * fallDirection;
+                  fence.position.y = 1 - progress * 0.8; // Sink down
+                  
+                  if (progress >= 1) {
+                    clearInterval(fallInterval);
+                    scene.remove(fence);
+                    fence.geometry.dispose();
+                    fence.material.dispose();
+                  }
+                }, 16);
+              }
+              
+              // Bullet destroyed on fence hit
+              this.destroy();
+              playSound('hit');
               break;
             }
           }
@@ -11259,45 +11326,64 @@
       rondel.receiveShadow = true;
       scene.add(rondel);
       
-      // Path material - smooth dirt/gravel path
-      const pathMat = new THREE.MeshPhysicalMaterial({ 
-        color: 0x9A8A6A, // Light brown dirt
+      // Path material - brown dirt road
+      const roadMat = new THREE.MeshPhysicalMaterial({ 
+        color: 0x8B7355, // Brown dirt
+        metalness: 0.0,
+        roughness: 0.9,
+      });
+      
+      // Grass strip material for middle of roads
+      const grassStripMat = new THREE.MeshPhysicalMaterial({ 
+        color: 0x5A7D3C, // Darker green grass
         metalness: 0.0,
         roughness: 0.85,
       });
       
-      // Helper function to create smooth straight path
-      function createPath(startX, startZ, endX, endZ, width = 3) {
+      // Helper function to create wagon road with grass strip in middle
+      function createWagonRoad(startX, startZ, endX, endZ, roadWidth = 4) {
         const length = Math.sqrt((endX - startX) ** 2 + (endZ - startZ) ** 2);
         const angle = Math.atan2(endZ - startZ, endX - startX);
+        const midX = (startX + endX) / 2;
+        const midZ = (startZ + endZ) / 2;
         
-        // Create path as single mesh for performance
-        const pathGeo = new THREE.PlaneGeometry(width, length);
-        const path = new THREE.Mesh(pathGeo, pathMat);
-        path.rotation.x = -Math.PI/2;
-        path.rotation.z = angle - Math.PI/2;
-        path.position.set((startX + endX) / 2, 0.02, (startZ + endZ) / 2);
-        path.receiveShadow = true;
-        scene.add(path);
+        // Create main road (brown dirt)
+        const roadGeo = new THREE.PlaneGeometry(roadWidth, length);
+        const road = new THREE.Mesh(roadGeo, roadMat);
+        road.rotation.x = -Math.PI/2;
+        road.rotation.z = angle - Math.PI/2;
+        road.position.set(midX, 0.02, midZ);
+        road.receiveShadow = true;
+        scene.add(road);
+        
+        // Create grass strip in middle (1/3 width of road)
+        const grassStripWidth = roadWidth / 3;
+        const grassGeo = new THREE.PlaneGeometry(grassStripWidth, length);
+        const grassStrip = new THREE.Mesh(grassGeo, grassStripMat);
+        grassStrip.rotation.x = -Math.PI/2;
+        grassStrip.rotation.z = angle - Math.PI/2;
+        grassStrip.position.set(midX, 0.03, midZ); // Slightly above road
+        grassStrip.receiveShadow = true;
+        scene.add(grassStrip);
       }
       
-      // 4 Main Paths from Central Hub (Rondel):
-      // Paths start from different points on the rondel edge based on direction
+      // 4 Main Wagon Roads from Central Hub (Rondel):
+      // Roads start from different points on the rondel edge based on direction
       
-      // 1. Path to Stonehenge (60, 60) - Northeast direction
-      createPath(rondelRadius * 0.707, rondelRadius * 0.707, 60, 60, 3);
+      // 1. Road to Stonehenge (60, 60) - Northeast direction
+      createWagonRoad(rondelRadius * 0.707, rondelRadius * 0.707, 60, 60, 4);
       
-      // 2. Path to Illuminati Pyramid (-70, 50) - Northwest direction  
-      createPath(-rondelRadius * 0.6, rondelRadius * 0.8, -70, 50, 3);
+      // 2. Road to Illuminati Pyramid (-70, 50) - Northwest direction  
+      createWagonRoad(-rondelRadius * 0.6, rondelRadius * 0.8, -70, 50, 4);
       
-      // 3. Path to Lake (30, -30) - Southeast direction
-      createPath(rondelRadius * 0.707, -rondelRadius * 0.707, 30, -30, 3);
+      // 3. Road to Lake (30, -30) - Southeast direction
+      createWagonRoad(rondelRadius * 0.707, -rondelRadius * 0.707, 30, -30, 4);
       
-      // 4. Path to Windmill (40, 40) - East direction (slightly different from Stonehenge)
-      createPath(rondelRadius * 0.9, rondelRadius * 0.436, 40, 40, 3);
+      // 4. Road to Windmill (40, 40) - East direction
+      createWagonRoad(rondelRadius * 0.9, rondelRadius * 0.436, 40, 40, 4);
       
-      // 5. Path to Tesla Tower (-80, -80) - Northwest direction
-      createPath(-rondelRadius * 0.707, -rondelRadius * 0.707, -80, -80, 3);
+      // 5. Road to Tesla Tower (-80, -80) - Southwest direction
+      createWagonRoad(-rondelRadius * 0.707, -rondelRadius * 0.707, -80, -80, 4);
       
       // Farm Fields - Fill empty spaces with farm texture
       // Create large farm field background (performance optimized - single large mesh)
@@ -11324,7 +11410,8 @@
         scene.add(fieldMesh);
       });
 
-      // Wooden fences around play area
+      // Wooden fences around play area - now breakable!
+      window.breakableFences = []; // Store all fences for collision/damage detection
       const fenceMat = new THREE.MeshToonMaterial({ color: 0x8B4513 });
       const postGeo = new THREE.BoxGeometry(0.3, 2, 0.3);
       const railGeo = new THREE.BoxGeometry(4, 0.2, 0.2);
@@ -11336,17 +11423,21 @@
         const z = Math.sin(angle) * 85;
         
         // Fence post
-        const post = new THREE.Mesh(postGeo, fenceMat);
+        const post = new THREE.Mesh(postGeo, fenceMat.clone());
         post.position.set(x, 1, z);
         post.castShadow = true;
+        post.userData = { isFence: true, hp: 15, maxHp: 15, originalPosition: post.position.clone() };
         scene.add(post);
+        window.breakableFences.push(post);
         
         // Fence rail
         if (i % 2 === 0) {
-          const rail = new THREE.Mesh(railGeo, fenceMat);
+          const rail = new THREE.Mesh(railGeo, fenceMat.clone());
           rail.position.set(x, 1, z);
           rail.rotation.y = angle;
+          rail.userData = { isFence: true, hp: 10, maxHp: 10, originalPosition: rail.position.clone(), railAngle: angle };
           scene.add(rail);
+          window.breakableFences.push(rail);
         }
       }
 
@@ -11399,6 +11490,13 @@
       const wmBlades2 = wmBlades.clone();
       wmBlades2.rotation.z = Math.PI/2;
       wmGroup.add(wmBlades2);
+      
+      // Add broken/damaged blade (third blade bent and damaged)
+      const brokenBlade = new THREE.Mesh(new THREE.BoxGeometry(6, 0.8, 0.9), new THREE.MeshBasicMaterial({color: 0x654321})); // Darker brown (damaged)
+      brokenBlade.position.set(-3, 7, 2);
+      brokenBlade.rotation.z = Math.PI * 0.15; // Bent at angle
+      wmGroup.add(brokenBlade);
+      
       // Store blades reference for rotation animation
       wmGroup.userData = { isWindmill: true, blades: [wmBlades, wmBlades2], hp: 600, maxHp: 600, questActive: false, light: wmLight };
       scene.add(wmGroup);
@@ -11440,6 +11538,27 @@
       signpostGroup.add(sprite);
       
       scene.add(signpostGroup);
+      
+      // Farm field near windmill (plowed rows)
+      const windmillFieldGroup = new THREE.Group();
+      windmillFieldGroup.position.set(45, 0, 50); // Near windmill but not overlapping
+      const fieldSoilMat = new THREE.MeshToonMaterial({ color: 0x654321 }); // Brown soil
+      for (let row = 0; row < 5; row++) {
+        for (let col = 0; col < 6; col++) {
+          const fieldPlot = new THREE.Mesh(
+            new THREE.PlaneGeometry(1.2, 1.2),
+            fieldSoilMat
+          );
+          fieldPlot.rotation.x = -Math.PI / 2;
+          fieldPlot.position.set(
+            -3 + col * 1.5,
+            0.01,
+            -3 + row * 1.5
+          );
+          windmillFieldGroup.add(fieldPlot);
+        }
+      }
+      scene.add(windmillFieldGroup);
       
       // Mine
       const mineGeo = new THREE.DodecahedronGeometry(5);
@@ -11820,7 +11939,7 @@
 
       // Farm Area near windmill
       const farmGroup = new THREE.Group();
-      farmGroup.position.set(35, 0, 35); // Near windmill
+      farmGroup.position.set(50, 0, 35); // Moved further back from spawn
       
       // Wheat field (50 stalks)
       const wheatGeo = new THREE.ConeGeometry(0.1, 0.8, 4);
@@ -12534,6 +12653,10 @@
           maxHp = 50;
           mesh.userData.trunk = trunk;
           mesh.userData.leaves = leaves;
+          // Add sway animation data
+          mesh.userData.swayPhase = Math.random() * Math.PI * 2; // Random starting phase
+          mesh.userData.swaySpeed = 0.5 + Math.random() * 0.5; // Random sway speed
+          mesh.userData.swayAmount = 0.05 + Math.random() * 0.05; // Sway intensity
         } else if (type === 'barrel') {
           // Barrel: cylinder
           const barrelGeo = new THREE.CylinderGeometry(0.4, 0.4, 1, 8);
@@ -16769,11 +16892,14 @@
       
       // Calculate sun position and lighting based on time of day
       // 0 = midnight (dark), 0.25 = sunrise, 0.5 = noon (bright), 0.75 = sunset, 1 = midnight
+      // Use smoothstep easing for smoother color transitions
+      const smoothstep = (t) => t * t * (3 - 2 * t); // Smooth interpolation
+      
       let sunIntensity, ambientIntensity, skyColor;
       
       if (t < 0.25) {
         // Night to sunrise (0 -> 0.25)
-        const phase = t / 0.25;
+        const phase = smoothstep(t / 0.25); // Smooth easing
         sunIntensity = 0.2 + (0.6 * phase); // 0.2 -> 0.8
         ambientIntensity = 0.3 + (0.3 * phase); // 0.3 -> 0.6
         skyColor = new THREE.Color().lerpColors(
@@ -16783,13 +16909,13 @@
         );
       } else if (t < 0.5) {
         // Sunrise to noon (0.25 -> 0.5)
-        const phase = (t - 0.25) / 0.25;
+        const phase = smoothstep((t - 0.25) / 0.25);
         sunIntensity = 0.8 + (0.2 * phase); // 0.8 -> 1.0
         ambientIntensity = 0.6 + (0.1 * phase); // 0.6 -> 0.7
         skyColor = new THREE.Color(0x87CEEB); // Bright day
       } else if (t < 0.75) {
         // Noon to sunset (0.5 -> 0.75)
-        const phase = (t - 0.5) / 0.25;
+        const phase = smoothstep((t - 0.5) / 0.25);
         sunIntensity = 1.0 - (0.6 * phase); // 1.0 -> 0.4
         ambientIntensity = 0.7 - (0.3 * phase); // 0.7 -> 0.4
         skyColor = new THREE.Color().lerpColors(
@@ -16799,7 +16925,7 @@
         );
       } else {
         // Sunset to night (0.75 -> 1.0)
-        const phase = (t - 0.75) / 0.25;
+        const phase = smoothstep((t - 0.75) / 0.25);
         sunIntensity = 0.4 - (0.2 * phase); // 0.4 -> 0.2
         ambientIntensity = 0.4 - (0.1 * phase); // 0.4 -> 0.3
         skyColor = new THREE.Color().lerpColors(
@@ -16809,16 +16935,25 @@
         );
       }
       
-      // Apply lighting changes smoothly (non-blocking)
-      window.ambientLight.intensity = ambientIntensity;
-      window.dirLight.intensity = sunIntensity;
+      // Apply lighting changes with lerp for extra smoothness
+      const lerpSpeed = 0.1; // Smooth transition speed
+      window.ambientLight.intensity += (ambientIntensity - window.ambientLight.intensity) * lerpSpeed;
+      window.dirLight.intensity += (sunIntensity - window.dirLight.intensity) * lerpSpeed;
       
-      // Update sky color
-      scene.background = skyColor;
+      // Update sky color with lerp for smooth transitions
+      if (!window.currentSkyColor) {
+        window.currentSkyColor = skyColor.clone();
+      }
+      window.currentSkyColor.lerp(skyColor, lerpSpeed);
+      scene.background = window.currentSkyColor;
       
-      // Update fog color to match sky (fog reacts to lighting)
+      // Update fog color to match sky (fog reacts to lighting) with lerp
       if (scene.fog) {
-        scene.fog.color = skyColor;
+        if (!window.currentFogColor) {
+          window.currentFogColor = window.currentSkyColor.clone();
+        }
+        window.currentFogColor.lerp(window.currentSkyColor, lerpSpeed);
+        scene.fog.color = window.currentFogColor;
       }
       
       // Move sun position in an arc
@@ -17068,6 +17203,45 @@
         player.update(dt);
       }
       
+      // Lake Physics - Check if player is in water
+      const LAKE_CENTER_X = 30;
+      const LAKE_CENTER_Z = -30;
+      const LAKE_RADIUS = 18;
+      const distToLake = Math.sqrt(
+        (player.mesh.position.x - LAKE_CENTER_X) ** 2 + 
+        (player.mesh.position.z - LAKE_CENTER_Z) ** 2
+      );
+      
+      if (distToLake < LAKE_RADIUS) {
+        // Player is in water!
+        if (!player.inWater) {
+          player.inWater = true;
+          player.waterEntryTime = gameTime;
+          
+          // Splash effect on water entry
+          spawnParticles(player.mesh.position, 0x87CEEB, 20); // Blue splash
+          spawnParticles(player.mesh.position, 0xFFFFFF, 10); // White foam
+          playSound('waterSplash');
+        }
+        
+        // Slow player movement while in water (50% speed reduction)
+        player.velocity.multiplyScalar(0.5);
+        
+        // Sinking effect - lower player slightly
+        player.mesh.position.y = Math.max(-0.3, player.mesh.position.y - dt * 0.5);
+        
+        // Create ripple effect
+        if (Math.random() < 0.3) {
+          spawnParticles(player.mesh.position, 0x87CEEB, 2);
+        }
+      } else {
+        if (player.inWater) {
+          player.inWater = false;
+          // Return to normal height
+          player.mesh.position.y = 0.5;
+        }
+      }
+      
       // Check legendary cigar quest
       if (isGameActive && !isPaused) {
         checkLegendaryCigarQuest();
@@ -17221,30 +17395,52 @@
               projectiles.push(new Projectile(player.mesh.position.x, player.mesh.position.z, nearest.mesh.position));
               
               // ENHANCED muzzle flash light effect - 3 variations (FRESH)
+              // Brighter at night for better visibility
+              const isNight = dayNightCycle.timeOfDay < 0.2 || dayNightCycle.timeOfDay > 0.8;
+              const nightMultiplier = isNight ? 2.0 : 1.0; // Double intensity at night
+              
               const flashVariation = i % 3;
               let flashColor, flashIntensity, flashRadius;
               if (flashVariation === 0) {
                 // Bright white flash
                 flashColor = 0xFFFFFF;
-                flashIntensity = 6;
-                flashRadius = 20;
+                flashIntensity = 6 * nightMultiplier;
+                flashRadius = 20 * (isNight ? 1.5 : 1.0); // Larger radius at night
               } else if (flashVariation === 1) {
                 // Yellow-orange flash
                 flashColor = 0xFFCC00;
-                flashIntensity = 5.5;
-                flashRadius = 18;
+                flashIntensity = 5.5 * nightMultiplier;
+                flashRadius = 18 * (isNight ? 1.5 : 1.0);
               } else {
                 // Blue-white flash (hotter burn)
                 flashColor = 0xCCFFFF;
-                flashIntensity = 6.5;
-                flashRadius = 22;
+                flashIntensity = 6.5 * nightMultiplier;
+                flashRadius = 22 * (isNight ? 1.5 : 1.0);
               }
               
               const flashLight = new THREE.PointLight(flashColor, flashIntensity, flashRadius);
               flashLight.position.copy(player.mesh.position);
               flashLight.position.y += 1;
+              flashLight.castShadow = false; // Performance: no shadows for flash
               scene.add(flashLight);
               flashLights.push(flashLight);
+              
+              // Add ground reflection light at night for bounce effect
+              if (isNight) {
+                const reflectionLight = new THREE.PointLight(flashColor, flashIntensity * 0.5, flashRadius * 0.7);
+                reflectionLight.position.copy(player.mesh.position);
+                reflectionLight.position.y = 0.1; // Near ground
+                scene.add(reflectionLight);
+                flashLights.push(reflectionLight);
+                
+                // Remove reflection with main flash
+                const reflTimeoutId = setTimeout(() => {
+                  scene.remove(reflectionLight);
+                  const idx = flashLights.indexOf(reflectionLight);
+                  if (idx > -1) flashLights.splice(idx, 1);
+                }, 80);
+                activeTimeouts.push(reflTimeoutId);
+              }
               
               // Remove flash after short time
               const timeoutId = setTimeout(() => {
@@ -17651,6 +17847,52 @@
         // Pulsing opacity (between 0.3 and 0.7 for good visibility)
         obj.material.opacity = 0.5 + Math.sin(obj.userData.angle * 3) * 0.2;
       });
+      
+      // Waterfall animation
+      
+      // Tree sway animation - subtle wind effect
+      if (window.destructibleProps) {
+        window.destructibleProps.forEach(prop => {
+          if (prop.type === 'tree' && !prop.destroyed && prop.mesh.userData.swayPhase !== undefined) {
+            prop.mesh.userData.swayPhase += dt * prop.mesh.userData.swaySpeed;
+            const swayX = Math.sin(prop.mesh.userData.swayPhase) * prop.mesh.userData.swayAmount;
+            const swayZ = Math.cos(prop.mesh.userData.swayPhase * 0.7) * prop.mesh.userData.swayAmount;
+            
+            // Apply sway to leaves (independent sway)
+            if (prop.mesh.userData.leaves) {
+              prop.mesh.userData.leaves.rotation.x = swayX;
+              prop.mesh.userData.leaves.rotation.z = swayZ;
+            }
+            // Trunk sways less
+            if (prop.mesh.userData.trunk) {
+              prop.mesh.userData.trunk.rotation.x = swayX * 0.3;
+              prop.mesh.userData.trunk.rotation.z = swayZ * 0.3;
+            }
+          }
+        });
+      }
+      
+      // Fence physics - check player collision and reset
+      if (window.breakableFences) {
+        window.breakableFences.forEach(fence => {
+          if (fence.userData.isFence && fence.userData.hp > 0) {
+            const dist = Math.sqrt(
+              (player.mesh.position.x - fence.position.x) ** 2 +
+              (player.mesh.position.z - fence.position.z) ** 2
+            );
+            
+            // Player collision - shake fence
+            if (dist < 2) {
+              fence.rotation.x = Math.sin(gameTime * 10) * 0.1;
+              fence.rotation.z = Math.cos(gameTime * 10) * 0.1;
+            } else {
+              // Return to normal
+              fence.rotation.x *= 0.9;
+              fence.rotation.z *= 0.9;
+            }
+          }
+        });
+      }
       
       // Waterfall animation
       animatedSceneObjects.waterfalls.forEach(obj => {
