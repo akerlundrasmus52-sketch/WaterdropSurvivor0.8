@@ -175,7 +175,7 @@
     /* Combo Counter - Red/Black Theme */
     #combo-counter {
       position: absolute;
-      top: 35%;
+      top: 60%; /* Moved down to be closer to character (was 35%) */
       left: 50%;
       transform: translate(-50%, -50%);
       text-align: center;
@@ -186,30 +186,30 @@
     }
     
     #combo-text {
-      font-size: 48px;
+      font-size: 28px; /* Reduced from 48px for smaller text */
       font-weight: 900;
       color: #FF0000;
-      text-shadow: 
-        3px 3px 0 #000,
-        -2px -2px 0 #000,
-        2px -2px 0 #000,
-        -2px 2px 0 #000,
-        0 0 20px rgba(255,0,0,0.9),
-        0 0 40px rgba(255,0,0,0.7);
-      animation: combo-bubble 0.5s ease-out;
-    }
-    
-    #combo-multiplier {
-      font-size: 24px;
-      font-weight: bold;
-      color: #8B0000;
       text-shadow: 
         2px 2px 0 #000,
         -1px -1px 0 #000,
         1px -1px 0 #000,
         -1px 1px 0 #000,
-        0 0 15px rgba(139,0,0,0.8);
-      margin-top: 5px;
+        0 0 10px rgba(255,0,0,0.9),
+        0 0 20px rgba(255,0,0,0.7);
+      animation: combo-bubble 0.5s ease-out;
+    }
+    
+    #combo-multiplier {
+      font-size: 16px; /* Reduced from 24px to match smaller text */
+      font-weight: bold;
+      color: #8B0000;
+      text-shadow: 
+        1px 1px 0 #000,
+        -1px -1px 0 #000,
+        1px -1px 0 #000,
+        -1px 1px 0 #000,
+        0 0 8px rgba(139,0,0,0.8);
+      margin-top: 3px;
     }
     
     @keyframes combo-bubble {
@@ -3885,6 +3885,10 @@
         this.invulnerabilityTime = 0;
         this.invulnerabilityDuration = 0.5; // 500ms of invulnerability after taking damage
         
+        // X eyes effect when hit
+        this.xEyesActive = false;
+        this.xEyes = [];
+        
         // Store base scale for breathing animation efficiency
         this.baseScale = 1.0;
       }
@@ -4331,6 +4335,57 @@
           setTimeout(() => {
             waterdropContainer.classList.remove('attacked');
           }, 400);
+        }
+        
+        // Show "X" eyes when hit
+        if (!this.xEyesActive) {
+          this.xEyesActive = true;
+          // Hide normal eyes
+          this.leftEye.visible = false;
+          this.rightEye.visible = false;
+          this.leftPupil.visible = false;
+          this.rightPupil.visible = false;
+          
+          // Create X shapes for eyes
+          const xMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 });
+          this.xEyes = [];
+          
+          // Left X
+          const leftX1 = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.02, 0.01), xMaterial);
+          leftX1.position.set(-0.12, 0.1, 0.4);
+          leftX1.rotation.z = Math.PI / 4;
+          this.mesh.add(leftX1);
+          this.xEyes.push(leftX1);
+          
+          const leftX2 = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.02, 0.01), xMaterial);
+          leftX2.position.set(-0.12, 0.1, 0.4);
+          leftX2.rotation.z = -Math.PI / 4;
+          this.mesh.add(leftX2);
+          this.xEyes.push(leftX2);
+          
+          // Right X
+          const rightX1 = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.02, 0.01), xMaterial);
+          rightX1.position.set(0.12, 0.1, 0.4);
+          rightX1.rotation.z = Math.PI / 4;
+          this.mesh.add(rightX1);
+          this.xEyes.push(rightX1);
+          
+          const rightX2 = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.02, 0.01), xMaterial);
+          rightX2.position.set(0.12, 0.1, 0.4);
+          rightX2.rotation.z = -Math.PI / 4;
+          this.mesh.add(rightX2);
+          this.xEyes.push(rightX2);
+          
+          // Remove X eyes after 300ms and restore normal eyes
+          setTimeout(() => {
+            this.xEyesActive = false;
+            this.xEyes.forEach(x => this.mesh.remove(x));
+            this.xEyes = [];
+            this.leftEye.visible = true;
+            this.rightEye.visible = true;
+            this.leftPupil.visible = true;
+            this.rightPupil.visible = true;
+          }, 300);
         }
         
         // Show damage number for player (red color)
@@ -7577,6 +7632,8 @@
       // Camp state
       hasVisitedCamp: false, // Track first camp visit
       nextRunTimeOfDay: 'day', // 'day' or 'night' - chosen from sleep option
+      lastDeathHour: 6, // Track hour of day for time progression (0-23, starts at 6 AM)
+      runCount: 0, // Track total number of runs for time progression
       // Training Hall system
       trainingPoints: 0,
       lastTrainingPointTime: 0, // Timestamp of last training point awarded
@@ -7642,6 +7699,8 @@
           saveData.companions = { ...defaultSaveData.companions, ...(saveData.companions || {}) };
           saveData.hasVisitedCamp = saveData.hasVisitedCamp || false;
           saveData.nextRunTimeOfDay = saveData.nextRunTimeOfDay || 'day';
+          saveData.lastDeathHour = saveData.lastDeathHour || 6; // Default to 6 AM
+          saveData.runCount = saveData.runCount || 0;
           saveData.trainingPoints = saveData.trainingPoints || 0;
           saveData.lastTrainingPointTime = saveData.lastTrainingPointTime || 0;
           saveData.skillPoints = saveData.skillPoints || 0;
@@ -7705,38 +7764,38 @@
 
     // --- ACHIEVEMENTS SYSTEM ---
     const ACHIEVEMENTS = {
-      kills10: { id: 'kills10', name: 'First Blood', desc: 'Kill 10 enemies', reward: 25, attributePoints: 1, check: () => playerStats.kills >= 10, claimed: false },
-      kills50: { id: 'kills50', name: 'Killer Instinct', desc: 'Kill 50 enemies', reward: 50, attributePoints: 1, check: () => playerStats.kills >= 50, claimed: false },
-      kills100: { id: 'kills100', name: 'Century Slayer', desc: 'Kill 100 enemies', reward: 100, attributePoints: 2, check: () => playerStats.kills >= 100, claimed: false },
-      kills500: { id: 'kills500', name: 'Mass Destroyer', desc: 'Kill 500 enemies', reward: 250, attributePoints: 2, check: () => playerStats.kills >= 500, claimed: false },
-      kills1000: { id: 'kills1000', name: 'Legendary Warrior', desc: 'Kill 1000 enemies', reward: 500, attributePoints: 3, check: () => playerStats.kills >= 1000, claimed: false },
-      kills2500: { id: 'kills2500', name: 'Elite Slayer', desc: 'Kill 2500 enemies', reward: 750, attributePoints: 3, check: () => playerStats.kills >= 2500, claimed: false },
-      kills5000: { id: 'kills5000', name: 'God of War', desc: 'Kill 5000 enemies', reward: 1000, attributePoints: 4, check: () => playerStats.kills >= 5000, claimed: false },
+      kills10: { id: 'kills10', name: 'First Blood', desc: 'Kill 10 enemies', reward: 25, skillPoints: 1, attributePoints: 1, check: () => playerStats.kills >= 10, claimed: false },
+      kills50: { id: 'kills50', name: 'Killer Instinct', desc: 'Kill 50 enemies', reward: 50, skillPoints: 1, attributePoints: 1, check: () => playerStats.kills >= 50, claimed: false },
+      kills100: { id: 'kills100', name: 'Century Slayer', desc: 'Kill 100 enemies', reward: 100, skillPoints: 2, attributePoints: 2, check: () => playerStats.kills >= 100, claimed: false },
+      kills500: { id: 'kills500', name: 'Mass Destroyer', desc: 'Kill 500 enemies', reward: 250, skillPoints: 2, attributePoints: 2, check: () => playerStats.kills >= 500, claimed: false },
+      kills1000: { id: 'kills1000', name: 'Legendary Warrior', desc: 'Kill 1000 enemies', reward: 500, skillPoints: 3, attributePoints: 3, check: () => playerStats.kills >= 1000, claimed: false },
+      kills2500: { id: 'kills2500', name: 'Elite Slayer', desc: 'Kill 2500 enemies', reward: 750, skillPoints: 3, attributePoints: 3, check: () => playerStats.kills >= 2500, claimed: false },
+      kills5000: { id: 'kills5000', name: 'God of War', desc: 'Kill 5000 enemies', reward: 1000, skillPoints: 4, attributePoints: 4, check: () => playerStats.kills >= 5000, claimed: false },
       
-      gold100: { id: 'gold100', name: 'Small Fortune', desc: 'Collect 100 gold in one run', reward: 50, attributePoints: 1, check: () => playerStats.gold >= 100, claimed: false },
-      gold500: { id: 'gold500', name: 'Treasure Hunter', desc: 'Collect 500 gold in one run', reward: 150, attributePoints: 1, check: () => playerStats.gold >= 500, claimed: false },
-      gold1000: { id: 'gold1000', name: 'Gold Baron', desc: 'Collect 1000 gold in one run', reward: 300, attributePoints: 2, check: () => playerStats.gold >= 1000, claimed: false },
-      gold2500: { id: 'gold2500', name: 'Wealth Magnet', desc: 'Collect 2500 gold in one run', reward: 500, attributePoints: 2, check: () => playerStats.gold >= 2500, claimed: false },
+      gold100: { id: 'gold100', name: 'Small Fortune', desc: 'Collect 100 gold in one run', reward: 50, skillPoints: 1, attributePoints: 1, check: () => playerStats.gold >= 100, claimed: false },
+      gold500: { id: 'gold500', name: 'Treasure Hunter', desc: 'Collect 500 gold in one run', reward: 150, skillPoints: 1, attributePoints: 1, check: () => playerStats.gold >= 500, claimed: false },
+      gold1000: { id: 'gold1000', name: 'Gold Baron', desc: 'Collect 1000 gold in one run', reward: 300, skillPoints: 2, attributePoints: 2, check: () => playerStats.gold >= 1000, claimed: false },
+      gold2500: { id: 'gold2500', name: 'Wealth Magnet', desc: 'Collect 2500 gold in one run', reward: 500, skillPoints: 2, attributePoints: 2, check: () => playerStats.gold >= 2500, claimed: false },
       
-      dasher: { id: 'dasher', name: 'Dash Master', desc: 'Perform 50 dashes in one run', reward: 100, attributePoints: 1, check: () => playerStats.dashesPerformed >= 50, claimed: false },
-      survivor: { id: 'survivor', name: 'Time Warrior', desc: 'Survive for 10 minutes', reward: 200, attributePoints: 2, check: () => playerStats.survivalTime >= 600, claimed: false },
-      survivor20: { id: 'survivor20', name: 'Endurance Master', desc: 'Survive for 20 minutes', reward: 400, attributePoints: 3, check: () => playerStats.survivalTime >= 1200, claimed: false },
-      survivor30: { id: 'survivor30', name: 'Immortal Legend', desc: 'Survive for 30 minutes', reward: 600, attributePoints: 4, check: () => playerStats.survivalTime >= 1800, claimed: false },
-      weaponMaster: { id: 'weaponMaster', name: 'Weapon Master', desc: 'Unlock all 3 weapons', reward: 150, attributePoints: 1, check: () => playerStats.weaponsUnlocked >= 3, claimed: false },
-      untouchable: { id: 'untouchable', name: 'Untouchable', desc: 'Take no damage for 3 minutes', reward: 300, attributePoints: 3, check: () => playerStats.survivalTime >= 180 && playerStats.damageTaken === 0, claimed: false },
+      dasher: { id: 'dasher', name: 'Dash Master', desc: 'Perform 50 dashes in one run', reward: 100, skillPoints: 1, attributePoints: 1, check: () => playerStats.dashesPerformed >= 50, claimed: false },
+      survivor: { id: 'survivor', name: 'Time Warrior', desc: 'Survive for 10 minutes', reward: 200, skillPoints: 2, attributePoints: 2, check: () => playerStats.survivalTime >= 600, claimed: false },
+      survivor20: { id: 'survivor20', name: 'Endurance Master', desc: 'Survive for 20 minutes', reward: 400, skillPoints: 3, attributePoints: 3, check: () => playerStats.survivalTime >= 1200, claimed: false },
+      survivor30: { id: 'survivor30', name: 'Immortal Legend', desc: 'Survive for 30 minutes', reward: 600, skillPoints: 4, attributePoints: 4, check: () => playerStats.survivalTime >= 1800, claimed: false },
+      weaponMaster: { id: 'weaponMaster', name: 'Weapon Master', desc: 'Unlock all 3 weapons', reward: 150, skillPoints: 1, attributePoints: 1, check: () => playerStats.weaponsUnlocked >= 3, claimed: false },
+      untouchable: { id: 'untouchable', name: 'Untouchable', desc: 'Take no damage for 3 minutes', reward: 300, skillPoints: 3, attributePoints: 3, check: () => playerStats.survivalTime >= 180 && playerStats.damageTaken === 0, claimed: false },
       
-      miniBoss1: { id: 'miniBoss1', name: 'Boss Slayer I', desc: 'Defeat your first mini-boss', reward: 150, attributePoints: 2, check: () => playerStats.miniBossesDefeated >= 1, claimed: false },
-      miniBoss3: { id: 'miniBoss3', name: 'Boss Slayer II', desc: 'Defeat 3 mini-bosses', reward: 300, attributePoints: 2, check: () => playerStats.miniBossesDefeated >= 3, claimed: false },
-      miniBoss5: { id: 'miniBoss5', name: 'Boss Slayer III', desc: 'Defeat 5 mini-bosses', reward: 500, attributePoints: 3, check: () => playerStats.miniBossesDefeated >= 5, claimed: false },
-      miniBoss10: { id: 'miniBoss10', name: 'Boss Hunter', desc: 'Defeat 10 mini-bosses', reward: 800, attributePoints: 4, check: () => playerStats.miniBossesDefeated >= 10, claimed: false },
+      miniBoss1: { id: 'miniBoss1', name: 'Boss Slayer I', desc: 'Defeat your first mini-boss', reward: 150, skillPoints: 2, attributePoints: 2, check: () => playerStats.miniBossesDefeated >= 1, claimed: false },
+      miniBoss3: { id: 'miniBoss3', name: 'Boss Slayer II', desc: 'Defeat 3 mini-bosses', reward: 300, skillPoints: 2, attributePoints: 2, check: () => playerStats.miniBossesDefeated >= 3, claimed: false },
+      miniBoss5: { id: 'miniBoss5', name: 'Boss Slayer III', desc: 'Defeat 5 mini-bosses', reward: 500, skillPoints: 3, attributePoints: 3, check: () => playerStats.miniBossesDefeated >= 5, claimed: false },
+      miniBoss10: { id: 'miniBoss10', name: 'Boss Hunter', desc: 'Defeat 10 mini-bosses', reward: 800, skillPoints: 4, attributePoints: 4, check: () => playerStats.miniBossesDefeated >= 10, claimed: false },
       
-      level10: { id: 'level10', name: 'Rising Star', desc: 'Reach Level 10', reward: 100, attributePoints: 1, check: () => playerStats.lvl >= 10, claimed: false },
-      level25: { id: 'level25', name: 'Experienced Fighter', desc: 'Reach Level 25', reward: 250, attributePoints: 2, check: () => playerStats.lvl >= 25, claimed: false },
-      level50: { id: 'level50', name: 'Master Champion', desc: 'Reach Level 50', reward: 500, attributePoints: 3, check: () => playerStats.lvl >= 50, claimed: false },
-      level75: { id: 'level75', name: 'Elite Warrior', desc: 'Reach Level 75', reward: 750, attributePoints: 3, check: () => playerStats.lvl >= 75, claimed: false },
-      level100: { id: 'level100', name: 'Legendary Hero', desc: 'Reach Level 100', reward: 1000, attributePoints: 4, check: () => playerStats.lvl >= 100, claimed: false },
-      level125: { id: 'level125', name: 'Unstoppable Force', desc: 'Reach Level 125', reward: 1250, attributePoints: 4, check: () => playerStats.lvl >= 125, claimed: false },
-      level150: { id: 'level150', name: 'Ascended Champion', desc: 'Reach Level 150', reward: 1500, attributePoints: 5, check: () => playerStats.lvl >= 150, claimed: false }
+      level10: { id: 'level10', name: 'Rising Star', desc: 'Reach Level 10', reward: 100, skillPoints: 1, attributePoints: 1, check: () => playerStats.lvl >= 10, claimed: false },
+      level25: { id: 'level25', name: 'Experienced Fighter', desc: 'Reach Level 25', reward: 250, skillPoints: 2, attributePoints: 2, check: () => playerStats.lvl >= 25, claimed: false },
+      level50: { id: 'level50', name: 'Master Champion', desc: 'Reach Level 50', reward: 500, skillPoints: 3, attributePoints: 3, check: () => playerStats.lvl >= 50, claimed: false },
+      level75: { id: 'level75', name: 'Elite Warrior', desc: 'Reach Level 75', reward: 750, skillPoints: 3, attributePoints: 3, check: () => playerStats.lvl >= 75, claimed: false },
+      level100: { id: 'level100', name: 'Legendary Hero', desc: 'Reach Level 100', reward: 1000, skillPoints: 4, attributePoints: 4, check: () => playerStats.lvl >= 100, claimed: false },
+      level125: { id: 'level125', name: 'Unstoppable Force', desc: 'Reach Level 125', reward: 1250, skillPoints: 4, attributePoints: 4, check: () => playerStats.lvl >= 125, claimed: false },
+      level150: { id: 'level150', name: 'Ascended Champion', desc: 'Reach Level 150', reward: 1500, skillPoints: 5, attributePoints: 5, check: () => playerStats.lvl >= 150, claimed: false }
     };
 
     function updateAchievementsScreen() {
@@ -7773,6 +7832,9 @@
             </div>
             <div style="color: #FFD700; font-size: 16px; font-weight: bold;">
               Reward: ${achievement.reward} Gold
+            </div>
+            <div style="color: #90EE90; font-size: 16px; font-weight: bold; margin-top: 5px;">
+              Skill Points: ${achievement.skillPoints || 0} 🔮
             </div>
             <div style="color: #5DADE2; font-size: 16px; font-weight: bold; margin-top: 5px;">
               Attribute Points: ${achievement.attributePoints} ${canClaim ? '⭐' : ''}
@@ -7841,6 +7903,10 @@
       const attributePoints = achievement.attributePoints || 0;
       saveData.unspentAttributePoints += attributePoints;
       
+      // Award skill points (with safety check)
+      const skillPoints = achievement.skillPoints || 0;
+      saveData.skillPoints += skillPoints;
+      
       // Play sound
       playSound('coin');
       
@@ -7851,7 +7917,7 @@
       showEnhancedNotification(
         'achievement',
         'ACHIEVEMENT UNLOCKED!',
-        `${achievement.name} - +${achievement.reward} Gold, +${attributePoints} Attribute Point${attributePoints > 1 ? 's' : ''}!`
+        `${achievement.name} - +${achievement.reward} Gold, +${skillPoints} Skill Point${skillPoints > 1 ? 's' : ''}, +${attributePoints} Attribute Point${attributePoints > 1 ? 's' : ''}!`
       );
       
       // Save
@@ -8927,34 +8993,279 @@
     };
 
     const SKILL_TREE = {
+      // STARTING SKILLS - Available first (Dash and Headshot as per requirements)
+      dashMaster: {
+        name: '🏃 Dash Master',
+        description: 'Reduce dash cooldown by 15%, increase dash distance by 10%',
+        cost: 1,
+        maxLevel: 3,
+        requires: null,
+        bonus: (level) => ({
+          dashCooldown: 0.15 * level,
+          dashDistance: 0.1 * level
+        })
+      },
+      criticalFocus: {
+        name: '🎯 Headshot',
+        description: '+10% crit chance, +15% crit damage',
+        cost: 1,
+        maxLevel: 5,
+        requires: null,
+        bonus: (level) => ({
+          critChance: 0.1 * level,
+          critDamage: 0.15 * level
+        })
+      },
+      
+      // COMBAT PATH (12 skills) - Unlocked after initial skills
       combatMastery: {
         name: 'Combat Mastery',
         description: '+10% damage, +5% crit chance',
         cost: 1,
         maxLevel: 5,
-        requires: null,
+        requires: 'dashMaster',
         bonus: (level) => ({
           damage: 0.1 * level,
           critChance: 0.05 * level
         })
       },
+      bladeDancer: {
+        name: 'Blade Dancer',
+        description: '+8% attack speed, +5% move speed',
+        cost: 1,
+        maxLevel: 3,
+        requires: 'combatMastery',
+        bonus: (level) => ({
+          attackSpeed: 0.08 * level,
+          moveSpeed: 0.05 * level
+        })
+      },
+      heavyStrike: {
+        name: 'Heavy Strike',
+        description: '+15% damage, -5% attack speed',
+        cost: 1,
+        maxLevel: 3,
+        requires: 'combatMastery',
+        bonus: (level) => ({
+          damage: 0.15 * level,
+          attackSpeed: -0.05 * level
+        })
+      },
+      rapidFire: {
+        name: 'Rapid Fire',
+        description: '+12% attack speed',
+        cost: 1,
+        maxLevel: 3,
+        requires: 'bladeDancer',
+        bonus: (level) => ({
+          attackSpeed: 0.12 * level
+        })
+      },
+      armorPierce: {
+        name: 'Armor Pierce',
+        description: 'Ignore 15% of enemy armor',
+        cost: 1,
+        maxLevel: 3,
+        requires: 'heavyStrike',
+        bonus: (level) => ({
+          armorPenetration: 0.15 * level
+        })
+      },
+      multiHit: {
+        name: 'Multi-Hit',
+        description: '5% chance to hit twice',
+        cost: 1,
+        maxLevel: 3,
+        requires: 'rapidFire',
+        bonus: (level) => ({
+          multiHitChance: 0.05 * level
+        })
+      },
+      executioner: {
+        name: 'Executioner',
+        description: '+20% damage to enemies below 30% HP',
+        cost: 1,
+        maxLevel: 3,
+        requires: 'criticalFocus',
+        bonus: (level) => ({
+          executeDamage: 0.2 * level
+        })
+      },
+      bloodlust: {
+        name: 'Bloodlust',
+        description: 'Heal 5 HP on kill',
+        cost: 1,
+        maxLevel: 3,
+        requires: 'executioner',
+        bonus: (level) => ({
+          healOnKill: 5 * level
+        })
+      },
+      berserker: {
+        name: 'Berserker',
+        description: '+10% damage when below 50% HP',
+        cost: 1,
+        maxLevel: 3,
+        requires: 'bloodlust',
+        bonus: (level) => ({
+          lowHpDamage: 0.1 * level
+        })
+      },
+      weaponSpecialist: {
+        name: 'Weapon Specialist',
+        description: '+8% all weapon damage',
+        cost: 1,
+        maxLevel: 5,
+        requires: 'multiHit',
+        bonus: (level) => ({
+          weaponDamage: 0.08 * level
+        })
+      },
+      combatVeteran: {
+        name: 'Combat Veteran',
+        description: '+12% damage, +8% attack speed',
+        cost: 1,
+        maxLevel: 3,
+        requires: 'weaponSpecialist',
+        bonus: (level) => ({
+          damage: 0.12 * level,
+          attackSpeed: 0.08 * level
+        })
+      },
+      
+      // DEFENSE PATH (12 skills)
       survivalist: {
         name: 'Survivalist',
         description: '+15 HP, +1 HP/sec regen',
         cost: 1,
         maxLevel: 5,
-        requires: null,
+        requires: 'criticalFocus',
         bonus: (level) => ({
           hp: 15 * level,
           regen: 1 * level
         })
       },
+      ironSkin: {
+        name: 'Iron Skin',
+        description: '+10 armor',
+        cost: 1,
+        maxLevel: 3,
+        requires: 'survivalist',
+        bonus: (level) => ({
+          armor: 10 * level
+        })
+      },
+      quickReflex: {
+        name: 'Quick Reflex',
+        description: '+5% dodge chance',
+        cost: 1,
+        maxLevel: 3,
+        requires: 'survivalist',
+        bonus: (level) => ({
+          dodgeChance: 0.05 * level
+        })
+      },
+      fortification: {
+        name: 'Fortification',
+        description: '+10 armor, +5% damage reduction',
+        cost: 1,
+        maxLevel: 5,
+        requires: 'ironSkin',
+        bonus: (level) => ({
+          armor: 10 * level,
+          damageReduction: 0.05 * level
+        })
+      },
+      regeneration: {
+        name: 'Regeneration',
+        description: '+2 HP/sec regen',
+        cost: 1,
+        maxLevel: 3,
+        requires: 'survivalist',
+        bonus: (level) => ({
+          regen: 2 * level
+        })
+      },
+      lastStand: {
+        name: 'Last Stand',
+        description: 'Survive fatal blow with 1 HP (once per run)',
+        cost: 1,
+        maxLevel: 1,
+        requires: 'fortification',
+        bonus: (level) => ({
+          lastStand: level > 0
+        })
+      },
+      toughness: {
+        name: 'Toughness',
+        description: '+25 max HP',
+        cost: 1,
+        maxLevel: 3,
+        requires: 'regeneration',
+        bonus: (level) => ({
+          hp: 25 * level
+        })
+      },
+      guardian: {
+        name: 'Guardian',
+        description: '+8% damage reduction',
+        cost: 1,
+        maxLevel: 3,
+        requires: 'fortification',
+        bonus: (level) => ({
+          damageReduction: 0.08 * level
+        })
+      },
+      resilience: {
+        name: 'Resilience',
+        description: '+15% max HP',
+        cost: 1,
+        maxLevel: 3,
+        requires: 'toughness',
+        bonus: (level) => ({
+          hpPercent: 0.15 * level
+        })
+      },
+      secondWind: {
+        name: 'Second Wind',
+        description: 'Heal 30% HP when below 20% HP (60s cooldown)',
+        cost: 1,
+        maxLevel: 1,
+        requires: 'resilience',
+        bonus: (level) => ({
+          secondWind: level > 0
+        })
+      },
+      endurance: {
+        name: 'Endurance',
+        description: '+20 max HP, +1.5 HP/sec regen',
+        cost: 1,
+        maxLevel: 5,
+        requires: 'guardian',
+        bonus: (level) => ({
+          hp: 20 * level,
+          regen: 1.5 * level
+        })
+      },
+      immortal: {
+        name: 'Immortal',
+        description: '+10% all damage reduction, +3 HP/sec regen',
+        cost: 1,
+        maxLevel: 3,
+        requires: 'endurance',
+        bonus: (level) => ({
+          damageReduction: 0.1 * level,
+          regen: 3 * level
+        })
+      },
+      
+      // UTILITY PATH (12 skills)
       wealthHunter: {
         name: 'Wealth Hunter',
         description: '+15% gold gain, +10% XP gain',
         cost: 1,
         maxLevel: 5,
-        requires: null,
+        requires: 'dashMaster',
         bonus: (level) => ({
           gold: 0.15 * level,
           xp: 0.1 * level
@@ -8965,21 +9276,234 @@
         description: '+20% XP gain, -5% cooldown',
         cost: 1,
         maxLevel: 5,
-        requires: null,
+        requires: 'wealthHunter',
         bonus: (level) => ({
           xp: 0.2 * level,
           cooldown: 0.05 * level
         })
       },
-      fortification: {
-        name: 'Fortification',
-        description: '+10 armor, +5% damage reduction',
+      magnetism: {
+        name: 'Magnetism',
+        description: '+25% pickup range',
+        cost: 1,
+        maxLevel: 3,
+        requires: 'wealthHunter',
+        bonus: (level) => ({
+          pickupRange: 0.25 * level
+        })
+      },
+      efficiency: {
+        name: 'Efficiency',
+        description: '-10% all cooldowns',
+        cost: 1,
+        maxLevel: 3,
+        requires: 'quickLearner',
+        bonus: (level) => ({
+          cooldown: 0.1 * level
+        })
+      },
+      scavenger: {
+        name: 'Scavenger',
+        description: '+20% drop rate for all items',
+        cost: 1,
+        maxLevel: 3,
+        requires: 'magnetism',
+        bonus: (level) => ({
+          dropRate: 0.2 * level
+        })
+      },
+      fortuneFinder: {
+        name: 'Fortune Finder',
+        description: '+25% gold drops',
+        cost: 1,
+        maxLevel: 3,
+        requires: 'scavenger',
+        bonus: (level) => ({
+          gold: 0.25 * level
+        })
+      },
+      speedster: {
+        name: 'Speedster',
+        description: '+10% move speed',
+        cost: 1,
+        maxLevel: 3,
+        requires: 'dashMaster',
+        bonus: (level) => ({
+          moveSpeed: 0.1 * level
+        })
+      },
+      cooldownExpert: {
+        name: 'Cooldown Expert',
+        description: '-15% all cooldowns',
+        cost: 1,
+        maxLevel: 3,
+        requires: 'efficiency',
+        bonus: (level) => ({
+          cooldown: 0.15 * level
+        })
+      },
+      auraExpansion: {
+        name: 'Aura Expansion',
+        description: '+20% aura weapon range',
+        cost: 1,
+        maxLevel: 3,
+        requires: 'speedster',
+        bonus: (level) => ({
+          auraRange: 0.2 * level
+        })
+      },
+      resourceful: {
+        name: 'Resourceful',
+        description: '+15% XP, +15% gold, +10% drop rate',
         cost: 1,
         maxLevel: 5,
-        requires: null,
+        requires: 'fortuneFinder',
         bonus: (level) => ({
-          armor: 10 * level,
-          damageReduction: 0.05 * level
+          xp: 0.15 * level,
+          gold: 0.15 * level,
+          dropRate: 0.1 * level
+        })
+      },
+      treasureHunter: {
+        name: 'Treasure Hunter',
+        description: '+30% gold, +50% pickup range',
+        cost: 1,
+        maxLevel: 3,
+        requires: 'resourceful',
+        bonus: (level) => ({
+          gold: 0.3 * level,
+          pickupRange: 0.5 * level
+        })
+      },
+      
+      // ELEMENTAL PATH (12 skills)
+      fireMastery: {
+        name: '🔥 Fire Mastery',
+        description: '+15% fire damage, burn enemies',
+        cost: 1,
+        maxLevel: 3,
+        requires: 'combatMastery',
+        bonus: (level) => ({
+          fireDamage: 0.15 * level,
+          burnChance: 0.1 * level
+        })
+      },
+      iceMastery: {
+        name: '❄️ Ice Mastery',
+        description: '+15% ice damage, slow enemies',
+        cost: 1,
+        maxLevel: 3,
+        requires: 'combatMastery',
+        bonus: (level) => ({
+          iceDamage: 0.15 * level,
+          slowChance: 0.15 * level
+        })
+      },
+      lightningMastery: {
+        name: '⚡ Lightning Mastery',
+        description: '+15% lightning damage, chain lightning',
+        cost: 1,
+        maxLevel: 3,
+        requires: 'combatMastery',
+        bonus: (level) => ({
+          lightningDamage: 0.15 * level,
+          chainChance: 0.1 * level
+        })
+      },
+      elementalFusion: {
+        name: 'Elemental Fusion',
+        description: '+10% all elemental damage',
+        cost: 1,
+        maxLevel: 3,
+        requires: 'fireMastery',
+        bonus: (level) => ({
+          elementalDamage: 0.1 * level
+        })
+      },
+      pyromaniac: {
+        name: 'Pyromaniac',
+        description: '+25% fire damage, burn spreads',
+        cost: 1,
+        maxLevel: 3,
+        requires: 'fireMastery',
+        bonus: (level) => ({
+          fireDamage: 0.25 * level,
+          burnSpread: level > 0
+        })
+      },
+      frostbite: {
+        name: 'Frostbite',
+        description: '+25% ice damage, freeze chance',
+        cost: 1,
+        maxLevel: 3,
+        requires: 'iceMastery',
+        bonus: (level) => ({
+          iceDamage: 0.25 * level,
+          freezeChance: 0.05 * level
+        })
+      },
+      stormCaller: {
+        name: 'Storm Caller',
+        description: '+25% lightning damage, more chains',
+        cost: 1,
+        maxLevel: 3,
+        requires: 'lightningMastery',
+        bonus: (level) => ({
+          lightningDamage: 0.25 * level,
+          chainCount: level
+        })
+      },
+      elementalChain: {
+        name: 'Elemental Chain',
+        description: 'Elemental attacks chain to nearby enemies',
+        cost: 1,
+        maxLevel: 3,
+        requires: 'elementalFusion',
+        bonus: (level) => ({
+          elementalChain: level
+        })
+      },
+      manaOverflow: {
+        name: 'Mana Overflow',
+        description: '+20% elemental damage, -10% cooldowns',
+        cost: 1,
+        maxLevel: 3,
+        requires: 'pyromaniac',
+        bonus: (level) => ({
+          elementalDamage: 0.2 * level,
+          cooldown: 0.1 * level
+        })
+      },
+      spellEcho: {
+        name: 'Spell Echo',
+        description: '10% chance to cast elemental effect twice',
+        cost: 1,
+        maxLevel: 3,
+        requires: 'elementalChain',
+        bonus: (level) => ({
+          spellEchoChance: 0.1 * level
+        })
+      },
+      arcaneEmpowerment: {
+        name: 'Arcane Empowerment',
+        description: '+15% all damage, +15% elemental damage',
+        cost: 1,
+        maxLevel: 5,
+        requires: 'manaOverflow',
+        bonus: (level) => ({
+          damage: 0.15 * level,
+          elementalDamage: 0.15 * level
+        })
+      },
+      elementalOverload: {
+        name: 'Elemental Overload',
+        description: '+30% elemental damage, elemental effects guaranteed',
+        cost: 1,
+        maxLevel: 3,
+        requires: 'arcaneEmpowerment',
+        bonus: (level) => ({
+          elementalDamage: 0.3 * level,
+          elementalGuaranteed: level >= 3
         })
       }
     };
@@ -12095,7 +12619,7 @@
       SLOW_MOTION_ZOOM: 0.15,
       SHAKE_ZOOM_INTENSITY: 0.4,
       ROTATE_CAM_RADIUS: 20,
-      KILL_MESSAGES: ['ELIMINATED!', 'ANNIHILATED!', 'OBLITERATED!']
+      KILL_MESSAGES: ['ELIMINATED!', 'DESTROYED!', 'OBLITERATED!']
     };
     
     function getRandomKillMessage() {
@@ -12104,8 +12628,9 @@
     }
     
     function triggerKillCam(enemyPosition, isMiniBoss = false, damageType = 'physical') {
-      // Only trigger for mini-bosses or randomly (15% chance for regular enemies)
-      const shouldActivateKillCam = isMiniBoss || Math.random() < KILL_CAM_CONSTANTS.REGULAR_ENEMY_CHANCE;
+      // UPDATED: Only trigger for mini-bosses to prevent disorienting camera movements during regular combat
+      // This improves player focus and reduces motion sickness from frequent camera shifts
+      const shouldActivateKillCam = isMiniBoss;
       if (!shouldActivateKillCam || killCamActive) return;
       
       // Select random kill cam animation type
@@ -13843,74 +14368,74 @@
       // Yellow/White to Dark Red gradient with intensifying glow and size
       let textColor = '#FFFF00'; // Start with Yellow
       let glowIntensity = 20;
-      let fontSize = 38; // Base font size (smaller start, reduced from 42)
+      let fontSize = 22; // Base font size (smaller, reduced from 38)
       let lightningCount = 0; // Number of lightning effects (keep minimal)
       
       if (comboState.count >= GODLIKE_COMBO_THRESHOLD + 1) {
         // GODLIKE x2, x3... - Red/Black with max glow
         textColor = '#8B0000'; // Dark red
         glowIntensity = 70; // Reduced from 90
-        fontSize = 78; // Reduced from 86
+        fontSize = 48; // Reduced from 78 to fit smaller combo text
         lightningCount = 4; // Reduced from 6
       } else if (comboState.count === GODLIKE_COMBO_THRESHOLD) {
         // GODLIKE - Red/Black with glowing light effects
         textColor = '#8B0000'; // Dark red  
         glowIntensity = 65; // Reduced from 85
-        fontSize = 74; // Reduced from 82
+        fontSize = 44; // Reduced from 74 to fit smaller combo text
         lightningCount = 3; // Reduced from 5
       } else if (comboState.count === 13) {
         // Almost Max Combo
         textColor = '#A00000'; // Dark red
         glowIntensity = 78;
-        fontSize = 76;
+        fontSize = 42;
         lightningCount = 5;
       } else if (comboState.count === 12) {
         // Fantastic Combo
         textColor = '#C00000'; // Medium dark red
         glowIntensity = 48; // Reduced from 72
-        fontSize = 56; // Reduced from 72
+        fontSize = 36; // Reduced from 56 to fit smaller combo text
         lightningCount = 2; // Reduced from 4
       } else if (comboState.count === 11) {
         // Unbelievable Combo
         textColor = '#C80000'; // Medium dark red
         glowIntensity = 46; // Reduced from 66
-        fontSize = 54; // Reduced from 68
+        fontSize = 34; // Reduced from 54 to fit smaller combo text
         lightningCount = 2; // Reduced from 4
       } else if (comboState.count === 10) {
         // Amazing Combo
         textColor = '#D00000'; // Medium red
         glowIntensity = 44; // Reduced from 60
-        fontSize = 52; // Reduced from 64
+        fontSize = 32; // Reduced from 52 to fit smaller combo text
         lightningCount = 1; // Reduced from 4
       } else if (comboState.count === 9) {
         // Mythical Combo
         textColor = '#D80000'; // Lighter red
         glowIntensity = 42; // Reduced from 54
-        fontSize = 50; // Reduced from 60
+        fontSize = 30; // Reduced from 50 to fit smaller combo text
         lightningCount = 1; // Reduced from 3
       } else if (comboState.count === 8) {
         // Legendary Combo
         textColor = '#E00000'; // Light red
         glowIntensity = 40; // Reduced from 48
-        fontSize = 48; // Reduced from 56
+        fontSize = 28; // Reduced from 48 to fit smaller combo text
         lightningCount = 1; // Reduced from 3
       } else if (comboState.count === 7) {
         // Epic Combo
         textColor = '#E80000'; // Very light red
         glowIntensity = 36; // Reduced from 40
-        fontSize = 46; // Reduced from 52
+        fontSize = 26; // Reduced from 46 to fit smaller combo text
         lightningCount = 1; // Reduced from 2
       } else if (comboState.count === 6) {
         // Rare Combo
         textColor = '#FF3333'; // Pink-ish red
         glowIntensity = 32; // Reduced
-        fontSize = 44; // Reduced from 48
+        fontSize = 25; // Reduced from 44 to fit smaller combo text
         lightningCount = 0; // Reduced from 2
       } else if (comboState.count === 5) {
         // Multikill - Yellow/White start
         textColor = '#FFFF99'; // Light yellow
         glowIntensity = 25; // Reduced
-        fontSize = 40; // Reduced from 42
+        fontSize = 24; // Reduced from 40 to fit smaller combo text
         lightningCount = 0; // Reduced from 1
       }
       
@@ -14470,15 +14995,19 @@
       // Reset run loot tracking
       window.runLootGained = [];
       
-      // Set time of day based on sleep choice
-      if (saveData.nextRunTimeOfDay === 'day') {
-        dayNightCycle.timeOfDay = 0.25; // Dawn (6 AM - clear daytime start)
-      } else if (saveData.nextRunTimeOfDay === 'night') {
-        dayNightCycle.timeOfDay = 0.00; // Midnight (clear nighttime start)
-      } else {
-        // Default to day if not set
-        dayNightCycle.timeOfDay = 0.25;
-      }
+      // UPDATED: Time progression system
+      // Each run starts 1 hour later than the previous death time
+      // First run starts at 6 AM (default), subsequent runs progress through the 24-hour cycle
+      saveData.runCount = (saveData.runCount || 0) + 1;
+      const startHour = (saveData.lastDeathHour || 6) + 1; // Start 1 hour after previous death
+      const normalizedHour = startHour % 24; // Wrap around 24 hours
+      saveData.lastDeathHour = normalizedHour; // Save for next run
+      
+      // Convert hour (0-23) to timeOfDay (0-1)
+      // 0 = midnight, 6 = dawn, 12 = noon, 18 = dusk
+      dayNightCycle.timeOfDay = normalizedHour / 24;
+      
+      saveSaveData(); // Save the updated hour
       
       // Apply permanent upgrades from save data
       const baseHp = 100 + PERMANENT_UPGRADES.maxHp.effect(saveData.upgrades.maxHp);
