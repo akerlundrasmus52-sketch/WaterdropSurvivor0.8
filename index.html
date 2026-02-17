@@ -5302,7 +5302,7 @@
         
         playerStats.kills++;
         
-        // Quest progression: first kill completes first run quest
+        // Quest progression: first kill completes first run quest (>= 1 to handle any first kill)
         if (saveData.storyQuests.currentQuest === 'firstRun' && playerStats.kills >= 1) {
           progressQuest('firstRun', true);
         }
@@ -11720,40 +11720,6 @@
         resetGame();
         startCountdown(); // Start countdown after resetting game (PR #70)
       };
-      
-      // Main menu buttons removed - now in options menu
-      // document.getElementById('progression-btn').onclick = () => {
-      //   playSound('waterdrop');
-      //   hideMainMenu();
-      //   showProgressionShop();
-      // };
-      
-      // document.getElementById('achievements-btn').onclick = () => {
-      //   playSound('waterdrop');
-      //   hideMainMenu();
-      //   updateAchievementsScreen();
-      //   document.getElementById('achievements-screen').style.display = 'flex';
-      // };
-      
-      // document.getElementById('attributes-btn').onclick = () => {
-      //   playSound('waterdrop');
-      //   hideMainMenu();
-      //   updateAttributesScreen();
-      //   document.getElementById('attributes-screen').style.display = 'flex';
-      // };
-      
-      // document.getElementById('gear-btn').onclick = () => {
-      //   playSound('waterdrop');
-      //   hideMainMenu();
-      //   updateGearScreen();
-      //   document.getElementById('gear-screen').style.display = 'flex';
-      // };
-      
-      // document.getElementById('credits-btn').onclick = () => {
-      //   playSound('waterdrop');
-      //   hideMainMenu();
-      //   document.getElementById('credits-screen').style.display = 'flex';
-      // };
       
       document.getElementById('camp-btn').onclick = () => {
         playSound('waterdrop');
