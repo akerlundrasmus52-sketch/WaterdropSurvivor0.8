@@ -10004,45 +10004,6 @@
           'Upgrade any building to level 3 to master building progression!<br><br><b>Objective:</b> Upgrade any building to Level 3<br><b>Reward:</b> 2 Skill Points',
           'Build Strong!'
         );
-          'Unlock the Companion House to boost your companion\'s power!<br><br><b>Objective:</b> Click "Unlock" on Companion House (FREE via quest)<br><b>Reward:</b> Companion House unlocked + 1 Skill Point',
-          'Get a Companion!'
-        );
-      } else if (completed.includes('unlockCompanionHouse') && !completed.includes('unlockTrainingHall')) {
-        // Quest 11: Unlock Training Hall
-        saveData.storyQuests.currentQuest = 'unlockTrainingHall';
-        saveSaveData();
-        showQuestPopup(
-          '📜 Quest: Train Harder',
-          'Unlock the Training Hall to improve your training efficiency!<br><br><b>Objective:</b> Click "Unlock" on Training Hall (FREE via quest)<br><b>Reward:</b> Training Hall unlocked + 2 Skill Points',
-          'To Training!'
-        );
-      } else if (completed.includes('unlockTrainingHall') && !completed.includes('survive60Seconds')) {
-        // Quest 12: Survival challenge for skill points
-        saveData.storyQuests.currentQuest = 'survive60Seconds';
-        saveSaveData();
-        showQuestPopup(
-          '📜 Quest: Survival Test',
-          'Now that you know the basics, prove your skills by surviving 60 seconds in a run!<br><br><b>Objective:</b> Survive for 60 seconds in a single run<br><b>Reward:</b> 2 Skill Points',
-          'Challenge Accepted!'
-        );
-      } else if (completed.includes('survive60Seconds') && !completed.includes('kill50Enemies')) {
-        // Quest 13: Combat challenge
-        saveData.storyQuests.currentQuest = 'kill50Enemies';
-        saveSaveData();
-        showQuestPopup(
-          '📜 Quest: Warrior\'s Path',
-          'Show your combat prowess by defeating 50 enemies total (across all runs)!<br><br><b>Objective:</b> Kill 50 enemies (cumulative)<br><b>Reward:</b> 2 Skill Points',
-          'To Battle!'
-        );
-      } else if (completed.includes('kill50Enemies') && !completed.includes('upgradeAnyBuildingTo3')) {
-        // Quest 14: Building mastery
-        saveData.storyQuests.currentQuest = 'upgradeAnyBuildingTo3';
-        saveSaveData();
-        showQuestPopup(
-          '📜 Quest: Master Builder',
-          'Upgrade any building to level 3 to master building progression!<br><br><b>Objective:</b> Upgrade any building to Level 3<br><b>Reward:</b> 2 Skill Points',
-          'Build Strong!'
-        );
       } else if (completed.includes('upgradeAnyBuildingTo3')) {
         // End of main quest chain - show completion message
         if (!completed.includes('mainQuestComplete')) {
@@ -10539,7 +10500,7 @@
           
            buildingCard.innerHTML = `
              <div class="building-header">
-               <div class="building-name">${building.icon} ${building.name}${hasNotification ? ' <span class="quest-indicator">!</span>' : ''}${hasQuestForBuilding(buildingId) ? ' <span class="quest-indicator">!</span>' : ''}</div>
+               <div class="building-name">${building.icon} ${building.name}${hasNotification ? ' <span class="quest-indicator">!</span>' : ''}</div>
                <div class="building-level">${isLockedFree ? 'LOCKED' : `Level ${buildingData.level}/${buildingData.maxLevel}`}</div>
              </div>
              <div class="building-desc">${building.description}</div>
