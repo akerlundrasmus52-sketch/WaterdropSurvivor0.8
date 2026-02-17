@@ -882,6 +882,55 @@
       white-space: nowrap;
     }
     
+    /* Day/Night Clock - Waterdrop Shape */
+    #day-night-clock {
+      position: absolute;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      pointer-events: none;
+      z-index: 100;
+    }
+    
+    #day-night-clock-shape {
+      background: radial-gradient(circle at 30% 30%, rgba(40,40,40,0.9), rgba(0,0,0,0.8));
+      border: 3px solid #FFD700;
+      border-radius: 50% 50% 50% 0;
+      width: 72px;
+      height: 72px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.7), 
+                  0 0 25px rgba(255,215,0,0.4),
+                  inset -2px -2px 8px rgba(0,0,0,0.5),
+                  inset 2px 2px 8px rgba(255,255,255,0.1);
+      transform-style: preserve-3d;
+      transform: rotate(-45deg);
+    }
+    
+    #day-night-clock-content {
+      transform: rotate(45deg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    #day-night-icon {
+      font-size: 32px;
+      margin-bottom: 2px;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+    }
+    
+    #day-night-time {
+      font-size: 11px;
+      color: #FFD700;
+      font-weight: bold;
+      text-shadow: 0 0 8px rgba(255,215,0,0.6), 1px 1px 2px rgba(0,0,0,0.8);
+    }
+    
     /* PR #117: Options Menu Modal */
     #options-menu {
       display: none;
@@ -2505,25 +2554,11 @@
     <button id="settings-btn" class="btn-small" style="position: absolute; top: 20px; right: 120px; pointer-events: auto; z-index: 100;">⚙️</button>
     
     <!-- Day/Night Cycle Clock - Enhanced 3D appearance -->
-    <div id="day-night-clock" style="position: absolute; top: 20px; left: 50%; transform: translateX(-50%); pointer-events: none; z-index: 100;">
-      <div id="day-night-clock-shape" style="background: radial-gradient(circle at 30% 30%, rgba(40,40,40,0.9), rgba(0,0,0,0.8)); 
-                  border: 3px solid #FFD700; 
-                  border-radius: 50% 50% 50% 0;
-                  width: 72px; 
-                  height: 72px; 
-                  display: flex; 
-                  flex-direction: column; 
-                  align-items: center; 
-                  justify-content: center; 
-                  box-shadow: 0 4px 20px rgba(0,0,0,0.7), 
-                              0 0 25px rgba(255,215,0,0.4),
-                              inset -2px -2px 8px rgba(0,0,0,0.5),
-                              inset 2px 2px 8px rgba(255,255,255,0.1);
-                  transform-style: preserve-3d;
-                  transform: rotate(-45deg);">
-        <div style="transform: rotate(45deg); display: flex; flex-direction: column; align-items: center; justify-content: center;">
-          <div id="day-night-icon" style="font-size: 32px; margin-bottom: 2px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));">☀️</div>
-          <div id="day-night-time" style="font-size: 11px; color: #FFD700; font-weight: bold; text-shadow: 0 0 8px rgba(255,215,0,0.6), 1px 1px 2px rgba(0,0,0,0.8);">00:00</div>
+    <div id="day-night-clock">
+      <div id="day-night-clock-shape">
+        <div id="day-night-clock-content">
+          <div id="day-night-icon">☀️</div>
+          <div id="day-night-time">00:00</div>
         </div>
       </div>
     </div>
@@ -10756,7 +10791,7 @@
         scene.add(rightTrack);
         
         // Grass in the middle
-        const grassWidth = trackSeparation - trackWidth * 0.5; // Grass between tracks
+        const grassWidth = trackSeparation - trackWidth; // Grass between tracks
         const grassGeo = new THREE.PlaneGeometry(grassWidth, length);
         const grass = new THREE.Mesh(grassGeo, grassMiddleMat);
         grass.rotation.x = -Math.PI/2;
@@ -15995,36 +16030,38 @@
         }
       }
     
-    // Function to get current region based on player position
+    // Function to get current region based on player position (optimized with squared distances)
     function getCurrentRegion(x, z) {
       // Check for specific landmarks first (small radius)
+      // Using squared distances to avoid expensive sqrt operations
+      
       // Windmill: around (40, 40)
-      const distToWindmill = Math.sqrt(Math.pow(x - 40, 2) + Math.pow(z - 40, 2));
-      if (distToWindmill < 20) return 'Windmill';
+      const distSqToWindmill = Math.pow(x - 40, 2) + Math.pow(z - 40, 2);
+      if (distSqToWindmill < 400) return 'Windmill'; // 20^2 = 400
       
       // Mine: around (-40, 40)
-      const distToMine = Math.sqrt(Math.pow(x + 40, 2) + Math.pow(z - 40, 2));
-      if (distToMine < 20) return 'Mine';
+      const distSqToMine = Math.pow(x + 40, 2) + Math.pow(z - 40, 2);
+      if (distSqToMine < 400) return 'Mine'; // 20^2 = 400
       
-      // Stonehenge: around (-60, -20)
-      const distToStonehenge = Math.sqrt(Math.pow(x + 60, 2) + Math.pow(z + 20, 2));
-      if (distToStonehenge < 25) return 'Stonehenge';
+      // Stonehenge: around (60, 60) - actual position from createPath
+      const distSqToStonehenge = Math.pow(x - 60, 2) + Math.pow(z - 60, 2);
+      if (distSqToStonehenge < 625) return 'Stonehenge'; // 25^2 = 625
       
-      // Pyramid: around (50, -50)
-      const distToPyramid = Math.sqrt(Math.pow(x - 50, 2) + Math.pow(z + 50, 2));
-      if (distToPyramid < 25) return 'Pyramid';
+      // Pyramid: around (-70, 50) - actual position from createPath
+      const distSqToPyramid = Math.pow(x + 70, 2) + Math.pow(z - 50, 2);
+      if (distSqToPyramid < 625) return 'Pyramid'; // 25^2 = 625
       
       // Montana: around (0, -200) - North in snow biome
-      const distToMontana = Math.sqrt(Math.pow(x, 2) + Math.pow(z + 200, 2));
-      if (distToMontana < 30) return 'Montana Monument';
+      const distSqToMontana = Math.pow(x, 2) + Math.pow(z + 200, 2);
+      if (distSqToMontana < 900) return 'Montana Monument'; // 30^2 = 900
       
-      // Eiffel: check if exists and get position
-      const distToEiffel = Math.sqrt(Math.pow(x - 120, 2) + Math.pow(z + 120, 2));
-      if (distToEiffel < 30) return 'Eiffel Tower';
+      // Eiffel: around (120, 120) - approximate location
+      const distSqToEiffel = Math.pow(x - 120, 2) + Math.pow(z - 120, 2);
+      if (distSqToEiffel < 900) return 'Eiffel Tower'; // 30^2 = 900
       
-      // Lake: around (0, 0) approximate center
-      const distToLake = Math.sqrt(Math.pow(x, 2) + Math.pow(z, 2));
-      if (distToLake < 25) return 'Lake';
+      // Lake: around (30, -30) - actual position from createPath
+      const distSqToLake = Math.pow(x - 30, 2) + Math.pow(z + 30, 2);
+      if (distSqToLake < 625) return 'Lake'; // 25^2 = 625
       
       // Spawn area (center, small radius)
       if (Math.abs(x) < 15 && Math.abs(z) < 15) return 'Spawn Area';
