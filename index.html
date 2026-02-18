@@ -1955,13 +1955,13 @@
       border: 3px solid #8B4513;
       border-radius: 15px;
       padding: 20px;
-      margin: 15px 0;
+      margin: 15px auto;
       cursor: pointer;
       transition: all 0.2s ease;
       box-shadow: 0 4px 8px rgba(0,0,0,0.5);
       text-align: left;
-      max-width: 700px;
-      width: 100%;
+      max-width: 500px; /* Reduced from 700px for iPhone 16 portrait */
+      width: 95%; /* Ensure it fits within screen bounds */
     }
 
     .building-card:hover {
@@ -3137,7 +3137,7 @@
       lakeCenterZ: -30,
       lakeRadius: 18,
       // Performance optimization - Phase 1
-      maxEnemiesOnScreen: 50,
+      maxEnemiesOnScreen: 70, // Increased from 50 for harder difficulty
       // Movement physics
       accelLerpFactor: 0.12, // Acceleration smoothness
       decelLerpFactor: 0.06, // Deceleration smoothness (glide effect)
@@ -13727,31 +13727,31 @@
       }
       
       // Scale spawn count with player level for increased difficulty
-      // Early game (1-30): More enemies, harder challenge - "hard as hell"
-      // Mid-game (31-75): Balanced progression after upgrades
-      // Late-game (76-150): Gradually increasing endgame difficulty
+      // Early game (1-30): Much more enemies for harder challenge
+      // Mid-game (31-75): Moderate but still challenging
+      // Late-game (76-150): Aggressive endgame difficulty
       let baseCount, levelBonus, cap;
       
       if (playerStats.lvl <= 30) {
-        // Early game: Aggressive spawns (4-8 enemies per wave)
-        baseCount = 4 + Math.floor(waveCount / 3);
-        levelBonus = Math.floor(playerStats.lvl / 4);
-        cap = 8;
-      } else if (playerStats.lvl <= 75) {
-        // Mid-game: Moderate spawns after upgrade threshold
-        baseCount = 3 + Math.floor(waveCount / 4);
-        levelBonus = Math.floor(playerStats.lvl / 6);
-        cap = 10;
-      } else if (playerStats.lvl <= 120) {
-        // Late-game: Progressive difficulty
-        baseCount = 4 + Math.floor(waveCount / 3);
-        levelBonus = Math.floor(playerStats.lvl / 5);
+        // Early game: Very aggressive spawns (6-12 enemies per wave) - harder difficulty
+        baseCount = 6 + Math.floor(waveCount / 2);
+        levelBonus = Math.floor(playerStats.lvl / 3);
         cap = 12;
-      } else {
-        // End-game: Maximum challenge
-        baseCount = 5 + Math.floor(waveCount / 2);
+      } else if (playerStats.lvl <= 75) {
+        // Mid-game: Challenging spawns (5-14 enemies per wave)
+        baseCount = 5 + Math.floor(waveCount / 3);
         levelBonus = Math.floor(playerStats.lvl / 4);
-        cap = 15;
+        cap = 14;
+      } else if (playerStats.lvl <= 120) {
+        // Late-game: Very challenging (6-16 enemies per wave)
+        baseCount = 6 + Math.floor(waveCount / 2);
+        levelBonus = Math.floor(playerStats.lvl / 3);
+        cap = 16;
+      } else {
+        // End-game: Maximum challenge (8-20 enemies per wave)
+        baseCount = 8 + Math.floor(waveCount / 2);
+        levelBonus = Math.floor(playerStats.lvl / 3);
+        cap = 20;
       }
       
       const count = Math.min(baseCount + levelBonus, cap);
