@@ -6513,8 +6513,8 @@
 
     // Performance: Cached geometries and materials for projectiles (reused across instances)
     const projectileGeometryCache = {
-      bullet: new THREE.SphereGeometry(0.0625, 8, 8),  // 75% smaller (0.25 * 0.25 = 0.0625)
-      bulletGlow: new THREE.SphereGeometry(0.0875, 6, 6)  // 75% smaller (0.35 * 0.25 = 0.0875)
+      bullet: new THREE.SphereGeometry(0.0625, 8, 8),  // 75% smaller radius (0.25 → 0.0625 is 25% of original)
+      bulletGlow: new THREE.SphereGeometry(0.0875, 6, 6)  // 75% smaller radius (0.35 → 0.0875 is 25% of original)
     };
     const projectileMaterialCache = {
       bullet: new THREE.MeshBasicMaterial({ 
@@ -11154,6 +11154,7 @@
               <div style="font-size: 18px; color: #FFD700; margin-bottom: 5px;">${quest.name}</div>
               <div style="font-size: 14px; color: #AAA; margin-bottom: 10px;">${quest.description}</div>
               <button class="btn claim-quest-btn" data-quest-id="${questId}" 
+                      aria-label="Claim quest reward"
                       style="font-size: 16px; padding: 10px 20px; background: #FFD700; color: #000; cursor: pointer; font-weight: bold;">
                 🎁 Claim Reward
               </button>
@@ -15143,12 +15144,28 @@
         }
         
         // Phase 3: Add more stat upgrades for diversity with weighted selection
-        // ATK speed and damage have 3x higher probability
-        const weightedCommonUpgrades = [
-          ...commonUpgrades.filter(u => u.id === 'str' || u.id === 'aspd').flatMap(u => [u, u, u]), // 3x weight for damage and attack speed
-          ...commonUpgrades.filter(u => u.id !== 'str' && u.id !== 'aspd') // 1x weight for others
-        ];
-        choices.push(...weightedCommonUpgrades.sort(() => 0.5 - Math.random()).slice(0, 3));
+        // ATK speed and damage have 3x higher probability (weighted random selection)
+        const selectedUpgrades = [];
+        for (let i = 0; i < 3; i++) {
+          // Calculate weighted random selection
+          const weights = commonUpgrades.map(u => 
+            (u.id === 'str' || u.id === 'aspd') ? 3 : 1
+          );
+          const totalWeight = weights.reduce((sum, w) => sum + w, 0);
+          let random = Math.random() * totalWeight;
+          
+          let selectedIndex = 0;
+          for (let j = 0; j < weights.length; j++) {
+            random -= weights[j];
+            if (random <= 0) {
+              selectedIndex = j;
+              break;
+            }
+          }
+          
+          selectedUpgrades.push(commonUpgrades[selectedIndex]);
+        }
+        choices.push(...selectedUpgrades);
         
         // ALWAYS SHOW 6 CHOICES: Shuffle and ensure exactly 6 choices in 2×3 grid
         choices = choices.sort(() => 0.5 - Math.random()).slice(0, 6);
