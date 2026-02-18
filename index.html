@@ -2311,16 +2311,15 @@
         min-height: 44px; /* iOS touch target minimum */
       }
       
-      /* CENTER MINIMAP IN PORTRAIT MODE */
+      /* ALIGN MINIMAP BOTTOM-RIGHT IN PORTRAIT MODE */
       #minimap-container {
-        right: 50%;
-        transform: translateX(50%);
-        bottom: 150px; /* Move up to avoid bottom UI */
+        right: 20px;
+        bottom: 90px; /* Above touch joystick */
       }
       
       #region-display {
-        right: 50%;
-        transform: translateX(50%) translateY(140px); /* Combine transforms to preserve both */
+        right: 20px;
+        bottom: 75px;
       }
     }
     
@@ -12835,7 +12834,8 @@
       // Near plane increased to 15 (was 10) - player area is completely clear
       // Far plane at 35 (was 28) - fog begins at edges only, not heavy at top
       // PERFORMANCE: Balanced for 60fps target while maintaining visibility
-      scene.fog = new THREE.Fog(COLORS.bg, 15, 35);
+      // Tighter fog for better visibility around character - fog only at edges
+      scene.fog = new THREE.Fog(COLORS.bg, 18, 38);
       
       // Phase 5: Initialize particle object pool for performance (100 particles pre-allocated)
       particlePool = new ObjectPool(
