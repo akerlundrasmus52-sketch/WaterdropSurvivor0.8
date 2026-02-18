@@ -2127,7 +2127,7 @@
       /* Portrait mode adjustments */
       .modal-content {
         width: 92%;
-        max-width: 450px; /* Increased from 350px for better level-up card readability */
+        max-width: 450px; /* Increased for better level-up card readability in portrait orientation */
       }
 
       .bar-container {
@@ -2241,7 +2241,7 @@
       /* Further optimize level-up modal for small portrait screens */
       .modal-content {
         width: 95%;
-        max-width: 400px; /* Slightly smaller for iPhone 16 portrait */
+        max-width: 400px; /* Reduced from 450px for smaller iPhone screens to fit better */
         padding: 20px; /* Reduce padding */
       }
       
@@ -2335,7 +2335,8 @@
         min-height: 44px; /* iOS touch target minimum */
       }
       
-      /* ALIGN MINIMAP BOTTOM-RIGHT IN PORTRAIT MODE */
+      /* ALIGN MINIMAP BOTTOM-RIGHT IN PORTRAIT MODE for iPhone 16 */
+      /* Specific positioning for iPhone 16 and similar devices to avoid UI overlap */
       #minimap-container {
         right: 20px;
         bottom: 90px; /* Above touch joystick */
