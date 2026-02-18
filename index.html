@@ -1652,24 +1652,31 @@
     }
 
     .menu-btn {
-      background: transparent;
-      color: transparent;
-      border: none;
-      padding: 0;
-      font-size: 0;
-      box-shadow: none;
+      background: linear-gradient(135deg, rgba(93,173,226,0.9), rgba(52,152,219,0.9));
+      color: #FFFFFF;
+      border: 3px solid rgba(255,255,255,0.6);
+      padding: 15px 40px;
+      font-size: 24px;
+      font-weight: bold;
+      box-shadow: 
+        0 0 20px rgba(93,173,226,0.6),
+        0 4px 15px rgba(0,0,0,0.4),
+        inset 0 1px 0 rgba(255,255,255,0.3);
       position: absolute;
       width: 260px; /* Reduced from 300px */
-      height: 50px; /* Reduced from 60px */
+      height: 60px;
       cursor: pointer;
       transition: all 0.2s ease;
       overflow: visible;
       left: 50%;
       transform: translateX(-50%);
+      border-radius: 10px;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+      letter-spacing: 2px;
     }
 
-    #start-game-btn { top: 70%; } /* MENU FIX: Placed above title image (lower on screen) */
-    #camp-btn { top: 78%; } /* MENU FIX: Placed below START button */
+    #start-game-btn { top: 55%; } /* Position START GAME button in middle-lower area */
+    #camp-btn { top: 65%; } /* Position CAMP button below START GAME */
 
     .menu-btn::before {
       content: '';
@@ -1685,17 +1692,29 @@
     }
 
     .menu-btn:hover {
-      box-shadow: 0 0 20px rgba(93, 173, 226, 0.8), 0 0 40px rgba(93, 173, 226, 0.6), inset 0 0 30px rgba(93, 173, 226, 0.3);
+      background: linear-gradient(135deg, rgba(93,173,226,1), rgba(52,152,219,1));
+      box-shadow: 
+        0 0 30px rgba(93, 173, 226, 0.9), 
+        0 0 50px rgba(93, 173, 226, 0.6), 
+        0 4px 20px rgba(0,0,0,0.5),
+        inset 0 0 30px rgba(93, 173, 226, 0.3);
+      transform: translateX(-50%) translateY(-2px);
     }
 
     .menu-btn:active {
-      box-shadow: 0 0 40px rgba(255, 255, 255, 1), 0 0 60px rgba(93, 173, 226, 1), inset 0 0 40px rgba(255, 255, 255, 0.8);
+      background: linear-gradient(135deg, rgba(255,255,255,0.9), rgba(93,173,226,1));
+      box-shadow: 
+        0 0 40px rgba(255, 255, 255, 1), 
+        0 0 60px rgba(93, 173, 226, 1), 
+        0 2px 10px rgba(0,0,0,0.6),
+        inset 0 0 40px rgba(255, 255, 255, 0.8);
       animation: lightning-flash 0.3s ease;
+      transform: translateX(-50%) translateY(2px);
     }
 
     .menu-btn:active::before {
-      width: 260px; /* Reduced from 300px */
-      height: 260px; /* Reduced from 300px */
+      width: 260px;
+      height: 260px;
     }
 
     @keyframes lightning-flash {
@@ -1936,13 +1955,13 @@
       border: 3px solid #8B4513;
       border-radius: 15px;
       padding: 20px;
-      margin: 15px 0;
+      margin: 15px auto;
       cursor: pointer;
       transition: all 0.2s ease;
       box-shadow: 0 4px 8px rgba(0,0,0,0.5);
       text-align: left;
-      max-width: 700px;
-      width: 100%;
+      max-width: 500px; /* Reduced from 700px for iPhone 16 portrait */
+      width: 95%; /* Ensure it fits within screen bounds */
     }
 
     .building-card:hover {
@@ -3118,7 +3137,7 @@
       lakeCenterZ: -30,
       lakeRadius: 18,
       // Performance optimization - Phase 1
-      maxEnemiesOnScreen: 50,
+      maxEnemiesOnScreen: 70, // Increased from 50 for harder difficulty
       // Movement physics
       accelLerpFactor: 0.12, // Acceleration smoothness
       decelLerpFactor: 0.06, // Deceleration smoothness (glide effect)
@@ -3682,6 +3701,11 @@
     function setGameActive(active) {
       isGameActive = active;
       window.isGameActive = active;
+    }
+    
+    function setGameOver(gameOverState) {
+      isGameOver = gameOverState;
+      window.isGameOver = gameOverState;
     }
     
     // Day/Night Cycle System - Smooth, non-blocking transitions
@@ -5882,14 +5906,14 @@
               Math.sin(angle) * speed
             );
             
-            let life = 50;
+            let life = 80;  // Increased from 50 for more visible death animation
             const updatePiece = () => {
               life--;
               piece.position.add(vel);
               vel.y -= 0.02; // Gravity
               piece.rotation.x += 0.15;
               piece.rotation.y += 0.15;
-              piece.material.opacity = life / 50;
+              piece.material.opacity = life / 80;  // Update divisor to match new life
               
               if (life <= 0 || piece.position.y < 0) {
                 scene.remove(piece);
@@ -5935,11 +5959,11 @@
           scene.add(bloodPool);
           
           // Fade out
-          let corpseLife = 120;
+          let corpseLife = 180;  // Increased from 120 for longer visible corpse
           const fadeCorpse = () => {
             corpseLife--;
-            corpse.material.opacity = (corpseLife / 120) * 0.7;
-            bloodPool.material.opacity = (corpseLife / 120) * 0.5;
+            corpse.material.opacity = (corpseLife / 180) * 0.7;  // Update divisor
+            bloodPool.material.opacity = (corpseLife / 180) * 0.5;  // Update divisor
             
             if (corpseLife <= 0) {
               scene.remove(corpse);
@@ -6489,17 +6513,17 @@
 
     // Performance: Cached geometries and materials for projectiles (reused across instances)
     const projectileGeometryCache = {
-      bullet: new THREE.SphereGeometry(0.25, 8, 8),
-      bulletGlow: new THREE.SphereGeometry(0.35, 6, 6)
+      bullet: new THREE.SphereGeometry(0.0625, 8, 8),  // 75% smaller radius (0.25 → 0.0625 is 25% of original)
+      bulletGlow: new THREE.SphereGeometry(0.0875, 6, 6)  // 75% smaller radius (0.35 → 0.0875 is 25% of original)
     };
     const projectileMaterialCache = {
       bullet: new THREE.MeshBasicMaterial({ 
-        color: 0xFFFF00,
+        color: 0xFF4500,  // Red-orange starting color
         transparent: true,
         opacity: 0.95
       }),
       bulletGlow: new THREE.MeshBasicMaterial({
-        color: 0xFFFF00,
+        color: 0xFF6347,  // Tomato red-orange for glow
         transparent: true,
         opacity: 0.4
       })
@@ -6660,19 +6684,26 @@
 
     class Projectile {
       constructor(x, z, target) {
-        // Performance: Reuse cached geometry and materials instead of creating new ones
-        this.mesh = new THREE.Mesh(projectileGeometryCache.bullet, projectileMaterialCache.bullet);
+        // Performance: Reuse cached geometry but clone materials for independent color transitions
+        this.mesh = new THREE.Mesh(
+          projectileGeometryCache.bullet, 
+          projectileMaterialCache.bullet.clone()  // Clone material for independent color
+        );
         this.mesh.position.set(x, 0.5, z);
         scene.add(this.mesh);
         
-        // Add glowing trail effect with cached resources
-        this.glow = new THREE.Mesh(projectileGeometryCache.bulletGlow, projectileMaterialCache.bulletGlow);
+        // Add glowing trail effect with cloned material
+        this.glow = new THREE.Mesh(
+          projectileGeometryCache.bulletGlow, 
+          projectileMaterialCache.bulletGlow.clone()  // Clone material for independent color
+        );
         this.glow.position.copy(this.mesh.position);
         scene.add(this.glow);
 
-        this.speed = 0.4;
+        this.speed = 0.5; // Increased from 0.4 (25% faster)
         this.active = true;
         this.life = 60; // Frames
+        this.maxLife = 60; // Track max life for color transition
         
         // Piercing support: track enemies already hit
         this.hitEnemies = new Set();
@@ -6715,10 +6746,28 @@
         this.mesh.position.x += this.vx;
         this.mesh.position.z += this.vz;
         
+        // Color transition: red-orange (start) → copper (end)
+        // Progress: 1.0 (just fired) → 0.0 (about to expire)
+        const progress = this.life / this.maxLife;
+        
+        // Red-orange: 0xFF4500 (RGB: 255, 69, 0)
+        // Copper: 0xB87333 (RGB: 184, 115, 51)
+        const startColor = { r: 255, g: 69, b: 0 };
+        const endColor = { r: 184, g: 115, b: 51 };
+        
+        const r = Math.floor(startColor.r * progress + endColor.r * (1 - progress));
+        const g = Math.floor(startColor.g * progress + endColor.g * (1 - progress));
+        const b = Math.floor(startColor.b * progress + endColor.b * (1 - progress));
+        
+        const currentColor = (r << 16) | (g << 8) | b;
+        this.mesh.material.color.setHex(currentColor);
+        
         // Update glow position and fade it
         if (this.glow) {
           this.glow.position.copy(this.mesh.position);
           this.glow.material.opacity = 0.4 * (this.life / 60);
+          // Also update glow color to match bullet
+          this.glow.material.color.setHex(currentColor);
         }
         
         this.life--;
@@ -6762,7 +6811,7 @@
               div.style.position = 'absolute';
               div.style.color = '#FF0000';
               div.style.fontSize = '32px';
-              div.style.fontWeight = '600'; // Reduced from 'bold' to 600 for thinner font
+              div.style.fontWeight = '500'; // Reduced from 600 to 500 for thinner font
               div.style.fontFamily = 'Bangers, cursive';
               div.style.textShadow = '0 0 20px #FF0000, 2px 2px 4px #000';
               div.style.pointerEvents = 'none';
@@ -6999,12 +7048,18 @@
       destroy() {
         this.active = false;
         scene.remove(this.mesh);
-        // Performance: Don't dispose shared cached geometry/material
+        // Dispose cloned materials (not geometry, which is shared)
+        if (this.mesh.material) {
+          this.mesh.material.dispose();
+        }
         
         // Remove glow if it exists
         if (this.glow) {
           scene.remove(this.glow);
-          // Performance: Don't dispose shared cached geometry/material
+          // Dispose cloned glow material
+          if (this.glow.material) {
+            this.glow.material.dispose();
+          }
         }
       }
     }
@@ -11098,9 +11153,10 @@
             <div style="background: rgba(255,215,0,0.1); border: 2px solid #FFD700; border-radius: 10px; padding: 15px; margin-bottom: 10px;">
               <div style="font-size: 18px; color: #FFD700; margin-bottom: 5px;">${quest.name}</div>
               <div style="font-size: 14px; color: #AAA; margin-bottom: 10px;">${quest.description}</div>
-              <button class="btn" onclick="claimTutorialQuest('${questId}'); document.body.querySelector('[data-quest-hall-overlay]').remove();" 
-                      style="font-size: 16px; padding: 10px 20px; background: #FFD700; color: #000;">
-                Claim Reward
+              <button class="btn claim-quest-btn" data-quest-id="${questId}" 
+                      aria-label="Claim quest reward"
+                      style="font-size: 16px; padding: 10px 20px; background: #FFD700; color: #000; cursor: pointer; font-weight: bold;">
+                🎁 Claim Reward
               </button>
             </div>
           `;
@@ -11141,6 +11197,25 @@
       
       panel.innerHTML = content;
       overlay.setAttribute('data-quest-hall-overlay', 'true');
+      
+      // Add event listeners for claim buttons
+      panel.querySelectorAll('.claim-quest-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+          const questId = this.getAttribute('data-quest-id');
+          console.log('[Quest] Claiming quest:', questId);
+          
+          // Claim the quest
+          claimTutorialQuest(questId);
+          
+          // Remove overlay after a short delay
+          setTimeout(() => {
+            const overlayElement = document.body.querySelector('[data-quest-hall-overlay]');
+            if (overlayElement) {
+              document.body.removeChild(overlayElement);
+            }
+          }, 100);
+        });
+      });
       
       // Close button handler
       const closeBtn = panel.querySelector('.btn[style*="background: #888"]');
@@ -13581,7 +13656,7 @@
             // Reset game and return to menu
             resetGame();
             document.getElementById('settings-modal').style.display = 'none';
-            isPaused = false;
+            setGamePaused(false);
             showMainMenu();
             updateShopUI();
             
@@ -13653,31 +13728,31 @@
       }
       
       // Scale spawn count with player level for increased difficulty
-      // Early game (1-30): More enemies, harder challenge - "hard as hell"
-      // Mid-game (31-75): Balanced progression after upgrades
-      // Late-game (76-150): Gradually increasing endgame difficulty
+      // Early game (1-30): Much more enemies for harder challenge
+      // Mid-game (31-75): Moderate but still challenging
+      // Late-game (76-150): Aggressive endgame difficulty
       let baseCount, levelBonus, cap;
       
       if (playerStats.lvl <= 30) {
-        // Early game: Aggressive spawns (4-8 enemies per wave)
-        baseCount = 4 + Math.floor(waveCount / 3);
-        levelBonus = Math.floor(playerStats.lvl / 4);
-        cap = 8;
-      } else if (playerStats.lvl <= 75) {
-        // Mid-game: Moderate spawns after upgrade threshold
-        baseCount = 3 + Math.floor(waveCount / 4);
-        levelBonus = Math.floor(playerStats.lvl / 6);
-        cap = 10;
-      } else if (playerStats.lvl <= 120) {
-        // Late-game: Progressive difficulty
-        baseCount = 4 + Math.floor(waveCount / 3);
-        levelBonus = Math.floor(playerStats.lvl / 5);
+        // Early game: Very aggressive spawns (6-12 enemies per wave) - harder difficulty
+        baseCount = 6 + Math.floor(waveCount / 2);
+        levelBonus = Math.floor(playerStats.lvl / 3);
         cap = 12;
-      } else {
-        // End-game: Maximum challenge
-        baseCount = 5 + Math.floor(waveCount / 2);
+      } else if (playerStats.lvl <= 75) {
+        // Mid-game: Challenging spawns (5-14 enemies per wave)
+        baseCount = 5 + Math.floor(waveCount / 3);
         levelBonus = Math.floor(playerStats.lvl / 4);
-        cap = 15;
+        cap = 14;
+      } else if (playerStats.lvl <= 120) {
+        // Late-game: Very challenging (6-16 enemies per wave)
+        baseCount = 6 + Math.floor(waveCount / 2);
+        levelBonus = Math.floor(playerStats.lvl / 3);
+        cap = 16;
+      } else {
+        // End-game: Maximum challenge (8-20 enemies per wave)
+        baseCount = 8 + Math.floor(waveCount / 2);
+        levelBonus = Math.floor(playerStats.lvl / 3);
+        cap = 20;
       }
       
       const count = Math.min(baseCount + levelBonus, cap);
@@ -14158,19 +14233,19 @@
         left: 50%;
         transform: translate(-50%, -50%) scale(0);
         font-family: 'Bangers', cursive;
-        font-size: 120px;
-        font-weight: bold;
+        font-size: 60px;
+        font-weight: 500;
         color: #FFD700;
         text-shadow: 
-          0 0 20px rgba(255,215,0,1),
-          0 0 40px rgba(93,173,226,0.8),
-          4px 4px 0 #000,
-          -2px -2px 0 #000,
-          2px -2px 0 #000,
-          -2px 2px 0 #000;
+          0 0 15px rgba(255,215,0,0.9),
+          0 0 30px rgba(93,173,226,0.6),
+          3px 3px 0 #000,
+          -1px -1px 0 #000,
+          1px -1px 0 #000,
+          -1px 1px 0 #000;
         z-index: 200;
         pointer-events: none;
-        letter-spacing: 8px;
+        letter-spacing: 6px;
       `;
       levelUpText.textContent = 'LEVEL UP!';
       document.body.appendChild(levelUpText);
@@ -15068,8 +15143,29 @@
           });
         }
         
-        // Phase 3: Add more stat upgrades for diversity (was 2, now 3)
-        choices.push(...commonUpgrades.sort(() => 0.5 - Math.random()).slice(0, 3));
+        // Phase 3: Add more stat upgrades for diversity with weighted selection
+        // ATK speed and damage have 3x higher probability (weighted random selection)
+        const selectedUpgrades = [];
+        for (let i = 0; i < 3; i++) {
+          // Calculate weighted random selection
+          const weights = commonUpgrades.map(u => 
+            (u.id === 'str' || u.id === 'aspd') ? 3 : 1
+          );
+          const totalWeight = weights.reduce((sum, w) => sum + w, 0);
+          let random = Math.random() * totalWeight;
+          
+          let selectedIndex = 0;
+          for (let j = 0; j < weights.length; j++) {
+            random -= weights[j];
+            if (random <= 0) {
+              selectedIndex = j;
+              break;
+            }
+          }
+          
+          selectedUpgrades.push(commonUpgrades[selectedIndex]);
+        }
+        choices.push(...selectedUpgrades);
         
         // ALWAYS SHOW 6 CHOICES: Shuffle and ensure exactly 6 choices in 2×3 grid
         choices = choices.sort(() => 0.5 - Math.random()).slice(0, 6);
@@ -16413,9 +16509,9 @@
     }
 
     function gameOver() {
-      isGameOver = true;
-      isPaused = true;
-      isGameActive = false;
+      setGameOver(true);
+      setGamePaused(true);
+      setGameActive(false);
       
       stopDroneHum(); // Stop drone sound
       
@@ -16775,9 +16871,9 @@
         player.mesh.material.color.setHex(COLORS.player);
       }
 
-      isGameOver = false;
-      isPaused = true;  // Start paused, countdown will unpause (PR #70)
-      isGameActive = false;  // Not active until countdown completes (PR #70)
+      setGameOver(false);
+      setGamePaused(true);  // Start paused, countdown will unpause (PR #70)
+      setGameActive(false);  // Not active until countdown completes (PR #70)
       document.getElementById('gameover-screen').style.display = 'none';
       updateHUD();
     }
@@ -16790,7 +16886,7 @@
       if (modal.style.display === 'flex') {
         modal.style.display = 'none';
         if (levelUpModal.style.display !== 'flex' && !isGameOver) {
-          isPaused = false;
+          setGamePaused(false);
         }
       } else {
         // Calculate current run time
@@ -16874,7 +16970,7 @@
 </div>
         `;
         modal.style.display = 'flex';
-        isPaused = true;
+        setGamePaused(true);
       }
     }
 
