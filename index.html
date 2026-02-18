@@ -2126,8 +2126,8 @@
     @media (orientation: portrait) {
       /* Portrait mode adjustments */
       .modal-content {
-        width: 90%;
-        max-width: 350px;
+        width: 92%;
+        max-width: 450px; /* Increased for better level-up card readability in portrait orientation */
       }
 
       .bar-container {
@@ -2174,6 +2174,19 @@
       .menu-title {
         font-size: 32px;
         margin-bottom: 20px;
+      }
+      
+      /* Optimize level-up cards for portrait iPhone 16 */
+      .upgrade-card {
+        padding: 15px; /* Slightly reduce padding for portrait */
+      }
+      
+      .upgrade-title {
+        font-size: 18px; /* Slightly smaller for portrait readability */
+      }
+      
+      .upgrade-desc {
+        font-size: 12px; /* Slightly smaller for portrait readability */
       }
     }
 
@@ -2223,6 +2236,17 @@
       .menu-btn:active::before {
         width: 220px;
         height: 220px;
+      }
+      
+      /* Further optimize level-up modal for small portrait screens */
+      .modal-content {
+        width: 95%;
+        max-width: 400px; /* Reduced from 450px for smaller iPhone screens to fit better */
+        padding: 20px; /* Reduce padding */
+      }
+      
+      #upgrade-list {
+        gap: 12px; /* Reduce gap between cards */
       }
     }
     
@@ -2311,16 +2335,16 @@
         min-height: 44px; /* iOS touch target minimum */
       }
       
-      /* CENTER MINIMAP IN PORTRAIT MODE */
+      /* ALIGN MINIMAP BOTTOM-RIGHT IN PORTRAIT MODE for iPhone 16 */
+      /* Specific positioning for iPhone 16 and similar devices to avoid UI overlap */
       #minimap-container {
-        right: 50%;
-        transform: translateX(50%);
-        bottom: 150px; /* Move up to avoid bottom UI */
+        right: 20px;
+        bottom: 90px; /* Above touch joystick */
       }
       
       #region-display {
-        right: 50%;
-        transform: translateX(50%) translateY(140px); /* Combine transforms to preserve both */
+        right: 20px;
+        bottom: 75px;
       }
     }
     
@@ -12835,7 +12859,8 @@
       // Near plane increased to 15 (was 10) - player area is completely clear
       // Far plane at 35 (was 28) - fog begins at edges only, not heavy at top
       // PERFORMANCE: Balanced for 60fps target while maintaining visibility
-      scene.fog = new THREE.Fog(COLORS.bg, 15, 35);
+      // Tighter fog for better visibility around character - fog only at edges
+      scene.fog = new THREE.Fog(COLORS.bg, 18, 38);
       
       // Phase 5: Initialize particle object pool for performance (100 particles pre-allocated)
       particlePool = new ObjectPool(
