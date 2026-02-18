@@ -6673,6 +6673,10 @@
         this.speed = 0.4;
         this.active = true;
         this.life = 60; // Frames
+        
+        // Piercing support: track enemies already hit
+        this.hitEnemies = new Set();
+        this.pierceCount = playerStats.pierceCount || 0; // How many enemies can be pierced
 
         // Calculate direction
         const dx = target.x - x;
@@ -6724,9 +6728,11 @@
           return;
         }
 
-        // Collision Check
+        // Collision Check - with piercing support
         for (let enemy of enemies) {
           if (enemy.isDead) continue;
+          if (this.hitEnemies.has(enemy)) continue; // Skip already-hit enemies
+          
           const dx = this.mesh.position.x - enemy.mesh.position.x;
           const dz = this.mesh.position.z - enemy.mesh.position.z;
           if (dx*dx + dz*dz < 0.6) { // Hit radius
@@ -6822,9 +6828,20 @@
             spawnParticles(enemy.mesh.position, COLORS.player, 5);
             spawnParticles(enemy.mesh.position, 0xFFFFFF, 3);
             
-            this.destroy();
-            playSound('hit');
-            break;
+            // Mark this enemy as hit
+            this.hitEnemies.add(enemy);
+            
+            // Check if bullet should be destroyed or continue piercing
+            if (this.hitEnemies.size > this.pierceCount) {
+              // Hit more enemies than pierce count allows, destroy bullet
+              this.destroy();
+              playSound('hit');
+              break;
+            } else {
+              // Continue piercing
+              playSound('hit');
+              // Don't break - allow bullet to continue
+            }
           }
         }
         
