@@ -6811,7 +6811,7 @@
               div.style.position = 'absolute';
               div.style.color = '#FF0000';
               div.style.fontSize = '32px';
-              div.style.fontWeight = '600'; // Reduced from 'bold' to 600 for thinner font
+              div.style.fontWeight = '500'; // Reduced from 600 to 500 for thinner font
               div.style.fontFamily = 'Bangers, cursive';
               div.style.textShadow = '0 0 20px #FF0000, 2px 2px 4px #000';
               div.style.pointerEvents = 'none';
@@ -14232,19 +14232,19 @@
         left: 50%;
         transform: translate(-50%, -50%) scale(0);
         font-family: 'Bangers', cursive;
-        font-size: 120px;
-        font-weight: bold;
+        font-size: 60px;
+        font-weight: 500;
         color: #FFD700;
         text-shadow: 
-          0 0 20px rgba(255,215,0,1),
-          0 0 40px rgba(93,173,226,0.8),
-          4px 4px 0 #000,
-          -2px -2px 0 #000,
-          2px -2px 0 #000,
-          -2px 2px 0 #000;
+          0 0 15px rgba(255,215,0,0.9),
+          0 0 30px rgba(93,173,226,0.6),
+          3px 3px 0 #000,
+          -1px -1px 0 #000,
+          1px -1px 0 #000,
+          -1px 1px 0 #000;
         z-index: 200;
         pointer-events: none;
-        letter-spacing: 8px;
+        letter-spacing: 6px;
       `;
       levelUpText.textContent = 'LEVEL UP!';
       document.body.appendChild(levelUpText);
@@ -15142,8 +15142,13 @@
           });
         }
         
-        // Phase 3: Add more stat upgrades for diversity (was 2, now 3)
-        choices.push(...commonUpgrades.sort(() => 0.5 - Math.random()).slice(0, 3));
+        // Phase 3: Add more stat upgrades for diversity with weighted selection
+        // ATK speed and damage have 3x higher probability
+        const weightedCommonUpgrades = [
+          ...commonUpgrades.filter(u => u.id === 'str' || u.id === 'aspd').flatMap(u => [u, u, u]), // 3x weight for damage and attack speed
+          ...commonUpgrades.filter(u => u.id !== 'str' && u.id !== 'aspd') // 1x weight for others
+        ];
+        choices.push(...weightedCommonUpgrades.sort(() => 0.5 - Math.random()).slice(0, 3));
         
         // ALWAYS SHOW 6 CHOICES: Shuffle and ensure exactly 6 choices in 2×3 grid
         choices = choices.sort(() => 0.5 - Math.random()).slice(0, 6);
