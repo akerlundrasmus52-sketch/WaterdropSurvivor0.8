@@ -6757,12 +6757,12 @@
               // HEADSHOT! Instant kill
               enemy.hp = 0;
               
-              // Create floating HEADSHOT text
+              // Create floating HEADSHOT text - THINNER FONT
               const div = document.createElement('div');
               div.style.position = 'absolute';
               div.style.color = '#FF0000';
               div.style.fontSize = '32px';
-              div.style.fontWeight = 'bold';
+              div.style.fontWeight = '600'; // Reduced from 'bold' to 600 for thinner font
               div.style.fontFamily = 'Bangers, cursive';
               div.style.textShadow = '0 0 20px #FF0000, 2px 2px 4px #000';
               div.style.pointerEvents = 'none';
