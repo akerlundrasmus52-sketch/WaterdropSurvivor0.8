@@ -1652,24 +1652,31 @@
     }
 
     .menu-btn {
-      background: transparent;
-      color: transparent;
-      border: none;
-      padding: 0;
-      font-size: 0;
-      box-shadow: none;
+      background: linear-gradient(135deg, rgba(93,173,226,0.9), rgba(52,152,219,0.9));
+      color: #FFFFFF;
+      border: 3px solid rgba(255,255,255,0.6);
+      padding: 15px 40px;
+      font-size: 24px;
+      font-weight: bold;
+      box-shadow: 
+        0 0 20px rgba(93,173,226,0.6),
+        0 4px 15px rgba(0,0,0,0.4),
+        inset 0 1px 0 rgba(255,255,255,0.3);
       position: absolute;
       width: 260px; /* Reduced from 300px */
-      height: 50px; /* Reduced from 60px */
+      height: 60px;
       cursor: pointer;
       transition: all 0.2s ease;
       overflow: visible;
       left: 50%;
       transform: translateX(-50%);
+      border-radius: 10px;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+      letter-spacing: 2px;
     }
 
-    #start-game-btn { top: 70%; } /* MENU FIX: Placed above title image (lower on screen) */
-    #camp-btn { top: 78%; } /* MENU FIX: Placed below START button */
+    #start-game-btn { top: 55%; } /* Position START GAME button in middle-lower area */
+    #camp-btn { top: 65%; } /* Position CAMP button below START GAME */
 
     .menu-btn::before {
       content: '';
@@ -1685,17 +1692,29 @@
     }
 
     .menu-btn:hover {
-      box-shadow: 0 0 20px rgba(93, 173, 226, 0.8), 0 0 40px rgba(93, 173, 226, 0.6), inset 0 0 30px rgba(93, 173, 226, 0.3);
+      background: linear-gradient(135deg, rgba(93,173,226,1), rgba(52,152,219,1));
+      box-shadow: 
+        0 0 30px rgba(93, 173, 226, 0.9), 
+        0 0 50px rgba(93, 173, 226, 0.6), 
+        0 4px 20px rgba(0,0,0,0.5),
+        inset 0 0 30px rgba(93, 173, 226, 0.3);
+      transform: translateX(-50%) translateY(-2px);
     }
 
     .menu-btn:active {
-      box-shadow: 0 0 40px rgba(255, 255, 255, 1), 0 0 60px rgba(93, 173, 226, 1), inset 0 0 40px rgba(255, 255, 255, 0.8);
+      background: linear-gradient(135deg, rgba(255,255,255,0.9), rgba(93,173,226,1));
+      box-shadow: 
+        0 0 40px rgba(255, 255, 255, 1), 
+        0 0 60px rgba(93, 173, 226, 1), 
+        0 2px 10px rgba(0,0,0,0.6),
+        inset 0 0 40px rgba(255, 255, 255, 0.8);
       animation: lightning-flash 0.3s ease;
+      transform: translateX(-50%) translateY(2px);
     }
 
     .menu-btn:active::before {
-      width: 260px; /* Reduced from 300px */
-      height: 260px; /* Reduced from 300px */
+      width: 260px;
+      height: 260px;
     }
 
     @keyframes lightning-flash {
@@ -3682,6 +3701,11 @@
     function setGameActive(active) {
       isGameActive = active;
       window.isGameActive = active;
+    }
+    
+    function setGameOver(gameOverState) {
+      isGameOver = gameOverState;
+      window.isGameOver = gameOverState;
     }
     
     // Day/Night Cycle System - Smooth, non-blocking transitions
@@ -11098,9 +11122,9 @@
             <div style="background: rgba(255,215,0,0.1); border: 2px solid #FFD700; border-radius: 10px; padding: 15px; margin-bottom: 10px;">
               <div style="font-size: 18px; color: #FFD700; margin-bottom: 5px;">${quest.name}</div>
               <div style="font-size: 14px; color: #AAA; margin-bottom: 10px;">${quest.description}</div>
-              <button class="btn" onclick="claimTutorialQuest('${questId}'); document.body.querySelector('[data-quest-hall-overlay]').remove();" 
-                      style="font-size: 16px; padding: 10px 20px; background: #FFD700; color: #000;">
-                Claim Reward
+              <button class="btn claim-quest-btn" data-quest-id="${questId}" 
+                      style="font-size: 16px; padding: 10px 20px; background: #FFD700; color: #000; cursor: pointer; font-weight: bold;">
+                🎁 Claim Reward
               </button>
             </div>
           `;
@@ -11141,6 +11165,25 @@
       
       panel.innerHTML = content;
       overlay.setAttribute('data-quest-hall-overlay', 'true');
+      
+      // Add event listeners for claim buttons
+      panel.querySelectorAll('.claim-quest-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+          const questId = this.getAttribute('data-quest-id');
+          console.log('[Quest] Claiming quest:', questId);
+          
+          // Claim the quest
+          claimTutorialQuest(questId);
+          
+          // Remove overlay after a short delay
+          setTimeout(() => {
+            const overlayElement = document.body.querySelector('[data-quest-hall-overlay]');
+            if (overlayElement) {
+              document.body.removeChild(overlayElement);
+            }
+          }, 100);
+        });
+      });
       
       // Close button handler
       const closeBtn = panel.querySelector('.btn[style*="background: #888"]');
@@ -13581,7 +13624,7 @@
             // Reset game and return to menu
             resetGame();
             document.getElementById('settings-modal').style.display = 'none';
-            isPaused = false;
+            setGamePaused(false);
             showMainMenu();
             updateShopUI();
             
@@ -16413,9 +16456,9 @@
     }
 
     function gameOver() {
-      isGameOver = true;
-      isPaused = true;
-      isGameActive = false;
+      setGameOver(true);
+      setGamePaused(true);
+      setGameActive(false);
       
       stopDroneHum(); // Stop drone sound
       
@@ -16775,9 +16818,9 @@
         player.mesh.material.color.setHex(COLORS.player);
       }
 
-      isGameOver = false;
-      isPaused = true;  // Start paused, countdown will unpause (PR #70)
-      isGameActive = false;  // Not active until countdown completes (PR #70)
+      setGameOver(false);
+      setGamePaused(true);  // Start paused, countdown will unpause (PR #70)
+      setGameActive(false);  // Not active until countdown completes (PR #70)
       document.getElementById('gameover-screen').style.display = 'none';
       updateHUD();
     }
@@ -16790,7 +16833,7 @@
       if (modal.style.display === 'flex') {
         modal.style.display = 'none';
         if (levelUpModal.style.display !== 'flex' && !isGameOver) {
-          isPaused = false;
+          setGamePaused(false);
         }
       } else {
         // Calculate current run time
@@ -16874,7 +16917,7 @@
 </div>
         `;
         modal.style.display = 'flex';
-        isPaused = true;
+        setGamePaused(true);
       }
     }
 
