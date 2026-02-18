@@ -2126,8 +2126,8 @@
     @media (orientation: portrait) {
       /* Portrait mode adjustments */
       .modal-content {
-        width: 90%;
-        max-width: 350px;
+        width: 92%;
+        max-width: 450px; /* Increased from 350px for better level-up card readability */
       }
 
       .bar-container {
@@ -2174,6 +2174,19 @@
       .menu-title {
         font-size: 32px;
         margin-bottom: 20px;
+      }
+      
+      /* Optimize level-up cards for portrait iPhone 16 */
+      .upgrade-card {
+        padding: 15px; /* Slightly reduce padding for portrait */
+      }
+      
+      .upgrade-title {
+        font-size: 18px; /* Slightly smaller for portrait readability */
+      }
+      
+      .upgrade-desc {
+        font-size: 12px; /* Slightly smaller for portrait readability */
       }
     }
 
@@ -2223,6 +2236,17 @@
       .menu-btn:active::before {
         width: 220px;
         height: 220px;
+      }
+      
+      /* Further optimize level-up modal for small portrait screens */
+      .modal-content {
+        width: 95%;
+        max-width: 400px; /* Slightly smaller for iPhone 16 portrait */
+        padding: 20px; /* Reduce padding */
+      }
+      
+      #upgrade-list {
+        gap: 12px; /* Reduce gap between cards */
       }
     }
     
