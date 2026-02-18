@@ -10566,7 +10566,7 @@
         rewardSkillPoints: 2,
         unlockBuilding: 'skillTree',
         nextQuest: 'quest2_spendSkills',
-        conditions: ['firstRunDeath'] // Requires firstRunDeath to be claimed
+        conditions: ['firstRunDeath'] // Requires firstRunDeath to be auto-claimed (on first death)
       },
       quest2_spendSkills: {
         id: 'quest2_spendSkills',
@@ -10688,7 +10688,8 @@
     
     // Check if a quest is claimed (completed)
     function isQuestClaimed(questId) {
-      return saveData.tutorialQuests.completedQuests.includes(questId);
+      const completedQuests = saveData.tutorialQuests.completedQuests || [];
+      return completedQuests.includes(questId);
     }
     
     // Check if a building has an active quest
@@ -10806,8 +10807,9 @@
                   saveSaveData();
                   showNextQuestPopup(quest.nextQuest);
                 } else {
-                  console.log(`Cannot start ${quest.nextQuest}: conditions not met`);
-                  showStatChange('⚠️ Prerequisites not met for next quest');
+                  const questName = TUTORIAL_QUESTS[quest.nextQuest]?.name || quest.nextQuest;
+                  console.log(`Cannot start ${questName}: conditions not met`);
+                  showStatChange(`⚠️ Prerequisites not met for ${questName}`);
                 }
               }
               updateCampScreen();
@@ -10835,7 +10837,8 @@
                 }, 500);
               }
             } else {
-              console.log(`Cannot start ${quest.nextQuest}: conditions not met`);
+              const questName = TUTORIAL_QUESTS[quest.nextQuest]?.name || quest.nextQuest;
+              console.log(`Cannot start ${questName}: conditions not met`);
             }
           }
         }, 100);
@@ -10886,7 +10889,8 @@
             saveData.tutorialQuests.currentQuest = firstQuestId;
             saveSaveData();
           } else {
-            console.log(`Cannot start ${firstQuestId}: conditions not met`);
+            const questName = TUTORIAL_QUESTS[firstQuestId]?.name || firstQuestId;
+            console.log(`Cannot start ${questName}: conditions not met`);
           }
         }
       }
@@ -16614,7 +16618,8 @@
               saveSaveData();
               showNextQuestPopup(firstQuestId);
             } else {
-              console.log(`Cannot start ${firstQuestId}: conditions not met`);
+              const questName = TUTORIAL_QUESTS[firstQuestId]?.name || firstQuestId;
+              console.log(`Cannot start ${questName}: conditions not met`);
             }
           }, 1000);
         }, 1000);
