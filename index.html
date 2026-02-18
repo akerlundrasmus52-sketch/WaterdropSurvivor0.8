@@ -318,8 +318,9 @@
     #bottom-bars-container {
       position: absolute;
       bottom: 0;
-      left: 0;
-      width: 100%;
+      left: 50%; /* CENTER HORIZONTALLY */
+      transform: translateX(-50%); /* EXACT CENTER */
+      width: auto; /* Don't stretch full width */
       z-index: 100;
       pointer-events: none;
       display: flex;
@@ -329,10 +330,10 @@
       gap: 8px;
     }
     
-    /* Waterdrop Level Display Container */
+    /* Waterdrop Level Display Container - CENTERED AT BOTTOM */
     #waterdrop-container {
-      width: 90px;
-      height: 110px;
+      width: 80px; /* Slightly smaller, less oval */
+      height: 100px; /* Reduced from 110px for less oval appearance */
       position: relative;
       margin-bottom: 15px;
       /* 3D appearance with stronger shadow and depth */
@@ -442,16 +443,16 @@
       display: none;
     }
     
-    /* Round Minimap - Bottom Right Corner */
+    /* Round Minimap - Bottom Right Corner - SMALLER, NEARLY ROUND */
     #minimap-container {
       position: absolute;
-      bottom: 30px;
-      right: 30px;
-      width: 90px; /* Smaller - more compact */
-      height: 105px; /* Nearly round/circular shape */
-      /* WATERDROP SHAPE: Nearly round with subtle waterdrop hint */
-      border-radius: 50% 50% 50% 45%; /* Rounded with slightly less rounded bottom-right for subtle waterdrop effect */
-      transform: rotate(0deg); /* No rotation - standard orientation */
+      bottom: 20px; /* Closer to bottom */
+      right: 20px; /* Closer to right */
+      width: 70px; /* Smaller - more compact */
+      height: 72px; /* Nearly perfectly round */
+      /* Nearly perfect circle with subtle bottom hint */
+      border-radius: 50% 50% 48% 48%; /* Nearly round */
+      transform: rotate(0deg);
       border: 3px solid #FFD700;
       /* 80s BATMAN COMIC STYLE: Dark gradient with halftone */
       background: radial-gradient(circle at 30% 30%, rgba(30,30,30,0.9), rgba(0,0,0,0.95));
@@ -10596,10 +10597,13 @@
       }
     }
     
-    // Claim a tutorial quest
+    // Claim a tutorial quest - REWRITTEN for reliability
     function claimTutorialQuest(questId) {
       const quest = TUTORIAL_QUESTS[questId];
-      if (!quest) return;
+      if (!quest) {
+        console.error('Quest not found:', questId);
+        return;
+      }
       
       // Remove from ready to claim
       const index = saveData.tutorialQuests.readyToClaim.indexOf(questId);
@@ -10615,12 +10619,15 @@
       // Give rewards
       if (quest.rewardGold) {
         saveData.gold += quest.rewardGold;
+        showStatChange(`+${quest.rewardGold} Gold!`);
       }
       if (quest.rewardSkillPoints) {
         saveData.skillPoints += quest.rewardSkillPoints;
+        showStatChange(`+${quest.rewardSkillPoints} Skill Points!`);
       }
       if (quest.rewardAttributePoints) {
         saveData.trainingPoints = (saveData.trainingPoints || 0) + quest.rewardAttributePoints;
+        showStatChange(`+${quest.rewardAttributePoints} Attribute Points!`);
       }
       
       // Unlock building
@@ -10629,24 +10636,29 @@
         if (saveData.campBuildings[quest.unlockBuilding].level === 0) {
           saveData.campBuildings[quest.unlockBuilding].level = 1;
         }
+        const buildingName = CAMP_BUILDINGS[quest.unlockBuilding]?.name || 'Building';
+        showStatChange(`🏛️ ${buildingName} Unlocked!`);
       }
       
       // Give companion egg
       if (quest.companionEgg) {
-        // Companion is already unlocked in save data by default, just make sure
         if (saveData.companions && saveData.companions.stormWolf) {
           saveData.companions.stormWolf.unlocked = true;
         }
+        showStatChange('🥚 Companion Egg Received!');
       }
       
       // Give item
       if (quest.giveItem) {
         saveData.inventory.push(quest.giveItem);
         if (quest.autoEquip && saveData.equippedGear) {
-          // Auto-equip in first slot
           saveData.equippedGear[0] = quest.giveItem;
         }
+        showStatChange(`📦 ${quest.giveItem.name} Acquired!`);
       }
+      
+      // Save immediately after rewards
+      saveSaveData();
       
       // Show reward message
       const message = quest.message || `Quest Complete! ${quest.rewardGold ? `+${quest.rewardGold} gold` : ''} ${quest.rewardSkillPoints ? `+${quest.rewardSkillPoints} skill points` : ''}`;
@@ -10657,37 +10669,42 @@
           message,
           'Awesome!',
           () => {
-            // Start next quest
-            if (quest.nextQuest) {
-              saveData.tutorialQuests.currentQuest = quest.nextQuest;
-              saveSaveData();
-              showNextQuestPopup(quest.nextQuest);
-            }
-            updateCampScreen();
+            // Wait 100ms before activating next quest (as per requirements)
+            setTimeout(() => {
+              if (quest.nextQuest) {
+                saveData.tutorialQuests.currentQuest = quest.nextQuest;
+                saveSaveData();
+                showNextQuestPopup(quest.nextQuest);
+              }
+              updateCampScreen();
+            }, 100);
           }
         );
       } else {
-        // Auto-claim: just advance
-        if (quest.nextQuest) {
-          saveData.tutorialQuests.currentQuest = quest.nextQuest;
-          saveSaveData();
-          showNextQuestPopup(quest.nextQuest);
-          
-          // Trigger Stonehenge cinematic when quest 6 starts
-          if (quest.nextQuest === 'quest6_stonehengeChest' && window.stonehengeChest) {
-            setTimeout(() => {
-              if (!saveData.tutorialQuests.stonehengeChestCinematicShown) {
-                triggerCinematic('stonehenge', window.stonehengeChest.position, 2000);
-                saveData.tutorialQuests.stonehengeChestCinematicShown = true;
-                saveSaveData();
-              }
-            }, 500);
+        // Auto-claim: just advance with 100ms delay
+        setTimeout(() => {
+          if (quest.nextQuest) {
+            saveData.tutorialQuests.currentQuest = quest.nextQuest;
+            saveSaveData();
+            showNextQuestPopup(quest.nextQuest);
+            
+            // Trigger Stonehenge cinematic when quest 6 starts
+            if (quest.nextQuest === 'quest6_stonehengeChest' && window.stonehengeChest) {
+              setTimeout(() => {
+                if (!saveData.tutorialQuests.stonehengeChestCinematicShown) {
+                  triggerCinematic('stonehenge', window.stonehengeChest.position, 2000);
+                  saveData.tutorialQuests.stonehengeChestCinematicShown = true;
+                  saveSaveData();
+                }
+              }, 500);
+            }
           }
-        }
+        }, 100);
       }
-      
-      saveSaveData();
     }
+    
+    // Expose globally for inline onclick handlers
+    window.claimTutorialQuest = claimTutorialQuest;
     
     // Show next quest popup
     function showNextQuestPopup(questId) {
@@ -10888,6 +10905,82 @@
       document.body.appendChild(overlay);
     }
 
+    // NEW: Comic-magazine styled info box (80s Batman style)
+    function showComicInfoBox(title, message, buttonText = 'Got it!', onClose = null) {
+      const overlay = document.createElement('div');
+      overlay.id = 'comic-info-overlay';
+      overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.95);
+        z-index: 100;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        animation: fadeIn 0.3s ease-out;
+      `;
+      
+      const popup = document.createElement('div');
+      popup.style.cssText = `
+        background: linear-gradient(135deg, #1e3a5f 0%, #0d1f3a 100%);
+        border: 6px solid #FFD700;
+        border-radius: 10px;
+        padding: 40px;
+        max-width: 600px;
+        width: 90%;
+        text-align: center;
+        animation: popIn 0.3s ease-out;
+        box-shadow: 
+          0 0 40px rgba(255,215,0,0.6),
+          inset 0 0 30px rgba(0,0,0,0.3);
+        font-family: 'Bangers', cursive;
+      `;
+      
+      popup.innerHTML = `
+        <div style="
+          font-size: 32px; 
+          color: #FFD700; 
+          font-weight: bold; 
+          margin-bottom: 25px;
+          text-shadow: 3px 3px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000;
+          letter-spacing: 2px;
+        ">${title}</div>
+        <div style="
+          font-size: 16px; 
+          color: #FFF; 
+          line-height: 1.8; 
+          margin-bottom: 30px;
+          font-family: Arial, sans-serif;
+          background: rgba(0,0,0,0.3);
+          padding: 20px;
+          border-radius: 10px;
+          border: 2px solid rgba(255,215,0,0.3);
+        ">${message}</div>
+        <button class="btn" style="
+          font-size: 22px; 
+          padding: 15px 40px; 
+          background: #FFD700; 
+          color: #000;
+          font-family: 'Bangers', cursive;
+          border: 3px solid #000;
+          box-shadow: 4px 4px 0 #000;
+          letter-spacing: 1px;
+        ">${buttonText}</button>
+      `;
+      
+      const button = popup.querySelector('button');
+      button.onclick = () => {
+        document.body.removeChild(overlay);
+        if (onClose) onClose();
+      };
+      
+      overlay.appendChild(popup);
+      document.body.appendChild(overlay);
+    }
+
     // NEW: Show Quest Hall UI for claiming completed quests
     function showQuestHall() {
       // Clear quest notification for the main building
@@ -11036,28 +11129,34 @@
         saveData.campBuildings.campHub.unlocked = false;
         saveData.campBuildings.campHub.level = 0;
         
-        // Show first-time welcome popup
+        // Show first-time welcome popup - REWRITTEN with comic-magazine styling
         if (!saveData.storyQuests.welcomeShown) {
           saveData.storyQuests.welcomeShown = true;
           saveSaveData();
           
-          // Show popup after a brief delay
+          // Show comic-style popup after a brief delay
           setTimeout(() => {
-            showQuestPopup(
-              '🎉 Welcome to Waterdrop Survivor Camp!',
-              'Hey there! Welcome to your camp. This is where you\'ll upgrade between runs and unlock new abilities.<br><br>📜 <b>Go to the Quest/Main building to start your first story quest!</b><br><br>Complete quests to unlock more buildings and features.',
-              'Let\'s Go!',
+            showComicInfoBox(
+              '💧 WATERDROP SURVIVOR - THE GAME LOOP',
+              `<div style="text-align: left; padding: 10px;">
+                <p style="font-family: 'Bangers', cursive; font-size: 20px; margin-bottom: 10px;">🎮 <b>THE SURVIVAL CYCLE</b></p>
+                <p style="line-height: 1.8; margin-bottom: 10px;">
+                  1️⃣ <b>START RUN</b> → Fight enemies, level up, collect XP<br>
+                  2️⃣ <b>DIE & RETURN</b> → Keep your gold & progress<br>
+                  3️⃣ <b>UPGRADE CAMP</b> → Unlock skills, gear, companions<br>
+                  4️⃣ <b>GET STRONGER</b> → Go back out and survive longer!
+                </p>
+                <p style="font-family: 'Bangers', cursive; font-size: 20px; margin-bottom: 10px;">📜 <b>YOUR FIRST QUEST</b></p>
+                <p style="line-height: 1.8;">
+                  <b>NO QUEST IS ACTIVE ON YOUR FIRST RUN.</b><br>
+                  After you die, Quest 1 will unlock in the Main Building.<br>
+                  Complete quests to unlock new buildings and features!
+                </p>
+              </div>`,
+              'START MY JOURNEY!',
               () => {
-                // Set the first quest
-                if (!saveData.storyQuests.currentQuest) {
-                  saveData.storyQuests.currentQuest = 'firstRun';
-                  // Mark main building with notification
-                  if (!saveData.storyQuests.questNotifications) {
-                    saveData.storyQuests.questNotifications = {};
-                  }
-                  saveData.storyQuests.questNotifications.questMission = true;
-                  saveSaveData();
-                }
+                // NO quest set on first visit - quest activates after first death
+                saveSaveData();
               }
             );
           }, 500);
@@ -13998,6 +14097,9 @@
       // SLOW MOTION EFFECT - Time slows, sounds pitch down
       createSlowMotionEffect();
       
+      // NEW: Centered LEVEL UP text animation (grow → shrink → fade)
+      createCenteredLevelUpText();
+      
       // Level up visual effects with delay for slow-mo
       setTimeout(() => {
         createLevelUpEffects();
@@ -14008,6 +14110,67 @@
       setTimeout(() => {
         showUpgradeModal();
       }, 800);
+    }
+    
+    // NEW: Centered "LEVEL UP!" text that grows, shrinks, and fades
+    function createCenteredLevelUpText() {
+      const levelUpText = document.createElement('div');
+      levelUpText.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) scale(0);
+        font-family: 'Bangers', cursive;
+        font-size: 120px;
+        font-weight: bold;
+        color: #FFD700;
+        text-shadow: 
+          0 0 20px rgba(255,215,0,1),
+          0 0 40px rgba(93,173,226,0.8),
+          4px 4px 0 #000,
+          -2px -2px 0 #000,
+          2px -2px 0 #000,
+          -2px 2px 0 #000;
+        z-index: 200;
+        pointer-events: none;
+        letter-spacing: 8px;
+      `;
+      levelUpText.textContent = 'LEVEL UP!';
+      document.body.appendChild(levelUpText);
+      
+      // Animation: appear from nothing (scale 0) → grow to combo size → shrink and fade
+      const startTime = Date.now();
+      const totalDuration = 2000; // 2 seconds total
+      
+      const animate = () => {
+        const elapsed = Date.now() - startTime;
+        const progress = elapsed / totalDuration;
+        
+        if (progress < 0.3) {
+          // Phase 1: Grow from nothing to full size (0-30%)
+          const scale = (progress / 0.3) * 1.2; // Grow to 120%
+          levelUpText.style.transform = `translate(-50%, -50%) scale(${scale})`;
+          levelUpText.style.opacity = progress / 0.3;
+        } else if (progress < 0.6) {
+          // Phase 2: Hold at full size (30-60%)
+          levelUpText.style.transform = `translate(-50%, -50%) scale(1.2)`;
+          levelUpText.style.opacity = 1;
+        } else if (progress < 1) {
+          // Phase 3: Shrink and fade (60-100%)
+          const fadeProgress = (progress - 0.6) / 0.4;
+          const scale = 1.2 - (fadeProgress * 0.6); // Shrink from 1.2 to 0.6
+          const opacity = 1 - fadeProgress;
+          levelUpText.style.transform = `translate(-50%, -50%) scale(${scale})`;
+          levelUpText.style.opacity = opacity;
+        } else {
+          // Animation complete, remove element
+          document.body.removeChild(levelUpText);
+          return;
+        }
+        
+        requestAnimationFrame(animate);
+      };
+      animate();
     }
     
     function createSmallFloatingText(text, pos) {
@@ -14193,18 +14356,90 @@
         particles.push(particle);
       }
       
-      // Lightning bolts - Reduced from 8 to 4 for performance
-      for(let i=0; i<4; i++) {
-        const angle = (i / 4) * Math.PI * 2;
-        const lightning = new LightningBolt(
-          player.mesh.position.clone(),
-          new THREE.Vector3(
-            Math.cos(angle) * 5,
-            8,
-            Math.sin(angle) * 5
-          )
+      // REMOVED: Lightning bolts (too expensive for performance)
+      // ADDED: Extra water spray from head, arms, and ground around character
+      // Water spray from character's head
+      for(let i=0; i<20; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 0.3 + Math.random() * 0.5;
+        const dropletGeo = new THREE.SphereGeometry(0.1, 6, 6);
+        const dropletMat = new THREE.MeshPhysicalMaterial({ 
+          color: 0x5DADE2,
+          transparent: true,
+          opacity: 0.8,
+          metalness: 0.4,
+          roughness: 0.2
+        });
+        const droplet = new THREE.Mesh(dropletGeo, dropletMat);
+        droplet.position.copy(player.mesh.position);
+        droplet.position.y += 1.5; // From head
+        scene.add(droplet);
+        
+        const vel = new THREE.Vector3(
+          Math.cos(angle) * speed,
+          0.8 + Math.random() * 0.4,
+          Math.sin(angle) * speed
         );
-        particles.push(lightning);
+        
+        let life = 60;
+        const updateDroplet = () => {
+          life--;
+          droplet.position.add(vel);
+          vel.y -= 0.04; // Gravity
+          droplet.material.opacity = life / 60;
+          
+          if (life <= 0 || droplet.position.y < 0) {
+            scene.remove(droplet);
+            droplet.geometry.dispose();
+            droplet.material.dispose();
+          } else {
+            requestAnimationFrame(updateDroplet);
+          }
+        };
+        updateDroplet();
+      }
+      
+      // Water spray from ground around character (circle pattern)
+      for(let i=0; i<30; i++) {
+        const angle = (i / 30) * Math.PI * 2;
+        const radius = 1 + Math.random() * 0.5;
+        const dropletGeo = new THREE.SphereGeometry(0.08, 6, 6);
+        const dropletMat = new THREE.MeshPhysicalMaterial({ 
+          color: 0x3498DB,
+          transparent: true,
+          opacity: 0.9,
+          metalness: 0.3,
+          roughness: 0.1
+        });
+        const droplet = new THREE.Mesh(dropletGeo, dropletMat);
+        droplet.position.copy(player.mesh.position);
+        droplet.position.x += Math.cos(angle) * radius;
+        droplet.position.z += Math.sin(angle) * radius;
+        droplet.position.y = 0.1;
+        scene.add(droplet);
+        
+        const vel = new THREE.Vector3(
+          Math.cos(angle) * 0.15,
+          0.6 + Math.random() * 0.4,
+          Math.sin(angle) * 0.15
+        );
+        
+        let life = 50;
+        const updateDroplet = () => {
+          life--;
+          droplet.position.add(vel);
+          vel.y -= 0.035;
+          droplet.material.opacity = life / 50;
+          
+          if (life <= 0 || droplet.position.y < 0) {
+            scene.remove(droplet);
+            droplet.geometry.dispose();
+            droplet.material.dispose();
+          } else {
+            requestAnimationFrame(updateDroplet);
+          }
+        };
+        updateDroplet();
       }
       
       // Camera zoom effect
