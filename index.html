@@ -5906,14 +5906,14 @@
               Math.sin(angle) * speed
             );
             
-            let life = 50;
+            let life = 80;  // Increased from 50 for more visible death animation
             const updatePiece = () => {
               life--;
               piece.position.add(vel);
               vel.y -= 0.02; // Gravity
               piece.rotation.x += 0.15;
               piece.rotation.y += 0.15;
-              piece.material.opacity = life / 50;
+              piece.material.opacity = life / 80;  // Update divisor to match new life
               
               if (life <= 0 || piece.position.y < 0) {
                 scene.remove(piece);
@@ -5959,11 +5959,11 @@
           scene.add(bloodPool);
           
           // Fade out
-          let corpseLife = 120;
+          let corpseLife = 180;  // Increased from 120 for longer visible corpse
           const fadeCorpse = () => {
             corpseLife--;
-            corpse.material.opacity = (corpseLife / 120) * 0.7;
-            bloodPool.material.opacity = (corpseLife / 120) * 0.5;
+            corpse.material.opacity = (corpseLife / 180) * 0.7;  // Update divisor
+            bloodPool.material.opacity = (corpseLife / 180) * 0.5;  // Update divisor
             
             if (corpseLife <= 0) {
               scene.remove(corpse);
@@ -6513,17 +6513,17 @@
 
     // Performance: Cached geometries and materials for projectiles (reused across instances)
     const projectileGeometryCache = {
-      bullet: new THREE.SphereGeometry(0.25, 8, 8),
-      bulletGlow: new THREE.SphereGeometry(0.35, 6, 6)
+      bullet: new THREE.SphereGeometry(0.0625, 8, 8),  // 75% smaller (0.25 * 0.25 = 0.0625)
+      bulletGlow: new THREE.SphereGeometry(0.0875, 6, 6)  // 75% smaller (0.35 * 0.25 = 0.0875)
     };
     const projectileMaterialCache = {
       bullet: new THREE.MeshBasicMaterial({ 
-        color: 0xFFFF00,
+        color: 0xFF4500,  // Red-orange starting color
         transparent: true,
         opacity: 0.95
       }),
       bulletGlow: new THREE.MeshBasicMaterial({
-        color: 0xFFFF00,
+        color: 0xFF6347,  // Tomato red-orange for glow
         transparent: true,
         opacity: 0.4
       })
@@ -6684,19 +6684,26 @@
 
     class Projectile {
       constructor(x, z, target) {
-        // Performance: Reuse cached geometry and materials instead of creating new ones
-        this.mesh = new THREE.Mesh(projectileGeometryCache.bullet, projectileMaterialCache.bullet);
+        // Performance: Reuse cached geometry but clone materials for independent color transitions
+        this.mesh = new THREE.Mesh(
+          projectileGeometryCache.bullet, 
+          projectileMaterialCache.bullet.clone()  // Clone material for independent color
+        );
         this.mesh.position.set(x, 0.5, z);
         scene.add(this.mesh);
         
-        // Add glowing trail effect with cached resources
-        this.glow = new THREE.Mesh(projectileGeometryCache.bulletGlow, projectileMaterialCache.bulletGlow);
+        // Add glowing trail effect with cloned material
+        this.glow = new THREE.Mesh(
+          projectileGeometryCache.bulletGlow, 
+          projectileMaterialCache.bulletGlow.clone()  // Clone material for independent color
+        );
         this.glow.position.copy(this.mesh.position);
         scene.add(this.glow);
 
-        this.speed = 0.4;
+        this.speed = 0.5; // Increased from 0.4 (25% faster)
         this.active = true;
         this.life = 60; // Frames
+        this.maxLife = 60; // Track max life for color transition
         
         // Piercing support: track enemies already hit
         this.hitEnemies = new Set();
@@ -6739,10 +6746,28 @@
         this.mesh.position.x += this.vx;
         this.mesh.position.z += this.vz;
         
+        // Color transition: red-orange (start) → copper (end)
+        // Progress: 1.0 (just fired) → 0.0 (about to expire)
+        const progress = this.life / this.maxLife;
+        
+        // Red-orange: 0xFF4500 (RGB: 255, 69, 0)
+        // Copper: 0xB87333 (RGB: 184, 115, 51)
+        const startColor = { r: 255, g: 69, b: 0 };
+        const endColor = { r: 184, g: 115, b: 51 };
+        
+        const r = Math.floor(startColor.r * progress + endColor.r * (1 - progress));
+        const g = Math.floor(startColor.g * progress + endColor.g * (1 - progress));
+        const b = Math.floor(startColor.b * progress + endColor.b * (1 - progress));
+        
+        const currentColor = (r << 16) | (g << 8) | b;
+        this.mesh.material.color.setHex(currentColor);
+        
         // Update glow position and fade it
         if (this.glow) {
           this.glow.position.copy(this.mesh.position);
           this.glow.material.opacity = 0.4 * (this.life / 60);
+          // Also update glow color to match bullet
+          this.glow.material.color.setHex(currentColor);
         }
         
         this.life--;
@@ -7023,12 +7048,18 @@
       destroy() {
         this.active = false;
         scene.remove(this.mesh);
-        // Performance: Don't dispose shared cached geometry/material
+        // Dispose cloned materials (not geometry, which is shared)
+        if (this.mesh.material) {
+          this.mesh.material.dispose();
+        }
         
         // Remove glow if it exists
         if (this.glow) {
           scene.remove(this.glow);
-          // Performance: Don't dispose shared cached geometry/material
+          // Dispose cloned glow material
+          if (this.glow.material) {
+            this.glow.material.dispose();
+          }
         }
       }
     }
