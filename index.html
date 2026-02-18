@@ -6676,7 +6676,7 @@
         
         // Piercing support: track enemies already hit
         this.hitEnemies = new Set();
-        this.pierceCount = playerStats.pierceCount || 0; // How many enemies can be pierced
+        this.maxHits = (playerStats.pierceCount || 0) + 1; // Total enemies this bullet can hit (1 + pierce count)
 
         // Calculate direction
         const dx = target.x - x;
@@ -6832,13 +6832,13 @@
             this.hitEnemies.add(enemy);
             
             // Check if bullet should be destroyed or continue piercing
-            if (this.hitEnemies.size > this.pierceCount) {
-              // Hit more enemies than pierce count allows, destroy bullet
+            if (this.hitEnemies.size >= this.maxHits) {
+              // Hit maximum number of enemies, destroy bullet
               this.destroy();
               playSound('hit');
               break;
             } else {
-              // Continue piercing
+              // Continue piercing (haven't reached max hits yet)
               playSound('hit');
               // Don't break - allow bullet to continue
             }
@@ -14893,10 +14893,11 @@
           id: 'pierce', 
           icon: '🎯',
           title: 'PIERCING SHOTS', 
-          desc: 'Bullets Pass Through +1 Enemy (Stacks)', 
+          desc: 'Bullets Hit +1 Additional Enemy (Stacks)', 
           apply: () => { 
             playerStats.pierceCount = (playerStats.pierceCount || 0) + 1;
-            showStatChange('Piercing +1 Enemy (Total: ' + playerStats.pierceCount + ' enemies)');
+            const totalHits = playerStats.pierceCount + 1;
+            showStatChange('Piercing +1! (Total hits: ' + totalHits + ' enemies)');
           } 
         }
       ];
@@ -15355,25 +15356,40 @@
       else {
         // ALWAYS SHOW 6 CHOICES: Show 6 random choices for 2×3 grid
         // Weighted selection: ATK speed and ATK power have higher spawn weight
+        
+        // Create weighted pool with Fisher-Yates shuffle for proper randomization
         const weightedPool = [];
         
-        // Add each upgrade to pool, with ATK speed and power added multiple times for higher weight
+        // Add each upgrade with appropriate weight
         commonUpgrades.forEach(upgrade => {
           if (upgrade.id === 'str' || upgrade.id === 'aspd') {
-            // ATK power and ATK speed: 3x weight (added 3 times)
-            weightedPool.push(upgrade, upgrade, upgrade);
+            // ATK power and ATK speed: 3x weight
+            weightedPool.push({ upgrade, weight: 3 });
           } else {
-            // Other upgrades: normal weight (added once)
-            weightedPool.push(upgrade);
+            // Other upgrades: normal weight
+            weightedPool.push({ upgrade, weight: 1 });
           }
         });
         
-        // Shuffle the weighted pool and pick 6 unique upgrades
-        const shuffled = weightedPool.sort(() => 0.5 - Math.random());
+        // Expand weighted pool based on weights
+        const expandedPool = [];
+        weightedPool.forEach(item => {
+          for (let i = 0; i < item.weight; i++) {
+            expandedPool.push(item.upgrade);
+          }
+        });
+        
+        // Fisher-Yates shuffle for proper randomization
+        for (let i = expandedPool.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [expandedPool[i], expandedPool[j]] = [expandedPool[j], expandedPool[i]];
+        }
+        
+        // Pick 6 unique upgrades
         const unique = [];
         const seen = new Set();
         
-        for (const upgrade of shuffled) {
+        for (const upgrade of expandedPool) {
           if (!seen.has(upgrade.id)) {
             unique.push(upgrade);
             seen.add(upgrade.id);
