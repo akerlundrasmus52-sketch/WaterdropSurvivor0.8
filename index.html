@@ -10541,7 +10541,7 @@
 
     // --- TUTORIAL QUEST SYSTEM (8-Quest Flow) ---
     
-    // Quest definitions
+    // Quest definitions with conditions for dependencies
     const TUTORIAL_QUESTS = {
       firstRunDeath: {
         id: 'firstRunDeath',
@@ -10553,7 +10553,8 @@
         unlockBuilding: 'questMission', // Already unlocked by default
         autoClaim: true,
         triggerOnDeath: true,
-        nextQuest: 'quest1_kill3'
+        nextQuest: 'quest1_kill3',
+        conditions: [] // No prerequisites
       },
       quest1_kill3: {
         id: 'quest1_kill3',
@@ -10564,7 +10565,8 @@
         rewardGold: 200,
         rewardSkillPoints: 2,
         unlockBuilding: 'skillTree',
-        nextQuest: 'quest2_spendSkills'
+        nextQuest: 'quest2_spendSkills',
+        conditions: ['firstRunDeath'] // Requires firstRunDeath to be auto-claimed (on first death)
       },
       quest2_spendSkills: {
         id: 'quest2_spendSkills',
@@ -10575,7 +10577,8 @@
         rewardGold: 0,
         rewardSkillPoints: 0,
         unlockBuilding: 'trainingHall', // Progression Building (Training Hall serves as attribute/progression)
-        nextQuest: 'quest3_buyProgression'
+        nextQuest: 'quest3_buyProgression',
+        conditions: ['quest1_kill3'] // Requires quest1_kill3 to be claimed
       },
       quest3_buyProgression: {
         id: 'quest3_buyProgression',
@@ -10586,7 +10589,8 @@
         rewardGold: 0,
         rewardSkillPoints: 0,
         message: 'Great! You\'re getting stronger!',
-        nextQuest: 'quest4_kill10'
+        nextQuest: 'quest4_kill10',
+        conditions: ['quest2_spendSkills'] // Requires quest2_spendSkills to be claimed
       },
       quest4_kill10: {
         id: 'quest4_kill10',
@@ -10598,7 +10602,8 @@
         rewardSkillPoints: 0,
         unlockBuilding: 'companionHouse',
         companionEgg: true, // Give companion egg
-        nextQuest: 'quest5_breedCompanion'
+        nextQuest: 'quest5_breedCompanion',
+        conditions: ['quest3_buyProgression'] // Requires quest3_buyProgression to be claimed
       },
       quest5_breedCompanion: {
         id: 'quest5_breedCompanion',
@@ -10609,7 +10614,8 @@
         rewardGold: 0,
         rewardSkillPoints: 0,
         message: 'Companion activated! They will fight by your side!',
-        nextQuest: 'quest6_stonehengeChest'
+        nextQuest: 'quest6_stonehengeChest',
+        conditions: ['quest4_kill10'] // Requires quest4_kill10 to be claimed
       },
       quest6_stonehengeChest: {
         id: 'quest6_stonehengeChest',
@@ -10622,7 +10628,8 @@
         unlockBuilding: 'armory', // Gear Building
         giveItem: { name: 'Cigar', rarity: 'rare', stats: { strength: 1, speed: 1, precision: 1 } },
         autoEquip: true,
-        nextQuest: 'quest7_survive2min'
+        nextQuest: 'quest7_survive2min',
+        conditions: ['quest5_breedCompanion'] // Requires quest5_breedCompanion to be claimed
       },
       quest7_survive2min: {
         id: 'quest7_survive2min',
@@ -10634,7 +10641,8 @@
         rewardSkillPoints: 0,
         rewardAttributePoints: 3,
         unlockBuilding: 'forge', // Attributes Building (using forge as placeholder)
-        nextQuest: 'quest8_newWeapon'
+        nextQuest: 'quest8_newWeapon',
+        conditions: ['quest6_stonehengeChest'] // Requires quest6_stonehengeChest to be claimed
       },
       quest8_newWeapon: {
         id: 'quest8_newWeapon',
@@ -10645,7 +10653,8 @@
         rewardGold: 0,
         rewardSkillPoints: 0,
         message: 'Tutorial Complete! You\'re ready to survive!',
-        nextQuest: null // Tutorial complete
+        nextQuest: null, // Tutorial complete
+        conditions: ['quest7_survive2min'] // Requires quest7_survive2min to be claimed
       }
     };
     
@@ -10653,6 +10662,34 @@
     function getCurrentQuest() {
       const questId = saveData.tutorialQuests.currentQuest;
       return questId ? TUTORIAL_QUESTS[questId] : null;
+    }
+    
+    // Check if quest conditions are fulfilled
+    function checkQuestConditions(questId) {
+      const quest = TUTORIAL_QUESTS[questId];
+      if (!quest) return false;
+      
+      // If no conditions, quest is always available
+      if (!quest.conditions || quest.conditions.length === 0) {
+        return true;
+      }
+      
+      // Check if all prerequisite quests are claimed (completed)
+      const completedQuests = saveData.tutorialQuests.completedQuests || [];
+      for (const conditionQuestId of quest.conditions) {
+        if (!completedQuests.includes(conditionQuestId)) {
+          console.log(`Quest ${questId} blocked: requires ${conditionQuestId} to be claimed`);
+          return false;
+        }
+      }
+      
+      return true;
+    }
+    
+    // Check if a quest is claimed (completed)
+    function isQuestClaimed(questId) {
+      const completedQuests = saveData.tutorialQuests.completedQuests || [];
+      return completedQuests.includes(questId);
     }
     
     // Check if a building has an active quest
@@ -10764,9 +10801,16 @@
             // Wait 100ms before activating next quest (as per requirements)
             setTimeout(() => {
               if (quest.nextQuest) {
-                saveData.tutorialQuests.currentQuest = quest.nextQuest;
-                saveSaveData();
-                showNextQuestPopup(quest.nextQuest);
+                // Check if conditions for next quest are met
+                if (checkQuestConditions(quest.nextQuest)) {
+                  saveData.tutorialQuests.currentQuest = quest.nextQuest;
+                  saveSaveData();
+                  showNextQuestPopup(quest.nextQuest);
+                } else {
+                  const questName = TUTORIAL_QUESTS[quest.nextQuest]?.name || quest.nextQuest;
+                  console.log(`Cannot start ${questName}: conditions not met`);
+                  showStatChange(`⚠️ Prerequisites not met for ${questName}`);
+                }
               }
               updateCampScreen();
             }, 100);
@@ -10776,27 +10820,36 @@
         // Auto-claim: just advance with 100ms delay
         setTimeout(() => {
           if (quest.nextQuest) {
-            saveData.tutorialQuests.currentQuest = quest.nextQuest;
-            saveSaveData();
-            showNextQuestPopup(quest.nextQuest);
-            
-            // Trigger Stonehenge cinematic when quest 6 starts
-            if (quest.nextQuest === 'quest6_stonehengeChest' && window.stonehengeChest) {
-              setTimeout(() => {
-                if (!saveData.tutorialQuests.stonehengeChestCinematicShown) {
-                  triggerCinematic('stonehenge', window.stonehengeChest.position, 2000);
-                  saveData.tutorialQuests.stonehengeChestCinematicShown = true;
-                  saveSaveData();
-                }
-              }, 500);
+            // Check if conditions for next quest are met
+            if (checkQuestConditions(quest.nextQuest)) {
+              saveData.tutorialQuests.currentQuest = quest.nextQuest;
+              saveSaveData();
+              showNextQuestPopup(quest.nextQuest);
+              
+              // Trigger Stonehenge cinematic when quest 6 starts
+              if (quest.nextQuest === 'quest6_stonehengeChest' && window.stonehengeChest) {
+                setTimeout(() => {
+                  if (!saveData.tutorialQuests.stonehengeChestCinematicShown) {
+                    triggerCinematic('stonehenge', window.stonehengeChest.position, 2000);
+                    saveData.tutorialQuests.stonehengeChestCinematicShown = true;
+                    saveSaveData();
+                  }
+                }, 500);
+              }
+            } else {
+              const questName = TUTORIAL_QUESTS[quest.nextQuest]?.name || quest.nextQuest;
+              console.log(`Cannot start ${questName}: conditions not met`);
             }
           }
         }, 100);
       }
     }
     
-    // Expose globally for inline onclick handlers
+    // Expose globally for inline onclick handlers and external access
     window.claimTutorialQuest = claimTutorialQuest;
+    window.checkQuestConditions = checkQuestConditions;
+    window.isQuestClaimed = isQuestClaimed;
+    window.getCurrentQuest = getCurrentQuest;
     
     // Show next quest popup
     function showNextQuestPopup(questId) {
@@ -10830,8 +10883,15 @@
       if (!saveData.tutorialQuests.currentQuest && completed.length === 0) {
         // First quest starts after first death
         if (saveData.tutorialQuests.firstDeathShown) {
-          saveData.tutorialQuests.currentQuest = 'quest1_kill3';
-          saveSaveData();
+          const firstQuestId = 'quest1_kill3';
+          // Validate conditions before starting
+          if (checkQuestConditions(firstQuestId)) {
+            saveData.tutorialQuests.currentQuest = firstQuestId;
+            saveSaveData();
+          } else {
+            const questName = TUTORIAL_QUESTS[firstQuestId]?.name || firstQuestId;
+            console.log(`Cannot start ${questName}: conditions not met`);
+          }
         }
       }
     }
@@ -16551,9 +16611,16 @@
           showComicTutorial('first_death');
           // Start quest 1 after first death
           setTimeout(() => {
-            saveData.tutorialQuests.currentQuest = 'quest1_kill3';
-            saveSaveData();
-            showNextQuestPopup('quest1_kill3');
+            const firstQuestId = 'quest1_kill3';
+            // Validate conditions before starting
+            if (checkQuestConditions(firstQuestId)) {
+              saveData.tutorialQuests.currentQuest = firstQuestId;
+              saveSaveData();
+              showNextQuestPopup(firstQuestId);
+            } else {
+              const questName = TUTORIAL_QUESTS[firstQuestId]?.name || firstQuestId;
+              console.log(`Cannot start ${questName}: conditions not met`);
+            }
           }, 1000);
         }, 1000);
       }
