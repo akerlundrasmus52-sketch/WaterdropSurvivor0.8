@@ -1197,12 +1197,14 @@
     
     /* Rarity-based edge colors */
     .upgrade-card.rarity-common {
-      border-color: #888888;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.5), inset 0 0 0 2px rgba(0,0,0,0.4);
+      border-color: #27ae60;
+      background: linear-gradient(135deg, #1a2e1a 0%, #0f1f0f 100%);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.5), 0 0 10px rgba(39,174,96,0.2), inset 0 0 0 2px rgba(0,0,0,0.4);
     }
     
     .upgrade-card.rarity-rare {
       border-color: #3498DB;
+      background: linear-gradient(135deg, #1a2e3a 0%, #0f1f2a 100%);
       box-shadow: 0 4px 8px rgba(0,0,0,0.5), 0 0 15px rgba(52,152,219,0.3), inset 0 0 0 2px rgba(0,0,0,0.4);
     }
     
@@ -1211,26 +1213,29 @@
     }
     
     .upgrade-card.rarity-epic {
-      border-color: #9b59b6;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.5), 0 0 15px rgba(155,89,182,0.3), inset 0 0 0 2px rgba(0,0,0,0.4);
+      border-color: #e67e22;
+      background: linear-gradient(135deg, #2e1a0a 0%, #1f0f05 100%);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.5), 0 0 15px rgba(230,126,34,0.3), inset 0 0 0 2px rgba(0,0,0,0.4);
     }
     
     .upgrade-card.rarity-epic:hover {
-      box-shadow: 0 0 20px rgba(155,89,182,0.8), 0 0 40px rgba(155,89,182,0.6);
+      box-shadow: 0 0 20px rgba(230,126,34,0.8), 0 0 40px rgba(230,126,34,0.6);
     }
     
     .upgrade-card.rarity-legendary {
-      border-color: #FFA500;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.5), 0 0 20px rgba(255,165,0,0.5), inset 0 0 0 2px rgba(0,0,0,0.4);
+      border-color: #e74c3c;
+      background: linear-gradient(135deg, #2e0a0a 0%, #1f0505 100%);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.5), 0 0 20px rgba(231,76,60,0.5), inset 0 0 0 2px rgba(0,0,0,0.4);
       animation: legendary-glow 2s ease-in-out infinite alternate;
     }
     
     .upgrade-card.rarity-legendary:hover {
-      box-shadow: 0 0 25px rgba(255,165,0,1), 0 0 50px rgba(255,165,0,0.8);
+      box-shadow: 0 0 25px rgba(231,76,60,1), 0 0 50px rgba(231,76,60,0.8);
     }
     
     .upgrade-card.rarity-mythical {
       border-color: #FF4444;
+      background: linear-gradient(135deg, #3a0505 0%, #2a0000 100%);
       box-shadow: 0 4px 8px rgba(0,0,0,0.5), 0 0 20px rgba(255,68,68,0.5), inset 0 0 0 2px rgba(0,0,0,0.4);
       animation: mythical-glow 1.5s ease-in-out infinite alternate;
     }
@@ -1241,10 +1246,10 @@
     
     @keyframes legendary-glow {
       0% { 
-        box-shadow: 0 4px 8px rgba(0,0,0,0.5), 0 0 20px rgba(255,165,0,0.5), inset 0 0 0 2px rgba(0,0,0,0.4);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.5), 0 0 20px rgba(231,76,60,0.5), inset 0 0 0 2px rgba(0,0,0,0.4);
       }
       100% { 
-        box-shadow: 0 4px 8px rgba(0,0,0,0.5), 0 0 30px rgba(255,165,0,0.8), 0 0 50px rgba(255,165,0,0.4), inset 0 0 0 2px rgba(0,0,0,0.4);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.5), 0 0 30px rgba(231,76,60,0.8), 0 0 50px rgba(231,76,60,0.4), inset 0 0 0 2px rgba(0,0,0,0.4);
       }
     }
     
@@ -1333,13 +1338,14 @@
     
     /* Highest possible upgrade gets legendary treatment */
     .upgrade-card.max-upgrade {
-      border-color: #FFA500;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.5), 0 0 20px rgba(255,165,0,0.5), inset 0 0 0 2px rgba(0,0,0,0.4);
+      border-color: #e74c3c;
+      background: linear-gradient(135deg, #2e0a0a 0%, #1f0505 100%);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.5), 0 0 20px rgba(231,76,60,0.5), inset 0 0 0 2px rgba(0,0,0,0.4);
       animation: legendary-glow 2s ease-in-out infinite alternate;
     }
     
     .upgrade-card.max-upgrade:hover {
-      box-shadow: 0 0 25px rgba(255,165,0,1), 0 0 50px rgba(255,165,0,0.8);
+      box-shadow: 0 0 25px rgba(231,76,60,1), 0 0 50px rgba(231,76,60,0.8);
     }
     
     @keyframes perkPulse {
@@ -1916,10 +1922,10 @@
     /* Credits/Achievements Screens */
     #credits-screen, #achievements-screen, #camp-screen {
       position: fixed;
-      top: 5%; /* Shifted down 5% for iPhone 16 */
-      left: 5%; /* Shifted right 5% for iPhone 16 */
-      width: 90%; /* Reduced from 100% to account for shift */
-      height: 90%; /* Reduced from 100% to account for shift */
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
       background: linear-gradient(to bottom, #1a1a2e, #16213e);
       display: none;
       flex-direction: column;
@@ -1927,11 +1933,11 @@
       justify-content: flex-start;
       overflow-y: auto;
       z-index: 50; /* Lower than UI layer buttons */
-      /* IPHONE 16 OPTIMIZATION: Adjust padding for safe area, shift left/up for full visibility */
-      padding-top: max(30px, env(safe-area-inset-top)); /* Shift slightly up */
+      /* IPHONE 16 OPTIMIZATION: Adjust padding for safe area */
+      padding-top: max(30px, env(safe-area-inset-top));
       padding-right: max(20px, env(safe-area-inset-right));
       padding-bottom: max(80px, env(safe-area-inset-bottom));
-      padding-left: max(30px, env(safe-area-inset-left)); /* Shift slightly left */
+      padding-left: max(20px, env(safe-area-inset-left));
     }
 
     .screen-title {
@@ -11264,16 +11270,14 @@
           const questId = this.getAttribute('data-quest-id');
           console.log('[Quest] Claiming quest:', questId);
           
-          // Claim the quest
-          claimTutorialQuest(questId);
+          // Remove Quest Hall overlay immediately so the reward popup is clearly visible
+          const overlayElement = document.body.querySelector('[data-quest-hall-overlay]');
+          if (overlayElement) {
+            document.body.removeChild(overlayElement);
+          }
           
-          // Remove overlay after a short delay
-          setTimeout(() => {
-            const overlayElement = document.body.querySelector('[data-quest-hall-overlay]');
-            if (overlayElement) {
-              document.body.removeChild(overlayElement);
-            }
-          }, 100);
+          // Claim the quest (shows reward popup + triggers next quest)
+          claimTutorialQuest(questId);
         });
       });
       
@@ -15562,25 +15566,30 @@
         
         // Add appropriate styling classes based on upgrade type
         if (u.id) {
-          // Class upgrades
+          // Class upgrades (epic - orange)
           if (u.id.startsWith('class_')) {
-            card.className += ' class';
+            card.className += ' class rarity-epic';
           }
-          // Perk upgrades (class-like purple edges)
+          // Perk upgrades (epic - orange)
           else if (u.id.startsWith('perk_')) {
-            card.className += ' perk';
+            card.className += ' perk rarity-epic';
           }
-          // Weapon upgrades
+          // Weapon upgrades (rare - blue)
           else if (u.id.includes('gun_') || u.id.includes('sword_') || u.id.includes('aura_') || 
                    u.id.includes('meteor_') || u.id.includes('drone_') || u.id.includes('double_barrel_') ||
                    u.id.includes('ice_spear_') || u.id.includes('fire_ring_')) {
-            card.className += ' weapon';
+            card.className += ' weapon rarity-rare';
+          }
+          else {
+            // Default common upgrades get green rarity
+            card.className += ' rarity-common';
           }
           
-          // Special powerful upgrades get max-upgrade legendary glow
+          // Special powerful upgrades get legendary (red) treatment
           if (u.id.includes('dash_mastery') || u.id.includes('second_wind') || 
               u.id.includes('berserker_rage') || u.id.includes('lucky_strikes')) {
-            card.className += ' max-upgrade';
+            card.classList.remove('rarity-common', 'rarity-rare', 'rarity-epic', 'rarity-legendary', 'rarity-mythical');
+            card.classList.add('max-upgrade', 'rarity-legendary');
           }
         }
         
@@ -17349,7 +17358,8 @@
       // FRESH: FPS watchdog - rolling 10-frame average
       recentFrameTimes: [],
       rollingAvgFPS: 60,
-      particleThrottleActive: false
+      particleThrottleActive: false,
+      consecutiveSkipCount: 0 // Track consecutive skipped renders to prevent frozen screen
     };
     
     // FRESH: FPS Watchdog - Update rolling average and throttle particles if needed
@@ -17546,8 +17556,10 @@
       let shouldSkipRender = false;
       
       // Skip if previous frame exceeded 2x budget (first frame has totalFrameTime=0 so won't skip)
-      if (previousFrameTime > FRAME_TIME_BUDGET * 2) {
+      // But never skip more than 2 consecutive frames to prevent a frozen-screen bug
+      if (previousFrameTime > FRAME_TIME_BUDGET * 2 && performanceLog.consecutiveSkipCount < 2) {
         shouldSkipRender = true;
+        performanceLog.consecutiveSkipCount++;
         // Throttled warning to prevent console spam during sustained poor performance
         if (!window.lastFrameSkipWarning || (Date.now() - window.lastFrameSkipWarning) > 5000) {
           console.warn(`Frame skip triggered: previous frame took ${previousFrameTime.toFixed(2)}ms`);
@@ -18562,6 +18574,7 @@
         try {
           renderer.render(scene, camera);
           performanceLog.renderCount++;
+          performanceLog.consecutiveSkipCount = 0; // Reset on successful render
         } catch (error) {
           console.error('Render error caught - game continues:', error);
           // Log error details but continue - the game loop will recover naturally
