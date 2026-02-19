@@ -5857,6 +5857,23 @@
           const currentQuest = getCurrentQuest();
           if (currentQuest && currentQuest.id === 'quest1_kill3' && playerStats.kills >= 3) {
             progressTutorialQuest('quest1_kill3', true);
+            // Show text magazine explaining the current mission once quest is marked ready-to-claim
+            // Guard: only show if quest1 is now in readyToClaim (i.e. still relevant)
+            if (saveData.tutorialQuests.readyToClaim.includes('quest1_kill3')) {
+              showComicInfoBox(
+                '📋 MISSION REPORT',
+                `<div style="text-align: left; padding: 10px;">
+                  <p style="font-family: 'Bangers', cursive; font-size: 20px; margin-bottom: 10px;">✅ 3 KILLS CONFIRMED!</p>
+                  <p style="line-height: 1.8; margin-bottom: 10px;">
+                    Excellent work, Droplet! You've eliminated 3 enemies.<br><br>
+                    <b>CURRENT MISSION:</b> Build your strength between runs. Use camp resources to upgrade your abilities and become unstoppable.<br><br>
+                    Return to the <b>⛺ Main Building</b> to claim your reward.
+                  </p>
+                  <p style="font-size: 13px; color: #FFD700;">💡 Tip: Die or finish your run, then head to Camp → Main Building.</p>
+                </div>`,
+                'UNDERSTOOD!'
+              );
+            }
           }
         }
         
@@ -10571,14 +10588,15 @@
         rewardGold: 200,
         rewardSkillPoints: 2,
         unlockBuilding: 'skillTree',
+        message: "Outstanding, Droplet! 🎯<br><br>You've proven your combat worth. The <b>Skill Tree</b> is now unlocked at camp!<br><br>Head to the <b>Skill Tree</b> tab and spend your <b>2 Skill Points</b> to grow stronger.",
         nextQuest: 'quest2_spendSkills',
         conditions: ['firstRunDeath'] // Requires firstRunDeath to be auto-claimed (on first death)
       },
       quest2_spendSkills: {
         id: 'quest2_spendSkills',
-        name: 'Spend Skill Points',
-        description: 'Spend 2 skill points on Dash + Headshot Chain',
-        objectives: 'Unlock 2 specific skills',
+        name: 'Visit the Skill Tree',
+        description: 'Go to the Skill Tree tab and spend 2 skill points to unlock new abilities',
+        objectives: 'Unlock 2 skills in the Skill Tree tab',
         claim: 'Main Building',
         rewardGold: 0,
         rewardSkillPoints: 0,
@@ -10883,23 +10901,8 @@
     
     // Advance to next quest in story chain
     function advanceQuestChain() {
-      const completed = saveData.tutorialQuests.completedQuests;
-      
-      // Start first quest if no quest active
-      if (!saveData.tutorialQuests.currentQuest && completed.length === 0) {
-        // First quest starts after first death
-        if (saveData.tutorialQuests.firstDeathShown) {
-          const firstQuestId = 'quest1_kill3';
-          // Validate conditions before starting
-          if (checkQuestConditions(firstQuestId)) {
-            saveData.tutorialQuests.currentQuest = firstQuestId;
-            saveSaveData();
-          } else {
-            const questName = TUTORIAL_QUESTS[firstQuestId]?.name || firstQuestId;
-            console.log(`Cannot start ${questName}: conditions not met`);
-          }
-        }
-      }
+      // Quest1 is now activated via the Main Building (showQuestHall), not here.
+      // This function is kept for any future use but no longer auto-starts quest1.
     }
     
     // Update quest tracker in camp screen
@@ -11147,6 +11150,34 @@
       }
       saveData.storyQuests.questNotifications.questMission = false;
       saveSaveData();
+      
+      // Activate quest1 the first time the player enters the Main Building after their first run
+      if (
+        saveData.tutorialQuests.firstDeathShown &&
+        isQuestClaimed('firstRunDeath') &&
+        !saveData.tutorialQuests.currentQuest &&
+        !isQuestClaimed('quest1_kill3') &&
+        !saveData.tutorialQuests.readyToClaim.includes('quest1_kill3')
+      ) {
+        if (checkQuestConditions('quest1_kill3')) {
+          saveData.tutorialQuests.currentQuest = 'quest1_kill3';
+          saveSaveData();
+          // Show text magazine explaining the first quest (synchronous after save)
+          showComicInfoBox(
+            '📋 MISSION BRIEFING',
+            `<div style="text-align: left; padding: 10px;">
+              <p style="font-family: 'Bangers', cursive; font-size: 20px; margin-bottom: 10px;">🎯 QUEST 1: COMBAT READINESS</p>
+              <p style="line-height: 1.8; margin-bottom: 10px;">
+                Welcome back, Droplet. You survived your first encounter — now it's time to prove yourself.<br><br>
+                <b>YOUR MISSION:</b> Head back out and eliminate <b>3 enemies</b> in a single run.<br><br>
+                Once you achieve 3 kills, return here to claim your reward and unlock new camp upgrades.
+              </p>
+              <p style="font-size: 13px; color: #FFD700;">Reward: +200 Gold · +2 Skill Points · Skill Tree Unlocked</p>
+            </div>`,
+            'ACCEPT MISSION!'
+          );
+        }
+      }
       
       // Quest ID to display name mapping
       const questNames = {
@@ -16614,23 +16645,14 @@
       
       if (!saveData.tutorialQuests.firstDeathShown) {
         saveData.tutorialQuests.firstDeathShown = true;
+        // Auto-claim firstRunDeath so quest1 conditions are satisfied when player enters main building
+        if (!saveData.tutorialQuests.completedQuests.includes('firstRunDeath')) {
+          saveData.tutorialQuests.completedQuests.push('firstRunDeath');
+        }
         saveSaveData();
-        // Show first death tutorial after a brief delay
+        // Show first death tutorial – quest1 activates later when player enters the Main Building
         setTimeout(() => {
           showComicTutorial('first_death');
-          // Start quest 1 after first death
-          setTimeout(() => {
-            const firstQuestId = 'quest1_kill3';
-            // Validate conditions before starting
-            if (checkQuestConditions(firstQuestId)) {
-              saveData.tutorialQuests.currentQuest = firstQuestId;
-              saveSaveData();
-              showNextQuestPopup(firstQuestId);
-            } else {
-              const questName = TUTORIAL_QUESTS[firstQuestId]?.name || firstQuestId;
-              console.log(`Cannot start ${questName}: conditions not met`);
-            }
-          }, 1000);
         }, 1000);
       }
       
