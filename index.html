@@ -2825,8 +2825,8 @@
     <button id="stats-btn" class="btn-small" style="position: absolute; top: 20px; right: 20px; pointer-events: auto; z-index: 100;">STATS</button>
     <button id="settings-btn" class="btn-small" style="position: absolute; top: 20px; right: 120px; pointer-events: auto; z-index: 100;">⚙️</button>
     
-    <!-- Day/Night Cycle Clock - WATERDROP SHAPED (80s theme) -->
-    <div id="day-night-clock" style="position: absolute; top: 20px; left: 50%; transform: translateX(-50%); pointer-events: none; z-index: 100;">
+    <!-- Day/Night Cycle Clock - positioned top-right, below stats buttons -->
+    <div id="day-night-clock" style="position: absolute; top: 70px; right: 20px; pointer-events: none; z-index: 100;">
       <div style="background: radial-gradient(circle at 30% 30%, rgba(40,40,40,0.9), rgba(0,0,0,0.8)); 
                   border: 3px solid #FFD700; 
                   border-radius: 50% 50% 50% 0; /* WATERDROP SHAPE: teardrop with pointed bottom-right */
@@ -2886,8 +2886,8 @@
           <!-- Definitions -->
           <defs>
             <clipPath id="waterdrop-clip">
-              <!-- Waterdrop shape: top(50,10), left curve(25), right curve(75), bottom(50,110) -->
-              <path d="M 50 10 C 35 20, 25 35, 25 60 C 25 85, 35 100, 50 110 C 65 100, 75 85, 75 60 C 75 35, 65 20, 50 10 Z" />
+              <!-- Teardrop shape: pointed top, round bottom -->
+              <path d="M 50 8 C 50 8, 20 50, 20 72 C 20 93, 33 112, 50 112 C 67 112, 80 93, 80 72 C 80 50, 50 8, 50 8 Z" />
             </clipPath>
             <linearGradient id="exp-gradient" x1="0%" y1="100%" x2="0%" y2="0%">
               <stop offset="0%" style="stop-color:#3498DB;stop-opacity:1" />
@@ -2905,18 +2905,18 @@
               <feDisplacementMap in="SourceGraphic" scale="3"/>
             </filter>
           </defs>
-          <!-- Background -->
-          <path d="M 50 10 C 35 20, 25 35, 25 60 C 25 85, 35 100, 50 110 C 65 100, 75 85, 75 60 C 75 35, 65 20, 50 10 Z" 
+          <!-- Background - teardrop shape -->
+          <path d="M 50 8 C 50 8, 20 50, 20 72 C 20 93, 33 112, 50 112 C 67 112, 80 93, 80 72 C 80 50, 50 8, 50 8 Z" 
                 fill="rgba(58,58,58,0.8)" stroke="#000000" stroke-width="3"/>
           <!-- EXP Fill (clips to waterdrop shape, fills from bottom to top) -->
           <g clip-path="url(#waterdrop-clip)">
-            <rect id="waterdrop-exp-fill" x="0" y="10" width="100" height="110" 
+            <rect id="waterdrop-exp-fill" x="0" y="8" width="100" height="112" 
                   fill="url(#exp-gradient)" 
                   filter="url(#water-turbulence)" 
                   opacity="0.9"/>
           </g>
           <!-- Level text -->
-          <text id="waterdrop-level-text" x="50" y="70" 
+          <text id="waterdrop-level-text" x="50" y="80" 
                 text-anchor="middle" 
                 font-size="24" 
                 font-weight="bold" 
@@ -10724,6 +10724,14 @@
             updateTrainingSection();
             updateGoldDisplays();
             
+            // QUEST 4 (new): Track attribute purchase for "Upgrade an Attribute" quest
+            if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest4_upgradeAttr') {
+              progressTutorialQuest('quest4_upgradeAttr', true);
+            }
+            // QUEST 5 (new): Track training session for "Complete a Training Session" quest
+            if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest5_trainingSession') {
+              progressTutorialQuest('quest5_trainingSession', true);
+            }
             // QUEST 3 (legacy): Track attribute purchase for tutorial quest
             if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest3_buyProgression') {
               // Count total attribute levels purchased
@@ -10800,17 +10808,46 @@
       },
       quest3_stonehengeGear: {
         id: 'quest3_stonehengeGear',
-        name: 'Find the First Gear',
-        description: 'Head to Stonehenge on the map and collect the quest chest to get your first gear',
+        name: 'Find the Cigar at Stonehenge',
+        description: 'Head to Stonehenge on the map and collect the quest chest to get the legendary Cigar',
         objectives: 'Find and collect the chest at Stonehenge',
         claim: 'Main Building',
-        rewardGold: 0,
+        rewardGold: 50,
         rewardSkillPoints: 0,
         unlockBuilding: 'armory',
         giveItem: { id: 'cigar_quest', name: 'Cigar', type: 'ring', rarity: 'rare', stats: { attackSpeed: 1, movementSpeed: 1, attackPrecision: 1 }, description: '+1 Attack Speed, +1 Movement Speed, +1 Attack Precision' },
-        message: "You found the Cigar! 🚬<br><br>This rare ring grants <b>+1 Attack Speed, +1 Movement Speed, +1 Attack Precision</b>.<br><br>Head to the <b>Armory</b> (Gear section) and equip it!",
-        nextQuest: 'quest4_equipCigar',
+        autoEquip: true,
+        message: "🚬 Cigar auto-equipped!<br><br>This rare ring grants <b>+1 Attack Speed, +1 Movement Speed, +1 Attack Precision</b>.<br><br>The <b>Armory</b> is now unlocked. Your next challenge: <b>Upgrade an Attribute</b> in the Training Hall!",
+        nextQuest: 'quest4_upgradeAttr',
         conditions: ['quest2_spendSkills']
+      },
+      quest4_upgradeAttr: {
+        id: 'quest4_upgradeAttr',
+        name: 'Upgrade an Attribute',
+        description: 'Open the Training Hall and spend an attribute point to upgrade any stat',
+        objectives: 'Spend 1 attribute point in the Training Hall',
+        claim: 'Main Building',
+        rewardGold: 50,
+        rewardSkillPoints: 0,
+        rewardAttributePoints: 2,
+        unlockBuilding: 'trainingHall',
+        message: "💪 Attribute upgraded!<br><br>You earned <b>+2 free Attribute Points</b>!<br><br>The <b>Training Hall</b> is now unlocked. Next: <b>Complete a Training Session</b>!",
+        nextQuest: 'quest5_trainingSession',
+        conditions: ['quest3_stonehengeGear']
+      },
+      quest5_trainingSession: {
+        id: 'quest5_trainingSession',
+        name: 'Complete a Training Session',
+        description: 'Use the Training Hall to complete one training session',
+        objectives: 'Complete 1 training session in the Training Hall',
+        claim: 'Main Building',
+        rewardGold: 50,
+        rewardSkillPoints: 0,
+        rewardAttributePoints: 1,
+        unlockBuilding: 'forge',
+        message: "🏋️ Training complete!<br><br>You earned <b>+1 free Training Point</b>!<br><br>The <b>Forge</b> is now unlocked. Prove your strength — <b>Kill 10 Enemies</b>!",
+        nextQuest: 'quest7_kill10',
+        conditions: ['quest4_upgradeAttr']
       },
       quest4_equipCigar: {
         id: 'quest4_equipCigar',
@@ -10861,7 +10898,7 @@
         rewardSkillPoints: 0,
         message: "🎉 TUTORIAL COMPLETE!<br><br>You've mastered the basics of survival!<br><br>The world is yours to conquer. Good luck, Droplet!",
         nextQuest: null,
-        conditionsAny: ['quest4_equipCigar', 'quest6_buyAttributes'], // Accept any of these predecessors
+        conditionsAny: ['quest5_trainingSession', 'quest4_equipCigar', 'quest6_buyAttributes'], // Accept any of these predecessors
         conditions: [] // No strict requirements - conditionsAny handles it
       },
       quest3_buyProgression: {
@@ -11037,6 +11074,15 @@
           // Clear current quest
           saveData.tutorialQuests.currentQuest = null;
           
+          // Quest 2 fix: close skill tree panel so it doesn't stay open after completion
+          if (questId === 'quest2_spendSkills') {
+            const skillsSection = document.getElementById('camp-skills-section');
+            const buildingsSection = document.getElementById('camp-buildings-section');
+            if (skillsSection) skillsSection.style.display = 'none';
+            const skillsTab = document.getElementById('camp-skills-tab');
+            if (skillsTab) skillsTab.style.background = '#3a3a3a';
+          }
+          
           // Show notification
           showStatChange('📜 Quest Complete! Return to Main Building to claim!');
         }
@@ -11105,9 +11151,13 @@
       if (quest.giveItem) {
         saveData.inventory.push(quest.giveItem);
         if (quest.autoEquip && saveData.equippedGear) {
-          saveData.equippedGear[0] = quest.giveItem;
+          // Equip to appropriate slot based on item type
+          const itemType = quest.giveItem.type || 'ring';
+          saveData.equippedGear[itemType] = quest.giveItem;
+          showStatChange(`🎯 ${quest.giveItem.name} Auto-Equipped!`);
+        } else {
+          showStatChange(`📦 ${quest.giveItem.name} Acquired!`);
         }
-        showStatChange(`📦 ${quest.giveItem.name} Acquired!`);
       }
       
       // Save immediately after rewards
@@ -11871,8 +11921,20 @@
         
         // Skip locked paid buildings - show them with quest unlock requirement
         if (!building.isFree && !isUnlocked && buildingData.level === 0) {
-          // Map building IDs to their unlock quest names
-          const buildingUnlockQuests = {
+          // Map building IDs to which tutorial quest unlocks them
+          const buildingQuestUnlockMap = {
+            'skillTree': { questId: 'quest1_kill3', label: 'Kill 3 Enemies (Quest 1)' },
+            'armory': { questId: 'quest3_stonehengeGear', label: 'Find the Cigar (Quest 3)' },
+            'trainingHall': { questId: 'quest4_upgradeAttr', label: 'Upgrade an Attribute (Quest 4)' },
+            'forge': { questId: 'quest5_trainingSession', label: 'Complete Training (Quest 5)' },
+            'companionHouse': { questId: 'quest4_kill10', label: 'Kill 10 Enemies (Quest 4b)' },
+            'trashRecycle': { questId: null, label: 'Future Quest' },
+            'tempShop': { questId: null, label: 'Future Quest' }
+          };
+          
+          const questInfo = buildingQuestUnlockMap[buildingId] || { questId: null, label: 'Complete a Quest' };
+          // Legacy unlock quests
+          const legacyUnlockQuests = {
             'skillTree': 'unlockSkillTree',
             'forge': 'unlockForge',
             'trashRecycle': 'unlockRecycle',
@@ -11880,54 +11942,41 @@
             'companionHouse': 'unlockCompanionHouse',
             'trainingHall': 'unlockTrainingHall'
           };
-          
-          const hasUnlockQuest = buildingUnlockQuests[buildingId] && 
-                                  saveData.storyQuests.currentQuest === buildingUnlockQuests[buildingId];
+          const hasLegacyUnlockQuest = legacyUnlockQuests[buildingId] && 
+                                  saveData.storyQuests.currentQuest === legacyUnlockQuests[buildingId];
           
           const buildingCard = document.createElement('div');
           buildingCard.className = 'building-card';
-          if (!hasUnlockQuest) buildingCard.style.opacity = '0.6';
+          buildingCard.style.opacity = '0.7';
+          buildingCard.style.cursor = 'not-allowed';
           
           buildingCard.innerHTML = `
             <div class="building-header">
-              <div class="building-name">${building.icon} ${building.name}${hasUnlockQuest ? ' <span class="quest-indicator">!</span>' : ''}</div>
-              <div class="building-level">LOCKED</div>
+              <div class="building-name">${building.icon} ${building.name}</div>
+              <div class="building-level" style="color:#FF6B6B;">🔒 LOCKED</div>
             </div>
             <div class="building-desc">${building.description}</div>
-            <div class="building-cost">${hasUnlockQuest ? 'Click to Unlock (Quest)' : 'Unlock via Quest'}</div>
+            <div class="building-cost" style="color:#FFD700; font-size:12px;">🗝️ Unlock: ${questInfo.label}</div>
           `;
           
           buildingCard.onclick = () => {
-            if (hasUnlockQuest) {
-              // Quest-based unlock (FREE)
+            if (hasLegacyUnlockQuest) {
+              // Quest-based unlock (FREE) — legacy system
               buildingData.unlocked = true;
               buildingData.level = 1;
               saveSaveData();
               updateCampScreen();
               playSound('collect');
-              
-              // Progress the unlock quest
-              if (buildingId === 'skillTree' && saveData.storyQuests.currentQuest === 'unlockSkillTree') {
-                progressQuest('unlockSkillTree', true);
-              } else if (buildingId === 'forge' && saveData.storyQuests.currentQuest === 'unlockForge') {
-                progressQuest('unlockForge', true);
-              } else if (buildingId === 'trashRecycle' && saveData.storyQuests.currentQuest === 'unlockRecycle') {
-                progressQuest('unlockRecycle', true);
-              } else if (buildingId === 'armory' && saveData.storyQuests.currentQuest === 'unlockArmory') {
-                progressQuest('unlockArmory', true);
-              } else if (buildingId === 'companionHouse' && saveData.storyQuests.currentQuest === 'unlockCompanionHouse') {
-                progressQuest('unlockCompanionHouse', true);
-              } else if (buildingId === 'trainingHall' && saveData.storyQuests.currentQuest === 'unlockTrainingHall') {
-                progressQuest('unlockTrainingHall', true);
-              }
-              
-              // QUEST 5: Mark quest as complete when companion house is opened
-              if (buildingId === 'companionHouse' && saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest5_breedCompanion') {
-                progressTutorialQuest('quest5_breedCompanion', true);
-              }
+              if (buildingId === 'skillTree' && saveData.storyQuests.currentQuest === 'unlockSkillTree') progressQuest('unlockSkillTree', true);
+              else if (buildingId === 'forge' && saveData.storyQuests.currentQuest === 'unlockForge') progressQuest('unlockForge', true);
+              else if (buildingId === 'trashRecycle' && saveData.storyQuests.currentQuest === 'unlockRecycle') progressQuest('unlockRecycle', true);
+              else if (buildingId === 'armory' && saveData.storyQuests.currentQuest === 'unlockArmory') progressQuest('unlockArmory', true);
+              else if (buildingId === 'companionHouse' && saveData.storyQuests.currentQuest === 'unlockCompanionHouse') progressQuest('unlockCompanionHouse', true);
+              else if (buildingId === 'trainingHall' && saveData.storyQuests.currentQuest === 'unlockTrainingHall') progressQuest('unlockTrainingHall', true);
+              if (buildingId === 'companionHouse' && saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest5_breedCompanion') progressTutorialQuest('quest5_breedCompanion', true);
             } else {
               playSound('invalid');
-              showStatusMessage('Complete quests to unlock this building!', 2000);
+              showStatusMessage(`🔒 Complete "${questInfo.label}" to unlock this building!`, 2500);
             }
           };
           
@@ -12058,10 +12107,44 @@
           <div class="skill-desc">${skill.description}</div>
           <div style="font-size: 12px; color: #5DADE2; margin: 5px 0;">Level ${skillData.level}/${skill.maxLevel}</div>
           <div class="skill-cost">${isMaxLevel ? 'MAX' : `${skill.cost} SP`}</div>
+          ${!isMaxLevel && canAfford ? '<div class="skill-hold-bar" style="height:6px;background:#333;border:2px solid #000;border-radius:3px;margin-top:6px;overflow:hidden;"><div class="skill-hold-fill" style="height:100%;width:0%;background:#FFD700;transition:none;"></div></div><div style="font-size:10px;color:#888;margin-top:2px;">Hold to buy</div>' : ''}
         `;
         
-        if (!isMaxLevel) {
-          skillNode.onclick = () => unlockSkill(skillId);
+        if (!isMaxLevel && canAfford) {
+          let holdTimer = null;
+          let holdStart = null;
+          const HOLD_DURATION = 1000; // 1 second
+          // Cache DOM reference to avoid repeated queries in animation loop
+          const fillEl = skillNode.querySelector('.skill-hold-fill');
+          
+          const startHold = () => {
+            if (holdTimer) return;
+            holdStart = Date.now();
+            const animate = () => {
+              const elapsed = Date.now() - holdStart;
+              const pct = Math.min(100, (elapsed / HOLD_DURATION) * 100);
+              if (fillEl) fillEl.style.width = pct + '%';
+              if (pct >= 100) {
+                holdTimer = null;
+                unlockSkill(skillId);
+              } else {
+                holdTimer = requestAnimationFrame(animate);
+              }
+            };
+            holdTimer = requestAnimationFrame(animate);
+          };
+          
+          const cancelHold = () => {
+            if (holdTimer) { cancelAnimationFrame(holdTimer); holdTimer = null; }
+            if (fillEl) fillEl.style.width = '0%';
+          };
+          
+          skillNode.addEventListener('pointerdown', (e) => { e.preventDefault(); startHold(); });
+          skillNode.addEventListener('pointerup', cancelHold);
+          skillNode.addEventListener('pointerleave', cancelHold);
+          skillNode.addEventListener('pointercancel', cancelHold);
+          skillNode.style.cursor = 'pointer';
+          skillNode.style.userSelect = 'none';
         }
         
         skillsContent.appendChild(skillNode);
