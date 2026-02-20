@@ -867,7 +867,7 @@
     
     .comic-title {
       color: #FFD700;
-      font-size: 48px;
+      font-size: clamp(24px, 6vw, 48px);
       font-weight: 900;
       text-align: center;
       margin-bottom: 25px;
@@ -885,7 +885,7 @@
     
     .comic-text {
       color: #FFFFFF;
-      font-size: 22px;
+      font-size: clamp(14px, 4vw, 22px);
       line-height: 1.9;
       margin-bottom: 30px;
       text-align: center;
@@ -1993,6 +1993,7 @@
       text-align: left;
       max-width: 500px; /* Reduced from 700px for iPhone 16 portrait */
       width: 95%; /* Ensure it fits within screen bounds */
+      box-sizing: border-box;
     }
 
     .building-card:hover {
@@ -11930,6 +11931,15 @@
         const isMaxLevel = skillData.level >= skill.maxLevel;
         const canAfford = saveData.skillPoints >= skill.cost;
         
+        // Progressive unlock: after quest1 only show first 4 skills (dashMaster, criticalFocus + 2 more);
+        // after quest2 is claimed, show all skills
+        const allSkillIds = Object.keys(SKILL_TREE);
+        const skillIndex = allSkillIds.indexOf(skillId);
+        const quest2Claimed = isQuestClaimed('quest2_spendSkills');
+        const quest1Claimed = isQuestClaimed('quest1_kill3');
+        if (!quest2Claimed && skillIndex >= 4) continue;
+        if (!quest1Claimed && skillIndex >= 2) continue;
+        
         const skillNode = document.createElement('div');
         skillNode.className = 'skill-node';
         if (skillData.unlocked) skillNode.classList.add('unlocked');
@@ -14203,7 +14213,7 @@
       // X button for comic-tutorial-modal
       document.getElementById('comic-tutorial-x-btn').onclick = () => {
         document.getElementById('comic-tutorial-modal').style.display = 'none';
-        if (isGameActive) setGamePaused(false);
+        if (isGameActive && !isGameOver) setGamePaused(false);
       };
       // X button for levelup-modal
       document.getElementById('levelup-x-btn').onclick = () => {
@@ -14656,7 +14666,7 @@
       for(let i = 0; i < cappedCount; i++) {
         // Enforce global cap - just skip if full, particles expire naturally
         if (smokeParticles.length >= MAX_SMOKE_PARTICLES) continue;
-        const smokeGeo = new THREE.SphereGeometry(0.15, 6, 6);
+        const smokeGeo = new THREE.SphereGeometry(0.04, 6, 6);
         const smokeMat = new THREE.MeshBasicMaterial({ 
           color: 0x666666, 
           transparent: true, 
