@@ -11127,6 +11127,13 @@
       // This function is kept for any future use but no longer auto-starts quest1.
     }
     
+    // Helper: should questMission building show notification glow?
+    function isQuestMissionReady() {
+      const tq = saveData.tutorialQuests;
+      return (tq.readyToClaim && tq.readyToClaim.length > 0) ||
+             (tq.firstDeathShown && !tq.currentQuest && !isQuestClaimed('quest1_kill3'));
+    }
+    
     // Update quest tracker in camp screen
     function updateQuestTracker() {
       const questTracker = document.getElementById('quest-tracker');
@@ -11885,10 +11892,7 @@
               // NEW: Add click handler for unlocked free buildings only
               if (buildingId === 'questMission') {
                 // Show notification glow on questMission if quests ready
-                if (
-                  (saveData.tutorialQuests.readyToClaim && saveData.tutorialQuests.readyToClaim.length > 0) ||
-                  (saveData.tutorialQuests.firstDeathShown && !saveData.tutorialQuests.currentQuest && !isQuestClaimed('quest1_kill3'))
-                ) {
+                if (isQuestMissionReady()) {
                   buildingCard.classList.add('quest-ready-glow');
                 }
                 buildingCard.onclick = () => showQuestHall();
@@ -11926,19 +11930,20 @@
       skillPointsDisplay.textContent = `Skill Points Available: ${saveData.skillPoints}`;
       skillsContent.innerHTML = '';
       
+      // Progressive skill unlock: compute once before loop
+      const _allSkillIds = Object.keys(SKILL_TREE);
+      const _quest1Claimed = isQuestClaimed('quest1_kill3');
+      const _quest2Claimed = isQuestClaimed('quest2_spendSkills');
+      
       for (const [skillId, skill] of Object.entries(SKILL_TREE)) {
         const skillData = saveData.skillTree[skillId];
         const isMaxLevel = skillData.level >= skill.maxLevel;
         const canAfford = saveData.skillPoints >= skill.cost;
         
-        // Progressive unlock: after quest1 only show first 4 skills (dashMaster, criticalFocus + 2 more);
-        // after quest2 is claimed, show all skills
-        const allSkillIds = Object.keys(SKILL_TREE);
-        const skillIndex = allSkillIds.indexOf(skillId);
-        const quest2Claimed = isQuestClaimed('quest2_spendSkills');
-        const quest1Claimed = isQuestClaimed('quest1_kill3');
-        if (!quest2Claimed && skillIndex >= 4) continue;
-        if (!quest1Claimed && skillIndex >= 2) continue;
+        // Progressive unlock: after quest1 only show first 4 skills; after quest2 show all
+        const skillIndex = _allSkillIds.indexOf(skillId);
+        if (!_quest2Claimed && skillIndex >= 4) continue;
+        if (!_quest1Claimed && skillIndex >= 2) continue;
         
         const skillNode = document.createElement('div');
         skillNode.className = 'skill-node';
