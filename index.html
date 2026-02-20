@@ -2990,7 +2990,7 @@
   <!-- Game Over Screen -->
   <div id="gameover-screen">
     <h1 style="color: #5DADE2; font-size: 40px; text-shadow: 2px 2px 0 #000, 0 0 10px rgba(93,173,226,0.8);">GAME OVER</h1>
-    <div style="max-width: 500px; margin: 20px auto;">
+    <div style="max-width: 90vw; margin: 20px auto; box-sizing: border-box; overflow-y: auto;">
       <h3 style="color: #FFD700; font-size: 24px; margin-bottom: 15px;">Run Summary</h3>
       <div style="text-align: left; background: rgba(0,0,0,0.5); padding: 20px; border-radius: 10px; margin-bottom: 20px;">
         <p id="final-score" style="font-size: 18px; margin: 8px 0;">⏱️ Survived: 0s</p>
@@ -11263,9 +11263,12 @@
         background: linear-gradient(to bottom, #2a3a4a, #1a2a3a);
         border: 3px solid #FFD700;
         border-radius: 20px;
-        padding: 30px;
-        max-width: 500px;
+        padding: 20px;
+        max-width: 90vw;
         width: 90%;
+        max-height: 85vh;
+        overflow-y: auto;
+        box-sizing: border-box;
         text-align: center;
         animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.1);
         box-shadow: 0 0 30px rgba(255,215,0,0.5);
@@ -11319,9 +11322,12 @@
         background: linear-gradient(135deg, #1e3a5f 0%, #0d1f3a 100%);
         border: 6px solid #FFD700;
         border-radius: 10px;
-        padding: 40px;
-        max-width: 600px;
+        padding: 20px;
+        max-width: 90vw;
         width: 90%;
+        max-height: 85vh;
+        overflow-y: auto;
+        box-sizing: border-box;
         text-align: center;
         animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.1);
         box-shadow: 
@@ -11453,11 +11459,12 @@
         background: linear-gradient(to bottom, #2a3a4a, #1a2a3a);
         border: 3px solid #FFD700;
         border-radius: 20px;
-        padding: 30px;
-        max-width: 600px;
+        padding: 20px;
+        max-width: 90vw;
         width: 90%;
-        max-height: 80vh;
+        max-height: 85vh;
         overflow-y: auto;
+        box-sizing: border-box;
         text-align: center;
         animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.1);
         box-shadow: 0 0 30px rgba(255,215,0,0.5);
@@ -11876,6 +11883,13 @@
             } else {
               // NEW: Add click handler for unlocked free buildings only
               if (buildingId === 'questMission') {
+                // Show notification glow on questMission if quests ready
+                if (
+                  saveData.tutorialQuests.readyToClaim && saveData.tutorialQuests.readyToClaim.length > 0 ||
+                  (saveData.tutorialQuests.firstDeathShown && !saveData.tutorialQuests.currentQuest && !isQuestClaimed('quest1_kill3'))
+                ) {
+                  buildingCard.classList.add('quest-ready-glow');
+                }
                 buildingCard.onclick = () => showQuestHall();
                 buildingCard.style.cursor = 'pointer';
               } else if (buildingId === 'skillTree') {
@@ -18511,12 +18525,11 @@
               }, 80);
               activeTimeouts.push(timeoutId);
               
-              // Gun kickback effect - slight recoil visual
-              const originalY = player.mesh.position.y;
-              player.mesh.position.y = originalY - 0.05;
+              // Gun kickback effect - snappy recoil via scale squish
+              player.mesh.scale.set(1.15, 0.85, 1.15);
               const kickbackTimeoutId = setTimeout(() => {
-                player.mesh.position.y = originalY;
-              }, 50);
+                player.mesh.scale.set(1, 1, 1);
+              }, 80);
               activeTimeouts.push(kickbackTimeoutId);
               
               // ENHANCED Muzzle flash particles (small burst at gun muzzle - not generic spray)
@@ -18700,10 +18713,9 @@
           }
           
           // HEAVY RECOIL - much stronger than pistol
-          const originalY = player.mesh.position.y;
-          player.mesh.position.y = originalY - 0.15; // 3x stronger than pistol
+          player.mesh.scale.set(1.3, 0.7, 1.3);
           const kickbackTimeoutId = setTimeout(() => {
-            player.mesh.position.y = originalY;
+            player.mesh.scale.set(1, 1, 1);
           }, 100);
           activeTimeouts.push(kickbackTimeoutId);
           
