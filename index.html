@@ -2626,6 +2626,16 @@
   <div id="camp-screen">
     <div class="screen-title">⛺ CAMP</div>
     
+    <!-- Account Level Display (top-center) -->
+    <div id="account-level-display" style="text-align:center;margin-bottom:15px;background:linear-gradient(135deg,rgba(20,20,40,0.9),rgba(40,20,60,0.9));border:2px solid #FFD700;border-radius:12px;padding:10px 20px;max-width:400px;width:100%;">
+      <div style="font-family:'Bangers',cursive;font-size:14px;color:#aaa;letter-spacing:2px;">ACCOUNT LEVEL</div>
+      <div id="account-level-value" style="font-family:'Bangers',cursive;font-size:36px;color:#FFD700;text-shadow:0 0 10px rgba(255,215,0,0.8);">1</div>
+      <div style="background:rgba(0,0,0,0.5);border-radius:8px;height:8px;width:100%;margin:4px 0;overflow:hidden;">
+        <div id="account-level-bar" style="height:100%;background:linear-gradient(90deg,#FFD700,#FFA500);width:0%;transition:width 0.5s;border-radius:8px;"></div>
+      </div>
+      <div id="account-level-progress-text" style="font-size:11px;color:#aaa;">0 / 100 XP</div>
+    </div>
+    
     <!-- Camp Tabs -->
     <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
       <button class="btn" id="camp-buildings-tab" style="padding: 10px 20px; font-size: 16px; background: #5A3A31;">BUILDINGS</button>
@@ -2933,6 +2943,7 @@
       <div id="upgrade-list">
         <!-- Cards injected by JS -->
       </div>
+      <button id="levelup-skip-btn" style="margin-top:12px;padding:8px 24px;background:#333;color:#FFD700;border:2px solid #FFD700;border-radius:8px;font-family:'Bangers',cursive;font-size:16px;letter-spacing:2px;cursor:pointer;display:none;" onclick="(function(){var m=document.getElementById('levelup-modal');m.style.display='none';if(window.setGamePaused)window.setGamePaused(false);})()">CONTINUE →</button>
     </div>
   </div>
 
@@ -3732,6 +3743,7 @@
       isPaused = paused;
       window.isPaused = paused;
     }
+    window.setGamePaused = (paused) => setGamePaused(paused);
     
     function setGameActive(active) {
       isGameActive = active;
@@ -8385,6 +8397,9 @@
         elementalOverload: { unlocked: false, level: 0, maxLevel: 3 }
       },
       skillPoints: 0, // Start with 0 skill points - earn through quests
+      // Account Level System - Persistent across all runs
+      accountLevel: 1, // Persistent character level
+      accountXP: 0,    // Total XP earned (quests + kills)
       // Camp state
       hasVisitedCamp: false, // Track first camp visit
       nextRunTimeOfDay: 'day', // 'day' or 'night' - chosen from sleep option
@@ -8475,6 +8490,9 @@
           saveData.lastTrainingPointTime = saveData.lastTrainingPointTime || 0;
           saveData.skillPoints = saveData.skillPoints || 0;
           saveData.selectedCompanion = saveData.selectedCompanion || 'stormWolf';
+          // Account level system
+          saveData.accountLevel = saveData.accountLevel || 1;
+          saveData.accountXP = saveData.accountXP || 0;
           // Story quest system (legacy fields)
           saveData.storyQuests = { ...defaultSaveData.storyQuests, ...(saveData.storyQuests || {}) };
           saveData.storyQuests.buildingFirstUse = { ...defaultSaveData.storyQuests.buildingFirstUse, ...(saveData.storyQuests.buildingFirstUse || {}) };
@@ -10359,11 +10377,13 @@
         
         // QUEST 2: Track skill point spending for tutorial quest
         if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest2_spendSkills') {
-          // Count total skill points spent (each level = 1 point)
-          const totalSkillsUnlocked = Object.values(saveData.skillTree).filter(s => s.level > 0).length;
+          // Require specifically Dash (dashMaster) AND a Headshot/Critical skill (criticalFocus or executioner)
+          const hasDash = saveData.skillTree.dashMaster && saveData.skillTree.dashMaster.level > 0;
+          const hasHeadshot = (saveData.skillTree.criticalFocus && saveData.skillTree.criticalFocus.level > 0) ||
+                              (saveData.skillTree.executioner && saveData.skillTree.executioner.level > 0);
           
-          if (totalSkillsUnlocked >= 2) {
-            // Completed quest 2: spent 2 skill points
+          if (hasDash && hasHeadshot) {
+            // Completed quest 2: unlocked Dash and Headshot
             progressTutorialQuest('quest2_spendSkills', true);
           }
         }
@@ -10392,8 +10412,18 @@
           };
         }
         
-        if (skillId === 'dashMaster' && saveData.tutorial.currentStep === 'unlock_dash' && !saveData.tutorial.dashUnlocked) {
+        // Unlock dash ability whenever dashMaster skill is purchased (regardless of tutorial step)
+        if (skillId === 'dashMaster' && !saveData.tutorial.dashUnlocked) {
           saveData.tutorial.dashUnlocked = true;
+          saveSaveData();
+        }
+        // Unlock headshot ability whenever a crit skill is purchased
+        if ((skillId === 'criticalFocus' || skillId === 'executioner') && !saveData.tutorial.headshotUnlocked) {
+          saveData.tutorial.headshotUnlocked = true;
+          saveSaveData();
+        }
+        
+        if (skillId === 'dashMaster' && saveData.tutorial.currentStep === 'unlock_dash') {
           saveData.tutorial.currentStep = 'unlock_headshot';
           saveSaveData();
           setTimeout(() => {
@@ -10598,7 +10628,7 @@
         description: 'Start a new run and kill 3 enemies',
         objectives: 'Kill 3 enemies in one run',
         claim: 'Main Building',
-        rewardGold: 200,
+        rewardGold: 50,
         rewardSkillPoints: 2,
         unlockBuilding: 'skillTree',
         message: "Outstanding, Droplet! 🎯<br><br>You've proven your combat worth. The <b>Skill Tree</b> is now unlocked at camp!<br><br>Head to the <b>Skill Tree</b> tab and spend your <b>2 Skill Points</b> to grow stronger.",
@@ -10607,9 +10637,9 @@
       },
       quest2_spendSkills: {
         id: 'quest2_spendSkills',
-        name: 'Visit the Skill Tree',
-        description: 'Go to the Skill Tree tab and spend 2 skill points to unlock new abilities',
-        objectives: 'Unlock 2 skills in the Skill Tree tab',
+        name: 'Buy Dash & Headshot',
+        description: 'Go to the Skill Tree tab and unlock both Dash (dashMaster) and Headshot (criticalFocus or executioner)',
+        objectives: 'Unlock Dash and a Headshot/Critical skill in the Skill Tree tab',
         claim: 'Main Building',
         rewardGold: 0,
         rewardSkillPoints: 0,
@@ -10863,6 +10893,8 @@
         saveData.trainingPoints = (saveData.trainingPoints || 0) + quest.rewardAttributePoints;
         showStatChange(`+${quest.rewardAttributePoints} Attribute Points!`);
       }
+      // Award account XP for completing a quest (50 XP per quest)
+      addAccountXP(50);
       
       // Unlock building
       if (quest.unlockBuilding && saveData.campBuildings[quest.unlockBuilding]) {
@@ -11482,7 +11514,60 @@
       document.body.appendChild(overlay);
     }
 
+    // --- ACCOUNT LEVEL SYSTEM ---
+    // Account XP: 1 XP per kill (across all runs) + 50 XP per quest completed
+    // Level thresholds scale by 100 per level (level 2 = 100xp, level 3 = 300xp, etc.)
+    function getAccountLevelXPRequired(level) {
+      return level * 100; // 100 XP per level (scales with level)
+    }
+    
+    function addAccountXP(amount) {
+      if (!saveData.accountXP) saveData.accountXP = 0;
+      if (!saveData.accountLevel) saveData.accountLevel = 1;
+      saveData.accountXP += amount;
+      // Check for level-up
+      let leveledUp = false;
+      while (saveData.accountXP >= getAccountLevelXPRequired(saveData.accountLevel)) {
+        saveData.accountXP -= getAccountLevelXPRequired(saveData.accountLevel);
+        saveData.accountLevel++;
+        leveledUp = true;
+        // Reward on account level-up (rotate between reward types)
+        const rewardCycle = (saveData.accountLevel - 1) % 4;
+        if (rewardCycle === 0) {
+          saveData.unspentAttributePoints = (saveData.unspentAttributePoints || 0) + 1;
+          showEnhancedNotification('attribute', 'ACCOUNT LEVEL UP!', `Level ${saveData.accountLevel}! +1 Attribute Point`);
+        } else if (rewardCycle === 1) {
+          saveData.skillPoints = (saveData.skillPoints || 0) + 1;
+          showEnhancedNotification('unlock', 'ACCOUNT LEVEL UP!', `Level ${saveData.accountLevel}! +1 Skill Point`);
+        } else if (rewardCycle === 2) {
+          saveData.trainingPoints = (saveData.trainingPoints || 0) + 1;
+          showEnhancedNotification('attribute', 'ACCOUNT LEVEL UP!', `Level ${saveData.accountLevel}! +1 Training Point`);
+        } else {
+          saveData.gold = (saveData.gold || 0) + 100;
+          showEnhancedNotification('achievement', 'ACCOUNT LEVEL UP!', `Level ${saveData.accountLevel}! +100 Gold`);
+        }
+      }
+      if (leveledUp) saveSaveData();
+      updateAccountLevelDisplay();
+    }
+    
+    function updateAccountLevelDisplay() {
+      const levelEl = document.getElementById('account-level-value');
+      const barEl = document.getElementById('account-level-bar');
+      const textEl = document.getElementById('account-level-progress-text');
+      if (!levelEl) return;
+      const level = saveData.accountLevel || 1;
+      const xp = saveData.accountXP || 0;
+      const required = getAccountLevelXPRequired(level);
+      const pct = Math.min(100, (xp / required) * 100);
+      levelEl.textContent = level;
+      if (barEl) barEl.style.width = pct + '%';
+      if (textEl) textEl.textContent = `${xp} / ${required} XP`;
+    }
+
     function updateCampScreen() {
+      // Update account level display whenever camp is opened
+      updateAccountLevelDisplay();
       // Check for first-time camp visit
       if (!saveData.hasVisitedCamp) {
         saveData.hasVisitedCamp = true;
@@ -13767,31 +13852,31 @@
       document.getElementById('shop-back-btn').onclick = () => {
         playSound('waterdrop');
         document.getElementById('progression-shop').style.display = 'none';
-        showMainMenu();
+        if (isGameActive) { setGamePaused(false); } else { showMainMenu(); }
       };
       
       document.getElementById('achievements-back-btn').onclick = () => {
         playSound('waterdrop');
         document.getElementById('achievements-screen').style.display = 'none';
-        showMainMenu();
+        if (isGameActive) { setGamePaused(false); } else { showMainMenu(); }
       };
       
       document.getElementById('attributes-back-btn').onclick = () => {
         playSound('waterdrop');
         document.getElementById('attributes-screen').style.display = 'none';
-        showMainMenu();
+        if (isGameActive) { setGamePaused(false); } else { showMainMenu(); }
       };
       
       document.getElementById('gear-back-btn').onclick = () => {
         playSound('waterdrop');
         document.getElementById('gear-screen').style.display = 'none';
-        showMainMenu();
+        if (isGameActive) { setGamePaused(false); } else { showMainMenu(); }
       };
       
       document.getElementById('credits-back-btn').onclick = () => {
         playSound('waterdrop');
         document.getElementById('credits-screen').style.display = 'none';
-        showMainMenu();
+        if (isGameActive) { setGamePaused(false); } else { showMainMenu(); }
       };
       
       document.getElementById('camp-back-btn').onclick = () => {
@@ -15833,6 +15918,10 @@
           modal.style.display = 'none';
           modal.querySelector('h2').innerText = 'LEVEL UP!';
           modal.querySelector('h2').style.fontSize = '32px';
+          // Hide skip button and clear its timeout
+          const skipBtn = document.getElementById('levelup-skip-btn');
+          if (skipBtn) skipBtn.style.display = 'none';
+          clearTimeout(window._levelupSkipTimeout);
           
           // Restore camera position and projection after level-up
           if (savedCameraPosition) {
@@ -15868,6 +15957,16 @@
       });
 
       modal.style.display = 'flex';
+      
+      // Show skip button after 5 seconds as safety valve if player can't select an upgrade
+      const skipBtn = document.getElementById('levelup-skip-btn');
+      if (skipBtn) {
+        skipBtn.style.display = 'none';
+        clearTimeout(window._levelupSkipTimeout);
+        window._levelupSkipTimeout = setTimeout(() => {
+          if (modal.style.display === 'flex') skipBtn.style.display = 'inline-block';
+        }, 5000);
+      }
     }
 
     // Waterdrop dimensions constants (match SVG viewBox)
@@ -16653,7 +16752,7 @@
           tutorialData = {
             title: '⚡ DROPLET DOWN! ⚡',
             text: '<strong style="color:#FFD700;">YOUR JOURNEY BEGINS NOW...</strong><br><br>Every hero falls. But only the <strong>BRAVE</strong> rise again!<br><br>Return to the <strong>⛺ CAMP</strong> to unlock your true potential.<br><br><strong>WARNING:</strong> Your progression is LOCKED until you complete your training!',
-            button: '⚡ ENTER CAMP ⚡'
+            button: '⛺ GO TO CAMP'
           };
           break;
         case 'unlock_dash':
@@ -16693,6 +16792,11 @@
         if (step === 'first_death') {
           saveData.tutorial.currentStep = 'go_to_camp';
           saveSaveData();
+          // Navigate to camp screen on first death
+          const gameoverScreen = document.getElementById('gameover-screen');
+          if (gameoverScreen) gameoverScreen.style.display = 'none';
+          updateCampScreen();
+          document.getElementById('camp-screen').style.display = 'flex';
         } else if (step === 'unlock_dash') {
           saveData.tutorial.currentStep = 'unlock_dash';
           saveSaveData();
@@ -16825,6 +16929,8 @@
       saveData.totalKills += playerStats.kills; // Track cumulative kills
       if (survivalTime > saveData.bestTime) saveData.bestTime = survivalTime;
       if (playerStats.kills > saveData.bestKills) saveData.bestKills = playerStats.kills;
+      // Add account XP for kills this run (1 XP per kill)
+      if (playerStats.kills > 0) addAccountXP(playerStats.kills);
       
       // Tutorial Quest: Check for first death
       if (!saveData.tutorialQuests) {
