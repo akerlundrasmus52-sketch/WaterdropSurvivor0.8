@@ -1500,7 +1500,7 @@
     .btn {
       background: #5A3A31;
       color: white;
-      border: none;
+      border: 3px solid #000;
       padding: 15px 30px;
       font-size: 20px;
       border-radius: 50px;
@@ -1565,7 +1565,7 @@
     .btn-small {
       background: #5A3A31;
       color: white;
-      border: none;
+      border: 2px solid #000;
       padding: 10px 20px;
       font-size: 16px;
       border-radius: 30px;
@@ -2622,13 +2622,13 @@
     <div class="screen-title">⛺ CAMP</div>
     
     <!-- Account Level Display (top-center) -->
-    <div id="account-level-display" style="text-align:center;margin-bottom:15px;background:linear-gradient(135deg,rgba(20,20,40,0.9),rgba(40,20,60,0.9));border:2px solid #FFD700;border-radius:12px;padding:10px 20px;max-width:400px;width:100%;">
-      <div style="font-family:'Bangers',cursive;font-size:14px;color:#aaa;letter-spacing:2px;">ACCOUNT LEVEL</div>
-      <div id="account-level-value" style="font-family:'Bangers',cursive;font-size:36px;color:#FFD700;text-shadow:0 0 10px rgba(255,215,0,0.8);">1</div>
-      <div style="background:rgba(0,0,0,0.5);border-radius:8px;height:8px;width:100%;margin:4px 0;overflow:hidden;">
+    <div id="account-level-display" style="text-align:center;margin-bottom:15px;background:linear-gradient(135deg,rgba(20,20,40,0.9),rgba(40,20,60,0.9));border:2px solid #FFD700;border-radius:12px;padding:8px 14px;max-width:220px;width:100%;">
+      <div style="font-family:'Bangers',cursive;font-size:11px;color:#aaa;letter-spacing:2px;">ACCOUNT LEVEL</div>
+      <div id="account-level-value" style="font-family:'Bangers',cursive;font-size:26px;color:#FFD700;text-shadow:0 0 10px rgba(255,215,0,0.8);">1</div>
+      <div style="background:rgba(0,0,0,0.5);border-radius:8px;height:6px;width:100%;margin:3px 0;overflow:hidden;">
         <div id="account-level-bar" style="height:100%;background:linear-gradient(90deg,#FFD700,#FFA500);width:0%;transition:width 0.5s;border-radius:8px;"></div>
       </div>
-      <div id="account-level-progress-text" style="font-size:11px;color:#aaa;">0 / 100 XP</div>
+      <div id="account-level-progress-text" style="font-size:10px;color:#aaa;">0 / 100 XP</div>
     </div>
     
     <!-- Camp Tabs -->
@@ -2778,7 +2778,7 @@
       </div>
       
       <!-- Phase 3: EXP bar at top (restored) -->
-      <div class="bar-container" id="exp-bar-container" style="border-color: #2a2a2a;">
+      <div class="bar-container" id="exp-bar-container">
         <div class="bar-fill" id="exp-fill"></div>
         <div class="bar-text" id="exp-text" style="color: #FFFFFF;">EXP: 0%</div>
       </div>
@@ -2907,7 +2907,7 @@
           </defs>
           <!-- Background -->
           <path d="M 50 10 C 35 20, 25 35, 25 60 C 25 85, 35 100, 50 110 C 65 100, 75 85, 75 60 C 75 35, 65 20, 50 10 Z" 
-                fill="rgba(58,58,58,0.8)" stroke="#2a2a2a" stroke-width="3"/>
+                fill="rgba(58,58,58,0.8)" stroke="#000000" stroke-width="3"/>
           <!-- EXP Fill (clips to waterdrop shape, fills from bottom to top) -->
           <g clip-path="url(#waterdrop-clip)">
             <rect id="waterdrop-exp-fill" x="0" y="10" width="100" height="110" 
@@ -2990,10 +2990,11 @@
 
   <!-- Game Over Screen -->
   <div id="gameover-screen">
+    <div style="background: linear-gradient(to bottom, #1a1a2e, #0d0d1a); border: 4px solid #000; border-radius: 12px; padding: 20px; max-width: 90vw; width: 480px; max-height: 90vh; overflow-y: auto; box-sizing: border-box; box-shadow: 0 0 0 2px #FFD700, 0 8px 30px rgba(0,0,0,0.8); position: relative;">
     <h1 style="color: #5DADE2; font-size: 40px; text-shadow: 2px 2px 0 #000, 0 0 10px rgba(93,173,226,0.8);">GAME OVER</h1>
     <div style="max-width: 90vw; max-height: 70vh; margin: 20px auto; box-sizing: border-box; overflow-y: auto;">
       <h3 style="color: #FFD700; font-size: 24px; margin-bottom: 15px;">Run Summary</h3>
-      <div style="text-align: left; background: rgba(0,0,0,0.5); padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+      <div style="text-align: left; background: rgba(0,0,0,0.5); padding: 20px; border-radius: 10px; margin-bottom: 20px; border: 2px solid rgba(0,0,0,0.8);">
         <p id="final-score" style="font-size: 18px; margin: 8px 0;">⏱️ Survived: 0s</p>
         <p id="final-kills" style="font-size: 18px; margin: 8px 0;">⚔️ Kills: 0</p>
         <p id="final-level" style="font-size: 18px; margin: 8px 0;">📊 Final Level: 1</p>
@@ -3008,9 +3009,10 @@
       </div>
     </div>
     <div style="display: flex; gap: 15px; margin-top: 10px; flex-wrap: wrap; justify-content: center;">
-      <button class="btn" id="goto-camp-btn" style="background: #8B4513;">⛺ GO TO CAMP</button>
-      <button class="btn" id="quit-to-menu-btn" style="background: #555;">📋 QUIT TO MENU</button>
-      <button class="btn" id="restart-btn">🔄 START RUN</button>
+      <button class="btn" id="goto-camp-btn" style="background: #8B4513; border: 3px solid #000;">⛺ GO TO CAMP</button>
+      <button class="btn" id="quit-to-menu-btn" style="background: #555; border: 3px solid #000;">📋 QUIT TO MENU</button>
+      <button class="btn" id="restart-btn" style="border: 3px solid #000;">🔄 START RUN</button>
+    </div>
     </div>
   </div>
 
@@ -5630,15 +5632,53 @@
         this.lastDamageType = damageType;
         
         // Phase 5: Hit impact particles (flesh/blood) on every hit - ENHANCED: Scale with HP remaining
-        const bloodParticleCount = Math.max(4, Math.floor((1 - this.hp/this.maxHp) * 12) + 3); // More blood as HP drops
+        const hpRatio = this.hp / this.maxHp;
+        const bloodParticleCount = Math.max(5, Math.floor((1 - hpRatio) * 14) + 4); // More blood as HP drops
         spawnParticles(this.mesh.position, 0x8B0000, Math.min(bloodParticleCount, 20)); // Blood particles scale with HP loss
+        spawnParticles(this.mesh.position, 0x660000, Math.min(Math.floor(bloodParticleCount * 0.5), 8)); // Darker blood
         // Spawn multiple ground blood decals for more brutal effect
         spawnBloodDecal(this.mesh.position);
-        if (this.hp / this.maxHp < 0.5) {
+        if (hpRatio < 0.5) {
           spawnBloodDecal(this.mesh.position); // Extra decal at half HP
         }
-        if (this.hp / this.maxHp < 0.25) {
+        if (hpRatio < 0.25) {
           spawnBloodDecal(this.mesh.position); // Extra decal at low HP
+          spawnBloodDecal(this.mesh.position); // Even more at critical HP
+        }
+        
+        // Blood drip: small drops fall from wounded enemy to ground
+        if (hpRatio < 0.5 && scene) {
+          const dripCount = hpRatio < 0.25 ? 3 : 1;
+          for (let d = 0; d < dripCount; d++) {
+            const drip = new THREE.Mesh(
+              new THREE.SphereGeometry(0.04 + Math.random() * 0.04, 4, 4),
+              new THREE.MeshBasicMaterial({ color: 0x8B0000 })
+            );
+            drip.position.set(
+              this.mesh.position.x + (Math.random() - 0.5) * 0.4,
+              this.mesh.position.y + (Math.random() - 0.5) * 0.2,
+              this.mesh.position.z + (Math.random() - 0.5) * 0.4
+            );
+            scene.add(drip);
+            let dripVelY = 0;
+            let dripLife = 25 + Math.floor(Math.random() * 15);
+            const updateDrip = () => {
+              dripVelY -= 0.018;
+              drip.position.y += dripVelY;
+              dripLife--;
+              if (drip.position.y <= 0.02 || dripLife <= 0) {
+                const hitGround = drip.position.y <= 0.02;
+                const dripPos = drip.position.clone();
+                scene.remove(drip);
+                drip.geometry.dispose();
+                drip.material.dispose();
+                if (hitGround) spawnBloodDecal(dripPos);
+                return;
+              }
+              requestAnimationFrame(updateDrip);
+            };
+            updateDrip();
+          }
         }
         
         // Phase 3: Apply armor reduction for MiniBoss
@@ -10455,15 +10495,26 @@
         showStatusMessage(`${skill.name} leveled up!`, 2000);
         
         // QUEST 2: Track skill point spending for tutorial quest
-        if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest2_spendSkills') {
-          // Require specifically Dash (dashMaster) AND a Headshot/Critical skill (criticalFocus or executioner)
-          const hasDash = saveData.skillTree.dashMaster && saveData.skillTree.dashMaster.level > 0;
-          const hasHeadshot = (saveData.skillTree.criticalFocus && saveData.skillTree.criticalFocus.level > 0) ||
-                              (saveData.skillTree.executioner && saveData.skillTree.executioner.level > 0);
-          
-          if (hasDash && hasHeadshot) {
-            // Completed quest 2: unlocked Dash and Headshot
-            progressTutorialQuest('quest2_spendSkills', true);
+        if (saveData.tutorialQuests) {
+          // Auto-activate quest2 if quest1 is claimed but quest2 hasn't started (race condition fix)
+          if (
+            isQuestClaimed('quest1_kill3') &&
+            !saveData.tutorialQuests.currentQuest &&
+            !isQuestClaimed('quest2_spendSkills') &&
+            !saveData.tutorialQuests.readyToClaim.includes('quest2_spendSkills')
+          ) {
+            saveData.tutorialQuests.currentQuest = 'quest2_spendSkills';
+          }
+          if (saveData.tutorialQuests.currentQuest === 'quest2_spendSkills') {
+            // Require specifically Dash (dashMaster) AND a Headshot/Critical skill (criticalFocus or executioner)
+            const hasDash = saveData.skillTree.dashMaster && saveData.skillTree.dashMaster.level > 0;
+            const hasHeadshot = (saveData.skillTree.criticalFocus && saveData.skillTree.criticalFocus.level > 0) ||
+                                (saveData.skillTree.executioner && saveData.skillTree.executioner.level > 0);
+            
+            if (hasDash && hasHeadshot) {
+              // Completed quest 2: unlocked Dash and Headshot
+              progressTutorialQuest('quest2_spendSkills', true);
+            }
           }
         }
         
@@ -11080,19 +11131,19 @@
           message,
           'Continue',
           () => {
-            // Wait 100ms before activating next quest (as per requirements)
-            setTimeout(() => {
-              if (quest.nextQuest) {
-                // Check if conditions for next quest are met
-                if (checkQuestConditions(quest.nextQuest)) {
-                  saveData.tutorialQuests.currentQuest = quest.nextQuest;
-                  // Reset quest6 attribute counter when quest6 starts
-                  if (quest.nextQuest === 'quest6_buyAttributes') {
-                    saveData.tutorialQuests.quest6AttrCount = 0;
-                  }
-                  saveSaveData();
+            if (quest.nextQuest) {
+              // Check if conditions for next quest are met
+              if (checkQuestConditions(quest.nextQuest)) {
+                // Set currentQuest immediately (synchronous) so skill checks work without timing issues
+                saveData.tutorialQuests.currentQuest = quest.nextQuest;
+                // Reset quest6 attribute counter when quest6 starts
+                if (quest.nextQuest === 'quest6_buyAttributes') {
+                  saveData.tutorialQuests.quest6AttrCount = 0;
+                }
+                saveSaveData();
+                // Delay only the popup display
+                setTimeout(() => {
                   showNextQuestPopup(quest.nextQuest);
-                  
                   // Trigger Stonehenge cinematic when quest3_stonehengeGear starts
                   if (quest.nextQuest === 'quest3_stonehengeGear' && window.stonehengeChest) {
                     setTimeout(() => {
@@ -11103,14 +11154,14 @@
                       }
                     }, 500);
                   }
-                } else {
-                  const questName = TUTORIAL_QUESTS[quest.nextQuest]?.name || quest.nextQuest;
-                  console.log(`Cannot start ${questName}: conditions not met`);
-                  showStatChange(`⚠️ Prerequisites not met for ${questName}`);
-                }
+                }, 100);
+              } else {
+                const questName = TUTORIAL_QUESTS[quest.nextQuest]?.name || quest.nextQuest;
+                console.log(`Cannot start ${questName}: conditions not met`);
+                showStatChange(`⚠️ Prerequisites not met for ${questName}`);
               }
-              updateCampScreen();
-            }, 100);
+            }
+            updateCampScreen();
           }
         );
       } else {
@@ -11485,6 +11536,27 @@
             </div>`,
             'ACCEPT MISSION!'
           );
+        }
+      }
+      
+      // Fallback: auto-activate quest2 if quest1 is claimed but quest2 hasn't started
+      if (
+        isQuestClaimed('quest1_kill3') &&
+        !saveData.tutorialQuests.currentQuest &&
+        !isQuestClaimed('quest2_spendSkills') &&
+        !saveData.tutorialQuests.readyToClaim.includes('quest2_spendSkills')
+      ) {
+        saveData.tutorialQuests.currentQuest = 'quest2_spendSkills';
+        saveSaveData();
+      }
+      
+      // If quest2 is active, check if skills are already bought (handles edge cases)
+      if (saveData.tutorialQuests.currentQuest === 'quest2_spendSkills') {
+        const hasDash = saveData.skillTree.dashMaster && saveData.skillTree.dashMaster.level > 0;
+        const hasHeadshot = (saveData.skillTree.criticalFocus && saveData.skillTree.criticalFocus.level > 0) ||
+                            (saveData.skillTree.executioner && saveData.skillTree.executioner.level > 0);
+        if (hasDash && hasHeadshot) {
+          progressTutorialQuest('quest2_spendSkills', true);
         }
       }
       
