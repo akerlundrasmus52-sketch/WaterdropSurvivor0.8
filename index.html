@@ -2603,6 +2603,7 @@
     <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
       <button class="btn" id="camp-buildings-tab" style="padding: 10px 20px; font-size: 16px; background: #5A3A31;">BUILDINGS</button>
       <button class="btn" id="camp-skills-tab" style="padding: 10px 20px; font-size: 16px; background: #3a3a3a;">SKILL TREE</button>
+      <button class="btn" id="camp-passive-tab" style="padding: 10px 20px; font-size: 16px; background: #3a3a3a;">⚗️ PASSIVES</button>
       <button class="btn" id="camp-sleep-tab" style="padding: 10px 20px; font-size: 16px; background: #3a3a3a;" aria-label="Sleep">💤 SLEEP</button>
       <button class="btn" id="camp-training-tab" style="padding: 10px 20px; font-size: 16px; background: #3a3a3a;" aria-label="Training">🏋️ TRAINING</button>
     </div>
@@ -2666,6 +2667,22 @@
         </p>
       </div>
       <div id="training-attributes-content" style="display: flex; flex-direction: column; gap: 15px;">
+        <!-- Dynamically populated -->
+      </div>
+    </div>
+
+    <!-- Passive Skills Section -->
+    <div id="camp-passive-section" style="display: none; width: 100%; max-width: 700px;">
+      <div style="color: #FFD700; font-size: 20px; margin-bottom: 15px;">⚗️ Passive Skills</div>
+      <div style="background: rgba(0,0,0,0.5); padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+        <p style="font-size: 14px; color: #AAA; line-height: 1.6;">
+          Passive skills provide permanent bonuses across all runs. Unlock new passives as your Account Level increases.
+        </p>
+        <p style="font-size: 14px; color: #5DADE2; margin-top: 8px;">
+          Passive Skill Points: <span id="passive-skill-points-display" style="color:#FFD700;font-weight:bold;">0</span>
+        </p>
+      </div>
+      <div id="camp-passive-content" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px;">
         <!-- Dynamically populated -->
       </div>
     </div>
@@ -4254,26 +4271,33 @@
         this.rightArm.rotation.z = -Math.PI / 6; // Angled outward
         this.mesh.add(this.rightArm);
         
-        // Gun visual (held by right arm)
-        const gunBodyGeo = new THREE.BoxGeometry(0.08, 0.12, 0.25);
-        const gunMat = new THREE.MeshToonMaterial({ color: 0x222222 }); // Dark gray gun body
+        // Gun visual (held by right arm) - enhanced for better visibility
+        const gunBodyGeo = new THREE.BoxGeometry(0.12, 0.16, 0.35); // Larger gun body
+        const gunMat = new THREE.MeshToonMaterial({ color: 0x333333 }); // Slightly lighter dark gray
         this.gunBody = new THREE.Mesh(gunBodyGeo, gunMat);
-        this.gunBody.position.set(0.4, -0.1, 0.3);
+        this.gunBody.position.set(0.42, -0.05, 0.35);
         this.mesh.add(this.gunBody);
         
-        // Gun barrel
-        const barrelGeo = new THREE.CylinderGeometry(0.025, 0.025, 0.2, 8);
-        const barrelMat = new THREE.MeshToonMaterial({ color: 0x111111 }); // Black barrel
+        // Gun barrel - longer and thicker
+        const barrelGeo = new THREE.CylinderGeometry(0.035, 0.03, 0.3, 8);
+        const barrelMat = new THREE.MeshToonMaterial({ color: 0x1a1a1a }); // Black barrel
         this.gunBarrel = new THREE.Mesh(barrelGeo, barrelMat);
         this.gunBarrel.rotation.x = Math.PI / 2;
-        this.gunBarrel.position.set(0.4, -0.1, 0.45);
+        this.gunBarrel.position.set(0.42, -0.05, 0.56);
         this.mesh.add(this.gunBarrel);
         
+        // Gun scope / sight for visibility
+        const sightGeo = new THREE.BoxGeometry(0.04, 0.05, 0.06);
+        const sightMat = new THREE.MeshToonMaterial({ color: 0x666666 });
+        this.gunSight = new THREE.Mesh(sightGeo, sightMat);
+        this.gunSight.position.set(0.42, 0.04, 0.35);
+        this.mesh.add(this.gunSight);
+        
         // Gun handle
-        const handleGeo = new THREE.BoxGeometry(0.05, 0.15, 0.08);
+        const handleGeo = new THREE.BoxGeometry(0.07, 0.18, 0.10);
         const handleMat = new THREE.MeshToonMaterial({ color: 0x8B4513 }); // Brown handle
         this.gunHandle = new THREE.Mesh(handleGeo, handleMat);
-        this.gunHandle.position.set(0.4, -0.2, 0.25);
+        this.gunHandle.position.set(0.42, -0.22, 0.25);
         this.gunHandle.rotation.z = -Math.PI / 6;
         this.mesh.add(this.gunHandle);
         
@@ -8380,6 +8404,9 @@
       // Account Level System - Persistent across all runs
       accountLevel: 1, // Persistent character level
       accountXP: 0,    // Total XP earned (quests + kills)
+      // Passive Skills System
+      passiveSkills: {},       // Object: skillId → level
+      passiveSkillPoints: 0,   // Points to spend on passive skills
       // Camp state
       hasVisitedCamp: false, // Track first camp visit
       nextRunTimeOfDay: 'day', // 'day' or 'night' - chosen from sleep option
@@ -8473,6 +8500,9 @@
           // Account level system
           saveData.accountLevel = saveData.accountLevel || 1;
           saveData.accountXP = saveData.accountXP || 0;
+          // Passive skills system
+          saveData.passiveSkills = saveData.passiveSkills || {};
+          saveData.passiveSkillPoints = saveData.passiveSkillPoints || 0;
           // Story quest system (legacy fields)
           saveData.storyQuests = { ...defaultSaveData.storyQuests, ...(saveData.storyQuests || {}) };
           saveData.storyQuests.buildingFirstUse = { ...defaultSaveData.storyQuests.buildingFirstUse, ...(saveData.storyQuests.buildingFirstUse || {}) };
@@ -10469,6 +10499,59 @@
       return `${hours}h ${minutes}m`;
     }
     
+    // Passive Skills System
+    const PASSIVE_SKILLS = [
+      { id: 'hp_boost', icon: '❤️', name: 'HP Boost', desc: '+10 Max HP per level', maxLevel: 5, cost: 2, apply: (saves) => { saves.passiveSkills.hp_boost = (saves.passiveSkills.hp_boost || 0) + 1; } },
+      { id: 'dmg_boost', icon: '⚔️', name: 'Damage Boost', desc: '+5% Base Damage per level', maxLevel: 5, cost: 2, apply: (saves) => { saves.passiveSkills.dmg_boost = (saves.passiveSkills.dmg_boost || 0) + 1; } },
+      { id: 'gold_bonus', icon: '💰', name: 'Gold Finder', desc: '+10% Gold per level', maxLevel: 5, cost: 2, apply: (saves) => { saves.passiveSkills.gold_bonus = (saves.passiveSkills.gold_bonus || 0) + 1; } },
+      { id: 'xp_bonus', icon: '⭐', name: 'XP Boost', desc: '+10% XP per level', maxLevel: 5, cost: 2, apply: (saves) => { saves.passiveSkills.xp_bonus = (saves.passiveSkills.xp_bonus || 0) + 1; } },
+      { id: 'regen_boost', icon: '🔄', name: 'Regeneration', desc: '+0.5 HP/sec per level', maxLevel: 5, cost: 3, apply: (saves) => { saves.passiveSkills.regen_boost = (saves.passiveSkills.regen_boost || 0) + 1; } },
+      { id: 'speed_boost', icon: '💨', name: 'Swiftness', desc: '+5% Move Speed per level', maxLevel: 3, cost: 3, apply: (saves) => { saves.passiveSkills.speed_boost = (saves.passiveSkills.speed_boost || 0) + 1; } }
+    ];
+    
+    function updatePassiveSkillsSection() {
+      if (!saveData.passiveSkills) saveData.passiveSkills = {};
+      if (!saveData.passiveSkillPoints) saveData.passiveSkillPoints = 0;
+      
+      const pointsEl = document.getElementById('passive-skill-points-display');
+      if (pointsEl) pointsEl.textContent = saveData.passiveSkillPoints;
+      
+      const content = document.getElementById('camp-passive-content');
+      if (!content) return;
+      content.innerHTML = '';
+      
+      PASSIVE_SKILLS.forEach(skill => {
+        const currentLevel = saveData.passiveSkills[skill.id] || 0;
+        const isMax = currentLevel >= skill.maxLevel;
+        const canAfford = saveData.passiveSkillPoints >= skill.cost;
+        
+        const card = document.createElement('div');
+        card.style.cssText = `background:linear-gradient(to bottom,#2a3a2a,#1a2a1a);border:2px solid ${isMax ? '#FFD700' : '#4a6a4a'};border-radius:12px;padding:15px;`;
+        card.innerHTML = `
+          <div style="font-size:24px;margin-bottom:6px;">${skill.icon}</div>
+          <div style="font-family:'Bangers',cursive;font-size:18px;color:${isMax ? '#FFD700' : '#90EE90'};letter-spacing:1px;">${skill.name}</div>
+          <div style="font-size:13px;color:#aaa;margin:4px 0;">${skill.desc}</div>
+          <div style="font-size:12px;color:#FFD700;margin:4px 0;">Level: ${currentLevel}/${skill.maxLevel}</div>
+          ${!isMax ? `<button style="background:${canAfford ? '#2a6a2a' : '#3a3a3a'};color:${canAfford ? '#90EE90' : '#666'};border:1px solid ${canAfford ? '#4a9a4a' : '#555'};border-radius:6px;padding:6px 12px;cursor:${canAfford ? 'pointer' : 'default'};font-size:13px;margin-top:6px;" data-id="${skill.id}" data-cost="${skill.cost}">Unlock (${skill.cost} pts)</button>` : '<div style="color:#FFD700;font-size:13px;margin-top:6px;">✅ MAX LEVEL</div>'}
+        `;
+        
+        const btn = card.querySelector('button');
+        if (btn && canAfford) {
+          btn.onclick = () => {
+            if (saveData.passiveSkillPoints < skill.cost) return;
+            saveData.passiveSkillPoints -= skill.cost;
+            skill.apply(saveData);
+            saveSaveData();
+            updatePassiveSkillsSection();
+            playSound('collect');
+            showStatusMessage(`${skill.name} upgraded!`, 2000);
+          };
+        }
+        
+        content.appendChild(card);
+      });
+    }
+    
     function updateTrainingSection() {
       updateTrainingPoints();
       
@@ -10649,8 +10732,8 @@
         claim: 'Main Building',
         rewardGold: 0,
         rewardSkillPoints: 0,
-        message: "Cigar equipped! 🚬<br><br>Feel that power — +1 to all stats!<br><br>Your next mission: <b>complete a run</b> to earn Attribute Points.",
-        nextQuest: 'quest5_doRun',
+        message: "Cigar equipped! 🚬<br><br>Feel that power — +1 to all stats!<br><br>Your next mission: <b>Kill 10 Enemies</b> in a single run!",
+        nextQuest: 'quest7_kill10',
         conditions: ['quest3_stonehengeGear']
       },
       quest5_doRun: {
@@ -10690,7 +10773,8 @@
         rewardSkillPoints: 0,
         message: "🎉 TUTORIAL COMPLETE!<br><br>You've mastered the basics of survival!<br><br>The world is yours to conquer. Good luck, Droplet!",
         nextQuest: null,
-        conditions: ['quest6_buyAttributes']
+        conditionsAny: ['quest4_equipCigar', 'quest6_buyAttributes'], // Accept any of these predecessors
+        conditions: [] // No strict requirements - conditionsAny handles it
       },
       quest3_buyProgression: {
         id: 'quest3_buyProgression',
@@ -10781,13 +10865,24 @@
       const quest = TUTORIAL_QUESTS[questId];
       if (!quest) return false;
       
+      const completedQuests = saveData.tutorialQuests.completedQuests || [];
+      
+      // Check conditionsAny - quest is available if ANY of these are claimed
+      if (quest.conditionsAny && quest.conditionsAny.length > 0) {
+        const anyMet = quest.conditionsAny.some(cId => completedQuests.includes(cId));
+        if (!anyMet) {
+          console.log(`Quest ${questId} blocked: requires any of ${quest.conditionsAny.join(', ')} to be claimed`);
+          return false;
+        }
+        return true;
+      }
+      
       // If no conditions, quest is always available
       if (!quest.conditions || quest.conditions.length === 0) {
         return true;
       }
       
       // Check if all prerequisite quests are claimed (completed)
-      const completedQuests = saveData.tutorialQuests.completedQuests || [];
       for (const conditionQuestId of quest.conditions) {
         if (!completedQuests.includes(conditionQuestId)) {
           console.log(`Quest ${questId} blocked: requires ${conditionQuestId} to be claimed`);
@@ -13891,10 +13986,12 @@
         document.getElementById('camp-skills-section').style.display = 'none';
         document.getElementById('camp-sleep-section').style.display = 'none';
         document.getElementById('camp-training-section').style.display = 'none';
+        document.getElementById('camp-passive-section').style.display = 'none';
         document.getElementById('camp-buildings-tab').style.background = '#5A3A31';
         document.getElementById('camp-skills-tab').style.background = '#3a3a3a';
         document.getElementById('camp-sleep-tab').style.background = '#3a3a3a';
         document.getElementById('camp-training-tab').style.background = '#3a3a3a';
+        document.getElementById('camp-passive-tab').style.background = '#3a3a3a';
       };
       
       document.getElementById('camp-skills-tab').onclick = () => {
@@ -13903,10 +14000,27 @@
         document.getElementById('camp-skills-section').style.display = 'block';
         document.getElementById('camp-sleep-section').style.display = 'none';
         document.getElementById('camp-training-section').style.display = 'none';
+        document.getElementById('camp-passive-section').style.display = 'none';
         document.getElementById('camp-buildings-tab').style.background = '#3a3a3a';
         document.getElementById('camp-skills-tab').style.background = '#5A3A31';
         document.getElementById('camp-sleep-tab').style.background = '#3a3a3a';
         document.getElementById('camp-training-tab').style.background = '#3a3a3a';
+        document.getElementById('camp-passive-tab').style.background = '#3a3a3a';
+      };
+      
+      document.getElementById('camp-passive-tab').onclick = () => {
+        playSound('waterdrop');
+        document.getElementById('camp-buildings-section').style.display = 'none';
+        document.getElementById('camp-skills-section').style.display = 'none';
+        document.getElementById('camp-sleep-section').style.display = 'none';
+        document.getElementById('camp-training-section').style.display = 'none';
+        document.getElementById('camp-passive-section').style.display = 'block';
+        document.getElementById('camp-buildings-tab').style.background = '#3a3a3a';
+        document.getElementById('camp-skills-tab').style.background = '#3a3a3a';
+        document.getElementById('camp-sleep-tab').style.background = '#3a3a3a';
+        document.getElementById('camp-training-tab').style.background = '#3a3a3a';
+        document.getElementById('camp-passive-tab').style.background = '#5A3A31';
+        updatePassiveSkillsSection();
       };
       
       document.getElementById('camp-sleep-tab').onclick = () => {
@@ -13915,10 +14029,12 @@
         document.getElementById('camp-skills-section').style.display = 'none';
         document.getElementById('camp-sleep-section').style.display = 'block';
         document.getElementById('camp-training-section').style.display = 'none';
+        document.getElementById('camp-passive-section').style.display = 'none';
         document.getElementById('camp-buildings-tab').style.background = '#3a3a3a';
         document.getElementById('camp-skills-tab').style.background = '#3a3a3a';
         document.getElementById('camp-sleep-tab').style.background = '#5A3A31';
         document.getElementById('camp-training-tab').style.background = '#3a3a3a';
+        document.getElementById('camp-passive-tab').style.background = '#3a3a3a';
       };
       
       document.getElementById('camp-training-tab').onclick = () => {
@@ -13927,10 +14043,12 @@
         document.getElementById('camp-skills-section').style.display = 'none';
         document.getElementById('camp-sleep-section').style.display = 'none';
         document.getElementById('camp-training-section').style.display = 'block';
+        document.getElementById('camp-passive-section').style.display = 'none';
         document.getElementById('camp-buildings-tab').style.background = '#3a3a3a';
         document.getElementById('camp-skills-tab').style.background = '#3a3a3a';
         document.getElementById('camp-sleep-tab').style.background = '#3a3a3a';
         document.getElementById('camp-training-tab').style.background = '#5A3A31';
+        document.getElementById('camp-passive-tab').style.background = '#3a3a3a';
         updateTrainingSection();
       };
       
@@ -16977,6 +17095,13 @@
       const baseArmor = PERMANENT_UPGRADES.armor.effect(saveData.upgrades.armor);
       const cdReduction = PERMANENT_UPGRADES.cooldownReduction.effect(saveData.upgrades.cooldownReduction);
       
+      // Apply passive skill bonuses
+      const passiveSkills = saveData.passiveSkills || {};
+      const passiveHpBonus = (passiveSkills.hp_boost || 0) * 10;
+      const passiveDmgBonus = (passiveSkills.dmg_boost || 0) * 0.05;
+      const passiveRegenBonus = (passiveSkills.regen_boost || 0) * 0.5;
+      const passiveSpeedBonus = (passiveSkills.speed_boost || 0) * 0.05;
+      
       // Apply attribute bonuses from achievement system
       const dexterity = saveData.attributes.dexterity || 0;
       const strength = saveData.attributes.strength || 0;
@@ -17017,21 +17142,21 @@
       playerStats.lvl = 1;
       playerStats.exp = 0;
       playerStats.expReq = GAME_CONFIG.baseExpReq;
-      playerStats.hp = baseHp + attrHp;
-      playerStats.maxHp = baseHp + attrHp;
+      playerStats.hp = baseHp + attrHp + passiveHpBonus;
+      playerStats.maxHp = baseHp + attrHp + passiveHpBonus;
       
       // Apply legendary cigar bonus if unlocked
       const cigarBonus = (saveData.extendedQuests && saveData.extendedQuests.legendaryCigar && saveData.extendedQuests.legendaryCigar.completed) ? 1.5 : 1.0;
-      playerStats.strength = baseDamage * (1 + attrDamage + gearMagicBonus) * cigarBonus;
+      playerStats.strength = baseDamage * (1 + attrDamage + gearMagicBonus + passiveDmgBonus) * cigarBonus;
       
-      playerStats.walkSpeed = baseSpeed * (1 + gearMoveSpeedBonus + enduranceMoveSpeed);
+      playerStats.walkSpeed = baseSpeed * (1 + gearMoveSpeedBonus + enduranceMoveSpeed + passiveSpeedBonus);
       playerStats.kills = 0;
       playerStats.miniBossesDefeated = 0; // Reset mini-boss tracking
       playerStats.atkSpeed = baseAtkSpeed * (1 + attrAtkSpeed + gearAtkSpeedBonus);
       playerStats.critChance = baseCritChance + attrCritChance + gearPrecisionBonus + gearCritBonus;
       playerStats.critDmg = baseCritDmg + attrCritDmg;
       playerStats.armor = baseArmor + gearStats.flexibility + flexibilityArmor; // Flexibility gives flat armor bonus
-      playerStats.hpRegen = baseRegen + attrRegen;
+      playerStats.hpRegen = baseRegen + attrRegen + passiveRegenBonus;
       playerStats.gold = 0;
       waveCount = 0;
       lastWaveEndTime = 0; // Reset wave timing
