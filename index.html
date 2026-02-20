@@ -1687,16 +1687,13 @@
     }
 
     .menu-btn {
-      background: linear-gradient(135deg, rgba(93,173,226,0.9), rgba(52,152,219,0.9));
-      color: #FFFFFF;
-      border: 3px solid rgba(255,255,255,0.6);
+      background: transparent; /* Invisible - overlays text in background image */
+      color: transparent; /* Hide button text - text visible via background image */
+      border: none;
       padding: 15px 40px;
       font-size: 24px;
       font-weight: bold;
-      box-shadow: 
-        0 0 20px rgba(93,173,226,0.6),
-        0 4px 15px rgba(0,0,0,0.4),
-        inset 0 1px 0 rgba(255,255,255,0.3);
+      box-shadow: none;
       position: absolute;
       width: 260px; /* Reduced from 300px */
       height: 60px;
@@ -1706,56 +1703,22 @@
       left: 50%;
       transform: translateX(-50%);
       border-radius: 10px;
-      text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+      text-shadow: none;
       letter-spacing: 2px;
+    }
+
+    .menu-btn:hover {
+      background: rgba(93,173,226,0.15); /* Subtle highlight on hover so player knows it's a button */
+      border-radius: 10px;
+    }
+
+    .menu-btn:active {
+      background: rgba(93,173,226,0.3);
+      transform: translateX(-50%) translateY(2px);
     }
 
     #start-game-btn { top: 55%; } /* Position START GAME button in middle-lower area */
     #camp-btn { top: 65%; } /* Position CAMP button below START GAME */
-
-    .menu-btn::before {
-      content: '';
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: 0;
-      height: 0;
-      border-radius: 50%;
-      background: rgba(255, 255, 255, 0.5);
-      transform: translate(-50%, -50%);
-      transition: width 0.6s, height 0.6s;
-    }
-
-    .menu-btn:hover {
-      background: linear-gradient(135deg, rgba(93,173,226,1), rgba(52,152,219,1));
-      box-shadow: 
-        0 0 30px rgba(93, 173, 226, 0.9), 
-        0 0 50px rgba(93, 173, 226, 0.6), 
-        0 4px 20px rgba(0,0,0,0.5),
-        inset 0 0 30px rgba(93, 173, 226, 0.3);
-      transform: translateX(-50%) translateY(-2px);
-    }
-
-    .menu-btn:active {
-      background: linear-gradient(135deg, rgba(255,255,255,0.9), rgba(93,173,226,1));
-      box-shadow: 
-        0 0 40px rgba(255, 255, 255, 1), 
-        0 0 60px rgba(93, 173, 226, 1), 
-        0 2px 10px rgba(0,0,0,0.6),
-        inset 0 0 40px rgba(255, 255, 255, 0.8);
-      animation: lightning-flash 0.3s ease;
-      transform: translateX(-50%) translateY(2px);
-    }
-
-    .menu-btn:active::before {
-      width: 260px;
-      height: 260px;
-    }
-
-    @keyframes lightning-flash {
-      0%, 100% { filter: brightness(1.1); }
-      50% { filter: brightness(2); box-shadow: 0 0 40px rgba(255,255,255,1), 0 0 80px rgba(93,173,226,1); }
-    }
 
     .gold-display {
       position: absolute;
@@ -2626,10 +2589,21 @@
   <div id="camp-screen">
     <div class="screen-title">⛺ CAMP</div>
     
+    <!-- Account Level Display (top-center) -->
+    <div id="account-level-display" style="text-align:center;margin-bottom:15px;background:linear-gradient(135deg,rgba(20,20,40,0.9),rgba(40,20,60,0.9));border:2px solid #FFD700;border-radius:12px;padding:10px 20px;max-width:400px;width:100%;">
+      <div style="font-family:'Bangers',cursive;font-size:14px;color:#aaa;letter-spacing:2px;">ACCOUNT LEVEL</div>
+      <div id="account-level-value" style="font-family:'Bangers',cursive;font-size:36px;color:#FFD700;text-shadow:0 0 10px rgba(255,215,0,0.8);">1</div>
+      <div style="background:rgba(0,0,0,0.5);border-radius:8px;height:8px;width:100%;margin:4px 0;overflow:hidden;">
+        <div id="account-level-bar" style="height:100%;background:linear-gradient(90deg,#FFD700,#FFA500);width:0%;transition:width 0.5s;border-radius:8px;"></div>
+      </div>
+      <div id="account-level-progress-text" style="font-size:11px;color:#aaa;">0 / 100 XP</div>
+    </div>
+    
     <!-- Camp Tabs -->
     <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
       <button class="btn" id="camp-buildings-tab" style="padding: 10px 20px; font-size: 16px; background: #5A3A31;">BUILDINGS</button>
       <button class="btn" id="camp-skills-tab" style="padding: 10px 20px; font-size: 16px; background: #3a3a3a;">SKILL TREE</button>
+      <button class="btn" id="camp-passive-tab" style="padding: 10px 20px; font-size: 16px; background: #3a3a3a;">⚗️ PASSIVES</button>
       <button class="btn" id="camp-sleep-tab" style="padding: 10px 20px; font-size: 16px; background: #3a3a3a;" aria-label="Sleep">💤 SLEEP</button>
       <button class="btn" id="camp-training-tab" style="padding: 10px 20px; font-size: 16px; background: #3a3a3a;" aria-label="Training">🏋️ TRAINING</button>
     </div>
@@ -2693,6 +2667,22 @@
         </p>
       </div>
       <div id="training-attributes-content" style="display: flex; flex-direction: column; gap: 15px;">
+        <!-- Dynamically populated -->
+      </div>
+    </div>
+
+    <!-- Passive Skills Section -->
+    <div id="camp-passive-section" style="display: none; width: 100%; max-width: 700px;">
+      <div style="color: #FFD700; font-size: 20px; margin-bottom: 15px;">⚗️ Passive Skills</div>
+      <div style="background: rgba(0,0,0,0.5); padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+        <p style="font-size: 14px; color: #AAA; line-height: 1.6;">
+          Passive skills provide permanent bonuses across all runs. Unlock new passives as your Account Level increases.
+        </p>
+        <p style="font-size: 14px; color: #5DADE2; margin-top: 8px;">
+          Passive Skill Points: <span id="passive-skill-points-display" style="color:#FFD700;font-weight:bold;">0</span>
+        </p>
+      </div>
+      <div id="camp-passive-content" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px;">
         <!-- Dynamically populated -->
       </div>
     </div>
@@ -2933,6 +2923,7 @@
       <div id="upgrade-list">
         <!-- Cards injected by JS -->
       </div>
+      <button id="levelup-skip-btn" style="margin-top:12px;padding:8px 24px;background:#333;color:#FFD700;border:2px solid #FFD700;border-radius:8px;font-family:'Bangers',cursive;font-size:16px;letter-spacing:2px;cursor:pointer;display:none;" onclick="(function(){var m=document.getElementById('levelup-modal');m.style.display='none';if(window.setGamePaused)window.setGamePaused(false);})()">CONTINUE →</button>
     </div>
   </div>
 
@@ -3601,9 +3592,17 @@
     // Phase 5: Initialize particle object pool for performance
     let particlePool = null; // Will be initialized after scene is created
     
+    // Smoke particles managed array (avoids RAF accumulation over long sessions)
+    let smokeParticles = [];
+    const MAX_SMOKE_PARTICLES = 30; // Cap to prevent performance issues
+    
     // Deferred disposal queue for Three.js memory management (PR #81)
     const disposalQueue = [];
     const MAX_DISPOSALS_PER_FRAME = 10;
+    
+    // Ground blood decals array (cleaned up on reset)
+    let bloodDecals = [];
+    const MAX_BLOOD_DECALS = 40; // Cap for performance
     
     let frameCount = 0;
     let isPaused = false;
@@ -3732,6 +3731,7 @@
       isPaused = paused;
       window.isPaused = paused;
     }
+    window.setGamePaused = (paused) => setGamePaused(paused);
     
     function setGameActive(active) {
       isGameActive = active;
@@ -4271,26 +4271,33 @@
         this.rightArm.rotation.z = -Math.PI / 6; // Angled outward
         this.mesh.add(this.rightArm);
         
-        // Gun visual (held by right arm)
-        const gunBodyGeo = new THREE.BoxGeometry(0.08, 0.12, 0.25);
-        const gunMat = new THREE.MeshToonMaterial({ color: 0x222222 }); // Dark gray gun body
+        // Gun visual (held by right arm) - enhanced for better visibility
+        const gunBodyGeo = new THREE.BoxGeometry(0.12, 0.16, 0.35); // Larger gun body
+        const gunMat = new THREE.MeshToonMaterial({ color: 0x333333 }); // Slightly lighter dark gray
         this.gunBody = new THREE.Mesh(gunBodyGeo, gunMat);
-        this.gunBody.position.set(0.4, -0.1, 0.3);
+        this.gunBody.position.set(0.42, -0.05, 0.35);
         this.mesh.add(this.gunBody);
         
-        // Gun barrel
-        const barrelGeo = new THREE.CylinderGeometry(0.025, 0.025, 0.2, 8);
-        const barrelMat = new THREE.MeshToonMaterial({ color: 0x111111 }); // Black barrel
+        // Gun barrel - longer and thicker
+        const barrelGeo = new THREE.CylinderGeometry(0.035, 0.03, 0.3, 8);
+        const barrelMat = new THREE.MeshToonMaterial({ color: 0x1a1a1a }); // Black barrel
         this.gunBarrel = new THREE.Mesh(barrelGeo, barrelMat);
         this.gunBarrel.rotation.x = Math.PI / 2;
-        this.gunBarrel.position.set(0.4, -0.1, 0.45);
+        this.gunBarrel.position.set(0.42, -0.05, 0.56);
         this.mesh.add(this.gunBarrel);
         
+        // Gun scope / sight for visibility
+        const sightGeo = new THREE.BoxGeometry(0.04, 0.05, 0.06);
+        const sightMat = new THREE.MeshToonMaterial({ color: 0x666666 });
+        this.gunSight = new THREE.Mesh(sightGeo, sightMat);
+        this.gunSight.position.set(0.42, 0.04, 0.35);
+        this.mesh.add(this.gunSight);
+        
         // Gun handle
-        const handleGeo = new THREE.BoxGeometry(0.05, 0.15, 0.08);
+        const handleGeo = new THREE.BoxGeometry(0.07, 0.18, 0.10);
         const handleMat = new THREE.MeshToonMaterial({ color: 0x8B4513 }); // Brown handle
         this.gunHandle = new THREE.Mesh(handleGeo, handleMat);
-        this.gunHandle.position.set(0.4, -0.2, 0.25);
+        this.gunHandle.position.set(0.42, -0.22, 0.25);
         this.gunHandle.rotation.z = -Math.PI / 6;
         this.mesh.add(this.gunHandle);
         
@@ -5539,6 +5546,8 @@
         // Phase 5: Hit impact particles (flesh/blood) on every hit - ENHANCED: Scale with damage
         const bloodParticleCount = Math.min(3 + Math.floor(amount / 10), 15); // 3-15 particles based on damage
         spawnParticles(this.mesh.position, 0x8B0000, bloodParticleCount); // Blood particles scale with damage
+        // Ground blood decal on every hit
+        spawnBloodDecal(this.mesh.position);
         
         // Phase 3: Apply armor reduction for MiniBoss
         let finalAmount = amount;
@@ -7453,15 +7462,21 @@
         this.mesh.position.copy(pos);
         this.mesh.material.color.setHex(color);
         this.mesh.material.emissive.setHex(color);
+        // Blood particles (dark red) get smaller, faster, more splatter-like behavior
+        const isBlood = (color === 0x8B0000 || color === 0x6B0000);
+        const velScale = isBlood ? 1.5 : 1.0;
         this.vel.set(
-          (Math.random() - 0.5) * Particle.VEL_XZ_RANGE,
-          Particle.VEL_Y_MIN + Math.random() * Particle.VEL_Y_RANGE,
-          (Math.random() - 0.5) * Particle.VEL_XZ_RANGE
+          (Math.random() - 0.5) * Particle.VEL_XZ_RANGE * velScale,
+          (isBlood ? 0.05 : Particle.VEL_Y_MIN) + Math.random() * Particle.VEL_Y_RANGE * (isBlood ? 0.5 : 1.0),
+          (Math.random() - 0.5) * Particle.VEL_XZ_RANGE * velScale
         );
+        // Blood particles should be smaller scale
+        const sizeScale = isBlood ? 0.4 + Math.random() * 0.4 : 1.0;
+        this.mesh.scale.setScalar(sizeScale);
         this.mesh.rotation.set(0, 0, 0);
         this.mesh.visible = true;
         scene.add(this.mesh);
-        this.life = Particle.MAX_LIFETIME;
+        this.life = isBlood ? Math.floor(Particle.MAX_LIFETIME * 0.6) : Particle.MAX_LIFETIME;
       }
       
       update() {
@@ -7484,6 +7499,7 @@
         if (this.life <= 0) {
           scene.remove(this.mesh);
           this.mesh.visible = false;
+          this.mesh.scale.setScalar(1); // Reset scale for pool reuse
           return false;
         }
         return true;
@@ -8385,6 +8401,12 @@
         elementalOverload: { unlocked: false, level: 0, maxLevel: 3 }
       },
       skillPoints: 0, // Start with 0 skill points - earn through quests
+      // Account Level System - Persistent across all runs
+      accountLevel: 1, // Persistent character level
+      accountXP: 0,    // Total XP earned (quests + kills)
+      // Passive Skills System
+      passiveSkills: {},       // Object: skillId → level
+      passiveSkillPoints: 0,   // Points to spend on passive skills
       // Camp state
       hasVisitedCamp: false, // Track first camp visit
       nextRunTimeOfDay: 'day', // 'day' or 'night' - chosen from sleep option
@@ -8475,6 +8497,12 @@
           saveData.lastTrainingPointTime = saveData.lastTrainingPointTime || 0;
           saveData.skillPoints = saveData.skillPoints || 0;
           saveData.selectedCompanion = saveData.selectedCompanion || 'stormWolf';
+          // Account level system
+          saveData.accountLevel = saveData.accountLevel || 1;
+          saveData.accountXP = saveData.accountXP || 0;
+          // Passive skills system
+          saveData.passiveSkills = saveData.passiveSkills || {};
+          saveData.passiveSkillPoints = saveData.passiveSkillPoints || 0;
           // Story quest system (legacy fields)
           saveData.storyQuests = { ...defaultSaveData.storyQuests, ...(saveData.storyQuests || {}) };
           saveData.storyQuests.buildingFirstUse = { ...defaultSaveData.storyQuests.buildingFirstUse, ...(saveData.storyQuests.buildingFirstUse || {}) };
@@ -10359,11 +10387,13 @@
         
         // QUEST 2: Track skill point spending for tutorial quest
         if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest2_spendSkills') {
-          // Count total skill points spent (each level = 1 point)
-          const totalSkillsUnlocked = Object.values(saveData.skillTree).filter(s => s.level > 0).length;
+          // Require specifically Dash (dashMaster) AND a Headshot/Critical skill (criticalFocus or executioner)
+          const hasDash = saveData.skillTree.dashMaster && saveData.skillTree.dashMaster.level > 0;
+          const hasHeadshot = (saveData.skillTree.criticalFocus && saveData.skillTree.criticalFocus.level > 0) ||
+                              (saveData.skillTree.executioner && saveData.skillTree.executioner.level > 0);
           
-          if (totalSkillsUnlocked >= 2) {
-            // Completed quest 2: spent 2 skill points
+          if (hasDash && hasHeadshot) {
+            // Completed quest 2: unlocked Dash and Headshot
             progressTutorialQuest('quest2_spendSkills', true);
           }
         }
@@ -10392,8 +10422,18 @@
           };
         }
         
-        if (skillId === 'dashMaster' && saveData.tutorial.currentStep === 'unlock_dash' && !saveData.tutorial.dashUnlocked) {
+        // Unlock dash ability whenever dashMaster skill is purchased (regardless of tutorial step)
+        if (skillId === 'dashMaster' && !saveData.tutorial.dashUnlocked) {
           saveData.tutorial.dashUnlocked = true;
+          saveSaveData();
+        }
+        // Unlock headshot ability whenever a crit skill is purchased
+        if ((skillId === 'criticalFocus' || skillId === 'executioner') && !saveData.tutorial.headshotUnlocked) {
+          saveData.tutorial.headshotUnlocked = true;
+          saveSaveData();
+        }
+        
+        if (skillId === 'dashMaster' && saveData.tutorial.currentStep === 'unlock_dash') {
           saveData.tutorial.currentStep = 'unlock_headshot';
           saveSaveData();
           setTimeout(() => {
@@ -10457,6 +10497,59 @@
       const minutes = Math.floor((timeRemaining % (60 * 60 * 1000)) / (60 * 1000));
       
       return `${hours}h ${minutes}m`;
+    }
+    
+    // Passive Skills System
+    const PASSIVE_SKILLS = [
+      { id: 'hp_boost', icon: '❤️', name: 'HP Boost', desc: '+10 Max HP per level', maxLevel: 5, cost: 2, apply: (saves) => { saves.passiveSkills.hp_boost = (saves.passiveSkills.hp_boost || 0) + 1; } },
+      { id: 'dmg_boost', icon: '⚔️', name: 'Damage Boost', desc: '+5% Base Damage per level', maxLevel: 5, cost: 2, apply: (saves) => { saves.passiveSkills.dmg_boost = (saves.passiveSkills.dmg_boost || 0) + 1; } },
+      { id: 'gold_bonus', icon: '💰', name: 'Gold Finder', desc: '+10% Gold per level', maxLevel: 5, cost: 2, apply: (saves) => { saves.passiveSkills.gold_bonus = (saves.passiveSkills.gold_bonus || 0) + 1; } },
+      { id: 'xp_bonus', icon: '⭐', name: 'XP Boost', desc: '+10% XP per level', maxLevel: 5, cost: 2, apply: (saves) => { saves.passiveSkills.xp_bonus = (saves.passiveSkills.xp_bonus || 0) + 1; } },
+      { id: 'regen_boost', icon: '🔄', name: 'Regeneration', desc: '+0.5 HP/sec per level', maxLevel: 5, cost: 3, apply: (saves) => { saves.passiveSkills.regen_boost = (saves.passiveSkills.regen_boost || 0) + 1; } },
+      { id: 'speed_boost', icon: '💨', name: 'Swiftness', desc: '+5% Move Speed per level', maxLevel: 3, cost: 3, apply: (saves) => { saves.passiveSkills.speed_boost = (saves.passiveSkills.speed_boost || 0) + 1; } }
+    ];
+    
+    function updatePassiveSkillsSection() {
+      if (!saveData.passiveSkills) saveData.passiveSkills = {};
+      if (!saveData.passiveSkillPoints) saveData.passiveSkillPoints = 0;
+      
+      const pointsEl = document.getElementById('passive-skill-points-display');
+      if (pointsEl) pointsEl.textContent = saveData.passiveSkillPoints;
+      
+      const content = document.getElementById('camp-passive-content');
+      if (!content) return;
+      content.innerHTML = '';
+      
+      PASSIVE_SKILLS.forEach(skill => {
+        const currentLevel = saveData.passiveSkills[skill.id] || 0;
+        const isMax = currentLevel >= skill.maxLevel;
+        const canAfford = saveData.passiveSkillPoints >= skill.cost;
+        
+        const card = document.createElement('div');
+        card.style.cssText = `background:linear-gradient(to bottom,#2a3a2a,#1a2a1a);border:2px solid ${isMax ? '#FFD700' : '#4a6a4a'};border-radius:12px;padding:15px;`;
+        card.innerHTML = `
+          <div style="font-size:24px;margin-bottom:6px;">${skill.icon}</div>
+          <div style="font-family:'Bangers',cursive;font-size:18px;color:${isMax ? '#FFD700' : '#90EE90'};letter-spacing:1px;">${skill.name}</div>
+          <div style="font-size:13px;color:#aaa;margin:4px 0;">${skill.desc}</div>
+          <div style="font-size:12px;color:#FFD700;margin:4px 0;">Level: ${currentLevel}/${skill.maxLevel}</div>
+          ${!isMax ? `<button style="background:${canAfford ? '#2a6a2a' : '#3a3a3a'};color:${canAfford ? '#90EE90' : '#666'};border:1px solid ${canAfford ? '#4a9a4a' : '#555'};border-radius:6px;padding:6px 12px;cursor:${canAfford ? 'pointer' : 'default'};font-size:13px;margin-top:6px;" data-id="${skill.id}" data-cost="${skill.cost}">Unlock (${skill.cost} pts)</button>` : '<div style="color:#FFD700;font-size:13px;margin-top:6px;">✅ MAX LEVEL</div>'}
+        `;
+        
+        const btn = card.querySelector('button');
+        if (btn && canAfford) {
+          btn.onclick = () => {
+            if (saveData.passiveSkillPoints < skill.cost) return;
+            saveData.passiveSkillPoints -= skill.cost;
+            skill.apply(saveData);
+            saveSaveData();
+            updatePassiveSkillsSection();
+            playSound('collect');
+            showStatusMessage(`${skill.name} upgraded!`, 2000);
+          };
+        }
+        
+        content.appendChild(card);
+      });
     }
     
     function updateTrainingSection() {
@@ -10598,7 +10691,7 @@
         description: 'Start a new run and kill 3 enemies',
         objectives: 'Kill 3 enemies in one run',
         claim: 'Main Building',
-        rewardGold: 200,
+        rewardGold: 50,
         rewardSkillPoints: 2,
         unlockBuilding: 'skillTree',
         message: "Outstanding, Droplet! 🎯<br><br>You've proven your combat worth. The <b>Skill Tree</b> is now unlocked at camp!<br><br>Head to the <b>Skill Tree</b> tab and spend your <b>2 Skill Points</b> to grow stronger.",
@@ -10607,9 +10700,9 @@
       },
       quest2_spendSkills: {
         id: 'quest2_spendSkills',
-        name: 'Visit the Skill Tree',
-        description: 'Go to the Skill Tree tab and spend 2 skill points to unlock new abilities',
-        objectives: 'Unlock 2 skills in the Skill Tree tab',
+        name: 'Buy Dash & Headshot',
+        description: 'Go to the Skill Tree tab and unlock both Dash (dashMaster) and Headshot (criticalFocus or executioner)',
+        objectives: 'Unlock Dash and a Headshot/Critical skill in the Skill Tree tab',
         claim: 'Main Building',
         rewardGold: 0,
         rewardSkillPoints: 0,
@@ -10639,8 +10732,8 @@
         claim: 'Main Building',
         rewardGold: 0,
         rewardSkillPoints: 0,
-        message: "Cigar equipped! 🚬<br><br>Feel that power — +1 to all stats!<br><br>Your next mission: <b>complete a run</b> to earn Attribute Points.",
-        nextQuest: 'quest5_doRun',
+        message: "Cigar equipped! 🚬<br><br>Feel that power — +1 to all stats!<br><br>Your next mission: <b>Kill 10 Enemies</b> in a single run!",
+        nextQuest: 'quest7_kill10',
         conditions: ['quest3_stonehengeGear']
       },
       quest5_doRun: {
@@ -10680,7 +10773,8 @@
         rewardSkillPoints: 0,
         message: "🎉 TUTORIAL COMPLETE!<br><br>You've mastered the basics of survival!<br><br>The world is yours to conquer. Good luck, Droplet!",
         nextQuest: null,
-        conditions: ['quest6_buyAttributes']
+        conditionsAny: ['quest4_equipCigar', 'quest6_buyAttributes'], // Accept any of these predecessors
+        conditions: [] // No strict requirements - conditionsAny handles it
       },
       quest3_buyProgression: {
         id: 'quest3_buyProgression',
@@ -10771,15 +10865,27 @@
       const quest = TUTORIAL_QUESTS[questId];
       if (!quest) return false;
       
+      const completedQuests = saveData.tutorialQuests.completedQuests || [];
+      const completedSet = new Set(completedQuests); // Use Set for O(1) lookup
+      
+      // Check conditionsAny - quest is available if ANY of these are claimed
+      if (quest.conditionsAny && quest.conditionsAny.length > 0) {
+        const anyMet = quest.conditionsAny.some(cId => completedSet.has(cId));
+        if (!anyMet) {
+          console.log(`Quest ${questId} blocked: requires any of ${quest.conditionsAny.join(', ')} to be claimed`);
+          return false;
+        }
+        return true;
+      }
+      
       // If no conditions, quest is always available
       if (!quest.conditions || quest.conditions.length === 0) {
         return true;
       }
       
       // Check if all prerequisite quests are claimed (completed)
-      const completedQuests = saveData.tutorialQuests.completedQuests || [];
       for (const conditionQuestId of quest.conditions) {
-        if (!completedQuests.includes(conditionQuestId)) {
+        if (!completedSet.has(conditionQuestId)) {
           console.log(`Quest ${questId} blocked: requires ${conditionQuestId} to be claimed`);
           return false;
         }
@@ -10863,6 +10969,8 @@
         saveData.trainingPoints = (saveData.trainingPoints || 0) + quest.rewardAttributePoints;
         showStatChange(`+${quest.rewardAttributePoints} Attribute Points!`);
       }
+      // Award account XP for completing a quest (50 XP per quest)
+      addAccountXP(50);
       
       // Unlock building
       if (quest.unlockBuilding && saveData.campBuildings[quest.unlockBuilding]) {
@@ -11482,7 +11590,60 @@
       document.body.appendChild(overlay);
     }
 
+    // --- ACCOUNT LEVEL SYSTEM ---
+    // Account XP: 1 XP per kill (across all runs) + 50 XP per quest completed
+    // Level threshold = level * 100 (e.g., level 1 needs 100xp, level 2 needs 200xp, etc.)
+    function getAccountLevelXPRequired(level) {
+      return level * 100; // Linear: each level requires level*100 XP total
+    }
+    
+    function addAccountXP(amount) {
+      if (!saveData.accountXP) saveData.accountXP = 0;
+      if (!saveData.accountLevel) saveData.accountLevel = 1;
+      saveData.accountXP += amount;
+      // Check for level-up
+      let leveledUp = false;
+      while (saveData.accountXP >= getAccountLevelXPRequired(saveData.accountLevel)) {
+        saveData.accountXP -= getAccountLevelXPRequired(saveData.accountLevel);
+        saveData.accountLevel++;
+        leveledUp = true;
+        // Reward on account level-up (rotate between reward types)
+        const rewardCycle = (saveData.accountLevel - 1) % 4;
+        if (rewardCycle === 0) {
+          saveData.unspentAttributePoints = (saveData.unspentAttributePoints || 0) + 1;
+          showEnhancedNotification('attribute', 'ACCOUNT LEVEL UP!', `Level ${saveData.accountLevel}! +1 Attribute Point`);
+        } else if (rewardCycle === 1) {
+          saveData.skillPoints = (saveData.skillPoints || 0) + 1;
+          showEnhancedNotification('unlock', 'ACCOUNT LEVEL UP!', `Level ${saveData.accountLevel}! +1 Skill Point`);
+        } else if (rewardCycle === 2) {
+          saveData.trainingPoints = (saveData.trainingPoints || 0) + 1;
+          showEnhancedNotification('attribute', 'ACCOUNT LEVEL UP!', `Level ${saveData.accountLevel}! +1 Training Point`);
+        } else {
+          saveData.gold = (saveData.gold || 0) + 100;
+          showEnhancedNotification('achievement', 'ACCOUNT LEVEL UP!', `Level ${saveData.accountLevel}! +100 Gold`);
+        }
+      }
+      if (leveledUp) saveSaveData();
+      updateAccountLevelDisplay();
+    }
+    
+    function updateAccountLevelDisplay() {
+      const levelEl = document.getElementById('account-level-value');
+      const barEl = document.getElementById('account-level-bar');
+      const textEl = document.getElementById('account-level-progress-text');
+      if (!levelEl) return;
+      const level = saveData.accountLevel || 1;
+      const xp = saveData.accountXP || 0;
+      const required = getAccountLevelXPRequired(level);
+      const pct = Math.min(100, (xp / required) * 100);
+      levelEl.textContent = level;
+      if (barEl) barEl.style.width = pct + '%';
+      if (textEl) textEl.textContent = `${xp} / ${required} XP`;
+    }
+
     function updateCampScreen() {
+      // Update account level display whenever camp is opened
+      updateAccountLevelDisplay();
       // Check for first-time camp visit
       if (!saveData.hasVisitedCamp) {
         saveData.hasVisitedCamp = true;
@@ -13351,6 +13512,20 @@
       renderer.shadowMap.type = THREE.PCFSoftShadowMap;
       document.getElementById('game-container').appendChild(renderer.domElement);
 
+      // Handle WebGL context loss to prevent renderer freezes in long sessions
+      renderer.domElement.addEventListener('webglcontextlost', (e) => {
+        e.preventDefault();
+        console.warn('WebGL context lost - attempting recovery');
+        // Pause game logic while context is lost
+        setGamePaused(true);
+      }, false);
+      renderer.domElement.addEventListener('webglcontextrestored', () => {
+        console.info('WebGL context restored');
+        // Resume game if it was active
+        if (isGameActive) setGamePaused(false);
+        renderer.shadowMap.needsUpdate = true;
+      }, false);
+
       // Day/Night Cycle System - Non-blocking, smooth transitions
       // Store light references for day/night cycle
       window.ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
@@ -13767,31 +13942,31 @@
       document.getElementById('shop-back-btn').onclick = () => {
         playSound('waterdrop');
         document.getElementById('progression-shop').style.display = 'none';
-        showMainMenu();
+        if (isGameActive) { setGamePaused(false); } else { showMainMenu(); }
       };
       
       document.getElementById('achievements-back-btn').onclick = () => {
         playSound('waterdrop');
         document.getElementById('achievements-screen').style.display = 'none';
-        showMainMenu();
+        if (isGameActive) { setGamePaused(false); } else { showMainMenu(); }
       };
       
       document.getElementById('attributes-back-btn').onclick = () => {
         playSound('waterdrop');
         document.getElementById('attributes-screen').style.display = 'none';
-        showMainMenu();
+        if (isGameActive) { setGamePaused(false); } else { showMainMenu(); }
       };
       
       document.getElementById('gear-back-btn').onclick = () => {
         playSound('waterdrop');
         document.getElementById('gear-screen').style.display = 'none';
-        showMainMenu();
+        if (isGameActive) { setGamePaused(false); } else { showMainMenu(); }
       };
       
       document.getElementById('credits-back-btn').onclick = () => {
         playSound('waterdrop');
         document.getElementById('credits-screen').style.display = 'none';
-        showMainMenu();
+        if (isGameActive) { setGamePaused(false); } else { showMainMenu(); }
       };
       
       document.getElementById('camp-back-btn').onclick = () => {
@@ -13812,10 +13987,12 @@
         document.getElementById('camp-skills-section').style.display = 'none';
         document.getElementById('camp-sleep-section').style.display = 'none';
         document.getElementById('camp-training-section').style.display = 'none';
+        document.getElementById('camp-passive-section').style.display = 'none';
         document.getElementById('camp-buildings-tab').style.background = '#5A3A31';
         document.getElementById('camp-skills-tab').style.background = '#3a3a3a';
         document.getElementById('camp-sleep-tab').style.background = '#3a3a3a';
         document.getElementById('camp-training-tab').style.background = '#3a3a3a';
+        document.getElementById('camp-passive-tab').style.background = '#3a3a3a';
       };
       
       document.getElementById('camp-skills-tab').onclick = () => {
@@ -13824,10 +14001,27 @@
         document.getElementById('camp-skills-section').style.display = 'block';
         document.getElementById('camp-sleep-section').style.display = 'none';
         document.getElementById('camp-training-section').style.display = 'none';
+        document.getElementById('camp-passive-section').style.display = 'none';
         document.getElementById('camp-buildings-tab').style.background = '#3a3a3a';
         document.getElementById('camp-skills-tab').style.background = '#5A3A31';
         document.getElementById('camp-sleep-tab').style.background = '#3a3a3a';
         document.getElementById('camp-training-tab').style.background = '#3a3a3a';
+        document.getElementById('camp-passive-tab').style.background = '#3a3a3a';
+      };
+      
+      document.getElementById('camp-passive-tab').onclick = () => {
+        playSound('waterdrop');
+        document.getElementById('camp-buildings-section').style.display = 'none';
+        document.getElementById('camp-skills-section').style.display = 'none';
+        document.getElementById('camp-sleep-section').style.display = 'none';
+        document.getElementById('camp-training-section').style.display = 'none';
+        document.getElementById('camp-passive-section').style.display = 'block';
+        document.getElementById('camp-buildings-tab').style.background = '#3a3a3a';
+        document.getElementById('camp-skills-tab').style.background = '#3a3a3a';
+        document.getElementById('camp-sleep-tab').style.background = '#3a3a3a';
+        document.getElementById('camp-training-tab').style.background = '#3a3a3a';
+        document.getElementById('camp-passive-tab').style.background = '#5A3A31';
+        updatePassiveSkillsSection();
       };
       
       document.getElementById('camp-sleep-tab').onclick = () => {
@@ -13836,10 +14030,12 @@
         document.getElementById('camp-skills-section').style.display = 'none';
         document.getElementById('camp-sleep-section').style.display = 'block';
         document.getElementById('camp-training-section').style.display = 'none';
+        document.getElementById('camp-passive-section').style.display = 'none';
         document.getElementById('camp-buildings-tab').style.background = '#3a3a3a';
         document.getElementById('camp-skills-tab').style.background = '#3a3a3a';
         document.getElementById('camp-sleep-tab').style.background = '#5A3A31';
         document.getElementById('camp-training-tab').style.background = '#3a3a3a';
+        document.getElementById('camp-passive-tab').style.background = '#3a3a3a';
       };
       
       document.getElementById('camp-training-tab').onclick = () => {
@@ -13848,10 +14044,12 @@
         document.getElementById('camp-skills-section').style.display = 'none';
         document.getElementById('camp-sleep-section').style.display = 'none';
         document.getElementById('camp-training-section').style.display = 'block';
+        document.getElementById('camp-passive-section').style.display = 'none';
         document.getElementById('camp-buildings-tab').style.background = '#3a3a3a';
         document.getElementById('camp-skills-tab').style.background = '#3a3a3a';
         document.getElementById('camp-sleep-tab').style.background = '#3a3a3a';
         document.getElementById('camp-training-tab').style.background = '#5A3A31';
+        document.getElementById('camp-passive-tab').style.background = '#3a3a3a';
         updateTrainingSection();
       };
       
@@ -14285,10 +14483,42 @@
         particles.push(particle);
       }
     }
+
+    // Blood ground decal - small circle splat on the ground for realistic blood
+    // Uses a circular buffer approach: overwrite oldest slot instead of shift() for O(1)
+    let bloodDecalIndex = 0; // Current write index for circular buffer
+    function spawnBloodDecal(pos) {
+      if (!scene) return;
+      if (bloodDecals.length < MAX_BLOOD_DECALS) {
+        // Buffer not full yet - append
+        const size = 0.15 + Math.random() * 0.35;
+        const geo = new THREE.CircleGeometry(size, 6);
+        const mat = new THREE.MeshBasicMaterial({
+          color: 0x6B0000,
+          transparent: true,
+          opacity: 0.6 + Math.random() * 0.3,
+          depthWrite: false
+        });
+        const decal = new THREE.Mesh(geo, mat);
+        decal.rotation.x = -Math.PI / 2;
+        decal.position.set(pos.x + (Math.random() - 0.5) * 0.8, 0.02, pos.z + (Math.random() - 0.5) * 0.8);
+        scene.add(decal);
+        bloodDecals.push(decal);
+      } else {
+        // Reuse existing slot (O(1) circular overwrite)
+        const old = bloodDecals[bloodDecalIndex];
+        old.position.set(pos.x + (Math.random() - 0.5) * 0.8, 0.02, pos.z + (Math.random() - 0.5) * 0.8);
+        old.material.opacity = 0.6 + Math.random() * 0.3;
+        bloodDecalIndex = (bloodDecalIndex + 1) % MAX_BLOOD_DECALS;
+      }
+    }
     
-    // Enhanced muzzle smoke effect
+    // Enhanced muzzle smoke effect - managed array to avoid RAF accumulation
     function spawnMuzzleSmoke(pos, count = 5) {
-      for(let i = 0; i < count; i++) {
+      const cappedCount = Math.min(count, 3); // Cap per-call count
+      for(let i = 0; i < cappedCount; i++) {
+        // Enforce global cap - just skip if full, particles expire naturally
+        if (smokeParticles.length >= MAX_SMOKE_PARTICLES) continue;
         const smokeGeo = new THREE.SphereGeometry(0.15, 6, 6);
         const smokeMat = new THREE.MeshBasicMaterial({ 
           color: 0x666666, 
@@ -14303,32 +14533,18 @@
           pos.z + (Math.random() - 0.5) * 0.3
         );
         scene.add(smoke);
-        
-        // Animate smoke rising and fading
-        const velocity = {
-          x: (Math.random() - 0.5) * 0.02,
-          y: 0.03 + Math.random() * 0.02,
-          z: (Math.random() - 0.5) * 0.02
-        };
-        
-        let life = GAME_CONFIG.smokeDurationFrames;
-        const update = () => {
-          life--;
-          smoke.position.x += velocity.x;
-          smoke.position.y += velocity.y;
-          smoke.position.z += velocity.z;
-          smoke.scale.multiplyScalar(1.05); // Expand
-          smokeMat.opacity = (life / GAME_CONFIG.smokeDurationFrames) * 0.5;
-          
-          if (life <= 0) {
-            scene.remove(smoke);
-            smokeGeo.dispose();
-            smokeMat.dispose();
-          } else {
-            requestAnimationFrame(update);
-          }
-        };
-        update();
+        smokeParticles.push({
+          mesh: smoke,
+          material: smokeMat,
+          geometry: smokeGeo,
+          velocity: {
+            x: (Math.random() - 0.5) * 0.02,
+            y: 0.03 + Math.random() * 0.02,
+            z: (Math.random() - 0.5) * 0.02
+          },
+          life: GAME_CONFIG.smokeDurationFrames,
+          maxLife: GAME_CONFIG.smokeDurationFrames
+        });
       }
     }
 
@@ -14495,13 +14711,25 @@
       }, 800);
     }
     
-    // NEW: Centered "LEVEL UP!" text that grows, shrinks, and fades
+    // NEW: "LEVEL UP!" text that shoots from character's head
     function createCenteredLevelUpText() {
       const levelUpText = document.createElement('div');
+      
+      // Calculate character head position on screen
+      let startX = window.innerWidth / 2;
+      let startY = window.innerHeight / 2;
+      if (player && player.mesh && camera) {
+        const headPos = player.mesh.position.clone();
+        headPos.y += 2; // Above player
+        headPos.project(camera);
+        startX = (headPos.x * 0.5 + 0.5) * window.innerWidth;
+        startY = (-(headPos.y * 0.5) + 0.5) * window.innerHeight;
+      }
+      
       levelUpText.style.cssText = `
         position: fixed;
-        top: 50%;
-        left: 50%;
+        left: ${startX}px;
+        top: ${startY}px;
         transform: translate(-50%, -50%) scale(0);
         font-family: 'Bangers', cursive;
         font-size: 38px;
@@ -14517,44 +14745,60 @@
         z-index: 200;
         pointer-events: none;
         letter-spacing: 4px;
-        transition: transform 0.12s ease-out, opacity 0.12s ease-out;
       `;
       levelUpText.textContent = 'LEVEL UP!';
       document.body.appendChild(levelUpText);
       
-      // Animation: appear from nothing (scale 0) → grow to combo size → shrink and fade
+      // Animation: shoot up from character head, wait 0.2s, then float to center
       const startTime = Date.now();
       const totalDuration = 2000; // 2 seconds total
+      const centerX = window.innerWidth / 2;
+      const centerY = window.innerHeight / 2;
       
-      const animate = () => {
+      const animFn = () => {
         const elapsed = Date.now() - startTime;
         const progress = elapsed / totalDuration;
         
-        if (progress < 0.3) {
-          // Phase 1: Grow from nothing to full size (0-30%)
-          const scale = (progress / 0.3) * 1.2; // Grow to 120%
+        if (progress < 0.15) {
+          // Phase 1: Shoot up from head (0-15% = 300ms)
+          const t = progress / 0.15;
+          const scale = t * 1.2;
+          const curY = startY - t * 80; // Shoot up 80px
+          levelUpText.style.top = curY + 'px';
           levelUpText.style.transform = `translate(-50%, -50%) scale(${scale})`;
-          levelUpText.style.opacity = progress / 0.3;
-        } else if (progress < 0.6) {
-          // Phase 2: Hold at full size (30-60%)
+          levelUpText.style.opacity = t;
+        } else if (progress < 0.25) {
+          // Phase 2: Wait 0.2s at that position (15-25%)
           levelUpText.style.transform = `translate(-50%, -50%) scale(1.2)`;
           levelUpText.style.opacity = 1;
+        } else if (progress < 0.65) {
+          // Phase 3: Float toward center and grow (25-65%)
+          const t = (progress - 0.25) / 0.40;
+          const curX = startX + (centerX - startX) * t;
+          const curY = (startY - 80) + (centerY - (startY - 80)) * t;
+          const scale = 1.2 + t * 0.2; // Grow to 1.4x
+          levelUpText.style.left = curX + 'px';
+          levelUpText.style.top = curY + 'px';
+          levelUpText.style.transform = `translate(-50%, -50%) scale(${scale})`;
+          levelUpText.style.opacity = 1;
         } else if (progress < 1) {
-          // Phase 3: Shrink and fade (60-100%)
-          const fadeProgress = (progress - 0.6) / 0.4;
-          const scale = 1.2 - (fadeProgress * 0.6); // Shrink from 1.2 to 0.6
+          // Phase 4: Shrink and fade at center (65-100%)
+          const fadeProgress = (progress - 0.65) / 0.35;
+          const scale = 1.4 - (fadeProgress * 0.8);
           const opacity = 1 - fadeProgress;
+          levelUpText.style.left = centerX + 'px';
+          levelUpText.style.top = centerY + 'px';
           levelUpText.style.transform = `translate(-50%, -50%) scale(${scale})`;
           levelUpText.style.opacity = opacity;
         } else {
           // Animation complete, remove element
-          document.body.removeChild(levelUpText);
+          if (levelUpText.parentNode) levelUpText.parentNode.removeChild(levelUpText);
           return;
         }
         
-        requestAnimationFrame(animate);
+        requestAnimationFrame(animFn);
       };
-      animate();
+      animFn();
     }
     
     function createSmallFloatingText(text, pos) {
@@ -15251,8 +15495,8 @@
 
       // --- SPECIAL LEVELS ---
       
-      // Levels 3, 4, 9, 17: WEAPON UPGRADE LEVELS (added level 3 and 4)
-      if ([3, 4, 9, 17].includes(playerStats.lvl)) {
+      // Levels 3, 9, 17: WEAPON UPGRADE LEVELS
+      if ([3, 9, 17].includes(playerStats.lvl)) {
         modal.querySelector('h2').innerText = 'WEAPON UPGRADE!';
         modal.querySelector('h2').style.fontSize = '36px';
         
@@ -15449,147 +15693,31 @@
           choices.push(...additionalUpgrades.slice(0, needed));
         }
       }
-      // WEAPON UNLOCK: Level 5 for new weapon unlock (levels 3-4 have weapon upgrade opportunities)
-      // Only show once at level 5 to avoid duplicate weapon selection
-      else if (playerStats.lvl === 5) {
-        choices = [
-          { 
-            id: 'sword', 
-            icon: '⚔️',
-            title: 'SLASHY SLASH', 
-            desc: 'Slash enemies in front', 
-            apply: () => { 
-              weapons.sword.active = true;
-              weapons.sword.level = 1;
-              showStatChange('New Weapon: Sword');
-              
-              // QUEST 8: Track weapon unlock
-              if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest8_newWeapon') {
-                progressTutorialQuest('quest8_newWeapon', true);
-              }
-            } 
-          },
-          { 
-            id: 'aura', 
-            icon: '🌀',
-            title: 'ZAP ZONE', 
-            desc: 'Damage aura around you', 
-            apply: () => { 
-              weapons.aura.active = true;
-              weapons.aura.level = 1;
-              showStatChange('New Weapon: Aura');
-              
-              // QUEST 8: Track weapon unlock
-              if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest8_newWeapon') {
-                progressTutorialQuest('quest8_newWeapon', true);
-              }
-            } 
-          },
-          { 
-            id: 'meteor', 
-            icon: '☄️',
-            title: 'SPACE ROCKS', 
-            desc: 'Call meteors from sky', 
-            apply: () => { 
-              weapons.meteor.active = true;
-              weapons.meteor.level = 1;
-              showStatChange('New Weapon: Meteor');
-              
-              // QUEST 8: Track weapon unlock
-              if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest8_newWeapon') {
-                progressTutorialQuest('quest8_newWeapon', true);
-              }
-            } 
-          },
-          { 
-            id: 'droneturret', 
-            title: 'DRONE TURRET', 
-            desc: 'Automated drone that shoots enemies', 
-            apply: () => { 
-              weapons.droneTurret.active = true;
-              weapons.droneTurret.level = 1;
-              // Create initial drone
-              const drone = new DroneTurret(player);
-              droneTurrets.push(drone);
-              startDroneHum(); // Start continuous drone sound
-              showStatChange('New Weapon: Drone Turret');
-              
-              // QUEST 8: Track weapon unlock
-              if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest8_newWeapon') {
-                progressTutorialQuest('quest8_newWeapon', true);
-              }
-              
-              // Visual effect when unlocked
-              for(let i=0; i<6; i++) {
-                const angle = (i / 6) * Math.PI * 2;
-                spawnParticles(
-                  new THREE.Vector3(
-                    player.mesh.position.x + Math.cos(angle) * 3,
-                    player.mesh.position.y,
-                    player.mesh.position.z + Math.sin(angle) * 3
-                  ),
-                  0x00FFFF,
-                  5
-                );
-              }
-              
-              // Screen flash
-              if (flashOverlay) {
-                flashOverlay.style.opacity = '0.3';
-                flashOverlay.style.background = 'rgba(0, 255, 255, 0.3)';
-                setTimeout(() => { flashOverlay.style.opacity = '0'; }, 200);
-              }
-            } 
-          },
-          { 
-            id: 'doublebarrel', 
-            icon: '🔫',
-            title: 'DOUBLE BARREL', 
-            desc: 'Powerful shotgun spread', 
-            apply: () => { 
-              weapons.doubleBarrel.active = true;
-              weapons.doubleBarrel.level = 1;
-              showStatChange('New Weapon: Double Barrel');
-              
-              // QUEST 8: Track weapon unlock
-              if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest8_newWeapon') {
-                progressTutorialQuest('quest8_newWeapon', true);
-              }
-            } 
-          },
-          { 
-            id: 'icespear', 
-            icon: '❄️',
-            title: 'ICE SPEAR', 
-            desc: 'Freezing projectile that slows enemies 40%', 
-            apply: () => { 
-              weapons.iceSpear.active = true;
-              weapons.iceSpear.level = 1;
-              showStatChange('New Weapon: Ice Spear');
-              
-              // QUEST 8: Track weapon unlock
-              if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest8_newWeapon') {
-                progressTutorialQuest('quest8_newWeapon', true);
-              }
-            } 
-          },
-          { 
-            id: 'firering', 
-            icon: '🔥',
-            title: 'FIRE RING', 
-            desc: 'Spinning fire orbs orbit around you', 
-            apply: () => { 
-              weapons.fireRing.active = true;
-              weapons.fireRing.level = 1;
-              showStatChange('New Weapon: Fire Ring');
-              
-              // QUEST 8: Track weapon unlock
-              if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest8_newWeapon') {
-                progressTutorialQuest('quest8_newWeapon', true);
-              }
-            } 
-          }
+      // WEAPON UNLOCK: Level 4, 8, 12, 16 for new weapon unlocks (4 weapons total per run)
+      else if ([4, 8, 12, 16].includes(playerStats.lvl)) {
+        modal.querySelector('h2').innerText = 'NEW WEAPON!';
+        modal.querySelector('h2').style.fontSize = '36px';
+        // Build list of all possible new weapons, filtering already-active ones
+        const allWeaponChoices = [
+          { id: 'sword', icon: '⚔️', title: 'SLASHY SLASH', desc: 'Slash enemies in front', active: () => weapons.sword.active, apply: () => { weapons.sword.active = true; weapons.sword.level = 1; showStatChange('New Weapon: Sword'); if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest8_newWeapon') progressTutorialQuest('quest8_newWeapon', true); } },
+          { id: 'aura', icon: '🌀', title: 'ZAP ZONE', desc: 'Damage aura around you', active: () => weapons.aura.active, apply: () => { weapons.aura.active = true; weapons.aura.level = 1; showStatChange('New Weapon: Aura'); if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest8_newWeapon') progressTutorialQuest('quest8_newWeapon', true); } },
+          { id: 'meteor', icon: '☄️', title: 'SPACE ROCKS', desc: 'Call meteors from sky', active: () => weapons.meteor.active, apply: () => { weapons.meteor.active = true; weapons.meteor.level = 1; showStatChange('New Weapon: Meteor'); if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest8_newWeapon') progressTutorialQuest('quest8_newWeapon', true); } },
+          { id: 'droneturret', icon: '🤖', title: 'DRONE TURRET', desc: 'Automated drone that shoots enemies', active: () => weapons.droneTurret.active, apply: () => { weapons.droneTurret.active = true; weapons.droneTurret.level = 1; const drone = new DroneTurret(player); droneTurrets.push(drone); startDroneHum(); showStatChange('New Weapon: Drone Turret'); if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest8_newWeapon') progressTutorialQuest('quest8_newWeapon', true); } },
+          { id: 'doublebarrel', icon: '🔫', title: 'DOUBLE BARREL', desc: 'Powerful shotgun spread', active: () => weapons.doubleBarrel.active, apply: () => { weapons.doubleBarrel.active = true; weapons.doubleBarrel.level = 1; showStatChange('New Weapon: Double Barrel'); if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest8_newWeapon') progressTutorialQuest('quest8_newWeapon', true); } },
+          { id: 'icespear', icon: '❄️', title: 'ICE SPEAR', desc: 'Freezing projectile that slows enemies 40%', active: () => weapons.iceSpear.active, apply: () => { weapons.iceSpear.active = true; weapons.iceSpear.level = 1; showStatChange('New Weapon: Ice Spear'); if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest8_newWeapon') progressTutorialQuest('quest8_newWeapon', true); } },
+          { id: 'firering', icon: '🔥', title: 'FIRE RING', desc: 'Spinning fire orbs orbit around you', active: () => weapons.fireRing.active, apply: () => { weapons.fireRing.active = true; weapons.fireRing.level = 1; showStatChange('New Weapon: Fire Ring'); if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest8_newWeapon') progressTutorialQuest('quest8_newWeapon', true); } }
         ];
+        // Only offer weapons not yet active, shuffle and pick up to 3
+        const available = allWeaponChoices.filter(w => !w.active());
+        const shuffled = available.sort(() => 0.5 - Math.random());
+        choices = shuffled.slice(0, Math.min(3, shuffled.length));
+        // Fill with common upgrades if < 3 weapon choices available
+        if (choices.length < 3) {
+          const fillers = commonUpgrades.sort(() => 0.5 - Math.random()).slice(0, 3 - choices.length);
+          choices.push(...fillers);
+        }
+        // Add 3 common upgrades
+        choices.push(...commonUpgrades.sort(() => 0.5 - Math.random()).slice(0, 3));
       }
       // Level 10: CLASS SELECTION - ALWAYS SHOW 6 CHOICES
       else if (playerStats.lvl === 10) {
@@ -15833,6 +15961,10 @@
           modal.style.display = 'none';
           modal.querySelector('h2').innerText = 'LEVEL UP!';
           modal.querySelector('h2').style.fontSize = '32px';
+          // Hide skip button and clear its timeout
+          const skipBtn = document.getElementById('levelup-skip-btn');
+          if (skipBtn) skipBtn.style.display = 'none';
+          clearTimeout(window.levelupSkipTimeoutId);
           
           // Restore camera position and projection after level-up
           if (savedCameraPosition) {
@@ -15868,6 +16000,16 @@
       });
 
       modal.style.display = 'flex';
+      
+      // Show skip button after 5 seconds as safety valve if player can't select an upgrade
+      const skipBtn = document.getElementById('levelup-skip-btn');
+      if (skipBtn) {
+        skipBtn.style.display = 'none';
+        clearTimeout(window.levelupSkipTimeoutId);
+        window.levelupSkipTimeoutId = setTimeout(() => {
+          if (modal.style.display === 'flex') skipBtn.style.display = 'inline-block';
+        }, 5000);
+      }
     }
 
     // Waterdrop dimensions constants (match SVG viewBox)
@@ -16653,7 +16795,7 @@
           tutorialData = {
             title: '⚡ DROPLET DOWN! ⚡',
             text: '<strong style="color:#FFD700;">YOUR JOURNEY BEGINS NOW...</strong><br><br>Every hero falls. But only the <strong>BRAVE</strong> rise again!<br><br>Return to the <strong>⛺ CAMP</strong> to unlock your true potential.<br><br><strong>WARNING:</strong> Your progression is LOCKED until you complete your training!',
-            button: '⚡ ENTER CAMP ⚡'
+            button: '⛺ GO TO CAMP'
           };
           break;
         case 'unlock_dash':
@@ -16693,6 +16835,14 @@
         if (step === 'first_death') {
           saveData.tutorial.currentStep = 'go_to_camp';
           saveSaveData();
+          // Navigate to camp screen on first death
+          const gameoverScreen = document.getElementById('gameover-screen');
+          if (gameoverScreen) gameoverScreen.style.display = 'none';
+          const campScreen = document.getElementById('camp-screen');
+          if (campScreen) {
+            updateCampScreen();
+            campScreen.style.display = 'flex';
+          }
         } else if (step === 'unlock_dash') {
           saveData.tutorial.currentStep = 'unlock_dash';
           saveSaveData();
@@ -16825,6 +16975,8 @@
       saveData.totalKills += playerStats.kills; // Track cumulative kills
       if (survivalTime > saveData.bestTime) saveData.bestTime = survivalTime;
       if (playerStats.kills > saveData.bestKills) saveData.bestKills = playerStats.kills;
+      // Add account XP for kills this run (1 XP per kill)
+      if (playerStats.kills > 0) addAccountXP(playerStats.kills);
       
       // Tutorial Quest: Check for first death
       if (!saveData.tutorialQuests) {
@@ -16940,6 +17092,13 @@
       const baseArmor = PERMANENT_UPGRADES.armor.effect(saveData.upgrades.armor);
       const cdReduction = PERMANENT_UPGRADES.cooldownReduction.effect(saveData.upgrades.cooldownReduction);
       
+      // Apply passive skill bonuses
+      const passiveSkills = saveData.passiveSkills || {};
+      const passiveHpBonus = (passiveSkills.hp_boost || 0) * 10;
+      const passiveDmgBonus = (passiveSkills.dmg_boost || 0) * 0.05;
+      const passiveRegenBonus = (passiveSkills.regen_boost || 0) * 0.5;
+      const passiveSpeedBonus = (passiveSkills.speed_boost || 0) * 0.05;
+      
       // Apply attribute bonuses from achievement system
       const dexterity = saveData.attributes.dexterity || 0;
       const strength = saveData.attributes.strength || 0;
@@ -16980,21 +17139,21 @@
       playerStats.lvl = 1;
       playerStats.exp = 0;
       playerStats.expReq = GAME_CONFIG.baseExpReq;
-      playerStats.hp = baseHp + attrHp;
-      playerStats.maxHp = baseHp + attrHp;
+      playerStats.hp = baseHp + attrHp + passiveHpBonus;
+      playerStats.maxHp = baseHp + attrHp + passiveHpBonus;
       
       // Apply legendary cigar bonus if unlocked
       const cigarBonus = (saveData.extendedQuests && saveData.extendedQuests.legendaryCigar && saveData.extendedQuests.legendaryCigar.completed) ? 1.5 : 1.0;
-      playerStats.strength = baseDamage * (1 + attrDamage + gearMagicBonus) * cigarBonus;
+      playerStats.strength = baseDamage * (1 + attrDamage + gearMagicBonus + passiveDmgBonus) * cigarBonus;
       
-      playerStats.walkSpeed = baseSpeed * (1 + gearMoveSpeedBonus + enduranceMoveSpeed);
+      playerStats.walkSpeed = baseSpeed * (1 + gearMoveSpeedBonus + enduranceMoveSpeed + passiveSpeedBonus);
       playerStats.kills = 0;
       playerStats.miniBossesDefeated = 0; // Reset mini-boss tracking
       playerStats.atkSpeed = baseAtkSpeed * (1 + attrAtkSpeed + gearAtkSpeedBonus);
       playerStats.critChance = baseCritChance + attrCritChance + gearPrecisionBonus + gearCritBonus;
       playerStats.critDmg = baseCritDmg + attrCritDmg;
       playerStats.armor = baseArmor + gearStats.flexibility + flexibilityArmor; // Flexibility gives flat armor bonus
-      playerStats.hpRegen = baseRegen + attrRegen;
+      playerStats.hpRegen = baseRegen + attrRegen + passiveRegenBonus;
       playerStats.gold = 0;
       waveCount = 0;
       lastWaveEndTime = 0; // Reset wave timing
@@ -17090,6 +17249,15 @@
       });
       expGems = [];
       
+      // Clean up blood decals
+      bloodDecals.forEach(d => {
+        scene.remove(d);
+        d.geometry.dispose();
+        d.material.dispose();
+      });
+      bloodDecals = [];
+      bloodDecalIndex = 0; // Reset circular buffer index
+      
       goldCoins.forEach(g => {
         scene.remove(g.mesh);
         g.mesh.geometry.dispose();
@@ -17134,6 +17302,14 @@
         clearTimeout(timeoutId);
       });
       activeTimeouts = [];
+      
+      // Clean up managed smoke particles
+      smokeParticles.forEach(sp => {
+        scene.remove(sp.mesh);
+        sp.geometry.dispose();
+        sp.material.dispose();
+      });
+      smokeParticles = [];
       
       meteors.forEach(m => {
         scene.remove(m.mesh);
@@ -18740,6 +18916,23 @@
 
       // Cleanup and memory management (run every 3 seconds to avoid performance issues)
       enemies = enemies.filter(e => !e.isDead);
+      
+      // Update managed smoke particles (replaces individual RAF loops)
+      smokeParticles = smokeParticles.filter(sp => {
+        sp.life--;
+        sp.mesh.position.x += sp.velocity.x;
+        sp.mesh.position.y += sp.velocity.y;
+        sp.mesh.position.z += sp.velocity.z;
+        sp.mesh.scale.multiplyScalar(1.05);
+        sp.material.opacity = (sp.life / sp.maxLife) * 0.5;
+        if (sp.life <= 0) {
+          scene.remove(sp.mesh);
+          sp.geometry.dispose();
+          sp.material.dispose();
+          return false;
+        }
+        return true;
+      });
       
       const now = Date.now();
       if (now - lastCleanupTime > 3000) { // Run cleanup every 3 seconds
