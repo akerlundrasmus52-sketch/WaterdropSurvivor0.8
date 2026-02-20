@@ -1687,16 +1687,13 @@
     }
 
     .menu-btn {
-      background: linear-gradient(135deg, rgba(93,173,226,0.9), rgba(52,152,219,0.9));
-      color: #FFFFFF;
-      border: 3px solid rgba(255,255,255,0.6);
+      background: transparent; /* Invisible - overlays text in background image */
+      color: transparent; /* Hide button text - text visible via background image */
+      border: none;
       padding: 15px 40px;
       font-size: 24px;
       font-weight: bold;
-      box-shadow: 
-        0 0 20px rgba(93,173,226,0.6),
-        0 4px 15px rgba(0,0,0,0.4),
-        inset 0 1px 0 rgba(255,255,255,0.3);
+      box-shadow: none;
       position: absolute;
       width: 260px; /* Reduced from 300px */
       height: 60px;
@@ -1706,56 +1703,22 @@
       left: 50%;
       transform: translateX(-50%);
       border-radius: 10px;
-      text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+      text-shadow: none;
       letter-spacing: 2px;
+    }
+
+    .menu-btn:hover {
+      background: rgba(93,173,226,0.15); /* Subtle highlight on hover so player knows it's a button */
+      border-radius: 10px;
+    }
+
+    .menu-btn:active {
+      background: rgba(93,173,226,0.3);
+      transform: translateX(-50%) translateY(2px);
     }
 
     #start-game-btn { top: 55%; } /* Position START GAME button in middle-lower area */
     #camp-btn { top: 65%; } /* Position CAMP button below START GAME */
-
-    .menu-btn::before {
-      content: '';
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: 0;
-      height: 0;
-      border-radius: 50%;
-      background: rgba(255, 255, 255, 0.5);
-      transform: translate(-50%, -50%);
-      transition: width 0.6s, height 0.6s;
-    }
-
-    .menu-btn:hover {
-      background: linear-gradient(135deg, rgba(93,173,226,1), rgba(52,152,219,1));
-      box-shadow: 
-        0 0 30px rgba(93, 173, 226, 0.9), 
-        0 0 50px rgba(93, 173, 226, 0.6), 
-        0 4px 20px rgba(0,0,0,0.5),
-        inset 0 0 30px rgba(93, 173, 226, 0.3);
-      transform: translateX(-50%) translateY(-2px);
-    }
-
-    .menu-btn:active {
-      background: linear-gradient(135deg, rgba(255,255,255,0.9), rgba(93,173,226,1));
-      box-shadow: 
-        0 0 40px rgba(255, 255, 255, 1), 
-        0 0 60px rgba(93, 173, 226, 1), 
-        0 2px 10px rgba(0,0,0,0.6),
-        inset 0 0 40px rgba(255, 255, 255, 0.8);
-      animation: lightning-flash 0.3s ease;
-      transform: translateX(-50%) translateY(2px);
-    }
-
-    .menu-btn:active::before {
-      width: 260px;
-      height: 260px;
-    }
-
-    @keyframes lightning-flash {
-      0%, 100% { filter: brightness(1.1); }
-      50% { filter: brightness(2); box-shadow: 0 0 40px rgba(255,255,255,1), 0 0 80px rgba(93,173,226,1); }
-    }
 
     .gold-display {
       position: absolute;
@@ -3619,6 +3582,10 @@
     // Deferred disposal queue for Three.js memory management (PR #81)
     const disposalQueue = [];
     const MAX_DISPOSALS_PER_FRAME = 10;
+    
+    // Ground blood decals array (cleaned up on reset)
+    let bloodDecals = [];
+    const MAX_BLOOD_DECALS = 40; // Cap for performance
     
     let frameCount = 0;
     let isPaused = false;
@@ -5555,6 +5522,8 @@
         // Phase 5: Hit impact particles (flesh/blood) on every hit - ENHANCED: Scale with damage
         const bloodParticleCount = Math.min(3 + Math.floor(amount / 10), 15); // 3-15 particles based on damage
         spawnParticles(this.mesh.position, 0x8B0000, bloodParticleCount); // Blood particles scale with damage
+        // Ground blood decal on every hit
+        spawnBloodDecal(this.mesh.position);
         
         // Phase 3: Apply armor reduction for MiniBoss
         let finalAmount = amount;
@@ -7469,15 +7438,21 @@
         this.mesh.position.copy(pos);
         this.mesh.material.color.setHex(color);
         this.mesh.material.emissive.setHex(color);
+        // Blood particles (dark red) get smaller, faster, more splatter-like behavior
+        const isBlood = (color === 0x8B0000 || color === 0x6B0000);
+        const velScale = isBlood ? 1.5 : 1.0;
         this.vel.set(
-          (Math.random() - 0.5) * Particle.VEL_XZ_RANGE,
-          Particle.VEL_Y_MIN + Math.random() * Particle.VEL_Y_RANGE,
-          (Math.random() - 0.5) * Particle.VEL_XZ_RANGE
+          (Math.random() - 0.5) * Particle.VEL_XZ_RANGE * velScale,
+          (isBlood ? 0.05 : Particle.VEL_Y_MIN) + Math.random() * Particle.VEL_Y_RANGE * (isBlood ? 0.5 : 1.0),
+          (Math.random() - 0.5) * Particle.VEL_XZ_RANGE * velScale
         );
+        // Blood particles should be smaller scale
+        const sizeScale = isBlood ? 0.4 + Math.random() * 0.4 : 1.0;
+        this.mesh.scale.setScalar(sizeScale);
         this.mesh.rotation.set(0, 0, 0);
         this.mesh.visible = true;
         scene.add(this.mesh);
-        this.life = Particle.MAX_LIFETIME;
+        this.life = isBlood ? Math.floor(Particle.MAX_LIFETIME * 0.6) : Particle.MAX_LIFETIME;
       }
       
       update() {
@@ -7500,6 +7475,7 @@
         if (this.life <= 0) {
           scene.remove(this.mesh);
           this.mesh.visible = false;
+          this.mesh.scale.setScalar(1); // Reset scale for pool reuse
           return false;
         }
         return true;
@@ -14388,6 +14364,35 @@
         particles.push(particle);
       }
     }
+
+    // Blood ground decal - small circle splat on the ground for realistic blood
+    function spawnBloodDecal(pos) {
+      if (!scene) return;
+      // Enforce decal cap: remove oldest if over limit
+      if (bloodDecals.length >= MAX_BLOOD_DECALS) {
+        const old = bloodDecals.shift();
+        scene.remove(old);
+        old.geometry.dispose();
+        old.material.dispose();
+      }
+      const size = 0.15 + Math.random() * 0.35; // Small irregular splats
+      const geo = new THREE.CircleGeometry(size, 6);
+      const mat = new THREE.MeshBasicMaterial({
+        color: 0x6B0000, // Dark blood red
+        transparent: true,
+        opacity: 0.6 + Math.random() * 0.3,
+        depthWrite: false
+      });
+      const decal = new THREE.Mesh(geo, mat);
+      decal.rotation.x = -Math.PI / 2;
+      decal.position.set(
+        pos.x + (Math.random() - 0.5) * 0.8,
+        0.02, // Slightly above ground
+        pos.z + (Math.random() - 0.5) * 0.8
+      );
+      scene.add(decal);
+      bloodDecals.push(decal);
+    }
     
     // Enhanced muzzle smoke effect - managed array to avoid RAF accumulation
     function spawnMuzzleSmoke(pos, count = 5) {
@@ -15378,8 +15383,8 @@
 
       // --- SPECIAL LEVELS ---
       
-      // Levels 3, 4, 9, 17: WEAPON UPGRADE LEVELS (added level 3 and 4)
-      if ([3, 4, 9, 17].includes(playerStats.lvl)) {
+      // Levels 3, 9, 17: WEAPON UPGRADE LEVELS
+      if ([3, 9, 17].includes(playerStats.lvl)) {
         modal.querySelector('h2').innerText = 'WEAPON UPGRADE!';
         modal.querySelector('h2').style.fontSize = '36px';
         
@@ -15576,147 +15581,31 @@
           choices.push(...additionalUpgrades.slice(0, needed));
         }
       }
-      // WEAPON UNLOCK: Level 5 for new weapon unlock (levels 3-4 have weapon upgrade opportunities)
-      // Only show once at level 5 to avoid duplicate weapon selection
-      else if (playerStats.lvl === 5) {
-        choices = [
-          { 
-            id: 'sword', 
-            icon: '⚔️',
-            title: 'SLASHY SLASH', 
-            desc: 'Slash enemies in front', 
-            apply: () => { 
-              weapons.sword.active = true;
-              weapons.sword.level = 1;
-              showStatChange('New Weapon: Sword');
-              
-              // QUEST 8: Track weapon unlock
-              if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest8_newWeapon') {
-                progressTutorialQuest('quest8_newWeapon', true);
-              }
-            } 
-          },
-          { 
-            id: 'aura', 
-            icon: '🌀',
-            title: 'ZAP ZONE', 
-            desc: 'Damage aura around you', 
-            apply: () => { 
-              weapons.aura.active = true;
-              weapons.aura.level = 1;
-              showStatChange('New Weapon: Aura');
-              
-              // QUEST 8: Track weapon unlock
-              if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest8_newWeapon') {
-                progressTutorialQuest('quest8_newWeapon', true);
-              }
-            } 
-          },
-          { 
-            id: 'meteor', 
-            icon: '☄️',
-            title: 'SPACE ROCKS', 
-            desc: 'Call meteors from sky', 
-            apply: () => { 
-              weapons.meteor.active = true;
-              weapons.meteor.level = 1;
-              showStatChange('New Weapon: Meteor');
-              
-              // QUEST 8: Track weapon unlock
-              if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest8_newWeapon') {
-                progressTutorialQuest('quest8_newWeapon', true);
-              }
-            } 
-          },
-          { 
-            id: 'droneturret', 
-            title: 'DRONE TURRET', 
-            desc: 'Automated drone that shoots enemies', 
-            apply: () => { 
-              weapons.droneTurret.active = true;
-              weapons.droneTurret.level = 1;
-              // Create initial drone
-              const drone = new DroneTurret(player);
-              droneTurrets.push(drone);
-              startDroneHum(); // Start continuous drone sound
-              showStatChange('New Weapon: Drone Turret');
-              
-              // QUEST 8: Track weapon unlock
-              if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest8_newWeapon') {
-                progressTutorialQuest('quest8_newWeapon', true);
-              }
-              
-              // Visual effect when unlocked
-              for(let i=0; i<6; i++) {
-                const angle = (i / 6) * Math.PI * 2;
-                spawnParticles(
-                  new THREE.Vector3(
-                    player.mesh.position.x + Math.cos(angle) * 3,
-                    player.mesh.position.y,
-                    player.mesh.position.z + Math.sin(angle) * 3
-                  ),
-                  0x00FFFF,
-                  5
-                );
-              }
-              
-              // Screen flash
-              if (flashOverlay) {
-                flashOverlay.style.opacity = '0.3';
-                flashOverlay.style.background = 'rgba(0, 255, 255, 0.3)';
-                setTimeout(() => { flashOverlay.style.opacity = '0'; }, 200);
-              }
-            } 
-          },
-          { 
-            id: 'doublebarrel', 
-            icon: '🔫',
-            title: 'DOUBLE BARREL', 
-            desc: 'Powerful shotgun spread', 
-            apply: () => { 
-              weapons.doubleBarrel.active = true;
-              weapons.doubleBarrel.level = 1;
-              showStatChange('New Weapon: Double Barrel');
-              
-              // QUEST 8: Track weapon unlock
-              if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest8_newWeapon') {
-                progressTutorialQuest('quest8_newWeapon', true);
-              }
-            } 
-          },
-          { 
-            id: 'icespear', 
-            icon: '❄️',
-            title: 'ICE SPEAR', 
-            desc: 'Freezing projectile that slows enemies 40%', 
-            apply: () => { 
-              weapons.iceSpear.active = true;
-              weapons.iceSpear.level = 1;
-              showStatChange('New Weapon: Ice Spear');
-              
-              // QUEST 8: Track weapon unlock
-              if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest8_newWeapon') {
-                progressTutorialQuest('quest8_newWeapon', true);
-              }
-            } 
-          },
-          { 
-            id: 'firering', 
-            icon: '🔥',
-            title: 'FIRE RING', 
-            desc: 'Spinning fire orbs orbit around you', 
-            apply: () => { 
-              weapons.fireRing.active = true;
-              weapons.fireRing.level = 1;
-              showStatChange('New Weapon: Fire Ring');
-              
-              // QUEST 8: Track weapon unlock
-              if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest8_newWeapon') {
-                progressTutorialQuest('quest8_newWeapon', true);
-              }
-            } 
-          }
+      // WEAPON UNLOCK: Level 4, 8, 12, 16 for new weapon unlocks (4 weapons total per run)
+      else if ([4, 8, 12, 16].includes(playerStats.lvl)) {
+        modal.querySelector('h2').innerText = 'NEW WEAPON!';
+        modal.querySelector('h2').style.fontSize = '36px';
+        // Build list of all possible new weapons, filtering already-active ones
+        const allWeaponChoices = [
+          { id: 'sword', icon: '⚔️', title: 'SLASHY SLASH', desc: 'Slash enemies in front', active: () => weapons.sword.active, apply: () => { weapons.sword.active = true; weapons.sword.level = 1; showStatChange('New Weapon: Sword'); if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest8_newWeapon') progressTutorialQuest('quest8_newWeapon', true); } },
+          { id: 'aura', icon: '🌀', title: 'ZAP ZONE', desc: 'Damage aura around you', active: () => weapons.aura.active, apply: () => { weapons.aura.active = true; weapons.aura.level = 1; showStatChange('New Weapon: Aura'); if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest8_newWeapon') progressTutorialQuest('quest8_newWeapon', true); } },
+          { id: 'meteor', icon: '☄️', title: 'SPACE ROCKS', desc: 'Call meteors from sky', active: () => weapons.meteor.active, apply: () => { weapons.meteor.active = true; weapons.meteor.level = 1; showStatChange('New Weapon: Meteor'); if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest8_newWeapon') progressTutorialQuest('quest8_newWeapon', true); } },
+          { id: 'droneturret', icon: '🤖', title: 'DRONE TURRET', desc: 'Automated drone that shoots enemies', active: () => weapons.droneTurret.active, apply: () => { weapons.droneTurret.active = true; weapons.droneTurret.level = 1; const drone = new DroneTurret(player); droneTurrets.push(drone); startDroneHum(); showStatChange('New Weapon: Drone Turret'); if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest8_newWeapon') progressTutorialQuest('quest8_newWeapon', true); } },
+          { id: 'doublebarrel', icon: '🔫', title: 'DOUBLE BARREL', desc: 'Powerful shotgun spread', active: () => weapons.doubleBarrel.active, apply: () => { weapons.doubleBarrel.active = true; weapons.doubleBarrel.level = 1; showStatChange('New Weapon: Double Barrel'); if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest8_newWeapon') progressTutorialQuest('quest8_newWeapon', true); } },
+          { id: 'icespear', icon: '❄️', title: 'ICE SPEAR', desc: 'Freezing projectile that slows enemies 40%', active: () => weapons.iceSpear.active, apply: () => { weapons.iceSpear.active = true; weapons.iceSpear.level = 1; showStatChange('New Weapon: Ice Spear'); if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest8_newWeapon') progressTutorialQuest('quest8_newWeapon', true); } },
+          { id: 'firering', icon: '🔥', title: 'FIRE RING', desc: 'Spinning fire orbs orbit around you', active: () => weapons.fireRing.active, apply: () => { weapons.fireRing.active = true; weapons.fireRing.level = 1; showStatChange('New Weapon: Fire Ring'); if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest8_newWeapon') progressTutorialQuest('quest8_newWeapon', true); } }
         ];
+        // Only offer weapons not yet active, shuffle and pick up to 3
+        const available = allWeaponChoices.filter(w => !w.active());
+        const shuffled = available.sort(() => 0.5 - Math.random());
+        choices = shuffled.slice(0, Math.min(3, shuffled.length));
+        // Fill with common upgrades if < 3 weapon choices available
+        if (choices.length < 3) {
+          const fillers = commonUpgrades.sort(() => 0.5 - Math.random()).slice(0, 3 - choices.length);
+          choices.push(...fillers);
+        }
+        // Add 3 common upgrades
+        choices.push(...commonUpgrades.sort(() => 0.5 - Math.random()).slice(0, 3));
       }
       // Level 10: CLASS SELECTION - ALWAYS SHOW 6 CHOICES
       else if (playerStats.lvl === 10) {
@@ -17237,6 +17126,14 @@
         e.mesh.material.dispose();
       });
       expGems = [];
+      
+      // Clean up blood decals
+      bloodDecals.forEach(d => {
+        scene.remove(d);
+        d.geometry.dispose();
+        d.material.dispose();
+      });
+      bloodDecals = [];
       
       goldCoins.forEach(g => {
         scene.remove(g.mesh);
