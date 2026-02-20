@@ -774,6 +774,7 @@
     }
     
     .story-quest-content {
+      position: relative;
       background: linear-gradient(to bottom, #1a3a4a 0%, #0f1f2a 100%);
       border: 4px solid #5DADE2;
       border-radius: 20px;
@@ -2509,7 +2510,7 @@
 
   <!-- FRESH IMPLEMENTATION: Story Quest Welcome Modal -->
   <div id="story-quest-modal" class="story-quest-modal">
-    <div class="story-quest-content" style="position:relative;">
+    <div class="story-quest-content">
       <button class="overlay-close-x" id="story-quest-x-btn" title="Close">✕</button>
       <div class="story-quest-title">
         💧 WELCOME TO WATER DROP SURVIVOR 💧
@@ -14611,6 +14612,7 @@
     }
     
     // Update blood decal fade (call in main loop)
+    const BLOOD_DECAL_FADE_START = 0.7; // Start fading at 70% of lifetime
     function updateBloodDecals() {
       const now = Date.now();
       for (const decal of bloodDecals) {
@@ -14618,9 +14620,9 @@
         const age = now - decal.userData.spawnTime;
         if (age >= BLOOD_DECAL_FADE_MS) {
           decal.material.opacity = 0;
-        } else if (age > BLOOD_DECAL_FADE_MS * 0.7) {
+        } else if (age > BLOOD_DECAL_FADE_MS * BLOOD_DECAL_FADE_START) {
           // Start fading at 70% of lifetime
-          const fadeProgress = (age - BLOOD_DECAL_FADE_MS * 0.7) / (BLOOD_DECAL_FADE_MS * 0.3);
+          const fadeProgress = (age - BLOOD_DECAL_FADE_MS * BLOOD_DECAL_FADE_START) / (BLOOD_DECAL_FADE_MS * (1 - BLOOD_DECAL_FADE_START));
           decal.material.opacity = (decal.userData.initialOpacity || 0.7) * (1 - fadeProgress);
         }
       }
