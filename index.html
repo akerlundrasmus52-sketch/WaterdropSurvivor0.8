@@ -532,8 +532,29 @@
       transform: translateX(-50%);
       font-size: 10px;
       font-weight: bold;
-      color: #5DADE2;
-      text-shadow: 0 0 4px rgba(93,173,226,1);
+      color: #FFD700;
+      text-shadow: 0 0 4px rgba(255,215,0,1);
+    }
+
+    /* Active quest location marker (yellow ?) */
+    .minimap-quest-location {
+      width: 8px;
+      height: 8px;
+      background: rgba(255,215,0,0.3);
+      border: 1px solid #FFD700;
+      border-radius: 2px;
+      box-shadow: 0 0 8px rgba(255,215,0,0.8);
+    }
+    .minimap-quest-location::before {
+      content: '?';
+      position: absolute;
+      top: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 11px;
+      font-weight: bold;
+      color: #FFD700;
+      text-shadow: 0 0 6px rgba(255,215,0,1);
     }
     
     /* Stat Notification Queue - Red/Black Dominant */
@@ -1268,13 +1289,21 @@
     }
     
     @keyframes popIn {
-      from { 
+      0% { 
         opacity: 0;
-        transform: scale(0.7) translateY(-20px);
+        transform: scale(0.05);
       }
-      to { 
+      60% {
         opacity: 1;
-        transform: scale(1) translateY(0);
+        transform: scale(1.05);
+      }
+      80% {
+        opacity: 1;
+        transform: scale(0.97);
+      }
+      100% { 
+        opacity: 1;
+        transform: scale(1);
       }
     }
     
@@ -7389,28 +7418,30 @@
     }
 
     class Particle {
-      static MAX_LIFETIME = 30; // Frames until particle fades out
-      static INITIAL_OPACITY = 0.8; // Maximum opacity for particles
+      static MAX_LIFETIME = 28; // Lifetime in frames before removal
+      static INITIAL_OPACITY = 0.92; // Maximum opacity for particles
+      static VEL_XZ_RANGE = 0.55; // Horizontal velocity spread
+      static VEL_Y_MIN = 0.15;    // Minimum upward velocity
+      static VEL_Y_RANGE = 0.5;   // Additional random upward velocity
       
       constructor(pos, color) {
-        const geo = new THREE.BoxGeometry(0.2, 0.2, 0.2);
-        // Changed to MeshPhysicalMaterial for light reactivity (smoke/fog effects)
-        const mat = new THREE.MeshPhysicalMaterial({ 
+        const geo = new THREE.BoxGeometry(0.32, 0.32, 0.32);
+        const mat = new THREE.MeshStandardMaterial({ 
           color: color,
           transparent: true,
           opacity: Particle.INITIAL_OPACITY,
           emissive: color,
-          emissiveIntensity: 0.2,
-          roughness: 0.8,
-          metalness: 0.1
+          emissiveIntensity: 0.5,
+          roughness: 0.5,
+          metalness: 0.15
         });
         this.mesh = new THREE.Mesh(geo, mat);
         this.mesh.position.copy(pos);
         
         this.vel = new THREE.Vector3(
-          (Math.random() - 0.5) * 0.3,
-          Math.random() * 0.3,
-          (Math.random() - 0.5) * 0.3
+          (Math.random() - 0.5) * Particle.VEL_XZ_RANGE,
+          Particle.VEL_Y_MIN + Math.random() * Particle.VEL_Y_RANGE,
+          (Math.random() - 0.5) * Particle.VEL_XZ_RANGE
         );
         
         scene.add(this.mesh);
@@ -7423,9 +7454,9 @@
         this.mesh.material.color.setHex(color);
         this.mesh.material.emissive.setHex(color);
         this.vel.set(
-          (Math.random() - 0.5) * 0.3,
-          Math.random() * 0.3,
-          (Math.random() - 0.5) * 0.3
+          (Math.random() - 0.5) * Particle.VEL_XZ_RANGE,
+          Particle.VEL_Y_MIN + Math.random() * Particle.VEL_Y_RANGE,
+          (Math.random() - 0.5) * Particle.VEL_XZ_RANGE
         );
         this.mesh.rotation.set(0, 0, 0);
         this.mesh.visible = true;
@@ -7468,68 +7499,46 @@
       }
     }
 
+    // Shared star geometry for all ExpGem instances (created once, reused for performance)
+    let _expGemStarGeometry = null;
+    let _expGemStarMaterial = null;
+
     class ExpGem {
       constructor(x, z) {
-        // Create waterdrop shape that fills with water (per requirements)
-        // Outer shell
-        const outerGeometry = new THREE.SphereGeometry(0.3, 16, 16);
-        const positions = outerGeometry.attributes.position;
-        for (let i = 0; i < positions.count; i++) {
-          const y = positions.getY(i);
-          if (y > 0) {
-            // Stretch top to make teardrop
-            positions.setY(i, y * 1.3);
-            const squeeze = 1 - (y / 0.3) * 0.2;
-            positions.setX(i, positions.getX(i) * squeeze);
-            positions.setZ(i, positions.getZ(i) * squeeze);
+        // Use shared star geometry (created once)
+        if (!_expGemStarGeometry) {
+          const starPoints = 5;
+          const outerR = 0.28;
+          const innerR = 0.12;
+          const starShape = new THREE.Shape();
+          for (let i = 0; i < starPoints * 2; i++) {
+            const angle = (i / (starPoints * 2)) * Math.PI * 2 - Math.PI / 2;
+            const r = i % 2 === 0 ? outerR : innerR;
+            if (i === 0) starShape.moveTo(Math.cos(angle) * r, Math.sin(angle) * r);
+            else starShape.lineTo(Math.cos(angle) * r, Math.sin(angle) * r);
           }
+          starShape.closePath();
+          const extrudeSettings = { depth: 0.10, bevelEnabled: true, bevelSize: 0.03, bevelThickness: 0.03, bevelSegments: 2 };
+          _expGemStarGeometry = new THREE.ExtrudeGeometry(starShape, extrudeSettings);
+          _expGemStarGeometry.center();
+          _expGemStarMaterial = new THREE.MeshStandardMaterial({
+            color: 0xFFD700,
+            emissive: 0xFFAA00,
+            emissiveIntensity: 0.6,
+            metalness: 0.7,
+            roughness: 0.2
+          });
         }
-        outerGeometry.computeVertexNormals();
-        
-        // Transparent blue shell
-        const shellMaterial = new THREE.MeshPhysicalMaterial({ 
-          color: 0x3498DB, // Blue matching EXP bar
-          transparent: true,
-          opacity: 0.3,
-          metalness: 0.1,
-          roughness: 0.2,
-          transmission: 0.5,
-          thickness: 0.3
-        });
-        
-        this.mesh = new THREE.Mesh(outerGeometry, shellMaterial);
+
+        // Each gem gets its own material clone for per-instance emissive animation
+        const starMaterial = _expGemStarMaterial.clone();
+
+        this.mesh = new THREE.Mesh(_expGemStarGeometry, starMaterial);
         this.mesh.position.set(x, 0.5, z);
         scene.add(this.mesh);
-        
-        // Water fill inside (starts small, grows)
-        const waterGeometry = new THREE.SphereGeometry(0.25, 12, 12);
-        // Flatten bottom of water
-        const waterPositions = waterGeometry.attributes.position;
-        for (let i = 0; i < waterPositions.count; i++) {
-          const y = waterPositions.getY(i);
-          if (y < -0.1) {
-            waterPositions.setY(i, -0.1); // Flat bottom like liquid
-          }
-        }
-        waterGeometry.computeVertexNormals();
-        
-        const waterMaterial = new THREE.MeshPhysicalMaterial({
-          color: 0x5DADE2, // Lighter water blue
-          transparent: true,
-          opacity: 0.7,
-          metalness: 0.2,
-          roughness: 0.3,
-          emissive: 0x3498DB,
-          emissiveIntensity: 0.3
-        });
-        
-        this.waterFill = new THREE.Mesh(waterGeometry, waterMaterial);
-        this.waterFill.scale.y = 0.5; // Start half-filled
-        this.waterFill.position.y = -0.1;
-        this.mesh.add(this.waterFill);
-        
-        // Add animated shadow on ground
-        const shadowGeo = new THREE.CircleGeometry(0.25, 16);
+
+        // Add small ground shadow
+        const shadowGeo = new THREE.CircleGeometry(0.22, 12);
         const shadowMat = new THREE.MeshBasicMaterial({ 
           color: 0x000000, 
           transparent: true, 
@@ -7540,46 +7549,35 @@
         this.shadow.rotation.x = -Math.PI / 2;
         this.shadow.position.set(x, 0.05, z);
         scene.add(this.shadow);
-        
+
         this.active = true;
-        // FRESH: Randomized rotation speed and direction for each XP drop
-        this.rotSpeed = (Math.random() * 0.12 + 0.04) * (Math.random() < 0.5 ? 1 : -1); // 0.04-0.16, random direction
-        this.rotSpeedY = (Math.random() * 0.08 + 0.02) * (Math.random() < 0.5 ? 1 : -1); // 0.02-0.10, random direction
-        this.rotSpeedX = (Math.random() * 0.06 + 0.01) * (Math.random() < 0.5 ? 1 : -1); // 0.01-0.07, random direction
+        // Spin fast on Y axis (star spinning over its axis as required)
+        this.rotSpeedY = (Math.random() * 0.15 + 0.10) * (Math.random() < 0.5 ? 1 : -1);
         this.bobPhase = Math.random() * Math.PI * 2;
         this.sparklePhase = Math.random() * Math.PI * 2;
-        this.fillPhase = 0; // Water fill animation
         this.value = GAME_CONFIG.expValue;
       }
 
       update(playerPos) {
         if (!this.active) return;
 
-        // FRESH: Spin with randomized speeds and directions (each XP drop unique)
-        this.mesh.rotation.z += this.rotSpeed;
+        // Spin star over its Y axis (fast)
         this.mesh.rotation.y += this.rotSpeedY;
-        this.mesh.rotation.x += this.rotSpeedX;
-        
+
         // Bob up and down
         this.bobPhase += 0.05;
         this.mesh.position.y = 0.5 + Math.sin(this.bobPhase) * 0.1;
         
-        // Animate shadow to follow bob (shadow stays on ground but changes size)
+        // Animate shadow to follow bob
         if (this.shadow) {
-          const shadowScale = 0.8 + Math.sin(this.bobPhase) * 0.2; // Larger when lower, smaller when higher
+          const shadowScale = 0.8 + Math.sin(this.bobPhase) * 0.2;
           this.shadow.scale.set(shadowScale, shadowScale, 1);
-          this.shadow.material.opacity = 0.2 + Math.sin(this.bobPhase) * 0.1; // More opaque when closer to ground
+          this.shadow.material.opacity = 0.2 + Math.sin(this.bobPhase) * 0.1;
         }
         
-        // Sparkle effect on shell
+        // Pulsing gold glow
         this.sparklePhase += 0.1;
-        this.mesh.material.emissiveIntensity = 0.3 + Math.sin(this.sparklePhase) * 0.2;
-        
-        // Animate water fill (pulsing/sloshing effect)
-        this.fillPhase += 0.05;
-        const fillAmount = 0.5 + Math.sin(this.fillPhase) * 0.1; // Pulse between 0.4 and 0.6
-        this.waterFill.scale.y = fillAmount;
-        this.waterFill.position.y = -0.1 + (0.5 - fillAmount) * 0.15; // Adjust position as it fills
+        this.mesh.material.emissiveIntensity = 0.5 + Math.sin(this.sparklePhase) * 0.3;
 
         // Magnet
         const dx = playerPos.x - this.mesh.position.x;
@@ -7667,8 +7665,8 @@
         setTimeout(() => flash.remove(), 100);
         
         scene.remove(this.mesh);
-        this.mesh.geometry.dispose();
-        this.mesh.material.dispose();
+        // Geometry is shared across all ExpGem instances - do not dispose it
+        this.mesh.material.dispose(); // Only dispose the per-instance cloned material
         
         // Remove shadow
         if (this.shadow) {
@@ -7681,8 +7679,6 @@
         playSound('collect');
       }
     }
-
-    // PR #117: Gold System Overhaul
     // Different gold drop types based on amount
     class GoldCoin {
       constructor(x, z, amount) {
@@ -11123,7 +11119,7 @@
       }
     }
     
-    function showQuestPopup(title, message, buttonText = 'Got it!', onClose = null) {
+    function showQuestPopup(title, message, buttonText = 'Continue', onClose = null) {
       // Create popup overlay
       const overlay = document.createElement('div');
       overlay.id = 'quest-popup-overlay';
@@ -11150,7 +11146,7 @@
         max-width: 500px;
         width: 90%;
         text-align: center;
-        animation: popIn 0.3s ease-out;
+        animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.1);
         box-shadow: 0 0 30px rgba(255,215,0,0.5);
       `;
       
@@ -11171,7 +11167,7 @@
     }
 
     // NEW: Comic-magazine styled info box (80s Batman style)
-    function showComicInfoBox(title, message, buttonText = 'Got it!', onClose = null) {
+    function showComicInfoBox(title, message, buttonText = 'Continue', onClose = null) {
       const overlay = document.createElement('div');
       overlay.id = 'comic-info-overlay';
       overlay.style.cssText = `
@@ -11197,7 +11193,7 @@
         max-width: 600px;
         width: 90%;
         text-align: center;
-        animation: popIn 0.3s ease-out;
+        animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.1);
         box-shadow: 
           0 0 40px rgba(255,215,0,0.6),
           inset 0 0 30px rgba(0,0,0,0.3);
@@ -11324,7 +11320,7 @@
         max-height: 80vh;
         overflow-y: auto;
         text-align: center;
-        animation: popIn 0.3s ease-out;
+        animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.1);
         box-shadow: 0 0 30px rgba(255,215,0,0.5);
       `;
       
@@ -11394,6 +11390,9 @@
         <button class="btn start-run-btn" style="margin-top: 20px; font-size: 18px; padding: 12px 35px; background: #27ae60; color: #FFF; margin-right: 10px;">
           ▶ Start New Run
         </button>
+        <button class="btn accept-quest-btn" style="margin-top: 20px; font-size: 16px; padding: 10px 28px; background: #e67e22; color: #FFF; margin-right: 10px;">
+          📋 Accept New Quest
+        </button>
         <button class="btn" style="margin-top: 20px; font-size: 16px; padding: 10px 30px; background: #888; color: #FFF;">
           Close
         </button>
@@ -11425,6 +11424,50 @@
         startRunBtn.onclick = () => {
           document.body.removeChild(overlay);
           startGame();
+        };
+      }
+
+      // Accept New Quest button handler
+      const acceptQuestBtn = panel.querySelector('.accept-quest-btn');
+      if (acceptQuestBtn) {
+        acceptQuestBtn.onclick = () => {
+          // Find the next available quest that hasn't started yet
+          const allQuestIds = Object.keys(TUTORIAL_QUESTS);
+          const completedQuests = saveData.tutorialQuests.completedQuests || [];
+          const currentQuest = saveData.tutorialQuests.currentQuest;
+          let nextQuestId = null;
+          for (const qId of allQuestIds) {
+            if (!completedQuests.includes(qId) && qId !== currentQuest && checkQuestConditions(qId)) {
+              nextQuestId = qId;
+              break;
+            }
+          }
+          if (nextQuestId) {
+            document.body.removeChild(overlay);
+            saveData.tutorialQuests.currentQuest = nextQuestId;
+            saveSaveData();
+            const q = TUTORIAL_QUESTS[nextQuestId];
+            showComicInfoBox('📋 NEW QUEST',
+              `<div style="text-align:left;padding:10px;">
+                <p style="font-family:'Bangers',cursive;font-size:20px;margin-bottom:10px;">🎯 ${q.name}</p>
+                <p style="line-height:1.8;margin-bottom:10px;">${q.description}<br><br><b>Objective:</b> ${q.objectives}</p>
+                ${q.rewardGold ? `<p style="font-size:13px;color:#FFD700;">Reward: +${q.rewardGold} Gold${q.rewardSkillPoints ? ` · +${q.rewardSkillPoints} Skill Points` : ''}</p>` : ''}
+              </div>`,
+              'ACCEPT MISSION!'
+            );
+          } else if (currentQuest) {
+            document.body.removeChild(overlay);
+            const q = TUTORIAL_QUESTS[currentQuest];
+            showComicInfoBox('📋 ACTIVE QUEST',
+              `<div style="text-align:left;padding:10px;">
+                <p style="font-family:'Bangers',cursive;font-size:20px;margin-bottom:10px;">🎯 ${q ? q.name : currentQuest}</p>
+                <p style="line-height:1.8;">${q ? q.description : ''}<br><br><b>Objective:</b> ${q ? q.objectives : ''}</p>
+              </div>`,
+              'Continue'
+            );
+          } else {
+            showComicInfoBox('📋 NO QUESTS AVAILABLE', 'Complete your current objectives to unlock new quests!', 'OK');
+          }
         };
       }
       
@@ -14234,7 +14277,9 @@
     // Phase 5: Updated to use Object Pool for performance
     function spawnParticles(pos, color, count) {
       if (!particlePool) return; // Safety check
-      for(let i=0; i<count; i++) {
+      // Cap particles per spawn to reduce quantity while keeping visuals impactful
+      const cappedCount = Math.min(count, 6);
+      for(let i=0; i<cappedCount; i++) {
         const particle = particlePool.get();
         particle.reset(pos, color);
         particles.push(particle);
@@ -14459,19 +14504,20 @@
         left: 50%;
         transform: translate(-50%, -50%) scale(0);
         font-family: 'Bangers', cursive;
-        font-size: 60px;
+        font-size: 38px;
         font-weight: 500;
         color: #FFD700;
         text-shadow: 
-          0 0 15px rgba(255,215,0,0.9),
-          0 0 30px rgba(93,173,226,0.6),
-          3px 3px 0 #000,
+          0 0 10px rgba(255,215,0,0.85),
+          0 0 20px rgba(93,173,226,0.4),
+          2px 2px 0 #000,
           -1px -1px 0 #000,
           1px -1px 0 #000,
           -1px 1px 0 #000;
         z-index: 200;
         pointer-events: none;
-        letter-spacing: 6px;
+        letter-spacing: 4px;
+        transition: transform 0.12s ease-out, opacity 0.12s ease-out;
       `;
       levelUpText.textContent = 'LEVEL UP!';
       document.body.appendChild(levelUpText);
@@ -15986,6 +16032,27 @@
           minimap.appendChild(landmarkDot);
         }
       });
+
+      // Show active quest location as yellow "?" on minimap
+      const QUEST_LOCATIONS = {
+        quest3_stonehengeGear: { x: -60, z: 60 },
+        quest3_findStonehenge: { x: -60, z: 60 }
+      };
+      const currentQuest = getCurrentQuest ? getCurrentQuest() : null;
+      if (currentQuest && QUEST_LOCATIONS[currentQuest.id]) {
+        const qPos = QUEST_LOCATIONS[currentQuest.id];
+        const qdx = qPos.x - player.mesh.position.x;
+        const qdz = qPos.z - player.mesh.position.z;
+        if (Math.abs(qdx) < mapSize / 2 && Math.abs(qdz) < mapSize / 2) {
+          const qmapX = 50 + (qdx / mapSize) * 100;
+          const qmapZ = 50 + (qdz / mapSize) * 100;
+          const questDot = document.createElement('div');
+          questDot.className = 'minimap-dot minimap-quest-location';
+          questDot.style.left = `${qmapX}%`;
+          questDot.style.top = `${qmapZ}%`;
+          minimap.appendChild(questDot);
+        }
+      }
     }
     
     // Stats Bar removed - Users access stats via STATS button modal
@@ -16851,17 +16918,14 @@
       // Reset run loot tracking
       window.runLootGained = [];
       
-      // UPDATED: Time progression system
-      // Each run starts 1 hour later than the previous death time
-      // First run starts at 6 AM (default), subsequent runs progress through the 24-hour cycle
+      // Time system: always start a run at 6 AM or 6 PM (alternating)
+      // First run: 6 AM. Each subsequent run alternates between 6 PM and 6 AM.
       saveData.runCount = (saveData.runCount || 0) + 1;
-      const startHour = (saveData.lastDeathHour || 6) + 1; // Start 1 hour after previous death
-      const normalizedHour = startHour % 24; // Wrap around 24 hours
-      saveData.lastDeathHour = normalizedHour; // Save for next run
-      
+      const startHour = (saveData.runCount % 2 === 1) ? 6 : 18; // Odd runs → 6 AM, Even runs → 6 PM
+
       // Convert hour (0-23) to timeOfDay (0-1)
       // 0 = midnight, 6 = dawn, 12 = noon, 18 = dusk
-      dayNightCycle.timeOfDay = normalizedHour / 24;
+      dayNightCycle.timeOfDay = startHour / 24;
       
       saveSaveData(); // Save the updated hour
       
@@ -17283,19 +17347,17 @@
               const swipeTime = Date.now() - swipeStart.time;
               
               if (swipeTime < 250 && swipeDist > 60) {
-                // Perform dash in the exact direction of the swipe!
-                swipeDetected = true;
-                
-                // Use the centralized dash method for proper direction handling
-                // Pass normalized screen-space swipe direction
-                const dist = Math.sqrt(dx*dx + dy*dy);
-                player.dash(dx / dist, dy / dist);
-                
-                // Track dash
-                playerStats.dashesPerformed++;
-                
-                // Reset swipe
-                swipeStart = null;
+                // Dash only available after unlocking in skill tree
+                if (!saveData.tutorial || !saveData.tutorial.dashUnlocked) {
+                  showStatChange('🔒 Unlock Dash in the Skill Tree!');
+                  swipeStart = null;
+                } else {
+                  swipeDetected = true;
+                  const dist = Math.sqrt(dx*dx + dy*dy);
+                  player.dash(dx / dist, dy / dist);
+                  playerStats.dashesPerformed++;
+                  swipeStart = null;
+                }
               }
             }
             
@@ -17414,8 +17476,8 @@
         const dt = Date.now() - touchStartTime;
         const dist = Math.sqrt(dx*dx + dy*dy);
         
-        // Quick swipe for dash (at least 40 pixels, less than 400ms)
-        if (dt < 400 && dist > 40 && swipeDetected) {
+        // Quick swipe for dash (at least 40 pixels, less than 400ms, only if unlocked)
+        if (dt < 400 && dist > 40 && swipeDetected && saveData.tutorial && saveData.tutorial.dashUnlocked) {
            player.dash(dx/dist, dy/dist);
         }
       }, { passive: false });
@@ -17430,8 +17492,8 @@
           if (gameSettings.controlType !== 'keyboard') return;
           keysPressed[e.key.toLowerCase()] = true;
           
-          // Space bar for dash
-          if (e.key === ' ' && !player.isDashing && (keysPressed['w'] || keysPressed['a'] || keysPressed['s'] || keysPressed['d'])) {
+          // Space bar for dash (only if unlocked in skill tree)
+          if (e.key === ' ' && !player.isDashing && saveData.tutorial && saveData.tutorial.dashUnlocked && (keysPressed['w'] || keysPressed['a'] || keysPressed['s'] || keysPressed['d'])) {
             let dx = 0, dy = 0;
             if (keysPressed['w']) dy = -1;
             if (keysPressed['s']) dy = 1;
