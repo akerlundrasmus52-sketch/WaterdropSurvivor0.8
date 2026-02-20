@@ -3640,6 +3640,10 @@
     let bloodDecals = [];
     const MAX_BLOOD_DECALS = 50; // Cap for performance (req: max 50)
     
+    // Blood drips array - updated in main game loop to avoid many individual RAF loops
+    let bloodDrips = [];
+    const MAX_BLOOD_DRIPS = 30;
+    
     let frameCount = 0;
     let isPaused = false;
     let isGameOver = false;
@@ -5646,10 +5650,10 @@
           spawnBloodDecal(this.mesh.position); // Even more at critical HP
         }
         
-        // Blood drip: small drops fall from wounded enemy to ground
-        if (hpRatio < 0.5 && scene) {
-          const dripCount = hpRatio < 0.25 ? 3 : 1;
-          for (let d = 0; d < dripCount; d++) {
+        // Blood drip: small drops fall from wounded enemy to ground (managed in main loop)
+        if (hpRatio < 0.5 && scene && bloodDrips.length < MAX_BLOOD_DRIPS) {
+          const dripCount = hpRatio < 0.25 ? 2 : 1;
+          for (let d = 0; d < dripCount && bloodDrips.length < MAX_BLOOD_DRIPS; d++) {
             const drip = new THREE.Mesh(
               new THREE.SphereGeometry(0.04 + Math.random() * 0.04, 4, 4),
               new THREE.MeshBasicMaterial({ color: 0x8B0000 })
@@ -5660,24 +5664,7 @@
               this.mesh.position.z + (Math.random() - 0.5) * 0.4
             );
             scene.add(drip);
-            let dripVelY = 0;
-            let dripLife = 25 + Math.floor(Math.random() * 15);
-            const updateDrip = () => {
-              dripVelY -= 0.018;
-              drip.position.y += dripVelY;
-              dripLife--;
-              if (drip.position.y <= 0.02 || dripLife <= 0) {
-                const hitGround = drip.position.y <= 0.02;
-                const dripPos = drip.position.clone();
-                scene.remove(drip);
-                drip.geometry.dispose();
-                drip.material.dispose();
-                if (hitGround) spawnBloodDecal(dripPos);
-                return;
-              }
-              requestAnimationFrame(updateDrip);
-            };
-            updateDrip();
+            bloodDrips.push({ mesh: drip, velY: 0, life: 25 + Math.floor(Math.random() * 15) });
           }
         }
         
@@ -10496,26 +10483,7 @@
         
         // QUEST 2: Track skill point spending for tutorial quest
         if (saveData.tutorialQuests) {
-          // Auto-activate quest2 if quest1 is claimed but quest2 hasn't started (race condition fix)
-          if (
-            isQuestClaimed('quest1_kill3') &&
-            !saveData.tutorialQuests.currentQuest &&
-            !isQuestClaimed('quest2_spendSkills') &&
-            !saveData.tutorialQuests.readyToClaim.includes('quest2_spendSkills')
-          ) {
-            saveData.tutorialQuests.currentQuest = 'quest2_spendSkills';
-          }
-          if (saveData.tutorialQuests.currentQuest === 'quest2_spendSkills') {
-            // Require specifically Dash (dashMaster) AND a Headshot/Critical skill (criticalFocus or executioner)
-            const hasDash = saveData.skillTree.dashMaster && saveData.skillTree.dashMaster.level > 0;
-            const hasHeadshot = (saveData.skillTree.criticalFocus && saveData.skillTree.criticalFocus.level > 0) ||
-                                (saveData.skillTree.executioner && saveData.skillTree.executioner.level > 0);
-            
-            if (hasDash && hasHeadshot) {
-              // Completed quest 2: unlocked Dash and Headshot
-              progressTutorialQuest('quest2_spendSkills', true);
-            }
-          }
+          ensureQuest2Activated();
         }
         
         // Quest progression: Track skill unlocks for tutorial quest
@@ -10978,6 +10946,29 @@
     function getCurrentQuest() {
       const questId = saveData.tutorialQuests.currentQuest;
       return questId ? TUTORIAL_QUESTS[questId] : null;
+    }
+    
+    // Helper: ensure quest2 is activated and check if both skills are already bought
+    function ensureQuest2Activated() {
+      if (!saveData.tutorialQuests) return;
+      // Auto-activate quest2 if quest1 is claimed but quest2 hasn't started
+      if (
+        isQuestClaimed('quest1_kill3') &&
+        !saveData.tutorialQuests.currentQuest &&
+        !isQuestClaimed('quest2_spendSkills') &&
+        !saveData.tutorialQuests.readyToClaim.includes('quest2_spendSkills')
+      ) {
+        saveData.tutorialQuests.currentQuest = 'quest2_spendSkills';
+      }
+      // If quest2 is active, check if both skills are already bought
+      if (saveData.tutorialQuests.currentQuest === 'quest2_spendSkills') {
+        const hasDash = saveData.skillTree.dashMaster && saveData.skillTree.dashMaster.level > 0;
+        const hasHeadshot = (saveData.skillTree.criticalFocus && saveData.skillTree.criticalFocus.level > 0) ||
+                            (saveData.skillTree.executioner && saveData.skillTree.executioner.level > 0);
+        if (hasDash && hasHeadshot) {
+          progressTutorialQuest('quest2_spendSkills', true);
+        }
+      }
     }
     
     // Check if quest conditions are fulfilled
@@ -11540,25 +11531,9 @@
       }
       
       // Fallback: auto-activate quest2 if quest1 is claimed but quest2 hasn't started
-      if (
-        isQuestClaimed('quest1_kill3') &&
-        !saveData.tutorialQuests.currentQuest &&
-        !isQuestClaimed('quest2_spendSkills') &&
-        !saveData.tutorialQuests.readyToClaim.includes('quest2_spendSkills')
-      ) {
-        saveData.tutorialQuests.currentQuest = 'quest2_spendSkills';
-        saveSaveData();
-      }
-      
-      // If quest2 is active, check if skills are already bought (handles edge cases)
-      if (saveData.tutorialQuests.currentQuest === 'quest2_spendSkills') {
-        const hasDash = saveData.skillTree.dashMaster && saveData.skillTree.dashMaster.level > 0;
-        const hasHeadshot = (saveData.skillTree.criticalFocus && saveData.skillTree.criticalFocus.level > 0) ||
-                            (saveData.skillTree.executioner && saveData.skillTree.executioner.level > 0);
-        if (hasDash && hasHeadshot) {
-          progressTutorialQuest('quest2_spendSkills', true);
-        }
-      }
+      // Also check if quest2 is active but skills are already bought
+      ensureQuest2Activated();
+      saveSaveData();
       
       // Quest ID to display name mapping
       const questNames = {
@@ -17722,6 +17697,14 @@
       bloodDecals = [];
       bloodDecalIndex = 0; // Reset circular buffer index
       
+      // Clean up blood drips
+      bloodDrips.forEach(d => {
+        scene.remove(d.mesh);
+        d.mesh.geometry.dispose();
+        d.mesh.material.dispose();
+      });
+      bloodDrips = [];
+      
       goldCoins.forEach(g => {
         scene.remove(g.mesh);
         g.mesh.geometry.dispose();
@@ -19232,6 +19215,25 @@
       
       // Update blood decal fade (12 second lifetime)
       updateBloodDecals();
+      
+      // Update blood drips (falling drops from wounded enemies)
+      if (bloodDrips.length > 0) {
+        bloodDrips = bloodDrips.filter(d => {
+          d.velY -= 0.018;
+          d.mesh.position.y += d.velY;
+          d.life--;
+          if (d.mesh.position.y <= 0.02 || d.life <= 0) {
+            const hitGround = d.mesh.position.y <= 0.02;
+            const pos = d.mesh.position.clone();
+            scene.remove(d.mesh);
+            d.mesh.geometry.dispose();
+            d.mesh.material.dispose();
+            if (hitGround) spawnBloodDecal(pos);
+            return false;
+          }
+          return true;
+        });
+      }
       
       // Performance: Use cached arrays instead of scene.traverse() every frame
       // Windmill Rotation and Light Animation
