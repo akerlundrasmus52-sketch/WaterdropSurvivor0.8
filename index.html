@@ -2991,7 +2991,7 @@
   <!-- Game Over Screen -->
   <div id="gameover-screen">
     <h1 style="color: #5DADE2; font-size: 40px; text-shadow: 2px 2px 0 #000, 0 0 10px rgba(93,173,226,0.8);">GAME OVER</h1>
-    <div style="max-width: 90vw; margin: 20px auto; box-sizing: border-box; overflow-y: auto;">
+    <div style="max-width: 90vw; max-height: 70vh; margin: 20px auto; box-sizing: border-box; overflow-y: auto;">
       <h3 style="color: #FFD700; font-size: 24px; margin-bottom: 15px;">Run Summary</h3>
       <div style="text-align: left; background: rgba(0,0,0,0.5); padding: 20px; border-radius: 10px; margin-bottom: 20px;">
         <p id="final-score" style="font-size: 18px; margin: 8px 0;">⏱️ Survived: 0s</p>
@@ -3603,6 +3603,7 @@
     let meteors = [];
     let flashLights = []; // Track temporary flash lights for cleanup
     let activeTimeouts = []; // Track active timeouts for cleanup
+    let playerRecoilTimeout = null; // Track recoil animation to prevent conflicts
     let droneTurrets = []; // Track active drone turrets
     
     // Cinematic camera system
@@ -11129,7 +11130,8 @@
     
     // Helper: should questMission building show notification glow?
     function isQuestMissionReady() {
-      const tq = saveData.tutorialQuests;
+      const tq = saveData && saveData.tutorialQuests;
+      if (!tq) return false;
       return (tq.readyToClaim && tq.readyToClaim.length > 0) ||
              (tq.firstDeathShown && !tq.currentQuest && !isQuestClaimed('quest1_kill3'));
     }
@@ -18542,10 +18544,12 @@
               
               // Gun kickback effect - snappy recoil via scale squish
               player.mesh.scale.set(1.15, 0.85, 1.15);
-              const kickbackTimeoutId = setTimeout(() => {
+              if (playerRecoilTimeout) clearTimeout(playerRecoilTimeout);
+              playerRecoilTimeout = setTimeout(() => {
                 player.mesh.scale.set(1, 1, 1);
+                playerRecoilTimeout = null;
               }, 80);
-              activeTimeouts.push(kickbackTimeoutId);
+              activeTimeouts.push(playerRecoilTimeout);
               
               // ENHANCED Muzzle flash particles (small burst at gun muzzle - not generic spray)
               const muzzlePos = player.mesh.position.clone();
@@ -18729,10 +18733,12 @@
           
           // HEAVY RECOIL - much stronger than pistol
           player.mesh.scale.set(1.3, 0.7, 1.3);
-          const kickbackTimeoutId = setTimeout(() => {
+          if (playerRecoilTimeout) clearTimeout(playerRecoilTimeout);
+          playerRecoilTimeout = setTimeout(() => {
             player.mesh.scale.set(1, 1, 1);
+            playerRecoilTimeout = null;
           }, 100);
-          activeTimeouts.push(kickbackTimeoutId);
+          activeTimeouts.push(playerRecoilTimeout);
           
           // Orange/yellow muzzle flash (shotgun characteristic)
           const flashLight = new THREE.PointLight(0xFFA500, 8, 18); // Orange, brighter, wider
