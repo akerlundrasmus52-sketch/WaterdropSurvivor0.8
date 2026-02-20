@@ -11885,7 +11885,7 @@
               if (buildingId === 'questMission') {
                 // Show notification glow on questMission if quests ready
                 if (
-                  saveData.tutorialQuests.readyToClaim && saveData.tutorialQuests.readyToClaim.length > 0 ||
+                  (saveData.tutorialQuests.readyToClaim && saveData.tutorialQuests.readyToClaim.length > 0) ||
                   (saveData.tutorialQuests.firstDeathShown && !saveData.tutorialQuests.currentQuest && !isQuestClaimed('quest1_kill3'))
                 ) {
                   buildingCard.classList.add('quest-ready-glow');
