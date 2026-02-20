@@ -111,11 +111,12 @@
       /* 80s BATMAN COMIC STYLE: Darker gradient with gold accents */
       background: linear-gradient(to bottom, #1a1a1a 0%, #1a1a1a 50%, #3a3a3a 50%, #3a3a3a 100%);
       border-radius: 12px;
-      border: 3px solid #FFD700; /* Gold border for comic style */
+      border: 4px solid #000000; /* Black border comic style */
       overflow: hidden;
       position: relative;
       /* Enhanced comic shadow with gold glow */
       box-shadow: 
+        0 0 0 2px #FFD700,
         0 3px 8px rgba(0,0,0,0.5), 
         inset 0 2px 4px rgba(0,0,0,0.4), 
         0 0 15px rgba(255,215,0,0.3);
@@ -155,9 +156,9 @@
     }
 
     #hp-fill { 
-      background: linear-gradient(to bottom, #FF4444, #CC0000);
+      background: linear-gradient(to bottom, #FF2222, #AA0000);
       width: 100%;
-      box-shadow: 0 0 10px rgba(255,68,68,0.8), 0 0 20px rgba(255,68,68,0.4), inset 0 2px 4px rgba(255,255,255,0.2);
+      box-shadow: 0 0 12px rgba(255,0,0,1), 0 0 25px rgba(255,0,0,0.6), inset 0 2px 4px rgba(255,255,255,0.3);
     }
     #exp-fill { 
       background: linear-gradient(to bottom, #5DADE2, #3498DB);
@@ -1956,6 +1957,7 @@
       justify-content: flex-start;
       overflow-y: auto;
       z-index: 50; /* Lower than UI layer buttons */
+      box-sizing: border-box;
       /* IPHONE 16 OPTIMIZATION: Adjust padding for safe area */
       padding-top: max(30px, env(safe-area-inset-top));
       padding-right: max(20px, env(safe-area-inset-right));
@@ -5574,10 +5576,16 @@
         this.lastDamageType = damageType;
         
         // Phase 5: Hit impact particles (flesh/blood) on every hit - ENHANCED: Scale with HP remaining
-        const bloodParticleCount = Math.max(3, Math.floor((1 - this.hp/this.maxHp) * 8) + 2); // More blood as HP drops
-        spawnParticles(this.mesh.position, 0x8B0000, Math.min(bloodParticleCount, 15)); // Blood particles scale with HP loss
-        // Ground blood decal on every hit
+        const bloodParticleCount = Math.max(4, Math.floor((1 - this.hp/this.maxHp) * 12) + 3); // More blood as HP drops
+        spawnParticles(this.mesh.position, 0x8B0000, Math.min(bloodParticleCount, 20)); // Blood particles scale with HP loss
+        // Spawn multiple ground blood decals for more brutal effect
         spawnBloodDecal(this.mesh.position);
+        if (this.hp / this.maxHp < 0.5) {
+          spawnBloodDecal(this.mesh.position); // Extra decal at half HP
+        }
+        if (this.hp / this.maxHp < 0.25) {
+          spawnBloodDecal(this.mesh.position); // Extra decal at low HP
+        }
         
         // Phase 3: Apply armor reduction for MiniBoss
         let finalAmount = amount;
@@ -5823,6 +5831,14 @@
         document.body.appendChild(flash);
         setTimeout(() => flash.remove(), this.isMiniBoss ? 100 : 50);
         
+        // DEATH BLOOD BURST - violent explosion of blood particles
+        const deathBloodCount = this.isMiniBoss ? 25 : 12;
+        spawnParticles(this.mesh.position, 0x8B0000, deathBloodCount);
+        spawnParticles(this.mesh.position, 0x6B0000, Math.floor(deathBloodCount * 0.6));
+        for (let db = 0; db < (this.isMiniBoss ? 4 : 2); db++) {
+          spawnBloodDecal(this.mesh.position);
+        }
+        
         scene.remove(this.mesh);
         this.mesh.geometry.dispose();
         this.mesh.material.dispose();
@@ -5982,7 +5998,7 @@
           // EXPLOSION DEATH: Main explosion (death ring removed per requirements)
           spawnParticles(this.mesh.position, enemyColor, 20);
           spawnParticles(this.mesh.position, 0xFFFFFF, 8);
-          spawnParticles(this.mesh.position, 0x8B0000, 6);
+          spawnParticles(this.mesh.position, 0x8B0000, 15);
           
           // Explode into pieces (NO death ring)
           const pieceCount = this.isMiniBoss ? 25 : 15;
@@ -7459,12 +7475,12 @@
     class Particle {
       static MAX_LIFETIME = 28; // Lifetime in frames before removal
       static INITIAL_OPACITY = 0.92; // Maximum opacity for particles
-      static VEL_XZ_RANGE = 0.55; // Horizontal velocity spread
-      static VEL_Y_MIN = 0.15;    // Minimum upward velocity
+      static VEL_XZ_RANGE = 0.35; // Horizontal velocity spread
+      static VEL_Y_MIN = 0.08;    // Minimum upward velocity
       static VEL_Y_RANGE = 0.5;   // Additional random upward velocity
       
       constructor(pos, color) {
-        const geo = new THREE.BoxGeometry(0.32, 0.32, 0.32);
+        const geo = new THREE.BoxGeometry(0.06, 0.06, 0.06);
         const mat = new THREE.MeshStandardMaterial({ 
           color: color,
           transparent: true,
@@ -7583,19 +7599,6 @@
         this.mesh.position.set(x, 0.5, z);
         scene.add(this.mesh);
 
-        // Add small ground shadow
-        const shadowGeo = new THREE.CircleGeometry(0.22, 12);
-        const shadowMat = new THREE.MeshBasicMaterial({ 
-          color: 0x000000, 
-          transparent: true, 
-          opacity: 0.3,
-          depthWrite: false 
-        });
-        this.shadow = new THREE.Mesh(shadowGeo, shadowMat);
-        this.shadow.rotation.x = -Math.PI / 2;
-        this.shadow.position.set(x, 0.05, z);
-        scene.add(this.shadow);
-
         this.active = true;
         // Spin fast on Y axis (star spinning over its axis as required)
         this.rotSpeedY = (Math.random() * 0.15 + 0.10) * (Math.random() < 0.5 ? 1 : -1);
@@ -7614,13 +7617,6 @@
         this.bobPhase += 0.05;
         this.mesh.position.y = 0.5 + Math.sin(this.bobPhase) * 0.1;
         
-        // Animate shadow to follow bob
-        if (this.shadow) {
-          const shadowScale = 0.8 + Math.sin(this.bobPhase) * 0.2;
-          this.shadow.scale.set(shadowScale, shadowScale, 1);
-          this.shadow.material.opacity = 0.2 + Math.sin(this.bobPhase) * 0.1;
-        }
-        
         // Pulsing gold glow
         this.sparklePhase += 0.1;
         this.mesh.material.emissiveIntensity = 0.5 + Math.sin(this.sparklePhase) * 0.3;
@@ -7633,12 +7629,6 @@
         if (dist < magnetRange) { // Use magnetRange variable
           this.mesh.position.x += (dx / dist) * 0.3;
           this.mesh.position.z += (dz / dist) * 0.3;
-          
-          // Update shadow position
-          if (this.shadow) {
-            this.shadow.position.x = this.mesh.position.x;
-            this.shadow.position.z = this.mesh.position.z;
-          }
           
           // Visual Trail when pulled - blue particles with sparkle (PR #117)
           if (Math.random() < 0.3) {
@@ -7713,13 +7703,6 @@
         scene.remove(this.mesh);
         // Geometry is shared across all ExpGem instances - do not dispose it
         this.mesh.material.dispose(); // Only dispose the per-instance cloned material
-        
-        // Remove shadow
-        if (this.shadow) {
-          scene.remove(this.shadow);
-          this.shadow.geometry.dispose();
-          this.shadow.material.dispose();
-        }
         
         addExp(this.value);
         playSound('collect');
@@ -13649,6 +13632,31 @@
       // Don't call showLoadingScreen - standalone script handles it
       window.gameModuleReady = true;
       console.log('[Init] Game module ready - Three.js loaded, event listeners attached');
+      
+      // SAFETY: Periodic check - if game paused but no overlay/menu visible, auto-unpause
+      setInterval(() => {
+        if (isPaused && isGameActive && !isGameOver) {
+          // Check if any overlay is actually open
+          const hasOpenOverlay = 
+            document.getElementById('levelup-modal')?.style.display === 'flex' ||
+            document.getElementById('settings-modal')?.style.display === 'flex' ||
+            document.getElementById('options-menu')?.style.display === 'flex' ||
+            document.getElementById('stats-modal')?.style.display === 'flex' ||
+            document.getElementById('gear-screen')?.style.display === 'flex' ||
+            document.getElementById('achievements-screen')?.style.display === 'flex' ||
+            document.getElementById('credits-screen')?.style.display === 'flex' ||
+            document.getElementById('attributes-screen')?.style.display === 'flex' ||
+            document.getElementById('progression-shop')?.style.display === 'flex' ||
+            document.querySelector('[data-quest-hall-overlay]') !== null ||
+            document.getElementById('quest-popup-overlay') !== null ||
+            document.getElementById('comic-info-overlay') !== null ||
+            document.getElementById('comic-tutorial-modal')?.style.display === 'flex' ||
+            document.getElementById('story-quest-modal')?.style.display === 'flex';
+          if (!hasOpenOverlay) {
+            setGamePaused(false);
+          }
+        }
+      }, 2000); // Check every 2 seconds
     }
     
     // showLoadingScreen is now handled by standalone script
