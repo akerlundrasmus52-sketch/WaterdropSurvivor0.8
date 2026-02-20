@@ -5875,6 +5875,11 @@
               );
             }
           }
+          // Quest 7 (new): Kill 10 enemies — notify mid-run when objective reached
+          if (currentQuest && currentQuest.id === 'quest7_kill10' && playerStats.kills >= 10 &&
+              !saveData.tutorialQuests.readyToClaim.includes('quest7_kill10')) {
+            showStatChange('⚔️ 10 Kills! Return to camp to claim your reward!');
+          }
         }
         
         // Track side challenge progress
@@ -9344,9 +9349,13 @@
       saveSaveData();
       updateGearScreen();
       
-      // Quest progression: first time equipping gear
+      // Quest progression: first time equipping gear (legacy)
       if (saveData.storyQuests.currentQuest === 'equipGear') {
         progressQuest('equipGear', true);
+      }
+      // Quest 4: Equip the Cigar
+      if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest4_equipCigar') {
+        progressTutorialQuest('quest4_equipCigar', true);
       }
     }
 
@@ -10538,7 +10547,7 @@
             updateTrainingSection();
             updateGoldDisplays();
             
-            // QUEST 3: Track attribute purchase for tutorial quest
+            // QUEST 3 (legacy): Track attribute purchase for tutorial quest
             if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest3_buyProgression') {
               // Count total attribute levels purchased
               const totalAttrLevels = Object.values(saveData.attributes || {}).reduce((sum, val) => sum + val, 0);
@@ -10546,6 +10555,14 @@
               if (totalAttrLevels >= 1) {
                 // Completed quest 3: bought 1 progression upgrade
                 progressTutorialQuest('quest3_buyProgression', true);
+              }
+            }
+            // QUEST 6: Track attribute purchase for upgrade-3-attributes quest
+            if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest6_buyAttributes') {
+              if (!saveData.tutorialQuests.quest6AttrCount) saveData.tutorialQuests.quest6AttrCount = 0;
+              saveData.tutorialQuests.quest6AttrCount++;
+              if (saveData.tutorialQuests.quest6AttrCount >= 3) {
+                progressTutorialQuest('quest6_buyAttributes', true);
               }
             }
           } else {
@@ -10600,9 +10617,74 @@
         claim: 'Main Building',
         rewardGold: 0,
         rewardSkillPoints: 0,
-        unlockBuilding: 'trainingHall', // Progression Building (Training Hall serves as attribute/progression)
-        nextQuest: 'quest3_buyProgression',
+        message: "Skills unlocked! 🌟<br><br>Head to <b>Stonehenge</b> on the map — a glowing chest awaits you there with your first piece of gear!",
+        nextQuest: 'quest3_stonehengeGear',
         conditions: ['quest1_kill3'] // Requires quest1_kill3 to be claimed
+      },
+      quest3_stonehengeGear: {
+        id: 'quest3_stonehengeGear',
+        name: 'Find the First Gear',
+        description: 'Head to Stonehenge on the map and collect the quest chest to get your first gear',
+        objectives: 'Find and collect the chest at Stonehenge',
+        claim: 'Main Building',
+        rewardGold: 0,
+        rewardSkillPoints: 0,
+        unlockBuilding: 'armory',
+        giveItem: { id: 'cigar_quest', name: 'Cigar', type: 'ring', rarity: 'rare', stats: { attackSpeed: 1, movementSpeed: 1, attackPrecision: 1 }, description: '+1 Attack Speed, +1 Movement Speed, +1 Attack Precision' },
+        message: "You found the Cigar! 🚬<br><br>This rare ring grants <b>+1 Attack Speed, +1 Movement Speed, +1 Attack Precision</b>.<br><br>Head to the <b>Armory</b> (Gear section) and equip it!",
+        nextQuest: 'quest4_equipCigar',
+        conditions: ['quest2_spendSkills']
+      },
+      quest4_equipCigar: {
+        id: 'quest4_equipCigar',
+        name: 'Equip the Cigar',
+        description: 'Open the Armory, navigate to the Gear section in your inventory, and equip the Cigar',
+        objectives: 'Equip the Cigar from your inventory',
+        claim: 'Main Building',
+        rewardGold: 0,
+        rewardSkillPoints: 0,
+        message: "Cigar equipped! 🚬<br><br>Feel that power — +1 to all stats!<br><br>Your next mission: <b>complete a run</b> to earn Attribute Points.",
+        nextQuest: 'quest5_doRun',
+        conditions: ['quest3_stonehengeGear']
+      },
+      quest5_doRun: {
+        id: 'quest5_doRun',
+        name: 'Complete a Run',
+        description: 'Head out and complete a run to earn Attribute Points',
+        objectives: 'Complete 1 run',
+        claim: 'Main Building',
+        triggerOnDeath: true,
+        rewardGold: 0,
+        rewardSkillPoints: 0,
+        rewardAttributePoints: 3,
+        unlockBuilding: 'trainingHall',
+        message: "Run complete! 🏆<br><br>You earned <b>3 Attribute Points</b>!<br><br>Head to the <b>Training Hall</b> and upgrade <b>3 attributes</b> to grow stronger!",
+        nextQuest: 'quest6_buyAttributes',
+        conditions: ['quest4_equipCigar']
+      },
+      quest6_buyAttributes: {
+        id: 'quest6_buyAttributes',
+        name: 'Upgrade 3 Attributes',
+        description: 'Go to the Training Hall and spend Attribute Points to upgrade 3 attributes',
+        objectives: 'Buy 3 attribute upgrades in the Training Hall',
+        claim: 'Main Building',
+        rewardGold: 0,
+        rewardSkillPoints: 0,
+        message: "Attributes upgraded! 💪<br><br>You're growing stronger every day!<br><br>One final challenge awaits — prove your strength!",
+        nextQuest: 'quest7_kill10',
+        conditions: ['quest5_doRun']
+      },
+      quest7_kill10: {
+        id: 'quest7_kill10',
+        name: 'Kill 10 Enemies',
+        description: 'Head out and eliminate 10 enemies in a single run',
+        objectives: 'Kill 10 enemies',
+        triggerOnDeath: true,
+        rewardGold: 500,
+        rewardSkillPoints: 0,
+        message: "🎉 TUTORIAL COMPLETE!<br><br>You've mastered the basics of survival!<br><br>The world is yours to conquer. Good luck, Droplet!",
+        nextQuest: null,
+        conditions: ['quest6_buyAttributes']
       },
       quest3_buyProgression: {
         id: 'quest3_buyProgression',
@@ -10831,8 +10913,23 @@
                 // Check if conditions for next quest are met
                 if (checkQuestConditions(quest.nextQuest)) {
                   saveData.tutorialQuests.currentQuest = quest.nextQuest;
+                  // Reset quest6 attribute counter when quest6 starts
+                  if (quest.nextQuest === 'quest6_buyAttributes') {
+                    saveData.tutorialQuests.quest6AttrCount = 0;
+                  }
                   saveSaveData();
                   showNextQuestPopup(quest.nextQuest);
+                  
+                  // Trigger Stonehenge cinematic when quest3_stonehengeGear starts
+                  if (quest.nextQuest === 'quest3_stonehengeGear' && window.stonehengeChest) {
+                    setTimeout(() => {
+                      if (!saveData.tutorialQuests.stonehengeChestCinematicShown) {
+                        triggerCinematic('stonehenge', window.stonehengeChest.position, 2000);
+                        saveData.tutorialQuests.stonehengeChestCinematicShown = true;
+                        saveSaveData();
+                      }
+                    }, 500);
+                  }
                 } else {
                   const questName = TUTORIAL_QUESTS[quest.nextQuest]?.name || quest.nextQuest;
                   console.log(`Cannot start ${questName}: conditions not met`);
@@ -10850,11 +10947,15 @@
             // Check if conditions for next quest are met
             if (checkQuestConditions(quest.nextQuest)) {
               saveData.tutorialQuests.currentQuest = quest.nextQuest;
+              // Reset quest6 attribute counter when quest6 starts
+              if (quest.nextQuest === 'quest6_buyAttributes') {
+                saveData.tutorialQuests.quest6AttrCount = 0;
+              }
               saveSaveData();
               showNextQuestPopup(quest.nextQuest);
               
-              // Trigger Stonehenge cinematic when quest 6 starts
-              if (quest.nextQuest === 'quest6_stonehengeChest' && window.stonehengeChest) {
+              // Trigger Stonehenge cinematic when quest 3 (stonehengeGear) or quest 6 (legacy) starts
+              if ((quest.nextQuest === 'quest3_stonehengeGear' || quest.nextQuest === 'quest6_stonehengeChest') && window.stonehengeChest) {
                 setTimeout(() => {
                   if (!saveData.tutorialQuests.stonehengeChestCinematicShown) {
                     triggerCinematic('stonehenge', window.stonehengeChest.position, 2000);
@@ -16689,13 +16790,21 @@
       // Tutorial: Check for quest completion on death
       const currentQuest = getCurrentQuest();
       if (currentQuest && currentQuest.triggerOnDeath) {
-        // Quest 4: Kill 10 enemies
+        // Quest 4: Kill 10 enemies (legacy)
         if (currentQuest.id === 'quest4_kill10' && saveData.tutorialQuests.killsThisRun >= 10) {
           progressTutorialQuest('quest4_kill10', true);
         }
-        // Quest 7: Survive 2 minutes
+        // Quest 7: Survive 2 minutes (legacy)
         if (currentQuest.id === 'quest7_survive2min' && saveData.tutorialQuests.survivalTimeThisRun >= 120) {
           progressTutorialQuest('quest7_survive2min', true);
+        }
+        // Quest 5: Complete a run (any run completion counts)
+        if (currentQuest.id === 'quest5_doRun') {
+          progressTutorialQuest('quest5_doRun', true);
+        }
+        // Quest 7 (new): Kill 10 enemies
+        if (currentQuest.id === 'quest7_kill10' && saveData.tutorialQuests.killsThisRun >= 10) {
+          progressTutorialQuest('quest7_kill10', true);
         }
       }
       
@@ -17835,10 +17944,11 @@
         checkLegendaryCigarQuest();
       }
       
-      // QUEST 6: Check Stonehenge chest proximity
+      // QUEST 3: Check Stonehenge chest proximity
       if (window.stonehengeChest && 
           saveData.tutorialQuests && 
-          saveData.tutorialQuests.currentQuest === 'quest6_stonehengeChest' &&
+          (saveData.tutorialQuests.currentQuest === 'quest3_stonehengeGear' ||
+           saveData.tutorialQuests.currentQuest === 'quest6_stonehengeChest') &&
           isGameActive && !isPaused) {
         const dist = player.mesh.position.distanceTo(window.stonehengeChest.position);
         if (dist < window.stonehengeChest.userData.pickupRadius) {
@@ -17846,14 +17956,15 @@
           scene.remove(window.stonehengeChest);
           window.stonehengeChest = null;
           
+          const activeQuestId = saveData.tutorialQuests.currentQuest;
           // Show item card popup
           showQuestPopup(
             '🎁 Treasure Found!',
-            '<div style="text-align: center;"><div style="font-size: 48px; margin: 10px 0;">🚬</div><div style="color: #4169E1; font-size: 24px; font-weight: bold;">CIGAR</div><div style="color: #FFD700; font-size: 18px;">★★★ RARE ★★★</div><div style="margin: 15px 0; font-size: 16px;">+1 Strength<br>+1 Speed<br>+1 Precision</div><div style="color: #4169E1;">Gear Building Unlocked!</div></div>',
-            'Equip!',
+            '<div style="text-align: center;"><div style="font-size: 48px; margin: 10px 0;">🚬</div><div style="color: #4169E1; font-size: 24px; font-weight: bold;">CIGAR</div><div style="color: #FFD700; font-size: 18px;">★★★ RARE ★★★</div><div style="margin: 15px 0; font-size: 16px;">+1 Attack Speed<br>+1 Movement Speed<br>+1 Attack Precision</div><div style="color: #4169E1;">Return to camp to claim your reward!</div></div>',
+            'Collect!',
             () => {
-              // Complete quest 6 (auto-claim)
-              progressTutorialQuest('quest6_stonehengeChest', true);
+              // Complete the active stonehenge chest quest
+              progressTutorialQuest(activeQuestId, true);
               
               // Show blue particle effect at pickup location
               for (let i = 0; i < 15; i++) {
@@ -17861,7 +17972,7 @@
                 const speed = 2 + Math.random() * 2;
                 const particle = particlePool.get();
                 if (particle) {
-                  particle.mesh.position.copy(window.stonehengeChest ? window.stonehengeChest.position : player.mesh.position);
+                  particle.mesh.position.copy(player.mesh.position);
                   particle.velocity.set(
                     Math.cos(angle) * speed,
                     3 + Math.random() * 2,
