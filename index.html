@@ -10866,10 +10866,11 @@
       if (!quest) return false;
       
       const completedQuests = saveData.tutorialQuests.completedQuests || [];
+      const completedSet = new Set(completedQuests); // Use Set for O(1) lookup
       
       // Check conditionsAny - quest is available if ANY of these are claimed
       if (quest.conditionsAny && quest.conditionsAny.length > 0) {
-        const anyMet = quest.conditionsAny.some(cId => completedQuests.includes(cId));
+        const anyMet = quest.conditionsAny.some(cId => completedSet.has(cId));
         if (!anyMet) {
           console.log(`Quest ${questId} blocked: requires any of ${quest.conditionsAny.join(', ')} to be claimed`);
           return false;
@@ -10884,7 +10885,7 @@
       
       // Check if all prerequisite quests are claimed (completed)
       for (const conditionQuestId of quest.conditions) {
-        if (!completedQuests.includes(conditionQuestId)) {
+        if (!completedSet.has(conditionQuestId)) {
           console.log(`Quest ${questId} blocked: requires ${conditionQuestId} to be claimed`);
           return false;
         }
@@ -11591,9 +11592,9 @@
 
     // --- ACCOUNT LEVEL SYSTEM ---
     // Account XP: 1 XP per kill (across all runs) + 50 XP per quest completed
-    // Level thresholds scale by 100 per level (level 2 = 100xp, level 3 = 300xp, etc.)
+    // Level threshold = level * 100 (e.g., level 1 needs 100xp, level 2 needs 200xp, etc.)
     function getAccountLevelXPRequired(level) {
-      return level * 100; // 100 XP per level (scales with level)
+      return level * 100; // Linear: each level requires level*100 XP total
     }
     
     function addAccountXP(amount) {
@@ -14484,47 +14485,40 @@
     }
 
     // Blood ground decal - small circle splat on the ground for realistic blood
+    // Uses a circular buffer approach: overwrite oldest slot instead of shift() for O(1)
+    let bloodDecalIndex = 0; // Current write index for circular buffer
     function spawnBloodDecal(pos) {
       if (!scene) return;
-      // Enforce decal cap: remove oldest if over limit
-      if (bloodDecals.length >= MAX_BLOOD_DECALS) {
-        const old = bloodDecals.shift();
-        scene.remove(old);
-        old.geometry.dispose();
-        old.material.dispose();
+      if (bloodDecals.length < MAX_BLOOD_DECALS) {
+        // Buffer not full yet - append
+        const size = 0.15 + Math.random() * 0.35;
+        const geo = new THREE.CircleGeometry(size, 6);
+        const mat = new THREE.MeshBasicMaterial({
+          color: 0x6B0000,
+          transparent: true,
+          opacity: 0.6 + Math.random() * 0.3,
+          depthWrite: false
+        });
+        const decal = new THREE.Mesh(geo, mat);
+        decal.rotation.x = -Math.PI / 2;
+        decal.position.set(pos.x + (Math.random() - 0.5) * 0.8, 0.02, pos.z + (Math.random() - 0.5) * 0.8);
+        scene.add(decal);
+        bloodDecals.push(decal);
+      } else {
+        // Reuse existing slot (O(1) circular overwrite)
+        const old = bloodDecals[bloodDecalIndex];
+        old.position.set(pos.x + (Math.random() - 0.5) * 0.8, 0.02, pos.z + (Math.random() - 0.5) * 0.8);
+        old.material.opacity = 0.6 + Math.random() * 0.3;
+        bloodDecalIndex = (bloodDecalIndex + 1) % MAX_BLOOD_DECALS;
       }
-      const size = 0.15 + Math.random() * 0.35; // Small irregular splats
-      const geo = new THREE.CircleGeometry(size, 6);
-      const mat = new THREE.MeshBasicMaterial({
-        color: 0x6B0000, // Dark blood red
-        transparent: true,
-        opacity: 0.6 + Math.random() * 0.3,
-        depthWrite: false
-      });
-      const decal = new THREE.Mesh(geo, mat);
-      decal.rotation.x = -Math.PI / 2;
-      decal.position.set(
-        pos.x + (Math.random() - 0.5) * 0.8,
-        0.02, // Slightly above ground
-        pos.z + (Math.random() - 0.5) * 0.8
-      );
-      scene.add(decal);
-      bloodDecals.push(decal);
     }
     
     // Enhanced muzzle smoke effect - managed array to avoid RAF accumulation
     function spawnMuzzleSmoke(pos, count = 5) {
       const cappedCount = Math.min(count, 3); // Cap per-call count
       for(let i = 0; i < cappedCount; i++) {
-        // Enforce global cap by removing oldest particle if needed
-        if (smokeParticles.length >= MAX_SMOKE_PARTICLES) {
-          const old = smokeParticles.shift();
-          if (old && old.mesh) {
-            scene.remove(old.mesh);
-            old.mesh.geometry.dispose();
-            old.mesh.material.dispose();
-          }
-        }
+        // Enforce global cap - just skip if full, particles expire naturally
+        if (smokeParticles.length >= MAX_SMOKE_PARTICLES) continue;
         const smokeGeo = new THREE.SphereGeometry(0.15, 6, 6);
         const smokeMat = new THREE.MeshBasicMaterial({ 
           color: 0x666666, 
@@ -15970,7 +15964,7 @@
           // Hide skip button and clear its timeout
           const skipBtn = document.getElementById('levelup-skip-btn');
           if (skipBtn) skipBtn.style.display = 'none';
-          clearTimeout(window._levelupSkipTimeout);
+          clearTimeout(window.levelupSkipTimeoutId);
           
           // Restore camera position and projection after level-up
           if (savedCameraPosition) {
@@ -16011,8 +16005,8 @@
       const skipBtn = document.getElementById('levelup-skip-btn');
       if (skipBtn) {
         skipBtn.style.display = 'none';
-        clearTimeout(window._levelupSkipTimeout);
-        window._levelupSkipTimeout = setTimeout(() => {
+        clearTimeout(window.levelupSkipTimeoutId);
+        window.levelupSkipTimeoutId = setTimeout(() => {
           if (modal.style.display === 'flex') skipBtn.style.display = 'inline-block';
         }, 5000);
       }
@@ -16844,8 +16838,11 @@
           // Navigate to camp screen on first death
           const gameoverScreen = document.getElementById('gameover-screen');
           if (gameoverScreen) gameoverScreen.style.display = 'none';
-          updateCampScreen();
-          document.getElementById('camp-screen').style.display = 'flex';
+          const campScreen = document.getElementById('camp-screen');
+          if (campScreen) {
+            updateCampScreen();
+            campScreen.style.display = 'flex';
+          }
         } else if (step === 'unlock_dash') {
           saveData.tutorial.currentStep = 'unlock_dash';
           saveSaveData();
@@ -17259,6 +17256,7 @@
         d.material.dispose();
       });
       bloodDecals = [];
+      bloodDecalIndex = 0; // Reset circular buffer index
       
       goldCoins.forEach(g => {
         scene.remove(g.mesh);
