@@ -3612,6 +3612,10 @@
     // Phase 5: Initialize particle object pool for performance
     let particlePool = null; // Will be initialized after scene is created
     
+    // Smoke particles managed array (avoids RAF accumulation over long sessions)
+    let smokeParticles = [];
+    const MAX_SMOKE_PARTICLES = 30; // Cap to prevent performance issues
+    
     // Deferred disposal queue for Three.js memory management (PR #81)
     const disposalQueue = [];
     const MAX_DISPOSALS_PER_FRAME = 10;
@@ -13436,6 +13440,20 @@
       renderer.shadowMap.type = THREE.PCFSoftShadowMap;
       document.getElementById('game-container').appendChild(renderer.domElement);
 
+      // Handle WebGL context loss to prevent renderer freezes in long sessions
+      renderer.domElement.addEventListener('webglcontextlost', (e) => {
+        e.preventDefault();
+        console.warn('WebGL context lost - attempting recovery');
+        // Pause game logic while context is lost
+        setGamePaused(true);
+      }, false);
+      renderer.domElement.addEventListener('webglcontextrestored', () => {
+        console.info('WebGL context restored');
+        // Resume game if it was active
+        if (isGameActive) setGamePaused(false);
+        renderer.shadowMap.needsUpdate = true;
+      }, false);
+
       // Day/Night Cycle System - Non-blocking, smooth transitions
       // Store light references for day/night cycle
       window.ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
@@ -14371,9 +14389,19 @@
       }
     }
     
-    // Enhanced muzzle smoke effect
+    // Enhanced muzzle smoke effect - managed array to avoid RAF accumulation
     function spawnMuzzleSmoke(pos, count = 5) {
-      for(let i = 0; i < count; i++) {
+      const cappedCount = Math.min(count, 3); // Cap per-call count
+      for(let i = 0; i < cappedCount; i++) {
+        // Enforce global cap by removing oldest particle if needed
+        if (smokeParticles.length >= MAX_SMOKE_PARTICLES) {
+          const old = smokeParticles.shift();
+          if (old && old.mesh) {
+            scene.remove(old.mesh);
+            old.mesh.geometry.dispose();
+            old.mesh.material.dispose();
+          }
+        }
         const smokeGeo = new THREE.SphereGeometry(0.15, 6, 6);
         const smokeMat = new THREE.MeshBasicMaterial({ 
           color: 0x666666, 
@@ -14388,32 +14416,18 @@
           pos.z + (Math.random() - 0.5) * 0.3
         );
         scene.add(smoke);
-        
-        // Animate smoke rising and fading
-        const velocity = {
-          x: (Math.random() - 0.5) * 0.02,
-          y: 0.03 + Math.random() * 0.02,
-          z: (Math.random() - 0.5) * 0.02
-        };
-        
-        let life = GAME_CONFIG.smokeDurationFrames;
-        const update = () => {
-          life--;
-          smoke.position.x += velocity.x;
-          smoke.position.y += velocity.y;
-          smoke.position.z += velocity.z;
-          smoke.scale.multiplyScalar(1.05); // Expand
-          smokeMat.opacity = (life / GAME_CONFIG.smokeDurationFrames) * 0.5;
-          
-          if (life <= 0) {
-            scene.remove(smoke);
-            smokeGeo.dispose();
-            smokeMat.dispose();
-          } else {
-            requestAnimationFrame(update);
-          }
-        };
-        update();
+        smokeParticles.push({
+          mesh: smoke,
+          material: smokeMat,
+          geometry: smokeGeo,
+          velocity: {
+            x: (Math.random() - 0.5) * 0.02,
+            y: 0.03 + Math.random() * 0.02,
+            z: (Math.random() - 0.5) * 0.02
+          },
+          life: GAME_CONFIG.smokeDurationFrames,
+          maxLife: GAME_CONFIG.smokeDurationFrames
+        });
       }
     }
 
@@ -14580,13 +14594,25 @@
       }, 800);
     }
     
-    // NEW: Centered "LEVEL UP!" text that grows, shrinks, and fades
+    // NEW: "LEVEL UP!" text that shoots from character's head
     function createCenteredLevelUpText() {
       const levelUpText = document.createElement('div');
+      
+      // Calculate character head position on screen
+      let startX = window.innerWidth / 2;
+      let startY = window.innerHeight / 2;
+      if (player && player.mesh && camera) {
+        const headPos = player.mesh.position.clone();
+        headPos.y += 2; // Above player
+        headPos.project(camera);
+        startX = (headPos.x * 0.5 + 0.5) * window.innerWidth;
+        startY = (-(headPos.y * 0.5) + 0.5) * window.innerHeight;
+      }
+      
       levelUpText.style.cssText = `
         position: fixed;
-        top: 50%;
-        left: 50%;
+        left: ${startX}px;
+        top: ${startY}px;
         transform: translate(-50%, -50%) scale(0);
         font-family: 'Bangers', cursive;
         font-size: 38px;
@@ -14602,44 +14628,60 @@
         z-index: 200;
         pointer-events: none;
         letter-spacing: 4px;
-        transition: transform 0.12s ease-out, opacity 0.12s ease-out;
       `;
       levelUpText.textContent = 'LEVEL UP!';
       document.body.appendChild(levelUpText);
       
-      // Animation: appear from nothing (scale 0) → grow to combo size → shrink and fade
+      // Animation: shoot up from character head, wait 0.2s, then float to center
       const startTime = Date.now();
       const totalDuration = 2000; // 2 seconds total
+      const centerX = window.innerWidth / 2;
+      const centerY = window.innerHeight / 2;
       
-      const animate = () => {
+      const animFn = () => {
         const elapsed = Date.now() - startTime;
         const progress = elapsed / totalDuration;
         
-        if (progress < 0.3) {
-          // Phase 1: Grow from nothing to full size (0-30%)
-          const scale = (progress / 0.3) * 1.2; // Grow to 120%
+        if (progress < 0.15) {
+          // Phase 1: Shoot up from head (0-15% = 300ms)
+          const t = progress / 0.15;
+          const scale = t * 1.2;
+          const curY = startY - t * 80; // Shoot up 80px
+          levelUpText.style.top = curY + 'px';
           levelUpText.style.transform = `translate(-50%, -50%) scale(${scale})`;
-          levelUpText.style.opacity = progress / 0.3;
-        } else if (progress < 0.6) {
-          // Phase 2: Hold at full size (30-60%)
+          levelUpText.style.opacity = t;
+        } else if (progress < 0.25) {
+          // Phase 2: Wait 0.2s at that position (15-25%)
           levelUpText.style.transform = `translate(-50%, -50%) scale(1.2)`;
           levelUpText.style.opacity = 1;
+        } else if (progress < 0.65) {
+          // Phase 3: Float toward center and grow (25-65%)
+          const t = (progress - 0.25) / 0.40;
+          const curX = startX + (centerX - startX) * t;
+          const curY = (startY - 80) + (centerY - (startY - 80)) * t;
+          const scale = 1.2 + t * 0.2; // Grow to 1.4x
+          levelUpText.style.left = curX + 'px';
+          levelUpText.style.top = curY + 'px';
+          levelUpText.style.transform = `translate(-50%, -50%) scale(${scale})`;
+          levelUpText.style.opacity = 1;
         } else if (progress < 1) {
-          // Phase 3: Shrink and fade (60-100%)
-          const fadeProgress = (progress - 0.6) / 0.4;
-          const scale = 1.2 - (fadeProgress * 0.6); // Shrink from 1.2 to 0.6
+          // Phase 4: Shrink and fade at center (65-100%)
+          const fadeProgress = (progress - 0.65) / 0.35;
+          const scale = 1.4 - (fadeProgress * 0.8);
           const opacity = 1 - fadeProgress;
+          levelUpText.style.left = centerX + 'px';
+          levelUpText.style.top = centerY + 'px';
           levelUpText.style.transform = `translate(-50%, -50%) scale(${scale})`;
           levelUpText.style.opacity = opacity;
         } else {
           // Animation complete, remove element
-          document.body.removeChild(levelUpText);
+          if (levelUpText.parentNode) levelUpText.parentNode.removeChild(levelUpText);
           return;
         }
         
-        requestAnimationFrame(animate);
+        requestAnimationFrame(animFn);
       };
-      animate();
+      animFn();
     }
     
     function createSmallFloatingText(text, pos) {
@@ -17241,6 +17283,14 @@
       });
       activeTimeouts = [];
       
+      // Clean up managed smoke particles
+      smokeParticles.forEach(sp => {
+        scene.remove(sp.mesh);
+        sp.geometry.dispose();
+        sp.material.dispose();
+      });
+      smokeParticles = [];
+      
       meteors.forEach(m => {
         scene.remove(m.mesh);
         scene.remove(m.shadow);
@@ -18846,6 +18896,23 @@
 
       // Cleanup and memory management (run every 3 seconds to avoid performance issues)
       enemies = enemies.filter(e => !e.isDead);
+      
+      // Update managed smoke particles (replaces individual RAF loops)
+      smokeParticles = smokeParticles.filter(sp => {
+        sp.life--;
+        sp.mesh.position.x += sp.velocity.x;
+        sp.mesh.position.y += sp.velocity.y;
+        sp.mesh.position.z += sp.velocity.z;
+        sp.mesh.scale.multiplyScalar(1.05);
+        sp.material.opacity = (sp.life / sp.maxLife) * 0.5;
+        if (sp.life <= 0) {
+          scene.remove(sp.mesh);
+          sp.geometry.dispose();
+          sp.material.dispose();
+          return false;
+        }
+        return true;
+      });
       
       const now = Date.now();
       if (now - lastCleanupTime > 3000) { // Run cleanup every 3 seconds
