@@ -2509,7 +2509,7 @@
         </p>
       </div>
       <button class="menu-btn menu-btn-primary" id="story-quest-close-btn">
-        OK
+        Continue
       </button>
     </div>
   </div>
@@ -10774,6 +10774,9 @@
         saveData.gold += quest.rewardGold;
         showStatChange(`+${quest.rewardGold} Gold!`);
       }
+      // Award 50 bonus gold for every quest claimed
+      saveData.gold += 50;
+      showStatChange('+50 Gold!');
       if (quest.rewardSkillPoints) {
         saveData.skillPoints += quest.rewardSkillPoints;
         showStatChange(`+${quest.rewardSkillPoints} Skill Points!`);
@@ -10820,7 +10823,7 @@
         showQuestPopup(
           '✨ Quest Claimed!',
           message,
-          'Awesome!',
+          'Continue',
           () => {
             // Wait 100ms before activating next quest (as per requirements)
             setTimeout(() => {
@@ -10883,7 +10886,7 @@
       showQuestPopup(
         `📜 ${quest.name}`,
         `${quest.description}<br><br><b>Objective:</b> ${quest.objectives}${quest.claim ? `<br><b>Claim:</b> ${quest.claim}` : ''}`,
-        'Got it!'
+        'Continue'
       );
     }
     
@@ -11287,6 +11290,9 @@
       
       // Close button
       content += `
+        <button class="btn start-run-btn" style="margin-top: 20px; font-size: 18px; padding: 12px 35px; background: #27ae60; color: #FFF; margin-right: 10px;">
+          ▶ Start New Run
+        </button>
         <button class="btn" style="margin-top: 20px; font-size: 16px; padding: 10px 30px; background: #888; color: #FFF;">
           Close
         </button>
@@ -11311,6 +11317,15 @@
           claimTutorialQuest(questId);
         });
       });
+      
+      // Start New Run button handler
+      const startRunBtn = panel.querySelector('.start-run-btn');
+      if (startRunBtn) {
+        startRunBtn.onclick = () => {
+          document.body.removeChild(overlay);
+          startGame();
+        };
+      }
       
       // Close button handler
       const closeBtn = panel.querySelector('.btn[style*="background: #888"]');
@@ -13254,6 +13269,16 @@
     function hideMainMenu() {
       document.getElementById('main-menu').style.display = 'none';
     }
+
+    // Helper to start a new run from anywhere (camp, main building, game over)
+    function startGame() {
+      document.getElementById('main-menu').style.display = 'none';
+      document.getElementById('camp-screen').style.display = 'none';
+      document.getElementById('gameover-screen').style.display = 'none';
+      resetGame();
+      startCountdown();
+    }
+    window.startGame = startGame;
     
     // Countdown system (PR #70-71)
     function startCountdown() {
@@ -13628,7 +13653,12 @@
       document.getElementById('camp-back-btn').onclick = () => {
         playSound('waterdrop');
         document.getElementById('camp-screen').style.display = 'none';
-        showMainMenu();
+        if (isGameActive) {
+          // Resume game when returning from camp during an active run
+          setGamePaused(false);
+        } else {
+          showMainMenu();
+        }
       };
       
       // Camp tab switching
@@ -16858,14 +16888,10 @@
       eiffelQuest = { active: false, timer: 0, duration: 60, kills: 0, killsNeeded: 25, landmark: null, hasCompleted: false };
       document.getElementById('eiffel-quest-ui').style.display = 'none';
       
-      // Reset windmill HP
-      if (scene) {
-        scene.children.forEach(c => {
-          if (c.userData.isWindmill) {
-            c.userData.hp = 1000;
-            c.userData.maxHp = 1000;
-          }
-        });
+      // Reset windmill HP (optimized: use pre-cached animatedSceneObjects)
+      for (const c of animatedSceneObjects.windmills) {
+        c.userData.hp = 1000;
+        c.userData.maxHp = 1000;
       }
       
       // Reset music
@@ -17852,22 +17878,21 @@
         }
       }
       
-      // Check windmill quest trigger
+      // Check windmill quest trigger (optimized: use pre-cached animatedSceneObjects instead of scene.children)
       if (!windmillQuest.active && !windmillQuest.hasCompleted) {
-        scene.children.forEach(child => {
-          if (child.userData && child.userData.isWindmill) {
-            const dist = player.mesh.position.distanceTo(child.position);
-            // Check if player is in front of windmill (90 degree arc)
-            const dx = player.mesh.position.x - child.position.x;
-            const dz = player.mesh.position.z - child.position.z;
-            const angle = Math.atan2(dz, dx);
-            const isFront = Math.abs(angle) < Math.PI / 2; // Front 180 degree arc
-            
-            if (dist < 8 && isFront) {
-              startWindmillQuest(child);
-            }
+        for (const child of animatedSceneObjects.windmills) {
+          const dist = player.mesh.position.distanceTo(child.position);
+          // Check if player is in front of windmill (90 degree arc)
+          const dx = player.mesh.position.x - child.position.x;
+          const dz = player.mesh.position.z - child.position.z;
+          const angle = Math.atan2(dz, dx);
+          const isFront = Math.abs(angle) < Math.PI / 2; // Front 180 degree arc
+          
+          if (dist < 8 && isFront) {
+            startWindmillQuest(child);
+            break;
           }
-        });
+        }
       }
       
       // Update windmill quest
