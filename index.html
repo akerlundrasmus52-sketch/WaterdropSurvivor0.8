@@ -287,6 +287,15 @@
       text-align: center;
       animation: bubble-bounce 0.5s ease-out;
     }
+
+    /* Quest-ready pulse glow - used on camp building cards with pending quests */
+    @keyframes quest-pulse-glow {
+      0%, 100% { box-shadow: 0 0 8px 2px rgba(255,215,0,0.4); }
+      50% { box-shadow: 0 0 20px 8px rgba(255,215,0,0.9), 0 0 40px 16px rgba(255,165,0,0.4); }
+    }
+    .quest-ready-glow {
+      animation: quest-pulse-glow 1.2s ease-in-out infinite;
+    }
     
     @keyframes bubble-bounce {
       0% {
@@ -316,8 +325,8 @@
     
     /* New Bottom Layout: Waterdrop Level Display with EXP filling, Traditional EXP Bar */
     #bottom-bars-container {
-      position: absolute;
-      bottom: 0;
+      position: fixed;
+      bottom: 20px;
       left: 50%; /* CENTER HORIZONTALLY */
       transform: translateX(-50%); /* EXACT CENTER */
       width: auto; /* Don't stretch full width */
@@ -326,7 +335,7 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding-bottom: 10px;
+      padding-bottom: 0;
       gap: 8px;
     }
     
@@ -927,6 +936,27 @@
       font-size: 22px;
       background: linear-gradient(to bottom, #5DADE2, #3498DB);
       border: 3px solid #2980B9;
+    }
+
+    /* Universal X close button for all overlays/modals */
+    .overlay-close-x {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: none;
+      border: none;
+      color: #fff;
+      font-size: 1.4em;
+      font-weight: bold;
+      cursor: pointer;
+      z-index: 100;
+      text-shadow: 0 0 6px #ffd700;
+      line-height: 1;
+      padding: 4px 8px;
+    }
+    .overlay-close-x:hover {
+      color: #ffd700;
+      text-shadow: 0 0 12px #ffd700, 0 0 20px #ffa500;
     }
     
     
@@ -2479,7 +2509,8 @@
 
   <!-- FRESH IMPLEMENTATION: Story Quest Welcome Modal -->
   <div id="story-quest-modal" class="story-quest-modal">
-    <div class="story-quest-content">
+    <div class="story-quest-content" style="position:relative;">
+      <button class="overlay-close-x" id="story-quest-x-btn" title="Close">✕</button>
       <div class="story-quest-title">
         💧 WELCOME TO WATER DROP SURVIVOR 💧
       </div>
@@ -2509,6 +2540,7 @@
   <!-- Comic Book Tutorial Modal -->
   <div id="comic-tutorial-modal" class="comic-tutorial-modal">
     <div class="comic-panel">
+      <button class="overlay-close-x" id="comic-tutorial-x-btn" title="Close">✕</button>
       <div class="comic-title" id="comic-title">FIRST DEATH!</div>
       <div class="comic-text" id="comic-text">
         Your journey begins with failure, but <strong>that's how you learn!</strong><br><br>
@@ -2915,6 +2947,7 @@
   <!-- Level Up Modal -->
   <div id="levelup-modal">
     <div class="modal-content">
+      <button class="overlay-close-x" id="levelup-x-btn">✕</button>
       <h2>LEVEL UP!</h2>
       <div id="upgrade-list">
         <!-- Cards injected by JS -->
@@ -3598,7 +3631,7 @@
     
     // Ground blood decals array (cleaned up on reset)
     let bloodDecals = [];
-    const MAX_BLOOD_DECALS = 40; // Cap for performance
+    const MAX_BLOOD_DECALS = 50; // Cap for performance (req: max 50)
     
     let frameCount = 0;
     let isPaused = false;
@@ -5539,9 +5572,9 @@
         // Track last damage type for death effects
         this.lastDamageType = damageType;
         
-        // Phase 5: Hit impact particles (flesh/blood) on every hit - ENHANCED: Scale with damage
-        const bloodParticleCount = Math.min(3 + Math.floor(amount / 10), 15); // 3-15 particles based on damage
-        spawnParticles(this.mesh.position, 0x8B0000, bloodParticleCount); // Blood particles scale with damage
+        // Phase 5: Hit impact particles (flesh/blood) on every hit - ENHANCED: Scale with HP remaining
+        const bloodParticleCount = Math.max(3, Math.floor((1 - this.hp/this.maxHp) * 8) + 2); // More blood as HP drops
+        spawnParticles(this.mesh.position, 0x8B0000, Math.min(bloodParticleCount, 15)); // Blood particles scale with HP loss
         // Ground blood decal on every hit
         spawnBloodDecal(this.mesh.position);
         
@@ -11260,11 +11293,20 @@
         <button class="btn" style="font-size: 18px; padding: 12px 30px; background: #FFD700; color: #000;">${buttonText}</button>
       `;
       
-      const button = popup.querySelector('button');
-      button.onclick = () => {
+      // Add X close button
+      const xBtn = document.createElement('button');
+      xBtn.className = 'overlay-close-x';
+      xBtn.innerHTML = '✕';
+      xBtn.title = 'Close';
+      popup.style.position = 'relative';
+      popup.appendChild(xBtn);
+      
+      const closeHandler = () => {
         document.body.removeChild(overlay);
         if (onClose) onClose();
       };
+      popup.querySelector('button.btn').onclick = closeHandler;
+      xBtn.onclick = closeHandler;
       
       overlay.appendChild(popup);
       document.body.appendChild(overlay);
@@ -11336,11 +11378,20 @@
         ">${buttonText}</button>
       `;
       
-      const button = popup.querySelector('button');
-      button.onclick = () => {
+      const comicCloseHandler = () => {
         document.body.removeChild(overlay);
         if (onClose) onClose();
       };
+      popup.querySelector('button').onclick = comicCloseHandler;
+      
+      // Add X close button
+      const xBtn = document.createElement('button');
+      xBtn.className = 'overlay-close-x';
+      xBtn.innerHTML = '✕';
+      xBtn.title = 'Close';
+      popup.style.position = 'relative';
+      popup.appendChild(xBtn);
+      xBtn.onclick = comicCloseHandler;
       
       overlay.appendChild(popup);
       document.body.appendChild(overlay);
@@ -11575,12 +11626,24 @@
         };
       }
       
-      // Close button handler
-      const closeBtn = panel.querySelector('.btn[style*="background: #888"]');
-      closeBtn.onclick = () => {
+      // Shared close handler for quest hall
+      const questHallClose = () => {
         document.body.removeChild(overlay);
         updateCampScreen(); // Refresh camp to remove ! notification
       };
+      
+      // Close button handler
+      const closeBtn = panel.querySelector('.btn[style*="background: #888"]');
+      closeBtn.onclick = questHallClose;
+      
+      // Add X close button to quest hall panel
+      const questHallXBtn = document.createElement('button');
+      questHallXBtn.className = 'overlay-close-x';
+      questHallXBtn.innerHTML = '✕';
+      questHallXBtn.title = 'Close';
+      panel.style.position = 'relative';
+      panel.appendChild(questHallXBtn);
+      questHallXBtn.onclick = questHallClose;
       
       overlay.appendChild(panel);
       document.body.appendChild(overlay);
@@ -11957,7 +12020,21 @@
       desertGround.receiveShadow = true;
       scene.add(desertGround);
 
-      // Features
+      // Biome blend zones - gradient transition strips between biomes
+      // Forest→Desert transition (z 90-110)
+      const blendDesertMat = new THREE.MeshToonMaterial({ color: 0xC8A96E, transparent: true, opacity: 0.7 });
+      const blendDesertGeo = new THREE.PlaneGeometry(mapSize, 20);
+      const blendDesert = new THREE.Mesh(blendDesertGeo, blendDesertMat);
+      blendDesert.rotation.x = -Math.PI / 2;
+      blendDesert.position.set(0, 0.005, 100);
+      scene.add(blendDesert);
+      // Forest→Snow transition (z -90 to -110)
+      const blendSnowMat = new THREE.MeshToonMaterial({ color: 0xCCDDEE, transparent: true, opacity: 0.65 });
+      const blendSnowGeo = new THREE.PlaneGeometry(mapSize, 20);
+      const blendSnow = new THREE.Mesh(blendSnowGeo, blendSnowMat);
+      blendSnow.rotation.x = -Math.PI / 2;
+      blendSnow.position.set(0, 0.005, -100);
+      scene.add(blendSnow);
       // NOTE: Old lake removed - using enhanced reflective lake defined later (line ~3747)
       
       // Add water ripple effect
@@ -13550,6 +13627,8 @@
       // Performance: Cache animated scene objects after world creation
       cacheAnimatedObjects();
       player = new Player();
+      // Spawn player in forest region (top-left quadrant with trees)
+      player.mesh.position.set(-15, 0.5, -15);
       
       // Initialize gear system
       initializeGear();
@@ -14089,13 +14168,24 @@
       
       // Reset progress button with double confirmation
       // FRESH IMPLEMENTATION: Story Quest Modal close handler
-      document.getElementById('story-quest-close-btn').onclick = () => {
+      function closeStoryQuestModal() {
         playSound('waterdrop');
-        // Mark as shown
         saveData.storyQuests.welcomeShown = true;
         saveSaveData();
-        // Close modal
         document.getElementById('story-quest-modal').style.display = 'none';
+        if (isGameActive) setGamePaused(false);
+      }
+      document.getElementById('story-quest-close-btn').onclick = closeStoryQuestModal;
+      document.getElementById('story-quest-x-btn').onclick = closeStoryQuestModal;
+      // X button for comic-tutorial-modal
+      document.getElementById('comic-tutorial-x-btn').onclick = () => {
+        document.getElementById('comic-tutorial-modal').style.display = 'none';
+        if (isGameActive) setGamePaused(false);
+      };
+      // X button for levelup-modal
+      document.getElementById('levelup-x-btn').onclick = () => {
+        document.getElementById('levelup-modal').style.display = 'none';
+        if (window.setGamePaused) window.setGamePaused(false);
       };
       
       document.getElementById('settings-reset-btn').onclick = () => {
@@ -14469,10 +14559,13 @@
     }
 
     // Phase 5: Updated to use Object Pool for performance
+    const MAX_TOTAL_PARTICLES = 150; // Hard cap per spec
     function spawnParticles(pos, color, count) {
       if (!particlePool) return; // Safety check
+      // Enforce hard particle cap for performance
+      if (particles.length >= MAX_TOTAL_PARTICLES) return;
       // Cap particles per spawn to reduce quantity while keeping visuals impactful
-      const cappedCount = Math.min(count, 6);
+      const cappedCount = Math.min(count, 6, MAX_TOTAL_PARTICLES - particles.length);
       for(let i=0; i<cappedCount; i++) {
         const particle = particlePool.get();
         particle.reset(pos, color);
@@ -14483,29 +14576,53 @@
     // Blood ground decal - small circle splat on the ground for realistic blood
     // Uses a circular buffer approach: overwrite oldest slot instead of shift() for O(1)
     let bloodDecalIndex = 0; // Current write index for circular buffer
+    const BLOOD_DECAL_FADE_MS = 12000; // 12 seconds fade per spec
     function spawnBloodDecal(pos) {
       if (!scene) return;
+      const now = Date.now();
       if (bloodDecals.length < MAX_BLOOD_DECALS) {
         // Buffer not full yet - append
         const size = 0.15 + Math.random() * 0.35;
         const geo = new THREE.CircleGeometry(size, 6);
+        const initialOpacity = 0.6 + Math.random() * 0.3;
         const mat = new THREE.MeshBasicMaterial({
           color: 0x6B0000,
           transparent: true,
-          opacity: 0.6 + Math.random() * 0.3,
+          opacity: initialOpacity,
           depthWrite: false
         });
         const decal = new THREE.Mesh(geo, mat);
         decal.rotation.x = -Math.PI / 2;
         decal.position.set(pos.x + (Math.random() - 0.5) * 0.8, 0.02, pos.z + (Math.random() - 0.5) * 0.8);
+        decal.userData.spawnTime = now;
+        decal.userData.initialOpacity = initialOpacity;
         scene.add(decal);
         bloodDecals.push(decal);
       } else {
         // Reuse existing slot (O(1) circular overwrite)
         const old = bloodDecals[bloodDecalIndex];
+        const initialOpacity = 0.6 + Math.random() * 0.3;
         old.position.set(pos.x + (Math.random() - 0.5) * 0.8, 0.02, pos.z + (Math.random() - 0.5) * 0.8);
-        old.material.opacity = 0.6 + Math.random() * 0.3;
+        old.material.opacity = initialOpacity;
+        old.userData.spawnTime = now;
+        old.userData.initialOpacity = initialOpacity;
         bloodDecalIndex = (bloodDecalIndex + 1) % MAX_BLOOD_DECALS;
+      }
+    }
+    
+    // Update blood decal fade (call in main loop)
+    function updateBloodDecals() {
+      const now = Date.now();
+      for (const decal of bloodDecals) {
+        if (!decal.userData.spawnTime) continue;
+        const age = now - decal.userData.spawnTime;
+        if (age >= BLOOD_DECAL_FADE_MS) {
+          decal.material.opacity = 0;
+        } else if (age > BLOOD_DECAL_FADE_MS * 0.7) {
+          // Start fading at 70% of lifetime
+          const fadeProgress = (age - BLOOD_DECAL_FADE_MS * 0.7) / (BLOOD_DECAL_FADE_MS * 0.3);
+          decal.material.opacity = (decal.userData.initialOpacity || 0.7) * (1 - fadeProgress);
+        }
       }
     }
     
@@ -18392,10 +18509,11 @@
               }, 50);
               activeTimeouts.push(kickbackTimeoutId);
               
-              // ENHANCED Muzzle flash particles (bright and intense) - Reduced for performance
-              spawnParticles(player.mesh.position, 0xFFFF00, 6); // Reduced for performance
-              spawnParticles(player.mesh.position, 0xFFFFFF, 4); // Reduced for performance
-              spawnParticles(player.mesh.position, 0xFFA500, 4); // Reduced for performance
+              // ENHANCED Muzzle flash particles (small burst at gun muzzle - not generic spray)
+              const muzzlePos = player.mesh.position.clone();
+              muzzlePos.y += 0.5;
+              spawnParticles(muzzlePos, 0xFFFF88, 2); // Tiny yellow muzzle spark
+              spawnParticles(muzzlePos, 0xFFFFFF, 1); // White hot flash
               // Add realistic muzzle smoke
               spawnMuzzleSmoke(player.mesh.position, 3);
             }, i * 100);
@@ -18594,10 +18712,12 @@
           }, 100);
           activeTimeouts.push(timeoutId);
           
-          // Orange/yellow particles for shotgun blast
-          spawnParticles(player.mesh.position, 0xFFA500, 12); // Orange
-          spawnParticles(player.mesh.position, 0xFFFF00, 10); // Yellow
-          spawnParticles(player.mesh.position, 0xFFFFFF, 6); // White
+          // Focused muzzle flash for shotgun blast (wider spread)
+          const shotgunMuzzlePos = player.mesh.position.clone();
+          shotgunMuzzlePos.y += 0.5;
+          spawnParticles(shotgunMuzzlePos, 0xFFA500, 3); // Orange muzzle
+          spawnParticles(shotgunMuzzlePos, 0xFFFF00, 2); // Yellow spark
+          spawnParticles(shotgunMuzzlePos, 0xFFFFFF, 2); // White flash
           // Heavy muzzle smoke for shotgun
           spawnMuzzleSmoke(player.mesh.position, 6);
           
@@ -18707,6 +18827,9 @@
         }
         return alive;
       });
+      
+      // Update blood decal fade (12 second lifetime)
+      updateBloodDecals();
       
       // Performance: Use cached arrays instead of scene.traverse() every frame
       // Windmill Rotation and Light Animation
