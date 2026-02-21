@@ -5671,22 +5671,26 @@
         
         // Phase 5: Hit impact particles (flesh/blood) on every hit - ENHANCED: Scale with HP remaining
         const hpRatio = this.hp / this.maxHp;
-        const bloodParticleCount = Math.max(5, Math.floor((1 - hpRatio) * 14) + 4); // More blood as HP drops
-        spawnParticles(this.mesh.position, 0x8B0000, Math.min(bloodParticleCount, 20)); // Blood particles scale with HP loss
-        spawnParticles(this.mesh.position, 0x660000, Math.min(Math.floor(bloodParticleCount * 0.5), 8)); // Darker blood
+        const bloodParticleCount = Math.max(8, Math.floor((1 - hpRatio) * 22) + 6); // More blood as HP drops - increased intensity
+        spawnParticles(this.mesh.position, 0x8B0000, Math.min(bloodParticleCount, 30)); // Blood particles scale with HP loss
+        spawnParticles(this.mesh.position, 0x660000, Math.min(Math.floor(bloodParticleCount * 0.6), 14)); // Darker blood
+        spawnParticles(this.mesh.position, 0xCC0000, Math.min(Math.floor(bloodParticleCount * 0.3), 8)); // Bright splatter
         // Spawn multiple ground blood decals for more brutal effect
         spawnBloodDecal(this.mesh.position);
+        spawnBloodDecal(this.mesh.position); // Always at least 2 decals per hit
         if (hpRatio < 0.5) {
           spawnBloodDecal(this.mesh.position); // Extra decal at half HP
+          spawnBloodDecal(this.mesh.position); // Additional splatter
         }
         if (hpRatio < 0.25) {
           spawnBloodDecal(this.mesh.position); // Extra decal at low HP
           spawnBloodDecal(this.mesh.position); // Even more at critical HP
+          spawnBloodDecal(this.mesh.position); // Enemy barely alive - covered in blood
         }
         
         // Blood drip: small drops fall from wounded enemy to ground (managed in main loop)
         if (hpRatio < 0.5 && scene && bloodDrips.length < MAX_BLOOD_DRIPS) {
-          const dripCount = hpRatio < 0.25 ? 2 : 1;
+          const dripCount = hpRatio < 0.25 ? 3 : 2; // More drips at low HP
           for (let d = 0; d < dripCount && bloodDrips.length < MAX_BLOOD_DRIPS; d++) {
             const drip = new THREE.Mesh(
               new THREE.SphereGeometry(0.04 + Math.random() * 0.04, 4, 4),
@@ -5947,10 +5951,11 @@
         setTimeout(() => flash.remove(), this.isMiniBoss ? 100 : 50);
         
         // DEATH BLOOD BURST - violent explosion of blood particles
-        const deathBloodCount = this.isMiniBoss ? 25 : 12;
+        const deathBloodCount = this.isMiniBoss ? 40 : 20; // Increased gore intensity
         spawnParticles(this.mesh.position, 0x8B0000, deathBloodCount);
-        spawnParticles(this.mesh.position, 0x6B0000, Math.floor(deathBloodCount * 0.6));
-        for (let db = 0; db < (this.isMiniBoss ? 4 : 2); db++) {
+        spawnParticles(this.mesh.position, 0x6B0000, Math.floor(deathBloodCount * 0.7));
+        spawnParticles(this.mesh.position, 0xCC0000, Math.floor(deathBloodCount * 0.4)); // Bright red splatter in air
+        for (let db = 0; db < (this.isMiniBoss ? 7 : 4); db++) {
           spawnBloodDecal(this.mesh.position);
         }
         
@@ -12374,63 +12379,27 @@
 
     // --- WORLD GENERATION ---
     function createWorld() {
-      // Ground - EXPANDED TO 600x600 WITH MULTI-BIOME SYSTEM
-      // Map layout: Snow (north) → Mountains → Fields (center) → Desert (south)
+      // Ground - Unified green forest world
       const mapSize = 600;
       
-      // Create multiple ground planes for different biomes
-      // Snow biome (north: z < -100)
-      const snowGeo = new THREE.PlaneGeometry(mapSize, 200);
-      const snowMat = new THREE.MeshToonMaterial({ color: 0xF0F8FF }); // Alice blue (snow)
-      const snowGround = new THREE.Mesh(snowGeo, snowMat);
-      snowGround.rotation.x = -Math.PI / 2;
-      snowGround.position.set(0, 0, -200);
-      snowGround.receiveShadow = true;
-      scene.add(snowGround);
+      // Single lush green ground plane covering the whole map
+      const mainGroundGeo = new THREE.PlaneGeometry(mapSize, mapSize);
+      const mainGroundMat = new THREE.MeshToonMaterial({ color: COLORS.ground }); // Green grass
+      const mainGround = new THREE.Mesh(mainGroundGeo, mainGroundMat);
+      mainGround.rotation.x = -Math.PI / 2;
+      mainGround.position.set(0, 0, 0);
+      mainGround.receiveShadow = true;
+      scene.add(mainGround);
       
-      // Mountain biome (north-center: -100 < z < 0)
-      const mountainGeo = new THREE.PlaneGeometry(mapSize, 100);
-      const mountainMat = new THREE.MeshToonMaterial({ color: 0x8B7355 }); // Brown/rocky
-      const mountainGround = new THREE.Mesh(mountainGeo, mountainMat);
-      mountainGround.rotation.x = -Math.PI / 2;
-      mountainGround.position.set(0, 0, -50);
-      mountainGround.receiveShadow = true;
-      scene.add(mountainGround);
+      // Darker forest floor ring around the fountain spawn area
+      const forestRingMat = new THREE.MeshToonMaterial({ color: 0x2E5A1A }); // Dark forest green, no transparency needed
+      const forestRingGeo = new THREE.RingGeometry(12, 45, 32);
+      const forestRingMesh = new THREE.Mesh(forestRingGeo, forestRingMat);
+      forestRingMesh.rotation.x = -Math.PI / 2;
+      forestRingMesh.position.set(0, 0.005, 0);
+      scene.add(forestRingMesh);
       
-      // Fields biome (center: 0 < z < 100) - original green grass
-      const fieldGeo = new THREE.PlaneGeometry(mapSize, 100);
-      const fieldMat = new THREE.MeshToonMaterial({ color: COLORS.ground });
-      const fieldGround = new THREE.Mesh(fieldGeo, fieldMat);
-      fieldGround.rotation.x = -Math.PI / 2;
-      fieldGround.position.set(0, 0, 50);
-      fieldGround.receiveShadow = true;
-      scene.add(fieldGround);
-      
-      // Desert biome (south: z > 100)
-      const desertGeo = new THREE.PlaneGeometry(mapSize, 200);
-      const desertMat = new THREE.MeshToonMaterial({ color: 0xEDC9AF }); // Desert sand
-      const desertGround = new THREE.Mesh(desertGeo, desertMat);
-      desertGround.rotation.x = -Math.PI / 2;
-      desertGround.position.set(0, 0, 200);
-      desertGround.receiveShadow = true;
-      scene.add(desertGround);
-
-      // Biome blend zones - gradient transition strips between biomes
-      // Forest→Desert transition (z 90-110)
-      const blendDesertMat = new THREE.MeshToonMaterial({ color: 0xC8A96E, transparent: true, opacity: 0.7 });
-      const blendDesertGeo = new THREE.PlaneGeometry(mapSize, 20);
-      const blendDesert = new THREE.Mesh(blendDesertGeo, blendDesertMat);
-      blendDesert.rotation.x = -Math.PI / 2;
-      blendDesert.position.set(0, 0.005, 100);
-      scene.add(blendDesert);
-      // Forest→Snow transition (z -90 to -110)
-      const blendSnowMat = new THREE.MeshToonMaterial({ color: 0xCCDDEE, transparent: true, opacity: 0.65 });
-      const blendSnowGeo = new THREE.PlaneGeometry(mapSize, 20);
-      const blendSnow = new THREE.Mesh(blendSnowGeo, blendSnowMat);
-      blendSnow.rotation.x = -Math.PI / 2;
-      blendSnow.position.set(0, 0.005, -100);
-      scene.add(blendSnow);
-      // NOTE: Old lake removed - using enhanced reflective lake defined later (line ~3747)
+      // NOTE: Lake defined later using enhanced reflective lake
       
       // Add water ripple effect
       const rippleGeo = new THREE.RingGeometry(14, 15, 16); // Reduced segments for performance
@@ -12498,23 +12467,32 @@
         scene.add(grassStrip);
       }
       
-      // 4 Main Wagon Roads from Central Hub (Rondel):
+      // 3 Main Wagon Roads from Central Hub (Rondel) - only to key regions
       // Roads start from different points on the rondel edge based on direction
       
       // 1. Road to Stonehenge (60, 60) - Northeast direction
       createWagonRoad(rondelRadius * 0.707, rondelRadius * 0.707, 60, 60, 4);
       
-      // 2. Road to Illuminati Pyramid (-70, 50) - Northwest direction  
-      createWagonRoad(-rondelRadius * 0.6, rondelRadius * 0.8, -70, 50, 4);
-      
-      // 3. Road to Lake (30, -30) - Southeast direction
-      createWagonRoad(rondelRadius * 0.707, -rondelRadius * 0.707, 30, -30, 4);
-      
-      // 4. Road to Windmill (40, 40) - East direction
+      // 2. Road to Windmill (40, 40) - East direction
       createWagonRoad(rondelRadius * 0.9, rondelRadius * 0.436, 40, 40, 4);
       
-      // 5. Road to Tesla Tower (-80, -80) - Southwest direction
+      // 3. Road to Tesla Tower (-80, -80) - Southwest direction
       createWagonRoad(-rondelRadius * 0.707, -rondelRadius * 0.707, -80, -80, 4);
+      
+      // Spawn Portal - ground ring at player spawn position (syncs with countdown)
+      const spawnPortalOuter = new THREE.RingGeometry(1.8, 2.4, 24);
+      const spawnPortalInner = new THREE.CircleGeometry(1.8, 24);
+      const spawnPortalOuterMat = new THREE.MeshBasicMaterial({ color: 0x00FFCC, transparent: true, opacity: 0.9, side: THREE.DoubleSide });
+      const spawnPortalInnerMat = new THREE.MeshBasicMaterial({ color: 0x00FFCC, transparent: true, opacity: 0.25, side: THREE.DoubleSide });
+      const spawnPortalRing = new THREE.Mesh(spawnPortalOuter, spawnPortalOuterMat);
+      const spawnPortalDisc = new THREE.Mesh(spawnPortalInner, spawnPortalInnerMat);
+      spawnPortalRing.rotation.x = -Math.PI / 2;
+      spawnPortalDisc.rotation.x = -Math.PI / 2;
+      spawnPortalRing.position.set(12, 0.06, 0);
+      spawnPortalDisc.position.set(12, 0.05, 0);
+      scene.add(spawnPortalRing);
+      scene.add(spawnPortalDisc);
+      window.spawnPortal = { ring: spawnPortalRing, disc: spawnPortalDisc, ringMat: spawnPortalOuterMat, discMat: spawnPortalInnerMat, phase: 0, active: true };
       
       // Farm Fields - Fill empty spaces with farm texture
       // Create large farm field background (performance optimized - single large mesh)
@@ -12670,23 +12648,61 @@
       
       scene.add(signpostGroup);
       
-      // Farm field near windmill (plowed rows)
+      // Barn adjacent to windmill (not connected - placed to the north-east)
+      const barnGroup = new THREE.Group();
+      barnGroup.position.set(50, 0, 30); // Adjacent to windmill, not connected
+      // Barn body
+      const barnBodyGeo = new THREE.BoxGeometry(8, 5, 10);
+      const barnBodyMat = new THREE.MeshToonMaterial({ color: 0xA0522D }); // Sienna red barn
+      const barnBody = new THREE.Mesh(barnBodyGeo, barnBodyMat);
+      barnBody.position.y = 2.5;
+      barnBody.castShadow = true;
+      barnGroup.add(barnBody);
+      // Barn roof
+      const barnRoofGeo = new THREE.CylinderGeometry(0.1, 6, 3.5, 4);
+      const barnRoofMat = new THREE.MeshToonMaterial({ color: 0x5C3317 }); // Dark brown roof
+      const barnRoof = new THREE.Mesh(barnRoofGeo, barnRoofMat);
+      barnRoof.position.y = 6.75;
+      barnRoof.rotation.y = Math.PI / 4;
+      barnRoof.castShadow = true;
+      barnGroup.add(barnRoof);
+      // Barn door
+      const barnDoorGeo = new THREE.BoxGeometry(3, 4, 0.2);
+      const barnDoorMat = new THREE.MeshToonMaterial({ color: 0x3B1A08 });
+      const barnDoor = new THREE.Mesh(barnDoorGeo, barnDoorMat);
+      barnDoor.position.set(0, 2, 5.1);
+      barnGroup.add(barnDoor);
+      // Barn loft window
+      const barnWindowGeo = new THREE.BoxGeometry(1.5, 1.5, 0.2);
+      const barnWindowMat = new THREE.MeshToonMaterial({ color: 0xFFD700, emissive: 0xFFAA00, emissiveIntensity: 0.3 });
+      const barnWindow = new THREE.Mesh(barnWindowGeo, barnWindowMat);
+      barnWindow.position.set(0, 4.5, 5.1);
+      barnGroup.add(barnWindow);
+      scene.add(barnGroup);
+      
+      // Realistic farm fields: wide soil strips with crop rows, adjacent to barn+windmill
+      const fieldSoilMat = new THREE.MeshToonMaterial({ color: 0x5C3A1A }); // Rich dark soil
+      const cropMat = new THREE.MeshToonMaterial({ color: 0x7CBA3E }); // Crop green
       const windmillFieldGroup = new THREE.Group();
-      windmillFieldGroup.position.set(45, 0, 50); // Near windmill but not overlapping
-      const fieldSoilMat = new THREE.MeshToonMaterial({ color: 0x654321 }); // Brown soil
-      for (let row = 0; row < 5; row++) {
-        for (let col = 0; col < 6; col++) {
-          const fieldPlot = new THREE.Mesh(
-            new THREE.PlaneGeometry(1.2, 1.2),
-            fieldSoilMat
-          );
-          fieldPlot.rotation.x = -Math.PI / 2;
-          fieldPlot.position.set(
-            -3 + col * 1.5,
-            0.01,
-            -3 + row * 1.5
-          );
-          windmillFieldGroup.add(fieldPlot);
+      windmillFieldGroup.position.set(55, 0, 42); // Adjacent to windmill+barn
+      // Wide field base
+      const fieldBaseMesh = new THREE.Mesh(new THREE.PlaneGeometry(18, 14), new THREE.MeshToonMaterial({ color: 0x5C3A1A }));
+      fieldBaseMesh.rotation.x = -Math.PI / 2;
+      fieldBaseMesh.position.set(0, 0.01, 0);
+      windmillFieldGroup.add(fieldBaseMesh);
+      // Plowed crop rows
+      for (let row = 0; row < 7; row++) {
+        // Soil row (darker strip)
+        const rowMesh = new THREE.Mesh(new THREE.PlaneGeometry(18, 0.6), fieldSoilMat);
+        rowMesh.rotation.x = -Math.PI / 2;
+        rowMesh.position.set(0, 0.02, -4.5 + row * 1.5);
+        windmillFieldGroup.add(rowMesh);
+        // Crop plants along row
+        for (let c = 0; c < 9; c++) {
+          const cropGeo = new THREE.ConeGeometry(0.25, 0.8, 5);
+          const crop = new THREE.Mesh(cropGeo, cropMat);
+          crop.position.set(-8 + c * 2, 0.4, -4.5 + row * 1.5);
+          windmillFieldGroup.add(crop);
         }
       }
       scene.add(windmillFieldGroup);
@@ -13778,14 +13794,9 @@
         }
         leaves.castShadow = true;
         
-        // Add shadow
-        const shadow = new THREE.Mesh(shadowGeo, shadowMat);
-        shadow.rotation.x = -Math.PI/2;
-        shadow.position.y = 0.01;
-        
         group.add(trunk);
         group.add(leaves);
-        group.add(shadow);
+        // Note: shadows are cast by the dirLight shadow map - no duplicate blob shadow needed
         
         // Random pos in forest area and spread across map
         // Lake exclusion zone constants
@@ -13834,7 +13845,28 @@
         }
       }
       
-      // Waterfall from cliff into lake
+      // Extra forest trees in a ring around the fountain spawn area for the forest feel
+      const forestTrunkMat2 = new THREE.MeshToonMaterial({ color: 0x4A2C0A });
+      const forestLeavesMat2 = new THREE.MeshToonMaterial({ color: 0x1A5C1A });
+      for (let f = 0; f < 28; f++) {
+        const fAngle = (f / 28) * Math.PI * 2 + (Math.random() - 0.5) * 0.2;
+        const fDist = 18 + Math.random() * 8; // Ring at 18-26 units from center
+        const fx = Math.cos(fAngle) * fDist;
+        const fz = Math.sin(fAngle) * fDist;
+        // Skip trees in the player spawn zone (player spawns at x=12, z=0) or on roads
+        if (fx > 8 && fx < 20 && Math.abs(fz) < 5) continue; // Exclusion: player spawn portal at (12,0,0)
+        const fGroup = new THREE.Group();
+        const fTrunk = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.3, 2.5, 6), forestTrunkMat2);
+        fTrunk.position.y = 1.25;
+        fTrunk.castShadow = true;
+        const fLeaves = new THREE.Mesh(new THREE.SphereGeometry(1.2 + Math.random() * 0.5, 7, 6), forestLeavesMat2);
+        fLeaves.position.y = 3.2;
+        fLeaves.castShadow = true;
+        fGroup.add(fTrunk);
+        fGroup.add(fLeaves);
+        fGroup.position.set(fx, 0, fz);
+        scene.add(fGroup);
+      }
       const waterfallGroup2 = new THREE.Group();
       
       // Cliff/rock formation
@@ -15665,12 +15697,13 @@
         updateDroplet();
       }
       
-      // Expanding splash ring on ground
-      const ringGeo = new THREE.RingGeometry(0.5, 1, 16); // Reduced segments for performance
+      // Water-sprout-from-head level-up ring: multiple expanding rings + vertical water jet
+      // Ring 1: fast-expanding bright ring (teal/white)
+      const ringGeo = new THREE.RingGeometry(0.3, 0.8, 24);
       const ringMat = new THREE.MeshBasicMaterial({ 
-        color: COLORS.player,
+        color: 0xAAF0FF,
         transparent: true,
-        opacity: 0.8,
+        opacity: 1.0,
         side: THREE.DoubleSide
       });
       const ring = new THREE.Mesh(ringGeo, ringMat);
@@ -15679,12 +15712,12 @@
       ring.rotation.x = -Math.PI / 2;
       scene.add(ring);
       
-      let ringLife = 60;
+      let ringLife = 70;
       const updateRing = () => {
         ringLife--;
-        const scale = 1 + (60 - ringLife) * 0.15;
+        const scale = 1 + (70 - ringLife) * 0.18;
         ring.scale.set(scale, scale, 1);
-        ring.material.opacity = ringLife / 60;
+        ring.material.opacity = Math.max(0, ringLife / 70);
         
         if (ringLife <= 0) {
           scene.remove(ring);
@@ -15695,6 +15728,60 @@
         }
       };
       updateRing();
+      
+      // Ring 2: slower second ring (blue, slightly delayed)
+      const ring2Geo = new THREE.RingGeometry(0.3, 0.6, 24);
+      const ring2Mat = new THREE.MeshBasicMaterial({ color: 0x5DADE2, transparent: true, opacity: 0.85, side: THREE.DoubleSide });
+      const ring2 = new THREE.Mesh(ring2Geo, ring2Mat);
+      ring2.position.copy(player.mesh.position);
+      ring2.position.y = 0.05;
+      ring2.rotation.x = -Math.PI / 2;
+      scene.add(ring2);
+      let ring2Life = 50;
+      const updateRing2 = () => {
+        ring2Life--;
+        const s2 = 0.5 + (50 - ring2Life) * 0.22;
+        ring2.scale.set(s2, s2, 1);
+        ring2.material.opacity = Math.max(0, ring2Life / 50 * 0.85);
+        if (ring2Life <= 0) {
+          scene.remove(ring2);
+          ring2Geo.dispose(); ring2Mat.dispose();
+        } else requestAnimationFrame(updateRing2);
+      };
+      setTimeout(updateRing2, 80); // Slightly delayed second ring
+      
+      // Vertical water column shooting up from head (water sprout)
+      // Shared base material cloned per jet for individual opacity animation
+      const jetBaseMat = new THREE.MeshBasicMaterial({ color: 0x5DADE2, transparent: true, opacity: 0.85 });
+      for (let j = 0; j < 18; j++) {
+        const jetGeo = new THREE.SphereGeometry(0.07 + Math.random() * 0.05, 6, 6);
+        const jetMat = jetBaseMat.clone(); // Clone for per-jet opacity animation
+        const jet = new THREE.Mesh(jetGeo, jetMat);
+        jet.position.copy(player.mesh.position);
+        jet.position.y += 1.2; // From head height
+        const spreadAngle = (j / 18) * Math.PI * 2;
+        const spreadR = 0.15 + Math.random() * 0.2;
+        const vel = new THREE.Vector3(
+          Math.cos(spreadAngle) * spreadR * 0.3,
+          0.35 + Math.random() * 0.5, // Upward jet
+          Math.sin(spreadAngle) * spreadR * 0.3
+        );
+        scene.add(jet);
+        let jLife = 55 + Math.floor(Math.random() * 20);
+        const maxJLife = jLife;
+        const updateJet = () => {
+          jLife--;
+          jet.position.add(vel);
+          vel.y -= 0.025; // Gravity brings it back down
+          jet.material.opacity = Math.max(0, jLife / maxJLife * 0.9);
+          if (jLife <= 0 || jet.position.y < 0) {
+            scene.remove(jet);
+            jetGeo.dispose(); jetMat.dispose();
+          } else requestAnimationFrame(updateJet);
+        };
+        updateJet();
+      }
+      jetBaseMat.dispose(); // Dispose the shared base after all clones are made
       
       // Fountain/explosion of "LEVEL UP" text particles from player's head
       const texts = ["L", "E", "V", "E", "L", " ", "U", "P", "!"];
@@ -18093,6 +18180,13 @@
       });
       flashLights = [];
       
+      // Re-activate spawn portal for next run
+      if (window.spawnPortal) {
+        window.spawnPortal.active = true;
+        window.spawnPortal.ringMat.opacity = 0.9;
+        window.spawnPortal.discMat.opacity = 0.25;
+      }
+      
       // Clear any pending timeouts
       activeTimeouts.forEach(timeoutId => {
         clearTimeout(timeoutId);
@@ -19194,28 +19288,24 @@
             setTimeout(() => {
               projectiles.push(new Projectile(player.mesh.position.x, player.mesh.position.z, nearest.mesh.position));
               
-              // ENHANCED muzzle flash light effect - 3 variations (FRESH)
-              // Brighter at night for better visibility
+              // Muzzle flash light effect - smaller radius to keep lightning contained to barrel area
               const isNight = dayNightCycle.timeOfDay < 0.2 || dayNightCycle.timeOfDay > 0.8;
-              const nightMultiplier = isNight ? 2.0 : 1.0; // Double intensity at night
+              const nightMultiplier = isNight ? 1.5 : 1.0;
               
               const flashVariation = i % 3;
               let flashColor, flashIntensity, flashRadius;
               if (flashVariation === 0) {
-                // Bright white flash
                 flashColor = 0xFFFFFF;
-                flashIntensity = 6 * nightMultiplier;
-                flashRadius = 20 * (isNight ? 1.5 : 1.0); // Larger radius at night
+                flashIntensity = 4 * nightMultiplier;
+                flashRadius = 8 * (isNight ? 1.3 : 1.0); // Reduced from 20
               } else if (flashVariation === 1) {
-                // Yellow-orange flash
                 flashColor = 0xFFCC00;
-                flashIntensity = 5.5 * nightMultiplier;
-                flashRadius = 18 * (isNight ? 1.5 : 1.0);
+                flashIntensity = 3.5 * nightMultiplier;
+                flashRadius = 7 * (isNight ? 1.3 : 1.0); // Reduced from 18
               } else {
-                // Blue-white flash (hotter burn)
                 flashColor = 0xCCFFFF;
-                flashIntensity = 6.5 * nightMultiplier;
-                flashRadius = 22 * (isNight ? 1.5 : 1.0);
+                flashIntensity = 4.5 * nightMultiplier;
+                flashRadius = 9 * (isNight ? 1.3 : 1.0); // Reduced from 22
               }
               
               const flashLight = new THREE.PointLight(flashColor, flashIntensity, flashRadius);
@@ -19261,13 +19351,17 @@
               }, 80);
               activeTimeouts.push(playerRecoilTimeout);
               
-              // ENHANCED Muzzle flash particles (small burst at gun muzzle - not generic spray)
+              // Enhanced muzzle sparks: small directional sparks from barrel tip
               const muzzlePos = player.mesh.position.clone();
               muzzlePos.y += 0.5;
-              spawnParticles(muzzlePos, 0xFFFF88, 2); // Tiny yellow muzzle spark
-              spawnParticles(muzzlePos, 0xFFFFFF, 1); // White hot flash
+              // Offset muzzle forward in player facing direction
+              muzzlePos.x += Math.sin(player.mesh.rotation.y) * 0.6;
+              muzzlePos.z += Math.cos(player.mesh.rotation.y) * 0.6;
+              spawnParticles(muzzlePos, 0xFFFF44, 4); // Yellow muzzle sparks
+              spawnParticles(muzzlePos, 0xFFFFFF, 2); // White hot flash
+              spawnParticles(muzzlePos, 0xFF8800, 2); // Orange embers
               // Add realistic muzzle smoke
-              spawnMuzzleSmoke(player.mesh.position, 3);
+              spawnMuzzleSmoke(muzzlePos, 3);
             }, i * 100);
           }
           weapons.gun.lastShot = time;
@@ -19721,6 +19815,45 @@
         });
       }
       
+      // Walk-into prop damage: barrels and crates take damage when player runs into them
+      if (window.destructibleProps && player && !player.isDead) {
+        const PROP_WALK_COLLISION_SQ = 1.2; // Squared distance: ~1.1 unit radius for barrel/crate collision
+        const PROP_WALK_DMG_COOLDOWN = 300; // ms between walk-into damage ticks (tunable)
+        for (let prop of window.destructibleProps) {
+          if (prop.destroyed || prop.type === 'tree') continue; // Trees need dash to break
+          const pdx = player.mesh.position.x - prop.mesh.position.x;
+          const pdz = player.mesh.position.z - prop.mesh.position.z;
+          const pdist2 = pdx * pdx + pdz * pdz;
+          if (pdist2 < PROP_WALK_COLLISION_SQ) {
+            if (!prop._walkDmgTimer || Date.now() - prop._walkDmgTimer > PROP_WALK_DMG_COOLDOWN) {
+              prop._walkDmgTimer = Date.now();
+              prop.hp -= 8; // Walk-into damage
+              spawnParticles(prop.mesh.position, 0xD2691E, 4);
+              const hpPct = prop.hp / prop.maxHp;
+              if (hpPct <= 0.5 && !prop.darkenedStage1) {
+                prop.darkenedStage1 = true;
+                prop.mesh.material.color.copy(prop.originalColor).multiplyScalar(0.8);
+              } else if (hpPct <= 0.25 && !prop.darkenedStage2) {
+                prop.darkenedStage2 = true;
+                prop.mesh.material.color.copy(prop.originalColor).multiplyScalar(0.6);
+                prop.mesh.scale.copy(prop.originalScale).multiplyScalar(0.85);
+              } else if (prop.hp <= 0) {
+                prop.destroyed = true;
+                if (prop.type === 'barrel') {
+                  spawnParticles(prop.mesh.position, 0xFF4500, 20);
+                  spawnParticles(prop.mesh.position, 0xFFFF00, 10);
+                } else {
+                  spawnParticles(prop.mesh.position, 0xD2691E, 18);
+                }
+                scene.remove(prop.mesh);
+                if (prop.mesh.geometry) prop.mesh.geometry.dispose();
+                if (prop.mesh.material) prop.mesh.material.dispose();
+              }
+            }
+          }
+        }
+      }
+      
       // Waterfall animation
       animatedSceneObjects.waterfalls.forEach(obj => {
         obj.userData.phase += 0.05;
@@ -19895,6 +20028,30 @@
           );
           jet.material.opacity = 0.4 + Math.sin(jet.userData.phase) * 0.3;
         });
+      }
+      
+      // Spawn portal animation: pulse while countdown is active, fade after game starts
+      if (window.spawnPortal && window.spawnPortal.active) {
+        window.spawnPortal.phase += dt * 4;
+        const pulse = 0.6 + Math.sin(window.spawnPortal.phase) * 0.4;
+        window.spawnPortal.ringMat.opacity = pulse;
+        window.spawnPortal.discMat.opacity = pulse * 0.3;
+        // Color cycle: teal -> bright cyan during countdown
+        const col = countdownActive ? 0x00FFFF : 0x00FFCC;
+        window.spawnPortal.ringMat.color.setHex(col);
+        window.spawnPortal.discMat.color.setHex(col);
+        // Slowly rotate
+        window.spawnPortal.ring.rotation.z += dt * 1.5;
+        // Fade out 3s after game starts
+        if (isGameActive && !countdownActive) {
+          window.spawnPortal.ringMat.opacity *= 0.97;
+          window.spawnPortal.discMat.opacity *= 0.97;
+          if (window.spawnPortal.ringMat.opacity < 0.02) {
+            window.spawnPortal.active = false;
+            window.spawnPortal.ringMat.opacity = 0;
+            window.spawnPortal.discMat.opacity = 0;
+          }
+        }
       }
 
       // Underwater chest shimmer animation
