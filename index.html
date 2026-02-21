@@ -7026,8 +7026,7 @@
             
             // HEADSHOT SYSTEM: Double-crit check for headshot (instant kill) - requires headshot skill
             const isCrit = Math.random() < playerStats.critChance;
-            const headshotUnlocked = saveData.skillTree && saveData.skillTree.headshot && saveData.skillTree.headshot.level > 0;
-            const isDoubleCrit = headshotUnlocked && isCrit && Math.random() < playerStats.critChance; // Second crit check
+            const isDoubleCrit = playerStats.headshotUnlocked && isCrit && Math.random() < playerStats.critChance; // Second crit check
             
             if (isDoubleCrit) {
               // HEADSHOT! Instant kill
@@ -8619,15 +8618,15 @@
           saveData.inventory = saveData.inventory || [];
           saveData.campBuildings = { ...defaultSaveData.campBuildings, ...(saveData.campBuildings || {}) };
           saveData.skillTree = { ...defaultSaveData.skillTree, ...(saveData.skillTree || {}) };
-          // Migration: rename old skill keys
+          // Migration: rename old skill keys (prefer newer key if both exist)
           if (saveData.skillTree.dashMaster !== undefined && saveData.skillTree.dash === undefined) {
             saveData.skillTree.dash = saveData.skillTree.dashMaster;
-            delete saveData.skillTree.dashMaster;
           }
+          delete saveData.skillTree.dashMaster;
           if (saveData.skillTree.criticalFocus !== undefined && saveData.skillTree.headshot === undefined) {
             saveData.skillTree.headshot = saveData.skillTree.criticalFocus;
-            delete saveData.skillTree.criticalFocus;
           }
+          delete saveData.skillTree.criticalFocus;
           if (!saveData.skillTree.dashMasterSkill) {
             saveData.skillTree.dashMasterSkill = { unlocked: false, level: 0, maxLevel: 3 };
           }
@@ -11767,6 +11766,10 @@
       if (textEl) textEl.textContent = `${xp} / ${required} XP`;
     }
 
+    function isDashUnlocked() {
+      return !!(saveData && saveData.skillTree && saveData.skillTree.dash && saveData.skillTree.dash.level > 0);
+    }
+
     function recalculateAllStats() {
       // Recalculate playerStats from base + attributes + skills + gear
       if (typeof playerStats === 'undefined') return;
@@ -11785,17 +11788,35 @@
       armorBonus += (attrs.endurance || 0) * 2;
       
       // Apply skill tree bonuses
-      for (const [skillId, skill] of Object.entries(SKILL_TREE)) {
-        const skillData = saveData.skillTree[skillId];
-        if (!skillData || skillData.level === 0) continue;
-        const bonus = skill.bonus(skillData.level);
-        if (bonus.hp) hpBonus += bonus.hp;
-        if (bonus.regen) regenBonus += bonus.regen;
-        if (bonus.damage) damageBonus += bonus.damage;
-        if (bonus.moveSpeed) speedBonus += bonus.moveSpeed;
-        if (bonus.critChance) critChanceBonus += bonus.critChance;
-        if (bonus.critDamage) critDmgBonus += bonus.critDamage;
-        if (bonus.armor) armorBonus += bonus.armor;
+      if (typeof SKILL_TREE !== 'undefined') {
+        for (const [skillId, skill] of Object.entries(SKILL_TREE)) {
+          const skillData = saveData.skillTree[skillId];
+          if (!skillData || skillData.level === 0) continue;
+          const bonus = skill.bonus(skillData.level);
+          if (bonus.hp) hpBonus += bonus.hp;
+          if (bonus.regen) regenBonus += bonus.regen;
+          if (bonus.damage) damageBonus += bonus.damage;
+          if (bonus.moveSpeed) speedBonus += bonus.moveSpeed;
+          if (bonus.critChance) critChanceBonus += bonus.critChance;
+          if (bonus.critDamage) critDmgBonus += bonus.critDamage;
+          if (bonus.armor) armorBonus += bonus.armor;
+        }
+      }
+      
+      // Apply gear bonuses from equipped items
+      const equipped = saveData.equippedGear || {};
+      const GEAR_STAT_MAP = {
+        hp: (v) => { hpBonus += v; },
+        armor: (v) => { armorBonus += v; },
+        hpRegen: (v) => { regenBonus += v; },
+        damage: (v) => { damageBonus += v * 0.01; },
+        critChance: (v) => { critChanceBonus += v * 0.01; }
+      };
+      for (const slot of Object.values(equipped)) {
+        if (!slot || !slot.stats) continue;
+        for (const [stat, value] of Object.entries(slot.stats)) {
+          if (GEAR_STAT_MAP[stat]) GEAR_STAT_MAP[stat](value);
+        }
       }
       
       // Apply bonuses to playerStats
@@ -11806,6 +11827,8 @@
       playerStats.critChance = Math.min(0.95, 0.1 + critChanceBonus);
       playerStats.critDmg = 1.5 + critDmgBonus;
       playerStats.armor = Math.min(80, armorBonus);
+      // Cache headshot unlock state in playerStats for fast access in hot path
+      playerStats.headshotUnlocked = !!(saveData.skillTree && saveData.skillTree.headshot && saveData.skillTree.headshot.level > 0);
     }
 
     function updateCampScreen() {
@@ -18012,7 +18035,7 @@
               
               if (swipeTime < 250 && swipeDist > 60) {
                 // Dash only available after unlocking in skill tree
-                if (!saveData.skillTree || !saveData.skillTree.dash || saveData.skillTree.dash.level === 0) {
+                if (!isDashUnlocked()) {
                   showStatChange('🔒 Unlock Dash in the Skill Tree!');
                   swipeStart = null;
                 } else {
@@ -18157,7 +18180,7 @@
           keysPressed[e.key.toLowerCase()] = true;
           
           // Space bar for dash (only if unlocked in skill tree)
-          if (e.key === ' ' && !player.isDashing && saveData.skillTree && saveData.skillTree.dash && saveData.skillTree.dash.level > 0 && (keysPressed['w'] || keysPressed['a'] || keysPressed['s'] || keysPressed['d'])) {
+          if (e.key === ' ' && !player.isDashing && isDashUnlocked() && (keysPressed['w'] || keysPressed['a'] || keysPressed['s'] || keysPressed['d'])) {
             let dx = 0, dy = 0;
             if (keysPressed['w']) dy = -1;
             if (keysPressed['s']) dy = 1;
@@ -18541,7 +18564,7 @@
           // Button 0 (A/X) for dash - detect button press (not hold)
           const dashPressed = gamepad.buttons[0].pressed;
           if (dashPressed && !gameSettings.gamepadButtonStates.dashButton && !player.isDashing && joystickLeft.active &&
-              saveData.skillTree && saveData.skillTree.dash && saveData.skillTree.dash.level > 0) {
+              isDashUnlocked()) {
             player.isDashing = true;
             player.dashTime = player.dashDuration;
             // Convert joystick direction to isometric world coordinates before dashing
