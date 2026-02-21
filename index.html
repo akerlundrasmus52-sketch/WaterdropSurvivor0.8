@@ -8568,7 +8568,7 @@
       }
     };
 
-    let saveData = { ...defaultSaveData };
+    let saveData = JSON.parse(JSON.stringify(defaultSaveData));
 
     function loadSaveData() {
       try {
@@ -11280,7 +11280,8 @@
       if (!questTracker) return;
       
       const currentQuest = getCurrentQuest();
-      if (!currentQuest) {
+      // Hide tracker if no quest is active, or if the player hasn't died yet (first run)
+      if (!currentQuest || !saveData.tutorialQuests.firstDeathShown) {
         questTracker.style.display = 'none';
         return;
       }
@@ -14350,6 +14351,7 @@
         playSound('waterdrop');
         hideMainMenu();
         resetGame();
+        updateQuestTracker(); // Ensure quest HUD reflects current state before run starts
         startCountdown(); // Start countdown after resetting game (PR #70)
       };
       
