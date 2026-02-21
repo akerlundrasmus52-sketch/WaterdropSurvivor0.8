@@ -11320,6 +11320,7 @@
     // --- GAME LOGIC ---
 
     function init() {
+      console.log('[Init] Starting game initialization...');
       // Load save data and settings first
       loadSaveData();
       loadSettings();
@@ -11357,7 +11358,12 @@
       renderer.setSize(window.innerWidth, window.innerHeight);
       renderer.shadowMap.enabled = true;
       renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-      document.getElementById('game-container').appendChild(renderer.domElement);
+      const gameContainer = document.getElementById('game-container');
+      if (!gameContainer) {
+        console.error('[Init] #game-container element not found - cannot append renderer canvas');
+        throw new Error('game-container element missing from DOM');
+      }
+      gameContainer.appendChild(renderer.domElement);
 
       // Handle WebGL context loss to prevent renderer freezes in long sessions
       renderer.domElement.addEventListener('webglcontextlost', (e) => {
