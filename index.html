@@ -940,7 +940,30 @@
       border: 3px solid #2980B9;
     }
 
-    /* Universal X close button for all overlays/modals */
+    /* Yellow comic-style confirmation button used in modals/info boxes */
+    .comic-confirm-btn {
+      display: block;
+      width: 100%;
+      padding: 15px;
+      font-size: 22px;
+      font-weight: bold;
+      background: #FFD700;
+      color: #000;
+      border: 3px solid #000;
+      border-radius: 10px;
+      box-shadow: 4px 4px 0 #000;
+      cursor: pointer;
+      margin-top: 10px;
+      font-family: 'Bangers', cursive;
+      letter-spacing: 1px;
+    }
+    .comic-confirm-btn:hover {
+      background: #FFC200;
+    }
+    .comic-confirm-btn:active {
+      transform: translate(2px, 2px);
+      box-shadow: 2px 2px 0 #000;
+    }
     .overlay-close-x {
       position: absolute;
       top: 10px;
@@ -2535,7 +2558,7 @@
           💎 <strong>Gear & Achievements:</strong> Collect equipment, complete achievements, and master the elemental powers.
         </p>
       </div>
-      <button class="menu-btn menu-btn-primary" id="story-quest-close-btn">
+      <button id="story-quest-close-btn" class="comic-confirm-btn">
         Continue
       </button>
     </div>
@@ -6034,22 +6057,9 @@
           const currentQuest = getCurrentQuest();
           if (currentQuest && currentQuest.id === 'quest1_kill3' && playerStats.kills >= 3) {
             progressTutorialQuest('quest1_kill3', true);
-            // Show text magazine explaining the current mission once quest is marked ready-to-claim
-            // Guard: only show if quest1 is now in readyToClaim (i.e. still relevant)
+            // Guard: only set pending notification if quest1 is now in readyToClaim
             if (saveData.tutorialQuests.readyToClaim.includes('quest1_kill3')) {
-              showComicInfoBox(
-                '📋 MISSION REPORT',
-                `<div style="text-align: left; padding: 10px;">
-                  <p style="font-family: 'Bangers', cursive; font-size: 20px; margin-bottom: 10px;">✅ 3 KILLS CONFIRMED!</p>
-                  <p style="line-height: 1.8; margin-bottom: 10px;">
-                    Excellent work, Droplet! You've eliminated 3 enemies.<br><br>
-                    <b>CURRENT MISSION:</b> Build your strength between runs. Use camp resources to upgrade your abilities and become unstoppable.<br><br>
-                    Return to the <b>⛺ Main Building</b> to claim your reward.
-                  </p>
-                  <p style="font-size: 13px; color: #FFD700;">💡 Tip: Die or finish your run, then head to Camp → Main Building.</p>
-                </div>`,
-                'UNDERSTOOD!'
-              );
+              saveData.tutorialQuests.pendingMissionNotification = 'quest1_kill3';
             }
           }
           // Quest 7 (new): Kill 10 enemies — notify mid-run when objective reached
@@ -9910,29 +9920,7 @@
     };
 
     const SKILL_TREE = {
-      // STARTING SKILLS - Available first (Dash and Headshot as per requirements)
-      dashMaster: {
-        name: '🏃 Dash Master',
-        description: 'Reduce dash cooldown by 15%, increase dash distance by 10%',
-        cost: 1,
-        maxLevel: 3,
-        requires: null,
-        bonus: (level) => ({
-          dashCooldown: 0.15 * level,
-          dashDistance: 0.1 * level
-        })
-      },
-      criticalFocus: {
-        name: '🎯 Headshot',
-        description: '+10% crit chance, +15% crit damage',
-        cost: 1,
-        maxLevel: 5,
-        requires: null,
-        bonus: (level) => ({
-          critChance: 0.1 * level,
-          critDamage: 0.15 * level
-        })
-      },
+      // STARTING SKILLS - Available first (Dash and Critical Focus as base skills)
       dash: {
         id: 'dash',
         name: 'Dash',
@@ -9945,11 +9933,33 @@
           dashCooldown: 0.2 * level
         })
       },
+      criticalFocus: {
+        name: '🎯 Critical Focus',
+        description: '+10% crit chance, +15% crit damage',
+        cost: 1,
+        maxLevel: 5,
+        requires: null,
+        bonus: (level) => ({
+          critChance: 0.1 * level,
+          critDamage: 0.15 * level
+        })
+      },
+      dashMaster: {
+        name: '🏃 Dash Master',
+        description: 'Reduce dash cooldown by 15%, increase dash distance by 10%',
+        cost: 1,
+        maxLevel: 3,
+        requires: 'dash',
+        bonus: (level) => ({
+          dashCooldown: 0.15 * level,
+          dashDistance: 0.1 * level
+        })
+      },
       headshot: {
         id: 'headshot',
         name: 'Headshot',
         path: 'combat',
-        requires: null,
+        requires: 'criticalFocus',
         maxLevel: 5,
         cost: 1,
         description: 'Double-crit = instant kill',
@@ -10581,24 +10591,24 @@
           };
         }
         
-        // Unlock dash ability whenever dashMaster skill is purchased (regardless of tutorial step)
-        if (skillId === 'dashMaster' && !saveData.tutorial.dashUnlocked) {
+        // Unlock dash ability whenever dash or dashMaster skill is purchased (regardless of tutorial step)
+        if ((skillId === 'dash' || skillId === 'dashMaster') && !saveData.tutorial.dashUnlocked) {
           saveData.tutorial.dashUnlocked = true;
           saveSaveData();
         }
         // Unlock headshot ability whenever a crit skill is purchased
-        if ((skillId === 'criticalFocus' || skillId === 'executioner') && !saveData.tutorial.headshotUnlocked) {
+        if ((skillId === 'criticalFocus' || skillId === 'headshot' || skillId === 'executioner') && !saveData.tutorial.headshotUnlocked) {
           saveData.tutorial.headshotUnlocked = true;
           saveSaveData();
         }
         
-        if (skillId === 'dashMaster' && saveData.tutorial.currentStep === 'unlock_dash') {
+        if ((skillId === 'dashMaster' || skillId === 'dash') && saveData.tutorial.currentStep === 'unlock_dash') {
           saveData.tutorial.currentStep = 'unlock_headshot';
           saveSaveData();
           setTimeout(() => {
             showComicTutorial('unlock_headshot');
           }, 1000);
-        } else if ((skillId === 'criticalFocus' || skillId === 'executioner') && saveData.tutorial.currentStep === 'unlock_headshot' && !saveData.tutorial.headshotUnlocked) {
+        } else if ((skillId === 'criticalFocus' || skillId === 'headshot' || skillId === 'executioner') && saveData.tutorial.currentStep === 'unlock_headshot' && !saveData.tutorial.headshotUnlocked) {
           // Accept any crit/headshot related skill
           saveData.tutorial.headshotUnlocked = true;
           saveSaveData();
@@ -10868,8 +10878,8 @@
       quest2_spendSkills: {
         id: 'quest2_spendSkills',
         name: 'Buy Dash & Headshot',
-        description: 'Go to the Skill Tree tab and unlock both Dash (dashMaster) and Headshot (criticalFocus or executioner)',
-        objectives: 'Unlock Dash and a Headshot/Critical skill in the Skill Tree tab',
+        description: 'Go to the Skill Tree tab and unlock both Dash and Critical Focus (or a Headshot skill)',
+        objectives: 'Unlock Dash and a Critical Focus/Headshot skill in the Skill Tree tab',
         claim: 'Main Building',
         rewardGold: 100,
         rewardSkillPoints: 1,
@@ -11156,8 +11166,10 @@
       }
       // If quest2 is active, check if both skills are already bought
       if (saveData.tutorialQuests.currentQuest === 'quest2_spendSkills') {
-        const hasDash = saveData.skillTree.dashMaster && saveData.skillTree.dashMaster.level > 0;
+        const hasDash = (saveData.skillTree.dash && saveData.skillTree.dash.level > 0) ||
+                        (saveData.skillTree.dashMaster && saveData.skillTree.dashMaster.level > 0);
         const hasHeadshot = (saveData.skillTree.criticalFocus && saveData.skillTree.criticalFocus.level > 0) ||
+                            (saveData.skillTree.headshot && saveData.skillTree.headshot.level > 0) ||
                             (saveData.skillTree.executioner && saveData.skillTree.executioner.level > 0);
         if (hasDash && hasHeadshot) {
           progressTutorialQuest('quest2_spendSkills', true);
@@ -17815,6 +17827,27 @@
       }
       
       updateGoldDisplays();
+      
+      // Show deferred mission notification after death (quest completed during run)
+      if (saveData.tutorialQuests && saveData.tutorialQuests.pendingMissionNotification === 'quest1_kill3') {
+        saveData.tutorialQuests.pendingMissionNotification = null;
+        saveSaveData();
+        setTimeout(() => {
+          showComicInfoBox(
+            '📋 MISSION REPORT',
+            `<div style="text-align: left; padding: 10px;">
+              <p style="font-family: 'Bangers', cursive; font-size: 20px; margin-bottom: 10px;">✅ 3 KILLS CONFIRMED!</p>
+              <p style="line-height: 1.8; margin-bottom: 10px;">
+                Excellent work, Droplet! You've eliminated 3 enemies.<br><br>
+                <b>CURRENT MISSION:</b> Build your strength between runs. Use camp resources to upgrade your abilities and become unstoppable.<br><br>
+                Return to the <b>⛺ Main Building</b> to claim your reward.
+              </p>
+              <p style="font-size: 13px; color: #FFD700;">💡 Tip: Head to Camp → Main Building to claim your reward.</p>
+            </div>`,
+            'UNDERSTOOD!'
+          );
+        }, 1500);
+      }
     }
 
     function resetGame() {
