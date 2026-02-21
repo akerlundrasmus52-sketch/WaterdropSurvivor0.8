@@ -2631,13 +2631,13 @@
       <div id="account-level-progress-text" style="font-size:10px;color:#aaa;">0 / 100 XP</div>
     </div>
     
-    <!-- Camp Tabs -->
-    <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
+    <!-- Camp Tabs (hidden - navigation handled by building card clicks) -->
+    <div style="display: none;">
       <button class="btn" id="camp-buildings-tab" style="padding: 10px 20px; font-size: 16px; background: #5A3A31;">BUILDINGS</button>
-      <button class="btn" id="camp-skills-tab" style="padding: 10px 20px; font-size: 16px; background: #3a3a3a; display:none;">SKILL TREE</button>
-      <button class="btn" id="camp-passive-tab" style="padding: 10px 20px; font-size: 16px; background: #3a3a3a; display:none;">⚗️ PASSIVES</button>
-      <button class="btn" id="camp-sleep-tab" style="padding: 10px 20px; font-size: 16px; background: #3a3a3a; display:none;" aria-label="Sleep">💤 SLEEP</button>
-      <button class="btn" id="camp-training-tab" style="padding: 10px 20px; font-size: 16px; background: #3a3a3a; display:none;" aria-label="Training">🏋️ TRAINING</button>
+      <button class="btn" id="camp-skills-tab" style="padding: 10px 20px; font-size: 16px; background: #3a3a3a;">SKILL TREE</button>
+      <button class="btn" id="camp-passive-tab" style="padding: 10px 20px; font-size: 16px; background: #3a3a3a;">⚗️ PASSIVES</button>
+      <button class="btn" id="camp-sleep-tab" style="padding: 10px 20px; font-size: 16px; background: #3a3a3a;" aria-label="Sleep">💤 SLEEP</button>
+      <button class="btn" id="camp-training-tab" style="padding: 10px 20px; font-size: 16px; background: #3a3a3a;" aria-label="Training">🏋️ TRAINING</button>
     </div>
 
     <!-- Buildings Section -->
@@ -2650,6 +2650,7 @@
 
     <!-- Skills Section -->
     <div id="camp-skills-section" style="display: none; width: 100%; max-width: 900px;">
+      <button class="back-btn camp-section-back-btn" style="margin-bottom: 15px; font-size: 14px; padding: 8px 20px;">← Back to Buildings</button>
       <div style="color: #FFD700; font-size: 20px; margin-bottom: 15px;">Skill Tree</div>
       <div style="color: #5DADE2; font-size: 16px; margin-bottom: 15px;" id="skill-points-display">
         Skill Points Available: 0
@@ -2661,6 +2662,7 @@
 
     <!-- Sleep Section -->
     <div id="camp-sleep-section" style="display: none; width: 100%; max-width: 600px;">
+      <button class="back-btn camp-section-back-btn" style="margin-bottom: 15px; font-size: 14px; padding: 8px 20px;">← Back to Buildings</button>
       <div style="color: #FFD700; font-size: 20px; margin-bottom: 15px;">💤 Rest & Prepare</div>
       <div style="background: rgba(0,0,0,0.5); padding: 30px; border-radius: 10px; text-align: center;">
         <p style="font-size: 18px; margin-bottom: 30px; line-height: 1.6;">
@@ -2686,6 +2688,7 @@
 
     <!-- Training Section -->
     <div id="camp-training-section" style="display: none; width: 100%; max-width: 700px;">
+      <button class="back-btn camp-section-back-btn" style="margin-bottom: 15px; font-size: 14px; padding: 8px 20px;">← Back to Buildings</button>
       <div style="color: #FFD700; font-size: 20px; margin-bottom: 15px;">🏋️ Training Hall</div>
       <div style="background: rgba(0,0,0,0.5); padding: 20px; border-radius: 10px; margin-bottom: 20px;">
         <p style="font-size: 16px; margin-bottom: 15px;">
@@ -2705,6 +2708,7 @@
 
     <!-- Passive Skills Section -->
     <div id="camp-passive-section" style="display: none; width: 100%; max-width: 700px;">
+      <button class="back-btn camp-section-back-btn" style="margin-bottom: 15px; font-size: 14px; padding: 8px 20px;">← Back to Buildings</button>
       <div style="color: #FFD700; font-size: 20px; margin-bottom: 15px;">⚗️ Passive Skills</div>
       <div style="background: rgba(0,0,0,0.5); padding: 20px; border-radius: 10px; margin-bottom: 20px;">
         <p style="font-size: 14px; color: #AAA; line-height: 1.6;">
@@ -8531,7 +8535,8 @@
         secondRunCompleted: false, // For achievements building unlock
         killsThisRun: 0, // Track kills per run (reset on new run)
         survivalTimeThisRun: 0, // Track survival time per run
-        stonengengeChestFound: false // Quest 6 specific
+        stonengengeChestFound: false, // Quest 6 specific
+        lastShownQuestReminder: null // Track last shown quest reminder on run start
       },
       // Legacy quest data (keep for backward compatibility)
       storyQuests: {
@@ -10866,8 +10871,8 @@
         description: 'Go to the Skill Tree tab and unlock both Dash (dashMaster) and Headshot (criticalFocus or executioner)',
         objectives: 'Unlock Dash and a Headshot/Critical skill in the Skill Tree tab',
         claim: 'Main Building',
-        rewardGold: 0,
-        rewardSkillPoints: 0,
+        rewardGold: 100,
+        rewardSkillPoints: 1,
         message: "Skills unlocked! 🌟<br><br>Head to <b>Stonehenge</b> on the map — a glowing chest awaits you there with your first piece of gear!",
         nextQuest: 'quest3_stonehengeGear',
         conditions: ['quest1_kill3'] // Requires quest1_kill3 to be claimed
@@ -10878,8 +10883,8 @@
         description: 'Head to Stonehenge on the map and collect the quest chest to get the legendary Cigar',
         objectives: 'Find and collect the chest at Stonehenge',
         claim: 'Main Building',
-        rewardGold: 50,
-        rewardSkillPoints: 0,
+        rewardGold: 150,
+        rewardSkillPoints: 1,
         unlockBuildingOnActivation: 'armory', // Armory unlocks when THIS quest activates (so player can use it)
         giveItem: { id: 'cigar_quest', name: 'Cigar', type: 'ring', rarity: 'rare', stats: { attackSpeed: 1, movementSpeed: 1, attackPrecision: 1 }, description: '+1 Attack Speed, +1 Movement Speed, +1 Attack Precision' },
         autoEquip: true,
@@ -10893,11 +10898,11 @@
         description: 'Open the Training Hall and spend an attribute point to upgrade any stat',
         objectives: 'Spend 1 attribute point in the Training Hall',
         claim: 'Main Building',
-        rewardGold: 50,
-        rewardSkillPoints: 0,
+        rewardGold: 100,
+        rewardSkillPoints: 1,
         rewardAttributePoints: 2,
         unlockBuildingOnActivation: 'trainingHall', // Training Hall unlocks when THIS quest activates
-        message: "💪 Attribute upgraded!<br><br>You earned <b>+2 free Attribute Points</b>!",
+        message: "💪 Attribute upgraded!<br><br>You earned <b>+2 free Attribute Points</b> and <b>+1 Skill Point</b>!",
         nextQuest: 'quest5_trainingSession',
         conditions: ['quest3_stonehengeGear']
       },
@@ -10907,11 +10912,11 @@
         description: 'Use the Training Hall to complete one training session',
         objectives: 'Complete 1 training session in the Training Hall',
         claim: 'Main Building',
-        rewardGold: 50,
-        rewardSkillPoints: 0,
-        rewardAttributePoints: 1,
+        rewardGold: 100,
+        rewardSkillPoints: 1,
+        rewardAttributePoints: 2,
         unlockBuildingOnActivation: 'forge', // Forge unlocks when THIS quest activates
-        message: "🏋️ Training complete!<br><br>You earned <b>+1 free Training Point</b>!",
+        message: "🏋️ Training complete!<br><br>You earned <b>+2 Attribute Points</b> and <b>+1 Skill Point</b>!",
         nextQuest: 'quest7_kill10',
         conditions: ['quest4_upgradeAttr']
       },
@@ -10921,8 +10926,8 @@
         description: 'Open the Armory, navigate to the Gear section in your inventory, and equip the Cigar',
         objectives: 'Equip the Cigar from your inventory',
         claim: 'Main Building',
-        rewardGold: 0,
-        rewardSkillPoints: 0,
+        rewardGold: 100,
+        rewardSkillPoints: 1,
         message: "Cigar equipped! 🚬<br><br>Feel that power — +1 to all stats!<br><br>Your next mission: <b>Kill 10 Enemies</b> in a single run!",
         nextQuest: 'quest7_kill10',
         conditions: ['quest3_stonehengeGear']
@@ -10934,11 +10939,11 @@
         objectives: 'Complete 1 run',
         claim: 'Main Building',
         triggerOnDeath: true,
-        rewardGold: 0,
-        rewardSkillPoints: 0,
+        rewardGold: 100,
+        rewardSkillPoints: 1,
         rewardAttributePoints: 3,
         unlockBuilding: 'trainingHall',
-        message: "Run complete! 🏆<br><br>You earned <b>3 Attribute Points</b>!<br><br>Head to the <b>Training Hall</b> and upgrade <b>3 attributes</b> to grow stronger!",
+        message: "Run complete! 🏆<br><br>You earned <b>3 Attribute Points</b> and <b>+1 Skill Point</b>!<br><br>Head to the <b>Training Hall</b> and upgrade <b>3 attributes</b> to grow stronger!",
         nextQuest: 'quest6_buyAttributes',
         conditions: ['quest4_equipCigar']
       },
@@ -10973,8 +10978,9 @@
         description: 'Buy 1 progression upgrade',
         objectives: 'Purchase any attribute upgrade',
         claim: 'Main Building',
-        rewardGold: 0,
-        rewardSkillPoints: 0,
+        rewardGold: 100,
+        rewardSkillPoints: 1,
+        rewardAttributePoints: 1,
         message: 'Great! You\'re getting stronger!',
         nextQuest: 'quest4_kill10',
         conditions: ['quest2_spendSkills'] // Requires quest2_spendSkills to be claimed
@@ -10985,8 +10991,8 @@
         description: 'Kill 10 enemies in one run',
         objectives: 'Kill 10 enemies',
         triggerOnDeath: true, // Reward given when player dies after completing objective
-        rewardGold: 0,
-        rewardSkillPoints: 0,
+        rewardGold: 200,
+        rewardSkillPoints: 1,
         unlockBuilding: 'companionHouse',
         companionEgg: true, // Give companion egg
         nextQuest: 'quest5_breedCompanion',
@@ -10998,8 +11004,9 @@
         description: 'Visit Companion Building and activate your companion',
         objectives: 'Activate/breed companion',
         claim: 'Main Building',
-        rewardGold: 0,
-        rewardSkillPoints: 0,
+        rewardGold: 150,
+        rewardSkillPoints: 1,
+        rewardAttributePoints: 1,
         message: 'Companion activated! They will fight by your side!',
         nextQuest: 'quest6_stonehengeChest',
         conditions: ['quest4_kill10'] // Requires quest4_kill10 to be claimed
@@ -11010,8 +11017,8 @@
         description: 'Find the Stonehenge chest on the map',
         objectives: 'Find and open Stonehenge chest',
         autoClaim: true, // Completes on pickup
-        rewardGold: 0,
-        rewardSkillPoints: 0,
+        rewardGold: 100,
+        rewardSkillPoints: 1,
         unlockBuilding: 'armory', // Gear Building
         giveItem: { name: 'Cigar', rarity: 'rare', stats: { strength: 1, speed: 1, precision: 1 } },
         autoEquip: true,
@@ -11024,10 +11031,10 @@
         description: 'Survive for 2 minutes in a run',
         objectives: 'Survive 120 seconds',
         triggerOnDeath: true,
-        rewardGold: 0,
-        rewardSkillPoints: 0,
+        rewardGold: 100,
+        rewardSkillPoints: 1,
         rewardAttributePoints: 3,
-        unlockBuilding: 'forge', // Attributes Building (using forge as placeholder)
+        unlockBuilding: 'trainingHall', // Unlock Training Hall for attribute spending (legacy quest chain)
         nextQuest: 'quest8_newWeapon',
         conditions: ['quest6_stonehengeChest'] // Requires quest6_stonehengeChest to be claimed
       },
@@ -11037,8 +11044,9 @@
         description: 'Unlock a new weapon in your next run',
         objectives: 'Unlock any new weapon during a run',
         claim: 'Main Building',
-        rewardGold: 0,
-        rewardSkillPoints: 0,
+        rewardGold: 300,
+        rewardSkillPoints: 1,
+        rewardAttributePoints: 1,
         message: 'Tutorial Complete! You\'re ready to survive!',
         nextQuest: null, // Tutorial complete
         conditions: ['quest7_survive2min'] // Requires quest7_survive2min to be claimed
@@ -11428,31 +11436,63 @@
       if (!questTracker) return;
       
       const currentQuest = getCurrentQuest();
-      // Hide tracker if no quest is active, or if the player hasn't died yet (first run)
-      if (!currentQuest || !saveData.tutorialQuests.firstDeathShown) {
+      const completedQuests = (saveData.tutorialQuests && saveData.tutorialQuests.completedQuests) || [];
+      const readyToClaim = (saveData.tutorialQuests && saveData.tutorialQuests.readyToClaim) || [];
+      
+      // Hide tracker if no quest is active or ready, and no recently completed quest, and player hasn't died yet
+      if (!saveData.tutorialQuests.firstDeathShown && !currentQuest && completedQuests.length === 0) {
+        questTracker.style.display = 'none';
+        return;
+      }
+      if (!currentQuest && completedQuests.length === 0 && readyToClaim.length === 0) {
         questTracker.style.display = 'none';
         return;
       }
       
-      // Build progress info for kill-based quests
-      let progressText = '';
-      const killsNow = (saveData.tutorialQuests && saveData.tutorialQuests.killsThisRun) || 0;
-      if (currentQuest.id === 'quest1_kill3') {
-        progressText = ` (${Math.min(killsNow, 3)}/3)`;
-      } else if (currentQuest.id === 'quest7_kill10' || currentQuest.id === 'quest4_kill10') {
-        progressText = ` (${Math.min(killsNow, 10)}/10)`;
+      questTracker.innerHTML = '';
+      
+      // Show last completed quest with ✅ and strikethrough (persistent after death)
+      if (completedQuests.length > 0) {
+        const lastCompletedId = completedQuests[completedQuests.length - 1];
+        const lastCompleted = TUTORIAL_QUESTS[lastCompletedId];
+        if (lastCompleted && lastCompleted.name) {
+          const completedEl = document.createElement('div');
+          completedEl.style.cssText = 'font-size: 11px; color: #aaa; text-decoration: line-through; margin-bottom: 3px;';
+          completedEl.setAttribute('aria-label', `Completed: ${lastCompleted.name}`);
+          completedEl.textContent = `✅ ${lastCompleted.name}`;
+          questTracker.appendChild(completedEl);
+        }
       }
       
-      questTracker.textContent = '';
-      const nameEl = document.createElement('b');
-      nameEl.textContent = `📜 ${currentQuest.name}${progressText}`;
-      const objEl = document.createElement('span');
-      objEl.style.fontSize = '11px';
-      objEl.style.color = '#ddd';
-      objEl.textContent = currentQuest.objectives;
-      questTracker.appendChild(nameEl);
-      questTracker.appendChild(document.createElement('br'));
-      questTracker.appendChild(objEl);
+      // Show current active quest
+      if (currentQuest && saveData.tutorialQuests.firstDeathShown) {
+        // Build progress info for kill-based quests
+        let progressText = '';
+        const killsNow = (saveData.tutorialQuests && saveData.tutorialQuests.killsThisRun) || 0;
+        if (currentQuest.id === 'quest1_kill3') {
+          progressText = ` (${Math.min(killsNow, 3)}/3)`;
+        } else if (currentQuest.id === 'quest7_kill10' || currentQuest.id === 'quest4_kill10') {
+          progressText = ` (${Math.min(killsNow, 10)}/10)`;
+        }
+        
+        const nameEl = document.createElement('b');
+        nameEl.textContent = `📜 ${currentQuest.name}${progressText}`;
+        const objEl = document.createElement('span');
+        objEl.style.fontSize = '11px';
+        objEl.style.color = '#ddd';
+        objEl.textContent = currentQuest.objectives;
+        questTracker.appendChild(nameEl);
+        questTracker.appendChild(document.createElement('br'));
+        questTracker.appendChild(objEl);
+      } else if (readyToClaim.length > 0) {
+        // Show "ready to claim" status
+        const readyEl = document.createElement('b');
+        readyEl.style.color = '#FFD700';
+        readyEl.setAttribute('aria-label', 'Quest reward ready to claim at Main Building');
+        readyEl.textContent = '🎁 Quest ready to claim at Main Building!';
+        questTracker.appendChild(readyEl);
+      }
+      
       questTracker.style.display = 'block';
     }
 
@@ -11556,6 +11596,9 @@
     }
     
     function showQuestPopup(title, message, buttonText = 'Continue', onClose = null) {
+      // Pause game when popup is shown
+      const wasGameActive = isGameActive && !isGameOver;
+      if (wasGameActive) setGamePaused(true);
       // Create popup overlay
       const overlay = document.createElement('div');
       overlay.id = 'quest-popup-overlay';
@@ -11605,6 +11648,7 @@
       
       const closeHandler = () => {
         document.body.removeChild(overlay);
+        if (wasGameActive) setGamePaused(false);
         if (onClose) onClose();
       };
       popup.querySelector('button.btn').onclick = closeHandler;
@@ -11616,6 +11660,9 @@
 
     // NEW: Comic-magazine styled info box (80s Batman style)
     function showComicInfoBox(title, message, buttonText = 'Continue', onClose = null) {
+      // Pause game when popup is shown
+      const wasGameActive = isGameActive && !isGameOver;
+      if (wasGameActive) setGamePaused(true);
       const overlay = document.createElement('div');
       overlay.id = 'comic-info-overlay';
       overlay.style.cssText = `
@@ -11685,6 +11732,7 @@
       
       const comicCloseHandler = () => {
         document.body.removeChild(overlay);
+        if (wasGameActive) setGamePaused(false);
         if (onClose) onClose();
       };
       popup.querySelector('button').onclick = comicCloseHandler;
@@ -11704,6 +11752,9 @@
 
     // NEW: Show Quest Hall UI for claiming completed quests
     function showQuestHall() {
+      // Pause game if active
+      const wasGameActive = isGameActive && !isGameOver;
+      if (wasGameActive) setGamePaused(true);
       // Clear quest notification for the main building
       if (!saveData.storyQuests.questNotifications) {
         saveData.storyQuests.questNotifications = {};
@@ -11896,6 +11947,7 @@
       // Shared close handler for quest hall
       const questHallClose = () => {
         document.body.removeChild(overlay);
+        if (wasGameActive) setGamePaused(false);
         updateCampScreen(); // Refresh camp to remove ! notification
       };
       
@@ -14204,7 +14256,27 @@
           () => { startCountdown(); }
         );
       } else {
-        startCountdown();
+        // Re-show current quest reminder if player died and has an active quest
+        const currentQuest = getCurrentQuest();
+        const lastShownQuest = saveData.tutorialQuests && saveData.tutorialQuests.lastShownQuestReminder;
+        if (currentQuest && currentQuest.id !== lastShownQuest && saveData.tutorialQuests.firstDeathShown) {
+          saveData.tutorialQuests.lastShownQuestReminder = currentQuest.id;
+          saveSaveData();
+          setGamePaused(true);
+          showComicInfoBox(
+            '📜 ACTIVE QUEST',
+            `<div style="text-align:left;line-height:1.8;font-size:15px;padding:4px 0">
+              <div style="font-size:18px;color:#FFD700;margin-bottom:10px;"><b>${currentQuest.name}</b></div>
+              <div style="margin-bottom:8px;">${currentQuest.description}</div>
+              <div style="color:#aaa;font-size:13px;"><b>Objective:</b> ${currentQuest.objectives}</div>
+              ${currentQuest.claim ? `<div style="color:#aaa;font-size:13px;margin-top:4px;"><b>Claim at:</b> ${currentQuest.claim}</div>` : ''}
+            </div>`,
+            'GOT IT! →',
+            () => { startCountdown(); }
+          );
+        } else {
+          startCountdown();
+        }
       }
     }
     window.startGame = startGame;
@@ -14595,6 +14667,14 @@
           showMainMenu();
         }
       };
+      
+      // Back to Buildings buttons inside each sub-section
+      document.querySelectorAll('.camp-section-back-btn').forEach(btn => {
+        btn.onclick = () => {
+          playSound('waterdrop');
+          document.getElementById('camp-buildings-tab').click();
+        };
+      });
       
       // Camp tab switching
       document.getElementById('camp-buildings-tab').onclick = () => {
