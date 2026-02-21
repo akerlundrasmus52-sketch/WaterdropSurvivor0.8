@@ -3001,21 +3001,15 @@
     </div>
   </div>
   
-  <!-- PR #117: Options Menu Modal -->
+  <!-- In-game pause menu (shown via ☰ during a run) -->
   <div id="options-menu">
     <div class="options-content">
-      <h2 class="options-title">OPTIONS</h2>
+      <h2 class="options-title">PAUSED</h2>
       <div class="options-buttons">
-        <button class="btn-small" id="options-stats-btn">STATS</button>
-        <button class="btn-small" id="options-progression-btn">PROGRESSION</button>
-        <button class="btn-small" id="options-attributes-btn">ATTRIBUTES</button>
-        <button class="btn-small" id="options-gear-btn">GEAR & EQUIPMENT</button>
-        <button class="btn-small" id="options-achievements-btn">ACHIEVEMENTS</button>
-        <button class="btn-small" id="options-settings-btn">⚙️ SETTINGS</button>
-        <button class="btn-small" id="options-credits-btn">CREDITS</button>
+        <button class="btn-small" id="close-options-btn">▶ RESUME</button>
         <button class="btn-small" id="options-camp-btn">⛺ GO TO CAMP</button>
-        <button class="btn-small" id="options-exit-btn">🚪 EXIT TO MENU</button>
-        <button class="btn-small" id="close-options-btn">CLOSE</button>
+        <button class="btn-small" id="options-settings-btn">⚙️ SETTINGS</button>
+        <button class="btn-small" id="options-exit-btn">🚪 QUIT TO MAIN MENU</button>
       </div>
     </div>
   </div>
@@ -14254,7 +14248,6 @@
       const menuBtn = document.getElementById('menu-btn');
       const optionsMenu = document.getElementById('options-menu');
       const closeOptionsBtn = document.getElementById('close-options-btn');
-      const optionsStatsBtn = document.getElementById('options-stats-btn');
       const optionsSettingsBtn = document.getElementById('options-settings-btn');
       const optionsCampBtn = document.getElementById('options-camp-btn');
       
@@ -14270,22 +14263,28 @@
         playSound('waterdrop');
       });
       
-      optionsStatsBtn.addEventListener('click', () => {
-        optionsMenu.style.display = 'none';
-        toggleStats();
-      });
-      
       optionsCampBtn.addEventListener('click', () => {
         optionsMenu.style.display = 'none';
+        // End the current run: save stats then go to camp
+        setGameOver(true);
+        setGameActive(false);
         setGamePaused(true);
+        stopDroneHum();
+        // Save run stats (same logic as gameOver but skip the game-over screen)
+        const survivalTime = Math.floor((Date.now() - gameStartTime) / 1000);
+        saveData.totalRuns++;
+        saveData.totalKills += playerStats.kills;
+        if (survivalTime > saveData.bestTime) saveData.bestTime = survivalTime;
+        if (playerStats.kills > saveData.bestKills) saveData.bestKills = playerStats.kills;
+        if (playerStats.kills > 0) addAccountXP(playerStats.kills);
+        // Tutorial: handle go_to_camp step transition
+        if (saveData.tutorial && saveData.tutorial.currentStep === 'go_to_camp' && !saveData.tutorial.campVisited) {
+          saveData.tutorial.campVisited = true;
+          saveData.tutorial.currentStep = 'unlock_dash';
+          setTimeout(() => { showComicTutorial('unlock_dash'); }, 500);
+        }
+        saveSaveData();
         updateCampScreen();
-        
-        // Ensure buildings section is visible
-        document.getElementById('camp-buildings-section').style.display = 'block';
-        document.getElementById('camp-skills-section').style.display = 'none';
-        document.getElementById('camp-training-section').style.display = 'none';
-        document.getElementById('camp-buildings-tab').style.background = '#5A3A31';
-        
         document.getElementById('camp-screen').style.display = 'flex';
         playSound('waterdrop');
       });
@@ -14307,64 +14306,6 @@
         // Open settings modal
         document.getElementById('settings-modal').style.display = 'flex';
       });
-      
-      // Options menu - Progression button
-      const optionsProgressionBtn = document.getElementById('options-progression-btn');
-      if (optionsProgressionBtn) {
-        optionsProgressionBtn.addEventListener('click', () => {
-          optionsMenu.style.display = 'none';
-          setGamePaused(true);
-          showProgressionShop();
-          playSound('waterdrop');
-        });
-      }
-      
-      // Options menu - Attributes button
-      const optionsAttributesBtn = document.getElementById('options-attributes-btn');
-      if (optionsAttributesBtn) {
-        optionsAttributesBtn.addEventListener('click', () => {
-          optionsMenu.style.display = 'none';
-          setGamePaused(true);
-          updateAttributesScreen();
-          document.getElementById('attributes-screen').style.display = 'flex';
-          playSound('waterdrop');
-        });
-      }
-      
-      // Options menu - Gear button
-      const optionsGearBtn = document.getElementById('options-gear-btn');
-      if (optionsGearBtn) {
-        optionsGearBtn.addEventListener('click', () => {
-          optionsMenu.style.display = 'none';
-          setGamePaused(true);
-          updateGearScreen();
-          document.getElementById('gear-screen').style.display = 'flex';
-          playSound('waterdrop');
-        });
-      }
-      
-      // Options menu - Achievements button
-      const optionsAchievementsBtn = document.getElementById('options-achievements-btn');
-      if (optionsAchievementsBtn) {
-        optionsAchievementsBtn.addEventListener('click', () => {
-          optionsMenu.style.display = 'none';
-          setGamePaused(true);
-          updateAchievementsScreen();
-          document.getElementById('achievements-screen').style.display = 'flex';
-          playSound('waterdrop');
-        });
-      }
-      
-      // Options menu - Credits button
-      const optionsCreditsBtn = document.getElementById('options-credits-btn');
-      if (optionsCreditsBtn) {
-        optionsCreditsBtn.addEventListener('click', () => {
-          optionsMenu.style.display = 'none';
-          setGamePaused(true);
-          document.getElementById('credits-screen').style.display = 'flex';
-          playSound('waterdrop');
-        });
-      }
       
       document.getElementById('settings-btn').onclick = () => {
         playSound('waterdrop');
