@@ -2825,8 +2825,8 @@
     <button id="stats-btn" class="btn-small" style="position: absolute; top: 20px; right: 20px; pointer-events: auto; z-index: 100;">STATS</button>
     <button id="settings-btn" class="btn-small" style="position: absolute; top: 20px; right: 120px; pointer-events: auto; z-index: 100;">⚙️</button>
     
-    <!-- Day/Night Cycle Clock - positioned top-right, below stats buttons -->
-    <div id="day-night-clock" style="position: absolute; top: 70px; right: 20px; pointer-events: none; z-index: 100;">
+    <!-- Day/Night Cycle Clock - centered at top, same horizontal alignment as waterdrop (center-top vs center-bottom) -->
+    <div id="day-night-clock" style="position: fixed; top: 20px; left: 50%; transform: translateX(-50%); pointer-events: none; z-index: 100;">
       <div style="background: radial-gradient(circle at 30% 30%, rgba(40,40,40,0.9), rgba(0,0,0,0.8)); 
                   border: 3px solid #FFD700; 
                   border-radius: 50% 50% 50% 0; /* WATERDROP SHAPE: teardrop with pointed bottom-right */
@@ -10814,10 +10814,10 @@
         claim: 'Main Building',
         rewardGold: 50,
         rewardSkillPoints: 0,
-        unlockBuilding: 'armory',
+        unlockBuildingOnActivation: 'armory', // Armory unlocks when THIS quest activates (so player can use it)
         giveItem: { id: 'cigar_quest', name: 'Cigar', type: 'ring', rarity: 'rare', stats: { attackSpeed: 1, movementSpeed: 1, attackPrecision: 1 }, description: '+1 Attack Speed, +1 Movement Speed, +1 Attack Precision' },
         autoEquip: true,
-        message: "🚬 Cigar auto-equipped!<br><br>This rare ring grants <b>+1 Attack Speed, +1 Movement Speed, +1 Attack Precision</b>.<br><br>The <b>Armory</b> is now unlocked. Your next challenge: <b>Upgrade an Attribute</b> in the Training Hall!",
+        message: "🚬 Cigar auto-equipped!<br><br>This rare ring grants <b>+1 Attack Speed, +1 Movement Speed, +1 Attack Precision</b>.",
         nextQuest: 'quest4_upgradeAttr',
         conditions: ['quest2_spendSkills']
       },
@@ -10830,8 +10830,8 @@
         rewardGold: 50,
         rewardSkillPoints: 0,
         rewardAttributePoints: 2,
-        unlockBuilding: 'trainingHall',
-        message: "💪 Attribute upgraded!<br><br>You earned <b>+2 free Attribute Points</b>!<br><br>The <b>Training Hall</b> is now unlocked. Next: <b>Complete a Training Session</b>!",
+        unlockBuildingOnActivation: 'trainingHall', // Training Hall unlocks when THIS quest activates
+        message: "💪 Attribute upgraded!<br><br>You earned <b>+2 free Attribute Points</b>!",
         nextQuest: 'quest5_trainingSession',
         conditions: ['quest3_stonehengeGear']
       },
@@ -10844,8 +10844,8 @@
         rewardGold: 50,
         rewardSkillPoints: 0,
         rewardAttributePoints: 1,
-        unlockBuilding: 'forge',
-        message: "🏋️ Training complete!<br><br>You earned <b>+1 free Training Point</b>!<br><br>The <b>Forge</b> is now unlocked. Prove your strength — <b>Kill 10 Enemies</b>!",
+        unlockBuildingOnActivation: 'forge', // Forge unlocks when THIS quest activates
+        message: "🏋️ Training complete!<br><br>You earned <b>+1 free Training Point</b>!",
         nextQuest: 'quest7_kill10',
         conditions: ['quest4_upgradeAttr']
       },
@@ -11129,7 +11129,7 @@
       // Award account XP for completing a quest (50 XP per quest)
       addAccountXP(50);
       
-      // Unlock building
+      // Unlock building on CLAIM (only for quests that use unlockBuilding, e.g. quest1 for SkillTree)
       if (quest.unlockBuilding && saveData.campBuildings[quest.unlockBuilding]) {
         saveData.campBuildings[quest.unlockBuilding].unlocked = true;
         if (saveData.campBuildings[quest.unlockBuilding].level === 0) {
@@ -11160,81 +11160,70 @@
         }
       }
       
-      // Save immediately after rewards
+      // --- AUTO-CHAIN: Activate next quest IMMEDIATELY (synchronous) ---
+      let nextQuestActivated = null;
+      if (quest.nextQuest && checkQuestConditions(quest.nextQuest)) {
+        saveData.tutorialQuests.currentQuest = quest.nextQuest;
+        if (quest.nextQuest === 'quest6_buyAttributes') {
+          saveData.tutorialQuests.quest6AttrCount = 0;
+        }
+        nextQuestActivated = TUTORIAL_QUESTS[quest.nextQuest] || null;
+        
+        // Unlock building on ACTIVATION for next quest (so player can complete it)
+        if (nextQuestActivated && nextQuestActivated.unlockBuildingOnActivation) {
+          const bld = nextQuestActivated.unlockBuildingOnActivation;
+          if (saveData.campBuildings[bld]) {
+            saveData.campBuildings[bld].unlocked = true;
+            if (saveData.campBuildings[bld].level === 0) { saveData.campBuildings[bld].level = 1; }
+            const bldName = CAMP_BUILDINGS[bld]?.name || 'Building';
+            showStatChange(`🏛️ ${bldName} Unlocked!`);
+          }
+        }
+      }
+      
+      // Save immediately after rewards and quest activation
       saveSaveData();
       
-      // Show reward message
-      const message = quest.message || `Quest Complete! ${quest.rewardGold ? `+${quest.rewardGold} gold` : ''} ${quest.rewardSkillPoints ? `+${quest.rewardSkillPoints} skill points` : ''}`;
+      // Build the combined popup message: reward info + new quest info
+      const claimMsg = quest.message || `Quest Complete! ${quest.rewardGold ? `+${quest.rewardGold} gold` : ''} ${quest.rewardSkillPoints ? `+${quest.rewardSkillPoints} skill points` : ''}`;
+      let combinedMessage = claimMsg;
+      if (nextQuestActivated) {
+        combinedMessage += `<br><br><hr style="border-color:#FFD700;opacity:0.4;margin:10px 0;"><br><span style="color:#FFD700;font-size:18px;font-family:'Bangers',cursive;letter-spacing:1px;">📜 NEW QUEST: ${nextQuestActivated.name}</span><br><span style="color:#ccc;font-size:14px;">${nextQuestActivated.description}</span><br><small style="color:#aaa;">Objective: ${nextQuestActivated.objectives}</small>`;
+      }
       
       if (!quest.autoClaim) {
-        showQuestPopup(
-          '✨ Quest Claimed!',
-          message,
+        // Show single combined popup (claim reward + new quest info)
+        showComicInfoBox(
+          '✨ Quest Complete!',
+          combinedMessage,
           'Continue',
           () => {
-            if (quest.nextQuest) {
-              // Check if conditions for next quest are met
-              if (checkQuestConditions(quest.nextQuest)) {
-                // Set currentQuest immediately (synchronous) so skill checks work without timing issues
-                saveData.tutorialQuests.currentQuest = quest.nextQuest;
-                // Reset quest6 attribute counter when quest6 starts
-                if (quest.nextQuest === 'quest6_buyAttributes') {
-                  saveData.tutorialQuests.quest6AttrCount = 0;
-                }
+            // Trigger Stonehenge cinematic after closing popup if next quest involves stonehenge
+            if (quest.nextQuest === 'quest3_stonehengeGear' && window.stonehengeChest) {
+              if (!saveData.tutorialQuests.stonehengeChestCinematicShown) {
+                triggerCinematic('stonehenge', window.stonehengeChest.position, 2000);
+                saveData.tutorialQuests.stonehengeChestCinematicShown = true;
                 saveSaveData();
-                // Delay only the popup display
-                setTimeout(() => {
-                  showNextQuestPopup(quest.nextQuest);
-                  // Trigger Stonehenge cinematic when quest3_stonehengeGear starts
-                  if (quest.nextQuest === 'quest3_stonehengeGear' && window.stonehengeChest) {
-                    setTimeout(() => {
-                      if (!saveData.tutorialQuests.stonehengeChestCinematicShown) {
-                        triggerCinematic('stonehenge', window.stonehengeChest.position, 2000);
-                        saveData.tutorialQuests.stonehengeChestCinematicShown = true;
-                        saveSaveData();
-                      }
-                    }, 500);
-                  }
-                }, 100);
-              } else {
-                const questName = TUTORIAL_QUESTS[quest.nextQuest]?.name || quest.nextQuest;
-                console.log(`Cannot start ${questName}: conditions not met`);
-                showStatChange(`⚠️ Prerequisites not met for ${questName}`);
               }
             }
             updateCampScreen();
           }
         );
       } else {
-        // Auto-claim: just advance with 100ms delay
-        setTimeout(() => {
-          if (quest.nextQuest) {
-            // Check if conditions for next quest are met
-            if (checkQuestConditions(quest.nextQuest)) {
-              saveData.tutorialQuests.currentQuest = quest.nextQuest;
-              // Reset quest6 attribute counter when quest6 starts
-              if (quest.nextQuest === 'quest6_buyAttributes') {
-                saveData.tutorialQuests.quest6AttrCount = 0;
+        // Auto-claim: show next quest popup if one was activated
+        if (nextQuestActivated) {
+          showNextQuestPopup(quest.nextQuest);
+          // Trigger Stonehenge cinematic when quest3_stonehengeGear starts
+          if (quest.nextQuest === 'quest3_stonehengeGear' && window.stonehengeChest) {
+            setTimeout(() => {
+              if (!saveData.tutorialQuests.stonehengeChestCinematicShown) {
+                triggerCinematic('stonehenge', window.stonehengeChest.position, 2000);
+                saveData.tutorialQuests.stonehengeChestCinematicShown = true;
+                saveSaveData();
               }
-              saveSaveData();
-              showNextQuestPopup(quest.nextQuest);
-              
-              // Trigger Stonehenge cinematic when quest 3 (stonehengeGear) or quest 6 (legacy) starts
-              if ((quest.nextQuest === 'quest3_stonehengeGear' || quest.nextQuest === 'quest6_stonehengeChest') && window.stonehengeChest) {
-                setTimeout(() => {
-                  if (!saveData.tutorialQuests.stonehengeChestCinematicShown) {
-                    triggerCinematic('stonehenge', window.stonehengeChest.position, 2000);
-                    saveData.tutorialQuests.stonehengeChestCinematicShown = true;
-                    saveSaveData();
-                  }
-                }, 500);
-              }
-            } else {
-              const questName = TUTORIAL_QUESTS[quest.nextQuest]?.name || quest.nextQuest;
-              console.log(`Cannot start ${questName}: conditions not met`);
-            }
+            }, 500);
           }
-        }, 100);
+        }
       }
     }
     
@@ -11249,7 +11238,7 @@
       const quest = TUTORIAL_QUESTS[questId];
       if (!quest) return;
       
-      showQuestPopup(
+      showComicInfoBox(
         `📜 ${quest.name}`,
         `${quest.description}<br><br><b>Objective:</b> ${quest.objectives}${quest.claim ? `<br><b>Claim:</b> ${quest.claim}` : ''}`,
         'Continue'
@@ -11360,7 +11349,7 @@
         if (dist < 20) {
           saveData.extendedQuests.legendaryCigar.started = true;
           saveSaveData();
-          showQuestPopup(
+          showComicInfoBox(
             '🚬 Quest: The Legendary Cigar',
             'You sense something powerful near Stonehenge...<br><br>Ancient legends speak of an <strong>Eternal Cigar</strong> hidden within these mystical stones. It\'s said to grant immense power to those worthy enough to find it!<br><br><b>Objective:</b> Search around Stonehenge for the legendary cigar',
             'I\'ll find it!'
@@ -11384,7 +11373,7 @@
           // Note: The bonus is applied this run only - stored in saveData for permanent tracking
           // On future runs, check saveData.extendedQuests.legendaryCigar.completed in resetGame
           
-          showQuestPopup(
+          showComicInfoBox(
             '🚬 Legendary Cigar Found!',
             '<strong>You\'ve discovered the Eternal Cigar!</strong><br><br>A surge of power flows through you. Your attacks feel stronger, your movements more precise.<br><br><b>Reward:</b> +50% Permanent Damage!<br><br>The cigar glows with an otherworldly light, forever enhancing your combat prowess.',
             'AMAZING!'
@@ -11606,7 +11595,7 @@
         left: 0;
         width: 100%;
         height: 100%;
-        background: rgba(0,0,0,0.9);
+        background: rgba(0,0,0,0.95);
         z-index: 150;
         display: flex;
         align-items: center;
@@ -11617,9 +11606,11 @@
       
       const panel = document.createElement('div');
       panel.style.cssText = `
-        background: linear-gradient(to bottom, #2a3a4a, #1a2a3a);
-        border: 3px solid #FFD700;
-        border-radius: 20px;
+        background: linear-gradient(135deg, #1e3a5f 0%, #0d1f3a 100%);
+        background-image: radial-gradient(circle at 3px 3px, rgba(255,215,0,0.08) 2px, transparent 2px);
+        background-size: 15px 15px;
+        border: 6px solid #FFD700;
+        border-radius: 10px;
         padding: 20px;
         max-width: 90vw;
         width: 90%;
@@ -11628,12 +11619,13 @@
         box-sizing: border-box;
         text-align: center;
         animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.1);
-        box-shadow: 0 0 30px rgba(255,215,0,0.5);
+        box-shadow: 0 0 40px rgba(255,215,0,0.6), inset 0 0 30px rgba(0,0,0,0.3);
+        font-family: 'Bangers', cursive;
       `;
       
       let content = `
-        <div style="font-size: 28px; color: #FFD700; font-weight: bold; margin-bottom: 20px;">📜 Main Building</div>
-        <div style="font-size: 16px; color: #AAA; margin-bottom: 30px;">Claim completed quests to unlock rewards and progress!</div>
+        <div style="font-size: 32px; color: #FFD700; font-weight: bold; margin-bottom: 20px; text-shadow: 3px 3px 0 #000, -1px -1px 0 #000; letter-spacing: 2px;">📜 MAIN BUILDING</div>
+        <div style="font-size: 16px; color: #AAA; margin-bottom: 30px; font-family: Arial, sans-serif;">Claim completed quests to unlock rewards and progress!</div>
       `;
       
       // Initialize tutorial quest arrays if they don't exist
@@ -11697,9 +11689,6 @@
         <button class="btn start-run-btn" style="margin-top: 20px; font-size: 18px; padding: 12px 35px; background: #27ae60; color: #FFF; margin-right: 10px;">
           ▶ Start New Run
         </button>
-        <button class="btn accept-quest-btn" style="margin-top: 20px; font-size: 16px; padding: 10px 28px; background: #e67e22; color: #FFF; margin-right: 10px;">
-          📋 Accept New Quest
-        </button>
         <button class="btn" style="margin-top: 20px; font-size: 16px; padding: 10px 30px; background: #888; color: #FFF;">
           Close
         </button>
@@ -11734,50 +11723,6 @@
         };
       }
 
-      // Accept New Quest button handler
-      const acceptQuestBtn = panel.querySelector('.accept-quest-btn');
-      if (acceptQuestBtn) {
-        acceptQuestBtn.onclick = () => {
-          // Find the next available quest that hasn't started yet
-          const allQuestIds = Object.keys(TUTORIAL_QUESTS);
-          const completedQuests = saveData.tutorialQuests.completedQuests || [];
-          const currentQuest = saveData.tutorialQuests.currentQuest;
-          let nextQuestId = null;
-          for (const qId of allQuestIds) {
-            if (!completedQuests.includes(qId) && qId !== currentQuest && checkQuestConditions(qId)) {
-              nextQuestId = qId;
-              break;
-            }
-          }
-          if (nextQuestId) {
-            document.body.removeChild(overlay);
-            saveData.tutorialQuests.currentQuest = nextQuestId;
-            saveSaveData();
-            const q = TUTORIAL_QUESTS[nextQuestId];
-            showComicInfoBox('📋 NEW QUEST',
-              `<div style="text-align:left;padding:10px;">
-                <p style="font-family:'Bangers',cursive;font-size:20px;margin-bottom:10px;">🎯 ${q.name}</p>
-                <p style="line-height:1.8;margin-bottom:10px;">${q.description}<br><br><b>Objective:</b> ${q.objectives}</p>
-                ${q.rewardGold ? `<p style="font-size:13px;color:#FFD700;">Reward: +${q.rewardGold} Gold${q.rewardSkillPoints ? ` · +${q.rewardSkillPoints} Skill Points` : ''}</p>` : ''}
-              </div>`,
-              'ACCEPT MISSION!'
-            );
-          } else if (currentQuest) {
-            document.body.removeChild(overlay);
-            const q = TUTORIAL_QUESTS[currentQuest];
-            showComicInfoBox('📋 ACTIVE QUEST',
-              `<div style="text-align:left;padding:10px;">
-                <p style="font-family:'Bangers',cursive;font-size:20px;margin-bottom:10px;">🎯 ${q ? q.name : currentQuest}</p>
-                <p style="line-height:1.8;">${q ? q.description : ''}<br><br><b>Objective:</b> ${q ? q.objectives : ''}</p>
-              </div>`,
-              'Continue'
-            );
-          } else {
-            showComicInfoBox('📋 NO QUESTS AVAILABLE', 'Complete your current objectives to unlock new quests!', 'OK');
-          }
-        };
-      }
-      
       // Shared close handler for quest hall
       const questHallClose = () => {
         document.body.removeChild(overlay);
@@ -18775,9 +18720,9 @@
           
           const activeQuestId = saveData.tutorialQuests.currentQuest;
           // Show item card popup
-          showQuestPopup(
+          showComicInfoBox(
             '🎁 Treasure Found!',
-            '<div style="text-align: center;"><div style="font-size: 48px; margin: 10px 0;">🚬</div><div style="color: #4169E1; font-size: 24px; font-weight: bold;">CIGAR</div><div style="color: #FFD700; font-size: 18px;">★★★ RARE ★★★</div><div style="margin: 15px 0; font-size: 16px;">+1 Attack Speed<br>+1 Movement Speed<br>+1 Attack Precision</div><div style="color: #4169E1;">Return to camp to claim your reward!</div></div>',
+            '<div style="text-align: center;"><div style="font-size: 48px; margin: 10px 0;">🚬</div><div style="color: #4169E1; font-size: 24px; font-weight: bold;">CIGAR</div><div style="color: #FFD700; font-size: 18px;">★★★ RARE ★★★</div><div style="margin: 15px 0; font-size: 16px; font-family: Arial, sans-serif;">+1 Attack Speed<br>+1 Movement Speed<br>+1 Attack Precision</div><div style="color: #4169E1; font-family: Arial, sans-serif;">Return to camp to claim your reward!</div></div>',
             'Collect!',
             () => {
               // Complete the active stonehenge chest quest
