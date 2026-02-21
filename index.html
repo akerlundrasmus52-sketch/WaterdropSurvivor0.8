@@ -119,7 +119,7 @@
         0 0 0 2px #FFD700,
         0 3px 8px rgba(0,0,0,0.5), 
         inset 0 2px 4px rgba(0,0,0,0.4), 
-        0 0 15px rgba(255,215,0,0.3);
+        0 0 5px rgba(255,215,0,0.1);
       /* Comic halftone pattern */
       background-image: 
         radial-gradient(circle at 3px 3px, rgba(255,215,0,0.05) 2px, transparent 2px);
@@ -149,7 +149,7 @@
         1px -1px 0 #000, 
         -1px 1px 0 #000, 
         1px 1px 0 #000,
-        0 0 5px rgba(255,215,0,0.5);
+        0 0 3px rgba(255,215,0,0.2);
       pointer-events: none;
       z-index: 1;
       letter-spacing: 1px;
@@ -176,7 +176,7 @@
         1px -1px 0 #000, 
         -1px 1px 0 #000, 
         1px 1px 0 #000,
-        0 0 5px rgba(255,215,0,0.5);
+        0 0 3px rgba(255,215,0,0.2);
       font-size: 14px;
       margin-top: 4px;
       letter-spacing: 1px;
@@ -2787,7 +2787,7 @@
       <div class="stat-text" id="status-message" style="color: #5DADE2; text-shadow: 0 0 8px rgba(93,173,226,0.8), 0 0 12px rgba(93,173,226,0.5), 1px 1px 2px rgba(0,0,0,0.5); font-size: 16px; min-height: 20px; margin-top: 5px;"></div>
       
       <!-- Active Quest Tracker (Camp Only) -->
-      <div class="stat-text" id="quest-tracker" style="display: none; color: #FFD700; text-shadow: 0 0 8px rgba(255,215,0,0.8), 1px 1px 2px rgba(0,0,0,0.8); font-size: 14px; margin-top: 5px; background: rgba(0,0,0,0.7); padding: 5px 10px; border-radius: 5px; border: 1px solid #FFD700;"></div>
+      <div class="stat-text" id="quest-tracker" style="display: none; color: #FFD700; text-shadow: 0 0 3px rgba(255,215,0,0.3), 1px 1px 2px rgba(0,0,0,0.8); font-size: 14px; margin-top: 5px; background: rgba(0,0,0,0.7); padding: 5px 10px; border-radius: 5px; border: 1px solid #FFD700;"></div>
       
       <!-- Quest Arrow Guidance (in-game) -->
       <div id="quest-arrow">❗➤</div>
@@ -12144,7 +12144,16 @@
             <div class="building-cost">${isLockedFree ? 'Unlock via Quest' : (isMaxLevel ? 'MAX LEVEL' : (building.isFree ? 'FREE' : `Cost: ${cost} gold`))}</div>
           `;
           
-          if (!isMaxLevel && !building.isFree && building.baseCost > 0) {
+          if (buildingId === 'skillTree') {
+            buildingCard.onclick = () => {
+              if (saveData.storyQuests.questNotifications) {
+                saveData.storyQuests.questNotifications.skillTree = false;
+                saveSaveData();
+              }
+              document.getElementById('camp-skills-tab').click();
+            };
+            buildingCard.style.cursor = 'pointer';
+          } else if (!isMaxLevel && !building.isFree && building.baseCost > 0) {
             buildingCard.onclick = () => upgradeCampBuilding(buildingId);
             if (!canAfford) {
               buildingCard.style.opacity = '0.6';
@@ -12189,6 +12198,14 @@
           
           buildingsContent.appendChild(buildingCard);
         }
+      }
+      
+      // Show/hide skill tree tab based on skillTree building unlock status
+      const skillTabEl = document.getElementById('camp-skills-tab');
+      if (skillTabEl) {
+        const skillBuildingData = saveData.campBuildings.skillTree;
+        const isSkillTreeUnlocked = skillBuildingData && (skillBuildingData.unlocked || skillBuildingData.level > 0);
+        skillTabEl.style.display = isSkillTreeUnlocked ? '' : 'none';
       }
       
       // Update skills section
