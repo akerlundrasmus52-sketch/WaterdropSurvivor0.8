@@ -14441,10 +14441,11 @@
       window.dirLight.castShadow = true;
       window.dirLight.shadow.mapSize.width = 2048;
       window.dirLight.shadow.mapSize.height = 2048;
-      window.dirLight.shadow.camera.left = -60;
-      window.dirLight.shadow.camera.right = 60;
-      window.dirLight.shadow.camera.top = 60;
-      window.dirLight.shadow.camera.bottom = -60;
+      window.dirLight.shadow.camera.left = -80;
+      window.dirLight.shadow.camera.right = 80;
+      window.dirLight.shadow.camera.top = 80;
+      window.dirLight.shadow.camera.bottom = -80;
+      window.dirLight.shadow.camera.updateProjectionMatrix(); // Apply frustum changes
       // Soft shadow settings for realistic effect
       window.dirLight.shadow.radius = 4; // Soft shadow blur
       window.dirLight.shadow.bias = -0.0001; // Prevent shadow acne
@@ -16581,7 +16582,7 @@
       
       // Quest 8: Force weapon choice when quest8_newWeapon is active (grant first new weapon)
       if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest8_newWeapon' &&
-          ![4, 8, 12, 16].includes(playerStats.lvl)) {
+          ![5, 8, 15, 20].includes(playerStats.lvl)) {
         modal.querySelector('h2').innerText = 'NEW WEAPON!';
         modal.querySelector('h2').style.fontSize = '36px';
         const allWeaponChoicesQ8 = [
@@ -16797,8 +16798,8 @@
           choices.push(...additionalUpgrades.slice(0, needed));
         }
       }
-      // WEAPON UNLOCK: Level 4, 8, 12, 16 for new weapon unlocks (4 weapons total per run)
-      else if ([4, 8, 12, 16].includes(playerStats.lvl)) {
+      // WEAPON UNLOCK: Level 5, 8, 15, 20 for new weapon unlocks (4 weapons total per run)
+      else if ([5, 8, 15, 20].includes(playerStats.lvl)) {
         modal.querySelector('h2').innerText = 'NEW WEAPON!';
         modal.querySelector('h2').style.fontSize = '36px';
         // Build list of all possible new weapons, filtering already-active ones
@@ -19721,10 +19722,18 @@
         }
 
         if (nearest) {
+          // Determine fire target: auto-aim targets nearest enemy, manual fires in player facing direction
+          const gunTarget = gameSettings.autoAim
+            ? nearest.mesh.position
+            : new THREE.Vector3(
+                player.mesh.position.x + Math.sin(player.mesh.rotation.y) * weapons.gun.range,
+                0,
+                player.mesh.position.z + Math.cos(player.mesh.rotation.y) * weapons.gun.range
+              );
           // Fire based on barrels
           for(let i=0; i<weapons.gun.barrels; i++) {
             setTimeout(() => {
-              projectiles.push(new Projectile(player.mesh.position.x, player.mesh.position.z, nearest.mesh.position));
+              projectiles.push(new Projectile(player.mesh.position.x, player.mesh.position.z, gunTarget));
               
               // Muzzle flash light effect - smaller radius to keep lightning contained to barrel area
               const isNight = dayNightCycle.timeOfDay < 0.2 || dayNightCycle.timeOfDay > 0.8;
