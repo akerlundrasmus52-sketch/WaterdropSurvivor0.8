@@ -3665,11 +3665,15 @@
     
     // Ground blood decals array (cleaned up on reset)
     let bloodDecals = [];
-    const MAX_BLOOD_DECALS = 50; // Cap for performance (req: max 50)
+    const MAX_BLOOD_DECALS = 80; // Cap for performance - increased for better gore
     
     // Blood drips array - updated in main game loop to avoid many individual RAF loops
     let bloodDrips = [];
-    const MAX_BLOOD_DRIPS = 30;
+    const MAX_BLOOD_DRIPS = 50;
+    
+    // Shared geometry for enemy bullet-hole decals (reused across all enemies for performance)
+    const bulletHoleGeo = new THREE.CircleGeometry(0.08, 6);
+    const bulletHoleMat = new THREE.MeshBasicMaterial({ color: 0x3A0000, transparent: true, opacity: 0.9, depthWrite: false, side: THREE.DoubleSide });
     
     let frameCount = 0;
     let isPaused = false;
@@ -4233,6 +4237,7 @@
         this.mesh = new THREE.Mesh(geometry, material);
         this.mesh.position.y = 0.5;
         this.mesh.castShadow = true;
+        this.mesh.receiveShadow = true;
         scene.add(this.mesh);
         
         // Add water shine effect (multiple layers)
@@ -5403,6 +5408,7 @@
         this.mesh = new THREE.Mesh(geometry, material);
         this.mesh.position.set(x, type === 5 ? 2 : 0.5, z);
         this.mesh.castShadow = true;
+        this.mesh.receiveShadow = true;
         scene.add(this.mesh);
 
         // Stats based on type - SCALED BY LEVEL (Rebalanced for better gameplay - reduced HP for more rewarding kills)
@@ -5464,6 +5470,25 @@
         this.lastAttackTime = 0;
         this.attackCooldown = 1000; // 1 second cooldown
         // Armor defaults to 0 if not set (only MiniBoss has armor = 0.25)
+        
+        // Add glowing eyes to enemy (VFX)
+        const eyeRadius = type === 10 ? 0.12 : 0.07;
+        const eyeColor = type === 4 ? 0xFF3300 : (type === 10 ? 0xFF0000 : 0xFF2222);
+        const eGeo = new THREE.SphereGeometry(eyeRadius, 6, 6);
+        const eMat = new THREE.MeshBasicMaterial({ color: eyeColor });
+        const eyeSpread = type === 10 ? 0.3 : 0.18;
+        const eyeForward = type === 5 ? 0.45 : 0.42;
+        this.leftEye = new THREE.Mesh(eGeo, eMat);
+        this.leftEye.position.set(-eyeSpread, 0.1, eyeForward);
+        this.mesh.add(this.leftEye);
+        this.rightEye = new THREE.Mesh(eGeo, eMat.clone()); // share geometry, clone material
+        this.rightEye.position.set(eyeSpread, 0.1, eyeForward);
+        this.mesh.add(this.rightEye);
+        // Blink timer
+        this.blinkTimer = 0;
+        this.blinkDuration = 0.08;
+        this.nextBlinkTime = 1.5 + Math.random() * 3.5;
+        this.isBlinking = false;
       }
 
       update(dt, playerPos) {
@@ -5503,6 +5528,7 @@
           
           // Add enemy avoidance to prevent stacking/trains (optimized)
           // Only check nearby enemies to avoid O(n²) performance issues
+          let avoidX = 0, avoidZ = 0;
           let avoidanceCount = 0;
           const maxAvoidanceChecks = 5; // Limit checks to nearest enemies
           for (let other of enemies) {
@@ -5513,16 +5539,25 @@
             
             // If too close to another enemy, push away
             if (odist < 1.5 && odist > 0.01) {
-              const repulsion = 0.02; // Gentle push
-              vx += (odx / odist) * repulsion;
-              vz += (odz / odist) * repulsion;
+              const repulsion = 0.015; // Gentle push (kept smaller than forward speed)
+              avoidX += (odx / odist) * repulsion;
+              avoidZ += (odz / odist) * repulsion;
               avoidanceCount++;
             }
           }
+          // Blend avoidance as secondary force - cap so it doesn't overpower forward movement
+          const avoidMag = Math.sqrt(avoidX*avoidX + avoidZ*avoidZ);
+          if (avoidMag > this.speed * 0.6) {
+            const scale = (this.speed * 0.6) / avoidMag;
+            avoidX *= scale;
+            avoidZ *= scale;
+          }
+          vx += avoidX;
+          vz += avoidZ;
           
           // Type 1 (Fast) - Zigzag perpendicular oscillation
           if (this.type === 1) {
-            const wobble = Math.sin(gameTime * 12 + this.wobbleOffset) * 0.08;
+            const wobble = Math.sin(gameTime * 12 + this.wobbleOffset) * 0.06;
             vx += wobble * (dz/dist); // Perpendicular oscillation
             vz -= wobble * (dx/dist);
           }
@@ -5530,7 +5565,7 @@
           // Type 2 (Balanced) - Slight weaving instead of circle strafe
           if (this.type === 2) {
             const weavePhase = gameTime * 4 + this.wobbleOffset;
-            const weave = Math.sin(weavePhase) * 0.05;
+            const weave = Math.sin(weavePhase) * 0.04;
             vx += weave * (-dz/dist);
             vz += weave * (dx/dist);
           }
@@ -5538,7 +5573,7 @@
           // Type 0 (Tank/Slow) - Weaving approach pattern
           if (this.type === 0) {
             const weavePhase = gameTime * 3 + this.wobbleOffset;
-            const weave = Math.sin(weavePhase) * 0.06;
+            const weave = Math.sin(weavePhase) * 0.04;
             vx += weave * (-dz/dist); // Weave side to side
             vz += weave * (dx/dist);
           }
@@ -5546,7 +5581,7 @@
           // Type 5 (Flying) - Wavy flying pattern
           if (this.type === 5) {
             const wavePhase = gameTime * 5 + this.wobbleOffset;
-            const wave = Math.sin(wavePhase) * 0.1;
+            const wave = Math.sin(wavePhase) * 0.08;
             vx += wave * (dz/dist);
             vz -= wave * (dx/dist);
             // Flying height with sin wave
@@ -5624,6 +5659,28 @@
            this.mesh.scale.set(1+squish*1.5, 1-squish*1.5, 1+squish*1.5);
         } else {
            this.mesh.scale.set(1-squish, 1+squish*1.5, 1-squish);
+        }
+        
+        // Blinking eyes animation
+        if (this.leftEye && this.rightEye) {
+          this.blinkTimer += dt;
+          if (this.blinkTimer >= this.nextBlinkTime) {
+            this.isBlinking = true;
+            this.blinkTimer = 0;
+            this.nextBlinkTime = 1.5 + Math.random() * 3.5;
+          }
+          if (this.isBlinking) {
+            const bp = Math.min(1, this.blinkTimer / this.blinkDuration);
+            const eyeScale = bp < 0.5 ? 1 - bp * 2 : (bp - 0.5) * 2;
+            this.leftEye.scale.y = Math.max(0.05, eyeScale);
+            this.rightEye.scale.y = Math.max(0.05, eyeScale);
+            if (bp >= 1) {
+              this.isBlinking = false;
+              this.blinkTimer = 0;
+              this.leftEye.scale.y = 1;
+              this.rightEye.scale.y = 1;
+            }
+          }
         }
       }
 
@@ -5704,6 +5761,45 @@
             scene.add(drip);
             bloodDrips.push({ mesh: drip, velY: 0, life: 25 + Math.floor(Math.random() * 15) });
           }
+        }
+        
+        // Bullet-hole decal that sticks to enemy surface (visible bloody wound)
+        if (!this.bulletHoles) this.bulletHoles = [];
+        const MAX_ENEMY_BULLET_HOLES = 8;
+        if (this.bulletHoles.length < MAX_ENEMY_BULLET_HOLES) {
+          // Reuse shared geometry; clone shared material for per-hole opacity control
+          const holeDecal = new THREE.Mesh(bulletHoleGeo, bulletHoleMat.clone());
+          // Place on enemy surface (random position on sphere surface)
+          const theta = Math.random() * Math.PI * 2;
+          const phi = Math.random() * Math.PI;
+          const nx = Math.sin(phi) * Math.cos(theta);
+          const ny = Math.sin(phi) * Math.sin(theta);
+          const nz = Math.cos(phi);
+          holeDecal.position.set(nx * 0.54, ny * 0.54, nz * 0.54);
+          // Face outward from center
+          holeDecal.lookAt(new THREE.Vector3(nx * 2, ny * 2, nz * 2));
+          this.mesh.add(holeDecal);
+          this.bulletHoles.push(holeDecal);
+        }
+        
+        // Airborne blood splatter - arcs up then falls under gravity (managed in main loop via bloodDrips)
+        const burstCount = isCrit ? 3 : 1;
+        for (let b = 0; b < burstCount && bloodDrips.length < MAX_BLOOD_DRIPS; b++) {
+          const p = new THREE.Mesh(
+            new THREE.SphereGeometry(0.04 + Math.random() * 0.04, 4, 4),
+            new THREE.MeshBasicMaterial({ color: 0xAA0000 })
+          );
+          p.position.set(
+            this.mesh.position.x + (Math.random() - 0.5) * 0.3,
+            this.mesh.position.y + 0.1,
+            this.mesh.position.z + (Math.random() - 0.5) * 0.3
+          );
+          scene.add(p);
+          bloodDrips.push({
+            mesh: p,
+            velY: 0.15 + Math.random() * 0.2, // initial upward burst
+            life: 30 + Math.floor(Math.random() * 15)
+          });
         }
         
         // Phase 3: Apply armor reduction for MiniBoss
@@ -5962,6 +6058,14 @@
         scene.remove(this.mesh);
         this.mesh.geometry.dispose();
         this.mesh.material.dispose();
+        // Dispose cloned bullet-hole materials to prevent memory leaks
+        if (this.bulletHoles) {
+          this.bulletHoles.forEach(h => h.material.dispose());
+          this.bulletHoles = [];
+        }
+        // Dispose eye geometry (shared) and materials
+        if (this.leftEye) { this.leftEye.material.dispose(); this.leftEye = null; }
+        if (this.rightEye) { this.rightEye.material.dispose(); this.rightEye = null; }
         
         // Drop EXP
         const expMultiplier = this.isMiniBoss ? 3 : 1;
@@ -6783,6 +6887,7 @@
         });
         this.mesh = new THREE.Mesh(geo, mat);
         this.mesh.castShadow = true;
+        this.mesh.receiveShadow = true;
         scene.add(this.mesh);
         
         // Position near player
@@ -14222,14 +14327,15 @@
       window.dirLight.castShadow = true;
       window.dirLight.shadow.mapSize.width = 2048;
       window.dirLight.shadow.mapSize.height = 2048;
-      window.dirLight.shadow.camera.left = -100;
-      window.dirLight.shadow.camera.right = 100;
-      window.dirLight.shadow.camera.top = 100;
-      window.dirLight.shadow.camera.bottom = -100;
+      window.dirLight.shadow.camera.left = -60;
+      window.dirLight.shadow.camera.right = 60;
+      window.dirLight.shadow.camera.top = 60;
+      window.dirLight.shadow.camera.bottom = -60;
       // Soft shadow settings for realistic effect
       window.dirLight.shadow.radius = 4; // Soft shadow blur
       window.dirLight.shadow.bias = -0.0001; // Prevent shadow acne
       scene.add(window.dirLight);
+      scene.add(window.dirLight.target); // Must add target to scene for custom target position
 
       // Apply graphics quality settings
       applyGraphicsQuality(gameSettings.graphicsQuality);
@@ -15057,8 +15163,8 @@
           type = 5;
         }
         
-        // Ranged enemies (type 4) - only 20% chance
-        if (type === 4 && Math.random() > 0.2) {
+        // Ranged enemies (type 4) - 30% chance at level 10+ for more variety
+        if (type === 4 && Math.random() > 0.3) {
           type = Math.floor(Math.random() * 3);
         }
         
@@ -18842,11 +18948,16 @@
       // Move sun position in an arc
       const sunAngle = (t - 0.25) * Math.PI * 2; // Offset so noon is at top
       // Keep sun at minimum height of 20 to stay above effective horizon
+      // Anchor light to player for correct shadow casting as player moves around the map
+      const shadowCenterX = (player && player.mesh) ? player.mesh.position.x : 0;
+      const shadowCenterZ = (player && player.mesh) ? player.mesh.position.z : 0;
       window.dirLight.position.set(
-        Math.cos(sunAngle) * 50,
+        shadowCenterX + Math.cos(sunAngle) * 50,
         Math.max(20, Math.sin(sunAngle) * 100), // Minimum 20 units above ground
-        Math.sin(sunAngle) * 50
+        shadowCenterZ + Math.sin(sunAngle) * 50
       );
+      window.dirLight.target.position.set(shadowCenterX, 0, shadowCenterZ);
+      window.dirLight.target.updateMatrixWorld();
     }
     
     function animate(time) {
