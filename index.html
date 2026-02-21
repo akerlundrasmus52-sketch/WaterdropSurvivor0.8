@@ -2609,6 +2609,33 @@
       }
     }
 
+    /* Stat Bar Panel */
+    #stat-bar-panel {
+      position: fixed;
+      bottom: 120px;
+      left: 10px;
+      width: 140px;
+      background: rgba(0,0,0,0.75);
+      border: 2px solid #FFD700;
+      border-radius: 8px;
+      padding: 6px 8px;
+      z-index: 15;
+      font-family: 'Bangers', cursive;
+      font-size: 11px;
+      color: #FFD700;
+      pointer-events: none;
+      display: none;
+    }
+    #stat-bar-panel .stat-row {
+      border-bottom: 1px solid rgba(255,215,0,0.3);
+      padding: 2px 0;
+      line-height: 1.3;
+    }
+    #stat-bar-panel .stat-row:last-child { border-bottom: none; }
+    #stat-bar-panel .stat-label { color: #aaa; font-size: 10px; }
+    #stat-bar-panel .stat-claimed { color: #4f4; font-size: 10px; animation: stat-fade 5s forwards; }
+    @keyframes stat-fade { 0%{opacity:1} 80%{opacity:1} 100%{opacity:0} }
+
   </style>
 </head>
 <body>
@@ -3773,6 +3800,7 @@
     
     let frameCount = 0;
     let isPaused = false;
+    let pauseOverlayCount = 0;
     let isGameOver = false;
     let isGameActive = false;  // Changed to false - start with menu
     let gameTime = 0;
@@ -3895,10 +3923,18 @@
     
     // Helper functions to keep window variables in sync (acceptance criteria #2)
     function setGamePaused(paused) {
-      isPaused = paused;
-      window.isPaused = paused;
+      if (paused) {
+        pauseOverlayCount++;
+      } else {
+        pauseOverlayCount = Math.max(0, pauseOverlayCount - 1);
+      }
+      const shouldPause = pauseOverlayCount > 0;
+      isPaused = shouldPause;
+      window.isPaused = shouldPause;
+      window.pauseOverlayCount = pauseOverlayCount;
     }
     window.setGamePaused = (paused) => setGamePaused(paused);
+    window.pauseOverlayCount = 0;
     
     function setGameActive(active) {
       isGameActive = active;
@@ -4775,22 +4811,33 @@
         
         const speedMag = this.velocity.length();
         
-        // Realistic water droplet physics with MORE PRONOUNCED wobble (Phase 1 enhancement)
-        // Wobble increases with speed
-        this.wobblePhase += dt * (12 + speedMag * 50); // Increased from 10 + speedMag * 40
-        const wobble = Math.sin(this.wobblePhase) * (0.10 + speedMag * 0.30); // Increased from 0.08 + speedMag * 0.25
-        
-        // Squish effect: stretch in direction of movement (MORE DRAMATIC for Phase 1)
-        const stretchX = 1 + Math.abs(this.velocity.x) * 3.0; // Increased from 2.5
-        const stretchZ = 1 + Math.abs(this.velocity.z) * 3.0; // Increased from 2.5
-        const squishY = 1 / Math.sqrt(stretchX * stretchZ);
-        
-        // Apply deformation with wobble (MORE PRONOUNCED for Phase 1)
-        this.mesh.scale.set(
-          stretchX * (1 + wobble * 0.6), // Increased from 0.5
-          squishY * (1 - wobble * 0.4), // Increased from 0.35
-          stretchZ * (1 + wobble * 0.6)  // Increased from 0.5
-        );
+        // Waterdrop physics: squish/bounce/wobble
+        const dt2 = Math.min(dt, 0.05);
+        let targetScaleY = 1.0;
+        let targetScaleXZ = 1.0;
+        if (speedMag > 0.05) {
+          const squishAmt = Math.min(speedMag * 0.04, 0.18);
+          targetScaleY = 1.0 - squishAmt;
+          targetScaleXZ = 1.0 + squishAmt * 0.7;
+          this.wobblePhase += dt2 * speedMag * 8;
+          targetScaleY += Math.sin(this.wobblePhase) * 0.03;
+        } else {
+          this.wobblePhase += dt2 * 2;
+          targetScaleY = 1.0 + Math.sin(this.wobblePhase) * 0.02;
+        }
+        if (this.isDashing) {
+          targetScaleY = 0.6;
+          targetScaleXZ = 1.4;
+        }
+        const scaleLerp = Math.min(dt2 * 12, 1);
+        this.mesh.scale.y = this.mesh.scale.y + (targetScaleY - this.mesh.scale.y) * scaleLerp;
+        this.mesh.scale.x = this.mesh.scale.x + (targetScaleXZ - this.mesh.scale.x) * scaleLerp;
+        this.mesh.scale.z = this.mesh.scale.z + (targetScaleXZ - this.mesh.scale.z) * scaleLerp;
+        // Shed water particles when moving fast
+        if (speedMag > 0.4 && Math.random() < dt2 * speedMag * 3 && !this.isDashing) {
+          const n = Math.floor(Math.random() * 2) + 1;
+          for (let i = 0; i < n; i++) spawnWaterParticle(this.mesh.position);
+        }
         
         // Animate water shine
         this.shine.rotation.y += 0.05;
@@ -5268,6 +5315,50 @@
     // Note: All Hard Tank enemies share the same deformed shape for performance.
     // This is intentional - visual variety comes from animations and positioning.
     let hardTankGeometryCache = null;
+
+    // Water particle pool for player physics effects
+    const waterParticlePool = [];
+    const MAX_WATER_PARTICLES = 20;
+    let waterParticleGeom = null;
+    let waterParticleMat = null;
+
+    function spawnWaterParticle(pos) {
+      if (!scene) return;
+      let p = waterParticlePool.find(x => !x.active);
+      if (!p) {
+        if (waterParticlePool.length >= MAX_WATER_PARTICLES) return;
+        if (!waterParticleGeom) waterParticleGeom = new THREE.SphereGeometry(0.12, 4, 4);
+        if (!waterParticleMat) waterParticleMat = new THREE.MeshBasicMaterial({ color: 0x44aabb, transparent: true, opacity: 0.7 });
+        const mesh = new THREE.Mesh(waterParticleGeom, waterParticleMat.clone());
+        p = { mesh, active: false, life: 0, vx: 0, vy: 0, vz: 0 };
+        scene.add(p.mesh);
+        waterParticlePool.push(p);
+      }
+      p.active = true;
+      p.life = 0.5;
+      p.mesh.position.set(pos.x + (Math.random()-0.5)*0.5, pos.y + Math.random()*0.5, pos.z + (Math.random()-0.5)*0.5);
+      p.mesh.scale.setScalar(1);
+      p.mesh.material.opacity = 0.7;
+      p.vx = (Math.random()-0.5)*4;
+      p.vy = Math.random()*3+1;
+      p.vz = (Math.random()-0.5)*4;
+      p.mesh.visible = true;
+    }
+
+    function updateWaterParticles(delta) {
+      for (const p of waterParticlePool) {
+        if (!p.active) continue;
+        p.life -= delta;
+        if (p.life <= 0) { p.active = false; p.mesh.visible = false; continue; }
+        p.mesh.position.x += p.vx * delta;
+        p.mesh.position.y += p.vy * delta;
+        p.mesh.position.z += p.vz * delta;
+        p.vy -= 9.8 * delta;
+        const lifeFrac = p.life / 0.5;
+        p.mesh.scale.setScalar(lifeFrac * 0.8);
+        p.mesh.material.opacity = lifeFrac * 0.7;
+      }
+    }
     function getHardTankGeometry() {
       if (!hardTankGeometryCache) {
         const geometry = new THREE.SphereGeometry(0.6, 8, 8);
@@ -6335,6 +6426,17 @@
         updateHUD();
         updateComboCounter(true); // Phase 2: Track combo on kill
         checkAchievements(); // Check for achievements after kill
+        // Kill 7 achievement check
+        if (playerStats.kills === 7 && (!saveData.achievementQuests || !saveData.achievementQuests.kill7Unlocked)) {
+          if (!saveData.achievementQuests) saveData.achievementQuests = { kill7Unlocked: false, kill7Quest: 'none' };
+          saveData.achievementQuests.kill7Unlocked = true;
+          saveData.achievementQuests.kill7Quest = 'active';
+          saveSaveData();
+          setGamePaused(true);
+          showEnhancedNotification('achievement', '🏆 ACHIEVEMENT UNLOCKED: Kill 7 Enemies!', 'Visit the Achievement Building in Camp to claim your reward!');
+          setTimeout(() => { setGamePaused(false); }, 3000);
+          updateStatBar();
+        }
       }
       
       // Specialized death effects by damage type
@@ -8686,6 +8788,7 @@
         maxWeapons: 0
       },
       achievements: [],
+      achievementQuests: { kill7Unlocked: false, kill7Quest: 'none' }, // 'none'|'active'|'complete'
       // Achievement-based attribute points
       attributes: {
         dexterity: 0,
@@ -8966,6 +9069,7 @@
 
     // --- ACHIEVEMENTS SYSTEM ---
     const ACHIEVEMENTS = {
+      kill7: { id: 'kill7', name: 'First Steps', desc: 'Kill 7 enemies', reward: 10, skillPoints: 0, attributePoints: 0, check: () => playerStats.kills >= 7, claimed: false },
       kills10: { id: 'kills10', name: 'First Blood', desc: 'Kill 10 enemies', reward: 25, skillPoints: 1, attributePoints: 1, check: () => playerStats.kills >= 10, claimed: false },
       kills50: { id: 'kills50', name: 'Killer Instinct', desc: 'Kill 50 enemies', reward: 50, skillPoints: 1, attributePoints: 1, check: () => playerStats.kills >= 50, claimed: false },
       kills100: { id: 'kills100', name: 'Century Slayer', desc: 'Kill 100 enemies', reward: 100, skillPoints: 2, attributePoints: 2, check: () => playerStats.kills >= 100, claimed: false },
@@ -9084,6 +9188,51 @@
         badge.remove();
       }
     }
+
+    function updateStatBar() {
+      const panel = document.getElementById('stat-bar-panel');
+      if (!panel || !isGameActive || isGameOver) { if (panel) panel.style.display = 'none'; return; }
+      panel.style.display = 'block';
+      const waveEl = document.getElementById('stat-bar-wave');
+      const killsEl = document.getElementById('stat-bar-kills');
+      const comboEl = document.getElementById('stat-bar-combo');
+      const questEl = document.getElementById('stat-bar-quest');
+      const achEl = document.getElementById('stat-bar-achievement');
+      if (waveEl) waveEl.textContent = 'Wave: ' + (waveCount || 0);
+      if (killsEl) killsEl.textContent = 'Kills: ' + (playerStats ? playerStats.kills : 0);
+      // Combo
+      const combo = window.currentCombo || 0;
+      if (comboEl) { if (combo > 1) { comboEl.textContent = '🔥 Combo x' + combo; comboEl.style.display = ''; } else { comboEl.style.display = 'none'; } }
+      // Active quest
+      if (questEl) {
+        let questText = '';
+        if (currentQuest) {
+          const kills = playerStats ? playerStats.kills : 0;
+          if (currentQuest.id === 'quest1_kill3') questText = 'Kill 3 Enemies: ' + Math.min(kills, 3) + '/3';
+          else if (currentQuest.id === 'quest4_kill10') questText = 'Kill 10: ' + Math.min(kills,10) + '/10';
+          else if (currentQuest.id === 'quest6_kill10') questText = 'Kill 10: ' + Math.min(kills,10) + '/10';
+          else if (currentQuest.id === 'quest7_kill10') questText = 'Kill 15: ' + Math.min(kills,15) + '/15';
+          else if (currentQuest.label) questText = currentQuest.label;
+          else questText = currentQuest.id || '';
+        }
+        // Check kill7 achievement quest
+        if (!questText && saveData.achievementQuests && saveData.achievementQuests.kill7Quest === 'active') {
+          questText = '🏆 Visit Achievement Building';
+        }
+        questEl.textContent = questText ? '📋 ' + questText : '';
+      }
+      // Achievement progress
+      if (achEl) {
+        const kills = playerStats ? playerStats.kills : 0;
+        if (!saveData.achievementQuests || !saveData.achievementQuests.kill7Unlocked) {
+          achEl.style.display = '';
+          achEl.textContent = '🏆 Kill 7: ' + Math.min(kills, 7) + '/7';
+        } else {
+          achEl.style.display = 'none';
+        }
+      }
+    }
+    window.updateStatBar = updateStatBar;
 
     function claimAchievement(achievementId) {
       const achievement = Object.values(ACHIEVEMENTS).find(a => a.id === achievementId);
@@ -14607,7 +14756,9 @@
             document.getElementById('story-quest-modal')?.style.display === 'flex' ||
             windmillQuest.dialogueOpen; // Pause during farmer dialogue
           if (!hasOpenOverlay) {
-            setGamePaused(false);
+            pauseOverlayCount = 0;
+            isPaused = false;
+            window.isPaused = false;
           }
         }
       }, 2000); // Check every 2 seconds
@@ -15756,8 +15907,11 @@
         waterdropContainer.classList.remove('grow');
       }, 300);
       
-      if (playerStats.exp >= playerStats.expReq) {
-        levelUp();
+      if (playerStats.exp >= playerStats.expReq && !isGameOver && isGameActive) {
+        const levelUpModal = document.getElementById('levelup-modal');
+        if (!levelUpModal || levelUpModal.style.display !== 'flex') {
+          levelUp();
+        }
       }
       updateHUD();
     }
@@ -18254,11 +18408,13 @@
       text.innerHTML = tutorialData.text;
       btn.textContent = tutorialData.button;
       
+      if (isGameActive && !isGameOver) setGamePaused(true);
       modal.style.display = 'flex';
       
       // Handle button click
       btn.onclick = () => {
         modal.style.display = 'none';
+        if (isGameActive && !isGameOver) setGamePaused(false);
         
         // Update tutorial state
         if (step === 'first_death') {
@@ -18395,6 +18551,18 @@
       setGameOver(true);
       setGamePaused(true);
       setGameActive(false);
+      // Close farmer speech bubble if open
+      const farmerBubble = document.getElementById('farmer-speech-bubble');
+      if (farmerBubble) farmerBubble.style.display = 'none';
+      // Close any open modals
+      ['levelup-modal','settings-modal','stats-modal','comic-tutorial-modal','story-quest-modal'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+      });
+      // Reset pause counter
+      pauseOverlayCount = 0;
+      isPaused = false;
+      window.isPaused = false;
       // Close farmer dialogue if open when game ends to prevent UI malfunction
       if (windmillQuest.dialogueOpen) {
         hideFarmerDialogue();
@@ -20285,6 +20453,8 @@
 
       // Entities Update
       enemies.forEach(e => e.update(dt, player.mesh.position));
+      updateWaterParticles(dt);
+      updateStatBar();
       
       // Phase 5: Update companion
       if (activeCompanion && !activeCompanion.isDead) {
@@ -20780,6 +20950,15 @@
     try { init(); } catch(e) { console.error('[Game Error]', e); console.error('[Game] Initialization failed - game cannot start'); }
 
   </script>
+  <!-- Stat Bar Panel -->
+  <div id="stat-bar-panel">
+    <div id="stat-bar-wave" class="stat-row"></div>
+    <div id="stat-bar-kills" class="stat-row"></div>
+    <div id="stat-bar-combo" class="stat-row" style="display:none"></div>
+    <div id="stat-bar-quest" class="stat-row"></div>
+    <div id="stat-bar-achievement" class="stat-row" style="display:none"></div>
+    <div id="stat-bar-claimed" class="stat-label stat-claimed" style="display:none"></div>
+  </div>
   <!-- Farmer NPC Speech Bubble (comic-style, paged) -->
   <div id="farmer-speech-bubble" role="dialog" aria-label="Farmer dialogue">
     <div id="farmer-speech-bubble-text"></div>
