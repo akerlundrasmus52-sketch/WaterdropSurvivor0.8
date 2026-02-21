@@ -2634,10 +2634,10 @@
     <!-- Camp Tabs -->
     <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
       <button class="btn" id="camp-buildings-tab" style="padding: 10px 20px; font-size: 16px; background: #5A3A31;">BUILDINGS</button>
-      <button class="btn" id="camp-skills-tab" style="padding: 10px 20px; font-size: 16px; background: #3a3a3a;">SKILL TREE</button>
-      <button class="btn" id="camp-passive-tab" style="padding: 10px 20px; font-size: 16px; background: #3a3a3a;">⚗️ PASSIVES</button>
-      <button class="btn" id="camp-sleep-tab" style="padding: 10px 20px; font-size: 16px; background: #3a3a3a;" aria-label="Sleep">💤 SLEEP</button>
-      <button class="btn" id="camp-training-tab" style="padding: 10px 20px; font-size: 16px; background: #3a3a3a;" aria-label="Training">🏋️ TRAINING</button>
+      <button class="btn" id="camp-skills-tab" style="padding: 10px 20px; font-size: 16px; background: #3a3a3a; display:none;">SKILL TREE</button>
+      <button class="btn" id="camp-passive-tab" style="padding: 10px 20px; font-size: 16px; background: #3a3a3a; display:none;">⚗️ PASSIVES</button>
+      <button class="btn" id="camp-sleep-tab" style="padding: 10px 20px; font-size: 16px; background: #3a3a3a; display:none;" aria-label="Sleep">💤 SLEEP</button>
+      <button class="btn" id="camp-training-tab" style="padding: 10px 20px; font-size: 16px; background: #3a3a3a; display:none;" aria-label="Training">🏋️ TRAINING</button>
     </div>
 
     <!-- Buildings Section -->
@@ -2972,18 +2972,18 @@
   <!-- PR #117: Options Menu Modal -->
   <div id="options-menu">
     <div class="options-content">
-      <h2 class="options-title">OPTIONS</h2>
+      <h2 class="options-title">PAUSED</h2>
       <div class="options-buttons">
-        <button class="btn-small" id="options-stats-btn">STATS</button>
-        <button class="btn-small" id="options-progression-btn">PROGRESSION</button>
-        <button class="btn-small" id="options-attributes-btn">ATTRIBUTES</button>
-        <button class="btn-small" id="options-gear-btn">GEAR & EQUIPMENT</button>
-        <button class="btn-small" id="options-achievements-btn">ACHIEVEMENTS</button>
+        <button class="btn-small" id="options-stats-btn" style="display:none">STATS</button>
+        <button class="btn-small" id="options-progression-btn" style="display:none">PROGRESSION</button>
+        <button class="btn-small" id="options-attributes-btn" style="display:none">ATTRIBUTES</button>
+        <button class="btn-small" id="options-gear-btn" style="display:none">GEAR & EQUIPMENT</button>
+        <button class="btn-small" id="options-achievements-btn" style="display:none">ACHIEVEMENTS</button>
         <button class="btn-small" id="options-settings-btn">⚙️ SETTINGS</button>
-        <button class="btn-small" id="options-credits-btn">CREDITS</button>
+        <button class="btn-small" id="options-credits-btn" style="display:none">CREDITS</button>
         <button class="btn-small" id="options-camp-btn">⛺ GO TO CAMP</button>
         <button class="btn-small" id="options-exit-btn">🚪 EXIT TO MENU</button>
-        <button class="btn-small" id="close-options-btn">CLOSE</button>
+        <button class="btn-small" id="close-options-btn">▶ RESUME</button>
       </div>
     </div>
   </div>
@@ -4149,6 +4149,13 @@
     // Dash mechanics
     let dashCooldown = 1000; // Base cooldown in ms (1 second)
     let dashDistance = 2.5; // Base dash distance multiplier
+
+    // New dash state variables (Feature 1)
+    let isDashing = false;
+    let dashCooldownRemaining = 0;
+    let dashTimer = 0;
+    let dashDirection = { x: 0, z: 0 };
+    let dashInvulnerable = false;
 
     // Upgrade Config
     const UPGRADES = {
@@ -6996,7 +7003,7 @@
             const isCrit = Math.random() < playerStats.critChance;
             const isDoubleCrit = isCrit && Math.random() < playerStats.critChance; // Second crit check
             
-            if (isDoubleCrit) {
+            if (isDoubleCrit && playerStats.headshotUnlocked) {
               // HEADSHOT! Instant kill
               enemy.hp = 0;
               
@@ -8493,7 +8500,11 @@
         manaOverflow: { unlocked: false, level: 0, maxLevel: 3 },
         spellEcho: { unlocked: false, level: 0, maxLevel: 3 },
         arcaneEmpowerment: { unlocked: false, level: 0, maxLevel: 5 },
-        elementalOverload: { unlocked: false, level: 0, maxLevel: 3 }
+        elementalOverload: { unlocked: false, level: 0, maxLevel: 3 },
+        
+        // NEW SKILLS (Feature 1)
+        dash: { unlocked: false, level: 0, maxLevel: 5 },
+        headshot: { unlocked: false, level: 0, maxLevel: 5 }
       },
       skillPoints: 0, // Start with 0 skill points - earn through quests
       // Account Level System - Persistent across all runs
@@ -9917,6 +9928,30 @@
           critDamage: 0.15 * level
         })
       },
+      dash: {
+        id: 'dash',
+        name: 'Dash',
+        path: 'utility',
+        requires: null,
+        maxLevel: 5,
+        cost: 1,
+        description: 'Quick dodge in movement direction',
+        bonus: (level) => ({
+          dashCooldown: 0.2 * level
+        })
+      },
+      headshot: {
+        id: 'headshot',
+        name: 'Headshot',
+        path: 'combat',
+        requires: null,
+        maxLevel: 5,
+        cost: 1,
+        description: 'Double-crit = instant kill',
+        bonus: (level) => ({
+          critChance: 0.05 * level
+        })
+      },
       
       // COMBAT PATH (12 skills) - Unlocked after initial skills
       combatMastery: {
@@ -10408,6 +10443,36 @@
         })
       }
     };
+
+    function isDashUnlocked() {
+      return (saveData.skillTree && saveData.skillTree.dash && saveData.skillTree.dash.level > 0) ||
+             (saveData.tutorial && saveData.tutorial.dashUnlocked) ||
+             (saveData.skillTree && saveData.skillTree.dashMaster && saveData.skillTree.dashMaster.level > 0);
+    }
+    function isHeadshotUnlocked() {
+      return (saveData.skillTree && saveData.skillTree.headshot && saveData.skillTree.headshot.level > 0) ||
+             (saveData.tutorial && saveData.tutorial.headshotUnlocked) ||
+             (saveData.skillTree && saveData.skillTree.criticalFocus && saveData.skillTree.criticalFocus.level > 0) ||
+             (saveData.skillTree && saveData.skillTree.executioner && saveData.skillTree.executioner.level > 0);
+    }
+
+    function startDash() {
+      if (!isDashUnlocked() || isDashing || dashCooldownRemaining > 0) return;
+      if (!player) return;
+      isDashing = true;
+      dashTimer = 0.2;
+      dashInvulnerable = true;
+      const keysP = window._keysPressed || {};
+      const dx = (keysP['d'] || keysP['arrowright'] ? 1 : 0) - (keysP['a'] || keysP['arrowleft'] ? 1 : 0);
+      const dz = (keysP['s'] || keysP['arrowdown'] ? 1 : 0) - (keysP['w'] || keysP['arrowup'] ? 1 : 0);
+      const len = Math.sqrt(dx*dx + dz*dz);
+      dashDirection.x = len > 0 ? dx/len : 0;
+      dashDirection.z = len > 0 ? dz/len : 1;
+      const dashLevel = (saveData.skillTree && saveData.skillTree.dash) ? (saveData.skillTree.dash.level || 0) : 0;
+      dashCooldownRemaining = Math.max(1.5, 3 - 0.2 * dashLevel);
+      // Delegate actual movement to existing player.dash()
+      player.dash(dashDirection.x, dashDirection.z);
+    }
 
     function getBuildingCost(buildingId) {
       const building = CAMP_BUILDINGS[buildingId];
@@ -10977,7 +11042,90 @@
         message: 'Tutorial Complete! You\'re ready to survive!',
         nextQuest: null, // Tutorial complete
         conditions: ['quest7_survive2min'] // Requires quest7_survive2min to be claimed
+      },
+      quest3_reachLevel5: {
+        id: 'quest3_reachLevel5',
+        title: 'Reach Level 5',
+        description: 'Reach level 5 or higher in a single run',
+        objective: 'Reach level 5+',
+        reward: { gold: 250 },
+        nextQuest: 'quest4_craftWeapon',
+        unlocksBuilding: 'forge'
+      },
+      quest4_craftWeapon: {
+        id: 'quest4_craftWeapon',
+        title: 'Craft a Weapon',
+        description: 'Craft a weapon at the Forge',
+        objective: 'Craft a weapon at the Forge',
+        reward: { gold: 150 },
+        nextQuest: 'quest5_equipGear',
+        unlocksBuilding: 'armory'
+      },
+      quest5_equipGear: {
+        id: 'quest5_equipGear',
+        title: 'Equip Gear',
+        description: 'Equip a piece of gear',
+        objective: 'Equip a piece of gear',
+        reward: { gold: 200 },
+        nextQuest: 'quest6_trainAttribute',
+        unlocksBuilding: 'trainingHall'
+      },
+      quest6_trainAttribute: {
+        id: 'quest6_trainAttribute',
+        title: 'Train an Attribute',
+        description: 'Train any attribute',
+        objective: 'Train any attribute',
+        reward: { gold: 150 },
+        nextQuest: 'quest7_activateCompanion',
+        unlocksBuilding: 'companionHouse'
+      },
+      quest7_activateCompanion: {
+        id: 'quest7_activateCompanion',
+        title: 'Activate a Companion',
+        description: 'Activate a companion',
+        objective: 'Activate a companion',
+        reward: { gold: 200, egg: 1 },
+        nextQuest: 'quest8_scrapGear',
+        unlocksBuilding: 'trashRecycle'
+      },
+      quest8_scrapGear: {
+        id: 'quest8_scrapGear',
+        title: 'Scrap Gear',
+        description: 'Scrap a piece of gear',
+        objective: 'Scrap a piece of gear',
+        reward: { gold: 200 },
+        nextQuest: 'quest9_buyTempItem',
+        unlocksBuilding: 'tempShop'
+      },
+      quest9_buyTempItem: {
+        id: 'quest9_buyTempItem',
+        title: 'Buy from Temp Shop',
+        description: 'Buy an item from the Temp Shop',
+        objective: 'Buy from Temp Shop',
+        reward: { gold: 300 },
+        nextQuest: 'quest10_visitAll',
+        unlocksBuilding: 'inventoryStorage'
+      },
+      quest10_visitAll: {
+        id: 'quest10_visitAll',
+        title: 'Visit Every Building',
+        description: 'Visit every building in the camp',
+        objective: 'Visit every building',
+        reward: { gold: 500, skillPoints: 3 },
+        nextQuest: null,
+        unlocksBuilding: 'campHub'
       }
+    };
+
+    const buildingQuestUnlockMap = {
+      'forge': 'quest3_reachLevel5',
+      'armory': 'quest4_craftWeapon',
+      'trainingHall': 'quest5_equipGear',
+      'companionHouse': 'quest6_trainAttribute',
+      'trashRecycle': 'quest7_activateCompanion',
+      'tempShop': 'quest8_scrapGear',
+      'inventoryStorage': 'quest9_buyTempItem',
+      'campHub': 'quest10_visitAll'
     };
     
     // Get current quest object
@@ -14171,8 +14319,13 @@
       });
       
       optionsCampBtn.addEventListener('click', () => {
+        setGameOver(true);
+        setGameActive(false);
+        stopDroneHum();
+        saveData.totalRuns++;
+        saveData.totalKills += playerStats.kills;
+        saveSaveData();
         optionsMenu.style.display = 'none';
-        setGamePaused(true);
         updateCampScreen();
         
         // Ensure buildings tab is selected (not sleep/day-night selection)
@@ -17518,6 +17671,13 @@
         }
       }
       
+      // Quest 3 (new chain): Reach Level 5
+      if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest3_reachLevel5' && playerStats.lvl >= 5) {
+        if (!saveData.tutorialQuests.readyToClaim.includes('quest3_reachLevel5')) {
+          saveData.tutorialQuests.readyToClaim.push('quest3_reachLevel5');
+        }
+      }
+      
       // Mark second run completed (for achievements unlock)
       if (saveData.totalRuns >= 2) {
         saveData.tutorialQuests.secondRunCompleted = true;
@@ -17527,6 +17687,11 @@
       
       // Display game over screen
       document.getElementById('gameover-screen').style.display = 'flex';
+      // On first run, only show "Go to Camp" button; restore all buttons on subsequent runs
+      const isFirstRun = saveData.totalRuns === 1;
+      document.getElementById('restart-btn').style.display = isFirstRun ? 'none' : '';
+      document.getElementById('quit-to-menu-btn').style.display = isFirstRun ? 'none' : '';
+      document.getElementById('goto-camp-btn').style.display = '';
       document.getElementById('final-score').innerText = `⏱️ Survived: ${survivalTime}s`;
       document.getElementById('final-kills').innerText = `⚔️ Kills: ${playerStats.kills}`;
       document.getElementById('final-level').innerText = `📊 Final Level: ${playerStats.lvl}`;
@@ -17701,6 +17866,8 @@
       playerStats.dashesPerformed = 0;
       playerStats.damageTaken = 0;
       playerStats.weaponsUnlocked = 0;
+      // Cache headshot unlock status for this run
+      playerStats.headshotUnlocked = isHeadshotUnlocked();
       
       windmillQuest = { active: false, timer: 0, duration: 15, windmill: null, hasCompleted: false };
       document.getElementById('windmill-quest-ui').style.display = 'none';
@@ -18160,7 +18327,8 @@
       // Keyboard Controls (WASD for movement, mouse for aiming) - only register once
       if (!gameSettings.inputListenersRegistered) {
         const keysPressed = {};
-        gameSettings.keysPressed = keysPressed; // Store reference for game loop access
+        gameSettings.keysPressed = keysPressed;
+        window._keysPressed = keysPressed; // Expose for startDash()
         
         window.addEventListener('keydown', (e) => {
           if (!isGameActive || isPaused || isGameOver) return;
@@ -18181,6 +18349,11 @@
               const dashDz = dy / dist;
               player.dash(dashDx, dashDz);
             }
+          }
+          // Space bar for dash via new isDashUnlocked() system
+          if (e.code === 'Space' && isDashUnlocked() && !isDashing && dashCooldownRemaining <= 0) {
+            e.preventDefault(); // Prevent default scroll behavior
+            startDash();
           }
         });
         
@@ -18635,6 +18808,19 @@
         camera.position.z = prevCamZ;
       } else {
         player.update(dt);
+      }
+
+      // Dash cooldown tick (Feature 1)
+      if (isDashing) {
+        dashTimer -= dt;
+        if (dashTimer <= 0) {
+          isDashing = false;
+          dashInvulnerable = false;
+        }
+      }
+      if (dashCooldownRemaining > 0) {
+        dashCooldownRemaining -= dt;
+        if (dashCooldownRemaining < 0) dashCooldownRemaining = 0;
       }
       
       // Lake Physics - Check if player is in water
