@@ -10897,9 +10897,8 @@
         rewardSkillPoints: 1,
         unlockBuildingOnActivation: 'armory', // Armory unlocks when THIS quest activates (so player can use it)
         giveItem: { id: 'cigar_quest', name: 'Cigar', type: 'ring', rarity: 'rare', stats: { attackSpeed: 1, movementSpeed: 1, attackPrecision: 1 }, description: '+1 Attack Speed, +1 Movement Speed, +1 Attack Precision' },
-        autoEquip: true,
-        message: "🚬 Cigar auto-equipped!<br><br>This rare ring grants <b>+1 Attack Speed, +1 Movement Speed, +1 Attack Precision</b>.",
-        nextQuest: 'quest4_upgradeAttr',
+        message: "🚬 Cigar acquired!<br><br>This rare ring grants <b>+1 Attack Speed, +1 Movement Speed, +1 Attack Precision</b>.<br><br>Head to the <b>Armory</b> and equip the Cigar from your inventory!",
+        nextQuest: 'quest4_equipCigar',
         conditions: ['quest2_spendSkills']
       },
       quest4_upgradeAttr: {
@@ -10914,7 +10913,7 @@
         unlockBuildingOnActivation: 'trainingHall', // Training Hall unlocks when THIS quest activates
         message: "💪 Attribute upgraded!<br><br>You earned <b>+2 free Attribute Points</b> and <b>+1 Skill Point</b>!",
         nextQuest: 'quest5_trainingSession',
-        conditions: ['quest3_stonehengeGear']
+        conditions: ['quest4_equipCigar']
       },
       quest5_trainingSession: {
         id: 'quest5_trainingSession',
@@ -10938,8 +10937,9 @@
         claim: 'Main Building',
         rewardGold: 100,
         rewardSkillPoints: 1,
-        message: "Cigar equipped! 🚬<br><br>Feel that power — +1 to all stats!<br><br>Your next mission: <b>Kill 10 Enemies</b> in a single run!",
-        nextQuest: 'quest7_kill10',
+        rewardAttributePoints: 1,
+        message: "Cigar equipped! 🚬<br><br>Feel that power — +1 to all stats!<br><br>You've unlocked the <b>Training Hall</b> — spend your training point to upgrade an attribute!",
+        nextQuest: 'quest4_upgradeAttr',
         conditions: ['quest3_stonehengeGear']
       },
       quest5_doRun: {
