@@ -2102,6 +2102,73 @@
       font-weight: bold;
     }
 
+    /* Skill Tree - Branching Tree Layout */
+    .skill-tree-wrapper {
+      position: relative;
+      overflow: auto;
+      width: 100%;
+      max-height: 70vh;
+      background: rgba(0,0,0,0.3);
+      border-radius: 10px;
+    }
+    .skill-tree-canvas {
+      position: relative;
+      min-width: 700px;
+    }
+    .skill-tree-svg {
+      position: absolute;
+      top: 0; left: 0;
+      pointer-events: none;
+      z-index: 1;
+    }
+    .skill-node-tree {
+      position: absolute;
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      border: 3px solid #666;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      font-size: 10px;
+      cursor: pointer;
+      z-index: 2;
+      transition: all 0.2s;
+      background: linear-gradient(135deg, #2a2a3e, #1a1a2e);
+      padding: 4px;
+      box-sizing: border-box;
+    }
+    .skill-node-tree.path-root {
+      width: 90px; height: 90px;
+      font-size: 11px;
+      border-width: 4px;
+    }
+    .skill-node-tree.path-combat { border-color: #e74c3c; }
+    .skill-node-tree.path-combat.skill-node-unlocked { box-shadow: 0 0 15px rgba(231,76,60,0.7); background: linear-gradient(135deg, #3e1a1a, #2e0a0a); }
+    .skill-node-tree.path-defense { border-color: #3498db; }
+    .skill-node-tree.path-defense.skill-node-unlocked { box-shadow: 0 0 15px rgba(52,152,219,0.7); background: linear-gradient(135deg, #1a2a3e, #0a1a2e); }
+    .skill-node-tree.path-utility { border-color: #2ecc71; }
+    .skill-node-tree.path-utility.skill-node-unlocked { box-shadow: 0 0 15px rgba(46,204,113,0.7); background: linear-gradient(135deg, #1a3e2a, #0a2e1a); }
+    .skill-node-tree.path-elemental { border-color: #9b59b6; }
+    .skill-node-tree.path-elemental.skill-node-unlocked { box-shadow: 0 0 15px rgba(155,89,182,0.7); background: linear-gradient(135deg, #2a1a3e, #1a0a2e); }
+    .skill-node-tree.path-root { border-color: #FFD700; }
+    .skill-node-tree.path-root.skill-node-unlocked { box-shadow: 0 0 20px rgba(255,215,0,0.8); background: linear-gradient(135deg, #3e3000, #2e2000); }
+    .skill-node-tree.skill-node-locked { opacity: 0.4; cursor: not-allowed; filter: grayscale(0.8); }
+    .skill-node-tree.skill-node-available { animation: skillPulse 2s infinite; }
+    @keyframes skillPulse {
+      0%, 100% { box-shadow: 0 0 8px rgba(255,215,0,0.5); }
+      50% { box-shadow: 0 0 20px rgba(255,215,0,1), 0 0 30px rgba(255,215,0,0.5); }
+    }
+    .skill-node-tree.skill-node-maxed { border-style: double; border-width: 5px; }
+    .skill-connector { stroke-width: 3; opacity: 0.6; }
+    .skill-connector-combat { stroke: #e74c3c; }
+    .skill-connector-defense { stroke: #3498db; }
+    .skill-connector-utility { stroke: #2ecc71; }
+    .skill-connector-elemental { stroke: #9b59b6; }
+    .skill-connector-root { stroke: #FFD700; }
+
     /* Credits Right Align */
     #credits-screen .screen-content {
       text-align: right;
@@ -2631,13 +2698,9 @@
       <div id="account-level-progress-text" style="font-size:10px;color:#aaa;">0 / 100 XP</div>
     </div>
     
-    <!-- Camp Tabs -->
+    <!-- Camp Tabs - Only Buildings tab remains; other panels open as modals via buildings -->
     <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
       <button class="btn" id="camp-buildings-tab" style="padding: 10px 20px; font-size: 16px; background: #5A3A31;">BUILDINGS</button>
-      <button class="btn" id="camp-skills-tab" style="padding: 10px 20px; font-size: 16px; background: #3a3a3a;">SKILL TREE</button>
-      <button class="btn" id="camp-passive-tab" style="padding: 10px 20px; font-size: 16px; background: #3a3a3a;">⚗️ PASSIVES</button>
-      <button class="btn" id="camp-sleep-tab" style="padding: 10px 20px; font-size: 16px; background: #3a3a3a;" aria-label="Sleep">💤 SLEEP</button>
-      <button class="btn" id="camp-training-tab" style="padding: 10px 20px; font-size: 16px; background: #3a3a3a;" aria-label="Training">🏋️ TRAINING</button>
     </div>
 
     <!-- Buildings Section -->
@@ -2648,74 +2711,43 @@
       </div>
     </div>
 
-    <!-- Skills Section -->
-    <div id="camp-skills-section" style="display: none; width: 100%; max-width: 900px;">
-      <div style="color: #FFD700; font-size: 20px; margin-bottom: 15px;">Skill Tree</div>
-      <div style="color: #5DADE2; font-size: 16px; margin-bottom: 15px;" id="skill-points-display">
-        Skill Points Available: 0
-      </div>
-      <div class="skill-tree-container" id="camp-skills-content">
-        <!-- Dynamically populated -->
-      </div>
-    </div>
-
-    <!-- Sleep Section -->
-    <div id="camp-sleep-section" style="display: none; width: 100%; max-width: 600px;">
-      <div style="color: #FFD700; font-size: 20px; margin-bottom: 15px;">💤 Rest & Prepare</div>
-      <div style="background: rgba(0,0,0,0.5); padding: 30px; border-radius: 10px; text-align: center;">
-        <p style="font-size: 18px; margin-bottom: 30px; line-height: 1.6;">
-          Choose when to start your next run. Time of day affects enemy behavior and loot chances.
-        </p>
-        <div style="display: flex; gap: 20px; justify-content: center; flex-wrap: wrap;">
-          <div id="sleep-day-option" style="flex: 1; min-width: 200px; background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); padding: 20px; border-radius: 10px; cursor: pointer; border: 3px solid #FFD700;">
-            <div style="font-size: 40px; margin-bottom: 10px;">☀️</div>
-            <div style="font-size: 20px; font-weight: bold; color: #000; margin-bottom: 10px;">DAY</div>
-            <div style="font-size: 14px; color: #333;">Better visibility, standard enemy spawns</div>
-          </div>
-          <div id="sleep-night-option" style="flex: 1; min-width: 200px; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); padding: 20px; border-radius: 10px; cursor: pointer; border: 3px solid transparent;">
-            <div style="font-size: 40px; margin-bottom: 10px;">🌙</div>
-            <div style="font-size: 20px; font-weight: bold; color: #FFF; margin-bottom: 10px;">NIGHT</div>
-            <div style="font-size: 14px; color: #AAA;">Harder enemies, +50% gold & XP</div>
-          </div>
+    <!-- Skills Modal Overlay (opened via Skill Tree building) -->
+    <div id="camp-skills-section" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 200; overflow-y: auto;">
+      <div style="max-width: 960px; margin: 0 auto; padding: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+          <div style="color: #FFD700; font-size: 20px;">🌳 Skill Tree</div>
+          <button class="btn" onclick="document.getElementById('camp-skills-section').style.display='none';" style="padding: 8px 16px;">✕ Close</button>
         </div>
-        <p style="font-size: 14px; margin-top: 20px; color: #AAA;">
-          Current selection: <span id="current-time-choice" style="color: #FFD700; font-weight: bold;">DAY</span>
-        </p>
+        <div style="color: #5DADE2; font-size: 16px; margin-bottom: 15px;" id="skill-points-display">
+          Skill Points Available: 0
+        </div>
+        <div id="camp-skills-content">
+          <!-- Dynamically populated -->
+        </div>
       </div>
     </div>
 
-    <!-- Training Section -->
-    <div id="camp-training-section" style="display: none; width: 100%; max-width: 700px;">
-      <div style="color: #FFD700; font-size: 20px; margin-bottom: 15px;">🏋️ Training Hall</div>
-      <div style="background: rgba(0,0,0,0.5); padding: 20px; border-radius: 10px; margin-bottom: 20px;">
-        <p style="font-size: 16px; margin-bottom: 15px;">
-          Training Points Available: <span id="training-points-display" style="color: #FFD700; font-weight: bold;">0</span>
-        </p>
-        <p style="font-size: 14px; color: #AAA; line-height: 1.6;">
-          You earn 1 training point every 24 hours. Spend gold + 1 training point to permanently increase an attribute by +1.
-        </p>
-        <p style="font-size: 12px; color: #888; margin-top: 10px;" id="next-training-point-time">
-          Next training point in: Calculating...
-        </p>
-      </div>
-      <div id="training-attributes-content" style="display: flex; flex-direction: column; gap: 15px;">
-        <!-- Dynamically populated -->
-      </div>
-    </div>
-
-    <!-- Passive Skills Section -->
-    <div id="camp-passive-section" style="display: none; width: 100%; max-width: 700px;">
-      <div style="color: #FFD700; font-size: 20px; margin-bottom: 15px;">⚗️ Passive Skills</div>
-      <div style="background: rgba(0,0,0,0.5); padding: 20px; border-radius: 10px; margin-bottom: 20px;">
-        <p style="font-size: 14px; color: #AAA; line-height: 1.6;">
-          Passive skills provide permanent bonuses across all runs. Unlock new passives as your Account Level increases.
-        </p>
-        <p style="font-size: 14px; color: #5DADE2; margin-top: 8px;">
-          Passive Skill Points: <span id="passive-skill-points-display" style="color:#FFD700;font-weight:bold;">0</span>
-        </p>
-      </div>
-      <div id="camp-passive-content" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px;">
-        <!-- Dynamically populated -->
+    <!-- Training Modal Overlay (opened via Training Hall building) -->
+    <div id="camp-training-section" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 200; overflow-y: auto;">
+      <div style="max-width: 700px; margin: 0 auto; padding: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+          <div style="color: #FFD700; font-size: 20px;">🏋️ Training Hall</div>
+          <button class="btn" onclick="document.getElementById('camp-training-section').style.display='none';" style="padding: 8px 16px;">✕ Close</button>
+        </div>
+        <div style="background: rgba(0,0,0,0.5); padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+          <p style="font-size: 16px; margin-bottom: 15px;">
+            Training Points Available: <span id="training-points-display" style="color: #FFD700; font-weight: bold;">0</span>
+          </p>
+          <p style="font-size: 14px; color: #AAA; line-height: 1.6;">
+            You earn 1 training point every 24 hours. Spend gold + 1 training point to permanently increase an attribute by +1.
+          </p>
+          <p style="font-size: 12px; color: #888; margin-top: 10px;" id="next-training-point-time">
+            Next training point in: Calculating...
+          </p>
+        </div>
+        <div id="training-attributes-content" style="display: flex; flex-direction: column; gap: 15px;">
+          <!-- Dynamically populated -->
+        </div>
       </div>
     </div>
 
@@ -6019,13 +6051,13 @@
           saveData.tutorialQuests.killsThisRun = playerStats.kills;
           updateQuestTracker();
           
-          // Quest 1: Kill 3 enemies
+          // Quest 1: Kill 3 enemies (First Blood)
           const currentQuest = getCurrentQuest();
-          if (currentQuest && currentQuest.id === 'quest1_kill3' && playerStats.kills >= 3) {
-            progressTutorialQuest('quest1_kill3', true);
+          if (currentQuest && currentQuest.id === 'quest1_firstBlood' && playerStats.kills >= 3) {
+            progressTutorialQuest('quest1_firstBlood', true);
             // Show text magazine explaining the current mission once quest is marked ready-to-claim
             // Guard: only show if quest1 is now in readyToClaim (i.e. still relevant)
-            if (saveData.tutorialQuests.readyToClaim.includes('quest1_kill3')) {
+            if (saveData.tutorialQuests.readyToClaim.includes('quest1_firstBlood')) {
               showComicInfoBox(
                 '📋 MISSION REPORT',
                 `<div style="text-align: left; padding: 10px;">
@@ -6992,9 +7024,10 @@
               dmg = weapons.droneTurret.damage * playerStats.damage * playerStats.strength;
             }
             
-            // HEADSHOT SYSTEM: Double-crit check for headshot (instant kill)
+            // HEADSHOT SYSTEM: Double-crit check for headshot (instant kill) - requires headshot skill
             const isCrit = Math.random() < playerStats.critChance;
-            const isDoubleCrit = isCrit && Math.random() < playerStats.critChance; // Second crit check
+            const headshotUnlocked = saveData.skillTree && saveData.skillTree.headshot && saveData.skillTree.headshot.level > 0;
+            const isDoubleCrit = headshotUnlocked && isCrit && Math.random() < playerStats.critChance; // Second crit check
             
             if (isDoubleCrit) {
               // HEADSHOT! Instant kill
@@ -8437,14 +8470,17 @@
         workshop: { level: 0, maxLevel: 10, unlocked: false },
         shrine: { level: 0, maxLevel: 10, unlocked: false }
       },
-      // COMPREHENSIVE SKILL TREE - 48 Skills Total (Fresh Implementation)
+      // COMPREHENSIVE SKILL TREE - 50 Skills Total
       skillTree: {
-        // COMBAT PATH (12 skills)
+        // ROOT SKILLS
+        dash: { unlocked: false, level: 0, maxLevel: 3 },
+        headshot: { unlocked: false, level: 0, maxLevel: 5 },
+        
+        // COMBAT PATH (11 skills)
         combatMastery: { unlocked: false, level: 0, maxLevel: 5 },
         bladeDancer: { unlocked: false, level: 0, maxLevel: 3 },
         heavyStrike: { unlocked: false, level: 0, maxLevel: 3 },
         rapidFire: { unlocked: false, level: 0, maxLevel: 3 },
-        criticalFocus: { unlocked: false, level: 0, maxLevel: 5 },
         armorPierce: { unlocked: false, level: 0, maxLevel: 3 },
         multiHit: { unlocked: false, level: 0, maxLevel: 3 },
         executioner: { unlocked: false, level: 0, maxLevel: 3 },
@@ -8475,7 +8511,7 @@
         scavenger: { unlocked: false, level: 0, maxLevel: 3 },
         fortuneFinder: { unlocked: false, level: 0, maxLevel: 3 },
         speedster: { unlocked: false, level: 0, maxLevel: 3 },
-        dashMaster: { unlocked: false, level: 0, maxLevel: 3 },
+        dashMasterSkill: { unlocked: false, level: 0, maxLevel: 3 },
         cooldownExpert: { unlocked: false, level: 0, maxLevel: 3 },
         auraExpansion: { unlocked: false, level: 0, maxLevel: 3 },
         resourceful: { unlocked: false, level: 0, maxLevel: 5 },
@@ -8583,6 +8619,18 @@
           saveData.inventory = saveData.inventory || [];
           saveData.campBuildings = { ...defaultSaveData.campBuildings, ...(saveData.campBuildings || {}) };
           saveData.skillTree = { ...defaultSaveData.skillTree, ...(saveData.skillTree || {}) };
+          // Migration: rename old skill keys
+          if (saveData.skillTree.dashMaster !== undefined && saveData.skillTree.dash === undefined) {
+            saveData.skillTree.dash = saveData.skillTree.dashMaster;
+            delete saveData.skillTree.dashMaster;
+          }
+          if (saveData.skillTree.criticalFocus !== undefined && saveData.skillTree.headshot === undefined) {
+            saveData.skillTree.headshot = saveData.skillTree.criticalFocus;
+            delete saveData.skillTree.criticalFocus;
+          }
+          if (!saveData.skillTree.dashMasterSkill) {
+            saveData.skillTree.dashMasterSkill = { unlocked: false, level: 0, maxLevel: 3 };
+          }
           saveData.companions = { ...defaultSaveData.companions, ...(saveData.companions || {}) };
           saveData.hasVisitedCamp = saveData.hasVisitedCamp || false;
           saveData.nextRunTimeOfDay = saveData.nextRunTimeOfDay || 'day';
@@ -9894,9 +9942,9 @@
     };
 
     const SKILL_TREE = {
-      // STARTING SKILLS - Available first (Dash and Headshot as per requirements)
-      dashMaster: {
-        name: '🏃 Dash Master',
+      // ROOT SKILLS - Two starting nodes
+      dash: {
+        name: '🏃 Dash',
         description: 'Reduce dash cooldown by 15%, increase dash distance by 10%',
         cost: 1,
         maxLevel: 3,
@@ -9906,7 +9954,7 @@
           dashDistance: 0.1 * level
         })
       },
-      criticalFocus: {
+      headshot: {
         name: '🎯 Headshot',
         description: '+10% crit chance, +15% crit damage',
         cost: 1,
@@ -9918,13 +9966,13 @@
         })
       },
       
-      // COMBAT PATH (12 skills) - Unlocked after initial skills
+      // COMBAT PATH (11 skills) - branches from headshot
       combatMastery: {
         name: 'Combat Mastery',
         description: '+10% damage, +5% crit chance',
         cost: 1,
         maxLevel: 5,
-        requires: 'dashMaster',
+        requires: 'headshot',
         bonus: (level) => ({
           damage: 0.1 * level,
           critChance: 0.05 * level
@@ -9987,7 +10035,7 @@
         description: '+20% damage to enemies below 30% HP',
         cost: 1,
         maxLevel: 3,
-        requires: 'criticalFocus',
+        requires: 'combatMastery',
         bonus: (level) => ({
           executeDamage: 0.2 * level
         })
@@ -10034,13 +10082,13 @@
         })
       },
       
-      // DEFENSE PATH (12 skills)
+      // DEFENSE PATH (12 skills) - branches from dash
       survivalist: {
         name: 'Survivalist',
         description: '+15 HP, +1 HP/sec regen',
         cost: 1,
         maxLevel: 5,
-        requires: 'criticalFocus',
+        requires: 'dash',
         bonus: (level) => ({
           hp: 15 * level,
           regen: 1 * level
@@ -10160,13 +10208,13 @@
         })
       },
       
-      // UTILITY PATH (12 skills)
+      // UTILITY PATH (12 skills) - branches from dash
       wealthHunter: {
         name: 'Wealth Hunter',
         description: '+15% gold gain, +10% XP gain',
         cost: 1,
         maxLevel: 5,
-        requires: 'dashMaster',
+        requires: 'dash',
         bonus: (level) => ({
           gold: 0.15 * level,
           xp: 0.1 * level
@@ -10228,9 +10276,20 @@
         description: '+10% move speed',
         cost: 1,
         maxLevel: 3,
-        requires: 'dashMaster',
+        requires: 'dash',
         bonus: (level) => ({
           moveSpeed: 0.1 * level
+        })
+      },
+      dashMasterSkill: {
+        name: '💨 Dash Master',
+        description: '+1 dash charge, -10% dash cooldown',
+        cost: 1,
+        maxLevel: 3,
+        requires: 'cooldownExpert',
+        bonus: (level) => ({
+          dashCharges: level,
+          dashCooldown: 0.1 * level
         })
       },
       cooldownExpert: {
@@ -10277,13 +10336,13 @@
         })
       },
       
-      // ELEMENTAL PATH (12 skills)
+      // ELEMENTAL PATH (12 skills) - branches from headshot
       fireMastery: {
         name: '🔥 Fire Mastery',
         description: '+15% fire damage, burn enemies',
         cost: 1,
         maxLevel: 3,
-        requires: 'combatMastery',
+        requires: 'headshot',
         bonus: (level) => ({
           fireDamage: 0.15 * level,
           burnChance: 0.1 * level
@@ -10294,7 +10353,7 @@
         description: '+15% ice damage, slow enemies',
         cost: 1,
         maxLevel: 3,
-        requires: 'combatMastery',
+        requires: 'headshot',
         bonus: (level) => ({
           iceDamage: 0.15 * level,
           slowChance: 0.15 * level
@@ -10305,7 +10364,7 @@
         description: '+15% lightning damage, chain lightning',
         cost: 1,
         maxLevel: 3,
-        requires: 'combatMastery',
+        requires: 'headshot',
         bonus: (level) => ({
           lightningDamage: 0.15 * level,
           chainChance: 0.1 * level
@@ -10477,6 +10536,7 @@
         skillData.level++;
         
         saveSaveData();
+        recalculateAllStats();
         updateCampScreen();
         playSound('collect');
         
@@ -10511,24 +10571,24 @@
           };
         }
         
-        // Unlock dash ability whenever dashMaster skill is purchased (regardless of tutorial step)
-        if (skillId === 'dashMaster' && !saveData.tutorial.dashUnlocked) {
+        // Unlock dash ability whenever dash skill is purchased (regardless of tutorial step)
+        if (skillId === 'dash' && !saveData.tutorial.dashUnlocked) {
           saveData.tutorial.dashUnlocked = true;
           saveSaveData();
         }
-        // Unlock headshot ability whenever a crit skill is purchased
-        if ((skillId === 'criticalFocus' || skillId === 'executioner') && !saveData.tutorial.headshotUnlocked) {
+        // Unlock headshot ability whenever a headshot/crit skill is purchased
+        if ((skillId === 'headshot' || skillId === 'executioner') && !saveData.tutorial.headshotUnlocked) {
           saveData.tutorial.headshotUnlocked = true;
           saveSaveData();
         }
         
-        if (skillId === 'dashMaster' && saveData.tutorial.currentStep === 'unlock_dash') {
+        if (skillId === 'dash' && saveData.tutorial.currentStep === 'unlock_dash') {
           saveData.tutorial.currentStep = 'unlock_headshot';
           saveSaveData();
           setTimeout(() => {
             showComicTutorial('unlock_headshot');
           }, 1000);
-        } else if ((skillId === 'criticalFocus' || skillId === 'executioner') && saveData.tutorial.currentStep === 'unlock_headshot' && !saveData.tutorial.headshotUnlocked) {
+        } else if ((skillId === 'headshot' || skillId === 'executioner') && saveData.tutorial.currentStep === 'unlock_headshot' && !saveData.tutorial.headshotUnlocked) {
           // Accept any crit/headshot related skill
           saveData.tutorial.headshotUnlocked = true;
           saveSaveData();
@@ -10725,31 +10785,9 @@
             updateTrainingSection();
             updateGoldDisplays();
             
-            // QUEST 4 (new): Track attribute purchase for "Upgrade an Attribute" quest
-            if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest4_upgradeAttr') {
-              progressTutorialQuest('quest4_upgradeAttr', true);
-            }
-            // QUEST 5 (new): Track training session for "Complete a Training Session" quest
-            if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest5_trainingSession') {
-              progressTutorialQuest('quest5_trainingSession', true);
-            }
-            // QUEST 3 (legacy): Track attribute purchase for tutorial quest
-            if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest3_buyProgression') {
-              // Count total attribute levels purchased
-              const totalAttrLevels = Object.values(saveData.attributes || {}).reduce((sum, val) => sum + val, 0);
-              
-              if (totalAttrLevels >= 1) {
-                // Completed quest 3: bought 1 progression upgrade
-                progressTutorialQuest('quest3_buyProgression', true);
-              }
-            }
-            // QUEST 6: Track attribute purchase for upgrade-3-attributes quest
-            if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest6_buyAttributes') {
-              if (!saveData.tutorialQuests.quest6AttrCount) saveData.tutorialQuests.quest6AttrCount = 0;
-              saveData.tutorialQuests.quest6AttrCount++;
-              if (saveData.tutorialQuests.quest6AttrCount >= 3) {
-                progressTutorialQuest('quest6_buyAttributes', true);
-              }
+            // QUEST 6: Track attribute purchase for "Train Your Body" quest
+            if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest6_trainBody') {
+              progressTutorialQuest('quest6_trainBody', true);
             }
           } else {
             playSound('invalid');
@@ -10765,7 +10803,7 @@
       }
     }
 
-    // --- TUTORIAL QUEST SYSTEM (8-Quest Flow) ---
+    // --- TUTORIAL QUEST SYSTEM (10-Quest Tutorial Chain) ---
     
     // Quest definitions with conditions for dependencies
     const TUTORIAL_QUESTS = {
@@ -10774,209 +10812,122 @@
         name: 'First Death Tutorial',
         description: 'Your first death triggers the tutorial',
         objectives: 'Die in your first run',
-        rewardGold: 0,
-        rewardSkillPoints: 0,
-        unlockBuilding: 'questMission', // Already unlocked by default
-        autoClaim: true,
-        triggerOnDeath: true,
-        nextQuest: 'quest1_kill3',
-        conditions: [] // No prerequisites
+        rewardGold: 0, rewardSkillPoints: 0,
+        autoClaim: true, triggerOnDeath: true,
+        nextQuest: 'quest1_firstBlood',
+        conditions: []
       },
-      quest1_kill3: {
-        id: 'quest1_kill3',
-        name: 'Kill 3 Enemies',
-        description: 'Start a new run and kill 3 enemies',
-        objectives: 'Kill 3 enemies in one run',
-        claim: 'Main Building',
-        rewardGold: 50,
-        rewardSkillPoints: 2,
+      quest1_firstBlood: {
+        id: 'quest1_firstBlood',
+        name: 'First Blood',
+        description: 'Kill 3 enemies in one run',
+        objectives: 'Kill 3 enemies',
+        rewardGold: 200, rewardSkillPoints: 2,
         unlockBuilding: 'skillTree',
-        message: "Outstanding, Droplet! 🎯<br><br>You've proven your combat worth. The <b>Skill Tree</b> is now unlocked at camp!<br><br>Head to the <b>Skill Tree</b> tab and spend your <b>2 Skill Points</b> to grow stronger.",
-        nextQuest: 'quest2_spendSkills',
-        conditions: ['firstRunDeath'] // Requires firstRunDeath to be auto-claimed (on first death)
+        message: "⚔️ First Blood earned!<br><br>You've proven your worth! The <b>Skill Tree</b> building is now unlocked at camp!<br><br>You received <b>200 Gold</b> and <b>2 Skill Points</b>. Spend them on <b>Dash</b> and <b>Headshot</b>!",
+        nextQuest: 'quest2_learnSkills',
+        conditions: ['firstRunDeath']
       },
-      quest2_spendSkills: {
-        id: 'quest2_spendSkills',
-        name: 'Buy Dash & Headshot',
-        description: 'Go to the Skill Tree tab and unlock both Dash (dashMaster) and Headshot (criticalFocus or executioner)',
-        objectives: 'Unlock Dash and a Headshot/Critical skill in the Skill Tree tab',
-        claim: 'Main Building',
-        rewardGold: 0,
-        rewardSkillPoints: 0,
-        message: "Skills unlocked! 🌟<br><br>Head to <b>Stonehenge</b> on the map — a glowing chest awaits you there with your first piece of gear!",
-        nextQuest: 'quest3_stonehengeGear',
-        conditions: ['quest1_kill3'] // Requires quest1_kill3 to be claimed
+      quest2_learnSkills: {
+        id: 'quest2_learnSkills',
+        name: 'Learn Your Skills',
+        description: 'Spend 2 skill points on Dash and Headshot in the Skill Tree',
+        objectives: 'Unlock Dash and Headshot skills',
+        rewardGold: 100, rewardSkillPoints: 0,
+        unlockBuilding: 'questMission',
+        message: "🌟 Skills unlocked!<br><br>Dash and Headshot are now active in-game!<br><br>The <b>Quest Hall</b> is now unlocked — track your future missions there.",
+        nextQuest: 'quest3_forgeAwaits',
+        conditions: ['quest1_firstBlood']
       },
-      quest3_stonehengeGear: {
-        id: 'quest3_stonehengeGear',
-        name: 'Find the Cigar at Stonehenge',
-        description: 'Head to Stonehenge on the map and collect the quest chest to get the legendary Cigar',
-        objectives: 'Find and collect the chest at Stonehenge',
-        claim: 'Main Building',
-        rewardGold: 50,
-        rewardSkillPoints: 0,
-        unlockBuildingOnActivation: 'armory', // Armory unlocks when THIS quest activates (so player can use it)
-        giveItem: { id: 'cigar_quest', name: 'Cigar', type: 'ring', rarity: 'rare', stats: { attackSpeed: 1, movementSpeed: 1, attackPrecision: 1 }, description: '+1 Attack Speed, +1 Movement Speed, +1 Attack Precision' },
-        autoEquip: true,
-        message: "🚬 Cigar auto-equipped!<br><br>This rare ring grants <b>+1 Attack Speed, +1 Movement Speed, +1 Attack Precision</b>.",
-        nextQuest: 'quest4_upgradeAttr',
-        conditions: ['quest2_spendSkills']
-      },
-      quest4_upgradeAttr: {
-        id: 'quest4_upgradeAttr',
-        name: 'Upgrade an Attribute',
-        description: 'Open the Training Hall and spend an attribute point to upgrade any stat',
-        objectives: 'Spend 1 attribute point in the Training Hall',
-        claim: 'Main Building',
-        rewardGold: 50,
-        rewardSkillPoints: 0,
-        rewardAttributePoints: 2,
-        unlockBuildingOnActivation: 'trainingHall', // Training Hall unlocks when THIS quest activates
-        message: "💪 Attribute upgraded!<br><br>You earned <b>+2 free Attribute Points</b>!",
-        nextQuest: 'quest5_trainingSession',
-        conditions: ['quest3_stonehengeGear']
-      },
-      quest5_trainingSession: {
-        id: 'quest5_trainingSession',
-        name: 'Complete a Training Session',
-        description: 'Use the Training Hall to complete one training session',
-        objectives: 'Complete 1 training session in the Training Hall',
-        claim: 'Main Building',
-        rewardGold: 50,
-        rewardSkillPoints: 0,
-        rewardAttributePoints: 1,
-        unlockBuildingOnActivation: 'forge', // Forge unlocks when THIS quest activates
-        message: "🏋️ Training complete!<br><br>You earned <b>+1 free Training Point</b>!",
-        nextQuest: 'quest7_kill10',
-        conditions: ['quest4_upgradeAttr']
-      },
-      quest4_equipCigar: {
-        id: 'quest4_equipCigar',
-        name: 'Equip the Cigar',
-        description: 'Open the Armory, navigate to the Gear section in your inventory, and equip the Cigar',
-        objectives: 'Equip the Cigar from your inventory',
-        claim: 'Main Building',
-        rewardGold: 0,
-        rewardSkillPoints: 0,
-        message: "Cigar equipped! 🚬<br><br>Feel that power — +1 to all stats!<br><br>Your next mission: <b>Kill 10 Enemies</b> in a single run!",
-        nextQuest: 'quest7_kill10',
-        conditions: ['quest3_stonehengeGear']
-      },
-      quest5_doRun: {
-        id: 'quest5_doRun',
-        name: 'Complete a Run',
-        description: 'Head out and complete a run to earn Attribute Points',
-        objectives: 'Complete 1 run',
-        claim: 'Main Building',
+      quest3_forgeAwaits: {
+        id: 'quest3_forgeAwaits',
+        name: 'The Forge Awaits',
+        description: 'Complete a run reaching level 5 or higher',
+        objectives: 'Reach Level 5 in a run',
+        rewardGold: 250, rewardSkillPoints: 0,
         triggerOnDeath: true,
-        rewardGold: 0,
-        rewardSkillPoints: 0,
-        rewardAttributePoints: 3,
+        unlockBuilding: 'forge',
+        message: "🔥 The Forge is yours!<br><br>Forge building unlocked! Craft your first weapon to grow stronger.",
+        nextQuest: 'quest4_craftWeapon',
+        conditions: ['quest2_learnSkills']
+      },
+      quest4_craftWeapon: {
+        id: 'quest4_craftWeapon',
+        name: 'Craft Your First Weapon',
+        description: 'Craft any weapon at the Forge',
+        objectives: 'Craft 1 weapon at the Forge',
+        rewardGold: 150, rewardSkillPoints: 0,
+        unlockBuilding: 'armory',
+        message: "⚒️ Weapon crafted!<br><br>The <b>Armory</b> is now unlocked! Go equip your new gear.",
+        nextQuest: 'quest5_gearUp',
+        conditions: ['quest3_forgeAwaits']
+      },
+      quest5_gearUp: {
+        id: 'quest5_gearUp',
+        name: 'Gear Up',
+        description: 'Equip a piece of gear in the Armory',
+        objectives: 'Equip any gear in the Armory',
+        rewardGold: 200, rewardSkillPoints: 0,
         unlockBuilding: 'trainingHall',
-        message: "Run complete! 🏆<br><br>You earned <b>3 Attribute Points</b>!<br><br>Head to the <b>Training Hall</b> and upgrade <b>3 attributes</b> to grow stronger!",
-        nextQuest: 'quest6_buyAttributes',
-        conditions: ['quest4_equipCigar']
+        message: "🛡️ Geared up!<br><br>The <b>Training Hall</b> is now unlocked! Time to train your body.",
+        nextQuest: 'quest6_trainBody',
+        conditions: ['quest4_craftWeapon']
       },
-      quest6_buyAttributes: {
-        id: 'quest6_buyAttributes',
-        name: 'Upgrade 3 Attributes',
-        description: 'Go to the Training Hall and spend Attribute Points to upgrade 3 attributes',
-        objectives: 'Buy 3 attribute upgrades in the Training Hall',
-        claim: 'Main Building',
-        rewardGold: 0,
-        rewardSkillPoints: 0,
-        message: "Attributes upgraded! 💪<br><br>You're growing stronger every day!<br><br>One final challenge awaits — prove your strength!",
-        nextQuest: 'quest7_kill10',
-        conditions: ['quest5_doRun']
-      },
-      quest7_kill10: {
-        id: 'quest7_kill10',
-        name: 'Kill 10 Enemies',
-        description: 'Head out and eliminate 10 enemies in a single run',
-        objectives: 'Kill 10 enemies',
-        triggerOnDeath: true,
-        rewardGold: 500,
-        rewardSkillPoints: 0,
-        message: "🎉 TUTORIAL COMPLETE!<br><br>You've mastered the basics of survival!<br><br>The world is yours to conquer. Good luck, Droplet!",
-        nextQuest: null,
-        conditionsAny: ['quest5_trainingSession', 'quest4_equipCigar', 'quest6_buyAttributes'], // Accept any of these predecessors
-        conditions: [] // No strict requirements - conditionsAny handles it
-      },
-      quest3_buyProgression: {
-        id: 'quest3_buyProgression',
-        name: 'Buy Progression',
-        description: 'Buy 1 progression upgrade',
-        objectives: 'Purchase any attribute upgrade',
-        claim: 'Main Building',
-        rewardGold: 0,
-        rewardSkillPoints: 0,
-        message: 'Great! You\'re getting stronger!',
-        nextQuest: 'quest4_kill10',
-        conditions: ['quest2_spendSkills'] // Requires quest2_spendSkills to be claimed
-      },
-      quest4_kill10: {
-        id: 'quest4_kill10',
-        name: 'Kill 10 Enemies',
-        description: 'Kill 10 enemies in one run',
-        objectives: 'Kill 10 enemies',
-        triggerOnDeath: true, // Reward given when player dies after completing objective
-        rewardGold: 0,
-        rewardSkillPoints: 0,
+      quest6_trainBody: {
+        id: 'quest6_trainBody',
+        name: 'Train Your Body',
+        description: 'Train any attribute in the Training Hall',
+        objectives: 'Train 1 attribute in the Training Hall',
+        rewardGold: 150, rewardSkillPoints: 0,
         unlockBuilding: 'companionHouse',
-        companionEgg: true, // Give companion egg
-        nextQuest: 'quest5_breedCompanion',
-        conditions: ['quest3_buyProgression'] // Requires quest3_buyProgression to be claimed
+        message: "💪 Training complete!<br><br>The <b>Companion House</b> is now unlocked! Find a faithful companion.",
+        nextQuest: 'quest7_companion',
+        conditions: ['quest5_gearUp']
       },
-      quest5_breedCompanion: {
-        id: 'quest5_breedCompanion',
-        name: 'Breed Companion',
-        description: 'Visit Companion Building and activate your companion',
-        objectives: 'Activate/breed companion',
-        claim: 'Main Building',
-        rewardGold: 0,
-        rewardSkillPoints: 0,
-        message: 'Companion activated! They will fight by your side!',
-        nextQuest: 'quest6_stonehengeChest',
-        conditions: ['quest4_kill10'] // Requires quest4_kill10 to be claimed
+      quest7_companion: {
+        id: 'quest7_companion',
+        name: 'A Faithful Companion',
+        description: 'Activate or breed a companion in the Companion House',
+        objectives: 'Activate/breed a companion',
+        rewardGold: 200, rewardSkillPoints: 0,
+        companionEgg: true,
+        unlockBuilding: 'trashRecycle',
+        message: "🥚 Companion bonded!<br><br>You received a <b>Companion Egg</b>! The <b>Trash & Recycle</b> building is now unlocked.",
+        nextQuest: 'quest8_recycle',
+        conditions: ['quest6_trainBody']
       },
-      quest6_stonehengeChest: {
-        id: 'quest6_stonehengeChest',
-        name: 'Find Stonehenge Chest',
-        description: 'Find the Stonehenge chest on the map',
-        objectives: 'Find and open Stonehenge chest',
-        autoClaim: true, // Completes on pickup
-        rewardGold: 0,
-        rewardSkillPoints: 0,
-        unlockBuilding: 'armory', // Gear Building
-        giveItem: { name: 'Cigar', rarity: 'rare', stats: { strength: 1, speed: 1, precision: 1 } },
-        autoEquip: true,
-        nextQuest: 'quest7_survive2min',
-        conditions: ['quest5_breedCompanion'] // Requires quest5_breedCompanion to be claimed
+      quest8_recycle: {
+        id: 'quest8_recycle',
+        name: 'Recycle and Rebuild',
+        description: 'Scrap a piece of gear at the Trash & Recycle building',
+        objectives: 'Scrap 1 piece of gear',
+        rewardGold: 200, rewardSkillPoints: 0,
+        unlockBuilding: 'tempShop',
+        message: "♻️ Recycled!<br><br>The <b>Temp Shop</b> is now open! Browse temporary items between runs.",
+        nextQuest: 'quest9_shopItem',
+        conditions: ['quest7_companion']
       },
-      quest7_survive2min: {
-        id: 'quest7_survive2min',
-        name: 'Survive 2 Minutes',
-        description: 'Survive for 2 minutes in a run',
-        objectives: 'Survive 120 seconds',
-        triggerOnDeath: true,
-        rewardGold: 0,
-        rewardSkillPoints: 0,
-        rewardAttributePoints: 3,
-        unlockBuilding: 'forge', // Attributes Building (using forge as placeholder)
-        nextQuest: 'quest8_newWeapon',
-        conditions: ['quest6_stonehengeChest'] // Requires quest6_stonehengeChest to be claimed
+      quest9_shopItem: {
+        id: 'quest9_shopItem',
+        name: 'Fully Equipped',
+        description: 'Buy a temporary item from the Temp Shop',
+        objectives: 'Buy 1 item from the Temp Shop',
+        rewardGold: 300, rewardSkillPoints: 0,
+        unlockBuilding: 'inventory',
+        message: "🛒 Purchased!<br><br>The <b>Inventory Storage</b> is now unlocked! Store and manage your gear.",
+        nextQuest: 'quest10_homeBase',
+        conditions: ['quest8_recycle']
       },
-      quest8_newWeapon: {
-        id: 'quest8_newWeapon',
-        name: 'Get New Weapon',
-        description: 'Unlock a new weapon in your next run',
-        objectives: 'Unlock any new weapon during a run',
-        claim: 'Main Building',
-        rewardGold: 0,
-        rewardSkillPoints: 0,
-        message: 'Tutorial Complete! You\'re ready to survive!',
-        nextQuest: null, // Tutorial complete
-        conditions: ['quest7_survive2min'] // Requires quest7_survive2min to be claimed
+      quest10_homeBase: {
+        id: 'quest10_homeBase',
+        name: 'Home Sweet Home',
+        description: 'Visit every unlocked building at least once',
+        objectives: 'Visit all unlocked buildings',
+        rewardGold: 500, rewardSkillPoints: 3,
+        unlockBuilding: 'campHub',
+        message: "🏠 TUTORIAL COMPLETE!<br><br>You have full camp access! The <b>Camp Hub</b> is now unlocked.<br><br>You received <b>500 Gold</b> and <b>3 Skill Points</b>. The world is yours!",
+        nextQuest: null,
+        conditions: ['quest9_shopItem']
       }
     };
     
@@ -10985,26 +10936,26 @@
       const questId = saveData.tutorialQuests.currentQuest;
       return questId ? TUTORIAL_QUESTS[questId] : null;
     }
-    
+
     // Helper: ensure quest2 is activated and check if both skills are already bought
     function ensureQuest2Activated() {
       if (!saveData.tutorialQuests) return;
       // Auto-activate quest2 if quest1 is claimed but quest2 hasn't started
       if (
-        isQuestClaimed('quest1_kill3') &&
+        isQuestClaimed('quest1_firstBlood') &&
         !saveData.tutorialQuests.currentQuest &&
-        !isQuestClaimed('quest2_spendSkills') &&
-        !saveData.tutorialQuests.readyToClaim.includes('quest2_spendSkills')
+        !isQuestClaimed('quest2_learnSkills') &&
+        !saveData.tutorialQuests.readyToClaim.includes('quest2_learnSkills')
       ) {
-        saveData.tutorialQuests.currentQuest = 'quest2_spendSkills';
+        saveData.tutorialQuests.currentQuest = 'quest2_learnSkills';
       }
       // If quest2 is active, check if both skills are already bought
-      if (saveData.tutorialQuests.currentQuest === 'quest2_spendSkills') {
-        const hasDash = saveData.skillTree.dashMaster && saveData.skillTree.dashMaster.level > 0;
-        const hasHeadshot = (saveData.skillTree.criticalFocus && saveData.skillTree.criticalFocus.level > 0) ||
+      if (saveData.tutorialQuests.currentQuest === 'quest2_learnSkills') {
+        const hasDash = saveData.skillTree.dash && saveData.skillTree.dash.level > 0;
+        const hasHeadshot = (saveData.skillTree.headshot && saveData.skillTree.headshot.level > 0) ||
                             (saveData.skillTree.executioner && saveData.skillTree.executioner.level > 0);
         if (hasDash && hasHeadshot) {
-          progressTutorialQuest('quest2_spendSkills', true);
+          progressTutorialQuest('quest2_learnSkills', true);
         }
       }
     }
@@ -11077,12 +11028,9 @@
           updateQuestTracker();
           
           // Quest 2 fix: close skill tree panel so it doesn't stay open after completion
-          if (questId === 'quest2_spendSkills') {
+          if (questId === 'quest2_learnSkills') {
             const skillsSection = document.getElementById('camp-skills-section');
-            const buildingsSection = document.getElementById('camp-buildings-section');
             if (skillsSection) skillsSection.style.display = 'none';
-            const skillsTab = document.getElementById('camp-skills-tab');
-            if (skillsTab) skillsTab.style.background = '#3a3a3a';
           }
           
           // Show notification
@@ -11271,7 +11219,7 @@
       const tq = saveData && saveData.tutorialQuests;
       if (!tq) return false;
       return (tq.readyToClaim && tq.readyToClaim.length > 0) ||
-             (tq.firstDeathShown && !tq.currentQuest && !isQuestClaimed('quest1_kill3'));
+             (tq.firstDeathShown && !tq.currentQuest && !isQuestClaimed('quest1_firstBlood'));
     }
     
     // Update quest tracker in camp screen
@@ -11289,9 +11237,9 @@
       // Build progress info for kill-based quests
       let progressText = '';
       const killsNow = (saveData.tutorialQuests && saveData.tutorialQuests.killsThisRun) || 0;
-      if (currentQuest.id === 'quest1_kill3') {
+      if (currentQuest.id === 'quest1_firstBlood') {
         progressText = ` (${Math.min(killsNow, 3)}/3)`;
-      } else if (currentQuest.id === 'quest7_kill10' || currentQuest.id === 'quest4_kill10') {
+      } else if (currentQuest.id === 'quest7_kill10') {
         progressText = ` (${Math.min(killsNow, 10)}/10)`;
       }
       
@@ -11568,17 +11516,17 @@
         saveData.tutorialQuests.firstDeathShown &&
         isQuestClaimed('firstRunDeath') &&
         !saveData.tutorialQuests.currentQuest &&
-        !isQuestClaimed('quest1_kill3') &&
-        !saveData.tutorialQuests.readyToClaim.includes('quest1_kill3')
+        !isQuestClaimed('quest1_firstBlood') &&
+        !saveData.tutorialQuests.readyToClaim.includes('quest1_firstBlood')
       ) {
-        if (checkQuestConditions('quest1_kill3')) {
-          saveData.tutorialQuests.currentQuest = 'quest1_kill3';
+        if (checkQuestConditions('quest1_firstBlood')) {
+          saveData.tutorialQuests.currentQuest = 'quest1_firstBlood';
           saveSaveData();
           // Show text magazine explaining the first quest (synchronous after save)
           showComicInfoBox(
             '📋 MISSION BRIEFING',
             `<div style="text-align: left; padding: 10px;">
-              <p style="font-family: 'Bangers', cursive; font-size: 20px; margin-bottom: 10px;">🎯 QUEST 1: COMBAT READINESS</p>
+              <p style="font-family: 'Bangers', cursive; font-size: 20px; margin-bottom: 10px;">🎯 QUEST 1: FIRST BLOOD</p>
               <p style="line-height: 1.8; margin-bottom: 10px;">
                 Welcome back, Droplet. You survived your first encounter — now it's time to prove yourself.<br><br>
                 <b>YOUR MISSION:</b> Head back out and eliminate <b>3 enemies</b> in a single run.<br><br>
@@ -11819,6 +11767,47 @@
       if (textEl) textEl.textContent = `${xp} / ${required} XP`;
     }
 
+    function recalculateAllStats() {
+      // Recalculate playerStats from base + attributes + skills + gear
+      if (typeof playerStats === 'undefined') return;
+      
+      // Base stats
+      let hpBonus = 0, regenBonus = 0, damageBonus = 0, speedBonus = 0;
+      let critChanceBonus = 0, critDmgBonus = 0, armorBonus = 0;
+      
+      // Apply attribute bonuses
+      const attrs = saveData.attributes || {};
+      hpBonus += (attrs.vitality || 0) * 10;
+      regenBonus += (attrs.vitality || 0) * 0.25;
+      damageBonus += (attrs.strength || 0) * 0.05;
+      speedBonus += (attrs.agility || 0) * 0.05;
+      critChanceBonus += (attrs.precision || 0) * 0.01;
+      armorBonus += (attrs.endurance || 0) * 2;
+      
+      // Apply skill tree bonuses
+      for (const [skillId, skill] of Object.entries(SKILL_TREE)) {
+        const skillData = saveData.skillTree[skillId];
+        if (!skillData || skillData.level === 0) continue;
+        const bonus = skill.bonus(skillData.level);
+        if (bonus.hp) hpBonus += bonus.hp;
+        if (bonus.regen) regenBonus += bonus.regen;
+        if (bonus.damage) damageBonus += bonus.damage;
+        if (bonus.moveSpeed) speedBonus += bonus.moveSpeed;
+        if (bonus.critChance) critChanceBonus += bonus.critChance;
+        if (bonus.critDamage) critDmgBonus += bonus.critDamage;
+        if (bonus.armor) armorBonus += bonus.armor;
+      }
+      
+      // Apply bonuses to playerStats
+      const baseHp = 100 + (typeof PERMANENT_UPGRADES !== 'undefined' ? PERMANENT_UPGRADES.maxHp.effect(saveData.upgrades.maxHp) : 0);
+      playerStats.maxHp = Math.floor(baseHp + hpBonus);
+      playerStats.hpRegen = regenBonus;
+      playerStats.damage = 1 + damageBonus;
+      playerStats.critChance = Math.min(0.95, 0.1 + critChanceBonus);
+      playerStats.critDmg = 1.5 + critDmgBonus;
+      playerStats.armor = Math.min(80, armorBonus);
+    }
+
     function updateCampScreen() {
       // Update account level display whenever camp is opened
       updateAccountLevelDisplay();
@@ -11890,13 +11879,15 @@
         if (!building.isFree && !isUnlocked && buildingData.level === 0) {
           // Map building IDs to which tutorial quest unlocks them
           const buildingQuestUnlockMap = {
-            'skillTree': { questId: 'quest1_kill3', label: 'Kill 3 Enemies (Quest 1)' },
-            'armory': { questId: 'quest3_stonehengeGear', label: 'Find the Cigar (Quest 3)' },
-            'trainingHall': { questId: 'quest4_upgradeAttr', label: 'Upgrade an Attribute (Quest 4)' },
-            'forge': { questId: 'quest5_trainingSession', label: 'Complete Training (Quest 5)' },
-            'companionHouse': { questId: 'quest4_kill10', label: 'Kill 10 Enemies (Quest 4b)' },
-            'trashRecycle': { questId: null, label: 'Future Quest' },
-            'tempShop': { questId: null, label: 'Future Quest' }
+            'skillTree': { questId: 'quest1_firstBlood', label: 'First Blood (Quest 1)' },
+            'forge': { questId: 'quest3_forgeAwaits', label: 'The Forge Awaits (Quest 3)' },
+            'armory': { questId: 'quest4_craftWeapon', label: 'Craft Your First Weapon (Quest 4)' },
+            'trainingHall': { questId: 'quest5_gearUp', label: 'Gear Up (Quest 5)' },
+            'companionHouse': { questId: 'quest6_trainBody', label: 'Train Your Body (Quest 6)' },
+            'trashRecycle': { questId: 'quest7_companion', label: 'A Faithful Companion (Quest 7)' },
+            'tempShop': { questId: 'quest8_recycle', label: 'Recycle and Rebuild (Quest 8)' },
+            'inventory': { questId: 'quest9_shopItem', label: 'Fully Equipped (Quest 9)' },
+            'campHub': { questId: 'quest10_homeBase', label: 'Home Sweet Home (Quest 10)' }
           };
           
           const questInfo = buildingQuestUnlockMap[buildingId] || { questId: null, label: 'Complete a Quest' };
@@ -12017,14 +12008,21 @@
                 buildingCard.onclick = () => showQuestHall();
                 buildingCard.style.cursor = 'pointer';
               } else if (buildingId === 'skillTree') {
-                // Clear notification when clicking on skill tree
+                // Open skill tree modal overlay
                 buildingCard.onclick = () => {
-                  if (saveData.storyQuests.questNotifications) {
+                  if (saveData.storyQuests && saveData.storyQuests.questNotifications) {
                     saveData.storyQuests.questNotifications.skillTree = false;
                     saveSaveData();
                   }
-                  // Switch to skill tree tab
-                  document.getElementById('camp-skills-tab').click();
+                  updateCampScreen(); // refresh skill points display
+                  document.getElementById('camp-skills-section').style.display = 'flex';
+                };
+                buildingCard.style.cursor = 'pointer';
+              } else if (buildingId === 'trainingHall') {
+                // Open training modal overlay
+                buildingCard.onclick = () => {
+                  updateTrainingSection();
+                  document.getElementById('camp-training-section').style.display = 'flex';
                 };
                 buildingCard.style.cursor = 'pointer';
               } else if (saveData.storyQuests.questNotifications && saveData.storyQuests.questNotifications[buildingId]) {
@@ -12043,55 +12041,155 @@
         }
       }
       
-      // Update skills section
+      // Update skills section - Branching Tree Layout
       const skillsContent = document.getElementById('camp-skills-content');
       const skillPointsDisplay = document.getElementById('skill-points-display');
       skillPointsDisplay.textContent = `Skill Points Available: ${saveData.skillPoints}`;
       skillsContent.innerHTML = '';
-      
-      // Progressive skill unlock: compute once before loop
-      const _allSkillIds = Object.keys(SKILL_TREE);
-      const _quest1Claimed = isQuestClaimed('quest1_kill3');
-      const _quest2Claimed = isQuestClaimed('quest2_spendSkills');
-      
+
+      // SKILL_TREE_LAYOUT: visual positions (col, row) for each skill node
+      const SKILL_TREE_LAYOUT = {
+        dash:              { col: 1, row: 0, path: 'root' },
+        headshot:          { col: 4, row: 0, path: 'root' },
+        survivalist:       { col: 0, row: 1, path: 'defense' },
+        ironSkin:          { col: 0, row: 2, path: 'defense' },
+        quickReflex:       { col: 1, row: 2, path: 'defense' },
+        fortification:     { col: 0, row: 3, path: 'defense' },
+        regeneration:      { col: 1, row: 3, path: 'defense' },
+        lastStand:         { col: 0, row: 4, path: 'defense' },
+        toughness:         { col: 1, row: 4, path: 'defense' },
+        guardian:          { col: 0, row: 5, path: 'defense' },
+        resilience:        { col: 1, row: 5, path: 'defense' },
+        secondWind:        { col: 0, row: 6, path: 'defense' },
+        endurance:         { col: 1, row: 6, path: 'defense' },
+        immortal:          { col: 0, row: 7, path: 'defense' },
+        wealthHunter:      { col: 2, row: 1, path: 'utility' },
+        quickLearner:      { col: 3, row: 1, path: 'utility' },
+        magnetism:         { col: 2, row: 2, path: 'utility' },
+        efficiency:        { col: 3, row: 2, path: 'utility' },
+        scavenger:         { col: 2, row: 3, path: 'utility' },
+        fortuneFinder:     { col: 3, row: 3, path: 'utility' },
+        speedster:         { col: 2, row: 4, path: 'utility' },
+        dashMasterSkill:   { col: 3, row: 4, path: 'utility' },
+        cooldownExpert:    { col: 2, row: 5, path: 'utility' },
+        auraExpansion:     { col: 3, row: 5, path: 'utility' },
+        resourceful:       { col: 2, row: 6, path: 'utility' },
+        treasureHunter:    { col: 3, row: 6, path: 'utility' },
+        combatMastery:     { col: 4, row: 1, path: 'combat' },
+        bladeDancer:       { col: 5, row: 2, path: 'combat' },
+        heavyStrike:       { col: 4, row: 2, path: 'combat' },
+        rapidFire:         { col: 5, row: 3, path: 'combat' },
+        armorPierce:       { col: 4, row: 3, path: 'combat' },
+        multiHit:          { col: 5, row: 4, path: 'combat' },
+        executioner:       { col: 4, row: 4, path: 'combat' },
+        bloodlust:         { col: 5, row: 5, path: 'combat' },
+        berserker:         { col: 4, row: 5, path: 'combat' },
+        weaponSpecialist:  { col: 5, row: 6, path: 'combat' },
+        combatVeteran:     { col: 4, row: 6, path: 'combat' },
+        fireMastery:       { col: 6, row: 1, path: 'elemental' },
+        iceMastery:        { col: 7, row: 1, path: 'elemental' },
+        lightningMastery:  { col: 6, row: 2, path: 'elemental' },
+        elementalFusion:   { col: 7, row: 2, path: 'elemental' },
+        pyromaniac:        { col: 6, row: 3, path: 'elemental' },
+        frostbite:         { col: 7, row: 3, path: 'elemental' },
+        stormCaller:       { col: 6, row: 4, path: 'elemental' },
+        elementalChain:    { col: 7, row: 4, path: 'elemental' },
+        manaOverflow:      { col: 6, row: 5, path: 'elemental' },
+        spellEcho:         { col: 7, row: 5, path: 'elemental' },
+        arcaneEmpowerment: { col: 6, row: 6, path: 'elemental' },
+        elementalOverload: { col: 7, row: 6, path: 'elemental' }
+      };
+
+      const NODE_W = 90, NODE_H = 90, COL_GAP = 110, ROW_GAP = 110, PAD = 10;
+      const TOTAL_COLS = 8, TOTAL_ROWS = 8;
+      const canvasW = TOTAL_COLS * COL_GAP + PAD * 2;
+      // Render bottom-up: row 0 = bottom, row 7 = top
+      const canvasH = TOTAL_ROWS * ROW_GAP + PAD * 2;
+
+      const wrapper = document.createElement('div');
+      wrapper.className = 'skill-tree-wrapper';
+
+      const canvas = document.createElement('div');
+      canvas.className = 'skill-tree-canvas';
+      canvas.style.width = canvasW + 'px';
+      canvas.style.height = canvasH + 'px';
+
+      // SVG for connector lines
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('width', canvasW);
+      svg.setAttribute('height', canvasH);
+      svg.className = 'skill-tree-svg';
+      canvas.appendChild(svg);
+
+      // Helper: get center pixel of a node
+      const nodeCenter = (col, row) => ({
+        x: PAD + col * COL_GAP + NODE_W / 2,
+        y: canvasH - PAD - row * ROW_GAP - NODE_H / 2
+      });
+
+      // Draw SVG connector lines first (parent → child)
       for (const [skillId, skill] of Object.entries(SKILL_TREE)) {
+        if (!skill.requires) continue;
+        const childLayout = SKILL_TREE_LAYOUT[skillId];
+        const parentLayout = SKILL_TREE_LAYOUT[skill.requires];
+        if (!childLayout || !parentLayout) continue;
+        const from = nodeCenter(parentLayout.col, parentLayout.row);
+        const to = nodeCenter(childLayout.col, childLayout.row);
+        const path = childLayout.path;
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', from.x); line.setAttribute('y1', from.y);
+        line.setAttribute('x2', to.x);   line.setAttribute('y2', to.y);
+        line.classList.add('skill-connector', `skill-connector-${path}`);
+        svg.appendChild(line);
+      }
+
+      // Render skill nodes
+      for (const [skillId, skill] of Object.entries(SKILL_TREE)) {
+        const layout = SKILL_TREE_LAYOUT[skillId];
+        if (!layout) continue;
         const skillData = saveData.skillTree[skillId];
+        if (!skillData) continue;
+
         const isMaxLevel = skillData.level >= skill.maxLevel;
         const canAfford = saveData.skillPoints >= skill.cost;
-        
-        // Progressive unlock: after quest1 only show first 4 skills; after quest2 show all
-        const skillIndex = _allSkillIds.indexOf(skillId);
-        if (!_quest2Claimed && skillIndex >= 4) continue;
-        if (!_quest1Claimed && skillIndex >= 2) continue;
-        
-        const skillNode = document.createElement('div');
-        skillNode.className = 'skill-node';
-        if (skillData.unlocked) skillNode.classList.add('unlocked');
-        if (!canAfford || isMaxLevel) skillNode.classList.add('locked');
-        
-        skillNode.innerHTML = `
-          <div class="skill-name">${skill.name}</div>
-          <div class="skill-desc">${skill.description}</div>
-          <div style="font-size: 12px; color: #5DADE2; margin: 5px 0;">Level ${skillData.level}/${skill.maxLevel}</div>
-          <div class="skill-cost">${isMaxLevel ? 'MAX' : `${skill.cost} SP`}</div>
-          ${!isMaxLevel && canAfford ? '<div class="skill-hold-bar" style="height:6px;background:#333;border:2px solid #000;border-radius:3px;margin-top:6px;overflow:hidden;"><div class="skill-hold-fill" style="height:100%;width:0%;background:#FFD700;transition:none;"></div></div><div style="font-size:10px;color:#888;margin-top:2px;">Hold to buy</div>' : ''}
+        // Parent must be unlocked (or no parent)
+        const parentUnlocked = !skill.requires || (saveData.skillTree[skill.requires] && saveData.skillTree[skill.requires].level > 0);
+        const isUnlocked = skillData.level > 0;
+        const isAvailable = parentUnlocked && canAfford && !isMaxLevel;
+
+        const center = nodeCenter(layout.col, layout.row);
+        const nodeSize = layout.path === 'root' ? 90 : 80;
+
+        const node = document.createElement('div');
+        node.className = `skill-node-tree path-${layout.path}`;
+        if (isUnlocked) node.classList.add('skill-node-unlocked');
+        if (isMaxLevel) node.classList.add('skill-node-maxed');
+        if (!parentUnlocked || (!isAvailable && !isUnlocked)) node.classList.add('skill-node-locked');
+        else if (isAvailable && !isUnlocked) node.classList.add('skill-node-available');
+
+        node.style.left = (center.x - nodeSize / 2) + 'px';
+        node.style.top = (center.y - nodeSize / 2) + 'px';
+        node.style.width = nodeSize + 'px';
+        node.style.height = nodeSize + 'px';
+
+        node.innerHTML = `
+          <div style="font-size:${layout.path === 'root' ? '16' : '13'}px;line-height:1.1;">${skill.name}</div>
+          <div style="font-size:9px;color:#aaa;margin:1px 0;">${skillData.level}/${skill.maxLevel}</div>
+          <div style="font-size:10px;color:#FFD700;">${isMaxLevel ? 'MAX' : `${skill.cost} SP`}</div>
+          ${!isMaxLevel && canAfford && parentUnlocked ? '<div style="font-size:8px;color:#888;">Hold</div>' : ''}
         `;
-        
-        if (!isMaxLevel && canAfford) {
+        node.title = `${skill.name}\n${skill.description}`;
+
+        if (!isMaxLevel && canAfford && parentUnlocked) {
           let holdTimer = null;
           let holdStart = null;
-          const HOLD_DURATION = 1000; // 1 second
-          // Cache DOM reference to avoid repeated queries in animation loop
-          const fillEl = skillNode.querySelector('.skill-hold-fill');
-          
+          const HOLD_DURATION = 1000;
           const startHold = () => {
             if (holdTimer) return;
             holdStart = Date.now();
             const animate = () => {
               const elapsed = Date.now() - holdStart;
-              const pct = Math.min(100, (elapsed / HOLD_DURATION) * 100);
-              if (fillEl) fillEl.style.width = pct + '%';
-              if (pct >= 100) {
+              if (elapsed >= HOLD_DURATION) {
                 holdTimer = null;
                 unlockSkill(skillId);
               } else {
@@ -12100,37 +12198,21 @@
             };
             holdTimer = requestAnimationFrame(animate);
           };
-          
           const cancelHold = () => {
             if (holdTimer) { cancelAnimationFrame(holdTimer); holdTimer = null; }
-            if (fillEl) fillEl.style.width = '0%';
           };
-          
-          skillNode.addEventListener('pointerdown', (e) => { e.preventDefault(); startHold(); });
-          skillNode.addEventListener('pointerup', cancelHold);
-          skillNode.addEventListener('pointerleave', cancelHold);
-          skillNode.addEventListener('pointercancel', cancelHold);
-          skillNode.style.cursor = 'pointer';
-          skillNode.style.userSelect = 'none';
+          node.addEventListener('pointerdown', (e) => { e.preventDefault(); startHold(); });
+          node.addEventListener('pointerup', cancelHold);
+          node.addEventListener('pointerleave', cancelHold);
+          node.addEventListener('pointercancel', cancelHold);
+          node.style.userSelect = 'none';
         }
-        
-        skillsContent.appendChild(skillNode);
+
+        canvas.appendChild(node);
       }
-      
-      // Update sleep section
-      const dayOption = document.getElementById('sleep-day-option');
-      const nightOption = document.getElementById('sleep-night-option');
-      const currentChoice = document.getElementById('current-time-choice');
-      
-      if (saveData.nextRunTimeOfDay === 'day') {
-        dayOption.style.border = '3px solid #FFD700';
-        nightOption.style.border = '3px solid transparent';
-        currentChoice.textContent = 'DAY ☀️';
-      } else {
-        dayOption.style.border = '3px solid transparent';
-        nightOption.style.border = '3px solid #FFD700';
-        currentChoice.textContent = 'NIGHT 🌙';
-      }
+
+      wrapper.appendChild(canvas);
+      skillsContent.appendChild(wrapper);
       
       // Update training section
       updateTrainingSection();
@@ -14175,15 +14257,11 @@
         setGamePaused(true);
         updateCampScreen();
         
-        // Ensure buildings tab is selected (not sleep/day-night selection)
+        // Ensure buildings section is visible
         document.getElementById('camp-buildings-section').style.display = 'block';
         document.getElementById('camp-skills-section').style.display = 'none';
-        document.getElementById('camp-sleep-section').style.display = 'none';
         document.getElementById('camp-training-section').style.display = 'none';
         document.getElementById('camp-buildings-tab').style.background = '#5A3A31';
-        document.getElementById('camp-skills-tab').style.background = '#3a3a3a';
-        document.getElementById('camp-sleep-tab').style.background = '#3a3a3a';
-        document.getElementById('camp-training-tab').style.background = '#3a3a3a';
         
         document.getElementById('camp-screen').style.display = 'flex';
         playSound('waterdrop');
@@ -14426,92 +14504,11 @@
         }
       };
       
-      // Camp tab switching
+      // Camp tab switching - only buildings tab remains
       document.getElementById('camp-buildings-tab').onclick = () => {
         playSound('waterdrop');
         document.getElementById('camp-buildings-section').style.display = 'block';
-        document.getElementById('camp-skills-section').style.display = 'none';
-        document.getElementById('camp-sleep-section').style.display = 'none';
-        document.getElementById('camp-training-section').style.display = 'none';
-        document.getElementById('camp-passive-section').style.display = 'none';
         document.getElementById('camp-buildings-tab').style.background = '#5A3A31';
-        document.getElementById('camp-skills-tab').style.background = '#3a3a3a';
-        document.getElementById('camp-sleep-tab').style.background = '#3a3a3a';
-        document.getElementById('camp-training-tab').style.background = '#3a3a3a';
-        document.getElementById('camp-passive-tab').style.background = '#3a3a3a';
-      };
-      
-      document.getElementById('camp-skills-tab').onclick = () => {
-        playSound('waterdrop');
-        document.getElementById('camp-buildings-section').style.display = 'none';
-        document.getElementById('camp-skills-section').style.display = 'block';
-        document.getElementById('camp-sleep-section').style.display = 'none';
-        document.getElementById('camp-training-section').style.display = 'none';
-        document.getElementById('camp-passive-section').style.display = 'none';
-        document.getElementById('camp-buildings-tab').style.background = '#3a3a3a';
-        document.getElementById('camp-skills-tab').style.background = '#5A3A31';
-        document.getElementById('camp-sleep-tab').style.background = '#3a3a3a';
-        document.getElementById('camp-training-tab').style.background = '#3a3a3a';
-        document.getElementById('camp-passive-tab').style.background = '#3a3a3a';
-      };
-      
-      document.getElementById('camp-passive-tab').onclick = () => {
-        playSound('waterdrop');
-        document.getElementById('camp-buildings-section').style.display = 'none';
-        document.getElementById('camp-skills-section').style.display = 'none';
-        document.getElementById('camp-sleep-section').style.display = 'none';
-        document.getElementById('camp-training-section').style.display = 'none';
-        document.getElementById('camp-passive-section').style.display = 'block';
-        document.getElementById('camp-buildings-tab').style.background = '#3a3a3a';
-        document.getElementById('camp-skills-tab').style.background = '#3a3a3a';
-        document.getElementById('camp-sleep-tab').style.background = '#3a3a3a';
-        document.getElementById('camp-training-tab').style.background = '#3a3a3a';
-        document.getElementById('camp-passive-tab').style.background = '#5A3A31';
-        updatePassiveSkillsSection();
-      };
-      
-      document.getElementById('camp-sleep-tab').onclick = () => {
-        playSound('waterdrop');
-        document.getElementById('camp-buildings-section').style.display = 'none';
-        document.getElementById('camp-skills-section').style.display = 'none';
-        document.getElementById('camp-sleep-section').style.display = 'block';
-        document.getElementById('camp-training-section').style.display = 'none';
-        document.getElementById('camp-passive-section').style.display = 'none';
-        document.getElementById('camp-buildings-tab').style.background = '#3a3a3a';
-        document.getElementById('camp-skills-tab').style.background = '#3a3a3a';
-        document.getElementById('camp-sleep-tab').style.background = '#5A3A31';
-        document.getElementById('camp-training-tab').style.background = '#3a3a3a';
-        document.getElementById('camp-passive-tab').style.background = '#3a3a3a';
-      };
-      
-      document.getElementById('camp-training-tab').onclick = () => {
-        playSound('waterdrop');
-        document.getElementById('camp-buildings-section').style.display = 'none';
-        document.getElementById('camp-skills-section').style.display = 'none';
-        document.getElementById('camp-sleep-section').style.display = 'none';
-        document.getElementById('camp-training-section').style.display = 'block';
-        document.getElementById('camp-passive-section').style.display = 'none';
-        document.getElementById('camp-buildings-tab').style.background = '#3a3a3a';
-        document.getElementById('camp-skills-tab').style.background = '#3a3a3a';
-        document.getElementById('camp-sleep-tab').style.background = '#3a3a3a';
-        document.getElementById('camp-training-tab').style.background = '#5A3A31';
-        document.getElementById('camp-passive-tab').style.background = '#3a3a3a';
-        updateTrainingSection();
-      };
-      
-      // Sleep option handlers
-      document.getElementById('sleep-day-option').onclick = () => {
-        playSound('waterdrop');
-        saveData.nextRunTimeOfDay = 'day';
-        saveSaveData();
-        updateCampScreen();
-      };
-      
-      document.getElementById('sleep-night-option').onclick = () => {
-        playSound('waterdrop');
-        saveData.nextRunTimeOfDay = 'night';
-        saveSaveData();
-        updateCampScreen();
       };
       
       // Go to Camp from death screen
@@ -17500,17 +17497,9 @@
       // Tutorial: Check for quest completion on death
       const currentQuest = getCurrentQuest();
       if (currentQuest && currentQuest.triggerOnDeath) {
-        // Quest 4: Kill 10 enemies (legacy)
-        if (currentQuest.id === 'quest4_kill10' && saveData.tutorialQuests.killsThisRun >= 10) {
-          progressTutorialQuest('quest4_kill10', true);
-        }
-        // Quest 7: Survive 2 minutes (legacy)
-        if (currentQuest.id === 'quest7_survive2min' && saveData.tutorialQuests.survivalTimeThisRun >= 120) {
-          progressTutorialQuest('quest7_survive2min', true);
-        }
-        // Quest 5: Complete a run (any run completion counts)
-        if (currentQuest.id === 'quest5_doRun') {
-          progressTutorialQuest('quest5_doRun', true);
+        // Quest 3: Reach level 5 in a run
+        if (currentQuest.id === 'quest3_forgeAwaits' && playerStats.lvl >= 5) {
+          progressTutorialQuest('quest3_forgeAwaits', true);
         }
         // Quest 7 (new): Kill 10 enemies
         if (currentQuest.id === 'quest7_kill10' && saveData.tutorialQuests.killsThisRun >= 10) {
@@ -18023,7 +18012,7 @@
               
               if (swipeTime < 250 && swipeDist > 60) {
                 // Dash only available after unlocking in skill tree
-                if (!saveData.tutorial || !saveData.tutorial.dashUnlocked) {
+                if (!saveData.skillTree || !saveData.skillTree.dash || saveData.skillTree.dash.level === 0) {
                   showStatChange('🔒 Unlock Dash in the Skill Tree!');
                   swipeStart = null;
                 } else {
@@ -18168,7 +18157,7 @@
           keysPressed[e.key.toLowerCase()] = true;
           
           // Space bar for dash (only if unlocked in skill tree)
-          if (e.key === ' ' && !player.isDashing && saveData.tutorial && saveData.tutorial.dashUnlocked && (keysPressed['w'] || keysPressed['a'] || keysPressed['s'] || keysPressed['d'])) {
+          if (e.key === ' ' && !player.isDashing && saveData.skillTree && saveData.skillTree.dash && saveData.skillTree.dash.level > 0 && (keysPressed['w'] || keysPressed['a'] || keysPressed['s'] || keysPressed['d'])) {
             let dx = 0, dy = 0;
             if (keysPressed['w']) dy = -1;
             if (keysPressed['s']) dy = 1;
@@ -18551,7 +18540,8 @@
           
           // Button 0 (A/X) for dash - detect button press (not hold)
           const dashPressed = gamepad.buttons[0].pressed;
-          if (dashPressed && !gameSettings.gamepadButtonStates.dashButton && !player.isDashing && joystickLeft.active) {
+          if (dashPressed && !gameSettings.gamepadButtonStates.dashButton && !player.isDashing && joystickLeft.active &&
+              saveData.skillTree && saveData.skillTree.dash && saveData.skillTree.dash.level > 0) {
             player.isDashing = true;
             player.dashTime = player.dashDuration;
             // Convert joystick direction to isometric world coordinates before dashing
