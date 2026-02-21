@@ -567,6 +567,73 @@
       text-shadow: 0 0 6px rgba(255,215,0,1);
     }
     
+    /* Farmer NPC Speech Bubble */
+    #farmer-speech-bubble {
+      position: absolute;
+      display: none;
+      background: #fffde7;
+      border: 3px solid #4e342e;
+      border-radius: 14px;
+      padding: 12px 16px 10px;
+      max-width: 260px;
+      min-width: 160px;
+      font-family: Arial, sans-serif;
+      font-size: 13px;
+      color: #3e2723;
+      box-shadow: 4px 4px 0px #4e342e;
+      z-index: 500;
+      pointer-events: auto;
+      cursor: pointer;
+      transform: translate(-50%, calc(-100% - 18px));
+      text-align: left;
+      user-select: none;
+    }
+    #farmer-speech-bubble::after {
+      content: '';
+      position: absolute;
+      bottom: -16px;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 8px solid transparent;
+      border-top-color: #4e342e;
+    }
+    #farmer-speech-bubble::before {
+      content: '';
+      position: absolute;
+      bottom: -12px;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 6px solid transparent;
+      border-top-color: #fffde7;
+      z-index: 1;
+    }
+    #farmer-speech-bubble-text {
+      margin-bottom: 7px;
+      line-height: 1.5;
+    }
+    #farmer-speech-bubble-prompt {
+      font-size: 10px;
+      color: #8d6e63;
+      text-align: right;
+    }
+    /* Farmer "?" above head */
+    #farmer-quest-indicator {
+      position: absolute;
+      display: none;
+      font-size: 20px;
+      font-weight: bold;
+      color: #FFD700;
+      text-shadow: 0 0 6px rgba(255,215,0,1), 1px 1px 2px #000;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      z-index: 450;
+      animation: questIndicatorBob 1.2s ease-in-out infinite;
+    }
+    @keyframes questIndicatorBob {
+      0%, 100% { transform: translate(-50%, -50%); }
+      50% { transform: translate(-50%, calc(-50% - 5px)); }
+    }
+
     /* Stat Notification Queue - Red/Black Dominant */
     #stat-notifications {
       position: absolute;
@@ -4035,13 +4102,14 @@
     
     let waveCount = 0;
     let lastWaveEndTime = 0; // Track when last wave was cleared
-    let windmillQuest = { active: false, timer: 0, duration: 30, windmill: null, hasCompleted: false };
+    let windmillQuest = { active: false, timer: 0, duration: 30, windmill: null, hasCompleted: false, dialogueOpen: false, rewardReady: false, rewardGiven: false, failed: false };
     let montanaQuest = { active: false, timer: 0, duration: 45, kills: 0, killsNeeded: 15, landmark: null, hasCompleted: false };
     let eiffelQuest = { active: false, timer: 0, duration: 60, kills: 0, killsNeeded: 25, landmark: null, hasCompleted: false };
     const MONTANA_QUEST_TRIGGER_DISTANCE = 15; // Proximity distance for Montana quest
     const EIFFEL_QUEST_TRIGGER_DISTANCE = 20; // Proximity distance for Eiffel quest (larger due to taller structure)
     let montanaLandmark = null; // Store Montana landmark reference for efficient distance checks
     let eiffelLandmark = null; // Store Eiffel landmark reference for efficient distance checks
+    let farmerNPC = null; // Farmer NPC near windmill
     let runStartGold = 0;  // Track gold at start of run for end-of-run calculation
     let lastCleanupTime = 0; // Track last memory cleanup time
     let miniBossesSpawned = new Set(); // Track which mini-boss levels have been spawned
@@ -5608,9 +5676,7 @@
           this.mesh.position.z -= (dz / dist) * 2;
           
           if (windmillQuest.windmill.userData.hp <= 0) {
-            windmillQuest.active = false;
-            createFloatingText("WINDMILL DESTROYED!", windmillQuest.windmill.position);
-            document.getElementById('windmill-quest-ui').style.display = 'none';
+            failWindmillQuest();
           }
         } else if (dist < 1.0 && this.type !== 4) { // Ranged enemies don't melee attack
           // Attack player with cooldown to prevent instant death
@@ -12782,6 +12848,54 @@
       signpostGroup.add(sprite);
       
       scene.add(signpostGroup);
+
+      // Farmer NPC near windmill (between windmill and barn)
+      (function() {
+        const farmerGroup = new THREE.Group();
+        farmerGroup.position.set(44, 0, 44); // Between windmill and barn
+        // Body
+        const bodyMesh = new THREE.Mesh(
+          new THREE.BoxGeometry(0.8, 1.2, 0.5),
+          new THREE.MeshToonMaterial({ color: 0x8B4513 }) // brown shirt
+        );
+        bodyMesh.position.y = 1.4;
+        bodyMesh.castShadow = true;
+        farmerGroup.add(bodyMesh);
+        // Legs
+        const legMat = new THREE.MeshToonMaterial({ color: 0x4b3621 }); // dark brown trousers
+        [-0.2, 0.2].forEach(xOff => {
+          const leg = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.8, 0.4), legMat);
+          leg.position.set(xOff, 0.6, 0);
+          leg.castShadow = true;
+          farmerGroup.add(leg);
+        });
+        // Head
+        const headMesh = new THREE.Mesh(
+          new THREE.BoxGeometry(0.7, 0.7, 0.7),
+          new THREE.MeshToonMaterial({ color: 0xf5cba7 }) // skin tone
+        );
+        headMesh.position.y = 2.35;
+        headMesh.castShadow = true;
+        farmerGroup.add(headMesh);
+        // Hat brim
+        const hatBrimMesh = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.6, 0.6, 0.1, 8),
+          new THREE.MeshToonMaterial({ color: 0x5C3317 })
+        );
+        hatBrimMesh.position.y = 2.75;
+        farmerGroup.add(hatBrimMesh);
+        // Hat top
+        const hatTopMesh = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.35, 0.42, 0.5, 8),
+          new THREE.MeshToonMaterial({ color: 0x5C3317 })
+        );
+        hatTopMesh.position.y = 3.05;
+        farmerGroup.add(hatTopMesh);
+
+        farmerGroup.userData = { isFarmerNPC: true };
+        scene.add(farmerGroup);
+        farmerNPC = farmerGroup;
+      })();
       
       // Barn adjacent to windmill (not connected - placed to the north-east)
       const barnGroup = new THREE.Group();
@@ -17158,7 +17272,9 @@
           const mapZ = 50 + (dz / mapSize) * 100;
           
           const landmarkDot = document.createElement('div');
-          landmarkDot.className = 'minimap-dot minimap-landmark';
+          // Add quest-ready "?" indicator for windmill when quest available
+          const isWindmillAvailable = landmark.name === 'windmill' && !windmillQuest.active && !windmillQuest.rewardGiven;
+          landmarkDot.className = 'minimap-dot minimap-landmark' + (isWindmillAvailable ? ' quest-ready' : '');
           landmarkDot.style.left = `${mapX}%`;
           landmarkDot.style.top = `${mapZ}%`;
           minimap.appendChild(landmarkDot);
@@ -17538,6 +17654,129 @@
       }, COMBO_ANIMATION_DURATION);
     }
     
+    // ── Farmer NPC Dialogue System ──────────────────────────────────────────
+    const FARMER_DIALOGUE = {
+      intro: [
+        "Howdy, stranger! Glad you came by the windmill.",
+        "Those blasted raiders have been attackin' my fields and stealin' my crops!",
+        "I need to head over to the barn and refill supplies before winter hits.",
+        "Could ya protect the windmill while I'm gone? Keep those varmints away!",
+        "Do this for me and I'll hand over my trusty double-barrel gun. Deal?"
+      ],
+      success: [
+        "You did it! The windmill's still standin'!",
+        "I'm so relieved — those crops are safe for the season.",
+        "A deal's a deal. Here, take my double-barrel gun. You've earned it!"
+      ],
+      failure: [
+        "Oh no... they got my crops again...",
+        "I can't believe it — all that hard work, gone.",
+        "I need some time to recover. Come back another day and we'll try again."
+      ]
+    };
+
+    let farmerDialogueLines = [];
+    let farmerDialoguePage = 0;
+
+    function worldToScreen(worldPos) {
+      const vec = worldPos.clone();
+      vec.project(camera);
+      return {
+        x: (vec.x * 0.5 + 0.5) * window.innerWidth,
+        y: (-(vec.y * 0.5) + 0.5) * window.innerHeight
+      };
+    }
+
+    function showFarmerDialogue(lines, onComplete) {
+      farmerDialogueLines = lines;
+      farmerDialoguePage = 0;
+      windmillQuest.dialogueOpen = true;
+
+      const bubble = document.getElementById('farmer-speech-bubble');
+      const textEl = document.getElementById('farmer-speech-bubble-text');
+      const promptEl = document.getElementById('farmer-speech-bubble-prompt');
+
+      function renderPage() {
+        textEl.textContent = farmerDialogueLines[farmerDialoguePage];
+        const isLast = farmerDialoguePage >= farmerDialogueLines.length - 1;
+        promptEl.textContent = isLast ? '▶ tap to close' : '▶ tap to continue';
+        bubble.style.display = 'block';
+        if (farmerNPC) {
+          const screen = worldToScreen(farmerNPC.position.clone().setY(farmerNPC.position.y + 3.5));
+          bubble.style.left = screen.x + 'px';
+          bubble.style.top = screen.y + 'px';
+        }
+      }
+
+      function advancePage() {
+        farmerDialoguePage++;
+        if (farmerDialoguePage >= farmerDialogueLines.length) {
+          hideFarmerDialogue();
+          if (onComplete) onComplete();
+        } else {
+          renderPage();
+        }
+      }
+
+      // Clean up previous listeners before adding new ones
+      if (bubble._farmerClickHandler) {
+        bubble.removeEventListener('click', bubble._farmerClickHandler);
+      }
+      if (bubble._farmerTouchHandler) {
+        bubble.removeEventListener('touchend', bubble._farmerTouchHandler);
+      }
+
+      function touchHandler(e) {
+        e.preventDefault(); // Prevent subsequent click event on touch devices
+        advancePage();
+      }
+
+      bubble._farmerClickHandler = advancePage;
+      bubble._farmerTouchHandler = touchHandler;
+      bubble.addEventListener('click', advancePage);
+      bubble.addEventListener('touchend', touchHandler);
+      renderPage();
+    }
+
+    function hideFarmerDialogue() {
+      windmillQuest.dialogueOpen = false;
+      const bubble = document.getElementById('farmer-speech-bubble');
+      bubble.style.display = 'none';
+      if (bubble._farmerClickHandler) {
+        bubble.removeEventListener('click', bubble._farmerClickHandler);
+        bubble._farmerClickHandler = null;
+      }
+      if (bubble._farmerTouchHandler) {
+        bubble.removeEventListener('touchend', bubble._farmerTouchHandler);
+        bubble._farmerTouchHandler = null;
+      }
+    }
+
+    function updateFarmerNPCIndicator() {
+      const indicator = document.getElementById('farmer-quest-indicator');
+      if (!farmerNPC || !indicator) return;
+      // Show "?" while quest is not started and reward not given yet
+      const showIndicator = !windmillQuest.active && !windmillQuest.rewardGiven && !windmillQuest.dialogueOpen;
+      if (showIndicator) {
+        const screen = worldToScreen(farmerNPC.position.clone().setY(farmerNPC.position.y + 4.2));
+        indicator.style.left = screen.x + 'px';
+        indicator.style.top = screen.y + 'px';
+        indicator.style.display = 'block';
+      } else {
+        indicator.style.display = 'none';
+      }
+    }
+
+    function updateFarmerBubblePosition() {
+      if (!windmillQuest.dialogueOpen || !farmerNPC) return;
+      const bubble = document.getElementById('farmer-speech-bubble');
+      if (bubble.style.display === 'none') return;
+      const screen = worldToScreen(farmerNPC.position.clone().setY(farmerNPC.position.y + 3.5));
+      bubble.style.left = screen.x + 'px';
+      bubble.style.top = screen.y + 'px';
+    }
+    // ────────────────────────────────────────────────────────────────────────
+
     function updateWindmillQuestUI() {
       if (!windmillQuest.active || !windmillQuest.windmill) return;
       
@@ -17551,11 +17790,12 @@
     }
     
     function startWindmillQuest(windmill) {
-      if (windmillQuest.hasCompleted) return;
+      if (windmillQuest.hasCompleted || windmillQuest.active) return;
       
       windmillQuest.active = true;
       windmillQuest.timer = windmillQuest.duration;
       windmillQuest.windmill = windmill;
+      windmillQuest.failed = false;
       windmill.userData.hp = 600;
       windmill.userData.maxHp = 600;
       
@@ -17564,7 +17804,6 @@
       
       createFloatingText("DEFEND THE WINDMILL!", windmill.position);
       
-      // FRESH IMPLEMENTATION: Enhanced quest notification
       showEnhancedNotification(
         'quest',
         'NEW QUEST!',
@@ -17575,25 +17814,15 @@
     function completeWindmillQuest() {
       windmillQuest.active = false;
       windmillQuest.hasCompleted = true;
+      windmillQuest.rewardReady = true;
       document.getElementById('windmill-quest-ui').style.display = 'none';
       
       createFloatingText("QUEST COMPLETE!", windmillQuest.windmill.position);
       
-      // Grant passive level up
-      playerStats.lvl++;
-      playerStats.expReq = (playerStats.lvl * 2) * GAME_CONFIG.expValue;
-      
-      // Unlock Double Barrel Gun
-      weapons.gun.barrels = 2;
-      weapons.gun.damage += 10;
-      
-      createFloatingText("DOUBLE BARREL UNLOCKED!", player.mesh.position);
-      
-      // FRESH IMPLEMENTATION: Enhanced unlock notification
       showEnhancedNotification(
-        'unlock',
-        'WEAPON UNLOCKED!',
-        'Double Barrel Gun - Increased damage and firepower!'
+        'quest',
+        'QUEST COMPLETE!',
+        'Return to the farmer for your reward!'
       );
       
       // Unlock lore
@@ -17602,6 +17831,38 @@
       
       playSound('levelup');
       updateHUD();
+    }
+
+    function giveWindmillQuestReward() {
+      windmillQuest.rewardReady = false;
+      windmillQuest.rewardGiven = true;
+
+      // Grant passive level up
+      playerStats.lvl++;
+      playerStats.expReq = (playerStats.lvl * 2) * GAME_CONFIG.expValue;
+
+      // Unlock Double Barrel Gun
+      weapons.gun.barrels = 2;
+      weapons.gun.damage += 10;
+
+      createFloatingText("DOUBLE BARREL UNLOCKED!", player.mesh.position);
+
+      showEnhancedNotification(
+        'unlock',
+        'WEAPON UNLOCKED!',
+        'Double Barrel Gun - Increased damage and firepower!'
+      );
+
+      playSound('levelup');
+      updateHUD();
+    }
+
+    function failWindmillQuest() {
+      windmillQuest.active = false;
+      windmillQuest.failed = true;
+      document.getElementById('windmill-quest-ui').style.display = 'none';
+      if (windmillQuest.windmill) createFloatingText("WINDMILL DESTROYED!", windmillQuest.windmill.position);
+      showEnhancedNotification('quest', 'QUEST FAILED', 'Return to the farmer to retry.');
     }
     
     // Montana Quest Functions
@@ -18246,8 +18507,9 @@
       // Cache headshot unlock status for this run
       playerStats.headshotUnlocked = isHeadshotUnlocked();
       
-      windmillQuest = { active: false, timer: 0, duration: 15, windmill: null, hasCompleted: false };
+      windmillQuest = { active: false, timer: 0, duration: 15, windmill: null, hasCompleted: false, dialogueOpen: false, rewardReady: false, rewardGiven: false, failed: false };
       document.getElementById('windmill-quest-ui').style.display = 'none';
+      hideFarmerDialogue();
       
       montanaQuest = { active: false, timer: 0, duration: 45, kills: 0, killsNeeded: 15, landmark: null, hasCompleted: false };
       document.getElementById('montana-quest-ui').style.display = 'none';
@@ -19350,23 +19612,35 @@
         }
       }
       
-      // Check windmill quest trigger (optimized: use pre-cached animatedSceneObjects instead of scene.children)
-      if (!windmillQuest.active && !windmillQuest.hasCompleted) {
-        for (const child of animatedSceneObjects.windmills) {
-          const dist = player.mesh.position.distanceTo(child.position);
-          // Check if player is in front of windmill (90 degree arc)
-          const dx = player.mesh.position.x - child.position.x;
-          const dz = player.mesh.position.z - child.position.z;
-          const angle = Math.atan2(dz, dx);
-          const isFront = Math.abs(angle) < Math.PI / 2; // Front 180 degree arc
-          
-          if (dist < 8 && isFront) {
-            startWindmillQuest(child);
-            break;
-          }
+      // Farmer NPC: Update "?" indicator position and check for player proximity to trigger dialogue
+      updateFarmerNPCIndicator();
+      updateFarmerBubblePosition();
+      if (farmerNPC && !windmillQuest.dialogueOpen && !isPaused && !isGameOver) {
+        const farmerDist = player.mesh.position.distanceTo(farmerNPC.position);
+        const FARMER_TALK_DIST = 5;
+        // Trigger intro dialogue if quest not yet started (and not currently failed/awaiting retry)
+        if (!windmillQuest.active && !windmillQuest.hasCompleted && !windmillQuest.failed && farmerDist < FARMER_TALK_DIST) {
+          const windmillRef = animatedSceneObjects.windmills.length > 0 ? animatedSceneObjects.windmills[0] : null;
+          showFarmerDialogue(FARMER_DIALOGUE.intro, function() {
+            if (windmillRef) startWindmillQuest(windmillRef);
+          });
+        }
+        // Reward dialogue after quest success
+        else if (windmillQuest.hasCompleted && windmillQuest.rewardReady && !windmillQuest.rewardGiven && farmerDist < FARMER_TALK_DIST) {
+          showFarmerDialogue(FARMER_DIALOGUE.success, function() {
+            giveWindmillQuestReward();
+          });
+        }
+        // Failure retry dialogue – reset failed flag only after dialogue completes so player can retry
+        else if (windmillQuest.failed && !windmillQuest.active && !windmillQuest.hasCompleted && farmerDist < FARMER_TALK_DIST) {
+          showFarmerDialogue(FARMER_DIALOGUE.failure, function() {
+            windmillQuest.failed = false; // allow intro dialogue on next approach for retry
+          });
         }
       }
-      
+
+      // Check windmill quest trigger – quest now starts only via farmer NPC dialogue above
+
       // Update windmill quest
       if (windmillQuest.active) {
         windmillQuest.timer -= dt;
@@ -19376,9 +19650,8 @@
           // Quest completed successfully
           completeWindmillQuest();
         } else if (windmillQuest.windmill && windmillQuest.windmill.userData.hp <= 0) {
-          // Quest failed
-          windmillQuest.active = false;
-          document.getElementById('windmill-quest-ui').style.display = 'none';
+          // Quest failed – windmill destroyed
+          failWindmillQuest();
         }
       }
       
@@ -20299,5 +20572,12 @@
     try { init(); } catch(e) { console.error('[Game Error]', e); console.error('[Game] Initialization failed - game cannot start'); }
 
   </script>
+  <!-- Farmer NPC Speech Bubble (comic-style, paged) -->
+  <div id="farmer-speech-bubble" role="dialog" aria-label="Farmer dialogue">
+    <div id="farmer-speech-bubble-text"></div>
+    <div id="farmer-speech-bubble-prompt">▶ tap to continue</div>
+  </div>
+  <!-- Farmer NPC quest indicator "?" above head -->
+  <div id="farmer-quest-indicator">?</div>
 </body>
 </html>
