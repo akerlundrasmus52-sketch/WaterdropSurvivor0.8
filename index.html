@@ -6017,6 +6017,7 @@
         // Tutorial Quest: Track kills this run
         if (saveData.tutorialQuests) {
           saveData.tutorialQuests.killsThisRun = playerStats.kills;
+          updateQuestTracker();
           
           // Quest 1: Kill 3 enemies
           const currentQuest = getCurrentQuest();
@@ -11073,6 +11074,7 @@
           
           // Clear current quest
           saveData.tutorialQuests.currentQuest = null;
+          updateQuestTracker();
           
           // Quest 2 fix: close skill tree panel so it doesn't stay open after completion
           if (questId === 'quest2_spendSkills') {
@@ -11183,6 +11185,7 @@
       
       // Save immediately after rewards and quest activation
       saveSaveData();
+      updateQuestTracker();
       
       // Build the combined popup message: reward info + new quest info
       const claimMsg = quest.message || `Quest Complete! ${quest.rewardGold ? `+${quest.rewardGold} gold` : ''} ${quest.rewardSkillPoints ? `+${quest.rewardSkillPoints} skill points` : ''}`;
@@ -11282,7 +11285,25 @@
         return;
       }
       
-      questTracker.textContent = `📜 ${currentQuest.name}`;
+      // Build progress info for kill-based quests
+      let progressText = '';
+      const killsNow = (saveData.tutorialQuests && saveData.tutorialQuests.killsThisRun) || 0;
+      if (currentQuest.id === 'quest1_kill3') {
+        progressText = ` (${Math.min(killsNow, 3)}/3)`;
+      } else if (currentQuest.id === 'quest7_kill10' || currentQuest.id === 'quest4_kill10') {
+        progressText = ` (${Math.min(killsNow, 10)}/10)`;
+      }
+      
+      questTracker.textContent = '';
+      const nameEl = document.createElement('b');
+      nameEl.textContent = `📜 ${currentQuest.name}${progressText}`;
+      const objEl = document.createElement('span');
+      objEl.style.fontSize = '11px';
+      objEl.style.color = '#ddd';
+      objEl.textContent = currentQuest.objectives;
+      questTracker.appendChild(nameEl);
+      questTracker.appendChild(document.createElement('br'));
+      questTracker.appendChild(objEl);
       questTracker.style.display = 'block';
     }
 
@@ -13994,6 +14015,7 @@
       document.getElementById('camp-screen').style.display = 'none';
       document.getElementById('gameover-screen').style.display = 'none';
       resetGame();
+      updateQuestTracker();
       
       // Show first-run destructibles info box
       const isFirstRun = !saveData.shownDestructiblesInfo;
