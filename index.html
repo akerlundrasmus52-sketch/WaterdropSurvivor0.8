@@ -55,7 +55,7 @@
       padding: 0;
       overflow: hidden;
       background-color: #000000; /* Black background - no white space */
-      font-family: 'Bangers', 'M PLUS Rounded 1c', cursive;
+      font-family: 'M PLUS Rounded 1c', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       touch-action: none;
       user-select: none;
       -webkit-user-select: none;
@@ -7011,8 +7011,8 @@
               const div = document.createElement('div');
               div.style.position = 'absolute';
               div.style.color = '#FF0000';
-              div.style.fontSize = '24px';
-              div.style.fontWeight = '400';
+              div.style.fontSize = '32px';
+              div.style.fontWeight = '500'; // Reduced from 600 to 500 for thinner font
               div.style.fontFamily = 'Bangers, cursive';
               div.style.textShadow = '0 0 20px #FF0000, 2px 2px 4px #000';
               div.style.pointerEvents = 'none';
@@ -11334,7 +11334,6 @@
       // Save immediately after rewards and quest activation
       saveSaveData();
       updateQuestTracker();
-      updateCampScreen();
       
       // Build the combined popup message: reward info + new quest info
       const claimMsg = quest.message || `Quest Complete! ${quest.rewardGold ? `+${quest.rewardGold} gold` : ''} ${quest.rewardSkillPoints ? `+${quest.rewardSkillPoints} skill points` : ''}`;
@@ -11430,7 +11429,7 @@
       
       const currentQuest = getCurrentQuest();
       // Hide tracker if no quest is active, or if the player hasn't died yet (first run)
-      if (!currentQuest || !saveData.tutorialQuests.firstDeathShown || saveData.totalRuns === 0) {
+      if (!currentQuest || !saveData.tutorialQuests.firstDeathShown) {
         questTracker.style.display = 'none';
         return;
       }
@@ -14991,7 +14990,7 @@
       killText.style.fontSize = isMiniBoss ? '48px' : '36px';
       killText.style.fontWeight = '900';
       killText.style.textShadow = '0 0 10px rgba(0,0,0,0.8), 0 0 20px rgba(255,0,0,0.5)';
-      killText.style.fontFamily = "'Bangers', 'M PLUS Rounded 1c', cursive";
+      killText.style.fontFamily = "'M PLUS Rounded 1c', sans-serif";
       killText.textContent = isMiniBoss ? '⚡ BOSS DOWN! ⚡' : getRandomKillMessage();
       killText.style.opacity = '0';
       killText.style.animation = 'killTextAppear 0.3s ease-out forwards';
@@ -15371,8 +15370,8 @@
         top: ${startY}px;
         transform: translate(-50%, -50%) scale(0);
         font-family: 'Bangers', cursive;
-        font-size: 32px;
-        font-weight: 400;
+        font-size: 38px;
+        font-weight: 500;
         color: #FFD700;
         text-shadow: 
           0 0 10px rgba(255,215,0,0.85),
