@@ -343,7 +343,7 @@
     /* Waterdrop Level Display Container - CENTERED AT BOTTOM */
     #waterdrop-container {
       width: 80px; /* Slightly smaller, less oval */
-      height: 100px; /* Reduced from 110px for less oval appearance */
+      height: 90px; /* Lowered slightly - more rounded shape */
       position: relative;
       margin-bottom: 15px;
       /* 3D appearance with stronger shadow and depth */
@@ -616,6 +616,35 @@
       color: #8d6e63;
       text-align: right;
     }
+    /* Farmer speech bubble movement animations */
+    @keyframes bubble-twinkle {
+      0%, 100% { box-shadow: 4px 4px 0px #4e342e; }
+      50% { box-shadow: 4px 4px 8px rgba(255,215,0,0.6), 4px 4px 0px #4e342e; }
+    }
+    @keyframes bubble-push-left {
+      0%, 100% { transform: translate(-50%, calc(-100% - 18px)); }
+      50% { transform: translate(calc(-50% - 6px), calc(-100% - 18px)); }
+    }
+    @keyframes bubble-push-right {
+      0%, 100% { transform: translate(-50%, calc(-100% - 18px)); }
+      50% { transform: translate(calc(-50% + 6px), calc(-100% - 18px)); }
+    }
+    @keyframes bubble-push-up {
+      0%, 100% { transform: translate(-50%, calc(-100% - 18px)); }
+      50% { transform: translate(-50%, calc(-100% - 26px)); }
+    }
+    @keyframes bubble-lean-left {
+      0%, 100% { transform: translate(-50%, calc(-100% - 18px)) rotate(0deg); }
+      50% { transform: translate(-50%, calc(-100% - 18px)) rotate(-4deg); }
+    }
+    @keyframes bubble-lean-right {
+      0%, 100% { transform: translate(-50%, calc(-100% - 18px)) rotate(0deg); }
+      50% { transform: translate(-50%, calc(-100% - 18px)) rotate(4deg); }
+    }
+    #farmer-speech-bubble.moving-left { animation: bubble-lean-left 0.4s ease-in-out infinite, bubble-push-left 0.4s ease-in-out infinite; }
+    #farmer-speech-bubble.moving-right { animation: bubble-lean-right 0.4s ease-in-out infinite, bubble-push-right 0.4s ease-in-out infinite; }
+    #farmer-speech-bubble.moving-up { animation: bubble-push-up 0.4s ease-in-out infinite; }
+    #farmer-speech-bubble.idle { animation: bubble-twinkle 2s ease-in-out infinite; }
     /* Farmer "?" above head */
     #farmer-quest-indicator {
       position: absolute;
@@ -2980,8 +3009,8 @@
           <!-- Definitions -->
           <defs>
             <clipPath id="waterdrop-clip">
-              <!-- Teardrop shape: pointed top, round bottom -->
-              <path d="M 50 8 C 50 8, 20 50, 20 72 C 20 93, 33 112, 50 112 C 67 112, 80 93, 80 72 C 80 50, 50 8, 50 8 Z" />
+              <!-- Rounded waterdrop shape: raised top point for shorter, less oval shape -->
+              <path d="M 50 18 C 50 18, 22 52, 22 72 C 22 92, 34 110, 50 110 C 66 110, 78 92, 78 72 C 78 52, 50 18, 50 18 Z" />
             </clipPath>
             <linearGradient id="exp-gradient" x1="0%" y1="100%" x2="0%" y2="0%">
               <stop offset="0%" style="stop-color:#3498DB;stop-opacity:1" />
@@ -2999,18 +3028,18 @@
               <feDisplacementMap in="SourceGraphic" scale="3"/>
             </filter>
           </defs>
-          <!-- Background - teardrop shape -->
-          <path d="M 50 8 C 50 8, 20 50, 20 72 C 20 93, 33 112, 50 112 C 67 112, 80 93, 80 72 C 80 50, 50 8, 50 8 Z" 
+          <!-- Background - rounded waterdrop shape -->
+          <path d="M 50 18 C 50 18, 22 52, 22 72 C 22 92, 34 110, 50 110 C 66 110, 78 92, 78 72 C 78 52, 50 18, 50 18 Z" 
                 fill="rgba(58,58,58,0.8)" stroke="#000000" stroke-width="3"/>
           <!-- EXP Fill (clips to waterdrop shape, fills from bottom to top) -->
           <g clip-path="url(#waterdrop-clip)">
-            <rect id="waterdrop-exp-fill" x="0" y="8" width="100" height="112" 
+            <rect id="waterdrop-exp-fill" x="0" y="18" width="100" height="92" 
                   fill="url(#exp-gradient)" 
                   filter="url(#water-turbulence)" 
                   opacity="0.9"/>
           </g>
           <!-- Level text -->
-          <text id="waterdrop-level-text" x="50" y="80" 
+          <text id="waterdrop-level-text" x="50" y="78" 
                 text-anchor="middle" 
                 font-size="24" 
                 font-weight="bold" 
@@ -12826,6 +12855,7 @@
       const cabin = new THREE.Mesh(cabinGeo, cabinMat);
       cabin.position.set(-20, 2.5, -20);
       cabin.castShadow = true;
+      cabin.receiveShadow = true;
       scene.add(cabin);
 
       // Windmill with improvements
@@ -12833,6 +12863,8 @@
       wmGroup.position.set(40, 0, 40);
       const wmBase = new THREE.Mesh(new THREE.CylinderGeometry(2, 3, 8, 8), new THREE.MeshToonMaterial({color: 0xD2B48C})); // Beige
       wmBase.position.y = 4;
+      wmBase.castShadow = true;
+      wmBase.receiveShadow = true;
       wmGroup.add(wmBase);
       
       // Add door to windmill
@@ -12865,15 +12897,18 @@
       
       const wmBlades = new THREE.Mesh(new THREE.BoxGeometry(12, 1, 1), new THREE.MeshBasicMaterial({color: 0x8B4513})); // Brown
       wmBlades.position.set(0, 7, 2);
+      wmBlades.castShadow = true;
       wmGroup.add(wmBlades);
       const wmBlades2 = wmBlades.clone();
       wmBlades2.rotation.z = Math.PI/2;
+      wmBlades2.castShadow = true;
       wmGroup.add(wmBlades2);
       
       // Add broken/damaged blade (third blade bent and damaged)
       const brokenBlade = new THREE.Mesh(new THREE.BoxGeometry(6, 0.8, 0.9), new THREE.MeshBasicMaterial({color: 0x654321})); // Darker brown (damaged)
       brokenBlade.position.set(-3, 7, 2);
       brokenBlade.rotation.z = Math.PI * 0.15; // Bent at angle
+      brokenBlade.castShadow = true;
       wmGroup.add(brokenBlade);
       
       // Store blades reference for rotation animation
@@ -14569,7 +14604,8 @@
             document.getElementById('quest-popup-overlay') !== null ||
             document.getElementById('comic-info-overlay') !== null ||
             document.getElementById('comic-tutorial-modal')?.style.display === 'flex' ||
-            document.getElementById('story-quest-modal')?.style.display === 'flex';
+            document.getElementById('story-quest-modal')?.style.display === 'flex' ||
+            windmillQuest.dialogueOpen; // Pause during farmer dialogue
           if (!hasOpenOverlay) {
             setGamePaused(false);
           }
@@ -16672,8 +16708,8 @@
         }
         choices.push(...commonUpgrades.sort(() => 0.5 - Math.random()).slice(0, 3));
       }
-      // Levels 3, 9, 17: WEAPON UPGRADE LEVELS
-      else if ([3, 9, 17].includes(playerStats.lvl)) {
+      // Levels 3, 4, 9, 17, 23: WEAPON UPGRADE LEVELS
+      else if ([3, 4, 9, 17, 23].includes(playerStats.lvl)) {
         modal.querySelector('h2').innerText = 'WEAPON UPGRADE!';
         modal.querySelector('h2').style.fontSize = '36px';
         
@@ -17089,8 +17125,8 @@
           }
           // Weapon upgrades (rare - blue)
           else if (u.id.includes('gun_') || u.id.includes('sword_') || u.id.includes('aura_') || 
-                   u.id.includes('meteor_') || u.id.includes('drone_') || u.id.includes('double_barrel_') ||
-                   u.id.includes('ice_spear_') || u.id.includes('fire_ring_')) {
+                   u.id.includes('meteor_') || u.id.includes('doublebarrel_') ||
+                   u.id.includes('droneturret_') || u.id.includes('icespear_') || u.id.includes('firering_')) {
             card.className += ' weapon rarity-rare';
           }
           else {
@@ -17221,9 +17257,10 @@
       }
     }
 
-    // Waterdrop dimensions constants (match SVG viewBox)
+    // Waterdrop dimensions constants (match SVG viewBox - raised/rounded shape)
     const WATERDROP_SVG_HEIGHT = 120; // Total SVG viewBox height
-    const WATERDROP_FILL_HEIGHT = 110; // Fillable area height (waterdrop shape)
+    const WATERDROP_FILL_TOP = 18;    // Top y-coordinate of fillable area (raised from 8 for compact shape)
+    const WATERDROP_FILL_HEIGHT = 92; // Maximum fill height in SVG units (from y=18 to y=110)
     
     function updateHUD() {
       const hpPct = (playerStats.hp / playerStats.maxHp) * 100;
@@ -17257,7 +17294,7 @@
       // Update waterdrop EXP fill (fills from bottom to top like a thermometer)
       const waterdropFill = document.getElementById('waterdrop-exp-fill');
       const fillHeight = WATERDROP_FILL_HEIGHT * (expPct / 100);
-      const fillY = WATERDROP_SVG_HEIGHT - fillHeight;
+      const fillY = WATERDROP_FILL_TOP + WATERDROP_FILL_HEIGHT - fillHeight;
       waterdropFill.setAttribute('y', fillY);
       waterdropFill.setAttribute('height', fillHeight);
       
@@ -17796,6 +17833,7 @@
       farmerDialogueLines = lines;
       farmerDialoguePage = 0;
       windmillQuest.dialogueOpen = true;
+      setGamePaused(true); // Pause game while dialogue is showing
 
       const bubble = document.getElementById('farmer-speech-bubble');
       const textEl = document.getElementById('farmer-speech-bubble-text');
@@ -17855,6 +17893,20 @@
         bubble.removeEventListener('touchend', bubble._farmerTouchHandler);
         bubble._farmerTouchHandler = null;
       }
+      // Resume game after dialogue closes (if game is still active and no other overlay is open)
+      if (isGameActive && !isGameOver) {
+        const hasOpenOverlay =
+          document.getElementById('levelup-modal')?.style.display === 'flex' ||
+          document.getElementById('settings-modal')?.style.display === 'flex' ||
+          document.getElementById('options-menu')?.style.display === 'flex' ||
+          document.getElementById('stats-modal')?.style.display === 'flex' ||
+          document.getElementById('comic-tutorial-modal')?.style.display === 'flex' ||
+          document.getElementById('story-quest-modal')?.style.display === 'flex' ||
+          document.getElementById('quest-popup-overlay') !== null;
+        if (!hasOpenOverlay) {
+          setGamePaused(false);
+        }
+      }
     }
 
     function updateFarmerNPCIndicator() {
@@ -17879,6 +17931,20 @@
       const screen = worldToScreen(farmerNPC.position.clone().setY(farmerNPC.position.y + 3.5));
       bubble.style.left = screen.x + 'px';
       bubble.style.top = screen.y + 'px';
+      // Apply dynamic animation based on player movement
+      const jx = joystickLeft.x;
+      const jy = joystickLeft.y;
+      const moving = Math.abs(jx) > 0.2 || Math.abs(jy) > 0.2;
+      bubble.classList.remove('moving-left', 'moving-right', 'moving-up', 'idle');
+      if (moving) {
+        if (Math.abs(jx) >= Math.abs(jy)) {
+          bubble.classList.add(jx < 0 ? 'moving-left' : 'moving-right');
+        } else {
+          bubble.classList.add('moving-up');
+        }
+      } else {
+        bubble.classList.add('idle');
+      }
     }
     // ────────────────────────────────────────────────────────────────────────
 
@@ -17949,6 +18015,13 @@
       // Unlock Double Barrel Gun
       weapons.gun.barrels = 2;
       weapons.gun.damage += 10;
+      weapons.doubleBarrel.active = true;
+      weapons.doubleBarrel.level = 1;
+
+      // Spawn a blue (rare) reward chest near the farmer as visual representation
+      const chestX = farmerNPC ? farmerNPC.position.x + 1.5 : player.mesh.position.x + 2;
+      const chestZ = farmerNPC ? farmerNPC.position.z + 1.5 : player.mesh.position.z + 2;
+      spawnChest(chestX, chestZ, 'rare');
 
       createFloatingText("DOUBLE BARREL UNLOCKED!", player.mesh.position);
 
@@ -18322,6 +18395,10 @@
       setGameOver(true);
       setGamePaused(true);
       setGameActive(false);
+      // Close farmer dialogue if open when game ends to prevent UI malfunction
+      if (windmillQuest.dialogueOpen) {
+        hideFarmerDialogue();
+      }
       
       stopDroneHum(); // Stop drone sound
       
