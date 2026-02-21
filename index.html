@@ -6053,19 +6053,24 @@
           saveData.tutorialQuests.killsThisRun = playerStats.kills;
           updateQuestTracker();
           
-          // Quest 1: Kill 3 enemies
+          // Quest 1: Kill 7 enemies
           const currentQuest = getCurrentQuest();
-          if (currentQuest && currentQuest.id === 'quest1_kill3' && playerStats.kills >= 3) {
+          if (currentQuest && currentQuest.id === 'quest1_kill3' && playerStats.kills >= 7) {
             progressTutorialQuest('quest1_kill3', true);
             // Guard: only set pending notification if quest1 is now in readyToClaim
             if (saveData.tutorialQuests.readyToClaim.includes('quest1_kill3')) {
               saveData.tutorialQuests.pendingMissionNotification = 'quest1_kill3';
             }
           }
-          // Quest 7 (new): Kill 10 enemies — notify mid-run when objective reached
-          if (currentQuest && currentQuest.id === 'quest7_kill10' && playerStats.kills >= 10 &&
+          // Quest 6: Kill 10 enemies — notify mid-run when objective reached
+          if (currentQuest && currentQuest.id === 'quest6_kill10' && playerStats.kills >= 10 &&
+              !saveData.tutorialQuests.readyToClaim.includes('quest6_kill10')) {
+            showStatChange('⚔️ 10 Kills! Return to camp after this run!');
+          }
+          // Quest 7 (new): Kill 15 enemies — notify mid-run when objective reached
+          if (currentQuest && currentQuest.id === 'quest7_kill10' && playerStats.kills >= 15 &&
               !saveData.tutorialQuests.readyToClaim.includes('quest7_kill10')) {
-            showStatChange('⚔️ 10 Kills! Return to camp to claim your reward!');
+            showStatChange('⚔️ 15 Kills! Return to camp to claim your reward!');
           }
         }
         
@@ -10864,14 +10869,14 @@
       },
       quest1_kill3: {
         id: 'quest1_kill3',
-        name: 'Kill 3 Enemies',
-        description: 'Start a new run and kill 3 enemies',
-        objectives: 'Kill 3 enemies in one run',
+        name: 'Kill 7 Enemies',
+        description: 'Start a new run and kill 7 enemies',
+        objectives: 'Kill 7 enemies in one run',
         claim: 'Main Building',
         rewardGold: 50,
-        rewardSkillPoints: 2,
+        rewardSkillPoints: 3,
         unlockBuilding: 'skillTree',
-        message: "Outstanding, Droplet! 🎯<br><br>You've proven your combat worth. The <b>Skill Tree</b> is now unlocked at camp!<br><br>Head to the <b>Skill Tree</b> tab and spend your <b>2 Skill Points</b> to grow stronger.",
+        message: "Outstanding, Droplet! 🎯<br><br>You've proven your combat worth. The <b>Skill Tree</b> is now unlocked at camp!<br><br>Head to the <b>Skill Tree</b> tab and spend your <b>3 Skill Points</b> to grow stronger.",
         nextQuest: 'quest2_spendSkills',
         conditions: ['firstRunDeath'] // Requires firstRunDeath to be auto-claimed (on first death)
       },
@@ -10894,7 +10899,7 @@
         objectives: 'Find and collect the chest at Stonehenge',
         claim: 'Main Building',
         rewardGold: 150,
-        rewardSkillPoints: 1,
+        rewardSkillPoints: 2,
         unlockBuildingOnActivation: 'armory', // Armory unlocks when THIS quest activates (so player can use it)
         giveItem: { id: 'cigar_quest', name: 'Cigar', type: 'ring', rarity: 'rare', stats: { attackSpeed: 1, movementSpeed: 1, attackPrecision: 1 }, description: '+1 Attack Speed, +1 Movement Speed, +1 Attack Precision' },
         message: "🚬 Cigar acquired!<br><br>This rare ring grants <b>+1 Attack Speed, +1 Movement Speed, +1 Attack Precision</b>.<br><br>Head to the <b>Armory</b> and equip the Cigar from your inventory!",
@@ -10904,14 +10909,14 @@
       quest4_upgradeAttr: {
         id: 'quest4_upgradeAttr',
         name: 'Upgrade an Attribute',
-        description: 'Open the Training Hall and spend an attribute point to upgrade any stat',
+        description: 'Open the Training Hall and spend the attribute point you received to upgrade any stat',
         objectives: 'Spend 1 attribute point in the Training Hall',
         claim: 'Main Building',
         rewardGold: 100,
         rewardSkillPoints: 1,
-        rewardAttributePoints: 2,
+        rewardAttributePoints: 3,
         unlockBuildingOnActivation: 'trainingHall', // Training Hall unlocks when THIS quest activates
-        message: "💪 Attribute upgraded!<br><br>You earned <b>+2 free Attribute Points</b> and <b>+1 Skill Point</b>!",
+        message: "💪 Attribute upgraded!<br><br>You earned <b>+3 free Attribute Points</b> and <b>+1 Skill Point</b>!",
         nextQuest: 'quest5_trainingSession',
         conditions: ['quest4_equipCigar']
       },
@@ -10925,8 +10930,8 @@
         rewardSkillPoints: 1,
         rewardAttributePoints: 2,
         unlockBuildingOnActivation: 'forge', // Forge unlocks when THIS quest activates
-        message: "🏋️ Training complete!<br><br>You earned <b>+2 Attribute Points</b> and <b>+1 Skill Point</b>!",
-        nextQuest: 'quest7_kill10',
+        message: "🏋️ Training complete!<br><br>You earned <b>+2 Attribute Points</b> and <b>+1 Skill Point</b>!<br><br>Next: keep pushing — kill <b>10 enemies</b> in a run!",
+        nextQuest: 'quest6_kill10',
         conditions: ['quest4_upgradeAttr']
       },
       quest4_equipCigar: {
@@ -10937,8 +10942,8 @@
         claim: 'Main Building',
         rewardGold: 100,
         rewardSkillPoints: 1,
-        rewardAttributePoints: 1,
-        message: "Cigar equipped! 🚬<br><br>Feel that power — +1 to all stats!<br><br>You've unlocked the <b>Training Hall</b> — spend your training point to upgrade an attribute!",
+        rewardAttributePoints: 2,
+        message: "Cigar equipped! 🚬<br><br>Feel that power — +1 to all stats!<br><br>You've unlocked the <b>Training Hall</b> — a free Attribute Point awaits you there!",
         nextQuest: 'quest4_upgradeAttr',
         conditions: ['quest3_stonehengeGear']
       },
@@ -10969,17 +10974,29 @@
         nextQuest: 'quest7_kill10',
         conditions: ['quest5_doRun']
       },
-      quest7_kill10: {
-        id: 'quest7_kill10',
+      quest6_kill10: {
+        id: 'quest6_kill10',
         name: 'Kill 10 Enemies',
         description: 'Head out and eliminate 10 enemies in a single run',
-        objectives: 'Kill 10 enemies',
+        objectives: 'Kill 10 enemies in one run',
+        triggerOnDeath: true,
+        rewardGold: 200,
+        rewardSkillPoints: 1,
+        message: "⚔️ 10 Enemies Defeated!<br><br>You're growing stronger, Droplet!<br><br>One final challenge: eliminate <b>15 enemies</b> in a single run to complete your training!",
+        nextQuest: 'quest7_kill10',
+        conditions: ['quest5_trainingSession']
+      },
+      quest7_kill10: {
+        id: 'quest7_kill10',
+        name: 'Kill 15 Enemies',
+        description: 'Head out and eliminate 15 enemies in a single run',
+        objectives: 'Kill 15 enemies',
         triggerOnDeath: true,
         rewardGold: 500,
         rewardSkillPoints: 0,
         message: "🎉 TUTORIAL COMPLETE!<br><br>You've mastered the basics of survival!<br><br>The world is yours to conquer. Good luck, Droplet!",
         nextQuest: null,
-        conditionsAny: ['quest5_trainingSession', 'quest4_equipCigar', 'quest6_buyAttributes'], // Accept any of these predecessors
+        conditionsAny: ['quest6_kill10', 'quest5_trainingSession', 'quest4_equipCigar', 'quest6_buyAttributes'], // Accept any of these predecessors
         conditions: [] // No strict requirements - conditionsAny handles it
       },
       quest3_buyProgression: {
@@ -11349,6 +11366,12 @@
             showStatChange(`🏛️ ${bldName} Unlocked!`);
           }
         }
+        
+        // Give 1 attribute point when the Training Hall quest activates so player can complete it immediately
+        if (nextQuestActivated && nextQuestActivated.id === 'quest4_upgradeAttr') {
+          saveData.trainingPoints = (saveData.trainingPoints || 0) + 1;
+          showStatChange('+1 Attribute Point! Spend it in the Training Hall!');
+        }
       }
       
       // Save immediately after rewards and quest activation
@@ -11482,9 +11505,11 @@
         let progressText = '';
         const killsNow = (saveData.tutorialQuests && saveData.tutorialQuests.killsThisRun) || 0;
         if (currentQuest.id === 'quest1_kill3') {
-          progressText = ` (${Math.min(killsNow, 3)}/3)`;
-        } else if (currentQuest.id === 'quest7_kill10' || currentQuest.id === 'quest4_kill10') {
+          progressText = ` (${Math.min(killsNow, 7)}/7)`;
+        } else if (currentQuest.id === 'quest6_kill10' || currentQuest.id === 'quest4_kill10') {
           progressText = ` (${Math.min(killsNow, 10)}/10)`;
+        } else if (currentQuest.id === 'quest7_kill10') {
+          progressText = ` (${Math.min(killsNow, 15)}/15)`;
         }
         
         const nameEl = document.createElement('b');
@@ -11540,6 +11565,10 @@
       
       if (!modal || !title || !text || !btn) return;
       
+      // Pause game while lore popup is visible
+      const wasGameActive = isGameActive && !isGameOver;
+      if (wasGameActive) setGamePaused(true);
+      
       title.textContent = `${loreData.icon} ${loreData.name}`;
       text.innerHTML = `<strong>${loreData.description}</strong><br><br>${loreData.story}`;
       btn.textContent = 'CLOSE';
@@ -11548,6 +11577,7 @@
       
       btn.onclick = () => {
         modal.style.display = 'none';
+        if (wasGameActive) setGamePaused(false);
       };
     }
     
@@ -11792,10 +11822,10 @@
               <p style="font-family: 'Bangers', cursive; font-size: 20px; margin-bottom: 10px;">🎯 QUEST 1: COMBAT READINESS</p>
               <p style="line-height: 1.8; margin-bottom: 10px;">
                 Welcome back, Droplet. You survived your first encounter — now it's time to prove yourself.<br><br>
-                <b>YOUR MISSION:</b> Head back out and eliminate <b>3 enemies</b> in a single run.<br><br>
-                Once you achieve 3 kills, return here to claim your reward and unlock new camp upgrades.
+                <b>YOUR MISSION:</b> Head back out and eliminate <b>7 enemies</b> in a single run.<br><br>
+                Once you achieve 7 kills, return here to claim your reward and unlock new camp upgrades.
               </p>
-              <p style="font-size: 13px; color: #FFD700;">Reward: +200 Gold · +2 Skill Points · Skill Tree Unlocked</p>
+              <p style="font-size: 13px; color: #FFD700;">Reward: +50 Gold · +3 Skill Points · Skill Tree Unlocked</p>
             </div>`,
             'ACCEPT MISSION!'
           );
@@ -12102,7 +12132,7 @@
         if (!building.isFree && !isUnlocked && buildingData.level === 0) {
           // Map building IDs to which tutorial quest unlocks them
           const buildingQuestUnlockMap = {
-            'skillTree': { questId: 'quest1_kill3', label: 'Kill 3 Enemies (Quest 1)' },
+            'skillTree': { questId: 'quest1_kill3', label: 'Kill 7 Enemies (Quest 1)' },
             'armory': { questId: 'quest3_stonehengeGear', label: 'Find the Cigar (Quest 3)' },
             'trainingHall': { questId: 'quest4_upgradeAttr', label: 'Upgrade an Attribute (Quest 4)' },
             'forge': { questId: 'quest5_trainingSession', label: 'Complete Training (Quest 5)' },
@@ -16242,8 +16272,28 @@
 
       // --- SPECIAL LEVELS ---
       
+      // Quest 8: Force weapon choice when quest8_newWeapon is active (grant first new weapon)
+      if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest8_newWeapon' &&
+          ![4, 8, 12, 16].includes(playerStats.lvl)) {
+        modal.querySelector('h2').innerText = 'NEW WEAPON!';
+        modal.querySelector('h2').style.fontSize = '36px';
+        const allWeaponChoicesQ8 = [
+          { id: 'sword', title: 'SLASHY SLASH', desc: 'Slash enemies in front', active: () => weapons.sword.active, apply: () => { weapons.sword.active = true; weapons.sword.level = 1; showStatChange('New Weapon: Sword'); progressTutorialQuest('quest8_newWeapon', true); } },
+          { id: 'aura', title: 'ZAP ZONE', desc: 'Damage aura around you', active: () => weapons.aura.active, apply: () => { weapons.aura.active = true; weapons.aura.level = 1; showStatChange('New Weapon: Aura'); progressTutorialQuest('quest8_newWeapon', true); } },
+          { id: 'meteor', title: 'SPACE ROCKS', desc: 'Call meteors from sky', active: () => weapons.meteor.active, apply: () => { weapons.meteor.active = true; weapons.meteor.level = 1; showStatChange('New Weapon: Meteor'); progressTutorialQuest('quest8_newWeapon', true); } },
+          { id: 'icespear', title: 'ICE SPEAR', desc: 'Freezing projectile that slows enemies 40%', active: () => weapons.iceSpear.active, apply: () => { weapons.iceSpear.active = true; weapons.iceSpear.level = 1; showStatChange('New Weapon: Ice Spear'); progressTutorialQuest('quest8_newWeapon', true); } },
+          { id: 'firering', title: 'FIRE RING', desc: 'Spinning fire orbs orbit around you', active: () => weapons.fireRing.active, apply: () => { weapons.fireRing.active = true; weapons.fireRing.level = 1; showStatChange('New Weapon: Fire Ring'); progressTutorialQuest('quest8_newWeapon', true); } }
+        ];
+        const availableQ8 = allWeaponChoicesQ8.filter(w => !w.active());
+        choices = availableQ8.sort(() => 0.5 - Math.random()).slice(0, Math.min(3, availableQ8.length));
+        if (choices.length < 3) {
+          const fillers = commonUpgrades.sort(() => 0.5 - Math.random()).slice(0, 3 - choices.length);
+          choices.push(...fillers);
+        }
+        choices.push(...commonUpgrades.sort(() => 0.5 - Math.random()).slice(0, 3));
+      }
       // Levels 3, 9, 17: WEAPON UPGRADE LEVELS
-      if ([3, 9, 17].includes(playerStats.lvl)) {
+      else if ([3, 9, 17].includes(playerStats.lvl)) {
         modal.querySelector('h2').innerText = 'WEAPON UPGRADE!';
         modal.querySelector('h2').style.fontSize = '36px';
         
@@ -17774,8 +17824,12 @@
         if (currentQuest.id === 'quest5_doRun') {
           progressTutorialQuest('quest5_doRun', true);
         }
-        // Quest 7 (new): Kill 10 enemies
-        if (currentQuest.id === 'quest7_kill10' && saveData.tutorialQuests.killsThisRun >= 10) {
+        // Quest 6: Kill 10 enemies (new intermediate quest)
+        if (currentQuest.id === 'quest6_kill10' && saveData.tutorialQuests.killsThisRun >= 10) {
+          progressTutorialQuest('quest6_kill10', true);
+        }
+        // Quest 7 (new): Kill 15 enemies
+        if (currentQuest.id === 'quest7_kill10' && saveData.tutorialQuests.killsThisRun >= 15) {
           progressTutorialQuest('quest7_kill10', true);
         }
       }
