@@ -6113,11 +6113,47 @@
         setTimeout(() => flash.remove(), this.isMiniBoss ? 100 : 50);
         
         // DEATH BLOOD BURST - violent explosion of blood particles
-        const deathBloodCount = this.isMiniBoss ? 40 : 20; // Increased gore intensity
+        const deathBloodCount = this.isMiniBoss ? 60 : 35; // Enhanced gore
         spawnParticles(this.mesh.position, 0x8B0000, deathBloodCount);
         spawnParticles(this.mesh.position, 0x6B0000, Math.floor(deathBloodCount * 0.7));
-        spawnParticles(this.mesh.position, 0xCC0000, Math.floor(deathBloodCount * 0.4)); // Bright red splatter in air
-        for (let db = 0; db < (this.isMiniBoss ? 7 : 4); db++) {
+        spawnParticles(this.mesh.position, 0xCC0000, Math.floor(deathBloodCount * 0.5)); // Bright red splatter in air
+        // Airborne blood droplets that land and form small pools
+        const airBloodCount = this.isMiniBoss ? 12 : 6;
+        for (let ab = 0; ab < airBloodCount; ab++) {
+          const landX = this.mesh.position.x + (Math.random() - 0.5) * 4;
+          const landZ = this.mesh.position.z + (Math.random() - 0.5) * 4;
+          const delay = 80 + Math.floor(Math.random() * 200);
+          setTimeout(() => {
+            if (!scene) return;
+            const r = 0.15 + Math.random() * 0.25;
+            const poolGeo = new THREE.CircleGeometry(r, 8);
+            const poolMat = new THREE.MeshStandardMaterial({ color: 0x7A0000, roughness: 0.3, metalness: 0.4, transparent: true, opacity: 0.75 });
+            const pool = new THREE.Mesh(poolGeo, poolMat);
+            pool.rotation.x = -Math.PI / 2;
+            pool.position.set(landX, 0.015, landZ);
+            scene.add(pool);
+            bloodDecals.push(pool);
+            // Fade after 8 seconds
+            setTimeout(() => {
+              let op = 0.75;
+              let disposed = false;
+              const fade = setInterval(() => {
+                if (disposed) { clearInterval(fade); return; }
+                op -= 0.025;
+                poolMat.opacity = Math.max(0, op);
+                if (op <= 0) {
+                  clearInterval(fade);
+                  disposed = true;
+                  if (pool.parent) scene.remove(pool);
+                  poolGeo.dispose();
+                  poolMat.dispose();
+                }
+              }, 100);
+              pool.userData.fadeInterval = fade; // Store for external cleanup if needed
+            }, 8000);
+          }, delay);
+        }
+        for (let db = 0; db < (this.isMiniBoss ? 10 : 6); db++) {
           spawnBloodDecal(this.mesh.position);
         }
         
@@ -6228,9 +6264,9 @@
           saveData.tutorialQuests.killsThisRun = playerStats.kills;
           updateQuestTracker();
           
-          // Quest 1: Kill 7 enemies
+          // Quest 1: Kill 3 enemies
           const currentQuest = getCurrentQuest();
-          if (currentQuest && currentQuest.id === 'quest1_kill3' && playerStats.kills >= 7) {
+          if (currentQuest && currentQuest.id === 'quest1_kill3' && playerStats.kills >= 3) {
             progressTutorialQuest('quest1_kill3', true);
             // Guard: only set pending notification if quest1 is now in readyToClaim
             if (saveData.tutorialQuests.readyToClaim.includes('quest1_kill3')) {
@@ -6279,12 +6315,13 @@
         
         if (deathVariation < 0.25) {
           // EXPLOSION DEATH: Main explosion (death ring removed per requirements)
-          spawnParticles(this.mesh.position, enemyColor, 20);
-          spawnParticles(this.mesh.position, 0xFFFFFF, 8);
-          spawnParticles(this.mesh.position, 0x8B0000, 15);
+          spawnParticles(this.mesh.position, enemyColor, 30);
+          spawnParticles(this.mesh.position, 0xFFFFFF, 10);
+          spawnParticles(this.mesh.position, 0x8B0000, 25); // More blood
+          spawnParticles(this.mesh.position, 0xFF2200, 15); // Bright red gore pieces
           
           // Explode into pieces (NO death ring)
-          const pieceCount = this.isMiniBoss ? 25 : 15;
+          const pieceCount = this.isMiniBoss ? 40 : 22;
           for(let i = 0; i < pieceCount; i++) {
             const piece = new THREE.Mesh(
               new THREE.BoxGeometry(0.3, 0.3, 0.3),
@@ -6341,10 +6378,12 @@
           
           // Blood pool
           const bloodGeo = new THREE.CircleGeometry(0.8, 16);
-          const bloodMat = new THREE.MeshBasicMaterial({ 
+          const bloodMat = new THREE.MeshStandardMaterial({ 
             color: 0x8B0000, 
             transparent: true,
             opacity: 0.5,
+            roughness: 0.3,
+            metalness: 0.5, // Shine/reflection on blood pool
             side: THREE.DoubleSide
           });
           const bloodPool = new THREE.Mesh(bloodGeo, bloodMat);
@@ -7264,8 +7303,19 @@
               enemy.takeDamage(Math.floor(dmg), false);
             }
             
-            // Knockback effect
-            const knockbackForce = 0.5;
+            // Knockback effect - scales with weapon level
+            let knockbackForce = 0.5 * (1 + (weapons.gun.level - 1) * 0.25);
+            if (weapons.doubleBarrel.active && this.isDoubleBarrel) {
+              // Double barrel: heavy knockback with partial topple effect
+              knockbackForce = 1.8 * (1 + (weapons.doubleBarrel.level - 1) * 0.2);
+              // Topple: tilt enemy mesh briefly on impact
+              const toppleAngle = (Math.random() - 0.5) * 0.6;
+              enemy.mesh.rotation.x = toppleAngle;
+              enemy.mesh.rotation.z = toppleAngle * 0.5;
+              setTimeout(() => {
+                if (enemy.mesh) { enemy.mesh.rotation.x = 0; enemy.mesh.rotation.z = 0; }
+              }, 300);
+            }
             enemy.mesh.position.x += this.vx * knockbackForce;
             enemy.mesh.position.z += this.vz * knockbackForce;
             
@@ -7868,10 +7918,10 @@
           _expGemStarGeometry = new THREE.ExtrudeGeometry(starShape, extrudeSettings);
           _expGemStarGeometry.center();
           _expGemStarMaterial = new THREE.MeshStandardMaterial({
-            color: 0xFFD700,
-            emissive: 0xFFAA00,
-            emissiveIntensity: 0.6,
-            metalness: 0.7,
+            color: 0x1E90FF,      // SM64-style blue star
+            emissive: 0x0055CC,   // Deep blue glow
+            emissiveIntensity: 0.7,
+            metalness: 0.5,
             roughness: 0.2
           });
         }
@@ -7881,6 +7931,25 @@
 
         this.mesh = new THREE.Mesh(_expGemStarGeometry, starMaterial);
         this.mesh.position.set(x, 0.5, z);
+
+        // SM64-style: add black outline ring and yellow-edge highlight using a slightly larger dark mesh
+        const outlineGeo = new THREE.ExtrudeGeometry((() => {
+          const s = new THREE.Shape();
+          const pts = 5, outerO = 0.33, innerO = 0.14;
+          for (let i = 0; i < pts * 2; i++) {
+            const ang = (i / (pts * 2)) * Math.PI * 2 - Math.PI / 2;
+            const r = i % 2 === 0 ? outerO : innerO;
+            if (i === 0) s.moveTo(Math.cos(ang) * r, Math.sin(ang) * r);
+            else s.lineTo(Math.cos(ang) * r, Math.sin(ang) * r);
+          }
+          s.closePath();
+          return s;
+        })(), { depth: 0.08, bevelEnabled: false });
+        outlineGeo.center();
+        const outlineMesh = new THREE.Mesh(outlineGeo, new THREE.MeshBasicMaterial({ color: 0x000000 }));
+        outlineMesh.position.z = -0.01;
+        this.mesh.add(outlineMesh);
+
         scene.add(this.mesh);
 
         this.active = true;
@@ -11045,9 +11114,9 @@
       },
       quest1_kill3: {
         id: 'quest1_kill3',
-        name: 'Kill 7 Enemies',
-        description: 'Start a new run and kill 7 enemies',
-        objectives: 'Kill 7 enemies in one run',
+        name: 'Kill 3 Enemies',
+        description: 'Start a new run and kill 3 enemies',
+        objectives: 'Kill 3 enemies in one run',
         claim: 'Main Building',
         rewardGold: 50,
         rewardSkillPoints: 3,
@@ -16376,6 +16445,9 @@
       const modal = document.getElementById('levelup-modal');
       const list = document.getElementById('upgrade-list');
       list.innerHTML = '';
+      // Reset header for two-press system
+      const h2 = modal.querySelector('h2');
+      if (h2) { h2.innerText = 'LEVEL UP!'; h2.style.color = ''; h2.style.fontSize = '32px'; }
       
       let choices = [];
 
@@ -17046,8 +17118,35 @@
         }
         
         card.onclick = () => {
-          // Phase 4: Prevent double-clicking by immediately disabling all cards
           const allCards = list.querySelectorAll('.upgrade-card');
+          
+          // Two-press system: first press selects/highlights, second press confirms
+          if (card.dataset.selected !== '1') {
+            // First press: highlight this card, deselect others
+            allCards.forEach(c => {
+              c.dataset.selected = '';
+              c.style.opacity = '0.45';
+              c.style.transform = 'scale(1)';
+              c.style.outline = 'none';
+              c.style.boxShadow = '';
+            });
+            card.dataset.selected = '1';
+            card.style.opacity = '1';
+            card.style.transform = 'scale(1.06)';
+            // Color the highlight based on upgrade rarity/type
+            let glowColor = '#00FF88'; // green default
+            if (card.classList.contains('rarity-rare')) glowColor = '#4499FF';
+            else if (card.classList.contains('rarity-epic')) glowColor = '#FF8800';
+            else if (card.classList.contains('rarity-legendary')) glowColor = '#FF2222';
+            card.style.outline = `3px solid ${glowColor}`;
+            card.style.boxShadow = `0 0 18px ${glowColor}, 0 0 6px ${glowColor}`;
+            // Update prompt text
+            const h2 = modal.querySelector('h2');
+            if (h2) { h2.innerText = 'CONFIRM?'; h2.style.color = '#FFD700'; }
+            return; // Wait for second press
+          }
+          
+          // Second press: apply upgrade
           allCards.forEach(c => {
             c.style.pointerEvents = 'none';
             c.style.opacity = '0.5';
@@ -17066,6 +17165,7 @@
           modal.style.display = 'none';
           modal.querySelector('h2').innerText = 'LEVEL UP!';
           modal.querySelector('h2').style.fontSize = '32px';
+          modal.querySelector('h2').style.color = '';
           // Hide skip button and clear its timeout
           const skipBtn = document.getElementById('levelup-skip-btn');
           if (skipBtn) skipBtn.style.display = 'none';
@@ -17098,6 +17198,10 @@
             allCards.forEach(c => {
               c.style.pointerEvents = 'auto';
               c.style.opacity = '1';
+              c.dataset.selected = '';
+              c.style.outline = 'none';
+              c.style.boxShadow = '';
+              c.style.transform = 'scale(1)';
             });
           }, 500);
         };
@@ -19721,15 +19825,33 @@
           }
         }
 
-        if (nearest) {
-          // Determine fire target: auto-aim targets nearest enemy, manual fires in player facing direction
-          const gunTarget = gameSettings.autoAim
-            ? nearest.mesh.position
-            : new THREE.Vector3(
-                player.mesh.position.x + Math.sin(player.mesh.rotation.y) * weapons.gun.range,
-                0,
-                player.mesh.position.z + Math.cos(player.mesh.rotation.y) * weapons.gun.range
-              );
+        // In manual mode: only fire if right stick is active (player is aiming) OR if on keyboard/gamepad
+        // This prevents auto-fire off-aim on mobile touch
+        const canFireManual = gameSettings.autoAim || joystickRight.active || gameSettings.controlType === 'keyboard' || gameSettings.controlType === 'gamepad';
+
+        if (nearest && canFireManual) {
+          // Determine fire target:
+          // - auto-aim: target nearest enemy directly
+          // - manual with right stick: fire in right-stick direction
+          // - manual keyboard: fire in player facing direction
+          let gunTarget;
+          if (gameSettings.autoAim) {
+            gunTarget = nearest.mesh.position;
+          } else if (joystickRight.active) {
+            // Right stick directs the shot
+            const aimAngle = Math.atan2(joystickRight.x, joystickRight.y);
+            gunTarget = new THREE.Vector3(
+              player.mesh.position.x + Math.sin(aimAngle) * weapons.gun.range,
+              0,
+              player.mesh.position.z + Math.cos(aimAngle) * weapons.gun.range
+            );
+          } else {
+            gunTarget = new THREE.Vector3(
+              player.mesh.position.x + Math.sin(player.mesh.rotation.y) * weapons.gun.range,
+              0,
+              player.mesh.position.z + Math.cos(player.mesh.rotation.y) * weapons.gun.range
+            );
+          }
           // Fire based on barrels
           for(let i=0; i<weapons.gun.barrels; i++) {
             setTimeout(() => {
