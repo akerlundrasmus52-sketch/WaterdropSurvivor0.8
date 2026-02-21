@@ -18352,6 +18352,7 @@
           }
           // Space bar for dash via new isDashUnlocked() system
           if (e.code === 'Space' && isDashUnlocked() && !isDashing && dashCooldownRemaining <= 0) {
+            e.preventDefault(); // Prevent default scroll behavior
             startDash();
           }
         });
