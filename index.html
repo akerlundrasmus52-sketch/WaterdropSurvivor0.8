@@ -3106,7 +3106,7 @@
       <div id="upgrade-list">
         <!-- Cards injected by JS -->
       </div>
-      <button id="levelup-skip-btn" style="margin-top:12px;padding:8px 24px;background:#333;color:#FFD700;border:2px solid #FFD700;border-radius:8px;font-family:'Bangers',cursive;font-size:16px;letter-spacing:2px;cursor:pointer;display:none;" onclick="(function(){var m=document.getElementById('levelup-modal');m.style.display='none';if(window.setGamePaused)window.setGamePaused(false);})()">CONTINUE →</button>
+      <button id="levelup-skip-btn" style="margin-top:12px;padding:8px 24px;background:#333;color:#FFD700;border:2px solid #FFD700;border-radius:8px;font-family:'Bangers',cursive;font-size:16px;letter-spacing:2px;cursor:pointer;display:none;" onclick="(function(){var m=document.getElementById('levelup-modal');m.style.display='none';if(window.setGamePaused)window.setGamePaused(false);if(window.checkPendingLevelUp)window.checkPendingLevelUp();})()">CONTINUE →</button>
     </div>
   </div>
 
@@ -3802,6 +3802,7 @@
     let isPaused = false;
     let pauseOverlayCount = 0;
     let isGameOver = false;
+    let levelUpPending = false;
     let isGameActive = false;  // Changed to false - start with menu
     let gameTime = 0;
     let gameStartTime = 0;
@@ -4167,7 +4168,7 @@
     
     let waveCount = 0;
     let lastWaveEndTime = 0; // Track when last wave was cleared
-    let windmillQuest = { active: false, timer: 0, duration: 30, windmill: null, hasCompleted: false, dialogueOpen: false, rewardReady: false, rewardGiven: false, failed: false };
+    let windmillQuest = { active: false, timer: 0, duration: 30, windmill: null, hasCompleted: false, dialogueOpen: false, rewardReady: false, rewardGiven: false, failed: false, failedCooldown: false };
     let montanaQuest = { active: false, timer: 0, duration: 45, kills: 0, killsNeeded: 15, landmark: null, hasCompleted: false };
     let eiffelQuest = { active: false, timer: 0, duration: 60, kills: 0, killsNeeded: 25, landmark: null, hasCompleted: false };
     const MONTANA_QUEST_TRIGGER_DISTANCE = 15; // Proximity distance for Montana quest
@@ -12659,7 +12660,7 @@
              </div>
              <div class="building-desc">${building.description}</div>
              <div class="building-bonus">Current: ${bonusText}</div>
-            <div class="building-cost">${isLockedFree ? 'Unlock via Quest' : (isMaxLevel ? 'MAX LEVEL' : (building.isFree ? 'FREE' : `Cost: ${cost} gold`))}</div>
+            <div class="building-cost">${isLockedFree ? 'Unlock via Quest' : (isMaxLevel ? 'MAX LEVEL' : (building.isFree ? 'FREE' : `Level ${buildingData.level}/${buildingData.maxLevel}`))}</div>
           `;
           
           if (buildingId === 'skillTree') {
@@ -12671,11 +12672,21 @@
               document.getElementById('camp-skills-tab').click();
             };
             buildingCard.style.cursor = 'pointer';
-          } else if (!isMaxLevel && !building.isFree && building.baseCost > 0) {
-            buildingCard.onclick = () => upgradeCampBuilding(buildingId);
-            if (!canAfford) {
-              buildingCard.style.opacity = '0.6';
-            }
+          } else if (!building.isFree && building.baseCost > 0) {
+            // Buildings are unlocked through quests only — clicking opens building's screen
+            buildingCard.style.cursor = 'pointer';
+            buildingCard.onclick = () => {
+              if (buildingId === 'armory') {
+                updateGearScreen();
+                document.getElementById('gear-screen').style.display = 'flex';
+              } else if (buildingId === 'trainingHall') {
+                document.getElementById('camp-training-tab').click();
+              } else if (buildingId === 'forge') {
+                showProgressionShop();
+              } else {
+                showStatChange(`${building.icon} ${building.name}: Level ${buildingData.level}/${buildingData.maxLevel}`);
+              }
+            };
           } else if (building.isFree) {
             buildingCard.style.border = '2px solid #FFD700';
             
@@ -15358,6 +15369,7 @@
       document.getElementById('levelup-x-btn').onclick = () => {
         document.getElementById('levelup-modal').style.display = 'none';
         if (window.setGamePaused) window.setGamePaused(false);
+        checkPendingLevelUp();
       };
       
       document.getElementById('settings-reset-btn').onclick = () => {
@@ -15907,7 +15919,7 @@
         waterdropContainer.classList.remove('grow');
       }, 300);
       
-      if (playerStats.exp >= playerStats.expReq && !isGameOver && isGameActive) {
+      if (playerStats.exp >= playerStats.expReq && !isGameOver && isGameActive && !levelUpPending) {
         const levelUpModal = document.getElementById('levelup-modal');
         if (!levelUpModal || levelUpModal.style.display !== 'flex') {
           levelUp();
@@ -15917,6 +15929,7 @@
     }
 
     function levelUp() {
+      levelUpPending = true;
       setGamePaused(true);
       
       // Lock camera during level-up to prevent zoom changes
@@ -16000,6 +16013,16 @@
       }, 800);
     }
     
+    function checkPendingLevelUp() {
+      levelUpPending = false;
+      if (playerStats && playerStats.exp >= playerStats.expReq && !isGameOver && isGameActive) {
+        const modal = document.getElementById('levelup-modal');
+        if (!modal || modal.style.display !== 'flex') {
+          levelUp();
+        }
+      }
+    }
+    window.checkPendingLevelUp = checkPendingLevelUp;
     // NEW: "LEVEL UP!" text that shoots from character's head
     function createCenteredLevelUpText() {
       const levelUpText = document.createElement('div');
@@ -17373,6 +17396,7 @@
           }
           
           setGamePaused(false);
+          checkPendingLevelUp();
           
           // Resume combo timer after level-up
           if (comboState.pausedAt) {
@@ -18563,6 +18587,7 @@
       pauseOverlayCount = 0;
       isPaused = false;
       window.isPaused = false;
+      levelUpPending = false;
       // Close farmer dialogue if open when game ends to prevent UI malfunction
       if (windmillQuest.dialogueOpen) {
         hideFarmerDialogue();
@@ -18857,7 +18882,7 @@
       // Cache headshot unlock status for this run
       playerStats.headshotUnlocked = isHeadshotUnlocked();
       
-      windmillQuest = { active: false, timer: 0, duration: 15, windmill: null, hasCompleted: false, dialogueOpen: false, rewardReady: false, rewardGiven: false, failed: false };
+      windmillQuest = { active: false, timer: 0, duration: 15, windmill: null, hasCompleted: false, dialogueOpen: false, rewardReady: false, rewardGiven: false, failed: false, failedCooldown: false };
       document.getElementById('windmill-quest-ui').style.display = 'none';
       hideFarmerDialogue();
       
@@ -19010,6 +19035,7 @@
       // Reset any accumulated pauses before starting a new game
       pauseOverlayCount = 0;
       window.pauseOverlayCount = 0;
+      levelUpPending = false;
       setGamePaused(true);  // Start paused, countdown will unpause (PR #70)
       setGameActive(false);  // Not active until countdown completes (PR #70)
       document.getElementById('gameover-screen').style.display = 'none';
@@ -19978,7 +20004,7 @@
         const farmerDist = player.mesh.position.distanceTo(farmerNPC.position);
         const FARMER_TALK_DIST = 5;
         // Trigger intro dialogue if quest not yet started (and not currently failed/awaiting retry)
-        if (!windmillQuest.active && !windmillQuest.hasCompleted && !windmillQuest.failed && farmerDist < FARMER_TALK_DIST) {
+        if (!windmillQuest.active && !windmillQuest.hasCompleted && !windmillQuest.failed && !windmillQuest.failedCooldown && farmerDist < FARMER_TALK_DIST) {
           const windmillRef = animatedSceneObjects.windmills.length > 0 ? animatedSceneObjects.windmills[0] : null;
           showFarmerDialogue(FARMER_DIALOGUE.intro, function() {
             if (windmillRef) startWindmillQuest(windmillRef);
@@ -19990,10 +20016,11 @@
             giveWindmillQuestReward();
           });
         }
-        // Failure retry dialogue – reset failed flag only after dialogue completes so player can retry
+        // Failure dialogue – shown once after quest fails; sets cooldown to prevent immediate re-trigger
         else if (windmillQuest.failed && !windmillQuest.active && !windmillQuest.hasCompleted && farmerDist < FARMER_TALK_DIST) {
           showFarmerDialogue(FARMER_DIALOGUE.failure, function() {
-            windmillQuest.failed = false; // allow intro dialogue on next approach for retry
+            windmillQuest.failed = false;
+            windmillQuest.failedCooldown = true; // Prevent quest from restarting until next run
           });
         }
       }
