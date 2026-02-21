@@ -55,7 +55,7 @@
       padding: 0;
       overflow: hidden;
       background-color: #000000; /* Black background - no white space */
-      font-family: 'M PLUS Rounded 1c', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      font-family: 'Bangers', 'Impact', 'Comic Sans MS', cursive;
       touch-action: none;
       user-select: none;
       -webkit-user-select: none;
@@ -140,7 +140,7 @@
       left: 50%;
       transform: translate(-50%, -50%);
       /* 80s BATMAN COMIC STYLE: Bold comic font */
-      font-family: 'Bangers', 'M PLUS Rounded 1c', cursive;
+      font-family: 'Bangers', 'Impact', 'Comic Sans MS', cursive;
       font-weight: bold;
       font-size: 12px;
       color: #FFD700; /* Gold text for comic style */
@@ -168,7 +168,7 @@
 
     .stat-text {
       /* 80s BATMAN COMIC STYLE */
-      font-family: 'Bangers', 'M PLUS Rounded 1c', cursive;
+      font-family: 'Bangers', 'Impact', 'Comic Sans MS', cursive;
       color: #FFD700; /* Gold for comic style */
       font-weight: bold;
       text-shadow: 
@@ -216,7 +216,7 @@
     
     #combo-text {
       /* COMIC STYLING: 80s Batman comic font, smaller size */
-      font-family: 'Bangers', 'M PLUS Rounded 1c', cursive;
+      font-family: 'Bangers', 'Impact', 'Comic Sans MS', cursive;
       font-size: 20px; /* Reduced from 28px (originally) then 24px to 20px for better mobile visibility */
       font-weight: 900;
       color: #FF0000;
@@ -237,7 +237,7 @@
     
     #combo-multiplier {
       /* COMIC STYLING: Matches combo text style */
-      font-family: 'Bangers', 'M PLUS Rounded 1c', cursive;
+      font-family: 'Bangers', 'Impact', 'Comic Sans MS', cursive;
       font-size: 14px; /* Reduced from 16px to match smaller text */
       font-weight: bold;
       color: #8B0000;
@@ -278,7 +278,7 @@
     
     /* Quest Notification Bubble */
     .quest-notification {
-      font-family: 'Bangers', 'M PLUS Rounded 1c', cursive;
+      font-family: 'Bangers', 'Impact', 'Comic Sans MS', cursive;
       font-size: 18px;
       color: #333;
       background: white;
@@ -580,7 +580,7 @@
     
     .stat-notification {
       /* COMIC STYLING: Batman 80s comic-style notification bubbles */
-      font-family: 'Bangers', 'M PLUS Rounded 1c', cursive;
+      font-family: 'Bangers', 'Impact', 'Comic Sans MS', cursive;
       background: linear-gradient(to bottom, #3a3a3a 0%, #3a3a3a 50%, #6a6a6a 50%, #6a6a6a 100%);
       border: 3px solid #FFD700; /* Gold border for comic pop */
       border-radius: 20px;
@@ -1417,7 +1417,7 @@
     /* Damage Numbers */
     .damage-number {
       position: absolute;
-      font-family: 'Bangers', 'M PLUS Rounded 1c', cursive; /* Comic font */
+      font-family: 'Bangers', 'Impact', 'Comic Sans MS', cursive; /* Comic font */
       font-weight: bold;
       font-size: 12px; /* SMALLER: Reduced from 16px */
       pointer-events: none;
@@ -7011,8 +7011,8 @@
               const div = document.createElement('div');
               div.style.position = 'absolute';
               div.style.color = '#FF0000';
-              div.style.fontSize = '32px';
-              div.style.fontWeight = '500'; // Reduced from 600 to 500 for thinner font
+              div.style.fontSize = '24px';
+              div.style.fontWeight = '400';
               div.style.fontFamily = 'Bangers, cursive';
               div.style.textShadow = '0 0 20px #FF0000, 2px 2px 4px #000';
               div.style.pointerEvents = 'none';
@@ -11334,6 +11334,7 @@
       // Save immediately after rewards and quest activation
       saveSaveData();
       updateQuestTracker();
+      updateCampScreen();
       
       // Build the combined popup message: reward info + new quest info
       const claimMsg = quest.message || `Quest Complete! ${quest.rewardGold ? `+${quest.rewardGold} gold` : ''} ${quest.rewardSkillPoints ? `+${quest.rewardSkillPoints} skill points` : ''}`;
@@ -11429,7 +11430,7 @@
       
       const currentQuest = getCurrentQuest();
       // Hide tracker if no quest is active, or if the player hasn't died yet (first run)
-      if (!currentQuest || !saveData.tutorialQuests.firstDeathShown) {
+      if (!currentQuest || !saveData.tutorialQuests.firstDeathShown || saveData.totalRuns === 0) {
         questTracker.style.display = 'none';
         return;
       }
@@ -14990,7 +14991,7 @@
       killText.style.fontSize = isMiniBoss ? '48px' : '36px';
       killText.style.fontWeight = '900';
       killText.style.textShadow = '0 0 10px rgba(0,0,0,0.8), 0 0 20px rgba(255,0,0,0.5)';
-      killText.style.fontFamily = "'M PLUS Rounded 1c', sans-serif";
+      killText.style.fontFamily = "'Bangers', 'Impact', 'Comic Sans MS', cursive";
       killText.textContent = isMiniBoss ? '⚡ BOSS DOWN! ⚡' : getRandomKillMessage();
       killText.style.opacity = '0';
       killText.style.animation = 'killTextAppear 0.3s ease-out forwards';
@@ -15370,8 +15371,8 @@
         top: ${startY}px;
         transform: translate(-50%, -50%) scale(0);
         font-family: 'Bangers', cursive;
-        font-size: 38px;
-        font-weight: 500;
+        font-size: 32px;
+        font-weight: 400;
         color: #FFD700;
         text-shadow: 
           0 0 10px rgba(255,215,0,0.85),
