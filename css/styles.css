@@ -1437,6 +1437,19 @@
       }
     }
 
+    @keyframes lightning-flash {
+      0%   { box-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 20px #00aaff; filter: brightness(1.2); border-color: #ffffff; }
+      20%  { box-shadow: 0 0 40px #fff, 0 0 80px #00aaff, 0 0 120px #0066ff; filter: brightness(2.8); border-color: #ffffff; }
+      40%  { box-shadow: 0 0 20px #00aaff, 0 0 50px #0044ff; filter: brightness(2.0); }
+      60%  { box-shadow: 0 0 35px #ffffff, 0 0 70px #00aaff; filter: brightness(2.4); border-color: #aaddff; }
+      80%  { box-shadow: 0 0 15px #00aaff, 0 0 30px #0066ff; filter: brightness(1.6); }
+      100% { box-shadow: 0 0 10px currentColor; filter: brightness(1.2); }
+    }
+
+    .upgrade-card.lightning-selected {
+      animation: lightning-flash 0.5s ease-out forwards !important;
+    }
+
     .upgrade-title {
       font-weight: bold;
       color: #FFD700;

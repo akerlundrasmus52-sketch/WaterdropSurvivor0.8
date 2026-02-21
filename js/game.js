@@ -5579,7 +5579,8 @@
         
         // NEW SKILLS (Feature 1)
         dash: { unlocked: false, level: 0, maxLevel: 5 },
-        headshot: { unlocked: false, level: 0, maxLevel: 5 }
+        headshot: { unlocked: false, level: 0, maxLevel: 5 },
+        autoAim: { unlocked: false, level: 0, maxLevel: 1 }
       },
       skillPoints: 0, // Start with 0 skill points - earn through quests
       // Account Level System - Persistent across all runs
@@ -6458,9 +6459,9 @@
                 </div>
                 <div style="color: #aaa; font-size: 13px; margin-bottom: 10px;">${equippedGear.description}</div>
                 <div style="margin-bottom: 10px;">
-                  ${Object.entries(equippedGear.stats).map(([stat, val]) => `
+                  ${Object.entries(equippedGear.stats).map(([stat, val]) => GEAR_ATTRIBUTES[stat] ? `
                     <div style="color: #90ee90; font-size: 13px;">• ${GEAR_ATTRIBUTES[stat].name}: +${val}</div>
-                  `).join('')}
+                  ` : '').join('')}
                 </div>
                 <button onclick="unequipGear('${slot.key}')" style="padding: 8px 15px; background: linear-gradient(to bottom, #c0392b, #a93226); color: white; border: 2px solid #e74c3c; border-radius: 8px; cursor: pointer; font-weight: bold;">UNEQUIP</button>
               </div>
@@ -6481,9 +6482,9 @@
                     <div style="color: ${getRarityColor(gear.rarity)}; font-size: 14px; font-weight: bold;">${gear.name}</div>
                     <div style="color: #999; font-size: 11px;">${gear.description}</div>
                     <div style="margin-top: 5px;">
-                      ${Object.entries(gear.stats).map(([stat, val]) => `
+                      ${Object.entries(gear.stats).map(([stat, val]) => GEAR_ATTRIBUTES[stat] ? `
                         <span style="color: #90ee90; font-size: 11px; margin-right: 10px;">+${val} ${GEAR_ATTRIBUTES[stat].icon}</span>
-                      `).join('')}
+                      ` : '').join('')}
                     </div>
                   </div>
                 `).join('') || '<div style="color: #777; font-size: 12px; padding: 10px;">No available gear for this slot</div>'}
@@ -7051,6 +7052,14 @@
           critChance: 0.1 * level,
           critDamage: 0.15 * level
         })
+      },
+      autoAim: {
+        name: '🎯 Auto-Aim',
+        description: 'Enables automatic targeting of nearest enemies. Toggle in Settings > Auto-Aim.',
+        cost: 1,
+        maxLevel: 1,
+        requires: null,
+        bonus: (level) => ({ autoAim: level > 0 })
       },
       dashMaster: {
         name: '🏃 Dash Master',
@@ -7708,6 +7717,18 @@
         if ((skillId === 'criticalFocus' || skillId === 'headshot' || skillId === 'executioner') && !saveData.tutorial.headshotUnlocked) {
           saveData.tutorial.headshotUnlocked = true;
           saveSaveData();
+        }
+        
+        // Auto-Aim skill: enable checkbox + notify player
+        if (skillId === 'autoAim' && skillData.level >= 1) {
+          const autoAimCb = document.getElementById('auto-aim-checkbox');
+          if (autoAimCb) {
+            autoAimCb.disabled = false;
+            autoAimCb.title = 'Toggle Auto-Aim on/off';
+          }
+          const autoAimLabel = document.getElementById('auto-aim-label-tooltip');
+          if (autoAimLabel) autoAimLabel.style.display = 'none';
+          showStatChange('🎯 Auto-Aim unlocked! Enable it in Settings > Auto-Aim checkbox');
         }
         
         if ((skillId === 'dashMaster' || skillId === 'dash') && saveData.tutorial.currentStep === 'unlock_dash') {
@@ -9355,8 +9376,12 @@
             buildingCard.style.cursor = 'pointer';
             buildingCard.onclick = () => {
               if (buildingId === 'armory') {
-                updateGearScreen();
+                try { updateGearScreen(); } catch(e) { console.error('updateGearScreen error:', e); }
                 document.getElementById('gear-screen').style.display = 'flex';
+                if (saveData.storyQuests && saveData.storyQuests.buildingFirstUse) {
+                  saveData.storyQuests.buildingFirstUse.armory = true;
+                  saveSaveData();
+                }
               } else if (buildingId === 'trainingHall') {
                 document.getElementById('camp-training-tab').click();
               } else if (buildingId === 'forge') {
@@ -11807,6 +11832,12 @@
       const autoAimCheckbox = document.getElementById('auto-aim-checkbox');
       if (autoAimCheckbox) {
         autoAimCheckbox.checked = !!gameSettings.autoAim;
+        // Disable auto-aim checkbox until Auto-Aim skill is unlocked in Skill Tree
+        const autoAimSkillUnlocked = saveData.skillTree && saveData.skillTree.autoAim && saveData.skillTree.autoAim.level > 0;
+        autoAimCheckbox.disabled = !autoAimSkillUnlocked;
+        autoAimCheckbox.title = autoAimSkillUnlocked ? 'Toggle Auto-Aim on/off' : 'Unlock Auto-Aim in the Skill Tree first';
+        const autoAimTooltip = document.getElementById('auto-aim-label-tooltip');
+        if (autoAimTooltip) autoAimTooltip.style.display = autoAimSkillUnlocked ? 'none' : 'inline';
       }
 
       const controlTypeSelect = document.getElementById('control-type-select');
@@ -12693,7 +12724,14 @@
       
       // Show upgrade modal with dramatic entrance after effects - FASTER
       setTimeout(() => {
-        showUpgradeModal();
+        try {
+          showUpgradeModal();
+        } catch(e) {
+          console.error('[LevelUp] showUpgradeModal error:', e);
+          // Fallback: resume game so player isn't stuck
+          levelUpPending = false;
+          setGamePaused(false);
+        }
       }, 800);
     }
     
@@ -13970,6 +14008,18 @@
         choices = unique;
       }
 
+      // SAFETY FALLBACK: ensure choices is always populated (never stuck with empty modal)
+      if (!choices || choices.length === 0) {
+        const pool = [...commonUpgrades];
+        for (let i = pool.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [pool[i], pool[j]] = [pool[j], pool[i]];
+        }
+        choices = pool.slice(0, 6);
+      }
+      // Ensure game is paused while upgrade modal is open
+      setGamePaused(true);
+
       choices.forEach((u, index) => {
         const card = document.createElement('div');
         card.className = 'upgrade-card';
@@ -14026,10 +14076,14 @@
               c.style.transform = 'scale(1)';
               c.style.outline = 'none';
               c.style.boxShadow = '';
+              c.classList.remove('lightning-selected');
             });
             card.dataset.selected = '1';
             card.style.opacity = '1';
             card.style.transform = 'scale(1.06)';
+            // Lightning edge glow effect on first click
+            card.classList.add('lightning-selected');
+            setTimeout(() => card.classList.remove('lightning-selected'), 500);
             // Color the highlight based on upgrade rarity/type
             let glowColor = '#00FF88'; // green default
             if (card.classList.contains('rarity-rare')) glowColor = '#4499FF';
@@ -14837,11 +14891,7 @@
       
       createFloatingText("DEFEND THE WINDMILL!", windmill.position);
       
-      showEnhancedNotification(
-        'quest',
-        'NEW QUEST!',
-        'Defend the Windmill from enemy attacks!'
-      );
+      showStatChange('⚔️ Side Quest Activated: Defend the Windmill!');
     }
     
     function completeWindmillQuest() {
@@ -15158,6 +15208,11 @@
       if (!isShowingNotification) {
         processStatNotificationQueue();
       }
+    }
+
+    // showStatusMessage: compact status notification (camp screen feedback)
+    function showStatusMessage(text, duration = 2000) {
+      showStatChange(text);
     }
 
     function processStatNotificationQueue() {
