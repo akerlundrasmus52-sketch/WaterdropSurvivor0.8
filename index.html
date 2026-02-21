@@ -17279,7 +17279,7 @@
         
         // Update tutorial state
         if (step === 'first_death') {
-          saveData.tutorial.currentStep = 'go_to_camp';
+          if (saveData.tutorial) saveData.tutorial.currentStep = 'go_to_camp';
           saveSaveData();
           // Navigate to camp screen on first death
           const gameoverScreen = document.getElementById('gameover-screen');
@@ -17290,14 +17290,14 @@
             campScreen.style.display = 'flex';
           }
         } else if (step === 'unlock_dash') {
-          saveData.tutorial.currentStep = 'unlock_dash';
+          if (saveData.tutorial) saveData.tutorial.currentStep = 'unlock_dash';
           saveSaveData();
         } else if (step === 'unlock_headshot') {
-          saveData.tutorial.currentStep = 'unlock_headshot';
+          if (saveData.tutorial) saveData.tutorial.currentStep = 'unlock_headshot';
           saveSaveData();
         } else if (step === 'tutorial_complete') {
-          saveData.tutorial.completed = true;
-          saveData.tutorial.currentStep = 'completed';
+          if (saveData.tutorial) saveData.tutorial.completed = true;
+          if (saveData.tutorial) saveData.tutorial.currentStep = 'completed';
           saveSaveData();
         }
       };
@@ -17485,6 +17485,11 @@
       document.getElementById('final-level').innerText = `📊 Final Level: ${playerStats.lvl}`;
       document.getElementById('gold-earned').innerText = `💰 Gold Earned: ${goldEarned}`;
       document.getElementById('total-gold').innerText = `💵 Total Gold: ${saveData.gold}`;
+      
+      // First death: only show "Go to Camp" button — hide Start Run and Quit to Menu
+      const isFirstDeath = (saveData.totalRuns === 1);
+      document.getElementById('restart-btn').style.display = isFirstDeath ? 'none' : '';
+      document.getElementById('quit-to-menu-btn').style.display = isFirstDeath ? 'none' : '';
       
       // Display loot summary
       const lootItemsDiv = document.getElementById('loot-items');
