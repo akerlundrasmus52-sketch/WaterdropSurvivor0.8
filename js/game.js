@@ -5879,7 +5879,7 @@
       const questEl = document.getElementById('stat-bar-quest');
       const achEl = document.getElementById('stat-bar-achievement');
       if (waveEl) waveEl.textContent = 'Wave: ' + (waveCount || 0);
-      if (killsEl) killsEl.textContent = 'Kills: ' + (playerStats ? playerStats.kills : 0);
+      if (killsEl) killsEl.style.display = 'none'; // Kill stat row removed from lower-left HUD box
       // Combo
       const combo = window.currentCombo || 0;
       if (comboEl) { if (combo > 1) { comboEl.textContent = '🔥 Combo x' + combo; comboEl.style.display = ''; } else { comboEl.style.display = 'none'; } }
@@ -11461,6 +11461,7 @@
         if (isPaused && isGameActive && !isGameOver) {
           // Check if any overlay is actually open
           const hasOpenOverlay = 
+            levelUpPending || // Prevent auto-unpause while level-up modal is pending (800ms delay)
             document.getElementById('levelup-modal')?.style.display === 'flex' ||
             document.getElementById('settings-modal')?.style.display === 'flex' ||
             document.getElementById('options-menu')?.style.display === 'flex' ||
