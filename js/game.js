@@ -4706,6 +4706,7 @@
     // Shared star geometry for all ExpGem instances (created once, reused for performance)
     let _expGemStarGeometry = null;
     let _expGemStarMaterial = null;
+    let _expGemOutlineGeometry = null; // Shared outline geometry (created once, reused for performance)
 
     class ExpGem {
       constructor(x, z) {
@@ -4741,7 +4742,8 @@
         this.mesh.position.set(x, 0.5, z);
 
         // SM64-style: add black outline ring and yellow-edge highlight using a slightly larger dark mesh
-        const outlineGeo = new THREE.ExtrudeGeometry((() => {
+        // Outline geometry is shared across all ExpGem instances (created once)
+        if (!_expGemOutlineGeometry) {
           const s = new THREE.Shape();
           const pts = 5, outerO = 0.33, innerO = 0.14;
           for (let i = 0; i < pts * 2; i++) {
@@ -4751,11 +4753,13 @@
             else s.lineTo(Math.cos(ang) * r, Math.sin(ang) * r);
           }
           s.closePath();
-          return s;
-        })(), { depth: 0.08, bevelEnabled: false });
-        outlineGeo.center();
-        const outlineMesh = new THREE.Mesh(outlineGeo, new THREE.MeshBasicMaterial({ color: 0x000000 }));
+          _expGemOutlineGeometry = new THREE.ExtrudeGeometry(s, { depth: 0.08, bevelEnabled: false });
+          _expGemOutlineGeometry.center();
+        }
+        const outlineMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+        const outlineMesh = new THREE.Mesh(_expGemOutlineGeometry, outlineMat);
         outlineMesh.position.z = -0.01;
+        this._outlineMat = outlineMat; // Store per-instance material for disposal
         this.mesh.add(outlineMesh);
 
         scene.add(this.mesh);
@@ -4805,65 +4809,20 @@
       collect() {
         this.active = false;
         
-        // SPLASH EFFECT when collected - blue star-burst (PR #117)
-        const splashPos = this.mesh.position.clone();
-        const SPLASH_PARTICLE_COUNT = 20;
-        
-        // Blue star-shaped splash particles
-        for(let i=0; i<SPLASH_PARTICLE_COUNT; i++) {
-          const angle = (i / SPLASH_PARTICLE_COUNT) * Math.PI * 2;
-          const speed = 0.15 + Math.random() * 0.2;
-          const particle = new THREE.Mesh(
-            new THREE.SphereGeometry(0.08, 8, 8),
-            new THREE.MeshBasicMaterial({ 
-              color: 0x3498DB, // Blue color (PR #117)
-              transparent: true, 
-              opacity: 0.9
-            })
-          );
-          particle.position.copy(splashPos);
-          scene.add(particle);
-          
-          const vel = new THREE.Vector3(
-            Math.cos(angle) * speed,
-            0.2 + Math.random() * 0.15,
-            Math.sin(angle) * speed
-          );
-          
-          let life = 30;
-          const updateParticle = () => {
-            life--;
-            particle.position.add(vel);
-            vel.y -= 0.02; // Gravity
-            particle.material.opacity = life / 30;
-            
-            if (life <= 0 || particle.position.y < 0.05) {
-              scene.remove(particle);
-              particle.geometry.dispose();
-              particle.material.dispose();
-            } else {
-              requestAnimationFrame(updateParticle);
-            }
-          };
-          updateParticle();
-        }
+        // SPLASH EFFECT: use pooled particles to avoid per-gem geometry/material allocation
+        // and eliminate 20 separate requestAnimationFrame callbacks per gem (PR #117)
+        spawnParticles(this.mesh.position, 0x3498DB, 8);
         
         // Screen flash effect - blue tint (PR #117)
         const flash = document.createElement('div');
-        flash.style.position = 'fixed';
-        flash.style.top = '0';
-        flash.style.left = '0';
-        flash.style.width = '100%';
-        flash.style.height = '100%';
-        flash.style.background = 'rgba(52, 152, 219, 0.2)'; // Blue flash
-        flash.style.pointerEvents = 'none';
-        flash.style.zIndex = '500';
+        flash.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(52,152,219,0.2);pointer-events:none;z-index:500';
         document.body.appendChild(flash);
         setTimeout(() => flash.remove(), 100);
         
         scene.remove(this.mesh);
         // Geometry is shared across all ExpGem instances - do not dispose it
         this.mesh.material.dispose(); // Only dispose the per-instance cloned material
+        if (this._outlineMat) this._outlineMat.dispose(); // Dispose per-instance outline material
         
         addExp(this.value);
         playSound('collect');
@@ -12645,10 +12604,12 @@
       
       // Trigger waterdrop grow animation on XP pickup
       const waterdropContainer = document.getElementById('waterdrop-container');
-      waterdropContainer.classList.add('grow');
-      setTimeout(() => {
-        waterdropContainer.classList.remove('grow');
-      }, 300);
+      if (waterdropContainer) {
+        waterdropContainer.classList.add('grow');
+        setTimeout(() => {
+          waterdropContainer.classList.remove('grow');
+        }, 300);
+      }
       
       if (playerStats.exp >= playerStats.expReq && !isGameOver && isGameActive && !levelUpPending) {
         const levelUpModal = document.getElementById('levelup-modal');
@@ -15138,11 +15099,23 @@
       // Close farmer speech bubble if open
       const farmerBubble = document.getElementById('farmer-speech-bubble');
       if (farmerBubble) farmerBubble.style.display = 'none';
-      // Close any open modals
-      ['levelup-modal','settings-modal','stats-modal','comic-tutorial-modal','story-quest-modal'].forEach(id => {
+      // Close any open modals and quest UIs
+      ['levelup-modal','settings-modal','stats-modal','comic-tutorial-modal','story-quest-modal',
+       'windmill-quest-ui','montana-quest-ui','eiffel-quest-ui'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.style.display = 'none';
       });
+      // Also update quest state so active quests are properly cleaned up
+      if (windmillQuest && windmillQuest.active) {
+        windmillQuest.active = false;
+        windmillQuest.failed = true;
+      }
+      if (montanaQuest && montanaQuest.active) {
+        montanaQuest.active = false;
+      }
+      if (eiffelQuest && eiffelQuest.active) {
+        eiffelQuest.active = false;
+      }
       // Reset pause counter
       pauseOverlayCount = 0;
       isPaused = false;
@@ -15478,6 +15451,7 @@
         scene.remove(e.mesh);
         e.mesh.geometry.dispose();
         e.mesh.material.dispose();
+        if (e._outlineMat) e._outlineMat.dispose(); // Dispose per-instance outline material
       });
       expGems = [];
       
