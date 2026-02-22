@@ -23,4 +23,5 @@ try {
   console.error('[FATAL] Module initialization failed:', e);
   // Still set gameModuleReady so loading screen doesn't hang forever
   window.gameModuleReady = true;
+  window.gameModuleFailed = true; // Flag the failure for error display
 }
