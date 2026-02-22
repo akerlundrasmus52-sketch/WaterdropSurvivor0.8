@@ -1,0 +1,32 @@
+// --- RENDERER / SCENE CONFIGURATION ---
+// Extracted from game.js - loaded as a regular script before the game.js ES module
+// Exposes window.GameRenderer for use by main.js
+//
+// Only pure configuration constants are extracted here. The actual Three.js
+// renderer, camera, and lighting objects are created inside the init() function
+// in main.js because they depend on the THREE module import and on each other
+// (e.g. dirLight is added to scene, renderer is appended to the DOM). Those
+// objects stay coupled to the main module scope.
+
+const RENDERER_CONFIG = {
+  // Orthographic camera distance (half-height of the view frustum)
+  cameraDistance: 15,
+  // Camera world-space position (gives a balanced top-down isometric angle)
+  cameraPositionX: 18,
+  cameraPositionY: 16,
+  cameraPositionZ: 18,
+  // Scene fog distances (near/far clip for edge fog)
+  fogNear: 18,
+  fogFar: 38,
+  // Default shadow map size (used at init; overridden by applyGraphicsQuality)
+  defaultShadowMapSize: 2048,
+  // Directional light shadow frustum half-size
+  shadowFrustumHalfSize: 80,
+  // Directional light shadow quality settings
+  shadowRadius: 4,   // Soft shadow blur
+  shadowBias: -0.0001 // Prevent shadow acne
+};
+
+window.GameRenderer = {
+  RENDERER_CONFIG
+};

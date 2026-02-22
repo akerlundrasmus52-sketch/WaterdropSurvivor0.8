@@ -596,7 +596,7 @@
   <!-- FRESH IMPLEMENTATION: Standalone loading script (non-module) -->
   <script src="js/loading.js"></script>
 
-  <!-- Extracted game modules (regular scripts, must load before game.js module) -->
+  <!-- Extracted game modules (regular scripts, must load before main.js module) -->
   <script src="js/state.js"></script>
   <script src="js/utils.js"></script>
   <script src="js/audio.js"></script>
@@ -604,8 +604,11 @@
   <script src="js/enemies.js"></script>
   <script src="js/combat.js"></script>
   <script src="js/player.js"></script>
+  <script src="js/world.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/renderer.js"></script>
 
-  <script type="module" src="js/game.js"></script>
+  <script type="module" src="js/main.js"></script>
   <!-- Stat Bar Panel -->
   <div id="stat-bar-panel">
     <div id="stat-bar-wave" class="stat-row"></div>

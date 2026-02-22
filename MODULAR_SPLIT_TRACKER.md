@@ -19,11 +19,11 @@ Use this to resume work if context/memory is lost. Just paste this issue link to
 - [x] Extract `js/player.js` — player movement & stats via `window.GamePlayer`
 
 ### Phase 3: Environment & Glue (Final PR)
-- [ ] Extract `js/world.js` — terrain, environment via `window.GameWorld`
-- [ ] Extract `js/ui.js` — HUD, menus, modals via `window.GameUI`
-- [ ] Extract `js/renderer.js` — Three.js scene setup via `window.GameRenderer`
-- [ ] Rename remaining `game.js` → `main.js` (init & game loop only)
-- [ ] Final cleanup and verification
+- [x] Extract `js/world.js` — terrain, environment via `window.GameWorld`
+- [x] Extract `js/ui.js` — HUD, menus, modals via `window.GameUI`
+- [x] Extract `js/renderer.js` — Three.js scene setup via `window.GameRenderer`
+- [x] Rename remaining `game.js` → `main.js` (init & game loop only)
+- [x] Final cleanup and verification
 
 ## Architecture Pattern
 - NO ES modules / import / export (browser `<script>` tag loading)
@@ -85,3 +85,64 @@ The Player class (THREE.js mesh creation, movement, input) remains in game.js.
   const { getDefaultPlayerStats } = window.GamePlayer;
   ```
 - ~60 lines removed (playerStats object, weapons object, UPGRADES object, Enemy stat block).
+
+## Phase 3 Implementation Notes
+
+### `js/world.js` (~100 lines)
+Extracted pure data/config that has no THREE.js runtime dependencies:
+- `COLORS` — scene colour palette
+- `GAME_CONFIG` — core numeric constants (speeds, wave interval, lake config, etc.)
+- `countdownMessages` — array of countdown strings shown at run start
+- `COMPANIONS` — companion type definitions (stormWolf, skyFalcon, waterSpirit)
+- `getInitialDayNightCycle()` — factory returning the fresh day/night state object
+
+Exposes `window.GameWorld`. The ambient-creature spawn functions (`spawnBird`, `spawnBat`,
+`spawnOwl`, `spawnFirefly`) remain in `main.js` because they directly reference the `scene`
+and `player` closure variables.
+
+### `js/ui.js` (~65 lines)
+Extracted pure DOM-manipulation helpers that have no THREE.js scene dependencies:
+- `showStatChange(text, level)` — queues a stat-change notification popup
+- `showStatusMessage(text, duration)` — thin wrapper around showStatChange
+- `_processStatNotificationQueue()` (private) — dequeues and animates notifications
+
+Module-private state (`_statNotificationQueue`, `_isShowingNotification`) is owned by
+this file. Exposes `window.GameUI`.
+
+Functions that were left in `main.js` due to THREE.js coupling:
+- `createDamageNumber()` — uses `camera.project()` for 3D→2D screen position
+- `updateHUD()` — reads `playerStats`, `player`, `enemies`, `windmillQuest`
+- `updateMinimap()` — reads `player.mesh.position` and `enemies` array
+
+### `js/renderer.js` (~35 lines)
+Extracted renderer configuration constants into `RENDERER_CONFIG`:
+- `cameraDistance`, `cameraPositionX/Y/Z` — orthographic camera setup
+- `fogNear`, `fogFar` — scene fog planes
+- `defaultShadowMapSize`, `shadowFrustumHalfSize` — directional light shadow settings
+- `shadowRadius`, `shadowBias` — soft-shadow quality settings
+
+Exposes `window.GameRenderer`. The `init()` function in `main.js` now references these
+constants when creating the camera, fog, and directional light. The full Three.js
+renderer/camera/scene creation and `applyGraphicsQuality()` remain in `main.js` because
+they depend on the THREE module import, mutable closure variables, and each other.
+
+### `js/main.js` (renamed from `js/game.js`)
+- Destructured aliases added alongside existing ones:
+  ```js
+  const { COLORS, GAME_CONFIG, countdownMessages, COMPANIONS, getInitialDayNightCycle } = window.GameWorld;
+  const { showStatChange, showStatusMessage } = window.GameUI;
+  const { RENDERER_CONFIG } = window.GameRenderer;
+  ```
+- `let dayNightCycle = getInitialDayNightCycle();` replaces the inline object literal.
+- `init()` uses `RENDERER_CONFIG.*` for camera, fog, and shadow-map setup.
+- ~90 lines removed (COLORS, GAME_CONFIG, countdownMessages, COMPANIONS, dayNightCycle
+  inline object, showStatChange/showStatusMessage/processStatNotificationQueue functions).
+
+### `index.html` changes
+New script tags added in dependency order before the `main.js` module:
+```html
+<script src="js/world.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/renderer.js"></script>
+<script type="module" src="js/main.js"></script>
+```
