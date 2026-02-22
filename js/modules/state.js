@@ -1,6 +1,7 @@
 // js/modules/state.js
 // Shared mutable game state container (gs) and exported const objects
     import * as THREE from 'three';
+    import { GAME_CONFIG } from './constants.js';
 
     // ── Shared mutable state container ─────────────────────────────────────────
     export const gs = {
@@ -106,9 +107,9 @@
         originalCameraTarget: new THREE.Vector3(gs.player.mesh.position.x, 0, gs.player.mesh.position.z)
       };
       
-      // Play dramatic sound for mini-boss
+      // Play dramatic sound for mini-boss (use gs.playSound set by gamelogic.js to avoid circular import)
       if (type === 'miniboss') {
-        playSound('hit', 1.5, 0.3); // Low pitch dramatic hit
+        if (gs.playSound) gs.playSound('hit', 1.5, 0.3); // Low pitch dramatic hit
       }
     }
     
@@ -571,3 +572,5 @@
       armor: { name: "Armor", cost: 200, inc: 2, max: 10 },
       magnet: { name: "Magnet Range", cost: 100, inc: 0.5, max: 5 }
     };
+
+    export { setGamePaused, setGameActive, setGameOver, triggerCinematic, updateCinematic, updateAmbientCreatures };

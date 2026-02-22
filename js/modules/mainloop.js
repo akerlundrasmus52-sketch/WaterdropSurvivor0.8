@@ -2,10 +2,17 @@
 // Main animation loop, day/night cycle, FPS watchdog
     import * as THREE from 'three';
     import { GAME_CONFIG, MONTANA_QUEST_TRIGGER_DISTANCE, EIFFEL_QUEST_TRIGGER_DISTANCE } from './constants.js';
-    import { gs, gameSettings, playerStats, weapons, joystickLeft, joystickRight } from './state.js';
+    import { gs, gameSettings, playerStats, weapons, joystickLeft, joystickRight, updateCinematic, updateAmbientCreatures } from './state.js';
     import { playSound } from './audio.js';
-    import { checkAchievements } from './achievements.js';
-    import { checkQuestConditions, claimTutorialQuest } from './quests.js';
+    import { checkAchievements, updateStatBar } from './achievements.js';
+    import { checkQuestConditions, claimTutorialQuest, progressTutorialQuest } from './quests.js';
+    import { updateWaterParticles } from './classes.js';
+    import { spawnWave, processDisposalQueue, updateKillCam, updateHUD, updateWindmillQuestUI,
+             completeWindmillQuest, failWindmillQuest, completeMontanaQuest, completeEiffelQuest,
+             createDamageNumber, createFloatingText, addExp,
+             spawnMuzzleSmoke, showFarmerDialogue, updateFarmerNPCIndicator, updateFarmerBubblePosition,
+             giveWindmillQuestReward, updateMontanaQuestUI, updateEiffelQuestUI, updateBloodDecals,
+             FARMER_DIALOGUE } from './gamelogic.js';
 
     // --- MAIN LOOP ---
     // Performance tracking for freeze bug investigation
