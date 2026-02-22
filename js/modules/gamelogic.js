@@ -16,8 +16,6 @@
     import { animate } from './mainloop.js';
 
     // --- GAME LOGIC ---
-    // Store playSound on gs so state.js cinematic functions can call it without a circular import
-    gs.playSound = playSound;
 
     function init() {
       console.log('[Init] Starting game initialization...');

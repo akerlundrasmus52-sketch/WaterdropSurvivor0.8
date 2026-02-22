@@ -2,6 +2,7 @@
 // Shared mutable game state container (gs) and exported const objects
     import * as THREE from 'three';
     import { GAME_CONFIG } from './constants.js';
+    import { playSound } from './audio.js';
 
     // ── Shared mutable state container ─────────────────────────────────────────
     export const gs = {
@@ -107,9 +108,9 @@
         originalCameraTarget: new THREE.Vector3(gs.player.mesh.position.x, 0, gs.player.mesh.position.z)
       };
       
-      // Play dramatic sound for mini-boss (use gs.playSound set by gamelogic.js to avoid circular import)
+      // Play dramatic sound for mini-boss
       if (type === 'miniboss') {
-        if (gs.playSound) gs.playSound('hit', 1.5, 0.3); // Low pitch dramatic hit
+        playSound('hit', 1.5, 0.3); // Low pitch dramatic hit
       }
     }
     
