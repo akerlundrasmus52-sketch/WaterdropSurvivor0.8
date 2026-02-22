@@ -359,7 +359,7 @@
         gs.saveData.totalKills += playerStats.kills;
         saveSaveData();
         optionsMenu.style.display = 'none';
-        updateCampScreen();
+        window.updateCampScreen();
         
         // Ensure buildings tab is selected (not sleep/day-night selection)
         document.getElementById('camp-buildings-section').style.display = 'block';
@@ -550,7 +550,7 @@
       document.getElementById('camp-btn').onclick = () => {
         playSound('waterdrop');
         hideMainMenu();
-        updateCampScreen();
+        window.updateCampScreen();
         document.getElementById('camp-screen').style.display = 'flex';
         
         // Tutorial: Check if gs.player visited camp for first time after first death
@@ -704,21 +704,21 @@
         playSound('waterdrop');
         gs.saveData.nextRunTimeOfDay = 'day';
         saveSaveData();
-        updateCampScreen();
+        window.updateCampScreen();
       };
       
       document.getElementById('sleep-night-option').onclick = () => {
         playSound('waterdrop');
         gs.saveData.nextRunTimeOfDay = 'night';
         saveSaveData();
-        updateCampScreen();
+        window.updateCampScreen();
       };
       
       // Go to Camp from death screen
       document.getElementById('goto-camp-btn').onclick = () => {
         playSound('waterdrop');
         document.getElementById('gameover-screen').style.display = 'none';
-        updateCampScreen();
+        window.updateCampScreen();
         document.getElementById('camp-screen').style.display = 'flex';
         // Keep menu hidden during camp visit from death
       };
@@ -3841,7 +3841,7 @@
           if (gameoverScreen) gameoverScreen.style.display = 'none';
           const campScreen = document.getElementById('camp-screen');
           if (campScreen) {
-            updateCampScreen();
+            window.updateCampScreen();
             campScreen.style.display = 'flex';
           }
         } else if (step === 'unlock_dash') {
@@ -4005,7 +4005,7 @@
       if (survivalTime > gs.saveData.bestTime) gs.saveData.bestTime = survivalTime;
       if (playerStats.kills > gs.saveData.bestKills) gs.saveData.bestKills = playerStats.kills;
       // Add account XP for kills this run (1 XP per kill)
-      if (playerStats.kills > 0) addAccountXP(playerStats.kills);
+      if (playerStats.kills > 0) window.addAccountXP(playerStats.kills);
       
       // Tutorial Quest: Check for first death
       if (!gs.saveData.tutorialQuests) {

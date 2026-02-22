@@ -426,7 +426,7 @@
           }
           
           // Show notification
-          gs.showStatChange('📜 Quest Complete! Return to Main Building to claim!');
+          window.showStatChange('📜 Quest Complete! Return to Main Building to claim!');
         }
         
         saveSaveData();
@@ -455,18 +455,18 @@
       // Give rewards
       if (quest.rewardGold) {
         gs.saveData.gold += quest.rewardGold;
-        gs.showStatChange(`+${quest.rewardGold} Gold!`);
+        window.showStatChange(`+${quest.rewardGold} Gold!`);
       }
       // Award 50 bonus gold for every quest claimed
       gs.saveData.gold += 50;
-      gs.showStatChange('+50 Gold!');
+      window.showStatChange('+50 Gold!');
       if (quest.rewardSkillPoints) {
         gs.saveData.skillPoints += quest.rewardSkillPoints;
-        gs.showStatChange(`+${quest.rewardSkillPoints} Skill Points!`);
+        window.showStatChange(`+${quest.rewardSkillPoints} Skill Points!`);
       }
       if (quest.rewardAttributePoints) {
         gs.saveData.trainingPoints = (gs.saveData.trainingPoints || 0) + quest.rewardAttributePoints;
-        gs.showStatChange(`+${quest.rewardAttributePoints} Attribute Points!`);
+        window.showStatChange(`+${quest.rewardAttributePoints} Attribute Points!`);
       }
       // Award account XP for completing a quest (50 XP per quest)
       addAccountXP(50);
@@ -478,7 +478,7 @@
           gs.saveData.campBuildings[quest.unlockBuilding].level = 1;
         }
         const buildingName = CAMP_BUILDINGS[quest.unlockBuilding]?.name || 'Building';
-        gs.showStatChange(`🏛️ ${buildingName} Unlocked!`);
+        window.showStatChange(`🏛️ ${buildingName} Unlocked!`);
       }
       
       // Give companion egg
@@ -486,7 +486,7 @@
         if (gs.saveData.companions && gs.saveData.companions.stormWolf) {
           gs.saveData.companions.stormWolf.unlocked = true;
         }
-        gs.showStatChange('🥚 Companion Egg Received!');
+        window.showStatChange('🥚 Companion Egg Received!');
       }
       
       // Give item
@@ -496,9 +496,9 @@
           // Equip to appropriate slot based on item type
           const itemType = quest.giveItem.type || 'ring';
           gs.saveData.equippedGear[itemType] = quest.giveItem;
-          gs.showStatChange(`🎯 ${quest.giveItem.name} Auto-Equipped!`);
+          window.showStatChange(`🎯 ${quest.giveItem.name} Auto-Equipped!`);
         } else {
-          gs.showStatChange(`📦 ${quest.giveItem.name} Acquired!`);
+          window.showStatChange(`📦 ${quest.giveItem.name} Acquired!`);
         }
       }
       
@@ -518,14 +518,14 @@
             gs.saveData.campBuildings[bld].unlocked = true;
             if (gs.saveData.campBuildings[bld].level === 0) { gs.saveData.campBuildings[bld].level = 1; }
             const bldName = CAMP_BUILDINGS[bld]?.name || 'Building';
-            gs.showStatChange(`🏛️ ${bldName} Unlocked!`);
+            window.showStatChange(`🏛️ ${bldName} Unlocked!`);
           }
         }
         
         // Give 1 attribute point when the Training Hall quest activates so gs.player can complete it immediately
         if (nextQuestActivated && nextQuestActivated.id === 'quest4_upgradeAttr') {
           gs.saveData.trainingPoints = (gs.saveData.trainingPoints || 0) + 1;
-          gs.showStatChange('+1 Attribute Point! Spend it in the Training Hall!');
+          window.showStatChange('+1 Attribute Point! Spend it in the Training Hall!');
         }
       }
       
@@ -584,6 +584,8 @@
     window.progressTutorialQuest = progressTutorialQuest;
     window.progressQuest = progressQuest;
     window.ensureQuest2Activated = ensureQuest2Activated;
+    window.updateCampScreen = updateCampScreen;
+    window.addAccountXP = addAccountXP;
     
     // Show next quest popup
     function showNextQuestPopup(questId) {
@@ -705,7 +707,7 @@
         
         const loreData = LORE_DATABASE[category][id];
         if (loreData) {
-          gs.showStatChange(`📖 Lore Unlocked: ${loreData.name}`);
+          window.showStatChange(`📖 Lore Unlocked: ${loreData.name}`);
           
           // Show a lore popup after a short delay
           setTimeout(() => {
@@ -1421,7 +1423,7 @@
               } else if (buildingId === 'forge') {
                 showProgressionShop();
               } else {
-                gs.showStatChange(`${building.icon} ${building.name}: Level ${buildingData.level}/${buildingData.maxLevel}`);
+                window.showStatChange(`${building.icon} ${building.name}: Level ${buildingData.level}/${buildingData.maxLevel}`);
               }
             };
           } else if (building.isFree) {
