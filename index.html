@@ -347,7 +347,7 @@
       </div>
       
       <!-- Status Message Bar -->
-      <div class="stat-text" id="status-message" style="color: #5DADE2; text-shadow: 0 0 8px rgba(93,173,226,0.8), 0 0 12px rgba(93,173,226,0.5), 1px 1px 2px rgba(0,0,0,0.5); font-size: 16px; min-height: 20px; margin-top: 5px;"></div>
+      <div class="stat-text" id="status-message" style="display: none; color: #5DADE2; text-shadow: 0 0 8px rgba(93,173,226,0.8), 0 0 12px rgba(93,173,226,0.5), 1px 1px 2px rgba(0,0,0,0.5); font-size: 16px; min-height: 20px; margin-top: 5px;"></div>
       
       <!-- Active Quest Tracker (Camp Only) -->
       <div class="stat-text" id="quest-tracker" style="display: none; color: #FFD700; text-shadow: 0 0 3px rgba(255,215,0,0.3), 1px 1px 2px rgba(0,0,0,0.8); font-size: 14px; margin-top: 5px; background: rgba(0,0,0,0.7); padding: 5px 10px; border-radius: 5px; border: 1px solid #FFD700;"></div>
@@ -389,7 +389,7 @@
     <button id="settings-btn" class="btn-small" style="position: absolute; top: 20px; right: 120px; pointer-events: auto; z-index: 100;">⚙️</button>
     
     <!-- Day/Night Cycle Clock - centered at top, same horizontal alignment as waterdrop (center-top vs center-bottom) -->
-    <div id="day-night-clock" style="position: fixed; top: 20px; left: 50%; transform: translateX(-50%); pointer-events: none; z-index: 100;">
+    <div id="day-night-clock" style="position: fixed; top: 20px; left: calc(50% + 50px); transform: translateX(-50%) scale(0.8); transform-origin: top center; pointer-events: none; z-index: 100;">
       <div style="background: radial-gradient(circle at 30% 30%, rgba(40,40,40,0.9), rgba(0,0,0,0.8)); 
                   border: 3px solid #FFD700; 
                   border-radius: 50% 50% 50% 0; /* WATERDROP SHAPE: teardrop with pointed bottom-right */

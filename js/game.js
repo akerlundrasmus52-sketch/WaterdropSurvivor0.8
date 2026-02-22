@@ -14017,8 +14017,6 @@
         }
         choices = pool.slice(0, 6);
       }
-      // Ensure game is paused while upgrade modal is open
-      setGamePaused(true);
 
       choices.forEach((u, index) => {
         const card = document.createElement('div');
@@ -14889,8 +14887,6 @@
       document.getElementById('windmill-quest-ui').style.display = 'block';
       updateWindmillQuestUI();
       
-      createFloatingText("DEFEND THE WINDMILL!", windmill.position);
-      
       showStatChange('⚔️ Side Quest Activated: Defend the Windmill!');
     }
     
@@ -14976,8 +14972,7 @@
       document.getElementById('montana-quest-ui').style.display = 'block';
       updateMontanaQuestUI();
       
-      createFloatingText("MONTANA CHALLENGE!", landmark.position);
-      createFloatingText(`SURVIVE ${montanaQuest.duration}s & KILL ${montanaQuest.killsNeeded}!`, landmark.position);
+      showStatChange('⚔️ Side Quest Activated: Montana Survival!');
     }
     
     function completeMontanaQuest() {
@@ -15025,8 +15020,7 @@
       document.getElementById('eiffel-quest-ui').style.display = 'block';
       updateEiffelQuestUI();
       
-      createFloatingText("EIFFEL CHALLENGE!", landmark.position);
-      createFloatingText(`SURVIVE ${eiffelQuest.duration}s & KILL ${eiffelQuest.killsNeeded}!`, landmark.position);
+      showStatChange('⚔️ Side Quest Activated: Eiffel Tower Defense!');
     }
     
     function completeEiffelQuest() {
