@@ -2691,8 +2691,8 @@
         }
         choices = pool.slice(0, 6);
       }
-      // Ensure game is paused while upgrade modal is open
-      setGamePaused(true);
+      // Game is already paused by levelUp() — do NOT call setGamePaused(true) here
+      // to keep pauseOverlayCount balanced (one pause per level-up cycle).
 
       choices.forEach((u, index) => {
         const card = document.createElement('div');
@@ -3550,8 +3550,6 @@
       document.getElementById('windmill-quest-ui').style.display = 'block';
       updateWindmillQuestUI();
       
-      createFloatingText("DEFEND THE WINDMILL!", windmill.position);
-      
       showStatChange('⚔️ Side Quest Activated: Defend the Windmill!');
     }
     
@@ -3637,8 +3635,7 @@
       document.getElementById('montana-quest-ui').style.display = 'block';
       updateMontanaQuestUI();
       
-      createFloatingText("MONTANA CHALLENGE!", landmark.position);
-      createFloatingText(`SURVIVE ${gs.montanaQuest.duration}s & KILL ${gs.montanaQuest.killsNeeded}!`, landmark.position);
+      showStatChange(`🏔️ Montana Challenge! Survive ${gs.montanaQuest.duration}s & Kill ${gs.montanaQuest.killsNeeded}!`);
     }
     
     function completeMontanaQuest() {
@@ -3686,8 +3683,7 @@
       document.getElementById('eiffel-quest-ui').style.display = 'block';
       updateEiffelQuestUI();
       
-      createFloatingText("EIFFEL CHALLENGE!", landmark.position);
-      createFloatingText(`SURVIVE ${gs.eiffelQuest.duration}s & KILL ${gs.eiffelQuest.killsNeeded}!`, landmark.position);
+      showStatChange(`🗼 Eiffel Challenge! Survive ${gs.eiffelQuest.duration}s & Kill ${gs.eiffelQuest.killsNeeded}!`);
     }
     
     function completeEiffelQuest() {
@@ -4537,6 +4533,9 @@
 
     gs.showStatChange = showStatChange;
     gs.showStatusMessage = showStatusMessage;
+    // Expose for cross-module calls from camp.js (BUG 4 fix)
+    window.showComicTutorial = showComicTutorial;
+    window.showStatusMessage = showStatusMessage;
     export { init, spawnWave, processDisposalQueue, gameOver, resetGame, startGame, spawnParticles, showStatChange, showStatusMessage };
     // Register spawnParticles in gs so other modules can call gs.spawnParticles()
     gs.spawnParticles = spawnParticles;
