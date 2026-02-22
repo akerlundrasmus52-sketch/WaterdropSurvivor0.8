@@ -88,20 +88,6 @@
           const mainMenu = document.getElementById('main-menu');
           if (mainMenu) {
             mainMenu.style.display = 'flex';
-            
-            // Show error if module failed to load (dead buttons scenario)
-            if (!window.gameModuleReady || window.gameModuleFailed) {
-              const errorDiv = document.createElement('div');
-              errorDiv.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:rgba(231,76,60,0.9);color:white;padding:15px 25px;border-radius:10px;font-size:14px;z-index:10001;text-align:center;max-width:80%;';
-              const mainMsg = document.createTextNode('\u26a0\ufe0f Game failed to load. Please refresh the page.');
-              const br = document.createElement('br');
-              const small = document.createElement('small');
-              small.textContent = 'If this keeps happening, check your internet connection.';
-              errorDiv.appendChild(mainMsg);
-              errorDiv.appendChild(br);
-              errorDiv.appendChild(small);
-              document.body.appendChild(errorDiv);
-            }
           }
           
           // FRESH IMPLEMENTATION: Show Story Quest Modal on first load
