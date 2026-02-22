@@ -2,17 +2,17 @@
 // Core game logic: init, spawning, combat, UI updates, level-up, reset
     import * as THREE from 'three';
     import { COLORS, GAME_CONFIG, MAX_SMOKE_PARTICLES, MAX_BLOOD_DECALS, MAX_DISPOSALS_PER_FRAME, MAX_BLOOD_DRIPS } from './constants.js';
-    import { gs, gameSettings, playerStats, weapons, joystickLeft, joystickRight, bulletHoleGeo, bulletHoleMat, disposalQueue, setGamePaused, setGameActive, setGameOver, triggerCinematic } from './state.js';
+    import { gs, gameSettings, playerStats, weapons, joystickLeft, joystickRight, bulletHoleGeo, bulletHoleMat, disposalQueue } from './state.js';
     import { playSound, updateBackgroundMusic, startDroneHum, stopDroneHum } from './audio.js';
     import { Player, Enemy, Projectile, SwordSlash, IceSpear, Meteor, Particle, ObjectPool, Chest, ExpGem, GoldCoin, DroneTurret, Companion } from './classes.js';
-    import { loadSaveData, saveSaveData, saveSettings, loadSettings, SAVE_KEY, SETTINGS_KEY, defaultSaveData } from './save.js';
+    import { loadSaveData, saveSaveData, saveSettings, loadSettings, SAVE_KEY, defaultSaveData } from './save.js';
     import { updateAchievementsScreen, updateAchievementBadge, checkAchievements, showGoldBagAnimation } from './achievements.js';
     import { updateAttributesScreen, updateAttributesBadge } from './attributes.js';
     import { initializeGear, updateGearScreen, calculateGearStats } from './gear.js';
     import { upgradeCampBuilding, updateTrainingPoints, isDashUnlocked, isHeadshotUnlocked, startDash } from './camp.js';
-    import { getCurrentQuest, checkQuestConditions, claimTutorialQuest, progressTutorialQuest, updateQuestTracker, updateCampScreen } from './quests.js';
+    import { getCurrentQuest, checkQuestConditions, claimTutorialQuest } from './quests.js';
     import { createWorld, cacheAnimatedObjects, applyGraphicsQuality } from './world.js';
-    import { setupInputs, updateControlType } from './input.js';
+    import { setupInputs } from './input.js';
     import { animate } from './mainloop.js';
 
     // --- GAME LOGIC ---
@@ -783,6 +783,7 @@
             document.getElementById('settings-modal').style.display = 'none';
             setGamePaused(false);
             showMainMenu();
+            updateShopUI();
             
             alert('✅ All progress has been completely reset! The game will start fresh on your next playthrough.');
             playSound('hit');
@@ -2690,8 +2691,8 @@
         }
         choices = pool.slice(0, 6);
       }
-      // Game is already paused by levelUp() — do NOT call setGamePaused(true) here
-      // to keep pauseOverlayCount balanced (one pause per level-up cycle).
+      // Ensure game is paused while upgrade modal is open
+      setGamePaused(true);
 
       choices.forEach((u, index) => {
         const card = document.createElement('div');
@@ -3549,6 +3550,8 @@
       document.getElementById('windmill-quest-ui').style.display = 'block';
       updateWindmillQuestUI();
       
+      createFloatingText("DEFEND THE WINDMILL!", windmill.position);
+      
       showStatChange('⚔️ Side Quest Activated: Defend the Windmill!');
     }
     
@@ -3634,7 +3637,8 @@
       document.getElementById('montana-quest-ui').style.display = 'block';
       updateMontanaQuestUI();
       
-      showStatChange(`🏔️ Montana Challenge! Survive ${gs.montanaQuest.duration}s & Kill ${gs.montanaQuest.killsNeeded}!`);
+      createFloatingText("MONTANA CHALLENGE!", landmark.position);
+      createFloatingText(`SURVIVE ${gs.montanaQuest.duration}s & KILL ${gs.montanaQuest.killsNeeded}!`, landmark.position);
     }
     
     function completeMontanaQuest() {
@@ -3682,7 +3686,8 @@
       document.getElementById('eiffel-quest-ui').style.display = 'block';
       updateEiffelQuestUI();
       
-      showStatChange(`🗼 Eiffel Challenge! Survive ${gs.eiffelQuest.duration}s & Kill ${gs.eiffelQuest.killsNeeded}!`);
+      createFloatingText("EIFFEL CHALLENGE!", landmark.position);
+      createFloatingText(`SURVIVE ${gs.eiffelQuest.duration}s & KILL ${gs.eiffelQuest.killsNeeded}!`, landmark.position);
     }
     
     function completeEiffelQuest() {
@@ -4532,15 +4537,6 @@
 
     gs.showStatChange = showStatChange;
     gs.showStatusMessage = showStatusMessage;
-    // Expose for cross-module calls from camp.js (BUG 4 fix)
-    window.showComicTutorial = showComicTutorial;
-    window.showStatusMessage = showStatusMessage;
-    export { init, spawnWave, processDisposalQueue, gameOver, resetGame, startGame, spawnParticles, showStatChange, showStatusMessage,
-             updateKillCam, updateHUD, updateWindmillQuestUI,
-             completeWindmillQuest, failWindmillQuest, completeMontanaQuest, completeEiffelQuest,
-             createDamageNumber, createFloatingText, addExp,
-             spawnMuzzleSmoke, showFarmerDialogue, updateFarmerNPCIndicator, updateFarmerBubblePosition,
-             giveWindmillQuestReward, updateMontanaQuestUI, updateEiffelQuestUI, updateBloodDecals,
-             FARMER_DIALOGUE };
+    export { init, spawnWave, processDisposalQueue, gameOver, resetGame, startGame, spawnParticles, showStatChange, showStatusMessage };
     // Register spawnParticles in gs so other modules can call gs.spawnParticles()
     gs.spawnParticles = spawnParticles;

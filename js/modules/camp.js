@@ -895,7 +895,7 @@
       const cost = getBuildingCost(buildingId);
       
       if (buildingData.level >= buildingData.maxLevel) {
-        gs.showStatusMessage('Building is at max level!', 2000);
+        showStatusMessage('Building is at max level!', 2000);
         return;
       }
       
@@ -914,20 +914,20 @@
         saveSaveData();
         updateCampScreen();
         playSound('collect');
-        gs.showStatusMessage(`${building.name} upgraded to level ${buildingData.level}!`, 2000);
+        showStatusMessage(`${building.name} upgraded to level ${buildingData.level}!`, 2000);
         
         // Quest progression
         if (buildingId === 'skillTree' && buildingData.level === 2 && gs.saveData.storyQuests.currentQuest === 'upgradeSkillTree') {
-          window.progressQuest('upgradeSkillTree', true);
+          progressQuest('upgradeSkillTree', true);
         }
         
         // Check for "upgrade any building to level 3" quest
         if (buildingData.level === 3 && gs.saveData.storyQuests.currentQuest === 'upgradeAnyBuildingTo3') {
-          window.progressQuest('upgradeAnyBuildingTo3', true);
+          progressQuest('upgradeAnyBuildingTo3', true);
         }
       } else {
         playSound('invalid');
-        gs.showStatusMessage('Not enough gold!', 2000);
+        showStatusMessage('Not enough gold!', 2000);
       }
     }
 
@@ -936,7 +936,7 @@
       const skillData = gs.saveData.skillTree[skillId];
       
       if (skillData.level >= skill.maxLevel) {
-        gs.showStatusMessage('Skill is at max level!', 2000);
+        showStatusMessage('Skill is at max level!', 2000);
         return;
       }
       
@@ -952,11 +952,11 @@
         updateCampScreen();
         playSound('collect');
         
-        gs.showStatusMessage(`${skill.name} leveled up!`, 2000);
+        showStatusMessage(`${skill.name} leveled up!`, 2000);
         
         // QUEST 2: Track skill point spending for tutorial quest
         if (gs.saveData.tutorialQuests) {
-          window.ensureQuest2Activated();
+          ensureQuest2Activated();
         }
         
         // Quest progression: Track skill unlocks for tutorial quest
@@ -967,7 +967,7 @@
           if (unlockedSkillsCount >= 2) {
             // Completed the demonstration quest
             gs.saveData.storyQuests.buildingFirstUse.skillTree = true;
-            window.progressQuest('useSkillTree', true);
+            progressQuest('useSkillTree', true);
           }
         }
         
@@ -1010,19 +1010,19 @@
           gs.saveData.tutorial.currentStep = 'unlock_headshot';
           saveSaveData();
           setTimeout(() => {
-            window.showComicTutorial('unlock_headshot');
+            showComicTutorial('unlock_headshot');
           }, 1000);
         } else if ((skillId === 'criticalFocus' || skillId === 'headshot' || skillId === 'executioner') && gs.saveData.tutorial.currentStep === 'unlock_headshot' && !gs.saveData.tutorial.headshotUnlocked) {
           // Accept any crit/headshot related skill
           gs.saveData.tutorial.headshotUnlocked = true;
           saveSaveData();
           setTimeout(() => {
-            window.showComicTutorial('tutorial_complete');
+            showComicTutorial('tutorial_complete');
           }, 1000);
         }
       } else {
         playSound('invalid');
-        gs.showStatusMessage('Not enough skill points!', 2000);
+        showStatusMessage('Not enough skill points!', 2000);
       }
     }
 
@@ -1117,7 +1117,7 @@
             saveSaveData();
             updatePassiveSkillsSection();
             playSound('collect');
-            gs.showStatusMessage(`${skill.name} upgraded!`, 2000);
+            showStatusMessage(`${skill.name} upgraded!`, 2000);
           };
         }
         
@@ -1205,17 +1205,17 @@
             saveSaveData();
             
             playSound('levelup');
-            gs.showStatusMessage(`${attr.name} increased to ${gs.saveData.attributes[attrId]}!`, 2000);
+            showStatusMessage(`${attr.name} increased to ${gs.saveData.attributes[attrId]}!`, 2000);
             updateTrainingSection();
             updateGoldDisplays();
             
             // QUEST 4 (new): Track attribute purchase for "Upgrade an Attribute" quest
             if (gs.saveData.tutorialQuests && gs.saveData.tutorialQuests.currentQuest === 'quest4_upgradeAttr') {
-              window.progressTutorialQuest('quest4_upgradeAttr', true);
+              progressTutorialQuest('quest4_upgradeAttr', true);
             }
             // QUEST 5 (new): Track training session for "Complete a Training Session" quest
             if (gs.saveData.tutorialQuests && gs.saveData.tutorialQuests.currentQuest === 'quest5_trainingSession') {
-              window.progressTutorialQuest('quest5_trainingSession', true);
+              progressTutorialQuest('quest5_trainingSession', true);
             }
             // QUEST 3 (legacy): Track attribute purchase for tutorial quest
             if (gs.saveData.tutorialQuests && gs.saveData.tutorialQuests.currentQuest === 'quest3_buyProgression') {
@@ -1224,7 +1224,7 @@
               
               if (totalAttrLevels >= 1) {
                 // Completed quest 3: bought 1 progression upgrade
-                window.progressTutorialQuest('quest3_buyProgression', true);
+                progressTutorialQuest('quest3_buyProgression', true);
               }
             }
             // QUEST 6: Track attribute purchase for upgrade-3-attributes quest
@@ -1232,15 +1232,15 @@
               if (!gs.saveData.tutorialQuests.quest6AttrCount) gs.saveData.tutorialQuests.quest6AttrCount = 0;
               gs.saveData.tutorialQuests.quest6AttrCount++;
               if (gs.saveData.tutorialQuests.quest6AttrCount >= 3) {
-                window.progressTutorialQuest('quest6_buyAttributes', true);
+                progressTutorialQuest('quest6_buyAttributes', true);
               }
             }
           } else {
             playSound('invalid');
             if (gs.saveData.trainingPoints < 1) {
-              gs.showStatusMessage('Not enough training points!', 2000);
+              showStatusMessage('Not enough training points!', 2000);
             } else {
-              gs.showStatusMessage('Not enough gold!', 2000);
+              showStatusMessage('Not enough gold!', 2000);
             }
           }
         };
