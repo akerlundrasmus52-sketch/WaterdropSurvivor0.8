@@ -275,7 +275,7 @@
     /* New Bottom Layout: Waterdrop Level Display with EXP filling, Traditional EXP Bar */
     #bottom-bars-container {
       position: fixed;
-      bottom: 20px;
+      bottom: 12px;
       left: 50%; /* CENTER HORIZONTALLY */
       transform: translateX(-50%); /* EXACT CENTER */
       width: auto; /* Don't stretch full width */
@@ -404,8 +404,8 @@
     /* Round Minimap - Bottom Right Corner - SMALLER, NEARLY ROUND */
     #minimap-container {
       position: absolute;
-      bottom: 20px; /* Closer to bottom */
-      right: 20px; /* Closer to right */
+      bottom: 10px; /* Closer to bottom */
+      right: 10px; /* Closer to right */
       width: 70px; /* Smaller - more compact */
       height: 72px; /* Nearly perfectly round */
       /* Nearly perfect circle with subtle bottom hint */
