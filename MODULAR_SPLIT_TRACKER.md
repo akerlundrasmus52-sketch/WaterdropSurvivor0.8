@@ -13,10 +13,10 @@ Use this to resume work if context/memory is lost. Just paste this issue link to
 - [x] Update all references in `game.js`
 
 ### Phase 2: Game Systems (Next PR)
-- [ ] Extract `js/weapons.js` — weapon definitions & logic via `window.GameWeapons`
-- [ ] Extract `js/enemies.js` — enemy types & AI via `window.GameEnemies`
-- [ ] Extract `js/combat.js` — damage, projectiles, hit detection via `window.GameCombat`
-- [ ] Extract `js/player.js` — player movement & stats via `window.GamePlayer`
+- [x] Extract `js/weapons.js` — weapon definitions & logic via `window.GameWeapons`
+- [x] Extract `js/enemies.js` — enemy types & AI via `window.GameEnemies`
+- [x] Extract `js/combat.js` — damage, projectiles, hit detection via `window.GameCombat`
+- [x] Extract `js/player.js` — player movement & stats via `window.GamePlayer`
 
 ### Phase 3: Environment & Glue (Final PR)
 - [ ] Extract `js/world.js` — terrain, environment via `window.GameWorld`
@@ -51,3 +51,37 @@ Initialises `window.GameState = {}` as a namespace placeholder. Actual state var
   ```
 - `window.gameSettings = gameSettings;` added after gameSettings is defined so audio.js can read `soundEnabled`.
 - ~430 lines removed from game.js (audio section + utility functions).
+
+## Phase 2 Implementation Notes
+
+### `js/weapons.js` (~35 lines)
+Extracted: `getDefaultWeapons()` factory (returns fresh mutable weapons-state object), `WEAPON_UPGRADES`
+config table. Exposes `window.GameWeapons`. In game.js: `const weapons = getDefaultWeapons()` replaces
+the inline object literal; `const UPGRADES = WEAPON_UPGRADES` replaces its inline definition.
+
+### `js/enemies.js` (~80 lines)
+Extracted: `ENEMY_TYPES` constants (type-index map for all 11 enemy types) and `getEnemyBaseStats()`
+factory that returns the per-type HP/speed/flags/damage object. Exposes `window.GameEnemies`.
+In game.js: `Object.assign(this, getEnemyBaseStats(...))` in the Enemy constructor replaces the
+50-line if-else stat block. THREE.js geometry/mesh creation remains in game.js due to renderer deps.
+
+### `js/combat.js` (~35 lines)
+Extracted: `calculateArmorReduction(amount, armorPercent)` (used by Player.takeDamage) and
+`calculateEnemyArmorReduction(amount, armorFraction)` (used by Enemy.takeDamage for MiniBoss armor).
+Exposes `window.GameCombat`. All combat execution logic (projectiles, hit loops) remains in game.js
+due to deep THREE.js / scene-graph dependencies.
+
+### `js/player.js` (~55 lines)
+Extracted: `getDefaultPlayerStats(baseExpReq)` factory that returns the full mutable playerStats
+object for a new run. Exposes `window.GamePlayer`. In game.js: `const playerStats = getDefaultPlayerStats(GAME_CONFIG.baseExpReq)` replaces the 42-line inline object literal.
+The Player class (THREE.js mesh creation, movement, input) remains in game.js.
+
+### `js/game.js` changes
+- Destructured aliases added:
+  ```js
+  const { getDefaultWeapons, WEAPON_UPGRADES } = window.GameWeapons;
+  const { ENEMY_TYPES, getEnemyBaseStats } = window.GameEnemies;
+  const { calculateArmorReduction, calculateEnemyArmorReduction } = window.GameCombat;
+  const { getDefaultPlayerStats } = window.GamePlayer;
+  ```
+- ~60 lines removed (playerStats object, weapons object, UPGRADES object, Enemy stat block).

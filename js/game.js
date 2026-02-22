@@ -1,10 +1,15 @@
     import * as THREE from 'three';
 
     // --- MODULE ALIASES FOR EXTRACTED GLOBALS ---
-    // audio.js, utils.js, state.js are loaded as regular scripts before this module
+    // audio.js, utils.js, state.js, weapons.js, enemies.js, combat.js, player.js
+    // are all loaded as regular scripts before this module
     const { playSound, initMusic, updateBackgroundMusic, startDroneHum, stopDroneHum } = window.GameAudio;
     const audioCtx = window.GameAudio.audioCtx;
     const { getRarityColor, getChestTierForCombo, getAccountLevelXPRequired, KILL_CAM_CONSTANTS, getRandomKillMessage } = window.GameUtils;
+    const { getDefaultWeapons, WEAPON_UPGRADES } = window.GameWeapons;
+    const { ENEMY_TYPES, getEnemyBaseStats } = window.GameEnemies;
+    const { calculateArmorReduction, calculateEnemyArmorReduction } = window.GameCombat;
+    const { getDefaultPlayerStats } = window.GamePlayer;
 
     // --- CONSTANTS & CONFIG ---
     const COLORS = {
@@ -560,60 +565,10 @@
     let swipeStart = null;
     
     // Stats
-    const playerStats = {
-      lvl: 1,
-      exp: 0,
-      expReq: GAME_CONFIG.baseExpReq,
-      hp: 100,
-      maxHp: 100,
-      strength: 1,
-      armor: 0, // Percentage reduction (0-100)
-      speed: 1, // Multiplier
-      critChance: 0.1,
-      critDmg: 1.5, // 150% base (User said 5%, assuming +5% or 1.05x, but 1.5x is standard)
-      damage: 1, // Multiplier
-      atkSpeed: 1, // Multiplier
-      walkSpeed: 25, // Display value
-      kills: 0,
-      hpRegen: 0,
-      gold: 0,
-      survivalTime: 0,
-      dashesPerformed: 0,
-      damageTaken: 0,
-      weaponsUnlocked: 0,
-      miniBossesDefeated: 0, // Track mini-boss kills for achievements
-      // Perk System
-      perks: {
-        vampire: 0,      // Life steal %
-        juggernaut: 0,   // Damage reduction %
-        swift: 0,        // Move speed %
-        lucky: 0,        // Crit chance %
-        berserker: 0     // Low HP attack speed bonus
-      },
-      // Skill upgrades
-      dashCooldownReduction: 0,
-      dashDistanceBonus: 0,
-      hasSecondWind: false,
-      lifeStealPercent: 0,
-      thornsPercent: 0,
-      hasBerserkerRage: false,
-      treasureHunterChance: 0,
-      doubleCritChance: 0,
-      extraProjectiles: 0,
-      doubleUpgradeChance: 0
-    };
+    const playerStats = getDefaultPlayerStats(GAME_CONFIG.baseExpReq);
 
-    // Weapons State
-    const weapons = {
-      gun: { active: true, level: 1, damage: 15, cooldown: 1000, lastShot: 0, range: 12, barrels: 1 },
-      sword: { active: false, level: 0, damage: 30, cooldown: 1500, lastShot: 0, range: 3.5 },
-      aura: { active: false, level: 0, damage: 5, cooldown: 500, lastShot: 0, range: 3 },
-      meteor: { active: false, level: 0, damage: 60, cooldown: 2500, lastShot: 0, area: 5 },
-      droneTurret: { active: false, level: 0, damage: 12, cooldown: 250, lastShot: 0, range: 15, droneCount: 1 }, // Faster fire rate, lower damage per shot (same DPS)
-      doubleBarrel: { active: false, level: 0, damage: 25, cooldown: 1200, lastShot: 0, range: 12, spread: 0.3 },
-      iceSpear: { active: false, level: 0, damage: 20, cooldown: 1500, lastShot: 0, range: 15, slowPercent: 0.4, slowDuration: 2000 },
-      fireRing: { active: false, level: 0, damage: 8, cooldown: 800, lastShot: 0, range: 4, orbs: 3, rotationSpeed: 2 }
-    };
+    // Weapons State — initialised from GameWeapons definitions
+    const weapons = getDefaultWeapons();
 
     // Magnet range for XP collection
     let magnetRange = 2; // Base range for XP magnet
@@ -629,14 +584,8 @@
     let dashDirection = { x: 0, z: 0 };
     let dashInvulnerable = false;
 
-    // Upgrade Config
-    const UPGRADES = {
-      damage: { name: "Base Damage", cost: 100, inc: 0.1, max: 10 },
-      health: { name: "Max Health", cost: 100, inc: 10, max: 10 },
-      speed: { name: "Move Speed", cost: 150, inc: 0.05, max: 5 },
-      armor: { name: "Armor", cost: 200, inc: 2, max: 10 },
-      magnet: { name: "Magnet Range", cost: 100, inc: 0.5, max: 5 }
-    };
+    // Upgrade Config — alias from GameWeapons
+    const UPGRADES = WEAPON_UPGRADES;
 
     // --- CLASSES ---
 
@@ -1433,8 +1382,8 @@
         // Check invulnerability frames
         if (this.invulnerable) return;
         
-        // Armor reduction
-        const reduced = Math.max(1, amount * (1 - playerStats.armor / 100));
+        // Armor reduction — delegated to GameCombat
+        const reduced = calculateArmorReduction(amount, playerStats.armor);
         playerStats.hp -= reduced;
         updateHUD();
         playSound('hit');
@@ -1907,58 +1856,8 @@
         this.mesh.receiveShadow = true;
         scene.add(this.mesh);
 
-        // Stats based on type - SCALED BY LEVEL (Rebalanced for better gameplay - reduced HP for more rewarding kills)
-        if (type === 0) { // Tank
-          this.hp = 100 * levelScaling; // Reduced from 150
-          this.speed = GAME_CONFIG.enemySpeedBase * 0.6; // Speed NOT scaled
-        } else if (type === 1) { // Fast, Low HP
-          this.hp = 30 * levelScaling; // Reduced from 40
-          this.speed = GAME_CONFIG.enemySpeedBase * 1.6; // Speed NOT scaled
-        } else if (type === 2) { // Balanced
-          this.hp = 60 * levelScaling; // Reduced from 80
-          this.speed = GAME_CONFIG.enemySpeedBase; // Speed NOT scaled
-        } else if (type === 3) { // Slowing
-          this.hp = 75 * levelScaling; // Reduced from 100
-          this.speed = GAME_CONFIG.enemySpeedBase * 0.8; // Speed NOT scaled
-          this.slowDuration = 2000; // 2 seconds slow
-          this.slowAmount = 0.5; // 50% slow
-        } else if (type === 4) { // Ranged
-          this.hp = 50 * levelScaling; // Reduced from 60
-          this.speed = GAME_CONFIG.enemySpeedBase * 0.7; // Speed NOT scaled
-          this.attackRange = 8; // Range for ranged attacks
-          this.projectileSpeed = 0.15;
-        } else if (type === 5) { // Flying
-          this.hp = 60 * levelScaling;
-          this.speed = GAME_CONFIG.enemySpeedBase * 1.3;
-          this.isFlying = true;
-        } else if (type === 6) { // Hard Tank
-          this.hp = 180 * levelScaling;
-          this.speed = GAME_CONFIG.enemySpeedBase * 0.65;
-        } else if (type === 7) { // Hard Fast
-          this.hp = 55 * levelScaling;
-          this.speed = GAME_CONFIG.enemySpeedBase * 1.8;
-        } else if (type === 8) { // Hard Balanced
-          this.hp = 110 * levelScaling;
-          this.speed = GAME_CONFIG.enemySpeedBase * 1.1;
-        } else if (type === 9) { // Elite
-          this.hp = 200 * levelScaling;
-          this.speed = GAME_CONFIG.enemySpeedBase * 0.9;
-        } else if (type === 10) { // MiniBoss
-          const miniBossStartLevel = 10;
-          // Phase 3: Double MiniBoss hitpoints for increased difficulty
-          this.hp = 1000 * (1 + (playerLevel - miniBossStartLevel) * 0.15);
-          this.speed = GAME_CONFIG.enemySpeedBase * 0.5;
-          this.isMiniBoss = true;
-          // Phase 3: Add armor stat (damage reduction)
-          this.armor = 0.25; // 25% damage reduction
-        }
-        
-        this.maxHp = this.hp;
-        // Early game difficulty: Higher base damage (50 instead of 25)
-        // At 100 HP start, this means ~2 hits to die without upgrades (hard as hell)
-        // Armor upgrades become critical for survival
-        this.damage = (type === 9 ? 50 * 1.5 : 50) * levelScaling; // Elite does 1.5x damage
-        if (type === 10) this.damage = 75 * levelScaling; // MiniBoss damage - even more threatening
+        // Stats based on type — delegated to GameEnemies.getEnemyBaseStats
+        Object.assign(this, getEnemyBaseStats(type, levelScaling, GAME_CONFIG.enemySpeedBase, playerLevel));
         this.isDead = false;
         this.isDamaged = false; // Track if enemy has been visually damaged
         this.pulsePhase = Math.random() * Math.PI;
@@ -2296,10 +2195,10 @@
           });
         }
         
-        // Phase 3: Apply armor reduction for MiniBoss
+        // Phase 3: Apply armor reduction for MiniBoss — delegated to GameCombat
         let finalAmount = amount;
         if (this.armor > 0) {
-          finalAmount = amount * (1 - this.armor);
+          finalAmount = calculateEnemyArmorReduction(amount, this.armor);
           // Show armor reduction effect
           if (this.isMiniBoss) {
             createFloatingText(`-${Math.floor(amount * this.armor)}`, this.mesh.position, '#FFD700');
