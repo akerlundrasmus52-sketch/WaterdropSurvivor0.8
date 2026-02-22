@@ -596,6 +596,11 @@
   <!-- FRESH IMPLEMENTATION: Standalone loading script (non-module) -->
   <script src="js/loading.js"></script>
 
+  <!-- Extracted game modules (regular scripts, must load before game.js module) -->
+  <script src="js/state.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/audio.js"></script>
+
   <script type="module" src="js/game.js"></script>
   <!-- Stat Bar Panel -->
   <div id="stat-bar-panel">
