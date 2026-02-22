@@ -17,4 +17,10 @@ import { animate, updateDayNightCycle } from './modules/mainloop.js';
 
 
 // Init Game
-try { init(); } catch(e) { console.error('[Game Error]', e); console.error('[Game] Initialization failed - game cannot start'); }
+try {
+  init();
+} catch(e) {
+  console.error('[FATAL] Module initialization failed:', e);
+  // Still set gameModuleReady so loading screen doesn't hang forever
+  window.gameModuleReady = true;
+}

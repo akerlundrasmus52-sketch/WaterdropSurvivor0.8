@@ -1,6 +1,8 @@
 // js/modules/state.js
 // Shared mutable game state container (gs) and exported const objects
     import * as THREE from 'three';
+    import { GAME_CONFIG } from './constants.js';
+    import { playSound } from './audio.js';
 
     // ── Shared mutable state container ─────────────────────────────────────────
     export const gs = {
@@ -571,3 +573,5 @@
       armor: { name: "Armor", cost: 200, inc: 2, max: 10 },
       magnet: { name: "Magnet Range", cost: 100, inc: 0.5, max: 5 }
     };
+
+    export { setGamePaused, setGameActive, setGameOver, triggerCinematic, updateCinematic, updateAmbientCreatures };
