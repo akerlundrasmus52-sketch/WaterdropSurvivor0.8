@@ -382,3 +382,6 @@
 
 
     export { playSound, updateBackgroundMusic, initMusic, startDroneHum, stopDroneHum };
+
+    // Register playSound on gs to allow state.js to call it without a circular import
+    gs._playSound = playSound;

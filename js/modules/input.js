@@ -2,7 +2,8 @@
 // Touch joystick, keyboard, gamepad controls
     import { gs, gameSettings, playerStats, joystickLeft, joystickRight } from './state.js';
     import { JOYSTICK_UPDATE_INTERVAL } from './constants.js';
-    import { startDash } from './camp.js';
+    import { startDash, isDashUnlocked } from './camp.js';
+    import { toggleStats } from './gamelogic.js';
 
     // --- INPUT SYSTEM ---
     function setupInputs() {
