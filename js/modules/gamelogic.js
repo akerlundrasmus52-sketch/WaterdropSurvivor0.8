@@ -2267,11 +2267,11 @@
         modal.querySelector('h2').innerText = 'NEW WEAPON!';
         modal.querySelector('h2').style.fontSize = '36px';
         const allWeaponChoicesQ8 = [
-          { id: 'sword', title: 'SLASHY SLASH', desc: 'Slash gs.enemies in front', active: () => weapons.sword.active, apply: () => { weapons.sword.active = true; weapons.sword.level = 1; showStatChange('New Weapon: Sword'); progressTutorialQuest('quest8_newWeapon', true); } },
-          { id: 'aura', title: 'ZAP ZONE', desc: 'Damage aura around you', active: () => weapons.aura.active, apply: () => { weapons.aura.active = true; weapons.aura.level = 1; showStatChange('New Weapon: Aura'); progressTutorialQuest('quest8_newWeapon', true); } },
-          { id: 'meteor', title: 'SPACE ROCKS', desc: 'Call gs.meteors from sky', active: () => weapons.meteor.active, apply: () => { weapons.meteor.active = true; weapons.meteor.level = 1; showStatChange('New Weapon: Meteor'); progressTutorialQuest('quest8_newWeapon', true); } },
-          { id: 'icespear', title: 'ICE SPEAR', desc: 'Freezing projectile that slows gs.enemies 40%', active: () => weapons.iceSpear.active, apply: () => { weapons.iceSpear.active = true; weapons.iceSpear.level = 1; showStatChange('New Weapon: Ice Spear'); progressTutorialQuest('quest8_newWeapon', true); } },
-          { id: 'firering', title: 'FIRE RING', desc: 'Spinning fire orbs orbit around you', active: () => weapons.fireRing.active, apply: () => { weapons.fireRing.active = true; weapons.fireRing.level = 1; showStatChange('New Weapon: Fire Ring'); progressTutorialQuest('quest8_newWeapon', true); } }
+          { id: 'sword', title: 'SLASHY SLASH', desc: 'Slash gs.enemies in front', active: () => weapons.sword.active, apply: () => { weapons.sword.active = true; weapons.sword.level = 1; showStatChange('New Weapon: Sword'); window.progressTutorialQuest('quest8_newWeapon', true); } },
+          { id: 'aura', title: 'ZAP ZONE', desc: 'Damage aura around you', active: () => weapons.aura.active, apply: () => { weapons.aura.active = true; weapons.aura.level = 1; showStatChange('New Weapon: Aura'); window.progressTutorialQuest('quest8_newWeapon', true); } },
+          { id: 'meteor', title: 'SPACE ROCKS', desc: 'Call gs.meteors from sky', active: () => weapons.meteor.active, apply: () => { weapons.meteor.active = true; weapons.meteor.level = 1; showStatChange('New Weapon: Meteor'); window.progressTutorialQuest('quest8_newWeapon', true); } },
+          { id: 'icespear', title: 'ICE SPEAR', desc: 'Freezing projectile that slows gs.enemies 40%', active: () => weapons.iceSpear.active, apply: () => { weapons.iceSpear.active = true; weapons.iceSpear.level = 1; showStatChange('New Weapon: Ice Spear'); window.progressTutorialQuest('quest8_newWeapon', true); } },
+          { id: 'firering', title: 'FIRE RING', desc: 'Spinning fire orbs orbit around you', active: () => weapons.fireRing.active, apply: () => { weapons.fireRing.active = true; weapons.fireRing.level = 1; showStatChange('New Weapon: Fire Ring'); window.progressTutorialQuest('quest8_newWeapon', true); } }
         ];
         const availableQ8 = allWeaponChoicesQ8.filter(w => !w.active());
         choices = availableQ8.sort(() => 0.5 - Math.random()).slice(0, Math.min(3, availableQ8.length));
@@ -2485,13 +2485,13 @@
         modal.querySelector('h2').style.fontSize = '36px';
         // Build list of all possible new weapons, filtering already-active ones
         const allWeaponChoices = [
-          { id: 'sword', icon: '⚔️', title: 'SLASHY SLASH', desc: 'Slash gs.enemies in front', active: () => weapons.sword.active, apply: () => { weapons.sword.active = true; weapons.sword.level = 1; showStatChange('New Weapon: Sword'); if (gs.saveData.tutorialQuests && gs.saveData.tutorialQuests.currentQuest === 'quest8_newWeapon') progressTutorialQuest('quest8_newWeapon', true); } },
-          { id: 'aura', icon: '🌀', title: 'ZAP ZONE', desc: 'Damage aura around you', active: () => weapons.aura.active, apply: () => { weapons.aura.active = true; weapons.aura.level = 1; showStatChange('New Weapon: Aura'); if (gs.saveData.tutorialQuests && gs.saveData.tutorialQuests.currentQuest === 'quest8_newWeapon') progressTutorialQuest('quest8_newWeapon', true); } },
-          { id: 'meteor', icon: '☄️', title: 'SPACE ROCKS', desc: 'Call gs.meteors from sky', active: () => weapons.meteor.active, apply: () => { weapons.meteor.active = true; weapons.meteor.level = 1; showStatChange('New Weapon: Meteor'); if (gs.saveData.tutorialQuests && gs.saveData.tutorialQuests.currentQuest === 'quest8_newWeapon') progressTutorialQuest('quest8_newWeapon', true); } },
-          { id: 'droneturret', icon: '🤖', title: 'DRONE TURRET', desc: 'Automated drone that shoots gs.enemies', active: () => weapons.droneTurret.active, apply: () => { weapons.droneTurret.active = true; weapons.droneTurret.level = 1; const drone = new DroneTurret(gs.player); gs.droneTurrets.push(drone); startDroneHum(); showStatChange('New Weapon: Drone Turret'); if (gs.saveData.tutorialQuests && gs.saveData.tutorialQuests.currentQuest === 'quest8_newWeapon') progressTutorialQuest('quest8_newWeapon', true); } },
-          { id: 'doublebarrel', icon: '🔫', title: 'DOUBLE BARREL', desc: 'Powerful shotgun spread', active: () => weapons.doubleBarrel.active, apply: () => { weapons.doubleBarrel.active = true; weapons.doubleBarrel.level = 1; showStatChange('New Weapon: Double Barrel'); if (gs.saveData.tutorialQuests && gs.saveData.tutorialQuests.currentQuest === 'quest8_newWeapon') progressTutorialQuest('quest8_newWeapon', true); } },
-          { id: 'icespear', icon: '❄️', title: 'ICE SPEAR', desc: 'Freezing projectile that slows gs.enemies 40%', active: () => weapons.iceSpear.active, apply: () => { weapons.iceSpear.active = true; weapons.iceSpear.level = 1; showStatChange('New Weapon: Ice Spear'); if (gs.saveData.tutorialQuests && gs.saveData.tutorialQuests.currentQuest === 'quest8_newWeapon') progressTutorialQuest('quest8_newWeapon', true); } },
-          { id: 'firering', icon: '🔥', title: 'FIRE RING', desc: 'Spinning fire orbs orbit around you', active: () => weapons.fireRing.active, apply: () => { weapons.fireRing.active = true; weapons.fireRing.level = 1; showStatChange('New Weapon: Fire Ring'); if (gs.saveData.tutorialQuests && gs.saveData.tutorialQuests.currentQuest === 'quest8_newWeapon') progressTutorialQuest('quest8_newWeapon', true); } }
+          { id: 'sword', icon: '⚔️', title: 'SLASHY SLASH', desc: 'Slash gs.enemies in front', active: () => weapons.sword.active, apply: () => { weapons.sword.active = true; weapons.sword.level = 1; showStatChange('New Weapon: Sword'); if (gs.saveData.tutorialQuests && gs.saveData.tutorialQuests.currentQuest === 'quest8_newWeapon') window.progressTutorialQuest('quest8_newWeapon', true); } },
+          { id: 'aura', icon: '🌀', title: 'ZAP ZONE', desc: 'Damage aura around you', active: () => weapons.aura.active, apply: () => { weapons.aura.active = true; weapons.aura.level = 1; showStatChange('New Weapon: Aura'); if (gs.saveData.tutorialQuests && gs.saveData.tutorialQuests.currentQuest === 'quest8_newWeapon') window.progressTutorialQuest('quest8_newWeapon', true); } },
+          { id: 'meteor', icon: '☄️', title: 'SPACE ROCKS', desc: 'Call gs.meteors from sky', active: () => weapons.meteor.active, apply: () => { weapons.meteor.active = true; weapons.meteor.level = 1; showStatChange('New Weapon: Meteor'); if (gs.saveData.tutorialQuests && gs.saveData.tutorialQuests.currentQuest === 'quest8_newWeapon') window.progressTutorialQuest('quest8_newWeapon', true); } },
+          { id: 'droneturret', icon: '🤖', title: 'DRONE TURRET', desc: 'Automated drone that shoots gs.enemies', active: () => weapons.droneTurret.active, apply: () => { weapons.droneTurret.active = true; weapons.droneTurret.level = 1; const drone = new DroneTurret(gs.player); gs.droneTurrets.push(drone); startDroneHum(); showStatChange('New Weapon: Drone Turret'); if (gs.saveData.tutorialQuests && gs.saveData.tutorialQuests.currentQuest === 'quest8_newWeapon') window.progressTutorialQuest('quest8_newWeapon', true); } },
+          { id: 'doublebarrel', icon: '🔫', title: 'DOUBLE BARREL', desc: 'Powerful shotgun spread', active: () => weapons.doubleBarrel.active, apply: () => { weapons.doubleBarrel.active = true; weapons.doubleBarrel.level = 1; showStatChange('New Weapon: Double Barrel'); if (gs.saveData.tutorialQuests && gs.saveData.tutorialQuests.currentQuest === 'quest8_newWeapon') window.progressTutorialQuest('quest8_newWeapon', true); } },
+          { id: 'icespear', icon: '❄️', title: 'ICE SPEAR', desc: 'Freezing projectile that slows gs.enemies 40%', active: () => weapons.iceSpear.active, apply: () => { weapons.iceSpear.active = true; weapons.iceSpear.level = 1; showStatChange('New Weapon: Ice Spear'); if (gs.saveData.tutorialQuests && gs.saveData.tutorialQuests.currentQuest === 'quest8_newWeapon') window.progressTutorialQuest('quest8_newWeapon', true); } },
+          { id: 'firering', icon: '🔥', title: 'FIRE RING', desc: 'Spinning fire orbs orbit around you', active: () => weapons.fireRing.active, apply: () => { weapons.fireRing.active = true; weapons.fireRing.level = 1; showStatChange('New Weapon: Fire Ring'); if (gs.saveData.tutorialQuests && gs.saveData.tutorialQuests.currentQuest === 'quest8_newWeapon') window.progressTutorialQuest('quest8_newWeapon', true); } }
         ];
         // Only offer weapons not yet active, shuffle and pick up to 3
         const available = allWeaponChoices.filter(w => !w.active());
@@ -4040,23 +4040,23 @@
       if (currentQuest && currentQuest.triggerOnDeath) {
         // Quest 4: Kill 10 gs.enemies (legacy)
         if (currentQuest.id === 'quest4_kill10' && gs.saveData.tutorialQuests.killsThisRun >= 10) {
-          progressTutorialQuest('quest4_kill10', true);
+          window.progressTutorialQuest('quest4_kill10', true);
         }
         // Quest 7: Survive 2 minutes (legacy)
         if (currentQuest.id === 'quest7_survive2min' && gs.saveData.tutorialQuests.survivalTimeThisRun >= 120) {
-          progressTutorialQuest('quest7_survive2min', true);
+          window.progressTutorialQuest('quest7_survive2min', true);
         }
         // Quest 5: Complete a run (any run completion counts)
         if (currentQuest.id === 'quest5_doRun') {
-          progressTutorialQuest('quest5_doRun', true);
+          window.progressTutorialQuest('quest5_doRun', true);
         }
         // Quest 6: Kill 10 gs.enemies (new intermediate quest)
         if (currentQuest.id === 'quest6_kill10' && gs.saveData.tutorialQuests.killsThisRun >= 10) {
-          progressTutorialQuest('quest6_kill10', true);
+          window.progressTutorialQuest('quest6_kill10', true);
         }
         // Quest 7 (new): Kill 15 gs.enemies
         if (currentQuest.id === 'quest7_kill10' && gs.saveData.tutorialQuests.killsThisRun >= 15) {
-          progressTutorialQuest('quest7_kill10', true);
+          window.progressTutorialQuest('quest7_kill10', true);
         }
       }
       
@@ -4537,6 +4537,11 @@
 
     gs.showStatChange = showStatChange;
     gs.showStatusMessage = showStatusMessage;
+    window.showStatChange = showStatChange;
+    window.showStatusMessage = showStatusMessage;
+    window.createFloatingText = createFloatingText;
+    window.showComicTutorial = showComicTutorial;
+    window.addGold = addGold;
     export { init, spawnWave, processDisposalQueue, gameOver, resetGame, startGame, spawnParticles, showStatChange, showStatusMessage };
     // Register spawnParticles in gs so other modules can call gs.spawnParticles()
     gs.spawnParticles = spawnParticles;

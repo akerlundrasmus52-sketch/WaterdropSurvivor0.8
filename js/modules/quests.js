@@ -581,6 +581,9 @@
     window.checkQuestConditions = checkQuestConditions;
     window.isQuestClaimed = isQuestClaimed;
     window.getCurrentQuest = getCurrentQuest;
+    window.progressTutorialQuest = progressTutorialQuest;
+    window.progressQuest = progressQuest;
+    window.ensureQuest2Activated = ensureQuest2Activated;
     
     // Show next quest popup
     function showNextQuestPopup(questId) {
@@ -1340,7 +1343,7 @@
               if (buildingId === 'companionHouse' && gs.saveData.tutorialQuests && gs.saveData.tutorialQuests.currentQuest === 'quest5_breedCompanion') progressTutorialQuest('quest5_breedCompanion', true);
             } else {
               playSound('invalid');
-              showStatusMessage(`🔒 Complete "${questInfo.label}" to unlock this building!`, 2500);
+              window.showStatusMessage(`🔒 Complete "${questInfo.label}" to unlock this building!`, 2500);
             }
           };
           

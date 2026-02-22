@@ -392,11 +392,11 @@
       
       // Quest progression: first time equipping gear (legacy)
       if (gs.saveData.storyQuests.currentQuest === 'equipGear') {
-        progressQuest('equipGear', true);
+        window.progressQuest('equipGear', true);
       }
       // Quest 4: Equip the Cigar
       if (gs.saveData.tutorialQuests && gs.saveData.tutorialQuests.currentQuest === 'quest4_equipCigar') {
-        progressTutorialQuest('quest4_equipCigar', true);
+        window.progressTutorialQuest('quest4_equipCigar', true);
       }
     }
 

@@ -82,7 +82,7 @@
               if (swipeTime < 250 && swipeDist > 60) {
                 // Dash only available after unlocking in skill tree
                 if (!gs.saveData.tutorial || !gs.saveData.tutorial.dashUnlocked) {
-                  showStatChange('🔒 Unlock Dash in the Skill Tree!');
+                  window.showStatChange('🔒 Unlock Dash in the Skill Tree!');
                   gs.swipeStart = null;
                 } else {
                   swipeDetected = true;
