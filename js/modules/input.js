@@ -302,4 +302,4 @@
       // Additional setup for keyboard/gamepad controls could go here
     }
 
-    export { setupInputs };
+    export { setupInputs, updateControlType };

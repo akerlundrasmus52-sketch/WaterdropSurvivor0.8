@@ -1579,4 +1579,4 @@
     gs.showComicInfoBox = showComicInfoBox;
     gs.checkLegendaryCigarQuest = checkLegendaryCigarQuest;
     gs.addAccountXP = addAccountXP;
-    export { getCurrentQuest, checkQuestConditions, claimTutorialQuest, isQuestClaimed, showComicInfoBox, addAccountXP };
+    export { getCurrentQuest, checkQuestConditions, claimTutorialQuest, isQuestClaimed, showComicInfoBox, addAccountXP, progressTutorialQuest, updateQuestTracker };
