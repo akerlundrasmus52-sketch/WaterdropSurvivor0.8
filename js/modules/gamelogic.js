@@ -4542,6 +4542,11 @@
     window.createFloatingText = createFloatingText;
     window.showComicTutorial = showComicTutorial;
     window.addGold = addGold;
-    export { init, spawnWave, processDisposalQueue, gameOver, resetGame, startGame, spawnParticles, showStatChange, showStatusMessage };
+    export { init, spawnWave, processDisposalQueue, gameOver, resetGame, startGame, spawnParticles, showStatChange, showStatusMessage,
+             updateKillCam, updateHUD, updateWindmillQuestUI, completeWindmillQuest, failWindmillQuest,
+             completeMontanaQuest, completeEiffelQuest, createDamageNumber, addExp, spawnMuzzleSmoke,
+             showFarmerDialogue, updateFarmerNPCIndicator, updateFarmerBubblePosition,
+             giveWindmillQuestReward, updateMontanaQuestUI, updateEiffelQuestUI, updateBloodDecals,
+             FARMER_DIALOGUE, toggleStats };
     // Register spawnParticles in gs so other modules can call gs.spawnParticles()
     gs.spawnParticles = spawnParticles;

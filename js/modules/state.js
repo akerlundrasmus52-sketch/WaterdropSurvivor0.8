@@ -2,7 +2,6 @@
 // Shared mutable game state container (gs) and exported const objects
     import * as THREE from 'three';
     import { GAME_CONFIG } from './constants.js';
-    import { playSound } from './audio.js';
 
     // ── Shared mutable state container ─────────────────────────────────────────
     export const gs = {
@@ -108,9 +107,13 @@
         originalCameraTarget: new THREE.Vector3(gs.player.mesh.position.x, 0, gs.player.mesh.position.z)
       };
       
-      // Play dramatic sound for mini-boss
+      // Play dramatic sound for mini-boss (lazily resolved to avoid circular dependency)
       if (type === 'miniboss') {
-        playSound('hit', 1.5, 0.3); // Low pitch dramatic hit
+        if (typeof gs._playSound === 'function') {
+          gs._playSound('hit', 1.5, 0.3); // Low pitch dramatic hit
+        } else {
+          console.warn('[triggerCinematic] gs._playSound not yet registered; audio.js may not be loaded');
+        }
       }
     }
     
