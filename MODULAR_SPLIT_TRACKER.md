@@ -1,64 +1,53 @@
-# Modular Split Tracker
+# game.js Modular Split — Tracking Document
 
-This document tracks the extraction of code from `js/game.js` into separate module files.
+Use this to resume work if context/memory is lost. Just paste this issue link to any new Copilot chat session:
+> "Continue the game.js modular split for timmiee/0.2-NewVersion-Waterdrop-. See MODULAR_SPLIT_TRACKER.md in the repo root."
 
-## Extracted Modules
+## Status
 
-### `js/audio.js` (~379 lines extracted)
-- **Type**: Regular `<script>` tag (no `import`/`export`)
-- **Exposes**: `window.GameAudio`
-- **Contents**:
-  - `audioCtx` — Web Audio API context
-  - `musicOscillators`, `musicGain`, `currentMusicLevel` — background music state
-  - `initMusic()` — initialise music gain node
-  - `updateBackgroundMusic()` — stop all background music (removed per requirements)
-  - `playSound(type)` — all synthesized sound effects (shoot, hit, levelup, upgrade, waterdrop, multikill, splash, collect, coin, coinDrop, dash, sword, doublebarrel, meteor)
-  - `droneOscillator`, `droneGain` — drone hum state
-  - `startDroneHum()` — start continuous drone oscillator
-  - `stopDroneHum()` — fade out and stop drone oscillator
-- **Dependency note**: `playSound`/`startDroneHum` read `window.gameSettings.soundEnabled` (game.js exposes `gameSettings` on `window` after defining it).
+### Phase 1: Foundation (THIS PR)
+- [x] Extract `js/state.js` — shared game state via `window.GameState`
+- [x] Extract `js/utils.js` — utility functions via `window.GameUtils`
+- [x] Extract `js/audio.js` — audio system via `window.GameAudio`
+- [x] Update `index.html` script loading order
+- [x] Update all references in `game.js`
 
-### `js/utils.js` (~50 lines extracted)
-- **Type**: Regular `<script>` tag
-- **Exposes**: `window.GameUtils`
-- **Contents**:
-  - `getRarityColor(rarity)` — maps rarity tier to CSS hex colour string
-  - `getChestTierForCombo(comboCount)` — returns chest tier name for a combo count
-  - `getAccountLevelXPRequired(level)` — linear XP formula (level × 100)
-  - `KILL_CAM_CONSTANTS` — constants object for kill-cam behaviour
-  - `getRandomKillMessage()` — picks a random kill message string
+### Phase 2: Game Systems (Next PR)
+- [ ] Extract `js/weapons.js` — weapon definitions & logic via `window.GameWeapons`
+- [ ] Extract `js/enemies.js` — enemy types & AI via `window.GameEnemies`
+- [ ] Extract `js/combat.js` — damage, projectiles, hit detection via `window.GameCombat`
+- [ ] Extract `js/player.js` — player movement & stats via `window.GamePlayer`
+
+### Phase 3: Environment & Glue (Final PR)
+- [ ] Extract `js/world.js` — terrain, environment via `window.GameWorld`
+- [ ] Extract `js/ui.js` — HUD, menus, modals via `window.GameUI`
+- [ ] Extract `js/renderer.js` — Three.js scene setup via `window.GameRenderer`
+- [ ] Rename remaining `game.js` → `main.js` (init & game loop only)
+- [ ] Final cleanup and verification
+
+## Architecture Pattern
+- NO ES modules / import / export (browser `<script>` tag loading)
+- Global namespace pattern: `window.GameState`, `window.GameUtils`, etc.
+- Scripts loaded in dependency order in index.html
+- Each module can reference other modules via their global namespace
+
+## Phase 1 Implementation Notes
+
+### `js/audio.js` (~395 lines)
+Extracted: all Web Audio API code — `audioCtx`, `initMusic`, `updateBackgroundMusic`, `playSound`, `droneOscillator`/`droneGain`, `startDroneHum`, `stopDroneHum`. Exposes `window.GameAudio`. References `window.gameSettings.soundEnabled` (game.js exposes `gameSettings` on `window` after defining it).
+
+### `js/utils.js` (~50 lines)
+Extracted: pure utility functions — `getRarityColor`, `getChestTierForCombo`, `getAccountLevelXPRequired`, `KILL_CAM_CONSTANTS`, `getRandomKillMessage`. Exposes `window.GameUtils`.
 
 ### `js/state.js` (~10 lines)
-- **Type**: Regular `<script>` tag
-- **Exposes**: `window.GameState`
-- **Contents**: Initialises `window.GameState = {}` as a namespace placeholder for future incremental state migration. Actual state variables remain in `game.js` (module scope) due to THREE.js dependencies and complex mutable-reference semantics.
+Initialises `window.GameState = {}` as a namespace placeholder. Actual state variables remain in `game.js` module scope due to THREE.js dependencies and complex mutable-reference semantics; incremental property migration planned for Phase 2+.
 
-## Changes to `js/game.js`
-- Added destructured aliases at top (after `import * as THREE from 'three'`):
+### `js/game.js` changes
+- Destructured aliases added at top so all existing call sites continue to work unchanged:
   ```js
   const { playSound, initMusic, updateBackgroundMusic, startDroneHum, stopDroneHum } = window.GameAudio;
   const audioCtx = window.GameAudio.audioCtx;
   const { getRarityColor, getChestTierForCombo, getAccountLevelXPRequired, KILL_CAM_CONSTANTS, getRandomKillMessage } = window.GameUtils;
   ```
-- Added `window.gameSettings = gameSettings;` immediately after `gameSettings` is defined (~line 548).
-- Removed ~380-line audio section (lines 42–420 of original).
-- Removed `getRarityColor`, `getChestTierForCombo`, `getAccountLevelXPRequired`, `KILL_CAM_CONSTANTS`, and `getRandomKillMessage` from their original locations.
-
-## Changes to `index.html`
-Added three `<script>` tags before `<script type="module" src="js/game.js">`:
-```html
-<script src="js/state.js"></script>
-<script src="js/utils.js"></script>
-<script src="js/audio.js"></script>
-```
-
-## Line Count Summary
-| File | Before | After | Delta |
-|------|--------|-------|-------|
-| `js/game.js` | 17 603 | ~17 194 | −409 |
-| `js/audio.js` | — | ~280 | +280 |
-| `js/utils.js` | — | ~50 | +50 |
-| `js/state.js` | — | ~10 | +10 |
-
-Net reduction in `game.js`: **409 lines (~2.3%)**.  
-The audio and utility extractions represent the safest, self-contained sections. Further state extraction is deferred due to the complex mutable-reference problem with module-scoped variables that get reassigned during game resets.
+- `window.gameSettings = gameSettings;` added after gameSettings is defined so audio.js can read `soundEnabled`.
+- ~430 lines removed from game.js (audio section + utility functions).

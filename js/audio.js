@@ -5,7 +5,12 @@
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 let musicOscillators = [];
 let musicGain = null;
-let currentMusicLevel = 0;
+
+// Returns true only when game.js has initialised and sound is enabled.
+// window.gameSettings is set by game.js; until then this correctly returns false.
+function isSoundEnabled() {
+  return !!(window.gameSettings && window.gameSettings.soundEnabled);
+}
 
 function initMusic() {
   if (!musicGain) {
@@ -38,9 +43,7 @@ function playSound(type) {
   // - Soundtrack request noted: Neelix - "By Way to Leave"
   //   (To be implemented in future update with proper licensing)
   
-  // window.gameSettings is set by game.js after it initialises; before that,
-  // soundEnabled is undefined (falsy) so sounds are correctly suppressed.
-  if (!(window.gameSettings || {}).soundEnabled) return; // Respect sound settings
+  if (!isSoundEnabled()) return; // Respect sound settings
   if (audioCtx.state === 'suspended') audioCtx.resume();
   const osc = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
@@ -340,9 +343,7 @@ let droneOscillator = null;
 let droneGain = null;
 
 function startDroneHum() {
-  // window.gameSettings is set by game.js after init; before that soundEnabled is
-  // falsy so the drone is correctly suppressed until the game is running.
-  if (!(window.gameSettings || {}).soundEnabled || droneOscillator) return;
+  if (!isSoundEnabled() || droneOscillator) return;
   if (audioCtx.state === 'suspended') audioCtx.resume();
   
   droneOscillator = audioCtx.createOscillator();

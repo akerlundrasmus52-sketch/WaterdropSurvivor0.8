@@ -15089,12 +15089,7 @@
         c.userData.maxHp = 1000;
       }
       
-      // Reset music
-      musicOscillators.forEach(m => {
-        m.osc.stop();
-      });
-      musicOscillators = [];
-      currentMusicLevel = 0;
+      // Reset music (updateBackgroundMusic stops all oscillators and clears state)
       updateBackgroundMusic();
 
       // Clear Entities
