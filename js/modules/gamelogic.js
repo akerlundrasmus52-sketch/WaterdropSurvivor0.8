@@ -226,6 +226,7 @@
     window.startGame = startGame;
     window.gameOver = gameOver;
     window.updateHUD = updateHUD;
+    window.spawnBloodDecal = spawnBloodDecal;
     
     // Countdown system (PR #70-71)
     function startCountdown() {
@@ -4549,6 +4550,7 @@
              completeMontanaQuest, completeEiffelQuest, createDamageNumber, addExp, spawnMuzzleSmoke,
              showFarmerDialogue, updateFarmerNPCIndicator, updateFarmerBubblePosition,
              giveWindmillQuestReward, updateMontanaQuestUI, updateEiffelQuestUI, updateBloodDecals,
+             startWindmillQuest, startMontanaQuest, startEiffelQuest, spawnBloodDecal,
              FARMER_DIALOGUE, toggleStats };
     // Register spawnParticles in gs so other modules can call gs.spawnParticles()
     gs.spawnParticles = spawnParticles;

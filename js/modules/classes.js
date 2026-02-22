@@ -1587,16 +1587,16 @@
         gs.spawnParticles(this.mesh.position, 0x660000, Math.min(Math.floor(bloodParticleCount * 0.6), 14)); // Darker blood
         gs.spawnParticles(this.mesh.position, 0xCC0000, Math.min(Math.floor(bloodParticleCount * 0.3), 8)); // Bright splatter
         // Spawn multiple ground blood decals for more brutal effect
-        spawnBloodDecal(this.mesh.position);
-        spawnBloodDecal(this.mesh.position); // Always at least 2 decals per hit
+        if (window.spawnBloodDecal) window.spawnBloodDecal(this.mesh.position);
+        if (window.spawnBloodDecal) window.spawnBloodDecal(this.mesh.position); // Always at least 2 decals per hit
         if (hpRatio < 0.5) {
-          spawnBloodDecal(this.mesh.position); // Extra decal at half HP
-          spawnBloodDecal(this.mesh.position); // Additional splatter
+          if (window.spawnBloodDecal) window.spawnBloodDecal(this.mesh.position); // Extra decal at half HP
+          if (window.spawnBloodDecal) window.spawnBloodDecal(this.mesh.position); // Additional splatter
         }
         if (hpRatio < 0.25) {
-          spawnBloodDecal(this.mesh.position); // Extra decal at low HP
-          spawnBloodDecal(this.mesh.position); // Even more at critical HP
-          spawnBloodDecal(this.mesh.position); // Enemy barely alive - covered in blood
+          if (window.spawnBloodDecal) window.spawnBloodDecal(this.mesh.position); // Extra decal at low HP
+          if (window.spawnBloodDecal) window.spawnBloodDecal(this.mesh.position); // Even more at critical HP
+          if (window.spawnBloodDecal) window.spawnBloodDecal(this.mesh.position); // Enemy barely alive - covered in blood
         }
         
         // Blood drip: small drops fall from wounded enemy to ground (managed in main loop)
@@ -1942,7 +1942,7 @@
           }, delay);
         }
         for (let db = 0; db < (this.isMiniBoss ? 10 : 6); db++) {
-          spawnBloodDecal(this.mesh.position);
+          if (window.spawnBloodDecal) window.spawnBloodDecal(this.mesh.position);
         }
         
         gs.scene.remove(this.mesh);
