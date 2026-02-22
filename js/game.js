@@ -26,7 +26,7 @@
       lakeCenterZ: -30,
       lakeRadius: 18,
       // Performance optimization - Phase 1
-      maxEnemiesOnScreen: 70, // Increased from 50 for harder difficulty
+      maxEnemiesOnScreen: 50, // Hard cap to prevent lag (docs specify 50 max)
       // Movement physics
       accelLerpFactor: 0.12, // Acceleration smoothness
       decelLerpFactor: 0.06, // Deceleration smoothness (glide effect)
@@ -971,7 +971,9 @@
       thornsPercent: 0,
       hasBerserkerRage: false,
       treasureHunterChance: 0,
-      doubleCritChance: 0
+      doubleCritChance: 0,
+      extraProjectiles: 0,
+      doubleUpgradeChance: 0
     };
 
     // Weapons State
@@ -13168,13 +13170,17 @@
       }, 4000);
     }
 
-    function showUpgradeModal() {
+    function showUpgradeModal(isBonusRound = false) {
       const modal = document.getElementById('levelup-modal');
       const list = document.getElementById('upgrade-list');
       list.innerHTML = '';
       // Reset header for two-press system
       const h2 = modal.querySelector('h2');
-      if (h2) { h2.innerText = 'LEVEL UP!'; h2.style.color = ''; h2.style.fontSize = '32px'; }
+      if (h2) {
+        h2.innerText = isBonusRound ? 'BONUS UPGRADE!' : 'LEVEL UP!';
+        h2.style.color = isBonusRound ? '#FFD700' : '';
+        h2.style.fontSize = '32px';
+      }
       
       let choices = [];
 
@@ -13373,6 +13379,26 @@
             playerStats.pierceCount = (playerStats.pierceCount || 0) + 1;
             const totalHits = playerStats.pierceCount + 1;
             showStatChange('Piercing +1! (Total hits: ' + totalHits + ' enemies)');
+          } 
+        },
+        { 
+          id: 'double_cast', 
+          icon: '🔀',
+          title: 'DOUBLE CAST', 
+          desc: 'Fires double shots from your current weapon (+1 projectile per stack)', 
+          apply: () => { 
+            playerStats.extraProjectiles = (playerStats.extraProjectiles || 0) + 1;
+            showStatChange('Double Cast! (' + (playerStats.extraProjectiles + 1) + ' projectiles per shot)');
+          } 
+        },
+        { 
+          id: 'double_upgrade_chance', 
+          icon: '🎲',
+          title: 'DOUBLE UPGRADE CHANCE', 
+          desc: 'Chance to get one more upgrade box after the original one (+25% per stack, max 100% at 4 stacks)', 
+          apply: () => { 
+            playerStats.doubleUpgradeChance = (playerStats.doubleUpgradeChance || 0) + 0.25;
+            showStatChange('Double Upgrade Chance +25%! (Total: ' + Math.round(playerStats.doubleUpgradeChance * 100) + '%)');
           } 
         }
       ];
@@ -13810,6 +13836,7 @@
         choices = pool.slice(0, 6);
       }
 
+      try {
       choices.forEach((u, index) => {
         const card = document.createElement('div');
         card.className = 'upgrade-card';
@@ -13903,7 +13930,7 @@
             console.error('Error applying upgrade:', error);
           }
           
-          // Always close modal and resume game
+          // Always close modal
           modal.style.display = 'none';
           modal.querySelector('h2').innerText = 'LEVEL UP!';
           modal.querySelector('h2').style.fontSize = '32px';
@@ -13924,6 +13951,24 @@
             savedCameraPosition = null; // Clear after restoration
           }
           
+          // Check for Double Upgrade Chance bonus (only on the first pick, not on bonus rounds)
+          if (!isBonusRound && playerStats.doubleUpgradeChance > 0) {
+            const bonusChance = Math.min(1.0, playerStats.doubleUpgradeChance);
+            if (Math.random() < bonusChance) {
+              // Bonus round: reopen modal with a new set of choices without unpausing
+              showUpgradeModal(true);
+              // Resume combo timer
+              if (comboState.pausedAt) {
+                const pauseDuration = Date.now() - comboState.pausedAt;
+                comboState.lastKillTime += pauseDuration;
+                comboState.pausedAt = null;
+              }
+              lastHudUpdateMs = 0; // Force HUD refresh
+              updateHUD();
+              return;
+            }
+          }
+          
           forceGameUnpause();
           
           // Resume combo timer after level-up
@@ -13933,6 +13978,7 @@
             comboState.pausedAt = null;
           }
           
+          lastHudUpdateMs = 0; // Force HUD refresh after level-up
           updateHUD();
           
           // Re-enable pointer events after closing (for next level up)
@@ -13949,6 +13995,13 @@
         };
         list.appendChild(card);
       });
+      } catch(cardErr) {
+        console.error('[LevelUp] Card generation error:', cardErr);
+        // Fallback: ensure game unpauses if card creation fails
+        levelUpPending = false;
+        setGamePaused(false);
+        return;
+      }
 
       modal.style.display = 'flex';
       
@@ -13968,7 +14021,11 @@
     const WATERDROP_FILL_TOP = 18;    // Top y-coordinate of fillable area (raised from 8 for compact shape)
     const WATERDROP_FILL_HEIGHT = 92; // Maximum fill height in SVG units (from y=18 to y=110)
     
+    let lastHudUpdateMs = 0;
     function updateHUD() {
+      const nowMs = Date.now();
+      if (nowMs - lastHudUpdateMs < 100) return; // Throttle DOM updates to max 10/sec
+      lastHudUpdateMs = nowMs;
       const hpPct = (playerStats.hp / playerStats.maxHp) * 100;
       document.getElementById('hp-fill').style.width = `${Math.max(0, hpPct)}%`;
       document.getElementById('hp-text').innerText = `HP: ${Math.max(0, Math.ceil(playerStats.hp))}/${playerStats.maxHp}`;
@@ -14738,20 +14795,15 @@
     function failWindmillQuest() {
       windmillQuest.active = false;
       windmillQuest.failed = true;
-      // Show MISSION FAILED text in the windmill UI briefly, then hide after 2.5 seconds
+      // Hide windmill quest UI immediately - no on-screen failure text
+      const uiEl = document.getElementById('windmill-quest-ui');
+      if (uiEl) uiEl.style.display = 'none';
       const timerEl = document.getElementById('windmill-timer-text');
       const hpEl = document.getElementById('windmill-hp-text');
       const hpFill = document.getElementById('windmill-hp-fill');
-      if (timerEl) timerEl.innerText = 'MISSION FAILED';
-      if (hpEl) hpEl.innerText = 'WINDMILL DESTROYED';
+      if (timerEl) timerEl.innerText = 'DEFEND: 0s';
+      if (hpEl) hpEl.innerText = 'WINDMILL: 0/600';
       if (hpFill) hpFill.style.width = '0%';
-      setTimeout(() => {
-        document.getElementById('windmill-quest-ui').style.display = 'none';
-        if (timerEl) timerEl.innerText = 'DEFEND: 0s';
-        if (hpEl) hpEl.innerText = 'WINDMILL: 0/600';
-      }, 2500);
-      if (windmillQuest.windmill) createFloatingText("WINDMILL DESTROYED!", windmillQuest.windmill.position);
-      showEnhancedNotification('quest', 'QUEST FAILED', 'Return to the farmer to retry.');
     }
     
     // Montana Quest Functions
@@ -16686,6 +16738,21 @@
           for(let i=0; i<weapons.gun.barrels; i++) {
             setTimeout(() => {
               projectiles.push(new Projectile(player.mesh.position.x, player.mesh.position.z, gunTarget));
+              
+              // Double Cast: fire extra projectiles with slight spread (±5 degrees per side)
+              const extraShots = playerStats.extraProjectiles || 0;
+              for (let s = 0; s < extraShots; s++) {
+                const spreadAngle = (Math.random() - 0.5) * (Math.PI / 18); // random ±5 degrees
+                const dx = gunTarget.x - player.mesh.position.x;
+                const dz = gunTarget.z - player.mesh.position.z;
+                // Rotate displacement vector by spreadAngle to get a new target at same distance
+                const spreadTarget = new THREE.Vector3(
+                  player.mesh.position.x + (Math.cos(spreadAngle) * dx - Math.sin(spreadAngle) * dz),
+                  0,
+                  player.mesh.position.z + (Math.sin(spreadAngle) * dx + Math.cos(spreadAngle) * dz)
+                );
+                projectiles.push(new Projectile(player.mesh.position.x, player.mesh.position.z, spreadTarget));
+              }
               
               // Muzzle flash light effect - smaller radius to keep lightning contained to barrel area
               const isNight = dayNightCycle.timeOfDay < 0.2 || dayNightCycle.timeOfDay > 0.8;
