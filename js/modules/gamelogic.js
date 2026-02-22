@@ -5,14 +5,14 @@
     import { gs, gameSettings, playerStats, weapons, joystickLeft, joystickRight, bulletHoleGeo, bulletHoleMat, disposalQueue } from './state.js';
     import { playSound, updateBackgroundMusic, startDroneHum, stopDroneHum } from './audio.js';
     import { Player, Enemy, Projectile, SwordSlash, IceSpear, Meteor, Particle, ObjectPool, Chest, ExpGem, GoldCoin, DroneTurret, Companion } from './classes.js';
-    import { loadSaveData, saveSaveData, saveSettings, loadSettings, SAVE_KEY, defaultSaveData } from './save.js';
+    import { loadSaveData, saveSaveData, saveSettings, loadSettings, SAVE_KEY, SETTINGS_KEY, defaultSaveData } from './save.js';
     import { updateAchievementsScreen, updateAchievementBadge, checkAchievements, showGoldBagAnimation } from './achievements.js';
     import { updateAttributesScreen, updateAttributesBadge } from './attributes.js';
     import { initializeGear, updateGearScreen, calculateGearStats } from './gear.js';
-    import { upgradeCampBuilding, updateTrainingPoints, isDashUnlocked, isHeadshotUnlocked, startDash } from './camp.js';
-    import { getCurrentQuest, checkQuestConditions, claimTutorialQuest } from './quests.js';
+    import { upgradeCampBuilding, updateTrainingPoints, isDashUnlocked, isHeadshotUnlocked, startDash, updateTrainingSection, updatePassiveSkillsSection, FUN_COMBO_NAMES } from './camp.js';
+    import { getCurrentQuest, checkQuestConditions, claimTutorialQuest, updateQuestTracker } from './quests.js';
     import { createWorld, cacheAnimatedObjects, applyGraphicsQuality } from './world.js';
-    import { setupInputs } from './input.js';
+    import { setupInputs, updateControlType, onWindowResize } from './input.js';
     import { animate } from './mainloop.js';
 
     // --- GAME LOGIC ---
@@ -783,7 +783,7 @@
             document.getElementById('settings-modal').style.display = 'none';
             setGamePaused(false);
             showMainMenu();
-            updateShopUI();
+            showProgressionShop();
             
             alert('✅ All progress has been completely reset! The game will start fresh on your next playthrough.');
             playSound('hit');

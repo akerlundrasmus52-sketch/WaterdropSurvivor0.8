@@ -1249,4 +1249,4 @@
       }
     }
 
-    export { isDashUnlocked, isHeadshotUnlocked, startDash, getBuildingCost, upgradeCampBuilding, unlockSkill, updateTrainingPoints, getNextTrainingPointTime, updatePassiveSkillsSection, updateTrainingSection, CAMP_BUILDINGS };
+    export { isDashUnlocked, isHeadshotUnlocked, startDash, getBuildingCost, upgradeCampBuilding, unlockSkill, updateTrainingPoints, getNextTrainingPointTime, updatePassiveSkillsSection, updateTrainingSection, CAMP_BUILDINGS, FUN_COMBO_NAMES };
