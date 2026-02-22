@@ -186,7 +186,7 @@
       gs.saveData.achievements.push(achievement.id);
       
       // Award gold
-      addGold(achievement.reward);
+      window.addGold(achievement.reward);
       
       // Award attribute points (with safety check)
       const attributePoints = achievement.attributePoints || 0;
@@ -296,7 +296,7 @@
               // Ignore storage errors - notification will show again next time
             }
             // Use showStatChange style for first-time achievements
-            showStatChange(`🏆 ${achievement.name} - Check Achievements Menu!`);
+            window.showStatChange(`🏆 ${achievement.name} - Check Achievements Menu!`);
             playSound('levelup');
           }
         }

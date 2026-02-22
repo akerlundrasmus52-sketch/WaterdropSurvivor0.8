@@ -1666,7 +1666,7 @@
           finalAmount = amount * (1 - this.armor);
           // Show armor reduction effect
           if (this.isMiniBoss) {
-            createFloatingText(`-${Math.floor(amount * this.armor)}`, this.mesh.position, '#FFD700');
+            window.createFloatingText(`-${Math.floor(amount * this.armor)}`, this.mesh.position, '#FFD700');
           }
         }
         
@@ -2035,7 +2035,7 @@
             epic: '#9B59B6',
             legendary: '#F39C12'
           };
-          createFloatingText(`+${newGear.name}`, this.mesh.position, rarityColors[newGear.rarity] || '#FFFFFF');
+          window.createFloatingText(`+${newGear.name}`, this.mesh.position, rarityColors[newGear.rarity] || '#FFFFFF');
           playSound('coin');
           
           console.log('[Phase 1 Gear Drop]', newGear.name, '-', newGear.rarity);
@@ -2044,7 +2044,7 @@
           if (gs.saveData.storyQuests.currentQuest === 'discoverLakeChest' && gs.saveData.inventory.length === 1) {
             // This is the first item - treat it as finding the lake chest
             setTimeout(() => {
-              progressQuest('discoverLakeChest', true);
+              window.progressQuest('discoverLakeChest', true);
             }, 2000); // Small delay to let gs.player see the item notification
           }
         }
@@ -2059,7 +2059,7 @@
           // Quest 1: Kill 3 gs.enemies
           const currentQuest = getCurrentQuest();
           if (currentQuest && currentQuest.id === 'quest1_kill3' && playerStats.kills >= 3) {
-            progressTutorialQuest('quest1_kill3', true);
+            window.progressTutorialQuest('quest1_kill3', true);
             // Guard: only set pending notification if quest1 is now in readyToClaim
             if (gs.saveData.tutorialQuests.readyToClaim.includes('quest1_kill3')) {
               gs.saveData.tutorialQuests.pendingMissionNotification = 'quest1_kill3';
@@ -2068,12 +2068,12 @@
           // Quest 6: Kill 10 gs.enemies — notify mid-run when objective reached
           if (currentQuest && currentQuest.id === 'quest6_kill10' && playerStats.kills >= 10 &&
               !gs.saveData.tutorialQuests.readyToClaim.includes('quest6_kill10')) {
-            showStatChange('⚔️ 10 Kills! Return to camp after this run!');
+            window.showStatChange('⚔️ 10 Kills! Return to camp after this run!');
           }
           // Quest 7 (new): Kill 15 gs.enemies — notify mid-run when objective reached
           if (currentQuest && currentQuest.id === 'quest7_kill10' && playerStats.kills >= 15 &&
               !gs.saveData.tutorialQuests.readyToClaim.includes('quest7_kill10')) {
-            showStatChange('⚔️ 15 Kills! Return to camp to claim your reward!');
+            window.showStatChange('⚔️ 15 Kills! Return to camp to claim your reward!');
           }
         }
         
@@ -2085,14 +2085,14 @@
             // Award gold before saving to prevent loss on crash
             gs.saveData.gold += 50;
             saveSaveData();
-            createFloatingText("Side Quest Complete: Kill 10 Enemies! +50 Gold", this.mesh.position, '#FFD700');
+            window.createFloatingText("Side Quest Complete: Kill 10 Enemies! +50 Gold", this.mesh.position, '#FFD700');
           }
         }
         
         // Track mini-boss defeats for achievements
         if (this.isMiniBoss) {
           playerStats.miniBossesDefeated++;
-          createFloatingText("MINI-BOSS DEFEATED! 🏆", this.mesh.position);
+          window.createFloatingText("MINI-BOSS DEFEATED! 🏆", this.mesh.position);
         }
         
         updateHUD();
@@ -2875,7 +2875,7 @@
         this.isDead = true;
         this.mesh.visible = false;
         this.respawnTimer = 10; // 10 second respawn
-        createFloatingText('Companion down!', this.mesh.position, '#FF6347');
+        window.createFloatingText('Companion down!', this.mesh.position, '#FF6347');
       }
       
       respawn() {
@@ -2884,7 +2884,7 @@
         this.mesh.visible = true;
         this.mesh.position.copy(gs.player.mesh.position);
         this.mesh.position.x += 2;
-        createFloatingText('Companion respawned!', this.mesh.position, '#00FF00');
+        window.createFloatingText('Companion respawned!', this.mesh.position, '#00FF00');
       }
       
       addXP(amount) {
@@ -2900,7 +2900,7 @@
           saveSaveData();
           
           if (this.companionData.level === 10) {
-            createFloatingText('⭐ COMPANION EVOLVED! ⭐', this.mesh.position, '#FFD700');
+            window.createFloatingText('⭐ COMPANION EVOLVED! ⭐', this.mesh.position, '#FFD700');
             // Update stats to evolved form
             const stats = this.data.evolvedStats;
             this.damage = stats.damage;
@@ -2908,7 +2908,7 @@
             this.maxHp = stats.health;
             this.hp = this.maxHp;
           } else {
-            createFloatingText(`Level ${this.companionData.level}!`, this.mesh.position, '#00FF00');
+            window.createFloatingText(`Level ${this.companionData.level}!`, this.mesh.position, '#00FF00');
           }
         }
       }
@@ -4106,7 +4106,7 @@
         
         // Collect ONLY when gs.player is very close
         if (dist < this.collectRange) {
-          addGold(this.amount);
+          window.addGold(this.amount);
           playSound('coin');
           
           // Gold collect gs.particles - 20 sparkles + flash
@@ -4341,25 +4341,25 @@
           const prevHp = playerStats.hp;
           playerStats.hp = Math.min(playerStats.maxHp, playerStats.hp + healAmount);
           const actualHeal = playerStats.hp - prevHp;
-          createFloatingText(`+${actualHeal} HP!`, this.mesh.position);
-          showStatChange(`Chest: +${actualHeal} HP!`);
+          window.createFloatingText(`+${actualHeal} HP!`, this.mesh.position);
+          window.showStatChange(`Chest: +${actualHeal} HP!`);
           gs.spawnParticles(this.mesh.position, 0xFF69B4, 10); // Reduced for performance
         } else if (rand < 0.6) {
           // Gold (25% chance)
           const goldAmount = 12 + Math.floor(Math.random() * 19); // 12-30 gold (reduced from 20-50)
-          addGold(goldAmount);
-          createFloatingText(`+${goldAmount} Gold!`, this.mesh.position);
-          showStatChange(`Chest: +${goldAmount} Gold!`);
+          window.addGold(goldAmount);
+          window.createFloatingText(`+${goldAmount} Gold!`, this.mesh.position);
+          window.showStatChange(`Chest: +${goldAmount} Gold!`);
         } else if (rand < 0.85) {
           // Random perk/stat boost (25% chance)
           this.applyRandomPerk();
         } else {
           // Weapon attachment or upgrade hint (15% chance)
-          createFloatingText('Weapon Enhanced!', this.mesh.position);
+          window.createFloatingText('Weapon Enhanced!', this.mesh.position);
           // Apply a small weapon boost - check if weapon exists
           if (weapons && weapons.gun && weapons.gun.active) {
             weapons.gun.damage += 5;
-            showStatChange('Chest: Gun Damage +5');
+            window.showStatChange('Chest: Gun Damage +5');
           }
         }
       }
@@ -4371,38 +4371,38 @@
             const maxWalkSpeed = 50; // 2x the initial 25
             if (playerStats.walkSpeed < maxWalkSpeed) {
               playerStats.walkSpeed *= 1.1;
-              showStatChange('Chest: +10% Move Speed');
+              window.showStatChange('Chest: +10% Move Speed');
             } else {
-              showStatChange('Chest: Max Speed Reached');
+              window.showStatChange('Chest: Max Speed Reached');
             }
           }},
           { name: 'Damage Boost', apply: () => { 
             playerStats.strength += 0.1;
-            showStatChange('Chest: +10% Damage');
+            window.showStatChange('Chest: +10% Damage');
           }},
           { name: 'Health Boost', apply: () => { 
             playerStats.maxHp += 20;
             playerStats.hp += 20;
-            showStatChange('Chest: +20 Max HP');
+            window.showStatChange('Chest: +20 Max HP');
           }},
           { name: 'Armor Boost', apply: () => { 
             playerStats.armor = Math.min(80, playerStats.armor + 8);
-            showStatChange('Chest: +8% Armor');
+            window.showStatChange('Chest: +8% Armor');
           }},
           { name: 'Attack Speed', apply: () => {
             // Cap minimum cooldown at 300ms to prevent performance issues
             if (weapons.gun.cooldown > 300) {
               weapons.gun.cooldown *= 0.9;
-              showStatChange('Chest: +10% Attack Speed');
+              window.showStatChange('Chest: +10% Attack Speed');
             } else {
-              showStatChange('Chest: Max Attack Speed');
+              window.showStatChange('Chest: Max Attack Speed');
             }
           }}
         ];
         
         const perk = perks[Math.floor(Math.random() * perks.length)];
         perk.apply();
-        createFloatingText(perk.name + '!', this.mesh.position);
+        window.createFloatingText(perk.name + '!', this.mesh.position);
       }
       
       destroy() {
