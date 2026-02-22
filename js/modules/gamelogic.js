@@ -2,7 +2,7 @@
 // Core game logic: init, spawning, combat, UI updates, level-up, reset
     import * as THREE from 'three';
     import { COLORS, GAME_CONFIG, MAX_SMOKE_PARTICLES, MAX_BLOOD_DECALS, MAX_DISPOSALS_PER_FRAME, MAX_BLOOD_DRIPS } from './constants.js';
-    import { gs, gameSettings, playerStats, weapons, joystickLeft, joystickRight, bulletHoleGeo, bulletHoleMat, disposalQueue } from './state.js';
+    import { gs, gameSettings, playerStats, weapons, joystickLeft, joystickRight, bulletHoleGeo, bulletHoleMat, disposalQueue, setGamePaused, setGameActive, setGameOver } from './state.js';
     import { playSound, updateBackgroundMusic, startDroneHum, stopDroneHum } from './audio.js';
     import { Player, Enemy, Projectile, SwordSlash, IceSpear, Meteor, Particle, ObjectPool, Chest, ExpGem, GoldCoin, DroneTurret, Companion } from './classes.js';
     import { loadSaveData, saveSaveData, saveSettings, loadSettings, SAVE_KEY, SETTINGS_KEY, defaultSaveData } from './save.js';

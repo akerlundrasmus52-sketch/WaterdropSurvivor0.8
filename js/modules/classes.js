@@ -2,7 +2,7 @@
 // Game entity classes: Player, Enemy, Bullet, Particle, ObjectPool, Chest, ExpGem, GoldCoin
     import * as THREE from 'three';
     import { COLORS, GAME_CONFIG, MAX_BLOOD_DRIPS } from './constants.js';
-    import { gs, gameSettings, playerStats, weapons, joystickLeft, joystickRight, bulletHoleGeo, bulletHoleMat, disposalQueue } from './state.js';
+    import { gs, gameSettings, playerStats, weapons, joystickLeft, joystickRight, bulletHoleGeo, bulletHoleMat, disposalQueue, setGamePaused } from './state.js';
     import { playSound } from './audio.js';
 
     // --- CLASSES ---
