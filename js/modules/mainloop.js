@@ -12,6 +12,7 @@
              createDamageNumber, addExp,
              spawnMuzzleSmoke, showFarmerDialogue, updateFarmerNPCIndicator, updateFarmerBubblePosition,
              giveWindmillQuestReward, updateMontanaQuestUI, updateEiffelQuestUI, updateBloodDecals,
+             startWindmillQuest, startMontanaQuest, startEiffelQuest, spawnBloodDecal,
              FARMER_DIALOGUE } from './gamelogic.js';
 
     // --- MAIN LOOP ---
