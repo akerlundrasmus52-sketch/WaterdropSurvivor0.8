@@ -388,8 +388,8 @@
     <button id="stats-btn" class="btn-small" style="position: absolute; top: 20px; right: 20px; pointer-events: auto; z-index: 100;">STATS</button>
     <button id="settings-btn" class="btn-small" style="position: absolute; top: 20px; right: 120px; pointer-events: auto; z-index: 100;">⚙️</button>
     
-    <!-- Day/Night Cycle Clock - centered at top, same horizontal alignment as waterdrop (center-top vs center-bottom) -->
-    <div id="day-night-clock" style="position: fixed; top: 20px; left: calc(50% + 50px); transform: translateX(-50%) scale(0.8); transform-origin: top center; pointer-events: none; z-index: 100;">
+    <!-- Day/Night Cycle Clock - moved to upper-right, 20% smaller to avoid XP/HP bar overlap -->
+    <div id="day-night-clock" style="position: fixed; top: 15px; right: 175px; transform: scale(0.64); transform-origin: top right; pointer-events: none; z-index: 100;">
       <div style="background: radial-gradient(circle at 30% 30%, rgba(40,40,40,0.9), rgba(0,0,0,0.8)); 
                   border: 3px solid #FFD700; 
                   border-radius: 50% 50% 50% 0; /* WATERDROP SHAPE: teardrop with pointed bottom-right */
