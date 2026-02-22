@@ -10,9 +10,9 @@
     import { updateAttributesScreen, updateAttributesBadge } from './attributes.js';
     import { initializeGear, updateGearScreen, calculateGearStats } from './gear.js';
     import { upgradeCampBuilding, updateTrainingPoints, isDashUnlocked, isHeadshotUnlocked, startDash } from './camp.js';
-    import { getCurrentQuest, checkQuestConditions, claimTutorialQuest } from './quests.js';
+    import { getCurrentQuest, checkQuestConditions, claimTutorialQuest, progressTutorialQuest, updateQuestTracker } from './quests.js';
     import { createWorld, cacheAnimatedObjects, applyGraphicsQuality } from './world.js';
-    import { setupInputs } from './input.js';
+    import { setupInputs, updateControlType } from './input.js';
     import { animate } from './mainloop.js';
 
     // --- GAME LOGIC ---
