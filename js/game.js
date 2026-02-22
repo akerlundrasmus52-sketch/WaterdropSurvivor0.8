@@ -12081,8 +12081,7 @@
       // X button for levelup-modal
       document.getElementById('levelup-x-btn').onclick = () => {
         document.getElementById('levelup-modal').style.display = 'none';
-        if (window.setGamePaused) window.setGamePaused(false);
-        checkPendingLevelUp();
+        forceGameUnpause();
       };
       
       document.getElementById('settings-reset-btn').onclick = () => {
@@ -12743,6 +12742,19 @@
       }
     }
     window.checkPendingLevelUp = checkPendingLevelUp;
+
+    // Hard-reset pause state and check for pending level-ups.
+    // Call this whenever the level-up modal is dismissed (card pick, skip, X button)
+    // so that stacked pauseOverlayCount from achievement / quest overlays never freezes the game.
+    function forceGameUnpause() {
+      pauseOverlayCount = 0;
+      window.pauseOverlayCount = 0;
+      isPaused = false;
+      window.isPaused = false;
+      checkPendingLevelUp();
+    }
+    window.forceGameUnpause = forceGameUnpause;
+
     // NEW: "LEVEL UP!" text that shoots from character's head
     function createCenteredLevelUpText() {
       const levelUpText = document.createElement('div');
@@ -14130,8 +14142,7 @@
             savedCameraPosition = null; // Clear after restoration
           }
           
-          setGamePaused(false);
-          checkPendingLevelUp();
+          forceGameUnpause();
           
           // Resume combo timer after level-up
           if (comboState.pausedAt) {

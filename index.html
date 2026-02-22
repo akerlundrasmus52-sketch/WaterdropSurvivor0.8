@@ -519,7 +519,7 @@
       <div id="upgrade-list">
         <!-- Cards injected by JS -->
       </div>
-      <button id="levelup-skip-btn" style="margin-top:12px;padding:8px 24px;background:#333;color:#FFD700;border:2px solid #FFD700;border-radius:8px;font-family:'Bangers',cursive;font-size:16px;letter-spacing:2px;cursor:pointer;display:none;" onclick="(function(){var m=document.getElementById('levelup-modal');m.style.display='none';if(window.setGamePaused)window.setGamePaused(false);if(window.checkPendingLevelUp)window.checkPendingLevelUp();})()">CONTINUE →</button>
+      <button id="levelup-skip-btn" style="margin-top:12px;padding:8px 24px;background:#333;color:#FFD700;border:2px solid #FFD700;border-radius:8px;font-family:'Bangers',cursive;font-size:16px;letter-spacing:2px;cursor:pointer;display:none;" onclick="(function(){document.getElementById('levelup-modal').style.display='none';if(window.forceGameUnpause)window.forceGameUnpause();})()">CONTINUE →</button>
     </div>
   </div>
 
