@@ -11453,12 +11453,18 @@
       window.gameModuleReady = true;
       console.log('[Init] Game module ready - Three.js loaded, event listeners attached');
       
-      // SAFETY: Periodic check - if game paused but no overlay/menu visible, auto-unpause
+      // SAFETY: Pause watchdog - auto-unpause if stuck with no visible overlay.
+      // Tracks how long the game has been paused; forces unpause after >10s regardless
+      // of levelUpPending to recover from any stuck-pause scenario.
+      let pauseWatchdogStart = 0;
       setInterval(() => {
         if (isPaused && isGameActive && !isGameOver) {
-          // Check if any overlay is actually open
-          const hasOpenOverlay = 
-            levelUpPending || // Prevent auto-unpause while level-up modal is pending (800ms delay)
+          const now = Date.now();
+          if (pauseWatchdogStart === 0) pauseWatchdogStart = now;
+          const pausedMs = now - pauseWatchdogStart;
+
+          // Check if any overlay is actually visible
+          const hasVisibleOverlay =
             document.getElementById('levelup-modal')?.style.display === 'flex' ||
             document.getElementById('settings-modal')?.style.display === 'flex' ||
             document.getElementById('options-menu')?.style.display === 'flex' ||
@@ -11473,13 +11479,27 @@
             document.getElementById('comic-info-overlay') !== null ||
             document.getElementById('comic-tutorial-modal')?.style.display === 'flex' ||
             document.getElementById('story-quest-modal')?.style.display === 'flex' ||
-            windmillQuest.dialogueOpen; // Pause during farmer dialogue
-          if (!hasOpenOverlay) {
+            windmillQuest.dialogueOpen;
+
+          // Force-unpause after >10s (watchdog for stuck states, overrides levelUpPending).
+          // For shorter pauses, also auto-unpause when levelUpPending is false and no
+          // overlay is visible (levelUpPending is only a concern within the first ~800ms
+          // before showUpgradeModal runs; by the 2s check the modal is already shown).
+          const PAUSE_WATCHDOG_TIMEOUT_MS = 10000;
+          const shouldForce = pausedMs > PAUSE_WATCHDOG_TIMEOUT_MS;
+          if (!hasVisibleOverlay && (!levelUpPending || shouldForce)) {
             pauseOverlayCount = 0;
             window.pauseOverlayCount = 0;
             isPaused = false;
             window.isPaused = false;
+            if (shouldForce) {
+              levelUpPending = false;
+              console.warn(`[PauseWatchdog] Force-unpaused after ${pausedMs}ms - clearing stuck pause state`);
+            }
+            pauseWatchdogStart = 0;
           }
+        } else {
+          pauseWatchdogStart = 0; // Reset timer when not paused or game not active
         }
       }, 2000); // Check every 2 seconds
     }
@@ -11672,6 +11692,7 @@
       });
       
       optionsStatsBtn.addEventListener('click', () => {
+        setGamePaused(false); // Balance the options menu's setGamePaused(true) before opening stats
         optionsMenu.style.display = 'none';
         toggleStats();
       });
@@ -11713,7 +11734,7 @@
       
       optionsSettingsBtn.addEventListener('click', () => {
         optionsMenu.style.display = 'none';
-        setGamePaused(true);
+        // Reuse the options menu's existing pause (no extra setGamePaused needed)
         // Open settings modal
         document.getElementById('settings-modal').style.display = 'flex';
       });
@@ -11723,7 +11744,7 @@
       if (optionsProgressionBtn) {
         optionsProgressionBtn.addEventListener('click', () => {
           optionsMenu.style.display = 'none';
-          setGamePaused(true);
+          // Reuse the options menu's existing pause (no extra setGamePaused needed)
           showProgressionShop();
           playSound('waterdrop');
         });
@@ -11734,7 +11755,7 @@
       if (optionsAttributesBtn) {
         optionsAttributesBtn.addEventListener('click', () => {
           optionsMenu.style.display = 'none';
-          setGamePaused(true);
+          // Reuse the options menu's existing pause (no extra setGamePaused needed)
           updateAttributesScreen();
           document.getElementById('attributes-screen').style.display = 'flex';
           playSound('waterdrop');
@@ -11746,7 +11767,7 @@
       if (optionsGearBtn) {
         optionsGearBtn.addEventListener('click', () => {
           optionsMenu.style.display = 'none';
-          setGamePaused(true);
+          // Reuse the options menu's existing pause (no extra setGamePaused needed)
           updateGearScreen();
           document.getElementById('gear-screen').style.display = 'flex';
           playSound('waterdrop');
@@ -11758,7 +11779,7 @@
       if (optionsAchievementsBtn) {
         optionsAchievementsBtn.addEventListener('click', () => {
           optionsMenu.style.display = 'none';
-          setGamePaused(true);
+          // Reuse the options menu's existing pause (no extra setGamePaused needed)
           updateAchievementsScreen();
           document.getElementById('achievements-screen').style.display = 'flex';
           playSound('waterdrop');
@@ -11770,7 +11791,7 @@
       if (optionsCreditsBtn) {
         optionsCreditsBtn.addEventListener('click', () => {
           optionsMenu.style.display = 'none';
-          setGamePaused(true);
+          // Reuse the options menu's existing pause (no extra setGamePaused needed)
           document.getElementById('credits-screen').style.display = 'flex';
           playSound('waterdrop');
         });
