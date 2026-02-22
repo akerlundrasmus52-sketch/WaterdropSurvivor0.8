@@ -1,6 +1,6 @@
 // js/modules/quests.js
 // Quest systems: tutorial, story quests, account level
-    import { gs, gameSettings, playerStats, triggerCinematic } from './state.js';
+    import { gs, gameSettings, playerStats } from './state.js';
     import { saveSaveData } from './save.js';
     import { playSound } from './audio.js';
     import { CAMP_BUILDINGS } from './camp.js';
@@ -581,11 +581,6 @@
     window.checkQuestConditions = checkQuestConditions;
     window.isQuestClaimed = isQuestClaimed;
     window.getCurrentQuest = getCurrentQuest;
-    // Expose for cross-module calls from camp.js (BUG 4 fix)
-    window.progressTutorialQuest = progressTutorialQuest;
-    window.ensureQuest2Activated = ensureQuest2Activated;
-    window.progressQuest = progressQuest;
-    window.updateQuestTracker = updateQuestTracker;
     
     // Show next quest popup
     function showNextQuestPopup(questId) {
@@ -1579,4 +1574,4 @@
     gs.showComicInfoBox = showComicInfoBox;
     gs.checkLegendaryCigarQuest = checkLegendaryCigarQuest;
     gs.addAccountXP = addAccountXP;
-    export { getCurrentQuest, checkQuestConditions, claimTutorialQuest, isQuestClaimed, showComicInfoBox, addAccountXP, progressTutorialQuest, updateQuestTracker, updateCampScreen };
+    export { getCurrentQuest, checkQuestConditions, claimTutorialQuest, isQuestClaimed, showComicInfoBox, addAccountXP };
