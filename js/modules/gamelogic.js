@@ -4,15 +4,15 @@
     import { COLORS, GAME_CONFIG, MAX_SMOKE_PARTICLES, MAX_BLOOD_DECALS, MAX_DISPOSALS_PER_FRAME, MAX_BLOOD_DRIPS } from './constants.js';
     import { gs, gameSettings, playerStats, weapons, joystickLeft, joystickRight, bulletHoleGeo, bulletHoleMat, disposalQueue } from './state.js';
     import { playSound, updateBackgroundMusic, startDroneHum, stopDroneHum } from './audio.js';
-    import { Player, Enemy, Bullet, Particle, ObjectPool, Chest, ExpGem, GoldCoin } from './classes.js';
+    import { Player, Enemy, Projectile, SwordSlash, IceSpear, Meteor, Particle, ObjectPool, Chest, ExpGem, GoldCoin, DroneTurret, Companion } from './classes.js';
     import { loadSaveData, saveSaveData, saveSettings, loadSettings, SAVE_KEY, defaultSaveData } from './save.js';
     import { updateAchievementsScreen, updateAchievementBadge, checkAchievements, showGoldBagAnimation } from './achievements.js';
     import { updateAttributesScreen, updateAttributesBadge } from './attributes.js';
     import { initializeGear, updateGearScreen, calculateGearStats } from './gear.js';
     import { upgradeCampBuilding, updateTrainingPoints, isDashUnlocked, isHeadshotUnlocked, startDash } from './camp.js';
     import { getCurrentQuest, checkQuestConditions, claimTutorialQuest } from './quests.js';
-    import { generateWorld, cacheAnimatedObjects, adjustShadowMapForPerformance } from './world.js';
-    import { setupInputListeners } from './input.js';
+    import { createWorld, cacheAnimatedObjects, applyGraphicsQuality } from './world.js';
+    import { setupInputs } from './input.js';
     import { animate } from './mainloop.js';
 
     // --- GAME LOGIC ---
