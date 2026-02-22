@@ -3111,9 +3111,7 @@
           saveData.achievementQuests.kill7Unlocked = true;
           saveData.achievementQuests.kill7Quest = 'active';
           saveSaveData();
-          setGamePaused(true);
           showEnhancedNotification('achievement', '🏆 ACHIEVEMENT UNLOCKED: Kill 7 Enemies!', 'Visit the Achievement Building in Camp to claim your reward!');
-          setTimeout(() => { setGamePaused(false); }, 3000);
           updateStatBar();
         }
       }
@@ -12938,50 +12936,11 @@
     }
     
     function createLevelUpEffects() {
-      // Water Fountain Effect - 60 water droplet particles explode from character
-      for(let i=0; i<60; i++) {
-        const angle = (i / 60) * Math.PI * 2;
-        const speed = 0.2 + Math.random() * 0.4;
-        const height = 0.6 + Math.random() * 0.8;
-        
-        // Water droplets
-        const dropletGeo = new THREE.SphereGeometry(0.08, 8, 8);
-        const dropletMat = new THREE.MeshPhysicalMaterial({ 
-          color: COLORS.player,
-          transparent: true,
-          opacity: 0.9,
-          metalness: 0.3,
-          roughness: 0.1
-        });
-        const droplet = new THREE.Mesh(dropletGeo, dropletMat);
-        droplet.position.copy(player.mesh.position);
-        droplet.position.y += 1;
-        scene.add(droplet);
-        
-        const vel = new THREE.Vector3(
-          Math.cos(angle) * speed,
-          height,
-          Math.sin(angle) * speed
-        );
-        
-        let life = 80;
-        const updateDroplet = () => {
-          life--;
-          droplet.position.add(vel);
-          vel.y -= 0.03; // Gravity
-          droplet.rotation.y += 0.1;
-          droplet.material.opacity = life / 80;
-          
-          if (life <= 0 || droplet.position.y < 0) {
-            scene.remove(droplet);
-            droplet.geometry.dispose();
-            droplet.material.dispose();
-          } else {
-            requestAnimationFrame(updateDroplet);
-          }
-        };
-        updateDroplet();
-      }
+      // Water Fountain Effect - use particle pool to avoid GC spikes
+      // (replaces 60 fountain droplets, 18 jet spheres, 20 head droplets, 30 ground droplets)
+      spawnParticles(player.mesh.position, COLORS.player, 30); // main fountain burst
+      spawnParticles(player.mesh.position, 0xFFFFFF, 10);      // white sparkles
+      spawnParticles(player.mesh.position, 0x5DADE2, 20);      // blue water droplets
       
       // Water-sprout-from-head level-up ring: multiple expanding rings + vertical water jet
       // Ring 1: fast-expanding bright ring (teal/white)
@@ -13036,39 +12995,6 @@
       };
       setTimeout(updateRing2, 80); // Slightly delayed second ring
       
-      // Vertical water column shooting up from head (water sprout)
-      // Shared base material cloned per jet for individual opacity animation
-      const jetBaseMat = new THREE.MeshBasicMaterial({ color: 0x5DADE2, transparent: true, opacity: 0.85 });
-      for (let j = 0; j < 18; j++) {
-        const jetGeo = new THREE.SphereGeometry(0.07 + Math.random() * 0.05, 6, 6);
-        const jetMat = jetBaseMat.clone(); // Clone for per-jet opacity animation
-        const jet = new THREE.Mesh(jetGeo, jetMat);
-        jet.position.copy(player.mesh.position);
-        jet.position.y += 1.2; // From head height
-        const spreadAngle = (j / 18) * Math.PI * 2;
-        const spreadR = 0.15 + Math.random() * 0.2;
-        const vel = new THREE.Vector3(
-          Math.cos(spreadAngle) * spreadR * 0.3,
-          0.35 + Math.random() * 0.5, // Upward jet
-          Math.sin(spreadAngle) * spreadR * 0.3
-        );
-        scene.add(jet);
-        let jLife = 55 + Math.floor(Math.random() * 20);
-        const maxJLife = jLife;
-        const updateJet = () => {
-          jLife--;
-          jet.position.add(vel);
-          vel.y -= 0.025; // Gravity brings it back down
-          jet.material.opacity = Math.max(0, jLife / maxJLife * 0.9);
-          if (jLife <= 0 || jet.position.y < 0) {
-            scene.remove(jet);
-            jetGeo.dispose(); jetMat.dispose();
-          } else requestAnimationFrame(updateJet);
-        };
-        updateJet();
-      }
-      jetBaseMat.dispose(); // Dispose the shared base after all clones are made
-      
       // Fountain/explosion of "LEVEL UP" text particles from player's head
       const texts = ["L", "E", "V", "E", "L", " ", "U", "P", "!"];
       
@@ -13103,136 +13029,6 @@
         );
         particles.push(particle);
       }
-      
-      // REMOVED: Lightning bolts (too expensive for performance)
-      // ADDED: Extra water spray from head, arms, and ground around character
-      // Water spray from character's head
-      for(let i=0; i<20; i++) {
-        const angle = Math.random() * Math.PI * 2;
-        const speed = 0.3 + Math.random() * 0.5;
-        const dropletGeo = new THREE.SphereGeometry(0.1, 6, 6);
-        const dropletMat = new THREE.MeshPhysicalMaterial({ 
-          color: 0x5DADE2,
-          transparent: true,
-          opacity: 0.8,
-          metalness: 0.4,
-          roughness: 0.2
-        });
-        const droplet = new THREE.Mesh(dropletGeo, dropletMat);
-        droplet.position.copy(player.mesh.position);
-        droplet.position.y += 1.5; // From head
-        scene.add(droplet);
-        
-        const vel = new THREE.Vector3(
-          Math.cos(angle) * speed,
-          0.8 + Math.random() * 0.4,
-          Math.sin(angle) * speed
-        );
-        
-        let life = 60;
-        const updateDroplet = () => {
-          life--;
-          droplet.position.add(vel);
-          vel.y -= 0.04; // Gravity
-          droplet.material.opacity = life / 60;
-          
-          if (life <= 0 || droplet.position.y < 0) {
-            scene.remove(droplet);
-            droplet.geometry.dispose();
-            droplet.material.dispose();
-          } else {
-            requestAnimationFrame(updateDroplet);
-          }
-        };
-        updateDroplet();
-      }
-      
-      // Water spray from ground around character (circle pattern)
-      for(let i=0; i<30; i++) {
-        const angle = (i / 30) * Math.PI * 2;
-        const radius = 1 + Math.random() * 0.5;
-        const dropletGeo = new THREE.SphereGeometry(0.08, 6, 6);
-        const dropletMat = new THREE.MeshPhysicalMaterial({ 
-          color: 0x3498DB,
-          transparent: true,
-          opacity: 0.9,
-          metalness: 0.3,
-          roughness: 0.1
-        });
-        const droplet = new THREE.Mesh(dropletGeo, dropletMat);
-        droplet.position.copy(player.mesh.position);
-        droplet.position.x += Math.cos(angle) * radius;
-        droplet.position.z += Math.sin(angle) * radius;
-        droplet.position.y = 0.1;
-        scene.add(droplet);
-        
-        const vel = new THREE.Vector3(
-          Math.cos(angle) * 0.15,
-          0.6 + Math.random() * 0.4,
-          Math.sin(angle) * 0.15
-        );
-        
-        let life = 50;
-        const updateDroplet = () => {
-          life--;
-          droplet.position.add(vel);
-          vel.y -= 0.035;
-          droplet.material.opacity = life / 50;
-          
-          if (life <= 0 || droplet.position.y < 0) {
-            scene.remove(droplet);
-            droplet.geometry.dispose();
-            droplet.material.dispose();
-          } else {
-            requestAnimationFrame(updateDroplet);
-          }
-        };
-        updateDroplet();
-      }
-      
-      // Camera zoom effect
-      const originalD = 20;
-      const zoomD = 12; // Zoom closer
-      const zoomDuration = 1200; // ms
-      const startTime = Date.now();
-      
-      const zoomAnim = () => {
-        const elapsed = Date.now() - startTime;
-        const t = Math.min(elapsed / zoomDuration, 1);
-        const eased = 1 - Math.pow(1 - t, 3); // Ease out cubic
-        
-        const d = originalD - (originalD - zoomD) * Math.sin(eased * Math.PI);
-        const aspect = window.innerWidth / window.innerHeight;
-        camera.left = -d * aspect;
-        camera.right = d * aspect;
-        camera.top = d;
-        camera.bottom = -d;
-        camera.updateProjectionMatrix();
-        
-        if (t < 1) {
-          requestAnimationFrame(zoomAnim);
-        }
-      };
-      zoomAnim();
-      
-      // Screen shake
-      const originalCameraPos = camera.position.clone();
-      let shakeTime = 0;
-      const shakeDuration = 0.5;
-      
-      const shakeAnim = () => {
-        shakeTime += 0.016;
-        if (shakeTime < shakeDuration) {
-          const intensity = (1 - shakeTime / shakeDuration) * 2;
-          camera.position.x = originalCameraPos.x + (Math.random() - 0.5) * intensity;
-          camera.position.y = originalCameraPos.y + (Math.random() - 0.5) * intensity;
-          camera.position.z = originalCameraPos.z + (Math.random() - 0.5) * intensity;
-          requestAnimationFrame(shakeAnim);
-        } else {
-          camera.position.copy(originalCameraPos);
-        }
-      };
-      shakeAnim();
     }
     
     class LevelUpTextParticle {
@@ -13620,7 +13416,7 @@
       
       // Quest 8: Force weapon choice when quest8_newWeapon is active (grant first new weapon)
       if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest8_newWeapon' &&
-          ![5, 8, 15, 20].includes(playerStats.lvl)) {
+          ![4, 5, 8, 15, 20].includes(playerStats.lvl)) {
         modal.querySelector('h2').innerText = 'NEW WEAPON!';
         modal.querySelector('h2').style.fontSize = '36px';
         const allWeaponChoicesQ8 = [
@@ -13638,8 +13434,8 @@
         }
         choices.push(...commonUpgrades.sort(() => 0.5 - Math.random()).slice(0, 3));
       }
-      // Levels 3, 4, 9, 17, 23: WEAPON UPGRADE LEVELS
-      else if ([3, 4, 9, 17, 23].includes(playerStats.lvl)) {
+      // Levels 3, 9, 17, 23: WEAPON UPGRADE LEVELS
+      else if ([3, 9, 17, 23].includes(playerStats.lvl)) {
         modal.querySelector('h2').innerText = 'WEAPON UPGRADE!';
         modal.querySelector('h2').style.fontSize = '36px';
         
@@ -13836,8 +13632,8 @@
           choices.push(...additionalUpgrades.slice(0, needed));
         }
       }
-      // WEAPON UNLOCK: Level 5, 8, 15, 20 for new weapon unlocks (4 weapons total per run)
-      else if ([5, 8, 15, 20].includes(playerStats.lvl)) {
+      // WEAPON UNLOCK: Level 4, 5, 8, 15, 20 for new weapon unlocks
+      else if ([4, 5, 8, 15, 20].includes(playerStats.lvl)) {
         modal.querySelector('h2').innerText = 'NEW WEAPON!';
         modal.querySelector('h2').style.fontSize = '36px';
         // Build list of all possible new weapons, filtering already-active ones
