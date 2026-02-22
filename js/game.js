@@ -8006,9 +8006,9 @@
       },
       quest2_spendSkills: {
         id: 'quest2_spendSkills',
-        name: 'Buy Dash & Headshot',
-        description: 'Go to the Skill Tree tab and unlock both Dash and Critical Focus (or a Headshot skill)',
-        objectives: 'Unlock Dash and a Critical Focus/Headshot skill in the Skill Tree tab',
+        name: 'Buy 3 Skills',
+        description: 'Go to the Skill Tree tab and unlock any three skills',
+        objectives: 'Unlock any 3 skills in the Skill Tree tab',
         claim: 'Main Building',
         rewardGold: 100,
         rewardSkillPoints: 1,
@@ -8305,14 +8305,10 @@
       ) {
         saveData.tutorialQuests.currentQuest = 'quest2_spendSkills';
       }
-      // If quest2 is active, check if both skills are already bought
+      // If quest2 is active, check if three skills have been bought
       if (saveData.tutorialQuests.currentQuest === 'quest2_spendSkills') {
-        const hasDash = (saveData.skillTree.dash && saveData.skillTree.dash.level > 0) ||
-                        (saveData.skillTree.dashMaster && saveData.skillTree.dashMaster.level > 0);
-        const hasHeadshot = (saveData.skillTree.criticalFocus && saveData.skillTree.criticalFocus.level > 0) ||
-                            (saveData.skillTree.headshot && saveData.skillTree.headshot.level > 0) ||
-                            (saveData.skillTree.executioner && saveData.skillTree.executioner.level > 0);
-        if (hasDash && hasHeadshot) {
+        const totalSkillsBought = Object.values(saveData.skillTree).filter(s => s && s.level > 0).length;
+        if (totalSkillsBought >= 3) {
           progressTutorialQuest('quest2_spendSkills', true);
         }
       }
@@ -8714,8 +8710,9 @@
         };
       }
       
-      // Start quest when player visits Stonehenge area
-      if (player && !saveData.extendedQuests.legendaryCigar.started) {
+      // Start quest when player visits Stonehenge area (only after tutorial stonehenge quest is done)
+      if (player && !saveData.extendedQuests.legendaryCigar.started &&
+          saveData.tutorialQuests && isQuestClaimed('quest3_stonehengeGear')) {
         const stonehengePos = { x: -60, z: 60 };
         const dist = Math.sqrt(
           Math.pow(player.mesh.position.x - stonehengePos.x, 2) +
@@ -14063,10 +14060,11 @@
           card.style.animation = `swooshInRight 0.6s ease-out ${index * 0.15}s forwards`;
         }
         
+        let autoConfirmTimer = null;
         card.onclick = () => {
           const allCards = list.querySelectorAll('.upgrade-card');
           
-          // Two-press system: first press selects/highlights, second press confirms
+          // First press: highlight chosen card, then auto-confirm after 0.1 seconds
           if (card.dataset.selected !== '1') {
             // First press: highlight this card, deselect others
             allCards.forEach(c => {
@@ -14090,13 +14088,13 @@
             else if (card.classList.contains('rarity-legendary')) glowColor = '#FF2222';
             card.style.outline = `3px solid ${glowColor}`;
             card.style.boxShadow = `0 0 18px ${glowColor}, 0 0 6px ${glowColor}`;
-            // Update prompt text
-            const h2 = modal.querySelector('h2');
-            if (h2) { h2.innerText = 'CONFIRM?'; h2.style.color = '#FFD700'; }
-            return; // Wait for second press
+            // Auto-confirm after 0.1 seconds; store timer to allow cancellation
+            autoConfirmTimer = setTimeout(() => { autoConfirmTimer = null; if (card.dataset.selected === '1') card.click(); }, 100);
+            return;
           }
           
-          // Second press: apply upgrade
+          // Confirm: clear pending auto-confirm timer, apply upgrade
+          if (autoConfirmTimer) { clearTimeout(autoConfirmTimer); autoConfirmTimer = null; }
           allCards.forEach(c => {
             c.style.pointerEvents = 'none';
             c.style.opacity = '0.5';
