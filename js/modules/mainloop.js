@@ -9,7 +9,7 @@
     import { updateWaterParticles } from './classes.js';
     import { spawnWave, processDisposalQueue, updateKillCam, updateHUD, updateWindmillQuestUI,
              completeWindmillQuest, failWindmillQuest, completeMontanaQuest, completeEiffelQuest,
-             createDamageNumber, createFloatingText, addExp,
+             createDamageNumber, addExp,
              spawnMuzzleSmoke, showFarmerDialogue, updateFarmerNPCIndicator, updateFarmerBubblePosition,
              giveWindmillQuestReward, updateMontanaQuestUI, updateEiffelQuestUI, updateBloodDecals,
              FARMER_DIALOGUE } from './gamelogic.js';
@@ -486,7 +486,7 @@
               '</div>',
               'EQUIP ARMOR!'
             );
-            createFloatingText('LEGENDARY ARMOR!', gs.player.mesh.position);
+            window.createFloatingText('LEGENDARY ARMOR!', gs.player.mesh.position);
             gs.spawnParticles(gs.player.mesh.position, 0xFFD700, 30);
             gs.spawnParticles(gs.player.mesh.position, 0xFF8C00, 20);
           }
@@ -616,7 +616,7 @@
           // Quest failed
           gs.montanaQuest.active = false;
           document.getElementById('montana-quest-ui').style.display = 'none';
-          createFloatingText("MONTANA FAILED!", gs.montanaQuest.landmark.position);
+          window.createFloatingText("MONTANA FAILED!", gs.montanaQuest.landmark.position);
         }
       }
       
@@ -640,7 +640,7 @@
           // Quest failed
           gs.eiffelQuest.active = false;
           document.getElementById('eiffel-quest-ui').style.display = 'none';
-          createFloatingText("EIFFEL FAILED!", gs.eiffelQuest.landmark.position);
+          window.createFloatingText("EIFFEL FAILED!", gs.eiffelQuest.landmark.position);
         }
       }
 
