@@ -1,8 +1,8 @@
     import * as THREE from 'three';
 
     // --- MODULE ALIASES FOR EXTRACTED GLOBALS ---
-    // audio.js, utils.js, state.js, weapons.js, enemies.js, combat.js, player.js
-    // are all loaded as regular scripts before this module
+    // audio.js, utils.js, state.js, weapons.js, enemies.js, combat.js, player.js,
+    // world.js, ui.js, renderer.js are all loaded as regular scripts before this module
     const { playSound, initMusic, updateBackgroundMusic, startDroneHum, stopDroneHum } = window.GameAudio;
     const audioCtx = window.GameAudio.audioCtx;
     const { getRarityColor, getChestTierForCombo, getAccountLevelXPRequired, KILL_CAM_CONSTANTS, getRandomKillMessage } = window.GameUtils;
@@ -10,45 +10,13 @@
     const { ENEMY_TYPES, getEnemyBaseStats } = window.GameEnemies;
     const { calculateArmorReduction, calculateEnemyArmorReduction } = window.GameCombat;
     const { getDefaultPlayerStats } = window.GamePlayer;
+    const { COLORS, GAME_CONFIG, countdownMessages, COMPANIONS, getInitialDayNightCycle } = window.GameWorld;
+    const { showStatChange, showStatusMessage } = window.GameUI;
+    const { RENDERER_CONFIG } = window.GameRenderer;
 
     // --- CONSTANTS & CONFIG ---
-    const COLORS = {
-      bg: 0xFFF0F5,
-      player: 0x4FC3F7, // Light Blue - more like water droplet
-      enemySquare: 0xFF69B4, // Hot Pink
-      enemyTriangle: 0xFFD700, // Gold
-      enemyRound: 0x9370DB, // Purple
-      ground: 0x7CFC00, // Lawn Green (More vibrant)
-      forest: 0x98FB98, // Pale Green
-      lake: 0x1E90FF, // Dodger Blue (More water-like)
-      cabin: 0xDEB887, // Burlywood
-      farmland: 0xF0E68C, // Khaki
-      exp: 0x5DADE2, // Light Blue (Matching EXP bar)
-    };
-
-    const GAME_CONFIG = {
-      playerSpeedBase: 0.12, // Slower as requested
-      enemySpeedBase: 0.05,  // Slower as requested
-      waveInterval: 300, // Frames between waves (approx 5s)
-      expValue: 10,
-      baseExpReq: 20,
-      // Lake configuration - used for spawn avoidance
-      lakeCenterX: 30,
-      lakeCenterZ: -30,
-      lakeRadius: 18,
-      // Performance optimization - Phase 1
-      maxEnemiesOnScreen: 50, // Hard cap to prevent lag (docs specify 50 max)
-      // Movement physics
-      accelLerpFactor: 0.12, // Acceleration smoothness
-      decelLerpFactor: 0.06, // Deceleration smoothness (glide effect)
-      movementLeanFactor: 0.15, // Tilt during movement
-      dashLeanFactor: 0.4, // Dramatic tilt during dash
-      dashLeanReturnDuration: 200, // ms to return to upright after dash
-      // Combat effects
-      meteorKnockbackMultiplier: 3, // Knockback strength
-      explosionShakeIntensity: 1.5, // Camera shake on explosions
-      smokeDurationFrames: 30 // Muzzle smoke lifetime (at 60fps = 0.5s)
-    };
+    // COLORS and GAME_CONFIG are defined in world.js → window.GameWorld
+    // and aliased at the top of this file.
 
     // --- GAME STATE ---
     let scene, camera, renderer;
@@ -257,12 +225,8 @@
     }
     
     // Day/Night Cycle System - Smooth, non-blocking transitions
-    let dayNightCycle = {
-      enabled: true,
-      timeOfDay: 0.25, // Start at dawn (6 AM / 25% through day cycle) (0-1, where 0=midnight, 0.25=dawn, 0.5=noon, 0.75=dusk, 1=midnight)
-      cycleSpeed: 1 / 600, // 10 minutes for full cycle (1 / 600 seconds at 60fps)
-      lastUpdateTime: 0
-    };
+    // Initial state provided by world.js → getInitialDayNightCycle()
+    let dayNightCycle = getInitialDayNightCycle();
     
     // Ambient Creatures System
     let ambientCreatures = [];
@@ -493,50 +457,10 @@
     let countdownActive = false;
     let countdownStep = 0;
     let countdownTimer = 0;
-    const countdownMessages = [
-      "Get Ready!",
-      "3",
-      "2",
-      "1",
-      "Survive!"
-    ];
+    // countdownMessages defined in world.js → window.GameWorld (aliased at top)
 
     // Phase 5: Companion System Data
-    const COMPANIONS = {
-      stormWolf: {
-        id: 'stormWolf',
-        name: 'Storm Wolf',
-        icon: '🐺',
-        evolvedIcon: '⚡',
-        type: 'melee',
-        baseStats: { damage: 8, attackSpeed: 1.2, health: 50 },
-        evolvedStats: { damage: 20, attackSpeed: 0.8, health: 100 },
-        unlockCondition: 'default',
-        description: 'Melee companion that follows and attacks enemies'
-      },
-      skyFalcon: {
-        id: 'skyFalcon',
-        name: 'Sky Falcon',
-        icon: '🦅',
-        evolvedIcon: '🔥',
-        type: 'ranged',
-        baseStats: { damage: 6, attackSpeed: 1.5, health: 40 },
-        evolvedStats: { damage: 15, attackSpeed: 1.0, health: 80 },
-        unlockCondition: 'level15',
-        description: 'Ranged companion that circles and dives at enemies'
-      },
-      waterSpirit: {
-        id: 'waterSpirit',
-        name: 'Water Spirit',
-        icon: '💧',
-        evolvedIcon: '🌊',
-        type: 'support',
-        baseStats: { damage: 3, attackSpeed: 8.0, health: 60 },
-        evolvedStats: { damage: 8, attackSpeed: 5.0, health: 120 },
-        unlockCondition: 'denLevel2',
-        description: 'Support companion that heals and slows enemies'
-      }
-    };
+    // COMPANIONS defined in world.js → window.GameWorld (aliased at top)
     
     let activeCompanion = null; // Will hold the active Companion instance
 
@@ -10830,7 +10754,7 @@
       // Far plane at 35 (was 28) - fog begins at edges only, not heavy at top
       // PERFORMANCE: Balanced for 60fps target while maintaining visibility
       // Tighter fog for better visibility around character - fog only at edges
-      scene.fog = new THREE.Fog(COLORS.bg, 18, 38);
+      scene.fog = new THREE.Fog(COLORS.bg, RENDERER_CONFIG.fogNear, RENDERER_CONFIG.fogFar);
       
       // Phase 5: Initialize particle object pool for performance (100 particles pre-allocated)
       particlePool = new ObjectPool(
@@ -10844,9 +10768,9 @@
       // Adjusted for better top-down view: distance 15 (balanced), angle (18,16,18) for better perspective
       // This provides clear visibility without being too close or too far
       const aspect = window.innerWidth / window.innerHeight;
-      const d = 15; // Balanced distance for good visibility
+      const d = RENDERER_CONFIG.cameraDistance; // Balanced distance for good visibility
       camera = new THREE.OrthographicCamera(-d * aspect, d * aspect, d, -d, 1, 1000);
-      camera.position.set(18, 16, 18); // Better angle - not too low, better visibility
+      camera.position.set(RENDERER_CONFIG.cameraPositionX, RENDERER_CONFIG.cameraPositionY, RENDERER_CONFIG.cameraPositionZ); // Better angle - not too low, better visibility
       camera.lookAt(scene.position);
 
       // Renderer
@@ -10881,19 +10805,20 @@
       scene.add(window.ambientLight);
 
       // Realistic sun/moon with soft dynamic shadows
+      const frustumHalf = RENDERER_CONFIG.shadowFrustumHalfSize;
       window.dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
       window.dirLight.position.set(50, 100, 50);
       window.dirLight.castShadow = true;
-      window.dirLight.shadow.mapSize.width = 2048;
-      window.dirLight.shadow.mapSize.height = 2048;
-      window.dirLight.shadow.camera.left = -80;
-      window.dirLight.shadow.camera.right = 80;
-      window.dirLight.shadow.camera.top = 80;
-      window.dirLight.shadow.camera.bottom = -80;
+      window.dirLight.shadow.mapSize.width = RENDERER_CONFIG.defaultShadowMapSize;
+      window.dirLight.shadow.mapSize.height = RENDERER_CONFIG.defaultShadowMapSize;
+      window.dirLight.shadow.camera.left = -frustumHalf;
+      window.dirLight.shadow.camera.right = frustumHalf;
+      window.dirLight.shadow.camera.top = frustumHalf;
+      window.dirLight.shadow.camera.bottom = -frustumHalf;
       window.dirLight.shadow.camera.updateProjectionMatrix(); // Apply frustum changes
       // Soft shadow settings for realistic effect
-      window.dirLight.shadow.radius = 4; // Soft shadow blur
-      window.dirLight.shadow.bias = -0.0001; // Prevent shadow acne
+      window.dirLight.shadow.radius = RENDERER_CONFIG.shadowRadius; // Soft shadow blur
+      window.dirLight.shadow.bias = RENDERER_CONFIG.shadowBias; // Prevent shadow acne
       scene.add(window.dirLight);
       scene.add(window.dirLight.target); // Must add target to scene for custom target position
 
@@ -14455,11 +14380,9 @@
     let statusMessageFadeInterval = null;
     let statusMessageFadeTimeout = null;
     
-    // Stat Notification Queue System - Red/Black Theme
-    const statNotificationQueue = [];
-    let isShowingNotification = false;
-    
-    // Comic Book Tutorial System
+    // showStatChange and showStatusMessage are defined in ui.js → window.GameUI
+    // (aliased at the top of this file — statNotificationQueue and the queue
+    //  processing logic live in ui.js module scope)
     function showComicTutorial(step) {
       const modal = document.getElementById('comic-tutorial-modal');
       const title = document.getElementById('comic-title');
@@ -14539,56 +14462,8 @@
       };
     }
 
-    function showStatChange(text, level = 'normal') {
-      // Add to queue with level
-      statNotificationQueue.push({ text, level });
-      
-      // Start processing queue if not already processing
-      if (!isShowingNotification) {
-        processStatNotificationQueue();
-      }
-    }
-
-    // showStatusMessage: compact status notification (camp screen feedback)
-    function showStatusMessage(text, duration = 2000) {
-      showStatChange(text);
-    }
-
-    function processStatNotificationQueue() {
-      if (statNotificationQueue.length === 0) {
-        isShowingNotification = false;
-        return;
-      }
-
-      isShowingNotification = true;
-      const { text, level } = statNotificationQueue.shift();
-      
-      // Create notification element
-      const container = document.getElementById('stat-notifications');
-      const notification = document.createElement('div');
-      notification.className = 'stat-notification';
-      
-      // Add styling based on level
-      if (level === 'mythical') {
-        notification.classList.add('combo-mythical');
-      } else if (level === 'high') {
-        notification.classList.add('combo-high');
-      }
-      
-      notification.innerText = text;
-      container.appendChild(notification);
-
-      // Faster fade out: 1.2 seconds display, then 0.4s fade
-      setTimeout(() => {
-        notification.style.animation = 'stat-fade-out 0.4s ease-out forwards';
-        
-        // Remove element and process next in queue
-        setTimeout(() => {
-          container.removeChild(notification);
-          processStatNotificationQueue();
-        }, 400);
-      }, 1200);
-    }
+    // showStatChange, showStatusMessage, processStatNotificationQueue
+    // are defined in ui.js → window.GameUI (aliased at top of this file)
     
     // FRESH IMPLEMENTATION: Enhanced Notification System
     function showEnhancedNotification(type, title, message) {
