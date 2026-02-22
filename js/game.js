@@ -6570,6 +6570,11 @@
       if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest4_equipCigar') {
         progressTutorialQuest('quest4_equipCigar', true);
       }
+      // Quest 6: Equip the Cigarr from armory → advance quest chain to quest7
+      if (saveData.tutorialQuests && gearId === 'cigarr_quest' &&
+          saveData.tutorialQuests.currentQuest === 'quest6_stonehengeChest') {
+        progressTutorialQuest('quest6_stonehengeChest', true);
+      }
     }
 
     function unequipGear(slotKey) {
@@ -8128,8 +8133,7 @@
         rewardGold: 100,
         rewardSkillPoints: 1,
         unlockBuilding: 'armory', // Gear Building
-        giveItem: { name: 'Cigar', rarity: 'rare', stats: { strength: 1, speed: 1, precision: 1 } },
-        autoEquip: true,
+        giveItem: { id: 'cigarr_quest', name: 'Cigarr', type: 'ring', rarity: 'rare', stats: { flexibility: 1, movementSpeed: 1, attackSpeed: 1, attackPrecision: 1, critChance: 1, elementalMagic: 1 }, description: '+1 to all combat stats' },
         nextQuest: 'quest7_survive2min',
         conditions: ['quest5_breedCompanion'] // Requires quest5_breedCompanion to be claimed
       },
@@ -14734,7 +14738,18 @@
     function failWindmillQuest() {
       windmillQuest.active = false;
       windmillQuest.failed = true;
-      document.getElementById('windmill-quest-ui').style.display = 'none';
+      // Show MISSION FAILED text in the windmill UI briefly, then hide after 2.5 seconds
+      const timerEl = document.getElementById('windmill-timer-text');
+      const hpEl = document.getElementById('windmill-hp-text');
+      const hpFill = document.getElementById('windmill-hp-fill');
+      if (timerEl) timerEl.innerText = 'MISSION FAILED';
+      if (hpEl) hpEl.innerText = 'WINDMILL DESTROYED';
+      if (hpFill) hpFill.style.width = '0%';
+      setTimeout(() => {
+        document.getElementById('windmill-quest-ui').style.display = 'none';
+        if (timerEl) timerEl.innerText = 'DEFEND: 0s';
+        if (hpEl) hpEl.innerText = 'WINDMILL: 0/600';
+      }, 2500);
       if (windmillQuest.windmill) createFloatingText("WINDMILL DESTROYED!", windmillQuest.windmill.position);
       showEnhancedNotification('quest', 'QUEST FAILED', 'Return to the farmer to retry.');
     }
@@ -16502,7 +16517,7 @@
           // Show item card popup
           showComicInfoBox(
             '🎁 Treasure Found!',
-            '<div style="text-align: center;"><div style="font-size: 48px; margin: 10px 0;">🚬</div><div style="color: #4169E1; font-size: 24px; font-weight: bold;">CIGAR</div><div style="color: #FFD700; font-size: 18px;">★★★ RARE ★★★</div><div style="margin: 15px 0; font-size: 16px; font-family: Arial, sans-serif;">+1 Attack Speed<br>+1 Movement Speed<br>+1 Attack Precision</div><div style="color: #4169E1; font-family: Arial, sans-serif;">Return to camp to claim your reward!</div></div>',
+            '<div style="text-align: center;"><div style="font-size: 48px; margin: 10px 0;">🚬</div><div style="color: #3498db; font-size: 24px; font-weight: bold;">CIGARR</div><div style="color: #FFD700; font-size: 18px;">★★★ RARE ★★★</div><div style="margin: 15px 0; font-size: 16px; font-family: Arial, sans-serif;">+1 to all combat stats</div><div style="color: #3498db; font-family: Arial, sans-serif;">Go to the Armory to equip your Cigarr!</div></div>',
             'Collect!',
             () => {
               // Complete the active stonehenge chest quest
