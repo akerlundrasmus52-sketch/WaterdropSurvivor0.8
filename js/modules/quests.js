@@ -581,6 +581,11 @@
     window.checkQuestConditions = checkQuestConditions;
     window.isQuestClaimed = isQuestClaimed;
     window.getCurrentQuest = getCurrentQuest;
+    // Expose for cross-module calls from camp.js (BUG 4 fix)
+    window.progressTutorialQuest = progressTutorialQuest;
+    window.ensureQuest2Activated = ensureQuest2Activated;
+    window.progressQuest = progressQuest;
+    window.updateQuestTracker = updateQuestTracker;
     
     // Show next quest popup
     function showNextQuestPopup(questId) {

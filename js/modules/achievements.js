@@ -153,6 +153,14 @@
           else if (currentQuest.label) questText = currentQuest.label;
           else questText = currentQuest.id || '';
         }
+        // Active landmark quests (show in stat bar, not as screen overlays)
+        if (!questText && gs.windmillQuest && gs.windmillQuest.active) {
+          questText = `🏚️ Defend Windmill: ${Math.ceil(gs.windmillQuest.timer)}s`;
+        } else if (gs.montanaQuest && gs.montanaQuest.active) {
+          questText = `🏔️ Montana: ${gs.montanaQuest.kills}/${gs.montanaQuest.killsNeeded} kills`;
+        } else if (gs.eiffelQuest && gs.eiffelQuest.active) {
+          questText = `🗼 Eiffel: ${gs.eiffelQuest.kills}/${gs.eiffelQuest.killsNeeded} kills`;
+        }
         // Check kill7 achievement quest
         if (!questText && gs.saveData.achievementQuests && gs.saveData.achievementQuests.kill7Quest === 'active') {
           questText = '🏆 Visit Achievement Building';
