@@ -803,7 +803,7 @@
         // Armor reduction
         const reduced = Math.max(1, amount * (1 - playerStats.armor / 100));
         playerStats.hp -= reduced;
-        updateHUD();
+        if (window.updateHUD) window.updateHUD();
         playSound('hit');
         
         // Trigger waterdrop UI attack animation
@@ -981,12 +981,8 @@
           };
           setTimeout(fadePool, 500);
           
-          gameOver();
+          if (window.gameOver) window.gameOver();
         }
-      }
-    }
-
-    // Cached deformed geometry for Hard Tank (performance optimization)
     // Note: All Hard Tank gs.enemies share the same deformed shape for performance.
     // This is intentional - visual variety comes from animations and positioning.
 
@@ -2095,7 +2091,7 @@
           window.createFloatingText("MINI-BOSS DEFEATED! 🏆", this.mesh.position);
         }
         
-        updateHUD();
+        if (window.updateHUD) window.updateHUD();
         updateComboCounter(true); // Phase 2: Track combo on kill
         checkAchievements(); // Check for achievements after kill
         // Kill 7 achievement check

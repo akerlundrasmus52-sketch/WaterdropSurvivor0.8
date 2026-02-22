@@ -1,6 +1,6 @@
 // js/modules/quests.js
 // Quest systems: tutorial, story quests, account level
-    import { gs, gameSettings, playerStats, setGamePaused } from './state.js';
+    import { gs, gameSettings, playerStats, setGamePaused, triggerCinematic } from './state.js';
     import { saveSaveData } from './save.js';
     import { playSound } from './audio.js';
     import { CAMP_BUILDINGS } from './camp.js';
