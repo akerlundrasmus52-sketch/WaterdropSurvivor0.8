@@ -14017,8 +14017,6 @@
         }
         choices = pool.slice(0, 6);
       }
-      // Ensure game is paused while upgrade modal is open
-      setGamePaused(true);
 
       choices.forEach((u, index) => {
         const card = document.createElement('div');
