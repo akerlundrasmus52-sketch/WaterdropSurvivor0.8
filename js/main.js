@@ -12236,29 +12236,8 @@
         return;
       }
       
-      // Custom XP Curve: Progressive difficulty scaling to level 150
-      // Early game (1-30): Hard but manageable
-      // Mid game (31-75): Balanced progression after upgrade threshold
-      // Late game (76-150): Challenging endgame content
-      let killsNeeded;
-      if (playerStats.lvl <= 5) {
-        killsNeeded = 2 + playerStats.lvl; // Levels 1-5: 3, 4, 5, 6, 7 kills respectively
-      } else if (playerStats.lvl <= 15) {
-        killsNeeded = 7 + Math.floor((playerStats.lvl - 5) * 0.5); // Levels 6-15: 7-12 kills
-      } else if (playerStats.lvl <= 30) {
-        killsNeeded = 12 + Math.floor((playerStats.lvl - 15) * 0.7); // Levels 16-30: 12-22 kills
-      } else if (playerStats.lvl <= 50) {
-        killsNeeded = 22 + Math.floor((playerStats.lvl - 30) * 1); // Levels 31-50: 22-42 kills
-      } else if (playerStats.lvl <= 75) {
-        killsNeeded = 42 + Math.floor((playerStats.lvl - 50) * 1.2); // Levels 51-75: 42-72 kills
-      } else if (playerStats.lvl <= 100) {
-        killsNeeded = 72 + Math.floor((playerStats.lvl - 75) * 1.5); // Levels 76-100: 72-109 kills
-      } else if (playerStats.lvl <= 125) {
-        killsNeeded = 109 + Math.floor((playerStats.lvl - 100) * 1.8); // Levels 101-125: 109-154 kills
-      } else {
-        killsNeeded = 154 + Math.floor((playerStats.lvl - 125) * 2); // Levels 126-150: 154+ kills (extreme endgame)
-      }
-      playerStats.expReq = killsNeeded * GAME_CONFIG.expValue;
+      // XP Curve: Each level requires 1.5x more XP than the previous one
+      playerStats.expReq = Math.floor(playerStats.expReq * 1.5);
       
       // Check for level achievements
       checkAchievements();
@@ -13398,14 +13377,50 @@
         choices = unique;
       }
 
-      // SAFETY FALLBACK: ensure choices is always populated (never stuck with empty modal)
-      if (!choices || choices.length === 0) {
-        const pool = [...commonUpgrades];
-        for (let i = pool.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [pool[i], pool[j]] = [pool[j], pool[i]];
+      // SAFETY FALLBACK: ensure exactly 6 choices are always available
+      if (!choices) choices = [];
+      if (choices.length < 6) {
+        const fallbackItems = [
+          {
+            id: 'fallback_hp', icon: '❤️', title: '+20 MAX HP', desc: 'Max HP +20 (Instant Heal +20)',
+            apply: () => {
+              playerStats.maxHp += 20;
+              playerStats.hp = Math.min(playerStats.hp + 20, playerStats.maxHp);
+              showStatChange('+20 Max HP');
+            }
+          },
+          {
+            id: 'fallback_heal', icon: '💊', title: 'HEAL 50%', desc: 'Instantly restore 50% of your max HP',
+            apply: () => {
+              playerStats.hp = Math.min(playerStats.maxHp, playerStats.hp + Math.floor(playerStats.maxHp * 0.5));
+              showStatChange('Healed 50% HP!');
+            }
+          },
+          {
+            id: 'fallback_gold', icon: '💰', title: '+50 GOLD', desc: 'Gain 50 gold instantly',
+            apply: () => {
+              playerStats.gold += 50;
+              showStatChange('+50 Gold');
+            }
+          }
+        ];
+        const usedIds = new Set(choices.map(c => c.id));
+        for (const f of fallbackItems) {
+          if (choices.length >= 6) break;
+          if (!usedIds.has(f.id)) {
+            choices.push(f);
+            usedIds.add(f.id);
+          }
         }
-        choices = pool.slice(0, 6);
+        // If still under 6, fill with shuffled common upgrades
+        if (choices.length < 6) {
+          const pool = commonUpgrades.filter(u => !usedIds.has(u.id));
+          for (let i = pool.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [pool[i], pool[j]] = [pool[j], pool[i]];
+          }
+          choices.push(...pool.slice(0, 6 - choices.length));
+        }
       }
 
       try {
