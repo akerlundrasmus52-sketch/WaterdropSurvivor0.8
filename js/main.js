@@ -85,6 +85,7 @@
     let pauseOverlayCount = 0;
     let isGameOver = false;
     let levelUpPending = false;
+    let pendingQuestLevels = 0; // Queue of free (no-XP-cost) level-ups from quest rewards
     let isGameActive = false;  // Changed to false - start with menu
     let gameTime = 0;
     let gameStartTime = 0;
@@ -1001,11 +1002,21 @@
               const dx = nearestEnemy.mesh.position.x - this.mesh.position.x;
               const dz = nearestEnemy.mesh.position.z - this.mesh.position.z;
               const perfectAngle = Math.atan2(dx, dz);
-              // Apply accuracy: low accuracy adds random offset to aim direction
+              // Apply accuracy: low accuracy adds a stable offset (updated every 150ms, not every frame)
+              // This prevents per-frame random jitter that causes the character to wobble rapidly
               const accuracy = playerStats.autoAimAccuracy || 0.3;
               const maxError = (1 - accuracy) * (Math.PI / 4); // up to 45° off at 0% accuracy
-              const aimAngleError = (Math.random() - 0.5) * 2 * maxError;
-              this.mesh.rotation.y = perfectAngle + aimAngleError;
+              // Recalculate aim error every 150ms (not every frame) to prevent per-frame jitter
+              if (!this._nextAimErrorUpdate || gameTime >= this._nextAimErrorUpdate) {
+                this._nextAimErrorUpdate = gameTime + 0.15; // 150ms between aim-error updates
+                this._currentAimError = (Math.random() - 0.5) * 2 * maxError;
+              }
+              const targetAngle = perfectAngle + (this._currentAimError || 0);
+              // Lerp toward target angle to avoid snapping
+              let angleDiff = targetAngle - this.mesh.rotation.y;
+              while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
+              while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
+              this.mesh.rotation.y += angleDiff * Math.min(10 * dt, 1);
             }
           } else if (joystickLeft.active) {
             // If no right stick input and no auto-aim, rotate to face movement direction
@@ -7328,9 +7339,11 @@
           setTimeout(() => {
             showComicTutorial('unlock_headshot');
           }, 1000);
-        } else if ((skillId === 'criticalFocus' || skillId === 'headshot' || skillId === 'executioner') && saveData.tutorial.currentStep === 'unlock_headshot' && !saveData.tutorial.headshotUnlocked) {
-          // Accept any crit/headshot related skill
-          saveData.tutorial.headshotUnlocked = true;
+        } else if ((skillId === 'criticalFocus' || skillId === 'headshot' || skillId === 'executioner') && saveData.tutorial.currentStep === 'unlock_headshot') {
+          // Accept any crit/headshot related skill to complete the tutorial.
+          // Note: the block ~20 lines above already set headshotUnlocked = true, so the
+          // previous `!saveData.tutorial.headshotUnlocked` guard here was always false and
+          // prevented tutorial_complete from ever showing. Guard removed intentionally.
           saveSaveData();
           setTimeout(() => {
             showComicTutorial('tutorial_complete');
@@ -12322,7 +12335,7 @@
       updateHUD();
     }
 
-    function levelUp() {
+    function levelUp(freeLevel = false) {
       if (levelUpPending) return; // Prevent double-trigger
       levelUpPending = true;
       setGamePaused(true);
@@ -12350,7 +12363,9 @@
       }
       
       playerStats.lvl++;
-      playerStats.exp -= playerStats.expReq;
+      if (!freeLevel) {
+        playerStats.exp -= playerStats.expReq;
+      }
       
       // Victory condition: Reaching level 100
       if (playerStats.lvl === 100) {
@@ -12416,7 +12431,11 @@
     
     function checkPendingLevelUp() {
       levelUpPending = false;
-      if (playerStats && playerStats.exp >= playerStats.expReq && !isGameOver && isGameActive) {
+      if (pendingQuestLevels > 0 && !isGameOver && isGameActive) {
+        // Process queued quest-reward levels first (free, no XP cost)
+        pendingQuestLevels--;
+        levelUp(true);
+      } else if (playerStats && playerStats.exp >= playerStats.expReq && !isGameOver && isGameActive) {
         levelUp();
       }
     }
@@ -12434,21 +12453,19 @@
     }
     window.forceGameUnpause = forceGameUnpause;
 
-    // Award levels one-at-a-time via the normal levelUp flow to avoid skipping levels.
-    // Uses a short timeout chain so each upgrade modal can complete before the next.
+    // Queue all free (quest-reward) level-ups and process them one-at-a-time after each upgrade
+    // modal is dismissed, so the player sees an upgrade choice for every level gained.
+    // Safe for multiple concurrent callers (JavaScript is single-threaded): if a second quest
+    // fires awardLevels while the first is already in progress, all levels go into the queue.
     function awardLevels(count) {
       if (!count || count < 1) return;
-      levelUp();
-      if (count > 1) {
-        // Chain remaining levels after a short delay (100ms) so levelUp()'s
-        // own setTimeout for showUpgradeModal (800ms) has been registered first,
-        // preventing stacked calls from racing with each other.
-        const tid = setTimeout(() => {
-          const tidx = activeTimeouts.indexOf(tid);
-          if (tidx > -1) activeTimeouts.splice(tidx, 1);
-          awardLevels(count - 1);
-        }, 100);
-        activeTimeouts.push(tid);
+      if (levelUpPending) {
+        // A level-up is already in progress; queue all levels for later
+        pendingQuestLevels += count;
+      } else {
+        // Start the first level-up now, queue the rest
+        pendingQuestLevels += (count - 1);
+        levelUp(true); // Free level — no XP deduction
       }
     }
 
@@ -14537,9 +14554,8 @@
       windmillQuest.rewardReady = false;
       windmillQuest.rewardGiven = true;
 
-      // Grant passive level up
-      playerStats.lvl++;
-      playerStats.expReq = playerStats.lvl <= 4 ? Math.floor(GAME_CONFIG.baseExpReq * Math.pow(1.5, playerStats.lvl - 1)) : Math.floor(GAME_CONFIG.baseExpReq * playerStats.lvl);
+      // Grant level up with proper upgrade modal (via awardLevels)
+      awardLevels(1);
 
       // Unlock Double Barrel Gun
       weapons.gun.barrels = 2;
@@ -14745,6 +14761,8 @@
       const btn = document.getElementById('comic-action-btn');
       
       if (!modal || !title || !text || !btn) return;
+      // Guard: do not show again if the modal is already visible (prevents double-trigger)
+      if (modal.style.display === 'flex') return;
       
       let tutorialData = {};
       
@@ -15374,6 +15392,7 @@
       pauseOverlayCount = 0;
       window.pauseOverlayCount = 0;
       levelUpPending = false;
+      pendingQuestLevels = 0;
       setGamePaused(true);  // Start paused, countdown will unpause (PR #70)
       setGameActive(false);  // Not active until countdown completes (PR #70)
       document.getElementById('gameover-screen').style.display = 'none';
