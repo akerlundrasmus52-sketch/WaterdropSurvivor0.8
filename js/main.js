@@ -6298,10 +6298,10 @@
           story: 'This tree grew from a single water droplet that absorbed centuries of knowledge. Each skill you unlock is a branch of understanding.'
         },
         forge: {
-          name: 'The Eternal Forge',
+          name: 'Progression Upgrades',
           icon: '🔨',
-          description: 'A forge that never cools, capable of crafting legendary equipment.',
-          story: 'Fueled by the heat of a thousand defeated enemies, this forge can shape even the hardest materials.'
+          description: 'A place to permanently upgrade your abilities and power.',
+          story: 'Fueled by the heat of a thousand defeated enemies, this place shapes even the hardest challenges.'
         },
         companionHouse: {
           name: 'Companion Sanctuary',
@@ -6388,7 +6388,7 @@
         }
       },
       forge: {
-        name: 'Forge',
+        name: 'Progression Upgrades',
         icon: '⚒️',
         description: 'Craft and upgrade weapons. Higher tiers unlock better rarities',
         baseCost: 250,
@@ -8811,6 +8811,7 @@
             }
           };
           
+          addLongPressDetail(buildingCard, `${building.icon} ${building.name}`, building.description);
           buildingsContent.appendChild(buildingCard);
           continue;
         }
@@ -8926,6 +8927,7 @@
             }
           }
           
+          addLongPressDetail(buildingCard, `${building.icon} ${building.name}`, building.description);
           buildingsContent.appendChild(buildingCard);
         }
       }
@@ -8941,7 +8943,7 @@
       // Update skills section
       const skillsContent = document.getElementById('camp-skills-content');
       const skillPointsDisplay = document.getElementById('skill-points-display');
-      skillPointsDisplay.textContent = `Skill Points Available: ${saveData.skillPoints}`;
+      skillPointsDisplay.textContent = `SP: ${saveData.skillPoints}`;
       skillsContent.innerHTML = '';
       
       // Progressive skill unlock: compute once before loop
@@ -11111,6 +11113,39 @@
       console.log('[Countdown] Game started - isPaused:', isPaused, 'isGameActive:', isGameActive);
     }
     
+    // --- LONG PRESS DETAIL POPUP ---
+    function showBuildingDetail(title, description) {
+      let popup = document.getElementById('building-detail-popup');
+      if (!popup) {
+        popup = document.createElement('div');
+        popup.id = 'building-detail-popup';
+        popup.className = 'camp-menu-box';
+        popup.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);max-width:320px;width:90%;z-index:200;text-align:center;';
+        document.body.appendChild(popup);
+        popup.addEventListener('click', () => { popup.style.display = 'none'; });
+      }
+      popup.innerHTML = `
+        <div style="font-size:20px;color:#FFD700;font-weight:bold;margin-bottom:10px;">${title}</div>
+        <div style="font-size:14px;color:#c9d1d9;line-height:1.6;">${description}</div>
+        <div style="font-size:11px;color:#888;margin-top:12px;">Tap to close</div>
+      `;
+      popup.style.display = 'block';
+    }
+
+    function addLongPressDetail(element, title, description) {
+      let holdTimer = null;
+      const HOLD_DURATION = 500;
+      const startHold = () => {
+        if (holdTimer) return;
+        holdTimer = setTimeout(() => { holdTimer = null; showBuildingDetail(title, description); }, HOLD_DURATION);
+      };
+      const cancelHold = () => { if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; } };
+      element.addEventListener('pointerdown', () => startHold());
+      element.addEventListener('pointerup', cancelHold);
+      element.addEventListener('pointerleave', cancelHold);
+      element.addEventListener('pointercancel', cancelHold);
+    }
+
     function showProgressionShop() {
       const shopGrid = document.getElementById('shop-grid');
       shopGrid.innerHTML = '';
@@ -11426,25 +11461,33 @@
       document.getElementById('shop-back-btn').onclick = () => {
         playSound('waterdrop');
         document.getElementById('progression-shop').style.display = 'none';
-        if (isGameActive) { setGamePaused(false); } else { showMainMenu(); }
+        const campVisible = document.getElementById('camp-screen').style.display === 'flex';
+        if (!campVisible && isGameActive) { setGamePaused(false); }
+        else if (!campVisible) { showMainMenu(); }
       };
       
       document.getElementById('achievements-back-btn').onclick = () => {
         playSound('waterdrop');
         document.getElementById('achievements-screen').style.display = 'none';
-        if (isGameActive) { setGamePaused(false); } else { showMainMenu(); }
+        const campVisible = document.getElementById('camp-screen').style.display === 'flex';
+        if (!campVisible && isGameActive) { setGamePaused(false); }
+        else if (!campVisible) { showMainMenu(); }
       };
       
       document.getElementById('attributes-back-btn').onclick = () => {
         playSound('waterdrop');
         document.getElementById('attributes-screen').style.display = 'none';
-        if (isGameActive) { setGamePaused(false); } else { showMainMenu(); }
+        const campVisible = document.getElementById('camp-screen').style.display === 'flex';
+        if (!campVisible && isGameActive) { setGamePaused(false); }
+        else if (!campVisible) { showMainMenu(); }
       };
       
       document.getElementById('gear-back-btn').onclick = () => {
         playSound('waterdrop');
         document.getElementById('gear-screen').style.display = 'none';
-        if (isGameActive) { setGamePaused(false); } else { showMainMenu(); }
+        const campVisible = document.getElementById('camp-screen').style.display === 'flex';
+        if (!campVisible && isGameActive) { setGamePaused(false); }
+        else if (!campVisible) { showMainMenu(); }
       };
       
       document.getElementById('credits-back-btn').onclick = () => {
