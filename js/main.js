@@ -51,6 +51,7 @@
       teslaTowers: [] // FRESH: Tesla Tower animation
     };
     let lastTime = null; // Initialize as null for proper first-frame detection (PR #82 fix)
+    let animationFrameId = null; // Track the animation frame ID for potential cancellation
     
     // Phase 5: Initialize particle object pool for performance
     let particlePool = null; // Will be initialized after scene is created
@@ -10845,7 +10846,7 @@
       window.addEventListener('resize', onWindowResize, false);
       
       // Start Loop - begin rendering immediately (non-blocking)
-      requestAnimationFrame(animate);
+      animationFrameId = requestAnimationFrame(animate);
       
       // FRESH: Signal that module is ready (standalone loading script is waiting for this)
       // Don't call showLoadingScreen - standalone script handles it
@@ -15563,7 +15564,7 @@
     }
     
     function animate(time) {
-      requestAnimationFrame(animate);
+      animationFrameId = requestAnimationFrame(animate);
       
       // Safety check: Ensure Three.js components are initialized before rendering (PR #82)
       if (!renderer || !scene || !camera) {
