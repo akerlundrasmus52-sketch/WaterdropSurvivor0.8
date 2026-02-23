@@ -321,13 +321,13 @@
         transform: scale(1) scaleY(1); 
       }
       25% { 
-        transform: scale(0.98) scaleY(1.04); /* Squish horizontally, stretch vertically */
+        transform: scale(0.94) scaleY(1.09); /* More dramatic squish */
       }
       50% { 
-        transform: scale(1.02) scaleY(0.98); /* Stretch horizontally, squish vertically */
+        transform: scale(1.06) scaleY(0.94); /* More dramatic stretch */
       }
       75% { 
-        transform: scale(0.99) scaleY(1.02); /* Squish horizontally, stretch vertically */
+        transform: scale(0.97) scaleY(1.05); /* Secondary squish */
       }
     }
     
@@ -345,9 +345,9 @@
     
     @keyframes waterdrop-bounce {
       0% { transform: scale(1) scaleY(1); }
-      20% { transform: scale(0.85) scaleY(1.2); }
-      40% { transform: scale(1.1) scaleY(0.9); }
-      60% { transform: scale(0.95) scaleY(1.05); }
+      20% { transform: scale(0.80) scaleY(1.28); }
+      40% { transform: scale(1.16) scaleY(0.86); }
+      60% { transform: scale(0.93) scaleY(1.10); }
       80% { transform: scale(1.02) scaleY(0.98); }
       100% { transform: scale(1) scaleY(1); }
     }
@@ -885,9 +885,9 @@
       width: 90%;
       max-height: 85vh;
       overflow-y: auto;
-      box-shadow: 0 0 60px rgba(255,215,0,0.9),
-                  0 0 30px rgba(255,215,0,0.6),
-                  inset 0 0 40px rgba(0,0,0,0.9);
+      box-shadow: 0 0 35px rgba(255,215,0,0.55),
+                  0 0 18px rgba(255,215,0,0.35),
+                  inset 0 0 30px rgba(0,0,0,0.9);
       position: relative;
       /* Batman 80s comic halftone pattern */
       background-image: 
@@ -2665,15 +2665,15 @@
     /* Camp menu box — comic-panel / Loop Report style */
     .camp-menu-box {
       background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%);
-      border: 8px solid #FFD700;
+      border: 6px solid #FFD700;
       border-radius: 15px;
-      box-shadow: 0 0 60px rgba(255,215,0,0.6),
-                  0 0 30px rgba(255,215,0,0.3),
-                  inset 0 0 40px rgba(0,0,0,0.9);
+      box-shadow: 0 0 30px rgba(255,215,0,0.35),
+                  0 0 15px rgba(255,215,0,0.15),
+                  inset 0 0 30px rgba(0,0,0,0.9);
       padding: 20px;
       box-sizing: border-box;
       width: min(800px, 90vw);
-      max-height: 70vh;
+      max-height: 78vh;
       overflow-y: auto;
       overscroll-behavior: contain;
       -webkit-overflow-scrolling: touch;
