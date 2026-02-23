@@ -7960,8 +7960,11 @@
             const skillsSection = document.getElementById('camp-skills-section');
             const buildingsSection = document.getElementById('camp-buildings-section');
             if (skillsSection) skillsSection.style.display = 'none';
+            if (buildingsSection) buildingsSection.style.display = 'block'; // Show buildings (camp main view)
             const skillsTab = document.getElementById('camp-skills-tab');
             if (skillsTab) skillsTab.style.background = '#3a3a3a';
+            const buildingsTab = document.getElementById('camp-buildings-tab');
+            if (buildingsTab) buildingsTab.style.background = '#5A3A31';
           }
           
           // Show notification
@@ -8045,6 +8048,19 @@
         } else {
           showStatChange(`📦 ${quest.giveItem.name} Acquired!`);
         }
+      }
+      
+      // Tutorial complete: unlock all remaining buildings so player can explore full camp
+      if (questId === 'quest7_kill10') {
+        const buildingsToUnlock = ['companionHouse', 'workshop', 'trashRecycle'];
+        buildingsToUnlock.forEach(bld => {
+          if (saveData.campBuildings[bld] && !saveData.campBuildings[bld].unlocked) {
+            saveData.campBuildings[bld].unlocked = true;
+            if (saveData.campBuildings[bld].level === 0) saveData.campBuildings[bld].level = 1;
+            const bldName = CAMP_BUILDINGS[bld]?.name || 'Building';
+            showStatChange(`🏛️ ${bldName} Unlocked!`);
+          }
+        });
       }
       
       // --- AUTO-CHAIN: Activate next quest IMMEDIATELY (synchronous) ---
@@ -13047,7 +13063,7 @@
           id: 'double_cast', 
           icon: '🔀',
           title: 'DOUBLE CAST', 
-          desc: 'Small chance to fire twice per shot (+20% chance per stack, stacks increase the odds)', 
+          desc: 'Small chance to fire twice per shot (+20% per stack)', 
           apply: () => { 
             playerStats.doubleCastChance = (playerStats.doubleCastChance || 0) + 0.20;
             const pct = Math.round((playerStats.doubleCastChance || 0) * 100);
@@ -15160,6 +15176,10 @@
       playerStats.hasBerserkerRage = false;
       playerStats.treasureHunterChance = 0;
       playerStats.doubleCritChance = 0;
+      playerStats.extraProjectiles = 0;
+      playerStats.doubleCastChance = 0;
+      playerStats.doubleUpgradeChance = 0;
+      playerStats.pierceCount = 0;
       playerStats.survivalTime = 0;
       playerStats.dashesPerformed = 0;
       playerStats.damageTaken = 0;
