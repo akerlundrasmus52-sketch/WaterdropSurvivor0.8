@@ -14,7 +14,11 @@ const ENEMY_TYPES = {
   HARD_FAST:    7,  // Capsule          — high speed variant of FAST
   HARD_BALANCED:8,  // Dodecahedron     — stronger balanced variant
   ELITE:        9,  // Icosahedron      — elite, does 1.5× damage
-  MINI_BOSS:    10  // Large dodecahedron — boss with armor, scaling HP
+  MINI_BOSS:    10, // Large dodecahedron — boss with armor, scaling HP
+  FLYING_BOSS:  11, // Lvl-15 giant flying boss — oversized, unique behavior
+  BUG_RANGED:   12, // Bug/water-being with eyes — ranged variant
+  BUG_SLOW:     13, // Bug/water-being with eyes — slow, high HP variant
+  BUG_FAST:     14  // Bug/water-being with eyes — fast, low HP variant
 };
 
 const MINI_BOSS_HP_SCALING_RATE = 0.15; // 15% HP increase per player level above start
@@ -74,12 +78,41 @@ function getEnemyBaseStats(type, levelScaling, speedBase, playerLevel) {
     stats.speed      = speedBase * 0.5;
     stats.isMiniBoss = true;
     stats.armor      = 0.25; // 25% damage reduction
+  } else if (type === 11) {   // Flying Boss (level 15) — giant airborne boss
+    const flyingBossStartLevel = 15;
+    stats.hp          = 2500 * (1 + Math.max(0, playerLevel - flyingBossStartLevel) * MINI_BOSS_HP_SCALING_RATE);
+    stats.speed       = speedBase * 0.7;
+    stats.isFlying    = true;
+    stats.isFlyingBoss = true;
+    stats.armor       = 0.30; // 30% damage reduction
+    stats.attackRange = 12;   // Wide attack radius
+    stats.projectileSpeed = 0.18;
+  } else if (type === 12) {   // Bug Ranged — water-being bug, keeps distance, fires projectiles
+    stats.hp             = 45 * levelScaling;
+    stats.speed          = speedBase * 0.75;
+    stats.isBug          = true;
+    stats.attackRange    = 10;
+    stats.projectileSpeed = 0.14;
+  } else if (type === 13) {   // Bug Slow — large armoured bug, very slow, high HP
+    stats.hp    = 140 * levelScaling;
+    stats.speed = speedBase * 0.45;
+    stats.isBug = true;
+    stats.armor = 0.15;
+  } else if (type === 14) {   // Bug Fast — small quick bug, low HP
+    stats.hp       = 25 * levelScaling;
+    stats.speed    = speedBase * 1.9;
+    stats.isBug    = true;
+    stats.isFlying = true; // Airborne variant
   }
 
   stats.maxHp  = stats.hp;
-  // Elite does 1.5× base damage; MiniBoss has its own value
+  // Elite does 1.5× base damage; MiniBoss/FlyingBoss have their own values
   stats.damage = (type === 9 ? 50 * 1.5 : 50) * levelScaling;
   if (type === 10) stats.damage = 75 * levelScaling;
+  if (type === 11) stats.damage = 100 * levelScaling; // Flying Boss hits hard
+  if (type === 12) stats.damage = 35 * levelScaling;  // Bug Ranged — moderate
+  if (type === 13) stats.damage = 65 * levelScaling;  // Bug Slow — heavy melee
+  if (type === 14) stats.damage = 20 * levelScaling;  // Bug Fast — light but rapid
 
   return stats;
 }

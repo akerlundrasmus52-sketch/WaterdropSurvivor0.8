@@ -89,9 +89,26 @@ function playSound(type) {
     osc3.start(now + 0.05);
     osc3.stop(now + 0.25);
   } else if (type === 'hit') {
-    // NOTE: Other sounds muted for now per requirements
-    // To re-enable, remove this return statement
-    return; // Muted
+    // Punchy hit sound — short sharp thwack suitable for rapid repetition
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(280, now);
+    osc.frequency.exponentialRampToValueAtTime(80, now + 0.04);
+    gain.gain.setValueAtTime(0.18, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+    osc.start(now);
+    osc.stop(now + 0.06);
+    // Add brief mid-frequency punch body
+    const osc2 = audioCtx.createOscillator();
+    const gain2 = audioCtx.createGain();
+    osc2.connect(gain2);
+    gain2.connect(audioCtx.destination);
+    osc2.type = 'triangle';
+    osc2.frequency.setValueAtTime(500, now);
+    osc2.frequency.exponentialRampToValueAtTime(150, now + 0.05);
+    gain2.gain.setValueAtTime(0.12, now);
+    gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+    osc2.start(now);
+    osc2.stop(now + 0.05);
   } else if (type === 'levelup') {
     // LEVEL-UP AUDIO FIX: Punchy, growing-power feel (not slow motion)
     // Quick ascending power-up sound with impact

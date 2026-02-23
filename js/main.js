@@ -458,6 +458,14 @@
     let runStartGold = 0;  // Track gold at start of run for end-of-run calculation
     let lastCleanupTime = 0; // Track last memory cleanup time
     let miniBossesSpawned = new Set(); // Track which mini-boss levels have been spawned
+    const FLYING_BOSS_SPAWN_KEY = 'flyingBoss15'; // Unique key for the level-15 flying boss spawn
+    // Landmark positions and detection radii for quest8_findAllLandmarks
+    const LANDMARK_CONFIGS = {
+      stonehenge:  { x:  60, z:  60, radius: 20, key: 'stonehenge',  label: 'Stonehenge'  },
+      pyramid:     { x:  50, z: -50, radius: 20, key: 'pyramid',     label: 'Pyramid'     },
+      montana:     { x:   0, z:-200, radius: 25, key: 'montana',     label: 'Montana'     },
+      teslaTower:  { x: -80, z: -80, radius: 25, key: 'teslaTower',  label: 'Tesla Tower' }
+    };
     
     // Countdown system (PR #70-71)
     let countdownActive = false;
@@ -1802,7 +1810,7 @@
 
     class Enemy {
       constructor(type, x, z, playerLevel = 1) {
-        this.type = type; // 0: Tank, 1: Fast, 2: Balanced, 3: Slowing, 4: Ranged, 5: Flying, 6: Hard Tank, 7: Hard Fast, 8: Hard Balanced, 9: Elite, 10: MiniBoss
+        this.type = type; // 0: Tank, 1: Fast, 2: Balanced, 3: Slowing, 4: Ranged, 5: Flying, 6: Hard Tank, 7: Hard Fast, 8: Hard Balanced, 9: Elite, 10: MiniBoss, 11: FlyingBoss, 12: BugRanged, 13: BugSlow, 14: BugFast
         let geometry;
         let color;
         
@@ -1869,21 +1877,41 @@
           // MiniBoss
           geometry = new THREE.DodecahedronGeometry(1.0, 1);
           color = 0xFFD700; // Gold - MiniBoss
+        } else if (type === 11) {
+          // Flying Boss — large, imposing, multi-winged form
+          geometry = new THREE.IcosahedronGeometry(2.5, 1);
+          color = 0x8B008B; // Dark magenta — menacing flying boss
+        } else if (type === 12) {
+          // Bug Ranged — insect-like body with compound eyes
+          geometry = new THREE.CapsuleGeometry(0.35, 0.6, 6, 8);
+          color = 0x556B2F; // Dark olive green — bug colour
+        } else if (type === 13) {
+          // Bug Slow — bulky armoured beetle-like body
+          geometry = new THREE.SphereGeometry(0.7, 10, 10);
+          color = 0x2F4F2F; // Very dark green — armoured beetle
+        } else if (type === 14) {
+          // Bug Fast — small dart-like flying bug
+          geometry = new THREE.OctahedronGeometry(0.35, 1);
+          color = 0x9ACD32; // Yellow-green — quick bug
         }
 
         const material = new THREE.MeshPhysicalMaterial({ 
           color: color,
           transparent: true,
           opacity: 0.85,
-          metalness: type === 10 ? 0.4 : 0.1,
-          roughness: 0.6,
+          metalness: (type === 10 || type === 11) ? 0.4 : (type === 13 ? 0.3 : 0.1),
+          roughness: type === 13 ? 0.8 : 0.6,
           transmission: 0.2,
           thickness: 0.5,
-          emissive: type === 10 ? color : 0x000000,
-          emissiveIntensity: type === 10 ? 0.3 : 0
+          emissive: (type === 10 || type === 11) ? color : 0x000000,
+          emissiveIntensity: type === 10 ? 0.3 : (type === 11 ? 0.5 : 0)
         });
         this.mesh = new THREE.Mesh(geometry, material);
-        this.mesh.position.set(x, type === 5 ? 2 : 0.5, z);
+        // Flying enemies hover higher; Flying Boss is enormous and hovers high
+        const yPos = (type === 5 || type === 14) ? 2 : (type === 11 ? 5 : 0.5);
+        this.mesh.position.set(x, yPos, z);
+        // Flying Boss is scaled large enough to be dramatic but still mostly visible on screen
+        if (type === 11) this.mesh.scale.set(1.8, 1.8, 1.8);
         this.mesh.castShadow = true;
         this.mesh.receiveShadow = true;
         scene.add(this.mesh);
@@ -1899,12 +1927,12 @@
         // Armor defaults to 0 if not set (only MiniBoss has armor = 0.25)
         
         // Add glowing eyes to enemy (VFX)
-        const eyeRadius = type === 10 ? 0.12 : 0.07;
-        const eyeColor = type === 4 ? 0xFF3300 : (type === 10 ? 0xFF0000 : 0xFF2222);
+        const eyeRadius = type === 10 ? 0.12 : (type === 11 ? 0.28 : (type === 13 ? 0.10 : 0.07));
+        const eyeColor = type === 4 ? 0xFF3300 : (type === 10 ? 0xFF0000 : (type === 11 ? 0xFF0000 : (type >= 12 ? 0xFF6600 : 0xFF2222)));
         const eGeo = new THREE.SphereGeometry(eyeRadius, 6, 6);
         const eMat = new THREE.MeshBasicMaterial({ color: eyeColor });
-        const eyeSpread = type === 10 ? 0.3 : 0.18;
-        const eyeForward = type === 5 ? 0.45 : 0.42;
+        const eyeSpread = type === 10 ? 0.3 : (type === 11 ? 0.7 : (type === 13 ? 0.25 : 0.18));
+        const eyeForward = type === 5 ? 0.45 : (type === 11 ? 2.0 : (type === 14 ? 0.3 : 0.42));
         this.leftEye = new THREE.Mesh(eGeo, eMat);
         this.leftEye.position.set(-eyeSpread, 0.1, eyeForward);
         this.mesh.add(this.leftEye);
@@ -1942,6 +1970,34 @@
             this.lastAttackTime = now;
           }
           this.mesh.lookAt(targetPos);
+        } else if (this.type === 12 && dist < this.attackRange) {
+          // Bug Ranged — strafe sideways while firing
+          const now = Date.now();
+          if (now - this.lastAttackTime > 1800) {
+            this.fireProjectile(targetPos);
+            this.lastAttackTime = now;
+          }
+          // Strafe perpendicular to player
+          const perpX = -dz / dist;
+          const perpZ =  dx / dist;
+          this.mesh.position.x += perpX * this.speed * 0.6;
+          this.mesh.position.z += perpZ * this.speed * 0.6;
+          this.mesh.lookAt(new THREE.Vector3(targetPos.x, this.mesh.position.y, targetPos.z));
+        } else if (this.isFlyingBoss && dist < this.attackRange) {
+          // Flying Boss — orbit player and fire powerful projectiles
+          const now = Date.now();
+          if (now - this.lastAttackTime > 2000) {
+            this.fireProjectile(targetPos);
+            this.lastAttackTime = now;
+          }
+          // Slowly orbit the player
+          const orbitSpeed = 0.008;
+          const angle = Math.atan2(this.mesh.position.z - targetPos.z, this.mesh.position.x - targetPos.x);
+          const newAngle = angle + orbitSpeed;
+          const orbitR = this.attackRange * 0.8;
+          this.mesh.position.x = targetPos.x + Math.cos(newAngle) * orbitR;
+          this.mesh.position.z = targetPos.z + Math.sin(newAngle) * orbitR;
+          this.mesh.lookAt(new THREE.Vector3(targetPos.x, this.mesh.position.y, targetPos.z));
         } else if (dist > 0.5) {
           // Check if slow effect expired
           if (this.slowedUntil && this.slowedUntil < Date.now()) {
@@ -2079,6 +2135,12 @@
           this.mesh.material.emissiveIntensity = glowIntensity;
           // Larger breathing effect for mini-boss
           this.mesh.scale.set(1+squish*2, 1-squish*2, 1+squish*2);
+        } else if (this.isFlyingBoss) {
+          // Flying Boss — dramatic pulsing glow and slow rotation
+          const fbGlow = 0.5 + Math.sin(this.pulsePhase * 1.5) * 0.3;
+          this.mesh.material.emissiveIntensity = fbGlow;
+          this.mesh.rotation.y += dt * 0.8; // Slow menacing spin
+          this.mesh.scale.set(1.8 + squish, 1.8 + squish, 1.8 + squish);
         } else if (this.type === 0 || this.type === 3 || this.type === 6) {
            // Tank, Slowing, and Hard Tank breathe more dramatically
            this.mesh.scale.set(1+squish*1.5, 1-squish*1.5, 1+squish*1.5);
@@ -2227,12 +2289,12 @@
           });
         }
         
-        // Phase 3: Apply armor reduction for MiniBoss — delegated to GameCombat
+        // Phase 3: Apply armor reduction for MiniBoss/FlyingBoss — delegated to GameCombat
         let finalAmount = amount;
         if (this.armor > 0) {
           finalAmount = calculateEnemyArmorReduction(amount, this.armor);
           // Show armor reduction effect
-          if (this.isMiniBoss) {
+          if (this.isMiniBoss || this.isFlyingBoss) {
             createFloatingText(`-${Math.floor(amount * this.armor)}`, this.mesh.position, '#FFD700');
           }
         }
@@ -2474,14 +2536,14 @@
         flash.style.left = '0';
         flash.style.width = '100%';
         flash.style.height = '100%';
-        flash.style.background = this.isMiniBoss ? 'rgba(255, 215, 0, 0.3)' : 'rgba(255, 255, 255, 0.2)';
+        flash.style.background = this.isFlyingBoss ? 'rgba(139, 0, 139, 0.4)' : (this.isMiniBoss ? 'rgba(255, 215, 0, 0.3)' : 'rgba(255, 255, 255, 0.2)');
         flash.style.pointerEvents = 'none';
         flash.style.zIndex = '500';
         document.body.appendChild(flash);
-        setTimeout(() => flash.remove(), this.isMiniBoss ? 100 : 50);
+        setTimeout(() => flash.remove(), (this.isMiniBoss || this.isFlyingBoss) ? 100 : 50);
         
         // DEATH BLOOD BURST - violent explosion of blood particles
-        const deathBloodCount = this.isMiniBoss ? 30 : 18;
+        const deathBloodCount = this.isFlyingBoss ? 50 : (this.isMiniBoss ? 30 : 18);
         spawnParticles(this.mesh.position, 0x8B0000, deathBloodCount);
         spawnParticles(this.mesh.position, 0x6B0000, Math.floor(deathBloodCount * 0.7));
         spawnParticles(this.mesh.position, 0xCC0000, Math.floor(deathBloodCount * 0.5)); // Bright red splatter in air
@@ -2539,7 +2601,7 @@
         if (this.rightEye) { this.rightEye.material.dispose(); this.rightEye = null; }
         
         // Drop EXP
-        const expMultiplier = this.isMiniBoss ? 3 : 1;
+        const expMultiplier = this.isMiniBoss ? 3 : (this.isFlyingBoss ? 5 : 1);
         for (let i = 0; i < expMultiplier; i++) {
           spawnExp(this.mesh.position.x, this.mesh.position.z);
         }
@@ -2548,7 +2610,11 @@
         let goldAmount = 0;
         let dropChance = 0;
         
-        if (this.isMiniBoss) {
+        if (this.isFlyingBoss) {
+          // Flying Boss: guaranteed large gold reward
+          goldAmount = 100 + Math.floor(Math.random() * 101); // 100-200 gold
+          dropChance = 1.0;
+        } else if (this.isMiniBoss) {
           // MiniBoss: guaranteed 50-100 gold (increased from 30-60)
           goldAmount = 50 + Math.floor(Math.random() * 51);
           dropChance = 1.0; // 100% for mini-boss
@@ -2578,6 +2644,12 @@
               goldAmount = 15 + Math.floor(Math.random() * 11); // 15-25 gold (was 3-5)
             } else if (this.type === 9) { // Elite
               goldAmount = 25 + Math.floor(Math.random() * 26); // 25-50 gold (was 5-8)
+            } else if (this.type === 12) { // Bug Ranged
+              goldAmount = 8 + Math.floor(Math.random() * 7);  // 8-14 gold
+            } else if (this.type === 13) { // Bug Slow
+              goldAmount = 12 + Math.floor(Math.random() * 9); // 12-20 gold
+            } else if (this.type === 14) { // Bug Fast
+              goldAmount = 5 + Math.floor(Math.random() * 5);  // 5-9 gold
             } else {
               goldAmount = 5 + Math.floor(Math.random() * 6); // 5-10 gold (was 1-2)
             }
@@ -2591,7 +2663,9 @@
         
         // Phase 1: Gear drop system - enemies have a chance to drop gear
         let gearDropChance = 0;
-        if (this.isMiniBoss) {
+        if (this.isFlyingBoss) {
+          gearDropChance = 0.75; // 75% for flying boss
+        } else if (this.isMiniBoss) {
           gearDropChance = 0.5; // 50% for mini-boss
         } else {
           // Regular enemies: 3-8% chance (scales with enemy type 0-9)
@@ -2670,6 +2744,11 @@
         if (this.isMiniBoss) {
           playerStats.miniBossesDefeated++;
           createFloatingText("MINI-BOSS DEFEATED! 🏆", this.mesh.position);
+        }
+        if (this.isFlyingBoss) {
+          playerStats.miniBossesDefeated++;
+          createFloatingText("⚡ FLYING BOSS DEFEATED! ⚡", this.mesh.position, '#FF00FF');
+          showEnhancedNotification('achievement', '⚡ FLYING BOSS SLAIN!', 'You defeated the Level 15 Flying Boss!');
         }
         
         updateHUD();
@@ -4366,11 +4445,11 @@
           _expGemStarGeometry = new THREE.ExtrudeGeometry(starShape, extrudeSettings);
           _expGemStarGeometry.center();
           _expGemStarMaterial = new THREE.MeshStandardMaterial({
-            color: 0x1E90FF,      // SM64-style blue star
-            emissive: 0x0055CC,   // Deep blue glow
-            emissiveIntensity: 0.7,
-            metalness: 0.5,
-            roughness: 0.2
+            color: 0x4FC3F7,      // Lighter sky blue — matches XP bar color
+            emissive: 0xFFCC00,   // Yellow reflection/edge glow
+            emissiveIntensity: 0.4,
+            metalness: 0.6,
+            roughness: 0.15
           });
         }
 
@@ -4400,6 +4479,14 @@
         outlineMesh.position.z = -0.01;
         this._outlineMat = outlineMat; // Store per-instance material for disposal
         this.mesh.add(outlineMesh);
+        
+        // Yellow edge glow ring — thin, slightly larger than the star outline
+        const glowRingMat = new THREE.MeshBasicMaterial({ color: 0xFFDD00, transparent: true, opacity: 0.55 });
+        const glowRingMesh = new THREE.Mesh(_expGemOutlineGeometry, glowRingMat);
+        glowRingMesh.scale.set(1.08, 1.08, 0.5);
+        glowRingMesh.position.z = -0.02;
+        this._glowRingMat = glowRingMat;
+        this.mesh.add(glowRingMesh);
 
         scene.add(this.mesh);
 
@@ -4421,9 +4508,14 @@
         this.bobPhase += 0.05;
         this.mesh.position.y = 0.5 + Math.sin(this.bobPhase) * 0.1;
         
-        // Pulsing gold glow
+        // Pulsing yellow edge glow — sync with star's emissive intensity
         this.sparklePhase += 0.1;
-        this.mesh.material.emissiveIntensity = 0.5 + Math.sin(this.sparklePhase) * 0.3;
+        const pulse = 0.35 + Math.sin(this.sparklePhase) * 0.25;
+        this.mesh.material.emissiveIntensity = pulse;
+        // Also pulse the yellow glow ring opacity
+        if (this._glowRingMat) {
+          this._glowRingMat.opacity = 0.35 + Math.sin(this.sparklePhase + 0.5) * 0.25;
+        }
 
         // Magnet
         const dx = playerPos.x - this.mesh.position.x;
@@ -4434,9 +4526,9 @@
           this.mesh.position.x += (dx / dist) * 0.3;
           this.mesh.position.z += (dz / dist) * 0.3;
           
-          // Visual Trail when pulled - blue particles with sparkle (PR #117)
+          // Visual Trail when pulled - lighter blue particles (PR #117)
           if (Math.random() < 0.3) {
-             spawnParticles(this.mesh.position, 0x3498DB, 1);
+             spawnParticles(this.mesh.position, 0x4FC3F7, 1);
           }
         }
 
@@ -4450,11 +4542,11 @@
         
         // SPLASH EFFECT: use pooled particles to avoid per-gem geometry/material allocation
         // and eliminate 20 separate requestAnimationFrame callbacks per gem (PR #117)
-        spawnParticles(this.mesh.position, 0x3498DB, 8);
+        spawnParticles(this.mesh.position, 0x4FC3F7, 8);
         
-        // Screen flash effect - blue tint (PR #117)
+        // Screen flash effect - lighter blue tint (PR #117)
         const flash = document.createElement('div');
-        flash.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(52,152,219,0.2);pointer-events:none;z-index:500';
+        flash.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(79,195,247,0.18);pointer-events:none;z-index:500';
         document.body.appendChild(flash);
         setTimeout(() => flash.remove(), 100);
         
@@ -4462,6 +4554,7 @@
         // Geometry is shared across all ExpGem instances - do not dispose it
         this.mesh.material.dispose(); // Only dispose the per-instance cloned material
         if (this._outlineMat) this._outlineMat.dispose(); // Dispose per-instance outline material
+        if (this._glowRingMat) this._glowRingMat.dispose(); // Dispose per-instance glow ring material
         
         addExp(this.value);
         playSound('collect');
@@ -5109,6 +5202,7 @@
         trainingHall: { level: 0, maxLevel: 10, unlocked: false }, // Unlock via quest
         trashRecycle: { level: 0, maxLevel: 10, unlocked: false }, // Unlock via quest
         tempShop: { level: 0, maxLevel: 10, unlocked: false }, // Unlock via quest
+        achievementBuilding: { level: 0, maxLevel: 1, unlocked: false }, // Unlock via quest8_findAllLandmarks
         // Legacy buildings (for compatibility)
         trainingGrounds: { level: 0, maxLevel: 10, unlocked: false },
         library: { level: 0, maxLevel: 10, unlocked: false },
@@ -5204,6 +5298,12 @@
         killsThisRun: 0, // Track kills per run (reset on new run)
         survivalTimeThisRun: 0, // Track survival time per run
         stonengengeChestFound: false, // Quest 6 specific
+        landmarksFound: {          // Track landmarks found for quest8_findAllLandmarks
+          stonehenge: false,
+          pyramid: false,
+          montana: false,
+          teslaTower: false
+        },
         lastShownQuestReminder: null // Track last shown quest reminder on run start
       },
       // Legacy quest data (keep for backward compatibility)
@@ -5434,6 +5534,11 @@
       updateAchievementBadge(unclaimedCount);
     }
 
+    // Alias so Achievement Hall button can call a named function
+    function renderAchievementsContent(containerEl) {
+      updateAchievementsScreen();
+    }
+
     function updateAchievementBadge(count) {
       let badge = document.getElementById('achievement-badge');
       if (count > 0) {
@@ -5490,6 +5595,11 @@
           else if (currentQuest.id === 'quest4_kill10') questText = 'Kill 10: ' + Math.min(kills,10) + '/10';
           else if (currentQuest.id === 'quest6_kill10') questText = 'Kill 10: ' + Math.min(kills,10) + '/10';
           else if (currentQuest.id === 'quest7_kill10') questText = 'Kill 15: ' + Math.min(kills,15) + '/15';
+          else if (currentQuest.id === 'quest8_findAllLandmarks') {
+            const lf = saveData.tutorialQuests.landmarksFound || {};
+            const found = Object.values(LANDMARK_CONFIGS).filter(cfg => lf[cfg.key]).length;
+            questText = `🗺️ Find Landmarks: ${found}/${Object.keys(LANDMARK_CONFIGS).length}`;
+          }
           else if (currentQuest.label) questText = currentQuest.label;
           else questText = currentQuest.id || '';
         }
@@ -6575,6 +6685,16 @@
           shopDiscount: 0.05 * level, // +5% discount per level
           itemVariety: level // More items available per level
         })
+      },
+      achievementBuilding: {
+        name: 'Achievement Hall',
+        icon: '🏆',
+        description: 'Claim achievement rewards and track your progress. Unlocked by finding every landmark!',
+        baseCost: 0, // Free — reward for exploration
+        costMultiplier: 0,
+        maxCost: 0,
+        isFree: true,
+        bonus: (level) => ({})
       },
       
       // LEGACY BUILDINGS (kept for compatibility)
@@ -7722,10 +7842,36 @@
         triggerOnDeath: true,
         rewardGold: 500,
         rewardSkillPoints: 0,
-        message: "🎉 TUTORIAL COMPLETE!<br><br>You've mastered the basics of survival!<br><br>The world is yours to conquer. Good luck, Droplet!",
-        nextQuest: null,
+        message: "🎉 NEARLY THERE!<br><br>You've mastered the basics of survival!<br><br>Explore the world — find every landmark (Stonehenge, Pyramid, Montana, Tesla Tower) to unlock the Achievement Building!",
+        nextQuest: 'quest8_findAllLandmarks',
         conditionsAny: ['quest6_kill10', 'quest5_trainingSession', 'quest4_equipCigar', 'quest6_buyAttributes'], // Accept any of these predecessors
         conditions: [] // No strict requirements - conditionsAny handles it
+      },
+      quest8_findAllLandmarks: {
+        id: 'quest8_findAllLandmarks',
+        name: 'Find Every Landmark',
+        description: 'Explore the map and find every landmark: Stonehenge, Pyramid, Montana, and the Tesla Tower',
+        objectives: 'Find: Stonehenge ☐  Pyramid ☐  Montana ☐  Tesla Tower ☐',
+        triggerOnDeath: false,
+        rewardGold: 750,
+        rewardSkillPoints: 3,
+        rewardAttributePoints: 2,
+        unlockBuilding: 'achievementBuilding',
+        message: "🗺️ ALL LANDMARKS FOUND!<br><br>You've explored the entire world!<br><br>The <b>Achievement Building</b> is now unlocked in Camp. Claim your achievements there!",
+        nextQuest: 'quest9_visitAchievementBuilding',
+        conditions: ['quest7_kill10']
+      },
+      quest9_visitAchievementBuilding: {
+        id: 'quest9_visitAchievementBuilding',
+        name: 'Visit the Achievement Building',
+        description: 'Head to Camp and visit the newly unlocked Achievement Building',
+        objectives: 'Open the Achievement Building in Camp',
+        claim: 'Achievement Building',
+        rewardGold: 300,
+        rewardSkillPoints: 2,
+        message: "🏆 TUTORIAL COMPLETE!<br><br>The whole world is yours to conquer. Complete Achievements to earn more rewards. Good luck, Droplet!",
+        nextQuest: null,
+        conditions: ['quest8_findAllLandmarks']
       },
       quest3_buyProgression: {
         id: 'quest3_buyProgression',
@@ -9036,6 +9182,24 @@
                   buildingCard.classList.add('quest-ready-glow');
                 }
                 buildingCard.onclick = () => showQuestHall();
+                buildingCard.style.cursor = 'pointer';
+              } else if (buildingId === 'achievementBuilding') {
+                // Open Achievement screen when Achievement Hall clicked
+                buildingCard.onclick = () => {
+                  if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest9_visitAchievementBuilding') {
+                    progressTutorialQuest('quest9_visitAchievementBuilding', true);
+                    saveSaveData();
+                  }
+                  // Show the achievements screen
+                  document.getElementById('camp-screen').style.display = 'none';
+                  const achScreen = document.getElementById('achievements-screen');
+                  if (achScreen) {
+                    achScreen.style.display = 'flex';
+                    // Refresh achievements content
+                    const achContent = document.getElementById('achievements-content');
+                    if (achContent) renderAchievementsContent(achContent);
+                  }
+                };
                 buildingCard.style.cursor = 'pointer';
               } else if (buildingId === 'skillTree') {
                 // Clear notification when clicking on skill tree
@@ -11604,7 +11768,11 @@
         playSound('waterdrop');
         document.getElementById('achievements-screen').style.display = 'none';
         const campVisible = document.getElementById('camp-screen').style.display === 'flex';
-        if (!campVisible && isGameActive) { setGamePaused(false); }
+        // If coming back from Achievement Hall, show camp
+        if (!campVisible && !isGameActive) {
+          document.getElementById('camp-screen').style.display = 'flex';
+          updateCampScreen();
+        } else if (!campVisible && isGameActive) { setGamePaused(false); }
         else if (!campVisible) { showMainMenu(); }
       };
       
@@ -11845,6 +12013,28 @@
       const miniBossLevels = [10, 25, 40, 55, 70, 85, 100, 115, 130, 145];
       const isMiniBossWave = miniBossLevels.includes(playerStats.lvl) && !miniBossesSpawned.has(playerStats.lvl);
       
+      // Level 15 Flying Boss — unique one-time event per run
+      const isFlyingBossWave = playerStats.lvl === 15 && !miniBossesSpawned.has(FLYING_BOSS_SPAWN_KEY);
+      
+      if (isFlyingBossWave) {
+        miniBossesSpawned.add(FLYING_BOSS_SPAWN_KEY);
+        const angle = Math.random() * Math.PI * 2;
+        const dist = 35; // Spawn further away so the large boss is framed well
+        const ex = player.mesh.position.x + Math.cos(angle) * dist;
+        const ez = player.mesh.position.z + Math.sin(angle) * dist;
+        const flyingBoss = new Enemy(11, ex, ez, playerStats.lvl);
+        enemies.push(flyingBoss);
+        createFloatingText("⚠️ FLYING BOSS INCOMING! ⚠️", player.mesh.position, '#FF00FF');
+        triggerCinematic('miniboss', flyingBoss.mesh, 4000);
+        // Escort bugs
+        for (let i = 0; i < 4; i++) {
+          const sa = Math.random() * Math.PI * 2;
+          const sd = 28 + Math.random() * 6;
+          enemies.push(new Enemy(14, player.mesh.position.x + Math.cos(sa) * sd, player.mesh.position.z + Math.sin(sa) * sd, playerStats.lvl));
+        }
+        return;
+      }
+      
       if (isMiniBossWave) {
         // Mark this level's mini-boss as spawned
         miniBossesSpawned.add(playerStats.lvl);
@@ -11933,7 +12123,7 @@
         
         // Random type - include new enemy types as level increases
         // 0: Tank, 1: Fast, 2: Balanced, 3: Slowing (lvl 8+), 4: Ranged (lvl 10+)
-        // 5: Flying (lvl 8+), 6-9: Hard variants (lvl 12+)
+        // 5: Flying (lvl 8+), 6-9: Hard variants (lvl 12+), 12-14: Bug variants (lvl 15+)
         let maxType = 2; // Start with 3 base types
         if (playerStats.lvl >= 8) maxType = 5; // Add slowing (3), ranged placeholder, and flying (5)
         if (playerStats.lvl >= 10) maxType = 5; // Add ranged enemies (4)
@@ -11969,6 +12159,12 @@
           if (type === 4 && playerStats.lvl < 10) {
             type = Math.floor(Math.random() * 3);
           }
+        }
+        
+        // Bug/water-being enemies (types 12-14) — available from level 15+
+        // ~20% chance to spawn one of the bug variants when available
+        if (playerStats.lvl >= 15 && Math.random() < 0.20) {
+          type = 12 + Math.floor(Math.random() * 3); // 12, 13, or 14
         }
         
         enemies.push(new Enemy(type, ex, ez, playerStats.lvl));
@@ -14945,8 +15141,9 @@
       saveData.totalKills += playerStats.kills; // Track cumulative kills
       if (survivalTime > saveData.bestTime) saveData.bestTime = survivalTime;
       if (playerStats.kills > saveData.bestKills) saveData.bestKills = playerStats.kills;
-      // Add account XP for kills this run (1 XP per kill)
+      // Add account XP for kills this run (1 XP per kill) + run completion bonus (25 XP)
       if (playerStats.kills > 0) addAccountXP(playerStats.kills);
+      addAccountXP(25); // Run completion bonus
       
       // Tutorial Quest: Check for first death
       if (!saveData.tutorialQuests) {
@@ -16450,6 +16647,25 @@
       }
 
       // --- WEAPONS ---
+      
+      // Track landmark visits for quest8_findAllLandmarks
+      if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest8_findAllLandmarks') {
+        const lf = saveData.tutorialQuests.landmarksFound;
+        const px = player.mesh.position.x, pz = player.mesh.position.z;
+        for (const cfg of Object.values(LANDMARK_CONFIGS)) {
+          if (!lf[cfg.key] && Math.hypot(px - cfg.x, pz - cfg.z) < cfg.radius) {
+            lf[cfg.key] = true;
+            createFloatingText(`📍 ${cfg.label} Found!`, player.mesh.position, '#FFDD00');
+          }
+        }
+        // Check if all found
+        const allFound = Object.values(LANDMARK_CONFIGS).every(cfg => lf[cfg.key]);
+        if (allFound) {
+          progressTutorialQuest('quest8_findAllLandmarks', true);
+          saveSaveData();
+        }
+        updateQuestTracker();
+      }
       
       // 1. GUN
       if (weapons.gun.active && time - weapons.gun.lastShot > weapons.gun.cooldown) {
