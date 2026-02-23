@@ -13288,16 +13288,13 @@
           { id: 'doublebarrel',icon: '🔫',  title: 'DOUBLE BARREL',  desc: 'Powerful 6-pellet shotgun spread',         active: () => weapons.doubleBarrel.active,apply: () => { weapons.doubleBarrel.active = true; weapons.doubleBarrel.level = 1; showStatChange('New Weapon: Double Barrel'); questCheck(); } },
           { id: 'icespear',    icon: '❄️',  title: 'ICE SPEAR',      desc: 'Crystalline shard that slows enemies 40%', active: () => weapons.iceSpear.active,    apply: () => { weapons.iceSpear.active = true; weapons.iceSpear.level = 1; showStatChange('New Weapon: Ice Spear'); questCheck(); } },
           { id: 'firering',    icon: '🔥',  title: 'FIRE RING',      desc: 'Spinning fire orbs orbit around you',      active: () => weapons.fireRing.active,    apply: () => { weapons.fireRing.active = true; weapons.fireRing.level = 1; showStatChange('New Weapon: Fire Ring'); questCheck(); } },
-          { id: 'lightning',   icon: '⚡',  title: 'LIGHTNING ARC',  desc: 'Chain lightning that jumps 3 enemies',     active: () => weapons.lightning && weapons.lightning.active, apply: () => {
-            if (!weapons.lightning) weapons.lightning = { active: false, level: 1, damage: 25, cooldown: 1800, lastShot: 0, range: 12, chainCount: 3 };
+          { id: 'lightning',   icon: '⚡',  title: 'LIGHTNING ARC',  desc: 'Chain lightning that jumps 3 enemies',     active: () => weapons.lightning.active, apply: () => {
             weapons.lightning.active = true; weapons.lightning.level = 1; showStatChange('New Weapon: Lightning Arc'); questCheck();
           }},
-          { id: 'poison',      icon: '☠️',  title: 'POISON CLOUD',   desc: 'Toxic cloud that damages over time',       active: () => weapons.poison && weapons.poison.active, apply: () => {
-            if (!weapons.poison) weapons.poison = { active: false, level: 1, damage: 8, cooldown: 3000, lastShot: 0, range: 5, duration: 4000 };
+          { id: 'poison',      icon: '☠️',  title: 'POISON CLOUD',   desc: 'Toxic cloud that damages over time',       active: () => weapons.poison.active, apply: () => {
             weapons.poison.active = true; weapons.poison.level = 1; showStatChange('New Weapon: Poison Cloud'); questCheck();
           }},
-          { id: 'homing',      icon: '🚀',  title: 'HOMING MISSILE', desc: 'Slow but seeking missile — never misses',  active: () => weapons.homing && weapons.homing.active, apply: () => {
-            if (!weapons.homing) weapons.homing = { active: false, level: 1, damage: 45, cooldown: 2500, lastShot: 0, range: 20 };
+          { id: 'homing',      icon: '🚀',  title: 'HOMING MISSILE', desc: 'Slow but seeking missile — never misses',  active: () => weapons.homing.active, apply: () => {
             weapons.homing.active = true; weapons.homing.level = 1; showStatChange('New Weapon: Homing Missile'); questCheck();
           }}
         ];
@@ -13305,7 +13302,7 @@
         // Separate inactive (new) weapons from upgrades for active ones
         const inactiveWeapons = newWeaponChoices.filter(w => !w.active());
         const upgradeWeapons = [
-          ...(weapons.gun.level < 5 ? [{ id: 'gun_up', icon: '🔫', title: `GUN Lv.${weapons.gun.level + 1}`, desc: 'Damage +10, Fire Rate +15%', apply: () => { weapons.gun.level++; weapons.gun.damage += 10; weapons.gun.cooldown *= 0.85; showStatChange(`Gun Level ${weapons.gun.level}`); } }] : []),
+          ...(weapons.gun.level < 5 ? [{ id: 'gun_up', icon: '🎯', title: `GUN Lv.${weapons.gun.level + 1}`, desc: 'Damage +10, Fire Rate +15%', apply: () => { weapons.gun.level++; weapons.gun.damage += 10; weapons.gun.cooldown *= 0.85; showStatChange(`Gun Level ${weapons.gun.level}`); } }] : []),
           ...(weapons.sword.active && weapons.sword.level < 5 ? [{ id: 'sword_up', icon: '⚔️', title: `SWORD Lv.${weapons.sword.level + 1}`, desc: 'Damage +15, Range +0.5', apply: () => { weapons.sword.level++; weapons.sword.damage += 15; weapons.sword.range += 0.5; showStatChange(`Sword Level ${weapons.sword.level}`); } }] : []),
           ...(weapons.iceSpear.active && weapons.iceSpear.level < 5 ? [{ id: 'ice_up', icon: '❄️', title: `ICE SPEAR Lv.${weapons.iceSpear.level + 1}`, desc: 'Damage +10, Slow +10%', apply: () => { weapons.iceSpear.level++; weapons.iceSpear.damage += 10; weapons.iceSpear.slowPercent += 0.1; showStatChange(`Ice Spear Level ${weapons.iceSpear.level}`); } }] : []),
           ...(weapons.fireRing.active && weapons.fireRing.level < 5 ? [{ id: 'fire_up', icon: '🔥', title: `FIRE RING Lv.${weapons.fireRing.level + 1}`, desc: 'Damage +5, +1 Orb', apply: () => { weapons.fireRing.level++; weapons.fireRing.damage += 5; weapons.fireRing.orbs += 1; showStatChange(`Fire Ring Level ${weapons.fireRing.level}`); } }] : []),
@@ -15120,6 +15117,10 @@
       weapons.doubleBarrel = { active: false, level: 0, damage: 25, cooldown: 1200, lastShot: 0, range: 12, spread: 0.3 };
       weapons.iceSpear = { active: false, level: 0, damage: 20, cooldown: 1500, lastShot: 0, range: 15, slowPercent: 0.4, slowDuration: 2000 };
       weapons.fireRing = { active: false, level: 0, damage: 8, cooldown: 800, lastShot: 0, range: 4, orbs: 3, rotationSpeed: 2 };
+      // New weapons — initialized upfront so weapon-selection code can always check .active
+      weapons.lightning = { active: false, level: 0, damage: 25, cooldown: 1800, lastShot: 0, range: 12, chainCount: 3 };
+      weapons.poison    = { active: false, level: 0, damage: 8,  cooldown: 3000, lastShot: 0, range: 5,  duration: 4000 };
+      weapons.homing    = { active: false, level: 0, damage: 45, cooldown: 2500, lastShot: 0, range: 20 };
       
       // Clean up any existing drone turrets
       droneTurrets.forEach(drone => drone.destroy());
@@ -16774,7 +16775,7 @@
       }
 
       // 9. LIGHTNING ARC — chain lightning between up to N enemies
-      if (weapons.lightning && weapons.lightning.active && time - weapons.lightning.lastShot > weapons.lightning.cooldown) {
+      if (weapons.lightning.active && time - weapons.lightning.lastShot > weapons.lightning.cooldown) {
         let nearest = null;
         let minDst = Infinity;
         for (let e of enemies) {
@@ -16814,7 +16815,7 @@
       }
 
       // 10. POISON CLOUD — AoE damage field around player that poisons nearby enemies
-      if (weapons.poison && weapons.poison.active && time - weapons.poison.lastShot > weapons.poison.cooldown) {
+      if (weapons.poison.active && time - weapons.poison.lastShot > weapons.poison.cooldown) {
         enemies.forEach(e => {
           if (e.isDead) return;
           const d = player.mesh.position.distanceTo(e.mesh.position);
@@ -16832,7 +16833,7 @@
       }
 
       // 11. HOMING MISSILE — slow tracking projectile
-      if (weapons.homing && weapons.homing.active && time - weapons.homing.lastShot > weapons.homing.cooldown) {
+      if (weapons.homing.active && time - weapons.homing.lastShot > weapons.homing.cooldown) {
         let nearest = null; let minDst = Infinity;
         for (let e of enemies) {
           if (e.isDead) continue;
@@ -16863,7 +16864,7 @@
               for (let e of enemies) {
                 if (e.isDead) continue;
                 if (missileMesh.position.distanceTo(e.mesh.position) < 1.2) {
-                  const dmg = (weapons.homing.damage || 45) * playerStats.strength;
+                  const dmg = weapons.homing.damage * playerStats.strength;
                   e.takeDamage(Math.floor(dmg));
                   spawnParticles(missileMesh.position, 0xFF4500, 12);
                   spawnParticles(missileMesh.position, 0xFFAA00, 8);
@@ -17224,14 +17225,23 @@
           for (let i = scene.children.length - 1; i >= 0; i--) {
             const obj = scene.children[i];
             // Only cull plain Mesh objects that have no userData tracking and are fully transparent
-            if (obj.isMesh && !obj.userData.tracked && obj.material && obj.material.transparent && obj.material.opacity <= 0.01) {
+            // Handle both single materials and material arrays
+            const mat = obj.material;
+            const isFullyTransparent = Array.isArray(mat)
+              ? mat.every(m => m.transparent && m.opacity <= 0.01)
+              : (mat && mat.transparent && mat.opacity <= 0.01);
+            if (obj.isMesh && !obj.userData.tracked && isFullyTransparent) {
               toRemove.push(obj);
             }
           }
           toRemove.forEach(obj => {
             scene.remove(obj);
             if (obj.geometry) obj.geometry.dispose();
-            if (obj.material) obj.material.dispose();
+            if (Array.isArray(obj.material)) {
+              obj.material.forEach(m => m.dispose());
+            } else if (obj.material) {
+              obj.material.dispose();
+            }
           });
           if (toRemove.length) console.warn(`[Perf] Culled ${toRemove.length} stale transparent meshes.`);
         }
