@@ -932,12 +932,12 @@
             this.trailTimer = 0;
           }
           
-          // Add lean/tilt in direction of movement
+          // Add lean/tilt in direction of movement — over-exaggerated for comic feel
           if (this.velocity.length() > 0.05) {
-            const leanFactor = GAME_CONFIG.movementLeanFactor * (15 + this.wobbleIntensity * 10);
+            const leanFactor = GAME_CONFIG.movementLeanFactor * (20 + this.wobbleIntensity * 20);
             const leanAngleX = -this.velocity.z * leanFactor;
             const leanAngleZ = this.velocity.x * leanFactor;
-            const leanDt = Math.min(dt * 8, 0.5);
+            const leanDt = Math.min(dt * 10, 0.6);
             this.mesh.rotation.x += (leanAngleX - this.mesh.rotation.x) * leanDt;
             this.mesh.rotation.z += (leanAngleZ - this.mesh.rotation.z) * leanDt;
           } else {
@@ -1020,9 +1020,18 @@
         // Detect direction changes to spike wobble intensity
         if (speedMag > 0.05) {
           const velDir = this.velocity.clone().normalize();
-          const dirChange = 1 - velDir.dot(this.prevVelDir);
+          const dirDot = velDir.dot(this.prevVelDir);
+          const dirChange = 1 - dirDot;
           if (dirChange > 0.3) {
-            this.wobbleIntensity = Math.min(1, this.wobbleIntensity + dirChange * 1.5);
+            // Over-exaggerate wobble on direction changes for comic waterdrop feel
+            this.wobbleIntensity = Math.min(1, this.wobbleIntensity + dirChange * 3.0);
+            // Full reversal (dot < -0.5): dramatic stretch + water trail
+            if (dirDot < -0.5 && speedMag > 0.08) {
+              this.postDashSquish = Math.max(this.postDashSquish, 0.9);
+              this.wobbleIntensity = 1;
+              // Spawn water trail particles to show sliding
+              for (let i = 0; i < 4; i++) spawnWaterParticle(this.mesh.position);
+            }
           }
           this.prevVelDir.copy(velDir);
         }
@@ -1060,17 +1069,17 @@
             targetScaleXZ = 1.5;
           }
         } else if (this.postDashSquish > 0.01) {
-          // Post-dash/stop oscillating bounce — starts with a stretch, then squish, then settle
-          const bounce = Math.sin(this.postDashSquish * Math.PI * 2.5) * 0.3 * this.postDashSquish;
+          // Post-dash/stop/turn oscillating bounce — over-exaggerated for comic waterdrop feel
+          const bounce = Math.sin(this.postDashSquish * Math.PI * 3.0) * 0.45 * this.postDashSquish;
           targetScaleY = 1.0 + bounce;
-          targetScaleXZ = 1.0 - bounce * 0.5;
+          targetScaleXZ = 1.0 - bounce * 0.6;
         } else if (speedMag > 0.05) {
-          // Moving: vertical bounce oscillates ~0.94↔1.06, slight XZ squash-stretch
-          this.wobblePhase += dt2 * speedMag * 170;  // phase rate: speedMag(~0.12) * 170 * dt2 ≈ 20 rad/s ≈ 3 Hz
-          const bounce = Math.sin(this.wobblePhase) * (0.06 + this.wobbleIntensity * 0.06);
+          // Moving: vertical bounce oscillates — bigger range, more dramatic wobble
+          this.wobblePhase += dt2 * speedMag * 200;  // faster phase for snappier feel
+          const bounce = Math.sin(this.wobblePhase) * (0.10 + this.wobbleIntensity * 0.12);
           targetScaleY = 1.0 + bounce;
-          const squishAmt = Math.min(speedMag * 1.2, 0.18);
-          targetScaleXZ = 1.0 + squishAmt + Math.cos(this.wobblePhase) * (0.02 + this.wobbleIntensity * 0.03);
+          const squishAmt = Math.min(speedMag * 1.5, 0.25);
+          targetScaleXZ = 1.0 + squishAmt + Math.cos(this.wobblePhase) * (0.04 + this.wobbleIntensity * 0.06);
         } else {
           // Idle breathing
           this.wobblePhase += dt2 * 2.5;
@@ -1217,13 +1226,13 @@
         
         // Apply spring-damper scale combined with breathing multiplier
         // Directional stretch: mesh local Z = forward (movement direction), local X = sideways
-        // This ensures squish/stretch, wobble, and dash deformation all work alongside breathing
+        // Over-exaggerated for comic waterdrop style — elongate in travel direction
         const dirStretch = this.isDashing
-          ? 0.38
-          : Math.min(speedMag * 1.3, 0.18);
+          ? 0.5
+          : Math.min(speedMag * 2.0, 0.28);
         this.mesh.scale.y = this.currentScaleY * this._breathScale;
-        this.mesh.scale.x = this.currentScaleXZ * (1.0 - dirStretch * 0.55) * this._breathScale;
-        this.mesh.scale.z = this.currentScaleXZ * (1.0 + dirStretch * 0.4) * this._breathScale;
+        this.mesh.scale.x = this.currentScaleXZ * (1.0 - dirStretch * 0.65) * this._breathScale;
+        this.mesh.scale.z = this.currentScaleXZ * (1.0 + dirStretch * 0.55) * this._breathScale;
         
         // Blinking eyes animation
         this.blinkTimer += dt;
@@ -1782,8 +1791,8 @@
         let color;
         
         // Enemy scaling based on player level - NOT SPEED, just HP and DAMAGE
-        // Phase 3: Increased difficulty - 15% per level (was 10%)
-        const levelScaling = 1 + (playerLevel - 1) * 0.15;
+        // Progressive difficulty: starts at 15% per level, accelerates at higher levels
+        const levelScaling = 1 + (playerLevel - 1) * 0.18;
         
         if (type === 0) {
           // Bacteria/Amoeba - Squishy organic blob shape
@@ -11053,6 +11062,7 @@
             document.getElementById('credits-screen')?.style.display === 'flex' ||
             document.getElementById('attributes-screen')?.style.display === 'flex' ||
             document.getElementById('progression-shop')?.style.display === 'flex' ||
+            document.getElementById('camp-screen')?.style.display === 'flex' ||
             document.querySelector('[data-quest-hall-overlay]') !== null ||
             document.getElementById('quest-popup-overlay') !== null ||
             document.getElementById('comic-info-overlay') !== null ||
@@ -11817,21 +11827,19 @@
       }
       
       // Scale spawn count with player level for increased difficulty
-      // Early game (1-30): Much more enemies for harder challenge
-      // Mid-game (31-75): Moderate but still challenging
-      // Late-game (76-150): Aggressive endgame difficulty
+      // Progressive spawning: starts manageable then ramps up aggressively
       let baseCount, levelBonus, cap;
       
       if (playerStats.lvl <= 30) {
-        // Early game: Very aggressive spawns (6-12 enemies per wave) - harder difficulty
+        // Early game: Progressive spawns (4-14 per wave)
+        baseCount = 4 + Math.floor(waveCount / 2);
+        levelBonus = Math.floor(playerStats.lvl / 2);
+        cap = 14;
+      } else if (playerStats.lvl <= 75) {
+        // Mid-game: Aggressive spawns (6-18 enemies per wave)
         baseCount = 6 + Math.floor(waveCount / 2);
         levelBonus = Math.floor(playerStats.lvl / 3);
-        cap = 12;
-      } else if (playerStats.lvl <= 75) {
-        // Mid-game: Challenging spawns (5-14 enemies per wave)
-        baseCount = 5 + Math.floor(waveCount / 3);
-        levelBonus = Math.floor(playerStats.lvl / 4);
-        cap = 14;
+        cap = 18;
       } else if (playerStats.lvl <= 120) {
         // Late-game: Very challenging (6-16 enemies per wave)
         baseCount = 6 + Math.floor(waveCount / 2);
@@ -12308,14 +12316,14 @@
       playerStats.lvl++;
       playerStats.exp -= playerStats.expReq;
       
-      // Victory condition: Reaching level 50
-      if (playerStats.lvl === 50) {
+      // Victory condition: Reaching level 100
+      if (playerStats.lvl === 100) {
         // Reset immediately so the game doesn't stay stuck in paused/pending state
         // while the victory message and gameOver() are deferred
         levelUpPending = false;
         setGamePaused(false);
         setTimeout(() => {
-          showStatChange('🎉 ULTIMATE VICTORY! You reached Level 50! 🎉');
+          showStatChange('🎉 ULTIMATE VICTORY! You reached Level 100! 🎉');
           setTimeout(() => {
             gameOver(); // Show game over screen as victory screen
           }, 2000);
@@ -12323,8 +12331,13 @@
         return;
       }
       
-      // XP Curve: Each level requires 1.5x more XP than the previous one
-      playerStats.expReq = Math.floor(playerStats.expReq * 1.5);
+      // XP Curve: Keep 1.5x growth for levels 1-4 (good early pace),
+      // then switch to linear growth (base * level) for level 5+ so level 100 is achievable.
+      if (playerStats.lvl <= 4) {
+        playerStats.expReq = Math.floor(playerStats.expReq * 1.5);
+      } else {
+        playerStats.expReq = Math.floor(GAME_CONFIG.baseExpReq * playerStats.lvl);
+      }
       
       // Wrap synchronous pre-modal operations in try-catch so that any unexpected
       // exception cannot prevent the level-up setTimeouts from being registered,
@@ -13034,10 +13047,11 @@
           id: 'double_cast', 
           icon: '🔀',
           title: 'DOUBLE CAST', 
-          desc: 'Fires double shots from your current weapon (+1 projectile per stack)', 
+          desc: 'Small chance to fire twice per shot (+20% chance per stack, stacks increase the odds)', 
           apply: () => { 
-            playerStats.extraProjectiles = (playerStats.extraProjectiles || 0) + 1;
-            showStatChange('Double Cast! (' + (playerStats.extraProjectiles + 1) + ' projectiles per shot)');
+            playerStats.doubleCastChance = (playerStats.doubleCastChance || 0) + 0.20;
+            const pct = Math.round((playerStats.doubleCastChance || 0) * 100);
+            showStatChange('Double Cast! (' + pct + '% chance to fire twice)');
           } 
         },
         { 
@@ -14471,7 +14485,7 @@
 
       // Grant passive level up
       playerStats.lvl++;
-      playerStats.expReq = (playerStats.lvl * 2) * GAME_CONFIG.expValue;
+      playerStats.expReq = playerStats.lvl <= 4 ? Math.floor(GAME_CONFIG.baseExpReq * Math.pow(1.5, playerStats.lvl - 1)) : Math.floor(GAME_CONFIG.baseExpReq * playerStats.lvl);
 
       // Unlock Double Barrel Gun
       weapons.gun.barrels = 2;
@@ -14543,7 +14557,7 @@
       
       // Rewards: +2 levels, +500 gold, +3 attr points
       playerStats.lvl += 2;
-      playerStats.expReq = (playerStats.lvl * 2) * GAME_CONFIG.expValue;
+      playerStats.expReq = playerStats.lvl <= 4 ? Math.floor(GAME_CONFIG.baseExpReq * Math.pow(1.5, playerStats.lvl - 1)) : Math.floor(GAME_CONFIG.baseExpReq * playerStats.lvl);
       playerStats.gold += 500;
       playerStats.attributePoints += 3;
       
@@ -14591,7 +14605,7 @@
       
       // Rewards: +3 levels, +1000 gold, +5 attr points, +20 gun damage
       playerStats.lvl += 3;
-      playerStats.expReq = (playerStats.lvl * 2) * GAME_CONFIG.expValue;
+      playerStats.expReq = playerStats.lvl <= 4 ? Math.floor(GAME_CONFIG.baseExpReq * Math.pow(1.5, playerStats.lvl - 1)) : Math.floor(GAME_CONFIG.baseExpReq * playerStats.lvl);
       playerStats.gold += 1000;
       playerStats.attributePoints += 5;
       weapons.gun.damage += 20;
@@ -15114,7 +15128,7 @@
       weapons.aura = { active: false, level: 0, damage: 5, cooldown: 500, lastShot: 0, range: 3 };
       weapons.meteor = { active: false, level: 0, damage: 60, cooldown: 2500, lastShot: 0, area: 5 };
       weapons.droneTurret = { active: false, level: 0, damage: 15, cooldown: 400, lastShot: 0, range: 15, droneCount: 1 };
-      weapons.doubleBarrel = { active: false, level: 0, damage: 25, cooldown: 1200, lastShot: 0, range: 12, spread: 0.3 };
+      weapons.doubleBarrel = { active: false, level: 0, damage: 18, cooldown: 1500, lastShot: 0, range: 12, spread: 0.3 };
       weapons.iceSpear = { active: false, level: 0, damage: 20, cooldown: 1500, lastShot: 0, range: 15, slowPercent: 0.4, slowDuration: 2000 };
       weapons.fireRing = { active: false, level: 0, damage: 8, cooldown: 800, lastShot: 0, range: 4, orbs: 3, rotationSpeed: 2 };
       // New weapons — initialized upfront so weapon-selection code can always check .active
@@ -16406,9 +16420,9 @@
             setTimeout(() => {
               projectiles.push(new Projectile(player.mesh.position.x, player.mesh.position.z, gunTarget));
               
-              // Double Cast: fire extra projectiles with slight spread (±5 degrees per side)
-              const extraShots = playerStats.extraProjectiles || 0;
-              for (let s = 0; s < extraShots; s++) {
+              // Double Cast: chance to fire a second shot with slight spread
+              const castChance = playerStats.doubleCastChance || 0;
+              if (castChance > 0 && Math.random() < castChance) {
                 const spreadAngle = (Math.random() - 0.5) * (Math.PI / 18); // random ±5 degrees
                 const dx = gunTarget.x - player.mesh.position.x;
                 const dz = gunTarget.z - player.mesh.position.z;

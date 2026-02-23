@@ -51,6 +51,7 @@ function getDefaultPlayerStats(baseExpReq) {
     treasureHunterChance: 0,
     doubleCritChance: 0,
     extraProjectiles: 0,
+    doubleCastChance: 0,
     doubleUpgradeChance: 0
   };
 }
