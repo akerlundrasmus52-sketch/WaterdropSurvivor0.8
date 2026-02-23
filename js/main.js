@@ -2328,6 +2328,7 @@
               piece.geometry.dispose();
               piece.material.dispose();
             }
+          }
           playSound('hit');
         }
         
