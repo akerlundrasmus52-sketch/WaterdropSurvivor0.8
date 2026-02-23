@@ -56,6 +56,10 @@
     // Phase 5: Initialize particle object pool for performance
     let particlePool = null; // Will be initialized after scene is created
     
+    // Managed animations array - replaces orphaned requestAnimationFrame loops in death/damage effects
+    let managedAnimations = [];
+    const MAX_MANAGED_ANIMATIONS = 100; // Frame budget cap
+
     // Smoke particles managed array (avoids RAF accumulation over long sessions)
     let smokeParticles = [];
     const MAX_SMOKE_PARTICLES = 30; // Cap to prevent performance issues
@@ -66,11 +70,11 @@
     
     // Ground blood decals array (cleaned up on reset)
     let bloodDecals = [];
-    const MAX_BLOOD_DECALS = 80; // Cap for performance - increased for better gore
+    const MAX_BLOOD_DECALS = 30; // Cap for performance
     
     // Blood drips array - updated in main game loop to avoid many individual RAF loops
     let bloodDrips = [];
-    const MAX_BLOOD_DRIPS = 50;
+    const MAX_BLOOD_DRIPS = 20;
     
     // Shared geometry for enemy bullet-hole decals (reused across all enemies for performance)
     const bulletHoleGeo = new THREE.CircleGeometry(0.08, 6);
@@ -751,6 +755,14 @@
         this.targetScale = new THREE.Vector3(1, 1, 1);
         this.trailTimer = 0;
         this.wobblePhase = 0;
+        // Spring-damper for waterdrop deformation
+        this.scaleYVel = 0;       // spring velocity for Y scale
+        this.scaleXZVel = 0;      // spring velocity for XZ scale
+        this.currentScaleY = 1.0;
+        this.currentScaleXZ = 1.0;
+        this.wobbleIntensity = 0; // spikes on direction change / dash
+        this.prevVelDir = new THREE.Vector3(); // previous velocity direction for direction-change detection
+        this.postDashSquish = 0;  // timer for post-dash bounce
         
         // Phase 5: Low health water bleed timer
         this.waterBleedTimer = 0;
@@ -920,14 +932,16 @@
           
           // Add lean/tilt in direction of movement
           if (this.velocity.length() > 0.05) {
-            const leanAngleX = -this.velocity.z * GAME_CONFIG.movementLeanFactor;
-            const leanAngleZ = this.velocity.x * GAME_CONFIG.movementLeanFactor;
-            this.mesh.rotation.x = leanAngleX;
-            this.mesh.rotation.z = leanAngleZ;
+            const leanFactor = GAME_CONFIG.movementLeanFactor * (2.5 + this.wobbleIntensity * 1.5);
+            const leanAngleX = -this.velocity.z * leanFactor;
+            const leanAngleZ = this.velocity.x * leanFactor;
+            const leanDt = Math.min(dt * 15, 0.75);
+            this.mesh.rotation.x += (leanAngleX - this.mesh.rotation.x) * leanDt;
+            this.mesh.rotation.z += (leanAngleZ - this.mesh.rotation.z) * leanDt;
           } else {
             // Return to upright when idle
-            this.mesh.rotation.x *= 0.9;
-            this.mesh.rotation.z *= 0.9;
+            this.mesh.rotation.x *= 0.88;
+            this.mesh.rotation.z *= 0.88;
           }
           
           // Rotation/Aiming with RIGHT stick (independent of movement)
@@ -993,28 +1007,71 @@
         
         const speedMag = this.velocity.length();
         
-        // Waterdrop physics: squish/bounce/wobble
+        // Waterdrop physics: spring-damper squish/bounce/wobble
         const dt2 = Math.min(dt, 0.05);
-        let targetScaleY = 1.0;
-        let targetScaleXZ = 1.0;
+        
+        // Detect direction changes to spike wobble intensity
         if (speedMag > 0.05) {
-          const squishAmt = Math.min(speedMag * 0.04, 0.18);
-          targetScaleY = 1.0 - squishAmt;
-          targetScaleXZ = 1.0 + squishAmt * 0.7;
-          this.wobblePhase += dt2 * speedMag * 8;
-          targetScaleY += Math.sin(this.wobblePhase) * 0.03;
-        } else {
-          this.wobblePhase += dt2 * 2;
-          targetScaleY = 1.0 + Math.sin(this.wobblePhase) * 0.02;
+          const velDir = this.velocity.clone().normalize();
+          const dirChange = 1 - velDir.dot(this.prevVelDir);
+          if (dirChange > 0.3) {
+            this.wobbleIntensity = Math.min(1, this.wobbleIntensity + dirChange * 1.5);
+          }
+          this.prevVelDir.copy(velDir);
+        }
+        // Decay wobble intensity
+        this.wobbleIntensity = Math.max(0, this.wobbleIntensity - dt2 * 3);
+        
+        // Post-dash squish bounce timer
+        if (!this.isDashing && this.postDashSquish > 0) {
+          this.postDashSquish = Math.max(0, this.postDashSquish - dt2 * 4);
         }
         if (this.isDashing) {
-          targetScaleY = 0.6;
-          targetScaleXZ = 1.4;
+          this.postDashSquish = 1.0;
+          this.wobbleIntensity = Math.min(1, this.wobbleIntensity + 0.8);
         }
-        const scaleLerp = Math.min(dt2 * 12, 1);
-        this.mesh.scale.y = this.mesh.scale.y + (targetScaleY - this.mesh.scale.y) * scaleLerp;
-        this.mesh.scale.x = this.mesh.scale.x + (targetScaleXZ - this.mesh.scale.x) * scaleLerp;
-        this.mesh.scale.z = this.mesh.scale.z + (targetScaleXZ - this.mesh.scale.z) * scaleLerp;
+        
+        // Compute target scales
+        let targetScaleY, targetScaleXZ;
+        if (this.isDashing) {
+          // Dramatic squish during dash
+          targetScaleY = 0.5;
+          targetScaleXZ = 1.5;
+        } else if (this.postDashSquish > 0.01) {
+          // Post-dash oscillating bounce
+          const bounce = Math.sin(this.postDashSquish * Math.PI * 3) * 0.25 * this.postDashSquish;
+          targetScaleY = 1.0 + bounce;
+          targetScaleXZ = 1.0 - bounce * 0.5;
+        } else if (speedMag > 0.05) {
+          // Moving: elongate in direction of travel
+          const squishAmt = Math.min(speedMag * 0.055, 0.28);
+          targetScaleY = 1.0 - squishAmt;
+          targetScaleXZ = 1.0 + squishAmt * 0.8;
+          this.wobblePhase += dt2 * speedMag * 9;
+          targetScaleY += Math.sin(this.wobblePhase) * (0.04 + this.wobbleIntensity * 0.08);
+          targetScaleXZ += Math.cos(this.wobblePhase) * (0.02 + this.wobbleIntensity * 0.04);
+        } else {
+          // Idle breathing
+          this.wobblePhase += dt2 * 2.5;
+          targetScaleY = 1.0 + Math.sin(this.wobblePhase) * 0.03;
+          targetScaleXZ = 1.0 - Math.sin(this.wobblePhase) * 0.015;
+        }
+        
+        // Spring-damper integration (k=200 stiffness, c=18 damping)
+        const springK = 200, springC = 18;
+        const forceY = springK * (targetScaleY - this.currentScaleY) - springC * this.scaleYVel;
+        const forceXZ = springK * (targetScaleXZ - this.currentScaleXZ) - springC * this.scaleXZVel;
+        this.scaleYVel += forceY * dt2;
+        this.scaleXZVel += forceXZ * dt2;
+        this.currentScaleY += this.scaleYVel * dt2;
+        this.currentScaleXZ += this.scaleXZVel * dt2;
+        // Clamp to sane range
+        this.currentScaleY = Math.max(0.3, Math.min(2.0, this.currentScaleY));
+        this.currentScaleXZ = Math.max(0.5, Math.min(2.0, this.currentScaleXZ));
+        
+        this.mesh.scale.y = this.currentScaleY;
+        this.mesh.scale.x = this.currentScaleXZ;
+        this.mesh.scale.z = this.currentScaleXZ;
         // Shed water particles when moving fast
         if (speedMag > 0.4 && Math.random() < dt2 * speedMag * 3 && !this.isDashing) {
           const n = Math.floor(Math.random() * 2) + 1;
@@ -1117,25 +1174,25 @@
               );
               scene.add(smoke);
               
-              // Animate smoke rising and drifting forward
-              let smokeLife = 100;
-              const updateSmoke = () => {
-                smokeLife--;
-                smoke.position.y += 0.02; // Rise up
-                smoke.position.z += 0.03; // Drift forward
-                smoke.position.x += (Math.random() - 0.5) * 0.02; // Random drift
-                smoke.scale.multiplyScalar(1.03); // Expand faster
-                smoke.material.opacity = (smokeLife / 100) * 0.6; // Fade out
-                
-                if (smokeLife <= 0) {
-                  scene.remove(smoke);
-                  smoke.geometry.dispose();
-                  smoke.material.dispose();
-                } else {
-                  requestAnimationFrame(updateSmoke);
-                }
-              };
-              updateSmoke();
+              // Use managed smokeParticles instead of individual RAF loop
+              if (smokeParticles.length < MAX_SMOKE_PARTICLES) {
+                smokeParticles.push({
+                  mesh: smoke,
+                  material: smokeMat,
+                  geometry: smokeGeo,
+                  velocity: {
+                    x: (Math.random() - 0.5) * 0.02,
+                    y: 0.02,
+                    z: 0.03
+                  },
+                  life: 100,
+                  maxLife: 100
+                });
+              } else {
+                scene.remove(smoke);
+                smokeGeo.dispose();
+                smokeMat.dispose();
+              }
             }
           }
         }
@@ -2197,23 +2254,27 @@
               (Math.random() - 0.5) * 0.5
             );
             
-            let life = 60; // Increased lifetime
-            const updateLimb = () => {
-              life--;
-              limb.position.add(vel);
-              vel.y -= 0.02; // Gravity
-              limb.rotation.x += 0.15;
-              limb.rotation.y += 0.15;
-              
-              if (life <= 0 || limb.position.y < 0) {
-                scene.remove(limb);
-                limb.geometry.dispose();
-                limb.material.dispose();
-              } else {
-                requestAnimationFrame(updateLimb);
-              }
-            };
-            updateLimb();
+            let life = 60;
+            if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
+              managedAnimations.push({ update(_dt) {
+                life--;
+                limb.position.add(vel);
+                vel.y -= 0.02;
+                limb.rotation.x += 0.15;
+                limb.rotation.y += 0.15;
+                if (life <= 0 || limb.position.y < 0) {
+                  scene.remove(limb);
+                  limb.geometry.dispose();
+                  limb.material.dispose();
+                  return false;
+                }
+                return true;
+              }});
+            } else {
+              scene.remove(limb);
+              limb.geometry.dispose();
+              limb.material.dispose();
+            }
           }
           
           spawnParticles(this.mesh.position, enemyColor, 12); // Reduced for performance
@@ -2247,26 +2308,26 @@
             );
             
             let life = 40;
-            const updatePiece = () => {
-              life--;
-              piece.position.add(vel);
-              vel.y -= 0.02; // Gravity
-              piece.rotation.x += 0.1;
-              piece.rotation.y += 0.1;
-              
-              if (life <= 0 || piece.position.y < 0) {
-                scene.remove(piece);
-                piece.geometry.dispose();
-                piece.material.dispose();
-              } else {
-                requestAnimationFrame(updatePiece);
-              }
-            };
-            updatePiece();
-          }
-          
-          // Enhanced particles for destruction
-          spawnParticles(this.mesh.position, enemyColor, 8); // Reduced for performance
+            if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
+              managedAnimations.push({ update(_dt) {
+                life--;
+                piece.position.add(vel);
+                vel.y -= 0.02;
+                piece.rotation.x += 0.1;
+                piece.rotation.y += 0.1;
+                if (life <= 0 || piece.position.y < 0) {
+                  scene.remove(piece);
+                  piece.geometry.dispose();
+                  piece.material.dispose();
+                  return false;
+                }
+                return true;
+              }});
+            } else {
+              scene.remove(piece);
+              piece.geometry.dispose();
+              piece.material.dispose();
+            }
           playSound('hit');
         }
         
@@ -2339,16 +2400,17 @@
           const fallDuration = 60;
           let fallTimer = 0;
           const startY = this.mesh.position.y;
-          const fallAnim = () => {
-            if (fallTimer < fallDuration && this.mesh.parent) {
+          const flyMesh = this.mesh;
+          managedAnimations.push({ update(_dt) {
+            if (fallTimer < fallDuration && flyMesh.parent) {
               fallTimer++;
-              this.mesh.position.y = startY * (1 - fallTimer / fallDuration);
-              this.mesh.rotation.x += 0.1;
-              this.mesh.rotation.z += 0.15;
-              requestAnimationFrame(fallAnim);
+              flyMesh.position.y = startY * (1 - fallTimer / fallDuration);
+              flyMesh.rotation.x += 0.1;
+              flyMesh.rotation.z += 0.15;
+              return true;
             }
-          };
-          fallAnim();
+            return false;
+          }});
         }
         
         // Screen flash on kill (dopamine boost) - stronger flash for mini-boss
@@ -2365,7 +2427,7 @@
         setTimeout(() => flash.remove(), this.isMiniBoss ? 100 : 50);
         
         // DEATH BLOOD BURST - violent explosion of blood particles
-        const deathBloodCount = this.isMiniBoss ? 60 : 35; // Enhanced gore
+        const deathBloodCount = this.isMiniBoss ? 30 : 18;
         spawnParticles(this.mesh.position, 0x8B0000, deathBloodCount);
         spawnParticles(this.mesh.position, 0x6B0000, Math.floor(deathBloodCount * 0.7));
         spawnParticles(this.mesh.position, 0xCC0000, Math.floor(deathBloodCount * 0.5)); // Bright red splatter in air
@@ -2582,7 +2644,7 @@
           spawnParticles(this.mesh.position, 0xFF2200, 15); // Bright red gore pieces
           
           // Explode into pieces (NO death ring)
-          const pieceCount = this.isMiniBoss ? 40 : 22;
+          const pieceCount = this.isMiniBoss ? 20 : 10;
           for(let i = 0; i < pieceCount; i++) {
             const piece = new THREE.Mesh(
               new THREE.BoxGeometry(0.3, 0.3, 0.3),
@@ -2599,24 +2661,28 @@
               Math.sin(angle) * speed
             );
             
-            let life = 80;  // Increased from 50 for more visible death animation
-            const updatePiece = () => {
-              life--;
-              piece.position.add(vel);
-              vel.y -= 0.02; // Gravity
-              piece.rotation.x += 0.15;
-              piece.rotation.y += 0.15;
-              piece.material.opacity = life / 80;  // Update divisor to match new life
-              
-              if (life <= 0 || piece.position.y < 0) {
-                scene.remove(piece);
-                piece.geometry.dispose();
-                piece.material.dispose();
-              } else {
-                requestAnimationFrame(updatePiece);
-              }
-            };
-            updatePiece();
+            let life = 80;
+            if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
+              managedAnimations.push({ update(_dt) {
+                life--;
+                piece.position.add(vel);
+                vel.y -= 0.02;
+                piece.rotation.x += 0.15;
+                piece.rotation.y += 0.15;
+                piece.material.opacity = life / 80;
+                if (life <= 0 || piece.position.y < 0) {
+                  scene.remove(piece);
+                  piece.geometry.dispose();
+                  piece.material.dispose();
+                  return false;
+                }
+                return true;
+              }});
+            } else {
+              scene.remove(piece);
+              piece.geometry.dispose();
+              piece.material.dispose();
+            }
           }
         } else if (deathVariation < 0.5) {
           // CORPSE DEATH: Leave a corpse sprite with blood pool
@@ -2654,12 +2720,11 @@
           scene.add(bloodPool);
           
           // Fade out
-          let corpseLife = 180;  // Increased from 120 for longer visible corpse
-          const fadeCorpse = () => {
+          let corpseLife = 180;
+          managedAnimations.push({ update(_dt) {
             corpseLife--;
-            corpse.material.opacity = (corpseLife / 180) * 0.7;  // Update divisor
-            bloodPool.material.opacity = (corpseLife / 180) * 0.5;  // Update divisor
-            
+            corpse.material.opacity = (corpseLife / 180) * 0.7;
+            bloodPool.material.opacity = (corpseLife / 180) * 0.5;
             if (corpseLife <= 0) {
               scene.remove(corpse);
               scene.remove(bloodPool);
@@ -2667,11 +2732,10 @@
               corpse.material.dispose();
               bloodPool.geometry.dispose();
               bloodPool.material.dispose();
-            } else {
-              requestAnimationFrame(fadeCorpse);
+              return false;
             }
-          };
-          fadeCorpse();
+            return true;
+          }});
         } else if (deathVariation < 0.75) {
           // DISINTEGRATION DEATH: Enemy dissolves into particles
           spawnParticles(this.mesh.position, enemyColor, 30);
@@ -2693,22 +2757,26 @@
             );
             
             let life = 40;
-            const updatePiece = () => {
-              life--;
-              piece.position.add(vel);
-              vel.y -= 0.01; // Gentle gravity
-              piece.scale.multiplyScalar(0.95); // Shrink
-              piece.material.opacity = life / 40;
-              
-              if (life <= 0 || piece.scale.x < 0.01) {
-                scene.remove(piece);
-                piece.geometry.dispose();
-                piece.material.dispose();
-              } else {
-                requestAnimationFrame(updatePiece);
-              }
-            };
-            updatePiece();
+            if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
+              managedAnimations.push({ update(_dt) {
+                life--;
+                piece.position.add(vel);
+                vel.y -= 0.01;
+                piece.scale.multiplyScalar(0.95);
+                piece.material.opacity = life / 40;
+                if (life <= 0 || piece.scale.x < 0.01) {
+                  scene.remove(piece);
+                  piece.geometry.dispose();
+                  piece.material.dispose();
+                  return false;
+                }
+                return true;
+              }});
+            } else {
+              scene.remove(piece);
+              piece.geometry.dispose();
+              piece.material.dispose();
+            }
           }
         } else {
           // SPLATTER DEATH: Dramatic blood splatter effect
@@ -2738,19 +2806,17 @@
             
             // Fade out
             let life = 100;
-            const fadeSplatter = () => {
+            managedAnimations.push({ update(_dt) {
               life--;
               splatter.material.opacity = (life / 100) * 0.6;
-              
               if (life <= 0) {
                 scene.remove(splatter);
                 splatter.geometry.dispose();
                 splatter.material.dispose();
-              } else {
-                requestAnimationFrame(fadeSplatter);
+                return false;
               }
-            };
-            fadeSplatter();
+              return true;
+            }});
           }
           
           // Central corpse piece
@@ -2769,18 +2835,17 @@
           scene.add(corpse);
           
           let corpseLife = 120;
-          const fadeCorpse = () => {
+          managedAnimations.push({ update(_dt) {
             corpseLife--;
             corpse.material.opacity = (corpseLife / 120) * 0.8;
             if (corpseLife <= 0) {
               scene.remove(corpse);
               corpse.geometry.dispose();
               corpse.material.dispose();
-            } else {
-              requestAnimationFrame(fadeCorpse);
+              return false;
             }
-          };
-          fadeCorpse();
+            return true;
+          }});
         }
       }
       
@@ -2820,11 +2885,10 @@
         
         // Fade to ash
         let life = 120;
-        const fadeToAsh = () => {
+        managedAnimations.push({ update(_dt) {
           life--;
           corpse.material.opacity = (life / 120) * 0.8;
-          corpse.scale.multiplyScalar(0.995); // Shrink
-          
+          corpse.scale.multiplyScalar(0.995);
           if (life <= 0) {
             scene.remove(corpse);
             scene.remove(burnMark);
@@ -2832,11 +2896,10 @@
             corpse.material.dispose();
             burnMark.geometry.dispose();
             burnMark.material.dispose();
-          } else {
-            requestAnimationFrame(fadeToAsh);
+            return false;
           }
-        };
-        fadeToAsh();
+          return true;
+        }});
       }
       
       dieByIce(enemyColor) {
@@ -2845,7 +2908,7 @@
         spawnParticles(this.mesh.position, 0xFFFFFF, 12); // White frost
         
         // Shatter into ice shards
-        const shardCount = 20;
+        const shardCount = 10;
         for(let i = 0; i < shardCount; i++) {
           const shardGeo = new THREE.ConeGeometry(0.1, 0.3, 4);
           const shardMat = new THREE.MeshBasicMaterial({ 
@@ -2865,23 +2928,27 @@
           );
           
           let life = 60;
-          const updateShard = () => {
-            life--;
-            shard.position.add(vel);
-            vel.y -= 0.03; // Gravity
-            shard.rotation.x += 0.2;
-            shard.rotation.z += 0.15;
-            shard.material.opacity = (life / 60) * 0.7;
-            
-            if (life <= 0 || shard.position.y < 0) {
-              scene.remove(shard);
-              shard.geometry.dispose();
-              shard.material.dispose();
-            } else {
-              requestAnimationFrame(updateShard);
-            }
-          };
-          updateShard();
+          if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
+            managedAnimations.push({ update(_dt) {
+              life--;
+              shard.position.add(vel);
+              vel.y -= 0.03;
+              shard.rotation.x += 0.2;
+              shard.rotation.z += 0.15;
+              shard.material.opacity = (life / 60) * 0.7;
+              if (life <= 0 || shard.position.y < 0) {
+                scene.remove(shard);
+                shard.geometry.dispose();
+                shard.material.dispose();
+                return false;
+              }
+              return true;
+            }});
+          } else {
+            scene.remove(shard);
+            shard.geometry.dispose();
+            shard.material.dispose();
+          }
         }
       }
       
@@ -2905,61 +2972,38 @@
         corpse.rotation.x = -Math.PI / 2;
         scene.add(corpse);
         
-        // Smoke particles rising
-        let smokeLife = 80;
-        const createSmoke = () => {
-          if (smokeLife > 0) {
-            smokeLife--;
+        // Smoke particles rising - use managed array instead of RAF
+        const deathPos = this.mesh.position.clone();
+        let smokeSpawnCount = 8;
+        let smokeSpawnInterval = setInterval(() => {
+          smokeSpawnCount--;
+          if (smokeSpawnCount <= 0 || !scene) { clearInterval(smokeSpawnInterval); return; }
+          if (smokeParticles.length < MAX_SMOKE_PARTICLES) {
             const smokeGeo = new THREE.SphereGeometry(0.1, 6, 6);
-            const smokeMat = new THREE.MeshBasicMaterial({ 
-              color: 0x666666,
-              transparent: true,
-              opacity: 0.4
-            });
+            const smokeMat = new THREE.MeshBasicMaterial({ color: 0x666666, transparent: true, opacity: 0.4 });
             const smoke = new THREE.Mesh(smokeGeo, smokeMat);
-            smoke.position.copy(this.mesh.position);
+            smoke.position.copy(deathPos);
             smoke.position.y = 0.1;
             scene.add(smoke);
-            
-            let life = 40;
-            const updateSmoke = () => {
-              life--;
-              smoke.position.y += 0.03;
-              smoke.position.x += (Math.random() - 0.5) * 0.02;
-              smoke.position.z += (Math.random() - 0.5) * 0.02;
-              smoke.scale.multiplyScalar(1.03);
-              smoke.material.opacity = (life / 40) * 0.4;
-              
-              if (life <= 0) {
-                scene.remove(smoke);
-                smoke.geometry.dispose();
-                smoke.material.dispose();
-              } else {
-                requestAnimationFrame(updateSmoke);
-              }
-            };
-            updateSmoke();
-            
-            setTimeout(createSmoke, 100);
+            smokeParticles.push({ mesh: smoke, material: smokeMat, geometry: smokeGeo,
+              velocity: { x: (Math.random()-0.5)*0.02, y: 0.03, z: (Math.random()-0.5)*0.02 },
+              life: 40, maxLife: 40 });
           }
-        };
-        createSmoke();
+        }, 100);
         
         // Fade corpse
         let corpseLife = 120;
-        const fadeCorpse = () => {
+        managedAnimations.push({ update(_dt) {
           corpseLife--;
           corpse.material.opacity = (corpseLife / 120) * 0.9;
-          
           if (corpseLife <= 0) {
             scene.remove(corpse);
             corpse.geometry.dispose();
             corpse.material.dispose();
-          } else {
-            requestAnimationFrame(fadeCorpse);
+            return false;
           }
-        };
-        fadeCorpse();
+          return true;
+        }});
       }
       
       dieByShotgun(enemyColor) {
@@ -2969,7 +3013,7 @@
         spawnParticles(this.mesh.position, 0xFFFFFF, 10);
         
         // Massive gib explosion
-        const gibCount = 40;
+        const gibCount = 15;
         for(let i = 0; i < gibCount; i++) {
           const gibSize = 0.1 + Math.random() * 0.2;
           const gibGeo = new THREE.BoxGeometry(gibSize, gibSize, gibSize);
@@ -2990,23 +3034,27 @@
           );
           
           let life = 60;
-          const updateGib = () => {
-            life--;
-            gib.position.add(vel);
-            vel.y -= 0.025; // Gravity
-            gib.rotation.x += 0.25;
-            gib.rotation.y += 0.2;
-            gib.material.opacity = life / 60;
-            
-            if (life <= 0 || gib.position.y < 0) {
-              scene.remove(gib);
-              gib.geometry.dispose();
-              gib.material.dispose();
-            } else {
-              requestAnimationFrame(updateGib);
-            }
-          };
-          updateGib();
+          if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
+            managedAnimations.push({ update(_dt) {
+              life--;
+              gib.position.add(vel);
+              vel.y -= 0.025;
+              gib.rotation.x += 0.25;
+              gib.rotation.y += 0.2;
+              gib.material.opacity = life / 60;
+              if (life <= 0 || gib.position.y < 0) {
+                scene.remove(gib);
+                gib.geometry.dispose();
+                gib.material.dispose();
+                return false;
+              }
+              return true;
+            }});
+          } else {
+            scene.remove(gib);
+            gib.geometry.dispose();
+            gib.material.dispose();
+          }
         }
         
         // Large blood pool
@@ -3025,19 +3073,17 @@
         
         // Fade blood
         let life = 150;
-        const fadeBlood = () => {
+        managedAnimations.push({ update(_dt) {
           life--;
           bloodPool.material.opacity = (life / 150) * 0.7;
-          
           if (life <= 0) {
             scene.remove(bloodPool);
             bloodPool.geometry.dispose();
             bloodPool.material.dispose();
-          } else {
-            requestAnimationFrame(fadeBlood);
+            return false;
           }
-        };
-        fadeBlood();
+          return true;
+        }});
       }
       
       dieByHeadshot(enemyColor) {
@@ -3085,36 +3131,27 @@
         
         // Blood spray trail from neck
         let headLife = 80;
-        const updateHead = () => {
+        managedAnimations.push({ update(_dt) {
           headLife--;
           head.position.add(headVel);
-          headVel.y -= 0.025; // Gravity
-          
-          // Enhanced rotation with varying speeds for more dramatic effect
+          headVel.y -= 0.025;
           head.rotation.x += rotSpeed.x;
           head.rotation.y += rotSpeed.y;
           head.rotation.z += rotSpeed.z;
-          
-          // Blood stream trail from severed neck
           if (headLife % 2 === 0 && headLife > 20) {
-            // Crimson blood, not white!
             spawnParticles(head.position, 0xDC143C, 3);
           }
-          
-          // Fade out near end
           if (headLife < 20) {
             head.material.opacity = headLife / 20;
           }
-          
           if (headLife <= 0 || head.position.y < 0) {
             scene.remove(head);
             head.geometry.dispose();
             head.material.dispose();
-          } else {
-            requestAnimationFrame(updateHead);
+            return false;
           }
-        };
-        updateHead();
+          return true;
+        }});
         
         // Body falls (corpse without head)
         const corpseGeo = new THREE.CircleGeometry(0.6, 16);
@@ -3145,7 +3182,7 @@
         scene.add(bloodPool);
         
         // Extra gore pieces (bone/skull fragments) with proper coloring
-        for(let i = 0; i < 12; i++) {
+        for(let i = 0; i < 6; i++) {
           const pieceSize = 0.1 + Math.random() * 0.1;
           const piece = new THREE.Mesh(
             new THREE.BoxGeometry(pieceSize, pieceSize, pieceSize),
@@ -3165,32 +3202,35 @@
           );
           
           let life = 60;
-          const updatePiece = () => {
-            life--;
-            piece.position.add(vel);
-            vel.y -= 0.03;
-            piece.rotation.x += 0.2;
-            piece.rotation.y += 0.25;
-            piece.material.opacity = life / 60;
-            
-            if (life <= 0 || piece.position.y < 0) {
-              scene.remove(piece);
-              piece.geometry.dispose();
-              piece.material.dispose();
-            } else {
-              requestAnimationFrame(updatePiece);
-            }
-          };
-          updatePiece();
+          if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
+            managedAnimations.push({ update(_dt) {
+              life--;
+              piece.position.add(vel);
+              vel.y -= 0.03;
+              piece.rotation.x += 0.2;
+              piece.rotation.y += 0.25;
+              piece.material.opacity = life / 60;
+              if (life <= 0 || piece.position.y < 0) {
+                scene.remove(piece);
+                piece.geometry.dispose();
+                piece.material.dispose();
+                return false;
+              }
+              return true;
+            }});
+          } else {
+            scene.remove(piece);
+            piece.geometry.dispose();
+            piece.material.dispose();
+          }
         }
         
         // Fade corpse
         let life = 120;
-        const fadeCorpse = () => {
+        managedAnimations.push({ update(_dt) {
           life--;
           corpse.material.opacity = (life / 120) * 0.8;
           bloodPool.material.opacity = (life / 120) * 0.6;
-          
           if (life <= 0) {
             scene.remove(corpse);
             scene.remove(bloodPool);
@@ -3198,11 +3238,10 @@
             corpse.material.dispose();
             bloodPool.geometry.dispose();
             bloodPool.material.dispose();
-          } else {
-            requestAnimationFrame(fadeCorpse);
+            return false;
           }
-        };
-        fadeCorpse();
+          return true;
+        }});
       }
     }
 
@@ -14899,6 +14938,7 @@
         d.mesh.material.dispose();
       });
       bloodDrips = [];
+      managedAnimations = [];
       
       goldCoins.forEach(g => {
         scene.remove(g.mesh);
@@ -16507,6 +16547,13 @@
       // Update blood decal fade (12 second lifetime)
       updateBloodDecals();
       
+      // Update managed animations (replaces individual RAF loops for death/damage effects)
+      if (managedAnimations.length > 0) {
+        managedAnimations = managedAnimations.filter(anim => {
+          return anim.update(dt);
+        });
+      }
+
       // Update blood drips (falling drops from wounded enemies)
       if (bloodDrips.length > 0) {
         bloodDrips = bloodDrips.filter(d => {
