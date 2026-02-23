@@ -983,6 +983,7 @@
             this.mesh.rotation.y = angle;
           } else if (gameSettings.autoAim && enemies && enemies.length > 0) {
             // Auto-aim when enabled (works in any orientation)
+            // Accuracy starts low and improves with dexterity/upgrades via autoAimAccuracy stat
             let nearestEnemy = null;
             let minDist = Infinity;
             enemies.forEach(e => {
@@ -997,8 +998,12 @@
             if (nearestEnemy) {
               const dx = nearestEnemy.mesh.position.x - this.mesh.position.x;
               const dz = nearestEnemy.mesh.position.z - this.mesh.position.z;
-              const angle = Math.atan2(dx, dz);
-              this.mesh.rotation.y = angle;
+              const perfectAngle = Math.atan2(dx, dz);
+              // Apply accuracy: low accuracy adds random offset to aim direction
+              const accuracy = playerStats.autoAimAccuracy || 0.3;
+              const maxError = (1 - accuracy) * (Math.PI / 4); // up to 45° off at 0% accuracy
+              const aimAngleError = (Math.random() - 0.5) * 2 * maxError;
+              this.mesh.rotation.y = perfectAngle + aimAngleError;
             }
           } else if (joystickLeft.active) {
             // If no right stick input and no auto-aim, rotate to face movement direction
@@ -2470,7 +2475,8 @@
             pool.rotation.x = -Math.PI / 2;
             pool.position.set(landX, 0.015, landZ);
             scene.add(pool);
-            bloodDecals.push(pool);
+            // Air blood pools manage their own lifecycle via the fade interval below;
+            // do NOT push into bloodDecals to avoid unbounded array growth.
             // Fade after 8 seconds
             setTimeout(() => {
               let op = 0.75;
@@ -3929,14 +3935,28 @@
 
     class IceSpear {
       constructor(x, z, target) {
-        // Ice spear shape - elongated diamond
-        const geometry = new THREE.ConeGeometry(0.15, 0.6, 4);
-        const material = new THREE.MeshBasicMaterial({ color: 0x87CEEB, transparent: true, opacity: 0.9 });
+        // Ice shard — elongated octahedron for a crystalline look (4-sided cone approximation)
+        const geometry = new THREE.ConeGeometry(0.12, 0.7, 4);
+        // Bright ice-blue with high emissive so it stands out visually
+        const material = new THREE.MeshStandardMaterial({
+          color: 0xAEEEFF,
+          emissive: 0x005577,
+          emissiveIntensity: 0.8,
+          transparent: true,
+          opacity: 0.95,
+          metalness: 0.3,
+          roughness: 0.1
+        });
         this.mesh = new THREE.Mesh(geometry, material);
         this.mesh.position.set(x, 0.5, z);
         scene.add(this.mesh);
 
-        this.speed = 0.35;
+        // Small glow light that travels with the shard
+        this.light = new THREE.PointLight(0x88DDFF, 2.5, 5);
+        this.light.position.copy(this.mesh.position);
+        scene.add(this.light);
+
+        this.speed = 0.42; // Slightly faster — ice shards fly fast
         this.active = true;
         this.life = 70; // Frames - longer range than normal projectile
 
@@ -3947,12 +3967,16 @@
         this.vx = (dx / dist) * this.speed;
         this.vz = (dz / dist) * this.speed;
         
-        // Rotate spear to face direction
+        // Rotate shard to face direction of travel
         this.mesh.rotation.z = -Math.atan2(dz, dx) + Math.PI/2;
         this.mesh.rotation.x = Math.PI/2;
         
         // Trailing particles
         this.particleTimer = 0;
+
+        // Spawn initial burst of ice chips from the "firing" point
+        spawnParticles(this.mesh.position, 0xCCEEFF, 4);
+        spawnParticles(this.mesh.position, 0xFFFFFF, 2);
       }
 
       update() {
@@ -3960,12 +3984,17 @@
         
         this.mesh.position.x += this.vx;
         this.mesh.position.z += this.vz;
+        // Keep light in sync with shard
+        this.light.position.copy(this.mesh.position);
         this.life--;
         
-        // Ice trail particles
+        // Denser ice trail — small ice chips flying off
         this.particleTimer++;
-        if (this.particleTimer % 3 === 0) {
-          spawnParticles(this.mesh.position, 0x87CEEB, 2);
+        if (this.particleTimer % 2 === 0) {
+          spawnParticles(this.mesh.position, 0xAEEEFF, 1);
+        }
+        if (this.particleTimer % 5 === 0) {
+          spawnParticles(this.mesh.position, 0xFFFFFF, 1); // White frost fleck
         }
 
         if (this.life <= 0) {
@@ -4021,6 +4050,11 @@
         scene.remove(this.mesh);
         this.mesh.geometry.dispose();
         this.mesh.material.dispose();
+        // Remove the glow light that travels with the shard
+        if (this.light) {
+          scene.remove(this.light);
+          this.light = null;
+        }
       }
     }
 
@@ -4099,11 +4133,32 @@
           }
         });
         
-        // Enhanced visuals - thinner, more realistic explosion
-        spawnParticles(this.target, 0xFF4500, 8); // Reduced count for thinner look
+        // Enhanced visuals — visible explosion ring + debris
+        spawnParticles(this.target, 0xFF4500, 8);
         spawnParticles(this.target, 0xFFFF00, 4);
-        spawnParticles(this.target, 0xFF8C00, 6); // Dark orange
-        spawnMuzzleSmoke(this.target, 10); // Add smoke cloud
+        spawnParticles(this.target, 0xFF8C00, 6);
+        spawnMuzzleSmoke(this.target, 10);
+
+        // Explosion shockwave ring — expands outward and fades
+        const ringGeo = new THREE.RingGeometry(0.2, 0.6, 24);
+        const ringMat = new THREE.MeshBasicMaterial({ color: 0xFF6600, transparent: true, opacity: 0.9, side: THREE.DoubleSide, depthWrite: false });
+        const ring = new THREE.Mesh(ringGeo, ringMat);
+        ring.rotation.x = -Math.PI / 2;
+        ring.position.set(this.target.x, 0.08, this.target.z);
+        scene.add(ring);
+        let ringLife = 25;
+        if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
+          managedAnimations.push({ update(_dt) {
+            ringLife--;
+            const scale = 1 + (1 - ringLife / 25) * (weapons.meteor.area / 1.5);
+            ring.scale.set(scale, scale, scale);
+            ring.material.opacity = (ringLife / 25) * 0.9;
+            if (ringLife <= 0) { scene.remove(ring); ring.geometry.dispose(); ring.material.dispose(); return false; }
+            return true;
+          }});
+        } else {
+          scene.remove(ring); ring.geometry.dispose(); ring.material.dispose();
+        }
         
         // Camera shake for explosion
         const shakeIntensity = GAME_CONFIG.explosionShakeIntensity;
@@ -12082,11 +12137,23 @@
     const BLOOD_DECAL_FADE_START = 0.7; // Start fading at 70% of lifetime
     function updateBloodDecals() {
       const now = Date.now();
-      for (const decal of bloodDecals) {
-        if (!decal.userData.spawnTime) continue;
+      // Use backward iteration so we can splice without index issues
+      for (let i = bloodDecals.length - 1; i >= 0; i--) {
+        const decal = bloodDecals[i];
+        // Skip entries that have already been disposed externally (air blood pools)
+        if (!decal.userData.spawnTime) {
+          if (!decal.parent) {
+            bloodDecals.splice(i, 1);
+          }
+          continue;
+        }
         const age = now - decal.userData.spawnTime;
         if (age >= BLOOD_DECAL_FADE_MS) {
-          decal.material.opacity = 0;
+          // Fully expired — remove from scene, dispose, and purge from array
+          if (decal.parent) scene.remove(decal);
+          if (decal.geometry) decal.geometry.dispose();
+          if (decal.material) decal.material.dispose();
+          bloodDecals.splice(i, 1);
         } else if (age > BLOOD_DECAL_FADE_MS * BLOOD_DECAL_FADE_START) {
           // Start fading at 70% of lifetime
           const fadeProgress = (age - BLOOD_DECAL_FADE_MS * BLOOD_DECAL_FADE_START) / (BLOOD_DECAL_FADE_MS * (1 - BLOOD_DECAL_FADE_START));
@@ -13205,31 +13272,61 @@
           choices.push(...additionalUpgrades.slice(0, needed));
         }
       }
-      // WEAPON UNLOCK: Level 4, 8, 15, 20 for new weapon unlocks
+      // WEAPON UNLOCK: Level 4, 8, 15, 20 — show ONLY 6 weapon choices (no stat upgrades)
       else if ([4, 8, 15, 20].includes(playerStats.lvl)) {
         modal.querySelector('h2').innerText = 'NEW WEAPON!';
         modal.querySelector('h2').style.fontSize = '36px';
-        // Build list of all possible new weapons, filtering already-active ones
-        const allWeaponChoices = [
-          { id: 'sword', icon: '⚔️', title: 'SLASHY SLASH', desc: 'Slash enemies in front', active: () => weapons.sword.active, apply: () => { weapons.sword.active = true; weapons.sword.level = 1; showStatChange('New Weapon: Sword'); if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest8_newWeapon') progressTutorialQuest('quest8_newWeapon', true); } },
-          { id: 'aura', icon: '🌀', title: 'ZAP ZONE', desc: 'Damage aura around you', active: () => weapons.aura.active, apply: () => { weapons.aura.active = true; weapons.aura.level = 1; showStatChange('New Weapon: Aura'); if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest8_newWeapon') progressTutorialQuest('quest8_newWeapon', true); } },
-          { id: 'meteor', icon: '☄️', title: 'SPACE ROCKS', desc: 'Call meteors from sky', active: () => weapons.meteor.active, apply: () => { weapons.meteor.active = true; weapons.meteor.level = 1; showStatChange('New Weapon: Meteor'); if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest8_newWeapon') progressTutorialQuest('quest8_newWeapon', true); } },
-          { id: 'droneturret', icon: '🤖', title: 'DRONE TURRET', desc: 'Automated drone that shoots enemies', active: () => weapons.droneTurret.active, apply: () => { weapons.droneTurret.active = true; weapons.droneTurret.level = 1; const drone = new DroneTurret(player); droneTurrets.push(drone); startDroneHum(); showStatChange('New Weapon: Drone Turret'); if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest8_newWeapon') progressTutorialQuest('quest8_newWeapon', true); } },
-          { id: 'doublebarrel', icon: '🔫', title: 'DOUBLE BARREL', desc: 'Powerful shotgun spread', active: () => weapons.doubleBarrel.active, apply: () => { weapons.doubleBarrel.active = true; weapons.doubleBarrel.level = 1; showStatChange('New Weapon: Double Barrel'); if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest8_newWeapon') progressTutorialQuest('quest8_newWeapon', true); } },
-          { id: 'icespear', icon: '❄️', title: 'ICE SPEAR', desc: 'Freezing projectile that slows enemies 40%', active: () => weapons.iceSpear.active, apply: () => { weapons.iceSpear.active = true; weapons.iceSpear.level = 1; showStatChange('New Weapon: Ice Spear'); if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest8_newWeapon') progressTutorialQuest('quest8_newWeapon', true); } },
-          { id: 'firering', icon: '🔥', title: 'FIRE RING', desc: 'Spinning fire orbs orbit around you', active: () => weapons.fireRing.active, apply: () => { weapons.fireRing.active = true; weapons.fireRing.level = 1; showStatChange('New Weapon: Fire Ring'); if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest8_newWeapon') progressTutorialQuest('quest8_newWeapon', true); } }
+
+        const questCheck = () => { if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest8_newWeapon') progressTutorialQuest('quest8_newWeapon', true); };
+
+        // Full weapon pool — inactive weapons first, then upgrades for active weapons
+        const newWeaponChoices = [
+          { id: 'sword',       icon: '⚔️',  title: 'SLASHY SLASH',   desc: 'Slash enemies in front of you',            active: () => weapons.sword.active,       apply: () => { weapons.sword.active = true; weapons.sword.level = 1; showStatChange('New Weapon: Sword'); questCheck(); } },
+          { id: 'aura',        icon: '🌀',  title: 'ZAP ZONE',       desc: 'Damage aura — zaps nearby enemies',        active: () => weapons.aura.active,        apply: () => { weapons.aura.active = true; weapons.aura.level = 1; showStatChange('New Weapon: Aura'); questCheck(); } },
+          { id: 'meteor',      icon: '☄️',  title: 'SPACE ROCKS',    desc: 'Call meteors from the sky',                active: () => weapons.meteor.active,      apply: () => { weapons.meteor.active = true; weapons.meteor.level = 1; showStatChange('New Weapon: Meteor'); questCheck(); } },
+          { id: 'droneturret', icon: '🤖',  title: 'DRONE TURRET',   desc: 'Automated drone that shoots enemies',      active: () => weapons.droneTurret.active, apply: () => { weapons.droneTurret.active = true; weapons.droneTurret.level = 1; const drone = new DroneTurret(player); droneTurrets.push(drone); startDroneHum(); showStatChange('New Weapon: Drone Turret'); questCheck(); } },
+          { id: 'doublebarrel',icon: '🔫',  title: 'DOUBLE BARREL',  desc: 'Powerful 6-pellet shotgun spread',         active: () => weapons.doubleBarrel.active,apply: () => { weapons.doubleBarrel.active = true; weapons.doubleBarrel.level = 1; showStatChange('New Weapon: Double Barrel'); questCheck(); } },
+          { id: 'icespear',    icon: '❄️',  title: 'ICE SPEAR',      desc: 'Crystalline shard that slows enemies 40%', active: () => weapons.iceSpear.active,    apply: () => { weapons.iceSpear.active = true; weapons.iceSpear.level = 1; showStatChange('New Weapon: Ice Spear'); questCheck(); } },
+          { id: 'firering',    icon: '🔥',  title: 'FIRE RING',      desc: 'Spinning fire orbs orbit around you',      active: () => weapons.fireRing.active,    apply: () => { weapons.fireRing.active = true; weapons.fireRing.level = 1; showStatChange('New Weapon: Fire Ring'); questCheck(); } },
+          { id: 'lightning',   icon: '⚡',  title: 'LIGHTNING ARC',  desc: 'Chain lightning that jumps 3 enemies',     active: () => weapons.lightning && weapons.lightning.active, apply: () => {
+            if (!weapons.lightning) weapons.lightning = { active: false, level: 1, damage: 25, cooldown: 1800, lastShot: 0, range: 12, chainCount: 3 };
+            weapons.lightning.active = true; weapons.lightning.level = 1; showStatChange('New Weapon: Lightning Arc'); questCheck();
+          }},
+          { id: 'poison',      icon: '☠️',  title: 'POISON CLOUD',   desc: 'Toxic cloud that damages over time',       active: () => weapons.poison && weapons.poison.active, apply: () => {
+            if (!weapons.poison) weapons.poison = { active: false, level: 1, damage: 8, cooldown: 3000, lastShot: 0, range: 5, duration: 4000 };
+            weapons.poison.active = true; weapons.poison.level = 1; showStatChange('New Weapon: Poison Cloud'); questCheck();
+          }},
+          { id: 'homing',      icon: '🚀',  title: 'HOMING MISSILE', desc: 'Slow but seeking missile — never misses',  active: () => weapons.homing && weapons.homing.active, apply: () => {
+            if (!weapons.homing) weapons.homing = { active: false, level: 1, damage: 45, cooldown: 2500, lastShot: 0, range: 20 };
+            weapons.homing.active = true; weapons.homing.level = 1; showStatChange('New Weapon: Homing Missile'); questCheck();
+          }}
         ];
-        // Only offer weapons not yet active, shuffle and pick up to 3
-        const available = allWeaponChoices.filter(w => !w.active());
-        const shuffled = available.sort(() => 0.5 - Math.random());
-        choices = shuffled.slice(0, Math.min(3, shuffled.length));
-        // Fill with common upgrades if < 3 weapon choices available
-        if (choices.length < 3) {
-          const fillers = commonUpgrades.sort(() => 0.5 - Math.random()).slice(0, 3 - choices.length);
-          choices.push(...fillers);
+
+        // Separate inactive (new) weapons from upgrades for active ones
+        const inactiveWeapons = newWeaponChoices.filter(w => !w.active());
+        const upgradeWeapons = [
+          ...(weapons.gun.level < 5 ? [{ id: 'gun_up', icon: '🔫', title: `GUN Lv.${weapons.gun.level + 1}`, desc: 'Damage +10, Fire Rate +15%', apply: () => { weapons.gun.level++; weapons.gun.damage += 10; weapons.gun.cooldown *= 0.85; showStatChange(`Gun Level ${weapons.gun.level}`); } }] : []),
+          ...(weapons.sword.active && weapons.sword.level < 5 ? [{ id: 'sword_up', icon: '⚔️', title: `SWORD Lv.${weapons.sword.level + 1}`, desc: 'Damage +15, Range +0.5', apply: () => { weapons.sword.level++; weapons.sword.damage += 15; weapons.sword.range += 0.5; showStatChange(`Sword Level ${weapons.sword.level}`); } }] : []),
+          ...(weapons.iceSpear.active && weapons.iceSpear.level < 5 ? [{ id: 'ice_up', icon: '❄️', title: `ICE SPEAR Lv.${weapons.iceSpear.level + 1}`, desc: 'Damage +10, Slow +10%', apply: () => { weapons.iceSpear.level++; weapons.iceSpear.damage += 10; weapons.iceSpear.slowPercent += 0.1; showStatChange(`Ice Spear Level ${weapons.iceSpear.level}`); } }] : []),
+          ...(weapons.fireRing.active && weapons.fireRing.level < 5 ? [{ id: 'fire_up', icon: '🔥', title: `FIRE RING Lv.${weapons.fireRing.level + 1}`, desc: 'Damage +5, +1 Orb', apply: () => { weapons.fireRing.level++; weapons.fireRing.damage += 5; weapons.fireRing.orbs += 1; showStatChange(`Fire Ring Level ${weapons.fireRing.level}`); } }] : []),
+          ...(weapons.meteor.active && weapons.meteor.level < 5 ? [{ id: 'meteor_up', icon: '☄️', title: `METEOR Lv.${weapons.meteor.level + 1}`, desc: 'Damage +20, Area +1', apply: () => { weapons.meteor.level++; weapons.meteor.damage += 20; weapons.meteor.area += 1; showStatChange(`Meteor Level ${weapons.meteor.level}`); } }] : []),
+          ...(weapons.aura.active && weapons.aura.level < 5 ? [{ id: 'aura_up', icon: '🌀', title: `AURA Lv.${weapons.aura.level + 1}`, desc: 'Damage +3, Range +10%', apply: () => { weapons.aura.level++; weapons.aura.damage += 3; weapons.aura.range = Math.min(5, weapons.aura.range * 1.1); showStatChange(`Aura Level ${weapons.aura.level}`); } }] : []),
+          ...(weapons.doubleBarrel.active && weapons.doubleBarrel.level < 5 ? [{ id: 'dbl_up', icon: '🔫', title: `DOUBLE BARREL Lv.${weapons.doubleBarrel.level + 1}`, desc: 'Damage +12, Fire Rate +10%', apply: () => { weapons.doubleBarrel.level++; weapons.doubleBarrel.damage += 12; weapons.doubleBarrel.cooldown *= 0.9; showStatChange(`Double Barrel Level ${weapons.doubleBarrel.level}`); } }] : [])
+        ];
+
+        // Prefer new weapons first; pad with weapon upgrades to always reach 6 choices
+        const shuffledNew = inactiveWeapons.sort(() => 0.5 - Math.random());
+        const shuffledUp  = upgradeWeapons.sort(() => 0.5 - Math.random());
+        choices = [...shuffledNew, ...shuffledUp].slice(0, 6);
+
+        // If still < 6 (edge case: all weapons maxed), loop inactive weapons again or repeat upgrades
+        if (choices.length < 6) {
+          const filler = [...shuffledNew, ...shuffledUp];
+          while (choices.length < 6 && filler.length) {
+            const pick = filler.shift();
+            if (!choices.find(c => c.id === pick.id)) choices.push(pick);
+          }
         }
-        // Add 3 common upgrades
-        choices.push(...commonUpgrades.sort(() => 0.5 - Math.random()).slice(0, 3));
       }
       // Level 10: CLASS SELECTION - ALWAYS SHOW 6 CHOICES
       else if (playerStats.lvl === 10) {
@@ -14984,6 +15081,17 @@
       playerStats.armor = baseArmor + gearStats.flexibility + flexibilityArmor; // Flexibility gives flat armor bonus
       playerStats.hpRegen = baseRegen + attrRegen + passiveRegenBonus;
       playerStats.gold = 0;
+
+      // --- NEW STATS: connected to camp upgrades and attributes ---
+      // dashPower: how far/fast dash goes — scales with strength (physical power) and endurance
+      playerStats.dashPower = 1.0 + (strength * 0.04) + (trainingEndurance * 0.03);
+      // autoAimAccuracy: 0=always miss, 1=perfect aim — starts low, improves with dexterity
+      playerStats.autoAimAccuracy = Math.min(1.0, 0.30 + dexterity * 0.08 + (saveData.upgrades.attackSpeed || 0) * 0.02);
+      // turnResponse/stopResponse: how quickly player pivots — scales with flexibility (agility)
+      playerStats.turnResponse  = 1.0 + trainingFlexibility * 0.05 + dexterity * 0.02;
+      playerStats.stopResponse  = 1.0 + trainingFlexibility * 0.05 + dexterity * 0.02;
+      // manualAimAccuracy: similar to autoAim but for manual aiming — scales differently
+      playerStats.manualAimAccuracy = Math.min(1.0, 0.60 + dexterity * 0.04 + trainingFlexibility * 0.02);
       waveCount = 0;
       lastWaveEndTime = 0; // Reset wave timing
       miniBossesSpawned.clear(); // Reset mini-boss tracking
@@ -15029,6 +15137,8 @@
       // Reset temporary skills (these should not persist between runs)
       playerStats.dashCooldownReduction = 0;
       playerStats.dashDistanceBonus = 0;
+      // Apply dashPower from camp upgrades/attributes to base dash distance
+      dashDistance = 2.5 * (playerStats.dashPower || 1.0);
       playerStats.hasSecondWind = false;
       playerStats.lifeStealPercent = 0;
       playerStats.thornsPercent = 0;
@@ -16485,18 +16595,22 @@
             );
             // Mark projectile as from drone turret for damage calculation
             projectile.isDroneTurret = true;
-            // Make drone bullets smaller and faster
-            projectile.mesh.scale.set(0.5, 0.5, 0.5);
+            // Drone shots: very small (barely visible) but fast — high-DPS volume fire
+            projectile.mesh.scale.set(0.35, 0.35, 0.35);
+            projectile.mesh.material.color.setHex(0x00FFFF); // Cyan tint for drone shots
             if (projectile.glow) {
-              projectile.glow.scale.set(0.5, 0.5, 0.5);
+              projectile.glow.scale.set(0.35, 0.35, 0.35);
+              projectile.glow.material.color.setHex(0x00FFFF);
             }
-            projectile.speed = 0.6; // Faster than regular bullets
-            projectile.vx = projectile.vx * 1.5;
-            projectile.vz = projectile.vz * 1.5;
+            // Fast projectile speed — drones fire many rapid shots
+            projectile.vx = projectile.vx * 2.2;
+            projectile.vz = projectile.vz * 2.2;
+            projectile.life = 30; // Short lifetime = close-range rapid fire
+            projectile.maxLife = 30;
             projectiles.push(projectile);
             
-            // Small muzzle flash from drone
-            const flashLight = new THREE.PointLight(0x00FFFF, 2, 8);
+            // Tiny cyan muzzle flash from drone
+            const flashLight = new THREE.PointLight(0x00FFFF, 1.5, 5);
             flashLight.position.copy(drone.mesh.position);
             flashLight.position.y += 0.2;
             scene.add(flashLight);
@@ -16507,7 +16621,7 @@
               if (idx > -1) flashLights.splice(idx, 1);
               const tidx = activeTimeouts.indexOf(timeoutId);
               if (tidx > -1) activeTimeouts.splice(tidx, 1);
-            }, 50);
+            }, 40);
             activeTimeouts.push(timeoutId);
             
             playSound('shoot');
@@ -16659,8 +16773,117 @@
         weapons.fireRing.lastShot = time;
       }
 
-      // Entities Update
-      enemies.forEach(e => e.update(dt, player.mesh.position));
+      // 9. LIGHTNING ARC — chain lightning between up to N enemies
+      if (weapons.lightning && weapons.lightning.active && time - weapons.lightning.lastShot > weapons.lightning.cooldown) {
+        let nearest = null;
+        let minDst = Infinity;
+        for (let e of enemies) {
+          if (e.isDead) continue;
+          const d = player.mesh.position.distanceTo(e.mesh.position);
+          if (d < weapons.lightning.range && d < minDst) { minDst = d; nearest = e; }
+        }
+        if (nearest) {
+          const chainCount = weapons.lightning.chainCount || 3;
+          const hitTargets = new Set();
+          let current = nearest;
+          for (let c = 0; c < chainCount && current; c++) {
+            if (hitTargets.has(current)) break;
+            hitTargets.add(current);
+            const dmg = (weapons.lightning.damage * playerStats.strength) * (1 - c * 0.2); // 20% falloff per chain
+            const isCrit = Math.random() < playerStats.critChance;
+            current.takeDamage(Math.floor(isCrit ? dmg * playerStats.critDmg : dmg), isCrit);
+            spawnParticles(current.mesh.position, 0xFFFF00, 6);
+            spawnParticles(current.mesh.position, 0x00FFFF, 4);
+            // Find next chain target
+            let nextTarget = null; let nextDist = Infinity;
+            for (let e of enemies) {
+              if (e.isDead || hitTargets.has(e)) continue;
+              const d = current.mesh.position.distanceTo(e.mesh.position);
+              if (d < 6 && d < nextDist) { nextDist = d; nextTarget = e; }
+            }
+            current = nextTarget;
+          }
+          // Lightning flash
+          const lFlash = new THREE.PointLight(0xFFFF00, 6, 14); lFlash.position.copy(nearest.mesh.position); lFlash.position.y += 1;
+          scene.add(lFlash); flashLights.push(lFlash);
+          const ltId = setTimeout(() => { scene.remove(lFlash); const li = flashLights.indexOf(lFlash); if (li > -1) flashLights.splice(li, 1); }, 100);
+          activeTimeouts.push(ltId);
+          weapons.lightning.lastShot = time;
+          playSound('hit');
+        }
+      }
+
+      // 10. POISON CLOUD — AoE damage field around player that poisons nearby enemies
+      if (weapons.poison && weapons.poison.active && time - weapons.poison.lastShot > weapons.poison.cooldown) {
+        enemies.forEach(e => {
+          if (e.isDead) return;
+          const d = player.mesh.position.distanceTo(e.mesh.position);
+          if (d < weapons.poison.range) {
+            const dmg = weapons.poison.damage * playerStats.strength;
+            e.takeDamage(Math.floor(dmg));
+            spawnParticles(e.mesh.position, 0x00FF00, 4);
+            spawnParticles(e.mesh.position, 0x44FF44, 3);
+          }
+        });
+        // Poison cloud visual
+        spawnParticles(player.mesh.position, 0x00FF00, 8);
+        spawnParticles(player.mesh.position, 0x88FF44, 6);
+        weapons.poison.lastShot = time;
+      }
+
+      // 11. HOMING MISSILE — slow tracking projectile
+      if (weapons.homing && weapons.homing.active && time - weapons.homing.lastShot > weapons.homing.cooldown) {
+        let nearest = null; let minDst = Infinity;
+        for (let e of enemies) {
+          if (e.isDead) continue;
+          const d = player.mesh.position.distanceTo(e.mesh.position);
+          if (d < weapons.homing.range && d < minDst) { minDst = d; nearest = e; }
+        }
+        if (nearest) {
+          const missileGeo = new THREE.ConeGeometry(0.2, 0.6, 5);
+          const missileMat = new THREE.MeshBasicMaterial({ color: 0xFF6600 });
+          const missileMesh = new THREE.Mesh(missileGeo, missileMat);
+          missileMesh.position.set(player.mesh.position.x, 0.6, player.mesh.position.z);
+          scene.add(missileMesh);
+          let target = nearest;
+          let mLife = 120;
+          const mVel = new THREE.Vector3(target.mesh.position.x - missileMesh.position.x, 0, target.mesh.position.z - missileMesh.position.z).normalize().multiplyScalar(0.25);
+          if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
+            managedAnimations.push({ update(_dt) {
+              mLife--;
+              // Home toward target
+              if (!target.isDead) {
+                const desired = new THREE.Vector3(target.mesh.position.x - missileMesh.position.x, 0, target.mesh.position.z - missileMesh.position.z).normalize().multiplyScalar(0.25);
+                mVel.lerp(desired, 0.12);
+              }
+              missileMesh.position.add(mVel);
+              missileMesh.rotation.y = Math.atan2(mVel.x, mVel.z);
+              spawnParticles(missileMesh.position, 0xFF4400, 2);
+              // Explode on contact
+              for (let e of enemies) {
+                if (e.isDead) continue;
+                if (missileMesh.position.distanceTo(e.mesh.position) < 1.2) {
+                  const dmg = (weapons.homing.damage || 45) * playerStats.strength;
+                  e.takeDamage(Math.floor(dmg));
+                  spawnParticles(missileMesh.position, 0xFF4500, 12);
+                  spawnParticles(missileMesh.position, 0xFFAA00, 8);
+                  scene.remove(missileMesh); missileMesh.geometry.dispose(); missileMesh.material.dispose();
+                  return false;
+                }
+              }
+              if (mLife <= 0) {
+                scene.remove(missileMesh); missileMesh.geometry.dispose(); missileMesh.material.dispose();
+                return false;
+              }
+              return true;
+            }});
+          } else {
+            scene.remove(missileMesh); missileMesh.geometry.dispose(); missileMesh.material.dispose();
+          }
+          weapons.homing.lastShot = time;
+          playSound('shoot');
+        }
+      }
       updateWaterParticles(dt);
       updateStatBar();
       
@@ -16992,7 +17215,27 @@
       const now = Date.now();
       if (now - lastCleanupTime > 3000) { // Run cleanup every 3 seconds
         lastCleanupTime = now;
-        
+
+        // Scene children growth guard — warn and cull stale invisible meshes if count exceeds threshold
+        const MAX_SCENE_CHILDREN = 600;
+        if (scene.children.length > MAX_SCENE_CHILDREN) {
+          console.warn(`[Perf] scene.children=${scene.children.length} exceeds ${MAX_SCENE_CHILDREN}. Culling invisible non-tracked meshes.`);
+          const toRemove = [];
+          for (let i = scene.children.length - 1; i >= 0; i--) {
+            const obj = scene.children[i];
+            // Only cull plain Mesh objects that have no userData tracking and are fully transparent
+            if (obj.isMesh && !obj.userData.tracked && obj.material && obj.material.transparent && obj.material.opacity <= 0.01) {
+              toRemove.push(obj);
+            }
+          }
+          toRemove.forEach(obj => {
+            scene.remove(obj);
+            if (obj.geometry) obj.geometry.dispose();
+            if (obj.material) obj.material.dispose();
+          });
+          if (toRemove.length) console.warn(`[Perf] Culled ${toRemove.length} stale transparent meshes.`);
+        }
+
         // Limit max items on ground (memory optimization)
         const MAX_EXP_GEMS = 100;
         const MAX_GOLD_COINS = 50;
