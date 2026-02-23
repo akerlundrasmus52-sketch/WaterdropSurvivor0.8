@@ -784,6 +784,7 @@
         
         // Store base scale for breathing animation efficiency
         this.baseScale = 1.0;
+        this._breathScale = 1.0; // Multiplier from cigar breathing, applied on top of spring-damper
       }
 
       update(dt) {
@@ -1068,10 +1069,8 @@
         // Clamp to sane range
         this.currentScaleY = Math.max(0.3, Math.min(2.0, this.currentScaleY));
         this.currentScaleXZ = Math.max(0.5, Math.min(2.0, this.currentScaleXZ));
+        // Note: mesh.scale is applied after cigar breathing section, combined with _breathScale
         
-        this.mesh.scale.y = this.currentScaleY;
-        this.mesh.scale.x = this.currentScaleXZ;
-        this.mesh.scale.z = this.currentScaleXZ;
         // Shed water particles when moving fast
         if (speedMag > 0.4 && Math.random() < dt2 * speedMag * 3 && !this.isDashing) {
           const n = Math.floor(Math.random() * 2) + 1;
@@ -1111,6 +1110,7 @@
         }
         
         // Animate cigar tip with breathing animation (breath-in/breath-out cycle)
+        this._breathScale = 1.0; // Reset each frame; updated below if cigar tip exists
         if (this.cigarTip) {
           // Breathing animation cycle
           this.breathTimer += dt;
@@ -1125,22 +1125,20 @@
             this.cigarTip.material.opacity = tipBrightness;
             this.cigarTip.scale.set(1 + inhaleProgress * 0.3, 1 + inhaleProgress * 0.3, 1 + inhaleProgress * 0.3);
             
-            // Subtle body scaling during inhale - efficient approach
-            const targetScale = this.baseScale * (1 + inhaleProgress * 0.05);
-            this.mesh.scale.set(targetScale, targetScale, targetScale);
+            // Subtle body scaling during inhale - applied as multiplier on spring-damper
+            this._breathScale = 1 + inhaleProgress * 0.05;
           } else if (breathPhase < 0.5) {
             // Holding breath
             this.isBreathingIn = false;
             this.cigarTip.material.opacity = 1.0;
             this.cigarTip.scale.set(1.3, 1.3, 1.3);
-            this.mesh.scale.set(this.baseScale * 1.05, this.baseScale * 1.05, this.baseScale * 1.05);
+            this._breathScale = 1.05;
           } else {
             // Breathing out - emit smoke from mouth
             this.isBreathingIn = false;
             const exhaleProgress = (breathPhase - 0.5) / 0.5;
             const tipBrightness = 1.0 - exhaleProgress * 0.3 + Math.sin(gameTime * 8) * 0.1;
-            const targetScale = this.baseScale * (1.05 - exhaleProgress * 0.05);
-            this.mesh.scale.set(targetScale, targetScale, targetScale);
+            this._breathScale = 1.05 - exhaleProgress * 0.05;
             this.cigarTip.material.opacity = tipBrightness;
             this.cigarTip.scale.set(1.3 - exhaleProgress * 0.3, 1.3 - exhaleProgress * 0.3, 1.3 - exhaleProgress * 0.3);
             
@@ -1196,6 +1194,12 @@
             }
           }
         }
+        
+        // Apply spring-damper scale combined with breathing multiplier
+        // This ensures squish/stretch, wobble, and dash deformation all work alongside breathing
+        this.mesh.scale.y = this.currentScaleY * this._breathScale;
+        this.mesh.scale.x = this.currentScaleXZ * this._breathScale;
+        this.mesh.scale.z = this.currentScaleXZ * this._breathScale;
         
         // Blinking eyes animation
         this.blinkTimer += dt;
@@ -1478,14 +1482,11 @@
           spawnWaterDroplet(this.mesh.position);
         }
         
-        // More dramatic squishy deformation animation
-        this.mesh.scale.set(1.4, 0.6, 1.4); // More squished
-        setTimeout(() => {
-          this.mesh.scale.set(0.7, 1.3, 0.7); // More stretched
-          setTimeout(() => {
-            this.mesh.scale.set(1, 1, 1);
-          }, 50);
-        }, 50);
+        // Squishy deformation on hit - drive spring-damper directly for smooth recovery
+        this.currentScaleXZ = 1.4;
+        this.currentScaleY = 0.6;
+        this.scaleXZVel = 0;
+        this.scaleYVel = 0;
         
         // FRESH IMPLEMENTATION: Screen shake scales with damage amount
         const originalCameraPos = { 
@@ -2396,8 +2397,10 @@
           this.dieStandard(enemyColor);
         }
         
-        // Flying enemies fall to ground
+        // Flying enemies fall to ground (animation checks flyMesh.parent each frame;
+        // if cap is reached, the enemy mesh still gets removed at scene.remove below)
         if (this.isFlying) {
+          if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
           const fallDuration = 60;
           let fallTimer = 0;
           const startY = this.mesh.position.y;
@@ -2412,6 +2415,7 @@
             }
             return false;
           }});
+          }
         }
         
         // Screen flash on kill (dopamine boost) - stronger flash for mini-boss
@@ -2722,6 +2726,7 @@
           
           // Fade out
           let corpseLife = 180;
+          if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
           managedAnimations.push({ update(_dt) {
             corpseLife--;
             corpse.material.opacity = (corpseLife / 180) * 0.7;
@@ -2737,6 +2742,11 @@
             }
             return true;
           }});
+          } else {
+            scene.remove(corpse); scene.remove(bloodPool);
+            corpse.geometry.dispose(); corpse.material.dispose();
+            bloodPool.geometry.dispose(); bloodPool.material.dispose();
+          }
         } else if (deathVariation < 0.75) {
           // DISINTEGRATION DEATH: Enemy dissolves into particles
           spawnParticles(this.mesh.position, enemyColor, 30);
@@ -2807,6 +2817,7 @@
             
             // Fade out
             let life = 100;
+            if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
             managedAnimations.push({ update(_dt) {
               life--;
               splatter.material.opacity = (life / 100) * 0.6;
@@ -2818,6 +2829,10 @@
               }
               return true;
             }});
+            } else {
+              scene.remove(splatter);
+              splatter.geometry.dispose(); splatter.material.dispose();
+            }
           }
           
           // Central corpse piece
@@ -2836,6 +2851,7 @@
           scene.add(corpse);
           
           let corpseLife = 120;
+          if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
           managedAnimations.push({ update(_dt) {
             corpseLife--;
             corpse.material.opacity = (corpseLife / 120) * 0.8;
@@ -2847,6 +2863,10 @@
             }
             return true;
           }});
+          } else {
+            scene.remove(corpse);
+            corpse.geometry.dispose(); corpse.material.dispose();
+          }
         }
       }
       
@@ -2886,6 +2906,7 @@
         
         // Fade to ash
         let life = 120;
+        if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
         managedAnimations.push({ update(_dt) {
           life--;
           corpse.material.opacity = (life / 120) * 0.8;
@@ -2901,6 +2922,11 @@
           }
           return true;
         }});
+        } else {
+          scene.remove(corpse); scene.remove(burnMark);
+          corpse.geometry.dispose(); corpse.material.dispose();
+          burnMark.geometry.dispose(); burnMark.material.dispose();
+        }
       }
       
       dieByIce(enemyColor) {
@@ -2994,6 +3020,7 @@
         
         // Fade corpse
         let corpseLife = 120;
+        if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
         managedAnimations.push({ update(_dt) {
           corpseLife--;
           corpse.material.opacity = (corpseLife / 120) * 0.9;
@@ -3005,6 +3032,10 @@
           }
           return true;
         }});
+        } else {
+          scene.remove(corpse);
+          corpse.geometry.dispose(); corpse.material.dispose();
+        }
       }
       
       dieByShotgun(enemyColor) {
@@ -3074,6 +3105,7 @@
         
         // Fade blood
         let life = 150;
+        if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
         managedAnimations.push({ update(_dt) {
           life--;
           bloodPool.material.opacity = (life / 150) * 0.7;
@@ -3085,6 +3117,10 @@
           }
           return true;
         }});
+        } else {
+          scene.remove(bloodPool);
+          bloodPool.geometry.dispose(); bloodPool.material.dispose();
+        }
       }
       
       dieByHeadshot(enemyColor) {
@@ -3132,6 +3168,7 @@
         
         // Blood spray trail from neck
         let headLife = 80;
+        if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
         managedAnimations.push({ update(_dt) {
           headLife--;
           head.position.add(headVel);
@@ -3153,6 +3190,10 @@
           }
           return true;
         }});
+        } else {
+          scene.remove(head);
+          head.geometry.dispose(); head.material.dispose();
+        }
         
         // Body falls (corpse without head)
         const corpseGeo = new THREE.CircleGeometry(0.6, 16);
@@ -3228,6 +3269,7 @@
         
         // Fade corpse
         let life = 120;
+        if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
         managedAnimations.push({ update(_dt) {
           life--;
           corpse.material.opacity = (life / 120) * 0.8;
@@ -3243,6 +3285,11 @@
           }
           return true;
         }});
+        } else {
+          scene.remove(corpse); scene.remove(bloodPool);
+          corpse.geometry.dispose(); corpse.material.dispose();
+          bloodPool.geometry.dispose(); bloodPool.material.dispose();
+        }
       }
     }
 
@@ -12119,10 +12166,14 @@
       playerStats.lvl++;
       playerStats.exp -= playerStats.expReq;
       
-      // Victory condition: Reaching level 150
-      if (playerStats.lvl === 150) {
+      // Victory condition: Reaching level 50
+      if (playerStats.lvl === 50) {
+        // Reset immediately so the game doesn't stay stuck in paused/pending state
+        // while the victory message and gameOver() are deferred
+        levelUpPending = false;
+        setGamePaused(false);
         setTimeout(() => {
-          showStatChange('🎉 ULTIMATE VICTORY! You reached Level 150! 🎉');
+          showStatChange('🎉 ULTIMATE VICTORY! You reached Level 50! 🎉');
           setTimeout(() => {
             gameOver(); // Show game over screen as victory screen
           }, 2000);
@@ -12871,7 +12922,7 @@
       
       // Quest 8: Force weapon choice when quest8_newWeapon is active (grant first new weapon)
       if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest8_newWeapon' &&
-          ![4, 5, 8, 15, 20].includes(playerStats.lvl)) {
+          ![4, 8, 15, 20].includes(playerStats.lvl)) {
         modal.querySelector('h2').innerText = 'NEW WEAPON!';
         modal.querySelector('h2').style.fontSize = '36px';
         const allWeaponChoicesQ8 = [
@@ -12889,8 +12940,8 @@
         }
         choices.push(...commonUpgrades.sort(() => 0.5 - Math.random()).slice(0, 3));
       }
-      // Levels 3, 9, 17, 23: WEAPON UPGRADE LEVELS
-      else if ([3, 9, 17, 23].includes(playerStats.lvl)) {
+      // Levels 5, 9, 17, 23: WEAPON UPGRADE LEVELS (first weapon upgrade at level 5)
+      else if ([5, 9, 17, 23].includes(playerStats.lvl)) {
         modal.querySelector('h2').innerText = 'WEAPON UPGRADE!';
         modal.querySelector('h2').style.fontSize = '36px';
         
@@ -13087,8 +13138,8 @@
           choices.push(...additionalUpgrades.slice(0, needed));
         }
       }
-      // WEAPON UNLOCK: Level 4, 5, 8, 15, 20 for new weapon unlocks
-      else if ([4, 5, 8, 15, 20].includes(playerStats.lvl)) {
+      // WEAPON UNLOCK: Level 4, 8, 15, 20 for new weapon unlocks
+      else if ([4, 8, 15, 20].includes(playerStats.lvl)) {
         modal.querySelector('h2').innerText = 'NEW WEAPON!';
         modal.querySelector('h2').style.fontSize = '36px';
         // Build list of all possible new weapons, filtering already-active ones
