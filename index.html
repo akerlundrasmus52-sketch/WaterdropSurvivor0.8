@@ -180,6 +180,24 @@
   <div id="camp-screen">
     <div class="screen-title">⛺ CAMP</div>
     
+    <!-- Magazine-style action button: "Continue Game" when in-run, "Start New Run" otherwise -->
+    <button id="camp-action-btn" class="camp-action-btn" style="
+      display: block;
+      margin: 0 auto 15px auto;
+      padding: 10px 32px;
+      font-family: 'Bangers', cursive;
+      font-size: 20px;
+      letter-spacing: 2px;
+      background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+      color: #FFD700;
+      border: 3px solid #FFD700;
+      border-radius: 4px;
+      box-shadow: 4px 4px 0 #000, 0 0 12px rgba(255,215,0,0.3);
+      cursor: pointer;
+      text-transform: uppercase;
+      text-shadow: 1px 1px 0 #000;
+    ">▶ START NEW RUN</button>
+    
     <!-- Account Level Display (top-center) -->
     <div id="account-level-display" style="text-align:center;margin-bottom:15px;background:linear-gradient(135deg,rgba(20,20,40,0.9),rgba(40,20,60,0.9));border:2px solid #FFD700;border-radius:12px;padding:8px 14px;max-width:220px;width:100%;">
       <div style="font-family:'Bangers',cursive;font-size:11px;color:#aaa;letter-spacing:2px;">ACCOUNT LEVEL</div>
@@ -282,7 +300,6 @@
       </div>
     </div>
 
-    <button class="back-btn" id="camp-back-btn">BACK TO MENU</button>
   </div>
 
   <!-- Settings Modal -->
