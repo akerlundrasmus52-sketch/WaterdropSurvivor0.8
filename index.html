@@ -116,14 +116,18 @@
   <!-- Main Menu -->
   <!-- Progression Shop -->
   <div id="progression-shop">
-    <div class="shop-header">
-      <div class="shop-title">PROGRESSION UPGRADES</div>
-      <div class="gold-display" id="shop-gold">GOLD: 0</div>
+    <div class="camp-menu-box">
+      <div class="camp-menu-pinned-header">
+        <div class="shop-title">⚒️ PROGRESSION UPGRADES</div>
+        <div class="gold-display" id="shop-gold">GOLD: 0</div>
+      </div>
+      <div class="camp-menu-scroll">
+        <div class="shop-grid" id="shop-grid">
+          <!-- Upgrade cards will be added dynamically -->
+        </div>
+      </div>
+      <button class="back-btn camp-section-back-btn" id="shop-back-btn">← Back to Camp</button>
     </div>
-    <div class="shop-grid" id="shop-grid">
-      <!-- Upgrade cards will be added dynamically -->
-    </div>
-    <button class="back-btn" id="shop-back-btn">BACK TO MENU</button>
   </div>
 
   <!-- Achievements Screen -->
@@ -132,7 +136,7 @@
     <div class="screen-content" id="achievements-content">
       <!-- Dynamically populated -->
     </div>
-    <button class="back-btn" id="achievements-back-btn">BACK TO MENU</button>
+    <button class="back-btn" id="achievements-back-btn">← Back to Camp</button>
   </div>
 
   <!-- Attributes Screen -->
@@ -144,7 +148,7 @@
     <div class="screen-content" id="attributes-content" style="display: grid; gap: 15px; width: 100%; max-width: 700px; margin: 0 auto;">
       <!-- Dynamically populated -->
     </div>
-    <button class="back-btn" id="attributes-back-btn" style="margin-top: 20px;">BACK TO MENU</button>
+    <button class="back-btn" id="attributes-back-btn" style="margin-top: 20px;">← Back to Camp</button>
   </div>
 
   <!-- Gear & Equipment Screen -->
@@ -164,7 +168,7 @@
     <div class="screen-content" id="gear-content" style="display: grid; gap: 15px; width: 100%; max-width: 900px; margin: 0 auto;">
       <!-- Dynamically populated -->
     </div>
-    <button class="back-btn" id="gear-back-btn" style="margin-top: 20px;">BACK TO MENU</button>
+    <button class="back-btn" id="gear-back-btn" style="margin-top: 20px;">← Back to Camp</button>
   </div>
 
   <!-- Credits Screen -->
@@ -226,77 +230,89 @@
     </div>
 
     <!-- Skills Section -->
-    <div id="camp-skills-section" style="display: none; width: 100%; max-width: 900px;">
-      <button class="back-btn camp-section-back-btn" style="margin-bottom: 15px; font-size: 14px; padding: 8px 20px;">← Back to Buildings</button>
-      <div style="color: #FFD700; font-size: 20px; margin-bottom: 15px;">Skill Tree</div>
-      <div style="color: #5DADE2; font-size: 16px; margin-bottom: 15px;" id="skill-points-display">
-        Skill Points Available: 0
-      </div>
-      <div class="skill-tree-container" id="camp-skills-content">
-        <!-- Dynamically populated -->
+    <div id="camp-skills-section" style="display: none; width: 100%; max-width: 700px;">
+      <div class="camp-menu-box camp-menu-scroll">
+        <div class="camp-menu-pinned-header">
+          <div style="color: #FFD700; font-size: 20px;">🌳 Skill Tree</div>
+          <div style="color: #5DADE2; font-size: 14px;" id="skill-points-display">SP: 0</div>
+        </div>
+        <button class="back-btn camp-section-back-btn" style="margin-bottom: 15px; font-size: 14px; padding: 8px 20px;">← Back to Camp</button>
+        <div class="skill-tree-container" id="camp-skills-content">
+          <!-- Dynamically populated -->
+        </div>
       </div>
     </div>
 
     <!-- Sleep Section -->
-    <div id="camp-sleep-section" style="display: none; width: 100%; max-width: 600px;">
-      <button class="back-btn camp-section-back-btn" style="margin-bottom: 15px; font-size: 14px; padding: 8px 20px;">← Back to Buildings</button>
-      <div style="color: #FFD700; font-size: 20px; margin-bottom: 15px;">💤 Rest & Prepare</div>
-      <div style="background: rgba(0,0,0,0.5); padding: 30px; border-radius: 10px; text-align: center;">
-        <p style="font-size: 18px; margin-bottom: 30px; line-height: 1.6;">
-          Choose when to start your next run. Time of day affects enemy behavior and loot chances.
-        </p>
-        <div style="display: flex; gap: 20px; justify-content: center; flex-wrap: wrap;">
-          <div id="sleep-day-option" style="flex: 1; min-width: 200px; background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); padding: 20px; border-radius: 10px; cursor: pointer; border: 3px solid #FFD700;">
-            <div style="font-size: 40px; margin-bottom: 10px;">☀️</div>
-            <div style="font-size: 20px; font-weight: bold; color: #000; margin-bottom: 10px;">DAY</div>
-            <div style="font-size: 14px; color: #333;">Better visibility, standard enemy spawns</div>
-          </div>
-          <div id="sleep-night-option" style="flex: 1; min-width: 200px; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); padding: 20px; border-radius: 10px; cursor: pointer; border: 3px solid transparent;">
-            <div style="font-size: 40px; margin-bottom: 10px;">🌙</div>
-            <div style="font-size: 20px; font-weight: bold; color: #FFF; margin-bottom: 10px;">NIGHT</div>
-            <div style="font-size: 14px; color: #AAA;">Harder enemies, +50% gold & XP</div>
-          </div>
+    <div id="camp-sleep-section" style="display: none; width: 100%; max-width: 700px;">
+      <div class="camp-menu-box camp-menu-scroll">
+        <div class="camp-menu-pinned-header">
+          <div style="color: #FFD700; font-size: 20px;">💤 Rest &amp; Prepare</div>
         </div>
-        <p style="font-size: 14px; margin-top: 20px; color: #AAA;">
-          Current selection: <span id="current-time-choice" style="color: #FFD700; font-weight: bold;">DAY</span>
-        </p>
+        <button class="back-btn camp-section-back-btn" style="margin-bottom: 15px; font-size: 14px; padding: 8px 20px;">← Back to Camp</button>
+        <div style="text-align: center;">
+          <p style="font-size: 16px; margin-bottom: 20px; line-height: 1.6;">
+            Choose when to start your next run. Time of day affects enemy behavior and loot chances.
+          </p>
+          <div style="display: flex; gap: 20px; justify-content: center; flex-wrap: wrap;">
+            <div id="sleep-day-option" style="flex: 1; min-width: 160px; background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); padding: 20px; border-radius: 10px; cursor: pointer; border: 3px solid #FFD700;">
+              <div style="font-size: 40px; margin-bottom: 10px;">☀️</div>
+              <div style="font-size: 20px; font-weight: bold; color: #000; margin-bottom: 10px;">DAY</div>
+              <div style="font-size: 14px; color: #333;">Better visibility, standard enemy spawns</div>
+            </div>
+            <div id="sleep-night-option" style="flex: 1; min-width: 160px; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); padding: 20px; border-radius: 10px; cursor: pointer; border: 3px solid transparent;">
+              <div style="font-size: 40px; margin-bottom: 10px;">🌙</div>
+              <div style="font-size: 20px; font-weight: bold; color: #FFF; margin-bottom: 10px;">NIGHT</div>
+              <div style="font-size: 14px; color: #AAA;">Harder enemies, +50% gold &amp; XP</div>
+            </div>
+          </div>
+          <p style="font-size: 14px; margin-top: 20px; color: #AAA;">
+            Current selection: <span id="current-time-choice" style="color: #FFD700; font-weight: bold;">DAY</span>
+          </p>
+        </div>
       </div>
     </div>
 
     <!-- Training Section -->
     <div id="camp-training-section" style="display: none; width: 100%; max-width: 700px;">
-      <button class="back-btn camp-section-back-btn" style="margin-bottom: 15px; font-size: 14px; padding: 8px 20px;">← Back to Buildings</button>
-      <div style="color: #FFD700; font-size: 20px; margin-bottom: 15px;">🏋️ Training Hall</div>
-      <div style="background: rgba(0,0,0,0.5); padding: 20px; border-radius: 10px; margin-bottom: 20px;">
-        <p style="font-size: 16px; margin-bottom: 15px;">
-          Training Points Available: <span id="training-points-display" style="color: #FFD700; font-weight: bold;">0</span>
-        </p>
-        <p style="font-size: 14px; color: #AAA; line-height: 1.6;">
-          You earn 1 training point every 24 hours. Spend gold + 1 training point to permanently increase an attribute by +1.
-        </p>
-        <p style="font-size: 12px; color: #888; margin-top: 10px;" id="next-training-point-time">
-          Next training point in: Calculating...
-        </p>
-      </div>
-      <div id="training-attributes-content" style="display: flex; flex-direction: column; gap: 15px;">
-        <!-- Dynamically populated -->
+      <div class="camp-menu-box camp-menu-scroll">
+        <div class="camp-menu-pinned-header">
+          <div style="color: #FFD700; font-size: 20px;">🏋️ Training Hall</div>
+        </div>
+        <button class="back-btn camp-section-back-btn" style="margin-bottom: 15px; font-size: 14px; padding: 8px 20px;">← Back to Camp</button>
+        <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; margin-bottom: 20px;">
+          <p style="font-size: 16px; margin-bottom: 10px;">
+            Training Points Available: <span id="training-points-display" style="color: #FFD700; font-weight: bold;">0</span>
+          </p>
+          <p style="font-size: 14px; color: #AAA; line-height: 1.6;">
+            You earn 1 training point every 24 hours. Spend gold + 1 training point to permanently increase an attribute by +1.
+          </p>
+          <p style="font-size: 12px; color: #888; margin-top: 10px;" id="next-training-point-time">
+            Next training point in: Calculating...
+          </p>
+        </div>
+        <div id="training-attributes-content" style="display: flex; flex-direction: column; gap: 15px;">
+          <!-- Dynamically populated -->
+        </div>
       </div>
     </div>
 
     <!-- Passive Skills Section -->
     <div id="camp-passive-section" style="display: none; width: 100%; max-width: 700px;">
-      <button class="back-btn camp-section-back-btn" style="margin-bottom: 15px; font-size: 14px; padding: 8px 20px;">← Back to Buildings</button>
-      <div style="color: #FFD700; font-size: 20px; margin-bottom: 15px;">⚗️ Passive Skills</div>
-      <div style="background: rgba(0,0,0,0.5); padding: 20px; border-radius: 10px; margin-bottom: 20px;">
-        <p style="font-size: 14px; color: #AAA; line-height: 1.6;">
-          Passive skills provide permanent bonuses across all runs. Unlock new passives as your Account Level increases.
-        </p>
-        <p style="font-size: 14px; color: #5DADE2; margin-top: 8px;">
-          Passive Skill Points: <span id="passive-skill-points-display" style="color:#FFD700;font-weight:bold;">0</span>
-        </p>
-      </div>
-      <div id="camp-passive-content" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px;">
-        <!-- Dynamically populated -->
+      <div class="camp-menu-box camp-menu-scroll">
+        <div class="camp-menu-pinned-header">
+          <div style="color: #FFD700; font-size: 20px;">⚗️ Passive Skills</div>
+          <div style="font-size: 14px; color: #5DADE2;">Points: <span id="passive-skill-points-display" style="color:#FFD700;font-weight:bold;">0</span></div>
+        </div>
+        <button class="back-btn camp-section-back-btn" style="margin-bottom: 15px; font-size: 14px; padding: 8px 20px;">← Back to Camp</button>
+        <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; margin-bottom: 15px;">
+          <p style="font-size: 14px; color: #AAA; line-height: 1.6;">
+            Passive skills provide permanent bonuses across all runs. Unlock new passives as your Account Level increases.
+          </p>
+        </div>
+        <div id="camp-passive-content" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 15px;">
+          <!-- Dynamically populated -->
+        </div>
       </div>
     </div>
 
