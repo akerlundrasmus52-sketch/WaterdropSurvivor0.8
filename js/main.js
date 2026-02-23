@@ -909,7 +909,9 @@
           }
           
           // Enhanced inertia: Smooth acceleration and deceleration with glide
-          const lerpFactor = joystickLeft.active ? GAME_CONFIG.accelLerpFactor : GAME_CONFIG.decelLerpFactor;
+          // Scale lerpFactor by dt*60 to normalize across frame rates and eliminate jitter
+          const baseLerpFactor = joystickLeft.active ? GAME_CONFIG.accelLerpFactor : GAME_CONFIG.decelLerpFactor;
+          const lerpFactor = Math.min(baseLerpFactor * (dt * 60), 1.0);
           this.velocity.lerp(targetVel, lerpFactor);
           
           // Apply velocity with inertia
@@ -1007,8 +1009,11 @@
             }
           } else if (joystickLeft.active) {
             // If no right stick input and no auto-aim, rotate to face movement direction
-            const angle = Math.atan2(targetVel.x, targetVel.z);
-            this.mesh.rotation.y = angle;
+            // Only update rotation if joystick has meaningful input (prevents jitter near center)
+            if (targetVel.lengthSq() > 0.000001) {
+              const angle = Math.atan2(targetVel.x, targetVel.z);
+              this.mesh.rotation.y = angle;
+            }
           }
         }
         
@@ -7948,6 +7953,10 @@
     // Progress tutorial quest
     function progressTutorialQuest(questId, completed = false) {
       if (saveData.tutorialQuests.currentQuest !== questId) return;
+      // Guard: if already in readyToClaim, don't re-trigger
+      if (saveData.tutorialQuests.readyToClaim && saveData.tutorialQuests.readyToClaim.includes(questId)) return;
+      // Guard: if already completed, don't re-trigger
+      if (saveData.tutorialQuests.completedQuests && saveData.tutorialQuests.completedQuests.includes(questId)) return;
       
       const quest = TUTORIAL_QUESTS[questId];
       if (!quest) return;
@@ -12425,6 +12434,24 @@
     }
     window.forceGameUnpause = forceGameUnpause;
 
+    // Award levels one-at-a-time via the normal levelUp flow to avoid skipping levels.
+    // Uses a short timeout chain so each upgrade modal can complete before the next.
+    function awardLevels(count) {
+      if (!count || count < 1) return;
+      levelUp();
+      if (count > 1) {
+        // Chain remaining levels after a short delay (100ms) so levelUp()'s
+        // own setTimeout for showUpgradeModal (800ms) has been registered first,
+        // preventing stacked calls from racing with each other.
+        const tid = setTimeout(() => {
+          const tidx = activeTimeouts.indexOf(tid);
+          if (tidx > -1) activeTimeouts.splice(tidx, 1);
+          awardLevels(count - 1);
+        }, 100);
+        activeTimeouts.push(tid);
+      }
+    }
+
     // NEW: "LEVEL UP!" text that shoots from character's head
     function createCenteredLevelUpText() {
       const levelUpText = document.createElement('div');
@@ -14582,11 +14609,10 @@
       
       createFloatingText("MONTANA COMPLETE!", montanaQuest.landmark.position);
       
-      // Rewards: +2 levels, +500 gold, +3 attr points
-      playerStats.lvl += 2;
-      playerStats.expReq = playerStats.lvl <= 4 ? Math.floor(GAME_CONFIG.baseExpReq * Math.pow(1.5, playerStats.lvl - 1)) : Math.floor(GAME_CONFIG.baseExpReq * playerStats.lvl);
+      // Rewards: +2 levels (via proper level-up flow), +500 gold, +3 attr points
       playerStats.gold += 500;
       playerStats.attributePoints += 3;
+      awardLevels(2);
       
       createFloatingText("+2 LEVELS!", player.mesh.position);
       createFloatingText("+500 GOLD!", player.mesh.position);
@@ -14630,12 +14656,11 @@
       
       createFloatingText("EIFFEL COMPLETE!", eiffelQuest.landmark.position);
       
-      // Rewards: +3 levels, +1000 gold, +5 attr points, +20 gun damage
-      playerStats.lvl += 3;
-      playerStats.expReq = playerStats.lvl <= 4 ? Math.floor(GAME_CONFIG.baseExpReq * Math.pow(1.5, playerStats.lvl - 1)) : Math.floor(GAME_CONFIG.baseExpReq * playerStats.lvl);
+      // Rewards: +3 levels (via proper level-up flow), +1000 gold, +5 attr points, +20 gun damage
       playerStats.gold += 1000;
       playerStats.attributePoints += 5;
       weapons.gun.damage += 20;
+      awardLevels(3);
       
       createFloatingText("+3 LEVELS!", player.mesh.position);
       createFloatingText("+1000 GOLD!", player.mesh.position);
@@ -16158,6 +16183,9 @@
       } else {
         player.update(dt);
       }
+
+      // Update enemy AI movement (was missing - enemies were frozen)
+      enemies.forEach(e => e.update(dt, player.mesh.position));
 
       // Dash cooldown tick (Feature 1)
       if (isDashing) {
