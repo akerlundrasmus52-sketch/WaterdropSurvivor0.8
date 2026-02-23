@@ -7896,6 +7896,12 @@
         return;
       }
       
+      // Guard: prevent double-claiming if quest was already completed
+      if (saveData.tutorialQuests.completedQuests.includes(questId)) {
+        console.warn('[Quest] Already claimed:', questId);
+        return;
+      }
+      
       // Remove from ready to claim
       const index = saveData.tutorialQuests.readyToClaim.indexOf(questId);
       if (index > -1) {
@@ -8669,6 +8675,15 @@
     }
 
     function updateCampScreen() {
+      // Update action button label based on game state
+      const campActionBtn = document.getElementById('camp-action-btn');
+      if (campActionBtn) {
+        if (isGameActive) {
+          campActionBtn.textContent = '▶ CONTINUE GAME';
+        } else {
+          campActionBtn.textContent = '▶ START NEW RUN';
+        }
+      }
       // Update account level display whenever camp is opened
       updateAccountLevelDisplay();
       // Check for first-time camp visit
@@ -11185,12 +11200,10 @@
       });
       
       optionsCampBtn.addEventListener('click', () => {
-        setGameOver(true);
-        setGameActive(false);
-        stopDroneHum();
-        saveData.totalRuns++;
-        saveData.totalKills += playerStats.kills;
-        saveSaveData();
+        // The options menu was opened with setGamePaused(true) (pauseOverlayCount=1).
+        // We intentionally do NOT call setGamePaused(false) here, so the game
+        // remains paused while in camp. "Continue Game" will call setGamePaused(false)
+        // to resume when the player returns.
         optionsMenu.style.display = 'none';
         updateCampScreen();
         
@@ -11440,14 +11453,15 @@
         if (isGameActive) { setGamePaused(false); } else { showMainMenu(); }
       };
       
-      document.getElementById('camp-back-btn').onclick = () => {
+      document.getElementById('camp-action-btn').onclick = () => {
         playSound('waterdrop');
         document.getElementById('camp-screen').style.display = 'none';
         if (isGameActive) {
           // Resume game when returning from camp during an active run
           setGamePaused(false);
         } else {
-          showMainMenu();
+          // Start a new run
+          startGame();
         }
       };
       
@@ -12129,15 +12143,13 @@
       }
       
       if (playerStats.exp >= playerStats.expReq && !isGameOver && isGameActive && !levelUpPending) {
-        const levelUpModal = document.getElementById('levelup-modal');
-        if (!levelUpModal || levelUpModal.style.display !== 'flex') {
-          levelUp();
-        }
+        levelUp();
       }
       updateHUD();
     }
 
     function levelUp() {
+      if (levelUpPending) return; // Prevent double-trigger
       levelUpPending = true;
       setGamePaused(true);
       
@@ -12236,10 +12248,7 @@
     function checkPendingLevelUp() {
       levelUpPending = false;
       if (playerStats && playerStats.exp >= playerStats.expReq && !isGameOver && isGameActive) {
-        const modal = document.getElementById('levelup-modal');
-        if (!modal || modal.style.display !== 'flex') {
-          levelUp();
-        }
+        levelUp();
       }
     }
     window.checkPendingLevelUp = checkPendingLevelUp;
@@ -12686,6 +12695,11 @@
     }
 
     function showUpgradeModal(isBonusRound = false) {
+      // Bail out if the game has ended; prevents stale setTimeout from showing modal post-death
+      if (isGameOver || !isGameActive) {
+        levelUpPending = false;
+        return;
+      }
       const modal = document.getElementById('levelup-modal');
       const list = document.getElementById('upgrade-list');
       list.innerHTML = '';
