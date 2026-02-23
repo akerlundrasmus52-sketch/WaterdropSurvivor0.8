@@ -763,6 +763,7 @@
         this.wobbleIntensity = 0; // spikes on direction change / dash
         this.prevVelDir = new THREE.Vector3(); // previous velocity direction for direction-change detection
         this.postDashSquish = 0;  // timer for post-dash bounce
+        this.wasMoving = false;   // used to detect stopping transition for squish
         
         // Phase 5: Low health water bleed timer
         this.waterBleedTimer = 0;
@@ -933,10 +934,10 @@
           
           // Add lean/tilt in direction of movement
           if (this.velocity.length() > 0.05) {
-            const leanFactor = GAME_CONFIG.movementLeanFactor * (2.5 + this.wobbleIntensity * 1.5);
+            const leanFactor = GAME_CONFIG.movementLeanFactor * (15 + this.wobbleIntensity * 10);
             const leanAngleX = -this.velocity.z * leanFactor;
             const leanAngleZ = this.velocity.x * leanFactor;
-            const leanDt = Math.min(dt * 15, 0.75);
+            const leanDt = Math.min(dt * 8, 0.5);
             this.mesh.rotation.x += (leanAngleX - this.mesh.rotation.x) * leanDt;
             this.mesh.rotation.z += (leanAngleZ - this.mesh.rotation.z) * leanDt;
           } else {
@@ -1023,7 +1024,14 @@
         // Decay wobble intensity
         this.wobbleIntensity = Math.max(0, this.wobbleIntensity - dt2 * 3);
         
-        // Post-dash squish bounce timer
+        // Stopping squish: detect transition from moving to fully stopped
+        if (this.wasMoving && speedMag < 0.02 && !this.isDashing) {
+          this.postDashSquish = Math.max(this.postDashSquish, 0.7);
+          this.wobbleIntensity = Math.min(1, this.wobbleIntensity + 0.5);
+        }
+        this.wasMoving = speedMag > 0.02;
+
+        // Post-dash / post-stop squish bounce timer
         if (!this.isDashing && this.postDashSquish > 0) {
           this.postDashSquish = Math.max(0, this.postDashSquish - dt2 * 4);
         }
@@ -1035,22 +1043,29 @@
         // Compute target scales
         let targetScaleY, targetScaleXZ;
         if (this.isDashing) {
-          // Dramatic squish during dash
-          targetScaleY = 0.5;
-          targetScaleXZ = 1.5;
+          // Dash START: quick squish then elongate (gives a "push-off" feel)
+          const dashProg = 1 - (this.dashTime / this.dashDuration);
+          if (dashProg < 0.2) {
+            const t = dashProg / 0.2;
+            targetScaleY = 1.0 - t * 0.55;   // 1.0 → 0.45 squish
+            targetScaleXZ = 1.0 + t * 0.5;   // 1.0 → 1.5 expand
+          } else {
+            // Dash BODY: fully elongated in travel direction
+            targetScaleY = 0.45;
+            targetScaleXZ = 1.5;
+          }
         } else if (this.postDashSquish > 0.01) {
-          // Post-dash oscillating bounce
-          const bounce = Math.sin(this.postDashSquish * Math.PI * 3) * 0.25 * this.postDashSquish;
+          // Post-dash/stop oscillating bounce — starts with a stretch, then squish, then settle
+          const bounce = Math.sin(this.postDashSquish * Math.PI * 2.5) * 0.3 * this.postDashSquish;
           targetScaleY = 1.0 + bounce;
           targetScaleXZ = 1.0 - bounce * 0.5;
         } else if (speedMag > 0.05) {
-          // Moving: elongate in direction of travel
-          const squishAmt = Math.min(speedMag * 0.055, 0.28);
-          targetScaleY = 1.0 - squishAmt;
-          targetScaleXZ = 1.0 + squishAmt * 0.8;
-          this.wobblePhase += dt2 * speedMag * 9;
-          targetScaleY += Math.sin(this.wobblePhase) * (0.04 + this.wobbleIntensity * 0.08);
-          targetScaleXZ += Math.cos(this.wobblePhase) * (0.02 + this.wobbleIntensity * 0.04);
+          // Moving: vertical bounce oscillates ~0.94↔1.06, slight XZ squash-stretch
+          this.wobblePhase += dt2 * speedMag * 170;  // phase rate: speedMag(~0.12) * 170 * dt2 ≈ 20 rad/s ≈ 3 Hz
+          const bounce = Math.sin(this.wobblePhase) * (0.06 + this.wobbleIntensity * 0.06);
+          targetScaleY = 1.0 + bounce;
+          const squishAmt = Math.min(speedMag * 1.2, 0.18);
+          targetScaleXZ = 1.0 + squishAmt + Math.cos(this.wobblePhase) * (0.02 + this.wobbleIntensity * 0.03);
         } else {
           // Idle breathing
           this.wobblePhase += dt2 * 2.5;
@@ -1196,10 +1211,14 @@
         }
         
         // Apply spring-damper scale combined with breathing multiplier
+        // Directional stretch: mesh local Z = forward (movement direction), local X = sideways
         // This ensures squish/stretch, wobble, and dash deformation all work alongside breathing
+        const dirStretch = this.isDashing
+          ? 0.38
+          : Math.min(speedMag * 1.3, 0.18);
         this.mesh.scale.y = this.currentScaleY * this._breathScale;
-        this.mesh.scale.x = this.currentScaleXZ * this._breathScale;
-        this.mesh.scale.z = this.currentScaleXZ * this._breathScale;
+        this.mesh.scale.x = this.currentScaleXZ * (1.0 - dirStretch * 0.55) * this._breathScale;
+        this.mesh.scale.z = this.currentScaleXZ * (1.0 + dirStretch * 0.4) * this._breathScale;
         
         // Blinking eyes animation
         this.blinkTimer += dt;
