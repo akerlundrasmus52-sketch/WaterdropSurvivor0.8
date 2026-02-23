@@ -222,21 +222,25 @@
     </div>
 
     <!-- Buildings Section -->
-    <div id="camp-buildings-section" style="width: 100%; max-width: 800px;">
-      <div style="color: #FFD700; font-size: 20px; margin-bottom: 15px;">Camp Buildings</div>
-      <div id="camp-buildings-content">
-        <!-- Dynamically populated -->
+    <div id="camp-buildings-section">
+      <div class="camp-menu-box camp-menu-scroll">
+        <div class="camp-menu-pinned-header">
+          <div style="color: #FFD700; font-size: 20px;">🏕️ Camp Buildings</div>
+        </div>
+        <div id="camp-buildings-content">
+          <!-- Dynamically populated -->
+        </div>
       </div>
     </div>
 
     <!-- Skills Section -->
-    <div id="camp-skills-section" style="display: none; width: 100%; max-width: 700px;">
+    <div id="camp-skills-section" style="display: none; width: 100%;">
       <div class="camp-menu-box camp-menu-scroll">
         <div class="camp-menu-pinned-header">
           <div style="color: #FFD700; font-size: 20px;">🌳 Skill Tree</div>
           <div style="color: #5DADE2; font-size: 14px;" id="skill-points-display">SP: 0</div>
         </div>
-        <button class="back-btn camp-section-back-btn" style="margin-bottom: 15px; font-size: 14px; padding: 8px 20px;">← Back to Camp</button>
+        <button class="back-btn camp-section-back-btn">← Back to Camp</button>
         <div class="skill-tree-container" id="camp-skills-content">
           <!-- Dynamically populated -->
         </div>
@@ -244,12 +248,12 @@
     </div>
 
     <!-- Sleep Section -->
-    <div id="camp-sleep-section" style="display: none; width: 100%; max-width: 700px;">
+    <div id="camp-sleep-section" style="display: none; width: 100%;">
       <div class="camp-menu-box camp-menu-scroll">
         <div class="camp-menu-pinned-header">
           <div style="color: #FFD700; font-size: 20px;">💤 Rest &amp; Prepare</div>
         </div>
-        <button class="back-btn camp-section-back-btn" style="margin-bottom: 15px; font-size: 14px; padding: 8px 20px;">← Back to Camp</button>
+        <button class="back-btn camp-section-back-btn">← Back to Camp</button>
         <div style="text-align: center;">
           <p style="font-size: 16px; margin-bottom: 20px; line-height: 1.6;">
             Choose when to start your next run. Time of day affects enemy behavior and loot chances.
@@ -274,12 +278,12 @@
     </div>
 
     <!-- Training Section -->
-    <div id="camp-training-section" style="display: none; width: 100%; max-width: 700px;">
+    <div id="camp-training-section" style="display: none; width: 100%;">
       <div class="camp-menu-box camp-menu-scroll">
         <div class="camp-menu-pinned-header">
           <div style="color: #FFD700; font-size: 20px;">🏋️ Training Hall</div>
         </div>
-        <button class="back-btn camp-section-back-btn" style="margin-bottom: 15px; font-size: 14px; padding: 8px 20px;">← Back to Camp</button>
+        <button class="back-btn camp-section-back-btn">← Back to Camp</button>
         <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; margin-bottom: 20px;">
           <p style="font-size: 16px; margin-bottom: 10px;">
             Training Points Available: <span id="training-points-display" style="color: #FFD700; font-weight: bold;">0</span>
@@ -298,13 +302,13 @@
     </div>
 
     <!-- Passive Skills Section -->
-    <div id="camp-passive-section" style="display: none; width: 100%; max-width: 700px;">
+    <div id="camp-passive-section" style="display: none; width: 100%;">
       <div class="camp-menu-box camp-menu-scroll">
         <div class="camp-menu-pinned-header">
           <div style="color: #FFD700; font-size: 20px;">⚗️ Passive Skills</div>
           <div style="font-size: 14px; color: #5DADE2;">Points: <span id="passive-skill-points-display" style="color:#FFD700;font-weight:bold;">0</span></div>
         </div>
-        <button class="back-btn camp-section-back-btn" style="margin-bottom: 15px; font-size: 14px; padding: 8px 20px;">← Back to Camp</button>
+        <button class="back-btn camp-section-back-btn">← Back to Camp</button>
         <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; margin-bottom: 15px;">
           <p style="font-size: 14px; color: #AAA; line-height: 1.6;">
             Passive skills provide permanent bonuses across all runs. Unlock new passives as your Account Level increases.
