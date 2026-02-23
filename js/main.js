@@ -5358,7 +5358,8 @@
             box-shadow: 0 0 10px rgba(255, 0, 0, 0.8);
             z-index: 100;
           `;
-          document.getElementById('achievements-btn').appendChild(badge);
+          const achievementsBtn = document.getElementById('achievements-btn') || document.getElementById('options-achievements-btn');
+          if (achievementsBtn) achievementsBtn.appendChild(badge);
         }
         badge.textContent = count;
       } else if (badge) {
@@ -12239,19 +12240,30 @@
       // XP Curve: Each level requires 1.5x more XP than the previous one
       playerStats.expReq = Math.floor(playerStats.expReq * 1.5);
       
-      // Check for level achievements
-      checkAchievements();
-      
-      // SLOW MOTION EFFECT - Time slows, sounds pitch down
-      createSlowMotionEffect();
-      
-      // NEW: Centered LEVEL UP text animation (grow → shrink → fade)
-      createCenteredLevelUpText();
+      // Wrap synchronous pre-modal operations in try-catch so that any unexpected
+      // exception cannot prevent the level-up setTimeouts from being registered,
+      // which would otherwise leave the game permanently frozen.
+      try {
+        // Check for level achievements
+        checkAchievements();
+        
+        // SLOW MOTION EFFECT - Time slows, sounds pitch down
+        createSlowMotionEffect();
+        
+        // NEW: Centered LEVEL UP text animation (grow → shrink → fade)
+        createCenteredLevelUpText();
+      } catch(e) {
+        console.error('[LevelUp] Pre-modal synchronous error:', e);
+      }
       
       // Level up visual effects with delay for slow-mo
       setTimeout(() => {
-        createLevelUpEffects();
-        playSound('levelup');
+        try {
+          createLevelUpEffects();
+          playSound('levelup');
+        } catch(e) {
+          console.error('[LevelUp] Effects error:', e);
+        }
       }, 300);
       
       // Show upgrade modal with dramatic entrance after effects - FASTER
