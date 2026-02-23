@@ -5585,6 +5585,7 @@
       // This function just checks if achievements are unlocked (not auto-claiming)
       // Players must click to claim in the achievements menu
       let hasNewAchievement = false;
+      let unclaimedCount = 0;
       
       for (const key in ACHIEVEMENTS) {
         const achievement = ACHIEVEMENTS[key];
@@ -5597,6 +5598,7 @@
         // Check if achieved - mark internally but don't auto-claim
         if (achievement.check()) {
           hasNewAchievement = true;
+          unclaimedCount++;
           
           // Show notification only the FIRST TIME it's unlocked (not on every run)
           // Check if this specific achievement has been notified before by storing in localStorage
@@ -5626,9 +5628,18 @@
         }
       }
       
-      // Update achievement badge
+      // Update achievement badge - only do full DOM rebuild when screen is visible.
+      // Calling updateAchievementsScreen() on every kill (after level 10 achievement
+      // becomes active) caused severe lag: the heavy innerHTML rebuild ran on every
+      // enemy kill. Now we update only the lightweight badge during gameplay and
+      // defer the full rebuild until the player actually opens the achievements screen.
       if (hasNewAchievement) {
-        updateAchievementsScreen();
+        const achScreen = document.getElementById('achievements-screen');
+        if (achScreen && achScreen.style.display === 'flex') {
+          updateAchievementsScreen();
+        } else {
+          updateAchievementBadge(unclaimedCount);
+        }
       }
     }
 
