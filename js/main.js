@@ -7704,8 +7704,8 @@
       quest4_craftWeapon: {
         id: 'quest4_craftWeapon',
         title: 'Craft a Weapon',
-        description: 'Craft a weapon at the Forge',
-        objective: 'Craft a weapon at the Forge',
+        description: 'Craft a weapon at the Progression Upgrades',
+        objective: 'Craft a weapon at the Progression Upgrades',
         reward: { gold: 150 },
         nextQuest: 'quest5_equipGear',
         unlocksBuilding: 'armory'
@@ -8458,7 +8458,7 @@
       const questNames = {
         'firstRun': 'Quest 1: Kill One Enemy',
         'useSkillTree': 'Quest 2: Activate and Claim Two Skills',
-        'unlockForge': 'Quest 3: Unlock Forge',
+        'unlockForge': 'Quest 3: Unlock Progression Upgrades',
         'unlockArmory': 'Quest 4: Unlock Armory',
         'unlockRecycle': 'Quest 5: Unlock Trash & Recycle',
         'unlockCompanionHouse': 'Quest 6: Unlock Companion House',
