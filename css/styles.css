@@ -2775,7 +2775,6 @@
 
     /* Subsection active state: hide top camp UI */
     #camp-screen.camp-subsection-active > .screen-title,
-    #camp-screen.camp-subsection-active > #camp-action-btn,
     #camp-screen.camp-subsection-active > #account-level-display,
     #camp-screen.camp-subsection-active > .camp-header-btns {
       display: none !important;

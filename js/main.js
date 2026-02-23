@@ -9094,7 +9094,7 @@
         { label: 'Crit Chance', start: startCrit,   current: currentCrit },
         { label: 'Armor',       start: startArmor,  current: currentArmor },
         { label: 'Strength',    start: 1,           current: 1 + (attrs.strength || 0) },
-        { label: 'Endurance',   start: 0,           current: attrs.endurance || 0 },
+        { label: 'Endurance',   start: 0,           current: attrs.endurance || 0 }, // Training attribute, starts at 0
       ];
 
       const totalKills = saveData.totalKills || 0;
@@ -9138,7 +9138,7 @@
           </div>
         </div>
         <table class="account-stats-table">
-          <thead><tr><th>Stat</th><th>Start</th><th>Now</th><th>Δ Delta</th></tr></thead>
+          <thead><tr><th>Stat</th><th>Start</th><th>Now</th><th>Δ</th></tr></thead>
           <tbody>${rows}</tbody>
         </table>
         <div style="margin-top:14px;font-size:13px;color:#aaa;text-align:center;line-height:2;">
