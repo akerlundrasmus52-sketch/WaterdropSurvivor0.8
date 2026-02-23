@@ -864,24 +864,35 @@
                 if (prop.type === 'tree') {
                   spawnParticles(pPos, 0x8B4513, 25);
                   spawnParticles(pPos, 0x228B22, 20);
+                  // Tree falls and remains as debris (does not disappear)
+                  const fallDir = Math.random() < 0.5 ? 1 : -1;
+                  const fallAxis = Math.random() < 0.5 ? 'x' : 'z';
+                  const fallDuration = 500;
+                  const fallStart = Date.now();
+                  if (prop.mesh.userData.leaves) prop.mesh.userData.leaves.visible = false;
+                  const treeMesh = prop.mesh;
+                  const dashFall = setInterval(() => {
+                    const elapsed = Date.now() - fallStart;
+                    const progress = Math.min(elapsed / fallDuration, 1);
+                    if (fallAxis === 'x') treeMesh.rotation.x = (Math.PI / 2) * progress * fallDir;
+                    else treeMesh.rotation.z = (Math.PI / 2) * progress * fallDir;
+                    treeMesh.position.y = -progress * 1.5;
+                    if (progress >= 1) clearInterval(dashFall);
+                  }, 16);
                 } else if (prop.type === 'barrel') {
                   spawnParticles(pPos, 0xFF4500, 30);
                   spawnParticles(pPos, 0xFFFF00, 15);
+                  scene.remove(prop.mesh);
+                  if (prop.mesh.geometry) prop.mesh.geometry.dispose();
+                  if (prop.mesh.material) prop.mesh.material.dispose();
                 } else {
                   spawnParticles(pPos, 0xD2691E, 20);
+                  scene.remove(prop.mesh);
+                  if (prop.mesh.geometry) prop.mesh.geometry.dispose();
+                  if (prop.mesh.material) prop.mesh.material.dispose();
                 }
                 // Screen shake on big destruction
                 if (window.triggerScreenShake) window.triggerScreenShake(0.3);
-                scene.remove(prop.mesh);
-                if (prop.mesh.userData.trunk) {
-                  prop.mesh.userData.trunk.geometry.dispose();
-                  prop.mesh.userData.trunk.material.dispose();
-                  prop.mesh.userData.leaves.geometry.dispose();
-                  prop.mesh.userData.leaves.material.dispose();
-                } else if (prop.mesh.geometry) {
-                  prop.mesh.geometry.dispose();
-                  prop.mesh.material.dispose();
-                }
               }
             }
           }
@@ -3869,23 +3880,43 @@
                   spawnParticles(prop.mesh.position, 0xFF4500, 30); // Orange explosion
                   spawnParticles(prop.mesh.position, 0xFFFF00, 15); // Yellow fire
                   playSound('hit');
+                  // Barrel removed from scene
+                  scene.remove(prop.mesh);
+                  prop.mesh.geometry.dispose();
+                  prop.mesh.material.dispose();
                 } else if (prop.type === 'tree') {
-                  // Tree breaks apart
+                  // Tree falls and remains as debris (does not disappear)
                   spawnParticles(prop.mesh.position, 0x8B4513, 20); // Brown wood
                   spawnParticles(prop.mesh.position, 0x228B22, 15); // Green leaves
+                  // Animate tree falling — rotate to ground and stay as debris
+                  const fallDir = Math.random() < 0.5 ? 1 : -1;
+                  const fallAxis = Math.random() < 0.5 ? 'x' : 'z';
+                  const fallDuration = 600;
+                  const fallStart = Date.now();
+                  // Hide leaves to simulate them scattering, trunk remains as log
+                  if (prop.mesh.userData.leaves) {
+                    prop.mesh.userData.leaves.visible = false;
+                  }
+                  const treeMesh = prop.mesh;
+                  const treeFall = setInterval(() => {
+                    const elapsed = Date.now() - fallStart;
+                    const progress = Math.min(elapsed / fallDuration, 1);
+                    const angle = (Math.PI / 2) * progress * fallDir;
+                    if (fallAxis === 'x') {
+                      treeMesh.rotation.x = angle;
+                    } else {
+                      treeMesh.rotation.z = angle;
+                    }
+                    treeMesh.position.y = -progress * 1.5; // Sink slightly into ground
+                    if (progress >= 1) {
+                      clearInterval(treeFall);
+                      // Tree stays as fallen log debris — never removed
+                    }
+                  }, 16);
                 } else if (prop.type === 'crate') {
-                  // Crate breaks
+                  // Crate breaks apart and is removed
                   spawnParticles(prop.mesh.position, 0xD2691E, 20); // Wood particles
-                }
-                
-                // Remove from scene
-                scene.remove(prop.mesh);
-                if (prop.mesh.userData.trunk) {
-                  prop.mesh.userData.trunk.geometry.dispose();
-                  prop.mesh.userData.trunk.material.dispose();
-                  prop.mesh.userData.leaves.geometry.dispose();
-                  prop.mesh.userData.leaves.material.dispose();
-                } else {
+                  scene.remove(prop.mesh);
                   prop.mesh.geometry.dispose();
                   prop.mesh.material.dispose();
                 }
@@ -4445,7 +4476,7 @@
           _expGemStarGeometry = new THREE.ExtrudeGeometry(starShape, extrudeSettings);
           _expGemStarGeometry.center();
           _expGemStarMaterial = new THREE.MeshStandardMaterial({
-            color: 0x4FC3F7,      // Lighter sky blue — matches XP bar color
+            color: 0x5DADE2,      // Match XP bar color exactly (#5DADE2)
             emissive: 0xFFCC00,   // Yellow reflection/edge glow
             emissiveIntensity: 0.4,
             metalness: 0.6,
@@ -9344,7 +9375,7 @@
       
       // Single lush green ground plane covering the whole map
       const mainGroundGeo = new THREE.PlaneGeometry(mapSize, mapSize);
-      const mainGroundMat = new THREE.MeshToonMaterial({ color: COLORS.ground }); // Green grass
+      const mainGroundMat = new THREE.MeshStandardMaterial({ color: COLORS.ground, roughness: 0.95, metalness: 0.0 }); // Green grass - realistic shading
       const mainGround = new THREE.Mesh(mainGroundGeo, mainGroundMat);
       mainGround.rotation.x = -Math.PI / 2;
       mainGround.position.set(0, 0, 0);
@@ -9352,7 +9383,7 @@
       scene.add(mainGround);
       
       // Darker forest floor ring around the fountain spawn area
-      const forestRingMat = new THREE.MeshToonMaterial({ color: 0x2E5A1A }); // Dark forest green, no transparency needed
+      const forestRingMat = new THREE.MeshStandardMaterial({ color: 0x2E5A1A, roughness: 0.9, metalness: 0.0 }); // Dark forest green with shading
       const forestRingGeo = new THREE.RingGeometry(12, 45, 32);
       const forestRingMesh = new THREE.Mesh(forestRingGeo, forestRingMat);
       forestRingMesh.rotation.x = -Math.PI / 2;
@@ -9400,44 +9431,40 @@
         roughness: 0.85,
       });
       
-      // Helper function to create wagon road with grass strip in middle
-      function createWagonRoad(startX, startZ, endX, endZ, roadWidth = 4) {
+      // Helper function to create a narrow dirt trail to landmarks
+      function createTrail(startX, startZ, endX, endZ) {
+        const trailWidth = 1.5; // Narrow trail
         const length = Math.sqrt((endX - startX) ** 2 + (endZ - startZ) ** 2);
         const angle = Math.atan2(endZ - startZ, endX - startX);
         const midX = (startX + endX) / 2;
         const midZ = (startZ + endZ) / 2;
         
-        // Create main road (brown dirt)
-        const roadGeo = new THREE.PlaneGeometry(roadWidth, length);
+        // Create narrow dirt trail (no grass strip)
+        const roadGeo = new THREE.PlaneGeometry(trailWidth, length);
         const road = new THREE.Mesh(roadGeo, roadMat);
         road.rotation.x = -Math.PI/2;
         road.rotation.z = angle - Math.PI/2;
         road.position.set(midX, 0.02, midZ);
         road.receiveShadow = true;
         scene.add(road);
-        
-        // Create grass strip in middle (1/3 width of road)
-        const grassStripWidth = roadWidth / 3;
-        const grassGeo = new THREE.PlaneGeometry(grassStripWidth, length);
-        const grassStrip = new THREE.Mesh(grassGeo, grassStripMat);
-        grassStrip.rotation.x = -Math.PI/2;
-        grassStrip.rotation.z = angle - Math.PI/2;
-        grassStrip.position.set(midX, 0.03, midZ); // Slightly above road
-        grassStrip.receiveShadow = true;
-        scene.add(grassStrip);
       }
       
-      // 3 Main Wagon Roads from Central Hub (Rondel) - only to key regions
-      // Roads start from different points on the rondel edge based on direction
+      // Narrow dirt trails from spawn rondel to key landmarks (no wagon roads)
       
-      // 1. Road to Stonehenge (60, 60) - Northeast direction
-      createWagonRoad(rondelRadius * 0.707, rondelRadius * 0.707, 60, 60, 4);
+      // 1. Trail to Stonehenge (60, 60) - Northeast direction
+      createTrail(rondelRadius * 0.707, rondelRadius * 0.707, 60, 60);
       
-      // 2. Road to Windmill (40, 40) - East direction
-      createWagonRoad(rondelRadius * 0.9, rondelRadius * 0.436, 40, 40, 4);
+      // 2. Trail to Windmill (40, 40) - East direction
+      createTrail(rondelRadius * 0.9, rondelRadius * 0.436, 40, 40);
       
-      // 3. Road to Tesla Tower (-80, -80) - Southwest direction
-      createWagonRoad(-rondelRadius * 0.707, -rondelRadius * 0.707, -80, -80, 4);
+      // 3. Trail to Tesla Tower (-80, -80) - Southwest direction
+      createTrail(-rondelRadius * 0.707, -rondelRadius * 0.707, -80, -80);
+      
+      // 4. Trail to Pyramid (50, -50) - Southeast direction
+      createTrail(rondelRadius * 0.707, -rondelRadius * 0.707, 50, -50);
+      
+      // 5. Trail to Lake/Waterfall (30, -30) - South direction
+      createTrail(rondelRadius * 0.5, -rondelRadius * 0.866, 30, -30);
       
       // Spawn Portal - ground ring at player spawn position (syncs with countdown)
       const spawnPortalOuter = new THREE.RingGeometry(1.8, 2.4, 24);
@@ -9572,9 +9599,28 @@
       brokenBlade.castShadow = true;
       wmGroup.add(brokenBlade);
       
-      // Store blades reference for rotation animation
-      wmGroup.userData = { isWindmill: true, blades: [wmBlades, wmBlades2], hp: 600, maxHp: 600, questActive: false, light: wmLight };
+      // Store blades reference for rotation animation (broken blade also rotates slowly)
+      wmGroup.userData = { isWindmill: true, blades: [wmBlades, wmBlades2, brokenBlade], hp: 600, maxHp: 600, questActive: false, light: wmLight };
       scene.add(wmGroup);
+      
+      // Hay bales outside windmill
+      const hayBaleMat = new THREE.MeshToonMaterial({ color: 0xD4A855 }); // Golden hay color
+      const hayBaleGeo = new THREE.CylinderGeometry(0.8, 0.8, 1.2, 12);
+      const hayBalePositions = [
+        { x: 43, z: 43, ry: 0 },
+        { x: 37, z: 42, ry: Math.PI / 4 },
+        { x: 38, z: 38, ry: 0 },
+        { x: 44, z: 37, ry: Math.PI / 3 },
+      ];
+      hayBalePositions.forEach(pos => {
+        const hayBale = new THREE.Mesh(hayBaleGeo, hayBaleMat);
+        hayBale.position.set(pos.x, 0.6, pos.z);
+        hayBale.rotation.z = Math.PI / 2; // Lay on side
+        hayBale.rotation.y = pos.ry;
+        hayBale.castShadow = true;
+        hayBale.receiveShadow = true;
+        scene.add(hayBale);
+      });
       
       // Phase 5: Add "QUEST HERE" signpost at Windmill entrance
       const signpostGroup = new THREE.Group();
@@ -9893,6 +9939,27 @@
       }
       
       scene.add(mayanGroup);
+      
+      // Pyramid scattered stones — partially destroyed look (scattered/fallen stone blocks)
+      const pyramidScatterMat = new THREE.MeshStandardMaterial({ color: 0xBBA080, roughness: 0.9, metalness: 0.0 });
+      const pyramidScatterPositions = [
+        { x: 55, z: -55, ry: 0.3, sx: 1.5, sy: 0.8, sz: 1.2 },
+        { x: 44, z: -44, ry: 1.1, sx: 1.0, sy: 0.6, sz: 1.0 },
+        { x: 58, z: -44, ry: 0.7, sx: 1.8, sy: 0.7, sz: 1.4 },
+        { x: 43, z: -56, ry: 0.2, sx: 1.2, sy: 0.5, sz: 0.9 },
+        { x: 60, z: -50, ry: 1.5, sx: 0.8, sy: 0.6, sz: 1.0 },
+        { x: 47, z: -60, ry: 0.9, sx: 1.3, sy: 0.7, sz: 1.1 },
+        { x: 53, z: -42, ry: 0.4, sx: 0.6, sy: 0.4, sz: 0.8 },
+      ];
+      pyramidScatterPositions.forEach(pos => {
+        const sGeo = new THREE.BoxGeometry(pos.sx, pos.sy, pos.sz);
+        const sMesh = new THREE.Mesh(sGeo, pyramidScatterMat);
+        sMesh.position.set(pos.x, pos.sy / 2, pos.z);
+        sMesh.rotation.y = pos.ry;
+        sMesh.castShadow = true;
+        sMesh.receiveShadow = true;
+        scene.add(sMesh);
+      });
 
       // Phase 4: Illuminati Pyramid - Pyramid with All-Seeing Eye, Fences, and Men in Black guards
       const illuminatiGroup = new THREE.Group();
@@ -10792,6 +10859,7 @@
         const trunk = new THREE.Mesh(trunkGeo, trunkMat);
         trunk.position.y = 1;
         trunk.castShadow = true;
+        trunk.receiveShadow = true;
         
         // Randomly choose tree type
         const treeType = Math.floor(Math.random() * 3);
@@ -10807,6 +10875,7 @@
           leaves.position.y = 5;
         }
         leaves.castShadow = true;
+        leaves.receiveShadow = true;
         
         group.add(trunk);
         group.add(leaves);
@@ -10873,9 +10942,11 @@
         const fTrunk = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.3, 2.5, 6), forestTrunkMat2);
         fTrunk.position.y = 1.25;
         fTrunk.castShadow = true;
+        fTrunk.receiveShadow = true;
         const fLeaves = new THREE.Mesh(new THREE.SphereGeometry(1.2 + Math.random() * 0.5, 7, 6), forestLeavesMat2);
         fLeaves.position.y = 3.2;
         fLeaves.castShadow = true;
+        fLeaves.receiveShadow = true;
         fGroup.add(fTrunk);
         fGroup.add(fLeaves);
         fGroup.position.set(fx, 0, fz);
@@ -10950,6 +11021,41 @@
         );
         flower.rotation.x = -Math.PI/2;
         scene.add(flower);
+      }
+      
+      // Scatter rocks (big and small) across terrain for ground realism
+      const rockMatGray = new THREE.MeshStandardMaterial({ color: 0x888888, roughness: 0.9, metalness: 0.1 });
+      const rockMatDark = new THREE.MeshStandardMaterial({ color: 0x555555, roughness: 0.95, metalness: 0.05 });
+      // Big rocks
+      for (let i = 0; i < 60; i++) {
+        const scale = 0.6 + Math.random() * 1.2;
+        const rockGeo = new THREE.DodecahedronGeometry(scale, 0);
+        const rockMat = Math.random() < 0.5 ? rockMatGray : rockMatDark;
+        const rock = new THREE.Mesh(rockGeo, rockMat);
+        rock.position.set(
+          (Math.random() - 0.5) * 200,
+          scale * 0.4,
+          (Math.random() - 0.5) * 200
+        );
+        rock.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+        rock.castShadow = true;
+        rock.receiveShadow = true;
+        if (Math.abs(rock.position.x) > 12 || Math.abs(rock.position.z) > 12) {
+          scene.add(rock);
+        }
+      }
+      // Small rocks (pebbles)
+      for (let i = 0; i < 120; i++) {
+        const scale = 0.1 + Math.random() * 0.35;
+        const pebbleGeo = new THREE.DodecahedronGeometry(scale, 0);
+        const pebble = new THREE.Mesh(pebbleGeo, rockMatGray);
+        pebble.position.set(
+          (Math.random() - 0.5) * 180,
+          scale * 0.4,
+          (Math.random() - 0.5) * 180
+        );
+        pebble.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+        scene.add(pebble);
       }
       
       // FRESH IMPLEMENTATION: Destructible Environment System
@@ -17263,10 +17369,15 @@
       // Performance: Use cached arrays instead of scene.traverse() every frame
       // Windmill Rotation and Light Animation
       animatedSceneObjects.windmills.forEach(c => {
-        // Rotate the blades stored in userData
+        // Rotate all blades stored in userData (including worn/broken third blade)
         if (c.userData.blades && c.userData.blades.length > 0) {
           c.userData.blades[0].rotation.z += 0.05;
           c.userData.blades[1].rotation.z += 0.05;
+          // Third broken blade rotates at the same speed (wobbles slightly)
+          if (c.userData.blades[2]) {
+            c.userData.blades[2].rotation.z += 0.05;
+            c.userData.blades[2].rotation.x = Math.sin(gameTime * 0.8) * 0.04; // Slight wobble
+          }
         }
         
         // Animate windmill light (pulsing) with null check
