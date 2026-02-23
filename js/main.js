@@ -2975,7 +2975,7 @@
         // Smoke particles rising - use managed array instead of RAF
         const deathPos = this.mesh.position.clone();
         let smokeSpawnCount = 8;
-        let smokeSpawnInterval = setInterval(() => {
+        const smokeSpawnInterval = setInterval(() => {
           smokeSpawnCount--;
           if (smokeSpawnCount <= 0 || !scene) { clearInterval(smokeSpawnInterval); return; }
           if (smokeParticles.length < MAX_SMOKE_PARTICLES) {
