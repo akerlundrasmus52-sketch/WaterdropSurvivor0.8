@@ -2737,6 +2737,12 @@
               !saveData.tutorialQuests.readyToClaim.includes('quest7_kill10')) {
             showStatChange('⚔️ 15 Kills! Return to camp to claim your reward!');
           }
+          // quest_run_kill25: Kill 25 enemies
+          if (currentQuest && currentQuest.id === 'quest_run_kill25' && playerStats.kills >= 25 &&
+              !saveData.tutorialQuests.readyToClaim.includes('quest_run_kill25')) {
+            progressTutorialQuest('quest_run_kill25', true);
+            showStatChange('⚔️ 25 Kills! Return to camp to claim your reward!');
+          }
         }
         
         // Track side challenge progress
@@ -5234,6 +5240,7 @@
         trashRecycle: { level: 0, maxLevel: 10, unlocked: false }, // Unlock via quest
         tempShop: { level: 0, maxLevel: 10, unlocked: false }, // Unlock via quest
         achievementBuilding: { level: 0, maxLevel: 1, unlocked: false }, // Unlock via quest8_findAllLandmarks
+        accountBuilding: { level: 1, maxLevel: 1, unlocked: true }, // Always unlocked — account stats
         // Legacy buildings (for compatibility)
         trainingGrounds: { level: 0, maxLevel: 10, unlocked: false },
         library: { level: 0, maxLevel: 10, unlocked: false },
@@ -5626,6 +5633,9 @@
           else if (currentQuest.id === 'quest4_kill10') questText = 'Kill 10: ' + Math.min(kills,10) + '/10';
           else if (currentQuest.id === 'quest6_kill10') questText = 'Kill 10: ' + Math.min(kills,10) + '/10';
           else if (currentQuest.id === 'quest7_kill10') questText = 'Kill 15: ' + Math.min(kills,15) + '/15';
+          else if (currentQuest.id === 'quest_run_kill25') questText = 'Kill 25: ' + Math.min(kills,25) + '/25';
+          else if (currentQuest.id === 'quest_windmill_guide') questText = '🏭 Defend the Windmill!';
+          else if (currentQuest.id === 'quest_account_visit') questText = '👤 Visit Account Building in Camp';
           else if (currentQuest.id === 'quest8_findAllLandmarks') {
             const lf = saveData.tutorialQuests.landmarksFound || {};
             const found = Object.values(LANDMARK_CONFIGS).filter(cfg => lf[cfg.key]).length;
@@ -6725,6 +6735,17 @@
         costMultiplier: 0,
         maxCost: 0,
         isFree: true,
+        bonus: (level) => ({})
+      },
+      accountBuilding: {
+        name: 'Account & Records',
+        icon: '👤',
+        description: 'View your starting stats, current stats, total kills, account level, and achievements.',
+        baseCost: 0,
+        costMultiplier: 0,
+        maxCost: 0,
+        isFree: true,
+        isCore: true,
         bonus: (level) => ({})
       },
       
@@ -7900,9 +7921,49 @@
         claim: 'Achievement Building',
         rewardGold: 300,
         rewardSkillPoints: 2,
-        message: "🏆 TUTORIAL COMPLETE!<br><br>The whole world is yours to conquer. Complete Achievements to earn more rewards. Good luck, Droplet!",
-        nextQuest: null,
+        message: "🏆 Achievement Hall visited!<br><br>Now it's time to explore more of the world. Head to the <b>Windmill</b> on the map and talk to the farmer there — a special challenge awaits!",
+        nextQuest: 'quest_windmill_guide',
         conditions: ['quest8_findAllLandmarks']
+      },
+      quest_windmill_guide: {
+        id: 'quest_windmill_guide',
+        name: 'Defend the Windmill',
+        description: 'Find the Windmill on the map and talk to the farmer. Defend the windmill for 15 seconds to earn a special run reward!',
+        objectives: 'Find the Windmill and defend it for the farmer',
+        claim: 'Quest Hall',
+        rewardGold: 400,
+        rewardSkillPoints: 2,
+        triggerOnDeath: false,
+        message: "🏆 WINDMILL DEFENDED!<br><br>The farmer is grateful! Each run, if you defend the windmill you'll earn a <b>temporary Double Barrel Gun</b> for that round.<br><br>Next: keep fighting — kill <b>25 enemies</b> to prove your strength!",
+        nextQuest: 'quest_run_kill25',
+        conditions: ['quest9_visitAchievementBuilding']
+      },
+      quest_run_kill25: {
+        id: 'quest_run_kill25',
+        name: 'Kill 25 Enemies',
+        description: 'Head out and eliminate 25 enemies in a single run',
+        objectives: 'Kill 25 enemies in one run',
+        triggerOnDeath: true,
+        rewardGold: 500,
+        rewardSkillPoints: 2,
+        rewardAttributePoints: 2,
+        message: "💪 25 Kills! You're a true survivor!<br><br>Head to the <b>Account Building</b> in camp to review your progress and stats!",
+        nextQuest: 'quest_account_visit',
+        conditions: ['quest_windmill_guide']
+      },
+      quest_account_visit: {
+        id: 'quest_account_visit',
+        name: 'Check Your Account Stats',
+        description: 'Visit the Account & Records building in camp to see your full stats and progression',
+        objectives: 'Open the Account building in Camp',
+        claim: 'Account Building',
+        autoClaim: true,
+        rewardGold: 200,
+        rewardSkillPoints: 1,
+        rewardAttributePoints: 3,
+        message: "📊 Account reviewed!<br><br>You can always return here to track your progress. Keep completing quests and runs — the world of Water Drop Survivor has much more to discover!",
+        nextQuest: null,
+        conditions: ['quest_run_kill25']
       },
       quest3_buyProgression: {
         id: 'quest3_buyProgression',
@@ -8974,6 +9035,7 @@
       const levelEl = document.getElementById('account-level-value');
       const barEl = document.getElementById('account-level-bar');
       const textEl = document.getElementById('account-level-progress-text');
+      const sectionLevelEl = document.getElementById('account-section-level-display');
       if (!levelEl) return;
       const level = saveData.accountLevel || 1;
       const xp = saveData.accountXP || 0;
@@ -8982,6 +9044,108 @@
       levelEl.textContent = level;
       if (barEl) barEl.style.width = pct + '%';
       if (textEl) textEl.textContent = `${xp} / ${required} XP`;
+      if (sectionLevelEl) sectionLevelEl.textContent = `Level ${level}`;
+    }
+
+    // Show the Account section within the camp screen
+    function showAccountSection() {
+      const campScreen = document.getElementById('camp-screen');
+      campScreen.classList.add('camp-subsection-active');
+      document.getElementById('camp-buildings-section').style.display = 'none';
+      document.getElementById('camp-skills-section').style.display = 'none';
+      document.getElementById('camp-sleep-section').style.display = 'none';
+      document.getElementById('camp-training-section').style.display = 'none';
+      document.getElementById('camp-passive-section').style.display = 'none';
+      const accountSection = document.getElementById('camp-account-section');
+      if (accountSection) {
+        accountSection.style.display = 'block';
+        renderAccountContent();
+      }
+      // Progress quest if relevant
+      if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest_account_visit') {
+        progressTutorialQuest('quest_account_visit', true);
+      }
+    }
+
+    // Render account stats inside the account section
+    function renderAccountContent() {
+      const content = document.getElementById('camp-account-content');
+      if (!content) return;
+      updateAccountLevelDisplay();
+      const defaultStats = getDefaultPlayerStats();
+      // Current stats derived from permanent upgrades + attributes
+      const ups = saveData.upgrades || {};
+      const attrs = saveData.attributes || {};
+      const startHp = defaultStats.maxHp || 100;
+      const currentHp = startHp + (ups.maxHp || 0) * 10 + (attrs.vitality || 0) * 15;
+      const startDmg = defaultStats.damage || 1;
+      const currentDmg = +(startDmg + (ups.attackDamage || 0) * 0.1 + (attrs.strength || 0) * 0.1).toFixed(2);
+      const startAtkSpd = defaultStats.attackSpeed || 1;
+      const currentAtkSpd = +(startAtkSpd + (ups.attackSpeed || 0) * 0.1 + (attrs.dexterity || 0) * 0.05).toFixed(2);
+      const startCrit = defaultStats.critChance || 0.1;
+      const currentCrit = +(startCrit + (ups.critChance || 0) * 0.02 + (attrs.dexterity || 0) * 0.02).toFixed(2);
+      const startArmor = 0;
+      const currentArmor = (ups.armor || 0) * 2 + (attrs.endurance || 0) * 2;
+
+      const statsToShow = [
+        { label: 'Max HP',      start: startHp,     current: currentHp },
+        { label: 'Damage',      start: startDmg,    current: currentDmg },
+        { label: 'Atk Speed',   start: startAtkSpd, current: currentAtkSpd },
+        { label: 'Crit Chance', start: startCrit,   current: currentCrit },
+        { label: 'Armor',       start: startArmor,  current: currentArmor },
+        { label: 'Strength',    start: 1,           current: 1 + (attrs.strength || 0) },
+        { label: 'Endurance',   start: 0,           current: attrs.endurance || 0 },
+      ];
+
+      const totalKills = saveData.totalKills || 0;
+      const level = saveData.accountLevel || 1;
+      const questsDone = (saveData.tutorialQuests && saveData.tutorialQuests.claimedQuests) ? saveData.tutorialQuests.claimedQuests.length : 0;
+      const totalRuns = saveData.totalRuns || 0;
+      const totalGoldEarned = saveData.totalGoldEarned || 0;
+      const bestKills = saveData.bestKills || 0;
+
+      const fmtDelta = (start, current) => {
+        const d = (typeof current === 'number' && typeof start === 'number') ? +(current - start).toFixed(2) : 0;
+        if (d > 0) return `<span class="stat-delta-positive">+${d}</span>`;
+        if (d < 0) return `<span class="stat-delta-negative">${d}</span>`;
+        return `<span class="stat-delta-neutral">—</span>`;
+      };
+
+      const fmtVal = (v) => typeof v === 'number' ? (v % 1 === 0 ? v : v.toFixed(2)) : v;
+
+      let rows = statsToShow.map(s =>
+        `<tr><td>${s.label}</td><td>${fmtVal(s.start)}</td><td>${fmtVal(s.current)}</td><td>${fmtDelta(s.start, s.current)}</td></tr>`
+      ).join('');
+
+      content.innerHTML = `
+        <div class="building-popup-title">👤 ACCOUNT &amp; RECORDS</div>
+        <div style="display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin-bottom:16px;">
+          <div style="background:rgba(255,215,0,0.08);border:2px solid #FFD700;border-radius:12px;padding:10px 18px;text-align:center;min-width:100px;">
+            <div style="font-family:'Bangers',cursive;font-size:28px;color:#FFD700;">${level}</div>
+            <div style="font-size:11px;color:#aaa;">ACCOUNT LEVEL</div>
+          </div>
+          <div style="background:rgba(255,215,0,0.08);border:2px solid #e74c3c;border-radius:12px;padding:10px 18px;text-align:center;min-width:100px;">
+            <div style="font-family:'Bangers',cursive;font-size:28px;color:#e74c3c;">${totalKills}</div>
+            <div style="font-size:11px;color:#aaa;">TOTAL KILLS</div>
+          </div>
+          <div style="background:rgba(255,215,0,0.08);border:2px solid #2ecc71;border-radius:12px;padding:10px 18px;text-align:center;min-width:100px;">
+            <div style="font-family:'Bangers',cursive;font-size:28px;color:#2ecc71;">${questsDone}</div>
+            <div style="font-size:11px;color:#aaa;">QUESTS DONE</div>
+          </div>
+          <div style="background:rgba(255,215,0,0.08);border:2px solid #5DADE2;border-radius:12px;padding:10px 18px;text-align:center;min-width:100px;">
+            <div style="font-family:'Bangers',cursive;font-size:28px;color:#5DADE2;">${totalRuns}</div>
+            <div style="font-size:11px;color:#aaa;">TOTAL RUNS</div>
+          </div>
+        </div>
+        <table class="account-stats-table">
+          <thead><tr><th>Stat</th><th>Start</th><th>Now</th><th>Δ Delta</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+        <div style="margin-top:14px;font-size:13px;color:#aaa;text-align:center;line-height:2;">
+          💰 Total Gold Earned: <span style="color:#FFD700;font-weight:bold;">${totalGoldEarned}</span><br>
+          ⚔️ Best Run Kills: <span style="color:#e74c3c;font-weight:bold;">${bestKills}</span>
+        </div>
+      `;
     }
 
     function updateCampScreen() {
@@ -8989,9 +9153,9 @@
       const campActionBtn = document.getElementById('camp-action-btn');
       if (campActionBtn) {
         if (isGameActive) {
-          campActionBtn.textContent = '▶ CONTINUE GAME';
+          campActionBtn.textContent = '▶ CONTINUE';
         } else {
-          campActionBtn.textContent = '▶ START NEW RUN';
+          campActionBtn.textContent = '▶ START RUN';
         }
       }
       // Update account level display whenever camp is opened
@@ -9232,6 +9396,13 @@
                   }
                 };
                 buildingCard.style.cursor = 'pointer';
+              } else if (buildingId === 'accountBuilding') {
+                // Open account section
+                buildingCard.onclick = () => {
+                  playSound('waterdrop');
+                  showAccountSection();
+                };
+                buildingCard.style.cursor = 'pointer';
               } else if (buildingId === 'skillTree') {
                 // Clear notification when clicking on skill tree
                 buildingCard.onclick = () => {
@@ -9241,6 +9412,18 @@
                   }
                   // Switch to skill tree tab
                   document.getElementById('camp-skills-tab').click();
+                };
+                buildingCard.style.cursor = 'pointer';
+              } else if (buildingId === 'campHub' || buildingId === 'loreMaster' || buildingId === 'inventory') {
+                // Show building info popup
+                buildingCard.onclick = () => {
+                  const msgs = {
+                    campHub: { title: '🏠 Camp Hub', body: 'The central hub of your camp. All activities and buildings are organized through here. Keep upgrading your camp to unlock new buildings and strengthen your runs!' },
+                    loreMaster: { title: '📖 Lore Master', body: 'The Lore Master holds the history of Water Drop Survivors. Unlock lore entries by completing quests and defeating special enemies. Coming in a future update!' },
+                    inventory: { title: '📦 Inventory', body: 'Your storage for earned items and equipment. Items you collect on runs are kept here. Open the Armory to equip your gear.' }
+                  };
+                  const info = msgs[buildingId];
+                  if (info) showComicInfoBox(info.title, `<p style="line-height:1.7;">${info.body}</p>`, 'GOT IT!', () => {});
                 };
                 buildingCard.style.cursor = 'pointer';
               } else if (saveData.storyQuests.questNotifications && saveData.storyQuests.questNotifications[buildingId]) {
@@ -11647,10 +11830,13 @@
         updateCampScreen();
         
         // Ensure buildings tab is selected (not sleep/day-night selection)
+        document.getElementById('camp-screen').classList.remove('camp-subsection-active');
         document.getElementById('camp-buildings-section').style.display = 'block';
         document.getElementById('camp-skills-section').style.display = 'none';
         document.getElementById('camp-sleep-section').style.display = 'none';
         document.getElementById('camp-training-section').style.display = 'none';
+        const campAccountSection = document.getElementById('camp-account-section');
+        if (campAccountSection) campAccountSection.style.display = 'none';
         document.getElementById('camp-buildings-tab').style.background = '#5A3A31';
         document.getElementById('camp-skills-tab').style.background = '#3a3a3a';
         document.getElementById('camp-sleep-tab').style.background = '#3a3a3a';
@@ -11836,6 +12022,7 @@
         playSound('waterdrop');
         hideMainMenu();
         updateCampScreen();
+        document.getElementById('camp-screen').classList.remove('camp-subsection-active');
         document.getElementById('camp-screen').style.display = 'flex';
         
         // Tutorial: Check if player visited camp for first time after first death
@@ -11915,11 +12102,30 @@
           startGame();
         }
       };
+
+      // Camp Menu button → open settings/options
+      const campMenuBtn = document.getElementById('camp-menu-btn');
+      if (campMenuBtn) {
+        campMenuBtn.onclick = () => {
+          playSound('waterdrop');
+          document.getElementById('settings-modal').style.display = 'flex';
+        };
+      }
+
+      // Camp Account button → open account section
+      const campAccountBtn = document.getElementById('camp-account-btn');
+      if (campAccountBtn) {
+        campAccountBtn.onclick = () => {
+          playSound('waterdrop');
+          showAccountSection();
+        };
+      }
       
       // Back to Buildings buttons inside each sub-section
       document.querySelectorAll('.camp-section-back-btn').forEach(btn => {
         btn.onclick = () => {
           playSound('waterdrop');
+          document.getElementById('camp-screen').classList.remove('camp-subsection-active');
           document.getElementById('camp-buildings-tab').click();
         };
       });
@@ -11927,11 +12133,14 @@
       // Camp tab switching
       document.getElementById('camp-buildings-tab').onclick = () => {
         playSound('waterdrop');
+        document.getElementById('camp-screen').classList.remove('camp-subsection-active');
         document.getElementById('camp-buildings-section').style.display = 'block';
         document.getElementById('camp-skills-section').style.display = 'none';
         document.getElementById('camp-sleep-section').style.display = 'none';
         document.getElementById('camp-training-section').style.display = 'none';
         document.getElementById('camp-passive-section').style.display = 'none';
+        const campAccountSection = document.getElementById('camp-account-section');
+        if (campAccountSection) campAccountSection.style.display = 'none';
         document.getElementById('camp-buildings-tab').style.background = '#5A3A31';
         document.getElementById('camp-skills-tab').style.background = '#3a3a3a';
         document.getElementById('camp-sleep-tab').style.background = '#3a3a3a';
@@ -11941,11 +12150,14 @@
       
       document.getElementById('camp-skills-tab').onclick = () => {
         playSound('waterdrop');
+        document.getElementById('camp-screen').classList.add('camp-subsection-active');
         document.getElementById('camp-buildings-section').style.display = 'none';
         document.getElementById('camp-skills-section').style.display = 'block';
         document.getElementById('camp-sleep-section').style.display = 'none';
         document.getElementById('camp-training-section').style.display = 'none';
         document.getElementById('camp-passive-section').style.display = 'none';
+        const campAccountSection = document.getElementById('camp-account-section');
+        if (campAccountSection) campAccountSection.style.display = 'none';
         document.getElementById('camp-buildings-tab').style.background = '#3a3a3a';
         document.getElementById('camp-skills-tab').style.background = '#5A3A31';
         document.getElementById('camp-sleep-tab').style.background = '#3a3a3a';
@@ -11955,11 +12167,14 @@
       
       document.getElementById('camp-passive-tab').onclick = () => {
         playSound('waterdrop');
+        document.getElementById('camp-screen').classList.add('camp-subsection-active');
         document.getElementById('camp-buildings-section').style.display = 'none';
         document.getElementById('camp-skills-section').style.display = 'none';
         document.getElementById('camp-sleep-section').style.display = 'none';
         document.getElementById('camp-training-section').style.display = 'none';
         document.getElementById('camp-passive-section').style.display = 'block';
+        const campAccountSection = document.getElementById('camp-account-section');
+        if (campAccountSection) campAccountSection.style.display = 'none';
         document.getElementById('camp-buildings-tab').style.background = '#3a3a3a';
         document.getElementById('camp-skills-tab').style.background = '#3a3a3a';
         document.getElementById('camp-sleep-tab').style.background = '#3a3a3a';
@@ -11970,11 +12185,14 @@
       
       document.getElementById('camp-sleep-tab').onclick = () => {
         playSound('waterdrop');
+        document.getElementById('camp-screen').classList.add('camp-subsection-active');
         document.getElementById('camp-buildings-section').style.display = 'none';
         document.getElementById('camp-skills-section').style.display = 'none';
         document.getElementById('camp-sleep-section').style.display = 'block';
         document.getElementById('camp-training-section').style.display = 'none';
         document.getElementById('camp-passive-section').style.display = 'none';
+        const campAccountSection = document.getElementById('camp-account-section');
+        if (campAccountSection) campAccountSection.style.display = 'none';
         document.getElementById('camp-buildings-tab').style.background = '#3a3a3a';
         document.getElementById('camp-skills-tab').style.background = '#3a3a3a';
         document.getElementById('camp-sleep-tab').style.background = '#5A3A31';
@@ -11984,11 +12202,14 @@
       
       document.getElementById('camp-training-tab').onclick = () => {
         playSound('waterdrop');
+        document.getElementById('camp-screen').classList.add('camp-subsection-active');
         document.getElementById('camp-buildings-section').style.display = 'none';
         document.getElementById('camp-skills-section').style.display = 'none';
         document.getElementById('camp-sleep-section').style.display = 'none';
         document.getElementById('camp-training-section').style.display = 'block';
         document.getElementById('camp-passive-section').style.display = 'none';
+        const campAccountSection = document.getElementById('camp-account-section');
+        if (campAccountSection) campAccountSection.style.display = 'none';
         document.getElementById('camp-buildings-tab').style.background = '#3a3a3a';
         document.getElementById('camp-skills-tab').style.background = '#3a3a3a';
         document.getElementById('camp-sleep-tab').style.background = '#3a3a3a';
@@ -12017,6 +12238,7 @@
         playSound('waterdrop');
         document.getElementById('gameover-screen').style.display = 'none';
         updateCampScreen();
+        document.getElementById('camp-screen').classList.remove('camp-subsection-active');
         document.getElementById('camp-screen').style.display = 'flex';
         // Keep menu hidden during camp visit from death
       };
@@ -14848,6 +15070,11 @@
       unlockLore('landmarks', 'windmill');
       unlockLore('bosses', 'windmillBoss');
       
+      // Progress windmill guide quest if active
+      if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest_windmill_guide') {
+        progressTutorialQuest('quest_windmill_guide', true);
+      }
+      
       playSound('levelup');
       updateHUD();
     }
@@ -14859,9 +15086,7 @@
       // Grant level up with proper upgrade modal (via awardLevels)
       awardLevels(1);
 
-      // Unlock Double Barrel Gun
-      weapons.gun.barrels = 2;
-      weapons.gun.damage += 10;
+      // Unlock Double Barrel Gun — TEMPORARY for this run only (resets next run)
       weapons.doubleBarrel.active = true;
       weapons.doubleBarrel.level = 1;
 
@@ -14870,12 +15095,12 @@
       const chestZ = farmerNPC ? farmerNPC.position.z + 1.5 : player.mesh.position.z + 2;
       spawnChest(chestX, chestZ, 'rare');
 
-      createFloatingText("DOUBLE BARREL UNLOCKED!", player.mesh.position);
+      createFloatingText("DOUBLE BARREL! (THIS RUN)", player.mesh.position);
 
       showEnhancedNotification(
         'unlock',
-        'WEAPON UNLOCKED!',
-        'Double Barrel Gun - Increased damage and firepower!'
+        'TEMP WEAPON UNLOCKED!',
+        'Double Barrel Gun — for this run only! Defend the windmill again next run for another reward!'
       );
 
       playSound('levelup');
@@ -15121,6 +15346,7 @@
           const campScreen = document.getElementById('camp-screen');
           if (campScreen) {
             updateCampScreen();
+            campScreen.classList.remove('camp-subsection-active');
             campScreen.style.display = 'flex';
           }
         } else if (step === 'unlock_dash') {
@@ -15302,6 +15528,10 @@
         if (currentQuest.id === 'quest7_kill10' && saveData.tutorialQuests.killsThisRun >= 15) {
           progressTutorialQuest('quest7_kill10', true);
         }
+        // quest_run_kill25: Kill 25 enemies
+        if (currentQuest.id === 'quest_run_kill25' && saveData.tutorialQuests.killsThisRun >= 25) {
+          progressTutorialQuest('quest_run_kill25', true);
+        }
       }
       
       // Quest 3 (new chain): Reach Level 5
@@ -15376,6 +15606,9 @@
 
     function resetGame() {
       stopDroneHum(); // Stop drone sound on reset
+      
+      // Reset weapons to default state for each run (roguelite: all run upgrades are temporary)
+      Object.assign(weapons, getDefaultWeapons());
       
       // Reset run loot tracking
       window.runLootGained = [];

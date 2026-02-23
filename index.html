@@ -181,33 +181,22 @@
   <!-- Camp Screen -->
   <div id="camp-screen">
     <div class="screen-title">⛺ CAMP</div>
-    
-    <!-- Magazine-style action button: "Continue Game" when in-run, "Start New Run" otherwise -->
-    <button id="camp-action-btn" class="camp-action-btn" style="
-      display: block;
-      margin: 0 auto 15px auto;
-      padding: 10px 32px;
-      font-family: 'Bangers', cursive;
-      font-size: 20px;
-      letter-spacing: 2px;
-      background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
-      color: #FFD700;
-      border: 3px solid #FFD700;
-      border-radius: 4px;
-      box-shadow: 4px 4px 0 #000, 0 0 12px rgba(255,215,0,0.3);
-      cursor: pointer;
-      text-transform: uppercase;
-      text-shadow: 1px 1px 0 #000;
-    ">▶ START NEW RUN</button>
-    
-    <!-- Account Level Display (top-center) -->
-    <div id="account-level-display" style="text-align:center;margin-bottom:15px;background:linear-gradient(135deg,rgba(20,20,40,0.9),rgba(40,20,60,0.9));border:2px solid #FFD700;border-radius:12px;padding:8px 14px;max-width:220px;width:100%;">
+
+    <!-- Account Level Display (top-center, oval glass dome) -->
+    <div id="account-level-display" style="text-align:center;margin-bottom:12px;width:100%;">
       <div style="font-family:'Bangers',cursive;font-size:11px;color:#aaa;letter-spacing:2px;">ACCOUNT LEVEL</div>
       <div id="account-level-value" style="font-family:'Bangers',cursive;font-size:26px;color:#FFD700;text-shadow:0 0 10px rgba(255,215,0,0.8);">1</div>
-      <div style="background:rgba(0,0,0,0.5);border-radius:8px;height:6px;width:100%;margin:3px 0;overflow:hidden;">
+      <div style="background:rgba(0,0,0,0.5);border-radius:8px;height:6px;width:80%;margin:3px auto;overflow:hidden;">
         <div id="account-level-bar" style="height:100%;background:linear-gradient(90deg,#FFD700,#FFA500);width:0%;transition:width 0.5s;border-radius:8px;"></div>
       </div>
       <div id="account-level-progress-text" style="font-size:10px;color:#aaa;">0 / 100 XP</div>
+    </div>
+
+    <!-- Camp header action buttons: Menu / Account / Continue -->
+    <div class="camp-header-btns">
+      <button class="camp-header-btn" id="camp-menu-btn">☰ MENU</button>
+      <button class="camp-header-btn" id="camp-account-btn">👤 ACCOUNT</button>
+      <button class="camp-header-btn" id="camp-action-btn">▶ CONTINUE</button>
     </div>
     
     <!-- Camp Tabs (hidden - navigation handled by building card clicks) -->
@@ -313,6 +302,20 @@
           </p>
         </div>
         <div id="camp-passive-content" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 15px;">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Account Building Section -->
+    <div id="camp-account-section" style="display: none; width: 100%;" class="camp-section-flex">
+      <div class="camp-section-outer-header">
+        <div style="color: #FFD700; font-size: 20px;">👤 Account &amp; Stats</div>
+        <div style="font-size: 13px; color: #5DADE2;" id="account-section-level-display">Level 1</div>
+      </div>
+      <button class="back-btn camp-section-back-btn">← Back to Camp</button>
+      <div class="camp-menu-box">
+        <div id="camp-account-content">
           <!-- Dynamically populated -->
         </div>
       </div>
