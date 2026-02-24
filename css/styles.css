@@ -593,60 +593,6 @@
     #farmer-speech-bubble.moving-right { animation: bubble-lean-right 0.4s ease-in-out infinite, bubble-push-right 0.4s ease-in-out infinite; }
     #farmer-speech-bubble.moving-up { animation: bubble-push-up 0.4s ease-in-out infinite; }
     #farmer-speech-bubble.idle { animation: bubble-twinkle 2s ease-in-out infinite; }
-    /* Tutorial Speech Bubble (same visual style as farmer bubble) */
-    #tutorial-speech-bubble {
-      position: absolute;
-      display: none;
-      background: #fffde7;
-      border: 3px solid #4e342e;
-      border-radius: 14px;
-      padding: 12px 16px 10px;
-      max-width: 280px;
-      min-width: 180px;
-      font-family: Arial, sans-serif;
-      font-size: 13px;
-      color: #3e2723;
-      box-shadow: 4px 4px 0px #4e342e;
-      z-index: 501;
-      pointer-events: auto;
-      cursor: pointer;
-      transform: translate(-50%, calc(-100% - 18px));
-      text-align: left;
-      user-select: none;
-      animation: tut-bubble-idle 2s ease-in-out infinite;
-    }
-    #tutorial-speech-bubble::after {
-      content: '';
-      position: absolute;
-      bottom: -16px;
-      left: 50%;
-      transform: translateX(-50%);
-      border: 8px solid transparent;
-      border-top-color: #4e342e;
-    }
-    #tutorial-speech-bubble::before {
-      content: '';
-      position: absolute;
-      bottom: -12px;
-      left: 50%;
-      transform: translateX(-50%);
-      border: 6px solid transparent;
-      border-top-color: #fffde7;
-      z-index: 1;
-    }
-    #tutorial-speech-bubble-text {
-      margin-bottom: 7px;
-      line-height: 1.5;
-    }
-    #tutorial-speech-bubble-prompt {
-      font-size: 10px;
-      color: #8d6e63;
-      text-align: right;
-    }
-    @keyframes tut-bubble-idle {
-      0%, 100% { box-shadow: 4px 4px 0px #4e342e; }
-      50% { box-shadow: 4px 4px 8px rgba(255,215,0,0.6), 4px 4px 0px #4e342e; }
-    }
     /* Farmer "?" above head */
     #farmer-quest-indicator {
       position: absolute;
