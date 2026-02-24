@@ -16168,8 +16168,11 @@
       }
       if (anchor === 'skillTree') {
         const el = document.getElementById('camp-skills-section');
-        if (el && el.offsetParent !== null) { const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + 50 }; }
-        return { x: window.innerWidth / 2, y: window.innerHeight * 0.15 };
+        if (el && el.offsetParent !== null) { const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: Math.max(r.top + 50, window.innerHeight * 0.6) }; }
+        return { x: window.innerWidth / 2, y: window.innerHeight * 0.6 };
+      }
+      if (anchor === 'camp-center') {
+        return { x: window.innerWidth / 2, y: window.innerHeight * 0.6 };
       }
       // Default: center top area of screen
       return { x: window.innerWidth / 2, y: window.innerHeight * 0.18 };
@@ -16411,7 +16414,7 @@
           if (tutGetStep() !== TUT_STEP.CAMP_INTRO) return;
           showTutBubble(
             "🏕️ WELCOME TO CAMP — your fortress of power between runs! Every building here makes you PERMANENTLY stronger. Skill trees, gear, companions, quests — this is where legends are BUILT. Your first quest: kill 3 enemies on your next run. I'll be watching!",
-            'center',
+            'camp-center',
             () => { tutSetStep(TUT_STEP.CAMP_QUEST_NOTIFY); },
             false
           );
@@ -16430,7 +16433,7 @@
             if (tutGetStep() !== TUT_STEP.CAMP_QUEST_NOTIFY) return;
             showTutBubble(
               "🏆 Quest COMPLETE, warrior! Head to the MAIN BUILDING and claim your reward — coins, skill points, and power boosts await. Every quest reward makes you permanently stronger. GO CLAIM IT!",
-              'center',
+              'camp-center',
               null,   // advances when quest is claimed
               false
             );
@@ -16448,7 +16451,7 @@
           if (tutGetStep() !== TUT_STEP.AFTER_CLAIMING) return;
           showTutBubble(
             "⚡ CLAIMED! Now for the real upgrade — head to the SKILL TREE. This is a web of permanent power that evolves your warrior across EVERY run. Time to unlock your potential!",
-            'center',
+            'camp-center',
             null,   // advances when skill tree is entered
             false
           );
@@ -16501,7 +16504,7 @@
           if (tutGetStep() !== TUT_STEP.START_NEXT_RUN) return;
           showTutBubble(
             "👑 TRAINING COMPLETE, LEGEND-IN-MAKING! Head back and enter the MAIN BUILDING to launch your next run — now armed, upgraded, and twice as deadly. The path to LEVEL 100 and true legend status starts HERE. GO BECOME IMMORTAL! 🌊",
-            'center',
+            'camp-center',
             () => { tutSetStep(TUT_STEP.COMPLETE); },
             false
           );
