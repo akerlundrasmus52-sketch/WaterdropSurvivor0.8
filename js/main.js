@@ -16240,13 +16240,13 @@
 
     function tutStep1() {
       tutSetStep(TUT_STEP.CHAR_INTRO);
-      showTutBubble("Welcome! This is your character.", 'player', () => tutStep2(), true);
+      showTutBubble("Welcome, WARRIOR! 💧 You ARE the Water Drop — a liquid legend forged in battle. Your mission? Survive waves of enemies that want you EVAPORATED. Let's get you armed and dangerous!", 'player', () => tutStep2(), true);
     }
 
     function tutStep2() {
       tutSetStep(TUT_STEP.LEFT_STICK);
       showTutBubble(
-        "This is how you steer. The left stick moves your character in whatever direction you push it.",
+        "👇 LEFT STICK — your legs of doom! Drag it in any direction to glide through the battlefield. Stay mobile, stay alive. NEVER stop moving!",
         'left-joystick', () => tutStep3(), true
       );
     }
@@ -16254,7 +16254,7 @@
     function tutStep3() {
       tutSetStep(TUT_STEP.RIGHT_STICK);
       showTutBubble(
-        "This is the aim stick. Steer it to shoot at enemies — it fires in the direction you push it.",
+        "👇 RIGHT STICK — your weapon hand! Push it toward enemies to auto-fire in that direction. Lock on and UNLEASH your liquid fury on anything that moves!",
         'right-joystick', () => tutStep4(), true
       );
     }
@@ -16262,7 +16262,7 @@
     function tutStep4() {
       tutSetStep(TUT_STEP.COMBINED_DEMO);
       showTutBubble(
-        "Use both sticks simultaneously — left to move, right to aim and shoot. Try it out!",
+        "⚡ NOW — use BOTH sticks at once! Left to dodge, right to destroy. This dual-stick mastery is what separates survivors from splatter. TAP HERE, then try it for a few seconds!",
         'center',
         () => {
           if (isGameActive && !isGameOver) setGamePaused(false);
@@ -16281,7 +16281,7 @@
       tutSetStep(TUT_STEP.FIRST_KILL);
       _tutKillsAtStep5 = playerStats ? playerStats.kills : 0;
       showTutBubble(
-        "OK, now find your first enemy and kill it!",
+        "🔥 FIRST BLOOD! Enemies are lurking nearby — hunt them down and make your first kill. This is where your legend begins. GO GET THEM!",
         'center',
         () => { if (isGameActive && !isGameOver) setGamePaused(false); },
         true
@@ -16306,7 +16306,7 @@
         anchor = expGems[0].mesh.position.clone();
       }
       showTutBubble(
-        "Nice! Now pick up the XP stars that drop when you kill enemies. These make you level up!",
+        "✨ LOOT! See those glowing gems? That's XP — the raw fuel of your power. Walk over them to absorb their energy. More XP = faster level-ups = STRONGER you. Don't leave any behind!",
         anchor,
         () => { if (isGameActive && !isGameOver) setGamePaused(false); },
         true
@@ -16324,7 +16324,7 @@
     function tutStep7() {
       tutSetStep(TUT_STEP.KILL_TO_LEVELUP);
       showTutBubble(
-        "Now kill enemies and pick up stars until you level up!",
+        "💥 Every kill drops XP gems. Every gem fills your level bar. When it fills up — BOOM — you get to choose a permanent POWER UPGRADE! Keep slaughtering and collecting until your power surges!",
         'center',
         () => { if (isGameActive && !isGameOver) setGamePaused(false); },
         true
@@ -16339,7 +16339,7 @@
         setTimeout(() => {
           if (tutGetStep() !== TUT_STEP.LEVELUP_UPGRADES) return;
           showTutBubble(
-            "These are your level-up upgrades — random each time! Stat building is deep here. Choose wisely, pick one upgrade to get stronger, and keep stacking good choices!",
+            "🎯 LEVEL UP — CHOOSE YOUR DESTINY! Each run gives you random upgrades to stack. Pick the one that fits your playstyle — damage, speed, survivability. STACK ENOUGH and become an unstoppable force of nature!",
             'levelup-modal',
             null,   // no click-dismiss — upgrade selection advances the tutorial
             false   // game already paused by levelUp()
@@ -16357,7 +16357,7 @@
         setTimeout(() => {
           if (tutGetStep() !== TUT_STEP.ON_YOUR_OWN || isGameOver) return;
           showTutBubble(
-            "OK, you're on your own now until you die. Then I'll come back and explain more!",
+            "You're a natural, warrior! 🌊 Now push as far as you can — kill, collect, level up, and UNLEASH your power. When you fall, I'll meet you in camp with even bigger secrets. DIE GLORIOUSLY, then come back STRONGER!",
             'center',
             () => { if (isGameActive && !isGameOver) setGamePaused(false); },
             true
@@ -16379,7 +16379,7 @@
       setTimeout(() => {
         if (tutGetStep() !== TUT_STEP.DEATH) return;
         showTutBubble(
-          "OK, here are your run stats. You can now visit camp for permanent upgrades — this is a roguelike survivor with between-run progression! Go to camp and I'll show you the ropes.",
+          "⚔️ What a fight! Check your run stats — this is your legacy growing. But death here is NOT the end... it's your next evolution. Camp is waiting with PERMANENT UPGRADES that carry across every run. Head there NOW and let's forge your legend!",
           'gameover-screen',
           () => {
             tutSetStep(TUT_STEP.CAMP_INTRO);
@@ -16410,7 +16410,7 @@
         setTimeout(() => {
           if (tutGetStep() !== TUT_STEP.CAMP_INTRO) return;
           showTutBubble(
-            "Start a new run from the Main Building or the top of screen. I won't interfere until you die and return here. First quest: kill 3 enemies! Keep trying until you get 3 kills.",
+            "🏕️ WELCOME TO CAMP — your fortress of power between runs! Every building here makes you PERMANENTLY stronger. Skill trees, gear, companions, quests — this is where legends are BUILT. Your first quest: kill 3 enemies on your next run. I'll be watching!",
             'center',
             () => { tutSetStep(TUT_STEP.CAMP_QUEST_NOTIFY); },
             false
@@ -16429,7 +16429,7 @@
           setTimeout(() => {
             if (tutGetStep() !== TUT_STEP.CAMP_QUEST_NOTIFY) return;
             showTutBubble(
-              "OK, time to claim your quest reward! Go to the Main Building and claim it now.",
+              "🏆 Quest COMPLETE, warrior! Head to the MAIN BUILDING and claim your reward — coins, skill points, and power boosts await. Every quest reward makes you permanently stronger. GO CLAIM IT!",
               'center',
               null,   // advances when quest is claimed
               false
@@ -16447,7 +16447,7 @@
         setTimeout(() => {
           if (tutGetStep() !== TUT_STEP.AFTER_CLAIMING) return;
           showTutBubble(
-            "Great! Now let's go to the Skill Tree menu.",
+            "⚡ CLAIMED! Now for the real upgrade — head to the SKILL TREE. This is a web of permanent power that evolves your warrior across EVERY run. Time to unlock your potential!",
             'center',
             null,   // advances when skill tree is entered
             false
@@ -16466,7 +16466,7 @@
         setTimeout(() => {
           if (tutGetStep() !== TUT_STEP.SKILL_TREE_TUTORIAL) return;
           showTutBubble(
-            "Now take 3 skills! More will open up as you progress.",
+            "🌟 THE SKILL TREE — your path to godhood! Every skill permanently buffs your warrior. Pick 3 skills now and feel the power surge through you. More unlock as you level up. CHOOSE WISELY, warrior!",
             'skillTree',
             null,   // advances after 3 skills selected
             false
@@ -16486,7 +16486,7 @@
           setTimeout(() => {
             if (tutGetStep() !== TUT_STEP.BACK_TO_CAMP) return;
             showTutBubble(
-              "OK, click here to get back to camp. You leveled up your account, so now you've got one more skill point. Use it now like you just did!",
+              "🔥 THREE SKILLS IN — you're evolving fast! You earned a bonus skill point from leveling up your account. Spend it now to push even further. Every point counts on the road to greatness!",
               'skillTree',
               null,   // advances when skill point is used
               false
@@ -16500,7 +16500,7 @@
         setTimeout(() => {
           if (tutGetStep() !== TUT_STEP.START_NEXT_RUN) return;
           showTutBubble(
-            "Now go back to the main menu, enter the Main Building, and start your next run!",
+            "👑 TRAINING COMPLETE, LEGEND-IN-MAKING! Head back and enter the MAIN BUILDING to launch your next run — now armed, upgraded, and twice as deadly. The path to LEVEL 100 and true legend status starts HERE. GO BECOME IMMORTAL! 🌊",
             'center',
             () => { tutSetStep(TUT_STEP.COMPLETE); },
             false
