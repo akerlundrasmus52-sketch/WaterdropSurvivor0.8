@@ -2727,6 +2727,7 @@
         }
         
         playerStats.kills++;
+        tutOnKill(); // First-run tutorial hook
         
         // Tutorial Quest: Track kills this run
         if (saveData.tutorialQuests) {
@@ -5404,6 +5405,11 @@
       // Side challenges
       sideChallenges: {
         kill10Enemies: { completed: false, progress: 0, target: 10 }
+      },
+      // First-Run Tutorial System (speech bubble tutorial)
+      firstRunTutorial: {
+        step: 0,       // 0=not started, 1-9=in-run steps, 10=death, 11-16=camp, 17=complete
+        completed: false
       }
     };
 
@@ -5445,6 +5451,8 @@
           saveData.sideChallenges = { ...defaultSaveData.sideChallenges, ...(saveData.sideChallenges || {}) };
           // Tutorial system (new fields)
           saveData.tutorial = { ...defaultSaveData.tutorial, ...(saveData.tutorial || {}) };
+          // First-run tutorial system
+          saveData.firstRunTutorial = { ...defaultSaveData.firstRunTutorial, ...(saveData.firstRunTutorial || {}) };
           // Destructibles info shown flag
           saveData.shownDestructiblesInfo = saveData.shownDestructiblesInfo || false;
         }
@@ -7463,6 +7471,7 @@
           skillData.unlocked = true;
         }
         skillData.level++;
+        tutOnSkillSelected(); // First-run tutorial hook
         
         saveSaveData();
         updateCampScreen();
@@ -8287,6 +8296,7 @@
       if (!saveData.tutorialQuests.completedQuests.includes(questId)) {
         saveData.tutorialQuests.completedQuests.push(questId);
       }
+      tutOnQuestClaimed(questId); // First-run tutorial hook
       
       // Give rewards
       if (quest.rewardGold) {
@@ -9166,6 +9176,12 @@
     }
 
     function updateCampScreen() {
+      // First-run tutorial hook: fire after current call stack (by then camp-screen is visible)
+      setTimeout(() => {
+        if (document.getElementById('camp-screen')?.style.display === 'flex') {
+          tutOnCampEntered();
+        }
+      }, 0);
       // Update action button label based on game state
       const campActionBtn = document.getElementById('camp-action-btn');
       if (campActionBtn) {
@@ -12474,6 +12490,8 @@
       setGameActive(true);
       gameStartTime = Date.now();
       console.log('[Countdown] Game started - isPaused:', isPaused, 'isGameActive:', isGameActive);
+      // First-run tutorial: trigger on the very first run
+      tutOnRunStart();
     }
     
     // --- LONG PRESS DETAIL POPUP ---
@@ -12939,6 +12957,7 @@
         document.getElementById('camp-sleep-tab').style.background = '#3a3a3a';
         document.getElementById('camp-training-tab').style.background = '#3a3a3a';
         document.getElementById('camp-passive-tab').style.background = '#3a3a3a';
+        tutOnSkillTreeEntered(); // First-run tutorial hook
       };
       
       document.getElementById('camp-passive-tab').onclick = () => {
@@ -13085,6 +13104,18 @@
           }
         }
       };
+
+      const replayTutBtn = document.getElementById('settings-replay-tutorial-btn');
+      if (replayTutBtn) {
+        replayTutBtn.onclick = () => {
+          if (confirm('Reset and replay the first-run tutorial? Tutorial progress will be cleared.')) {
+            tutResetTutorial();
+            document.getElementById('settings-modal').style.display = 'none';
+            alert('✅ Tutorial reset! It will replay on your next run.');
+            playSound('collect');
+          }
+        };
+      }
             
       // Stats Bar removed - No toggle needed
       
@@ -13614,6 +13645,7 @@
 
     function addExp(amount) {
       playerStats.exp += amount;
+      tutOnXPCollected(); // First-run tutorial hook
       
       // Phase 5: Give companion XP (10% of player XP)
       if (activeCompanion && !activeCompanion.isDead) {
@@ -13637,6 +13669,7 @@
 
     function levelUp(freeLevel = false) {
       if (levelUpPending) return; // Prevent double-trigger
+      tutOnLevelUp(); // First-run tutorial hook (before levelUpPending guard)
       levelUpPending = true;
       setGamePaused(true);
       
@@ -15030,6 +15063,7 @@
           
           // Always close modal
           modal.style.display = 'none';
+          tutOnUpgradeSelected(); // First-run tutorial hook
           modal.querySelector('h2').innerText = 'LEVEL UP!';
           modal.querySelector('h2').style.fontSize = '32px';
           modal.querySelector('h2').style.color = '';
@@ -16058,6 +16092,432 @@
     // showStatChange and showStatusMessage are defined in ui.js → window.GameUI
     // (aliased at the top of this file — statNotificationQueue and the queue
     //  processing logic live in ui.js module scope)
+
+    // --- FIRST-RUN TUTORIAL SYSTEM ---
+    // Comprehensive speech-bubble tutorial for new players.
+    // Reuses the same visual style as the windmill farmer dialogue.
+
+    const TUT_STEP = {
+      NONE: 0,
+      CHAR_INTRO: 1,
+      LEFT_STICK: 2,
+      RIGHT_STICK: 3,
+      COMBINED_DEMO: 4,
+      FIRST_KILL: 5,
+      XP_STARS: 6,
+      KILL_TO_LEVELUP: 7,
+      LEVELUP_UPGRADES: 8,
+      ON_YOUR_OWN: 9,
+      DEATH: 10,
+      CAMP_INTRO: 11,
+      CAMP_QUEST_NOTIFY: 12,
+      AFTER_CLAIMING: 13,
+      SKILL_TREE_TUTORIAL: 14,
+      BACK_TO_CAMP: 15,
+      START_NEXT_RUN: 16,
+      COMPLETE: 17,
+    };
+
+    // Runtime-only tutorial state (not persisted)
+    let _tutStep4Timer = null;
+    let _tutKillsAtStep5 = 0;
+    let _tutSkillsPickedInStep14 = 0;
+    let _tutBubbleOnDismiss = null;
+    let _tutCampEnteredDebounce = false;
+
+    function tutGetStep() {
+      return (saveData.firstRunTutorial && saveData.firstRunTutorial.step) || 0;
+    }
+
+    function tutSetStep(n) {
+      if (!saveData.firstRunTutorial) saveData.firstRunTutorial = { step: 0, completed: false };
+      saveData.firstRunTutorial.step = n;
+      if (n >= TUT_STEP.COMPLETE) saveData.firstRunTutorial.completed = true;
+      saveSaveData();
+    }
+
+    function tutIsCompleted() {
+      return !!(saveData.firstRunTutorial && saveData.firstRunTutorial.completed);
+    }
+
+    function tutGetAnchorPos(anchor) {
+      // THREE.Vector3 world position
+      if (anchor && typeof anchor === 'object' && anchor.isVector3) {
+        return worldToScreen(anchor.clone().setY(anchor.y + 1.5));
+      }
+      if (anchor === 'player' && player && player.mesh) {
+        return worldToScreen(player.mesh.position.clone().setY(player.mesh.position.y + 1.5));
+      }
+      if (anchor === 'left-joystick') {
+        const el = document.getElementById('joystick-outer');
+        if (el) { const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top }; }
+      }
+      if (anchor === 'right-joystick') {
+        const el = document.getElementById('joystick-outer-right');
+        if (el) { const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top }; }
+      }
+      if (anchor === 'levelup-modal') {
+        const el = document.getElementById('levelup-modal');
+        if (el) { const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: Math.max(r.top + 40, 60) }; }
+        return { x: window.innerWidth / 2, y: window.innerHeight * 0.15 };
+      }
+      if (anchor === 'gameover-screen') {
+        const el = document.getElementById('gameover-screen');
+        if (el) { const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height * 0.25 }; }
+        return { x: window.innerWidth / 2, y: window.innerHeight * 0.25 };
+      }
+      if (anchor === 'skillTree') {
+        const el = document.getElementById('camp-skills-section');
+        if (el && el.offsetParent !== null) { const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + 50 }; }
+        return { x: window.innerWidth / 2, y: window.innerHeight * 0.15 };
+      }
+      // Default: center top area of screen
+      return { x: window.innerWidth / 2, y: window.innerHeight * 0.18 };
+    }
+
+    function showTutBubble(text, anchor, onDismiss, pauseGame) {
+      const bubble = document.getElementById('tutorial-speech-bubble');
+      if (!bubble) return;
+      const textEl = document.getElementById('tutorial-speech-bubble-text');
+      const promptEl = document.getElementById('tutorial-speech-bubble-prompt');
+      if (!textEl || !promptEl) return;
+
+      if (pauseGame && isGameActive && !isGameOver) setGamePaused(true);
+
+      textEl.textContent = text;
+      promptEl.textContent = onDismiss ? '▶ tap to continue' : '';
+      bubble.style.display = 'block';
+
+      const pos = tutGetAnchorPos(anchor);
+      bubble.style.left = pos.x + 'px';
+      bubble.style.top = pos.y + 'px';
+
+      // Remove old listeners
+      if (bubble._tutClick) { bubble.removeEventListener('click', bubble._tutClick); bubble._tutClick = null; }
+      if (bubble._tutTouch) { bubble.removeEventListener('touchend', bubble._tutTouch); bubble._tutTouch = null; }
+
+      if (onDismiss) {
+        _tutBubbleOnDismiss = onDismiss;
+        function doAdvance() {
+          hideTutBubble();
+          const cb = _tutBubbleOnDismiss;
+          _tutBubbleOnDismiss = null;
+          if (cb) cb();
+        }
+        function touchHandler(e) { e.preventDefault(); doAdvance(); }
+        bubble._tutClick = doAdvance;
+        bubble._tutTouch = touchHandler;
+        bubble.addEventListener('click', doAdvance);
+        bubble.addEventListener('touchend', touchHandler);
+      } else {
+        _tutBubbleOnDismiss = null;
+      }
+    }
+
+    function hideTutBubble() {
+      const bubble = document.getElementById('tutorial-speech-bubble');
+      if (!bubble) return;
+      bubble.style.display = 'none';
+      if (bubble._tutClick) { bubble.removeEventListener('click', bubble._tutClick); bubble._tutClick = null; }
+      if (bubble._tutTouch) { bubble.removeEventListener('touchend', bubble._tutTouch); bubble._tutTouch = null; }
+      _tutBubbleOnDismiss = null;
+    }
+
+    // --- Tutorial step functions ---
+
+    function tutOnRunStart() {
+      if (tutIsCompleted()) return;
+      // Only start tutorial on the very first run (totalRuns === 0 at run start time)
+      if (saveData.totalRuns > 0) return;
+      const step = tutGetStep();
+      if (step >= TUT_STEP.DEATH) return;
+      // (Re)start from step 1 — runs always start fresh
+      setTimeout(() => {
+        if (!isGameActive || isGameOver) return;
+        tutStep1();
+      }, 800);
+    }
+
+    function tutStep1() {
+      tutSetStep(TUT_STEP.CHAR_INTRO);
+      showTutBubble("Welcome! This is your character.", 'player', () => tutStep2(), true);
+    }
+
+    function tutStep2() {
+      tutSetStep(TUT_STEP.LEFT_STICK);
+      showTutBubble(
+        "This is how you steer. The left stick moves your character in whatever direction you push it.",
+        'left-joystick', () => tutStep3(), true
+      );
+    }
+
+    function tutStep3() {
+      tutSetStep(TUT_STEP.RIGHT_STICK);
+      showTutBubble(
+        "This is the aim stick. Steer it to shoot at enemies — it fires in the direction you push it.",
+        'right-joystick', () => tutStep4(), true
+      );
+    }
+
+    function tutStep4() {
+      tutSetStep(TUT_STEP.COMBINED_DEMO);
+      showTutBubble(
+        "Use both sticks simultaneously — left to move, right to aim and shoot. Try it out!",
+        'center',
+        () => {
+          if (isGameActive && !isGameOver) setGamePaused(false);
+          if (_tutStep4Timer) clearTimeout(_tutStep4Timer);
+          // Advance after 5 seconds of free play
+          _tutStep4Timer = setTimeout(() => {
+            _tutStep4Timer = null;
+            if (tutGetStep() === TUT_STEP.COMBINED_DEMO && !isGameOver) tutStep5();
+          }, 5000);
+        },
+        true
+      );
+    }
+
+    function tutStep5() {
+      tutSetStep(TUT_STEP.FIRST_KILL);
+      _tutKillsAtStep5 = playerStats ? playerStats.kills : 0;
+      showTutBubble(
+        "OK, now find your first enemy and kill it!",
+        'center',
+        () => { if (isGameActive && !isGameOver) setGamePaused(false); },
+        true
+      );
+    }
+
+    function tutOnKill() {
+      if (tutIsCompleted()) return;
+      if (tutGetStep() === TUT_STEP.FIRST_KILL && playerStats.kills > _tutKillsAtStep5) {
+        // Delay so XP gems have time to spawn
+        setTimeout(() => {
+          if (tutGetStep() === TUT_STEP.FIRST_KILL && !isGameOver) tutStep6();
+        }, 600);
+      }
+    }
+
+    function tutStep6() {
+      tutSetStep(TUT_STEP.XP_STARS);
+      // Try to anchor near the first dropped XP gem
+      let anchor = 'center';
+      if (expGems.length > 0 && expGems[0].mesh) {
+        anchor = expGems[0].mesh.position.clone();
+      }
+      showTutBubble(
+        "Nice! Now pick up the XP stars that drop when you kill enemies. These make you level up!",
+        anchor,
+        () => { if (isGameActive && !isGameOver) setGamePaused(false); },
+        true
+      );
+    }
+
+    function tutOnXPCollected() {
+      if (tutIsCompleted()) return;
+      if (tutGetStep() === TUT_STEP.XP_STARS) {
+        hideTutBubble();
+        tutStep7();
+      }
+    }
+
+    function tutStep7() {
+      tutSetStep(TUT_STEP.KILL_TO_LEVELUP);
+      showTutBubble(
+        "Now kill enemies and pick up stars until you level up!",
+        'center',
+        () => { if (isGameActive && !isGameOver) setGamePaused(false); },
+        true
+      );
+    }
+
+    function tutOnLevelUp() {
+      if (tutIsCompleted()) return;
+      if (tutGetStep() === TUT_STEP.KILL_TO_LEVELUP) {
+        tutSetStep(TUT_STEP.LEVELUP_UPGRADES);
+        // Show bubble after level-up modal appears (levelUp has 800ms delay for modal)
+        setTimeout(() => {
+          if (tutGetStep() !== TUT_STEP.LEVELUP_UPGRADES) return;
+          showTutBubble(
+            "These are your level-up upgrades — they're random each time. The game has depth in stat building. Your character can be built in many ways, so choose wisely! Pick one upgrade to get stronger. This stacks, so make good choices and continue!",
+            'levelup-modal',
+            null,   // no click-dismiss — upgrade selection advances the tutorial
+            false   // game already paused by levelUp()
+          );
+        }, 950);
+      }
+    }
+
+    function tutOnUpgradeSelected() {
+      if (tutIsCompleted()) return;
+      if (tutGetStep() === TUT_STEP.LEVELUP_UPGRADES) {
+        hideTutBubble();
+        tutSetStep(TUT_STEP.ON_YOUR_OWN);
+        // Show step 9 bubble after a short delay (forceGameUnpause() briefly plays, then we re-pause)
+        setTimeout(() => {
+          if (tutGetStep() !== TUT_STEP.ON_YOUR_OWN || isGameOver) return;
+          showTutBubble(
+            "OK, you're on your own now until you die. Then I'll come back and explain more!",
+            'center',
+            () => { if (isGameActive && !isGameOver) setGamePaused(false); },
+            true
+          );
+        }, 400);
+      }
+    }
+
+    function tutOnDeath() {
+      if (tutIsCompleted()) return;
+      const step = tutGetStep();
+      if (step < TUT_STEP.CHAR_INTRO) return;
+      if (step > TUT_STEP.ON_YOUR_OWN && step !== TUT_STEP.DEATH) return;
+      // Any in-run step → set to DEATH
+      if (step < TUT_STEP.DEATH) tutSetStep(TUT_STEP.DEATH);
+      hideTutBubble();
+      if (_tutStep4Timer) { clearTimeout(_tutStep4Timer); _tutStep4Timer = null; }
+
+      setTimeout(() => {
+        if (tutGetStep() !== TUT_STEP.DEATH) return;
+        showTutBubble(
+          "OK, here are your stats from this run. You can now go to your camp for permanent upgrades. It's a roguelike vs. survivor — there's progression between runs! Now go to camp and we'll learn some of that stuff there.",
+          'gameover-screen',
+          () => {
+            tutSetStep(TUT_STEP.CAMP_INTRO);
+            const gameoverScreen = document.getElementById('gameover-screen');
+            if (gameoverScreen) gameoverScreen.style.display = 'none';
+            const campScreen = document.getElementById('camp-screen');
+            if (campScreen) {
+              updateCampScreen();
+              campScreen.classList.remove('camp-subsection-active');
+              campScreen.style.display = 'flex';
+            }
+          },
+          false
+        );
+      }, 1200);
+    }
+
+    function tutOnCampEntered() {
+      if (tutIsCompleted()) return;
+      // Debounce: only fire once per 1.5-second window
+      if (_tutCampEnteredDebounce) return;
+      _tutCampEnteredDebounce = true;
+      setTimeout(() => { _tutCampEnteredDebounce = false; }, 1500);
+
+      const step = tutGetStep();
+
+      if (step === TUT_STEP.CAMP_INTRO) {
+        setTimeout(() => {
+          if (tutGetStep() !== TUT_STEP.CAMP_INTRO) return;
+          showTutBubble(
+            "OK, now start a new round from the Main Building or at the top of the screen. I won't interfere until you die and come back here again. Oh, I almost forgot — your first quest is to kill 3 enemies! Try to do that before you die. If not, try again until you get 3 kills, then we'll continue explaining how this camp works.",
+            'center',
+            () => { tutSetStep(TUT_STEP.CAMP_QUEST_NOTIFY); },
+            false
+          );
+        }, 600);
+        return;
+      }
+
+      if (step === TUT_STEP.CAMP_QUEST_NOTIFY) {
+        // Check if kill-3 quest is ready to claim or already claimed
+        const kills3Ready = saveData.tutorialQuests && (
+          saveData.tutorialQuests.readyToClaim.includes('quest1_kill3') ||
+          saveData.tutorialQuests.completedQuests.includes('quest1_kill3')
+        );
+        if (kills3Ready) {
+          setTimeout(() => {
+            if (tutGetStep() !== TUT_STEP.CAMP_QUEST_NOTIFY) return;
+            showTutBubble(
+              "OK, time to claim your quest reward! Go to the Main Building and claim it now.",
+              'center',
+              null,   // advances when quest is claimed
+              false
+            );
+          }, 700);
+        }
+      }
+    }
+
+    function tutOnQuestClaimed(questId) {
+      if (tutIsCompleted()) return;
+      if (tutGetStep() === TUT_STEP.CAMP_QUEST_NOTIFY && questId === 'quest1_kill3') {
+        hideTutBubble();
+        tutSetStep(TUT_STEP.AFTER_CLAIMING);
+        setTimeout(() => {
+          if (tutGetStep() !== TUT_STEP.AFTER_CLAIMING) return;
+          showTutBubble(
+            "Great! Now let's go to the Skill Tree menu.",
+            'center',
+            null,   // advances when skill tree is entered
+            false
+          );
+        }, 500);
+      }
+    }
+
+    function tutOnSkillTreeEntered() {
+      if (tutIsCompleted()) return;
+      const step = tutGetStep();
+      if (step === TUT_STEP.AFTER_CLAIMING) {
+        hideTutBubble();
+        tutSetStep(TUT_STEP.SKILL_TREE_TUTORIAL);
+        _tutSkillsPickedInStep14 = 0;
+        setTimeout(() => {
+          if (tutGetStep() !== TUT_STEP.SKILL_TREE_TUTORIAL) return;
+          showTutBubble(
+            "Now take 3 skills! More will open up as you progress.",
+            'skillTree',
+            null,   // advances after 3 skills selected
+            false
+          );
+        }, 400);
+      }
+    }
+
+    function tutOnSkillSelected() {
+      if (tutIsCompleted()) return;
+      const step = tutGetStep();
+      if (step === TUT_STEP.SKILL_TREE_TUTORIAL) {
+        _tutSkillsPickedInStep14++;
+        if (_tutSkillsPickedInStep14 >= 3) {
+          hideTutBubble();
+          tutSetStep(TUT_STEP.BACK_TO_CAMP);
+          setTimeout(() => {
+            if (tutGetStep() !== TUT_STEP.BACK_TO_CAMP) return;
+            showTutBubble(
+              "OK, click here to get back to camp. You leveled up your account, so now you've got one more skill point. Use it now like you just did!",
+              'skillTree',
+              null,   // advances when skill point is used
+              false
+            );
+          }, 400);
+        }
+      } else if (step === TUT_STEP.BACK_TO_CAMP) {
+        // Player used their bonus skill point in step 15
+        hideTutBubble();
+        tutSetStep(TUT_STEP.START_NEXT_RUN);
+        setTimeout(() => {
+          if (tutGetStep() !== TUT_STEP.START_NEXT_RUN) return;
+          showTutBubble(
+            "Now go back to the main menu, enter the Main Building, and start your next run!",
+            'center',
+            () => { tutSetStep(TUT_STEP.COMPLETE); },
+            false
+          );
+        }, 400);
+      }
+    }
+
+    function tutResetTutorial() {
+      hideTutBubble();
+      if (_tutStep4Timer) { clearTimeout(_tutStep4Timer); _tutStep4Timer = null; }
+      saveData.firstRunTutorial = { step: 0, completed: false };
+      saveSaveData();
+    }
+
+    // --- End First-Run Tutorial System ---
+
     function showComicTutorial(step) {
       const modal = document.getElementById('comic-tutorial-modal');
       const title = document.getElementById('comic-title');
@@ -16209,6 +16669,8 @@
       // Close farmer speech bubble if open
       const farmerBubble = document.getElementById('farmer-speech-bubble');
       if (farmerBubble) farmerBubble.style.display = 'none';
+      // First-run tutorial death hook
+      tutOnDeath();
       // Close any open modals and quest UIs
       ['levelup-modal','settings-modal','stats-modal','comic-tutorial-modal','story-quest-modal',
        'windmill-quest-ui','montana-quest-ui','eiffel-quest-ui'].forEach(id => {
@@ -16277,7 +16739,9 @@
         }
         saveSaveData();
         // Show first death tutorial – quest1 activates later when player enters the Main Building
+        // Suppressed when the new first-run tutorial is active (it handles the death step itself)
         setTimeout(() => {
+          if (!tutIsCompleted() && tutGetStep() >= TUT_STEP.CHAR_INTRO) return;
           showComicTutorial('first_death');
         }, 1000);
       }
@@ -16383,6 +16847,8 @@
 
     function resetGame() {
       stopDroneHum(); // Stop drone sound on reset
+      hideTutBubble(); // Hide tutorial bubble on reset
+      if (_tutStep4Timer) { clearTimeout(_tutStep4Timer); _tutStep4Timer = null; }
       
       // Reset weapons to default state for each run (roguelite: all run upgrades are temporary)
       Object.assign(weapons, getDefaultWeapons());
