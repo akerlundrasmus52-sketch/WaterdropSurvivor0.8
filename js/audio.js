@@ -352,6 +352,77 @@ function playSound(type) {
     gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
     osc2.start(now);
     osc2.stop(now + 0.25);
+  } else if (type === 'lightning') {
+    // Lightning: rapid high-frequency crack
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(2200, now);
+    osc.frequency.exponentialRampToValueAtTime(400, now + 0.08);
+    gain.gain.setValueAtTime(0.22, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+    osc.start(now);
+    osc.stop(now + 0.12);
+    // Crackle overlay
+    const osc2 = audioCtx.createOscillator();
+    const gain2 = audioCtx.createGain();
+    osc2.connect(gain2);
+    gain2.connect(audioCtx.destination);
+    osc2.type = 'square';
+    osc2.frequency.setValueAtTime(1800, now);
+    osc2.frequency.exponentialRampToValueAtTime(200, now + 0.1);
+    gain2.gain.setValueAtTime(0.12, now);
+    gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+    osc2.start(now);
+    osc2.stop(now + 0.1);
+  } else if (type === 'freeze') {
+    // Icy tinkle: high frequency sine with quick decay
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(3200, now);
+    osc.frequency.exponentialRampToValueAtTime(1600, now + 0.12);
+    gain.gain.setValueAtTime(0.10, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+    osc.start(now);
+    osc.stop(now + 0.18);
+    // Crystal chime
+    const osc2 = audioCtx.createOscillator();
+    const gain2 = audioCtx.createGain();
+    osc2.connect(gain2);
+    gain2.connect(audioCtx.destination);
+    osc2.type = 'sine';
+    osc2.frequency.setValueAtTime(4200, now + 0.03);
+    osc2.frequency.exponentialRampToValueAtTime(2000, now + 0.15);
+    gain2.gain.setValueAtTime(0.07, now + 0.03);
+    gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+    osc2.start(now + 0.03);
+    osc2.stop(now + 0.18);
+  } else if (type === 'volcano') {
+    // Deep rumble with slow oscillation
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(55, now);
+    osc.frequency.linearRampToValueAtTime(45, now + 0.5);
+    gain.gain.setValueAtTime(0.28, now);
+    gain.gain.linearRampToValueAtTime(0, now + 0.6);
+    osc.start(now);
+    osc.stop(now + 0.6);
+    const osc2 = audioCtx.createOscillator();
+    const gain2 = audioCtx.createGain();
+    osc2.connect(gain2);
+    gain2.connect(audioCtx.destination);
+    osc2.type = 'square';
+    osc2.frequency.setValueAtTime(80, now);
+    osc2.frequency.linearRampToValueAtTime(40, now + 0.4);
+    gain2.gain.setValueAtTime(0.18, now);
+    gain2.gain.linearRampToValueAtTime(0, now + 0.5);
+    osc2.start(now);
+    osc2.stop(now + 0.5);
+  } else if (type === 'drone_shot') {
+    // Drone rapid-fire: short sharp buzz
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(600, now);
+    osc.frequency.exponentialRampToValueAtTime(200, now + 0.04);
+    gain.gain.setValueAtTime(0.08, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+    osc.start(now);
+    osc.stop(now + 0.05);
   }
 }
 

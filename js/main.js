@@ -1366,6 +1366,14 @@
             
             // Glow effect
             orb.material.opacity = 0.7 + Math.sin(gameTime * 8 + i) * 0.2;
+            
+            // Fire particles around each orb (throttled: every 3 frames)
+            if (Math.floor(gameTime * 60) % 3 === i % 3) {
+              spawnParticles(orb.position, 0xFF4500, 1);
+            }
+            if (Math.floor(gameTime * 60) % 7 === i % 7) {
+              spawnParticles(orb.position, 0xFF8C00, 1);
+            }
           }
         } else {
           // Hide orbs when weapon not active
@@ -4089,6 +4097,7 @@
           roughness: 0.1
         });
         this.mesh = new THREE.Mesh(geometry, material);
+        this.mesh.scale.set(1, 3, 1); // Elongated ice shard
         this.mesh.position.set(x, 0.5, z);
         scene.add(this.mesh);
 
@@ -9846,7 +9855,7 @@
       // Farmer NPC near windmill (between windmill and barn)
       (function() {
         const farmerGroup = new THREE.Group();
-        farmerGroup.position.set(44, 0, 44); // Between windmill and barn
+        farmerGroup.position.set(44, 0, -20); // Farm area south of windmill, away from Stonehenge
         // Body
         const bodyMesh = new THREE.Mesh(
           new THREE.BoxGeometry(0.8, 1.2, 0.5),
@@ -9893,7 +9902,7 @@
       
       // Barn adjacent to windmill (not connected - placed to the north-east)
       const barnGroup = new THREE.Group();
-      barnGroup.position.set(50, 0, 30); // Adjacent to windmill, not connected
+      barnGroup.position.set(50, 0, -10); // Farm area away from Stonehenge
       // Barn body
       const barnBodyGeo = new THREE.BoxGeometry(8, 5, 10);
       const barnBodyMat = new THREE.MeshToonMaterial({ color: 0xA0522D }); // Sienna red barn
@@ -11037,6 +11046,15 @@
       const shadowGeo = new THREE.CircleGeometry(2, 16);
       const shadowMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.3 });
       
+      // Seeded pseudo-random for deterministic tree positions.
+      // Uses sin-based hash: multiplying by a large prime-like constant (10000) spreads
+      // the sin output across the fractional range for good distribution.
+      function seededRandom(seed) {
+        const SEED_MULTIPLIER = 10000; // Large constant for wide fractional distribution
+        const x = Math.sin(seed + 1) * SEED_MULTIPLIER;
+        return x - Math.floor(x);
+      }
+
       for (let i = 0; i < 120; i++) { // Increased from 50 to 120
         const group = new THREE.Group();
         const trunk = new THREE.Mesh(trunkGeo, trunkMat);
@@ -11044,8 +11062,8 @@
         trunk.castShadow = true;
         trunk.receiveShadow = true;
         
-        // Randomly choose tree type
-        const treeType = Math.floor(Math.random() * 3);
+        // Deterministic tree type based on index
+        const treeType = Math.floor(seededRandom(i * 7) * 3);
         let leaves;
         if (treeType === 0) {
           leaves = new THREE.Mesh(leavesGeo, treeMat);
@@ -11085,13 +11103,13 @@
         // Avoid spawning trees in lake area and rondel
         while ((inLake || inRondel) && attempts < MAX_SPAWN_ATTEMPTS) {
           if (i < 80) {
-            // First 80 trees in forest area (Top Left quadrant mostly)
-            tx = (Math.random() * 100) - 90;
-            tz = (Math.random() * 100) - 90;
+            // First 80 trees in forest area (Top Left quadrant mostly) - seeded deterministic
+            tx = (seededRandom(i * 13 + attempts * 3) * 100) - 90;
+            tz = (seededRandom(i * 17 + attempts * 5) * 100) - 90;
           } else {
-            // Remaining 40 trees spread across entire map
-            tx = (Math.random() * 180) - 90;
-            tz = (Math.random() * 180) - 90;
+            // Remaining 40 trees spread across entire map - seeded deterministic
+            tx = (seededRandom(i * 19 + attempts * 7) * 180) - 90;
+            tz = (seededRandom(i * 23 + attempts * 11) * 180) - 90;
           }
           
           // Check if tree would be in lake
@@ -11349,6 +11367,557 @@
         const crate = createDestructibleProp('crate', new THREE.Vector3(x, 0, z));
         window.destructibleProps.push(crate);
       }
+
+      // ===================================================================
+      // REGIONAL CONTENT: Desert, Snowy Mountains, Forest, Sci-Fi/Alien
+      // ===================================================================
+
+      // --- DESERT REGION (x: 50-200, z: -200 to 0) ---
+      // Camel props near pyramid
+      function createCamel(cx, cz) {
+        const camelGroup = new THREE.Group();
+        camelGroup.position.set(cx, 0, cz);
+        const camelMat = new THREE.MeshToonMaterial({ color: 0xC19A6B });
+        // Body
+        const bodyGeo = new THREE.BoxGeometry(3, 1.5, 1.2);
+        const body = new THREE.Mesh(bodyGeo, camelMat);
+        body.position.set(0, 1.5, 0);
+        body.castShadow = true;
+        camelGroup.add(body);
+        // Hump
+        const humpGeo = new THREE.SphereGeometry(0.6, 8, 8);
+        const hump = new THREE.Mesh(humpGeo, camelMat);
+        hump.position.set(0, 2.5, 0);
+        hump.castShadow = true;
+        camelGroup.add(hump);
+        // Head
+        const headGeo = new THREE.BoxGeometry(0.8, 0.8, 0.8);
+        const head = new THREE.Mesh(headGeo, camelMat);
+        head.position.set(1.8, 2.3, 0);
+        head.castShadow = true;
+        camelGroup.add(head);
+        // Neck
+        const neckGeo = new THREE.CylinderGeometry(0.2, 0.3, 1.2, 6);
+        const neck = new THREE.Mesh(neckGeo, camelMat);
+        neck.position.set(1.3, 2.0, 0);
+        neck.rotation.z = -0.4;
+        neck.castShadow = true;
+        camelGroup.add(neck);
+        // Legs
+        const legGeo = new THREE.CylinderGeometry(0.18, 0.18, 1.2, 6);
+        [[-1, 0.5], [-1, -0.5], [1, 0.5], [1, -0.5]].forEach(([lx, lz]) => {
+          const leg = new THREE.Mesh(legGeo, camelMat);
+          leg.position.set(lx, 0.6, lz);
+          leg.castShadow = true;
+          camelGroup.add(leg);
+        });
+        scene.add(camelGroup);
+      }
+      createCamel(80, -70);
+      createCamel(120, -90);
+      createCamel(95, -120);
+
+      // Sand dunes in desert
+      const sandMat = new THREE.MeshToonMaterial({ color: 0xE8C880 });
+      const dunePositions = [
+        { x: 100, z: -80, rx: 0.6, rz: 1.2 },
+        { x: 140, z: -60, rx: 0.8, rz: 1.5 },
+        { x: 120, z: -130, rx: 0.5, rz: 1.0 },
+        { x: 160, z: -100, rx: 0.7, rz: 1.3 },
+        { x: 90, z: -150, rx: 0.6, rz: 1.1 },
+        { x: 170, z: -140, rx: 0.9, rz: 1.6 },
+      ];
+      dunePositions.forEach(d => {
+        const duneGeo = new THREE.SphereGeometry(d.rx, 8, 6);
+        const dune = new THREE.Mesh(duneGeo, sandMat);
+        dune.position.set(d.x, 0, d.z);
+        dune.scale.set(d.rz * 3, 0.4, d.rz * 2);
+        dune.receiveShadow = true;
+        scene.add(dune);
+      });
+
+      // Old rusty car in desert
+      (function() {
+        const carGroup = new THREE.Group();
+        carGroup.position.set(110, 0, -80);
+        carGroup.rotation.y = 0.7;
+        const rustyMat = new THREE.MeshToonMaterial({ color: 0x8B4513 });
+        // Car body
+        const carBodyGeo = new THREE.BoxGeometry(4, 1.2, 2);
+        const carBody = new THREE.Mesh(carBodyGeo, rustyMat);
+        carBody.position.y = 0.9;
+        carBody.castShadow = true;
+        carGroup.add(carBody);
+        // Car top
+        const carTopGeo = new THREE.BoxGeometry(2.5, 0.9, 1.8);
+        const carTop = new THREE.Mesh(carTopGeo, rustyMat);
+        carTop.position.set(0.2, 2.05, 0);
+        carTop.castShadow = true;
+        carGroup.add(carTop);
+        // Wheels (flat cylinders)
+        const wheelGeo2 = new THREE.CylinderGeometry(0.5, 0.5, 0.3, 8);
+        const wheelMat2 = new THREE.MeshToonMaterial({ color: 0x222222 });
+        [[-1.5, 0.5, 0.9], [-1.5, 0.5, -0.9], [1.5, 0.5, 0.9], [1.5, 0.5, -0.9]].forEach(([wx, wy, wz]) => {
+          const wheel = new THREE.Mesh(wheelGeo2, wheelMat2);
+          wheel.position.set(wx, wy, wz);
+          wheel.rotation.x = Math.PI / 2;
+          carGroup.add(wheel);
+        });
+        scene.add(carGroup);
+      })();
+
+      // Sandy ground overlay for desert region
+      const desertGroundMat = new THREE.MeshToonMaterial({ color: 0xDEB887, transparent: true, opacity: 0.5 });
+      const desertGround = new THREE.Mesh(new THREE.PlaneGeometry(150, 200), desertGroundMat);
+      desertGround.rotation.x = -Math.PI / 2;
+      desertGround.position.set(125, 0.005, -100);
+      scene.add(desertGround);
+
+      // --- SNOWY MOUNTAINS REGION (x: -200 to 0, z: -200 to 0) ---
+      // Volcano with glowing orange/red lava crater
+      (function() {
+        const volcanoGroup = new THREE.Group();
+        volcanoGroup.position.set(-100, 0, -120);
+        
+        const volMat = new THREE.MeshToonMaterial({ color: 0x5C4033 }); // Dark brown rock
+        // Volcano base cone
+        const baseGeo = new THREE.ConeGeometry(18, 22, 12);
+        const base = new THREE.Mesh(baseGeo, volMat);
+        base.position.y = 11;
+        base.castShadow = true;
+        volcanoGroup.add(base);
+        
+        // Inner lava crater (orange/red glow)
+        const craterGeo = new THREE.ConeGeometry(6, 5, 12, 1, true);
+        const craterMat = new THREE.MeshBasicMaterial({ 
+          color: 0xFF4500, side: THREE.BackSide,
+        });
+        const crater = new THREE.Mesh(craterGeo, craterMat);
+        crater.position.y = 20;
+        volcanoGroup.add(crater);
+        
+        // Lava pool at top
+        const lavaPoolGeo = new THREE.CircleGeometry(5.5, 16);
+        const lavaPoolMat = new THREE.MeshBasicMaterial({ color: 0xFF6A00 });
+        const lavaPool = new THREE.Mesh(lavaPoolGeo, lavaPoolMat);
+        lavaPool.rotation.x = -Math.PI / 2;
+        lavaPool.position.y = 21.8;
+        lavaPool.userData = { isLavaPool: true, phase: 0 };
+        volcanoGroup.add(lavaPool);
+        
+        // Glowing orange point light inside crater
+        const volcanoLight = new THREE.PointLight(0xFF4500, 4, 35);
+        volcanoLight.position.set(0, 22, 0);
+        volcanoLight.userData = { isVolcanoLight: true, phase: 0 };
+        volcanoGroup.add(volcanoLight);
+        
+        // Lava rock chunks scattered around base
+        const lavaRockMat = new THREE.MeshToonMaterial({ color: 0x3B2A2A });
+        for (let r = 0; r < 12; r++) {
+          const rAngle = (r / 12) * Math.PI * 2;
+          const rDist = 16 + Math.sin(r * 2.3) * 4;
+          const rockGeo = new THREE.DodecahedronGeometry(0.8 + Math.sin(r) * 0.4, 0);
+          const rock = new THREE.Mesh(rockGeo, lavaRockMat);
+          rock.position.set(Math.cos(rAngle) * rDist, 0.5, Math.sin(rAngle) * rDist);
+          rock.rotation.set(Math.random() * 2, Math.random() * 2, Math.random() * 2);
+          rock.castShadow = true;
+          volcanoGroup.add(rock);
+        }
+        
+        // Snow-covered rocks near volcano base (contrast)
+        const snowRockMat = new THREE.MeshToonMaterial({ color: 0xF0F0F0 });
+        for (let s = 0; s < 8; s++) {
+          const sAngle = (s / 8) * Math.PI * 2 + 0.4;
+          const sDist = 22 + s * 1.2;
+          const snowRockGeo = new THREE.SphereGeometry(1.2 + s * 0.2, 7, 6);
+          const snowRock = new THREE.Mesh(snowRockGeo, snowRockMat);
+          snowRock.position.set(Math.cos(sAngle) * sDist, 0.8, Math.sin(sAngle) * sDist);
+          snowRock.castShadow = true;
+          volcanoGroup.add(snowRock);
+        }
+        
+        scene.add(volcanoGroup);
+        // Store for animation
+        window.volcanoLight = volcanoLight;
+        window.lavaPool = lavaPool;
+      })();
+
+      // Snowy ground overlay
+      const snowGroundMat = new THREE.MeshToonMaterial({ color: 0xEEEEFF, transparent: true, opacity: 0.4 });
+      const snowGround = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), snowGroundMat);
+      snowGround.rotation.x = -Math.PI / 2;
+      snowGround.position.set(-100, 0.006, -100);
+      scene.add(snowGround);
+
+      // --- FOREST/GREEN REGION (x: 0-200, z: 0-200) - Extra trees and mushrooms near Stonehenge ---
+      // Dense trees around Stonehenge (NOT inside the stone circle)
+      const stonehengeTreeTrunkMat = new THREE.MeshToonMaterial({ color: 0x4A2C0A });
+      const stonehengeTreeLeavesMat = new THREE.MeshToonMaterial({ color: 0x1A7A1A });
+      const stonehengeDenseTreeData = [
+        {x:78, z:62}, {x:80, z:55}, {x:76, z:70}, {x:85, z:65},
+        {x:42, z:62}, {x:40, z:55}, {x:44, z:70}, {x:38, z:65},
+        {x:62, z:42}, {x:55, z:40}, {x:70, z:44}, {x:65, z:38},
+        {x:62, z:78}, {x:55, z:80}, {x:70, z:76}, {x:65, z:85},
+      ];
+      stonehengeDenseTreeData.forEach(td => {
+        const tg = new THREE.Group();
+        const tt = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.35, 3, 6), stonehengeTreeTrunkMat);
+        tt.position.y = 1.5; tt.castShadow = true;
+        const tl = new THREE.Mesh(new THREE.SphereGeometry(1.8, 7, 6), stonehengeTreeLeavesMat);
+        tl.position.y = 4; tl.castShadow = true;
+        tg.add(tt); tg.add(tl);
+        tg.position.set(td.x, 0, td.z);
+        scene.add(tg);
+      });
+
+      // Mushrooms scattered in forest region
+      const mushroomCapMat = new THREE.MeshToonMaterial({ color: 0xC0392B }); // Red mushroom cap
+      const mushroomStemMat = new THREE.MeshToonMaterial({ color: 0xFFF8DC }); // Cream stem
+      const mushroomData = [
+        {x:75, z:75, s:1.0}, {x:85, z:80, s:0.7}, {x:90, z:70, s:1.2},
+        {x:70, z:90, s:0.8}, {x:100, z:80, s:1.0}, {x:80, z:100, s:0.6},
+        {x:110, z:70, s:1.3}, {x:65, z:110, s:0.9},
+      ];
+      mushroomData.forEach(m => {
+        const mGroup = new THREE.Group();
+        mGroup.position.set(m.x, 0, m.z);
+        const stemGeo = new THREE.CylinderGeometry(0.15 * m.s, 0.2 * m.s, 0.7 * m.s, 8);
+        const stem = new THREE.Mesh(stemGeo, mushroomStemMat);
+        stem.position.y = 0.35 * m.s;
+        mGroup.add(stem);
+        const capGeo = new THREE.SphereGeometry(0.5 * m.s, 8, 6);
+        const cap = new THREE.Mesh(capGeo, mushroomCapMat);
+        cap.position.y = 0.9 * m.s;
+        cap.scale.y = 0.6;
+        mGroup.add(cap);
+        scene.add(mGroup);
+      });
+
+      // --- SCI-FI/ALIEN REGION (x: -200 to 0, z: 0 to 200) ---
+      // Area 51 building
+      (function() {
+        const area51Group = new THREE.Group();
+        area51Group.position.set(-120, 0, 100);
+        
+        const a51Mat = new THREE.MeshToonMaterial({ color: 0x888888 }); // Flat grey
+        // Main hangar building
+        const hangarGeo = new THREE.BoxGeometry(25, 6, 15);
+        const hangar = new THREE.Mesh(hangarGeo, a51Mat);
+        hangar.position.y = 3;
+        hangar.castShadow = true;
+        hangar.receiveShadow = true;
+        area51Group.add(hangar);
+        
+        // Hangar roof (slightly arched with cylinder)
+        const roofGeo = new THREE.CylinderGeometry(0.1, 14, 4, 4);
+        const roofMat = new THREE.MeshToonMaterial({ color: 0x666666 });
+        const roofMesh = new THREE.Mesh(roofGeo, roofMat);
+        roofMesh.position.y = 8;
+        roofMesh.rotation.y = Math.PI / 4;
+        roofMesh.castShadow = true;
+        area51Group.add(roofMesh);
+        
+        // Side building
+        const sideGeo = new THREE.BoxGeometry(10, 4, 8);
+        const sideBuilding = new THREE.Mesh(sideGeo, a51Mat);
+        sideBuilding.position.set(16, 2, 0);
+        sideBuilding.castShadow = true;
+        area51Group.add(sideBuilding);
+        
+        // Satellite dish
+        const dishBase = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.3, 0.3, 2, 6),
+          new THREE.MeshToonMaterial({ color: 0x444444 })
+        );
+        dishBase.position.set(-8, 7, 0);
+        area51Group.add(dishBase);
+        const dishGeo = new THREE.SphereGeometry(2, 12, 6, 0, Math.PI);
+        const dish = new THREE.Mesh(dishGeo, new THREE.MeshToonMaterial({ color: 0xBBBBBB }));
+        dish.position.set(-8, 9, 0);
+        dish.rotation.x = -Math.PI / 2;
+        area51Group.add(dish);
+        
+        // Warning signs / "CLASSIFIED" on building
+        const warningLight = new THREE.Mesh(
+          new THREE.SphereGeometry(0.3, 8, 8),
+          new THREE.MeshBasicMaterial({ color: 0xFF0000, transparent: true, opacity: 0.9 })
+        );
+        warningLight.position.set(0, 7, 7.5);
+        warningLight.userData = { isWarningLight: true, phase: 0 };
+        area51Group.add(warningLight);
+        
+        // Perimeter fence around Area 51
+        const a51FenceMat = new THREE.MeshToonMaterial({ color: 0x777777 });
+        for (let f = 0; f < 20; f++) {
+          const fPost = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 3, 6), a51FenceMat);
+          const fAngle = (f / 20) * Math.PI * 2;
+          fPost.position.set(Math.cos(fAngle) * 18, 1.5, Math.sin(fAngle) * 14);
+          area51Group.add(fPost);
+        }
+        
+        scene.add(area51Group);
+        window.warningLight = warningLight;
+      })();
+
+      // Crashed alien spaceship
+      (function() {
+        const shipGroup = new THREE.Group();
+        shipGroup.position.set(-150, 0, 60);
+        shipGroup.rotation.y = 0.8;
+        
+        // Disc body (saucer shape)
+        const discGeo = new THREE.SphereGeometry(8, 16, 8);
+        const discMat = new THREE.MeshPhysicalMaterial({ 
+          color: 0x778899, metalness: 0.8, roughness: 0.3,
+          emissive: 0x002244, emissiveIntensity: 0.2
+        });
+        const disc = new THREE.Mesh(discGeo, discMat);
+        disc.scale.set(1, 0.3, 1); // Flatten into disc
+        disc.position.y = 1.5;
+        disc.castShadow = true;
+        shipGroup.add(disc);
+        
+        // Dome on top
+        const domeGeo = new THREE.SphereGeometry(3.5, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2);
+        const domeMat = new THREE.MeshPhysicalMaterial({ 
+          color: 0x88CCFF, transparent: true, opacity: 0.6,
+          metalness: 0.1, roughness: 0.1
+        });
+        const dome = new THREE.Mesh(domeGeo, domeMat);
+        dome.position.y = 2.4;
+        dome.castShadow = true;
+        shipGroup.add(dome);
+        
+        // Damage / cracked section
+        const damagedGeo = new THREE.BoxGeometry(4, 0.8, 3);
+        const damagedMat = new THREE.MeshToonMaterial({ color: 0x445566 });
+        const damaged = new THREE.Mesh(damagedGeo, damagedMat);
+        damaged.position.set(6, 1.2, 2);
+        damaged.rotation.z = 0.3;
+        damaged.castShadow = true;
+        shipGroup.add(damaged);
+        
+        // Glowing engine lights around disc edge
+        const engineColors = [0x00FFCC, 0x00FF88, 0x44FFAA];
+        for (let e = 0; e < 6; e++) {
+          const eAngle = (e / 6) * Math.PI * 2;
+          const engineLight = new THREE.Mesh(
+            new THREE.SphereGeometry(0.4, 8, 8),
+            new THREE.MeshBasicMaterial({ color: engineColors[e % 3] })
+          );
+          engineLight.position.set(Math.cos(eAngle) * 7.5, 1.5, Math.sin(eAngle) * 7.5);
+          engineLight.userData = { isEngineLight: true, phase: (e / 6) * Math.PI * 2 };
+          shipGroup.add(engineLight);
+        }
+        
+        // Tilt the ship (crashed angle)
+        shipGroup.rotation.x = 0.25;
+        shipGroup.rotation.z = -0.15;
+        
+        // Crash crater under ship
+        const crashGeo = new THREE.RingGeometry(6, 10, 16);
+        const crashMat = new THREE.MeshBasicMaterial({ color: 0x4A3728, transparent: true, opacity: 0.7 });
+        const crashCrater = new THREE.Mesh(crashGeo, crashMat);
+        crashCrater.rotation.x = -Math.PI / 2;
+        crashCrater.position.set(-150, 0.01, 60);
+        scene.add(crashCrater);
+        
+        scene.add(shipGroup);
+      })();
+
+      // Alien/sci-fi ground overlay
+      const scifiGroundMat = new THREE.MeshToonMaterial({ color: 0x334433, transparent: true, opacity: 0.3 });
+      const scifiGround = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), scifiGroundMat);
+      scifiGround.rotation.x = -Math.PI / 2;
+      scifiGround.position.set(-100, 0.006, 100);
+      scene.add(scifiGround);
+
+      // --- NEAR SPAWN: Colosseum-style arena (ring of columns) ---
+      (function() {
+        const colosseumGroup = new THREE.Group();
+        colosseumGroup.position.set(-25, 0, 25);
+        const columnMat = new THREE.MeshToonMaterial({ color: 0xD4C5A9 }); // Aged stone
+        const numColumns = 12;
+        const colosseumRadius = 10;
+        for (let c = 0; c < numColumns; c++) {
+          const cAngle = (c / numColumns) * Math.PI * 2;
+          const colGeo = new THREE.CylinderGeometry(0.4, 0.5, 5, 8);
+          const col = new THREE.Mesh(colGeo, columnMat);
+          col.position.set(Math.cos(cAngle) * colosseumRadius, 2.5, Math.sin(cAngle) * colosseumRadius);
+          col.castShadow = true;
+          colosseumGroup.add(col);
+          // Capital on top
+          const capGeo = new THREE.BoxGeometry(1.2, 0.4, 1.2);
+          const capMesh = new THREE.Mesh(capGeo, columnMat);
+          capMesh.position.set(Math.cos(cAngle) * colosseumRadius, 5.2, Math.sin(cAngle) * colosseumRadius);
+          capMesh.castShadow = true;
+          colosseumGroup.add(capMesh);
+        }
+        // Arena floor (circular stone ground)
+        const arenaFloorGeo = new THREE.CircleGeometry(9.5, 32);
+        const arenaFloorMat = new THREE.MeshToonMaterial({ color: 0xBBAA88 });
+        const arenaFloor = new THREE.Mesh(arenaFloorGeo, arenaFloorMat);
+        arenaFloor.rotation.x = -Math.PI / 2;
+        arenaFloor.position.y = 0.01;
+        colosseumGroup.add(arenaFloor);
+        scene.add(colosseumGroup);
+      })();
+
+      // Ancient ruins near spawn (scattered pillars)
+      (function() {
+        const ruinsMat = new THREE.MeshToonMaterial({ color: 0x9E8C7A });
+        const ruinPositions = [
+          {x: 15, z: 25, h: 3, tilt: 0.1},  {x: 22, z: 18, h: 5, tilt: -0.15},
+          {x: -15, z: 18, h: 4, tilt: 0.2}, {x: -20, z: 30, h: 2, tilt: -0.1},
+          {x: 25, z: 35, h: 6, tilt: 0.05}, {x: -10, z: 35, h: 3.5, tilt: 0.3},
+        ];
+        ruinPositions.forEach(r => {
+          const pillarGeo = new THREE.CylinderGeometry(0.5, 0.6, r.h, 8);
+          const pillar = new THREE.Mesh(pillarGeo, ruinsMat);
+          pillar.position.set(r.x, r.h / 2, r.z);
+          pillar.rotation.z = r.tilt;
+          pillar.castShadow = true;
+          pillar.receiveShadow = true;
+          scene.add(pillar);
+        });
+      })();
+
+      // --- WATER LILIES on the lake ---
+      const lilyMat = new THREE.MeshToonMaterial({ color: 0x228B22, side: THREE.DoubleSide });
+      const lilyPositions = [
+        {x:24, z:-26}, {x:33, z:-22}, {x:36, z:-35}, {x:27, z:-38},
+        {x:22, z:-33}, {x:38, z:-28}, {x:29, z:-24}, {x:35, z:-40},
+      ];
+      lilyPositions.forEach((lp, lilyIdx) => {
+        const lilyGeo = new THREE.CircleGeometry(0.7 + seededRandom(lilyIdx * 31) * 0.4, 8); // 31 = prime for varied lily sizes
+        const lily = new THREE.Mesh(lilyGeo, lilyMat);
+        lily.rotation.x = -Math.PI / 2;
+        lily.position.set(lp.x, 0.03, lp.z);
+        scene.add(lily);
+        // Small flower on lily
+        const flowerMat = new THREE.MeshBasicMaterial({ color: 0xFFFFFF });
+        const flowerGeo = new THREE.SphereGeometry(0.18, 6, 4);
+        const flower = new THREE.Mesh(flowerGeo, flowerMat);
+        flower.position.set(lp.x, 0.1, lp.z);
+        flower.scale.y = 0.5;
+        scene.add(flower);
+      });
+
+      // --- RIVERS: 2 winding paths of flat blue planes ---
+      const riverMat = new THREE.MeshBasicMaterial({ color: 0x4499CC, transparent: true, opacity: 0.65 });
+      // River 1: from lake (30,-30) northeast toward Stonehenge direction
+      const river1Points = [
+        [30, -30], [25, -15], [20, 0], [15, 15], [25, 30]
+      ];
+      for (let r = 0; r < river1Points.length - 1; r++) {
+        const [ax, az] = river1Points[r];
+        const [bx, bz] = river1Points[r + 1];
+        const len = Math.sqrt((bx-ax)**2 + (bz-az)**2);
+        const riverGeo = new THREE.PlaneGeometry(1.5, len);
+        const riverSeg = new THREE.Mesh(riverGeo, riverMat);
+        riverSeg.rotation.x = -Math.PI / 2;
+        const angle = Math.atan2(bz - az, bx - ax);
+        riverSeg.rotation.z = angle - Math.PI / 2;
+        riverSeg.position.set((ax + bx) / 2, 0.008, (az + bz) / 2);
+        scene.add(riverSeg);
+      }
+      // River 2: from west area toward south
+      const river2Points = [
+        [-30, 0], [-40, -15], [-35, -30], [-25, -45]
+      ];
+      for (let r = 0; r < river2Points.length - 1; r++) {
+        const [ax, az] = river2Points[r];
+        const [bx, bz] = river2Points[r + 1];
+        const len = Math.sqrt((bx-ax)**2 + (bz-az)**2);
+        const riverGeo = new THREE.PlaneGeometry(1.2, len);
+        const riverSeg = new THREE.Mesh(riverGeo, riverMat);
+        riverSeg.rotation.x = -Math.PI / 2;
+        const angle = Math.atan2(bz - az, bx - ax);
+        riverSeg.rotation.z = angle - Math.PI / 2;
+        riverSeg.position.set((ax + bx) / 2, 0.008, (az + bz) / 2);
+        scene.add(riverSeg);
+      }
+      // Stone bridges over rivers
+      const bridgeMat = new THREE.MeshToonMaterial({ color: 0x888880 });
+      [[20, 0], [-35, -22]].forEach(([bx, bz]) => {
+        const bridgeGeo = new THREE.BoxGeometry(4, 0.3, 1.5);
+        const bridge = new THREE.Mesh(bridgeGeo, bridgeMat);
+        bridge.position.set(bx, 0.1, bz);
+        bridge.castShadow = true;
+        scene.add(bridge);
+      });
+
+      // --- MAP BORDER FENCE with Signs ---
+      const borderFenceMat = new THREE.MeshToonMaterial({ color: 0x6B4226 });
+      const borderPostGeo = new THREE.CylinderGeometry(0.2, 0.2, 2.5, 6);
+      const signTexts = ['STOP', 'EDGE OF THE WORLD', 'No Trespassing'];
+      const signTextures = signTexts.map(text => {
+        const cv = document.createElement('canvas');
+        cv.width = 256; cv.height = 64;
+        const c = cv.getContext('2d');
+        c.fillStyle = '#D2B48C';
+        c.fillRect(0, 0, 256, 64);
+        c.strokeStyle = '#8B4513';
+        c.lineWidth = 3;
+        c.strokeRect(2, 2, 252, 60);
+        c.fillStyle = '#8B0000';
+        c.font = 'bold 22px Arial';
+        c.textAlign = 'center';
+        c.textBaseline = 'middle';
+        c.fillText(text, 128, 32);
+        return new THREE.CanvasTexture(cv);
+      });
+      let signIdx = 0;
+      const BORDER = 195;
+      const FENCE_STEP = 10;
+      // North & South edges
+      [-BORDER, BORDER].forEach(edgeZ => {
+        for (let x = -BORDER; x <= BORDER; x += FENCE_STEP) {
+          const post = new THREE.Mesh(borderPostGeo, borderFenceMat.clone());
+          post.position.set(x, 1.25, edgeZ);
+          post.castShadow = true;
+          post.userData = { isFence: true, hp: 20, maxHp: 20, originalPosition: post.position.clone() };
+          scene.add(post);
+          window.breakableFences.push(post);
+          if (Math.abs(x + BORDER) % (FENCE_STEP * 3) < FENCE_STEP) {
+            const signMesh = new THREE.Mesh(
+              new THREE.BoxGeometry(3, 0.8, 0.1),
+              new THREE.MeshBasicMaterial({ map: signTextures[signIdx % 3] })
+            );
+            signMesh.position.set(x, 2.8, edgeZ);
+            scene.add(signMesh);
+            signIdx++;
+          }
+        }
+      });
+      // East & West edges
+      [-BORDER, BORDER].forEach(edgeX => {
+        for (let z = -BORDER; z <= BORDER; z += FENCE_STEP) {
+          const post = new THREE.Mesh(borderPostGeo, borderFenceMat.clone());
+          post.position.set(edgeX, 1.25, z);
+          post.castShadow = true;
+          post.userData = { isFence: true, hp: 20, maxHp: 20, originalPosition: post.position.clone() };
+          scene.add(post);
+          window.breakableFences.push(post);
+          if (Math.abs(z + BORDER) % (FENCE_STEP * 3) < FENCE_STEP) {
+            const signMesh = new THREE.Mesh(
+              new THREE.BoxGeometry(3, 0.8, 0.1),
+              new THREE.MeshBasicMaterial({ map: signTextures[signIdx % 3] })
+            );
+            signMesh.position.set(edgeX, 2.8, z);
+            signMesh.rotation.y = Math.PI / 2;
+            scene.add(signMesh);
+            signIdx++;
+          }
+        }
+      });
+
+      // --- Tesla Tower Point Light (blue/white) ---
+      const teslaLight = new THREE.PointLight(0x00CCFF, 3, 30);
+      teslaLight.position.set(-80, 18, -80);
+      teslaLight.userData = { isTeslaLight: true, phase: 0 };
+      scene.add(teslaLight);
+      window.teslaPointLight = teslaLight;
     }
 
     // Performance: Cache animated objects to avoid scene.traverse() every frame
@@ -11445,7 +12014,7 @@
       // Far plane at 35 (was 28) - fog begins at edges only, not heavy at top
       // PERFORMANCE: Balanced for 60fps target while maintaining visibility
       // Tighter fog for better visibility around character - fog only at edges
-      scene.fog = new THREE.Fog(COLORS.bg, RENDERER_CONFIG.fogNear, RENDERER_CONFIG.fogFar);
+      scene.fog = new THREE.FogExp2(COLORS.bg, 0.025);
       
       // Phase 5: Initialize particle object pool for performance (100 particles pre-allocated)
       particlePool = new ObjectPool(
@@ -13803,12 +14372,13 @@
             id: 'doublebarrel_upgrade', 
             icon: '🔫',
             title: `DOUBLE BARREL Level ${nextLevel}`, 
-            desc: `Damage +12, Fire Rate +10%`, 
+            desc: `+1 Shot, Damage +12, Fire Rate +10%`, 
             apply: () => { 
               weapons.doubleBarrel.level++;
               weapons.doubleBarrel.damage += 12;
               weapons.doubleBarrel.cooldown *= 0.9;
-              showStatChange(`Double Barrel Level ${weapons.doubleBarrel.level}: +12 Dmg, +10% Fire Rate`);
+              weapons.doubleBarrel.pellets = (weapons.doubleBarrel.pellets || 2) + 1;
+              showStatChange(`Double Barrel Level ${weapons.doubleBarrel.level}: +1 Shot, +12 Dmg`);
             } 
           });
         }
@@ -13917,7 +14487,7 @@
           ...(weapons.fireRing.active && weapons.fireRing.level < 5 ? [{ id: 'fire_up', icon: '🔥', title: `FIRE RING Lv.${weapons.fireRing.level + 1}`, desc: 'Damage +5, +1 Orb', apply: () => { weapons.fireRing.level++; weapons.fireRing.damage += 5; weapons.fireRing.orbs += 1; showStatChange(`Fire Ring Level ${weapons.fireRing.level}`); } }] : []),
           ...(weapons.meteor.active && weapons.meteor.level < 5 ? [{ id: 'meteor_up', icon: '☄️', title: `METEOR Lv.${weapons.meteor.level + 1}`, desc: 'Damage +20, Area +1', apply: () => { weapons.meteor.level++; weapons.meteor.damage += 20; weapons.meteor.area += 1; showStatChange(`Meteor Level ${weapons.meteor.level}`); } }] : []),
           ...(weapons.aura.active && weapons.aura.level < 5 ? [{ id: 'aura_up', icon: '🌀', title: `AURA Lv.${weapons.aura.level + 1}`, desc: 'Damage +3, Range +10%', apply: () => { weapons.aura.level++; weapons.aura.damage += 3; weapons.aura.range = Math.min(5, weapons.aura.range * 1.1); showStatChange(`Aura Level ${weapons.aura.level}`); } }] : []),
-          ...(weapons.doubleBarrel.active && weapons.doubleBarrel.level < 5 ? [{ id: 'dbl_up', icon: '🔫', title: `DOUBLE BARREL Lv.${weapons.doubleBarrel.level + 1}`, desc: 'Damage +12, Fire Rate +10%', apply: () => { weapons.doubleBarrel.level++; weapons.doubleBarrel.damage += 12; weapons.doubleBarrel.cooldown *= 0.9; showStatChange(`Double Barrel Level ${weapons.doubleBarrel.level}`); } }] : [])
+          ...(weapons.doubleBarrel.active && weapons.doubleBarrel.level < 5 ? [{ id: 'dbl_up', icon: '🔫', title: `DOUBLE BARREL Lv.${weapons.doubleBarrel.level + 1}`, desc: '+1 Shot, Damage +12', apply: () => { weapons.doubleBarrel.level++; weapons.doubleBarrel.damage += 12; weapons.doubleBarrel.cooldown *= 0.9; weapons.doubleBarrel.pellets = (weapons.doubleBarrel.pellets || 2) + 1; showStatChange(`Double Barrel Level ${weapons.doubleBarrel.level}`); } }] : [])
         ];
 
         // Prefer new weapons first; pad with weapon upgrades to always reach 6 choices
@@ -15734,7 +16304,7 @@
       weapons.aura = { active: false, level: 0, damage: 5, cooldown: 500, lastShot: 0, range: 3 };
       weapons.meteor = { active: false, level: 0, damage: 60, cooldown: 2500, lastShot: 0, area: 5 };
       weapons.droneTurret = { active: false, level: 0, damage: 15, cooldown: 400, lastShot: 0, range: 15, droneCount: 1 };
-      weapons.doubleBarrel = { active: false, level: 0, damage: 18, cooldown: 1500, lastShot: 0, range: 12, spread: 0.3 };
+      weapons.doubleBarrel = { active: false, level: 0, damage: 18, cooldown: 1500, lastShot: 0, range: 12, spread: 0.3, pellets: 2 };
       weapons.iceSpear = { active: false, level: 0, damage: 20, cooldown: 1500, lastShot: 0, range: 15, slowPercent: 0.4, slowDuration: 2000 };
       weapons.fireRing = { active: false, level: 0, damage: 8, cooldown: 800, lastShot: 0, range: 4, orbs: 3, rotationSpeed: 2 };
       // New weapons — initialized upfront so weapon-selection code can always check .active
@@ -15820,6 +16390,10 @@
       });
       bloodDecals = [];
       bloodDecalIndex = 0; // Reset circular buffer index
+      
+      // Reset lava timers
+      window._lavaDamageTimer = 0;
+      window._lavaSpoutTimer = 0;
       
       // Clean up blood drips
       bloodDrips.forEach(d => {
@@ -17305,8 +17879,9 @@
           const baseAngle = Math.atan2(baseDir.z, baseDir.x);
           const spreadAngle = weapons.doubleBarrel.spread;
           
-          // Create 6 pellets in a spread pattern
-          for (let i = 0; i < 6; i++) {
+          // Fire pellets with spread (shotgun pattern) - pellets count increases per upgrade
+          const pelletCount = weapons.doubleBarrel.pellets || 2;
+          for (let i = 0; i < pelletCount; i++) {
             const angle = baseAngle + (Math.random() - 0.5) * spreadAngle * 2;
             const target = new THREE.Vector3(
               player.mesh.position.x + Math.cos(angle) * weapons.doubleBarrel.range,
@@ -17415,6 +17990,17 @@
             // Fire particles on hit
             spawnParticles(e.mesh.position, 0xFF4500, 6); // Orange-red fire
             spawnParticles(e.mesh.position, 0xFFD700, 4); // Yellow flames
+            // Charring effect: progressively darken enemy color toward black on each fire hit.
+            // Different factors per channel simulate realistic charring (reds fade slowest).
+            if (e.mesh.material && e.mesh.material.color) {
+              const CHAR_RED_FACTOR = 0.88;   // Reds persist slightly longer when charred
+              const CHAR_GREEN_FACTOR = 0.85; // Greens fade mid-rate
+              const CHAR_BLUE_FACTOR = 0.82;  // Blues fade fastest for warm char tint
+              e.mesh.material.color.r *= CHAR_RED_FACTOR;
+              e.mesh.material.color.g *= CHAR_GREEN_FACTOR;
+              e.mesh.material.color.b *= CHAR_BLUE_FACTOR;
+            }
+            e.lastDamageType = 'fire';
             hit = true;
           }
         });
@@ -17845,6 +18431,70 @@
         }
       });
 
+      // Volcano light flicker & Tesla light flicker
+      if (window.volcanoLight) {
+        window.volcanoLight.userData.phase += dt * 8;
+        window.volcanoLight.intensity = 3 + Math.sin(window.volcanoLight.userData.phase) * 1.5 + Math.sin(window.volcanoLight.userData.phase * 3.7) * 0.8;
+      }
+      if (window.lavaPool && window.lavaPool.material) {
+        const lp = window.lavaPool;
+        lp.userData.phase = (lp.userData.phase || 0) + dt * 4;
+        lp.material.color.setHex(Math.sin(lp.userData.phase) > 0 ? 0xFF6A00 : 0xFF4500);
+      }
+      if (window.teslaPointLight) {
+        window.teslaPointLight.userData.phase += dt * 5;
+        window.teslaPointLight.intensity = 2 + Math.sin(window.teslaPointLight.userData.phase * 3) * 1.5;
+      }
+      // Warning light blink (Area 51)
+      if (window.warningLight && window.warningLight.material) {
+        window.warningLight.material.opacity = Math.sin(gameTime * 3) > 0 ? 0.9 : 0.1;
+      }
+
+      // Lava damage: player takes damage when close to volcano (at -100, 0, -120)
+      if (player && isGameActive && !isGameOver) {
+        const LAVA_DAMAGE_RADIUS = 8;   // Distance from volcano center to take lava damage
+        const LAVA_MAX_DAMAGE = 10;     // Max damage per tick at volcano center
+        const LAVA_TICK_INTERVAL = 0.5; // Seconds between lava damage ticks
+        const lavaX = -100, lavaZ = -120;
+        const ldx = player.mesh.position.x - lavaX;
+        const ldz = player.mesh.position.z - lavaZ;
+        const lavaDist = Math.sqrt(ldx * ldx + ldz * ldz);
+        if (lavaDist < LAVA_DAMAGE_RADIUS) {
+          if (!window._lavaDamageTimer) window._lavaDamageTimer = 0;
+          window._lavaDamageTimer += dt;
+          if (window._lavaDamageTimer > LAVA_TICK_INTERVAL) {
+            window._lavaDamageTimer = 0;
+            player.takeDamage(LAVA_MAX_DAMAGE * (1 - lavaDist / LAVA_DAMAGE_RADIUS)); // More damage closer to center
+            spawnParticles(player.mesh.position, 0xFF4500, 4);
+            playSound('volcano');
+          }
+        }
+        // Lava spout: occasional lava particles erupting from volcano top
+        if (!window._lavaSpoutTimer) window._lavaSpoutTimer = 0;
+        window._lavaSpoutTimer += dt;
+        if (window._lavaSpoutTimer > (2 + Math.random() * 3)) { // Every 2-5 seconds
+          window._lavaSpoutTimer = 0;
+          for (let ls = 0; ls < 8; ls++) {
+            const geo = new THREE.SphereGeometry(0.15, 4, 4);
+            const mat = new THREE.MeshBasicMaterial({ color: Math.random() < 0.5 ? 0xFF4500 : 0xFF8C00 });
+            const lavaP = new THREE.Mesh(geo, mat);
+            lavaP.position.set(lavaX + (Math.random() - 0.5) * 2, 22, lavaZ + (Math.random() - 0.5) * 2);
+            scene.add(lavaP);
+            const vx = (Math.random() - 0.5) * 0.3, vz = (Math.random() - 0.5) * 0.3;
+            let vy = 0.3 + Math.random() * 0.2, lpLife = 60;
+            if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
+              managedAnimations.push({ update(_dt2) {
+                lpLife--;
+                vy -= 0.012;
+                lavaP.position.x += vx; lavaP.position.y += vy; lavaP.position.z += vz;
+                if (lpLife <= 0) { scene.remove(lavaP); geo.dispose(); mat.dispose(); return false; }
+                return true;
+              }});
+            } else { scene.remove(lavaP); geo.dispose(); mat.dispose(); }
+          }
+        }
+      }
+
       // Cleanup and memory management (run every 3 seconds to avoid performance issues)
       enemies = enemies.filter(e => !e.isDead);
       
@@ -17870,7 +18520,7 @@
         lastCleanupTime = now;
 
         // Scene children growth guard — warn and cull stale invisible meshes if count exceeds threshold
-        const MAX_SCENE_CHILDREN = 600;
+        const MAX_SCENE_CHILDREN = 1200;
         if (scene.children.length > MAX_SCENE_CHILDREN) {
           console.warn(`[Perf] scene.children=${scene.children.length} exceeds ${MAX_SCENE_CHILDREN}. Culling invisible non-tracked meshes.`);
           const toRemove = [];
