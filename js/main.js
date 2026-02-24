@@ -461,7 +461,7 @@
     const FLYING_BOSS_SPAWN_KEY = 'flyingBoss15'; // Unique key for the level-15 flying boss spawn
     // Landmark positions and detection radii for quest8_findAllLandmarks
     const LANDMARK_CONFIGS = {
-      stonehenge:  { x:  60, z:  60, radius: 20, key: 'stonehenge',  label: 'Stonehenge'  },
+      stonehenge:  { x: 100, z:  80, radius: 20, key: 'stonehenge',  label: 'Stonehenge'  },
       pyramid:     { x:  50, z: -50, radius: 20, key: 'pyramid',     label: 'Pyramid'     },
       montana:     { x:   0, z:-200, radius: 25, key: 'montana',     label: 'Montana'     },
       teslaTower:  { x: -80, z: -80, radius: 25, key: 'teslaTower',  label: 'Tesla Tower' }
@@ -1110,11 +1110,11 @@
           targetScaleXZ = 1.0 - bounce * 0.6;
         } else if (speedMag > 0.05) {
           // Moving: vertical bounce oscillates — bigger range, more dramatic wobble
-          this.wobblePhase += dt2 * speedMag * 200;  // faster phase for snappier feel
-          const bounce = Math.sin(this.wobblePhase) * (0.10 + this.wobbleIntensity * 0.12);
+          this.wobblePhase += dt2 * speedMag * 120;  // slower phase for heavier, lower-frequency bounce
+          const bounce = Math.sin(this.wobblePhase) * (0.14 + this.wobbleIntensity * 0.18);
           targetScaleY = 1.0 + bounce;
           const squishAmt = Math.min(speedMag * 1.5, 0.25);
-          targetScaleXZ = 1.0 + squishAmt + Math.cos(this.wobblePhase) * (0.04 + this.wobbleIntensity * 0.06);
+          targetScaleXZ = 1.0 + squishAmt + Math.cos(this.wobblePhase) * (0.06 + this.wobbleIntensity * 0.10);
         } else {
           // Idle breathing
           this.wobblePhase += dt2 * 2.5;
@@ -1441,8 +1441,12 @@
       }
 
       takeDamage(amount) {
-        // Check invulnerability frames
-        if (this.invulnerable) return;
+        // Safety: do not process damage when game is not active or already over
+        if (!isGameActive || isGameOver) return;
+        // Check invulnerability frames (hit-stun + dash invulnerability)
+        if (this.invulnerable || dashInvulnerable) return;
+        // Safety: ignore zero or negative damage to prevent phantom kills
+        if (!amount || amount <= 0) return;
         
         // Armor reduction — delegated to GameCombat
         const reduced = calculateArmorReduction(amount, playerStats.armor);
@@ -1591,7 +1595,7 @@
         };
         shakeAnim();
 
-        if (playerStats.hp <= 0) {
+        if (playerStats.hp <= 0 && !isGameOver) {
           // ENHANCED Death splash: more particles + ground pool with fade
           spawnParticles(this.mesh.position, COLORS.player, 25); // Reduced for performance
           spawnParticles(this.mesh.position, 0xFFFFFF, 8); // Reduced for performance
@@ -3540,6 +3544,7 @@
           let nearestDist = Infinity;
           
           for (const enemy of enemies) {
+            if (enemy.isDead) continue; // Skip dead enemies
             const ex = enemy.mesh.position.x - this.mesh.position.x;
             const ez = enemy.mesh.position.z - this.mesh.position.z;
             const d = ex*ex + ez*ez;
@@ -8589,7 +8594,7 @@
       // Start quest when player visits Stonehenge area (only after tutorial stonehenge quest is done)
       if (player && !saveData.extendedQuests.legendaryCigar.started &&
           saveData.tutorialQuests && isQuestClaimed('quest3_stonehengeGear')) {
-        const stonehengePos = { x: -60, z: 60 };
+        const stonehengePos = { x: 100, z: 80 };
         const dist = Math.sqrt(
           Math.pow(player.mesh.position.x - stonehengePos.x, 2) +
           Math.pow(player.mesh.position.z - stonehengePos.z, 2)
@@ -8940,7 +8945,7 @@
       // Show completed quests count
       content += `
         <div style="font-size: 14px; color: #AAA; margin-top: 20px;">
-          Completed Quests: ${saveData.tutorialQuests.completedQuests.length} / 8
+          Completed Quests: ${saveData.tutorialQuests.completedQuests.length} / ${Object.keys(TUTORIAL_QUESTS).length}
         </div>
       `;
       
@@ -9337,11 +9342,10 @@
            buildingCard.innerHTML = `
              <div class="building-header">
                <div class="building-name">${building.icon} ${building.name}${hasNotification ? ' <span class="quest-indicator">!</span>' : ''}</div>
-               <div class="building-level">${isLockedFree ? 'LOCKED' : `Level ${buildingData.level}/${buildingData.maxLevel}`}</div>
+               <div class="building-level">${isLockedFree ? 'LOCKED' : '✓ UNLOCKED'}</div>
              </div>
              <div class="building-desc">${building.description}</div>
-             <div class="building-bonus">Current: ${bonusText}</div>
-            <div class="building-cost">${isLockedFree ? 'Unlock via Quest' : (isMaxLevel ? 'MAX LEVEL' : (building.isFree ? 'FREE' : `Level ${buildingData.level}/${buildingData.maxLevel}`))}</div>
+            <div class="building-cost">${isLockedFree ? 'Unlock via Quest' : 'UNLOCKED'}</div>
           `;
           
           if (buildingId === 'skillTree') {
@@ -9575,7 +9579,7 @@
       scene.add(mainGround);
       
       // Darker forest floor ring around the fountain spawn area
-      const forestRingMat = new THREE.MeshStandardMaterial({ color: 0x2E5A1A, roughness: 0.9, metalness: 0.0 }); // Dark forest green with shading
+      const forestRingMat = new THREE.MeshStandardMaterial({ color: 0x2E5A1A, roughness: 0.9, metalness: 0.0, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }); // Dark forest green with shading - polygon offset prevents z-fighting
       const forestRingGeo = new THREE.RingGeometry(12, 45, 32);
       const forestRingMesh = new THREE.Mesh(forestRingGeo, forestRingMat);
       forestRingMesh.rotation.x = -Math.PI / 2;
@@ -9679,6 +9683,9 @@
         color: 0x6B8E23, // Olive drab green for farmland
         metalness: 0.0,
         roughness: 0.95,
+        polygonOffset: true,
+        polygonOffsetFactor: -1,
+        polygonOffsetUnits: -1
       });
       
       // Create farm field patches in strategic locations
@@ -9855,7 +9862,7 @@
       // Farmer NPC near windmill (between windmill and barn)
       (function() {
         const farmerGroup = new THREE.Group();
-        farmerGroup.position.set(44, 0, -20); // Farm area south of windmill, away from Stonehenge
+        farmerGroup.position.set(44, 0, 45); // East of windmill at (40, 0, 40) — visible and interactable
         // Body
         const bodyMesh = new THREE.Mesh(
           new THREE.BoxGeometry(0.8, 1.2, 0.5),
@@ -9972,7 +9979,7 @@
 
       // Phase 4: Stonehenge - Circle of big rocks - Relocated to new mystical location
       const stonehengeGroup = new THREE.Group();
-      stonehengeGroup.position.set(60, 0, 60); // New location - northeast area
+      stonehengeGroup.position.set(100, 0, 80); // Moved far northeast — separated from farm area
       
       const stoneMat = new THREE.MeshToonMaterial({ color: 0x808080 }); // Gray stone
       const numStones = 30; // Real Stonehenge has ~30 stones in outer circle
@@ -10055,7 +10062,7 @@
       stonehengeChestGroup.add(blueGlowLight);
       
       // Position on altar
-      stonehengeChestGroup.position.set(60, 1, 60); // On top of Stonehenge altar
+      stonehengeChestGroup.position.set(100, 1, 80); // On top of Stonehenge altar
       stonehengeChestGroup.userData = { 
         isStonehengeChest: true, 
         questItem: true,
@@ -11467,7 +11474,7 @@
       })();
 
       // Sandy ground overlay for desert region
-      const desertGroundMat = new THREE.MeshToonMaterial({ color: 0xDEB887, transparent: true, opacity: 0.5 });
+      const desertGroundMat = new THREE.MeshToonMaterial({ color: 0xDEB887, transparent: true, opacity: 0.5, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 });
       const desertGround = new THREE.Mesh(new THREE.PlaneGeometry(150, 200), desertGroundMat);
       desertGround.rotation.x = -Math.PI / 2;
       desertGround.position.set(125, 0.005, -100);
@@ -11543,7 +11550,7 @@
       })();
 
       // Snowy ground overlay
-      const snowGroundMat = new THREE.MeshToonMaterial({ color: 0xEEEEFF, transparent: true, opacity: 0.4 });
+      const snowGroundMat = new THREE.MeshToonMaterial({ color: 0xEEEEFF, transparent: true, opacity: 0.4, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 });
       const snowGround = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), snowGroundMat);
       snowGround.rotation.x = -Math.PI / 2;
       snowGround.position.set(-100, 0.006, -100);
@@ -11726,7 +11733,7 @@
       })();
 
       // Alien/sci-fi ground overlay
-      const scifiGroundMat = new THREE.MeshToonMaterial({ color: 0x334433, transparent: true, opacity: 0.3 });
+      const scifiGroundMat = new THREE.MeshToonMaterial({ color: 0x334433, transparent: true, opacity: 0.3, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 });
       const scifiGround = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), scifiGroundMat);
       scifiGround.rotation.x = -Math.PI / 2;
       scifiGround.position.set(-100, 0.006, 100);
@@ -12014,7 +12021,7 @@
       // Far plane at 35 (was 28) - fog begins at edges only, not heavy at top
       // PERFORMANCE: Balanced for 60fps target while maintaining visibility
       // Tighter fog for better visibility around character - fog only at edges
-      scene.fog = new THREE.FogExp2(COLORS.bg, 0.025);
+      scene.fog = new THREE.FogExp2(COLORS.bg, 0.03);
       
       // Phase 5: Initialize particle object pool for performance (100 particles pre-allocated)
       particlePool = new ObjectPool(
@@ -17314,7 +17321,7 @@
       }
 
       // Update enemy AI movement (was missing - enemies were frozen)
-      enemies.forEach(e => e.update(dt, player.mesh.position));
+      enemies.forEach(e => { if (e && e.mesh && !e.isDead) e.update(dt, player.mesh.position); });
 
       // Dash cooldown tick (Feature 1)
       if (isDashing) {

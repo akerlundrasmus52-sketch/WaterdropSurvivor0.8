@@ -11,6 +11,7 @@
  * @returns {number} Reduced damage (minimum 1)
  */
 function calculateArmorReduction(amount, armorPercent) {
+  if (!amount || amount <= 0) return 0; // No phantom damage from zero/negative inputs
   return Math.max(1, amount * (1 - armorPercent / 100));
 }
 
