@@ -16182,7 +16182,7 @@
       const promptEl = document.getElementById('tutorial-speech-bubble-prompt');
       if (!textEl || !promptEl) return;
 
-      if (pauseGame && isGameActive && !isGameOver) setGamePaused(true);
+      if (pauseGame && isGameActive && !isGameOver && !isPaused) setGamePaused(true);
 
       textEl.textContent = text;
       promptEl.textContent = onDismiss ? '▶ tap to continue' : '';
@@ -16199,9 +16199,9 @@
       if (onDismiss) {
         _tutBubbleOnDismiss = onDismiss;
         function doAdvance() {
-          hideTutBubble();
           const cb = _tutBubbleOnDismiss;
           _tutBubbleOnDismiss = null;
+          hideTutBubble();
           if (cb) cb();
         }
         function touchHandler(e) { e.preventDefault(); doAdvance(); }
