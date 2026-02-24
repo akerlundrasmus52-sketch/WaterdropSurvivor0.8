@@ -9782,24 +9782,38 @@
       groundLight.position.set(40, 0.05, 40);
       scene.add(groundLight);
       
-      const wmBlades = new THREE.Mesh(new THREE.BoxGeometry(12, 1, 1), new THREE.MeshBasicMaterial({color: 0x8B4513})); // Brown
-      wmBlades.position.set(0, 7, 2);
-      wmBlades.castShadow = true;
-      wmGroup.add(wmBlades);
-      const wmBlades2 = wmBlades.clone();
-      wmBlades2.rotation.z = Math.PI/2;
-      wmBlades2.castShadow = true;
-      wmGroup.add(wmBlades2);
-      
-      // Add broken/damaged blade (third blade bent and damaged)
-      const brokenBlade = new THREE.Mesh(new THREE.BoxGeometry(6, 0.8, 0.9), new THREE.MeshBasicMaterial({color: 0x654321})); // Darker brown (damaged)
-      brokenBlade.position.set(-3, 7, 2);
-      brokenBlade.rotation.z = Math.PI * 0.15; // Bent at angle
-      brokenBlade.castShadow = true;
-      wmGroup.add(brokenBlade);
-      
-      // Store blades reference for rotation animation (broken blade also rotates slowly)
-      wmGroup.userData = { isWindmill: true, blades: [wmBlades, wmBlades2, brokenBlade], hp: 600, maxHp: 600, questActive: false, light: wmLight };
+      // Windmill hub
+      const wmHub = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.4, 0.4, 0.5, 8),
+        new THREE.MeshToonMaterial({color: 0x5A3A1A})
+      );
+      wmHub.rotation.x = Math.PI / 2;
+      wmHub.position.set(0, 7, 2.3);
+      wmGroup.add(wmHub);
+
+      // 4 individual windmill blades radiating from hub
+      const bladeMat = new THREE.MeshToonMaterial({color: 0x8B4513});
+      const wornMat = new THREE.MeshToonMaterial({color: 0x5C3317});
+      const bladeGroup = new THREE.Group();
+      bladeGroup.position.set(0, 7, 2);
+      wmGroup.add(bladeGroup);
+      for (let bi = 0; bi < 4; bi++) {
+        const angle = (bi / 4) * Math.PI * 2;
+        const isWorn = bi >= 2;
+        const bLen = isWorn ? 4.2 : 5.5;
+        const blade = new THREE.Mesh(
+          new THREE.BoxGeometry(1.0, bLen, 0.15),
+          isWorn ? wornMat : bladeMat
+        );
+        blade.position.set(Math.cos(angle) * bLen * 0.5, Math.sin(angle) * bLen * 0.5, 0);
+        blade.rotation.z = angle;
+        if (isWorn) blade.rotation.x = 0.06;
+        blade.castShadow = true;
+        bladeGroup.add(blade);
+      }
+
+      // Store blades reference for rotation animation
+      wmGroup.userData = { isWindmill: true, blades: [bladeGroup], hp: 600, maxHp: 600, questActive: false, light: wmLight };
       scene.add(wmGroup);
       
       // Hay bales outside windmill
@@ -10071,30 +10085,49 @@
       scene.add(stonehengeChestGroup);
       window.stonehengeChest = stonehengeChestGroup; // Store reference for proximity check
 
-      // Mayan Pyramid - Stepped pyramid - MADE MORE VISIBLE
+      // Great Pyramid of Giza - Egyptian stepped pyramid
       const mayanGroup = new THREE.Group();
       mayanGroup.position.set(50, 0, -50);
       
-      const pyramidMat = new THREE.MeshToonMaterial({ color: 0xD2B48C }); // Tan/beige like ancient stone
-      const pyramidSteps = 6; // Increased from 5
+      // Multi-material sandstone look with weathering
+      const pyramidMatLight = new THREE.MeshStandardMaterial({ color: 0xE8D5A3, roughness: 0.92, metalness: 0.0 }); // Light sandstone face
+      const pyramidMatMid = new THREE.MeshStandardMaterial({ color: 0xD4B483, roughness: 0.95, metalness: 0.0 });   // Mid sandstone
+      const pyramidMatDark = new THREE.MeshStandardMaterial({ color: 0xBF9B5E, roughness: 0.98, metalness: 0.0 });  // Weathered dark face
+      const pyramidSteps = 6;
+      const pyramidMats = [pyramidMatLight, pyramidMatMid, pyramidMatDark, pyramidMatMid, pyramidMatLight, pyramidMatMid];
       
       for(let i=0; i<pyramidSteps; i++) {
-        const stepSize = 14 - i * 2; // Increased from (10 - i * 1.5)
-        const stepHeight = 2.5; // Increased from 2
+        const stepSize = 14 - i * 2;
+        const stepHeight = 2.5;
         const stepGeo = new THREE.BoxGeometry(stepSize, stepHeight, stepSize);
-        const step = new THREE.Mesh(stepGeo, pyramidMat);
+        const step = new THREE.Mesh(stepGeo, pyramidMats[i % pyramidMats.length]);
         step.position.set(0, i * stepHeight + stepHeight/2, 0);
         step.castShadow = true;
+        step.receiveShadow = true;
         mayanGroup.add(step);
       }
       
-      // Temple on top - MADE LARGER
-      const templeGeo = new THREE.BoxGeometry(4, 4, 4); // Increased from (3, 3, 3)
-      const templeMat = new THREE.MeshToonMaterial({ color: 0x8B7355 }); // Darker brown
-      const temple = new THREE.Mesh(templeGeo, templeMat);
-      temple.position.set(0, pyramidSteps * 2.5 + 2, 0); // Adjusted for new step height
-      temple.castShadow = true;
-      mayanGroup.add(temple);
+      // Capstone at top
+      const pyramidCapstoneGeo = new THREE.ConeGeometry(2, 3, 4);
+      const pyramidCapstoneMat = new THREE.MeshStandardMaterial({ color: 0xC8A040, roughness: 0.6, metalness: 0.3 });
+      const pyramidCapstone = new THREE.Mesh(pyramidCapstoneGeo, pyramidCapstoneMat);
+      pyramidCapstone.position.set(0, pyramidSteps * 2.5 + 1.5, 0);
+      pyramidCapstone.rotation.y = Math.PI / 4;
+      pyramidCapstone.castShadow = true;
+      mayanGroup.add(pyramidCapstone);
+
+      // Entrance/doorway at base (south face)
+      const doorwayGeo = new THREE.BoxGeometry(2.5, 3.5, 0.4);
+      const doorwayMat = new THREE.MeshStandardMaterial({ color: 0x2A1F0A, roughness: 1.0, metalness: 0.0 });
+      const doorway = new THREE.Mesh(doorwayGeo, doorwayMat);
+      doorway.position.set(0, 1.75, 7.2);
+      mayanGroup.add(doorway);
+
+      // Doorway arch top (triangular lintel)
+      const lintGeo = new THREE.BoxGeometry(3.0, 0.5, 0.4);
+      const lintel = new THREE.Mesh(lintGeo, pyramidMatDark);
+      lintel.position.set(0, 3.75, 7.2);
+      mayanGroup.add(lintel);
       
       // Phase 4: Eye of Horus on Maya Pyramid
       const eyeOfHorusGroup = new THREE.Group();
@@ -10138,6 +10171,25 @@
       }
       
       scene.add(mayanGroup);
+
+      // Sand dunes around pyramid base
+      const pyramidDuneMat = new THREE.MeshStandardMaterial({ color: 0xE0C878, roughness: 0.99, metalness: 0.0 });
+      const pyramidDunePositions = [
+        { x: 58, z: -52, rx: 0.1, rz: 0.3, sx: 5, sy: 1.2, sz: 4 },
+        { x: 42, z: -57, rx: 0.2, rz: -0.2, sx: 4, sy: 0.8, sz: 3.5 },
+        { x: 55, z: -42, rx: 0.1, rz: 0.1, sx: 6, sy: 1.0, sz: 3 },
+        { x: 44, z: -44, rx: 0.15, rz: 0.2, sx: 3.5, sy: 0.9, sz: 3 },
+        { x: 62, z: -58, rx: 0.05, rz: 0.4, sx: 4.5, sy: 1.1, sz: 3.5 },
+      ];
+      pyramidDunePositions.forEach(d => {
+        const duneGeo = new THREE.SphereGeometry(1, 8, 6);
+        const dune = new THREE.Mesh(duneGeo, pyramidDuneMat);
+        dune.position.set(d.x, d.sy * 0.3, d.z);
+        dune.scale.set(d.sx, d.sy, d.sz);
+        dune.rotation.set(d.rx, 0, d.rz);
+        dune.receiveShadow = true;
+        scene.add(dune);
+      });
       
       // Pyramid scattered stones — partially destroyed look (scattered/fallen stone blocks)
       const pyramidScatterMat = new THREE.MeshStandardMaterial({ color: 0xBBA080, roughness: 0.9, metalness: 0.0 });
@@ -10957,15 +11009,15 @@
       teslaBase.castShadow = true;
       teslaGroup.add(teslaBase);
       
-      // Main tower structure - tall metal cylinder
-      const teslaTowerGeo = new THREE.CylinderGeometry(1.2, 1.5, 25, 12);
+      // Main tower structure - scaled down to fit screen
+      const teslaTowerGeo = new THREE.CylinderGeometry(1.2, 1.5, 15, 12);
       const teslaTowerMat = new THREE.MeshPhysicalMaterial({ 
         color: 0x888888, 
         metalness: 0.8,
         roughness: 0.3
       });
       const teslaTower = new THREE.Mesh(teslaTowerGeo, teslaTowerMat);
-      teslaTower.position.y = 14.5;
+      teslaTower.position.y = 9.5;
       teslaTower.castShadow = true;
       teslaGroup.add(teslaTower);
       
@@ -10978,7 +11030,7 @@
           roughness: 0.2
         });
         const ring = new THREE.Mesh(ringGeo, ringMat);
-        ring.position.y = i * 5 + 2;
+        ring.position.y = i * 3 + 2;
         ring.rotation.x = Math.PI / 2;
         teslaGroup.add(ring);
       }
@@ -10993,7 +11045,7 @@
         emissiveIntensity: 0.5
       });
       const coil = new THREE.Mesh(coilGeo, coilMat);
-      coil.position.y = 27;
+      coil.position.y = 17;
       coil.rotation.x = Math.PI / 2;
       teslaGroup.add(coil);
       
@@ -11005,7 +11057,7 @@
         emissiveIntensity: 1
       });
       const ball = new THREE.Mesh(ballGeo, ballMat);
-      ball.position.y = 29;
+      ball.position.y = 19;
       teslaGroup.add(ball);
       
       // Add glow effect around top ball
@@ -11016,7 +11068,7 @@
         opacity: 0.3
       });
       const glow = new THREE.Mesh(glowGeo, glowMat);
-      glow.position.y = 29;
+      glow.position.y = 19;
       teslaGroup.add(glow);
       
       // Lightning arc points (4 ground points around tower)
@@ -11031,7 +11083,7 @@
       teslaGroup.userData = { 
         isTeslaTower: true,
         arcPoints: arcPoints,
-        topPosition: new THREE.Vector3(-80, 29, -80),
+        topPosition: new THREE.Vector3(-80, 19, -80),
         arcLines: [] // Will store line meshes
       };
       
@@ -11486,35 +11538,56 @@
         const volcanoGroup = new THREE.Group();
         volcanoGroup.position.set(-100, 0, -120);
         
-        const volMat = new THREE.MeshToonMaterial({ color: 0x5C4033 }); // Dark brown rock
-        // Volcano base cone
-        const baseGeo = new THREE.ConeGeometry(18, 22, 12);
+        const volMat = new THREE.MeshStandardMaterial({ color: 0x4A3525, roughness: 0.95, metalness: 0.0 }); // Dark volcanic rock
+        // Volcano base cone - SCALED DOWN so it fits on screen
+        const baseGeo = new THREE.ConeGeometry(14, 13, 14);
         const base = new THREE.Mesh(baseGeo, volMat);
-        base.position.y = 11;
+        base.position.y = 6.5;
         base.castShadow = true;
         volcanoGroup.add(base);
+
+        // Middle rocky section for irregular shape
+        const midMat = new THREE.MeshStandardMaterial({ color: 0x3D2E1E, roughness: 0.98, metalness: 0.0 });
+        const midGeo = new THREE.ConeGeometry(8, 6, 10);
+        const midSection = new THREE.Mesh(midGeo, midMat);
+        midSection.position.y = 10;
+        midSection.castShadow = true;
+        volcanoGroup.add(midSection);
         
-        // Inner lava crater (orange/red glow)
-        const craterGeo = new THREE.ConeGeometry(6, 5, 12, 1, true);
-        const craterMat = new THREE.MeshBasicMaterial({ 
+        // Inner lava crater (orange/red glow with emissive)
+        const craterGeo = new THREE.ConeGeometry(4, 3, 12, 1, true);
+        const craterMat = new THREE.MeshStandardMaterial({ 
           color: 0xFF4500, side: THREE.BackSide,
+          emissive: 0xFF3300, emissiveIntensity: 0.8,
         });
         const crater = new THREE.Mesh(craterGeo, craterMat);
-        crater.position.y = 20;
+        crater.position.y = 12.5;
         volcanoGroup.add(crater);
         
-        // Lava pool at top
-        const lavaPoolGeo = new THREE.CircleGeometry(5.5, 16);
-        const lavaPoolMat = new THREE.MeshBasicMaterial({ color: 0xFF6A00 });
+        // Lava pool at top with emissive glow
+        const lavaPoolGeo = new THREE.CircleGeometry(3.8, 16);
+        const lavaPoolMat = new THREE.MeshStandardMaterial({ color: 0xFF6A00, emissive: 0xFF4400, emissiveIntensity: 1.0 });
         const lavaPool = new THREE.Mesh(lavaPoolGeo, lavaPoolMat);
         lavaPool.rotation.x = -Math.PI / 2;
-        lavaPool.position.y = 21.8;
+        lavaPool.position.y = 13.2;
         lavaPool.userData = { isLavaPool: true, phase: 0 };
         volcanoGroup.add(lavaPool);
         
+        // Lava flow channels down sides
+        const lavaFlowMat = new THREE.MeshStandardMaterial({ color: 0xFF5500, emissive: 0xFF3300, emissiveIntensity: 0.6 });
+        for (let lf = 0; lf < 3; lf++) {
+          const lfAngle = (lf / 3) * Math.PI * 2 + 0.5;
+          const lavaFlowGeo = new THREE.BoxGeometry(0.8, 5, 0.5);
+          const lavaFlow = new THREE.Mesh(lavaFlowGeo, lavaFlowMat);
+          lavaFlow.position.set(Math.cos(lfAngle) * 4, 8, Math.sin(lfAngle) * 4);
+          lavaFlow.rotation.y = lfAngle;
+          lavaFlow.rotation.x = -0.4;
+          volcanoGroup.add(lavaFlow);
+        }
+
         // Glowing orange point light inside crater
-        const volcanoLight = new THREE.PointLight(0xFF4500, 4, 35);
-        volcanoLight.position.set(0, 22, 0);
+        const volcanoLight = new THREE.PointLight(0xFF4500, 4, 30);
+        volcanoLight.position.set(0, 13, 0);
         volcanoLight.userData = { isVolcanoLight: true, phase: 0 };
         volcanoGroup.add(volcanoLight);
         
@@ -18197,13 +18270,7 @@
       animatedSceneObjects.windmills.forEach(c => {
         // Rotate all blades stored in userData (including worn/broken third blade)
         if (c.userData.blades && c.userData.blades.length > 0) {
-          c.userData.blades[0].rotation.z += 0.05;
-          c.userData.blades[1].rotation.z += 0.05;
-          // Third broken blade rotates at the same speed (wobbles slightly)
-          if (c.userData.blades[2]) {
-            c.userData.blades[2].rotation.z += 0.05;
-            c.userData.blades[2].rotation.x = Math.sin(gameTime * 0.8) * 0.04; // Slight wobble
-          }
+          c.userData.blades[0].rotation.z += 0.02;
         }
         
         // Animate windmill light (pulsing) with null check
