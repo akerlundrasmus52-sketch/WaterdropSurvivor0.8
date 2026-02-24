@@ -31,9 +31,9 @@ const GAME_CONFIG = {
   // Performance optimization - Phase 1
   maxEnemiesOnScreen: 50, // Hard cap to prevent lag (docs specify 50 max)
   // Movement physics
-  accelLerpFactor: 0.12, // Acceleration smoothness
-  decelLerpFactor: 0.06, // Deceleration smoothness (glide effect)
-  movementLeanFactor: 0.15, // Tilt during movement
+  accelLerpFactor: 0.08, // Reduced acceleration — heavier, slower to start
+  decelLerpFactor: 0.025, // Much slower deceleration — more momentum/glide
+  movementLeanFactor: 0.25, // Stronger lean effect on turns and braking
   dashLeanFactor: 0.4, // Dramatic tilt during dash
   dashLeanReturnDuration: 200, // ms to return to upright after dash
   // Combat effects

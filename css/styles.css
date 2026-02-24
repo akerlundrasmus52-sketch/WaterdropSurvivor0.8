@@ -2787,7 +2787,7 @@
 
     /* Camp menu box — extra bottom padding so last items aren't cut off */
     .camp-menu-box {
-      padding-bottom: 40px;
+      padding-bottom: 120px;
     }
 
     /* Back-to-camp button: ensure it sits above the box with visible spacing */
