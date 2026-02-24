@@ -5408,7 +5408,7 @@
       },
       // First-Run Tutorial System (speech bubble tutorial)
       firstRunTutorial: {
-        step: 0,       // 0=not started, 1-9=in-run steps, 10=death, 11-16=camp, 17=complete
+        step: 0,       // 0=not started, 1-16=active steps (see TUT_STEP constants), 17=complete
         completed: false
       }
     };
@@ -13669,7 +13669,7 @@
 
     function levelUp(freeLevel = false) {
       if (levelUpPending) return; // Prevent double-trigger
-      tutOnLevelUp(); // First-run tutorial hook (before levelUpPending guard)
+      tutOnLevelUp(); // First-run tutorial hook (called after levelUpPending guard, before setting it)
       levelUpPending = true;
       setGamePaused(true);
       
@@ -16339,7 +16339,7 @@
         setTimeout(() => {
           if (tutGetStep() !== TUT_STEP.LEVELUP_UPGRADES) return;
           showTutBubble(
-            "These are your level-up upgrades — they're random each time. The game has depth in stat building. Your character can be built in many ways, so choose wisely! Pick one upgrade to get stronger. This stacks, so make good choices and continue!",
+            "These are your level-up upgrades — random each time! Stat building is deep here. Choose wisely, pick one upgrade to get stronger, and keep stacking good choices!",
             'levelup-modal',
             null,   // no click-dismiss — upgrade selection advances the tutorial
             false   // game already paused by levelUp()
@@ -16379,7 +16379,7 @@
       setTimeout(() => {
         if (tutGetStep() !== TUT_STEP.DEATH) return;
         showTutBubble(
-          "OK, here are your stats from this run. You can now go to your camp for permanent upgrades. It's a roguelike vs. survivor — there's progression between runs! Now go to camp and we'll learn some of that stuff there.",
+          "OK, here are your run stats. You can now visit camp for permanent upgrades — this is a roguelike survivor with between-run progression! Go to camp and I'll show you the ropes.",
           'gameover-screen',
           () => {
             tutSetStep(TUT_STEP.CAMP_INTRO);
@@ -16410,7 +16410,7 @@
         setTimeout(() => {
           if (tutGetStep() !== TUT_STEP.CAMP_INTRO) return;
           showTutBubble(
-            "OK, now start a new round from the Main Building or at the top of the screen. I won't interfere until you die and come back here again. Oh, I almost forgot — your first quest is to kill 3 enemies! Try to do that before you die. If not, try again until you get 3 kills, then we'll continue explaining how this camp works.",
+            "Start a new run from the Main Building or the top of screen. I won't interfere until you die and return here. First quest: kill 3 enemies! Keep trying until you get 3 kills.",
             'center',
             () => { tutSetStep(TUT_STEP.CAMP_QUEST_NOTIFY); },
             false
