@@ -9855,7 +9855,7 @@
       // Farmer NPC near windmill (between windmill and barn)
       (function() {
         const farmerGroup = new THREE.Group();
-        farmerGroup.position.set(44, 0, 44); // Between windmill and barn
+        farmerGroup.position.set(44, 0, -20); // Farm area south of windmill, away from Stonehenge
         // Body
         const bodyMesh = new THREE.Mesh(
           new THREE.BoxGeometry(0.8, 1.2, 0.5),
@@ -9902,7 +9902,7 @@
       
       // Barn adjacent to windmill (not connected - placed to the north-east)
       const barnGroup = new THREE.Group();
-      barnGroup.position.set(50, 0, 30); // Adjacent to windmill, not connected
+      barnGroup.position.set(50, 0, -10); // Farm area away from Stonehenge
       // Barn body
       const barnBodyGeo = new THREE.BoxGeometry(8, 5, 10);
       const barnBodyMat = new THREE.MeshToonMaterial({ color: 0xA0522D }); // Sienna red barn
@@ -11046,9 +11046,12 @@
       const shadowGeo = new THREE.CircleGeometry(2, 16);
       const shadowMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.3 });
       
-      // Seeded pseudo-random for deterministic tree positions
+      // Seeded pseudo-random for deterministic tree positions.
+      // Uses sin-based hash: multiplying by a large prime-like constant (10000) spreads
+      // the sin output across the fractional range for good distribution.
       function seededRandom(seed) {
-        const x = Math.sin(seed + 1) * 10000;
+        const SEED_MULTIPLIER = 10000; // Large constant for wide fractional distribution
+        const x = Math.sin(seed + 1) * SEED_MULTIPLIER;
         return x - Math.floor(x);
       }
 
@@ -11786,7 +11789,7 @@
         {x:22, z:-33}, {x:38, z:-28}, {x:29, z:-24}, {x:35, z:-40},
       ];
       lilyPositions.forEach((lp, lilyIdx) => {
-        const lilyGeo = new THREE.CircleGeometry(0.7 + seededRandom(lilyIdx * 31) * 0.4, 8);
+        const lilyGeo = new THREE.CircleGeometry(0.7 + seededRandom(lilyIdx * 31) * 0.4, 8); // 31 = prime for varied lily sizes
         const lily = new THREE.Mesh(lilyGeo, lilyMat);
         lily.rotation.x = -Math.PI / 2;
         lily.position.set(lp.x, 0.03, lp.z);
@@ -14369,12 +14372,13 @@
             id: 'doublebarrel_upgrade', 
             icon: '🔫',
             title: `DOUBLE BARREL Level ${nextLevel}`, 
-            desc: `Damage +12, Fire Rate +10%`, 
+            desc: `+1 Shot, Damage +12, Fire Rate +10%`, 
             apply: () => { 
               weapons.doubleBarrel.level++;
               weapons.doubleBarrel.damage += 12;
               weapons.doubleBarrel.cooldown *= 0.9;
-              showStatChange(`Double Barrel Level ${weapons.doubleBarrel.level}: +12 Dmg, +10% Fire Rate`);
+              weapons.doubleBarrel.pellets = (weapons.doubleBarrel.pellets || 2) + 1;
+              showStatChange(`Double Barrel Level ${weapons.doubleBarrel.level}: +1 Shot, +12 Dmg`);
             } 
           });
         }
@@ -14483,7 +14487,7 @@
           ...(weapons.fireRing.active && weapons.fireRing.level < 5 ? [{ id: 'fire_up', icon: '🔥', title: `FIRE RING Lv.${weapons.fireRing.level + 1}`, desc: 'Damage +5, +1 Orb', apply: () => { weapons.fireRing.level++; weapons.fireRing.damage += 5; weapons.fireRing.orbs += 1; showStatChange(`Fire Ring Level ${weapons.fireRing.level}`); } }] : []),
           ...(weapons.meteor.active && weapons.meteor.level < 5 ? [{ id: 'meteor_up', icon: '☄️', title: `METEOR Lv.${weapons.meteor.level + 1}`, desc: 'Damage +20, Area +1', apply: () => { weapons.meteor.level++; weapons.meteor.damage += 20; weapons.meteor.area += 1; showStatChange(`Meteor Level ${weapons.meteor.level}`); } }] : []),
           ...(weapons.aura.active && weapons.aura.level < 5 ? [{ id: 'aura_up', icon: '🌀', title: `AURA Lv.${weapons.aura.level + 1}`, desc: 'Damage +3, Range +10%', apply: () => { weapons.aura.level++; weapons.aura.damage += 3; weapons.aura.range = Math.min(5, weapons.aura.range * 1.1); showStatChange(`Aura Level ${weapons.aura.level}`); } }] : []),
-          ...(weapons.doubleBarrel.active && weapons.doubleBarrel.level < 5 ? [{ id: 'dbl_up', icon: '🔫', title: `DOUBLE BARREL Lv.${weapons.doubleBarrel.level + 1}`, desc: 'Damage +12, Fire Rate +10%', apply: () => { weapons.doubleBarrel.level++; weapons.doubleBarrel.damage += 12; weapons.doubleBarrel.cooldown *= 0.9; showStatChange(`Double Barrel Level ${weapons.doubleBarrel.level}`); } }] : [])
+          ...(weapons.doubleBarrel.active && weapons.doubleBarrel.level < 5 ? [{ id: 'dbl_up', icon: '🔫', title: `DOUBLE BARREL Lv.${weapons.doubleBarrel.level + 1}`, desc: '+1 Shot, Damage +12', apply: () => { weapons.doubleBarrel.level++; weapons.doubleBarrel.damage += 12; weapons.doubleBarrel.cooldown *= 0.9; weapons.doubleBarrel.pellets = (weapons.doubleBarrel.pellets || 2) + 1; showStatChange(`Double Barrel Level ${weapons.doubleBarrel.level}`); } }] : [])
         ];
 
         // Prefer new weapons first; pad with weapon upgrades to always reach 6 choices
@@ -16300,7 +16304,7 @@
       weapons.aura = { active: false, level: 0, damage: 5, cooldown: 500, lastShot: 0, range: 3 };
       weapons.meteor = { active: false, level: 0, damage: 60, cooldown: 2500, lastShot: 0, area: 5 };
       weapons.droneTurret = { active: false, level: 0, damage: 15, cooldown: 400, lastShot: 0, range: 15, droneCount: 1 };
-      weapons.doubleBarrel = { active: false, level: 0, damage: 18, cooldown: 1500, lastShot: 0, range: 12, spread: 0.3 };
+      weapons.doubleBarrel = { active: false, level: 0, damage: 18, cooldown: 1500, lastShot: 0, range: 12, spread: 0.3, pellets: 2 };
       weapons.iceSpear = { active: false, level: 0, damage: 20, cooldown: 1500, lastShot: 0, range: 15, slowPercent: 0.4, slowDuration: 2000 };
       weapons.fireRing = { active: false, level: 0, damage: 8, cooldown: 800, lastShot: 0, range: 4, orbs: 3, rotationSpeed: 2 };
       // New weapons — initialized upfront so weapon-selection code can always check .active
@@ -16386,6 +16390,10 @@
       });
       bloodDecals = [];
       bloodDecalIndex = 0; // Reset circular buffer index
+      
+      // Reset lava timers
+      window._lavaDamageTimer = 0;
+      window._lavaSpoutTimer = 0;
       
       // Clean up blood drips
       bloodDrips.forEach(d => {
@@ -17871,8 +17879,9 @@
           const baseAngle = Math.atan2(baseDir.z, baseDir.x);
           const spreadAngle = weapons.doubleBarrel.spread;
           
-          // Create 6 pellets in a spread pattern
-          for (let i = 0; i < 6; i++) {
+          // Fire pellets with spread (shotgun pattern) - pellets count increases per upgrade
+          const pelletCount = weapons.doubleBarrel.pellets || 2;
+          for (let i = 0; i < pelletCount; i++) {
             const angle = baseAngle + (Math.random() - 0.5) * spreadAngle * 2;
             const target = new THREE.Vector3(
               player.mesh.position.x + Math.cos(angle) * weapons.doubleBarrel.range,
@@ -17981,6 +17990,17 @@
             // Fire particles on hit
             spawnParticles(e.mesh.position, 0xFF4500, 6); // Orange-red fire
             spawnParticles(e.mesh.position, 0xFFD700, 4); // Yellow flames
+            // Charring effect: progressively darken enemy color toward black on each fire hit.
+            // Different factors per channel simulate realistic charring (reds fade slowest).
+            if (e.mesh.material && e.mesh.material.color) {
+              const CHAR_RED_FACTOR = 0.88;   // Reds persist slightly longer when charred
+              const CHAR_GREEN_FACTOR = 0.85; // Greens fade mid-rate
+              const CHAR_BLUE_FACTOR = 0.82;  // Blues fade fastest for warm char tint
+              e.mesh.material.color.r *= CHAR_RED_FACTOR;
+              e.mesh.material.color.g *= CHAR_GREEN_FACTOR;
+              e.mesh.material.color.b *= CHAR_BLUE_FACTOR;
+            }
+            e.lastDamageType = 'fire';
             hit = true;
           }
         });
@@ -18428,6 +18448,51 @@
       // Warning light blink (Area 51)
       if (window.warningLight && window.warningLight.material) {
         window.warningLight.material.opacity = Math.sin(gameTime * 3) > 0 ? 0.9 : 0.1;
+      }
+
+      // Lava damage: player takes damage when close to volcano (at -100, 0, -120)
+      if (player && isGameActive && !isGameOver) {
+        const LAVA_DAMAGE_RADIUS = 8;   // Distance from volcano center to take lava damage
+        const LAVA_MAX_DAMAGE = 10;     // Max damage per tick at volcano center
+        const LAVA_TICK_INTERVAL = 0.5; // Seconds between lava damage ticks
+        const lavaX = -100, lavaZ = -120;
+        const ldx = player.mesh.position.x - lavaX;
+        const ldz = player.mesh.position.z - lavaZ;
+        const lavaDist = Math.sqrt(ldx * ldx + ldz * ldz);
+        if (lavaDist < LAVA_DAMAGE_RADIUS) {
+          if (!window._lavaDamageTimer) window._lavaDamageTimer = 0;
+          window._lavaDamageTimer += dt;
+          if (window._lavaDamageTimer > LAVA_TICK_INTERVAL) {
+            window._lavaDamageTimer = 0;
+            player.takeDamage(LAVA_MAX_DAMAGE * (1 - lavaDist / LAVA_DAMAGE_RADIUS)); // More damage closer to center
+            spawnParticles(player.mesh.position, 0xFF4500, 4);
+            playSound('volcano');
+          }
+        }
+        // Lava spout: occasional lava particles erupting from volcano top
+        if (!window._lavaSpoutTimer) window._lavaSpoutTimer = 0;
+        window._lavaSpoutTimer += dt;
+        if (window._lavaSpoutTimer > (2 + Math.random() * 3)) { // Every 2-5 seconds
+          window._lavaSpoutTimer = 0;
+          for (let ls = 0; ls < 8; ls++) {
+            const geo = new THREE.SphereGeometry(0.15, 4, 4);
+            const mat = new THREE.MeshBasicMaterial({ color: Math.random() < 0.5 ? 0xFF4500 : 0xFF8C00 });
+            const lavaP = new THREE.Mesh(geo, mat);
+            lavaP.position.set(lavaX + (Math.random() - 0.5) * 2, 22, lavaZ + (Math.random() - 0.5) * 2);
+            scene.add(lavaP);
+            const vx = (Math.random() - 0.5) * 0.3, vz = (Math.random() - 0.5) * 0.3;
+            let vy = 0.3 + Math.random() * 0.2, lpLife = 60;
+            if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
+              managedAnimations.push({ update(_dt2) {
+                lpLife--;
+                vy -= 0.012;
+                lavaP.position.x += vx; lavaP.position.y += vy; lavaP.position.z += vz;
+                if (lpLife <= 0) { scene.remove(lavaP); geo.dispose(); mat.dispose(); return false; }
+                return true;
+              }});
+            } else { scene.remove(lavaP); geo.dispose(); mat.dispose(); }
+          }
+        }
       }
 
       // Cleanup and memory management (run every 3 seconds to avoid performance issues)
