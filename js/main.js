@@ -1367,11 +1367,11 @@
             // Glow effect
             orb.material.opacity = 0.7 + Math.sin(gameTime * 8 + i) * 0.2;
             
-            // Fire particles around each orb
-            if (Math.random() < 0.4) {
+            // Fire particles around each orb (throttled: every 3 frames)
+            if (Math.floor(gameTime * 60) % 3 === i % 3) {
               spawnParticles(orb.position, 0xFF4500, 1);
             }
-            if (Math.random() < 0.2) {
+            if (Math.floor(gameTime * 60) % 7 === i % 7) {
               spawnParticles(orb.position, 0xFF8C00, 1);
             }
           }
@@ -11046,12 +11046,13 @@
       const shadowGeo = new THREE.CircleGeometry(2, 16);
       const shadowMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.3 });
       
+      // Seeded pseudo-random for deterministic tree positions
+      function seededRandom(seed) {
+        const x = Math.sin(seed + 1) * 10000;
+        return x - Math.floor(x);
+      }
+
       for (let i = 0; i < 120; i++) { // Increased from 50 to 120
-        // Seeded pseudo-random for deterministic tree positions
-        function seededRandom(seed) {
-          const x = Math.sin(seed + 1) * 10000;
-          return x - Math.floor(x);
-        }
         const group = new THREE.Group();
         const trunk = new THREE.Mesh(trunkGeo, trunkMat);
         trunk.position.y = 1;
@@ -11784,8 +11785,8 @@
         {x:24, z:-26}, {x:33, z:-22}, {x:36, z:-35}, {x:27, z:-38},
         {x:22, z:-33}, {x:38, z:-28}, {x:29, z:-24}, {x:35, z:-40},
       ];
-      lilyPositions.forEach(lp => {
-        const lilyGeo = new THREE.CircleGeometry(0.7 + Math.random() * 0.4, 8);
+      lilyPositions.forEach((lp, lilyIdx) => {
+        const lilyGeo = new THREE.CircleGeometry(0.7 + seededRandom(lilyIdx * 31) * 0.4, 8);
         const lily = new THREE.Mesh(lilyGeo, lilyMat);
         lily.rotation.x = -Math.PI / 2;
         lily.position.set(lp.x, 0.03, lp.z);
