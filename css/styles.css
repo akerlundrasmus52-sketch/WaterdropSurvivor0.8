@@ -18,6 +18,11 @@
       z-index: 1;
     }
 
+    /* Fix blue border: canvas is inline by default which creates a line-height gap */
+    #game-container canvas {
+      display: block;
+    }
+
     #ui-layer {
       position: absolute;
       top: 0;
