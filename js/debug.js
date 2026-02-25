@@ -122,7 +122,7 @@
       }
 
       // Clean up entries for enemies that died/were removed
-      if (_stuckMap.size > 200) {
+      if (_stuckMap.size > 50) {
         const alive2 = new Set();
         if (enemies) enemies.forEach(e => { if (e && e.mesh) alive2.add(e.mesh.uuid); });
         for (const id of _stuckMap.keys()) {
