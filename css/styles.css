@@ -157,7 +157,7 @@
     /* Combo Counter - Red/Black Theme */
     #combo-counter {
       position: absolute;
-      top: 60%; /* Moved down to be closer to character (was 35%) */
+      top: 40%; /* Position closer to character head area */
       left: 50%;
       transform: translate(-50%, -50%);
       text-align: center;
@@ -168,40 +168,30 @@
     }
     
     #combo-text {
-      /* COMIC STYLING: 80s Batman comic font, smaller size */
       font-family: 'Bangers', 'M PLUS Rounded 1c', cursive;
-      font-size: 20px; /* Reduced from 28px (originally) then 24px to 20px for better mobile visibility */
-      font-weight: 900;
+      font-size: 14px; /* Much smaller combo text */
+      font-weight: 400; /* Thinner weight */
       color: #FF0000;
-      letter-spacing: 2px; /* Comic book spacing */
-      text-shadow: 
-        2px 2px 0 #000,
-        -1px -1px 0 #000,
-        1px -1px 0 #000,
-        -1px 1px 0 #000,
-        0 0 10px rgba(255,0,0,0.9),
-        0 0 20px rgba(255,0,0,0.7);
-      animation: combo-bubble 0.5s ease-out;
-      /* Comic bubble treatment */
-      background: radial-gradient(ellipse at center, rgba(255,255,255,0.15) 0%, transparent 70%);
-      padding: 5px 10px;
-      border-radius: 10px;
-    }
-    
-    #combo-multiplier {
-      /* COMIC STYLING: Matches combo text style */
-      font-family: 'Bangers', 'M PLUS Rounded 1c', cursive;
-      font-size: 14px; /* Reduced from 16px to match smaller text */
-      font-weight: bold;
-      color: #8B0000;
       letter-spacing: 1px;
       text-shadow: 
         1px 1px 0 #000,
         -1px -1px 0 #000,
-        1px -1px 0 #000,
-        -1px 1px 0 #000,
-        0 0 8px rgba(139,0,0,0.8);
-      margin-top: 3px;
+        0 0 6px rgba(255,0,0,0.7);
+      animation: combo-bubble 0.5s ease-out;
+      padding: 3px 6px;
+      border-radius: 8px;
+    }
+    
+    #combo-multiplier {
+      font-family: 'Bangers', 'M PLUS Rounded 1c', cursive;
+      font-size: 10px; /* Smaller multiplier */
+      font-weight: 400; /* Thinner */
+      color: #8B0000;
+      letter-spacing: 1px;
+      text-shadow: 
+        1px 1px 0 #000,
+        0 0 4px rgba(139,0,0,0.6);
+      margin-top: 1px;
     }
     
     @keyframes combo-bubble {
