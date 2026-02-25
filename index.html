@@ -427,7 +427,7 @@
     <button id="settings-btn" class="btn-small" style="position: absolute; top: 20px; right: 120px; pointer-events: auto; z-index: 100;">⚙️</button>
     
     <!-- Day/Night Cycle Clock - moved to upper-right, 20% smaller to avoid XP/HP bar overlap -->
-    <div id="day-night-clock" style="position: fixed; top: 6px; right: 230px; transform: scale(0.55); transform-origin: top right; pointer-events: none; z-index: 100;">
+    <div id="day-night-clock" style="position: fixed; top: 6px; right: 218px; transform: scale(0.55); transform-origin: top right; pointer-events: none; z-index: 100;">
       <div style="background: radial-gradient(circle at 30% 30%, rgba(40,40,40,0.9), rgba(0,0,0,0.8)); 
                   border: 3px solid #FFD700; 
                   border-radius: 50% 50% 50% 0; /* WATERDROP SHAPE: teardrop with pointed bottom-right */
@@ -461,15 +461,8 @@
       <div id="minimap"></div>
     </div>
     
-    <!-- REGION DISPLAY INDICATOR (below minimap) -->
-    <div id="region-display" style="position: absolute; top: 60px; left: 10px; transform: none; 
-                                     background: linear-gradient(to bottom, rgba(40,40,40,0.9), rgba(0,0,0,0.8));
-                                     border: 2px solid #FFD700; border-radius: 10px; padding: 8px 15px;
-                                     font-size: 14px; color: #FFD700; font-weight: bold; z-index: 99;
-                                     text-shadow: 0 0 8px rgba(255,215,0,0.6), 1px 1px 2px rgba(0,0,0,0.8);
-                                     box-shadow: 0 4px 15px rgba(0,0,0,0.7), 0 0 20px rgba(255,215,0,0.3);
-                                     pointer-events: none; text-align: center; min-width: 100px;">
-      <div style="font-size: 10px; color: #AAA; margin-bottom: 2px;">REGION</div>
+    <!-- REGION DISPLAY INDICATOR (above minimap, slides in from right) -->
+    <div id="region-display">
       <div id="region-name">Forest</div>
     </div>
     
