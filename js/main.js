@@ -17089,7 +17089,8 @@
 
     function onWindowResize() {
       const aspect = window.innerWidth / window.innerHeight;
-      let d = 20;
+      // Use the same base distance as init() to prevent zoom-out on any resize event
+      let d = RENDERER_CONFIG.cameraDistance;
       
       // Landscape camera zoom - 50% closer in landscape mode
       const isPortrait = window.innerHeight > window.innerWidth;
@@ -17209,44 +17210,28 @@
       // Use smoothstep easing for smoother color transitions
       const smoothstep = (t) => t * t * (3 - 2 * t); // Smooth interpolation
       
-      let sunIntensity, ambientIntensity, skyColor;
+      let sunIntensity, ambientIntensity;
       
       if (t < 0.25) {
         // Night to sunrise (0 -> 0.25)
         const phase = smoothstep(t / 0.25); // Smooth easing
         sunIntensity = 0.2 + (0.6 * phase); // 0.2 -> 0.8
         ambientIntensity = 0.3 + (0.3 * phase); // 0.3 -> 0.6
-        skyColor = new THREE.Color().lerpColors(
-          new THREE.Color(0x1a1a2e), // Dark blue night
-          new THREE.Color(0x87CEEB), // Light blue day
-          phase
-        );
       } else if (t < 0.5) {
         // Sunrise to noon (0.25 -> 0.5)
         const phase = smoothstep((t - 0.25) / 0.25);
         sunIntensity = 0.8 + (0.2 * phase); // 0.8 -> 1.0
         ambientIntensity = 0.6 + (0.1 * phase); // 0.6 -> 0.7
-        skyColor = new THREE.Color(0x87CEEB); // Bright day
       } else if (t < 0.75) {
         // Noon to sunset (0.5 -> 0.75)
         const phase = smoothstep((t - 0.5) / 0.25);
         sunIntensity = 1.0 - (0.6 * phase); // 1.0 -> 0.4
         ambientIntensity = 0.7 - (0.3 * phase); // 0.7 -> 0.4
-        skyColor = new THREE.Color().lerpColors(
-          new THREE.Color(0x87CEEB), // Day blue
-          new THREE.Color(0xFF6B35), // Sunset orange
-          phase
-        );
       } else {
         // Sunset to night (0.75 -> 1.0)
         const phase = smoothstep((t - 0.75) / 0.25);
         sunIntensity = 0.4 - (0.2 * phase); // 0.4 -> 0.2
         ambientIntensity = 0.4 - (0.1 * phase); // 0.4 -> 0.3
-        skyColor = new THREE.Color().lerpColors(
-          new THREE.Color(0xFF6B35), // Sunset orange
-          new THREE.Color(0x1a1a2e), // Night dark blue
-          phase
-        );
       }
       
       // Apply lighting changes with lerp for extra smoothness
@@ -17254,21 +17239,10 @@
       window.ambientLight.intensity += (ambientIntensity - window.ambientLight.intensity) * lerpSpeed;
       window.dirLight.intensity += (sunIntensity - window.dirLight.intensity) * lerpSpeed;
       
-      // Update sky color with lerp for smooth transitions
-      if (!window.currentSkyColor) {
-        window.currentSkyColor = skyColor.clone();
-      }
-      window.currentSkyColor.lerp(skyColor, lerpSpeed);
-      scene.background = window.currentSkyColor;
-      
-      // Update fog color to match sky (fog reacts to lighting) with lerp
-      if (scene.fog) {
-        if (!window.currentFogColor) {
-          window.currentFogColor = window.currentSkyColor.clone();
-        }
-        window.currentFogColor.lerp(window.currentSkyColor, lerpSpeed);
-        scene.fog.color = window.currentFogColor;
-      }
+      // Note: scene.background and scene.fog.color are kept at their initial COLORS.bg value.
+      // Changing them to sky-blue during the day cycle caused a blue-screen artifact at the
+      // screen edges and the fog area, which is now fixed by relying solely on dynamic
+      // lighting (ambient + directional) to convey the time of day.
       
       // Move sun position in an arc
       const sunAngle = (t - 0.25) * Math.PI * 2; // Offset so noon is at top
