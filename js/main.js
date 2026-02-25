@@ -58,7 +58,7 @@
     
     // Managed animations array - replaces orphaned requestAnimationFrame loops in death/damage effects
     let managedAnimations = [];
-    const MAX_MANAGED_ANIMATIONS = 100; // Frame budget cap
+    const MAX_MANAGED_ANIMATIONS = 200; // Increased from 100 to accommodate air blood pool animations
 
     // Smoke particles managed array (avoids RAF accumulation over long sessions)
     let smokeParticles = [];
@@ -2043,7 +2043,8 @@
           let avoidanceCount = 0;
           const maxAvoidanceChecks = 5; // Limit checks to nearest enemies
           for (let other of enemies) {
-            if (other === this || other.isDead || avoidanceCount >= maxAvoidanceChecks) continue;
+            if (other === this || other.isDead) continue;
+            if (avoidanceCount >= maxAvoidanceChecks) break; // stop iterating once cap hit
             const odx = this.mesh.position.x - other.mesh.position.x;
             const odz = this.mesh.position.z - other.mesh.position.z;
             const odist = Math.sqrt(odx*odx + odz*odz);
@@ -2589,41 +2590,48 @@
         spawnParticles(this.mesh.position, 0x6B0000, Math.floor(deathBloodCount * 0.7));
         spawnParticles(this.mesh.position, 0xCC0000, Math.floor(deathBloodCount * 0.5)); // Bright red splatter in air
         // Airborne blood droplets that land and form small pools
+        // Uses managedAnimations (game-loop-driven) instead of setTimeout/setInterval chains
+        // so cleanup is tied to the game loop, respects pause/reset, and avoids timer callback bursts.
         const airBloodCount = this.isMiniBoss ? 12 : 6;
         for (let ab = 0; ab < airBloodCount; ab++) {
-          const landX = this.mesh.position.x + (Math.random() - 0.5) * 4;
-          const landZ = this.mesh.position.z + (Math.random() - 0.5) * 4;
-          const delay = 80 + Math.floor(Math.random() * 200);
-          setTimeout(() => {
-            if (!scene) return;
-            const r = 0.15 + Math.random() * 0.25;
-            const poolGeo = new THREE.CircleGeometry(r, 8);
-            const poolMat = new THREE.MeshStandardMaterial({ color: 0x7A0000, roughness: 0.3, metalness: 0.4, transparent: true, opacity: 0.75 });
-            const pool = new THREE.Mesh(poolGeo, poolMat);
-            pool.rotation.x = -Math.PI / 2;
-            pool.position.set(landX, 0.015, landZ);
-            scene.add(pool);
-            // Air blood pools manage their own lifecycle via the fade interval below;
-            // do NOT push into bloodDecals to avoid unbounded array growth.
-            // Fade after 8 seconds
-            setTimeout(() => {
-              let op = 0.75;
-              let disposed = false;
-              const fade = setInterval(() => {
-                if (disposed) { clearInterval(fade); return; }
-                op -= 0.025;
-                poolMat.opacity = Math.max(0, op);
-                if (op <= 0) {
-                  clearInterval(fade);
-                  disposed = true;
-                  if (pool.parent) scene.remove(pool);
-                  poolGeo.dispose();
-                  poolMat.dispose();
-                }
-              }, 100);
-              pool.userData.fadeInterval = fade; // Store for external cleanup if needed
-            }, 8000);
-          }, delay);
+          if (managedAnimations.length >= MAX_MANAGED_ANIMATIONS) break; // respect cap
+          const landX = deathPos.x + (Math.random() - 0.5) * 4;
+          const landZ = deathPos.z + (Math.random() - 0.5) * 4;
+          const r = 0.15 + Math.random() * 0.25;
+          const poolGeo = new THREE.CircleGeometry(r, 8);
+          const poolMat = new THREE.MeshBasicMaterial({ color: 0x7A0000, transparent: true, opacity: 0 });
+          const pool = new THREE.Mesh(poolGeo, poolMat);
+          pool.rotation.x = -Math.PI / 2;
+          pool.position.set(landX, 0.015, landZ);
+          scene.add(pool);
+          // delayFrames: ~5-17 frames landing delay (mirrors the old 80-280ms at 60fps)
+          const delayFrames = 5 + Math.floor(Math.random() * 12);
+          // WAIT_FRAMES: visible duration (~8s at 60fps = 480 frames)
+          // FADE_FRAMES: fade-out duration (~1s at 60fps = 60 frames)
+          const WAIT_FRAMES = 480;
+          const FADE_FRAMES = 60;
+          let abTimer = 0;
+          managedAnimations.push({
+            update(_dt) {
+              abTimer++;
+              if (abTimer === delayFrames) poolMat.opacity = 0.75; // appear
+              if (abTimer > WAIT_FRAMES) {
+                poolMat.opacity = Math.max(0, 0.75 * (1 - (abTimer - WAIT_FRAMES) / FADE_FRAMES));
+              }
+              if (abTimer >= WAIT_FRAMES + FADE_FRAMES) {
+                if (pool.parent) scene.remove(pool);
+                poolGeo.dispose();
+                poolMat.dispose();
+                return false;
+              }
+              return true;
+            },
+            cleanup() {
+              if (pool.parent) scene.remove(pool);
+              poolGeo.dispose();
+              poolMat.dispose();
+            }
+          });
         }
         for (let db = 0; db < (this.isMiniBoss ? 10 : 6); db++) {
           spawnBloodDecal(this.mesh.position);
@@ -16557,6 +16565,10 @@
         d.mesh.material.dispose();
       });
       bloodDrips = [];
+      // Call optional cleanup() on each managed animation before clearing, so any
+      // Three.js objects they own (e.g. air blood pool meshes/geometries) are
+      // properly removed from the scene and disposed instead of leaking across runs.
+      managedAnimations.forEach(anim => { if (anim.cleanup) anim.cleanup(); });
       managedAnimations = [];
       
       goldCoins.forEach(g => {
@@ -17234,6 +17246,10 @@
       let dt = (time - lastTime) / 1000;
       lastTime = time;
       gameTime = time / 1000; // Update game time in seconds
+
+      // Guard against NaN or negative dt (e.g. from tab-switch timing jitter)
+      // which could propagate NaN into physics positions and permanently break the loop.
+      if (!isFinite(dt) || dt <= 0) dt = 0.016; // fallback to ~60fps frame
 
       // Debug: log frame timing anomalies (throttled, observation-only)
       if (window.GameDebug) window.GameDebug.onFrameStart(time, dt * 1000, gameTime);
@@ -18317,6 +18333,10 @@
         // Cull particles beyond fog distance
         const distToPlayer = p.mesh.position.distanceTo(player.mesh.position);
         if (distToPlayer > FOG_DISTANCE) {
+          // Remove from scene before releasing so the mesh is not left as an
+          // invisible orphan in scene.children, which inflates scene child count.
+          scene.remove(p.mesh);
+          p.mesh.visible = false;
           if (particlePool) {
             particlePool.release(p);
           }
