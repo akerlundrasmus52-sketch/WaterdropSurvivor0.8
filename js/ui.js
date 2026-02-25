@@ -28,9 +28,9 @@ function _updateLiveStatDisplay(text) {
   const liveEl = document.getElementById('live-stat-display');
   if (!liveEl) return;
 
-  // Push current live stat to previous stats if it exists
+  // Push current live stat to previous stats if it exists and wasn't already pushed
   const currentText = liveEl.textContent;
-  if (currentText && currentText.trim()) {
+  if (currentText && currentText.trim() && currentText.trim() !== _previousStats[0]) {
     _previousStats.unshift(currentText.trim());
     if (_previousStats.length > 3) _previousStats.pop();
     _updatePreviousStatsPanel();
@@ -40,13 +40,15 @@ function _updateLiveStatDisplay(text) {
   liveEl.textContent = text;
   liveEl.style.display = 'block';
 
-  // Auto-hide after 4 seconds and move to previous
+  // Auto-hide after 4 seconds and move to previous if not already replaced
   if (_liveStatTimer) clearTimeout(_liveStatTimer);
   _liveStatTimer = setTimeout(() => {
     if (liveEl.textContent === text) {
-      _previousStats.unshift(text);
-      if (_previousStats.length > 3) _previousStats.pop();
-      _updatePreviousStatsPanel();
+      if (text.trim() !== _previousStats[0]) {
+        _previousStats.unshift(text.trim());
+        if (_previousStats.length > 3) _previousStats.pop();
+        _updatePreviousStatsPanel();
+      }
       liveEl.style.display = 'none';
       liveEl.textContent = '';
     }
