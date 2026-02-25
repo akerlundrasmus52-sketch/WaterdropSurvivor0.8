@@ -796,7 +796,7 @@
         
         // Store base scale for breathing animation efficiency
         this.baseScale = 1.0;
-        this._breathScale = 1.0; // Multiplier from cigar breathing, applied on top of spring-damper
+        this._breathScale = 1.0; // Multiplier from breathing animation, applied on top of spring-damper
       }
 
       update(dt) {
@@ -1221,7 +1221,7 @@
         // Clamp to sane range
         this.currentScaleY = Math.max(0.3, Math.min(2.0, this.currentScaleY));
         this.currentScaleXZ = Math.max(0.5, Math.min(2.0, this.currentScaleXZ));
-        // Note: mesh.scale is applied after cigar breathing section, combined with _breathScale
+        // Note: mesh.scale is applied after breathing section, combined with _breathScale
         
         // Shed water particles when moving fast
         if (speedMag > 0.4 && Math.random() < dt2 * speedMag * 3 && !this.isDashing) {
