@@ -123,6 +123,25 @@
       const elapsed = Date.now() - cinematicData.startTime;
       const progress = Math.min(elapsed / cinematicData.duration, 1);
       
+      // Safety: if cinematic target was destroyed (e.g. boss died mid-cinematic),
+      // force-end the cinematic to prevent accessing null/disposed objects.
+      if (cinematicData.type === 'miniboss' && (!cinematicData.target || !cinematicData.target.position)) {
+        console.warn('[Cinematic] Target lost (boss died?) — force-ending cinematic');
+        camera.position.copy(cinematicData.originalCameraPos);
+        camera.lookAt(cinematicData.originalCameraTarget);
+        cinematicActive = false;
+        cinematicData = null;
+        return;
+      }
+      if (cinematicData.type === 'stonehenge' && !cinematicData.target) {
+        console.warn('[Cinematic] Stonehenge target lost — force-ending cinematic');
+        camera.position.copy(cinematicData.originalCameraPos);
+        camera.lookAt(cinematicData.originalCameraTarget);
+        cinematicActive = false;
+        cinematicData = null;
+        return;
+      }
+      
       if (progress >= 1) {
         // End cinematic - restore camera
         camera.position.copy(cinematicData.originalCameraPos);
@@ -13386,6 +13405,13 @@
     function updateKillCam(dt) {
       if (!killCamActive) return;
       
+      // Safety: if kill cam data is missing or invalid, force-end to prevent crash
+      if (!killCamData || !killCamData.killPosition || !killCamData.originalCameraPos) {
+        console.warn('[KillCam] Invalid killCamData — force-ending kill cam');
+        killCamActive = false;
+        return;
+      }
+      
       killCamTimer += dt;
       const progress = Math.min(killCamTimer / killCamDuration, 1);
       
@@ -17176,7 +17202,8 @@
       recentFrameTimes: [],
       rollingAvgFPS: 60,
       particleThrottleActive: false,
-      consecutiveSkipCount: 0 // Track consecutive skipped renders to prevent frozen screen
+      consecutiveSkipCount: 0, // Track consecutive skipped renders to prevent frozen screen
+      gameLogicErrorCount: 0  // Track consecutive game logic errors (freeze detection)
     };
     
     // FRESH: FPS Watchdog - Update rolling average and throttle particles if needed
@@ -17399,6 +17426,11 @@
         return;
       }
       
+      // --- BEGIN GAME LOGIC (wrapped in try-catch to guarantee rendering) ---
+      // Any uncaught exception in game logic previously prevented renderer.render() from
+      // being called, producing the "frozen picture, game runs in background" bug.
+      try {
+
       // Handle keyboard/gamepad input updates (integrated into game loop)
       if (gameSettings.controlType === 'keyboard') {
         const keysPressed = gameSettings.keysPressed || {};
@@ -18936,11 +18968,35 @@
         window.underwaterChest.position.y = -0.4 + Math.sin(gameTime * 1.5) * 0.08;
       }
 
+      // Game logic completed without error — reset consecutive error counter
+      performanceLog.gameLogicErrorCount = 0;
+
+      } catch (gameLogicError) {
+        // --- END GAME LOGIC try-catch ---
+        // Log the error that would have frozen the screen (always-on, not gated by ?debug=1)
+        performanceLog.gameLogicErrorCount++;
+        if (!window._lastGameLogicError || (Date.now() - window._lastGameLogicError) > 2000) {
+          console.error('[GameLoop] Game logic error caught — rendering continues (consecutive errors: ' + performanceLog.gameLogicErrorCount + '):', gameLogicError);
+          window._lastGameLogicError = Date.now();
+        }
+        // Force-end stuck cinematics/killcams that may have caused the crash
+        if (cinematicActive) {
+          console.warn('[GameLoop] Force-ending cinematic after game logic error');
+          cinematicActive = false;
+          cinematicData = null;
+        }
+        if (killCamActive) {
+          console.warn('[GameLoop] Force-ending killCam after game logic error');
+          killCamActive = false;
+        }
+      }
+
       // Phase 3: Render loop protection - wrap in try-catch to prevent freeze
       // Frame Skip Mechanism: Skip rendering if frame budget exceeded
+      // BUT: always render after game logic errors to prevent frozen-screen bug
       const renderStartTime = performance.now();
       
-      if (!shouldSkipRender) {
+      if (!shouldSkipRender || performanceLog.gameLogicErrorCount > 0) {
         try {
           renderer.render(scene, camera);
           performanceLog.renderCount++;
@@ -18956,6 +19012,11 @@
       }
       
       const renderEndTime = performance.now();
+      
+      // Always-on freeze detection: log when game logic errors are accumulating
+      if (window.GameDebug) {
+        window.GameDebug.onRenderStatus(performanceLog.gameLogicErrorCount, cinematicActive, killCamActive, isPaused);
+      }
       
       // Track frame performance
       const frameEndTime = performance.now();

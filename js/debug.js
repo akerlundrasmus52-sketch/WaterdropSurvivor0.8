@@ -100,6 +100,19 @@
       }
     },
 
+    // Always-on freeze detection (NOT gated by ?debug=1)
+    // Call after each render with the game logic error count.
+    // Logs a warning when game logic errors are preventing rendering.
+    onRenderStatus(gameLogicErrorCount, cinematicActive, killCamActive, isPaused) {
+      if (gameLogicErrorCount > 3) {
+        // Always log this — it means the screen would have been frozen without the try-catch
+        console.warn('[FreezeGuard] Game logic threw ' + gameLogicErrorCount +
+          ' consecutive errors — rendering forced to prevent freeze.' +
+          ' cinematic=' + cinematicActive + ' killCam=' + killCamActive +
+          ' paused=' + isPaused);
+      }
+    },
+
     // Call once per frame, passing enemy array and alive/spawned/died counts
     onEnemyTick(enemies, spawnedThisTick, diedThisTick) {
       if (!enabled) return;
