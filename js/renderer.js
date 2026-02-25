@@ -20,8 +20,8 @@ const RENDERER_CONFIG = {
   fogFar: 38,
   // Default shadow map size (used at init; overridden by applyGraphicsQuality)
   defaultShadowMapSize: 2048,
-  // Directional light shadow frustum half-size
-  shadowFrustumHalfSize: 80,
+  // Directional light shadow frustum half-size (covers visible area; shadow is re-anchored to player each frame)
+  shadowFrustumHalfSize: 40,
   // Directional light shadow quality settings
   shadowRadius: 4,   // Soft shadow blur
   shadowBias: -0.0001 // Prevent shadow acne
