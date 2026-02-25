@@ -127,8 +127,10 @@
         // End cinematic - restore camera
         camera.position.copy(cinematicData.originalCameraPos);
         camera.lookAt(cinematicData.originalCameraTarget);
+        const endedType = cinematicData.type;
         cinematicActive = false;
         cinematicData = null;
+        console.log(`[Cinematic] '${endedType}' ended — camera restored, loop running normally`);
         return;
       }
       
@@ -13088,6 +13090,8 @@
         // Debug: log mini-boss spawn details
         if (window.GameDebug) window.GameDebug.onBossSpawn(miniBoss, playerStats.lvl, 'MiniBoss_L' + playerStats.lvl);
         createFloatingText("MINI-BOSS INCOMING!", player.mesh.position);
+        // Always-on log so render-loop health can be confirmed in console post-miniboss
+        console.log(`[MiniBoss] L${playerStats.lvl} spawned t=${Math.floor((Date.now()-gameStartTime)/1000)}s — loop alive, enemies=${enemies.length}`);
         
         // Trigger cinematic for mini-boss spawn
         triggerCinematic('miniboss', miniBoss.mesh, 3000);
@@ -16654,6 +16658,11 @@
       window.pauseOverlayCount = 0;
       levelUpPending = false;
       pendingQuestLevels = 0;
+      // Reset cinematic and kill-cam flags so stale state from a previous run can
+      // never carry into the new run and freeze the camera on the first frame.
+      cinematicActive = false;
+      cinematicData = null;
+      killCamActive = false;
       setGamePaused(true);  // Start paused, countdown will unpause (PR #70)
       setGameActive(false);  // Not active until countdown completes (PR #70)
       document.getElementById('gameover-screen').style.display = 'none';
@@ -17268,6 +17277,14 @@
         }
       }
       
+      // Update Kill Cam and Cinematic effects before any early-return so they always
+      // advance and terminate correctly — even when the game is paused (e.g. a level-up
+      // pause that coincides with a boss cinematic).  Without this, cinematicActive could
+      // stay true indefinitely while paused, leaving the camera locked on the now-empty
+      // boss position and producing the "visual freeze" symptom.
+      updateKillCam(dt);
+      updateCinematic();
+
       // Handle countdown sequence (PR #70)
       if (countdownActive) {
         // During countdown, still render but don't update game logic
@@ -17276,7 +17293,10 @@
       }
 
       if (isPaused || isGameOver || !isGameActive) {
-        // Update camera to follow player even when paused
+        // Update camera to follow player even when paused.
+        // cinematicActive is intentionally NOT excluded here: updateCinematic() ran
+        // above and already ended any elapsed cinematic, so by the time we reach this
+        // branch cinematicActive is false whenever the cinematic has finished.
         if (player && player.mesh && !killCamActive && !cinematicActive) {
           camera.position.x = player.mesh.position.x;
           camera.position.z = player.mesh.position.z + 20;
@@ -17430,12 +17450,6 @@
         // Green particle
         spawnParticles(player.mesh.position, 0x00FF00, 2);
       }
-
-      // Update Kill Cam effects
-      updateKillCam(dt);
-      
-      // Update Cinematic Camera effects
-      updateCinematic();
 
       // Player Update
       if (killCamActive) {
@@ -18872,7 +18886,8 @@
       if (currentTime - performanceLog.lastLogTime > 5000) {
         const avgFrameTime = performanceLog.cumulativeFrameTime / performanceLog.frameCount;
         const slowFramePercent = (performanceLog.slowFrames / performanceLog.frameCount * 100).toFixed(1);
-        console.log(`Performance Summary: Avg frame: ${avgFrameTime.toFixed(2)}ms, Slow frames: ${slowFramePercent}%, Enemies: ${aliveEnemies}, Spawns: ${performanceLog.spawnCount}, Renders: ${performanceLog.renderCount}`);
+        const runSec = Math.floor((Date.now() - gameStartTime) / 1000);
+        console.log(`[Loop] t=${runSec}s L${playerStats.lvl} — Avg frame: ${avgFrameTime.toFixed(2)}ms, Slow: ${slowFramePercent}%, Enemies: ${aliveEnemies}, Renders: ${performanceLog.renderCount}, cinematic: ${cinematicActive}, paused: ${isPaused}`);
         
         // Reset counters for next period
         performanceLog.lastLogTime = currentTime;
