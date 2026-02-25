@@ -7723,10 +7723,6 @@
             if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest4_upgradeAttr') {
               progressTutorialQuest('quest4_upgradeAttr', true);
             }
-            // QUEST 5 (new): Track training session for "Complete a Training Session" quest
-            if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest5_trainingSession') {
-              progressTutorialQuest('quest5_trainingSession', true);
-            }
             // QUEST 3 (legacy): Track attribute purchase for tutorial quest
             if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest3_buyProgression') {
               // Count total attribute levels purchased
@@ -7831,15 +7827,16 @@
       },
       quest5_trainingSession: {
         id: 'quest5_trainingSession',
-        name: 'Complete a Training Session',
-        description: 'Use the Training Hall to complete one training session',
-        objectives: 'Complete 1 training session in the Training Hall',
+        name: 'Survive 2 Minutes',
+        description: 'Head out on a run and survive for at least 2 minutes',
+        objectives: 'Survive 120 seconds in a run',
         claim: 'Main Building',
+        triggerOnDeath: true,
         rewardGold: 100,
         rewardSkillPoints: 1,
         rewardAttributePoints: 2,
         unlockBuildingOnActivation: 'forge', // Forge unlocks when THIS quest activates
-        message: "🏋️ Training complete!<br><br>You earned <b>+2 Attribute Points</b> and <b>+1 Skill Point</b>!<br><br>Next: keep pushing — kill <b>10 enemies</b> in a run!",
+        message: "⏱️ You survived 2 minutes!<br><br>You earned <b>+2 Attribute Points</b> and <b>+1 Skill Point</b>!<br><br>Next: keep pushing — kill <b>10 enemies</b> in a run!",
         nextQuest: 'quest6_kill10',
         conditions: ['quest4_upgradeAttr']
       },
@@ -9234,7 +9231,7 @@
             'skillTree': { questId: 'quest1_kill3', label: 'Kill 7 Enemies (Quest 1)' },
             'armory': { questId: 'quest3_stonehengeGear', label: 'Find the Cigar (Quest 3)' },
             'trainingHall': { questId: 'quest4_upgradeAttr', label: 'Upgrade an Attribute (Quest 4)' },
-            'forge': { questId: 'quest5_trainingSession', label: 'Complete Training (Quest 5)' },
+            'forge': { questId: 'quest5_trainingSession', label: 'Survive 2 Minutes (Quest 5)' },
             'companionHouse': { questId: 'quest4_kill10', label: 'Kill 10 Enemies (Quest 4b)' },
             'trashRecycle': { questId: null, label: 'Future Quest' },
             'tempShop': { questId: null, label: 'Future Quest' }
@@ -9331,10 +9328,10 @@
            buildingCard.innerHTML = `
              <div class="building-header">
                <div class="building-name">${building.icon} ${building.name}${hasNotification ? ' <span class="quest-indicator">!</span>' : ''}</div>
-               <div class="building-level">${isLockedFree ? 'LOCKED' : '✓ UNLOCKED'}</div>
+               <div class="building-level">${isLockedFree ? 'LOCKED' : `Lv ${buildingData.level}`}</div>
              </div>
              <div class="building-desc">${building.description}</div>
-            <div class="building-cost">${isLockedFree ? 'Unlock via Quest' : 'UNLOCKED'}</div>
+            <div class="building-cost">${isLockedFree ? 'Unlock via Quest' : ''}</div>
           `;
           
           if (buildingId === 'skillTree') {
@@ -16346,6 +16343,10 @@
         // Quest 4: Kill 10 enemies (legacy)
         if (currentQuest.id === 'quest4_kill10' && saveData.tutorialQuests.killsThisRun >= 10) {
           progressTutorialQuest('quest4_kill10', true);
+        }
+        // Quest 5 (survive 2 min): Check survival time
+        if (currentQuest.id === 'quest5_trainingSession' && survivalTime >= 120) {
+          progressTutorialQuest('quest5_trainingSession', true);
         }
         // Quest 7: Survive 2 minutes (legacy)
         if (currentQuest.id === 'quest7_survive2min' && saveData.tutorialQuests.survivalTimeThisRun >= 120) {
