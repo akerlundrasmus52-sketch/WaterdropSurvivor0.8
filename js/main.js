@@ -907,14 +907,22 @@
                 } else if (prop.type === 'barrel') {
                   spawnParticles(pPos, 0xFF4500, 30);
                   spawnParticles(pPos, 0xFFFF00, 15);
-                  scene.remove(prop.mesh);
-                  if (prop.mesh.geometry) prop.mesh.geometry.dispose();
-                  if (prop.mesh.material) prop.mesh.material.dispose();
+                  // Leave broken debris on ground instead of removing
+                  prop.mesh.scale.set(0.8, 0.3, 0.8);
+                  prop.mesh.position.y = 0.15;
+                  prop.mesh.rotation.x = (Math.random() - 0.5) * 0.8;
+                  prop.mesh.rotation.z = (Math.random() - 0.5) * 0.8;
+                  if (prop.mesh.material) prop.mesh.material.color.setHex(0x654321);
+                  if (prop.mesh.material) prop.mesh.material.opacity = 0.7;
                 } else {
                   spawnParticles(pPos, 0xD2691E, 20);
-                  scene.remove(prop.mesh);
-                  if (prop.mesh.geometry) prop.mesh.geometry.dispose();
-                  if (prop.mesh.material) prop.mesh.material.dispose();
+                  // Leave broken crate debris on ground
+                  prop.mesh.scale.set(0.7, 0.25, 0.7);
+                  prop.mesh.position.y = 0.12;
+                  prop.mesh.rotation.x = (Math.random() - 0.5) * 1.0;
+                  prop.mesh.rotation.z = (Math.random() - 0.5) * 1.0;
+                  if (prop.mesh.material) prop.mesh.material.color.setHex(0x8B6914);
+                  if (prop.mesh.material) prop.mesh.material.opacity = 0.6;
                 }
                 // Screen shake on big destruction
                 if (window.triggerScreenShake) window.triggerScreenShake(0.3);
@@ -931,9 +939,11 @@
               if (fdx * fdx + fdz * fdz < 4) {
                 fence.userData.hp = 0;
                 spawnParticles(fence.position, 0x8B4513, 15);
-                scene.remove(fence);
-                if (fence.geometry) fence.geometry.dispose();
-                if (fence.material) fence.material.dispose();
+                // Leave fence debris on ground instead of removing
+                fence.scale.set(1, 0.2, 1);
+                fence.position.y = 0.05;
+                fence.rotation.x = (Math.random() - 0.5) * 1.5;
+                if (fence.material) fence.material.opacity = 0.5;
               }
             }
           }
@@ -965,6 +975,43 @@
           // Apply velocity with inertia
           this.mesh.position.x += this.velocity.x;
           this.mesh.position.z += this.velocity.z;
+          
+          // Solid collision with map objects (trees, barrels, crates) — player bounces off
+          if (window.destructibleProps) {
+            for (let prop of window.destructibleProps) {
+              if (prop.destroyed) continue;
+              const collisionRadius = prop.type === 'tree' ? 1.0 : 0.7;
+              const pdx = this.mesh.position.x - prop.mesh.position.x;
+              const pdz = this.mesh.position.z - prop.mesh.position.z;
+              const pdist = Math.sqrt(pdx * pdx + pdz * pdz);
+              if (pdist < collisionRadius && pdist > 0.001) {
+                // Push player out of object
+                const pushX = (pdx / pdist) * collisionRadius;
+                const pushZ = (pdz / pdist) * collisionRadius;
+                this.mesh.position.x = prop.mesh.position.x + pushX;
+                this.mesh.position.z = prop.mesh.position.z + pushZ;
+                // Kill inward velocity
+                const dot = this.velocity.x * pdx + this.velocity.z * pdz;
+                if (dot < 0) {
+                  this.velocity.x -= (dot / (pdist * pdist)) * pdx;
+                  this.velocity.z -= (dot / (pdist * pdist)) * pdz;
+                }
+              }
+            }
+          }
+          // Solid collision with fences
+          if (window.breakableFences) {
+            for (let fence of window.breakableFences) {
+              if (!fence.userData || !fence.userData.isFence || fence.userData.hp <= 0) continue;
+              const fdx = this.mesh.position.x - fence.position.x;
+              const fdz = this.mesh.position.z - fence.position.z;
+              const fdist = Math.sqrt(fdx * fdx + fdz * fdz);
+              if (fdist < 0.6 && fdist > 0.001) {
+                this.mesh.position.x = fence.position.x + (fdx / fdist) * 0.6;
+                this.mesh.position.z = fence.position.z + (fdz / fdist) * 0.6;
+              }
+            }
+          }
 
           // Enhanced water droplet trail when moving - MORE PARTICLES
           if (this.velocity.length() > 0.01) {
@@ -1967,6 +2014,18 @@
         this.mesh.receiveShadow = true;
         scene.add(this.mesh);
 
+        // Ground shadow for flying enemies
+        this.groundShadow = null;
+        if (type === 5 || type === 11 || type === 14) {
+          const shadowRadius = type === 11 ? 2.0 : (type === 5 ? 0.6 : 0.4);
+          const shadowGeo = new THREE.CircleGeometry(shadowRadius, 12);
+          const shadowMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.25, depthWrite: false });
+          this.groundShadow = new THREE.Mesh(shadowGeo, shadowMat);
+          this.groundShadow.rotation.x = -Math.PI / 2;
+          this.groundShadow.position.set(x, 0.05, z);
+          scene.add(this.groundShadow);
+        }
+
         // Stats based on type — delegated to GameEnemies.getEnemyBaseStats
         Object.assign(this, getEnemyBaseStats(type, levelScaling, GAME_CONFIG.enemySpeedBase, playerLevel));
         this.isDead = false;
@@ -1977,19 +2036,38 @@
         this.attackCooldown = 1000; // 1 second cooldown
         // Armor defaults to 0 if not set (only MiniBoss has armor = 0.25)
         
-        // Add glowing eyes to enemy (VFX)
+        // Add glowing eyes to enemy (VFX) with realistic pupils
         const eyeRadius = type === 10 ? 0.12 : (type === 11 ? 0.28 : (type === 13 ? 0.10 : 0.07));
         const eyeColor = type === 4 ? 0xFF3300 : (type === 10 ? 0xFF0000 : (type === 11 ? 0xFF0000 : (type >= 12 ? 0xFF6600 : 0xFF2222)));
         const eGeo = new THREE.SphereGeometry(eyeRadius, 6, 6);
-        const eMat = new THREE.MeshBasicMaterial({ color: eyeColor });
+        const eMat = new THREE.MeshBasicMaterial({ color: 0xFFFFFF }); // White sclera
         const eyeSpread = type === 10 ? 0.3 : (type === 11 ? 0.7 : (type === 13 ? 0.25 : 0.18));
         const eyeForward = type === 5 ? 0.45 : (type === 11 ? 2.0 : (type === 14 ? 0.3 : 0.42));
         this.leftEye = new THREE.Mesh(eGeo, eMat);
         this.leftEye.position.set(-eyeSpread, 0.1, eyeForward);
         this.mesh.add(this.leftEye);
-        this.rightEye = new THREE.Mesh(eGeo, eMat.clone()); // share geometry, clone material
+        this.rightEye = new THREE.Mesh(eGeo, eMat.clone());
         this.rightEye.position.set(eyeSpread, 0.1, eyeForward);
         this.mesh.add(this.rightEye);
+        // Add colored iris + dark pupil for realistic eyes
+        const pupilRadius = eyeRadius * 0.55;
+        const pupilGeo = new THREE.SphereGeometry(pupilRadius, 5, 5);
+        const irisMat = new THREE.MeshBasicMaterial({ color: eyeColor });
+        const leftIris = new THREE.Mesh(pupilGeo, irisMat);
+        leftIris.position.set(0, 0, eyeRadius * 0.55);
+        this.leftEye.add(leftIris);
+        const rightIris = new THREE.Mesh(pupilGeo, irisMat.clone());
+        rightIris.position.set(0, 0, eyeRadius * 0.55);
+        this.rightEye.add(rightIris);
+        // Inner dark pupil
+        const innerPupilGeo = new THREE.SphereGeometry(pupilRadius * 0.5, 4, 4);
+        const innerPupilMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+        const leftPupil = new THREE.Mesh(innerPupilGeo, innerPupilMat);
+        leftPupil.position.set(0, 0, pupilRadius * 0.4);
+        leftIris.add(leftPupil);
+        const rightPupil = new THREE.Mesh(innerPupilGeo, innerPupilMat.clone());
+        rightPupil.position.set(0, 0, pupilRadius * 0.4);
+        rightIris.add(rightPupil);
         // Blink timer
         this.blinkTimer = 0;
         this.blinkDuration = 0.08;
@@ -2221,6 +2299,14 @@
             }
           }
         }
+        
+        // Update ground shadow position for flying enemies
+        if (this.groundShadow) {
+          this.groundShadow.position.x = this.mesh.position.x;
+          this.groundShadow.position.z = this.mesh.position.z;
+          // Shadow opacity scales with height
+          this.groundShadow.material.opacity = Math.max(0.08, 0.25 - (this.mesh.position.y - 0.5) * 0.03);
+        }
       }
 
       fireProjectile(targetPos) {
@@ -2407,105 +2493,66 @@
           playSound('hit');
         }
         
-        // 25% HP: More limbs fly off, walkSpeed *= 0.6 - ENHANCED
+        // 25% HP: Heavy blood spray, walkSpeed *= 0.6
         if (oldHpPercent >= 0.25 && hpPercent < 0.25 && !this.stage3Damage) {
           this.stage3Damage = true;
           
           // Reduce speed
           this.speed *= 0.6;
           
-          // Spawn more limb pieces - ENHANCED
+          // Massive blood spray instead of big limb pieces
           const enemyColor = this.mesh.material.color.getHex();
-          for(let i = 0; i < 8; i++) { // Increased from 4 to 8
-            const limbSize = Math.random() * 0.2 + 0.2; // Varied limb sizes
-            const limb = new THREE.Mesh(
-              new THREE.BoxGeometry(limbSize, limbSize * 0.5, limbSize * 0.5),
-              new THREE.MeshBasicMaterial({ color: enemyColor })
-            );
-            limb.position.copy(this.mesh.position);
-            scene.add(limb);
-            
-            const vel = new THREE.Vector3(
-              (Math.random() - 0.5) * 0.5, // Increased velocity
-              Math.random() * 0.6,
-              (Math.random() - 0.5) * 0.5
-            );
-            
-            let life = 60;
-            if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
-              managedAnimations.push({ update(_dt) {
-                life--;
-                limb.position.add(vel);
-                vel.y -= 0.02;
-                limb.rotation.x += 0.15;
-                limb.rotation.y += 0.15;
-                if (life <= 0 || limb.position.y < 0) {
-                  scene.remove(limb);
-                  limb.geometry.dispose();
-                  limb.material.dispose();
-                  return false;
-                }
-                return true;
-              }});
-            } else {
-              scene.remove(limb);
-              limb.geometry.dispose();
-              limb.material.dispose();
-            }
+          spawnParticles(this.mesh.position, 0x8B0000, 20);
+          spawnParticles(this.mesh.position, 0xCC0000, 15);
+          spawnParticles(this.mesh.position, 0x660000, 10);
+          spawnParticles(this.mesh.position, enemyColor, 6);
+          
+          // Blood spray decals around
+          for (let i = 0; i < 6; i++) {
+            spawnBloodDecal(this.mesh.position);
           }
           
-          spawnParticles(this.mesh.position, enemyColor, 12); // Reduced for performance
-          spawnParticles(this.mesh.position, 0x8B0000, 5); // Reduced for performance
+          // Airborne blood bursts
+          for (let b = 0; b < 5 && bloodDrips.length < MAX_BLOOD_DRIPS; b++) {
+            const p = new THREE.Mesh(
+              new THREE.SphereGeometry(0.03 + Math.random() * 0.04, 4, 4),
+              new THREE.MeshBasicMaterial({ color: 0xAA0000 })
+            );
+            p.position.set(
+              this.mesh.position.x + (Math.random() - 0.5) * 0.5,
+              this.mesh.position.y + 0.2,
+              this.mesh.position.z + (Math.random() - 0.5) * 0.5
+            );
+            scene.add(p);
+            bloodDrips.push({
+              mesh: p,
+              velY: 0.18 + Math.random() * 0.25,
+              life: 35 + Math.floor(Math.random() * 15)
+            });
+          }
+          
           playSound('hit');
         }
         
-        // Destruction effect at 20% HP threshold (keep existing behavior)
+        // Destruction effect at 20% HP threshold — covered in blood, near death
         if (oldHpPercent >= 0.2 && hpPercent < 0.2 && !this.isDamaged) {
           this.isDamaged = true;
           
-          // Visually damage the enemy - make smaller and break off pieces
+          // Visually damage the enemy - make smaller
           const damagePercent = 0.35 + Math.random() * 0.15; // 35-50%
           const newScale = 1 - damagePercent;
           this.mesh.scale.multiplyScalar(newScale);
           
-          // Spawn broken pieces
-          const enemyColor = this.mesh.material.color.getHex();
-          for(let i = 0; i < 5; i++) {
-            const piece = new THREE.Mesh(
-              new THREE.BoxGeometry(0.2, 0.2, 0.2),
-              new THREE.MeshBasicMaterial({ color: enemyColor })
-            );
-            piece.position.copy(this.mesh.position);
-            scene.add(piece);
-            
-            const vel = new THREE.Vector3(
-              (Math.random() - 0.5) * 0.3,
-              Math.random() * 0.4,
-              (Math.random() - 0.5) * 0.3
-            );
-            
-            let life = 40;
-            if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
-              managedAnimations.push({ update(_dt) {
-                life--;
-                piece.position.add(vel);
-                vel.y -= 0.02;
-                piece.rotation.x += 0.1;
-                piece.rotation.y += 0.1;
-                if (life <= 0 || piece.position.y < 0) {
-                  scene.remove(piece);
-                  piece.geometry.dispose();
-                  piece.material.dispose();
-                  return false;
-                }
-                return true;
-              }});
-            } else {
-              scene.remove(piece);
-              piece.geometry.dispose();
-              piece.material.dispose();
-            }
+          // Heavy blood spray instead of big broken pieces
+          spawnParticles(this.mesh.position, 0x8B0000, 18);
+          spawnParticles(this.mesh.position, 0xCC0000, 12);
+          spawnParticles(this.mesh.position, 0x440000, 8);
+          
+          // Blood pools around enemy
+          for (let i = 0; i < 8; i++) {
+            spawnBloodDecal(this.mesh.position);
           }
+          
           playSound('hit');
         }
         
@@ -2514,10 +2561,22 @@
         const particleCount = isCrit ? 8 : 3;
         spawnParticles(this.mesh.position, enemyColor, particleCount);
         
+        // Blood spray on every hit — more blood as enemy takes more damage
+        const bloodIntensity = Math.ceil((1 - hpPercent) * 6) + 1;
+        spawnParticles(this.mesh.position, 0x8B0000, Math.min(bloodIntensity, 6));
+        if (hpPercent < 0.6) {
+          spawnBloodDecal(this.mesh.position);
+        }
+        if (hpPercent < 0.3) {
+          spawnBloodDecal(this.mesh.position);
+          spawnParticles(this.mesh.position, 0xCC0000, 3);
+        }
+        
         // Additional impact particles
         if (isCrit) {
           spawnParticles(this.mesh.position, enemyColor, 5);
           spawnParticles(this.mesh.position, 0xFFFFFF, 3);
+          spawnBloodDecal(this.mesh.position);
         }
         
         // Enhanced squishy deformation on hit
@@ -2534,6 +2593,14 @@
 
       die() {
         this.isDead = true;
+        
+        // Clean up ground shadow
+        if (this.groundShadow) {
+          scene.remove(this.groundShadow);
+          this.groundShadow.geometry.dispose();
+          this.groundShadow.material.dispose();
+          this.groundShadow = null;
+        }
         
         // Clone position NOW before any mesh removal or disposal to prevent
         // race condition where position becomes undefined after scene.remove/dispose
@@ -2615,34 +2682,39 @@
         // Small blood particles on death (keep small, remove big explosion burst)
         spawnParticles(this.mesh.position, 0x8B0000, 4); // Small blood spray
         spawnParticles(this.mesh.position, 0xCC0000, 2); // Small bright red splatter
-        // Airborne blood droplets that land and form small pools
-        // Uses managedAnimations (game-loop-driven) instead of setTimeout/setInterval chains
-        // so cleanup is tied to the game loop, respects pause/reset, and avoids timer callback bursts.
-        const airBloodCount = this.isMiniBoss ? 12 : 6;
+        // Dynamic blood pools: varying sizes from tiny drips to big pools
+        const airBloodCount = this.isMiniBoss ? 16 : 10;
         for (let ab = 0; ab < airBloodCount; ab++) {
-          if (managedAnimations.length >= MAX_MANAGED_ANIMATIONS) break; // respect cap
-          const landX = deathPos.x + (Math.random() - 0.5) * 4;
-          const landZ = deathPos.z + (Math.random() - 0.5) * 4;
-          const r = 0.15 + Math.random() * 0.25;
-          const poolGeo = new THREE.CircleGeometry(r, 8);
-          const poolMat = new THREE.MeshBasicMaterial({ color: 0x7A0000, transparent: true, opacity: 0 });
+          if (managedAnimations.length >= MAX_MANAGED_ANIMATIONS) break;
+          const landX = deathPos.x + (Math.random() - 0.5) * 5;
+          const landZ = deathPos.z + (Math.random() - 0.5) * 5;
+          // Dynamic sizing: small drips (0.05), drops (0.15), pools (0.4+)
+          const sizeRoll = Math.random();
+          const r = sizeRoll < 0.4 ? (0.03 + Math.random() * 0.08) : // 40% tiny drips
+                    sizeRoll < 0.7 ? (0.1 + Math.random() * 0.15) :   // 30% drops
+                    sizeRoll < 0.9 ? (0.2 + Math.random() * 0.2) :    // 20% medium pools
+                                     (0.35 + Math.random() * 0.3);    // 10% big pools
+          const poolGeo = new THREE.CircleGeometry(r, r > 0.2 ? 12 : 6);
+          const poolMat = new THREE.MeshStandardMaterial({ 
+            color: sizeRoll < 0.5 ? 0x8B0000 : 0x6B0000, 
+            transparent: true, opacity: 0,
+            roughness: 0.15, metalness: 0.5
+          });
           const pool = new THREE.Mesh(poolGeo, poolMat);
           pool.rotation.x = -Math.PI / 2;
           pool.position.set(landX, 0.015, landZ);
           scene.add(pool);
-          // delayFrames: ~5-17 frames landing delay (mirrors the old 80-280ms at 60fps)
-          const delayFrames = 5 + Math.floor(Math.random() * 12);
-          // WAIT_FRAMES: visible duration (~8s at 60fps = 480 frames)
-          // FADE_FRAMES: fade-out duration (~1s at 60fps = 60 frames)
+          const delayFrames = 3 + Math.floor(Math.random() * 15);
+          const maxOpacity = 0.5 + Math.random() * 0.35;
           const WAIT_FRAMES = 480;
           const FADE_FRAMES = 60;
           let abTimer = 0;
           managedAnimations.push({
             update(_dt) {
               abTimer++;
-              if (abTimer === delayFrames) poolMat.opacity = 0.75; // appear
+              if (abTimer === delayFrames) poolMat.opacity = maxOpacity;
               if (abTimer > WAIT_FRAMES) {
-                poolMat.opacity = Math.max(0, 0.75 * (1 - (abTimer - WAIT_FRAMES) / FADE_FRAMES));
+                poolMat.opacity = Math.max(0, maxOpacity * (1 - (abTimer - WAIT_FRAMES) / FADE_FRAMES));
               }
               if (abTimer >= WAIT_FRAMES + FADE_FRAMES) {
                 if (pool.parent) scene.remove(pool);
@@ -2659,7 +2731,7 @@
             }
           });
         }
-        for (let db = 0; db < (this.isMiniBoss ? 10 : 6); db++) {
+        for (let db = 0; db < (this.isMiniBoss ? 12 : 8); db++) {
           spawnBloodDecal(this.mesh.position);
         }
         
@@ -3810,6 +3882,23 @@
               break;
             } else {
               // Continue piercing (haven't reached max hits yet)
+              // Exit blood spray — blood flies out from the exit side
+              const exitX = enemy.mesh.position.x + this.vx * 0.8;
+              const exitZ = enemy.mesh.position.z + this.vz * 0.8;
+              const exitPos = { x: exitX, y: enemy.mesh.position.y, z: exitZ };
+              spawnParticles(exitPos, 0x8B0000, 6);
+              spawnParticles(exitPos, 0xCC0000, 4);
+              spawnBloodDecal(exitPos);
+              // Airborne exit blood
+              for (let eb = 0; eb < 3 && bloodDrips.length < MAX_BLOOD_DRIPS; eb++) {
+                const bp = new THREE.Mesh(
+                  new THREE.SphereGeometry(0.03 + Math.random() * 0.03, 4, 4),
+                  new THREE.MeshBasicMaterial({ color: 0xAA0000 })
+                );
+                bp.position.set(exitX + (Math.random() - 0.5) * 0.3, enemy.mesh.position.y + 0.1, exitZ + (Math.random() - 0.5) * 0.3);
+                scene.add(bp);
+                bloodDrips.push({ mesh: bp, velY: 0.12 + Math.random() * 0.15, life: 25 + Math.floor(Math.random() * 10) });
+              }
               playSound('hit');
               // Don't break - allow bullet to continue
             }
@@ -4023,17 +4112,17 @@
 
     class SwordSlash {
       constructor(x, z, angle) {
-        // Arc geometry
-        const geometry = new THREE.RingGeometry(1.5, 2.5, 8, 1, -Math.PI/4, Math.PI/2);
-        const material = new THREE.MeshBasicMaterial({ color: 0xFFFFFF, side: THREE.DoubleSide, transparent: true, opacity: 0.8 });
+        // Thinner arc geometry for flowing blade effect
+        const geometry = new THREE.RingGeometry(1.8, 2.2, 12, 1, -Math.PI/4, Math.PI/2);
+        const material = new THREE.MeshBasicMaterial({ color: 0xCCDDFF, side: THREE.DoubleSide, transparent: true, opacity: 0.9 });
         this.mesh = new THREE.Mesh(geometry, material);
         this.mesh.rotation.x = -Math.PI / 2;
-        this.mesh.rotation.z = angle - Math.PI/4; // Adjust for arc center
+        this.mesh.rotation.z = angle - Math.PI/4;
         this.mesh.position.set(x, 0.6, z);
         scene.add(this.mesh);
         
-        this.life = 10; // frames
-        this.maxLife = 10;
+        this.life = 12; // frames — slightly longer for smoother fade
+        this.maxLife = 12;
         
         // Deal damage immediately
         const dmg = weapons.sword.damage * playerStats.strength * playerStats.damage;
@@ -4060,7 +4149,10 @@
       
       update() {
         this.life--;
-        this.mesh.material.opacity = this.life / this.maxLife;
+        const progress = 1 - (this.life / this.maxLife);
+        // Smooth ease-out fade with slight scale expansion for flowing feel
+        this.mesh.material.opacity = 0.9 * Math.pow(this.life / this.maxLife, 1.5);
+        this.mesh.scale.set(1 + progress * 0.15, 1 + progress * 0.15, 1);
         if (this.life <= 0) {
           scene.remove(this.mesh);
           this.mesh.geometry.dispose();
@@ -16569,7 +16661,7 @@
       weapons.sword = { active: false, level: 0, damage: 30, cooldown: 1500, lastShot: 0, range: 3.5 };
       weapons.aura = { active: false, level: 0, damage: 5, cooldown: 500, lastShot: 0, range: 3 };
       weapons.meteor = { active: false, level: 0, damage: 60, cooldown: 2500, lastShot: 0, area: 5 };
-      weapons.droneTurret = { active: false, level: 0, damage: 15, cooldown: 400, lastShot: 0, range: 15, droneCount: 1 };
+      weapons.droneTurret = { active: false, level: 0, damage: 8, cooldown: 200, lastShot: 0, range: 15, droneCount: 1 };
       weapons.doubleBarrel = { active: false, level: 0, damage: 18, cooldown: 1500, lastShot: 0, range: 12, spread: 0.3, pellets: 2 };
       weapons.iceSpear = { active: false, level: 0, damage: 20, cooldown: 1500, lastShot: 0, range: 15, slowPercent: 0.4, slowDuration: 2000 };
       weapons.fireRing = { active: false, level: 0, damage: 8, cooldown: 800, lastShot: 0, range: 4, orbs: 3, rotationSpeed: 2 };
@@ -18319,14 +18411,58 @@
           const chainCount = weapons.lightning.chainCount || 3;
           const hitTargets = new Set();
           let current = nearest;
+          let prevPos = player.mesh.position.clone(); // Start bolt from player
           for (let c = 0; c < chainCount && current; c++) {
             if (hitTargets.has(current)) break;
             hitTargets.add(current);
             const dmg = (weapons.lightning.damage * playerStats.strength) * (1 - c * 0.2); // 20% falloff per chain
             const isCrit = Math.random() < playerStats.critChance;
-            current.takeDamage(Math.floor(isCrit ? dmg * playerStats.critDmg : dmg), isCrit);
+            current.takeDamage(Math.floor(isCrit ? dmg * playerStats.critDmg : dmg), isCrit, 'lightning');
             spawnParticles(current.mesh.position, 0xFFFF00, 6);
             spawnParticles(current.mesh.position, 0x00FFFF, 4);
+            
+            // Visible lightning bolt line from previous target to current
+            const boltPoints = [];
+            const startP = prevPos.clone(); startP.y = 0.8;
+            const endP = current.mesh.position.clone(); endP.y = 0.8;
+            const segments = 6 + Math.floor(Math.random() * 4);
+            for (let s = 0; s <= segments; s++) {
+              const t = s / segments;
+              const px = startP.x + (endP.x - startP.x) * t + (s > 0 && s < segments ? (Math.random() - 0.5) * 0.6 : 0);
+              const py = startP.y + (endP.y - startP.y) * t + (s > 0 && s < segments ? (Math.random() - 0.5) * 0.3 : 0);
+              const pz = startP.z + (endP.z - startP.z) * t + (s > 0 && s < segments ? (Math.random() - 0.5) * 0.6 : 0);
+              boltPoints.push(new THREE.Vector3(px, py, pz));
+            }
+            const boltGeo = new THREE.BufferGeometry().setFromPoints(boltPoints);
+            const boltMat = new THREE.LineBasicMaterial({ color: 0xFFFF00, transparent: true, opacity: 1.0, linewidth: 2 });
+            const boltLine = new THREE.Line(boltGeo, boltMat);
+            scene.add(boltLine);
+            // Glow bolt (wider, dimmer)
+            const glowMat = new THREE.LineBasicMaterial({ color: 0x88DDFF, transparent: true, opacity: 0.6, linewidth: 3 });
+            const glowLine = new THREE.Line(boltGeo.clone(), glowMat);
+            scene.add(glowLine);
+            // Fade and remove bolt
+            if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
+              let boltLife = 8;
+              managedAnimations.push({ update(_dt) {
+                boltLife--;
+                boltMat.opacity = boltLife / 8;
+                glowMat.opacity = (boltLife / 8) * 0.6;
+                if (boltLife <= 0) {
+                  scene.remove(boltLine); scene.remove(glowLine);
+                  boltGeo.dispose(); boltMat.dispose(); glowMat.dispose();
+                  glowLine.geometry.dispose();
+                  return false;
+                }
+                return true;
+              }});
+            } else {
+              scene.remove(boltLine); scene.remove(glowLine);
+              boltGeo.dispose(); boltMat.dispose(); glowMat.dispose();
+              glowLine.geometry.dispose();
+            }
+            
+            prevPos = current.mesh.position.clone();
             // Find next chain target
             let nextTarget = null; let nextDist = Infinity;
             for (let e of enemies) {
@@ -18364,7 +18500,7 @@
         weapons.poison.lastShot = time;
       }
 
-      // 11. HOMING MISSILE — slow tracking projectile
+      // 11. HOMING MISSILE — Bullet Bill style with fire/smoke trail
       if (weapons.homing.active && time - weapons.homing.lastShot > weapons.homing.cooldown) {
         let nearest = null; let minDst = Infinity;
         for (let e of enemies) {
@@ -18373,45 +18509,93 @@
           if (d < weapons.homing.range && d < minDst) { minDst = d; nearest = e; }
         }
         if (nearest) {
-          const missileGeo = new THREE.ConeGeometry(0.2, 0.6, 5);
-          const missileMat = new THREE.MeshBasicMaterial({ color: 0xFF6600 });
-          const missileMesh = new THREE.Mesh(missileGeo, missileMat);
-          missileMesh.position.set(player.mesh.position.x, 0.6, player.mesh.position.z);
-          scene.add(missileMesh);
+          // Bullet Bill body: dark sphere with white eyes
+          const missileGroup = new THREE.Group();
+          const bodyGeo = new THREE.SphereGeometry(0.3, 8, 8);
+          const bodyMat = new THREE.MeshToonMaterial({ color: 0x222222 });
+          const body = new THREE.Mesh(bodyGeo, bodyMat);
+          missileGroup.add(body);
+          // Nose cone
+          const noseGeo = new THREE.ConeGeometry(0.2, 0.3, 6);
+          const noseMat = new THREE.MeshToonMaterial({ color: 0x111111 });
+          const nose = new THREE.Mesh(noseGeo, noseMat);
+          nose.rotation.x = Math.PI / 2;
+          nose.position.z = 0.35;
+          missileGroup.add(nose);
+          // Arms (small fins)
+          const armGeo = new THREE.BoxGeometry(0.5, 0.08, 0.15);
+          const armMat = new THREE.MeshToonMaterial({ color: 0x111111 });
+          const arms = new THREE.Mesh(armGeo, armMat);
+          arms.position.z = -0.15;
+          missileGroup.add(arms);
+          // White eyes
+          const eyeGeo = new THREE.SphereGeometry(0.08, 6, 6);
+          const eyeWhiteMat = new THREE.MeshBasicMaterial({ color: 0xFFFFFF });
+          const leftEye = new THREE.Mesh(eyeGeo, eyeWhiteMat);
+          leftEye.position.set(-0.12, 0.08, 0.22);
+          missileGroup.add(leftEye);
+          const rightEye = new THREE.Mesh(eyeGeo, eyeWhiteMat.clone());
+          rightEye.position.set(0.12, 0.08, 0.22);
+          missileGroup.add(rightEye);
+          // Pupils
+          const pupilGeo = new THREE.SphereGeometry(0.04, 4, 4);
+          const pupilMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+          const leftPupil = new THREE.Mesh(pupilGeo, pupilMat);
+          leftPupil.position.set(-0.12, 0.08, 0.28);
+          missileGroup.add(leftPupil);
+          const rightPupil = new THREE.Mesh(pupilGeo, pupilMat.clone());
+          rightPupil.position.set(0.12, 0.08, 0.28);
+          missileGroup.add(rightPupil);
+          
+          missileGroup.position.set(player.mesh.position.x, 0.6, player.mesh.position.z);
+          scene.add(missileGroup);
           let target = nearest;
           let mLife = 120;
-          const mVel = new THREE.Vector3(target.mesh.position.x - missileMesh.position.x, 0, target.mesh.position.z - missileMesh.position.z).normalize().multiplyScalar(0.25);
+          let smokeTimer = 0;
+          const mVel = new THREE.Vector3(target.mesh.position.x - missileGroup.position.x, 0, target.mesh.position.z - missileGroup.position.z).normalize().multiplyScalar(0.25);
           if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
             managedAnimations.push({ update(_dt) {
               mLife--;
+              smokeTimer++;
               // Home toward target
               if (!target.isDead) {
-                const desired = new THREE.Vector3(target.mesh.position.x - missileMesh.position.x, 0, target.mesh.position.z - missileMesh.position.z).normalize().multiplyScalar(0.25);
+                const desired = new THREE.Vector3(target.mesh.position.x - missileGroup.position.x, 0, target.mesh.position.z - missileGroup.position.z).normalize().multiplyScalar(0.25);
                 mVel.lerp(desired, 0.12);
               }
-              missileMesh.position.add(mVel);
-              missileMesh.rotation.y = Math.atan2(mVel.x, mVel.z);
-              spawnParticles(missileMesh.position, 0xFF4400, 2);
+              missileGroup.position.add(mVel);
+              missileGroup.rotation.y = Math.atan2(mVel.x, mVel.z);
+              // Fire trail from back
+              const trailPos = { x: missileGroup.position.x - mVel.x * 1.5, y: missileGroup.position.y, z: missileGroup.position.z - mVel.z * 1.5 };
+              spawnParticles(trailPos, 0xFF4400, 2); // Orange fire
+              spawnParticles(trailPos, 0xFF2200, 1); // Red fire
+              // Smoke trail every few frames
+              if (smokeTimer % 3 === 0) {
+                spawnParticles(trailPos, 0x666666, 1); // Gray smoke
+              }
               // Explode on contact
               for (let e of enemies) {
                 if (e.isDead) continue;
-                if (missileMesh.position.distanceTo(e.mesh.position) < 1.2) {
+                if (missileGroup.position.distanceTo(e.mesh.position) < 1.2) {
                   const dmg = weapons.homing.damage * playerStats.strength;
                   e.takeDamage(Math.floor(dmg));
-                  spawnParticles(missileMesh.position, 0xFF4500, 12);
-                  spawnParticles(missileMesh.position, 0xFFAA00, 8);
-                  scene.remove(missileMesh); missileMesh.geometry.dispose(); missileMesh.material.dispose();
+                  spawnParticles(missileGroup.position, 0xFF4500, 12);
+                  spawnParticles(missileGroup.position, 0xFFAA00, 8);
+                  spawnParticles(missileGroup.position, 0x222222, 6); // Smoke explosion
+                  scene.remove(missileGroup);
+                  missileGroup.traverse(child => { if (child.geometry) child.geometry.dispose(); if (child.material) child.material.dispose(); });
                   return false;
                 }
               }
               if (mLife <= 0) {
-                scene.remove(missileMesh); missileMesh.geometry.dispose(); missileMesh.material.dispose();
+                scene.remove(missileGroup);
+                missileGroup.traverse(child => { if (child.geometry) child.geometry.dispose(); if (child.material) child.material.dispose(); });
                 return false;
               }
               return true;
             }});
           } else {
-            scene.remove(missileMesh); missileMesh.geometry.dispose(); missileMesh.material.dispose();
+            scene.remove(missileGroup);
+            missileGroup.traverse(child => { if (child.geometry) child.geometry.dispose(); if (child.material) child.material.dispose(); });
           }
           weapons.homing.lastShot = time;
           playSound('shoot');
