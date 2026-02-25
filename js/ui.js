@@ -34,16 +34,16 @@ function _processStatNotificationQueue() {
   notification.innerText = text;
   container.appendChild(notification);
 
-  // Faster fade out: 1.2 seconds display, then 0.4s fade
+  // Faster fade out: 0.8 seconds display, then 0.3s fade
   setTimeout(() => {
-    notification.style.animation = 'stat-fade-out 0.4s ease-out forwards';
+    notification.style.animation = 'stat-fade-out 0.3s ease-out forwards';
 
     // Remove element and process next in queue
     setTimeout(() => {
       container.removeChild(notification);
       _processStatNotificationQueue();
-    }, 400);
-  }, 1200);
+    }, 300);
+  }, 800);
 }
 
 function showStatChange(text, level = 'normal') {

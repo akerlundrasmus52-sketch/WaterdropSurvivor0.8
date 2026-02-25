@@ -61,22 +61,52 @@
     .bar-container {
       width: 200px;
       height: 24px;
-      /* 80s BATMAN COMIC STYLE: Darker gradient with gold accents */
       background: linear-gradient(to bottom, #1a1a1a 0%, #1a1a1a 50%, #3a3a3a 50%, #3a3a3a 100%);
       border-radius: 12px;
-      border: 4px solid #000000; /* Black border comic style */
+      border: 3px solid #000000;
       overflow: hidden;
       position: relative;
-      /* Enhanced comic shadow with gold glow */
       box-shadow: 
-        0 0 0 2px #FFD700,
+        0 0 0 1px rgba(255,215,0,0.6),
+        0 0 6px rgba(93,173,226,0.4),
         0 3px 8px rgba(0,0,0,0.5), 
-        inset 0 2px 4px rgba(0,0,0,0.4), 
-        0 0 5px rgba(255,215,0,0.1);
-      /* Comic halftone pattern */
+        inset 0 2px 4px rgba(0,0,0,0.4);
       background-image: 
         radial-gradient(circle at 3px 3px, rgba(255,215,0,0.05) 2px, transparent 2px);
       background-size: 12px 12px;
+      animation: bar-border-alive 3s ease-in-out infinite;
+    }
+
+    @keyframes bar-border-alive {
+      0%, 100% { 
+        box-shadow: 
+          0 0 0 1px rgba(255,215,0,0.6),
+          0 0 6px rgba(93,173,226,0.4),
+          0 3px 8px rgba(0,0,0,0.5), 
+          inset 0 2px 4px rgba(0,0,0,0.4);
+      }
+      25% { 
+        box-shadow: 
+          0 0 0 1px rgba(93,173,226,0.7),
+          0 0 8px rgba(255,215,0,0.5),
+          0 3px 8px rgba(0,0,0,0.5), 
+          inset 0 2px 4px rgba(0,0,0,0.4);
+      }
+      50% { 
+        box-shadow: 
+          0 0 0 1px rgba(255,215,0,0.8),
+          0 0 10px rgba(93,173,226,0.6),
+          0 0 4px rgba(255,215,0,0.3),
+          0 3px 8px rgba(0,0,0,0.5), 
+          inset 0 2px 4px rgba(0,0,0,0.4);
+      }
+      75% { 
+        box-shadow: 
+          0 0 0 1px rgba(93,173,226,0.6),
+          0 0 6px rgba(255,215,0,0.4),
+          0 3px 8px rgba(0,0,0,0.5), 
+          inset 0 2px 4px rgba(0,0,0,0.4);
+      }
     }
 
     .bar-fill {
@@ -285,8 +315,8 @@
     
     /* Waterdrop Level Display Container - CENTERED AT BOTTOM */
     #waterdrop-container {
-      width: 80px; /* Slightly smaller, less oval */
-      height: 90px; /* Lowered slightly - more rounded shape */
+      width: 90px;
+      height: 100px;
       position: relative;
       margin-bottom: 5px;
       /* 3D appearance with stronger shadow and depth */
@@ -399,10 +429,10 @@
     /* Round Minimap - Bottom Right Corner - SMALLER, NEARLY ROUND */
     #minimap-container {
       position: absolute;
-      bottom: 5px; /* Further into bottom-right corner */
-      right: 5px; /* Further into bottom-right corner */
-      width: 70px; /* Smaller - more compact */
-      height: 72px; /* Nearly perfectly round */
+      bottom: 2px;
+      right: 2px;
+      width: 90px;
+      height: 92px;
       /* Nearly perfect circle with subtle bottom hint */
       border-radius: 50% 50% 48% 48%; /* Nearly round */
       transform: rotate(0deg);
@@ -608,38 +638,36 @@
 
     /* Stat Notification Queue - Red/Black Dominant */
     #stat-notifications {
-      position: absolute;
-      top: 15%;
-      right: 20px;
-      transform: translateY(0);
-      width: 280px;
+      position: fixed;
+      top: 70px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 320px;
       z-index: 150;
       pointer-events: none;
+      text-align: center;
     }
     
     .stat-notification {
-      /* COMIC STYLING: Batman 80s comic-style notification bubbles */
       font-family: 'Bangers', 'M PLUS Rounded 1c', cursive;
-      background: linear-gradient(to bottom, #3a3a3a 0%, #3a3a3a 50%, #6a6a6a 50%, #6a6a6a 100%);
-      border: 3px solid #FFD700; /* Gold border for comic pop */
-      border-radius: 20px;
-      padding: 10px 18px;
-      margin-bottom: 10px;
-      font-size: 14px; /* Smaller comic text */
+      background: linear-gradient(135deg, #0a0f1a 0%, #0d1526 50%, #0a0f1a 100%);
+      border: 2px solid rgba(255,215,0,0.6);
+      border-radius: 12px;
+      padding: 8px 16px;
+      margin-bottom: 6px;
+      font-size: 13px;
       font-weight: bold;
       color: #FFD700;
-      letter-spacing: 1px; /* Comic spacing */
+      letter-spacing: 1px;
       text-shadow: 
-        -1px -1px 0 #000, 
-        1px -1px 0 #000, 
-        -1px 1px 0 #000, 
-        1px 1px 0 #000,
-        0 0 5px rgba(255,215,0,0.5);
+        0 0 6px rgba(255,215,0,0.6),
+        1px 1px 2px rgba(0,0,0,0.9);
       box-shadow: 
-        0 3px 8px rgba(0,0,0,0.3), 
-        inset 0 2px 4px rgba(0,0,0,0.2), 
-        0 0 15px rgba(255,215,0,0.3); /* Golden glow */
-      animation: stat-float-in-right 0.4s ease-out;
+        0 2px 8px rgba(0,0,0,0.5), 
+        0 0 12px rgba(255,215,0,0.2),
+        0 0 6px rgba(93,173,226,0.15),
+        inset 0 0 15px rgba(0,0,0,0.5);
+      animation: stat-float-in-right 0.3s ease-out;
       display: inline-block;
       max-width: fit-content;
       white-space: nowrap;
@@ -1092,7 +1120,7 @@
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(0,0,0,0.85);
+      background: rgba(0,0,0,0.9);
       z-index: 200;
       align-items: center;
       justify-content: center;
@@ -1100,13 +1128,21 @@
     }
     
     .options-content {
-      background: linear-gradient(to bottom, #2a2a2a 0%, #2a2a2a 50%, #4a4a4a 50%, #4a4a4a 100%);
-      border: 5px solid #8B4513;
-      border-radius: 20px;
+      background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%);
+      background-image: 
+        linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%),
+        radial-gradient(circle at 3px 3px, rgba(255,215,0,0.06) 2px, transparent 2px);
+      background-size: 100%, 15px 15px;
+      border: 5px solid #FFD700;
+      border-radius: 15px;
       padding: 30px;
       max-width: 400px;
       width: 90%;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+      box-shadow: 
+        0 10px 40px rgba(0,0,0,0.9),
+        0 0 40px rgba(255,215,0,0.4),
+        0 0 20px rgba(255,215,0,0.2),
+        inset 0 0 30px rgba(0,0,0,0.8);
     }
     
     .options-title {
@@ -1258,38 +1294,52 @@
     }
 
     .upgrade-card {
-      /* 80s BATMAN COMIC STYLE: Unified base with halftone */
-      background: linear-gradient(to bottom, #2a2a2a, #1a1a1a);
+      background: linear-gradient(135deg, #1a1e2e 0%, #0d1020 100%);
       background-image: 
-        linear-gradient(to bottom, #2a2a2a, #1a1a1a),
-        radial-gradient(circle at 3px 3px, rgba(255,215,0,0.05) 2px, transparent 2px);
+        linear-gradient(135deg, #1a1e2e 0%, #0d1020 100%),
+        radial-gradient(circle at 3px 3px, rgba(255,215,0,0.04) 2px, transparent 2px);
       background-size: 100%, 12px 12px;
-      margin: 0; /* No margin in grid layout */
+      margin: 0;
       padding: 18px;
-      border-radius: 15px;
-      /* Default border (standard upgrades - grey) */
-      border: 4px solid #888888;
+      border-radius: 12px;
+      border: 3px solid #888888;
       cursor: pointer;
-      transition: transform 0.1s, box-shadow 0.2s, filter 0.2s;
+      transition: transform 0.15s, box-shadow 0.25s, filter 0.2s, border-color 0.2s;
       box-shadow: 
-        0 4px 8px rgba(0,0,0,0.6), 
-        inset 0 2px 4px rgba(0,0,0,0.5),
-        0 0 8px rgba(70,130,200,0.35),
-        0 0 18px rgba(50,100,200,0.18);
+        0 4px 12px rgba(0,0,0,0.6), 
+        inset 0 1px 0 rgba(255,255,255,0.05),
+        inset 0 -1px 0 rgba(0,0,0,0.3);
       position: relative;
+      overflow: hidden;
+    }
+
+    .upgrade-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 40%;
+      background: linear-gradient(to bottom, rgba(255,255,255,0.06), transparent);
+      border-radius: 12px 12px 0 0;
+      pointer-events: none;
+      z-index: 1;
     }
 
     .upgrade-card:hover {
-      box-shadow: 0 0 20px rgba(136,136,136,0.6), 0 0 40px rgba(136,136,136,0.4);
-      filter: brightness(1.2);
-      animation: lightning-pulse 0.5s ease-in-out infinite;
+      box-shadow: 0 0 15px rgba(136,136,136,0.4), 0 0 30px rgba(136,136,136,0.2), inset 0 1px 0 rgba(255,255,255,0.08);
+      filter: brightness(1.15);
+      border-color: #aaa;
     }
 
     .upgrade-card:active {
-      transform: scale(0.95);
-      box-shadow: 0 0 30px rgba(255,255,255,0.5), 0 0 60px rgba(136,136,136,0.8);
-      filter: brightness(1.5);
-      animation: lightning-flash 0.3s ease;
+      transform: scale(0.97) perspective(600px) rotateX(2deg);
+      box-shadow: 
+        0 2px 6px rgba(0,0,0,0.4),
+        inset 0 2px 8px rgba(0,0,0,0.3),
+        inset 0 1px 0 rgba(255,255,255,0.1);
+      filter: brightness(1.1);
+      border-color: #fff;
     }
     
     /* Weapon upgrades - Red edges */
@@ -1315,50 +1365,65 @@
     /* Rarity-based edge colors */
     .upgrade-card.rarity-common {
       border-color: #27ae60;
-      background: linear-gradient(135deg, #1a2e1a 0%, #0f1f0f 100%);
-      box-shadow: 0 4px 8px rgba(0,0,0,0.5), 0 0 10px rgba(39,174,96,0.2), inset 0 0 0 2px rgba(0,0,0,0.4);
+      background: linear-gradient(135deg, #0d1a12 0%, #081210 100%);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5), 0 0 8px rgba(39,174,96,0.15), inset 0 1px 0 rgba(255,255,255,0.05);
+      animation: rarity-glow-common 3s ease-in-out infinite;
+    }
+    @keyframes rarity-glow-common {
+      0%, 100% { box-shadow: 0 4px 12px rgba(0,0,0,0.5), 0 0 8px rgba(39,174,96,0.15); }
+      50% { box-shadow: 0 4px 12px rgba(0,0,0,0.5), 0 0 14px rgba(39,174,96,0.3); }
     }
     
     .upgrade-card.rarity-rare {
       border-color: #3498DB;
-      background: linear-gradient(135deg, #1a2e3a 0%, #0f1f2a 100%);
-      box-shadow: 0 4px 8px rgba(0,0,0,0.5), 0 0 15px rgba(52,152,219,0.3), inset 0 0 0 2px rgba(0,0,0,0.4);
+      background: linear-gradient(135deg, #0d1520 0%, #081018 100%);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5), 0 0 10px rgba(52,152,219,0.2), inset 0 1px 0 rgba(255,255,255,0.05);
+      animation: rarity-glow-rare 2.5s ease-in-out infinite;
     }
-    
     .upgrade-card.rarity-rare:hover {
-      box-shadow: 0 0 20px rgba(52,152,219,0.8), 0 0 40px rgba(52,152,219,0.6);
+      box-shadow: 0 0 20px rgba(52,152,219,0.7), 0 0 35px rgba(52,152,219,0.4);
+      border-color: #5dade2;
+    }
+    @keyframes rarity-glow-rare {
+      0%, 100% { box-shadow: 0 4px 12px rgba(0,0,0,0.5), 0 0 10px rgba(52,152,219,0.2); }
+      50% { box-shadow: 0 4px 12px rgba(0,0,0,0.5), 0 0 18px rgba(52,152,219,0.45); }
     }
     
     .upgrade-card.rarity-epic {
       border-color: #e67e22;
-      background: linear-gradient(135deg, #2e1a0a 0%, #1f0f05 100%);
-      box-shadow: 0 4px 8px rgba(0,0,0,0.5), 0 0 15px rgba(230,126,34,0.3), inset 0 0 0 2px rgba(0,0,0,0.4);
+      background: linear-gradient(135deg, #1a1005 0%, #120a03 100%);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5), 0 0 12px rgba(230,126,34,0.25), inset 0 1px 0 rgba(255,255,255,0.05);
+      animation: rarity-glow-epic 2s ease-in-out infinite;
     }
-    
     .upgrade-card.rarity-epic:hover {
-      box-shadow: 0 0 20px rgba(230,126,34,0.8), 0 0 40px rgba(230,126,34,0.6);
+      box-shadow: 0 0 22px rgba(230,126,34,0.7), 0 0 40px rgba(230,126,34,0.4);
+      border-color: #f39c12;
+    }
+    @keyframes rarity-glow-epic {
+      0%, 100% { box-shadow: 0 4px 12px rgba(0,0,0,0.5), 0 0 12px rgba(230,126,34,0.25); }
+      50% { box-shadow: 0 4px 12px rgba(0,0,0,0.5), 0 0 22px rgba(230,126,34,0.5); }
     }
     
     .upgrade-card.rarity-legendary {
       border-color: #e74c3c;
-      background: linear-gradient(135deg, #2e0a0a 0%, #1f0505 100%);
-      box-shadow: 0 4px 8px rgba(0,0,0,0.5), 0 0 20px rgba(231,76,60,0.5), inset 0 0 0 2px rgba(0,0,0,0.4);
+      background: linear-gradient(135deg, #1a0808 0%, #120404 100%);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5), 0 0 15px rgba(231,76,60,0.35), inset 0 1px 0 rgba(255,255,255,0.05);
       animation: legendary-glow 2s ease-in-out infinite alternate;
     }
-    
     .upgrade-card.rarity-legendary:hover {
-      box-shadow: 0 0 25px rgba(231,76,60,1), 0 0 50px rgba(231,76,60,0.8);
+      box-shadow: 0 0 25px rgba(231,76,60,0.9), 0 0 45px rgba(231,76,60,0.5);
+      border-color: #ff6b5a;
     }
     
     .upgrade-card.rarity-mythical {
       border-color: #FF4444;
-      background: linear-gradient(135deg, #3a0505 0%, #2a0000 100%);
-      box-shadow: 0 4px 8px rgba(0,0,0,0.5), 0 0 20px rgba(255,68,68,0.5), inset 0 0 0 2px rgba(0,0,0,0.4);
+      background: linear-gradient(135deg, #200505 0%, #180202 100%);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5), 0 0 18px rgba(255,68,68,0.4), inset 0 1px 0 rgba(255,255,255,0.05);
       animation: mythical-glow 1.5s ease-in-out infinite alternate;
     }
-    
     .upgrade-card.rarity-mythical:hover {
-      box-shadow: 0 0 25px rgba(255,68,68,1), 0 0 50px rgba(255,68,68,0.8);
+      box-shadow: 0 0 28px rgba(255,68,68,0.9), 0 0 50px rgba(255,68,68,0.6);
+      border-color: #ff6666;
     }
     
     @keyframes legendary-glow {
@@ -1969,15 +2034,18 @@
       bottom: 20px;
       left: 50%;
       transform: translateX(-50%);
-      background: linear-gradient(to bottom, #e74c3c, #c0392b);
-      color: white;
-      border: none;
-      padding: 15px 40px;
-      font-size: 20px;
-      border-radius: 40px;
-      font-weight: bold;
+      background: linear-gradient(to bottom, #FFD700 0%, #FFA500 100%);
+      color: #000;
+      border: 4px solid #000;
+      padding: 12px 36px;
+      font-size: 18px;
+      border-radius: 12px;
+      font-weight: 900;
+      font-family: 'Bangers', cursive;
+      letter-spacing: 2px;
+      text-transform: uppercase;
       cursor: pointer;
-      box-shadow: 0 4px 0 #a93226, 0 0 0 rgba(231,76,60,0);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.6), 0 0 15px rgba(255,215,0,0.4);
       transition: all 0.15s ease;
       position: relative;
       overflow: hidden;
@@ -2337,7 +2405,7 @@
       
       /* Move day/night clock further right in portrait to avoid HP/EXP bar overlap */
       #day-night-clock {
-        right: 80px;
+        right: 190px;
       }
       
       /* Reduce padding on small portrait screens */
@@ -2612,19 +2680,22 @@
     /* Stat Bar Panel */
     #stat-bar-panel {
       position: fixed;
-      bottom: 120px;
-      left: 10px;
-      width: 140px;
-      background: rgba(0,0,0,0.75);
-      border: 2px solid #FFD700;
-      border-radius: 8px;
-      padding: 6px 8px;
+      bottom: 100px;
+      left: 8px;
+      width: 180px;
+      max-height: 25vh;
+      overflow-y: auto;
+      background: linear-gradient(135deg, #0a0f1a 0%, #0d1526 100%);
+      border: 2px solid rgba(255,215,0,0.5);
+      border-radius: 10px;
+      padding: 8px 10px;
       z-index: 15;
       font-family: 'Bangers', cursive;
       font-size: 11px;
       color: #FFD700;
       pointer-events: none;
       display: none;
+      box-shadow: 0 0 10px rgba(255,215,0,0.15), 0 0 5px rgba(93,173,226,0.1), inset 0 0 10px rgba(0,0,0,0.5);
     }
     #stat-bar-panel .stat-row {
       border-bottom: 1px solid rgba(255,215,0,0.3);

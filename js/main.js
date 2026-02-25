@@ -8702,9 +8702,9 @@
         const lastCompleted = TUTORIAL_QUESTS[lastCompletedId];
         if (lastCompleted && lastCompleted.name) {
           const completedEl = document.createElement('div');
-          completedEl.style.cssText = 'font-size: 11px; color: #aaa; text-decoration: line-through; margin-bottom: 3px;';
+          completedEl.style.cssText = 'font-size: 11px; color: #4CAF50; text-decoration: line-through; margin-bottom: 3px;';
           completedEl.setAttribute('aria-label', `Completed: ${lastCompleted.name}`);
-          completedEl.textContent = `✅ ${lastCompleted.name}`;
+          completedEl.textContent = `✓ ${lastCompleted.name}`;
           questTracker.appendChild(completedEl);
         }
       }
@@ -14241,6 +14241,31 @@
             60% { transform: translateX(-10%) scale(1.1); opacity: 1; }
             100% { transform: translateX(0) scale(1); opacity: 1; }
           }
+          @keyframes swooshFromTopLeft {
+            0% { transform: translate(-120%, -120%) scale(0.3) rotate(-15deg); opacity: 0; }
+            70% { transform: translate(5%, 5%) scale(1.05) rotate(1deg); opacity: 1; }
+            100% { transform: translate(0, 0) scale(1) rotate(0deg); opacity: 1; }
+          }
+          @keyframes swooshFromTopRight {
+            0% { transform: translate(120%, -120%) scale(0.3) rotate(15deg); opacity: 0; }
+            70% { transform: translate(-5%, 5%) scale(1.05) rotate(-1deg); opacity: 1; }
+            100% { transform: translate(0, 0) scale(1) rotate(0deg); opacity: 1; }
+          }
+          @keyframes swooshFromBottomLeft {
+            0% { transform: translate(-120%, 120%) scale(0.3) rotate(15deg); opacity: 0; }
+            70% { transform: translate(5%, -5%) scale(1.05) rotate(-1deg); opacity: 1; }
+            100% { transform: translate(0, 0) scale(1) rotate(0deg); opacity: 1; }
+          }
+          @keyframes swooshFromBottomRight {
+            0% { transform: translate(120%, 120%) scale(0.3) rotate(-15deg); opacity: 0; }
+            70% { transform: translate(-5%, -5%) scale(1.05) rotate(1deg); opacity: 1; }
+            100% { transform: translate(0, 0) scale(1) rotate(0deg); opacity: 1; }
+          }
+          @keyframes levelUpFly {
+            0% { transform: translateY(0) scale(1); opacity: 1; }
+            40% { transform: translateY(-30px) scale(1.1); opacity: 1; }
+            100% { transform: translateY(0) scale(1); opacity: 1; }
+          }
         `;
         document.head.appendChild(style);
       }
@@ -14532,9 +14557,9 @@
       if (h2) {
         h2.innerText = isBonusRound ? 'BONUS UPGRADE!' : 'LEVEL UP!';
         h2.style.color = isBonusRound ? '#FFD700' : '';
-        h2.style.fontSize = '32px';
-      }
-      
+        h2.style.fontSize = '24px';
+        h2.style.animation = 'levelUpFly 1s ease-out forwards';
+      }      
       let choices = [];
 
       // --- POOL OF UPGRADES ---
@@ -14542,8 +14567,8 @@
         { 
           id: 'str', 
           icon: '⚔️',
-          title: 'MUSCLE JUICE', 
-          desc: 'Weapon Damage +6% (Level-100 Balanced)', 
+          title: 'TIDAL FORCE', 
+          desc: 'Weapon Damage +6%', 
           apply: () => { 
             playerStats.strength += 0.06; // Reduced from 0.15 to 0.06 for level-100 balance
             showStatChange('+6% Damage');
@@ -14552,8 +14577,8 @@
         { 
           id: 'aspd', 
           icon: '⚡',
-          title: 'SPEEDY TRIGGER', 
-          desc: 'Attack Speed +3% (Level-100 Balanced)', 
+          title: 'RAPID CURRENT', 
+          desc: 'Attack Speed +3%', 
           apply: () => { 
             playerStats.atkSpeed += 0.03; // Reduced from 0.15 to 0.03 for level-100 balance
             weapons.gun.cooldown *= 0.97; // Adjusted from 0.85 to 0.97
@@ -14564,7 +14589,7 @@
         { 
           id: 'armor', 
           icon: '🛡️',
-          title: 'THICC ARMOR', 
+          title: 'HARDENED SHELL', 
           desc: 'Armor +12% (Damage Reduction, Max 80%)', 
           apply: () => { 
             playerStats.armor = Math.min(80, playerStats.armor + 12); 
@@ -14574,7 +14599,7 @@
         { 
           id: 'hp', 
           icon: '❤️',
-          title: 'CHONKY BODY', 
+          title: 'DEEP RESERVOIR', 
           desc: 'Max HP +30 (Instant Heal +30)', 
           apply: () => { 
             playerStats.maxHp += 30; 
@@ -14585,8 +14610,8 @@
         { 
           id: 'crit', 
           icon: '🎯',
-          title: 'CRIT MACHINE', 
-          desc: 'Critical Hit Chance +1.5% (Level-100 Balanced)', 
+          title: 'PRECISION STRIKE', 
+          desc: 'Critical Hit Chance +1.5%', 
           apply: () => { 
             playerStats.critChance += 0.015; // Reduced from 0.08 to 0.015 for level-100 balance
             showStatChange('+1.5% Crit Chance (Now: ' + Math.round(playerStats.critChance * 100) + '%)');
@@ -14595,7 +14620,7 @@
         { 
           id: 'regen', 
           icon: '💚',
-          title: 'HEALING VIBES', 
+          title: 'SPRING WATER', 
           desc: 'HP Regeneration +2/sec (Passive Healing)', 
           apply: () => { 
             playerStats.hpRegen += 2; 
@@ -14605,8 +14630,8 @@
         { 
           id: 'speed', 
           icon: '🏃',
-          title: 'SPEEDY BOI', 
-          desc: 'Movement Speed +3% (Level-100 Balanced)', 
+          title: 'SWIFT STREAM', 
+          desc: 'Movement Speed +3%', 
           apply: () => { 
             playerStats.walkSpeed *= 1.03; // Reduced from 1.15 to 1.03 for level-100 balance
             showStatChange('+3% Move Speed');
@@ -14615,8 +14640,8 @@
         { 
           id: 'critdmg', 
           icon: '💥',
-          title: 'GLASS CANNON', 
-          desc: 'Critical Damage +6% (Level-100 Balanced)', 
+          title: 'TORRENT POWER', 
+          desc: 'Critical Damage +6%', 
           apply: () => { 
             playerStats.critDmg += 0.06; // Reduced from 0.3 to 0.06 for level-100 balance
             showStatChange('+6% Crit Damage (Now: ' + Math.round(playerStats.critDmg * 100) + '%)');
@@ -14625,7 +14650,7 @@
         { 
           id: 'magnet', 
           icon: '🧲',
-          title: 'XP MAGNET', 
+          title: 'WHIRLPOOL', 
           desc: 'EXP Pickup Range +25% (+1 unit)', 
           apply: () => { 
             magnetRange += 1; 
@@ -14635,8 +14660,8 @@
         { 
           id: 'cooldown', 
           icon: '⏱️',
-          title: 'COOLDOWN MASTER', 
-          desc: 'All Weapon Cooldowns -2% (Level-100 Balanced)', 
+          title: 'FLOW STATE', 
+          desc: 'All Weapon Cooldowns -2%', 
           apply: () => { 
             weapons.gun.cooldown *= 0.98; // Reduced from 0.95 to 0.98 for level-100 balance
             weapons.sword.cooldown *= 0.98;
@@ -14765,9 +14790,9 @@
         modal.querySelector('h2').innerText = 'NEW WEAPON!';
         modal.querySelector('h2').style.fontSize = '36px';
         const allWeaponChoicesQ8 = [
-          { id: 'sword', title: 'SLASHY SLASH', desc: 'Slash enemies in front', active: () => weapons.sword.active, apply: () => { weapons.sword.active = true; weapons.sword.level = 1; showStatChange('New Weapon: Sword'); progressTutorialQuest('quest8_newWeapon', true); } },
-          { id: 'aura', title: 'ZAP ZONE', desc: 'Damage aura around you', active: () => weapons.aura.active, apply: () => { weapons.aura.active = true; weapons.aura.level = 1; showStatChange('New Weapon: Aura'); progressTutorialQuest('quest8_newWeapon', true); } },
-          { id: 'meteor', title: 'SPACE ROCKS', desc: 'Call meteors from sky', active: () => weapons.meteor.active, apply: () => { weapons.meteor.active = true; weapons.meteor.level = 1; showStatChange('New Weapon: Meteor'); progressTutorialQuest('quest8_newWeapon', true); } },
+          { id: 'sword', title: 'TIDAL SLASH', desc: 'Slash enemies in front', active: () => weapons.sword.active, apply: () => { weapons.sword.active = true; weapons.sword.level = 1; showStatChange('New Weapon: Sword'); progressTutorialQuest('quest8_newWeapon', true); } },
+          { id: 'aura', title: 'STORM SURGE', desc: 'Damage aura around you', active: () => weapons.aura.active, apply: () => { weapons.aura.active = true; weapons.aura.level = 1; showStatChange('New Weapon: Aura'); progressTutorialQuest('quest8_newWeapon', true); } },
+          { id: 'meteor', title: 'HAILSTORM', desc: 'Call meteors from sky', active: () => weapons.meteor.active, apply: () => { weapons.meteor.active = true; weapons.meteor.level = 1; showStatChange('New Weapon: Meteor'); progressTutorialQuest('quest8_newWeapon', true); } },
           { id: 'icespear', title: 'ICE SPEAR', desc: 'Freezing projectile that slows enemies 40%', active: () => weapons.iceSpear.active, apply: () => { weapons.iceSpear.active = true; weapons.iceSpear.level = 1; showStatChange('New Weapon: Ice Spear'); progressTutorialQuest('quest8_newWeapon', true); } },
           { id: 'firering', title: 'FIRE RING', desc: 'Spinning fire orbs orbit around you', active: () => weapons.fireRing.active, apply: () => { weapons.fireRing.active = true; weapons.fireRing.level = 1; showStatChange('New Weapon: Fire Ring'); progressTutorialQuest('quest8_newWeapon', true); } }
         ];
@@ -14987,9 +15012,9 @@
 
         // Full weapon pool — inactive weapons first, then upgrades for active weapons
         const newWeaponChoices = [
-          { id: 'sword',       icon: '⚔️',  title: 'SLASHY SLASH',   desc: 'Slash enemies in front of you',            active: () => weapons.sword.active,       apply: () => { weapons.sword.active = true; weapons.sword.level = 1; showStatChange('New Weapon: Sword'); questCheck(); } },
-          { id: 'aura',        icon: '🌀',  title: 'ZAP ZONE',       desc: 'Damage aura — zaps nearby enemies',        active: () => weapons.aura.active,        apply: () => { weapons.aura.active = true; weapons.aura.level = 1; showStatChange('New Weapon: Aura'); questCheck(); } },
-          { id: 'meteor',      icon: '☄️',  title: 'SPACE ROCKS',    desc: 'Call meteors from the sky',                active: () => weapons.meteor.active,      apply: () => { weapons.meteor.active = true; weapons.meteor.level = 1; showStatChange('New Weapon: Meteor'); questCheck(); } },
+          { id: 'sword',       icon: '⚔️',  title: 'TIDAL SLASH',    desc: 'Slash enemies in front of you',            active: () => weapons.sword.active,       apply: () => { weapons.sword.active = true; weapons.sword.level = 1; showStatChange('New Weapon: Sword'); questCheck(); } },
+          { id: 'aura',        icon: '🌀',  title: 'STORM SURGE',    desc: 'Damage aura — zaps nearby enemies',        active: () => weapons.aura.active,        apply: () => { weapons.aura.active = true; weapons.aura.level = 1; showStatChange('New Weapon: Aura'); questCheck(); } },
+          { id: 'meteor',      icon: '☄️',  title: 'HAILSTORM',      desc: 'Call meteors from the sky',                active: () => weapons.meteor.active,      apply: () => { weapons.meteor.active = true; weapons.meteor.level = 1; showStatChange('New Weapon: Meteor'); questCheck(); } },
           { id: 'droneturret', icon: '🤖',  title: 'DRONE TURRET',   desc: 'Automated drone that shoots enemies',      active: () => weapons.droneTurret.active, apply: () => { weapons.droneTurret.active = true; weapons.droneTurret.level = 1; const drone = new DroneTurret(player); droneTurrets.push(drone); startDroneHum(); showStatChange('New Weapon: Drone Turret'); questCheck(); } },
           { id: 'doublebarrel',icon: '🔫',  title: 'DOUBLE BARREL',  desc: 'Powerful 6-pellet shotgun spread',         active: () => weapons.doubleBarrel.active,apply: () => { weapons.doubleBarrel.active = true; weapons.doubleBarrel.level = 1; showStatChange('New Weapon: Double Barrel'); questCheck(); } },
           { id: 'icespear',    icon: '❄️',  title: 'ICE SPEAR',      desc: 'Crystalline shard that slows enemies 40%', active: () => weapons.iceSpear.active,    apply: () => { weapons.iceSpear.active = true; weapons.iceSpear.level = 1; showStatChange('New Weapon: Ice Spear'); questCheck(); } },
@@ -15291,13 +15316,11 @@
         // Phase 1: Text-only upgrade cards (removed icons as requested)
         card.innerHTML = `<div class="upgrade-title">${u.title}</div><div class="upgrade-desc">${u.desc}</div>`;
         
-        // Add dramatic entrance animation - alternate left/right
+        // Add dramatic entrance animation - from corners
         card.style.opacity = '0';
-        if (index % 2 === 0) {
-          card.style.animation = `swooshInLeft 0.6s ease-out ${index * 0.15}s forwards`;
-        } else {
-          card.style.animation = `swooshInRight 0.6s ease-out ${index * 0.15}s forwards`;
-        }
+        const corners = ['TopLeft', 'TopRight', 'BottomLeft', 'BottomRight'];
+        const corner = corners[index % 4];
+        card.style.animation = `swooshFrom${corner} 0.5s ease-out ${index * 0.1}s forwards`;
         
         let autoConfirmTimer = null;
         card.onclick = () => {
@@ -15354,7 +15377,7 @@
           // Always close modal
           modal.style.display = 'none';
           modal.querySelector('h2').innerText = 'LEVEL UP!';
-          modal.querySelector('h2').style.fontSize = '32px';
+          modal.querySelector('h2').style.fontSize = '24px';
           modal.querySelector('h2').style.color = '';
           // Hide skip button and clear its timeout
           const skipBtn = document.getElementById('levelup-skip-btn');
