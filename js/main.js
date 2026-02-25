@@ -5844,7 +5844,12 @@
 
     function updateStatBar() {
       const panel = document.getElementById('stat-bar-panel');
-      if (!panel || !isGameActive || isGameOver) { if (panel) panel.style.display = 'none'; return; }
+      const liveStatEl = document.getElementById('live-stat-display');
+      if (!panel || !isGameActive || isGameOver) { 
+        if (panel) panel.style.display = 'none'; 
+        if (liveStatEl) liveStatEl.style.display = 'none';
+        return; 
+      }
       panel.style.display = 'block';
       const waveEl = document.getElementById('stat-bar-wave');
       const killsEl = document.getElementById('stat-bar-kills');
