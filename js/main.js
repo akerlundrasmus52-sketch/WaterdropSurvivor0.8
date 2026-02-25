@@ -645,25 +645,6 @@
         this.smile.rotation.z = Math.PI;
         this.mesh.add(this.smile);
         
-        // Cigar accessory with glowing tip
-        const cigarGeo = new THREE.CylinderGeometry(0.02, 0.025, 0.25, 8);
-        const cigarMat = new THREE.MeshToonMaterial({ color: 0x8B4513 }); // Brown
-        this.cigar = new THREE.Mesh(cigarGeo, cigarMat);
-        this.cigar.position.set(0.2, -0.1, 0.35);
-        this.cigar.rotation.z = -Math.PI / 6; // Angled
-        this.mesh.add(this.cigar);
-        
-        // Glowing cigar tip
-        const tipGeo = new THREE.SphereGeometry(0.03, 8, 8);
-        const tipMat = new THREE.MeshBasicMaterial({ 
-          color: 0xFF4500, // Orange-red
-          transparent: true,
-          opacity: 1
-        });
-        this.cigarTip = new THREE.Mesh(tipGeo, tipMat);
-        this.cigarTip.position.set(0.28, -0.05, 0.35);
-        this.mesh.add(this.cigarTip);
-        
         // Bandage accessory (white cross-shaped bandage on head)
         const bandageGeo = new THREE.BoxGeometry(0.3, 0.05, 0.05);
         const bandageMat = new THREE.MeshToonMaterial({ color: 0xFFFFFF }); // White
@@ -947,6 +928,26 @@
               }
             }
           }
+          // DASH DESTRUCTION: Break through trees and props when dashing
+          if (window.destructibleProps) {
+            for (let prop of window.destructibleProps) {
+              if (prop.destroyed) continue;
+              const pdx = this.mesh.position.x - prop.mesh.position.x;
+              const pdz = this.mesh.position.z - prop.mesh.position.z;
+              if (pdx * pdx + pdz * pdz < 2.5) {
+                prop.hp = 0;
+                prop.destroyed = true;
+                spawnParticles(prop.mesh.position, prop.type === 'tree' ? 0x228B22 : 0x8B4513, 20);
+                prop.mesh.scale.set(1, 0.2, 1);
+                prop.mesh.position.y = 0.05;
+                prop.mesh.rotation.x = (Math.random() - 0.5) * 1.5;
+                if (prop.mesh.material) {
+                  prop.mesh.material.transparent = true;
+                  prop.mesh.material.opacity = 0.5;
+                }
+              }
+            }
+          }
           
           if (this.dashTime <= 0) {
             this.isDashing = false;
@@ -996,10 +997,15 @@
                   this.velocity.x -= (dot / (pdist * pdist)) * pdx;
                   this.velocity.z -= (dot / (pdist * pdist)) * pdz;
                 }
+                // Wobble the object on collision
+                if (!prop._wobbleTime) prop._wobbleTime = 0;
+                prop._wobbleTime = 1.0; // Start wobble for 1 second
+                if (!prop._wobbleDir) prop._wobbleDir = { x: -pdx / pdist, z: -pdz / pdist };
+                else { prop._wobbleDir.x = -pdx / pdist; prop._wobbleDir.z = -pdz / pdist; }
               }
             }
           }
-          // Solid collision with fences
+          // Solid collision with fences — also wobble on contact
           if (window.breakableFences) {
             for (let fence of window.breakableFences) {
               if (!fence.userData || !fence.userData.isFence || fence.userData.hp <= 0) continue;
@@ -1009,6 +1015,11 @@
               if (fdist < 0.6 && fdist > 0.001) {
                 this.mesh.position.x = fence.position.x + (fdx / fdist) * 0.6;
                 this.mesh.position.z = fence.position.z + (fdz / fdist) * 0.6;
+                // Wobble fence on collision
+                if (!fence.userData._wobbleTime) fence.userData._wobbleTime = 0;
+                fence.userData._wobbleTime = 0.8;
+                if (!fence.userData._wobbleDir) fence.userData._wobbleDir = { x: -fdx / fdist, z: -fdz / fdist };
+                else { fence.userData._wobbleDir.x = -fdx / fdist; fence.userData._wobbleDir.z = -fdz / fdist; }
               }
             }
           }
@@ -1248,90 +1259,18 @@
           this.rightLeg.rotation.x = 0;
         }
         
-        // Animate cigar tip with breathing animation (breath-in/breath-out cycle)
-        this._breathScale = 1.0; // Reset each frame; updated below if cigar tip exists
-        if (this.cigarTip) {
-          // Breathing animation cycle
-          this.breathTimer += dt;
-          const breathPhase = (this.breathTimer % this.breathCycle) / this.breathCycle; // 0 to 1
-          
-          // Breath-in: 0 to 0.4 (1.6s), Hold: 0.4 to 0.5 (0.4s), Breath-out: 0.5 to 1.0 (2s)
-          if (breathPhase < 0.4) {
-            // Breathing in - cigar tip glows brighter
-            this.isBreathingIn = true;
-            const inhaleProgress = breathPhase / 0.4;
-            const tipBrightness = 0.7 + inhaleProgress * 0.3 + Math.sin(gameTime * 8) * 0.1;
-            this.cigarTip.material.opacity = tipBrightness;
-            this.cigarTip.scale.set(1 + inhaleProgress * 0.3, 1 + inhaleProgress * 0.3, 1 + inhaleProgress * 0.3);
-            
-            // Subtle body scaling during inhale - applied as multiplier on spring-damper
-            this._breathScale = 1 + inhaleProgress * 0.05;
-          } else if (breathPhase < 0.5) {
-            // Holding breath
-            this.isBreathingIn = false;
-            this.cigarTip.material.opacity = 1.0;
-            this.cigarTip.scale.set(1.3, 1.3, 1.3);
-            this._breathScale = 1.05;
-          } else {
-            // Breathing out - emit smoke from mouth
-            this.isBreathingIn = false;
-            const exhaleProgress = (breathPhase - 0.5) / 0.5;
-            const tipBrightness = 1.0 - exhaleProgress * 0.3 + Math.sin(gameTime * 8) * 0.1;
-            this._breathScale = 1.05 - exhaleProgress * 0.05;
-            this.cigarTip.material.opacity = tipBrightness;
-            this.cigarTip.scale.set(1.3 - exhaleProgress * 0.3, 1.3 - exhaleProgress * 0.3, 1.3 - exhaleProgress * 0.3);
-            
-            // Emit smoke from mouth during exhale
-            this.smokeTimer += dt;
-            if (this.smokeTimer > 0.15) { // Faster smoke during exhale
-              this.smokeTimer = 0;
-              
-              // Get current lighting intensity for smoke color
-              const lightIntensity = window.dirLight ? window.dirLight.intensity : 0.8;
-              const smokeColor = new THREE.Color().lerpColors(
-                new THREE.Color(0x555555), // Dark gray in night
-                new THREE.Color(0xCCCCCC), // Light gray in day
-                lightIntensity
-              );
-              
-              // Create smoke particle from mouth
-              const smokeGeo = new THREE.SphereGeometry(0.08, 6, 6);
-              const smokeMat = new THREE.MeshBasicMaterial({ 
-                color: smokeColor,
-                transparent: true,
-                opacity: 0.6
-              });
-              const smoke = new THREE.Mesh(smokeGeo, smokeMat);
-              
-              // Position at mouth (slightly in front of face), clamped above ground
-              smoke.position.set(
-                this.mesh.position.x,
-                Math.max(0.1, this.mesh.position.y - 0.05),
-                this.mesh.position.z + 0.45
-              );
-              scene.add(smoke);
-              
-              // Use managed smokeParticles instead of individual RAF loop
-              if (smokeParticles.length < MAX_SMOKE_PARTICLES) {
-                smokeParticles.push({
-                  mesh: smoke,
-                  material: smokeMat,
-                  geometry: smokeGeo,
-                  velocity: {
-                    x: (Math.random() - 0.5) * 0.02,
-                    y: 0.02,
-                    z: 0.03
-                  },
-                  life: 100,
-                  maxLife: 100
-                });
-              } else {
-                scene.remove(smoke);
-                smokeGeo.dispose();
-                smokeMat.dispose();
-              }
-            }
-          }
+        // Breathing animation (subtle body scaling)
+        this._breathScale = 1.0;
+        this.breathTimer += dt;
+        const breathPhase = (this.breathTimer % this.breathCycle) / this.breathCycle;
+        if (breathPhase < 0.4) {
+          const inhaleProgress = breathPhase / 0.4;
+          this._breathScale = 1 + inhaleProgress * 0.05;
+        } else if (breathPhase < 0.5) {
+          this._breathScale = 1.05;
+        } else {
+          const exhaleProgress = (breathPhase - 0.5) / 0.5;
+          this._breathScale = 1.05 - exhaleProgress * 0.05;
         }
         
         // Apply spring-damper scale combined with breathing multiplier
@@ -2694,40 +2633,41 @@
         document.body.appendChild(flash);
         setTimeout(() => flash.remove(), (this.isMiniBoss || this.isFlyingBoss) ? 100 : 50);
         
-        // Blood spray on death - realistic small particles, no big chunks
-        spawnParticles(this.mesh.position, 0x8B0000, 8); // Blood spray
-        spawnParticles(this.mesh.position, 0xCC0000, 5); // Bright red splatter
-        spawnParticles(this.mesh.position, 0x660000, 4); // Dark blood mist
+        // Blood spray on death - massive brutal blood explosion
+        spawnParticles(this.mesh.position, 0x8B0000, 14); // Blood spray
+        spawnParticles(this.mesh.position, 0xCC0000, 10); // Bright red splatter
+        spawnParticles(this.mesh.position, 0x660000, 8); // Dark blood mist
+        spawnParticles(this.mesh.position, 0x440000, 6); // Extra dark blood chunks
         // Airborne blood spray burst (arcs outward from death position)
-        for (let sb = 0; sb < 4 && bloodDrips.length < MAX_BLOOD_DRIPS; sb++) {
-          const spraySize = 0.02 + Math.random() * 0.04;
+        for (let sb = 0; sb < 8 && bloodDrips.length < MAX_BLOOD_DRIPS; sb++) {
+          const spraySize = 0.02 + Math.random() * 0.06;
           const spray = new THREE.Mesh(
             new THREE.SphereGeometry(spraySize, 4, 4),
-            new THREE.MeshBasicMaterial({ color: 0xAA0000 })
+            new THREE.MeshBasicMaterial({ color: [0xAA0000, 0x8B0000, 0x660000, 0xCC0000][sb % 4] })
           );
           spray.position.copy(deathPos);
-          spray.position.y += 0.2;
+          spray.position.y += 0.3;
           scene.add(spray);
           bloodDrips.push({
             mesh: spray,
-            velX: (Math.random() - 0.5) * 0.15,
-            velZ: (Math.random() - 0.5) * 0.15,
-            velY: 0.15 + Math.random() * 0.2,
-            life: 35 + Math.floor(Math.random() * 15)
+            velX: (Math.random() - 0.5) * 0.25,
+            velZ: (Math.random() - 0.5) * 0.25,
+            velY: 0.2 + Math.random() * 0.3,
+            life: 40 + Math.floor(Math.random() * 20)
           });
         }
-        // Dynamic blood pools: varying sizes from tiny drips to big pools
-        const airBloodCount = this.isMiniBoss ? 16 : 10;
+        // Dynamic blood pools: more pools with bigger sizes
+        const airBloodCount = this.isMiniBoss ? 24 : 16;
         for (let ab = 0; ab < airBloodCount; ab++) {
           if (managedAnimations.length >= MAX_MANAGED_ANIMATIONS) break;
           const landX = deathPos.x + (Math.random() - 0.5) * 5;
           const landZ = deathPos.z + (Math.random() - 0.5) * 5;
           // Dynamic sizing: small drips (0.05), drops (0.15), pools (0.4+)
           const sizeRoll = Math.random();
-          const r = sizeRoll < 0.4 ? (0.03 + Math.random() * 0.08) : // 40% tiny drips
-                    sizeRoll < 0.7 ? (0.1 + Math.random() * 0.15) :   // 30% drops
-                    sizeRoll < 0.9 ? (0.2 + Math.random() * 0.2) :    // 20% medium pools
-                                     (0.35 + Math.random() * 0.3);    // 10% big pools
+          const r = sizeRoll < 0.3 ? (0.04 + Math.random() * 0.1) :  // 30% tiny drips
+                    sizeRoll < 0.55 ? (0.12 + Math.random() * 0.2) :  // 25% drops
+                    sizeRoll < 0.8 ? (0.25 + Math.random() * 0.3) :   // 25% medium pools
+                                     (0.4 + Math.random() * 0.4);     // 20% big pools
           const poolGeo = new THREE.CircleGeometry(r, r > 0.2 ? 12 : 6);
           const poolMat = new THREE.MeshStandardMaterial({ 
             color: sizeRoll < 0.5 ? 0x8B0000 : 0x6B0000, 
@@ -2765,7 +2705,7 @@
             }
           });
         }
-        for (let db = 0; db < (this.isMiniBoss ? 12 : 8); db++) {
+        for (let db = 0; db < (this.isMiniBoss ? 18 : 12); db++) {
           spawnBloodDecal(this.mesh.position);
         }
         
@@ -2783,15 +2723,17 @@
         const expMultiplier = this.isMiniBoss ? 3 : (this.isFlyingBoss ? 5 : 1);
         const wasFlying = this.isFlying;
         
-        // Varied fall direction for different death looks
-        const fallVariation = Math.random();
-        const fallDirX = (fallVariation < 0.33) ? 1 : (fallVariation < 0.66 ? -1 : 0);
-        const fallDirZ = (fallVariation >= 0.66) ? (Math.random() < 0.5 ? 1 : -1) : 0;
+        // Dynamic death animation styles - brutal varied ragdoll falls
+        const deathStyle = Math.floor(Math.random() * 6); // 0-5 different death types
+        const fallSignX = (Math.random() < 0.5) ? 1 : -1;
+        const fallSignZ = (Math.random() < 0.5) ? 1 : -1;
+        const spinDir = (Math.random() < 0.5) ? 1 : -1;
         
-        // Fall down animation: enemy falls lifeless, lies on ground, THEN XP star spawns separately
-        const FALL_FRAMES = wasFlying ? 45 : 30; // Flying enemies take longer to fall
-        const LINGER_FRAMES = 40; // Lie on ground lifeless before fading
-        const FADE_FRAMES = 20; // Fade out corpse
+        // Fall down animation: enemy falls dynamically, lies on ground, explodes into blood, THEN XP star spawns
+        const FALL_FRAMES = wasFlying ? 50 : 35;
+        const LINGER_FRAMES = 50; // Lie on ground lifeless before blood explosion
+        const EXPLODE_FRAMES = 15; // Blood explosion phase
+        const FADE_FRAMES = 15; // Fade out remains
         let fallFrame = 0;
         const startY = dyingMesh.position.y;
         const startScaleY = dyingMesh.scale.y;
@@ -2801,28 +2743,108 @@
             fallFrame++;
             
             if (fallFrame <= FALL_FRAMES) {
-              // Phase 1: Fall to ground
               const progress = Math.min(fallFrame / FALL_FRAMES, 1);
-              // Tip over in the chosen direction (lifeless ragdoll)
-              dyingMesh.rotation.x = fallDirX * progress * (Math.PI / 2);
-              dyingMesh.rotation.z = fallDirZ * progress * (Math.PI / 2);
-              dyingMesh.scale.y = startScaleY * (1 - progress * 0.5);
-              dyingMesh.position.y = startY * (1 - progress);
+              const eased = 1 - Math.pow(1 - progress, 3); // Ease-out cubic for natural fall
+              
+              if (deathStyle === 0) {
+                // Face-plant: fall forward onto stomach
+                dyingMesh.rotation.x = fallSignX * eased * (Math.PI / 2);
+                dyingMesh.rotation.z = fallSignZ * eased * 0.15; // slight twist
+                dyingMesh.position.y = startY * (1 - eased);
+                dyingMesh.scale.y = startScaleY * (1 - eased * 0.6);
+              } else if (deathStyle === 1) {
+                // Side fall: topple sideways
+                dyingMesh.rotation.z = fallSignZ * eased * (Math.PI / 2);
+                dyingMesh.rotation.x = fallSignX * eased * 0.2;
+                dyingMesh.position.y = startY * (1 - eased);
+                dyingMesh.scale.y = startScaleY * (1 - eased * 0.4);
+              } else if (deathStyle === 2) {
+                // Back fall: fall backward
+                dyingMesh.rotation.x = fallSignX * -1 * eased * (Math.PI / 2.2);
+                dyingMesh.rotation.z = fallSignZ * eased * 0.1;
+                dyingMesh.position.y = startY * (1 - eased);
+                dyingMesh.scale.y = startScaleY * (1 - eased * 0.5);
+              } else if (deathStyle === 3) {
+                // Knees first: two-stage collapse - knees buckle then body falls
+                if (progress < 0.4) {
+                  const kneePhase = progress / 0.4;
+                  dyingMesh.scale.y = startScaleY * (1 - kneePhase * 0.5); // compress down
+                  dyingMesh.position.y = startY * (1 - kneePhase * 0.6);
+                } else {
+                  const bodyPhase = (progress - 0.4) / 0.6;
+                  const bodyEased = 1 - Math.pow(1 - bodyPhase, 2);
+                  dyingMesh.scale.y = startScaleY * 0.5 * (1 - bodyEased * 0.6);
+                  dyingMesh.rotation.x = fallSignX * bodyEased * (Math.PI / 2);
+                  dyingMesh.rotation.z = fallSignZ * bodyEased * 0.3;
+                  dyingMesh.position.y = startY * 0.4 * (1 - bodyEased);
+                }
+              } else if (deathStyle === 4) {
+                // Spin and collapse: enemy spins as they fall
+                dyingMesh.rotation.y = spinDir * eased * Math.PI * 1.5;
+                dyingMesh.rotation.x = fallSignX * eased * (Math.PI / 2.5);
+                dyingMesh.position.y = startY * (1 - eased);
+                dyingMesh.scale.y = startScaleY * (1 - eased * 0.55);
+              } else {
+                // Dramatic crumple: compress then topple
+                if (progress < 0.3) {
+                  const crumple = progress / 0.3;
+                  dyingMesh.scale.y = startScaleY * (1 - crumple * 0.4);
+                  dyingMesh.scale.x = startScaleY * (1 + crumple * 0.2);
+                  dyingMesh.position.y = startY * (1 - crumple * 0.3);
+                } else {
+                  const topple = (progress - 0.3) / 0.7;
+                  const toppleEased = 1 - Math.pow(1 - topple, 2);
+                  dyingMesh.rotation.x = fallSignX * toppleEased * (Math.PI / 2);
+                  dyingMesh.rotation.z = fallSignZ * toppleEased * (Math.PI / 4);
+                  dyingMesh.scale.y = startScaleY * 0.6 * (1 - toppleEased * 0.4);
+                  dyingMesh.position.y = startY * 0.7 * (1 - toppleEased);
+                }
+              }
               // Flying enemies: also tumble during fall
               if (wasFlying) {
-                dyingMesh.rotation.y += 0.08;
+                dyingMesh.rotation.y += 0.1;
+                dyingMesh.position.y = Math.max(0, startY * (1 - eased));
+              }
+              // Bounce impact when hitting ground near end of fall
+              if (progress > 0.85 && progress < 0.95) {
+                spawnParticles(deathPos, 0x8B0000, 3);
+                spawnBloodDecal(deathPos);
               }
             } else if (fallFrame <= FALL_FRAMES + LINGER_FRAMES) {
-              // Phase 2: Lie on ground lifeless (no change, just wait)
-            } else if (fallFrame <= FALL_FRAMES + LINGER_FRAMES + FADE_FRAMES) {
-              // Phase 3: Fade out corpse
-              const fadeProgress = (fallFrame - FALL_FRAMES - LINGER_FRAMES) / FADE_FRAMES;
+              // Phase 2: Lie on ground lifeless - slight settling
+              const lingerProgress = (fallFrame - FALL_FRAMES) / LINGER_FRAMES;
+              if (lingerProgress < 0.1) {
+                // Small bounce/settle on impact
+                const bounce = Math.sin(lingerProgress * Math.PI * 10) * 0.02 * (1 - lingerProgress * 10);
+                dyingMesh.position.y = bounce;
+              }
+            } else if (fallFrame <= FALL_FRAMES + LINGER_FRAMES + EXPLODE_FRAMES) {
+              // Phase 3: Blood explosion - body bursts into blood piles
+              const explodeProgress = (fallFrame - FALL_FRAMES - LINGER_FRAMES) / EXPLODE_FRAMES;
+              if (explodeProgress < 0.3) {
+                // Burst blood spray
+                spawnParticles(deathPos, 0x8B0000, 4);
+                spawnParticles(deathPos, 0x660000, 3);
+                spawnBloodDecal(deathPos);
+                spawnBloodDecal(deathPos);
+              }
+              // Flatten and expand as body breaks apart
               if (dyingMesh.material) {
                 dyingMesh.material.transparent = true;
-                dyingMesh.material.opacity = 1 - fadeProgress;
+                dyingMesh.material.opacity = 1 - explodeProgress * 0.7;
+              }
+              dyingMesh.scale.y *= 0.92;
+              dyingMesh.scale.x *= 1.03;
+              dyingMesh.scale.z *= 1.03;
+            } else if (fallFrame <= FALL_FRAMES + LINGER_FRAMES + EXPLODE_FRAMES + FADE_FRAMES) {
+              // Phase 4: Fade out remains
+              const fadeProgress = (fallFrame - FALL_FRAMES - LINGER_FRAMES - EXPLODE_FRAMES) / FADE_FRAMES;
+              if (dyingMesh.material) {
+                dyingMesh.material.transparent = true;
+                dyingMesh.material.opacity = Math.max(0, 0.3 * (1 - fadeProgress));
               }
             } else {
-              // Phase 4: Remove corpse and spawn XP star at death position
+              // Phase 5: Remove corpse and spawn XP star at death position
               scene.remove(dyingMesh);
               if (dyingMesh.geometry) dyingMesh.geometry.dispose();
               if (dyingMesh.material) dyingMesh.material.dispose();
@@ -18738,6 +18760,36 @@
           }
           return true;
         });
+      }
+      
+      // Update object wobble animations (trees, fences, barrels, crates)
+      if (window.destructibleProps) {
+        for (let prop of window.destructibleProps) {
+          if (prop.destroyed || !prop._wobbleTime || prop._wobbleTime <= 0) continue;
+          prop._wobbleTime -= dt;
+          const wobbleAmount = Math.sin(prop._wobbleTime * 18) * prop._wobbleTime * 0.15;
+          const dir = prop._wobbleDir || { x: 1, z: 0 };
+          prop.mesh.rotation.x = dir.x * wobbleAmount;
+          prop.mesh.rotation.z = dir.z * wobbleAmount;
+          if (prop._wobbleTime <= 0) {
+            prop.mesh.rotation.x = 0;
+            prop.mesh.rotation.z = 0;
+          }
+        }
+      }
+      if (window.breakableFences) {
+        for (let fence of window.breakableFences) {
+          if (!fence.userData || fence.userData.hp <= 0 || !fence.userData._wobbleTime || fence.userData._wobbleTime <= 0) continue;
+          fence.userData._wobbleTime -= dt;
+          const wobbleAmount = Math.sin(fence.userData._wobbleTime * 20) * fence.userData._wobbleTime * 0.2;
+          const dir = fence.userData._wobbleDir || { x: 1, z: 0 };
+          fence.rotation.x = dir.x * wobbleAmount;
+          fence.rotation.z = dir.z * wobbleAmount;
+          if (fence.userData._wobbleTime <= 0) {
+            fence.rotation.x = 0;
+            fence.rotation.z = 0;
+          }
+        }
       }
       
       // Performance: Use cached arrays instead of scene.traverse() every frame
