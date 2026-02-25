@@ -15,9 +15,11 @@ const RENDERER_CONFIG = {
   cameraPositionX: 18,
   cameraPositionY: 16,
   cameraPositionZ: 18,
-  // Scene fog distances (near/far clip for edge fog)
-  fogNear: 18,
-  fogFar: 38,
+  // Scene fog distances (near/far clip for edge fog).
+  // fogNear must exceed player camera-depth (~25.6) so the player is never inside the fog.
+  // fogFar is pushed to ~42 so objects just beyond the visible area are fully hidden.
+  fogNear: 28,
+  fogFar: 42,
   // Default shadow map size (used at init; overridden by applyGraphicsQuality)
   defaultShadowMapSize: 2048,
   // Directional light shadow frustum half-size (covers visible area; shadow is re-anchored to player each frame)
