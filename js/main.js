@@ -1040,18 +1040,20 @@
             this.trailTimer = 0;
           }
           
-          // Add lean/tilt in direction of movement — over-exaggerated for comic feel
-          if (this.velocity.length() > 0.05) {
-            const leanFactor = GAME_CONFIG.movementLeanFactor * (20 + this.wobbleIntensity * 20);
+          // Add lean/tilt in direction of movement — more dynamic and responsive
+          if (this.velocity.length() > 0.03) {
+            const leanFactor = GAME_CONFIG.movementLeanFactor * (25 + this.wobbleIntensity * 25);
             const leanAngleX = -this.velocity.z * leanFactor;
             const leanAngleZ = this.velocity.x * leanFactor;
-            const leanDt = Math.min(dt * 10, 0.6);
+            // Faster response on direction changes, smooth in steady state
+            const leanResponse = this.wobbleIntensity > 0.3 ? 0.7 : 0.5;
+            const leanDt = Math.min(dt * 12, leanResponse);
             this.mesh.rotation.x += (leanAngleX - this.mesh.rotation.x) * leanDt;
             this.mesh.rotation.z += (leanAngleZ - this.mesh.rotation.z) * leanDt;
           } else {
-            // Return to upright when idle
-            this.mesh.rotation.x *= 0.88;
-            this.mesh.rotation.z *= 0.88;
+            // Smooth return to upright when idle - more natural settle
+            this.mesh.rotation.x *= 0.85;
+            this.mesh.rotation.z *= 0.85;
           }
           
           // Rotation/Aiming with RIGHT stick (independent of movement)
@@ -1139,15 +1141,15 @@
         const dt2 = Math.min(dt, 0.05);
         
         // Detect direction changes to spike wobble intensity
-        if (speedMag > 0.05) {
+        if (speedMag > 0.04) {
           const velDir = this.velocity.clone().normalize();
           const dirDot = velDir.dot(this.prevVelDir);
           const dirChange = 1 - dirDot;
-          if (dirChange > 0.3) {
-            // Over-exaggerate wobble on direction changes for comic waterdrop feel
-            this.wobbleIntensity = Math.min(1, this.wobbleIntensity + dirChange * 3.0);
+          if (dirChange > 0.2) {
+            // Over-exaggerate wobble on direction changes for dynamic feel
+            this.wobbleIntensity = Math.min(1, this.wobbleIntensity + dirChange * 4.0);
             // Full reversal (dot < -0.5): dramatic stretch + water trail
-            if (dirDot < -0.5 && speedMag > 0.08) {
+            if (dirDot < -0.5 && speedMag > 0.06) {
               this.postDashSquish = Math.max(this.postDashSquish, 0.9);
               this.wobbleIntensity = 1;
               // Spawn water trail particles to show sliding
@@ -10910,22 +10912,35 @@
       scene.add(waterfallGroup);
 
       // Reflective Lake - Enhanced with realistic water properties
-      const enhancedLakeGeo = new THREE.CircleGeometry(18, 32);
+      const enhancedLakeGeo = new THREE.CircleGeometry(18, 48); // More segments for smoother circle
       const enhancedLakeMat = new THREE.MeshPhysicalMaterial({ 
         color: COLORS.lake,
-        metalness: 0.5, // Increased for better reflectivity
-        roughness: 0.1, // Decreased for smoother, clearer reflections
+        metalness: 0.5,
+        roughness: 0.1,
         transparent: true,
         opacity: 0.85,
-        reflectivity: 0.9, // Increased for enhanced water reflections
-        clearcoat: 1.0, // Add clearcoat for wet surface look
-        clearcoatRoughness: 0.1 // Smooth clearcoat for better reflections
+        reflectivity: 0.9,
+        clearcoat: 1.0,
+        clearcoatRoughness: 0.1,
+        depthWrite: true,
+        polygonOffset: true,
+        polygonOffsetFactor: -2, // Prevent z-fighting with ground
+        polygonOffsetUnits: -2
       });
       const enhancedLake = new THREE.Mesh(enhancedLakeGeo, enhancedLakeMat);
       enhancedLake.rotation.x = -Math.PI / 2;
-      enhancedLake.position.set(30, 0.01, -30);
-      enhancedLake.receiveShadow = true; // Receive shadows for better depth
+      enhancedLake.position.set(30, 0.03, -30); // Raised slightly above ground to prevent z-fighting
+      enhancedLake.receiveShadow = true;
       scene.add(enhancedLake);
+      
+      // Sandy shore ring around lake for visual border
+      const shoreGeo = new THREE.RingGeometry(17.5, 20, 48);
+      const shoreMat = new THREE.MeshStandardMaterial({ color: 0xC2B280, roughness: 0.9, metalness: 0, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 });
+      const shore = new THREE.Mesh(shoreGeo, shoreMat);
+      shore.rotation.x = -Math.PI / 2;
+      shore.position.set(30, 0.02, -30);
+      shore.receiveShadow = true;
+      scene.add(shore);
       
       // Sun sparkles on lake
       for(let i=0; i<10; i++) {
@@ -18699,6 +18714,8 @@
           missileGroup.add(rightPupil);
           
           missileGroup.position.set(player.mesh.position.x, 0.6, player.mesh.position.z);
+          // Tilt missile at 45° angle (lie down instead of standing up)
+          missileGroup.rotation.x = -Math.PI / 4;
           scene.add(missileGroup);
           let target = nearest;
           let mLife = 120;
@@ -18708,20 +18725,30 @@
             managedAnimations.push({ update(_dt) {
               mLife--;
               smokeTimer++;
-              // Home toward target
+              // Home toward target with stronger tracking
               if (!target.isDead) {
                 const desired = new THREE.Vector3(target.mesh.position.x - missileGroup.position.x, 0, target.mesh.position.z - missileGroup.position.z).normalize().multiplyScalar(0.25);
-                mVel.lerp(desired, 0.12);
+                mVel.lerp(desired, 0.15); // Stronger homing
+              } else {
+                // Re-acquire target if current target died
+                let newTarget = null; let newMinDst = Infinity;
+                for (let e of enemies) {
+                  if (e.isDead) continue;
+                  const d = missileGroup.position.distanceTo(e.mesh.position);
+                  if (d < 20 && d < newMinDst) { newMinDst = d; newTarget = e; }
+                }
+                if (newTarget) target = newTarget;
               }
               missileGroup.position.add(mVel);
               missileGroup.rotation.y = Math.atan2(mVel.x, mVel.z);
-              // Fire trail from back
+              missileGroup.rotation.x = -Math.PI / 4; // Maintain 45° tilt
+              // Enhanced fire and smoke trail from back
               const trailPos = { x: missileGroup.position.x - mVel.x * 1.5, y: missileGroup.position.y, z: missileGroup.position.z - mVel.z * 1.5 };
               spawnParticles(trailPos, 0xFF4400, 2); // Orange fire
               spawnParticles(trailPos, 0xFF2200, 1); // Red fire
-              // Smoke trail every few frames
-              if (smokeTimer % 3 === 0) {
-                spawnParticles(trailPos, 0x666666, 1); // Gray smoke
+              if (smokeTimer % 2 === 0) {
+                spawnParticles(trailPos, 0x555555, 2); // More smoke
+                spawnParticles(trailPos, 0x888888, 1); // Light smoke
               }
               // Explode on contact
               for (let e of enemies) {
