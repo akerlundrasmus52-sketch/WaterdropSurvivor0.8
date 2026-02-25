@@ -1231,10 +1231,10 @@
               });
               const smoke = new THREE.Mesh(smokeGeo, smokeMat);
               
-              // Position at mouth (slightly in front of face)
+              // Position at mouth (slightly in front of face), clamped above ground
               smoke.position.set(
                 this.mesh.position.x,
-                this.mesh.position.y - 0.05,
+                Math.max(0.1, this.mesh.position.y - 0.05),
                 this.mesh.position.z + 0.45
               );
               scene.add(smoke);
@@ -11170,22 +11170,56 @@
         // Lake exclusion zone constants
         const LAKE_CENTER_X = 30;
         const LAKE_CENTER_Z = -30;
-        const LAKE_EXCLUSION_RADIUS = 18; // Lake radius 15 + buffer 3
+        const LAKE_EXCLUSION_RADIUS = 22; // Lake radius 18 + buffer 4
         const MAX_SPAWN_ATTEMPTS = 20;
         
-        // Phase 5: Simple exclusion - just avoid rondel center
-        function isInRondel(x, z) {
-          const distToCenter = Math.sqrt(x * x + z * z);
-          return distToCenter < (rondelRadius + 2); // Rondel radius + buffer
+        // Helper: distance from point (px,pz) to line segment (x1,z1)→(x2,z2)
+        function distToSegment(px, pz, x1, z1, x2, z2) {
+          const dx = x2 - x1, dz = z2 - z1;
+          const len2 = dx * dx + dz * dz;
+          if (len2 === 0) return Math.sqrt((px - x1) * (px - x1) + (pz - z1) * (pz - z1));
+          const t = Math.max(0, Math.min(1, ((px - x1) * dx + (pz - z1) * dz) / len2));
+          return Math.sqrt((px - (x1 + t * dx)) ** 2 + (pz - (z1 + t * dz)) ** 2);
+        }
+        
+        // Comprehensive exclusion: lake, rondel, all paths, all buildings/landmarks
+        function isPositionExcluded(x, z) {
+          // Lake exclusion
+          const distToLake = Math.sqrt((x - LAKE_CENTER_X) ** 2 + (z - LAKE_CENTER_Z) ** 2);
+          if (distToLake < LAKE_EXCLUSION_RADIUS) return true;
+          
+          // Rondel center exclusion
+          if (Math.sqrt(x * x + z * z) < (rondelRadius + 2)) return true;
+          
+          // Path exclusion (5-unit buffer on each side of trail)
+          const PATH_WIDTH = 5;
+          const r = rondelRadius;
+          if (distToSegment(x, z, r * 0.707, r * 0.707, 60, 60)   < PATH_WIDTH) return true; // → Stonehenge
+          if (distToSegment(x, z, r * 0.9,   r * 0.436, 40, 40)   < PATH_WIDTH) return true; // → Windmill
+          if (distToSegment(x, z, -r * 0.707, -r * 0.707, -80, -80) < PATH_WIDTH) return true; // → Tesla Tower
+          if (distToSegment(x, z, r * 0.707, -r * 0.707, 50, -50) < PATH_WIDTH) return true; // → Pyramid
+          if (distToSegment(x, z, r * 0.5,   -r * 0.866, 30, -30) < PATH_WIDTH) return true; // → Lake
+          
+          // Building exclusion zones
+          if (Math.sqrt((x - 40) ** 2 + (z - 40) ** 2)   < 8)  return true; // Windmill
+          if (Math.sqrt((x + 20) ** 2 + (z + 20) ** 2)   < 8)  return true; // Cabin
+          if (Math.sqrt((x + 40) ** 2 + (z - 40) ** 2)   < 8)  return true; // Mine entrance
+          
+          // Landmark exclusion zones
+          if (Math.sqrt((x - 100) ** 2 + (z - 80) ** 2)  < 22) return true; // Stonehenge
+          if (Math.sqrt((x - 50) ** 2  + (z + 50) ** 2)  < 22) return true; // Pyramid
+          if (Math.sqrt((x + 80) ** 2  + (z + 80) ** 2)  < 27) return true; // Tesla Tower
+          if (Math.sqrt((x + 80) ** 2  + (z - 150) ** 2) < 20) return true; // Eiffel Tower
+          
+          return false;
         }
         
         let tx, tz;
-        let inLake = true;
-        let inRondel = true;
+        let excluded = true;
         let attempts = 0;
         
-        // Avoid spawning trees in lake area and rondel
-        while ((inLake || inRondel) && attempts < MAX_SPAWN_ATTEMPTS) {
+        // Avoid spawning trees in excluded areas
+        while (excluded && attempts < MAX_SPAWN_ATTEMPTS) {
           if (i < 80) {
             // First 80 trees in forest area (Top Left quadrant mostly) - seeded deterministic
             tx = (seededRandom(i * 13 + attempts * 3) * 100) - 90;
@@ -11196,18 +11230,12 @@
             tz = (seededRandom(i * 23 + attempts * 11) * 180) - 90;
           }
           
-          // Check if tree would be in lake
-          const distToLake = Math.sqrt((tx - LAKE_CENTER_X) * (tx - LAKE_CENTER_X) + (tz - LAKE_CENTER_Z) * (tz - LAKE_CENTER_Z));
-          inLake = distToLake < LAKE_EXCLUSION_RADIUS;
-          
-          // Check if tree would be in rondel
-          inRondel = isInRondel(tx, tz);
-          
+          excluded = isPositionExcluded(tx, tz);
           attempts++;
         }
         
-        // Only add tree if not in lake and not in rondel
-        if (!inLake && !inRondel) {
+        // Only add tree if position is valid
+        if (!excluded) {
           group.position.set(tx, 0, tz);
           scene.add(group);
         }
@@ -18694,6 +18722,11 @@
         sp.mesh.position.x += sp.velocity.x;
         sp.mesh.position.y += sp.velocity.y;
         sp.mesh.position.z += sp.velocity.z;
+        // Ground collision: keep smoke above ground to prevent visual artifacts
+        if (sp.mesh.position.y < 0.1) {
+          sp.mesh.position.y = 0.1;
+          sp.velocity.y = Math.abs(sp.velocity.y) * 0.1; // Damp vertical velocity at ground
+        }
         sp.mesh.scale.multiplyScalar(1.05);
         sp.material.opacity = (sp.life / sp.maxLife) * 0.5;
         if (sp.life <= 0) {
