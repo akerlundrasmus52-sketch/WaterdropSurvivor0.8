@@ -5447,6 +5447,7 @@
           saveData.storyQuests.buildingFirstUse = { ...defaultSaveData.storyQuests.buildingFirstUse, ...(saveData.storyQuests.buildingFirstUse || {}) };
           // Tutorial quest system (new)
           saveData.tutorialQuests = { ...defaultSaveData.tutorialQuests, ...(saveData.tutorialQuests || {}) };
+          saveData.tutorialQuests.landmarksFound = { ...defaultSaveData.tutorialQuests.landmarksFound, ...(saveData.tutorialQuests.landmarksFound || {}) };
           saveData.sideChallenges = { ...defaultSaveData.sideChallenges, ...(saveData.sideChallenges || {}) };
           // Tutorial system (new fields)
           saveData.tutorial = { ...defaultSaveData.tutorial, ...(saveData.tutorial || {}) };
@@ -17780,12 +17781,17 @@
       
       // Track landmark visits for quest8_findAllLandmarks
       if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest8_findAllLandmarks') {
+        if (!saveData.tutorialQuests.landmarksFound) {
+          saveData.tutorialQuests.landmarksFound = { stonehenge: false, pyramid: false, montana: false, teslaTower: false };
+        }
         const lf = saveData.tutorialQuests.landmarksFound;
         const px = player.mesh.position.x, pz = player.mesh.position.z;
         for (const cfg of Object.values(LANDMARK_CONFIGS)) {
           if (!lf[cfg.key] && Math.hypot(px - cfg.x, pz - cfg.z) < cfg.radius) {
             lf[cfg.key] = true;
-            createFloatingText(`📍 ${cfg.label} Found!`, player.mesh.position, '#FFDD00');
+            createFloatingText(`📍 ${cfg.label} Found!`, player.mesh.position);
+            showStatChange(`📍 ${cfg.label} Found!`);
+            saveSaveData();
           }
         }
         // Check if all found
