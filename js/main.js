@@ -7609,6 +7609,14 @@
       dashDirection.z = len > 0 ? dz/len : 1;
       const dashLevel = (saveData.skillTree && saveData.skillTree.dash) ? (saveData.skillTree.dash.level || 0) : 0;
       dashCooldownRemaining = Math.max(1.5, 3 - 0.2 * dashLevel);
+      // Trigger waterdrop dash wave animation
+      const wdc = document.getElementById('waterdrop-container');
+      if (wdc) {
+        wdc.classList.remove('dashing');
+        void wdc.offsetWidth;
+        wdc.classList.add('dashing');
+        setTimeout(() => wdc.classList.remove('dashing'), 500);
+      }
       // Delegate actual movement to existing player.dash()
       player.dash(dashDirection.x, dashDirection.z);
     }
@@ -15512,12 +15520,15 @@
       updateRegionDisplay();
     }
     
-    // Region display update function
+    // Region display update function with slide-in/slide-out animation
+    let currentRegion = '';
+    let regionTimeout = null;
     function updateRegionDisplay() {
       if (!player || !player.mesh) return;
       
       const regionNameEl = document.getElementById('region-name');
-      if (!regionNameEl) return;
+      const regionDisplay = document.getElementById('region-display');
+      if (!regionNameEl || !regionDisplay) return;
       
       const px = player.mesh.position.x;
       const pz = player.mesh.position.z;
@@ -15543,7 +15554,22 @@
         region = 'Southern Woods';
       }
       
-      regionNameEl.textContent = region;
+      // Only animate if region changed
+      if (region !== currentRegion) {
+        currentRegion = region;
+        regionNameEl.textContent = region;
+        
+        // Clear any pending hide timeout
+        if (regionTimeout) clearTimeout(regionTimeout);
+        
+        // Slide in from right
+        regionDisplay.classList.add('region-visible');
+        
+        // After 3 seconds, slide back out to the right
+        regionTimeout = setTimeout(() => {
+          regionDisplay.classList.remove('region-visible');
+        }, 3000);
+      }
     }
     
     // Minimap update function (with throttling for performance)
@@ -15604,12 +15630,12 @@
         });
       }
       
-      // Add landmark dots (windmill, montana, eiffel, stonehenge if they exist)
+      // Add landmark dots with region-specific icons
       const landmarks = [
-        { pos: { x: 60, z: 40 }, name: 'windmill' },
-        { pos: { x: -50, z: -50 }, name: 'montana' },
-        { pos: { x: 70, z: -60 }, name: 'eiffel' },
-        { pos: { x: -60, z: 60 }, name: 'stonehenge' }
+        { pos: { x: 60, z: 40 }, name: 'windmill', icon: '⚙️' },
+        { pos: { x: -50, z: -50 }, name: 'montana', icon: '⛰️' },
+        { pos: { x: 70, z: -60 }, name: 'eiffel', icon: '⚡' },
+        { pos: { x: -60, z: 60 }, name: 'stonehenge', icon: '🗿' }
       ];
       
       landmarks.forEach(landmark => {
@@ -15619,6 +15645,14 @@
         if (Math.abs(dx) < mapSize / 2 && Math.abs(dz) < mapSize / 2) {
           const mapX = 50 + (dx / mapSize) * 100;
           const mapZ = 50 + (dz / mapSize) * 100;
+          
+          // Add icon element for landmark
+          const iconEl = document.createElement('div');
+          iconEl.className = 'minimap-icon';
+          iconEl.textContent = landmark.icon;
+          iconEl.style.left = `${mapX}%`;
+          iconEl.style.top = `${mapZ}%`;
+          minimap.appendChild(iconEl);
           
           const landmarkDot = document.createElement('div');
           // Add quest-ready "?" indicator for windmill when quest available
@@ -18206,6 +18240,17 @@
           for(let i=0; i<weapons.gun.barrels; i++) {
             setTimeout(() => {
               projectiles.push(new Projectile(player.mesh.position.x, player.mesh.position.z, gunTarget));
+              
+              // Trigger waterdrop shooting wave animation
+              if (i === 0) {
+                const wdc = document.getElementById('waterdrop-container');
+                if (wdc) {
+                  wdc.classList.remove('shooting');
+                  void wdc.offsetWidth;
+                  wdc.classList.add('shooting');
+                  setTimeout(() => wdc.classList.remove('shooting'), 300);
+                }
+              }
               
               // Double Cast: chance to fire a second shot with slight spread
               const castChance = playerStats.doubleCastChance || 0;

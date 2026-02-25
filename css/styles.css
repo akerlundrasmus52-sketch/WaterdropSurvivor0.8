@@ -376,6 +376,33 @@
       80% { transform: scale(1.02) scaleY(0.98); }
       100% { transform: scale(1) scaleY(1); }
     }
+
+    /* Shooting wave animation - water ripples when firing */
+    #waterdrop-container.shooting {
+      animation: waterdrop-shoot 0.3s ease-out, waterdrop-bubble 2.5s ease-in-out infinite;
+    }
+
+    @keyframes waterdrop-shoot {
+      0% { transform: scale(1) scaleY(1); }
+      15% { transform: scale(1.08) scaleY(0.92); }
+      30% { transform: scale(0.95) scaleY(1.06); }
+      50% { transform: scale(1.04) scaleY(0.97); }
+      100% { transform: scale(1) scaleY(1); }
+    }
+
+    /* Dash wave animation - stronger water splash */
+    #waterdrop-container.dashing {
+      animation: waterdrop-dash 0.5s ease-out, waterdrop-bubble 2.5s ease-in-out infinite;
+    }
+
+    @keyframes waterdrop-dash {
+      0% { transform: scale(1) scaleY(1) rotate(0deg); }
+      15% { transform: scale(0.85) scaleY(1.22) rotate(-3deg); }
+      30% { transform: scale(1.18) scaleY(0.84) rotate(2deg); }
+      50% { transform: scale(0.92) scaleY(1.12) rotate(-1deg); }
+      70% { transform: scale(1.05) scaleY(0.96) rotate(1deg); }
+      100% { transform: scale(1) scaleY(1) rotate(0deg); }
+    }
     
     #waterdrop-svg {
       width: 100%;
@@ -426,13 +453,13 @@
       display: none;
     }
     
-    /* Round Minimap - Bottom Right Corner - SMALLER, NEARLY ROUND */
+    /* Round Minimap - Bottom Right Corner - 25% BIGGER */
     #minimap-container {
       position: absolute;
-      bottom: 2px;
-      right: 2px;
-      width: 90px;
-      height: 92px;
+      bottom: 8px;
+      right: 8px;
+      width: 113px;
+      height: 115px;
       /* Nearly perfect circle with subtle bottom hint */
       border-radius: 50% 50% 48% 48%; /* Nearly round */
       transform: rotate(0deg);
@@ -538,6 +565,62 @@
       font-weight: bold;
       color: #FFD700;
       text-shadow: 0 0 6px rgba(255,215,0,1);
+    }
+    
+    /* Region Display - HP/XP bar style, positioned above minimap, slides in/out from right */
+    #region-display {
+      position: absolute;
+      bottom: 132px;
+      right: -200px;
+      width: auto;
+      min-width: 113px;
+      max-width: 160px;
+      height: 22px;
+      background: linear-gradient(to bottom, #1a1a1a 0%, #1a1a1a 50%, #3a3a3a 50%, #3a3a3a 100%);
+      border-radius: 11px;
+      border: 2px solid #000000;
+      overflow: hidden;
+      box-shadow: 
+        0 0 0 1px rgba(255,215,0,0.6),
+        0 0 6px rgba(255,215,0,0.3),
+        0 3px 8px rgba(0,0,0,0.5),
+        inset 0 2px 4px rgba(0,0,0,0.4);
+      z-index: 101;
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 10px;
+      transition: right 0.5s ease-in-out;
+    }
+    
+    #region-display.region-visible {
+      right: 8px;
+    }
+    
+    #region-name {
+      font-family: 'Bangers', 'M PLUS Rounded 1c', cursive;
+      font-weight: bold;
+      font-size: 11px;
+      color: #FFD700;
+      text-shadow: 
+        -1px -1px 0 #000,
+        1px -1px 0 #000,
+        -1px 1px 0 #000,
+        1px 1px 0 #000,
+        0 0 3px rgba(255,215,0,0.2);
+      letter-spacing: 1px;
+      white-space: nowrap;
+    }
+
+    /* Minimap landmark icons for different regions */
+    .minimap-icon {
+      position: absolute;
+      transform: translate(-50%, -50%);
+      font-size: 8px;
+      text-align: center;
+      z-index: 5;
+      filter: drop-shadow(0 0 2px rgba(0,0,0,0.8));
     }
     
     /* Farmer NPC Speech Bubble */
@@ -2405,7 +2488,7 @@
       
       /* Move day/night clock further right in portrait to avoid HP/EXP bar overlap */
       #day-night-clock {
-        right: 190px;
+        right: 178px;
       }
       
       /* Reduce padding on small portrait screens */
@@ -2602,8 +2685,11 @@
       }
       
       #region-display {
+        bottom: 212px;
+      }
+
+      #region-display.region-visible {
         right: 20px;
-        bottom: 75px;
       }
     }
     
