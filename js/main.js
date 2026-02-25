@@ -873,14 +873,18 @@
                   const fallStart = Date.now();
                   if (prop.mesh.userData.leaves) prop.mesh.userData.leaves.visible = false;
                   const treeMesh = prop.mesh;
-                  const dashFall = setInterval(() => {
-                    const elapsed = Date.now() - fallStart;
-                    const progress = Math.min(elapsed / fallDuration, 1);
-                    if (fallAxis === 'x') treeMesh.rotation.x = (Math.PI / 2) * progress * fallDir;
-                    else treeMesh.rotation.z = (Math.PI / 2) * progress * fallDir;
-                    treeMesh.position.y = -progress * 1.5;
-                    if (progress >= 1) clearInterval(dashFall);
-                  }, 16);
+                  if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
+                    let dashFallTimer = 0;
+                    const dashFallFrames = Math.ceil(fallDuration / 16);
+                    managedAnimations.push({ update(_dt) {
+                      dashFallTimer++;
+                      const progress = Math.min(dashFallTimer / dashFallFrames, 1);
+                      if (fallAxis === 'x') treeMesh.rotation.x = (Math.PI / 2) * progress * fallDir;
+                      else treeMesh.rotation.z = (Math.PI / 2) * progress * fallDir;
+                      treeMesh.position.y = -progress * 1.5;
+                      return progress < 1;
+                    }});
+                  }
                 } else if (prop.type === 'barrel') {
                   spawnParticles(pPos, 0xFF4500, 30);
                   spawnParticles(pPos, 0xFFFF00, 15);
@@ -2244,13 +2248,17 @@
         
         // Phase 5: Hit impact particles (flesh/blood) on every hit - ENHANCED: Scale with HP remaining
         const hpRatio = this.hp / this.maxHp;
-        const bloodParticleCount = Math.max(8, Math.floor((1 - hpRatio) * 22) + 6); // More blood as HP drops - increased intensity
+        const bloodParticleCount = Math.max(10, Math.floor((1 - hpRatio) * 28) + 8); // More blood as HP drops - increased intensity
         spawnParticles(this.mesh.position, 0x8B0000, Math.min(bloodParticleCount, 30)); // Blood particles scale with HP loss
         spawnParticles(this.mesh.position, 0x660000, Math.min(Math.floor(bloodParticleCount * 0.6), 14)); // Darker blood
-        spawnParticles(this.mesh.position, 0xCC0000, Math.min(Math.floor(bloodParticleCount * 0.3), 8)); // Bright splatter
+        spawnParticles(this.mesh.position, 0xCC0000, Math.min(Math.floor(bloodParticleCount * 0.4), 10)); // Bright splatter
         // Spawn multiple ground blood decals for more brutal effect
         spawnBloodDecal(this.mesh.position);
         spawnBloodDecal(this.mesh.position); // Always at least 2 decals per hit
+        spawnBloodDecal(this.mesh.position); // Extra decal for more violence
+        if (hpRatio < 0.7) {
+          spawnBloodDecal(this.mesh.position); // Start extra blood earlier
+        }
         if (hpRatio < 0.5) {
           spawnBloodDecal(this.mesh.position); // Extra decal at half HP
           spawnBloodDecal(this.mesh.position); // Additional splatter
@@ -2270,8 +2278,9 @@
         }
         
         // Blood drip: small drops fall from wounded enemy to ground (managed in main loop)
-        if (hpRatio < 0.5 && scene && bloodDrips.length < MAX_BLOOD_DRIPS) {
-          const dripCount = hpRatio < 0.25 ? 3 : 2; // More drips at low HP
+        // More blood drips from first shot onward, increasing with damage
+        if (scene && bloodDrips.length < MAX_BLOOD_DRIPS) {
+          const dripCount = hpRatio < 0.25 ? 4 : (hpRatio < 0.5 ? 3 : 2); // Blood from every hit
           for (let d = 0; d < dripCount && bloodDrips.length < MAX_BLOOD_DRIPS; d++) {
             const drip = new THREE.Mesh(
               new THREE.SphereGeometry(0.04 + Math.random() * 0.04, 4, 4),
@@ -2307,7 +2316,7 @@
         }
         
         // Airborne blood splatter - arcs up then falls under gravity (managed in main loop via bloodDrips)
-        const burstCount = isCrit ? 3 : 1;
+        const burstCount = isCrit ? 4 : 2; // More airborne blood per shot
         for (let b = 0; b < burstCount && bloodDrips.length < MAX_BLOOD_DRIPS; b++) {
           const p = new THREE.Mesh(
             new THREE.SphereGeometry(0.04 + Math.random() * 0.04, 4, 4),
@@ -2584,11 +2593,9 @@
         document.body.appendChild(flash);
         setTimeout(() => flash.remove(), (this.isMiniBoss || this.isFlyingBoss) ? 100 : 50);
         
-        // DEATH BLOOD BURST - violent explosion of blood particles
-        const deathBloodCount = this.isFlyingBoss ? 50 : (this.isMiniBoss ? 30 : 18);
-        spawnParticles(this.mesh.position, 0x8B0000, deathBloodCount);
-        spawnParticles(this.mesh.position, 0x6B0000, Math.floor(deathBloodCount * 0.7));
-        spawnParticles(this.mesh.position, 0xCC0000, Math.floor(deathBloodCount * 0.5)); // Bright red splatter in air
+        // Small blood particles on death (keep small, remove big explosion burst)
+        spawnParticles(this.mesh.position, 0x8B0000, 4); // Small blood spray
+        spawnParticles(this.mesh.position, 0xCC0000, 2); // Small bright red splatter
         // Airborne blood droplets that land and form small pools
         // Uses managedAnimations (game-loop-driven) instead of setTimeout/setInterval chains
         // so cleanup is tied to the game loop, respects pause/reset, and avoids timer callback bursts.
@@ -2637,28 +2644,67 @@
           spawnBloodDecal(this.mesh.position);
         }
         
-        scene.remove(this.mesh);
-        // Delay geometry/material disposal by 100ms so that any in-flight callbacks
-        // that reference this.mesh.position (drops, effects) can safely complete first.
-        const _meshToDispose = this.mesh;
+        // Enemy death animation: fall down, then morph into XP star
+        // Keep mesh in scene for fall animation instead of immediately removing
+        const dyingMesh = this.mesh;
         const _bulletHoles = this.bulletHoles;
         const _leftEye = this.leftEye;
         const _rightEye = this.rightEye;
         this.bulletHoles = [];
         this.leftEye = null;
         this.rightEye = null;
-        setTimeout(() => {
-          if (_meshToDispose.geometry) _meshToDispose.geometry.dispose();
-          if (_meshToDispose.material) _meshToDispose.material.dispose();
-          if (_bulletHoles) _bulletHoles.forEach(h => { if (h.material) h.material.dispose(); });
-          if (_leftEye) _leftEye.material.dispose();
-          if (_rightEye) _rightEye.material.dispose();
-        }, 100);
         
-        // Drop EXP - use cloned deathPos so position is always valid
+        // Drop EXP after fall animation - use cloned deathPos so position is always valid
         const expMultiplier = this.isMiniBoss ? 3 : (this.isFlyingBoss ? 5 : 1);
-        for (let i = 0; i < expMultiplier; i++) {
-          spawnExp(deathPos.x, deathPos.z);
+        
+        // Fall down animation: enemy tips over and shrinks, then morphs to XP star
+        const FALL_FRAMES = 30; // ~0.5s at 60fps
+        let fallFrame = 0;
+        const startY = dyingMesh.position.y;
+        const startScaleY = dyingMesh.scale.y;
+        
+        if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
+          managedAnimations.push({ update(_dt) {
+            fallFrame++;
+            const progress = Math.min(fallFrame / FALL_FRAMES, 1);
+            // Tip forward and shrink vertically (falling down effect)
+            dyingMesh.rotation.x = progress * (Math.PI / 2);
+            dyingMesh.scale.y = startScaleY * (1 - progress * 0.6);
+            dyingMesh.position.y = startY * (1 - progress);
+            // Fade out near end
+            if (dyingMesh.material && progress > 0.5) {
+              dyingMesh.material.transparent = true;
+              dyingMesh.material.opacity = 1 - ((progress - 0.5) * 2);
+            }
+            if (progress >= 1) {
+              // Remove enemy mesh and spawn XP star at death position
+              scene.remove(dyingMesh);
+              if (dyingMesh.geometry) dyingMesh.geometry.dispose();
+              if (dyingMesh.material) dyingMesh.material.dispose();
+              if (_bulletHoles) _bulletHoles.forEach(h => { if (h.material) h.material.dispose(); });
+              if (_leftEye) _leftEye.material.dispose();
+              if (_rightEye) _rightEye.material.dispose();
+              // Spawn XP gems after morph
+              for (let i = 0; i < expMultiplier; i++) {
+                spawnExp(deathPos.x, deathPos.z);
+              }
+              return false;
+            }
+            return true;
+          }});
+        } else {
+          // Fallback: no animation slot available, remove immediately
+          scene.remove(dyingMesh);
+          setTimeout(() => {
+            if (dyingMesh.geometry) dyingMesh.geometry.dispose();
+            if (dyingMesh.material) dyingMesh.material.dispose();
+            if (_bulletHoles) _bulletHoles.forEach(h => { if (h.material) h.material.dispose(); });
+            if (_leftEye) _leftEye.material.dispose();
+            if (_rightEye) _rightEye.material.dispose();
+          }, 100);
+          for (let i = 0; i < expMultiplier; i++) {
+            spawnExp(deathPos.x, deathPos.z);
+          }
         }
         
         // PR #117: Drop GOLD - Reduced drop rate (chest-like rarity), bigger amounts
@@ -2806,9 +2852,13 @@
           playerStats.miniBossesDefeated++;
           createFloatingText("MINI-BOSS DEFEATED! 🏆", deathPos);
           // Clean up any surviving minions spawned with this mini-boss
+          // Stagger deaths to prevent simultaneous death effect overload (freeze fix)
+          let minionDelay = 0;
           for (const e of enemies) {
             if (!e.isDead && e.isMiniBossMinion) {
-              e.die();
+              const minionRef = e;
+              setTimeout(() => { if (!minionRef.isDead) minionRef.die(); }, minionDelay);
+              minionDelay += 150; // 150ms between each minion death
             }
           }
         }
@@ -3125,24 +3175,31 @@
         corpse.rotation.x = -Math.PI / 2;
         scene.add(corpse);
         
-        // Smoke particles rising - use managed array instead of RAF
+        // Smoke particles rising - use managedAnimations instead of setInterval to prevent timer accumulation
         const deathPos = this.mesh.position.clone();
         let smokeSpawnCount = 8;
-        const smokeSpawnInterval = setInterval(() => {
-          smokeSpawnCount--;
-          if (smokeSpawnCount <= 0 || !scene) { clearInterval(smokeSpawnInterval); return; }
-          if (smokeParticles.length < MAX_SMOKE_PARTICLES) {
-            const smokeGeo = new THREE.SphereGeometry(0.1, 6, 6);
-            const smokeMat = new THREE.MeshBasicMaterial({ color: 0x666666, transparent: true, opacity: 0.4 });
-            const smoke = new THREE.Mesh(smokeGeo, smokeMat);
-            smoke.position.copy(deathPos);
-            smoke.position.y = 0.1;
-            scene.add(smoke);
-            smokeParticles.push({ mesh: smoke, material: smokeMat, geometry: smokeGeo,
-              velocity: { x: (Math.random()-0.5)*0.02, y: 0.03, z: (Math.random()-0.5)*0.02 },
-              life: 40, maxLife: 40 });
-          }
-        }, 100);
+        let smokeSpawnTimer = 0;
+        if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
+          managedAnimations.push({ update(_dt) {
+            smokeSpawnTimer++;
+            if (smokeSpawnTimer % 6 === 0) { // ~100ms at 60fps
+              smokeSpawnCount--;
+              if (smokeSpawnCount <= 0 || !scene) return false;
+              if (smokeParticles.length < MAX_SMOKE_PARTICLES) {
+                const smokeGeo = new THREE.SphereGeometry(0.1, 6, 6);
+                const smokeMat = new THREE.MeshBasicMaterial({ color: 0x666666, transparent: true, opacity: 0.4 });
+                const smoke = new THREE.Mesh(smokeGeo, smokeMat);
+                smoke.position.copy(deathPos);
+                smoke.position.y = 0.1;
+                scene.add(smoke);
+                smokeParticles.push({ mesh: smoke, material: smokeMat, geometry: smokeGeo,
+                  velocity: { x: (Math.random()-0.5)*0.02, y: 0.03, z: (Math.random()-0.5)*0.02 },
+                  life: 40, maxLife: 40 });
+              }
+            }
+            return smokeSpawnCount > 0;
+          }});
+        }
         
         // Fade corpse
         let corpseLife = 120;
@@ -3810,21 +3867,26 @@
                     prop.mesh.userData.leaves.visible = false;
                   }
                   const treeMesh = prop.mesh;
-                  const treeFall = setInterval(() => {
-                    const elapsed = Date.now() - fallStart;
-                    const progress = Math.min(elapsed / fallDuration, 1);
-                    const angle = (Math.PI / 2) * progress * fallDir;
-                    if (fallAxis === 'x') {
-                      treeMesh.rotation.x = angle;
-                    } else {
-                      treeMesh.rotation.z = angle;
-                    }
-                    treeMesh.position.y = -progress * 1.5; // Sink slightly into ground
-                    if (progress >= 1) {
-                      clearInterval(treeFall);
-                      // Tree stays as fallen log debris — never removed
-                    }
-                  }, 16);
+                  if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
+                    let treeFallTimer = 0;
+                    const treeFallFrames = Math.ceil(fallDuration / 16); // ~37 frames
+                    managedAnimations.push({ update(_dt) {
+                      treeFallTimer++;
+                      const progress = Math.min(treeFallTimer / treeFallFrames, 1);
+                      const angle = (Math.PI / 2) * progress * fallDir;
+                      if (fallAxis === 'x') {
+                        treeMesh.rotation.x = angle;
+                      } else {
+                        treeMesh.rotation.z = angle;
+                      }
+                      treeMesh.position.y = -progress * 1.5; // Sink slightly into ground
+                      if (progress >= 1) {
+                        // Tree stays as fallen log debris — never removed
+                        return false;
+                      }
+                      return true;
+                    }});
+                  }
                 } else if (prop.type === 'crate') {
                   // Crate breaks apart and is removed
                   spawnParticles(prop.mesh.position, 0xD2691E, 20); // Wood particles
@@ -3887,19 +3949,29 @@
                 const fallDuration = 500;
                 const fallStart = Date.now();
                 
-                const fallInterval = setInterval(() => {
-                  const elapsed = Date.now() - fallStart;
-                  const progress = Math.min(elapsed / fallDuration, 1);
-                  fence.rotation.x = startRotX + (Math.PI / 2) * progress * fallDirection;
-                  fence.position.y = 1 - progress * 0.8; // Sink down
-                  
-                  if (progress >= 1) {
-                    clearInterval(fallInterval);
-                    scene.remove(fence);
-                    fence.geometry.dispose();
-                    fence.material.dispose();
-                  }
-                }, 16);
+                const fenceFallFrames = Math.ceil(fallDuration / 16); // ~31 frames
+                const fenceRef = fence;
+                if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
+                  let fenceFallTimer = 0;
+                  managedAnimations.push({ update(_dt) {
+                    fenceFallTimer++;
+                    const progress = Math.min(fenceFallTimer / fenceFallFrames, 1);
+                    fenceRef.rotation.x = startRotX + (Math.PI / 2) * progress * fallDirection;
+                    fenceRef.position.y = 1 - progress * 0.8; // Sink down
+                    
+                    if (progress >= 1) {
+                      scene.remove(fenceRef);
+                      fenceRef.geometry.dispose();
+                      fenceRef.material.dispose();
+                      return false;
+                    }
+                    return true;
+                  }});
+                } else {
+                  scene.remove(fenceRef);
+                  fenceRef.geometry.dispose();
+                  fenceRef.material.dispose();
+                }
               }
               
               // Bullet destroyed on fence hit
@@ -4390,7 +4462,7 @@
           _expGemStarGeometry.center();
           _expGemStarMaterial = new THREE.MeshPhysicalMaterial({
             color: 0x5DADE2,      // Match XP bar color exactly (#5DADE2)
-            emissive: 0xFFD700,   // Gold inner edge glow (#FFD700)
+            emissive: 0x2E86C1,   // Blue emissive glow matching XP bar
             emissiveIntensity: 0.4,
             metalness: 0.3,
             roughness: 0.05,
@@ -4427,8 +4499,8 @@
         this._outlineMat = outlineMat; // Store per-instance material for disposal
         this.mesh.add(outlineMesh);
         
-        // Yellow edge glow ring — thin, slightly larger than the star outline
-        const glowRingMat = new THREE.MeshBasicMaterial({ color: 0xFFDD00, transparent: true, opacity: 0.55 });
+        // Black edge glow ring — thin, slightly larger than the star outline, glows subtly
+        const glowRingMat = new THREE.MeshBasicMaterial({ color: 0x111111, transparent: true, opacity: 0.65 });
         const glowRingMesh = new THREE.Mesh(_expGemOutlineGeometry, glowRingMat);
         glowRingMesh.scale.set(1.08, 1.08, 0.5);
         glowRingMesh.position.z = -0.02;
@@ -4455,13 +4527,13 @@
         this.bobPhase += 0.05;
         this.mesh.position.y = 0.5 + Math.sin(this.bobPhase) * 0.1;
         
-        // Pulsing yellow edge glow — sync with star's emissive intensity
+        // Pulsing black edge glow — sync with star's emissive intensity
         this.sparklePhase += 0.1;
         const pulse = 0.35 + Math.sin(this.sparklePhase) * 0.25;
         this.mesh.material.emissiveIntensity = pulse;
-        // Also pulse the yellow glow ring opacity
+        // Also pulse the black glow ring opacity
         if (this._glowRingMat) {
-          this._glowRingMat.opacity = 0.35 + Math.sin(this.sparklePhase + 0.5) * 0.25;
+          this._glowRingMat.opacity = 0.45 + Math.sin(this.sparklePhase + 0.5) * 0.2;
         }
 
         // Magnet
@@ -13414,13 +13486,17 @@
       if (bloodDecals.length < MAX_BLOOD_DECALS) {
         // Buffer not full yet - append
         const size = 0.15 + Math.random() * 0.35;
-        const geo = new THREE.CircleGeometry(size, 6);
+        const geo = new THREE.CircleGeometry(size, 8);
         const initialOpacity = 0.6 + Math.random() * 0.3;
-        const mat = new THREE.MeshBasicMaterial({
+        const mat = new THREE.MeshStandardMaterial({
           color: 0x6B0000,
           transparent: true,
           opacity: initialOpacity,
-          depthWrite: false
+          depthWrite: false,
+          roughness: 0.15,     // Smooth reflective surface like wet blood
+          metalness: 0.6,      // High metalness for glass-like reflection
+          emissive: 0x3A0000,  // Subtle dark red glow
+          emissiveIntensity: 0.15
         });
         const decal = new THREE.Mesh(geo, mat);
         decal.rotation.x = -Math.PI / 2;
