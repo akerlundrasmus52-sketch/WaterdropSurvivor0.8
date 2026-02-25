@@ -13061,6 +13061,8 @@
         const ez = player.mesh.position.z + Math.sin(angle) * dist;
         const flyingBoss = new Enemy(11, ex, ez, playerStats.lvl);
         enemies.push(flyingBoss);
+        // Debug: log flying boss spawn details
+        if (window.GameDebug) window.GameDebug.onBossSpawn(flyingBoss, playerStats.lvl, 'FlyingBoss_L' + playerStats.lvl);
         createFloatingText("⚠️ FLYING BOSS INCOMING! ⚠️", player.mesh.position, '#FF00FF');
         triggerCinematic('miniboss', flyingBoss.mesh, 4000);
         // Escort bugs
@@ -13083,6 +13085,8 @@
         const ez = player.mesh.position.z + Math.sin(angle) * dist;
         const miniBoss = new Enemy(10, ex, ez, playerStats.lvl);
         enemies.push(miniBoss);
+        // Debug: log mini-boss spawn details
+        if (window.GameDebug) window.GameDebug.onBossSpawn(miniBoss, playerStats.lvl, 'MiniBoss_L' + playerStats.lvl);
         createFloatingText("MINI-BOSS INCOMING!", player.mesh.position);
         
         // Trigger cinematic for mini-boss spawn
@@ -14959,8 +14963,11 @@
           // Phase 4: Wrap in try-catch to ensure modal always closes
           try {
             u.apply();
+            // Debug: log upgrade applied (class/perk upgrades logged verbosely)
+            if (window.GameDebug) window.GameDebug.onUpgradeApplied(u.id, playerStats);
           } catch (error) {
             console.error('Error applying upgrade:', error);
+            if (window.GameDebug) window.GameDebug.oshot('upgrade_err_' + (u.id || 'unk'), 'Upgrade apply error ' + (u.id || '') + ': ' + error.message, error.stack);
           }
           
           // Always close modal
@@ -17218,6 +17225,9 @@
       let dt = (time - lastTime) / 1000;
       lastTime = time;
       gameTime = time / 1000; // Update game time in seconds
+
+      // Debug: log frame timing anomalies (throttled, observation-only)
+      if (window.GameDebug) window.GameDebug.onFrameStart(time, dt * 1000, gameTime);
       
       // Phase 3: Lag compensation - cap deltaTime to prevent death spiral
       const MAX_DELTA_TIME = 0.1; // 100ms cap
@@ -17378,9 +17388,13 @@
       if (frameCount % GAME_CONFIG.waveInterval === 0 && (aliveEnemies === 0 || timeSinceLastWave > GAME_CONFIG.waveInterval)) {
         lastWaveEndTime = frameCount; // Update last wave time on every spawn
         const spawnStartTime = performance.now();
+        const _dbgPreSpawn = enemies.length;
         spawnWave();
         const spawnEndTime = performance.now();
         performanceLog.spawnCount++;
+        if (window.GameDebug && window.GameDebug.enabled) {
+          window.GameDebug.onEnemyTick(enemies, enemies.length - _dbgPreSpawn, 0);
+        }
         
         // Log if spawning took unusually long
         if (spawnEndTime - spawnStartTime > 10) {
@@ -17390,9 +17404,13 @@
         // Quick spawn if all enemies cleared and minimum delay passed
         lastWaveEndTime = frameCount;
         const spawnStartTime = performance.now();
+        const _dbgPreSpawn2 = enemies.length;
         spawnWave();
         const spawnEndTime = performance.now();
         performanceLog.spawnCount++;
+        if (window.GameDebug && window.GameDebug.enabled) {
+          window.GameDebug.onEnemyTick(enemies, enemies.length - _dbgPreSpawn2, 0);
+        }
         
         // Log if spawning took unusually long
         if (spawnEndTime - spawnStartTime > 10) {
@@ -17424,7 +17442,8 @@
         // Preserve kill cam camera position from being overridden by player.update
         const prevCamX = camera.position.x;
         const prevCamZ = camera.position.z;
-        player.update(dt);
+        if (window.GameDebug) window.GameDebug.safeCall('player.update', () => player.update(dt));
+        else player.update(dt);
         camera.position.x = prevCamX;
         camera.position.z = prevCamZ;
       } else if (cinematicActive) {
@@ -17432,16 +17451,25 @@
         const prevCamX = camera.position.x;
         const prevCamY = camera.position.y;
         const prevCamZ = camera.position.z;
-        player.update(dt);
+        if (window.GameDebug) window.GameDebug.safeCall('player.update', () => player.update(dt));
+        else player.update(dt);
         camera.position.x = prevCamX;
         camera.position.y = prevCamY;
         camera.position.z = prevCamZ;
       } else {
-        player.update(dt);
+        if (window.GameDebug) window.GameDebug.safeCall('player.update', () => player.update(dt));
+        else player.update(dt);
       }
 
       // Update enemy AI movement (was missing - enemies were frozen)
+      // Debug: track alive/died counts per frame for diagnostics
+      const _dbgAliveBeforeEnemyTick = window.GameDebug && window.GameDebug.enabled
+        ? enemies.filter(e => e && !e.isDead).length : 0;
       enemies.forEach(e => { if (e && e.mesh && !e.isDead) e.update(dt, player.mesh.position); });
+      if (window.GameDebug && window.GameDebug.enabled) {
+        const _dbgAliveAfter = enemies.filter(e => e && !e.isDead).length;
+        window.GameDebug.onEnemyTick(enemies, 0, _dbgAliveBeforeEnemyTick - _dbgAliveAfter);
+      }
 
       // Dash cooldown tick (Feature 1)
       if (isDashing) {
@@ -18809,6 +18837,7 @@
           performanceLog.consecutiveSkipCount = 0; // Reset on successful render
         } catch (error) {
           console.error('Render error caught - game continues:', error);
+          if (window.GameDebug) window.GameDebug.oshot('render_err', 'Render error: ' + error.message, error.stack);
           // Log error details but continue - the game loop will recover naturally
           // Active objects are already filtered above, so invalid objects are removed
         }
