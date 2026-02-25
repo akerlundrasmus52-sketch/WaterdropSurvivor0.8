@@ -8377,12 +8377,6 @@
             showStatChange(`🏛️ ${bldName} Unlocked!`);
           }
         }
-        
-        // Give 1 attribute point when the Training Hall quest activates so player can complete it immediately
-        if (nextQuestActivated && nextQuestActivated.id === 'quest4_upgradeAttr') {
-          saveData.trainingPoints = (saveData.trainingPoints || 0) + 1;
-          showStatChange('+1 Attribute Point! Spend it in the Training Hall!');
-        }
       }
       
       // Save immediately after rewards and quest activation
@@ -13000,6 +12994,15 @@
         document.getElementById('camp-training-tab').style.background = '#5A3A31';
         document.getElementById('camp-passive-tab').style.background = '#3a3a3a';
         updateTrainingSection();
+        // First entry: award training point once so player can immediately complete quest4_upgradeAttr
+        if (saveData.storyQuests && saveData.storyQuests.buildingFirstUse && !saveData.storyQuests.buildingFirstUse.trainingHall) {
+          saveData.storyQuests.buildingFirstUse.trainingHall = true;
+          if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest4_upgradeAttr') {
+            saveData.trainingPoints = (saveData.trainingPoints || 0) + 1;
+            showStatChange('+1 Attribute Point! Spend it in the Training Hall!');
+            saveSaveData();
+          }
+        }
       };
       
       // Sleep option handlers
