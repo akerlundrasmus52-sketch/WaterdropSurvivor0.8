@@ -480,7 +480,7 @@
     let lastCleanupTime = 0; // Track last memory cleanup time
     let miniBossesSpawned = new Set(); // Track which mini-boss levels have been spawned
     const FLYING_BOSS_SPAWN_KEY = 'flyingBoss15'; // Unique key for the level-15 flying boss spawn
-    // Landmark positions and detection radii for quest11_findAllLandmarks
+    // Landmark positions and detection radii for quest8_findAllLandmarks
     const LANDMARK_CONFIGS = {
       stonehenge:  { x: 100, z:  80, radius: 20, key: 'stonehenge',  label: 'Stonehenge'  },
       pyramid:     { x:  50, z: -50, radius: 20, key: 'pyramid',     label: 'Pyramid'     },
@@ -3041,20 +3041,20 @@
               saveData.tutorialQuests.pendingMissionNotification = 'quest1_kill3';
             }
           }
-          // Quest kill tracking — notify mid-run when objective reached
-          if (currentQuest && currentQuest.id === 'quest8_kill10' && playerStats.kills >= 10 &&
-              !saveData.tutorialQuests.readyToClaim.includes('quest8_kill10')) {
+          // Quest 6: Kill 10 enemies — notify mid-run when objective reached
+          if (currentQuest && currentQuest.id === 'quest6_kill10' && playerStats.kills >= 10 &&
+              !saveData.tutorialQuests.readyToClaim.includes('quest6_kill10')) {
             showStatChange('⚔️ 10 Kills! Return to camp after this run!');
           }
-          // Kill 15 enemies
-          if (currentQuest && currentQuest.id === 'quest10_kill15' && playerStats.kills >= 15 &&
-              !saveData.tutorialQuests.readyToClaim.includes('quest10_kill15')) {
+          // Quest 7 (new): Kill 15 enemies — notify mid-run when objective reached
+          if (currentQuest && currentQuest.id === 'quest7_kill10' && playerStats.kills >= 15 &&
+              !saveData.tutorialQuests.readyToClaim.includes('quest7_kill10')) {
             showStatChange('⚔️ 15 Kills! Return to camp to claim your reward!');
           }
-          // Kill 25 enemies
-          if (currentQuest && currentQuest.id === 'quest14_kill25' && playerStats.kills >= 25 &&
-              !saveData.tutorialQuests.readyToClaim.includes('quest14_kill25')) {
-            progressTutorialQuest('quest14_kill25', true);
+          // quest_run_kill25: Kill 25 enemies
+          if (currentQuest && currentQuest.id === 'quest_run_kill25' && playerStats.kills >= 25 &&
+              !saveData.tutorialQuests.readyToClaim.includes('quest_run_kill25')) {
+            progressTutorialQuest('quest_run_kill25', true);
             showStatChange('⚔️ 25 Kills! Return to camp to claim your reward!');
           }
         }
@@ -5464,7 +5464,7 @@
         trainingHall: { level: 0, maxLevel: 10, unlocked: false }, // Unlock via quest
         trashRecycle: { level: 0, maxLevel: 10, unlocked: false }, // Unlock via quest
         tempShop: { level: 0, maxLevel: 10, unlocked: false }, // Unlock via quest
-        achievementBuilding: { level: 0, maxLevel: 1, unlocked: false }, // Unlock via quest11_findAllLandmarks
+        achievementBuilding: { level: 0, maxLevel: 1, unlocked: false }, // Unlock via quest8_findAllLandmarks
         accountBuilding: { level: 1, maxLevel: 1, unlocked: true }, // Always unlocked — account stats
         // Legacy buildings (for compatibility)
         trainingGrounds: { level: 0, maxLevel: 10, unlocked: false },
@@ -5561,7 +5561,7 @@
         killsThisRun: 0, // Track kills per run (reset on new run)
         survivalTimeThisRun: 0, // Track survival time per run
         stonengengeChestFound: false, // Quest 6 specific
-        landmarksFound: {          // Track landmarks found for quest11_findAllLandmarks
+        landmarksFound: {          // Track landmarks found for quest8_findAllLandmarks
           stonehenge: false,
           pyramid: false,
           montana: false,
@@ -5670,32 +5670,11 @@
       }
     }
 
-    // Throttle saves to avoid excessive localStorage writes (max once per 500ms)
-    let _saveScheduled = false;
-    let _lastSaveTime = 0;
-    const _SAVE_MIN_INTERVAL = 500; // ms
-
     function saveSaveData() {
-      const now = Date.now();
-      if (now - _lastSaveTime >= _SAVE_MIN_INTERVAL) {
-        _lastSaveTime = now;
-        _saveScheduled = false;
-        try {
-          localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
-        } catch (e) {
-          console.error('Failed to save data:', e);
-        }
-      } else if (!_saveScheduled) {
-        _saveScheduled = true;
-        setTimeout(() => {
-          _saveScheduled = false;
-          _lastSaveTime = Date.now();
-          try {
-            localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
-          } catch (e) {
-            console.error('Failed to save data:', e);
-          }
-        }, _SAVE_MIN_INTERVAL - (now - _lastSaveTime));
+      try {
+        localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
+      } catch (e) {
+        console.error('Failed to save data:', e);
       }
     }
     
@@ -5889,12 +5868,13 @@
         if (currentQuest) {
           const kills = playerStats ? playerStats.kills : 0;
           if (currentQuest.id === 'quest1_kill3') questText = 'Kill 3 Enemies: ' + Math.min(kills, 3) + '/3';
-          else if (currentQuest.id === 'quest8_kill10') questText = 'Kill 10: ' + Math.min(kills,10) + '/10';
-          else if (currentQuest.id === 'quest10_kill15') questText = 'Kill 15: ' + Math.min(kills,15) + '/15';
-          else if (currentQuest.id === 'quest14_kill25') questText = 'Kill 25: ' + Math.min(kills,25) + '/25';
-          else if (currentQuest.id === 'quest13_windmill') questText = '🏭 Defend the Windmill!';
-          else if (currentQuest.id === 'quest15_accountVisit') questText = '👤 Visit Account Building in Camp';
-          else if (currentQuest.id === 'quest11_findAllLandmarks') {
+          else if (currentQuest.id === 'quest4_kill10') questText = 'Kill 10: ' + Math.min(kills,10) + '/10';
+          else if (currentQuest.id === 'quest6_kill10') questText = 'Kill 10: ' + Math.min(kills,10) + '/10';
+          else if (currentQuest.id === 'quest7_kill10') questText = 'Kill 15: ' + Math.min(kills,15) + '/15';
+          else if (currentQuest.id === 'quest_run_kill25') questText = 'Kill 25: ' + Math.min(kills,25) + '/25';
+          else if (currentQuest.id === 'quest_windmill_guide') questText = '🏭 Defend the Windmill!';
+          else if (currentQuest.id === 'quest_account_visit') questText = '👤 Visit Account Building in Camp';
+          else if (currentQuest.id === 'quest8_findAllLandmarks') {
             const lf = saveData.tutorialQuests.landmarksFound || {};
             const found = Object.values(LANDMARK_CONFIGS).filter(cfg => lf[cfg.key]).length;
             questText = `🗺️ Find Landmarks: ${found}/${Object.keys(LANDMARK_CONFIGS).length}`;
@@ -7976,15 +7956,26 @@
             updateTrainingSection();
             updateGoldDisplays();
             
-            // Track attribute purchase for "Upgrade an Attribute" quest
-            if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest5_upgradeAttr') {
-              progressTutorialQuest('quest5_upgradeAttr', true);
+            // QUEST 4 (new): Track attribute purchase for "Upgrade an Attribute" quest
+            if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest4_upgradeAttr') {
+              progressTutorialQuest('quest4_upgradeAttr', true);
             }
-            // Legacy: Track attribute purchase for tutorial quest
+            // QUEST 3 (legacy): Track attribute purchase for tutorial quest
             if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest3_buyProgression') {
+              // Count total attribute levels purchased
               const totalAttrLevels = Object.values(saveData.attributes || {}).reduce((sum, val) => sum + val, 0);
+              
               if (totalAttrLevels >= 1) {
+                // Completed quest 3: bought 1 progression upgrade
                 progressTutorialQuest('quest3_buyProgression', true);
+              }
+            }
+            // QUEST 6: Track attribute purchase for upgrade-3-attributes quest
+            if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest6_buyAttributes') {
+              if (!saveData.tutorialQuests.quest6AttrCount) saveData.tutorialQuests.quest6AttrCount = 0;
+              saveData.tutorialQuests.quest6AttrCount++;
+              if (saveData.tutorialQuests.quest6AttrCount >= 3) {
+                progressTutorialQuest('quest6_buyAttributes', true);
               }
             }
           } else {
@@ -8005,7 +7996,6 @@
     
     // Quest definitions with conditions for dependencies
     const TUTORIAL_QUESTS = {
-      // === PHASE 0: First death triggers tutorial ===
       firstRunDeath: {
         id: 'firstRunDeath',
         name: 'First Death Tutorial',
@@ -8013,14 +8003,12 @@
         objectives: 'Die in your first run',
         rewardGold: 0,
         rewardSkillPoints: 0,
-        unlockBuilding: 'questMission',
+        unlockBuilding: 'questMission', // Already unlocked by default
         autoClaim: true,
         triggerOnDeath: true,
         nextQuest: 'quest1_kill3',
-        conditions: []
+        conditions: [] // No prerequisites
       },
-
-      // === PHASE 1: Run quest → Unlock Skill Tree ===
       quest1_kill3: {
         id: 'quest1_kill3',
         name: 'Kill 3 Enemies',
@@ -8032,10 +8020,8 @@
         unlockBuilding: 'skillTree',
         message: "Outstanding, Droplet! 🎯<br><br>You've proven your combat worth. The <b>Skill Tree</b> is now unlocked at camp!<br><br>Head to the <b>Skill Tree</b> tab and spend your <b>3 Skill Points</b> to grow stronger.",
         nextQuest: 'quest2_spendSkills',
-        conditions: ['firstRunDeath']
+        conditions: ['firstRunDeath'] // Requires firstRunDeath to be auto-claimed (on first death)
       },
-
-      // === PHASE 2: Camp quest → Use Skill Tree (free first use) ===
       quest2_spendSkills: {
         id: 'quest2_spendSkills',
         name: 'Buy 3 Skills',
@@ -8046,10 +8032,8 @@
         rewardSkillPoints: 1,
         message: "Skills unlocked! 🌟<br><br>Head to <b>Stonehenge</b> on the map — a glowing chest awaits you there with your first piece of gear!",
         nextQuest: 'quest3_stonehengeGear',
-        conditions: ['quest1_kill3']
+        conditions: ['quest1_kill3'] // Requires quest1_kill3 to be claimed
       },
-
-      // === PHASE 3: Run quest → Find gear at Stonehenge → Unlock Armory ===
       quest3_stonehengeGear: {
         id: 'quest3_stonehengeGear',
         name: 'Find the Cigar at Stonehenge',
@@ -8058,14 +8042,41 @@
         claim: 'Main Building',
         rewardGold: 150,
         rewardSkillPoints: 2,
-        unlockBuildingOnActivation: 'armory',
+        unlockBuildingOnActivation: 'armory', // Armory unlocks when THIS quest activates (so player can use it)
         giveItem: { id: 'cigar_quest', name: 'Cigar', type: 'ring', rarity: 'rare', stats: { attackSpeed: 1, movementSpeed: 1, attackPrecision: 1 }, description: '+1 Attack Speed, +1 Movement Speed, +1 Attack Precision' },
         message: "🚬 Cigar acquired!<br><br>This rare ring grants <b>+1 Attack Speed, +1 Movement Speed, +1 Attack Precision</b>.<br><br>Head to the <b>Armory</b> and equip the Cigar from your inventory!",
         nextQuest: 'quest4_equipCigar',
         conditions: ['quest2_spendSkills']
       },
-
-      // === PHASE 4: Camp quest → Equip gear (free first use of Armory) ===
+      quest4_upgradeAttr: {
+        id: 'quest4_upgradeAttr',
+        name: 'Upgrade an Attribute',
+        description: 'Open the Training Hall and spend the attribute point you received to upgrade any stat',
+        objectives: 'Spend 1 attribute point in the Training Hall',
+        claim: 'Main Building',
+        rewardGold: 100,
+        rewardSkillPoints: 1,
+        rewardAttributePoints: 3,
+        unlockBuildingOnActivation: 'trainingHall', // Training Hall unlocks when THIS quest activates
+        message: "💪 Attribute upgraded!<br><br>You earned <b>+3 free Attribute Points</b> and <b>+1 Skill Point</b>!",
+        nextQuest: 'quest5_trainingSession',
+        conditions: ['quest4_equipCigar']
+      },
+      quest5_trainingSession: {
+        id: 'quest5_trainingSession',
+        name: 'Survive 2 Minutes',
+        description: 'Head out on a run and survive for at least 2 minutes',
+        objectives: 'Survive 120 seconds in a run',
+        claim: 'Main Building',
+        triggerOnDeath: true,
+        rewardGold: 100,
+        rewardSkillPoints: 1,
+        rewardAttributePoints: 2,
+        unlockBuildingOnActivation: 'forge', // Forge unlocks when THIS quest activates
+        message: "⏱️ You survived 2 minutes!<br><br>You earned <b>+2 Attribute Points</b> and <b>+1 Skill Point</b>!<br><br>Next: keep pushing — kill <b>10 enemies</b> in a run!",
+        nextQuest: 'quest6_kill10',
+        conditions: ['quest4_upgradeAttr']
+      },
       quest4_equipCigar: {
         id: 'quest4_equipCigar',
         name: 'Equip the Cigar',
@@ -8076,105 +8087,63 @@
         rewardSkillPoints: 1,
         rewardAttributePoints: 2,
         message: "Cigar equipped! 🚬<br><br>Feel that power — +1 to all stats!<br><br>You've unlocked the <b>Training Hall</b> — a free Attribute Point awaits you there!",
-        nextQuest: 'quest5_upgradeAttr',
+        nextQuest: 'quest4_upgradeAttr',
         conditions: ['quest3_stonehengeGear']
       },
-
-      // === PHASE 5: Camp quest → Use Training Hall (free first use) → Unlock Training Hall ===
-      quest5_upgradeAttr: {
-        id: 'quest5_upgradeAttr',
-        name: 'Upgrade an Attribute',
-        description: 'Open the Training Hall and spend the attribute point you received to upgrade any stat',
-        objectives: 'Spend 1 attribute point in the Training Hall',
-        claim: 'Main Building',
-        rewardGold: 100,
-        rewardSkillPoints: 1,
-        rewardAttributePoints: 3,
-        unlockBuildingOnActivation: 'trainingHall',
-        message: "💪 Attribute upgraded!<br><br>You earned <b>+3 free Attribute Points</b> and <b>+1 Skill Point</b>!",
-        nextQuest: 'quest6_survive2min',
-        conditions: ['quest4_equipCigar']
-      },
-
-      // === PHASE 6: Run quest → Survive 2 minutes → Unlock Forge ===
-      quest6_survive2min: {
-        id: 'quest6_survive2min',
-        name: 'Survive 2 Minutes',
-        description: 'Head out on a run and survive for at least 2 minutes',
-        objectives: 'Survive 120 seconds in a run',
+      quest5_doRun: {
+        id: 'quest5_doRun',
+        name: 'Complete a Run',
+        description: 'Head out and complete a run to earn Attribute Points',
+        objectives: 'Complete 1 run',
         claim: 'Main Building',
         triggerOnDeath: true,
         rewardGold: 100,
         rewardSkillPoints: 1,
-        rewardAttributePoints: 2,
-        unlockBuilding: 'forge',
-        message: "⏱️ You survived 2 minutes!<br><br>The <b>Progression Upgrades</b> building is now unlocked! Buy your first upgrade there.",
-        nextQuest: 'quest7_buyProgression',
-        conditions: ['quest5_upgradeAttr']
+        rewardAttributePoints: 3,
+        unlockBuilding: 'trainingHall',
+        message: "Run complete! 🏆<br><br>You earned <b>3 Attribute Points</b> and <b>+1 Skill Point</b>!<br><br>Head to the <b>Training Hall</b> and upgrade <b>3 attributes</b> to grow stronger!",
+        nextQuest: 'quest6_buyAttributes',
+        conditions: ['quest4_equipCigar']
       },
-
-      // === PHASE 7: Camp quest → Use Forge/Progression Shop (free first use) ===
-      quest7_buyProgression: {
-        id: 'quest7_buyProgression',
-        name: 'Buy a Progression Upgrade',
-        description: 'Open the Progression Upgrades building and buy any upgrade',
-        objectives: 'Purchase any progression upgrade',
+      quest6_buyAttributes: {
+        id: 'quest6_buyAttributes',
+        name: 'Upgrade 3 Attributes',
+        description: 'Go to the Training Hall and spend Attribute Points to upgrade 3 attributes',
+        objectives: 'Buy 3 attribute upgrades in the Training Hall',
         claim: 'Main Building',
-        rewardGold: 150,
-        rewardSkillPoints: 1,
-        message: "⚒️ Upgrade purchased!<br><br>Each upgrade makes you permanently stronger. Time to prove your might!",
-        nextQuest: 'quest8_kill10',
-        conditions: ['quest6_survive2min']
+        rewardGold: 0,
+        rewardSkillPoints: 0,
+        message: "Attributes upgraded! 💪<br><br>You're growing stronger every day!<br><br>One final challenge awaits — prove your strength!",
+        nextQuest: 'quest7_kill10',
+        conditions: ['quest5_doRun']
       },
-
-      // === PHASE 8: Run quest → Kill 10 enemies → Unlock Companion House ===
-      quest8_kill10: {
-        id: 'quest8_kill10',
+      quest6_kill10: {
+        id: 'quest6_kill10',
         name: 'Kill 10 Enemies',
         description: 'Head out and eliminate 10 enemies in a single run',
         objectives: 'Kill 10 enemies in one run',
         triggerOnDeath: true,
         rewardGold: 200,
         rewardSkillPoints: 1,
-        unlockBuilding: 'companionHouse',
-        companionEgg: true,
-        message: "⚔️ 10 Enemies Defeated!<br><br>A <b>Companion Egg</b> has appeared! The <b>Companion House</b> is now unlocked. Visit it to activate your companion!",
-        nextQuest: 'quest9_activateCompanion',
-        conditions: ['quest7_buyProgression']
+        message: "⚔️ 10 Enemies Defeated!<br><br>You're growing stronger, Droplet!<br><br>One final challenge: eliminate <b>15 enemies</b> in a single run to complete your training!",
+        nextQuest: 'quest7_kill10',
+        conditions: ['quest5_trainingSession']
       },
-
-      // === PHASE 9: Camp quest → Use Companion House (free first use) ===
-      quest9_activateCompanion: {
-        id: 'quest9_activateCompanion',
-        name: 'Activate Your Companion',
-        description: 'Visit the Companion House and activate your companion to fight by your side',
-        objectives: 'Activate a companion',
-        claim: 'Main Building',
-        rewardGold: 150,
-        rewardSkillPoints: 1,
-        rewardAttributePoints: 1,
-        message: "🐺 Companion activated!<br><br>They will fight by your side in battle!<br><br>Now go on a run and kill <b>15 enemies</b> to prove your combined strength!",
-        nextQuest: 'quest10_kill15',
-        conditions: ['quest8_kill10']
-      },
-
-      // === PHASE 10: Run quest → Kill 15 enemies → Unlock Achievement Building ===
-      quest10_kill15: {
-        id: 'quest10_kill15',
+      quest7_kill10: {
+        id: 'quest7_kill10',
         name: 'Kill 15 Enemies',
         description: 'Head out and eliminate 15 enemies in a single run',
-        objectives: 'Kill 15 enemies in one run',
+        objectives: 'Kill 15 enemies',
         triggerOnDeath: true,
-        rewardGold: 300,
-        rewardSkillPoints: 2,
-        message: "🎉 15 Kills! Well done!<br><br>Explore the world — find every landmark (Stonehenge, Pyramid, Montana, Tesla Tower) to unlock the Achievement Building!",
-        nextQuest: 'quest11_findAllLandmarks',
-        conditions: ['quest9_activateCompanion']
+        rewardGold: 500,
+        rewardSkillPoints: 0,
+        message: "🎉 NEARLY THERE!<br><br>You've mastered the basics of survival!<br><br>Explore the world — find every landmark (Stonehenge, Pyramid, Montana, Tesla Tower) to unlock the Achievement Building!",
+        nextQuest: 'quest8_findAllLandmarks',
+        conditionsAny: ['quest6_kill10', 'quest5_trainingSession', 'quest4_equipCigar', 'quest6_buyAttributes'], // Accept any of these predecessors
+        conditions: [] // No strict requirements - conditionsAny handles it
       },
-
-      // === PHASE 11: Run quest → Find all landmarks → Unlock Achievement Building ===
-      quest11_findAllLandmarks: {
-        id: 'quest11_findAllLandmarks',
+      quest8_findAllLandmarks: {
+        id: 'quest8_findAllLandmarks',
         name: 'Find Every Landmark',
         description: 'Explore the map and find every landmark: Stonehenge, Pyramid, Montana, and the Tesla Tower',
         objectives: 'Find: Stonehenge ☐  Pyramid ☐  Montana ☐  Tesla Tower ☐',
@@ -8183,28 +8152,24 @@
         rewardSkillPoints: 3,
         rewardAttributePoints: 2,
         unlockBuilding: 'achievementBuilding',
-        message: "🗺️ ALL LANDMARKS FOUND!<br><br>You've explored the entire world!<br><br>The <b>Achievement Building</b> is now unlocked in Camp. Visit it to claim your achievements!",
-        nextQuest: 'quest12_visitAchievements',
-        conditions: ['quest10_kill15']
+        message: "🗺️ ALL LANDMARKS FOUND!<br><br>You've explored the entire world!<br><br>The <b>Achievement Building</b> is now unlocked in Camp. Claim your achievements there!",
+        nextQuest: 'quest9_visitAchievementBuilding',
+        conditions: ['quest7_kill10']
       },
-
-      // === PHASE 12: Camp quest → Visit Achievement Building (free first use) ===
-      quest12_visitAchievements: {
-        id: 'quest12_visitAchievements',
+      quest9_visitAchievementBuilding: {
+        id: 'quest9_visitAchievementBuilding',
         name: 'Visit the Achievement Building',
         description: 'Head to Camp and visit the newly unlocked Achievement Building',
         objectives: 'Open the Achievement Building in Camp',
         claim: 'Achievement Building',
         rewardGold: 300,
         rewardSkillPoints: 2,
-        message: "🏆 Achievement Hall visited!<br><br>Now head to the <b>Windmill</b> on the map and talk to the farmer — a special challenge awaits!",
-        nextQuest: 'quest13_windmill',
-        conditions: ['quest11_findAllLandmarks']
+        message: "🏆 Achievement Hall visited!<br><br>Now it's time to explore more of the world. Head to the <b>Windmill</b> on the map and talk to the farmer there — a special challenge awaits!",
+        nextQuest: 'quest_windmill_guide',
+        conditions: ['quest8_findAllLandmarks']
       },
-
-      // === PHASE 13: Run quest → Defend Windmill ===
-      quest13_windmill: {
-        id: 'quest13_windmill',
+      quest_windmill_guide: {
+        id: 'quest_windmill_guide',
         name: 'Defend the Windmill',
         description: 'Find the Windmill on the map and talk to the farmer. Defend the windmill for 15 seconds to earn a special run reward!',
         objectives: 'Find the Windmill and defend it for the farmer',
@@ -8212,14 +8177,12 @@
         rewardGold: 400,
         rewardSkillPoints: 2,
         triggerOnDeath: false,
-        message: "🏆 WINDMILL DEFENDED!<br><br>The farmer is grateful! Each run, if you defend the windmill you'll earn a <b>temporary Double Barrel Gun</b>.<br><br>Next: kill <b>25 enemies</b> to prove your strength!",
-        nextQuest: 'quest14_kill25',
-        conditions: ['quest12_visitAchievements']
+        message: "🏆 WINDMILL DEFENDED!<br><br>The farmer is grateful! Each run, if you defend the windmill you'll earn a <b>temporary Double Barrel Gun</b> for that round.<br><br>Next: keep fighting — kill <b>25 enemies</b> to prove your strength!",
+        nextQuest: 'quest_run_kill25',
+        conditions: ['quest9_visitAchievementBuilding']
       },
-
-      // === PHASE 14: Run quest → Kill 25 enemies ===
-      quest14_kill25: {
-        id: 'quest14_kill25',
+      quest_run_kill25: {
+        id: 'quest_run_kill25',
         name: 'Kill 25 Enemies',
         description: 'Head out and eliminate 25 enemies in a single run',
         objectives: 'Kill 25 enemies in one run',
@@ -8228,13 +8191,11 @@
         rewardSkillPoints: 2,
         rewardAttributePoints: 2,
         message: "💪 25 Kills! You're a true survivor!<br><br>Head to the <b>Account Building</b> in camp to review your progress and stats!",
-        nextQuest: 'quest15_accountVisit',
-        conditions: ['quest13_windmill']
+        nextQuest: 'quest_account_visit',
+        conditions: ['quest_windmill_guide']
       },
-
-      // === PHASE 15: Camp quest → Check Account stats ===
-      quest15_accountVisit: {
-        id: 'quest15_accountVisit',
+      quest_account_visit: {
+        id: 'quest_account_visit',
         name: 'Check Your Account Stats',
         description: 'Visit the Account & Records building in camp to see your full stats and progression',
         objectives: 'Open the Account building in Camp',
@@ -8245,17 +8206,169 @@
         rewardAttributePoints: 3,
         message: "📊 Account reviewed!<br><br>You can always return here to track your progress. Keep completing quests and runs — the world of Water Drop Survivor has much more to discover!",
         nextQuest: null,
-        conditions: ['quest14_kill25']
+        conditions: ['quest_run_kill25']
+      },
+      quest3_buyProgression: {
+        id: 'quest3_buyProgression',
+        name: 'Buy Progression',
+        description: 'Buy 1 progression upgrade',
+        objectives: 'Purchase any attribute upgrade',
+        claim: 'Main Building',
+        rewardGold: 100,
+        rewardSkillPoints: 1,
+        rewardAttributePoints: 1,
+        message: 'Great! You\'re getting stronger!',
+        nextQuest: 'quest4_kill10',
+        conditions: ['quest2_spendSkills'] // Requires quest2_spendSkills to be claimed
+      },
+      quest4_kill10: {
+        id: 'quest4_kill10',
+        name: 'Kill 10 Enemies',
+        description: 'Kill 10 enemies in one run',
+        objectives: 'Kill 10 enemies',
+        triggerOnDeath: true, // Reward given when player dies after completing objective
+        rewardGold: 200,
+        rewardSkillPoints: 1,
+        unlockBuilding: 'companionHouse',
+        companionEgg: true, // Give companion egg
+        nextQuest: 'quest5_breedCompanion',
+        conditions: ['quest3_buyProgression'] // Requires quest3_buyProgression to be claimed
+      },
+      quest5_breedCompanion: {
+        id: 'quest5_breedCompanion',
+        name: 'Breed Companion',
+        description: 'Visit Companion Building and activate your companion',
+        objectives: 'Activate/breed companion',
+        claim: 'Main Building',
+        rewardGold: 150,
+        rewardSkillPoints: 1,
+        rewardAttributePoints: 1,
+        message: 'Companion activated! They will fight by your side!',
+        nextQuest: 'quest6_stonehengeChest',
+        conditions: ['quest4_kill10'] // Requires quest4_kill10 to be claimed
+      },
+      quest6_stonehengeChest: {
+        id: 'quest6_stonehengeChest',
+        name: 'Find Stonehenge Chest',
+        description: 'Find the Stonehenge chest on the map',
+        objectives: 'Find and open Stonehenge chest',
+        autoClaim: true, // Completes on pickup
+        rewardGold: 100,
+        rewardSkillPoints: 1,
+        unlockBuilding: 'armory', // Gear Building
+        giveItem: { id: 'cigarr_quest', name: 'Cigarr', type: 'ring', rarity: 'rare', stats: { flexibility: 1, movementSpeed: 1, attackSpeed: 1, attackPrecision: 1, critChance: 1, elementalMagic: 1 }, description: '+1 to all combat stats' },
+        nextQuest: 'quest7_survive2min',
+        conditions: ['quest5_breedCompanion'] // Requires quest5_breedCompanion to be claimed
+      },
+      quest7_survive2min: {
+        id: 'quest7_survive2min',
+        name: 'Survive 2 Minutes',
+        description: 'Survive for 2 minutes in a run',
+        objectives: 'Survive 120 seconds',
+        triggerOnDeath: true,
+        rewardGold: 100,
+        rewardSkillPoints: 1,
+        rewardAttributePoints: 3,
+        unlockBuilding: 'trainingHall', // Unlock Training Hall for attribute spending (legacy quest chain)
+        nextQuest: 'quest8_newWeapon',
+        conditions: ['quest6_stonehengeChest'] // Requires quest6_stonehengeChest to be claimed
+      },
+      quest8_newWeapon: {
+        id: 'quest8_newWeapon',
+        name: 'Get New Weapon',
+        description: 'Unlock a new weapon in your next run',
+        objectives: 'Unlock any new weapon during a run',
+        claim: 'Main Building',
+        rewardGold: 300,
+        rewardSkillPoints: 1,
+        rewardAttributePoints: 1,
+        message: 'Tutorial Complete! You\'re ready to survive!',
+        nextQuest: null, // Tutorial complete
+        conditions: ['quest7_survive2min'] // Requires quest7_survive2min to be claimed
+      },
+      quest3_reachLevel5: {
+        id: 'quest3_reachLevel5',
+        title: 'Reach Level 5',
+        description: 'Reach level 5 or higher in a single run',
+        objective: 'Reach level 5+',
+        reward: { gold: 250 },
+        nextQuest: 'quest4_craftWeapon',
+        unlocksBuilding: 'forge'
+      },
+      quest4_craftWeapon: {
+        id: 'quest4_craftWeapon',
+        title: 'Craft a Weapon',
+        description: 'Craft a weapon at the Progression Upgrades',
+        objective: 'Craft a weapon at the Progression Upgrades',
+        reward: { gold: 150 },
+        nextQuest: 'quest5_equipGear',
+        unlocksBuilding: 'armory'
+      },
+      quest5_equipGear: {
+        id: 'quest5_equipGear',
+        title: 'Equip Gear',
+        description: 'Equip a piece of gear',
+        objective: 'Equip a piece of gear',
+        reward: { gold: 200 },
+        nextQuest: 'quest6_trainAttribute',
+        unlocksBuilding: 'trainingHall'
+      },
+      quest6_trainAttribute: {
+        id: 'quest6_trainAttribute',
+        title: 'Train an Attribute',
+        description: 'Train any attribute',
+        objective: 'Train any attribute',
+        reward: { gold: 150 },
+        nextQuest: 'quest7_activateCompanion',
+        unlocksBuilding: 'companionHouse'
+      },
+      quest7_activateCompanion: {
+        id: 'quest7_activateCompanion',
+        title: 'Activate a Companion',
+        description: 'Activate a companion',
+        objective: 'Activate a companion',
+        reward: { gold: 200, egg: 1 },
+        nextQuest: 'quest8_scrapGear',
+        unlocksBuilding: 'trashRecycle'
+      },
+      quest8_scrapGear: {
+        id: 'quest8_scrapGear',
+        title: 'Scrap Gear',
+        description: 'Scrap a piece of gear',
+        objective: 'Scrap a piece of gear',
+        reward: { gold: 200 },
+        nextQuest: 'quest9_buyTempItem',
+        unlocksBuilding: 'tempShop'
+      },
+      quest9_buyTempItem: {
+        id: 'quest9_buyTempItem',
+        title: 'Buy from Temp Shop',
+        description: 'Buy an item from the Temp Shop',
+        objective: 'Buy from Temp Shop',
+        reward: { gold: 300 },
+        nextQuest: 'quest10_visitAll',
+        unlocksBuilding: 'inventoryStorage'
+      },
+      quest10_visitAll: {
+        id: 'quest10_visitAll',
+        title: 'Visit Every Building',
+        description: 'Visit every building in the camp',
+        objective: 'Visit every building',
+        reward: { gold: 500, skillPoints: 3 },
+        nextQuest: null,
+        unlocksBuilding: 'campHub'
       }
     };
 
     const buildingQuestUnlockMap = {
-      'skillTree': 'quest1_kill3',
-      'armory': 'quest3_stonehengeGear',
-      'trainingHall': 'quest5_upgradeAttr',
-      'forge': 'quest6_survive2min',
-      'companionHouse': 'quest8_kill10',
-      'achievementBuilding': 'quest11_findAllLandmarks'
+      'forge': 'quest3_reachLevel5',
+      'armory': 'quest4_craftWeapon',
+      'trainingHall': 'quest5_equipGear',
+      'companionHouse': 'quest6_trainAttribute',
+      'trashRecycle': 'quest7_activateCompanion',
+      'tempShop': 'quest8_scrapGear',
+      'inventoryStorage': 'quest9_buyTempItem',
+      'campHub': 'quest10_visitAll'
     };
     
     // Get current quest object
@@ -8451,7 +8564,7 @@
       }
       
       // Tutorial complete: unlock all remaining buildings so player can explore full camp
-      if (questId === 'quest10_kill15') {
+      if (questId === 'quest7_kill10') {
         const buildingsToUnlock = ['companionHouse', 'workshop', 'trashRecycle'];
         buildingsToUnlock.forEach(bld => {
           if (saveData.campBuildings[bld] && !saveData.campBuildings[bld].unlocked) {
@@ -8467,6 +8580,9 @@
       let nextQuestActivated = null;
       if (quest.nextQuest && checkQuestConditions(quest.nextQuest)) {
         saveData.tutorialQuests.currentQuest = quest.nextQuest;
+        if (quest.nextQuest === 'quest6_buyAttributes') {
+          saveData.tutorialQuests.quest6AttrCount = 0;
+        }
         nextQuestActivated = TUTORIAL_QUESTS[quest.nextQuest] || null;
         
         // Unlock building on ACTIVATION for next quest (so player can complete it)
@@ -8612,13 +8728,11 @@
         let progressText = '';
         const killsNow = (saveData.tutorialQuests && saveData.tutorialQuests.killsThisRun) || 0;
         if (currentQuest.id === 'quest1_kill3') {
-          progressText = ` (${Math.min(killsNow, 3)}/3)`;
-        } else if (currentQuest.id === 'quest8_kill10') {
+          progressText = ` (${Math.min(killsNow, 7)}/7)`;
+        } else if (currentQuest.id === 'quest6_kill10' || currentQuest.id === 'quest4_kill10') {
           progressText = ` (${Math.min(killsNow, 10)}/10)`;
-        } else if (currentQuest.id === 'quest10_kill15') {
+        } else if (currentQuest.id === 'quest7_kill10') {
           progressText = ` (${Math.min(killsNow, 15)}/15)`;
-        } else if (currentQuest.id === 'quest14_kill25') {
-          progressText = ` (${Math.min(killsNow, 25)}/25)`;
         }
         
         const nameEl = document.createElement('b');
@@ -8932,8 +9046,8 @@
               <p style="font-family: 'Bangers', cursive; font-size: 20px; margin-bottom: 10px;">🎯 QUEST 1: COMBAT READINESS</p>
               <p style="line-height: 1.8; margin-bottom: 10px;">
                 Welcome back, Droplet. You survived your first encounter — now it's time to prove yourself.<br><br>
-                <b>YOUR MISSION:</b> Head back out and eliminate <b>3 enemies</b> in a single run.<br><br>
-                Once you achieve 3 kills, return here to claim your reward and unlock new camp upgrades.
+                <b>YOUR MISSION:</b> Head back out and eliminate <b>7 enemies</b> in a single run.<br><br>
+                Once you achieve 7 kills, return here to claim your reward and unlock new camp upgrades.
               </p>
               <p style="font-size: 13px; color: #FFD700;">Reward: +50 Gold · +3 Skill Points · Skill Tree Unlocked</p>
             </div>`,
@@ -9184,8 +9298,8 @@
         renderAccountContent();
       }
       // Progress quest if relevant
-      if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest15_accountVisit') {
-        progressTutorialQuest('quest15_accountVisit', true);
+      if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest_account_visit') {
+        progressTutorialQuest('quest_account_visit', true);
       }
     }
 
@@ -9351,11 +9465,11 @@
         if (!building.isFree && !isUnlocked && buildingData.level === 0) {
           // Map building IDs to which tutorial quest unlocks them
           const buildingQuestUnlockMap = {
-            'skillTree': { questId: 'quest1_kill3', label: 'Kill 3 Enemies (Quest 1)' },
+            'skillTree': { questId: 'quest1_kill3', label: 'Kill 7 Enemies (Quest 1)' },
             'armory': { questId: 'quest3_stonehengeGear', label: 'Find the Cigar (Quest 3)' },
-            'trainingHall': { questId: 'quest5_upgradeAttr', label: 'Upgrade an Attribute (Quest 5)' },
-            'forge': { questId: 'quest6_survive2min', label: 'Survive 2 Minutes (Quest 6)' },
-            'companionHouse': { questId: 'quest8_kill10', label: 'Kill 10 Enemies (Quest 8)' },
+            'trainingHall': { questId: 'quest4_upgradeAttr', label: 'Upgrade an Attribute (Quest 4)' },
+            'forge': { questId: 'quest5_trainingSession', label: 'Survive 2 Minutes (Quest 5)' },
+            'companionHouse': { questId: 'quest4_kill10', label: 'Kill 10 Enemies (Quest 4b)' },
             'trashRecycle': { questId: null, label: 'Future Quest' },
             'tempShop': { questId: null, label: 'Future Quest' }
           };
@@ -9401,7 +9515,7 @@
               else if (buildingId === 'armory' && saveData.storyQuests.currentQuest === 'unlockArmory') progressQuest('unlockArmory', true);
               else if (buildingId === 'companionHouse' && saveData.storyQuests.currentQuest === 'unlockCompanionHouse') progressQuest('unlockCompanionHouse', true);
               else if (buildingId === 'trainingHall' && saveData.storyQuests.currentQuest === 'unlockTrainingHall') progressQuest('unlockTrainingHall', true);
-              if (buildingId === 'companionHouse' && saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest9_activateCompanion') progressTutorialQuest('quest9_activateCompanion', true);
+              if (buildingId === 'companionHouse' && saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest5_breedCompanion') progressTutorialQuest('quest5_breedCompanion', true);
             } else {
               playSound('invalid');
               showStatusMessage(`🔒 Complete "${questInfo.label}" to unlock this building!`, 2500);
@@ -9503,8 +9617,8 @@
               } else if (buildingId === 'achievementBuilding') {
                 // Open Achievement screen when Achievement Hall clicked
                 buildingCard.onclick = () => {
-                  if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest12_visitAchievements') {
-                    progressTutorialQuest('quest12_visitAchievements', true);
+                  if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest9_visitAchievementBuilding') {
+                    progressTutorialQuest('quest9_visitAchievementBuilding', true);
                     saveSaveData();
                   }
                   // Show the achievements screen
@@ -12742,12 +12856,6 @@
       
       saveData.gold -= cost;
       saveData.upgrades[upgradeKey]++;
-      
-      // Track quest: Buy a Progression Upgrade
-      if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest7_buyProgression') {
-        progressTutorialQuest('quest7_buyProgression', true);
-      }
-      
       saveSaveData();
       
       playSound('levelup');
@@ -13187,10 +13295,10 @@
         document.getElementById('camp-training-tab').style.background = '#5A3A31';
         document.getElementById('camp-passive-tab').style.background = '#3a3a3a';
         updateTrainingSection();
-        // First entry: award training point once so player can immediately complete quest5_upgradeAttr
+        // First entry: award training point once so player can immediately complete quest4_upgradeAttr
         if (saveData.storyQuests && saveData.storyQuests.buildingFirstUse && !saveData.storyQuests.buildingFirstUse.trainingHall) {
           saveData.storyQuests.buildingFirstUse.trainingHall = true;
-          if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest5_upgradeAttr') {
+          if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest4_upgradeAttr') {
             saveData.trainingPoints = (saveData.trainingPoints || 0) + 1;
             showStatChange('+1 Attribute Point! Spend it in the Training Hall!');
             saveSaveData();
@@ -16113,8 +16221,8 @@
       unlockLore('bosses', 'windmillBoss');
       
       // Progress windmill guide quest if active
-      if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest13_windmill') {
-        progressTutorialQuest('quest13_windmill', true);
+      if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest_windmill_guide') {
+        progressTutorialQuest('quest_windmill_guide', true);
       }
       
       playSound('levelup');
@@ -16557,21 +16665,28 @@
           progressTutorialQuest('quest4_kill10', true);
         }
         // Quest 5 (survive 2 min): Check survival time
-        // Quest: Survive 2 minutes
-        if (currentQuest.id === 'quest6_survive2min' && survivalTime >= 120) {
-          progressTutorialQuest('quest6_survive2min', true);
+        if (currentQuest.id === 'quest5_trainingSession' && survivalTime >= 120) {
+          progressTutorialQuest('quest5_trainingSession', true);
         }
-        // Quest: Kill 10 enemies
-        if (currentQuest.id === 'quest8_kill10' && saveData.tutorialQuests.killsThisRun >= 10) {
-          progressTutorialQuest('quest8_kill10', true);
+        // Quest 7: Survive 2 minutes (legacy)
+        if (currentQuest.id === 'quest7_survive2min' && saveData.tutorialQuests.survivalTimeThisRun >= 120) {
+          progressTutorialQuest('quest7_survive2min', true);
         }
-        // Quest: Kill 15 enemies
-        if (currentQuest.id === 'quest10_kill15' && saveData.tutorialQuests.killsThisRun >= 15) {
-          progressTutorialQuest('quest10_kill15', true);
+        // Quest 5: Complete a run (any run completion counts)
+        if (currentQuest.id === 'quest5_doRun') {
+          progressTutorialQuest('quest5_doRun', true);
         }
-        // Quest: Kill 25 enemies
-        if (currentQuest.id === 'quest14_kill25' && saveData.tutorialQuests.killsThisRun >= 25) {
-          progressTutorialQuest('quest14_kill25', true);
+        // Quest 6: Kill 10 enemies (new intermediate quest)
+        if (currentQuest.id === 'quest6_kill10' && saveData.tutorialQuests.killsThisRun >= 10) {
+          progressTutorialQuest('quest6_kill10', true);
+        }
+        // Quest 7 (new): Kill 15 enemies
+        if (currentQuest.id === 'quest7_kill10' && saveData.tutorialQuests.killsThisRun >= 15) {
+          progressTutorialQuest('quest7_kill10', true);
+        }
+        // quest_run_kill25: Kill 25 enemies
+        if (currentQuest.id === 'quest_run_kill25' && saveData.tutorialQuests.killsThisRun >= 25) {
+          progressTutorialQuest('quest_run_kill25', true);
         }
       }
       
@@ -16953,17 +17068,17 @@
         activeCompanion = null;
       }
       
-      // COMPANION UNLOCKS AFTER COMPANION ACTIVATION QUEST
-      const companionQuestCompleted = saveData.tutorialQuests?.completedQuests?.includes('quest9_activateCompanion') ||
-                                      saveData.tutorialQuests?.completedQuests?.includes('quest5_breedCompanion') || false;
+      // COMPANION UNLOCKS AFTER QUEST 5 (breed companion quest)
+      // Quest 4 gives the egg, Quest 5 is to activate it
+      const quest5Completed = saveData.tutorialQuests?.completedQuests?.includes('quest5_breedCompanion') || false;
       
       if (saveData.selectedCompanion && 
           saveData.companions[saveData.selectedCompanion]?.unlocked &&
-          companionQuestCompleted) {
+          quest5Completed) {
         activeCompanion = new Companion(saveData.selectedCompanion);
-        console.log('[Companion] Spawned companion:', saveData.selectedCompanion, 'after completing companion quest');
-      } else if (!companionQuestCompleted) {
-        console.log('[Companion] Hidden until companion activation quest is completed');
+        console.log('[Phase 5] Spawned companion:', saveData.selectedCompanion, 'after completing quest 5');
+      } else if (!quest5Completed) {
+        console.log('[Companion] Hidden until quest 5 (breed companion) is completed');
       }
 
       // Reset Player - Spawn right next to the fountain/statue
@@ -18060,8 +18175,8 @@
 
       // --- WEAPONS ---
       
-      // Track landmark visits for quest11_findAllLandmarks
-      if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest11_findAllLandmarks') {
+      // Track landmark visits for quest8_findAllLandmarks
+      if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest8_findAllLandmarks') {
         if (!saveData.tutorialQuests.landmarksFound) {
           saveData.tutorialQuests.landmarksFound = { stonehenge: false, pyramid: false, montana: false, teslaTower: false };
         }
@@ -18078,7 +18193,7 @@
         // Check if all found
         const allFound = Object.values(LANDMARK_CONFIGS).every(cfg => lf[cfg.key]);
         if (allFound) {
-          progressTutorialQuest('quest11_findAllLandmarks', true);
+          progressTutorialQuest('quest8_findAllLandmarks', true);
           saveSaveData();
         }
         updateQuestTracker();
