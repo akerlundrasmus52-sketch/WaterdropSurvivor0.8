@@ -12217,13 +12217,9 @@
       // Scene
       scene = new THREE.Scene();
       scene.background = new THREE.Color(COLORS.bg);
-      // Enhanced fog for depth - reacts to day/night cycle lighting
-      // FOG FIX: Fog only at edges, clear visibility near player, balanced vertically
-      // Near plane increased to 15 (was 10) - player area is completely clear
-      // Far plane at 35 (was 28) - fog begins at edges only, not heavy at top
-      // PERFORMANCE: Balanced for 60fps target while maintaining visibility
-      // Tighter fog for better visibility around character - fog only at edges
-      scene.fog = new THREE.FogExp2(COLORS.bg, 0.03);
+      // Linear fog concentrated at edges: player area stays clear (fogNear), fog closes in at edges (fogFar)
+      // Uses RENDERER_CONFIG values so fog distance is tuned in one place (renderer.js)
+      scene.fog = new THREE.Fog(COLORS.bg, RENDERER_CONFIG.fogNear, RENDERER_CONFIG.fogFar);
       
       // Phase 5: Initialize particle object pool for performance (100 particles pre-allocated)
       particlePool = new ObjectPool(
@@ -18363,8 +18359,8 @@
       chests.forEach(c => c.update(player.mesh.position));
       
       // Phase 5: Update particles and release back to pool when dead
-      // PERFORMANCE: Cull particles beyond fog distance (35 units)
-      const FOG_DISTANCE = 35;
+      // PERFORMANCE: Cull particles beyond fog far plane (invisible beyond fog anyway)
+      const FOG_DISTANCE = RENDERER_CONFIG.fogFar;
       particles = particles.filter(p => {
         // Cull particles beyond fog distance
         const distToPlayer = p.mesh.position.distanceTo(player.mesh.position);
