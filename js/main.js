@@ -70,11 +70,11 @@
     
     // Ground blood decals array (cleaned up on reset)
     let bloodDecals = [];
-    const MAX_BLOOD_DECALS = 30; // Cap for performance
+    const MAX_BLOOD_DECALS = 50; // Cap for performance
     
     // Blood drips array - updated in main game loop to avoid many individual RAF loops
     let bloodDrips = [];
-    const MAX_BLOOD_DRIPS = 20;
+    const MAX_BLOOD_DRIPS = 40;
     
     // Shared geometry for enemy bullet-hole decals (reused across all enemies for performance)
     const bulletHoleGeo = new THREE.CircleGeometry(0.08, 6);
@@ -2374,36 +2374,69 @@
           spawnBloodDecal(this.mesh.position); // Enemy barely alive - covered in blood
         }
         
-        // Progressive blood stain: tint enemy mesh toward red as HP drops
-        if (this.mesh && this.mesh.material && this.mesh.material.emissive !== undefined) {
-          // emissiveIntensity increases as the enemy takes more damage (0 at full HP → 0.55 near death)
-          const bloodStainIntensity = (1 - hpRatio) * 0.55;
-          this.mesh.material.emissive = new THREE.Color(0x8B0000);
-          this.mesh.material.emissiveIntensity = bloodStainIntensity;
+        // Progressive blood stain: blend enemy mesh color toward dark red as HP drops
+        // This works on ALL enemy colors (including yellow/gold) by directly lerping the color
+        if (this.mesh && this.mesh.material) {
+          if (!this._originalColor) {
+            this._originalColor = this.mesh.material.color.clone();
+          }
+          // Lerp factor: 0 at full HP → 0.85 near death (almost fully blood-covered)
+          const bloodLerp = (1 - hpRatio) * 0.85;
+          const bloodColor = new THREE.Color(0x8B0000);
+          this.mesh.material.color.copy(this._originalColor).lerp(bloodColor, bloodLerp);
+          // Also apply emissive for wet blood sheen
+          if (this.mesh.material.emissive !== undefined) {
+            const bloodStainIntensity = (1 - hpRatio) * 0.4;
+            this.mesh.material.emissive = new THREE.Color(0x6B0000);
+            this.mesh.material.emissiveIntensity = bloodStainIntensity;
+          }
+        }
+        
+        // Add blood stain meshes directly on enemy body (visible on all colors)
+        if (!this._bloodStains) this._bloodStains = [];
+        const MAX_BODY_BLOOD_STAINS = 12;
+        if (this._bloodStains.length < MAX_BODY_BLOOD_STAINS) {
+          const stainCount = hpRatio < 0.25 ? 3 : (hpRatio < 0.5 ? 2 : 1);
+          for (let s = 0; s < stainCount && this._bloodStains.length < MAX_BODY_BLOOD_STAINS; s++) {
+            const stainSize = 0.08 + Math.random() * 0.15;
+            const stain = new THREE.Mesh(
+              new THREE.CircleGeometry(stainSize, 6),
+              new THREE.MeshBasicMaterial({ color: 0x8B0000, transparent: true, opacity: 0.8, side: THREE.DoubleSide, depthWrite: false })
+            );
+            // Place on enemy surface
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.random() * Math.PI;
+            const r = 0.52;
+            stain.position.set(r * Math.sin(phi) * Math.cos(theta), r * Math.sin(phi) * Math.sin(theta), r * Math.cos(phi));
+            stain.lookAt(stain.position.clone().multiplyScalar(2));
+            this.mesh.add(stain);
+            this._bloodStains.push(stain);
+          }
         }
         
         // Blood drip: small drops fall from wounded enemy to ground (managed in main loop)
         // More blood drips from first shot onward, increasing with damage
         if (scene && bloodDrips.length < MAX_BLOOD_DRIPS) {
-          const dripCount = hpRatio < 0.25 ? 4 : (hpRatio < 0.5 ? 3 : 2); // Blood from every hit
+          const dripCount = hpRatio < 0.25 ? 6 : (hpRatio < 0.5 ? 4 : 3); // Blood from every hit
           for (let d = 0; d < dripCount && bloodDrips.length < MAX_BLOOD_DRIPS; d++) {
+            const dripSize = 0.03 + Math.random() * 0.05;
             const drip = new THREE.Mesh(
-              new THREE.SphereGeometry(0.04 + Math.random() * 0.04, 4, 4),
+              new THREE.SphereGeometry(dripSize, 4, 4),
               new THREE.MeshBasicMaterial({ color: 0x8B0000 })
             );
             drip.position.set(
-              this.mesh.position.x + (Math.random() - 0.5) * 0.4,
-              this.mesh.position.y + (Math.random() - 0.5) * 0.2,
-              this.mesh.position.z + (Math.random() - 0.5) * 0.4
+              this.mesh.position.x + (Math.random() - 0.5) * 0.5,
+              this.mesh.position.y + (Math.random() - 0.5) * 0.3,
+              this.mesh.position.z + (Math.random() - 0.5) * 0.5
             );
             scene.add(drip);
-            bloodDrips.push({ mesh: drip, velY: 0, life: 25 + Math.floor(Math.random() * 15) });
+            bloodDrips.push({ mesh: drip, velY: 0, life: 30 + Math.floor(Math.random() * 20) });
           }
         }
         
         // Bullet-hole decal that sticks to enemy surface (visible bloody wound)
         if (!this.bulletHoles) this.bulletHoles = [];
-        const MAX_ENEMY_BULLET_HOLES = 8;
+        const MAX_ENEMY_BULLET_HOLES = 12;
         if (this.bulletHoles.length < MAX_ENEMY_BULLET_HOLES) {
           // Reuse shared geometry; clone shared material for per-hole opacity control
           const holeDecal = new THREE.Mesh(bulletHoleGeo, bulletHoleMat.clone());
@@ -2421,22 +2454,25 @@
         }
         
         // Airborne blood splatter - arcs up then falls under gravity (managed in main loop via bloodDrips)
-        const burstCount = isCrit ? 4 : 2; // More airborne blood per shot
+        const burstCount = isCrit ? 5 : 3; // More airborne blood per shot
         for (let b = 0; b < burstCount && bloodDrips.length < MAX_BLOOD_DRIPS; b++) {
+          const bSize = 0.03 + Math.random() * 0.05;
           const p = new THREE.Mesh(
-            new THREE.SphereGeometry(0.04 + Math.random() * 0.04, 4, 4),
+            new THREE.SphereGeometry(bSize, 4, 4),
             new THREE.MeshBasicMaterial({ color: 0xAA0000 })
           );
           p.position.set(
-            this.mesh.position.x + (Math.random() - 0.5) * 0.3,
+            this.mesh.position.x + (Math.random() - 0.5) * 0.4,
             this.mesh.position.y + 0.1,
-            this.mesh.position.z + (Math.random() - 0.5) * 0.3
+            this.mesh.position.z + (Math.random() - 0.5) * 0.4
           );
           scene.add(p);
           bloodDrips.push({
             mesh: p,
-            velY: 0.15 + Math.random() * 0.2, // initial upward burst
-            life: 30 + Math.floor(Math.random() * 15)
+            velX: (Math.random() - 0.5) * 0.08,
+            velZ: (Math.random() - 0.5) * 0.08,
+            velY: 0.12 + Math.random() * 0.22, // initial upward burst
+            life: 35 + Math.floor(Math.random() * 15)
           });
         }
         
@@ -2645,27 +2681,6 @@
           this.dieStandard(enemyColor);
         }
         
-        // Flying enemies fall to ground (animation checks flyMesh.parent each frame;
-        // if cap is reached, the enemy mesh still gets removed at scene.remove below)
-        if (this.isFlying) {
-          if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
-          const fallDuration = 60;
-          let fallTimer = 0;
-          const startY = this.mesh.position.y;
-          const flyMesh = this.mesh;
-          managedAnimations.push({ update(_dt) {
-            if (fallTimer < fallDuration && flyMesh.parent) {
-              fallTimer++;
-              flyMesh.position.y = startY * (1 - fallTimer / fallDuration);
-              flyMesh.rotation.x += 0.1;
-              flyMesh.rotation.z += 0.15;
-              return true;
-            }
-            return false;
-          }});
-          }
-        }
-        
         // Screen flash on kill (dopamine boost) - stronger flash for mini-boss
         const flash = document.createElement('div');
         flash.style.position = 'fixed';
@@ -2679,9 +2694,28 @@
         document.body.appendChild(flash);
         setTimeout(() => flash.remove(), (this.isMiniBoss || this.isFlyingBoss) ? 100 : 50);
         
-        // Small blood particles on death (keep small, remove big explosion burst)
-        spawnParticles(this.mesh.position, 0x8B0000, 4); // Small blood spray
-        spawnParticles(this.mesh.position, 0xCC0000, 2); // Small bright red splatter
+        // Blood spray on death - realistic small particles, no big chunks
+        spawnParticles(this.mesh.position, 0x8B0000, 8); // Blood spray
+        spawnParticles(this.mesh.position, 0xCC0000, 5); // Bright red splatter
+        spawnParticles(this.mesh.position, 0x660000, 4); // Dark blood mist
+        // Airborne blood spray burst (arcs outward from death position)
+        for (let sb = 0; sb < 4 && bloodDrips.length < MAX_BLOOD_DRIPS; sb++) {
+          const spraySize = 0.02 + Math.random() * 0.04;
+          const spray = new THREE.Mesh(
+            new THREE.SphereGeometry(spraySize, 4, 4),
+            new THREE.MeshBasicMaterial({ color: 0xAA0000 })
+          );
+          spray.position.copy(deathPos);
+          spray.position.y += 0.2;
+          scene.add(spray);
+          bloodDrips.push({
+            mesh: spray,
+            velX: (Math.random() - 0.5) * 0.15,
+            velZ: (Math.random() - 0.5) * 0.15,
+            velY: 0.15 + Math.random() * 0.2,
+            life: 35 + Math.floor(Math.random() * 15)
+          });
+        }
         // Dynamic blood pools: varying sizes from tiny drips to big pools
         const airBloodCount = this.isMiniBoss ? 16 : 10;
         for (let ab = 0; ab < airBloodCount; ab++) {
@@ -2735,21 +2769,29 @@
           spawnBloodDecal(this.mesh.position);
         }
         
-        // Enemy death animation: fall down, then morph into XP star
-        // Keep mesh in scene for fall animation instead of immediately removing
+        // Enemy death animation: fall lifeless to ground, then spawn XP star separately
         const dyingMesh = this.mesh;
         const _bulletHoles = this.bulletHoles;
+        const _bloodStains = this._bloodStains;
         const _leftEye = this.leftEye;
         const _rightEye = this.rightEye;
         this.bulletHoles = [];
+        this._bloodStains = [];
         this.leftEye = null;
         this.rightEye = null;
         
-        // Drop EXP after fall animation - use cloned deathPos so position is always valid
         const expMultiplier = this.isMiniBoss ? 3 : (this.isFlyingBoss ? 5 : 1);
+        const wasFlying = this.isFlying;
         
-        // Fall down animation: enemy tips over and shrinks, then morphs to XP star
-        const FALL_FRAMES = 30; // ~0.5s at 60fps
+        // Varied fall direction for different death looks
+        const fallVariation = Math.random();
+        const fallDirX = (fallVariation < 0.33) ? 1 : (fallVariation < 0.66 ? -1 : 0);
+        const fallDirZ = (fallVariation >= 0.66) ? (Math.random() < 0.5 ? 1 : -1) : 0;
+        
+        // Fall down animation: enemy falls lifeless, lies on ground, THEN XP star spawns separately
+        const FALL_FRAMES = wasFlying ? 45 : 30; // Flying enemies take longer to fall
+        const LINGER_FRAMES = 40; // Lie on ground lifeless before fading
+        const FADE_FRAMES = 20; // Fade out corpse
         let fallFrame = 0;
         const startY = dyingMesh.position.y;
         const startScaleY = dyingMesh.scale.y;
@@ -2757,25 +2799,38 @@
         if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
           managedAnimations.push({ update(_dt) {
             fallFrame++;
-            const progress = Math.min(fallFrame / FALL_FRAMES, 1);
-            // Tip forward and shrink vertically (falling down effect)
-            dyingMesh.rotation.x = progress * (Math.PI / 2);
-            dyingMesh.scale.y = startScaleY * (1 - progress * 0.6);
-            dyingMesh.position.y = startY * (1 - progress);
-            // Fade out near end
-            if (dyingMesh.material && progress > 0.5) {
-              dyingMesh.material.transparent = true;
-              dyingMesh.material.opacity = 1 - ((progress - 0.5) * 2);
-            }
-            if (progress >= 1) {
-              // Remove enemy mesh and spawn XP star at death position
+            
+            if (fallFrame <= FALL_FRAMES) {
+              // Phase 1: Fall to ground
+              const progress = Math.min(fallFrame / FALL_FRAMES, 1);
+              // Tip over in the chosen direction (lifeless ragdoll)
+              dyingMesh.rotation.x = fallDirX * progress * (Math.PI / 2);
+              dyingMesh.rotation.z = fallDirZ * progress * (Math.PI / 2);
+              dyingMesh.scale.y = startScaleY * (1 - progress * 0.5);
+              dyingMesh.position.y = startY * (1 - progress);
+              // Flying enemies: also tumble during fall
+              if (wasFlying) {
+                dyingMesh.rotation.y += 0.08;
+              }
+            } else if (fallFrame <= FALL_FRAMES + LINGER_FRAMES) {
+              // Phase 2: Lie on ground lifeless (no change, just wait)
+            } else if (fallFrame <= FALL_FRAMES + LINGER_FRAMES + FADE_FRAMES) {
+              // Phase 3: Fade out corpse
+              const fadeProgress = (fallFrame - FALL_FRAMES - LINGER_FRAMES) / FADE_FRAMES;
+              if (dyingMesh.material) {
+                dyingMesh.material.transparent = true;
+                dyingMesh.material.opacity = 1 - fadeProgress;
+              }
+            } else {
+              // Phase 4: Remove corpse and spawn XP star at death position
               scene.remove(dyingMesh);
               if (dyingMesh.geometry) dyingMesh.geometry.dispose();
               if (dyingMesh.material) dyingMesh.material.dispose();
               if (_bulletHoles) _bulletHoles.forEach(h => { if (h.material) h.material.dispose(); });
+              if (_bloodStains) _bloodStains.forEach(s => { if (s.geometry) s.geometry.dispose(); if (s.material) s.material.dispose(); });
               if (_leftEye) _leftEye.material.dispose();
               if (_rightEye) _rightEye.material.dispose();
-              // Spawn XP gems after morph
+              // Spawn XP gems after corpse fades (separate from death)
               for (let i = 0; i < expMultiplier; i++) {
                 spawnExp(deathPos.x, deathPos.z);
               }
@@ -2790,6 +2845,7 @@
             if (dyingMesh.geometry) dyingMesh.geometry.dispose();
             if (dyingMesh.material) dyingMesh.material.dispose();
             if (_bulletHoles) _bulletHoles.forEach(h => { if (h.material) h.material.dispose(); });
+            if (_bloodStains) _bloodStains.forEach(s => { if (s.geometry) s.geometry.dispose(); if (s.material) s.material.dispose(); });
             if (_leftEye) _leftEye.material.dispose();
             if (_rightEye) _rightEye.material.dispose();
           }, 100);
@@ -2991,8 +3047,8 @@
           }
         } else if (deathVariation < 0.5) {
           // CORPSE DEATH: Leave a corpse sprite with blood pool
-          spawnParticles(this.mesh.position, enemyColor, 8);
-          spawnParticles(this.mesh.position, 0x8B0000, 4);
+          spawnParticles(this.mesh.position, 0x8B0000, 8);
+          spawnParticles(this.mesh.position, 0xCC0000, 4);
           
           // Corpse sprite
           const corpseGeo = new THREE.CircleGeometry(0.6, 16);
@@ -3059,7 +3115,7 @@
         } else {
           // SPLATTER DEATH: Dramatic blood splatter effect
           spawnParticles(this.mesh.position, 0x8B0000, 25); // Lots of blood
-          spawnParticles(this.mesh.position, enemyColor, 10);
+          spawnParticles(this.mesh.position, 0xCC0000, 10); // Blood spray
           
           // Create blood splatter marks in random directions
           for(let i = 0; i < 8; i++) {
@@ -3360,11 +3416,10 @@
       
       dieByHeadshot(enemyColor) {
         // FRESH IMPLEMENTATION: Enhanced headshot with actual head detachment
-        // Headshot: Dramatic head explosion with visible detached head
-        spawnParticles(this.mesh.position, enemyColor, 25);
-        spawnParticles(this.mesh.position, 0xDC143C, 20); // Crimson blood (not white!)
+        // Headshot: Blood spray (reduced enemy color particles, more blood)
+        spawnParticles(this.mesh.position, 0xDC143C, 20); // Crimson blood
         spawnParticles(this.mesh.position, 0x8B0000, 15); // Dark red blood
-        spawnParticles(this.mesh.position, 0xFFFFFF, 5);
+        spawnParticles(this.mesh.position, 0xCC0000, 10); // Bright blood spray
         
         // Blood stream particles (continuous stream effect)
         for (let i = 0; i < 8; i++) {
@@ -12940,9 +12995,17 @@
       document.getElementById('shop-back-btn').onclick = () => {
         playSound('waterdrop');
         document.getElementById('progression-shop').style.display = 'none';
-        const campVisible = document.getElementById('camp-screen').style.display === 'flex';
-        if (!campVisible && isGameActive) { setGamePaused(false); }
-        else if (!campVisible) { showMainMenu(); }
+        const campScreen = document.getElementById('camp-screen');
+        const campVisible = campScreen.style.display === 'flex';
+        if (campVisible) {
+          // Return to camp buildings view
+          campScreen.classList.remove('camp-subsection-active');
+          document.getElementById('camp-buildings-tab').click();
+        } else if (isGameActive) {
+          setGamePaused(false);
+        } else {
+          showMainMenu();
+        }
       };
       
       document.getElementById('achievements-back-btn').onclick = () => {
@@ -13010,7 +13073,9 @@
       }
       
       // Back to Buildings buttons inside each sub-section
+      // Skip shop-back-btn which has its own dedicated handler above
       document.querySelectorAll('.camp-section-back-btn').forEach(btn => {
+        if (btn.id === 'shop-back-btn') return; // Already handled above
         btn.onclick = () => {
           playSound('waterdrop');
           document.getElementById('camp-screen').classList.remove('camp-subsection-active');
@@ -18658,6 +18723,9 @@
         bloodDrips = bloodDrips.filter(d => {
           d.velY -= 0.018;
           d.mesh.position.y += d.velY;
+          // Apply horizontal velocity for spray effect
+          if (d.velX) d.mesh.position.x += d.velX;
+          if (d.velZ) d.mesh.position.z += d.velZ;
           d.life--;
           if (d.mesh.position.y <= 0.02 || d.life <= 0) {
             const hitGround = d.mesh.position.y <= 0.02;
