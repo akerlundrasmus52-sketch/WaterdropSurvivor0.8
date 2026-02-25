@@ -2504,6 +2504,11 @@
       die() {
         this.isDead = true;
         
+        // Clone position NOW before any mesh removal or disposal to prevent
+        // race condition where position becomes undefined after scene.remove/dispose
+        if (!this.mesh) return;
+        const deathPos = this.mesh.position.clone();
+        
         // Track kills for active quests
         if (montanaQuest.active) {
           montanaQuest.kills++;
@@ -2623,21 +2628,27 @@
         }
         
         scene.remove(this.mesh);
-        this.mesh.geometry.dispose();
-        this.mesh.material.dispose();
-        // Dispose cloned bullet-hole materials to prevent memory leaks
-        if (this.bulletHoles) {
-          this.bulletHoles.forEach(h => h.material.dispose());
-          this.bulletHoles = [];
-        }
-        // Dispose eye geometry (shared) and materials
-        if (this.leftEye) { this.leftEye.material.dispose(); this.leftEye = null; }
-        if (this.rightEye) { this.rightEye.material.dispose(); this.rightEye = null; }
+        // Delay geometry/material disposal by 100ms so that any in-flight callbacks
+        // that reference this.mesh.position (drops, effects) can safely complete first.
+        const _meshToDispose = this.mesh;
+        const _bulletHoles = this.bulletHoles;
+        const _leftEye = this.leftEye;
+        const _rightEye = this.rightEye;
+        this.bulletHoles = [];
+        this.leftEye = null;
+        this.rightEye = null;
+        setTimeout(() => {
+          if (_meshToDispose.geometry) _meshToDispose.geometry.dispose();
+          if (_meshToDispose.material) _meshToDispose.material.dispose();
+          if (_bulletHoles) _bulletHoles.forEach(h => { if (h.material) h.material.dispose(); });
+          if (_leftEye) _leftEye.material.dispose();
+          if (_rightEye) _rightEye.material.dispose();
+        }, 100);
         
-        // Drop EXP
+        // Drop EXP - use cloned deathPos so position is always valid
         const expMultiplier = this.isMiniBoss ? 3 : (this.isFlyingBoss ? 5 : 1);
         for (let i = 0; i < expMultiplier; i++) {
-          spawnExp(this.mesh.position.x, this.mesh.position.z);
+          spawnExp(deathPos.x, deathPos.z);
         }
         
         // PR #117: Drop GOLD - Reduced drop rate (chest-like rarity), bigger amounts
@@ -2692,7 +2703,7 @@
         
         // Only spawn gold if amount > 0
         if (goldAmount > 0) {
-          spawnGold(this.mesh.position.x, this.mesh.position.z, goldAmount);
+          spawnGold(deathPos.x, deathPos.z, goldAmount);
         }
         
         // Phase 1: Gear drop system - enemies have a chance to drop gear
@@ -2720,7 +2731,7 @@
             epic: '#9B59B6',
             legendary: '#F39C12'
           };
-          createFloatingText(`+${newGear.name}`, this.mesh.position, rarityColors[newGear.rarity] || '#FFFFFF');
+          createFloatingText(`+${newGear.name}`, deathPos, rarityColors[newGear.rarity] || '#FFFFFF');
           playSound('coin');
           
           console.log('[Phase 1 Gear Drop]', newGear.name, '-', newGear.rarity);
@@ -2776,18 +2787,24 @@
             // Award gold before saving to prevent loss on crash
             saveData.gold += 50;
             saveSaveData();
-            createFloatingText("Side Quest Complete: Kill 10 Enemies! +50 Gold", this.mesh.position, '#FFD700');
+            createFloatingText("Side Quest Complete: Kill 10 Enemies! +50 Gold", deathPos, '#FFD700');
           }
         }
         
         // Track mini-boss defeats for achievements
         if (this.isMiniBoss) {
           playerStats.miniBossesDefeated++;
-          createFloatingText("MINI-BOSS DEFEATED! 🏆", this.mesh.position);
+          createFloatingText("MINI-BOSS DEFEATED! 🏆", deathPos);
+          // Clean up any surviving minions spawned with this mini-boss
+          for (const e of enemies) {
+            if (!e.isDead && e.isMiniBossMinion) {
+              e.die();
+            }
+          }
         }
         if (this.isFlyingBoss) {
           playerStats.miniBossesDefeated++;
-          createFloatingText("⚡ FLYING BOSS DEFEATED! ⚡", this.mesh.position, '#FF00FF');
+          createFloatingText("⚡ FLYING BOSS DEFEATED! ⚡", deathPos, '#FF00FF');
           showEnhancedNotification('achievement', '⚡ FLYING BOSS SLAIN!', 'You defeated the Level 15 Flying Boss!');
         }
         
@@ -13024,6 +13041,7 @@
       
       // Skip spawning if we're at the limit
       if (currentEnemyCount >= GAME_CONFIG.maxEnemiesOnScreen) {
+        console.warn(`[EnemyCap] Enemy count (${currentEnemyCount}) at max (${GAME_CONFIG.maxEnemiesOnScreen}), skipping wave spawn`);
         return;
       }
       
@@ -13078,7 +13096,9 @@
           const supportX = player.mesh.position.x + Math.cos(supportAngle) * supportDist;
           const supportZ = player.mesh.position.z + Math.sin(supportAngle) * supportDist;
           const supportType = Math.floor(Math.random() * Math.min(3, Math.max(1, playerStats.lvl / 3)));
-          enemies.push(new Enemy(supportType, supportX, supportZ, playerStats.lvl));
+          const minion = new Enemy(supportType, supportX, supportZ, playerStats.lvl);
+          minion.isMiniBossMinion = true; // Tag for cleanup on mini-boss death
+          enemies.push(minion);
         }
         // Don't spawn additional regular wave enemies on mini-boss waves
         return;
@@ -16947,6 +16967,15 @@
         window._keysPressed = keysPressed; // Expose for startDash()
         
         window.addEventListener('keydown', (e) => {
+          // ESC key: dismiss level-up modal and force unpause (works even when isPaused)
+          if (e.key === 'Escape' && isGameActive && !isGameOver) {
+            const levelupModal = document.getElementById('levelup-modal');
+            if (levelupModal && levelupModal.style.display === 'flex') {
+              levelupModal.style.display = 'none';
+              if (window.forceGameUnpause) window.forceGameUnpause();
+              return;
+            }
+          }
           if (!isGameActive || isPaused || isGameOver) return;
           if (gameSettings.controlType !== 'keyboard') return;
           keysPressed[e.key.toLowerCase()] = true;
@@ -17179,7 +17208,7 @@
         lastTime = time;
         gameTime = time / 1000; // Initialize gameTime for visual effects
         // Render the initial frame before returning to avoid blank screen
-        renderer.render(scene, camera);
+        try { renderer.render(scene, camera); } catch(e) { console.error('Render error (init frame):', e); }
         return;
       }
 
@@ -17232,7 +17261,7 @@
       // Handle countdown sequence (PR #70)
       if (countdownActive) {
         // During countdown, still render but don't update game logic
-        renderer.render(scene, camera);
+        try { renderer.render(scene, camera); } catch(e) { console.error('Render error (countdown):', e); }
         return;
       }
 
@@ -17244,7 +17273,7 @@
           camera.lookAt(player.mesh.position);
         }
         // Still render the scene so visual effects (camera shake, particles, modals) are visible (PR #82)
-        renderer.render(scene, camera);
+        try { renderer.render(scene, camera); } catch(e) { console.error('Render error (paused):', e); }
         return;
       }
       
