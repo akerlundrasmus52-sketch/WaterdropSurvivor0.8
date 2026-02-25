@@ -67,9 +67,10 @@
       overflow: hidden;
       position: relative;
       box-shadow: 
-        0 0 0 1px rgba(255,215,0,0.6),
-        0 0 6px rgba(93,173,226,0.4),
-        0 3px 8px rgba(0,0,0,0.5), 
+        0 0 0 1px rgba(255,215,0,0.7),
+        0 0 0 4px #000,
+        0 0 8px rgba(255,215,0,0.5),
+        0 0 16px rgba(255,215,0,0.2),
         inset 0 2px 4px rgba(0,0,0,0.4);
       background-image: 
         radial-gradient(circle at 3px 3px, rgba(255,215,0,0.05) 2px, transparent 2px);
@@ -80,31 +81,34 @@
     @keyframes bar-border-alive {
       0%, 100% { 
         box-shadow: 
-          0 0 0 1px rgba(255,215,0,0.6),
-          0 0 6px rgba(93,173,226,0.4),
-          0 3px 8px rgba(0,0,0,0.5), 
+          0 0 0 1px rgba(255,215,0,0.7),
+          0 0 0 4px #000,
+          0 0 8px rgba(255,215,0,0.5),
+          0 0 16px rgba(255,215,0,0.2),
           inset 0 2px 4px rgba(0,0,0,0.4);
       }
       25% { 
         box-shadow: 
-          0 0 0 1px rgba(93,173,226,0.7),
-          0 0 8px rgba(255,215,0,0.5),
-          0 3px 8px rgba(0,0,0,0.5), 
+          0 0 0 1px rgba(255,215,0,0.9),
+          0 0 0 4px #000,
+          0 0 10px rgba(255,215,0,0.6),
+          0 0 20px rgba(255,215,0,0.3),
           inset 0 2px 4px rgba(0,0,0,0.4);
       }
       50% { 
         box-shadow: 
-          0 0 0 1px rgba(255,215,0,0.8),
-          0 0 10px rgba(93,173,226,0.6),
-          0 0 4px rgba(255,215,0,0.3),
-          0 3px 8px rgba(0,0,0,0.5), 
+          0 0 0 1px rgba(255,215,0,1),
+          0 0 0 4px #000,
+          0 0 14px rgba(255,215,0,0.7),
+          0 0 24px rgba(255,215,0,0.35),
           inset 0 2px 4px rgba(0,0,0,0.4);
       }
       75% { 
         box-shadow: 
-          0 0 0 1px rgba(93,173,226,0.6),
-          0 0 6px rgba(255,215,0,0.4),
-          0 3px 8px rgba(0,0,0,0.5), 
+          0 0 0 1px rgba(255,215,0,0.8),
+          0 0 0 4px #000,
+          0 0 10px rgba(255,215,0,0.55),
+          0 0 18px rgba(255,215,0,0.25),
           inset 0 2px 4px rgba(0,0,0,0.4);
       }
     }
@@ -456,14 +460,14 @@
     /* Round Minimap - Bottom Right Corner - 25% BIGGER */
     #minimap-container {
       position: absolute;
-      bottom: 8px;
+      bottom: 4px;
       right: 8px;
-      width: 113px;
-      height: 115px;
+      width: 130px;
+      height: 132px;
       /* Nearly perfect circle with subtle bottom hint */
       border-radius: 50% 50% 48% 48%; /* Nearly round */
       transform: rotate(0deg);
-      border: 3px solid #FFD700;
+      border: 3px solid #000;
       /* 80s BATMAN COMIC STYLE: Dark gradient with halftone */
       background: radial-gradient(circle at 30% 30%, rgba(30,30,30,0.9), rgba(0,0,0,0.95));
       background-image: 
@@ -473,13 +477,16 @@
       overflow: hidden;
       pointer-events: none;
       z-index: 100;
-      /* Enhanced comic shadow with gold glow */
+      /* Enhanced border: thick black + yellow glow between */
       box-shadow: 
-        0 4px 20px rgba(0,0,0,0.8),
-        0 0 25px rgba(255,215,0,0.4),
+        0 0 0 1px rgba(255,215,0,0.7),
+        0 0 0 4px #000,
+        0 0 10px rgba(255,215,0,0.5),
+        0 0 20px rgba(255,215,0,0.2),
         inset -2px -2px 8px rgba(0,0,0,0.7),
         inset 2px 2px 8px rgba(255,255,255,0.1);
       transform-style: preserve-3d;
+      animation: bar-border-alive 3s ease-in-out infinite;
     }
     
     #minimap {
@@ -569,21 +576,23 @@
     
     /* Region Display - HP/XP bar style, positioned above minimap, slides in/out from right */
     #region-display {
-      position: absolute;
-      bottom: 132px;
-      right: -200px;
+      position: fixed;
+      bottom: 195px;
+      left: 8px;
+      right: auto;
       width: auto;
-      min-width: 113px;
-      max-width: 160px;
+      min-width: 190px;
+      max-width: 200px;
       height: 22px;
       background: linear-gradient(to bottom, #1a1a1a 0%, #1a1a1a 50%, #3a3a3a 50%, #3a3a3a 100%);
       border-radius: 11px;
-      border: 2px solid #000000;
+      border: 3px solid #000;
       overflow: hidden;
       box-shadow: 
-        0 0 0 1px rgba(255,215,0,0.6),
-        0 0 6px rgba(255,215,0,0.3),
-        0 3px 8px rgba(0,0,0,0.5),
+        0 0 0 1px rgba(255,215,0,0.7),
+        0 0 0 4px #000,
+        0 0 8px rgba(255,215,0,0.5),
+        0 0 16px rgba(255,215,0,0.2),
         inset 0 2px 4px rgba(0,0,0,0.4);
       z-index: 101;
       pointer-events: none;
@@ -591,11 +600,13 @@
       align-items: center;
       justify-content: center;
       padding: 0 10px;
-      transition: right 0.5s ease-in-out;
+      transition: opacity 0.5s ease-in-out;
+      opacity: 0;
+      animation: bar-border-alive 3s ease-in-out infinite;
     }
     
     #region-display.region-visible {
-      right: 8px;
+      opacity: 1;
     }
     
     #region-name {
@@ -1144,7 +1155,7 @@
       top: 20px;
       right: 150px;
       background: linear-gradient(to bottom, #5A3A31, #3a2a21);
-      border: 3px solid #8B4513;
+      border: 3px solid #000;
       border-radius: 50%;
       width: 50px;
       height: 50px;
@@ -1152,36 +1163,46 @@
       cursor: pointer;
       pointer-events: auto;
       z-index: 100;
-      box-shadow: 0 4px 0 #2a1a11, 0 6px 12px rgba(0,0,0,0.5);
+      box-shadow: 
+        0 0 0 1px rgba(255,215,0,0.7),
+        0 0 0 4px #000,
+        0 0 8px rgba(255,215,0,0.5),
+        0 4px 0 #2a1a11;
       transition: all 0.2s;
       display: flex;
       align-items: center;
       justify-content: center;
       color: #FFD700;
       text-shadow: 0 0 8px rgba(255,215,0,0.6);
+      animation: bar-border-alive 3s ease-in-out infinite;
     }
     
-    /* PR #117: Menu button */
+    /* PR #117: Menu button - always visible in right upper corner */
     #menu-btn {
       position: absolute;
-      top: 20px;
-      right: 20px;
+      top: 10px;
+      right: 10px;
       background: linear-gradient(to bottom, #5A3A31, #3a2a21);
-      border: 3px solid #8B4513;
+      border: 3px solid #000;
       border-radius: 50%;
-      width: 50px;
-      height: 50px;
-      font-size: 24px;
+      width: 44px;
+      height: 44px;
+      font-size: 22px;
       cursor: pointer;
       pointer-events: auto;
       z-index: 100;
-      box-shadow: 0 4px 0 #2a1a11, 0 6px 12px rgba(0,0,0,0.5);
+      box-shadow: 
+        0 0 0 1px rgba(255,215,0,0.7),
+        0 0 0 4px #000,
+        0 0 8px rgba(255,215,0,0.5),
+        0 4px 0 #2a1a11;
       transition: all 0.2s;
-      display: none; /* Hidden in landscape, shown in portrait */
+      display: flex;
       align-items: center;
       justify-content: center;
       color: #FFD700;
       text-shadow: 0 0 8px rgba(255,215,0,0.6);
+      animation: bar-border-alive 3s ease-in-out infinite;
     }
     
     #equipment-btn:hover, #menu-btn:hover {
@@ -2486,9 +2507,16 @@
         display: flex !important;
       }
       
-      /* Move day/night clock further right in portrait to avoid HP/EXP bar overlap */
+      /* Position live stat display under menu button in portrait */
+      #live-stat-display {
+        top: 10px;
+        right: 60px;
+        width: 160px;
+      }
+      
+      /* Move day/night clock between HP and stat display in portrait */
       #day-night-clock {
-        right: 178px;
+        right: 230px;
       }
       
       /* Reduce padding on small portrait screens */
@@ -2763,32 +2791,73 @@
       }
     }
 
-    /* Stat Bar Panel */
+    /* Live Stat Display - upper right, shows latest stat one at a time */
+    #live-stat-display {
+      position: fixed;
+      top: 10px;
+      right: 60px;
+      width: 180px;
+      min-height: 24px;
+      background: linear-gradient(135deg, #0a0f1a 0%, #0d1526 100%);
+      border: 3px solid #000;
+      border-radius: 12px;
+      padding: 4px 10px;
+      z-index: 99;
+      font-family: 'Bangers', cursive;
+      font-size: 11px;
+      color: #FFD700;
+      pointer-events: none;
+      display: none;
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      box-shadow:
+        0 0 0 1px rgba(255,215,0,0.7),
+        0 0 0 4px #000,
+        0 0 8px rgba(255,215,0,0.5),
+        0 0 16px rgba(255,215,0,0.2),
+        inset 0 0 10px rgba(0,0,0,0.5);
+      text-shadow: 0 0 6px rgba(255,215,0,0.6), 1px 1px 2px rgba(0,0,0,0.9);
+      animation: bar-border-alive 3s ease-in-out infinite;
+    }
+
+    /* Stat Bar Panel - lower left, previous stats + quest */
     #stat-bar-panel {
       position: fixed;
-      bottom: 100px;
+      bottom: 60px;
       left: 8px;
-      width: 180px;
-      max-height: 25vh;
+      width: 190px;
+      max-height: 30vh;
       overflow-y: auto;
       background: linear-gradient(135deg, #0a0f1a 0%, #0d1526 100%);
-      border: 2px solid rgba(255,215,0,0.5);
+      border: 3px solid #000;
       border-radius: 10px;
-      padding: 8px 10px;
+      padding: 6px 8px;
       z-index: 15;
       font-family: 'Bangers', cursive;
       font-size: 11px;
       color: #FFD700;
       pointer-events: none;
       display: none;
-      box-shadow: 0 0 10px rgba(255,215,0,0.15), 0 0 5px rgba(93,173,226,0.1), inset 0 0 10px rgba(0,0,0,0.5);
+      box-shadow:
+        0 0 0 1px rgba(255,215,0,0.7),
+        0 0 0 4px #000,
+        0 0 8px rgba(255,215,0,0.5),
+        0 0 16px rgba(255,215,0,0.2),
+        inset 0 0 10px rgba(0,0,0,0.5);
+      animation: bar-border-alive 3s ease-in-out infinite;
     }
+    #stat-bar-panel .stat-section {
+      border-bottom: 1px solid rgba(255,215,0,0.4);
+      padding: 2px 0;
+      margin-bottom: 2px;
+    }
+    #stat-bar-panel .stat-section:last-child { border-bottom: none; margin-bottom: 0; }
     #stat-bar-panel .stat-row {
-      border-bottom: 1px solid rgba(255,215,0,0.3);
       padding: 2px 0;
       line-height: 1.3;
     }
-    #stat-bar-panel .stat-row:last-child { border-bottom: none; }
     #stat-bar-panel .stat-label { color: #aaa; font-size: 10px; }
     #stat-bar-panel .stat-claimed { color: #4f4; font-size: 10px; animation: stat-fade 5s forwards; }
     @keyframes stat-fade { 0%{opacity:1} 80%{opacity:1} 100%{opacity:0} }

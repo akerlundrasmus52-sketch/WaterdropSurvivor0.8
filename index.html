@@ -426,10 +426,10 @@
     <button id="stats-btn" class="btn-small" style="position: absolute; top: 20px; right: 20px; pointer-events: auto; z-index: 100;">STATS</button>
     <button id="settings-btn" class="btn-small" style="position: absolute; top: 20px; right: 120px; pointer-events: auto; z-index: 100;">⚙️</button>
     
-    <!-- Day/Night Cycle Clock - moved to upper-right, 20% smaller to avoid XP/HP bar overlap -->
-    <div id="day-night-clock" style="position: fixed; top: 6px; right: 218px; transform: scale(0.55); transform-origin: top right; pointer-events: none; z-index: 100;">
+    <!-- Day/Night Cycle Clock - between HP/stat bar area, slightly more right -->
+    <div id="day-night-clock" style="position: fixed; top: 6px; right: 250px; transform: scale(0.55); transform-origin: top right; pointer-events: none; z-index: 100;">
       <div style="background: radial-gradient(circle at 30% 30%, rgba(40,40,40,0.9), rgba(0,0,0,0.8)); 
-                  border: 3px solid #FFD700; 
+                  border: 3px solid #000; 
                   border-radius: 50% 50% 50% 0; /* WATERDROP SHAPE: teardrop with pointed bottom-right */
                   width: 80px; 
                   height: 80px; 
@@ -437,8 +437,10 @@
                   flex-direction: column; 
                   align-items: center; 
                   justify-content: center; 
-                  box-shadow: 0 4px 20px rgba(0,0,0,0.7), 
-                              0 0 25px rgba(255,215,0,0.4),
+                  box-shadow: 0 0 0 1px rgba(255,215,0,0.7),
+                              0 0 0 4px #000,
+                              0 0 10px rgba(255,215,0,0.5),
+                              0 0 20px rgba(255,215,0,0.2),
                               inset -2px -2px 8px rgba(0,0,0,0.5),
                               inset 2px 2px 8px rgba(255,255,255,0.1);
                   transform-style: preserve-3d;
@@ -452,6 +454,9 @@
     
     <!-- PR #117: Menu button (shows in portrait mode) -->
     <button id="menu-btn" title="Menu">☰</button>
+    
+    <!-- Live Stat Display - upper right, shows latest upgrade/event one at a time -->
+    <div id="live-stat-display"></div>
     
     <!-- Equipment Button -->
     <button id="equipment-btn" title="Equipment">⚔️</button>
@@ -643,12 +648,19 @@
   <script src="js/renderer.js"></script>
 
   <script type="module" src="js/main.js"></script>
-  <!-- Stat Bar Panel -->
+  <!-- Stat Bar Panel (lower left - previous stats + quest) -->
   <div id="stat-bar-panel">
+    <div id="stat-bar-quest-section" class="stat-section">
+      <div id="stat-bar-quest" class="stat-row"></div>
+    </div>
+    <div id="stat-bar-previous-section" class="stat-section">
+      <div id="stat-bar-prev-1" class="stat-row"></div>
+      <div id="stat-bar-prev-2" class="stat-row"></div>
+      <div id="stat-bar-prev-3" class="stat-row"></div>
+    </div>
     <div id="stat-bar-wave" class="stat-row"></div>
-    <div id="stat-bar-kills" class="stat-row"></div>
+    <div id="stat-bar-kills" class="stat-row" style="display:none"></div>
     <div id="stat-bar-combo" class="stat-row" style="display:none"></div>
-    <div id="stat-bar-quest" class="stat-row"></div>
     <div id="stat-bar-achievement" class="stat-row" style="display:none"></div>
     <div id="stat-bar-claimed" class="stat-label stat-claimed" style="display:none"></div>
   </div>
