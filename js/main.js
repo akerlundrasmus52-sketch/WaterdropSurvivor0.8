@@ -2258,6 +2258,14 @@
           spawnBloodDecal(this.mesh.position); // Enemy barely alive - covered in blood
         }
         
+        // Progressive blood stain: tint enemy mesh toward red as HP drops
+        if (this.mesh && this.mesh.material && this.mesh.material.emissive !== undefined) {
+          // emissiveIntensity increases as the enemy takes more damage (0 at full HP → 0.55 near death)
+          const bloodStainIntensity = (1 - hpRatio) * 0.55;
+          this.mesh.material.emissive = new THREE.Color(0x8B0000);
+          this.mesh.material.emissiveIntensity = bloodStainIntensity;
+        }
+        
         // Blood drip: small drops fall from wounded enemy to ground (managed in main loop)
         if (hpRatio < 0.5 && scene && bloodDrips.length < MAX_BLOOD_DRIPS) {
           const dripCount = hpRatio < 0.25 ? 3 : 2; // More drips at low HP
@@ -2803,52 +2811,15 @@
         const deathVariation = Math.random();
         
         if (deathVariation < 0.25) {
-          // EXPLOSION DEATH: Main explosion (death ring removed per requirements)
-          spawnParticles(this.mesh.position, enemyColor, 30);
-          spawnParticles(this.mesh.position, 0xFFFFFF, 10);
-          spawnParticles(this.mesh.position, 0x8B0000, 25); // More blood
-          spawnParticles(this.mesh.position, 0xFF2200, 15); // Bright red gore pieces
-          
-          // Explode into pieces (NO death ring)
-          const pieceCount = this.isMiniBoss ? 20 : 10;
-          for(let i = 0; i < pieceCount; i++) {
-            const piece = new THREE.Mesh(
-              new THREE.BoxGeometry(0.3, 0.3, 0.3),
-              new THREE.MeshBasicMaterial({ color: enemyColor, transparent: true })
-            );
-            piece.position.copy(this.mesh.position);
-            scene.add(piece);
-            
-            const angle = (i / pieceCount) * Math.PI * 2;
-            const speed = this.isMiniBoss ? 0.6 : 0.4;
-            const vel = new THREE.Vector3(
-              Math.cos(angle) * speed,
-              0.3 + Math.random() * 0.3,
-              Math.sin(angle) * speed
-            );
-            
-            let life = 80;
-            if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
-              managedAnimations.push({ update(_dt) {
-                life--;
-                piece.position.add(vel);
-                vel.y -= 0.02;
-                piece.rotation.x += 0.15;
-                piece.rotation.y += 0.15;
-                piece.material.opacity = life / 80;
-                if (life <= 0 || piece.position.y < 0) {
-                  scene.remove(piece);
-                  piece.geometry.dispose();
-                  piece.material.dispose();
-                  return false;
-                }
-                return true;
-              }});
-            } else {
-              scene.remove(piece);
-              piece.geometry.dispose();
-              piece.material.dispose();
-            }
+          // BLOOD BURST DEATH: Intense blood explosion (no large flying pieces for performance)
+          spawnParticles(this.mesh.position, 0x8B0000, 25); // Dark blood
+          spawnParticles(this.mesh.position, 0xCC0000, 15); // Bright red splatter
+          spawnParticles(this.mesh.position, 0xFF2200, 10); // Vivid gore
+          // Small blood splatter marks on the ground
+          for (let i = 0; i < 6; i++) {
+            const angle = (i / 6) * Math.PI * 2;
+            const dist = 0.4 + Math.random() * 0.8;
+            spawnBloodDecal({ x: this.mesh.position.x + Math.cos(angle) * dist, y: 0, z: this.mesh.position.z + Math.sin(angle) * dist });
           }
         } else if (deathVariation < 0.5) {
           // CORPSE DEATH: Leave a corpse sprite with blood pool
@@ -2909,46 +2880,13 @@
             bloodPool.geometry.dispose(); bloodPool.material.dispose();
           }
         } else if (deathVariation < 0.75) {
-          // DISINTEGRATION DEATH: Enemy dissolves into particles
-          spawnParticles(this.mesh.position, enemyColor, 30);
-          spawnParticles(this.mesh.position, 0x444444, 10); // Dark particles
-          
-          // Create dissolving pieces that shrink as they fall
-          for(let i = 0; i < 12; i++) {
-            const piece = new THREE.Mesh(
-              new THREE.SphereGeometry(0.15, 8, 8),
-              new THREE.MeshBasicMaterial({ color: enemyColor, transparent: true })
-            );
-            piece.position.copy(this.mesh.position);
-            scene.add(piece);
-            
-            const vel = new THREE.Vector3(
-              (Math.random() - 0.5) * 0.2,
-              Math.random() * 0.2,
-              (Math.random() - 0.5) * 0.2
-            );
-            
-            let life = 40;
-            if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
-              managedAnimations.push({ update(_dt) {
-                life--;
-                piece.position.add(vel);
-                vel.y -= 0.01;
-                piece.scale.multiplyScalar(0.95);
-                piece.material.opacity = life / 40;
-                if (life <= 0 || piece.scale.x < 0.01) {
-                  scene.remove(piece);
-                  piece.geometry.dispose();
-                  piece.material.dispose();
-                  return false;
-                }
-                return true;
-              }});
-            } else {
-              scene.remove(piece);
-              piece.geometry.dispose();
-              piece.material.dispose();
-            }
+          // BLOOD MIST DEATH: Enemy dissolves in a burst of blood mist (no large pieces for performance)
+          spawnParticles(this.mesh.position, 0x8B0000, 20); // Dark blood cloud
+          spawnParticles(this.mesh.position, 0xCC2200, 12); // Red mist
+          spawnParticles(this.mesh.position, 0x660000, 8);  // Deep crimson
+          // Scattered blood stains around death position
+          for (let i = 0; i < 5; i++) {
+            spawnBloodDecal({ x: this.mesh.position.x + (Math.random() - 0.5) * 3, y: 0, z: this.mesh.position.z + (Math.random() - 0.5) * 3 });
           }
         } else {
           // SPLATTER DEATH: Dramatic blood splatter effect
@@ -3200,54 +3138,15 @@
       }
       
       dieByShotgun(enemyColor) {
-        // Shotgun death: Massive explosion of gibs
-        spawnParticles(this.mesh.position, enemyColor, 30);
-        spawnParticles(this.mesh.position, 0x8B0000, 20); // Lots of blood
-        spawnParticles(this.mesh.position, 0xFFFFFF, 10);
-        
-        // Massive gib explosion
-        const gibCount = 15;
-        for(let i = 0; i < gibCount; i++) {
-          const gibSize = 0.1 + Math.random() * 0.2;
-          const gibGeo = new THREE.BoxGeometry(gibSize, gibSize, gibSize);
-          const gibMat = new THREE.MeshBasicMaterial({ 
-            color: i % 3 === 0 ? 0x8B0000 : enemyColor,
-            transparent: true
-          });
-          const gib = new THREE.Mesh(gibGeo, gibMat);
-          gib.position.copy(this.mesh.position);
-          scene.add(gib);
-          
-          const angle = (i / gibCount) * Math.PI * 2;
-          const speed = 0.5 + Math.random() * 0.3;
-          const vel = new THREE.Vector3(
-            Math.cos(angle) * speed,
-            0.4 + Math.random() * 0.4,
-            Math.sin(angle) * speed
-          );
-          
-          let life = 60;
-          if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
-            managedAnimations.push({ update(_dt) {
-              life--;
-              gib.position.add(vel);
-              vel.y -= 0.025;
-              gib.rotation.x += 0.25;
-              gib.rotation.y += 0.2;
-              gib.material.opacity = life / 60;
-              if (life <= 0 || gib.position.y < 0) {
-                scene.remove(gib);
-                gib.geometry.dispose();
-                gib.material.dispose();
-                return false;
-              }
-              return true;
-            }});
-          } else {
-            scene.remove(gib);
-            gib.geometry.dispose();
-            gib.material.dispose();
-          }
+        // Shotgun death: Massive blood explosion (no large gib pieces for performance)
+        spawnParticles(this.mesh.position, 0x8B0000, 30); // Lots of blood
+        spawnParticles(this.mesh.position, 0xCC0000, 20); // Bright splatter
+        spawnParticles(this.mesh.position, 0xFF2200, 10); // Vivid gore
+        // Scatter blood decals in a wide radius
+        for (let i = 0; i < 10; i++) {
+          const angle = (i / 10) * Math.PI * 2;
+          const dist = 0.3 + Math.random() * 1.5;
+          spawnBloodDecal({ x: this.mesh.position.x + Math.cos(angle) * dist, y: 0, z: this.mesh.position.z + Math.sin(angle) * dist });
         }
         
         // Large blood pool
@@ -3384,48 +3283,12 @@
         bloodPool.rotation.x = -Math.PI / 2;
         scene.add(bloodPool);
         
-        // Extra gore pieces (bone/skull fragments) with proper coloring
-        for(let i = 0; i < 6; i++) {
-          const pieceSize = 0.1 + Math.random() * 0.1;
-          const piece = new THREE.Mesh(
-            new THREE.BoxGeometry(pieceSize, pieceSize, pieceSize),
-            new THREE.MeshBasicMaterial({ 
-              color: i % 3 === 0 ? 0xFFFFFF : (i % 3 === 1 ? 0x8B0000 : enemyColor), 
-              transparent: true 
-            })
-          );
-          piece.position.copy(this.mesh.position);
-          piece.position.y += 0.5; // Start from head height
-          scene.add(piece);
-          
-          const vel = new THREE.Vector3(
-            (Math.random() - 0.5) * 0.5,
-            0.5 + Math.random() * 0.4,
-            (Math.random() - 0.5) * 0.5
-          );
-          
-          let life = 60;
-          if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
-            managedAnimations.push({ update(_dt) {
-              life--;
-              piece.position.add(vel);
-              vel.y -= 0.03;
-              piece.rotation.x += 0.2;
-              piece.rotation.y += 0.25;
-              piece.material.opacity = life / 60;
-              if (life <= 0 || piece.position.y < 0) {
-                scene.remove(piece);
-                piece.geometry.dispose();
-                piece.material.dispose();
-                return false;
-              }
-              return true;
-            }});
-          } else {
-            scene.remove(piece);
-            piece.geometry.dispose();
-            piece.material.dispose();
-          }
+        // Extra blood particles instead of large gore pieces (better performance)
+        spawnParticles(this.mesh.position, 0xDC143C, 12); // Crimson blood burst
+        spawnParticles(this.mesh.position, 0x8B0000, 8);  // Dark blood
+        for (let i = 0; i < 5; i++) {
+          const angle = (i / 5) * Math.PI * 2;
+          spawnBloodDecal({ x: this.mesh.position.x + Math.cos(angle) * (0.5 + Math.random() * 0.8), y: 0, z: this.mesh.position.z + Math.sin(angle) * (0.5 + Math.random() * 0.8) });
         }
         
         // Fade corpse
@@ -4498,12 +4361,15 @@
           const extrudeSettings = { depth: 0.10, bevelEnabled: true, bevelSize: 0.03, bevelThickness: 0.03, bevelSegments: 2 };
           _expGemStarGeometry = new THREE.ExtrudeGeometry(starShape, extrudeSettings);
           _expGemStarGeometry.center();
-          _expGemStarMaterial = new THREE.MeshStandardMaterial({
+          _expGemStarMaterial = new THREE.MeshPhysicalMaterial({
             color: 0x5DADE2,      // Match XP bar color exactly (#5DADE2)
-            emissive: 0xFFCC00,   // Yellow reflection/edge glow
+            emissive: 0xFFD700,   // Gold inner edge glow (#FFD700)
             emissiveIntensity: 0.4,
-            metalness: 0.6,
-            roughness: 0.15
+            metalness: 0.3,
+            roughness: 0.05,
+            clearcoat: 1.0,        // Glass-like shine layer
+            clearcoatRoughness: 0.05,
+            reflectivity: 0.8
           });
         }
 
@@ -9584,7 +9450,7 @@
       scene.add(mainGround);
 
       // Decorative terrain hills/bumps for visual depth (low-profile so they don't block movement)
-      const hillMat = new THREE.MeshStandardMaterial({ color: 0x6AB54A, roughness: 0.96, metalness: 0.0 });
+      const hillMat = new THREE.MeshStandardMaterial({ color: 0x2D5A1A, roughness: 0.96, metalness: 0.0 });
       const hillDataList = [
         { x: -60, z: 30, rx: 8, ry: 1.4, rz: 7 }, { x: 80, z: -20, rx: 10, ry: 1.6, rz: 8 },
         { x: -40, z: -70, rx: 12, ry: 1.8, rz: 10 }, { x: 70, z: 80, rx: 9, ry: 1.5, rz: 7 },
@@ -9816,29 +9682,42 @@
       wmHub.position.set(0, 7, 2.3);
       wmGroup.add(wmHub);
 
-      // 4 individual windmill blades radiating from hub
+      // 4 uniform windmill blades radiating from hub — all the same length for proper spinning
       const bladeMat = new THREE.MeshToonMaterial({color: 0x8B4513});
-      const wornMat = new THREE.MeshToonMaterial({color: 0x5C3317});
+      const bladeMat2 = new THREE.MeshToonMaterial({color: 0xDEB887}); // Lighter wood for alternating sails
       const bladeGroup = new THREE.Group();
-      bladeGroup.position.set(0, 7, 2);
+      bladeGroup.position.set(0, 7, 2.4);
       wmGroup.add(bladeGroup);
+      const bLen = 5.5; // All blades same length
       for (let bi = 0; bi < 4; bi++) {
         const angle = (bi / 4) * Math.PI * 2;
-        const isWorn = bi >= 2;
-        const bLen = isWorn ? 4.2 : 5.5;
         const blade = new THREE.Mesh(
-          new THREE.BoxGeometry(1.0, bLen, 0.15),
-          isWorn ? wornMat : bladeMat
+          new THREE.BoxGeometry(1.2, bLen, 0.12),
+          bi % 2 === 0 ? bladeMat : bladeMat2
         );
         blade.position.set(Math.cos(angle) * bLen * 0.5, Math.sin(angle) * bLen * 0.5, 0);
         blade.rotation.z = angle;
-        if (isWorn) blade.rotation.x = 0.06;
         blade.castShadow = true;
         bladeGroup.add(blade);
       }
 
-      // Store blades reference for rotation animation
-      wmGroup.userData = { isWindmill: true, blades: [bladeGroup], hp: 600, maxHp: 600, questActive: false, light: wmLight };
+      // Spinning shadow on the ground that rotates with blades
+      const windmillShadowGeo = new THREE.PlaneGeometry(0.8, bLen);
+      const windmillShadowMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.18, depthWrite: false });
+      const shadowGroup = new THREE.Group();
+      shadowGroup.position.set(40, 0.03, 40);
+      shadowGroup.rotation.x = -Math.PI / 2;
+      for (let si = 0; si < 4; si++) {
+        const shadowBlade = new THREE.Mesh(windmillShadowGeo, windmillShadowMat.clone());
+        const sAngle = (si / 4) * Math.PI * 2;
+        shadowBlade.position.set(Math.cos(sAngle) * bLen * 0.5, Math.sin(sAngle) * bLen * 0.5, 0);
+        shadowBlade.rotation.z = sAngle;
+        shadowGroup.add(shadowBlade);
+      }
+      scene.add(shadowGroup);
+
+      // Store blades reference for rotation animation (includes ground shadow)
+      wmGroup.userData = { isWindmill: true, blades: [bladeGroup], shadowGroup: shadowGroup, hp: 600, maxHp: 600, questActive: false, light: wmLight };
       scene.add(wmGroup);
       
       // Hay bales outside windmill
@@ -12204,8 +12083,8 @@
           renderer.shadowMap.type = THREE.BasicShadowMap;
           window.dirLight.shadow.mapSize.width = 512;
           window.dirLight.shadow.mapSize.height = 512;
-          // Fixed 1:1 ratio for maximum performance on low-end devices
-          renderer.setPixelRatio(1);
+          // Reduced pixel ratio for performance on low-end devices
+          renderer.setPixelRatio(0.6);
           break;
         
         case 'medium':
@@ -12214,8 +12093,8 @@
           renderer.shadowMap.type = THREE.PCFSoftShadowMap;
           window.dirLight.shadow.mapSize.width = 1024;
           window.dirLight.shadow.mapSize.height = 1024;
-          // Cap at 1.5x device ratio for balanced quality/performance
-          renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+          // Reduced pixel ratio for balanced quality/performance
+          renderer.setPixelRatio(0.75);
           break;
         
         case 'high':
@@ -12224,8 +12103,8 @@
           renderer.shadowMap.type = THREE.PCFSoftShadowMap;
           window.dirLight.shadow.mapSize.width = 2048;
           window.dirLight.shadow.mapSize.height = 2048;
-          // Cap at 2x device ratio for maximum visual quality
-          renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+          // Cap at 1x device ratio for maximum visual quality while maintaining 60 FPS
+          renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.0));
           break;
       }
       
@@ -18412,9 +18291,13 @@
       // Performance: Use cached arrays instead of scene.traverse() every frame
       // Windmill Rotation and Light Animation
       animatedSceneObjects.windmills.forEach(c => {
-        // Rotate all blades stored in userData (including worn/broken third blade)
+        // Rotate all blades stored in userData
         if (c.userData.blades && c.userData.blades.length > 0) {
           c.userData.blades[0].rotation.z += 0.02;
+        }
+        // Rotate spinning ground shadow in sync with blades
+        if (c.userData.shadowGroup) {
+          c.userData.shadowGroup.rotation.z += 0.02;
         }
         
         // Animate windmill light (pulsing) with null check
@@ -18536,6 +18419,9 @@
           const pdz = player.mesh.position.z - prop.mesh.position.z;
           const pdist2 = pdx * pdx + pdz * pdz;
           if (pdist2 < PROP_WALK_COLLISION_SQ) {
+            // Wobble effect when player walks into prop
+            prop.mesh.rotation.x = Math.sin(gameTime * 12) * 0.12;
+            prop.mesh.rotation.z = Math.cos(gameTime * 10) * 0.12;
             if (!prop._walkDmgTimer || Date.now() - prop._walkDmgTimer > PROP_WALK_DMG_COOLDOWN) {
               prop._walkDmgTimer = Date.now();
               prop.hp -= 8; // Walk-into damage
@@ -18561,6 +18447,10 @@
                 if (prop.mesh.material) prop.mesh.material.dispose();
               }
             }
+          } else {
+            // Return to upright position when player moves away
+            prop.mesh.rotation.x *= 0.85;
+            prop.mesh.rotation.z *= 0.85;
           }
         }
       }

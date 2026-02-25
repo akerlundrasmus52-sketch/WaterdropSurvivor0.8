@@ -9,7 +9,7 @@ const COLORS = {
   enemySquare: 0xFF69B4, // Hot Pink
   enemyTriangle: 0xFFD700, // Gold
   enemyRound: 0x9370DB, // Purple
-  ground: 0x7CFC00, // Lawn Green (More vibrant)
+  ground: 0x2D5A1A, // Dark forest green (unified ground colour)
   forest: 0x98FB98, // Pale Green
   lake: 0x1E90FF, // Dodger Blue (More water-like)
   cabin: 0xDEB887, // Burlywood
