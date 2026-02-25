@@ -16961,9 +16961,9 @@
           saveData.companions[saveData.selectedCompanion]?.unlocked &&
           companionQuestCompleted) {
         activeCompanion = new Companion(saveData.selectedCompanion);
-        console.log('[Phase 5] Spawned companion:', saveData.selectedCompanion, 'after completing quest 5');
-      } else if (!quest5Completed) {
-        console.log('[Companion] Hidden until quest 5 (breed companion) is completed');
+        console.log('[Companion] Spawned companion:', saveData.selectedCompanion, 'after completing companion quest');
+      } else if (!companionQuestCompleted) {
+        console.log('[Companion] Hidden until companion activation quest is completed');
       }
 
       // Reset Player - Spawn right next to the fountain/statue
