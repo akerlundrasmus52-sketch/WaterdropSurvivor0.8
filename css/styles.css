@@ -2517,14 +2517,6 @@
         transform: translateX(-50%) scale(0.63) !important;
       }
 
-      #stat-bar-panel {
-        top: 64px;
-        bottom: auto;
-        right: 8px;
-        left: auto;
-        width: 180px;
-      }
-      
       /* Reduce padding on small portrait screens */
       .story-quest-content {
         padding: 20px;
@@ -2822,64 +2814,6 @@
         inset 0 0 6px rgba(0,0,0,0.4);
       text-shadow: 0 1px 3px rgba(0,0,0,0.9);
     }
-
-    /* Stat Bar Panel — mega HUD stat box (upper-right, under menu button) */
-    #stat-bar-panel {
-      position: fixed;
-      top: 64px;
-      right: 8px;
-      width: 190px;
-      max-height: 160px; /* Allow countdown + all stat rows */
-      overflow: hidden;
-      background: rgba(10, 10, 15, 0.92);
-      border: 2px solid rgba(255,215,0,0.5);
-      border-radius: 8px;
-      padding: 4px 8px;
-      z-index: 101;
-      pointer-events: none;
-      display: none; /* Hidden when game is inactive; shown by JS when in-game */
-    }
-    #stat-bar-panel.hud-active {
-      display: flex !important;
-      flex-direction: column;
-      gap: 2px;
-    }
-    #stat-bar-panel .stat-section {
-      border-bottom: 1px solid rgba(255,215,0,0.4);
-      padding: 2px 0;
-      margin-bottom: 2px;
-    }
-    #stat-bar-panel .stat-section:last-child { border-bottom: none; margin-bottom: 0; }
-    #stat-bar-panel .stat-row {
-      padding: 2px 6px;
-      line-height: 1.4;
-      font-family: 'Bangers', cursive;
-      font-size: 11px;
-      border-radius: 4px;
-    }
-    /* Colored rows */
-    #stat-bar-countdown { color: #FFD700; background: rgba(255,215,0,0.15); font-size: 14px; text-align: center; letter-spacing: 1px; }
-    #stat-bar-countdown:empty { display: none; }
-    #stat-bar-wave { color: #FFD700; background: rgba(255,215,0,0.08); }
-    #stat-bar-kills { color: #FF6B6B; background: rgba(255,107,107,0.08); }
-    #stat-bar-combo { color: #FF4500; background: rgba(255,69,0,0.08); }
-    #stat-bar-live,
-    #stat-bar-region {
-      color: #87CEEB;
-      background: rgba(135,206,235,0.08);
-      border-bottom: 1px solid rgba(255,215,0,0.25);
-      margin-bottom: 2px;
-      padding-bottom: 3px;
-    }
-    #stat-bar-region { display: none; }
-    #stat-bar-quest { color: #FFD700; background: rgba(255,215,0,0.08); }
-    #stat-bar-prev-1 { color: #aaa; background: rgba(255,255,255,0.04); }
-    #stat-bar-prev-2 { color: #888; background: rgba(255,255,255,0.03); }
-    #stat-bar-prev-3 { color: #666; background: rgba(255,255,255,0.02); }
-    #stat-bar-achievement { color: #FFD700; background: rgba(255,215,0,0.12); }
-    #stat-bar-panel .stat-label { color: #aaa; font-size: 10px; }
-    #stat-bar-panel .stat-claimed { color: #4f4; font-size: 10px; animation: stat-fade 5s forwards; }
-    @keyframes stat-fade { 0%{opacity:1} 80%{opacity:1} 100%{opacity:0} }
 
     /* You-Died banner */
     #you-died-banner {
