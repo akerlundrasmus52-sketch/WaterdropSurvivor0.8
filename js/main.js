@@ -6096,7 +6096,15 @@
       const questTrackerEl = document.getElementById('quest-tracker');
       if (questTrackerEl) {
         if (currentQuest && currentQuest.name) {
-          questTrackerEl.innerHTML = '<b style="color:#FFD700;">📜 ' + currentQuest.name + '</b><br><span style="font-size:11px;color:#ccc;">' + questText + '</span>';
+          questTrackerEl.textContent = '';
+          const nameEl = document.createElement('b');
+          nameEl.style.color = '#FFD700';
+          nameEl.textContent = '📜 ' + currentQuest.name;
+          const progEl = document.createElement('span');
+          progEl.style.cssText = 'font-size:11px;color:#ccc;display:block;';
+          progEl.textContent = questText;
+          questTrackerEl.appendChild(nameEl);
+          questTrackerEl.appendChild(progEl);
           questTrackerEl.style.display = 'block';
         } else if (questText) {
           questTrackerEl.textContent = '📜 ' + questText;
