@@ -9868,6 +9868,9 @@
       document.getElementById('codex-prev-btn').disabled = codexPage <= 0;
       document.getElementById('codex-next-btn').disabled = codexPage >= totalPages - 1;
     }
+
+    // Render account stats inside the account section
+    function renderAccountContent() {
       const content = document.getElementById('camp-account-content');
       if (!content) return;
       updateAccountLevelDisplay();
