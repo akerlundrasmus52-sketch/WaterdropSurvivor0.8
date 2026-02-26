@@ -388,7 +388,7 @@
       <div class="stat-text" id="status-message" style="display: none; color: #5DADE2; text-shadow: 0 0 8px rgba(93,173,226,0.8), 0 0 12px rgba(93,173,226,0.5), 1px 1px 2px rgba(0,0,0,0.5); font-size: 16px; min-height: 20px; margin-top: 5px;"></div>
       
       <!-- Active Quest Tracker (Camp Only) -->
-      <div class="stat-text" id="quest-tracker" style="display: none; position: fixed; top: 10px; right: 10px; left: auto; color: #FFD700; text-shadow: 0 0 3px rgba(255,215,0,0.3), 1px 1px 2px rgba(0,0,0,0.8); font-size: 11px; background: rgba(0,0,0,0.7); padding: 4px 8px; border-radius: 4px; border: 1px solid #FFD700; max-width: 200px; z-index: 200;"></div>
+      <div class="stat-text" id="quest-tracker" style="display: none; position: fixed; top: 12px; left: 12px; right: auto; color: #FFD700; text-shadow: 0 0 3px rgba(255,215,0,0.3), 1px 1px 2px rgba(0,0,0,0.8); font-size: 11px; background: rgba(0,0,0,0.7); padding: 4px 8px; border-radius: 4px; border: 1px solid #FFD700; max-width: 200px; z-index: 200;"></div>
       
       <!-- Quest Arrow Guidance (in-game) -->
       <div id="quest-arrow">❗➤</div>
@@ -457,6 +457,21 @@
     
     <!-- Live Stat Display - upper right, shows latest upgrade/event one at a time -->
     <div id="live-stat-display"></div>
+    
+    <!-- Unified Info Stat Box - upper right, under menu button -->
+    <div id="unified-stat-box">
+      <div class="stat-box-section" id="stat-box-region-section">
+        <div id="stat-box-region">Forest</div>
+      </div>
+      <div class="stat-box-section" id="stat-box-live-section">
+        <div id="stat-box-live"></div>
+      </div>
+      <div class="stat-box-section" id="stat-box-prev-section">
+        <div id="stat-box-prev-1" class="stat-box-prev"></div>
+        <div id="stat-box-prev-2" class="stat-box-prev"></div>
+        <div id="stat-box-prev-3" class="stat-box-prev"></div>
+      </div>
+    </div>
     
     <!-- Equipment Button -->
     <button id="equipment-btn" title="Equipment">⚔️</button>

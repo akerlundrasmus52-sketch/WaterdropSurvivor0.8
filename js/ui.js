@@ -16,39 +16,55 @@ let _liveStatTimer = null;
 
 function _updatePreviousStatsPanel() {
   for (let i = 0; i < 3; i++) {
+    // Update both legacy and unified stat box previous items
     const el = document.getElementById('stat-bar-prev-' + (i + 1));
     if (el) {
       el.textContent = _previousStats[i] || '';
       el.style.display = _previousStats[i] ? '' : 'none';
+    }
+    const boxEl = document.getElementById('stat-box-prev-' + (i + 1));
+    if (boxEl) {
+      boxEl.textContent = _previousStats[i] || '';
+      boxEl.style.display = _previousStats[i] ? '' : 'none';
     }
   }
 }
 
 function _updateLiveStatDisplay(text) {
   const liveEl = document.getElementById('live-stat-display');
-  if (!liveEl) return;
+  const boxLiveEl = document.getElementById('stat-box-live');
 
   // Push current live stat to previous stats if it exists and wasn't already pushed
-  const currentText = liveEl.textContent;
+  const currentText = (boxLiveEl && boxLiveEl.textContent) || (liveEl && liveEl.textContent) || '';
   if (currentText && currentText.trim() && currentText.trim() !== _previousStats[0]) {
     _previousStats.unshift(currentText.trim());
     if (_previousStats.length > 3) _previousStats.pop();
     _updatePreviousStatsPanel();
   }
 
-  // Show the new stat in live display
-  liveEl.textContent = text;
-  liveEl.style.display = 'block';
+  // Show the new stat in legacy live display
+  if (liveEl) {
+    liveEl.textContent = text;
+    liveEl.style.display = 'block';
+  }
+
+  // Show in unified stat box live section
+  if (boxLiveEl) {
+    boxLiveEl.textContent = text;
+  }
 
   // Auto-hide after 4 seconds and move to previous if not already replaced
   if (_liveStatTimer) clearTimeout(_liveStatTimer);
   _liveStatTimer = setTimeout(() => {
-    if (liveEl.textContent === text) {
+    if (boxLiveEl && boxLiveEl.textContent === text) {
       if (text.trim() !== _previousStats[0]) {
         _previousStats.unshift(text.trim());
         if (_previousStats.length > 3) _previousStats.pop();
         _updatePreviousStatsPanel();
       }
+      boxLiveEl.textContent = '';
+    }
+    if (liveEl && liveEl.textContent === text) {
       liveEl.style.display = 'none';
       liveEl.textContent = '';
     }

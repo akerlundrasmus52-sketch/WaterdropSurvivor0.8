@@ -13874,8 +13874,8 @@
       }
     }
 
-    function spawnExp(x, z) {
-      expGems.push(new ExpGem(x, z));
+    function spawnExp(x, z, velX, velZ) {
+      expGems.push(new ExpGem(x, z, velX, velZ));
     }
     
     function spawnGold(x, z, amount) {
@@ -15510,7 +15510,7 @@
       
       const regionNameEl = document.getElementById('region-name');
       const regionDisplay = document.getElementById('region-display');
-      if (!regionNameEl || !regionDisplay) return;
+      const statBoxRegion = document.getElementById('stat-box-region');
       
       const px = player.mesh.position.x;
       const pz = player.mesh.position.z;
@@ -15536,20 +15536,25 @@
         region = 'Southern Woods';
       }
       
+      // Update unified stat box region display
+      if (statBoxRegion) {
+        statBoxRegion.textContent = '📍 ' + region;
+      }
+      
       // Only animate if region changed
       if (region !== currentRegion) {
         currentRegion = region;
-        regionNameEl.textContent = region;
+        if (regionNameEl) regionNameEl.textContent = region;
         
         // Clear any pending hide timeout
         if (regionTimeout) clearTimeout(regionTimeout);
         
-        // Slide in from right
-        regionDisplay.classList.add('region-visible');
+        // Slide in from right (legacy)
+        if (regionDisplay) regionDisplay.classList.add('region-visible');
         
-        // After 3 seconds, slide back out to the right
+        // After 3 seconds, slide back out to the right (legacy)
         regionTimeout = setTimeout(() => {
-          regionDisplay.classList.remove('region-visible');
+          if (regionDisplay) regionDisplay.classList.remove('region-visible');
         }, 3000);
       }
     }
