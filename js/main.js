@@ -6011,6 +6011,10 @@
       }
     }
 
+    // Track notification text to allow temporary override in the live stat rectangle
+    let _liveStatNotification = '';
+    let _liveStatNotificationTimer = null;
+
     function updateStatBar() {
       const panel = document.getElementById('stat-bar-panel');
       const liveStatEl = document.getElementById('live-stat-display');
@@ -6021,11 +6025,15 @@
       }
       if (panel) panel.style.display = 'none';
       
-      // Build unified stat content for the single bar
+      // Build live game info for the rectangle (no full quest details)
       const parts = [];
       
       // Wave
       parts.push('⚔️ Wave ' + (waveCount || 0));
+      
+      // Kills
+      const kills = playerStats ? playerStats.kills : 0;
+      parts.push('💀 ' + kills);
       
       // Combo
       const combo = window.currentCombo || 0;
@@ -6034,53 +6042,68 @@
       // Region
       const regionName = document.getElementById('region-name')?.textContent || 'Forest';
       parts.push('📍 ' + regionName);
-
-      // Active quest
-      let questText = '';
-      const currentQuest = getCurrentQuest();
-      if (currentQuest) {
-        const kills = playerStats ? playerStats.kills : 0;
-        if (currentQuest.id === 'quest1_kill3') questText = 'Kill 3: ' + Math.min(kills, 3) + '/3';
-        else if (currentQuest.id === 'quest8_kill10') questText = 'Kill 10: ' + Math.min(kills,10) + '/10';
-        else if (currentQuest.id === 'quest10_kill15') questText = 'Kill 15: ' + Math.min(kills,15) + '/15';
-        else if (currentQuest.id === 'quest14_kill25') questText = 'Kill 25: ' + Math.min(kills,25) + '/25';
-        else if (currentQuest.id === 'quest13_windmill') questText = '🏭 Defend Windmill!';
-        else if (currentQuest.id === 'quest15_accountVisit') questText = '👤 Visit Account';
-        else if (currentQuest.id === 'quest11_findAllLandmarks') {
-          const lf = saveData.tutorialQuests.landmarksFound || {};
-          const found = Object.values(LANDMARK_CONFIGS).filter(cfg => lf[cfg.key]).length;
-          questText = `🗺️ Landmarks ${found}/${Object.keys(LANDMARK_CONFIGS).length}`;
-        }
-        else if (currentQuest.label) questText = currentQuest.label;
-        else questText = currentQuest.id || '';
-      }
-      if (!questText && saveData.achievementQuests && saveData.achievementQuests.kill7Quest === 'active') {
-        questText = '🏆 Visit Achievement';
-      }
-      if (questText) parts.push('📋 ' + questText);
       
-      // Achievement progress
-      const kills = playerStats ? playerStats.kills : 0;
-      if (!saveData.achievementQuests || !saveData.achievementQuests.kill7Unlocked) {
-        parts.push('🏆 ' + Math.min(kills, 7) + '/7');
+      // Quest completion count (brief, not full quest details)
+      const completedQuests = (saveData.tutorialQuests && saveData.tutorialQuests.completedQuests) || [];
+      const totalQuests = Object.keys(TUTORIAL_QUESTS).length;
+      if (completedQuests.length > 0) {
+        parts.push('📋 ' + completedQuests.length + '/' + totalQuests);
+      }
+      
+      // Side quest indicator
+      if (saveData.achievementQuests && saveData.achievementQuests.kill7Quest === 'active') {
+        parts.push('⭐ Side Quest');
       }
 
-      // Update the unified stat bar
+      // Update the live stat rectangle
       if (liveStatEl) {
-        const unified = parts.join('  ·  ');
-        liveStatEl.textContent = unified;
+        // If a notification is active, show it; otherwise show the stat bar
+        if (_liveStatNotification) {
+          liveStatEl.textContent = _liveStatNotification;
+          liveStatEl.style.color = '#FFD700';
+        } else {
+          liveStatEl.textContent = parts.join('  ·  ');
+          liveStatEl.style.color = '#e0e0e0';
+        }
         liveStatEl.style.display = 'block';
-        // Dynamic width based on content
         liveStatEl.style.width = 'auto';
-        liveStatEl.style.maxWidth = 'min(680px, calc(100vw - 40px))';
+        liveStatEl.style.maxWidth = 'min(560px, calc(100vw - 40px))';
         liveStatEl.style.minWidth = '200px';
       }
       
-      // Update quest tracker (top-left overlay)
+      // Build quest text for the left-side tracker
+      let questText = '';
+      const currentQuest = getCurrentQuest();
+      if (currentQuest) {
+        if (currentQuest.id === 'quest1_kill3') questText = Math.min(kills, 3) + '/3';
+        else if (currentQuest.id === 'quest8_kill10') questText = Math.min(kills,10) + '/10';
+        else if (currentQuest.id === 'quest10_kill15') questText = Math.min(kills,15) + '/15';
+        else if (currentQuest.id === 'quest14_kill25') questText = Math.min(kills,25) + '/25';
+        else if (currentQuest.id === 'quest13_windmill') questText = 'Active';
+        else if (currentQuest.id === 'quest15_accountVisit') questText = 'Go to Camp';
+        else if (currentQuest.id === 'quest11_findAllLandmarks') {
+          const lf = saveData.tutorialQuests.landmarksFound || {};
+          const found = Object.values(LANDMARK_CONFIGS).filter(cfg => lf[cfg.key]).length;
+          questText = `${found}/${Object.keys(LANDMARK_CONFIGS).length}`;
+        }
+        else questText = 'Active';
+      }
+      if (!questText && saveData.achievementQuests && saveData.achievementQuests.kill7Quest === 'active') {
+        questText = 'Visit Camp';
+      }
+      
+      // Update quest tracker (left-side overlay) — show quest name + progress
       const questTrackerEl = document.getElementById('quest-tracker');
       if (questTrackerEl) {
-        questTrackerEl.textContent = questText ? `📋 ${questText}` : '';
-        questTrackerEl.style.display = questText ? 'block' : 'none';
+        if (currentQuest && currentQuest.name) {
+          questTrackerEl.innerHTML = '<b style="color:#FFD700;">📜 ' + currentQuest.name + '</b><br><span style="font-size:11px;color:#ccc;">' + questText + '</span>';
+          questTrackerEl.style.display = 'block';
+        } else if (questText) {
+          questTrackerEl.textContent = '📜 ' + questText;
+          questTrackerEl.style.display = 'block';
+        } else {
+          questTrackerEl.style.display = 'none';
+        }
       }
       
       // Update hidden stat-bar elements for compatibility
@@ -6098,6 +6121,17 @@
       if (regionEl) regionEl.textContent = `📍 ${regionName}`;
     }
     window.updateStatBar = updateStatBar;
+    
+    // Show a notification in the live stat rectangle temporarily, then revert to stat bar
+    function showLiveStatNotification(text) {
+      _liveStatNotification = text;
+      if (_liveStatNotificationTimer) clearTimeout(_liveStatNotificationTimer);
+      _liveStatNotificationTimer = setTimeout(() => {
+        _liveStatNotification = '';
+        _liveStatNotificationTimer = null;
+      }, 3000);
+    }
+    window.showLiveStatNotification = showLiveStatNotification;
 
     function claimAchievement(achievementId) {
       const achievement = Object.values(ACHIEVEMENTS).find(a => a.id === achievementId);
@@ -8758,6 +8792,7 @@
       const currentQuest = getCurrentQuest();
       const completedQuests = (saveData.tutorialQuests && saveData.tutorialQuests.completedQuests) || [];
       const readyToClaim = (saveData.tutorialQuests && saveData.tutorialQuests.readyToClaim) || [];
+      const totalQuests = Object.keys(TUTORIAL_QUESTS).length;
       
       // Hide tracker if no quest is active or ready, and no recently completed quest, and player hasn't died yet
       if (!saveData.tutorialQuests.firstDeathShown && !currentQuest && completedQuests.length === 0) {
@@ -8771,20 +8806,28 @@
       
       questTracker.innerHTML = '';
       
-      // Show last completed quest with ✅ and strikethrough (persistent after death)
+      // Quest completion summary
+      if (completedQuests.length > 0) {
+        const summaryEl = document.createElement('div');
+        summaryEl.style.cssText = 'font-size: 10px; color: #999; margin-bottom: 4px;';
+        summaryEl.textContent = `✅ ${completedQuests.length}/${totalQuests} done`;
+        questTracker.appendChild(summaryEl);
+      }
+      
+      // Show last completed quest with strikethrough
       if (completedQuests.length > 0) {
         const lastCompletedId = completedQuests[completedQuests.length - 1];
         const lastCompleted = TUTORIAL_QUESTS[lastCompletedId];
         if (lastCompleted && lastCompleted.name) {
           const completedEl = document.createElement('div');
-          completedEl.style.cssText = 'font-size: 11px; color: #4CAF50; text-decoration: line-through; margin-bottom: 3px;';
+          completedEl.style.cssText = 'font-size: 10px; color: #4CAF50; text-decoration: line-through; margin-bottom: 3px;';
           completedEl.setAttribute('aria-label', `Completed: ${lastCompleted.name}`);
           completedEl.textContent = `✓ ${lastCompleted.name}`;
           questTracker.appendChild(completedEl);
         }
       }
       
-      // Show current active quest
+      // Show current active quest with name prominently
       if (currentQuest && saveData.tutorialQuests.firstDeathShown) {
         // Build progress info for kill-based quests
         let progressText = '';
@@ -8800,21 +8843,27 @@
         }
         
         const nameEl = document.createElement('b');
-        nameEl.textContent = `📜 ${currentQuest.name}${progressText}`;
-        const objEl = document.createElement('span');
-        objEl.style.fontSize = '11px';
-        objEl.style.color = '#ddd';
-        objEl.textContent = currentQuest.objectives;
+        nameEl.style.cssText = 'color: #FFD700; font-size: 12px;';
+        nameEl.textContent = `📜 ${currentQuest.name}`;
+        const progEl = document.createElement('div');
+        progEl.style.cssText = 'font-size: 11px; color: #ccc; margin-top: 2px;';
+        progEl.textContent = progressText || 'Active';
         questTracker.appendChild(nameEl);
-        questTracker.appendChild(document.createElement('br'));
-        questTracker.appendChild(objEl);
+        questTracker.appendChild(progEl);
       } else if (readyToClaim.length > 0) {
-        // Show "ready to claim" status
         const readyEl = document.createElement('b');
-        readyEl.style.color = '#FFD700';
+        readyEl.style.cssText = 'color: #FFD700; font-size: 12px;';
         readyEl.setAttribute('aria-label', 'Quest reward ready to claim at Main Building');
-        readyEl.textContent = '🎁 Quest ready to claim at Main Building!';
+        readyEl.textContent = '🎁 Claim Reward!';
         questTracker.appendChild(readyEl);
+      }
+      
+      // Side quest indicator
+      if (saveData.achievementQuests && saveData.achievementQuests.kill7Quest === 'active') {
+        const sideEl = document.createElement('div');
+        sideEl.style.cssText = 'font-size: 10px; color: #9b59b6; margin-top: 3px;';
+        sideEl.textContent = '⭐ Side Quest Active';
+        questTracker.appendChild(sideEl);
       }
       
       questTracker.style.display = 'block';

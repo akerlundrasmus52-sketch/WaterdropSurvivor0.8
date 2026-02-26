@@ -25,54 +25,25 @@ function _updatePreviousStatsPanel() {
 }
 
 function _updateLiveStatDisplay(text) {
-  const liveEl = document.getElementById('live-stat-display');
   const panelLiveEl = document.getElementById('stat-bar-live');
-  if (!liveEl && !panelLiveEl) return;
 
-  // Push current live stat to previous stats if it exists and wasn't already pushed
-  let currentText = '';
-  if (liveEl && liveEl.textContent) {
-    currentText = liveEl.textContent;
-  } else if (panelLiveEl && panelLiveEl.textContent) {
-    currentText = panelLiveEl.textContent.replace(/^🔔\s*/, '');
-  }
-  if (currentText && currentText.trim() && currentText.trim() !== _previousStats[0]) {
-    _previousStats.unshift(currentText.trim());
+  // Push current notification text to previous stats history
+  if (text && text.trim() && text.trim() !== _previousStats[0]) {
+    _previousStats.unshift(text.trim());
     if (_previousStats.length > 3) _previousStats.pop();
     _updatePreviousStatsPanel();
   }
 
-  // Show the new stat in live display
-  if (liveEl) {
-    liveEl.textContent = text;
-    liveEl.style.display = 'block';
+  // Show notification in the live stat rectangle via main.js
+  if (window.showLiveStatNotification) {
+    window.showLiveStatNotification(text);
   }
+
+  // Also update panel live element for compatibility
   if (panelLiveEl) {
     panelLiveEl.textContent = text ? `🔔 ${text}` : '';
     panelLiveEl.style.display = text ? '' : 'none';
   }
-
-  // Auto-hide after 4 seconds and move to previous if not already replaced
-  if (_liveStatTimer) clearTimeout(_liveStatTimer);
-  _liveStatTimer = setTimeout(() => {
-    const liveMatches = !liveEl || liveEl.textContent === text;
-    const panelMatches = !panelLiveEl || panelLiveEl.textContent === `🔔 ${text}`;
-    if (liveMatches && panelMatches) {
-      if (text.trim() !== _previousStats[0]) {
-        _previousStats.unshift(text.trim());
-        if (_previousStats.length > 3) _previousStats.pop();
-        _updatePreviousStatsPanel();
-      }
-      if (liveEl) {
-        liveEl.style.display = 'none';
-        liveEl.textContent = '';
-      }
-      if (panelLiveEl) {
-        panelLiveEl.textContent = '';
-        panelLiveEl.style.display = 'none';
-      }
-    }
-  }, 4000);
 }
 
 function _processStatNotificationQueue() {
