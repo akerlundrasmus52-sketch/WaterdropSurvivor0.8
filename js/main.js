@@ -2935,10 +2935,14 @@
         spawnParticles(this.mesh.position, 0xCC0000, 10); // Bright red splatter
         spawnParticles(this.mesh.position, 0x660000, 8); // Dark blood mist
         spawnParticles(this.mesh.position, 0x440000, 6); // Extra dark blood chunks
-        // Advanced blood particle burst on death
-        if (window.BloodSystem) window.BloodSystem.emitBurst(deathPos, this.isMiniBoss ? 600 : 300, { spreadXZ: 1.8, spreadY: 1.2 });
-        // Airborne blood spray burst (arcs outward from death position)
-        for (let sb = 0; sb < 8 && bloodDrips.length < MAX_BLOOD_DRIPS; sb++) {
+        // Advanced blood particle burst on death — heavy spray up in air
+        if (window.BloodSystem) {
+          window.BloodSystem.emitBurst(deathPos, this.isMiniBoss ? 900 : 500, { spreadXZ: 2.2, spreadY: 1.8 });
+          // Pulsating blood fountain after death — simulates heart still pumping
+          window.BloodSystem.emitPulse(deathPos, { pulses: this.isMiniBoss ? 8 : 5, perPulse: this.isMiniBoss ? 600 : 350, interval: 180, spreadXZ: 2.0 });
+        }
+        // Airborne blood spray burst — sprays high in air, rains down tiny droplets
+        for (let sb = 0; sb < 14 && bloodDrips.length < MAX_BLOOD_DRIPS; sb++) {
           const spraySize = 0.02 + Math.random() * 0.06;
           const spray = new THREE.Mesh(
             new THREE.SphereGeometry(spraySize, 4, 4),
@@ -2949,10 +2953,10 @@
           scene.add(spray);
           bloodDrips.push({
             mesh: spray,
-            velX: (Math.random() - 0.5) * 0.25,
-            velZ: (Math.random() - 0.5) * 0.25,
-            velY: 0.2 + Math.random() * 0.3,
-            life: 40 + Math.floor(Math.random() * 20)
+            velX: (Math.random() - 0.5) * 0.45,
+            velZ: (Math.random() - 0.5) * 0.45,
+            velY: 0.35 + Math.random() * 0.55,
+            life: 55 + Math.floor(Math.random() * 30)
           });
         }
         // Dynamic blood pools: more pools with bigger sizes
@@ -3038,13 +3042,23 @@
         }
         const wasFlying = this.isFlying;
         
+        // XP star pops out immediately on death, flying slightly away from the body
+        // so it is visible during the death animation and can be collected right away.
+        const xpPopAngle = Math.random() * Math.PI * 2;
+        const xpPopDist = 0.8 + Math.random() * 0.6; // 0.8–1.4 units away
+        for (let i = 0; i < expMultiplier; i++) {
+          const spread = i * (Math.PI * 2 / Math.max(expMultiplier, 1));
+          const angle = xpPopAngle + spread;
+          spawnExp(deathPos.x + Math.cos(angle) * xpPopDist, deathPos.z + Math.sin(angle) * xpPopDist);
+        }
+        
         // Dynamic death animation styles - brutal varied ragdoll falls
         const deathStyle = Math.floor(Math.random() * 6); // 0-5 different death types
         const fallSignX = (Math.random() < 0.5) ? 1 : -1;
         const fallSignZ = (Math.random() < 0.5) ? 1 : -1;
         const spinDir = (Math.random() < 0.5) ? 1 : -1;
         
-        // Fall down animation: enemy falls dynamically, lies on ground, explodes into blood, THEN XP star spawns
+        // Fall down animation: enemy falls dynamically, lies on ground, explodes into blood
         const FALL_FRAMES = wasFlying ? 50 : 35;
         const LINGER_FRAMES = 50; // Lie on ground lifeless before blood explosion
         const EXPLODE_FRAMES = 15; // Blood explosion phase
@@ -3159,7 +3173,7 @@
                 dyingMesh.material.opacity = Math.max(0, 0.3 * (1 - fadeProgress));
               }
             } else {
-              // Phase 5: Remove corpse and spawn XP star at death position
+              // Phase 5: Remove corpse (XP star already spawned at death start)
               scene.remove(dyingMesh);
               if (dyingMesh.geometry) dyingMesh.geometry.dispose();
               if (dyingMesh.material) dyingMesh.material.dispose();
@@ -3167,10 +3181,6 @@
               if (_bloodStains) _bloodStains.forEach(s => { if (s.geometry) s.geometry.dispose(); if (s.material) s.material.dispose(); });
               if (_leftEye) _leftEye.material.dispose();
               if (_rightEye) _rightEye.material.dispose();
-              // Spawn XP gems after corpse fades (separate from death)
-              for (let i = 0; i < expMultiplier; i++) {
-                spawnExp(deathPos.x, deathPos.z);
-              }
               return false;
             }
             return true;
@@ -3186,9 +3196,7 @@
             if (_leftEye) _leftEye.material.dispose();
             if (_rightEye) _rightEye.material.dispose();
           }, 100);
-          for (let i = 0; i < expMultiplier; i++) {
-            spawnExp(deathPos.x, deathPos.z);
-          }
+          // XP already spawned above; nothing extra needed in this fallback
         }
         
         // PR #117: Drop GOLD - Reduced drop rate (chest-like rarity), bigger amounts
@@ -4279,7 +4287,7 @@
       }
 
       update() {
-        if (!this.active) return;
+        if (!this.active) return false;
         
         // Handle enemy projectiles separately
         if (this.isEnemyProjectile) {
@@ -4288,7 +4296,7 @@
           
           if (this.lifetime <= 0) {
             this.destroy();
-            return;
+            return false;
           }
           
           // Check collision with player
@@ -4299,8 +4307,9 @@
             spawnParticles(player.mesh.position, 0xFF6347, 5);
             this.destroy();
             playSound('hit');
+            return false;
           }
-          return;
+          return true;
         }
         
         // Player projectiles
@@ -4335,7 +4344,7 @@
 
         if (this.life <= 0) {
           this.destroy();
-          return;
+          return false;
         }
 
         // Collision Check - with piercing support
@@ -4960,6 +4969,7 @@
             }
           }
         }
+        return this.active;
       }
 
       destroy() {
