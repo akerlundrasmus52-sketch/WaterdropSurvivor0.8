@@ -2863,7 +2863,7 @@
       left: auto;
       bottom: auto;
       width: min(420px, calc(100vw - 20px));
-      max-height: min(33vh, 280px);
+      max-height: min(33vh, 280px); /* Cap height so panel stays below top HUD controls on short screens */
       overflow-y: auto;
       background: linear-gradient(135deg, #0a0f1a 0%, #0d1526 100%);
       border: 3px solid #000;
