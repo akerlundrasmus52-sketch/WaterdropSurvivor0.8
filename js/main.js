@@ -13411,6 +13411,9 @@
       countdownActive = true;
       countdownStep = 0;
       countdownTimer = 0;
+      // Show HUD panel immediately so countdown displays in the mega bar
+      const panel = document.getElementById('stat-bar-panel');
+      if (panel) panel.classList.add('hud-active');
       showCountdownMessage(0);
     }
     
@@ -13422,6 +13425,10 @@
       
       // Use Stat Log for countdown messages
       showStatChange(countdownMessages[step]);
+      
+      // Also update the countdown row in the mega HUD bar
+      const cdEl = document.getElementById('stat-bar-countdown');
+      if (cdEl) cdEl.textContent = countdownMessages[step];
       
       const duration = step === 0 ? 1500 : 1000;
       
@@ -13444,9 +13451,11 @@
       gameStartTime = Date.now();
       console.log('[Countdown] Game started - isPaused:', isPaused, 'isGameActive:', isGameActive);
 
-      // Activate HUD stat panel
+      // Activate HUD stat panel and clear countdown row
       const panel = document.getElementById('stat-bar-panel');
       if (panel) panel.classList.add('hud-active');
+      const cdEl = document.getElementById('stat-bar-countdown');
+      if (cdEl) cdEl.textContent = '';
 
       // Remove camp-mode from chat tab
       const chatTab = document.getElementById('ai-chat-tab');
