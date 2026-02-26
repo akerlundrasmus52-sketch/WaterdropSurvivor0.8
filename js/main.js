@@ -6020,14 +6020,11 @@
     let _liveStatNotificationTimer = null;
 
     function updateStatBar() {
-      const panel = document.getElementById('stat-bar-panel');
       const liveStatEl = document.getElementById('live-stat-display');
-      if ((!panel && !liveStatEl) || !isGameActive || isGameOver) { 
-        if (panel) panel.style.display = 'none'; 
+      if (!liveStatEl || !isGameActive || isGameOver) { 
         if (liveStatEl) liveStatEl.style.display = 'none';
         return; 
       }
-      if (panel) panel.style.display = 'none';
       
       // Build live game info for the rectangle (no full quest details)
       const parts = [];
@@ -6110,29 +6107,6 @@
           questTrackerEl.style.display = 'none';
         }
       }
-      
-      // Update stat-bar elements for the HUD stat box
-      const waveEl = document.getElementById('stat-bar-wave');
-      const killsEl = document.getElementById('stat-bar-kills');
-      const comboEl = document.getElementById('stat-bar-combo');
-      const questEl = document.getElementById('stat-bar-quest');
-      const achEl = document.getElementById('stat-bar-achievement');
-      const regionEl = document.getElementById('stat-bar-region');
-      if (waveEl) { waveEl.textContent = '⚔️ Wave ' + (waveCount || 0); waveEl.style.display = ''; }
-      if (killsEl) { killsEl.textContent = '💀 Kills: ' + kills; killsEl.style.display = kills > 0 ? '' : 'none'; }
-      if (comboEl) { if (combo > 1) { comboEl.textContent = '🔥 Combo x' + combo; comboEl.style.display = ''; } else { comboEl.style.display = 'none'; } }
-      // Quest row: show full quest name + progress in the stat box panel
-      if (questEl) {
-        if (currentQuest) {
-          questEl.textContent = '📜 ' + currentQuest.name + (questText ? ' · ' + questText : '');
-          questEl.style.display = '';
-        } else {
-          questEl.textContent = '';
-          questEl.style.display = 'none';
-        }
-      }
-      if (achEl) achEl.style.display = 'none';
-      if (regionEl) { regionEl.textContent = '📍 ' + regionName; regionEl.style.display = ''; }
     }
     window.updateStatBar = updateStatBar;
     
@@ -13411,9 +13385,6 @@
       countdownActive = true;
       countdownStep = 0;
       countdownTimer = 0;
-      // Show HUD panel immediately so countdown displays in the mega bar
-      const panel = document.getElementById('stat-bar-panel');
-      if (panel) panel.classList.add('hud-active');
       showCountdownMessage(0);
     }
     
@@ -13425,10 +13396,6 @@
       
       // Use Stat Log for countdown messages
       showStatChange(countdownMessages[step]);
-      
-      // Also update the countdown row in the mega HUD bar
-      const cdEl = document.getElementById('stat-bar-countdown');
-      if (cdEl) cdEl.textContent = countdownMessages[step];
       
       const duration = step === 0 ? 1500 : 1000;
       
@@ -13450,12 +13417,6 @@
       setGameActive(true);
       gameStartTime = Date.now();
       console.log('[Countdown] Game started - isPaused:', isPaused, 'isGameActive:', isGameActive);
-
-      // Activate HUD stat panel and clear countdown row
-      const panel = document.getElementById('stat-bar-panel');
-      if (panel) panel.classList.add('hud-active');
-      const cdEl = document.getElementById('stat-bar-countdown');
-      if (cdEl) cdEl.textContent = '';
 
       // Remove camp-mode from chat tab
       const chatTab = document.getElementById('ai-chat-tab');
@@ -17317,9 +17278,6 @@
       // Show "YOU DIED" banner for 3 seconds
       showYouDiedBanner(3000);
 
-      // Deactivate HUD stat panel
-      const panel = document.getElementById('stat-bar-panel');
-      if (panel) panel.classList.remove('hud-active');
       // Also update quest state so active quests are properly cleaned up
       if (windmillQuest && windmillQuest.active) {
         windmillQuest.active = false;

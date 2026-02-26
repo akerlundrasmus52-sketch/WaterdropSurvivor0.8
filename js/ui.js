@@ -10,39 +10,10 @@
 const _statNotificationQueue = [];
 let _isShowingNotification = false;
 
-// Previous stats history for the lower-left panel (max 3 items)
-const _previousStats = [];
-let _liveStatTimer = null;
-
-function _updatePreviousStatsPanel() {
-  for (let i = 0; i < 3; i++) {
-    const el = document.getElementById('stat-bar-prev-' + (i + 1));
-    if (el) {
-      el.textContent = _previousStats[i] || '';
-      el.style.display = _previousStats[i] ? '' : 'none';
-    }
-  }
-}
-
 function _updateLiveStatDisplay(text) {
-  const panelLiveEl = document.getElementById('stat-bar-live');
-
-  // Push current notification text to previous stats history
-  if (text && text.trim() && text.trim() !== _previousStats[0]) {
-    _previousStats.unshift(text.trim());
-    if (_previousStats.length > 3) _previousStats.pop();
-    _updatePreviousStatsPanel();
-  }
-
   // Show notification in the live stat rectangle via main.js
   if (window.showLiveStatNotification) {
     window.showLiveStatNotification(text);
-  }
-
-  // Also update panel live element for compatibility
-  if (panelLiveEl) {
-    panelLiveEl.textContent = text ? `🔔 ${text}` : '';
-    panelLiveEl.style.display = text ? '' : 'none';
   }
 }
 
@@ -55,7 +26,7 @@ function _processStatNotificationQueue() {
   _isShowingNotification = true;
   const { text, level } = _statNotificationQueue.shift();
 
-  // Update live stat display (upper right)
+  // Update live stat display
   _updateLiveStatDisplay(text);
 
   // Create notification element
