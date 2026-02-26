@@ -673,5 +673,54 @@
   </div>
   <!-- Farmer NPC quest indicator "?" above head -->
   <div id="farmer-quest-indicator">?</div>
+
+  <!-- AI Chat Box Console (slide-in from left, comic style) -->
+  <div id="ai-chat-tab" title="Open AI Console">💬 AI</div>
+  <div id="ai-chat-box">
+    <div class="chat-header">
+      <span>💧 DROPLET AI</span>
+      <button class="chat-close-btn" id="chat-close-btn" title="Close">✕</button>
+    </div>
+    <div class="chat-messages" id="chat-messages"></div>
+    <div class="chat-input-area">
+      <input type="text" id="chat-input" placeholder="Type a command..." autocomplete="off" />
+      <button id="chat-send-btn">SEND</button>
+    </div>
+  </div>
+
+  <!-- Character Visuals Screen -->
+  <div id="character-visuals-screen">
+    <div class="char-vis-header">🎨 CHARACTER VISUALS</div>
+    <button class="back-btn camp-section-back-btn" id="char-vis-back-btn">← Back to Camp</button>
+    <div class="char-vis-preview">
+      <div class="char-preview-drop" id="char-preview-drop"></div>
+    </div>
+    <div class="char-vis-sections">
+      <div class="char-vis-section">
+        <div class="char-vis-section-title">🎩 Accessories</div>
+        <div class="char-vis-options" id="char-vis-accessories"></div>
+      </div>
+      <div class="char-vis-section">
+        <div class="char-vis-section-title">🎬 Animations</div>
+        <div class="char-vis-options" id="char-vis-animations"></div>
+      </div>
+      <div class="char-vis-section">
+        <div class="char-vis-section-title">👕 Outfits</div>
+        <div class="char-vis-options" id="char-vis-outfits"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Codex Screen -->
+  <div id="codex-screen">
+    <div class="codex-header">📖 CODEX</div>
+    <button class="back-btn camp-section-back-btn" id="codex-back-btn">← Back to Camp</button>
+    <div class="codex-pages" id="codex-pages"></div>
+    <div class="codex-pagination">
+      <button id="codex-prev-btn">◀ PREV</button>
+      <span id="codex-page-info">Page 1</span>
+      <button id="codex-next-btn">NEXT ▶</button>
+    </div>
+  </div>
 </body>
 </html>
