@@ -460,7 +460,7 @@
     /* Round Minimap - Bottom Right Corner - 25% BIGGER */
     #minimap-container {
       position: absolute;
-      bottom: 4px;
+      bottom: 42px;
       right: 8px;
       width: 130px;
       height: 132px;
@@ -574,16 +574,17 @@
       text-shadow: 0 0 6px rgba(255,215,0,1);
     }
     
-    /* Region Display - lower-left indicator */
+    /* Region Display - lower-left indicator - comic style matching stat bar */
     #region-display {
       position: fixed;
-      bottom: 10px;
+      bottom: 48px;
       left: 8px;
       right: auto;
       width: auto;
-      min-width: 190px;
-      max-width: 200px;
-      height: 22px;
+      min-width: 120px;
+      max-width: 280px;
+      height: auto;
+      min-height: 22px;
       background: linear-gradient(to bottom, #1a1a1a 0%, #1a1a1a 50%, #3a3a3a 50%, #3a3a3a 100%);
       border-radius: 11px;
       border: 3px solid #000;
@@ -594,13 +595,16 @@
         0 0 8px rgba(255,215,0,0.5),
         0 0 16px rgba(255,215,0,0.2),
         inset 0 2px 4px rgba(0,0,0,0.4);
+      background-image: 
+        radial-gradient(circle at 3px 3px, rgba(255,215,0,0.05) 2px, transparent 2px);
+      background-size: 12px 12px;
       z-index: 101;
       pointer-events: none;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 0 10px;
-      transition: opacity 0.5s ease-in-out;
+      padding: 2px 14px;
+      transition: opacity 0.5s ease-in-out, width 0.3s ease-out;
       opacity: 1;
       animation: bar-border-alive 3s ease-in-out infinite;
     }
@@ -831,7 +835,7 @@
     /* Quest tracker — fixed position in-game overlay */
     #quest-tracker {
       position: fixed !important;
-      top: 78px !important;
+      top: 86px !important;
       left: 12px !important;
       right: auto !important;
       color: #FFD700;
@@ -2819,10 +2823,10 @@
       }
     }
 
-    /* Live Stat Display - comic-style status bar under clock */
+    /* Live Stat Display - comic-style unified status bar under clock */
     #live-stat-display {
       position: fixed;
-      top: 62px;
+      top: 100px;
       left: 50%;
       transform: translateX(-50%);
       width: min(560px, calc(100vw - 40px));
@@ -2847,6 +2851,9 @@
         inset 0 0 10px rgba(0,0,0,0.5);
       text-shadow: 0 0 6px rgba(255,215,0,0.6), 1px 1px 2px rgba(0,0,0,0.9);
       animation: bar-border-alive 3s ease-in-out infinite;
+      background-image: 
+        radial-gradient(circle at 3px 3px, rgba(255,215,0,0.05) 2px, transparent 2px);
+      background-size: 12px 12px;
     }
 
     /* Hide old large stat textbox panel */
