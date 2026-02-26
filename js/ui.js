@@ -102,5 +102,16 @@ function showStatusMessage(text, duration = 2000) {
 
 window.GameUI = {
   showStatChange,
-  showStatusMessage
+  showStatusMessage,
+  showYouDiedBanner
 };
+
+function showYouDiedBanner(duration) {
+  duration = duration || 3000;
+  const banner = document.getElementById('you-died-banner');
+  if (!banner) return;
+  banner.style.display = 'block';
+  setTimeout(() => {
+    banner.style.display = 'none';
+  }, duration);
+}

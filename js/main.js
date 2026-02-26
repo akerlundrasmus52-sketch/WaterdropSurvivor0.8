@@ -11,7 +11,7 @@
     const { calculateArmorReduction, calculateEnemyArmorReduction } = window.GameCombat;
     const { getDefaultPlayerStats } = window.GamePlayer;
     const { COLORS, GAME_CONFIG, countdownMessages, COMPANIONS, getInitialDayNightCycle } = window.GameWorld;
-    const { showStatChange, showStatusMessage } = window.GameUI;
+    const { showStatChange, showStatusMessage, showYouDiedBanner } = window.GameUI;
     const { RENDERER_CONFIG } = window.GameRenderer;
 
     // --- CONSTANTS & CONFIG ---
@@ -6096,41 +6096,43 @@
         questText = 'Visit Camp';
       }
       
-      // Update quest tracker (left-side overlay) — show quest name + progress
+      // Update quest tracker (left-side overlay) — simplified: show only progress number
       const questTrackerEl = document.getElementById('quest-tracker');
       if (questTrackerEl) {
-        if (currentQuest && currentQuest.name) {
-          questTrackerEl.textContent = '';
-          const nameEl = document.createElement('b');
-          nameEl.style.color = '#FFD700';
-          nameEl.textContent = '📜 ' + currentQuest.name;
-          const progEl = document.createElement('span');
-          progEl.style.cssText = 'font-size:11px;color:#ccc;display:block;';
-          progEl.textContent = questText;
-          questTrackerEl.appendChild(nameEl);
-          questTrackerEl.appendChild(progEl);
-          questTrackerEl.style.display = 'block';
-        } else if (questText) {
+        if (currentQuest && questText) {
+          // Simplified: just show icon + short progress (full name visible in stat box)
           questTrackerEl.textContent = '📜 ' + questText;
+          questTrackerEl.style.display = 'block';
+        } else if (currentQuest) {
+          questTrackerEl.textContent = '📜 ' + (currentQuest.name || 'Quest');
           questTrackerEl.style.display = 'block';
         } else {
           questTrackerEl.style.display = 'none';
         }
       }
       
-      // Update hidden stat-bar elements for compatibility
+      // Update stat-bar elements for the HUD stat box
       const waveEl = document.getElementById('stat-bar-wave');
       const killsEl = document.getElementById('stat-bar-kills');
       const comboEl = document.getElementById('stat-bar-combo');
       const questEl = document.getElementById('stat-bar-quest');
       const achEl = document.getElementById('stat-bar-achievement');
       const regionEl = document.getElementById('stat-bar-region');
-      if (waveEl) waveEl.textContent = 'Wave: ' + (waveCount || 0);
-      if (killsEl) killsEl.style.display = 'none';
+      if (waveEl) { waveEl.textContent = '⚔️ Wave ' + (waveCount || 0); waveEl.style.display = ''; }
+      if (killsEl) { killsEl.textContent = '💀 Kills: ' + kills; killsEl.style.display = kills > 0 ? '' : 'none'; }
       if (comboEl) { if (combo > 1) { comboEl.textContent = '🔥 Combo x' + combo; comboEl.style.display = ''; } else { comboEl.style.display = 'none'; } }
-      if (questEl) questEl.textContent = questText ? '📋 ' + questText : '';
+      // Quest row: show full quest name + progress in the stat box panel
+      if (questEl) {
+        if (currentQuest) {
+          questEl.textContent = '📜 ' + currentQuest.name + (questText ? ' · ' + questText : '');
+          questEl.style.display = '';
+        } else {
+          questEl.textContent = '';
+          questEl.style.display = 'none';
+        }
+      }
       if (achEl) achEl.style.display = 'none';
-      if (regionEl) regionEl.textContent = `📍 ${regionName}`;
+      if (regionEl) { regionEl.textContent = '📍 ' + regionName; regionEl.style.display = ''; }
     }
     window.updateStatBar = updateStatBar;
     
@@ -9497,6 +9499,39 @@
     };
 
     let chatOpen = false;
+    let _chatIdleTimer = null;
+
+    // Hide chat tab while joystick is moving
+    function hideChatTabForJoystick() {
+      const tab = document.getElementById('ai-chat-tab');
+      if (tab) tab.classList.add('chat-tab-hidden');
+      if (_chatIdleTimer) { clearTimeout(_chatIdleTimer); _chatIdleTimer = null; }
+    }
+
+    // Reshow chat tab after a short idle period
+    function showChatTabAfterIdle(delay) {
+      delay = delay !== undefined ? delay : 1500;
+      if (_chatIdleTimer) clearTimeout(_chatIdleTimer);
+      _chatIdleTimer = setTimeout(() => {
+        const tab = document.getElementById('ai-chat-tab');
+        if (tab) tab.classList.remove('chat-tab-hidden');
+        _chatIdleTimer = null;
+      }, delay);
+    }
+
+    // Show a farmer-style reminder bubble near the chat tab
+    function showChatReminderBubble(text, inCampMode) {
+      const bubble = document.getElementById('chat-reminder-bubble');
+      if (!bubble) return;
+      bubble.textContent = text;
+      bubble.style.display = 'block';
+      if (inCampMode) {
+        bubble.classList.add('camp-mode');
+      } else {
+        bubble.classList.remove('camp-mode');
+      }
+      setTimeout(() => { bubble.style.display = 'none'; }, 5000);
+    }
 
     function initAIChat() {
       const tab = document.getElementById('ai-chat-tab');
@@ -9566,25 +9601,80 @@
 
       // Settings/graphics
       if (lower.includes('lag') || lower.includes('fps') || lower.includes('smooth') || lower.includes('performance')) {
-        if (window.GameRenderer && window.GameRenderer.setQuality) {
-          window.GameRenderer.setQuality('low');
-        }
+        const qs = document.getElementById('quality-select');
+        if (window.GameRenderer && window.GameRenderer.setQuality) window.GameRenderer.setQuality('low');
+        if (qs) qs.value = 'low';
         return "⚡ I've optimized the settings for better performance. The game should run smoother now. You can also adjust settings manually in the Settings menu.";
       }
-      if (lower.includes('lower graphics') || lower.includes('low quality') || lower.includes('reduce')) {
-        if (window.GameRenderer && window.GameRenderer.setQuality) {
-          window.GameRenderer.setQuality('low');
-        }
+      if (lower.includes('lower graphics') || lower.includes('low quality') || lower.includes('reduce quality')) {
+        const qs = document.getElementById('quality-select');
+        if (window.GameRenderer && window.GameRenderer.setQuality) window.GameRenderer.setQuality('low');
+        if (qs) qs.value = 'low';
         return "📉 Graphics set to low quality for better performance.";
       }
+      if (lower.includes('medium graphics') || lower.includes('medium quality')) {
+        const qs = document.getElementById('quality-select');
+        if (window.GameRenderer && window.GameRenderer.setQuality) window.GameRenderer.setQuality('medium');
+        if (qs) qs.value = 'medium';
+        return "⚖️ Graphics set to medium quality.";
+      }
       if (lower.includes('higher graphics') || lower.includes('high quality') || lower.includes('better graphics') || lower.includes('max quality')) {
-        if (window.GameRenderer && window.GameRenderer.setQuality) {
-          window.GameRenderer.setQuality('high');
-        }
+        const qs = document.getElementById('quality-select');
+        if (window.GameRenderer && window.GameRenderer.setQuality) window.GameRenderer.setQuality('high');
+        if (qs) qs.value = 'high';
         return "📈 Graphics set to high quality. If you experience lag, type 'lower graphics'.";
       }
       if (lower.includes('more blood') || lower.includes('effects')) {
         return "🩸 Visual effects are at maximum. Enemy hits show blood splatter effects during combat!";
+      }
+
+      // Auto-aim toggle
+      if (lower.includes('auto aim') || lower.includes('auto-aim') || lower.includes('autoaim')) {
+        const cb = document.getElementById('auto-aim-checkbox');
+        if (cb && !cb.disabled) {
+          const enable = lower.includes('enable') || lower.includes('on') || lower.includes('turn on');
+          const disable = lower.includes('disable') || lower.includes('off') || lower.includes('turn off');
+          if (enable) { cb.checked = true; cb.dispatchEvent(new Event('change')); return "🎯 Auto-aim enabled!"; }
+          if (disable) { cb.checked = false; cb.dispatchEvent(new Event('change')); return "🎯 Auto-aim disabled."; }
+          return `🎯 Auto-aim is currently ${cb.checked ? 'ON' : 'OFF'}. Say "enable auto-aim" or "disable auto-aim" to toggle.`;
+        }
+        return "🔒 Auto-aim must be unlocked in the Skill Tree before it can be enabled.";
+      }
+
+      // Sound toggle
+      if (lower.includes('sound') && (lower.includes('on') || lower.includes('off') || lower.includes('enable') || lower.includes('disable') || lower.includes('mute') || lower.includes('unmute'))) {
+        const st = document.getElementById('sound-toggle');
+        if (st) {
+          const enable = lower.includes('on') || lower.includes('enable') || lower.includes('unmute');
+          st.checked = enable;
+          st.dispatchEvent(new Event('change'));
+          return enable ? "🔊 Sound effects enabled!" : "🔇 Sound effects muted.";
+        }
+      }
+
+      // Music toggle
+      if (lower.includes('music') && (lower.includes('on') || lower.includes('off') || lower.includes('enable') || lower.includes('disable') || lower.includes('mute') || lower.includes('unmute'))) {
+        const mt = document.getElementById('music-toggle');
+        if (mt) {
+          const enable = lower.includes('on') || lower.includes('enable') || lower.includes('unmute');
+          mt.checked = enable;
+          mt.dispatchEvent(new Event('change'));
+          return enable ? "🎵 Music enabled!" : "🎵 Music muted.";
+        }
+      }
+
+      // Control type
+      if (lower.includes('keyboard') && lower.includes('control')) {
+        const cs = document.getElementById('control-type-select');
+        if (cs) { cs.value = 'keyboard'; cs.dispatchEvent(new Event('change')); return "⌨️ Controls switched to keyboard."; }
+      }
+      if (lower.includes('gamepad') || lower.includes('controller')) {
+        const cs = document.getElementById('control-type-select');
+        if (cs) { cs.value = 'gamepad'; cs.dispatchEvent(new Event('change')); return "🎮 Controls switched to gamepad."; }
+      }
+      if (lower.includes('touch') && lower.includes('control')) {
+        const cs = document.getElementById('control-type-select');
+        if (cs) { cs.value = 'touch'; cs.dispatchEvent(new Event('change')); return "👆 Controls switched to touch (joystick)."; }
       }
 
       // Settings
@@ -13353,6 +13443,22 @@
       setGameActive(true);
       gameStartTime = Date.now();
       console.log('[Countdown] Game started - isPaused:', isPaused, 'isGameActive:', isGameActive);
+
+      // Activate HUD stat panel
+      const panel = document.getElementById('stat-bar-panel');
+      if (panel) panel.classList.add('hud-active');
+
+      // Remove camp-mode from chat tab
+      const chatTab = document.getElementById('ai-chat-tab');
+      if (chatTab) chatTab.classList.remove('camp-mode');
+
+      // Show chat tab reminder on first run and every 5th run
+      const runs = saveData.totalRuns || 0;
+      if (runs === 0 || runs % 5 === 0) {
+        setTimeout(() => {
+          showChatReminderBubble('Need auto-aim? Ask me here! 💬', false);
+        }, 4000);
+      }
     }
     
     // --- LONG PRESS DETAIL POPUP ---
@@ -13490,6 +13596,10 @@
         optionsMenu.style.display = 'none';
         updateCampScreen();
         
+        // Move chat tab upward in camp mode to avoid menu overlap
+        const chatTab = document.getElementById('ai-chat-tab');
+        if (chatTab) chatTab.classList.add('camp-mode');
+
         // Ensure buildings tab is selected (not sleep/day-night selection)
         document.getElementById('camp-screen').classList.remove('camp-subsection-active');
         document.getElementById('camp-buildings-section').style.display = 'block';
@@ -13685,6 +13795,20 @@
         updateCampScreen();
         document.getElementById('camp-screen').classList.remove('camp-subsection-active');
         document.getElementById('camp-screen').style.display = 'flex';
+
+        // Move chat tab upward in camp mode to avoid menu overlap
+        const chatTab = document.getElementById('ai-chat-tab');
+        if (chatTab) chatTab.classList.add('camp-mode');
+
+        // Track camp visits and show reminder on 1st and every 5th visit
+        if (!saveData.campVisitCount) saveData.campVisitCount = 0;
+        saveData.campVisitCount++;
+        saveSaveData();
+        if (saveData.campVisitCount === 1 || saveData.campVisitCount % 5 === 0) {
+          setTimeout(() => {
+            showChatReminderBubble('Ask me about quests, settings & tips! 💬', true);
+          }, 1500);
+        }
         
         // Tutorial: Check if player visited camp for first time after first death
         if (!saveData.tutorial) {
@@ -13763,6 +13887,11 @@
       document.getElementById('camp-action-btn').onclick = () => {
         playSound('waterdrop');
         document.getElementById('camp-screen').style.display = 'none';
+        // Remove camp mode from chat tab when leaving camp
+        const chatTab = document.getElementById('ai-chat-tab');
+        if (chatTab) chatTab.classList.remove('camp-mode');
+        const reminderBubble = document.getElementById('chat-reminder-bubble');
+        if (reminderBubble) reminderBubble.style.display = 'none';
         if (isGameActive) {
           // Resume game when returning from camp during an active run
           setGamePaused(false);
@@ -13920,6 +14049,9 @@
         updateCampScreen();
         document.getElementById('camp-screen').classList.remove('camp-subsection-active');
         document.getElementById('camp-screen').style.display = 'flex';
+        // Move chat tab upward in camp mode to avoid menu overlap
+        const chatTab = document.getElementById('ai-chat-tab');
+        if (chatTab) chatTab.classList.add('camp-mode');
         // Keep menu hidden during camp visit from death
       };
       
@@ -17172,6 +17304,13 @@
         const el = document.getElementById(id);
         if (el) el.style.display = 'none';
       });
+
+      // Show "YOU DIED" banner for 3 seconds
+      showYouDiedBanner(3000);
+
+      // Deactivate HUD stat panel
+      const panel = document.getElementById('stat-bar-panel');
+      if (panel) panel.classList.remove('hud-active');
       // Also update quest state so active quests are properly cleaned up
       if (windmillQuest && windmillQuest.active) {
         windmillQuest.active = false;
@@ -17817,6 +17956,9 @@
             joystickOuter.style.display = 'block';
             joystickOuter.style.left = (touch.clientX - 60) + 'px';
             joystickOuter.style.top = (touch.clientY - 60) + 'px';
+
+            // Hide chat tab while joystick is active
+            hideChatTabForJoystick();
           }
           // Right half = aiming joystick
           else if (touch.clientX >= screenWidth / 2 && !joystickRight.active) {
@@ -17932,6 +18074,9 @@
             // Hide joystick
             joystickOuter.style.display = 'none';
             joystickInner.style.transform = 'translate(-50%, -50%)';
+
+            // Reshow chat tab after short idle timeout
+            showChatTabAfterIdle();
           }
           
           if (touch.identifier === joystickRight.id) {
