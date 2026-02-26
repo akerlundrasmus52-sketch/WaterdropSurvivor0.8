@@ -118,14 +118,14 @@
   function emitBurst(pos, count, options) {
     if (!_scene) return;
     const opts = options || {};
-    const spreadXZ  = opts.spreadXZ  !== undefined ? opts.spreadXZ  : 1.2;
-    const spreadY   = opts.spreadY   !== undefined ? opts.spreadY   : 0.8;
-    const minLife   = opts.minLife   !== undefined ? opts.minLife   : 40;
-    const maxLife   = opts.maxLife   !== undefined ? opts.maxLife   : 80;
+    const spreadXZ  = opts.spreadXZ  !== undefined ? opts.spreadXZ  : 1.8;
+    const spreadY   = opts.spreadY   !== undefined ? opts.spreadY   : 1.2;
+    const minLife   = opts.minLife   !== undefined ? opts.minLife   : 50;
+    const maxLife   = opts.maxLife   !== undefined ? opts.maxLife   : 100;
     const minSize   = opts.minSize   !== undefined ? opts.minSize   : 0.04;
-    const maxSize   = opts.maxSize   !== undefined ? opts.maxSize   : 0.10;
+    const maxSize   = opts.maxSize   !== undefined ? opts.maxSize   : 0.14;
     const color1    = opts.color1    !== undefined ? opts.color1    : 0x8B0000;
-    const color2    = opts.color2    !== undefined ? opts.color2    : 0xCC0000;
+    const color2    = opts.color2    !== undefined ? opts.color2    : 0xFF1A1A;
 
     const [r1, g1, b1] = _hexToRgb(color1);
     const [r2, g2, b2] = _hexToRgb(color2);
@@ -153,16 +153,16 @@
   /**
    * Pulsating heartbeat emission — emits `pulses` bursts spaced `interval` ms apart.
    * Simulates blood pumping from an open wound or severed neck.
-   * Default: 4 pulses, 400 drops each.
+   * Default: 6 pulses, 500 drops each.
    */
   function emitPulse(pos, options) {
     if (!_scene) return;
     const opts     = options || {};
-    const pulses   = opts.pulses   !== undefined ? opts.pulses   : 4;
-    const perPulse = opts.perPulse !== undefined ? opts.perPulse : 400;
-    const interval = opts.interval !== undefined ? opts.interval : 220; // ms
+    const pulses   = opts.pulses   !== undefined ? opts.pulses   : 6;
+    const perPulse = opts.perPulse !== undefined ? opts.perPulse : 500;
+    const interval = opts.interval !== undefined ? opts.interval : 200; // ms
     const arcDir   = opts.arcDir;   // optional THREE.Vector3 direction
-    const spreadXZ = opts.spreadXZ !== undefined ? opts.spreadXZ : 1.4;
+    const spreadXZ = opts.spreadXZ !== undefined ? opts.spreadXZ : 1.8;
     const color1   = opts.color1   !== undefined ? opts.color1   : 0x8B0000;
     const color2   = opts.color2   !== undefined ? opts.color2   : 0xFF0000;
 

@@ -71,7 +71,7 @@ function getEnemyBaseStats(type, levelScaling, speedBase, playerLevel) {
     stats.speed = speedBase * 1.3;
     stats.aiBehavior = 'interceptor';
   } else if (type === 7) {    // Hard Fast — aggressive flanker
-    stats.hp    = 55  * levelScaling;
+    stats.hp    = 55  * levelScaling * 1.2; // +20% HP (yellow/gold enemy)
     stats.speed = speedBase * 3.2;
     stats.aiBehavior = 'flanker';
   } else if (type === 8) {    // Hard Balanced — pack leader
@@ -84,7 +84,7 @@ function getEnemyBaseStats(type, levelScaling, speedBase, playerLevel) {
     stats.aiBehavior = 'stalker'; // Circles then strikes when player is busy
   } else if (type === 10) {   // MiniBoss
     const miniBossStartLevel = 10;
-    stats.hp         = 1000 * (1 + (playerLevel - miniBossStartLevel) * MINI_BOSS_HP_SCALING_RATE);
+    stats.hp         = 1000 * 1.2 * (1 + (playerLevel - miniBossStartLevel) * MINI_BOSS_HP_SCALING_RATE); // +20% HP (yellow/gold enemy)
     stats.speed      = speedBase * 1.0;
     stats.isMiniBoss = true;
     stats.armor      = 0.25;
