@@ -13748,9 +13748,10 @@
     // Uses a circular buffer approach: overwrite oldest slot instead of shift() for O(1)
     let bloodDecalIndex = 0; // Current write index for circular buffer
     const BLOOD_DECAL_FADE_MS = 12000; // 12 seconds fade per spec
-    function spawnBloodDecal(pos, sizeOverride) {
+    function spawnBloodDecal(pos, sizeOverride, colorOverride) {
       if (!scene) return;
       const now = Date.now();
+      const baseColor = colorOverride || 0x6B0000;
       // Layered pools: tiny drip, medium splat, large pool
       const layerSizes = sizeOverride ? [
         Math.max(0.08, sizeOverride * 0.55),
@@ -13769,7 +13770,7 @@
         if (bloodDecals.length < MAX_BLOOD_DECALS) {
           const geo = new THREE.CircleGeometry(size, 16);
           const mat = new THREE.MeshStandardMaterial({
-            color: 0x6B0000,
+            color: baseColor,
             transparent: true,
             opacity: initialOpacity,
             depthWrite: false,
@@ -13779,7 +13780,7 @@
             blending: THREE.MultiplyBlending,
             roughness: 0.15,     // Smooth reflective surface like wet blood
             metalness: 0.6,      // High metalness for glass-like reflection
-            emissive: 0x3A0000,  // Subtle dark red glow
+            emissive: baseColor,  // Subtle glow (matches color)
             emissiveIntensity: 0.15
           });
           const decal = new THREE.Mesh(geo, mat);
@@ -14103,25 +14104,25 @@
         startY = (-(headPos.y * 0.5) + 0.5) * window.innerHeight;
       }
       
-      levelUpText.style.cssText = `
+        levelUpText.style.cssText = `
         position: fixed;
         left: ${startX}px;
         top: ${startY}px;
         transform: translate(-50%, -50%) scale(0);
         font-family: 'Bangers', cursive;
-        font-size: 38px;
+        font-size: 22px;
         font-weight: 500;
         color: #FFD700;
         text-shadow: 
-          0 0 10px rgba(255,215,0,0.85),
-          0 0 20px rgba(93,173,226,0.4),
+          0 0 8px rgba(255,215,0,0.85),
+          0 0 16px rgba(93,173,226,0.35),
           2px 2px 0 #000,
           -1px -1px 0 #000,
           1px -1px 0 #000,
           -1px 1px 0 #000;
         z-index: 200;
         pointer-events: none;
-        letter-spacing: 4px;
+        letter-spacing: 2px;
       `;
       levelUpText.textContent = 'LEVEL UP!';
       document.body.appendChild(levelUpText);
@@ -14275,12 +14276,12 @@
     }
     
     function createLevelUpEffects() {
-      // Water Fountain Effect - use particle pool to avoid GC spikes
-      // (replaces 60 fountain droplets, 18 jet spheres, 20 head droplets, 30 ground droplets)
-      spawnParticles(player.mesh.position, COLORS.player, 30); // main fountain burst
-      spawnParticles(player.mesh.position, 0xFFFFFF, 10);      // white sparkles
-      spawnParticles(player.mesh.position, 0x5DADE2, 20);      // blue water droplets
-      
+      // Soft water fountain burst (small droplets only)
+      spawnParticles(player.mesh.position, 0x5DADE2, 12); // gentle water spray
+      spawnParticles(player.mesh.position, 0xFFFFFF, 6);  // subtle highlights
+      // Leave tiny water pools at feet
+      spawnBloodDecal(player.mesh.position, 0.22, 0x5DADE2);
+
       // Water-sprout-from-head level-up ring: multiple expanding rings + vertical water jet
       // Ring 1: fast-expanding bright ring (teal/white)
       const ringGeo = new THREE.RingGeometry(0.3, 0.8, 24);
@@ -14337,34 +14338,19 @@
       // Fountain/explosion of "LEVEL UP" text particles from player's head
       const texts = ["L", "E", "V", "E", "L", " ", "U", "P", "!"];
       
-      for(let i=0; i<40; i++) {
-        const angle = (i / 40) * Math.PI * 2;
-        const speed = 0.15 + Math.random() * 0.35;
+      for(let i=0; i<18; i++) {
+        const angle = (i / 18) * Math.PI * 2;
+        const speed = 0.08 + Math.random() * 0.18;
         const text = texts[i % texts.length];
         
         const particle = new LevelUpTextParticle(
           player.mesh.position.clone(),
           new THREE.Vector3(
             Math.cos(angle) * speed,
-            0.4 + Math.random() * 0.6,
+            0.5 + Math.random() * 0.4,
             Math.sin(angle) * speed
           ),
           text
-        );
-        particles.push(particle);
-      }
-      
-      // Add regular colored particles
-      for(let i=0; i<30; i++) {
-        const angle = (i / 30) * Math.PI * 2;
-        const speed = 0.2 + Math.random() * 0.3;
-        const particle = new LevelUpParticle(
-          player.mesh.position.clone(),
-          new THREE.Vector3(
-            Math.cos(angle) * speed,
-            0.5 + Math.random() * 0.5,
-            Math.sin(angle) * speed
-          )
         );
         particles.push(particle);
       }
@@ -14377,7 +14363,7 @@
         canvas.width = 64;
         canvas.height = 64;
         const ctx = canvas.getContext('2d');
-        ctx.font = 'bold 48px Arial';
+        ctx.font = 'bold 32px Arial';
         ctx.fillStyle = '#5DADE2';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
@@ -14388,13 +14374,14 @@
         const texture = new THREE.CanvasTexture(canvas);
         const spriteMat = new THREE.SpriteMaterial({ map: texture, transparent: true });
         this.mesh = new THREE.Sprite(spriteMat);
-        this.mesh.scale.set(0.5, 0.5, 0.5);
+        this.mesh.scale.set(0.35, 0.35, 0.35);
         this.mesh.position.copy(pos);
         this.mesh.position.y += 1;
         this.vel = vel;
         scene.add(this.mesh);
         this.life = 80;
         this.rotSpeed = (Math.random() - 0.5) * 0.2;
+        this.hasSplashed = false;
       }
       
       update() {
@@ -14406,11 +14393,15 @@
         // Fade out
         this.mesh.material.opacity = this.life / 80;
         
-        if (this.mesh.position.y < 0.1) {
-          this.mesh.position.y = 0.1;
-          this.vel.y *= -0.5; // Bounce
-          this.vel.x *= 0.7;
-          this.vel.z *= 0.7;
+        if (this.mesh.position.y < 0.08) {
+          this.mesh.position.y = 0.08;
+          this.vel.y *= -0.4; // Soft bounce
+          this.vel.x *= 0.65;
+          this.vel.z *= 0.65;
+          if (!this.hasSplashed) {
+            this.hasSplashed = true;
+            spawnBloodDecal(this.mesh.position, 0.16, 0x5DADE2);
+          }
         }
         
         if (this.life <= 0) {
