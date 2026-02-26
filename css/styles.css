@@ -2518,12 +2518,11 @@
       }
 
       #stat-bar-panel {
-        top: 111px;
-        bottom: auto;
-        left: 50%;
+        bottom: 5px;
+        top: auto;
+        left: 8px;
         right: auto;
-        transform: translateX(-50%);
-        width: min(520px, calc(100vw - 40px));
+        width: 180px;
       }
       
       /* Reduce padding on small portrait screens */
@@ -2798,14 +2797,39 @@
       }
     }
 
-    /* Stat Bar Panel — centered under clock, absorbs live-stat-display functionality */
-    #stat-bar-panel {
+    /* Live Stat Display - dark rectangle under clock showing all live game info */
+    #live-stat-display {
       position: fixed;
       top: 111px;
       left: 50%;
       transform: translateX(-50%);
       width: min(520px, calc(100vw - 40px));
-      max-height: 200px;
+      min-height: 22px;
+      background: rgba(25, 25, 30, 0.92);
+      border: 2px solid rgba(60, 60, 70, 0.8);
+      border-radius: 8px;
+      padding: 3px 10px;
+      z-index: 99;
+      font-family: 'Bangers', cursive;
+      font-size: 13px;
+      color: #e0e0e0;
+      pointer-events: none;
+      display: none;
+      text-align: center;
+      overflow: hidden;
+      box-shadow:
+        0 2px 8px rgba(0,0,0,0.7),
+        inset 0 0 6px rgba(0,0,0,0.4);
+      text-shadow: 0 1px 3px rgba(0,0,0,0.9);
+    }
+
+    /* Stat Bar Panel — redesigned HUD stat box (bottom-left, fixed size) */
+    #stat-bar-panel {
+      position: fixed;
+      bottom: 5px;
+      left: 8px;
+      width: 180px;
+      max-height: 80px; /* Caps to ~4 rows — same compact size during and after countdown */
       overflow: hidden;
       background: rgba(10, 10, 15, 0.92);
       border: 2px solid rgba(255,215,0,0.5);
@@ -2814,7 +2838,6 @@
       z-index: 101;
       pointer-events: none;
       display: none; /* Hidden when game is inactive; shown by JS when in-game */
-      text-align: center;
     }
     #stat-bar-panel.hud-active {
       display: flex !important;
@@ -2855,17 +2878,6 @@
     #stat-bar-panel .stat-label { color: #aaa; font-size: 10px; }
     #stat-bar-panel .stat-claimed { color: #4f4; font-size: 10px; animation: stat-fade 5s forwards; }
     @keyframes stat-fade { 0%{opacity:1} 80%{opacity:1} 100%{opacity:0} }
-    #stat-bar-notification {
-      color: #e0e0e0;
-      background: rgba(255,255,255,0.05);
-      border-bottom: 1px solid rgba(255,215,0,0.15);
-      font-style: italic;
-    }
-    #stat-bar-realtime {
-      color: #87CEEB;
-      background: rgba(135,206,235,0.06);
-      border-top: 1px solid rgba(255,215,0,0.15);
-    }
 
     /* You-Died banner */
     #you-died-banner {

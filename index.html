@@ -455,6 +455,9 @@
     <!-- PR #117: Menu button (shows in portrait mode) -->
     <button id="menu-btn" title="Menu">☰</button>
     
+    <!-- Live Stat Display - upper right, shows latest upgrade/event one at a time -->
+    <div id="live-stat-display"></div>
+    
     <!-- Equipment Button -->
     <button id="equipment-btn" title="Equipment">⚔️</button>
     
@@ -647,8 +650,6 @@
   <script type="module" src="js/main.js"></script>
   <!-- Stat Bar Panel (lower left - previous stats + quest) -->
   <div id="stat-bar-panel">
-    <div id="stat-bar-notification" class="stat-row" style="display:none"></div>
-    <div id="stat-bar-realtime" class="stat-row" style="display:none"></div>
     <div id="stat-bar-live" class="stat-row"></div>
     <div id="stat-bar-region" class="stat-row"></div>
     <div id="stat-bar-quest-section" class="stat-section">
