@@ -3934,7 +3934,7 @@
         if (window.BloodSystem) {
           const neckPos = this.mesh.position.clone();
           neckPos.y += 0.6;
-          window.BloodSystem.emitPulse(neckPos, { pulses: 4, perPulse: 200, interval: 200, spreadXZ: 1.8, color1: 0x8B0000, color2: 0xDC143C });
+          window.BloodSystem.emitPulse(neckPos, { pulses: 4, perPulse: 400, interval: 200, spreadXZ: 1.8, color1: 0x8B0000, color2: 0xDC143C });
         }
         
         // Create detached head that flies off with enhanced rotation
@@ -4387,7 +4387,7 @@
               if (window.BloodSystem) {
                 const headPos = enemy.mesh.position.clone();
                 headPos.y += 0.7;
-                window.BloodSystem.emitPulse(headPos, { pulses: 4, perPulse: 200, interval: 200, spreadXZ: 1.6 });
+                window.BloodSystem.emitPulse(headPos, { pulses: 4, perPulse: 400, interval: 200, spreadXZ: 1.6 });
               }
               
               // Flash effect

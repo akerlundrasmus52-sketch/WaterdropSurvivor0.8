@@ -153,12 +153,13 @@
   /**
    * Pulsating heartbeat emission — emits `pulses` bursts spaced `interval` ms apart.
    * Simulates blood pumping from an open wound or severed neck.
+   * Default: 4 pulses, 400 drops each.
    */
   function emitPulse(pos, options) {
     if (!_scene) return;
     const opts     = options || {};
     const pulses   = opts.pulses   !== undefined ? opts.pulses   : 4;
-    const perPulse = opts.perPulse !== undefined ? opts.perPulse : 200;
+    const perPulse = opts.perPulse !== undefined ? opts.perPulse : 400;
     const interval = opts.interval !== undefined ? opts.interval : 220; // ms
     const arcDir   = opts.arcDir;   // optional THREE.Vector3 direction
     const spreadXZ = opts.spreadXZ !== undefined ? opts.spreadXZ : 1.4;
