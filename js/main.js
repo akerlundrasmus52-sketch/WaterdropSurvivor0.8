@@ -1968,7 +1968,10 @@
         if (type === 5 || type === 11 || type === 14) {
           const shadowRadius = type === 11 ? 2.0 : (type === 5 ? 0.6 : 0.4);
           const shadowGeo = new THREE.CircleGeometry(shadowRadius, 12);
-          const shadowMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.25, depthWrite: false });
+          const shadowMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.35, depthWrite: false });
+          shadowMat.blending = THREE.MultiplyBlending;
+          shadowMat.polygonOffset = true;
+          shadowMat.polygonOffsetFactor = -0.1;
           this.groundShadow = new THREE.Mesh(shadowGeo, shadowMat);
           this.groundShadow.rotation.x = -Math.PI / 2;
           this.groundShadow.position.set(x, 0.05, z);
@@ -2372,14 +2375,14 @@
         
         // Add blood stain meshes directly on enemy body (visible on all colors)
         if (!this._bloodStains) this._bloodStains = [];
-        const MAX_BODY_BLOOD_STAINS = 12;
+        const MAX_BODY_BLOOD_STAINS = 16;
         if (this._bloodStains.length < MAX_BODY_BLOOD_STAINS) {
-          const stainCount = hpRatio < 0.25 ? 3 : (hpRatio < 0.5 ? 2 : 1);
+          const stainCount = hpRatio < 0.25 ? 4 : (hpRatio < 0.5 ? 3 : 2);
           for (let s = 0; s < stainCount && this._bloodStains.length < MAX_BODY_BLOOD_STAINS; s++) {
-            const stainSize = 0.08 + Math.random() * 0.15;
+            const stainSize = 0.1 + Math.random() * 0.2;
             const stain = new THREE.Mesh(
-              new THREE.CircleGeometry(stainSize, 6),
-              new THREE.MeshBasicMaterial({ color: 0x8B0000, transparent: true, opacity: 0.8, side: THREE.DoubleSide, depthWrite: false })
+              new THREE.CircleGeometry(stainSize, 8),
+              new THREE.MeshBasicMaterial({ color: 0x8B0000, transparent: true, opacity: 0.9, side: THREE.DoubleSide, depthWrite: false })
             );
             // Place on enemy surface
             const theta = Math.random() * Math.PI * 2;
@@ -4434,7 +4437,10 @@
         
         // Shadow indicator
         const shadowGeo = new THREE.CircleGeometry(2.5, 16);
-        const shadowMat = new THREE.MeshBasicMaterial({ color: 0x000000, opacity: 0.3, transparent: true });
+        const shadowMat = new THREE.MeshBasicMaterial({ color: 0x000000, opacity: 0.35, transparent: true, depthWrite: false });
+        shadowMat.blending = THREE.MultiplyBlending;
+        shadowMat.polygonOffset = true;
+        shadowMat.polygonOffsetFactor = -0.1;
         this.shadow = new THREE.Mesh(shadowGeo, shadowMat);
         this.shadow.rotation.x = -Math.PI/2;
         this.shadow.position.set(targetX, 0.1, targetZ);
@@ -5845,59 +5851,12 @@
     function updateStatBar() {
       const panel = document.getElementById('stat-bar-panel');
       const liveStatEl = document.getElementById('live-stat-display');
-      if (!panel || !isGameActive || isGameOver) { 
-        if (panel) panel.style.display = 'none'; 
+      // Deprecated lower-left HUD panel: keep hidden at all times.
+      if (panel) panel.style.display = 'none';
+      if (!isGameActive || isGameOver) { 
         if (liveStatEl) liveStatEl.style.display = 'none';
-        return; 
       }
-      panel.style.display = 'block';
-      const waveEl = document.getElementById('stat-bar-wave');
-      const killsEl = document.getElementById('stat-bar-kills');
-      const comboEl = document.getElementById('stat-bar-combo');
-      const questEl = document.getElementById('stat-bar-quest');
-      const achEl = document.getElementById('stat-bar-achievement');
-      if (waveEl) waveEl.textContent = 'Wave: ' + (waveCount || 0);
-      if (killsEl) killsEl.style.display = 'none'; // Kill stat row removed from lower-left HUD box
-      // Combo
-      const combo = window.currentCombo || 0;
-      if (comboEl) { if (combo > 1) { comboEl.textContent = '🔥 Combo x' + combo; comboEl.style.display = ''; } else { comboEl.style.display = 'none'; } }
-      // Active quest
-      if (questEl) {
-        let questText = '';
-        const currentQuest = getCurrentQuest();
-        if (currentQuest) {
-          const kills = playerStats ? playerStats.kills : 0;
-          if (currentQuest.id === 'quest1_kill3') questText = 'Kill 3 Enemies: ' + Math.min(kills, 3) + '/3';
-          else if (currentQuest.id === 'quest4_kill10') questText = 'Kill 10: ' + Math.min(kills,10) + '/10';
-          else if (currentQuest.id === 'quest6_kill10') questText = 'Kill 10: ' + Math.min(kills,10) + '/10';
-          else if (currentQuest.id === 'quest7_kill10') questText = 'Kill 15: ' + Math.min(kills,15) + '/15';
-          else if (currentQuest.id === 'quest_run_kill25') questText = 'Kill 25: ' + Math.min(kills,25) + '/25';
-          else if (currentQuest.id === 'quest_windmill_guide') questText = '🏭 Defend the Windmill!';
-          else if (currentQuest.id === 'quest_account_visit') questText = '👤 Visit Account Building in Camp';
-          else if (currentQuest.id === 'quest8_findAllLandmarks') {
-            const lf = saveData.tutorialQuests.landmarksFound || {};
-            const found = Object.values(LANDMARK_CONFIGS).filter(cfg => lf[cfg.key]).length;
-            questText = `🗺️ Find Landmarks: ${found}/${Object.keys(LANDMARK_CONFIGS).length}`;
-          }
-          else if (currentQuest.label) questText = currentQuest.label;
-          else questText = currentQuest.id || '';
-        }
-        // Check kill7 achievement quest
-        if (!questText && saveData.achievementQuests && saveData.achievementQuests.kill7Quest === 'active') {
-          questText = '🏆 Visit Achievement Building';
-        }
-        questEl.textContent = questText ? '📋 ' + questText : '';
-      }
-      // Achievement progress
-      if (achEl) {
-        const kills = playerStats ? playerStats.kills : 0;
-        if (!saveData.achievementQuests || !saveData.achievementQuests.kill7Unlocked) {
-          achEl.style.display = '';
-          achEl.textContent = '🏆 Kill 7: ' + Math.min(kills, 7) + '/7';
-        } else {
-          achEl.style.display = 'none';
-        }
-      }
+      // HUD panel removed from layout; no further updates needed.
     }
     window.updateStatBar = updateStatBar;
 
@@ -10078,7 +10037,10 @@
 
       // Spinning shadow on the ground that rotates with blades
       const windmillShadowGeo = new THREE.PlaneGeometry(0.8, bLen);
-      const windmillShadowMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.18, depthWrite: false });
+      const windmillShadowMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.22, depthWrite: false });
+      windmillShadowMat.blending = THREE.MultiplyBlending;
+      windmillShadowMat.polygonOffset = true;
+      windmillShadowMat.polygonOffsetFactor = -0.1;
       const shadowGroup = new THREE.Group();
       shadowGroup.position.set(40, 0.03, 40);
       shadowGroup.rotation.x = -Math.PI / 2;
@@ -13786,41 +13748,65 @@
     // Uses a circular buffer approach: overwrite oldest slot instead of shift() for O(1)
     let bloodDecalIndex = 0; // Current write index for circular buffer
     const BLOOD_DECAL_FADE_MS = 12000; // 12 seconds fade per spec
-    function spawnBloodDecal(pos) {
+    function spawnBloodDecal(pos, sizeOverride) {
       if (!scene) return;
       const now = Date.now();
-      if (bloodDecals.length < MAX_BLOOD_DECALS) {
-        // Buffer not full yet - append
-        const size = 0.15 + Math.random() * 0.35;
-        const geo = new THREE.CircleGeometry(size, 8);
-        const initialOpacity = 0.6 + Math.random() * 0.3;
-        const mat = new THREE.MeshStandardMaterial({
-          color: 0x6B0000,
-          transparent: true,
-          opacity: initialOpacity,
-          depthWrite: false,
-          roughness: 0.15,     // Smooth reflective surface like wet blood
-          metalness: 0.6,      // High metalness for glass-like reflection
-          emissive: 0x3A0000,  // Subtle dark red glow
-          emissiveIntensity: 0.15
-        });
-        const decal = new THREE.Mesh(geo, mat);
-        decal.rotation.x = -Math.PI / 2;
-        decal.position.set(pos.x + (Math.random() - 0.5) * 0.8, 0.02, pos.z + (Math.random() - 0.5) * 0.8);
-        decal.userData.spawnTime = now;
-        decal.userData.initialOpacity = initialOpacity;
-        scene.add(decal);
-        bloodDecals.push(decal);
-      } else {
-        // Reuse existing slot (O(1) circular overwrite)
-        const old = bloodDecals[bloodDecalIndex];
-        const initialOpacity = 0.6 + Math.random() * 0.3;
-        old.position.set(pos.x + (Math.random() - 0.5) * 0.8, 0.02, pos.z + (Math.random() - 0.5) * 0.8);
-        old.material.opacity = initialOpacity;
-        old.userData.spawnTime = now;
-        old.userData.initialOpacity = initialOpacity;
-        bloodDecalIndex = (bloodDecalIndex + 1) % MAX_BLOOD_DECALS;
-      }
+      // Layered pools: tiny drip, medium splat, large pool
+      const layerSizes = sizeOverride ? [
+        Math.max(0.08, sizeOverride * 0.55),
+        Math.max(0.12, sizeOverride),
+        Math.max(0.18, sizeOverride * 1.4)
+      ] : [
+        0.12 + Math.random() * 0.12,
+        0.24 + Math.random() * 0.18,
+        0.38 + Math.random() * 0.22
+      ];
+
+      const addDecal = (size) => {
+        const initialOpacity = 0.65 + Math.random() * 0.25;
+        const offsetX = pos.x + (Math.random() - 0.5) * 0.9;
+        const offsetZ = pos.z + (Math.random() - 0.5) * 0.9;
+        if (bloodDecals.length < MAX_BLOOD_DECALS) {
+          const geo = new THREE.CircleGeometry(size, 16);
+          const mat = new THREE.MeshStandardMaterial({
+            color: 0x6B0000,
+            transparent: true,
+            opacity: initialOpacity,
+            depthWrite: false,
+            depthTest: true,
+            polygonOffset: true,
+            polygonOffsetFactor: -0.1,
+            blending: THREE.MultiplyBlending,
+            roughness: 0.15,     // Smooth reflective surface like wet blood
+            metalness: 0.6,      // High metalness for glass-like reflection
+            emissive: 0x3A0000,  // Subtle dark red glow
+            emissiveIntensity: 0.15
+          });
+          const decal = new THREE.Mesh(geo, mat);
+          decal.renderOrder = 2; // Ensure drawn above ground
+          decal.rotation.x = -Math.PI / 2;
+          decal.position.set(offsetX, 0.02, offsetZ);
+          decal.userData.spawnTime = now;
+          decal.userData.initialOpacity = initialOpacity;
+          scene.add(decal);
+          bloodDecals.push(decal);
+        } else {
+          // Reuse existing slot (O(1) circular overwrite)
+          const old = bloodDecals[bloodDecalIndex];
+          if (old.geometry) old.geometry.dispose();
+          old.geometry = new THREE.CircleGeometry(size, 16);
+          old.position.set(offsetX, 0.02, offsetZ);
+          old.material.opacity = initialOpacity;
+          old.userData.spawnTime = now;
+          old.userData.initialOpacity = initialOpacity;
+          old.renderOrder = 2;
+          bloodDecalIndex = (bloodDecalIndex + 1) % MAX_BLOOD_DECALS;
+        }
+      };
+
+      layerSizes.forEach(addDecal);
+      // Airborne spray before pooling on ground
+      spawnParticles(pos, 0x8B0000, 5);
     }
     
     // Update blood decal fade (call in main loop)
@@ -19530,4 +19516,3 @@
 
     // Init Game
     try { init(); } catch(e) { console.error('[Game Error]', e); console.error('[Game] Initialization failed - game cannot start'); }
-
