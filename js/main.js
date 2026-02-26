@@ -6021,8 +6021,10 @@
 
     function updateStatBar() {
       const panel = document.getElementById('stat-bar-panel');
-      if (!panel || !isGameActive || isGameOver) { 
+      const liveStatEl = document.getElementById('live-stat-display');
+      if ((!panel && !liveStatEl) || !isGameActive || isGameOver) { 
         if (panel) panel.style.display = 'none'; 
+        if (liveStatEl) liveStatEl.style.display = 'none';
         return; 
       }
       if (panel) panel.style.display = 'none';
@@ -6057,15 +6059,20 @@
         parts.push('⭐ Side Quest');
       }
 
-      // Update realtime row in stat-bar-panel
-      const realtimeEl = document.getElementById('stat-bar-realtime');
-      if (realtimeEl) {
-        const gameTime = gameStartTime > 0 ? (Date.now() - gameStartTime) / 1000 : 0;
-        const mins = Math.floor(gameTime / 60);
-        const secs = Math.floor(gameTime % 60);
-        const goldVal = playerStats ? playerStats.gold : 0;
-        realtimeEl.textContent = `⏱ ${mins}:${secs.toString().padStart(2,'0')} | 💰 ${goldVal}`;
-        realtimeEl.style.display = '';
+      // Update the live stat rectangle
+      if (liveStatEl) {
+        // If a notification is active, show it; otherwise show the stat bar
+        if (_liveStatNotification) {
+          liveStatEl.textContent = _liveStatNotification;
+          liveStatEl.style.color = '#FFD700';
+        } else {
+          liveStatEl.textContent = parts.join('  ·  ');
+          liveStatEl.style.color = '#e0e0e0';
+        }
+        liveStatEl.style.display = 'block';
+        liveStatEl.style.width = 'auto';
+        liveStatEl.style.maxWidth = 'min(560px, calc(100vw - 40px))';
+        liveStatEl.style.minWidth = '200px';
       }
       
       // Build quest text for the left-side tracker
@@ -6129,20 +6136,13 @@
     }
     window.updateStatBar = updateStatBar;
     
-    // Show a notification in the stat-bar-notification row temporarily
+    // Show a notification in the live stat rectangle temporarily, then revert to stat bar
     function showLiveStatNotification(text) {
       _liveStatNotification = text;
-      const notifEl = document.getElementById('stat-bar-notification');
-      if (notifEl) {
-        notifEl.textContent = text ? `🔔 ${text}` : '';
-        notifEl.style.display = text ? '' : 'none';
-      }
       if (_liveStatNotificationTimer) clearTimeout(_liveStatNotificationTimer);
       _liveStatNotificationTimer = setTimeout(() => {
         _liveStatNotification = '';
         _liveStatNotificationTimer = null;
-        const el = document.getElementById('stat-bar-notification');
-        if (el) { el.textContent = ''; el.style.display = 'none'; }
       }, 3000);
     }
     window.showLiveStatNotification = showLiveStatNotification;
