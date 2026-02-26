@@ -3501,3 +3501,121 @@
       opacity: 0.4;
       cursor: not-allowed;
     }
+
+    /* =================================================
+       SUPER STAT BAR — Advanced real-time event panel
+       Right side, below menu button, above minimap
+       ================================================= */
+    #super-stat-bar {
+      position: fixed;
+      right: 5px;
+      top: 65px;
+      bottom: 185px;
+      width: 150px;
+      z-index: 98;
+      display: none;          /* shown only in-game via JS */
+      flex-direction: column;
+      gap: 3px;
+      pointer-events: none;
+      font-family: 'Bangers', cursive;
+      overflow: hidden;
+    }
+
+    /* Header row: wave · kills · combo */
+    .ssb-header {
+      background: rgba(0, 0, 0, 0.78);
+      border: 1px solid rgba(255, 215, 0, 0.45);
+      border-radius: 7px 7px 0 0;
+      padding: 3px 7px;
+      font-size: 11px;
+      color: #FFD700;
+      text-align: center;
+      letter-spacing: 1px;
+      text-shadow: 0 0 6px rgba(255,215,0,0.6), 1px 1px 2px rgba(0,0,0,0.9);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Shared base for all event/context rows */
+    .ssb-row {
+      border-radius: 6px;
+      padding: 3px 6px;
+      font-size: 11px;
+      border: 1px solid #555;
+      background: rgba(20, 20, 20, 0.85);
+      color: #AAAAAA;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      transition: opacity 0.35s ease, border-color 0.3s;
+      display: none;    /* hidden until populated by JS */
+      align-items: center;
+      gap: 3px;
+      min-height: 20px;
+    }
+
+    /* Context rows */
+    .ssb-region-row { font-size: 10px; }
+    .ssb-quest-row  { font-size: 10px; }
+
+    /* Horizontal divider */
+    .ssb-sep {
+      height: 1px;
+      background: linear-gradient(to right, transparent, rgba(255,215,0,0.3), transparent);
+      margin: 1px 0;
+      flex-shrink: 0;
+    }
+
+    /* History event rows */
+    .ssb-prev2   { font-size: 10px; opacity: 0.4  !important; }
+    .ssb-prev1   { font-size: 10px; opacity: 0.65 !important; }
+
+    /* Live current event — most prominent */
+    .ssb-current {
+      font-size: 12px;
+      border-width: 2px;
+      padding: 4px 7px;
+      min-height: 24px;
+      opacity: 1 !important;
+    }
+
+    /* Next-goal hint */
+    .ssb-next-row {
+      font-size: 9px;
+      opacity: 0.45 !important;
+      border-style: dashed;
+    }
+
+    /* Icon and text spans inside each row */
+    .ssb-icon {
+      flex-shrink: 0;
+      font-size: 10px;
+      line-height: 1;
+    }
+    .ssb-text {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex: 1;
+      min-width: 0;
+    }
+
+    /* Flash-in animation when new event arrives */
+    @keyframes ssb-flash-in {
+      0%   { transform: scale(1.05) translateX(5px); opacity: 0.6; }
+      50%  { transform: scale(1.02) translateX(0);   opacity: 1;   }
+      100% { transform: scale(1)    translateX(0);   opacity: 1;   }
+    }
+    .ssb-new-event {
+      animation: ssb-flash-in 0.35s ease-out forwards;
+    }
+
+    /* Portrait: tuck under menu button (44 px tall + 10 px top + 8 px gap = 62) */
+    @media (orientation: portrait) {
+      #super-stat-bar { right: 5px; top: 65px; }
+    }
+    /* Landscape: slightly higher since menu btn might be different */
+    @media (orientation: landscape) {
+      #super-stat-bar { right: 5px; top: 52px; bottom: 10px; }
+    }
