@@ -60,6 +60,14 @@ function showStatChange(text, level = 'normal') {
   // Add to queue with level
   _statNotificationQueue.push({ text, level });
 
+  // Mirror to super stat bar with appropriate rarity
+  if (window.pushSuperStatEvent) {
+    let rarity = 'common';
+    if (level === 'mythical') rarity = 'mythic';
+    else if (level === 'high') rarity = 'epic';
+    window.pushSuperStatEvent(text, rarity, '', 'neutral');
+  }
+
   // Start processing queue if not already processing
   if (!_isShowingNotification) {
     _processStatNotificationQueue();

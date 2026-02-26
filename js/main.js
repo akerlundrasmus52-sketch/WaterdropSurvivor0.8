@@ -4080,6 +4080,7 @@
               div.style.pointerEvents = 'none';
               div.style.zIndex = '1000';
               div.innerText = 'HEADSHOT!';
+              if (window.pushSuperStatEvent) window.pushSuperStatEvent('HEADSHOT!', 'legendary', '\uD83C\uDFAF', 'success');
               
               const vec = enemy.mesh.position.clone();
               vec.y += 2;
@@ -6107,6 +6108,8 @@
           questTrackerEl.style.display = 'none';
         }
       }
+      // Keep super stat bar context rows in sync every frame
+      _ssbUpdateContext();
     }
     window.updateStatBar = updateStatBar;
     
@@ -6120,6 +6123,157 @@
       }, 3000);
     }
     window.showLiveStatNotification = showLiveStatNotification;
+
+    // =====================================================================
+    //  SUPER STAT BAR — real-time event history with rarity color coding
+    // =====================================================================
+    const SSB_COLORS = {
+      common:    { text: '#AAAAAA', border: '#555555', bg: 'rgba(30,30,30,0.88)'  },
+      uncommon:  { text: '#4CAF50', border: '#2E7D32', bg: 'rgba(15,35,15,0.88)' },
+      rare:      { text: '#5DADE2', border: '#1565C0', bg: 'rgba(10,25,50,0.88)' },
+      epic:      { text: '#9B59B6', border: '#6A1B9A', bg: 'rgba(25,10,45,0.88)' },
+      legendary: { text: '#F39C12', border: '#E65100', bg: 'rgba(45,20,5,0.88)'  },
+      mythic:    { text: '#E74C3C', border: '#8B0000', bg: 'rgba(45,5,5,0.88)'   },
+      gold:      { text: '#FFD700', border: '#B8860B', bg: 'rgba(40,30,0,0.88)'  },
+      region:    { text: '#5DADE2', border: '#2980B9', bg: 'rgba(10,25,45,0.88)' },
+      quest:     { text: '#FFD700', border: '#F39C12', bg: 'rgba(45,35,0,0.88)'  },
+      death:     { text: '#FF2222', border: '#8B0000', bg: 'rgba(45,0,0,0.92)'   }
+    };
+
+    const _ssbHistory = [];
+    const SSB_MAX_HIST = 3;
+    const SSB_MAX_TEXT_LEN       = 21;   // characters before truncation
+    const SSB_FLASH_DURATION_MS  = 350;  // must match .ssb-new-event animation (0.35s)
+    const SSB_COMBO_CHEST_MILESTONES = [5, 7, 9, 10, 12, 15, 20]; // combo→chest thresholds
+    const SSB_TIMER_CRITICAL     = 5;    // quest timer seconds — red warning
+    const SSB_TIMER_WARNING      = 15;   // quest timer seconds — yellow warning
+
+    function _ssbApply(el, rarity) {
+      const c = SSB_COLORS[rarity] || SSB_COLORS.common;
+      el.style.color       = c.text;
+      el.style.borderColor = c.border;
+      el.style.background  = c.bg;
+      el.style.boxShadow   = `0 0 5px ${c.border}55, inset 0 0 4px ${c.border}22`;
+      el.style.textShadow  = `0 0 6px ${c.text}88, 1px 1px 2px rgba(0,0,0,0.9)`;
+    }
+
+    function pushSuperStatEvent(text, rarity, icon, status) {
+      if (!text) return;
+      rarity = rarity || 'common';
+      icon   = icon   || '';
+      const disp = text.length > SSB_MAX_TEXT_LEN ? text.slice(0, SSB_MAX_TEXT_LEN - 1) + '\u2026' : text;
+      const suffix = status === 'success' ? ' \u2705' : status === 'fail' ? ' \u274C' : status === 'death' ? ' \uD83D\uDC80' : '';
+      _ssbHistory.unshift({ text: disp + suffix, rarity, icon });
+      if (_ssbHistory.length > SSB_MAX_HIST) _ssbHistory.length = SSB_MAX_HIST;
+      _ssbRenderEvents();
+    }
+    window.pushSuperStatEvent = pushSuperStatEvent;
+
+    function _ssbRenderEvents() {
+      ['ssb-current', 'ssb-prev1', 'ssb-prev2'].forEach((id, i) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (_ssbHistory.length > i) {
+          const ev = _ssbHistory[i];
+          el.innerHTML = `<span class="ssb-icon">${ev.icon}</span><span class="ssb-text">${ev.text}</span>`;
+          _ssbApply(el, ev.rarity);
+          el.style.display = 'flex';
+        } else {
+          el.innerHTML = '';
+          el.style.display = 'none';
+        }
+      });
+      // Flash animation on the current (newest) row
+      const cur = document.getElementById('ssb-current');
+      if (cur && _ssbHistory.length > 0) {
+        cur.classList.add('ssb-new-event');
+        setTimeout(() => cur.classList.remove('ssb-new-event'), SSB_FLASH_DURATION_MS);
+      }
+    }
+
+    // Called every frame from updateStatBar() to keep context rows fresh
+    function _ssbUpdateContext() {
+      const bar = document.getElementById('super-stat-bar');
+      if (!bar) return;
+      if (!isGameActive || isGameOver) { bar.style.display = 'none'; return; }
+      bar.style.display = 'flex';
+
+      // ---- Header: Wave · Kills · Combo ----
+      const hdr = document.getElementById('ssb-header');
+      if (hdr) {
+        const wave  = waveCount  || 0;
+        const kills = playerStats ? playerStats.kills : 0;
+        const cbo   = (comboState && comboState.count >= 5) ? ` \uD83D\uDD25x${comboState.count}` : '';
+        hdr.textContent = `\u2694\uFE0F${wave}  \uD83D\uDC80${kills}${cbo}`;
+      }
+
+      // ---- Region ----
+      const rEl = document.getElementById('ssb-region');
+      if (rEl) {
+        const rname = document.getElementById('region-name')?.textContent || 'Forest';
+        rEl.innerHTML = `<span class="ssb-icon">\uD83D\uDCCD</span><span class="ssb-text">${rname}</span>`;
+        _ssbApply(rEl, 'region');
+        rEl.style.display = 'flex';
+      }
+
+      // ---- Active Quest ----
+      const qEl = document.getElementById('ssb-quest');
+      if (qEl) {
+        const cq = getCurrentQuest();
+        const k  = playerStats ? playerStats.kills : 0;
+        if (cq) {
+          let prog = '';
+          if      (cq.id === 'quest1_kill3')   prog = `${Math.min(k,3)}/3`;
+          else if (cq.id === 'quest8_kill10')  prog = `${Math.min(k,10)}/10`;
+          else if (cq.id === 'quest10_kill15') prog = `${Math.min(k,15)}/15`;
+          else if (cq.id === 'quest14_kill25') prog = `${Math.min(k,25)}/25`;
+          else if (cq.id === 'quest11_findAllLandmarks') {
+            const lf = saveData.tutorialQuests.landmarksFound || {};
+            const found = Object.values(LANDMARK_CONFIGS).filter(cfg => lf[cfg.key]).length;
+            prog = `${found}/${Object.keys(LANDMARK_CONFIGS).length}`;
+          }
+          // Timer overlay for timed quests (red when <SSB_TIMER_CRITICAL s, yellow when <SSB_TIMER_WARNING s)
+          const chkT = (q) => {
+            if (!q || !q.active) return '';
+            const t = Math.max(0, Math.ceil(q.timeRemaining));
+            return ` ${t <= SSB_TIMER_CRITICAL ? '\uD83D\uDD34' : t <= SSB_TIMER_WARNING ? '\uD83D\uDFE1' : '\u23F1'}${t}s`;
+          };
+          const timer = chkT(windmillQuest) || chkT(montanaQuest) || chkT(eiffelQuest);
+          qEl.innerHTML = `<span class="ssb-icon">\uD83D\uDCCB</span><span class="ssb-text">${cq.name || 'Quest'}${prog ? ' ' + prog : ''}${timer}</span>`;
+          _ssbApply(qEl, 'quest');
+          qEl.style.display = 'flex';
+        } else if (saveData.achievementQuests && saveData.achievementQuests.kill7Quest === 'active') {
+          qEl.innerHTML = `<span class="ssb-icon">\u2B50</span><span class="ssb-text">Side: Visit Camp</span>`;
+          _ssbApply(qEl, 'quest');
+          qEl.style.display = 'flex';
+        } else {
+          qEl.style.display = 'none';
+        }
+      }
+
+      // ---- Next Goal hint ----
+      const nEl = document.getElementById('ssb-next');
+      if (nEl) {
+        const cbo = comboState ? comboState.count : 0;
+        let goal = '';
+        if (cbo >= 5) {
+          const nm = SSB_COMBO_CHEST_MILESTONES.find(m => m > cbo);
+          if (nm) goal = `\uD83C\uDFAF x${nm} Chest`;
+        }
+        if (!goal && playerStats && playerStats.xpToNextLevel > 0) {
+          const left = Math.max(0, playerStats.xpToNextLevel - playerStats.xp);
+          if (left > 0) goal = `\u2B06 LvlUp: ${left > 1000 ? Math.ceil(left / 1000) + 'k' : left}xp`;
+        }
+        if (goal) {
+          nEl.innerHTML = `<span class="ssb-text">${goal}</span>`;
+          _ssbApply(nEl, 'common');
+          nEl.style.display = 'flex';
+        } else {
+          nEl.style.display = 'none';
+        }
+      }
+    }
+    window._ssbUpdateContext = _ssbUpdateContext;
 
     function claimAchievement(achievementId) {
       const achievement = Object.values(ACHIEVEMENTS).find(a => a.id === achievementId);
@@ -14692,6 +14846,12 @@
       }
       
       playerStats.lvl++;
+      // Notify the super stat bar — rarity escalates with milestone levels
+      if (window.pushSuperStatEvent) {
+        const lvl = playerStats.lvl;
+        const r = lvl >= 50 ? 'mythic' : lvl >= 25 ? 'legendary' : lvl >= 10 ? 'epic' : lvl >= 5 ? 'rare' : 'uncommon';
+        window.pushSuperStatEvent(`\u2B06 Level ${lvl}!`, r, '\u2728', 'success');
+      }
       if (!freeLevel) {
         playerStats.exp -= playerStats.expReq;
       }
@@ -16259,6 +16419,7 @@
         currentRegion = region;
         regionNameEl.textContent = region;
         regionDisplay.classList.add('region-visible');
+        if (window.pushSuperStatEvent) window.pushSuperStatEvent('\uD83D\uDCCD ' + region, 'region', '\uD83D\uDCCD', 'neutral');
       }
     }
     
@@ -17240,6 +17401,12 @@
       `;
       
       document.body.appendChild(notification);
+
+      // Mirror to super stat bar
+      if (window.pushSuperStatEvent) {
+        const r = type === 'achievement' ? 'epic' : type === 'attribute' ? 'legendary' : type === 'quest' ? 'quest' : 'rare';
+        window.pushSuperStatEvent(title, r, icon, 'success');
+      }
       
       // Play sound
       playSound('waterdrop');
@@ -17277,6 +17444,8 @@
 
       // Show "YOU DIED" banner for 3 seconds
       showYouDiedBanner(3000);
+      // Push to super stat bar
+      if (window.pushSuperStatEvent) window.pushSuperStatEvent('YOU DIED!', 'death', '\uD83D\uDC80', 'death');
 
       // Also update quest state so active quests are properly cleaned up
       if (windmillQuest && windmillQuest.active) {
