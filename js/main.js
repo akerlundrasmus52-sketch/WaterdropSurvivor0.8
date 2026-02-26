@@ -2379,12 +2379,22 @@
             const stainSize = 0.08 + Math.random() * 0.15;
             const stain = new THREE.Mesh(
               new THREE.CircleGeometry(stainSize, 6),
-              new THREE.MeshBasicMaterial({ color: 0x8B0000, transparent: true, opacity: 0.8, side: THREE.DoubleSide, depthWrite: false })
+              new THREE.MeshStandardMaterial({
+                color: 0x5a0000,
+                emissive: 0x1a0000,
+                emissiveIntensity: 0.25,
+                roughness: 0.22,
+                metalness: 0.5,
+                transparent: true,
+                opacity: 0.82,
+                side: THREE.DoubleSide,
+                depthWrite: false
+              })
             );
             // Place on enemy surface
             const theta = Math.random() * Math.PI * 2;
             const phi = Math.random() * Math.PI;
-            const r = 0.52;
+            const r = 0.49;
             stain.position.set(r * Math.sin(phi) * Math.cos(theta), r * Math.sin(phi) * Math.sin(theta), r * Math.cos(phi));
             stain.lookAt(stain.position.clone().multiplyScalar(2));
             this.mesh.add(stain);
@@ -5866,12 +5876,12 @@
     function updateStatBar() {
       const panel = document.getElementById('stat-bar-panel');
       const liveStatEl = document.getElementById('live-stat-display');
-      if (!panel || !isGameActive || isGameOver) { 
+      if (!isGameActive || isGameOver) { 
         if (panel) panel.style.display = 'none'; 
         if (liveStatEl) liveStatEl.style.display = 'none';
         return; 
       }
-      panel.style.display = 'block';
+      if (panel) panel.style.display = 'none';
       const waveEl = document.getElementById('stat-bar-wave');
       const killsEl = document.getElementById('stat-bar-kills');
       const comboEl = document.getElementById('stat-bar-combo');
@@ -5908,6 +5918,11 @@
           questText = '🏆 Visit Achievement Building';
         }
         questEl.textContent = questText ? '📋 ' + questText : '';
+        const questTrackerEl = document.getElementById('quest-tracker');
+        if (questTrackerEl) {
+          questTrackerEl.textContent = questText ? `📋 ${questText}` : '';
+          questTrackerEl.style.display = questText ? 'block' : 'none';
+        }
       }
       // Achievement progress
       if (achEl) {
@@ -15424,7 +15439,6 @@
     
     // Region display update function with slide-in/slide-out animation
     let currentRegion = '';
-    let regionTimeout = null;
     function updateRegionDisplay() {
       if (!player || !player.mesh) return;
       
@@ -15456,22 +15470,12 @@
         region = 'Southern Woods';
       }
       
-      // Only animate if region changed
+      // Update when region changes
       if (region !== currentRegion) {
         currentRegion = region;
         regionNameEl.textContent = region;
-        
-        // Clear any pending hide timeout
-        if (regionTimeout) clearTimeout(regionTimeout);
-        
-        // Slide in from right
-        regionDisplay.classList.add('region-visible');
-        
-        // After 3 seconds, slide back out to the right
-        regionTimeout = setTimeout(() => {
-          regionDisplay.classList.remove('region-visible');
-        }, 3000);
       }
+      regionDisplay.classList.add('region-visible');
     }
     
     // Minimap update function (with throttling for performance)

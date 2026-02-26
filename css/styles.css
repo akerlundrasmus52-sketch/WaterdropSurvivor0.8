@@ -574,10 +574,10 @@
       text-shadow: 0 0 6px rgba(255,215,0,1);
     }
     
-    /* Region Display - HP/XP bar style, positioned above minimap, slides in/out from right */
+    /* Region Display - lower-left indicator */
     #region-display {
       position: fixed;
-      bottom: 195px;
+      bottom: 10px;
       left: 8px;
       right: auto;
       width: auto;
@@ -601,7 +601,7 @@
       justify-content: center;
       padding: 0 10px;
       transition: opacity 0.5s ease-in-out;
-      opacity: 0;
+      opacity: 1;
       animation: bar-border-alive 3s ease-in-out infinite;
     }
     
@@ -831,26 +831,18 @@
     /* Quest tracker — fixed position in-game overlay */
     #quest-tracker {
       position: fixed !important;
-      top: 10px !important;
-      right: 10px !important;
-      left: auto !important;
+      top: 78px !important;
+      left: 12px !important;
+      right: auto !important;
       color: #FFD700;
       text-shadow: 0 0 3px rgba(255,215,0,0.3), 1px 1px 2px rgba(0,0,0,0.8);
       font-size: 12px;
-      background: rgba(0,0,0,0.8);
-      padding: 6px 10px;
-      border-radius: 6px;
-      border: 1px solid rgba(255,215,0,0.6);
-      max-width: 220px;
+      background: transparent;
+      padding: 0;
+      border: none;
+      max-width: 360px;
       z-index: 200;
       line-height: 1.5;
-    }
-
-    /* Consolidated into single top info panel */
-    #quest-tracker,
-    #live-stat-display,
-    #region-display {
-      display: none !important;
     }
 
     /* Quest indicator animation */
@@ -2544,9 +2536,9 @@
       
       /* Keep day/night clock centered in portrait */
       #day-night-clock {
-        left: 50% !important;
+        left: calc(50% + 11px) !important;
         right: auto !important;
-        transform: translateX(-50%) scale(0.55) !important;
+        transform: translateX(-50%) scale(0.63) !important;
       }
 
       #stat-bar-panel {
@@ -2748,11 +2740,12 @@
       }
       
       #region-display {
-        bottom: 212px;
+        bottom: 10px;
       }
 
       #region-display.region-visible {
-        right: 20px;
+        left: 8px;
+        right: auto;
       }
     }
     
@@ -2826,20 +2819,21 @@
       }
     }
 
-    /* Live Stat Display - consolidated into stat bar panel */
+    /* Live Stat Display - comic-style status bar under clock */
     #live-stat-display {
       position: fixed;
-      top: 10px;
-      right: 60px;
-      width: 180px;
-      min-height: 24px;
-      background: linear-gradient(135deg, #0a0f1a 0%, #0d1526 100%);
+      top: 62px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: min(560px, calc(100vw - 40px));
+      min-height: 26px;
+      background: linear-gradient(to bottom, #1a1a1a 0%, #1a1a1a 50%, #3a3a3a 50%, #3a3a3a 100%);
       border: 3px solid #000;
       border-radius: 12px;
-      padding: 4px 10px;
+      padding: 4px 12px;
       z-index: 99;
       font-family: 'Bangers', cursive;
-      font-size: 11px;
+      font-size: 14px;
       color: #FFD700;
       pointer-events: none;
       display: none;
@@ -2855,33 +2849,9 @@
       animation: bar-border-alive 3s ease-in-out infinite;
     }
 
-    /* Stat Bar Panel - consolidated top info panel under clock/menu */
+    /* Hide old large stat textbox panel */
     #stat-bar-panel {
-      position: fixed;
-      top: 66px;
-      right: 10px;
-      left: auto;
-      bottom: auto;
-      width: min(420px, calc(100vw - 20px));
-      max-height: min(33vh, 280px); /* Cap height so panel stays below top HUD controls on short screens */
-      overflow-y: auto;
-      background: linear-gradient(135deg, #0a0f1a 0%, #0d1526 100%);
-      border: 3px solid #000;
-      border-radius: 10px;
-      padding: 6px 8px;
-      z-index: 15;
-      font-family: 'Bangers', cursive;
-      font-size: 12px;
-      color: #FFD700;
-      pointer-events: none;
-      display: none;
-      box-shadow:
-        0 0 0 1px rgba(255,215,0,0.7),
-        0 0 0 4px #000,
-        0 0 8px rgba(255,215,0,0.5),
-        0 0 16px rgba(255,215,0,0.2),
-        inset 0 0 10px rgba(0,0,0,0.5);
-      animation: bar-border-alive 3s ease-in-out infinite;
+      display: none !important;
     }
     #stat-bar-panel .stat-section {
       border-bottom: 1px solid rgba(255,215,0,0.4);
