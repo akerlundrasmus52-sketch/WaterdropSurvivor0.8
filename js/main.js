@@ -5614,6 +5614,8 @@
         tempShop: { level: 0, maxLevel: 10, unlocked: false }, // Unlock via quest
         achievementBuilding: { level: 0, maxLevel: 1, unlocked: false }, // Unlock via quest11_findAllLandmarks
         accountBuilding: { level: 1, maxLevel: 1, unlocked: true }, // Always unlocked — account stats
+        characterVisuals: { level: 0, maxLevel: 5, unlocked: false }, // Unlock via quest
+        codex: { level: 0, maxLevel: 5, unlocked: false }, // Unlock via quest
         // Legacy buildings (for compatibility)
         trainingGrounds: { level: 0, maxLevel: 10, unlocked: false },
         library: { level: 0, maxLevel: 10, unlocked: false },
@@ -5811,6 +5813,8 @@
           saveData.firstRunTutorial = { ...defaultSaveData.firstRunTutorial, ...(saveData.firstRunTutorial || {}) };
           // Destructibles info shown flag
           saveData.shownDestructiblesInfo = saveData.shownDestructiblesInfo || false;
+          // Character visuals customization
+          saveData.characterVisuals = saveData.characterVisuals || { accessory: 'none', animation: 'idle', outfit: 'default' };
         }
       } catch (e) {
         console.error('Failed to load save data:', e);
@@ -7226,6 +7230,26 @@
         isCore: true,
         bonus: (level) => ({})
       },
+      characterVisuals: {
+        name: 'Character Visuals',
+        icon: '🎨',
+        description: 'Customize your character appearance, accessories, animations and outfits',
+        baseCost: 0,
+        costMultiplier: 0,
+        maxCost: 0,
+        isFree: true,
+        bonus: (level) => ({})
+      },
+      codex: {
+        name: 'Codex',
+        icon: '📖',
+        description: 'Encyclopedia of all enemies, structures, landmarks and game lore',
+        baseCost: 0,
+        costMultiplier: 0,
+        maxCost: 0,
+        isFree: true,
+        bonus: (level) => ({})
+      },
       
       // LEGACY BUILDINGS (kept for compatibility)
       trainingGrounds: {
@@ -8463,9 +8487,39 @@
         rewardGold: 200,
         rewardSkillPoints: 1,
         rewardAttributePoints: 3,
-        message: "📊 Account reviewed!<br><br>You can always return here to track your progress. Keep completing quests and runs — the world of Water Drop Survivor has much more to discover!",
-        nextQuest: null,
+        message: "📊 Account reviewed!<br><br>A new building has appeared — the <b>Character Visuals</b> studio! Visit it to customize your look.",
+        nextQuest: 'quest16_visitCharVisuals',
         conditions: ['quest14_kill25']
+      },
+
+      // === PHASE 16: Camp quest → Visit Character Visuals building ===
+      quest16_visitCharVisuals: {
+        id: 'quest16_visitCharVisuals',
+        name: 'Visit Character Visuals',
+        description: 'Head to Camp and open the Character Visuals building to customize your appearance',
+        objectives: 'Open the Character Visuals building in Camp',
+        claim: 'Main Building',
+        rewardGold: 200,
+        rewardSkillPoints: 1,
+        unlockBuilding: 'characterVisuals',
+        message: "🎨 Character Visuals unlocked!<br><br>Customize your look with accessories, animations, and outfits!<br><br>Next: open the <b>Codex</b> to learn about all the creatures and landmarks you've encountered!",
+        nextQuest: 'quest17_visitCodex',
+        conditions: ['quest15_accountVisit']
+      },
+
+      // === PHASE 17: Camp quest → Visit Codex building ===
+      quest17_visitCodex: {
+        id: 'quest17_visitCodex',
+        name: 'Visit the Codex',
+        description: 'Head to Camp and open the Codex building to browse the encyclopedia of the world',
+        objectives: 'Open the Codex building in Camp',
+        claim: 'Main Building',
+        rewardGold: 300,
+        rewardSkillPoints: 2,
+        unlockBuilding: 'codex',
+        message: "📖 Codex unlocked!<br><br>Browse all enemies, structures, and landmarks. Keep exploring — the world of Water Drop Survivor has much more to discover!",
+        nextQuest: null,
+        conditions: ['quest16_visitCharVisuals']
       }
     };
 
@@ -8475,7 +8529,9 @@
       'trainingHall': 'quest5_upgradeAttr',
       'forge': 'quest6_survive2min',
       'companionHouse': 'quest8_kill10',
-      'achievementBuilding': 'quest11_findAllLandmarks'
+      'achievementBuilding': 'quest11_findAllLandmarks',
+      'characterVisuals': 'quest16_visitCharVisuals',
+      'codex': 'quest17_visitCodex'
     };
     
     // Get current quest object
@@ -8590,6 +8646,7 @@
           
           // Show notification
           showStatChange('📜 Quest Complete! Return to Main Building to claim!');
+          chatSystemMessage('📜 Quest "' + quest.name + '" complete! Go to Camp to claim your reward.');
         }
         
         saveSaveData();
@@ -8638,6 +8695,7 @@
       }
       // Award account XP for completing a quest (50 XP per quest)
       addAccountXP(50);
+      chatSystemMessage('🎁 Quest "' + quest.name + '" claimed! Rewards received.');
       
       // Unlock building on CLAIM (only for quests that use unlockBuilding, e.g. quest1 for SkillTree)
       if (quest.unlockBuilding && saveData.campBuildings[quest.unlockBuilding]) {
@@ -9424,6 +9482,393 @@
       }
     }
 
+    // ============================================================
+    // AI CHAT BOX CONSOLE
+    // ============================================================
+    const AI_CHAT_RESPONSES = {
+      // Game help
+      help: "💧 I'm your Droplet AI assistant! I can help with:\n• Quest info — type 'quest' or 'what to do'\n• Settings — type 'settings' or 'graphics'\n• Game tips — type 'tips'\n• Buildings — type 'buildings'\n• Stats — type 'stats'",
+      quest: null, // dynamic
+      settings: "⚙️ Settings you can adjust:\n• Type 'lower graphics' to reduce visual effects\n• Type 'higher graphics' for better visuals\n• Type 'more fps' to optimize performance\n• Use the Settings menu for detailed controls",
+      tips: "💡 Tips:\n• Collect XP drops to level up fast\n• Use dash to dodge enemy attacks\n• Visit Camp buildings between runs\n• Equip gear from the Armory\n• Defend the Windmill for bonus weapons",
+      buildings: "🏕️ Camp Buildings:\n• Quest Hall — start & claim quests\n• Skill Tree — unlock abilities\n• Armory — equip gear\n• Training Hall — upgrade attributes\n• Forge — buy upgrades\n• Character Visuals — customize look\n• Codex — enemy encyclopedia",
+      stats: null, // dynamic
+      greeting: "💧 Welcome, Droplet! I'm your AI assistant. Type 'help' to see what I can do, or ask me anything about the game!",
+    };
+
+    let chatOpen = false;
+
+    function initAIChat() {
+      const tab = document.getElementById('ai-chat-tab');
+      const chatBox = document.getElementById('ai-chat-box');
+      const closeBtn = document.getElementById('chat-close-btn');
+      const sendBtn = document.getElementById('chat-send-btn');
+      const input = document.getElementById('chat-input');
+      if (!tab || !chatBox) return;
+
+      tab.onclick = () => toggleChat();
+      closeBtn.onclick = () => toggleChat(false);
+      sendBtn.onclick = () => sendChatMessage();
+      input.onkeydown = (e) => { if (e.key === 'Enter') sendChatMessage(); };
+
+      // Show greeting
+      addChatMessage('ai', AI_CHAT_RESPONSES.greeting);
+    }
+
+    function toggleChat(forceState) {
+      const tab = document.getElementById('ai-chat-tab');
+      const chatBox = document.getElementById('ai-chat-box');
+      chatOpen = forceState !== undefined ? forceState : !chatOpen;
+      if (chatOpen) {
+        chatBox.classList.add('chat-visible');
+        tab.classList.add('chat-open');
+      } else {
+        chatBox.classList.remove('chat-visible');
+        tab.classList.remove('chat-open');
+      }
+    }
+
+    function addChatMessage(type, text) {
+      const container = document.getElementById('chat-messages');
+      if (!container) return;
+      const msg = document.createElement('div');
+      msg.className = 'chat-msg ' + type;
+      msg.textContent = text;
+      container.appendChild(msg);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function getAIResponse(userText) {
+      const lower = userText.toLowerCase().trim();
+
+      // Quest info
+      if (lower.includes('quest') || lower.includes('what to do') || lower.includes('objective') || lower.includes('mission')) {
+        if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest) {
+          const q = TUTORIAL_QUESTS[saveData.tutorialQuests.currentQuest];
+          if (q) {
+            const readyToClaim = saveData.tutorialQuests.readyToClaim && saveData.tutorialQuests.readyToClaim.length > 0;
+            if (readyToClaim) {
+              return `✅ Quest ready to claim! Go to Camp → Quest Hall to claim your reward. Current: "${q.name}"`;
+            }
+            return `📜 Current Quest: "${q.name}"\n${q.description}\nObjective: ${q.objectives}`;
+          }
+        }
+        return "📜 No active quest right now. Visit the Quest Hall in Camp to start a new quest!";
+      }
+
+      // Stats
+      if (lower.includes('stats') || lower.includes('status') || lower.includes('health') || lower.includes('level')) {
+        const ups = saveData.upgrades || {};
+        const gold = saveData.gold || 0;
+        const kills = saveData.totalKills || 0;
+        return `📊 Your Stats:\n• Gold: ${gold}\n• Total Kills: ${kills}\n• Account Level: ${saveData.accountLevel || 1}\n• Upgrades: ${Object.values(ups).reduce((a, b) => a + (b || 0), 0)} total`;
+      }
+
+      // Settings/graphics
+      if (lower.includes('lag') || lower.includes('fps') || lower.includes('smooth') || lower.includes('performance')) {
+        if (window.GameRenderer && window.GameRenderer.setQuality) {
+          window.GameRenderer.setQuality('low');
+        }
+        return "⚡ I've optimized the settings for better performance. The game should run smoother now. You can also adjust settings manually in the Settings menu.";
+      }
+      if (lower.includes('lower graphics') || lower.includes('low quality') || lower.includes('reduce')) {
+        if (window.GameRenderer && window.GameRenderer.setQuality) {
+          window.GameRenderer.setQuality('low');
+        }
+        return "📉 Graphics set to low quality for better performance.";
+      }
+      if (lower.includes('higher graphics') || lower.includes('high quality') || lower.includes('better graphics') || lower.includes('max quality')) {
+        if (window.GameRenderer && window.GameRenderer.setQuality) {
+          window.GameRenderer.setQuality('high');
+        }
+        return "📈 Graphics set to high quality. If you experience lag, type 'lower graphics'.";
+      }
+      if (lower.includes('more blood') || lower.includes('effects')) {
+        return "🩸 Visual effects are at maximum. Enemy hits show blood splatter effects during combat!";
+      }
+
+      // Settings
+      if (lower.includes('setting') || lower.includes('config') || lower.includes('option')) {
+        return AI_CHAT_RESPONSES.settings;
+      }
+
+      // Buildings
+      if (lower.includes('building') || lower.includes('camp') || lower.includes('upgrade')) {
+        return AI_CHAT_RESPONSES.buildings;
+      }
+
+      // Tips
+      if (lower.includes('tip') || lower.includes('hint') || lower.includes('advice') || lower.includes('how to')) {
+        return AI_CHAT_RESPONSES.tips;
+      }
+
+      // Help
+      if (lower.includes('help') || lower === '?') {
+        return AI_CHAT_RESPONSES.help;
+      }
+
+      // Claim rewards
+      if (lower.includes('claim') || lower.includes('reward')) {
+        if (saveData.tutorialQuests && saveData.tutorialQuests.readyToClaim && saveData.tutorialQuests.readyToClaim.length > 0) {
+          return "🎁 You have rewards ready to claim! Go to Camp → Quest Hall and click the quest to claim your rewards.";
+        }
+        return "🎁 No rewards ready to claim right now. Complete your current quest objectives first!";
+      }
+
+      // Achievement
+      if (lower.includes('achievement') || lower.includes('trophy')) {
+        return "🏆 Visit the Achievement Hall in Camp to see all your achievements and claim rewards!";
+      }
+
+      // Companion
+      if (lower.includes('companion') || lower.includes('pet') || lower.includes('wolf')) {
+        return "🐺 Companions fight by your side! Visit the Companion House in Camp to manage and upgrade them.";
+      }
+
+      // Codex
+      if (lower.includes('codex') || lower.includes('enemy') || lower.includes('enemies') || lower.includes('bestiary')) {
+        return "📖 The Codex contains info on all enemies, landmarks, and structures. Visit the Codex building in Camp!";
+      }
+
+      // Default
+      return "💧 I'm not sure about that. Type 'help' to see what I can assist with, or try asking about quests, settings, tips, or buildings!";
+    }
+
+    function sendChatMessage() {
+      const input = document.getElementById('chat-input');
+      if (!input) return;
+      const text = input.value.trim();
+      if (!text) return;
+      input.value = '';
+      addChatMessage('user', text);
+      setTimeout(() => {
+        const response = getAIResponse(text);
+        addChatMessage('ai', response);
+      }, 300 + Math.random() * 400);
+    }
+
+    // Add dynamic system messages to chat
+    function chatSystemMessage(text) {
+      addChatMessage('system', text);
+    }
+
+    // ============================================================
+    // CHARACTER VISUALS SCREEN
+    // ============================================================
+    const CHARACTER_ACCESSORIES = [
+      { id: 'none', name: '❌ None', emoji: '' },
+      { id: 'headband', name: '🎀 Headband', emoji: '🎀' },
+      { id: 'eyepatch', name: '🏴‍☠️ Eye Patch', emoji: '🏴‍☠️' },
+      { id: 'armbands', name: '💪 Arm Bands', emoji: '💪' },
+      { id: 'earrings', name: '💎 Earrings', emoji: '💎' },
+      { id: 'crown', name: '👑 Crown', emoji: '👑' },
+    ];
+
+    const CHARACTER_ANIMATIONS = [
+      { id: 'idle', name: '🧍 Idle' },
+      { id: 'breathe', name: '🌬️ Breathe' },
+      { id: 'dash', name: '💨 Dash' },
+      { id: 'turn', name: '🔄 Turn' },
+      { id: 'smoke', name: '🚬 Smoke' },
+      { id: 'die', name: '💀 Die' },
+    ];
+
+    const CHARACTER_OUTFITS = [
+      { id: 'default', name: '💧 Default' },
+      { id: 'warrior', name: '⚔️ Warrior' },
+      { id: 'ninja', name: '🥷 Ninja' },
+      { id: 'royal', name: '👑 Royal' },
+      { id: 'shadow', name: '🌑 Shadow' },
+    ];
+
+    function openCharacterVisuals() {
+      const screen = document.getElementById('character-visuals-screen');
+      if (!screen) return;
+      screen.style.display = 'flex';
+
+      // Initialize save data for character visuals if needed
+      if (!saveData.characterVisuals) {
+        saveData.characterVisuals = { accessory: 'none', animation: 'idle', outfit: 'default' };
+      }
+
+      // Render accessory options
+      const accContainer = document.getElementById('char-vis-accessories');
+      accContainer.innerHTML = '';
+      CHARACTER_ACCESSORIES.forEach(acc => {
+        const btn = document.createElement('div');
+        btn.className = 'char-vis-option' + (saveData.characterVisuals.accessory === acc.id ? ' selected' : '');
+        btn.textContent = acc.name;
+        btn.onclick = () => {
+          saveData.characterVisuals.accessory = acc.id;
+          saveSaveData();
+          updateCharPreview();
+          accContainer.querySelectorAll('.char-vis-option').forEach(el => el.classList.remove('selected'));
+          btn.classList.add('selected');
+          chatSystemMessage(`🎨 Accessory changed to ${acc.name}`);
+        };
+        accContainer.appendChild(btn);
+      });
+
+      // Render animation options
+      const animContainer = document.getElementById('char-vis-animations');
+      animContainer.innerHTML = '';
+      CHARACTER_ANIMATIONS.forEach(anim => {
+        const btn = document.createElement('div');
+        btn.className = 'char-vis-option' + (saveData.characterVisuals.animation === anim.id ? ' selected' : '');
+        btn.textContent = anim.name;
+        btn.onclick = () => {
+          saveData.characterVisuals.animation = anim.id;
+          saveSaveData();
+          updateCharPreview();
+          animContainer.querySelectorAll('.char-vis-option').forEach(el => el.classList.remove('selected'));
+          btn.classList.add('selected');
+          chatSystemMessage(`🎬 Animation changed to ${anim.name}`);
+        };
+        animContainer.appendChild(btn);
+      });
+
+      // Render outfit options
+      const outfitContainer = document.getElementById('char-vis-outfits');
+      outfitContainer.innerHTML = '';
+      CHARACTER_OUTFITS.forEach(outfit => {
+        const btn = document.createElement('div');
+        btn.className = 'char-vis-option' + (saveData.characterVisuals.outfit === outfit.id ? ' selected' : '');
+        btn.textContent = outfit.name;
+        btn.onclick = () => {
+          saveData.characterVisuals.outfit = outfit.id;
+          saveSaveData();
+          updateCharPreview();
+          outfitContainer.querySelectorAll('.char-vis-option').forEach(el => el.classList.remove('selected'));
+          btn.classList.add('selected');
+          chatSystemMessage(`👕 Outfit changed to ${outfit.name}`);
+        };
+        outfitContainer.appendChild(btn);
+      });
+
+      updateCharPreview();
+
+      // Back button
+      document.getElementById('char-vis-back-btn').onclick = () => {
+        screen.style.display = 'none';
+        document.getElementById('camp-screen').style.display = 'flex';
+      };
+    }
+
+    function updateCharPreview() {
+      const drop = document.getElementById('char-preview-drop');
+      if (!drop) return;
+      const vis = saveData.characterVisuals || {};
+
+      // Update accessory display
+      const acc = CHARACTER_ACCESSORIES.find(a => a.id === vis.accessory) || CHARACTER_ACCESSORIES[0];
+      const accEmoji = acc.emoji ? `<span style="position:absolute;top:-12px;left:50%;transform:translateX(-50%);font-size:22px;">${acc.emoji}</span>` : '';
+
+      // Update animation
+      let animStyle = 'animation: char-breathe 3s ease-in-out infinite;';
+      if (vis.animation === 'dash') animStyle = 'animation: char-breathe 0.5s ease-in-out infinite;';
+      else if (vis.animation === 'turn') animStyle = 'animation: char-breathe 2s ease-in-out infinite; transform: scaleX(-1);';
+      else if (vis.animation === 'die') animStyle = 'animation: none; transform: rotate(90deg); opacity: 0.5;';
+      else if (vis.animation === 'smoke') animStyle = 'animation: char-breathe 4s ease-in-out infinite;';
+
+      // Update outfit color
+      let outfitGrad = 'radial-gradient(ellipse at 30% 30%, #87CEEB, #4A90D9, #2E5BA7)';
+      if (vis.outfit === 'warrior') outfitGrad = 'radial-gradient(ellipse at 30% 30%, #CD853F, #8B4513, #654321)';
+      else if (vis.outfit === 'ninja') outfitGrad = 'radial-gradient(ellipse at 30% 30%, #333, #111, #000)';
+      else if (vis.outfit === 'royal') outfitGrad = 'radial-gradient(ellipse at 30% 30%, #FFD700, #DAA520, #B8860B)';
+      else if (vis.outfit === 'shadow') outfitGrad = 'radial-gradient(ellipse at 30% 30%, #4a0080, #2d004d, #1a0033)';
+
+      const cigarEmoji = vis.animation === 'die' ? '' : '🚬';
+      drop.style.cssText = `width:80px;height:100px;background:${outfitGrad};border-radius:50% 50% 50% 50% / 60% 60% 40% 40%;position:relative;${animStyle}`;
+      drop.innerHTML = `${accEmoji}<span style="position:absolute;right:-16px;top:35%;font-size:18px;">${cigarEmoji}</span>`;
+    }
+
+    // ============================================================
+    // CODEX SCREEN
+    // ============================================================
+    const CODEX_ENTRIES = [
+      // Enemies
+      { category: 'Enemies', icon: '🟥', name: 'Tank', desc: 'High HP, slow-moving enemy. Absorbs damage like a sponge.', bubble: '"You shall not pass... quickly."' },
+      { category: 'Enemies', icon: '🟨', name: 'Fast Runner', desc: 'Low HP but extremely quick. Flanks from the sides.', bubble: '"Catch me if you can!"' },
+      { category: 'Enemies', icon: '🟦', name: 'Balanced', desc: 'Mid-range stats. A well-rounded threat.', bubble: '"Perfectly balanced, as all things should be."' },
+      { category: 'Enemies', icon: '🟪', name: 'Slowing', desc: 'Slows you on hit. Watch out for their debuff attacks.', bubble: '"Slow down, friend..."' },
+      { category: 'Enemies', icon: '🟫', name: 'Ranged', desc: 'Attacks from distance with projectiles.', bubble: '"Distance is my ally."' },
+      { category: 'Enemies', icon: '🔵', name: 'Flying', desc: 'Airborne enemy. Swoops in for attacks.', bubble: '"The sky is mine!"' },
+      { category: 'Enemies', icon: '⬛', name: 'Hard Tank', desc: 'Very high HP variant. Incredibly durable.', bubble: '"I am the wall."' },
+      { category: 'Enemies', icon: '⚡', name: 'Hard Fast', desc: 'Enhanced speed variant. Blisteringly quick.', bubble: '"Lightning never strikes twice... or does it?"' },
+      { category: 'Enemies', icon: '🔴', name: 'Elite', desc: '1.5× damage. A formidable foe.', bubble: '"I am no ordinary enemy."' },
+      { category: 'Enemies', icon: '💀', name: 'Mini Boss', desc: 'Boss with scaling HP. Beware their power.', bubble: '"Prepare yourself, Droplet!"' },
+      { category: 'Enemies', icon: '🦅', name: 'Flying Boss', desc: 'Giant flying boss appearing at level 15+.', bubble: '"From the skies, I descend upon you!"' },
+      { category: 'Enemies', icon: '🐛', name: 'Bug Ranged', desc: 'Water-bug variant with ranged attacks.', bubble: '"Bzzt! Incoming!"' },
+      // Landmarks
+      { category: 'Landmarks', icon: '🗿', name: 'Stonehenge', desc: 'Ancient stone circle. Quest chests appear here.', bubble: '"Legends say treasures lie within..."' },
+      { category: 'Landmarks', icon: '🔺', name: 'Pyramid', desc: 'Mysterious pyramid structure on the map.', bubble: '"Built by ancient water civilizations."' },
+      { category: 'Landmarks', icon: '🏔️', name: 'Montana', desc: 'Mountain region with survival challenges.', bubble: '"Survive the heights!"' },
+      { category: 'Landmarks', icon: '⚡', name: 'Tesla Tower', desc: 'Electrifying landmark with special encounters.', bubble: '"Power courses through these walls."' },
+      // Structures
+      { category: 'Structures', icon: '🏠', name: 'Windmill', desc: 'Defend it from enemies to earn rewards.', bubble: '"The farmer needs your help!"' },
+      { category: 'Structures', icon: '⛺', name: 'Camp', desc: 'Your home base. Upgrade buildings here.', bubble: '"Rest, upgrade, and prepare for the next run."' },
+      // Spawn Points
+      { category: 'Spawn Points', icon: '⛲', name: 'Spawn Fountain', desc: 'Where your journey begins each run.', bubble: '"From these waters, heroes rise."' },
+      { category: 'Spawn Points', icon: '🌀', name: 'Enemy Spawner', desc: 'Enemies emerge from these dark portals.', bubble: '"Endless waves flow from within."' },
+      // Perks
+      { category: 'Perks', icon: '🧛', name: 'Vampire', desc: 'Lifesteal on hit. Sustain through combat.', bubble: '"Your pain is my gain."' },
+      { category: 'Perks', icon: '🛡️', name: 'Juggernaut', desc: 'Bonus HP and armor. Become unstoppable.', bubble: '"Nothing can stop me!"' },
+      { category: 'Perks', icon: '⚡', name: 'Swift', desc: 'Increased movement and attack speed.', bubble: '"Speed is everything."' },
+      { category: 'Perks', icon: '🍀', name: 'Lucky', desc: 'Higher crit chance and better drops.', bubble: '"Fortune favors the bold!"' },
+    ];
+
+    let codexPage = 0;
+    const CODEX_PER_PAGE = 6;
+
+    function openCodex() {
+      const screen = document.getElementById('codex-screen');
+      if (!screen) return;
+      screen.style.display = 'flex';
+      codexPage = 0;
+      renderCodexPage();
+
+      document.getElementById('codex-back-btn').onclick = () => {
+        screen.style.display = 'none';
+        document.getElementById('camp-screen').style.display = 'flex';
+      };
+      document.getElementById('codex-prev-btn').onclick = () => {
+        if (codexPage > 0) { codexPage--; renderCodexPage(); }
+      };
+      document.getElementById('codex-next-btn').onclick = () => {
+        const maxPage = Math.ceil(CODEX_ENTRIES.length / CODEX_PER_PAGE) - 1;
+        if (codexPage < maxPage) { codexPage++; renderCodexPage(); }
+      };
+    }
+
+    function renderCodexPage() {
+      const container = document.getElementById('codex-pages');
+      if (!container) return;
+      container.innerHTML = '';
+
+      const start = codexPage * CODEX_PER_PAGE;
+      const end = Math.min(start + CODEX_PER_PAGE, CODEX_ENTRIES.length);
+      const totalPages = Math.ceil(CODEX_ENTRIES.length / CODEX_PER_PAGE);
+
+      for (let i = start; i < end; i++) {
+        const entry = CODEX_ENTRIES[i];
+        const div = document.createElement('div');
+        div.className = 'codex-entry';
+        div.innerHTML = `
+          <div class="codex-entry-icon">${entry.icon}</div>
+          <div class="codex-entry-name">${entry.name}</div>
+          <div class="codex-entry-desc">${entry.desc}</div>
+          <div class="codex-entry-bubble">${entry.bubble}</div>
+          <div style="font-size:10px;color:#888;margin-top:6px;text-align:center;">${entry.category}</div>
+        `;
+        container.appendChild(div);
+      }
+
+      // Update pagination
+      document.getElementById('codex-page-info').textContent = `Page ${codexPage + 1} of ${totalPages}`;
+      document.getElementById('codex-prev-btn').disabled = codexPage <= 0;
+      document.getElementById('codex-next-btn').disabled = codexPage >= totalPages - 1;
+    }
+
     // Render account stats inside the account section
     function renderAccountContent() {
       const content = document.getElementById('camp-account-content');
@@ -9758,6 +10203,26 @@
                 buildingCard.onclick = () => {
                   playSound('waterdrop');
                   showAccountSection();
+                };
+                buildingCard.style.cursor = 'pointer';
+              } else if (buildingId === 'characterVisuals') {
+                buildingCard.onclick = () => {
+                  if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest16_visitCharVisuals') {
+                    progressTutorialQuest('quest16_visitCharVisuals', true);
+                    saveSaveData();
+                  }
+                  document.getElementById('camp-screen').style.display = 'none';
+                  openCharacterVisuals();
+                };
+                buildingCard.style.cursor = 'pointer';
+              } else if (buildingId === 'codex') {
+                buildingCard.onclick = () => {
+                  if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest17_visitCodex') {
+                    progressTutorialQuest('quest17_visitCodex', true);
+                    saveSaveData();
+                  }
+                  document.getElementById('camp-screen').style.display = 'none';
+                  openCodex();
                 };
                 buildingCard.style.cursor = 'pointer';
               } else if (buildingId === 'skillTree') {
@@ -13527,6 +13992,8 @@
 
             
       // Stats Bar removed - No toggle needed
+      // Initialize AI Chat Box Console
+      initAIChat();
       
       // Equipment Button - Opens Gear Screen
       document.getElementById('equipment-btn').onclick = () => {
