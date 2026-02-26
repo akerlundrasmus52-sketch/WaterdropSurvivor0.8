@@ -1990,6 +1990,7 @@
         this._lastPlayerPos = null; // For movement prediction
         this._playerVelocity = { x: 0, z: 0 }; // Estimated player velocity
         this._flankAngle = (Math.random() > 0.5 ? 1 : -1) * (Math.PI * 0.3 + Math.random() * Math.PI * 0.4);
+        this._packRush = false; // Pack behavior: periodic group rush flag
         // Armor defaults to 0 if not set (only MiniBoss has armor = 0.25)
         
         // Add glowing eyes to enemy (VFX) with realistic pupils
@@ -2111,28 +2112,56 @@
           this.mesh.position.z = targetPos.z + Math.sin(newAngle) * orbitR;
           this.mesh.lookAt(new THREE.Vector3(targetPos.x, this.mesh.position.y, targetPos.z));
         } else if (dist > 0.5) {
-          // Check if slow effect expired
-          if (this.slowedUntil && this.slowedUntil < Date.now()) {
+          // Check if slow/freeze effect expired
+          const nowMs = Date.now();
+          if (this.slowedUntil && this.slowedUntil < nowMs) {
             this.speed = this.originalSpeed || this.speed;
             this.slowedUntil = null;
           }
+          // Handle freeze expiry: thaw enemy, restore color and speed
+          if (this.isFrozen && this.frozenUntil < nowMs) {
+            this.isFrozen = false;
+            this.speed = this.originalSpeed || this.speed;
+            if (this.mesh && this.mesh.material && this._originalColor) {
+              this.mesh.material.color.copy(this._originalColor);
+              if (this.mesh.material.emissive) {
+                this.mesh.material.emissive.setHex(0x000000);
+                this.mesh.material.emissiveIntensity = 0;
+              }
+              this.mesh.material.needsUpdate = true;
+            }
+            // Shatter ice: spawn ice chips flying outward
+            spawnParticles(this.mesh.position, 0xAEEEFF, 6);
+            spawnParticles(this.mesh.position, 0xFFFFFF, 4);
+          }
+          
+          // Frozen enemies stop moving
+          if (this.isFrozen) {
+            // Pulse ice glow to show frozen state
+            if (this.mesh && this.mesh.material) {
+              this.mesh.material.emissiveIntensity = 0.3 + Math.sin(gameTime * 8) * 0.15;
+            }
+            // Skip all movement below
+          } else {
           
           // Base movement towards target
           let vx = (dx / dist) * this.speed;
           let vz = (dz / dist) * this.speed;
           
-          // Add enemy avoidance to prevent stacking/trains (optimized)
+          // Add enemy avoidance to prevent stacking/trains (optimized — squared distance to skip sqrt)
           let avoidX = 0, avoidZ = 0;
           let avoidanceCount = 0;
           const maxAvoidanceChecks = 5;
+          const avoidRadiusSq = 1.5 * 1.5;
           for (let other of enemies) {
             if (other === this || other.isDead) continue;
             if (avoidanceCount >= maxAvoidanceChecks) break;
             const odx = this.mesh.position.x - other.mesh.position.x;
             const odz = this.mesh.position.z - other.mesh.position.z;
-            const odist = Math.sqrt(odx*odx + odz*odz);
+            const odistSq = odx*odx + odz*odz;
             
-            if (odist < 1.5 && odist > 0.01) {
+            if (odistSq < avoidRadiusSq && odistSq > 0.0001) {
+              const odist = Math.sqrt(odistSq);
               const repulsion = 0.02;
               avoidX += (odx / odist) * repulsion;
               avoidZ += (odz / odist) * repulsion;
@@ -2175,43 +2204,53 @@
               if (this._chargeTime <= 0) this._charging = false;
             }
           } else if (behavior === 'flanker') {
-            // Approach from the side/behind the player
+            // Approach from the side/behind the player, blend with forward movement to ensure closure
             if (this._aiTimer > this._aiCooldown) {
               this._aiTimer = 0;
-              this._flankAngle = (Math.random() > 0.5 ? 1 : -1) * (Math.PI * 0.3 + Math.random() * Math.PI * 0.5);
+              this._flankAngle = (Math.random() > 0.5 ? 1 : -1) * (Math.PI * 0.25 + Math.random() * Math.PI * 0.35);
               this._aiCooldown = 0.8 + Math.random() * 1.5;
             }
             const flankX = dx * Math.cos(this._flankAngle) - dz * Math.sin(this._flankAngle);
             const flankZ = dx * Math.sin(this._flankAngle) + dz * Math.cos(this._flankAngle);
             const fMag = Math.sqrt(flankX*flankX + flankZ*flankZ) || 1;
             if (dist > 3) {
-              vx = (flankX / fMag) * this.speed;
-              vz = (flankZ / fMag) * this.speed;
+              // Blend flank direction with direct approach so enemies always close distance
+              const blend = Math.min(1, (dist - 3) / 5);
+              vx = (flankX / fMag) * this.speed * (1 - blend * 0.4) + (dx / dist) * this.speed * blend * 0.4;
+              vz = (flankZ / fMag) * this.speed * (1 - blend * 0.4) + (dz / dist) * this.speed * blend * 0.4;
             } else {
               // Close range: dash straight at player
               vx = (dx / dist) * this.speed * 1.6;
               vz = (dz / dist) * this.speed * 1.6;
             }
           } else if (behavior === 'pack') {
-            // Spread out and surround the player
-            const spreadAngle = this.wobbleOffset * 0.2; // Unique angle per enemy
-            const desiredAngle = Math.atan2(dz, dx) + Math.PI + spreadAngle;
-            const surroundDist = 4 + Math.sin(this.wobbleOffset) * 2;
-            if (dist > surroundDist + 1) {
-              // Move towards surround position
+            // Spread out and surround the player, then rush together
+            const surroundDist = 3 + Math.sin(this.wobbleOffset) * 1.5;
+            // Periodically force a group rush to prevent endless circling
+            if (this._aiTimer > this._aiCooldown) {
+              this._aiTimer = 0;
+              this._aiCooldown = 1.5 + Math.random() * 2.0;
+              this._packRush = true;
+            }
+            if (this._packRush) {
+              // Rush straight at player
+              vx = (dx / dist) * this.speed * 1.4;
+              vz = (dz / dist) * this.speed * 1.4;
+              if (dist < 1.5) this._packRush = false;
+            } else if (dist > surroundDist + 1) {
+              // Move towards player with slight weave
               vx = (dx / dist) * this.speed;
               vz = (dz / dist) * this.speed;
-              // Add weave
               const weave = Math.sin(gameTime * 4 + this.wobbleOffset) * 0.06;
               vx += weave * (-dz/dist);
               vz += weave * (dx/dist);
             } else if (dist > 1.5) {
-              // Circle around player
+              // Circle around player — always maintain inward pull to prevent endless orbit
               const perpX = -dz / dist;
               const perpZ =  dx / dist;
               const circleDir = this.wobbleOffset > 50 ? 1 : -1;
-              vx = perpX * this.speed * 0.6 * circleDir + (dx / dist) * this.speed * 0.3;
-              vz = perpZ * this.speed * 0.6 * circleDir + (dz / dist) * this.speed * 0.3;
+              vx = perpX * this.speed * 0.5 * circleDir + (dx / dist) * this.speed * 0.5;
+              vz = perpZ * this.speed * 0.5 * circleDir + (dz / dist) * this.speed * 0.5;
             }
           } else if (behavior === 'ambusher') {
             // Wait at medium range then dash in
@@ -2320,6 +2359,7 @@
           this.mesh.position.x += vx;
           this.mesh.position.z += vz;
           this.mesh.lookAt(targetPos);
+          } // end else (!isFrozen) movement block
         }
 
         // Collision with target
@@ -2499,15 +2539,25 @@
           // Lerp factor: 0 at full HP → 0.85 near death (almost fully blood-covered)
           const bloodLerp = (1 - hpRatio) * 0.85;
           const bloodColor = new THREE.Color(0x8B0000);
-          this.mesh.material.color.copy(this._originalColor).lerp(bloodColor, bloodLerp);
+          // Only update color if not frozen (freeze manages its own colour)
+          if (!this.isFrozen) {
+            this.mesh.material.color.copy(this._originalColor).lerp(bloodColor, bloodLerp);
+          }
           // Also apply emissive for wet blood sheen
-          if (this.mesh.material.emissive !== undefined) {
+          if (!this.isFrozen && this.mesh.material.emissive !== undefined) {
             const bloodStainIntensity = (1 - hpRatio) * 0.4;
             this.mesh.material.emissive = new THREE.Color(0x6B0000);
             this.mesh.material.emissiveIntensity = bloodStainIntensity;
           }
         }
         
+        // Throttle expensive new-mesh creation (blood stains, drips, holes) to at most
+        // once every 120 ms to avoid creating dozens of objects during rapid drone fire.
+        const nowHit = Date.now();
+        const canSpawnMeshes = !this._lastHitMeshTime || (nowHit - this._lastHitMeshTime) > 120;
+        if (canSpawnMeshes) {
+          this._lastHitMeshTime = nowHit;
+
         // Add blood stain meshes directly on enemy body (visible on all colors)
         if (!this._bloodStains) this._bloodStains = [];
         const MAX_BODY_BLOOD_STAINS = 12;
@@ -2578,8 +2628,10 @@
           this.mesh.add(holeDecal);
           this.bulletHoles.push(holeDecal);
         }
+        } // end canSpawnMeshes throttle
         
-        // Airborne blood splatter - arcs up then falls under gravity (managed in main loop via bloodDrips)
+        // Airborne blood splatter - throttled alongside other mesh creation
+        if (canSpawnMeshes) {
         const burstCount = isCrit ? 5 : 3; // More airborne blood per shot
         for (let b = 0; b < burstCount && bloodDrips.length < MAX_BLOOD_DRIPS; b++) {
           const bSize = 0.03 + Math.random() * 0.05;
@@ -2601,6 +2653,7 @@
             life: 35 + Math.floor(Math.random() * 15)
           });
         }
+        } // end airborne blood throttle
         
         // Phase 3: Apply armor reduction for MiniBoss/FlyingBoss — delegated to GameCombat
         let finalAmount = amount;
@@ -2611,6 +2664,8 @@
             createFloatingText(`-${Math.floor(amount * this.armor)}`, this.mesh.position, '#FFD700');
           }
         }
+        // Frozen enemies take double damage after armor — freeze bonus applies on top of armor
+        if (this.isFrozen) finalAmount *= 2;
         
         const oldHp = this.hp;
         this.hp -= finalAmount;
@@ -2741,12 +2796,15 @@
           spawnBloodDecal(this.mesh.position);
         }
         
-        // Enhanced squishy deformation on hit
-        const squishScale = isCrit ? 0.7 : 0.85;
-        this.mesh.scale.set(squishScale, 1.3, squishScale);
-        setTimeout(() => {
-          this.mesh.scale.set(1, 1, 1);
-        }, 100);
+        // Enhanced squishy deformation on hit — only apply/schedule if not already squishing
+        if (!this._squishTimer) {
+          const squishScale = isCrit ? 0.7 : 0.85;
+          this.mesh.scale.set(squishScale, 1.3, squishScale);
+          this._squishTimer = setTimeout(() => {
+            if (this.mesh) this.mesh.scale.set(1, 1, 1);
+            this._squishTimer = null;
+          }, 100);
+        }
 
         if (this.hp <= 0) {
           this.die();
@@ -2755,6 +2813,13 @@
 
       die() {
         this.isDead = true;
+        // Clear freeze state so no further update logic applies to dead enemy
+        this.isFrozen = false;
+        // Cancel pending squish timeout to prevent callback on dead enemy
+        if (this._squishTimer) {
+          clearTimeout(this._squishTimer);
+          this._squishTimer = null;
+        }
         
         // Clean up ground shadow
         if (this.groundShadow) {
@@ -4132,9 +4197,12 @@
               enemy.takeDamage(Math.floor(dmg), false);
             }
             
-            // Knockback effect - scales with weapon level
-            let knockbackForce = 0.5 * (1 + (weapons.gun.level - 1) * 0.25);
-            if (weapons.doubleBarrel.active && this.isDoubleBarrel) {
+            // Knockback effect — drone: near zero; gun: reduced with level scaling; double barrel: heavy
+            let knockbackForce;
+            if (this.isDroneTurret) {
+              // Drone fires many rapid small bullets — near-zero knockback so enemy just wobbles
+              knockbackForce = 0.05;
+            } else if (weapons.doubleBarrel.active && this.isDoubleBarrel) {
               // Double barrel: heavy knockback with partial topple effect
               knockbackForce = 1.8 * (1 + (weapons.doubleBarrel.level - 1) * 0.2);
               // Topple: tilt enemy mesh briefly on impact
@@ -4144,6 +4212,9 @@
               setTimeout(() => {
                 if (enemy.mesh) { enemy.mesh.rotation.x = 0; enemy.mesh.rotation.z = 0; }
               }, 300);
+            } else {
+              // Standard gun: reduced base force, scales up with weapon level
+              knockbackForce = 0.3 * (1 + (weapons.gun.level - 1) * 0.2);
             }
             enemy.mesh.position.x += this.vx * knockbackForce;
             enemy.mesh.position.z += this.vz * knockbackForce;
@@ -4520,34 +4591,45 @@
           const dx = this.mesh.position.x - enemy.mesh.position.x;
           const dz = this.mesh.position.z - enemy.mesh.position.z;
           if (dx*dx + dz*dz < 0.6) {
-            // Calculate Damage
             let dmg = weapons.iceSpear.damage * playerStats.damage * playerStats.strength;
             const isCrit = Math.random() < playerStats.critChance;
             if (isCrit) dmg *= playerStats.critDmg;
             
-            enemy.takeDamage(Math.floor(dmg), isCrit);
+            enemy.takeDamage(Math.floor(dmg), isCrit, 'ice');
             
-            // Apply slow effect
-            if (!enemy.slowedUntil || enemy.slowedUntil < Date.now()) {
-              enemy.originalSpeed = enemy.speed;
+            // Freeze duration scales with ice spear level (base 2.5s, +0.5s per extra level)
+            const freezeDur = 2500 + (weapons.iceSpear.level - 1) * 500;
+            if (!enemy.isFrozen) {
+              // Store original speed and color before first freeze
+              if (!enemy._originalColor && enemy.mesh && enemy.mesh.material) {
+                enemy._originalColor = enemy.mesh.material.color.clone();
+              }
+              if (!enemy.originalSpeed) enemy.originalSpeed = enemy.speed;
             }
-            enemy.slowedUntil = Date.now() + weapons.iceSpear.slowDuration;
-            enemy.speed = enemy.originalSpeed * (1 - weapons.iceSpear.slowPercent);
+            enemy.isFrozen = true;
+            enemy.frozenUntil = Date.now() + freezeDur;
+            // Freeze stops movement entirely — originalSpeed preserved for thaw
+            enemy.speed = 0;
+            // Visual: turn enemy icy blue with bright emissive
+            if (enemy.mesh && enemy.mesh.material) {
+              enemy.mesh.material.color.setHex(0xB0E8FF);
+              if (enemy.mesh.material.emissive !== undefined) {
+                enemy.mesh.material.emissive = new THREE.Color(0x4488AA);
+                enemy.mesh.material.emissiveIntensity = 0.5;
+              }
+              enemy.mesh.material.needsUpdate = true;
+            }
+            // Clear separate slow effect — freeze supersedes it
+            enemy.slowedUntil = null;
             
             // Ice impact particles
-            spawnParticles(enemy.mesh.position, 0x87CEEB, 8);
+            spawnParticles(enemy.mesh.position, 0xAEEEFF, 8);
             spawnParticles(enemy.mesh.position, 0xFFFFFF, 5);
             
-            // Visual ice effect on enemy
-            if (enemy.mesh.material.color) {
-              const originalColor = enemy.mesh.material.color.getHex();
-              enemy.mesh.material.color.setHex(0xADD8E6); // Light blue
-              setTimeout(() => {
-                if (enemy.mesh.material.color) {
-                  enemy.mesh.material.color.setHex(originalColor);
-                }
-              }, 200);
-            }
+            // Minimal knockback (freeze compensates — less push than gun)
+            const kbForce = 0.15;
+            enemy.mesh.position.x += this.vx * kbForce;
+            enemy.mesh.position.z += this.vz * kbForce;
             
             this.destroy();
             playSound('hit');
