@@ -2143,13 +2143,37 @@
             // Shatter ice: spawn ice chips flying outward
             spawnParticles(this.mesh.position, 0xAEEEFF, 6);
             spawnParticles(this.mesh.position, 0xFFFFFF, 4);
+            // Ice crack particles + water pool on ground
+            if (window.BloodSystem) {
+              window.BloodSystem.emitBurst(this.mesh.position, 30, { spreadXZ: 0.6, spreadY: 0.4, color1: 0xAEEEFF, color2: 0xFFFFFF, minSize: 0.05, maxSize: 0.14 });
+            }
+            // Brief shaking struggle: enemy wiggles before breaking free
+            let shakeCount = 0;
+            const origX = this.mesh.position.x;
+            const origZ = this.mesh.position.z;
+            const shakeInterval = setInterval(() => {
+              shakeCount++;
+              if (this.mesh) {
+                this.mesh.position.x = origX + (Math.random() - 0.5) * 0.12;
+                this.mesh.position.z = origZ + (Math.random() - 0.5) * 0.12;
+              }
+              if (shakeCount >= 8) {
+                clearInterval(shakeInterval);
+                if (this.mesh) { this.mesh.position.x = origX; this.mesh.position.z = origZ; }
+              }
+            }, 40);
           }
           
           // Frozen enemies stop moving
           if (this.isFrozen) {
-            // Pulse ice glow to show frozen state
-            if (this.mesh && this.mesh.material) {
-              this.mesh.material.emissiveIntensity = 0.3 + Math.sin(gameTime * 8) * 0.15;
+            // Gradual freeze visual: lerp from original → ice blue based on freeze progress
+            if (this.mesh && this.mesh.material && this._originalColor && this.frozenUntil) {
+              const totalFreezeDur = this._freezeDuration || 2500;
+              const elapsed = Math.max(0, nowMs - (this.frozenUntil - totalFreezeDur));
+              const freezeT = Math.min(1, elapsed / 600); // 600ms to reach full ice
+              const iceColor = new THREE.Color(0xB0E8FF);
+              this.mesh.material.color.copy(this._originalColor).lerp(iceColor, freezeT);
+              this.mesh.material.emissiveIntensity = 0.3 + Math.sin(gameTime * 8) * 0.15 * freezeT;
             }
             // Skip all movement below
           } else {
@@ -2857,12 +2881,17 @@
         // Determine death effect based on damage type and health when dying
         const damageType = this.lastDamageType || 'physical';
         const enemyColor = this.mesh.material.color.getHex();
+        // Detect yellow/gold enemy for special spin death (type 7=HardFast gold, type 10=MiniBoss gold)
+        const isYellowEnemy = (this.type === 7 || this.type === 10);
         
         // Trigger kill cam effect for varied visual feedback
         triggerKillCam(this.mesh.position, this.isMiniBoss, damageType);
         
         // Special death effects based on damage type
-        if (damageType === 'fire') {
+        if (isYellowEnemy && damageType !== 'ice' && damageType !== 'fire' && damageType !== 'headshot') {
+          // Yellow enemies: 180-degree spin death with continuous neck blood arc
+          this.dieBySpinDeath(enemyColor);
+        } else if (damageType === 'fire') {
           // Fire death: Char and ash
           this.dieByFire(enemyColor);
         } else if (damageType === 'ice') {
@@ -2903,6 +2932,8 @@
         spawnParticles(this.mesh.position, 0xCC0000, 10); // Bright red splatter
         spawnParticles(this.mesh.position, 0x660000, 8); // Dark blood mist
         spawnParticles(this.mesh.position, 0x440000, 6); // Extra dark blood chunks
+        // Advanced blood particle burst on death
+        if (window.BloodSystem) window.BloodSystem.emitBurst(deathPos, this.isMiniBoss ? 600 : 300, { spreadXZ: 1.8, spreadY: 1.2 });
         // Airborne blood spray burst (arcs outward from death position)
         for (let sb = 0; sb < 8 && bloodDrips.length < MAX_BLOOD_DRIPS; sb++) {
           const spraySize = 0.02 + Math.random() * 0.06;
@@ -3556,11 +3587,29 @@
       }
       
       dieByIce(enemyColor) {
-        // Ice death: Shatter into ice crystals
-        spawnParticles(this.mesh.position, 0x87CEEB, 15); // Light blue ice
-        spawnParticles(this.mesh.position, 0xFFFFFF, 12); // White frost
-        
-        // Shatter into ice shards
+        // Enhanced ice death: crack → struggle → shatter, leaves ice chunks + water pools
+        const deathPos = this.mesh.position.clone();
+        spawnParticles(deathPos, 0x87CEEB, 15); // Light blue ice
+        spawnParticles(deathPos, 0xFFFFFF, 12); // White frost
+        // Ice crack particles
+        if (window.BloodSystem) {
+          window.BloodSystem.emitBurst(deathPos, 40, { spreadXZ: 0.5, spreadY: 0.4, color1: 0xAEEEFF, color2: 0xFFFFFF, minSize: 0.05, maxSize: 0.14, minLife: 30, maxLife: 60 });
+        }
+
+        // Brief struggle: body shakes before shattering
+        let struggleCount = 0;
+        const sx = deathPos.x, sz = deathPos.z;
+        const struggleInterval = setInterval(() => {
+          struggleCount++;
+          if (this.mesh) {
+            this.mesh.position.x = sx + (Math.random()-0.5) * (struggleCount < 4 ? 0.06 : 0.12);
+            this.mesh.position.z = sz + (Math.random()-0.5) * (struggleCount < 4 ? 0.06 : 0.12);
+            this.mesh.rotation.y += (Math.random()-0.5) * 0.3;
+          }
+          if (struggleCount >= 10) clearInterval(struggleInterval);
+        }, 40);
+
+        // Shatter into ice shards (with slight delay for drama)
         const shardCount = 10;
         for(let i = 0; i < shardCount; i++) {
           const shardGeo = new THREE.ConeGeometry(0.1, 0.3, 4);
@@ -3570,7 +3619,7 @@
             opacity: 0.7
           });
           const shard = new THREE.Mesh(shardGeo, shardMat);
-          shard.position.copy(this.mesh.position);
+          shard.position.copy(deathPos);
           scene.add(shard);
           
           const angle = (i / shardCount) * Math.PI * 2;
@@ -3603,6 +3652,28 @@
             shard.material.dispose();
           }
         }
+
+        // Water pool left on ground after ice melts
+        setTimeout(() => {
+          if (!scene) return;
+          const waterGeo = new THREE.CircleGeometry(0.6 + Math.random() * 0.3, 12);
+          const waterMat = new THREE.MeshStandardMaterial({ color: 0x88CCFF, transparent: true, opacity: 0.55, roughness: 0.05, metalness: 0.3, depthWrite: false });
+          const water = new THREE.Mesh(waterGeo, waterMat);
+          water.rotation.x = -Math.PI / 2;
+          water.position.set(deathPos.x, 0.015, deathPos.z);
+          scene.add(water);
+          let wLife = 180;
+          if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
+            managedAnimations.push({ update(_dt) {
+              wLife--;
+              water.material.opacity = (wLife / 180) * 0.55;
+              if (wLife <= 0) { scene.remove(water); water.geometry.dispose(); water.material.dispose(); return false; }
+              return true;
+            }, cleanup() { scene.remove(water); water.geometry.dispose(); water.material.dispose(); }});
+          } else {
+            scene.remove(water); water.geometry.dispose(); water.material.dispose();
+          }
+        }, 300);
       }
       
       dieByLightning(enemyColor) {
@@ -3672,18 +3743,113 @@
       }
       
       dieByShotgun(enemyColor) {
-        // Shotgun death: Massive blood explosion (no large gib pieces for performance)
-        spawnParticles(this.mesh.position, 0x8B0000, 30); // Lots of blood
-        spawnParticles(this.mesh.position, 0xCC0000, 20); // Bright splatter
-        spawnParticles(this.mesh.position, 0xFF2200, 10); // Vivid gore
+        // DISMEMBERMENT: Body splits into upper/lower halves with gore physics
+        const deathPos = this.mesh.position.clone();
+        spawnParticles(deathPos, 0x8B0000, 30); // Lots of blood
+        spawnParticles(deathPos, 0xCC0000, 20); // Bright splatter
+        spawnParticles(deathPos, 0xFF2200, 10); // Vivid gore
+        // Advanced blood burst
+        if (window.BloodSystem) window.BloodSystem.emitBurst(deathPos, 800, { spreadXZ: 2.2, spreadY: 1.8 });
+
         // Scatter blood decals in a wide radius
         for (let i = 0; i < 10; i++) {
           const angle = (i / 10) * Math.PI * 2;
           const dist = 0.3 + Math.random() * 1.5;
-          spawnBloodDecal({ x: this.mesh.position.x + Math.cos(angle) * dist, y: 0, z: this.mesh.position.z + Math.sin(angle) * dist });
+          spawnBloodDecal({ x: deathPos.x + Math.cos(angle) * dist, y: 0, z: deathPos.z + Math.sin(angle) * dist });
         }
-        
-        // Large blood pool
+
+        // ── Upper body ─────────────────────────────────────────────────────────
+        const upperGeo = new THREE.SphereGeometry(0.35, 8, 8);
+        const upperMat = new THREE.MeshBasicMaterial({ color: enemyColor, transparent: true, opacity: 1 });
+        const upper = new THREE.Mesh(upperGeo, upperMat);
+        upper.position.copy(deathPos);
+        upper.position.y += 0.4;
+        scene.add(upper);
+        // Intestine strands hanging from upper half (dark pink cylinder)
+        for (let g = 0; g < 3; g++) {
+          const gutGeo = new THREE.CylinderGeometry(0.025, 0.015, 0.3 + Math.random() * 0.2, 4);
+          const gutMat = new THREE.MeshBasicMaterial({ color: [0xFF69B4, 0xCC2244, 0x8B1A1A][g % 3] });
+          const gut = new THREE.Mesh(gutGeo, gutMat);
+          gut.position.set((Math.random() - 0.5) * 0.2, -0.25, (Math.random() - 0.5) * 0.2);
+          gut.rotation.z = (Math.random() - 0.5) * 0.5;
+          upper.add(gut);
+        }
+
+        // ── Lower body ─────────────────────────────────────────────────────────
+        const lowerGeo = new THREE.CylinderGeometry(0.3, 0.25, 0.35, 7);
+        const lowerMat = new THREE.MeshBasicMaterial({ color: enemyColor, transparent: true, opacity: 1 });
+        const lower = new THREE.Mesh(lowerGeo, lowerMat);
+        lower.position.copy(deathPos);
+        lower.position.y += 0.15;
+        scene.add(lower);
+        // Intestines from lower half too
+        for (let g = 0; g < 2; g++) {
+          const gutGeo = new THREE.CylinderGeometry(0.025, 0.015, 0.25 + Math.random() * 0.15, 4);
+          const gutMat = new THREE.MeshBasicMaterial({ color: [0xFF69B4, 0x8B1A1A][g % 2] });
+          const gut = new THREE.Mesh(gutGeo, gutMat);
+          gut.position.set((Math.random() - 0.5) * 0.15, 0.22, (Math.random() - 0.5) * 0.15);
+          lower.add(gut);
+        }
+
+        // ── Physics ────────────────────────────────────────────────────────────
+        // Random slide direction (lower half glides backward, upper stands briefly)
+        const slideAngle = Math.random() * Math.PI * 2;
+        const slideSpd = 0.06 + Math.random() * 0.05;
+        let upperVelY = 0.04;
+        let lowerSlideX = Math.cos(slideAngle) * slideSpd;
+        let lowerSlideZ = Math.sin(slideAngle) * slideSpd;
+        let splitLife = 140;
+        let dragTimer = 0;
+
+        if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
+          managedAnimations.push({ update(_dt) {
+            splitLife--;
+            dragTimer++;
+
+            // Lower half slides/glides backward, leaving blood trail
+            lower.position.x += lowerSlideX;
+            lower.position.z += lowerSlideZ;
+            lowerSlideX *= 0.95; // Friction
+            lowerSlideZ *= 0.95;
+
+            // Blood drag trail every 2 frames
+            if (dragTimer % 2 === 0 && window.BloodSystem) {
+              window.BloodSystem.emitDragTrail(lower.position, { x: lowerSlideX, y: 0, z: lowerSlideZ }, 8);
+            }
+
+            // Upper half: drop organs after brief pause, then collapse
+            if (splitLife < 100) {
+              upperVelY -= 0.012;
+              upper.position.y += upperVelY;
+              upper.rotation.x += 0.04;
+              upper.rotation.z += 0.03;
+              if (upper.position.y < 0.1) upper.position.y = 0.1;
+            }
+
+            if (splitLife < 30) {
+              upper.material.opacity = splitLife / 30;
+              lower.material.opacity = splitLife / 30;
+            }
+
+            if (splitLife <= 0) {
+              scene.remove(upper); scene.remove(lower);
+              upper.traverse(c => { if (c.geometry) c.geometry.dispose(); if (c.material) c.material.dispose(); });
+              lower.traverse(c => { if (c.geometry) c.geometry.dispose(); if (c.material) c.material.dispose(); });
+              return false;
+            }
+            return true;
+          }, cleanup() {
+            scene.remove(upper); scene.remove(lower);
+            upper.traverse(c => { if (c.geometry) c.geometry.dispose(); if (c.material) c.material.dispose(); });
+            lower.traverse(c => { if (c.geometry) c.geometry.dispose(); if (c.material) c.material.dispose(); });
+          }});
+        } else {
+          scene.remove(upper); scene.remove(lower);
+          upper.traverse(c => { if (c.geometry) c.geometry.dispose(); if (c.material) c.material.dispose(); });
+          lower.traverse(c => { if (c.geometry) c.geometry.dispose(); if (c.material) c.material.dispose(); });
+        }
+
+        // Large blood pool at split point
         const bloodGeo = new THREE.CircleGeometry(1.2, 16);
         const bloodMat = new THREE.MeshBasicMaterial({ 
           color: 0x8B0000, 
@@ -3692,12 +3858,12 @@
           side: THREE.DoubleSide
         });
         const bloodPool = new THREE.Mesh(bloodGeo, bloodMat);
-        bloodPool.position.copy(this.mesh.position);
+        bloodPool.position.copy(deathPos);
         bloodPool.position.y = 0.01;
         bloodPool.rotation.x = -Math.PI / 2;
         scene.add(bloodPool);
         
-        // Fade blood
+        // Fade blood pool
         let life = 150;
         if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
         managedAnimations.push({ update(_dt) {
@@ -3710,10 +3876,64 @@
             return false;
           }
           return true;
-        }});
+        }, cleanup() { scene.remove(bloodPool); bloodPool.geometry.dispose(); bloodPool.material.dispose(); }});
         } else {
           scene.remove(bloodPool);
           bloodPool.geometry.dispose(); bloodPool.material.dispose();
+        }
+      }
+      
+      dieBySpinDeath(enemyColor) {
+        // Yellow enemy: 180-degree spin with continuous neck blood arc trail
+        const deathPos = this.mesh.position.clone();
+        spawnParticles(deathPos, 0x8B0000, 20);
+        spawnParticles(deathPos, 0xCC0000, 10);
+
+        // Create spinning body proxy
+        const bodyGeo = new THREE.SphereGeometry(0.4, 8, 8);
+        const bodyMat = new THREE.MeshBasicMaterial({ color: enemyColor, transparent: true, opacity: 1 });
+        const body = new THREE.Mesh(bodyGeo, bodyMat);
+        body.position.copy(deathPos);
+        scene.add(body);
+
+        let spinAngle = 0;
+        let spinLife = 90; // ~1.5 seconds at 60fps
+        const spinSpeed = (Math.PI) / 30; // 180° in ~30 frames, then continues
+
+        if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
+          managedAnimations.push({ update(_dt) {
+            spinLife--;
+            spinAngle += spinSpeed;
+            body.rotation.y = spinAngle;
+
+            // Blood spray from neck following the spin
+            if (window.BloodSystem && spinLife > 15) {
+              window.BloodSystem.emitSpinTrail(body.position, spinAngle, 4);
+            }
+
+            // Scatter blood decal spots on ground as it spins
+            if (spinLife % 5 === 0) {
+              const splatAngle = spinAngle;
+              const dist = 0.5 + Math.random() * 1.5;
+              spawnBloodDecal({ x: deathPos.x + Math.cos(splatAngle) * dist, y: 0, z: deathPos.z + Math.sin(splatAngle) * dist });
+            }
+
+            if (spinLife < 25) {
+              body.material.opacity = spinLife / 25;
+            }
+            if (spinLife <= 0) {
+              scene.remove(body);
+              body.geometry.dispose(); body.material.dispose();
+              return false;
+            }
+            return true;
+          }, cleanup() {
+            scene.remove(body);
+            body.geometry.dispose(); body.material.dispose();
+          }});
+        } else {
+          scene.remove(body);
+          body.geometry.dispose(); body.material.dispose();
         }
       }
       
@@ -3723,14 +3943,11 @@
         spawnParticles(this.mesh.position, 0xDC143C, 20); // Crimson blood
         spawnParticles(this.mesh.position, 0x8B0000, 15); // Dark red blood
         spawnParticles(this.mesh.position, 0xCC0000, 10); // Bright blood spray
-        
-        // Blood stream particles (continuous stream effect)
-        for (let i = 0; i < 8; i++) {
-          setTimeout(() => {
-            const streamPos = this.mesh.position.clone();
-            streamPos.y += 0.8;
-            spawnParticles(streamPos, 0xDC143C, 5);
-          }, i * 50);
+        // Advanced headshot: pulsating blood from neck/head in 180-degree spread
+        if (window.BloodSystem) {
+          const neckPos = this.mesh.position.clone();
+          neckPos.y += 0.6;
+          window.BloodSystem.emitPulse(neckPos, { pulses: 4, perPulse: 400, interval: 200, spreadXZ: 1.8, color1: 0x8B0000, color2: 0xDC143C });
         }
         
         // Create detached head that flies off with enhanced rotation
@@ -4179,6 +4396,12 @@
               // Blood particle effect
               spawnParticles(enemy.mesh.position, 0x8B0000, 30); // Dark red blood
               spawnParticles(enemy.mesh.position, 0xFF0000, 20); // Bright red blood
+              // Advanced headshot: pulsating blood spray (zero knockback, 180° spread)
+              if (window.BloodSystem) {
+                const headPos = enemy.mesh.position.clone();
+                headPos.y += 0.7;
+                window.BloodSystem.emitPulse(headPos, { pulses: 4, perPulse: 400, interval: 200, spreadXZ: 1.6 });
+              }
               
               // Flash effect
               const headshotLight = new THREE.PointLight(0xFF0000, 12, 20);
@@ -4215,8 +4438,65 @@
             // Knockback effect — drone: near zero; gun: reduced with level scaling; double barrel: heavy
             let knockbackForce;
             if (this.isDroneTurret) {
-              // Drone fires many rapid small bullets — near-zero knockback so enemy just wobbles
-              knockbackForce = 0.05;
+              const droneLevel = weapons.droneTurret ? (weapons.droneTurret.level || 1) : 1;
+              // Drone L1/L2: near-zero knockback. L3: slight knockback (bullet penetration)
+              knockbackForce = droneLevel >= 3 ? 0.12 : 0.02;
+              // Level-based drone hit effects
+              if (droneLevel === 1) {
+                // L1: Slow enemy movement, fast wobble animation
+                if (!enemy.isDead && !enemy.isFrozen) {
+                  if (!enemy.originalSpeed) enemy.originalSpeed = enemy.speed;
+                  // Always calculate from originalSpeed to prevent compounding slowdown
+                  enemy.speed = (enemy.originalSpeed) * 0.5;
+                  if (!enemy.slowedUntil || enemy.slowedUntil < Date.now() + 500) {
+                    enemy.slowedUntil = Date.now() + 800; // Brief slow
+                  }
+                }
+                // Small blood pools in front
+                spawnBloodDecal({ x: enemy.mesh.position.x + this.vx * 0.5, y: 0, z: enemy.mesh.position.z + this.vz * 0.5 });
+              } else if (droneLevel === 2) {
+                // L2: Stop the enemy completely, fast shaking
+                if (!enemy.isDead && !enemy.isFrozen) {
+                  if (!enemy.originalSpeed) enemy.originalSpeed = enemy.speed;
+                  enemy.slowedUntil = Date.now() + 400; // Brief full stop
+                  enemy.speed = 0;
+                  setTimeout(() => { if (enemy && !enemy.isDead) enemy.speed = enemy.originalSpeed || enemy.speed; }, 400);
+                }
+                // Rapid shaking animation
+                if (enemy.mesh) {
+                  // Clear any existing shake interval to prevent concurrent animations
+                  if (enemy._droneShakeTimer) { clearInterval(enemy._droneShakeTimer); enemy._droneShakeTimer = null; }
+                  let shakes = 0;
+                  const sx = enemy.mesh.position.x, sz = enemy.mesh.position.z;
+                  enemy._droneShakeTimer = setInterval(() => {
+                    shakes++;
+                    if (enemy.mesh) {
+                      enemy.mesh.position.x = sx + (Math.random()-0.5)*0.08;
+                      enemy.mesh.position.z = sz + (Math.random()-0.5)*0.08;
+                    }
+                    if (shakes >= 6) {
+                      clearInterval(enemy._droneShakeTimer);
+                      enemy._droneShakeTimer = null;
+                      if (enemy.mesh) { enemy.mesh.position.x = sx; enemy.mesh.position.z = sz; }
+                    }
+                  }, 30);
+                }
+                // Large compact blood pool directly under enemy
+                if (window.BloodSystem) {
+                  window.BloodSystem.emitBurst(enemy.mesh.position, 25, { spreadXZ: 0.2, spreadY: 0.1, minLife: 15, maxLife: 25 });
+                }
+              } else if (droneLevel >= 3) {
+                // L3: Slight knockback + penetration, rapid tiny exit spray
+                const exitPos2 = new THREE.Vector3(
+                  enemy.mesh.position.x + this.vx * 0.8,
+                  enemy.mesh.position.y,
+                  enemy.mesh.position.z + this.vz * 0.8
+                );
+                const bulletDir2 = new THREE.Vector3(this.vx, 0, this.vz).normalize();
+                if (window.BloodSystem) {
+                  window.BloodSystem.emitExitWound(exitPos2, bulletDir2, 15, { spread: 0.3, speed: 0.25 });
+                }
+              }
             } else if (weapons.doubleBarrel.active && this.isDoubleBarrel) {
               // Double barrel: heavy knockback with partial topple effect
               knockbackForce = 1.8 * (1 + (weapons.doubleBarrel.level - 1) * 0.2);
@@ -4456,15 +4736,36 @@
               spawnParticles(exitPos, 0x8B0000, 6);
               spawnParticles(exitPos, 0xCC0000, 4);
               spawnBloodDecal(exitPos);
-              // Airborne exit blood
-              for (let eb = 0; eb < 3 && bloodDrips.length < MAX_BLOOD_DRIPS; eb++) {
-                const bp = new THREE.Mesh(
-                  new THREE.SphereGeometry(0.03 + Math.random() * 0.03, 4, 4),
-                  new THREE.MeshBasicMaterial({ color: 0xAA0000 })
-                );
-                bp.position.set(exitX + (Math.random() - 0.5) * 0.3, enemy.mesh.position.y + 0.1, exitZ + (Math.random() - 0.5) * 0.3);
-                scene.add(bp);
-                bloodDrips.push({ mesh: bp, velY: 0.12 + Math.random() * 0.15, life: 25 + Math.floor(Math.random() * 10) });
+              // Level 3+ gun: massive exit wound with spray and stacking pools
+              const gunLevel = weapons.gun ? (weapons.gun.level || 1) : 1;
+              if (gunLevel >= 3 && window.BloodSystem) {
+                const exitVec = new THREE.Vector3(exitPos.x, exitPos.y, exitPos.z);
+                const bulletDir = new THREE.Vector3(this.vx, 0, this.vz).normalize();
+                // Blood rapidly sprays out the back (exit hole) in drops, 2-4m trails
+                const exitCount = 40 + (gunLevel - 3) * 20; // Scales with level: 40/60/80
+                window.BloodSystem.emitExitWound(exitVec, bulletDir, exitCount, { spread: 0.6, speed: 0.4 });
+                // Track hit count on enemy for stacking (each hit adds more spray, capped at 3)
+                enemy._exitWoundCount = Math.min((enemy._exitWoundCount || 0) + 1, 3);
+                if (enemy._exitWoundCount > 1 && window.BloodSystem) {
+                  // Stacking: additional burst per wound, using fixed multiplier (no unbounded growth)
+                  window.BloodSystem.emitExitWound(exitVec, bulletDir, exitCount, { spread: 0.5, speed: 0.35 });
+                }
+                // Extra blood decals for 2-4m trail scatter
+                for (let tl = 0; tl < 6; tl++) {
+                  const trailDist = 0.5 + Math.random() * 3.5; // 0.5-4m range
+                  spawnBloodDecal({ x: exitX + this.vx * trailDist + (Math.random()-0.5)*0.4, y: 0, z: exitZ + this.vz * trailDist + (Math.random()-0.5)*0.4 });
+                }
+              } else {
+                // Airborne exit blood (standard gun <3)
+                for (let eb = 0; eb < 3 && bloodDrips.length < MAX_BLOOD_DRIPS; eb++) {
+                  const bp = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.03 + Math.random() * 0.03, 4, 4),
+                    new THREE.MeshBasicMaterial({ color: 0xAA0000 })
+                  );
+                  bp.position.set(exitX + (Math.random() - 0.5) * 0.3, enemy.mesh.position.y + 0.1, exitZ + (Math.random() - 0.5) * 0.3);
+                  scene.add(bp);
+                  bloodDrips.push({ mesh: bp, velY: 0.12 + Math.random() * 0.15, life: 25 + Math.floor(Math.random() * 10) });
+                }
               }
               playSound('hit');
               // Don't break - allow bullet to continue
@@ -4854,6 +5155,7 @@
             }
             enemy.isFrozen = true;
             enemy.frozenUntil = Date.now() + freezeDur;
+            enemy._freezeDuration = freezeDur; // Store for gradual visual transition
             // Freeze stops movement entirely — originalSpeed preserved for thaw
             enemy.speed = 0;
             // Visual: turn enemy icy blue with bright emissive; track freeze progress (0–1)
@@ -13693,6 +13995,9 @@
         100
       );
 
+      // Initialize advanced blood particle system (THREE.Points, 50k particles)
+      if (window.BloodSystem) window.BloodSystem.init(scene);
+
       // Camera (Orthographic for miniature look)
       // CAMERA FIX: Better angle and zoom - prevent zoom issues
       // Adjusted for better top-down view: distance 15 (balanced), angle (18,16,18) for better perspective
@@ -18194,6 +18499,9 @@
       bloodDecals = [];
       bloodDecalIndex = 0; // Reset circular buffer index
       
+      // Reset advanced blood particle system
+      if (window.BloodSystem) window.BloodSystem.reset();
+      
       // Reset lava timers
       window._lavaDamageTimer = 0;
       window._lavaSpoutTimer = 0;
@@ -20062,11 +20370,13 @@
                 if (e.isDead) continue;
                 if (missileGroup.position.distanceTo(e.mesh.position) < 1.2) {
                   const dmg = weapons.homing.damage * playerStats.strength;
-                  e.takeDamage(Math.floor(dmg), false, 'doubleBarrel');
+                  e.takeDamage(Math.floor(dmg), false, 'shotgun'); // Use shotgun death = dismemberment
                   spawnParticles(missileGroup.position, 0xFF4500, 12);
                   spawnParticles(missileGroup.position, 0xFFAA00, 8);
                   spawnParticles(missileGroup.position, 0x222222, 6); // Smoke explosion
-                  // Homing missile: massive gore blobs + heavy blood spray (same as double barrel)
+                  // Massive blood burst from explosion
+                  if (window.BloodSystem) window.BloodSystem.emitBurst(e.mesh.position, 500, { spreadXZ: 2.5, spreadY: 1.5 });
+                  // Homing missile: massive gore blobs + heavy blood spray
                   spawnParticles(e.mesh.position, 0x8B0000, 5);
                   spawnParticles(e.mesh.position, 0xCC0000, 4);
                   for (let mgc = 0; mgc < 4 && bloodDrips.length < MAX_BLOOD_DRIPS; mgc++) {
@@ -20088,6 +20398,10 @@
                   for (let gd = 0; gd < 3; gd++) {
                     spawnBloodDecal({ x: e.mesh.position.x + (Math.random()-0.5)*0.8, y: 0, z: e.mesh.position.z + (Math.random()-0.5)*0.8 });
                   }
+                  // Heavy knockback from missile
+                  const kbDir = new THREE.Vector3(e.mesh.position.x - missileGroup.position.x, 0, e.mesh.position.z - missileGroup.position.z).normalize();
+                  e.mesh.position.x += kbDir.x * 2.5;
+                  e.mesh.position.z += kbDir.z * 2.5;
                   scene.remove(missileGroup);
                   missileGroup.traverse(child => { if (child.geometry) child.geometry.dispose(); if (child.material) child.material.dispose(); });
                   return false;
@@ -20152,6 +20466,9 @@
       
       // Update blood decal fade (12 second lifetime)
       updateBloodDecals();
+      
+      // Update advanced blood particle system
+      if (window.BloodSystem) window.BloodSystem.update();
       
       // Update managed animations (replaces individual RAF loops for death/damage effects)
       if (managedAnimations.length > 0) {
