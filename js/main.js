@@ -5876,7 +5876,7 @@
     function updateStatBar() {
       const panel = document.getElementById('stat-bar-panel');
       const liveStatEl = document.getElementById('live-stat-display');
-      if (!isGameActive || isGameOver) { 
+      if ((!panel && !liveStatEl) || !isGameActive || isGameOver) { 
         if (panel) panel.style.display = 'none'; 
         if (liveStatEl) liveStatEl.style.display = 'none';
         return; 
@@ -15474,8 +15474,8 @@
       if (region !== currentRegion) {
         currentRegion = region;
         regionNameEl.textContent = region;
+        regionDisplay.classList.add('region-visible');
       }
-      regionDisplay.classList.add('region-visible');
     }
     
     // Minimap update function (with throttling for performance)
