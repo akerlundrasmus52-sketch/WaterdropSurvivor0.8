@@ -5877,6 +5877,7 @@
       const comboEl = document.getElementById('stat-bar-combo');
       const questEl = document.getElementById('stat-bar-quest');
       const achEl = document.getElementById('stat-bar-achievement');
+      const regionEl = document.getElementById('stat-bar-region');
       if (waveEl) waveEl.textContent = 'Wave: ' + (waveCount || 0);
       if (killsEl) killsEl.style.display = 'none'; // Kill stat row removed from lower-left HUD box
       // Combo
@@ -5917,6 +5918,10 @@
         } else {
           achEl.style.display = 'none';
         }
+      }
+      if (regionEl) {
+        const regionName = document.getElementById('region-name')?.textContent || 'Forest';
+        regionEl.textContent = `📍 ${regionName}`;
       }
     }
     window.updateStatBar = updateStatBar;
@@ -19415,4 +19420,3 @@
 
     // Init Game
     try { init(); } catch(e) { console.error('[Game Error]', e); console.error('[Game] Initialization failed - game cannot start'); }
-

@@ -26,6 +26,7 @@ function _updatePreviousStatsPanel() {
 
 function _updateLiveStatDisplay(text) {
   const liveEl = document.getElementById('live-stat-display');
+  const panelLiveEl = document.getElementById('stat-bar-live');
   if (!liveEl) return;
 
   // Push current live stat to previous stats if it exists and wasn't already pushed
@@ -39,6 +40,10 @@ function _updateLiveStatDisplay(text) {
   // Show the new stat in live display
   liveEl.textContent = text;
   liveEl.style.display = 'block';
+  if (panelLiveEl) {
+    panelLiveEl.textContent = text ? `🔔 ${text}` : '';
+    panelLiveEl.style.display = text ? '' : 'none';
+  }
 
   // Auto-hide after 4 seconds and move to previous if not already replaced
   if (_liveStatTimer) clearTimeout(_liveStatTimer);
@@ -51,6 +56,10 @@ function _updateLiveStatDisplay(text) {
       }
       liveEl.style.display = 'none';
       liveEl.textContent = '';
+      if (panelLiveEl) {
+        panelLiveEl.textContent = '';
+        panelLiveEl.style.display = 'none';
+      }
     }
   }, 4000);
 }
