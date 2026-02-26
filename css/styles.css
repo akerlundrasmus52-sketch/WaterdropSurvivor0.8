@@ -846,6 +846,13 @@
       line-height: 1.5;
     }
 
+    /* Consolidated into single top info panel */
+    #quest-tracker,
+    #live-stat-display,
+    #region-display {
+      display: none !important;
+    }
+
     /* Quest indicator animation */
     .quest-indicator {
       color: #FF4444;
@@ -2535,16 +2542,17 @@
         display: flex !important;
       }
       
-      /* Position live stat display under menu button in portrait */
-      #live-stat-display {
-        top: 10px;
-        right: 60px;
-        width: 160px;
-      }
-      
-      /* Move day/night clock between HP and stat display in portrait */
+      /* Keep day/night clock centered in portrait */
       #day-night-clock {
-        right: 230px;
+        left: 50% !important;
+        right: auto !important;
+        transform: translateX(-50%) scale(0.55) !important;
+      }
+
+      #stat-bar-panel {
+        top: 64px;
+        right: 8px;
+        width: min(380px, calc(100vw - 16px));
       }
       
       /* Reduce padding on small portrait screens */
@@ -2818,7 +2826,7 @@
       }
     }
 
-    /* Live Stat Display - upper right, shows latest stat one at a time */
+    /* Live Stat Display - consolidated into stat bar panel */
     #live-stat-display {
       position: fixed;
       top: 10px;
@@ -2847,13 +2855,15 @@
       animation: bar-border-alive 3s ease-in-out infinite;
     }
 
-    /* Stat Bar Panel - lower left, previous stats + quest */
+    /* Stat Bar Panel - consolidated top info panel under clock/menu */
     #stat-bar-panel {
       position: fixed;
-      bottom: 60px;
-      left: 8px;
-      width: 190px;
-      max-height: min(30vh, calc(100vh - 80px));
+      top: 66px;
+      right: 10px;
+      left: auto;
+      bottom: auto;
+      width: min(420px, calc(100vw - 20px));
+      max-height: min(33vh, 280px); /* Cap height so panel stays below top HUD controls on short screens */
       overflow-y: auto;
       background: linear-gradient(135deg, #0a0f1a 0%, #0d1526 100%);
       border: 3px solid #000;
@@ -2861,7 +2871,7 @@
       padding: 6px 8px;
       z-index: 15;
       font-family: 'Bangers', cursive;
-      font-size: 11px;
+      font-size: 12px;
       color: #FFD700;
       pointer-events: none;
       display: none;
@@ -2882,6 +2892,13 @@
     #stat-bar-panel .stat-row {
       padding: 2px 0;
       line-height: 1.3;
+    }
+    #stat-bar-live,
+    #stat-bar-region {
+      color: #F0F8FF;
+      border-bottom: 1px solid rgba(255,215,0,0.25);
+      margin-bottom: 2px;
+      padding-bottom: 3px;
     }
     #stat-bar-panel .stat-label { color: #aaa; font-size: 10px; }
     #stat-bar-panel .stat-claimed { color: #4f4; font-size: 10px; animation: stat-fade 5s forwards; }
@@ -3070,4 +3087,3 @@
     .account-stats-table .stat-delta-positive { color: #2ecc71; }
     .account-stats-table .stat-delta-negative { color: #e74c3c; }
     .account-stats-table .stat-delta-neutral { color: #aaa; }
-
