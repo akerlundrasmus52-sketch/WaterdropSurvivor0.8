@@ -2518,10 +2518,10 @@
       }
 
       #stat-bar-panel {
-        bottom: 5px;
-        top: auto;
-        left: 8px;
-        right: auto;
+        top: 64px;
+        bottom: auto;
+        right: 8px;
+        left: auto;
         width: 180px;
       }
       
@@ -2823,13 +2823,13 @@
       text-shadow: 0 1px 3px rgba(0,0,0,0.9);
     }
 
-    /* Stat Bar Panel — redesigned HUD stat box (bottom-left, fixed size) */
+    /* Stat Bar Panel — mega HUD stat box (upper-right, under menu button) */
     #stat-bar-panel {
       position: fixed;
-      bottom: 5px;
-      left: 8px;
-      width: 180px;
-      max-height: 80px; /* Caps to ~4 rows — same compact size during and after countdown */
+      top: 64px;
+      right: 8px;
+      width: 190px;
+      max-height: 160px; /* Allow countdown + all stat rows */
       overflow: hidden;
       background: rgba(10, 10, 15, 0.92);
       border: 2px solid rgba(255,215,0,0.5);
@@ -2858,6 +2858,8 @@
       border-radius: 4px;
     }
     /* Colored rows */
+    #stat-bar-countdown { color: #FFD700; background: rgba(255,215,0,0.15); font-size: 14px; text-align: center; letter-spacing: 1px; }
+    #stat-bar-countdown:empty { display: none; }
     #stat-bar-wave { color: #FFD700; background: rgba(255,215,0,0.08); }
     #stat-bar-kills { color: #FF6B6B; background: rgba(255,107,107,0.08); }
     #stat-bar-combo { color: #FF4500; background: rgba(255,69,0,0.08); }
