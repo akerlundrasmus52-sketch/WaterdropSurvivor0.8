@@ -34,9 +34,11 @@ function _updateLiveStatDisplay(text) {
     _updatePreviousStatsPanel();
   }
 
-  // Show notification in the live stat rectangle via main.js
-  if (window.showLiveStatNotification) {
-    window.showLiveStatNotification(text);
+  // Show notification in the stat-bar-notification row
+  const notifEl = document.getElementById('stat-bar-notification');
+  if (notifEl) {
+    notifEl.textContent = text ? `🔔 ${text}` : '';
+    notifEl.style.display = text ? '' : 'none';
   }
 
   // Also update panel live element for compatibility
