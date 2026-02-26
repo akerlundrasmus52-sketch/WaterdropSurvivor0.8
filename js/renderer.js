@@ -20,13 +20,13 @@ const RENDERER_CONFIG = {
   // fogFar is pushed to ~42 so objects just beyond the visible area are fully hidden.
   fogNear: 28,
   fogFar: 42,
-  // Default shadow map size (used at init; overridden by applyGraphicsQuality)
+  // Default shadow map size — high quality for detailed shadows
   defaultShadowMapSize: 2048,
   // Directional light shadow frustum half-size (covers visible area; shadow is re-anchored to player each frame)
-  shadowFrustumHalfSize: 40,
+  shadowFrustumHalfSize: 45,
   // Directional light shadow quality settings
-  shadowRadius: 4,   // Soft shadow blur
-  shadowBias: -0.0001 // Prevent shadow acne
+  shadowRadius: 3,   // Soft shadow blur - slightly sharper for quality
+  shadowBias: -0.0003 // Prevent shadow acne with better bias
 };
 
 window.GameRenderer = {

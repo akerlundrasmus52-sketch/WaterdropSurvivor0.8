@@ -37,72 +37,87 @@ const MINI_BOSS_HP_SCALING_RATE = 0.15; // 15% HP increase per player level abov
 function getEnemyBaseStats(type, levelScaling, speedBase, playerLevel) {
   const stats = {};
 
-  if (type === 0) {           // Tank
+  if (type === 0) {           // Tank — charges, tries to cut off player
     stats.hp    = 100 * levelScaling;
-    stats.speed = speedBase * 0.6;
-  } else if (type === 1) {    // Fast
+    stats.speed = speedBase * 1.2;
+    stats.aiBehavior = 'interceptor'; // Predicts player movement
+  } else if (type === 1) {    // Fast — flanker, zigzags around player
     stats.hp    = 30  * levelScaling;
-    stats.speed = speedBase * 1.6;
-  } else if (type === 2) {    // Balanced
+    stats.speed = speedBase * 2.8;
+    stats.aiBehavior = 'flanker'; // Approaches from sides/behind
+  } else if (type === 2) {    // Balanced — pack hunter, coordinates with others
     stats.hp    = 60  * levelScaling;
-    stats.speed = speedBase;
-  } else if (type === 3) {    // Slowing
+    stats.speed = speedBase * 1.8;
+    stats.aiBehavior = 'pack'; // Spreads out, surrounds player
+  } else if (type === 3) {    // Slowing — ambusher, hides then rushes
     stats.hp           = 75 * levelScaling;
-    stats.speed        = speedBase * 0.8;
+    stats.speed        = speedBase * 1.6;
     stats.slowDuration = 2000;
     stats.slowAmount   = 0.5;
-  } else if (type === 4) {    // Ranged
+    stats.aiBehavior = 'ambusher'; // Waits then dashes in
+  } else if (type === 4) {    // Ranged — kiter, maintains distance smartly
     stats.hp             = 50 * levelScaling;
-    stats.speed          = speedBase * 0.7;
+    stats.speed          = speedBase * 1.4;
     stats.attackRange    = 8;
     stats.projectileSpeed = 0.15;
-  } else if (type === 5) {    // Flying
+    stats.aiBehavior = 'kiter'; // Retreats when player approaches
+  } else if (type === 5) {    // Flying — dive bomber, swoops in and out
     stats.hp       = 60 * levelScaling;
-    stats.speed    = speedBase * 1.3;
+    stats.speed    = speedBase * 2.4;
     stats.isFlying = true;
-  } else if (type === 6) {    // Hard Tank
+    stats.aiBehavior = 'divebomber'; // Dives at player then retreats
+  } else if (type === 6) {    // Hard Tank — interceptor with prediction
     stats.hp    = 180 * levelScaling;
-    stats.speed = speedBase * 0.65;
-  } else if (type === 7) {    // Hard Fast
+    stats.speed = speedBase * 1.3;
+    stats.aiBehavior = 'interceptor';
+  } else if (type === 7) {    // Hard Fast — aggressive flanker
     stats.hp    = 55  * levelScaling;
-    stats.speed = speedBase * 1.8;
-  } else if (type === 8) {    // Hard Balanced
+    stats.speed = speedBase * 3.2;
+    stats.aiBehavior = 'flanker';
+  } else if (type === 8) {    // Hard Balanced — pack leader
     stats.hp    = 110 * levelScaling;
-    stats.speed = speedBase * 1.1;
-  } else if (type === 9) {    // Elite
+    stats.speed = speedBase * 2.0;
+    stats.aiBehavior = 'pack';
+  } else if (type === 9) {    // Elite — stalker, waits for openings
     stats.hp    = 200 * levelScaling;
-    stats.speed = speedBase * 0.9;
+    stats.speed = speedBase * 1.8;
+    stats.aiBehavior = 'stalker'; // Circles then strikes when player is busy
   } else if (type === 10) {   // MiniBoss
     const miniBossStartLevel = 10;
     stats.hp         = 1000 * (1 + (playerLevel - miniBossStartLevel) * MINI_BOSS_HP_SCALING_RATE);
-    stats.speed      = speedBase * 0.5;
+    stats.speed      = speedBase * 1.0;
     stats.isMiniBoss = true;
-    stats.armor      = 0.25; // 25% damage reduction
+    stats.armor      = 0.25;
+    stats.aiBehavior = 'interceptor';
   } else if (type === 11) {   // Flying Boss (level 15) — giant airborne boss
     const flyingBossStartLevel = 15;
     stats.hp          = 2500 * (1 + Math.max(0, playerLevel - flyingBossStartLevel) * MINI_BOSS_HP_SCALING_RATE);
-    stats.speed       = speedBase * 0.7;
+    stats.speed       = speedBase * 1.4;
     stats.isFlying    = true;
     stats.isFlyingBoss = true;
-    stats.armor       = 0.30; // 30% damage reduction
-    stats.attackRange = 12;   // Wide attack radius
+    stats.armor       = 0.30;
+    stats.attackRange = 12;
     stats.projectileSpeed = 0.18;
-  } else if (type === 12) {   // Bug Ranged — water-being bug, keeps distance, fires projectiles
+    stats.aiBehavior = 'divebomber';
+  } else if (type === 12) {   // Bug Ranged — kiting ranged attacker
     stats.hp             = 45 * levelScaling;
-    stats.speed          = speedBase * 0.75;
+    stats.speed          = speedBase * 1.5;
     stats.isBug          = true;
     stats.attackRange    = 10;
     stats.projectileSpeed = 0.14;
-  } else if (type === 13) {   // Bug Slow — large armoured bug, very slow, high HP
+    stats.aiBehavior = 'kiter';
+  } else if (type === 13) {   // Bug Slow — armoured interceptor
     stats.hp    = 140 * levelScaling;
-    stats.speed = speedBase * 0.45;
+    stats.speed = speedBase * 0.9;
     stats.isBug = true;
     stats.armor = 0.15;
-  } else if (type === 14) {   // Bug Fast — small quick bug, low HP
+    stats.aiBehavior = 'interceptor';
+  } else if (type === 14) {   // Bug Fast — fast dive bomber
     stats.hp       = 25 * levelScaling;
-    stats.speed    = speedBase * 1.9;
+    stats.speed    = speedBase * 3.4;
     stats.isBug    = true;
-    stats.isFlying = true; // Airborne variant
+    stats.isFlying = true;
+    stats.aiBehavior = 'divebomber';
   }
 
   stats.maxHp  = stats.hp;

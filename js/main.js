@@ -1983,6 +1983,13 @@
         this.wobbleOffset = Math.random() * 100;
         this.lastAttackTime = 0;
         this.attackCooldown = 1000; // 1 second cooldown
+        // AI state for smarter behaviors
+        this._aiState = 'approach'; // approach, flank, retreat, dive, wait
+        this._aiTimer = 0;
+        this._aiCooldown = 1.0 + Math.random() * 2.0; // Randomize decision intervals
+        this._lastPlayerPos = null; // For movement prediction
+        this._playerVelocity = { x: 0, z: 0 }; // Estimated player velocity
+        this._flankAngle = (Math.random() > 0.5 ? 1 : -1) * (Math.PI * 0.3 + Math.random() * Math.PI * 0.4);
         // Armor defaults to 0 if not set (only MiniBoss has armor = 0.25)
         
         // Add glowing eyes to enemy (VFX) with realistic pupils
@@ -2038,6 +2045,16 @@
         const dz = targetPos.z - this.mesh.position.z;
         const dist = Math.sqrt(dx*dx + dz*dz);
 
+        // Estimate player velocity for prediction AI
+        if (this._lastPlayerPos) {
+          this._playerVelocity.x = (playerPos.x - this._lastPlayerPos.x) / Math.max(dt, 0.016);
+          this._playerVelocity.z = (playerPos.z - this._lastPlayerPos.z) / Math.max(dt, 0.016);
+        }
+        this._lastPlayerPos = { x: playerPos.x, z: playerPos.z };
+        
+        // AI decision timer
+        this._aiTimer += dt;
+
         // Ranged Enemy behavior - stop at range, strafe, and shoot
         if (this.type === 4 && dist < this.attackRange) {
           const now = Date.now();
@@ -2045,31 +2062,38 @@
             this.fireProjectile(targetPos);
             this.lastAttackTime = now;
           }
-          // Retreat if player gets too close
+          // Smart retreat - predict player direction and dodge accordingly
           if (dist < 3.0) {
-            this.mesh.position.x -= (dx / dist) * this.speed * 1.5;
-            this.mesh.position.z -= (dz / dist) * this.speed * 1.5;
+            const retreatX = -(dx / dist) + this._playerVelocity.x * 0.3;
+            const retreatZ = -(dz / dist) + this._playerVelocity.z * 0.3;
+            const rMag = Math.sqrt(retreatX*retreatX + retreatZ*retreatZ) || 1;
+            this.mesh.position.x += (retreatX / rMag) * this.speed * 1.8;
+            this.mesh.position.z += (retreatZ / rMag) * this.speed * 1.8;
           } else {
-            // Strafe while shooting
+            // Strafe while shooting - vary pattern
             const strafeDir = Math.sin(gameTime * 3 + this.wobbleOffset) > 0 ? 1 : -1;
             const perpX = -dz / dist;
             const perpZ =  dx / dist;
-            this.mesh.position.x += perpX * this.speed * 0.4 * strafeDir;
-            this.mesh.position.z += perpZ * this.speed * 0.4 * strafeDir;
+            this.mesh.position.x += perpX * this.speed * 0.5 * strafeDir;
+            this.mesh.position.z += perpZ * this.speed * 0.5 * strafeDir;
           }
           this.mesh.lookAt(targetPos);
         } else if (this.type === 12 && dist < this.attackRange) {
-          // Bug Ranged — strafe sideways while firing
+          // Bug Ranged — strafe sideways while firing, retreat if too close
           const now = Date.now();
           if (now - this.lastAttackTime > 1800) {
             this.fireProjectile(targetPos);
             this.lastAttackTime = now;
           }
-          // Strafe perpendicular to player
-          const perpX = -dz / dist;
-          const perpZ =  dx / dist;
-          this.mesh.position.x += perpX * this.speed * 0.6;
-          this.mesh.position.z += perpZ * this.speed * 0.6;
+          if (dist < 4.0) {
+            this.mesh.position.x -= (dx / dist) * this.speed * 1.2;
+            this.mesh.position.z -= (dz / dist) * this.speed * 1.2;
+          } else {
+            const perpX = -dz / dist;
+            const perpZ =  dx / dist;
+            this.mesh.position.x += perpX * this.speed * 0.7;
+            this.mesh.position.z += perpZ * this.speed * 0.7;
+          }
           this.mesh.lookAt(new THREE.Vector3(targetPos.x, this.mesh.position.y, targetPos.z));
         } else if (this.isFlyingBoss && dist < this.attackRange) {
           // Flying Boss — orbit player and fire powerful projectiles
@@ -2078,11 +2102,11 @@
             this.fireProjectile(targetPos);
             this.lastAttackTime = now;
           }
-          // Slowly orbit the player
-          const orbitSpeed = 0.008;
+          // Orbit with varying radius
+          const orbitSpeed = 0.012;
           const angle = Math.atan2(this.mesh.position.z - targetPos.z, this.mesh.position.x - targetPos.x);
           const newAngle = angle + orbitSpeed;
-          const orbitR = this.attackRange * 0.8;
+          const orbitR = this.attackRange * (0.6 + Math.sin(gameTime * 0.5) * 0.2);
           this.mesh.position.x = targetPos.x + Math.cos(newAngle) * orbitR;
           this.mesh.position.z = targetPos.z + Math.sin(newAngle) * orbitR;
           this.mesh.lookAt(new THREE.Vector3(targetPos.x, this.mesh.position.y, targetPos.z));
@@ -2093,31 +2117,28 @@
             this.slowedUntil = null;
           }
           
-          // Move towards target
+          // Base movement towards target
           let vx = (dx / dist) * this.speed;
           let vz = (dz / dist) * this.speed;
           
           // Add enemy avoidance to prevent stacking/trains (optimized)
-          // Only check nearby enemies to avoid O(n²) performance issues
           let avoidX = 0, avoidZ = 0;
           let avoidanceCount = 0;
-          const maxAvoidanceChecks = 5; // Limit checks to nearest enemies
+          const maxAvoidanceChecks = 5;
           for (let other of enemies) {
             if (other === this || other.isDead) continue;
-            if (avoidanceCount >= maxAvoidanceChecks) break; // stop iterating once cap hit
+            if (avoidanceCount >= maxAvoidanceChecks) break;
             const odx = this.mesh.position.x - other.mesh.position.x;
             const odz = this.mesh.position.z - other.mesh.position.z;
             const odist = Math.sqrt(odx*odx + odz*odz);
             
-            // If too close to another enemy, push away
             if (odist < 1.5 && odist > 0.01) {
-              const repulsion = 0.015; // Gentle push (kept smaller than forward speed)
+              const repulsion = 0.02;
               avoidX += (odx / odist) * repulsion;
               avoidZ += (odz / odist) * repulsion;
               avoidanceCount++;
             }
           }
-          // Blend avoidance as secondary force - cap so it doesn't overpower forward movement
           const avoidMag = Math.sqrt(avoidX*avoidX + avoidZ*avoidZ);
           if (avoidMag > this.speed * 0.6) {
             const scale = (this.speed * 0.6) / avoidMag;
@@ -2127,56 +2148,173 @@
           vx += avoidX;
           vz += avoidZ;
           
-          // Type 1 (Fast) - Flanking zigzag with sudden bursts of speed
-          if (this.type === 1) {
-            const wobble = Math.sin(gameTime * 12 + this.wobbleOffset) * 0.06;
-            vx += wobble * (dz/dist);
-            vz -= wobble * (dx/dist);
-            // Burst of speed when close to player
-            if (dist < 4 && dist > 1) {
-              vx *= 1.4;
-              vz *= 1.4;
-            }
-          }
+          // AI Behavior System - each enemy type acts differently
+          const behavior = this.aiBehavior || 'approach';
           
-          // Type 2 (Balanced) - Slight weaving instead of circle strafe
-          if (this.type === 2) {
-            const weavePhase = gameTime * 4 + this.wobbleOffset;
-            const weave = Math.sin(weavePhase) * 0.04;
-            vx += weave * (-dz/dist);
-            vz += weave * (dx/dist);
-          }
-          
-          // Type 0 (Tank/Slow) - Charge attack when close enough
-          if (this.type === 0) {
+          if (behavior === 'interceptor') {
+            // Predict where the player will be and move to intercept
+            const predictTime = Math.min(dist / (this.speed * 60), 1.5);
+            const predictX = targetPos.x + this._playerVelocity.x * predictTime * 0.5;
+            const predictZ = targetPos.z + this._playerVelocity.z * predictTime * 0.5;
+            const pdx = predictX - this.mesh.position.x;
+            const pdz = predictZ - this.mesh.position.z;
+            const pdist = Math.sqrt(pdx*pdx + pdz*pdz) || 1;
+            vx = (pdx / pdist) * this.speed;
+            vz = (pdz / pdist) * this.speed;
+            // Charge when close
             if (dist < 5 && dist > 1.5 && !this._charging) {
-              // Random chance to charge
-              if (Math.random() < 0.005) {
+              if (Math.random() < 0.008) {
                 this._charging = true;
-                this._chargeTime = 0.5; // Charge for 0.5 seconds
+                this._chargeTime = 0.5;
               }
             }
             if (this._charging) {
               this._chargeTime -= dt;
-              vx = (dx / dist) * this.speed * 3; // Triple speed charge
+              vx = (dx / dist) * this.speed * 3;
               vz = (dz / dist) * this.speed * 3;
               if (this._chargeTime <= 0) this._charging = false;
+            }
+          } else if (behavior === 'flanker') {
+            // Approach from the side/behind the player
+            if (this._aiTimer > this._aiCooldown) {
+              this._aiTimer = 0;
+              this._flankAngle = (Math.random() > 0.5 ? 1 : -1) * (Math.PI * 0.3 + Math.random() * Math.PI * 0.5);
+              this._aiCooldown = 0.8 + Math.random() * 1.5;
+            }
+            const flankX = dx * Math.cos(this._flankAngle) - dz * Math.sin(this._flankAngle);
+            const flankZ = dx * Math.sin(this._flankAngle) + dz * Math.cos(this._flankAngle);
+            const fMag = Math.sqrt(flankX*flankX + flankZ*flankZ) || 1;
+            if (dist > 3) {
+              vx = (flankX / fMag) * this.speed;
+              vz = (flankZ / fMag) * this.speed;
             } else {
-              const weavePhase = gameTime * 3 + this.wobbleOffset;
-              const weave = Math.sin(weavePhase) * 0.04;
+              // Close range: dash straight at player
+              vx = (dx / dist) * this.speed * 1.6;
+              vz = (dz / dist) * this.speed * 1.6;
+            }
+          } else if (behavior === 'pack') {
+            // Spread out and surround the player
+            const spreadAngle = this.wobbleOffset * 0.2; // Unique angle per enemy
+            const desiredAngle = Math.atan2(dz, dx) + Math.PI + spreadAngle;
+            const surroundDist = 4 + Math.sin(this.wobbleOffset) * 2;
+            if (dist > surroundDist + 1) {
+              // Move towards surround position
+              vx = (dx / dist) * this.speed;
+              vz = (dz / dist) * this.speed;
+              // Add weave
+              const weave = Math.sin(gameTime * 4 + this.wobbleOffset) * 0.06;
               vx += weave * (-dz/dist);
               vz += weave * (dx/dist);
+            } else if (dist > 1.5) {
+              // Circle around player
+              const perpX = -dz / dist;
+              const perpZ =  dx / dist;
+              const circleDir = this.wobbleOffset > 50 ? 1 : -1;
+              vx = perpX * this.speed * 0.6 * circleDir + (dx / dist) * this.speed * 0.3;
+              vz = perpZ * this.speed * 0.6 * circleDir + (dz / dist) * this.speed * 0.3;
+            }
+          } else if (behavior === 'ambusher') {
+            // Wait at medium range then dash in
+            if (this._aiState === 'approach' && dist < 6) {
+              this._aiState = 'wait';
+              this._aiTimer = 0;
+            }
+            if (this._aiState === 'wait') {
+              // Hold position, slight drift
+              vx *= 0.1;
+              vz *= 0.1;
+              if (this._aiTimer > 1.5 + Math.random()) {
+                this._aiState = 'dash';
+                this._aiTimer = 0;
+              }
+            } else if (this._aiState === 'dash') {
+              vx = (dx / dist) * this.speed * 2.5;
+              vz = (dz / dist) * this.speed * 2.5;
+              if (dist < 1.2 || this._aiTimer > 0.6) {
+                this._aiState = 'retreat';
+                this._aiTimer = 0;
+              }
+            } else if (this._aiState === 'retreat') {
+              vx = -(dx / dist) * this.speed * 1.2;
+              vz = -(dz / dist) * this.speed * 1.2;
+              if (this._aiTimer > 0.8 || dist > 7) {
+                this._aiState = 'approach';
+                this._aiTimer = 0;
+              }
+            }
+          } else if (behavior === 'kiter') {
+            // Maintain optimal range, retreat when player approaches
+            const optimalRange = this.attackRange ? this.attackRange * 0.7 : 6;
+            if (dist < optimalRange - 1) {
+              // Too close - back away
+              vx = -(dx / dist) * this.speed * 1.5;
+              vz = -(dz / dist) * this.speed * 1.5;
+            } else if (dist < optimalRange + 2) {
+              // At range - strafe
+              const perpX = -dz / dist;
+              const perpZ =  dx / dist;
+              const sDir = Math.sin(gameTime * 2 + this.wobbleOffset) > 0 ? 1 : -1;
+              vx = perpX * this.speed * 0.6 * sDir;
+              vz = perpZ * this.speed * 0.6 * sDir;
+            }
+            // else: approach normally (default vx/vz)
+          } else if (behavior === 'divebomber') {
+            // Swoop in fast then pull away
+            if (this._aiState === 'approach' && dist < 5) {
+              this._aiState = 'dive';
+              this._aiTimer = 0;
+            }
+            if (this._aiState === 'dive') {
+              vx = (dx / dist) * this.speed * 2.0;
+              vz = (dz / dist) * this.speed * 2.0;
+              if (dist < 1.5 || this._aiTimer > 0.5) {
+                this._aiState = 'pullup';
+                this._aiTimer = 0;
+              }
+            } else if (this._aiState === 'pullup') {
+              // Fly away at angle
+              const escAngle = Math.atan2(dz, dx) + Math.PI + this._flankAngle * 0.5;
+              vx = Math.cos(escAngle) * this.speed * 1.5;
+              vz = Math.sin(escAngle) * this.speed * 1.5;
+              if (this._aiTimer > 1.0 || dist > 8) {
+                this._aiState = 'approach';
+                this._aiTimer = 0;
+              }
+            }
+          } else if (behavior === 'stalker') {
+            // Circle at medium range, strike when player is fighting others
+            // Only count nearby attackers (limit check count for performance)
+            let nearbyAttacking = 0;
+            for (let i = 0, count = 0; i < enemies.length && count < 8; i++) {
+              const e = enemies[i];
+              if (e === this || e.isDead) continue;
+              count++;
+              const edx = e.mesh.position.x - playerPos.x;
+              const edz = e.mesh.position.z - playerPos.z;
+              if (edx*edx + edz*edz < 9) nearbyAttacking++;
+            }
+            
+            if (nearbyAttacking >= 2 || dist < 2) {
+              // Player is distracted - rush in
+              vx = (dx / dist) * this.speed * 1.8;
+              vz = (dz / dist) * this.speed * 1.8;
+            } else if (dist < 8) {
+              // Circle at medium range
+              const perpX = -dz / dist;
+              const perpZ =  dx / dist;
+              vx = perpX * this.speed * 0.5 + (dx / dist) * this.speed * 0.15;
+              vz = perpZ * this.speed * 0.5 + (dz / dist) * this.speed * 0.15;
             }
           }
           
-          // Type 5 (Flying) - Wavy flying pattern
-          if (this.type === 5) {
+          // Flying height behavior
+          if (this.type === 5 || this.type === 14) {
             const wavePhase = gameTime * 5 + this.wobbleOffset;
             const wave = Math.sin(wavePhase) * 0.08;
             vx += wave * (dz/dist);
             vz -= wave * (dx/dist);
-            // Flying height with sin wave
-            this.mesh.position.y = 2 + Math.sin(gameTime * 3 + this.wobbleOffset) * 0.5;
+            const baseHeight = this._aiState === 'dive' ? 0.8 : 2;
+            this.mesh.position.y = baseHeight + Math.sin(gameTime * 3 + this.wobbleOffset) * 0.5;
           }
           
           this.mesh.position.x += vx;
@@ -5882,6 +6020,70 @@
         return; 
       }
       if (panel) panel.style.display = 'none';
+      
+      // Build unified stat content for the single bar
+      const parts = [];
+      
+      // Wave
+      parts.push('⚔️ Wave ' + (waveCount || 0));
+      
+      // Combo
+      const combo = window.currentCombo || 0;
+      if (combo > 1) parts.push('🔥 x' + combo);
+      
+      // Region
+      const regionName = document.getElementById('region-name')?.textContent || 'Forest';
+      parts.push('📍 ' + regionName);
+
+      // Active quest
+      let questText = '';
+      const currentQuest = getCurrentQuest();
+      if (currentQuest) {
+        const kills = playerStats ? playerStats.kills : 0;
+        if (currentQuest.id === 'quest1_kill3') questText = 'Kill 3: ' + Math.min(kills, 3) + '/3';
+        else if (currentQuest.id === 'quest8_kill10') questText = 'Kill 10: ' + Math.min(kills,10) + '/10';
+        else if (currentQuest.id === 'quest10_kill15') questText = 'Kill 15: ' + Math.min(kills,15) + '/15';
+        else if (currentQuest.id === 'quest14_kill25') questText = 'Kill 25: ' + Math.min(kills,25) + '/25';
+        else if (currentQuest.id === 'quest13_windmill') questText = '🏭 Defend Windmill!';
+        else if (currentQuest.id === 'quest15_accountVisit') questText = '👤 Visit Account';
+        else if (currentQuest.id === 'quest11_findAllLandmarks') {
+          const lf = saveData.tutorialQuests.landmarksFound || {};
+          const found = Object.values(LANDMARK_CONFIGS).filter(cfg => lf[cfg.key]).length;
+          questText = `🗺️ Landmarks ${found}/${Object.keys(LANDMARK_CONFIGS).length}`;
+        }
+        else if (currentQuest.label) questText = currentQuest.label;
+        else questText = currentQuest.id || '';
+      }
+      if (!questText && saveData.achievementQuests && saveData.achievementQuests.kill7Quest === 'active') {
+        questText = '🏆 Visit Achievement';
+      }
+      if (questText) parts.push('📋 ' + questText);
+      
+      // Achievement progress
+      const kills = playerStats ? playerStats.kills : 0;
+      if (!saveData.achievementQuests || !saveData.achievementQuests.kill7Unlocked) {
+        parts.push('🏆 ' + Math.min(kills, 7) + '/7');
+      }
+
+      // Update the unified stat bar
+      if (liveStatEl) {
+        const unified = parts.join('  ·  ');
+        liveStatEl.textContent = unified;
+        liveStatEl.style.display = 'block';
+        // Dynamic width based on content
+        liveStatEl.style.width = 'auto';
+        liveStatEl.style.maxWidth = 'min(680px, calc(100vw - 40px))';
+        liveStatEl.style.minWidth = '200px';
+      }
+      
+      // Update quest tracker (top-left overlay)
+      const questTrackerEl = document.getElementById('quest-tracker');
+      if (questTrackerEl) {
+        questTrackerEl.textContent = questText ? `📋 ${questText}` : '';
+        questTrackerEl.style.display = questText ? 'block' : 'none';
+      }
+      
+      // Update hidden stat-bar elements for compatibility
       const waveEl = document.getElementById('stat-bar-wave');
       const killsEl = document.getElementById('stat-bar-kills');
       const comboEl = document.getElementById('stat-bar-combo');
@@ -5889,55 +6091,11 @@
       const achEl = document.getElementById('stat-bar-achievement');
       const regionEl = document.getElementById('stat-bar-region');
       if (waveEl) waveEl.textContent = 'Wave: ' + (waveCount || 0);
-      if (killsEl) killsEl.style.display = 'none'; // Kill stat row removed from lower-left HUD box
-      // Combo
-      const combo = window.currentCombo || 0;
+      if (killsEl) killsEl.style.display = 'none';
       if (comboEl) { if (combo > 1) { comboEl.textContent = '🔥 Combo x' + combo; comboEl.style.display = ''; } else { comboEl.style.display = 'none'; } }
-      // Active quest
-      if (questEl) {
-        let questText = '';
-        const currentQuest = getCurrentQuest();
-        if (currentQuest) {
-          const kills = playerStats ? playerStats.kills : 0;
-          if (currentQuest.id === 'quest1_kill3') questText = 'Kill 3 Enemies: ' + Math.min(kills, 3) + '/3';
-          else if (currentQuest.id === 'quest8_kill10') questText = 'Kill 10: ' + Math.min(kills,10) + '/10';
-          else if (currentQuest.id === 'quest10_kill15') questText = 'Kill 15: ' + Math.min(kills,15) + '/15';
-          else if (currentQuest.id === 'quest14_kill25') questText = 'Kill 25: ' + Math.min(kills,25) + '/25';
-          else if (currentQuest.id === 'quest13_windmill') questText = '🏭 Defend the Windmill!';
-          else if (currentQuest.id === 'quest15_accountVisit') questText = '👤 Visit Account Building in Camp';
-          else if (currentQuest.id === 'quest11_findAllLandmarks') {
-            const lf = saveData.tutorialQuests.landmarksFound || {};
-            const found = Object.values(LANDMARK_CONFIGS).filter(cfg => lf[cfg.key]).length;
-            questText = `🗺️ Find Landmarks: ${found}/${Object.keys(LANDMARK_CONFIGS).length}`;
-          }
-          else if (currentQuest.label) questText = currentQuest.label;
-          else questText = currentQuest.id || '';
-        }
-        // Check kill7 achievement quest
-        if (!questText && saveData.achievementQuests && saveData.achievementQuests.kill7Quest === 'active') {
-          questText = '🏆 Visit Achievement Building';
-        }
-        questEl.textContent = questText ? '📋 ' + questText : '';
-        const questTrackerEl = document.getElementById('quest-tracker');
-        if (questTrackerEl) {
-          questTrackerEl.textContent = questText ? `📋 ${questText}` : '';
-          questTrackerEl.style.display = questText ? 'block' : 'none';
-        }
-      }
-      // Achievement progress
-      if (achEl) {
-        const kills = playerStats ? playerStats.kills : 0;
-        if (!saveData.achievementQuests || !saveData.achievementQuests.kill7Unlocked) {
-          achEl.style.display = '';
-          achEl.textContent = '🏆 Kill 7: ' + Math.min(kills, 7) + '/7';
-        } else {
-          achEl.style.display = 'none';
-        }
-      }
-      if (regionEl) {
-        const regionName = document.getElementById('region-name')?.textContent || 'Forest';
-        regionEl.textContent = `📍 ${regionName}`;
-      }
+      if (questEl) questEl.textContent = questText ? '📋 ' + questText : '';
+      if (achEl) achEl.style.display = 'none';
+      if (regionEl) regionEl.textContent = `📍 ${regionName}`;
     }
     window.updateStatBar = updateStatBar;
 
@@ -17526,19 +17684,30 @@
       // screen edges and the fog area, which is now fixed by relying solely on dynamic
       // lighting (ambient + directional) to convey the time of day.
       
-      // Move sun position in an arc
+      // Move sun position in an arc - shadows cast from side based on sun position
+      // At 6pm (t=0.75), sun is low on horizon casting long lateral shadows
+      // At noon (t=0.5), sun is overhead casting short shadows
       const sunAngle = (t - 0.25) * Math.PI * 2; // Offset so noon is at top
-      // Keep sun at minimum height of 20 to stay above effective horizon
+      // Sun elevation: high at noon, low at dawn/dusk for dramatic side shadows
+      const sunElevation = Math.sin(sunAngle);
+      // At 6pm (sunset), sun is low — shadows stretch sideways from objects
+      const sunHeight = Math.max(15, sunElevation * 80);
+      // Horizontal offset increases as sun goes lower (longer lateral shadows)
+      const lateralStrength = 60;
       // Anchor light to player for correct shadow casting as player moves around the map
       const shadowCenterX = (player && player.mesh) ? player.mesh.position.x : 0;
       const shadowCenterZ = (player && player.mesh) ? player.mesh.position.z : 0;
       window.dirLight.position.set(
-        shadowCenterX + Math.cos(sunAngle) * 50,
-        Math.max(20, Math.sin(sunAngle) * 100), // Minimum 20 units above ground
-        shadowCenterZ + Math.sin(sunAngle) * 50
+        shadowCenterX + Math.cos(sunAngle) * lateralStrength,
+        sunHeight,
+        shadowCenterZ + Math.sin(sunAngle) * lateralStrength
       );
       window.dirLight.target.position.set(shadowCenterX, 0, shadowCenterZ);
       window.dirLight.target.updateMatrixWorld();
+      
+      // Dynamic shadow quality based on sun angle - sharper at low angles
+      const shadowSharpness = Math.max(1, 6 - Math.abs(sunElevation) * 4);
+      window.dirLight.shadow.radius = shadowSharpness;
     }
     
     function animate(time) {
@@ -18857,9 +19026,35 @@
         if (c.userData.blades && c.userData.blades.length > 0) {
           c.userData.blades[0].rotation.z += 0.02;
         }
-        // Rotate spinning ground shadow in sync with blades
+        // Rotate spinning ground shadow in sync with blades + offset by sun angle
         if (c.userData.shadowGroup) {
           c.userData.shadowGroup.rotation.z += 0.02;
+          // Move shadow based on sun position for realistic shadow casting
+          if (window.dirLight) {
+            const lightPos = window.dirLight.position;
+            const wmPos = c.position;
+            const shadowDirX = wmPos.x - lightPos.x;
+            const shadowDirZ = wmPos.z - lightPos.z;
+            const shadowDist = Math.sqrt(shadowDirX*shadowDirX + shadowDirZ*shadowDirZ);
+            // Shadow offset: longer when sun is lower (more dramatic at sunset/sunrise)
+            const sunH = Math.max(lightPos.y, 15);
+            const shadowLength = Math.min(12, 80 / sunH);
+            if (shadowDist > 0) {
+              c.userData.shadowGroup.position.set(
+                wmPos.x + (shadowDirX / shadowDist) * shadowLength,
+                0.03,
+                wmPos.z + (shadowDirZ / shadowDist) * shadowLength
+              );
+              // Scale shadow based on sun height
+              const shadowScale = 0.8 + shadowLength * 0.15;
+              c.userData.shadowGroup.scale.set(shadowScale, shadowScale, 1);
+            }
+            // Shadow opacity: darker when sun is brighter
+            const opacity = Math.min(0.35, window.dirLight.intensity * 0.3);
+            c.userData.shadowGroup.children.forEach(child => {
+              if (child.material) child.material.opacity = opacity;
+            });
+          }
         }
         
         // Animate windmill light (pulsing) with null check
