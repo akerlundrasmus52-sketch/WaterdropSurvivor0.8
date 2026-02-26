@@ -574,43 +574,13 @@
       text-shadow: 0 0 6px rgba(255,215,0,1);
     }
     
-    /* Region Display - lower-left indicator - comic style matching stat bar */
+    /* Region Display - lower-left indicator - hidden */
     #region-display {
-      position: fixed;
-      bottom: 48px;
-      left: 8px;
-      right: auto;
-      width: auto;
-      min-width: 120px;
-      max-width: 280px;
-      height: auto;
-      min-height: 22px;
-      background: linear-gradient(to bottom, #1a1a1a 0%, #1a1a1a 50%, #3a3a3a 50%, #3a3a3a 100%);
-      border-radius: 11px;
-      border: 3px solid #000;
-      overflow: hidden;
-      box-shadow: 
-        0 0 0 1px rgba(255,215,0,0.7),
-        0 0 0 4px #000,
-        0 0 8px rgba(255,215,0,0.5),
-        0 0 16px rgba(255,215,0,0.2),
-        inset 0 2px 4px rgba(0,0,0,0.4);
-      background-image: 
-        radial-gradient(circle at 3px 3px, rgba(255,215,0,0.05) 2px, transparent 2px);
-      background-size: 12px 12px;
-      z-index: 101;
-      pointer-events: none;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 2px 14px;
-      transition: opacity 0.5s ease-in-out, width 0.3s ease-out;
-      opacity: 1;
-      animation: bar-border-alive 3s ease-in-out infinite;
+      display: none;
     }
     
     #region-display.region-visible {
-      opacity: 1;
+      display: none;
     }
     
     #region-name {
@@ -2548,9 +2518,11 @@
       }
 
       #stat-bar-panel {
-        top: 64px;
-        right: 8px;
-        width: min(380px, calc(100vw - 16px));
+        bottom: 5px;
+        top: auto;
+        left: 8px;
+        right: auto;
+        width: 180px;
       }
       
       /* Reduce padding on small portrait screens */
@@ -2851,12 +2823,14 @@
       text-shadow: 0 1px 3px rgba(0,0,0,0.9);
     }
 
-    /* Stat Bar Panel — redesigned HUD stat box (lower left) */
+    /* Stat Bar Panel — redesigned HUD stat box (bottom-left, fixed size) */
     #stat-bar-panel {
       position: fixed;
-      bottom: 170px; /* Above the joystick zone (~120px) with extra clearance */
+      bottom: 5px;
       left: 8px;
-      width: min(200px, calc(50vw - 16px));
+      width: 180px;
+      max-height: 80px; /* Caps to ~4 rows — same compact size during and after countdown */
+      overflow: hidden;
       background: rgba(10, 10, 15, 0.92);
       border: 2px solid rgba(255,215,0,0.5);
       border-radius: 8px;
@@ -2895,6 +2869,7 @@
       margin-bottom: 2px;
       padding-bottom: 3px;
     }
+    #stat-bar-region { display: none; }
     #stat-bar-quest { color: #FFD700; background: rgba(255,215,0,0.08); }
     #stat-bar-prev-1 { color: #aaa; background: rgba(255,255,255,0.04); }
     #stat-bar-prev-2 { color: #888; background: rgba(255,255,255,0.03); }
