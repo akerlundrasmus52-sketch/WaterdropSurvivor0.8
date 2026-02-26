@@ -1,5 +1,8 @@
     import * as THREE from 'three';
 
+    // Expose THREE globally so regular scripts (e.g. blood-system.js) can access it
+    window.THREE = THREE;
+
     // --- MODULE ALIASES FOR EXTRACTED GLOBALS ---
     // audio.js, utils.js, state.js, weapons.js, enemies.js, combat.js, player.js,
     // world.js, ui.js, renderer.js are all loaded as regular scripts before this module
