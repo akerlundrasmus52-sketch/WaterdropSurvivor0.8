@@ -1470,6 +1470,8 @@
       takeDamage(amount) {
         // Safety: do not process damage when game is not active or already over
         if (!isGameActive || isGameOver) return;
+        // Prevent stray hits during boss kill-cam cinematics
+        if (killCamActive) return;
         // Check invulnerability frames (hit-stun + dash invulnerability)
         if (this.invulnerable || dashInvulnerable) return;
         // Safety: ignore zero or negative damage to prevent phantom kills
@@ -2937,9 +2939,11 @@
         spawnParticles(this.mesh.position, 0x440000, 6); // Extra dark blood chunks
         // Advanced blood particle burst on death — heavy spray up in air
         if (window.BloodSystem) {
-          window.BloodSystem.emitBurst(deathPos, this.isMiniBoss ? 900 : 500, { spreadXZ: 2.2, spreadY: 1.8 });
+          window.BloodSystem.emitBurst(deathPos, this.isMiniBoss ? 900 : 500, { spreadXZ: 2.2, spreadY: 1.8, minSize: 0.03, maxSize: 0.16, minLife: 55, maxLife: 120 });
+          // Extra micro-fountain mist that rains down as tiny droplets
+          window.BloodSystem.emitBurst(deathPos, this.isMiniBoss ? 420 : 240, { spreadXZ: 1.8, spreadY: 1.2, minSize: 0.015, maxSize: 0.06, minLife: 60, maxLife: 110 });
           // Pulsating blood fountain after death — simulates heart still pumping
-          window.BloodSystem.emitPulse(deathPos, { pulses: this.isMiniBoss ? 8 : 5, perPulse: this.isMiniBoss ? 600 : 350, interval: 180, spreadXZ: 2.0 });
+          window.BloodSystem.emitPulse(deathPos, { pulses: this.isMiniBoss ? 10 : 6, perPulse: this.isMiniBoss ? 750 : 420, interval: 160, spreadXZ: 2.2, minSize: 0.02, maxSize: 0.1, minLife: 55, maxLife: 110 });
         }
         // Airborne blood spray burst — sprays high in air, rains down tiny droplets
         for (let sb = 0; sb < 14 && bloodDrips.length < MAX_BLOOD_DRIPS; sb++) {
