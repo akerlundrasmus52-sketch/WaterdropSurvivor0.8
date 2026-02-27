@@ -3611,6 +3611,52 @@
       animation: ssb-flash-in 0.35s ease-out forwards;
     }
 
+    /* Countdown section inside super stat bar */
+    .ssb-countdown {
+      border-radius: 7px;
+      padding: 5px 7px;
+      font-family: 'Bangers', cursive;
+      font-size: 22px;
+      letter-spacing: 3px;
+      text-align: center;
+      border: 2px solid #FFD700;
+      background: rgba(30,20,0,0.92);
+      color: #FFD700;
+      text-shadow: 0 0 10px #FFD700AA, 0 0 22px #FFD70066, 1px 1px 3px rgba(0,0,0,0.9);
+      box-shadow: 0 0 8px #FFD70066, inset 0 0 6px rgba(255,215,0,0.12);
+      margin-top: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .ssb-countdown.ssb-cd-orange {
+      border-color: #FF8800;
+      color: #FF8800;
+      text-shadow: 0 0 10px #FF8800AA, 0 0 22px #FF880066, 1px 1px 3px rgba(0,0,0,0.9);
+      box-shadow: 0 0 8px #FF880066, inset 0 0 6px rgba(255,136,0,0.12);
+    }
+    .ssb-countdown.ssb-cd-red {
+      border-color: #FF2222;
+      color: #FF2222;
+      text-shadow: 0 0 12px #FF2222CC, 0 0 28px #FF222266, 1px 1px 3px rgba(0,0,0,0.9);
+      box-shadow: 0 0 10px #FF222266, inset 0 0 6px rgba(255,34,34,0.15);
+    }
+    .ssb-countdown.ssb-cd-green {
+      border-color: #2ecc71;
+      color: #2ecc71;
+      text-shadow: 0 0 10px #2ecc71AA, 0 0 22px #2ecc7166, 1px 1px 3px rgba(0,0,0,0.9);
+      box-shadow: 0 0 8px #2ecc7166, inset 0 0 6px rgba(46,204,113,0.12);
+    }
+    @keyframes ssb-countdown-pulse {
+      0%   { transform: scale(1);    }
+      40%  { transform: scale(1.12); }
+      70%  { transform: scale(0.97); }
+      100% { transform: scale(1);    }
+    }
+    .ssb-countdown-pulse {
+      animation: ssb-countdown-pulse 0.45s ease-out forwards;
+    }
+
     /* Portrait: tuck under menu button (44 px tall + 10 px top + 8 px gap = 62) */
     @media (orientation: portrait) {
       #super-stat-bar { right: 5px; top: 65px; }
