@@ -20,6 +20,8 @@ window.GameAccount = (function () {
 
   function _pad2(n) { return n < 10 ? '0' + n : '' + n; }
 
+  function _esc(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
   function getAccountDefaults() {
     return {
       accountName: 'Adventurer',
@@ -111,14 +113,14 @@ window.GameAccount = (function () {
 
     if (active === 0) {
       html += '<div class="acc-profile-card border-' + (border || 'none') + '">';
-      html += '<div class="acc-icon">' + acc.profileIcon + '</div>';
-      html += '<div class="acc-name">' + acc.accountName + '</div>';
+      html += '<div class="acc-icon">' + _esc(acc.profileIcon) + '</div>';
+      html += '<div class="acc-name">' + _esc(acc.accountName) + '</div>';
       if (title) html += '<div class="acc-title">' + title + '</div>';
       if (border) html += '<div class="acc-border">Border: ' + border + '</div>';
       html += _xpBarHTML(acc);
       html += '<div class="acc-edit-row">';
-      html += '<input class="acc-name-input" type="text" value="' + acc.accountName + '" maxlength="24" placeholder="Name">';
-      html += '<input class="acc-icon-input" type="text" value="' + acc.profileIcon + '" maxlength="4" placeholder="Icon">';
+      html += '<input class="acc-name-input" type="text" value="' + _esc(acc.accountName) + '" maxlength="24" placeholder="Name">';
+      html += '<input class="acc-icon-input" type="text" value="' + _esc(acc.profileIcon) + '" maxlength="4" placeholder="Icon">';
       html += '<button class="acc-save-btn">Save</button>';
       html += '</div></div>';
     } else if (active === 1) {

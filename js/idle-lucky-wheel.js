@@ -14,6 +14,8 @@ window.GameLuckyWheel = (function () {
   var SPIN_COST = 50; // essence
 
   function _pad2(n) { return n < 10 ? '0' + n : '' + n; }
+
+  function getWheelDefaults() {
     return { lastFreeSpin: 0, totalSpins: 0, history: [] };
   }
 
@@ -76,8 +78,13 @@ window.GameLuckyWheel = (function () {
     if (!saveData.wheel) saveData.wheel = getWheelDefaults();
     var free = useFree && canFreeSpin(saveData);
     if (!free) {
-      if ((saveData.essence || 0) < SPIN_COST) return { ok: false, msg: 'Not enough essence (need ' + SPIN_COST + ').' };
-      saveData.essence = (saveData.essence || 0) - SPIN_COST;
+      var playerEssence = (saveData.clicker && saveData.clicker.essence > 0) ? saveData.clicker.essence : (saveData.essence || 0);
+      if (playerEssence < SPIN_COST) return { ok: false, msg: 'Not enough essence (need ' + SPIN_COST + ').' };
+      if (saveData.clicker && saveData.clicker.essence >= SPIN_COST) {
+        saveData.clicker.essence -= SPIN_COST;
+      } else {
+        saveData.essence = (saveData.essence || 0) - SPIN_COST;
+      }
     } else {
       saveData.wheel.lastFreeSpin = Date.now();
     }
@@ -98,7 +105,7 @@ window.GameLuckyWheel = (function () {
   function renderWheelPanel(saveData, container) {
     if (!saveData.wheel) saveData.wheel = getWheelDefaults();
     var free = canFreeSpin(saveData);
-    var essence = saveData.essence || 0;
+    var essence = (saveData.clicker && saveData.clicker.essence > 0) ? saveData.clicker.essence : (saveData.essence || 0);
     var colors = ['#e74c3c','#e67e22','#f1c40f','#2ecc71','#1abc9c','#3498db','#9b59b6','#e91e63'];
     var total = WHEEL_SEGMENTS.reduce(function (s, x) { return s + x.weight; }, 0);
     var sliceAngle = 360 / WHEEL_SEGMENTS.length;

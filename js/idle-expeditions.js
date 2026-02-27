@@ -1,6 +1,7 @@
 // Exposes window.GameExpeditions for use by main.js
 // Companion expedition system: send, check, reward rolling
 
+(function () {
 var EXPEDITION_DEFS = [
   {
     id: 'short_scout',
@@ -184,3 +185,4 @@ window.GameExpeditions = {
   rollExpeditionRewards: rollExpeditionRewards,
   checkExpeditions: checkExpeditions
 };
+})();

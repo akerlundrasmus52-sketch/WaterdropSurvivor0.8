@@ -1,6 +1,7 @@
 // Exposes window.GameIdle for use by main.js
 // Core idle engine: offline progress, idle tick, gold mine, auto-trainer
 
+(function () {
 var IDLE_CONFIG = {
   GOLD_MINE: {
     MAX_LEVEL: 10,
@@ -87,15 +88,24 @@ function idleTick(saveData) {
   var statPoints = 0;
 
   if (idle.goldMineLevel > 0) {
-    goldEarned = Math.floor(idle.goldMineLevel * IDLE_CONFIG.GOLD_MINE.RATE_PER_LEVEL * elapsedMinutes);
+    idle._goldAccumulator = (idle._goldAccumulator || 0) + (idle.goldMineLevel * IDLE_CONFIG.GOLD_MINE.RATE_PER_LEVEL * elapsedMinutes);
+    goldEarned = Math.floor(idle._goldAccumulator);
+    idle._goldAccumulator -= goldEarned;
   }
 
   if (idle.autoTrainerLevel > 0) {
-    statPoints = idle.autoTrainerLevel * IDLE_CONFIG.AUTO_TRAINER.RATE_PER_LEVEL * elapsedMinutes;
+    idle._statAccumulator = (idle._statAccumulator || 0) + (idle.autoTrainerLevel * IDLE_CONFIG.AUTO_TRAINER.RATE_PER_LEVEL * elapsedMinutes);
+    statPoints = Math.floor(idle._statAccumulator);
+    idle._statAccumulator -= statPoints;
   }
 
   idle.totalIdleGoldEarned = (idle.totalIdleGoldEarned || 0) + goldEarned;
   idle.totalIdleStatPoints = (idle.totalIdleStatPoints || 0) + statPoints;
+  saveData.gold = (saveData.gold || 0) + goldEarned;
+  if (statPoints > 0 && idle.autoTrainerStat) {
+    if (!saveData.stats) saveData.stats = {};
+    saveData.stats[idle.autoTrainerStat] = (saveData.stats[idle.autoTrainerStat] || 0) + statPoints;
+  }
   saveData.idle = idle;
 
   return {
@@ -178,3 +188,4 @@ window.GameIdle = {
   setAutoTrainerStat: setAutoTrainerStat,
   buildWelcomeBackSummary: buildWelcomeBackSummary
 };
+})();

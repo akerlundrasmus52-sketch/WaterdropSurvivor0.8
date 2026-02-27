@@ -86,10 +86,13 @@ window.GameShop = (function () {
         result.gem = gem;
       }
     } else if (eff.type === 'gemDust') {
-      if (!saveData.gems) saveData.gems = { gemDust: 0 };
+      if (!saveData.gems) saveData.gems = window.GameGems ? window.GameGems.getGemsDefaults() : { inventory: [], gemDust: 0, totalGemsFound: 0, totalGemsFused: 0, totalGemsMelted: 0 };
       saveData.gems.gemDust = (saveData.gems.gemDust || 0) + eff.amount;
     } else if (eff.type === 'addSocket') {
       if (saveData.gems) saveData.gems.gemDust -= eff.dustCost;
+      result.msg = 'Purchased ' + item.name + '! (Feature coming soon)';
+    } else if (eff.type === 'rerollStat' || eff.type === 'rerollSocket') {
+      result.msg = 'Purchased ' + item.name + '! (Feature coming soon)';
     }
 
     return result;

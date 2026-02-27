@@ -12,7 +12,12 @@
     { id: 'expeditions',  label: '🗺 Expeditions' },
     { id: 'prestige',     label: '⭐ Prestige' },
     { id: 'dailies',      label: '📅 Dailies' },
-    { id: 'achievements', label: '🏆 Achievements' }
+    { id: 'achievements', label: '🏆 Achievements' },
+    { id: 'gems',         label: '💎 Gems' },
+    { id: 'shop',         label: '🏪 Shop' },
+    { id: 'wheel',        label: '🎡 Wheel' },
+    { id: 'account',      label: '🧙 Account' },
+    { id: 'statistics',   label: '📊 Stats' }
   ];
 
   function _el(tag, cls, text) {
@@ -95,6 +100,11 @@
     else if (_activeTab === 'prestige' && ui) ui.renderPrestigePanel(sd, container);
     else if (_activeTab === 'dailies' && ui) ui.renderDailyPanel(sd, container);
     else if (_activeTab === 'achievements') _renderAchievementsPanel(sd, container);
+    else if (_activeTab === 'gems' && window.GameGems) window.GameGems.renderGemsPanel(sd, container);
+    else if (_activeTab === 'shop' && window.GameShop) window.GameShop.renderShopPanel(sd, container);
+    else if (_activeTab === 'wheel' && window.GameLuckyWheel) window.GameLuckyWheel.renderWheelPanel(sd, container);
+    else if (_activeTab === 'account' && window.GameAccount) window.GameAccount.renderAccountPanel(sd, container);
+    else if (_activeTab === 'statistics' && window.GameStatistics) window.GameStatistics.renderStatisticsPanel(sd, container);
   }
 
   function _buildIdlePanel() {
@@ -131,6 +141,11 @@
   function initIdleSystems(saveData) {
     if (window.GameIdle && saveData.idle && saveData.idle.lastTickTime) {
       var offline = window.GameIdle.calculateOfflineProgress(saveData.idle.lastTickTime, saveData);
+      saveData.gold = (saveData.gold || 0) + offline.goldEarned;
+      if (offline.statPoints > 0 && offline.statTrained) {
+        if (!saveData.stats) saveData.stats = {};
+        saveData.stats[offline.statTrained] = (saveData.stats[offline.statTrained] || 0) + Math.floor(offline.statPoints);
+      }
       if (window.GameIdleUI && offline.elapsedMinutes >= 1) {
         var summary = window.GameIdle.buildWelcomeBackSummary(offline);
         if (summary) window.GameIdleUI.showWelcomeBack(summary);
@@ -147,13 +162,12 @@
 
   function campIdleTick(saveData) {
     if (window.GameIdle) window.GameIdle.idleTick(saveData);
-    if (window.GameClicker) window.GameClicker.processAutoClicks(saveData);
+    if (window.GameClicker) {
+      var bonuses = window.GamePrestige ? window.GamePrestige.getAscensionBonuses(saveData) : {};
+      window.GameClicker.processAutoClicks(saveData, 1000, bonuses);
+    }
     if (window.GameExpeditions) {
-      var active = (saveData.expeditions && saveData.expeditions.active) || [];
-      var now = Date.now();
-      for (var i = active.length - 1; i >= 0; i--)
-        if (active[i].completesAt && now >= active[i].completesAt)
-          window.GameExpeditions.completeExpedition(active[i].id, saveData);
+      window.GameExpeditions.checkExpeditions(saveData);
     }
     if (window.GameAchievements) window.GameAchievements.checkAchievements(saveData);
   }
@@ -171,6 +185,7 @@
 
   document.addEventListener('DOMContentLoaded', function () {
     if (window.GameIdleCSS) window.GameIdleCSS.init();
+    if (window.GameAccountCSS) window.GameAccountCSS.init();
     var wrap = _buildIdlePanel();
     if (wrap) { _switchTab('idle'); _startTick(); }
     if (window.GameState) {
