@@ -3285,6 +3285,12 @@
           };
           createFloatingText(`+${newGear.name}`, deathPos, rarityColors[newGear.rarity] || '#FFFFFF');
           playSound('coin');
+
+          // Notify SSB with gear drop rarity
+          if (window.pushSuperStatEvent) {
+            const gr = newGear.rarity || 'common';
+            window.pushSuperStatEvent(`📦 ${newGear.name}`, gr, '📦', 'success');
+          }
           
           console.log('[Phase 1 Gear Drop]', newGear.name, '-', newGear.rarity);
           
@@ -6117,6 +6123,12 @@
         
         // Give player reward
         this.giveReward();
+
+        // Notify SSB of chest open with tier rarity
+        if (window.pushSuperStatEvent) {
+          const tr = this.tier === 'mythical' ? 'mythic' : (this.tier || 'common');
+          window.pushSuperStatEvent(`🎁 ${(this.tier||'Common').toUpperCase()} Chest!`, tr, '🎁', 'success');
+        }
         
         // Remove chest after short delay
         const destroyTimeoutId = setTimeout(() => {
@@ -6813,16 +6825,17 @@
     //  SUPER STAT BAR — real-time event history with rarity color coding
     // =====================================================================
     const SSB_COLORS = {
-      common:    { text: '#AAAAAA', border: '#555555', bg: 'rgba(30,30,30,0.88)'  },
-      uncommon:  { text: '#4CAF50', border: '#2E7D32', bg: 'rgba(15,35,15,0.88)' },
-      rare:      { text: '#5DADE2', border: '#1565C0', bg: 'rgba(10,25,50,0.88)' },
-      epic:      { text: '#9B59B6', border: '#6A1B9A', bg: 'rgba(25,10,45,0.88)' },
-      legendary: { text: '#F39C12', border: '#E65100', bg: 'rgba(45,20,5,0.88)'  },
-      mythic:    { text: '#E74C3C', border: '#8B0000', bg: 'rgba(45,5,5,0.88)'   },
+      common:    { text: '#999999', border: '#555555', bg: 'rgba(30,30,30,0.88)'  },
+      uncommon:  { text: '#2ecc71', border: '#1a8a4a', bg: 'rgba(10,35,18,0.88)' },
+      rare:      { text: '#3498db', border: '#1565C0', bg: 'rgba(10,25,50,0.88)' },
+      epic:      { text: '#9b59b6', border: '#6A1B9A', bg: 'rgba(25,10,45,0.88)' },
+      legendary: { text: '#e74c3c', border: '#c0392b', bg: 'rgba(45,10,5,0.88)'  },
+      mythic:    { text: '#FFD700', border: '#B8860B', bg: 'rgba(40,30,0,0.92)'  },
       gold:      { text: '#FFD700', border: '#B8860B', bg: 'rgba(40,30,0,0.88)'  },
       region:    { text: '#5DADE2', border: '#2980B9', bg: 'rgba(10,25,45,0.88)' },
       quest:     { text: '#FFD700', border: '#F39C12', bg: 'rgba(45,35,0,0.88)'  },
-      death:     { text: '#FF2222', border: '#8B0000', bg: 'rgba(45,0,0,0.92)'   }
+      death:     { text: '#FF2222', border: '#8B0000', bg: 'rgba(45,0,0,0.92)'   },
+      countdown: { text: '#FFD700', border: '#B8860B', bg: 'rgba(40,30,0,0.92)'  }
     };
 
     const _ssbHistory = [];
@@ -6838,8 +6851,14 @@
       el.style.color       = c.text;
       el.style.borderColor = c.border;
       el.style.background  = c.bg;
-      el.style.boxShadow   = `0 0 5px ${c.border}55, inset 0 0 4px ${c.border}22`;
-      el.style.textShadow  = `0 0 6px ${c.text}88, 1px 1px 2px rgba(0,0,0,0.9)`;
+      // Mythic gets extra strong glow per spec
+      if (rarity === 'mythic') {
+        el.style.boxShadow  = `0 0 10px ${c.border}AA, 0 0 20px ${c.text}55, inset 0 0 6px ${c.border}33`;
+        el.style.textShadow = `0 0 8px ${c.text}CC, 0 0 18px ${c.text}88, 1px 1px 2px rgba(0,0,0,0.9)`;
+      } else {
+        el.style.boxShadow  = `0 0 5px ${c.border}55, inset 0 0 4px ${c.border}22`;
+        el.style.textShadow = `0 0 6px ${c.text}88, 1px 1px 2px rgba(0,0,0,0.9)`;
+      }
     }
 
     function pushSuperStatEvent(text, rarity, icon, status) {
@@ -6853,6 +6872,38 @@
       _ssbRenderEvents();
     }
     window.pushSuperStatEvent = pushSuperStatEvent;
+
+    // Show an animated countdown step in the dedicated SSB countdown row
+    function _ssbShowCountdown(message, step) {
+      const el = document.getElementById('ssb-countdown');
+      if (!el) return;
+      // Determine urgency class from step (0=get ready/yellow, 1=3/yellow, 2=2/orange, 3=1/red, 4=survive/green)
+      el.classList.remove('ssb-cd-orange', 'ssb-cd-red', 'ssb-cd-green');
+      if      (step === 3) el.classList.add('ssb-cd-red');
+      else if (step === 2) el.classList.add('ssb-cd-orange');
+      else if (step >= 4)  el.classList.add('ssb-cd-green'); // step 4 = "Survive!"
+      // else default yellow styling
+      // Build display text
+      let displayText;
+      if (step >= 4)      displayText = '⚔️ SURVIVE!';
+      else if (step === 0) displayText = '🎮 GET READY!';
+      else                 displayText = `⏱️ ${message}`;
+      el.textContent = displayText;
+      el.style.display = 'block';
+      // Pulse animation on each step
+      el.classList.remove('ssb-countdown-pulse');
+      void el.offsetWidth; // force reflow
+      el.classList.add('ssb-countdown-pulse');
+      // Show parent bar during countdown if not already visible
+      const bar = document.getElementById('super-stat-bar');
+      if (bar) bar.style.display = 'flex';
+    }
+
+    function _ssbHideCountdown() {
+      const el = document.getElementById('ssb-countdown');
+      if (el) el.style.display = 'none';
+    }
+    window._ssbHideCountdown = _ssbHideCountdown;
 
     function _ssbRenderEvents() {
       ['ssb-current', 'ssb-prev1', 'ssb-prev2'].forEach((id, i) => {
@@ -8703,6 +8754,10 @@
       }
       // Delegate actual movement to existing player.dash()
       player.dash(dashDirection.x, dashDirection.z);
+      // Notify SSB of dash activation
+      if (window.pushSuperStatEvent) {
+        window.pushSuperStatEvent('💨 Dash!', 'rare', '💨', 'neutral');
+      }
     }
 
     function getBuildingCost(buildingId) {
@@ -14238,6 +14293,11 @@
       
       // Use Stat Log for countdown messages
       showStatChange(countdownMessages[step]);
+
+      // Show in dedicated SSB countdown row with urgency styling
+      if (typeof _ssbShowCountdown === 'function') {
+        _ssbShowCountdown(countdownMessages[step], step);
+      }
       
       const duration = step === 0 ? 1500 : 1000;
       
@@ -14253,6 +14313,11 @@
     
     function endCountdown() {
       countdownActive = false;
+
+      // Hide SSB countdown row now that countdown is over
+      if (typeof _ssbHideCountdown === 'function') {
+        setTimeout(_ssbHideCountdown, 800); // brief delay so "SURVIVE!" is visible
+      }
       
       // Ensure game properly unpauses (use helper functions to sync window variables)
       setGamePaused(false);
@@ -14954,6 +15019,12 @@
 
     function spawnWave() {
       waveCount++;
+
+      // Notify super stat bar of new wave
+      if (window.pushSuperStatEvent) {
+        const wRarity = waveCount >= 10 ? 'epic' : waveCount >= 5 ? 'rare' : 'uncommon';
+        window.pushSuperStatEvent(`🌊 Wave ${waveCount}!`, wRarity, '🌊', 'neutral');
+      }
       
       // Phase 1 Performance Fix: Limit maximum enemies on screen
       const currentEnemyCount = enemies.filter(e => !e.isDead).length;
@@ -17279,6 +17350,15 @@
             const cz = player.mesh.position.z + Math.sin(chestAngle) * chestDist;
             spawnChest(cx, cz, chestTier);
             showStatChange(`${chestTier.toUpperCase()} Chest Spawned!`);
+            // Notify SSB with appropriate rarity
+            if (window.pushSuperStatEvent) {
+              let cr = 'uncommon';
+              if      (comboState.count >= 20) cr = 'mythic';
+              else if (comboState.count >= 15) cr = 'legendary';
+              else if (comboState.count >= 10) cr = 'epic';
+              else if (comboState.count >= 9)  cr = 'rare';
+              window.pushSuperStatEvent(`🔥 x${comboState.count} Combo!`, cr, '🎁', 'success');
+            }
           }
         }
         

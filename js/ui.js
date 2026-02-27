@@ -63,8 +63,11 @@ function showStatChange(text, level = 'normal') {
   // Mirror to super stat bar with appropriate rarity
   if (window.pushSuperStatEvent) {
     let rarity = 'common';
-    if (level === 'mythical') rarity = 'mythic';
-    else if (level === 'high') rarity = 'epic';
+    if      (level === 'mythical')  rarity = 'mythic';
+    else if (level === 'legendary') rarity = 'legendary';
+    else if (level === 'high')      rarity = 'epic';
+    else if (level === 'rare')      rarity = 'rare';
+    else if (level === 'uncommon')  rarity = 'uncommon';
     window.pushSuperStatEvent(text, rarity, '', 'neutral');
   }
 
