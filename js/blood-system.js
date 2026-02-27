@@ -163,6 +163,10 @@
     const interval = opts.interval !== undefined ? opts.interval : 200; // ms
     const arcDir   = opts.arcDir;   // optional THREE.Vector3 direction
     const spreadXZ = opts.spreadXZ !== undefined ? opts.spreadXZ : 1.8;
+    const minSize  = opts.minSize  !== undefined ? opts.minSize  : 0.03;
+    const maxSize  = opts.maxSize  !== undefined ? opts.maxSize  : 0.10;
+    const minLife  = opts.minLife  !== undefined ? opts.minLife  : 50;
+    const maxLife  = opts.maxLife  !== undefined ? opts.maxLife  : 100;
     const color1   = opts.color1   !== undefined ? opts.color1   : 0x8B0000;
     const color2   = opts.color2   !== undefined ? opts.color2   : 0xFF0000;
 
@@ -177,8 +181,8 @@
           const r   = r1 + (r2 - r1) * t;
           const g   = g1 + (g2 - g1) * t;
           const b   = b1 + (b2 - b1) * t;
-          const size = 0.03 + Math.random() * 0.07;
-          const life = 50 + Math.floor(Math.random() * 50);
+          const size = minSize + Math.random() * (maxSize - minSize);
+          const life = minLife + Math.floor(Math.random() * (maxLife - minLife));
 
           let vx, vy, vz;
           if (arcDir) {
