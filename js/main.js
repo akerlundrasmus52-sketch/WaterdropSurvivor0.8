@@ -1479,9 +1479,33 @@
         if (this.invulnerable || dashInvulnerable) return;
         // Safety: ignore zero or negative damage to prevent phantom kills
         if (!amount || amount <= 0) return;
-        
+
+        // Dodge chance — chance to fully negate the hit
+        if (playerStats.dodgeChance > 0 && Math.random() < playerStats.dodgeChance) {
+          createFloatingText('DODGE!', this.mesh.position, '#00FFFF');
+          spawnParticles(this.mesh.position, 0x00FFFF, 6);
+          return;
+        }
+
         // Armor reduction — delegated to GameCombat
-        const reduced = calculateArmorReduction(amount, playerStats.armor);
+        let reduced = calculateArmorReduction(amount, playerStats.armor);
+
+        // Extra damage reduction from skill tree (additive with armor, after it)
+        if (playerStats.damageReduction > 0) {
+          reduced = Math.max(1, reduced * (1 - playerStats.damageReduction));
+        }
+
+        // Last Stand — survive a fatal hit once per run
+        if (playerStats.hasLastStand && !playerStats.lastStandUsed && playerStats.hp - reduced <= 0) {
+          playerStats.lastStandUsed = true;
+          playerStats.hp = 1;
+          createFloatingText('LAST STAND!', this.mesh.position, '#FFD700');
+          spawnParticles(this.mesh.position, 0xFFD700, 20);
+          updateHUD();
+          playSound('levelup');
+          return;
+        }
+
         playerStats.hp -= reduced;
         updateHUD();
         playSound('hit');
@@ -1876,8 +1900,8 @@
         let color;
         
         // Enemy scaling based on player level - NOT SPEED, just HP and DAMAGE
-        // Progressive difficulty: starts at 15% per level, accelerates at higher levels
-        const levelScaling = 1 + (playerLevel - 1) * 0.18;
+        // Progressive difficulty: 20% per level to force use of all upgrades
+        const levelScaling = 1 + (playerLevel - 1) * 0.20;
         
         if (type === 0) {
           // Bacteria/Amoeba - Squishy organic blob shape
@@ -2706,14 +2730,30 @@
         // Phase 3: Apply armor reduction for MiniBoss/FlyingBoss — delegated to GameCombat
         let finalAmount = amount;
         if (this.armor > 0) {
-          finalAmount = calculateEnemyArmorReduction(amount, this.armor);
+          // Apply player's armor penetration: reduces effective enemy armor
+          const effectiveArmor = this.armor * (1 - (playerStats.armorPenetration || 0));
+          finalAmount = calculateEnemyArmorReduction(amount, effectiveArmor);
           // Show armor reduction effect
           if (this.isMiniBoss || this.isFlyingBoss) {
-            createFloatingText(`-${Math.floor(amount * this.armor)}`, this.mesh.position, '#FFD700');
+            createFloatingText(`-${Math.floor(amount * effectiveArmor)}`, this.mesh.position, '#FFD700');
           }
         }
+
+        // Apply elemental resistance/vulnerability based on damage type
+        if (damageType && this.elementalResistance) {
+          const resistKey = damageType === 'gun' || damageType === 'sword' || damageType === 'drone' || damageType === 'shotgun' || damageType === 'doubleBarrel'
+            ? 'physical' : damageType;
+          const resist = this.elementalResistance[resistKey] || 0;
+          if (resist !== 0) finalAmount *= (1 - resist);
+        }
+
         // Frozen enemies take double damage after armor — freeze bonus applies on top of armor
         if (this.isFrozen) finalAmount *= 2;
+
+        // Execute bonus: extra damage vs enemies below 30% HP
+        if (playerStats.executeDamage > 0 && this.hp / this.maxHp < 0.30) {
+          finalAmount *= (1 + playerStats.executeDamage);
+        }
         
         const oldHp = this.hp;
         this.hp -= finalAmount;
@@ -3313,7 +3353,13 @@
         }
         
         playerStats.kills++;
-        
+
+        // Heal on kill (Bloodlust skill and similar)
+        if (playerStats.healOnKill > 0) {
+          playerStats.hp = Math.min(playerStats.maxHp, playerStats.hp + playerStats.healOnKill);
+          updateHUD();
+        }
+
         // Tutorial Quest: Track kills this run
         if (saveData.tutorialQuests) {
           saveData.tutorialQuests.killsThisRun = playerStats.kills;
@@ -5137,6 +5183,10 @@
           const dz = this.mesh.position.z - enemy.mesh.position.z;
           if (dx*dx + dz*dz < 0.6) {
             let dmg = weapons.iceSpear.damage * playerStats.damage * playerStats.strength;
+            // Apply ice damage bonus from skills
+            if (playerStats.iceDamage > 0 || playerStats.elementalDamage > 0) {
+              dmg *= (1 + (playerStats.iceDamage || 0) + (playerStats.elementalDamage || 0));
+            }
             const isCrit = Math.random() < playerStats.critChance;
             if (isCrit) dmg *= playerStats.critDmg;
             
@@ -7797,16 +7847,16 @@
     const PERMANENT_UPGRADES = {
       maxHp: {
         name: 'Max HP',
-        description: '+10 HP per level',
-        maxLevel: 20,
+        description: '+25 HP per level',
+        maxLevel: 30,
         baseCost: 150,
         costIncrease: 75,
-        effect: (level) => 10 * level
+        effect: (level) => 25 * level
       },
       hpRegen: {
         name: 'HP Regen',
         description: '+0.5 HP/sec per level',
-        maxLevel: 10,
+        maxLevel: 15,
         baseCost: 250,
         costIncrease: 100,
         effect: (level) => 0.5 * level
@@ -7814,7 +7864,7 @@
       moveSpeed: {
         name: 'Move Speed',
         description: '+5% per level',
-        maxLevel: 10,
+        maxLevel: 15,
         baseCost: 200,
         costIncrease: 75,
         effect: (level) => 0.05 * level
@@ -7822,7 +7872,7 @@
       attackDamage: {
         name: 'Attack Damage',
         description: '+10% per level',
-        maxLevel: 15,
+        maxLevel: 25,
         baseCost: 250,
         costIncrease: 100,
         effect: (level) => 0.1 * level
@@ -7830,7 +7880,7 @@
       attackSpeed: {
         name: 'Attack Speed',
         description: '+5% per level',
-        maxLevel: 10,
+        maxLevel: 15,
         baseCost: 250,
         costIncrease: 100,
         effect: (level) => 0.05 * level
@@ -7838,7 +7888,7 @@
       critChance: {
         name: 'Crit Chance',
         description: '+2% per level',
-        maxLevel: 10,
+        maxLevel: 15,
         baseCost: 350,
         costIncrease: 100,
         effect: (level) => 0.02 * level
@@ -7846,23 +7896,23 @@
       critDamage: {
         name: 'Crit Damage',
         description: '+10% per level',
-        maxLevel: 10,
+        maxLevel: 15,
         baseCost: 350,
         costIncrease: 100,
         effect: (level) => 0.1 * level
       },
       armor: {
         name: 'Armor',
-        description: '+2 per level',
-        maxLevel: 15,
+        description: '+3% per level',
+        maxLevel: 20,
         baseCost: 250,
         costIncrease: 100,
-        effect: (level) => 2 * level
+        effect: (level) => 3 * level
       },
       cooldownReduction: {
         name: 'Cooldown Reduction',
         description: '-3% per level',
-        maxLevel: 10,
+        maxLevel: 15,
         baseCost: 400,
         costIncrease: 100,
         effect: (level) => 0.03 * level
@@ -7870,7 +7920,7 @@
       goldEarned: {
         name: 'Gold Earned',
         description: '+10% per level',
-        maxLevel: 10,
+        maxLevel: 15,
         baseCost: 500,
         costIncrease: 150,
         effect: (level) => 0.1 * level
@@ -7878,7 +7928,7 @@
       expEarned: {
         name: 'EXP Earned',
         description: '+10% per level',
-        maxLevel: 10,
+        maxLevel: 15,
         baseCost: 450,
         costIncrease: 150,
         effect: (level) => 0.1 * level
@@ -8793,6 +8843,103 @@
         })
       }
     };
+
+    /**
+     * Apply all purchased SKILL_TREE bonuses to playerStats and the module-level
+     * dash variables. Call this at the END of resetGame(), after base stats are set.
+     * This fixes the critical bug where skill purchases had no in-game effect.
+     */
+    function applySkillTreeBonuses() {
+      if (!saveData.skillTree) return;
+
+      // Accumulators for stats that combine additively
+      let hpFlat = 0, hpPercent = 0, regenFlat = 0, armorFlat = 0;
+      let damageMult = 0, critChanceFlat = 0, critDmgFlat = 0;
+      let atkSpeedMult = 0, moveSpeedMult = 0;
+      let dashCdReduction = 0, dashDistMult = 0, cooldownReduction = 0;
+
+      for (const skillId in saveData.skillTree) {
+        const skillData = saveData.skillTree[skillId];
+        const level = (skillData && skillData.level) || 0;
+        if (level === 0) continue;
+
+        const skillDef = SKILL_TREE[skillId];
+        if (!skillDef || typeof skillDef.bonus !== 'function') continue;
+
+        const bonus = skillDef.bonus(level);
+
+        // --- Accumulated stats ---
+        if (bonus.hp)           hpFlat        += bonus.hp;
+        if (bonus.hpPercent)    hpPercent     += bonus.hpPercent;
+        if (bonus.regen)        regenFlat     += bonus.regen;
+        if (bonus.armor)        armorFlat     += bonus.armor;
+        if (bonus.damage)       damageMult    += bonus.damage;
+        if (bonus.weaponDamage) damageMult    += bonus.weaponDamage; // weaponDamage stacks additively with damage into the same multiplier
+        if (bonus.critChance)   critChanceFlat += bonus.critChance;
+        if (bonus.critDamage)   critDmgFlat   += bonus.critDamage;
+        if (bonus.attackSpeed)  atkSpeedMult  += bonus.attackSpeed;
+        if (bonus.moveSpeed)    moveSpeedMult += bonus.moveSpeed;
+        if (bonus.dashCooldown) dashCdReduction += bonus.dashCooldown;
+        if (bonus.dashDistance) dashDistMult  += bonus.dashDistance;
+        if (bonus.cooldown)     cooldownReduction += bonus.cooldown;
+
+        // --- Direct playerStats fields ---
+        if (bonus.damageReduction)    playerStats.damageReduction    = Math.min(0.75, (playerStats.damageReduction || 0) + bonus.damageReduction);
+        if (bonus.dodgeChance)        playerStats.dodgeChance        = Math.min(0.75, (playerStats.dodgeChance || 0) + bonus.dodgeChance);
+        if (bonus.healOnKill)         playerStats.healOnKill         = (playerStats.healOnKill || 0) + bonus.healOnKill;
+        if (bonus.lowHpDamage)        playerStats.lowHpDamage        = (playerStats.lowHpDamage || 0) + bonus.lowHpDamage;
+        if (bonus.executeDamage)      playerStats.executeDamage      = (playerStats.executeDamage || 0) + bonus.executeDamage;
+        if (bonus.armorPenetration)   playerStats.armorPenetration   = Math.min(0.90, (playerStats.armorPenetration || 0) + bonus.armorPenetration);
+        if (bonus.multiHitChance)     playerStats.multiHitChance     = Math.min(0.75, (playerStats.multiHitChance || 0) + bonus.multiHitChance);
+        if (bonus.lastStand)          playerStats.hasLastStand       = true;
+        if (bonus.secondWind)         playerStats.hasSecondWind      = true;
+        if (bonus.pickupRange)        playerStats.pickupRange        = (playerStats.pickupRange || 1.0) + bonus.pickupRange;
+        if (bonus.dropRate)           playerStats.dropRate           = (playerStats.dropRate || 1.0) + bonus.dropRate;
+        if (bonus.auraRange)          playerStats.auraRange          = (playerStats.auraRange || 1.0) + bonus.auraRange;
+        // Elemental
+        if (bonus.fireDamage)         playerStats.fireDamage         = (playerStats.fireDamage || 0) + bonus.fireDamage;
+        if (bonus.iceDamage)          playerStats.iceDamage          = (playerStats.iceDamage || 0) + bonus.iceDamage;
+        if (bonus.lightningDamage)    playerStats.lightningDamage    = (playerStats.lightningDamage || 0) + bonus.lightningDamage;
+        if (bonus.elementalDamage)    playerStats.elementalDamage    = (playerStats.elementalDamage || 0) + bonus.elementalDamage;
+        if (bonus.burnChance)         playerStats.burnChance         = (playerStats.burnChance || 0) + bonus.burnChance;
+        if (bonus.slowChance)         playerStats.slowChance         = (playerStats.slowChance || 0) + bonus.slowChance;
+        if (bonus.chainChance)        playerStats.chainChance        = (playerStats.chainChance || 0) + bonus.chainChance;
+        if (bonus.chainCount)         playerStats.chainCount         = (playerStats.chainCount || 0) + bonus.chainCount;
+        if (bonus.freezeChance)       playerStats.freezeChance       = (playerStats.freezeChance || 0) + bonus.freezeChance;
+        if (bonus.burnSpread)         playerStats.burnSpread         = true;
+        if (bonus.spellEchoChance)    playerStats.spellEchoChance    = (playerStats.spellEchoChance || 0) + bonus.spellEchoChance;
+        if (bonus.elementalChain)     playerStats.elementalChain     = (playerStats.elementalChain || 0) + bonus.elementalChain;
+        if (bonus.elementalGuaranteed) playerStats.elementalGuaranteed = true;
+      }
+
+      // --- Apply accumulated bonuses ---
+      // HP (flat first, then percent on top)
+      playerStats.maxHp += hpFlat;
+      if (hpPercent > 0) playerStats.maxHp = Math.floor(playerStats.maxHp * (1 + hpPercent));
+      playerStats.hp = playerStats.maxHp; // Start the run at full health
+
+      playerStats.hpRegen   += regenFlat;
+      playerStats.armor     += armorFlat;
+
+      // Multiplicative bonuses applied to already-calculated base stats
+      if (damageMult    !== 0) playerStats.strength  *= (1 + damageMult);
+      if (critChanceFlat !== 0) playerStats.critChance += critChanceFlat;
+      if (critDmgFlat   !== 0) playerStats.critDmg    += critDmgFlat;
+      if (atkSpeedMult  !== 0) playerStats.atkSpeed   *= (1 + atkSpeedMult);
+      if (moveSpeedMult !== 0) playerStats.walkSpeed  *= (1 + moveSpeedMult);
+
+      // Dash variables (module-level; dashDistance was already set from dashPower)
+      const totalDashCd = Math.min(0.80, dashCdReduction + cooldownReduction);
+      if (totalDashCd > 0) dashCooldown *= (1 - totalDashCd);
+      if (dashDistMult > 0) dashDistance *= (1 + dashDistMult);
+
+      // Clamp stats to sane ranges
+      playerStats.armor       = Math.min(85, playerStats.armor);
+      playerStats.critChance  = Math.min(0.95, playerStats.critChance);
+
+      // Mobility score = average of turnResponse bonuses (visual/feel metric)
+      playerStats.mobilityScore = playerStats.turnResponse || 1.0;
+    }
 
     function isDashUnlocked() {
       return (saveData.skillTree && saveData.skillTree.dash && saveData.skillTree.dash.level > 0) ||
@@ -11385,15 +11532,15 @@
       const ups = saveData.upgrades || {};
       const attrs = saveData.attributes || {};
       const startHp = defaultStats.maxHp || 100;
-      const currentHp = startHp + (ups.maxHp || 0) * 10 + (attrs.vitality || 0) * 15;
+      const currentHp = startHp + PERMANENT_UPGRADES.maxHp.effect(ups.maxHp || 0) + (attrs.vitality || 0) * 15;
       const startDmg = defaultStats.damage || 1;
-      const currentDmg = +(startDmg + (ups.attackDamage || 0) * 0.1 + (attrs.strength || 0) * 0.1).toFixed(2);
+      const currentDmg = +(startDmg + PERMANENT_UPGRADES.attackDamage.effect(ups.attackDamage || 0) + (attrs.strength || 0) * 0.1).toFixed(2);
       const startAtkSpd = defaultStats.attackSpeed || 1;
-      const currentAtkSpd = +(startAtkSpd + (ups.attackSpeed || 0) * 0.1 + (attrs.dexterity || 0) * 0.05).toFixed(2);
+      const currentAtkSpd = +(startAtkSpd + PERMANENT_UPGRADES.attackSpeed.effect(ups.attackSpeed || 0) + (attrs.dexterity || 0) * 0.05).toFixed(2);
       const startCrit = defaultStats.critChance || 0.1;
-      const currentCrit = +(startCrit + (ups.critChance || 0) * 0.02 + (attrs.dexterity || 0) * 0.02).toFixed(2);
+      const currentCrit = +(startCrit + PERMANENT_UPGRADES.critChance.effect(ups.critChance || 0) + (attrs.dexterity || 0) * 0.02).toFixed(2);
       const startArmor = 0;
-      const currentArmor = (ups.armor || 0) * 2 + (attrs.endurance || 0) * 2;
+      const currentArmor = PERMANENT_UPGRADES.armor.effect(ups.armor || 0) + (attrs.endurance || 0) * 2;
 
       const statsToShow = [
         { label: 'Max HP',      start: startHp,     current: currentHp },
@@ -16383,12 +16530,12 @@
         return;
       }
       
-      // XP Curve: Keep 1.5x growth for levels 1-4 (good early pace),
-      // then switch to linear growth (base * level) for level 5+ so level 100 is achievable.
-      if (playerStats.lvl <= 4) {
+      // XP Curve: 1.5x growth when leveling up to levels 2-5 (rapid early pace),
+      // then formula-based for level 6+ to make Level 100 require meaningful grinding.
+      if (playerStats.lvl <= 5) {
         playerStats.expReq = Math.floor(playerStats.expReq * 1.5);
       } else {
-        playerStats.expReq = Math.floor(GAME_CONFIG.baseExpReq * playerStats.lvl);
+        playerStats.expReq = Math.floor(GAME_CONFIG.baseExpReq * playerStats.lvl * 1.15);
       }
       
       // Wrap synchronous pre-modal operations in try-catch so that any unexpected
@@ -19226,6 +19373,8 @@
       // Reset temporary skills (these should not persist between runs)
       playerStats.dashCooldownReduction = 0;
       playerStats.dashDistanceBonus = 0;
+      // Reset dashCooldown to base before applying permanent skill bonuses
+      dashCooldown = 1500;
       // Apply dashPower from camp upgrades/attributes to base dash distance
       dashDistance = 1.8 * (playerStats.dashPower || 1.0);
       playerStats.hasSecondWind = false;
@@ -19242,8 +19391,43 @@
       playerStats.dashesPerformed = 0;
       playerStats.damageTaken = 0;
       playerStats.weaponsUnlocked = 0;
+      playerStats.damage = 1; // Reset dynamic damage multiplier (used for lowHpDamage)
+      // Reset new RPG stats to defaults before skill-tree application
+      playerStats.dodgeChance       = 0;
+      playerStats.damageReduction   = 0;
+      playerStats.hasLastStand      = false;
+      playerStats.lastStandUsed     = false;
+      playerStats.healOnKill        = 0;
+      playerStats.lowHpDamage       = 0;
+      playerStats.executeDamage     = 0;
+      playerStats.armorPenetration  = 0;
+      playerStats.multiHitChance    = 0;
+      playerStats.weaponDamage      = 0;
+      playerStats.pickupRange       = 1.0;
+      playerStats.dropRate          = 1.0;
+      playerStats.auraRange         = 1.0;
+      playerStats.fireDamage        = 0;
+      playerStats.iceDamage         = 0;
+      playerStats.lightningDamage   = 0;
+      playerStats.elementalDamage   = 0;
+      playerStats.burnChance        = 0;
+      playerStats.slowChance        = 0;
+      playerStats.chainChance       = 0;
+      playerStats.chainCount        = 0;
+      playerStats.freezeChance      = 0;
+      playerStats.burnSpread        = false;
+      playerStats.spellEchoChance   = 0;
+      playerStats.elementalChain    = 0;
+      playerStats.elementalGuaranteed = false;
+      playerStats.mobilityScore     = 1.0;
       // Cache headshot unlock status for this run
       playerStats.headshotUnlocked = isHeadshotUnlocked();
+
+      // Apply ALL purchased SKILL_TREE bonuses to playerStats (fix: was never called before)
+      applySkillTreeBonuses();
+
+      // Apply pickupRange skill bonus to magnetRange (reset base first, then scale)
+      magnetRange = 2 * (playerStats.pickupRange || 1.0);
       
       windmillQuest = { active: false, timer: 0, duration: 15, windmill: null, hasCompleted: false, dialogueOpen: false, rewardReady: false, rewardGiven: false, failed: false, failedCooldown: false };
       document.getElementById('windmill-quest-ui').style.display = 'none';
@@ -20224,6 +20408,11 @@
         spawnParticles(player.mesh.position, 0x00FF00, 2);
       }
 
+      // Low-HP damage bonus: dynamically update playerStats.damage each frame
+      if (playerStats.lowHpDamage > 0) {
+        playerStats.damage = playerStats.hp < playerStats.maxHp * 0.5 ? (1 + playerStats.lowHpDamage) : 1;
+      }
+
       // Player Update
       if (killCamActive) {
         // Preserve kill cam camera position from being overridden by player.update
@@ -20769,12 +20958,13 @@
 
       // 3. AURA
       if (weapons.aura.active && time - weapons.aura.lastShot > weapons.aura.cooldown) {
-        // Damage all in range
+        // Damage all in range (auraRange skill multiplier expands reach)
+        const effectiveAuraRange = weapons.aura.range * (playerStats.auraRange || 1.0);
         let hit = false;
         enemies.forEach(e => {
           if (e.isDead) return;
           const d = player.mesh.position.distanceTo(e.mesh.position);
-          if (d < weapons.aura.range) {
+          if (d < effectiveAuraRange) {
             e.takeDamage(weapons.aura.damage * playerStats.strength);
             hit = true;
           }
@@ -20995,12 +21185,12 @@
           if (e.isDead) return;
           const d = player.mesh.position.distanceTo(e.mesh.position);
           if (d < weapons.fireRing.range) {
-            const dmg = weapons.fireRing.damage * playerStats.strength;
+            const dmg = weapons.fireRing.damage * playerStats.strength *
+              (1 + (playerStats.fireDamage || 0) + (playerStats.elementalDamage || 0));
             const isCrit = Math.random() < playerStats.critChance;
             const finalDmg = isCrit ? dmg * playerStats.critDmg : dmg;
-            e.takeDamage(finalDmg);
+            e.takeDamage(finalDmg, isCrit, 'fire');
             createDamageNumber(finalDmg, e.mesh.position, isCrit);
-            
             // Fire particles on hit
             spawnParticles(e.mesh.position, 0xFF4500, 6); // Orange-red fire
             spawnParticles(e.mesh.position, 0xFFD700, 4); // Yellow flames
@@ -21038,7 +21228,9 @@
           for (let c = 0; c < chainCount && current; c++) {
             if (hitTargets.has(current)) break;
             hitTargets.add(current);
-            const dmg = (weapons.lightning.damage * playerStats.strength) * (1 - c * 0.2); // 20% falloff per chain
+            const dmg = (weapons.lightning.damage * playerStats.strength) *
+              (1 + (playerStats.lightningDamage || 0) + (playerStats.elementalDamage || 0)) *
+              (1 - c * 0.2); // 20% falloff per chain
             const isCrit = Math.random() < playerStats.critChance;
             current.takeDamage(Math.floor(isCrit ? dmg * playerStats.critDmg : dmg), isCrit, 'lightning');
             spawnParticles(current.mesh.position, 0xFFFF00, 6);
