@@ -2532,6 +2532,53 @@
           this.mesh.position.x += vx;
           this.mesh.position.z += vz;
           this.mesh.lookAt(targetPos);
+
+          // Collision with environment props (trees, barrels, crates) — ground enemies bounce off
+          // Skip flying enemy types: 5=Flying, 11=FlyingBoss, 14=BugFast(fly), 16=SweepingSwarm
+          const FLYING_TYPES = new Set([5, 11, 14, 16]);
+          const TREE_COLL_R = 1.0;  // Collision radius for tree props
+          const PROP_COLL_R = 0.7;  // Collision radius for barrel/crate props
+          const FENCE_COLL_R = 0.6; // Collision radius for fence segments
+          const _isFlying = FLYING_TYPES.has(this.type);
+          if (!_isFlying && window.destructibleProps) {
+            for (let prop of window.destructibleProps) {
+              if (!prop || !prop.mesh || prop.destroyed) continue;
+              const edx = this.mesh.position.x - prop.mesh.position.x;
+              const edz = this.mesh.position.z - prop.mesh.position.z;
+              const eDist = Math.sqrt(edx*edx + edz*edz);
+              const eRadius = prop.type === 'tree' ? TREE_COLL_R : PROP_COLL_R;
+              if (eDist < eRadius && eDist > 0.001) {
+                this.mesh.position.x = prop.mesh.position.x + (edx / eDist) * eRadius;
+                this.mesh.position.z = prop.mesh.position.z + (edz / eDist) * eRadius;
+                // Wobble the prop on enemy impact
+                if (!prop._wobbleTime) prop._wobbleTime = 0;
+                if (prop._wobbleTime <= 0) {
+                  prop._wobbleTime = 0.6;
+                  if (!prop._wobbleDir) prop._wobbleDir = { x: edx / eDist, z: edz / eDist };
+                  else { prop._wobbleDir.x = edx / eDist; prop._wobbleDir.z = edz / eDist; }
+                }
+              }
+            }
+          }
+          // Collision with fences (also skip for flying enemies)
+          if (!_isFlying && window.breakableFences) {
+            for (let fence of window.breakableFences) {
+              if (!fence.userData || !fence.userData.isFence || fence.userData.hp <= 0) continue;
+              const efdx = this.mesh.position.x - fence.position.x;
+              const efdz = this.mesh.position.z - fence.position.z;
+              const efDist = Math.sqrt(efdx*efdx + efdz*efdz);
+              if (efDist < FENCE_COLL_R && efDist > 0.001) {
+                this.mesh.position.x = fence.position.x + (efdx / efDist) * FENCE_COLL_R;
+                this.mesh.position.z = fence.position.z + (efdz / efDist) * FENCE_COLL_R;
+                if (!fence.userData._wobbleTime) fence.userData._wobbleTime = 0;
+                if (fence.userData._wobbleTime <= 0) {
+                  fence.userData._wobbleTime = 0.5;
+                  if (!fence.userData._wobbleDir) fence.userData._wobbleDir = { x: efdx / efDist, z: efdz / efDist };
+                  else { fence.userData._wobbleDir.x = efdx / efDist; fence.userData._wobbleDir.z = efdz / efDist; }
+                }
+              }
+            }
+          }
           } // end else (!isFrozen) movement block
         }
 
@@ -6336,6 +6383,8 @@
       giveReward() {
         // Determine reward type
         const rand = Math.random();
+        // Rarity label for SSB notification color
+        const tierRarity = this.tier === 'mythical' ? 'mythic' : (this.tier || 'common');
         
         if (rand < 0.35) {
           // Health restore (35% chance)
@@ -6344,14 +6393,16 @@
           playerStats.hp = Math.min(playerStats.maxHp, playerStats.hp + healAmount);
           const actualHeal = playerStats.hp - prevHp;
           createFloatingText(`+${actualHeal} HP!`, this.mesh.position);
-          showStatChange(`Chest: +${actualHeal} HP!`);
+          showStatChange(`🎁 Chest: +${actualHeal} HP!`);
+          if (window.pushSuperStatEvent) window.pushSuperStatEvent(`🎁 +${actualHeal} HP from ${(this.tier||'Common')} Chest`, tierRarity, '❤️', 'success');
           spawnParticles(this.mesh.position, 0xFF69B4, 10); // Reduced for performance
         } else if (rand < 0.6) {
           // Gold (25% chance)
           const goldAmount = 12 + Math.floor(Math.random() * 19); // 12-30 gold (reduced from 20-50)
           addGold(goldAmount);
           createFloatingText(`+${goldAmount} Gold!`, this.mesh.position);
-          showStatChange(`Chest: +${goldAmount} Gold!`);
+          showStatChange(`🎁 Chest: +${goldAmount} Gold!`);
+          if (window.pushSuperStatEvent) window.pushSuperStatEvent(`🎁 +${goldAmount} Gold!`, tierRarity, '💰', 'success');
         } else if (rand < 0.85) {
           // Random perk/stat boost (25% chance)
           this.applyRandomPerk();
@@ -6361,7 +6412,8 @@
           // Apply a small weapon boost - check if weapon exists
           if (weapons && weapons.gun && weapons.gun.active) {
             weapons.gun.damage += 5;
-            showStatChange('Chest: Gun Damage +5');
+            showStatChange('🎁 Chest: Gun Damage +5');
+            if (window.pushSuperStatEvent) window.pushSuperStatEvent('🎁 Gun Damage +5!', tierRarity, '🔫', 'success');
           }
         }
       }
@@ -6405,6 +6457,8 @@
         const perk = perks[Math.floor(Math.random() * perks.length)];
         perk.apply();
         createFloatingText(perk.name + '!', this.mesh.position);
+        const pRarity = this.tier === 'mythical' ? 'mythic' : (this.tier || 'common');
+        if (window.pushSuperStatEvent) window.pushSuperStatEvent(`🎁 ${perk.name}!`, pRarity, '⭐', 'success');
       }
       
       destroy() {
@@ -16856,6 +16910,11 @@
     }
     
 
+    // Expose camp navigation for loading.js and other external scripts
+    window.updateCampScreen = function() {
+      try { updateCampScreen(); } catch(e) { console.error('[CampWorld] updateCampScreen error:', e); }
+    };
+
     function spawnWave() {
       waveCount++;
 
@@ -17307,7 +17366,8 @@
         });
         const decal = new THREE.Mesh(geo, mat);
         decal.rotation.x = -Math.PI / 2;
-        decal.position.set(pos.x + (Math.random() - 0.5) * 0.8, 0.02, pos.z + (Math.random() - 0.5) * 0.8);
+        decal.renderOrder = 12; // Render above ground to prevent z-fighting
+        decal.position.set(pos.x + (Math.random() - 0.5) * 0.8, 0.06, pos.z + (Math.random() - 0.5) * 0.8);
         decal.userData.spawnTime = now;
         decal.userData.initialOpacity = initialOpacity;
         scene.add(decal);
@@ -17316,7 +17376,7 @@
         // Reuse existing slot (O(1) circular overwrite)
         const old = bloodDecals[bloodDecalIndex];
         const initialOpacity = 0.6 + Math.random() * 0.3;
-        old.position.set(pos.x + (Math.random() - 0.5) * 0.8, 0.02, pos.z + (Math.random() - 0.5) * 0.8);
+        old.position.set(pos.x + (Math.random() - 0.5) * 0.8, 0.06, pos.z + (Math.random() - 0.5) * 0.8);
         old.material.opacity = initialOpacity;
         old.userData.spawnTime = now;
         old.userData.initialOpacity = initialOpacity;
@@ -18678,7 +18738,7 @@
         
         // Add appropriate styling classes based on upgrade type
         if (u.id) {
-          // Class upgrades (epic - orange)
+          // Class upgrades (epic - purple)
           if (u.id.startsWith('class_')) {
             card.className += ' class rarity-epic';
           }
@@ -18686,11 +18746,16 @@
           else if (u.id.startsWith('perk_')) {
             card.className += ' perk rarity-epic';
           }
-          // Weapon upgrades (rare - blue)
+          // Weapon upgrades (dark border with shadow)
           else if (u.id.includes('gun_') || u.id.includes('sword_') || u.id.includes('aura_') || 
                    u.id.includes('meteor_') || u.id.includes('doublebarrel_') ||
                    u.id.includes('droneturret_') || u.id.includes('icespear_') || u.id.includes('firering_')) {
             card.className += ' weapon rarity-rare';
+          }
+          // Damage & Attack Speed upgrades get blue (rare) rarity
+          else if (u.id === 'str' || u.id === 'aspd' || u.id === 'dmg' || u.id === 'atkspd' ||
+                   u.id.includes('damage') || u.id.includes('attack_speed') || u.id.includes('atk_speed')) {
+            card.className += ' rarity-rare';
           }
           else {
             // Default common upgrades get green rarity

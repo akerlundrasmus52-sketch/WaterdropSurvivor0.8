@@ -4284,3 +4284,42 @@
   -webkit-user-select: none;
 }
 .ui-cal-move-handle:active { cursor: grabbing; }
+
+/* ============================================================
+   LIVING BORDER SYSTEM — universal breathing dark outer border
+   Applied to all interactive UI elements that need the effect.
+   The inner UV sheen uses a pseudo-element on .living-border class.
+   ============================================================ */
+
+/* Living border animation: dark outer border that breathes like fog/shadow */
+@keyframes living-border-breathe {
+  0%   { box-shadow: 0 0 0 3px rgba(4,8,18,0.96), 0 0 8px rgba(0,0,0,0.5),  inset 0 0 0 1px rgba(150,220,255,0.08); }
+  25%  { box-shadow: 0 0 0 4px rgba(3,6,16,0.97), 0 0 10px rgba(0,0,0,0.55), inset 0 0 0 1px rgba(150,220,255,0.10); }
+  50%  { box-shadow: 0 0 0 4px rgba(2,5,15,0.98), 0 0 13px rgba(0,0,0,0.6),  inset 0 0 0 1px rgba(180,240,255,0.14); }
+  75%  { box-shadow: 0 0 0 3px rgba(4,7,18,0.96), 0 0 9px rgba(0,0,0,0.52),  inset 0 0 0 1px rgba(150,220,255,0.09); }
+  100% { box-shadow: 0 0 0 3px rgba(4,8,18,0.96), 0 0 8px rgba(0,0,0,0.5),  inset 0 0 0 1px rgba(150,220,255,0.08); }
+}
+
+/* Apply to camp header buttons */
+.camp-header-btn {
+  animation: living-border-breathe 4s ease-in-out infinite;
+}
+.camp-header-btn:hover, .camp-header-btn:active {
+  animation: none;
+}
+
+/* Apply to #super-stat-bar */
+#super-stat-bar {
+  animation: living-border-breathe 5s ease-in-out infinite;
+}
+
+/* Apply to ssb-countdown — living glow around it */
+.ssb-countdown {
+  animation: ssb-countdown-pulse 0.45s ease-out forwards, living-border-breathe 3s ease-in-out infinite;
+}
+
+/* Apply to tutorial-text wrapper */
+#tutorial-text-wrap {
+  animation: living-border-breathe 3s ease-in-out infinite;
+}
+

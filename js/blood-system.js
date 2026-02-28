@@ -9,7 +9,7 @@
   // ─── Configuration ──────────────────────────────────────────────────────────
   const MAX_BLOOD_PARTICLES = 50000;
   const GRAVITY = -0.018;
-  const GROUND_Y = 0.01; // Y position for ground stains
+  const GROUND_Y = 0.05; // Y position for ground stains (raised to prevent z-fighting with terrain)
 
   // ─── Internal State ─────────────────────────────────────────────────────────
   let _scene = null;
@@ -68,7 +68,7 @@
     });
 
     _points = new THREE.Points(_geo, _mat);
-    _points.renderOrder = 10;  // Render blood well above ground to avoid z-fighting
+    _points.renderOrder = 15;  // Render blood above ground to avoid z-fighting
     _scene.add(_points);
   }
 
