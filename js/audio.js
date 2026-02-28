@@ -63,12 +63,22 @@ function createNoise(duration) {
   return source;
 }
 
-function playSound(type) {
+/**
+ * Play a synthesised sound effect.
+ *
+ * @param {string} type   - Sound identifier (e.g. 'shoot', 'hit', 'levelup', 'waterSplash', …)
+ * @param {number} [pitch=1] - Frequency multiplier: >1 raises pitch, <1 lowers it (must be > 0)
+ * @param {number} [volume=1] - Gain scalar: 0 = mute, 1 = full (negative values are ignored)
+ */
+function playSound(type, pitch, volume) {
   if (!isSoundEnabled()) return;
   if (!audioCtx) return;
   if (audioCtx.state === 'suspended') audioCtx.resume();
 
   const now = audioCtx.currentTime;
+  // Optional pitch multiplier (>1 = higher, <1 = lower) and volume scalar (0 = mute, 1 = full)
+  const pitchMult = (typeof pitch === 'number' && pitch > 0) ? pitch : 1;
+  const volScale  = (typeof volume === 'number' && volume >= 0) ? volume : 1;
 
   if (type === 'shoot') {
     // Realistic gunshot: noise crack (high-freq transient) + bass thump
@@ -100,16 +110,16 @@ function playSound(type) {
     const noiseGain = audioCtx.createGain();
     const hp = audioCtx.createBiquadFilter();
     hp.type = 'highpass'; hp.frequency.value = 400;
-    noiseGain.gain.setValueAtTime(0.5, now);
+    noiseGain.gain.setValueAtTime(0.5 * volScale, now);
     noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
     noise.connect(hp); hp.connect(noiseGain); noiseGain.connect(audioCtx.destination);
     noise.start(now); noise.stop(now + 0.07);
     const thud = audioCtx.createOscillator();
     const thudGain = audioCtx.createGain();
     thud.type = 'sine';
-    thud.frequency.setValueAtTime(90, now);
-    thud.frequency.exponentialRampToValueAtTime(40, now + 0.05);
-    thudGain.gain.setValueAtTime(0.3, now);
+    thud.frequency.setValueAtTime(90 * pitchMult, now);
+    thud.frequency.exponentialRampToValueAtTime(40 * pitchMult, now + 0.05);
+    thudGain.gain.setValueAtTime(0.3 * volScale, now);
     thudGain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
     thud.connect(thudGain); thudGain.connect(audioCtx.destination);
     thud.start(now); thud.stop(now + 0.07);
@@ -378,6 +388,29 @@ function playSound(type) {
     noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
     noise.connect(bp); bp.connect(noiseGain); noiseGain.connect(audioCtx.destination);
     noise.start(now); noise.stop(now + 0.04);
+
+  } else if (type === 'waterSplash') {
+    // Water splash on player entering water: layered bandpass noise + low plop
+    const noise = createNoise(0.3);
+    const noiseGain = audioCtx.createGain();
+    const bp = audioCtx.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.setValueAtTime(1800, now);
+    bp.frequency.exponentialRampToValueAtTime(500, now + 0.25);
+    bp.Q.value = 1.2;
+    noiseGain.gain.setValueAtTime(0.4 * volScale, now);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+    noise.connect(bp); bp.connect(noiseGain); noiseGain.connect(audioCtx.destination);
+    noise.start(now); noise.stop(now + 0.3);
+    const plop = audioCtx.createOscillator();
+    const plopGain = audioCtx.createGain();
+    plop.type = 'sine';
+    plop.frequency.setValueAtTime(300 * pitchMult, now);
+    plop.frequency.exponentialRampToValueAtTime(80 * pitchMult, now + 0.15);
+    plopGain.gain.setValueAtTime(0.25 * volScale, now);
+    plopGain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+    plop.connect(plopGain); plopGain.connect(audioCtx.destination);
+    plop.start(now); plop.stop(now + 0.2);
   }
 }
 // Drone humming sound - continuous

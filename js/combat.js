@@ -21,10 +21,11 @@ function calculateArmorReduction(amount, armorPercent) {
  *
  * @param {number} amount        - Raw incoming damage
  * @param {number} armorFraction - Armor as a fraction (0.0–1.0)
- * @returns {number} Reduced damage
+ * @returns {number} Reduced damage (minimum 0)
  */
 function calculateEnemyArmorReduction(amount, armorFraction) {
-  return amount * (1 - armorFraction);
+  if (amount <= 0 || !isFinite(amount)) return 0; // No phantom damage from zero/negative/NaN inputs
+  return Math.max(0, amount * (1 - armorFraction));
 }
 
 window.GameCombat = {
