@@ -1,6 +1,7 @@
 // Exposes window.GamePrestige for use by main.js
 // Prestige/ascension system: ascend, skill tree, bonuses
 
+(function () {
 var ASCENSION_SKILLS = [
   { id: 'gold_rush',        name: 'Gold Rush',          maxLevel: 5,  costs: [1,2,4,8,16],    desc: '+10% gold per level' },
   { id: 'stat_boost',       name: 'Stat Boost',         maxLevel: 5,  costs: [1,2,4,8,16],    desc: '+5% all stats per level' },
@@ -74,6 +75,17 @@ function performAscension(saveData) {
     saveData.idle.totalIdleStatPoints = 0;
   }
 
+  // Reset clicker run progress (essence and upgrades reset; gems/achievements/account/wheel persist)
+  if (saveData.clicker) {
+    saveData.clicker.essence = 0;
+    saveData.clicker.clickPowerTier = 0;
+    saveData.clicker.autoClickerLevel = 0;
+  }
+  saveData.essence = 0;
+  if (saveData.shop) {
+    saveData.shop.stock = [];
+  }
+
   return {
     success: true,
     pointsEarned: pointsEarned,
@@ -141,3 +153,4 @@ window.GamePrestige = {
   purchaseSkill: purchaseSkill,
   getAscensionBonuses: getAscensionBonuses
 };
+})();

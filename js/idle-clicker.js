@@ -1,6 +1,7 @@
 // Exposes window.GameClicker for use by main.js
 // Clicker mini-game: click handler, power upgrades, auto-clicker, crits, combos
 
+(function () {
 var CLICKER_CONFIG = {
   BASE_CLICK_GOLD: 1,
   BASE_CLICK_ESSENCE: 0.1,
@@ -98,6 +99,7 @@ function processClick(saveData, ascensionBonuses) {
   var essenceEarned = Math.round(CLICKER_CONFIG.BASE_CLICK_ESSENCE * powerMult * comboMult * critMult * essenceGainMult * 100) / 100;
 
   clicker.essence = (clicker.essence || 0) + essenceEarned;
+  saveData.essence = (saveData.essence || 0) + essenceEarned;
   clicker.totalClicks = (clicker.totalClicks || 0) + 1;
   clicker.totalEssenceEarned = (clicker.totalEssenceEarned || 0) + essenceEarned;
   saveData.clicker = clicker;
@@ -162,6 +164,7 @@ function processAutoClicks(saveData, elapsedMs, ascensionBonuses) {
   var essenceEarned = Math.round(CLICKER_CONFIG.BASE_CLICK_ESSENCE * powerMult * essenceMult * clicks * 100) / 100;
 
   clicker.essence = (clicker.essence || 0) + essenceEarned;
+  saveData.essence = (saveData.essence || 0) + essenceEarned;
   clicker.totalEssenceEarned = (clicker.totalEssenceEarned || 0) + essenceEarned;
   saveData.clicker = clicker;
 
@@ -179,3 +182,4 @@ window.GameClicker = {
   upgradeAutoClicker: upgradeAutoClicker,
   processAutoClicks: processAutoClicks
 };
+})();

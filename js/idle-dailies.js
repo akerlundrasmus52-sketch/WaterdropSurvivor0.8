@@ -1,6 +1,7 @@
 // Exposes window.GameDailies for use by main.js
 // Daily login tracker and daily quest system
 
+(function () {
 var DAILY_LOGIN_REWARDS = [
   { day: 1, gold: 50,  item: null },
   { day: 2, gold: 100, item: null },
@@ -41,21 +42,33 @@ function shouldResetDailies(saveData) {
   return (now - (dailies.lastDailyReset || 0)) >= MS_PER_DAY;
 }
 
+function _isSameDay(ts1, ts2) {
+  var d1 = new Date(ts1), d2 = new Date(ts2);
+  return d1.getFullYear() === d2.getFullYear() &&
+         d1.getMonth() === d2.getMonth() &&
+         d1.getDate() === d2.getDate();
+}
+
 function checkDailyLogin(saveData) {
   var dailies = saveData.dailies || getDailiesDefaults();
   var now = Date.now();
 
   var lastLogin = dailies.lastLoginDate || 0;
-  var elapsed = now - lastLogin;
 
-  // Already logged in today
-  if (elapsed < MS_PER_DAY) {
+  // Already logged in today (calendar day)
+  if (lastLogin > 0 && _isSameDay(lastLogin, now)) {
     return { alreadyClaimed: true };
   }
 
-  // Missed a day → reset streak
-  if (elapsed >= MS_PER_DAY * 2) {
-    dailies.loginStreak = 0;
+  // Missed a day → reset streak (more than 1 calendar day has passed)
+  if (lastLogin > 0) {
+    var d1 = new Date(lastLogin), d2 = new Date(now);
+    d1.setHours(0, 0, 0, 0);
+    d2.setHours(0, 0, 0, 0);
+    var daysDiff = Math.round((d2 - d1) / (24 * 60 * 60 * 1000));
+    if (daysDiff >= 2) {
+      dailies.loginStreak = 0;
+    }
   }
 
   dailies.loginStreak = (dailies.loginStreak || 0) + 1;
@@ -172,3 +185,4 @@ window.GameDailies = {
   updateDailyQuestProgress: updateDailyQuestProgress,
   checkDailyQuestCompletion: checkDailyQuestCompletion
 };
+})();

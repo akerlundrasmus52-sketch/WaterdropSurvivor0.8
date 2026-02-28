@@ -1,6 +1,7 @@
 // Exposes window.GameAchievements for use by main.js
 // Achievement system with permanent stat bonuses
 
+(function () {
 var ACHIEVEMENTS = [
   // Combat
   { id: 'combat_1',    name: 'First Blood',      description: 'Kill 100 enemies',      category: 'Combat',    requirement: { stat: 'totalKills', value: 100 },   bonus: { type: 'damage', pct: 1 } },
@@ -45,7 +46,7 @@ function getAchievementsDefaults() {
 
 function checkAchievements(saveData) {
   var ach = saveData.achievements || getAchievementsDefaults();
-  var stats = saveData.stats || {};
+  var stats = saveData.statistics || saveData.stats || {};
   var newly = [];
 
   for (var i = 0; i < ACHIEVEMENTS.length; i++) {
@@ -88,3 +89,4 @@ window.GameAchievements = {
   checkAchievements: checkAchievements,
   getAchievementBonuses: getAchievementBonuses
 };
+})();
