@@ -12,7 +12,7 @@ window.GameAccountCSS = (function () {
     '.acc-edit-row{display:flex;gap:6px;margin-top:12px;justify-content:center;flex-wrap:wrap}',
     '.acc-name-input,.acc-icon-input{padding:4px 8px;background:#2a2a2a;border:1px solid #555;color:#fff;border-radius:4px}',
     '.acc-icon-input{width:50px;text-align:center}.acc-save-btn{padding:4px 14px;background:#4a90d9;color:#fff;border:none;border-radius:4px;cursor:pointer}',
-    '.acc-save-btn:hover{background:#357abd}
+    '.acc-save-btn:hover{background:#357abd}',
     '.acc-xp-bar-wrap{position:relative;background:#333;border-radius:20px;height:22px;margin:10px 0;overflow:hidden}',
     '.acc-xp-bar{height:100%;background:linear-gradient(90deg,#f0c040,#e07820,#f0c040);background-size:200% 100%;animation:xpShimmer 2s linear infinite;border-radius:20px;transition:width .4s}',
     '@keyframes xpShimmer{0%{background-position:0% 50%}100%{background-position:200% 50%}}',
@@ -69,6 +69,8 @@ window.GameAccountCSS = (function () {
     '.wheel-history{text-align:left;margin-top:10px}.wheel-history h4{margin:0 0 4px;font-size:13px;color:#aaa}',
     '.wheel-history ul{list-style:none;padding:6px;margin:0;font-size:12px;max-height:160px;overflow-y:auto;background:#111;border-radius:4px}',
     '.wheel-history li{padding:2px 0;border-bottom:1px solid #222;color:#bbb}.wh-ts{color:#777}.wheel-total{color:#666;font-size:11px;margin-top:6px}',
+    '@keyframes wheelSpin{0%{transform:rotate(0deg)}100%{transform:rotate(1440deg)}}',
+    '.wheel-svg-spinning{animation:wheelSpin 1.5s cubic-bezier(0.17,0.67,0.12,1.0) forwards;transform-origin:center;transform-box:fill-box}',
     '.stats-panel h3{margin:0 0 10px;font-size:16px}.stats-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}',
     '.stat-card{display:flex;align-items:center;gap:8px;background:#1e1e1e;border:1px solid #333;border-radius:6px;padding:8px 10px}',
     '.stat-icon{font-size:20px;min-width:24px;text-align:center}.stat-name{font-size:11px;color:#999}.stat-value{font-size:15px;font-weight:bold;color:#fff}'
