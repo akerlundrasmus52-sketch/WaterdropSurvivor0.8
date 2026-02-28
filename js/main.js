@@ -12051,6 +12051,9 @@
     }
 
     function updateCampScreen() {
+      // Hide combat HUD (Rage Bar + Special Attacks) — not visible in camp
+      if (window.GameRageCombat) window.GameRageCombat.setCombatHUDVisible(false);
+
       // First-run tutorial hook: fire after current call stack (by then camp-screen is visible)
       // Update action button label based on game state
       const campActionBtn = document.getElementById('camp-action-btn');
@@ -15603,6 +15606,8 @@
       updateGoldDisplays();
       setGameActive(false);
       setGamePaused(true);
+      // Hide combat HUD (Rage Bar + Special Attacks) — not visible in main menu
+      if (window.GameRageCombat) window.GameRageCombat.setCombatHUDVisible(false);
     }
     
     function hideMainMenu() {
@@ -15751,6 +15756,9 @@
       gameStartTime = Date.now();
       console.log('[Countdown] Game started - isPaused:', isPaused, 'isGameActive:', isGameActive);
 
+      // Show combat HUD (Rage Bar + Special Attacks) now that gameplay is active
+      if (window.GameRageCombat) window.GameRageCombat.setCombatHUDVisible(true);
+
       // Remove camp-mode from chat tab
       const chatTab = document.getElementById('ai-chat-tab');
       if (chatTab) chatTab.classList.remove('camp-mode');
@@ -15816,7 +15824,7 @@
       panel.style.cssText = 'background:linear-gradient(135deg,#0d0d1a,#1a0d2e);border:3px solid #FF4400;border-radius:14px;padding:20px;max-width:min(96vw,620px);width:100%;color:#fff;font-family:"Bangers",cursive;max-height:90vh;overflow-y:auto;box-shadow:0 0 40px rgba(255,68,0,0.5);';
 
       const pts = saveData.specialAtkPoints || 0;
-      panel.innerHTML = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;"><div style="font-size:26px;letter-spacing:2px;color:#FF4400;">⚡ SPECIAL ATTACKS</div><div style="font-size:16px;color:#FFD700;">SAP: ${pts}</div></div><div style="font-size:12px;color:#aaa;font-family:Arial,sans-serif;margin-bottom:14px;">Unlock and upgrade powerful special attacks. Earn Special Atk Points (SAP) from kills and quests. Equip up to 4 attacks using the loadout button in-game.</div>`;
+      panel.innerHTML = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;"><div style="font-size:26px;letter-spacing:2px;color:#FF4400;">⚡ SPECIAL ATTACKS</div><div style="font-size:16px;color:#FFD700;">SAP: ${pts}</div></div><div style="font-size:12px;color:#aaa;font-family:'M PLUS Rounded 1c',sans-serif;margin-bottom:14px;">Unlock and upgrade powerful special attacks. Earn Special Atk Points (SAP) from kills and quests. Equip up to 4 attacks using the loadout button in-game.</div>`;
 
       // Close button
       const closeBtn = document.createElement('button');
@@ -16725,12 +16733,16 @@
           try { updateCampScreen(); } catch(e) { console.error('[Camp] updateCampScreen error:', e); }
           // Refresh special attack loadout buttons for the new run
           if (window.GameRageCombat) window.GameRageCombat.refreshLoadout(saveData);
-          // Safety retry: if CampWorld didn't activate on first call (e.g. scene build
-          // threw on the first attempt), retry after a short delay so the 3D camp
-          // shows rather than falling back to the static 2D menu.
+          // Safety retries: if CampWorld didn't activate (e.g. scene build threw), retry
+          // with increasing delays so the 3D camp shows reliably rather than falling back.
           if (window.CampWorld && !window.CampWorld.isActive) {
             setTimeout(() => {
-              try { updateCampScreen(); } catch(e) { console.error('[Camp] Retry updateCampScreen error:', e); }
+              try { updateCampScreen(); } catch(e) { console.error('[Camp] Retry 1 updateCampScreen error:', e); }
+              if (window.CampWorld && !window.CampWorld.isActive) {
+                setTimeout(() => {
+                  try { updateCampScreen(); } catch(e) { console.error('[Camp] Retry 2 updateCampScreen error:', e); }
+                }, CAMP_ACTIVATION_RETRY_DELAY_MS * 4);
+              }
             }, CAMP_ACTIVATION_RETRY_DELAY_MS);
           }
         }, 0);
@@ -17037,9 +17049,12 @@
             type = 16;
           }
         } else {
-          // Early game: occasionally include Daddy Longlegs for variety (3-hit easy enemy)
-          if (playerStats.lvl >= 2 && Math.random() < 0.20) {
-            type = 15;
+          // Early game: reliably include Daddy Longlegs (spider, 3-hit kill) and the
+          // yellow easy enemy (type 7 — visually distinct, manageable at low levels)
+          if (Math.random() < 0.30) {
+            type = 15; // Daddy Longlegs — tiny body, huge legs, 3 bullets to kill
+          } else if (Math.random() < 0.25) {
+            type = 7;  // Yellow easy enemy — gold colour, low HP at early-game scaling
           }
         }
         
@@ -19925,6 +19940,12 @@
             // 3D camp world scene is pre-warmed at startup — this is now fast
             setTimeout(() => {
               try { updateCampScreen(); } catch(e) { console.error('[Camp] updateCampScreen error:', e); }
+              // Safety retries for reliable 3D camp activation
+              if (window.CampWorld && !window.CampWorld.isActive) {
+                setTimeout(() => {
+                  try { updateCampScreen(); } catch(e) { console.error('[Camp] Retry updateCampScreen error:', e); }
+                }, 80);
+              }
             }, 0);
           }
         } else if (step === 'unlock_dash') {
@@ -20013,6 +20034,8 @@
       setGameOver(true);
       setGamePaused(true);
       setGameActive(false);
+      // Hide combat HUD (Rage Bar + Special Attacks) on death/game over
+      if (window.GameRageCombat) window.GameRageCombat.setCombatHUDVisible(false);
       // Close farmer speech bubble if open
       const farmerBubble = document.getElementById('farmer-speech-bubble');
       if (farmerBubble) farmerBubble.style.display = 'none';

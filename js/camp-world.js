@@ -1423,7 +1423,10 @@
       const grp = _buildingMeshes[def.id];
       if (!grp) continue;
       const bd = _saveData.campBuildings && _saveData.campBuildings[def.id];
-      const isUnlocked = bd ? (bd.unlocked || bd.level > 0) : false;
+      // Only show a building when it has been explicitly unlocked (unlocked === true).
+      // Checking level > 0 alone is insufficient — a building with level > 0 from a
+      // legacy save should remain hidden until the quest that unlocks it is completed.
+      const isUnlocked = bd ? (bd.unlocked === true) : false;
       grp.visible = isUnlocked;
     }
     // Quest Hall is always visible (core building)
