@@ -4419,7 +4419,8 @@
   border-bottom: 2px solid rgba(255,215,0,0.6);
   box-shadow: 0 4px 30px rgba(0,0,0,0.8), 0 0 60px rgba(255,215,0,0.15);
   transform: translateY(-100%);
-  pointer-events: none;
+  pointer-events: auto;
+  cursor: pointer;
 }
 #account-levelup-curtain.curtain-enter {
   animation: curtain-drop 0.5s cubic-bezier(0.22,1,0.36,1) forwards;

@@ -1507,18 +1507,21 @@
     // Remove blueprint mode immediately
     _setBlueprintMode(grp, false);
 
-    // Flash effect: scale up from 0 → 1.05 → 1.0 over ~0.7 seconds
+    // Flash effect: scale up from 0 → 1.07 → 1.0 over ~0.7 seconds (ease-out with slight overshoot)
+    const ANIM_DURATION_MS      = 700;
+    const OVERSHOOT_THRESHOLD   = 0.85; // fraction of duration at which peak overshoot is reached
+    const OVERSHOOT_PEAK_SCALE  = 1.07; // maximum scale during overshoot
+    const OVERSHOOT_AMOUNT      = OVERSHOOT_PEAK_SCALE - 1.0; // how much past 1.0 we go
+
     const startTime = performance.now();
-    const duration = 700;
     grp.scale.set(0.01, 0.01, 0.01);
 
     function animStep() {
       const elapsed = performance.now() - startTime;
-      const t = Math.min(elapsed / duration, 1.0);
-      // Ease out with slight overshoot
-      const scale = t < 0.85
-        ? 1.07 * (t / 0.85)
-        : 1.07 - 0.07 * ((t - 0.85) / 0.15);
+      const t = Math.min(elapsed / ANIM_DURATION_MS, 1.0);
+      const scale = t < OVERSHOOT_THRESHOLD
+        ? OVERSHOOT_PEAK_SCALE * (t / OVERSHOOT_THRESHOLD)
+        : OVERSHOOT_PEAK_SCALE - OVERSHOOT_AMOUNT * ((t - OVERSHOOT_THRESHOLD) / (1.0 - OVERSHOOT_THRESHOLD));
       grp.scale.set(scale, scale, scale);
       if (t < 1.0) {
         requestAnimationFrame(animStep);

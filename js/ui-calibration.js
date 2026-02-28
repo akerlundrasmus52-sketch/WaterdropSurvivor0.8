@@ -17,6 +17,7 @@
   const USER_DEFAULT_KEY = 'wd_hud_layout_user_default_v2';
   const MIN_W = 40;
   const MIN_H = 20;
+  const DRAG_THRESHOLD = 6; // px movement before a drag is recognised (prevents accidental drags on click)
 
   // HUD elements that can be repositioned / resized.
   // Each entry specifies:
@@ -194,6 +195,7 @@
     saveBtn.addEventListener('click', _saveAndExit);
 
     const saveDefaultBtn = document.createElement('button');
+    saveDefaultBtn.id = 'ui-cal-save-default-btn';
     saveDefaultBtn.className = 'ui-cal-btn ui-cal-save-btn';
     saveDefaultBtn.textContent = '⭐ Save as Default';
     saveDefaultBtn.title = 'Save current layout as your personal default (Reset will restore this)';
@@ -253,7 +255,7 @@
       const pt = _getPointer(e);
       const dx = pt.x - startX;
       const dy = pt.y - startY;
-      if (!dragging && Math.abs(dx) + Math.abs(dy) > 6) dragging = true;
+      if (!dragging && Math.abs(dx) + Math.abs(dy) > DRAG_THRESHOLD) dragging = true;
       if (!dragging) return;
       tabBtn.style.left = Math.max(0, startLeft + dx) + 'px';
       tabBtn.style.top  = Math.max(0, startTop  + dy) + 'px';
@@ -500,7 +502,7 @@
       console.warn('[UICalibration] Could not save default:', e);
     }
     // Visual feedback
-    const saveDefaultBtn = document.querySelector('#ui-cal-panel .ui-cal-save-btn:nth-child(2)');
+    const saveDefaultBtn = document.getElementById('ui-cal-save-default-btn');
     if (saveDefaultBtn) {
       const orig = saveDefaultBtn.textContent;
       saveDefaultBtn.textContent = '✅ Saved!';

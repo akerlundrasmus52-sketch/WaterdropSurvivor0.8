@@ -11004,27 +11004,39 @@
 
     // ── Account Level-Up Curtain Animation ──────────────────────
     let _curtainTimer = null;
+    let _curtainDismissHandler = null;
     function showAccountLevelUpCurtain(newLevel, rewardLabel) {
       const curtain = document.getElementById('account-levelup-curtain');
       if (!curtain) return;
       // Clear any in-progress curtain
       if (_curtainTimer) { clearTimeout(_curtainTimer); _curtainTimer = null; }
+      if (_curtainDismissHandler) {
+        curtain.removeEventListener('click', _curtainDismissHandler);
+        _curtainDismissHandler = null;
+      }
       curtain.classList.remove('curtain-enter', 'curtain-exit');
       curtain.innerHTML = [
         '<div class="curtain-icon">🏆</div>',
         '<div class="curtain-levelup-text">LEVEL UP!</div>',
         `<div class="curtain-level-num">Level ${newLevel}</div>`,
-        `<div class="curtain-reward-text">${rewardLabel}</div>`
+        `<div class="curtain-reward-text">${rewardLabel} · Tap to dismiss</div>`
       ].join('');
       // Force reflow so animation restarts
       void curtain.offsetWidth;
       curtain.classList.add('curtain-enter');
-      // Auto-dismiss after 3.5 seconds
-      _curtainTimer = setTimeout(() => {
+
+      function dismissCurtain() {
+        if (_curtainTimer) { clearTimeout(_curtainTimer); _curtainTimer = null; }
         curtain.classList.remove('curtain-enter');
         curtain.classList.add('curtain-exit');
-        _curtainTimer = null;
-      }, 3500);
+        curtain.removeEventListener('click', dismissCurtain);
+        _curtainDismissHandler = null;
+      }
+      _curtainDismissHandler = dismissCurtain;
+      curtain.addEventListener('click', dismissCurtain);
+
+      // Auto-dismiss after 3.5 seconds
+      _curtainTimer = setTimeout(dismissCurtain, 3500);
     }
 
     function updateAccountLevelDisplay() {
@@ -15942,6 +15954,17 @@
       if (!window.GameRageCombat) return;
       const allAttacks = window.GameRageCombat.ALL_SPECIAL_ATTACKS;
 
+      // Pre-compute branch groupings once (allAttacks is static)
+      const branchMap = {};
+      for (const sa of allAttacks) {
+        const b = sa.branch || 'start';
+        if (!branchMap[b]) branchMap[b] = [];
+        branchMap[b].push(sa);
+      }
+      for (const b of Object.keys(branchMap)) {
+        branchMap[b].sort((a, b2) => (a.branchOrder || 0) - (b2.branchOrder || 0));
+      }
+
       // Remove any existing panel before creating a new one
       const existing = document.getElementById('special-attacks-panel-overlay');
       if (existing && existing.parentNode) existing.parentNode.removeChild(existing);
@@ -15983,7 +16006,7 @@
         const isUnlocked = currentLvl > 0;
 
         // Availability: starting attacks always available; others need branch predecessor
-        const sameBranch = allAttacks.filter(a => a.branch === sa.branch).sort((a,b) => a.branchOrder - b.branchOrder);
+        const sameBranch = branchMap[sa.branch || 'start'] || [];
         const prevInBranch = sameBranch.find(a => a.branchOrder === sa.branchOrder - 1);
         const prevNode = prevInBranch ? ((saveData.skillTree || {})[prevInBranch.skillTreeId] || { level: 0 }) : null;
         const isAvailable = sa.isStartingAttack || (knifeUnlocked && (!prevInBranch || prevNode.level > 0));
@@ -16048,7 +16071,7 @@
       startLabel.style.cssText = 'font-size:12px;color:#aaa;letter-spacing:2px;margin-bottom:8px;text-transform:uppercase;';
       startLabel.textContent = '— Starting Attack —';
       startSection.appendChild(startLabel);
-      const startingAttacks = allAttacks.filter(a => a.branch === 'start');
+      const startingAttacks = branchMap['start'] || [];
       startingAttacks.forEach(sa => startSection.appendChild(renderAttackNode(sa)));
       panel.appendChild(startSection);
 
@@ -16076,7 +16099,7 @@
           row.appendChild(rowLabel);
           const nodesRow = document.createElement('div');
           nodesRow.style.cssText = 'display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;';
-          const branchAttacks = allAttacks.filter(a => a.branch === branchId).sort((a,b) => a.branchOrder - b.branchOrder);
+          const branchAttacks = branchMap[branchId] || [];
           branchAttacks.forEach((sa, i) => {
             if (i > 0) {
               const arrow = document.createElement('div');
