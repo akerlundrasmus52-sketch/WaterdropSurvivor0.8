@@ -6307,6 +6307,7 @@
         tempShop: { level: 0, maxLevel: 10, unlocked: false }, // Unlock via quest
         achievementBuilding: { level: 0, maxLevel: 1, unlocked: false }, // Unlock via quest11_findAllLandmarks
         accountBuilding: { level: 1, maxLevel: 1, unlocked: true }, // Always unlocked — account stats
+        idleMenu: { level: 1, maxLevel: 1, unlocked: true }, // Always unlocked — idle progression panel
         characterVisuals: { level: 0, maxLevel: 5, unlocked: false }, // Unlock via quest
         codex: { level: 0, maxLevel: 5, unlocked: false }, // Unlock via quest
         // Legacy buildings (for compatibility)
@@ -6571,6 +6572,13 @@
           if (settings.soundEnabled !== undefined) gameSettings.soundEnabled = settings.soundEnabled;
           if (settings.musicEnabled !== undefined) gameSettings.musicEnabled = settings.musicEnabled;
           if (settings.graphicsQuality) gameSettings.graphicsQuality = settings.graphicsQuality;
+        } else {
+          // No saved settings — auto-detect best control type.
+          // Touch events + no fine pointer = mobile/tablet → 'touch' (on-screen joystick).
+          // Everything else (desktop, laptop) → 'keyboard' so WASD works immediately.
+          const isTouchOnly = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+          const hasFinePointer = window.matchMedia?.('(pointer: fine)').matches ?? false;
+          gameSettings.controlType = (isTouchOnly && !hasFinePointer) ? 'touch' : 'keyboard';
         }
       } catch (e) {
         console.error('Failed to load settings:', e);
@@ -6677,6 +6685,35 @@
     // Alias so Achievement Hall button can call a named function
     function renderAchievementsContent(containerEl) {
       updateAchievementsScreen();
+      // Also render idle achievements panel (from idle-achievements.js) if available
+      if (containerEl && window.GameAchievements) {
+        let idleAchWrap = containerEl.querySelector('#idle-achievements-wrap');
+        if (!idleAchWrap) {
+          idleAchWrap = document.createElement('div');
+          idleAchWrap.id = 'idle-achievements-wrap';
+          idleAchWrap.style.cssText = 'margin-top:18px;border-top:2px solid rgba(255,215,0,0.3);padding-top:14px;';
+          containerEl.appendChild(idleAchWrap);
+        }
+        // Use idle-bootstrap's internal render if available, otherwise basic display
+        if (typeof window.GameIdleBootstrap !== 'undefined' && window.GameState && window.GameState.saveData) {
+          var GA = window.GameAchievements;
+          var sd = window.GameState.saveData;
+          var ach = sd.achievements || GA.getAchievementsDefaults();
+          var defs = GA.ACHIEVEMENTS;
+          if (defs && defs.length) {
+            var h = '<h3 style="font-family:\'Bangers\',cursive;color:#FFD700;font-size:1.4em;margin:0 0 8px;letter-spacing:1px;">⚙️ IDLE ACHIEVEMENTS</h3>';
+            defs.forEach(function(def) {
+              var unlocked = ach.unlocked && !!ach.unlocked[def.id];
+              h += '<div style="padding:6px 10px;margin:4px 0;border-radius:6px;font-size:13px;' +
+                (unlocked ? 'background:rgba(255,215,0,0.1);border:2px solid rgba(255,215,0,0.4);color:#FFD700;'
+                          : 'background:rgba(0,0,0,0.2);border:1px solid rgba(255,215,0,0.1);color:#666;') + '">' +
+                (unlocked ? '✅ ' : '🔒 ') + '<b>' + def.name + '</b> — ' + def.description +
+                ' <span style="color:#FFD700;">→ +' + def.bonus.pct + '% ' + def.bonus.type + '</span></div>';
+            });
+            idleAchWrap.innerHTML = h;
+          }
+        }
+      }
     }
 
     function updateAchievementBadge(count) {
@@ -8092,6 +8129,16 @@
         maxCost: 0,
         isFree: true,
         isCore: true,
+        bonus: (level) => ({})
+      },
+      idleMenu: {
+        name: 'Idle Progression',
+        icon: '⚙️',
+        description: 'Manage your idle gold mine, fountain, expeditions, prestige, daily rewards, gems, shop and lucky wheel.',
+        baseCost: 0,
+        costMultiplier: 0,
+        maxCost: 0,
+        isFree: true,
         bonus: (level) => ({})
       },
       characterVisuals: {
@@ -10339,6 +10386,8 @@
       document.getElementById('camp-sleep-section').style.display = 'none';
       document.getElementById('camp-training-section').style.display = 'none';
       document.getElementById('camp-passive-section').style.display = 'none';
+      const campIdleSA = document.getElementById('camp-idle-section');
+      if (campIdleSA) campIdleSA.style.display = 'none';
       const accountSection = document.getElementById('camp-account-section');
       if (accountSection) {
         accountSection.style.display = 'block';
@@ -10347,6 +10396,25 @@
       // Progress quest if relevant
       if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest15_accountVisit') {
         progressTutorialQuest('quest15_accountVisit', true);
+      }
+    }
+
+    // Show the Idle Progression section within the camp screen
+    function showIdleSection() {
+      const campScreen = document.getElementById('camp-screen');
+      campScreen.classList.add('camp-subsection-active');
+      document.getElementById('camp-buildings-section').style.display = 'none';
+      document.getElementById('camp-skills-section').style.display = 'none';
+      document.getElementById('camp-sleep-section').style.display = 'none';
+      document.getElementById('camp-training-section').style.display = 'none';
+      document.getElementById('camp-passive-section').style.display = 'none';
+      const accountSection = document.getElementById('camp-account-section');
+      if (accountSection) accountSection.style.display = 'none';
+      const idleSection = document.getElementById('camp-idle-section');
+      if (idleSection) {
+        idleSection.style.display = 'block';
+        // Refresh the active idle panel
+        if (window.GameIdleBootstrap) window.GameIdleBootstrap.refreshPanel();
       }
     }
 
@@ -10904,6 +10972,14 @@
           ⚔️ Best Run Kills: <span style="color:#e74c3c;font-weight:bold;">${bestKills}</span>
         </div>
       `;
+
+      // Append GameAccount profile/progression panel (from idle-account.js) if available
+      if (window.GameAccount && window.GameAccount.renderAccountPanel) {
+        const accPanelWrap = document.createElement('div');
+        accPanelWrap.style.cssText = 'margin-top:18px;border-top:2px solid rgba(255,215,0,0.3);padding-top:14px;';
+        content.appendChild(accPanelWrap);
+        window.GameAccount.renderAccountPanel(saveData, accPanelWrap);
+      }
     }
 
     function updateCampScreen() {
@@ -11161,6 +11237,13 @@
                 buildingCard.onclick = () => {
                   playSound('waterdrop');
                   showAccountSection();
+                };
+                buildingCard.style.cursor = 'pointer';
+              } else if (buildingId === 'idleMenu') {
+                // Open Idle Progression section
+                buildingCard.onclick = () => {
+                  playSound('waterdrop');
+                  showIdleSection();
                 };
                 buildingCard.style.cursor = 'pointer';
               } else if (buildingId === 'characterVisuals') {
@@ -14475,6 +14558,8 @@
         document.getElementById('camp-training-section').style.display = 'none';
         const campAccountSection = document.getElementById('camp-account-section');
         if (campAccountSection) campAccountSection.style.display = 'none';
+        const campIdleSection = document.getElementById('camp-idle-section');
+        if (campIdleSection) campIdleSection.style.display = 'none';
         document.getElementById('camp-buildings-tab').style.background = '#5A3A31';
         document.getElementById('camp-skills-tab').style.background = '#3a3a3a';
         document.getElementById('camp-sleep-tab').style.background = '#3a3a3a';
@@ -14808,6 +14893,8 @@
         document.getElementById('camp-passive-section').style.display = 'none';
         const campAccountSection = document.getElementById('camp-account-section');
         if (campAccountSection) campAccountSection.style.display = 'none';
+        const campIdleSection2 = document.getElementById('camp-idle-section');
+        if (campIdleSection2) campIdleSection2.style.display = 'none';
         document.getElementById('camp-buildings-tab').style.background = '#5A3A31';
         document.getElementById('camp-skills-tab').style.background = '#3a3a3a';
         document.getElementById('camp-sleep-tab').style.background = '#3a3a3a';
@@ -14825,6 +14912,8 @@
         document.getElementById('camp-passive-section').style.display = 'none';
         const campAccountSection = document.getElementById('camp-account-section');
         if (campAccountSection) campAccountSection.style.display = 'none';
+        const campIdleSS = document.getElementById('camp-idle-section');
+        if (campIdleSS) campIdleSS.style.display = 'none';
         document.getElementById('camp-buildings-tab').style.background = '#3a3a3a';
         document.getElementById('camp-skills-tab').style.background = '#5A3A31';
         document.getElementById('camp-sleep-tab').style.background = '#3a3a3a';
@@ -14842,6 +14931,8 @@
         document.getElementById('camp-passive-section').style.display = 'block';
         const campAccountSection = document.getElementById('camp-account-section');
         if (campAccountSection) campAccountSection.style.display = 'none';
+        const campIdleSP = document.getElementById('camp-idle-section');
+        if (campIdleSP) campIdleSP.style.display = 'none';
         document.getElementById('camp-buildings-tab').style.background = '#3a3a3a';
         document.getElementById('camp-skills-tab').style.background = '#3a3a3a';
         document.getElementById('camp-sleep-tab').style.background = '#3a3a3a';
@@ -14860,6 +14951,8 @@
         document.getElementById('camp-passive-section').style.display = 'none';
         const campAccountSection = document.getElementById('camp-account-section');
         if (campAccountSection) campAccountSection.style.display = 'none';
+        const campIdleSL = document.getElementById('camp-idle-section');
+        if (campIdleSL) campIdleSL.style.display = 'none';
         document.getElementById('camp-buildings-tab').style.background = '#3a3a3a';
         document.getElementById('camp-skills-tab').style.background = '#3a3a3a';
         document.getElementById('camp-sleep-tab').style.background = '#5A3A31';
@@ -14877,6 +14970,8 @@
         document.getElementById('camp-passive-section').style.display = 'none';
         const campAccountSection = document.getElementById('camp-account-section');
         if (campAccountSection) campAccountSection.style.display = 'none';
+        const campIdleST = document.getElementById('camp-idle-section');
+        if (campIdleST) campIdleST.style.display = 'none';
         document.getElementById('camp-buildings-tab').style.background = '#3a3a3a';
         document.getElementById('camp-skills-tab').style.background = '#3a3a3a';
         document.getElementById('camp-sleep-tab').style.background = '#3a3a3a';
