@@ -3249,6 +3249,13 @@
       overflow-y: auto;
     }
 
+    /* Hide game HUD layer when 3D camp is active to prevent black bar artifacts.
+       NOTE: Requires #ui-layer to be a sibling of #camp-screen in the DOM
+       (index.html: camp-screen @ line ~182, ui-layer @ line ~400, same parent). */
+    #camp-screen.camp-3d-mode ~ #ui-layer {
+      visibility: hidden;
+    }
+
     /* Skill nodes — taller boxes */
     .skill-node {
       min-height: 130px;

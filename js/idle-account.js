@@ -22,6 +22,21 @@ window.GameAccount = (function () {
 
   function _esc(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
+  function _deepMerge(target, source) {
+    for (var key in source) {
+      if (!Object.prototype.hasOwnProperty.call(source, key)) continue;
+      // Guard against prototype pollution
+      if (key === '__proto__' || key === 'constructor' || key === 'prototype') continue;
+      if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])
+          && target[key] && typeof target[key] === 'object' && !Array.isArray(target[key])) {
+        _deepMerge(target[key], source[key]);
+      } else {
+        target[key] = source[key];
+      }
+    }
+    return target;
+  }
+
   function getAccountDefaults() {
     return {
       accountName: 'Adventurer',
@@ -125,10 +140,13 @@ window.GameAccount = (function () {
       html += '</div>';
       // Cloud save / login section
       var isSignedIn = window.GameAuth && window.GameAuth.getCurrentUser && window.GameAuth.getCurrentUser();
+      var isConfigured = !(window.GameAuth && window.GameAuth._isPlaceholderConfig && window.GameAuth._isPlaceholderConfig());
       html += '<div style="margin-top:12px;padding-top:10px;border-top:1px solid rgba(93,173,226,0.3);text-align:center;">';
       if (isSignedIn) {
         html += '<div style="font-size:12px;color:#2ecc71;margin-bottom:6px;">✅ Signed in — cloud save active</div>';
         html += '<button class="idle-btn" id="acc-signout-btn" style="font-size:12px;padding:4px 12px;">Sign Out</button>';
+      } else if (!isConfigured) {
+        html += '<div style="font-size:12px;color:#e67e22;margin-bottom:6px;">⚠️ Cloud save not configured — playing locally</div>';
       } else {
         html += '<div style="font-size:12px;color:#aaa;margin-bottom:6px;">☁️ Sign in to sync your progress across devices</div>';
         html += '<button class="idle-btn" id="acc-signin-btn" style="font-size:12px;padding:4px 14px;">🔑 Sign In</button>';
@@ -201,7 +219,7 @@ window.GameAccount = (function () {
                   var local = window.GameState.saveData;
                   var localTs = (local.idle && local.idle.lastTickTime) || 0;
                   var cloudTs = (cloudSave.idle && cloudSave.idle.lastTickTime) || 0;
-                  if (cloudTs > localTs) Object.assign(local, cloudSave);
+                  if (cloudTs > localTs) _deepMerge(local, cloudSave);
                 }
                 renderAccountPanel(saveData, container);
               });

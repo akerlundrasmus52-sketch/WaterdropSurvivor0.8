@@ -38,10 +38,26 @@ window.GameAuth = (function () {
     document.head.appendChild(s);
   }
 
+  // ─── Detect placeholder / unconfigured Firebase config ───────────────────
+  function _isPlaceholderConfig() {
+    return FIREBASE_CONFIG.apiKey === 'YOUR_API_KEY';
+  }
+
   // ─── Firebase initialisation ─────────────────────────────────────────────
   function initAuth(callback) {
     if (_initialized) {
       if (typeof callback === 'function') callback(null, _currentUser);
+      return;
+    }
+
+    // Short-circuit immediately if the config is still placeholder values.
+    // This avoids a 10-second timeout and keeps the game playable offline.
+    if (_isPlaceholderConfig()) {
+      _initialized = true;
+      console.info('[GameAuth] Firebase config not set — cloud save unavailable, playing locally.');
+      if (typeof callback === 'function') {
+        callback(new Error('Firebase not configured — playing locally'), null);
+      }
       return;
     }
 
@@ -216,6 +232,54 @@ window.GameAuth = (function () {
       return;
     }
 
+    // If Firebase is not configured show a friendly notice instead of broken sign-in buttons.
+    if (_isPlaceholderConfig()) {
+      var noticeOverlay = document.createElement('div');
+      noticeOverlay.id = 'game-auth-overlay';
+      noticeOverlay.style.cssText = [
+        'position:fixed;top:0;left:0;width:100%;height:100%;',
+        'background:rgba(0,0,0,0.92);display:flex;align-items:center;',
+        'justify-content:center;z-index:99999;font-family:inherit;'
+      ].join('');
+
+      var noticeModal = document.createElement('div');
+      noticeModal.style.cssText = [
+        'background:linear-gradient(135deg,#1e3a5f 0%,#0d1f3a 100%);',
+        'border:5px solid #FFD700;border-radius:12px;',
+        'padding:28px 24px;max-width:360px;width:90%;text-align:center;',
+        'color:#fff;',
+        'box-shadow:0 0 40px rgba(255,215,0,0.5),inset 0 0 30px rgba(0,0,0,0.3);',
+        'font-family:inherit;'
+      ].join('');
+
+      noticeModal.innerHTML = [
+        '<div style="font-size:52px;margin-bottom:6px;">💧</div>',
+        '<h2 style="margin:0 0 4px;color:#FFD700;font-family:\'Bangers\',cursive;font-size:2em;',
+        'text-shadow:2px 2px 0 #000,-1px -1px 0 #000;letter-spacing:2px;">WATER DROP SURVIVOR</h2>',
+        '<div style="background:#fffde7;border:3px solid #000;border-radius:10px;padding:10px 14px;',
+        'color:#1a0f0a;font-size:13px;line-height:1.5;text-align:left;margin:12px 0 16px;',
+        'box-shadow:2px 2px 0 #000;">',
+        '⚠️ Cloud save not configured — playing locally.',
+        '</div>',
+        '<button id="auth-skip-btn" style="',
+        'background:linear-gradient(to bottom,#FFD700,#FFA500);color:#000;',
+        'border:3px solid #000;border-radius:6px;padding:10px 24px;',
+        'cursor:pointer;font-size:16px;font-family:\'Bangers\',cursive;',
+        'letter-spacing:1px;box-shadow:3px 3px 0 #000;">',
+        '▶ PLAY LOCALLY</button>'
+      ].join('');
+
+      noticeOverlay.appendChild(noticeModal);
+      document.body.appendChild(noticeOverlay);
+
+      document.getElementById('auth-skip-btn').addEventListener('click', function () {
+        var ov = document.getElementById('game-auth-overlay');
+        if (ov) ov.parentNode.removeChild(ov);
+        if (typeof onComplete === 'function') onComplete(null);
+      });
+      return;
+    }
+
     // Build overlay — uses the game's "welcome droplet text menu box" aesthetic
     var overlay = document.createElement('div');
     overlay.id = 'game-auth-overlay';
@@ -329,6 +393,7 @@ window.GameAuth = (function () {
     getCurrentUser: getCurrentUser,
     saveToCloud: saveToCloud,
     loadFromCloud: loadFromCloud,
-    renderAuthUI: renderAuthUI
+    renderAuthUI: renderAuthUI,
+    _isPlaceholderConfig: _isPlaceholderConfig
   };
 })();
