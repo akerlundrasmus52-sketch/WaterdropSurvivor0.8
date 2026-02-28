@@ -60,8 +60,6 @@ window.GameAccount = (function () {
       { key: 'critChance',    label: 'Crit Chance',       base: 0.1, pct: true },
       { key: 'critDmg',       label: 'Crit Multiplier',   base: 1.5 },
       { key: 'multiHitChance',label: 'Multi-Hit Chance',  base: 0,   pct: true },
-      { key: 'doubleCastChance',label:'Double Cast',      base: 0,   pct: true },
-      { key: 'extraProjectiles',label:'Extra Projectiles',base: 0 },
       { key: 'armorPenetration',label:'Armor Penetration',base: 0,   pct: true },
       { key: 'executeDamage', label: 'Execute Damage',    base: 0,   pct: true },
       { key: 'lowHpDamage',   label: 'Low HP Damage',     base: 0,   pct: true }
@@ -100,8 +98,7 @@ window.GameAccount = (function () {
       { key: 'doubleCritChance',label:'Double Crit',      base: 0,   pct: true }
     ]},
     { icon: '👻', name: 'Spiritual', stats: [
-      { key: 'lifeStealPercent',label:'Life Steal',       base: 0,   pct: true },
-      { key: 'healOnKill',    label: 'Heal on Kill',      base: 0 }
+      { key: 'lifeStealPercent',label:'Life Steal',       base: 0,   pct: true }
     ]},
     { icon: '🎒', name: 'Utility', stats: [
       { key: 'pickupRange',   label: 'Pickup Range',      base: 1.0 },
@@ -357,6 +354,8 @@ window.GameAccount = (function () {
     html += '</div></div>';
     container.innerHTML = html;
 
+    function _trySave() { try { if (window.saveSaveData) window.saveSaveData(); } catch(e) {} }
+
     // Attribute [+] button listeners
     container.querySelectorAll('.acc-attr-plus[data-attr]').forEach(function (btn) {
       btn.addEventListener('click', function () {
@@ -365,7 +364,7 @@ window.GameAccount = (function () {
         if ((acc.coreAttributePoints || 0) > 0 && (acc.coreAttributes[key] || 0) < MAX_ATTR_LEVEL) {
           acc.coreAttributes[key] = (acc.coreAttributes[key] || 0) + 1;
           acc.coreAttributePoints--;
-          if (window.GameState && window.GameState.saveData) { try { if (window.saveSaveData) window.saveSaveData(); } catch(e) {} }
+          _trySave();
           renderAccountPanel(saveData, container);
         }
       });
@@ -377,7 +376,7 @@ window.GameAccount = (function () {
         if ((acc.companionAttributePoints || 0) > 0 && (acc.companionAttributes[key] || 0) < MAX_ATTR_LEVEL) {
           acc.companionAttributes[key] = (acc.companionAttributes[key] || 0) + 1;
           acc.companionAttributePoints--;
-          if (window.GameState && window.GameState.saveData) { try { if (window.saveSaveData) window.saveSaveData(); } catch(e) {} }
+          _trySave();
           renderAccountPanel(saveData, container);
         }
       });

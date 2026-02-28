@@ -21002,7 +21002,7 @@
         playerStats.damage      = (playerStats.damage      || 1)    * (1 + mightBonus    + (lvlBonuses.damage     || 0));
         playerStats.atkSpeed    = (playerStats.atkSpeed    || 1)    * (1 + swiftnessBonus + (lvlBonuses.atkSpeed   || 0));
         playerStats.walkSpeed   = (playerStats.walkSpeed   || 25)   * (1 + agilityBonus   + (lvlBonuses.walkSpeed  || 0));
-        playerStats.armor      += fortitudeBonus * 100; // fortitude adds flat armor %
+        playerStats.armor      += fortitudeBonus * 100; // fortitude adds flat armor percentage points (armor is 0-100 scale)
         playerStats.critChance  = Math.min(0.95, (playerStats.critChance || 0.1) + lethalityBonus + (lvlBonuses.critChance || 0));
         playerStats.maxHp       = (playerStats.maxHp       || 100)  * (1 + (lvlBonuses.maxHp      || 0));
         playerStats.hp          = playerStats.maxHp;
