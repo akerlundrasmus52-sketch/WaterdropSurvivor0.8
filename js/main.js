@@ -11966,9 +11966,11 @@
           campBoard:           () => showCampBoardMenu(),
         };
         window.CampWorld.enter(renderer, saveData, campCallbacks);
-        // Mark camp-screen as 3D mode so CSS can hide the 2D building cards
-        const campScreenEl = document.getElementById('camp-screen');
-        if (campScreenEl) campScreenEl.classList.add('camp-3d-mode');
+        // Mark camp-screen as 3D mode only if CampWorld successfully activated
+        if (window.CampWorld.isActive) {
+          const campScreenEl = document.getElementById('camp-screen');
+          if (campScreenEl) campScreenEl.classList.add('camp-3d-mode');
+        }
       }
       // ──────────────────────────────────────────────────────────────────
 
@@ -19591,9 +19593,12 @@
           if (gameoverScreen) gameoverScreen.style.display = 'none';
           const campScreen = document.getElementById('camp-screen');
           if (campScreen) {
-            updateCampScreen();
             campScreen.classList.remove('camp-subsection-active');
             campScreen.style.display = 'flex';
+            // Defer heavy 3D camp world setup to next tick to prevent UI freeze
+            setTimeout(() => {
+              try { updateCampScreen(); } catch(e) { console.error('[Camp] updateCampScreen error:', e); }
+            }, 0);
           }
         } else if (step === 'unlock_dash') {
           saveData.tutorial.currentStep = 'unlock_dash';
