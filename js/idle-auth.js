@@ -216,41 +216,60 @@ window.GameAuth = (function () {
       return;
     }
 
-    // Build overlay
+    // Build overlay — uses the game's "welcome droplet text menu box" aesthetic
     var overlay = document.createElement('div');
     overlay.id = 'game-auth-overlay';
     overlay.style.cssText = [
       'position:fixed;top:0;left:0;width:100%;height:100%;',
-      'background:rgba(10,10,30,0.92);display:flex;align-items:center;',
+      'background:rgba(0,0,0,0.92);display:flex;align-items:center;',
       'justify-content:center;z-index:99999;font-family:inherit;'
     ].join('');
 
     var modal = document.createElement('div');
     modal.style.cssText = [
-      'background:#1a1a2e;border:2px solid #5DADE2;border-radius:14px;',
-      'padding:32px 28px;max-width:360px;width:90%;text-align:center;',
-      'color:#e0e0e0;box-shadow:0 8px 40px rgba(0,0,0,0.6);'
+      'background:linear-gradient(135deg,#1e3a5f 0%,#0d1f3a 100%);',
+      'border:5px solid #FFD700;border-radius:12px;',
+      'padding:28px 24px;max-width:360px;width:90%;text-align:center;',
+      'color:#fff;',
+      'box-shadow:0 0 40px rgba(255,215,0,0.5),inset 0 0 30px rgba(0,0,0,0.3);',
+      'font-family:inherit;'
     ].join('');
 
     modal.innerHTML = [
-      '<div style="font-size:48px;margin-bottom:8px;">💧</div>',
-      '<h2 style="margin:0 0 6px;color:#5DADE2;">Water Drop Survivor</h2>',
-      '<p style="color:#aaa;font-size:14px;margin:0 0 22px;">',
-      'Sign in to save your progress and sync across devices.',
-      '</p>',
+      '<div style="font-size:52px;margin-bottom:6px;">💧</div>',
+      '<h2 style="margin:0 0 4px;color:#FFD700;font-family:\'Bangers\',cursive;font-size:2em;',
+      'text-shadow:2px 2px 0 #000,-1px -1px 0 #000;letter-spacing:2px;">WATER DROP SURVIVOR</h2>',
+      // NPC speech-bubble style info text
+      '<div style="background:#fffde7;border:3px solid #000;border-radius:10px;padding:10px 14px;',
+      'color:#1a0f0a;font-size:13px;line-height:1.5;text-align:left;margin:12px 0 16px;',
+      'box-shadow:2px 2px 0 #000;position:relative;">',
+      '☁️ Sign in to save your progress and sync across devices!',
+      '</div>',
+      // Google button — keep branding, wrap in thematic style
       '<button id="auth-google-btn" style="',
-      'width:100%;padding:12px;margin-bottom:10px;border-radius:8px;',
-      'border:none;background:#4285F4;color:#fff;font-size:16px;cursor:pointer;">',
-      '🔑 Sign in with Google</button>',
+      'width:100%;padding:11px;margin-bottom:10px;border-radius:6px;',
+      'background:#fff;color:#444;font-size:15px;cursor:pointer;',
+      'border:3px solid #000;box-shadow:2px 2px 0 #000;font-weight:bold;',
+      'display:flex;align-items:center;justify-content:center;gap:8px;">',
+      '<img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" ',
+      'width="20" height="20" alt="" onerror="this.style.display=\'none\'">',
+      'Sign in with Google</button>',
+      // Apple button — keep branding
       '<button id="auth-apple-btn" style="',
-      'width:100%;padding:12px;margin-bottom:18px;border-radius:8px;',
-      'border:none;background:#222;color:#fff;font-size:16px;cursor:pointer;">',
-      ' Sign in with Apple</button>',
+      'width:100%;padding:11px;margin-bottom:16px;border-radius:6px;',
+      'background:#000;color:#fff;font-size:15px;cursor:pointer;',
+      'border:3px solid #FFD700;box-shadow:2px 2px 0 #000;font-weight:bold;',
+      'display:flex;align-items:center;justify-content:center;gap:8px;">',
+      '<span style="font-size:20px;line-height:1;"> </span>',
+      'Sign in with Apple</button>',
+      // Yellow "Play without account" OK button matching game style
       '<button id="auth-skip-btn" style="',
-      'background:transparent;border:1px solid #555;color:#aaa;',
-      'padding:8px 20px;border-radius:8px;cursor:pointer;font-size:14px;">',
-      'Play without account</button>',
-      '<div id="auth-error-msg" style="color:#e74c3c;font-size:13px;margin-top:12px;min-height:18px;"></div>'
+      'background:linear-gradient(to bottom,#FFD700,#FFA500);color:#000;',
+      'border:3px solid #000;border-radius:6px;padding:10px 24px;',
+      'cursor:pointer;font-size:16px;font-family:\'Bangers\',cursive;',
+      'letter-spacing:1px;box-shadow:3px 3px 0 #000;">',
+      '▶ PLAY WITHOUT ACCOUNT</button>',
+      '<div id="auth-error-msg" style="color:#FF4500;font-size:13px;margin-top:10px;min-height:18px;font-family:Arial,sans-serif;"></div>'
     ].join('');
 
     overlay.appendChild(modal);
@@ -267,16 +286,31 @@ window.GameAuth = (function () {
       if (typeof onComplete === 'function') onComplete(user || null);
     }
 
+    // After a successful login, persist the provider's display name into the game profile
+    function _applyProviderName(user) {
+      if (!user) return;
+      var displayName = user.displayName ||
+        (user.providerData && user.providerData[0] && user.providerData[0].displayName) ||
+        '';
+      if (displayName && window.GameAccount && window.GameState && window.GameState.saveData) {
+        window.GameAccount.setProfileName(displayName, window.GameState.saveData);
+      }
+    }
+
     document.getElementById('auth-google-btn').addEventListener('click', function () {
+      _showError('');
       signInWithGoogle(function (err, user) {
         if (err) { _showError('Google sign-in failed: ' + err.message); return; }
+        _applyProviderName(user);
         _dismiss(user);
       });
     });
 
     document.getElementById('auth-apple-btn').addEventListener('click', function () {
+      _showError('');
       signInWithApple(function (err, user) {
         if (err) { _showError('Apple sign-in failed: ' + err.message); return; }
+        _applyProviderName(user);
         _dismiss(user);
       });
     });

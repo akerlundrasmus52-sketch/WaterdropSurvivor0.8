@@ -6571,6 +6571,13 @@
           if (settings.soundEnabled !== undefined) gameSettings.soundEnabled = settings.soundEnabled;
           if (settings.musicEnabled !== undefined) gameSettings.musicEnabled = settings.musicEnabled;
           if (settings.graphicsQuality) gameSettings.graphicsQuality = settings.graphicsQuality;
+        } else {
+          // No saved settings — auto-detect best control type.
+          // Touch events + no fine pointer = mobile/tablet → 'touch' (on-screen joystick).
+          // Everything else (desktop, laptop) → 'keyboard' so WASD works immediately.
+          const isTouchOnly = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+          const hasFinePointer = window.matchMedia && window.matchMedia('(pointer: fine)').matches;
+          gameSettings.controlType = (isTouchOnly && !hasFinePointer) ? 'touch' : 'keyboard';
         }
       } catch (e) {
         console.error('Failed to load settings:', e);
