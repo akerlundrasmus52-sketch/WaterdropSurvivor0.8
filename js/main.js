@@ -18724,42 +18724,32 @@
     // Floating text fade tracking to prevent memory leaks
     let floatingTextFadeInterval = null;
     let floatingTextFadeTimeout = null;
-    
+
     function createFloatingText(text, pos) {
       // Display message in status bar instead of floating text
       const statusEl = document.getElementById('status-message');
       if (!statusEl) return;
-      
-      // Clear any existing fade interval and timeout
-      if (floatingTextFadeInterval) {
-        clearInterval(floatingTextFadeInterval);
-        floatingTextFadeInterval = null;
-      }
-      if (floatingTextFadeTimeout) {
-        clearTimeout(floatingTextFadeTimeout);
-        floatingTextFadeTimeout = null;
-      }
-      
+
+      // Cancel any pending fade
+      if (floatingTextFadeTimeout) { clearTimeout(floatingTextFadeTimeout); floatingTextFadeTimeout = null; }
+      if (floatingTextFadeInterval)  { clearInterval(floatingTextFadeInterval);  floatingTextFadeInterval  = null; }
+
       statusEl.innerText = text;
-      statusEl.style.color = '#FF4444'; // Red for important messages like mini-boss
+      statusEl.style.color = '#FF4444';
       statusEl.style.fontSize = '18px';
+      statusEl.style.transition = 'opacity 0.8s ease-out';
       statusEl.style.opacity = '1';
-      
-      // Clear after 4 seconds with fade out
+
+      // Use CSS transition for fade-out instead of setInterval (eliminates 20-fps timer)
       floatingTextFadeTimeout = setTimeout(() => {
-        let opacity = 1;
-        floatingTextFadeInterval = setInterval(() => {
-          opacity -= 0.05;
-          if (opacity <= 0) {
-            clearInterval(floatingTextFadeInterval);
-            floatingTextFadeInterval = null;
-            statusEl.innerText = '';
-            statusEl.style.opacity = '1';
-            statusEl.style.fontSize = '16px';
-          } else {
-            statusEl.style.opacity = opacity.toString();
-          }
-        }, 50);
+        floatingTextFadeTimeout = null;
+        statusEl.style.opacity = '0';
+        floatingTextFadeTimeout = setTimeout(() => {
+          floatingTextFadeTimeout = null;
+          statusEl.innerText = '';
+          statusEl.style.opacity = '1';
+          statusEl.style.fontSize = '16px';
+        }, 850); // slightly longer than the 0.8s CSS transition
       }, 4000);
     }
 
@@ -19549,12 +19539,12 @@
         card.classList.add('glass-3d');
 
         // Randomised entrance animation pool (choose one per card)
-        const _cardAnimations = [
+        const cardAnimationOptions = [
           'swooshFromTopLeft', 'swooshFromTopRight', 'swooshFromBottomLeft', 'swooshFromBottomRight',
           'cardSpinInLeft', 'cardSpinInRight', 'cardDropIn', 'cardSmokeRise',
           'cardTilePop', 'cardSpin720', 'cardVortex', 'cardCrashIn', 'cardFlipIn'
         ];
-        const chosenAnim = _cardAnimations[Math.floor(Math.random() * _cardAnimations.length)];
+        const chosenAnim = cardAnimationOptions[Math.floor(Math.random() * cardAnimationOptions.length)];
         const animDuration = chosenAnim === 'cardSpin720' ? '0.75s' : '0.55s';
 
         card.style.opacity = '0';
@@ -19750,16 +19740,35 @@
     const WATERDROP_FILL_HEIGHT = 92; // Maximum fill height in SVG units (from y=18 to y=110)
     
     let lastHudUpdateMs = 0;
+    // Cached HUD element references (filled lazily on first updateHUD call) to avoid
+    // repeated getElementById lookups on a hot 10 Hz path.
+    let _hudEls = null;
+    function _getHudEls() {
+      if (_hudEls) return _hudEls;
+      _hudEls = {
+        hpFill:        document.getElementById('hp-fill'),
+        hpText:        document.getElementById('hp-text'),
+        expFill:       document.getElementById('exp-fill'),
+        expText:       document.getElementById('exp-text'),
+        botExpFill:    document.getElementById('bottom-exp-fill'),
+        botExpText:    document.getElementById('bottom-exp-text'),
+        wdLevel:       document.getElementById('waterdrop-level-text'),
+        wdExpFill:     document.getElementById('waterdrop-exp-fill'),
+        lowHpVignette: document.getElementById('low-hp-vignette'),
+      };
+      return _hudEls;
+    }
     function updateHUD() {
       const nowMs = Date.now();
       if (nowMs - lastHudUpdateMs < 100) return; // Throttle DOM updates to max 10/sec
       lastHudUpdateMs = nowMs;
+      const h = _getHudEls();
       const hpPct = (playerStats.hp / playerStats.maxHp) * 100;
-      document.getElementById('hp-fill').style.width = `${Math.max(0, hpPct)}%`;
-      document.getElementById('hp-text').innerText = `HP: ${Math.max(0, Math.ceil(playerStats.hp))}/${playerStats.maxHp}`;
-      
+      h.hpFill.style.width = `${Math.max(0, hpPct)}%`;
+      h.hpText.innerText = `HP: ${Math.max(0, Math.ceil(playerStats.hp))}/${playerStats.maxHp}`;
+
       // FRESH: Low HP warning vignette when HP < 30%
-      const lowHpVignette = document.getElementById('low-hp-vignette');
+      const lowHpVignette = h.lowHpVignette;
       if (lowHpVignette) {
         if (hpPct < 30 && hpPct > 0) {
           // Show vignette, opacity scales with how low HP is (more intense as HP drops)
@@ -19769,25 +19778,26 @@
           lowHpVignette.style.opacity = '0';
         }
       }
-      
+
       const expPct = (playerStats.exp / playerStats.expReq) * 100;
       // Update old EXP bar (hidden but keep for compatibility)
-      document.getElementById('exp-fill').style.width = `${Math.min(100, expPct)}%`;
-      document.getElementById('exp-text').innerText = `EXP: ${Math.min(100, Math.ceil(expPct))}%`;
-      
+      if (h.expFill) h.expFill.style.width = `${Math.min(100, expPct)}%`;
+      if (h.expText) h.expText.innerText = `EXP: ${Math.min(100, Math.ceil(expPct))}%`;
+
       // Update bottom bars (EXP bar and waterdrop level display)
-      document.getElementById('bottom-exp-fill').style.width = `${Math.min(100, expPct)}%`;
-      document.getElementById('bottom-exp-text').innerText = `EXP: ${Math.min(100, Math.ceil(expPct))}%`;
-      
+      if (h.botExpFill) h.botExpFill.style.width = `${Math.min(100, expPct)}%`;
+      if (h.botExpText) h.botExpText.innerText = `EXP: ${Math.min(100, Math.ceil(expPct))}%`;
+
       // Update waterdrop level display
-      document.getElementById('waterdrop-level-text').textContent = playerStats.lvl;
-      
+      if (h.wdLevel) h.wdLevel.textContent = playerStats.lvl;
+
       // Update waterdrop EXP fill (fills from bottom to top like a thermometer)
-      const waterdropFill = document.getElementById('waterdrop-exp-fill');
-      const fillHeight = WATERDROP_FILL_HEIGHT * (expPct / 100);
-      const fillY = WATERDROP_FILL_TOP + WATERDROP_FILL_HEIGHT - fillHeight;
-      waterdropFill.setAttribute('y', fillY);
-      waterdropFill.setAttribute('height', fillHeight);
+      if (h.wdExpFill) {
+        const fillHeight = WATERDROP_FILL_HEIGHT * (expPct / 100);
+        const fillY = WATERDROP_FILL_TOP + WATERDROP_FILL_HEIGHT - fillHeight;
+        h.wdExpFill.setAttribute('y', fillY);
+        h.wdExpFill.setAttribute('height', fillHeight);
+      }
       
       // Update minimap
       updateMinimap();
@@ -20029,11 +20039,26 @@
           questDot.style.top  = `${qmapZ}%`;
           minimap.appendChild(questDot);
         } else {
-          // Quest is off-map: show arrow on minimap edge pointing toward it
+          // Quest is off-map: show arrow on minimap edge pointing toward it.
+          // Compute angle toward the quest then place the arrow element on the
+          // edge of the minimap so it visually indicates which direction to travel.
           const angle = Math.atan2(qdx, qdz);
+          // Position on the minimap boundary (50% ± offset along the edge).
+          // We clamp the arrow to the nearest edge using the dominant axis.
+          const halfW = 50; // half of the 100% coordinate space
+          const edgePad = 8; // % margin from edge
+          const sinA = Math.sin(angle);
+          const cosA = Math.cos(angle);
+          // Scale so the larger component hits the boundary (±(halfW-edgePad))
+          const scale = (halfW - edgePad) / Math.max(Math.abs(sinA), Math.abs(cosA), 0.01);
+          const edgeX = 50 + sinA * scale;
+          const edgeZ = 50 + cosA * scale;
           const arrowEl = document.createElement('div');
           arrowEl.className = 'minimap-quest-arrow';
-          arrowEl.style.transform = `rotate(${angle}rad)`;
+          arrowEl.style.position = 'absolute';
+          arrowEl.style.left = `${Math.round(edgeX)}%`;
+          arrowEl.style.top  = `${Math.round(edgeZ)}%`;
+          arrowEl.style.transform = `translate(-50%,-50%) rotate(${angle}rad)`;
           minimap.appendChild(arrowEl);
         }
       }
@@ -21102,7 +21127,7 @@
             companionHouse:      () => {},
             achievementBuilding: () => {},
             inventory:           () => {},
-            campBoard:           () => {},
+            campBoard:           () => showFastTravelMenu(),
             specialAttacks:      () => {},
             warehouse:           () => {},
             tavern:              () => {},
