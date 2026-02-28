@@ -37,6 +37,83 @@ window.GameAccount = (function () {
     return target;
   }
 
+  var CORE_ATTRS = [
+    { key: 'might',     label: 'Might',     icon: '⚔️',  desc: 'Raw attack power',    effect: '+0.2% damage',     stat: 'damage' },
+    { key: 'swiftness', label: 'Swiftness', icon: '⚡',  desc: 'Attack speed',         effect: '+0.2% atk speed',  stat: 'atkSpeed' },
+    { key: 'agility',   label: 'Agility',   icon: '🏃',  desc: 'Movement speed',       effect: '+0.2% move speed', stat: 'walkSpeed' },
+    { key: 'haste',     label: 'Haste',     icon: '⏱️',  desc: 'Cooldown reduction',   effect: '+0.2% CDR',        stat: 'cdr' },
+    { key: 'precision', label: 'Precision', icon: '🎯',  desc: 'Accuracy / Auto-aim',  effect: '+0.2% accuracy',   stat: 'accuracy' },
+    { key: 'fortitude', label: 'Fortitude', icon: '🛡️',  desc: 'Defense / Toughness',  effect: '+0.2% defense',    stat: 'armor' },
+    { key: 'lethality', label: 'Lethality', icon: '💀',  desc: 'Critical strike',      effect: '+0.2% crit',       stat: 'critChance' },
+    { key: 'potency',   label: 'Potency',   icon: '✨',  desc: 'Special attack power', effect: '+0.2% special',    stat: 'specialDmg' }
+  ];
+
+  var MAX_ATTR_LEVEL = 500;
+  var ATTR_BONUS_PER_POINT = 0.002; // 0.2% per point
+
+  var STAT_CATEGORIES = [
+    { icon: '⚔️', name: 'Combat', stats: [
+      { key: 'damage',        label: 'Damage',            base: 1.0 },
+      { key: 'atkSpeed',      label: 'Attack Speed',      base: 1.0 },
+      { key: 'strength',      label: 'Attack Power',      base: 1.0 },
+      { key: 'weaponDamage',  label: 'Weapon Damage',     base: 0 },
+      { key: 'critChance',    label: 'Crit Chance',       base: 0.1, pct: true },
+      { key: 'critDmg',       label: 'Crit Multiplier',   base: 1.5 },
+      { key: 'multiHitChance',label: 'Multi-Hit Chance',  base: 0,   pct: true },
+      { key: 'doubleCastChance',label:'Double Cast',      base: 0,   pct: true },
+      { key: 'extraProjectiles',label:'Extra Projectiles',base: 0 },
+      { key: 'armorPenetration',label:'Armor Penetration',base: 0,   pct: true },
+      { key: 'executeDamage', label: 'Execute Damage',    base: 0,   pct: true },
+      { key: 'lowHpDamage',   label: 'Low HP Damage',     base: 0,   pct: true }
+    ]},
+    { icon: '🛡️', name: 'Defensive', stats: [
+      { key: 'maxHp',         label: 'Max HP',            base: 100 },
+      { key: 'hpRegen',       label: 'HP Regen',          base: 0 },
+      { key: 'armor',         label: 'Armor',             base: 0 },
+      { key: 'damageReduction',label:'Damage Reduction',  base: 0,   pct: true },
+      { key: 'dodgeChance',   label: 'Dodge Chance',      base: 0,   pct: true },
+      { key: 'thornsPercent', label: 'Thorns',            base: 0,   pct: true },
+      { key: 'healOnKill',    label: 'Heal on Kill',      base: 0 }
+    ]},
+    { icon: '🏃', name: 'Speed & Mobility', stats: [
+      { key: 'walkSpeed',     label: 'Walk Speed',        base: 25 },
+      { key: 'speed',         label: 'Speed Multiplier',  base: 1.0 },
+      { key: 'mobilityScore', label: 'Mobility Score',    base: 1.0 },
+      { key: 'dashDistanceBonus',label:'Dash Distance',   base: 0,   pct: true },
+      { key: 'dashCooldownReduction',label:'Dash CDR',    base: 0,   pct: true }
+    ]},
+    { icon: '🔥', name: 'Elemental', stats: [
+      { key: 'fireDamage',    label: 'Fire Damage',       base: 0,   pct: true },
+      { key: 'iceDamage',     label: 'Ice Damage',        base: 0,   pct: true },
+      { key: 'lightningDamage',label:'Lightning Damage',  base: 0,   pct: true },
+      { key: 'elementalDamage',label:'Elemental Damage',  base: 0,   pct: true },
+      { key: 'burnChance',    label: 'Burn Chance',       base: 0,   pct: true },
+      { key: 'slowChance',    label: 'Slow Chance',       base: 0,   pct: true },
+      { key: 'freezeChance',  label: 'Freeze Chance',     base: 0,   pct: true },
+      { key: 'chainChance',   label: 'Chain Chance',      base: 0,   pct: true },
+      { key: 'chainCount',    label: 'Chain Count',       base: 0 },
+      { key: 'spellEchoChance',label:'Spell Echo',        base: 0,   pct: true }
+    ]},
+    { icon: '✨', name: 'Magical', stats: [
+      { key: 'elementalChain',label: 'Elemental Chain',   base: 0 },
+      { key: 'auraRange',     label: 'Aura Range',        base: 1.0 },
+      { key: 'doubleCritChance',label:'Double Crit',      base: 0,   pct: true }
+    ]},
+    { icon: '👻', name: 'Spiritual', stats: [
+      { key: 'lifeStealPercent',label:'Life Steal',       base: 0,   pct: true },
+      { key: 'healOnKill',    label: 'Heal on Kill',      base: 0 }
+    ]},
+    { icon: '🎒', name: 'Utility', stats: [
+      { key: 'pickupRange',   label: 'Pickup Range',      base: 1.0 },
+      { key: 'dropRate',      label: 'Drop Rate',         base: 1.0 },
+      { key: 'treasureHunterChance',label:'Treasure Hunter',base:0,  pct: true }
+    ]},
+    { icon: '📊', name: 'Projectile', stats: [
+      { key: 'extraProjectiles',label:'Extra Projectiles',base: 0 },
+      { key: 'doubleCastChance',label:'Double Cast Chance',base:0,   pct: true }
+    ]}
+  ];
+
   function getAccountDefaults() {
     return {
       accountName: 'Adventurer',
@@ -47,7 +124,12 @@ window.GameAccount = (function () {
       xp: 0,
       totalXP: 0,
       activityLog: [],
-      baseStats: null
+      baseStats: null,
+      coreAttributes: { might: 0, swiftness: 0, agility: 0, haste: 0, precision: 0, fortitude: 0, lethality: 0, potency: 0 },
+      coreAttributePoints: 0,
+      companionAttributes: { might: 0, swiftness: 0, agility: 0, haste: 0, precision: 0, fortitude: 0, lethality: 0, potency: 0 },
+      companionAttributePoints: 0,
+      levelStatBonuses: {}
     };
   }
 
@@ -69,13 +151,23 @@ window.GameAccount = (function () {
 
     var leveledUp = false;
     var newLevel = acc.level;
+    var levelUpRewards = [];
     while (acc.level < MAX_LEVEL && acc.xp >= getXPForLevel(acc.level)) {
       acc.xp -= getXPForLevel(acc.level);
       acc.level++;
       leveledUp = true;
       newLevel = acc.level;
+      // Award 1 core attribute point per account level-up
+      if (!acc.coreAttributes) acc.coreAttributes = { might: 0, swiftness: 0, agility: 0, haste: 0, precision: 0, fortitude: 0, lethality: 0, potency: 0 };
+      acc.coreAttributePoints = (acc.coreAttributePoints || 0) + 1;
+      // Award +0.5% to a random stat permanently
+      var randomStats = ['damage', 'atkSpeed', 'walkSpeed', 'critChance', 'maxHp', 'armor', 'hpRegen', 'pickupRange', 'dropRate', 'lifeStealPercent'];
+      var randomStat = randomStats[Math.floor(Math.random() * randomStats.length)];
+      if (!acc.levelStatBonuses) acc.levelStatBonuses = {};
+      acc.levelStatBonuses[randomStat] = (acc.levelStatBonuses[randomStat] || 0) + 0.005;
+      levelUpRewards.push({ level: newLevel, stat: randomStat });
     }
-    return { leveledUp: leveledUp, newLevel: newLevel };
+    return { leveledUp: leveledUp, newLevel: newLevel, rewards: levelUpRewards };
   }
 
   function getCurrentTitle(saveData) {
@@ -154,19 +246,93 @@ window.GameAccount = (function () {
       html += '</div>';
       html += '</div>';
     } else if (active === 1) {
-      var stats = saveData.stats || {};
-      var base = acc.baseStats || {};
-      html += '<table class="acc-stats-table"><tr><th>Stat</th><th>Base</th><th>Current</th><th>Bonus</th></tr>';
-      var slist = [
-        { key: 'hp', label: 'HP' }, { key: 'damage', label: 'Damage' }, { key: 'speed', label: 'Speed' },
-        { key: 'armor', label: 'Armor' }, { key: 'critChance', label: 'CritChance' }
-      ];
-      slist.forEach(function (s) {
-        var b = base[s.key] || 0, c = stats[s.key] || 0;
-        var diff = b > 0 ? '+' + Math.round((c - b) / b * 100) + '%' : '+' + (c - b);
-        html += '<tr><td>' + s.label + '</td><td>' + b + '</td><td>' + c + '</td><td>' + diff + '</td></tr>';
+      if (!acc.coreAttributes) acc.coreAttributes = { might: 0, swiftness: 0, agility: 0, haste: 0, precision: 0, fortitude: 0, lethality: 0, potency: 0 };
+      if (!acc.companionAttributes) acc.companionAttributes = { might: 0, swiftness: 0, agility: 0, haste: 0, precision: 0, fortitude: 0, lethality: 0, potency: 0 };
+      var coreAttrPts = acc.coreAttributePoints || 0;
+      var compAttrPts = acc.companionAttributePoints || 0;
+      var levelBonuses = acc.levelStatBonuses || {};
+
+      // Header: attribute points available
+      html += '<div class="acc-attr-pts-header">⭐ ATTRIBUTE POINTS: ' + coreAttrPts + '</div>';
+
+      // Core attributes with [+] buttons
+      html += '<div class="acc-section-title">═══ CORE ATTRIBUTES (Upgradable) ═══</div>';
+      html += '<div class="acc-attrs-list">';
+      CORE_ATTRS.forEach(function (a) {
+        var lvl = acc.coreAttributes[a.key] || 0;
+        var bonusPct = (lvl * ATTR_BONUS_PER_POINT * 100).toFixed(1);
+        var canUp = coreAttrPts > 0 && lvl < MAX_ATTR_LEVEL;
+        html += '<div class="acc-attr-row">';
+        html += '<span class="acc-attr-icon">' + a.icon + '</span>';
+        html += '<span class="acc-attr-label">' + a.label + '</span>';
+        html += '<span class="acc-attr-level">' + lvl + '/' + MAX_ATTR_LEVEL + '</span>';
+        html += '<button class="acc-attr-plus' + (canUp ? '' : ' acc-attr-plus-disabled') + '" data-attr="' + a.key + '" ' + (canUp ? '' : 'disabled') + '>[+]</button>';
+        html += '<span class="acc-attr-bonus">(+' + bonusPct + '% ' + a.effect.replace(/\+[\d.]+% /, '') + ')</span>';
+        html += '</div>';
       });
-      html += '</table>';
+      html += '</div>';
+
+      // Companion attributes
+      html += '<div class="acc-section-title" style="margin-top:10px;">═══ COMPANION ATTRIBUTES ═══</div>';
+      html += '<div class="acc-attr-pts-header" style="font-size:12px;">⭐ COMPANION POINTS: ' + compAttrPts + '</div>';
+      html += '<div class="acc-attrs-list">';
+      CORE_ATTRS.forEach(function (a) {
+        var lvl = acc.companionAttributes[a.key] || 0;
+        var bonusPct = (lvl * ATTR_BONUS_PER_POINT * 100).toFixed(1);
+        var canUp = compAttrPts > 0 && lvl < MAX_ATTR_LEVEL;
+        html += '<div class="acc-attr-row">';
+        html += '<span class="acc-attr-icon">' + a.icon + '</span>';
+        html += '<span class="acc-attr-label">' + a.label + '</span>';
+        html += '<span class="acc-attr-level">' + lvl + '/' + MAX_ATTR_LEVEL + '</span>';
+        html += '<button class="acc-attr-plus' + (canUp ? '' : ' acc-attr-plus-disabled') + '" data-companion-attr="' + a.key + '" ' + (canUp ? '' : 'disabled') + '>[+]</button>';
+        html += '<span class="acc-attr-bonus">(+' + bonusPct + '% ' + a.effect.replace(/\+[\d.]+% /, '') + ')</span>';
+        html += '</div>';
+      });
+      html += '</div>';
+
+      // All stats by category
+      html += '<div class="acc-section-title" style="margin-top:10px;">═══ ALL STATS (Original → Current) ═══</div>';
+      html += '<div class="acc-stats-scroll">';
+
+      // Compute attribute-based bonuses
+      var attrBonus = {};
+      CORE_ATTRS.forEach(function (a) {
+        var lvl = acc.coreAttributes[a.key] || 0;
+        attrBonus[a.stat] = (attrBonus[a.stat] || 0) + lvl * ATTR_BONUS_PER_POINT;
+      });
+
+      STAT_CATEGORIES.forEach(function (cat) {
+        html += '<div class="acc-stat-cat-header">' + cat.icon + ' ' + cat.name + '</div>';
+        cat.stats.forEach(function (s) {
+          var base = s.base;
+          var bonus = (attrBonus[s.key] || 0) + (levelBonuses[s.key] || 0);
+          var cur;
+          if (s.pct) {
+            cur = base + bonus;
+            var baseStr = (base * 100).toFixed(1) + '%';
+            var curStr = (cur * 100).toFixed(1) + '%';
+            var diffStr = bonus > 0 ? '+' + (bonus * 100).toFixed(1) + '%' : '—';
+            html += '<div class="acc-stat-row"><span class="acc-stat-name">' + s.label + '</span><span class="acc-stat-vals">' + baseStr + ' → <b>' + curStr + '</b></span><span class="acc-stat-diff acc-stat-up">' + diffStr + '</span></div>';
+          } else {
+            cur = base * (1 + bonus);
+            var baseStr2 = base.toFixed(base < 10 ? 2 : 0);
+            var curStr2 = cur.toFixed(cur < 10 ? 2 : 0);
+            var diffStr2 = bonus > 0 ? '+' + (bonus * 100).toFixed(1) + '%' : '—';
+            html += '<div class="acc-stat-row"><span class="acc-stat-name">' + s.label + '</span><span class="acc-stat-vals">' + baseStr2 + ' → <b>' + curStr2 + '</b></span><span class="acc-stat-diff acc-stat-up">' + diffStr2 + '</span></div>';
+          }
+        });
+      });
+
+      // Level stat bonuses earned
+      var hasLevelBonuses = Object.keys(levelBonuses).length > 0;
+      if (hasLevelBonuses) {
+        html += '<div class="acc-stat-cat-header">⬆️ Level-Up Bonuses</div>';
+        Object.keys(levelBonuses).forEach(function (sk) {
+          html += '<div class="acc-stat-row"><span class="acc-stat-name">' + sk + '</span><span class="acc-stat-vals acc-stat-up">+' + (levelBonuses[sk] * 100).toFixed(1) + '%</span></div>';
+        });
+      }
+      html += '<div style="text-align:center;color:#666;font-size:11px;padding:6px;">[SCROLL FOR MORE CATEGORIES]</div>';
+      html += '</div>';
     } else if (active === 2) {
       var log = acc.activityLog || [];
       html += '<div class="acc-log">';
@@ -190,6 +356,32 @@ window.GameAccount = (function () {
 
     html += '</div></div>';
     container.innerHTML = html;
+
+    // Attribute [+] button listeners
+    container.querySelectorAll('.acc-attr-plus[data-attr]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var key = btn.getAttribute('data-attr');
+        if (!acc.coreAttributes) acc.coreAttributes = {};
+        if ((acc.coreAttributePoints || 0) > 0 && (acc.coreAttributes[key] || 0) < MAX_ATTR_LEVEL) {
+          acc.coreAttributes[key] = (acc.coreAttributes[key] || 0) + 1;
+          acc.coreAttributePoints--;
+          if (window.GameState && window.GameState.saveData) { try { if (window.saveSaveData) window.saveSaveData(); } catch(e) {} }
+          renderAccountPanel(saveData, container);
+        }
+      });
+    });
+    container.querySelectorAll('.acc-attr-plus[data-companion-attr]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var key = btn.getAttribute('data-companion-attr');
+        if (!acc.companionAttributes) acc.companionAttributes = {};
+        if ((acc.companionAttributePoints || 0) > 0 && (acc.companionAttributes[key] || 0) < MAX_ATTR_LEVEL) {
+          acc.companionAttributes[key] = (acc.companionAttributes[key] || 0) + 1;
+          acc.companionAttributePoints--;
+          if (window.GameState && window.GameState.saveData) { try { if (window.saveSaveData) window.saveSaveData(); } catch(e) {} }
+          renderAccountPanel(saveData, container);
+        }
+      });
+    });
 
     container.querySelectorAll('.acc-tab-btn').forEach(function (btn) {
       btn.addEventListener('click', function () {
@@ -249,6 +441,9 @@ window.GameAccount = (function () {
     getMilestones: getMilestones,
     setProfileName: setProfileName,
     setProfileIcon: setProfileIcon,
-    renderAccountPanel: renderAccountPanel
+    renderAccountPanel: renderAccountPanel,
+    CORE_ATTRS: CORE_ATTRS,
+    ATTR_BONUS_PER_POINT: ATTR_BONUS_PER_POINT,
+    MAX_ATTR_LEVEL: MAX_ATTR_LEVEL
   };
 })();

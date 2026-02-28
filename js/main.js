@@ -7706,6 +7706,7 @@
     
     // Expose to global scope for onclick handlers
     window.increaseAttribute = increaseAttribute;
+    window.saveSaveData = saveSaveData;
 
     // --- GEAR SYSTEM ---
     const GEAR_ATTRIBUTES = {
@@ -20987,6 +20988,29 @@
       playerStats.armor = baseArmor + gearStats.flexibility + flexibilityArmor; // Flexibility gives flat armor bonus
       playerStats.hpRegen = baseRegen + attrRegen + passiveRegenBonus;
       playerStats.gold = 0;
+
+      // --- CORE ACCOUNT ATTRIBUTES (Might/Swiftness/Agility/etc.) ---
+      if (saveData.account && window.GameAccount) {
+        const coreAttrs = saveData.account.coreAttributes || {};
+        const lvlBonuses = saveData.account.levelStatBonuses || {};
+        const ABP = window.GameAccount.ATTR_BONUS_PER_POINT || 0.002;
+        const mightBonus    = (coreAttrs.might     || 0) * ABP;
+        const swiftnessBonus= (coreAttrs.swiftness || 0) * ABP;
+        const agilityBonus  = (coreAttrs.agility   || 0) * ABP;
+        const fortitudeBonus= (coreAttrs.fortitude || 0) * ABP;
+        const lethalityBonus= (coreAttrs.lethality || 0) * ABP;
+        playerStats.damage      = (playerStats.damage      || 1)    * (1 + mightBonus    + (lvlBonuses.damage     || 0));
+        playerStats.atkSpeed    = (playerStats.atkSpeed    || 1)    * (1 + swiftnessBonus + (lvlBonuses.atkSpeed   || 0));
+        playerStats.walkSpeed   = (playerStats.walkSpeed   || 25)   * (1 + agilityBonus   + (lvlBonuses.walkSpeed  || 0));
+        playerStats.armor      += fortitudeBonus * 100; // fortitude adds flat armor %
+        playerStats.critChance  = Math.min(0.95, (playerStats.critChance || 0.1) + lethalityBonus + (lvlBonuses.critChance || 0));
+        playerStats.maxHp       = (playerStats.maxHp       || 100)  * (1 + (lvlBonuses.maxHp      || 0));
+        playerStats.hp          = playerStats.maxHp;
+        playerStats.hpRegen    += lvlBonuses.hpRegen || 0;
+        playerStats.lifeStealPercent = Math.min(0.5, (playerStats.lifeStealPercent || 0) + (lvlBonuses.lifeStealPercent || 0));
+        playerStats.pickupRange     = (playerStats.pickupRange || 1.0)  * (1 + (lvlBonuses.pickupRange || 0));
+        playerStats.dropRate        = (playerStats.dropRate   || 1.0)  * (1 + (lvlBonuses.dropRate    || 0));
+      }
 
       // --- NEW STATS: connected to camp upgrades and attributes ---
       // dashPower: how far/fast dash goes — scales with strength (physical power) and endurance
