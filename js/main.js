@@ -2906,7 +2906,21 @@
         const oldHp = this.hp;
         this.hp -= finalAmount;
         createDamageNumber(Math.floor(finalAmount), this.mesh.position, isCrit);
-        
+
+        // Multi-hit: chance to strike again for 50% damage
+        if (playerStats.multiHitChance > 0 && !this.isDead && this.hp > 0 && Math.random() < playerStats.multiHitChance) {
+          const multiHitDmg = Math.max(1, Math.floor(finalAmount * 0.5));
+          this.hp -= multiHitDmg;
+          createDamageNumber(multiHitDmg, this.mesh.position, false);
+        }
+
+        // Life steal: heal player for a % of damage dealt
+        if (playerStats.lifeStealPercent > 0) {
+          const lifeStealHeal = finalAmount * playerStats.lifeStealPercent;
+          playerStats.hp = Math.min(playerStats.maxHp, playerStats.hp + lifeStealHeal);
+          updateHUD();
+        }
+
         const hpPercent = this.hp / this.maxHp;
         const oldHpPercent = oldHp / this.maxHp;
         
@@ -19152,6 +19166,7 @@
             desc: `Low HP Bonus +10% Damage (Current: Level ${playerStats.perks.berserker})`, 
             apply: () => { 
               playerStats.perks.berserker++;
+              playerStats.lowHpDamage = (playerStats.lowHpDamage || 0) + 0.10;
               showStatChange(`Berserker Soul Level ${playerStats.perks.berserker}! (Bonus when HP < 50%)`);
             } 
           }
