@@ -1018,7 +1018,7 @@
         0 0 10px rgba(93,173,226,0.5);
       letter-spacing: 3px;
       text-transform: uppercase;
-      font-family: 'Impact', 'Arial Black', sans-serif;
+      font-family: 'Bangers', cursive;
     }
     
     .comic-text {
@@ -1355,20 +1355,17 @@
     }
 
     h2 {
-      /* 80s BATMAN COMIC STYLE */
-      /* Note: Impact font used for titles/headers, Bangers font used for body/numbers */
-      /* This creates visual hierarchy: bold titles (Impact) vs. playful content (Bangers) */
-      /* TYPOGRAPHY FIX: Slightly thinner headlines */
-      font-family: 'Impact', 'Arial Black', sans-serif;
-      font-weight: 600; /* Slightly thinner than default bold (700) */
+      /* Comic-magazine style — matches the soft, cozy but clear Bangers font used in stat menus */
+      font-family: 'Bangers', cursive;
+      font-weight: 400; /* Bangers is naturally bold at this weight */
       color: #FFD700;
       margin-top: 0;
       font-size: 36px;
       text-shadow: 
-        3px 3px 0 #000,  /* Reduced from 4px for thinner look */
-        -2px -2px 0 #000, /* Reduced from 3px */
-        2px -2px 0 #000,  /* Reduced from 3px */
-        -2px 2px 0 #000,  /* Reduced from 3px */
+        3px 3px 0 #000,
+        -2px -2px 0 #000,
+        2px -2px 0 #000,
+        -2px 2px 0 #000,
         0 0 30px rgba(255,215,0,1),
         0 0 15px rgba(255,215,0,0.8);
       letter-spacing: 2px;
@@ -1617,9 +1614,11 @@
     }
 
     .upgrade-title {
-      font-weight: bold;
+      font-family: 'Bangers', cursive;
+      font-weight: 400;
       color: #FFD700;
       font-size: 20px; /* Slightly larger for better legibility */
+      letter-spacing: 1px;
       text-shadow: 0 0 10px rgba(255,215,0,0.8), 0 0 20px rgba(255,215,0,0.4), 2px 2px 4px rgba(0,0,0,1);
       margin-bottom: 8px;
     }
@@ -1949,6 +1948,7 @@
     }
 
     .menu-title {
+      font-family: 'Bangers', cursive;
       font-size: 42px;
       color: #5DADE2;
       text-shadow: 0 0 20px rgba(93,173,226,0.8), 0 0 40px rgba(93,173,226,0.5);

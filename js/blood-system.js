@@ -57,17 +57,18 @@
     _geo.setAttribute('size',     new THREE.BufferAttribute(_sizes, 1));
 
     _mat = new THREE.PointsMaterial({
-      size: 0.07,
+      size: 0.09,
       vertexColors: true,
       transparent: true,
-      opacity: 0.92,
+      opacity: 0.95,
       depthWrite: false,
+      depthTest: true,
       sizeAttenuation: true,
       blending: THREE.NormalBlending
     });
 
     _points = new THREE.Points(_geo, _mat);
-    _points.renderOrder = 1;
+    _points.renderOrder = 10;  // Render blood well above ground to avoid z-fighting
     _scene.add(_points);
   }
 

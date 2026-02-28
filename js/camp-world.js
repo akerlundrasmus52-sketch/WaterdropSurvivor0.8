@@ -44,6 +44,7 @@
   let _campCamera  = null;
   let _renderer    = null;       // shared renderer from main.js
   let _callbacks   = {};         // { buildingId → fn() } set by main.js
+  let _isBuilding  = false;      // guard against re-entrant _buildScene() calls
   let _saveData    = null;
 
   let _playerMesh  = null;
@@ -1564,6 +1565,26 @@
   // ──────────────────────────────────────────────────────────
 
   /**
+   * warmUp(renderer)
+   * Pre-build the camp scene in the background (called at game init, not on first death).
+   * This eliminates the synchronous scene-build freeze on the first camp visit.
+   */
+  function warmUp(rendererRef) {
+    if (_campScene || _isBuilding) return; // Already built or building
+    if (!T()) return; // THREE not yet available
+    _renderer = rendererRef;
+    _isBuilding = true;
+    try {
+      _buildScene();
+      console.log('[CampWorld] Scene pre-warmed successfully');
+    } catch (e) {
+      console.warn('[CampWorld] Pre-warm failed:', e);
+      _campScene = null;
+    }
+    _isBuilding = false;
+  }
+
+  /**
    * enter(renderer, saveData, callbacks)
    * Called by main.js whenever the camp should be shown.
    * @param {THREE.WebGLRenderer} renderer  shared renderer
@@ -1582,14 +1603,26 @@
 
     // Build scene once — wrap in try/catch so a partial build failure
     // resets _campScene to null, allowing a clean retry on the next enter().
+    // Note: JavaScript is single-threaded so warmUp() (called via setTimeout) will
+    // always complete fully before enter() runs. _isBuilding guards against any
+    // unexpected re-entrant scenario.
     if (!_campScene) {
+      if (_isBuilding) {
+        // This path should not occur in practice (single-threaded JS), but as a
+        // safety valve: skip activation and let the caller try again on next visit.
+        console.warn('[CampWorld] enter() called while scene is building — retry will succeed');
+        return;
+      }
+      _isBuilding = true;
       try {
         _buildScene();
       } catch (e) {
         console.error('[CampWorld] _buildScene() failed — will retry on next enter():', e);
         _campScene = null; // ensure a full rebuild is attempted next time
+        _isBuilding = false;
         return;
       }
+      _isBuilding = false;
     }
 
     // Reset player to spawn
@@ -1712,6 +1745,7 @@
     render,
     refreshBuildings,
     onResize,
+    warmUp,
   };
 
 })();
