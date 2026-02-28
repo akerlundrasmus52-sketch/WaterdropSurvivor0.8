@@ -138,7 +138,20 @@
     return wrap;
   }
 
+  // Merge cloud save into local save, preferring whichever was updated more recently.
+  function _mergeCloudSave(local, cloud) {
+    var localTs = (local.idle && local.idle.lastTickTime) || 0;
+    var cloudTs = (cloud.idle && cloud.idle.lastTickTime) || 0;
+    if (cloudTs > localTs) {
+      Object.assign(local, cloud);
+    }
+  }
+
+  var _idleSystemsInit = false;
+
   function initIdleSystems(saveData) {
+    if (_idleSystemsInit) return;
+    _idleSystemsInit = true;
     if (window.GameIdle && saveData.idle && saveData.idle.lastTickTime) {
       var offline = window.GameIdle.calculateOfflineProgress(saveData.idle.lastTickTime, saveData);
       saveData.gold = (saveData.gold || 0) + offline.goldEarned;
@@ -191,6 +204,34 @@
     if (window.GameState) {
       window.GameState.initIdleSystems = initIdleSystems;
       window.GameState.campIdleTick = campIdleTick;
+    }
+    // Initialize Firebase Auth, then prompt login if user is not signed in
+    if (window.GameAuth) {
+      window.GameAuth.initAuth(function () {
+        if (!window.GameAuth.getCurrentUser()) {
+          window.GameAuth.renderAuthUI(function (user) {
+            // If user signed in, attempt to load cloud save
+            if (user && window.GameState && window.GameState.saveData) {
+              window.GameAuth.loadFromCloud(function (err, cloudSave) {
+                if (!err && cloudSave) {
+                  _mergeCloudSave(window.GameState.saveData, cloudSave);
+                }
+                if (window.GameState.saveData) initIdleSystems(window.GameState.saveData);
+              });
+            } else if (window.GameState && window.GameState.saveData) {
+              initIdleSystems(window.GameState.saveData);
+            }
+          });
+        } else if (window.GameState && window.GameState.saveData) {
+          // Already signed in — proceed to load cloud save and init
+          window.GameAuth.loadFromCloud(function (err, cloudSave) {
+            if (!err && cloudSave) {
+              _mergeCloudSave(window.GameState.saveData, cloudSave);
+            }
+            initIdleSystems(window.GameState.saveData);
+          });
+        }
+      });
     }
   });
 
