@@ -16,8 +16,8 @@
   const RAGE_DAMAGE_MULT  = 2.5;
   const RAGE_SPEED_MULT   = 1.4;
 
-  // ── Special attack definitions ───────────────────────────────
-  const SPECIAL_ATTACKS = [
+  // ── All available special attacks (unlocked via skill tree) ──
+  const ALL_SPECIAL_ATTACKS = [
     {
       id: 'shockwave',
       name: 'Shockwave',
@@ -27,7 +27,8 @@
       damageRadius: 12,
       damage: 80,
       color: 0xFF6600,
-      keybind: '1'
+      keybind: '1',
+      skillTreeId: 'specialShockwave'
     },
     {
       id: 'frozenStorm',
@@ -38,7 +39,8 @@
       damageRadius: 18,
       damage: 30,
       color: 0x44AAFF,
-      keybind: '2'
+      keybind: '2',
+      skillTreeId: 'specialFrozenStorm'
     },
     {
       id: 'deathBlossom',
@@ -49,7 +51,44 @@
       damageRadius: 20,
       damage: 60,
       color: 0xFF44AA,
-      keybind: '3'
+      keybind: '3',
+      skillTreeId: 'specialDeathBlossom'
+    },
+    {
+      id: 'thunderStrike',
+      name: 'Thunder Strike',
+      icon: '⚡',
+      description: 'Lightning bolt hits all enemies in a line',
+      cooldownMs: 10000,
+      damageRadius: 8,
+      damage: 100,
+      color: 0xFFFF00,
+      keybind: '4',
+      skillTreeId: 'specialThunderStrike'
+    },
+    {
+      id: 'voidPulse',
+      name: 'Void Pulse',
+      icon: '🌀',
+      description: 'Dark energy pulls enemies inward then detonates',
+      cooldownMs: 18000,
+      damageRadius: 22,
+      damage: 75,
+      color: 0x8800FF,
+      keybind: '5',
+      skillTreeId: 'specialVoidPulse'
+    },
+    {
+      id: 'infernoRing',
+      name: 'Inferno Ring',
+      icon: '🔥',
+      description: 'Ring of fire burns all surrounding enemies',
+      cooldownMs: 14000,
+      damageRadius: 16,
+      damage: 55,
+      color: 0xFF2200,
+      keybind: '6',
+      skillTreeId: 'specialInfernoRing'
     }
   ];
 
@@ -62,16 +101,32 @@
   let _scene = null;
 
   const _specialCooldowns = {}; // { id: lastUsedMs }
-  SPECIAL_ATTACKS.forEach(s => { _specialCooldowns[s.id] = 0; });
+  ALL_SPECIAL_ATTACKS.forEach(s => { _specialCooldowns[s.id] = 0; });
 
   // Callbacks assigned by main.js
   let _onRageActivated = null;
   let _onRageDeactivated = null;
-  let _onSpecialAttack = null; // fn(attack, enemies) → called to actually deal damage
+  let _onSpecialAttack = null; // fn(attack) → called to actually deal damage
+
+  // ── Loadout helpers ───────────────────────────────────────────
+  function _getEquippedAttacks() {
+    if (!_saveData) return [];
+    const equipped = (_saveData.equippedSpecials || []).slice(0, 3);
+    return equipped.map(id => ALL_SPECIAL_ATTACKS.find(s => s.id === id)).filter(Boolean);
+  }
+
+  function _isUnlocked(sa) {
+    if (!_saveData || !_saveData.skillTree) return false;
+    const node = _saveData.skillTree[sa.skillTreeId];
+    return node && node.level > 0;
+  }
 
   // ── HUD helpers ───────────────────────────────────────────────
   function _buildHUD() {
-    if (document.getElementById('rage-hud')) return;
+    if (document.getElementById('rage-hud')) {
+      _rebuildSpecialButtons();
+      return;
+    }
 
     // Rage bar container
     const container = document.createElement('div');
@@ -86,23 +141,123 @@
     `;
     document.body.appendChild(container);
 
-    document.getElementById('rage-activate-btn').addEventListener('click', activateRage);
+    const rageBtn = document.getElementById('rage-activate-btn');
+    rageBtn.addEventListener('click', activateRage);
+    rageBtn.addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); activateRage(); }, { passive: false });
     _updateRageHUD();
 
-    // Special attack buttons
+    // Special attack buttons container
     const saContainer = document.createElement('div');
     saContainer.id = 'special-attacks-hud';
     saContainer.className = 'special-attacks-hud';
-    SPECIAL_ATTACKS.forEach(sa => {
+    document.body.appendChild(saContainer);
+    _rebuildSpecialButtons();
+
+    // Loadout button (small edit icon on the rage HUD)
+    const loadoutBtn = document.createElement('button');
+    loadoutBtn.id = 'sa-loadout-btn';
+    loadoutBtn.title = 'Edit Special Attack Loadout';
+    loadoutBtn.style.cssText = 'background:none;border:none;color:#FFD700;font-size:14px;cursor:pointer;padding:2px 4px;';
+    loadoutBtn.textContent = '⚙️';
+    container.appendChild(loadoutBtn);
+    loadoutBtn.addEventListener('click', _toggleLoadoutPanel);
+    loadoutBtn.addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); _toggleLoadoutPanel(); }, { passive: false });
+
+    // Loadout panel
+    _buildLoadoutPanel();
+  }
+
+  function _rebuildSpecialButtons() {
+    const saContainer = document.getElementById('special-attacks-hud');
+    if (!saContainer) return;
+    saContainer.innerHTML = '';
+
+    const equipped = _getEquippedAttacks();
+    if (equipped.length === 0) {
+      const hint = document.createElement('div');
+      hint.style.cssText = 'color:#888;font-size:10px;padding:4px 8px;';
+      hint.textContent = '🔒 Unlock specials';
+      saContainer.appendChild(hint);
+      return;
+    }
+
+    equipped.forEach(sa => {
       const btn = document.createElement('button');
       btn.id = `sa-btn-${sa.id}`;
       btn.className = 'special-attack-btn';
       btn.innerHTML = `<span class="sa-icon">${sa.icon}</span><span class="sa-name">${sa.name}</span><div class="sa-cooldown-overlay" id="sa-cd-${sa.id}"></div>`;
       btn.title = sa.description;
+      // Use both click and touchstart to fix control conflict with joystick zone
       btn.addEventListener('click', () => triggerSpecialAttack(sa.id));
+      btn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        triggerSpecialAttack(sa.id);
+      }, { passive: false });
       saContainer.appendChild(btn);
     });
-    document.body.appendChild(saContainer);
+  }
+
+  function _buildLoadoutPanel() {
+    if (document.getElementById('sa-loadout-panel')) return;
+    const panel = document.createElement('div');
+    panel.id = 'sa-loadout-panel';
+    document.body.appendChild(panel);
+  }
+
+  function _toggleLoadoutPanel() {
+    const panel = document.getElementById('sa-loadout-panel');
+    if (!panel) return;
+    const isVisible = panel.classList.contains('visible');
+    if (isVisible) {
+      panel.classList.remove('visible');
+      return;
+    }
+    _renderLoadoutPanel();
+    panel.classList.add('visible');
+  }
+
+  function _renderLoadoutPanel() {
+    const panel = document.getElementById('sa-loadout-panel');
+    if (!panel) return;
+    const equipped = (_saveData && _saveData.equippedSpecials) ? _saveData.equippedSpecials.slice() : [];
+
+    panel.innerHTML = `<h3>⚔️ SPECIAL ATTACKS (max 3)</h3>`;
+
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'sa-loadout-close';
+    closeBtn.textContent = '✕';
+    closeBtn.addEventListener('click', () => panel.classList.remove('visible'));
+    panel.appendChild(closeBtn);
+
+    ALL_SPECIAL_ATTACKS.forEach(sa => {
+      const unlocked = _isUnlocked(sa);
+      const isEquipped = equipped.includes(sa.id);
+      const item = document.createElement('div');
+      item.className = 'sa-loadout-item' + (isEquipped ? ' equipped' : '') + (!unlocked ? ' locked' : '');
+      item.innerHTML = `<span style="font-size:20px">${sa.icon}</span><div><div style="font-weight:bold;color:#DDD">${sa.name}</div><div style="font-size:10px;color:#888">${sa.description}</div></div>${isEquipped ? '<span style="color:#FFD700;font-size:11px;margin-left:auto">EQUIPPED</span>' : (unlocked ? '<span style="color:#88FF88;font-size:11px;margin-left:auto">TAP TO EQUIP</span>' : '<span style="color:#888;font-size:11px;margin-left:auto">🔒 LOCKED</span>')}`;
+      if (unlocked) {
+        item.addEventListener('click', () => _toggleEquip(sa.id));
+      }
+      panel.appendChild(item);
+    });
+  }
+
+  function _toggleEquip(attackId) {
+    if (!_saveData) return;
+    if (!_saveData.equippedSpecials) _saveData.equippedSpecials = [];
+    const idx = _saveData.equippedSpecials.indexOf(attackId);
+    if (idx >= 0) {
+      _saveData.equippedSpecials.splice(idx, 1);
+    } else {
+      if (_saveData.equippedSpecials.length >= 3) {
+        _saveData.equippedSpecials.shift(); // remove oldest
+      }
+      _saveData.equippedSpecials.push(attackId);
+    }
+    if (window.saveSaveData) window.saveSaveData();
+    _renderLoadoutPanel();
+    _rebuildSpecialButtons();
   }
 
   function _updateRageHUD() {
@@ -120,18 +275,19 @@
       btn.textContent = _rageActive ? '🔥 RAGING!' : 'RAGE!';
     }
 
-    // Update special attack cooldowns
+    // Update special attack cooldowns (only equipped)
     const now = Date.now();
-    SPECIAL_ATTACKS.forEach(sa => {
+    const equipped = _getEquippedAttacks();
+    equipped.forEach(sa => {
       const cdEl = document.getElementById(`sa-cd-${sa.id}`);
-      const btn = document.getElementById(`sa-btn-${sa.id}`);
-      if (!cdEl || !btn) return;
+      const saBtn = document.getElementById(`sa-btn-${sa.id}`);
+      if (!cdEl || !saBtn) return;
       const elapsed = now - (_specialCooldowns[sa.id] || 0);
       const remaining = Math.max(0, sa.cooldownMs - elapsed);
       const frac = remaining / sa.cooldownMs;
       cdEl.style.height = (frac * 100) + '%';
-      btn.disabled = remaining > 0;
-      btn.classList.toggle('sa-ready', remaining <= 0);
+      saBtn.disabled = remaining > 0;
+      saBtn.classList.toggle('sa-ready', remaining <= 0);
     });
   }
 
@@ -168,8 +324,13 @@
 
   // ── Special Attacks ───────────────────────────────────────────
   function triggerSpecialAttack(attackId) {
-    const sa = SPECIAL_ATTACKS.find(s => s.id === attackId);
+    const sa = ALL_SPECIAL_ATTACKS.find(s => s.id === attackId);
     if (!sa) return;
+    // Check it's unlocked
+    if (!_isUnlocked(sa)) {
+      if (window.showStatChange) window.showStatChange('🔒 Unlock in Skill Tree!');
+      return;
+    }
     const now = Date.now();
     if (now - (_specialCooldowns[attackId] || 0) < sa.cooldownMs) return;
 
@@ -177,8 +338,10 @@
     _showBigText(`${sa.icon} ${sa.name.toUpperCase()}!`, '#FFFFFF');
     _flashScreen(sa.color, 0.5, 300);
 
-    // Spawn visual ring burst
+    // Spawn 3D ring burst in scene
     _spawnAttackRing(sa);
+    // Spawn 2D CSS ring effect for extra visual impact
+    _spawnCssRing(sa);
 
     // Delegate actual damage to main.js callback
     if (typeof _onSpecialAttack === 'function') _onSpecialAttack(sa);
@@ -219,30 +382,68 @@
     setTimeout(() => el.remove(), 1800);
   }
 
+  // 2D CSS ring burst centered on screen
+  function _spawnCssRing(sa) {
+    let num = (typeof sa.color === 'string')
+      ? parseInt(sa.color.replace('#', ''), 16)
+      : sa.color;
+    const r = (num >> 16) & 0xFF;
+    const g = (num >> 8) & 0xFF;
+    const b = num & 0xFF;
+    const size = sa.damageRadius * 14; // scale to pixels
+    const el = document.createElement('div');
+    el.className = 'sa-ring-outer';
+    el.style.cssText = `
+      left:50%; top:50%;
+      width:${size}px; height:${size}px;
+      border: 4px solid rgba(${r},${g},${b},0.9);
+      box-shadow: 0 0 20px rgba(${r},${g},${b},0.7), inset 0 0 10px rgba(${r},${g},${b},0.3);
+    `;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 800);
+  }
+
   function _spawnAttackRing(sa) {
     if (!_scene || !window.THREE) return;
     const THREE = window.THREE;
-    const geo = new THREE.RingGeometry(0.5, sa.damageRadius, 32);
+    const geo = new THREE.RingGeometry(0.5, sa.damageRadius, 48);
     const mat = new THREE.MeshBasicMaterial({
       color: sa.color, side: THREE.DoubleSide,
-      transparent: true, opacity: 0.6
+      transparent: true, opacity: 0.75
     });
     const ring = new THREE.Mesh(geo, mat);
     ring.rotation.x = -Math.PI / 2;
-    // Position at player
     const playerMesh = window._gamePlayerMesh;
     if (playerMesh) ring.position.copy(playerMesh.position);
     ring.position.y = 0.05;
     _scene.add(ring);
 
+    // Secondary inner ring for extra effect
+    const geo2 = new THREE.RingGeometry(0.2, sa.damageRadius * 0.5, 48);
+    const mat2 = new THREE.MeshBasicMaterial({
+      color: 0xFFFFFF, side: THREE.DoubleSide,
+      transparent: true, opacity: 0.4
+    });
+    const ring2 = new THREE.Mesh(geo2, mat2);
+    ring2.rotation.x = -Math.PI / 2;
+    if (playerMesh) ring2.position.copy(playerMesh.position);
+    ring2.position.y = 0.06;
+    _scene.add(ring2);
+
     // Animate expand and fade
     const startTime = Date.now();
-    const duration = 600;
+    const duration = 700;
     function animRing() {
       const t = (Date.now() - startTime) / duration;
-      if (t >= 1) { _scene.remove(ring); mat.dispose(); geo.dispose(); return; }
-      mat.opacity = 0.6 * (1 - t);
-      ring.scale.setScalar(1 + t * 0.3);
+      if (t >= 1) {
+        _scene.remove(ring);  mat.dispose();  geo.dispose();
+        _scene.remove(ring2); mat2.dispose(); geo2.dispose();
+        return;
+      }
+      mat.opacity  = 0.75 * (1 - t);
+      mat2.opacity = 0.4  * (1 - t);
+      ring.scale.setScalar(1 + t * 0.5);
+      ring2.scale.setScalar(1 + t * 0.8);
       requestAnimationFrame(animRing);
     }
     requestAnimationFrame(animRing);
@@ -293,7 +494,9 @@
 
   // ── Public API ────────────────────────────────────────────────
   window.GameRageCombat = {
-    SPECIAL_ATTACKS,
+    ALL_SPECIAL_ATTACKS,
+    // Legacy alias so existing main.js code that references SPECIAL_ATTACKS still works
+    get SPECIAL_ATTACKS() { return ALL_SPECIAL_ATTACKS; },
     RAGE_MAX,
     RAGE_DAMAGE_MULT,
     RAGE_SPEED_MULT,
@@ -303,6 +506,12 @@
       _saveData = saveData;
       _spawnParticlesFn = spawnParticlesFn;
       _buildHUD();
+    },
+
+    refreshLoadout(saveData) {
+      if (saveData) _saveData = saveData;
+      _rebuildSpecialButtons();
+      _updateRageHUD();
     },
 
     update,

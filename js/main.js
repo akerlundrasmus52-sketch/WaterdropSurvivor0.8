@@ -6477,8 +6477,19 @@
         // NEW SKILLS (Feature 1)
         dash: { unlocked: false, level: 0, maxLevel: 5 },
         headshot: { unlocked: false, level: 0, maxLevel: 5 },
-        autoAim: { unlocked: false, level: 0, maxLevel: 1 }
+        autoAim: { unlocked: false, level: 0, maxLevel: 1 },
+        // Special Attack unlock nodes
+        specialShockwave:    { unlocked: false, level: 0, maxLevel: 1 },
+        specialFrozenStorm:  { unlocked: false, level: 0, maxLevel: 1 },
+        specialDeathBlossom: { unlocked: false, level: 0, maxLevel: 1 },
+        specialThunderStrike:{ unlocked: false, level: 0, maxLevel: 1 },
+        specialVoidPulse:    { unlocked: false, level: 0, maxLevel: 1 },
+        specialInfernoRing:  { unlocked: false, level: 0, maxLevel: 1 },
+        // Melee Takedown unlock node
+        meleeTakedown:       { unlocked: false, level: 0, maxLevel: 1 }
       },
+      // Special attacks loadout (max 3 equipped at once; populated after unlocking)
+      equippedSpecials: [],
       skillPoints: 0, // Start with 0 skill points - earn through quests
       // Account Level System - Persistent across all runs
       accountLevel: 1, // Persistent character level
@@ -6634,6 +6645,8 @@
           // Harvesting system (new fields)
           saveData.resources = { ...defaultSaveData.resources, ...(saveData.resources || {}) };
           saveData.harvestingTools = { ...defaultSaveData.harvestingTools, ...(saveData.harvestingTools || {}) };
+          // Special attacks loadout (new field)
+          saveData.equippedSpecials = saveData.equippedSpecials || [];
         }
       } catch (e) {
         console.error('Failed to load save data:', e);
@@ -8895,6 +8908,66 @@
           elementalDamage: 0.3 * level,
           elementalGuaranteed: level >= 3
         })
+      },
+
+      // ── SPECIAL ATTACKS PATH ──────────────────────────────────
+      specialShockwave: {
+        name: '💥 Shockwave',
+        description: 'Unlocks the Shockwave special attack (massive AoE explosion)',
+        cost: 2,
+        maxLevel: 1,
+        requires: 'combatMastery',
+        bonus: (level) => ({ unlockSpecial: 'shockwave' })
+      },
+      specialFrozenStorm: {
+        name: '❄️ Frozen Storm',
+        description: 'Unlocks Frozen Storm (freeze nearby enemies)',
+        cost: 2,
+        maxLevel: 1,
+        requires: 'specialShockwave',
+        bonus: (level) => ({ unlockSpecial: 'frozenStorm' })
+      },
+      specialDeathBlossom: {
+        name: '🌸 Death Blossom',
+        description: 'Unlocks Death Blossom (360° projectile burst)',
+        cost: 2,
+        maxLevel: 1,
+        requires: 'specialFrozenStorm',
+        bonus: (level) => ({ unlockSpecial: 'deathBlossom' })
+      },
+      specialThunderStrike: {
+        name: '⚡ Thunder Strike',
+        description: 'Unlocks Thunder Strike (lightning line attack)',
+        cost: 2,
+        maxLevel: 1,
+        requires: 'lightningMastery',
+        bonus: (level) => ({ unlockSpecial: 'thunderStrike' })
+      },
+      specialVoidPulse: {
+        name: '🌀 Void Pulse',
+        description: 'Unlocks Void Pulse (dark energy implosion)',
+        cost: 3,
+        maxLevel: 1,
+        requires: 'specialDeathBlossom',
+        bonus: (level) => ({ unlockSpecial: 'voidPulse' })
+      },
+      specialInfernoRing: {
+        name: '🔥 Inferno Ring',
+        description: 'Unlocks Inferno Ring (ring of fire)',
+        cost: 2,
+        maxLevel: 1,
+        requires: 'fireMastery',
+        bonus: (level) => ({ unlockSpecial: 'infernoRing' })
+      },
+
+      // ── MELEE TAKEDOWN ────────────────────────────────────────
+      meleeTakedown: {
+        name: '🔪 Melee Takedown',
+        description: 'Unlocks the knife melee instant-kill takedown attack',
+        cost: 3,
+        maxLevel: 1,
+        requires: 'executioner',
+        bonus: (level) => ({ unlockMelee: level > 0 })
       }
     };
 
@@ -9107,6 +9180,11 @@
         saveSaveData();
         updateCampScreen();
         playSound('collect');
+        
+        // Refresh special attack loadout HUD if a special attack or melee node was unlocked
+        if (window.GameRageCombat && (skillId.startsWith('special') || skillId === 'meleeTakedown')) {
+          window.GameRageCombat.refreshLoadout(saveData);
+        }
         
         showStatusMessage(`${skill.name} leveled up!`, 2000);
         
@@ -15202,6 +15280,111 @@
         });
       }
 
+      // ── Melee Takedown ────────────────────────────────────────
+      // Cooldown-based instant-kill knife attack (requires skill tree unlock)
+      const MELEE_COOLDOWN_MS = 6000;
+      const MELEE_RANGE = 4.5;       // units
+      let _meleeLastUsed = 0;
+
+      function isMeleeUnlocked() {
+        return saveData.skillTree && saveData.skillTree.meleeTakedown &&
+               saveData.skillTree.meleeTakedown.level > 0;
+      }
+
+      function updateMeleeButton() {
+        const btn = document.getElementById('melee-takedown-btn');
+        if (!btn) return;
+        if (!isMeleeUnlocked()) { btn.style.display = 'none'; return; }
+        btn.style.display = 'flex';
+        const elapsed = Date.now() - _meleeLastUsed;
+        const ready = elapsed >= MELEE_COOLDOWN_MS;
+        btn.disabled = !ready;
+        btn.classList.toggle('melee-ready', ready);
+        const overlay = document.getElementById('melee-cd-overlay');
+        if (overlay) {
+          const frac = ready ? 0 : 1 - (elapsed / MELEE_COOLDOWN_MS);
+          overlay.style.height = (frac * 100) + '%';
+        }
+      }
+
+      function performMeleeTakedown() {
+        if (!isMeleeUnlocked()) {
+          showStatChange('🔒 Unlock Melee Takedown in Skill Tree!');
+          return;
+        }
+        if (!isGameActive || isPaused || isGameOver) return;
+        const now = Date.now();
+        if (now - _meleeLastUsed < MELEE_COOLDOWN_MS) return;
+        if (!player || !player.mesh) return;
+
+        _meleeLastUsed = now;
+
+        // Visual slash animation
+        const slashEl = document.createElement('div');
+        slashEl.className = 'melee-slash-fx';
+        slashEl.textContent = '🔪';
+        slashEl.style.left = '50%';
+        slashEl.style.top = '45%';
+        slashEl.style.transform = 'translate(-50%,-50%)';
+        document.body.appendChild(slashEl);
+        setTimeout(() => slashEl.remove(), 500);
+
+        // Screen flash
+        if (window.GameRageCombat) {
+          // Use internal flash via the public API workaround
+          const flashEl = document.getElementById('rage-flash') || (() => {
+            const el = document.createElement('div');
+            el.id = 'rage-flash';
+            el.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:199;';
+            document.body.appendChild(el);
+            return el;
+          })();
+          flashEl.style.background = 'rgba(180,0,0,0.35)';
+          flashEl.style.transition = 'none';
+          setTimeout(() => {
+            flashEl.style.transition = 'background 300ms ease-out';
+            flashEl.style.background = 'rgba(180,0,0,0)';
+          }, 50);
+        }
+
+        // Find nearest enemy and instant-kill it
+        const pPos = player.mesh.position;
+        let nearest = null;
+        let nearestDist = Infinity;
+        for (const enemy of enemies) {
+          if (!enemy || !enemy.mesh || enemy.isDead) continue;
+          const dx = enemy.mesh.position.x - pPos.x;
+          const dz = enemy.mesh.position.z - pPos.z;
+          const dist = Math.sqrt(dx*dx + dz*dz);
+          if (dist < MELEE_RANGE && dist < nearestDist) {
+            nearestDist = dist;
+            nearest = enemy;
+          }
+        }
+        if (nearest) {
+          nearest.takeDamage(99999, 'melee'); // instant kill
+          showStatChange('🔪 TAKEDOWN!');
+        } else {
+          showStatChange('🔪 No enemy in range!');
+        }
+
+        updateMeleeButton();
+      }
+
+      // Wire up melee button
+      const meleeBtn = document.getElementById('melee-takedown-btn');
+      if (meleeBtn) {
+        meleeBtn.addEventListener('click', performMeleeTakedown);
+        meleeBtn.addEventListener('touchstart', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          performMeleeTakedown();
+        }, { passive: false });
+      }
+
+      // Expose updateMeleeButton so game loop can call it
+      window._updateMeleeButton = updateMeleeButton;
+
       // Expose camera and player mesh reference to window for harvesting / rage modules
       window._gameCamera = camera;
       
@@ -16274,13 +16457,17 @@
       document.getElementById('goto-camp-btn').onclick = () => {
         playSound('waterdrop');
         document.getElementById('gameover-screen').style.display = 'none';
-        try { updateCampScreen(); } catch(e) { console.error('[Camp] updateCampScreen error:', e); }
+        // Show camp screen immediately so player sees the transition
         document.getElementById('camp-screen').classList.remove('camp-subsection-active');
         document.getElementById('camp-screen').style.display = 'flex';
-        // Move chat tab upward in camp mode to avoid menu overlap
         const chatTab = document.getElementById('ai-chat-tab');
         if (chatTab) chatTab.classList.add('camp-mode');
-        // Keep menu hidden during camp visit from death
+        // Defer heavy 3D camp world setup to next tick to prevent UI freeze
+        setTimeout(() => {
+          try { updateCampScreen(); } catch(e) { console.error('[Camp] updateCampScreen error:', e); }
+          // Refresh special attack loadout buttons for the new run
+          if (window.GameRageCombat) window.GameRageCombat.refreshLoadout(saveData);
+        }, 0);
       };
       
       // Quit to Menu button
@@ -20211,12 +20398,35 @@
       let swipeDetected = false;
       
       zone.addEventListener('touchstart', (e) => {
+        // Check if any touch targets a HUD button (special attacks, rage, melee).
+        // If so, skip joystick handling for that touch so button events fire normally.
+        let allHudTouches = true;
+        for (let i = 0; i < e.changedTouches.length; i++) {
+          const t = e.changedTouches[i];
+          const el = document.elementFromPoint(t.clientX, t.clientY);
+          if (el && (el.closest('#special-attacks-hud') || el.closest('#rage-hud') || el.closest('#melee-takedown-btn'))) {
+            // Touch is on a HUD button — fire it and skip joystick logic
+            if (el.closest && el.closest('button') && !el.closest('button').disabled) {
+              el.closest('button').click();
+            }
+          } else {
+            allHudTouches = false;
+          }
+        }
+        if (allHudTouches) return; // All touches were on HUD — don't process as joystick
+
         e.preventDefault();
         
         for (let i = 0; i < e.changedTouches.length; i++) {
           const touch = e.changedTouches[i];
           const screenWidth = window.innerWidth;
           const screenHeight = window.innerHeight;
+
+          // Skip touches on HUD elements
+          const touchEl = document.elementFromPoint(touch.clientX, touch.clientY);
+          if (touchEl && (touchEl.closest('#special-attacks-hud') || touchEl.closest('#rage-hud') || touchEl.closest('#melee-takedown-btn'))) {
+            continue;
+          }
           
           // Ignore touches in top 40% of screen (for UI elements)
           if (touch.clientY < screenHeight * 0.6) {
@@ -21977,6 +22187,8 @@
       if (window.GameRageCombat) {
         window.GameRageCombat.update(dt);
       }
+      // Update melee takedown button cooldown display
+      if (window._updateMeleeButton) window._updateMeleeButton();
       
       // Phase 5: Update companion
       if (activeCompanion && !activeCompanion.isDead) {
