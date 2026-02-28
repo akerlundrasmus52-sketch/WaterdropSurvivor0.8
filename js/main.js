@@ -3535,6 +3535,10 @@
         checkAchievements(); // Check for achievements after kill
         // Rage Mode: add rage on kill
         if (window.GameRageCombat) window.GameRageCombat.addRage(8);
+        // Special Atk Points: earn 1 point per 10 kills
+        if (playerStats.kills % 10 === 0) {
+          saveData.specialAtkPoints = (saveData.specialAtkPoints || 0) + 1;
+        }
         // Harvesting: chance to drop Flesh
         if (window.GameHarvesting && this.mesh) window.GameHarvesting.onEnemyKilled(this.mesh.position);
         // Kill 7 achievement check
@@ -6516,7 +6520,9 @@
         trainingGrounds: { level: 0, maxLevel: 10, unlocked: false },
         library: { level: 0, maxLevel: 10, unlocked: false },
         workshop: { level: 0, maxLevel: 10, unlocked: false },
-        shrine: { level: 0, maxLevel: 10, unlocked: false }
+        shrine: { level: 0, maxLevel: 10, unlocked: false },
+        // Special Attacks arena — unlocked via quest
+        specialAttacks: { level: 0, maxLevel: 1, unlocked: false }
       },
       // COMPREHENSIVE SKILL TREE - 48 Skills Total (Fresh Implementation)
       skillTree: {
@@ -6580,18 +6586,33 @@
         dash: { unlocked: false, level: 0, maxLevel: 5 },
         headshot: { unlocked: false, level: 0, maxLevel: 5 },
         autoAim: { unlocked: false, level: 0, maxLevel: 1 },
-        // Special Attack unlock nodes
-        specialShockwave:    { unlocked: false, level: 0, maxLevel: 1 },
-        specialFrozenStorm:  { unlocked: false, level: 0, maxLevel: 1 },
-        specialDeathBlossom: { unlocked: false, level: 0, maxLevel: 1 },
-        specialThunderStrike: { unlocked: false, level: 0, maxLevel: 1 },
-        specialVoidPulse:    { unlocked: false, level: 0, maxLevel: 1 },
-        specialInfernoRing:  { unlocked: false, level: 0, maxLevel: 1 },
-        // Melee Takedown unlock node
+        // Special Attack unlock/upgrade nodes (maxLevel: 3 = 3 upgrade tiers)
+        specialKnifeTakedown: { unlocked: false, level: 0, maxLevel: 3 },
+        specialShockwave:    { unlocked: false, level: 0, maxLevel: 3 },
+        specialFrozenStorm:  { unlocked: false, level: 0, maxLevel: 3 },
+        specialDeathBlossom: { unlocked: false, level: 0, maxLevel: 3 },
+        specialThunderStrike: { unlocked: false, level: 0, maxLevel: 3 },
+        specialVoidPulse:    { unlocked: false, level: 0, maxLevel: 3 },
+        specialInfernoRing:  { unlocked: false, level: 0, maxLevel: 3 },
+        specialAcidCloud:    { unlocked: false, level: 0, maxLevel: 3 },
+        specialGravityWell:  { unlocked: false, level: 0, maxLevel: 3 },
+        specialSonicBoom:    { unlocked: false, level: 0, maxLevel: 3 },
+        specialBloodRain:    { unlocked: false, level: 0, maxLevel: 3 },
+        specialTimeFracture: { unlocked: false, level: 0, maxLevel: 3 },
+        specialChainLightning: { unlocked: false, level: 0, maxLevel: 3 },
+        specialMirrorField:  { unlocked: false, level: 0, maxLevel: 3 },
+        specialMeteorStrike: { unlocked: false, level: 0, maxLevel: 3 },
+        specialShadowClone:  { unlocked: false, level: 0, maxLevel: 3 },
+        specialForceBarrier: { unlocked: false, level: 0, maxLevel: 3 },
+        specialPlasmaBurst:  { unlocked: false, level: 0, maxLevel: 3 },
+        specialEarthquake:   { unlocked: false, level: 0, maxLevel: 3 },
+        specialAdrenalineRush: { unlocked: false, level: 0, maxLevel: 3 },
+        // Melee Takedown unlock node (legacy — keep for backward compatibility)
         meleeTakedown:       { unlocked: false, level: 0, maxLevel: 1 }
       },
-      // Special attacks loadout (max 3 equipped at once; populated after unlocking)
+      // Special attacks loadout (max 4 equipped at once; populated after unlocking)
       equippedSpecials: [],
+      specialAtkPoints: 0, // Points earned to unlock/upgrade special attacks
       skillPoints: 0, // Start with 0 skill points - earn through quests
       // Account Level System - Persistent across all runs
       accountLevel: 1, // Persistent character level
@@ -6749,6 +6770,8 @@
           saveData.harvestingTools = { ...defaultSaveData.harvestingTools, ...(saveData.harvestingTools || {}) };
           // Special attacks loadout (new field)
           saveData.equippedSpecials = saveData.equippedSpecials || [];
+          // Special attack points (new field)
+          saveData.specialAtkPoints = saveData.specialAtkPoints || 0;
         }
       } catch (e) {
         console.error('Failed to load save data:', e);
@@ -12067,6 +12090,7 @@
           },
           inventory:           () => showInventoryScreen(),
           campBoard:           () => showCampBoardMenu(),
+          specialAttacks:      () => showSpecialAttacksPanel(),
         };
         window.CampWorld.enter(renderer, saveData, campCallbacks);
         // Mark camp-screen as 3D mode only if CampWorld successfully activated
@@ -15771,6 +15795,108 @@
       element.addEventListener('pointerup', cancelHold);
       element.addEventListener('pointerleave', cancelHold);
       element.addEventListener('pointercancel', cancelHold);
+    }
+
+    // ============================================================
+    // SPECIAL ATTACKS PANEL — Skill Tree for Special Attacks
+    // ============================================================
+    function showSpecialAttacksPanel() {
+      if (!window.GameRageCombat) return;
+      const allAttacks = window.GameRageCombat.ALL_SPECIAL_ATTACKS;
+
+      // Remove any existing panel before creating a new one
+      const existing = document.getElementById('special-attacks-panel-overlay');
+      if (existing && existing.parentNode) existing.parentNode.removeChild(existing);
+
+      const overlay = document.createElement('div');
+      overlay.id = 'special-attacks-panel-overlay';
+      overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.92);z-index:500;display:flex;align-items:center;justify-content:center;overflow-y:auto;';
+
+      const panel = document.createElement('div');
+      panel.style.cssText = 'background:linear-gradient(135deg,#0d0d1a,#1a0d2e);border:3px solid #FF4400;border-radius:14px;padding:20px;max-width:min(96vw,620px);width:100%;color:#fff;font-family:"Bangers",cursive;max-height:90vh;overflow-y:auto;box-shadow:0 0 40px rgba(255,68,0,0.5);';
+
+      const pts = saveData.specialAtkPoints || 0;
+      panel.innerHTML = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;"><div style="font-size:26px;letter-spacing:2px;color:#FF4400;">⚡ SPECIAL ATTACKS</div><div style="font-size:16px;color:#FFD700;">SAP: ${pts}</div></div><div style="font-size:12px;color:#aaa;font-family:Arial,sans-serif;margin-bottom:14px;">Unlock and upgrade powerful special attacks. Earn Special Atk Points (SAP) from kills and quests. Equip up to 4 attacks using the loadout button in-game.</div>`;
+
+      // Close button
+      const closeBtn = document.createElement('button');
+      closeBtn.textContent = '✕ Close';
+      closeBtn.style.cssText = 'position:absolute;top:14px;right:14px;background:rgba(255,255,255,0.1);border:1px solid #888;color:#fff;padding:6px 14px;border-radius:6px;cursor:pointer;font-family:"Bangers",cursive;font-size:14px;';
+      closeBtn.addEventListener('click', () => { if (overlay.parentNode) overlay.parentNode.removeChild(overlay); });
+      panel.style.position = 'relative';
+      panel.appendChild(closeBtn);
+
+      // Render each attack as a skill node
+      const grid = document.createElement('div');
+      grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(175px,1fr));gap:10px;';
+
+      allAttacks.forEach((sa, idx) => {
+        const stNode = (saveData.skillTree || {})[sa.skillTreeId] || { level: 0, maxLevel: 3 };
+        const currentLvl = stNode.level || 0;
+        const maxLvl = stNode.maxLevel || 3;
+        const isUnlocked = currentLvl > 0;
+        // Starting attacks are always available; others require the previous attack to be unlocked
+        const prevAttack = (!sa.isStartingAttack && idx > 0) ? allAttacks[idx - 1] : null;
+        const prevNode = prevAttack ? ((saveData.skillTree || {})[prevAttack.skillTreeId] || { level: 0 }) : { level: 1 };
+        const isAvailable = sa.isStartingAttack || prevNode.level > 0;
+        const UNLOCK_COST = 1;
+        const UPGRADE_COST = 1;
+        const canAfford = pts >= (isUnlocked ? UPGRADE_COST : UNLOCK_COST);
+        const canUpgrade = isUnlocked && currentLvl < maxLvl && canAfford;
+        const canUnlock = !isUnlocked && isAvailable && canAfford;
+
+        const node = document.createElement('div');
+        node.style.cssText = `background:rgba(255,255,255,0.04);border:2px solid ${isUnlocked ? '#FF4400' : (isAvailable ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.1)')};border-radius:10px;padding:10px 8px;text-align:center;opacity:${isAvailable || isUnlocked ? '1' : '0.45'};transition:border-color 0.2s;`;
+
+        const upgrade = sa.upgrades && sa.upgrades.find(u => u.level === Math.max(1, currentLvl));
+        const upgradeNext = sa.upgrades && sa.upgrades.find(u => u.level === currentLvl + 1);
+        const bonusText = (upgradeNext && upgradeNext.bonus) ? `<div style="font-size:9px;color:#aaa;font-family:Arial,sans-serif;margin-top:2px;">Next: ${upgradeNext.bonus}</div>` : '';
+
+        node.innerHTML = `
+          <div style="font-size:28px;margin-bottom:4px;">${sa.icon}</div>
+          <div style="font-size:13px;letter-spacing:1px;color:${isUnlocked ? '#FF8844' : '#DDD'};">${sa.name}</div>
+          <div style="font-size:9px;color:#888;font-family:Arial,sans-serif;margin:3px 0;">${sa.description}</div>
+          <div style="font-size:10px;color:#FFD700;margin:4px 0;">Level ${currentLvl}/${maxLvl}</div>
+          ${bonusText}
+          <div style="font-size:9px;color:#aaa;font-family:Arial,sans-serif;">CD: ${((upgrade && upgrade.cooldownMs) || sa.cooldownMs) / 1000}s</div>
+        `;
+
+        if (canUnlock || canUpgrade) {
+          const btn = document.createElement('button');
+          btn.textContent = canUnlock ? `🔓 Unlock (${UNLOCK_COST} SAP)` : `⬆️ Upgrade (${UPGRADE_COST} SAP)`;
+          btn.style.cssText = 'margin-top:8px;width:100%;padding:5px;background:linear-gradient(135deg,#FF4400,#FF8800);border:none;color:#fff;border-radius:6px;cursor:pointer;font-family:"Bangers",cursive;font-size:12px;letter-spacing:0.5px;';
+          btn.addEventListener('click', () => {
+            const cost = canUnlock ? UNLOCK_COST : UPGRADE_COST;
+            if ((saveData.specialAtkPoints || 0) < cost) return;
+            saveData.specialAtkPoints -= cost;
+            if (!saveData.skillTree[sa.skillTreeId]) saveData.skillTree[sa.skillTreeId] = { level: 0, maxLevel: maxLvl };
+            saveData.skillTree[sa.skillTreeId].level = Math.min(maxLvl, (saveData.skillTree[sa.skillTreeId].level || 0) + 1);
+            saveData.skillTree[sa.skillTreeId].unlocked = true;
+            saveSaveData();
+            if (window.GameRageCombat) window.GameRageCombat.refreshLoadout(saveData);
+            // Rebuild the panel to reflect new state
+            if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+            showSpecialAttacksPanel();
+          });
+          node.appendChild(btn);
+        } else if (currentLvl >= maxLvl) {
+          const maxTag = document.createElement('div');
+          maxTag.style.cssText = 'margin-top:8px;color:#FFD700;font-size:11px;';
+          maxTag.textContent = '✨ MAX LEVEL';
+          node.appendChild(maxTag);
+        } else if (!isAvailable) {
+          const lockTag = document.createElement('div');
+          lockTag.style.cssText = 'margin-top:8px;color:#666;font-size:11px;';
+          lockTag.textContent = '🔒 Unlock previous first';
+          node.appendChild(lockTag);
+        }
+
+        grid.appendChild(node);
+      });
+
+      panel.appendChild(grid);
+      overlay.appendChild(panel);
+      document.body.appendChild(overlay);
     }
 
     // ============================================================

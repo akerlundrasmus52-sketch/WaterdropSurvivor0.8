@@ -324,7 +324,6 @@
     const layout = {};
     for (const h of _handles) {
       const el = h.el;
-      const cs = window.getComputedStyle(el);
       layout[h.def.selector] = {
         left:      el.style.left   || null,
         top:       el.style.top    || null,
@@ -371,10 +370,22 @@
   }
 
   function _applyEntryToElement(el, entry) {
-    if (entry.left   !== undefined && entry.left   !== null) el.style.left   = entry.left;
-    if (entry.top    !== undefined && entry.top    !== null) el.style.top    = entry.top;
-    if (entry.right  !== undefined && entry.right  !== null) el.style.right  = entry.right;
-    if (entry.bottom !== undefined && entry.bottom !== null) el.style.bottom = entry.bottom;
+    // Apply horizontal position — clear the opposing anchor to avoid conflicts
+    if (entry.left !== undefined && entry.left !== null) {
+      el.style.left  = entry.left;
+      el.style.right = '';
+    } else if (entry.right !== undefined && entry.right !== null) {
+      el.style.right = entry.right;
+      el.style.left  = '';
+    }
+    // Apply vertical position — clear the opposing anchor to avoid conflicts
+    if (entry.top !== undefined && entry.top !== null) {
+      el.style.top    = entry.top;
+      el.style.bottom = '';
+    } else if (entry.bottom !== undefined && entry.bottom !== null) {
+      el.style.bottom = entry.bottom;
+      el.style.top    = '';
+    }
     if (entry.transform)       el.style.transform       = entry.transform;
     if (entry.transformOrigin) el.style.transformOrigin = entry.transformOrigin;
     // Ensure position is fixed so saved coords work regardless of which

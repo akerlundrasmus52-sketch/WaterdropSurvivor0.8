@@ -16,10 +16,28 @@
   const RAGE_DAMAGE_MULT  = 2.5;
   const RAGE_SPEED_MULT   = 1.4;
 
-  const MAX_EQUIPPED_SPECIALS = 3; // Maximum special attacks player can equip at once
+  const MAX_EQUIPPED_SPECIALS = 4; // Maximum special attacks player can equip at once
 
   // ── All available special attacks (unlocked via skill tree) ──
   const ALL_SPECIAL_ATTACKS = [
+    {
+      id: 'knifeTakedown',
+      name: 'Knife Takedown',
+      icon: '🔪',
+      description: 'Close-range insta-kill melee takedown',
+      cooldownMs: 40000,
+      damageRadius: 2,
+      damage: 9999,
+      color: 0xCC0000,
+      keybind: '1',
+      skillTreeId: 'specialKnifeTakedown',
+      isStartingAttack: true,
+      upgrades: [
+        { level: 1, cooldownMs: 40000, damage: 9999 },
+        { level: 2, cooldownMs: 32000, damage: 9999, bonus: '-8s cooldown' },
+        { level: 3, cooldownMs: 25000, damage: 9999, bonus: '-7s cooldown' }
+      ]
+    },
     {
       id: 'shockwave',
       name: 'Shockwave',
@@ -29,8 +47,13 @@
       damageRadius: 12,
       damage: 80,
       color: 0xFF6600,
-      keybind: '1',
-      skillTreeId: 'specialShockwave'
+      keybind: '2',
+      skillTreeId: 'specialShockwave',
+      upgrades: [
+        { level: 1, cooldownMs: 8000,  damage: 80  },
+        { level: 2, cooldownMs: 6500,  damage: 110, bonus: '+30 dmg, -1.5s cd' },
+        { level: 3, cooldownMs: 5000,  damage: 150, bonus: '+40 dmg, -1.5s cd' }
+      ]
     },
     {
       id: 'frozenStorm',
@@ -41,8 +64,13 @@
       damageRadius: 18,
       damage: 30,
       color: 0x44AAFF,
-      keybind: '2',
-      skillTreeId: 'specialFrozenStorm'
+      keybind: '3',
+      skillTreeId: 'specialFrozenStorm',
+      upgrades: [
+        { level: 1, cooldownMs: 12000, damage: 30  },
+        { level: 2, cooldownMs: 9500,  damage: 50,  bonus: '+20 dmg, -2.5s cd' },
+        { level: 3, cooldownMs: 7000,  damage: 75,  bonus: '+25 dmg, -2.5s cd' }
+      ]
     },
     {
       id: 'deathBlossom',
@@ -53,8 +81,13 @@
       damageRadius: 20,
       damage: 60,
       color: 0xFF44AA,
-      keybind: '3',
-      skillTreeId: 'specialDeathBlossom'
+      keybind: '4',
+      skillTreeId: 'specialDeathBlossom',
+      upgrades: [
+        { level: 1, cooldownMs: 15000, damage: 60  },
+        { level: 2, cooldownMs: 12000, damage: 85,  bonus: '+25 dmg, -3s cd' },
+        { level: 3, cooldownMs: 9000,  damage: 120, bonus: '+35 dmg, -3s cd' }
+      ]
     },
     {
       id: 'thunderStrike',
@@ -65,8 +98,13 @@
       damageRadius: 8,
       damage: 100,
       color: 0xFFFF00,
-      keybind: '4',
-      skillTreeId: 'specialThunderStrike'
+      keybind: '5',
+      skillTreeId: 'specialThunderStrike',
+      upgrades: [
+        { level: 1, cooldownMs: 10000, damage: 100 },
+        { level: 2, cooldownMs: 8000,  damage: 140, bonus: '+40 dmg, -2s cd' },
+        { level: 3, cooldownMs: 6000,  damage: 190, bonus: '+50 dmg, -2s cd' }
+      ]
     },
     {
       id: 'voidPulse',
@@ -77,8 +115,13 @@
       damageRadius: 22,
       damage: 75,
       color: 0x8800FF,
-      keybind: '5',
-      skillTreeId: 'specialVoidPulse'
+      keybind: '6',
+      skillTreeId: 'specialVoidPulse',
+      upgrades: [
+        { level: 1, cooldownMs: 18000, damage: 75  },
+        { level: 2, cooldownMs: 14000, damage: 105, bonus: '+30 dmg, -4s cd' },
+        { level: 3, cooldownMs: 10000, damage: 145, bonus: '+40 dmg, -4s cd' }
+      ]
     },
     {
       id: 'infernoRing',
@@ -89,8 +132,234 @@
       damageRadius: 16,
       damage: 55,
       color: 0xFF2200,
-      keybind: '6',
-      skillTreeId: 'specialInfernoRing'
+      keybind: '7',
+      skillTreeId: 'specialInfernoRing',
+      upgrades: [
+        { level: 1, cooldownMs: 14000, damage: 55  },
+        { level: 2, cooldownMs: 11000, damage: 80,  bonus: '+25 dmg, -3s cd' },
+        { level: 3, cooldownMs: 8000,  damage: 115, bonus: '+35 dmg, -3s cd' }
+      ]
+    },
+    {
+      id: 'acidCloud',
+      name: 'Acid Cloud',
+      icon: '🟢',
+      description: 'Toxic cloud melts enemies over time',
+      cooldownMs: 16000,
+      damageRadius: 14,
+      damage: 45,
+      color: 0x44FF22,
+      keybind: '8',
+      skillTreeId: 'specialAcidCloud',
+      upgrades: [
+        { level: 1, cooldownMs: 16000, damage: 45  },
+        { level: 2, cooldownMs: 12500, damage: 70,  bonus: '+25 dmg, -3.5s cd' },
+        { level: 3, cooldownMs: 9000,  damage: 100, bonus: '+30 dmg, -3.5s cd' }
+      ]
+    },
+    {
+      id: 'gravityWell',
+      name: 'Gravity Well',
+      icon: '🌑',
+      description: 'Black hole crushes and kills nearby enemies',
+      cooldownMs: 22000,
+      damageRadius: 20,
+      damage: 120,
+      color: 0x220044,
+      keybind: '9',
+      skillTreeId: 'specialGravityWell',
+      upgrades: [
+        { level: 1, cooldownMs: 22000, damage: 120 },
+        { level: 2, cooldownMs: 17000, damage: 165, bonus: '+45 dmg, -5s cd' },
+        { level: 3, cooldownMs: 12000, damage: 220, bonus: '+55 dmg, -5s cd' }
+      ]
+    },
+    {
+      id: 'sonicBoom',
+      name: 'Sonic Boom',
+      icon: '📢',
+      description: 'Deafening blast knocks back all enemies',
+      cooldownMs: 11000,
+      damageRadius: 18,
+      damage: 65,
+      color: 0xCCCCFF,
+      keybind: '0',
+      skillTreeId: 'specialSonicBoom',
+      upgrades: [
+        { level: 1, cooldownMs: 11000, damage: 65  },
+        { level: 2, cooldownMs: 8500,  damage: 90,  bonus: '+25 dmg, -2.5s cd' },
+        { level: 3, cooldownMs: 6500,  damage: 125, bonus: '+35 dmg, -2s cd' }
+      ]
+    },
+    {
+      id: 'bloodRain',
+      name: 'Blood Rain',
+      icon: '🩸',
+      description: 'Rain of blood deals damage and slows enemies',
+      cooldownMs: 20000,
+      damageRadius: 25,
+      damage: 50,
+      color: 0x990000,
+      keybind: 'q',
+      skillTreeId: 'specialBloodRain',
+      upgrades: [
+        { level: 1, cooldownMs: 20000, damage: 50  },
+        { level: 2, cooldownMs: 15500, damage: 75,  bonus: '+25 dmg, -4.5s cd' },
+        { level: 3, cooldownMs: 11000, damage: 110, bonus: '+35 dmg, -4.5s cd' }
+      ]
+    },
+    {
+      id: 'timeFracture',
+      name: 'Time Fracture',
+      icon: '⏳',
+      description: 'Slow all enemies to a crawl for 5 seconds',
+      cooldownMs: 25000,
+      damageRadius: 30,
+      damage: 20,
+      color: 0x00FFFF,
+      keybind: 'w',
+      skillTreeId: 'specialTimeFracture',
+      upgrades: [
+        { level: 1, cooldownMs: 25000, damage: 20  },
+        { level: 2, cooldownMs: 20000, damage: 35,  bonus: '+15 dmg, -5s cd' },
+        { level: 3, cooldownMs: 15000, damage: 55,  bonus: '+20 dmg, -5s cd' }
+      ]
+    },
+    {
+      id: 'chainLightning',
+      name: 'Chain Lightning',
+      icon: '🌩️',
+      description: 'Lightning chains between multiple enemies',
+      cooldownMs: 13000,
+      damageRadius: 15,
+      damage: 90,
+      color: 0xFFEE00,
+      keybind: 'e',
+      skillTreeId: 'specialChainLightning',
+      upgrades: [
+        { level: 1, cooldownMs: 13000, damage: 90  },
+        { level: 2, cooldownMs: 10000, damage: 125, bonus: '+35 dmg, -3s cd' },
+        { level: 3, cooldownMs: 7500,  damage: 170, bonus: '+45 dmg, -2.5s cd' }
+      ]
+    },
+    {
+      id: 'mirrorField',
+      name: 'Mirror Field',
+      icon: '🪞',
+      description: 'Reflect all projectiles back at enemies',
+      cooldownMs: 30000,
+      damageRadius: 12,
+      damage: 0,
+      color: 0xEEEEEE,
+      keybind: 'r',
+      skillTreeId: 'specialMirrorField',
+      upgrades: [
+        { level: 1, cooldownMs: 30000, damage: 0   },
+        { level: 2, cooldownMs: 24000, damage: 0,   bonus: '-6s cooldown, lasts longer' },
+        { level: 3, cooldownMs: 18000, damage: 0,   bonus: '-6s cooldown, also damages' }
+      ]
+    },
+    {
+      id: 'meteorStrike',
+      name: 'Meteor Strike',
+      icon: '☄️',
+      description: 'Call down meteors from the sky',
+      cooldownMs: 28000,
+      damageRadius: 10,
+      damage: 200,
+      color: 0xFF8800,
+      keybind: 't',
+      skillTreeId: 'specialMeteorStrike',
+      upgrades: [
+        { level: 1, cooldownMs: 28000, damage: 200 },
+        { level: 2, cooldownMs: 22000, damage: 270, bonus: '+70 dmg, -6s cd' },
+        { level: 3, cooldownMs: 16000, damage: 360, bonus: '+90 dmg, -6s cd' }
+      ]
+    },
+    {
+      id: 'shadowClone',
+      name: 'Shadow Clone',
+      icon: '👤',
+      description: 'Spawn a shadow clone that fights alongside you',
+      cooldownMs: 35000,
+      damageRadius: 8,
+      damage: 40,
+      color: 0x440088,
+      keybind: 'y',
+      skillTreeId: 'specialShadowClone',
+      upgrades: [
+        { level: 1, cooldownMs: 35000, damage: 40  },
+        { level: 2, cooldownMs: 28000, damage: 60,  bonus: '+20 dmg, -7s cd' },
+        { level: 3, cooldownMs: 21000, damage: 85,  bonus: '+25 dmg, -7s cd' }
+      ]
+    },
+    {
+      id: 'forceBarrier',
+      name: 'Force Barrier',
+      icon: '🛡️',
+      description: 'Temporary invincibility shield',
+      cooldownMs: 40000,
+      damageRadius: 6,
+      damage: 0,
+      color: 0x4488FF,
+      keybind: 'u',
+      skillTreeId: 'specialForceBarrier',
+      upgrades: [
+        { level: 1, cooldownMs: 40000, damage: 0   },
+        { level: 2, cooldownMs: 32000, damage: 0,   bonus: '-8s cooldown, lasts longer' },
+        { level: 3, cooldownMs: 24000, damage: 0,   bonus: '-8s cooldown, also counters' }
+      ]
+    },
+    {
+      id: 'plasmaBurst',
+      name: 'Plasma Burst',
+      icon: '🔮',
+      description: 'Concentrated plasma vaporizes enemies in a cone',
+      cooldownMs: 17000,
+      damageRadius: 12,
+      damage: 130,
+      color: 0xFF00FF,
+      keybind: 'i',
+      skillTreeId: 'specialPlasmaBurst',
+      upgrades: [
+        { level: 1, cooldownMs: 17000, damage: 130 },
+        { level: 2, cooldownMs: 13000, damage: 180, bonus: '+50 dmg, -4s cd' },
+        { level: 3, cooldownMs: 9500,  damage: 240, bonus: '+60 dmg, -3.5s cd' }
+      ]
+    },
+    {
+      id: 'earthquakeStamp',
+      name: 'Earthquake',
+      icon: '🌍',
+      description: 'Stomp the ground and stun all nearby enemies',
+      cooldownMs: 19000,
+      damageRadius: 20,
+      damage: 70,
+      color: 0x885500,
+      keybind: 'o',
+      skillTreeId: 'specialEarthquake',
+      upgrades: [
+        { level: 1, cooldownMs: 19000, damage: 70  },
+        { level: 2, cooldownMs: 15000, damage: 100, bonus: '+30 dmg, -4s cd' },
+        { level: 3, cooldownMs: 11000, damage: 140, bonus: '+40 dmg, -4s cd' }
+      ]
+    },
+    {
+      id: 'adrenalineRush',
+      name: 'Adrenaline Rush',
+      icon: '💉',
+      description: 'Massive speed and damage boost for 8 seconds',
+      cooldownMs: 45000,
+      damageRadius: 0,
+      damage: 0,
+      color: 0xFF4488,
+      keybind: 'p',
+      skillTreeId: 'specialAdrenalineRush',
+      upgrades: [
+        { level: 1, cooldownMs: 45000, damage: 0   },
+        { level: 2, cooldownMs: 36000, damage: 0,   bonus: '-9s cooldown, longer boost' },
+        { level: 3, cooldownMs: 27000, damage: 0,   bonus: '-9s cooldown, stronger boost' }
+      ]
     }
   ];
 
@@ -121,6 +390,15 @@
     if (!_saveData || !_saveData.skillTree) return false;
     const node = _saveData.skillTree[sa.skillTreeId];
     return node && node.level > 0;
+  }
+
+  // Get the effective cooldownMs for a special attack based on its current upgrade level
+  function _getEffectiveCooldown(sa) {
+    if (!_saveData || !_saveData.skillTree || !sa.upgrades) return sa.cooldownMs;
+    const node = _saveData.skillTree[sa.skillTreeId];
+    const lvl = (node && node.level) || 1;
+    const upgrade = sa.upgrades.find(u => u.level === lvl);
+    return (upgrade && upgrade.cooldownMs) || sa.cooldownMs;
   }
 
   // ── HUD helpers ───────────────────────────────────────────────
@@ -184,11 +462,12 @@
     }
 
     equipped.forEach(sa => {
+      const unlocked = _isUnlocked(sa);
       const btn = document.createElement('button');
       btn.id = `sa-btn-${sa.id}`;
-      btn.className = 'special-attack-btn';
+      btn.className = 'special-attack-btn' + (unlocked ? '' : ' sa-locked');
       btn.innerHTML = `<span class="sa-icon">${sa.icon}</span><span class="sa-name">${sa.name}</span><div class="sa-cooldown-overlay" id="sa-cd-${sa.id}"></div>`;
-      btn.title = sa.description;
+      btn.title = unlocked ? sa.description : `🔒 Locked — unlock in Special Attacks building`;
       // Use both click and touchstart to fix control conflict with joystick zone
       btn.addEventListener('click', () => triggerSpecialAttack(sa.id));
       btn.addEventListener('touchstart', (e) => {
@@ -284,12 +563,15 @@
       const cdEl = document.getElementById(`sa-cd-${sa.id}`);
       const saBtn = document.getElementById(`sa-btn-${sa.id}`);
       if (!cdEl || !saBtn) return;
+      const effectiveCd = _getEffectiveCooldown(sa);
       const elapsed = now - (_specialCooldowns[sa.id] || 0);
-      const remaining = Math.max(0, sa.cooldownMs - elapsed);
-      const frac = remaining / sa.cooldownMs;
+      const remaining = Math.max(0, effectiveCd - elapsed);
+      const frac = remaining / effectiveCd;
       cdEl.style.height = (frac * 100) + '%';
-      saBtn.disabled = remaining > 0;
-      saBtn.classList.toggle('sa-ready', remaining <= 0);
+      const unlocked = _isUnlocked(sa);
+      saBtn.disabled = !unlocked || remaining > 0;
+      saBtn.classList.toggle('sa-ready', unlocked && remaining <= 0);
+      saBtn.classList.toggle('sa-locked', !unlocked);
     });
   }
 
@@ -334,7 +616,7 @@
       return;
     }
     const now = Date.now();
-    if (now - (_specialCooldowns[attackId] || 0) < sa.cooldownMs) return;
+    if (now - (_specialCooldowns[attackId] || 0) < _getEffectiveCooldown(sa)) return;
 
     _specialCooldowns[attackId] = now;
     _showBigText(`${sa.icon} ${sa.name.toUpperCase()}!`, '#FFFFFF');
