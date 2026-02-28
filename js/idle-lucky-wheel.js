@@ -161,6 +161,8 @@ window.GameLuckyWheel = (function () {
           el.textContent = '🎉 ' + res.prize + ' — ' + res.description;
           renderWheelPanel(saveData, container);
         } else {
+          var existingResult = container.querySelector('.wheel-result');
+          if (existingResult) existingResult.textContent = '';
           btns.forEach(function (b) { b.disabled = false; });
           alert(res.msg);
         }
