@@ -79,9 +79,29 @@ window.GameAccountCSS = (function () {
     '@keyframes wheelSpin{0%{transform:rotate(0deg)}100%{transform:rotate(1440deg)}}',
     '.wheel-svg-spinning{animation:wheelSpin 1.5s cubic-bezier(0.17,0.67,0.12,1.0) forwards;transform-origin:center;transform-box:fill-box;}',
     /* Stats panel */
-    '.stats-panel h3{margin:0 0 10px;font-size:18px;font-family:"Bangers",cursive;color:#FFD700;}.stats-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;}',
-    '.stat-card{display:flex;align-items:center;gap:8px;background:rgba(255,215,0,0.06);border:2px solid rgba(255,215,0,0.2);border-radius:6px;padding:8px 10px;}',
-    '.stat-icon{font-size:20px;min-width:24px;text-align:center;}.stat-name{font-size:11px;color:#aaa;}.stat-value{font-size:15px;font-weight:bold;color:#FFD700;}'
+    /* Attribute point system */
+    '.acc-attr-pts-header{background:linear-gradient(to right,rgba(255,215,0,0.15),rgba(255,165,0,0.08));border:2px solid rgba(255,215,0,0.5);border-radius:6px;padding:8px 12px;font-size:14px;font-weight:bold;color:#FFD700;font-family:"Bangers",cursive;letter-spacing:1px;margin-bottom:8px;text-align:center;}',
+    '.acc-section-title{color:#5DADE2;font-size:12px;font-family:"Bangers",cursive;letter-spacing:1px;margin:4px 0 6px;padding:2px 0;border-bottom:1px solid rgba(93,173,226,0.3);}',
+    '.acc-attrs-list{display:flex;flex-direction:column;gap:3px;margin-bottom:4px;}',
+    '.acc-attr-row{display:flex;align-items:center;gap:6px;padding:4px 6px;background:rgba(255,215,0,0.04);border-radius:4px;border:1px solid rgba(255,215,0,0.1);}',
+    '.acc-attr-icon{font-size:16px;min-width:22px;text-align:center;}',
+    '.acc-attr-label{flex:1;font-size:12px;color:#ddd;font-weight:bold;}',
+    '.acc-attr-level{font-size:12px;color:#FFD700;min-width:60px;text-align:right;}',
+    '.acc-attr-plus{padding:2px 8px;background:linear-gradient(to bottom,#3498DB,#2C3E50);color:#fff;border:1px solid #5DADE2;border-radius:4px;cursor:pointer;font-size:12px;font-family:monospace;font-weight:bold;}',
+    '.acc-attr-plus:hover{background:linear-gradient(to bottom,#5DADE2,#3498DB);}',
+    '.acc-attr-plus-disabled{background:#444 !important;border-color:#666 !important;cursor:not-allowed !important;opacity:0.5;}',
+    '.acc-attr-bonus{font-size:11px;color:#2ecc71;min-width:100px;text-align:right;}',
+    /* Stats scroll */
+    '.acc-stats-scroll{max-height:280px;overflow-y:auto;border:1px solid rgba(255,215,0,0.2);border-radius:4px;background:rgba(0,0,0,0.3);}',
+    '.acc-stat-cat-header{background:rgba(93,173,226,0.12);border-bottom:1px solid rgba(93,173,226,0.2);padding:4px 8px;font-size:11px;font-family:"Bangers",cursive;letter-spacing:1px;color:#5DADE2;}',
+    '.acc-stat-row{display:flex;align-items:center;padding:3px 8px;border-bottom:1px solid rgba(255,215,0,0.06);font-size:12px;}',
+    '.acc-stat-row:nth-child(even){background:rgba(255,215,0,0.02);}',
+    '.acc-stat-name{flex:1;color:#bbb;}',
+    '.acc-stat-vals{min-width:120px;text-align:right;color:#ddd;}',
+    '.acc-stat-vals b{color:#FFD700;}',
+    '.acc-stat-diff{min-width:60px;text-align:right;font-size:11px;}',
+    '.acc-stat-up{color:#2ecc71;}',
+    '.acc-stat-down{color:#e74c3c;}'
   ].join('\n');
 
   function init() {
