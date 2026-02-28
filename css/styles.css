@@ -803,7 +803,60 @@
           0 0 25px rgba(255,215,0,0.5);
       }
     }
-    
+
+    /* ── Living fog / water / smoke border animation ──────────────────────────
+       A breathing outer glow (via ::after pseudo-elements) that evokes moving
+       water, fog, or smoke shadows around all major UI surfaces.
+       Using ::after keeps the animation isolated from each element's own
+       box-shadow and existing ::before shine layers.
+    ── */
+    @keyframes ui-fog-glow {
+      0%, 100% {
+        box-shadow:
+          0 0 6px 2px rgba(93,173,226,0.20),
+          0 0 14px 5px rgba(93,173,226,0.09),
+          0 0 0 1px rgba(93,173,226,0.14);
+        opacity: 0.7;
+      }
+      33% {
+        box-shadow:
+          0 0 10px 4px rgba(93,173,226,0.38),
+          0 0 22px 9px rgba(93,173,226,0.18),
+          0 0 0 2px rgba(150,210,255,0.22),
+          0 0 5px 1px rgba(200,235,255,0.12);
+        opacity: 1;
+      }
+      66% {
+        box-shadow:
+          0 0 14px 6px rgba(93,173,226,0.45),
+          0 0 30px 13px rgba(93,173,226,0.20),
+          0 0 0 2px rgba(93,173,226,0.28);
+        opacity: 0.9;
+      }
+    }
+
+    /* Shared fog pseudo-element base */
+    .camp-menu-box::after,
+    .settings-container::after,
+    .enhanced-notification::after,
+    .stat-notification::after,
+    .skill-node::after,
+    .modal-content::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      pointer-events: none;
+      z-index: -1;
+      will-change: box-shadow, opacity;
+      animation: ui-fog-glow 5s ease-in-out infinite;
+    }
+
+    /* Ensure fog pseudo-elements on skill nodes work (they are position:relative already) */
+    .skill-node {
+      position: relative;
+    }
+
     /* Quest tracker — fixed position left-side in-game overlay with dark background */
     #quest-tracker {
       position: fixed !important;
@@ -841,56 +894,47 @@
       }
     }
     
-    /* FRESH IMPLEMENTATION: Enhanced Notification System */
+    /* FRESH IMPLEMENTATION: Enhanced Notification System —
+       Positioned under the XP bar (stat bar cluster, top-right) instead of centre-screen
+       so notifications never obstruct gameplay. Multiple events are queued in JS. */
+    :root {
+      --notif-slide-distance: 120%;
+    }
     .enhanced-notification {
       position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%) scale(0.8);
+      top: 60px;
+      right: 10px;
+      left: auto;
+      transform: translateX(var(--notif-slide-distance));
       background: linear-gradient(to bottom, #1a3a4a 0%, #0f1f2a 100%);
-      border: 4px solid #5DADE2;
-      border-radius: 20px;
-      padding: 30px;
-      max-width: 400px;
+      border: 3px solid #5DADE2;
+      border-radius: 16px;
+      padding: 12px 16px;
+      max-width: 280px;
       z-index: 999;
       pointer-events: none;
-      box-shadow: 0 0 40px rgba(93,173,226,0.8);
-      animation: notification-popup 0.5s ease-out forwards;
+      box-shadow: 0 0 30px rgba(93,173,226,0.6);
+      animation: enhanced-notif-slide-in 0.4s ease-out forwards;
     }
     
-    @keyframes notification-popup {
-      0% {
-        opacity: 0;
-        transform: translate(-50%, -50%) scale(0.5);
-      }
-      60% {
-        transform: translate(-50%, -50%) scale(1.05);
-      }
-      100% {
-        opacity: 1;
-        transform: translate(-50%, -50%) scale(1);
-      }
+    @keyframes enhanced-notif-slide-in {
+      0%   { opacity: 0; transform: translateX(var(--notif-slide-distance)); }
+      100% { opacity: 1; transform: translateX(0); }
     }
     
     .enhanced-notification.fade-out {
-      animation: notification-fadeout 0.3s ease-out forwards;
+      animation: enhanced-notif-slide-out 0.3s ease-out forwards;
     }
     
-    @keyframes notification-fadeout {
-      0% {
-        opacity: 1;
-        transform: translate(-50%, -50%) scale(1);
-      }
-      100% {
-        opacity: 0;
-        transform: translate(-50%, -50%) scale(0.8);
-      }
+    @keyframes enhanced-notif-slide-out {
+      0%   { opacity: 1; transform: translateX(0); }
+      100% { opacity: 0; transform: translateX(var(--notif-slide-distance)); }
     }
     
     .notification-icon {
-      font-size: 48px;
+      font-size: 28px;
       text-align: center;
-      margin-bottom: 15px;
+      margin-bottom: 6px;
       animation: icon-bounce 0.6s ease-out;
     }
     
@@ -901,18 +945,18 @@
     
     .notification-title {
       color: #FFD700;
-      font-size: 24px;
+      font-size: 16px;
       font-weight: bold;
       text-align: center;
-      margin-bottom: 10px;
-      text-shadow: 0 0 15px rgba(255,215,0,0.8);
+      margin-bottom: 5px;
+      text-shadow: 0 0 10px rgba(255,215,0,0.8);
     }
     
     .notification-text {
       color: #FFFFFF;
-      font-size: 16px;
+      font-size: 13px;
       text-align: center;
-      line-height: 1.5;
+      line-height: 1.4;
     }
     
     /* Story Quest Modal Styles */
