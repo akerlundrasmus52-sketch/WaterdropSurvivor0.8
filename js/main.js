@@ -11242,9 +11242,9 @@
                   <div style="color:${isMaxed ? '#FFD700' : '#fff'};font-size:12px;font-weight:bold;">${skill.name}</div>
                   <div style="color:#aaa;font-size:10px;margin:4px 0;">${skill.desc}</div>
                   <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;">
-                    <span style="color:#4FC3F7;font-size:11px;">Lv ${currentLevel}/${skill.maxLevel}</span>
+                    <span style="color:#4FC3F7;font-size:11px;">Level ${currentLevel}/${skill.maxLevel}</span>
                     ${isLocked
-                      ? '<span style="color:#f66;font-size:10px;">Needs Lv5</span>'
+                      ? '<span style="color:#f66;font-size:10px;">Needs Level 5</span>'
                       : isMaxed
                         ? '<span style="color:#FFD700;font-size:10px;">MAX</span>'
                         : `<button onclick="upgradeCompanionSkill('${skillId}')" style="background:${canAfford ? 'rgba(255,215,0,0.2)' : 'rgba(100,100,100,0.2)'};border:1px solid ${canAfford ? '#FFD700' : '#555'};border-radius:4px;padding:3px 8px;color:${canAfford ? '#FFD700' : '#666'};cursor:${canAfford ? 'pointer' : 'default'};font-size:10px;">${skill.cost} SP</button>`
