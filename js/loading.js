@@ -84,17 +84,25 @@
         setTimeout(function() {
           loadingScreen.style.display = 'none';
           
-          // Show main menu (module script will handle button event listeners)
-          const mainMenu = document.getElementById('main-menu');
-          if (mainMenu) {
-            mainMenu.style.display = 'flex';
+          // Route to 3D Camp World as the default screen (instead of old 2D main menu).
+          // The main menu is still accessible from within the camp via the START RUN button.
+          // Remove camp-subsection-active so the buildings overview is shown (not a sub-panel).
+          var campScreen = document.getElementById('camp-screen');
+          if (campScreen && window.updateCampScreen) {
+            campScreen.classList.remove('camp-subsection-active');
+            campScreen.style.display = 'flex';
+            window.updateCampScreen();
+          } else {
+            // Fallback: show main menu if camp world is not ready yet
+            var mainMenu = document.getElementById('main-menu');
+            if (mainMenu) mainMenu.style.display = 'flex';
           }
           
           // FRESH IMPLEMENTATION: Show Story Quest Modal on first load
           setTimeout(function() {
             // Access saveData through window if available (will be set by game module)
             if (window.saveData && !window.saveData.storyQuests.welcomeShown) {
-              const storyModal = document.getElementById('story-quest-modal');
+              var storyModal = document.getElementById('story-quest-modal');
               if (storyModal) {
                 storyModal.style.display = 'flex';
               }

@@ -574,7 +574,9 @@
     </div>
 
     <!-- Countdown Text (PR #70-71) -->
-    <div id="tutorial-text" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 96px; font-weight: bold; color: #FFF; text-shadow: 0 0 20px rgba(255,255,255,0.8), 0 0 40px rgba(93,173,226,0.6); opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 150;"></div>
+    <div id="tutorial-text-wrap" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;z-index:150;overflow:hidden;border-radius:14px;padding:8px 18px;">
+      <div id="tutorial-text" style="font-size: 96px; font-weight: bold; color: #FFF; text-shadow: 0 0 20px rgba(255,255,255,0.8), 0 0 40px rgba(93,173,226,0.6); opacity: 0; transition: opacity 0.3s; pointer-events: none;"></div>
+    </div>
 
     <!-- Melee Takedown Button (unlocked via Skill Tree) -->
     <button id="melee-takedown-btn" style="display:none;" title="Melee Takedown (knife instant-kill)">
