@@ -11975,7 +11975,7 @@
 
       document.getElementById('inv-back-btn').onclick = () => {
         modal.remove();
-        if (campScreen) campScreen.style.display = 'flex';
+        if (campScreen) { campScreen.style.display = 'flex'; try { updateCampScreen(); } catch(err) { console.error('[Camp] inv-back-btn updateCampScreen error:', err); } }
       };
     }
 
@@ -12184,7 +12184,7 @@
       // Back button
       document.getElementById('ch-back-btn').onclick = () => {
         modal.remove();
-        if (campScreen) campScreen.style.display = 'flex';
+        if (campScreen) { campScreen.style.display = 'flex'; try { updateCampScreen(); } catch(err) { console.error('[Camp] ch-back-btn updateCampScreen error:', err); } }
       };
 
       // Activate companion button (quest9 progression)
@@ -17536,6 +17536,8 @@
           window.pauseOverlayCount = 0;
           isPaused = false;
           window.isPaused = false;
+          // Clean up game-world objects so the game scene doesn't consume GPU alongside camp
+          _cleanupGameForCampTransition();
           // Show camp screen immediately so player sees the transition
           document.getElementById('camp-screen').classList.remove('camp-subsection-active');
           document.getElementById('camp-screen').style.display = 'flex';
@@ -17586,6 +17588,8 @@
           roeEl.style.display = 'none';
           fadeTransition(() => {
             document.getElementById('gameover-screen').style.display = 'none';
+            // Clean up game-world objects so the game scene doesn't consume GPU alongside camp
+            _cleanupGameForCampTransition();
             document.getElementById('camp-screen').classList.remove('camp-subsection-active');
             document.getElementById('camp-screen').style.display = 'flex';
             try { updateCampScreen(); } catch(e) { console.error('[RunEndOptions] updateCampScreen error:', e); }
@@ -20984,6 +20988,25 @@
     window.triggerScreenShake = function(intensity) {
       window.screenShakeIntensity = Math.max(window.screenShakeIntensity, intensity);
     };
+
+    // Dispose game-world entities (enemies, projectiles, non-blood particles) before
+    // entering camp, so neither scene consumes GPU resources simultaneously.
+    // NOTE: BloodSystem is intentionally NOT reset here — blood stains remain visible
+    // until the scene switches naturally.
+    function _cleanupGameForCampTransition() {
+      enemies.forEach(e => {
+        try { scene.remove(e.mesh); e.mesh.geometry.dispose(); e.mesh.material.dispose(); } catch(_) {}
+      });
+      enemies = [];
+      projectiles.forEach(p => {
+        try { scene.remove(p.mesh); p.mesh.geometry.dispose(); p.mesh.material.dispose(); } catch(_) {}
+      });
+      projectiles = [];
+      particles.forEach(p => {
+        try { scene.remove(p.mesh); p.mesh.geometry.dispose(); p.mesh.material.dispose(); } catch(_) {}
+      });
+      particles = [];
+    }
 
     function gameOver() {
       setGameOver(true);

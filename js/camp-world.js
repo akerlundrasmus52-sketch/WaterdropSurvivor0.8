@@ -69,14 +69,14 @@
   let _sparkPositions = null;
   let _sparkVelocities = [];
   let _sparkLifetimes = [];
-  const SPARK_COUNT   = 120;
+  const SPARK_COUNT   = 60;
 
   // Floating dust / atmosphere particles
   let _dustSystem    = null;
   let _dustPositions = null;
   let _dustVelocities = [];
   let _dustLifetimes  = [];
-  const DUST_COUNT    = 80;
+  const DUST_COUNT    = 40;
 
   // Building mesh registry { id → THREE.Group }
   let _buildingMeshes = {};
@@ -431,7 +431,7 @@
   // ── Ambient forest ring ──────────────────────────────────
   function _buildAmbientForest() {
     const THREE = T();
-    const treeCount = 40;
+    const treeCount = 25;
     const treeColors = [0x1a4010, 0x143810, 0x0e2808, 0x224818];
 
     for (let i = 0; i < treeCount; i++) {
@@ -449,7 +449,7 @@
       const trunkMat = new THREE.MeshLambertMaterial({ color: 0x3d2208 });
       const trunk = new THREE.Mesh(trunkGeo, trunkMat);
       trunk.position.y = 0.9 * scale;
-      trunk.castShadow = true;
+      trunk.castShadow = false;
       grp.add(trunk);
 
       // Canopy (2 stacked cones)
@@ -461,7 +461,7 @@
         const canopyGeo = new THREE.ConeGeometry(cr, ch, 7);
         const canopy = new THREE.Mesh(canopyGeo, canopyMat);
         canopy.position.y = (1.8 + c * 1.0) * scale;
-        canopy.castShadow = true;
+        canopy.castShadow = false;
         grp.add(canopy);
       }
       _campScene.add(grp);
