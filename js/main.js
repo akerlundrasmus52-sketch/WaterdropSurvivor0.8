@@ -1034,6 +1034,31 @@
             }
           }
 
+          // Solid collision with resource rocks/crystals — player cannot walk through them
+          if (window.GameHarvesting && window.GameHarvesting.harvestNodes) {
+            for (let node of window.GameHarvesting.harvestNodes) {
+              if (node.depleted || !node.mesh) continue;
+              const collRadius = 0.9; // Rocks are about 1.6 radius but use smaller collider
+              const ndx = this.mesh.position.x - node.mesh.position.x;
+              const ndz = this.mesh.position.z - node.mesh.position.z;
+              const ndist = Math.sqrt(ndx * ndx + ndz * ndz);
+              if (ndist < collRadius && ndist > 0.001) {
+                // Push player out
+                this.mesh.position.x = node.mesh.position.x + (ndx / ndist) * collRadius;
+                this.mesh.position.z = node.mesh.position.z + (ndz / ndist) * collRadius;
+                const dot = this.velocity.x * ndx + this.velocity.z * ndz;
+                if (dot < 0) {
+                  this.velocity.x -= (dot / (ndist * ndist)) * ndx;
+                  this.velocity.z -= (dot / (ndist * ndist)) * ndz;
+                }
+                // Wobble the rock on collision
+                node._wobbleTime = 0.7;
+                if (!node._wobbleDir) node._wobbleDir = { x: -ndx / ndist, z: -ndz / ndist };
+                else { node._wobbleDir.x = -ndx / ndist; node._wobbleDir.z = -ndz / ndist; }
+              }
+            }
+          }
+
           // Enhanced water droplet trail when moving - MORE PARTICLES
           if (this.velocity.length() > 0.01) {
             this.trailTimer += dt;
@@ -10585,7 +10610,8 @@
           color: #FFF; 
           line-height: 1.8; 
           margin-bottom: 30px;
-          font-family: Arial, sans-serif;
+          font-family: 'Bangers', cursive;
+          letter-spacing: 0.5px;
           background: rgba(0,0,0,0.3);
           padding: 20px;
           border-radius: 10px;
@@ -16548,7 +16574,7 @@
         document.getElementById('gameover-screen').style.display = 'none';
         // Close any tutorial/comic modals that might still be open from the death sequence
         ['comic-tutorial-modal','comic-info-overlay','story-quest-modal'].forEach(id => {
-          const el = id === 'comic-info-overlay' ? document.getElementById(id) : document.getElementById(id);
+          const el = document.getElementById(id);
           if (el) el.style.display = 'none';
         });
         // Clear any stuck comic-info-overlay created dynamically

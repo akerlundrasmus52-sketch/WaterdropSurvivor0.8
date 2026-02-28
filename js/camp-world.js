@@ -1603,12 +1603,14 @@
 
     // Build scene once — wrap in try/catch so a partial build failure
     // resets _campScene to null, allowing a clean retry on the next enter().
-    // _isBuilding guard prevents re-entrant calls (e.g. warmUp + enter racing).
+    // Note: JavaScript is single-threaded so warmUp() (called via setTimeout) will
+    // always complete fully before enter() runs. _isBuilding guards against any
+    // unexpected re-entrant scenario.
     if (!_campScene) {
       if (_isBuilding) {
-        // Scene is already being built (warmUp racing with enter) — activate
-        // anyway; the scene will be ready by next frame.
-        _isActive = true;
+        // This path should not occur in practice (single-threaded JS), but as a
+        // safety valve: skip activation and let the caller try again on next visit.
+        console.warn('[CampWorld] enter() called while scene is building — retry will succeed');
         return;
       }
       _isBuilding = true;
