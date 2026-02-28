@@ -24,7 +24,20 @@ function getChestTierForCombo(comboCount) {
 }
 
 function getAccountLevelXPRequired(level) {
-  return level * 100; // Linear: each level requires level*100 XP total
+  return level * 100; // XP required to advance from `level` to `level + 1`
+}
+
+/**
+ * Clamps a value between min and max (inclusive).
+ * Replaces repeated Math.min(Math.max(value, min), max) patterns.
+ *
+ * @param {number} value - The number to clamp
+ * @param {number} min   - Lower bound
+ * @param {number} max   - Upper bound
+ * @returns {number}
+ */
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max);
 }
 
 const KILL_CAM_CONSTANTS = {
@@ -45,6 +58,7 @@ window.GameUtils = {
   getRarityColor,
   getChestTierForCombo,
   getAccountLevelXPRequired,
+  clamp,
   KILL_CAM_CONSTANTS,
   getRandomKillMessage
 };

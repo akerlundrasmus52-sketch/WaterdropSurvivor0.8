@@ -2,7 +2,7 @@
 // Core idle engine: offline progress, idle tick, gold mine, auto-trainer
 
 (function () {
-var IDLE_CONFIG = {
+const IDLE_CONFIG = {
   GOLD_MINE: {
     MAX_LEVEL: 10,
     RATE_PER_LEVEL: 2,       // gold per minute per level
@@ -48,23 +48,23 @@ function getAutoTrainerUpgradeCost(currentLevel) {
 }
 
 function calculateOfflineProgress(lastTimestamp, saveData) {
-  var now = Date.now();
-  var elapsed = now - lastTimestamp;
-  var maxElapsed = IDLE_CONFIG.MAX_OFFLINE_HOURS * 3600 * 1000;
+  const now = Date.now();
+  let elapsed = now - lastTimestamp;
+  const maxElapsed = IDLE_CONFIG.MAX_OFFLINE_HOURS * 3600 * 1000;
   if (elapsed > maxElapsed) elapsed = maxElapsed;
 
-  var elapsedMinutes = elapsed / 60000;
-  var idle = saveData.idle || getIdleDefaults();
+  const elapsedMinutes = elapsed / 60000;
+  const idle = saveData.idle || getIdleDefaults();
 
-  var goldEarned = 0;
+  let goldEarned = 0;
   if (idle.goldMineLevel > 0) {
-    var ratePerMin = idle.goldMineLevel * IDLE_CONFIG.GOLD_MINE.RATE_PER_LEVEL;
+    const ratePerMin = idle.goldMineLevel * IDLE_CONFIG.GOLD_MINE.RATE_PER_LEVEL;
     goldEarned = Math.floor(ratePerMin * elapsedMinutes);
   }
 
-  var statPoints = 0;
+  let statPoints = 0;
   if (idle.autoTrainerLevel > 0) {
-    var statRatePerMin = idle.autoTrainerLevel * IDLE_CONFIG.AUTO_TRAINER.RATE_PER_LEVEL;
+    const statRatePerMin = idle.autoTrainerLevel * IDLE_CONFIG.AUTO_TRAINER.RATE_PER_LEVEL;
     statPoints = statRatePerMin * elapsedMinutes;
   }
 
@@ -78,14 +78,14 @@ function calculateOfflineProgress(lastTimestamp, saveData) {
 }
 
 function idleTick(saveData) {
-  var idle = saveData.idle || getIdleDefaults();
-  var now = Date.now();
-  var elapsed = now - (idle.lastTickTime || now);
+  const idle = saveData.idle || getIdleDefaults();
+  const now = Date.now();
+  const elapsed = now - (idle.lastTickTime || now);
   idle.lastTickTime = now;
 
-  var elapsedMinutes = elapsed / 60000;
-  var goldEarned = 0;
-  var statPoints = 0;
+  const elapsedMinutes = elapsed / 60000;
+  let goldEarned = 0;
+  let statPoints = 0;
 
   if (idle.goldMineLevel > 0) {
     idle._goldAccumulator = (idle._goldAccumulator || 0) + (idle.goldMineLevel * IDLE_CONFIG.GOLD_MINE.RATE_PER_LEVEL * elapsedMinutes);
@@ -116,8 +116,8 @@ function idleTick(saveData) {
 }
 
 function upgradeGoldMine(saveData) {
-  var idle = saveData.idle || getIdleDefaults();
-  var cost = getGoldMineUpgradeCost(idle.goldMineLevel);
+  const idle = saveData.idle || getIdleDefaults();
+  const cost = getGoldMineUpgradeCost(idle.goldMineLevel);
   if (idle.goldMineLevel >= IDLE_CONFIG.GOLD_MINE.MAX_LEVEL) {
     return { success: false, reason: 'Max level reached' };
   }
@@ -131,8 +131,8 @@ function upgradeGoldMine(saveData) {
 }
 
 function upgradeAutoTrainer(saveData) {
-  var idle = saveData.idle || getIdleDefaults();
-  var cost = getAutoTrainerUpgradeCost(idle.autoTrainerLevel);
+  const idle = saveData.idle || getIdleDefaults();
+  const cost = getAutoTrainerUpgradeCost(idle.autoTrainerLevel);
   if (idle.autoTrainerLevel >= IDLE_CONFIG.AUTO_TRAINER.MAX_LEVEL) {
     return { success: false, reason: 'Max level reached' };
   }
@@ -146,21 +146,21 @@ function upgradeAutoTrainer(saveData) {
 }
 
 function setAutoTrainerStat(stat, saveData) {
-  var valid = IDLE_CONFIG.AUTO_TRAINER.VALID_STATS;
+  const valid = IDLE_CONFIG.AUTO_TRAINER.VALID_STATS;
   if (valid.indexOf(stat) === -1) {
     return { success: false, reason: 'Invalid stat' };
   }
-  var idle = saveData.idle || getIdleDefaults();
+  const idle = saveData.idle || getIdleDefaults();
   idle.autoTrainerStat = stat;
   saveData.idle = idle;
   return { success: true, stat: stat };
 }
 
 function buildWelcomeBackSummary(offlineResults) {
-  var minutes = Math.floor(offlineResults.elapsedMinutes);
-  var hours = Math.floor(minutes / 60);
-  var remMin = minutes % 60;
-  var timeStr = hours > 0 ? (hours + 'h ' + remMin + 'm') : (remMin + 'm');
+  const minutes = Math.floor(offlineResults.elapsedMinutes);
+  const hours = Math.floor(minutes / 60);
+  const remMin = minutes % 60;
+  const timeStr = hours > 0 ? (hours + 'h ' + remMin + 'm') : (remMin + 'm');
 
   return {
     timeAway: timeStr,
