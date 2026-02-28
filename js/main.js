@@ -4233,6 +4233,8 @@
         if (this.companionData.level < 10 && this.companionData.xp >= xpRequired[this.companionData.level]) {
           this.companionData.level++;
           saveData.companions[this.companionId] = this.companionData;
+          // Award companion skill point on level up
+          saveData.companionSkillPoints = (saveData.companionSkillPoints || 0) + 1;
           saveSaveData();
           
           if (this.companionData.level === 10) {
@@ -4244,7 +4246,7 @@
             this.maxHp = stats.health;
             this.hp = this.maxHp;
           } else {
-            createFloatingText(`Level ${this.companionData.level}!`, this.mesh.position, '#00FF00');
+            createFloatingText(`Level ${this.companionData.level}! +1 SP`, this.mesh.position, '#00FF00');
           }
         }
       }
@@ -6285,11 +6287,15 @@
       inventory: [],
       // Phase 5: Companion System
       companions: {
-        stormWolf: { unlocked: true, level: 1, xp: 0 },
-        skyFalcon: { unlocked: false, level: 1, xp: 0 },
-        waterSpirit: { unlocked: false, level: 1, xp: 0 }
+        stormWolf: { unlocked: true, level: 1, xp: 0, skills: {} },
+        skyFalcon: { unlocked: false, level: 1, xp: 0, skills: {} },
+        waterSpirit: { unlocked: false, level: 1, xp: 0, skills: {} }
       },
       selectedCompanion: 'stormWolf', // Default companion
+      hasCompanionEgg: false, // Companion egg found at UFO sight (Area 51)
+      companionEggHatched: false, // Whether the UFO companion egg has been hatched
+      companionEggHatchProgress: 0, // 0-100 hatching progress
+      companionSkillPoints: 0, // Skill points for companion skill tree
       // Camp System - Quest-Driven Building Unlock System
       campBuildings: {
         // Core buildings - NEW: Only Quest Mission Hall unlocked initially
@@ -6409,7 +6415,8 @@
           stonehenge: false,
           pyramid: false,
           montana: false,
-          teslaTower: false
+          teslaTower: false,
+          ufoSight: false
         },
         lastShownQuestReminder: null // Track last shown quest reminder on run start
       },
@@ -6488,6 +6495,18 @@
           saveData.lastTrainingPointTime = saveData.lastTrainingPointTime || 0;
           saveData.skillPoints = saveData.skillPoints || 0;
           saveData.selectedCompanion = saveData.selectedCompanion || 'stormWolf';
+          saveData.hasCompanionEgg = saveData.hasCompanionEgg || false;
+          saveData.companionEggHatched = saveData.companionEggHatched || false;
+          saveData.companionEggHatchProgress = saveData.companionEggHatchProgress || 0;
+          saveData.companionSkillPoints = saveData.companionSkillPoints || 0;
+          // Ensure companion skill data fields exist
+          if (saveData.companions) {
+            Object.keys(saveData.companions).forEach(cId => {
+              if (saveData.companions[cId] && !saveData.companions[cId].skills) {
+                saveData.companions[cId].skills = {};
+              }
+            });
+          }
           // Account level system
           saveData.accountLevel = saveData.accountLevel || 1;
           saveData.accountXP = saveData.accountXP || 0;
@@ -6815,6 +6834,9 @@
         else if (currentQuest.id === 'quest14_kill25') questText = Math.min(kills,25) + '/25';
         else if (currentQuest.id === 'quest13_windmill') questText = 'Active';
         else if (currentQuest.id === 'quest15_accountVisit') questText = 'Go to Camp';
+        else if (currentQuest.id === 'quest18_findCompanionEgg') questText = '→ Area 51';
+        else if (currentQuest.id === 'quest19_hatchEgg') questText = 'Go to Camp';
+        else if (currentQuest.id === 'quest20_trainCompanion') questText = 'Train Companion';
         else if (currentQuest.id === 'quest11_findAllLandmarks') {
           const lf = saveData.tutorialQuests.landmarksFound || {};
           const found = Object.values(LANDMARK_CONFIGS).filter(cfg => lf[cfg.key]).length;
@@ -9432,9 +9454,56 @@
         rewardGold: 300,
         rewardSkillPoints: 2,
         unlockBuilding: 'codex',
-        message: "📖 Codex unlocked!<br><br>Browse all enemies, structures, and landmarks. Keep exploring — the world of Water Drop Survivor has much more to discover!",
-        nextQuest: null,
+        message: "📖 Codex unlocked!<br><br>Browse all enemies, structures, and landmarks.<br><br>A strange signal was detected from the <b>Sci-Fi Region</b>... Head to <b>Area 51</b> on the map to investigate!",
+        nextQuest: 'quest18_findCompanionEgg',
         conditions: ['quest16_visitCharVisuals']
+      },
+
+      // === PHASE 18: Run quest → Find Companion Egg at UFO sight in Area 51 ===
+      quest18_findCompanionEgg: {
+        id: 'quest18_findCompanionEgg',
+        name: 'Find the Companion Egg',
+        description: 'A mysterious signal leads to the UFO crash site in Area 51. Find the glowing Companion Egg hidden there!',
+        objectives: 'Find the Companion Egg at the UFO sight in Area 51',
+        claim: 'Main Building',
+        rewardGold: 500,
+        rewardSkillPoints: 3,
+        rewardAttributePoints: 2,
+        triggerOnDeath: false,
+        questObjectivePos: { x: -150, z: 60 },
+        message: "🥚 COMPANION EGG FOUND!<br><br>You discovered a mysterious egg at the UFO crash site! Take it to the <b>Companion House</b> in camp to hatch it!",
+        nextQuest: 'quest19_hatchEgg',
+        conditions: ['quest17_visitCodex']
+      },
+
+      // === PHASE 19: Camp quest → Place egg in Companion House and hatch it ===
+      quest19_hatchEgg: {
+        id: 'quest19_hatchEgg',
+        name: 'Hatch the Companion Egg',
+        description: 'Bring the Companion Egg to the Companion House and place it in the nest to hatch your new companion!',
+        objectives: 'Place and hatch the egg in the Companion House',
+        claim: 'Companion House',
+        rewardGold: 600,
+        rewardSkillPoints: 3,
+        rewardAttributePoints: 3,
+        message: "🐣 COMPANION HATCHED!<br><br>Your new companion has hatched! Train it in the <b>Companion House</b> to unlock powerful abilities and grow it into a mighty ally!",
+        nextQuest: 'quest20_trainCompanion',
+        conditions: ['quest18_findCompanionEgg']
+      },
+
+      // === PHASE 20: Camp quest → Train companion (level it up once) ===
+      quest20_trainCompanion: {
+        id: 'quest20_trainCompanion',
+        name: 'Train Your Companion',
+        description: 'Take your companion on a run to earn XP and level it up. Then visit the Companion House to unlock a skill!',
+        objectives: 'Level up your companion and unlock a skill',
+        claim: 'Companion House',
+        rewardGold: 400,
+        rewardSkillPoints: 2,
+        rewardAttributePoints: 2,
+        message: "⚔️ Companion trained!<br><br>Your companion grows stronger with every battle! Equip them and go on runs together to unlock even more powerful skills!",
+        nextQuest: null,
+        conditions: ['quest19_hatchEgg']
       }
     };
 
@@ -10893,6 +10962,409 @@
       document.getElementById('codex-next-btn').disabled = codexPage >= totalPages - 1;
     }
 
+    // ============================================================
+    // INVENTORY SCREEN
+    // ============================================================
+    function showInventoryScreen() {
+      // Close camp screen
+      const campScreen = document.getElementById('camp-screen');
+      if (campScreen) campScreen.style.display = 'none';
+
+      // Remove any existing inventory modal
+      const existingModal = document.getElementById('inventory-screen-modal');
+      if (existingModal) existingModal.remove();
+
+      const modal = document.createElement('div');
+      modal.id = 'inventory-screen-modal';
+      modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);z-index:200;overflow-y:auto;display:flex;flex-direction:column;align-items:center;padding:20px;box-sizing:border-box;';
+
+      const currencies = [
+        { icon: '🪙', name: 'Gold', value: saveData.gold || 0 },
+        { icon: '💎', name: 'Gems', value: saveData.gems || 0 },
+        { icon: '✨', name: 'Essence', value: saveData.essence || 0 }
+      ];
+
+      const currencyHTML = currencies.map(c =>
+        `<div style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,215,0,0.1);border:1px solid #FFD700;border-radius:8px;padding:8px 14px;margin:4px;">
+          <span style="font-size:20px;">${c.icon}</span>
+          <span style="color:#FFD700;font-size:16px;font-weight:bold;">${c.value.toLocaleString()}</span>
+          <span style="color:#aaa;font-size:12px;">${c.name}</span>
+        </div>`
+      ).join('');
+
+      // Special Items section
+      let specialItemsHTML = '';
+      if (saveData.hasCompanionEgg) {
+        const alreadyHatched = saveData.companionEggHatched;
+        specialItemsHTML += `
+          <div style="background:linear-gradient(135deg,rgba(0,255,180,0.15),rgba(0,100,80,0.3));border:2px solid #00FFB4;border-radius:12px;padding:16px;margin:8px 0;display:flex;align-items:center;gap:14px;">
+            <div style="font-size:48px;animation:pulse 1.5s ease-in-out infinite;">🥚</div>
+            <div style="flex:1;">
+              <div style="color:#00FFB4;font-size:18px;font-weight:bold;">Mysterious Companion Egg</div>
+              <div style="color:#aaa;font-size:13px;margin:4px 0;">Found at the UFO crash site in Area 51. Something stirs within...</div>
+              <div style="color:#FFD700;font-size:12px;">★★★ LEGENDARY ★★★</div>
+            </div>
+            <div>
+              ${alreadyHatched
+                ? '<span style="color:#00FF88;font-size:13px;">✅ Hatched</span>'
+                : `<button onclick="document.getElementById('inventory-screen-modal').remove();document.getElementById('camp-screen').style.display='flex';showCompanionHouse();" style="background:linear-gradient(135deg,#00FFB4,#0080FF);border:none;border-radius:8px;padding:10px 16px;color:#000;font-weight:bold;cursor:pointer;font-size:13px;">Place in Companion House →</button>`
+              }
+            </div>
+          </div>`;
+      }
+
+      // Gear inventory
+      const gear = saveData.inventory || [];
+      const gearHTML = gear.length === 0
+        ? '<div style="color:#666;text-align:center;padding:20px;">No gear collected yet. Complete runs to find gear!</div>'
+        : gear.map((item, idx) => {
+          const rarityColor = { common:'#aaa', uncommon:'#1aff1a', rare:'#0070dd', epic:'#a335ee', legendary:'#ff8000' }[item.rarity] || '#aaa';
+          const rarityStars = { common:'★', uncommon:'★★', rare:'★★★', epic:'★★★★', legendary:'★★★★★' }[item.rarity] || '★';
+          const isEquipped = saveData.equippedGear && Object.values(saveData.equippedGear).some(g => g && g.id === item.id);
+          return `
+            <div style="background:rgba(255,255,255,0.05);border:1px solid ${rarityColor};border-radius:8px;padding:12px;margin:6px 0;display:flex;align-items:center;gap:12px;">
+              <div style="font-size:32px;">${item.type === 'ring' ? '💍' : item.type === 'amulet' ? '📿' : item.type === 'helmet' ? '⛑️' : item.type === 'boots' ? '👢' : '🛡️'}</div>
+              <div style="flex:1;">
+                <div style="color:${rarityColor};font-size:15px;font-weight:bold;">${item.name}</div>
+                <div style="color:#aaa;font-size:12px;">${item.description || ''}</div>
+                <div style="color:${rarityColor};font-size:11px;">${rarityStars} ${(item.rarity || 'common').toUpperCase()}</div>
+              </div>
+              <div>
+                ${isEquipped
+                  ? '<span style="color:#FFD700;font-size:12px;">✅ Equipped</span>'
+                  : `<button onclick="equipItemFromInventory(${idx})" style="background:rgba(255,215,0,0.2);border:1px solid #FFD700;border-radius:6px;padding:6px 12px;color:#FFD700;cursor:pointer;font-size:12px;">Equip</button>`
+                }
+              </div>
+            </div>`;
+        }).join('');
+
+      modal.innerHTML = `
+        <div style="max-width:640px;width:100%;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+            <h2 style="color:#FFD700;margin:0;font-size:22px;">📦 Inventory</h2>
+            <button id="inv-back-btn" style="background:rgba(255,255,255,0.1);border:1px solid #666;border-radius:8px;padding:8px 16px;color:#fff;cursor:pointer;">← Back to Camp</button>
+          </div>
+
+          <div style="background:rgba(255,215,0,0.05);border:1px solid #FFD700;border-radius:12px;padding:16px;margin-bottom:20px;">
+            <div style="color:#FFD700;font-size:14px;font-weight:bold;margin-bottom:10px;">💰 Currencies</div>
+            <div style="display:flex;flex-wrap:wrap;gap:4px;">${currencyHTML}</div>
+          </div>
+
+          ${saveData.hasCompanionEgg ? `
+          <div style="background:rgba(0,255,180,0.05);border:1px solid #00FFB4;border-radius:12px;padding:16px;margin-bottom:20px;">
+            <div style="color:#00FFB4;font-size:14px;font-weight:bold;margin-bottom:10px;">✨ Special Items</div>
+            ${specialItemsHTML}
+          </div>` : ''}
+
+          <div style="background:rgba(255,255,255,0.03);border:1px solid #444;border-radius:12px;padding:16px;">
+            <div style="color:#fff;font-size:14px;font-weight:bold;margin-bottom:10px;">⚔️ Gear (${gear.length} items)</div>
+            ${gearHTML}
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(modal);
+
+      document.getElementById('inv-back-btn').onclick = () => {
+        modal.remove();
+        if (campScreen) campScreen.style.display = 'flex';
+      };
+    }
+
+    // Equip item directly from inventory screen
+    function equipItemFromInventory(itemIdx) {
+      const item = saveData.inventory[itemIdx];
+      if (!item) return;
+      const slot = item.type || 'ring';
+      if (!saveData.equippedGear) saveData.equippedGear = {};
+      saveData.equippedGear[slot] = item;
+      saveSaveData();
+      showStatChange(`🎯 ${item.name} Equipped!`);
+      // Refresh inventory screen
+      const modal = document.getElementById('inventory-screen-modal');
+      if (modal) { modal.remove(); showInventoryScreen(); }
+    }
+    window.equipItemFromInventory = equipItemFromInventory;
+
+    // ============================================================
+    // COMPANION HOUSE SCREEN
+    // ============================================================
+
+    // Companion skill tree data
+    const COMPANION_SKILLS = {
+      attackBoost:  { name: '⚔️ Combat Training', desc: '+15% companion damage per level', maxLevel: 5, cost: 1, effect: (lvl) => lvl * 0.15 },
+      speedBoost:   { name: '💨 Swift Paws', desc: '+10% companion attack speed per level', maxLevel: 5, cost: 1, effect: (lvl) => lvl * 0.10 },
+      healing:      { name: '💚 Healing Aura', desc: 'Companion heals player for 2 HP per level every 5s', maxLevel: 5, cost: 2, effect: (lvl) => lvl * 2 },
+      toughness:    { name: '🛡️ Iron Hide', desc: '+20 companion HP per level', maxLevel: 5, cost: 1, effect: (lvl) => lvl * 20 },
+      critStrike:   { name: '✨ Critical Strike', desc: '+5% critical hit chance per level', maxLevel: 3, cost: 2, effect: (lvl) => lvl * 0.05 },
+      aoeDamage:    { name: '💥 Area Assault', desc: 'Attacks hit all enemies within 2 units (unlocks at level 5)', maxLevel: 1, cost: 3, effect: (lvl) => lvl },
+      revive:       { name: '♻️ Undying Bond', desc: 'Companion revives 50% faster per level', maxLevel: 3, cost: 2, effect: (lvl) => lvl * 0.5 },
+      expShare:     { name: '📈 XP Link', desc: '+5% bonus XP for both player and companion per level', maxLevel: 5, cost: 1, effect: (lvl) => lvl * 0.05 }
+    };
+
+    function showCompanionHouse() {
+      const campScreen = document.getElementById('camp-screen');
+      if (campScreen) campScreen.style.display = 'none';
+
+      const existingModal = document.getElementById('companion-house-modal');
+      if (existingModal) existingModal.remove();
+
+      const modal = document.createElement('div');
+      modal.id = 'companion-house-modal';
+      modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);z-index:200;overflow-y:auto;display:flex;flex-direction:column;align-items:center;padding:20px;box-sizing:border-box;';
+
+      // Determine state
+      const hasEgg = saveData.hasCompanionEgg;
+      const isHatched = saveData.companionEggHatched;
+      const hatchProgress = saveData.companionEggHatchProgress || 0;
+      const companionId = saveData.selectedCompanion || 'stormWolf';
+      const companionData = saveData.companions[companionId] || { unlocked: true, level: 1, xp: 0, skills: {} };
+      const companionInfo = COMPANIONS[companionId];
+      const companionQuestDone = saveData.tutorialQuests?.completedQuests?.includes('quest9_activateCompanion');
+
+      // Egg section
+      let eggSectionHTML = '';
+      if (!hasEgg) {
+        eggSectionHTML = `
+          <div style="background:rgba(255,100,0,0.1);border:1px dashed #FF8000;border-radius:12px;padding:20px;text-align:center;margin-bottom:20px;">
+            <div style="font-size:48px;margin-bottom:10px;">🏚️</div>
+            <div style="color:#FF8000;font-size:16px;font-weight:bold;">The nest is empty...</div>
+            <div style="color:#aaa;font-size:13px;margin-top:8px;">Find the <b style="color:#FFD700;">Companion Egg</b> at the UFO crash site in Area 51 to bring life to this sanctuary!</div>
+          </div>`;
+      } else if (!isHatched) {
+        const progressBar = `<div style="height:12px;background:#333;border-radius:6px;overflow:hidden;margin:10px 0;"><div style="height:100%;width:${hatchProgress}%;background:linear-gradient(90deg,#00FFB4,#0080FF);transition:width 0.5s;border-radius:6px;"></div></div>`;
+        eggSectionHTML = `
+          <div style="background:linear-gradient(135deg,rgba(0,255,180,0.1),rgba(0,100,80,0.2));border:2px solid #00FFB4;border-radius:12px;padding:20px;margin-bottom:20px;">
+            <div style="text-align:center;margin-bottom:14px;">
+              <div style="font-size:64px;animation:pulse 1.2s ease-in-out infinite;display:inline-block;">🥚</div>
+              <div style="color:#00FFB4;font-size:18px;font-weight:bold;margin-top:8px;">Companion Egg — Incubating</div>
+              <div style="color:#aaa;font-size:13px;">Hatching Progress: ${Math.floor(hatchProgress)}%</div>
+              ${progressBar}
+            </div>
+            <div style="text-align:center;">
+              <button id="hatch-egg-btn" style="background:linear-gradient(135deg,#00FFB4,#0080FF);border:none;border-radius:10px;padding:12px 28px;color:#000;font-weight:bold;cursor:pointer;font-size:15px;margin-top:4px;">
+                🐣 Hatch Egg (Costs 200 Gold)
+              </button>
+            </div>
+          </div>`;
+      } else {
+        eggSectionHTML = `
+          <div style="background:linear-gradient(135deg,rgba(255,180,0,0.1),rgba(150,80,0,0.2));border:2px solid #FFD700;border-radius:12px;padding:16px;margin-bottom:20px;text-align:center;">
+            <div style="font-size:36px;">🐣 ✅</div>
+            <div style="color:#FFD700;font-size:15px;font-weight:bold;">Companion Egg Hatched!</div>
+            <div style="color:#aaa;font-size:12px;">Your companion has joined your camp.</div>
+          </div>`;
+      }
+
+      // Active companion section
+      const xpRequired = [0, 100, 250, 500, 800, 1200, 1700, 2300, 3000, 4000];
+      const currentXP = companionData.xp || 0;
+      const companionLevel = companionData.level || 1;
+      const xpNeeded = xpRequired[Math.min(companionLevel, 9)] || 4000;
+      const xpPct = Math.min(100, (currentXP / xpNeeded) * 100);
+      const isEvolved = companionLevel >= 10;
+
+      const companionSection = `
+        <div style="background:rgba(255,255,255,0.04);border:1px solid #555;border-radius:12px;padding:16px;margin-bottom:20px;">
+          <div style="color:#FFD700;font-size:15px;font-weight:bold;margin-bottom:12px;">🐺 Active Companion</div>
+
+          <!-- Companion selector -->
+          <div style="display:flex;gap:8px;margin-bottom:14px;">
+            ${Object.entries(saveData.companions).map(([cId, cData]) => {
+              const info = COMPANIONS[cId];
+              if (!info) return '';
+              const isSelected = cId === companionId;
+              const isUnlocked = cData.unlocked;
+              return `<button onclick="selectCompanion('${cId}')"
+                style="flex:1;padding:10px 6px;border-radius:8px;border:2px solid ${isSelected ? '#FFD700' : '#444'};
+                background:${isSelected ? 'rgba(255,215,0,0.15)' : isUnlocked ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.3)'};
+                color:${isUnlocked ? '#fff' : '#555'};cursor:${isUnlocked ? 'pointer' : 'default'};font-size:11px;text-align:center;">
+                <div style="font-size:22px;">${isEvolved && isSelected ? info.evolvedIcon : info.icon}</div>
+                <div>${info.name}</div>
+                ${!isUnlocked ? '<div style="color:#f66;font-size:10px;">🔒 Locked</div>' : ''}
+              </button>`;
+            }).join('')}
+          </div>
+
+          <!-- Companion stats -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
+            <div style="background:rgba(255,255,255,0.05);border-radius:8px;padding:10px;">
+              <div style="color:#aaa;font-size:11px;">Level</div>
+              <div style="color:#FFD700;font-size:20px;font-weight:bold;">${companionLevel} ${isEvolved ? '⭐' : ''}</div>
+            </div>
+            <div style="background:rgba(255,255,255,0.05);border-radius:8px;padding:10px;">
+              <div style="color:#aaa;font-size:11px;">Type</div>
+              <div style="color:#4FC3F7;font-size:14px;">${companionInfo?.type || 'melee'}</div>
+            </div>
+          </div>
+
+          <!-- XP bar -->
+          <div style="margin-bottom:12px;">
+            <div style="display:flex;justify-content:space-between;color:#aaa;font-size:11px;margin-bottom:4px;">
+              <span>XP Progress</span><span>${currentXP} / ${xpNeeded}</span>
+            </div>
+            <div style="height:10px;background:#333;border-radius:5px;overflow:hidden;">
+              <div style="height:100%;width:${xpPct}%;background:linear-gradient(90deg,#4FC3F7,#00BFA5);border-radius:5px;transition:width 0.3s;"></div>
+            </div>
+          </div>
+
+          <!-- Activate button for quest9 -->
+          ${!companionQuestDone ? `
+          <button id="activate-companion-btn" style="width:100%;background:linear-gradient(135deg,#FF6B35,#FF4500);border:none;border-radius:10px;padding:14px;color:#fff;font-weight:bold;cursor:pointer;font-size:15px;margin-bottom:12px;">
+            ⚡ Activate Companion — Fight by Your Side!
+          </button>` : `
+          <div style="background:rgba(0,255,100,0.1);border:1px solid #00FF64;border-radius:8px;padding:10px;text-align:center;margin-bottom:12px;color:#00FF64;font-size:13px;">
+            ✅ Companion Active — Fighting alongside you!
+          </div>`}
+        </div>`;
+
+      // Skill tree section
+      const companionSkillData = companionData.skills || {};
+      const skillPoints = saveData.companionSkillPoints || 0;
+
+      const skillTreeHTML = `
+        <div style="background:rgba(255,255,255,0.04);border:1px solid #555;border-radius:12px;padding:16px;margin-bottom:20px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <div style="color:#FFD700;font-size:15px;font-weight:bold;">🌟 Companion Skill Tree</div>
+            <div style="background:rgba(255,215,0,0.15);border:1px solid #FFD700;border-radius:6px;padding:4px 10px;color:#FFD700;font-size:13px;">
+              SP: ${skillPoints}
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            ${Object.entries(COMPANION_SKILLS).map(([skillId, skill]) => {
+              const currentLevel = (companionSkillData[skillId] || 0);
+              const isMaxed = currentLevel >= skill.maxLevel;
+              const canAfford = skillPoints >= skill.cost;
+              const requiresLevel5 = skillId === 'aoeDamage' && companionLevel < 5;
+              const isLocked = requiresLevel5;
+              return `
+                <div style="background:rgba(255,255,255,0.05);border:1px solid ${isMaxed ? '#FFD700' : '#444'};border-radius:8px;padding:10px;">
+                  <div style="color:${isMaxed ? '#FFD700' : '#fff'};font-size:12px;font-weight:bold;">${skill.name}</div>
+                  <div style="color:#aaa;font-size:10px;margin:4px 0;">${skill.desc}</div>
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;">
+                    <span style="color:#4FC3F7;font-size:11px;">Level ${currentLevel}/${skill.maxLevel}</span>
+                    ${isLocked
+                      ? '<span style="color:#f66;font-size:10px;">Needs Level 5</span>'
+                      : isMaxed
+                        ? '<span style="color:#FFD700;font-size:10px;">MAX</span>'
+                        : `<button onclick="upgradeCompanionSkill('${skillId}')" style="background:${canAfford ? 'rgba(255,215,0,0.2)' : 'rgba(100,100,100,0.2)'};border:1px solid ${canAfford ? '#FFD700' : '#555'};border-radius:4px;padding:3px 8px;color:${canAfford ? '#FFD700' : '#666'};cursor:${canAfford ? 'pointer' : 'default'};font-size:10px;">${skill.cost} SP</button>`
+                    }
+                  </div>
+                </div>`;
+            }).join('')}
+          </div>
+        </div>`;
+
+      modal.innerHTML = `
+        <div style="max-width:640px;width:100%;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+            <div>
+              <h2 style="color:#FFD700;margin:0;font-size:22px;">🏡 Companion House</h2>
+              <div style="color:#aaa;font-size:12px;">A cozy sanctuary for your loyal companions</div>
+            </div>
+            <button id="ch-back-btn" style="background:rgba(255,255,255,0.1);border:1px solid #666;border-radius:8px;padding:8px 16px;color:#fff;cursor:pointer;">← Back to Camp</button>
+          </div>
+
+          ${eggSectionHTML}
+          ${companionSection}
+          ${skillTreeHTML}
+        </div>
+      `;
+
+      document.body.appendChild(modal);
+
+      // Back button
+      document.getElementById('ch-back-btn').onclick = () => {
+        modal.remove();
+        if (campScreen) campScreen.style.display = 'flex';
+      };
+
+      // Activate companion button (quest9 progression)
+      const activateBtn = document.getElementById('activate-companion-btn');
+      if (activateBtn) {
+        activateBtn.onclick = () => {
+          if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest9_activateCompanion') {
+            progressTutorialQuest('quest9_activateCompanion', true);
+            saveSaveData();
+          }
+          activateBtn.outerHTML = '<div style="background:rgba(0,255,100,0.1);border:1px solid #00FF64;border-radius:8px;padding:10px;text-align:center;margin-bottom:12px;color:#00FF64;font-size:13px;">✅ Companion Active — Fighting alongside you!</div>';
+          showStatChange('⚡ Companion Activated!');
+          playSound('collect');
+        };
+      }
+
+      // Hatch egg button
+      const hatchBtn = document.getElementById('hatch-egg-btn');
+      if (hatchBtn) {
+        hatchBtn.onclick = () => {
+          if (saveData.gold < 200) {
+            showStatChange('❌ Not enough Gold! Need 200g to hatch.');
+            playSound('invalid');
+            return;
+          }
+          saveData.gold -= 200;
+          saveData.companionEggHatchProgress = 100;
+          saveData.companionEggHatched = true;
+          saveSaveData();
+          showStatChange('🐣 Companion Egg Hatched!');
+          playSound('collect');
+          // Progress quest19 if active
+          if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest19_hatchEgg') {
+            progressTutorialQuest('quest19_hatchEgg', true);
+          }
+          modal.remove();
+          showCompanionHouse();
+        };
+      }
+    }
+
+    // Select companion from companion house
+    function selectCompanion(companionId) {
+      if (!saveData.companions[companionId] || !saveData.companions[companionId].unlocked) {
+        showStatChange('🔒 Companion not yet unlocked!');
+        return;
+      }
+      saveData.selectedCompanion = companionId;
+      saveSaveData();
+      // Check quest20 progress - if companion was leveled
+      if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest20_trainCompanion') {
+        const cData = saveData.companions[companionId];
+        if (cData && cData.level >= 2 && Object.keys(cData.skills || {}).some(s => (cData.skills[s] || 0) > 0)) {
+          progressTutorialQuest('quest20_trainCompanion', true);
+        }
+      }
+      const modal = document.getElementById('companion-house-modal');
+      if (modal) { modal.remove(); showCompanionHouse(); }
+    }
+    window.selectCompanion = selectCompanion;
+
+    // Upgrade a companion skill
+    function upgradeCompanionSkill(skillId) {
+      const skill = COMPANION_SKILLS[skillId];
+      if (!skill) return;
+      const companionId = saveData.selectedCompanion || 'stormWolf';
+      if (!saveData.companions[companionId]) return;
+      if (!saveData.companions[companionId].skills) saveData.companions[companionId].skills = {};
+      const currentLevel = saveData.companions[companionId].skills[skillId] || 0;
+      if (currentLevel >= skill.maxLevel) { showStatChange('Already at max level!'); return; }
+      if ((saveData.companionSkillPoints || 0) < skill.cost) { showStatChange('❌ Not enough Companion Skill Points!'); playSound('invalid'); return; }
+      saveData.companionSkillPoints -= skill.cost;
+      saveData.companions[companionId].skills[skillId] = currentLevel + 1;
+      saveSaveData();
+      showStatChange(`✨ ${skill.name} upgraded to Lv ${currentLevel + 1}!`);
+      playSound('collect');
+      // Progress quest20 if skill unlocked and companion leveled
+      if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest20_trainCompanion') {
+        const cData = saveData.companions[companionId];
+        if (cData && cData.level >= 2) {
+          progressTutorialQuest('quest20_trainCompanion', true);
+        }
+      }
+      const modal = document.getElementById('companion-house-modal');
+      if (modal) { modal.remove(); showCompanionHouse(); }
+    }
+    window.upgradeCompanionSkill = upgradeCompanionSkill;
+
     // Render account stats inside the account section
     function renderAccountContent() {
       const content = document.getElementById('camp-account-content');
@@ -11003,9 +11475,9 @@
         // NEW: Only unlock Quest/Mission Hall initially - all other buildings locked
         saveData.campBuildings.questMission.unlocked = true;
         saveData.campBuildings.questMission.level = 1;
-        // Keep other free buildings locked initially
-        saveData.campBuildings.inventory.unlocked = false;
-        saveData.campBuildings.inventory.level = 0;
+        // Inventory is also unlocked on first visit so players can see their items
+        saveData.campBuildings.inventory.unlocked = true;
+        saveData.campBuildings.inventory.level = 1;
         saveData.campBuildings.campHub.unlocked = false;
         saveData.campBuildings.campHub.level = 0;
         
@@ -11195,6 +11667,8 @@
                 document.getElementById('camp-training-tab').click();
               } else if (buildingId === 'forge') {
                 showProgressionShop();
+              } else if (buildingId === 'companionHouse') {
+                showCompanionHouse();
               } else {
                 showStatChange(`${building.icon} ${building.name}: Level ${buildingData.level}/${buildingData.maxLevel}`);
               }
@@ -11277,17 +11751,19 @@
                   document.getElementById('camp-skills-tab').click();
                 };
                 buildingCard.style.cursor = 'pointer';
-              } else if (buildingId === 'campHub' || buildingId === 'loreMaster' || buildingId === 'inventory') {
+              } else if (buildingId === 'campHub' || buildingId === 'loreMaster') {
                 // Show building info popup
                 buildingCard.onclick = () => {
                   const msgs = {
                     campHub: { title: '🏠 Camp Hub', body: 'The central hub of your camp. All activities and buildings are organized through here. Keep upgrading your camp to unlock new buildings and strengthen your runs!' },
-                    loreMaster: { title: '📖 Lore Master', body: 'The Lore Master holds the history of Water Drop Survivors. Unlock lore entries by completing quests and defeating special enemies. Coming in a future update!' },
-                    inventory: { title: '📦 Inventory', body: 'Your storage for earned items and equipment. Items you collect on runs are kept here. Open the Armory to equip your gear.' }
+                    loreMaster: { title: '📖 Lore Master', body: 'The Lore Master holds the history of Water Drop Survivors. Unlock lore entries by completing quests and defeating special enemies. Coming in a future update!' }
                   };
                   const info = msgs[buildingId];
                   if (info) showComicInfoBox(info.title, `<p style="line-height:1.7;">${info.body}</p>`, 'GOT IT!', () => {});
                 };
+                buildingCard.style.cursor = 'pointer';
+              } else if (buildingId === 'inventory') {
+                buildingCard.onclick = () => showInventoryScreen();
                 buildingCard.style.cursor = 'pointer';
               } else if (saveData.storyQuests.questNotifications && saveData.storyQuests.questNotifications[buildingId]) {
                 // Clear notification on click for other buildings
@@ -13793,6 +14269,27 @@
         scene.add(crashCrater);
         
         scene.add(shipGroup);
+
+        // Add a glowing Companion Egg near the UFO crash site (quest18 objective)
+        const eggGroup = new THREE.Group();
+        eggGroup.position.set(-148, 0, 58);
+        const eggGeo = new THREE.SphereGeometry(0.7, 12, 10);
+        eggGeo.scale(1, 1.3, 1);
+        const eggMat = new THREE.MeshPhysicalMaterial({
+          color: 0x00FFB4, emissive: 0x00CC88, emissiveIntensity: 0.6,
+          transparent: true, opacity: 0.9, metalness: 0.2, roughness: 0.3
+        });
+        const eggMesh = new THREE.Mesh(eggGeo, eggMat);
+        eggMesh.position.y = 0.9;
+        eggMesh.castShadow = true;
+        eggGroup.add(eggMesh);
+        // Glow light
+        const eggLight = new THREE.PointLight(0x00FFB4, 3, 8);
+        eggLight.position.y = 1;
+        eggGroup.add(eggLight);
+        eggGroup.userData = { isCompanionEgg: true, pickupRadius: 4 };
+        scene.add(eggGroup);
+        window.companionEggObject = eggGroup;
       })();
 
       // Alien/sci-fi ground overlay
@@ -17225,6 +17722,82 @@
       
       // REGION DISPLAY: Update current region based on player position
       updateRegionDisplay();
+
+      // QUEST DIRECTION ARROW: Show animated directional arrow toward quest objective
+      updateQuestArrow();
+    }
+
+    // Quest direction arrow: points toward current quest objective position
+    function updateQuestArrow() {
+      const arrowEl = document.getElementById('quest-arrow');
+      if (!arrowEl) return;
+
+      if (!isGameActive || isPaused || isGameOver || !player || !player.mesh) {
+        arrowEl.style.display = 'none';
+        return;
+      }
+
+      // Determine quest objective world position
+      const currentQuest = getCurrentQuest();
+      if (!currentQuest || !currentQuest.questObjectivePos) {
+        arrowEl.style.display = 'none';
+        return;
+      }
+
+      const objPos = currentQuest.questObjectivePos;
+      const px = player.mesh.position.x;
+      const pz = player.mesh.position.z;
+      const dx = objPos.x - px;
+      const dz = objPos.z - pz;
+      const dist = Math.sqrt(dx * dx + dz * dz);
+
+      // Hide arrow when very close to objective
+      if (dist < 10) {
+        arrowEl.style.display = 'none';
+        return;
+      }
+
+      // Calculate angle (atan2 in screen space: x→right, z→down)
+      // Camera is top-down, x maps to screen right, z maps to screen down
+      const angleDeg = Math.atan2(dz, dx) * (180 / Math.PI); // 0° = right, 90° = down
+
+      // Screen dimensions
+      const W = window.innerWidth;
+      const H = window.innerHeight;
+      const margin = 60;
+      const cx = W / 2;
+      const cy = H / 2;
+
+      // Find intersection of direction ray with screen edge rectangle
+      const angleRad = Math.atan2(dz, dx);
+      let ax, ay;
+      const tanA = Math.tan(angleRad);
+      // Try left/right edges first
+      if (Math.abs(Math.cos(angleRad)) > 0.001) {
+        if (dx > 0) {
+          ax = cx + (W / 2 - margin);
+          ay = cy + tanA * (W / 2 - margin);
+        } else {
+          ax = cx - (W / 2 - margin);
+          ay = cy - tanA * (W / 2 - margin);
+        }
+        // Clamp to top/bottom
+        if (Math.abs(ay - cy) > H / 2 - margin) {
+          ay = dz > 0 ? cy + H / 2 - margin : cy - H / 2 + margin;
+          ax = Math.abs(tanA) > 0.001 ? cx + (ay - cy) / tanA : cx;
+        }
+      } else {
+        ax = cx;
+        ay = dz > 0 ? cy + H / 2 - margin : cy - H / 2 + margin;
+      }
+
+      arrowEl.style.display = 'block';
+      arrowEl.style.left = (ax - 24) + 'px';
+      arrowEl.style.top = (ay - 24) + 'px';
+      arrowEl.style.transform = `rotate(${angleDeg}deg)`;
+      // Update arrow label with distance
+      const distLabel = dist > 100 ? `${Math.round(dist)}m` : `${Math.round(dist)}m`;
+      arrowEl.innerHTML = `➤<span style="position:absolute;top:100%;left:50%;transform:translateX(-50%);font-size:10px;color:#FFD700;white-space:nowrap;">${distLabel}</span>`;
     }
     
     // Region display update function with slide-in/slide-out animation
@@ -19802,7 +20375,63 @@
           );
         }
       }
-      
+
+      // Companion Egg at UFO sight (quest18_findCompanionEgg)
+      if (window.companionEggObject &&
+          saveData.tutorialQuests &&
+          saveData.tutorialQuests.currentQuest === 'quest18_findCompanionEgg' &&
+          !saveData.hasCompanionEgg &&
+          isGameActive && !isPaused) {
+        const eggDist = player.mesh.position.distanceTo(window.companionEggObject.position);
+        if (eggDist < window.companionEggObject.userData.pickupRadius) {
+          scene.remove(window.companionEggObject);
+          window.companionEggObject = null;
+          saveData.hasCompanionEgg = true;
+          // Add egg to inventory display
+          saveData.inventory.push({
+            id: 'companion_egg_ufo',
+            name: 'Mysterious Companion Egg',
+            type: 'special',
+            rarity: 'legendary',
+            description: 'A pulsing egg found at the UFO crash site. Hatch it in the Companion House!',
+            isCompanionEgg: true
+          });
+          saveSaveData();
+          // Show pickup popup
+          showComicInfoBox(
+            '🥚 Companion Egg Found!',
+            '<div style="text-align:center;"><div style="font-size:64px;margin:10px 0;animation:pulse 1s ease-in-out infinite;">🥚</div><div style="color:#00FFB4;font-size:22px;font-weight:bold;">MYSTERIOUS COMPANION EGG</div><div style="color:#FFD700;font-size:16px;">★★★★★ LEGENDARY ★★★★★</div><div style="margin:15px 0;font-size:14px;font-family:Arial,sans-serif;color:#ccc;">Found at the UFO crash site in Area 51. Something stirs within... Take it to the <b style="color:#00FFB4;">Companion House</b> to hatch it!</div></div>',
+            '🐣 Take to Camp!',
+            () => {
+              progressTutorialQuest('quest18_findCompanionEgg', true);
+              // Show green particles
+              for (let i = 0; i < 20; i++) {
+                const angle = (i / 20) * Math.PI * 2;
+                const speed = 2 + Math.random() * 3;
+                const particle = particlePool.get();
+                if (particle) {
+                  particle.mesh.position.copy(player.mesh.position);
+                  particle.velocity.set(Math.cos(angle) * speed, 4 + Math.random() * 2, Math.sin(angle) * speed);
+                  particle.mesh.material.color.setHex(0x00FFB4);
+                  particle.mesh.visible = true;
+                  particle.active = true;
+                  particle.life = 1.5;
+                }
+              }
+            }
+          );
+        }
+        // Animate the egg (bob up and down)
+        if (window.companionEggObject) {
+          window.companionEggObject.position.y = Math.sin(Date.now() * 0.002) * 0.3;
+          window.companionEggObject.rotation.y += 0.01;
+        }
+      } else if (window.companionEggObject && !saveData.hasCompanionEgg) {
+        // Keep animating even when quest isn't active
+        window.companionEggObject.position.y = Math.sin(Date.now() * 0.002) * 0.3;
+        window.companionEggObject.rotation.y += 0.01;
+      }
+
       // Farmer NPC: Update "?" indicator position and check for player proximity to trigger dialogue
       updateFarmerNPCIndicator();
       updateFarmerBubblePosition();
