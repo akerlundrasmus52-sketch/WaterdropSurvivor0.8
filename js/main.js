@@ -6576,7 +6576,12 @@
         workshop: { level: 0, maxLevel: 10, unlocked: false },
         shrine: { level: 0, maxLevel: 10, unlocked: false },
         // Special Attacks arena — unlocked via quest
-        specialAttacks: { level: 0, maxLevel: 1, unlocked: false }
+        specialAttacks: { level: 0, maxLevel: 1, unlocked: false },
+        // New buildings — unlocked through quest progression
+        warehouse: { level: 0, maxLevel: 1, unlocked: false },   // Quest 7
+        tavern:    { level: 0, maxLevel: 1, unlocked: false },   // Quest 8
+        shop:      { level: 0, maxLevel: 1, unlocked: false },   // Quest 9
+        prestige:  { level: 0, maxLevel: 1, unlocked: false }    // Quest 10
       },
       // COMPREHENSIVE SKILL TREE - 48 Skills Total (Fresh Implementation)
       skillTree: {
@@ -6667,6 +6672,7 @@
       // Special attacks loadout (max 4 equipped at once; populated after unlocking)
       equippedSpecials: [],
       specialAtkPoints: 0, // Points earned to unlock/upgrade special attacks
+      specialBranch: null, // 'upper' | 'lower' — chosen after knife is unlocked
       skillPoints: 0, // Start with 0 skill points - earn through quests
       // Account Level System - Persistent across all runs
       accountLevel: 1, // Persistent character level
@@ -6826,6 +6832,15 @@
           saveData.equippedSpecials = saveData.equippedSpecials || [];
           // Special attack points (new field)
           saveData.specialAtkPoints = saveData.specialAtkPoints || 0;
+          // Special branch choice (new field)
+          if (saveData.specialBranch === undefined) saveData.specialBranch = null;
+          // New buildings migration
+          saveData.campBuildings = saveData.campBuildings || {};
+          ['warehouse', 'tavern', 'shop', 'prestige'].forEach(bld => {
+            if (!saveData.campBuildings[bld]) {
+              saveData.campBuildings[bld] = { level: 0, maxLevel: 1, unlocked: false };
+            }
+          });
         }
       } catch (e) {
         console.error('Failed to load save data:', e);
@@ -8498,6 +8513,46 @@
         isFree: true,
         bonus: (level) => ({})
       },
+      warehouse: {
+        name: 'Warehouse',
+        icon: '🏪',
+        description: 'Store and manage your resources and items. Unlocked after Quest 7.',
+        baseCost: 0,
+        costMultiplier: 0,
+        maxCost: 0,
+        isFree: true,
+        bonus: (level) => ({})
+      },
+      tavern: {
+        name: 'Tavern',
+        icon: '🍺',
+        description: 'Send companions on expeditions and socialize. Unlocked after Quest 8.',
+        baseCost: 0,
+        costMultiplier: 0,
+        maxCost: 0,
+        isFree: true,
+        bonus: (level) => ({})
+      },
+      shop: {
+        name: 'Shop',
+        icon: '🛒',
+        description: 'Buy powerful items and upgrades. Unlocked after Quest 9.',
+        baseCost: 0,
+        costMultiplier: 0,
+        maxCost: 0,
+        isFree: true,
+        bonus: (level) => ({})
+      },
+      prestige: {
+        name: 'Prestige Altar',
+        icon: '✨',
+        description: 'Begin the Prestige journey for massive permanent power. Unlocked after Quest 10.',
+        baseCost: 0,
+        costMultiplier: 0,
+        maxCost: 0,
+        isFree: true,
+        bonus: (level) => ({})
+      },
       
       // LEGACY BUILDINGS (kept for compatibility)
       trainingGrounds: {
@@ -9783,7 +9838,8 @@
         claim: 'Main Building',
         rewardGold: 150,
         rewardSkillPoints: 1,
-        message: "⚒️ Upgrade purchased!<br><br>Each upgrade makes you permanently stronger. Time to prove your might!",
+        unlockBuilding: 'warehouse',
+        message: "⚒️ Upgrade purchased!<br><br>Each upgrade makes you permanently stronger. Time to prove your might!<br><br>The <b>Warehouse</b> is now unlocked — store and manage your resources there!",
         nextQuest: 'quest8_kill10',
         conditions: ['quest6_survive2min']
       },
@@ -9814,12 +9870,13 @@
         rewardGold: 150,
         rewardSkillPoints: 1,
         rewardAttributePoints: 1,
-        message: "🐺 Companion activated!<br><br>They will fight by your side in battle!<br><br>Now go on a run and kill <b>15 enemies</b> to prove your combined strength!",
+        unlockBuilding: 'shop',
+        message: "🐺 Companion activated!<br><br>They will fight by your side in battle!<br><br>The <b>Shop</b> is now open — buy powerful items to aid your journey!<br><br>Now go on a run and kill <b>15 enemies</b> to prove your combined strength!",
         nextQuest: 'quest10_kill15',
         conditions: ['quest8_kill10']
       },
 
-      // === PHASE 10: Run quest → Kill 15 enemies → Unlock Achievement Building ===
+      // === PHASE 10: Run quest → Kill 15 enemies → Unlock Prestige Altar ===
       quest10_kill15: {
         id: 'quest10_kill15',
         name: 'Kill 15 Enemies',
@@ -9828,7 +9885,8 @@
         triggerOnDeath: true,
         rewardGold: 300,
         rewardSkillPoints: 2,
-        message: "🎉 15 Kills! Well done!<br><br>Explore the world — find every landmark (Stonehenge, Pyramid, Montana, Tesla Tower) to unlock the Achievement Building!",
+        unlockBuilding: 'prestige',
+        message: "🎉 15 Kills! Well done!<br><br>The <b>Prestige Altar</b> has awakened — you may now begin the path of Prestige!<br><br>Explore the world — find every landmark (Stonehenge, Pyramid, Montana, Tesla Tower) to unlock the Achievement Building!",
         nextQuest: 'quest11_findAllLandmarks',
         conditions: ['quest9_activateCompanion']
       },
@@ -10288,6 +10346,19 @@
             showStatChange(`🏛️ ${bldName} Unlocked!`);
           }
         });
+      }
+
+      // Quest 8: also unlock the Tavern alongside Companion House
+      if (questId === 'quest8_kill10') {
+        if (saveData.campBuildings['tavern'] && !saveData.campBuildings['tavern'].unlocked) {
+          saveData.campBuildings['tavern'].unlocked = true;
+          if (saveData.campBuildings['tavern'].level === 0) saveData.campBuildings['tavern'].level = 1;
+          showStatChange('🏛️ Tavern Unlocked!');
+          if (window.CampWorld) {
+            window.CampWorld.refreshBuildings(saveData);
+            window.CampWorld.playBuildingUnlockAnimation('tavern');
+          }
+        }
       }
       
       // --- AUTO-CHAIN: Activate next quest IMMEDIATELY (synchronous) ---
@@ -12214,6 +12285,10 @@
           inventory:           () => showInventoryScreen(),
           campBoard:           () => showCampBoardMenu(),
           specialAttacks:      () => showSpecialAttacksPanel(),
+          warehouse:           () => showInventoryScreen(),
+          tavern:              () => showExpeditionsMenu ? showExpeditionsMenu() : showQuestHall(),
+          shop:                () => showProgressionShop(),
+          prestige:            () => showPrestigeMenu ? showPrestigeMenu() : showProgressionShop(),
         };
         window.CampWorld.enter(renderer, saveData, campCallbacks);
         // Mark camp-screen as 3D mode only if CampWorld successfully activated
@@ -15979,6 +16054,7 @@
       const pts = saveData.specialAtkPoints || 0;
       const knifeNode = (saveData.skillTree || {})['specialKnifeTakedown'] || { level: 0, maxLevel: 3 };
       const knifeUnlocked = (knifeNode.level || 0) > 0;
+      const chosenBranch = saveData.specialBranch || null;
 
       // Header
       const header = document.createElement('div');
@@ -16005,11 +16081,14 @@
         const maxLvl = stNode.maxLevel || 3;
         const isUnlocked = currentLvl > 0;
 
-        // Availability: starting attacks always available; others need branch predecessor
+        // Branch restriction: attacks from wrong branch are not available
+        const branchOk = sa.branch === 'start' || !chosenBranch || sa.branch === chosenBranch;
+
+        // Availability: starting attacks always available; others need branch predecessor AND branch chosen
         const sameBranch = branchMap[sa.branch || 'start'] || [];
         const prevInBranch = sameBranch.find(a => a.branchOrder === sa.branchOrder - 1);
         const prevNode = prevInBranch ? ((saveData.skillTree || {})[prevInBranch.skillTreeId] || { level: 0 }) : null;
-        const isAvailable = sa.isStartingAttack || (knifeUnlocked && (!prevInBranch || prevNode.level > 0));
+        const isAvailable = branchOk && (sa.isStartingAttack || (knifeUnlocked && (!prevInBranch || prevNode.level > 0)));
 
         const UNLOCK_COST = 1;
         const UPGRADE_COST = 1;
@@ -16079,37 +16158,82 @@
         // Branch divider
         const divider = document.createElement('div');
         divider.style.cssText = 'display:flex;align-items:center;gap:12px;margin-bottom:14px;';
+        const dividerLabel = chosenBranch
+          ? (chosenBranch === 'upper' ? '⚔️ PATH: OFFENSIVE' : '🛡️ PATH: CONTROL')
+          : 'CHOOSE YOUR PATH';
         divider.innerHTML = `
           <div style="flex:1;height:2px;background:linear-gradient(to right,transparent,rgba(255,100,0,0.5));"></div>
-          <div style="font-size:12px;color:#FF8844;letter-spacing:1px;">CHOOSE YOUR PATH</div>
+          <div style="font-size:12px;color:#FF8844;letter-spacing:1px;">${dividerLabel}</div>
           <div style="flex:1;height:2px;background:linear-gradient(to left,transparent,rgba(68,150,255,0.5));"></div>
         `;
         panel.appendChild(divider);
+
+        // If no branch chosen yet, show branch selector buttons
+        if (!chosenBranch) {
+          const branchPicker = document.createElement('div');
+          branchPicker.style.cssText = 'display:flex;gap:12px;justify-content:center;margin-bottom:16px;';
+          const makePickBtn = (branch, label, color, desc) => {
+            const btn = document.createElement('button');
+            btn.style.cssText = `flex:1;max-width:220px;padding:14px 10px;background:linear-gradient(135deg,${color}33,${color}11);border:2px solid ${color};border-radius:10px;color:${color};font-family:"Bangers",cursive;font-size:14px;cursor:pointer;letter-spacing:1px;`;
+            btn.innerHTML = `${label}<div style="font-size:10px;color:#aaa;font-family:Arial,sans-serif;margin-top:4px;font-weight:normal;">${desc}</div>`;
+            btn.addEventListener('click', () => {
+              saveData.specialBranch = branch;
+              saveSaveData();
+              if (window.GameRageCombat) window.GameRageCombat.refreshLoadout(saveData);
+              if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+              showSpecialAttacksPanel();
+            });
+            return btn;
+          };
+          branchPicker.appendChild(makePickBtn('upper', '⚔️ Upper Path', '#FF6600', 'Offensive — Shockwave, Death Blossom, Thunder Strike…'));
+          branchPicker.appendChild(makePickBtn('lower', '🛡️ Lower Path', '#4488FF', 'Control — Frozen Storm, Inferno Ring, Void Pulse…'));
+          panel.appendChild(branchPicker);
+        } else {
+          // Show chosen branch + a small switch button
+          const switchRow = document.createElement('div');
+          switchRow.style.cssText = 'text-align:right;margin-bottom:10px;';
+          const switchBtn = document.createElement('button');
+          switchBtn.textContent = '🔀 Switch Branch';
+          switchBtn.style.cssText = 'background:rgba(255,255,255,0.07);border:1px solid #555;color:#aaa;padding:4px 10px;border-radius:6px;cursor:pointer;font-family:Arial,sans-serif;font-size:11px;';
+          switchBtn.title = 'Reset your branch choice (you will lose access to current branch unlocks)';
+          switchBtn.addEventListener('click', () => {
+            if (!confirm('Switch branch? You will need to re-select your path.')) return;
+            saveData.specialBranch = null;
+            saveSaveData();
+            if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+            showSpecialAttacksPanel();
+          });
+          switchRow.appendChild(switchBtn);
+          panel.appendChild(switchRow);
+        }
 
         // ── BRANCH ROWS ────────────────────────────────────────────
         const branchesContainer = document.createElement('div');
         branchesContainer.style.cssText = 'display:flex;flex-direction:column;gap:16px;';
 
         function renderBranchRow(branchId, label, color) {
+          const isChosen = !chosenBranch || chosenBranch === branchId;
           const row = document.createElement('div');
-          row.style.cssText = `border:1px solid ${color}33;border-radius:10px;padding:10px;background:${color}08;`;
+          row.style.cssText = `border:2px solid ${isChosen ? color + '66' : '#33333366'};border-radius:10px;padding:10px;background:${isChosen ? color + '08' : 'rgba(0,0,0,0.2)'};opacity:${isChosen ? '1' : '0.4'};`;
           const rowLabel = document.createElement('div');
-          rowLabel.style.cssText = `font-size:13px;color:${color};letter-spacing:1.5px;margin-bottom:8px;`;
-          rowLabel.textContent = label;
+          rowLabel.style.cssText = `font-size:13px;color:${isChosen ? color : '#666'};letter-spacing:1.5px;margin-bottom:8px;`;
+          rowLabel.textContent = label + (isChosen && chosenBranch ? ' ✓ CHOSEN' : (!chosenBranch ? ' — click to choose' : ' 🔒 Not chosen'));
           row.appendChild(rowLabel);
-          const nodesRow = document.createElement('div');
-          nodesRow.style.cssText = 'display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;';
-          const branchAttacks = branchMap[branchId] || [];
-          branchAttacks.forEach((sa, i) => {
-            if (i > 0) {
-              const arrow = document.createElement('div');
-              arrow.style.cssText = 'display:flex;align-items:center;color:#666;font-size:18px;flex-shrink:0;';
-              arrow.textContent = '→';
-              nodesRow.appendChild(arrow);
-            }
-            nodesRow.appendChild(renderAttackNode(sa));
-          });
-          row.appendChild(nodesRow);
+          if (isChosen) {
+            const nodesRow = document.createElement('div');
+            nodesRow.style.cssText = 'display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;';
+            const branchAttacks = branchMap[branchId] || [];
+            branchAttacks.forEach((sa, i) => {
+              if (i > 0) {
+                const arrow = document.createElement('div');
+                arrow.style.cssText = 'display:flex;align-items:center;color:#666;font-size:18px;flex-shrink:0;';
+                arrow.textContent = '→';
+                nodesRow.appendChild(arrow);
+              }
+              nodesRow.appendChild(renderAttackNode(sa));
+            });
+            row.appendChild(nodesRow);
+          }
           return row;
         }
 
@@ -16209,6 +16333,11 @@
           document.getElementById('camp-screen').style.display = 'none';
           openCodex();
         },
+        specialAttacks:      () => { overlay.remove(); showSpecialAttacksPanel(); },
+        warehouse:           () => { overlay.remove(); showInventoryScreen(); },
+        tavern:              () => { overlay.remove(); if (typeof showExpeditionsMenu === 'function') showExpeditionsMenu(); else showQuestHall(); },
+        shop:                () => { overlay.remove(); showProgressionShop(); },
+        prestige:            () => { overlay.remove(); if (typeof showPrestigeMenu === 'function') showPrestigeMenu(); else showProgressionShop(); },
       };
 
       for (const [buildingId, building] of Object.entries(CAMP_BUILDINGS)) {
