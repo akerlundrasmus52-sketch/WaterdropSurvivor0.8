@@ -53,13 +53,13 @@
     /* HUD — centered below the day/night clock */
     .hud-top {
       position: fixed;
-      top: 52px;
-      left: 50%;
-      transform: translateX(-50%);
+      top: 8px;
+      left: 8px;
+      transform: none;
       padding: 4px 8px;
       display: flex;
       flex-direction: column;
-      align-items: center;
+      align-items: flex-start;
       gap: 6px;
       cursor: grab;
       z-index: 11;
@@ -537,6 +537,26 @@
       font-weight: bold;
       color: #FFD700;
       text-shadow: 0 0 6px rgba(255,215,0,1);
+    }
+
+    /* Off-screen quest direction arrow (shown on minimap edge when quest is far away) */
+    .minimap-quest-arrow {
+      position: absolute;
+      /* top/left are set dynamically by JS to the edge position */
+      width: 0;
+      height: 0;
+      pointer-events: none;
+      transform-origin: center center;
+      /* Arrow tip pointing upward (north); rotated by JS via transform: rotate(Xrad) */
+      border-left: 5px solid transparent;
+      border-right: 5px solid transparent;
+      border-bottom: 10px solid #FFD700;
+      filter: drop-shadow(0 0 4px rgba(255,215,0,0.9));
+      animation: minimapArrowPulse 1s ease-in-out infinite;
+    }
+    @keyframes minimapArrowPulse {
+      0%,100% { opacity: 1; }
+      50%      { opacity: 0.45; }
     }
     
     /* Region Display - lower-left indicator - hidden */
@@ -1755,6 +1775,112 @@
       0%   { opacity: 0; transform: translate(120%, 120%) scale(0.5) rotate(-15deg); }
       60%  { opacity: 1; transform: translate(-5%, -5%) scale(1.04) rotate(1deg); }
       100% { opacity: 1; transform: translate(0, 0) scale(1) rotate(0deg); }
+    }
+
+    /* ── Additional randomised card-arrival animations ───────────────────── */
+
+    /* Spin-in from left */
+    @keyframes cardSpinInLeft {
+      0%   { opacity: 0; transform: translateX(-150%) rotate(-360deg) scale(0.3); }
+      70%  { opacity: 1; transform: translateX(4%) rotate(8deg) scale(1.05); }
+      100% { opacity: 1; transform: translateX(0) rotate(0deg) scale(1); }
+    }
+    /* Spin-in from right */
+    @keyframes cardSpinInRight {
+      0%   { opacity: 0; transform: translateX(150%) rotate(360deg) scale(0.3); }
+      70%  { opacity: 1; transform: translateX(-4%) rotate(-8deg) scale(1.05); }
+      100% { opacity: 1; transform: translateX(0) rotate(0deg) scale(1); }
+    }
+    /* Drop like a water droplet */
+    @keyframes cardDropIn {
+      0%   { opacity: 0; transform: translateY(-200%) scaleY(1.6) scaleX(0.6); }
+      55%  { opacity: 1; transform: translateY(6%) scaleY(0.85) scaleX(1.08); }
+      75%  { transform: translateY(-3%) scaleY(1.04) scaleX(0.98); }
+      100% { opacity: 1; transform: translateY(0) scaleY(1) scaleX(1); }
+    }
+    /* Rise from smoke center */
+    @keyframes cardSmokeRise {
+      0%   { opacity: 0; transform: scale(0.1) translateY(40px); filter: blur(10px); }
+      50%  { opacity: 0.7; transform: scale(1.08) translateY(-6px); filter: blur(2px); }
+      80%  { opacity: 1; transform: scale(0.97) translateY(2px); filter: blur(0); }
+      100% { opacity: 1; transform: scale(1) translateY(0); filter: blur(0); }
+    }
+    /* Chessboard tile pop-in */
+    @keyframes cardTilePop {
+      0%   { opacity: 0; transform: scale(0) rotate(45deg); border-radius: 50%; }
+      60%  { opacity: 1; transform: scale(1.06) rotate(-3deg); border-radius: 14px; }
+      100% { opacity: 1; transform: scale(1) rotate(0deg); border-radius: 12px; }
+    }
+    /* 720-degree spin settle */
+    @keyframes cardSpin720 {
+      0%   { opacity: 0; transform: scale(0.2) rotate(720deg); }
+      65%  { opacity: 1; transform: scale(1.05) rotate(-8deg); }
+      85%  { transform: scale(0.98) rotate(3deg); }
+      100% { opacity: 1; transform: scale(1) rotate(0deg); }
+    }
+    /* Vortex/warp from edges */
+    @keyframes cardVortex {
+      0%   { opacity: 0; transform: scale(0) rotate(180deg); filter: blur(8px) saturate(0); }
+      50%  { opacity: 0.8; transform: scale(1.1) rotate(-10deg); filter: blur(1px) saturate(1.5); }
+      75%  { transform: scale(0.96) rotate(4deg); filter: blur(0) saturate(1); }
+      100% { opacity: 1; transform: scale(1) rotate(0deg); filter: none; }
+    }
+    /* Multi-direction crash from corners */
+    @keyframes cardCrashIn {
+      0%   { opacity: 0; transform: translate(-60%,-60%) scale(0.4); }
+      40%  { opacity: 1; transform: translate(4%,4%) scale(1.06); }
+      65%  { transform: translate(-2%,-2%) scale(0.98); }
+      100% { opacity: 1; transform: translate(0,0) scale(1); }
+    }
+    /* Card shuffle/flip-in */
+    @keyframes cardFlipIn {
+      0%   { opacity: 0; transform: perspective(600px) rotateY(90deg) scale(0.7); }
+      55%  { opacity: 1; transform: perspective(600px) rotateY(-8deg) scale(1.04); }
+      100% { opacity: 1; transform: perspective(600px) rotateY(0deg) scale(1); }
+    }
+    /* Dark-glow blink when card reaches its resting position */
+    @keyframes cardDarkGlowBlink {
+      0%,100% { box-shadow: inherit; }
+      50%     { box-shadow: 0 0 0 3px rgba(0,0,0,0.9), 0 0 24px rgba(0,0,0,0.7),
+                            inset 0 0 14px rgba(0,0,0,0.6); }
+    }
+    /* Smoky edge shimmer (continuous subtle effect after arrival) */
+    @keyframes cardSmokyEdge {
+      0%,100% { border-color: inherit; }
+      33%     { border-color: rgba(120,180,255,0.55); }
+      66%     { border-color: rgba(80,120,200,0.35); }
+    }
+
+    /* ── Glass 3D upgrade-card refinements ──────────────────────────────── */
+    /* Applied via JS after card arrival; replaces plain dark style */
+    .upgrade-card.glass-3d {
+      background:
+        linear-gradient(135deg,
+          rgba(40,60,100,0.55) 0%,
+          rgba(15,20,40,0.85) 40%,
+          rgba(10,15,35,0.95) 100%);
+      border: 2px solid rgba(100,160,255,0.45);
+      border-radius: 14px;
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,0.06),
+        0 6px 24px rgba(0,0,0,0.7),
+        inset 0 1px 0 rgba(255,255,255,0.12),
+        inset 0 -1px 0 rgba(0,0,0,0.35),
+        inset 2px 0 0 rgba(255,255,255,0.04),
+        inset -2px 0 0 rgba(0,0,0,0.2);
+      /* Soft smoky edge shimmer */
+      animation: cardSmokyEdge 4s ease-in-out infinite;
+      transform-style: preserve-3d;
+    }
+    .upgrade-card.glass-3d::before {
+      background: linear-gradient(to bottom,
+        rgba(255,255,255,0.14) 0%,
+        rgba(255,255,255,0.04) 45%,
+        transparent 100%);
+    }
+    /* Dark glow blinks once when card settles (added via JS) */
+    .upgrade-card.glass-3d.settled {
+      animation: cardDarkGlowBlink 0.4s ease-out, cardSmokyEdge 4s 0.4s ease-in-out infinite;
     }
 
     /* Level-up heading fly-in */
@@ -3784,16 +3910,22 @@
        ================================================= */
     #super-stat-bar {
       position: fixed;
-      right: 5px;
-      top: 65px;
-      width: 150px;
+      left: 50%;
+      transform: translateX(-50%);
+      top: 4px;
+      width: 220px;
       z-index: 98;
       display: none;          /* shown only in-game via JS */
       flex-direction: column;
       gap: 3px;
       pointer-events: none;
       font-family: 'Bangers', cursive;
-      overflow: hidden;
+      overflow: visible;
+      background: rgba(20,20,20,0.82);
+      border: 2px solid rgba(80,80,80,0.7);
+      border-radius: 10px;
+      padding: 3px 8px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.7);
     }
 
     /* Header row: wave · kills · combo */
@@ -3936,13 +4068,13 @@
       animation: ssb-countdown-pulse 0.45s ease-out forwards;
     }
 
-    /* Portrait: tuck under menu button (44 px tall + 10 px top + 8 px gap = 62) */
+    /* Portrait: keep super-stat-bar centered at top */
     @media (orientation: portrait) {
-      #super-stat-bar { right: 5px; top: 65px; }
+      #super-stat-bar { left: 50%; transform: translateX(-50%); top: 4px; right: auto; }
     }
-    /* Landscape: slightly higher since menu btn might be different */
+    /* Landscape: keep super-stat-bar centered at top */
     @media (orientation: landscape) {
-      #super-stat-bar { right: 5px; top: 52px; }
+      #super-stat-bar { left: 50%; transform: translateX(-50%); top: 4px; right: auto; }
     }
 
 /* ============================================================
@@ -4734,3 +4866,8 @@
 .building-construction {
   animation: build-pulse 0.8s ease-in-out infinite;
 }
+
+/* ── Layout adjustments per UX spec ────────────────────────── */
+/* Hide the in-game STATS button; stats are merged into the center top stat bar.
+   The stats modal remains accessible from the Options/Settings menu. */
+#stats-btn { display: none !important; }
