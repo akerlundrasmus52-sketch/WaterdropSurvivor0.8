@@ -15957,15 +15957,18 @@
           const hudTop = document.querySelector('.hud-top');
           if (!hudTop) return;
           const STORAGE_KEY = 'wd_hudtop_pos';
-          // Restore saved position if available
+          // Restore saved position if available, clamped to current viewport
           try {
             const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
             if (saved && typeof saved.left === 'number' && typeof saved.top === 'number') {
-              hudTop.style.left = Math.max(0, saved.left) + 'px';
-              hudTop.style.top  = Math.max(0, saved.top)  + 'px';
+              const maxL = Math.max(0, window.innerWidth  - hudTop.offsetWidth);
+              const maxT = Math.max(0, window.innerHeight - hudTop.offsetHeight);
+              hudTop.style.left = Math.min(maxL, Math.max(0, saved.left)) + 'px';
+              hudTop.style.top  = Math.min(maxT, Math.max(0, saved.top))  + 'px';
             }
           } catch(e) {}
-          let dragStartX, dragStartY, origLeft, origTop, isDragging = false;
+          let dragStartX, dragStartY, origLeft, origTop;
+          let isDragging = false;
           function getPointer(e) {
             return e.touches ? e.touches[0] : e;
           }
@@ -15992,8 +15995,10 @@
             const dy = p.clientY - dragStartY;
             if (!isDragging && (Math.abs(dx) + Math.abs(dy)) > 4) isDragging = true;
             if (!isDragging) return;
-            hudTop.style.left = Math.max(0, origLeft + dx) + 'px';
-            hudTop.style.top  = Math.max(0, origTop  + dy) + 'px';
+            const maxL = Math.max(0, window.innerWidth  - hudTop.offsetWidth);
+            const maxT = Math.max(0, window.innerHeight - hudTop.offsetHeight);
+            hudTop.style.left = Math.min(maxL, Math.max(0, origLeft + dx)) + 'px';
+            hudTop.style.top  = Math.min(maxT, Math.max(0, origTop  + dy)) + 'px';
             hudTop.style.right  = '';
             hudTop.style.bottom = '';
           }

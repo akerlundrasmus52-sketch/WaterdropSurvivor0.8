@@ -3799,7 +3799,7 @@
       gap: 3px;
       pointer-events: none;
       font-family: 'Bangers', cursive;
-      overflow: visible;
+      overflow: hidden;
     }
 
     /* Header row: wave · kills · combo */
