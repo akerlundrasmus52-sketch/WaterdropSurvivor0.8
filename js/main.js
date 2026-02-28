@@ -7389,6 +7389,21 @@
           nEl.style.display = 'none';
         }
       }
+
+      // ---- Game timer (always visible after countdown) ----
+      const cdEl = document.getElementById('ssb-countdown');
+      if (cdEl && !countdownActive && isGameActive && !isGameOver) {
+        const elapsedSec = (gameStartTime != null && gameStartTime !== 0)
+          ? Math.floor((Date.now() - gameStartTime) / 1000)
+          : 0;
+        const mins = Math.floor(elapsedSec / 60);
+        const secs = elapsedSec % 60;
+        cdEl.textContent = `⏱ ${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        cdEl.classList.remove('ssb-cd-orange', 'ssb-cd-red', 'ssb-cd-green');
+        cdEl.style.display = 'block';
+      } else if (cdEl && !countdownActive && (!isGameActive || isGameOver)) {
+        cdEl.style.display = 'none';
+      }
     }
     window._ssbUpdateContext = _ssbUpdateContext;
 
@@ -15999,8 +16014,9 @@
             const maxT = Math.max(0, window.innerHeight - hudTop.offsetHeight);
             hudTop.style.left = Math.min(maxL, Math.max(0, origLeft + dx)) + 'px';
             hudTop.style.top  = Math.min(maxT, Math.max(0, origTop  + dy)) + 'px';
-            hudTop.style.right  = '';
-            hudTop.style.bottom = '';
+            hudTop.style.right     = '';
+            hudTop.style.bottom    = '';
+            hudTop.style.transform = ''; // clear CSS centering transform when manually positioned
           }
           function onUp() {
             window.removeEventListener('mousemove', onMove);
@@ -16223,10 +16239,8 @@
     function endCountdown() {
       countdownActive = false;
 
-      // Hide SSB countdown row now that countdown is over
-      if (typeof _ssbHideCountdown === 'function') {
-        setTimeout(_ssbHideCountdown, 800); // brief delay so "SURVIVE!" is visible
-      }
+      // Keep SSB countdown visible — it will transition to showing elapsed game time
+      // via _ssbUpdateContext() which runs every frame. No need to hide it.
       
       // Ensure game properly unpauses (use helper functions to sync window variables)
       setGamePaused(false);
@@ -19376,8 +19390,9 @@
           }
         }
         
-        // Phase 1: Text-only upgrade cards (removed icons as requested)
-        card.innerHTML = `<div class="upgrade-title">${u.title}</div><div class="upgrade-desc">${u.desc}</div>`;
+        // Upgrade cards: show icon (if present) + title + desc
+        const iconHtml = u.icon ? `<span class="upgrade-icon">${u.icon}</span>` : '';
+        card.innerHTML = `${iconHtml}<div class="upgrade-title">${u.title}</div><div class="upgrade-desc">${u.desc}</div>`;
         
         // Add dramatic entrance animation - from corners
         card.style.opacity = '0';
