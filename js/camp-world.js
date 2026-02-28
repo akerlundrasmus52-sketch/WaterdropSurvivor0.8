@@ -473,11 +473,12 @@
     grp.add(hl);
 
     // Ground shadow disc
-    const shadowGeo = new THREE.CircleGeometry(0.4, 16);
+    const shadowGeo = new THREE.CircleGeometry(0.4, 32);
     const shadowMat = new THREE.MeshBasicMaterial({
       color: 0x000000,
       transparent: true,
-      opacity: 0.3
+      opacity: 0.3,
+      depthWrite: false
     });
     const shadowDisc = new THREE.Mesh(shadowGeo, shadowMat);
     shadowDisc.rotation.x = -Math.PI / 2;
@@ -1442,20 +1443,90 @@
   // ──────────────────────────────────────────────────────────
   function _refreshBuildings() {
     if (!_saveData) return;
+    const THREE = T();
     for (const def of BUILDING_DEFS) {
       const grp = _buildingMeshes[def.id];
       if (!grp) continue;
       const bd = _saveData.campBuildings && _saveData.campBuildings[def.id];
-      // Only show a building when it has been explicitly unlocked (unlocked === true).
-      // Checking level > 0 alone is insufficient — a building with level > 0 from a
-      // legacy save should remain hidden until the quest that unlocks it is completed.
       const isUnlocked = bd ? (bd.unlocked === true) : false;
-      grp.visible = isUnlocked;
+
+      if (isUnlocked) {
+        // Fully unlocked — show normally
+        grp.visible = true;
+        _setBlueprintMode(grp, false);
+      } else {
+        // Locked — show as semi-transparent blueprint outline
+        grp.visible = true;
+        _setBlueprintMode(grp, true);
+      }
     }
-    // Quest Hall is always visible (core building)
+    // Quest Hall is always visible and unlocked
     if (_buildingMeshes['questMission']) {
       _buildingMeshes['questMission'].visible = true;
+      _setBlueprintMode(_buildingMeshes['questMission'], false);
     }
+  }
+
+  // Apply or remove blueprint (locked) visual mode to a building group
+  function _setBlueprintMode(grp, enable) {
+    const THREE = T();
+    grp.traverse(child => {
+      if (!child.isMesh) return;
+      if (enable) {
+        // Store original material if not already stored
+        if (!child.userData._origMaterial) {
+          child.userData._origMaterial = child.material;
+        }
+        // Blueprint: wireframe + semi-transparent blue tint
+        if (!child.userData._blueprintMat) {
+          child.userData._blueprintMat = new THREE.MeshBasicMaterial({
+            color: 0x4488FF,
+            transparent: true,
+            opacity: 0.18,
+            wireframe: false,
+            depthWrite: false,
+            side: THREE.DoubleSide
+          });
+        }
+        child.material = child.userData._blueprintMat;
+      } else {
+        // Restore original material
+        if (child.userData._origMaterial) {
+          child.material = child.userData._origMaterial;
+        }
+      }
+    });
+  }
+
+  // Play a construction animation when a building is first unlocked
+  function _playBuildingUnlockAnimation(buildingId) {
+    const grp = _buildingMeshes[buildingId];
+    if (!grp) return;
+    const THREE = T();
+
+    // Remove blueprint mode immediately
+    _setBlueprintMode(grp, false);
+
+    // Flash effect: scale up from 0 → 1.05 → 1.0 over ~0.7 seconds
+    const startTime = performance.now();
+    const duration = 700;
+    grp.scale.set(0.01, 0.01, 0.01);
+
+    function animStep() {
+      const elapsed = performance.now() - startTime;
+      const t = Math.min(elapsed / duration, 1.0);
+      // Ease out with slight overshoot
+      const scale = t < 0.85
+        ? 1.07 * (t / 0.85)
+        : 1.07 - 0.07 * ((t - 0.85) / 0.15);
+      grp.scale.set(scale, scale, scale);
+      if (t < 1.0) {
+        requestAnimationFrame(animStep);
+      } else {
+        grp.scale.set(1, 1, 1);
+      }
+    }
+    requestAnimationFrame(animStep);
   }
 
   // ──────────────────────────────────────────────────────────
@@ -1851,6 +1922,7 @@
     update,
     render,
     refreshBuildings,
+    playBuildingUnlockAnimation: _playBuildingUnlockAnimation,
     onResize,
     warmUp,
   };

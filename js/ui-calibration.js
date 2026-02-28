@@ -14,6 +14,7 @@
   'use strict';
 
   const STORAGE_KEY = 'wd_hud_layout_v2';
+  const USER_DEFAULT_KEY = 'wd_hud_layout_user_default_v2';
   const MIN_W = 40;
   const MIN_H = 20;
 
@@ -160,16 +161,29 @@
   }
 
   // ──────────────────────────────────────────────────────────
-  // Overlay (dim background + Save / Reset / Close buttons)
+  // Overlay: collapsible tab panel for buttons (movable tab)
   // ──────────────────────────────────────────────────────────
   function _buildOverlay() {
     _overlay = document.createElement('div');
     _overlay.id = 'ui-calibration-overlay';
     _overlay.className = 'ui-cal-overlay';
 
+    // ── Tab toggle button (draggable, always visible) ────────
+    const tabBtn = document.createElement('button');
+    tabBtn.id = 'ui-cal-tab-toggle';
+    tabBtn.className = 'ui-cal-tab-toggle';
+    tabBtn.textContent = '🎛️ UI CAL';
+    tabBtn.title = 'Drag to move · Click to open/close panel';
+
+    // ── Collapsible panel ────────────────────────────────────
+    const panel = document.createElement('div');
+    panel.id = 'ui-cal-panel';
+    panel.className = 'ui-cal-panel';
+    panel.style.display = 'none';
+
     const title = document.createElement('div');
     title.className = 'ui-cal-title';
-    title.textContent = '🎛️ UI CALIBRATION  —  Drag elements to reposition · Drag ◤ to resize';
+    title.textContent = '🎛️ UI CALIBRATION — Drag ✥ to move · Drag ◤ to resize';
 
     const btnRow = document.createElement('div');
     btnRow.className = 'ui-cal-btn-row';
@@ -179,9 +193,16 @@
     saveBtn.textContent = '💾 Save Layout';
     saveBtn.addEventListener('click', _saveAndExit);
 
+    const saveDefaultBtn = document.createElement('button');
+    saveDefaultBtn.className = 'ui-cal-btn ui-cal-save-btn';
+    saveDefaultBtn.textContent = '⭐ Save as Default';
+    saveDefaultBtn.title = 'Save current layout as your personal default (Reset will restore this)';
+    saveDefaultBtn.addEventListener('click', _saveAsDefault);
+
     const resetBtn = document.createElement('button');
     resetBtn.className = 'ui-cal-btn ui-cal-reset-btn';
     resetBtn.textContent = '↩️ Reset to Default';
+    resetBtn.title = 'Restore your saved default layout (or factory settings if none saved)';
     resetBtn.addEventListener('click', _resetAndExit);
 
     const closeBtn = document.createElement('button');
@@ -190,12 +211,68 @@
     closeBtn.addEventListener('click', exit);
 
     btnRow.appendChild(saveBtn);
+    btnRow.appendChild(saveDefaultBtn);
     btnRow.appendChild(resetBtn);
     btnRow.appendChild(closeBtn);
 
-    _overlay.appendChild(title);
-    _overlay.appendChild(btnRow);
+    panel.appendChild(title);
+    panel.appendChild(btnRow);
+
+    // Toggle panel visibility on tab button click
+    let _panelVisible = false;
+    tabBtn.addEventListener('click', () => {
+      _panelVisible = !_panelVisible;
+      panel.style.display = _panelVisible ? 'block' : 'none';
+    });
+
+    _overlay.appendChild(tabBtn);
+    _overlay.appendChild(panel);
     document.body.appendChild(_overlay);
+
+    // Make tab button draggable
+    _bindTabDrag(tabBtn);
+  }
+
+  // Make the tab toggle button draggable
+  function _bindTabDrag(tabBtn) {
+    let startX, startY, startLeft, startTop, dragging = false;
+    function onDown(e) {
+      // Only start drag on long-press or direct drag (not click)
+      dragging = false;
+      const pt = _getPointer(e);
+      startX = pt.x; startY = pt.y;
+      const rect = tabBtn.getBoundingClientRect();
+      startLeft = rect.left; startTop = rect.top;
+      window.addEventListener('mousemove', onMove);
+      window.addEventListener('mouseup', onUp);
+      window.addEventListener('touchmove', onMove, { passive: false });
+      window.addEventListener('touchend', onUp);
+    }
+    function onMove(e) {
+      e.preventDefault();
+      const pt = _getPointer(e);
+      const dx = pt.x - startX;
+      const dy = pt.y - startY;
+      if (!dragging && Math.abs(dx) + Math.abs(dy) > 6) dragging = true;
+      if (!dragging) return;
+      tabBtn.style.left = Math.max(0, startLeft + dx) + 'px';
+      tabBtn.style.top  = Math.max(0, startTop  + dy) + 'px';
+      tabBtn.style.right  = 'auto';
+      tabBtn.style.bottom = 'auto';
+    }
+    function onUp(e) {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+      window.removeEventListener('touchmove', onMove);
+      window.removeEventListener('touchend', onUp);
+      if (dragging) {
+        // Prevent the click from firing after a drag
+        e.stopPropagation();
+        dragging = false;
+      }
+    }
+    tabBtn.addEventListener('mousedown', onDown);
+    tabBtn.addEventListener('touchstart', onDown, { passive: false });
   }
 
   function _removeOverlay() {
@@ -389,7 +466,7 @@
   // ──────────────────────────────────────────────────────────
   // Save / Reset helpers
   // ──────────────────────────────────────────────────────────
-  function _saveAndExit() {
+  function _captureLayout() {
     const layout = {};
     for (const h of _handles) {
       const el = h.el;
@@ -402,28 +479,54 @@
         height: el.style.height || null,
       };
     }
+    return layout;
+  }
+
+  function _saveAndExit() {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(layout));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(_captureLayout()));
     } catch (e) {
       console.warn('[UICalibration] Could not save layout:', e);
     }
     exit();
   }
 
+  function _saveAsDefault() {
+    const layout = _captureLayout();
+    try {
+      localStorage.setItem(USER_DEFAULT_KEY, JSON.stringify(layout));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(layout));
+    } catch (e) {
+      console.warn('[UICalibration] Could not save default:', e);
+    }
+    // Visual feedback
+    const saveDefaultBtn = document.querySelector('#ui-cal-panel .ui-cal-save-btn:nth-child(2)');
+    if (saveDefaultBtn) {
+      const orig = saveDefaultBtn.textContent;
+      saveDefaultBtn.textContent = '✅ Saved!';
+      setTimeout(() => { saveDefaultBtn.textContent = orig; }, 1500);
+    }
+  }
+
   function _resetAndExit() {
     try { localStorage.removeItem(STORAGE_KEY); } catch (e) { /* ignore */ }
-    // Restore defaults immediately
+    // Restore user's saved default, or factory defaults if none
+    const userDefault = _loadUserDefault();
     for (const h of _handles) {
       const el = h.el;
-      const d = h.def.defaultPos;
-      el.style.left      = d.left   || '';
-      el.style.top       = d.top    || '';
-      el.style.right     = d.right  || '';
-      el.style.bottom    = d.bottom || '';
-      el.style.width     = '';
-      el.style.height    = '';
-      el.style.transform = '';
-      el.style.transformOrigin = '';
+      if (userDefault && userDefault[h.def.selector]) {
+        _applyEntryToElement(el, userDefault[h.def.selector]);
+      } else {
+        const d = h.def.defaultPos;
+        el.style.left      = d.left   || '';
+        el.style.top       = d.top    || '';
+        el.style.right     = d.right  || '';
+        el.style.bottom    = d.bottom || '';
+        el.style.width     = '';
+        el.style.height    = '';
+        el.style.transform = '';
+        el.style.transformOrigin = '';
+      }
     }
     exit();
   }
@@ -434,6 +537,15 @@
   function _loadLayout() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function _loadUserDefault() {
+    try {
+      const raw = localStorage.getItem(USER_DEFAULT_KEY);
       return raw ? JSON.parse(raw) : null;
     } catch (e) {
       return null;
