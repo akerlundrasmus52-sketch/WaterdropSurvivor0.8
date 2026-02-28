@@ -113,7 +113,7 @@ window.GameLuckyWheel = (function () {
     var html = '<div class="wheel-panel">';
     html += '<h3>🎡 Lucky Wheel</h3>';
     if (free) html += '<div class="wheel-free-badge">🎁 Free Spin Available!</div>';
-    html += '<div class="wheel-visual"><svg viewBox="0 0 200 200" width="200" height="200">';
+    html += '<div class="wheel-visual"><svg id="wheel-svg" viewBox="0 0 200 200" width="200" height="200">';
     WHEEL_SEGMENTS.forEach(function (seg, i) {
       var startAngle = i * sliceAngle - 90;
       var endAngle = startAngle + sliceAngle;
@@ -144,19 +144,27 @@ window.GameLuckyWheel = (function () {
     container.innerHTML = html;
 
     function doSpin(useFree) {
-      var res = spin(saveData, useFree);
-      if (res.ok) {
-        var el = container.querySelector('.wheel-result');
-        if (!el) {
-          el = document.createElement('div');
-          el.className = 'wheel-result';
-          container.querySelector('.wheel-panel').insertBefore(el, container.querySelector('.wheel-btns'));
+      var svg = container.querySelector('#wheel-svg');
+      var btns = container.querySelectorAll('.wheel-spin-free, .wheel-spin-paid');
+      btns.forEach(function (b) { b.disabled = true; });
+      if (svg) svg.classList.add('wheel-svg-spinning');
+      setTimeout(function () {
+        if (svg) svg.classList.remove('wheel-svg-spinning');
+        var res = spin(saveData, useFree);
+        if (res.ok) {
+          var el = container.querySelector('.wheel-result');
+          if (!el) {
+            el = document.createElement('div');
+            el.className = 'wheel-result';
+            container.querySelector('.wheel-panel').insertBefore(el, container.querySelector('.wheel-btns'));
+          }
+          el.textContent = '🎉 ' + res.prize + ' — ' + res.description;
+          renderWheelPanel(saveData, container);
+        } else {
+          btns.forEach(function (b) { b.disabled = false; });
+          alert(res.msg);
         }
-        el.textContent = '🎉 ' + res.prize + ' — ' + res.description;
-        renderWheelPanel(saveData, container);
-      } else {
-        alert(res.msg);
-      }
+      }, 1500);
     }
 
     var freeBtn = container.querySelector('.wheel-spin-free');

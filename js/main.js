@@ -6584,6 +6584,7 @@
     
     // Expose saveData to window scope for loading screen access (FRESH IMPLEMENTATION)
     window.saveData = saveData;
+    window.GameState.saveData = saveData;
 
     // --- ACHIEVEMENTS SYSTEM ---
     const ACHIEVEMENTS = {
@@ -14982,6 +14983,8 @@
             
             // Reset to default save data (complete fresh start)
             saveData = JSON.parse(JSON.stringify(defaultSaveData));
+            window.saveData = saveData;
+            window.GameState.saveData = saveData;
             
             // Save the fresh state
             saveSaveData();
