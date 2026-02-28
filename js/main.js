@@ -15514,6 +15514,8 @@
         if (window.CampWorld && renderer) {
           window.CampWorld.warmUp(renderer);
         }
+        // Apply any saved HUD layout from the UI Calibration system.
+        if (window.UICalibration) window.UICalibration.applyLayout();
       }, 2000);
       
       // SAFETY: Pause watchdog - auto-unpause if stuck with no visible overlay.
@@ -15543,7 +15545,8 @@
             document.getElementById('comic-info-overlay') !== null ||
             document.getElementById('comic-tutorial-modal')?.style.display === 'flex' ||
             document.getElementById('story-quest-modal')?.style.display === 'flex' ||
-            windmillQuest.dialogueOpen;
+            windmillQuest.dialogueOpen ||
+            (window.UICalibration && window.UICalibration.isActive);
 
           // Force-unpause after >10s (watchdog for stuck states, overrides levelUpPending).
           // For shorter pauses, also auto-unpause when levelUpPending is false and no
@@ -16591,10 +16594,19 @@
         const chatTab = document.getElementById('ai-chat-tab');
         if (chatTab) chatTab.classList.add('camp-mode');
         // Defer 3D camp world setup to next tick (scene is pre-warmed at startup, so this is fast)
+        const CAMP_ACTIVATION_RETRY_DELAY_MS = 80;
         setTimeout(() => {
           try { updateCampScreen(); } catch(e) { console.error('[Camp] updateCampScreen error:', e); }
           // Refresh special attack loadout buttons for the new run
           if (window.GameRageCombat) window.GameRageCombat.refreshLoadout(saveData);
+          // Safety retry: if CampWorld didn't activate on first call (e.g. scene build
+          // threw on the first attempt), retry after a short delay so the 3D camp
+          // shows rather than falling back to the static 2D menu.
+          if (window.CampWorld && !window.CampWorld.isActive) {
+            setTimeout(() => {
+              try { updateCampScreen(); } catch(e) { console.error('[Camp] Retry updateCampScreen error:', e); }
+            }, CAMP_ACTIVATION_RETRY_DELAY_MS);
+          }
         }, 0);
       };
       
@@ -16667,8 +16679,17 @@
         }
       };
 
-            
-      // Stats Bar removed - No toggle needed
+      // UI Calibration button — opens HUD editor mode (pauses game while editing)
+      document.getElementById('ui-calibration-btn').onclick = () => {
+        document.getElementById('settings-modal').style.display = 'none';
+        if (isGameActive && !isGameOver) setGamePaused(true);
+        if (window.UICalibration) {
+          window.UICalibration.enter(() => {
+            // Resume game when calibration is closed (if in an active run)
+            if (isGameActive && !isGameOver) setGamePaused(false);
+          });
+        }
+      };
       // Initialize AI Chat Box Console
       initAIChat();
       

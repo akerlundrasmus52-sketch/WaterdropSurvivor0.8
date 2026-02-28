@@ -1625,37 +1625,42 @@
       _isBuilding = false;
     }
 
-    // Reset player to spawn
-    _playerPos.x = SPAWN_POS.x;
-    _playerPos.z = SPAWN_POS.z;
-    _playerVel.x = 0;
-    _playerVel.z = 0;
-    if (_playerMesh) {
-      _playerMesh.position.set(_playerPos.x, PLAYER_RADIUS, _playerPos.z);
+    // Reset player to spawn — wrap in try/catch so any unexpected setup
+    // failure does not block camp activation (scene is already built).
+    try {
+      _playerPos.x = SPAWN_POS.x;
+      _playerPos.z = SPAWN_POS.z;
+      _playerVel.x = 0;
+      _playerVel.z = 0;
+      if (_playerMesh) {
+        _playerMesh.position.set(_playerPos.x, PLAYER_RADIUS, _playerPos.z);
+      }
+      _updateCamera(0);
+
+      // Refresh building visibility
+      _refreshBuildings();
+
+      // Ensure HUD elements
+      _ensureHUD();
+      _nearBuilding = null;
+      _updatePromptUI();
+
+      // Camera aspect
+      const aspect = window.innerWidth / window.innerHeight;
+      if (_campCamera) {
+        _campCamera.aspect = aspect;
+        _campCamera.updateProjectionMatrix();
+      }
+
+      // Reset touch state
+      _touch.active = false;
+      _touch.id = null;
+      _touch.x = 0;
+      _touch.y = 0;
+      _hideTouchIndicator();
+    } catch (setupErr) {
+      console.warn('[CampWorld] Non-critical setup error in enter():', setupErr);
     }
-    _updateCamera(0);
-
-    // Refresh building visibility
-    _refreshBuildings();
-
-    // Ensure HUD elements
-    _ensureHUD();
-    _nearBuilding = null;
-    _updatePromptUI();
-
-    // Camera aspect
-    const aspect = window.innerWidth / window.innerHeight;
-    if (_campCamera) {
-      _campCamera.aspect = aspect;
-      _campCamera.updateProjectionMatrix();
-    }
-
-    // Reset touch state
-    _touch.active = false;
-    _touch.id = null;
-    _touch.x = 0;
-    _touch.y = 0;
-    _hideTouchIndicator();
 
     _isActive = true;
   }
