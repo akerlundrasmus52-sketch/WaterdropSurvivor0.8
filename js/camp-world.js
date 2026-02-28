@@ -35,6 +35,7 @@
     { id: 'armory',             x: -9,  z:-13,  label: 'Armory',           icon: '⚔️' },
     { id: 'inventory',          x:  9,  z:-13,  label: 'Inventory',        icon: '📦' },
     { id: 'campBoard',          x: -3.5, z: 0,  label: 'Camp Board',       icon: '📋' },
+    { id: 'specialAttacks',     x:  9,  z:  7,  label: 'Special Attacks',  icon: '⚡' },
   ];
 
   // ──────────────────────────────────────────────────────────
@@ -482,6 +483,7 @@
       case 'armory':             return _buildArmory(def);
       case 'inventory':          return _buildInventoryStorage(def);
       case 'campBoard':          return _buildCampBoard(def);
+      case 'specialAttacks':     return _buildSpecialAttacksArena(def);
       default:                   return _buildGenericBuilding(def);
     }
   }
@@ -1083,6 +1085,74 @@
     b.castShadow = true;
     grp.add(b);
     _addNameSign(grp, def.label, 0, 4.2, 0);
+    return grp;
+  }
+
+  // ── Special Attacks Arena ─ octagonal training arena ────
+  function _buildSpecialAttacksArena(def) {
+    const THREE = T();
+    const grp = new THREE.Group();
+    grp.position.set(def.x, 0, def.z);
+
+    // Octagonal stone floor
+    const floorGeo = new THREE.CylinderGeometry(3.5, 3.5, 0.2, 8);
+    const floorMat = _lambert(0x2a2a3a);
+    const floor = _mesh(floorGeo, floorMat);
+    floor.position.y = 0.1;
+    grp.add(floor);
+
+    // Low stone wall ring
+    const wallGeo = new THREE.CylinderGeometry(3.6, 3.6, 1.1, 8, 1, true);
+    const wallMat = new T().MeshLambertMaterial({ color: 0x404055, side: T().DoubleSide });
+    const wall = new T().Mesh(wallGeo, wallMat);
+    wall.position.y = 0.75;
+    grp.add(wall);
+
+    // Central weapon rack (cross of cylinders)
+    const rackMat = _lambert(0x884422);
+    for (let i = 0; i < 2; i++) {
+      const rGeo = new THREE.CylinderGeometry(0.06, 0.06, 2.8, 6);
+      const rack = _mesh(rGeo, rackMat);
+      rack.position.y = 1.2;
+      rack.rotation.z = (i * Math.PI) / 2;
+      grp.add(rack);
+    }
+
+    // Glowing energy orb in the center
+    const orbGeo = new THREE.SphereGeometry(0.5, 12, 8);
+    const orbMat = new T().MeshPhongMaterial({
+      color: 0xff4400, emissive: 0xff2200, emissiveIntensity: 0.9,
+      transparent: true, opacity: 0.85
+    });
+    const orb = _mesh(orbGeo, orbMat);
+    orb.position.y = 2.0;
+    grp.add(orb);
+
+    // Pulsing light from the orb
+    const orbLight = new THREE.PointLight(0xff4400, 2.0, 8, 2);
+    orbLight.position.set(0, 2.0, 0);
+    grp.add(orbLight);
+
+    // Corner pillars
+    for (let i = 0; i < 4; i++) {
+      const a = (i / 4) * Math.PI * 2 + Math.PI / 4;
+      const pillarGeo = new THREE.CylinderGeometry(0.2, 0.25, 2.5, 6);
+      const pillar = _mesh(pillarGeo, _lambert(0x555566));
+      pillar.position.set(Math.cos(a) * 3.0, 1.25, Math.sin(a) * 3.0);
+      pillar.castShadow = true;
+      grp.add(pillar);
+
+      // Torch on each pillar
+      const torchGeo = new THREE.BoxGeometry(0.18, 0.35, 0.18);
+      const torch = _mesh(torchGeo, _mat(0xffcc44, 0xffcc44, 0.8));
+      torch.position.set(Math.cos(a) * 3.0, 2.7, Math.sin(a) * 3.0);
+      const tLight = new THREE.PointLight(0xffcc44, 1.0, 5, 2);
+      tLight.position.copy(torch.position);
+      grp.add(torch);
+      grp.add(tLight);
+    }
+
+    _addNameSign(grp, def.label, 0, 4.0, 0);
     return grp;
   }
 
