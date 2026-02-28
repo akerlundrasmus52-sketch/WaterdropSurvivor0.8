@@ -6,17 +6,17 @@
   var _panels = {};
   var _activeTab = 'idle';
 
+  // Account and Achievements are integrated into their existing camp buildings.
+  // This panel contains only the idle-specific features.
   var TABS = [
     { id: 'idle',         label: '⛏ Idle' },
     { id: 'fountain',     label: '💧 Fountain' },
     { id: 'expeditions',  label: '🗺 Expeditions' },
     { id: 'prestige',     label: '⭐ Prestige' },
     { id: 'dailies',      label: '📅 Dailies' },
-    { id: 'achievements', label: '🏆 Achievements' },
     { id: 'gems',         label: '💎 Gems' },
     { id: 'shop',         label: '🏪 Shop' },
     { id: 'wheel',        label: '🎡 Wheel' },
-    { id: 'account',      label: '🧙 Account' },
     { id: 'statistics',   label: '📊 Stats' }
   ];
 
@@ -99,20 +99,26 @@
     else if (_activeTab === 'expeditions' && ui) ui.renderExpeditionPanel(sd, container);
     else if (_activeTab === 'prestige' && ui) ui.renderPrestigePanel(sd, container);
     else if (_activeTab === 'dailies' && ui) ui.renderDailyPanel(sd, container);
-    else if (_activeTab === 'achievements') _renderAchievementsPanel(sd, container);
     else if (_activeTab === 'gems' && window.GameGems) window.GameGems.renderGemsPanel(sd, container);
     else if (_activeTab === 'shop' && window.GameShop) window.GameShop.renderShopPanel(sd, container);
     else if (_activeTab === 'wheel' && window.GameLuckyWheel) window.GameLuckyWheel.renderWheelPanel(sd, container);
-    else if (_activeTab === 'account' && window.GameAccount) window.GameAccount.renderAccountPanel(sd, container);
     else if (_activeTab === 'statistics' && window.GameStatistics) window.GameStatistics.renderStatisticsPanel(sd, container);
   }
 
   function _buildIdlePanel() {
-    var campSection = document.getElementById('camp-buildings-section');
-    if (!campSection) return null;
+    // Place the idle panel inside the dedicated camp-idle-content div.
+    // This keeps it hidden until the player clicks the "Idle Progression" building.
+    var idleContent = document.getElementById('camp-idle-content');
+    if (!idleContent) {
+      // Fallback: append before the buildings section (pre-HTML-update environments).
+      var campSection = document.getElementById('camp-buildings-section');
+      if (!campSection) return null;
+      var fallbackContainer = campSection.parentNode;
+      idleContent = fallbackContainer;
+    }
     var wrap = document.createElement('div');
     wrap.id = 'idle-tab-panel-wrap';
-    wrap.style.cssText = 'background:#1a1a2e;border:1px solid #5DADE2;border-radius:10px;padding:12px;margin-bottom:12px;';
+    wrap.style.cssText = 'padding:4px;';
     var tabBar = document.createElement('div');
     tabBar.style.cssText = 'display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px;';
     for (var t = 0; t < TABS.length; t++) {
@@ -134,7 +140,7 @@
       _panels[TABS[p].id] = panelDiv;
       wrap.appendChild(panelDiv);
     }
-    campSection.parentNode.insertBefore(wrap, campSection);
+    idleContent.appendChild(wrap);
     return wrap;
   }
 
