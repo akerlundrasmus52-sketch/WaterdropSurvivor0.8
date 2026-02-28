@@ -19,7 +19,8 @@
   // ──────────────────────────────────────────────────────────
   // Constants
   // ──────────────────────────────────────────────────────────
-  const SPAWN_POS = { x: 0, z: 3 };           // where player spawns (near fire)
+  const SPAWN_POS = { x: 0, z: 22 };          // player spawns at camp entrance (south gate, facing north toward campfire)
+  const BENNY_POS = { x: 2, z: 2 };            // Benny stands just east of the campfire (origin) at camp centre
   const PLAYER_SPEED = 7.0;                    // units per second
   const PLAYER_RADIUS = 0.55;
   const INTERACTION_RADIUS = 3.5;             // proximity to trigger interact
@@ -79,6 +80,19 @@
 
   // Building mesh registry { id → THREE.Group }
   let _buildingMeshes = {};
+
+  // Benny the Camp Janitor NPC
+  let _bennyMesh       = null;
+  let _nearBenny       = false;
+  let _bennyDialogIdx  = 0;
+
+  const BENNY_DIALOGUES = [
+    "Hey there, Droplet! Name's Benny — Camp Janitor, guide, and part-time firekeeper. Welcome to the camp!",
+    "This campfire is the heart of camp. All the buildings around it help you grow stronger between runs.",
+    "See those buildings? Some are locked — complete quests to unlock them and gain new powers!",
+    "After a run, come back here to spend your rewards. The quest board at Quest Hall tracks your progress.",
+    "Head north when you're ready — the spaceship launch pad will take you into battle. Good luck out there!",
+  ];
 
   // Interaction state
   let _nearBuilding  = null;   // id of nearest building (if within radius)
@@ -182,6 +196,15 @@
       _buildingMeshes[def.id] = grp;
       _campScene.add(grp);
     }
+
+    // ── Benny the Camp Janitor ───────────────────────────────
+    _buildBenny();
+
+    // ── Camp entrance (south gate + sign) ───────────────────
+    _buildCampEntrance();
+
+    // ── Spaceship path (north — tree alley tunnel + ship) ───
+    _buildSpaceshipPath();
 
     // ── Player character ─────────────────────────────────────
     _buildPlayer();
@@ -493,6 +516,255 @@
 
     grp.position.set(_playerPos.x, PLAYER_RADIUS, _playerPos.z);
     _playerMesh = grp;
+    _campScene.add(grp);
+  }
+
+  // ──────────────────────────────────────────────────────────
+  // Benny the Camp Janitor NPC
+  // ──────────────────────────────────────────────────────────
+  function _buildBenny() {
+    const THREE = T();
+    const grp = new THREE.Group();
+    grp.position.set(BENNY_POS.x, 0, BENNY_POS.z);
+
+    // Body (overalls — brownish green)
+    const bodyMat = new THREE.MeshPhongMaterial({ color: 0x4a7a3a, shininess: 30 });
+    const bodyGeo = new THREE.CylinderGeometry(0.25, 0.3, 1.1, 8);
+    const body = new THREE.Mesh(bodyGeo, bodyMat);
+    body.position.y = 0.75;
+    body.castShadow = true;
+    grp.add(body);
+
+    // Head (skin tone sphere)
+    const headMat = new THREE.MeshPhongMaterial({ color: 0xf4c28a, shininess: 40 });
+    const headGeo = new THREE.SphereGeometry(0.22, 10, 8);
+    const head = new THREE.Mesh(headGeo, headMat);
+    head.position.y = 1.5;
+    head.castShadow = true;
+    grp.add(head);
+
+    // Hard hat (yellow cylinder on top)
+    const hatMat = new THREE.MeshPhongMaterial({ color: 0xFFD700, shininess: 60 });
+    const hatGeo = new THREE.CylinderGeometry(0.25, 0.28, 0.15, 8);
+    const hat = new THREE.Mesh(hatGeo, hatMat);
+    hat.position.y = 1.76;
+    grp.add(hat);
+    const hatBrimGeo = new THREE.CylinderGeometry(0.32, 0.32, 0.04, 8);
+    const hatBrim = new THREE.Mesh(hatBrimGeo, hatMat);
+    hatBrim.position.y = 1.68;
+    grp.add(hatBrim);
+
+    // Arms (simple cylinders)
+    const armMat = new THREE.MeshPhongMaterial({ color: 0x4a7a3a, shininess: 30 });
+    [-1, 1].forEach(side => {
+      const armGeo = new THREE.CylinderGeometry(0.07, 0.07, 0.7, 6);
+      const arm = new THREE.Mesh(armGeo, armMat);
+      arm.position.set(side * 0.38, 0.95, 0);
+      arm.rotation.z = side * 0.4;
+      arm.castShadow = true;
+      grp.add(arm);
+    });
+
+    // Broom (stick + bristles)
+    const broomStickGeo = new THREE.CylinderGeometry(0.04, 0.04, 1.6, 6);
+    const broomStick = new THREE.Mesh(broomStickGeo, new THREE.MeshLambertMaterial({ color: 0x8B5E3C }));
+    broomStick.position.set(-0.55, 1.1, 0.2);
+    broomStick.rotation.z = -0.3;
+    grp.add(broomStick);
+    const bristleGeo = new THREE.ConeGeometry(0.18, 0.35, 8);
+    const bristle = new THREE.Mesh(bristleGeo, new THREE.MeshLambertMaterial({ color: 0xC8A850 }));
+    bristle.position.set(-0.55 - Math.sin(0.3) * 0.8, 1.1 - Math.cos(0.3) * 0.8 + 0.18, 0.2);
+    bristle.rotation.z = -0.3;
+    grp.add(bristle);
+
+    // Interaction indicator (floating "!" label)
+    const canvas = document.createElement('canvas');
+    canvas.width = 64; canvas.height = 64;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#FFD700';
+    ctx.font = 'bold 48px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('!', 32, 32);
+    const tex = new THREE.CanvasTexture(canvas);
+    const spriteMat = new THREE.SpriteMaterial({ map: tex, transparent: true });
+    const sprite = new THREE.Sprite(spriteMat);
+    sprite.scale.set(0.6, 0.6, 1);
+    sprite.position.set(0, 2.3, 0);
+    sprite.userData.isBennyIndicator = true;
+    grp.add(sprite);
+
+    _bennyMesh = grp;
+    _campScene.add(grp);
+  }
+
+  // ── Camp Entrance (south gate + welcome sign) ────────────
+  function _buildCampEntrance() {
+    const THREE = T();
+
+    // Gate posts
+    const postMat = new THREE.MeshLambertMaterial({ color: 0x5c3317 });
+    [-2.5, 2.5].forEach(x => {
+      const postGeo = new THREE.CylinderGeometry(0.2, 0.25, 4, 8);
+      const post = new THREE.Mesh(postGeo, postMat);
+      post.position.set(x, 2, 22);
+      post.castShadow = true;
+      _campScene.add(post);
+    });
+
+    // Gate crossbar
+    const barGeo = new THREE.CylinderGeometry(0.12, 0.12, 5.5, 8);
+    const bar = new THREE.Mesh(barGeo, postMat);
+    bar.rotation.z = Math.PI / 2;
+    bar.position.set(0, 4.1, 22);
+    _campScene.add(bar);
+
+    // Welcome sign hanging from crossbar
+    const signGeo = new THREE.BoxGeometry(3.6, 0.9, 0.12);
+    const signMat = new THREE.MeshLambertMaterial({ color: 0xc8a870 });
+    const sign = new THREE.Mesh(signGeo, signMat);
+    sign.position.set(0, 3.45, 22);
+    _campScene.add(sign);
+
+    // Sign chains (thin cylinders)
+    [-1.4, 1.4].forEach(x => {
+      const chainGeo = new THREE.CylinderGeometry(0.03, 0.03, 0.65, 4);
+      const chain = new THREE.Mesh(chainGeo, new THREE.MeshLambertMaterial({ color: 0x888888 }));
+      chain.position.set(x, 3.85, 22);
+      _campScene.add(chain);
+    });
+
+    // Torches flanking gate
+    [-2.8, 2.8].forEach(x => {
+      const torchGeo = new THREE.CylinderGeometry(0.08, 0.08, 0.6, 6);
+      const torch = new THREE.Mesh(torchGeo, new THREE.MeshLambertMaterial({ color: 0x3d2208 }));
+      torch.position.set(x, 2.4, 22.1);
+      _campScene.add(torch);
+      const flameMat = new THREE.MeshBasicMaterial({ color: 0xff8800, transparent: true, opacity: 0.9 });
+      const flameGeo = new THREE.ConeGeometry(0.1, 0.3, 6, 1, true);
+      const flame = new THREE.Mesh(flameGeo, flameMat);
+      flame.position.set(x, 2.85, 22.1);
+      _campScene.add(flame);
+      const torchLight = new THREE.PointLight(0xff8800, 1.8, 6, 2);
+      torchLight.position.set(x, 2.85, 22.1);
+      _campScene.add(torchLight);
+    });
+
+    // Dirt path leading from entrance south (z: 22 → 28)
+    const entrancePathMat = new THREE.MeshLambertMaterial({ color: 0x2e1c0e });
+    const entrancePathGeo = new THREE.PlaneGeometry(2.5, 8);
+    const entrancePath = new THREE.Mesh(entrancePathGeo, entrancePathMat);
+    entrancePath.rotation.x = -Math.PI / 2;
+    entrancePath.position.set(0, 0.02, 25.5);
+    _campScene.add(entrancePath);
+  }
+
+  // ── Spaceship Path (tree alley tunnel leading north to ship) ──
+  function _buildSpaceshipPath() {
+    const THREE = T();
+
+    // Path northward from campfire to ship (z: -25 to -40)
+    const pathMat = new THREE.MeshLambertMaterial({ color: 0x2e1c0e });
+    const pathGeo = new THREE.PlaneGeometry(2.8, 20);
+    const path = new THREE.Mesh(pathGeo, pathMat);
+    path.rotation.x = -Math.PI / 2;
+    path.position.set(0, 0.02, -32);
+    _campScene.add(path);
+
+    // Tree alley (4 pairs of trees forming a tunnel)
+    const treeCanopyMat = new THREE.MeshLambertMaterial({ color: 0x143810 });
+    const treeTrunkMat  = new THREE.MeshLambertMaterial({ color: 0x3d2208 });
+    for (let i = 0; i < 4; i++) {
+      const z = -24 - i * 4;
+      [-3.5, 3.5].forEach(x => {
+        const trunkGeo = new THREE.CylinderGeometry(0.18, 0.22, 2.4, 7);
+        const trunk = new THREE.Mesh(trunkGeo, treeTrunkMat);
+        trunk.position.set(x, 1.2, z);
+        trunk.castShadow = true;
+        _campScene.add(trunk);
+        const canopyGeo = new THREE.ConeGeometry(1.5, 2.8, 7);
+        const canopy = new THREE.Mesh(canopyGeo, treeCanopyMat);
+        canopy.position.set(x, 3.6, z);
+        canopy.castShadow = true;
+        _campScene.add(canopy);
+        // Hanging branches toward centre (inner tilt)
+        const branchGeo = new THREE.CylinderGeometry(0.05, 0.08, 1.6, 5);
+        const branchMat = new THREE.MeshLambertMaterial({ color: 0x3d2208 });
+        const branch = new THREE.Mesh(branchGeo, branchMat);
+        branch.position.set(x * 0.5, 3.8, z);
+        branch.rotation.z = (x > 0 ? -1 : 1) * 0.55;
+        _campScene.add(branch);
+      });
+    }
+
+    // Sign post: "🚀 To Spaceship" before the tree alley
+    const signPostGeo = new THREE.CylinderGeometry(0.08, 0.1, 2.5, 6);
+    const signPost = new THREE.Mesh(signPostGeo, new THREE.MeshLambertMaterial({ color: 0x5c3317 }));
+    signPost.position.set(2.2, 1.25, -22);
+    _campScene.add(signPost);
+    const signBoardGeo = new THREE.BoxGeometry(2.2, 0.75, 0.1);
+    const signBoard = new THREE.Mesh(signBoardGeo, new THREE.MeshLambertMaterial({ color: 0xc8a870 }));
+    signBoard.position.set(2.2, 2.5, -22);
+    signBoard.rotation.y = 0.3;
+    _campScene.add(signBoard);
+
+    // Spaceship (simple sci-fi craft at z=-44)
+    _buildSpaceship(-44);
+  }
+
+  // ── Spaceship ─────────────────────────────────────────────
+  function _buildSpaceship(z) {
+    const THREE = T();
+    const grp = new THREE.Group();
+    grp.position.set(0, 0, z);
+
+    // Landing pad
+    const padGeo = new THREE.CylinderGeometry(5, 5, 0.25, 16);
+    const padMat = new THREE.MeshPhongMaterial({ color: 0x334455, shininess: 60 });
+    const pad = new THREE.Mesh(padGeo, padMat);
+    pad.position.y = 0.12;
+    grp.add(pad);
+    // Pad markings
+    const markGeo = new THREE.TorusGeometry(3.5, 0.1, 4, 16);
+    const markMat = new THREE.MeshBasicMaterial({ color: 0xFFD700 });
+    const mark = new THREE.Mesh(markGeo, markMat);
+    mark.rotation.x = Math.PI / 2;
+    mark.position.y = 0.27;
+    grp.add(mark);
+
+    // Hull (flattened sphere)
+    const hullGeo = new THREE.SphereGeometry(2.8, 12, 8);
+    hullGeo.scale(1, 0.45, 1);
+    const hullMat = new THREE.MeshPhongMaterial({ color: 0x889aaa, shininess: 120, specular: 0x334455 });
+    const hull = new THREE.Mesh(hullGeo, hullMat);
+    hull.position.y = 2.5;
+    hull.castShadow = true;
+    grp.add(hull);
+
+    // Cockpit dome
+    const domeGeo = new THREE.SphereGeometry(1.2, 10, 6, 0, Math.PI * 2, 0, Math.PI * 0.5);
+    const domeMat = new THREE.MeshPhongMaterial({ color: 0x44aacc, transparent: true, opacity: 0.75, shininess: 200 });
+    const dome = new THREE.Mesh(domeGeo, domeMat);
+    dome.position.y = 3.3;
+    grp.add(dome);
+
+    // Engine glow
+    const engineLight = new THREE.PointLight(0x4488ff, 3, 12, 2);
+    engineLight.position.set(0, 1.2, 0);
+    grp.add(engineLight);
+
+    // Landing legs (3 struts)
+    const legMat = new THREE.MeshLambertMaterial({ color: 0x667788 });
+    for (let i = 0; i < 3; i++) {
+      const angle = (i / 3) * Math.PI * 2;
+      const legGeo = new THREE.CylinderGeometry(0.08, 0.08, 1.8, 4);
+      const leg = new THREE.Mesh(legGeo, legMat);
+      leg.position.set(Math.sin(angle) * 2.2, 1.4, Math.cos(angle) * 2.2);
+      leg.rotation.z = Math.sin(angle) * 0.4;
+      leg.rotation.x = Math.cos(angle) * 0.4;
+      grp.add(leg);
+    }
+
     _campScene.add(grp);
   }
 
@@ -1520,6 +1792,15 @@
       f.scale.set(s, 0.85 + 0.2 * Math.sin(_campTime * (6 + i * 2.7)), s);
       f.material.opacity = 0.7 + 0.15 * Math.sin(_campTime * (5 + i * 1.5));
     });
+    // Benny idle: gentle sway + "!" indicator bobbing
+    if (_bennyMesh) {
+      _bennyMesh.rotation.y = Math.sin(_campTime * 0.6) * 0.15;
+      const indicator = _bennyMesh.children.find(c => c.userData.isBennyIndicator);
+      if (indicator) {
+        indicator.position.y = 2.3 + Math.sin(_campTime * 2.5) * 0.1;
+        indicator.material.opacity = 0.7 + 0.3 * Math.sin(_campTime * 2.5);
+      }
+    }
   }
 
   // ──────────────────────────────────────────────────────────
@@ -1637,7 +1918,14 @@
       }
     }
 
-    if (_nearBuilding !== (nearest ? nearest.id : null)) {
+    // Check proximity to Benny
+    const bdx = _playerPos.x - BENNY_POS.x;
+    const bdz = _playerPos.z - BENNY_POS.z;
+    const bennyDist = Math.sqrt(bdx * bdx + bdz * bdz);
+    const prevNearBenny = _nearBenny;
+    _nearBenny = bennyDist < INTERACTION_RADIUS;
+
+    if (_nearBuilding !== (nearest ? nearest.id : null) || _nearBenny !== prevNearBenny) {
       _nearBuilding = nearest ? nearest.id : null;
       _updatePromptUI();
     }
@@ -1645,7 +1933,11 @@
 
   function _updatePromptUI() {
     if (!_promptEl) return;
-    if (_nearBuilding) {
+    if (_nearBenny && !_nearBuilding) {
+      _promptEl.textContent = '🧹  Benny  —  Tap / [E]';
+      _promptEl.style.display = 'block';
+      if (_interactBtn) _interactBtn.style.display = 'block';
+    } else if (_nearBuilding) {
       const def = BUILDING_DEFS.find(d => d.id === _nearBuilding);
       if (def) {
         _promptEl.textContent = `${def.icon}  ${def.label}  —  Tap / [E]`;
@@ -1658,7 +1950,26 @@
     }
   }
 
+  function _showBennyDialogue() {
+    const el = document.getElementById('benny-dialogue');
+    const textEl = document.getElementById('benny-dialogue-text');
+    const closeBtn = document.getElementById('benny-close-btn');
+    if (!el || !textEl) return;
+    textEl.textContent = BENNY_DIALOGUES[_bennyDialogIdx % BENNY_DIALOGUES.length];
+    el.style.display = 'block';
+    if (closeBtn) {
+      closeBtn.onclick = function () {
+        el.style.display = 'none';
+        _bennyDialogIdx = (_bennyDialogIdx + 1) % BENNY_DIALOGUES.length;
+      };
+    }
+  }
+
   function _interact() {
+    if (_nearBenny && !_nearBuilding) {
+      _showBennyDialogue();
+      return;
+    }
     if (!_nearBuilding) return;
     const fn = _callbacks[_nearBuilding];
     if (typeof fn === 'function') {

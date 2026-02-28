@@ -12544,6 +12544,16 @@
           saveData.storyQuests.welcomeShown = true;
           saveSaveData();
           
+          // Show Benny intro dialogue
+          setTimeout(() => {
+            const bennyEl = document.getElementById('benny-dialogue');
+            const bennyText = document.getElementById('benny-dialogue-text');
+            if (bennyEl && bennyText) {
+              bennyText.textContent = "Hey there, Droplet! I'm Benny — your Camp Janitor and guide. Walk around camp with the joystick and approach buildings to interact. Find me by the campfire — I'll give you tips!";
+              bennyEl.style.display = 'block';
+            }
+          }, 800);
+
           // Show comic-style popup after a brief delay
           setTimeout(() => {
             showComicInfoBox(
@@ -15677,6 +15687,28 @@
 
     // --- GAME LOGIC ---
 
+    /**
+     * fadeTransition(callback)
+     * Fades to black, calls callback(), then fades back in.
+     * Used for smooth scene transitions between camp and game.
+     */
+    function fadeTransition(callback, duration) {
+      duration = duration || 400;
+      const overlay = document.getElementById('screen-transition');
+      if (!overlay) { if (callback) callback(); return; }
+      overlay.style.transition = 'opacity ' + (duration / 1000) + 's ease';
+      overlay.style.opacity = '1';
+      overlay.classList.add('fade-in');
+      setTimeout(function () {
+        if (callback) callback();
+        // Fade back out
+        setTimeout(function () {
+          overlay.style.opacity = '0';
+          overlay.classList.remove('fade-in');
+        }, 80);
+      }, duration);
+    }
+
     function init() {
       console.log('[Init] Starting game initialization...');
       // Load save data and settings first
@@ -16107,6 +16139,12 @@
     function startGame() {
       // Deactivate 3D camp world when starting a game run
       if (window.CampWorld) window.CampWorld.exit();
+      // Hide Benny dialogue if showing
+      const bennyEl = document.getElementById('benny-dialogue');
+      if (bennyEl) bennyEl.style.display = 'none';
+      // Hide run-end-options if showing
+      const roeEl = document.getElementById('run-end-options');
+      if (roeEl) roeEl.style.display = 'none';
       const campScreenEl = document.getElementById('camp-screen');
       if (campScreenEl) campScreenEl.classList.remove('camp-3d-mode');
       document.getElementById('main-menu').style.display = 'none';
@@ -17390,47 +17428,51 @@
       // Go to Camp from death screen
       document.getElementById('goto-camp-btn').onclick = () => {
         playSound('waterdrop');
-        document.getElementById('gameover-screen').style.display = 'none';
-        // Close any tutorial/comic modals that might still be open from the death sequence
-        ['comic-tutorial-modal','comic-info-overlay','story-quest-modal'].forEach(id => {
-          const el = document.getElementById(id);
-          if (el) el.style.display = 'none';
-        });
-        // Clear any stuck comic-info-overlay created dynamically
-        const dynOverlay = document.getElementById('comic-info-overlay');
-        if (dynOverlay && dynOverlay.parentNode) dynOverlay.parentNode.removeChild(dynOverlay);
-        // Ensure pause state is clean before entering camp
-        pauseOverlayCount = 0;
-        window.pauseOverlayCount = 0;
-        isPaused = false;
-        window.isPaused = false;
-        // Show camp screen immediately so player sees the transition
-        document.getElementById('camp-screen').classList.remove('camp-subsection-active');
-        document.getElementById('camp-screen').style.display = 'flex';
-        const chatTab = document.getElementById('ai-chat-tab');
-        if (chatTab) chatTab.classList.add('camp-mode');
-        // Activate 3D camp world immediately (pre-warmed at startup) so there is no
-        // opaque-background flash before the scene becomes visible.
-        try { updateCampScreen(); } catch(e) { console.error('[Camp] initial updateCampScreen error:', e); }
-        // Defer a second pass to handle async DOM settle and refresh rage-combat loadout
-        const CAMP_ACTIVATION_RETRY_DELAY_MS = 80;
-        setTimeout(() => {
-          try { updateCampScreen(); } catch(e) { console.error('[Camp] updateCampScreen error:', e); }
-          // Refresh special attack loadout buttons for the new run
-          if (window.GameRageCombat) window.GameRageCombat.refreshLoadout(saveData);
-          // Safety retries: if CampWorld didn't activate (e.g. scene build threw), retry
-          // with increasing delays so the 3D camp shows reliably rather than falling back.
-          if (window.CampWorld && !window.CampWorld.isActive) {
-            setTimeout(() => {
-              try { updateCampScreen(); } catch(e) { console.error('[Camp] Retry 1 updateCampScreen error:', e); }
-              if (window.CampWorld && !window.CampWorld.isActive) {
-                setTimeout(() => {
-                  try { updateCampScreen(); } catch(e) { console.error('[Camp] Retry 2 updateCampScreen error:', e); }
-                }, CAMP_ACTIVATION_RETRY_DELAY_MS * 4);
-              }
-            }, CAMP_ACTIVATION_RETRY_DELAY_MS);
-          }
-        }, 0);
+        // Hide run-end-options if showing
+        const roeEl = document.getElementById('run-end-options');
+        if (roeEl) roeEl.style.display = 'none';
+        fadeTransition(() => {
+          document.getElementById('gameover-screen').style.display = 'none';
+          // Close any tutorial/comic modals that might still be open from the death sequence
+          ['comic-tutorial-modal','comic-info-overlay','story-quest-modal'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.style.display = 'none';
+          });
+          // Clear any stuck comic-info-overlay created dynamically
+          const dynOverlay = document.getElementById('comic-info-overlay');
+          if (dynOverlay && dynOverlay.parentNode) dynOverlay.parentNode.removeChild(dynOverlay);
+          // Ensure pause state is clean before entering camp
+          pauseOverlayCount = 0;
+          window.pauseOverlayCount = 0;
+          isPaused = false;
+          window.isPaused = false;
+          // Show camp screen immediately so player sees the transition
+          document.getElementById('camp-screen').classList.remove('camp-subsection-active');
+          document.getElementById('camp-screen').style.display = 'flex';
+          const chatTab = document.getElementById('ai-chat-tab');
+          if (chatTab) chatTab.classList.add('camp-mode');
+          // Activate 3D camp world immediately (pre-warmed at startup) so there is no
+          // opaque-background flash before the scene becomes visible.
+          try { updateCampScreen(); } catch(e) { console.error('[Camp] initial updateCampScreen error:', e); }
+          // Defer a second pass to handle async DOM settle and refresh rage-combat loadout
+          const CAMP_ACTIVATION_RETRY_DELAY_MS = 80;
+          setTimeout(() => {
+            try { updateCampScreen(); } catch(e) { console.error('[Camp] updateCampScreen error:', e); }
+            // Refresh special attack loadout buttons for the new run
+            if (window.GameRageCombat) window.GameRageCombat.refreshLoadout(saveData);
+            // Safety retries: if CampWorld didn't activate (e.g. scene build threw), retry
+            // with increasing delays so the 3D camp shows reliably rather than falling back.
+            if (window.CampWorld && !window.CampWorld.isActive) {
+              setTimeout(() => {
+                try { updateCampScreen(); } catch(e) { console.error('[Camp] Retry 1 updateCampScreen error:', e); }
+                if (window.CampWorld && !window.CampWorld.isActive) {
+                  setTimeout(() => {
+                    try { updateCampScreen(); } catch(e) { console.error('[Camp] Retry 2 updateCampScreen error:', e); }
+                  }, CAMP_ACTIVATION_RETRY_DELAY_MS * 4);
+                }
+              }, CAMP_ACTIVATION_RETRY_DELAY_MS);
+            }
+          }, 0);
       };
       
       // Quit to Menu button
@@ -17446,6 +17488,25 @@
         document.getElementById('gameover-screen').style.display = 'none';
         startGame(); // Start new run immediately
       };
+
+      // ── Run-End Options box (shown after death) ─────────────────
+      const roeEl = document.getElementById('run-end-options');
+      if (roeEl) {
+        document.getElementById('roe-camp-btn').onclick = () => {
+          roeEl.style.display = 'none';
+          fadeTransition(() => {
+            document.getElementById('gameover-screen').style.display = 'none';
+            document.getElementById('camp-screen').classList.remove('camp-subsection-active');
+            document.getElementById('camp-screen').style.display = 'flex';
+            try { updateCampScreen(); } catch(e) { console.error('[RunEndOptions] updateCampScreen error:', e); }
+          });
+        };
+        document.getElementById('roe-continue-btn').onclick = () => {
+          roeEl.style.display = 'none';
+          document.getElementById('gameover-screen').style.display = 'none';
+          startGame();
+        };
+      }
       
       // Reset progress button with double confirmation
       // FRESH IMPLEMENTATION: Story Quest Modal close handler
@@ -20975,6 +21036,16 @@
       
       updateGoldDisplays();
       
+      // Show the run-end-options box after a brief delay (lets YOU DIED banner show first)
+      setTimeout(() => {
+        const roeEl = document.getElementById('run-end-options');
+        if (roeEl) {
+          const roeTitle = document.getElementById('roe-title');
+          if (roeTitle) roeTitle.textContent = '💀 You Died';
+          roeEl.style.display = 'block';
+        }
+      }, 2200);
+
       // Show deferred mission notification after death (quest completed during run)
       if (saveData.tutorialQuests && saveData.tutorialQuests.pendingMissionNotification === 'quest1_kill3') {
         saveData.tutorialQuests.pendingMissionNotification = null;
