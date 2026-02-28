@@ -32,6 +32,8 @@
       keybind: '1',
       skillTreeId: 'specialKnifeTakedown',
       isStartingAttack: true,
+      branch: 'start',
+      branchOrder: 0,
       upgrades: [
         { level: 1, cooldownMs: 40000, damage: 9999 },
         { level: 2, cooldownMs: 32000, damage: 9999, bonus: '-8s cooldown' },
@@ -49,6 +51,8 @@
       color: 0xFF6600,
       keybind: '2',
       skillTreeId: 'specialShockwave',
+      branch: 'upper',
+      branchOrder: 1,
       upgrades: [
         { level: 1, cooldownMs: 8000,  damage: 80  },
         { level: 2, cooldownMs: 6500,  damage: 110, bonus: '+30 dmg, -1.5s cd' },
@@ -66,6 +70,8 @@
       color: 0x44AAFF,
       keybind: '3',
       skillTreeId: 'specialFrozenStorm',
+      branch: 'lower',
+      branchOrder: 1,
       upgrades: [
         { level: 1, cooldownMs: 12000, damage: 30  },
         { level: 2, cooldownMs: 9500,  damage: 50,  bonus: '+20 dmg, -2.5s cd' },
@@ -83,6 +89,8 @@
       color: 0xFF44AA,
       keybind: '4',
       skillTreeId: 'specialDeathBlossom',
+      branch: 'upper',
+      branchOrder: 2,
       upgrades: [
         { level: 1, cooldownMs: 15000, damage: 60  },
         { level: 2, cooldownMs: 12000, damage: 85,  bonus: '+25 dmg, -3s cd' },
@@ -100,6 +108,8 @@
       color: 0xFFFF00,
       keybind: '5',
       skillTreeId: 'specialThunderStrike',
+      branch: 'upper',
+      branchOrder: 3,
       upgrades: [
         { level: 1, cooldownMs: 10000, damage: 100 },
         { level: 2, cooldownMs: 8000,  damage: 140, bonus: '+40 dmg, -2s cd' },
@@ -117,6 +127,8 @@
       color: 0x8800FF,
       keybind: '6',
       skillTreeId: 'specialVoidPulse',
+      branch: 'lower',
+      branchOrder: 3,
       upgrades: [
         { level: 1, cooldownMs: 18000, damage: 75  },
         { level: 2, cooldownMs: 14000, damage: 105, bonus: '+30 dmg, -4s cd' },
@@ -134,6 +146,8 @@
       color: 0xFF2200,
       keybind: '7',
       skillTreeId: 'specialInfernoRing',
+      branch: 'lower',
+      branchOrder: 2,
       upgrades: [
         { level: 1, cooldownMs: 14000, damage: 55  },
         { level: 2, cooldownMs: 11000, damage: 80,  bonus: '+25 dmg, -3s cd' },
@@ -151,6 +165,8 @@
       color: 0x44FF22,
       keybind: '8',
       skillTreeId: 'specialAcidCloud',
+      branch: 'lower',
+      branchOrder: 4,
       upgrades: [
         { level: 1, cooldownMs: 16000, damage: 45  },
         { level: 2, cooldownMs: 12500, damage: 70,  bonus: '+25 dmg, -3.5s cd' },
@@ -168,6 +184,8 @@
       color: 0x220044,
       keybind: '9',
       skillTreeId: 'specialGravityWell',
+      branch: 'upper',
+      branchOrder: 4,
       upgrades: [
         { level: 1, cooldownMs: 22000, damage: 120 },
         { level: 2, cooldownMs: 17000, damage: 165, bonus: '+45 dmg, -5s cd' },
@@ -185,6 +203,8 @@
       color: 0xCCCCFF,
       keybind: '0',
       skillTreeId: 'specialSonicBoom',
+      branch: 'upper',
+      branchOrder: 5,
       upgrades: [
         { level: 1, cooldownMs: 11000, damage: 65  },
         { level: 2, cooldownMs: 8500,  damage: 90,  bonus: '+25 dmg, -2.5s cd' },
@@ -202,6 +222,8 @@
       color: 0x990000,
       keybind: 'q',
       skillTreeId: 'specialBloodRain',
+      branch: 'lower',
+      branchOrder: 5,
       upgrades: [
         { level: 1, cooldownMs: 20000, damage: 50  },
         { level: 2, cooldownMs: 15500, damage: 75,  bonus: '+25 dmg, -4.5s cd' },
@@ -219,6 +241,8 @@
       color: 0x00FFFF,
       keybind: 'w',
       skillTreeId: 'specialTimeFracture',
+      branch: 'lower',
+      branchOrder: 6,
       upgrades: [
         { level: 1, cooldownMs: 25000, damage: 20  },
         { level: 2, cooldownMs: 20000, damage: 35,  bonus: '+15 dmg, -5s cd' },
@@ -236,6 +260,8 @@
       color: 0xFFEE00,
       keybind: 'e',
       skillTreeId: 'specialChainLightning',
+      branch: 'upper',
+      branchOrder: 6,
       upgrades: [
         { level: 1, cooldownMs: 13000, damage: 90  },
         { level: 2, cooldownMs: 10000, damage: 125, bonus: '+35 dmg, -3s cd' },
@@ -253,6 +279,8 @@
       color: 0xEEEEEE,
       keybind: 'r',
       skillTreeId: 'specialMirrorField',
+      branch: 'lower',
+      branchOrder: 7,
       upgrades: [
         { level: 1, cooldownMs: 30000, damage: 0   },
         { level: 2, cooldownMs: 24000, damage: 0,   bonus: '-6s cooldown, lasts longer' },
@@ -270,6 +298,8 @@
       color: 0xFF8800,
       keybind: 't',
       skillTreeId: 'specialMeteorStrike',
+      branch: 'upper',
+      branchOrder: 7,
       upgrades: [
         { level: 1, cooldownMs: 28000, damage: 200 },
         { level: 2, cooldownMs: 22000, damage: 270, bonus: '+70 dmg, -6s cd' },
@@ -287,6 +317,8 @@
       color: 0x440088,
       keybind: 'y',
       skillTreeId: 'specialShadowClone',
+      branch: 'lower',
+      branchOrder: 8,
       upgrades: [
         { level: 1, cooldownMs: 35000, damage: 40  },
         { level: 2, cooldownMs: 28000, damage: 60,  bonus: '+20 dmg, -7s cd' },
@@ -304,6 +336,8 @@
       color: 0x4488FF,
       keybind: 'u',
       skillTreeId: 'specialForceBarrier',
+      branch: 'lower',
+      branchOrder: 9,
       upgrades: [
         { level: 1, cooldownMs: 40000, damage: 0   },
         { level: 2, cooldownMs: 32000, damage: 0,   bonus: '-8s cooldown, lasts longer' },
@@ -321,6 +355,8 @@
       color: 0xFF00FF,
       keybind: 'i',
       skillTreeId: 'specialPlasmaBurst',
+      branch: 'upper',
+      branchOrder: 8,
       upgrades: [
         { level: 1, cooldownMs: 17000, damage: 130 },
         { level: 2, cooldownMs: 13000, damage: 180, bonus: '+50 dmg, -4s cd' },
@@ -338,6 +374,8 @@
       color: 0x885500,
       keybind: 'o',
       skillTreeId: 'specialEarthquake',
+      branch: 'lower',
+      branchOrder: 10,
       upgrades: [
         { level: 1, cooldownMs: 19000, damage: 70  },
         { level: 2, cooldownMs: 15000, damage: 100, bonus: '+30 dmg, -4s cd' },
@@ -355,6 +393,8 @@
       color: 0xFF4488,
       keybind: 'p',
       skillTreeId: 'specialAdrenalineRush',
+      branch: 'upper',
+      branchOrder: 9,
       upgrades: [
         { level: 1, cooldownMs: 45000, damage: 0   },
         { level: 2, cooldownMs: 36000, damage: 0,   bonus: '-9s cooldown, longer boost' },

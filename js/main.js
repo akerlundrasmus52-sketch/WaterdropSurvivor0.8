@@ -8401,6 +8401,16 @@
           trainingEfficiency: 0.05 * level // +5% attribute gain per level
         })
       },
+      specialAttacks: {
+        name: 'Special Attacks',
+        icon: '⚡',
+        description: 'Choose and upgrade powerful special attack abilities. Earn SAP from quests to unlock new attacks.',
+        baseCost: 0,
+        costMultiplier: 0,
+        maxCost: 0,
+        isFree: true,
+        bonus: (level) => ({})
+      },
       
       // ADDITIONAL BUILDINGS
       trashRecycle: {
@@ -9707,8 +9717,10 @@
         rewardGold: 150,
         rewardSkillPoints: 2,
         unlockBuildingOnActivation: 'armory',
+        unlockBuilding: 'specialAttacks',
+        rewardSAP: 2,
         giveItem: { id: 'cigar_quest', name: 'Cigar', type: 'ring', rarity: 'rare', stats: { attackSpeed: 1, movementSpeed: 1, attackPrecision: 1 }, description: '+1 Attack Speed, +1 Movement Speed, +1 Attack Precision' },
-        message: "🚬 Cigar acquired!<br><br>This rare ring grants <b>+1 Attack Speed, +1 Movement Speed, +1 Attack Precision</b>.<br><br>Head to the <b>Armory</b> and equip the Cigar from your inventory!",
+        message: "🚬 Cigar acquired!<br><br>This rare ring grants <b>+1 Attack Speed, +1 Movement Speed, +1 Attack Precision</b>.<br><br>The <b>Special Attacks</b> building is now unlocked! Choose your first special attack.<br><br>Head to the <b>Armory</b> and equip the Cigar from your inventory!",
         nextQuest: 'quest4_equipCigar',
         conditions: ['quest2_spendSkills']
       },
@@ -10221,6 +10233,10 @@
         saveData.trainingPoints = (saveData.trainingPoints || 0) + quest.rewardAttributePoints;
         showStatChange(`+${quest.rewardAttributePoints} Attribute Points!`);
       }
+      if (quest.rewardSAP) {
+        saveData.specialAtkPoints = (saveData.specialAtkPoints || 0) + quest.rewardSAP;
+        showStatChange(`+${quest.rewardSAP} Special Atk Points!`);
+      }
       // Award account XP for completing a quest (50 XP per quest)
       addAccountXP(50);
       chatSystemMessage('🎁 Quest "' + quest.name + '" claimed! Rewards received.');
@@ -10233,8 +10249,11 @@
         }
         const buildingName = CAMP_BUILDINGS[quest.unlockBuilding]?.name || 'Building';
         showStatChange(`🏛️ ${buildingName} Unlocked!`);
-        // Refresh 3D camp world building visibility
-        if (window.CampWorld) window.CampWorld.refreshBuildings(saveData);
+        // Refresh 3D camp world building visibility + play unlock animation
+        if (window.CampWorld) {
+          window.CampWorld.refreshBuildings(saveData);
+          window.CampWorld.playBuildingUnlockAnimation(quest.unlockBuilding);
+        }
       }
       
       // Give companion egg
@@ -10285,6 +10304,10 @@
             if (saveData.campBuildings[bld].level === 0) { saveData.campBuildings[bld].level = 1; }
             const bldName = CAMP_BUILDINGS[bld]?.name || 'Building';
             showStatChange(`🏛️ ${bldName} Unlocked!`);
+            if (window.CampWorld) {
+              window.CampWorld.refreshBuildings(saveData);
+              window.CampWorld.playBuildingUnlockAnimation(bld);
+            }
           }
         }
       }
@@ -10959,24 +10982,63 @@
         leveledUp = true;
         // Reward on account level-up (rotate between reward types)
         const rewardCycle = (saveData.accountLevel - 1) % 4;
+        let rewardLabel = '';
         if (rewardCycle === 0) {
           saveData.unspentAttributePoints = (saveData.unspentAttributePoints || 0) + 1;
-          showEnhancedNotification('attribute', 'ACCOUNT LEVEL UP!', `Level ${saveData.accountLevel}! +1 Attribute Point`);
+          rewardLabel = '+1 Attribute Point';
         } else if (rewardCycle === 1) {
           saveData.skillPoints = (saveData.skillPoints || 0) + 1;
-          showEnhancedNotification('unlock', 'ACCOUNT LEVEL UP!', `Level ${saveData.accountLevel}! +1 Skill Point`);
+          rewardLabel = '+1 Skill Point';
         } else if (rewardCycle === 2) {
           saveData.trainingPoints = (saveData.trainingPoints || 0) + 1;
-          showEnhancedNotification('attribute', 'ACCOUNT LEVEL UP!', `Level ${saveData.accountLevel}! +1 Training Point`);
+          rewardLabel = '+1 Training Point';
         } else {
           saveData.gold = (saveData.gold || 0) + 100;
-          showEnhancedNotification('achievement', 'ACCOUNT LEVEL UP!', `Level ${saveData.accountLevel}! +100 Gold`);
+          rewardLabel = '+100 Gold';
         }
+        showAccountLevelUpCurtain(saveData.accountLevel, rewardLabel);
       }
       if (leveledUp) saveSaveData();
       updateAccountLevelDisplay();
     }
-    
+
+    // ── Account Level-Up Curtain Animation ──────────────────────
+    let _curtainTimer = null;
+    let _curtainDismissHandler = null;
+    function showAccountLevelUpCurtain(newLevel, rewardLabel) {
+      const curtain = document.getElementById('account-levelup-curtain');
+      if (!curtain) return;
+      // Clear any in-progress curtain
+      if (_curtainTimer) { clearTimeout(_curtainTimer); _curtainTimer = null; }
+      if (_curtainDismissHandler) {
+        curtain.removeEventListener('click', _curtainDismissHandler);
+        _curtainDismissHandler = null;
+      }
+      curtain.classList.remove('curtain-enter', 'curtain-exit');
+      curtain.innerHTML = [
+        '<div class="curtain-icon">🏆</div>',
+        '<div class="curtain-levelup-text">LEVEL UP!</div>',
+        `<div class="curtain-level-num">Level ${newLevel}</div>`,
+        `<div class="curtain-reward-text">${rewardLabel} · Tap to dismiss</div>`
+      ].join('');
+      // Force reflow so animation restarts
+      void curtain.offsetWidth;
+      curtain.classList.add('curtain-enter');
+
+      function dismissCurtain() {
+        if (_curtainTimer) { clearTimeout(_curtainTimer); _curtainTimer = null; }
+        curtain.classList.remove('curtain-enter');
+        curtain.classList.add('curtain-exit');
+        curtain.removeEventListener('click', dismissCurtain);
+        _curtainDismissHandler = null;
+      }
+      _curtainDismissHandler = dismissCurtain;
+      curtain.addEventListener('click', dismissCurtain);
+
+      // Auto-dismiss after 3.5 seconds
+      _curtainTimer = setTimeout(dismissCurtain, 3500);
+    }
+
     function updateAccountLevelDisplay() {
       const levelEl = document.getElementById('account-level-value');
       const barEl = document.getElementById('account-level-bar');
@@ -12248,6 +12310,7 @@
           const buildingQuestUnlockMap = {
             'skillTree': { questId: 'quest1_kill3', label: 'Kill 3 Enemies (Quest 1)' },
             'armory': { questId: 'quest3_stonehengeGear', label: 'Find the Cigar (Quest 3)' },
+            'specialAttacks': { questId: 'quest3_stonehengeGear', label: 'Find the Cigar (Quest 3)' },
             'trainingHall': { questId: 'quest5_upgradeAttr', label: 'Upgrade an Attribute (Quest 5)' },
             'forge': { questId: 'quest6_survive2min', label: 'Survive 2 Minutes (Quest 6)' },
             'companionHouse': { questId: 'quest8_kill10', label: 'Kill 10 Enemies (Quest 8)' },
@@ -15891,41 +15954,63 @@
       if (!window.GameRageCombat) return;
       const allAttacks = window.GameRageCombat.ALL_SPECIAL_ATTACKS;
 
+      // Pre-compute branch groupings once (allAttacks is static)
+      const branchMap = {};
+      for (const sa of allAttacks) {
+        const b = sa.branch || 'start';
+        if (!branchMap[b]) branchMap[b] = [];
+        branchMap[b].push(sa);
+      }
+      for (const b of Object.keys(branchMap)) {
+        branchMap[b].sort((a, b2) => (a.branchOrder || 0) - (b2.branchOrder || 0));
+      }
+
       // Remove any existing panel before creating a new one
       const existing = document.getElementById('special-attacks-panel-overlay');
       if (existing && existing.parentNode) existing.parentNode.removeChild(existing);
 
       const overlay = document.createElement('div');
       overlay.id = 'special-attacks-panel-overlay';
-      overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.92);z-index:500;display:flex;align-items:center;justify-content:center;overflow-y:auto;';
+      overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.92);z-index:500;display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;padding:16px 8px;box-sizing:border-box;';
 
       const panel = document.createElement('div');
-      panel.style.cssText = 'background:linear-gradient(135deg,#0d0d1a,#1a0d2e);border:3px solid #FF4400;border-radius:14px;padding:20px;max-width:min(96vw,620px);width:100%;color:#fff;font-family:"Bangers",cursive;max-height:90vh;overflow-y:auto;box-shadow:0 0 40px rgba(255,68,0,0.5);';
+      panel.style.cssText = 'background:linear-gradient(135deg,#0d0d1a,#1a0d2e);border:3px solid #FF4400;border-radius:14px;padding:20px;max-width:min(96vw,680px);width:100%;color:#fff;font-family:"Bangers",cursive;box-shadow:0 0 40px rgba(255,68,0,0.5);position:relative;';
 
       const pts = saveData.specialAtkPoints || 0;
-      panel.innerHTML = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;"><div style="font-size:26px;letter-spacing:2px;color:#FF4400;">⚡ SPECIAL ATTACKS</div><div style="font-size:16px;color:#FFD700;">SAP: ${pts}</div></div><div style="font-size:12px;color:#aaa;font-family:'M PLUS Rounded 1c',sans-serif;margin-bottom:14px;">Unlock and upgrade powerful special attacks. Earn Special Atk Points (SAP) from kills and quests. Equip up to 4 attacks using the loadout button in-game.</div>`;
+      const knifeNode = (saveData.skillTree || {})['specialKnifeTakedown'] || { level: 0, maxLevel: 3 };
+      const knifeUnlocked = (knifeNode.level || 0) > 0;
+
+      // Header
+      const header = document.createElement('div');
+      header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;';
+      header.innerHTML = `<div style="font-size:24px;letter-spacing:2px;color:#FF4400;">⚡ SPECIAL ATTACKS</div><div style="font-size:15px;color:#FFD700;">SAP: ${pts}</div>`;
+      panel.appendChild(header);
+
+      const subtitle = document.createElement('div');
+      subtitle.style.cssText = 'font-size:11px;color:#aaa;font-family:"M PLUS Rounded 1c",sans-serif;margin-bottom:14px;';
+      subtitle.textContent = 'Earn Special Atk Points (SAP) from quests. Unlock the starting attack, then choose a branch path.';
+      panel.appendChild(subtitle);
 
       // Close button
       const closeBtn = document.createElement('button');
-      closeBtn.textContent = '✕ Close';
-      closeBtn.style.cssText = 'position:absolute;top:14px;right:14px;background:rgba(255,255,255,0.1);border:1px solid #888;color:#fff;padding:6px 14px;border-radius:6px;cursor:pointer;font-family:"Bangers",cursive;font-size:14px;';
+      closeBtn.textContent = '✕';
+      closeBtn.style.cssText = 'position:absolute;top:14px;right:14px;background:rgba(255,255,255,0.1);border:1px solid #888;color:#fff;padding:4px 12px;border-radius:6px;cursor:pointer;font-family:"Bangers",cursive;font-size:14px;';
       closeBtn.addEventListener('click', () => { if (overlay.parentNode) overlay.parentNode.removeChild(overlay); });
-      panel.style.position = 'relative';
       panel.appendChild(closeBtn);
 
-      // Render each attack as a skill node
-      const grid = document.createElement('div');
-      grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(175px,1fr));gap:10px;';
-
-      allAttacks.forEach((sa, idx) => {
+      // Helper: render a single attack node card
+      function renderAttackNode(sa) {
         const stNode = (saveData.skillTree || {})[sa.skillTreeId] || { level: 0, maxLevel: 3 };
         const currentLvl = stNode.level || 0;
         const maxLvl = stNode.maxLevel || 3;
         const isUnlocked = currentLvl > 0;
-        // Starting attacks are always available; others require the previous attack to be unlocked
-        const prevAttack = (!sa.isStartingAttack && idx > 0) ? allAttacks[idx - 1] : null;
-        const prevNode = prevAttack ? ((saveData.skillTree || {})[prevAttack.skillTreeId] || { level: 0 }) : { level: 1 };
-        const isAvailable = sa.isStartingAttack || prevNode.level > 0;
+
+        // Availability: starting attacks always available; others need branch predecessor
+        const sameBranch = branchMap[sa.branch || 'start'] || [];
+        const prevInBranch = sameBranch.find(a => a.branchOrder === sa.branchOrder - 1);
+        const prevNode = prevInBranch ? ((saveData.skillTree || {})[prevInBranch.skillTreeId] || { level: 0 }) : null;
+        const isAvailable = sa.isStartingAttack || (knifeUnlocked && (!prevInBranch || prevNode.level > 0));
+
         const UNLOCK_COST = 1;
         const UPGRADE_COST = 1;
         const canAfford = pts >= (isUnlocked ? UPGRADE_COST : UNLOCK_COST);
@@ -15933,25 +16018,25 @@
         const canUnlock = !isUnlocked && isAvailable && canAfford;
 
         const node = document.createElement('div');
-        node.style.cssText = `background:rgba(255,255,255,0.04);border:2px solid ${isUnlocked ? '#FF4400' : (isAvailable ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.1)')};border-radius:10px;padding:10px 8px;text-align:center;opacity:${isAvailable || isUnlocked ? '1' : '0.45'};transition:border-color 0.2s;`;
+        node.style.cssText = `background:rgba(255,255,255,0.04);border:2px solid ${isUnlocked ? '#FF4400' : (isAvailable ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.08)')};border-radius:10px;padding:10px 8px;text-align:center;opacity:${isAvailable || isUnlocked ? '1' : '0.4'};flex:0 0 auto;width:140px;`;
 
-        const upgrade = sa.upgrades && sa.upgrades.find(u => u.level === Math.max(1, currentLvl));
         const upgradeNext = sa.upgrades && sa.upgrades.find(u => u.level === currentLvl + 1);
-        const bonusText = (upgradeNext && upgradeNext.bonus) ? `<div style="font-size:9px;color:#aaa;font-family:Arial,sans-serif;margin-top:2px;">Next: ${upgradeNext.bonus}</div>` : '';
+        const bonusText = upgradeNext && upgradeNext.bonus ? `<div style="font-size:9px;color:#aaa;font-family:Arial,sans-serif;margin-top:2px;">Next: ${upgradeNext.bonus}</div>` : '';
+        const upgrade = sa.upgrades && sa.upgrades.find(u => u.level === Math.max(1, currentLvl));
 
         node.innerHTML = `
-          <div style="font-size:28px;margin-bottom:4px;">${sa.icon}</div>
-          <div style="font-size:13px;letter-spacing:1px;color:${isUnlocked ? '#FF8844' : '#DDD'};">${sa.name}</div>
-          <div style="font-size:9px;color:#888;font-family:Arial,sans-serif;margin:3px 0;">${sa.description}</div>
-          <div style="font-size:10px;color:#FFD700;margin:4px 0;">Level ${currentLvl}/${maxLvl}</div>
+          <div style="font-size:26px;margin-bottom:3px;">${sa.icon}</div>
+          <div style="font-size:12px;letter-spacing:1px;color:${isUnlocked ? '#FF8844' : '#DDD'};">${sa.name}</div>
+          <div style="font-size:9px;color:#888;font-family:Arial,sans-serif;margin:2px 0;">${sa.description}</div>
+          <div style="font-size:10px;color:#FFD700;margin:3px 0;">Lv ${currentLvl}/${maxLvl}</div>
           ${bonusText}
           <div style="font-size:9px;color:#aaa;font-family:Arial,sans-serif;">CD: ${((upgrade && upgrade.cooldownMs) || sa.cooldownMs) / 1000}s</div>
         `;
 
         if (canUnlock || canUpgrade) {
           const btn = document.createElement('button');
-          btn.textContent = canUnlock ? `🔓 Unlock (${UNLOCK_COST} SAP)` : `⬆️ Upgrade (${UPGRADE_COST} SAP)`;
-          btn.style.cssText = 'margin-top:8px;width:100%;padding:5px;background:linear-gradient(135deg,#FF4400,#FF8800);border:none;color:#fff;border-radius:6px;cursor:pointer;font-family:"Bangers",cursive;font-size:12px;letter-spacing:0.5px;';
+          btn.textContent = canUnlock ? `🔓 Unlock (${UNLOCK_COST})` : `⬆️ Upgrade (${UPGRADE_COST})`;
+          btn.style.cssText = 'margin-top:7px;width:100%;padding:4px;background:linear-gradient(135deg,#FF4400,#FF8800);border:none;color:#fff;border-radius:6px;cursor:pointer;font-family:"Bangers",cursive;font-size:11px;';
           btn.addEventListener('click', () => {
             const cost = canUnlock ? UNLOCK_COST : UPGRADE_COST;
             if ((saveData.specialAtkPoints || 0) < cost) return;
@@ -15961,27 +16046,83 @@
             saveData.skillTree[sa.skillTreeId].unlocked = true;
             saveSaveData();
             if (window.GameRageCombat) window.GameRageCombat.refreshLoadout(saveData);
-            // Rebuild the panel to reflect new state
             if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
             showSpecialAttacksPanel();
           });
           node.appendChild(btn);
         } else if (currentLvl >= maxLvl) {
-          const maxTag = document.createElement('div');
-          maxTag.style.cssText = 'margin-top:8px;color:#FFD700;font-size:11px;';
-          maxTag.textContent = '✨ MAX LEVEL';
-          node.appendChild(maxTag);
+          const t = document.createElement('div');
+          t.style.cssText = 'margin-top:7px;color:#FFD700;font-size:11px;';
+          t.textContent = '✨ MAX';
+          node.appendChild(t);
         } else if (!isAvailable) {
-          const lockTag = document.createElement('div');
-          lockTag.style.cssText = 'margin-top:8px;color:#666;font-size:11px;';
-          lockTag.textContent = '🔒 Unlock previous first';
-          node.appendChild(lockTag);
+          const t = document.createElement('div');
+          t.style.cssText = 'margin-top:7px;color:#555;font-size:10px;';
+          t.textContent = '🔒 Locked';
+          node.appendChild(t);
+        }
+        return node;
+      }
+
+      // ── STARTING ATTACK ────────────────────────────────────────
+      const startSection = document.createElement('div');
+      startSection.style.cssText = 'display:flex;flex-direction:column;align-items:center;margin-bottom:16px;';
+      const startLabel = document.createElement('div');
+      startLabel.style.cssText = 'font-size:12px;color:#aaa;letter-spacing:2px;margin-bottom:8px;text-transform:uppercase;';
+      startLabel.textContent = '— Starting Attack —';
+      startSection.appendChild(startLabel);
+      const startingAttacks = branchMap['start'] || [];
+      startingAttacks.forEach(sa => startSection.appendChild(renderAttackNode(sa)));
+      panel.appendChild(startSection);
+
+      if (knifeUnlocked) {
+        // Branch divider
+        const divider = document.createElement('div');
+        divider.style.cssText = 'display:flex;align-items:center;gap:12px;margin-bottom:14px;';
+        divider.innerHTML = `
+          <div style="flex:1;height:2px;background:linear-gradient(to right,transparent,rgba(255,100,0,0.5));"></div>
+          <div style="font-size:12px;color:#FF8844;letter-spacing:1px;">CHOOSE YOUR PATH</div>
+          <div style="flex:1;height:2px;background:linear-gradient(to left,transparent,rgba(68,150,255,0.5));"></div>
+        `;
+        panel.appendChild(divider);
+
+        // ── BRANCH ROWS ────────────────────────────────────────────
+        const branchesContainer = document.createElement('div');
+        branchesContainer.style.cssText = 'display:flex;flex-direction:column;gap:16px;';
+
+        function renderBranchRow(branchId, label, color) {
+          const row = document.createElement('div');
+          row.style.cssText = `border:1px solid ${color}33;border-radius:10px;padding:10px;background:${color}08;`;
+          const rowLabel = document.createElement('div');
+          rowLabel.style.cssText = `font-size:13px;color:${color};letter-spacing:1.5px;margin-bottom:8px;`;
+          rowLabel.textContent = label;
+          row.appendChild(rowLabel);
+          const nodesRow = document.createElement('div');
+          nodesRow.style.cssText = 'display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;';
+          const branchAttacks = branchMap[branchId] || [];
+          branchAttacks.forEach((sa, i) => {
+            if (i > 0) {
+              const arrow = document.createElement('div');
+              arrow.style.cssText = 'display:flex;align-items:center;color:#666;font-size:18px;flex-shrink:0;';
+              arrow.textContent = '→';
+              nodesRow.appendChild(arrow);
+            }
+            nodesRow.appendChild(renderAttackNode(sa));
+          });
+          row.appendChild(nodesRow);
+          return row;
         }
 
-        grid.appendChild(node);
-      });
+        branchesContainer.appendChild(renderBranchRow('upper', '⚔️ Upper Branch — Offensive', '#FF6600'));
+        branchesContainer.appendChild(renderBranchRow('lower', '🛡️ Lower Branch — Control', '#4488FF'));
+        panel.appendChild(branchesContainer);
+      } else {
+        const hint = document.createElement('div');
+        hint.style.cssText = 'text-align:center;color:#888;font-size:12px;font-family:"M PLUS Rounded 1c",sans-serif;margin-top:4px;';
+        hint.textContent = 'Unlock the Knife Takedown to reveal two branch paths!';
+        panel.appendChild(hint);
+      }
 
-      panel.appendChild(grid);
       overlay.appendChild(panel);
       document.body.appendChild(overlay);
     }
