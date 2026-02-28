@@ -87,6 +87,13 @@
           // Route to 3D Camp World as the default screen (instead of old 2D main menu).
           // Prefer 3D camp if CampWorld, THREE and the renderer are all available.
           // Falls back to 2D camp-screen (via updateCampScreen) or main menu.
+          if (!window.CampWorld || !window.THREE || !window.gameRenderer || !window.updateCampScreen) {
+            console.warn('[Loading] showMenuAfterLoading: missing components —',
+              'CampWorld:', !!window.CampWorld,
+              'THREE:', !!window.THREE,
+              'gameRenderer:', !!window.gameRenderer,
+              'updateCampScreen:', !!window.updateCampScreen);
+          }
           var campScreen = document.getElementById('camp-screen');
           if (window.CampWorld && window.THREE && window.gameRenderer && window.updateCampScreen) {
             // 3D camp mode: camp-screen becomes a transparent HUD overlay over the canvas

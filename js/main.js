@@ -16001,10 +16001,7 @@
       // Start Loop - begin rendering immediately (non-blocking)
       animationFrameId = requestAnimationFrame(animate);
       
-      // FRESH: Signal that module is ready (standalone loading script is waiting for this)
-      // Don't call showLoadingScreen - standalone script handles it
-      window.gameModuleReady = true;
-      console.log('[Init] Game module ready - Three.js loaded, event listeners attached');
+      console.log('[Init] Game init complete - Three.js loaded, event listeners attached');
 
       // Pre-warm the 3D camp world scene in the background.
       // Builds the Three.js scene geometry 2 seconds after startup so the first
@@ -17688,6 +17685,14 @@
     window.updateCampScreen = function() {
       try { updateCampScreen(); } catch(e) { console.error('[CampWorld] updateCampScreen error:', e); }
     };
+
+    // Signal that module is ready — loading.js is polling for this flag.
+    // Must come AFTER window.updateCampScreen, window.gameRenderer, and
+    // window.THREE are all available so showMenuAfterLoading() can route
+    // to the 3D camp screen on first load instead of falling back to the
+    // main menu.
+    window.gameModuleReady = true;
+    console.log('[Init] Game module ready - Three.js loaded, event listeners and camp screen attached');
 
     function spawnWave() {
       waveCount++;
