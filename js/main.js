@@ -7952,7 +7952,7 @@
                   const notEquipped = g.id !== equippedId;
                   return gearType && notEquipped;
                 }).map(gear => `
-                  <div style="background: rgba(0,0,0,0.4); border: 2px solid ${getRarityColor(gear.rarity)}; border-radius: 8px; padding: 10px; cursor: pointer;" onclick="equipGear('${slot.key}', '${gear.id}')">
+                  <div class="gear-inventory-item" data-slot="${slot.key}" data-gearid="${gear.id}" style="background: rgba(0,0,0,0.4); border: 2px solid ${getRarityColor(gear.rarity)}; border-radius: 8px; padding: 10px; cursor: pointer; user-select: none;">
                     <div style="color: ${getRarityColor(gear.rarity)}; font-size: 14px; font-weight: bold;">${gear.name}</div>
                     <div style="color: #999; font-size: 11px;">${gear.description}</div>
                     <div style="margin-top: 5px;">
@@ -7960,6 +7960,7 @@
                         <span style="color: #90ee90; font-size: 11px; margin-right: 10px;">+${val} ${GEAR_ATTRIBUTES[stat].icon}</span>
                       ` : '').join('')}
                     </div>
+                    <div style="color:#555;font-size:10px;margin-top:4px;">Tap to preview · Hold to equip</div>
                   </div>
                 `).join('') || '<div style="color: #777; font-size: 12px; padding: 10px;">No available gear for this slot</div>'}
               </div>
@@ -7969,6 +7970,26 @@
       }
       
       content.innerHTML = html;
+
+      // Attach fast-click (preview) + long-press (equip) to each inventory item
+      content.querySelectorAll('.gear-inventory-item').forEach(function (el) {
+        var slotKey = el.getAttribute('data-slot');
+        var gearId  = el.getAttribute('data-gearid');
+        var gear    = saveData.inventory.find(function (g) { return g.id === gearId; });
+        if (!gear) return;
+        var typeIcons = { weapon: '⚔️', armor: '🛡️', helmet: '⛑️', boots: '👢', ring: '💍', amulet: '📿' };
+        attachPressHandler(
+          el,
+          function preview() {
+            showItemInfoPanel(
+              { name: gear.name, rarity: gear.rarity, icon: typeIcons[gear.type] || '📦', stats: gear.stats, description: gear.description },
+              function () { equipGear(slotKey, gearId); },
+              { equipLabel: '⚔️ Equip', hint: 'Long press item to equip directly.' }
+            );
+          },
+          function action() { equipGear(slotKey, gearId); }
+        );
+      });
     }
 
 
@@ -8062,10 +8083,170 @@
       return stats;
     }
 
+    // ── Item Info / Preview Panel ─────────────────────────────────────────────
+    // showItemInfoPanel(itemData, onEquip, opts)
+    //   itemData : { name, rarity, icon, stats, description, requirements }
+    //   onEquip  : callback called when user confirms equip (null = hide equip btn)
+    //   opts     : { equipLabel, hint }
+    function showItemInfoPanel(itemData, onEquip, opts) {
+      opts = opts || {};
+      // Remove any existing overlay
+      var old = document.getElementById('item-info-overlay');
+      if (old && old.parentNode) old.parentNode.removeChild(old);
+
+      var rarityMap = { common: '#aaaaaa', uncommon: '#55cc55', rare: '#44aaff', epic: '#aa44ff', legendary: '#ffaa00' };
+      var rarityColor = rarityMap[itemData.rarity] || '#ffffff';
+
+      var overlay = document.createElement('div');
+      overlay.id = 'item-info-overlay';
+
+      var panel = document.createElement('div');
+      panel.id = 'item-info-panel';
+
+      // Icon
+      if (itemData.icon) {
+        var iconDiv = document.createElement('div');
+        iconDiv.className = 'iip-icon';
+        iconDiv.textContent = itemData.icon;
+        panel.appendChild(iconDiv);
+      }
+
+      // Name
+      var nameDiv = document.createElement('div');
+      nameDiv.className = 'iip-name';
+      nameDiv.style.color = rarityColor;
+      nameDiv.textContent = itemData.name || '';
+      panel.appendChild(nameDiv);
+
+      // Rarity
+      if (itemData.rarity) {
+        var rarDiv = document.createElement('div');
+        rarDiv.className = 'iip-rarity rarity-' + itemData.rarity;
+        rarDiv.textContent = itemData.rarity;
+        panel.appendChild(rarDiv);
+      }
+
+      // Description
+      if (itemData.description) {
+        var descDiv = document.createElement('div');
+        descDiv.className = 'iip-desc';
+        descDiv.textContent = itemData.description;
+        panel.appendChild(descDiv);
+      }
+
+      // Stats
+      if (itemData.stats && Object.keys(itemData.stats).length > 0) {
+        var statsDiv = document.createElement('div');
+        statsDiv.className = 'iip-stats';
+        for (var s in itemData.stats) {
+          var attr = (typeof GEAR_ATTRIBUTES !== 'undefined' && GEAR_ATTRIBUTES[s]) ? GEAR_ATTRIBUTES[s] : null;
+          var label = attr ? (attr.icon + ' ' + attr.name) : s;
+          var row = document.createElement('div');
+          row.className = 'iip-stat-row';
+          row.innerHTML = '<span>' + label + '</span><span>+' + itemData.stats[s] + '</span>';
+          statsDiv.appendChild(row);
+        }
+        panel.appendChild(statsDiv);
+      }
+
+      // Requirements
+      if (itemData.requirements) {
+        var reqDiv = document.createElement('div');
+        reqDiv.className = 'iip-desc';
+        reqDiv.style.color = '#F39C12';
+        reqDiv.textContent = itemData.requirements;
+        panel.appendChild(reqDiv);
+      }
+
+      // Action buttons
+      var actions = document.createElement('div');
+      actions.className = 'iip-actions';
+
+      if (typeof onEquip === 'function') {
+        var equipBtn = document.createElement('button');
+        equipBtn.className = 'iip-btn-equip';
+        equipBtn.textContent = opts.equipLabel || '⚔️ Equip';
+        equipBtn.addEventListener('click', function () {
+          closePanel();
+          onEquip();
+        });
+        actions.appendChild(equipBtn);
+      }
+
+      var closeBtn = document.createElement('button');
+      closeBtn.className = 'iip-btn-close';
+      closeBtn.textContent = '✕ Close';
+      closeBtn.addEventListener('click', closePanel);
+      actions.appendChild(closeBtn);
+      panel.appendChild(actions);
+
+      // Hint
+      if (opts.hint !== false) {
+        var hint = document.createElement('div');
+        hint.className = 'iip-hint';
+        hint.textContent = opts.hint || (typeof onEquip === 'function' ? 'Tap Equip or long-press item to equip.' : '');
+        panel.appendChild(hint);
+      }
+
+      overlay.appendChild(panel);
+      // Tap outside to close
+      overlay.addEventListener('click', function (e) { if (e.target === overlay) closePanel(); });
+      document.body.appendChild(overlay);
+
+      function closePanel() {
+        var el = document.getElementById('item-info-overlay');
+        if (el && el.parentNode) el.parentNode.removeChild(el);
+      }
+    }
+    window.showItemInfoPanel = showItemInfoPanel;
+
+    // ── Long-press / double-tap helper ────────────────────────────────────────
+    // Attaches fast-click (preview) + long-press & double-tap (action) to an element.
+    // onPreview() called on fast single click
+    // onAction() called on long-press (>400ms) or double-tap (<400ms gap)
+    function attachPressHandler(el, onPreview, onAction) {
+      var LONG_MS = 400;
+      var pressTimer = null;
+      var lastTap = 0;
+      var fired = false;
+
+      function startPress(e) {
+        fired = false;
+        pressTimer = setTimeout(function () {
+          fired = true;
+          onAction();
+        }, LONG_MS);
+      }
+      function endPress(e) {
+        clearTimeout(pressTimer);
+        if (fired) return;
+        // Double-tap detection
+        var now = Date.now();
+        if (now - lastTap < 400) {
+          lastTap = 0;
+          onAction();
+        } else {
+          lastTap = now;
+          onPreview();
+        }
+      }
+      function cancelPress() { clearTimeout(pressTimer); }
+
+      el.addEventListener('mousedown', startPress);
+      el.addEventListener('mouseup', endPress);
+      el.addEventListener('mouseleave', cancelPress);
+      el.addEventListener('touchstart', startPress, { passive: true });
+      el.addEventListener('touchend', endPress);
+      el.addEventListener('touchcancel', cancelPress);
+    }
+    window.attachPressHandler = attachPressHandler;
+
     function equipGear(slotKey, gearId) {
       saveData.equippedGear[slotKey] = gearId;
       playSound('coin');
       saveSaveData();
+      // Recalculate stats if the function exists
+      if (typeof window.recalculateAllStats === 'function') window.recalculateAllStats();
       updateGearScreen();
       
       // Quest progression: first time equipping gear (legacy)
@@ -16140,6 +16321,64 @@
           t.textContent = '🔒 Locked';
           node.appendChild(t);
         }
+
+        // Tap = info preview; long press = unlock/upgrade (only if available)
+        node.style.cursor = 'pointer';
+        node.style.userSelect = 'none';
+        const upgrade2 = sa.upgrades && sa.upgrades.find(u => u.level === Math.max(1, currentLvl));
+        const cdSec = (((upgrade2 && upgrade2.cooldownMs) || sa.cooldownMs) / 1000) + 's';
+        const previewStats = {};
+        if (sa.damage) previewStats['Damage'] = sa.damage;
+        if (sa.cooldownMs) previewStats['Cooldown'] = cdSec;
+        if (currentLvl > 0) previewStats['Level'] = currentLvl + '/' + maxLvl;
+
+        function doSpecialPreview() {
+          if (typeof showItemInfoPanel !== 'function') return;
+          const actionLbl = canUnlock ? ('🔓 Unlock (1 SAP)') : (canUpgrade ? '⬆️ Upgrade (1 SAP)' : null);
+          showItemInfoPanel(
+            {
+              name: sa.name,
+              rarity: isUnlocked ? (currentLvl >= maxLvl ? 'legendary' : 'epic') : 'rare',
+              icon: sa.icon,
+              stats: previewStats,
+              description: sa.description + (sa.upgrades && sa.upgrades[0] ? '\n\n' + sa.upgrades[0].bonus : ''),
+              requirements: 'Cooldown: ' + cdSec + ' · Level ' + currentLvl + '/' + maxLvl
+            },
+            (canUnlock || canUpgrade) ? function() {
+              const cost = 1;
+              if ((saveData.specialAtkPoints || 0) < cost) return;
+              saveData.specialAtkPoints -= cost;
+              if (!saveData.skillTree[sa.skillTreeId]) saveData.skillTree[sa.skillTreeId] = { level: 0, maxLevel: maxLvl };
+              saveData.skillTree[sa.skillTreeId].level = Math.min(maxLvl, (saveData.skillTree[sa.skillTreeId].level || 0) + 1);
+              saveData.skillTree[sa.skillTreeId].unlocked = true;
+              saveSaveData();
+              if (window.GameRageCombat) window.GameRageCombat.refreshLoadout(saveData);
+              if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+              showSpecialAttacksPanel();
+            } : null,
+            { equipLabel: actionLbl || '⬆️ Upgrade', hint: 'Long press card to unlock/upgrade directly.' }
+          );
+        }
+        function doSpecialAction() {
+          if (!canUnlock && !canUpgrade) { doSpecialPreview(); return; }
+          const cost = 1;
+          if ((saveData.specialAtkPoints || 0) < cost) return;
+          saveData.specialAtkPoints -= cost;
+          if (!saveData.skillTree[sa.skillTreeId]) saveData.skillTree[sa.skillTreeId] = { level: 0, maxLevel: maxLvl };
+          saveData.skillTree[sa.skillTreeId].level = Math.min(maxLvl, (saveData.skillTree[sa.skillTreeId].level || 0) + 1);
+          saveData.skillTree[sa.skillTreeId].unlocked = true;
+          saveSaveData();
+          if (window.GameRageCombat) window.GameRageCombat.refreshLoadout(saveData);
+          if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+          showSpecialAttacksPanel();
+        }
+
+        if (typeof attachPressHandler === 'function') {
+          attachPressHandler(node, doSpecialPreview, doSpecialAction);
+        } else {
+          node.addEventListener('click', doSpecialPreview);
+        }
+
         return node;
       }
 

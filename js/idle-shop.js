@@ -109,12 +109,13 @@ window.GameShop = (function () {
     stock.forEach(function (slot, idx) {
       var item = SHOP_ITEMS.find(function (x) { return x.id === slot.itemId; });
       if (!item) return;
-      html += '<div class="shop-card' + (slot.featured ? ' shop-featured' : '') + (slot.soldOut ? ' shop-sold' : '') + '">';
+      html += '<div class="shop-card' + (slot.featured ? ' shop-featured' : '') + (slot.soldOut ? ' shop-sold' : '') + '" data-idx="' + idx + '" style="user-select:none;cursor:pointer;">';
       if (slot.featured) html += '<span class="shop-featured-badge">⭐ Featured</span>';
       html += '<span class="shop-item-icon">' + item.icon + '</span>';
       html += '<div class="shop-item-name">' + item.name + '</div>';
       html += '<div class="shop-item-desc">' + item.desc + '</div>';
       html += '<div class="shop-item-price">' + (slot.featured ? '<s>' + item.price + '</s> ' : '') + slot.price + ' 💰</div>';
+      if (!slot.soldOut) html += '<div style="font-size:10px;color:#888;margin-top:3px;">Tap to preview · Hold to buy</div>';
       html += '<button class="shop-buy-btn" data-idx="' + idx + '"' + (slot.soldOut || gold < slot.price ? ' disabled' : '') + '>' + (slot.soldOut ? 'Sold Out' : 'Buy') + '</button>';
       html += '</div>';
     });
@@ -122,13 +123,58 @@ window.GameShop = (function () {
     html += '<div class="shop-footer"><small>Stock refreshes daily. Purchases: ' + (saveData.shop.totalPurchases || 0) + ' | Spent: ' + (saveData.shop.totalGoldSpent || 0) + ' gold</small></div>';
     html += '</div>';
     container.innerHTML = html;
+
+    // Wire up shop-buy-btn (explicit button click always buys)
     container.querySelectorAll('.shop-buy-btn').forEach(function (btn) {
-      btn.addEventListener('click', function () {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
         var idx = parseInt(btn.getAttribute('data-idx'));
         var res = buyItem(idx, saveData);
         if (res.ok) renderShopPanel(saveData, container);
         else alert(res.msg);
       });
+    });
+
+    // Attach fast-click (preview) + long-press (buy) to shop cards
+    container.querySelectorAll('.shop-card[data-idx]').forEach(function (card) {
+      var idx = parseInt(card.getAttribute('data-idx'));
+      var slot = stock[idx];
+      if (!slot || slot.soldOut) return;
+      var item = SHOP_ITEMS.find(function (x) { return x.id === slot.itemId; });
+      if (!item) return;
+      var canBuy = (saveData.gold || 0) >= slot.price;
+
+      function doPreview() {
+        if (typeof window.showItemInfoPanel !== 'function') return;
+        window.showItemInfoPanel(
+          {
+            name: item.name,
+            rarity: item.cat === 'gem' ? 'epic' : (item.cat === 'special' ? 'legendary' : 'common'),
+            icon: item.icon,
+            stats: {},
+            description: item.desc,
+            requirements: slot.price + ' 💰' + (slot.featured ? '  ⭐ Featured' : '')
+          },
+          canBuy ? function () {
+            var res = buyItem(idx, saveData);
+            if (res.ok) renderShopPanel(saveData, container);
+            else alert(res.msg);
+          } : null,
+          { equipLabel: '💰 Buy', hint: 'Long press card to buy directly.' }
+        );
+      }
+      function doBuy() {
+        if (!canBuy) { doPreview(); return; }
+        var res = buyItem(idx, saveData);
+        if (res.ok) renderShopPanel(saveData, container);
+        else alert(res.msg);
+      }
+
+      if (typeof window.attachPressHandler === 'function') {
+        window.attachPressHandler(card, doPreview, doBuy);
+      } else {
+        card.addEventListener('click', doPreview);
+      }
     });
   }
 

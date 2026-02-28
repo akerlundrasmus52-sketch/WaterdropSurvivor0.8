@@ -4507,3 +4507,103 @@
   color: #e0d0a0;
   text-shadow: 0 1px 4px rgba(0,0,0,0.9);
 }
+
+/* ── Item Info / Preview Panel ─────────────────────────────── */
+.rarity-common    { color: #aaaaaa; }
+.rarity-uncommon  { color: #55cc55; }
+.rarity-rare      { color: #44aaff; }
+.rarity-epic      { color: #aa44ff; }
+.rarity-legendary { color: #ffaa00; }
+
+#item-info-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.75);
+  z-index: 9000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  box-sizing: border-box;
+}
+#item-info-panel {
+  background: linear-gradient(145deg,#12182b,#1e2640);
+  border: 2px solid #F39C12;
+  border-radius: 14px;
+  padding: 22px 20px 18px;
+  max-width: 360px;
+  width: 100%;
+  color: #fff;
+  box-shadow: 0 0 40px rgba(243,156,18,0.35);
+  font-family: 'M PLUS Rounded 1c', sans-serif;
+  position: relative;
+}
+#item-info-panel .iip-icon { font-size: 48px; text-align: center; margin-bottom: 6px; }
+#item-info-panel .iip-name {
+  font-family: 'Bangers', cursive;
+  font-size: 22px;
+  letter-spacing: 1px;
+  text-align: center;
+  margin-bottom: 4px;
+}
+#item-info-panel .iip-rarity {
+  text-align: center;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-bottom: 10px;
+}
+#item-info-panel .iip-desc {
+  color: #bbb;
+  font-size: 13px;
+  margin-bottom: 10px;
+  text-align: center;
+}
+#item-info-panel .iip-stats {
+  background: rgba(0,0,0,0.25);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+}
+#item-info-panel .iip-stat-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  padding: 2px 0;
+  color: #90ee90;
+}
+#item-info-panel .iip-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 6px;
+}
+#item-info-panel .iip-btn-equip {
+  flex: 1;
+  padding: 10px;
+  background: linear-gradient(to bottom,#27ae60,#1e8449);
+  border: 2px solid #2ecc71;
+  border-radius: 8px;
+  color: #fff;
+  font-weight: bold;
+  font-size: 14px;
+  cursor: pointer;
+}
+#item-info-panel .iip-btn-equip:hover { background: linear-gradient(to bottom,#2ecc71,#27ae60); }
+#item-info-panel .iip-btn-close {
+  flex: 1;
+  padding: 10px;
+  background: rgba(255,255,255,0.08);
+  border: 2px solid #888;
+  border-radius: 8px;
+  color: #ddd;
+  font-weight: bold;
+  font-size: 14px;
+  cursor: pointer;
+}
+#item-info-panel .iip-btn-close:hover { background: rgba(255,255,255,0.15); }
+#item-info-panel .iip-hint {
+  text-align: center;
+  font-size: 10px;
+  color: #666;
+  margin-top: 8px;
+}
