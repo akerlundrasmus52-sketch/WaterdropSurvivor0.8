@@ -471,6 +471,7 @@
     
     let waveCount = 0;
     let lastWaveEndTime = 0; // Track when last wave was cleared
+    let _firstEnemyTutorialShown = false; // Track if first-enemy steering/aim tutorial was shown
     let windmillQuest = { active: false, timer: 0, duration: 30, windmill: null, hasCompleted: false, dialogueOpen: false, rewardReady: false, rewardGiven: false, failed: false, failedCooldown: false };
     let montanaQuest = { active: false, timer: 0, duration: 45, kills: 0, killsNeeded: 15, landmark: null, hasCompleted: false };
     let eiffelQuest = { active: false, timer: 0, duration: 60, kills: 0, killsNeeded: 25, landmark: null, hasCompleted: false };
@@ -1981,6 +1982,14 @@
           // Bug Fast — small dart-like flying bug
           geometry = new THREE.OctahedronGeometry(0.35, 1);
           color = 0x9ACD32; // Yellow-green — quick bug
+        } else if (type === 15) {
+          // Daddy Longlegs — small round spider body
+          geometry = new THREE.SphereGeometry(0.28, 10, 10);
+          color = 0x8B4513; // Brown spider body
+        } else if (type === 16) {
+          // Sweeping Swarm — small fast diamond shape
+          geometry = new THREE.OctahedronGeometry(0.22, 0);
+          color = 0xFFAA00; // Amber swarm colour
         }
 
         const material = new THREE.MeshPhysicalMaterial({ 
@@ -1996,7 +2005,7 @@
         });
         this.mesh = new THREE.Mesh(geometry, material);
         // Flying enemies hover higher; Flying Boss is enormous and hovers high
-        const yPos = (type === 5 || type === 14) ? 2 : (type === 11 ? 5 : 0.5);
+        const yPos = (type === 5 || type === 14 || type === 16) ? 2 : (type === 11 ? 5 : 0.5);
         this.mesh.position.set(x, yPos, z);
         // Flying Boss is scaled large enough to be dramatic but still mostly visible on screen
         if (type === 11) this.mesh.scale.set(1.8, 1.8, 1.8);
@@ -2004,10 +2013,26 @@
         this.mesh.receiveShadow = true;
         scene.add(this.mesh);
 
+        // Add legs to Daddy Longlegs spider
+        if (type === 15) {
+          const legMat = new THREE.MeshLambertMaterial({ color: 0x5C3317 });
+          for (let leg = 0; leg < 8; leg++) {
+            const legAngle = (leg / 8) * Math.PI * 2;
+            const legGeo = new THREE.CylinderGeometry(0.02, 0.02, 0.9, 4);
+            const legMesh = new THREE.Mesh(legGeo, legMat);
+            legMesh.rotation.z = Math.PI / 2 - 0.4;
+            legMesh.rotation.y = legAngle;
+            legMesh.position.set(Math.cos(legAngle) * 0.35, -0.1, Math.sin(legAngle) * 0.35);
+            this.mesh.add(legMesh);
+          }
+          this._rearingPhase = 0; // 0=walking 1=rearing up 2=attacking
+          this._rearingTimer = 0;
+        }
+
         // Ground shadow for flying enemies
         this.groundShadow = null;
-        if (type === 5 || type === 11 || type === 14) {
-          const shadowRadius = type === 11 ? 2.0 : (type === 5 ? 0.6 : 0.4);
+        if (type === 5 || type === 11 || type === 14 || type === 16) {
+          const shadowRadius = type === 11 ? 2.0 : (type === 5 ? 0.6 : 0.35);
           const shadowGeo = new THREE.CircleGeometry(shadowRadius, 12);
           const shadowMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.25, depthWrite: false });
           this.groundShadow = new THREE.Mesh(shadowGeo, shadowMat);
@@ -2419,15 +2444,63 @@
               vx = perpX * this.speed * 0.5 + (dx / dist) * this.speed * 0.15;
               vz = perpZ * this.speed * 0.5 + (dz / dist) * this.speed * 0.15;
             }
+          } else if (behavior === 'rearing') {
+            // Daddy Longlegs: creep toward player, then rear up and attack
+            if (!this._rearingPhase) this._rearingPhase = 0;
+            if (!this._rearingTimer) this._rearingTimer = 0;
+            this._rearingTimer += dt;
+            if (this._rearingPhase === 0) {
+              // Walking phase: approach slowly
+              if (dist > this.attackRange) {
+                vx = (dx / dist) * this.speed * 0.8;
+                vz = (dz / dist) * this.speed * 0.8;
+              } else if (this._rearingTimer > 1.0) {
+                // Close enough — start rearing
+                this._rearingPhase = 1;
+                this._rearingTimer = 0;
+              }
+            } else if (this._rearingPhase === 1) {
+              // Rearing up: lift body, legs spread wide (animated via Y position)
+              this.mesh.position.y = 0.5 + Math.sin(this._rearingTimer * 4) * 0.4;
+              if (this._rearingTimer > 0.8) {
+                this._rearingPhase = 2;
+                this._rearingTimer = 0;
+              }
+            } else if (this._rearingPhase === 2) {
+              // Attack lunge
+              vx = (dx / dist) * this.speed * 3.0;
+              vz = (dz / dist) * this.speed * 3.0;
+              if (this._rearingTimer > 0.4) {
+                this._rearingPhase = 0;
+                this._rearingTimer = 0;
+                this.mesh.position.y = 0.5;
+              }
+            }
+          } else if (behavior === 'sweep') {
+            // Sweeping Swarm: flies rapidly in wide arcs across the map
+            if (!this._sweepDir) this._sweepDir = (Math.random() > 0.5) ? 1 : -1;
+            if (!this._sweepTimer) this._sweepTimer = 0;
+            this._sweepTimer += dt;
+            // Sweep side to side with a sinusoidal path
+            const sweepSpeed = this.speed * 2.5;
+            const perpX = -dz / (dist || 1);
+            const perpZ =  dx / (dist || 1);
+            vx = (dx / dist) * sweepSpeed * 0.3 + perpX * Math.sin(this._sweepTimer * 2) * sweepSpeed;
+            vz = (dz / dist) * sweepSpeed * 0.3 + perpZ * Math.sin(this._sweepTimer * 2) * sweepSpeed;
+            // Reverse direction occasionally
+            if (this._sweepTimer > 2.5 + Math.random() * 1.5) {
+              this._sweepDir *= -1;
+              this._sweepTimer = 0;
+            }
           }
           
           // Flying height behavior
-          if (this.type === 5 || this.type === 14) {
+          if (this.type === 5 || this.type === 14 || this.type === 16) {
             const wavePhase = gameTime * 5 + this.wobbleOffset;
             const wave = Math.sin(wavePhase) * 0.08;
-            vx += wave * (dz/dist);
-            vz -= wave * (dx/dist);
-            const baseHeight = this._aiState === 'dive' ? 0.8 : 2;
+            vx += wave * (dz/(dist||1));
+            vz -= wave * (dx/(dist||1));
+            const baseHeight = this._aiState === 'dive' ? 0.8 : (this.type === 16 ? 1.5 : 2);
             this.mesh.position.y = baseHeight + Math.sin(gameTime * 3 + this.wobbleOffset) * 0.5;
           }
           
@@ -3299,6 +3372,10 @@
               goldAmount = 12 + Math.floor(Math.random() * 9); // 12-20 gold
             } else if (this.type === 14) { // Bug Fast
               goldAmount = 5 + Math.floor(Math.random() * 5);  // 5-9 gold
+            } else if (this.type === 15) { // Daddy Longlegs — easy early enemy, small reward
+              goldAmount = 3 + Math.floor(Math.random() * 4);  // 3-6 gold
+            } else if (this.type === 16) { // Sweeping Swarm — minimal reward
+              goldAmount = 2 + Math.floor(Math.random() * 3);  // 2-4 gold
             } else {
               goldAmount = 5 + Math.floor(Math.random() * 6); // 5-10 gold (was 1-2)
             }
@@ -15403,6 +15480,15 @@
       // Don't call showLoadingScreen - standalone script handles it
       window.gameModuleReady = true;
       console.log('[Init] Game module ready - Three.js loaded, event listeners attached');
+
+      // Pre-warm the 3D camp world scene in the background.
+      // Builds the Three.js scene geometry 2 seconds after startup so the first
+      // camp visit (after the player dies) loads instantly instead of freezing.
+      setTimeout(() => {
+        if (window.CampWorld && renderer) {
+          window.CampWorld.warmUp(renderer);
+        }
+      }, 2000);
       
       // SAFETY: Pause watchdog - auto-unpause if stuck with no visible overlay.
       // Tracks how long the game has been paused; forces unpause after >10s regardless
@@ -16460,12 +16546,25 @@
       document.getElementById('goto-camp-btn').onclick = () => {
         playSound('waterdrop');
         document.getElementById('gameover-screen').style.display = 'none';
+        // Close any tutorial/comic modals that might still be open from the death sequence
+        ['comic-tutorial-modal','comic-info-overlay','story-quest-modal'].forEach(id => {
+          const el = id === 'comic-info-overlay' ? document.getElementById(id) : document.getElementById(id);
+          if (el) el.style.display = 'none';
+        });
+        // Clear any stuck comic-info-overlay created dynamically
+        const dynOverlay = document.getElementById('comic-info-overlay');
+        if (dynOverlay && dynOverlay.parentNode) dynOverlay.parentNode.removeChild(dynOverlay);
+        // Ensure pause state is clean before entering camp
+        pauseOverlayCount = 0;
+        window.pauseOverlayCount = 0;
+        isPaused = false;
+        window.isPaused = false;
         // Show camp screen immediately so player sees the transition
         document.getElementById('camp-screen').classList.remove('camp-subsection-active');
         document.getElementById('camp-screen').style.display = 'flex';
         const chatTab = document.getElementById('ai-chat-tab');
         if (chatTab) chatTab.classList.add('camp-mode');
-        // Defer heavy 3D camp world setup to next tick to prevent UI freeze
+        // Defer 3D camp world setup to next tick (scene is pre-warmed at startup, so this is fast)
         setTimeout(() => {
           try { updateCampScreen(); } catch(e) { console.error('[Camp] updateCampScreen error:', e); }
           // Refresh special attack loadout buttons for the new run
@@ -16702,13 +16801,21 @@
         // Random type - include new enemy types as level increases
         // 0: Tank, 1: Fast, 2: Balanced, 3: Slowing (lvl 8+), 4: Ranged (lvl 10+)
         // 5: Flying (lvl 8+), 6-9: Hard variants (lvl 12+), 12-14: Bug variants (lvl 15+)
+        // 15: Daddy Longlegs spider (lvl 5+), 16: Sweeping Swarm (after 3 kills, lvl 10+)
+
+        // Early game safety: first 2 runs spawn only gentle (easy) enemies
+        const totalRuns = saveData.totalRuns || 0;
+        const isEarlyGame = totalRuns <= 2;
+
         let maxType = 2; // Start with 3 base types
-        if (playerStats.lvl >= 8) maxType = 5; // Add slowing (3), ranged placeholder, and flying (5)
-        if (playerStats.lvl >= 10) maxType = 5; // Add ranged enemies (4)
-        if (playerStats.lvl >= 12) maxType = 6; // Add hard tank
-        if (playerStats.lvl >= 14) maxType = 7; // Add hard fast
-        if (playerStats.lvl >= 16) maxType = 8; // Add hard balanced
-        if (playerStats.lvl >= 18) maxType = 9; // Add elite
+        if (!isEarlyGame) {
+          if (playerStats.lvl >= 8) maxType = 5; // Add slowing (3), ranged placeholder, and flying (5)
+          if (playerStats.lvl >= 10) maxType = 5; // Add ranged enemies (4)
+          if (playerStats.lvl >= 12) maxType = 6; // Add hard tank
+          if (playerStats.lvl >= 14) maxType = 7; // Add hard fast
+          if (playerStats.lvl >= 16) maxType = 8; // Add hard balanced
+          if (playerStats.lvl >= 18) maxType = 9; // Add elite
+        }
         
         let type = Math.floor(Math.random() * (maxType + 1));
         
@@ -16718,34 +16825,76 @@
           type = 3; // Fall back to slowing
         }
         
-        // Flying enemies (type 5) - 15% chance at level 8+
-        if (playerStats.lvl >= 8 && Math.random() < 0.15) {
-          type = 5;
-        }
-        
-        // Ranged enemies (type 4) - 30% chance at level 10+ for more variety
-        if (type === 4 && Math.random() > 0.3) {
-          type = Math.floor(Math.random() * 3);
-        }
-        
-        // Hard variants (6-9) - reduce spawn rate to 30%
-        if (type >= 6 && type <= 9 && Math.random() > 0.3) {
-          // Fallback to types 0-5 (all basic types)
-          const fallbackMax = playerStats.lvl >= 8 ? 6 : 3;
-          type = Math.floor(Math.random() * fallbackMax);
-          // Exclude type 4 if not unlocked
-          if (type === 4 && playerStats.lvl < 10) {
+        if (!isEarlyGame) {
+          // Flying enemies (type 5) - 15% chance at level 8+
+          if (playerStats.lvl >= 8 && Math.random() < 0.15) {
+            type = 5;
+          }
+          
+          // Ranged enemies (type 4) - 30% chance at level 10+ for more variety
+          if (type === 4 && Math.random() > 0.3) {
             type = Math.floor(Math.random() * 3);
+          }
+          
+          // Hard variants (6-9) - reduce spawn rate to 30%
+          if (type >= 6 && type <= 9 && Math.random() > 0.3) {
+            // Fallback to types 0-5 (all basic types)
+            const fallbackMax = playerStats.lvl >= 8 ? 6 : 3;
+            type = Math.floor(Math.random() * fallbackMax);
+            // Exclude type 4 if not unlocked
+            if (type === 4 && playerStats.lvl < 10) {
+              type = Math.floor(Math.random() * 3);
+            }
+          }
+          
+          // Daddy Longlegs spider (type 15) — available from level 5+, ~15% chance
+          if (playerStats.lvl >= 5 && Math.random() < 0.15) {
+            type = 15;
+          }
+          
+          // Bug/water-being enemies (types 12-14) — available from level 15+
+          // ~20% chance to spawn one of the bug variants when available
+          if (playerStats.lvl >= 15 && Math.random() < 0.20) {
+            type = 12 + Math.floor(Math.random() * 3); // 12, 13, or 14
+          }
+          
+          // Sweeping Swarm (type 16) — available after 3 kills + level 10+, ~10% chance
+          const killsMilestone = saveData.totalKills || 0;
+          if (playerStats.lvl >= 10 && killsMilestone >= 3 && Math.random() < 0.10) {
+            type = 16;
+          }
+        } else {
+          // Early game: occasionally include Daddy Longlegs for variety (3-hit easy enemy)
+          if (playerStats.lvl >= 2 && Math.random() < 0.20) {
+            type = 15;
           }
         }
         
-        // Bug/water-being enemies (types 12-14) — available from level 15+
-        // ~20% chance to spawn one of the bug variants when available
-        if (playerStats.lvl >= 15 && Math.random() < 0.20) {
-          type = 12 + Math.floor(Math.random() * 3); // 12, 13, or 14
-        }
-        
-        enemies.push(new Enemy(type, ex, ez, playerStats.lvl));
+        const newEnemy = new Enemy(type, ex, ez, playerStats.lvl);
+        enemies.push(newEnemy);
+      }
+
+      // First-run tutorial: pause on first enemy appearance to teach steering & aiming
+      const isVeryFirstRun = saveData.totalRuns === 0;
+      if (isVeryFirstRun && waveCount === 1 && !_firstEnemyTutorialShown) {
+        _firstEnemyTutorialShown = true;
+        setGamePaused(true);
+        setTimeout(() => {
+          showComicInfoBox(
+            '🎯 FIRST ENEMY!',
+            '<div style="text-align:left;line-height:1.8;font-size:15px;padding:4px 0">' +
+            '<div style="font-size:17px;text-align:center;color:#5DADE2;margin-bottom:10px;"><b>HOW TO SURVIVE</b></div>' +
+            '<p style="margin-bottom:8px;">🕹️ <b>STEER:</b> Left joystick / WASD keys to move your droplet</p>' +
+            '<p style="margin-bottom:8px;">🎯 <b>AIM:</b> Right joystick / mouse to aim your shots</p>' +
+            '<p style="margin-bottom:8px;">💨 <b>DASH:</b> Double-tap direction to evade quickly</p>' +
+            '<p style="margin-bottom:8px;">⭐ <b>XP:</b> Collect the stars enemies drop to level up</p>' +
+            '<div style="background:rgba(255,215,0,0.1);border:2px solid rgba(255,215,0,0.4);border-radius:8px;padding:8px;margin-top:8px;font-size:13px;">' +
+            '💡 <b>Tip:</b> Keep moving — standing still is dangerous!</div>' +
+            '</div>',
+            'GOT IT! FIGHT! →',
+            () => { setGamePaused(false); }
+          );
+        }, 300); // brief delay so the enemies are visible before popup
       }
       
       // Phase 3: Chest spawn logic - only on wave completion (every 5th wave), high combo, or quest completion
@@ -19595,7 +19744,12 @@
           if (campScreen) {
             campScreen.classList.remove('camp-subsection-active');
             campScreen.style.display = 'flex';
-            // Defer heavy 3D camp world setup to next tick to prevent UI freeze
+            // Ensure clean pause state before entering camp
+            pauseOverlayCount = 0;
+            window.pauseOverlayCount = 0;
+            isPaused = false;
+            window.isPaused = false;
+            // 3D camp world scene is pre-warmed at startup — this is now fast
             setTimeout(() => {
               try { updateCampScreen(); } catch(e) { console.error('[Camp] updateCampScreen error:', e); }
             }, 0);
@@ -19972,6 +20126,7 @@
       playerStats.manualAimAccuracy = Math.min(1.0, 0.60 + dexterity * 0.04 + trainingFlexibility * 0.02);
       waveCount = 0;
       lastWaveEndTime = 0; // Reset wave timing
+      _firstEnemyTutorialShown = false; // Reset first-enemy tutorial for each run
       miniBossesSpawned.clear(); // Reset mini-boss tracking
       gameStartTime = Date.now();
       runStartGold = saveData.gold;

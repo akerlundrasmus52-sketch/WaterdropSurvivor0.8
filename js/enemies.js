@@ -4,21 +4,23 @@
 
 // Numeric constants for every enemy type (matches the Enemy constructor switch).
 const ENEMY_TYPES = {
-  TANK:         0,  // Bacteria/Amoeba  — squishy blob,    high HP, slow
-  FAST:         1,  // Water Bug        — elongated,        low HP,  fast
-  BALANCED:     2,  // Microbe          — round,            mid HP,  mid speed
-  SLOWING:      3,  // Spiky/icy        — slows player on hit
-  RANGED:       4,  // Tetrahedron      — stays at range, fires projectiles
-  FLYING:       5,  // Octahedron       — airborne, fast
-  HARD_TANK:    6,  // Deformed sphere  — very high HP, slow
-  HARD_FAST:    7,  // Capsule          — high speed variant of FAST
-  HARD_BALANCED:8,  // Dodecahedron     — stronger balanced variant
-  ELITE:        9,  // Icosahedron      — elite, does 1.5× damage
-  MINI_BOSS:    10, // Large dodecahedron — boss with armor, scaling HP
-  FLYING_BOSS:  11, // Lvl-15 giant flying boss — oversized, unique behavior
-  BUG_RANGED:   12, // Bug/water-being with eyes — ranged variant
-  BUG_SLOW:     13, // Bug/water-being with eyes — slow, high HP variant
-  BUG_FAST:     14  // Bug/water-being with eyes — fast, low HP variant
+  TANK:              0,  // Bacteria/Amoeba  — squishy blob,    high HP, slow
+  FAST:              1,  // Water Bug        — elongated,        low HP,  fast
+  BALANCED:          2,  // Microbe          — round,            mid HP,  mid speed
+  SLOWING:           3,  // Spiky/icy        — slows player on hit
+  RANGED:            4,  // Tetrahedron      — stays at range, fires projectiles
+  FLYING:            5,  // Octahedron       — airborne, fast
+  HARD_TANK:         6,  // Deformed sphere  — very high HP, slow
+  HARD_FAST:         7,  // Capsule          — high speed variant of FAST
+  HARD_BALANCED:     8,  // Dodecahedron     — stronger balanced variant
+  ELITE:             9,  // Icosahedron      — elite, does 1.5× damage
+  MINI_BOSS:         10, // Large dodecahedron — boss with armor, scaling HP
+  FLYING_BOSS:       11, // Lvl-15 giant flying boss — oversized, unique behavior
+  BUG_RANGED:        12, // Bug/water-being with eyes — ranged variant
+  BUG_SLOW:          13, // Bug/water-being with eyes — slow, high HP variant
+  BUG_FAST:          14, // Bug/water-being with eyes — fast, low HP variant
+  DADDY_LONGLEGS:    15, // Spider — small round body, huge thin legs, rears to attack, 3-hit kill
+  SWEEPING_SWARM:    16  // Cluster of fast flyers that sweep side to side, 1-hit kill
 };
 
 const MINI_BOSS_HP_SCALING_RATE = 0.20; // 20% HP increase per player level above start (was 15%)
@@ -118,6 +120,19 @@ function getEnemyBaseStats(type, levelScaling, speedBase, playerLevel) {
     stats.isBug    = true;
     stats.isFlying = true;
     stats.aiBehavior = 'divebomber';
+  } else if (type === 15) {   // Daddy Longlegs — small body, huge legs, easy 3-hit kill
+    stats.hp       = 30 * levelScaling;  // Very fragile — 3 bullets kill it
+    stats.speed    = speedBase * 1.5;
+    stats.isDaddyLonglegs = true;
+    stats.aiBehavior = 'rearing'; // Creeps toward player, rears up before attacking
+    stats.attackRange    = 3.5;   // Melee-range rearing attack
+    stats.isSpider       = true;
+  } else if (type === 16) {   // Sweeping Swarm — cluster that sweeps side to side
+    stats.hp       = 10 * levelScaling;  // 1-hit kill (very fragile)
+    stats.speed    = speedBase * 4.0;
+    stats.isFlying = true;
+    stats.isSwarm  = true;
+    stats.aiBehavior = 'sweep'; // Flies rapidly in large arcs across the screen
   }
 
   stats.maxHp  = stats.hp;
@@ -129,6 +144,8 @@ function getEnemyBaseStats(type, levelScaling, speedBase, playerLevel) {
   if (type === 12) stats.damage = 35 * levelScaling;  // Bug Ranged — moderate
   if (type === 13) stats.damage = 70 * levelScaling;  // Bug Slow — heavy melee
   if (type === 14) stats.damage = 25 * levelScaling;  // Bug Fast — light but rapid
+  if (type === 15) stats.damage = 20 * levelScaling;  // Daddy Longlegs — light bite
+  if (type === 16) stats.damage = 15 * levelScaling;  // Swarm — each hit is light but they swarm
 
   // --- Elemental resistance system ---
   // Each enemy type has intrinsic resistances/vulnerabilities (0 = neutral, >0 = resistant, <0 = vulnerable)
