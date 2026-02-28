@@ -3109,6 +3109,44 @@
       display: none !important;
     }
 
+    /* ── 3D Camp World Mode ─────────────────────────────────────────────
+       When CampWorld is active the camp-screen becomes a transparent HUD
+       overlay so the Three.js canvas (z-index: 1) shows through underneath.
+       Only the header action buttons, corner widgets, and any open subsection
+       panel remain visible.  Building cards are navigated via the 3D world.
+    ── */
+    #camp-screen.camp-3d-mode {
+      background: transparent !important;
+      overflow: hidden !important;
+    }
+    /* Hide the 2D building cards — player uses 3D navigation instead */
+    #camp-screen.camp-3d-mode #camp-buildings-section,
+    #camp-screen.camp-3d-mode > .screen-title,
+    #camp-screen.camp-3d-mode > #account-level-display {
+      display: none !important;
+    }
+    /* Header buttons float over the 3D world */
+    #camp-screen.camp-3d-mode .camp-header-btns {
+      position: fixed;
+      top: max(12px, env(safe-area-inset-top));
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 60;
+    }
+    /* Corner widgets also float */
+    #camp-screen.camp-3d-mode .camp-corner-widgets {
+      position: fixed;
+      top: max(70px, calc(env(safe-area-inset-top) + 58px));
+      right: max(8px, env(safe-area-inset-right));
+      z-index: 60;
+    }
+    /* Subsections (skill tree, training, etc.) still overlay the 3D world */
+    #camp-screen.camp-3d-mode .camp-section-flex {
+      background: linear-gradient(to bottom, rgba(26,26,46,0.97), rgba(22,33,62,0.97));
+      min-height: 100vh;
+      overflow-y: auto;
+    }
+
     /* Skill nodes — taller boxes */
     .skill-node {
       min-height: 130px;

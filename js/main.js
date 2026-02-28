@@ -517,6 +517,8 @@
     // Input - Twin-Stick Controls
     const joystickLeft = { x: 0, y: 0, active: false, id: null, originX: 0, originY: 0 }; // Movement
     const joystickRight = { x: 0, y: 0, active: false, id: null, originX: 0, originY: 0 }; // Aiming
+    // Expose joystickLeft to camp-world.js for player movement in the 3D camp hub
+    window._campJoystick = joystickLeft;
     
     // Throttle joystick DOM updates for performance (60fps = ~16ms)
     let lastJoystickLeftUpdate = 0;
@@ -9846,6 +9848,8 @@
         }
         const buildingName = CAMP_BUILDINGS[quest.unlockBuilding]?.name || 'Building';
         showStatChange(`🏛️ ${buildingName} Unlocked!`);
+        // Refresh 3D camp world building visibility
+        if (window.CampWorld) window.CampWorld.refreshBuildings(saveData);
       }
       
       // Give companion egg
@@ -11725,6 +11729,42 @@
           campActionBtn.textContent = '▶ START RUN';
         }
       }
+
+      // ── 3D Camp Hub World ──────────────────────────────────────────────
+      // Activate the 3D camp whenever this screen is opened.  Callbacks map
+      // building IDs to the existing 2D UI functions so interactions still work.
+      // Guard: renderer is module-scoped and is null until init() runs; skip 3D mode
+      // if renderer is not yet ready (e.g. very first frame before init completes).
+      if (window.CampWorld && renderer) {
+        const campCallbacks = {
+          questMission:        () => showQuestHall(),
+          skillTree:           () => document.getElementById('camp-skills-tab').click(),
+          armory:              () => { try { updateGearScreen(); } catch(e) {} document.getElementById('gear-screen').style.display = 'flex'; },
+          trainingHall:        () => document.getElementById('camp-training-tab').click(),
+          forge:               () => showProgressionShop(),
+          companionHouse:      () => showCompanionHouse(),
+          achievementBuilding: () => {
+            if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest12_visitAchievements') {
+              progressTutorialQuest('quest12_visitAchievements', true);
+              saveSaveData();
+            }
+            document.getElementById('camp-screen').style.display = 'none';
+            const achScreen = document.getElementById('achievements-screen');
+            if (achScreen) {
+              achScreen.style.display = 'flex';
+              const achContent = document.getElementById('achievements-content');
+              if (achContent && typeof renderAchievementsContent === 'function') renderAchievementsContent(achContent);
+            }
+          },
+          inventory:           () => showInventoryScreen(),
+        };
+        window.CampWorld.enter(renderer, saveData, campCallbacks);
+        // Mark camp-screen as 3D mode so CSS can hide the 2D building cards
+        const campScreenEl = document.getElementById('camp-screen');
+        if (campScreenEl) campScreenEl.classList.add('camp-3d-mode');
+      }
+      // ──────────────────────────────────────────────────────────────────
+
       // Refresh idle panel (spin wheel, account, etc.) whenever camp is opened
       if (window.GameIdleBootstrap) window.GameIdleBootstrap.refreshPanel();
       // Update account level display whenever camp is opened
@@ -15057,6 +15097,10 @@
 
     // Helper to start a new run from anywhere (camp, main building, game over)
     function startGame() {
+      // Deactivate 3D camp world when starting a game run
+      if (window.CampWorld) window.CampWorld.exit();
+      const campScreenEl = document.getElementById('camp-screen');
+      if (campScreenEl) campScreenEl.classList.remove('camp-3d-mode');
       document.getElementById('main-menu').style.display = 'none';
       document.getElementById('camp-screen').style.display = 'none';
       document.getElementById('gameover-screen').style.display = 'none';
@@ -15633,6 +15677,10 @@
       
       document.getElementById('camp-action-btn').onclick = () => {
         playSound('waterdrop');
+        // Deactivate 3D camp world and clean up CSS class
+        if (window.CampWorld) window.CampWorld.exit();
+        const campScreenEl = document.getElementById('camp-screen');
+        if (campScreenEl) campScreenEl.classList.remove('camp-3d-mode');
         document.getElementById('camp-screen').style.display = 'none';
         // Remove camp mode from chat tab when leaving camp
         const chatTab = document.getElementById('ai-chat-tab');
@@ -20201,6 +20249,13 @@
         dt = MAX_DELTA_TIME;
       }
       
+      // 3D Camp Hub World — update and render when active, skip all game logic
+      if (window.CampWorld && window.CampWorld.isActive) {
+        window.CampWorld.update(dt);
+        try { window.CampWorld.render(); } catch(e) { console.error('[CampWorld] Render error:', e); }
+        return;
+      }
+
       // Day/Night Cycle - Update lighting smoothly (non-blocking)
       // Runs every frame regardless of pause state for smooth visual transitions
       updateDayNightCycle(dt);
