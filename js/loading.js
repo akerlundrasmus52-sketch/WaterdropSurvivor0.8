@@ -141,9 +141,17 @@
             if (window.gameModuleReady) return; // module handler takes over
             var cs = document.getElementById('camp-screen');
             var mm = document.getElementById('main-menu');
-            if (cs) { cs.style.display = 'flex'; }
-            if (mm) { mm.style.display = 'none'; }
-            console.warn('[Loading] camp-btn fallback: showing camp-screen (2D mode)');
+            // Try 3D camp world first; fall back to 2D camp-screen
+            if (window.CampWorld && window.THREE && window.gameRenderer) {
+              if (mm) mm.style.display = 'none';
+              if (cs) { cs.classList.remove('camp-subsection-active'); cs.style.display = 'flex'; }
+              try { window.CampWorld.enter(window.gameRenderer, window.saveData || {}, {}); } catch(e) {}
+              console.warn('[Loading] camp-btn fallback: entering 3D camp world');
+            } else {
+              if (cs) { cs.style.display = 'flex'; }
+              if (mm) { mm.style.display = 'none'; }
+              console.warn('[Loading] camp-btn fallback: showing camp-screen (2D mode)');
+            }
           });
         }
       }
