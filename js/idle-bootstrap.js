@@ -205,32 +205,22 @@
       window.GameState.initIdleSystems = initIdleSystems;
       window.GameState.campIdleTick = campIdleTick;
     }
-    // Initialize Firebase Auth, then prompt login if user is not signed in
+    // Initialize Firebase Auth silently (no auto-popup on page load).
+    // The Account tab in camp lets players sign in on demand via renderAuthUI.
     if (window.GameAuth) {
       window.GameAuth.initAuth(function () {
-        if (!window.GameAuth.getCurrentUser()) {
-          window.GameAuth.renderAuthUI(function (user) {
-            // If user signed in, attempt to load cloud save
-            if (user && window.GameState && window.GameState.saveData) {
-              window.GameAuth.loadFromCloud(function (err, cloudSave) {
-                if (!err && cloudSave) {
-                  _mergeCloudSave(window.GameState.saveData, cloudSave);
-                }
-                if (window.GameState.saveData) initIdleSystems(window.GameState.saveData);
-              });
-            } else if (window.GameState && window.GameState.saveData) {
+        if (window.GameAuth.getCurrentUser()) {
+          // Already signed in — load cloud save and init idle systems
+          window.GameAuth.loadFromCloud(function (err, cloudSave) {
+            if (!err && cloudSave && window.GameState && window.GameState.saveData) {
+              _mergeCloudSave(window.GameState.saveData, cloudSave);
+            }
+            if (window.GameState && window.GameState.saveData) {
               initIdleSystems(window.GameState.saveData);
             }
           });
-        } else if (window.GameState && window.GameState.saveData) {
-          // Already signed in — proceed to load cloud save and init
-          window.GameAuth.loadFromCloud(function (err, cloudSave) {
-            if (!err && cloudSave) {
-              _mergeCloudSave(window.GameState.saveData, cloudSave);
-            }
-            initIdleSystems(window.GameState.saveData);
-          });
         }
+        // Not signed in: initIdleSystems will be called by main.js after saveData is ready
       });
     }
   });

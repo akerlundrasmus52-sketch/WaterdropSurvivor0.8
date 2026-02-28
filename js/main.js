@@ -3405,18 +3405,17 @@
           spawnParticles(this.mesh.position, 0x8B0000, 8);
           spawnParticles(this.mesh.position, 0xCC0000, 4);
           
-          // Corpse sprite
-          const corpseGeo = new THREE.CircleGeometry(0.6, 16);
+          // 3D body: a flattened sphere matching the enemy color, lying on the ground
+          const corpseGeo = new THREE.SphereGeometry(0.45, 8, 6);
           const corpseMat = new THREE.MeshBasicMaterial({ 
             color: enemyColor, 
             transparent: true,
-            opacity: 0.7,
-            side: THREE.DoubleSide
+            opacity: 0.85
           });
           const corpse = new THREE.Mesh(corpseGeo, corpseMat);
           corpse.position.copy(this.mesh.position);
-          corpse.position.y = 0.02;
-          corpse.rotation.x = -Math.PI / 2;
+          corpse.position.y = 0.12;
+          corpse.scale.y = 0.22; // Flatten into a pancake/body shape
           scene.add(corpse);
           
           // Blood pool
@@ -3513,19 +3512,18 @@
             }
           }
           
-          // Central corpse piece
+          // Central corpse piece - 3D flattened body matching enemy color
           const corpse = new THREE.Mesh(
-            new THREE.CircleGeometry(0.4, 16),
+            new THREE.SphereGeometry(0.4, 8, 6),
             new THREE.MeshBasicMaterial({ 
               color: enemyColor, 
               transparent: true,
-              opacity: 0.8,
-              side: THREE.DoubleSide
+              opacity: 0.85
             })
           );
           corpse.position.copy(this.mesh.position);
-          corpse.position.y = 0.02;
-          corpse.rotation.x = -Math.PI / 2;
+          corpse.position.y = 0.1;
+          corpse.scale.y = 0.2; // Flattened body silhouette
           scene.add(corpse);
           
           let corpseLife = 120;
@@ -3554,18 +3552,17 @@
         spawnParticles(this.mesh.position, 0xFFFF00, 10); // Yellow flames
         spawnParticles(this.mesh.position, 0x222222, 8); // Black smoke
         
-        // Charred corpse
-        const corpseGeo = new THREE.CircleGeometry(0.6, 16);
+        // Charred corpse - 3D flattened body shape
+        const corpseGeo = new THREE.SphereGeometry(0.5, 8, 6);
         const corpseMat = new THREE.MeshBasicMaterial({ 
           color: 0x222222, // Charred black
           transparent: true,
-          opacity: 0.8,
-          side: THREE.DoubleSide
+          opacity: 0.8
         });
         const corpse = new THREE.Mesh(corpseGeo, corpseMat);
         corpse.position.copy(this.mesh.position);
-        corpse.position.y = 0.02;
-        corpse.rotation.x = -Math.PI / 2;
+        corpse.position.y = 0.11;
+        corpse.scale.y = 0.2; // Flat charred body
         scene.add(corpse);
         
         // Burn mark on ground
@@ -3703,18 +3700,17 @@
         spawnParticles(this.mesh.position, 0xFFFFFF, 10); // White flash
         spawnParticles(this.mesh.position, 0x444444, 8); // Gray smoke
         
-        // Blackened corpse
-        const corpseGeo = new THREE.CircleGeometry(0.6, 16);
+        // Blackened corpse - 3D flattened body shape
+        const corpseGeo = new THREE.SphereGeometry(0.5, 8, 6);
         const corpseMat = new THREE.MeshBasicMaterial({ 
           color: 0x1a1a1a, // Very dark gray
           transparent: true,
-          opacity: 0.9,
-          side: THREE.DoubleSide
+          opacity: 0.9
         });
         const corpse = new THREE.Mesh(corpseGeo, corpseMat);
         corpse.position.copy(this.mesh.position);
-        corpse.position.y = 0.02;
-        corpse.rotation.x = -Math.PI / 2;
+        corpse.position.y = 0.11;
+        corpse.scale.y = 0.2; // Flat blackened body
         scene.add(corpse);
         
         // Smoke particles rising - use managedAnimations instead of setInterval to prevent timer accumulation
@@ -4026,18 +4022,17 @@
           head.geometry.dispose(); head.material.dispose();
         }
         
-        // Body falls (corpse without head)
-        const corpseGeo = new THREE.CircleGeometry(0.6, 16);
+        // Body falls (corpse without head) - 3D flattened body matching enemy color
+        const corpseGeo = new THREE.SphereGeometry(0.5, 8, 6);
         const corpseMat = new THREE.MeshBasicMaterial({ 
           color: enemyColor, 
           transparent: true,
-          opacity: 0.8,
-          side: THREE.DoubleSide
+          opacity: 0.85
         });
         const corpse = new THREE.Mesh(corpseGeo, corpseMat);
         corpse.position.copy(this.mesh.position);
-        corpse.position.y = 0.02;
-        corpse.rotation.x = -Math.PI / 2;
+        corpse.position.y = 0.11;
+        corpse.scale.y = 0.22; // Flat headless body
         scene.add(corpse);
         
         // Large blood splatter pool (crimson, not white!)
@@ -6585,6 +6580,8 @@
     // Expose saveData to window scope for loading screen access (FRESH IMPLEMENTATION)
     window.saveData = saveData;
     window.GameState.saveData = saveData;
+    // Bootstrap idle systems now that saveData is available
+    if (window.GameState.initIdleSystems) window.GameState.initIdleSystems(saveData);
 
     // --- ACHIEVEMENTS SYSTEM ---
     const ACHIEVEMENTS = {
@@ -10920,6 +10917,8 @@
           campActionBtn.textContent = '▶ START RUN';
         }
       }
+      // Refresh idle panel (spin wheel, account, etc.) whenever camp is opened
+      if (window.GameIdleBootstrap) window.GameIdleBootstrap.refreshPanel();
       // Update account level display whenever camp is opened
       updateAccountLevelDisplay();
       // Check for first-time camp visit
@@ -11450,20 +11449,8 @@
       // 5. Trail to Lake/Waterfall (30, -30) - South direction
       createTrail(rondelRadius * 0.5, -rondelRadius * 0.866, 30, -30);
       
-      // Spawn Portal - ground ring at player spawn position (syncs with countdown)
-      const spawnPortalOuter = new THREE.RingGeometry(1.8, 2.4, 24);
-      const spawnPortalInner = new THREE.CircleGeometry(1.8, 24);
-      const spawnPortalOuterMat = new THREE.MeshBasicMaterial({ color: 0x00FFCC, transparent: true, opacity: 0.9, side: THREE.DoubleSide });
-      const spawnPortalInnerMat = new THREE.MeshBasicMaterial({ color: 0x00FFCC, transparent: true, opacity: 0.25, side: THREE.DoubleSide });
-      const spawnPortalRing = new THREE.Mesh(spawnPortalOuter, spawnPortalOuterMat);
-      const spawnPortalDisc = new THREE.Mesh(spawnPortalInner, spawnPortalInnerMat);
-      spawnPortalRing.rotation.x = -Math.PI / 2;
-      spawnPortalDisc.rotation.x = -Math.PI / 2;
-      spawnPortalRing.position.set(12, 0.06, 0);
-      spawnPortalDisc.position.set(12, 0.05, 0);
-      scene.add(spawnPortalRing);
-      scene.add(spawnPortalDisc);
-      window.spawnPortal = { ring: spawnPortalRing, disc: spawnPortalDisc, ringMat: spawnPortalOuterMat, discMat: spawnPortalInnerMat, phase: 0, active: true };
+      // Initialise fountain/lightning spawn sequence (replaces old circle portal)
+      if (window.SpawnSequence) window.SpawnSequence.init(scene);
       
       // Farm Fields - Fill empty spaces with farm texture
       // Create large farm field background (performance optimized - single large mesh)
@@ -13062,7 +13049,7 @@
         const fx = Math.cos(fAngle) * fDist;
         const fz = Math.sin(fAngle) * fDist;
         // Skip trees in the player spawn zone (player spawns at x=12, z=0) or on roads
-        if (fx > 8 && fx < 20 && Math.abs(fz) < 5) continue; // Exclusion: player spawn portal at (12,0,0)
+        if (fx > 8 && fx < 20 && Math.abs(fz) < 5) continue; // Exclusion: player spawn area at (12,0,0)
         const fGroup = new THREE.Group();
         const fTrunk = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.3, 2.5, 6), forestTrunkMat2);
         fTrunk.position.y = 1.25;
@@ -14283,6 +14270,8 @@
       countdownActive = true;
       countdownStep = 0;
       countdownTimer = 0;
+      // Trigger fountain/lightning spawn sequence
+      if (window.SpawnSequence && player) window.SpawnSequence.play(player.mesh);
       showCountdownMessage(0);
     }
     
@@ -18658,12 +18647,8 @@
       });
       flashLights = [];
       
-      // Re-activate spawn portal for next run
-      if (window.spawnPortal) {
-        window.spawnPortal.active = true;
-        window.spawnPortal.ringMat.opacity = 0.9;
-        window.spawnPortal.discMat.opacity = 0.25;
-      }
+      // Reset fountain/lightning spawn sequence for next run
+      if (window.SpawnSequence) window.SpawnSequence.reset();
       
       // Clear any pending timeouts
       activeTimeouts.forEach(timeoutId => {
@@ -21097,29 +21082,8 @@
         });
       }
       
-      // Spawn portal animation: pulse while countdown is active, fade after game starts
-      if (window.spawnPortal && window.spawnPortal.active) {
-        window.spawnPortal.phase += dt * 4;
-        const pulse = 0.6 + Math.sin(window.spawnPortal.phase) * 0.4;
-        window.spawnPortal.ringMat.opacity = pulse;
-        window.spawnPortal.discMat.opacity = pulse * 0.3;
-        // Color cycle: teal -> bright cyan during countdown
-        const col = countdownActive ? 0x00FFFF : 0x00FFCC;
-        window.spawnPortal.ringMat.color.setHex(col);
-        window.spawnPortal.discMat.color.setHex(col);
-        // Slowly rotate
-        window.spawnPortal.ring.rotation.z += dt * 1.5;
-        // Fade out 3s after game starts
-        if (isGameActive && !countdownActive) {
-          window.spawnPortal.ringMat.opacity *= 0.97;
-          window.spawnPortal.discMat.opacity *= 0.97;
-          if (window.spawnPortal.ringMat.opacity < 0.02) {
-            window.spawnPortal.active = false;
-            window.spawnPortal.ringMat.opacity = 0;
-            window.spawnPortal.discMat.opacity = 0;
-          }
-        }
-      }
+      // Fountain/lightning spawn sequence update
+      if (window.SpawnSequence) window.SpawnSequence.update(dt);
 
       // Underwater chest shimmer animation
       if (window.underwaterChest && !window.underwaterChest.userData.collected) {

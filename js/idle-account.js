@@ -122,7 +122,19 @@ window.GameAccount = (function () {
       html += '<input class="acc-name-input" type="text" value="' + _esc(acc.accountName) + '" maxlength="24" placeholder="Name">';
       html += '<input class="acc-icon-input" type="text" value="' + _esc(acc.profileIcon) + '" maxlength="4" placeholder="Icon">';
       html += '<button class="acc-save-btn">Save</button>';
-      html += '</div></div>';
+      html += '</div>';
+      // Cloud save / login section
+      var isSignedIn = window.GameAuth && window.GameAuth.getCurrentUser && window.GameAuth.getCurrentUser();
+      html += '<div style="margin-top:12px;padding-top:10px;border-top:1px solid rgba(93,173,226,0.3);text-align:center;">';
+      if (isSignedIn) {
+        html += '<div style="font-size:12px;color:#2ecc71;margin-bottom:6px;">✅ Signed in — cloud save active</div>';
+        html += '<button class="idle-btn" id="acc-signout-btn" style="font-size:12px;padding:4px 12px;">Sign Out</button>';
+      } else {
+        html += '<div style="font-size:12px;color:#aaa;margin-bottom:6px;">☁️ Sign in to sync your progress across devices</div>';
+        html += '<button class="idle-btn" id="acc-signin-btn" style="font-size:12px;padding:4px 14px;">🔑 Sign In</button>';
+      }
+      html += '</div>';
+      html += '</div>';
     } else if (active === 1) {
       var stats = saveData.stats || {};
       var base = acc.baseStats || {};
@@ -175,6 +187,37 @@ window.GameAccount = (function () {
         setProfileName(n, saveData);
         setProfileIcon(ic, saveData);
         renderAccountPanel(saveData, container);
+      });
+    }
+    var signinBtn = container.querySelector('#acc-signin-btn');
+    if (signinBtn && window.GameAuth) {
+      signinBtn.addEventListener('click', function () {
+        window.GameAuth.initAuth(function () {
+          window.GameAuth.renderAuthUI(function (user) {
+            if (user && window.GameAuth.loadFromCloud) {
+              window.GameAuth.loadFromCloud(function (err, cloudSave) {
+                if (!err && cloudSave && window.GameState && window.GameState.saveData) {
+                  // merge and refresh
+                  var local = window.GameState.saveData;
+                  var localTs = (local.idle && local.idle.lastTickTime) || 0;
+                  var cloudTs = (cloudSave.idle && cloudSave.idle.lastTickTime) || 0;
+                  if (cloudTs > localTs) Object.assign(local, cloudSave);
+                }
+                renderAccountPanel(saveData, container);
+              });
+            } else {
+              renderAccountPanel(saveData, container);
+            }
+          });
+        });
+      });
+    }
+    var signoutBtn = container.querySelector('#acc-signout-btn');
+    if (signoutBtn && window.GameAuth) {
+      signoutBtn.addEventListener('click', function () {
+        window.GameAuth.signOut(function () {
+          renderAccountPanel(saveData, container);
+        });
       });
     }
   }
