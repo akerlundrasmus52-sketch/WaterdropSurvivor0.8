@@ -26,7 +26,11 @@ const RENDERER_CONFIG = {
   shadowFrustumHalfSize: 45,
   // Directional light shadow quality settings
   shadowRadius: 3,   // Soft shadow blur - slightly sharper for quality
-  shadowBias: -0.0003 // Prevent shadow acne with better bias
+  shadowBias: -0.0003, // Prevent shadow acne with better bias
+  // Split-resolution: world/terrain renders at a reduced pixel ratio to boost baseline FPS.
+  // UI and HTML overlays are unaffected (they always render at native device resolution).
+  worldPixelRatio: 0.85,   // 3D world render scale (< 1.0 = lower resolution = faster)
+  uiPixelRatio: 1.0        // Reserved: HTML/CSS UI always renders at native resolution
 };
 
 window.GameRenderer = {

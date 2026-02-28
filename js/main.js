@@ -15237,8 +15237,8 @@
           renderer.shadowMap.type = THREE.PCFSoftShadowMap;
           window.dirLight.shadow.mapSize.width = 1024;
           window.dirLight.shadow.mapSize.height = 1024;
-          // Reduced pixel ratio for balanced quality/performance
-          renderer.setPixelRatio(0.75);
+          // Split-resolution: medium tier uses world pixel ratio scale
+          renderer.setPixelRatio(Math.min(window.devicePixelRatio, RENDERER_CONFIG.worldPixelRatio * 0.9));
           break;
         
         case 'high':
@@ -15247,8 +15247,8 @@
           renderer.shadowMap.type = THREE.PCFSoftShadowMap;
           window.dirLight.shadow.mapSize.width = 2048;
           window.dirLight.shadow.mapSize.height = 2048;
-          // Cap at 1x device ratio for maximum visual quality while maintaining 60 FPS
-          renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.0));
+          // Apply split-resolution world scale: UI/HTML layers stay at full native resolution
+          renderer.setPixelRatio(Math.min(window.devicePixelRatio, RENDERER_CONFIG.worldPixelRatio));
           break;
       }
       
@@ -15295,6 +15295,9 @@
       // Renderer
       renderer = new THREE.WebGLRenderer({ antialias: true });
       renderer.setSize(window.innerWidth, window.innerHeight);
+      // Split-resolution: render the 3D world at a reduced pixel ratio to boost FPS.
+      // HTML/CSS UI layers are unaffected and always render at full native resolution.
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, RENDERER_CONFIG.worldPixelRatio));
       renderer.shadowMap.enabled = true;
       renderer.shadowMap.type = THREE.PCFSoftShadowMap;
       const gameContainer = document.getElementById('game-container');
@@ -17530,6 +17533,9 @@
         
         // NEW: Centered LEVEL UP text animation (grow → shrink → fade)
         createCenteredLevelUpText();
+
+        // Performance: drop to low pixel ratio during level-up transition to avoid GPU spike
+        if (renderer) renderer.setPixelRatio(0.55);
       } catch(e) {
         console.error('[LevelUp] Pre-modal synchronous error:', e);
       }
@@ -17548,9 +17554,12 @@
       setTimeout(() => {
         try {
           showUpgradeModal();
+          // Restore world pixel ratio now that the heavy transition is done
+          if (renderer) renderer.setPixelRatio(Math.min(window.devicePixelRatio, RENDERER_CONFIG.worldPixelRatio));
         } catch(e) {
           console.error('[LevelUp] showUpgradeModal error:', e);
           // Fallback: resume game so player isn't stuck
+          if (renderer) renderer.setPixelRatio(Math.min(window.devicePixelRatio, RENDERER_CONFIG.worldPixelRatio));
           levelUpPending = false;
           setGamePaused(false);
         }
@@ -17788,8 +17797,8 @@
       // Uses BloodSystem with blue water colors for performance (pool-based, no GC spikes)
       const pos = player.mesh.position;
       if (window.BloodSystem) {
-        // Main water burst — blue drops spraying outward and upward
-        window.BloodSystem.emitBurst(pos, 35, {
+        // Main water burst — blue drops spraying outward and upward (reduced count for performance)
+        window.BloodSystem.emitBurst(pos, 20, {
           spreadXZ: 0.5,
           spreadY: 1.4,
           minLife: 60,
@@ -17799,8 +17808,8 @@
           color1: 0x5DADE2, // water blue
           color2: 0x85C1E9  // lighter blue
         });
-        // White sparkle droplets (spray highlight)
-        window.BloodSystem.emitBurst(pos, 18, {
+        // White sparkle droplets (spray highlight, reduced count for performance)
+        window.BloodSystem.emitBurst(pos, 10, {
           spreadXZ: 0.35,
           spreadY: 1.8,
           minLife: 40,
@@ -17810,10 +17819,10 @@
           color1: 0xDDF3FF,
           color2: 0xFFFFFF
         });
-        // Delayed secondary drips — fly upward then drip down
+        // Delayed secondary drips — fly upward then drip down (reduced count for performance)
         setTimeout(() => {
           if (!player || !player.mesh) return;
-          window.BloodSystem.emitBurst(player.mesh.position, 20, {
+          window.BloodSystem.emitBurst(player.mesh.position, 12, {
             spreadXZ: 0.25,
             spreadY: 1.0,
             minLife: 70,
@@ -18652,6 +18661,8 @@
       }
 
       try {
+      // Shared active-hold state: only one card can be held at a time
+      let activeHold = null; // { timer, card } or null
       choices.forEach((u, index) => {
         const card = document.createElement('div');
         card.className = 'upgrade-card';
@@ -18694,48 +18705,22 @@
         const corner = corners[index % 4];
         card.style.animation = `swooshFrom${corner} 0.5s ease-out ${index * 0.1}s forwards`;
         
-        let autoConfirmTimer = null;
-        card.onclick = () => {
+        // Inject the melt-shadow hold-ring element
+        const holdRingEl = document.createElement('div');
+        holdRingEl.className = 'hold-ring';
+        card.appendChild(holdRingEl);
+
+        // Shared "apply and close" logic called when hold completes
+        const applyUpgradeAndClose = () => {
           const allCards = list.querySelectorAll('.upgrade-card');
-          
-          // First press: highlight chosen card, then auto-confirm after 0.1 seconds
-          if (card.dataset.selected !== '1') {
-            // First press: highlight this card, deselect others
-            allCards.forEach(c => {
-              c.dataset.selected = '';
-              c.style.opacity = '0.45';
-              c.style.transform = 'scale(1)';
-              c.style.outline = 'none';
-              c.style.boxShadow = '';
-              c.classList.remove('lightning-selected');
-            });
-            card.dataset.selected = '1';
-            card.style.opacity = '1';
-            card.style.transform = 'scale(1.06)';
-            // Lightning edge glow effect on first click
-            card.classList.add('lightning-selected');
-            setTimeout(() => card.classList.remove('lightning-selected'), 500);
-            // Color the highlight based on upgrade rarity/type
-            let glowColor = '#00FF88'; // green default
-            if (card.classList.contains('rarity-rare')) glowColor = '#4499FF';
-            else if (card.classList.contains('rarity-epic')) glowColor = '#FF8800';
-            else if (card.classList.contains('rarity-legendary')) glowColor = '#FF2222';
-            card.style.outline = `3px solid ${glowColor}`;
-            card.style.boxShadow = `0 0 18px ${glowColor}, 0 0 6px ${glowColor}`;
-            // Auto-confirm after 0.1 seconds; store timer to allow cancellation
-            autoConfirmTimer = setTimeout(() => { autoConfirmTimer = null; if (card.dataset.selected === '1') card.click(); }, 100);
-            return;
-          }
-          
-          // Confirm: clear pending auto-confirm timer, apply upgrade
-          if (autoConfirmTimer) { clearTimeout(autoConfirmTimer); autoConfirmTimer = null; }
           allCards.forEach(c => {
             c.style.pointerEvents = 'none';
             c.style.opacity = '0.5';
+            c.classList.remove('holding');
           });
-          
+
           playSound('upgrade'); // "Wooooaaa" sound after picking upgrade
-          
+
           // Phase 4: Wrap in try-catch to ensure modal always closes
           try {
             u.apply();
@@ -18745,7 +18730,7 @@
             console.error('Error applying upgrade:', error);
             if (window.GameDebug) window.GameDebug.oshot('upgrade_err_' + (u.id || 'unk'), 'Upgrade apply error ' + (u.id || '') + ': ' + error.message, error.stack);
           }
-          
+
           // Always close modal
           modal.style.display = 'none';
           modal.querySelector('h2').innerText = 'LEVEL UP!';
@@ -18755,7 +18740,7 @@
           const skipBtn = document.getElementById('levelup-skip-btn');
           if (skipBtn) skipBtn.style.display = 'none';
           clearTimeout(window.levelupSkipTimeoutId);
-          
+
           // Restore camera position and projection after level-up
           if (savedCameraPosition) {
             camera.position.set(savedCameraPosition.x, savedCameraPosition.y, savedCameraPosition.z);
@@ -18766,7 +18751,7 @@
             camera.updateProjectionMatrix();
             savedCameraPosition = null; // Clear after restoration
           }
-          
+
           // Check for Double Upgrade Chance bonus (only on the first pick, not on bonus rounds)
           if (!isBonusRound && playerStats.doubleUpgradeChance > 0) {
             const bonusChance = Math.min(1.0, playerStats.doubleUpgradeChance);
@@ -18784,19 +18769,19 @@
               return;
             }
           }
-          
+
           forceGameUnpause();
-          
+
           // Resume combo timer after level-up
           if (comboState.pausedAt) {
             const pauseDuration = Date.now() - comboState.pausedAt;
             comboState.lastKillTime += pauseDuration;
             comboState.pausedAt = null;
           }
-          
+
           lastHudUpdateMs = 0; // Force HUD refresh after level-up
           updateHUD();
-          
+
           // Re-enable pointer events after closing (for next level up)
           setTimeout(() => {
             allCards.forEach(c => {
@@ -18809,6 +18794,70 @@
             });
           }, 500);
         };
+
+        let holdTimer = null;
+
+        // Hold interaction: press and hold for 450ms to confirm upgrade
+        card.addEventListener('pointerdown', (e) => {
+          if (e.button !== undefined && e.button !== 0) return; // Left-click/touch only
+          e.preventDefault();
+
+          // Cancel any in-progress hold on another card
+          if (activeHold && activeHold.card !== card) {
+            clearTimeout(activeHold.timer);
+            activeHold.card.classList.remove('holding');
+            activeHold.card.dataset.selected = '';
+            activeHold.card.style.opacity = '0.5';
+            activeHold.card.style.transform = 'scale(1)';
+            activeHold = null;
+          }
+          if (holdTimer) return; // Already holding this card
+
+          // Use pointer capture so pointerup fires even if pointer leaves the card
+          card.setPointerCapture(e.pointerId);
+
+          // Dim all other cards, highlight this one
+          const allCards = list.querySelectorAll('.upgrade-card');
+          allCards.forEach(c => {
+            c.dataset.selected = '';
+            c.style.opacity = '0.5';
+            c.style.transform = 'scale(1)';
+            c.classList.remove('holding');
+          });
+          card.dataset.selected = '1';
+          card.style.opacity = '1';
+          card.style.transform = 'scale(1.04)';
+
+          // Start melt-shadow animation on this card
+          card.classList.add('holding');
+
+          // Confirm after 450ms hold duration
+          holdTimer = setTimeout(() => {
+            holdTimer = null;
+            activeHold = null;
+            // Guard: only apply if the modal is still visible and card is still selected
+            if (card.dataset.selected === '1' && modal.style.display !== 'none') {
+              applyUpgradeAndClose();
+            }
+          }, 450);
+          activeHold = { timer: holdTimer, card };
+        });
+
+        // Cancel hold if released or interrupted before timer fires
+        const cancelHold = () => {
+          if (!holdTimer) return; // Timer already fired (hold completed) — nothing to cancel
+          clearTimeout(holdTimer);
+          holdTimer = null;
+          if (activeHold && activeHold.card === card) activeHold = null;
+          card.classList.remove('holding');
+          // Restore this card's opacity (still selected, just not confirmed)
+          if (card.dataset.selected === '1') {
+            card.style.opacity = '1';
+            card.style.transform = 'scale(1.04)';
+          }
+        };
+        card.addEventListener('pointerup', cancelHold);
+        card.addEventListener('pointercancel', cancelHold);
         list.appendChild(card);
       });
       } catch(cardErr) {

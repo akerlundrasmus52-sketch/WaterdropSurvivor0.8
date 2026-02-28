@@ -1396,6 +1396,26 @@
       100% { box-shadow: 0 0 0 4px rgba(4,8,18,0.97), 0 2px 6px rgba(0,0,0,0.5), inset 0 0 0 rgba(255,255,255,0); }
     }
 
+    /* Glassy inward press effect for UI buttons — replaces white flash */
+    @keyframes btn-glass-press {
+      0%   { box-shadow: 0 6px 0 #3a2a21, 0 8px 15px rgba(0,0,0,0.3), inset 0 0 0 rgba(255,255,255,0); }
+      35%  { box-shadow: 0 1px 0 #3a2a21, 0 2px 6px rgba(0,0,0,0.4), inset 0 0 20px rgba(200,230,255,0.22), inset 0 0 8px rgba(255,255,255,0.14); }
+      100% { box-shadow: 0 6px 0 #3a2a21, 0 8px 15px rgba(0,0,0,0.3), inset 0 0 0 rgba(255,255,255,0); }
+    }
+
+    /* Melt-shadow inward sweep for hold interactions */
+    @keyframes melt-shadow-inward {
+      0%   { opacity: 0; }
+      20%  { opacity: 0.55; }
+      100% { opacity: 0.95; }
+    }
+
+    /* Rarity-tinted hold ring pulses from center outward while holding */
+    @keyframes hold-ring-pulse {
+      0%   { transform: scale(0.2); opacity: 0.9; }
+      100% { transform: scale(1);   opacity: 0; }
+    }
+
     .upgrade-card {
       background: linear-gradient(135deg, #1a1e2e 0%, #0d1020 100%);
       background-image: 
@@ -1424,6 +1444,38 @@
       border-radius: 12px 12px 0 0;
       pointer-events: none;
       z-index: 1;
+    }
+
+    /* Melt-shadow overlay: black fog that sweeps inward from edges on hold */
+    .upgrade-card::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 10px;
+      background: radial-gradient(ellipse at center, transparent 25%, rgba(0,0,0,0.92) 75%);
+      opacity: 0;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    /* Rarity-tinted hold ring: expands from center while button is held */
+    .upgrade-card .hold-ring {
+      position: absolute;
+      inset: 0;
+      border-radius: 10px;
+      border: 3px solid var(--rarity-glow-color, rgba(200,230,255,0.7));
+      pointer-events: none;
+      z-index: 11;
+      opacity: 0;
+      transform: scale(0.2);
+    }
+
+    .upgrade-card.holding::after {
+      animation: melt-shadow-inward 0.45s ease-in forwards;
+    }
+
+    .upgrade-card.holding .hold-ring {
+      animation: hold-ring-pulse 0.45s ease-out forwards;
     }
 
     .upgrade-card:hover {
@@ -1473,6 +1525,7 @@
       border-color: #27ae60;
       background: linear-gradient(135deg, #0d1a12 0%, #081210 100%);
       animation: rarity-glow-common 3s ease-in-out infinite;
+      --rarity-glow-color: rgba(39,174,96,0.8);
     }
     @keyframes rarity-glow-common {
       0%, 100% { box-shadow: 0 0 0 4px rgba(4,8,18,0.97), 0 4px 12px rgba(0,0,0,0.5), 0 0 8px rgba(39,174,96,0.15); }
@@ -1483,6 +1536,7 @@
       border-color: #3498DB;
       background: linear-gradient(135deg, #0d1520 0%, #081018 100%);
       animation: rarity-glow-rare 2.5s ease-in-out infinite;
+      --rarity-glow-color: rgba(52,152,219,0.9);
     }
     .upgrade-card.rarity-rare:hover {
       box-shadow: 0 0 0 4px rgba(4,8,18,0.97), 0 0 20px rgba(52,152,219,0.7), 0 0 35px rgba(52,152,219,0.4);
@@ -1497,6 +1551,7 @@
       border-color: #e67e22;
       background: linear-gradient(135deg, #1a1005 0%, #120a03 100%);
       animation: rarity-glow-epic 2s ease-in-out infinite;
+      --rarity-glow-color: rgba(230,126,34,0.9);
     }
     .upgrade-card.rarity-epic:hover {
       box-shadow: 0 0 0 4px rgba(4,8,18,0.97), 0 0 22px rgba(230,126,34,0.7), 0 0 40px rgba(230,126,34,0.4);
@@ -1511,6 +1566,7 @@
       border-color: #e74c3c;
       background: linear-gradient(135deg, #1a0808 0%, #120404 100%);
       animation: legendary-glow 2s ease-in-out infinite alternate;
+      --rarity-glow-color: rgba(231,76,60,0.95);
     }
     .upgrade-card.rarity-legendary:hover {
       box-shadow: 0 0 0 4px rgba(4,8,18,0.97), 0 0 25px rgba(231,76,60,0.9), 0 0 45px rgba(231,76,60,0.5);
@@ -1521,6 +1577,7 @@
       border-color: #FF4444;
       background: linear-gradient(135deg, #200505 0%, #180202 100%);
       animation: mythical-glow 1.5s ease-in-out infinite alternate;
+      --rarity-glow-color: rgba(255,68,68,1);
     }
     .upgrade-card.rarity-mythical:hover {
       box-shadow: 0 0 0 4px rgba(4,8,18,0.97), 0 0 28px rgba(255,68,68,0.9), 0 0 50px rgba(255,68,68,0.6);
@@ -1798,8 +1855,8 @@
     
     .btn:active {
       transform: translateY(4px) scale(0.98);
-      box-shadow: 0 0 30px rgba(255,255,255,0.8);
-      animation: lightning-flash 0.3s ease;
+      box-shadow: 0 0 0 #3a2a21, 0 2px 8px rgba(0,0,0,0.5);
+      animation: btn-glass-press 0.4s ease-out;
     }
     
     .btn:active::before {
@@ -1842,8 +1899,8 @@
     
     .btn-small:active {
       transform: translateY(3px) scale(0.98);
-      box-shadow: 0 0 30px rgba(255,255,255,0.8);
-      animation: lightning-flash 0.3s ease;
+      box-shadow: 0 0 0 #3a2a21, 0 2px 6px rgba(0,0,0,0.4);
+      animation: btn-glass-press 0.4s ease-out;
     }
     
     .btn-small:active::before {
@@ -2125,7 +2182,7 @@
 
     .upgrade-buy-btn:not(:disabled):active {
       transform: scale(0.95);
-      animation: lightning-flash 0.3s ease;
+      animation: btn-glass-press 0.4s ease-out;
     }
 
     .upgrade-buy-btn:not(:disabled):active::before {
@@ -2220,8 +2277,8 @@
 
     .back-btn:active {
       transform: translateX(-50%) translateY(4px) scale(0.98);
-      box-shadow: 0 0 30px rgba(255,255,255,0.8);
-      animation: lightning-flash 0.3s ease;
+      box-shadow: 0 0 0 #3a2a21, 0 2px 8px rgba(0,0,0,0.4);
+      animation: btn-glass-press 0.4s ease-out;
     }
 
     .back-btn:active::before {
