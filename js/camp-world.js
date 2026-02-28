@@ -36,6 +36,10 @@
     { id: 'inventory',          x:  9,  z:-13,  label: 'Inventory',        icon: '📦' },
     { id: 'campBoard',          x: -3.5, z: 0,  label: 'Camp Board',       icon: '📋' },
     { id: 'specialAttacks',     x:  9,  z:  7,  label: 'Special Attacks',  icon: '⚡' },
+    { id: 'warehouse',          x: -9,  z:  7,  label: 'Warehouse',        icon: '🏪' },
+    { id: 'tavern',             x: -5,  z: 14,  label: 'Tavern',           icon: '🍺' },
+    { id: 'shop',               x:  5,  z: 14,  label: 'Shop',             icon: '🛒' },
+    { id: 'prestige',           x:  0,  z:-19,  label: 'Prestige Altar',   icon: '✨' },
   ];
 
   // ──────────────────────────────────────────────────────────
@@ -478,7 +482,9 @@
       color: 0x000000,
       transparent: true,
       opacity: 0.3,
-      depthWrite: false
+      depthWrite: false,
+      side: THREE.DoubleSide,
+      alphaTest: 0.01
     });
     const shadowDisc = new THREE.Mesh(shadowGeo, shadowMat);
     shadowDisc.rotation.x = -Math.PI / 2;
@@ -506,6 +512,10 @@
       case 'inventory':          return _buildInventoryStorage(def);
       case 'campBoard':          return _buildCampBoard(def);
       case 'specialAttacks':     return _buildSpecialAttacksArena(def);
+      case 'warehouse':          return _buildWarehouse(def);
+      case 'tavern':             return _buildTavern(def);
+      case 'shop':               return _buildShop(def);
+      case 'prestige':           return _buildPrestigeAltar(def);
       default:                   return _buildGenericBuilding(def);
     }
   }
@@ -1178,7 +1188,227 @@
     return grp;
   }
 
-  // ── Mesh creation helper ─────────────────────────────────
+  // ── Warehouse ─ storage building with crates ─────────────
+  function _buildWarehouse(def) {
+    const THREE = T();
+    const grp = new THREE.Group();
+    grp.position.set(def.x, 0, def.z);
+
+    // Base
+    const baseGeo = new THREE.BoxGeometry(6, 0.2, 5);
+    grp.add(_mesh(baseGeo, _lambert(0x1a120a)));
+
+    // Walls
+    const wallGeo = new THREE.BoxGeometry(5.5, 3.5, 4.5);
+    const walls = _mesh(wallGeo, _lambert(0x7a5c3a));
+    walls.position.y = 1.95;
+    walls.castShadow = true;
+    grp.add(walls);
+
+    // Flat roof with slight overhang
+    const roofGeo = new THREE.BoxGeometry(6.2, 0.3, 5.2);
+    const roof = _mesh(roofGeo, _lambert(0x5c3d1e));
+    roof.position.y = 3.85;
+    roof.castShadow = true;
+    grp.add(roof);
+
+    // Door (large double door)
+    const doorGeo = new THREE.BoxGeometry(1.6, 2.4, 0.15);
+    const door = _mesh(doorGeo, _lambert(0x3d2005));
+    door.position.set(0, 1.4, 2.35);
+    grp.add(door);
+
+    // Storage crates outside
+    const cratePositions = [[-2.2, 0], [2.2, 0], [-2.2, -1], [2.2, -1]];
+    cratePositions.forEach(([cx, cz]) => {
+      const cGeo = new THREE.BoxGeometry(0.9, 0.9, 0.9);
+      const crate = _mesh(cGeo, _lambert(0xc8a870));
+      crate.position.set(cx, 0.45, cz - 2.8);
+      crate.rotation.y = Math.random() * 0.4;
+      crate.castShadow = true;
+      grp.add(crate);
+    });
+
+    // Lantern
+    const lanternGeo = new THREE.BoxGeometry(0.3, 0.4, 0.3);
+    const lantern = _mesh(lanternGeo, _mat(0xffcc44, 0xffcc44, 0.8));
+    lantern.position.set(0, 3.3, 2.4);
+    const lLight = new THREE.PointLight(0xffcc44, 1.0, 6, 2);
+    lLight.position.copy(lantern.position);
+    grp.add(lantern);
+    grp.add(lLight);
+
+    _addNameSign(grp, def.label, 0, 4.6, 0);
+    return grp;
+  }
+
+  // ── Tavern ─ cozy inn with warm interior glow ────────────
+  function _buildTavern(def) {
+    const THREE = T();
+    const grp = new THREE.Group();
+    grp.position.set(def.x, 0, def.z);
+
+    // Foundation
+    const baseGeo = new THREE.BoxGeometry(6, 0.25, 5.5);
+    grp.add(_mesh(baseGeo, _lambert(0x2e1a0a)));
+
+    // Walls (warm beige/cream)
+    const wallGeo = new THREE.BoxGeometry(5.5, 4, 5);
+    const walls = _mesh(wallGeo, _lambert(0xa07848));
+    walls.position.y = 2.25;
+    walls.castShadow = true;
+    grp.add(walls);
+
+    // Sloped roof
+    const roofGeo = new THREE.CylinderGeometry(0, 4.2, 2.2, 4);
+    const roof = _mesh(roofGeo, _lambert(0x8b2500));
+    roof.rotation.y = Math.PI / 4;
+    roof.position.y = 5.35;
+    roof.castShadow = true;
+    grp.add(roof);
+
+    // Door
+    const doorGeo = new THREE.BoxGeometry(1.2, 2.5, 0.15);
+    const door = _mesh(doorGeo, _lambert(0x3d1a05));
+    door.position.set(0, 1.5, 2.6);
+    grp.add(door);
+
+    // Hanging sign
+    const signPostGeo = new THREE.BoxGeometry(0.1, 1.5, 0.1);
+    const signPost = _mesh(signPostGeo, _lambert(0x4d2c0a));
+    signPost.position.set(1.8, 3.5, 2.7);
+    grp.add(signPost);
+    const signBoardGeo = new THREE.BoxGeometry(1.4, 0.7, 0.1);
+    const signBoard = _mesh(signBoardGeo, _lambert(0xd4a838));
+    signBoard.position.set(1.1, 3.1, 2.75);
+    grp.add(signBoard);
+
+    // Warm glow from windows
+    const winLight = new THREE.PointLight(0xff9944, 1.5, 8, 2);
+    winLight.position.set(0, 2.5, 1);
+    grp.add(winLight);
+
+    // Lanterns on either side
+    for (let s = -1; s <= 1; s += 2) {
+      const lGeo = new THREE.BoxGeometry(0.3, 0.5, 0.3);
+      const lantern = _mesh(lGeo, _mat(0xffcc44, 0xffcc44, 0.9));
+      lantern.position.set(s * 2.4, 3.8, 2.6);
+      const lLight = new THREE.PointLight(0xffcc44, 1.2, 6, 2);
+      lLight.position.copy(lantern.position);
+      grp.add(lantern);
+      grp.add(lLight);
+    }
+
+    _addNameSign(grp, def.label, 0, 6.0, 0);
+    return grp;
+  }
+
+  // ── Shop ─ market stall with colourful awning ────────────
+  function _buildShop(def) {
+    const THREE = T();
+    const grp = new THREE.Group();
+    grp.position.set(def.x, 0, def.z);
+
+    // Base platform
+    const baseGeo = new THREE.BoxGeometry(5.5, 0.25, 5);
+    grp.add(_mesh(baseGeo, _lambert(0x1a1208)));
+
+    // Walls (light stone)
+    const wallGeo = new THREE.BoxGeometry(5, 3.5, 4.5);
+    const walls = _mesh(wallGeo, _lambert(0xd4c8a0));
+    walls.position.y = 2.0;
+    walls.castShadow = true;
+    grp.add(walls);
+
+    // Flat roof
+    const roofGeo = new THREE.BoxGeometry(5.8, 0.25, 5.3);
+    const roof = _mesh(roofGeo, _lambert(0x4a8c3a));
+    roof.position.y = 3.85;
+    grp.add(roof);
+
+    // Awning (angled)
+    const awningGeo = new THREE.BoxGeometry(5.4, 0.1, 1.6);
+    const awning = _mesh(awningGeo, _mat(0xFFD700, 0xCC8800, 0.3));
+    awning.position.set(0, 3.5, 2.8);
+    awning.rotation.x = -0.3;
+    grp.add(awning);
+
+    // Counter / display table
+    const counterGeo = new THREE.BoxGeometry(3.5, 0.8, 0.9);
+    const counter = _mesh(counterGeo, _lambert(0x8b6914));
+    counter.position.set(0, 1.0, 2.4);
+    grp.add(counter);
+
+    // Gold coin stack (decorative)
+    for (let i = 0; i < 3; i++) {
+      const coinGeo = new THREE.CylinderGeometry(0.22, 0.22, 0.08, 8);
+      const coin = _mesh(coinGeo, _mat(0xFFD700, 0xCC8800, 0.4));
+      coin.position.set(-0.6 + i * 0.6, 1.5, 2.4);
+      grp.add(coin);
+    }
+
+    // Welcoming light
+    const shopLight = new THREE.PointLight(0xffe066, 1.4, 7, 2);
+    shopLight.position.set(0, 3, 2);
+    grp.add(shopLight);
+
+    _addNameSign(grp, def.label, 0, 5.0, 0);
+    return grp;
+  }
+
+  // ── Prestige Altar ─ glowing stone ring altar ────────────
+  function _buildPrestigeAltar(def) {
+    const THREE = T();
+    const grp = new THREE.Group();
+    grp.position.set(def.x, 0, def.z);
+
+    // Stone platform
+    const platformGeo = new THREE.CylinderGeometry(4.5, 4.8, 0.5, 12);
+    grp.add(_mesh(platformGeo, _lambert(0x303040)));
+
+    // Inner raised ring
+    const ringGeo = new THREE.CylinderGeometry(3.0, 3.2, 0.8, 12);
+    grp.add(_mesh(ringGeo, _lambert(0x252535)));
+
+    // Standing rune stones around the circle
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2;
+      const r = 3.5;
+      const stoneGeo = new THREE.BoxGeometry(0.4, 2.0 + (i % 2) * 0.8, 0.4);
+      const stoneMat = new THREE.MeshPhongMaterial({
+        color: 0x4a3f6b,
+        emissive: 0x8844ff,
+        emissiveIntensity: 0.4
+      });
+      const stone = _mesh(stoneGeo, stoneMat);
+      stone.position.set(Math.sin(a) * r, 1.4 + (i % 2) * 0.4, Math.cos(a) * r);
+      stone.castShadow = true;
+      grp.add(stone);
+    }
+
+    // Central glowing gem
+    const gemGeo = new THREE.OctahedronGeometry(0.7, 0);
+    const gemMat = new THREE.MeshPhongMaterial({
+      color: 0xcc88ff, emissive: 0x8800ff, emissiveIntensity: 1.2,
+      transparent: true, opacity: 0.9
+    });
+    const gem = _mesh(gemGeo, gemMat);
+    gem.position.y = 2.0;
+    grp.add(gem);
+
+    // Orbiting light
+    const altarLight = new THREE.PointLight(0x8800ff, 3.0, 14, 2);
+    altarLight.position.set(0, 2.5, 0);
+    grp.add(altarLight);
+
+    // Second warm gold light
+    const goldLight = new THREE.PointLight(0xFFD700, 1.5, 8, 2);
+    goldLight.position.set(0, 1.5, 0);
+    grp.add(goldLight);
+
+    _addNameSign(grp, def.label, 0, 5.0, 0);
+    return grp;
+  }
   function _mesh(geo, mat) {
     const m = new T().Mesh(geo, mat);
     m.receiveShadow = true;
@@ -1530,6 +1760,53 @@
       }
     }
     requestAnimationFrame(animStep);
+
+    // Golden particle burst to celebrate the unlock
+    if (_campScene) {
+      const PART_COUNT = 40;
+      const pGeo = new THREE.BufferGeometry();
+      const pPos = new Float32Array(PART_COUNT * 3);
+      const pVel = [];
+      for (let i = 0; i < PART_COUNT; i++) {
+        const a = Math.random() * Math.PI * 2;
+        const r = Math.random() * 2.5;
+        pPos[i * 3]     = grp.position.x + Math.sin(a) * r;
+        pPos[i * 3 + 1] = grp.position.y + 0.5 + Math.random() * 2;
+        pPos[i * 3 + 2] = grp.position.z + Math.cos(a) * r;
+        pVel.push({
+          x: (Math.random() - 0.5) * 2.5,
+          y: 2.5 + Math.random() * 3.5,
+          z: (Math.random() - 0.5) * 2.5
+        });
+      }
+      pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
+      const pMat = new THREE.PointsMaterial({
+        color: 0xFFD700, size: 0.25, transparent: true, opacity: 1.0
+      });
+      const particles = new THREE.Points(pGeo, pMat);
+      _campScene.add(particles);
+
+      const pStartMs = performance.now();
+      function animParticles() {
+        const pt = Math.min((performance.now() - pStartMs) / 1800, 1);
+        pMat.opacity = 1.0 - pt;
+        for (let i = 0; i < PART_COUNT; i++) {
+          pPos[i * 3]     += pVel[i].x * 0.016;
+          pPos[i * 3 + 1] += pVel[i].y * 0.016;
+          pPos[i * 3 + 2] += pVel[i].z * 0.016;
+          pVel[i].y -= 4 * 0.016; // gravity
+        }
+        pGeo.attributes.position.needsUpdate = true;
+        if (pt < 1) {
+          requestAnimationFrame(animParticles);
+        } else {
+          _campScene.remove(particles);
+          pGeo.dispose();
+          pMat.dispose();
+        }
+      }
+      requestAnimationFrame(animParticles);
+    }
   }
 
   // ──────────────────────────────────────────────────────────
@@ -1926,6 +2203,17 @@
     render,
     refreshBuildings,
     playBuildingUnlockAnimation: _playBuildingUnlockAnimation,
+    unlockBuilding(buildingId, saveData) {
+      if (saveData) _saveData = saveData;
+      if (_saveData && _saveData.campBuildings && _saveData.campBuildings[buildingId]) {
+        _saveData.campBuildings[buildingId].unlocked = true;
+        if (_saveData.campBuildings[buildingId].level === 0) {
+          _saveData.campBuildings[buildingId].level = 1;
+        }
+      }
+      _refreshBuildings();
+      _playBuildingUnlockAnimation(buildingId);
+    },
     onResize,
     warmUp,
   };

@@ -542,6 +542,7 @@
     const panel = document.getElementById('sa-loadout-panel');
     if (!panel) return;
     const equipped = (_saveData && _saveData.equippedSpecials) ? _saveData.equippedSpecials.slice() : [];
+    const chosenBranch = (_saveData && _saveData.specialBranch) || null;
 
     panel.innerHTML = `<h3>⚔️ SPECIAL ATTACKS (max ${MAX_EQUIPPED_SPECIALS})</h3>`;
 
@@ -551,17 +552,52 @@
     closeBtn.addEventListener('click', () => panel.classList.remove('visible'));
     panel.appendChild(closeBtn);
 
-    ALL_SPECIAL_ATTACKS.forEach(sa => {
-      const unlocked = _isUnlocked(sa);
-      const isEquipped = equipped.includes(sa.id);
-      const item = document.createElement('div');
-      item.className = 'sa-loadout-item' + (isEquipped ? ' equipped' : '') + (!unlocked ? ' locked' : '');
-      item.innerHTML = `<span style="font-size:20px">${sa.icon}</span><div><div style="font-weight:bold;color:#DDD">${sa.name}</div><div style="font-size:10px;color:#888">${sa.description}</div></div>${isEquipped ? '<span style="color:#FFD700;font-size:11px;margin-left:auto">EQUIPPED</span>' : (unlocked ? '<span style="color:#88FF88;font-size:11px;margin-left:auto">TAP TO EQUIP</span>' : '<span style="color:#888;font-size:11px;margin-left:auto">🔒 LOCKED</span>')}`;
-      if (unlocked) {
-        item.addEventListener('click', () => _toggleEquip(sa.id));
+    // Group attacks by branch
+    const starter = ALL_SPECIAL_ATTACKS.filter(sa => sa.branch === 'start');
+    const upper   = ALL_SPECIAL_ATTACKS.filter(sa => sa.branch === 'upper').sort((a, b) => a.branchOrder - b.branchOrder);
+    const lower   = ALL_SPECIAL_ATTACKS.filter(sa => sa.branch === 'lower').sort((a, b) => a.branchOrder - b.branchOrder);
+
+    const knifeUnlocked = starter.some(sa => _isUnlocked(sa));
+
+    function _renderGroup(label, attacks, branchId) {
+      const isActiveBranch = !branchId || !chosenBranch || chosenBranch === branchId;
+      const sectionLabel = document.createElement('div');
+      sectionLabel.style.cssText = `font-size:10px;color:${branchId === 'upper' ? '#FF8844' : branchId === 'lower' ? '#4488FF' : '#FFD700'};letter-spacing:2px;margin:8px 0 4px;text-transform:uppercase;padding:0 2px;opacity:${isActiveBranch ? '1' : '0.4'};`;
+      sectionLabel.textContent = label + (branchId && chosenBranch && !isActiveBranch ? ' 🔒' : '');
+      panel.appendChild(sectionLabel);
+
+      attacks.forEach(sa => {
+        const unlocked = _isUnlocked(sa);
+        const branchAccessible = isActiveBranch;
+        const isEquipped = equipped.includes(sa.id);
+        const item = document.createElement('div');
+        item.className = 'sa-loadout-item' + (isEquipped ? ' equipped' : '') + ((!unlocked || !branchAccessible) ? ' locked' : '');
+        item.style.opacity = branchAccessible ? '1' : '0.35';
+        item.innerHTML = `<span style="font-size:20px">${sa.icon}</span><div><div style="font-weight:bold;color:#DDD">${sa.name}</div><div style="font-size:10px;color:#888">${sa.description}</div></div>${isEquipped ? '<span style="color:#FFD700;font-size:11px;margin-left:auto">EQUIPPED</span>' : (unlocked && branchAccessible ? '<span style="color:#88FF88;font-size:11px;margin-left:auto">TAP TO EQUIP</span>' : '<span style="color:#888;font-size:11px;margin-left:auto">🔒 LOCKED</span>')}`;
+        if (unlocked && branchAccessible) {
+          item.addEventListener('click', () => _toggleEquip(sa.id));
+        }
+        panel.appendChild(item);
+      });
+    }
+
+    _renderGroup('— Starter Attack —', starter, null);
+
+    if (knifeUnlocked) {
+      if (!chosenBranch) {
+        const hint = document.createElement('div');
+        hint.style.cssText = 'font-size:10px;color:#FF8844;padding:6px 4px;text-align:center;';
+        hint.textContent = '⚡ Open Special Attacks to choose your branch path!';
+        panel.appendChild(hint);
       }
-      panel.appendChild(item);
-    });
+      _renderGroup('⚔️ Upper Branch', upper, 'upper');
+      _renderGroup('🛡️ Lower Branch', lower, 'lower');
+    } else {
+      const hint = document.createElement('div');
+      hint.style.cssText = 'font-size:10px;color:#888;padding:6px 4px;text-align:center;';
+      hint.textContent = '🔒 Unlock Knife Takedown to access branches';
+      panel.appendChild(hint);
+    }
   }
 
   function _toggleEquip(attackId) {

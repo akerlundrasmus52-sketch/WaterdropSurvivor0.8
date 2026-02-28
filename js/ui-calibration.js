@@ -331,14 +331,50 @@
       rh.textContent = '◤';
       el.appendChild(rh);
 
+      // ── Additional corner resize handles ─────────────────
+      const rhBR = document.createElement('div');
+      rhBR.className = 'ui-cal-resize-br'; rhBR.title = 'Drag to resize'; rhBR.textContent = '◢';
+      el.appendChild(rhBR);
+      const rhBL = document.createElement('div');
+      rhBL.className = 'ui-cal-resize-bl'; rhBL.title = 'Drag to resize'; rhBL.textContent = '◣';
+      el.appendChild(rhBL);
+      const rhTR = document.createElement('div');
+      rhTR.className = 'ui-cal-resize-tr'; rhTR.title = 'Drag to resize'; rhTR.textContent = '◥';
+      el.appendChild(rhTR);
+
+      // ── Edge resize handles ───────────────────────────────
+      const rhT = document.createElement('div');
+      rhT.className = 'ui-cal-resize-t'; rhT.title = 'Drag to resize height'; rhT.textContent = '⬆';
+      el.appendChild(rhT);
+      const rhB = document.createElement('div');
+      rhB.className = 'ui-cal-resize-b'; rhB.title = 'Drag to resize height'; rhB.textContent = '⬇';
+      el.appendChild(rhB);
+      const rhL = document.createElement('div');
+      rhL.className = 'ui-cal-resize-l'; rhL.title = 'Drag to resize width'; rhL.textContent = '⬅';
+      el.appendChild(rhL);
+      const rhR = document.createElement('div');
+      rhR.className = 'ui-cal-resize-r'; rhR.title = 'Drag to resize width'; rhR.textContent = '➡';
+      el.appendChild(rhR);
+
       // Add edit-mode class for border highlight
       el.classList.add('ui-cal-active-element');
 
-      const handle = { el, def, badge, mh, rh };
+      const handle = { el, def, badge, mh, rh, rhBR, rhBL, rhTR, rhT, rhB, rhL, rhR };
       _handles.push(handle);
 
       _bindDrag(mh, el, handle);
       _bindResize(rh, el, handle);
+      // Bottom-right: drag right/down grows element
+      _bindResizeCorner(rhBR, el, 1, 1);
+      // Bottom-left: drag left/down grows element (left edge moves)
+      _bindResizeCorner(rhBL, el, -1, 1);
+      // Top-right: drag right shrinks/grows width; drag up moves top edge up (height grows)
+      _bindResizeCorner(rhTR, el, 1, -1);
+      // Edge handles
+      _bindResizeEdge(rhT, el, 'top');
+      _bindResizeEdge(rhB, el, 'bottom');
+      _bindResizeEdge(rhL, el, 'left');
+      _bindResizeEdge(rhR, el, 'right');
     }
   }
 
@@ -348,6 +384,9 @@
       if (h.badge && h.badge.parentNode) h.badge.parentNode.removeChild(h.badge);
       if (h.mh && h.mh.parentNode) h.mh.parentNode.removeChild(h.mh);
       if (h.rh && h.rh.parentNode) h.rh.parentNode.removeChild(h.rh);
+      for (const key of ['rhBR','rhBL','rhTR','rhT','rhB','rhL','rhR']) {
+        if (h[key] && h[key].parentNode) h[key].parentNode.removeChild(h[key]);
+      }
     }
     _handles = [];
   }
@@ -465,8 +504,89 @@
     rh.addEventListener('touchstart', onDown, { passive: false });
   }
 
-  // ──────────────────────────────────────────────────────────
-  // Save / Reset helpers
+  // Resize from any corner — signX/signY: +1 = right/bottom grows, -1 = left/top grows
+  function _bindResizeCorner(handle, el, signX, signY) {
+    let startX, startY, startW, startH, startLeft, startTop;
+    let resizing = false;
+    function onDown(e) {
+      e.stopPropagation(); e.preventDefault();
+      resizing = true;
+      const pt = _getPointer(e);
+      startX = pt.x; startY = pt.y;
+      startW = el.offsetWidth; startH = el.offsetHeight;
+      const rect = el.getBoundingClientRect();
+      startLeft = rect.left; startTop = rect.top;
+      window.addEventListener('mousemove', onMove);
+      window.addEventListener('mouseup', onUp);
+      window.addEventListener('touchmove', onMove, { passive: false });
+      window.addEventListener('touchend', onUp);
+    }
+    function onMove(e) {
+      if (!resizing) return; e.preventDefault();
+      const pt = _getPointer(e);
+      const dx = (pt.x - startX) * signX;
+      const dy = (pt.y - startY) * signY;
+      const newW = Math.max(MIN_W, startW + dx);
+      const newH = Math.max(MIN_H, startH + dy);
+      el.style.width = newW + 'px';
+      el.style.height = newH + 'px';
+      // For left/top-moving corners, reposition the element
+      if (signX < 0) el.style.left = (startLeft + (startW - newW)) + 'px';
+      if (signY < 0) el.style.top  = (startTop  + (startH - newH)) + 'px';
+    }
+    function onUp() {
+      resizing = false;
+      window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp);
+      window.removeEventListener('touchmove', onMove); window.removeEventListener('touchend', onUp);
+    }
+    handle.addEventListener('mousedown', onDown);
+    handle.addEventListener('touchstart', onDown, { passive: false });
+  }
+
+  // Resize from an edge — edge: 'top'|'bottom'|'left'|'right'
+  function _bindResizeEdge(handle, el, edge) {
+    let startX, startY, startW, startH, startLeft, startTop;
+    let resizing = false;
+    function onDown(e) {
+      e.stopPropagation(); e.preventDefault();
+      resizing = true;
+      const pt = _getPointer(e);
+      startX = pt.x; startY = pt.y;
+      startW = el.offsetWidth; startH = el.offsetHeight;
+      const rect = el.getBoundingClientRect();
+      startLeft = rect.left; startTop = rect.top;
+      window.addEventListener('mousemove', onMove);
+      window.addEventListener('mouseup', onUp);
+      window.addEventListener('touchmove', onMove, { passive: false });
+      window.addEventListener('touchend', onUp);
+    }
+    function onMove(e) {
+      if (!resizing) return; e.preventDefault();
+      const pt = _getPointer(e);
+      if (edge === 'bottom') {
+        el.style.height = Math.max(MIN_H, startH + (pt.y - startY)) + 'px';
+      } else if (edge === 'top') {
+        const dy = pt.y - startY;
+        const newH = Math.max(MIN_H, startH - dy);
+        el.style.height = newH + 'px';
+        el.style.top = (startTop + (startH - newH)) + 'px';
+      } else if (edge === 'right') {
+        el.style.width = Math.max(MIN_W, startW + (pt.x - startX)) + 'px';
+      } else if (edge === 'left') {
+        const dx = pt.x - startX;
+        const newW = Math.max(MIN_W, startW - dx);
+        el.style.width = newW + 'px';
+        el.style.left = (startLeft + (startW - newW)) + 'px';
+      }
+    }
+    function onUp() {
+      resizing = false;
+      window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp);
+      window.removeEventListener('touchmove', onMove); window.removeEventListener('touchend', onUp);
+    }
+    handle.addEventListener('mousedown', onDown);
+    handle.addEventListener('touchstart', onDown, { passive: false });
+  }
   // ──────────────────────────────────────────────────────────
   function _captureLayout() {
     const layout = {};
