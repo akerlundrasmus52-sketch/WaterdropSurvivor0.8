@@ -54,7 +54,7 @@
     {
       selector: '.hud-top',
       label: '❤️ Stat Bars',
-      defaultPos: { left: '0px', top: '0px', right: null, bottom: null },
+      defaultPos: { left: null, top: '52px', right: null, bottom: null }, // centered via CSS transform
       defaultScale: 1,
     },
     {
@@ -424,6 +424,8 @@
       startY    = pt.y;
       startLeft = rect.left;
       startTop  = rect.top;
+      // Clear any CSS centering transform so pixel position is absolute
+      el.style.transform = '';
       el.style.cursor = 'grabbing';
       window.addEventListener('mousemove', onMove);
       window.addEventListener('mouseup',   onUp);

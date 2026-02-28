@@ -50,15 +50,17 @@
       transition: opacity 0.3s;
     }
 
-    /* HUD */
+    /* HUD — centered below the day/night clock */
     .hud-top {
       position: fixed;
-      top: 0;
-      left: 0;
-      padding: 20px 20px 20px 8px;
+      top: 52px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 4px 8px;
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      align-items: center;
+      gap: 6px;
       cursor: grab;
       z-index: 11;
       touch-action: none;
@@ -823,25 +825,39 @@
     @keyframes ui-fog-glow {
       0%, 100% {
         box-shadow:
-          0 0 6px 2px rgba(93,173,226,0.20),
-          0 0 14px 5px rgba(93,173,226,0.09),
-          0 0 0 1px rgba(93,173,226,0.14);
+          0 0 6px 2px rgba(93,173,226,0.25),
+          0 0 18px 7px rgba(93,173,226,0.10),
+          0 0 0 1px rgba(93,173,226,0.18),
+          -4px -2px 12px 3px rgba(0,40,80,0.30),
+          4px 2px 12px 3px rgba(0,40,80,0.30);
         opacity: 0.7;
       }
-      33% {
+      25% {
         box-shadow:
-          0 0 10px 4px rgba(93,173,226,0.38),
-          0 0 22px 9px rgba(93,173,226,0.18),
-          0 0 0 2px rgba(150,210,255,0.22),
-          0 0 5px 1px rgba(200,235,255,0.12);
+          0 0 10px 4px rgba(93,173,226,0.42),
+          0 0 26px 10px rgba(93,173,226,0.20),
+          0 0 0 2px rgba(150,210,255,0.28),
+          -6px 0 14px 4px rgba(0,50,100,0.35),
+          0 6px 14px 4px rgba(0,50,100,0.28);
         opacity: 1;
       }
-      66% {
+      50% {
         box-shadow:
-          0 0 14px 6px rgba(93,173,226,0.45),
-          0 0 30px 13px rgba(93,173,226,0.20),
-          0 0 0 2px rgba(93,173,226,0.28);
-        opacity: 0.9;
+          0 0 14px 6px rgba(93,173,226,0.50),
+          0 0 34px 14px rgba(93,173,226,0.22),
+          0 0 0 2px rgba(93,173,226,0.35),
+          4px -4px 16px 5px rgba(0,40,80,0.32),
+          -4px 4px 16px 5px rgba(0,40,80,0.32);
+        opacity: 0.95;
+      }
+      75% {
+        box-shadow:
+          0 0 8px 3px rgba(93,173,226,0.32),
+          0 0 20px 8px rgba(93,173,226,0.14),
+          0 0 0 1px rgba(150,210,255,0.22),
+          6px 2px 12px 3px rgba(0,50,100,0.30),
+          -2px -6px 12px 3px rgba(0,50,100,0.28);
+        opacity: 0.85;
       }
     }
 
@@ -1734,6 +1750,14 @@
       margin-bottom: 8px;
     }
 
+    .upgrade-icon {
+      font-size: 28px;
+      line-height: 1;
+      margin-bottom: 6px;
+      display: block;
+      filter: drop-shadow(0 0 6px rgba(255,215,0,0.5));
+    }
+
     .upgrade-desc {
       font-size: 13px;
       color: #c9d1d9; /* Lighter, more legible text */
@@ -1768,6 +1792,35 @@
     @keyframes perkPulse {
       0%, 100% { box-shadow: 0 4px 8px rgba(0,0,0,0.5), 0 0 15px rgba(155,89,182,0.3); }
       50% { box-shadow: 0 4px 8px rgba(0,0,0,0.5), 0 0 25px rgba(155,89,182,0.6); }
+    }
+
+    /* Level-up card entrance animations — cards fly in from screen corners */
+    @keyframes swooshFromTopLeft {
+      0%   { opacity: 0; transform: translate(-120%, -120%) scale(0.5) rotate(-15deg); }
+      60%  { opacity: 1; transform: translate(5%, 5%) scale(1.04) rotate(1deg); }
+      100% { opacity: 1; transform: translate(0, 0) scale(1) rotate(0deg); }
+    }
+    @keyframes swooshFromTopRight {
+      0%   { opacity: 0; transform: translate(120%, -120%) scale(0.5) rotate(15deg); }
+      60%  { opacity: 1; transform: translate(-5%, 5%) scale(1.04) rotate(-1deg); }
+      100% { opacity: 1; transform: translate(0, 0) scale(1) rotate(0deg); }
+    }
+    @keyframes swooshFromBottomLeft {
+      0%   { opacity: 0; transform: translate(-120%, 120%) scale(0.5) rotate(15deg); }
+      60%  { opacity: 1; transform: translate(5%, -5%) scale(1.04) rotate(-1deg); }
+      100% { opacity: 1; transform: translate(0, 0) scale(1) rotate(0deg); }
+    }
+    @keyframes swooshFromBottomRight {
+      0%   { opacity: 0; transform: translate(120%, 120%) scale(0.5) rotate(-15deg); }
+      60%  { opacity: 1; transform: translate(-5%, -5%) scale(1.04) rotate(1deg); }
+      100% { opacity: 1; transform: translate(0, 0) scale(1) rotate(0deg); }
+    }
+
+    /* Level-up heading fly-in */
+    @keyframes levelUpFly {
+      0%   { opacity: 0; transform: translateY(-30px) scale(0.7); letter-spacing: 8px; }
+      50%  { opacity: 1; transform: translateY(4px) scale(1.08); letter-spacing: 3px; }
+      100% { opacity: 1; transform: translateY(0) scale(1); letter-spacing: 2px; }
     }
 
     /* Damage Numbers */
@@ -2615,7 +2668,7 @@
       }
 
       .hud-top {
-        padding: 10px;
+        padding: 4px 8px; /* Keep compact in portrait; center position inherited */
       }
       
       /* PR #117: Fix button overlap in portrait mode */
@@ -2689,9 +2742,9 @@
       }
 
       .hud-top {
-        padding: 8px;
+        padding: 4px 8px;
         flex-direction: row;
-        justify-content: space-between;
+        justify-content: center;
       }
     }
     
@@ -4450,9 +4503,11 @@
   animation: ssb-countdown-pulse 0.45s ease-out forwards, living-border-breathe 3s ease-in-out infinite;
 }
 
-/* Apply to tutorial-text wrapper */
+/* tutorial-text-wrap: remove border animation that was creating a visible dark-bordered
+   black square at screen center (where the player character is) when no countdown text
+   was showing (opacity:0). The element is still used for countdown text display. */
 #tutorial-text-wrap {
-  animation: living-border-breathe 3s ease-in-out infinite;
+  animation: none;
 }
 
 
