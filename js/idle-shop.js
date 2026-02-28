@@ -146,10 +146,18 @@ window.GameShop = (function () {
 
       function doPreview() {
         if (typeof window.showItemInfoPanel !== 'function') return;
+        var previewRarity;
+        if (item.cat === 'special') {
+          previewRarity = 'legendary';
+        } else if (item.cat === 'gem') {
+          previewRarity = 'epic';
+        } else {
+          previewRarity = 'common';
+        }
         window.showItemInfoPanel(
           {
             name: item.name,
-            rarity: item.cat === 'gem' ? 'epic' : (item.cat === 'special' ? 'legendary' : 'common'),
+            rarity: previewRarity,
             icon: item.icon,
             stats: {},
             description: item.desc,

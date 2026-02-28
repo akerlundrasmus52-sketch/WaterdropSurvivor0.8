@@ -8206,6 +8206,7 @@
     // onAction() called on long-press (>400ms) or double-tap (<400ms gap)
     function attachPressHandler(el, onPreview, onAction) {
       var LONG_MS = 400;
+      var DOUBLE_TAP_MS = 400;
       var pressTimer = null;
       var lastTap = 0;
       var fired = false;
@@ -8222,7 +8223,7 @@
         if (fired) return;
         // Double-tap detection
         var now = Date.now();
-        if (now - lastTap < 400) {
+        if (now - lastTap < DOUBLE_TAP_MS) {
           lastTap = 0;
           onAction();
         } else {
