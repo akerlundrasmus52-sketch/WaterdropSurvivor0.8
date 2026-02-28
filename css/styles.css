@@ -3017,7 +3017,7 @@
     }
 
     .camp-corner-btn:hover { filter: brightness(1.3); transform: translateY(-2px); }
-    .camp-corner-btn:active { transform: translateY(0); }
+    .camp-corner-btn:active { transform: translateY(0); animation: btn-glass-press 0.4s ease-out; }
     .camp-corner-btn .corner-icon { font-size: 32px; display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; }
     .camp-corner-btn .corner-label { font-size: 10px; color: #ccc; letter-spacing: 1px; }
 
@@ -3142,7 +3142,7 @@
     }
 
     .camp-header-btn:hover { filter: brightness(1.2); }
-    .camp-header-btn:active { transform: translateY(2px); box-shadow: 1px 1px 0 #000; }
+    .camp-header-btn:active { transform: translateY(2px); box-shadow: 1px 1px 0 #000; animation: btn-glass-press 0.4s ease-out; }
 
     /* Building title dome header inside popups */
     .building-popup-title {

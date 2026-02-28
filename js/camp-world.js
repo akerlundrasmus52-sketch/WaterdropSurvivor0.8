@@ -107,6 +107,8 @@
   // ──────────────────────────────────────────────────────────
   function _buildScene() {
     const THREE = T();
+    // Reset building mesh registry so stale refs from a previous failed build don't linger
+    _buildingMeshes = {};
     _campScene = new THREE.Scene();
     _campScene.background = new THREE.Color(0x0a0c18); // deep night sky
     _campScene.fog = new THREE.FogExp2(0x120e08, 0.025); // warm hearth fog

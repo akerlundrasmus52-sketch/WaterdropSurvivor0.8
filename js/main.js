@@ -12114,13 +12114,19 @@
       if (!saveData.hasVisitedCamp) {
         saveData.hasVisitedCamp = true;
         // NEW: Only unlock Quest/Mission Hall initially - all other buildings locked
-        saveData.campBuildings.questMission.unlocked = true;
-        saveData.campBuildings.questMission.level = 1;
+        if (saveData.campBuildings && saveData.campBuildings.questMission) {
+          saveData.campBuildings.questMission.unlocked = true;
+          saveData.campBuildings.questMission.level = 1;
+        }
         // Inventory is also unlocked on first visit so players can see their items
-        saveData.campBuildings.inventory.unlocked = true;
-        saveData.campBuildings.inventory.level = 1;
-        saveData.campBuildings.campHub.unlocked = false;
-        saveData.campBuildings.campHub.level = 0;
+        if (saveData.campBuildings && saveData.campBuildings.inventory) {
+          saveData.campBuildings.inventory.unlocked = true;
+          saveData.campBuildings.inventory.level = 1;
+        }
+        if (saveData.campBuildings && saveData.campBuildings.campHub) {
+          saveData.campBuildings.campHub.unlocked = false;
+          saveData.campBuildings.campHub.level = 0;
+        }
         
         // Show first-time welcome popup - REWRITTEN with comic-magazine styling
         if (!saveData.storyQuests.welcomeShown) {
@@ -16730,7 +16736,10 @@
         document.getElementById('camp-screen').style.display = 'flex';
         const chatTab = document.getElementById('ai-chat-tab');
         if (chatTab) chatTab.classList.add('camp-mode');
-        // Defer 3D camp world setup to next tick (scene is pre-warmed at startup, so this is fast)
+        // Activate 3D camp world immediately (pre-warmed at startup) so there is no
+        // opaque-background flash before the scene becomes visible.
+        try { updateCampScreen(); } catch(e) { console.error('[Camp] initial updateCampScreen error:', e); }
+        // Defer a second pass to handle async DOM settle and refresh rage-combat loadout
         const CAMP_ACTIVATION_RETRY_DELAY_MS = 80;
         setTimeout(() => {
           try { updateCampScreen(); } catch(e) { console.error('[Camp] updateCampScreen error:', e); }
@@ -16991,9 +17000,9 @@
         // 5: Flying (lvl 8+), 6-9: Hard variants (lvl 12+), 12-14: Bug variants (lvl 15+)
         // 15: Daddy Longlegs spider (lvl 5+), 16: Sweeping Swarm (after 3 kills, lvl 10+)
 
-        // Early game safety: first 2 runs spawn only gentle (easy) enemies
+        // Early game safety: runs 0 and 1 (the first two runs) spawn only gentle enemies
         const totalRuns = saveData.totalRuns || 0;
-        const isEarlyGame = totalRuns <= 2;
+        const isEarlyGame = totalRuns < 2;
 
         let maxType = 2; // Start with 3 base types
         if (!isEarlyGame) {
@@ -18704,6 +18713,13 @@
         const corners = ['TopLeft', 'TopRight', 'BottomLeft', 'BottomRight'];
         const corner = corners[index % 4];
         card.style.animation = `swooshFrom${corner} 0.5s ease-out ${index * 0.1}s forwards`;
+        // Clear the inline animation after the entrance completes so CSS rarity-glow animations take over
+        card.addEventListener('animationend', (e) => {
+          if (e.animationName && e.animationName.startsWith('swooshFrom')) {
+            card.style.animation = '';
+            card.style.opacity = '1';
+          }
+        }, { once: true });
         
         // Inject the melt-shadow hold-ring element
         const holdRingEl = document.createElement('div');
@@ -19986,9 +20002,11 @@
             window.pauseOverlayCount = 0;
             isPaused = false;
             window.isPaused = false;
-            // 3D camp world scene is pre-warmed at startup — this is now fast
+            // Activate 3D camp world immediately so there is no opaque-background flash
+            try { updateCampScreen(); } catch(e) { console.error('[Camp] updateCampScreen error:', e); }
+            // Deferred pass + safety retries for reliable 3D camp activation
             setTimeout(() => {
-              try { updateCampScreen(); } catch(e) { console.error('[Camp] updateCampScreen error:', e); }
+              try { updateCampScreen(); } catch(e) { console.error('[Camp] updateCampScreen retry error:', e); }
               // Safety retries for reliable 3D camp activation
               if (window.CampWorld && !window.CampWorld.isActive) {
                 setTimeout(() => {
