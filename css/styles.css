@@ -3900,7 +3900,7 @@
   white-space: nowrap;
 }
 .rage-bar-bg {
-  width: 80px;
+  width: 72px;
   height: 10px;
   background: rgba(80,20,0,0.8);
   border-radius: 5px;
@@ -4100,3 +4100,106 @@
 .sa-loadout-item.equipped { border-color: rgba(255,215,0,0.7); background: rgba(255,215,0,0.1); }
 .sa-loadout-item.locked { opacity: 0.4; cursor: default; }
 .sa-loadout-close { align-self: flex-end; background: none; border: none; color: #888; font-size: 16px; cursor: pointer; padding: 0; line-height: 1; }
+
+/* ============================================================
+   UI CALIBRATION MODE
+   ============================================================ */
+#ui-calibration-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 9000;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding-top: max(14px, env(safe-area-inset-top));
+  gap: 8px;
+}
+.ui-cal-title {
+  background: rgba(10, 10, 20, 0.92);
+  color: #FFD700;
+  font-family: 'Bangers', cursive;
+  font-size: 14px;
+  letter-spacing: 1px;
+  padding: 7px 14px;
+  border-radius: 10px;
+  border: 2px solid rgba(255, 215, 0, 0.5);
+  pointer-events: none;
+  text-align: center;
+  max-width: 90vw;
+  white-space: normal;
+}
+.ui-cal-btn-row {
+  display: flex;
+  gap: 8px;
+  pointer-events: auto;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.ui-cal-btn {
+  font-family: 'Bangers', cursive;
+  font-size: 15px;
+  letter-spacing: 1px;
+  border: none;
+  border-radius: 10px;
+  padding: 8px 16px;
+  cursor: pointer;
+  box-shadow: 0 3px 0 rgba(0,0,0,0.4);
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+.ui-cal-btn:active { transform: translateY(3px); box-shadow: none; }
+.ui-cal-save-btn  { background: linear-gradient(135deg, #27ae60, #1e8449); color: #fff; }
+.ui-cal-reset-btn { background: linear-gradient(135deg, #e67e22, #ca6f1e); color: #fff; }
+.ui-cal-close-btn { background: linear-gradient(135deg, #555, #333); color: #ccc; }
+
+/* Active element highlight during calibration */
+.ui-cal-active-element {
+  outline: 2px dashed rgba(255, 215, 0, 0.8) !important;
+  outline-offset: 3px;
+  cursor: grab !important;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.ui-cal-active-element:active { cursor: grabbing !important; }
+
+/* Label badge shown inside each HUD element during calibration */
+.ui-cal-label-badge {
+  position: absolute;
+  top: -22px;
+  left: 0;
+  background: rgba(0, 0, 0, 0.82);
+  color: #FFD700;
+  font-family: 'Bangers', cursive;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  padding: 2px 6px;
+  border-radius: 5px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 9001;
+}
+
+/* Resize handle (upper-left corner ◤) */
+.ui-cal-resize-handle {
+  position: absolute;
+  top: -1px;
+  left: -1px;
+  width: 20px;
+  height: 20px;
+  background: rgba(255, 215, 0, 0.85);
+  color: #000;
+  font-size: 13px;
+  line-height: 20px;
+  text-align: center;
+  border-radius: 4px 0 4px 0;
+  cursor: nwse-resize;
+  z-index: 9002;
+  pointer-events: auto;
+  user-select: none;
+  -webkit-user-select: none;
+}
