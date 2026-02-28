@@ -478,7 +478,9 @@
       color: 0x000000,
       transparent: true,
       opacity: 0.3,
-      depthWrite: false
+      depthWrite: false,
+      side: THREE.DoubleSide,
+      alphaTest: 0.01
     });
     const shadowDisc = new THREE.Mesh(shadowGeo, shadowMat);
     shadowDisc.rotation.x = -Math.PI / 2;
