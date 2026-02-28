@@ -19,8 +19,8 @@
   // ──────────────────────────────────────────────────────────
   // Constants
   // ──────────────────────────────────────────────────────────
-  const SPAWN_POS = { x: 0, z: 22 };          // player spawns at camp entrance (south gate)
-  const BENNY_POS = { x: 2, z: 2 };            // Benny stands near campfire
+  const SPAWN_POS = { x: 0, z: 22 };          // player spawns at camp entrance (south gate, facing north toward campfire)
+  const BENNY_POS = { x: 2, z: 2 };            // Benny stands just east of the campfire (origin) at camp centre
   const PLAYER_SPEED = 7.0;                    // units per second
   const PLAYER_RADIUS = 0.55;
   const INTERACTION_RADIUS = 3.5;             // proximity to trigger interact

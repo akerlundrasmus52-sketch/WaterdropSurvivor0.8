@@ -17498,7 +17498,7 @@
             document.getElementById('gameover-screen').style.display = 'none';
             document.getElementById('camp-screen').classList.remove('camp-subsection-active');
             document.getElementById('camp-screen').style.display = 'flex';
-            try { updateCampScreen(); } catch(e) {}
+            try { updateCampScreen(); } catch(e) { console.error('[RunEndOptions] updateCampScreen error:', e); }
           });
         };
         document.getElementById('roe-continue-btn').onclick = () => {
