@@ -6482,7 +6482,7 @@
         specialShockwave:    { unlocked: false, level: 0, maxLevel: 1 },
         specialFrozenStorm:  { unlocked: false, level: 0, maxLevel: 1 },
         specialDeathBlossom: { unlocked: false, level: 0, maxLevel: 1 },
-        specialThunderStrike:{ unlocked: false, level: 0, maxLevel: 1 },
+        specialThunderStrike: { unlocked: false, level: 0, maxLevel: 1 },
         specialVoidPulse:    { unlocked: false, level: 0, maxLevel: 1 },
         specialInfernoRing:  { unlocked: false, level: 0, maxLevel: 1 },
         // Melee Takedown unlock node
@@ -15283,7 +15283,8 @@
       // ── Melee Takedown ────────────────────────────────────────
       // Cooldown-based instant-kill knife attack (requires skill tree unlock)
       const MELEE_COOLDOWN_MS = 6000;
-      const MELEE_RANGE = 4.5;       // units
+      const MELEE_RANGE = 4.5;               // units
+      const MELEE_INSTANT_KILL_DAMAGE = 99999; // effectively instant-kills any standard enemy
       let _meleeLastUsed = 0;
 
       function isMeleeUnlocked() {
@@ -15362,7 +15363,7 @@
           }
         }
         if (nearest) {
-          nearest.takeDamage(99999, 'melee'); // instant kill
+          nearest.takeDamage(MELEE_INSTANT_KILL_DAMAGE, 'melee'); // instant kill
           showStatChange('🔪 TAKEDOWN!');
         } else {
           showStatChange('🔪 No enemy in range!');
@@ -20397,18 +20398,27 @@
       let touchStartTime = 0;
       let swipeDetected = false;
       
+      // Helper: returns true if the element at (x,y) belongs to a game HUD button
+      function _isHudElement(x, y) {
+        const el = document.elementFromPoint(x, y);
+        return el && (
+          el.closest('#special-attacks-hud') ||
+          el.closest('#rage-hud') ||
+          el.closest('#melee-takedown-btn')
+        );
+      }
+
       zone.addEventListener('touchstart', (e) => {
         // Check if any touch targets a HUD button (special attacks, rage, melee).
         // If so, skip joystick handling for that touch so button events fire normally.
         let allHudTouches = true;
         for (let i = 0; i < e.changedTouches.length; i++) {
           const t = e.changedTouches[i];
-          const el = document.elementFromPoint(t.clientX, t.clientY);
-          if (el && (el.closest('#special-attacks-hud') || el.closest('#rage-hud') || el.closest('#melee-takedown-btn'))) {
+          if (_isHudElement(t.clientX, t.clientY)) {
             // Touch is on a HUD button — fire it and skip joystick logic
-            if (el.closest && el.closest('button') && !el.closest('button').disabled) {
-              el.closest('button').click();
-            }
+            const el = document.elementFromPoint(t.clientX, t.clientY);
+            const btn = el && el.closest('button');
+            if (btn && !btn.disabled) btn.click();
           } else {
             allHudTouches = false;
           }
@@ -20423,10 +20433,7 @@
           const screenHeight = window.innerHeight;
 
           // Skip touches on HUD elements
-          const touchEl = document.elementFromPoint(touch.clientX, touch.clientY);
-          if (touchEl && (touchEl.closest('#special-attacks-hud') || touchEl.closest('#rage-hud') || touchEl.closest('#melee-takedown-btn'))) {
-            continue;
-          }
+          if (_isHudElement(touch.clientX, touch.clientY)) continue;
           
           // Ignore touches in top 40% of screen (for UI elements)
           if (touch.clientY < screenHeight * 0.6) {

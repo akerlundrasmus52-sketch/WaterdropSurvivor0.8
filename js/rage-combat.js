@@ -16,6 +16,8 @@
   const RAGE_DAMAGE_MULT  = 2.5;
   const RAGE_SPEED_MULT   = 1.4;
 
+  const MAX_EQUIPPED_SPECIALS = 3; // Maximum special attacks player can equip at once
+
   // ── All available special attacks (unlocked via skill tree) ──
   const ALL_SPECIAL_ATTACKS = [
     {
@@ -111,7 +113,7 @@
   // ── Loadout helpers ───────────────────────────────────────────
   function _getEquippedAttacks() {
     if (!_saveData) return [];
-    const equipped = (_saveData.equippedSpecials || []).slice(0, 3);
+    const equipped = (_saveData.equippedSpecials || []).slice(0, MAX_EQUIPPED_SPECIALS);
     return equipped.map(id => ALL_SPECIAL_ATTACKS.find(s => s.id === id)).filter(Boolean);
   }
 
@@ -222,7 +224,7 @@
     if (!panel) return;
     const equipped = (_saveData && _saveData.equippedSpecials) ? _saveData.equippedSpecials.slice() : [];
 
-    panel.innerHTML = `<h3>⚔️ SPECIAL ATTACKS (max 3)</h3>`;
+    panel.innerHTML = `<h3>⚔️ SPECIAL ATTACKS (max ${MAX_EQUIPPED_SPECIALS})</h3>`;
 
     const closeBtn = document.createElement('button');
     closeBtn.className = 'sa-loadout-close';
@@ -250,7 +252,7 @@
     if (idx >= 0) {
       _saveData.equippedSpecials.splice(idx, 1);
     } else {
-      if (_saveData.equippedSpecials.length >= 3) {
+      if (_saveData.equippedSpecials.length >= MAX_EQUIPPED_SPECIALS) {
         _saveData.equippedSpecials.shift(); // remove oldest
       }
       _saveData.equippedSpecials.push(attackId);
