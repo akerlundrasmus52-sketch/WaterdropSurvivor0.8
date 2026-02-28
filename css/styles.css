@@ -462,7 +462,7 @@
     /* Round Minimap - Bottom Right Corner - 25% BIGGER */
     #minimap-container {
       position: absolute;
-      bottom: 42px;
+      bottom: 10px;
       right: 8px;
       width: 130px;
       height: 132px;
@@ -2731,7 +2731,7 @@
       /* Specific positioning for iPhone 16 and similar devices to avoid UI overlap */
       #minimap-container {
         right: 20px;
-        bottom: 90px; /* Above touch joystick */
+        bottom: 10px; /* Lowered to near bottom, special attacks moved to left */
       }
       
       #region-display {
@@ -2980,6 +2980,7 @@
     .camp-corner-btn:hover { filter: brightness(1.3); transform: translateY(-2px); }
     .camp-corner-btn:active { transform: translateY(0); }
     .camp-corner-btn .corner-icon { font-size: 28px; display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; }
+    #camp-spin-btn .corner-icon { font-size: 34px; width: 40px; height: 40px; }
     .camp-corner-btn .corner-label { font-size: 10px; color: #ccc; letter-spacing: 1px; }
 
     /* 7-day login reward calendar strip */
@@ -3899,7 +3900,7 @@
 .rage-hud {
   position: fixed;
   bottom: 80px;
-  right: 10px;
+  left: 10px;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -3964,7 +3965,7 @@
 .special-attacks-hud {
   position: fixed;
   bottom: 10px;
-  right: 10px;
+  left: 10px;
   display: flex;
   gap: 8px;
   z-index: 115;
@@ -4022,3 +4023,98 @@
   70%  { opacity:1; transform:translateX(-50%) scale(1.0); }
   100% { opacity:0; transform:translateX(-50%) scale(1.0) translateY(-30px); }
 }
+
+/* ============================================================
+   MELEE TAKEDOWN BUTTON
+   ============================================================ */
+#melee-takedown-btn {
+  position: fixed;
+  bottom: 10px;
+  right: 155px;
+  width: 64px;
+  height: 64px;
+  background: rgba(20,0,0,0.85);
+  border: 2px solid rgba(200,50,0,0.7);
+  border-radius: 12px;
+  cursor: pointer;
+  z-index: 115;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Bangers', cursive;
+  -webkit-tap-highlight-color: transparent;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+#melee-takedown-btn:disabled { opacity: 0.4; cursor: default; }
+#melee-takedown-btn.melee-ready { border-color: rgba(255,80,0,0.9); }
+.melee-icon { font-size: 26px; line-height: 1; }
+.melee-label { font-size: 9px; color: #FF9966; letter-spacing: 0.5px; margin-top: 1px; }
+.melee-cd-overlay {
+  position: absolute;
+  bottom: 0; left: 0;
+  width: 100%; height: 0%;
+  background: rgba(0,0,0,0.65);
+  transition: height 0.1s linear;
+  pointer-events: none;
+}
+/* Melee slash visual effect */
+.melee-slash-fx {
+  position: fixed;
+  pointer-events: none;
+  z-index: 220;
+  font-size: 72px;
+  animation: melee-slash-anim 0.5s ease-out forwards;
+  transform-origin: center;
+}
+@keyframes melee-slash-anim {
+  0%   { opacity:1; transform: scale(0.4) rotate(-30deg); }
+  40%  { opacity:1; transform: scale(1.2) rotate(10deg); }
+  100% { opacity:0; transform: scale(1.5) rotate(20deg) translateY(-20px); }
+}
+/* Special attack enhanced visual ring */
+.sa-ring-outer {
+  position: fixed;
+  pointer-events: none;
+  z-index: 218;
+  border-radius: 50%;
+  animation: sa-ring-expand 0.7s ease-out forwards;
+}
+@keyframes sa-ring-expand {
+  0%   { opacity:0.9; transform: translate(-50%,-50%) scale(0); }
+  60%  { opacity:0.6; }
+  100% { opacity:0;   transform: translate(-50%,-50%) scale(1); }
+}
+/* Loadout panel */
+#sa-loadout-panel {
+  position: fixed;
+  bottom: 150px;
+  left: 10px;
+  background: rgba(0,0,0,0.92);
+  border: 2px solid rgba(255,215,0,0.5);
+  border-radius: 14px;
+  padding: 10px;
+  z-index: 200;
+  display: none;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 240px;
+}
+#sa-loadout-panel.visible { display: flex; }
+#sa-loadout-panel h3 { color: #FFD700; font-size: 13px; margin: 0 0 4px; font-family: 'Bangers', cursive; letter-spacing: 1px; }
+.sa-loadout-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.15);
+  cursor: pointer;
+  font-size: 12px;
+  color: #DDD;
+  background: rgba(255,255,255,0.05);
+}
+.sa-loadout-item.equipped { border-color: rgba(255,215,0,0.7); background: rgba(255,215,0,0.1); }
+.sa-loadout-item.locked { opacity: 0.4; cursor: default; }
+.sa-loadout-close { align-self: flex-end; background: none; border: none; color: #888; font-size: 16px; cursor: pointer; padding: 0; line-height: 1; }
