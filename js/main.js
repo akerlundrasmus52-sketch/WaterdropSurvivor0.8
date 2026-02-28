@@ -967,7 +967,8 @@
         
           // Movement with LEFT stick
           if (joystickLeft.active) {
-            const speed = GAME_CONFIG.playerSpeedBase * (playerStats.walkSpeed / 25) * 60; // Base speed for 60fps
+            const rageSpeedMult = this._rageSpeedMult || 1;
+            const speed = GAME_CONFIG.playerSpeedBase * (playerStats.walkSpeed / 25) * 60 * rageSpeedMult; // Base speed for 60fps
             targetVel.x = joystickLeft.x * speed * dt; // Frame-rate independent
             targetVel.z = joystickLeft.y * speed * dt;
           }
@@ -3430,6 +3431,10 @@
         updateHUD();
         updateComboCounter(true); // Phase 2: Track combo on kill
         checkAchievements(); // Check for achievements after kill
+        // Rage Mode: add rage on kill
+        if (window.GameRageCombat) window.GameRageCombat.addRage(8);
+        // Harvesting: chance to drop Flesh
+        if (window.GameHarvesting && this.mesh) window.GameHarvesting.onEnemyKilled(this.mesh.position);
         // Kill 7 achievement check
         if (playerStats.kills === 7 && (!saveData.achievementQuests || !saveData.achievementQuests.kill7Unlocked)) {
           if (!saveData.achievementQuests) saveData.achievementQuests = { kill7Unlocked: false, kill7Quest: 'none' };
@@ -4431,6 +4436,11 @@
             if (weapons.droneTurret.active && this.isDroneTurret) {
               dmg = weapons.droneTurret.damage * playerStats.damage * playerStats.strength;
             }
+
+            // Rage Mode damage boost
+            if (player && player._rageDamageMult && player._rageDamageMult > 1) {
+              dmg *= player._rageDamageMult;
+            }
             
             // HEADSHOT SYSTEM: Double-crit check for headshot (instant kill)
             const isCrit = Math.random() < playerStats.critChance;
@@ -4869,30 +4879,52 @@
               
               prop.hp -= dmg;
               
-              // Visual damage stages
+              // Visual damage stages (5 stages for better destruction feel)
               const hpPercent = prop.hp / prop.maxHp;
               
-              if (hpPercent <= 0.5 && hpPercent > 0.25 && !prop.darkenedStage1) {
-                // 50% HP: Darken (only once)
+              if (hpPercent <= 0.8 && hpPercent > 0.6 && !prop.damageStage1) {
+                // Stage 1 (80% HP): Slight crack — small lean and sway increase
+                prop.damageStage1 = true;
+                if (prop.type === 'tree') {
+                  prop.mesh.userData.swayAmount = Math.min(0.2, (prop.mesh.userData.swayAmount || 0.05) + 0.08);
+                  prop.mesh.rotation.z = 0.05;
+                }
+              } else if (hpPercent <= 0.6 && hpPercent > 0.4 && !prop.darkenedStage1) {
+                // Stage 2 (60% HP): Visible damage — darken slightly
                 prop.darkenedStage1 = true;
                 if (prop.type === 'tree') {
-                  prop.mesh.userData.trunk.material.color.copy(prop.originalColor.trunk).multiplyScalar(0.8);
-                  prop.mesh.userData.leaves.material.color.copy(prop.originalColor.leaves).multiplyScalar(0.8);
+                  prop.mesh.userData.trunk.material.color.copy(prop.originalColor.trunk).multiplyScalar(0.85);
+                  prop.mesh.userData.leaves.material.color.copy(prop.originalColor.leaves).multiplyScalar(0.75);
+                  prop.mesh.userData.swayAmount = Math.min(0.3, (prop.mesh.userData.swayAmount || 0.05) + 0.12);
                 } else {
                   prop.mesh.material.color.copy(prop.originalColor).multiplyScalar(0.8);
                 }
-              } else if (hpPercent <= 0.25 && hpPercent > 0 && !prop.darkenedStage2) {
-                // 25% HP: Darken more + Shrink (only once)
-                prop.darkenedStage2 = true;
+              } else if (hpPercent <= 0.4 && hpPercent > 0.2 && !prop.damageStage3) {
+                // Stage 3 (40% HP): Heavy damage — major lean, lose leaves
+                prop.damageStage3 = true;
                 if (prop.type === 'tree') {
-                  prop.mesh.userData.trunk.material.color.copy(prop.originalColor.trunk).multiplyScalar(0.6);
-                  prop.mesh.userData.leaves.material.color.copy(prop.originalColor.leaves).multiplyScalar(0.6);
+                  prop.mesh.userData.trunk.material.color.copy(prop.originalColor.trunk).multiplyScalar(0.65);
+                  if (prop.mesh.userData.leaves) prop.mesh.userData.leaves.scale.set(0.6, 0.6, 0.6);
+                  prop.mesh.rotation.z = 0.15 * (Math.random() < 0.5 ? 1 : -1);
                 } else {
                   prop.mesh.material.color.copy(prop.originalColor).multiplyScalar(0.6);
+                  prop.mesh.scale.copy(prop.originalScale).multiplyScalar(0.85);
+                }
+                spawnParticles(prop.mesh.position, 0x8B4513, 6);
+              } else if (hpPercent <= 0.2 && hpPercent > 0 && !prop.darkenedStage2) {
+                // Stage 4 (20% HP): Near destruction — major shrink, very dark
+                prop.darkenedStage2 = true;
+                if (prop.type === 'tree') {
+                  prop.mesh.userData.trunk.material.color.copy(prop.originalColor.trunk).multiplyScalar(0.4);
+                  if (prop.mesh.userData.leaves) prop.mesh.userData.leaves.visible = false;
+                  prop.mesh.rotation.z = 0.3 * (prop.mesh.rotation.z >= 0 ? 1 : -1);
+                } else {
+                  prop.mesh.material.color.copy(prop.originalColor).multiplyScalar(0.4);
                 }
                 prop.mesh.scale.copy(prop.originalScale).multiplyScalar(0.8);
+                spawnParticles(prop.mesh.position, 0x8B4513, 10);
               } else if (prop.hp <= 0) {
-                // 0 HP: Destroy with debris
+                // Stage 5 (0 HP): Destroy with debris
                 prop.destroyed = true;
                 
                 // Explosion effect based on type
@@ -6530,6 +6562,15 @@
       firstRunTutorial: {
         step: 0,       // 0=not started, 1-16=active steps (see TUT_STEP constants), 17=complete
         completed: false
+      },
+      // Harvesting & Resource System
+      resources: {
+        wood: 0, stone: 0, coal: 0, iron: 0,
+        crystal: 0, magicEssence: 0, gem: 0, flesh: 0
+      },
+      harvestingTools: {
+        axe: false, sledgehammer: false, pickaxe: false, magicTool: false,
+        epicAxe: false, epicSledgehammer: false, epicPickaxe: false, epicMagicTool: false
       }
     };
 
@@ -6590,6 +6631,9 @@
           saveData.shownDestructiblesInfo = saveData.shownDestructiblesInfo || false;
           // Character visuals customization
           saveData.characterVisuals = saveData.characterVisuals || { accessory: 'none', animation: 'idle', outfit: 'default' };
+          // Harvesting system (new fields)
+          saveData.resources = { ...defaultSaveData.resources, ...(saveData.resources || {}) };
+          saveData.harvestingTools = { ...defaultSaveData.harvestingTools, ...(saveData.harvestingTools || {}) };
         }
       } catch (e) {
         console.error('Failed to load save data:', e);
@@ -9687,9 +9731,68 @@
         rewardGold: 500,
         rewardSkillPoints: 3,
         rewardAttributePoints: 3,
-        message: "📋 CAMP BOARD MASTERED!<br><br>You can now open <b>ALL</b> camp features instantly from the Camp Board near the campfire — no more walking to every building!<br><br>🎉 <b>TUTORIAL COMPLETE!</b><br>You've experienced everything the camp has to offer. Now go out there and conquer the world, Droplet!",
-        nextQuest: null,
+        message: "📋 CAMP BOARD MASTERED!<br><br>You can now open <b>ALL</b> camp features instantly from the Camp Board near the campfire!<br><br>⛏️ <b>NEXT:</b> Visit the Store and buy your first Harvesting Tool to gather resources from the world!",
+        nextQuest: 'quest22_buyFirstTool',
         conditions: ['quest20_trainCompanion']
+      },
+
+      // === HARVESTING QUESTLINE ===
+
+      // === PHASE 22: Buy first harvesting tool from Store ===
+      quest22_buyFirstTool: {
+        id: 'quest22_buyFirstTool',
+        name: 'Buy a Harvesting Tool',
+        description: 'Visit the Store in camp and purchase your first harvesting tool (Axe, Sledgehammer, Pickaxe, or Essence Rod).',
+        objectives: 'Buy any harvesting tool from the Store',
+        claim: 'Main Building',
+        rewardGold: 400,
+        rewardSkillPoints: 2,
+        message: "🪓 Tool acquired!<br><br>You now have a harvesting tool!<br><br>🌍 Head out on a run and use it on resource nodes — look for <b>🪨 rocks, 🌲 trees, ⚙️ iron deposits, and ✨ magic nodes</b> scattered across the map!",
+        nextQuest: 'quest23_harvestFirst',
+        conditions: ['quest21_useCampBoard']
+      },
+
+      // === PHASE 23: Harvest first resource node ===
+      quest23_harvestFirst: {
+        id: 'quest23_harvestFirst',
+        name: 'Harvest a Resource',
+        description: 'Approach a resource node on the map and stand near it to harvest it with your equipped tool.',
+        objectives: 'Harvest any 1 resource node',
+        triggerOnDeath: false,
+        rewardGold: 300,
+        rewardSkillPoints: 2,
+        message: "⛏️ First harvest complete!<br><br>You gathered your first resource!<br><br>💎 Now try harvesting <b>5 Wood</b> and <b>5 Stone</b> to unlock the Forge crafting system!",
+        nextQuest: 'quest24_harvestWoodStone',
+        conditions: ['quest22_buyFirstTool']
+      },
+
+      // === PHASE 24: Gather wood and stone ===
+      quest24_harvestWoodStone: {
+        id: 'quest24_harvestWoodStone',
+        name: 'Gather Wood & Stone',
+        description: 'Harvest trees (wood) with your Axe and rocks (stone) with your Sledgehammer.',
+        objectives: 'Collect 5 Wood and 5 Stone',
+        triggerOnDeath: false,
+        rewardGold: 600,
+        rewardSkillPoints: 3,
+        message: "🌲🪨 Materials gathered!<br><br>Excellent work gathering resources!<br><br>⚒️ Visit the <b>Forge</b> to smelt your materials and craft an <b>Epic tool</b>!",
+        nextQuest: 'quest25_useForge',
+        conditions: ['quest23_harvestFirst']
+      },
+
+      // === PHASE 25: Use the Forge to craft an Epic tool ===
+      quest25_useForge: {
+        id: 'quest25_useForge',
+        name: 'Forge an Epic Tool',
+        description: 'Open the Forge building in camp and upgrade one of your harvesting tools to Epic rarity.',
+        objectives: 'Craft any Epic harvesting tool in the Forge',
+        claim: 'Forge',
+        rewardGold: 1000,
+        rewardSkillPoints: 5,
+        rewardAttributePoints: 3,
+        message: "⚒️ EPIC TOOL CRAFTED!<br><br>Your Epic tool harvests <b>2.5× more resources</b> from each node!<br><br>🔥 Keep exploring — find <b>Coal, Iron, Crystals</b> and <b>Magic Nodes</b> to gather advanced materials for even more powerful upgrades!",
+        nextQuest: null,
+        conditions: ['quest24_harvestWoodStone']
       }
     };
 
@@ -15045,6 +15148,63 @@
       // Initialize background music
       updateBackgroundMusic();
       
+      // Initialize harvesting system (resource nodes + tools)
+      if (window.GameHarvesting) {
+        window.GameHarvesting.init(scene, saveData, spawnParticles);
+        // Connect harvest quest progression
+        window.GameHarvesting._onHarvest = function(resourceType, amount) {
+          const tq = saveData.tutorialQuests;
+          if (!tq) return;
+          // Quest 23: harvest first resource
+          if (tq.currentQuest === 'quest23_harvestFirst') {
+            progressTutorialQuest('quest23_harvestFirst', true);
+          }
+          // Quest 24: collect 5 wood and 5 stone
+          if (tq.currentQuest === 'quest24_harvestWoodStone') {
+            const res = saveData.resources || {};
+            if ((res.wood || 0) >= 5 && (res.stone || 0) >= 5) {
+              progressTutorialQuest('quest24_harvestWoodStone', true);
+            }
+          }
+          saveSaveData();
+        };
+      }
+
+      // Initialize Rage Combat system
+      if (window.GameRageCombat) {
+        window.GameRageCombat.init(scene, saveData, spawnParticles);
+        // When rage activates, boost player speed/damage
+        window.GameRageCombat.onRageActivated((damageMult, speedMult) => {
+          if (player) {
+            player._rageDamageMult = damageMult;
+            player._rageSpeedMult = speedMult;
+          }
+        });
+        window.GameRageCombat.onRageDeactivated(() => {
+          if (player) {
+            player._rageDamageMult = 1;
+            player._rageSpeedMult = 1;
+          }
+        });
+        // Handle special attacks: deal AoE damage to enemies
+        window.GameRageCombat.onSpecialAttack((sa) => {
+          const pPos = player && player.mesh ? player.mesh.position : null;
+          if (!pPos) return;
+          const radSq = sa.damageRadius * sa.damageRadius;
+          for (const enemy of enemies) {
+            if (!enemy || !enemy.mesh || enemy.isDead) continue;
+            const dx = enemy.mesh.position.x - pPos.x;
+            const dz = enemy.mesh.position.z - pPos.z;
+            if (dx*dx + dz*dz <= radSq) {
+              enemy.takeDamage(sa.damage, 'specialAttack');
+            }
+          }
+        });
+      }
+
+      // Expose camera and player mesh reference to window for harvesting / rage modules
+      window._gameCamera = camera;
+      
       // Listeners
       setupInputs();
       setupMenus();
@@ -15436,6 +15596,101 @@
     function showProgressionShop() {
       const shopGrid = document.getElementById('shop-grid');
       shopGrid.innerHTML = '';
+
+      // ── Harvesting Tools section ──────────────────────────────
+      if (window.GameHarvesting) {
+        const toolsHeader = document.createElement('div');
+        toolsHeader.style.cssText = 'width:100%;text-align:center;color:#FFD700;font-family:"Bangers",cursive;font-size:20px;letter-spacing:2px;margin-bottom:6px;padding-top:4px;';
+        toolsHeader.textContent = '⛏️ HARVESTING TOOLS';
+        shopGrid.appendChild(toolsHeader);
+
+        const tools = window.GameHarvesting.getToolList();
+        const ownedTools = window.GameHarvesting.getTools() || {};
+        const resources = window.GameHarvesting.getResources() || {};
+
+        tools.forEach(toolDef => {
+          const owned = ownedTools[toolDef.id];
+          const epicKey = 'epic' + toolDef.id.charAt(0).toUpperCase() + toolDef.id.slice(1);
+          const isEpic = ownedTools[epicKey];
+          const canAffordBase = saveData.gold >= toolDef.buyCost;
+
+          const card = document.createElement('div');
+          card.className = 'upgrade-shop-card' + (isEpic ? ' max-level' : '');
+          card.style.cssText = 'background:rgba(40,20,0,0.85);border:2px solid #8B4513;';
+
+          let reqStr = '';
+          if (toolDef.epicForgeReq) {
+            reqStr = Object.entries(toolDef.epicForgeReq).map(([k, v]) => {
+              const rt = window.GameHarvesting.RESOURCE_TYPES[k];
+              const have = resources[k] || 0;
+              const color = have >= v ? '#2ecc71' : '#e74c3c';
+              return `<span style="color:${color}">${rt ? rt.icon : k} ${have}/${v}</span>`;
+            }).join(' ');
+          }
+
+          if (!owned) {
+            card.innerHTML = `
+              <div class="upgrade-shop-title">${toolDef.icon} ${toolDef.name}</div>
+              <div class="upgrade-shop-desc">Harvest resources from the world</div>
+              <div class="upgrade-shop-cost">Cost: ${toolDef.buyCost} Gold</div>
+              <button class="upgrade-buy-btn" ${!canAffordBase ? 'disabled' : ''}>
+                ${canAffordBase ? 'BUY' : 'NOT ENOUGH GOLD'}
+              </button>`;
+            const btn = card.querySelector('.upgrade-buy-btn');
+            btn.onclick = () => {
+              if (window.GameHarvesting.buyTool(toolDef.id)) {
+                saveSaveData();
+                playSound('levelup');
+                // Quest 22: bought first tool
+                if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest22_buyFirstTool') {
+                  progressTutorialQuest('quest22_buyFirstTool', true);
+                  saveSaveData();
+                }
+                showProgressionShop();
+              }
+            };
+          } else if (!isEpic) {
+            // Base tool owned — show Epic upgrade option
+            const epicReqsMet = toolDef.epicForgeReq && Object.entries(toolDef.epicForgeReq).every(([k, v]) => (resources[k] || 0) >= v);
+            card.innerHTML = `
+              <div class="upgrade-shop-title">${toolDef.icon} ${toolDef.name} <span style="color:#2ecc71;font-size:12px;">✓ OWNED</span></div>
+              <div class="upgrade-shop-desc">⚒️ Forge to <span style="color:#FFD700;">EPIC</span> — harvests 2.5× more resources</div>
+              <div class="upgrade-shop-cost" style="font-size:12px;">Requires: ${reqStr}</div>
+              <button class="upgrade-buy-btn" ${!epicReqsMet ? 'disabled' : ''}>
+                ${epicReqsMet ? '⚒️ FORGE EPIC' : 'NEED MORE MATERIALS'}
+              </button>`;
+            const btn = card.querySelector('.upgrade-buy-btn');
+            btn.onclick = () => {
+              if (window.GameHarvesting.forgeTool(toolDef.id)) {
+                saveSaveData();
+                playSound('levelup');
+                // Quest 25: forged epic tool
+                if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest25_useForge') {
+                  progressTutorialQuest('quest25_useForge', true);
+                  saveSaveData();
+                }
+                showProgressionShop();
+              }
+            };
+          } else {
+            card.innerHTML = `
+              <div class="upgrade-shop-title">${toolDef.icon} ${toolDef.name} <span style="color:#FFD700;">★ EPIC</span></div>
+              <div class="upgrade-shop-desc" style="color:#2ecc71;">Maximum tier — 2.5× resource yield</div>
+              <div class="upgrade-shop-cost" style="color:#27ae60;">FULLY UPGRADED</div>`;
+          }
+          shopGrid.appendChild(card);
+        });
+
+        // Separator
+        const sep = document.createElement('hr');
+        sep.style.cssText = 'width:100%;border-color:rgba(255,215,0,0.2);margin:8px 0;';
+        shopGrid.appendChild(sep);
+
+        const upgradesHeader = document.createElement('div');
+        upgradesHeader.style.cssText = 'width:100%;text-align:center;color:#FFD700;font-family:"Bangers",cursive;font-size:20px;letter-spacing:2px;margin-bottom:6px;';
+        upgradesHeader.textContent = '⬆️ STAT UPGRADES';
+        shopGrid.appendChild(upgradesHeader);
+      }
       
       // Create upgrade cards for each permanent upgrade
       Object.keys(PERMANENT_UPGRADES).forEach(key => {
@@ -21663,6 +21918,17 @@
       }
       updateWaterParticles(dt);
       updateStatBar();
+      
+      // Update Harvesting system (resource node interactions)
+      if (window.GameHarvesting && player && player.mesh) {
+        window._gamePlayerMesh = player.mesh;
+        window.GameHarvesting.update(dt, player.mesh.position, Date.now());
+      }
+
+      // Update Rage Combat system (meter decay, special attack cooldowns)
+      if (window.GameRageCombat) {
+        window.GameRageCombat.update(dt);
+      }
       
       // Phase 5: Update companion
       if (activeCompanion && !activeCompanion.isDead) {
