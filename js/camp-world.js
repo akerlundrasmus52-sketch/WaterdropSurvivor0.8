@@ -81,6 +81,19 @@
   // Keyboard state (managed inside this module)
   let _keys = {};
 
+  // Touch movement (own system, independent from game's joystick zone)
+  // Activated only when camp is active.
+  const _touch = {
+    active: false,
+    id: null,
+    startX: 0,
+    startY: 0,
+    x: 0,       // normalised -1..1
+    y: 0,
+  };
+  // Touch indicator DOM element (shown where the user touched)
+  let _touchIndicator = null;
+
   // ──────────────────────────────────────────────────────────
   // Helper: safe THREE access (module loaded before main.js)
   // ──────────────────────────────────────────────────────────
@@ -1150,11 +1163,10 @@
     if (_keys['ArrowUp']    || _keys['KeyW']) mz -= 1;
     if (_keys['ArrowDown']  || _keys['KeyS']) mz += 1;
 
-    // Touch joystick (shared from main.js via window._campJoystick)
-    const joy = window._campJoystick;
-    if (joy && joy.active) {
-      mx += joy.x;
-      mz += joy.y;
+    // Internal touch movement (own camp touch system, avoids interference with game joystick)
+    if (_touch.active) {
+      mx += _touch.x;
+      mz += _touch.y;
     }
 
     // Normalize diagonal
@@ -1364,6 +1376,40 @@
     } else {
       _interactBtn = document.getElementById('camp-interact-btn');
     }
+
+    // Touch joystick indicator (virtual stick shown at touch origin)
+    if (!document.getElementById('camp-touch-indicator')) {
+      const ring = document.createElement('div');
+      ring.id = 'camp-touch-indicator';
+      ring.style.cssText = [
+        'position:fixed',
+        'width:80px',
+        'height:80px',
+        'border:3px solid rgba(93,173,226,0.5)',
+        'border-radius:50%',
+        'background:rgba(93,173,226,0.08)',
+        'display:none',
+        'z-index:55',
+        'pointer-events:none',
+      ].join(';');
+      // Inner dot
+      const dot = document.createElement('div');
+      dot.style.cssText = [
+        'position:absolute',
+        'top:50%',
+        'left:50%',
+        'width:28px',
+        'height:28px',
+        'margin:-14px 0 0 -14px',
+        'border-radius:50%',
+        'background:rgba(93,173,226,0.6)',
+      ].join(';');
+      ring.appendChild(dot);
+      document.body.appendChild(ring);
+      _touchIndicator = ring;
+    } else {
+      _touchIndicator = document.getElementById('camp-touch-indicator');
+    }
   }
 
   // ──────────────────────────────────────────────────────────
@@ -1376,6 +1422,93 @@
   }
   function _onKeyUp(e) {
     _keys[e.code] = false;
+  }
+
+  // ──────────────────────────────────────────────────────────
+  // Touch movement handlers (own system for camp navigation)
+  // ──────────────────────────────────────────────────────────
+  const _TOUCH_DEAD_ZONE = 10; // px
+
+  function _onTouchStart(e) {
+    if (!_isActive) return;
+    // Only handle left-half touches for movement (right half reserved for interact / UI)
+    for (let i = 0; i < e.changedTouches.length; i++) {
+      const t = e.changedTouches[i];
+      if (t.clientX < window.innerWidth * 0.55 && !_touch.active) {
+        _touch.active = true;
+        _touch.id     = t.identifier;
+        _touch.startX = t.clientX;
+        _touch.startY = t.clientY;
+        _touch.x = 0;
+        _touch.y = 0;
+        _showTouchIndicator(t.clientX, t.clientY);
+        e.preventDefault();
+        break;
+      }
+    }
+  }
+
+  function _onTouchMove(e) {
+    if (!_isActive || !_touch.active) return;
+    for (let i = 0; i < e.changedTouches.length; i++) {
+      const t = e.changedTouches[i];
+      if (t.identifier !== _touch.id) continue;
+      const dx = t.clientX - _touch.startX;
+      const dy = t.clientY - _touch.startY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const maxDist = 60;
+      const factor = Math.min(dist, maxDist) / maxDist;
+      if (dist > _TOUCH_DEAD_ZONE) {
+        _touch.x = (dx / dist) * factor;
+        _touch.y = (dy / dist) * factor;
+      } else {
+        _touch.x = 0;
+        _touch.y = 0;
+      }
+      _moveTouchIndicator(t.clientX, t.clientY);
+      e.preventDefault();
+      break;
+    }
+  }
+
+  function _onTouchEnd(e) {
+    if (!_isActive) return;
+    for (let i = 0; i < e.changedTouches.length; i++) {
+      if (e.changedTouches[i].identifier === _touch.id) {
+        _touch.active = false;
+        _touch.id = null;
+        _touch.x = 0;
+        _touch.y = 0;
+        _hideTouchIndicator();
+        break;
+      }
+    }
+  }
+
+  // Touch joystick visual (shows ring where user touched)
+  function _showTouchIndicator(cx, cy) {
+    if (!_touchIndicator) return;
+    _touchIndicator.style.left = (cx - 40) + 'px';
+    _touchIndicator.style.top  = (cy - 40) + 'px';
+    _touchIndicator.style.display = 'block';
+  }
+  function _moveTouchIndicator(cx, cy) {
+    if (!_touchIndicator) return;
+    // Inner dot follows finger, outer stays at origin
+    const inner = _touchIndicator.children[0];
+    if (inner) {
+      const ox = _touch.startX;
+      const oy = _touch.startY;
+      const dx = Math.max(-30, Math.min(30, cx - ox));
+      const dy = Math.max(-30, Math.min(30, cy - oy));
+      inner.style.transform = `translate(${dx}px, ${dy}px)`;
+    }
+  }
+  function _hideTouchIndicator() {
+    if (!_touchIndicator) return;
+    _touchIndicator.style.display = 'none';
+    const inner = _touchIndicator.children[0];
+    if (inner) inner.style.transform = '';
   }
 
   // ──────────────────────────────────────────────────────────
@@ -1429,6 +1562,13 @@
       _campCamera.updateProjectionMatrix();
     }
 
+    // Reset touch state
+    _touch.active = false;
+    _touch.id = null;
+    _touch.x = 0;
+    _touch.y = 0;
+    _hideTouchIndicator();
+
     _isActive = true;
   }
 
@@ -1439,9 +1579,13 @@
   function exit() {
     _isActive = false;
     _keys = {};
+    _touch.active = false;
+    _touch.x = 0;
+    _touch.y = 0;
     _nearBuilding = null;
     if (_promptEl) _promptEl.style.display = 'none';
     if (_interactBtn) _interactBtn.style.display = 'none';
+    _hideTouchIndicator();
   }
 
   /**
@@ -1487,9 +1631,17 @@
     }
   }
 
-  // Register keyboard listeners globally (only fire when camp is active)
+  // Register keyboard listeners globally (only fire when camp is active via _isActive guard).
+  // These are intentionally registered once at module load time (page lifetime) since
+  // camp-world.js is a singleton loaded once at startup — no leak concerns.
   window.addEventListener('keydown', _onKeyDown);
   window.addEventListener('keyup',   _onKeyUp);
+
+  // Touch movement listeners (own camp movement system, active only when camp is active)
+  window.addEventListener('touchstart', _onTouchStart, { passive: false });
+  window.addEventListener('touchmove',  _onTouchMove,  { passive: false });
+  window.addEventListener('touchend',   _onTouchEnd,   { passive: true });
+  window.addEventListener('touchcancel',_onTouchEnd,   { passive: true });
 
   // Handle resize
   window.addEventListener('resize', onResize);

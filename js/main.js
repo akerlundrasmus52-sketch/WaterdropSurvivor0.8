@@ -11733,7 +11733,9 @@
       // ── 3D Camp Hub World ──────────────────────────────────────────────
       // Activate the 3D camp whenever this screen is opened.  Callbacks map
       // building IDs to the existing 2D UI functions so interactions still work.
-      if (window.CampWorld) {
+      // Guard: renderer is module-scoped and is null until init() runs; skip 3D mode
+      // if renderer is not yet ready (e.g. very first frame before init completes).
+      if (window.CampWorld && renderer) {
         const campCallbacks = {
           questMission:        () => showQuestHall(),
           skillTree:           () => document.getElementById('camp-skills-tab').click(),

@@ -3143,6 +3143,8 @@
     /* Subsections (skill tree, training, etc.) still overlay the 3D world */
     #camp-screen.camp-3d-mode .camp-section-flex {
       background: linear-gradient(to bottom, rgba(26,26,46,0.97), rgba(22,33,62,0.97));
+      min-height: 100vh;
+      overflow-y: auto;
     }
 
     /* Skill nodes — taller boxes */
