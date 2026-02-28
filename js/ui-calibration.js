@@ -59,7 +59,7 @@
 
   let _active = false;
   let _overlay = null;
-  let _handles = []; // { el, def, wrapper, resizeHandle } per active HUD element
+  let _handles = []; // { el, def, badge, rh, mh } per active HUD element
   let _onExit = null; // optional callback when calibration is closed
 
   // ──────────────────────────────────────────────────────────
@@ -174,6 +174,13 @@
       badge.textContent = def.label;
       el.appendChild(badge);
 
+      // ── Move handle (center drag zone) ──────────────────
+      const mh = document.createElement('div');
+      mh.className = 'ui-cal-move-handle';
+      mh.title = 'Drag to move';
+      mh.textContent = '✥';
+      el.appendChild(mh);
+
       // ── Resize handle (upper-left corner ◤) ─────────────
       const rh = document.createElement('div');
       rh.className = 'ui-cal-resize-handle';
@@ -184,10 +191,10 @@
       // Add edit-mode class for border highlight
       el.classList.add('ui-cal-active-element');
 
-      const handle = { el, def, badge, rh };
+      const handle = { el, def, badge, mh, rh };
       _handles.push(handle);
 
-      _bindDrag(el, handle);
+      _bindDrag(mh, el, handle);
       _bindResize(rh, el, handle);
     }
   }
@@ -196,6 +203,7 @@
     for (const h of _handles) {
       h.el.classList.remove('ui-cal-active-element');
       if (h.badge && h.badge.parentNode) h.badge.parentNode.removeChild(h.badge);
+      if (h.mh && h.mh.parentNode) h.mh.parentNode.removeChild(h.mh);
       if (h.rh && h.rh.parentNode) h.rh.parentNode.removeChild(h.rh);
     }
     _handles = [];
@@ -218,15 +226,13 @@
   }
 
   // ──────────────────────────────────────────────────────────
-  // Drag to reposition
+  // Drag to reposition — triggerEl is the move handle; el is the HUD element to move
   // ──────────────────────────────────────────────────────────
-  function _bindDrag(el, handle) {
+  function _bindDrag(triggerEl, el, handle) {
     let startX, startY, startLeft, startTop;
     let dragging = false;
 
     function onDown(e) {
-      // Ignore if clicking the resize handle
-      if (e.target === handle.rh) return;
       e.stopPropagation();
       e.preventDefault();
       dragging = true;
@@ -264,8 +270,8 @@
       window.removeEventListener('touchend',  onUp);
     }
 
-    el.addEventListener('mousedown', onDown);
-    el.addEventListener('touchstart', onDown, { passive: false });
+    triggerEl.addEventListener('mousedown', onDown);
+    triggerEl.addEventListener('touchstart', onDown, { passive: false });
   }
 
   // ──────────────────────────────────────────────────────────

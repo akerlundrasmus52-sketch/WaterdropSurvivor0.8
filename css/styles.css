@@ -620,7 +620,7 @@
       padding: 12px 16px 10px;
       max-width: 260px;
       min-width: 160px;
-      font-family: Arial, sans-serif;
+      font-family: 'M PLUS Rounded 1c', sans-serif;
       font-size: 13px;
       color: #e0e0e0;
       box-shadow: 0 4px 16px rgba(0,0,0,0.8), 0 0 10px rgba(255,215,0,0.2), inset 0 0 8px rgba(0,0,0,0.5);
@@ -3010,7 +3010,7 @@
     .daily-login-day .day-gold {
       font-size: 10px;
       color: #aaa;
-      font-family: Arial, sans-serif;
+      font-family: 'M PLUS Rounded 1c', sans-serif;
     }
 
     /* When a section has the outer-header sibling, remove top border-radius from box */
@@ -3246,7 +3246,7 @@
       border-radius: 14px;
       padding: 10px 14px;
       max-width: 180px;
-      font-family: Arial, sans-serif;
+      font-family: 'M PLUS Rounded 1c', sans-serif;
       font-size: 12px;
       color: #3e2723;
       box-shadow: 4px 4px 0px #4e342e;
@@ -4161,11 +4161,11 @@
 .ui-cal-active-element {
   outline: 2px dashed rgba(255, 215, 0, 0.8) !important;
   outline-offset: 3px;
-  cursor: grab !important;
+  cursor: pointer !important;
   user-select: none;
   -webkit-user-select: none;
 }
-.ui-cal-active-element:active { cursor: grabbing !important; }
+.ui-cal-active-element:active { cursor: default !important; }
 
 /* Label badge shown inside each HUD element during calibration */
 .ui-cal-label-badge {
@@ -4203,3 +4203,27 @@
   user-select: none;
   -webkit-user-select: none;
 }
+
+/* Move handle (center drag zone) — strictly moves, never resizes */
+.ui-cal-move-handle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 50%;
+  cursor: grab;
+  font-size: 15px;
+  color: #fff;
+  z-index: 9002;
+  pointer-events: auto;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.ui-cal-move-handle:active { cursor: grabbing; }

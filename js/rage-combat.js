@@ -776,6 +776,20 @@
     }
   }
 
+  // ── HUD visibility (hide outside active gameplay) ────────────
+  function setCombatHUDVisible(active) {
+    const rageHud  = document.getElementById('rage-hud');
+    const saHud    = document.getElementById('special-attacks-hud');
+    const dispVal  = active ? '' : 'none';
+    if (rageHud)  rageHud.style.display  = dispVal;
+    if (saHud)    saHud.style.display    = dispVal;
+    // Close loadout panel when hiding
+    if (!active) {
+      const panel = document.getElementById('sa-loadout-panel');
+      if (panel) panel.classList.remove('visible');
+    }
+  }
+
   // ── Public API ────────────────────────────────────────────────
   window.GameRageCombat = {
     ALL_SPECIAL_ATTACKS,
@@ -790,6 +804,8 @@
       _saveData = saveData;
       _spawnParticlesFn = spawnParticlesFn;
       _buildHUD();
+      // HUD starts hidden — shown when gameplay begins via setCombatHUDVisible(true)
+      setCombatHUDVisible(false);
     },
 
     refreshLoadout(saveData) {
@@ -798,6 +814,7 @@
       _updateRageHUD();
     },
 
+    setCombatHUDVisible,
     update,
     addRage,
     activateRage,
