@@ -17686,13 +17686,9 @@
       try { updateCampScreen(); } catch(e) { console.error('[CampWorld] updateCampScreen error:', e); }
     };
 
-    // Signal that module is ready — loading.js is polling for this flag.
-    // Must come AFTER window.updateCampScreen, window.gameRenderer, and
-    // window.THREE are all available so showMenuAfterLoading() can route
-    // to the 3D camp screen on first load instead of falling back to the
-    // main menu.
-    window.gameModuleReady = true;
-    console.log('[Init] Game module ready - Three.js loaded, event listeners and camp screen attached');
+    // NOTE: window.gameModuleReady is set AFTER init() runs (see bottom of file)
+    // so that loading.js only transitions once window.gameRenderer, window.CampWorld,
+    // and window.updateCampScreen are all fully initialised.
 
     function spawnWave() {
       waveCount++;
@@ -24298,3 +24294,9 @@
 
     // Init Game
     try { init(); } catch(e) { console.error('[Game Error]', e); console.error('[Game] Initialization failed - game cannot start'); }
+
+    // Signal that the module is fully ready — loading.js polls for this flag.
+    // MUST come after init() so that window.gameRenderer, window.CampWorld, and
+    // window.updateCampScreen are all set before showMenuAfterLoading() runs.
+    window.gameModuleReady = true;
+    console.log('[main.js] Game module ready - all systems initialized');
