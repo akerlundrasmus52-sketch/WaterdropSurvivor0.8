@@ -34,6 +34,7 @@
     { id: 'achievementBuilding',x:   0, z:-15,  label: 'Hall of Trophies', icon: '🏆' },
     { id: 'armory',             x: -9,  z:-13,  label: 'Armory',           icon: '⚔️' },
     { id: 'inventory',          x:  9,  z:-13,  label: 'Inventory',        icon: '📦' },
+    { id: 'campBoard',          x: -3.5, z: 0,  label: 'Camp Board',       icon: '📋' },
   ];
 
   // ──────────────────────────────────────────────────────────
@@ -479,6 +480,7 @@
       case 'achievementBuilding':return _buildAchievementHall(def);
       case 'armory':             return _buildArmory(def);
       case 'inventory':          return _buildInventoryStorage(def);
+      case 'campBoard':          return _buildCampBoard(def);
       default:                   return _buildGenericBuilding(def);
     }
   }
@@ -1025,6 +1027,50 @@
   }
 
   // ── Generic fallback building ────────────────────────────
+  // ── Camp Board ─ glowing notice board near campfire ──────
+  function _buildCampBoard(def) {
+    const THREE = T();
+    const grp = new THREE.Group();
+    grp.position.set(def.x, 0, def.z);
+
+    // Main post
+    const postGeo = new THREE.CylinderGeometry(0.12, 0.15, 2.8, 8);
+    const post = _mesh(postGeo, _lambert(0x4d2c0a));
+    post.position.y = 1.4;
+    post.castShadow = true;
+    grp.add(post);
+
+    // Board frame
+    const frameGeo = new THREE.BoxGeometry(2.2, 1.4, 0.14);
+    const frame = _mesh(frameGeo, _lambert(0x5c3317));
+    frame.position.y = 2.6;
+    frame.castShadow = true;
+    grp.add(frame);
+
+    // Board surface (golden glow)
+    const boardGeo = new THREE.BoxGeometry(1.9, 1.1, 0.06);
+    const board = _mesh(boardGeo, _mat(0xf0d890, 0xf0d890, 0.5));
+    board.position.set(0, 2.6, 0.11);
+    grp.add(board);
+
+    // Decorative tacks (four corners)
+    const tackGeo = new THREE.SphereGeometry(0.05, 6, 6);
+    const tackMat = _mat(0xffd700, 0xffd700, 0.8);
+    for (const [tx, ty] of [[-0.8, 0.4], [0.8, 0.4], [-0.8, -0.4], [0.8, -0.4]]) {
+      const tack = _mesh(tackGeo, tackMat);
+      tack.position.set(tx, 2.6 + ty, 0.15);
+      grp.add(tack);
+    }
+
+    // Warm glow point light
+    const glow = new THREE.PointLight(0xf0d890, 1.8, 6, 2);
+    glow.position.set(0, 2.8, 0.6);
+    grp.add(glow);
+
+    _addNameSign(grp, def.label, 0, 3.7, 0);
+    return grp;
+  }
+
   function _buildGenericBuilding(def) {
     const THREE = T();
     const grp = new THREE.Group();

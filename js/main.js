@@ -6364,6 +6364,7 @@
         inventory: { level: 0, maxLevel: 10, unlocked: false }, // Unlock via quest
         campHub: { level: 0, maxLevel: 10, unlocked: false }, // Initially locked
         loreMaster: { level: 0, maxLevel: 10, unlocked: false }, // Initially locked (placeholder for future lore content)
+        campBoard: { level: 0, maxLevel: 1, unlocked: false }, // Unlock via quest21
         // Quest-unlockable buildings - locked initially, unlock through quest progression
         skillTree: { level: 0, maxLevel: 10, unlocked: false }, // Unlock after Quest 1 is claimed
         companionHouse: { level: 0, maxLevel: 10, unlocked: false }, // Unlock via quest
@@ -8244,6 +8245,16 @@
         isFree: true,
         bonus: (level) => ({})
       },
+      campBoard: {
+        name: 'Camp Board',
+        icon: '📋',
+        description: 'Fast access to all camp features from one central location near the campfire',
+        baseCost: 0,
+        costMultiplier: 0,
+        maxCost: 0,
+        isFree: true,
+        bonus: (level) => ({})
+      },
       
       // LEGACY BUILDINGS (kept for compatibility)
       trainingGrounds: {
@@ -9660,9 +9671,25 @@
         rewardGold: 400,
         rewardSkillPoints: 2,
         rewardAttributePoints: 2,
-        message: "⚔️ Companion trained!<br><br>Your companion grows stronger with every battle! Equip them and go on runs together to unlock even more powerful skills!",
-        nextQuest: null,
+        unlockBuilding: 'campBoard',
+        message: "⚔️ Companion trained!<br><br>Your companion grows stronger with every battle!<br><br>A <b>Camp Board</b> has appeared near the campfire — use it for instant access to ALL camp features without walking to each building!",
+        nextQuest: 'quest21_useCampBoard',
         conditions: ['quest19_hatchEgg']
+      },
+
+      // === PHASE 21: Use the Camp Board (Fast Access) ===
+      quest21_useCampBoard: {
+        id: 'quest21_useCampBoard',
+        name: 'Use the Camp Board',
+        description: 'The Camp Board near the campfire gives you fast access to every camp feature. Open it now!',
+        objectives: 'Interact with the Camp Board near the campfire',
+        claim: 'Quest Hall',
+        rewardGold: 500,
+        rewardSkillPoints: 3,
+        rewardAttributePoints: 3,
+        message: "📋 CAMP BOARD MASTERED!<br><br>You can now open <b>ALL</b> camp features instantly from the Camp Board near the campfire — no more walking to every building!<br><br>🎉 <b>TUTORIAL COMPLETE!</b><br>You've experienced everything the camp has to offer. Now go out there and conquer the world, Droplet!",
+        nextQuest: null,
+        conditions: ['quest20_trainCompanion']
       }
     };
 
@@ -9674,7 +9701,8 @@
       'companionHouse': 'quest8_kill10',
       'achievementBuilding': 'quest11_findAllLandmarks',
       'characterVisuals': 'quest16_visitCharVisuals',
-      'codex': 'quest17_visitCodex'
+      'codex': 'quest17_visitCodex',
+      'campBoard': 'quest20_trainCompanion'
     };
     
     // Get current quest object
@@ -11757,6 +11785,7 @@
             }
           },
           inventory:           () => showInventoryScreen(),
+          campBoard:           () => showCampBoardMenu(),
         };
         window.CampWorld.enter(renderer, saveData, campCallbacks);
         // Mark camp-screen as 3D mode so CSS can hide the 2D building cards
@@ -15281,6 +15310,127 @@
       element.addEventListener('pointerup', cancelHold);
       element.addEventListener('pointerleave', cancelHold);
       element.addEventListener('pointercancel', cancelHold);
+    }
+
+    // ============================================================
+    // CAMP BOARD — Fast Access Master Menu
+    // ============================================================
+    function showCampBoardMenu() {
+      // Progress quest21 if active
+      if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest21_useCampBoard') {
+        progressTutorialQuest('quest21_useCampBoard', true);
+        saveSaveData();
+      }
+
+      // Remove existing overlay if any
+      const existing = document.getElementById('camp-board-overlay');
+      if (existing) existing.remove();
+
+      const overlay = document.createElement('div');
+      overlay.id = 'camp-board-overlay';
+      overlay.style.cssText = [
+        'position:fixed', 'top:0', 'left:0', 'width:100%', 'height:100%',
+        'background:rgba(0,0,0,0.88)', 'z-index:500',
+        'display:flex', 'flex-direction:column', 'align-items:center',
+        'justify-content:flex-start', 'padding:20px 16px', 'box-sizing:border-box', 'overflow-y:auto',
+      ].join(';');
+
+      // Header row
+      const header = document.createElement('div');
+      header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;width:100%;max-width:520px;margin-bottom:8px;';
+      header.innerHTML = '<div style="font-family:\'Bangers\',cursive;font-size:26px;color:#FFD700;letter-spacing:2px;text-shadow:0 0 10px rgba(255,215,0,0.5);">📋 CAMP BOARD</div>';
+      const closeBtn = document.createElement('button');
+      closeBtn.textContent = '✕';
+      closeBtn.style.cssText = 'background:#2a2a2a;border:2px solid #666;border-radius:50%;width:38px;height:38px;color:#fff;font-size:18px;cursor:pointer;font-family:"Bangers",cursive;flex-shrink:0;';
+      closeBtn.onclick = () => overlay.remove();
+      header.appendChild(closeBtn);
+      overlay.appendChild(header);
+
+      const subtitle = document.createElement('div');
+      subtitle.style.cssText = 'color:#888;font-size:11px;margin-bottom:18px;text-align:center;letter-spacing:1.5px;max-width:400px;text-transform:uppercase;';
+      subtitle.textContent = 'Fast access — open any camp feature';
+      overlay.appendChild(subtitle);
+
+      // Building grid
+      const grid = document.createElement('div');
+      grid.style.cssText = 'display:grid;grid-template-columns:repeat(2,1fr);gap:10px;width:100%;max-width:520px;';
+
+      // Map each building to its open action
+      const buildingActions = {
+        questMission:        () => { overlay.remove(); showQuestHall(); },
+        skillTree:           () => { overlay.remove(); document.getElementById('camp-skills-tab').click(); },
+        armory:              () => { overlay.remove(); try { updateGearScreen(); } catch(e) {} document.getElementById('gear-screen').style.display = 'flex'; },
+        trainingHall:        () => { overlay.remove(); document.getElementById('camp-training-tab').click(); },
+        forge:               () => { overlay.remove(); showProgressionShop(); },
+        companionHouse:      () => { overlay.remove(); showCompanionHouse(); },
+        achievementBuilding: () => {
+          overlay.remove();
+          document.getElementById('camp-screen').style.display = 'none';
+          const achScreen = document.getElementById('achievements-screen');
+          if (achScreen) {
+            achScreen.style.display = 'flex';
+            const achContent = document.getElementById('achievements-content');
+            if (achContent && typeof renderAchievementsContent === 'function') renderAchievementsContent(achContent);
+          }
+        },
+        inventory:           () => { overlay.remove(); showInventoryScreen(); },
+        accountBuilding:     () => { overlay.remove(); showAccountSection(); },
+        idleMenu:            () => { overlay.remove(); showIdleSection(); },
+        characterVisuals:    () => {
+          overlay.remove();
+          if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest16_visitCharVisuals') {
+            progressTutorialQuest('quest16_visitCharVisuals', true);
+            saveSaveData();
+          }
+          document.getElementById('camp-screen').style.display = 'none';
+          openCharacterVisuals();
+        },
+        codex:               () => {
+          overlay.remove();
+          if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest17_visitCodex') {
+            progressTutorialQuest('quest17_visitCodex', true);
+            saveSaveData();
+          }
+          document.getElementById('camp-screen').style.display = 'none';
+          openCodex();
+        },
+      };
+
+      for (const [buildingId, building] of Object.entries(CAMP_BUILDINGS)) {
+        if (building.isLegacy) continue;
+        if (buildingId === 'campBoard') continue; // Don't list campBoard itself
+        const buildingData = saveData.campBuildings[buildingId];
+        if (!buildingData) continue;
+        const isUnlocked = buildingData.unlocked || buildingData.level > 0;
+        if (!isUnlocked) continue;
+
+        const action = buildingActions[buildingId];
+        const btn = document.createElement('button');
+        btn.style.cssText = [
+          'display:flex', 'flex-direction:column', 'align-items:center', 'justify-content:center',
+          'gap:6px', 'background:linear-gradient(135deg,#1a1a2e,#0d1020)',
+          'border:2px solid #c8a248', 'border-radius:10px', 'padding:14px 10px',
+          'cursor:pointer', 'font-family:"Bangers",cursive', 'color:#FFD700',
+          'letter-spacing:1px', 'transition:filter 0.15s,transform 0.1s',
+        ].join(';');
+        btn.innerHTML = `<span style="font-size:30px;line-height:1;">${building.icon}</span><span style="font-size:12px;text-transform:uppercase;color:#f0d890;">${building.name}</span>`;
+        if (action) {
+          btn.onclick = action;
+          btn.onmouseenter = () => { btn.style.filter = 'brightness(1.3)'; btn.style.transform = 'translateY(-2px)'; };
+          btn.onmouseleave = () => { btn.style.filter = ''; btn.style.transform = ''; };
+        } else {
+          btn.style.opacity = '0.4';
+          btn.style.cursor = 'default';
+        }
+        grid.appendChild(btn);
+      }
+
+      overlay.appendChild(grid);
+
+      // Tap backdrop to close
+      overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+
+      document.body.appendChild(overlay);
     }
 
     function showProgressionShop() {
