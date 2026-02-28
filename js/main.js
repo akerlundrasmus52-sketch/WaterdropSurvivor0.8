@@ -11556,13 +11556,12 @@
       closeBtn.style.cssText = 'position:absolute;top:12px;right:16px;background:none;border:none;color:#aaa;font-size:20px;cursor:pointer;font-family:Arial,sans-serif;';
       closeBtn.onclick = () => { overlay.remove(); _updateCampCornerWidgets(); };
       panel.style.position = 'relative';
-      panel.appendChild(closeBtn);
       if (window.GameLuckyWheel) {
         window.GameLuckyWheel.renderWheelPanel(saveData, panel);
-        panel.appendChild(closeBtn);
       } else {
         panel.innerHTML = '<div style="color:#FFD700;">Wheel not available</div>';
       }
+      panel.appendChild(closeBtn);
       overlay.appendChild(panel);
       overlay.onclick = (e) => { if (e.target === overlay) { overlay.remove(); _updateCampCornerWidgets(); } };
       document.body.appendChild(overlay);
