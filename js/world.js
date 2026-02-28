@@ -22,8 +22,8 @@ const GAME_CONFIG = {
   playerSpeedBase: 0.10, // Slower start — upgrades improve speed
   enemySpeedBase: 0.05,  // Slower as requested
   waveInterval: 300, // Frames between waves (approx 5s)
-  expValue: 10,
-  baseExpReq: 20,
+  expValue: 15,      // Increased from 10 — supports the Level-100 goal
+  baseExpReq: 30,    // Increased from 20 — deeper XP curve for long progression
   // Lake configuration - used for spawn avoidance
   lakeCenterX: 30,
   lakeCenterZ: -30,
