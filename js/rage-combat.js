@@ -31,6 +31,7 @@
       color: 0xCC0000,
       keybind: '1',
       skillTreeId: 'specialKnifeTakedown',
+      isStartingAttack: true,
       upgrades: [
         { level: 1, cooldownMs: 40000, damage: 9999 },
         { level: 2, cooldownMs: 32000, damage: 9999, bonus: '-8s cooldown' },
@@ -313,7 +314,7 @@
       id: 'plasmaBurst',
       name: 'Plasma Burst',
       icon: '🔮',
-      description: 'Concentrated plasma vaporises enemies in a cone',
+      description: 'Concentrated plasma vaporizes enemies in a cone',
       cooldownMs: 17000,
       damageRadius: 12,
       damage: 130,

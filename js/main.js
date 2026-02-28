@@ -15835,10 +15835,10 @@
         const currentLvl = stNode.level || 0;
         const maxLvl = stNode.maxLevel || 3;
         const isUnlocked = currentLvl > 0;
-        // First attack (knifeTakedown) is always available to unlock; others require previous to be unlocked
-        const prevAttack = idx > 0 ? allAttacks[idx - 1] : null;
+        // Starting attacks are always available; others require the previous attack to be unlocked
+        const prevAttack = (!sa.isStartingAttack && idx > 0) ? allAttacks[idx - 1] : null;
         const prevNode = prevAttack ? ((saveData.skillTree || {})[prevAttack.skillTreeId] || { level: 0 }) : { level: 1 };
-        const isAvailable = prevNode.level > 0;
+        const isAvailable = sa.isStartingAttack || prevNode.level > 0;
         const UNLOCK_COST = 1;
         const UPGRADE_COST = 1;
         const canAfford = pts >= (isUnlocked ? UPGRADE_COST : UNLOCK_COST);
