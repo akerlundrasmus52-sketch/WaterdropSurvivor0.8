@@ -12108,6 +12108,10 @@
       // Hide combat HUD (Rage Bar + Special Attacks) — not visible in camp
       if (window.GameRageCombat) window.GameRageCombat.setCombatHUDVisible(false);
 
+      // Hide the game HUD layer — not needed in camp (avoids black rectangles over 3D world)
+      const uiLayer = document.getElementById('ui-layer');
+      if (uiLayer) uiLayer.style.visibility = 'hidden';
+
       // First-run tutorial hook: fire after current call stack (by then camp-screen is visible)
       // Update action button label based on game state
       const campActionBtn = document.getElementById('camp-action-btn');
@@ -12155,6 +12159,10 @@
           const campScreenEl = document.getElementById('camp-screen');
           if (campScreenEl) campScreenEl.classList.add('camp-3d-mode');
         }
+      } else {
+        // 2D camp mode: hide game container to prevent black canvas showing behind camp UI
+        const gameContainer = document.getElementById('game-container');
+        if (gameContainer) gameContainer.style.display = 'none';
       }
       // ──────────────────────────────────────────────────────────────────
 
@@ -15367,6 +15375,9 @@
       }
       gameContainer.appendChild(renderer.domElement);
 
+      // Expose renderer globally so loading.js and other scripts can access it
+      window.gameRenderer = renderer;
+
       // Handle WebGL context loss to prevent renderer freezes in long sessions
       renderer.domElement.addEventListener('webglcontextlost', (e) => {
         e.preventDefault();
@@ -15686,6 +15697,11 @@
       document.getElementById('main-menu').style.display = 'none';
       document.getElementById('camp-screen').style.display = 'none';
       document.getElementById('gameover-screen').style.display = 'none';
+      // Restore game container and HUD layer hidden during camp mode
+      const uiLayer = document.getElementById('ui-layer');
+      if (uiLayer) uiLayer.style.visibility = '';
+      const gameContainer = document.getElementById('game-container');
+      if (gameContainer) gameContainer.style.display = 'block';
       resetGame();
       updateQuestTracker();
       

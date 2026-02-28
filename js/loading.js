@@ -85,10 +85,18 @@
           loadingScreen.style.display = 'none';
           
           // Route to 3D Camp World as the default screen (instead of old 2D main menu).
-          // The main menu is still accessible from within the camp via the START RUN button.
-          // Remove camp-subsection-active so the buildings overview is shown (not a sub-panel).
+          // Prefer 3D camp if CampWorld, THREE and the renderer are all available.
+          // Falls back to 2D camp-screen (via updateCampScreen) or main menu.
           var campScreen = document.getElementById('camp-screen');
-          if (campScreen && window.updateCampScreen) {
+          if (window.CampWorld && window.THREE && window.gameRenderer && window.updateCampScreen) {
+            // 3D camp mode: camp-screen becomes a transparent HUD overlay over the canvas
+            if (campScreen) {
+              campScreen.classList.remove('camp-subsection-active');
+              campScreen.style.display = 'flex';
+            }
+            window.updateCampScreen();
+          } else if (campScreen && window.updateCampScreen) {
+            // 2D camp or deferred 3D activation via updateCampScreen
             campScreen.classList.remove('camp-subsection-active');
             campScreen.style.display = 'flex';
             window.updateCampScreen();

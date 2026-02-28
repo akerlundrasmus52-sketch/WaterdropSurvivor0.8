@@ -145,11 +145,26 @@
   }
 
   // Merge cloud save into local save, preferring whichever was updated more recently.
+  function _deepMerge(target, source) {
+    for (var key in source) {
+      if (!Object.prototype.hasOwnProperty.call(source, key)) continue;
+      // Guard against prototype pollution
+      if (key === '__proto__' || key === 'constructor' || key === 'prototype') continue;
+      if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])
+          && target[key] && typeof target[key] === 'object' && !Array.isArray(target[key])) {
+        _deepMerge(target[key], source[key]);
+      } else {
+        target[key] = source[key];
+      }
+    }
+    return target;
+  }
+
   function _mergeCloudSave(local, cloud) {
     var localTs = (local.idle && local.idle.lastTickTime) || 0;
     var cloudTs = (cloud.idle && cloud.idle.lastTickTime) || 0;
     if (cloudTs > localTs) {
-      Object.assign(local, cloud);
+      _deepMerge(local, cloud);
     }
   }
 

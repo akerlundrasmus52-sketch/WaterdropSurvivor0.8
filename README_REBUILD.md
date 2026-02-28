@@ -2,28 +2,28 @@
 
 ## 🎮 About This Rebuild
 
-This is a **complete ground-up rebuild** of the Water Drop Survivor game, converting it from a THREE.js-based 3D game to a pure 2D Canvas pixel-art game.
+This is a **complete ground-up rebuild** of the Water Drop Survivor game. The game uses
+**THREE.js** for 3D rendering — both the main gameplay and the walkable 3D camp hub world.
+An earlier milestone briefly used a pure 2D Canvas renderer; that was superseded by the
+current THREE.js-based architecture.
 
 ### 📊 Quick Stats
 
-| Metric | Before | After | Improvement |
-|--------|--------|-------|-------------|
-| **File Size** | 279 KB | 43 KB | **-81%** |
-| **Lines of Code** | 7,748 | 1,480 | **-81%** |
-| **Dependencies** | 1 (THREE.js) | 0 | **-100%** |
-| **Load Time** | ~2 sec | <1 sec | **-50%** |
-| **Memory Usage** | ~50 MB | ~10 MB | **-80%** |
+| Metric | Before | After | Notes |
+|--------|--------|-------|-------|
+| **Renderer** | THREE.js 3D | THREE.js 3D | 3D gameplay + 3D camp hub |
+| **Camp** | Static 2D menu | Walkable 3D world | 10 interactive buildings |
+| **Auth** | Broken placeholder | Graceful degradation | Shows local-play message |
+| **Cloud Save** | Shallow merge | Deep merge | No data loss on sync |
 
 ---
 
 ## ✨ What's New
 
-### 1. **🎨 2D Pixel-Art Rendering**
-- Removed all THREE.js dependencies
-- Implemented pure Canvas 2D rendering
-- Pixel-perfect rendering with `image-rendering: pixelated`
-- Top-down Vampire Survivors-style view
-- All assets rendered programmatically in pixel-art style
+### 1. **🌐 THREE.js 3D Rendering**
+- Main game uses THREE.js `WebGLRenderer` with orthographic camera
+- Camp hub is a fully playable 3D walkable world (`camp-world.js`)
+- The old 2D Canvas prototype was replaced with THREE.js
 
 ### 2. **🐛 Freeze Bug FIXED**
 The critical bug that caused the game to freeze after the Vampire upgrade (levels 10-15) has been **completely fixed**.
@@ -152,8 +152,8 @@ Consistent colors across all UI elements:
 ## 🔧 Technical Details
 
 ### Technology Stack
-- **Pure HTML5 Canvas** - No frameworks
-- **Vanilla JavaScript** - No libraries
+- **THREE.js** - 3D WebGL rendering (main game + camp world)
+- **Vanilla JavaScript** - No additional frameworks
 - **Web Audio API** - Sound effects
 - **localStorage** - Save system
 - **Responsive design** - Mobile-friendly
@@ -174,10 +174,9 @@ Consistent colors across all UI elements:
 ## 🎯 All Requirements Met
 
 ### ✅ Rendering
-- [x] Removed THREE.js completely
-- [x] Implemented 2D Canvas rendering
-- [x] Applied pixel-art style
-- [x] Created pixel rendering functions
+- [x] THREE.js 3D WebGL rendering (main game + camp world)
+- [x] Orthographic camera for top-down gameplay view
+- [x] 3D walkable camp hub with 10 interactive buildings
 
 ### ✅ Freeze Bug
 - [x] Fixed timing variable initialization

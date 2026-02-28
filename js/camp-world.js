@@ -102,6 +102,25 @@
   // ──────────────────────────────────────────────────────────
   function T() { return window.THREE; }
 
+  /**
+   * _waitForTHREE(callback)
+   * Polls for window.THREE every 50ms for up to 3 seconds (60 attempts).
+   * Calls callback() once THREE is available, or logs a warning if it times out.
+   */
+  function _waitForTHREE(callback) {
+    var attempts = 0;
+    var interval = setInterval(function () {
+      attempts++;
+      if (T()) {
+        clearInterval(interval);
+        callback();
+      } else if (attempts >= 60) {
+        clearInterval(interval);
+        console.warn('[CampWorld] window.THREE not available after 3s, giving up');
+      }
+    }, 50);
+  }
+
   // ──────────────────────────────────────────────────────────
   // Scene construction
   // ──────────────────────────────────────────────────────────
@@ -1413,6 +1432,8 @@
     const fn = _callbacks[_nearBuilding];
     if (typeof fn === 'function') {
       fn();
+    } else {
+      console.warn('[CampWorld] No callback registered for building:', _nearBuilding);
     }
   }
 
@@ -1646,7 +1667,11 @@
    */
   function warmUp(rendererRef) {
     if (_campScene || _isBuilding) return; // Already built or building
-    if (!T()) return; // THREE not yet available
+    if (!T()) {
+      // THREE not yet available — wait and retry
+      _waitForTHREE(function () { warmUp(rendererRef); });
+      return;
+    }
     _renderer = rendererRef;
     _isBuilding = true;
     try {
@@ -1669,6 +1694,8 @@
   function enter(renderer, saveData, callbacks) {
     if (!T()) {
       console.warn('[CampWorld] THREE not yet available – deferred enter');
+      // Retry: wait for window.THREE then re-enter
+      _waitForTHREE(function () { enter(renderer, saveData, callbacks); });
       return;
     }
 
