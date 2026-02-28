@@ -614,16 +614,16 @@
     #farmer-speech-bubble {
       position: absolute;
       display: none;
-      background: #fffde7;
-      border: 3px solid #4e342e;
+      background: rgba(15, 20, 35, 0.96);
+      border: 2px solid rgba(255, 215, 0, 0.65);
       border-radius: 14px;
       padding: 12px 16px 10px;
       max-width: 260px;
       min-width: 160px;
       font-family: Arial, sans-serif;
       font-size: 13px;
-      color: #3e2723;
-      box-shadow: 4px 4px 0px #4e342e;
+      color: #e0e0e0;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.8), 0 0 10px rgba(255,215,0,0.2), inset 0 0 8px rgba(0,0,0,0.5);
       z-index: 500;
       pointer-events: auto;
       cursor: pointer;
@@ -638,7 +638,7 @@
       left: 50%;
       transform: translateX(-50%);
       border: 8px solid transparent;
-      border-top-color: #4e342e;
+      border-top-color: rgba(255, 215, 0, 0.65);
     }
     #farmer-speech-bubble::before {
       content: '';
@@ -647,7 +647,7 @@
       left: 50%;
       transform: translateX(-50%);
       border: 6px solid transparent;
-      border-top-color: #fffde7;
+      border-top-color: rgba(15, 20, 35, 0.96);
       z-index: 1;
     }
     #farmer-speech-bubble-text {
@@ -656,13 +656,13 @@
     }
     #farmer-speech-bubble-prompt {
       font-size: 10px;
-      color: #8d6e63;
+      color: rgba(255, 215, 0, 0.6);
       text-align: right;
     }
     /* Farmer speech bubble movement animations */
     @keyframes bubble-twinkle {
-      0%, 100% { box-shadow: 4px 4px 0px #4e342e; }
-      50% { box-shadow: 4px 4px 8px rgba(255,215,0,0.6), 4px 4px 0px #4e342e; }
+      0%, 100% { box-shadow: 0 4px 16px rgba(0,0,0,0.8), 0 0 10px rgba(255,215,0,0.2); }
+      50% { box-shadow: 0 4px 16px rgba(0,0,0,0.8), 0 0 18px rgba(255,215,0,0.45); }
     }
     @keyframes bubble-push-left {
       0%, 100% { transform: translate(-50%, calc(-100% - 18px)); }
@@ -1319,6 +1319,7 @@
       justify-content: center;
       pointer-events: none; /* Modal background should not block clicks */
       z-index: 20;
+      animation: fogwater-bg 8s ease-in-out infinite;
     }
 
     .modal-content {
@@ -1392,6 +1393,30 @@
       text-transform: uppercase;
     }
 
+    /* Fogwater: animated breathing dark outer border for level-up cards */
+    @keyframes fogwater-outer {
+      0%   { box-shadow: 0 0 0 4px rgba(4,8,18,0.97), 0 4px 12px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05), inset 0 -1px 0 rgba(0,0,0,0.3); }
+      25%  { box-shadow: 0 0 0 4px rgba(4,10,22,0.95), 0 4px 12px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05), inset 0 -1px 0 rgba(0,0,0,0.3); }
+      50%  { box-shadow: 0 0 0 5px rgba(3,7,20,0.98), 0 4px 14px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.07), inset 0 -1px 0 rgba(0,0,0,0.3); }
+      75%  { box-shadow: 0 0 0 4px rgba(5,9,22,0.95), 0 4px 12px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05), inset 0 -1px 0 rgba(0,0,0,0.3); }
+      100% { box-shadow: 0 0 0 4px rgba(4,8,18,0.97), 0 4px 12px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05), inset 0 -1px 0 rgba(0,0,0,0.3); }
+    }
+
+    /* Fogwater: slow breathing gradient on level-up modal background */
+    @keyframes fogwater-bg {
+      0%   { background: linear-gradient(to bottom, rgba(26,26,46,0.97), rgba(22,33,62,0.97)); }
+      33%  { background: linear-gradient(to bottom, rgba(20,24,52,0.97), rgba(18,36,68,0.97)); }
+      66%  { background: linear-gradient(to bottom, rgba(24,30,50,0.97), rgba(20,30,58,0.97)); }
+      100% { background: linear-gradient(to bottom, rgba(26,26,46,0.97), rgba(22,33,62,0.97)); }
+    }
+
+    /* Glass glow inward flash on card press */
+    @keyframes card-glass-press {
+      0%   { box-shadow: 0 0 0 4px rgba(4,8,18,0.97), 0 2px 6px rgba(0,0,0,0.5), inset 0 0 0 rgba(255,255,255,0); }
+      40%  { box-shadow: 0 0 0 4px rgba(4,8,18,0.97), 0 1px 4px rgba(0,0,0,0.4), inset 0 0 22px rgba(255,255,255,0.18), inset 0 0 10px rgba(200,230,255,0.12); }
+      100% { box-shadow: 0 0 0 4px rgba(4,8,18,0.97), 0 2px 6px rgba(0,0,0,0.5), inset 0 0 0 rgba(255,255,255,0); }
+    }
+
     .upgrade-card {
       background: linear-gradient(135deg, #1a1e2e 0%, #0d1020 100%);
       background-image: 
@@ -1403,11 +1428,8 @@
       border-radius: 12px;
       border: 3px solid #888888;
       cursor: pointer;
-      transition: transform 0.15s, box-shadow 0.25s, filter 0.2s, border-color 0.2s;
-      box-shadow: 
-        0 4px 12px rgba(0,0,0,0.6), 
-        inset 0 1px 0 rgba(255,255,255,0.05),
-        inset 0 -1px 0 rgba(0,0,0,0.3);
+      transition: transform 0.15s, filter 0.2s, border-color 0.2s;
+      animation: fogwater-outer 4s ease-in-out infinite;
       position: relative;
       overflow: hidden;
     }
@@ -1426,120 +1448,121 @@
     }
 
     .upgrade-card:hover {
-      box-shadow: 0 0 15px rgba(136,136,136,0.4), 0 0 30px rgba(136,136,136,0.2), inset 0 1px 0 rgba(255,255,255,0.08);
+      box-shadow: 0 0 0 4px rgba(4,8,18,0.97), 0 0 15px rgba(136,136,136,0.4), 0 0 30px rgba(136,136,136,0.2), inset 0 1px 0 rgba(255,255,255,0.08);
       filter: brightness(1.15);
       border-color: #aaa;
+      animation: none;
     }
 
     .upgrade-card:active {
       transform: scale(0.97) perspective(600px) rotateX(2deg);
-      box-shadow: 
-        0 2px 6px rgba(0,0,0,0.4),
-        inset 0 2px 8px rgba(0,0,0,0.3),
-        inset 0 1px 0 rgba(255,255,255,0.1);
-      filter: brightness(1.1);
-      border-color: #fff;
+      animation: card-glass-press 0.45s ease-out forwards;
+      filter: brightness(1.08);
+      border-color: rgba(200,230,255,0.9);
     }
     
     /* Weapon upgrades - Red edges */
     .upgrade-card.weapon {
       border-color: #FF4444;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.5), 0 0 15px rgba(255,68,68,0.3), inset 0 0 0 2px rgba(0,0,0,0.4);
+      animation: rarity-glow-weapon 3s ease-in-out infinite;
+    }
+    @keyframes rarity-glow-weapon {
+      0%, 100% { box-shadow: 0 0 0 4px rgba(4,8,18,0.97), 0 4px 8px rgba(0,0,0,0.5), 0 0 15px rgba(255,68,68,0.3); }
+      50% { box-shadow: 0 0 0 5px rgba(3,7,16,0.98), 0 4px 8px rgba(0,0,0,0.5), 0 0 22px rgba(255,68,68,0.5); }
     }
     
     .upgrade-card.weapon:hover {
-      box-shadow: 0 0 20px rgba(255,68,68,0.8), 0 0 40px rgba(255,68,68,0.6);
+      box-shadow: 0 0 0 4px rgba(4,8,18,0.97), 0 0 20px rgba(255,68,68,0.8), 0 0 40px rgba(255,68,68,0.6);
     }
     
     /* Class upgrades - Purple edges */
     .upgrade-card.class {
       border-color: #9b59b6;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.5), 0 0 15px rgba(155,89,182,0.3), inset 0 0 0 2px rgba(0,0,0,0.4);
+      animation: rarity-glow-class 3s ease-in-out infinite;
+    }
+    @keyframes rarity-glow-class {
+      0%, 100% { box-shadow: 0 0 0 4px rgba(4,8,18,0.97), 0 4px 8px rgba(0,0,0,0.5), 0 0 15px rgba(155,89,182,0.3); }
+      50% { box-shadow: 0 0 0 5px rgba(3,7,16,0.98), 0 4px 8px rgba(0,0,0,0.5), 0 0 22px rgba(155,89,182,0.5); }
     }
     
     .upgrade-card.class:hover {
-      box-shadow: 0 0 20px rgba(155,89,182,0.8), 0 0 40px rgba(155,89,182,0.6);
+      box-shadow: 0 0 0 4px rgba(4,8,18,0.97), 0 0 20px rgba(155,89,182,0.8), 0 0 40px rgba(155,89,182,0.6);
     }
     
     /* Rarity-based edge colors */
     .upgrade-card.rarity-common {
       border-color: #27ae60;
       background: linear-gradient(135deg, #0d1a12 0%, #081210 100%);
-      box-shadow: 0 4px 12px rgba(0,0,0,0.5), 0 0 8px rgba(39,174,96,0.15), inset 0 1px 0 rgba(255,255,255,0.05);
       animation: rarity-glow-common 3s ease-in-out infinite;
     }
     @keyframes rarity-glow-common {
-      0%, 100% { box-shadow: 0 4px 12px rgba(0,0,0,0.5), 0 0 8px rgba(39,174,96,0.15); }
-      50% { box-shadow: 0 4px 12px rgba(0,0,0,0.5), 0 0 14px rgba(39,174,96,0.3); }
+      0%, 100% { box-shadow: 0 0 0 4px rgba(4,8,18,0.97), 0 4px 12px rgba(0,0,0,0.5), 0 0 8px rgba(39,174,96,0.15); }
+      50% { box-shadow: 0 0 0 5px rgba(3,7,16,0.98), 0 4px 12px rgba(0,0,0,0.5), 0 0 14px rgba(39,174,96,0.3); }
     }
     
     .upgrade-card.rarity-rare {
       border-color: #3498DB;
       background: linear-gradient(135deg, #0d1520 0%, #081018 100%);
-      box-shadow: 0 4px 12px rgba(0,0,0,0.5), 0 0 10px rgba(52,152,219,0.2), inset 0 1px 0 rgba(255,255,255,0.05);
       animation: rarity-glow-rare 2.5s ease-in-out infinite;
     }
     .upgrade-card.rarity-rare:hover {
-      box-shadow: 0 0 20px rgba(52,152,219,0.7), 0 0 35px rgba(52,152,219,0.4);
+      box-shadow: 0 0 0 4px rgba(4,8,18,0.97), 0 0 20px rgba(52,152,219,0.7), 0 0 35px rgba(52,152,219,0.4);
       border-color: #5dade2;
     }
     @keyframes rarity-glow-rare {
-      0%, 100% { box-shadow: 0 4px 12px rgba(0,0,0,0.5), 0 0 10px rgba(52,152,219,0.2); }
-      50% { box-shadow: 0 4px 12px rgba(0,0,0,0.5), 0 0 18px rgba(52,152,219,0.45); }
+      0%, 100% { box-shadow: 0 0 0 4px rgba(4,8,18,0.97), 0 4px 12px rgba(0,0,0,0.5), 0 0 10px rgba(52,152,219,0.2); }
+      50% { box-shadow: 0 0 0 5px rgba(3,7,16,0.98), 0 4px 12px rgba(0,0,0,0.5), 0 0 18px rgba(52,152,219,0.45); }
     }
     
     .upgrade-card.rarity-epic {
       border-color: #e67e22;
       background: linear-gradient(135deg, #1a1005 0%, #120a03 100%);
-      box-shadow: 0 4px 12px rgba(0,0,0,0.5), 0 0 12px rgba(230,126,34,0.25), inset 0 1px 0 rgba(255,255,255,0.05);
       animation: rarity-glow-epic 2s ease-in-out infinite;
     }
     .upgrade-card.rarity-epic:hover {
-      box-shadow: 0 0 22px rgba(230,126,34,0.7), 0 0 40px rgba(230,126,34,0.4);
+      box-shadow: 0 0 0 4px rgba(4,8,18,0.97), 0 0 22px rgba(230,126,34,0.7), 0 0 40px rgba(230,126,34,0.4);
       border-color: #f39c12;
     }
     @keyframes rarity-glow-epic {
-      0%, 100% { box-shadow: 0 4px 12px rgba(0,0,0,0.5), 0 0 12px rgba(230,126,34,0.25); }
-      50% { box-shadow: 0 4px 12px rgba(0,0,0,0.5), 0 0 22px rgba(230,126,34,0.5); }
+      0%, 100% { box-shadow: 0 0 0 4px rgba(4,8,18,0.97), 0 4px 12px rgba(0,0,0,0.5), 0 0 12px rgba(230,126,34,0.25); }
+      50% { box-shadow: 0 0 0 5px rgba(3,7,16,0.98), 0 4px 12px rgba(0,0,0,0.5), 0 0 22px rgba(230,126,34,0.5); }
     }
     
     .upgrade-card.rarity-legendary {
       border-color: #e74c3c;
       background: linear-gradient(135deg, #1a0808 0%, #120404 100%);
-      box-shadow: 0 4px 12px rgba(0,0,0,0.5), 0 0 15px rgba(231,76,60,0.35), inset 0 1px 0 rgba(255,255,255,0.05);
       animation: legendary-glow 2s ease-in-out infinite alternate;
     }
     .upgrade-card.rarity-legendary:hover {
-      box-shadow: 0 0 25px rgba(231,76,60,0.9), 0 0 45px rgba(231,76,60,0.5);
+      box-shadow: 0 0 0 4px rgba(4,8,18,0.97), 0 0 25px rgba(231,76,60,0.9), 0 0 45px rgba(231,76,60,0.5);
       border-color: #ff6b5a;
     }
     
     .upgrade-card.rarity-mythical {
       border-color: #FF4444;
       background: linear-gradient(135deg, #200505 0%, #180202 100%);
-      box-shadow: 0 4px 12px rgba(0,0,0,0.5), 0 0 18px rgba(255,68,68,0.4), inset 0 1px 0 rgba(255,255,255,0.05);
       animation: mythical-glow 1.5s ease-in-out infinite alternate;
     }
     .upgrade-card.rarity-mythical:hover {
-      box-shadow: 0 0 28px rgba(255,68,68,0.9), 0 0 50px rgba(255,68,68,0.6);
+      box-shadow: 0 0 0 4px rgba(4,8,18,0.97), 0 0 28px rgba(255,68,68,0.9), 0 0 50px rgba(255,68,68,0.6);
       border-color: #ff6666;
     }
     
     @keyframes legendary-glow {
       0% { 
-        box-shadow: 0 4px 8px rgba(0,0,0,0.5), 0 0 20px rgba(231,76,60,0.5), inset 0 0 0 2px rgba(0,0,0,0.4);
+        box-shadow: 0 0 0 4px rgba(4,8,18,0.97), 0 4px 8px rgba(0,0,0,0.5), 0 0 20px rgba(231,76,60,0.5), inset 0 0 0 2px rgba(0,0,0,0.4);
       }
       100% { 
-        box-shadow: 0 4px 8px rgba(0,0,0,0.5), 0 0 30px rgba(231,76,60,0.8), 0 0 50px rgba(231,76,60,0.4), inset 0 0 0 2px rgba(0,0,0,0.4);
+        box-shadow: 0 0 0 5px rgba(3,7,16,0.98), 0 4px 8px rgba(0,0,0,0.5), 0 0 30px rgba(231,76,60,0.8), 0 0 50px rgba(231,76,60,0.4), inset 0 0 0 2px rgba(0,0,0,0.4);
       }
     }
     
     @keyframes mythical-glow {
       0% { 
-        box-shadow: 0 4px 8px rgba(0,0,0,0.5), 0 0 20px rgba(255,68,68,0.5), inset 0 0 0 2px rgba(0,0,0,0.4);
+        box-shadow: 0 0 0 4px rgba(4,8,18,0.97), 0 4px 8px rgba(0,0,0,0.5), 0 0 20px rgba(255,68,68,0.5), inset 0 0 0 2px rgba(0,0,0,0.4);
       }
       100% { 
-        box-shadow: 0 4px 8px rgba(0,0,0,0.5), 0 0 30px rgba(255,68,68,0.8), 0 0 50px rgba(255,68,68,0.4), inset 0 0 0 2px rgba(0,0,0,0.4);
+        box-shadow: 0 0 0 5px rgba(3,7,16,0.98), 0 4px 8px rgba(0,0,0,0.5), 0 0 30px rgba(255,68,68,0.8), 0 0 50px rgba(255,68,68,0.4), inset 0 0 0 2px rgba(0,0,0,0.4);
       }
     }
     
@@ -2791,25 +2814,21 @@
       }
     }
 
-    /* Live Stat Display - dark rectangle under clock showing all live game info */
+    /* Live Stat Display - upper left, under XP bar and active quest elements */
     #live-stat-display {
-      position: fixed;
-      top: 111px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: min(520px, calc(100vw - 40px));
+      width: auto;
+      max-width: 220px;
       min-height: 22px;
       background: rgba(25, 25, 30, 0.92);
       border: 2px solid rgba(60, 60, 70, 0.8);
       border-radius: 8px;
       padding: 3px 10px;
-      z-index: 99;
       font-family: 'Bangers', cursive;
-      font-size: 13px;
+      font-size: 12px;
       color: #e0e0e0;
       pointer-events: none;
       display: none;
-      text-align: center;
+      text-align: left;
       overflow: hidden;
       box-shadow:
         0 2px 8px rgba(0,0,0,0.7),
@@ -3686,8 +3705,8 @@
 
     /* Header row: wave · kills · combo */
     .ssb-header {
-      background: rgba(0, 0, 0, 0.78);
-      border: 1px solid rgba(255, 215, 0, 0.45);
+      background: rgba(25, 25, 30, 0.92);
+      border: 1px solid rgba(60, 60, 70, 0.85);
       border-radius: 7px 7px 0 0;
       padding: 3px 7px;
       font-size: 11px;
@@ -3698,6 +3717,7 @@
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.6), inset 0 0 6px rgba(0,0,0,0.4);
     }
 
     /* Shared base for all event/context rows */
@@ -3705,9 +3725,9 @@
       border-radius: 6px;
       padding: 3px 6px;
       font-size: 11px;
-      border: 1px solid #555;
-      background: rgba(20, 20, 20, 0.85);
-      color: #AAAAAA;
+      border: 1px solid rgba(60, 60, 70, 0.8);
+      background: rgba(25, 25, 30, 0.92);
+      color: #d0d0d0;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -3716,6 +3736,8 @@
       align-items: center;
       gap: 3px;
       min-height: 20px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.6), inset 0 0 4px rgba(0,0,0,0.4);
+      text-shadow: 0 1px 3px rgba(0,0,0,0.9);
     }
 
     /* Context rows */
@@ -3736,11 +3758,12 @@
 
     /* Live current event — most prominent */
     .ssb-current {
-      font-size: 12px;
+      font-size: 13px;
       border-width: 2px;
-      padding: 4px 7px;
-      min-height: 24px;
+      padding: 5px 7px;
+      min-height: 26px;
       opacity: 1 !important;
+      letter-spacing: 0.5px;
     }
 
     /* Next-goal hint */

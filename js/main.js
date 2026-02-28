@@ -6925,9 +6925,6 @@
           liveStatEl.style.color = '#e0e0e0';
         }
         liveStatEl.style.display = 'block';
-        liveStatEl.style.width = 'auto';
-        liveStatEl.style.maxWidth = 'min(560px, calc(100vw - 40px))';
-        liveStatEl.style.minWidth = '200px';
       }
       
       // Build quest text for the left-side tracker
@@ -6988,17 +6985,17 @@
     //  SUPER STAT BAR — real-time event history with rarity color coding
     // =====================================================================
     const SSB_COLORS = {
-      common:    { text: '#999999', border: '#555555', bg: 'rgba(30,30,30,0.88)'  },
-      uncommon:  { text: '#2ecc71', border: '#1a8a4a', bg: 'rgba(10,35,18,0.88)' },
-      rare:      { text: '#3498db', border: '#1565C0', bg: 'rgba(10,25,50,0.88)' },
-      epic:      { text: '#9b59b6', border: '#6A1B9A', bg: 'rgba(25,10,45,0.88)' },
-      legendary: { text: '#e74c3c', border: '#c0392b', bg: 'rgba(45,10,5,0.88)'  },
-      mythic:    { text: '#FFD700', border: '#B8860B', bg: 'rgba(40,30,0,0.92)'  },
-      gold:      { text: '#FFD700', border: '#B8860B', bg: 'rgba(40,30,0,0.88)'  },
-      region:    { text: '#5DADE2', border: '#2980B9', bg: 'rgba(10,25,45,0.88)' },
-      quest:     { text: '#FFD700', border: '#F39C12', bg: 'rgba(45,35,0,0.88)'  },
-      death:     { text: '#FF2222', border: '#8B0000', bg: 'rgba(45,0,0,0.92)'   },
-      countdown: { text: '#FFD700', border: '#B8860B', bg: 'rgba(40,30,0,0.92)'  }
+      common:    { text: '#b0b0b0', border: 'rgba(80,80,90,0.9)',  bg: 'rgba(25,25,30,0.92)'  },
+      uncommon:  { text: '#2ecc71', border: 'rgba(30,140,80,0.9)', bg: 'rgba(12,35,20,0.92)'  },
+      rare:      { text: '#5dade2', border: 'rgba(30,100,180,0.9)',bg: 'rgba(12,25,50,0.92)'  },
+      epic:      { text: '#c39bd3', border: 'rgba(120,50,170,0.9)',bg: 'rgba(28,12,48,0.92)'  },
+      legendary: { text: '#ec7063', border: 'rgba(180,50,40,0.9)', bg: 'rgba(48,10,8,0.92)'   },
+      mythic:    { text: '#FFD700', border: 'rgba(180,140,10,0.9)',bg: 'rgba(42,32,4,0.92)'   },
+      gold:      { text: '#FFD700', border: 'rgba(180,140,10,0.9)',bg: 'rgba(42,32,4,0.92)'   },
+      region:    { text: '#85c1e9', border: 'rgba(30,110,180,0.9)',bg: 'rgba(12,26,46,0.92)'  },
+      quest:     { text: '#f9e79f', border: 'rgba(200,150,10,0.9)',bg: 'rgba(45,35,4,0.92)'   },
+      death:     { text: '#ff6b6b', border: 'rgba(150,10,10,0.9)', bg: 'rgba(48,4,4,0.92)'    },
+      countdown: { text: '#FFD700', border: 'rgba(180,140,10,0.9)',bg: 'rgba(42,32,4,0.92)'   }
     };
 
     const _ssbHistory = [];
