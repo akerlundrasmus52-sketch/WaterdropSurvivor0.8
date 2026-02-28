@@ -177,13 +177,15 @@
     /* Quest Arrow Guidance */
     #quest-arrow {
       display: none;
-      position: absolute;
-      font-size: 48px;
+      position: fixed;
+      font-size: 36px;
       color: #FFD700;
       text-shadow: 0 0 20px rgba(255,215,0,1), 0 0 40px rgba(255,215,0,0.6);
       pointer-events: none;
       z-index: 50;
-      animation: questArrowPulse 1.5s ease-in-out infinite;
+      animation: questArrowPulse 1s ease-in-out infinite;
+      transform-origin: center center;
+      transition: left 0.1s, top 0.1s;
     }
     
     /* Stats Bar - Removed (Stats accessible via Stats Button Modal only) */
