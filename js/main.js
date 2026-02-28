@@ -20097,43 +20097,42 @@
     // showStatChange, showStatusMessage, processStatNotificationQueue
     // are defined in ui.js → window.GameUI (aliased at top of this file)
     
-    // FRESH IMPLEMENTATION: Enhanced Notification System
-    function showEnhancedNotification(type, title, message) {
+    // FRESH IMPLEMENTATION: Enhanced Notification System —
+    // Notifications appear under the XP bar (stat-bar cluster, top-right).
+    // A queue prevents multiple events from overlapping.
+    const _enhancedNotifQueue = [];
+    let _enhancedNotifActive = false;
+
+    function _runEnhancedNotifQueue() {
+      if (_enhancedNotifQueue.length === 0) {
+        _enhancedNotifActive = false;
+        return;
+      }
+      _enhancedNotifActive = true;
+      const { type, title, message } = _enhancedNotifQueue.shift();
+
       // Create notification element
       const notification = document.createElement('div');
       notification.className = 'enhanced-notification';
-      
-      // Icon based on type
+
+      // Icon and border colour based on type
       let icon = '';
       let borderColor = '#5DADE2';
       switch(type) {
-        case 'quest':
-          icon = '📜';
-          borderColor = '#FFD700';
-          break;
-        case 'achievement':
-          icon = '🏆';
-          borderColor = '#F39C12';
-          break;
-        case 'attribute':
-          icon = '⭐';
-          borderColor = '#9B59B6';
-          break;
-        case 'unlock':
-          icon = '🔓';
-          borderColor = '#2ECC71';
-          break;
-        default:
-          icon = '💧';
+        case 'quest':       icon = '📜'; borderColor = '#FFD700'; break;
+        case 'achievement': icon = '🏆'; borderColor = '#F39C12'; break;
+        case 'attribute':   icon = '⭐'; borderColor = '#9B59B6'; break;
+        case 'unlock':      icon = '🔓'; borderColor = '#2ECC71'; break;
+        default:            icon = '💧';
       }
-      
+
       notification.style.borderColor = borderColor;
       notification.innerHTML = `
         <div class="notification-icon">${icon}</div>
         <div class="notification-title">${title}</div>
         <div class="notification-text">${message}</div>
       `;
-      
+
       document.body.appendChild(notification);
 
       // Mirror to super stat bar
@@ -20141,19 +20140,25 @@
         const r = type === 'achievement' ? 'epic' : type === 'attribute' ? 'legendary' : type === 'quest' ? 'quest' : 'rare';
         window.pushSuperStatEvent(title, r, icon, 'success');
       }
-      
+
       // Play sound
       playSound('waterdrop');
-      
-      // Auto-remove after 3 seconds
+
+      // Auto-remove after 3 seconds, then process next in queue
       setTimeout(() => {
         notification.classList.add('fade-out');
         setTimeout(() => {
-          if (notification.parentNode) {
-            notification.parentNode.removeChild(notification);
-          }
+          notification.remove();
+          _runEnhancedNotifQueue();
         }, 300);
       }, 3000);
+    }
+
+    function showEnhancedNotification(type, title, message) {
+      _enhancedNotifQueue.push({ type, title, message });
+      if (!_enhancedNotifActive) {
+        _runEnhancedNotifQueue();
+      }
     }
 
     // Screen shake effect for big destructions and impacts

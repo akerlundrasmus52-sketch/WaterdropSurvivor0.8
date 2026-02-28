@@ -55,6 +55,62 @@
       defaultPos: { left: '0px', top: '0px', right: null, bottom: null },
       defaultScale: 1,
     },
+    {
+      selector: '#stat-notifications',
+      label: '📊 Stat Notifications',
+      defaultPos: { left: null, top: '70px', right: null, bottom: null },
+      defaultScale: 1,
+    },
+    {
+      selector: '#super-stat-bar',
+      label: '📈 Stat Bar Panel',
+      defaultPos: { right: '0px', top: '0px', left: null, bottom: null },
+      defaultScale: 1,
+    },
+    {
+      selector: '#region-display',
+      label: '🌍 Region Strip',
+      defaultPos: { right: '8px', bottom: '90px', left: null, top: null },
+      defaultScale: 1,
+    },
+    {
+      selector: '#combo-counter',
+      label: '💥 Combo Counter',
+      defaultPos: { right: '8px', bottom: null, left: null, top: null },
+      defaultScale: 1,
+    },
+    {
+      selector: '#quest-tracker',
+      label: '📜 Quest Tracker',
+      defaultPos: { left: '12px', top: '86px', right: null, bottom: null },
+      defaultScale: 1,
+    },
+    {
+      selector: '.modal-content',
+      label: '⬆️ Level Up Box',
+      // null values mean: clear inline styles on reset so CSS-defined centering takes over
+      defaultPos: { left: null, top: null, right: null, bottom: null },
+      defaultScale: 1,
+    },
+    {
+      selector: '.settings-container',
+      label: '⚙️ Settings Box',
+      // null values mean: clear inline styles on reset so CSS-defined centering takes over
+      defaultPos: { left: null, top: null, right: null, bottom: null },
+      defaultScale: 1,
+    },
+    {
+      selector: '#bottom-bars-container',
+      label: '💧 Level / EXP Bar',
+      defaultPos: { left: null, bottom: '0px', right: null, top: null },
+      defaultScale: 1,
+    },
+    {
+      selector: '#day-night-clock',
+      label: '🕐 Day/Night Clock',
+      defaultPos: { left: null, top: '6px', right: null, bottom: null },
+      defaultScale: 1,
+    },
   ];
 
   let _active = false;
@@ -159,6 +215,14 @@
     for (const def of HUD_DEFS) {
       const el = document.querySelector(def.selector);
       if (!el) continue;
+
+      // Skip elements that are currently hidden (display:none) — user can open the
+      // relevant panel first and then re-enter calibration to position it.
+      const cs = window.getComputedStyle(el);
+      if (cs.display === 'none' || cs.visibility === 'hidden') continue;
+
+      // Prevent duplicate handles if somehow _attachHandles is called twice
+      if (_handles.find(h => h.el === el)) continue;
 
       // Ensure element is fixed-position so it can be freely moved
       _makeFixed(el, def);
