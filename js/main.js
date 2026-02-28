@@ -14232,12 +14232,15 @@
           hp: hp,
           maxHp: maxHp,
           destroyed: false,
+          originalPosition: mesh.position.clone(),
           originalScale: mesh.scale.clone(),
           originalColor: type === 'tree' ? 
             { trunk: mesh.userData.trunk.material.color.clone(), leaves: mesh.userData.leaves.material.color.clone() } :
             mesh.material.color.clone()
         };
       }
+      // Expose createDestructibleProp so resetGame() can respawn destroyed props
+      window._createDestructibleProp = createDestructibleProp;
       
       // Spawn Trees (120) - scattered across the map
       for (let i = 0; i < 120; i++) {
@@ -16274,7 +16277,7 @@
       document.getElementById('goto-camp-btn').onclick = () => {
         playSound('waterdrop');
         document.getElementById('gameover-screen').style.display = 'none';
-        updateCampScreen();
+        try { updateCampScreen(); } catch(e) { console.error('[Camp] updateCampScreen error:', e); }
         document.getElementById('camp-screen').classList.remove('camp-subsection-active');
         document.getElementById('camp-screen').style.display = 'flex';
         // Move chat tab upward in camp mode to avoid menu overlap
@@ -20029,6 +20032,54 @@
         console.log('[Companion] Hidden until companion activation quest is completed');
       }
 
+      // Reset destructible environment — restore non-destroyed props to full health/visuals,
+      // and respawn any that were destroyed so every run starts with a complete world.
+      if (window.destructibleProps) {
+        const toRespawn = [];
+        for (const prop of window.destructibleProps) {
+          if (prop.destroyed) {
+            // Collect spawn info before discarding the dead entry
+            if (prop.originalPosition) {
+              toRespawn.push({ type: prop.type, position: prop.originalPosition.clone() });
+            }
+          } else {
+            // Restore health and visual damage state
+            prop.hp = prop.maxHp;
+            prop._wobbleTime = 0;
+            prop.darkenedStage1 = false;
+            prop.darkenedStage2 = false;
+            if (prop.type === 'tree') {
+              if (prop.mesh.userData.trunk) prop.mesh.userData.trunk.material.color.copy(prop.originalColor.trunk);
+              if (prop.mesh.userData.leaves) prop.mesh.userData.leaves.material.color.copy(prop.originalColor.leaves);
+            } else {
+              if (prop.mesh.material) prop.mesh.material.color.copy(prop.originalColor);
+            }
+            prop.mesh.scale.copy(prop.originalScale);
+          }
+        }
+        // Remove dead entries, then recreate them if the factory is available
+        window.destructibleProps = window.destructibleProps.filter(p => !p.destroyed);
+        if (window._createDestructibleProp) {
+          for (const { type, position } of toRespawn) {
+            try {
+              const newProp = window._createDestructibleProp(type, position);
+              window.destructibleProps.push(newProp);
+            } catch (e) { console.warn('[resetGame] Failed to respawn prop:', type, e); }
+          }
+        }
+      }
+
+      // Reset breakable fences — restore HP on surviving segments; discard disposed entries.
+      if (window.breakableFences) {
+        window.breakableFences = window.breakableFences.filter(fence => {
+          if (!fence.userData) return false;
+          if (fence.userData.hp <= 0) return false; // already disposed/removed
+          fence.userData.hp = fence.userData.maxHp || fence.userData.hp;
+          fence.userData._wobbleTime = 0;
+          return true;
+        });
+      }
+
       // Reset Player - Spawn right next to the fountain/statue
       if (player) {
         player.mesh.position.set(12, 0.5, 0); // Right next to fountain, outside rim
@@ -20656,7 +20707,7 @@
       
       // 3D Camp Hub World — update and render when active, skip all game logic
       if (window.CampWorld && window.CampWorld.isActive) {
-        window.CampWorld.update(dt);
+        try { window.CampWorld.update(dt); } catch(e) { console.error('[CampWorld] Update error:', e); }
         try { window.CampWorld.render(); } catch(e) { console.error('[CampWorld] Render error:', e); }
         return;
       }

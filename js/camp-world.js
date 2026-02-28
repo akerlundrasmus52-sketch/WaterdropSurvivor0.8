@@ -1129,6 +1129,7 @@
   // ──────────────────────────────────────────────────────────
   function _updateParticles(dt) {
     // ── Campfire sparks ──────────────────────────────────────
+    if (!_sparkSystem || !_sparkPositions) return;
     for (let i = 0; i < SPARK_COUNT; i++) {
       _sparkLifetimes[i] -= dt;
       if (_sparkLifetimes[i] <= 0) {
@@ -1153,9 +1154,10 @@
         _sparkVelocities[i].z *= 0.98;
       }
     }
-    _sparkSystem.geometry.attributes.position.needsUpdate = true;
+    if (_sparkSystem) _sparkSystem.geometry.attributes.position.needsUpdate = true;
 
     // ── Atmospheric dust ─────────────────────────────────────
+    if (!_dustSystem || !_dustPositions) return;
     for (let i = 0; i < DUST_COUNT; i++) {
       _dustLifetimes[i] -= dt;
       if (_dustLifetimes[i] <= 0) {
@@ -1176,7 +1178,7 @@
         _dustPositions[i * 3 + 2] += _dustVelocities[i].z * dt;
       }
     }
-    _dustSystem.geometry.attributes.position.needsUpdate = true;
+    if (_dustSystem) _dustSystem.geometry.attributes.position.needsUpdate = true;
   }
 
   // ──────────────────────────────────────────────────────────
@@ -1578,9 +1580,16 @@
     _saveData  = saveData;
     _callbacks = callbacks || {};
 
-    // Build scene once
+    // Build scene once — wrap in try/catch so a partial build failure
+    // resets _campScene to null, allowing a clean retry on the next enter().
     if (!_campScene) {
-      _buildScene();
+      try {
+        _buildScene();
+      } catch (e) {
+        console.error('[CampWorld] _buildScene() failed — will retry on next enter():', e);
+        _campScene = null; // ensure a full rebuild is attempted next time
+        return;
+      }
     }
 
     // Reset player to spawn
