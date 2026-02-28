@@ -2,7 +2,14 @@
 // Extracted from game.js - loaded as a regular script before game.js (module)
 // Exposes window.GameAudio for use by game.js
 
-const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+// Safe AudioContext creation: browsers may block instantiation before user gesture,
+// or AudioContext may be unavailable in headless/CI environments.
+let audioCtx = null;
+try {
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+} catch(e) {
+  console.warn('[Audio] AudioContext unavailable:', e.message, '— audio disabled');
+}
 let musicOscillators = [];
 let musicGain = null;
 
@@ -13,6 +20,7 @@ function isSoundEnabled() {
 }
 
 function initMusic() {
+  if (!audioCtx) return;
   if (!musicGain) {
     musicGain = audioCtx.createGain();
     musicGain.gain.value = 0.05;
@@ -22,6 +30,7 @@ function initMusic() {
 
 function updateBackgroundMusic() {
   // Background music removed per requirements
+  if (!audioCtx) return;
   initMusic();
   if (musicGain) {
     musicGain.gain.setValueAtTime(0, audioCtx.currentTime);
@@ -37,6 +46,7 @@ function updateBackgroundMusic() {
 
 // Helper: create a white noise buffer for realistic sound synthesis
 function createNoiseBuffer(duration) {
+  if (!audioCtx) return null;
   const sampleRate = audioCtx.sampleRate;
   const bufferSize = Math.floor(sampleRate * duration);
   const buffer = audioCtx.createBuffer(1, bufferSize, sampleRate);
@@ -47,6 +57,7 @@ function createNoiseBuffer(duration) {
 
 // Helper: create a noise source (one-shot)
 function createNoise(duration) {
+  if (!audioCtx) return null;
   const source = audioCtx.createBufferSource();
   source.buffer = createNoiseBuffer(Math.max(duration, 0.05));
   return source;
@@ -54,6 +65,7 @@ function createNoise(duration) {
 
 function playSound(type) {
   if (!isSoundEnabled()) return;
+  if (!audioCtx) return;
   if (audioCtx.state === 'suspended') audioCtx.resume();
 
   const now = audioCtx.currentTime;
@@ -374,6 +386,7 @@ let droneGain = null;
 
 function startDroneHum() {
   if (!isSoundEnabled() || droneOscillator) return;
+  if (!audioCtx) return;
   if (audioCtx.state === 'suspended') audioCtx.resume();
 
   droneOscillator = audioCtx.createOscillator();

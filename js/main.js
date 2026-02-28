@@ -6,16 +6,32 @@
     // --- MODULE ALIASES FOR EXTRACTED GLOBALS ---
     // audio.js, utils.js, state.js, weapons.js, enemies.js, combat.js, player.js,
     // world.js, ui.js, renderer.js are all loaded as regular scripts before this module
-    const { playSound, initMusic, updateBackgroundMusic, startDroneHum, stopDroneHum } = window.GameAudio;
-    const audioCtx = window.GameAudio.audioCtx;
-    const { getRarityColor, getChestTierForCombo, getAccountLevelXPRequired, KILL_CAM_CONSTANTS, getRandomKillMessage } = window.GameUtils;
-    const { getDefaultWeapons, WEAPON_UPGRADES } = window.GameWeapons;
-    const { ENEMY_TYPES, getEnemyBaseStats } = window.GameEnemies;
-    const { calculateArmorReduction, calculateEnemyArmorReduction } = window.GameCombat;
-    const { getDefaultPlayerStats } = window.GamePlayer;
-    const { COLORS, GAME_CONFIG, countdownMessages, COMPANIONS, getInitialDayNightCycle } = window.GameWorld;
-    const { showStatChange, showStatusMessage, showYouDiedBanner } = window.GameUI;
-    const { RENDERER_CONFIG } = window.GameRenderer;
+    // Defensive null-guards: if a pre-module script failed to load (e.g. CDN error),
+    // fall back to safe stubs so the rest of the module can still initialise.
+    const _GameAudio    = window.GameAudio    || {};
+    const _GameUtils    = window.GameUtils    || {};
+    const _GameWeapons  = window.GameWeapons  || {};
+    const _GameEnemies  = window.GameEnemies  || {};
+    const _GameCombat   = window.GameCombat   || {};
+    const _GamePlayer   = window.GamePlayer   || {};
+    const _GameWorld    = window.GameWorld    || {};
+    const _GameUI       = window.GameUI       || {};
+    const _GameRenderer = window.GameRenderer || {};
+
+    const playSound              = _GameAudio.playSound              || function(){};
+    const initMusic              = _GameAudio.initMusic              || function(){};
+    const updateBackgroundMusic  = _GameAudio.updateBackgroundMusic  || function(){};
+    const startDroneHum          = _GameAudio.startDroneHum          || function(){};
+    const stopDroneHum           = _GameAudio.stopDroneHum           || function(){};
+    const audioCtx               = _GameAudio.audioCtx               || null;
+    const { getRarityColor = ()=>'#fff', getChestTierForCombo = ()=>1, getAccountLevelXPRequired = ()=>100, KILL_CAM_CONSTANTS = {}, getRandomKillMessage = ()=>'' } = _GameUtils;
+    const { getDefaultWeapons = ()=>({}), WEAPON_UPGRADES = {} }     = _GameWeapons;
+    const { ENEMY_TYPES = {}, getEnemyBaseStats = ()=>({}) }         = _GameEnemies;
+    const { calculateArmorReduction = (d)=>d, calculateEnemyArmorReduction = (d)=>d } = _GameCombat;
+    const { getDefaultPlayerStats = ()=>({}) }                       = _GamePlayer;
+    const { COLORS = {bg:0x000000}, GAME_CONFIG = {}, countdownMessages = [], COMPANIONS = [], getInitialDayNightCycle = ()=>({}) } = _GameWorld;
+    const { showStatChange = ()=>{}, showStatusMessage = ()=>{}, showYouDiedBanner = ()=>{} } = _GameUI;
+    const { RENDERER_CONFIG = {} }                                   = _GameRenderer;
 
     // --- CONSTANTS & CONFIG ---
     // COLORS and GAME_CONFIG are defined in world.js → window.GameWorld
@@ -12495,7 +12511,7 @@
             }
           },
           inventory:           () => showInventoryScreen(),
-          campBoard:           () => showCampBoardMenu(),
+          campBoard:           () => showFastTravelMenu(),
           specialAttacks:      () => showSpecialAttacksPanel(),
           warehouse:           () => showInventoryScreen(),
           tavern:              () => showExpeditionsMenu ? showExpeditionsMenu() : showQuestHall(),
@@ -16625,6 +16641,80 @@
     // ============================================================
     // CAMP BOARD — Fast Access Master Menu
     // ============================================================
+    // Fast-travel hub: shown when player interacts with the Camp Board building.
+    // Displays all key destinations; also used by questline to guide players.
+    function showFastTravelMenu() {
+      const existing = document.getElementById('fast-travel-overlay');
+      if (existing) existing.remove();
+
+      const overlay = document.createElement('div');
+      overlay.id = 'fast-travel-overlay';
+      overlay.style.cssText = [
+        'position:fixed','top:0','left:0','width:100%','height:100%',
+        'background:rgba(0,0,0,0.9)','z-index:500',
+        'display:flex','flex-direction:column','align-items:center',
+        'justify-content:flex-start','padding:20px 16px','box-sizing:border-box','overflow-y:auto',
+      ].join(';');
+
+      const header = document.createElement('div');
+      header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;width:100%;max-width:480px;margin-bottom:12px;';
+      header.innerHTML = '<div style="font-family:\'Bangers\',cursive;font-size:28px;color:#FFD700;letter-spacing:2px;text-shadow:0 0 10px rgba(255,215,0,0.6);">🗺️ FAST TRAVEL</div>';
+      const closeBtn = document.createElement('button');
+      closeBtn.textContent = '✕';
+      closeBtn.style.cssText = 'background:#2a2a2a;border:2px solid #666;border-radius:50%;width:38px;height:38px;color:#fff;font-size:18px;cursor:pointer;font-family:"Bangers",cursive;flex-shrink:0;';
+      closeBtn.onclick = () => overlay.remove();
+      header.appendChild(closeBtn);
+      overlay.appendChild(header);
+
+      const subtitle = document.createElement('div');
+      subtitle.style.cssText = 'color:#aaa;font-size:12px;margin-bottom:18px;text-align:center;letter-spacing:1.5px;text-transform:uppercase;max-width:400px;';
+      subtitle.textContent = 'Choose a destination to travel to';
+      overlay.appendChild(subtitle);
+
+      // Destinations
+      const destinations = [
+        { id: 'camp',          icon: '⛺', label: 'Camp Hub',           desc: 'Return to the campfire hub',      action: () => { overlay.remove(); } },
+        { id: 'new_run',       icon: '⚔️', label: 'Start New Run',       desc: 'Begin a fresh survival run',      action: () => { overlay.remove(); startGame(); } },
+        { id: 'quest_hall',    icon: '📜', label: 'Quest Hall',           desc: 'View and accept quests',          action: () => { overlay.remove(); showQuestHall(); } },
+        { id: 'skill_tree',    icon: '🌳', label: 'Skill Tree',           desc: 'Spend skill points',              action: () => { overlay.remove(); document.getElementById('camp-skills-tab').click(); } },
+        { id: 'forge',         icon: '⚒️', label: 'The Forge',            desc: 'Upgrade weapons and gear',        action: () => { overlay.remove(); showProgressionShop(); } },
+        { id: 'inventory',     icon: '📦', label: 'Inventory',            desc: 'Manage your items',               action: () => { overlay.remove(); showInventoryScreen(); } },
+        { id: 'armory',        icon: '⚔️', label: 'Armory',              desc: 'View equipped gear',              action: () => { overlay.remove(); try { updateGearScreen(); } catch(e){} document.getElementById('gear-screen').style.display = 'flex'; } },
+        { id: 'achievements',  icon: '🏆', label: 'Hall of Trophies',    desc: 'Browse achievements',             action: () => { overlay.remove(); const a = document.getElementById('achievements-screen'); if(a) a.style.display='flex'; } },
+        { id: 'prestige',      icon: '✨', label: 'Prestige Altar',      desc: 'Reset for permanent bonuses',     action: () => { overlay.remove(); if(typeof showPrestigeMenu==='function') showPrestigeMenu(); else showProgressionShop(); } },
+        { id: 'main_menu',     icon: '🏠', label: 'Main Menu',           desc: 'Return to the main menu',         action: () => { overlay.remove(); resetGame(); showMainMenu(); } },
+      ];
+
+      const grid = document.createElement('div');
+      grid.style.cssText = 'display:grid;grid-template-columns:repeat(2,1fr);gap:10px;width:100%;max-width:480px;';
+
+      destinations.forEach(dest => {
+        const btn = document.createElement('button');
+        btn.style.cssText = [
+          'background:rgba(30,30,50,0.9)','border:2px solid rgba(100,160,255,0.35)',
+          'border-radius:12px','padding:14px 10px','cursor:pointer',
+          'display:flex','flex-direction:column','align-items:center','gap:6px',
+          'color:#fff','font-family:inherit','transition:background 0.2s,border-color 0.2s',
+        ].join(';');
+        btn.innerHTML = `<span style="font-size:24px">${dest.icon}</span>
+          <div style="font-family:'Bangers',cursive;font-size:15px;letter-spacing:1px;color:#FFD700">${dest.label}</div>
+          <div style="font-size:10px;color:#aaa;text-align:center">${dest.desc}</div>`;
+        btn.addEventListener('mouseenter', () => { btn.style.background='rgba(50,80,120,0.9)'; btn.style.borderColor='rgba(100,200,255,0.7)'; });
+        btn.addEventListener('mouseleave', () => { btn.style.background='rgba(30,30,50,0.9)'; btn.style.borderColor='rgba(100,160,255,0.35)'; });
+        btn.addEventListener('click', dest.action);
+        grid.appendChild(btn);
+      });
+
+      overlay.appendChild(grid);
+      document.body.appendChild(overlay);
+
+      // Advance quest if player opens fast-travel during questline
+      if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest21_useCampBoard') {
+        progressTutorialQuest('quest21_useCampBoard', true);
+        saveSaveData();
+      }
+    }
+
     function showCampBoardMenu() {
       // Progress quest21 if active
       if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest21_useCampBoard') {
@@ -19454,17 +19544,27 @@
         // Upgrade cards: show icon (if present) + title + desc
         const iconHtml = u.icon ? `<span class="upgrade-icon">${u.icon}</span>` : '';
         card.innerHTML = `${iconHtml}<div class="upgrade-title">${u.title}</div><div class="upgrade-desc">${u.desc}</div>`;
-        
-        // Add dramatic entrance animation - from corners
+
+        // Apply glass-3D look
+        card.classList.add('glass-3d');
+
+        // Randomised entrance animation pool (choose one per card)
+        const _cardAnimations = [
+          'swooshFromTopLeft', 'swooshFromTopRight', 'swooshFromBottomLeft', 'swooshFromBottomRight',
+          'cardSpinInLeft', 'cardSpinInRight', 'cardDropIn', 'cardSmokeRise',
+          'cardTilePop', 'cardSpin720', 'cardVortex', 'cardCrashIn', 'cardFlipIn'
+        ];
+        const chosenAnim = _cardAnimations[Math.floor(Math.random() * _cardAnimations.length)];
+        const animDuration = chosenAnim === 'cardSpin720' ? '0.75s' : '0.55s';
+
         card.style.opacity = '0';
-        const corners = ['TopLeft', 'TopRight', 'BottomLeft', 'BottomRight'];
-        const corner = corners[index % 4];
-        card.style.animation = `swooshFrom${corner} 0.5s ease-out ${index * 0.1}s forwards`;
-        // Clear the inline animation after the entrance completes so CSS rarity-glow animations take over
+        card.style.animation = `${chosenAnim} ${animDuration} ease-out ${index * 0.12}s forwards`;
+        // After arrival: clear inline anim, add settled class (dark-glow blink once)
         card.addEventListener('animationend', (e) => {
-          if (e.animationName && e.animationName.startsWith('swooshFrom')) {
+          if (e.animationName === chosenAnim) {
             card.style.animation = '';
             card.style.opacity = '1';
+            card.classList.add('settled');
           }
         }, { once: true });
         
@@ -19871,63 +19971,74 @@
           }
         });
       }
-      
-      // Add landmark dots with region-specific icons
-      const landmarks = [
-        { pos: { x: 60, z: 40 }, name: 'windmill', icon: '⚙️' },
-        { pos: { x: -50, z: -50 }, name: 'montana', icon: '⛰️' },
-        { pos: { x: 70, z: -60 }, name: 'eiffel', icon: '⚡' },
-        { pos: { x: -60, z: 60 }, name: 'stonehenge', icon: '🗿' }
-      ];
-      
-      landmarks.forEach(landmark => {
-        const dx = landmark.pos.x - player.mesh.position.x;
-        const dz = landmark.pos.z - player.mesh.position.z;
-        
-        if (Math.abs(dx) < mapSize / 2 && Math.abs(dz) < mapSize / 2) {
-          const mapX = 50 + (dx / mapSize) * 100;
-          const mapZ = 50 + (dz / mapSize) * 100;
-          
-          // Add icon element for landmark
-          const iconEl = document.createElement('div');
-          iconEl.className = 'minimap-icon';
-          iconEl.textContent = landmark.icon;
-          iconEl.style.left = `${mapX}%`;
-          iconEl.style.top = `${mapZ}%`;
-          minimap.appendChild(iconEl);
-          
-          const landmarkDot = document.createElement('div');
-          // Add quest-ready "?" indicator for windmill when quest available
-          const isWindmillAvailable = landmark.name === 'windmill' && !windmillQuest.active && !windmillQuest.rewardGiven;
-          landmarkDot.className = 'minimap-dot minimap-landmark' + (isWindmillAvailable ? ' quest-ready' : '');
-          landmarkDot.style.left = `${mapX}%`;
-          landmarkDot.style.top = `${mapZ}%`;
-          minimap.appendChild(landmarkDot);
-        }
-      });
 
       // Show active quest location as yellow "?" on minimap
       const QUEST_LOCATIONS = {
-        quest3_stonehengeGear: { x: -60, z: 60 },
-        quest3_findStonehenge: { x: -60, z: 60 }
+        quest3_stonehengeGear:        { x: -60,  z:  60 },
+        quest3_findStonehenge:        { x: -60,  z:  60 },
+        quest18_findCompanionEgg:     { x: -148, z:  58 },
+        quest1_kill3:                 null, // enemies are everywhere
+        quest4_kill10:                null,
+        quest6_survive2min:           null,
+        quest8_kill10:                null,
+        quest10_kill15:               null,
+        quest14_kill25:               null,
+        // Windmill defence quest
+        quest_windmill_defend:        { x: 60,   z:  40 },
+        // Montana / Mountain area
+        quest_montana:                { x: -50,  z: -50 },
+        // Eiffel Tower area
+        quest_eiffel:                 { x:  70,  z: -60 },
       };
+
+      // Always show key structures on minimap: UFO site, windmill
+      const alwaysLandmarks = [
+        { pos: { x: 60,   z:  40  }, icon: '⚙️',  name: 'windmill'  },
+        { pos: { x: -148, z:  58  }, icon: '🛸',  name: 'ufo'       },
+        { pos: { x: -60,  z:  60  }, icon: '🗿',  name: 'stonehenge' },
+        { pos: { x: -50,  z: -50  }, icon: '⛰️',  name: 'montana'   },
+        { pos: { x:  70,  z: -60  }, icon: '⚡',  name: 'eiffel'    },
+      ];
+      alwaysLandmarks.forEach(lm => {
+        const dx = lm.pos.x - player.mesh.position.x;
+        const dz = lm.pos.z - player.mesh.position.z;
+        if (Math.abs(dx) < mapSize / 2 && Math.abs(dz) < mapSize / 2) {
+          const mapX = 50 + (dx / mapSize) * 100;
+          const mapZ = 50 + (dz / mapSize) * 100;
+          const iconEl = document.createElement('div');
+          iconEl.className = 'minimap-icon';
+          iconEl.textContent = lm.icon;
+          iconEl.style.left = `${mapX}%`;
+          iconEl.style.top  = `${mapZ}%`;
+          minimap.appendChild(iconEl);
+        }
+      });
+
       const currentQuest = getCurrentQuest ? getCurrentQuest() : null;
       if (currentQuest && QUEST_LOCATIONS[currentQuest.id]) {
         const qPos = QUEST_LOCATIONS[currentQuest.id];
         const qdx = qPos.x - player.mesh.position.x;
         const qdz = qPos.z - player.mesh.position.z;
+        const qmapX = 50 + (qdx / mapSize) * 100;
+        const qmapZ = 50 + (qdz / mapSize) * 100;
+
         if (Math.abs(qdx) < mapSize / 2 && Math.abs(qdz) < mapSize / 2) {
-          const qmapX = 50 + (qdx / mapSize) * 100;
-          const qmapZ = 50 + (qdz / mapSize) * 100;
           const questDot = document.createElement('div');
           questDot.className = 'minimap-dot minimap-quest-location';
           questDot.style.left = `${qmapX}%`;
-          questDot.style.top = `${qmapZ}%`;
+          questDot.style.top  = `${qmapZ}%`;
           minimap.appendChild(questDot);
+        } else {
+          // Quest is off-map: show arrow on minimap edge pointing toward it
+          const angle = Math.atan2(qdx, qdz);
+          const arrowEl = document.createElement('div');
+          arrowEl.className = 'minimap-quest-arrow';
+          arrowEl.style.transform = `rotate(${angle}rad)`;
+          minimap.appendChild(arrowEl);
         }
       }
     }
-    
+
     // Stats Bar removed - Users access stats via STATS button modal
     
     // Combo System - Red/Black Theme
@@ -21002,10 +21113,23 @@
         }
       } catch(e) { console.warn('[gameOver] Could not activate 3D camp world:', e); }
 
+      // Respawn rule: first death shows the full info/stats screen so the player
+      // learns the game loop.  All subsequent deaths auto-redirect to the 3D camp
+      // after a brief pause (YOU DIED banner + 0.5 s grace).
+      const isFirstRun = saveData.totalRuns === 1;
+      if (!isFirstRun) {
+        // Subsequent deaths: go directly to 3D camp world
+        setTimeout(() => {
+          document.getElementById('gameover-screen').style.display = 'none';
+          try { updateCampScreen(); } catch(e) { console.error('[gameOver] camp redirect error:', e); }
+          const campScreenEl = document.getElementById('camp-screen');
+          if (campScreenEl) campScreenEl.style.display = 'flex';
+        }, 3500); // After YOU DIED banner (3s) + 0.5s grace
+      }
+
       // Display game over screen
       document.getElementById('gameover-screen').style.display = 'flex';
       // On first run, only show "Go to Camp" button; restore all buttons on subsequent runs
-      const isFirstRun = saveData.totalRuns === 1;
       document.getElementById('restart-btn').style.display = isFirstRun ? 'none' : '';
       document.getElementById('quit-to-menu-btn').style.display = isFirstRun ? 'none' : '';
       document.getElementById('goto-camp-btn').style.display = '';

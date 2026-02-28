@@ -104,6 +104,9 @@
             // Fallback: show main menu if camp world is not ready yet
             var mainMenu = document.getElementById('main-menu');
             if (mainMenu) mainMenu.style.display = 'flex';
+            // Attach emergency fallback handlers so the menu is usable even if the
+            // main.js module failed to load (e.g. CDN offline).
+            _attachFallbackMenuHandlers();
           }
           
           // FRESH IMPLEMENTATION: Show Story Quest Modal on first load
@@ -117,5 +120,31 @@
             }
           }, 500);
         }, 500);
+      }
+
+      // Emergency fallback: wire up main-menu buttons if main.js module didn't load.
+      // These handlers do nothing if the module already attached its own listeners.
+      function _attachFallbackMenuHandlers() {
+        var startBtn = document.getElementById('start-game-btn');
+        var campBtn  = document.getElementById('camp-btn');
+        if (startBtn && !startBtn._fallbackAttached) {
+          startBtn._fallbackAttached = true;
+          startBtn.addEventListener('click', function() {
+            if (window.gameModuleReady) return; // module handler takes over
+            startBtn.textContent = 'Loading\u2026 (check network)';
+            console.warn('[Loading] start-game-btn clicked but module not ready');
+          });
+        }
+        if (campBtn && !campBtn._fallbackAttached) {
+          campBtn._fallbackAttached = true;
+          campBtn.addEventListener('click', function() {
+            if (window.gameModuleReady) return; // module handler takes over
+            var cs = document.getElementById('camp-screen');
+            var mm = document.getElementById('main-menu');
+            if (cs) { cs.style.display = 'flex'; }
+            if (mm) { mm.style.display = 'none'; }
+            console.warn('[Loading] camp-btn fallback: showing camp-screen (2D mode)');
+          });
+        }
       }
     })();
