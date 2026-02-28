@@ -13,9 +13,9 @@
 (function () {
   'use strict';
 
-  const STORAGE_KEY = 'wd_hud_layout_v1';
-  const MIN_SCALE   = 0.4;
-  const MAX_SCALE   = 2.5;
+  const STORAGE_KEY = 'wd_hud_layout_v2';
+  const MIN_W = 40;
+  const MIN_H = 20;
 
   // HUD elements that can be repositioned / resized.
   // Each entry specifies:
@@ -275,10 +275,10 @@
   }
 
   // ──────────────────────────────────────────────────────────
-  // Resize from upper-left corner handle
+  // Resize from upper-left corner handle — alters width/height only
   // ──────────────────────────────────────────────────────────
   function _bindResize(rh, el) {
-    let startX, startY, startScale, startW;
+    let startX, startY, startW, startH;
     let resizing = false;
 
     function onDown(e) {
@@ -288,9 +288,9 @@
       const pt = _getPointer(e);
       startX = pt.x;
       startY = pt.y;
-      // Read current scale from transform
-      startScale = _getScale(el);
-      startW     = el.getBoundingClientRect().width / startScale;
+      // Capture current rendered size (not affected by scale)
+      startW = el.offsetWidth;
+      startH = el.offsetHeight;
 
       window.addEventListener('mousemove', onMove);
       window.addEventListener('mouseup',   onUp);
@@ -302,13 +302,12 @@
       if (!resizing) return;
       e.preventDefault();
       const pt = _getPointer(e);
-      // Dragging left/up increases size (negative delta = bigger)
+      // Dragging left/up increases size; use the axis with greater movement
       const dx = startX - pt.x;
       const dy = startY - pt.y;
-      const delta = (dx + dy) / 2;
-      const newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, startScale + delta / startW));
-      el.style.transform = 'scale(' + newScale + ')';
-      el.style.transformOrigin = 'top left';
+      const delta = Math.abs(dx) >= Math.abs(dy) ? dx : dy;
+      el.style.width  = Math.max(MIN_W, startW + delta) + 'px';
+      el.style.height = Math.max(MIN_H, startH + delta) + 'px';
     }
 
     function onUp() {
@@ -331,12 +330,12 @@
     for (const h of _handles) {
       const el = h.el;
       layout[h.def.selector] = {
-        left:      el.style.left   || null,
-        top:       el.style.top    || null,
-        right:     el.style.right  || null,
-        bottom:    el.style.bottom || null,
-        transform: el.style.transform || '',
-        transformOrigin: el.style.transformOrigin || '',
+        left:   el.style.left   || null,
+        top:    el.style.top    || null,
+        right:  el.style.right  || null,
+        bottom: el.style.bottom || null,
+        width:  el.style.width  || null,
+        height: el.style.height || null,
       };
     }
     try {
@@ -357,6 +356,8 @@
       el.style.top       = d.top    || '';
       el.style.right     = d.right  || '';
       el.style.bottom    = d.bottom || '';
+      el.style.width     = '';
+      el.style.height    = '';
       el.style.transform = '';
       el.style.transformOrigin = '';
     }
@@ -392,8 +393,8 @@
       el.style.bottom = entry.bottom;
       el.style.top    = '';
     }
-    if (entry.transform)       el.style.transform       = entry.transform;
-    if (entry.transformOrigin) el.style.transformOrigin = entry.transformOrigin;
+    if (entry.width)  el.style.width  = entry.width;
+    if (entry.height) el.style.height = entry.height;
     // Ensure position is fixed so saved coords work regardless of which
     // anchoring side (left/top/right/bottom) was saved.
     if (entry.left || entry.top || entry.right || entry.bottom) {
@@ -412,13 +413,6 @@
       return { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY };
     }
     return { x: e.clientX, y: e.clientY };
-  }
-
-  function _getScale(el) {
-    const t = el.style.transform;
-    if (!t) return 1;
-    const m = t.match(/scale\(([^)]+)\)/);
-    return m ? parseFloat(m[1]) : 1;
   }
 
   // ──────────────────────────────────────────────────────────
