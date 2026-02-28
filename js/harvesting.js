@@ -399,7 +399,7 @@
     if (!res) { hud.innerHTML = ''; return; }
 
     const entries = Object.entries(RESOURCE_TYPES)
-      .filter(([k]) => res[k] > 0)
+      .filter(([k]) => res[k] > 0 && k !== 'flesh')
       .map(([k, v]) => `<span class="harvest-res-item"><span class="harvest-res-icon">${v.icon}</span><span class="harvest-res-count">${res[k]}</span></span>`)
       .join('');
     hud.innerHTML = entries || '';

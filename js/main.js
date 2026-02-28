@@ -15952,6 +15952,65 @@
         }
         // Apply any saved HUD layout from the UI Calibration system.
         if (window.UICalibration) window.UICalibration.applyLayout();
+        // Make the upper-left stat bar (hud-top) directly draggable during gameplay.
+        (function initHudTopDrag() {
+          const hudTop = document.querySelector('.hud-top');
+          if (!hudTop) return;
+          const STORAGE_KEY = 'wd_hudtop_pos';
+          // Restore saved position if available
+          try {
+            const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+            if (saved && typeof saved.left === 'number' && typeof saved.top === 'number') {
+              hudTop.style.left = Math.max(0, saved.left) + 'px';
+              hudTop.style.top  = Math.max(0, saved.top)  + 'px';
+            }
+          } catch(e) {}
+          let dragStartX, dragStartY, origLeft, origTop, isDragging = false;
+          function getPointer(e) {
+            return e.touches ? e.touches[0] : e;
+          }
+          function onDown(e) {
+            // Don't start drag if clicking on a button or interactive element inside hud-top
+            if (e.target.closest('button,a,input,select')) return;
+            e.preventDefault();
+            isDragging = false;
+            const p = getPointer(e);
+            dragStartX = p.clientX;
+            dragStartY = p.clientY;
+            const rect = hudTop.getBoundingClientRect();
+            origLeft = rect.left;
+            origTop  = rect.top;
+            window.addEventListener('mousemove', onMove);
+            window.addEventListener('mouseup',   onUp);
+            window.addEventListener('touchmove', onMove, { passive: false });
+            window.addEventListener('touchend',  onUp);
+          }
+          function onMove(e) {
+            e.preventDefault();
+            const p = getPointer(e);
+            const dx = p.clientX - dragStartX;
+            const dy = p.clientY - dragStartY;
+            if (!isDragging && (Math.abs(dx) + Math.abs(dy)) > 4) isDragging = true;
+            if (!isDragging) return;
+            hudTop.style.left = Math.max(0, origLeft + dx) + 'px';
+            hudTop.style.top  = Math.max(0, origTop  + dy) + 'px';
+            hudTop.style.right  = '';
+            hudTop.style.bottom = '';
+          }
+          function onUp() {
+            window.removeEventListener('mousemove', onMove);
+            window.removeEventListener('mouseup',   onUp);
+            window.removeEventListener('touchmove', onMove);
+            window.removeEventListener('touchend',  onUp);
+            if (isDragging) {
+              const rect = hudTop.getBoundingClientRect();
+              try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ left: rect.left, top: rect.top })); } catch(e) {}
+              isDragging = false;
+            }
+          }
+          hudTop.addEventListener('mousedown',  onDown);
+          hudTop.addEventListener('touchstart', onDown, { passive: false });
+        })();
       }, 2000);
       
       // SAFETY: Pause watchdog - auto-unpause if stuck with no visible overlay.
@@ -20838,6 +20897,30 @@
       
       saveSaveData();
       
+      // Activate the 3D camp world as background for the death screen so the
+      // player sees the real 3D camp (not just the dark game scene) on death.
+      try {
+        if (window.CampWorld && renderer) {
+          const campCallbacks = {
+            questMission:        () => {},
+            skillTree:           () => {},
+            armory:              () => {},
+            trainingHall:        () => {},
+            forge:               () => {},
+            companionHouse:      () => {},
+            achievementBuilding: () => {},
+            inventory:           () => {},
+            campBoard:           () => {},
+            specialAttacks:      () => {},
+            warehouse:           () => {},
+            tavern:              () => {},
+            shop:                () => {},
+            prestige:            () => {},
+          };
+          window.CampWorld.enter(renderer, saveData, campCallbacks);
+        }
+      } catch(e) { console.warn('[gameOver] Could not activate 3D camp world:', e); }
+
       // Display game over screen
       document.getElementById('gameover-screen').style.display = 'flex';
       // On first run, only show "Go to Camp" button; restore all buttons on subsequent runs
