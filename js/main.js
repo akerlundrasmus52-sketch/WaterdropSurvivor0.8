@@ -24295,8 +24295,6 @@
     // Init Game
     try { init(); } catch(e) { console.error('[Game Error]', e); console.error('[Game] Initialization failed - game cannot start'); }
 
-    // Signal that the module is fully ready — loading.js polls for this flag.
-    // MUST come after init() so that window.gameRenderer, window.CampWorld, and
-    // window.updateCampScreen are all set before showMenuAfterLoading() runs.
+    // Signal to loading.js that all systems are ready
     window.gameModuleReady = true;
     console.log('[main.js] Game module ready - all systems initialized');
