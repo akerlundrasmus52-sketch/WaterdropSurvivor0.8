@@ -535,9 +535,9 @@
     // Magnet range for XP collection
     let magnetRange = 2; // Base range for XP magnet
     
-    // Dash mechanics
-    let dashCooldown = 1000; // Base cooldown in ms (1 second)
-    let dashDistance = 2.5; // Base dash distance multiplier
+    // Dash mechanics — starts sluggish; movement upgrades improve it
+    let dashCooldown = 1500; // Base cooldown in ms (1.5s at start — upgrades reduce)
+    let dashDistance = 1.8; // Base dash distance (short at start — upgrades increase)
 
     // New dash state variables (Feature 1)
     let isDashing = false;
@@ -545,6 +545,9 @@
     let dashTimer = 0;
     let dashDirection = { x: 0, z: 0 };
     let dashInvulnerable = false;
+
+    // Track the current camera shake RAF to cancel on new hit (prevent stacking shakes)
+    let _cameraShakeRAF = null;
 
     // Upgrade Config — alias from GameWeapons
     const UPGRADES = WEAPON_UPGRADES;
@@ -1598,6 +1601,11 @@
         this.scaleYVel = 0;
         
         // FRESH IMPLEMENTATION: Screen shake scales with damage amount
+        // Cancel any previous shake to prevent stacked RAF loops
+        if (_cameraShakeRAF) {
+          cancelAnimationFrame(_cameraShakeRAF);
+          _cameraShakeRAF = null;
+        }
         const originalCameraPos = { 
           x: camera.position.x, 
           y: camera.position.y, 
@@ -1615,8 +1623,9 @@
             camera.position.x = originalCameraPos.x + (Math.random() - 0.5) * intensity;
             camera.position.y = originalCameraPos.y + (Math.random() - 0.5) * intensity;
             camera.position.z = originalCameraPos.z + (Math.random() - 0.5) * intensity;
-            requestAnimationFrame(shakeAnim);
+            _cameraShakeRAF = requestAnimationFrame(shakeAnim);
           } else {
+            _cameraShakeRAF = null;
             camera.position.x = originalCameraPos.x;
             camera.position.y = originalCameraPos.y;
             camera.position.z = originalCameraPos.z;
@@ -7790,96 +7799,96 @@
         name: 'Max HP',
         description: '+10 HP per level',
         maxLevel: 20,
-        baseCost: 50,
-        costIncrease: 25,
+        baseCost: 150,
+        costIncrease: 75,
         effect: (level) => 10 * level
       },
       hpRegen: {
         name: 'HP Regen',
         description: '+0.5 HP/sec per level',
         maxLevel: 10,
-        baseCost: 100,
-        costIncrease: 50,
+        baseCost: 250,
+        costIncrease: 100,
         effect: (level) => 0.5 * level
       },
       moveSpeed: {
         name: 'Move Speed',
         description: '+5% per level',
         maxLevel: 10,
-        baseCost: 75,
-        costIncrease: 25,
+        baseCost: 200,
+        costIncrease: 75,
         effect: (level) => 0.05 * level
       },
       attackDamage: {
         name: 'Attack Damage',
         description: '+10% per level',
         maxLevel: 15,
-        baseCost: 100,
-        costIncrease: 50,
+        baseCost: 250,
+        costIncrease: 100,
         effect: (level) => 0.1 * level
       },
       attackSpeed: {
         name: 'Attack Speed',
         description: '+5% per level',
         maxLevel: 10,
-        baseCost: 100,
-        costIncrease: 50,
+        baseCost: 250,
+        costIncrease: 100,
         effect: (level) => 0.05 * level
       },
       critChance: {
         name: 'Crit Chance',
         description: '+2% per level',
         maxLevel: 10,
-        baseCost: 150,
-        costIncrease: 50,
+        baseCost: 350,
+        costIncrease: 100,
         effect: (level) => 0.02 * level
       },
       critDamage: {
         name: 'Crit Damage',
         description: '+10% per level',
         maxLevel: 10,
-        baseCost: 150,
-        costIncrease: 50,
+        baseCost: 350,
+        costIncrease: 100,
         effect: (level) => 0.1 * level
       },
       armor: {
         name: 'Armor',
         description: '+2 per level',
         maxLevel: 15,
-        baseCost: 100,
-        costIncrease: 50,
+        baseCost: 250,
+        costIncrease: 100,
         effect: (level) => 2 * level
       },
       cooldownReduction: {
         name: 'Cooldown Reduction',
         description: '-3% per level',
         maxLevel: 10,
-        baseCost: 200,
-        costIncrease: 50,
+        baseCost: 400,
+        costIncrease: 100,
         effect: (level) => 0.03 * level
       },
       goldEarned: {
         name: 'Gold Earned',
         description: '+10% per level',
         maxLevel: 10,
-        baseCost: 300,
-        costIncrease: 100,
+        baseCost: 500,
+        costIncrease: 150,
         effect: (level) => 0.1 * level
       },
       expEarned: {
         name: 'EXP Earned',
         description: '+10% per level',
         maxLevel: 10,
-        baseCost: 250,
-        costIncrease: 100,
+        baseCost: 450,
+        costIncrease: 150,
         effect: (level) => 0.1 * level
       },
       maxWeapons: {
         name: 'Max Weapons',
         description: '+1 weapon slot',
         maxLevel: 3,
-        baseCost: 500,
-        costIncrease: 500,
+        baseCost: 800,
+        costIncrease: 600,
         effect: (level) => level
       }
     };
@@ -9272,7 +9281,8 @@
         rewardSkillPoints: 1,
         rewardAttributePoints: 3,
         unlockBuildingOnActivation: 'trainingHall',
-        message: "💪 Attribute upgraded!<br><br>You earned <b>+3 free Attribute Points</b> and <b>+1 Skill Point</b>!",
+        unlockBuilding: 'achievementBuilding',
+        message: "💪 Attribute upgraded!<br><br>You earned <b>+3 free Attribute Points</b> and <b>+1 Skill Point</b>!<br><br>The <b>Achievement Building</b> is now unlocked — visit it to claim badges!",
         nextQuest: 'quest6_survive2min',
         conditions: ['quest4_equipCigar']
       },
@@ -11454,6 +11464,110 @@
       }
     }
 
+    // Update corner widget notification dots and daily streak label
+    function _updateCampCornerWidgets() {
+      // Daily reward notification
+      const dailyNotif = document.getElementById('camp-daily-notif');
+      const dailyStreak = document.getElementById('camp-daily-streak');
+      if (window.GameDailies) {
+        const canClaim = !window.GameDailies.checkDailyLogin(saveData).alreadyClaimed;
+        if (dailyNotif) dailyNotif.style.display = canClaim ? 'block' : 'none';
+        if (dailyStreak) {
+          const streak = (saveData.dailies && saveData.dailies.loginStreak) || 0;
+          const day = ((streak) % 7) + 1;
+          dailyStreak.textContent = 'DAY ' + day;
+        }
+      }
+      // Spin wheel free spin notification
+      const spinNotif = document.getElementById('camp-spin-notif');
+      if (spinNotif && window.GameLuckyWheel) {
+        const hasFree = window.GameLuckyWheel.canFreeSpin(saveData);
+        spinNotif.style.display = hasFree ? 'block' : 'none';
+      }
+    }
+
+    // Show daily reward panel in a popup overlay
+    function _showDailyRewardPanel() {
+      const overlay = document.createElement('div');
+      overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.92);z-index:500;display:flex;align-items:center;justify-content:center;';
+      const panel = document.createElement('div');
+      panel.style.cssText = 'background:linear-gradient(135deg,#1a1a2e,#0d1020);border:4px solid #FFD700;border-radius:14px;padding:24px;max-width:90vw;width:380px;color:#fff;font-family:"Bangers",cursive;text-align:center;box-shadow:0 0 30px rgba(255,215,0,0.5);';
+      // Build daily login calendar
+      if (window.GameDailies) {
+        const streak = (saveData.dailies && saveData.dailies.loginStreak) || 0;
+        const rewards = window.GameDailies.DAILY_LOGIN_REWARDS;
+        let html = '<div style="color:#FFD700;font-size:1.6em;margin-bottom:12px;text-shadow:2px 2px 0 #000;letter-spacing:2px;">🎁 DAILY REWARD</div>';
+        html += '<div style="font-family:Arial,sans-serif;font-size:13px;color:#ccc;margin-bottom:16px;">Login Streak: <b style="color:#FFD700;">' + streak + ' days</b></div>';
+        html += '<div class="daily-login-strip">';
+        rewards.forEach(function(r, i) {
+          const dayNum = i + 1;
+          const claimed = streak >= dayNum;
+          const isToday = streak % 7 === i && !window.GameDailies.checkDailyLogin(saveData).alreadyClaimed;
+          const cls = 'daily-login-day' + (claimed ? ' claimed' : '') + (isToday ? ' today' : '');
+          html += '<div class="' + cls + '">';
+          html += '<div class="day-num">Day ' + dayNum + '</div>';
+          html += '<div class="day-reward">' + (claimed ? '✅' : r.item ? '🎁' : '💰') + '</div>';
+          html += '<div class="day-gold">' + r.gold + 'g</div>';
+          html += '</div>';
+        });
+        html += '</div>';
+        // Claim button
+        const canClaim = !window.GameDailies.checkDailyLogin(saveData).alreadyClaimed;
+        if (canClaim) {
+          html += '<button id="claim-daily-btn" style="margin-top:16px;background:linear-gradient(to bottom,#2ecc71,#27ae60);color:#fff;border:3px solid #000;border-radius:8px;padding:10px 24px;font-family:Bangers,cursive;font-size:1.1em;letter-spacing:2px;cursor:pointer;box-shadow:3px 3px 0 #000;">CLAIM REWARD</button>';
+        } else {
+          html += '<div style="margin-top:16px;color:#aaa;font-family:Arial,sans-serif;font-size:13px;">✅ Already claimed today! Come back tomorrow.</div>';
+        }
+        panel.innerHTML = html;
+        if (canClaim) {
+          panel.querySelector('#claim-daily-btn').onclick = function() {
+            const result = window.GameDailies.checkDailyLogin(saveData);
+            if (!result.alreadyClaimed) {
+              saveData.gold = (saveData.gold || 0) + result.gold;
+              saveSaveData();
+              showStatChange('🎁 Day ' + result.day + ' Reward: +' + result.gold + ' Gold!');
+            }
+            overlay.remove();
+            _updateCampCornerWidgets();
+          };
+        }
+      } else {
+        panel.innerHTML = '<div style="color:#FFD700;font-size:1.4em;">Daily Rewards not available</div>';
+      }
+      const closeBtn = document.createElement('button');
+      closeBtn.textContent = '✕';
+      closeBtn.style.cssText = 'position:absolute;top:12px;right:16px;background:none;border:none;color:#aaa;font-size:20px;cursor:pointer;font-family:Arial,sans-serif;';
+      closeBtn.onclick = () => overlay.remove();
+      panel.style.position = 'relative';
+      panel.appendChild(closeBtn);
+      overlay.appendChild(panel);
+      overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+      document.body.appendChild(overlay);
+    }
+
+    // Show spin wheel panel in a popup overlay
+    function _showSpinWheelPanel() {
+      const overlay = document.createElement('div');
+      overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.92);z-index:500;display:flex;align-items:center;justify-content:center;';
+      const panel = document.createElement('div');
+      panel.style.cssText = 'background:linear-gradient(135deg,#1a1a2e,#0d1020);border:4px solid #FFD700;border-radius:14px;padding:24px;max-width:90vw;width:420px;color:#fff;font-family:"Bangers",cursive;text-align:center;box-shadow:0 0 30px rgba(255,215,0,0.5);overflow-y:auto;max-height:90vh;';
+      const closeBtn = document.createElement('button');
+      closeBtn.textContent = '✕';
+      closeBtn.style.cssText = 'position:absolute;top:12px;right:16px;background:none;border:none;color:#aaa;font-size:20px;cursor:pointer;font-family:Arial,sans-serif;';
+      closeBtn.onclick = () => { overlay.remove(); _updateCampCornerWidgets(); };
+      panel.style.position = 'relative';
+      panel.appendChild(closeBtn);
+      if (window.GameLuckyWheel) {
+        window.GameLuckyWheel.renderWheelPanel(saveData, panel);
+        panel.appendChild(closeBtn);
+      } else {
+        panel.innerHTML = '<div style="color:#FFD700;">Wheel not available</div>';
+      }
+      overlay.appendChild(panel);
+      overlay.onclick = (e) => { if (e.target === overlay) { overlay.remove(); _updateCampCornerWidgets(); } };
+      document.body.appendChild(overlay);
+    }
+
     function updateCampScreen() {
       // First-run tutorial hook: fire after current call stack (by then camp-screen is visible)
       // Update action button label based on game state
@@ -11469,6 +11583,8 @@
       if (window.GameIdleBootstrap) window.GameIdleBootstrap.refreshPanel();
       // Update account level display whenever camp is opened
       updateAccountLevelDisplay();
+      // Update corner notification dots and streak label
+      _updateCampCornerWidgets();
       // Check for first-time camp visit
       if (!saveData.hasVisitedCamp) {
         saveData.hasVisitedCamp = true;
@@ -14801,7 +14917,42 @@
       resetGame();
       updateQuestTracker();
       
-      // Show first-run destructibles info box
+      // Show first-run game loop tutorial BEFORE destructibles info
+      const isVeryFirstRun = !saveData.firstRunTutorial || !saveData.firstRunTutorial.gameLoopShown;
+      if (isVeryFirstRun) {
+        if (!saveData.firstRunTutorial) saveData.firstRunTutorial = {};
+        saveData.firstRunTutorial.gameLoopShown = true;
+        saveSaveData();
+        showComicInfoBox(
+          '💧 WELCOME TO WATER DROP SURVIVOR',
+          '<div style="text-align:left;line-height:1.9;font-size:15px;padding:4px 0">' +
+          '<div style="font-size:17px;text-align:center;color:#5DADE2;margin-bottom:12px;"><b>YOUR FIRST RUN</b></div>' +
+          '<p style="margin-bottom:10px;">This first run is to <b>get the feel of the character</b>.</p>' +
+          '<p style="margin-bottom:10px;">⚠️ <b>You will die</b> — but don\'t worry!</p>' +
+          '<p style="margin-bottom:10px;">This game has <b>deep RPG progression</b>. Every time you die, you return to <b>Camp</b> to permanently upgrade your character.</p>' +
+          '<div style="background:rgba(255,215,0,0.1);border:2px solid rgba(255,215,0,0.4);border-radius:8px;padding:10px;margin-top:8px;font-size:14px;">' +
+          '🎯 <b>Play until you die, and we\'ll start upgrading!</b>' +
+          '</div>' +
+          '</div>',
+          'LET\'S GO! →',
+          () => {
+            // Show destructibles info as second popup
+            showComicInfoBox(
+              '💥 THIS WORLD CAN BE DESTROYED!',
+              '<div style="text-align:left;line-height:1.8;font-size:15px;padding:4px 0">' +
+              '<div style="margin-bottom:10px;font-size:17px;text-align:center;color:#FF4500"><b>Everything in this world can be destroyed!</b></div>' +
+              '<div style="margin:6px 0">🚶 <b>Walk through</b> small objects (fences, crates, bushes) to smash them</div>' +
+              '<div style="margin:6px 0">⚡ <b>DASH</b> into anything — trees, houses, structures — to smash them to pieces</div>' +
+              '<div style="margin:6px 0">🔫 <b>Shoot</b> objects to destroy them from a distance</div>' +
+              '<div style="margin-top:12px;font-size:13px;color:#666;text-align:center">Tip: Big objects block your path — only DASH breaks them!</div>' +
+              '</div>',
+              'START! →',
+              () => { startCountdown(); }
+            );
+          }
+        );
+      } else {
+      // Show first-run destructibles info box on second run only
       const isFirstRun = !saveData.shownDestructiblesInfo;
       if (isFirstRun) {
         saveData.shownDestructiblesInfo = true;
@@ -14842,6 +14993,7 @@
           startCountdown();
         }
       }
+      } // end else (not very first run)
     }
     window.startGame = startGame;
     
@@ -15356,6 +15508,24 @@
         campMenuBtn.onclick = () => {
           playSound('waterdrop');
           document.getElementById('settings-modal').style.display = 'flex';
+        };
+      }
+
+      // Corner widget: Daily Reward button
+      const campDailyBtn = document.getElementById('camp-daily-btn');
+      if (campDailyBtn) {
+        campDailyBtn.onclick = () => {
+          playSound('waterdrop');
+          _showDailyRewardPanel();
+        };
+      }
+
+      // Corner widget: Spin Wheel button
+      const campSpinBtn = document.getElementById('camp-spin-btn');
+      if (campSpinBtn) {
+        campSpinBtn.onclick = () => {
+          playSound('waterdrop');
+          _showSpinWheelPanel();
         };
       }
 
@@ -16488,151 +16658,51 @@
     }
     
     function createLevelUpEffects() {
-      // Water Fountain Effect - use particle pool to avoid GC spikes
-      // (replaces 60 fountain droplets, 18 jet spheres, 20 head droplets, 30 ground droplets)
-      spawnParticles(player.mesh.position, COLORS.player, 30); // main fountain burst
-      spawnParticles(player.mesh.position, 0xFFFFFF, 10);      // white sparkles
-      spawnParticles(player.mesh.position, 0x5DADE2, 20);      // blue water droplets
-      
-      // Water-sprout-from-head level-up ring: multiple expanding rings + vertical water jet
-      // Ring 1: fast-expanding bright ring (teal/white)
-      const ringGeo = new THREE.RingGeometry(0.3, 0.8, 24);
-      const ringMat = new THREE.MeshBasicMaterial({ 
-        color: 0xAAF0FF,
-        transparent: true,
-        opacity: 1.0,
-        side: THREE.DoubleSide
-      });
-      const ring = new THREE.Mesh(ringGeo, ringMat);
-      ring.position.copy(player.mesh.position);
-      ring.position.y = 0.05;
-      ring.rotation.x = -Math.PI / 2;
-      scene.add(ring);
-      
-      let ringLife = 70;
-      const updateRing = () => {
-        ringLife--;
-        const scale = 1 + (70 - ringLife) * 0.18;
-        ring.scale.set(scale, scale, 1);
-        ring.material.opacity = Math.max(0, ringLife / 70);
-        
-        if (ringLife <= 0) {
-          scene.remove(ring);
-          ring.geometry.dispose();
-          ring.material.dispose();
-        } else {
-          requestAnimationFrame(updateRing);
-        }
-      };
-      updateRing();
-      
-      // Ring 2: slower second ring (blue, slightly delayed)
-      const ring2Geo = new THREE.RingGeometry(0.3, 0.6, 24);
-      const ring2Mat = new THREE.MeshBasicMaterial({ color: 0x5DADE2, transparent: true, opacity: 0.85, side: THREE.DoubleSide });
-      const ring2 = new THREE.Mesh(ring2Geo, ring2Mat);
-      ring2.position.copy(player.mesh.position);
-      ring2.position.y = 0.05;
-      ring2.rotation.x = -Math.PI / 2;
-      scene.add(ring2);
-      let ring2Life = 50;
-      const updateRing2 = () => {
-        ring2Life--;
-        const s2 = 0.5 + (50 - ring2Life) * 0.22;
-        ring2.scale.set(s2, s2, 1);
-        ring2.material.opacity = Math.max(0, ring2Life / 50 * 0.85);
-        if (ring2Life <= 0) {
-          scene.remove(ring2);
-          ring2Geo.dispose(); ring2Mat.dispose();
-        } else requestAnimationFrame(updateRing2);
-      };
-      setTimeout(updateRing2, 80); // Slightly delayed second ring
-      
-      // Fountain/explosion of "LEVEL UP" text particles from player's head
-      const texts = ["L", "E", "V", "E", "L", " ", "U", "P", "!"];
-      
-      for(let i=0; i<40; i++) {
-        const angle = (i / 40) * Math.PI * 2;
-        const speed = 0.15 + Math.random() * 0.35;
-        const text = texts[i % texts.length];
-        
-        const particle = new LevelUpTextParticle(
-          player.mesh.position.clone(),
-          new THREE.Vector3(
-            Math.cos(angle) * speed,
-            0.4 + Math.random() * 0.6,
-            Math.sin(angle) * speed
-          ),
-          text
-        );
-        particles.push(particle);
-      }
-      
-      // Add regular colored particles
-      for(let i=0; i<30; i++) {
-        const angle = (i / 30) * Math.PI * 2;
-        const speed = 0.2 + Math.random() * 0.3;
-        const particle = new LevelUpParticle(
-          player.mesh.position.clone(),
-          new THREE.Vector3(
-            Math.cos(angle) * speed,
-            0.5 + Math.random() * 0.5,
-            Math.sin(angle) * speed
-          )
-        );
-        particles.push(particle);
-      }
-    }
-    
-    class LevelUpTextParticle {
-      constructor(pos, vel, text) {
-        // Create sprite with text
-        const canvas = document.createElement('canvas');
-        canvas.width = 64;
-        canvas.height = 64;
-        const ctx = canvas.getContext('2d');
-        ctx.font = 'bold 48px Arial';
-        ctx.fillStyle = '#5DADE2';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.shadowColor = '#FFF';
-        ctx.shadowBlur = 10;
-        ctx.fillText(text, 32, 32);
-        
-        const texture = new THREE.CanvasTexture(canvas);
-        const spriteMat = new THREE.SpriteMaterial({ map: texture, transparent: true });
-        this.mesh = new THREE.Sprite(spriteMat);
-        this.mesh.scale.set(0.5, 0.5, 0.5);
-        this.mesh.position.copy(pos);
-        this.mesh.position.y += 1;
-        this.vel = vel;
-        scene.add(this.mesh);
-        this.life = 80;
-        this.rotSpeed = (Math.random() - 0.5) * 0.2;
-      }
-      
-      update() {
-        this.life--;
-        this.mesh.position.add(this.vel);
-        this.vel.y -= 0.02; // Gravity
-        this.mesh.rotation.z += this.rotSpeed;
-        
-        // Fade out
-        this.mesh.material.opacity = this.life / 80;
-        
-        if (this.mesh.position.y < 0.1) {
-          this.mesh.position.y = 0.1;
-          this.vel.y *= -0.5; // Bounce
-          this.vel.x *= 0.7;
-          this.vel.z *= 0.7;
-        }
-        
-        if (this.life <= 0) {
-          scene.remove(this.mesh);
-          this.mesh.material.map.dispose();
-          this.mesh.material.dispose();
-          return false;
-        }
-        return true;
+      // Water drop spray effect — small water drops that fly from character and land on ground
+      // Uses BloodSystem with blue water colors for performance (pool-based, no GC spikes)
+      const pos = player.mesh.position;
+      if (window.BloodSystem) {
+        // Main water burst — blue drops spraying outward and upward
+        window.BloodSystem.emitBurst(pos, 35, {
+          spreadXZ: 0.5,
+          spreadY: 1.4,
+          minLife: 60,
+          maxLife: 110,
+          minSize: 0.05,
+          maxSize: 0.12,
+          color1: 0x5DADE2, // water blue
+          color2: 0x85C1E9  // lighter blue
+        });
+        // White sparkle droplets (spray highlight)
+        window.BloodSystem.emitBurst(pos, 18, {
+          spreadXZ: 0.35,
+          spreadY: 1.8,
+          minLife: 40,
+          maxLife: 75,
+          minSize: 0.03,
+          maxSize: 0.07,
+          color1: 0xDDF3FF,
+          color2: 0xFFFFFF
+        });
+        // Delayed secondary drips — fly upward then drip down
+        setTimeout(() => {
+          if (!player || !player.mesh) return;
+          window.BloodSystem.emitBurst(player.mesh.position, 20, {
+            spreadXZ: 0.25,
+            spreadY: 1.0,
+            minLife: 70,
+            maxLife: 120,
+            minSize: 0.04,
+            maxSize: 0.09,
+            color1: 0x1A8FC1,
+            color2: 0x5DADE2
+          });
+        }, 150);
+      } else {
+        // Fallback: use spawnParticles pool
+        spawnParticles(pos, COLORS.player, 25);
+        spawnParticles(pos, 0xFFFFFF, 8);
+        spawnParticles(pos, 0x5DADE2, 15);
       }
     }
     
@@ -16666,42 +16736,6 @@
       update() {
         this.life--;
         this.mesh.material.opacity = this.life / this.maxLife;
-        
-        if (this.life <= 0) {
-          scene.remove(this.mesh);
-          this.mesh.geometry.dispose();
-          this.mesh.material.dispose();
-          return false;
-        }
-        return true;
-      }
-    }
-    
-    class LevelUpParticle {
-      constructor(pos, vel) {
-        const geo = new THREE.OctahedronGeometry(0.15);
-        const mat = new THREE.MeshBasicMaterial({ color: 0xFFD700 });
-        this.mesh = new THREE.Mesh(geo, mat);
-        this.mesh.position.copy(pos);
-        this.mesh.position.y += 1;
-        this.vel = vel;
-        scene.add(this.mesh);
-        this.life = 60;
-      }
-      
-      update() {
-        this.life--;
-        this.mesh.position.add(this.vel);
-        this.vel.y -= 0.015; // Gravity
-        this.mesh.rotation.x += 0.1;
-        this.mesh.rotation.y += 0.1;
-        
-        if (this.mesh.position.y < 0) {
-          this.mesh.position.y = 0;
-          this.vel.y = 0;
-          this.vel.x *= 0.8;
-          this.vel.z *= 0.8;
-        }
         
         if (this.life <= 0) {
           scene.remove(this.mesh);
@@ -19194,7 +19228,7 @@
       playerStats.dashCooldownReduction = 0;
       playerStats.dashDistanceBonus = 0;
       // Apply dashPower from camp upgrades/attributes to base dash distance
-      dashDistance = 2.5 * (playerStats.dashPower || 1.0);
+      dashDistance = 1.8 * (playerStats.dashPower || 1.0);
       playerStats.hasSecondWind = false;
       playerStats.lifeStealPercent = 0;
       playerStats.thornsPercent = 0;
@@ -21638,12 +21672,20 @@
       // Lava damage: player takes damage when close to volcano (at -100, 0, -120)
       if (player && isGameActive && !isGameOver) {
         const LAVA_DAMAGE_RADIUS = 8;   // Distance from volcano center to take lava damage
+        const LAVA_WARN_RADIUS = 14;    // Distance at which warning appears
         const LAVA_MAX_DAMAGE = 10;     // Max damage per tick at volcano center
         const LAVA_TICK_INTERVAL = 0.5; // Seconds between lava damage ticks
         const lavaX = -100, lavaZ = -120;
         const ldx = player.mesh.position.x - lavaX;
         const ldz = player.mesh.position.z - lavaZ;
         const lavaDist = Math.sqrt(ldx * ldx + ldz * ldz);
+        // Show warning when approaching lava zone (helps prevent "random death")
+        if (lavaDist < LAVA_WARN_RADIUS && lavaDist >= LAVA_DAMAGE_RADIUS) {
+          if (!window._lavaWarnShown || (Date.now() - window._lavaWarnShown) > 5000) {
+            window._lavaWarnShown = Date.now();
+            showStatChange('🌋 DANGER: Volcanic heat! Move away!');
+          }
+        }
         if (lavaDist < LAVA_DAMAGE_RADIUS) {
           if (!window._lavaDamageTimer) window._lavaDamageTimer = 0;
           window._lavaDamageTimer += dt;
