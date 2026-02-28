@@ -75,54 +75,10 @@
       height: 24px;
       background: linear-gradient(to bottom, #1a1a1a 0%, #1a1a1a 50%, #3a3a3a 50%, #3a3a3a 100%);
       border-radius: 12px;
-      border: 3px solid #000000;
+      border: 2px solid rgba(255,215,0,0.4);
       overflow: hidden;
       position: relative;
-      box-shadow: 
-        0 0 0 1px rgba(255,215,0,0.7),
-        0 0 0 4px #000,
-        0 0 8px rgba(255,215,0,0.5),
-        0 0 16px rgba(255,215,0,0.2),
-        inset 0 2px 4px rgba(0,0,0,0.4);
-      background-image: 
-        radial-gradient(circle at 3px 3px, rgba(255,215,0,0.05) 2px, transparent 2px);
-      background-size: 12px 12px;
-      animation: bar-border-alive 3s ease-in-out infinite;
-    }
-
-    @keyframes bar-border-alive {
-      0%, 100% { 
-        box-shadow: 
-          0 0 0 1px rgba(255,215,0,0.7),
-          0 0 0 4px #000,
-          0 0 8px rgba(255,215,0,0.5),
-          0 0 16px rgba(255,215,0,0.2),
-          inset 0 2px 4px rgba(0,0,0,0.4);
-      }
-      25% { 
-        box-shadow: 
-          0 0 0 1px rgba(255,215,0,0.9),
-          0 0 0 4px #000,
-          0 0 10px rgba(255,215,0,0.6),
-          0 0 20px rgba(255,215,0,0.3),
-          inset 0 2px 4px rgba(0,0,0,0.4);
-      }
-      50% { 
-        box-shadow: 
-          0 0 0 1px rgba(255,215,0,1),
-          0 0 0 4px #000,
-          0 0 14px rgba(255,215,0,0.7),
-          0 0 24px rgba(255,215,0,0.35),
-          inset 0 2px 4px rgba(0,0,0,0.4);
-      }
-      75% { 
-        box-shadow: 
-          0 0 0 1px rgba(255,215,0,0.8),
-          0 0 0 4px #000,
-          0 0 10px rgba(255,215,0,0.55),
-          0 0 18px rgba(255,215,0,0.25),
-          inset 0 2px 4px rgba(0,0,0,0.4);
-      }
+      box-shadow: 0 2px 6px rgba(0,0,0,0.5), inset 0 2px 4px rgba(0,0,0,0.4);
     }
 
     .bar-fill {
@@ -491,16 +447,11 @@
       overflow: hidden;
       pointer-events: none;
       z-index: 100;
-      /* Enhanced border: thick black + yellow glow between */
       box-shadow: 
-        0 0 0 1px rgba(255,215,0,0.7),
-        0 0 0 4px #000,
-        0 0 10px rgba(255,215,0,0.5),
-        0 0 20px rgba(255,215,0,0.2),
+        0 0 8px rgba(255,215,0,0.3),
         inset -2px -2px 8px rgba(0,0,0,0.7),
         inset 2px 2px 8px rgba(255,255,255,0.1);
       transform-style: preserve-3d;
-      animation: bar-border-alive 3s ease-in-out infinite;
     }
     
     #minimap {
@@ -1202,7 +1153,7 @@
       top: 20px;
       right: 150px;
       background: linear-gradient(to bottom, #5A3A31, #3a2a21);
-      border: 3px solid #000;
+      border: 2px solid rgba(255,215,0,0.5);
       border-radius: 50%;
       width: 50px;
       height: 50px;
@@ -1210,18 +1161,13 @@
       cursor: pointer;
       pointer-events: auto;
       z-index: 100;
-      box-shadow: 
-        0 0 0 1px rgba(255,215,0,0.7),
-        0 0 0 4px #000,
-        0 0 8px rgba(255,215,0,0.5),
-        0 4px 0 #2a1a11;
+      box-shadow: 0 4px 0 #2a1a11, 0 6px 12px rgba(0,0,0,0.4);
       transition: all 0.2s;
       display: flex;
       align-items: center;
       justify-content: center;
       color: #FFD700;
       text-shadow: 0 0 8px rgba(255,215,0,0.6);
-      animation: bar-border-alive 3s ease-in-out infinite;
     }
     
     /* PR #117: Menu button - always visible in right upper corner */
@@ -1230,7 +1176,7 @@
       top: 10px;
       right: 10px;
       background: linear-gradient(to bottom, #5A3A31, #3a2a21);
-      border: 3px solid #000;
+      border: 2px solid rgba(255,215,0,0.5);
       border-radius: 50%;
       width: 44px;
       height: 44px;
@@ -1238,18 +1184,13 @@
       cursor: pointer;
       pointer-events: auto;
       z-index: 100;
-      box-shadow: 
-        0 0 0 1px rgba(255,215,0,0.7),
-        0 0 0 4px #000,
-        0 0 8px rgba(255,215,0,0.5),
-        0 4px 0 #2a1a11;
+      box-shadow: 0 4px 0 #2a1a11, 0 6px 12px rgba(0,0,0,0.4);
       transition: all 0.2s;
       display: flex;
       align-items: center;
       justify-content: center;
       color: #FFD700;
       text-shadow: 0 0 8px rgba(255,215,0,0.6);
-      animation: bar-border-alive 3s ease-in-out infinite;
     }
     
     #equipment-btn:hover, #menu-btn:hover {
@@ -1498,7 +1439,7 @@
       border: 3px solid #888888;
       cursor: pointer;
       transition: transform 0.15s, filter 0.2s, border-color 0.2s;
-      animation: fogwater-outer 4s ease-in-out infinite;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
       position: relative;
       overflow: hidden;
     }
@@ -4487,7 +4428,7 @@
 
 /* Apply to camp header buttons */
 .camp-header-btn {
-  animation: living-border-breathe 4s ease-in-out infinite;
+  /* living-border-breathe animation removed — no breathing black border */
 }
 .camp-header-btn:hover, .camp-header-btn:active {
   animation: none;
@@ -4495,12 +4436,12 @@
 
 /* Apply to #super-stat-bar */
 #super-stat-bar {
-  animation: living-border-breathe 5s ease-in-out infinite;
+  /* living-border-breathe animation removed — stat bar no longer has breathing black border */
 }
 
 /* Apply to ssb-countdown — living glow around it */
 .ssb-countdown {
-  animation: ssb-countdown-pulse 0.45s ease-out forwards, living-border-breathe 3s ease-in-out infinite;
+  animation: ssb-countdown-pulse 0.45s ease-out forwards;
 }
 
 /* tutorial-text-wrap: remove border animation that was creating a visible dark-bordered
@@ -4670,4 +4611,126 @@
   font-size: 10px;
   color: #666;
   margin-top: 8px;
+}
+
+/* ── Screen Transition Overlay ──────────────────────────────────── */
+#screen-transition {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  z-index: 9999;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+#screen-transition.fade-in {
+  opacity: 1;
+}
+
+/* ── Benny Dialogue Box ────────────────────────────────────────── */
+#benny-dialogue {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(480px, 90vw);
+  background: rgba(10, 12, 24, 0.96);
+  border: 2px solid rgba(255,215,0,0.5);
+  border-radius: 14px;
+  padding: 16px 20px;
+  z-index: 600;
+  display: none;
+  font-family: 'M PLUS Rounded 1c', sans-serif;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.8);
+  pointer-events: auto;
+}
+#benny-dialogue .benny-name {
+  font-family: 'Bangers', cursive;
+  font-size: 18px;
+  color: #FFD700;
+  text-shadow: 1px 1px 0 #000;
+  margin-bottom: 8px;
+  letter-spacing: 1px;
+}
+#benny-dialogue .benny-text {
+  font-size: 14px;
+  color: #e0d8c0;
+  line-height: 1.5;
+  margin-bottom: 12px;
+}
+#benny-dialogue .benny-close-btn {
+  background: linear-gradient(to bottom, #5A3A21, #3a2a11);
+  border: 2px solid rgba(255,215,0,0.5);
+  border-radius: 8px;
+  color: #FFD700;
+  font-family: 'Bangers', cursive;
+  font-size: 16px;
+  letter-spacing: 1px;
+  padding: 8px 24px;
+  cursor: pointer;
+  display: block;
+  width: 100%;
+  text-align: center;
+}
+#benny-dialogue .benny-close-btn:hover {
+  filter: brightness(1.2);
+}
+
+/* ── Post-Death / Post-Quest Options Box ──────────────────────── */
+#run-end-options {
+  position: fixed;
+  bottom: 180px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(340px, 85vw);
+  background: rgba(10, 12, 24, 0.96);
+  border: 2px solid rgba(255,215,0,0.4);
+  border-radius: 14px;
+  padding: 16px 20px;
+  z-index: 590;
+  display: none;
+  font-family: 'M PLUS Rounded 1c', sans-serif;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.8);
+  pointer-events: auto;
+  text-align: center;
+}
+#run-end-options .roe-title {
+  font-family: 'Bangers', cursive;
+  font-size: 20px;
+  color: #FFD700;
+  margin-bottom: 14px;
+  letter-spacing: 1px;
+}
+#run-end-options .roe-btn {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 8px;
+  border-radius: 8px;
+  border: 2px solid rgba(255,215,0,0.4);
+  background: rgba(255,215,0,0.08);
+  color: #e0d8c0;
+  font-family: 'Bangers', cursive;
+  font-size: 16px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: filter 0.15s;
+}
+#run-end-options .roe-btn:hover {
+  filter: brightness(1.25);
+  background: rgba(255,215,0,0.16);
+}
+#run-end-options .roe-btn.primary {
+  background: linear-gradient(to bottom, #4a7a4a, #2d4d2d);
+  border-color: #5fbc5f;
+  color: #fff;
+}
+
+/* ── Building Construction Animation ─────────────────────────── */
+@keyframes build-pulse {
+  0%, 100% { opacity: 0.6; transform: scaleY(1); }
+  50% { opacity: 1.0; transform: scaleY(1.05); }
+}
+.building-construction {
+  animation: build-pulse 0.8s ease-in-out infinite;
 }
