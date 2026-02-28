@@ -121,13 +121,14 @@ function getEnemyBaseStats(type, levelScaling, speedBase, playerLevel) {
   }
 
   stats.maxHp  = stats.hp;
-  // Elite does 1.5× base damage; MiniBoss/FlyingBoss have their own values
-  stats.damage = (type === 9 ? 50 * 1.5 : 50) * levelScaling;
-  if (type === 10) stats.damage = 75 * levelScaling;
-  if (type === 11) stats.damage = 100 * levelScaling; // Flying Boss hits hard
-  if (type === 12) stats.damage = 35 * levelScaling;  // Bug Ranged — moderate
-  if (type === 13) stats.damage = 65 * levelScaling;  // Bug Slow — heavy melee
-  if (type === 14) stats.damage = 20 * levelScaling;  // Bug Fast — light but rapid
+  // Base damage reduced from 50 to 30 for better early-game survivability.
+  // Elite does 1.5× base damage; MiniBoss/FlyingBoss have their own values.
+  stats.damage = (type === 9 ? 30 * 1.5 : 30) * levelScaling;
+  if (type === 10) stats.damage = 50 * levelScaling;
+  if (type === 11) stats.damage = 70 * levelScaling; // Flying Boss hits hard
+  if (type === 12) stats.damage = 22 * levelScaling;  // Bug Ranged — moderate
+  if (type === 13) stats.damage = 45 * levelScaling;  // Bug Slow — heavy melee
+  if (type === 14) stats.damage = 15 * levelScaling;  // Bug Fast — light but rapid
 
   return stats;
 }

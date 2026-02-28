@@ -19,7 +19,7 @@ const COLORS = {
 
 // Core game configuration constants
 const GAME_CONFIG = {
-  playerSpeedBase: 0.12, // Slower as requested
+  playerSpeedBase: 0.10, // Slower start — upgrades improve speed
   enemySpeedBase: 0.05,  // Slower as requested
   waveInterval: 300, // Frames between waves (approx 5s)
   expValue: 10,
@@ -30,9 +30,9 @@ const GAME_CONFIG = {
   lakeRadius: 18,
   // Performance optimization - Phase 1
   maxEnemiesOnScreen: 50, // Hard cap to prevent lag (docs specify 50 max)
-  // Movement physics
-  accelLerpFactor: 0.08, // Reduced acceleration — heavier, slower to start
-  decelLerpFactor: 0.025, // Much slower deceleration — more momentum/glide
+  // Movement physics — slow and sluggish at start to reward movement upgrades
+  accelLerpFactor: 0.05, // Very slow acceleration at start — feels heavy and unresponsive
+  decelLerpFactor: 0.018, // Slow deceleration — lots of momentum/glide
   movementLeanFactor: 0.25, // Stronger lean effect on turns and braking
   dashLeanFactor: 0.4, // Dramatic tilt during dash
   dashLeanReturnDuration: 200, // ms to return to upright after dash

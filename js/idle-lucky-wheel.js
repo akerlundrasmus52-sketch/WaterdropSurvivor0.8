@@ -107,30 +107,58 @@ window.GameLuckyWheel = (function () {
     var free = canFreeSpin(saveData);
     var essence = (saveData.clicker && saveData.clicker.essence > 0) ? saveData.clicker.essence : (saveData.essence || 0);
     var colors = ['#e74c3c','#e67e22','#f1c40f','#2ecc71','#1abc9c','#3498db','#9b59b6','#e91e63'];
-    var total = WHEEL_SEGMENTS.reduce(function (s, x) { return s + x.weight; }, 0);
     var sliceAngle = 360 / WHEEL_SEGMENTS.length;
 
     var html = '<div class="wheel-panel">';
     html += '<h3>🎡 Lucky Wheel</h3>';
     if (free) html += '<div class="wheel-free-badge">🎁 Free Spin Available!</div>';
-    html += '<div class="wheel-visual"><svg id="wheel-svg" viewBox="0 0 200 200" width="200" height="200">';
+    // Wheel SVG wrapped in a 3D container for visual depth
+    html += '<div class="wheel-visual">';
+    html += '<div class="wheel-3d-container">';
+    html += '<div class="wheel-glow-ring"></div>';
+    html += '<svg id="wheel-svg" viewBox="0 0 200 200" width="220" height="220" style="display:block;filter:drop-shadow(0 4px 16px rgba(0,0,0,0.7)) drop-shadow(0 0 8px rgba(255,215,0,0.4));">';
+    // Outer rim with 3D shadow effect
+    html += '<circle cx="100" cy="100" r="98" fill="none" stroke="#1a1a1a" stroke-width="4"/>';
+    html += '<circle cx="100" cy="100" r="97" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="2"/>';
+    html += '<g id="wheel-group">';
     WHEEL_SEGMENTS.forEach(function (seg, i) {
       var startAngle = i * sliceAngle - 90;
       var endAngle = startAngle + sliceAngle;
       var s = startAngle * Math.PI / 180, e = endAngle * Math.PI / 180;
-      var x1 = 100 + 95 * Math.cos(s), y1 = 100 + 95 * Math.sin(s);
-      var x2 = 100 + 95 * Math.cos(e), y2 = 100 + 95 * Math.sin(e);
+      var x1 = 100 + 94 * Math.cos(s), y1 = 100 + 94 * Math.sin(s);
+      var x2 = 100 + 94 * Math.cos(e), y2 = 100 + 94 * Math.sin(e);
       var mid = (startAngle + sliceAngle / 2) * Math.PI / 180;
-      var tx = 100 + 65 * Math.cos(mid), ty = 100 + 65 * Math.sin(mid);
-      html += '<path d="M100,100 L' + x1 + ',' + y1 + ' A95,95 0 0,1 ' + x2 + ',' + y2 + ' Z" fill="' + colors[i % colors.length] + '" stroke="#fff" stroke-width="1.5"/>';
-      html += '<text x="' + tx + '" y="' + (ty + 4) + '" text-anchor="middle" font-size="11" fill="#fff">' + seg.label.split(' ')[0] + '</text>';
+      var tx = 100 + 68 * Math.cos(mid), ty = 100 + 68 * Math.sin(mid);
+      var color = colors[i % colors.length];
+      // Segment with gradient-like shading using lighter inner color
+      html += '<path d="M100,100 L' + x1 + ',' + y1 + ' A94,94 0 0,1 ' + x2 + ',' + y2 + ' Z" fill="' + color + '" stroke="#000" stroke-width="1.5"/>';
+      // Lighter overlay for 3D shine effect
+      html += '<path d="M100,100 L' + x1 + ',' + y1 + ' A94,94 0 0,1 ' + x2 + ',' + y2 + ' Z" fill="rgba(255,255,255,0.1)" stroke="none"/>';
+      html += '<text x="' + tx + '" y="' + (ty + 4) + '" text-anchor="middle" font-size="10" fill="#fff" font-weight="bold" style="text-shadow:1px 1px 2px #000;">' + seg.label.split(' ')[0] + '</text>';
     });
-    html += '<circle cx="100" cy="100" r="12" fill="#fff" stroke="#ccc" stroke-width="2"/>';
-    html += '</svg><div class="wheel-pointer">▼</div></div>';
+    // Center hub with 3D depth
+    html += '<circle cx="100" cy="100" r="16" fill="radial-gradient(circle,#fff,#ccc)" stroke="#888" stroke-width="2"/>';
+    html += '<circle cx="100" cy="100" r="16" fill="#f5f5f5" stroke="#555" stroke-width="2.5"/>';
+    html += '<circle cx="100" cy="100" r="10" fill="#e0e0e0" stroke="#999" stroke-width="1"/>';
+    // Shine highlight on hub
+    html += '<ellipse cx="96" cy="96" rx="5" ry="3" fill="rgba(255,255,255,0.7)"/>';
+    html += '</g>';
+    // Outer decorative dots (lightbulb effect)
+    for (var d = 0; d < 12; d++) {
+      var da = (d / 12) * Math.PI * 2;
+      var dx = 100 + 99 * Math.cos(da), dy = 100 + 99 * Math.sin(da);
+      html += '<circle cx="' + dx.toFixed(1) + '" cy="' + dy.toFixed(1) + '" r="3" fill="#FFD700" opacity="0.9"/>';
+    }
+    html += '</svg>';
+    html += '</div>';
+    // Pointer arrow
+    html += '<div class="wheel-pointer">▼</div>';
+    html += '</div>';
     html += '<div class="wheel-btns">';
     if (free) html += '<button class="wheel-spin-free">🎁 Free Spin</button>';
     html += '<button class="wheel-spin-paid"' + (essence < SPIN_COST ? ' disabled' : '') + '>Spin (50 ✨)</button>';
     html += '</div>';
+    html += '<div class="wheel-result"></div>';
     html += '<div class="wheel-essence">✨ Essence: ' + essence + '</div>';
     html += '<div class="wheel-history"><h4>Recent Spins</h4><ul>';
     (saveData.wheel.history || []).forEach(function (e) {
@@ -144,29 +172,50 @@ window.GameLuckyWheel = (function () {
     container.innerHTML = html;
 
     function doSpin(useFree) {
-      var svg = container.querySelector('#wheel-svg');
+      var wheelGroup = container.querySelector('#wheel-group');
       var btns = container.querySelectorAll('.wheel-spin-free, .wheel-spin-paid');
       btns.forEach(function (b) { b.disabled = true; });
-      if (svg) svg.classList.add('wheel-svg-spinning');
-      setTimeout(function () {
-        if (svg) svg.classList.remove('wheel-svg-spinning');
-        var res = spin(saveData, useFree);
-        if (res.ok) {
-          var el = container.querySelector('.wheel-result');
-          if (!el) {
-            el = document.createElement('div');
-            el.className = 'wheel-result';
-            container.querySelector('.wheel-panel').insertBefore(el, container.querySelector('.wheel-btns'));
-          }
-          el.textContent = '🎉 ' + res.prize + ' — ' + res.description;
-          renderWheelPanel(saveData, container);
-        } else {
-          var existingResult = container.querySelector('.wheel-result');
-          if (existingResult) existingResult.textContent = '';
-          btns.forEach(function (b) { b.disabled = false; });
-          alert(res.msg);
+
+      // Pre-calculate result so we can animate to the winning segment
+      var res = spin(saveData, useFree);
+      if (!res.ok) {
+        btns.forEach(function (b) { b.disabled = false; });
+        alert(res.msg);
+        return;
+      }
+
+      // Find segment index to determine landing angle
+      var segIndex = WHEEL_SEGMENTS.indexOf(res.segment);
+      if (segIndex < 0) segIndex = 0;
+      // The pointer is at the top (-90 deg offset). Segment i center is at (i * sliceAngle - 90 + sliceAngle/2).
+      // We want that angle to be at 0 (top), so we rotate by -(i * sliceAngle + sliceAngle/2 - 90) mod 360.
+      var segCenterAngle = segIndex * sliceAngle + sliceAngle / 2 - 90;
+      var landingOffset = (360 - (segCenterAngle % 360 + 360) % 360) % 360;
+      // Spin 5 full rotations plus the landing offset for dramatic effect
+      var totalDeg = 360 * 5 + landingOffset;
+      var spinDuration = 3200; // ms
+      var startTime = Date.now();
+      var currentRot = 0;
+
+      function animateSpin() {
+        var elapsed = Date.now() - startTime;
+        var t = Math.min(elapsed / spinDuration, 1);
+        // Cubic ease-out for deceleration
+        var eased = 1 - Math.pow(1 - t, 3);
+        currentRot = totalDeg * eased;
+        if (wheelGroup) {
+          wheelGroup.setAttribute('transform', 'rotate(' + currentRot.toFixed(2) + ',100,100)');
         }
-      }, 1500);
+        if (t < 1) {
+          requestAnimationFrame(animateSpin);
+        } else {
+          // Animation complete — show result
+          var el = container.querySelector('.wheel-result');
+          if (el) el.textContent = '🎉 ' + res.prize + ' — ' + res.description;
+          setTimeout(function () { renderWheelPanel(saveData, container); }, 2000);
+        }
+      }
+      requestAnimationFrame(animateSpin);
     }
 
     var freeBtn = container.querySelector('.wheel-spin-free');
