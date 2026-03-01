@@ -107,7 +107,7 @@
       initializeGear();
       
       // Initialize background music
-      updateBackgroundMusic();
+      if (typeof updateBackgroundMusic === 'function') updateBackgroundMusic();
       
       // Initialize harvesting system (resource nodes + tools)
       if (window.GameHarvesting) {
