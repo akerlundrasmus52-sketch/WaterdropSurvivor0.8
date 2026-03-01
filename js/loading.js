@@ -7,21 +7,6 @@
       window.loadingComplete = false;
       let menuShown = false;
 
-      var FALLBACK_IMAGE = '654811F9-1760-4A74-B977-73ECB1A92913.png';
-
-      function showVideoFallback() {
-        var loadingScreen = document.getElementById('loading-screen');
-        var loadingVideo = document.getElementById('loading-video');
-        var fallbackImg = document.getElementById('loading-fallback-img');
-        if (loadingVideo) loadingVideo.style.display = 'none';
-        if (fallbackImg) fallbackImg.style.display = 'block';
-        if (loadingScreen) {
-          loadingScreen.style.backgroundImage = 'url(' + FALLBACK_IMAGE + ')';
-          loadingScreen.style.backgroundSize = 'cover';
-          loadingScreen.style.backgroundPosition = 'center';
-        }
-      }
-      
       // Wait for DOM to be ready
       if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', initLoading);
@@ -38,13 +23,6 @@
           return;
         }
 
-        // Handle video load failure — show fallback image
-        const loadingVideo = document.getElementById('loading-video');
-        if (loadingVideo) {
-          loadingVideo.addEventListener('error', showVideoFallback);
-          loadingVideo.addEventListener('stalled', showVideoFallback);
-        }
-        
         let progress = 0;
         let progressInterval;
         
@@ -163,8 +141,8 @@
           startBtn._fallbackAttached = true;
           startBtn.addEventListener('click', function() {
             if (window.gameModuleReady) return; // module handler takes over
-            startBtn.textContent = 'Loading\u2026 (check network)';
-            console.warn('[Loading] start-game-btn clicked but module not ready');
+            console.warn('[Loading] start-game-btn clicked but module not ready - reloading');
+            window.location.reload();
           });
         }
         if (campBtn && !campBtn._fallbackAttached) {
