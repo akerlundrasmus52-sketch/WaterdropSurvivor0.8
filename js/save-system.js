@@ -1,0 +1,1926 @@
+// js/save-system.js — Notification/inbox system, save/load (localStorage), achievements, super-stat bar (SSB),
+// player attributes, and gear/equipment system.
+// Depends on: variables from main.js (playerStats, saveData, etc.)
+
+    // --- NOTIFICATION/INBOX SYSTEM ---
+    const notifications = [];
+    const inventory = [];
+    const RARITY = {
+      COMMON: { name: 'Common', color: 0xAAAAAA, multiplier: 1.0 },
+      RARE: { name: 'Rare', color: 0x5DADE2, multiplier: 1.25 },
+      EPIC: { name: 'Epic', color: 0x9B59B6, multiplier: 1.5 },
+      LEGENDARY: { name: 'Legendary', color: 0xF39C12, multiplier: 2.0 },
+      MYTHIC: { name: 'Mythic', color: 0xE74C3C, multiplier: 3.0 }
+    };
+
+    // --- SAVE SYSTEM ---
+    // FRESH START - Changed save key to force reset after comprehensive re-implementation
+    const SAVE_KEY = 'waterDropSurvivorSave_v2_FreshStart';
+    const SETTINGS_KEY = 'waterDropSurvivorSettings';
+
+    const defaultSaveData = {
+      gold: 0,
+      totalGoldEarned: 0,
+      totalRuns: 0,
+      totalKills: 0, // Track cumulative kills for quest progression
+      bestTime: 0,
+      bestKills: 0,
+      upgrades: {
+        maxHp: 0,
+        hpRegen: 0,
+        moveSpeed: 0,
+        attackDamage: 0,
+        attackSpeed: 0,
+        critChance: 0,
+        critDamage: 0,
+        armor: 0,
+        cooldownReduction: 0,
+        goldEarned: 0,
+        expEarned: 0,
+        maxWeapons: 0
+      },
+      achievements: [],
+      achievementQuests: { kill7Unlocked: false, kill7Quest: 'none' }, // 'none'|'active'|'complete'
+      // Achievement-based attribute points
+      attributes: {
+        dexterity: 0,
+        strength: 0,
+        vitality: 0,
+        luck: 0,
+        wisdom: 0,
+        // New training hall attributes
+        endurance: 0,
+        flexibility: 0
+      },
+      unspentAttributePoints: 0,
+      // Gear system
+      // Phase 1: Expand gear system to 6 slots with enhanced RPG stats
+      equippedGear: {
+        weapon: null,        // Main weapon slot
+        armor: null,         // Body armor slot  
+        helmet: null,        // Head slot (Phase 1)
+        boots: null,         // Feet slot (Phase 1)
+        ring: null,          // Accessory ring slot (Phase 1)
+        amulet: null         // Accessory amulet slot (Phase 1)
+      },
+      inventory: [],
+      // Phase 5: Companion System
+      companions: {
+        stormWolf: { unlocked: true, level: 1, xp: 0, skills: {} },
+        skyFalcon: { unlocked: false, level: 1, xp: 0, skills: {} },
+        waterSpirit: { unlocked: false, level: 1, xp: 0, skills: {} }
+      },
+      selectedCompanion: 'stormWolf', // Default companion
+      hasCompanionEgg: false, // Companion egg found at UFO sight (Area 51)
+      companionEggHatched: false, // Whether the UFO companion egg has been hatched
+      companionEggHatchProgress: 0, // 0-100 hatching progress
+      companionSkillPoints: 0, // Skill points for companion skill tree
+      // Camp System - Quest-Driven Building Unlock System
+      campBuildings: {
+        // Core buildings - NEW: Only Quest Mission Hall unlocked initially
+        questMission: { level: 1, maxLevel: 10, unlocked: true },
+        inventory: { level: 0, maxLevel: 10, unlocked: false }, // Unlock via quest
+        campHub: { level: 0, maxLevel: 10, unlocked: false }, // Initially locked
+        loreMaster: { level: 0, maxLevel: 10, unlocked: false }, // Initially locked (placeholder for future lore content)
+        campBoard: { level: 0, maxLevel: 1, unlocked: false }, // Unlock via quest21
+        // Quest-unlockable buildings - locked initially, unlock through quest progression
+        skillTree: { level: 0, maxLevel: 10, unlocked: false }, // Unlock after Quest 1 is claimed
+        companionHouse: { level: 0, maxLevel: 10, unlocked: false }, // Unlock via quest
+        forge: { level: 0, maxLevel: 10, unlocked: false }, // Unlock via quest
+        armory: { level: 0, maxLevel: 10, unlocked: false }, // Unlock via quest
+        trainingHall: { level: 0, maxLevel: 10, unlocked: false }, // Unlock via quest
+        trashRecycle: { level: 0, maxLevel: 10, unlocked: false }, // Unlock via quest
+        tempShop: { level: 0, maxLevel: 10, unlocked: false }, // Unlock via quest
+        achievementBuilding: { level: 0, maxLevel: 1, unlocked: false }, // Unlock via quest11_findAllLandmarks
+        accountBuilding: { level: 1, maxLevel: 1, unlocked: true }, // Always unlocked — account stats
+        idleMenu: { level: 1, maxLevel: 1, unlocked: true }, // Always unlocked — idle progression panel
+        characterVisuals: { level: 0, maxLevel: 5, unlocked: false }, // Unlock via quest
+        codex: { level: 0, maxLevel: 5, unlocked: false }, // Unlock via quest
+        // Legacy buildings (for compatibility)
+        trainingGrounds: { level: 0, maxLevel: 10, unlocked: false },
+        library: { level: 0, maxLevel: 10, unlocked: false },
+        workshop: { level: 0, maxLevel: 10, unlocked: false },
+        shrine: { level: 0, maxLevel: 10, unlocked: false },
+        // Special Attacks arena — unlocked via quest
+        specialAttacks: { level: 0, maxLevel: 1, unlocked: false },
+        // New buildings — unlocked through quest progression
+        warehouse: { level: 0, maxLevel: 1, unlocked: false },   // Quest 7
+        tavern:    { level: 0, maxLevel: 1, unlocked: false },   // Quest 8
+        shop:      { level: 0, maxLevel: 1, unlocked: false },   // Quest 9
+        prestige:  { level: 0, maxLevel: 1, unlocked: false }    // Quest 10
+      },
+      // COMPREHENSIVE SKILL TREE - 48 Skills Total (Fresh Implementation)
+      skillTree: {
+        // COMBAT PATH (12 skills)
+        combatMastery: { unlocked: false, level: 0, maxLevel: 5 },
+        bladeDancer: { unlocked: false, level: 0, maxLevel: 3 },
+        heavyStrike: { unlocked: false, level: 0, maxLevel: 3 },
+        rapidFire: { unlocked: false, level: 0, maxLevel: 3 },
+        criticalFocus: { unlocked: false, level: 0, maxLevel: 5 },
+        armorPierce: { unlocked: false, level: 0, maxLevel: 3 },
+        multiHit: { unlocked: false, level: 0, maxLevel: 3 },
+        executioner: { unlocked: false, level: 0, maxLevel: 3 },
+        bloodlust: { unlocked: false, level: 0, maxLevel: 3 },
+        berserker: { unlocked: false, level: 0, maxLevel: 3 },
+        weaponSpecialist: { unlocked: false, level: 0, maxLevel: 5 },
+        combatVeteran: { unlocked: false, level: 0, maxLevel: 3 },
+        
+        // DEFENSE PATH (12 skills)
+        survivalist: { unlocked: false, level: 0, maxLevel: 5 },
+        ironSkin: { unlocked: false, level: 0, maxLevel: 3 },
+        quickReflex: { unlocked: false, level: 0, maxLevel: 3 },
+        fortification: { unlocked: false, level: 0, maxLevel: 5 },
+        regeneration: { unlocked: false, level: 0, maxLevel: 3 },
+        lastStand: { unlocked: false, level: 0, maxLevel: 3 },
+        toughness: { unlocked: false, level: 0, maxLevel: 3 },
+        guardian: { unlocked: false, level: 0, maxLevel: 3 },
+        resilience: { unlocked: false, level: 0, maxLevel: 3 },
+        secondWind: { unlocked: false, level: 0, maxLevel: 3 },
+        endurance: { unlocked: false, level: 0, maxLevel: 5 },
+        immortal: { unlocked: false, level: 0, maxLevel: 3 },
+        
+        // UTILITY PATH (12 skills)
+        wealthHunter: { unlocked: false, level: 0, maxLevel: 5 },
+        quickLearner: { unlocked: false, level: 0, maxLevel: 5 },
+        magnetism: { unlocked: false, level: 0, maxLevel: 3 },
+        efficiency: { unlocked: false, level: 0, maxLevel: 3 },
+        scavenger: { unlocked: false, level: 0, maxLevel: 3 },
+        fortuneFinder: { unlocked: false, level: 0, maxLevel: 3 },
+        speedster: { unlocked: false, level: 0, maxLevel: 3 },
+        dashMaster: { unlocked: false, level: 0, maxLevel: 3 },
+        cooldownExpert: { unlocked: false, level: 0, maxLevel: 3 },
+        auraExpansion: { unlocked: false, level: 0, maxLevel: 3 },
+        resourceful: { unlocked: false, level: 0, maxLevel: 5 },
+        treasureHunter: { unlocked: false, level: 0, maxLevel: 3 },
+        
+        // ELEMENTAL PATH (12 skills)
+        fireMastery: { unlocked: false, level: 0, maxLevel: 3 },
+        iceMastery: { unlocked: false, level: 0, maxLevel: 3 },
+        lightningMastery: { unlocked: false, level: 0, maxLevel: 3 },
+        elementalFusion: { unlocked: false, level: 0, maxLevel: 3 },
+        pyromaniac: { unlocked: false, level: 0, maxLevel: 3 },
+        frostbite: { unlocked: false, level: 0, maxLevel: 3 },
+        stormCaller: { unlocked: false, level: 0, maxLevel: 3 },
+        elementalChain: { unlocked: false, level: 0, maxLevel: 3 },
+        manaOverflow: { unlocked: false, level: 0, maxLevel: 3 },
+        spellEcho: { unlocked: false, level: 0, maxLevel: 3 },
+        arcaneEmpowerment: { unlocked: false, level: 0, maxLevel: 5 },
+        elementalOverload: { unlocked: false, level: 0, maxLevel: 3 },
+        
+        // NEW SKILLS (Feature 1)
+        dash: { unlocked: false, level: 0, maxLevel: 5 },
+        headshot: { unlocked: false, level: 0, maxLevel: 5 },
+        autoAim: { unlocked: false, level: 0, maxLevel: 1 },
+        // Special Attack unlock/upgrade nodes (maxLevel: 3 = 3 upgrade tiers)
+        specialKnifeTakedown: { unlocked: false, level: 0, maxLevel: 3 },
+        specialShockwave:    { unlocked: false, level: 0, maxLevel: 3 },
+        specialFrozenStorm:  { unlocked: false, level: 0, maxLevel: 3 },
+        specialDeathBlossom: { unlocked: false, level: 0, maxLevel: 3 },
+        specialThunderStrike: { unlocked: false, level: 0, maxLevel: 3 },
+        specialVoidPulse:    { unlocked: false, level: 0, maxLevel: 3 },
+        specialInfernoRing:  { unlocked: false, level: 0, maxLevel: 3 },
+        specialAcidCloud:    { unlocked: false, level: 0, maxLevel: 3 },
+        specialGravityWell:  { unlocked: false, level: 0, maxLevel: 3 },
+        specialSonicBoom:    { unlocked: false, level: 0, maxLevel: 3 },
+        specialBloodRain:    { unlocked: false, level: 0, maxLevel: 3 },
+        specialTimeFracture: { unlocked: false, level: 0, maxLevel: 3 },
+        specialChainLightning: { unlocked: false, level: 0, maxLevel: 3 },
+        specialMirrorField:  { unlocked: false, level: 0, maxLevel: 3 },
+        specialMeteorStrike: { unlocked: false, level: 0, maxLevel: 3 },
+        specialShadowClone:  { unlocked: false, level: 0, maxLevel: 3 },
+        specialForceBarrier: { unlocked: false, level: 0, maxLevel: 3 },
+        specialPlasmaBurst:  { unlocked: false, level: 0, maxLevel: 3 },
+        specialEarthquake:   { unlocked: false, level: 0, maxLevel: 3 },
+        specialAdrenalineRush: { unlocked: false, level: 0, maxLevel: 3 },
+        // Melee Takedown unlock node (legacy — keep for backward compatibility)
+        meleeTakedown:       { unlocked: false, level: 0, maxLevel: 1 }
+      },
+      // Special attacks loadout (max 4 equipped at once; populated after unlocking)
+      equippedSpecials: [],
+      specialAtkPoints: 0, // Points earned to unlock/upgrade special attacks
+      specialBranch: null, // 'upper' | 'lower' — chosen after knife is unlocked
+      skillPoints: 0, // Start with 0 skill points - earn through quests
+      // Account Level System - Persistent across all runs
+      accountLevel: 1, // Persistent character level
+      accountXP: 0,    // Total XP earned (quests + kills)
+      // Passive Skills System
+      passiveSkills: {},       // Object: skillId → level
+      passiveSkillPoints: 0,   // Points to spend on passive skills
+      // Camp state
+      hasVisitedCamp: false, // Track first camp visit
+      nextRunTimeOfDay: 'day', // 'day' or 'night' - chosen from sleep option
+      lastDeathHour: 6, // Track hour of day for time progression (0-23, starts at 6 AM)
+      runCount: 0, // Track total number of runs for time progression
+      // Training Hall system
+      trainingPoints: 0,
+      lastTrainingPointTime: 0, // Timestamp of last training point awarded
+      // Tutorial Quest System - 8-Quest Tutorial Flow
+      tutorialQuests: {
+        currentQuest: null, // Current active quest ID
+        completedQuests: [], // Array of completed quest IDs
+        questProgress: {}, // Object tracking progress for each quest
+        readyToClaim: [], // Array of quest IDs ready to claim
+        firstDeathShown: false,
+        secondRunCompleted: false, // For achievements building unlock
+        killsThisRun: 0, // Track kills per run (reset on new run)
+        survivalTimeThisRun: 0, // Track survival time per run
+        stonengengeChestFound: false, // Quest 6 specific
+        landmarksFound: {          // Track landmarks found for quest11_findAllLandmarks
+          stonehenge: false,
+          pyramid: false,
+          montana: false,
+          teslaTower: false,
+          ufoSight: false
+        },
+        lastShownQuestReminder: null // Track last shown quest reminder on run start
+      },
+      // Legacy quest data (keep for backward compatibility)
+      storyQuests: {
+        welcomeShown: false,
+        mainBuildingUnlocked: false,
+        currentQuest: null,
+        completedQuests: [],
+        readyToClaimQuests: [],
+        questProgress: {},
+        buildingFirstUse: {
+          skillTree: false,
+          forge: false,
+          armory: false,
+          trashRecycle: false,
+          companionHouse: false,
+          trainingHall: false,
+          tempShop: false
+        },
+        questNotifications: {}
+      },
+      // Tutorial/Onboarding system (comic book style)
+      tutorial: {
+        completed: false,
+        firstDeath: false,
+        campVisited: false,
+        dashUnlocked: false,
+        headshotUnlocked: false,
+        currentStep: 'waiting_first_death' // Steps: waiting_first_death, show_death_tutorial, go_to_camp, unlock_dash, unlock_headshot, completed
+      },
+      // Lore Collection system
+      loreUnlocked: {
+        landmarks: [],
+        enemies: [],
+        bosses: [],
+        buildings: []
+      },
+      // Extended milestone quests
+      extendedQuests: {
+        legendaryCigar: { started: false, completed: false, foundCigar: false },
+        companionEgg: { started: false, completed: false, eggHatched: false, ceremonyDone: false }
+      },
+      // Side challenges
+      sideChallenges: {
+        kill10Enemies: { completed: false, progress: 0, target: 10 }
+      },
+      // First-Run Tutorial System (speech bubble tutorial)
+      firstRunTutorial: {
+        step: 0,       // 0=not started, 1-16=active steps (see TUT_STEP constants), 17=complete
+        completed: false
+      },
+      // Harvesting & Resource System
+      resources: {
+        wood: 0, stone: 0, coal: 0, iron: 0,
+        crystal: 0, magicEssence: 0, gem: 0, flesh: 0
+      },
+      harvestingTools: {
+        axe: false, sledgehammer: false, pickaxe: false, magicTool: false,
+        epicAxe: false, epicSledgehammer: false, epicPickaxe: false, epicMagicTool: false
+      }
+    };
+
+    let saveData = JSON.parse(JSON.stringify(defaultSaveData));
+
+    function loadSaveData() {
+      try {
+        const saved = localStorage.getItem(SAVE_KEY);
+        if (saved) {
+          saveData = JSON.parse(saved);
+          // Ensure all fields exist
+          saveData.upgrades = { ...defaultSaveData.upgrades, ...saveData.upgrades };
+          saveData.attributes = { ...defaultSaveData.attributes, ...(saveData.attributes || {}) };
+          saveData.unspentAttributePoints = saveData.unspentAttributePoints || 0;
+          saveData.equippedGear = { ...defaultSaveData.equippedGear, ...(saveData.equippedGear || {}) };
+          saveData.inventory = saveData.inventory || [];
+          saveData.campBuildings = { ...defaultSaveData.campBuildings, ...(saveData.campBuildings || {}) };
+          saveData.skillTree = { ...defaultSaveData.skillTree, ...(saveData.skillTree || {}) };
+          saveData.companions = { ...defaultSaveData.companions, ...(saveData.companions || {}) };
+          saveData.hasVisitedCamp = saveData.hasVisitedCamp || false;
+          saveData.nextRunTimeOfDay = saveData.nextRunTimeOfDay || 'day';
+          saveData.lastDeathHour = saveData.lastDeathHour || 6; // Default to 6 AM
+          saveData.runCount = saveData.runCount || 0;
+          saveData.trainingPoints = saveData.trainingPoints || 0;
+          saveData.lastTrainingPointTime = saveData.lastTrainingPointTime || 0;
+          saveData.skillPoints = saveData.skillPoints || 0;
+          saveData.selectedCompanion = saveData.selectedCompanion || 'stormWolf';
+          saveData.hasCompanionEgg = saveData.hasCompanionEgg || false;
+          saveData.companionEggHatched = saveData.companionEggHatched || false;
+          saveData.companionEggHatchProgress = saveData.companionEggHatchProgress || 0;
+          saveData.companionSkillPoints = saveData.companionSkillPoints || 0;
+          // Ensure companion skill data fields exist
+          if (saveData.companions) {
+            Object.keys(saveData.companions).forEach(cId => {
+              if (saveData.companions[cId] && !saveData.companions[cId].skills) {
+                saveData.companions[cId].skills = {};
+              }
+            });
+          }
+          // Account level system
+          saveData.accountLevel = saveData.accountLevel || 1;
+          saveData.accountXP = saveData.accountXP || 0;
+          // Passive skills system
+          saveData.passiveSkills = saveData.passiveSkills || {};
+          saveData.passiveSkillPoints = saveData.passiveSkillPoints || 0;
+          // Story quest system (legacy fields)
+          saveData.storyQuests = { ...defaultSaveData.storyQuests, ...(saveData.storyQuests || {}) };
+          saveData.storyQuests.buildingFirstUse = { ...defaultSaveData.storyQuests.buildingFirstUse, ...(saveData.storyQuests.buildingFirstUse || {}) };
+          // Tutorial quest system (new)
+          saveData.tutorialQuests = { ...defaultSaveData.tutorialQuests, ...(saveData.tutorialQuests || {}) };
+          saveData.tutorialQuests.landmarksFound = { ...defaultSaveData.tutorialQuests.landmarksFound, ...(saveData.tutorialQuests.landmarksFound || {}) };
+          saveData.sideChallenges = { ...defaultSaveData.sideChallenges, ...(saveData.sideChallenges || {}) };
+          // Tutorial system (new fields)
+          saveData.tutorial = { ...defaultSaveData.tutorial, ...(saveData.tutorial || {}) };
+          // First-run tutorial system
+          saveData.firstRunTutorial = { ...defaultSaveData.firstRunTutorial, ...(saveData.firstRunTutorial || {}) };
+          // Destructibles info shown flag
+          saveData.shownDestructiblesInfo = saveData.shownDestructiblesInfo || false;
+          // Character visuals customization
+          saveData.characterVisuals = saveData.characterVisuals || { accessory: 'none', animation: 'idle', outfit: 'default' };
+          // Harvesting system (new fields)
+          saveData.resources = { ...defaultSaveData.resources, ...(saveData.resources || {}) };
+          saveData.harvestingTools = { ...defaultSaveData.harvestingTools, ...(saveData.harvestingTools || {}) };
+          // Special attacks loadout (new field)
+          saveData.equippedSpecials = saveData.equippedSpecials || [];
+          // Special attack points (new field)
+          saveData.specialAtkPoints = saveData.specialAtkPoints || 0;
+          // Special branch choice (new field)
+          if (saveData.specialBranch === undefined) saveData.specialBranch = null;
+          // New buildings migration
+          saveData.campBuildings = saveData.campBuildings || {};
+          ['warehouse', 'tavern', 'shop', 'prestige'].forEach(bld => {
+            if (!saveData.campBuildings[bld]) {
+              saveData.campBuildings[bld] = { level: 0, maxLevel: 1, unlocked: false };
+            }
+          });
+        }
+      } catch (e) {
+        console.error('Failed to load save data:', e);
+        saveData = { ...defaultSaveData };
+      }
+    }
+
+    // Throttle saves to avoid excessive localStorage writes (max once per 500ms)
+    let _saveScheduled = false;
+    let _lastSaveTime = 0;
+    const _SAVE_MIN_INTERVAL = 500; // ms
+
+    function saveSaveData() {
+      const now = Date.now();
+      if (now - _lastSaveTime >= _SAVE_MIN_INTERVAL) {
+        _lastSaveTime = now;
+        _saveScheduled = false;
+        try {
+          localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
+        } catch (e) {
+          console.error('Failed to save data:', e);
+        }
+      } else if (!_saveScheduled) {
+        _saveScheduled = true;
+        setTimeout(() => {
+          _saveScheduled = false;
+          _lastSaveTime = Date.now();
+          try {
+            localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
+          } catch (e) {
+            console.error('Failed to save data:', e);
+          }
+        }, _SAVE_MIN_INTERVAL - (now - _lastSaveTime));
+      }
+    }
+    
+    // Settings persistence
+    function saveSettings() {
+      try {
+        const settings = {
+          autoAim: gameSettings.autoAim,
+          controlType: gameSettings.controlType,
+          soundEnabled: gameSettings.soundEnabled,
+          musicEnabled: gameSettings.musicEnabled,
+          graphicsQuality: gameSettings.graphicsQuality
+        };
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+      } catch (e) {
+        console.error('Failed to save settings:', e);
+      }
+    }
+    
+    function loadSettings() {
+      try {
+        const saved = localStorage.getItem(SETTINGS_KEY);
+        if (saved) {
+          const settings = JSON.parse(saved);
+          // Apply saved settings to gameSettings
+          if (settings.autoAim !== undefined) gameSettings.autoAim = settings.autoAim;
+          if (settings.controlType) gameSettings.controlType = settings.controlType;
+          if (settings.soundEnabled !== undefined) gameSettings.soundEnabled = settings.soundEnabled;
+          if (settings.musicEnabled !== undefined) gameSettings.musicEnabled = settings.musicEnabled;
+          if (settings.graphicsQuality) gameSettings.graphicsQuality = settings.graphicsQuality;
+        } else {
+          // No saved settings — auto-detect best control type.
+          // Touch events + no fine pointer = mobile/tablet → 'touch' (on-screen joystick).
+          // Everything else (desktop, laptop) → 'keyboard' so WASD works immediately.
+          const isTouchOnly = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+          const hasFinePointer = window.matchMedia?.('(pointer: fine)').matches ?? false;
+          gameSettings.controlType = (isTouchOnly && !hasFinePointer) ? 'touch' : 'keyboard';
+        }
+      } catch (e) {
+        console.error('Failed to load settings:', e);
+      }
+    }
+    
+    // Expose saveData to window scope for loading screen access (FRESH IMPLEMENTATION)
+    window.saveData = saveData;
+    window.GameState.saveData = saveData;
+    // Bootstrap idle systems now that saveData is available
+    if (window.GameState.initIdleSystems) window.GameState.initIdleSystems(saveData);
+
+    // --- ACHIEVEMENTS SYSTEM ---
+    const ACHIEVEMENTS = {
+      kill7: { id: 'kill7', name: 'First Steps', desc: 'Kill 7 enemies', reward: 10, skillPoints: 0, attributePoints: 0, check: () => playerStats.kills >= 7, claimed: false },
+      kills10: { id: 'kills10', name: 'First Blood', desc: 'Kill 10 enemies', reward: 25, skillPoints: 1, attributePoints: 1, check: () => playerStats.kills >= 10, claimed: false },
+      kills50: { id: 'kills50', name: 'Killer Instinct', desc: 'Kill 50 enemies', reward: 50, skillPoints: 1, attributePoints: 1, check: () => playerStats.kills >= 50, claimed: false },
+      kills100: { id: 'kills100', name: 'Century Slayer', desc: 'Kill 100 enemies', reward: 100, skillPoints: 2, attributePoints: 2, check: () => playerStats.kills >= 100, claimed: false },
+      kills500: { id: 'kills500', name: 'Mass Destroyer', desc: 'Kill 500 enemies', reward: 250, skillPoints: 2, attributePoints: 2, check: () => playerStats.kills >= 500, claimed: false },
+      kills1000: { id: 'kills1000', name: 'Legendary Warrior', desc: 'Kill 1000 enemies', reward: 500, skillPoints: 3, attributePoints: 3, check: () => playerStats.kills >= 1000, claimed: false },
+      kills2500: { id: 'kills2500', name: 'Elite Slayer', desc: 'Kill 2500 enemies', reward: 750, skillPoints: 3, attributePoints: 3, check: () => playerStats.kills >= 2500, claimed: false },
+      kills5000: { id: 'kills5000', name: 'God of War', desc: 'Kill 5000 enemies', reward: 1000, skillPoints: 4, attributePoints: 4, check: () => playerStats.kills >= 5000, claimed: false },
+      
+      gold100: { id: 'gold100', name: 'Small Fortune', desc: 'Collect 100 gold in one run', reward: 50, skillPoints: 1, attributePoints: 1, check: () => playerStats.gold >= 100, claimed: false },
+      gold500: { id: 'gold500', name: 'Treasure Hunter', desc: 'Collect 500 gold in one run', reward: 150, skillPoints: 1, attributePoints: 1, check: () => playerStats.gold >= 500, claimed: false },
+      gold1000: { id: 'gold1000', name: 'Gold Baron', desc: 'Collect 1000 gold in one run', reward: 300, skillPoints: 2, attributePoints: 2, check: () => playerStats.gold >= 1000, claimed: false },
+      gold2500: { id: 'gold2500', name: 'Wealth Magnet', desc: 'Collect 2500 gold in one run', reward: 500, skillPoints: 2, attributePoints: 2, check: () => playerStats.gold >= 2500, claimed: false },
+      
+      dasher: { id: 'dasher', name: 'Dash Master', desc: 'Perform 50 dashes in one run', reward: 100, skillPoints: 1, attributePoints: 1, check: () => playerStats.dashesPerformed >= 50, claimed: false },
+      survivor: { id: 'survivor', name: 'Time Warrior', desc: 'Survive for 10 minutes', reward: 200, skillPoints: 2, attributePoints: 2, check: () => playerStats.survivalTime >= 600, claimed: false },
+      survivor20: { id: 'survivor20', name: 'Endurance Master', desc: 'Survive for 20 minutes', reward: 400, skillPoints: 3, attributePoints: 3, check: () => playerStats.survivalTime >= 1200, claimed: false },
+      survivor30: { id: 'survivor30', name: 'Immortal Legend', desc: 'Survive for 30 minutes', reward: 600, skillPoints: 4, attributePoints: 4, check: () => playerStats.survivalTime >= 1800, claimed: false },
+      weaponMaster: { id: 'weaponMaster', name: 'Weapon Master', desc: 'Unlock all 3 weapons', reward: 150, skillPoints: 1, attributePoints: 1, check: () => playerStats.weaponsUnlocked >= 3, claimed: false },
+      untouchable: { id: 'untouchable', name: 'Untouchable', desc: 'Take no damage for 3 minutes', reward: 300, skillPoints: 3, attributePoints: 3, check: () => playerStats.survivalTime >= 180 && playerStats.damageTaken === 0, claimed: false },
+      
+      miniBoss1: { id: 'miniBoss1', name: 'Boss Slayer I', desc: 'Defeat your first mini-boss', reward: 150, skillPoints: 2, attributePoints: 2, check: () => playerStats.miniBossesDefeated >= 1, claimed: false },
+      miniBoss3: { id: 'miniBoss3', name: 'Boss Slayer II', desc: 'Defeat 3 mini-bosses', reward: 300, skillPoints: 2, attributePoints: 2, check: () => playerStats.miniBossesDefeated >= 3, claimed: false },
+      miniBoss5: { id: 'miniBoss5', name: 'Boss Slayer III', desc: 'Defeat 5 mini-bosses', reward: 500, skillPoints: 3, attributePoints: 3, check: () => playerStats.miniBossesDefeated >= 5, claimed: false },
+      miniBoss10: { id: 'miniBoss10', name: 'Boss Hunter', desc: 'Defeat 10 mini-bosses', reward: 800, skillPoints: 4, attributePoints: 4, check: () => playerStats.miniBossesDefeated >= 10, claimed: false },
+      
+      level10: { id: 'level10', name: 'Rising Star', desc: 'Reach Level 10', reward: 100, skillPoints: 1, attributePoints: 1, check: () => playerStats.lvl >= 10, claimed: false },
+      level25: { id: 'level25', name: 'Experienced Fighter', desc: 'Reach Level 25', reward: 250, skillPoints: 2, attributePoints: 2, check: () => playerStats.lvl >= 25, claimed: false },
+      level50: { id: 'level50', name: 'Master Champion', desc: 'Reach Level 50', reward: 500, skillPoints: 3, attributePoints: 3, check: () => playerStats.lvl >= 50, claimed: false },
+      level75: { id: 'level75', name: 'Elite Warrior', desc: 'Reach Level 75', reward: 750, skillPoints: 3, attributePoints: 3, check: () => playerStats.lvl >= 75, claimed: false },
+      level100: { id: 'level100', name: 'Legendary Hero', desc: 'Reach Level 100', reward: 1000, skillPoints: 4, attributePoints: 4, check: () => playerStats.lvl >= 100, claimed: false },
+      level125: { id: 'level125', name: 'Unstoppable Force', desc: 'Reach Level 125', reward: 1250, skillPoints: 4, attributePoints: 4, check: () => playerStats.lvl >= 125, claimed: false },
+      level150: { id: 'level150', name: 'Ascended Champion', desc: 'Reach Level 150', reward: 1500, skillPoints: 5, attributePoints: 5, check: () => playerStats.lvl >= 150, claimed: false }
+    };
+
+    function updateAchievementsScreen() {
+      const content = document.getElementById('achievements-content');
+      if (!content) return;
+      
+      let html = '<div style="display: grid; gap: 15px; width: 100%; max-width: 600px; margin: 0 auto;">';
+      
+      let unclaimedCount = 0;
+      for (const key in ACHIEVEMENTS) {
+        const achievement = ACHIEVEMENTS[key];
+        const isClaimed = saveData.achievements && saveData.achievements.includes(achievement.id);
+        const canClaim = !isClaimed && achievement.check();
+        
+        if (canClaim) unclaimedCount++;
+        
+        html += `
+          <div style="
+            background: linear-gradient(to bottom, ${isClaimed ? '#2c5530' : (canClaim ? '#4a4a2a' : '#3a3a3a')}, ${isClaimed ? '#1a3020' : (canClaim ? '#3a3a1a' : '#2a2a2a')});
+            border: 3px solid ${isClaimed ? '#FFD700' : (canClaim ? '#FFFF00' : '#5a5a5a')};
+            border-radius: 15px;
+            padding: 15px;
+            text-align: left;
+            position: relative;
+            cursor: ${canClaim ? 'pointer' : 'default'};
+            transition: all 0.2s ease;
+            ${canClaim ? 'box-shadow: 0 0 15px rgba(255, 255, 0, 0.5);' : ''}
+          " ${canClaim ? `onclick="claimAchievement('${achievement.id}')"` : ''}>
+            <div style="color: ${isClaimed ? '#FFD700' : (canClaim ? '#FFFF00' : '#bbb')}; font-size: 20px; font-weight: bold; margin-bottom: 5px;">
+              ${isClaimed ? '✓ ' : ''}${achievement.name}
+            </div>
+            <div style="color: ${isClaimed ? '#90ee90' : (canClaim ? '#dddd00' : '#888')}; font-size: 14px; margin-bottom: 8px;">
+              ${achievement.desc}
+            </div>
+            <div style="color: #FFD700; font-size: 16px; font-weight: bold;">
+              Reward: ${achievement.reward} Gold
+            </div>
+            <div style="color: #90EE90; font-size: 16px; font-weight: bold; margin-top: 5px;">
+              Skill Points: ${achievement.skillPoints || 0} 🔮
+            </div>
+            <div style="color: #5DADE2; font-size: 16px; font-weight: bold; margin-top: 5px;">
+              Attribute Points: ${achievement.attributePoints} ${canClaim ? '⭐' : ''}
+            </div>
+            ${canClaim ? '<div style="color: #FFFF00; font-size: 14px; margin-top: 8px; animation: pulse 1s infinite;">CLICK TO CLAIM!</div>' : ''}
+            </div>
+          </div>
+        `;
+      }
+      
+      html += '</div>';
+      content.innerHTML = html;
+      
+      // Update notification badge on achievements button
+      updateAchievementBadge(unclaimedCount);
+    }
+
+    // Alias so Achievement Hall button can call a named function
+    function renderAchievementsContent(containerEl) {
+      updateAchievementsScreen();
+      // Also render idle achievements panel (from idle-achievements.js) if available
+      if (containerEl && window.GameAchievements) {
+        let idleAchWrap = containerEl.querySelector('#idle-achievements-wrap');
+        if (!idleAchWrap) {
+          idleAchWrap = document.createElement('div');
+          idleAchWrap.id = 'idle-achievements-wrap';
+          idleAchWrap.style.cssText = 'margin-top:18px;border-top:2px solid rgba(255,215,0,0.3);padding-top:14px;';
+          containerEl.appendChild(idleAchWrap);
+        }
+        // Use idle-bootstrap's internal render if available, otherwise basic display
+        if (typeof window.GameIdleBootstrap !== 'undefined' && window.GameState && window.GameState.saveData) {
+          var GA = window.GameAchievements;
+          var sd = window.GameState.saveData;
+          var ach = sd.achievements || GA.getAchievementsDefaults();
+          var defs = GA.ACHIEVEMENTS;
+          if (defs && defs.length) {
+            var h = '<h3 style="font-family:\'Bangers\',cursive;color:#FFD700;font-size:1.4em;margin:0 0 8px;letter-spacing:1px;">⚙️ IDLE ACHIEVEMENTS</h3>';
+            defs.forEach(function(def) {
+              var unlocked = ach.unlocked && !!ach.unlocked[def.id];
+              h += '<div style="padding:6px 10px;margin:4px 0;border-radius:6px;font-size:13px;' +
+                (unlocked ? 'background:rgba(255,215,0,0.1);border:2px solid rgba(255,215,0,0.4);color:#FFD700;'
+                          : 'background:rgba(0,0,0,0.2);border:1px solid rgba(255,215,0,0.1);color:#666;') + '">' +
+                (unlocked ? '✅ ' : '🔒 ') + '<b>' + def.name + '</b> — ' + def.description +
+                ' <span style="color:#FFD700;">→ +' + def.bonus.pct + '% ' + def.bonus.type + '</span></div>';
+            });
+            idleAchWrap.innerHTML = h;
+          }
+        }
+      }
+    }
+
+    function updateAchievementBadge(count) {
+      let badge = document.getElementById('achievement-badge');
+      if (count > 0) {
+        if (!badge) {
+          badge = document.createElement('div');
+          badge.id = 'achievement-badge';
+          badge.style.cssText = `
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #FF0000;
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+            box-shadow: 0 0 10px rgba(255, 0, 0, 0.8);
+            z-index: 100;
+          `;
+          const achievementsBtn = document.getElementById('achievements-btn') || document.getElementById('options-achievements-btn');
+          if (achievementsBtn) achievementsBtn.appendChild(badge);
+        }
+        badge.textContent = count;
+      } else if (badge) {
+        badge.remove();
+      }
+    }
+
+    // Track notification text to allow temporary override in the live stat rectangle
+    let _liveStatNotification = '';
+    let _liveStatNotificationTimer = null;
+
+    function updateStatBar() {
+      const liveStatEl = document.getElementById('live-stat-display');
+      if (!liveStatEl || !isGameActive || isGameOver) { 
+        if (liveStatEl) liveStatEl.style.display = 'none';
+        return; 
+      }
+      
+      // Build live game info for the rectangle (no full quest details)
+      const parts = [];
+      
+      // Wave
+      parts.push('⚔️ Wave ' + (waveCount || 0));
+      
+      // Kills
+      const kills = playerStats ? playerStats.kills : 0;
+      parts.push('💀 ' + kills);
+      
+      // Combo
+      const combo = window.currentCombo || 0;
+      if (combo > 1) parts.push('🔥 x' + combo);
+      
+      // Region
+      const regionName = document.getElementById('region-name')?.textContent || 'Forest';
+      parts.push('📍 ' + regionName);
+      
+      // Quest completion count (brief, not full quest details)
+      const completedQuests = (saveData.tutorialQuests && saveData.tutorialQuests.completedQuests) || [];
+      const totalQuests = Object.keys(TUTORIAL_QUESTS).length;
+      if (completedQuests.length > 0) {
+        parts.push('📋 ' + completedQuests.length + '/' + totalQuests);
+      }
+      
+      // Side quest indicator
+      if (saveData.achievementQuests && saveData.achievementQuests.kill7Quest === 'active') {
+        parts.push('⭐ Side Quest');
+      }
+
+      // Update the live stat rectangle
+      if (liveStatEl) {
+        // If a notification is active, show it; otherwise show the stat bar
+        if (_liveStatNotification) {
+          liveStatEl.textContent = _liveStatNotification;
+          liveStatEl.style.color = '#FFD700';
+        } else {
+          liveStatEl.textContent = parts.join('  ·  ');
+          liveStatEl.style.color = '#e0e0e0';
+        }
+        liveStatEl.style.display = 'block';
+      }
+      
+      // Build quest text for the left-side tracker
+      let questText = '';
+      const currentQuest = getCurrentQuest();
+      if (currentQuest) {
+        if (currentQuest.id === 'quest1_kill3') questText = Math.min(kills, 3) + '/3';
+        else if (currentQuest.id === 'quest8_kill10') questText = Math.min(kills,10) + '/10';
+        else if (currentQuest.id === 'quest10_kill15') questText = Math.min(kills,15) + '/15';
+        else if (currentQuest.id === 'quest14_kill25') questText = Math.min(kills,25) + '/25';
+        else if (currentQuest.id === 'quest13_windmill') questText = 'Active';
+        else if (currentQuest.id === 'quest15_accountVisit') questText = 'Go to Camp';
+        else if (currentQuest.id === 'quest18_findCompanionEgg') questText = '→ Area 51';
+        else if (currentQuest.id === 'quest19_hatchEgg') questText = 'Go to Camp';
+        else if (currentQuest.id === 'quest20_trainCompanion') questText = 'Train Companion';
+        else if (currentQuest.id === 'quest11_findAllLandmarks') {
+          const lf = saveData.tutorialQuests.landmarksFound || {};
+          const found = Object.values(LANDMARK_CONFIGS).filter(cfg => lf[cfg.key]).length;
+          questText = `${found}/${Object.keys(LANDMARK_CONFIGS).length}`;
+        }
+        else questText = 'Active';
+      }
+      if (!questText && saveData.achievementQuests && saveData.achievementQuests.kill7Quest === 'active') {
+        questText = 'Visit Camp';
+      }
+      
+      // Update quest tracker (left-side overlay) — simplified: show only progress number
+      const questTrackerEl = document.getElementById('quest-tracker');
+      if (questTrackerEl) {
+        if (currentQuest && questText) {
+          // Simplified: just show icon + short progress (full name visible in stat box)
+          questTrackerEl.textContent = '📜 ' + questText;
+          questTrackerEl.style.display = 'block';
+        } else if (currentQuest) {
+          questTrackerEl.textContent = '📜 ' + (currentQuest.name || 'Quest');
+          questTrackerEl.style.display = 'block';
+        } else {
+          questTrackerEl.style.display = 'none';
+        }
+      }
+      // Keep super stat bar context rows in sync every frame
+      _ssbUpdateContext();
+    }
+    window.updateStatBar = updateStatBar;
+    
+    // Show a notification in the live stat rectangle temporarily, then revert to stat bar
+    function showLiveStatNotification(text) {
+      _liveStatNotification = text;
+      if (_liveStatNotificationTimer) clearTimeout(_liveStatNotificationTimer);
+      _liveStatNotificationTimer = setTimeout(() => {
+        _liveStatNotification = '';
+        _liveStatNotificationTimer = null;
+      }, 3000);
+    }
+    window.showLiveStatNotification = showLiveStatNotification;
+
+    // =====================================================================
+    //  SUPER STAT BAR — real-time event history with rarity color coding
+    // =====================================================================
+    const SSB_COLORS = {
+      common:    { text: '#b0b0b0', border: 'rgba(80,80,90,0.9)',  bg: 'rgba(25,25,30,0.92)'  },
+      uncommon:  { text: '#2ecc71', border: 'rgba(30,140,80,0.9)', bg: 'rgba(12,35,20,0.92)'  },
+      rare:      { text: '#5dade2', border: 'rgba(30,100,180,0.9)',bg: 'rgba(12,25,50,0.92)'  },
+      epic:      { text: '#c39bd3', border: 'rgba(120,50,170,0.9)',bg: 'rgba(28,12,48,0.92)'  },
+      legendary: { text: '#ec7063', border: 'rgba(180,50,40,0.9)', bg: 'rgba(48,10,8,0.92)'   },
+      mythic:    { text: '#FFD700', border: 'rgba(180,140,10,0.9)',bg: 'rgba(42,32,4,0.92)'   },
+      gold:      { text: '#FFD700', border: 'rgba(180,140,10,0.9)',bg: 'rgba(42,32,4,0.92)'   },
+      region:    { text: '#85c1e9', border: 'rgba(30,110,180,0.9)',bg: 'rgba(12,26,46,0.92)'  },
+      quest:     { text: '#f9e79f', border: 'rgba(200,150,10,0.9)',bg: 'rgba(45,35,4,0.92)'   },
+      death:     { text: '#ff6b6b', border: 'rgba(150,10,10,0.9)', bg: 'rgba(48,4,4,0.92)'    },
+      countdown: { text: '#FFD700', border: 'rgba(180,140,10,0.9)',bg: 'rgba(42,32,4,0.92)'   }
+    };
+
+    const _ssbHistory = [];
+    const SSB_MAX_HIST = 3;
+    const SSB_MAX_TEXT_LEN       = 21;   // characters before truncation
+    const SSB_FLASH_DURATION_MS  = 350;  // must match .ssb-new-event animation (0.35s)
+    const SSB_COMBO_CHEST_MILESTONES = [5, 7, 9, 10, 12, 15, 20]; // combo→chest thresholds
+    const SSB_TIMER_CRITICAL     = 5;    // quest timer seconds — red warning
+    const SSB_TIMER_WARNING      = 15;   // quest timer seconds — yellow warning
+
+    function _ssbApply(el, rarity) {
+      const c = SSB_COLORS[rarity] || SSB_COLORS.common;
+      el.style.color       = c.text;
+      el.style.borderColor = c.border;
+      el.style.background  = c.bg;
+      // Mythic gets extra strong glow per spec
+      if (rarity === 'mythic') {
+        el.style.boxShadow  = `0 0 10px ${c.border}AA, 0 0 20px ${c.text}55, inset 0 0 6px ${c.border}33`;
+        el.style.textShadow = `0 0 8px ${c.text}CC, 0 0 18px ${c.text}88, 1px 1px 2px rgba(0,0,0,0.9)`;
+      } else {
+        el.style.boxShadow  = `0 0 5px ${c.border}55, inset 0 0 4px ${c.border}22`;
+        el.style.textShadow = `0 0 6px ${c.text}88, 1px 1px 2px rgba(0,0,0,0.9)`;
+      }
+    }
+
+    function pushSuperStatEvent(text, rarity, icon, status) {
+      if (!text) return;
+      rarity = rarity || 'common';
+      icon   = icon   || '';
+      const disp = text.length > SSB_MAX_TEXT_LEN ? text.slice(0, SSB_MAX_TEXT_LEN - 1) + '\u2026' : text;
+      const suffix = status === 'success' ? ' \u2705' : status === 'fail' ? ' \u274C' : status === 'death' ? ' \uD83D\uDC80' : '';
+      _ssbHistory.unshift({ text: disp + suffix, rarity, icon });
+      if (_ssbHistory.length > SSB_MAX_HIST) _ssbHistory.length = SSB_MAX_HIST;
+      _ssbRenderEvents();
+    }
+    window.pushSuperStatEvent = pushSuperStatEvent;
+
+    // Show an animated countdown step in the dedicated SSB countdown row
+    function _ssbShowCountdown(message, step) {
+      const el = document.getElementById('ssb-countdown');
+      if (!el) return;
+      // Determine urgency class from step (0=get ready/yellow, 1=3/yellow, 2=2/orange, 3=1/red, 4=survive/green)
+      el.classList.remove('ssb-cd-orange', 'ssb-cd-red', 'ssb-cd-green');
+      if      (step === 3) el.classList.add('ssb-cd-red');
+      else if (step === 2) el.classList.add('ssb-cd-orange');
+      else if (step >= 4)  el.classList.add('ssb-cd-green'); // step 4 = "Survive!"
+      // else default yellow styling
+      // Build display text
+      let displayText;
+      if (step >= 4)      displayText = '⚔️ SURVIVE!';
+      else if (step === 0) displayText = '🎮 GET READY!';
+      else                 displayText = `⏱️ ${message}`;
+      el.textContent = displayText;
+      el.style.display = 'block';
+      // Pulse animation on each step
+      el.classList.remove('ssb-countdown-pulse');
+      void el.offsetWidth; // force reflow
+      el.classList.add('ssb-countdown-pulse');
+      // Show parent bar during countdown if not already visible
+      const bar = document.getElementById('super-stat-bar');
+      if (bar) bar.style.display = 'flex';
+    }
+
+    function _ssbHideCountdown() {
+      const el = document.getElementById('ssb-countdown');
+      if (el) el.style.display = 'none';
+    }
+    window._ssbHideCountdown = _ssbHideCountdown;
+
+    function _ssbRenderEvents() {
+      ['ssb-current', 'ssb-prev1', 'ssb-prev2'].forEach((id, i) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (_ssbHistory.length > i) {
+          const ev = _ssbHistory[i];
+          el.innerHTML = `<span class="ssb-icon">${ev.icon}</span><span class="ssb-text">${ev.text}</span>`;
+          _ssbApply(el, ev.rarity);
+          el.style.display = 'flex';
+        } else {
+          el.innerHTML = '';
+          el.style.display = 'none';
+        }
+      });
+      // Flash animation on the current (newest) row
+      const cur = document.getElementById('ssb-current');
+      if (cur && _ssbHistory.length > 0) {
+        cur.classList.add('ssb-new-event');
+        setTimeout(() => cur.classList.remove('ssb-new-event'), SSB_FLASH_DURATION_MS);
+      }
+    }
+
+    // Called every frame from updateStatBar() to keep context rows fresh
+    function _ssbUpdateContext() {
+      const bar = document.getElementById('super-stat-bar');
+      if (!bar) return;
+      if (!isGameActive || isGameOver) { bar.style.display = 'none'; return; }
+      bar.style.display = 'flex';
+
+      // ---- Header: Wave · Kills · Combo ----
+      const hdr = document.getElementById('ssb-header');
+      if (hdr) {
+        const wave  = waveCount  || 0;
+        const kills = playerStats ? playerStats.kills : 0;
+        const cbo   = (comboState && comboState.count >= 5) ? ` \uD83D\uDD25x${comboState.count}` : '';
+        hdr.textContent = `\u2694\uFE0F${wave}  \uD83D\uDC80${kills}${cbo}`;
+      }
+
+      // ---- Region ----
+      const rEl = document.getElementById('ssb-region');
+      if (rEl) {
+        const rname = document.getElementById('region-name')?.textContent || 'Forest';
+        rEl.innerHTML = `<span class="ssb-icon">\uD83D\uDCCD</span><span class="ssb-text">${rname}</span>`;
+        _ssbApply(rEl, 'region');
+        rEl.style.display = 'flex';
+      }
+
+      // ---- Active Quest ----
+      const qEl = document.getElementById('ssb-quest');
+      if (qEl) {
+        const cq = getCurrentQuest();
+        const k  = playerStats ? playerStats.kills : 0;
+        if (cq) {
+          let prog = '';
+          if      (cq.id === 'quest1_kill3')   prog = `${Math.min(k,3)}/3`;
+          else if (cq.id === 'quest8_kill10')  prog = `${Math.min(k,10)}/10`;
+          else if (cq.id === 'quest10_kill15') prog = `${Math.min(k,15)}/15`;
+          else if (cq.id === 'quest14_kill25') prog = `${Math.min(k,25)}/25`;
+          else if (cq.id === 'quest11_findAllLandmarks') {
+            const lf = saveData.tutorialQuests.landmarksFound || {};
+            const found = Object.values(LANDMARK_CONFIGS).filter(cfg => lf[cfg.key]).length;
+            prog = `${found}/${Object.keys(LANDMARK_CONFIGS).length}`;
+          }
+          // Timer overlay for timed quests (red when <SSB_TIMER_CRITICAL s, yellow when <SSB_TIMER_WARNING s)
+          const chkT = (q) => {
+            if (!q || !q.active) return '';
+            const t = Math.max(0, Math.ceil(q.timeRemaining));
+            return ` ${t <= SSB_TIMER_CRITICAL ? '\uD83D\uDD34' : t <= SSB_TIMER_WARNING ? '\uD83D\uDFE1' : '\u23F1'}${t}s`;
+          };
+          const timer = chkT(windmillQuest) || chkT(montanaQuest) || chkT(eiffelQuest);
+          qEl.innerHTML = `<span class="ssb-icon">\uD83D\uDCCB</span><span class="ssb-text">${cq.name || 'Quest'}${prog ? ' ' + prog : ''}${timer}</span>`;
+          _ssbApply(qEl, 'quest');
+          qEl.style.display = 'flex';
+        } else if (saveData.achievementQuests && saveData.achievementQuests.kill7Quest === 'active') {
+          qEl.innerHTML = `<span class="ssb-icon">\u2B50</span><span class="ssb-text">Side: Visit Camp</span>`;
+          _ssbApply(qEl, 'quest');
+          qEl.style.display = 'flex';
+        } else {
+          qEl.style.display = 'none';
+        }
+      }
+
+      // ---- Next Goal hint ----
+      const nEl = document.getElementById('ssb-next');
+      if (nEl) {
+        const cbo = comboState ? comboState.count : 0;
+        let goal = '';
+        if (cbo >= 5) {
+          const nm = SSB_COMBO_CHEST_MILESTONES.find(m => m > cbo);
+          if (nm) goal = `\uD83C\uDFAF x${nm} Chest`;
+        }
+        if (!goal && playerStats && playerStats.xpToNextLevel > 0) {
+          const left = Math.max(0, playerStats.xpToNextLevel - playerStats.xp);
+          if (left > 0) goal = `\u2B06 LvlUp: ${left > 1000 ? Math.ceil(left / 1000) + 'k' : left}xp`;
+        }
+        if (goal) {
+          nEl.innerHTML = `<span class="ssb-text">${goal}</span>`;
+          _ssbApply(nEl, 'common');
+          nEl.style.display = 'flex';
+        } else {
+          nEl.style.display = 'none';
+        }
+      }
+
+      // ---- Game timer (always visible after countdown) ----
+      const cdEl = document.getElementById('ssb-countdown');
+      if (cdEl && !countdownActive && isGameActive && !isGameOver) {
+        const elapsedSec = (gameStartTime != null && gameStartTime !== 0)
+          ? Math.floor((Date.now() - gameStartTime) / 1000)
+          : 0;
+        const mins = Math.floor(elapsedSec / 60);
+        const secs = elapsedSec % 60;
+        cdEl.textContent = `⏱ ${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        cdEl.classList.remove('ssb-cd-orange', 'ssb-cd-red', 'ssb-cd-green');
+        cdEl.style.display = 'block';
+      } else if (cdEl && !countdownActive && (!isGameActive || isGameOver)) {
+        cdEl.style.display = 'none';
+      }
+    }
+    window._ssbUpdateContext = _ssbUpdateContext;
+
+    function claimAchievement(achievementId) {
+      const achievement = Object.values(ACHIEVEMENTS).find(a => a.id === achievementId);
+      if (!achievement) return;
+      
+      const isClaimed = saveData.achievements && saveData.achievements.includes(achievement.id);
+      const canClaim = !isClaimed && achievement.check();
+      
+      if (!canClaim) return;
+      
+      // Mark as claimed
+      if (!saveData.achievements) saveData.achievements = [];
+      saveData.achievements.push(achievement.id);
+      
+      // Award gold
+      addGold(achievement.reward);
+      
+      // Award attribute points (with safety check)
+      const attributePoints = achievement.attributePoints || 0;
+      saveData.unspentAttributePoints += attributePoints;
+      
+      // Award skill points (with safety check)
+      const skillPoints = achievement.skillPoints || 0;
+      saveData.skillPoints += skillPoints;
+      
+      // Play sound
+      playSound('coin');
+      
+      // Show gold bag animation
+      showGoldBagAnimation(achievement.reward);
+      
+      // FRESH IMPLEMENTATION: Show enhanced achievement notification
+      showEnhancedNotification(
+        'achievement',
+        'ACHIEVEMENT UNLOCKED!',
+        `${achievement.name} - +${achievement.reward} Gold, +${skillPoints} Skill Point${skillPoints > 1 ? 's' : ''}, +${attributePoints} Attribute Point${attributePoints > 1 ? 's' : ''}!`
+      );
+      
+      // Save
+      saveSaveData();
+      
+      // Refresh screen
+      updateAchievementsScreen();
+    }
+    
+    // Expose to global scope for onclick handlers
+    window.claimAchievement = claimAchievement;
+
+    function showGoldBagAnimation(amount) {
+      const bag = document.createElement('div');
+      bag.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 64px;
+        z-index: 10000;
+        pointer-events: none;
+        animation: goldBagPop 1s ease-out forwards;
+      `;
+      bag.textContent = '💰';
+      document.body.appendChild(bag);
+      
+      const text = document.createElement('div');
+      text.style.cssText = `
+        position: fixed;
+        top: 55%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 32px;
+        font-weight: bold;
+        color: #FFD700;
+        text-shadow: 0 0 10px rgba(255, 215, 0, 0.8), -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000;
+        z-index: 10000;
+        pointer-events: none;
+        animation: goldTextFloat 1s ease-out forwards;
+      `;
+      text.textContent = `+${amount} GOLD!`;
+      document.body.appendChild(text);
+      
+      setTimeout(() => {
+        bag.remove();
+        text.remove();
+      }, 1000);
+    }
+
+    function checkAchievements() {
+      // This function just checks if achievements are unlocked (not auto-claiming)
+      // Players must click to claim in the achievements menu
+      let hasNewAchievement = false;
+      let unclaimedCount = 0;
+      
+      for (const key in ACHIEVEMENTS) {
+        const achievement = ACHIEVEMENTS[key];
+        
+        // Skip if already claimed - achievements are permanent once unlocked
+        if (saveData.achievements && saveData.achievements.includes(achievement.id)) {
+          continue;
+        }
+        
+        // Check if achieved - mark internally but don't auto-claim
+        if (achievement.check()) {
+          hasNewAchievement = true;
+          unclaimedCount++;
+          
+          // Show notification only the FIRST TIME it's unlocked (not on every run)
+          // Check if this specific achievement has been notified before by storing in localStorage
+          // Note: Notification state is tracked separately from claim state to avoid re-showing
+          // notifications in new runs before claiming. If localStorage is cleared, notifications
+          // may re-appear but will still respect the saveData.achievements claim status.
+          const notifyKey = `achievement_notified_${achievement.id}`;
+          let hasBeenNotified = false;
+          
+          try {
+            hasBeenNotified = localStorage.getItem(notifyKey);
+          } catch (e) {
+            // localStorage may fail in private browsing or when quota exceeded
+            console.warn('localStorage not available for achievement tracking');
+          }
+          
+          if (!hasBeenNotified) {
+            try {
+              localStorage.setItem(notifyKey, 'true');
+            } catch (e) {
+              // Ignore storage errors - notification will show again next time
+            }
+            // Use showStatChange style for first-time achievements
+            showStatChange(`🏆 ${achievement.name} - Check Achievements Menu!`);
+            playSound('levelup');
+          }
+        }
+      }
+      
+      // Update achievement badge - only do full DOM rebuild when screen is visible.
+      // Calling updateAchievementsScreen() on every kill (after level 10 achievement
+      // becomes active) caused severe lag: the heavy innerHTML rebuild ran on every
+      // enemy kill. Now we update only the lightweight badge during gameplay and
+      // defer the full rebuild until the player actually opens the achievements screen.
+      if (hasNewAchievement) {
+        const achScreen = document.getElementById('achievements-screen');
+        if (achScreen && achScreen.style.display === 'flex') {
+          updateAchievementsScreen();
+        } else {
+          updateAchievementBadge(unclaimedCount);
+        }
+      }
+    }
+
+    // --- ATTRIBUTES SYSTEM ---
+    const ATTRIBUTE_INFO = {
+      dexterity: {
+        name: 'Dexterity',
+        icon: '🎯',
+        description: 'Improves attack speed and critical chance',
+        effects: {
+          attackSpeed: 0.03, // +3% per point
+          critChance: 0.01   // +1% per point
+        }
+      },
+      strength: {
+        name: 'Strength',
+        icon: '💪',
+        description: 'Increases damage output',
+        effects: {
+          damage: 0.05 // +5% per point
+        }
+      },
+      vitality: {
+        name: 'Vitality',
+        icon: '❤️',
+        description: 'Boosts maximum health and health regeneration',
+        effects: {
+          maxHp: 10,      // +10 HP per point
+          hpRegen: 0.25   // +0.25 HP/sec per point
+        }
+      },
+      luck: {
+        name: 'Luck',
+        icon: '🍀',
+        description: 'Increases critical damage and treasure find chance',
+        effects: {
+          critDamage: 0.05,       // +5% crit damage per point
+          goldEarned: 0.03        // +3% gold find per point
+        }
+      },
+      wisdom: {
+        name: 'Wisdom',
+        icon: '🧠',
+        description: 'Reduces cooldowns and increases experience gain',
+        effects: {
+          cooldownReduction: 0.02, // +2% per point
+          expEarned: 0.03          // +3% per point
+        }
+      }
+    };
+
+    function updateAttributesScreen() {
+      const content = document.getElementById('attributes-content');
+      const pointsDisplay = document.getElementById('attr-points-display');
+      
+      if (!content || !pointsDisplay) return;
+      
+      const unspent = saveData.unspentAttributePoints || 0;
+      pointsDisplay.textContent = `Unspent Points: ${unspent}`;
+      
+      // Update badge on attributes button if there are unspent points
+      updateAttributesBadge(unspent);
+      
+      let html = '';
+      
+      for (const attrKey in ATTRIBUTE_INFO) {
+        const attr = ATTRIBUTE_INFO[attrKey];
+        const currentLevel = saveData.attributes[attrKey] || 0;
+        const canIncrease = unspent > 0;
+        
+        // Build effects display
+        let effectsHtml = '';
+        for (const effectKey in attr.effects) {
+          const value = attr.effects[effectKey];
+          const effectName = effectKey.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+          const displayValue = effectKey.includes('Hp') ? `+${value}` : `+${(value * 100).toFixed(0)}%`;
+          effectsHtml += `<div style="color: #90ee90; font-size: 13px;">• ${effectName}: ${displayValue} per point</div>`;
+        }
+        
+        html += `
+          <div style="
+            background: linear-gradient(to bottom, #2a3a4a, #1a2a3a);
+            border: 3px solid #5DADE2;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: left;
+            position: relative;
+          ">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 32px;">${attr.icon}</span>
+                <div>
+                  <div style="color: #5DADE2; font-size: 22px; font-weight: bold;">${attr.name}</div>
+                  <div style="color: #aaa; font-size: 14px;">Level: ${currentLevel}</div>
+                </div>
+              </div>
+              <button 
+                onclick="increaseAttribute('${attrKey}')" 
+                style="
+                  padding: 10px 20px;
+                  font-size: 24px;
+                  background: ${canIncrease ? 'linear-gradient(to bottom, #3498DB, #2C3E50)' : '#555'};
+                  color: white;
+                  border: 2px solid ${canIncrease ? '#5DADE2' : '#777'};
+                  border-radius: 10px;
+                  cursor: ${canIncrease ? 'pointer' : 'not-allowed'};
+                  opacity: ${canIncrease ? '1' : '0.5'};
+                "
+                ${!canIncrease ? 'disabled' : ''}
+              >+</button>
+            </div>
+            <div style="color: #ddd; font-size: 14px; margin-bottom: 10px;">${attr.description}</div>
+            <div style="margin-top: 10px;">
+              ${effectsHtml}
+            </div>
+          </div>
+        `;
+      }
+      
+      content.innerHTML = html;
+    }
+
+    function updateAttributesBadge(count) {
+      let badge = document.getElementById('attributes-badge');
+      const attrBtn = document.getElementById('attributes-btn');
+      
+      if (count > 0 && attrBtn) {
+        if (!badge) {
+          badge = document.createElement('div');
+          badge.id = 'attributes-badge';
+          badge.style.cssText = `
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #FF0000;
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+            box-shadow: 0 0 10px rgba(255, 0, 0, 0.8);
+            z-index: 100;
+          `;
+          attrBtn.appendChild(badge);
+        }
+        badge.textContent = count;
+      } else if (badge) {
+        badge.remove();
+      }
+    }
+
+    function increaseAttribute(attrKey) {
+      if (!saveData.attributes[attrKey]) saveData.attributes[attrKey] = 0;
+      
+      if (saveData.unspentAttributePoints > 0) {
+        saveData.attributes[attrKey]++;
+        saveData.unspentAttributePoints--;
+        
+        playSound('levelup');
+        saveSaveData();
+        updateAttributesScreen();
+      }
+    }
+    
+    // Expose to global scope for onclick handlers
+    window.increaseAttribute = increaseAttribute;
+    window.saveSaveData = saveSaveData;
+
+    // --- GEAR SYSTEM ---
+    const GEAR_ATTRIBUTES = {
+      flexibility: { name: 'Flexibility', icon: '🤸', color: '#9B59B6' },
+      movementSpeed: { name: 'Movement Speed', icon: '💨', color: '#3498DB' },
+      attackSpeed: { name: 'Attack Speed', icon: '⚡', color: '#F39C12' },
+      attackPrecision: { name: 'Attack Precision', icon: '🎯', color: '#E74C3C' },
+      critChance: { name: 'Crit Chance', icon: '✨', color: '#E67E22' },
+      elementalMagic: { name: 'Elemental Magic', icon: '🔮', color: '#8E44AD' }
+    };
+
+    // Phase 1: Define starter gear for all 6 slots
+    const STARTER_GEAR = [
+      {
+        id: 'starter_weapon',
+        name: 'Worn Sword',
+        type: 'weapon',
+        rarity: 'common',
+        stats: { attackSpeed: 1, attackPrecision: 1 },
+        description: 'A basic weapon'
+      },
+      {
+        id: 'starter_armor',
+        name: 'Leather Vest',
+        type: 'armor',
+        rarity: 'common',
+        stats: { flexibility: 2, movementSpeed: 1 },
+        description: 'Basic protection'
+      },
+      {
+        id: 'starter_helmet',
+        name: 'Cloth Cap',
+        type: 'helmet',
+        rarity: 'common',
+        stats: { flexibility: 1 },
+        description: 'Simple head covering'
+      },
+      {
+        id: 'starter_boots',
+        name: 'Worn Boots',
+        type: 'boots',
+        rarity: 'common',
+        stats: { movementSpeed: 1 },
+        description: 'Weathered footwear'
+      },
+      {
+        id: 'starter_ring',
+        name: 'Brass Ring',
+        type: 'ring',
+        rarity: 'common',
+        stats: { critChance: 1 },
+        description: 'Simple metal band'
+      },
+      {
+        id: 'starter_amulet',
+        name: 'Wooden Pendant',
+        type: 'amulet',
+        rarity: 'common',
+        stats: { elementalMagic: 1 },
+        description: 'Carved charm'
+      }
+    ];
+
+    // Additional gear that can be obtained (for future expansion)
+    const GEAR_POOL = [
+      {
+        id: 'blazing_sword',
+        name: 'Blazing Sword',
+        type: 'weapon',
+        rarity: 'rare',
+        stats: { attackSpeed: 2, attackPrecision: 2, elementalMagic: 1 },
+        description: 'A sword wreathed in flames'
+      },
+      {
+        id: 'frost_blade',
+        name: 'Frost Blade',
+        type: 'weapon',
+        rarity: 'epic',
+        stats: { attackSpeed: 3, attackPrecision: 3, elementalMagic: 2 },
+        description: 'Freezes enemies on hit'
+      },
+      {
+        id: 'shadow_cloak',
+        name: 'Shadow Cloak',
+        type: 'armor',
+        rarity: 'rare',
+        stats: { flexibility: 3, movementSpeed: 2 },
+        description: 'Move like a shadow'
+      },
+      {
+        id: 'dragon_plate',
+        name: 'Dragon Plate',
+        type: 'armor',
+        rarity: 'legendary',
+        stats: { flexibility: 2, movementSpeed: 1, attackPrecision: 2 },
+        description: 'Forged from dragon scales'
+      },
+      // Phase 1: Helmets
+      {
+        id: 'iron_helmet',
+        name: 'Iron Helmet',
+        type: 'helmet',
+        rarity: 'uncommon',
+        stats: { flexibility: 2 },
+        description: 'Sturdy head protection'
+      },
+      {
+        id: 'crown_of_wisdom',
+        name: 'Crown of Wisdom',
+        type: 'helmet',
+        rarity: 'epic',
+        stats: { flexibility: 2, elementalMagic: 2 },
+        description: 'Enhances magical abilities'
+      },
+      // Phase 1: Boots
+      {
+        id: 'speed_boots',
+        name: 'Winged Boots',
+        type: 'boots',
+        rarity: 'epic',
+        stats: { movementSpeed: 4, flexibility: 1 },
+        description: 'Swift as the wind'
+      },
+      {
+        id: 'shadow_steps',
+        name: 'Shadow Steps',
+        type: 'boots',
+        rarity: 'rare',
+        stats: { movementSpeed: 3 },
+        description: 'Silent and swift'
+      },
+      // Phase 1: Rings
+      {
+        id: 'crit_ring',
+        name: 'Ring of Critical Strikes',
+        type: 'ring',
+        rarity: 'rare',
+        stats: { critChance: 3, attackPrecision: 1 },
+        description: 'Increases critical hit chance'
+      },
+      {
+        id: 'power_ring',
+        name: 'Ring of Power',
+        type: 'ring',
+        rarity: 'legendary',
+        stats: { attackSpeed: 2, attackPrecision: 2, critChance: 1 },
+        description: 'Overwhelming offensive power'
+      },
+      // Phase 1: Amulets
+      {
+        id: 'magic_amulet',
+        name: 'Arcane Amulet',
+        type: 'amulet',
+        rarity: 'legendary',
+        stats: { elementalMagic: 4, attackSpeed: 2 },
+        description: 'Channels magical energy'
+      },
+      {
+        id: 'life_amulet',
+        name: 'Amulet of Life',
+        type: 'amulet',
+        rarity: 'epic',
+        stats: { flexibility: 3, elementalMagic: 1 },
+        description: 'Grants vitality and resilience'
+      }
+    ];
+
+    function initializeGear() {
+      // Phase 1: Give players starter gear for all 6 slots if they don't have any
+      if (!saveData.inventory || saveData.inventory.length === 0) {
+        saveData.inventory = [...STARTER_GEAR];
+        
+        // Auto-equip all 6 starter items
+        saveData.equippedGear.weapon = 'starter_weapon';
+        saveData.equippedGear.armor = 'starter_armor';
+        saveData.equippedGear.helmet = 'starter_helmet';
+        saveData.equippedGear.boots = 'starter_boots';
+        saveData.equippedGear.ring = 'starter_ring';
+        saveData.equippedGear.amulet = 'starter_amulet';
+        
+        saveSaveData();
+      }
+    }
+
+    function updateGearScreen() {
+      const content = document.getElementById('gear-content');
+      const statsContent = document.getElementById('gear-stats-content');
+      
+      if (!content || !statsContent) return;
+      
+      // Calculate total gear bonuses
+      const gearStats = calculateGearStats();
+      
+      // Update stats display
+      let statsHtml = '';
+      for (const statKey in GEAR_ATTRIBUTES) {
+        const stat = GEAR_ATTRIBUTES[statKey];
+        const value = gearStats[statKey] || 0;
+        statsHtml += `
+          <div style="display: flex; align-items: center; gap: 10px; padding: 5px;">
+            <span style="font-size: 24px;">${stat.icon}</span>
+            <div>
+              <div style="color: ${stat.color}; font-size: 14px; font-weight: bold;">${stat.name}</div>
+              <div style="color: #FFD700; font-size: 16px; font-weight: bold;">+${value}</div>
+            </div>
+          </div>
+        `;
+      }
+      statsContent.innerHTML = statsHtml;
+      
+      // Phase 1: Build gear slots display for all 6 slots
+      let html = '';
+      
+      const slots = [
+        { key: 'weapon', name: 'Weapon', icon: '⚔️' },
+        { key: 'armor', name: 'Armor', icon: '🛡️' },
+        { key: 'helmet', name: 'Helmet', icon: '⛑️' },
+        { key: 'boots', name: 'Boots', icon: '👢' },
+        { key: 'ring', name: 'Ring', icon: '💍' },
+        { key: 'amulet', name: 'Amulet', icon: '📿' }
+      ];
+      
+      for (const slot of slots) {
+        const equippedId = saveData.equippedGear[slot.key];
+        const equippedGear = equippedId ? saveData.inventory.find(g => g.id === equippedId) : null;
+        
+        html += `
+          <div style="background: linear-gradient(to bottom, #2a3a4a, #1a2a3a); border: 3px solid #F39C12; border-radius: 15px; padding: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 32px;">${slot.icon}</span>
+                <div style="color: #F39C12; font-size: 20px; font-weight: bold;">${slot.name}</div>
+              </div>
+            </div>
+            ${equippedGear ? `
+              <div style="background: rgba(0,0,0,0.3); border: 2px solid ${getRarityColor(equippedGear.rarity)}; border-radius: 10px; padding: 15px;">
+                <div style="color: ${getRarityColor(equippedGear.rarity)}; font-size: 18px; font-weight: bold; margin-bottom: 5px;">
+                  ${equippedGear.name}
+                </div>
+                <div style="color: #aaa; font-size: 13px; margin-bottom: 10px;">${equippedGear.description}</div>
+                <div style="margin-bottom: 10px;">
+                  ${Object.entries(equippedGear.stats).map(([stat, val]) => GEAR_ATTRIBUTES[stat] ? `
+                    <div style="color: #90ee90; font-size: 13px;">• ${GEAR_ATTRIBUTES[stat].name}: +${val}</div>
+                  ` : '').join('')}
+                </div>
+                <button onclick="unequipGear('${slot.key}')" style="padding: 8px 15px; background: linear-gradient(to bottom, #c0392b, #a93226); color: white; border: 2px solid #e74c3c; border-radius: 8px; cursor: pointer; font-weight: bold;">UNEQUIP</button>
+              </div>
+            ` : `
+              <div style="color: #777; font-size: 14px; text-align: center; padding: 20px;">
+                Empty Slot
+              </div>
+            `}
+            <div style="margin-top: 15px;">
+              <div style="color: #5DADE2; font-size: 16px; font-weight: bold; margin-bottom: 10px;">Available Gear:</div>
+              <div style="display: grid; gap: 10px; max-height: 200px; overflow-y: auto;">
+                ${saveData.inventory.filter(g => {
+                  const gearType = g.type === 'accessory' ? (slot.key === 'accessory1' || slot.key === 'accessory2') : g.type === slot.key;
+                  const notEquipped = g.id !== equippedId;
+                  return gearType && notEquipped;
+                }).map(gear => `
+                  <div class="gear-inventory-item" data-slot="${slot.key}" data-gearid="${gear.id}" style="background: rgba(0,0,0,0.4); border: 2px solid ${getRarityColor(gear.rarity)}; border-radius: 8px; padding: 10px; cursor: pointer; user-select: none;">
+                    <div style="color: ${getRarityColor(gear.rarity)}; font-size: 14px; font-weight: bold;">${gear.name}</div>
+                    <div style="color: #999; font-size: 11px;">${gear.description}</div>
+                    <div style="margin-top: 5px;">
+                      ${Object.entries(gear.stats).map(([stat, val]) => GEAR_ATTRIBUTES[stat] ? `
+                        <span style="color: #90ee90; font-size: 11px; margin-right: 10px;">+${val} ${GEAR_ATTRIBUTES[stat].icon}</span>
+                      ` : '').join('')}
+                    </div>
+                    <div style="color:#555;font-size:10px;margin-top:4px;">Tap to preview · Hold to equip</div>
+                  </div>
+                `).join('') || '<div style="color: #777; font-size: 12px; padding: 10px;">No available gear for this slot</div>'}
+              </div>
+            </div>
+          </div>
+        `;
+      }
+      
+      content.innerHTML = html;
+
+      // Attach fast-click (preview) + long-press (equip) to each inventory item
+      content.querySelectorAll('.gear-inventory-item').forEach(function (el) {
+        var slotKey = el.getAttribute('data-slot');
+        var gearId  = el.getAttribute('data-gearid');
+        var gear    = saveData.inventory.find(function (g) { return g.id === gearId; });
+        if (!gear) return;
+        var typeIcons = { weapon: '⚔️', armor: '🛡️', helmet: '⛑️', boots: '👢', ring: '💍', amulet: '📿' };
+        attachPressHandler(
+          el,
+          function preview() {
+            showItemInfoPanel(
+              { name: gear.name, rarity: gear.rarity, icon: typeIcons[gear.type] || '📦', stats: gear.stats, description: gear.description },
+              function () { equipGear(slotKey, gearId); },
+              { equipLabel: '⚔️ Equip', hint: 'Long press item to equip directly.' }
+            );
+          },
+          function action() { equipGear(slotKey, gearId); }
+        );
+      });
+    }
+
+
+    // Phase 1: Gear drop system - procedurally generate gear with rarity tiers
+    function generateRandomGear() {
+      // Rarity chances: common 50%, uncommon 25%, rare 15%, epic 8%, legendary 2%
+      const rarityRoll = Math.random();
+      let rarity;
+      if (rarityRoll < 0.50) rarity = 'common';
+      else if (rarityRoll < 0.75) rarity = 'uncommon';
+      else if (rarityRoll < 0.90) rarity = 'rare';
+      else if (rarityRoll < 0.98) rarity = 'epic';
+      else rarity = 'legendary';
+      
+      // Choose random gear type from all 6 slots
+      const types = ['weapon', 'armor', 'helmet', 'boots', 'ring', 'amulet'];
+      const type = types[Math.floor(Math.random() * types.length)];
+      
+      // Base stats by rarity
+      const rarityStatMult = {
+        common: 1,
+        uncommon: 1.5,
+        rare: 2,
+        epic: 3,
+        legendary: 4
+      };
+      const mult = rarityStatMult[rarity];
+      
+      // Generate random stats (1-3 random attributes)
+      const statCount = Math.floor(Math.random() * 3) + 1;
+      const stats = {};
+      const availableStats = Object.keys(GEAR_ATTRIBUTES);
+      const chosenStats = [];
+      
+      for (let i = 0; i < statCount; i++) {
+        const stat = availableStats[Math.floor(Math.random() * availableStats.length)];
+        if (!chosenStats.includes(stat)) {
+          chosenStats.push(stat);
+          stats[stat] = Math.floor((Math.random() * 2 + 1) * mult);
+        }
+      }
+      
+      // Generate unique ID
+      const id = `gear_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+      
+      // Generate name
+      const prefixes = ['Worn', 'Simple', 'Fine', 'Superior', 'Masterwork', 'Legendary'];
+      const typeNames = {
+        weapon: ['Blade', 'Sword', 'Axe', 'Dagger', 'Mace'],
+        armor: ['Vest', 'Plate', 'Mail', 'Cuirass', 'Armor'],
+        helmet: ['Cap', 'Helm', 'Crown', 'Mask', 'Circlet'],
+        boots: ['Boots', 'Shoes', 'Greaves', 'Treads', 'Steps'],
+        ring: ['Ring', 'Band', 'Loop', 'Circle', 'Hoop'],
+        amulet: ['Amulet', 'Pendant', 'Charm', 'Talisman', 'Necklace']
+      };
+      
+      const prefix = prefixes[Math.min(Math.floor(mult), prefixes.length - 1)];
+      const typeName = typeNames[type][Math.floor(Math.random() * typeNames[type].length)];
+      const name = `${prefix} ${typeName}`;
+      
+      return {
+        id,
+        name,
+        type,
+        rarity,
+        stats,
+        description: `A ${rarity} ${type}`
+      };
+    }
+
+    function calculateGearStats() {
+      const stats = {};
+      
+      for (const statKey in GEAR_ATTRIBUTES) {
+        stats[statKey] = 0;
+      }
+      
+      // Sum up stats from all equipped gear
+      for (const slotKey in saveData.equippedGear) {
+        const gearId = saveData.equippedGear[slotKey];
+        if (gearId) {
+          const gear = saveData.inventory.find(g => g.id === gearId);
+          if (gear && gear.stats) {
+            for (const statKey in gear.stats) {
+              stats[statKey] += gear.stats[statKey];
+            }
+          }
+        }
+      }
+      
+      return stats;
+    }
+
+    // ── Item Info / Preview Panel ─────────────────────────────────────────────
+    // showItemInfoPanel(itemData, onEquip, opts)
+    //   itemData : { name, rarity, icon, stats, description, requirements }
+    //   onEquip  : callback called when user confirms equip (null = hide equip btn)
+    //   opts     : { equipLabel, hint }
+    function showItemInfoPanel(itemData, onEquip, opts) {
+      opts = opts || {};
+      // Remove any existing overlay
+      var old = document.getElementById('item-info-overlay');
+      if (old && old.parentNode) old.parentNode.removeChild(old);
+
+      var rarityMap = { common: '#aaaaaa', uncommon: '#55cc55', rare: '#44aaff', epic: '#aa44ff', legendary: '#ffaa00' };
+      var rarityColor = rarityMap[itemData.rarity] || '#ffffff';
+
+      var overlay = document.createElement('div');
+      overlay.id = 'item-info-overlay';
+
+      var panel = document.createElement('div');
+      panel.id = 'item-info-panel';
+
+      // Icon
+      if (itemData.icon) {
+        var iconDiv = document.createElement('div');
+        iconDiv.className = 'iip-icon';
+        iconDiv.textContent = itemData.icon;
+        panel.appendChild(iconDiv);
+      }
+
+      // Name
+      var nameDiv = document.createElement('div');
+      nameDiv.className = 'iip-name';
+      nameDiv.style.color = rarityColor;
+      nameDiv.textContent = itemData.name || '';
+      panel.appendChild(nameDiv);
+
+      // Rarity
+      if (itemData.rarity) {
+        var rarDiv = document.createElement('div');
+        rarDiv.className = 'iip-rarity rarity-' + itemData.rarity;
+        rarDiv.textContent = itemData.rarity;
+        panel.appendChild(rarDiv);
+      }
+
+      // Description
+      if (itemData.description) {
+        var descDiv = document.createElement('div');
+        descDiv.className = 'iip-desc';
+        descDiv.textContent = itemData.description;
+        panel.appendChild(descDiv);
+      }
+
+      // Stats
+      if (itemData.stats && Object.keys(itemData.stats).length > 0) {
+        var statsDiv = document.createElement('div');
+        statsDiv.className = 'iip-stats';
+        for (var s in itemData.stats) {
+          var attr = (typeof GEAR_ATTRIBUTES !== 'undefined' && GEAR_ATTRIBUTES[s]) ? GEAR_ATTRIBUTES[s] : null;
+          var label = attr ? (attr.icon + ' ' + attr.name) : s;
+          var row = document.createElement('div');
+          row.className = 'iip-stat-row';
+          row.innerHTML = '<span>' + label + '</span><span>+' + itemData.stats[s] + '</span>';
+          statsDiv.appendChild(row);
+        }
+        panel.appendChild(statsDiv);
+      }
+
+      // Requirements
+      if (itemData.requirements) {
+        var reqDiv = document.createElement('div');
+        reqDiv.className = 'iip-desc';
+        reqDiv.style.color = '#F39C12';
+        reqDiv.textContent = itemData.requirements;
+        panel.appendChild(reqDiv);
+      }
+
+      // Action buttons
+      var actions = document.createElement('div');
+      actions.className = 'iip-actions';
+
+      if (typeof onEquip === 'function') {
+        var equipBtn = document.createElement('button');
+        equipBtn.className = 'iip-btn-equip';
+        equipBtn.textContent = opts.equipLabel || '⚔️ Equip';
+        equipBtn.addEventListener('click', function () {
+          closePanel();
+          onEquip();
+        });
+        actions.appendChild(equipBtn);
+      }
+
+      var closeBtn = document.createElement('button');
+      closeBtn.className = 'iip-btn-close';
+      closeBtn.textContent = '✕ Close';
+      closeBtn.addEventListener('click', closePanel);
+      actions.appendChild(closeBtn);
+      panel.appendChild(actions);
+
+      // Hint
+      if (opts.hint !== false) {
+        var hint = document.createElement('div');
+        hint.className = 'iip-hint';
+        hint.textContent = opts.hint || (typeof onEquip === 'function' ? 'Tap Equip or long-press item to equip.' : '');
+        panel.appendChild(hint);
+      }
+
+      overlay.appendChild(panel);
+      // Tap outside to close
+      overlay.addEventListener('click', function (e) { if (e.target === overlay) closePanel(); });
+      document.body.appendChild(overlay);
+
+      function closePanel() {
+        var el = document.getElementById('item-info-overlay');
+        if (el && el.parentNode) el.parentNode.removeChild(el);
+      }
+    }
+    window.showItemInfoPanel = showItemInfoPanel;
+
+    // ── Long-press / double-tap helper ────────────────────────────────────────
+    // Attaches fast-click (preview) + long-press & double-tap (action) to an element.
+    // onPreview() called on fast single click
+    // onAction() called on long-press (>400ms) or double-tap (<400ms gap)
+    function attachPressHandler(el, onPreview, onAction) {
+      var LONG_MS = 400;
+      var DOUBLE_TAP_MS = 400;
+      var pressTimer = null;
+      var lastTap = 0;
+      var fired = false;
+
+      function startPress(e) {
+        fired = false;
+        pressTimer = setTimeout(function () {
+          fired = true;
+          onAction();
+        }, LONG_MS);
+      }
+      function endPress(e) {
+        clearTimeout(pressTimer);
+        if (fired) return;
+        // Double-tap detection
+        var now = Date.now();
+        if (now - lastTap < DOUBLE_TAP_MS) {
+          lastTap = 0;
+          onAction();
+        } else {
+          lastTap = now;
+          onPreview();
+        }
+      }
+      function cancelPress() { clearTimeout(pressTimer); }
+
+      el.addEventListener('mousedown', startPress);
+      el.addEventListener('mouseup', endPress);
+      el.addEventListener('mouseleave', cancelPress);
+      el.addEventListener('touchstart', startPress, { passive: true });
+      el.addEventListener('touchend', endPress);
+      el.addEventListener('touchcancel', cancelPress);
+    }
+    window.attachPressHandler = attachPressHandler;
+
+    function equipGear(slotKey, gearId) {
+      saveData.equippedGear[slotKey] = gearId;
+      playSound('coin');
+      saveSaveData();
+      // Recalculate stats if the function exists
+      if (typeof window.recalculateAllStats === 'function') window.recalculateAllStats();
+      updateGearScreen();
+      
+      // Quest progression: first time equipping gear (legacy)
+      if (saveData.storyQuests.currentQuest === 'equipGear') {
+        progressQuest('equipGear', true);
+      }
+      // Quest 4: Equip the Cigar
+      if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest4_equipCigar') {
+        progressTutorialQuest('quest4_equipCigar', true);
+      }
+      // Quest 6: Equip the Cigarr from armory → advance quest chain to quest7
+      if (saveData.tutorialQuests && gearId === 'cigarr_quest' &&
+          saveData.tutorialQuests.currentQuest === 'quest6_stonehengeChest') {
+        progressTutorialQuest('quest6_stonehengeChest', true);
+      }
+    }
+
+    function unequipGear(slotKey) {
+      saveData.equippedGear[slotKey] = null;
+      playSound('waterdrop');
+      saveSaveData();
+      updateGearScreen();
+    }
+
+    // Expose to global scope for onclick handlers
+    window.equipGear = equipGear;
+    window.unequipGear = unequipGear;
+
+    // Upgrade definitions for the progression shop
+    const PERMANENT_UPGRADES = {
+      maxHp: {
+        name: 'Max HP',
+        description: '+25 HP per level',
+        maxLevel: 30,
+        baseCost: 150,
+        costIncrease: 75,
+        effect: (level) => 25 * level
+      },
+      hpRegen: {
+        name: 'HP Regen',
+        description: '+0.5 HP/sec per level',
+        maxLevel: 15,
+        baseCost: 250,
+        costIncrease: 100,
+        effect: (level) => 0.5 * level
+      },
+      moveSpeed: {
+        name: 'Move Speed',
+        description: '+5% per level',
+        maxLevel: 15,
+        baseCost: 200,
+        costIncrease: 75,
+        effect: (level) => 0.05 * level
+      },
+      attackDamage: {
+        name: 'Attack Damage',
+        description: '+10% per level',
+        maxLevel: 25,
+        baseCost: 250,
+        costIncrease: 100,
+        effect: (level) => 0.1 * level
+      },
+      attackSpeed: {
+        name: 'Attack Speed',
+        description: '+5% per level',
+        maxLevel: 15,
+        baseCost: 250,
+        costIncrease: 100,
+        effect: (level) => 0.05 * level
+      },
+      critChance: {
+        name: 'Crit Chance',
+        description: '+2% per level',
+        maxLevel: 15,
+        baseCost: 350,
+        costIncrease: 100,
+        effect: (level) => 0.02 * level
+      },
+      critDamage: {
+        name: 'Crit Damage',
+        description: '+10% per level',
+        maxLevel: 15,
+        baseCost: 350,
+        costIncrease: 100,
+        effect: (level) => 0.1 * level
+      },
+      armor: {
+        name: 'Armor',
+        description: '+3% per level',
+        maxLevel: 20,
+        baseCost: 250,
+        costIncrease: 100,
+        effect: (level) => 3 * level
+      },
+      cooldownReduction: {
+        name: 'Cooldown Reduction',
+        description: '-3% per level',
+        maxLevel: 15,
+        baseCost: 400,
+        costIncrease: 100,
+        effect: (level) => 0.03 * level
+      },
+      goldEarned: {
+        name: 'Gold Earned',
+        description: '+10% per level',
+        maxLevel: 15,
+        baseCost: 500,
+        costIncrease: 150,
+        effect: (level) => 0.1 * level
+      },
+      expEarned: {
+        name: 'EXP Earned',
+        description: '+10% per level',
+        maxLevel: 15,
+        baseCost: 450,
+        costIncrease: 150,
+        effect: (level) => 0.1 * level
+      },
+      maxWeapons: {
+        name: 'Max Weapons',
+        description: '+1 weapon slot',
+        maxLevel: 3,
+        baseCost: 800,
+        costIncrease: 600,
+        effect: (level) => level
+      }
+    };
+
+    function getCost(upgradeKey) {
+      const upgrade = PERMANENT_UPGRADES[upgradeKey];
+      const currentLevel = saveData.upgrades[upgradeKey];
+      return upgrade.baseCost + (currentLevel * upgrade.costIncrease);
+    }
+    
