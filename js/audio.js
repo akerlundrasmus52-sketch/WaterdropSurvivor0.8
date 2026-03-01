@@ -2,7 +2,12 @@
 // Extracted from game.js - loaded as a regular script before game.js (module)
 // Exposes window.GameAudio for use by game.js
 
-const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+let audioCtx;
+try {
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+} catch(e) {
+  console.warn('[Audio] AudioContext creation failed:', e);
+}
 let musicOscillators = [];
 let musicGain = null;
 
@@ -13,6 +18,7 @@ function isSoundEnabled() {
 }
 
 function initMusic() {
+  if (!audioCtx) return;
   if (!musicGain) {
     musicGain = audioCtx.createGain();
     musicGain.gain.value = 0.05;
@@ -53,7 +59,7 @@ function createNoise(duration) {
 }
 
 function playSound(type) {
-  if (!isSoundEnabled()) return;
+  if (!audioCtx || !isSoundEnabled()) return;
   if (audioCtx.state === 'suspended') audioCtx.resume();
 
   const now = audioCtx.currentTime;
@@ -373,7 +379,7 @@ let droneOscillator = null;
 let droneGain = null;
 
 function startDroneHum() {
-  if (!isSoundEnabled() || droneOscillator) return;
+  if (!audioCtx || !isSoundEnabled() || droneOscillator) return;
   if (audioCtx.state === 'suspended') audioCtx.resume();
 
   droneOscillator = audioCtx.createOscillator();

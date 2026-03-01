@@ -2168,4 +2168,10 @@
     }
 
     // Init Game
-    try { init(); } catch(e) { console.error('[Game Error]', e); console.error('[Game] Initialization failed - game cannot start'); }
+    try { init(); } catch(e) {
+      console.error('[Game Error]', e);
+      console.error('[Game] Initialization failed - game cannot start');
+      window.gameModuleReady = true;
+      var mainMenu = document.getElementById('main-menu');
+      if (mainMenu) mainMenu.style.display = 'flex';
+    }
