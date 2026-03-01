@@ -6,6 +6,7 @@
       window.gameModuleReady = false;
       window.loadingComplete = false;
       let menuShown = false;
+      let moduleErrorDetected = false;
 
       // Wait for DOM to be ready
       if (document.readyState === 'loading') {
@@ -23,58 +24,158 @@
           return;
         }
 
-        let progress = 0;
-        let progressInterval;
-        
-        // Animate loading bar from 0% to 100% over ~5 seconds (reduced from 8s)
-        function updateProgress() {
-          progress += 5; // 5% per step
-          loadingBar.style.width = progress + '%';
-          
-          if (progress >= 100) {
-            clearInterval(progressInterval);
-            window.loadingComplete = true;
-            
-            // Wait for module to be ready before showing menu
-            waitForModuleReady();
-          }
+        // Detect ES module load errors as early as possible
+        var mainScript = document.querySelector('script[src*="main.js"]');
+        if (mainScript) {
+          mainScript.addEventListener('error', function() {
+            console.error('[Loading] main.js module failed to load');
+            moduleErrorDetected = true;
+            showLoadingError();
+          });
         }
-        
-        // Start progress animation
-        progressInterval = setInterval(updateProgress, 250); // 20 steps × 250ms = 5s
-        
-        // 8-second failsafe timeout - show menu anyway if module fails to load
+
+        setStatus('Loading game engine...');
+        setProgress(5);
+
+        // Phase 1 (0–30%): animate bar to 30% while waiting for THREE.js
+        var phase1Interval = setInterval(function() {
+          var cur = getProgress();
+          if (cur < 30) {
+            setProgress(cur + 2);
+          } else {
+            clearInterval(phase1Interval);
+          }
+        }, 200);
+
+        // Phase 2 (30–70%): wait for window.THREE
+        waitForCondition(
+          function() { return !!window.THREE; },
+          function() {
+            clearInterval(phase1Interval);
+            setProgress(30);
+            setStatus('Loading game assets...');
+            animateTo(70, 4000, function() {
+              // Phase 3 (70–90%): wait for gameModuleReady
+              setStatus('Starting...');
+              waitForCondition(
+                function() { return !!window.gameModuleReady; },
+                function() {
+                  setProgress(90);
+                  animateTo(100, 800, function() {
+                    window.loadingComplete = true;
+                    showMenuAfterLoading();
+                  });
+                },
+                6000,  // 6 seconds for gameModuleReady once THREE is available
+                function() {
+                  console.warn('[Loading] gameModuleReady timeout after THREE loaded');
+                  window.loadingComplete = true;
+                  setProgress(100);
+                  showMenuAfterLoading();
+                }
+              );
+            });
+          },
+          8000,  // 8 seconds to wait for THREE.js
+          function() {
+            clearInterval(phase1Interval);
+            console.warn('[Loading] THREE.js load timeout');
+            // THREE didn't load — module chain failed
+            showLoadingError();
+          }
+        );
+
+        // 15-second hard failsafe
         setTimeout(function() {
           if (!menuShown) {
-            console.warn('[Loading] Failsafe timeout - showing menu without module ready signal');
-            clearInterval(progressInterval);
+            console.warn('[Loading] 15s hard failsafe - module not ready');
             window.loadingComplete = true;
-            showMenuAfterLoading();
+            if (window.gameModuleReady) {
+              setProgress(100);
+              showMenuAfterLoading();
+            } else {
+              showLoadingError();
+            }
           }
-        }, 8000);
+        }, 15000);
       }
-      
-      // Wait for module to signal ready, then show menu
-      function waitForModuleReady() {
-        let attempts = 0;
-        const maxAttempts = 50; // 50 × 100ms = 5s max wait
-        
-        const checkInterval = setInterval(function() {
-          attempts++;
-          
-          if (window.gameModuleReady) {
-            // Module is ready!
-            clearInterval(checkInterval);
-            showMenuAfterLoading();
-          } else if (attempts >= maxAttempts) {
-            // Timeout - show anyway
-            console.warn('[Loading] Module ready timeout - showing menu anyway');
-            clearInterval(checkInterval);
-            if (!menuShown) showMenuAfterLoading();
+
+      // ── helpers ────────────────────────────────────────────
+
+      var _currentProgress = 0;
+
+      function getProgress() {
+        return _currentProgress;
+      }
+
+      function setProgress(pct) {
+        _currentProgress = pct;
+        var bar = document.getElementById('loading-bar');
+        if (bar) bar.style.width = pct + '%';
+      }
+
+      function setStatus(text) {
+        var el = document.getElementById('loading-status');
+        if (el) el.textContent = text;
+      }
+
+      function animateTo(target, durationMs, cb) {
+        var start = _currentProgress;
+        var steps = Math.max(1, Math.round(durationMs / 50));
+        var inc = (target - start) / steps;
+        var step = 0;
+        var iv = setInterval(function() {
+          step++;
+          setProgress(Math.min(target, start + inc * step));
+          if (step >= steps) {
+            clearInterval(iv);
+            setProgress(target);
+            if (cb) cb();
           }
-        }, 100);
+        }, 50);
       }
-      
+
+      function waitForCondition(condition, onReady, timeoutMs, onTimeout) {
+        var elapsed = 0;
+        var interval = 100;
+        var iv = setInterval(function() {
+          if (condition()) {
+            clearInterval(iv);
+            onReady();
+          } else {
+            elapsed += interval;
+            if (elapsed >= timeoutMs) {
+              clearInterval(iv);
+              onTimeout();
+            }
+          }
+        }, interval);
+      }
+
+      function _displayErrorOverlay() {
+        var errEl = document.getElementById('loading-error');
+        var barContainer = document.querySelector('.loading-bar-container');
+        var statusEl = document.getElementById('loading-status');
+        if (barContainer) barContainer.style.display = 'none';
+        if (statusEl) statusEl.style.display = 'none';
+        if (errEl) errEl.style.display = 'block';
+      }
+
+      function _restoreLoadingScreenAndShowError() {
+        var ls = document.getElementById('loading-screen');
+        if (ls) {
+          ls.style.display = 'block';
+          ls.classList.remove('fade-out');
+        }
+        _displayErrorOverlay();
+      }
+
+      function showLoadingError() {
+        if (menuShown) return;
+        menuShown = true;
+        _displayErrorOverlay();
+      }
+
       function showMenuAfterLoading() {
         if (menuShown) return;
         menuShown = true;
@@ -86,10 +187,13 @@
         
         setTimeout(function() {
           loadingScreen.style.display = 'none';
+
+          if (!window.gameModuleReady) {
+            // Module never loaded — show error overlay on loading screen
+            _restoreLoadingScreenAndShowError();
+            return;
+          }
           
-          // Route to 3D Camp World as the default screen (instead of old 2D main menu).
-          // Prefer 3D camp if CampWorld, THREE and the renderer are all available.
-          // Falls back to 2D camp-screen (via updateCampScreen) or main menu.
           if (!window.CampWorld || !window.THREE || !window.gameRenderer || !window.updateCampScreen) {
             console.warn('[Loading] showMenuAfterLoading: missing components —',
               'CampWorld:', !!window.CampWorld,
@@ -105,18 +209,19 @@
               campScreen.style.display = 'flex';
             }
             window.updateCampScreen();
-          } else if (campScreen && window.updateCampScreen) {
-            // 2D camp or deferred 3D activation via updateCampScreen
+          } else if (window.gameModuleReady && campScreen && window.updateCampScreen) {
+            // Module loaded but camp world components not yet available — show 2D camp screen
             campScreen.classList.remove('camp-subsection-active');
             campScreen.style.display = 'flex';
             window.updateCampScreen();
-          } else {
-            // Fallback: show main menu if camp world is not ready yet
+          } else if (window.gameModuleReady) {
+            // Module loaded but camp world unavailable — show main menu with real handlers
             var mainMenu = document.getElementById('main-menu');
             if (mainMenu) mainMenu.style.display = 'flex';
-            // Attach emergency fallback handlers so the menu is usable even if the
-            // main.js module failed to load (e.g. CDN offline).
-            _attachFallbackMenuHandlers();
+          } else {
+            // Module not ready — show error
+            _restoreLoadingScreenAndShowError();
+            return;
           }
           
           // FRESH IMPLEMENTATION: Show Story Quest Modal on first load
@@ -130,39 +235,5 @@
             }
           }, 500);
         }, 500);
-      }
-
-      // Emergency fallback: wire up main-menu buttons if main.js module didn't load.
-      // These handlers do nothing if the module already attached its own listeners.
-      function _attachFallbackMenuHandlers() {
-        var startBtn = document.getElementById('start-game-btn');
-        var campBtn  = document.getElementById('camp-btn');
-        if (startBtn && !startBtn._fallbackAttached) {
-          startBtn._fallbackAttached = true;
-          startBtn.addEventListener('click', function() {
-            if (window.gameModuleReady) return; // module handler takes over
-            console.warn('[Loading] start-game-btn clicked but module not ready - reloading');
-            window.location.reload();
-          });
-        }
-        if (campBtn && !campBtn._fallbackAttached) {
-          campBtn._fallbackAttached = true;
-          campBtn.addEventListener('click', function() {
-            if (window.gameModuleReady) return; // module handler takes over
-            var cs = document.getElementById('camp-screen');
-            var mm = document.getElementById('main-menu');
-            // Try 3D camp world first; fall back to 2D camp-screen
-            if (window.CampWorld && window.THREE && window.gameRenderer) {
-              if (mm) mm.style.display = 'none';
-              if (cs) { cs.classList.remove('camp-subsection-active'); cs.style.display = 'flex'; }
-              try { window.CampWorld.enter(window.gameRenderer, window.saveData || {}, {}); } catch(e) {}
-              console.warn('[Loading] camp-btn fallback: entering 3D camp world');
-            } else {
-              if (cs) { cs.style.display = 'flex'; }
-              if (mm) { mm.style.display = 'none'; }
-              console.warn('[Loading] camp-btn fallback: showing camp-screen (2D mode)');
-            }
-          });
-        }
       }
     })();
