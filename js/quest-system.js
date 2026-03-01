@@ -243,8 +243,11 @@
         ">${buttonText}</button>
       `;
       
+      let comicClosed = false;
       const comicCloseHandler = () => {
-        document.body.removeChild(overlay);
+        if (comicClosed) return;
+        comicClosed = true;
+        if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
         if (wasGameActive) setGamePaused(false);
         if (onClose) onClose();
       };

@@ -87,17 +87,6 @@
           // Always show main menu after loading — camp is reached via menu buttons
           var mainMenu = document.getElementById('main-menu');
           if (mainMenu) mainMenu.style.display = 'flex';
-          
-          // FRESH IMPLEMENTATION: Show Story Quest Modal on first load
-          setTimeout(function() {
-            // Access saveData through window if available (will be set by game module)
-            if (window.saveData && !window.saveData.storyQuests?.welcomeShown) {
-              var storyModal = document.getElementById('story-quest-modal');
-              if (storyModal) {
-                storyModal.style.display = 'flex';
-              }
-            }
-          }, 500);
         }, 500);
       }
     })();
