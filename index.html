@@ -666,27 +666,19 @@
     </div>
   </div>
 
-  <!-- Import Map for Three.js -->
-  <script async src="https://unpkg.com/es-module-shims@1.8.0/dist/es-module-shims.js" onerror="console.warn('[CDN] ES Module Shims failed to load - game requires THREE.js to function')"></script>
-  <script type="importmap">
-    {
-      "imports": {
-        "three": "https://unpkg.com/three@0.176.0/build/three.module.js",
-        "three/addons/": "https://unpkg.com/three@0.176.0/examples/jsm/"
-      }
-    }
-  </script>
+  <!-- THREE.js loaded as a regular script (global THREE variable available to all game scripts) -->
+  <script src="https://unpkg.com/three@0.176.0/build/three.min.js" onerror="console.error('[CDN] THREE.js failed to load — game cannot start without THREE.js')"></script>
 
   <!-- CDN Error Logging (Non-blocking) -->
   <script src="js/cdn-monitor.js"></script>
 
-  <!-- FRESH IMPLEMENTATION: Standalone loading script (non-module) -->
+  <!-- Standalone loading screen -->
   <script src="js/loading.js"></script>
 
   <!-- Debug/diagnostic layer (observation-only, gated by ?debug=1) -->
   <script src="js/debug.js"></script>
 
-  <!-- Extracted game modules (regular scripts, must load before main.js module) -->
+  <!-- Core game helper modules (regular scripts — provide window.GameAudio, GameUtils, etc.) -->
   <script src="js/state.js"></script>
   <script src="js/utils.js"></script>
   <script src="js/audio.js"></script>
@@ -704,7 +696,7 @@
   <script src="js/rage-combat.js"></script>
   <script src="js/ui-calibration.js"></script>
 
-  <!-- Idle systems (loaded before main.js module so globals are available) -->
+  <!-- Idle systems -->
   <script src="js/idle-css.js"></script>
   <script src="js/idle-account-css.js"></script>
   <script src="js/idle-core.js"></script>
@@ -723,7 +715,23 @@
   <script src="js/idle-ui.js"></script>
   <script src="js/idle-bootstrap.js"></script>
 
-  <script type="module" src="js/main.js"></script>
+  <!-- Main game scripts — split from the original monolithic main.js (was 1.09 MB) -->
+  <!-- Load order matters: state/aliases first, then classes, then systems, then init, then loop -->
+  <script src="js/main.js"></script>              <!-- Game state variables & module aliases (~22 KB) -->
+  <script src="js/player-class.js"></script>      <!-- Player class (~51 KB) -->
+  <script src="js/enemy-class.js"></script>       <!-- DroneTurret + Enemy classes (~117 KB) -->
+  <script src="js/projectile-classes.js"></script><!-- Projectile, SwordSlash, IceSpear, Meteor, ObjectPool, Particle (~65 KB) -->
+  <script src="js/gem-classes.js"></script>       <!-- ExpGem, GoldCoin, Chest classes (~26 KB) -->
+  <script src="js/save-system.js"></script>       <!-- Save/load, achievements, SSB events, gear (~83 KB) -->
+  <script src="js/camp-skill-system.js"></script> <!-- Camp buildings, skill tree, training (~93 KB) -->
+  <script src="js/quest-system.js"></script>      <!-- Quests, account, chat, companion, camp screen (~110 KB) -->
+  <script src="js/world-gen.js"></script>         <!-- 3D world generation (createWorld) (~113 KB) -->
+  <script src="js/game-screens.js"></script>      <!-- init(), menus, wave spawning, effects (~136 KB) -->
+  <script src="js/level-up-system.js"></script>   <!-- Level-up modal, upgrade cards (~44 KB) -->
+  <script src="js/game-hud.js"></script>          <!-- HUD, minimap, combo, NPC dialogue (~48 KB) -->
+  <script src="js/game-over-reset.js"></script>   <!-- Game over screen, reset game (~37 KB) -->
+  <script src="js/input-system.js"></script>      <!-- Input handling (~13 KB) -->
+  <script src="js/game-loop.js"></script>         <!-- Main animate() loop, starts game (~98 KB) -->
 
   <!-- Farmer NPC Speech Bubble (comic-style, paged) -->
   <div id="farmer-speech-bubble" role="dialog" aria-label="Farmer dialogue">
