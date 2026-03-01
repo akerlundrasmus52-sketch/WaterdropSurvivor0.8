@@ -84,27 +84,9 @@
         setTimeout(function() {
           loadingScreen.style.display = 'none';
           
-          // Route to 3D Camp World as the default screen (instead of old 2D main menu).
-          // Prefer 3D camp if CampWorld, THREE and the renderer are all available.
-          // Falls back to 2D camp-screen (via updateCampScreen) or main menu.
-          var campScreen = document.getElementById('camp-screen');
-          if (window.CampWorld && window.THREE && window.gameRenderer && window.updateCampScreen) {
-            // 3D camp mode: camp-screen becomes a transparent HUD overlay over the canvas
-            if (campScreen) {
-              campScreen.classList.remove('camp-subsection-active');
-              campScreen.style.display = 'flex';
-            }
-            window.updateCampScreen();
-          } else if (campScreen && window.updateCampScreen) {
-            // 2D camp or deferred 3D activation via updateCampScreen
-            campScreen.classList.remove('camp-subsection-active');
-            campScreen.style.display = 'flex';
-            window.updateCampScreen();
-          } else {
-            // Fallback: show main menu if camp world is not ready yet
-            var mainMenu = document.getElementById('main-menu');
-            if (mainMenu) mainMenu.style.display = 'flex';
-          }
+          // Always show the main menu after loading
+          var mainMenu = document.getElementById('main-menu');
+          if (mainMenu) mainMenu.style.display = 'flex';
           
           // FRESH IMPLEMENTATION: Show Story Quest Modal on first load
           setTimeout(function() {
