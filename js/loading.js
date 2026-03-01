@@ -5,6 +5,7 @@
       // Initialize flags
       window.gameModuleReady = false;
       window.loadingComplete = false;
+      let menuShown = false;
       
       // Wait for DOM to be ready
       if (document.readyState === 'loading') {
@@ -44,7 +45,7 @@
         
         // 12-second failsafe timeout - show menu anyway if module fails to load
         setTimeout(function() {
-          if (!window.gameModuleReady) {
+          if (!window.gameModuleReady && !menuShown) {
             console.warn('[Loading] Failsafe timeout - showing menu without module ready signal');
             clearInterval(progressInterval);
             window.loadingComplete = true;
@@ -69,12 +70,14 @@
             // Timeout - show anyway
             console.warn('[Loading] Module ready timeout - showing menu anyway');
             clearInterval(checkInterval);
-            showMenuAfterLoading();
+            if (!menuShown) showMenuAfterLoading();
           }
         }, 100);
       }
       
       function showMenuAfterLoading() {
+        if (menuShown) return;
+        menuShown = true;
         const loadingScreen = document.getElementById('loading-screen');
         if (!loadingScreen) return;
         
