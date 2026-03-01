@@ -2,14 +2,7 @@
 // Extracted from game.js - loaded as a regular script before game.js (module)
 // Exposes window.GameAudio for use by game.js
 
-// Safe AudioContext creation: browsers may block instantiation before user gesture,
-// or AudioContext may be unavailable in headless/CI environments.
-let audioCtx = null;
-try {
-  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-} catch(e) {
-  console.warn('[Audio] AudioContext unavailable:', e.message, '— audio disabled');
-}
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 let musicOscillators = [];
 let musicGain = null;
 
@@ -20,7 +13,6 @@ function isSoundEnabled() {
 }
 
 function initMusic() {
-  if (!audioCtx) return;
   if (!musicGain) {
     musicGain = audioCtx.createGain();
     musicGain.gain.value = 0.05;
@@ -30,7 +22,6 @@ function initMusic() {
 
 function updateBackgroundMusic() {
   // Background music removed per requirements
-  if (!audioCtx) return;
   initMusic();
   if (musicGain) {
     musicGain.gain.setValueAtTime(0, audioCtx.currentTime);
@@ -46,7 +37,6 @@ function updateBackgroundMusic() {
 
 // Helper: create a white noise buffer for realistic sound synthesis
 function createNoiseBuffer(duration) {
-  if (!audioCtx) return null;
   const sampleRate = audioCtx.sampleRate;
   const bufferSize = Math.floor(sampleRate * duration);
   const buffer = audioCtx.createBuffer(1, bufferSize, sampleRate);
@@ -57,28 +47,16 @@ function createNoiseBuffer(duration) {
 
 // Helper: create a noise source (one-shot)
 function createNoise(duration) {
-  if (!audioCtx) return null;
   const source = audioCtx.createBufferSource();
   source.buffer = createNoiseBuffer(Math.max(duration, 0.05));
   return source;
 }
 
-/**
- * Play a synthesised sound effect.
- *
- * @param {string} type   - Sound identifier (e.g. 'shoot', 'hit', 'levelup', 'waterSplash', …)
- * @param {number} [pitch=1] - Frequency multiplier: >1 raises pitch, <1 lowers it (must be > 0)
- * @param {number} [volume=1] - Gain scalar: 0 = mute, 1 = full (negative values are ignored)
- */
-function playSound(type, pitch, volume) {
+function playSound(type) {
   if (!isSoundEnabled()) return;
-  if (!audioCtx) return;
   if (audioCtx.state === 'suspended') audioCtx.resume();
 
   const now = audioCtx.currentTime;
-  // Optional pitch multiplier (>1 = higher, <1 = lower) and volume scalar (0 = mute, 1 = full)
-  const pitchMult = (typeof pitch === 'number' && pitch > 0) ? pitch : 1;
-  const volScale  = (typeof volume === 'number' && volume >= 0) ? volume : 1;
 
   if (type === 'shoot') {
     // Realistic gunshot: noise crack (high-freq transient) + bass thump
@@ -110,16 +88,16 @@ function playSound(type, pitch, volume) {
     const noiseGain = audioCtx.createGain();
     const hp = audioCtx.createBiquadFilter();
     hp.type = 'highpass'; hp.frequency.value = 400;
-    noiseGain.gain.setValueAtTime(0.5 * volScale, now);
+    noiseGain.gain.setValueAtTime(0.5, now);
     noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
     noise.connect(hp); hp.connect(noiseGain); noiseGain.connect(audioCtx.destination);
     noise.start(now); noise.stop(now + 0.07);
     const thud = audioCtx.createOscillator();
     const thudGain = audioCtx.createGain();
     thud.type = 'sine';
-    thud.frequency.setValueAtTime(90 * pitchMult, now);
-    thud.frequency.exponentialRampToValueAtTime(40 * pitchMult, now + 0.05);
-    thudGain.gain.setValueAtTime(0.3 * volScale, now);
+    thud.frequency.setValueAtTime(90, now);
+    thud.frequency.exponentialRampToValueAtTime(40, now + 0.05);
+    thudGain.gain.setValueAtTime(0.3, now);
     thudGain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
     thud.connect(thudGain); thudGain.connect(audioCtx.destination);
     thud.start(now); thud.stop(now + 0.07);
@@ -388,29 +366,6 @@ function playSound(type, pitch, volume) {
     noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
     noise.connect(bp); bp.connect(noiseGain); noiseGain.connect(audioCtx.destination);
     noise.start(now); noise.stop(now + 0.04);
-
-  } else if (type === 'waterSplash') {
-    // Water splash on player entering water: layered bandpass noise + low plop
-    const noise = createNoise(0.3);
-    const noiseGain = audioCtx.createGain();
-    const bp = audioCtx.createBiquadFilter();
-    bp.type = 'bandpass';
-    bp.frequency.setValueAtTime(1800, now);
-    bp.frequency.exponentialRampToValueAtTime(500, now + 0.25);
-    bp.Q.value = 1.2;
-    noiseGain.gain.setValueAtTime(0.4 * volScale, now);
-    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
-    noise.connect(bp); bp.connect(noiseGain); noiseGain.connect(audioCtx.destination);
-    noise.start(now); noise.stop(now + 0.3);
-    const plop = audioCtx.createOscillator();
-    const plopGain = audioCtx.createGain();
-    plop.type = 'sine';
-    plop.frequency.setValueAtTime(300 * pitchMult, now);
-    plop.frequency.exponentialRampToValueAtTime(80 * pitchMult, now + 0.15);
-    plopGain.gain.setValueAtTime(0.25 * volScale, now);
-    plopGain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
-    plop.connect(plopGain); plopGain.connect(audioCtx.destination);
-    plop.start(now); plop.stop(now + 0.2);
   }
 }
 // Drone humming sound - continuous
@@ -419,7 +374,6 @@ let droneGain = null;
 
 function startDroneHum() {
   if (!isSoundEnabled() || droneOscillator) return;
-  if (!audioCtx) return;
   if (audioCtx.state === 'suspended') audioCtx.resume();
 
   droneOscillator = audioCtx.createOscillator();
