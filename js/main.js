@@ -1,8 +1,7 @@
     import * as THREE from 'three';
-window.THREE = THREE;
-    // Expose THREE globally so regular scripts (e.g. blood-system.js) can access it
     window.THREE = THREE;
-window.gameModuleReady = true;
+    // Expose THREE globally so regular scripts (e.g. blood-system.js) can access it
+    window.gameModuleReady = true;
     // --- MODULE ALIASES FOR EXTRACTED GLOBALS ---
     // audio.js, utils.js, state.js, weapons.js, enemies.js, combat.js, player.js,
     // world.js, ui.js, renderer.js are all loaded as regular scripts before this module
@@ -23078,4 +23077,4 @@ window.gameModuleReady = true;
         
         const timeoutId = setTimeout(() => {
           scene.remove(slashLight);
-          const idx = flashLights.indexOf(sl
+          cons
