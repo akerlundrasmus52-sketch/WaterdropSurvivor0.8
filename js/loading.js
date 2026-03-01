@@ -47,18 +47,23 @@
           }
         }, 200);
 
-        // Phase 2 (30–70%): wait for window.THREE
+        // Phase 2 (30–70%): wait for window.THREE or helper scripts (ES module path)
         waitForCondition(
-          function() { return !!window.THREE; },
+          function() { return !!window.THREE || !!window.GameWorld || !!window.GameRenderer; },
           function() {
             clearInterval(phase1Interval);
+            // If THREE was loaded via ES module but not exposed on window,
+            // the game scripts (world.js etc) loaded successfully so we proceed
+            if (!window.THREE && window.GameWorld) {
+              console.log('[Loading] THREE loaded via ES module - game scripts ready');
+            }
             setProgress(30);
             setStatus('Loading game assets...');
             animateTo(70, 4000, function() {
-              // Phase 3 (70–90%): wait for gameModuleReady
+              // Phase 3 (70–90%): wait for gameModuleReady or equivalent signals
               setStatus('Starting...');
               waitForCondition(
-                function() { return !!window.gameModuleReady; },
+                function() { return !!window.gameModuleReady || !!window.setGamePaused || !!window.updateCampScreen; },
                 function() {
                   setProgress(90);
                   animateTo(100, 800, function() {
@@ -73,6 +78,7 @@
                   setProgress(100);
                   showMenuAfterLoading();
                 }
+
               );
             });
           },
@@ -90,7 +96,7 @@
           if (!menuShown) {
             console.warn('[Loading] 15s hard failsafe - module not ready');
             window.loadingComplete = true;
-            if (window.gameModuleReady) {
+            if (window.gameModuleReady || window.setGamePaused || window.updateCampScreen) {
               setProgress(100);
               showMenuAfterLoading();
             } else {
@@ -188,21 +194,20 @@
         setTimeout(function() {
           loadingScreen.style.display = 'none';
 
-          if (!window.gameModuleReady) {
+          if (!(window.gameModuleReady || window.setGamePaused || window.updateCampScreen)) {
             // Module never loaded — show error overlay on loading screen
             _restoreLoadingScreenAndShowError();
             return;
           }
           
-          if (!window.CampWorld || !window.THREE || !window.gameRenderer || !window.updateCampScreen) {
+          if (!window.CampWorld || !window.gameRenderer || !window.updateCampScreen) {
             console.warn('[Loading] showMenuAfterLoading: missing components —',
               'CampWorld:', !!window.CampWorld,
-              'THREE:', !!window.THREE,
               'gameRenderer:', !!window.gameRenderer,
               'updateCampScreen:', !!window.updateCampScreen);
           }
           var campScreen = document.getElementById('camp-screen');
-          if (window.CampWorld && window.THREE && window.gameRenderer && window.updateCampScreen) {
+          if (window.CampWorld && window.gameRenderer && window.updateCampScreen) {
             // 3D camp mode: camp-screen becomes a transparent HUD overlay over the canvas
             if (campScreen) {
               campScreen.classList.remove('camp-subsection-active');
