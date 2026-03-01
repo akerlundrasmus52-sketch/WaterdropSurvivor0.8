@@ -700,6 +700,10 @@
     }
   </script>
 
+  <!-- THREE.js bridge: import THREE via the import map and expose on window for non-module scripts -->
+  <!-- blood-system.js, spawn-sequence.js, and camp-world.js are loaded dynamically by this bridge -->
+  <script type="module" src="js/three-bridge.js"></script>
+
   <!-- CDN Error Logging (Non-blocking) -->
   <script src="js/cdn-monitor.js"></script>
 
@@ -720,9 +724,7 @@
   <script src="js/world.js"></script>
   <script src="js/ui.js"></script>
   <script src="js/renderer.js"></script>
-  <script src="js/blood-system.js"></script>
-  <script src="js/spawn-sequence.js"></script>
-  <script src="js/camp-world.js"></script>
+  <!-- blood-system.js, spawn-sequence.js, camp-world.js loaded by js/three-bridge.js after window.THREE is set -->
   <script src="js/harvesting.js"></script>
   <script src="js/rage-combat.js"></script>
   <script src="js/ui-calibration.js"></script>
