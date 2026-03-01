@@ -84,7 +84,7 @@
         setTimeout(function() {
           loadingScreen.style.display = 'none';
           
-          // Always show the main menu after loading
+          // Always show main menu after loading — camp is reached via menu buttons
           var mainMenu = document.getElementById('main-menu');
           if (mainMenu) mainMenu.style.display = 'flex';
           
