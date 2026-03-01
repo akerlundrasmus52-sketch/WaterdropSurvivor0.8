@@ -49,12 +49,17 @@
     }
     
     // Enhance spawnParticles to respect throttle
-    const originalSpawnParticles = spawnParticles;
-    spawnParticles = function(position, color, count) {
-      // Apply throttle if active (50% reduction)
-      const adjustedCount = performanceLog.particleThrottleActive ? Math.ceil(count * 0.5) : count;
-      return originalSpawnParticles(position, color, adjustedCount);
-    };
+    // Use window.spawnParticles explicitly so the reassignment works correctly across
+    // separate <script> files that share the global scope (function declarations live
+    // on window, not in a per-script lexical scope, so window.x is the canonical reference)
+    if (typeof window.spawnParticles === 'function') {
+      const originalSpawnParticles = window.spawnParticles;
+      window.spawnParticles = function(position, color, count) {
+        // Apply throttle if active (50% reduction)
+        const adjustedCount = performanceLog.particleThrottleActive ? Math.ceil(count * 0.5) : count;
+        return originalSpawnParticles(position, color, adjustedCount);
+      };
+    }
     
     // Day/Night Cycle Update - Non-blocking, smooth lighting transitions
     function updateDayNightCycle(dt) {
