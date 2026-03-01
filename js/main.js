@@ -5,23 +5,24 @@
     // THREE.js is loaded via CDN <script> tag in index.html — no import needed here.
 
 
-    // --- MODULE ALIASES FOR EXTRACTED GLOBALS ---
+    // --- GLOBALS FROM EARLIER SCRIPTS ---
     // audio.js, utils.js, state.js, weapons.js, enemies.js, combat.js, player.js,
-    // world.js, ui.js, renderer.js are all loaded as regular scripts before this module
-    const { playSound, initMusic, updateBackgroundMusic, startDroneHum, stopDroneHum } = window.GameAudio;
-    const audioCtx = window.GameAudio.audioCtx;
-    const { getRarityColor, getChestTierForCombo, getAccountLevelXPRequired, KILL_CAM_CONSTANTS, getRandomKillMessage } = window.GameUtils;
-    const { getDefaultWeapons, WEAPON_UPGRADES } = window.GameWeapons;
-    const { ENEMY_TYPES, getEnemyBaseStats } = window.GameEnemies;
-    const { calculateArmorReduction, calculateEnemyArmorReduction } = window.GameCombat;
-    const { getDefaultPlayerStats } = window.GamePlayer;
-    const { COLORS, GAME_CONFIG, countdownMessages, COMPANIONS, getInitialDayNightCycle } = window.GameWorld;
-    const { showStatChange, showStatusMessage, showYouDiedBanner } = window.GameUI;
-    const { RENDERER_CONFIG } = window.GameRenderer;
+    // world.js, ui.js, renderer.js are all loaded as regular scripts before this file.
+    // Their top-level const/let/function declarations are already in the global scope:
+    //   playSound, initMusic, updateBackgroundMusic, startDroneHum, stopDroneHum (audio.js)
+    //   audioCtx, getRarityColor, getChestTierForCombo, KILL_CAM_CONSTANTS (utils.js / audio.js)
+    //   getDefaultWeapons, WEAPON_UPGRADES (weapons.js)
+    //   ENEMY_TYPES, getEnemyBaseStats (enemies.js)
+    //   calculateArmorReduction, calculateEnemyArmorReduction (combat.js)
+    //   getDefaultPlayerStats (player.js)
+    //   COLORS, GAME_CONFIG, countdownMessages, COMPANIONS, getInitialDayNightCycle (world.js)
+    //   showStatChange, showStatusMessage, showYouDiedBanner (ui.js)
+    //   RENDERER_CONFIG (renderer.js)
+    // Do NOT re-declare any of these with const/let — the earlier scripts already put
+    // them in the global lexical environment, and a duplicate const would throw SyntaxError.
 
     // --- CONSTANTS & CONFIG ---
-    // COLORS and GAME_CONFIG are defined in world.js → window.GameWorld
-    // and aliased at the top of this file.
+    // COLORS and GAME_CONFIG are defined in world.js (global scope).
 
     // --- GAME STATE ---
     let scene, camera, renderer;
