@@ -18,17 +18,20 @@ const threeDepScripts = [
   'js/camp-world.js'
 ];
 
-(async function loadSequentially() {
-  for (const src of threeDepScripts) {
-    await new Promise(function (resolve, reject) {
-      const script = document.createElement('script');
-      script.src = src;
-      script.onload = resolve;
-      script.onerror = function () {
-        console.error('[three-bridge] Failed to load ' + src);
-        reject(new Error('Failed to load ' + src));
-      };
-      document.body.appendChild(script);
-    });
-  }
-})();
+// Use top-level await so that main.js (next module in document order)
+// does NOT start until all THREE-dependent scripts are loaded and executed.
+for (const src of threeDepScripts) {
+  await new Promise(function (resolve) {
+    const script = document.createElement('script');
+    script.src = src;
+    script.onload = resolve;
+    script.onerror = function () {
+      console.error('[three-bridge] Failed to load ' + src + ' — continuing with remaining scripts');
+      resolve(); // resolve instead of reject so remaining scripts still load
+    };
+    document.body.appendChild(script);
+  });
+}
+
+window.threeBridgeReady = true;
+console.log('[three-bridge] All THREE-dependent scripts loaded');
