@@ -207,6 +207,8 @@
               'updateCampScreen:', !!window.updateCampScreen);
           }
           var campScreen = document.getElementById('camp-screen');
+          var moduleLoaded = window.gameModuleReady || window.setGamePaused || window.updateCampScreen;
+
           if (window.CampWorld && window.gameRenderer && window.updateCampScreen) {
             // 3D camp mode: camp-screen becomes a transparent HUD overlay over the canvas
             if (campScreen) {
@@ -214,12 +216,12 @@
               campScreen.style.display = 'flex';
             }
             window.updateCampScreen();
-          } else if (window.gameModuleReady && campScreen && window.updateCampScreen) {
+          } else if (moduleLoaded && campScreen && window.updateCampScreen) {
             // Module loaded but camp world components not yet available — show 2D camp screen
             campScreen.classList.remove('camp-subsection-active');
             campScreen.style.display = 'flex';
             window.updateCampScreen();
-          } else if (window.gameModuleReady) {
+          } else if (moduleLoaded) {
             // Module loaded but camp world unavailable — show main menu with real handlers
             var mainMenu = document.getElementById('main-menu');
             if (mainMenu) mainMenu.style.display = 'flex';
