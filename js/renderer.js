@@ -20,16 +20,16 @@ const RENDERER_CONFIG = {
   // fogFar is pushed to ~42 so objects just beyond the visible area are fully hidden.
   fogNear: 28,
   fogFar: 42,
-  // Default shadow map size — balanced quality/performance
-  defaultShadowMapSize: 1024,
+  // Default shadow map size — high quality for detailed shadows
+  defaultShadowMapSize: 2048,
   // Directional light shadow frustum half-size (covers visible area; shadow is re-anchored to player each frame)
   shadowFrustumHalfSize: 45,
   // Directional light shadow quality settings
-  shadowRadius: 2,   // Soft shadow blur - cheaper to compute
+  shadowRadius: 3,   // Soft shadow blur - slightly sharper for quality
   shadowBias: -0.0003, // Prevent shadow acne with better bias
   // Split-resolution: world/terrain renders at a reduced pixel ratio to boost baseline FPS.
   // UI and HTML overlays are unaffected (they always render at native device resolution).
-  worldPixelRatio: 0.75,   // 3D world render scale (< 1.0 = lower resolution = faster)
+  worldPixelRatio: 0.85,   // 3D world render scale (< 1.0 = lower resolution = faster)
   uiPixelRatio: 1.0        // Reserved: HTML/CSS UI always renders at native resolution
 };
 

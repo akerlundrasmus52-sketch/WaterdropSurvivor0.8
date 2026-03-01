@@ -55,14 +55,8 @@
 
   <!-- Loading Screen -->
   <div id="loading-screen">
-    <img id="loading-bg" src="654811F9-1760-4A74-B977-73ECB1A92913.png" alt="Loading">
-    <div id="loading-status" style="position:absolute; bottom:80px; left:50%; transform:translateX(-50%); color:#FFD700; font-family:'Bangers',cursive; font-size:16px; z-index:2; text-shadow:1px 1px 2px #000; white-space:nowrap;">Loading...</div>
     <div class="loading-bar-container">
       <div class="loading-bar" id="loading-bar"></div>
-    </div>
-    <div id="loading-error" style="display:none; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); text-align:center; z-index:2; color:#FF6B6B; font-family:'Bangers',cursive; font-size:20px; text-shadow:1px 1px 2px #000; padding:20px; background:rgba(0,0,0,0.7); border-radius:10px; border:2px solid #FF6B6B;">
-      ⚠️ Game engine failed to start.<br><br>
-      <button onclick="window.location.reload()" style="background:#FFD700; color:#000; border:none; padding:12px 30px; border-radius:8px; font-family:'Bangers',cursive; font-size:18px; cursor:pointer;">Tap to reload</button>
     </div>
   </div>
 
@@ -406,23 +400,6 @@
   <!-- Account Level-Up Curtain -->
   <div id="account-levelup-curtain" aria-live="polite" aria-atomic="true"></div>
 
-  <!-- Screen Transition Overlay (fade to black between camp/game) -->
-  <div id="screen-transition"></div>
-
-  <!-- Benny the Camp Janitor Dialogue Box -->
-  <div id="benny-dialogue">
-    <div class="benny-name">🧹 Benny the Camp Janitor</div>
-    <div class="benny-text" id="benny-dialogue-text"></div>
-    <button class="benny-close-btn" id="benny-close-btn">Got it!</button>
-  </div>
-
-  <!-- Post-Death / Post-Quest Run End Options -->
-  <div id="run-end-options">
-    <div class="roe-title" id="roe-title">Run Complete</div>
-    <button class="roe-btn primary" id="roe-camp-btn">🏕️ Return to Camp</button>
-    <button class="roe-btn" id="roe-continue-btn">▶ Start New Run</button>
-  </div>
-
   <div id="ui-layer">
     <div class="hud-top">
       <div class="bar-container" id="hp-bar-container">
@@ -700,10 +677,6 @@
     }
   </script>
 
-  <!-- THREE.js bridge: import THREE via the import map and expose on window for non-module scripts -->
-  <!-- blood-system.js, spawn-sequence.js, and camp-world.js are loaded dynamically by this bridge -->
-  <script type="module" src="js/three-bridge.js"></script>
-
   <!-- CDN Error Logging (Non-blocking) -->
   <script src="js/cdn-monitor.js"></script>
 
@@ -724,7 +697,9 @@
   <script src="js/world.js"></script>
   <script src="js/ui.js"></script>
   <script src="js/renderer.js"></script>
-  <!-- blood-system.js, spawn-sequence.js, camp-world.js loaded by js/three-bridge.js after window.THREE is set -->
+  <script src="js/blood-system.js"></script>
+  <script src="js/spawn-sequence.js"></script>
+  <script src="js/camp-world.js"></script>
   <script src="js/harvesting.js"></script>
   <script src="js/rage-combat.js"></script>
   <script src="js/ui-calibration.js"></script>

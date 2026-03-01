@@ -1,36 +1,21 @@
     import * as THREE from 'three';
-    window.THREE = THREE;
+
     // Expose THREE globally so regular scripts (e.g. blood-system.js) can access it
-    window.gameModuleReady = true;
+    window.THREE = THREE;
+
     // --- MODULE ALIASES FOR EXTRACTED GLOBALS ---
     // audio.js, utils.js, state.js, weapons.js, enemies.js, combat.js, player.js,
     // world.js, ui.js, renderer.js are all loaded as regular scripts before this module
-    // Defensive null-guards: if a pre-module script failed to load (e.g. CDN error),
-    // fall back to safe stubs so the rest of the module can still initialise.
-    const _GameAudio    = window.GameAudio    || {};
-    const _GameUtils    = window.GameUtils    || {};
-    const _GameWeapons  = window.GameWeapons  || {};
-    const _GameEnemies  = window.GameEnemies  || {};
-    const _GameCombat   = window.GameCombat   || {};
-    const _GamePlayer   = window.GamePlayer   || {};
-    const _GameWorld    = window.GameWorld    || {};
-    const _GameUI       = window.GameUI       || {};
-    const _GameRenderer = window.GameRenderer || {};
-
-    const playSound              = _GameAudio.playSound              || function(){};
-    const initMusic              = _GameAudio.initMusic              || function(){};
-    const updateBackgroundMusic  = _GameAudio.updateBackgroundMusic  || function(){};
-    const startDroneHum          = _GameAudio.startDroneHum          || function(){};
-    const stopDroneHum           = _GameAudio.stopDroneHum           || function(){};
-    const audioCtx               = _GameAudio.audioCtx               || null;
-    const { getRarityColor = ()=>'#fff', getChestTierForCombo = ()=>1, getAccountLevelXPRequired = ()=>100, KILL_CAM_CONSTANTS = {}, getRandomKillMessage = ()=>'' } = _GameUtils;
-    const { getDefaultWeapons = ()=>({}), WEAPON_UPGRADES = {} }     = _GameWeapons;
-    const { ENEMY_TYPES = {}, getEnemyBaseStats = ()=>({}) }         = _GameEnemies;
-    const { calculateArmorReduction = (d)=>d, calculateEnemyArmorReduction = (d)=>d } = _GameCombat;
-    const { getDefaultPlayerStats = ()=>({}) }                       = _GamePlayer;
-    const { COLORS = {bg:0x000000}, GAME_CONFIG = {}, countdownMessages = [], COMPANIONS = [], getInitialDayNightCycle = ()=>({}) } = _GameWorld;
-    const { showStatChange = ()=>{}, showStatusMessage = ()=>{}, showYouDiedBanner = ()=>{} } = _GameUI;
-    const { RENDERER_CONFIG = {} }                                   = _GameRenderer;
+    const { playSound, initMusic, updateBackgroundMusic, startDroneHum, stopDroneHum } = window.GameAudio;
+    const audioCtx = window.GameAudio.audioCtx;
+    const { getRarityColor, getChestTierForCombo, getAccountLevelXPRequired, KILL_CAM_CONSTANTS, getRandomKillMessage } = window.GameUtils;
+    const { getDefaultWeapons, WEAPON_UPGRADES } = window.GameWeapons;
+    const { ENEMY_TYPES, getEnemyBaseStats } = window.GameEnemies;
+    const { calculateArmorReduction, calculateEnemyArmorReduction } = window.GameCombat;
+    const { getDefaultPlayerStats } = window.GamePlayer;
+    const { COLORS, GAME_CONFIG, countdownMessages, COMPANIONS, getInitialDayNightCycle } = window.GameWorld;
+    const { showStatChange, showStatusMessage, showYouDiedBanner } = window.GameUI;
+    const { RENDERER_CONFIG } = window.GameRenderer;
 
     // --- CONSTANTS & CONFIG ---
     // COLORS and GAME_CONFIG are defined in world.js → window.GameWorld
@@ -11974,7 +11959,7 @@
 
       document.getElementById('inv-back-btn').onclick = () => {
         modal.remove();
-        if (campScreen) { campScreen.style.display = 'flex'; try { updateCampScreen(); } catch(err) { console.error('[Camp] inv-back-btn updateCampScreen error:', err); } }
+        if (campScreen) campScreen.style.display = 'flex';
       };
     }
 
@@ -12183,7 +12168,7 @@
       // Back button
       document.getElementById('ch-back-btn').onclick = () => {
         modal.remove();
-        if (campScreen) { campScreen.style.display = 'flex'; try { updateCampScreen(); } catch(err) { console.error('[Camp] ch-back-btn updateCampScreen error:', err); } }
+        if (campScreen) campScreen.style.display = 'flex';
       };
 
       // Activate companion button (quest9 progression)
@@ -12510,7 +12495,7 @@
             }
           },
           inventory:           () => showInventoryScreen(),
-          campBoard:           () => showFastTravelMenu(),
+          campBoard:           () => showCampBoardMenu(),
           specialAttacks:      () => showSpecialAttacksPanel(),
           warehouse:           () => showInventoryScreen(),
           tavern:              () => showExpeditionsMenu ? showExpeditionsMenu() : showQuestHall(),
@@ -12559,16 +12544,6 @@
           saveData.storyQuests.welcomeShown = true;
           saveSaveData();
           
-          // Show Benny intro dialogue
-          setTimeout(() => {
-            const bennyEl = document.getElementById('benny-dialogue');
-            const bennyText = document.getElementById('benny-dialogue-text');
-            if (bennyEl && bennyText) {
-              bennyText.textContent = "Hey there, Droplet! I'm Benny — your Camp Janitor and guide. Walk around camp with the joystick and approach buildings to interact. Find me by the campfire — I'll give you tips!";
-              bennyEl.style.display = 'block';
-            }
-          }, 800);
-
           // Show comic-style popup after a brief delay
           setTimeout(() => {
             showComicInfoBox(
@@ -15702,28 +15677,6 @@
 
     // --- GAME LOGIC ---
 
-    /**
-     * fadeTransition(callback)
-     * Fades to black, calls callback(), then fades back in.
-     * Used for smooth scene transitions between camp and game.
-     */
-    function fadeTransition(callback, duration) {
-      duration = duration || 400;
-      const overlay = document.getElementById('screen-transition');
-      if (!overlay) { if (callback) callback(); return; }
-      overlay.style.transition = 'opacity ' + (duration / 1000) + 's ease';
-      overlay.style.opacity = '1';
-      overlay.classList.add('fade-in');
-      setTimeout(function () {
-        if (callback) callback();
-        // Fade back out
-        setTimeout(function () {
-          overlay.style.opacity = '0';
-          overlay.classList.remove('fade-in');
-        }, 80);
-      }, duration);
-    }
-
     function init() {
       console.log('[Init] Starting game initialization...');
       // Load save data and settings first
@@ -16000,7 +15953,10 @@
       // Start Loop - begin rendering immediately (non-blocking)
       animationFrameId = requestAnimationFrame(animate);
       
-      console.log('[Init] Game init complete - Three.js loaded, event listeners attached');
+      // FRESH: Signal that module is ready (standalone loading script is waiting for this)
+      // Don't call showLoadingScreen - standalone script handles it
+      window.gameModuleReady = true;
+      console.log('[Init] Game module ready - Three.js loaded, event listeners attached');
 
       // Pre-warm the 3D camp world scene in the background.
       // Builds the Three.js scene geometry 2 seconds after startup so the first
@@ -16151,12 +16107,6 @@
     function startGame() {
       // Deactivate 3D camp world when starting a game run
       if (window.CampWorld) window.CampWorld.exit();
-      // Hide Benny dialogue if showing
-      const bennyEl = document.getElementById('benny-dialogue');
-      if (bennyEl) bennyEl.style.display = 'none';
-      // Hide run-end-options if showing
-      const roeEl = document.getElementById('run-end-options');
-      if (roeEl) roeEl.style.display = 'none';
       const campScreenEl = document.getElementById('camp-screen');
       if (campScreenEl) campScreenEl.classList.remove('camp-3d-mode');
       document.getElementById('main-menu').style.display = 'none';
@@ -16637,80 +16587,6 @@
     // ============================================================
     // CAMP BOARD — Fast Access Master Menu
     // ============================================================
-    // Fast-travel hub: shown when player interacts with the Camp Board building.
-    // Displays all key destinations; also used by questline to guide players.
-    function showFastTravelMenu() {
-      const existing = document.getElementById('fast-travel-overlay');
-      if (existing) existing.remove();
-
-      const overlay = document.createElement('div');
-      overlay.id = 'fast-travel-overlay';
-      overlay.style.cssText = [
-        'position:fixed','top:0','left:0','width:100%','height:100%',
-        'background:rgba(0,0,0,0.9)','z-index:500',
-        'display:flex','flex-direction:column','align-items:center',
-        'justify-content:flex-start','padding:20px 16px','box-sizing:border-box','overflow-y:auto',
-      ].join(';');
-
-      const header = document.createElement('div');
-      header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;width:100%;max-width:480px;margin-bottom:12px;';
-      header.innerHTML = '<div style="font-family:\'Bangers\',cursive;font-size:28px;color:#FFD700;letter-spacing:2px;text-shadow:0 0 10px rgba(255,215,0,0.6);">🗺️ FAST TRAVEL</div>';
-      const closeBtn = document.createElement('button');
-      closeBtn.textContent = '✕';
-      closeBtn.style.cssText = 'background:#2a2a2a;border:2px solid #666;border-radius:50%;width:38px;height:38px;color:#fff;font-size:18px;cursor:pointer;font-family:"Bangers",cursive;flex-shrink:0;';
-      closeBtn.onclick = () => overlay.remove();
-      header.appendChild(closeBtn);
-      overlay.appendChild(header);
-
-      const subtitle = document.createElement('div');
-      subtitle.style.cssText = 'color:#aaa;font-size:12px;margin-bottom:18px;text-align:center;letter-spacing:1.5px;text-transform:uppercase;max-width:400px;';
-      subtitle.textContent = 'Choose a destination to travel to';
-      overlay.appendChild(subtitle);
-
-      // Destinations
-      const destinations = [
-        { id: 'camp',          icon: '⛺', label: 'Camp Hub',           desc: 'Return to the campfire hub',      action: () => { overlay.remove(); } },
-        { id: 'new_run',       icon: '⚔️', label: 'Start New Run',       desc: 'Begin a fresh survival run',      action: () => { overlay.remove(); startGame(); } },
-        { id: 'quest_hall',    icon: '📜', label: 'Quest Hall',           desc: 'View and accept quests',          action: () => { overlay.remove(); showQuestHall(); } },
-        { id: 'skill_tree',    icon: '🌳', label: 'Skill Tree',           desc: 'Spend skill points',              action: () => { overlay.remove(); document.getElementById('camp-skills-tab').click(); } },
-        { id: 'forge',         icon: '⚒️', label: 'The Forge',            desc: 'Upgrade weapons and gear',        action: () => { overlay.remove(); showProgressionShop(); } },
-        { id: 'inventory',     icon: '📦', label: 'Inventory',            desc: 'Manage your items',               action: () => { overlay.remove(); showInventoryScreen(); } },
-        { id: 'armory',        icon: '⚔️', label: 'Armory',              desc: 'View equipped gear',              action: () => { overlay.remove(); try { updateGearScreen(); } catch(e){} document.getElementById('gear-screen').style.display = 'flex'; } },
-        { id: 'achievements',  icon: '🏆', label: 'Hall of Trophies',    desc: 'Browse achievements',             action: () => { overlay.remove(); const a = document.getElementById('achievements-screen'); if(a) a.style.display='flex'; } },
-        { id: 'prestige',      icon: '✨', label: 'Prestige Altar',      desc: 'Reset for permanent bonuses',     action: () => { overlay.remove(); if(typeof showPrestigeMenu==='function') showPrestigeMenu(); else showProgressionShop(); } },
-        { id: 'main_menu',     icon: '🏠', label: 'Main Menu',           desc: 'Return to the main menu',         action: () => { overlay.remove(); resetGame(); showMainMenu(); } },
-      ];
-
-      const grid = document.createElement('div');
-      grid.style.cssText = 'display:grid;grid-template-columns:repeat(2,1fr);gap:10px;width:100%;max-width:480px;';
-
-      destinations.forEach(dest => {
-        const btn = document.createElement('button');
-        btn.style.cssText = [
-          'background:rgba(30,30,50,0.9)','border:2px solid rgba(100,160,255,0.35)',
-          'border-radius:12px','padding:14px 10px','cursor:pointer',
-          'display:flex','flex-direction:column','align-items:center','gap:6px',
-          'color:#fff','font-family:inherit','transition:background 0.2s,border-color 0.2s',
-        ].join(';');
-        btn.innerHTML = `<span style="font-size:24px">${dest.icon}</span>
-          <div style="font-family:'Bangers',cursive;font-size:15px;letter-spacing:1px;color:#FFD700">${dest.label}</div>
-          <div style="font-size:10px;color:#aaa;text-align:center">${dest.desc}</div>`;
-        btn.addEventListener('mouseenter', () => { btn.style.background='rgba(50,80,120,0.9)'; btn.style.borderColor='rgba(100,200,255,0.7)'; });
-        btn.addEventListener('mouseleave', () => { btn.style.background='rgba(30,30,50,0.9)'; btn.style.borderColor='rgba(100,160,255,0.35)'; });
-        btn.addEventListener('click', dest.action);
-        grid.appendChild(btn);
-      });
-
-      overlay.appendChild(grid);
-      document.body.appendChild(overlay);
-
-      // Advance quest if player opens fast-travel during questline
-      if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest21_useCampBoard') {
-        progressTutorialQuest('quest21_useCampBoard', true);
-        saveSaveData();
-      }
-    }
-
     function showCampBoardMenu() {
       // Progress quest21 if active
       if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest21_useCampBoard') {
@@ -17514,53 +17390,47 @@
       // Go to Camp from death screen
       document.getElementById('goto-camp-btn').onclick = () => {
         playSound('waterdrop');
-        // Hide run-end-options if showing
-        const roeEl = document.getElementById('run-end-options');
-        if (roeEl) roeEl.style.display = 'none';
-        fadeTransition(() => {
-          document.getElementById('gameover-screen').style.display = 'none';
-          // Close any tutorial/comic modals that might still be open from the death sequence
-          ['comic-tutorial-modal','comic-info-overlay','story-quest-modal'].forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.style.display = 'none';
-          });
-          // Clear any stuck comic-info-overlay created dynamically
-          const dynOverlay = document.getElementById('comic-info-overlay');
-          if (dynOverlay && dynOverlay.parentNode) dynOverlay.parentNode.removeChild(dynOverlay);
-          // Ensure pause state is clean before entering camp
-          pauseOverlayCount = 0;
-          window.pauseOverlayCount = 0;
-          isPaused = false;
-          window.isPaused = false;
-          // Clean up game-world objects so the game scene doesn't consume GPU alongside camp
-          _cleanupGameForCampTransition();
-          // Show camp screen immediately so player sees the transition
-          document.getElementById('camp-screen').classList.remove('camp-subsection-active');
-          document.getElementById('camp-screen').style.display = 'flex';
-          const chatTab = document.getElementById('ai-chat-tab');
-          if (chatTab) chatTab.classList.add('camp-mode');
-          // Activate 3D camp world immediately (pre-warmed at startup) so there is no
-          // opaque-background flash before the scene becomes visible.
-          try { updateCampScreen(); } catch(e) { console.error('[Camp] initial updateCampScreen error:', e); }
-          // Defer a second pass to handle async DOM settle and refresh rage-combat loadout
-          const CAMP_ACTIVATION_RETRY_DELAY_MS = 80;
-          setTimeout(() => {
-            try { updateCampScreen(); } catch(e) { console.error('[Camp] updateCampScreen error:', e); }
-            // Refresh special attack loadout buttons for the new run
-            if (window.GameRageCombat) window.GameRageCombat.refreshLoadout(saveData);
-            // Safety retries: if CampWorld didn't activate (e.g. scene build threw), retry
-            // with increasing delays so the 3D camp shows reliably rather than falling back.
-            if (window.CampWorld && !window.CampWorld.isActive) {
-              setTimeout(() => {
-                try { updateCampScreen(); } catch(e) { console.error('[Camp] Retry 1 updateCampScreen error:', e); }
-                if (window.CampWorld && !window.CampWorld.isActive) {
-                  setTimeout(() => {
-                    try { updateCampScreen(); } catch(e) { console.error('[Camp] Retry 2 updateCampScreen error:', e); }
-                  }, CAMP_ACTIVATION_RETRY_DELAY_MS * 4);
-                }
-              }, CAMP_ACTIVATION_RETRY_DELAY_MS);
-            }
-          }, 0);
+        document.getElementById('gameover-screen').style.display = 'none';
+        // Close any tutorial/comic modals that might still be open from the death sequence
+        ['comic-tutorial-modal','comic-info-overlay','story-quest-modal'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.style.display = 'none';
+        });
+        // Clear any stuck comic-info-overlay created dynamically
+        const dynOverlay = document.getElementById('comic-info-overlay');
+        if (dynOverlay && dynOverlay.parentNode) dynOverlay.parentNode.removeChild(dynOverlay);
+        // Ensure pause state is clean before entering camp
+        pauseOverlayCount = 0;
+        window.pauseOverlayCount = 0;
+        isPaused = false;
+        window.isPaused = false;
+        // Show camp screen immediately so player sees the transition
+        document.getElementById('camp-screen').classList.remove('camp-subsection-active');
+        document.getElementById('camp-screen').style.display = 'flex';
+        const chatTab = document.getElementById('ai-chat-tab');
+        if (chatTab) chatTab.classList.add('camp-mode');
+        // Activate 3D camp world immediately (pre-warmed at startup) so there is no
+        // opaque-background flash before the scene becomes visible.
+        try { updateCampScreen(); } catch(e) { console.error('[Camp] initial updateCampScreen error:', e); }
+        // Defer a second pass to handle async DOM settle and refresh rage-combat loadout
+        const CAMP_ACTIVATION_RETRY_DELAY_MS = 80;
+        setTimeout(() => {
+          try { updateCampScreen(); } catch(e) { console.error('[Camp] updateCampScreen error:', e); }
+          // Refresh special attack loadout buttons for the new run
+          if (window.GameRageCombat) window.GameRageCombat.refreshLoadout(saveData);
+          // Safety retries: if CampWorld didn't activate (e.g. scene build threw), retry
+          // with increasing delays so the 3D camp shows reliably rather than falling back.
+          if (window.CampWorld && !window.CampWorld.isActive) {
+            setTimeout(() => {
+              try { updateCampScreen(); } catch(e) { console.error('[Camp] Retry 1 updateCampScreen error:', e); }
+              if (window.CampWorld && !window.CampWorld.isActive) {
+                setTimeout(() => {
+                  try { updateCampScreen(); } catch(e) { console.error('[Camp] Retry 2 updateCampScreen error:', e); }
+                }, CAMP_ACTIVATION_RETRY_DELAY_MS * 4);
+              }
+            }, CAMP_ACTIVATION_RETRY_DELAY_MS);
+          }
+        }, 0);
       };
       
       // Quit to Menu button
@@ -17576,27 +17446,6 @@
         document.getElementById('gameover-screen').style.display = 'none';
         startGame(); // Start new run immediately
       };
-
-      // ── Run-End Options box (shown after death) ─────────────────
-      const roeEl = document.getElementById('run-end-options');
-      if (roeEl) {
-        document.getElementById('roe-camp-btn').onclick = () => {
-          roeEl.style.display = 'none';
-          fadeTransition(() => {
-            document.getElementById('gameover-screen').style.display = 'none';
-            // Clean up game-world objects so the game scene doesn't consume GPU alongside camp
-            _cleanupGameForCampTransition();
-            document.getElementById('camp-screen').classList.remove('camp-subsection-active');
-            document.getElementById('camp-screen').style.display = 'flex';
-            try { updateCampScreen(); } catch(e) { console.error('[RunEndOptions] updateCampScreen error:', e); }
-          });
-        };
-        document.getElementById('roe-continue-btn').onclick = () => {
-          roeEl.style.display = 'none';
-          document.getElementById('gameover-screen').style.display = 'none';
-          startGame();
-        };
-      }
       
       // Reset progress button with double confirmation
       // FRESH IMPLEMENTATION: Story Quest Modal close handler
@@ -17684,10 +17533,6 @@
     window.updateCampScreen = function() {
       try { updateCampScreen(); } catch(e) { console.error('[CampWorld] updateCampScreen error:', e); }
     };
-
-    // NOTE: window.gameModuleReady is set AFTER init() runs (see bottom of file)
-    // so that loading.js only transitions once window.gameRenderer, window.CampWorld,
-    // and window.updateCampScreen are all fully initialised.
 
     function spawnWave() {
       waveCount++;
@@ -18728,32 +18573,42 @@
     // Floating text fade tracking to prevent memory leaks
     let floatingTextFadeInterval = null;
     let floatingTextFadeTimeout = null;
-
+    
     function createFloatingText(text, pos) {
       // Display message in status bar instead of floating text
       const statusEl = document.getElementById('status-message');
       if (!statusEl) return;
-
-      // Cancel any pending fade
-      if (floatingTextFadeTimeout) { clearTimeout(floatingTextFadeTimeout); floatingTextFadeTimeout = null; }
-      if (floatingTextFadeInterval)  { clearInterval(floatingTextFadeInterval);  floatingTextFadeInterval  = null; }
-
-      statusEl.innerText = text;
-      statusEl.style.color = '#FF4444';
-      statusEl.style.fontSize = '18px';
-      statusEl.style.transition = 'opacity 0.8s ease-out';
-      statusEl.style.opacity = '1';
-
-      // Use CSS transition for fade-out instead of setInterval (eliminates 20-fps timer)
-      floatingTextFadeTimeout = setTimeout(() => {
+      
+      // Clear any existing fade interval and timeout
+      if (floatingTextFadeInterval) {
+        clearInterval(floatingTextFadeInterval);
+        floatingTextFadeInterval = null;
+      }
+      if (floatingTextFadeTimeout) {
+        clearTimeout(floatingTextFadeTimeout);
         floatingTextFadeTimeout = null;
-        statusEl.style.opacity = '0';
-        floatingTextFadeTimeout = setTimeout(() => {
-          floatingTextFadeTimeout = null;
-          statusEl.innerText = '';
-          statusEl.style.opacity = '1';
-          statusEl.style.fontSize = '16px';
-        }, 850); // slightly longer than the 0.8s CSS transition
+      }
+      
+      statusEl.innerText = text;
+      statusEl.style.color = '#FF4444'; // Red for important messages like mini-boss
+      statusEl.style.fontSize = '18px';
+      statusEl.style.opacity = '1';
+      
+      // Clear after 4 seconds with fade out
+      floatingTextFadeTimeout = setTimeout(() => {
+        let opacity = 1;
+        floatingTextFadeInterval = setInterval(() => {
+          opacity -= 0.05;
+          if (opacity <= 0) {
+            clearInterval(floatingTextFadeInterval);
+            floatingTextFadeInterval = null;
+            statusEl.innerText = '';
+            statusEl.style.opacity = '1';
+            statusEl.style.fontSize = '16px';
+          } else {
+            statusEl.style.opacity = opacity.toString();
+          }
+        }, 50);
       }, 4000);
     }
 
@@ -19538,27 +19393,17 @@
         // Upgrade cards: show icon (if present) + title + desc
         const iconHtml = u.icon ? `<span class="upgrade-icon">${u.icon}</span>` : '';
         card.innerHTML = `${iconHtml}<div class="upgrade-title">${u.title}</div><div class="upgrade-desc">${u.desc}</div>`;
-
-        // Apply glass-3D look
-        card.classList.add('glass-3d');
-
-        // Randomised entrance animation pool (choose one per card)
-        const cardAnimationOptions = [
-          'swooshFromTopLeft', 'swooshFromTopRight', 'swooshFromBottomLeft', 'swooshFromBottomRight',
-          'cardSpinInLeft', 'cardSpinInRight', 'cardDropIn', 'cardSmokeRise',
-          'cardTilePop', 'cardSpin720', 'cardVortex', 'cardCrashIn', 'cardFlipIn'
-        ];
-        const chosenAnim = cardAnimationOptions[Math.floor(Math.random() * cardAnimationOptions.length)];
-        const animDuration = chosenAnim === 'cardSpin720' ? '0.75s' : '0.55s';
-
+        
+        // Add dramatic entrance animation - from corners
         card.style.opacity = '0';
-        card.style.animation = `${chosenAnim} ${animDuration} ease-out ${index * 0.12}s forwards`;
-        // After arrival: clear inline anim, add settled class (dark-glow blink once)
+        const corners = ['TopLeft', 'TopRight', 'BottomLeft', 'BottomRight'];
+        const corner = corners[index % 4];
+        card.style.animation = `swooshFrom${corner} 0.5s ease-out ${index * 0.1}s forwards`;
+        // Clear the inline animation after the entrance completes so CSS rarity-glow animations take over
         card.addEventListener('animationend', (e) => {
-          if (e.animationName === chosenAnim) {
+          if (e.animationName && e.animationName.startsWith('swooshFrom')) {
             card.style.animation = '';
             card.style.opacity = '1';
-            card.classList.add('settled');
           }
         }, { once: true });
         
@@ -19744,35 +19589,16 @@
     const WATERDROP_FILL_HEIGHT = 92; // Maximum fill height in SVG units (from y=18 to y=110)
     
     let lastHudUpdateMs = 0;
-    // Cached HUD element references (filled lazily on first updateHUD call) to avoid
-    // repeated getElementById lookups on a hot 10 Hz path.
-    let _hudEls = null;
-    function _getHudEls() {
-      if (_hudEls) return _hudEls;
-      _hudEls = {
-        hpFill:        document.getElementById('hp-fill'),
-        hpText:        document.getElementById('hp-text'),
-        expFill:       document.getElementById('exp-fill'),
-        expText:       document.getElementById('exp-text'),
-        botExpFill:    document.getElementById('bottom-exp-fill'),
-        botExpText:    document.getElementById('bottom-exp-text'),
-        wdLevel:       document.getElementById('waterdrop-level-text'),
-        wdExpFill:     document.getElementById('waterdrop-exp-fill'),
-        lowHpVignette: document.getElementById('low-hp-vignette'),
-      };
-      return _hudEls;
-    }
     function updateHUD() {
       const nowMs = Date.now();
       if (nowMs - lastHudUpdateMs < 100) return; // Throttle DOM updates to max 10/sec
       lastHudUpdateMs = nowMs;
-      const h = _getHudEls();
       const hpPct = (playerStats.hp / playerStats.maxHp) * 100;
-      h.hpFill.style.width = `${Math.max(0, hpPct)}%`;
-      h.hpText.innerText = `HP: ${Math.max(0, Math.ceil(playerStats.hp))}/${playerStats.maxHp}`;
-
+      document.getElementById('hp-fill').style.width = `${Math.max(0, hpPct)}%`;
+      document.getElementById('hp-text').innerText = `HP: ${Math.max(0, Math.ceil(playerStats.hp))}/${playerStats.maxHp}`;
+      
       // FRESH: Low HP warning vignette when HP < 30%
-      const lowHpVignette = h.lowHpVignette;
+      const lowHpVignette = document.getElementById('low-hp-vignette');
       if (lowHpVignette) {
         if (hpPct < 30 && hpPct > 0) {
           // Show vignette, opacity scales with how low HP is (more intense as HP drops)
@@ -19782,26 +19608,25 @@
           lowHpVignette.style.opacity = '0';
         }
       }
-
+      
       const expPct = (playerStats.exp / playerStats.expReq) * 100;
       // Update old EXP bar (hidden but keep for compatibility)
-      if (h.expFill) h.expFill.style.width = `${Math.min(100, expPct)}%`;
-      if (h.expText) h.expText.innerText = `EXP: ${Math.min(100, Math.ceil(expPct))}%`;
-
+      document.getElementById('exp-fill').style.width = `${Math.min(100, expPct)}%`;
+      document.getElementById('exp-text').innerText = `EXP: ${Math.min(100, Math.ceil(expPct))}%`;
+      
       // Update bottom bars (EXP bar and waterdrop level display)
-      if (h.botExpFill) h.botExpFill.style.width = `${Math.min(100, expPct)}%`;
-      if (h.botExpText) h.botExpText.innerText = `EXP: ${Math.min(100, Math.ceil(expPct))}%`;
-
+      document.getElementById('bottom-exp-fill').style.width = `${Math.min(100, expPct)}%`;
+      document.getElementById('bottom-exp-text').innerText = `EXP: ${Math.min(100, Math.ceil(expPct))}%`;
+      
       // Update waterdrop level display
-      if (h.wdLevel) h.wdLevel.textContent = playerStats.lvl;
-
+      document.getElementById('waterdrop-level-text').textContent = playerStats.lvl;
+      
       // Update waterdrop EXP fill (fills from bottom to top like a thermometer)
-      if (h.wdExpFill) {
-        const fillHeight = WATERDROP_FILL_HEIGHT * (expPct / 100);
-        const fillY = WATERDROP_FILL_TOP + WATERDROP_FILL_HEIGHT - fillHeight;
-        h.wdExpFill.setAttribute('y', fillY);
-        h.wdExpFill.setAttribute('height', fillHeight);
-      }
+      const waterdropFill = document.getElementById('waterdrop-exp-fill');
+      const fillHeight = WATERDROP_FILL_HEIGHT * (expPct / 100);
+      const fillY = WATERDROP_FILL_TOP + WATERDROP_FILL_HEIGHT - fillHeight;
+      waterdropFill.setAttribute('y', fillY);
+      waterdropFill.setAttribute('height', fillHeight);
       
       // Update minimap
       updateMinimap();
@@ -19985,89 +19810,63 @@
           }
         });
       }
-
-      // Show active quest location as yellow "?" on minimap
-      const QUEST_LOCATIONS = {
-        quest3_stonehengeGear:        { x: -60,  z:  60 },
-        quest3_findStonehenge:        { x: -60,  z:  60 },
-        quest18_findCompanionEgg:     { x: -148, z:  58 },
-        quest1_kill3:                 null, // enemies are everywhere
-        quest4_kill10:                null,
-        quest6_survive2min:           null,
-        quest8_kill10:                null,
-        quest10_kill15:               null,
-        quest14_kill25:               null,
-        // Windmill defence quest
-        quest_windmill_defend:        { x: 60,   z:  40 },
-        // Montana / Mountain area
-        quest_montana:                { x: -50,  z: -50 },
-        // Eiffel Tower area
-        quest_eiffel:                 { x:  70,  z: -60 },
-      };
-
-      // Always show key structures on minimap: UFO site, windmill
-      const alwaysLandmarks = [
-        { pos: { x: 60,   z:  40  }, icon: '⚙️',  name: 'windmill'  },
-        { pos: { x: -148, z:  58  }, icon: '🛸',  name: 'ufo'       },
-        { pos: { x: -60,  z:  60  }, icon: '🗿',  name: 'stonehenge' },
-        { pos: { x: -50,  z: -50  }, icon: '⛰️',  name: 'montana'   },
-        { pos: { x:  70,  z: -60  }, icon: '⚡',  name: 'eiffel'    },
+      
+      // Add landmark dots with region-specific icons
+      const landmarks = [
+        { pos: { x: 60, z: 40 }, name: 'windmill', icon: '⚙️' },
+        { pos: { x: -50, z: -50 }, name: 'montana', icon: '⛰️' },
+        { pos: { x: 70, z: -60 }, name: 'eiffel', icon: '⚡' },
+        { pos: { x: -60, z: 60 }, name: 'stonehenge', icon: '🗿' }
       ];
-      alwaysLandmarks.forEach(lm => {
-        const dx = lm.pos.x - player.mesh.position.x;
-        const dz = lm.pos.z - player.mesh.position.z;
+      
+      landmarks.forEach(landmark => {
+        const dx = landmark.pos.x - player.mesh.position.x;
+        const dz = landmark.pos.z - player.mesh.position.z;
+        
         if (Math.abs(dx) < mapSize / 2 && Math.abs(dz) < mapSize / 2) {
           const mapX = 50 + (dx / mapSize) * 100;
           const mapZ = 50 + (dz / mapSize) * 100;
+          
+          // Add icon element for landmark
           const iconEl = document.createElement('div');
           iconEl.className = 'minimap-icon';
-          iconEl.textContent = lm.icon;
+          iconEl.textContent = landmark.icon;
           iconEl.style.left = `${mapX}%`;
-          iconEl.style.top  = `${mapZ}%`;
+          iconEl.style.top = `${mapZ}%`;
           minimap.appendChild(iconEl);
+          
+          const landmarkDot = document.createElement('div');
+          // Add quest-ready "?" indicator for windmill when quest available
+          const isWindmillAvailable = landmark.name === 'windmill' && !windmillQuest.active && !windmillQuest.rewardGiven;
+          landmarkDot.className = 'minimap-dot minimap-landmark' + (isWindmillAvailable ? ' quest-ready' : '');
+          landmarkDot.style.left = `${mapX}%`;
+          landmarkDot.style.top = `${mapZ}%`;
+          minimap.appendChild(landmarkDot);
         }
       });
 
+      // Show active quest location as yellow "?" on minimap
+      const QUEST_LOCATIONS = {
+        quest3_stonehengeGear: { x: -60, z: 60 },
+        quest3_findStonehenge: { x: -60, z: 60 }
+      };
       const currentQuest = getCurrentQuest ? getCurrentQuest() : null;
       if (currentQuest && QUEST_LOCATIONS[currentQuest.id]) {
         const qPos = QUEST_LOCATIONS[currentQuest.id];
         const qdx = qPos.x - player.mesh.position.x;
         const qdz = qPos.z - player.mesh.position.z;
-        const qmapX = 50 + (qdx / mapSize) * 100;
-        const qmapZ = 50 + (qdz / mapSize) * 100;
-
         if (Math.abs(qdx) < mapSize / 2 && Math.abs(qdz) < mapSize / 2) {
+          const qmapX = 50 + (qdx / mapSize) * 100;
+          const qmapZ = 50 + (qdz / mapSize) * 100;
           const questDot = document.createElement('div');
           questDot.className = 'minimap-dot minimap-quest-location';
           questDot.style.left = `${qmapX}%`;
-          questDot.style.top  = `${qmapZ}%`;
+          questDot.style.top = `${qmapZ}%`;
           minimap.appendChild(questDot);
-        } else {
-          // Quest is off-map: show arrow on minimap edge pointing toward it.
-          // Compute angle toward the quest then place the arrow element on the
-          // edge of the minimap so it visually indicates which direction to travel.
-          const angle = Math.atan2(qdx, qdz);
-          // Position on the minimap boundary (50% ± offset along the edge).
-          // We clamp the arrow to the nearest edge using the dominant axis.
-          const halfW = 50; // half of the 100% coordinate space
-          const edgePad = 8; // % margin from edge
-          const sinA = Math.sin(angle);
-          const cosA = Math.cos(angle);
-          // Scale so the larger component hits the boundary (±(halfW-edgePad))
-          const scale = (halfW - edgePad) / Math.max(Math.abs(sinA), Math.abs(cosA), 0.01);
-          const edgeX = 50 + sinA * scale;
-          const edgeZ = 50 + cosA * scale;
-          const arrowEl = document.createElement('div');
-          arrowEl.className = 'minimap-quest-arrow';
-          arrowEl.style.position = 'absolute';
-          arrowEl.style.left = `${Math.round(edgeX)}%`;
-          arrowEl.style.top  = `${Math.round(edgeZ)}%`;
-          arrowEl.style.transform = `translate(-50%,-50%) rotate(${angle}rad)`;
-          minimap.appendChild(arrowEl);
         }
       }
     }
-
+    
     // Stats Bar removed - Users access stats via STATS button modal
     
     // Combo System - Red/Black Theme
@@ -20989,25 +20788,6 @@
       window.screenShakeIntensity = Math.max(window.screenShakeIntensity, intensity);
     };
 
-    // Dispose game-world entities (enemies, projectiles, non-blood particles) before
-    // entering camp, so neither scene consumes GPU resources simultaneously.
-    // NOTE: BloodSystem is intentionally NOT reset here — blood stains remain visible
-    // until the scene switches naturally.
-    function _cleanupGameForCampTransition() {
-      enemies.forEach(e => {
-        try { scene.remove(e.mesh); e.mesh.geometry.dispose(); e.mesh.material.dispose(); } catch(_) {}
-      });
-      enemies = [];
-      projectiles.forEach(p => {
-        try { scene.remove(p.mesh); p.mesh.geometry.dispose(); p.mesh.material.dispose(); } catch(_) {}
-      });
-      projectiles = [];
-      particles.forEach(p => {
-        try { scene.remove(p.mesh); p.mesh.geometry.dispose(); p.mesh.material.dispose(); } catch(_) {}
-      });
-      particles = [];
-    }
-
     function gameOver() {
       setGameOver(true);
       setGamePaused(true);
@@ -21150,7 +20930,7 @@
             companionHouse:      () => {},
             achievementBuilding: () => {},
             inventory:           () => {},
-            campBoard:           () => showFastTravelMenu(),
+            campBoard:           () => {},
             specialAttacks:      () => {},
             warehouse:           () => {},
             tavern:              () => {},
@@ -21161,23 +20941,10 @@
         }
       } catch(e) { console.warn('[gameOver] Could not activate 3D camp world:', e); }
 
-      // Respawn rule: first death shows the full info/stats screen so the player
-      // learns the game loop.  All subsequent deaths auto-redirect to the 3D camp
-      // after a brief pause (YOU DIED banner + 0.5 s grace).
-      const isFirstRun = saveData.totalRuns === 1;
-      if (!isFirstRun) {
-        // Subsequent deaths: go directly to 3D camp world
-        setTimeout(() => {
-          document.getElementById('gameover-screen').style.display = 'none';
-          try { updateCampScreen(); } catch(e) { console.error('[gameOver] camp redirect error:', e); }
-          const campScreenEl = document.getElementById('camp-screen');
-          if (campScreenEl) campScreenEl.style.display = 'flex';
-        }, 3500); // After YOU DIED banner (3s) + 0.5s grace
-      }
-
       // Display game over screen
       document.getElementById('gameover-screen').style.display = 'flex';
       // On first run, only show "Go to Camp" button; restore all buttons on subsequent runs
+      const isFirstRun = saveData.totalRuns === 1;
       document.getElementById('restart-btn').style.display = isFirstRun ? 'none' : '';
       document.getElementById('quit-to-menu-btn').style.display = isFirstRun ? 'none' : '';
       document.getElementById('goto-camp-btn').style.display = '';
@@ -21208,16 +20975,6 @@
       
       updateGoldDisplays();
       
-      // Show the run-end-options box after a brief delay (lets YOU DIED banner show first)
-      setTimeout(() => {
-        const roeEl = document.getElementById('run-end-options');
-        if (roeEl) {
-          const roeTitle = document.getElementById('roe-title');
-          if (roeTitle) roeTitle.textContent = '💀 You Died';
-          roeEl.style.display = 'block';
-        }
-      }, 2200);
-
       // Show deferred mission notification after death (quest completed during run)
       if (saveData.tutorialQuests && saveData.tutorialQuests.pendingMissionNotification === 'quest1_kill3') {
         saveData.tutorialQuests.pendingMissionNotification = null;
@@ -23077,4 +22834,1219 @@
         
         const timeoutId = setTimeout(() => {
           scene.remove(slashLight);
-          cons
+          const idx = flashLights.indexOf(slashLight);
+          if (idx > -1) flashLights.splice(idx, 1);
+          const tidx = activeTimeouts.indexOf(timeoutId);
+          if (tidx > -1) activeTimeouts.splice(tidx, 1);
+        }, 100);
+        activeTimeouts.push(timeoutId);
+      }
+
+      // 3. AURA
+      if (weapons.aura.active && time - weapons.aura.lastShot > weapons.aura.cooldown) {
+        // Damage all in range (auraRange skill multiplier expands reach)
+        const effectiveAuraRange = weapons.aura.range * (playerStats.auraRange || 1.0);
+        let hit = false;
+        enemies.forEach(e => {
+          if (e.isDead) return;
+          const d = player.mesh.position.distanceTo(e.mesh.position);
+          if (d < effectiveAuraRange) {
+            e.takeDamage(weapons.aura.damage * playerStats.strength);
+            hit = true;
+          }
+        });
+        if (hit) {
+          // ENHANCED - Visual effect for aura tick
+          spawnParticles(player.mesh.position, 0x5DADE2, 10); // Blue aura particles
+          spawnParticles(player.mesh.position, 0xFFFFFF, 5); // White sparkles
+        }
+        weapons.aura.lastShot = time;
+      }
+
+      // 4. METEOR
+      if (weapons.meteor.active && time - weapons.meteor.lastShot > weapons.meteor.cooldown) {
+        // Target random enemy or random spot near player
+        let targetX = player.mesh.position.x + (Math.random() - 0.5) * 10;
+        let targetZ = player.mesh.position.z + (Math.random() - 0.5) * 10;
+        
+        if (enemies.length > 0) {
+          const e = enemies[Math.floor(Math.random() * enemies.length)];
+          targetX = e.mesh.position.x;
+          targetZ = e.mesh.position.z;
+        }
+        
+        meteors.push(new Meteor(targetX, targetZ));
+        weapons.meteor.lastShot = time;
+      }
+
+      // 5. DRONE TURRET
+      if (weapons.droneTurret.active && time - weapons.droneTurret.lastShot > weapons.droneTurret.cooldown) {
+        // Update all drones
+        for (let drone of droneTurrets) {
+          if (!drone.active) continue;
+          
+          // Find nearest enemy for this drone
+          let nearestEnemy = null;
+          let minDist = Infinity;
+          
+          for (let e of enemies) {
+            if (e.isDead) continue;
+            const dist = drone.mesh.position.distanceTo(e.mesh.position);
+            if (dist < weapons.droneTurret.range && dist < minDist) {
+              minDist = dist;
+              nearestEnemy = e;
+            }
+          }
+          
+          // Fire projectile from drone
+          if (nearestEnemy) {
+            const projectile = new Projectile(
+              drone.mesh.position.x, 
+              drone.mesh.position.z, 
+              nearestEnemy.mesh.position
+            );
+            // Mark projectile as from drone turret for damage calculation
+            projectile.isDroneTurret = true;
+            // Drone shots: very small (barely visible) but fast — high-DPS volume fire
+            projectile.mesh.scale.set(0.35, 0.35, 0.35);
+            projectile.mesh.material.color.setHex(0x00FFFF); // Cyan tint for drone shots
+            if (projectile.glow) {
+              projectile.glow.scale.set(0.35, 0.35, 0.35);
+              projectile.glow.material.color.setHex(0x00FFFF);
+            }
+            // Fast projectile speed — drones fire many rapid shots
+            projectile.vx = projectile.vx * 2.2;
+            projectile.vz = projectile.vz * 2.2;
+            projectile.life = 30; // Short lifetime = close-range rapid fire
+            projectile.maxLife = 30;
+            projectiles.push(projectile);
+            
+            // Tiny cyan muzzle flash from drone
+            const flashLight = new THREE.PointLight(0x00FFFF, 1.5, 5);
+            flashLight.position.copy(drone.mesh.position);
+            flashLight.position.y += 0.2;
+            scene.add(flashLight);
+            flashLights.push(flashLight);
+            const timeoutId = setTimeout(() => {
+              scene.remove(flashLight);
+              const idx = flashLights.indexOf(flashLight);
+              if (idx > -1) flashLights.splice(idx, 1);
+              const tidx = activeTimeouts.indexOf(timeoutId);
+              if (tidx > -1) activeTimeouts.splice(tidx, 1);
+            }, 40);
+            activeTimeouts.push(timeoutId);
+            
+            playSound('shoot');
+          }
+        }
+        
+        weapons.droneTurret.lastShot = time;
+      }
+
+      // 6. DOUBLE BARREL - ENHANCED with 6-pellet spread, heavy recoil, orange/yellow flash
+      if (weapons.doubleBarrel.active && time - weapons.doubleBarrel.lastShot > weapons.doubleBarrel.cooldown) {
+        // Find nearest enemy
+        let nearest = null;
+        let minDst = Infinity;
+        
+        for (let e of enemies) {
+          if (e.isDead) continue;
+          const d = player.mesh.position.distanceTo(e.mesh.position);
+          if (d < weapons.doubleBarrel.range && d < minDst) {
+            minDst = d;
+            nearest = e;
+          }
+        }
+
+        if (nearest) {
+          // Fire 6 pellets with spread (shotgun pattern)
+          const baseDir = new THREE.Vector3(
+            nearest.mesh.position.x - player.mesh.position.x,
+            0,
+            nearest.mesh.position.z - player.mesh.position.z
+          ).normalize();
+          
+          const baseAngle = Math.atan2(baseDir.z, baseDir.x);
+          const spreadAngle = weapons.doubleBarrel.spread;
+          
+          // Fire pellets with spread (shotgun pattern) - pellets count increases per upgrade
+          const pelletCount = weapons.doubleBarrel.pellets || 2;
+          for (let i = 0; i < pelletCount; i++) {
+            const angle = baseAngle + (Math.random() - 0.5) * spreadAngle * 2;
+            const target = new THREE.Vector3(
+              player.mesh.position.x + Math.cos(angle) * weapons.doubleBarrel.range,
+              0,
+              player.mesh.position.z + Math.sin(angle) * weapons.doubleBarrel.range
+            );
+            const pellet = new Projectile(player.mesh.position.x, player.mesh.position.z, target);
+            pellet.isDoubleBarrel = true;
+            pellet.speed = 0.6; // Faster projectiles for shotgun
+            projectiles.push(pellet);
+          }
+          
+          // HEAVY RECOIL - much stronger than pistol
+          player.mesh.scale.set(1.3, 0.7, 1.3);
+          if (playerRecoilTimeout) clearTimeout(playerRecoilTimeout);
+          playerRecoilTimeout = setTimeout(() => {
+            player.mesh.scale.set(1, 1, 1);
+            playerRecoilTimeout = null;
+          }, 100);
+          activeTimeouts.push(playerRecoilTimeout);
+          
+          // Orange/yellow muzzle flash (shotgun characteristic)
+          const flashLight = new THREE.PointLight(0xFFA500, 8, 18); // Orange, brighter, wider
+          flashLight.position.copy(player.mesh.position);
+          flashLight.position.y += 1;
+          scene.add(flashLight);
+          flashLights.push(flashLight);
+          const timeoutId = setTimeout(() => {
+            scene.remove(flashLight);
+            const idx = flashLights.indexOf(flashLight);
+            if (idx > -1) flashLights.splice(idx, 1);
+            const tidx = activeTimeouts.indexOf(timeoutId);
+            if (tidx > -1) activeTimeouts.splice(tidx, 1);
+          }, 100);
+          activeTimeouts.push(timeoutId);
+          
+          // Focused muzzle flash for shotgun blast (wider spread)
+          const shotgunMuzzlePos = player.mesh.position.clone();
+          shotgunMuzzlePos.y += 0.5;
+          spawnParticles(shotgunMuzzlePos, 0xFFA500, 3); // Orange muzzle
+          spawnParticles(shotgunMuzzlePos, 0xFFFF00, 2); // Yellow spark
+          spawnParticles(shotgunMuzzlePos, 0xFFFFFF, 2); // White flash
+          // Heavy muzzle smoke for shotgun
+          spawnMuzzleSmoke(player.mesh.position, 6);
+          
+          weapons.doubleBarrel.lastShot = time;
+          playSound('doublebarrel'); // Double barrel sound
+        }
+      }
+      
+      // 7. ICE SPEAR
+      if (weapons.iceSpear.active && time - weapons.iceSpear.lastShot > weapons.iceSpear.cooldown) {
+        // Find nearest enemy
+        let nearest = null;
+        let minDst = Infinity;
+        
+        for (let e of enemies) {
+          if (e.isDead) continue;
+          const d = player.mesh.position.distanceTo(e.mesh.position);
+          if (d < weapons.iceSpear.range && d < minDst) {
+            minDst = d;
+            nearest = e;
+          }
+        }
+
+        if (nearest) {
+          projectiles.push(new IceSpear(player.mesh.position.x, player.mesh.position.z, nearest.mesh.position));
+          
+          // Ice flash effect
+          const flashLight = new THREE.PointLight(0x87CEEB, 3, 12); // Sky blue
+          flashLight.position.copy(player.mesh.position);
+          flashLight.position.y += 1;
+          scene.add(flashLight);
+          flashLights.push(flashLight);
+          const timeoutId = setTimeout(() => {
+            scene.remove(flashLight);
+            const idx = flashLights.indexOf(flashLight);
+            if (idx > -1) flashLights.splice(idx, 1);
+            const tidx = activeTimeouts.indexOf(timeoutId);
+            if (tidx > -1) activeTimeouts.splice(tidx, 1);
+          }, 80);
+          activeTimeouts.push(timeoutId);
+          
+          spawnParticles(player.mesh.position, 0x87CEEB, 8); // Ice blue particles
+          spawnParticles(player.mesh.position, 0xFFFFFF, 5); // White particles
+          
+          weapons.iceSpear.lastShot = time;
+          playSound('shoot');
+        }
+      }
+      
+      // 8. FIRE RING
+      if (weapons.fireRing.active && time - weapons.fireRing.lastShot > weapons.fireRing.cooldown) {
+        // Damage enemies within ring range
+        let hit = false;
+        enemies.forEach(e => {
+          if (e.isDead) return;
+          const d = player.mesh.position.distanceTo(e.mesh.position);
+          if (d < weapons.fireRing.range) {
+            const dmg = weapons.fireRing.damage * playerStats.strength *
+              (1 + (playerStats.fireDamage || 0) + (playerStats.elementalDamage || 0));
+            const isCrit = Math.random() < playerStats.critChance;
+            const finalDmg = isCrit ? dmg * playerStats.critDmg : dmg;
+            e.takeDamage(finalDmg, isCrit, 'fire');
+            createDamageNumber(finalDmg, e.mesh.position, isCrit);
+            // Fire particles on hit
+            spawnParticles(e.mesh.position, 0xFF4500, 6); // Orange-red fire
+            spawnParticles(e.mesh.position, 0xFFD700, 4); // Yellow flames
+            // Charring effect: progressively darken enemy color toward black on each fire hit.
+            // Different factors per channel simulate realistic charring (reds fade slowest).
+            if (e.mesh.material && e.mesh.material.color) {
+              const CHAR_RED_FACTOR = 0.88;   // Reds persist slightly longer when charred
+              const CHAR_GREEN_FACTOR = 0.85; // Greens fade mid-rate
+              const CHAR_BLUE_FACTOR = 0.82;  // Blues fade fastest for warm char tint
+              e.mesh.material.color.r *= CHAR_RED_FACTOR;
+              e.mesh.material.color.g *= CHAR_GREEN_FACTOR;
+              e.mesh.material.color.b *= CHAR_BLUE_FACTOR;
+            }
+            e.lastDamageType = 'fire';
+            hit = true;
+          }
+        });
+        weapons.fireRing.lastShot = time;
+      }
+
+      // 9. LIGHTNING ARC — chain lightning between up to N enemies
+      if (weapons.lightning.active && time - weapons.lightning.lastShot > weapons.lightning.cooldown) {
+        let nearest = null;
+        let minDst = Infinity;
+        for (let e of enemies) {
+          if (e.isDead) continue;
+          const d = player.mesh.position.distanceTo(e.mesh.position);
+          if (d < weapons.lightning.range && d < minDst) { minDst = d; nearest = e; }
+        }
+        if (nearest) {
+          const chainCount = weapons.lightning.chainCount || 3;
+          const hitTargets = new Set();
+          let current = nearest;
+          let prevPos = player.mesh.position.clone(); // Start bolt from player
+          for (let c = 0; c < chainCount && current; c++) {
+            if (hitTargets.has(current)) break;
+            hitTargets.add(current);
+            const dmg = (weapons.lightning.damage * playerStats.strength) *
+              (1 + (playerStats.lightningDamage || 0) + (playerStats.elementalDamage || 0)) *
+              (1 - c * 0.2); // 20% falloff per chain
+            const isCrit = Math.random() < playerStats.critChance;
+            current.takeDamage(Math.floor(isCrit ? dmg * playerStats.critDmg : dmg), isCrit, 'lightning');
+            spawnParticles(current.mesh.position, 0xFFFF00, 6);
+            spawnParticles(current.mesh.position, 0x00FFFF, 4);
+            
+            // Visible lightning bolt line from previous target to current
+            const boltPoints = [];
+            const startP = prevPos.clone(); startP.y = 0.8;
+            const endP = current.mesh.position.clone(); endP.y = 0.8;
+            const segments = 6 + Math.floor(Math.random() * 4);
+            for (let s = 0; s <= segments; s++) {
+              const t = s / segments;
+              const px = startP.x + (endP.x - startP.x) * t + (s > 0 && s < segments ? (Math.random() - 0.5) * 0.6 : 0);
+              const py = startP.y + (endP.y - startP.y) * t + (s > 0 && s < segments ? (Math.random() - 0.5) * 0.3 : 0);
+              const pz = startP.z + (endP.z - startP.z) * t + (s > 0 && s < segments ? (Math.random() - 0.5) * 0.6 : 0);
+              boltPoints.push(new THREE.Vector3(px, py, pz));
+            }
+            const boltGeo = new THREE.BufferGeometry().setFromPoints(boltPoints);
+            const boltMat = new THREE.LineBasicMaterial({ color: 0xFFFF00, transparent: true, opacity: 1.0, linewidth: 2 });
+            const boltLine = new THREE.Line(boltGeo, boltMat);
+            scene.add(boltLine);
+            // Glow bolt (wider, dimmer)
+            const glowMat = new THREE.LineBasicMaterial({ color: 0x88DDFF, transparent: true, opacity: 0.6, linewidth: 3 });
+            const glowLine = new THREE.Line(boltGeo.clone(), glowMat);
+            scene.add(glowLine);
+            // Fade and remove bolt
+            if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
+              let boltLife = 8;
+              managedAnimations.push({ update(_dt) {
+                boltLife--;
+                boltMat.opacity = boltLife / 8;
+                glowMat.opacity = (boltLife / 8) * 0.6;
+                if (boltLife <= 0) {
+                  scene.remove(boltLine); scene.remove(glowLine);
+                  boltGeo.dispose(); boltMat.dispose(); glowMat.dispose();
+                  glowLine.geometry.dispose();
+                  return false;
+                }
+                return true;
+              }});
+            } else {
+              scene.remove(boltLine); scene.remove(glowLine);
+              boltGeo.dispose(); boltMat.dispose(); glowMat.dispose();
+              glowLine.geometry.dispose();
+            }
+            
+            prevPos = current.mesh.position.clone();
+            // Find next chain target
+            let nextTarget = null; let nextDist = Infinity;
+            for (let e of enemies) {
+              if (e.isDead || hitTargets.has(e)) continue;
+              const d = current.mesh.position.distanceTo(e.mesh.position);
+              if (d < 6 && d < nextDist) { nextDist = d; nextTarget = e; }
+            }
+            current = nextTarget;
+          }
+          // Lightning flash
+          const lFlash = new THREE.PointLight(0xFFFF00, 6, 14); lFlash.position.copy(nearest.mesh.position); lFlash.position.y += 1;
+          scene.add(lFlash); flashLights.push(lFlash);
+          const ltId = setTimeout(() => { scene.remove(lFlash); const li = flashLights.indexOf(lFlash); if (li > -1) flashLights.splice(li, 1); }, 100);
+          activeTimeouts.push(ltId);
+          weapons.lightning.lastShot = time;
+          playSound('hit');
+        }
+      }
+
+      // 10. POISON CLOUD — AoE damage field around player that poisons nearby enemies
+      if (weapons.poison.active && time - weapons.poison.lastShot > weapons.poison.cooldown) {
+        enemies.forEach(e => {
+          if (e.isDead) return;
+          const d = player.mesh.position.distanceTo(e.mesh.position);
+          if (d < weapons.poison.range) {
+            const dmg = weapons.poison.damage * playerStats.strength;
+            e.takeDamage(Math.floor(dmg));
+            spawnParticles(e.mesh.position, 0x00FF00, 4);
+            spawnParticles(e.mesh.position, 0x44FF44, 3);
+          }
+        });
+        // Poison cloud visual
+        spawnParticles(player.mesh.position, 0x00FF00, 8);
+        spawnParticles(player.mesh.position, 0x88FF44, 6);
+        weapons.poison.lastShot = time;
+      }
+
+      // 11. HOMING MISSILE — Bullet Bill style with fire/smoke trail
+      if (weapons.homing.active && time - weapons.homing.lastShot > weapons.homing.cooldown) {
+        let nearest = null; let minDst = Infinity;
+        for (let e of enemies) {
+          if (e.isDead) continue;
+          const d = player.mesh.position.distanceTo(e.mesh.position);
+          if (d < weapons.homing.range && d < minDst) { minDst = d; nearest = e; }
+        }
+        if (nearest) {
+          // Bullet Bill body: dark sphere with white eyes
+          const missileGroup = new THREE.Group();
+          const bodyGeo = new THREE.SphereGeometry(0.3, 8, 8);
+          const bodyMat = new THREE.MeshToonMaterial({ color: 0x222222 });
+          const body = new THREE.Mesh(bodyGeo, bodyMat);
+          missileGroup.add(body);
+          // Nose cone
+          const noseGeo = new THREE.ConeGeometry(0.2, 0.3, 6);
+          const noseMat = new THREE.MeshToonMaterial({ color: 0x111111 });
+          const nose = new THREE.Mesh(noseGeo, noseMat);
+          nose.rotation.x = Math.PI / 2;
+          nose.position.z = 0.35;
+          missileGroup.add(nose);
+          // Arms (small fins)
+          const armGeo = new THREE.BoxGeometry(0.5, 0.08, 0.15);
+          const armMat = new THREE.MeshToonMaterial({ color: 0x111111 });
+          const arms = new THREE.Mesh(armGeo, armMat);
+          arms.position.z = -0.15;
+          missileGroup.add(arms);
+          // White eyes
+          const eyeGeo = new THREE.SphereGeometry(0.08, 6, 6);
+          const eyeWhiteMat = new THREE.MeshBasicMaterial({ color: 0xFFFFFF });
+          const leftEye = new THREE.Mesh(eyeGeo, eyeWhiteMat);
+          leftEye.position.set(-0.12, 0.08, 0.22);
+          missileGroup.add(leftEye);
+          const rightEye = new THREE.Mesh(eyeGeo, eyeWhiteMat.clone());
+          rightEye.position.set(0.12, 0.08, 0.22);
+          missileGroup.add(rightEye);
+          // Pupils
+          const pupilGeo = new THREE.SphereGeometry(0.04, 4, 4);
+          const pupilMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+          const leftPupil = new THREE.Mesh(pupilGeo, pupilMat);
+          leftPupil.position.set(-0.12, 0.08, 0.28);
+          missileGroup.add(leftPupil);
+          const rightPupil = new THREE.Mesh(pupilGeo, pupilMat.clone());
+          rightPupil.position.set(0.12, 0.08, 0.28);
+          missileGroup.add(rightPupil);
+          
+          missileGroup.position.set(player.mesh.position.x, 0.6, player.mesh.position.z);
+          // Tilt missile at 45° angle (lie down instead of standing up)
+          missileGroup.rotation.x = -Math.PI / 4;
+          scene.add(missileGroup);
+          let target = nearest;
+          let mLife = 120;
+          let smokeTimer = 0;
+          const mVel = new THREE.Vector3(target.mesh.position.x - missileGroup.position.x, 0, target.mesh.position.z - missileGroup.position.z).normalize().multiplyScalar(0.25);
+          if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
+            managedAnimations.push({ update(_dt) {
+              mLife--;
+              smokeTimer++;
+              // Home toward target with stronger tracking
+              if (!target.isDead) {
+                const desired = new THREE.Vector3(target.mesh.position.x - missileGroup.position.x, 0, target.mesh.position.z - missileGroup.position.z).normalize().multiplyScalar(0.25);
+                mVel.lerp(desired, 0.15); // Stronger homing
+              } else {
+                // Re-acquire target if current target died
+                let newTarget = null; let newMinDst = Infinity;
+                for (let e of enemies) {
+                  if (e.isDead) continue;
+                  const d = missileGroup.position.distanceTo(e.mesh.position);
+                  if (d < 20 && d < newMinDst) { newMinDst = d; newTarget = e; }
+                }
+                if (newTarget) target = newTarget;
+              }
+              missileGroup.position.add(mVel);
+              missileGroup.rotation.y = Math.atan2(mVel.x, mVel.z);
+              missileGroup.rotation.x = -Math.PI / 4; // Maintain 45° tilt
+              // Enhanced fire and smoke trail from back
+              const trailPos = { x: missileGroup.position.x - mVel.x * 1.5, y: missileGroup.position.y, z: missileGroup.position.z - mVel.z * 1.5 };
+              spawnParticles(trailPos, 0xFF4400, 2); // Orange fire
+              spawnParticles(trailPos, 0xFF2200, 1); // Red fire
+              if (smokeTimer % 2 === 0) {
+                spawnParticles(trailPos, 0x555555, 2); // More smoke
+                spawnParticles(trailPos, 0x888888, 1); // Light smoke
+              }
+              // Explode on contact
+              for (let e of enemies) {
+                if (e.isDead) continue;
+                if (missileGroup.position.distanceTo(e.mesh.position) < 1.2) {
+                  const dmg = weapons.homing.damage * playerStats.strength;
+                  e.takeDamage(Math.floor(dmg), false, 'shotgun'); // Use shotgun death = dismemberment
+                  spawnParticles(missileGroup.position, 0xFF4500, 12);
+                  spawnParticles(missileGroup.position, 0xFFAA00, 8);
+                  spawnParticles(missileGroup.position, 0x222222, 6); // Smoke explosion
+                  // Massive blood burst from explosion
+                  if (window.BloodSystem) window.BloodSystem.emitBurst(e.mesh.position, 500, { spreadXZ: 2.5, spreadY: 1.5 });
+                  // Homing missile: massive gore blobs + heavy blood spray
+                  spawnParticles(e.mesh.position, 0x8B0000, 5);
+                  spawnParticles(e.mesh.position, 0xCC0000, 4);
+                  for (let mgc = 0; mgc < 4 && bloodDrips.length < MAX_BLOOD_DRIPS; mgc++) {
+                    const mgSize = 0.08 + Math.random() * 0.1;
+                    const mgore = new THREE.Mesh(
+                      new THREE.DodecahedronGeometry(mgSize, 0),
+                      new THREE.MeshStandardMaterial({ color: mgc % 2 === 0 ? 0x6B0000 : 0x4B0082, roughness: 0.9 })
+                    );
+                    mgore.position.copy(e.mesh.position);
+                    scene.add(mgore);
+                    bloodDrips.push({
+                      mesh: mgore,
+                      velX: (Math.random() - 0.5) * 0.55,
+                      velZ: (Math.random() - 0.5) * 0.55,
+                      velY: 0.3 + Math.random() * 0.4,
+                      life: 60 + Math.floor(Math.random() * 25)
+                    });
+                  }
+                  for (let gd = 0; gd < 3; gd++) {
+                    spawnBloodDecal({ x: e.mesh.position.x + (Math.random()-0.5)*0.8, y: 0, z: e.mesh.position.z + (Math.random()-0.5)*0.8 });
+                  }
+                  // Heavy knockback from missile
+                  const kbDir = new THREE.Vector3(e.mesh.position.x - missileGroup.position.x, 0, e.mesh.position.z - missileGroup.position.z).normalize();
+                  e.mesh.position.x += kbDir.x * 2.5;
+                  e.mesh.position.z += kbDir.z * 2.5;
+                  scene.remove(missileGroup);
+                  missileGroup.traverse(child => { if (child.geometry) child.geometry.dispose(); if (child.material) child.material.dispose(); });
+                  return false;
+                }
+              }
+              if (mLife <= 0) {
+                scene.remove(missileGroup);
+                missileGroup.traverse(child => { if (child.geometry) child.geometry.dispose(); if (child.material) child.material.dispose(); });
+                return false;
+              }
+              return true;
+            }});
+          } else {
+            scene.remove(missileGroup);
+            missileGroup.traverse(child => { if (child.geometry) child.geometry.dispose(); if (child.material) child.material.dispose(); });
+          }
+          weapons.homing.lastShot = time;
+          playSound('shoot');
+        }
+      }
+      updateWaterParticles(dt);
+      updateStatBar();
+      
+      // Update Harvesting system (resource node interactions)
+      if (window.GameHarvesting && player && player.mesh) {
+        window._gamePlayerMesh = player.mesh;
+        window.GameHarvesting.update(dt, player.mesh.position, Date.now());
+      }
+
+      // Update Rage Combat system (meter decay, special attack cooldowns)
+      if (window.GameRageCombat) {
+        window.GameRageCombat.update(dt);
+      }
+      // Update melee takedown button cooldown display
+      if (window._updateMeleeButton) window._updateMeleeButton();
+      
+      // Phase 5: Update companion
+      if (activeCompanion && !activeCompanion.isDead) {
+        activeCompanion.update(dt);
+      }
+      
+      // Update drone turrets
+      droneTurrets.forEach(drone => drone.update(dt));
+      
+      // Projectiles update returns false if dead
+      projectiles = projectiles.filter(p => p.update() !== false);
+      meteors = meteors.filter(m => m.update() !== false);
+      expGems.forEach(g => g.update(player.mesh.position));
+      goldCoins.forEach(g => g.update(player.mesh.position));
+      chests.forEach(c => c.update(player.mesh.position));
+      
+      // Phase 5: Update particles and release back to pool when dead
+      // PERFORMANCE: Cull particles beyond fog far plane (invisible beyond fog anyway)
+      const FOG_DISTANCE = RENDERER_CONFIG.fogFar;
+      particles = particles.filter(p => {
+        // Cull particles beyond fog distance
+        const distToPlayer = p.mesh.position.distanceTo(player.mesh.position);
+        if (distToPlayer > FOG_DISTANCE) {
+          // Remove from scene before releasing so the mesh is not left as an
+          // invisible orphan in scene.children, which inflates scene child count.
+          scene.remove(p.mesh);
+          p.mesh.visible = false;
+          if (particlePool) {
+            particlePool.release(p);
+          }
+          return false;
+        }
+        
+        const alive = p.update();
+        if (!alive && particlePool) {
+          particlePool.release(p);
+        }
+        return alive;
+      });
+      
+      // Update blood decal fade (12 second lifetime)
+      updateBloodDecals();
+      
+      // Update advanced blood particle system
+      if (window.BloodSystem) window.BloodSystem.update();
+      
+      // Update managed animations (replaces individual RAF loops for death/damage effects)
+      if (managedAnimations.length > 0) {
+        managedAnimations = managedAnimations.filter(anim => {
+          return anim.update(dt);
+        });
+      }
+
+      // Update blood drips (falling drops from wounded enemies)
+      if (bloodDrips.length > 0) {
+        bloodDrips = bloodDrips.filter(d => {
+          d.velY -= 0.018;
+          d.mesh.position.y += d.velY;
+          // Apply horizontal velocity for spray effect
+          if (d.velX) d.mesh.position.x += d.velX;
+          if (d.velZ) d.mesh.position.z += d.velZ;
+          d.life--;
+          if (d.mesh.position.y <= 0.02 || d.life <= 0) {
+            const hitGround = d.mesh.position.y <= 0.02;
+            const pos = d.mesh.position.clone();
+            scene.remove(d.mesh);
+            d.mesh.geometry.dispose();
+            d.mesh.material.dispose();
+            // Ice shards don't leave blood decals on landing
+            if (hitGround && !d.isIce) spawnBloodDecal(pos);
+            return false;
+          }
+          return true;
+        });
+      }
+      
+      // Update object wobble animations (trees, fences, barrels, crates)
+      if (window.destructibleProps) {
+        for (let prop of window.destructibleProps) {
+          if (prop.destroyed || !prop._wobbleTime || prop._wobbleTime <= 0) continue;
+          prop._wobbleTime -= dt;
+          const wobbleAmount = Math.sin(prop._wobbleTime * 18) * prop._wobbleTime * 0.15;
+          const dir = prop._wobbleDir || { x: 1, z: 0 };
+          prop.mesh.rotation.x = dir.x * wobbleAmount;
+          prop.mesh.rotation.z = dir.z * wobbleAmount;
+          if (prop._wobbleTime <= 0) {
+            prop.mesh.rotation.x = 0;
+            prop.mesh.rotation.z = 0;
+          }
+        }
+      }
+      if (window.breakableFences) {
+        for (let fence of window.breakableFences) {
+          if (!fence.userData || fence.userData.hp <= 0 || !fence.userData._wobbleTime || fence.userData._wobbleTime <= 0) continue;
+          fence.userData._wobbleTime -= dt;
+          const wobbleAmount = Math.sin(fence.userData._wobbleTime * 20) * fence.userData._wobbleTime * 0.2;
+          const dir = fence.userData._wobbleDir || { x: 1, z: 0 };
+          fence.rotation.x = dir.x * wobbleAmount;
+          fence.rotation.z = dir.z * wobbleAmount;
+          if (fence.userData._wobbleTime <= 0) {
+            fence.rotation.x = 0;
+            fence.rotation.z = 0;
+          }
+        }
+      }
+      
+      // Performance: Use cached arrays instead of scene.traverse() every frame
+      // Windmill Rotation and Light Animation
+      animatedSceneObjects.windmills.forEach(c => {
+        // Rotate all blades stored in userData
+        if (c.userData.blades && c.userData.blades.length > 0) {
+          c.userData.blades[0].rotation.z += 0.02;
+        }
+        // Rotate spinning ground shadow in sync with blades + offset by sun angle
+        if (c.userData.shadowGroup) {
+          c.userData.shadowGroup.rotation.z += 0.02;
+          // Move shadow based on sun position for realistic shadow casting
+          if (window.dirLight) {
+            const lightPos = window.dirLight.position;
+            const wmPos = c.position;
+            const shadowDirX = wmPos.x - lightPos.x;
+            const shadowDirZ = wmPos.z - lightPos.z;
+            const shadowDist = Math.sqrt(shadowDirX*shadowDirX + shadowDirZ*shadowDirZ);
+            // Shadow offset: longer when sun is lower (more dramatic at sunset/sunrise)
+            const sunH = Math.max(lightPos.y, 15);
+            const shadowLength = Math.min(12, 80 / sunH);
+            if (shadowDist > 0) {
+              c.userData.shadowGroup.position.set(
+                wmPos.x + (shadowDirX / shadowDist) * shadowLength,
+                0.03,
+                wmPos.z + (shadowDirZ / shadowDist) * shadowLength
+              );
+              // Scale shadow based on sun height
+              const shadowScale = 0.8 + shadowLength * 0.15;
+              c.userData.shadowGroup.scale.set(shadowScale, shadowScale, 1);
+            }
+            // Shadow opacity: darker when sun is brighter
+            const opacity = Math.min(0.35, window.dirLight.intensity * 0.3);
+            c.userData.shadowGroup.children.forEach(child => {
+              if (child.material) child.material.opacity = opacity;
+            });
+          }
+        }
+        
+        // Animate windmill light (pulsing) with null check
+        if (c.userData.light && c.userData.light.material) {
+          c.userData.light.material.opacity = 0.8 + Math.sin(gameTime * 3) * 0.2;
+        }
+      });
+      
+      // Water ripple animation
+      animatedSceneObjects.waterRipples.forEach(c => {
+        c.userData.phase += 0.05;
+        const scale = 1 + Math.sin(c.userData.phase) * 0.1;
+        c.scale.set(scale, 1, scale);
+        c.material.opacity = 0.3 + Math.sin(c.userData.phase) * 0.2;
+      });
+      
+      // Lake sparkles animation
+      animatedSceneObjects.sparkles.forEach(c => {
+        c.userData.phase += 0.02 * c.userData.speed;
+        c.material.opacity = 0.3 + Math.abs(Math.sin(c.userData.phase)) * 0.7;
+        c.scale.set(
+          1 + Math.sin(c.userData.phase * 2) * 0.5,
+          1,
+          1 + Math.sin(c.userData.phase * 2) * 0.5
+        );
+      });
+      
+      // Crystal tower animation
+      animatedSceneObjects.crystals.forEach(obj => {
+        // Rotate crystals
+        obj.rotation.x += 0.01;
+        obj.rotation.y += 0.02;
+        
+        // Orbit animation
+        obj.userData.phase += 0.01 * obj.userData.orbitSpeed;
+        const offsetY = Math.sin(obj.userData.phase) * 0.5;
+        obj.position.y += offsetY * 0.05;
+        
+        // Pulsing emissive
+        if (obj.material.emissiveIntensity !== undefined) {
+          obj.material.emissiveIntensity = 0.3 + Math.sin(obj.userData.phase * 2) * 0.2;
+        }
+      });
+      
+      // Comet particle animation (orbiting particles)
+      animatedSceneObjects.cometParticles.forEach(obj => {
+        // Store the initial position as the orbit center (relative to parent/comet group)
+        if (!obj.userData.basePosition) {
+          obj.userData.basePosition = obj.position.clone();
+        }
+        
+        obj.userData.angle += obj.userData.speed * 0.02;
+        
+        const centerX = obj.userData.basePosition.x;
+        const centerZ = obj.userData.basePosition.z;
+        const centerY = obj.userData.basePosition.y;
+        
+        obj.position.x = centerX + Math.cos(obj.userData.angle) * obj.userData.radius;
+        obj.position.z = centerZ + Math.sin(obj.userData.angle) * obj.userData.radius;
+        obj.position.y = centerY + obj.userData.height + Math.sin(obj.userData.angle * 2) * 0.3;
+        
+        // Pulsing opacity (between 0.3 and 0.7 for good visibility)
+        obj.material.opacity = 0.5 + Math.sin(obj.userData.angle * 3) * 0.2;
+      });
+      
+      // Waterfall animation
+      
+      // Tree sway animation - subtle wind effect
+      if (window.destructibleProps) {
+        window.destructibleProps.forEach(prop => {
+          if (prop.type === 'tree' && !prop.destroyed && prop.mesh.userData.swayPhase !== undefined) {
+            prop.mesh.userData.swayPhase += dt * prop.mesh.userData.swaySpeed;
+            const swayX = Math.sin(prop.mesh.userData.swayPhase) * prop.mesh.userData.swayAmount;
+            const swayZ = Math.cos(prop.mesh.userData.swayPhase * 0.7) * prop.mesh.userData.swayAmount;
+            
+            // Apply sway to leaves (independent sway)
+            if (prop.mesh.userData.leaves) {
+              prop.mesh.userData.leaves.rotation.x = swayX;
+              prop.mesh.userData.leaves.rotation.z = swayZ;
+            }
+            // Trunk sways less
+            if (prop.mesh.userData.trunk) {
+              prop.mesh.userData.trunk.rotation.x = swayX * 0.3;
+              prop.mesh.userData.trunk.rotation.z = swayZ * 0.3;
+            }
+          }
+        });
+      }
+      
+      // Fence physics - check player collision and reset
+      if (window.breakableFences) {
+        window.breakableFences.forEach(fence => {
+          if (fence.userData.isFence && fence.userData.hp > 0) {
+            const dist = Math.sqrt(
+              (player.mesh.position.x - fence.position.x) ** 2 +
+              (player.mesh.position.z - fence.position.z) ** 2
+            );
+            
+            // Player collision - shake fence
+            if (dist < 2) {
+              fence.rotation.x = Math.sin(gameTime * 10) * 0.1;
+              fence.rotation.z = Math.cos(gameTime * 10) * 0.1;
+            } else {
+              // Return to normal
+              fence.rotation.x *= 0.9;
+              fence.rotation.z *= 0.9;
+            }
+          }
+        });
+      }
+      
+      // Walk-into prop damage: barrels and crates take damage when player runs into them
+      if (window.destructibleProps && player && !player.isDead) {
+        const PROP_WALK_COLLISION_SQ = 1.2; // Squared distance: ~1.1 unit radius for barrel/crate collision
+        const PROP_WALK_DMG_COOLDOWN = 300; // ms between walk-into damage ticks (tunable)
+        for (let prop of window.destructibleProps) {
+          if (prop.destroyed || prop.type === 'tree') continue; // Trees need dash to break
+          const pdx = player.mesh.position.x - prop.mesh.position.x;
+          const pdz = player.mesh.position.z - prop.mesh.position.z;
+          const pdist2 = pdx * pdx + pdz * pdz;
+          if (pdist2 < PROP_WALK_COLLISION_SQ) {
+            // Wobble effect when player walks into prop
+            prop.mesh.rotation.x = Math.sin(gameTime * 12) * 0.12;
+            prop.mesh.rotation.z = Math.cos(gameTime * 10) * 0.12;
+            if (!prop._walkDmgTimer || Date.now() - prop._walkDmgTimer > PROP_WALK_DMG_COOLDOWN) {
+              prop._walkDmgTimer = Date.now();
+              prop.hp -= 8; // Walk-into damage
+              spawnParticles(prop.mesh.position, 0xD2691E, 4);
+              const hpPct = prop.hp / prop.maxHp;
+              if (hpPct <= 0.5 && !prop.darkenedStage1) {
+                prop.darkenedStage1 = true;
+                prop.mesh.material.color.copy(prop.originalColor).multiplyScalar(0.8);
+              } else if (hpPct <= 0.25 && !prop.darkenedStage2) {
+                prop.darkenedStage2 = true;
+                prop.mesh.material.color.copy(prop.originalColor).multiplyScalar(0.6);
+                prop.mesh.scale.copy(prop.originalScale).multiplyScalar(0.85);
+              } else if (prop.hp <= 0) {
+                prop.destroyed = true;
+                if (prop.type === 'barrel') {
+                  spawnParticles(prop.mesh.position, 0xFF4500, 20);
+                  spawnParticles(prop.mesh.position, 0xFFFF00, 10);
+                } else {
+                  spawnParticles(prop.mesh.position, 0xD2691E, 18);
+                }
+                scene.remove(prop.mesh);
+                if (prop.mesh.geometry) prop.mesh.geometry.dispose();
+                if (prop.mesh.material) prop.mesh.material.dispose();
+              }
+            }
+          } else {
+            // Return to upright position when player moves away
+            prop.mesh.rotation.x *= 0.85;
+            prop.mesh.rotation.z *= 0.85;
+          }
+        }
+      }
+      
+      // Waterfall animation
+      animatedSceneObjects.waterfalls.forEach(obj => {
+        obj.userData.phase += 0.05;
+        obj.material.opacity = 0.6 + Math.sin(obj.userData.phase) * 0.1;
+      });
+      
+      animatedSceneObjects.waterDrops.forEach(obj => {
+        obj.position.y -= obj.userData.speed;
+        if (obj.position.y < 0) {
+          obj.position.y = obj.userData.startY;
+        }
+      });
+      
+      animatedSceneObjects.splashes.forEach(obj => {
+        obj.userData.phase += 0.1;
+        const scale = 1 + Math.sin(obj.userData.phase) * 0.3;
+        obj.scale.set(scale, 1, scale);
+        obj.material.opacity = 0.4 + Math.sin(obj.userData.phase) * 0.2;
+      });
+      
+      // FRESH IMPLEMENTATION: Tesla Tower Lightning Arcs Animation
+      animatedSceneObjects.teslaTowers.forEach(tower => {
+        if (!tower.userData.arcTimer) tower.userData.arcTimer = 0;
+        tower.userData.arcTimer += dt;
+        
+        // Create new lightning arc every 1.5 seconds
+        if (tower.userData.arcTimer > 1.5) {
+          tower.userData.arcTimer = 0;
+          
+          // Clear old arcs
+          if (tower.userData.arcLines && tower.userData.arcLines.length > 0) {
+            tower.userData.arcLines.forEach(line => {
+              scene.remove(line);
+              if (line.geometry) line.geometry.dispose();
+              if (line.material) line.material.dispose();
+            });
+            tower.userData.arcLines = [];
+          }
+          
+          // Create new lightning arcs to random ground points
+          const numArcs = Math.floor(Math.random() * 2) + 2; // 2-3 arcs
+          for (let i = 0; i < numArcs; i++) {
+            const targetPoint = tower.userData.arcPoints[Math.floor(Math.random() * tower.userData.arcPoints.length)];
+            
+            // Create jagged lightning path
+            const points = [];
+            const segments = 8;
+            const start = tower.userData.topPosition.clone();
+            const end = targetPoint.clone();
+            
+            points.push(start);
+            for (let j = 1; j < segments; j++) {
+              const t = j / segments;
+              const mid = new THREE.Vector3().lerpVectors(start, end, t);
+              // Add random jitter
+              mid.x += (Math.random() - 0.5) * 3;
+              mid.z += (Math.random() - 0.5) * 3;
+              points.push(mid);
+            }
+            points.push(end);
+            
+            // Create line (Note: linewidth has no effect in WebGL, arcs will be 1-pixel lines)
+            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+            const material = new THREE.LineBasicMaterial({ 
+              color: 0x00FFFF, 
+              transparent: true,
+              opacity: 0.8
+            });
+            const line = new THREE.Line(geometry, material);
+            scene.add(line);
+            tower.userData.arcLines.push(line);
+          }
+        }
+        
+        // Fade out arcs over time
+        if (tower.userData.arcLines && tower.userData.arcLines.length > 0) {
+          const fadeProgress = tower.userData.arcTimer / 1.5;
+          const opacity = Math.max(0, 0.8 - fadeProgress * 0.8);
+          tower.userData.arcLines.forEach(line => {
+            if (line.material) line.material.opacity = opacity;
+          });
+        }
+      });
+
+      // Volcano light flicker & Tesla light flicker
+      if (window.volcanoLight) {
+        window.volcanoLight.userData.phase += dt * 8;
+        window.volcanoLight.intensity = 3 + Math.sin(window.volcanoLight.userData.phase) * 1.5 + Math.sin(window.volcanoLight.userData.phase * 3.7) * 0.8;
+      }
+      if (window.lavaPool && window.lavaPool.material) {
+        const lp = window.lavaPool;
+        lp.userData.phase = (lp.userData.phase || 0) + dt * 4;
+        lp.material.color.setHex(Math.sin(lp.userData.phase) > 0 ? 0xFF6A00 : 0xFF4500);
+      }
+      if (window.teslaPointLight) {
+        window.teslaPointLight.userData.phase += dt * 5;
+        window.teslaPointLight.intensity = 2 + Math.sin(window.teslaPointLight.userData.phase * 3) * 1.5;
+      }
+      // Warning light blink (Area 51)
+      if (window.warningLight && window.warningLight.material) {
+        window.warningLight.material.opacity = Math.sin(gameTime * 3) > 0 ? 0.9 : 0.1;
+      }
+
+      // Lava damage: player takes damage when close to volcano (at -100, 0, -120)
+      if (player && isGameActive && !isGameOver) {
+        const LAVA_DAMAGE_RADIUS = 8;   // Distance from volcano center to take lava damage
+        const LAVA_WARN_RADIUS = 14;    // Distance at which warning appears
+        const LAVA_MAX_DAMAGE = 10;     // Max damage per tick at volcano center
+        const LAVA_TICK_INTERVAL = 0.5; // Seconds between lava damage ticks
+        const lavaX = -100, lavaZ = -120;
+        const ldx = player.mesh.position.x - lavaX;
+        const ldz = player.mesh.position.z - lavaZ;
+        const lavaDist = Math.sqrt(ldx * ldx + ldz * ldz);
+        // Show warning when approaching lava zone (helps prevent "random death")
+        if (lavaDist < LAVA_WARN_RADIUS && lavaDist >= LAVA_DAMAGE_RADIUS) {
+          if (!window._lavaWarnShown || (Date.now() - window._lavaWarnShown) > 5000) {
+            window._lavaWarnShown = Date.now();
+            showStatChange('🌋 DANGER: Volcanic heat! Move away!');
+          }
+        }
+        if (lavaDist < LAVA_DAMAGE_RADIUS) {
+          if (!window._lavaDamageTimer) window._lavaDamageTimer = 0;
+          window._lavaDamageTimer += dt;
+          if (window._lavaDamageTimer > LAVA_TICK_INTERVAL) {
+            window._lavaDamageTimer = 0;
+            player.takeDamage(LAVA_MAX_DAMAGE * (1 - lavaDist / LAVA_DAMAGE_RADIUS)); // More damage closer to center
+            spawnParticles(player.mesh.position, 0xFF4500, 4);
+            playSound('volcano');
+          }
+        }
+        // Lava spout: occasional lava particles erupting from volcano top
+        if (!window._lavaSpoutTimer) window._lavaSpoutTimer = 0;
+        window._lavaSpoutTimer += dt;
+        if (window._lavaSpoutTimer > (2 + Math.random() * 3)) { // Every 2-5 seconds
+          window._lavaSpoutTimer = 0;
+          for (let ls = 0; ls < 8; ls++) {
+            const geo = new THREE.SphereGeometry(0.15, 4, 4);
+            const mat = new THREE.MeshBasicMaterial({ color: Math.random() < 0.5 ? 0xFF4500 : 0xFF8C00 });
+            const lavaP = new THREE.Mesh(geo, mat);
+            lavaP.position.set(lavaX + (Math.random() - 0.5) * 2, 22, lavaZ + (Math.random() - 0.5) * 2);
+            scene.add(lavaP);
+            const vx = (Math.random() - 0.5) * 0.3, vz = (Math.random() - 0.5) * 0.3;
+            let vy = 0.3 + Math.random() * 0.2, lpLife = 60;
+            if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
+              managedAnimations.push({ update(_dt2) {
+                lpLife--;
+                vy -= 0.012;
+                lavaP.position.x += vx; lavaP.position.y += vy; lavaP.position.z += vz;
+                if (lpLife <= 0) { scene.remove(lavaP); geo.dispose(); mat.dispose(); return false; }
+                return true;
+              }});
+            } else { scene.remove(lavaP); geo.dispose(); mat.dispose(); }
+          }
+        }
+      }
+
+      // Cleanup and memory management (run every 3 seconds to avoid performance issues)
+      enemies = enemies.filter(e => !e.isDead);
+      
+      // Update managed smoke particles (replaces individual RAF loops)
+      smokeParticles = smokeParticles.filter(sp => {
+        sp.life--;
+        sp.mesh.position.x += sp.velocity.x;
+        sp.mesh.position.y += sp.velocity.y;
+        sp.mesh.position.z += sp.velocity.z;
+        // Ground collision: keep smoke above ground to prevent visual artifacts
+        if (sp.mesh.position.y < 0.1) {
+          sp.mesh.position.y = 0.1;
+          sp.velocity.y = Math.abs(sp.velocity.y) * 0.1; // Damp vertical velocity at ground
+        }
+        sp.mesh.scale.multiplyScalar(1.05);
+        sp.material.opacity = (sp.life / sp.maxLife) * 0.5;
+        if (sp.life <= 0) {
+          scene.remove(sp.mesh);
+          sp.geometry.dispose();
+          sp.material.dispose();
+          return false;
+        }
+        return true;
+      });
+      
+      const now = Date.now();
+      if (now - lastCleanupTime > 3000) { // Run cleanup every 3 seconds
+        lastCleanupTime = now;
+
+        // Scene children growth guard — warn and cull stale invisible meshes if count exceeds threshold
+        const MAX_SCENE_CHILDREN = 1200;
+        if (scene.children.length > MAX_SCENE_CHILDREN) {
+          console.warn(`[Perf] scene.children=${scene.children.length} exceeds ${MAX_SCENE_CHILDREN}. Culling invisible non-tracked meshes.`);
+          const toRemove = [];
+          for (let i = scene.children.length - 1; i >= 0; i--) {
+            const obj = scene.children[i];
+            // Only cull plain Mesh objects that have no userData tracking and are fully transparent
+            // Handle both single materials and material arrays
+            const mat = obj.material;
+            const isFullyTransparent = Array.isArray(mat)
+              ? mat.every(m => m.transparent && m.opacity <= 0.01)
+              : (mat && mat.transparent && mat.opacity <= 0.01);
+            if (obj.isMesh && !obj.userData.tracked && isFullyTransparent) {
+              toRemove.push(obj);
+            }
+          }
+          toRemove.forEach(obj => {
+            scene.remove(obj);
+            if (obj.geometry) obj.geometry.dispose();
+            if (Array.isArray(obj.material)) {
+              obj.material.forEach(m => m.dispose());
+            } else if (obj.material) {
+              obj.material.dispose();
+            }
+          });
+          if (toRemove.length) console.warn(`[Perf] Culled ${toRemove.length} stale transparent meshes.`);
+        }
+
+        // Limit max items on ground (memory optimization)
+        const MAX_EXP_GEMS = 100;
+        const MAX_GOLD_COINS = 50;
+        
+        // Helper function to cleanup distant items
+        const cleanupDistantItems = (items, maxItems, collectCallback) => {
+          if (items.length > maxItems && player && player.mesh) {
+            // Sort by distance, keep closest ones, auto-collect furthest
+            items.sort((a, b) => {
+              const distA = a.mesh.position.distanceTo(player.mesh.position);
+              const distB = b.mesh.position.distanceTo(player.mesh.position);
+              return distA - distB;
+            });
+            
+            // Auto-collect excess items (furthest ones)
+            const excessItems = items.splice(maxItems);
+            excessItems.forEach(item => {
+              if (item.active) {
+                collectCallback(item);
+                scene.remove(item.mesh);
+                item.mesh.geometry.dispose();
+                item.mesh.material.dispose();
+                item.active = false;
+              }
+            });
+          }
+        };
+        
+        // Clean up exp gems
+        cleanupDistantItems(expGems, MAX_EXP_GEMS, (gem) => addExp(gem.value));
+        
+        // Clean up gold coins
+        cleanupDistantItems(goldCoins, MAX_GOLD_COINS, (coin) => {
+          playerStats.gold += coin.amount;
+        });
+      }
+      
+      expGems = expGems.filter(g => g.active);
+      goldCoins = goldCoins.filter(g => g.active);
+      chests = chests.filter(c => c.active);
+
+      // Screen shake effect
+      if (window.screenShakeIntensity > 0.01) {
+        camera.position.x += (Math.random() - 0.5) * window.screenShakeIntensity * 2;
+        camera.position.y += (Math.random() - 0.5) * window.screenShakeIntensity * 1;
+        camera.position.z += (Math.random() - 0.5) * window.screenShakeIntensity * 2;
+        window.screenShakeIntensity *= 0.85; // Decay
+      } else {
+        window.screenShakeIntensity = 0;
+      }
+
+      // Fountain jet animation
+      if (window.fountainJets && isGameActive) {
+        const fjTime = gameTime;
+        window.fountainJets.forEach(jet => {
+          jet.userData.phase += dt * 4;
+          const arcHeight = Math.abs(Math.sin(jet.userData.phase)) * 1.5;
+          const inAngle = jet.userData.angle;
+          const dist = 3.5 - arcHeight * 0.3; // arc inward
+          jet.position.set(
+            Math.cos(inAngle) * dist,
+            0.5 + arcHeight,
+            Math.sin(inAngle) * dist
+          );
+          jet.material.opacity = 0.4 + Math.sin(jet.userData.phase) * 0.3;
+        });
+      }
+      
+      // Fountain/lightning spawn sequence update
+      if (window.SpawnSequence) window.SpawnSequence.update(dt);
+
+      // Underwater chest shimmer animation
+      if (window.underwaterChest && !window.underwaterChest.userData.collected) {
+        const uwData = window.underwaterChest.userData;
+        if (uwData.shimmerRing) {
+          uwData.shimmerRing.userData.phase = (uwData.shimmerRing.userData.phase || 0) + dt * 2;
+          const shimmerScale = 1 + Math.sin(uwData.shimmerRing.userData.phase) * 0.2;
+          uwData.shimmerRing.scale.set(shimmerScale, shimmerScale, shimmerScale);
+          uwData.shimmerRing.material.opacity = 0.3 + Math.sin(uwData.shimmerRing.userData.phase) * 0.2;
+        }
+        if (uwData.glowLight) {
+          uwData.glowLight.intensity = 3 + Math.sin(gameTime * 3) * 1.5;
+        }
+        // Gentle bobbing
+        window.underwaterChest.position.y = -0.4 + Math.sin(gameTime * 1.5) * 0.08;
+      }
+
+      // Game logic completed without error — reset consecutive error counter
+      performanceLog.gameLogicErrorCount = 0;
+
+      } catch (gameLogicError) {
+        // --- END GAME LOGIC try-catch ---
+        // Log the error that would have frozen the screen (always-on, not gated by ?debug=1)
+        performanceLog.gameLogicErrorCount++;
+        if (!window._lastGameLogicError || (Date.now() - window._lastGameLogicError) > 2000) {
+          console.error('[GameLoop] Game logic error caught — rendering continues (consecutive errors: ' + performanceLog.gameLogicErrorCount + '):', gameLogicError);
+          window._lastGameLogicError = Date.now();
+        }
+        // Force-end stuck cinematics/killcams that may have caused the crash
+        if (cinematicActive) {
+          console.warn('[GameLoop] Force-ending cinematic after game logic error');
+          cinematicActive = false;
+          cinematicData = null;
+        }
+        if (killCamActive) {
+          console.warn('[GameLoop] Force-ending killCam after game logic error');
+          killCamActive = false;
+        }
+      }
+
+      // Phase 3: Render loop protection - wrap in try-catch to prevent freeze
+      // Frame Skip Mechanism: Skip rendering if frame budget exceeded
+      // BUT: always render after game logic errors to prevent frozen-screen bug
+      const renderStartTime = performance.now();
+      
+      if (!shouldSkipRender || performanceLog.gameLogicErrorCount > 0) {
+        try {
+          renderer.render(scene, camera);
+          performanceLog.renderCount++;
+          performanceLog.consecutiveSkipCount = 0; // Reset on successful render
+        } catch (error) {
+          console.error('Render error caught - game continues:', error);
+          if (window.GameDebug) window.GameDebug.oshot('render_err', 'Render error: ' + error.message, error.stack);
+          // Log error details but continue - the game loop will recover naturally
+          // Active objects are already filtered above, so invalid objects are removed
+        }
+      } else {
+        // Frame was skipped to maintain performance (already warned above with throttling)
+      }
+      
+      const renderEndTime = performance.now();
+      
+      // Always-on freeze detection: log when game logic errors are accumulating
+      if (window.GameDebug) {
+        window.GameDebug.onRenderStatus(performanceLog.gameLogicErrorCount, cinematicActive, killCamActive, isPaused);
+      }
+      
+      // Track frame performance
+      const frameEndTime = performance.now();
+      const totalFrameTime = frameEndTime - frameStartTime;
+      performanceLog.totalFrameTime = totalFrameTime;
+      performanceLog.frameCount++;
+      
+      // FRESH: Update FPS watchdog with current frame time
+      updateFPSWatchdog(totalFrameTime);
+      
+      // Log slow frames
+      if (totalFrameTime > FRAME_TIME_BUDGET) {
+        performanceLog.slowFrames++;
+        if (totalFrameTime > FRAME_TIME_BUDGET * 1.5) {
+          console.warn(`Slow frame detected: ${totalFrameTime.toFixed(2)}ms (render: ${(renderEndTime - renderStartTime).toFixed(2)}ms, enemies: ${aliveEnemies}, particles: ${particles.length}, projectiles: ${projectiles.length})`);
+        }
+      }
+      
+      // Track cumulative frame time for accurate average
+      performanceLog.cumulativeFrameTime += totalFrameTime;
+      
+      // Periodic performance summary (every 5 seconds)
+      const currentTime = performance.now();
+      if (currentTime - performanceLog.lastLogTime > 5000) {
+        const avgFrameTime = performanceLog.cumulativeFrameTime / performanceLog.frameCount;
+        const slowFramePercent = (performanceLog.slowFrames / performanceLog.frameCount * 100).toFixed(1);
+        const runSec = Math.floor((Date.now() - gameStartTime) / 1000);
+        console.log(`[Loop] t=${runSec}s L${playerStats.lvl} — Avg frame: ${avgFrameTime.toFixed(2)}ms, Slow: ${slowFramePercent}%, Enemies: ${aliveEnemies}, Renders: ${performanceLog.renderCount}, cinematic: ${cinematicActive}, paused: ${isPaused}`);
+        
+        // Reset counters for next period
+        performanceLog.lastLogTime = currentTime;
+        performanceLog.slowFrames = 0;
+        performanceLog.frameCount = 0;
+        performanceLog.spawnCount = 0;
+        performanceLog.renderCount = 0;
+        performanceLog.cumulativeFrameTime = 0;
+      }
+      
+      // Process disposal queue after rendering (PR #81)
+      processDisposalQueue();
+    }
+
+    // Init Game
+    try { init(); } catch(e) { console.error('[Game Error]', e); console.error('[Game] Initialization failed - game cannot start'); }
