@@ -25,7 +25,7 @@
       );
 
       // Initialize advanced blood particle system (THREE.Points, 50k particles)
-      if (window.BloodSystem) window.BloodSystem.init(scene);
+      if (window.BloodSystem && typeof THREE !== 'undefined') window.BloodSystem.init(scene);
 
       // Camera (Orthographic for miniature look)
       // CAMERA FIX: Better angle and zoom - prevent zoom issues

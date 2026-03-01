@@ -32,6 +32,10 @@
 
   // ─── Init ────────────────────────────────────────────────────────────────────
   function init(threeScene) {
+    if (typeof THREE === 'undefined') {
+      console.warn('[BloodSystem] THREE.js not yet available – init deferred');
+      return;
+    }
     if (_scene) return; // already initialised
     _scene = threeScene;
 
