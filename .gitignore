@@ -16,7 +16,12 @@ package.json
 package-lock.json
 
 # Documentation and Summary Files
+# Root-level .md files are ignored except README.md and TODO.md
 *.md
 !README.md
+!TODO.md
+# Allow docs/ folder markdown files (archived summaries moved from root)
+!docs/
+!docs/*.md
 *.png
 *.mp4
