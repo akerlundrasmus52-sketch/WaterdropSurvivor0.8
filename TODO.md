@@ -13,15 +13,20 @@
 - [x] Split `js/main.js` into smaller organized module files
 - [x] Move .md clutter files to `docs/` folder
 - [x] Game works in current rollback state
+- [x] **Fix THREE.js → Blood System load order**: Added early-return guard (`if (typeof THREE === 'undefined') return;`) in `blood-system.js` `init()` and a `typeof THREE !== 'undefined'` pre-check in the `BloodSystem.init()` call in `game-screens.js`. Load order verified: THREE.js CDN → scene creation → `BloodSystem.init()` in game init.
+- [x] **Fix blood system efficiency**: Added safety guard to prevent init when THREE.js is unavailable. Existing `if (_scene) return;` guard prevents double-initialization. Ring-buffer and typed arrays already in use.
+- [x] **Re-apply THREE.js read fix**: BloodSystem now checks `typeof THREE !== 'undefined'` before initializing, ensuring it only reads THREE after it is ready.
+- [x] **Stop camp from auto-triggering on death**: Removed `CampWorld.enter()` call from `gameOver()`. Death screen now shows over the game scene; camp is only activated when player explicitly clicks "Go to Camp".
+- [x] **Keep existing camp menus**: All menu-based camp functionality preserved. Only the auto-activation on death was removed.
 
 ## 🔥 HIGH PRIORITY — Fix Next
-- [ ] **Fix THREE.js → Blood System load order**: The blood system (`js/blood-system.js`) must initialize AFTER THREE.js scene is fully created. Before the rollback, this was fixed so that THREE was read/loaded correctly and blood system was loaded more efficiently. The load order in index.html must ensure: THREE.js CDN → scene creation → blood-system.js init. Check that `BloodSystem.init()` is called after the THREE scene, camera, and renderer are ready.
-- [ ] **Fix blood system efficiency**: Before rollback, blood system was optimized to load more efficiently. Re-apply this optimization. Look at how blood-system.js initializes and make sure it doesn't create unnecessary objects or re-initialize.
-- [ ] **Re-apply THREE.js read fix**: THREE was being read/sent in wrong order relative to blood system. The fix ensured THREE sends data before blood system reads it (or blood waits for THREE to be ready).
+- [x] **Fix THREE.js → Blood System load order** — *(completed, see above)*
+- [x] **Fix blood system efficiency** — *(completed, see above)*
+- [x] **Re-apply THREE.js read fix** — *(completed, see above)*
 
 ## 🟡 MEDIUM PRIORITY — Camp System
-- [ ] **Stop camp from auto-triggering on death**: Currently when player dies, it triggers the camp menu. Death should go to a game-over/death screen instead. Camp should only be accessible from menus.
-- [ ] **Keep existing camp menus**: All the menu-based camp functionality (quest hall, skill tree, armory, training hall, forge, companion house, achievements, inventory, etc.) should remain intact
+- [x] **Stop camp from auto-triggering on death** — *(completed, see above)*
+- [x] **Keep existing camp menus** — *(completed, see above)*
 - [ ] **Prepare camp menus for real camp**: Eventually the menu-based camp will be replaced by a real interactive camp world (using camp-world.js). The menus should still be accessible from the real camp (e.g., clicking a building opens the menu). For now, keep menus as they are but make them modular enough to plug into the real camp later.
 - [ ] **Camp-world.js integration**: `js/camp-world.js` (81KB) contains a 3D camp world. This needs to be connected as the actual camp experience, with buildings that open the existing menu screens.
 

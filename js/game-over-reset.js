@@ -129,30 +129,6 @@
       }
       
       saveSaveData();
-      
-      // Activate the 3D camp world as background for the death screen so the
-      // player sees the real 3D camp (not just the dark game scene) on death.
-      try {
-        if (window.CampWorld && renderer) {
-          const campCallbacks = {
-            questMission:        () => {},
-            skillTree:           () => {},
-            armory:              () => {},
-            trainingHall:        () => {},
-            forge:               () => {},
-            companionHouse:      () => {},
-            achievementBuilding: () => {},
-            inventory:           () => {},
-            campBoard:           () => {},
-            specialAttacks:      () => {},
-            warehouse:           () => {},
-            tavern:              () => {},
-            shop:                () => {},
-            prestige:            () => {},
-          };
-          window.CampWorld.enter(renderer, saveData, campCallbacks);
-        }
-      } catch(e) { console.warn('[gameOver] Could not activate 3D camp world:', e); }
 
       // Display game over screen
       document.getElementById('gameover-screen').style.display = 'flex';
