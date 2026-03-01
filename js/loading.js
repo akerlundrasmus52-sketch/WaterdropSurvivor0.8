@@ -6,6 +6,21 @@
       window.gameModuleReady = false;
       window.loadingComplete = false;
       let menuShown = false;
+
+      var FALLBACK_IMAGE = '654811F9-1760-4A74-B977-73ECB1A92913.png';
+
+      function showVideoFallback() {
+        var loadingScreen = document.getElementById('loading-screen');
+        var loadingVideo = document.getElementById('loading-video');
+        var fallbackImg = document.getElementById('loading-fallback-img');
+        if (loadingVideo) loadingVideo.style.display = 'none';
+        if (fallbackImg) fallbackImg.style.display = 'block';
+        if (loadingScreen) {
+          loadingScreen.style.backgroundImage = 'url(' + FALLBACK_IMAGE + ')';
+          loadingScreen.style.backgroundSize = 'cover';
+          loadingScreen.style.backgroundPosition = 'center';
+        }
+      }
       
       // Wait for DOM to be ready
       if (document.readyState === 'loading') {
@@ -21,6 +36,13 @@
         if (!loadingScreen || !loadingBar) {
           console.error('[Loading] Loading elements not found');
           return;
+        }
+
+        // Handle video load failure — show fallback image
+        const loadingVideo = document.getElementById('loading-video');
+        if (loadingVideo) {
+          loadingVideo.addEventListener('error', showVideoFallback);
+          loadingVideo.addEventListener('stalled', showVideoFallback);
         }
         
         let progress = 0;
@@ -43,15 +65,15 @@
         // Start progress animation
         progressInterval = setInterval(updateProgress, 250); // 20 steps × 250ms = 5s
         
-        // 12-second failsafe timeout - show menu anyway if module fails to load
+        // 8-second failsafe timeout - show menu anyway if module fails to load
         setTimeout(function() {
-          if (!window.gameModuleReady && !menuShown) {
+          if (!menuShown) {
             console.warn('[Loading] Failsafe timeout - showing menu without module ready signal');
             clearInterval(progressInterval);
             window.loadingComplete = true;
             showMenuAfterLoading();
           }
-        }, 12000);
+        }, 8000);
       }
       
       // Wait for module to signal ready, then show menu
