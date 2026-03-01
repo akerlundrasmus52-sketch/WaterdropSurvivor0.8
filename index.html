@@ -58,6 +58,7 @@
     <video id="loading-video" autoplay loop muted playsinline poster="321E5768-E77B-4471-8C32-5D7C1D715A4B.png">
       <source src="_users_1950b102-4327-4638-ab62-43d98ac4e6de_generated_5ba0ce25-2cc0-45d0-8926-2f482cffaa5b_generated_video.mp4" type="video/mp4">
     </video>
+    <img id="loading-fallback-image" src="654811F9-1760-4A74-B977-73ECB1A92913.png" alt="">
     <div class="loading-bar-container">
       <div class="loading-bar" id="loading-bar"></div>
     </div>
@@ -189,8 +190,8 @@
     <div id="account-level-display" style="text-align:center;margin-bottom:12px;width:100%;">
       <div style="font-family:'Bangers',cursive;font-size:11px;color:#aaa;letter-spacing:2px;">ACCOUNT LEVEL</div>
       <div id="account-level-value" style="font-family:'Bangers',cursive;font-size:26px;color:#FFD700;text-shadow:0 0 10px rgba(255,215,0,0.8);">1</div>
-      <div style="background:rgba(0,0,0,0.5);border-radius:8px;height:6px;width:80%;margin:3px auto;overflow:hidden;">
-        <div id="account-level-bar" style="height:100%;background:linear-gradient(90deg,#FFD700,#FFA500);width:0%;transition:width 0.5s;border-radius:8px;"></div>
+      <div style="background:linear-gradient(to bottom,#1a1a1a 0%,#1a1a1a 50%,#3a3a3a 50%,#3a3a3a 100%);border-radius:10px;height:10px;width:80%;margin:3px auto;overflow:hidden;border:2px solid rgba(255,215,0,0.4);box-shadow:0 2px 6px rgba(0,0,0,0.5),inset 0 2px 4px rgba(0,0,0,0.4);">
+        <div id="account-level-bar" style="height:100%;background:linear-gradient(to right,#FFD700,#FFA500,#CD5C5C);width:0%;transition:width 0.5s;box-shadow:inset 0 2px 4px rgba(255,255,255,0.2);"></div>
       </div>
       <div id="account-level-progress-text" style="font-size:10px;color:#aaa;">0 / 100 XP</div>
     </div>

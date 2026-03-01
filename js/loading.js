@@ -42,8 +42,23 @@
         
         // Start progress animation
         progressInterval = setInterval(updateProgress, 250); // 20 steps × 250ms = 5s
+
+        // Handle video load failure: hide video and show fallback image
+        var loadingVideo = document.getElementById('loading-video');
+        var loadingFallbackImage = document.getElementById('loading-fallback-image');
+        if (loadingVideo && loadingFallbackImage) {
+          loadingVideo.addEventListener('error', function() {
+            loadingVideo.style.display = 'none';
+            loadingFallbackImage.style.display = 'block';
+          });
+          // Check if the video has already failed before the listener was attached
+          if (loadingVideo.error || loadingVideo.networkState === 3 /* NETWORK_NO_SOURCE */) {
+            loadingVideo.style.display = 'none';
+            loadingFallbackImage.style.display = 'block';
+          }
+        }
         
-        // 12-second failsafe timeout - show menu anyway if module fails to load
+        // 8-second failsafe timeout - show menu anyway if module fails to load
         setTimeout(function() {
           if (!window.gameModuleReady && !menuShown) {
             console.warn('[Loading] Failsafe timeout - showing menu without module ready signal');
@@ -51,7 +66,7 @@
             window.loadingComplete = true;
             showMenuAfterLoading();
           }
-        }, 12000);
+        }, 8000);
       }
       
       // Wait for module to signal ready, then show menu
@@ -141,8 +156,13 @@
           startBtn._fallbackAttached = true;
           startBtn.addEventListener('click', function() {
             if (window.gameModuleReady) return; // module handler takes over
-            startBtn.textContent = 'Loading\u2026 (check network)';
-            console.warn('[Loading] start-game-btn clicked but module not ready');
+            var reloads = parseInt(sessionStorage.getItem('_moduleReloadCount') || '0', 10);
+            if (reloads < 2) {
+              sessionStorage.setItem('_moduleReloadCount', reloads + 1);
+              location.reload();
+            } else {
+              startBtn.textContent = 'Failed to load \u2014 please refresh';
+            }
           });
         }
         if (campBtn && !campBtn._fallbackAttached) {
