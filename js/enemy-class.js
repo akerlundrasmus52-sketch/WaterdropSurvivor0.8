@@ -10,6 +10,16 @@
     let waterParticleGeom = null;
     let waterParticleMat = null;
 
+    // Pre-allocated constants for enemy update() — avoids per-frame Set/allocation
+    const _ENEMY_FLYING_TYPES = new Set([5, 11, 14, 16]);
+    const _TREE_COLL_R = 1.0;
+    const _PROP_COLL_R = 0.7;
+    const _FENCE_COLL_R = 0.6;
+    // Shared blood stain geometry (avoids per-hit CircleGeometry creation)
+    let _sharedBloodStainGeo = null;
+    // Shared blood drip geometry (avoids per-hit SphereGeometry creation)
+    let _sharedBloodDripGeo = null;
+
     function spawnWaterParticle(pos) {
       if (!scene) return;
       let p = waterParticlePool.find(x => !x.active);
@@ -152,15 +162,15 @@
         // Pulse core
         this.core.material.opacity = 0.6 + Math.sin(gameTime * 5) * 0.2;
         
-        // Find and track nearest enemy
+        // Find and track nearest enemy (squared distance avoids sqrt)
         let nearestEnemy = null;
-        let minDist = Infinity;
+        let minDistSq = weapons.droneTurret.range * weapons.droneTurret.range;
         
         for (let e of enemies) {
           if (e.isDead) continue;
-          const dist = this.mesh.position.distanceTo(e.mesh.position);
-          if (dist < weapons.droneTurret.range && dist < minDist) {
-            minDist = dist;
+          const distSq = this.mesh.position.distanceToSquared(e.mesh.position);
+          if (distSq < minDistSq) {
+            minDistSq = distSq;
             nearestEnemy = e;
           }
         }
@@ -419,7 +429,10 @@
           this._playerVelocity.x = (playerPos.x - this._lastPlayerPos.x) / Math.max(dt, 0.016);
           this._playerVelocity.z = (playerPos.z - this._lastPlayerPos.z) / Math.max(dt, 0.016);
         }
-        this._lastPlayerPos = { x: playerPos.x, z: playerPos.z };
+        // Reuse cached object instead of creating new one each frame
+        if (!this._lastPlayerPos) this._lastPlayerPos = { x: 0, z: 0 };
+        this._lastPlayerPos.x = playerPos.x;
+        this._lastPlayerPos.z = playerPos.z;
         
         // AI decision timer
         this._aiTimer += dt;
@@ -812,18 +825,14 @@
 
           // Collision with environment props (trees, barrels, crates) — ground enemies bounce off
           // Skip flying enemy types: 5=Flying, 11=FlyingBoss, 14=BugFast(fly), 16=SweepingSwarm
-          const FLYING_TYPES = new Set([5, 11, 14, 16]);
-          const TREE_COLL_R = 1.0;  // Collision radius for tree props
-          const PROP_COLL_R = 0.7;  // Collision radius for barrel/crate props
-          const FENCE_COLL_R = 0.6; // Collision radius for fence segments
-          const _isFlying = FLYING_TYPES.has(this.type);
+          const _isFlying = _ENEMY_FLYING_TYPES.has(this.type);
           if (!_isFlying && window.destructibleProps) {
             for (let prop of window.destructibleProps) {
               if (!prop || !prop.mesh || prop.destroyed) continue;
               const edx = this.mesh.position.x - prop.mesh.position.x;
               const edz = this.mesh.position.z - prop.mesh.position.z;
               const eDist = Math.sqrt(edx*edx + edz*edz);
-              const eRadius = prop.type === 'tree' ? TREE_COLL_R : PROP_COLL_R;
+              const eRadius = prop.type === 'tree' ? _TREE_COLL_R : _PROP_COLL_R;
               if (eDist < eRadius && eDist > 0.001) {
                 this.mesh.position.x = prop.mesh.position.x + (edx / eDist) * eRadius;
                 this.mesh.position.z = prop.mesh.position.z + (edz / eDist) * eRadius;
@@ -844,9 +853,9 @@
               const efdx = this.mesh.position.x - fence.position.x;
               const efdz = this.mesh.position.z - fence.position.z;
               const efDist = Math.sqrt(efdx*efdx + efdz*efdz);
-              if (efDist < FENCE_COLL_R && efDist > 0.001) {
-                this.mesh.position.x = fence.position.x + (efdx / efDist) * FENCE_COLL_R;
-                this.mesh.position.z = fence.position.z + (efdz / efDist) * FENCE_COLL_R;
+              if (efDist < _FENCE_COLL_R && efDist > 0.001) {
+                this.mesh.position.x = fence.position.x + (efdx / efDist) * _FENCE_COLL_R;
+                this.mesh.position.z = fence.position.z + (efdz / efDist) * _FENCE_COLL_R;
                 if (!fence.userData._wobbleTime) fence.userData._wobbleTime = 0;
                 if (fence.userData._wobbleTime <= 0) {
                   fence.userData._wobbleTime = 0.5;
@@ -1060,10 +1069,14 @@
         const MAX_BODY_BLOOD_STAINS = 12;
         if (this._bloodStains.length < MAX_BODY_BLOOD_STAINS) {
           const stainCount = hpRatio < 0.25 ? 3 : (hpRatio < 0.5 ? 2 : 1);
+          // Lazy-init shared stain geometry (unit-size, scale per instance)
+          if (!_sharedBloodStainGeo && typeof THREE !== 'undefined') {
+            _sharedBloodStainGeo = new THREE.CircleGeometry(1, 6);
+          }
           for (let s = 0; s < stainCount && this._bloodStains.length < MAX_BODY_BLOOD_STAINS; s++) {
             const stainSize = 0.08 + Math.random() * 0.15;
             const stain = new THREE.Mesh(
-              new THREE.CircleGeometry(stainSize, 6),
+              _sharedBloodStainGeo,
               new THREE.MeshStandardMaterial({
                 color: 0x5a0000,
                 emissive: 0x1a0000,
@@ -1076,6 +1089,7 @@
                 depthWrite: false
               })
             );
+            stain.scale.setScalar(stainSize);
             // Place on enemy surface
             const theta = Math.random() * Math.PI * 2;
             const phi = Math.random() * Math.PI;
@@ -1090,20 +1104,25 @@
         // Blood drip: small drops fall from wounded enemy to ground (managed in main loop)
         // More blood drips from first shot onward, increasing with damage
         if (scene && bloodDrips.length < MAX_BLOOD_DRIPS) {
+          // Lazy-init shared drip geometry (unit-size, scale per instance)
+          if (!_sharedBloodDripGeo && typeof THREE !== 'undefined') {
+            _sharedBloodDripGeo = new THREE.SphereGeometry(1, 4, 4);
+          }
           const dripCount = hpRatio < 0.25 ? 6 : (hpRatio < 0.5 ? 4 : 3); // Blood from every hit
           for (let d = 0; d < dripCount && bloodDrips.length < MAX_BLOOD_DRIPS; d++) {
             const dripSize = 0.03 + Math.random() * 0.05;
             const drip = new THREE.Mesh(
-              new THREE.SphereGeometry(dripSize, 4, 4),
+              _sharedBloodDripGeo,
               new THREE.MeshBasicMaterial({ color: 0x8B0000 })
             );
+            drip.scale.setScalar(dripSize);
             drip.position.set(
               this.mesh.position.x + (Math.random() - 0.5) * 0.5,
               this.mesh.position.y + (Math.random() - 0.5) * 0.3,
               this.mesh.position.z + (Math.random() - 0.5) * 0.5
             );
             scene.add(drip);
-            bloodDrips.push({ mesh: drip, velY: 0, life: 30 + Math.floor(Math.random() * 20) });
+            bloodDrips.push({ mesh: drip, velY: 0, life: 30 + Math.floor(Math.random() * 20), _sharedGeo: true });
           }
         }
         
@@ -1135,10 +1154,14 @@
         const burstCount = isCrit ? 5 : 3; // More airborne blood per shot
         for (let b = 0; b < burstCount && bloodDrips.length < MAX_BLOOD_DRIPS; b++) {
           const bSize = 0.03 + Math.random() * 0.05;
+          if (!_sharedBloodDripGeo && typeof THREE !== 'undefined') {
+            _sharedBloodDripGeo = new THREE.SphereGeometry(1, 4, 4);
+          }
           const p = new THREE.Mesh(
-            new THREE.SphereGeometry(bSize, 4, 4),
+            _sharedBloodDripGeo,
             new THREE.MeshBasicMaterial({ color: 0xAA0000 })
           );
+          p.scale.setScalar(bSize);
           p.position.set(
             this.mesh.position.x + (Math.random() - 0.5) * 0.4,
             this.mesh.position.y + 0.1,
@@ -1150,7 +1173,8 @@
             velX: (Math.random() - 0.5) * 0.08,
             velZ: (Math.random() - 0.5) * 0.08,
             velY: 0.12 + Math.random() * 0.22, // initial upward burst
-            life: 35 + Math.floor(Math.random() * 15)
+            life: 35 + Math.floor(Math.random() * 15),
+            _sharedGeo: true
           });
         }
         } // end airborne blood throttle
@@ -1447,10 +1471,14 @@
         // Airborne blood spray burst — sprays high in air, rains down tiny droplets
         for (let sb = 0; sb < 14 && bloodDrips.length < MAX_BLOOD_DRIPS; sb++) {
           const spraySize = 0.02 + Math.random() * 0.06;
+          if (!_sharedBloodDripGeo && typeof THREE !== 'undefined') {
+            _sharedBloodDripGeo = new THREE.SphereGeometry(1, 4, 4);
+          }
           const spray = new THREE.Mesh(
-            new THREE.SphereGeometry(spraySize, 4, 4),
+            _sharedBloodDripGeo,
             new THREE.MeshBasicMaterial({ color: [0xAA0000, 0x8B0000, 0x660000, 0xCC0000][sb % 4] })
           );
+          spray.scale.setScalar(spraySize);
           spray.position.copy(deathPos);
           spray.position.y += 0.3;
           scene.add(spray);
@@ -1459,7 +1487,8 @@
             velX: (Math.random() - 0.5) * 0.45,
             velZ: (Math.random() - 0.5) * 0.45,
             velY: 0.35 + Math.random() * 0.55,
-            life: 55 + Math.floor(Math.random() * 30)
+            life: 55 + Math.floor(Math.random() * 30),
+            _sharedGeo: true
           });
         }
         // Dynamic blood pools: more pools with bigger sizes

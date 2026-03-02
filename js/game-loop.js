@@ -558,7 +558,11 @@
 
       // Spawn Logic - Only spawn new wave if previous wave is cleared
       frameCount++;
-      aliveEnemies = enemies.filter(e => !e.isDead).length;
+      // Count alive enemies without creating a new array (avoids per-frame GC allocation)
+      aliveEnemies = 0;
+      for (let i = 0; i < enemies.length; i++) {
+        if (!enemies[i].isDead) aliveEnemies++;
+      }
       const timeSinceLastWave = frameCount - lastWaveEndTime;
       const minWaveDelay = Math.floor(GAME_CONFIG.waveInterval * 0.6); // 60% of wave interval (3 seconds at 60fps)
       
@@ -1610,11 +1614,11 @@
       
       // Phase 5: Update particles and release back to pool when dead
       // PERFORMANCE: Cull particles beyond fog far plane (invisible beyond fog anyway)
-      const FOG_DISTANCE = RENDERER_CONFIG.fogFar;
+      const FOG_DISTANCE_SQ = RENDERER_CONFIG.fogFar * RENDERER_CONFIG.fogFar;
       particles = particles.filter(p => {
-        // Cull particles beyond fog distance
-        const distToPlayer = p.mesh.position.distanceTo(player.mesh.position);
-        if (distToPlayer > FOG_DISTANCE) {
+        // Cull particles beyond fog distance (squared avoids sqrt per particle)
+        const distSq = p.mesh.position.distanceToSquared(player.mesh.position);
+        if (distSq > FOG_DISTANCE_SQ) {
           // Remove from scene before releasing so the mesh is not left as an
           // invisible orphan in scene.children, which inflates scene child count.
           scene.remove(p.mesh);
@@ -1659,9 +1663,11 @@
             // Reuse temp vector instead of clone()
             _tmpKnockback.copy(d.mesh.position);
             scene.remove(d.mesh);
-            // Only dispose geometry/material if they are NOT shared (ice shards etc.)
-            if (!_sharedGoreGeo || (d.mesh.geometry !== _sharedGoreGeo && d.mesh.geometry !== _sharedLavaGeo)) {
-              d.mesh.geometry.dispose();
+            // Only dispose geometry/material if they are NOT shared
+            if (!d._sharedGeo) {
+              if (!_sharedGoreGeo || (d.mesh.geometry !== _sharedGoreGeo && d.mesh.geometry !== _sharedLavaGeo)) {
+                d.mesh.geometry.dispose();
+              }
             }
             if (!_sharedGoreMats[0] || (d.mesh.material !== _sharedGoreMats[0] && d.mesh.material !== _sharedGoreMats[1] &&
                 d.mesh.material !== _sharedLavaMats[0] && d.mesh.material !== _sharedLavaMats[1])) {
@@ -2054,9 +2060,6 @@
         }
       }
 
-      // Cleanup and memory management (run every 3 seconds to avoid performance issues)
-      enemies = enemies.filter(e => !e.isDead);
-      
       // Update managed smoke particles (replaces individual RAF loops)
       smokeParticles = smokeParticles.filter(sp => {
         sp.life--;
@@ -2082,6 +2085,9 @@
       const now = Date.now();
       if (now - lastCleanupTime > 3000) { // Run cleanup every 3 seconds
         lastCleanupTime = now;
+
+        // Remove dead enemies from array (forEach already skips dead ones each frame)
+        enemies = enemies.filter(e => !e.isDead);
 
         // Scene children growth guard — warn and cull stale invisible meshes if count exceeds threshold
         const MAX_SCENE_CHILDREN = 1200;
