@@ -365,7 +365,8 @@
         this._aiState = 'approach'; // approach, flank, retreat, dive, wait
         this._aiTimer = 0;
         this._aiCooldown = 1.0 + Math.random() * 2.0; // Randomize decision intervals
-        this._lastPlayerPos = null; // For movement prediction
+        this._lastPlayerPos = { x: 0, z: 0 }; // For movement prediction (pre-allocated)
+        this._lastPlayerPosValid = false; // Skip velocity calc on first frame
         this._playerVelocity = { x: 0, z: 0 }; // Estimated player velocity
         this._flankAngle = (Math.random() > 0.5 ? 1 : -1) * (Math.PI * 0.3 + Math.random() * Math.PI * 0.4);
         this._packRush = false; // Pack behavior: periodic group rush flag
@@ -425,12 +426,12 @@
         const dist = Math.sqrt(dx*dx + dz*dz);
 
         // Estimate player velocity for prediction AI
-        if (this._lastPlayerPos) {
+        if (this._lastPlayerPosValid) {
           this._playerVelocity.x = (playerPos.x - this._lastPlayerPos.x) / Math.max(dt, 0.016);
           this._playerVelocity.z = (playerPos.z - this._lastPlayerPos.z) / Math.max(dt, 0.016);
+        } else {
+          this._lastPlayerPosValid = true;
         }
-        // Reuse cached object instead of creating new one each frame
-        if (!this._lastPlayerPos) this._lastPlayerPos = { x: 0, z: 0 };
         this._lastPlayerPos.x = playerPos.x;
         this._lastPlayerPos.z = playerPos.z;
         
