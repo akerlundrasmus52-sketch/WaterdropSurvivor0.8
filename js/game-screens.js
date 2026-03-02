@@ -9,7 +9,8 @@
       // Load save data and settings first
       loadSaveData();
       loadSettings();
-      
+      console.log('[Init] Save data loaded OK');
+
       // Scene
       scene = new THREE.Scene();
       scene.background = new THREE.Color(COLORS.bg);
@@ -26,6 +27,7 @@
 
       // Initialize advanced blood particle system (THREE.Points, 50k particles)
       if (window.BloodSystem && typeof THREE !== 'undefined') window.BloodSystem.init(scene);
+      console.log('[Init] Scene created OK');
 
       // Camera (Orthographic for miniature look)
       // CAMERA FIX: Better angle and zoom - prevent zoom issues
@@ -36,6 +38,7 @@
       camera = new THREE.OrthographicCamera(-d * aspect, d * aspect, d, -d, 1, 1000);
       camera.position.set(RENDERER_CONFIG.cameraPositionX, RENDERER_CONFIG.cameraPositionY, RENDERER_CONFIG.cameraPositionZ); // Better angle - not too low, better visibility
       camera.lookAt(scene.position);
+      console.log('[Init] Camera created OK');
 
       // Renderer
       renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -51,6 +54,7 @@
         throw new Error('game-container element missing from DOM');
       }
       gameContainer.appendChild(renderer.domElement);
+      console.log('[Init] Renderer created and appended OK');
 
       // Expose renderer globally so loading.js and other scripts can access it
       window.gameRenderer = renderer;
@@ -274,7 +278,9 @@
       
       // Listeners
       setupInputs();
+      console.log('[Init] Inputs set up OK');
       setupMenus();
+      console.log('[Init] Menus set up OK');
       window.addEventListener('resize', onWindowResize, false);
       
       // Start Loop - begin rendering immediately (non-blocking)
@@ -282,6 +288,7 @@
       
       // FRESH: Signal that module is ready (standalone loading script is waiting for this)
       // Don't call showLoadingScreen - standalone script handles it
+      console.log('[Init] All setup complete, setting gameModuleReady');
       window.gameModuleReady = true;
       console.log('[Init] Game module ready - Three.js loaded, event listeners attached');
 
@@ -1417,8 +1424,12 @@
       }
 
       // Ensure game systems reflect the current settings
-      updateControlType();
-      updateBackgroundMusic();
+      if (typeof updateControlType === 'function') {
+        try { updateControlType(); } catch(e) { console.warn('[Init] updateControlType failed:', e); }
+      }
+      if (typeof updateBackgroundMusic === 'function') {
+        try { updateBackgroundMusic(); } catch(e) { console.warn('[Init] updateBackgroundMusic failed:', e); }
+      }
       
       // Main Menu Buttons
       document.getElementById('start-game-btn').onclick = () => {
@@ -1852,7 +1863,9 @@
       };
       
       // Initialize control type UI on startup
-      updateControlType();
+      if (typeof updateControlType === 'function') {
+        try { updateControlType(); } catch(e) { console.warn('[Init] updateControlType (end of setupMenus) failed:', e); }
+      }
     }
     
 

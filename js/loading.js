@@ -77,16 +77,29 @@
       function showMenuAfterLoading() {
         const loadingScreen = document.getElementById('loading-screen');
         if (!loadingScreen) return;
-        
+
+        // Log the state for debugging
+        const initOk = window.gameModuleReady && !window.gameInitError;
+        console.log('[Loading] Showing menu — gameModuleReady:', window.gameModuleReady, 'initError:', !!window.gameInitError);
+
         // Fade out loading screen
         loadingScreen.classList.add('fade-out');
-        
+
         setTimeout(function() {
           loadingScreen.style.display = 'none';
-          
+
           // Always show main menu after loading — camp is reached via menu buttons
           var mainMenu = document.getElementById('main-menu');
           if (mainMenu) mainMenu.style.display = 'flex';
+
+          // If init failed, show a status indicator on the menu
+          if (!initOk) {
+            var statusDiv = document.createElement('div');
+            statusDiv.style.cssText = 'color:#ff6666;font-size:12px;text-align:center;margin-top:8px;font-family:monospace;';
+            statusDiv.textContent = '⚠️ Game engine failed to load — buttons may retry init';
+            var menuButtons = mainMenu ? mainMenu.querySelector('.menu-buttons') : null;
+            if (menuButtons) menuButtons.appendChild(statusDiv);
+          }
         }, 500);
       }
     })();

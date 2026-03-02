@@ -98,8 +98,10 @@ THREE.js CDN → loading.js → debug.js → state.js → utils.js → audio.js
 ### PR #469 — Fix: Show main menu after loading instead of auto-routing to camp
 - `showMenuAfterLoading()` had 3-branch routing that always resolved to camp → replaced with simple main menu display
 
-### PR #470 — Fix: always show main menu after loading — remove camp auto-jump
-- Confirmed and re-applied the camp routing fix in `loading.js` + verified `game-screens.js` `init()` doesn't show screens
+### PR #473 — Fix: Menu buttons don't work because init() crashes silently — add visible error display + fallback button handlers
+- `game-loop.js`: Updated catch block to store error in `window.gameInitError`, show visible red error overlay on screen, and call `_attachFallbackMenuHandlers()` so `start-game-btn` and `camp-btn` work even when `setupMenus()` never ran
+- `loading.js`: `showMenuAfterLoading()` now logs `gameModuleReady` and `gameInitError` state, and appends a warning indicator to the menu if init failed
+- `game-screens.js`: Added `console.log` checkpoints throughout `init()` (after save load, scene, camera, renderer, inputs, menus) so the exact crash point is visible in the console; guarded `updateControlType()` and `updateBackgroundMusic()` calls in `setupMenus()` with `typeof` + try-catch to prevent non-fatal audio/input crashes from breaking menu setup
 
 ---
 
@@ -113,6 +115,7 @@ THREE.js CDN → loading.js → debug.js → state.js → utils.js → audio.js
 - ✅ Death screen no longer auto-activates camp world
 - ✅ Cross-file `spawnParticles` reference safe
 - ✅ `gameModuleReady` always gets set even if `init()` fails
+- ✅ `init()` crash now shows visible red error overlay + fallback button handlers so menu buttons always work
 
 ### ⚠️ Possibly Still Needs Work
 - The `showComicInfoBox` welcome popup ("Welcome Dropplet" with yellow Continue button) — callback may still not work properly when entering camp for the first time
@@ -355,4 +358,4 @@ Fix broken game after JS file split (PR #464) — restore full loading → menu 
 
 ---
 
-*Last updated: 2026-03-01*
+*Last updated: 2026-03-02*
