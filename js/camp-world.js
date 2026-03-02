@@ -40,6 +40,8 @@
     { id: 'tavern',             x: -5,  z: 14,  label: 'Tavern',           icon: '🍺' },
     { id: 'shop',               x:  5,  z: 14,  label: 'Shop',             icon: '🛒' },
     { id: 'prestige',           x:  0,  z:-19,  label: 'Prestige Altar',   icon: '✨' },
+    { id: 'trashRecycle',       x: -13, z: -2,  label: 'Trash & Recycle',  icon: '♻️' },
+    { id: 'tempShop',           x:  13, z: -2,  label: 'Temp Shop',        icon: '🏪' },
   ];
 
   // ──────────────────────────────────────────────────────────

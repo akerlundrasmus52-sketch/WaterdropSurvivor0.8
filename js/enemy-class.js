@@ -1874,6 +1874,11 @@
             progressTutorialQuest('quest14_kill25', true);
             showStatChange('⚔️ 25 Kills! Return to camp to claim your reward!');
           }
+          // Kill 20 enemies (Trash & Recycle unlock)
+          if (currentQuest && currentQuest.id === 'quest26_kill20' && playerStats.kills >= 20 &&
+              !saveData.tutorialQuests.readyToClaim.includes('quest26_kill20')) {
+            showStatChange('⚔️ 20 Kills! Return to camp to claim your reward!');
+          }
         }
         
         // Track side challenge progress

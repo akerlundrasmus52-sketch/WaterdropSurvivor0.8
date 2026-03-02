@@ -115,6 +115,14 @@
         if (currentQuest.id === 'quest14_kill25' && saveData.tutorialQuests.killsThisRun >= 25) {
           progressTutorialQuest('quest14_kill25', true);
         }
+        // Quest: Kill 20 enemies (Trash & Recycle unlock)
+        if (currentQuest.id === 'quest26_kill20' && saveData.tutorialQuests.killsThisRun >= 20) {
+          progressTutorialQuest('quest26_kill20', true);
+        }
+        // Quest: Survive 3 minutes (Temp Shop unlock)
+        if (currentQuest.id === 'quest28_survive3min' && survivalTime >= 180) {
+          progressTutorialQuest('quest28_survive3min', true);
+        }
       }
       
       // Quest 3 (new chain): Reach Level 5

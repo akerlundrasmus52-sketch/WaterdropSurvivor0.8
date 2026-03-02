@@ -1598,7 +1598,7 @@
       const dailyNotif = document.getElementById('camp-daily-notif');
       const dailyStreak = document.getElementById('camp-daily-streak');
       if (window.GameDailies) {
-        const canClaim = !window.GameDailies.checkDailyLogin(saveData).alreadyClaimed;
+        const canClaim = window.GameDailies.isDailyAvailable(saveData);
         if (dailyNotif) dailyNotif.style.display = canClaim ? 'block' : 'none';
         if (dailyStreak) {
           const streak = (saveData.dailies && saveData.dailies.loginStreak) || 0;
@@ -1629,14 +1629,17 @@
       // Build daily login calendar
       if (window.GameDailies) {
         const streak = (saveData.dailies && saveData.dailies.loginStreak) || 0;
+        const canClaim = window.GameDailies.isDailyAvailable(saveData);
+        const peeked = canClaim ? window.GameDailies.peekDailyReward(saveData) : null;
+        const nextDay = peeked ? peeked.day : 0; // 1-based day number
         const rewards = window.GameDailies.DAILY_LOGIN_REWARDS;
         let html = '<div style="color:#FFD700;font-size:1.6em;margin-bottom:12px;text-shadow:2px 2px 0 #000;letter-spacing:2px;">🎁 DAILY REWARD</div>';
         html += '<div style="font-family:Arial,sans-serif;font-size:13px;color:#ccc;margin-bottom:16px;">Login Streak: <b style="color:#FFD700;">' + streak + ' days</b></div>';
         html += '<div class="daily-login-strip">';
         rewards.forEach(function(r, i) {
           const dayNum = i + 1;
-          const claimed = streak >= dayNum;
-          const isToday = streak % 7 === i && !window.GameDailies.checkDailyLogin(saveData).alreadyClaimed;
+          const claimed = streak >= dayNum && !canClaim;
+          const isToday = canClaim && nextDay === dayNum;
           const cls = 'daily-login-day' + (claimed ? ' claimed' : '') + (isToday ? ' today' : '');
           html += '<div class="' + cls + '">';
           html += '<div class="day-num">Day ' + dayNum + '</div>';
@@ -1646,7 +1649,6 @@
         });
         html += '</div>';
         // Claim button
-        const canClaim = !window.GameDailies.checkDailyLogin(saveData).alreadyClaimed;
         if (canClaim) {
           html += '<button id="claim-daily-btn" style="margin-top:16px;background:linear-gradient(to bottom,#2ecc71,#27ae60);color:#fff;border:3px solid #000;border-radius:8px;padding:10px 24px;font-family:Bangers,cursive;font-size:1.1em;letter-spacing:2px;cursor:pointer;box-shadow:3px 3px 0 #000;">CLAIM REWARD</button>';
         } else {
@@ -1762,6 +1764,20 @@
           tavern:              () => showExpeditionsMenu ? showExpeditionsMenu() : showQuestHall(),
           shop:                () => showProgressionShop(),
           prestige:            () => showPrestigeMenu ? showPrestigeMenu() : showProgressionShop(),
+          trashRecycle:        () => {
+            if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest27_useRecycle') {
+              progressTutorialQuest('quest27_useRecycle', true);
+              saveSaveData();
+            }
+            showInventoryScreen();
+          },
+          tempShop:            () => {
+            if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest29_useTempShop') {
+              progressTutorialQuest('quest29_useTempShop', true);
+              saveSaveData();
+            }
+            showProgressionShop();
+          },
         };
         window.CampWorld.enter(renderer, saveData, campCallbacks);
         // Mark camp-screen as 3D mode only if CampWorld successfully activated
@@ -1862,8 +1878,8 @@
             'trainingHall': { questId: 'quest5_upgradeAttr', label: 'Upgrade an Attribute (Quest 5)' },
             'forge': { questId: 'quest6_survive2min', label: 'Survive 2 Minutes (Quest 6)' },
             'companionHouse': { questId: 'quest8_kill10', label: 'Kill 10 Enemies (Quest 8)' },
-            'trashRecycle': { questId: null, label: 'Future Quest' },
-            'tempShop': { questId: null, label: 'Future Quest' }
+            'trashRecycle': { questId: 'quest26_kill20', label: 'Kill 20 Enemies (Quest 26)' },
+            'tempShop': { questId: 'quest28_survive3min', label: 'Survive 3 Minutes (Quest 28)' }
           };
           
           const questInfo = buildingQuestUnlockMap[buildingId] || { questId: null, label: 'Complete a Quest' };

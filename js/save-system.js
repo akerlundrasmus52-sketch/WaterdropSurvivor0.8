@@ -668,6 +668,7 @@
         else if (currentQuest.id === 'quest8_kill10') questText = Math.min(kills,10) + '/10';
         else if (currentQuest.id === 'quest10_kill15') questText = Math.min(kills,15) + '/15';
         else if (currentQuest.id === 'quest14_kill25') questText = Math.min(kills,25) + '/25';
+        else if (currentQuest.id === 'quest26_kill20') questText = Math.min(kills,20) + '/20';
         else if (currentQuest.id === 'quest13_windmill') questText = 'Active';
         else if (currentQuest.id === 'quest15_accountVisit') questText = 'Go to Camp';
         else if (currentQuest.id === 'quest18_findCompanionEgg') questText = '→ Area 51';
@@ -856,6 +857,7 @@
           else if (cq.id === 'quest8_kill10')  prog = `${Math.min(k,10)}/10`;
           else if (cq.id === 'quest10_kill15') prog = `${Math.min(k,15)}/15`;
           else if (cq.id === 'quest14_kill25') prog = `${Math.min(k,25)}/25`;
+          else if (cq.id === 'quest26_kill20') prog = `${Math.min(k,20)}/20`;
           else if (cq.id === 'quest11_findAllLandmarks') {
             const lf = saveData.tutorialQuests.landmarksFound || {};
             const found = Object.values(LANDMARK_CONFIGS).filter(cfg => lf[cfg.key]).length;
