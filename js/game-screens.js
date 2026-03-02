@@ -44,7 +44,11 @@
       console.log('[Init] Camera created OK');
 
       // Renderer
-      renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer = new THREE.WebGLRenderer({
+        antialias: false,
+        powerPreference: 'high-performance',
+        precision: 'mediump'
+      });
       renderer.setSize(window.innerWidth, window.innerHeight);
       // Split-resolution: render the 3D world at a reduced pixel ratio to boost FPS.
       // HTML/CSS UI layers are unaffected and always render at full native resolution.
@@ -2387,19 +2391,27 @@
     }
     
     // Enhanced muzzle smoke effect - managed array to avoid RAF accumulation
+    // Shared smoke geometry — avoids per-particle geometry allocations
+    let _sharedSmokeSphereGeo = null;
+    function _ensureSharedSmokeGeo() {
+      if (!_sharedSmokeSphereGeo && typeof THREE !== 'undefined') {
+        _sharedSmokeSphereGeo = new THREE.SphereGeometry(0.04, 4, 4); // Reduced segments 6→4
+      }
+    }
+
     function spawnMuzzleSmoke(pos, count = 5) {
       const cappedCount = Math.min(count, 3); // Cap per-call count
+      _ensureSharedSmokeGeo();
       for(let i = 0; i < cappedCount; i++) {
         // Enforce global cap - just skip if full, particles expire naturally
         if (smokeParticles.length >= MAX_SMOKE_PARTICLES) continue;
-        const smokeGeo = new THREE.SphereGeometry(0.04, 6, 6);
         const smokeMat = new THREE.MeshBasicMaterial({ 
           color: 0x666666, 
           transparent: true, 
           opacity: 0.5,
           depthWrite: false
         });
-        const smoke = new THREE.Mesh(smokeGeo, smokeMat);
+        const smoke = new THREE.Mesh(_sharedSmokeSphereGeo, smokeMat);
         smoke.position.set(
           pos.x + (Math.random() - 0.5) * 0.3,
           pos.y + 0.5,
@@ -2409,7 +2421,7 @@
         smokeParticles.push({
           mesh: smoke,
           material: smokeMat,
-          geometry: smokeGeo,
+          geometry: _sharedSmokeSphereGeo,
           velocity: {
             x: (Math.random() - 0.5) * 0.02,
             y: 0.03 + Math.random() * 0.02,

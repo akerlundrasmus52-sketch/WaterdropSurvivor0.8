@@ -128,6 +128,10 @@
    */
   function emitBurst(pos, count, options) {
     if (!_scene) return;
+    // FPS-based particle budget: scale count by current throttle level
+    const scale = (window.performanceLog && window.performanceLog.particleThrottleScale !== undefined)
+      ? window.performanceLog.particleThrottleScale : 1.0;
+    count = Math.ceil(count * scale);
     const opts = options || {};
     const spreadXZ  = opts.spreadXZ  !== undefined ? opts.spreadXZ  : 1.8;
     // spreadY default reduced to 0.3 — gives realistic 0–2m blood height instead of 40m+
@@ -169,9 +173,12 @@
    */
   function emitPulse(pos, options) {
     if (!_scene) return;
+    // FPS-based particle budget: scale per-pulse count by current throttle level
+    const scale = (window.performanceLog && window.performanceLog.particleThrottleScale !== undefined)
+      ? window.performanceLog.particleThrottleScale : 1.0;
     const opts     = options || {};
     const pulses   = opts.pulses   !== undefined ? opts.pulses   : 6;
-    const perPulse = opts.perPulse !== undefined ? opts.perPulse : 500;
+    const perPulse = Math.ceil((opts.perPulse !== undefined ? opts.perPulse : 500) * scale);
     const interval = opts.interval !== undefined ? opts.interval : 200; // ms
     const arcDir   = opts.arcDir;   // optional THREE.Vector3 direction
     const spreadXZ = opts.spreadXZ !== undefined ? opts.spreadXZ : 1.8;

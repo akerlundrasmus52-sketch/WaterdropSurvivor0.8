@@ -7,6 +7,13 @@
     let _sharedGoreMats = [null, null]; // Two alternating MeshStandardMaterials
     let _sharedLavaGeo  = null;     // SphereGeometry for lava spout particles
     let _sharedLavaMats = [null, null]; // Two color variants
+    // Shared lightning bolt materials (avoid creating new materials per bolt)
+    let _sharedBoltMat = null;
+    let _sharedGlowMat = null;
+    // Shared smoke geometry (avoid per-particle geometry creation)
+    let _sharedSmokeGeo = null;
+    // Cached homing missile geometries/materials (avoid per-missile creation)
+    let _missileGeoCache = null;
 
     function _ensureSharedGeo() {
       if (typeof THREE === 'undefined') return;
@@ -20,6 +27,27 @@
         _sharedLavaMats[0] = new THREE.MeshBasicMaterial({ color: 0xFF4500 });
         _sharedLavaMats[1] = new THREE.MeshBasicMaterial({ color: 0xFF8C00 });
       }
+      if (!_sharedBoltMat) {
+        _sharedBoltMat = new THREE.LineBasicMaterial({ color: 0xFFFF00, transparent: true, opacity: 1.0, linewidth: 2 });
+        _sharedGlowMat = new THREE.LineBasicMaterial({ color: 0x88DDFF, transparent: true, opacity: 0.6, linewidth: 3 });
+      }
+      if (!_sharedSmokeGeo) {
+        _sharedSmokeGeo = new THREE.SphereGeometry(0.15, 4, 4);
+      }
+      if (!_missileGeoCache) {
+        _missileGeoCache = {
+          bodyGeo: new THREE.SphereGeometry(0.3, 8, 8),
+          bodyMat: new THREE.MeshToonMaterial({ color: 0x222222 }),
+          noseGeo: new THREE.ConeGeometry(0.2, 0.3, 6),
+          noseMat: new THREE.MeshToonMaterial({ color: 0x111111 }),
+          armGeo: new THREE.BoxGeometry(0.5, 0.08, 0.15),
+          armMat: new THREE.MeshToonMaterial({ color: 0x111111 }),
+          eyeGeo: new THREE.SphereGeometry(0.08, 6, 6),
+          eyeWhiteMat: new THREE.MeshBasicMaterial({ color: 0xFFFFFF }),
+          pupilGeo: new THREE.SphereGeometry(0.04, 4, 4),
+          pupilMat: new THREE.MeshBasicMaterial({ color: 0x000000 })
+        };
+      }
     }
 
     // ─── Muzzle Flash PointLight Pool ──────────────────────────────────────────────
@@ -30,6 +58,14 @@
     // Reusable temporary vector for _acquireFlash callers (avoids per-shot clone allocations).
     // Initialized at script load time — THREE CDN is always loaded before game-loop.js.
     const _flashTempPos = new THREE.Vector3();
+    // Reusable temp vectors for weapon targeting — avoids per-shot Vector3 allocations
+    const _tmpGunTarget = new THREE.Vector3();
+    const _tmpSpreadTarget = new THREE.Vector3();
+    const _tmpShotgunDir = new THREE.Vector3();
+    const _tmpShotgunTarget = new THREE.Vector3();
+    const _tmpBoltStart = new THREE.Vector3();
+    const _tmpBoltEnd = new THREE.Vector3();
+    const _tmpKnockback = new THREE.Vector3();
 
     function _ensureFlashPool(sceneRef) {
       if (_flashPool !== null || typeof THREE === 'undefined') return;
@@ -84,9 +120,12 @@
       recentFrameTimes: [],
       rollingAvgFPS: 60,
       particleThrottleActive: false,
+      particleThrottleScale: 1.0, // Granular: 1.0 = full, 0.25 = 25%
       consecutiveSkipCount: 0, // Track consecutive skipped renders to prevent frozen screen
       gameLogicErrorCount: 0  // Track consecutive game logic errors (freeze detection)
     };
+    // Expose for cross-script FPS-based throttling (BloodSystem, etc.)
+    window.performanceLog = performanceLog;
     
     // FRESH: FPS Watchdog - Update rolling average and throttle particles if needed
     function updateFPSWatchdog(frameTime) {
@@ -103,14 +142,32 @@
         const avgFrameTime = performanceLog.recentFrameTimes.reduce((a, b) => a + b, 0) / 10;
         performanceLog.rollingAvgFPS = 1000 / avgFrameTime; // Convert ms to FPS
         
-        // Throttle particles if FPS < 30
-        if (performanceLog.rollingAvgFPS < 30 && !performanceLog.particleThrottleActive) {
-          performanceLog.particleThrottleActive = true;
-          console.warn(`FPS watchdog: FPS below 30 (${performanceLog.rollingAvgFPS.toFixed(1)}), throttling particles to 50%`);
-        } else if (performanceLog.rollingAvgFPS >= 35 && performanceLog.particleThrottleActive) {
-          // Restore particles when FPS recovers above 35 (hysteresis to prevent flapping)
+        // Granular particle throttling based on FPS tiers
+        const fps = performanceLog.rollingAvgFPS;
+        let newScale;
+        if (fps < 20) {
+          newScale = 0.25; // Critical: 25% particles
+        } else if (fps < 30) {
+          newScale = 0.50; // Low: 50% particles
+        } else if (fps < 45) {
+          newScale = 0.75; // Medium: 75% particles
+        } else {
+          newScale = 1.0;  // Good: full particles
+        }
+        
+        // Apply with hysteresis: only restore when FPS is 5 above threshold
+        if (newScale < performanceLog.particleThrottleScale) {
+          performanceLog.particleThrottleScale = newScale;
+          performanceLog.particleThrottleActive = newScale < 1.0;
+          if (newScale < 1.0) console.warn(`FPS watchdog: FPS=${fps.toFixed(1)}, particles at ${(newScale*100).toFixed(0)}%`);
+        } else if (fps >= 50 && performanceLog.particleThrottleScale < 1.0) {
+          performanceLog.particleThrottleScale = 1.0;
           performanceLog.particleThrottleActive = false;
-          console.log(`FPS watchdog: FPS recovered (${performanceLog.rollingAvgFPS.toFixed(1)}), restoring particles`);
+          console.log(`FPS watchdog: FPS recovered (${fps.toFixed(1)}), restoring full particles`);
+        } else if (fps >= 35 && performanceLog.particleThrottleScale < 0.75) {
+          performanceLog.particleThrottleScale = 0.75;
+        } else if (fps >= 25 && performanceLog.particleThrottleScale < 0.50) {
+          performanceLog.particleThrottleScale = 0.50;
         }
       }
     }
@@ -122,8 +179,9 @@
     if (typeof window.spawnParticles === 'function') {
       const originalSpawnParticles = window.spawnParticles;
       window.spawnParticles = function(position, color, count) {
-        // Apply throttle if active (50% reduction)
-        const adjustedCount = performanceLog.particleThrottleActive ? Math.ceil(count * 0.5) : count;
+        // Apply granular throttle based on FPS tier (25-100%)
+        const adjustedCount = Math.ceil(count * performanceLog.particleThrottleScale);
+        if (adjustedCount <= 0) return;
         return originalSpawnParticles(position, color, adjustedCount);
       };
     }
@@ -160,11 +218,12 @@
       if (!window.dirLight || !renderer) return;
 
       if (!_shadowsReducedForCombat && _combatKillsInWindow >= COMBAT_INTENSITY_HIGH) {
-        // Heavy combat — drop shadow map to 512 to reclaim GPU fill-rate
+        // Heavy combat — drop shadow map to 512 and use faster shadow type
         if (window.dirLight.shadow.mapSize.width !== 512) {
           if (window.dirLight.shadow.map) { window.dirLight.shadow.map.dispose(); window.dirLight.shadow.map = null; }
           window.dirLight.shadow.mapSize.width  = 512;
           window.dirLight.shadow.mapSize.height = 512;
+          renderer.shadowMap.type = THREE.PCFShadowMap; // Faster shadow filtering
           renderer.shadowMap.needsUpdate = true;
         }
         _shadowsReducedForCombat = true;
@@ -175,6 +234,7 @@
           if (window.dirLight.shadow.map) { window.dirLight.shadow.map.dispose(); window.dirLight.shadow.map = null; }
           window.dirLight.shadow.mapSize.width  = defaultSize;
           window.dirLight.shadow.mapSize.height = defaultSize;
+          renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Restore quality shadows
           renderer.shadowMap.needsUpdate = true;
         }
         _shadowsReducedForCombat = false;
@@ -345,8 +405,9 @@
 
       
       // Update ambient creatures (birds, bats, fireflies, owls) based on time of day
-      if (isGameActive && !isPaused) {
-        updateAmbientCreatures(dt);
+      // Throttle to every other frame — cosmetic-only, saves CPU
+      if (isGameActive && !isPaused && (performanceLog.frameCount & 1) === 0) {
+        updateAmbientCreatures(dt * 2); // Double dt to compensate for half update rate
       }
       
       // Frame Skip Mechanism: Determine if rendering should be skipped based on previous frame time
@@ -497,7 +558,11 @@
 
       // Spawn Logic - Only spawn new wave if previous wave is cleared
       frameCount++;
-      aliveEnemies = enemies.filter(e => !e.isDead).length;
+      // Count alive enemies without creating a new array (avoids per-frame GC allocation)
+      aliveEnemies = 0;
+      for (let i = 0; i < enemies.length; i++) {
+        if (!enemies[i].isDead) aliveEnemies++;
+      }
       const timeSinceLastWave = frameCount - lastWaveEndTime;
       const minWaveDelay = Math.floor(GAME_CONFIG.waveInterval * 0.6); // 60% of wave interval (3 seconds at 60fps)
       
@@ -914,15 +979,15 @@
       
       // 1. GUN
       if (weapons.gun.active && time - weapons.gun.lastShot > weapons.gun.cooldown) {
-        // Find nearest enemy
+        // Find nearest enemy (squared distance avoids sqrt per enemy)
         let nearest = null;
-        let minDst = Infinity;
+        let minDstSq = weapons.gun.range * weapons.gun.range;
         
         for (let e of enemies) {
           if (e.isDead) continue;
-          const d = player.mesh.position.distanceTo(e.mesh.position);
-          if (d < weapons.gun.range && d < minDst) {
-            minDst = d;
+          const dSq = player.mesh.position.distanceToSquared(e.mesh.position);
+          if (dSq < minDstSq) {
+            minDstSq = dSq;
             nearest = e;
           }
         }
@@ -942,17 +1007,19 @@
           } else if (joystickRight.active) {
             // Right stick directs the shot
             const aimAngle = Math.atan2(joystickRight.x, joystickRight.y);
-            gunTarget = new THREE.Vector3(
+            _tmpGunTarget.set(
               player.mesh.position.x + Math.sin(aimAngle) * weapons.gun.range,
               0,
               player.mesh.position.z + Math.cos(aimAngle) * weapons.gun.range
             );
+            gunTarget = _tmpGunTarget;
           } else {
-            gunTarget = new THREE.Vector3(
+            _tmpGunTarget.set(
               player.mesh.position.x + Math.sin(player.mesh.rotation.y) * weapons.gun.range,
               0,
               player.mesh.position.z + Math.cos(player.mesh.rotation.y) * weapons.gun.range
             );
+            gunTarget = _tmpGunTarget;
           }
           // Fire based on barrels
           for(let i=0; i<weapons.gun.barrels; i++) {
@@ -977,12 +1044,12 @@
                 const dx = gunTarget.x - player.mesh.position.x;
                 const dz = gunTarget.z - player.mesh.position.z;
                 // Rotate displacement vector by spreadAngle to get a new target at same distance
-                const spreadTarget = new THREE.Vector3(
+                _tmpSpreadTarget.set(
                   player.mesh.position.x + (Math.cos(spreadAngle) * dx - Math.sin(spreadAngle) * dz),
                   0,
                   player.mesh.position.z + (Math.sin(spreadAngle) * dx + Math.cos(spreadAngle) * dz)
                 );
-                projectiles.push(new Projectile(player.mesh.position.x, player.mesh.position.z, spreadTarget));
+                projectiles.push(new Projectile(player.mesh.position.x, player.mesh.position.z, _tmpSpreadTarget));
               }
               
               // Muzzle flash light effect - smaller radius to keep lightning contained to barrel area
@@ -1062,11 +1129,12 @@
       if (weapons.aura.active && time - weapons.aura.lastShot > weapons.aura.cooldown) {
         // Damage all in range (auraRange skill multiplier expands reach)
         const effectiveAuraRange = weapons.aura.range * (playerStats.auraRange || 1.0);
+        const auraRangeSq = effectiveAuraRange * effectiveAuraRange;
         let hit = false;
         enemies.forEach(e => {
           if (e.isDead) return;
-          const d = player.mesh.position.distanceTo(e.mesh.position);
-          if (d < effectiveAuraRange) {
+          const dSq = player.mesh.position.distanceToSquared(e.mesh.position);
+          if (dSq < auraRangeSq) {
           e.takeDamage(weapons.aura.damage * playerStats.strength, false, 'aura');
             hit = true;
           }
@@ -1101,15 +1169,15 @@
         for (let drone of droneTurrets) {
           if (!drone.active) continue;
           
-          // Find nearest enemy for this drone
+          // Find nearest enemy for this drone (squared distance avoids sqrt)
           let nearestEnemy = null;
-          let minDist = Infinity;
+          let minDistSq = weapons.droneTurret.range * weapons.droneTurret.range;
           
           for (let e of enemies) {
             if (e.isDead) continue;
-            const dist = drone.mesh.position.distanceTo(e.mesh.position);
-            if (dist < weapons.droneTurret.range && dist < minDist) {
-              minDist = dist;
+            const distSq = drone.mesh.position.distanceToSquared(e.mesh.position);
+            if (distSq < minDistSq) {
+              minDistSq = distSq;
               nearestEnemy = e;
             }
           }
@@ -1150,40 +1218,40 @@
 
       // 6. DOUBLE BARREL - ENHANCED with 6-pellet spread, heavy recoil, orange/yellow flash
       if (weapons.doubleBarrel.active && time - weapons.doubleBarrel.lastShot > weapons.doubleBarrel.cooldown) {
-        // Find nearest enemy
+        // Find nearest enemy (squared distance avoids sqrt per enemy)
         let nearest = null;
-        let minDst = Infinity;
+        let minDstSq = weapons.doubleBarrel.range * weapons.doubleBarrel.range;
         
         for (let e of enemies) {
           if (e.isDead) continue;
-          const d = player.mesh.position.distanceTo(e.mesh.position);
-          if (d < weapons.doubleBarrel.range && d < minDst) {
-            minDst = d;
+          const dSq = player.mesh.position.distanceToSquared(e.mesh.position);
+          if (dSq < minDstSq) {
+            minDstSq = dSq;
             nearest = e;
           }
         }
 
         if (nearest) {
           // Fire 6 pellets with spread (shotgun pattern)
-          const baseDir = new THREE.Vector3(
+          _tmpShotgunDir.set(
             nearest.mesh.position.x - player.mesh.position.x,
             0,
             nearest.mesh.position.z - player.mesh.position.z
           ).normalize();
           
-          const baseAngle = Math.atan2(baseDir.z, baseDir.x);
+          const baseAngle = Math.atan2(_tmpShotgunDir.z, _tmpShotgunDir.x);
           const spreadAngle = weapons.doubleBarrel.spread;
           
           // Fire pellets with spread (shotgun pattern) - pellets count increases per upgrade
           const pelletCount = weapons.doubleBarrel.pellets || 2;
           for (let i = 0; i < pelletCount; i++) {
             const angle = baseAngle + (Math.random() - 0.5) * spreadAngle * 2;
-            const target = new THREE.Vector3(
+            _tmpShotgunTarget.set(
               player.mesh.position.x + Math.cos(angle) * weapons.doubleBarrel.range,
               0,
               player.mesh.position.z + Math.sin(angle) * weapons.doubleBarrel.range
             );
-            const pellet = new Projectile(player.mesh.position.x, player.mesh.position.z, target);
+            const pellet = new Projectile(player.mesh.position.x, player.mesh.position.z, _tmpShotgunTarget);
             pellet.isDoubleBarrel = true;
             pellet.speed = 0.6; // Faster projectiles for shotgun
             projectiles.push(pellet);
@@ -1203,11 +1271,10 @@
           _acquireFlash(scene, 0xFFA500, 8, 18, _flashTempPos, 100);
           
           // Focused muzzle flash for shotgun blast (wider spread)
-          const shotgunMuzzlePos = player.mesh.position.clone();
-          shotgunMuzzlePos.y += 0.5;
-          spawnParticles(shotgunMuzzlePos, 0xFFA500, 3); // Orange muzzle
-          spawnParticles(shotgunMuzzlePos, 0xFFFF00, 2); // Yellow spark
-          spawnParticles(shotgunMuzzlePos, 0xFFFFFF, 2); // White flash
+          _flashTempPos.copy(player.mesh.position); _flashTempPos.y = 0.5;
+          spawnParticles(_flashTempPos, 0xFFA500, 3); // Orange muzzle
+          spawnParticles(_flashTempPos, 0xFFFF00, 2); // Yellow spark
+          spawnParticles(_flashTempPos, 0xFFFFFF, 2); // White flash
           // Heavy muzzle smoke for shotgun
           spawnMuzzleSmoke(player.mesh.position, 6);
           
@@ -1218,15 +1285,15 @@
       
       // 7. ICE SPEAR
       if (weapons.iceSpear.active && time - weapons.iceSpear.lastShot > weapons.iceSpear.cooldown) {
-        // Find nearest enemy
+        // Find nearest enemy (squared distance avoids sqrt per enemy)
         let nearest = null;
-        let minDst = Infinity;
+        let minDstSq = weapons.iceSpear.range * weapons.iceSpear.range;
         
         for (let e of enemies) {
           if (e.isDead) continue;
-          const d = player.mesh.position.distanceTo(e.mesh.position);
-          if (d < weapons.iceSpear.range && d < minDst) {
-            minDst = d;
+          const dSq = player.mesh.position.distanceToSquared(e.mesh.position);
+          if (dSq < minDstSq) {
+            minDstSq = dSq;
             nearest = e;
           }
         }
@@ -1248,12 +1315,13 @@
       
       // 8. FIRE RING
       if (weapons.fireRing.active && time - weapons.fireRing.lastShot > weapons.fireRing.cooldown) {
-        // Damage enemies within ring range
+        // Damage enemies within ring range (squared distance avoids sqrt)
         let hit = false;
+        const fireRangeSq = weapons.fireRing.range * weapons.fireRing.range;
         enemies.forEach(e => {
           if (e.isDead) return;
-          const d = player.mesh.position.distanceTo(e.mesh.position);
-          if (d < weapons.fireRing.range) {
+          const dSq = player.mesh.position.distanceToSquared(e.mesh.position);
+          if (dSq < fireRangeSq) {
             const dmg = weapons.fireRing.damage * playerStats.strength *
               (1 + (playerStats.fireDamage || 0) + (playerStats.elementalDamage || 0));
             const isCrit = Math.random() < playerStats.critChance;
@@ -1283,17 +1351,17 @@
       // 9. LIGHTNING ARC — chain lightning between up to N enemies
       if (weapons.lightning.active && time - weapons.lightning.lastShot > weapons.lightning.cooldown) {
         let nearest = null;
-        let minDst = Infinity;
+        let minDstSq = weapons.lightning.range * weapons.lightning.range;
         for (let e of enemies) {
           if (e.isDead) continue;
-          const d = player.mesh.position.distanceTo(e.mesh.position);
-          if (d < weapons.lightning.range && d < minDst) { minDst = d; nearest = e; }
+          const dSq = player.mesh.position.distanceToSquared(e.mesh.position);
+          if (dSq < minDstSq) { minDstSq = dSq; nearest = e; }
         }
         if (nearest) {
           const chainCount = weapons.lightning.chainCount || 3;
           const hitTargets = new Set();
           let current = nearest;
-          let prevPos = player.mesh.position.clone(); // Start bolt from player
+          _tmpBoltStart.copy(player.mesh.position); // Start bolt from player (reuse temp)
           for (let c = 0; c < chainCount && current; c++) {
             if (hitTargets.has(current)) break;
             hitTargets.add(current);
@@ -1307,23 +1375,25 @@
             
             // Visible lightning bolt line from previous target to current
             const boltPoints = [];
-            const startP = prevPos.clone(); startP.y = 0.8;
-            const endP = current.mesh.position.clone(); endP.y = 0.8;
+            _tmpBoltStart.y = 0.8;
+            _tmpBoltEnd.copy(current.mesh.position); _tmpBoltEnd.y = 0.8;
             const segments = 6 + Math.floor(Math.random() * 4);
             for (let s = 0; s <= segments; s++) {
               const t = s / segments;
-              const px = startP.x + (endP.x - startP.x) * t + (s > 0 && s < segments ? (Math.random() - 0.5) * 0.6 : 0);
-              const py = startP.y + (endP.y - startP.y) * t + (s > 0 && s < segments ? (Math.random() - 0.5) * 0.3 : 0);
-              const pz = startP.z + (endP.z - startP.z) * t + (s > 0 && s < segments ? (Math.random() - 0.5) * 0.6 : 0);
+              const px = _tmpBoltStart.x + (_tmpBoltEnd.x - _tmpBoltStart.x) * t + (s > 0 && s < segments ? (Math.random() - 0.5) * 0.6 : 0);
+              const py = _tmpBoltStart.y + (_tmpBoltEnd.y - _tmpBoltStart.y) * t + (s > 0 && s < segments ? (Math.random() - 0.5) * 0.3 : 0);
+              const pz = _tmpBoltStart.z + (_tmpBoltEnd.z - _tmpBoltStart.z) * t + (s > 0 && s < segments ? (Math.random() - 0.5) * 0.6 : 0);
               boltPoints.push(new THREE.Vector3(px, py, pz));
             }
+            _ensureSharedGeo();
             const boltGeo = new THREE.BufferGeometry().setFromPoints(boltPoints);
-            const boltMat = new THREE.LineBasicMaterial({ color: 0xFFFF00, transparent: true, opacity: 1.0, linewidth: 2 });
+            // Clone shared materials so each bolt can fade independently
+            const boltMat = _sharedBoltMat.clone();
             const boltLine = new THREE.Line(boltGeo, boltMat);
             scene.add(boltLine);
             // Glow bolt (wider, dimmer)
-            const glowMat = new THREE.LineBasicMaterial({ color: 0x88DDFF, transparent: true, opacity: 0.6, linewidth: 3 });
-            const glowLine = new THREE.Line(boltGeo.clone(), glowMat);
+            const glowMat = _sharedGlowMat.clone();
+            const glowLine = new THREE.Line(boltGeo, glowMat); // share geometry, no clone needed
             scene.add(glowLine);
             // Fade and remove bolt
             if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
@@ -1335,7 +1405,6 @@
                 if (boltLife <= 0) {
                   scene.remove(boltLine); scene.remove(glowLine);
                   boltGeo.dispose(); boltMat.dispose(); glowMat.dispose();
-                  glowLine.geometry.dispose();
                   return false;
                 }
                 return true;
@@ -1343,10 +1412,9 @@
             } else {
               scene.remove(boltLine); scene.remove(glowLine);
               boltGeo.dispose(); boltMat.dispose(); glowMat.dispose();
-              glowLine.geometry.dispose();
             }
             
-            prevPos = current.mesh.position.clone();
+            _tmpBoltStart.copy(current.mesh.position);
             // Find next chain target
             let nextTarget = null; let nextDist = Infinity;
             for (let e of enemies) {
@@ -1366,10 +1434,11 @@
 
       // 10. POISON CLOUD — AoE damage field around player that poisons nearby enemies
       if (weapons.poison.active && time - weapons.poison.lastShot > weapons.poison.cooldown) {
+        const poisonRangeSq = weapons.poison.range * weapons.poison.range;
         enemies.forEach(e => {
           if (e.isDead) return;
-          const d = player.mesh.position.distanceTo(e.mesh.position);
-          if (d < weapons.poison.range) {
+          const dSq = player.mesh.position.distanceToSquared(e.mesh.position);
+          if (dSq < poisonRangeSq) {
             const dmg = weapons.poison.damage * playerStats.strength;
             e.takeDamage(Math.floor(dmg));
             spawnParticles(e.mesh.position, 0x00FF00, 4);
@@ -1384,48 +1453,40 @@
 
       // 11. HOMING MISSILE — Bullet Bill style with fire/smoke trail
       if (weapons.homing.active && time - weapons.homing.lastShot > weapons.homing.cooldown) {
-        let nearest = null; let minDst = Infinity;
+        let nearest = null; let minDstSq = weapons.homing.range * weapons.homing.range;
         for (let e of enemies) {
           if (e.isDead) continue;
-          const d = player.mesh.position.distanceTo(e.mesh.position);
-          if (d < weapons.homing.range && d < minDst) { minDst = d; nearest = e; }
+          const dSq = player.mesh.position.distanceToSquared(e.mesh.position);
+          if (dSq < minDstSq) { minDstSq = dSq; nearest = e; }
         }
         if (nearest) {
-          // Bullet Bill body: dark sphere with white eyes
+          // Bullet Bill body: dark sphere with white eyes — use cached geometries/materials
+          _ensureSharedGeo();
+          const mc = _missileGeoCache;
           const missileGroup = new THREE.Group();
-          const bodyGeo = new THREE.SphereGeometry(0.3, 8, 8);
-          const bodyMat = new THREE.MeshToonMaterial({ color: 0x222222 });
-          const body = new THREE.Mesh(bodyGeo, bodyMat);
+          const body = new THREE.Mesh(mc.bodyGeo, mc.bodyMat);
           missileGroup.add(body);
           // Nose cone
-          const noseGeo = new THREE.ConeGeometry(0.2, 0.3, 6);
-          const noseMat = new THREE.MeshToonMaterial({ color: 0x111111 });
-          const nose = new THREE.Mesh(noseGeo, noseMat);
+          const nose = new THREE.Mesh(mc.noseGeo, mc.noseMat);
           nose.rotation.x = Math.PI / 2;
           nose.position.z = 0.35;
           missileGroup.add(nose);
           // Arms (small fins)
-          const armGeo = new THREE.BoxGeometry(0.5, 0.08, 0.15);
-          const armMat = new THREE.MeshToonMaterial({ color: 0x111111 });
-          const arms = new THREE.Mesh(armGeo, armMat);
+          const arms = new THREE.Mesh(mc.armGeo, mc.armMat);
           arms.position.z = -0.15;
           missileGroup.add(arms);
           // White eyes
-          const eyeGeo = new THREE.SphereGeometry(0.08, 6, 6);
-          const eyeWhiteMat = new THREE.MeshBasicMaterial({ color: 0xFFFFFF });
-          const leftEye = new THREE.Mesh(eyeGeo, eyeWhiteMat);
+          const leftEye = new THREE.Mesh(mc.eyeGeo, mc.eyeWhiteMat);
           leftEye.position.set(-0.12, 0.08, 0.22);
           missileGroup.add(leftEye);
-          const rightEye = new THREE.Mesh(eyeGeo, eyeWhiteMat.clone());
+          const rightEye = new THREE.Mesh(mc.eyeGeo, mc.eyeWhiteMat);
           rightEye.position.set(0.12, 0.08, 0.22);
           missileGroup.add(rightEye);
           // Pupils
-          const pupilGeo = new THREE.SphereGeometry(0.04, 4, 4);
-          const pupilMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
-          const leftPupil = new THREE.Mesh(pupilGeo, pupilMat);
+          const leftPupil = new THREE.Mesh(mc.pupilGeo, mc.pupilMat);
           leftPupil.position.set(-0.12, 0.08, 0.28);
           missileGroup.add(leftPupil);
-          const rightPupil = new THREE.Mesh(pupilGeo, pupilMat.clone());
+          const rightPupil = new THREE.Mesh(mc.pupilGeo, mc.pupilMat);
           rightPupil.position.set(0.12, 0.08, 0.28);
           missileGroup.add(rightPupil);
           
@@ -1499,24 +1560,22 @@
                     spawnBloodDecal({ x: e.mesh.position.x + (Math.random()-0.5)*0.8, y: 0, z: e.mesh.position.z + (Math.random()-0.5)*0.8 });
                   }
                   // Heavy knockback from missile
-                  const kbDir = new THREE.Vector3(e.mesh.position.x - missileGroup.position.x, 0, e.mesh.position.z - missileGroup.position.z).normalize();
-                  e.mesh.position.x += kbDir.x * 2.5;
-                  e.mesh.position.z += kbDir.z * 2.5;
+                  _tmpKnockback.set(e.mesh.position.x - missileGroup.position.x, 0, e.mesh.position.z - missileGroup.position.z).normalize();
+                  e.mesh.position.x += _tmpKnockback.x * 2.5;
+                  e.mesh.position.z += _tmpKnockback.z * 2.5;
                   scene.remove(missileGroup);
-                  missileGroup.traverse(child => { if (child.geometry) child.geometry.dispose(); if (child.material) child.material.dispose(); });
+                  // Don't dispose shared cached geometries/materials
                   return false;
                 }
               }
               if (mLife <= 0) {
                 scene.remove(missileGroup);
-                missileGroup.traverse(child => { if (child.geometry) child.geometry.dispose(); if (child.material) child.material.dispose(); });
                 return false;
               }
               return true;
             }});
           } else {
             scene.remove(missileGroup);
-            missileGroup.traverse(child => { if (child.geometry) child.geometry.dispose(); if (child.material) child.material.dispose(); });
           }
           weapons.homing.lastShot = time;
           playSound('shoot');
@@ -1555,11 +1614,11 @@
       
       // Phase 5: Update particles and release back to pool when dead
       // PERFORMANCE: Cull particles beyond fog far plane (invisible beyond fog anyway)
-      const FOG_DISTANCE = RENDERER_CONFIG.fogFar;
+      const FOG_DISTANCE_SQ = RENDERER_CONFIG.fogFar * RENDERER_CONFIG.fogFar;
       particles = particles.filter(p => {
-        // Cull particles beyond fog distance
-        const distToPlayer = p.mesh.position.distanceTo(player.mesh.position);
-        if (distToPlayer > FOG_DISTANCE) {
+        // Cull particles beyond fog distance (squared avoids sqrt per particle)
+        const distSq = p.mesh.position.distanceToSquared(player.mesh.position);
+        if (distSq > FOG_DISTANCE_SQ) {
           // Remove from scene before releasing so the mesh is not left as an
           // invisible orphan in scene.children, which inflates scene child count.
           scene.remove(p.mesh);
@@ -1601,18 +1660,21 @@
           d.life--;
           if (d.mesh.position.y <= 0.02 || d.life <= 0) {
             const hitGround = d.mesh.position.y <= 0.02;
-            const pos = d.mesh.position.clone();
+            // Reuse temp vector instead of clone()
+            _tmpKnockback.copy(d.mesh.position);
             scene.remove(d.mesh);
-            // Only dispose geometry/material if they are NOT shared (ice shards etc.)
-            if (!_sharedGoreGeo || (d.mesh.geometry !== _sharedGoreGeo && d.mesh.geometry !== _sharedLavaGeo)) {
-              d.mesh.geometry.dispose();
+            // Only dispose geometry/material if they are NOT shared
+            if (!d._sharedGeo) {
+              if (!_sharedGoreGeo || (d.mesh.geometry !== _sharedGoreGeo && d.mesh.geometry !== _sharedLavaGeo)) {
+                d.mesh.geometry.dispose();
+              }
             }
             if (!_sharedGoreMats[0] || (d.mesh.material !== _sharedGoreMats[0] && d.mesh.material !== _sharedGoreMats[1] &&
                 d.mesh.material !== _sharedLavaMats[0] && d.mesh.material !== _sharedLavaMats[1])) {
               d.mesh.material.dispose();
             }
             // Ice shards don't leave blood decals on landing
-            if (hitGround && !d.isIce) spawnBloodDecal(pos);
+            if (hitGround && !d.isIce) spawnBloodDecal(_tmpKnockback);
             return false;
           }
           return true;
@@ -1998,9 +2060,6 @@
         }
       }
 
-      // Cleanup and memory management (run every 3 seconds to avoid performance issues)
-      enemies = enemies.filter(e => !e.isDead);
-      
       // Update managed smoke particles (replaces individual RAF loops)
       smokeParticles = smokeParticles.filter(sp => {
         sp.life--;
@@ -2016,7 +2075,7 @@
         sp.material.opacity = (sp.life / sp.maxLife) * 0.5;
         if (sp.life <= 0) {
           scene.remove(sp.mesh);
-          sp.geometry.dispose();
+          // Don't dispose shared smoke geometry
           sp.material.dispose();
           return false;
         }
@@ -2026,6 +2085,9 @@
       const now = Date.now();
       if (now - lastCleanupTime > 3000) { // Run cleanup every 3 seconds
         lastCleanupTime = now;
+
+        // Remove dead enemies from array (forEach already skips dead ones each frame)
+        enemies = enemies.filter(e => !e.isDead);
 
         // Scene children growth guard — warn and cull stale invisible meshes if count exceeds threshold
         const MAX_SCENE_CHILDREN = 1200;
