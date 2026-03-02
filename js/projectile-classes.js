@@ -455,6 +455,8 @@
                 if (!enemy._lastDroneHoleTime || nowDrone - enemy._lastDroneHoleTime > 60) {
                   enemy._lastDroneHoleTime = nowDrone;
                   if (!enemy.bulletHoles) enemy.bulletHoles = [];
+                  ensureBulletHoleMaterials();
+                  if (bulletHoleGeo && bulletHoleMat) {
                   const holesToAdd = droneLevel >= 3 ? 2 : 1;
                   for (let dh = 0; dh < holesToAdd && enemy.bulletHoles.length < 20; dh++) {
                     const dHole = new THREE.Mesh(bulletHoleGeo, bulletHoleMat.clone());
@@ -464,6 +466,7 @@
                     dHole.lookAt(dHole.position.clone().multiplyScalar(2));
                     enemy.mesh.add(dHole);
                     enemy.bulletHoles.push(dHole);
+                  }
                   }
                 }
                 // Blood streaming continuously down front of enemy

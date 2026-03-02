@@ -83,8 +83,15 @@
     const MAX_BLOOD_DRIPS = 40;
     
     // Shared geometry for enemy bullet-hole decals (reused across all enemies for performance)
-    const bulletHoleGeo = new THREE.CircleGeometry(0.08, 6);
-    const bulletHoleMat = new THREE.MeshBasicMaterial({ color: 0x3A0000, transparent: true, opacity: 0.9, depthWrite: false, side: THREE.DoubleSide });
+    // Lazily initialized to avoid crashing if THREE.js CDN hasn't loaded yet
+    let bulletHoleGeo = null;
+    let bulletHoleMat = null;
+    function ensureBulletHoleMaterials() {
+      if ((!bulletHoleGeo || !bulletHoleMat) && typeof THREE !== 'undefined') {
+        bulletHoleGeo = new THREE.CircleGeometry(0.08, 6);
+        bulletHoleMat = new THREE.MeshBasicMaterial({ color: 0x3A0000, transparent: true, opacity: 0.9, depthWrite: false, side: THREE.DoubleSide });
+      }
+    }
     
     let frameCount = 0;
     let isPaused = false;

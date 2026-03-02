@@ -2177,12 +2177,20 @@
       // Show error on screen so the user can report what went wrong
       var errorDiv = document.createElement('div');
       errorDiv.id = 'init-error-display';
-      errorDiv.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:rgba(200,0,0,0.95);color:#fff;padding:15px;font-family:monospace;font-size:13px;z-index:99999;max-height:40vh;overflow-y:auto;border-top:3px solid #ff0;';
-      errorDiv.innerHTML = '<div style="font-size:18px;font-weight:bold;color:#ff0;margin-bottom:8px;">⚠️ GAME INIT ERROR — Please report this:</div>' +
-        '<div style="white-space:pre-wrap;word-break:break-all;">' + (e && e.stack ? e.stack : String(e)) + '</div>' +
-        '<div style="margin-top:10px;color:#ff0;font-size:11px;">Tap anywhere on this red box to dismiss</div>';
+      errorDiv.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:rgba(200,0,0,0.95);color:#fff;padding:10px;font-family:monospace;font-size:11px;z-index:99999;max-height:20vh;overflow-y:auto;border-top:3px solid #ff0;';
+      // Build the error overlay content using DOM APIs to avoid injecting HTML
+      var headerDiv = document.createElement('div');
+      headerDiv.style.cssText = 'font-size:14px;font-weight:bold;color:#ff0;margin-bottom:4px;';
+      headerDiv.textContent = '⚠️ GAME INIT ERROR — Tap to dismiss';
+      var messageDiv = document.createElement('div');
+      messageDiv.style.cssText = 'white-space:pre-wrap;word-break:break-all;max-height:12vh;overflow-y:auto;';
+      messageDiv.textContent = (e && e.stack) ? String(e.stack) : String(e);
+      errorDiv.appendChild(headerDiv);
+      errorDiv.appendChild(messageDiv);
       errorDiv.onclick = function() { errorDiv.style.display = 'none'; };
       document.body.appendChild(errorDiv);
+      // Auto-dismiss after 8 seconds so it doesn't permanently block buttons
+      setTimeout(function() { if (errorDiv) errorDiv.style.display = 'none'; }, 8000);
 
       // Show main menu
       var mainMenu = document.getElementById('main-menu');
@@ -2198,6 +2206,11 @@
     function _attachFallbackMenuHandlers() {
       var startBtn = document.getElementById('start-game-btn');
       var campBtn = document.getElementById('camp-btn');
+
+      // Make buttons visible since the normal background image alignment may not work
+      // when init fails (the buttons are normally transparent overlays on a background)
+      var applyStyle = window._applyFallbackButtonStyles || function() {};
+      [startBtn, campBtn].forEach(function(btn) { applyStyle(btn); });
 
       if (startBtn && !startBtn._hasFallback) {
         startBtn._hasFallback = true;
