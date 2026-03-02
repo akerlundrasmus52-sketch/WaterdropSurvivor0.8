@@ -1616,8 +1616,14 @@
 
     // Show daily reward panel in a popup overlay
     function _showDailyRewardPanel() {
+      if (window.CampWorld && window.CampWorld.isActive) window.CampWorld.pauseInput();
       const overlay = document.createElement('div');
       overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.92);z-index:500;display:flex;align-items:center;justify-content:center;';
+      const _closeDailyOverlay = () => {
+        overlay.remove();
+        _updateCampCornerWidgets();
+        if (window.CampWorld && window.CampWorld.isActive) window.CampWorld.resumeInput();
+      };
       const panel = document.createElement('div');
       panel.style.cssText = 'background:linear-gradient(135deg,#1a1a2e,#0d1020);border:4px solid #FFD700;border-radius:14px;padding:24px;max-width:90vw;width:380px;color:#fff;font-family:"Bangers",cursive;text-align:center;box-shadow:0 0 30px rgba(255,215,0,0.5);';
       // Build daily login calendar
@@ -1655,8 +1661,7 @@
               saveSaveData();
               showStatChange('🎁 Day ' + result.day + ' Reward: +' + result.gold + ' Gold!');
             }
-            overlay.remove();
-            _updateCampCornerWidgets();
+            _closeDailyOverlay();
           };
         }
       } else {
@@ -1665,24 +1670,30 @@
       const closeBtn = document.createElement('button');
       closeBtn.textContent = '✕';
       closeBtn.style.cssText = 'position:absolute;top:12px;right:16px;background:none;border:none;color:#aaa;font-size:20px;cursor:pointer;font-family:Arial,sans-serif;';
-      closeBtn.onclick = () => overlay.remove();
+      closeBtn.onclick = () => _closeDailyOverlay();
       panel.style.position = 'relative';
       panel.appendChild(closeBtn);
       overlay.appendChild(panel);
-      overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+      overlay.onclick = (e) => { if (e.target === overlay) _closeDailyOverlay(); };
       document.body.appendChild(overlay);
     }
 
     // Show spin wheel panel in a popup overlay
     function _showSpinWheelPanel() {
+      if (window.CampWorld && window.CampWorld.isActive) window.CampWorld.pauseInput();
       const overlay = document.createElement('div');
       overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.92);z-index:500;display:flex;align-items:center;justify-content:center;';
+      const _closeWheelOverlay = () => {
+        overlay.remove();
+        _updateCampCornerWidgets();
+        if (window.CampWorld && window.CampWorld.isActive) window.CampWorld.resumeInput();
+      };
       const panel = document.createElement('div');
       panel.style.cssText = 'background:linear-gradient(135deg,#1a1a2e,#0d1020);border:4px solid #FFD700;border-radius:14px;padding:24px;max-width:90vw;width:420px;color:#fff;font-family:"Bangers",cursive;text-align:center;box-shadow:0 0 30px rgba(255,215,0,0.5);overflow-y:auto;max-height:90vh;';
       const closeBtn = document.createElement('button');
       closeBtn.textContent = '✕';
       closeBtn.style.cssText = 'position:absolute;top:12px;right:16px;background:none;border:none;color:#aaa;font-size:20px;cursor:pointer;font-family:Arial,sans-serif;';
-      closeBtn.onclick = () => { overlay.remove(); _updateCampCornerWidgets(); };
+      closeBtn.onclick = () => _closeWheelOverlay();
       panel.style.position = 'relative';
       if (window.GameLuckyWheel) {
         window.GameLuckyWheel.renderWheelPanel(saveData, panel);
@@ -1691,7 +1702,7 @@
       }
       panel.appendChild(closeBtn);
       overlay.appendChild(panel);
-      overlay.onclick = (e) => { if (e.target === overlay) { overlay.remove(); _updateCampCornerWidgets(); } };
+      overlay.onclick = (e) => { if (e.target === overlay) _closeWheelOverlay(); };
       document.body.appendChild(overlay);
     }
 
