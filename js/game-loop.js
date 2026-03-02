@@ -2178,8 +2178,15 @@
       var errorDiv = document.createElement('div');
       errorDiv.id = 'init-error-display';
       errorDiv.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:rgba(200,0,0,0.95);color:#fff;padding:10px;font-family:monospace;font-size:11px;z-index:99999;max-height:20vh;overflow-y:auto;border-top:3px solid #ff0;';
-      errorDiv.innerHTML = '<div style="font-size:14px;font-weight:bold;color:#ff0;margin-bottom:4px;">⚠️ GAME INIT ERROR — Tap to dismiss</div>' +
-        '<div style="white-space:pre-wrap;word-break:break-all;max-height:12vh;overflow-y:auto;">' + (e && e.stack ? e.stack : String(e)) + '</div>';
+      // Build the error overlay content using DOM APIs to avoid injecting HTML
+      var headerDiv = document.createElement('div');
+      headerDiv.style.cssText = 'font-size:14px;font-weight:bold;color:#ff0;margin-bottom:4px;';
+      headerDiv.textContent = '⚠️ GAME INIT ERROR — Tap to dismiss';
+      var messageDiv = document.createElement('div');
+      messageDiv.style.cssText = 'white-space:pre-wrap;word-break:break-all;max-height:12vh;overflow-y:auto;';
+      messageDiv.textContent = (e && e.stack) ? String(e.stack) : String(e);
+      errorDiv.appendChild(headerDiv);
+      errorDiv.appendChild(messageDiv);
       errorDiv.onclick = function() { errorDiv.style.display = 'none'; };
       document.body.appendChild(errorDiv);
       // Auto-dismiss after 8 seconds so it doesn't permanently block buttons

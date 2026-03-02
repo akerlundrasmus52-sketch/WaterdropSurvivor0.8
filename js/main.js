@@ -87,7 +87,7 @@
     let bulletHoleGeo = null;
     let bulletHoleMat = null;
     function ensureBulletHoleMaterials() {
-      if (!bulletHoleGeo && typeof THREE !== 'undefined') {
+      if ((!bulletHoleGeo || !bulletHoleMat) && typeof THREE !== 'undefined') {
         bulletHoleGeo = new THREE.CircleGeometry(0.08, 6);
         bulletHoleMat = new THREE.MeshBasicMaterial({ color: 0x3A0000, transparent: true, opacity: 0.9, depthWrite: false, side: THREE.DoubleSide });
       }
