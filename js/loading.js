@@ -6,6 +6,20 @@
       window.gameModuleReady = false;
       window.loadingComplete = false;
       
+      // Shared utility: make menu buttons visible when the game is in fallback/error mode.
+      // Normally buttons are transparent overlays on a background image; this makes them
+      // clickable even when the background doesn't align or init failed.
+      window._applyFallbackButtonStyles = function(btn) {
+        if (!btn) return;
+        btn.style.background = 'linear-gradient(to bottom, #2980B9, #1A5276)';
+        btn.style.color = '#FFFFFF';
+        btn.style.border = '3px solid #5DADE2';
+        btn.style.textShadow = '0 0 8px rgba(93,173,226,0.8)';
+        btn.style.fontSize = '20px';
+        btn.style.fontWeight = 'bold';
+        btn.style.borderRadius = '12px';
+      };
+
       // Wait for DOM to be ready
       if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', initLoading);
@@ -97,17 +111,18 @@
           if (!initOk) {
             var buttons = mainMenu ? mainMenu.querySelectorAll('.menu-btn') : [];
             for (var i = 0; i < buttons.length; i++) {
-              buttons[i].style.background = 'linear-gradient(to bottom, #2980B9, #1A5276)';
-              buttons[i].style.color = '#FFFFFF';
-              buttons[i].style.border = '3px solid #5DADE2';
-              buttons[i].style.textShadow = '0 0 8px rgba(93,173,226,0.8)';
-              buttons[i].style.fontSize = '20px';
-              buttons[i].style.fontWeight = 'bold';
-              buttons[i].style.borderRadius = '12px';
+              window._applyFallbackButtonStyles(buttons[i]);
             }
 
             var statusDiv = document.createElement('div');
-            statusDiv.style.cssText = 'color:#ff6666;font-size:12px;text-align:center;margin-top:8px;font-family:monospace;position:absolute;bottom:10%;left:0;right:0;';
+            statusDiv.style.color = '#ff6666';
+            statusDiv.style.fontSize = '12px';
+            statusDiv.style.textAlign = 'center';
+            statusDiv.style.fontFamily = 'monospace';
+            statusDiv.style.position = 'absolute';
+            statusDiv.style.bottom = '10%';
+            statusDiv.style.left = '0';
+            statusDiv.style.right = '0';
             statusDiv.textContent = '⚠️ Game engine failed to load — tap buttons to retry';
             var menuButtons = mainMenu ? mainMenu.querySelector('.menu-buttons') : null;
             if (menuButtons) menuButtons.appendChild(statusDiv);

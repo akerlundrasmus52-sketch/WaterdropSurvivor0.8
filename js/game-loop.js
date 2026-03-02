@@ -2202,17 +2202,8 @@
 
       // Make buttons visible since the normal background image alignment may not work
       // when init fails (the buttons are normally transparent overlays on a background)
-      [startBtn, campBtn].forEach(function(btn) {
-        if (btn) {
-          btn.style.background = 'linear-gradient(to bottom, #2980B9, #1A5276)';
-          btn.style.color = '#FFFFFF';
-          btn.style.border = '3px solid #5DADE2';
-          btn.style.textShadow = '0 0 8px rgba(93,173,226,0.8)';
-          btn.style.fontSize = '20px';
-          btn.style.fontWeight = 'bold';
-          btn.style.borderRadius = '12px';
-        }
-      });
+      var applyStyle = window._applyFallbackButtonStyles || function() {};
+      [startBtn, campBtn].forEach(function(btn) { applyStyle(btn); });
 
       if (startBtn && !startBtn._hasFallback) {
         startBtn._hasFallback = true;
