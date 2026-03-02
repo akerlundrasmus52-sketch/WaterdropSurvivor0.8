@@ -1563,11 +1563,11 @@
             const pos = d.mesh.position.clone();
             scene.remove(d.mesh);
             // Only dispose geometry/material if they are NOT shared (ice shards etc.)
-            if (d.mesh.geometry !== _sharedGoreGeo && d.mesh.geometry !== _sharedLavaGeo) {
+            if (!_sharedGoreGeo || (d.mesh.geometry !== _sharedGoreGeo && d.mesh.geometry !== _sharedLavaGeo)) {
               d.mesh.geometry.dispose();
             }
-            if (d.mesh.material !== _sharedGoreMats[0] && d.mesh.material !== _sharedGoreMats[1] &&
-                d.mesh.material !== _sharedLavaMats[0] && d.mesh.material !== _sharedLavaMats[1]) {
+            if (!_sharedGoreMats[0] || (d.mesh.material !== _sharedGoreMats[0] && d.mesh.material !== _sharedGoreMats[1] &&
+                d.mesh.material !== _sharedLavaMats[0] && d.mesh.material !== _sharedLavaMats[1])) {
               d.mesh.material.dispose();
             }
             // Ice shards don't leave blood decals on landing

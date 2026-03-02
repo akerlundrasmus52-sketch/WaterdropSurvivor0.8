@@ -1722,15 +1722,18 @@
     // Check if any overlay element (from the building callback list) is visible
     for (let i = 0; i < _OVERLAY_IDS.length; i++) {
       const el = document.getElementById(_OVERLAY_IDS[i]);
-      if (el && el.style.display !== 'none' && el.style.display !== '') return;
+      if (!el) continue;
+      // Use getComputedStyle so we catch CSS-visible elements as well as inline-styled ones
+      var cs = getComputedStyle(el);
+      if (cs.display !== 'none') return;
     }
-
-    // Also check for any element with data-quest-hall-overlay attribute
-    if (document.querySelector('[data-quest-hall-overlay]')) return;
 
     // Check for camp tab panels that might be open (skill tree, training)
     const campTabs = document.getElementById('camp-tabs');
-    if (campTabs && campTabs.style.display !== 'none' && campTabs.style.display !== '') return;
+    if (campTabs) {
+      var cts = getComputedStyle(campTabs);
+      if (cts.display !== 'none') return;
+    }
 
     // No overlay detected — resume camp input
     _resumeInput();
