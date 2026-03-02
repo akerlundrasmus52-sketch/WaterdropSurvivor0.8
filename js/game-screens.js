@@ -1437,10 +1437,7 @@
       // Main Menu Buttons
       document.getElementById('start-game-btn').onclick = () => {
         playSound('waterdrop');
-        hideMainMenu();
-        resetGame();
-        updateQuestTracker(); // Ensure quest HUD reflects current state before run starts
-        startCountdown(); // Start countdown after resetting game (PR #70)
+        startGame(); // Full game start: restores HUD visibility, hides all screens, shows tutorials
       };
       
       document.getElementById('camp-btn').onclick = () => {
