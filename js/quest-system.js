@@ -613,6 +613,18 @@
       }
     }
 
+    // Open idle section and switch to the Expeditions tab
+    function showExpeditionsMenu() {
+      showIdleSection();
+      if (window.GameIdleBootstrap) window.GameIdleBootstrap.switchTab('expeditions');
+    }
+
+    // Open idle section and switch to the Prestige tab
+    function showPrestigeMenu() {
+      showIdleSection();
+      if (window.GameIdleBootstrap) window.GameIdleBootstrap.switchTab('prestige');
+    }
+
     // ============================================================
     // AI CHAT BOX CONSOLE
     // ============================================================
