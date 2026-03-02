@@ -1659,7 +1659,7 @@
         if (_isBuildingUnlocked(_nearBuilding)) {
           _promptEl.textContent = `${def.icon}  ${def.label}  —  Tap / [E]`;
         } else {
-          _promptEl.textContent = `🔒  ${def.label}  —  Complete quests to unlock`;
+          _promptEl.textContent = `🔒  ${def.label}  —  Complete quests to unlock this building`;
         }
         _promptEl.style.display = 'block';
       }
