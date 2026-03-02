@@ -1916,22 +1916,90 @@
         rewardGold: 1000,
         rewardSkillPoints: 5,
         rewardAttributePoints: 3,
-        message: "⚒️ EPIC TOOL CRAFTED!<br><br>Your Epic tool harvests <b>2.5× more resources</b> from each node!<br><br>🔥 Keep exploring — find <b>Coal, Iron, Crystals</b> and <b>Magic Nodes</b> to gather advanced materials for even more powerful upgrades!",
-        nextQuest: null,
+        message: "⚒️ EPIC TOOL CRAFTED!<br><br>Your Epic tool harvests <b>2.5× more resources</b> from each node!<br><br>⚔️ Time to push your limits — kill <b>20 enemies</b> in one run to unlock the <b>Trash & Recycle</b> building!",
+        nextQuest: 'quest26_kill20',
         conditions: ['quest24_harvestWoodStone']
+      },
+
+      // === PHASE 26: Run quest → Kill 20 enemies → Unlock Trash & Recycle ===
+      quest26_kill20: {
+        id: 'quest26_kill20',
+        name: 'Kill 20 Enemies',
+        description: 'Head out and eliminate 20 enemies in a single run to prove you are ready for recycling gear.',
+        objectives: 'Kill 20 enemies in one run',
+        triggerOnDeath: true,
+        rewardGold: 400,
+        rewardSkillPoints: 2,
+        rewardAttributePoints: 2,
+        unlockBuilding: 'trashRecycle',
+        message: "⚔️ 20 Kills!<br><br>The <b>Trash & Recycle</b> building is now unlocked! Visit it to scrap old gear into materials and fuse gear for better stats.",
+        nextQuest: 'quest27_useRecycle',
+        conditions: ['quest25_useForge']
+      },
+
+      // === PHASE 27: Camp quest → Visit Trash & Recycle building ===
+      quest27_useRecycle: {
+        id: 'quest27_useRecycle',
+        name: 'Visit Trash & Recycle',
+        description: 'Open the Trash & Recycle building in camp to see how to scrap and fuse gear.',
+        objectives: 'Open the Trash & Recycle building in Camp',
+        claim: 'Main Building',
+        rewardGold: 300,
+        rewardSkillPoints: 2,
+        message: "♻️ Recycling unlocked!<br><br>Scrap unwanted gear into materials and fuse items for better stats!<br><br>⏱️ Survive <b>3 minutes</b> in your next run to unlock the <b>Temporary Items Shop</b>!",
+        nextQuest: 'quest28_survive3min',
+        conditions: ['quest26_kill20']
+      },
+
+      // === PHASE 28: Run quest → Survive 3 minutes → Unlock Temp Shop ===
+      quest28_survive3min: {
+        id: 'quest28_survive3min',
+        name: 'Survive 3 Minutes',
+        description: 'Head out on a run and survive for at least 3 minutes to unlock temporary power-ups.',
+        objectives: 'Survive 180 seconds in a run',
+        triggerOnDeath: true,
+        rewardGold: 500,
+        rewardSkillPoints: 3,
+        rewardAttributePoints: 2,
+        unlockBuilding: 'tempShop',
+        message: "⏱️ 3 Minutes survived!<br><br>The <b>Temporary Items Shop</b> is now unlocked! Buy one-run power-ups and consumables before each run.",
+        nextQuest: 'quest29_useTempShop',
+        conditions: ['quest27_useRecycle']
+      },
+
+      // === PHASE 29: Camp quest → Visit Temp Shop building ===
+      quest29_useTempShop: {
+        id: 'quest29_useTempShop',
+        name: 'Visit the Temp Shop',
+        description: 'Open the Temporary Items Shop in camp to browse power-ups and consumables.',
+        objectives: 'Open the Temporary Items Shop in Camp',
+        claim: 'Main Building',
+        rewardGold: 400,
+        rewardSkillPoints: 3,
+        rewardAttributePoints: 2,
+        message: "🏪 Temp Shop explored!<br><br>Buy temporary boosts before each run to gain the edge!<br><br>🔥 <b>All buildings are now unlocked!</b> Keep exploring, upgrading, and conquering the world!",
+        nextQuest: null,
+        conditions: ['quest28_survive3min']
       }
     };
 
     const buildingQuestUnlockMap = {
       'skillTree': 'quest1_kill3',
+      'specialAttacks': 'quest3_stonehengeGear',
       'armory': 'quest3_stonehengeGear',
       'trainingHall': 'quest5_upgradeAttr',
       'forge': 'quest6_survive2min',
+      'warehouse': 'quest7_buyProgression',
       'companionHouse': 'quest8_kill10',
+      'tavern': 'quest8_kill10',
+      'shop': 'quest9_activateCompanion',
+      'prestige': 'quest10_kill15',
       'achievementBuilding': 'quest11_findAllLandmarks',
       'characterVisuals': 'quest16_visitCharVisuals',
       'codex': 'quest17_visitCodex',
-      'campBoard': 'quest20_trainCompanion'
+      'campBoard': 'quest20_trainCompanion',
+      'trashRecycle': 'quest26_kill20',
+      'tempShop': 'quest28_survive3min'
     };
     
     // Get current quest object
@@ -2147,7 +2215,7 @@
       
       // Tutorial complete: unlock all remaining buildings so player can explore full camp
       if (questId === 'quest10_kill15') {
-        const buildingsToUnlock = ['companionHouse', 'workshop', 'trashRecycle'];
+        const buildingsToUnlock = ['companionHouse', 'workshop'];
         buildingsToUnlock.forEach(bld => {
           if (saveData.campBuildings[bld] && !saveData.campBuildings[bld].unlocked) {
             saveData.campBuildings[bld].unlocked = true;
@@ -2340,6 +2408,8 @@
           progressText = ` (${Math.min(killsNow, 15)}/15)`;
         } else if (currentQuest.id === 'quest14_kill25') {
           progressText = ` (${Math.min(killsNow, 25)}/25)`;
+        } else if (currentQuest.id === 'quest26_kill20') {
+          progressText = ` (${Math.min(killsNow, 20)}/20)`;
         }
         
         const nameEl = document.createElement('b');

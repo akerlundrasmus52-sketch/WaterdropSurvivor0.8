@@ -49,6 +49,47 @@ function _isSameDay(ts1, ts2) {
          d1.getDate() === d2.getDate();
 }
 
+// Read-only check: returns true if today's daily reward has NOT been claimed yet.
+// Does NOT modify saveData — safe to call from render/UI code.
+function isDailyAvailable(saveData) {
+  var dailies = saveData.dailies || getDailiesDefaults();
+  var lastLogin = dailies.lastLoginDate || 0;
+  if (lastLogin > 0 && _isSameDay(lastLogin, Date.now())) {
+    return false; // already claimed today
+  }
+  return true; // reward available
+}
+
+// Peek at what the next reward will be without claiming.
+// Does NOT modify saveData.
+function peekDailyReward(saveData) {
+  var dailies = saveData.dailies || getDailiesDefaults();
+  var now = Date.now();
+  var lastLogin = dailies.lastLoginDate || 0;
+  if (lastLogin > 0 && _isSameDay(lastLogin, now)) {
+    return { alreadyClaimed: true };
+  }
+  var streak = dailies.loginStreak || 0;
+  // Check if streak would reset (missed 2+ days)
+  if (lastLogin > 0) {
+    var d1 = new Date(lastLogin), d2 = new Date(now);
+    d1.setHours(0, 0, 0, 0);
+    d2.setHours(0, 0, 0, 0);
+    var daysDiff = Math.round((d2 - d1) / (24 * 60 * 60 * 1000));
+    if (daysDiff >= 2) streak = 0;
+  }
+  var nextStreak = streak + 1;
+  var rewardDay = ((nextStreak - 1) % DAILY_LOGIN_REWARDS.length);
+  var reward = DAILY_LOGIN_REWARDS[rewardDay];
+  return {
+    alreadyClaimed: false,
+    streak: nextStreak,
+    day: rewardDay + 1,
+    gold: reward.gold,
+    item: reward.item
+  };
+}
+
 function checkDailyLogin(saveData) {
   var dailies = saveData.dailies || getDailiesDefaults();
   var now = Date.now();
@@ -180,6 +221,8 @@ window.GameDailies = {
   QUEST_POOL: QUEST_POOL,
   getDailiesDefaults: getDailiesDefaults,
   shouldResetDailies: shouldResetDailies,
+  isDailyAvailable: isDailyAvailable,
+  peekDailyReward: peekDailyReward,
   checkDailyLogin: checkDailyLogin,
   generateDailyQuests: generateDailyQuests,
   updateDailyQuestProgress: updateDailyQuestProgress,

@@ -1013,6 +1013,22 @@
         tavern:              () => { overlay.remove(); if (typeof showExpeditionsMenu === 'function') showExpeditionsMenu(); else showQuestHall(); },
         shop:                () => { overlay.remove(); showProgressionShop(); },
         prestige:            () => { overlay.remove(); if (typeof showPrestigeMenu === 'function') showPrestigeMenu(); else showProgressionShop(); },
+        trashRecycle:        () => {
+          overlay.remove();
+          if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest27_useRecycle') {
+            progressTutorialQuest('quest27_useRecycle', true);
+            saveSaveData();
+          }
+          showInventoryScreen();
+        },
+        tempShop:            () => {
+          overlay.remove();
+          if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest29_useTempShop') {
+            progressTutorialQuest('quest29_useTempShop', true);
+            saveSaveData();
+          }
+          showProgressionShop();
+        },
       };
 
       for (const [buildingId, building] of Object.entries(CAMP_BUILDINGS)) {
