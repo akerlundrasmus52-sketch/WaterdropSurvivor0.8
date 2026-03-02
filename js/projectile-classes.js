@@ -487,6 +487,11 @@
                 }
                 // Rapidly expanding blood pool
                 spawnBloodDecal(enemy.mesh.position);
+                // Fine blood mist along bullet line (simulates 15-20 tiny entry holes)
+                if (window.BloodSystem) {
+                  const _droneDir = new THREE.Vector3(this.vx, 0, this.vz).normalize();
+                  window.BloodSystem.emitDroneMist(enemy.mesh.position, _droneDir, 40);
+                }
               } else {
                 // Level 1: small continuous drips fall directly below enemy, slowly pooling
                 if (bloodDrips.length < MAX_BLOOD_DRIPS) {

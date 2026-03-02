@@ -22,6 +22,53 @@
       }
     }
 
+    // ─── Muzzle Flash PointLight Pool ──────────────────────────────────────────────
+    // Pre-allocate 3 reusable PointLights instead of creating new ones every shot.
+    // This eliminates GPU shader recompilations that caused FPS drops during combat.
+    const FLASH_POOL_SIZE = 3;
+    let _flashPool = null;
+    // Reusable temporary vector for _acquireFlash callers (avoids per-shot clone allocations).
+    // Initialized at script load time — THREE CDN is always loaded before game-loop.js.
+    const _flashTempPos = new THREE.Vector3();
+
+    function _ensureFlashPool(sceneRef) {
+      if (_flashPool !== null || typeof THREE === 'undefined') return;
+      _flashPool = [];
+      for (let i = 0; i < FLASH_POOL_SIZE; i++) {
+        const pl = new THREE.PointLight(0xFFFFFF, 0, 1);
+        pl.castShadow = false;
+        pl.position.set(0, -9999, 0); // parked off-screen when idle
+        pl._poolExpireAt = 0;
+        sceneRef.add(pl);
+        _flashPool.push(pl);
+      }
+    }
+
+    // Acquire a pooled PointLight, configure it, and auto-dim after `duration` ms.
+    // Reuses the slot whose expiry is furthest in the past so concurrent flashes work.
+    function _acquireFlash(sceneRef, color, intensity, radius, pos, duration) {
+      _ensureFlashPool(sceneRef);
+      if (!_flashPool) return;
+      const now = performance.now ? performance.now() : Date.now();
+      let best = _flashPool[0];
+      for (let i = 1; i < _flashPool.length; i++) {
+        if (_flashPool[i]._poolExpireAt <= now) { best = _flashPool[i]; break; }
+        if (_flashPool[i]._poolExpireAt < best._poolExpireAt) best = _flashPool[i];
+      }
+      best.color.setHex(color);
+      best.intensity = intensity;
+      best.distance = radius;
+      best.position.copy(pos);
+      best._poolExpireAt = now + duration;
+      // Timeout just dims the light; harmless if called after a game reset because
+      // game-over-reset.js already zeros all pool lights synchronously on reset.
+      setTimeout(() => {
+        best.intensity = 0;
+        best.position.set(0, -9999, 0);
+        best._poolExpireAt = 0;
+      }, duration);
+    }
+
     // --- MAIN LOOP ---
     // Performance tracking for freeze bug investigation
     let performanceLog = {
@@ -900,39 +947,13 @@
                 flashRadius = 9 * (isNight ? 1.3 : 1.0); // Reduced from 22
               }
               
-              const flashLight = new THREE.PointLight(flashColor, flashIntensity, flashRadius);
-              flashLight.position.copy(player.mesh.position);
-              flashLight.position.y += 1;
-              flashLight.castShadow = false; // Performance: no shadows for flash
-              scene.add(flashLight);
-              flashLights.push(flashLight);
-              
-              // Add ground reflection light at night for bounce effect
+              // Use pooled flash light to avoid shader recompilation per shot
+              _flashTempPos.copy(player.mesh.position); _flashTempPos.y += 1;
+              _acquireFlash(scene, flashColor, flashIntensity, flashRadius, _flashTempPos, 80);
               if (isNight) {
-                const reflectionLight = new THREE.PointLight(flashColor, flashIntensity * 0.5, flashRadius * 0.7);
-                reflectionLight.position.copy(player.mesh.position);
-                reflectionLight.position.y = 0.1; // Near ground
-                scene.add(reflectionLight);
-                flashLights.push(reflectionLight);
-                
-                // Remove reflection with main flash
-                const reflTimeoutId = setTimeout(() => {
-                  scene.remove(reflectionLight);
-                  const idx = flashLights.indexOf(reflectionLight);
-                  if (idx > -1) flashLights.splice(idx, 1);
-                }, 80);
-                activeTimeouts.push(reflTimeoutId);
+                _flashTempPos.copy(player.mesh.position); _flashTempPos.y = 0.1;
+                _acquireFlash(scene, flashColor, flashIntensity * 0.5, flashRadius * 0.7, _flashTempPos, 80);
               }
-              
-              // Remove flash after short time
-              const timeoutId = setTimeout(() => {
-                scene.remove(flashLight);
-                const idx = flashLights.indexOf(flashLight);
-                if (idx > -1) flashLights.splice(idx, 1);
-                const tidx = activeTimeouts.indexOf(timeoutId);
-                if (tidx > -1) activeTimeouts.splice(tidx, 1);
-              }, 80);
-              activeTimeouts.push(timeoutId);
               
               // Gun kickback effect - snappy recoil via scale squish
               player.mesh.scale.set(1.15, 0.85, 1.15);
@@ -974,21 +995,9 @@
         // ENHANCED - Add sword slash visual effects
         spawnParticles(player.mesh.position, 0xC0C0C0, 8); // Silver slash particles
         spawnParticles(player.mesh.position, 0xFFFFFF, 5); // White sparkles
-        // Add flash light for sword slash - track timeout for proper cleanup
-        const slashLight = new THREE.PointLight(0xC0C0C0, 3, 8);
-        slashLight.position.copy(player.mesh.position);
-        slashLight.position.y += 1;
-        scene.add(slashLight);
-        flashLights.push(slashLight);
-        
-        const timeoutId = setTimeout(() => {
-          scene.remove(slashLight);
-          const idx = flashLights.indexOf(slashLight);
-          if (idx > -1) flashLights.splice(idx, 1);
-          const tidx = activeTimeouts.indexOf(timeoutId);
-          if (tidx > -1) activeTimeouts.splice(tidx, 1);
-        }, 100);
-        activeTimeouts.push(timeoutId);
+        // Pooled flash light for sword slash (avoids shader recompilation)
+        _flashTempPos.copy(player.mesh.position); _flashTempPos.y += 1;
+        _acquireFlash(scene, 0xC0C0C0, 3, 8, _flashTempPos, 100);
       }
 
       // 3. AURA
@@ -1070,20 +1079,9 @@
             projectile.maxLife = 30;
             projectiles.push(projectile);
             
-            // Tiny cyan muzzle flash from drone
-            const flashLight = new THREE.PointLight(0x00FFFF, 1.5, 5);
-            flashLight.position.copy(drone.mesh.position);
-            flashLight.position.y += 0.2;
-            scene.add(flashLight);
-            flashLights.push(flashLight);
-            const timeoutId = setTimeout(() => {
-              scene.remove(flashLight);
-              const idx = flashLights.indexOf(flashLight);
-              if (idx > -1) flashLights.splice(idx, 1);
-              const tidx = activeTimeouts.indexOf(timeoutId);
-              if (tidx > -1) activeTimeouts.splice(tidx, 1);
-            }, 40);
-            activeTimeouts.push(timeoutId);
+            // Tiny cyan muzzle flash from drone (pooled)
+            _flashTempPos.copy(drone.mesh.position); _flashTempPos.y += 0.2;
+            _acquireFlash(scene, 0x00FFFF, 1.5, 5, _flashTempPos, 40);
             
             playSound('shoot');
           }
@@ -1142,20 +1140,9 @@
           }, 100);
           activeTimeouts.push(playerRecoilTimeout);
           
-          // Orange/yellow muzzle flash (shotgun characteristic)
-          const flashLight = new THREE.PointLight(0xFFA500, 8, 18); // Orange, brighter, wider
-          flashLight.position.copy(player.mesh.position);
-          flashLight.position.y += 1;
-          scene.add(flashLight);
-          flashLights.push(flashLight);
-          const timeoutId = setTimeout(() => {
-            scene.remove(flashLight);
-            const idx = flashLights.indexOf(flashLight);
-            if (idx > -1) flashLights.splice(idx, 1);
-            const tidx = activeTimeouts.indexOf(timeoutId);
-            if (tidx > -1) activeTimeouts.splice(tidx, 1);
-          }, 100);
-          activeTimeouts.push(timeoutId);
+          // Orange/yellow muzzle flash (shotgun characteristic) — pooled
+          _flashTempPos.copy(player.mesh.position); _flashTempPos.y += 1;
+          _acquireFlash(scene, 0xFFA500, 8, 18, _flashTempPos, 100);
           
           // Focused muzzle flash for shotgun blast (wider spread)
           const shotgunMuzzlePos = player.mesh.position.clone();
@@ -1189,20 +1176,9 @@
         if (nearest) {
           projectiles.push(new IceSpear(player.mesh.position.x, player.mesh.position.z, nearest.mesh.position));
           
-          // Ice flash effect
-          const flashLight = new THREE.PointLight(0x87CEEB, 3, 12); // Sky blue
-          flashLight.position.copy(player.mesh.position);
-          flashLight.position.y += 1;
-          scene.add(flashLight);
-          flashLights.push(flashLight);
-          const timeoutId = setTimeout(() => {
-            scene.remove(flashLight);
-            const idx = flashLights.indexOf(flashLight);
-            if (idx > -1) flashLights.splice(idx, 1);
-            const tidx = activeTimeouts.indexOf(timeoutId);
-            if (tidx > -1) activeTimeouts.splice(tidx, 1);
-          }, 80);
-          activeTimeouts.push(timeoutId);
+          // Ice flash effect (pooled)
+          _flashTempPos.copy(player.mesh.position); _flashTempPos.y += 1;
+          _acquireFlash(scene, 0x87CEEB, 3, 12, _flashTempPos, 80);
           
           spawnParticles(player.mesh.position, 0x87CEEB, 8); // Ice blue particles
           spawnParticles(player.mesh.position, 0xFFFFFF, 5); // White particles
@@ -1322,11 +1298,9 @@
             }
             current = nextTarget;
           }
-          // Lightning flash
-          const lFlash = new THREE.PointLight(0xFFFF00, 6, 14); lFlash.position.copy(nearest.mesh.position); lFlash.position.y += 1;
-          scene.add(lFlash); flashLights.push(lFlash);
-          const ltId = setTimeout(() => { scene.remove(lFlash); const li = flashLights.indexOf(lFlash); if (li > -1) flashLights.splice(li, 1); }, 100);
-          activeTimeouts.push(ltId);
+          // Lightning flash (pooled)
+          _flashTempPos.copy(nearest.mesh.position); _flashTempPos.y += 1;
+          _acquireFlash(scene, 0xFFFF00, 6, 14, _flashTempPos, 100);
           weapons.lightning.lastShot = time;
           playSound('hit');
         }

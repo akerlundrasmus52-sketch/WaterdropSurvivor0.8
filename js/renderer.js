@@ -20,8 +20,8 @@ const RENDERER_CONFIG = {
   // fogFar is pushed to ~42 so objects just beyond the visible area are fully hidden.
   fogNear: 28,
   fogFar: 42,
-  // Default shadow map size — high quality for detailed shadows
-  defaultShadowMapSize: 2048,
+  // Default shadow map size — 1024 balances quality and GPU fill-rate
+  defaultShadowMapSize: 1024,
   // Directional light shadow frustum half-size (covers visible area; shadow is re-anchored to player each frame)
   shadowFrustumHalfSize: 45,
   // Directional light shadow quality settings
