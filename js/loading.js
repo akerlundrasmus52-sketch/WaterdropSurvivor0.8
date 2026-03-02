@@ -25,9 +25,9 @@
         let progress = 0;
         let progressInterval;
         
-        // Animate loading bar from 0% to 100% over ~5 seconds (reduced from 8s)
+        // Animate loading bar from 0% to 100% over ~8 seconds
         function updateProgress() {
-          progress += 5; // 5% per step
+          progress += 2.5; // 2.5% per step
           loadingBar.style.width = progress + '%';
           
           if (progress >= 100) {
@@ -40,9 +40,9 @@
         }
         
         // Start progress animation
-        progressInterval = setInterval(updateProgress, 250); // 20 steps × 250ms = 5s
+        progressInterval = setInterval(updateProgress, 200); // 40 steps × 200ms = 8s
         
-        // 12-second failsafe timeout - show menu anyway if module fails to load
+        // 15-second failsafe timeout - show menu anyway if module fails to load
         setTimeout(function() {
           if (!window.gameModuleReady) {
             console.warn('[Loading] Failsafe timeout - showing menu without module ready signal');
@@ -50,7 +50,7 @@
             window.loadingComplete = true;
             showMenuAfterLoading();
           }
-        }, 12000);
+        }, 15000);
       }
       
       // Wait for module to signal ready, then show menu
@@ -92,11 +92,23 @@
           var mainMenu = document.getElementById('main-menu');
           if (mainMenu) mainMenu.style.display = 'flex';
 
-          // If init failed, show a status indicator on the menu
+          // If init failed, make buttons visible (they are normally transparent overlays
+          // on a background image) so users can actually find and click them
           if (!initOk) {
+            var buttons = mainMenu ? mainMenu.querySelectorAll('.menu-btn') : [];
+            for (var i = 0; i < buttons.length; i++) {
+              buttons[i].style.background = 'linear-gradient(to bottom, #2980B9, #1A5276)';
+              buttons[i].style.color = '#FFFFFF';
+              buttons[i].style.border = '3px solid #5DADE2';
+              buttons[i].style.textShadow = '0 0 8px rgba(93,173,226,0.8)';
+              buttons[i].style.fontSize = '20px';
+              buttons[i].style.fontWeight = 'bold';
+              buttons[i].style.borderRadius = '12px';
+            }
+
             var statusDiv = document.createElement('div');
-            statusDiv.style.cssText = 'color:#ff6666;font-size:12px;text-align:center;margin-top:8px;font-family:monospace;';
-            statusDiv.textContent = '⚠️ Game engine failed to load — buttons may retry init';
+            statusDiv.style.cssText = 'color:#ff6666;font-size:12px;text-align:center;margin-top:8px;font-family:monospace;position:absolute;bottom:10%;left:0;right:0;';
+            statusDiv.textContent = '⚠️ Game engine failed to load — tap buttons to retry';
             var menuButtons = mainMenu ? mainMenu.querySelector('.menu-buttons') : null;
             if (menuButtons) menuButtons.appendChild(statusDiv);
           }

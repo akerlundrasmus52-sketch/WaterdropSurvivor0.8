@@ -1112,6 +1112,8 @@
         const MAX_ENEMY_BULLET_HOLES = 12;
         if (this.bulletHoles.length < MAX_ENEMY_BULLET_HOLES) {
           // Reuse shared geometry; clone shared material for per-hole opacity control
+          ensureBulletHoleMaterials();
+          if (bulletHoleGeo && bulletHoleMat) {
           const holeDecal = new THREE.Mesh(bulletHoleGeo, bulletHoleMat.clone());
           // Place on enemy surface (random position on sphere surface)
           const theta = Math.random() * Math.PI * 2;
@@ -1124,6 +1126,7 @@
           holeDecal.lookAt(new THREE.Vector3(nx * 2, ny * 2, nz * 2));
           this.mesh.add(holeDecal);
           this.bulletHoles.push(holeDecal);
+          }
         }
         } // end canSpawnMeshes throttle
         

@@ -11,6 +11,9 @@
       loadSettings();
       console.log('[Init] Save data loaded OK');
 
+      // Pre-create shared bullet-hole materials now that THREE.js is available
+      ensureBulletHoleMaterials();
+
       // Scene
       scene = new THREE.Scene();
       scene.background = new THREE.Color(COLORS.bg);
