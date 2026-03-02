@@ -1703,6 +1703,10 @@
       const uiLayer = document.getElementById('ui-layer');
       if (uiLayer) uiLayer.style.visibility = 'hidden';
 
+      // Hide main menu and gameover screen to prevent overlap with camp
+      document.getElementById('main-menu').style.display = 'none';
+      document.getElementById('gameover-screen').style.display = 'none';
+
       // First-run tutorial hook: fire after current call stack (by then camp-screen is visible)
       // Update action button label based on game state
       const campActionBtn = document.getElementById('camp-action-btn');
