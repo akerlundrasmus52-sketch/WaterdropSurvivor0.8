@@ -1545,6 +1545,7 @@
         rewardGold: 50,
         rewardSkillPoints: 3,
         unlockBuilding: 'skillTree',
+        bennyQuip: 'Skill Tree time!\nYou\'re gonna love\nthis place! 🌳',
         message: "Outstanding, Droplet! 🎯<br><br>You've proven your combat worth. The <b>Skill Tree</b> is now unlocked at camp!<br><br>Head to the <b>Skill Tree</b> tab and spend your <b>3 Skill Points</b> to grow stronger.",
         nextQuest: 'quest2_spendSkills',
         conditions: ['firstRunDeath']
@@ -1575,6 +1576,7 @@
         rewardSkillPoints: 2,
         unlockBuildingOnActivation: 'armory',
         unlockBuilding: 'specialAttacks',
+        bennyQuip: 'Special Attacks!\nKnife Kill is my\nfavorite! 🔪',
         rewardSAP: 2,
         giveItem: { id: 'cigar_quest', name: 'Cigar', type: 'ring', rarity: 'rare', stats: { attackSpeed: 1, movementSpeed: 1, attackPrecision: 1 }, description: '+1 Attack Speed, +1 Movement Speed, +1 Attack Precision' },
         message: "🚬 Cigar acquired!<br><br>This rare ring grants <b>+1 Attack Speed, +1 Movement Speed, +1 Attack Precision</b>.<br><br>The <b>Special Attacks</b> building is now unlocked! Choose your first special attack.<br><br>Head to the <b>Armory</b> and equip the Cigar from your inventory!",
@@ -1609,6 +1611,7 @@
         rewardAttributePoints: 3,
         unlockBuildingOnActivation: 'trainingHall',
         unlockBuilding: 'achievementBuilding',
+        bennyQuip: 'Achievement Hall!\nBrag about your\nkills here! 🏆',
         message: "💪 Attribute upgraded!<br><br>You earned <b>+3 free Attribute Points</b> and <b>+1 Skill Point</b>!<br><br>The <b>Achievement Building</b> is now unlocked — visit it to claim badges!",
         nextQuest: 'quest6_survive2min',
         conditions: ['quest4_equipCigar']
@@ -1626,6 +1629,7 @@
         rewardSkillPoints: 1,
         rewardAttributePoints: 2,
         unlockBuilding: 'forge',
+        bennyQuip: 'Forge is OPEN!\nBuy upgrades —\nget powerful! ⚒️',
         message: "⏱️ You survived 2 minutes!<br><br>The <b>Progression Upgrades</b> building is now unlocked! Buy your first upgrade there.",
         nextQuest: 'quest7_buyProgression',
         conditions: ['quest5_upgradeAttr']
@@ -1641,6 +1645,7 @@
         rewardGold: 150,
         rewardSkillPoints: 1,
         unlockBuilding: 'warehouse',
+        bennyQuip: 'Warehouse!\nStore your loot\nlike a pro! 📦',
         message: "⚒️ Upgrade purchased!<br><br>Each upgrade makes you permanently stronger. Time to prove your might!<br><br>The <b>Warehouse</b> is now unlocked — store and manage your resources there!",
         nextQuest: 'quest8_kill10',
         conditions: ['quest6_survive2min']
@@ -1656,6 +1661,7 @@
         rewardGold: 200,
         rewardSkillPoints: 1,
         unlockBuilding: 'companionHouse',
+        bennyQuip: 'Companion House!\nYour new bestie\nlives here! 🐺',
         companionEgg: true,
         message: "⚔️ 10 Enemies Defeated!<br><br>A <b>Companion Egg</b> has appeared! The <b>Companion House</b> is now unlocked. Visit it to activate your companion!",
         nextQuest: 'quest9_activateCompanion',
@@ -1673,6 +1679,7 @@
         rewardSkillPoints: 1,
         rewardAttributePoints: 1,
         unlockBuilding: 'shop',
+        bennyQuip: 'The Shop! My\nfavorite place\nto spend gold! 🛒',
         message: "🐺 Companion activated!<br><br>They will fight by your side in battle!<br><br>The <b>Shop</b> is now open — buy powerful items to aid your journey!<br><br>Now go on a run and kill <b>15 enemies</b> to prove your combined strength!",
         nextQuest: 'quest10_kill15',
         conditions: ['quest8_kill10']
@@ -1688,6 +1695,7 @@
         rewardGold: 300,
         rewardSkillPoints: 2,
         unlockBuilding: 'prestige',
+        bennyQuip: 'Prestige Altar!\nReset to get\nstronger! ♾️',
         message: "🎉 15 Kills! Well done!<br><br>The <b>Prestige Altar</b> has awakened — you may now begin the path of Prestige!<br><br>Explore the world — find every landmark (Stonehenge, Pyramid, Montana, Tesla Tower) to unlock the Achievement Building!",
         nextQuest: 'quest11_findAllLandmarks',
         conditions: ['quest9_activateCompanion']
@@ -2111,8 +2119,8 @@
         showStatChange(`🏛️ ${buildingName} Unlocked!`);
         // Benny walks to the building and builds it, then play unlock animation
         if (window.CampWorld && window.CampWorld.isActive) {
-          window.CampWorld.bennyWalkToBuild(quest.unlockBuilding,
-            'Time to build\nthe ' + buildingName + '! 🔨');
+          const bennyMsg = quest.bennyQuip || ('Time to build\nthe ' + buildingName + '! 🔨');
+          window.CampWorld.bennyWalkToBuild(quest.unlockBuilding, bennyMsg);
           // Delay the unlock animation to sync with Benny arriving (1.2s walk)
           setTimeout(function () {
             window.CampWorld.refreshBuildings(saveData);

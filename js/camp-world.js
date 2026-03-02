@@ -629,7 +629,10 @@
     const sd = window.saveData;
     if (sd.bennyGreetingShown) return;  // already seen
 
-    // Show greeting on first camp visit (whether before or after first death)
+    // Only greet after the player has experienced their first death
+    if (!sd.tutorialQuests || !sd.tutorialQuests.firstDeathShown) return;
+
+    // Show greeting on first camp visit after first death
     sd.bennyGreetingShown = true;
     if (typeof saveSaveData === 'function') saveSaveData();
 
@@ -1933,7 +1936,10 @@
     'gear-screen', 'achievements-screen', 'progression-shop',
     'companion-house-modal', 'inventory-screen-modal',
     'camp-board-overlay', 'special-attacks-panel-overlay',
-    'quest-hall-overlay', 'prestige-menu', 'expeditions-menu'
+    'quest-hall-overlay', 'prestige-menu', 'expeditions-menu',
+    // Camp sub-sections (shown when player interacts with skill tree, training, etc.)
+    'camp-skills-section', 'camp-sleep-section', 'camp-training-section',
+    'camp-passive-section', 'camp-account-section', 'camp-idle-section'
   ];
 
   /**
