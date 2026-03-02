@@ -7,9 +7,18 @@
     function init() {
       console.log('[Init] Starting game initialization...');
       // Load save data and settings first
-      loadSaveData();
-      loadSettings();
+      try { loadSaveData(); } catch(e) { console.error('[Init] loadSaveData failed:', e); }
+      try { loadSettings(); } catch(e) { console.error('[Init] loadSettings failed:', e); }
       console.log('[Init] Save data loaded OK');
+
+      // Guard: if THREE.js CDN failed to load, run a limited init so the menu
+      // still appears cleanly (no error indicator) and buttons still work.
+      if (typeof THREE === 'undefined') {
+        console.error('[Init] THREE.js is not available (CDN failed?). Running in limited mode.');
+        try { setupMenus(); } catch(e) { console.error('[Init] setupMenus (limited mode) failed:', e); }
+        window.gameModuleReady = true;
+        return; // Exit without throwing — gameInitError stays unset, menu shows cleanly
+      }
 
       // Pre-create shared bullet-hole materials now that THREE.js is available
       ensureBulletHoleMaterials();
@@ -103,12 +112,20 @@
       applyGraphicsQuality(gameSettings.graphicsQuality);
 
       // Setup
-      createWorld();
+      try {
+        createWorld();
+      } catch(e) {
+        console.error('[Init] createWorld failed:', e);
+      }
       // Performance: Cache animated scene objects after world creation
       cacheAnimatedObjects();
-      player = new Player();
-      // Spawn player right next to the fountain (outside the rim, on the ground)
-      player.mesh.position.set(12, 0.5, 0);
+      try {
+        player = new Player();
+        // Spawn player right next to the fountain (outside the rim, on the ground)
+        player.mesh.position.set(12, 0.5, 0);
+      } catch(e) {
+        console.error('[Init] Player creation failed:', e);
+      }
       
       // Initialize gear system
       initializeGear();
@@ -1835,8 +1852,6 @@
             document.getElementById('settings-modal').style.display = 'none';
             setGamePaused(false);
             showMainMenu();
-            updateShopUI();
-            
             alert('✅ All progress has been completely reset! The game will start fresh on your next playthrough.');
             playSound('hit');
           }

@@ -312,6 +312,8 @@
     }
 
     function onWindowResize() {
+      // Guard: camera and renderer may be null if THREE.js CDN failed to load
+      if (!camera || !renderer) return;
       const aspect = window.innerWidth / window.innerHeight;
       // Use the same base distance as init() to prevent zoom-out on any resize event
       let d = RENDERER_CONFIG.cameraDistance;
