@@ -397,7 +397,7 @@
             document.getElementById('attributes-screen')?.style.display === 'flex' ||
             document.getElementById('progression-shop')?.style.display === 'flex' ||
             document.getElementById('camp-screen')?.style.display === 'flex' ||
-            document.querySelector('[data-quest-hall-overlay]') !== null ||
+            document.getElementById('quest-hall-overlay') !== null ||
             document.getElementById('quest-popup-overlay') !== null ||
             document.getElementById('comic-info-overlay') !== null ||
             document.getElementById('comic-tutorial-modal')?.style.display === 'flex' ||

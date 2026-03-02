@@ -333,7 +333,7 @@
         width: 100%;
         height: 100%;
         background: rgba(0,0,0,0.95);
-        z-index: 150;
+        z-index: 500;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -432,7 +432,7 @@
       `;
       
       panel.innerHTML = content;
-      overlay.setAttribute('data-quest-hall-overlay', 'true');
+      overlay.id = 'quest-hall-overlay';
       
       // Add event listeners for claim buttons
       panel.querySelectorAll('.claim-quest-btn').forEach(btn => {
@@ -441,7 +441,7 @@
           console.log('[Quest] Claiming quest:', questId);
           
           // Remove Quest Hall overlay immediately so the reward popup is clearly visible
-          const overlayElement = document.body.querySelector('[data-quest-hall-overlay]');
+          const overlayElement = document.getElementById('quest-hall-overlay');
           if (overlayElement) {
             document.body.removeChild(overlayElement);
           }
@@ -1768,6 +1768,13 @@
         if (window.CampWorld.isActive) {
           const campScreenEl = document.getElementById('camp-screen');
           if (campScreenEl) campScreenEl.classList.add('camp-3d-mode');
+          // Ensure interactive camp header/corner UI is detectable by the camp touch
+          // handler's z-index check (which looks for inline z-index >= 400).
+          // This prevents camp movement from swallowing taps on these buttons.
+          const campHeaderEl = document.querySelector('.camp-header-btns');
+          if (campHeaderEl) campHeaderEl.style.zIndex = '400';
+          const campCornerEl = document.querySelector('.camp-corner-widgets');
+          if (campCornerEl) campCornerEl.style.zIndex = '400';
         }
       } else {
         // 2D camp mode: hide game container to prevent black canvas showing behind camp UI
