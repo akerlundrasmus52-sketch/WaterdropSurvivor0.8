@@ -966,7 +966,7 @@
             while (diff > Math.PI) diff -= Math.PI*2;
             
             if (Math.abs(diff) < Math.PI/3) {
-              e.takeDamage(dmg);
+              e.takeDamage(dmg, false, 'sword');
             }
           }
         });

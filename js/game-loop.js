@@ -127,6 +127,60 @@
         return originalSpawnParticles(position, color, adjustedCount);
       };
     }
+
+    // ─── Combat Intensity Tracking ──────────────────────────────────────────────
+    // Tracks recent kill rate to drive dynamic shadow-map quality reduction during
+    // heavy combat. Lower shadow resolution during intense fights recovers ~5 FPS.
+    let _combatKillsInWindow = 0;      // kills in last 3 seconds
+    let _combatWindowStart = 0;        // timestamp of window start (ms)
+    const COMBAT_WINDOW_MS = 3000;     // 3-second rolling window
+    const COMBAT_INTENSITY_HIGH = 5;   // kills/window → reduce shadows
+    const COMBAT_INTENSITY_LOW  = 2;   // kills/window → restore shadows
+    let _shadowsReducedForCombat = false;
+
+    /**
+     * Call once per enemy kill to register for combat intensity.
+     * Exposed on window so any script (enemy-class, game-loop) can call it.
+     */
+    window.registerCombatKill = function() {
+      _combatKillsInWindow++;
+    };
+
+    /**
+     * Tick combat intensity each frame: age out old kills and apply dynamic
+     * shadow-map quality changes if the kill rate crosses thresholds.
+     * @param {number} nowMs - current timestamp in milliseconds
+     */
+    function updateCombatIntensity(nowMs) {
+      if (nowMs - _combatWindowStart > COMBAT_WINDOW_MS) {
+        _combatKillsInWindow = 0;
+        _combatWindowStart = nowMs;
+      }
+
+      if (!window.dirLight || !renderer) return;
+
+      if (!_shadowsReducedForCombat && _combatKillsInWindow >= COMBAT_INTENSITY_HIGH) {
+        // Heavy combat — drop shadow map to 512 to reclaim GPU fill-rate
+        if (window.dirLight.shadow.mapSize.width !== 512) {
+          if (window.dirLight.shadow.map) { window.dirLight.shadow.map.dispose(); window.dirLight.shadow.map = null; }
+          window.dirLight.shadow.mapSize.width  = 512;
+          window.dirLight.shadow.mapSize.height = 512;
+          renderer.shadowMap.needsUpdate = true;
+        }
+        _shadowsReducedForCombat = true;
+      } else if (_shadowsReducedForCombat && _combatKillsInWindow <= COMBAT_INTENSITY_LOW) {
+        // Combat calmed down — restore default shadow quality
+        const defaultSize = (typeof RENDERER_CONFIG !== 'undefined' && RENDERER_CONFIG.defaultShadowMapSize) ? RENDERER_CONFIG.defaultShadowMapSize : 1024;
+        if (window.dirLight.shadow.mapSize.width !== defaultSize) {
+          if (window.dirLight.shadow.map) { window.dirLight.shadow.map.dispose(); window.dirLight.shadow.map = null; }
+          window.dirLight.shadow.mapSize.width  = defaultSize;
+          window.dirLight.shadow.mapSize.height = defaultSize;
+          renderer.shadowMap.needsUpdate = true;
+        }
+        _shadowsReducedForCombat = false;
+      }
+    }
+
     
     // Day/Night Cycle Update - Non-blocking, smooth lighting transitions
     function updateDayNightCycle(dt) {
@@ -285,6 +339,10 @@
       // Day/Night Cycle - Update lighting smoothly (non-blocking)
       // Runs every frame regardless of pause state for smooth visual transitions
       updateDayNightCycle(dt);
+
+      // Update combat intensity and dynamic shadow quality every frame
+      updateCombatIntensity(performance.now ? performance.now() : Date.now());
+
       
       // Update ambient creatures (birds, bats, fireflies, owls) based on time of day
       if (isGameActive && !isPaused) {
@@ -1009,7 +1067,7 @@
           if (e.isDead) return;
           const d = player.mesh.position.distanceTo(e.mesh.position);
           if (d < effectiveAuraRange) {
-            e.takeDamage(weapons.aura.damage * playerStats.strength);
+          e.takeDamage(weapons.aura.damage * playerStats.strength, false, 'aura');
             hit = true;
           }
         });
