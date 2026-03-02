@@ -1645,15 +1645,25 @@
     }
   }
 
+  function _isBuildingUnlocked(buildingId) {
+    if (!_saveData || !_saveData.campBuildings) return false;
+    const bd = _saveData.campBuildings[buildingId];
+    return bd ? (bd.unlocked === true || bd.level > 0) : false;
+  }
+
   function _updatePromptUI() {
     if (!_promptEl) return;
     if (_nearBuilding) {
       const def = BUILDING_DEFS.find(d => d.id === _nearBuilding);
       if (def) {
-        _promptEl.textContent = `${def.icon}  ${def.label}  —  Tap / [E]`;
+        if (_isBuildingUnlocked(_nearBuilding)) {
+          _promptEl.textContent = `${def.icon}  ${def.label}  —  Tap / [E]`;
+        } else {
+          _promptEl.textContent = `🔒  ${def.label}  —  Complete quests to unlock this building`;
+        }
         _promptEl.style.display = 'block';
       }
-      if (_interactBtn) _interactBtn.style.display = 'block';
+      if (_interactBtn) _interactBtn.style.display = _isBuildingUnlocked(_nearBuilding) ? 'block' : 'none';
     } else {
       _promptEl.style.display = 'none';
       if (_interactBtn) _interactBtn.style.display = 'none';
@@ -1662,6 +1672,13 @@
 
   function _interact() {
     if (!_nearBuilding) return;
+    // Block interaction with locked buildings
+    if (!_isBuildingUnlocked(_nearBuilding)) {
+      if (typeof showStatusMessage === 'function') {
+        showStatusMessage('🔒 Complete quests to unlock this building!', 2000);
+      }
+      return;
+    }
     const fn = _callbacks[_nearBuilding];
     if (typeof fn === 'function') {
       fn();

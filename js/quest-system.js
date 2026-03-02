@@ -613,6 +613,18 @@
       }
     }
 
+    // Open idle section and switch to the Expeditions tab
+    function showExpeditionsMenu() {
+      showIdleSection();
+      if (window.GameIdleBootstrap) window.GameIdleBootstrap.switchTab('expeditions');
+    }
+
+    // Open idle section and switch to the Prestige tab
+    function showPrestigeMenu() {
+      showIdleSection();
+      if (window.GameIdleBootstrap) window.GameIdleBootstrap.switchTab('prestige');
+    }
+
     // ============================================================
     // AI CHAT BOX CONSOLE
     // ============================================================
@@ -1690,6 +1702,10 @@
       // Hide the game HUD layer — not needed in camp (avoids black rectangles over 3D world)
       const uiLayer = document.getElementById('ui-layer');
       if (uiLayer) uiLayer.style.visibility = 'hidden';
+
+      // Hide main menu and gameover screen to prevent overlap with camp
+      document.getElementById('main-menu').style.display = 'none';
+      document.getElementById('gameover-screen').style.display = 'none';
 
       // First-run tutorial hook: fire after current call stack (by then camp-screen is visible)
       // Update action button label based on game state

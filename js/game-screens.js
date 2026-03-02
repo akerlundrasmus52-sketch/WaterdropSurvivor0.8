@@ -1242,6 +1242,8 @@
         // remains paused while in camp. "Continue Game" will call setGamePaused(false)
         // to resume when the player returns.
         optionsMenu.style.display = 'none';
+        // Hide main menu if still visible
+        document.getElementById('main-menu').style.display = 'none';
         updateCampScreen();
         
         // Move chat tab upward in camp mode to avoid menu overlap
@@ -1732,6 +1734,8 @@
       document.getElementById('goto-camp-btn').onclick = () => {
         playSound('waterdrop');
         document.getElementById('gameover-screen').style.display = 'none';
+        // Hide main menu if still visible (loading screen may have shown it)
+        document.getElementById('main-menu').style.display = 'none';
         // Close any tutorial/comic modals that might still be open from the death sequence
         ['comic-tutorial-modal','comic-info-overlay','story-quest-modal'].forEach(id => {
           const el = document.getElementById(id);
