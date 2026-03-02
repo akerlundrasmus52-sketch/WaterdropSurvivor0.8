@@ -1,5 +1,136 @@
-# 0.2-NewVersion-Waterdrop-
-Version 0.5.1 alpha playable
+# 💧 Waterdrop Survivor
+
+**Version 0.5.1 alpha playable**
+
+A browser-based THREE.js survivor/roguelike game.
+
+---
+
+## 🎮 Project Overview
+
+- **Waterdrop Survivor** — browser-based THREE.js survivor/roguelike game
+- No ES modules — everything runs via `<script>` tags in `index.html` sharing global scope
+- THREE.js loaded from CDN (v0.176.0)
+- Game state saved to localStorage
+- Player controls a blue water droplet fighting waves of enemies
+
+---
+
+## 🏗️ Architecture (After Code Split)
+
+The original monolithic `main.js` (1.09MB) was split into ~15 smaller files to get each under GitHub's file size limit. The files load in this order in `index.html`:
+
+**Pre-existing helper files (load first):**
+
+```
+THREE.js CDN → loading.js → debug.js → state.js → utils.js → audio.js
+→ weapons.js → enemies.js → combat.js → player.js → world.js → ui.js
+→ renderer.js → blood-system.js → spawn-sequence.js → camp-world.js
+→ harvesting.js → rage-combat.js → ui-calibration.js → idle-*.js files
+```
+
+**Split game files (from old main.js), in load order:**
+
+| File | Size | Contents |
+|---|---|---|
+| `js/main.js` | ~22KB | Game state variables, animation, pause, day/night |
+| `js/player-class.js` | ~51KB | Player class |
+| `js/enemy-class.js` | ~117KB | DroneTurret + Enemy classes |
+| `js/projectile-classes.js` | ~65KB | Projectile, SwordSlash, IceSpear, Meteor, ObjectPool, Particle |
+| `js/gem-classes.js` | ~26KB | ExpGem, GoldCoin, Chest |
+| `js/save-system.js` | ~83KB | Save/load, achievements, gear |
+| `js/camp-skill-system.js` | ~93KB | Camp buildings, skill tree, training |
+| `js/quest-system.js` | ~110KB | Quests, account, chat, companion, camp screen |
+| `js/world-gen.js` | ~113KB | 3D world generation |
+| `js/game-screens.js` | ~136KB | `init()`, menus, wave spawning, effects |
+| `js/level-up-system.js` | ~44KB | Level-up modal, upgrade cards |
+| `js/game-hud.js` | ~48KB | HUD, minimap, combo counter, NPC dialogue |
+| `js/game-over-reset.js` | ~37KB | Game over screen, `resetGame()` |
+| `js/input-system.js` | ~13KB | Input handling (joystick, keyboard, gamepad) |
+| `js/game-loop.js` | ~98KB | Main `animate()` loop, performance logging, FPS watchdog |
+
+### 📁 Full File Structure
+
+```
+├── index.html                — Main HTML + script load order
+├── TODO.md                   — Development roadmap
+├── README.md                 — This file
+├── css/                      — Stylesheets
+├── docs/                     — Documentation
+├── js/
+│   ├── main.js               — Game state variables & module aliases
+│   ├── player-class.js       — Player class
+│   ├── enemy-class.js        — DroneTurret + Enemy classes
+│   ├── projectile-classes.js — Projectiles
+│   ├── gem-classes.js        — ExpGem, GoldCoin, Chest
+│   ├── save-system.js        — Save/load, achievements, gear
+│   ├── camp-skill-system.js  — Camp buildings, skill tree
+│   ├── quest-system.js       — Quests, companion, camp screen
+│   ├── world-gen.js          — 3D world generation
+│   ├── game-screens.js       — init(), menus, wave spawning
+│   ├── level-up-system.js    — Level-up modal
+│   ├── game-hud.js           — HUD, minimap, combo, NPC
+│   ├── game-over-reset.js    — Game over, reset
+│   ├── input-system.js       — Input handling
+│   ├── game-loop.js          — Main animate() loop
+│   ├── camp-world.js         — 3D camp hub world
+│   └── world.js              — World/environment constants (COLORS)
+```
+
+---
+
+## 🐛 Bugs Fixed (March 1, 2026) — Session Summary
+
+### PR #466 — Fix game boot failure caused by unsafe cross-file `spawnParticles` reassignment
+- `game-loop.js` had top-level parse-time code referencing `spawnParticles` from `game-screens.js` that would throw a ReferenceError before `init()` could run
+- Fixed by using `window.spawnParticles` with `typeof` guard
+
+### PR #467 — Fix game init failures after monolithic main.js split
+- `audio.js`: Bare `new AudioContext()` at top level crashes on mobile → wrapped in try-catch
+- `game-screens.js`: `updateBackgroundMusic()` in `init()` throws if audio failed → guarded with `typeof`
+- `game-loop.js`: `init()` catch block didn't set `gameModuleReady` → now sets it + shows menu fallback
+- `loading.js`: `saveData.storyQuests.welcomeShown` crashes if undefined → optional chaining
+
+### PR #468 — Fix BloodSystem THREE.js load guard + camp auto-activation on death
+- `BloodSystem.init()` crashes if THREE.js CDN failed → added `typeof` guard
+- `gameOver()` was calling `CampWorld.enter()` with no-op callbacks → removed; camp only via explicit button
+
+### PR #469 — Fix: Show main menu after loading instead of auto-routing to camp
+- `showMenuAfterLoading()` had 3-branch routing that always resolved to camp → replaced with simple main menu display
+
+### PR #470 — Fix: always show main menu after loading — remove camp auto-jump
+- Confirmed and re-applied the camp routing fix in `loading.js` + verified `game-screens.js` `init()` doesn't show screens
+
+---
+
+## ✅ Current Status
+
+### Fixed
+- ✅ Game boots properly after the 15-file split
+- ✅ Loading screen → main menu (no more camp auto-jump)
+- ✅ AudioContext crash on mobile/restricted environments
+- ✅ BloodSystem safe if THREE.js CDN fails
+- ✅ Death screen no longer auto-activates camp world
+- ✅ Cross-file `spawnParticles` reference safe
+- ✅ `gameModuleReady` always gets set even if `init()` fails
+
+### ⚠️ Possibly Still Needs Work
+- The `showComicInfoBox` welcome popup ("Welcome Dropplet" with yellow Continue button) — callback may still not work properly when entering camp for the first time
+- Story quest modal timing — the story-quest-modal in `loading.js` may still interfere if storyQuests data isn't populated
+- Full gameplay testing needed — menu works, but need to verify: Start Game → actual gameplay → enemies spawn → combat works → death screen → camp access
+- Mobile touch controls — joystick/touch input might need testing after the split
+- Save/load — localStorage save/load should be verified after the split
+- Camp sub-screens (quest hall, skill tree, armory, training hall, forge, companion house, achievements, inventory) — need verification
+
+---
+
+## ⚡ Important Notes for Future Copilot Sessions
+
+> **⚡ WORKFLOW NOTE:** When working on this repo, ALWAYS push PRs directly without asking for confirmation first. The owner has approved this workflow to reduce costs. Only stop and ask if something looks seriously wrong or risky. Just push the PR — if the owner doesn't want it, they'll let you know.
+
+> **🔧 TECHNICAL NOTE:** All JS files share global scope via `<script>` tags. No ES modules. Script load ORDER in `index.html` matters — if you add a new file, it must go in the right position. Always use `typeof` guards for cross-file function calls. Wrap risky top-level code in try-catch to prevent halting script execution.
+
+> **💰 COST NOTE:** Keep PRs comprehensive — fix as many things as possible per PR. The owner is on a tight budget. Don't split fixes into multiple small PRs when one big one will do.
 
 ---
 
@@ -199,34 +330,6 @@ Fix broken game after JS file split (PR #464) — restore full loading → menu 
 - Fix load order + add `window.*` exposures where needed
 
 ---
-
-### 📁 Current File Structure
-
-```
-├── index.html          — Main HTML + script load order
-├── TODO.md             — Development roadmap
-├── README.md           — This file
-├── css/                — Stylesheets
-├── docs/               — Documentation
-├── js/
-│   ├── main.js         — Game state variables & module aliases
-│   ├── player-class.js — Player class
-│   ├── enemy-class.js  — DroneTurret + Enemy classes
-│   ├── projectile-classes.js — Projectiles
-│   ├── gem-classes.js  — ExpGem, GoldCoin, Chest
-│   ├── save-system.js  — Save/load, achievements, gear
-│   ├── camp-skill-system.js — Camp buildings, skill tree
-│   ├── quest-system.js — Quests, companion, camp screen
-│   ├── world-gen.js    — 3D world generation
-│   ├── game-screens.js — init(), menus, wave spawning
-│   ├── level-up-system.js — Level-up modal
-│   ├── game-hud.js     — HUD, minimap, combo, NPC
-│   ├── game-over-reset.js — Game over, reset
-│   ├── input-system.js — Input handling
-│   ├── game-loop.js    — Main animate() loop
-│   ├── camp-world.js   — 3D camp hub world
-│   └── world.js        — World/environment constants (COLORS)
-```
 
 ### 🎮 All 17 Enemy Types (For Sprite Reference)
 
