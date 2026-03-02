@@ -251,7 +251,6 @@
       window.isPaused = shouldPause;
       window.pauseOverlayCount = pauseOverlayCount;
     }
-    window.setGamePaused = (paused) => setGamePaused(paused);
     window.pauseOverlayCount = 0;
     
     function setGameActive(active) {
