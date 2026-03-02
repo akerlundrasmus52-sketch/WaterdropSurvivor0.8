@@ -1542,6 +1542,9 @@
         const campScreenEl = document.getElementById('camp-screen');
         if (campScreenEl) campScreenEl.classList.remove('camp-3d-mode');
         document.getElementById('camp-screen').style.display = 'none';
+        // Restore ui-layer visibility (quest-system hides it when entering 3D camp mode)
+        const uiLayerEl = document.getElementById('ui-layer');
+        if (uiLayerEl) uiLayerEl.style.visibility = '';
         // Remove camp mode from chat tab when leaving camp
         const chatTab = document.getElementById('ai-chat-tab');
         if (chatTab) chatTab.classList.remove('camp-mode');
