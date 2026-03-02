@@ -16,17 +16,37 @@
       let touchStartTime = 0;
       let swipeDetected = false;
       
-      // Helper: returns true if the element at (x,y) belongs to a game HUD button
+      // Helper: returns true if the element at (x,y) belongs to a HUD button, menu panel,
+      // or any interactive UI element that should receive taps directly (not joystick).
       function _isHudElement(x, y) {
         const el = document.elementFromPoint(x, y);
         return el && (
           el.closest('#special-attacks-hud') ||
           el.closest('#rage-hud') ||
-          el.closest('#melee-takedown-btn')
+          el.closest('#melee-takedown-btn') ||
+          el.closest('#camp-screen') ||
+          el.closest('#main-menu') ||
+          el.closest('#gameover-screen') ||
+          el.closest('#options-menu') ||
+          el.closest('#settings-modal') ||
+          el.closest('#levelup-modal') ||
+          el.closest('#story-quest-modal') ||
+          el.closest('#comic-tutorial-modal') ||
+          el.closest('[class*="overlay"]') ||
+          (el.tagName === 'BUTTON') ||
+          (el.tagName === 'A') ||
+          (el.tagName === 'INPUT') ||
+          (el.tagName === 'SELECT')
         );
       }
 
       zone.addEventListener('touchstart', (e) => {
+        // Completely disable joystick when not in active gameplay
+        // (camp world, menus, buildings, any non-playing state)
+        if ((window.CampWorld && window.CampWorld.isActive) || !window.isGameActive) {
+          return; // Let touch events pass through to UI elements
+        }
+
         // Check if any touch targets a HUD button (special attacks, rage, melee).
         // If so, skip joystick handling for that touch so button events fire normally.
         let allHudTouches = true;

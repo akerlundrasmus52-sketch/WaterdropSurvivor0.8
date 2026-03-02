@@ -56,6 +56,13 @@
   let _playerVel   = { x: 0, z: 0 };
   let _playerPos   = { x: SPAWN_POS.x, z: SPAWN_POS.z };
 
+  // Benny NPC state
+  let _bennyMesh   = null;
+  let _bennyBubble = null;        // DOM speech-bubble element
+  const BENNY_POS  = { x: 4, z: 7 }; // near camp entrance
+  const BENNY_GREET_RADIUS = 3.5;
+  let _bennyGreeted = false;      // whether Benny dialogue has fired this session
+
   let _campTime    = 0;
   let _isActive    = false;
   let _menuOpen    = false;  // true while a building menu overlay is visible
@@ -186,6 +193,9 @@
 
     // ── Player character ─────────────────────────────────────
     _buildPlayer();
+
+    // ── Benny NPC ────────────────────────────────────────────
+    _buildBennyNPC();
 
     // ── Camera ──────────────────────────────────────────────
     const aspect = window.innerWidth / window.innerHeight;
@@ -495,6 +505,155 @@
     grp.position.set(_playerPos.x, PLAYER_RADIUS, _playerPos.z);
     _playerMesh = grp;
     _campScene.add(grp);
+  }
+
+  // ── Benny NPC ─────────────────────────────────────────────
+  function _buildBennyNPC() {
+    const THREE = T();
+    const grp = new THREE.Group();
+
+    // Body: taller, more angular shape — different from the round player drop
+    const bodyGeo = new THREE.CylinderGeometry(0.28, 0.35, 1.1, 8);
+    const bodyMat = new THREE.MeshPhongMaterial({
+      color: 0x8B4513,    // brown — leather jacket look
+      emissive: 0x3B1A05,
+      emissiveIntensity: 0.2,
+      shininess: 40
+    });
+    const body = new THREE.Mesh(bodyGeo, bodyMat);
+    body.position.y = 0.55;
+    body.castShadow = true;
+    grp.add(body);
+
+    // Head: simple sphere, distinctly different colour (weathered skin)
+    const headGeo = new THREE.SphereGeometry(0.26, 10, 8);
+    const headMat = new THREE.MeshPhongMaterial({
+      color: 0xC68642,
+      emissive: 0x402010,
+      emissiveIntensity: 0.15,
+      shininess: 30
+    });
+    const head = new THREE.Mesh(headGeo, headMat);
+    head.position.y = 1.32;
+    head.castShadow = true;
+    grp.add(head);
+
+    // Hat brim (flat disc)
+    const brimGeo = new THREE.CylinderGeometry(0.38, 0.38, 0.06, 12);
+    const hatMat  = new THREE.MeshPhongMaterial({ color: 0x2C1A0A, shininess: 10 });
+    const brim = new THREE.Mesh(brimGeo, hatMat);
+    brim.position.y = 1.56;
+    grp.add(brim);
+
+    // Hat crown
+    const crownGeo = new THREE.CylinderGeometry(0.22, 0.26, 0.3, 10);
+    const crown = new THREE.Mesh(crownGeo, hatMat);
+    crown.position.y = 1.72;
+    grp.add(crown);
+
+    grp.position.set(BENNY_POS.x, 0, BENNY_POS.z);
+    _bennyMesh = grp;
+    _campScene.add(grp);
+
+    // Create speech bubble DOM element (positioned via CSS transform in update)
+    const bubble = document.createElement('div');
+    bubble.id = 'benny-speech-bubble';
+    bubble.style.cssText = [
+      'position:fixed',
+      'background:rgba(20,14,8,0.92)',
+      'color:#FFD700',
+      'border:2px solid #8B6914',
+      'border-radius:10px',
+      'padding:6px 10px',
+      'font-family:Bangers,cursive',
+      'font-size:13px',
+      'letter-spacing:1px',
+      'pointer-events:none',
+      'z-index:350',
+      'max-width:160px',
+      'text-align:center',
+      'display:none',
+      'white-space:normal',
+      'line-height:1.4',
+      'box-shadow:0 2px 8px rgba(0,0,0,0.7)'
+    ].join(';');
+    document.body.appendChild(bubble);
+    _bennyBubble = bubble;
+  }
+
+  // Update Benny NPC each frame (gentle idle bob + speech bubble position)
+  function _updateBennyNPC(dt) {
+    if (!_bennyMesh || !_campScene) return;
+    const THREE = T();
+
+    // Gentle idle bob
+    _bennyMesh.position.y = Math.sin(_campTime * 1.4) * 0.06;
+
+    // Face the player
+    if (_playerMesh) {
+      const dx = _playerPos.x - BENNY_POS.x;
+      const dz = _playerPos.z - BENNY_POS.z;
+      if (Math.abs(dx) > 0.05 || Math.abs(dz) > 0.05) {
+        const targetAngle = Math.atan2(dx, dz);
+        let da = targetAngle - _bennyMesh.rotation.y;
+        while (da > Math.PI)  da -= Math.PI * 2;
+        while (da < -Math.PI) da += Math.PI * 2;
+        _bennyMesh.rotation.y += da * 0.05;
+      }
+    }
+
+    // Project Benny's world position to screen space for the speech bubble
+    if (_bennyBubble && _campCamera) {
+      const pos3d = new THREE.Vector3(BENNY_POS.x, 1.9, BENNY_POS.z);
+      pos3d.project(_campCamera);
+      const sx = ( pos3d.x * 0.5 + 0.5) * window.innerWidth;
+      const sy = (-pos3d.y * 0.5 + 0.5) * window.innerHeight;
+      _bennyBubble.style.left = (sx - 80) + 'px';
+      _bennyBubble.style.top  = (sy - 60) + 'px';
+    }
+
+    // Check proximity for first-death greeting
+    if (_playerMesh && !_bennyGreeted) {
+      const dx = _playerPos.x - BENNY_POS.x;
+      const dz = _playerPos.z - BENNY_POS.z;
+      if (Math.sqrt(dx * dx + dz * dz) < BENNY_GREET_RADIUS) {
+        _bennyGreeted = true;
+        _triggerBennyGreeting();
+      }
+    }
+  }
+
+  // Trigger Benny's first-death greeting (only once per save)
+  function _triggerBennyGreeting() {
+    if (!window.saveData) return;
+    const sd = window.saveData;
+    if (!sd.tutorialQuests || !sd.tutorialQuests.firstDeathShown) return;
+    if (sd.bennyGreetingShown) return;  // already seen
+
+    sd.bennyGreetingShown = true;
+    if (typeof saveSaveData === 'function') saveSaveData();
+
+    _showBennySpeech('Welcome to camp,\nSurvivor.\nLet\'s build you\na home. 🏕️');
+    setTimeout(() => { _hideBennySpeech(); }, 5000);
+
+    // Trigger the quest hint after the greeting fades
+    setTimeout(() => {
+      const currentQ = (typeof getCurrentQuest === 'function') ? getCurrentQuest() : null;
+      if (currentQ) {
+        _showBennySpeech('Quest:\n' + currentQ.name);
+        setTimeout(() => { _hideBennySpeech(); }, 4000);
+      }
+    }, 5500);
+  }
+
+  function _showBennySpeech(text) {
+    if (!_bennyBubble) return;
+    _bennyBubble.textContent = text;
+    _bennyBubble.style.display = 'block';
+  }
+
+  function _hideBennySpeech() {
+    if (_bennyBubble) _bennyBubble.style.display = 'none';
   }
 
   // ──────────────────────────────────────────────────────────
@@ -2191,6 +2350,10 @@
       _touch.x = 0;
       _touch.y = 0;
       _hideTouchIndicator();
+
+      // Reset Benny greeting so proximity check re-runs on each camp visit
+      // (but _triggerBennyGreeting() checks bennyGreetingShown in save data so it only shows once)
+      _bennyGreeted = false;
     } catch (setupErr) {
       console.warn('[CampWorld] Non-critical setup error in enter():', setupErr);
     }
@@ -2213,6 +2376,7 @@
     if (_promptEl) _promptEl.style.display = 'none';
     if (_interactBtn) _interactBtn.style.display = 'none';
     _hideTouchIndicator();
+    _hideBennySpeech();
   }
 
   /**
@@ -2223,6 +2387,7 @@
     if (!_isActive || !_campScene) return;
     _updateFire(dt);
     _updateParticles(dt);
+    _updateBennyNPC(dt);
 
     // When a building menu is open, freeze player input/movement but keep
     // rendering the camp scene (fire, particles, camera).  Auto-detect when

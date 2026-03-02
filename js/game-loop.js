@@ -177,6 +177,10 @@
       window.dirLight.shadow.radius = shadowSharpness;
     }
     
+    // 120 fps cap: minimum milliseconds between processed frames (~8.33 ms)
+    const _MIN_FRAME_MS = 1000 / 120;
+    let _lastAnimTime = 0;
+
     function animate(time) {
       animationFrameId = requestAnimationFrame(animate);
       
@@ -184,6 +188,10 @@
       if (!renderer || !scene || !camera) {
         return;
       }
+
+      // Cap frame rate at 120fps to avoid unnecessary GPU work on high-refresh screens
+      if (time - _lastAnimTime < _MIN_FRAME_MS) return;
+      _lastAnimTime = time;
 
       // Initialize lastTime on first frame to prevent huge dt (PR #82 fix)
       if (lastTime === null) {
