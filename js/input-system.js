@@ -114,6 +114,10 @@
       }, { passive: false });
 
       zone.addEventListener('touchmove', (e) => {
+        // Skip joystick processing when not in active gameplay
+        if ((window.CampWorld && window.CampWorld.isActive) || !window.isGameActive) {
+          return;
+        }
         e.preventDefault();
         
         for (let i = 0; i < e.changedTouches.length; i++) {
@@ -194,6 +198,10 @@
       }, { passive: false });
 
       const endJoystick = (e) => {
+        // Skip joystick processing when not in active gameplay
+        if ((window.CampWorld && window.CampWorld.isActive) || !window.isGameActive) {
+          return;
+        }
         e.preventDefault();
         for (let i = 0; i < e.changedTouches.length; i++) {
           const touch = e.changedTouches[i];
@@ -362,6 +370,7 @@
         joystickZone.style.display = 'none';
       }
       
-      // Additional setup for keyboard/gamepad controls could go here
+      // Sync pointer-events based on current game state
+      if (typeof window._syncJoystickZone === 'function') window._syncJoystickZone();
     }
 

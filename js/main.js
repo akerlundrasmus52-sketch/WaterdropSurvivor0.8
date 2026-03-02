@@ -250,18 +250,33 @@
       isPaused = shouldPause;
       window.isPaused = shouldPause;
       window.pauseOverlayCount = pauseOverlayCount;
+      _syncJoystickZone();
     }
     window.pauseOverlayCount = 0;
     
     function setGameActive(active) {
       isGameActive = active;
       window.isGameActive = active;
+      _syncJoystickZone();
     }
     
     function setGameOver(gameOverState) {
       isGameOver = gameOverState;
       window.isGameOver = gameOverState;
+      _syncJoystickZone();
     }
+
+    // Enable joystick pointer-events ONLY during active, unpaused gameplay.
+    // Prevents the full-screen joystick-zone from blocking touches on menus,
+    // level-up modals, camp buildings, game-over buttons, etc.
+    function _syncJoystickZone() {
+      var zone = document.getElementById('joystick-zone');
+      if (!zone) return;
+      var shouldBeActive = isGameActive && !isPaused && !isGameOver &&
+                           !(window.CampWorld && window.CampWorld.isActive);
+      zone.style.pointerEvents = shouldBeActive ? 'auto' : 'none';
+    }
+    window._syncJoystickZone = _syncJoystickZone;
     
     // Day/Night Cycle System - Smooth, non-blocking transitions
     // Initial state provided by world.js → getInitialDayNightCycle()

@@ -1107,6 +1107,7 @@
             window.pauseOverlayCount = 0;
             isPaused = false;
             window.isPaused = false;
+            if (typeof _syncJoystickZone === 'function') _syncJoystickZone();
             // Activate 3D camp world immediately so there is no opaque-background flash
             try { updateCampScreen(); } catch(e) { console.error('[Camp] updateCampScreen error:', e); }
             // Deferred pass + safety retries for reliable 3D camp activation

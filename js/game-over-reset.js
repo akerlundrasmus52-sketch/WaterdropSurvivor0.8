@@ -37,6 +37,7 @@
       pauseOverlayCount = 0;
       isPaused = false;
       window.isPaused = false;
+      if (typeof _syncJoystickZone === 'function') _syncJoystickZone();
       levelUpPending = false;
       // Close farmer dialogue if open when game ends to prevent UI malfunction
       if (windmillQuest.dialogueOpen) {
