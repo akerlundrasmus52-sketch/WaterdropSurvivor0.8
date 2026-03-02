@@ -623,27 +623,37 @@
     }
   }
 
-  // Trigger Benny's first-death greeting (only once per save)
+  // Trigger Benny's greeting (shown once per save after first run/death)
   function _triggerBennyGreeting() {
     if (!window.saveData) return;
     const sd = window.saveData;
-    if (!sd.tutorialQuests || !sd.tutorialQuests.firstDeathShown) return;
     if (sd.bennyGreetingShown) return;  // already seen
 
+    // Show greeting on first camp visit (whether before or after first death)
     sd.bennyGreetingShown = true;
     if (typeof saveSaveData === 'function') saveSaveData();
 
-    _showBennySpeech('Welcome to camp,\nSurvivor.\nLet\'s build you\na home. 🏕️');
+    _showBennySpeech('Welcome to camp,\nSurvivor! I\'m Benny.\nLet me show you\naround. 🏕️');
     setTimeout(() => { _hideBennySpeech(); }, 5000);
 
-    // Trigger the quest hint after the greeting fades
+    // After greeting, walk to the main building (questMission) and unlock it
+    setTimeout(() => {
+      _showBennySpeech('Follow me to the\nMain Building! 📜');
+      _bennyWalkToBuild('questMission', 'Here\'s your\nQuest Hall! 📜');
+      setTimeout(() => { _hideBennySpeech(); }, 3500);
+    }, 5500);
+
+    // Then show quest hint
     setTimeout(() => {
       const currentQ = (typeof getCurrentQuest === 'function') ? getCurrentQuest() : null;
       if (currentQ) {
-        _showBennySpeech('Quest:\n' + currentQ.name);
+        _showBennySpeech('Your quest:\n' + currentQ.name);
+        setTimeout(() => { _hideBennySpeech(); }, 4000);
+      } else {
+        _showBennySpeech('Start a run to\nbegin your\nfirst quest! ⚔️');
         setTimeout(() => { _hideBennySpeech(); }, 4000);
       }
-    }, 5500);
+    }, 10000);
   }
 
   function _showBennySpeech(text) {
@@ -654,6 +664,64 @@
 
   function _hideBennySpeech() {
     if (_bennyBubble) _bennyBubble.style.display = 'none';
+  }
+
+  // Benny walk-to-building animation: smoothly moves Benny to a building, shows speech, then returns
+  let _bennyWalking = false;
+  function _bennyWalkToBuild(buildingId, speechText) {
+    if (!_bennyMesh || _bennyWalking) return;
+    const def = BUILDING_DEFS.find(d => d.id === buildingId);
+    if (!def) return;
+    _bennyWalking = true;
+
+    // Save original position
+    const origX = BENNY_POS.x;
+    const origZ = BENNY_POS.z;
+    const targetX = def.x;
+    const targetZ = def.z;
+    const walkDuration = 1200; // ms
+
+    // Show speech
+    _showBennySpeech(speechText || 'Let me build\nthis for you! 🔨');
+
+    // Animate walk to building
+    const startMs = performance.now();
+    function walkStep() {
+      var t = Math.min((performance.now() - startMs) / walkDuration, 1);
+      var eased = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+      _bennyMesh.position.x = origX + (targetX - origX) * eased;
+      _bennyMesh.position.z = origZ + (targetZ - origZ) * eased;
+      // Face target direction
+      var dx = targetX - _bennyMesh.position.x;
+      var dz = targetZ - _bennyMesh.position.z;
+      if (Math.abs(dx) > 0.01 || Math.abs(dz) > 0.01) {
+        _bennyMesh.rotation.y = Math.atan2(dx, dz);
+      }
+      if (t < 1) {
+        requestAnimationFrame(walkStep);
+      } else {
+        // Arrived — wait, then walk back
+        setTimeout(function () {
+          _hideBennySpeech();
+          var retStart = performance.now();
+          function returnStep() {
+            var rt = Math.min((performance.now() - retStart) / walkDuration, 1);
+            var re = rt < 0.5 ? 2 * rt * rt : 1 - Math.pow(-2 * rt + 2, 2) / 2;
+            _bennyMesh.position.x = targetX + (origX - targetX) * re;
+            _bennyMesh.position.z = targetZ + (origZ - targetZ) * re;
+            if (rt < 1) {
+              requestAnimationFrame(returnStep);
+            } else {
+              _bennyMesh.position.x = origX;
+              _bennyMesh.position.z = origZ;
+              _bennyWalking = false;
+            }
+          }
+          requestAnimationFrame(returnStep);
+        }, 1500);
+      }
+    }
+    requestAnimationFrame(walkStep);
   }
 
   // ──────────────────────────────────────────────────────────
@@ -2166,6 +2234,19 @@
 
   function _onTouchStart(e) {
     if (!_isActive || _menuOpen) return;
+    // Don't intercept touches aimed at overlay panels above the 3D camp
+    var t0 = e.changedTouches[0];
+    if (t0) {
+      var el = document.elementFromPoint(t0.clientX, t0.clientY);
+      if (el) {
+        // If the touched element is inside a fixed overlay (z-index ≥ 400), let it handle the event
+        var node = el;
+        while (node && node !== document.body) {
+          if (node.style && node.style.zIndex && parseInt(node.style.zIndex, 10) >= 400) return;
+          node = node.parentElement;
+        }
+      }
+    }
     // Only handle left-half touches for movement (right half reserved for interact / UI)
     for (let i = 0; i < e.changedTouches.length; i++) {
       const t = e.changedTouches[i];
@@ -2354,6 +2435,25 @@
       // Reset Benny greeting so proximity check re-runs on each camp visit
       // (but _triggerBennyGreeting() checks bennyGreetingShown in save data so it only shows once)
       _bennyGreeted = false;
+
+      // Benny quest-aware speech on returning to camp (after first greeting already shown)
+      if (window.saveData && window.saveData.bennyGreetingShown) {
+        setTimeout(function () {
+          if (!_isActive) return;
+          var sd = window.saveData;
+          var tq = sd && sd.tutorialQuests;
+          if (tq && tq.readyToClaim && tq.readyToClaim.length > 0) {
+            _showBennySpeech('Welcome back!\nGo claim your\nquest reward! 📜');
+            setTimeout(function () { _hideBennySpeech(); }, 4000);
+          } else if (tq && tq.currentQuest) {
+            var currentQ = (typeof getCurrentQuest === 'function') ? getCurrentQuest() : null;
+            if (currentQ) {
+              _showBennySpeech('Current quest:\n' + currentQ.name);
+              setTimeout(function () { _hideBennySpeech(); }, 3500);
+            }
+          }
+        }, 1500);
+      }
     } catch (setupErr) {
       console.warn('[CampWorld] Non-critical setup error in enter():', setupErr);
     }
@@ -2457,6 +2557,7 @@
   window.CampWorld = {
     get isActive() { return _isActive; },
     get menuOpen() { return _menuOpen; },
+    pauseInput: function () { _menuOpen = true; },
     resumeInput: _resumeInput,
     enter,
     exit,
@@ -2464,6 +2565,9 @@
     render,
     refreshBuildings,
     playBuildingUnlockAnimation: _playBuildingUnlockAnimation,
+    bennyWalkToBuild: _bennyWalkToBuild,
+    showBennySpeech: _showBennySpeech,
+    hideBennySpeech: _hideBennySpeech,
     unlockBuilding(buildingId, saveData) {
       if (saveData) _saveData = saveData;
       if (_saveData && _saveData.campBuildings && _saveData.campBuildings[buildingId]) {

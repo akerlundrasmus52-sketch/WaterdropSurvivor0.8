@@ -2109,8 +2109,16 @@
         }
         const buildingName = CAMP_BUILDINGS[quest.unlockBuilding]?.name || 'Building';
         showStatChange(`🏛️ ${buildingName} Unlocked!`);
-        // Refresh 3D camp world building visibility + play unlock animation
-        if (window.CampWorld) {
+        // Benny walks to the building and builds it, then play unlock animation
+        if (window.CampWorld && window.CampWorld.isActive) {
+          window.CampWorld.bennyWalkToBuild(quest.unlockBuilding,
+            'Time to build\nthe ' + buildingName + '! 🔨');
+          // Delay the unlock animation to sync with Benny arriving (1.2s walk)
+          setTimeout(function () {
+            window.CampWorld.refreshBuildings(saveData);
+            window.CampWorld.playBuildingUnlockAnimation(quest.unlockBuilding);
+          }, 1300);
+        } else if (window.CampWorld) {
           window.CampWorld.refreshBuildings(saveData);
           window.CampWorld.playBuildingUnlockAnimation(quest.unlockBuilding);
         }
