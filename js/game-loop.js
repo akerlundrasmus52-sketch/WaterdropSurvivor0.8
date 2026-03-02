@@ -2172,6 +2172,75 @@
       console.error('[Game Error]', e);
       console.error('[Game] Initialization failed - game cannot start');
       window.gameModuleReady = true;
+      window.gameInitError = e; // Store the error for display
+
+      // Show error on screen so the user can report what went wrong
+      var errorDiv = document.createElement('div');
+      errorDiv.id = 'init-error-display';
+      errorDiv.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:rgba(200,0,0,0.95);color:#fff;padding:15px;font-family:monospace;font-size:13px;z-index:99999;max-height:40vh;overflow-y:auto;border-top:3px solid #ff0;';
+      errorDiv.innerHTML = '<div style="font-size:18px;font-weight:bold;color:#ff0;margin-bottom:8px;">⚠️ GAME INIT ERROR — Please report this:</div>' +
+        '<div style="white-space:pre-wrap;word-break:break-all;">' + (e && e.stack ? e.stack : String(e)) + '</div>' +
+        '<div style="margin-top:10px;color:#ff0;font-size:11px;">Tap anywhere on this red box to dismiss</div>';
+      errorDiv.onclick = function() { errorDiv.style.display = 'none'; };
+      document.body.appendChild(errorDiv);
+
+      // Show main menu
       var mainMenu = document.getElementById('main-menu');
       if (mainMenu) mainMenu.style.display = 'flex';
+
+      // Attach FALLBACK button handlers since setupMenus() never ran
+      // These provide basic functionality even when init() failed
+      _attachFallbackMenuHandlers();
+    }
+
+    // Fallback menu handlers — attached when init() fails
+    // These try to re-init or at least give the user some options
+    function _attachFallbackMenuHandlers() {
+      var startBtn = document.getElementById('start-game-btn');
+      var campBtn = document.getElementById('camp-btn');
+
+      if (startBtn && !startBtn._hasFallback) {
+        startBtn._hasFallback = true;
+        startBtn.addEventListener('click', function() {
+          // Try to re-initialize the game
+          var errorDisplay = document.getElementById('init-error-display');
+          if (errorDisplay) errorDisplay.style.display = 'none';
+
+          try {
+            init();
+            // If init succeeds this time, hide menu and start
+            var mainMenuEl = document.getElementById('main-menu');
+            if (mainMenuEl) mainMenuEl.style.display = 'none';
+            if (typeof resetGame === 'function') resetGame();
+            if (typeof startCountdown === 'function') startCountdown();
+          } catch(e2) {
+            console.error('[Retry] Init failed again:', e2);
+            // Show updated error
+            var errDiv = document.getElementById('init-error-display');
+            if (errDiv) {
+              errDiv.style.display = 'block';
+              var errContent = errDiv.querySelector('div:nth-child(2)');
+              if (errContent) errContent.textContent = 'RETRY FAILED: ' + (e2 && e2.stack ? e2.stack : String(e2));
+            } else {
+              alert('Game failed to start: ' + String(e2));
+            }
+          }
+        });
+      }
+
+      if (campBtn && !campBtn._hasFallback) {
+        campBtn._hasFallback = true;
+        campBtn.addEventListener('click', function() {
+          // Try to show camp screen
+          var campScreen = document.getElementById('camp-screen');
+          if (campScreen) {
+            var mainMenuEl = document.getElementById('main-menu');
+            if (mainMenuEl) mainMenuEl.style.display = 'none';
+            campScreen.style.display = 'flex';
+            if (typeof updateCampScreen === 'function') {
+              try { updateCampScreen(); } catch(e) { console.error('[Fallback] Camp error:', e); }
+            }
+          }
+        });
+      }
     }
