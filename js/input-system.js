@@ -371,6 +371,6 @@
       }
       
       // Sync pointer-events based on current game state
-      if (typeof _syncJoystickZone === 'function') _syncJoystickZone();
+      if (typeof window._syncJoystickZone === 'function') window._syncJoystickZone();
     }
 
