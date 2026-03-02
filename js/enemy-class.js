@@ -1343,6 +1343,8 @@
 
       die() {
         this.isDead = true;
+        // Register kill for combat intensity tracking (dynamic shadow quality)
+        if (typeof window.registerCombatKill === 'function') window.registerCombatKill();
         // Clear freeze state so no further update logic applies to dead enemy
         this.isFrozen = false;
         // Cancel pending squish timeout to prevent callback on dead enemy
@@ -1403,8 +1405,14 @@
           // Headshot: Specific head explosion
           this.dieByHeadshot(enemyColor);
         } else if (damageType === 'drone') {
-          // Drone death: riddled with holes, blood-soaked standard death
-          this.dieStandard(enemyColor);
+          // Drone death: riddled with tiny holes and blood mist spray
+          this.dieByDrone(enemyColor);
+        } else if (damageType === 'sword') {
+          // Sword death: slash wounds with immediate blood flow
+          this.dieBySword(enemyColor);
+        } else if (damageType === 'aura') {
+          // Aura death: burnt flesh, boiling blood effects
+          this.dieByAura(enemyColor);
         } else {
           // Standard death (bullet/physical/gun)
           this.dieStandard(enemyColor);
@@ -1430,9 +1438,9 @@
         spawnParticles(this.mesh.position, 0x440000, 6); // Extra dark blood chunks
         // Advanced blood particle burst on death — heavy spray up in air
         if (window.BloodSystem) {
-          window.BloodSystem.emitBurst(deathPos, this.isMiniBoss ? 900 : 500, { spreadXZ: 2.2, spreadY: 1.8, minSize: 0.03, maxSize: 0.16, minLife: 55, maxLife: 120 });
+          window.BloodSystem.emitBurst(deathPos, this.isMiniBoss ? 900 : 500, { spreadXZ: 2.2, spreadY: 0.4, minSize: 0.03, maxSize: 0.16, minLife: 55, maxLife: 120 });
           // Extra micro-fountain mist that rains down as tiny droplets
-          window.BloodSystem.emitBurst(deathPos, this.isMiniBoss ? 420 : 240, { spreadXZ: 1.8, spreadY: 1.2, minSize: 0.015, maxSize: 0.06, minLife: 60, maxLife: 110 });
+          window.BloodSystem.emitBurst(deathPos, this.isMiniBoss ? 420 : 240, { spreadXZ: 1.8, spreadY: 0.25, minSize: 0.015, maxSize: 0.06, minLife: 60, maxLife: 110 });
           // Pulsating blood fountain after death — simulates heart still pumping
           window.BloodSystem.emitPulse(deathPos, { pulses: this.isMiniBoss ? 10 : 6, perPulse: this.isMiniBoss ? 750 : 420, interval: 160, spreadXZ: 2.2, minSize: 0.02, maxSize: 0.1, minLife: 55, maxLife: 110 });
         }
@@ -2276,7 +2284,7 @@
         spawnParticles(deathPos, 0xFF2200, 10); // Vivid gore
         // Advanced blood burst + viscera for heavy shotgun damage
         if (window.BloodSystem) {
-          window.BloodSystem.emitBurst(deathPos, 800, { spreadXZ: 2.2, spreadY: 1.8 });
+          window.BloodSystem.emitBurst(deathPos, 800, { spreadXZ: 2.2, spreadY: 0.4 });
           window.BloodSystem.emitGuts(deathPos);
         }
 
@@ -2593,9 +2601,128 @@
           bloodPool.geometry.dispose(); bloodPool.material.dispose();
         }
       }
-    }
 
-    // Performance: Cached geometries and materials for projectiles (reused across instances).
+      dieByDrone(enemyColor) {
+        // DRONE TURRET DEATH: Riddled with 15-20 tiny holes, blood-mist spray
+        const deathPos = this.mesh.position.clone();
+        spawnParticles(deathPos, 0xAA0000, 12);
+        spawnParticles(deathPos, 0xCC2200, 8);
+        if (window.BloodSystem) {
+          const mistDir = new THREE.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5).normalize();
+          window.BloodSystem.emitDroneMist(deathPos, mistDir, 120, { lineLength: 0.6 });
+          window.BloodSystem.emitBurst(deathPos, 80, { spreadXZ: 0.6, spreadY: 0.15, minSize: 0.01, maxSize: 0.04, minLife: 20, maxLife: 45 });
+        }
+        // 15-20 tiny bullet-hole decals scattered around death position
+        const holeCount = 15 + Math.floor(Math.random() * 6);
+        for (let h = 0; h < holeCount; h++) {
+          const angle = Math.random() * Math.PI * 2;
+          const dist = Math.random() * 0.9;
+          spawnBloodDecal({ x: deathPos.x + Math.cos(angle) * dist, y: 0, z: deathPos.z + Math.sin(angle) * dist });
+        }
+        const corpseGeo = new THREE.SphereGeometry(0.4, 8, 6);
+        const corpseMat = new THREE.MeshBasicMaterial({ color: enemyColor, transparent: true, opacity: 0.8 });
+        const corpse = new THREE.Mesh(corpseGeo, corpseMat);
+        corpse.position.copy(deathPos);
+        corpse.position.y = 0.1;
+        corpse.scale.y = 0.2;
+        scene.add(corpse);
+        let life = 120;
+        if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
+          managedAnimations.push({ update(_dt) {
+            life--;
+            corpse.material.opacity = (life / 120) * 0.8;
+            if (life <= 0) { scene.remove(corpse); corpse.geometry.dispose(); corpse.material.dispose(); return false; }
+            return true;
+          }, cleanup() { scene.remove(corpse); corpse.geometry.dispose(); corpse.material.dispose(); }});
+        } else {
+          scene.remove(corpse); corpse.geometry.dispose(); corpse.material.dispose();
+        }
+      }
+
+      dieBySword(enemyColor) {
+        // SWORD DEATH: Deep slash wound with immediate blood flow along the cut line
+        const deathPos = this.mesh.position.clone();
+        spawnParticles(deathPos, 0x8B0000, 18);
+        spawnParticles(deathPos, 0xCC0000, 10);
+        if (window.BloodSystem) {
+          const slashAngle = Math.random() * Math.PI * 2;
+          const slashDir = new THREE.Vector3(Math.cos(slashAngle), 0, Math.sin(slashAngle)).normalize();
+          window.BloodSystem.emitSwordSlash(deathPos, slashDir, 120);
+          window.BloodSystem.emitBurst(deathPos, 60, { spreadXZ: 0.8, spreadY: 0.2, minSize: 0.03, maxSize: 0.09, minLife: 30, maxLife: 70 });
+          window.BloodSystem.emitPulse(deathPos, { pulses: 3, perPulse: 80, interval: 200, spreadXZ: 0.5, arcDir: slashDir });
+        }
+        for (let i = 0; i < 4; i++) {
+          const a = Math.random() * Math.PI * 2;
+          spawnBloodDecal({ x: deathPos.x + Math.cos(a) * (0.3 + Math.random() * 0.7), y: 0, z: deathPos.z + Math.sin(a) * (0.3 + Math.random() * 0.7) });
+        }
+        const corpseGeo = new THREE.SphereGeometry(0.45, 8, 6);
+        const corpseMat = new THREE.MeshBasicMaterial({ color: enemyColor, transparent: true, opacity: 0.85 });
+        const corpse = new THREE.Mesh(corpseGeo, corpseMat);
+        corpse.position.copy(deathPos);
+        corpse.position.y = 0.1;
+        corpse.scale.y = 0.22;
+        scene.add(corpse);
+        let life = 130;
+        if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
+          managedAnimations.push({ update(_dt) {
+            life--;
+            corpse.material.opacity = (life / 130) * 0.85;
+            if (life <= 0) { scene.remove(corpse); corpse.geometry.dispose(); corpse.material.dispose(); return false; }
+            return true;
+          }, cleanup() { scene.remove(corpse); corpse.geometry.dispose(); corpse.material.dispose(); }});
+        } else {
+          scene.remove(corpse); corpse.geometry.dispose(); corpse.material.dispose();
+        }
+      }
+
+      dieByAura(enemyColor) {
+        // AURA DEATH: Burnt flesh, boiling blood — intense energy damage
+        const deathPos = this.mesh.position.clone();
+        spawnParticles(deathPos, 0xFF4500, 12);
+        spawnParticles(deathPos, 0x5DADE2, 10);
+        spawnParticles(deathPos, 0x222222, 8);
+        if (window.BloodSystem) {
+          window.BloodSystem.emitAuraBurn(deathPos, 100);
+          window.BloodSystem.emitBurst(deathPos, 40, { spreadXZ: 0.4, spreadY: 0.12, minSize: 0.02, maxSize: 0.06, color1: 0x550000, color2: 0x8B0000, minLife: 20, maxLife: 50 });
+        }
+        const burnGeo = new THREE.CircleGeometry(0.7, 12);
+        const burnMat = new THREE.MeshBasicMaterial({ color: 0x111111, transparent: true, opacity: 0.55, side: THREE.DoubleSide });
+        const burnMark = new THREE.Mesh(burnGeo, burnMat);
+        burnMark.rotation.x = -Math.PI / 2;
+        burnMark.position.set(deathPos.x, 0.01, deathPos.z);
+        scene.add(burnMark);
+        const corpseGeo = new THREE.SphereGeometry(0.45, 8, 6);
+        const corpseMat = new THREE.MeshBasicMaterial({ color: 0x1a0a00, transparent: true, opacity: 0.85 });
+        const corpse = new THREE.Mesh(corpseGeo, corpseMat);
+        corpse.position.copy(deathPos);
+        corpse.position.y = 0.1;
+        corpse.scale.y = 0.2;
+        scene.add(corpse);
+        let life = 120;
+        if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
+          managedAnimations.push({ update(_dt) {
+            life--;
+            corpse.material.opacity = (life / 120) * 0.85;
+            burnMat.opacity = (life / 120) * 0.55;
+            if (life <= 0) {
+              scene.remove(corpse); scene.remove(burnMark);
+              corpse.geometry.dispose(); corpse.material.dispose();
+              burnGeo.dispose(); burnMat.dispose();
+              return false;
+            }
+            return true;
+          }, cleanup() {
+            scene.remove(corpse); scene.remove(burnMark);
+            corpse.geometry.dispose(); corpse.material.dispose();
+            burnGeo.dispose(); burnMat.dispose();
+          }});
+        } else {
+          scene.remove(corpse); scene.remove(burnMark);
+          corpse.geometry.dispose(); corpse.material.dispose();
+          burnGeo.dispose(); burnMat.dispose();
+        }
+      }
+    }
     // Lazily initialised on first use so the top-level script evaluation never calls THREE
     // before THREE.js has been loaded (mirrors the bulletHoleGeo/bulletHoleMat pattern).
     let projectileGeometryCache = null;

@@ -130,7 +130,8 @@
     if (!_scene) return;
     const opts = options || {};
     const spreadXZ  = opts.spreadXZ  !== undefined ? opts.spreadXZ  : 1.8;
-    const spreadY   = opts.spreadY   !== undefined ? opts.spreadY   : 1.2;
+    // spreadY default reduced to 0.3 — gives realistic 0–2m blood height instead of 40m+
+    const spreadY   = opts.spreadY   !== undefined ? opts.spreadY   : 0.3;
     const minLife   = opts.minLife   !== undefined ? opts.minLife   : 50;
     const maxLife   = opts.maxLife   !== undefined ? opts.maxLife   : 100;
     const minSize   = opts.minSize   !== undefined ? opts.minSize   : 0.04;
@@ -206,13 +207,16 @@
             const angle = baseAngle + (Math.random() - 0.5) * Math.PI;
             const speed = (0.05 + Math.random() * spreadXZ) * pressure;
             vx = Math.cos(angle) * speed;
-            vy = (0.15 + Math.random() * 0.6) * pressure;
+            // Realistic pump height: first pulse ~1-2m, decays with pressure.
+            // Formula: vy^2 / (2 * GRAVITY_ABS) = height → vy = sqrt(2 * 0.018 * h)
+            // First pump (pressure=1) → 0.12-0.27 → 0.4-2.0m; later pulses decay naturally.
+            vy = (0.12 + Math.random() * 0.15) * pressure;
             vz = Math.sin(angle) * speed;
           } else {
             const theta = Math.random() * Math.PI * 2;
             const speed = (0.04 + Math.random() * spreadXZ) * pressure;
             vx = Math.cos(theta) * speed;
-            vy = (0.15 + Math.random() * 0.6) * pressure;
+            vy = (0.12 + Math.random() * 0.15) * pressure;
             vz = Math.sin(theta) * speed;
           }
 
@@ -410,6 +414,73 @@
     }
   }
 
+  /**
+   * Emit a sword-slash wound — a horizontal arc of blood particles spraying in the
+   * direction of the slash. Simulates immediate blood flow from a cutting wound.
+   * @param {THREE.Vector3} pos    - wound centre
+   * @param {THREE.Vector3} slashDir - normalised direction of the slash
+   * @param {number} count
+   */
+  function emitSwordSlash(pos, slashDir, count) {
+    if (!_scene) return;
+    const n = count !== undefined ? count : 70;
+    const [r1, g1, b1] = _hexToRgb(0x8B0000);
+    const [r2, g2, b2] = _hexToRgb(0xCC0000);
+    // Perpendicular to slash direction (spread along wound line)
+    const perpX = -slashDir.z;
+    const perpZ =  slashDir.x;
+
+    for (let i = 0; i < n; i++) {
+      const t = Math.random();
+      const r = r1 + (r2 - r1) * t;
+      const g = g1 + (g2 - g1) * t;
+      const b = b1 + (b2 - b1) * t;
+      // Mix of tiny and medium droplets along the slash line
+      const size = Math.random() < 0.4 ? (0.015 + Math.random() * 0.03) : (0.04 + Math.random() * 0.07);
+      const life = 30 + Math.floor(Math.random() * 50);
+
+      // Spread along the wound line + outward spray
+      const along = (Math.random() - 0.5) * 0.8;
+      const outward = 0.04 + Math.random() * 0.12;
+      const vx = slashDir.x * outward + perpX * along * 0.3;
+      // Low upward velocity — slash wounds bleed outward more than upward
+      const vy = 0.03 + Math.random() * 0.08;
+      const vz = slashDir.z * outward + perpZ * along * 0.3;
+
+      _emit(pos.x + perpX * along * 0.3, pos.y + 0.4, pos.z + perpZ * along * 0.3,
+            vx, vy, vz, r, g, b, size, life);
+    }
+  }
+
+  /**
+   * Emit aura-burn effects — small charred particles and boiling blood droplets for
+   * energy/heat-based weapon kills.
+   * @param {THREE.Vector3} pos
+   * @param {number} count
+   */
+  function emitAuraBurn(pos, count) {
+    if (!_scene) return;
+    const n = count !== undefined ? count : 60;
+    // Dark charred + bright boiling-blood palette
+    const burnColors = [0x2A0000, 0x550000, 0x8B0000, 0xCC2200, 0xFF4500];
+
+    for (let i = 0; i < n; i++) {
+      const hex = burnColors[Math.floor(Math.random() * burnColors.length)];
+      const [r, g, b] = _hexToRgb(hex);
+      const size = 0.02 + Math.random() * 0.06;
+      const life = 25 + Math.floor(Math.random() * 35);
+
+      const theta = Math.random() * Math.PI * 2;
+      const speed = 0.02 + Math.random() * 0.06;
+      const vx = Math.cos(theta) * speed;
+      // Boiling: particles rise upward then fall back
+      const vy = 0.04 + Math.random() * 0.10;
+      const vz = Math.sin(theta) * speed;
+
+      _emit(pos.x, pos.y + 0.3, pos.z, vx, vy, vz, r, g, b, size, life);
+    }
+  }
+
   // ─── Update (call every frame) ───────────────────────────────────────────────
   function update() {
     if (!_scene || !_geo) return;
@@ -510,7 +581,9 @@
     emitDragTrail,
     emitSpinTrail,
     emitGuts,
-    emitDroneMist
+    emitDroneMist,
+    emitSwordSlash,
+    emitAuraBurn
   };
 
 })();
