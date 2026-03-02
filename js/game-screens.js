@@ -416,6 +416,7 @@
             window.pauseOverlayCount = 0;
             isPaused = false;
             window.isPaused = false;
+            if (typeof _syncJoystickZone === 'function') _syncJoystickZone();
             if (shouldForce) {
               levelUpPending = false;
               console.warn(`[PauseWatchdog] Force-unpaused after ${pausedMs}ms - clearing stuck pause state`);
@@ -1753,6 +1754,7 @@
         window.pauseOverlayCount = 0;
         isPaused = false;
         window.isPaused = false;
+        if (typeof _syncJoystickZone === 'function') _syncJoystickZone();
         // Show camp screen immediately so player sees the transition
         document.getElementById('camp-screen').classList.remove('camp-subsection-active');
         document.getElementById('camp-screen').style.display = 'flex';
@@ -2640,6 +2642,7 @@
       window.pauseOverlayCount = 0;
       isPaused = false;
       window.isPaused = false;
+      if (typeof _syncJoystickZone === 'function') _syncJoystickZone();
       checkPendingLevelUp();
     }
     window.forceGameUnpause = forceGameUnpause;

@@ -2359,6 +2359,7 @@
     }
 
     _isActive = true;
+    if (typeof window._syncJoystickZone === 'function') window._syncJoystickZone();
   }
 
   /**
@@ -2367,6 +2368,7 @@
    */
   function exit() {
     _isActive = false;
+    if (typeof window._syncJoystickZone === 'function') window._syncJoystickZone();
     _menuOpen = false;
     _keys = {};
     _touch.active = false;
