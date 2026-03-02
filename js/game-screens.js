@@ -1872,10 +1872,17 @@
     }
     
 
-    // Expose camp navigation for loading.js and other external scripts
-    window.updateCampScreen = function() {
-      try { updateCampScreen(); } catch(e) { console.error('[CampWorld] updateCampScreen error:', e); }
-    };
+    // Expose camp navigation for loading.js and other external scripts.
+    // IMPORTANT: capture the quest-system function BEFORE this proxy replaces window.updateCampScreen,
+    // otherwise calling `updateCampScreen()` bare-name inside the proxy would resolve to window.updateCampScreen
+    // (the proxy itself) causing infinite recursion / stack overflow.
+    (function() {
+      var _orig = (typeof updateCampScreen === 'function') ? updateCampScreen : null;
+      window.updateCampScreen = function() {
+        if (!_orig) { console.warn('[CampWorld] updateCampScreen not yet available'); return; }
+        try { _orig(); } catch(e) { console.error('[CampWorld] updateCampScreen error:', e); }
+      };
+    })();
 
     function spawnWave() {
       waveCount++;

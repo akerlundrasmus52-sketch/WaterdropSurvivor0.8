@@ -45,7 +45,13 @@ function getAchievementsDefaults() {
 }
 
 function checkAchievements(saveData) {
-  var ach = saveData.achievements || getAchievementsDefaults();
+  // Guard: the game's saveData.achievements is an Array (claimed-ID list), whereas the
+  // idle system needs an Object with an 'unlocked' map.  Use defaults when the field has
+  // the wrong shape to avoid "Cannot read properties of undefined" errors.
+  var raw = saveData.achievements;
+  var ach = (raw && !Array.isArray(raw) && typeof raw === 'object' && raw.unlocked)
+    ? raw
+    : getAchievementsDefaults();
   var stats = saveData.statistics || saveData.stats || {};
   var newly = [];
 
@@ -68,7 +74,10 @@ function checkAchievements(saveData) {
 }
 
 function getAchievementBonuses(saveData) {
-  var ach = saveData.achievements || getAchievementsDefaults();
+  var raw = saveData.achievements;
+  var ach = (raw && !Array.isArray(raw) && typeof raw === 'object' && raw.unlocked)
+    ? raw
+    : getAchievementsDefaults();
   var bonuses = {
     damage: 0,
     maxHp: 0,

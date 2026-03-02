@@ -2592,22 +2592,29 @@
       }
     }
 
-    // Performance: Cached geometries and materials for projectiles (reused across instances)
-    const projectileGeometryCache = {
-      bullet: new THREE.SphereGeometry(0.0625, 8, 8),  // 75% smaller radius (0.25 → 0.0625 is 25% of original)
-      bulletGlow: new THREE.SphereGeometry(0.0875, 6, 6)  // 75% smaller radius (0.35 → 0.0875 is 25% of original)
-    };
-    const projectileMaterialCache = {
-      bullet: new THREE.MeshBasicMaterial({ 
-        color: 0xFF4500,  // Red-orange starting color
-        transparent: true,
-        opacity: 0.95
-      }),
-      bulletGlow: new THREE.MeshBasicMaterial({
-        color: 0xFF6347,  // Tomato red-orange for glow
-        transparent: true,
-        opacity: 0.4
-      })
-    };
+    // Performance: Cached geometries and materials for projectiles (reused across instances).
+    // Lazily initialised on first use so the top-level script evaluation never calls THREE
+    // before THREE.js has been loaded (mirrors the bulletHoleGeo/bulletHoleMat pattern).
+    let projectileGeometryCache = null;
+    let projectileMaterialCache = null;
+    function ensureProjectileCaches() {
+      if (projectileGeometryCache) return;
+      projectileGeometryCache = {
+        bullet:     new THREE.SphereGeometry(0.0625, 8, 8),
+        bulletGlow: new THREE.SphereGeometry(0.0875, 6, 6)
+      };
+      projectileMaterialCache = {
+        bullet: new THREE.MeshBasicMaterial({
+          color: 0xFF4500,
+          transparent: true,
+          opacity: 0.95
+        }),
+        bulletGlow: new THREE.MeshBasicMaterial({
+          color: 0xFF6347,
+          transparent: true,
+          opacity: 0.4
+        })
+      };
+    }
 
     // Phase 5: Companion System - Simplified implementation for stable gameplay
