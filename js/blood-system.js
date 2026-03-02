@@ -26,6 +26,7 @@
 
   let _count = 0;   // active particle count
   let _head = 0;    // ring-buffer write head
+  let _highWater = 0; // high-water mark: max index that has been written to + 1
 
   // Shared material / geometry
   let _mat = null;
@@ -73,6 +74,8 @@
 
     _points = new THREE.Points(_geo, _mat);
     _points.renderOrder = 15;  // Render blood above ground to avoid z-fighting
+    _points.frustumCulled = false; // particles span entire world; skip bounding-sphere test
+    _geo.setDrawRange(0, 0);  // start with nothing to draw
     _scene.add(_points);
   }
 
@@ -91,6 +94,9 @@
     const i = _head;
     _head = (_head + 1) % MAX_BLOOD_PARTICLES;
     if (_count < MAX_BLOOD_PARTICLES) _count++;
+    if (_head > _highWater) _highWater = _head;
+    // Once wrapped, all slots are in play
+    if (_count >= MAX_BLOOD_PARTICLES) _highWater = MAX_BLOOD_PARTICLES;
 
     const i3 = i * 3;
     _positions[i3]     = x;
@@ -328,9 +334,15 @@
   function update() {
     if (!_scene || !_geo) return;
 
+    // Only iterate particles up to the high-water mark (avoids scanning 50k dead slots)
+    const limit = _highWater;
+    if (limit === 0) return;
+
     let needsUpdate = false;
-    for (let i = 0; i < MAX_BLOOD_PARTICLES; i++) {
+    let anyAlive = false;
+    for (let i = 0; i < limit; i++) {
       if (_life[i] <= 0) continue;
+      anyAlive = true;
       needsUpdate = true;
       _life[i]--;
 
@@ -378,17 +390,31 @@
       _geo.attributes.color.needsUpdate    = true;
       _geo.attributes.size.needsUpdate     = true;
     }
+
+    // Limit GPU draw range to only the particles that have been allocated
+    _geo.setDrawRange(0, limit);
+
+    // If no particles remain alive, reset high-water mark to avoid wasted iteration
+    if (!anyAlive) {
+      _highWater = 0;
+      _count = 0;
+      _head = 0;
+    }
   }
 
   // ─── Cleanup (call on game reset) ────────────────────────────────────────────
   function reset() {
     if (!_life) return;
-    for (let i = 0; i < MAX_BLOOD_PARTICLES; i++) {
+    for (let i = 0; i < _highWater; i++) {
       _life[i]     = 0;
       _grounded[i] = 0;
       if (_positions) _positions[i * 3 + 1] = -9999;
     }
+    _highWater = 0;
+    _count = 0;
+    _head = 0;
     if (_geo) {
+      _geo.setDrawRange(0, 0);
       if (_geo.attributes.position) _geo.attributes.position.needsUpdate = true;
     }
   }

@@ -58,6 +58,7 @@
 
   let _campTime    = 0;
   let _isActive    = false;
+  let _menuOpen    = false;  // true while a building menu overlay is visible
 
   // Campfire light + flame for flickering
   let _fireLight   = null;
@@ -1672,6 +1673,7 @@
 
   function _interact() {
     if (!_nearBuilding) return;
+    if (_menuOpen) return; // already showing a building menu
     // Block interaction with locked buildings
     if (!_isBuildingUnlocked(_nearBuilding)) {
       if (typeof showStatusMessage === 'function') {
@@ -1681,10 +1683,66 @@
     }
     const fn = _callbacks[_nearBuilding];
     if (typeof fn === 'function') {
+      // Pause camp input while the building menu is open
+      _menuOpen = true;
+      _playerVel.x = 0;
+      _playerVel.z = 0;
+      _keys = {};
+      _touch.active = false;
+      _touch.x = 0;
+      _touch.y = 0;
+      _hideTouchIndicator();
+      if (_promptEl) _promptEl.style.display = 'none';
+      if (_interactBtn) _interactBtn.style.display = 'none';
       fn();
     } else {
       console.warn('[CampWorld] No callback registered for building:', _nearBuilding);
     }
+  }
+
+  // Known overlay/screen element IDs that camp building callbacks may show.
+  // Used by _checkMenuClosed() to auto-detect when the player closes a menu.
+  const _OVERLAY_IDS = [
+    'gear-screen', 'achievements-screen', 'progression-shop',
+    'companion-house-modal', 'inventory-screen-modal',
+    'camp-board-overlay', 'special-attacks-panel-overlay',
+    'quest-hall-overlay', 'prestige-menu', 'expeditions-menu'
+  ];
+
+  /**
+   * Auto-detect when a building overlay has been dismissed.
+   * If _menuOpen is true but no known overlay is visible, resume camp input.
+   */
+  function _checkMenuClosed() {
+    if (!_menuOpen) return;
+    const campScreen = document.getElementById('camp-screen');
+    // If camp-screen itself is hidden, another full-screen took over; wait for it.
+    if (campScreen && campScreen.style.display === 'none') return;
+
+    // Check if any overlay element (from the building callback list) is visible
+    for (let i = 0; i < _OVERLAY_IDS.length; i++) {
+      const el = document.getElementById(_OVERLAY_IDS[i]);
+      if (el && el.style.display !== 'none' && el.style.display !== '') return;
+    }
+
+    // Also check for any element with data-quest-hall-overlay attribute
+    if (document.querySelector('[data-quest-hall-overlay]')) return;
+
+    // Check for camp tab panels that might be open (skill tree, training)
+    const campTabs = document.getElementById('camp-tabs');
+    if (campTabs && campTabs.style.display !== 'none' && campTabs.style.display !== '') return;
+
+    // No overlay detected — resume camp input
+    _resumeInput();
+  }
+
+  function _resumeInput() {
+    if (!_menuOpen) return;
+    _menuOpen = false;
+    _keys = {};
+    _touch.active = false;
+    _touch.x = 0;
+    _touch.y = 0;
   }
 
   // ──────────────────────────────────────────────────────────
@@ -1931,7 +1989,7 @@
   // Keyboard listeners
   // ──────────────────────────────────────────────────────────
   function _onKeyDown(e) {
-    if (!_isActive) return;
+    if (!_isActive || _menuOpen) return;
     _keys[e.code] = true;
     if (e.code === 'KeyE') _interact();
   }
@@ -1945,7 +2003,7 @@
   const _TOUCH_DEAD_ZONE = 10; // px
 
   function _onTouchStart(e) {
-    if (!_isActive) return;
+    if (!_isActive || _menuOpen) return;
     // Only handle left-half touches for movement (right half reserved for interact / UI)
     for (let i = 0; i < e.changedTouches.length; i++) {
       const t = e.changedTouches[i];
@@ -1964,7 +2022,7 @@
   }
 
   function _onTouchMove(e) {
-    if (!_isActive || !_touch.active) return;
+    if (!_isActive || !_touch.active || _menuOpen) return;
     for (let i = 0; i < e.changedTouches.length; i++) {
       const t = e.changedTouches[i];
       if (t.identifier !== _touch.id) continue;
@@ -2143,6 +2201,7 @@
    */
   function exit() {
     _isActive = false;
+    _menuOpen = false;
     _keys = {};
     _touch.active = false;
     _touch.x = 0;
@@ -2161,10 +2220,21 @@
     if (!_isActive || !_campScene) return;
     _updateFire(dt);
     _updateParticles(dt);
-    _updatePlayer(dt);
+
+    // When a building menu is open, freeze player input/movement but keep
+    // rendering the camp scene (fire, particles, camera).  Auto-detect when
+    // the overlay is dismissed: if the camp-screen is visible and no other
+    // full-screen overlay is on top, resume.
+    if (_menuOpen) {
+      _checkMenuClosed();
+    }
+
+    if (!_menuOpen) {
+      _updatePlayer(dt);
+      _updateInteraction();
+    }
     _updateCamera(dt);
     _updateSigns();
-    _updateInteraction();
   }
 
   /**
@@ -2216,6 +2286,8 @@
   // ──────────────────────────────────────────────────────────
   window.CampWorld = {
     get isActive() { return _isActive; },
+    get menuOpen() { return _menuOpen; },
+    resumeInput: _resumeInput,
     enter,
     exit,
     update,

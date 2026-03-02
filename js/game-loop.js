@@ -2,6 +2,26 @@
 // and the main animate() game loop (collision detection, AI updates, rendering).
 // This is the last file loaded — it starts the game by calling init().
 
+    // ─── Shared geometries/materials for hot-path effects (avoid per-frame allocation) ───
+    let _sharedGoreGeo = null;      // DodecahedronGeometry for gore blobs
+    let _sharedGoreMats = [null, null]; // Two alternating MeshStandardMaterials
+    let _sharedLavaGeo  = null;     // SphereGeometry for lava spout particles
+    let _sharedLavaMats = [null, null]; // Two color variants
+
+    function _ensureSharedGeo() {
+      if (typeof THREE === 'undefined') return;
+      if (!_sharedGoreGeo) {
+        _sharedGoreGeo = new THREE.DodecahedronGeometry(0.09, 0);
+        _sharedGoreMats[0] = new THREE.MeshStandardMaterial({ color: 0x6B0000, roughness: 0.9 });
+        _sharedGoreMats[1] = new THREE.MeshStandardMaterial({ color: 0x4B0082, roughness: 0.9 });
+      }
+      if (!_sharedLavaGeo) {
+        _sharedLavaGeo = new THREE.SphereGeometry(0.15, 4, 4);
+        _sharedLavaMats[0] = new THREE.MeshBasicMaterial({ color: 0xFF4500 });
+        _sharedLavaMats[1] = new THREE.MeshBasicMaterial({ color: 0xFF8C00 });
+      }
+    }
+
     // --- MAIN LOOP ---
     // Performance tracking for freeze bug investigation
     let performanceLog = {
@@ -1420,11 +1440,10 @@
                   spawnParticles(e.mesh.position, 0x8B0000, 5);
                   spawnParticles(e.mesh.position, 0xCC0000, 4);
                   for (let mgc = 0; mgc < 4 && bloodDrips.length < MAX_BLOOD_DRIPS; mgc++) {
-                    const mgSize = 0.08 + Math.random() * 0.1;
-                    const mgore = new THREE.Mesh(
-                      new THREE.DodecahedronGeometry(mgSize, 0),
-                      new THREE.MeshStandardMaterial({ color: mgc % 2 === 0 ? 0x6B0000 : 0x4B0082, roughness: 0.9 })
-                    );
+                    _ensureSharedGeo();
+                    const mgore = new THREE.Mesh(_sharedGoreGeo, _sharedGoreMats[mgc % 2]);
+                    const mgScale = 0.9 + Math.random() * 1.1; // vary size via scale
+                    mgore.scale.setScalar(mgScale);
                     mgore.position.copy(e.mesh.position);
                     scene.add(mgore);
                     bloodDrips.push({
@@ -1543,8 +1562,14 @@
             const hitGround = d.mesh.position.y <= 0.02;
             const pos = d.mesh.position.clone();
             scene.remove(d.mesh);
-            d.mesh.geometry.dispose();
-            d.mesh.material.dispose();
+            // Only dispose geometry/material if they are NOT shared (ice shards etc.)
+            if (d.mesh.geometry !== _sharedGoreGeo && d.mesh.geometry !== _sharedLavaGeo) {
+              d.mesh.geometry.dispose();
+            }
+            if (d.mesh.material !== _sharedGoreMats[0] && d.mesh.material !== _sharedGoreMats[1] &&
+                d.mesh.material !== _sharedLavaMats[0] && d.mesh.material !== _sharedLavaMats[1]) {
+              d.mesh.material.dispose();
+            }
             // Ice shards don't leave blood decals on landing
             if (hitGround && !d.isIce) spawnBloodDecal(pos);
             return false;
@@ -1912,9 +1937,9 @@
         if (window._lavaSpoutTimer > (2 + Math.random() * 3)) { // Every 2-5 seconds
           window._lavaSpoutTimer = 0;
           for (let ls = 0; ls < 8; ls++) {
-            const geo = new THREE.SphereGeometry(0.15, 4, 4);
-            const mat = new THREE.MeshBasicMaterial({ color: Math.random() < 0.5 ? 0xFF4500 : 0xFF8C00 });
-            const lavaP = new THREE.Mesh(geo, mat);
+            _ensureSharedGeo();
+            const lavaMatIdx = Math.random() < 0.5 ? 0 : 1;
+            const lavaP = new THREE.Mesh(_sharedLavaGeo, _sharedLavaMats[lavaMatIdx]);
             lavaP.position.set(lavaX + (Math.random() - 0.5) * 2, 22, lavaZ + (Math.random() - 0.5) * 2);
             scene.add(lavaP);
             const vx = (Math.random() - 0.5) * 0.3, vz = (Math.random() - 0.5) * 0.3;
@@ -1924,10 +1949,10 @@
                 lpLife--;
                 vy -= 0.012;
                 lavaP.position.x += vx; lavaP.position.y += vy; lavaP.position.z += vz;
-                if (lpLife <= 0) { scene.remove(lavaP); geo.dispose(); mat.dispose(); return false; }
+                if (lpLife <= 0) { scene.remove(lavaP); return false; }
                 return true;
               }});
-            } else { scene.remove(lavaP); geo.dispose(); mat.dispose(); }
+            } else { scene.remove(lavaP); }
           }
         }
       }
