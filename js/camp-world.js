@@ -530,7 +530,8 @@
     });
   }
   function _lambert(color) {
-    return new T().MeshLambertMaterial({ color });
+    const THREE = T();
+    return new THREE.MeshLambertMaterial( { color } );
   }
 
   // ── Quest Hall ─ rustic log cabin with quest board ───────
@@ -1135,8 +1136,8 @@
 
     // Low stone wall ring
     const wallGeo = new THREE.CylinderGeometry(3.6, 3.6, 1.1, 8, 1, true);
-    const wallMat = new T().MeshLambertMaterial({ color: 0x404055, side: T().DoubleSide });
-    const wall = new T().Mesh(wallGeo, wallMat);
+    const wallMat = new THREE.MeshLambertMaterial({ color: 0x404055, side: THREE.DoubleSide });
+    const wall = new THREE.Mesh(wallGeo, wallMat);
     wall.position.y = 0.75;
     grp.add(wall);
 
@@ -1152,7 +1153,7 @@
 
     // Glowing energy orb in the center
     const orbGeo = new THREE.SphereGeometry(0.5, 12, 8);
-    const orbMat = new T().MeshPhongMaterial({
+    const orbMat = new THREE.MeshPhongMaterial({
       color: 0xff4400, emissive: 0xff2200, emissiveIntensity: 0.9,
       transparent: true, opacity: 0.85
     });
@@ -1410,7 +1411,8 @@
     return grp;
   }
   function _mesh(geo, mat) {
-    const m = new T().Mesh(geo, mat);
+    const THREE = T();
+    const m = new THREE.Mesh(geo, mat);
     m.receiveShadow = true;
     return m;
   }

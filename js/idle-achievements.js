@@ -44,8 +44,16 @@ function getAchievementsDefaults() {
   };
 }
 
+// Guard: the game's saveData.achievements is an Array (claimed-ID list), whereas the
+// idle system needs an Object with an 'unlocked' map.  Returns true only when the field
+// has the correct idle-system shape.
+function _isIdleAchievementsData(raw) {
+  return !!(raw && !Array.isArray(raw) && typeof raw === 'object' && raw.unlocked);
+}
+
 function checkAchievements(saveData) {
-  var ach = saveData.achievements || getAchievementsDefaults();
+  var raw = saveData.achievements;
+  var ach = _isIdleAchievementsData(raw) ? raw : getAchievementsDefaults();
   var stats = saveData.statistics || saveData.stats || {};
   var newly = [];
 
@@ -68,7 +76,8 @@ function checkAchievements(saveData) {
 }
 
 function getAchievementBonuses(saveData) {
-  var ach = saveData.achievements || getAchievementsDefaults();
+  var raw = saveData.achievements;
+  var ach = _isIdleAchievementsData(raw) ? raw : getAchievementsDefaults();
   var bonuses = {
     damage: 0,
     maxHp: 0,
@@ -90,6 +99,7 @@ function getAchievementBonuses(saveData) {
 window.GameAchievements = {
   ACHIEVEMENTS: ACHIEVEMENTS,
   getAchievementsDefaults: getAchievementsDefaults,
+  isIdleAchievementsData: _isIdleAchievementsData,
   checkAchievements: checkAchievements,
   getAchievementBonuses: getAchievementBonuses
 };

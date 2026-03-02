@@ -160,6 +160,8 @@
 
     class Projectile {
       constructor(x, z, target) {
+        // Ensure geometry/material caches are initialised (lazy, safe even if THREE loads late)
+        ensureProjectileCaches();
         // Performance: Reuse cached geometry but clone materials for independent color transitions
         this.mesh = new THREE.Mesh(
           projectileGeometryCache.bullet, 

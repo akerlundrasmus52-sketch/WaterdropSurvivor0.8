@@ -667,7 +667,8 @@
   </div>
 
   <!-- THREE.js loaded as a regular script (global THREE variable available to all game scripts) -->
-  <script src="https://unpkg.com/three@0.176.0/build/three.min.js" onerror="console.error('[CDN] THREE.js failed to load — game cannot start without THREE.js')"></script>
+  <!-- Local copy (three.js r155 / v0.155.0, last version with UMD global build that sets window.THREE). -->
+  <script src="js/three.min.js"></script>
 
   <!-- CDN Error Logging (Non-blocking) -->
   <script src="js/cdn-monitor.js"></script>

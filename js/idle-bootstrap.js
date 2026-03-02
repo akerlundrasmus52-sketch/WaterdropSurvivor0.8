@@ -35,7 +35,8 @@
       return;
     }
     var GA = window.GameAchievements;
-    var ach = saveData.achievements || GA.getAchievementsDefaults();
+    var raw = saveData.achievements;
+    var ach = GA.isIdleAchievementsData(raw) ? raw : GA.getAchievementsDefaults();
     var bonuses = GA.getAchievementBonuses(saveData);
     var sumCard = _el('div', 'idle-card');
     sumCard.appendChild(_el('h4', 'idle-card-title', 'Active Bonuses'));
