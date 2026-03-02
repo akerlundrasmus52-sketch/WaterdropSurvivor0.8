@@ -1630,14 +1630,16 @@
       if (window.GameDailies) {
         const streak = (saveData.dailies && saveData.dailies.loginStreak) || 0;
         const canClaim = window.GameDailies.isDailyAvailable(saveData);
+        const peeked = canClaim ? window.GameDailies.peekDailyReward(saveData) : null;
+        const nextDay = peeked ? peeked.day : 0; // 1-based day number
         const rewards = window.GameDailies.DAILY_LOGIN_REWARDS;
         let html = '<div style="color:#FFD700;font-size:1.6em;margin-bottom:12px;text-shadow:2px 2px 0 #000;letter-spacing:2px;">🎁 DAILY REWARD</div>';
         html += '<div style="font-family:Arial,sans-serif;font-size:13px;color:#ccc;margin-bottom:16px;">Login Streak: <b style="color:#FFD700;">' + streak + ' days</b></div>';
         html += '<div class="daily-login-strip">';
         rewards.forEach(function(r, i) {
           const dayNum = i + 1;
-          const claimed = streak >= dayNum;
-          const isToday = canClaim && streak % 7 === i;
+          const claimed = streak >= dayNum && !canClaim;
+          const isToday = canClaim && nextDay === dayNum;
           const cls = 'daily-login-day' + (claimed ? ' claimed' : '') + (isToday ? ' today' : '');
           html += '<div class="' + cls + '">';
           html += '<div class="day-num">Day ' + dayNum + '</div>';
