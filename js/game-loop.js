@@ -267,6 +267,7 @@
       // --- BEGIN GAME LOGIC (wrapped in try-catch to guarantee rendering) ---
       // Any uncaught exception in game logic previously prevented renderer.render() from
       // being called, producing the "frozen picture, game runs in background" bug.
+      let aliveEnemies = 0; // Declared here so it's accessible in the performance logging below
       try {
 
       // Handle keyboard/gamepad input updates (integrated into game loop)
@@ -362,7 +363,7 @@
 
       // Spawn Logic - Only spawn new wave if previous wave is cleared
       frameCount++;
-      const aliveEnemies = enemies.filter(e => !e.isDead).length;
+      aliveEnemies = enemies.filter(e => !e.isDead).length;
       const timeSinceLastWave = frameCount - lastWaveEndTime;
       const minWaveDelay = Math.floor(GAME_CONFIG.waveInterval * 0.6); // 60% of wave interval (3 seconds at 60fps)
       
