@@ -667,14 +667,8 @@
   </div>
 
   <!-- THREE.js loaded as a regular script (global THREE variable available to all game scripts) -->
-  <!-- Local copy (three.js r155 / v0.155.0, last version with UMD global build) loaded first;
-       CDN is a fallback for environments where the local file is unavailable. -->
-  <script src="js/three.min.js" onerror="window._localThreeFailed=true;"></script>
-  <script>
-    if (window._localThreeFailed || typeof THREE === 'undefined') {
-      document.write('<scr'+'ipt src="https://cdn.jsdelivr.net/npm/three@0.155.0/build/three.min.js" onerror="console.error(\'[CDN] THREE.js failed to load — game cannot start without THREE.js\')"><\/scr'+'ipt>');
-    }
-  </script>
+  <!-- Local copy (three.js r155 / v0.155.0, last version with UMD global build that sets window.THREE). -->
+  <script src="js/three.min.js"></script>
 
   <!-- CDN Error Logging (Non-blocking) -->
   <script src="js/cdn-monitor.js"></script>
