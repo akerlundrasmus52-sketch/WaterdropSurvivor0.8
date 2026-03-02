@@ -522,6 +522,10 @@
         scene.remove(light);
       });
       flashLights = [];
+      // Reset pooled flash lights (remain in scene with zero intensity)
+      if (typeof _flashPool !== 'undefined' && _flashPool) {
+        _flashPool.forEach(pl => { pl.intensity = 0; pl.position.set(0, -9999, 0); pl._poolExpireAt = 0; });
+      }
       
       // Reset fountain/lightning spawn sequence for next run
       if (window.SpawnSequence) window.SpawnSequence.reset();

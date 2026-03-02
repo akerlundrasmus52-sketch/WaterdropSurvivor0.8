@@ -187,7 +187,11 @@
     for (let p = 0; p < pulses; p++) {
       setTimeout(() => {
         if (!_scene) return;
-        for (let i = 0; i < perPulse; i++) {
+        // Pressure drops with each pulse: ~22% falloff per pump gives a realistic
+        // heartbeat decay — first pump is highest-pressure, last is a weak seep.
+        const pressure = Math.max(0.15, 1 - p * 0.22);
+        const pulseCount = Math.ceil(perPulse * pressure);
+        for (let i = 0; i < pulseCount; i++) {
           const t   = Math.random();
           const r   = r1 + (r2 - r1) * t;
           const g   = g1 + (g2 - g1) * t;
@@ -200,15 +204,15 @@
             // Fan out 180° relative to arcDir
             const baseAngle = Math.atan2(arcDir.z, arcDir.x);
             const angle = baseAngle + (Math.random() - 0.5) * Math.PI;
-            const speed = 0.05 + Math.random() * spreadXZ;
+            const speed = (0.05 + Math.random() * spreadXZ) * pressure;
             vx = Math.cos(angle) * speed;
-            vy = 0.15 + Math.random() * 0.6;
+            vy = (0.15 + Math.random() * 0.6) * pressure;
             vz = Math.sin(angle) * speed;
           } else {
             const theta = Math.random() * Math.PI * 2;
-            const speed = 0.04 + Math.random() * spreadXZ;
+            const speed = (0.04 + Math.random() * spreadXZ) * pressure;
             vx = Math.cos(theta) * speed;
-            vy = 0.15 + Math.random() * 0.6;
+            vy = (0.15 + Math.random() * 0.6) * pressure;
             vz = Math.sin(theta) * speed;
           }
 
@@ -330,6 +334,82 @@
     }
   }
 
+  /**
+   * Emit viscera/gut blobs that spill onto the floor — for heavy damage deaths
+   * (shotgun, explosives). Creates large, dark elongated particles dragging on ground.
+   * @param {THREE.Vector3} pos  - wound/death position
+   * @param {object} options
+   */
+  function emitGuts(pos, options) {
+    if (!_scene) return;
+    const opts = options || {};
+    const count = opts.count !== undefined ? opts.count : 60;
+    const dir   = opts.dir; // optional THREE.Vector3 spill direction
+    // Viscera color palette: dark purple, dark red, pink intestine tones
+    const viscColors = [0x4B0082, 0x6B0000, 0x8B2500, 0x5C1A1A, 0xFF69B4];
+    for (let i = 0; i < count; i++) {
+      const hex = viscColors[Math.floor(Math.random() * viscColors.length)];
+      const [r, g, b] = _hexToRgb(hex);
+      const size = 0.12 + Math.random() * 0.20; // large blobs
+      const baseAngle = dir ? Math.atan2(dir.z, dir.x) : Math.random() * Math.PI * 2;
+      const angle = baseAngle + (Math.random() - 0.5) * (dir ? Math.PI * 0.8 : Math.PI * 2);
+      const dist  = Math.random() * 0.7;
+      // Heavy, low — guts fall to ground quickly
+      const speed = 0.015 + Math.random() * 0.04;
+      const vx = Math.cos(angle) * speed;
+      const vy = 0.03 + Math.random() * 0.10;
+      const vz = Math.sin(angle) * speed;
+      _emit(
+        pos.x + Math.cos(angle) * dist * 0.4,
+        pos.y + 0.3,
+        pos.z + Math.sin(angle) * dist * 0.4,
+        vx, vy, vz, r, g, b, size,
+        280 + Math.floor(Math.random() * 160) // long-lived stain
+      );
+    }
+  }
+
+  /**
+   * Emit a fine blood mist for drone turret hits — tiny droplets spread along the
+   * bullet line, simulating 15-20 rapid small-calibre entry wounds.
+   * @param {THREE.Vector3} pos       - impact centre
+   * @param {THREE.Vector3} bulletDir - normalised bullet travel direction
+   * @param {number} count
+   * @param {object} options
+   */
+  function emitDroneMist(pos, bulletDir, count, options) {
+    if (!_scene) return;
+    const opts = options || {};
+    const lineLength = opts.lineLength !== undefined ? opts.lineLength : 0.45;
+    const n = count !== undefined ? count : 80;
+    const [r1, g1, b1] = _hexToRgb(0xCC0000);
+    const [r2, g2, b2] = _hexToRgb(0xFF2200);
+    // Perpendicular to bullet direction (horizontal spread axis)
+    const perpX = -bulletDir.z;
+    const perpZ =  bulletDir.x;
+
+    for (let i = 0; i < n; i++) {
+      const t = Math.random();
+      const r = r1 + (r2 - r1) * t;
+      const g = g1 + (g2 - g1) * t;
+      const b = b1 + (b2 - b1) * t;
+      const size = 0.015 + Math.random() * 0.025; // very fine mist
+      const life = 20 + Math.floor(Math.random() * 20);
+
+      // Spread along perpendicular axis to create a line of tiny holes
+      const along = (Math.random() - 0.5) * lineLength;
+      const ox = perpX * along;
+      const oz = perpZ * along;
+
+      // Slight forward spray + micro gravity fall
+      const vx = bulletDir.x * (0.02 + Math.random() * 0.04) + (Math.random() - 0.5) * 0.025;
+      const vy = 0.01 + Math.random() * 0.06;
+      const vz = bulletDir.z * (0.02 + Math.random() * 0.04) + (Math.random() - 0.5) * 0.025;
+
+      _emit(pos.x + ox, pos.y + 0.35, pos.z + oz, vx, vy, vz, r, g, b, size, life);
+    }
+  }
+
   // ─── Update (call every frame) ───────────────────────────────────────────────
   function update() {
     if (!_scene || !_geo) return;
@@ -428,7 +508,9 @@
     emitPulse,
     emitExitWound,
     emitDragTrail,
-    emitSpinTrail
+    emitSpinTrail,
+    emitGuts,
+    emitDroneMist
   };
 
 })();

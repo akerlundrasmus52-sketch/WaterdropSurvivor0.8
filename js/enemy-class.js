@@ -2274,8 +2274,11 @@
         spawnParticles(deathPos, 0x8B0000, 30); // Lots of blood
         spawnParticles(deathPos, 0xCC0000, 20); // Bright splatter
         spawnParticles(deathPos, 0xFF2200, 10); // Vivid gore
-        // Advanced blood burst
-        if (window.BloodSystem) window.BloodSystem.emitBurst(deathPos, 800, { spreadXZ: 2.2, spreadY: 1.8 });
+        // Advanced blood burst + viscera for heavy shotgun damage
+        if (window.BloodSystem) {
+          window.BloodSystem.emitBurst(deathPos, 800, { spreadXZ: 2.2, spreadY: 1.8 });
+          window.BloodSystem.emitGuts(deathPos);
+        }
 
         // Scatter blood decals in a wide radius
         for (let i = 0; i < 10; i++) {
