@@ -47,6 +47,8 @@
         this.mesh = new THREE.Mesh(geo, mat);
         this.mesh.castShadow = true;
         this.mesh.receiveShadow = true;
+        this.mesh.material.emissive = new THREE.Color(0x000000);
+        this.mesh.material.emissiveIntensity = 0;
         scene.add(this.mesh);
         
         // Position near player
@@ -138,8 +140,6 @@
           const pulse = 1 + Math.sin(t * Math.PI) * 0.3;
           this.mesh.scale.set(s * pulse, s * pulse, s * pulse);
           this.mesh.position.y = baseY + 0.1;
-          // Flash emissive on attack
-          this.mesh.material.emissive = this.mesh.material.emissive || new THREE.Color();
           this.mesh.material.emissive.setHex(0xFF4400);
           this.mesh.material.emissiveIntensity = t * 0.8;
         } else if (this._animState === 'walk') {

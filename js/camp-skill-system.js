@@ -1606,7 +1606,7 @@
         rewardGold: 100,
         rewardSkillPoints: 1,
         rewardSAP: 1,
-        message: "⚡ Special Attack equipped!<br><br>Use it in battle to devastate your enemies!<br><br>Now head to the <b>Armory</b> and equip the Cigar from your inventory!",
+        message: "⚡ Special Attack equipped!<br><br>Use it in battle to devastate your enemies!<br><br>Now head to the <b>Armory</b> and equip the <b>Cigar</b> you found at Stonehenge!",
         nextQuest: 'quest4_equipCigar',
         conditions: ['quest3_stonehengeGear']
       },
@@ -1912,7 +1912,7 @@
         rewardGold: 600,
         rewardSkillPoints: 3,
         rewardAttributePoints: 3,
-        message: "🐣 COMPANION HATCHED!<br><br>A tiny newborn companion has emerged from the egg! 🍼<br><br>Take your <b>newborn companion</b> on a run and survive <b>1 minute</b> together to help it grow into a juvenile!",
+        message: "🐣 COMPANION HATCHED!<br><br>A tiny newborn companion has emerged from the egg! 🍼<br><br>Take your <b>newborn companion</b> on a run and survive <b>60 seconds</b> together to help it grow into a juvenile!",
         nextQuest: 'quest19b_growJuvenile',
         conditions: ['quest18_findCompanionEgg']
       },
@@ -1921,7 +1921,7 @@
       quest19b_growJuvenile: {
         id: 'quest19b_growJuvenile',
         name: 'Grow Your Companion — Juvenile',
-        description: 'Your newborn companion needs field experience! Take it on a run and survive 1 minute together so it can grow into a juvenile.',
+        description: 'Your newborn companion needs field experience! Take it on a run and survive 60 seconds together so it can grow into a juvenile.',
         objectives: 'Survive 60 seconds with your newborn companion',
         triggerOnDeath: true,
         rewardGold: 400,
