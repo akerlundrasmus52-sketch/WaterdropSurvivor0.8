@@ -2662,14 +2662,14 @@
         max-width: 450px; /* Increased for better level-up card readability in portrait orientation */
       }
 
-      .bar-container {
-        width: min(192px, 40vw);
-        height: 24px;
-      }
+    .bar-container {
+      width: min(230px, 46vw);
+      height: 24px;
+    }
 
-      .hud-top {
-        padding: 4px 8px; /* Keep compact in portrait; center position inherited */
-      }
+    .hud-top {
+      padding: 4px 8px; /* Keep compact in portrait; center position inherited */
+    }
       
       /* PR #117: Fix button overlap in portrait mode */
       /* Hide settings and stats buttons in portrait, show only menu button */
@@ -3121,6 +3121,7 @@
       box-shadow: 0 4px 12px rgba(0,0,0,0.6), 0 0 8px rgba(255,215,0,0.2), inset 0 1px 2px rgba(255,255,255,0.08);
       transition: filter 0.15s, transform 0.1s;
       text-transform: uppercase;
+      touch-action: manipulation;
     }
 
     .camp-corner-btn:hover { filter: brightness(1.3); transform: translateY(-2px); }
@@ -3246,6 +3247,7 @@
       text-transform: uppercase;
       text-shadow: 1px 1px 0 #000;
       transition: filter 0.15s;
+      touch-action: manipulation;
     }
 
     .camp-header-btn:hover { filter: brightness(1.2); }
@@ -4260,6 +4262,8 @@
   flex-direction: column;
   gap: 6px;
   max-width: 240px;
+  max-height: 60vh;
+  overflow-y: auto;
 }
 #sa-loadout-panel.visible { display: flex; }
 #sa-loadout-panel h3 { color: #FFD700; font-size: 13px; margin: 0 0 4px; font-family: 'Bangers', cursive; letter-spacing: 1px; }

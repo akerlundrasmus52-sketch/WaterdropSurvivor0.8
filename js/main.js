@@ -542,8 +542,9 @@
     // Input - Twin-Stick Controls
     const joystickLeft = { x: 0, y: 0, active: false, id: null, originX: 0, originY: 0 }; // Movement
     const joystickRight = { x: 0, y: 0, active: false, id: null, originX: 0, originY: 0 }; // Aiming
-    // Expose joystickLeft to camp-world.js for player movement in the 3D camp hub
+    // Expose joysticks to camp-world.js so exit() can fully reset them
     window._campJoystick = joystickLeft;
+    window._campJoystickRight = joystickRight;
     
     // Throttle joystick DOM updates for performance (60fps = ~16ms)
     let lastJoystickLeftUpdate = 0;

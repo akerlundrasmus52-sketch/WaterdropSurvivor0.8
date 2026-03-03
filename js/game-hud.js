@@ -995,7 +995,14 @@
       }
     }
 
+    let _activeDamageNumbers = 0;
+    const MAX_DAMAGE_NUMBERS = 12; // Cap to prevent DOM bloat during high-intensity combat
+
     function createDamageNumber(amount, pos, isCrit = false, isHeadshot = false) {
+      // Cap visible damage numbers to prevent DOM bloat
+      if (_activeDamageNumbers >= MAX_DAMAGE_NUMBERS) return;
+      _activeDamageNumbers++;
+
       const div = document.createElement('div');
       // Color code by damage type: headshot (red) > crit (gold) > normal (white)
       if (isHeadshot) {
@@ -1025,7 +1032,7 @@
       div.style.textAlign = 'center';
       
       document.body.appendChild(div);
-      setTimeout(() => div.remove(), 1000);
+      setTimeout(() => { div.remove(); _activeDamageNumbers = Math.max(0, _activeDamageNumbers - 1); }, 1000);
     }
     
     // Message fade tracking to prevent memory leaks

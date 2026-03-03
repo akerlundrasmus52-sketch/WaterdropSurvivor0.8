@@ -904,18 +904,11 @@
         }
       }
 
-      // ---- Game timer (always visible after countdown) ----
+      // ---- Game timer removed per UI overhaul (yellow timer stat bar) ----
+      // The elapsed-time display is hidden; ssb-countdown only shows during the
+      // initial 3-2-1 countdown (handled by _ssbShowCountdown, not here).
       const cdEl = document.getElementById('ssb-countdown');
-      if (cdEl && !countdownActive && isGameActive && !isGameOver) {
-        const elapsedSec = (gameStartTime != null && gameStartTime !== 0)
-          ? Math.floor((Date.now() - gameStartTime) / 1000)
-          : 0;
-        const mins = Math.floor(elapsedSec / 60);
-        const secs = elapsedSec % 60;
-        cdEl.textContent = `⏱ ${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-        cdEl.classList.remove('ssb-cd-orange', 'ssb-cd-red', 'ssb-cd-green');
-        cdEl.style.display = 'block';
-      } else if (cdEl && !countdownActive && (!isGameActive || isGameOver)) {
+      if (cdEl && !countdownActive) {
         cdEl.style.display = 'none';
       }
     }
