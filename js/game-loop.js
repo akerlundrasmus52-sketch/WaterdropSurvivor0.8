@@ -121,6 +121,7 @@
       rollingAvgFPS: 60,
       particleThrottleActive: false,
       particleThrottleScale: 1.0, // Granular: 1.0 = full, 0.25 = 25%
+      qualityParticleScale: 1.0,  // Set by applyGraphicsQuality per quality level
       consecutiveSkipCount: 0, // Track consecutive skipped renders to prevent frozen screen
       gameLogicErrorCount: 0  // Track consecutive game logic errors (freeze detection)
     };
@@ -172,19 +173,93 @@
       }
     }
     
-    // Enhance spawnParticles to respect throttle
+    // Enhance spawnParticles to respect throttle + quality particle scale
     // Use window.spawnParticles explicitly so the reassignment works correctly across
     // separate <script> files that share the global scope (function declarations live
     // on window, not in a per-script lexical scope, so window.x is the canonical reference)
     if (typeof window.spawnParticles === 'function') {
       const originalSpawnParticles = window.spawnParticles;
       window.spawnParticles = function(position, color, count) {
-        // Apply granular throttle based on FPS tier (25-100%)
-        const adjustedCount = Math.ceil(count * performanceLog.particleThrottleScale);
+        // Combine FPS-based throttle with quality-preset particle scale
+        const qualityScale = performanceLog.qualityParticleScale || 1.0;
+        const adjustedCount = Math.ceil(count * performanceLog.particleThrottleScale * qualityScale);
         if (adjustedCount <= 0) return;
         return originalSpawnParticles(position, color, adjustedCount);
       };
     }
+
+    // ─── Dynamic FPS Booster ────────────────────────────────────────────────────
+    // When graphicsQuality === 'auto', monitors rolling FPS every 2 seconds and
+    // steps quality up/down through QUALITY_LEVELS to keep FPS in the 60-120 range.
+    // Uses hysteresis (separate up/down thresholds) to prevent oscillation.
+    let _fpsBoosterLastCheck  = 0;
+    let _fpsBoosterCurrentIdx = 3;          // Start at 'medium' (index 3)
+    let _fpsBoosterStableCount = 0;         // Frames of stable FPS before up-stepping
+    const _FPS_BOOSTER_INTERVAL  = 2000;    // Check every 2 seconds
+    const _FPS_TARGET_LOW        = 55;      // Below this → step quality DOWN
+    const _FPS_TARGET_HIGH       = 100;     // Above this → step quality UP (if stable)
+    const _FPS_CRITICAL_LOW      = 35;      // Below this → drop 2 levels at once
+    const _FPS_STABILITY_MIN     = 70;      // Must be above this for stable count to grow
+    const _FPS_STABLE_CHECKS     = 3;       // Need 3 consecutive stable checks (~6s) before up-stepping
+
+    function updateDynamicFPSBooster(nowMs) {
+      // Only active when user selected 'auto'
+      if (!window.gameSettings || window.gameSettings.graphicsQuality !== 'auto') return;
+      if (!window.QUALITY_LEVELS || !window.QUALITY_PRESETS) return;
+
+      if (nowMs - _fpsBoosterLastCheck < _FPS_BOOSTER_INTERVAL) return;
+      _fpsBoosterLastCheck = nowMs;
+
+      const fps = performanceLog.rollingAvgFPS;
+      if (!fps || fps <= 0) return;
+
+      const levels = window.QUALITY_LEVELS;
+      let idx = _fpsBoosterCurrentIdx;
+      let changed = false;
+
+      if (fps < _FPS_CRITICAL_LOW && idx > 0) {
+        // Critical: drop 2 levels at once
+        idx = Math.max(0, idx - 2);
+        _fpsBoosterStableCount = 0;
+        changed = true;
+      } else if (fps < _FPS_TARGET_LOW && idx > 0) {
+        // Below target: step down 1 level
+        idx = idx - 1;
+        _fpsBoosterStableCount = 0;
+        changed = true;
+      } else if (fps > _FPS_TARGET_HIGH && idx < levels.length - 1) {
+        // Above target with headroom: step up if stable
+        _fpsBoosterStableCount++;
+        if (_fpsBoosterStableCount >= _FPS_STABLE_CHECKS) {
+          idx = idx + 1;
+          _fpsBoosterStableCount = 0;
+          changed = true;
+        }
+      } else {
+        // In the sweet spot (55-100 FPS), accumulate stability
+        if (fps >= _FPS_STABILITY_MIN) _fpsBoosterStableCount = Math.min(_fpsBoosterStableCount + 1, _FPS_STABLE_CHECKS);
+        else _fpsBoosterStableCount = 0;
+      }
+
+      if (changed) {
+        _fpsBoosterCurrentIdx = idx;
+        const newQuality = levels[idx];
+        if (typeof applyGraphicsQuality === 'function') {
+          applyGraphicsQuality(newQuality);
+        }
+        console.log(`[FPS Booster] FPS=${fps.toFixed(0)} → adjusted to "${newQuality}" (level ${idx}/${levels.length - 1})`);
+
+        // Update status indicator if visible
+        const statusEl = document.getElementById('fps-booster-status');
+        if (statusEl) {
+          statusEl.style.display = 'block';
+          statusEl.textContent = `Auto: ${newQuality} (${fps.toFixed(0)} FPS)`;
+        }
+      }
+    }
+    // Expose so settings UI can read current auto-quality
+    window._getFpsBoosterCurrentIdx = function() { return _fpsBoosterCurrentIdx; };
+    window._resetFpsBooster = function(idx) { _fpsBoosterCurrentIdx = idx; _fpsBoosterStableCount = 0; };
 
     // ─── Combat Intensity Tracking ──────────────────────────────────────────────
     // Tracks recent kill rate to drive dynamic shadow-map quality reduction during
@@ -402,6 +477,9 @@
 
       // Update combat intensity and dynamic shadow quality every frame
       updateCombatIntensity(performance.now ? performance.now() : Date.now());
+
+      // Dynamic FPS Booster — auto-adjust quality level based on real-time FPS
+      updateDynamicFPSBooster(performance.now ? performance.now() : Date.now());
 
       
       // Update ambient creatures (birds, bats, fireflies, owls) based on time of day
