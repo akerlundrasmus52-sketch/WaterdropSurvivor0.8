@@ -13,8 +13,24 @@ window.DialogueSystem = (function () {
     thinking: 'ds-bubble-thinking',
     task:     'ds-bubble-task',
     smoky:    'ds-bubble-smoky',
-    watery:   'ds-bubble-watery'
+    watery:   'ds-bubble-watery',
+    goal:     'ds-bubble-goal'
   };
+
+  // Dynamic size class based on text length
+  function _sizeClass(text) {
+    var len = text.length;
+    if (len <= 30) return 'ds-size-short';
+    if (len <= 70) return 'ds-size-medium';
+    return 'ds-size-long';
+  }
+
+  // Detect if a sentence is a question/objective and should use goal style
+  function _isGoalSentence(s) {
+    if (s.emotion === 'goal') return true;
+    if (s.isGoal) return true;
+    return false;
+  }
 
   // Pre-built dialogue sequences for Benny NPC
   var DIALOGUES = {
@@ -29,12 +45,12 @@ window.DialogueSystem = (function () {
       { text: 'Hey... you made it back. 💧 Tough first run, huh?', emotion: 'sad' },
       { text: 'Don\'t sweat it! Every drop starts here. You\'ll get stronger every time! 💪', emotion: 'happy' },
       { text: 'Welcome to your camp! This place will grow as you do.', emotion: 'happy' },
-      { text: 'Let\'s build something useful! Follow me, dude! 🔨', emotion: 'task' }
+      { text: 'Follow me, dude! Let\'s build the Quest Hall! 🔨', emotion: 'task' }
     ],
     // 3. Quest Hall building
     questHall: [
       { text: 'Here\'s the Quest Hall! 📜 This is where your missions live!', emotion: 'happy' },
-      { text: 'Each quest will push you further... think you can handle it?', emotion: 'thinking' },
+      { text: 'Build the Quest Hall to start your adventure!', emotion: 'goal', isGoal: true },
       { text: 'Accept quests here and complete them on your runs! 🎯', emotion: 'task' }
     ],
     // 4. Skill Tree building
@@ -80,6 +96,22 @@ window.DialogueSystem = (function () {
     // Generic build-unlock (used by bennyWalkToBuild)
     buildUnlock: [
       { text: 'Woah dude, you did it! 🔨 Building unlocked!', emotion: 'happy' }
+    ],
+    // Follow-me prompt (shown before Benny walks to a building)
+    followMe: [
+      { text: 'Follow me, dude! 🏃', emotion: 'task' }
+    ],
+    // Workshop / Forge building intro
+    workshop: [
+      { text: 'Time to build the Workshop! 🔧 This is where you craft your tools!', emotion: 'happy' },
+      { text: 'Build the Workshop to start crafting!', emotion: 'goal', isGoal: true },
+      { text: 'I\'ve got some free materials for you — let\'s get building! 🛠️', emotion: 'task' }
+    ],
+    // Tool showcase (after Workshop built)
+    toolShowcase: [
+      { text: 'Awesome! Now that you have tools, show me what you can do! 💪', emotion: 'happy' },
+      { text: 'Harvest resources: chop trees, mine rocks, collect materials!', emotion: 'goal', isGoal: true },
+      { text: 'Go on a run and gather resources for the next building! ⛏️', emotion: 'task' }
     ]
   };
 
@@ -147,11 +179,30 @@ window.DialogueSystem = (function () {
     for (var k = 0; k < keys.length; k++) {
       _container.classList.remove(EMOTIONS[keys[k]]);
     }
+    // Remove size classes
+    _container.classList.remove('ds-size-short', 'ds-size-medium', 'ds-size-long');
+
+    // Apply goal styling if this is a goal/objective sentence
+    var useGoal = _isGoalSentence(s);
+    if (useGoal) {
+      newClass = EMOTIONS.goal;
+    }
     _container.classList.add(newClass);
+
+    // Apply dynamic size class based on text length
+    _container.classList.add(_sizeClass(s.text));
 
     _textEl.innerHTML = '';
     clearTimeout(_twTimer);
     clearTimeout(_aaTimer);
+
+    // If goal sentence, prepend a label
+    if (useGoal) {
+      var lbl = document.createElement('span');
+      lbl.className = 'ds-goal-label';
+      lbl.textContent = '🎯 objective';
+      _textEl.appendChild(lbl);
+    }
 
     var chars  = Array.from(s.text); // Correctly splits multi-byte emoji
     var i      = 0;
@@ -224,6 +275,13 @@ window.DialogueSystem = (function () {
       // Complete current sentence instantly
       var s = _sentences[_sentIdx];
       _textEl.innerHTML = '';
+      // Re-add goal label if needed
+      if (_isGoalSentence(s)) {
+        var lbl = document.createElement('span');
+        lbl.className = 'ds-goal-label';
+        lbl.textContent = '🎯 objective';
+        _textEl.appendChild(lbl);
+      }
       Array.from(s.text).forEach(function (ch) {
         var span = document.createElement('span');
         span.className = 'ds-char visible';

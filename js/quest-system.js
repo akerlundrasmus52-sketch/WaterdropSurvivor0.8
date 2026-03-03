@@ -2060,7 +2060,7 @@
         // Skip locked paid buildings - show them with quest unlock requirement
         if (!building.isFree && !isUnlocked && buildingData.level === 0) {
           // Map building IDs to which tutorial quest unlocks them
-          const buildingQuestUnlockMap = {
+          const buildingQuestUnlockMapLocal = {
             'skillTree': { questId: 'quest1_kill3', label: 'Kill 3 Enemies (Quest 1)' },
             'armory': { questId: 'quest3_stonehengeGear', label: 'Find the Cigar (Quest 3)' },
             'specialAttacks': { questId: 'quest3_stonehengeGear', label: 'Find the Cigar (Quest 3)' },
@@ -2071,7 +2071,7 @@
             'tempShop': { questId: 'quest28_survive3min', label: 'Survive 3 Minutes (Quest 28)' }
           };
           
-          const questInfo = buildingQuestUnlockMap[buildingId] || { questId: null, label: 'Complete a Quest' };
+          const questInfo = buildingQuestUnlockMapLocal[buildingId] || { questId: null, label: 'Complete a Quest' };
           // Legacy unlock quests
           const legacyUnlockQuests = {
             'skillTree': 'unlockSkillTree',
@@ -2158,24 +2158,49 @@
           
           // NEW: For locked free buildings, show them as locked
           const isLockedFree = building.isFree && !isUnlocked;
+          
+          // NEW: Non-core buildings that are unlocked but not yet built need a Build button
+          const needsBuild = !building.isCore && isUnlocked && buildingData.level === 0;
 
           // Unspent-points badge per building
           let _bldgBadge = '';
-          if (!isLockedFree) {
+          if (!isLockedFree && !needsBuild) {
             if (buildingId === 'skillTree' && (saveData.skillPoints || 0) > 0) _bldgBadge = '<span class="building-badge" style="background:#2ecc71;">🌳 ' + saveData.skillPoints + '</span>';
             else if (buildingId === 'trainingHall' && (saveData.unspentAttributePoints || 0) > 0) _bldgBadge = '<span class="building-badge" style="background:#9b59b6;">⭐ ' + saveData.unspentAttributePoints + '</span>';
             else if (buildingId === 'forge' && (saveData.gold || 0) >= 50) _bldgBadge = '<span class="building-badge" style="background:#e67e22;">💰</span>';
             else if (buildingId === 'companionHouse' && (saveData.companionSkillPoints || 0) > 0) _bldgBadge = '<span class="building-badge" style="background:#e67e22;">🐾 ' + saveData.companionSkillPoints + '</span>';
           }
           
+          // Compute resource cost hint for needsBuild buildings
+          let _buildCostHint = '';
+          if (needsBuild) {
+            const builtCount = Object.values(saveData.campBuildings).filter(b => b && b.unlocked && b.level > 0).length;
+            const resCost = Math.max(1, builtCount + 1);
+            const res = saveData.resources || {};
+            _buildCostHint = `🔨 Build — 🪵${res.wood||0}/${resCost} 🪨${res.stone||0}/${resCost} 🖤${res.coal||0}/${resCost}`;
+          }
+
            buildingCard.innerHTML = `
              <div class="building-header">
                <div class="building-name">${building.icon} ${building.name}${hasNotification ? ' <span class="quest-indicator">!</span>' : ''}${_bldgBadge}</div>
-               <div class="building-level">${isLockedFree ? 'LOCKED' : `Lv ${buildingData.level}`}</div>
+               <div class="building-level">${isLockedFree ? 'LOCKED' : (needsBuild ? '🔨 BUILD' : `Lv ${buildingData.level}`)}</div>
              </div>
              <div class="building-desc">${building.description}</div>
-            <div class="building-cost">${isLockedFree ? 'Unlock via Quest' : ''}</div>
+            <div class="building-cost">${isLockedFree ? 'Unlock via Quest' : (needsBuild ? _buildCostHint : '')}</div>
           `;
+          
+          // Handle needsBuild: clicking opens the build overlay
+          if (needsBuild) {
+            buildingCard.style.cursor = 'pointer';
+            buildingCard.style.border = '2px solid #5DADE2';
+            buildingCard.onclick = () => {
+              const buildingName = CAMP_BUILDINGS[buildingId]?.name || 'Building';
+              _showBuildOverlay(buildingId, buildingName);
+            };
+            addLongPressDetail(buildingCard, `${building.icon} ${building.name}`, building.description);
+            buildingsContent.appendChild(buildingCard);
+            continue;
+          }
           
           if (buildingId === 'skillTree') {
             buildingCard.onclick = () => {

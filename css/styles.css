@@ -722,8 +722,8 @@
     #ds-bubble {
       position: fixed;
       z-index: 360;
-      max-width: 210px;
-      min-width: 0;
+      max-width: 320px;
+      min-width: 80px;
       width: max-content;
       padding: 12px 14px 10px;
       font-family: Bangers, cursive;
@@ -735,9 +735,15 @@
       cursor: pointer;
       display: none;
       /* Smooth transitions between emotion styles */
-      transition: border-radius 0.3s ease, background 0.3s ease, box-shadow 0.3s ease, color 0.3s ease;
+      transition: border-radius 0.3s ease, background 0.3s ease, box-shadow 0.3s ease, color 0.3s ease, max-width 0.3s ease;
       user-select: none;
     }
+    /* Short text (≤30 chars): compact bubble */
+    #ds-bubble.ds-size-short { max-width: 180px; font-size: 15px; }
+    /* Medium text (31-70 chars): default */
+    #ds-bubble.ds-size-medium { max-width: 260px; font-size: 14px; }
+    /* Long text (>70 chars): wider bubble */
+    #ds-bubble.ds-size-long { max-width: 340px; font-size: 13px; }
     /* Tail pointer arrow (down-left) */
     #ds-bubble::after {
       content: '';
@@ -834,6 +840,26 @@
       animation: ds-watery 2s ease-in-out infinite;
     }
     .ds-bubble-watery::after { border-top-color: #00BFFF; }
+
+    /* ── Goal/Objective style (for questions & objectives) ── */
+    .ds-bubble-goal {
+      background: rgba(8,20,8,0.95);
+      color: #FFD700;
+      border: 2px solid #DAA520;
+      border-radius: 8px;
+      box-shadow: 0 3px 14px rgba(0,0,0,0.7), 0 0 10px rgba(218,165,32,0.2);
+      text-align: left;
+      padding: 14px 16px 12px;
+    }
+    .ds-bubble-goal::after { border-top-color: #DAA520; }
+    .ds-bubble-goal .ds-goal-label {
+      display: block;
+      font-size: 10px;
+      letter-spacing: 2px;
+      color: #aaa;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+    }
 
     /* ── Typewriter characters ── */
     .ds-char {
