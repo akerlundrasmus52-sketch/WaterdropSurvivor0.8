@@ -2158,10 +2158,19 @@
           
           // NEW: For locked free buildings, show them as locked
           const isLockedFree = building.isFree && !isUnlocked;
+
+          // Unspent-points badge per building
+          let _bldgBadge = '';
+          if (!isLockedFree) {
+            if (buildingId === 'skillTree' && (saveData.skillPoints || 0) > 0) _bldgBadge = '<span class="building-badge" style="background:#2ecc71;">🌳 ' + saveData.skillPoints + '</span>';
+            else if (buildingId === 'trainingHall' && (saveData.unspentAttributePoints || 0) > 0) _bldgBadge = '<span class="building-badge" style="background:#9b59b6;">⭐ ' + saveData.unspentAttributePoints + '</span>';
+            else if (buildingId === 'forge' && (saveData.gold || 0) >= 50) _bldgBadge = '<span class="building-badge" style="background:#e67e22;">💰</span>';
+            else if (buildingId === 'companionHouse' && (saveData.companionSkillPoints || 0) > 0) _bldgBadge = '<span class="building-badge" style="background:#e67e22;">🐾 ' + saveData.companionSkillPoints + '</span>';
+          }
           
            buildingCard.innerHTML = `
              <div class="building-header">
-               <div class="building-name">${building.icon} ${building.name}${hasNotification ? ' <span class="quest-indicator">!</span>' : ''}</div>
+               <div class="building-name">${building.icon} ${building.name}${hasNotification ? ' <span class="quest-indicator">!</span>' : ''}${_bldgBadge}</div>
                <div class="building-level">${isLockedFree ? 'LOCKED' : `Lv ${buildingData.level}`}</div>
              </div>
              <div class="building-desc">${building.description}</div>
@@ -2372,17 +2381,43 @@
         if (!_quest2Claimed && skillIndex >= 4) continue;
         if (!_quest1Claimed && skillIndex >= 2) continue;
         
+        // Skill icon map for branch tree visualization
+        const _skillIcons = {
+          dash: '🏃', criticalFocus: '🎯', autoAim: '🔫', dashMaster: '⚡',
+          headshot: '💀', combatMastery: '⚔️', bladeDancer: '🗡️', heavyStrike: '🔨',
+          rapidFire: '🔥', lifeDrain: '❤️', berserkerRage: '😡', executioner: '☠️',
+          ironSkin: '🛡️', regeneration: '💚', dodgeMaster: '🦶', magneticField: '🧲',
+          goldRush: '💰', expBoost: '📈', survivalInstinct: '🌟', spiritLink: '👻',
+          bloodlust: '🩸', overcharge: '⚡', lastStand: '🏴', fireMastery: '🔥',
+          iceMastery: '❄️', lightningMastery: '⚡', specialFirestorm: '🌋',
+          specialIceAge: '🧊', specialThunderStrike: '⛈️', specialDeathBlossom: '🌸',
+          specialVoidPulse: '🌀', specialInfernoRing: '💫', meleeTakedown: '🔪'
+        };
+        const _getSkillIcon = (id, name) => _skillIcons[id] || (name && name.match(/^[^\w\s]/) ? name.charAt(0) : '🔮');
+
         const skillNode = document.createElement('div');
         skillNode.className = 'skill-node';
         if (skillData.unlocked) skillNode.classList.add('unlocked');
         if (!canAfford || isMaxLevel) skillNode.classList.add('locked');
+        if (skill.requires) skillNode.setAttribute('data-has-parent', 'true');
         
+        // Build level dots
+        let dotsHTML = '';
+        if (skill.maxLevel > 1) {
+          dotsHTML = '<div class="skill-level-dots">';
+          for (let d = 0; d < skill.maxLevel; d++) {
+            dotsHTML += `<span class="skill-level-dot${d < skillData.level ? ' filled' : ''}"></span>`;
+          }
+          dotsHTML += '</div>';
+        }
+
         skillNode.innerHTML = `
+          <div class="skill-icon-badge">${_getSkillIcon(skillId, skill.name)}</div>
+          ${dotsHTML}
           <div class="skill-name">${skill.name}</div>
           <div class="skill-desc">${skill.description}</div>
-          <div style="font-size: 12px; color: #5DADE2; margin: 5px 0;">Level ${skillData.level}/${skill.maxLevel}</div>
-          <div class="skill-cost">${isMaxLevel ? 'MAX' : `${skill.cost} SP`}</div>
-          ${!isMaxLevel && canAfford ? '<div class="skill-hold-bar" style="height:6px;background:#333;border:2px solid #000;border-radius:3px;margin-top:6px;overflow:hidden;"><div class="skill-hold-fill" style="height:100%;width:0%;background:#FFD700;transition:none;"></div></div><div style="font-size:10px;color:#888;margin-top:2px;">Hold to buy</div>' : ''}
+          <div class="skill-cost">${isMaxLevel ? '✅ MAX' : `${skill.cost} SP`}</div>
+          ${!isMaxLevel && canAfford ? '<div class="skill-hold-bar" style="height:5px;background:#222;border:1.5px solid #000;border-radius:3px;margin-top:5px;overflow:hidden;"><div class="skill-hold-fill" style="height:100%;width:0%;background:linear-gradient(90deg,#FFD700,#FFA500);transition:none;border-radius:2px;"></div></div><div style="font-size:9px;color:#666;margin-top:2px;">Hold to buy</div>' : ''}
         `;
         
         if (!isMaxLevel && canAfford) {
