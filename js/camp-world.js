@@ -514,20 +514,32 @@
     const THREE = T();
     const grp = new THREE.Group();
 
-    // Body: taller, more angular shape — different from the round player drop
-    const bodyGeo = new THREE.CylinderGeometry(0.28, 0.35, 1.1, 8);
+    // Body: tie-dye patchwork tunic — hippie homemade clothes
+    const bodyGeo = new THREE.CylinderGeometry(0.28, 0.38, 1.1, 8);
     const bodyMat = new THREE.MeshPhongMaterial({
-      color: 0x8B4513,    // brown — leather jacket look
-      emissive: 0x3B1A05,
-      emissiveIntensity: 0.2,
-      shininess: 40
+      color: 0x2E8B57,    // sea-green — tie-dye patchwork look
+      emissive: 0x0A3A1A,
+      emissiveIntensity: 0.25,
+      shininess: 20
     });
     const body = new THREE.Mesh(bodyGeo, bodyMat);
     body.position.y = 0.55;
     body.castShadow = true;
     grp.add(body);
 
-    // Head: simple sphere, distinctly different colour (weathered skin)
+    // Belt / sash patch (contrasting colour for homemade-clothes feel)
+    const sashGeo = new THREE.CylinderGeometry(0.30, 0.32, 0.15, 8);
+    const sashMat = new THREE.MeshPhongMaterial({
+      color: 0xDAA520,   // goldenrod sash
+      emissive: 0x4A3000,
+      emissiveIntensity: 0.2,
+      shininess: 15
+    });
+    const sash = new THREE.Mesh(sashGeo, sashMat);
+    sash.position.y = 0.72;
+    grp.add(sash);
+
+    // Head: simple sphere, warm skin tone
     const headGeo = new THREE.SphereGeometry(0.26, 10, 8);
     const headMat = new THREE.MeshPhongMaterial({
       color: 0xC68642,
@@ -540,18 +552,47 @@
     head.castShadow = true;
     grp.add(head);
 
-    // Hat brim (flat disc)
-    const brimGeo = new THREE.CylinderGeometry(0.38, 0.38, 0.06, 12);
-    const hatMat  = new THREE.MeshPhongMaterial({ color: 0x2C1A0A, shininess: 10 });
-    const brim = new THREE.Mesh(brimGeo, hatMat);
-    brim.position.y = 1.56;
-    grp.add(brim);
+    // Dreadlocks — multiple thin cylinders hanging from the head
+    const dreadMat = new THREE.MeshPhongMaterial({
+      color: 0x1A0A00,   // dark brown / black dreads
+      emissive: 0x0A0500,
+      emissiveIntensity: 0.1,
+      shininess: 10
+    });
+    var dreadAngles = [0, 0.8, 1.6, 2.4, 3.2, 4.0, 4.8, 5.6];
+    for (var di = 0; di < dreadAngles.length; di++) {
+      var da = dreadAngles[di];
+      var dreadLen = 0.5 + Math.random() * 0.25;
+      var dreadGeo = new THREE.CylinderGeometry(0.035, 0.025, dreadLen, 4);
+      var dread = new THREE.Mesh(dreadGeo, dreadMat);
+      var dreadR = 0.22;
+      dread.position.set(
+        Math.sin(da) * dreadR,
+        1.12 - dreadLen * 0.35,
+        Math.cos(da) * dreadR
+      );
+      dread.rotation.x = (Math.random() - 0.5) * 0.5;
+      dread.rotation.z = (Math.sin(da) * 0.3);
+      dread.castShadow = true;
+      grp.add(dread);
+    }
 
-    // Hat crown
-    const crownGeo = new THREE.CylinderGeometry(0.22, 0.26, 0.3, 10);
-    const crown = new THREE.Mesh(crownGeo, hatMat);
-    crown.position.y = 1.72;
-    grp.add(crown);
+    // Small round sunglasses (hippie look)
+    var glassMat = new THREE.MeshPhongMaterial({
+      color: 0x111111,
+      emissive: 0x222244,
+      emissiveIntensity: 0.3,
+      shininess: 80,
+      transparent: true,
+      opacity: 0.7
+    });
+    var glassGeo = new THREE.SphereGeometry(0.07, 6, 4);
+    var glassL = new THREE.Mesh(glassGeo, glassMat);
+    glassL.position.set(-0.1, 1.35, 0.22);
+    grp.add(glassL);
+    var glassR = new THREE.Mesh(glassGeo, glassMat);
+    glassR.position.set(0.1, 1.35, 0.22);
+    grp.add(glassR);
 
     grp.position.set(BENNY_POS.x, 0, BENNY_POS.z);
     _bennyMesh = grp;
@@ -635,13 +676,13 @@
     sd.bennyGreetingShown = true;
     if (typeof saveSaveData === 'function') saveSaveData();
 
-    _showBennySpeech('Welcome to camp,\nSurvivor! I\'m Benny.\nLet me show you\naround. 🏕️');
+    _showBennySpeech('Heyyy dude!\nI\'m Benny! ✌️\nWelcome to your\nfine little place\nyou can call home!\nIt ain\'t much yet...');
     setTimeout(() => { _hideBennySpeech(); }, 5000);
 
     // After greeting, walk to the main building (questMission) and unlock it
     setTimeout(() => {
-      _showBennySpeech('Follow me to the\nMain Building! 📜');
-      _bennyWalkToBuild('questMission', 'Here\'s your\nQuest Hall! 📜');
+      _showBennySpeech('Let\'s do something\nto make this place\nmore useful and cozy!\nFollow me, dude! 🔨');
+      _bennyWalkToBuild('questMission', 'Here\'s where we\nbuild the Quest Hall!\nI got materials for ya! 📜');
       setTimeout(() => { _hideBennySpeech(); }, 3500);
     }, 5500);
 
@@ -649,10 +690,10 @@
     setTimeout(() => {
       const currentQ = (typeof getCurrentQuest === 'function') ? getCurrentQuest() : null;
       if (currentQ) {
-        _showBennySpeech('Your quest:\n' + currentQ.name);
+        _showBennySpeech('Wao dude!\nYour quest:\n' + currentQ.name);
         setTimeout(() => { _hideBennySpeech(); }, 4000);
       } else {
-        _showBennySpeech('Start a run to\nbegin your\nfirst quest! ⚔️');
+        _showBennySpeech('Start a run and\nkill some enemies,\nthen come back\nhere dude! ⚔️');
         setTimeout(() => { _hideBennySpeech(); }, 4000);
       }
     }, 10000);
@@ -2241,10 +2282,19 @@
     if (t0) {
       var el = document.elementFromPoint(t0.clientX, t0.clientY);
       if (el) {
-        // If the touched element is inside a fixed overlay (z-index ≥ 400), let it handle the event
+        // Let touches on interactive elements (buttons, links, inputs) pass through
+        if (el.tagName === 'BUTTON' || el.tagName === 'A' || el.tagName === 'INPUT' ||
+            el.tagName === 'SELECT' || el.closest('button') || el.closest('a')) return;
+        // If the touched element is inside a fixed overlay (z-index ≥ 100), let it handle the event
         var node = el;
         while (node && node !== document.body) {
-          if (node.style && node.style.zIndex && parseInt(node.style.zIndex, 10) >= 400) return;
+          var zIdx = 0;
+          if (node.style && node.style.zIndex) zIdx = parseInt(node.style.zIndex, 10);
+          if (!zIdx && node.nodeType === 1) {
+            var cs = window.getComputedStyle(node);
+            if (cs.zIndex && cs.zIndex !== 'auto') zIdx = parseInt(cs.zIndex, 10);
+          }
+          if (zIdx >= 100) return;
           node = node.parentElement;
         }
       }
@@ -2481,6 +2531,18 @@
     if (_interactBtn) _interactBtn.style.display = 'none';
     _hideTouchIndicator();
     _hideBennySpeech();
+
+    // Reset main-game joystick state so sticks don't stay "active" into the next run
+    if (typeof joystickLeft !== 'undefined') {
+      joystickLeft.active = false;
+      joystickLeft.x = 0;
+      joystickLeft.y = 0;
+    }
+    if (typeof joystickRight !== 'undefined') {
+      joystickRight.active = false;
+      joystickRight.x = 0;
+      joystickRight.y = 0;
+    }
   }
 
   /**

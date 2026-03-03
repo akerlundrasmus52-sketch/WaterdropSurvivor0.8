@@ -198,11 +198,9 @@
       }, { passive: false });
 
       const endJoystick = (e) => {
-        // Skip joystick processing when not in active gameplay
-        if ((window.CampWorld && window.CampWorld.isActive) || !window.isGameActive) {
-          return;
-        }
-        e.preventDefault();
+        // Always allow touchend to clean up joystick state — even if game state
+        // changed mid-touch (e.g. game over, entered camp).  Preventing cleanup
+        // here is the root cause of the "stuck joystick" bug after camp visits.
         for (let i = 0; i < e.changedTouches.length; i++) {
           const touch = e.changedTouches[i];
           

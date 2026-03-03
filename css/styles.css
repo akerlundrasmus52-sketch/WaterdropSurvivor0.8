@@ -3283,6 +3283,14 @@
     #camp-screen.camp-3d-mode {
       background: transparent !important;
       overflow: hidden !important;
+      pointer-events: none; /* Let touches pass through to 3D canvas and camp world */
+    }
+    /* Re-enable pointer-events on interactive children that float over the 3D world */
+    #camp-screen.camp-3d-mode .camp-header-btn,
+    #camp-screen.camp-3d-mode .camp-corner-btn,
+    #camp-screen.camp-3d-mode .camp-section-flex,
+    #camp-screen.camp-3d-mode button {
+      pointer-events: auto;
     }
     /* Hide the 2D building cards — player uses 3D navigation instead */
     #camp-screen.camp-3d-mode #camp-buildings-section,
