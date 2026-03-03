@@ -1047,17 +1047,17 @@
         
         // Phase 5: Hit impact particles (flesh/blood) on every hit — scaled with HP ratio
         const hpRatio = this.hp / this.maxHp;
-        const isShotgunHit = damageType === 'doubleBarrel' || damageType === 'shotgun';
+        const isHeavyHit = damageType === 'doubleBarrel' || damageType === 'shotgun' || isCrit;
         const bloodParticleCount = Math.max(5, Math.floor((1 - hpRatio) * 18) + 5);
         spawnParticles(this.mesh.position, 0x8B0000, Math.min(bloodParticleCount, 20)); // Blood particles
         spawnParticles(this.mesh.position, 0x660000, Math.min(Math.floor(bloodParticleCount * 0.5), 8)); // Darker blood
-        if (isShotgunHit || isCrit) {
+        if (isHeavyHit) {
           spawnParticles(this.mesh.position, 0xCC0000, 6); // Bright red burst for heavy hits
           spawnParticles(this.mesh.position, 0xAA0000, 4);
         }
         // Ground blood decal — more on heavy hits
         spawnBloodDecal(this.mesh.position);
-        if (isShotgunHit) {
+        if (isHeavyHit) {
           spawnBloodDecal(this.mesh.position);
           spawnBloodDecal({ x: this.mesh.position.x + (Math.random()-0.5)*0.5, y: 0, z: this.mesh.position.z + (Math.random()-0.5)*0.5 });
         }
@@ -1069,7 +1069,8 @@
           spawnBloodDecal({ x: this.mesh.position.x + (Math.random()-0.5)*0.8, y: 0, z: this.mesh.position.z + (Math.random()-0.5)*0.8 });
         }
         // Blood system: directional spray on heavy hits
-        if (window.BloodSystem && (isShotgunHit || isCrit)) {
+        if (window.BloodSystem && isHeavyHit) {
+          const isShotgunHit = damageType === 'doubleBarrel' || damageType === 'shotgun';
           window.BloodSystem.emitBurst(this.mesh.position, isShotgunHit ? 60 : 30, { spreadXZ: 0.8, spreadY: 0.2, minSize: 0.01, maxSize: 0.06, minLife: 20, maxLife: 50 });
         }
         
@@ -1763,11 +1764,15 @@
         const startScaleY = dyingMesh.scale.y;
         
         // Spawn detached body parts for heavy kills (dismemberment)
+        const SHOTGUN_CHUNK_MIN = 3, SHOTGUN_CHUNK_EXTRA = 4;
+        const NORMAL_CHUNK_MIN = 1, NORMAL_CHUNK_EXTRA = 3;
+        const CHUNK_SIZE_MIN = 0.08, CHUNK_SIZE_RANGE = 0.18;
+        const GROUND_Y = 0.05, BOUNCE_DAMPEN = 0.3;
         const _deathChunks = [];
         if (isExplosiveDeath || (isCritDeath && Math.random() < 0.5)) {
-          const chunkCount = isShotgunDeath ? (3 + Math.floor(Math.random() * 4)) : (1 + Math.floor(Math.random() * 3));
+          const chunkCount = isShotgunDeath ? (SHOTGUN_CHUNK_MIN + Math.floor(Math.random() * SHOTGUN_CHUNK_EXTRA)) : (NORMAL_CHUNK_MIN + Math.floor(Math.random() * NORMAL_CHUNK_EXTRA));
           for (let ci = 0; ci < chunkCount; ci++) {
-            const chunkSize = 0.08 + Math.random() * 0.18;
+            const chunkSize = CHUNK_SIZE_MIN + Math.random() * CHUNK_SIZE_RANGE;
             const chunkGeo = Math.random() < 0.5 ? new THREE.SphereGeometry(chunkSize, 5, 4) : new THREE.BoxGeometry(chunkSize, chunkSize * 0.6, chunkSize * 0.8);
             const chunkMat = new THREE.MeshBasicMaterial({ color: Math.random() < 0.6 ? enemyColor : 0x8B0000, transparent: true, opacity: 0.9 });
             const chunk = new THREE.Mesh(chunkGeo, chunkMat);
@@ -1821,9 +1826,9 @@
               c.mesh.rotation.x += c.rotX;
               c.mesh.rotation.z += c.rotZ;
               // Bounce off ground
-              if (c.mesh.position.y < 0.05) {
-                c.mesh.position.y = 0.05;
-                c.vy = Math.abs(c.vy) * 0.3;
+              if (c.mesh.position.y < GROUND_Y) {
+                c.mesh.position.y = GROUND_Y;
+                c.vy = Math.abs(c.vy) * BOUNCE_DAMPEN;
                 c.vx *= 0.7; c.vz *= 0.7;
                 if (Math.random() < 0.5) spawnBloodDecal(c.mesh.position);
               }
