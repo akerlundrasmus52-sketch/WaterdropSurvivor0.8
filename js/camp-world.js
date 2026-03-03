@@ -58,6 +58,26 @@
   let _playerVel   = { x: 0, z: 0 };
   let _playerPos   = { x: SPAWN_POS.x, z: SPAWN_POS.z };
 
+  // Camp player limb references for animation
+  let _playerLeftArm = null;
+  let _playerRightArm = null;
+  let _playerLeftLeg = null;
+  let _playerRightLeg = null;
+  let _playerGunBody = null;
+  let _playerBandageTail = null;
+  // Camp player animation state
+  let _campAnimState = 'idle'; // idle | walk | run | dash | slide | shoot | knife | chop | gather | tool
+  let _campAnimTimer = 0;
+  let _campDashTimer = 0;
+  let _campDashVec   = { x: 0, z: 0 };
+  let _campDashing   = false;
+  let _campSliding   = false;
+  let _campSlideTimer = 0;
+  let _campActionTimer = 0; // for shoot/knife/chop/gather timed animations
+  let _campActionAnim = null;
+  // Spritesheet overlay
+  let _spriteAnimator = null;
+
   // Benny NPC state
   let _bennyMesh   = null;
   // _bennyBubble is now managed by window.DialogueSystem
@@ -458,46 +478,182 @@
     }
   }
 
-  // ── Player water-drop ────────────────────────────────────
+  // ── Player water-drop (exact match of in-game character) ──
   function _buildPlayer() {
     const THREE = T();
     const grp = new THREE.Group();
 
-    // Body (squished sphere — like the game character)
+    // Body — teardrop shape matching player-class.js
     const bodyGeo = new THREE.SphereGeometry(PLAYER_RADIUS, 16, 12);
-    bodyGeo.scale(1, 1.15, 1);
+    const positions = bodyGeo.attributes.position;
+    for (let i = 0; i < positions.count; i++) {
+      const y = positions.getY(i);
+      const x = positions.getX(i);
+      const z = positions.getZ(i);
+      if (y > 0) {
+        positions.setY(i, y * 1.2);
+        const squeeze = 1 - (y / (PLAYER_RADIUS)) * 0.3;
+        positions.setX(i, x * squeeze);
+        positions.setZ(i, z * squeeze);
+      }
+    }
+    bodyGeo.computeVertexNormals();
+
     const bodyMat = new THREE.MeshPhongMaterial({
-      color: 0x29b6f6,
+      color: 0x4FC3F7,       // match COLORS.player
       emissive: 0x0d47a1,
       emissiveIntensity: 0.3,
       shininess: 90,
       transparent: true,
-      opacity: 0.92
+      opacity: 0.85
     });
     const body = new THREE.Mesh(bodyGeo, bodyMat);
     body.castShadow = true;
     grp.add(body);
 
-    // Shiny highlight
-    const hlGeo = new THREE.SphereGeometry(PLAYER_RADIUS * 0.35, 8, 8);
-    const hlMat = new THREE.MeshBasicMaterial({
-      color: 0xffffff,
-      transparent: true,
-      opacity: 0.4
-    });
+    // Shiny highlight (water reflection)
+    const hlGeo = new THREE.SphereGeometry(PLAYER_RADIUS * 0.28, 8, 8);
+    const hlMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5 });
     const hl = new THREE.Mesh(hlGeo, hlMat);
-    hl.position.set(-0.18, 0.22, 0.22);
+    hl.position.set(-0.18, 0.25, 0.18);
     grp.add(hl);
 
+    // Glow shell
+    const glowGeo = new THREE.SphereGeometry(PLAYER_RADIUS + 0.04, 16, 12);
+    const glowMat = new THREE.MeshBasicMaterial({
+      color: 0x4FC3F7, transparent: true, opacity: 0.15, side: THREE.BackSide
+    });
+    const glow = new THREE.Mesh(glowGeo, glowMat);
+    grp.add(glow);
+
+    // Eye whites
+    const eyeWhiteGeo = new THREE.SphereGeometry(0.09, 8, 8);
+    const eyeWhiteMat = new THREE.MeshBasicMaterial({ color: 0xFFFFFF });
+    const leftEyeW = new THREE.Mesh(eyeWhiteGeo, eyeWhiteMat);
+    leftEyeW.position.set(-0.13, 0.06, 0.42);
+    grp.add(leftEyeW);
+    const rightEyeW = new THREE.Mesh(eyeWhiteGeo, eyeWhiteMat);
+    rightEyeW.position.set(0.13, 0.06, 0.42);
+    grp.add(rightEyeW);
+
+    // Red eyes (matching spritesheet)
+    const eyeGeo = new THREE.SphereGeometry(0.07, 8, 8);
+    const eyeMat = new THREE.MeshBasicMaterial({ color: 0xCC2222 });
+    const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
+    leftEye.position.set(-0.13, 0.06, 0.45);
+    grp.add(leftEye);
+    const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
+    rightEye.position.set(0.13, 0.06, 0.45);
+    grp.add(rightEye);
+
+    // Pupils
+    const pupilGeo = new THREE.SphereGeometry(0.035, 8, 8);
+    const pupilMat = new THREE.MeshBasicMaterial({ color: 0x220000 });
+    const leftPupil = new THREE.Mesh(pupilGeo, pupilMat);
+    leftPupil.position.set(-0.13, 0.06, 0.48);
+    grp.add(leftPupil);
+    const rightPupil = new THREE.Mesh(pupilGeo, pupilMat);
+    rightPupil.position.set(0.13, 0.06, 0.48);
+    grp.add(rightPupil);
+
+    // Angry brows
+    const browGeo = new THREE.BoxGeometry(0.10, 0.02, 0.03);
+    const browMat = new THREE.MeshBasicMaterial({ color: 0x1a6fc4 });
+    const leftBrow = new THREE.Mesh(browGeo, browMat);
+    leftBrow.position.set(-0.13, 0.15, 0.43);
+    leftBrow.rotation.z = 0.25;
+    grp.add(leftBrow);
+    const rightBrow = new THREE.Mesh(browGeo, browMat);
+    rightBrow.position.set(0.13, 0.15, 0.43);
+    rightBrow.rotation.z = -0.25;
+    grp.add(rightBrow);
+
+    // Mouth — determined frown
+    const mouthGeo = new THREE.BoxGeometry(0.10, 0.02, 0.025);
+    const mouthMat = new THREE.MeshBasicMaterial({ color: 0x1a3a5a });
+    const mouth = new THREE.Mesh(mouthGeo, mouthMat);
+    mouth.position.set(0, -0.08, 0.44);
+    grp.add(mouth);
+
+    // Head bandage wrap (matching spritesheet cloth wrap)
+    const bandageMat = new THREE.MeshPhongMaterial({
+      color: 0xF5DEB3, emissive: 0x8B7355, emissiveIntensity: 0.1, shininess: 10
+    });
+    const wrapGeo = new THREE.TorusGeometry(0.38, 0.05, 6, 16);
+    const wrap = new THREE.Mesh(wrapGeo, bandageMat);
+    wrap.position.set(0, 0.28, 0);
+    wrap.rotation.x = Math.PI / 2;
+    wrap.rotation.z = 0.15;
+    grp.add(wrap);
+
+    // Bandage tail
+    const tailGeo = new THREE.BoxGeometry(0.07, 0.22, 0.035);
+    const tail = new THREE.Mesh(tailGeo, bandageMat);
+    tail.position.set(-0.28, 0.16, -0.18);
+    tail.rotation.z = 0.3;
+    grp.add(tail);
+    _playerBandageTail = tail;
+
+    // Arms
+    const armGeo = new THREE.CylinderGeometry(0.055, 0.055, 0.32, 8);
+    const limbMat = new THREE.MeshPhongMaterial({
+      color: 0x4FC3F7, emissive: 0x0d47a1, emissiveIntensity: 0.15,
+      transparent: true, opacity: 0.85
+    });
+
+    const leftArm = new THREE.Mesh(armGeo, limbMat);
+    leftArm.position.set(-0.32, -0.02, 0);
+    leftArm.rotation.z = Math.PI / 6;
+    grp.add(leftArm);
+    _playerLeftArm = leftArm;
+
+    const rightArm = new THREE.Mesh(armGeo, limbMat);
+    rightArm.position.set(0.32, -0.02, 0);
+    rightArm.rotation.z = -Math.PI / 6;
+    grp.add(rightArm);
+    _playerRightArm = rightArm;
+
+    // Gun (held by right arm)
+    const gunBodyGeo = new THREE.BoxGeometry(0.10, 0.14, 0.30);
+    const gunMat = new THREE.MeshPhongMaterial({ color: 0x333333, shininess: 40 });
+    const gunBody = new THREE.Mesh(gunBodyGeo, gunMat);
+    gunBody.position.set(0.38, -0.06, 0.30);
+    grp.add(gunBody);
+    _playerGunBody = gunBody;
+
+    // Gun barrel
+    const barrelGeo = new THREE.CylinderGeometry(0.03, 0.025, 0.26, 8);
+    const barrelMat = new THREE.MeshPhongMaterial({ color: 0x1a1a1a });
+    const barrel = new THREE.Mesh(barrelGeo, barrelMat);
+    barrel.rotation.x = Math.PI / 2;
+    barrel.position.set(0.38, -0.06, 0.50);
+    grp.add(barrel);
+
+    // Gun handle
+    const handleGeo = new THREE.BoxGeometry(0.06, 0.16, 0.08);
+    const handleMat = new THREE.MeshPhongMaterial({ color: 0x8B4513 });
+    const handle = new THREE.Mesh(handleGeo, handleMat);
+    handle.position.set(0.38, -0.20, 0.22);
+    handle.rotation.z = -Math.PI / 6;
+    grp.add(handle);
+
+    // Legs
+    const legGeo = new THREE.CylinderGeometry(0.07, 0.06, 0.36, 8);
+    const leftLeg = new THREE.Mesh(legGeo, limbMat);
+    leftLeg.position.set(-0.13, -0.42, 0);
+    grp.add(leftLeg);
+    _playerLeftLeg = leftLeg;
+
+    const rightLeg = new THREE.Mesh(legGeo, limbMat);
+    rightLeg.position.set(0.13, -0.42, 0);
+    grp.add(rightLeg);
+    _playerRightLeg = rightLeg;
+
     // Ground shadow disc
-    const shadowGeo = new THREE.CircleGeometry(0.4, 32);
+    const shadowGeo = new THREE.CircleGeometry(0.45, 32);
     const shadowMat = new THREE.MeshBasicMaterial({
-      color: 0x000000,
-      transparent: true,
-      opacity: 0.3,
-      depthWrite: false,
-      side: THREE.DoubleSide,
-      alphaTest: 0.01
+      color: 0x000000, transparent: true, opacity: 0.3,
+      depthWrite: false, side: THREE.DoubleSide, alphaTest: 0.01
     });
     const shadowDisc = new THREE.Mesh(shadowGeo, shadowMat);
     shadowDisc.rotation.x = -Math.PI / 2;
@@ -507,6 +663,27 @@
     grp.position.set(_playerPos.x, PLAYER_RADIUS, _playerPos.z);
     _playerMesh = grp;
     _campScene.add(grp);
+
+    // Initialize sprite animator overlay
+    _initSpriteOverlay();
+  }
+
+  // ── Sprite overlay initialization ─────────────────────────
+  function _initSpriteOverlay() {
+    if (!window.SpriteAnimator || !_playerMesh) return;
+    _spriteAnimator = new window.SpriteAnimator(_campScene);
+    _spriteAnimator.load().then(() => {
+      const spriteMesh = _spriteAnimator.createMesh(1.8);
+      if (spriteMesh) {
+        spriteMesh.position.y = 0.3; // center on character
+        _playerMesh.add(spriteMesh);
+        _spriteAnimator.setVisible(true);
+        _spriteAnimator.play('idle');
+      }
+    }).catch(() => {
+      // Spritesheets not available — no overlay; 3D character still works
+      _spriteAnimator = null;
+    });
   }
 
   // ── Benny NPC ─────────────────────────────────────────────
@@ -1825,8 +2002,14 @@
   }
 
   // ──────────────────────────────────────────────────────────
-  // Player movement
+  // Player movement + animation states
   // ──────────────────────────────────────────────────────────
+  const CAMP_DASH_DURATION = 0.22;
+  const CAMP_DASH_SPEED    = 22;
+  const CAMP_SLIDE_DURATION = 0.35;
+  const CAMP_RUN_THRESHOLD = 5.5;  // speed above this = running
+  const CAMP_WALK_THRESHOLD = 0.5; // speed below this = idle
+
   function _updatePlayer(dt) {
     let mx = 0, mz = 0;
 
@@ -1849,38 +2032,246 @@
       mz /= len;
     }
 
-    // Smooth velocity
-    const targetX = mx * PLAYER_SPEED;
-    const targetZ = mz * PLAYER_SPEED;
-    const lerpF = (len > 0) ? 0.18 : 0.12;
-    _playerVel.x += (targetX - _playerVel.x) * lerpF;
-    _playerVel.z += (targetZ - _playerVel.z) * lerpF;
+    // ── Dash trigger (Shift or double-tap) ──
+    if (!_campDashing && !_campSliding && (_keys['ShiftLeft'] || _keys['ShiftRight']) && len > 0.1) {
+      _campDashing = true;
+      _campDashTimer = CAMP_DASH_DURATION;
+      _campDashVec.x = mx;
+      _campDashVec.z = mz;
+    }
 
-    // Update position (clamp to camp area)
-    _playerPos.x = Math.max(-38, Math.min(38, _playerPos.x + _playerVel.x * dt));
-    _playerPos.z = Math.max(-38, Math.min(38, _playerPos.z + _playerVel.z * dt));
+    // ── Slide trigger (Ctrl) ──
+    if (!_campDashing && !_campSliding && (_keys['ControlLeft'] || _keys['ControlRight']) && len > 0.1) {
+      _campSliding = true;
+      _campSlideTimer = CAMP_SLIDE_DURATION;
+    }
 
-    if (_playerMesh) {
-      _playerMesh.position.x = _playerPos.x;
-      _playerMesh.position.z = _playerPos.z;
-
-      // Rotation toward movement direction
-      if (len > 0.05) {
-        const targetAngle = Math.atan2(mx, mz);
-        let da = targetAngle - _playerMesh.rotation.y;
-        while (da > Math.PI)  da -= Math.PI * 2;
-        while (da < -Math.PI) da += Math.PI * 2;
-        _playerMesh.rotation.y += da * 0.2;
+    // ── Action triggers (keys) ──
+    if (!_campActionAnim) {
+      if (_keys['KeyE']) {
+        _campActionAnim = 'chop';
+        _campActionTimer = 0.8;
+      } else if (_keys['KeyF']) {
+        _campActionAnim = 'shoot';
+        _campActionTimer = 0.4;
+      } else if (_keys['KeyQ']) {
+        _campActionAnim = 'knife';
+        _campActionTimer = 0.35;
+      } else if (_keys['KeyR']) {
+        _campActionAnim = 'gather';
+        _campActionTimer = 1.0;
+      } else if (_keys['KeyT']) {
+        _campActionAnim = 'tool';
+        _campActionTimer = 0.6;
       }
+    }
 
-      // Gentle bobbing
-      _playerMesh.position.y = PLAYER_RADIUS + Math.sin(_campTime * 3) * 0.05;
+    // ── Update dash ──
+    if (_campDashing) {
+      _campDashTimer -= dt;
+      const dashSpeed = CAMP_DASH_SPEED;
+      _playerPos.x += _campDashVec.x * dashSpeed * dt;
+      _playerPos.z += _campDashVec.z * dashSpeed * dt;
+      _playerVel.x = _campDashVec.x * dashSpeed;
+      _playerVel.z = _campDashVec.z * dashSpeed;
+      if (_campDashTimer <= 0) _campDashing = false;
+    }
+    // ── Update slide ──
+    else if (_campSliding) {
+      _campSlideTimer -= dt;
+      const slideDecel = _campSlideTimer / CAMP_SLIDE_DURATION;
+      _playerPos.x += _playerVel.x * slideDecel * dt;
+      _playerPos.z += _playerVel.z * slideDecel * dt;
+      if (_campSlideTimer <= 0) _campSliding = false;
+    }
+    // ── Normal movement ──
+    else {
+      // Smooth velocity
+      const targetX = mx * PLAYER_SPEED;
+      const targetZ = mz * PLAYER_SPEED;
+      const lerpF = (len > 0) ? 0.18 : 0.12;
+      _playerVel.x += (targetX - _playerVel.x) * lerpF;
+      _playerVel.z += (targetZ - _playerVel.z) * lerpF;
 
-      // Squish on movement
-      const speed = Math.sqrt(_playerVel.x * _playerVel.x + _playerVel.z * _playerVel.z);
-      const squishY = 1 + speed * 0.015;
-      const squishXZ = 1 - speed * 0.008;
-      _playerMesh.children[0].scale.set(squishXZ, squishY, squishXZ);
+      // Update position (clamp to camp area)
+      _playerPos.x += _playerVel.x * dt;
+      _playerPos.z += _playerVel.z * dt;
+    }
+
+    // Clamp
+    _playerPos.x = Math.max(-38, Math.min(38, _playerPos.x));
+    _playerPos.z = Math.max(-38, Math.min(38, _playerPos.z));
+
+    // Update action timer
+    if (_campActionAnim) {
+      _campActionTimer -= dt;
+      if (_campActionTimer <= 0) _campActionAnim = null;
+    }
+
+    if (!_playerMesh) return;
+
+    _playerMesh.position.x = _playerPos.x;
+    _playerMesh.position.z = _playerPos.z;
+
+    // Rotation toward movement direction
+    const speed = Math.sqrt(_playerVel.x * _playerVel.x + _playerVel.z * _playerVel.z);
+    if (speed > 0.3) {
+      const targetAngle = Math.atan2(_playerVel.x, _playerVel.z);
+      let da = targetAngle - _playerMesh.rotation.y;
+      while (da > Math.PI)  da -= Math.PI * 2;
+      while (da < -Math.PI) da += Math.PI * 2;
+      _playerMesh.rotation.y += da * 0.2;
+    }
+
+    // ── Determine animation state ──
+    let newState = 'idle';
+    if (_campActionAnim) {
+      newState = _campActionAnim;
+    } else if (_campDashing) {
+      newState = 'dash';
+    } else if (_campSliding) {
+      newState = 'slide';
+    } else if (speed > CAMP_RUN_THRESHOLD) {
+      newState = 'run';
+    } else if (speed > CAMP_WALK_THRESHOLD) {
+      newState = 'walk';
+    }
+
+    if (newState !== _campAnimState) {
+      _campAnimState = newState;
+      _campAnimTimer = 0;
+    }
+    _campAnimTimer += dt;
+
+    // ── Apply 3D procedural animation per state ──
+    const phase = _campAnimTimer;
+
+    // Bobbing height
+    let bobY = 0;
+    // Body squish
+    let scaleY = 1, scaleXZ = 1;
+    // Limb swing
+    let armSwing = 0, legSwing = 0;
+
+    switch (_campAnimState) {
+      case 'idle':
+        bobY = Math.sin(_campTime * 2.5) * 0.04;
+        armSwing = Math.sin(_campTime * 1.5) * 0.08;
+        break;
+      case 'walk':
+        bobY = Math.sin(phase * 10) * 0.06;
+        armSwing = Math.sin(phase * 10) * 0.35;
+        legSwing = Math.sin(phase * 10) * 0.40;
+        scaleY = 1.0 + Math.sin(phase * 20) * 0.03;
+        scaleXZ = 1.0 - Math.sin(phase * 20) * 0.015;
+        break;
+      case 'run':
+        bobY = Math.sin(phase * 16) * 0.10;
+        armSwing = Math.sin(phase * 16) * 0.55;
+        legSwing = Math.sin(phase * 16) * 0.65;
+        scaleY = 1.0 + Math.sin(phase * 32) * 0.06;
+        scaleXZ = 1.0 - Math.sin(phase * 32) * 0.03;
+        // Smooth forward lean
+        _playerMesh.rotation.x += (-0.15 - _playerMesh.rotation.x) * 0.2;
+        break;
+      case 'dash':
+        bobY = -0.1;  // low to ground
+        scaleY = 0.6;
+        scaleXZ = 1.4;
+        armSwing = -0.8; // arms back
+        legSwing = -0.3;
+        _playerMesh.rotation.x += (-0.3 - _playerMesh.rotation.x) * 0.3; // smooth strong forward lean
+        break;
+      case 'slide':
+        bobY = -0.15;
+        scaleY = 0.5;
+        scaleXZ = 1.3;
+        armSwing = 0; // arms out
+        legSwing = 0.2;
+        break;
+      case 'shoot': {
+        const t = _campActionTimer / 0.4;
+        const recoil = Math.sin((1 - t) * Math.PI) * 0.15;
+        bobY = recoil * 0.05;
+        armSwing = 0;
+        // Gun recoil — kick right arm back
+        if (_playerRightArm) _playerRightArm.rotation.x = -0.8 + recoil * 2.0;
+        if (_playerGunBody) _playerGunBody.position.z = 0.30 - recoil * 0.15;
+        break;
+      }
+      case 'knife': {
+        const t = _campActionTimer / 0.35;
+        const slash = Math.sin((1 - t) * Math.PI * 2);
+        armSwing = 0;
+        if (_playerRightArm) _playerRightArm.rotation.x = slash * 1.2;
+        if (_playerRightArm) _playerRightArm.rotation.z = -Math.PI / 6 + slash * 0.5;
+        break;
+      }
+      case 'chop': {
+        const chopPhase = Math.sin(phase * 8);
+        armSwing = 0;
+        if (_playerRightArm) _playerRightArm.rotation.x = chopPhase * 1.4;
+        if (_playerLeftArm) _playerLeftArm.rotation.x = chopPhase * 0.6;
+        bobY = Math.abs(chopPhase) * 0.04;
+        break;
+      }
+      case 'gather': {
+        const gatherPhase = Math.sin(phase * 5);
+        bobY = -0.08 + Math.abs(gatherPhase) * 0.08; // bobbing down and up
+        armSwing = 0;
+        if (_playerRightArm) _playerRightArm.rotation.x = 0.6 + gatherPhase * 0.4;
+        if (_playerLeftArm) _playerLeftArm.rotation.x = 0.6 - gatherPhase * 0.4;
+        scaleY = 0.95;
+        break;
+      }
+      case 'tool': {
+        const toolPhase = Math.sin(phase * 10);
+        armSwing = 0;
+        if (_playerRightArm) _playerRightArm.rotation.x = toolPhase * 1.0;
+        bobY = Math.abs(toolPhase) * 0.03;
+        break;
+      }
+    }
+
+    // Apply body position
+    _playerMesh.position.y = PLAYER_RADIUS + bobY;
+
+    // Apply body squish to first child (body mesh)
+    if (_playerMesh.children[0]) {
+      _playerMesh.children[0].scale.set(scaleXZ, scaleY, scaleXZ);
+    }
+
+    // Apply limb animation (only if not overridden by action states)
+    if (_campAnimState !== 'shoot' && _campAnimState !== 'knife' &&
+        _campAnimState !== 'chop' && _campAnimState !== 'gather' && _campAnimState !== 'tool') {
+      if (_playerLeftArm) _playerLeftArm.rotation.x = armSwing;
+      if (_playerRightArm) _playerRightArm.rotation.x = -armSwing;
+      if (_playerLeftLeg) _playerLeftLeg.rotation.x = -legSwing;
+      if (_playerRightLeg) _playerRightLeg.rotation.x = legSwing;
+      // Reset gun position when not in action state
+      if (_playerGunBody) _playerGunBody.position.z = 0.30;
+    } else {
+      // Legs stay still during action states
+      if (_playerLeftLeg) _playerLeftLeg.rotation.x = 0;
+      if (_playerRightLeg) _playerRightLeg.rotation.x = 0;
+    }
+
+    // Reset forward lean for non-dash/run states
+    if (_campAnimState !== 'dash' && _campAnimState !== 'run') {
+      _playerMesh.rotation.x *= 0.85;
+    }
+
+    // Bandage tail physics — sway based on movement
+    if (_playerBandageTail) {
+      _playerBandageTail.rotation.x = Math.sin(_campTime * 4 + speed) * 0.2 * (1 + speed * 0.1);
+    }
+
+    // ── Update sprite animator overlay ──
+    if (_spriteAnimator) {
+      _spriteAnimator.update(dt);
+      if (_spriteAnimator.currentAnim() !== _campAnimState) {
+        _spriteAnimator.play(_campAnimState);
+      }
     }
   }
 
@@ -2629,6 +3020,12 @@
     if (_interactBtn) _interactBtn.style.display = 'none';
     _hideTouchIndicator();
     _hideBennySpeech();
+    // Reset camp animation state
+    _campAnimState = 'idle';
+    _campAnimTimer = 0;
+    _campDashing = false;
+    _campSliding = false;
+    _campActionAnim = null;
     // Remove camp mode from resource HUD when leaving camp
     if (window.GameHarvesting) window.GameHarvesting.hideCampHUD();
 
