@@ -588,7 +588,7 @@
     mouth.position.set(0, -0.06, 0.44);
     grp.add(mouth);
 
-    // Cigar — brown cylinder + darker tip, matching spritesheet
+    // Cigar — brown cylinder body + orange ember end, matching spritesheet
     const cigarMat = new THREE.MeshPhongMaterial({ color: 0x8B6914, shininess: 20 });
     const cigarGeo = new THREE.CylinderGeometry(0.025, 0.022, 0.22, 8);
     const cigar = new THREE.Mesh(cigarGeo, cigarMat);
