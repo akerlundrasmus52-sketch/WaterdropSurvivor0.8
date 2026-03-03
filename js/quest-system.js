@@ -1317,11 +1317,19 @@
             </div>
           </div>`;
       } else {
+        const growthStage = saveData.companionGrowthStage || 'newborn';
+        const growthIcons = { newborn: '🐣', juvenile: '🐾', adult: '🐺' };
+        const growthLabels = { newborn: 'Newborn', juvenile: 'Juvenile', adult: 'Adult' };
+        const growthColors = { newborn: '#FFD700', juvenile: '#FF8C00', adult: '#00FF64' };
+        const growthIcon = growthIcons[growthStage] || '🐣';
+        const growthLabel = growthLabels[growthStage] || 'Newborn';
+        const growthColor = growthColors[growthStage] || '#FFD700';
         eggSectionHTML = `
-          <div style="background:linear-gradient(135deg,rgba(255,180,0,0.1),rgba(150,80,0,0.2));border:2px solid #FFD700;border-radius:12px;padding:16px;margin-bottom:20px;text-align:center;">
-            <div style="font-size:36px;">🐣 ✅</div>
-            <div style="color:#FFD700;font-size:15px;font-weight:bold;">Companion Egg Hatched!</div>
-            <div style="color:#aaa;font-size:12px;">Your companion has joined your camp.</div>
+          <div style="background:linear-gradient(135deg,rgba(255,180,0,0.1),rgba(150,80,0,0.2));border:2px solid ${growthColor};border-radius:12px;padding:16px;margin-bottom:20px;text-align:center;">
+            <div style="font-size:36px;">${growthIcon} ✅</div>
+            <div style="color:${growthColor};font-size:15px;font-weight:bold;">Companion Egg Hatched!</div>
+            <div style="color:#aaa;font-size:12px;">Growth Stage: <b style="color:${growthColor};">${growthLabel}</b></div>
+            ${growthStage !== 'adult' ? '<div style="color:#888;font-size:11px;margin-top:4px;">Take your companion on runs to help it grow!</div>' : '<div style="color:#00FF64;font-size:11px;margin-top:4px;">Fully grown! Your companion is at full power.</div>'}
           </div>`;
       }
 
@@ -1474,6 +1482,7 @@
           saveData.gold -= 200;
           saveData.companionEggHatchProgress = 100;
           saveData.companionEggHatched = true;
+          saveData.companionGrowthStage = 'newborn';
           saveSaveData();
           showStatChange('🐣 Companion Egg Hatched!');
           playSound('collect');
@@ -1790,11 +1799,35 @@
           },
           inventory:           () => showInventoryScreen(),
           campBoard:           () => showCampBoardMenu(),
-          specialAttacks:      () => showSpecialAttacksPanel(),
-          warehouse:           () => showInventoryScreen(),
-          tavern:              () => showExpeditionsMenu ? showExpeditionsMenu() : showQuestHall(),
+          specialAttacks:      () => {
+            if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest3b_useSpecialAttacks') {
+              progressTutorialQuest('quest3b_useSpecialAttacks', true);
+              saveSaveData();
+            }
+            showSpecialAttacksPanel();
+          },
+          warehouse:           () => {
+            if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest7b_useWarehouse') {
+              progressTutorialQuest('quest7b_useWarehouse', true);
+              saveSaveData();
+            }
+            showInventoryScreen();
+          },
+          tavern:              () => {
+            if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest9b_visitTavern') {
+              progressTutorialQuest('quest9b_visitTavern', true);
+              saveSaveData();
+            }
+            showExpeditionsMenu ? showExpeditionsMenu() : showQuestHall();
+          },
           shop:                () => showProgressionShop(),
-          prestige:            () => showPrestigeMenu ? showPrestigeMenu() : showProgressionShop(),
+          prestige:            () => {
+            if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest10b_usePrestige') {
+              progressTutorialQuest('quest10b_usePrestige', true);
+              saveSaveData();
+            }
+            showPrestigeMenu ? showPrestigeMenu() : showProgressionShop();
+          },
           trashRecycle:        () => {
             if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest27_useRecycle') {
               progressTutorialQuest('quest27_useRecycle', true);
@@ -2036,6 +2069,30 @@
                 showProgressionShop();
               } else if (buildingId === 'companionHouse') {
                 showCompanionHouse();
+              } else if (buildingId === 'specialAttacks') {
+                if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest3b_useSpecialAttacks') {
+                  progressTutorialQuest('quest3b_useSpecialAttacks', true);
+                  saveSaveData();
+                }
+                showSpecialAttacksPanel();
+              } else if (buildingId === 'warehouse') {
+                if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest7b_useWarehouse') {
+                  progressTutorialQuest('quest7b_useWarehouse', true);
+                  saveSaveData();
+                }
+                showInventoryScreen();
+              } else if (buildingId === 'tavern') {
+                if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest9b_visitTavern') {
+                  progressTutorialQuest('quest9b_visitTavern', true);
+                  saveSaveData();
+                }
+                if (typeof showExpeditionsMenu === 'function') showExpeditionsMenu(); else showQuestHall();
+              } else if (buildingId === 'prestige') {
+                if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest10b_usePrestige') {
+                  progressTutorialQuest('quest10b_usePrestige', true);
+                  saveSaveData();
+                }
+                if (typeof showPrestigeMenu === 'function') showPrestigeMenu(); else showProgressionShop();
               } else {
                 showStatChange(`${building.icon} ${building.name}: Level ${buildingData.level}/${buildingData.maxLevel}`);
               }

@@ -1024,11 +1024,39 @@
           document.getElementById('camp-screen').style.display = 'none';
           openCodex();
         },
-        specialAttacks:      () => { overlay.remove(); showSpecialAttacksPanel(); },
-        warehouse:           () => { overlay.remove(); showInventoryScreen(); },
-        tavern:              () => { overlay.remove(); if (typeof showExpeditionsMenu === 'function') showExpeditionsMenu(); else showQuestHall(); },
+        specialAttacks:      () => {
+          overlay.remove();
+          if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest3b_useSpecialAttacks') {
+            progressTutorialQuest('quest3b_useSpecialAttacks', true);
+            saveSaveData();
+          }
+          showSpecialAttacksPanel();
+        },
+        warehouse:           () => {
+          overlay.remove();
+          if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest7b_useWarehouse') {
+            progressTutorialQuest('quest7b_useWarehouse', true);
+            saveSaveData();
+          }
+          showInventoryScreen();
+        },
+        tavern:              () => {
+          overlay.remove();
+          if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest9b_visitTavern') {
+            progressTutorialQuest('quest9b_visitTavern', true);
+            saveSaveData();
+          }
+          if (typeof showExpeditionsMenu === 'function') showExpeditionsMenu(); else showQuestHall();
+        },
         shop:                () => { overlay.remove(); showProgressionShop(); },
-        prestige:            () => { overlay.remove(); if (typeof showPrestigeMenu === 'function') showPrestigeMenu(); else showProgressionShop(); },
+        prestige:            () => {
+          overlay.remove();
+          if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest10b_usePrestige') {
+            progressTutorialQuest('quest10b_usePrestige', true);
+            saveSaveData();
+          }
+          if (typeof showPrestigeMenu === 'function') showPrestigeMenu(); else showProgressionShop();
+        },
         trashRecycle:        () => {
           overlay.remove();
           if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest27_useRecycle') {

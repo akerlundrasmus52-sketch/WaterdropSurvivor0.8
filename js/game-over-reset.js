@@ -123,6 +123,18 @@
         if (currentQuest.id === 'quest28_survive3min' && survivalTime >= 180) {
           progressTutorialQuest('quest28_survive3min', true);
         }
+        // Quest: Kill 12 enemies (alternation run quest)
+        if (currentQuest.id === 'quest15b_runKill12' && saveData.tutorialQuests.killsThisRun >= 12) {
+          progressTutorialQuest('quest15b_runKill12', true);
+        }
+        // Quest: Grow companion to juvenile (survive 60 seconds)
+        if (currentQuest.id === 'quest19b_growJuvenile' && survivalTime >= 60) {
+          progressTutorialQuest('quest19b_growJuvenile', true);
+        }
+        // Quest: Grow companion to adult (kill 8 enemies)
+        if (currentQuest.id === 'quest19c_growAdult' && saveData.tutorialQuests.killsThisRun >= 8) {
+          progressTutorialQuest('quest19c_growAdult', true);
+        }
       }
       
       // Quest 3 (new chain): Reach Level 5

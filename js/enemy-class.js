@@ -1879,6 +1879,16 @@
               !saveData.tutorialQuests.readyToClaim.includes('quest26_kill20')) {
             showStatChange('⚔️ 20 Kills! Return to camp to claim your reward!');
           }
+          // Kill 12 enemies (alternation run quest)
+          if (currentQuest && currentQuest.id === 'quest15b_runKill12' && playerStats.kills >= 12 &&
+              !saveData.tutorialQuests.readyToClaim.includes('quest15b_runKill12')) {
+            showStatChange('⚔️ 12 Kills! Return to camp to claim your reward!');
+          }
+          // Kill 8 enemies (grow companion to adult)
+          if (currentQuest && currentQuest.id === 'quest19c_growAdult' && playerStats.kills >= 8 &&
+              !saveData.tutorialQuests.readyToClaim.includes('quest19c_growAdult')) {
+            showStatChange('🐺 8 Kills! Your companion is growing stronger!');
+          }
         }
         
         // Track side challenge progress

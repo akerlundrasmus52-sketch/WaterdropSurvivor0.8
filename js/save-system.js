@@ -75,6 +75,7 @@
       companionEggHatched: false, // Whether the UFO companion egg has been hatched
       companionEggHatchProgress: 0, // 0-100 hatching progress
       companionSkillPoints: 0, // Skill points for companion skill tree
+      companionGrowthStage: 'egg', // Growth stages: egg, newborn, juvenile, adult
       // Camp System - Quest-Driven Building Unlock System
       campBuildings: {
         // Core buildings - NEW: Only Quest Mission Hall unlocked initially

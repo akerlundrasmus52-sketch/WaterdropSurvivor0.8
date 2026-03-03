@@ -1591,9 +1591,24 @@
         unlockBuilding: 'specialAttacks',
         rewardSAP: 2,
         giveItem: { id: 'cigar_quest', name: 'Cigar', type: 'ring', rarity: 'rare', stats: { attackSpeed: 1, movementSpeed: 1, attackPrecision: 1 }, description: '+1 Attack Speed, +1 Movement Speed, +1 Attack Precision' },
-        message: "🚬 Cigar acquired!<br><br>This rare ring grants <b>+1 Attack Speed, +1 Movement Speed, +1 Attack Precision</b>.<br><br>The <b>Special Attacks</b> building is now unlocked! Choose your first special attack.<br><br>Head to the <b>Armory</b> and equip the Cigar from your inventory!",
-        nextQuest: 'quest4_equipCigar',
+        message: "🚬 Cigar acquired!<br><br>This rare ring grants <b>+1 Attack Speed, +1 Movement Speed, +1 Attack Precision</b>.<br><br>The <b>Special Attacks</b> building is now unlocked! Visit it and choose your first special attack!",
+        nextQuest: 'quest3b_useSpecialAttacks',
         conditions: ['quest2_spendSkills']
+      },
+
+      // === PHASE 3b: Camp quest → Use Special Attacks building (first use) ===
+      quest3b_useSpecialAttacks: {
+        id: 'quest3b_useSpecialAttacks',
+        name: 'Choose a Special Attack',
+        description: 'Visit the Special Attacks building and equip your first special attack to unleash powerful abilities in combat!',
+        objectives: 'Open the Special Attacks building and equip a special attack',
+        claim: 'Main Building',
+        rewardGold: 100,
+        rewardSkillPoints: 1,
+        rewardSAP: 1,
+        message: "⚡ Special Attack equipped!<br><br>Use it in battle to devastate your enemies!<br><br>Now head to the <b>Armory</b> and equip the Cigar from your inventory!",
+        nextQuest: 'quest4_equipCigar',
+        conditions: ['quest3_stonehengeGear']
       },
 
       // === PHASE 4: Camp quest → Equip gear (free first use of Armory) ===
@@ -1655,9 +1670,23 @@
         rewardGold: 150,
         rewardSkillPoints: 1,
         unlockBuilding: 'warehouse',
-        message: "⚒️ Upgrade purchased!<br><br>Each upgrade makes you permanently stronger. Time to prove your might!<br><br>The <b>Warehouse</b> is now unlocked — store and manage your resources there!",
-        nextQuest: 'quest8_kill10',
+        message: "⚒️ Upgrade purchased!<br><br>Each upgrade makes you permanently stronger!<br><br>The <b>Warehouse</b> is now unlocked — visit it to store and manage your resources!",
+        nextQuest: 'quest7b_useWarehouse',
         conditions: ['quest6_survive2min']
+      },
+
+      // === PHASE 7b: Camp quest → Use Warehouse (first use) ===
+      quest7b_useWarehouse: {
+        id: 'quest7b_useWarehouse',
+        name: 'Visit the Warehouse',
+        description: 'Open the Warehouse building to view your resource storage and manage your materials.',
+        objectives: 'Open the Warehouse in Camp',
+        claim: 'Main Building',
+        rewardGold: 100,
+        rewardSkillPoints: 1,
+        message: "🏪 Warehouse visited!<br><br>You can now manage all your materials and resources from here.<br><br>Time to prove your might — head out and kill <b>10 enemies</b> in one run!",
+        nextQuest: 'quest8_kill10',
+        conditions: ['quest7_buyProgression']
       },
 
       // === PHASE 8: Run quest → Kill 10 enemies → Unlock Companion House ===
@@ -1687,9 +1716,23 @@
         rewardSkillPoints: 1,
         rewardAttributePoints: 1,
         unlockBuilding: 'shop',
-        message: "🐺 Companion activated!<br><br>They will fight by your side in battle!<br><br>The <b>Shop</b> is now open — buy powerful items to aid your journey!<br><br>Now go on a run and kill <b>15 enemies</b> to prove your combined strength!",
-        nextQuest: 'quest10_kill15',
+        message: "🐺 Companion activated!<br><br>They will fight by your side in battle!<br><br>The <b>Shop</b> is now open — buy powerful items!<br><br>Visit the <b>Tavern</b> to check out expeditions and rest options!",
+        nextQuest: 'quest9b_visitTavern',
         conditions: ['quest8_kill10']
+      },
+
+      // === PHASE 9b: Camp quest → Visit the Tavern (first use) ===
+      quest9b_visitTavern: {
+        id: 'quest9b_visitTavern',
+        name: 'Visit the Tavern',
+        description: 'Head to the Tavern in camp. Check out the expedition board and rest options for bonus buffs!',
+        objectives: 'Open the Tavern in Camp',
+        claim: 'Main Building',
+        rewardGold: 150,
+        rewardSkillPoints: 1,
+        message: "🍺 Tavern visited!<br><br>Use the Tavern to send companions on expeditions and rest for buffs!<br><br>Now go on a run and kill <b>15 enemies</b> to prove your combined strength!",
+        nextQuest: 'quest10_kill15',
+        conditions: ['quest9_activateCompanion']
       },
 
       // === PHASE 10: Run quest → Kill 15 enemies → Unlock Prestige Altar ===
@@ -1702,9 +1745,23 @@
         rewardGold: 300,
         rewardSkillPoints: 2,
         unlockBuilding: 'prestige',
-        message: "🎉 15 Kills! Well done!<br><br>The <b>Prestige Altar</b> has awakened — you may now begin the path of Prestige!<br><br>Explore the world — find every landmark (Stonehenge, Pyramid, Montana, Tesla Tower) to unlock the Achievement Building!",
+        message: "🎉 15 Kills! Well done!<br><br>The <b>Prestige Altar</b> has awakened! Visit it to view your prestige options!",
+        nextQuest: 'quest10b_usePrestige',
+        conditions: ['quest9b_visitTavern']
+      },
+
+      // === PHASE 10b: Camp quest → Visit Prestige Altar (first use) ===
+      quest10b_usePrestige: {
+        id: 'quest10b_usePrestige',
+        name: 'Visit the Prestige Altar',
+        description: 'Head to the Prestige Altar in camp and view your prestige options. Prestige lets you reset for powerful permanent bonuses!',
+        objectives: 'Open the Prestige Altar in Camp',
+        claim: 'Main Building',
+        rewardGold: 200,
+        rewardSkillPoints: 1,
+        message: "✨ Prestige Altar visited!<br><br>When you're ready, prestige to reset your progress in exchange for powerful permanent bonuses!<br><br>Explore the world — find every landmark (Stonehenge, Pyramid, Montana, Tesla Tower)!",
         nextQuest: 'quest11_findAllLandmarks',
-        conditions: ['quest9_activateCompanion']
+        conditions: ['quest10_kill15']
       },
 
       // === PHASE 11: Run quest → Find all landmarks → Unlock Achievement Building ===
@@ -1720,7 +1777,7 @@
         unlockBuilding: 'achievementBuilding',
         message: "🗺️ ALL LANDMARKS FOUND!<br><br>You've explored the entire world!<br><br>The <b>Achievement Building</b> is now unlocked in Camp. Visit it to claim your achievements!",
         nextQuest: 'quest12_visitAchievements',
-        conditions: ['quest10_kill15']
+        conditions: ['quest10b_usePrestige']
       },
 
       // === PHASE 12: Camp quest → Visit Achievement Building (free first use) ===
@@ -1778,9 +1835,24 @@
         rewardGold: 200,
         rewardSkillPoints: 1,
         rewardAttributePoints: 3,
-        message: "📊 Account reviewed!<br><br>A new building has appeared — the <b>Character Visuals</b> studio! Visit it to customize your look.",
-        nextQuest: 'quest16_visitCharVisuals',
+        message: "📊 Account reviewed!<br><br>Time for a combat challenge — head out and kill <b>12 enemies</b> in one run!",
+        nextQuest: 'quest15b_runKill12',
         conditions: ['quest14_kill25']
+      },
+
+      // === PHASE 15b: Run quest → Kill 12 enemies (alternation between camp quests) ===
+      quest15b_runKill12: {
+        id: 'quest15b_runKill12',
+        name: 'Kill 12 Enemies',
+        description: 'Head out on a run and kill 12 enemies to keep your skills sharp!',
+        objectives: 'Kill 12 enemies in one run',
+        triggerOnDeath: true,
+        rewardGold: 300,
+        rewardSkillPoints: 2,
+        rewardAttributePoints: 1,
+        message: "⚔️ 12 Kills! Nicely done!<br><br>A new building has appeared — the <b>Character Visuals</b> studio! Visit it to customize your look.",
+        nextQuest: 'quest16_visitCharVisuals',
+        conditions: ['quest15_accountVisit']
       },
 
       // === PHASE 16: Camp quest → Visit Character Visuals building ===
@@ -1795,7 +1867,7 @@
         unlockBuilding: 'characterVisuals',
         message: "🎨 Character Visuals unlocked!<br><br>Customize your look with accessories, animations, and outfits!<br><br>Next: open the <b>Codex</b> to learn about all the creatures and landmarks you've encountered!",
         nextQuest: 'quest17_visitCodex',
-        conditions: ['quest15_accountVisit']
+        conditions: ['quest15b_runKill12']
       },
 
       // === PHASE 17: Camp quest → Visit Codex building ===
@@ -1840,9 +1912,41 @@
         rewardGold: 600,
         rewardSkillPoints: 3,
         rewardAttributePoints: 3,
-        message: "🐣 COMPANION HATCHED!<br><br>Your new companion has hatched! Train it in the <b>Companion House</b> to unlock powerful abilities and grow it into a mighty ally!",
-        nextQuest: 'quest20_trainCompanion',
+        message: "🐣 COMPANION HATCHED!<br><br>A tiny newborn companion has emerged from the egg! 🍼<br><br>Take your <b>newborn companion</b> on a run and survive <b>1 minute</b> together to help it grow into a juvenile!",
+        nextQuest: 'quest19b_growJuvenile',
         conditions: ['quest18_findCompanionEgg']
+      },
+
+      // === PHASE 19b: Run quest → Grow companion from newborn to juvenile ===
+      quest19b_growJuvenile: {
+        id: 'quest19b_growJuvenile',
+        name: 'Grow Your Companion — Juvenile',
+        description: 'Your newborn companion needs field experience! Take it on a run and survive 1 minute together so it can grow into a juvenile.',
+        objectives: 'Survive 60 seconds with your newborn companion',
+        triggerOnDeath: true,
+        rewardGold: 400,
+        rewardSkillPoints: 2,
+        rewardAttributePoints: 1,
+        companionGrowth: 'juvenile',
+        message: "🐾 COMPANION GREW!<br><br>Your companion has grown into a <b>juvenile</b>! It's bigger, faster, and stronger now!<br><br>Take it on another run and kill <b>8 enemies</b> together to reach <b>adult</b> stage!",
+        nextQuest: 'quest19c_growAdult',
+        conditions: ['quest19_hatchEgg']
+      },
+
+      // === PHASE 19c: Run quest → Grow companion from juvenile to adult ===
+      quest19c_growAdult: {
+        id: 'quest19c_growAdult',
+        name: 'Grow Your Companion — Adult',
+        description: 'Your juvenile companion is almost fully grown! Take it on a run and kill 8 enemies together to reach adult form.',
+        objectives: 'Kill 8 enemies with your juvenile companion',
+        triggerOnDeath: true,
+        rewardGold: 500,
+        rewardSkillPoints: 3,
+        rewardAttributePoints: 2,
+        companionGrowth: 'adult',
+        message: "🐺 COMPANION FULLY GROWN!<br><br>Your companion has reached <b>adult</b> form! Full size, full power!<br><br>Train it in the <b>Companion House</b> to unlock powerful abilities!",
+        nextQuest: 'quest20_trainCompanion',
+        conditions: ['quest19b_growJuvenile']
       },
 
       // === PHASE 20: Camp quest → Train companion (level it up once) ===
@@ -1858,7 +1962,7 @@
         unlockBuilding: 'campBoard',
         message: "⚔️ Companion trained!<br><br>Your companion grows stronger with every battle!<br><br>A <b>Camp Board</b> has appeared near the campfire — use it for instant access to ALL camp features without walking to each building!",
         nextQuest: 'quest21_useCampBoard',
-        conditions: ['quest19_hatchEgg']
+        conditions: ['quest19c_growAdult']
       },
 
       // === PHASE 21: Use the Camp Board (Fast Access) ===
@@ -2409,6 +2513,16 @@
           saveData.companions.stormWolf.unlocked = true;
         }
         showStatChange('🥚 Companion Egg Received!');
+      }
+
+      // Handle companion growth stage progression
+      if (quest.companionGrowth) {
+        saveData.companionGrowthStage = quest.companionGrowth;
+        if (quest.companionGrowth === 'juvenile') {
+          showStatChange('🐾 Companion grew to Juvenile!');
+        } else if (quest.companionGrowth === 'adult') {
+          showStatChange('🐺 Companion reached Adult form!');
+        }
       }
       
       // Give item

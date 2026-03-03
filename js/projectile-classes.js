@@ -20,9 +20,25 @@
         this.respawnTimer = 0;
         this.lastAttackTime = 0;
         
+        // Animation state
+        this._animState = 'idle'; // idle, walk, attack
+        this._animTime = 0;
+        this._attackAnimTimer = 0;
+        this._baseScale = 1;
+        
+        // Growth stage scaling: newborn=0.5, juvenile=0.7, adult/default=1.0
+        const growthStage = saveData.companionGrowthStage || 'adult';
+        if (growthStage === 'newborn') {
+          this._baseScale = 0.5;
+        } else if (growthStage === 'juvenile') {
+          this._baseScale = 0.7;
+        } else {
+          this._baseScale = 1.0;
+        }
+        
         // Create visual representation
         const icon = isEvolved ? this.data.evolvedIcon : this.data.icon;
-        const size = 0.8;
+        const size = 0.8 * this._baseScale;
         const geo = new THREE.BoxGeometry(size, size, size);
         const mat = new THREE.MeshStandardMaterial({ 
           color: this.data.type === 'melee' ? 0x8B4513 : 
@@ -49,6 +65,8 @@
         
         if (!player || !player.mesh) return;
         
+        this._animTime += dt;
+        
         // Follow player with simple AI
         const dx = player.mesh.position.x - this.mesh.position.x;
         const dz = player.mesh.position.z - this.mesh.position.z;
@@ -56,17 +74,20 @@
         
         // Keep distance from player (melee closer, others farther)
         const targetDist = this.data.type === 'melee' ? 2 : 3;
+        let isMoving = false;
         
         if (dist > targetDist + 0.5) {
           // Move toward player
           const moveSpeed = 0.15;
           this.mesh.position.x += (dx / dist) * moveSpeed;
           this.mesh.position.z += (dz / dist) * moveSpeed;
+          isMoving = true;
         } else if (dist < targetDist - 0.5) {
           // Move away from player
           const moveSpeed = 0.1;
           this.mesh.position.x -= (dx / dist) * moveSpeed;
           this.mesh.position.z -= (dz / dist) * moveSpeed;
+          isMoving = true;
         }
         
         // Attack nearest enemy
@@ -93,11 +114,51 @@
             nearest.takeDamage(finalDamage, false);
             spawnParticles(nearest.mesh.position, 0xFF6347, 3);
             this.lastAttackTime = now;
+            this._animState = 'attack';
+            this._attackAnimTimer = 0.25;
           }
         }
         
-        // Bob animation
-        this.mesh.position.y = 0.5 + Math.sin(Date.now() * 0.003) * 0.1;
+        // Update animation state
+        if (this._attackAnimTimer > 0) {
+          this._attackAnimTimer -= dt;
+          this._animState = 'attack';
+        } else if (isMoving) {
+          this._animState = 'walk';
+        } else {
+          this._animState = 'idle';
+        }
+        
+        // Apply animation based on state
+        const baseY = 0.4 * this._baseScale;
+        const s = this._baseScale;
+        if (this._animState === 'attack') {
+          // Attack animation: quick scale pulse and slight lunge
+          const t = this._attackAnimTimer / 0.25;
+          const pulse = 1 + Math.sin(t * Math.PI) * 0.3;
+          this.mesh.scale.set(s * pulse, s * pulse, s * pulse);
+          this.mesh.position.y = baseY + 0.1;
+          // Flash emissive on attack
+          this.mesh.material.emissive = this.mesh.material.emissive || new THREE.Color();
+          this.mesh.material.emissive.setHex(0xFF4400);
+          this.mesh.material.emissiveIntensity = t * 0.8;
+        } else if (this._animState === 'walk') {
+          // Walk animation: bouncy hop movement
+          const bounce = Math.abs(Math.sin(this._animTime * 8)) * 0.2;
+          const tilt = Math.sin(this._animTime * 8) * 0.15;
+          this.mesh.position.y = baseY + bounce;
+          this.mesh.scale.set(s, s * (1 + bounce * 0.3), s);
+          this.mesh.rotation.z = tilt;
+          this.mesh.material.emissiveIntensity = 0;
+        } else {
+          // Idle animation: gentle bob and breathe
+          const bob = Math.sin(this._animTime * 2.5) * 0.08;
+          const breathe = 1 + Math.sin(this._animTime * 2) * 0.04;
+          this.mesh.position.y = baseY + bob;
+          this.mesh.scale.set(s * breathe, s / breathe, s * breathe);
+          this.mesh.rotation.z = 0;
+          this.mesh.material.emissiveIntensity = 0;
+        }
       }
       
       takeDamage(amount) {
