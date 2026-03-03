@@ -65,52 +65,77 @@
         this.highlight.position.set(-0.2, 0.3, 0.2);
         this.mesh.add(this.highlight);
         
-        // Add player face: eyes with friendly appearance (matching main menu art style)
-        // REMOVED RED EYES - using blue/cyan to match waterdrop theme
+        // Eyes — bold red to match spritesheet character design
+        const eyeWhiteGeo = new THREE.SphereGeometry(0.10, 8, 8);
+        const eyeWhiteMat = new THREE.MeshBasicMaterial({ color: 0xFFFFFF });
+        
+        this.leftEyeWhite = new THREE.Mesh(eyeWhiteGeo, eyeWhiteMat);
+        this.leftEyeWhite.position.set(-0.14, 0.08, 0.38);
+        this.mesh.add(this.leftEyeWhite);
+        
+        this.rightEyeWhite = new THREE.Mesh(eyeWhiteGeo, eyeWhiteMat);
+        this.rightEyeWhite.position.set(0.14, 0.08, 0.38);
+        this.mesh.add(this.rightEyeWhite);
+        
         const eyeGeo = new THREE.SphereGeometry(0.08, 8, 8);
-        const eyeMat = new THREE.MeshBasicMaterial({ color: 0x5DADE2 }); // Cyan/blue eyes to match waterdrop
+        const eyeMat = new THREE.MeshBasicMaterial({ color: 0xCC2222 }); // Red eyes matching spritesheet
         
         this.leftEye = new THREE.Mesh(eyeGeo, eyeMat);
-        this.leftEye.position.set(-0.12, 0.1, 0.4);
+        this.leftEye.position.set(-0.14, 0.08, 0.42);
         this.mesh.add(this.leftEye);
         
         this.rightEye = new THREE.Mesh(eyeGeo, eyeMat);
-        this.rightEye.position.set(0.12, 0.1, 0.4);
+        this.rightEye.position.set(0.14, 0.08, 0.42);
         this.mesh.add(this.rightEye);
         
-        // Pupils (darker blue for depth - matches waterdrop theme)
+        // Pupils (dark centers)
         const pupilGeo = new THREE.SphereGeometry(0.04, 8, 8);
-        const pupilMat = new THREE.MeshBasicMaterial({ color: 0x2874A6 }); // Dark blue to match waterdrop
+        const pupilMat = new THREE.MeshBasicMaterial({ color: 0x220000 }); // Very dark red/black
         
         this.leftPupil = new THREE.Mesh(pupilGeo, pupilMat);
-        this.leftPupil.position.set(-0.12, 0.1, 0.45);
+        this.leftPupil.position.set(-0.14, 0.08, 0.46);
         this.mesh.add(this.leftPupil);
         
         this.rightPupil = new THREE.Mesh(pupilGeo, pupilMat);
-        this.rightPupil.position.set(0.12, 0.1, 0.45);
+        this.rightPupil.position.set(0.14, 0.08, 0.46);
         this.mesh.add(this.rightPupil);
         
-        // Smile (curved shape using torus segment)
-        const smileGeo = new THREE.TorusGeometry(0.15, 0.02, 8, 16, Math.PI);
-        const smileMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
-        this.smile = new THREE.Mesh(smileGeo, smileMat);
-        this.smile.position.set(0, -0.05, 0.4);
-        this.smile.rotation.x = Math.PI / 2;
-        this.smile.rotation.z = Math.PI;
-        this.mesh.add(this.smile);
+        // Angry brow — furrowed look matching spritesheet
+        const browGeo = new THREE.BoxGeometry(0.12, 0.025, 0.04);
+        const browMat = new THREE.MeshBasicMaterial({ color: 0x1a6fc4 }); // Darker blue brow
+        this.leftBrow = new THREE.Mesh(browGeo, browMat);
+        this.leftBrow.position.set(-0.14, 0.18, 0.40);
+        this.leftBrow.rotation.z = 0.25; // Angled inward (angry)
+        this.mesh.add(this.leftBrow);
         
-        // Bandage accessory (white cross-shaped bandage on head)
-        const bandageGeo = new THREE.BoxGeometry(0.3, 0.05, 0.05);
-        const bandageMat = new THREE.MeshToonMaterial({ color: 0xFFFFFF }); // White
-        this.bandage = new THREE.Mesh(bandageGeo, bandageMat);
-        this.bandage.position.set(0, 0.35, 0);
-        this.mesh.add(this.bandage);
+        this.rightBrow = new THREE.Mesh(browGeo, browMat);
+        this.rightBrow.position.set(0.14, 0.18, 0.40);
+        this.rightBrow.rotation.z = -0.25;
+        this.mesh.add(this.rightBrow);
         
-        // Vertical bandage piece
-        const bandageVertGeo = new THREE.BoxGeometry(0.05, 0.3, 0.05);
-        this.bandageVert = new THREE.Mesh(bandageVertGeo, bandageMat);
-        this.bandageVert.position.set(0, 0.35, 0);
-        this.mesh.add(this.bandageVert);
+        // Mouth — small determined frown
+        const mouthGeo = new THREE.BoxGeometry(0.12, 0.025, 0.03);
+        const mouthMat = new THREE.MeshBasicMaterial({ color: 0x1a3a5a });
+        this.mouth = new THREE.Mesh(mouthGeo, mouthMat);
+        this.mouth.position.set(0, -0.08, 0.42);
+        this.mesh.add(this.mouth);
+        
+        // Head bandage wrap — wrapped cloth around head matching spritesheet
+        const bandageMat = new THREE.MeshToonMaterial({ color: 0xF5DEB3 }); // Wheat/tan color like cloth
+        // Main wrap band around head
+        const wrapGeo = new THREE.TorusGeometry(0.42, 0.06, 6, 16);
+        this.bandageWrap = new THREE.Mesh(wrapGeo, bandageMat);
+        this.bandageWrap.position.set(0, 0.30, 0);
+        this.bandageWrap.rotation.x = Math.PI / 2;
+        this.bandageWrap.rotation.z = 0.15; // Slightly tilted for style
+        this.mesh.add(this.bandageWrap);
+        
+        // Bandage tail hanging from wrap
+        const tailGeo = new THREE.BoxGeometry(0.08, 0.25, 0.04);
+        this.bandageTail = new THREE.Mesh(tailGeo, bandageMat);
+        this.bandageTail.position.set(-0.30, 0.18, -0.20);
+        this.bandageTail.rotation.z = 0.3;
+        this.mesh.add(this.bandageTail);
         
         // Eye blink animation timer
         this.blinkTimer = 0;
@@ -798,6 +823,8 @@
             this.rightEye.scale.y = scale;
             this.leftPupil.scale.y = scale;
             this.rightPupil.scale.y = scale;
+            if (this.leftEyeWhite) this.leftEyeWhite.scale.y = scale;
+            if (this.rightEyeWhite) this.rightEyeWhite.scale.y = scale;
           } else {
             // Opening
             const scale = (blinkProgress - 0.5) * 2;
@@ -805,6 +832,8 @@
             this.rightEye.scale.y = scale;
             this.leftPupil.scale.y = scale;
             this.rightPupil.scale.y = scale;
+            if (this.leftEyeWhite) this.leftEyeWhite.scale.y = scale;
+            if (this.rightEyeWhite) this.rightEyeWhite.scale.y = scale;
           }
           
           if (blinkProgress >= 1) {
@@ -815,6 +844,8 @@
             this.rightEye.scale.y = 1;
             this.leftPupil.scale.y = 1;
             this.rightPupil.scale.y = 1;
+            if (this.leftEyeWhite) this.leftEyeWhite.scale.y = 1;
+            if (this.rightEyeWhite) this.rightEyeWhite.scale.y = 1;
           }
         }
         
@@ -1036,6 +1067,8 @@
           this.rightEye.visible = false;
           this.leftPupil.visible = false;
           this.rightPupil.visible = false;
+          if (this.leftEyeWhite) this.leftEyeWhite.visible = false;
+          if (this.rightEyeWhite) this.rightEyeWhite.visible = false;
           
           // Create X shapes for eyes
           const xMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 });
@@ -1076,6 +1109,8 @@
             this.rightEye.visible = true;
             this.leftPupil.visible = true;
             this.rightPupil.visible = true;
+            if (this.leftEyeWhite) this.leftEyeWhite.visible = true;
+            if (this.rightEyeWhite) this.rightEyeWhite.visible = true;
           }, 300);
         }
         
