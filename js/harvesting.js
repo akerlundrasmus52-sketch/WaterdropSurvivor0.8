@@ -518,7 +518,6 @@
   }
 
   // ── Resource collection notification (slide-in from upper-right) ──
-  const _notifQueue = [];
   let _notifContainer = null;
   function _showCollectionNotification(resourceKey, amount) {
     if (!_notifContainer) {

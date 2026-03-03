@@ -2616,6 +2616,9 @@
         if (saveData.companions && saveData.companions.greyAlien) {
           saveData.companions.greyAlien.unlocked = true;
         }
+        saveData.hasCompanionEgg = true;
+        saveData.companionEggHatched = false;
+        saveData.companionEggHatchProgress = 0;
         showStatChange('👽 Grey Alien Companion Received!');
       }
 
