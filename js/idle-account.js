@@ -6,8 +6,8 @@ window.GameAccount = (function () {
     { level: 25,  title: 'Skilled',       border: null },
     { level: 40,  title: 'Veteran',       border: 'Silver' },
     { level: 60,  title: 'Expert',        border: null },
-    { level: 80,  title: 'Legend',        border: 'Diamond' },
-    { level: 100, title: 'Transcendent',  border: 'Prismatic' }
+    { level: 80,  title: 'Master',        border: 'Diamond' },
+    { level: 100, title: 'Legend',         border: 'Prismatic' }
   ];
 
   var MAX_LEVEL = 100;

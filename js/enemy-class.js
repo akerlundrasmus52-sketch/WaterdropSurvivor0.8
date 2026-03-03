@@ -561,6 +561,7 @@
           } else {
           
           // Base movement towards target — with slight prediction for smoother interception
+          // speed * 60 estimates distance-per-second at ~60fps; +1 avoids division by zero
           const _predictT = Math.min(dist / (this.speed * 60 + 1), 0.8);
           const _predX = targetPos.x + this._playerVelocity.x * _predictT * 0.3;
           const _predZ = targetPos.z + this._playerVelocity.z * _predictT * 0.3;
