@@ -461,6 +461,13 @@
       if (gameContainer) gameContainer.style.display = 'block';
       resetGame();
       updateQuestTracker();
+
+      // Show Benny's first-run welcome dialogue (once, non-blocking, auto-advances)
+      if (window.DialogueSystem && !saveData.firstRunBennyShown) {
+        saveData.firstRunBennyShown = true;
+        if (typeof saveSaveData === 'function') saveSaveData();
+        window.DialogueSystem.show(window.DialogueSystem.DIALOGUES.firstRunWelcome);
+      }
       
       // Show first-run game loop tutorial BEFORE destructibles info
       const isVeryFirstRun = !saveData.firstRunTutorial || !saveData.firstRunTutorial.gameLoopShown;

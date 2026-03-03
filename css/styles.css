@@ -718,6 +718,171 @@
       50% { transform: translate(-50%, calc(-50% - 5px)); }
     }
 
+    /* ─── DialogueSystem Animated Speech Bubble ─────────────────────────── */
+    #ds-bubble {
+      position: fixed;
+      z-index: 360;
+      max-width: 210px;
+      min-width: 130px;
+      padding: 12px 14px 10px;
+      font-family: Bangers, cursive;
+      font-size: 14px;
+      letter-spacing: 0.8px;
+      line-height: 1.5;
+      text-align: center;
+      pointer-events: auto;
+      cursor: pointer;
+      display: none;
+      /* Smooth transitions between emotion styles */
+      transition: border-radius 0.3s ease, background 0.3s ease, box-shadow 0.3s ease, color 0.3s ease;
+      user-select: none;
+    }
+    /* Tail pointer arrow (down-left) */
+    #ds-bubble::after {
+      content: '';
+      position: absolute;
+      bottom: -10px;
+      left: 22px;
+      border: 10px solid transparent;
+      transition: border-color 0.3s ease;
+    }
+
+    /* ── Emotion variants ── */
+    .ds-bubble-happy {
+      background: rgba(20,14,8,0.93);
+      color: #FFD700;
+      border: 2px solid #8B6914;
+      border-radius: 50% 50% 50% 20% / 50% 50% 30% 30%;
+      box-shadow: 0 3px 12px rgba(0,0,0,0.7), 0 0 8px rgba(255,215,0,0.15);
+    }
+    .ds-bubble-happy::after { border-top-color: #8B6914; }
+
+    .ds-bubble-angry {
+      background: rgba(60,8,8,0.95);
+      color: #FF4500;
+      border: 2px solid #CC2200;
+      border-radius: 4px;
+      clip-path: polygon(5% 15%,15% 0%,25% 15%,38% 0%,50% 15%,63% 0%,75% 15%,85% 0%,95% 15%,100% 35%,95% 55%,100% 75%,95% 88%,80% 100%,65% 88%,50% 100%,35% 88%,20% 100%,5% 88%,0% 75%,5% 55%,0% 35%);
+      box-shadow: 0 3px 12px rgba(0,0,0,0.7), 0 0 12px rgba(255,50,0,0.25);
+    }
+
+    .ds-bubble-sad {
+      background: rgba(10,20,40,0.93);
+      color: #87CEEB;
+      border: 2px solid #4682B4;
+      border-radius: 40% 40% 60% 60% / 30% 30% 70% 70%;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.7), 0 0 8px rgba(70,130,180,0.2);
+    }
+    .ds-bubble-sad::after { border-top-color: #4682B4; }
+
+    .ds-bubble-joking {
+      background: rgba(20,14,8,0.93);
+      color: #FFD700;
+      border: 2px solid #FF8C00;
+      border-radius: 30% 70% 40% 60% / 50% 50% 50% 50%;
+      box-shadow: 0 3px 12px rgba(0,0,0,0.7), 0 0 10px rgba(255,140,0,0.2);
+      animation: ds-wiggle 0.7s ease-in-out infinite alternate;
+    }
+    .ds-bubble-joking::after { border-top-color: #FF8C00; }
+
+    .ds-bubble-thinking {
+      background: rgba(30,30,50,0.93);
+      color: #E0E0FF;
+      border: 2px solid #9090CC;
+      border-radius: 50%;
+      box-shadow: 0 3px 12px rgba(0,0,0,0.7), 0 0 8px rgba(144,144,204,0.2);
+    }
+    /* Cloud dots instead of pointer for thinking */
+    .ds-bubble-thinking::after { content: none; }
+    .ds-bubble-thinking::before {
+      content: '● ●';
+      position: absolute;
+      bottom: -22px;
+      left: 22px;
+      color: #9090CC;
+      font-size: 10px;
+      letter-spacing: 4px;
+    }
+
+    .ds-bubble-task {
+      background: rgba(10,24,10,0.94);
+      color: #90EE90;
+      border: 2px solid #228B22;
+      border-radius: 6px;
+      box-shadow: 0 3px 12px rgba(0,0,0,0.7), 0 0 6px rgba(34,139,34,0.2);
+    }
+    .ds-bubble-task::after { border-top-color: #228B22; }
+
+    .ds-bubble-smoky {
+      background: rgba(30,30,30,0.6);
+      color: #DDDDDD;
+      border: 2px solid rgba(180,180,180,0.4);
+      border-radius: 20px;
+      box-shadow: 0 3px 20px rgba(0,0,0,0.5);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+    }
+    .ds-bubble-smoky::after { border-top-color: rgba(180,180,180,0.4); }
+
+    .ds-bubble-watery {
+      background: rgba(10,40,80,0.88);
+      color: #7EC8E3;
+      border: 2px solid #00BFFF;
+      border-radius: 50%;
+      box-shadow: 0 3px 12px rgba(0,0,0,0.7), 0 0 12px rgba(0,191,255,0.25);
+      animation: ds-watery 2s ease-in-out infinite;
+    }
+    .ds-bubble-watery::after { border-top-color: #00BFFF; }
+
+    /* ── Typewriter characters ── */
+    .ds-char {
+      opacity: 0;
+      display: inline;
+      transition: opacity 0.05s ease;
+    }
+    .ds-char.visible { opacity: 1; }
+    .ds-dots {
+      opacity: 0.6;
+      font-style: italic;
+    }
+
+    /* ── Choice buttons ── */
+    .ds-bubble-choices { margin-top: 8px; }
+    .ds-choice-btn {
+      display: block;
+      width: 100%;
+      margin: 4px 0;
+      padding: 6px 10px;
+      background: rgba(255,215,0,0.08);
+      color: #FFD700;
+      border: 1px solid rgba(255,215,0,0.45);
+      border-radius: 20px;
+      font-family: Bangers, cursive;
+      font-size: 13px;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      transition: background 0.15s, box-shadow 0.15s;
+    }
+    .ds-choice-btn:hover,
+    .ds-choice-btn:active {
+      background: rgba(255,215,0,0.22);
+      box-shadow: 0 0 8px rgba(255,215,0,0.35);
+    }
+
+    /* ── Keyframe animations ── */
+    @keyframes ds-wiggle {
+      0%   { transform: rotate(-2deg); }
+      100% { transform: rotate(2deg); }
+    }
+    @keyframes ds-watery {
+      0%   { border-radius: 50% 50% 50% 50%; }
+      25%  { border-radius: 60% 40% 50% 50%; }
+      50%  { border-radius: 50% 50% 60% 40%; }
+      75%  { border-radius: 40% 60% 50% 50%; }
+      100% { border-radius: 50% 50% 50% 50%; }
+    }
+    /* ─────────────────────────────────────────────────────────────────────── */
+
     /* Stat Notification Queue - Red/Black Dominant */
     #stat-notifications {
       position: fixed;
