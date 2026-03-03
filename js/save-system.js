@@ -66,11 +66,12 @@
       inventory: [],
       // Phase 5: Companion System
       companions: {
-        stormWolf: { unlocked: true, level: 1, xp: 0, skills: {} },
+        greyAlien: { unlocked: true, level: 1, xp: 0, skills: {} },
+        stormWolf: { unlocked: false, level: 1, xp: 0, skills: {} },
         skyFalcon: { unlocked: false, level: 1, xp: 0, skills: {} },
         waterSpirit: { unlocked: false, level: 1, xp: 0, skills: {} }
       },
-      selectedCompanion: 'stormWolf', // Default companion
+      selectedCompanion: 'greyAlien', // Default companion — Grey Alien from UFO crash site
       hasCompanionEgg: false, // Companion egg found at UFO sight (Area 51)
       companionEggHatched: false, // Whether the UFO companion egg has been hatched
       companionEggHatchProgress: 0, // 0-100 hatching progress
@@ -287,12 +288,21 @@
       // Harvesting & Resource System
       resources: {
         wood: 0, stone: 0, coal: 0, iron: 0,
-        crystal: 0, magicEssence: 0, gem: 0, flesh: 0
+        crystal: 0, magicEssence: 0, gem: 0, flesh: 0,
+        fur: 0, leather: 0, feather: 0, chitin: 0, venom: 0,
+        berry: 0, flower: 0, vegetable: 0
       },
       harvestingTools: {
         axe: false, sledgehammer: false, pickaxe: false, magicTool: false,
-        epicAxe: false, epicSledgehammer: false, epicPickaxe: false, epicMagicTool: false
-      }
+        epicAxe: false, epicSledgehammer: false, epicPickaxe: false, epicMagicTool: false,
+        knife: false, berryScoop: false, tranquilizerRifle: false
+      },
+      // Cooking system
+      cookedMeals: {},
+      craftedWeapons: {},
+      // Wildlife tracking
+      tranquilizedAnimals: [],
+      wolfBreedingProgress: 0 // 0-100 progress toward breeding storm wolf
     };
 
     let saveData = JSON.parse(JSON.stringify(defaultSaveData));
