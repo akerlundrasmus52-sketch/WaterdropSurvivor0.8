@@ -73,7 +73,44 @@
         hillMesh.receiveShadow = true;
         scene.add(hillMesh);
       });
-      
+
+      // === REGION GROUND TRANSITIONS ===
+      // Desert region (east side) - sandy ground overlay with smooth blend
+      const desertGradCanvas = document.createElement('canvas');
+      desertGradCanvas.width = 128; desertGradCanvas.height = 128;
+      const dCtx = desertGradCanvas.getContext('2d');
+      const dGrad = dCtx.createRadialGradient(64, 64, 10, 64, 64, 64);
+      dGrad.addColorStop(0, 'rgba(210,180,120,0.7)');
+      dGrad.addColorStop(0.6, 'rgba(190,160,100,0.4)');
+      dGrad.addColorStop(1, 'rgba(190,160,100,0)');
+      dCtx.fillStyle = dGrad; dCtx.fillRect(0, 0, 128, 128);
+      const desertTex = new THREE.CanvasTexture(desertGradCanvas);
+      const desertOverlay = new THREE.Mesh(
+        new THREE.PlaneGeometry(160, 160),
+        new THREE.MeshStandardMaterial({ map: desertTex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 })
+      );
+      desertOverlay.rotation.x = -Math.PI / 2;
+      desertOverlay.position.set(120, 0.01, -80);
+      scene.add(desertOverlay);
+
+      // Snow region (northwest) - white ground overlay
+      const snowGradCanvas = document.createElement('canvas');
+      snowGradCanvas.width = 128; snowGradCanvas.height = 128;
+      const sCtx = snowGradCanvas.getContext('2d');
+      const sGrad = sCtx.createRadialGradient(64, 64, 10, 64, 64, 64);
+      sGrad.addColorStop(0, 'rgba(230,240,255,0.65)');
+      sGrad.addColorStop(0.6, 'rgba(220,230,240,0.35)');
+      sGrad.addColorStop(1, 'rgba(220,230,240,0)');
+      sCtx.fillStyle = sGrad; sCtx.fillRect(0, 0, 128, 128);
+      const snowTex = new THREE.CanvasTexture(snowGradCanvas);
+      const snowOverlay = new THREE.Mesh(
+        new THREE.PlaneGeometry(160, 160),
+        new THREE.MeshStandardMaterial({ map: snowTex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 })
+      );
+      snowOverlay.rotation.x = -Math.PI / 2;
+      snowOverlay.position.set(-120, 0.01, -100);
+      scene.add(snowOverlay);
+
       // Darker forest floor ring around the fountain spawn area
       const forestRingMat = new THREE.MeshStandardMaterial({ color: 0x2E5A1A, roughness: 0.9, metalness: 0.0, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }); // Dark forest green with shading - polygon offset prevents z-fighting
       const forestRingGeo = new THREE.RingGeometry(12, 45, 32);
@@ -2688,6 +2725,65 @@
       teslaLight.userData = { isTeslaLight: true, phase: 0 };
       scene.add(teslaLight);
       window.teslaPointLight = teslaLight;
+
+      // === WILDLIFE SPAWNING ===
+      // Spawn animals as simple colored meshes in their regions
+      if (window.GameWorld && window.GameWorld.WILDLIFE) {
+        const WILDLIFE = window.GameWorld.WILDLIFE;
+        const regionCenters = {
+          forest: { x: 0, z: 50, spread: 80 },
+          desert: { x: 120, z: -80, spread: 60 },
+          snow:   { x: -120, z: -100, spread: 60 }
+        };
+        const animalMeshes = [];
+        for (const [animalId, animal] of Object.entries(WILDLIFE)) {
+          const region = regionCenters[animal.region] || regionCenters.forest;
+          const count = animal.passive ? 3 : 2;
+          for (let i = 0; i < count; i++) {
+            const ax = region.x + (Math.random() - 0.5) * region.spread;
+            const az = region.z + (Math.random() - 0.5) * region.spread;
+            // Skip if too close to player spawn
+            if (Math.abs(ax) < 15 && Math.abs(az) < 15) continue;
+
+            const size = animal.size || 0.5;
+            const animalGroup = new THREE.Group();
+
+            // Body
+            const bodyGeo = new THREE.BoxGeometry(size * 0.8, size * 0.5, size * 0.4);
+            const bodyColor = animal.passive ? 0x8B6914 : 0x8B0000;
+            const bodyMat = new THREE.MeshToonMaterial({ color: bodyColor });
+            const body = new THREE.Mesh(bodyGeo, bodyMat);
+            body.position.y = size * 0.3;
+            body.castShadow = true;
+            animalGroup.add(body);
+
+            // Head
+            const headGeo = new THREE.BoxGeometry(size * 0.3, size * 0.3, size * 0.3);
+            const head = new THREE.Mesh(headGeo, bodyMat);
+            head.position.set(size * 0.4, size * 0.45, 0);
+            head.castShadow = true;
+            animalGroup.add(head);
+
+            animalGroup.position.set(ax, 0, az);
+            animalGroup.userData = {
+              isWildlife: true,
+              animalId: animalId,
+              animalData: animal,
+              hp: animal.hp,
+              maxHp: animal.hp,
+              gender: animal.gender === 'random' ? (Math.random() < 0.5 ? 'male' : 'female') : null,
+              wanderTarget: { x: ax, z: az },
+              wanderTimer: Math.random() * 5,
+              alive: true
+            };
+
+            scene.add(animalGroup);
+            animalMeshes.push(animalGroup);
+          }
+        }
+        // Store wildlife meshes on window for game-loop access
+        window._wildlifeAnimals = animalMeshes;
+      }
     }
 
     // Performance: Cache animated objects to avoid scene.traverse() every frame

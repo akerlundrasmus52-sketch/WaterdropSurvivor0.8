@@ -1835,6 +1835,20 @@
             }
             showInventoryScreen();
           },
+          campfireKitchen:     () => {
+            if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest30_buildCampfire') {
+              progressTutorialQuest('quest30_buildCampfire', true);
+              saveSaveData();
+            }
+            showCampfireKitchen();
+          },
+          weaponsmith:         () => {
+            if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest31_buildWeaponsmith') {
+              progressTutorialQuest('quest31_buildWeaponsmith', true);
+              saveSaveData();
+            }
+            showWeaponsmith();
+          },
           tempShop:            () => {
             if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest29_useTempShop') {
               progressTutorialQuest('quest29_useTempShop', true);
