@@ -1166,7 +1166,7 @@
             // Spiritual bleed effect on lower body — yellow-white energy wisps climbing up
             const ePos = e.mesh.position;
             spawnParticles(
-              { x: ePos.x, y: ePos.y * pulseHeight, z: ePos.z },
+              { x: ePos.x, y: pulseHeight * 1.5, z: ePos.z },
               0xFFEE88, 2
             );
             // Bleeding at feet from spiritual damage

@@ -1386,7 +1386,7 @@
             this.mesh.rotation.x = stDir * (isHeavy ? 0.5 : 0.25);
             this.mesh.position.y += 0.05;
             this._squishTimer = setTimeout(() => {
-              if (this.mesh && !this.isDead) { this.mesh.rotation.x = 0; this.mesh.position.y = Math.max(0.5, this.mesh.position.y); }
+              if (this.mesh && !this.isDead) { this.mesh.rotation.x = 0; this.mesh.position.y = 0.5; }
               this._squishTimer = null;
             }, isHeavy ? 200 : 120);
           } else if (hitReaction === 1) {

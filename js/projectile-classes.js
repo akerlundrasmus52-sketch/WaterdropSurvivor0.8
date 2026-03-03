@@ -576,7 +576,7 @@
                 enemy.mesh.rotation.x = toppleAngle;
                 enemy.mesh.rotation.z = toppleAngle * 0.5;
                 setTimeout(() => {
-                  if (enemy.mesh) { enemy.mesh.rotation.x = 0; enemy.mesh.rotation.z = 0; }
+                  if (enemy.mesh && !enemy.isDead) { enemy.mesh.rotation.x = 0; enemy.mesh.rotation.z = 0; }
                 }, 300);
               }
             } else {
