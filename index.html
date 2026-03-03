@@ -640,28 +640,28 @@
 
   <!-- Game Over Screen -->
   <div id="gameover-screen">
-    <div style="background: linear-gradient(to bottom, #1a1a2e, #0d0d1a); border: 4px solid #000; border-radius: 12px; padding: 20px; max-width: 90vw; width: 480px; max-height: 90vh; overflow-y: auto; box-sizing: border-box; box-shadow: 0 0 0 2px #FFD700, 0 8px 30px rgba(0,0,0,0.8); position: relative;">
-    <h1 style="color: #5DADE2; font-size: 40px; text-shadow: 2px 2px 0 #000, 0 0 10px rgba(93,173,226,0.8);">GAME OVER</h1>
-    <div style="max-width: 90vw; max-height: 70vh; margin: 20px auto; box-sizing: border-box; overflow-y: auto;">
-      <h3 style="color: #FFD700; font-size: 24px; margin-bottom: 15px;">Run Summary</h3>
-      <div style="text-align: left; background: rgba(0,0,0,0.5); padding: 20px; border-radius: 10px; margin-bottom: 20px; border: 2px solid rgba(0,0,0,0.8);">
-        <p id="final-score" style="font-size: 18px; margin: 8px 0;">⏱️ Survived: 0s</p>
-        <p id="final-kills" style="font-size: 18px; margin: 8px 0;">⚔️ Kills: 0</p>
-        <p id="final-level" style="font-size: 18px; margin: 8px 0;">📊 Final Level: 1</p>
-        <p id="gold-earned" style="font-size: 20px; margin: 8px 0; color: #FFD700; font-weight: bold;">💰 Gold Earned: 0</p>
-        <p id="total-gold" style="font-size: 18px; margin: 8px 0; color: #FFD700;">💵 Total Gold: 0</p>
-        <div id="loot-summary" style="margin-top: 15px; padding-top: 15px; border-top: 2px solid rgba(255,215,0,0.3);">
-          <p style="font-size: 16px; color: #FFD700; margin-bottom: 10px;">🎁 Loot & Equipment:</p>
+    <div style="background: linear-gradient(135deg, #0e1225 0%, #060a18 100%); border: 4px solid #FFD700; outline: 3px solid rgba(255,170,0,0.4); outline-offset: 2px; border-radius: 16px; padding: 22px 20px; max-width: 90vw; width: 480px; max-height: 88vh; overflow-y: auto; box-sizing: border-box; box-shadow: 0 12px 40px rgba(0,0,0,0.95), 0 0 50px rgba(255,215,0,0.4), inset 0 0 30px rgba(0,0,0,0.8); position: relative;">
+    <h1 style="color: #FF4444; font-family: 'Bangers', cursive; font-size: 38px; text-shadow: 3px 3px 0 #000, -2px -2px 0 #000, 0 0 20px rgba(255,68,68,0.7); letter-spacing: 4px; margin-bottom: 8px;">💀 GAME OVER</h1>
+    <div style="max-width: 90vw; max-height: 65vh; margin: 10px auto; box-sizing: border-box; overflow-y: auto;">
+      <h3 style="color: #FFD700; font-family: 'Bangers', cursive; font-size: 22px; margin-bottom: 12px; letter-spacing: 2px;">Run Summary</h3>
+      <div style="text-align: left; background: rgba(0,0,0,0.5); padding: 18px; border-radius: 10px; margin-bottom: 15px; border: 2px solid rgba(255,215,0,0.2);">
+        <p id="final-score" style="font-size: 17px; margin: 7px 0;">⏱️ Survived: 0s</p>
+        <p id="final-kills" style="font-size: 17px; margin: 7px 0;">⚔️ Kills: 0</p>
+        <p id="final-level" style="font-size: 17px; margin: 7px 0;">📊 Final Level: 1</p>
+        <p id="gold-earned" style="font-size: 19px; margin: 7px 0; color: #FFD700; font-weight: bold;">💰 Gold Earned: 0</p>
+        <p id="total-gold" style="font-size: 17px; margin: 7px 0; color: #FFD700;">💵 Total Gold: 0</p>
+        <div id="loot-summary" style="margin-top: 12px; padding-top: 12px; border-top: 2px solid rgba(255,215,0,0.3);">
+          <p style="font-size: 15px; color: #FFD700; margin-bottom: 8px;">🎁 Loot & Equipment:</p>
           <div id="loot-items" style="font-size: 14px; color: #DDD; line-height: 1.8;">
             <p style="margin: 5px 0;">No items gained this run</p>
           </div>
         </div>
       </div>
     </div>
-    <div style="display: flex; gap: 15px; margin-top: 10px; flex-wrap: wrap; justify-content: center;">
-      <button class="btn" id="goto-camp-btn" style="background: #8B4513; border: 3px solid #000;">⛺ GO TO CAMP</button>
-      <button class="btn" id="quit-to-menu-btn" style="background: #555; border: 3px solid #000;">📋 QUIT TO MENU</button>
-      <button class="btn" id="restart-btn" style="border: 3px solid #000;">🔄 START RUN</button>
+    <div style="display: flex; gap: 12px; margin-top: 8px; flex-wrap: wrap; justify-content: center; padding-bottom: 8px;">
+      <button class="btn" id="goto-camp-btn" style="background: #8B4513; border: 3px solid #000; width: auto; min-width: 140px;">⛺ GO TO CAMP</button>
+      <button class="btn" id="quit-to-menu-btn" style="background: #555; border: 3px solid #000; width: auto; min-width: 140px;">📋 QUIT TO MENU</button>
+      <button class="btn" id="restart-btn" style="border: 3px solid #000; width: auto; min-width: 140px;">🔄 START RUN</button>
     </div>
     </div>
   </div>

@@ -886,9 +886,9 @@
           }
         }
 
-        // Camera Follow
+        // Camera Follow (smooth, closer view for better immersion)
         camera.position.x = this.mesh.position.x;
-        camera.position.z = this.mesh.position.z + 20; // Isometric offset
+        camera.position.z = this.mesh.position.z + 16; // Tighter isometric offset (was 20)
         camera.lookAt(this.mesh.position);
 
         // Bounds (Map is 400x400, from -200 to 200)

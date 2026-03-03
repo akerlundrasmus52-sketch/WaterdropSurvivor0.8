@@ -553,16 +553,23 @@
               const totalFreezeDur = this._freezeDuration || 2500;
               const elapsed = Math.max(0, nowMs - (this.frozenUntil - totalFreezeDur));
               const freezeT = Math.min(1, elapsed / 600); // 600ms to reach full ice
-              const iceColor = new THREE.Color(0xB0E8FF);
-              this.mesh.material.color.copy(this._originalColor).lerp(iceColor, freezeT);
+              if (!Enemy._iceColor) Enemy._iceColor = new THREE.Color(0xB0E8FF);
+              this.mesh.material.color.copy(this._originalColor).lerp(Enemy._iceColor, freezeT);
               this.mesh.material.emissiveIntensity = 0.3 + Math.sin(gameTime * 8) * 0.15 * freezeT;
             }
             // Skip all movement below
           } else {
           
-          // Base movement towards target
-          let vx = (dx / dist) * this.speed;
-          let vz = (dz / dist) * this.speed;
+          // Base movement towards target — with slight prediction for smoother interception
+          // speed * 60 estimates distance-per-second at ~60fps; +1 avoids division by zero
+          const _predictT = Math.min(dist / (this.speed * 60 + 1), 0.8);
+          const _predX = targetPos.x + this._playerVelocity.x * _predictT * 0.3;
+          const _predZ = targetPos.z + this._playerVelocity.z * _predictT * 0.3;
+          const _pdx = _predX - this.mesh.position.x;
+          const _pdz = _predZ - this.mesh.position.z;
+          const _pdist = Math.sqrt(_pdx * _pdx + _pdz * _pdz) || 1;
+          let vx = (_pdx / _pdist) * this.speed;
+          let vz = (_pdz / _pdist) * this.speed;
           
           // Add enemy avoidance to prevent stacking/trains (optimized — squared distance to skip sqrt)
           let avoidX = 0, avoidZ = 0;
@@ -1014,27 +1021,18 @@
         // Track last damage type for death effects
         this.lastDamageType = damageType;
         
-        // Phase 5: Hit impact particles (flesh/blood) on every hit - ENHANCED: Scale with HP remaining
+        // Phase 5: Hit impact particles (flesh/blood) on every hit — scaled with HP ratio
         const hpRatio = this.hp / this.maxHp;
-        const bloodParticleCount = Math.max(10, Math.floor((1 - hpRatio) * 28) + 8); // More blood as HP drops - increased intensity
-        spawnParticles(this.mesh.position, 0x8B0000, Math.min(bloodParticleCount, 30)); // Blood particles scale with HP loss
-        spawnParticles(this.mesh.position, 0x660000, Math.min(Math.floor(bloodParticleCount * 0.6), 14)); // Darker blood
-        spawnParticles(this.mesh.position, 0xCC0000, Math.min(Math.floor(bloodParticleCount * 0.4), 10)); // Bright splatter
-        // Spawn multiple ground blood decals for more brutal effect
+        const bloodParticleCount = Math.max(4, Math.floor((1 - hpRatio) * 14) + 4); // Reduced intensity for FPS
+        spawnParticles(this.mesh.position, 0x8B0000, Math.min(bloodParticleCount, 15)); // Blood particles
+        spawnParticles(this.mesh.position, 0x660000, Math.min(Math.floor(bloodParticleCount * 0.5), 6)); // Darker blood
+        // Ground blood decal (reduced from 3-5 per hit to 1-2 for FPS)
         spawnBloodDecal(this.mesh.position);
-        spawnBloodDecal(this.mesh.position); // Always at least 2 decals per hit
-        spawnBloodDecal(this.mesh.position); // Extra decal for more violence
-        if (hpRatio < 0.7) {
-          spawnBloodDecal(this.mesh.position); // Start extra blood earlier
-        }
         if (hpRatio < 0.5) {
-          spawnBloodDecal(this.mesh.position); // Extra decal at half HP
-          spawnBloodDecal(this.mesh.position); // Additional splatter
+          spawnBloodDecal(this.mesh.position); // Extra blood when low HP
         }
         if (hpRatio < 0.25) {
-          spawnBloodDecal(this.mesh.position); // Extra decal at low HP
-          spawnBloodDecal(this.mesh.position); // Even more at critical HP
-          spawnBloodDecal(this.mesh.position); // Enemy barely alive - covered in blood
+          spawnBloodDecal(this.mesh.position); // Extra decal at critical HP
         }
         
         // Progressive blood stain: blend enemy mesh color toward dark red as HP drops
@@ -1045,15 +1043,17 @@
           }
           // Lerp factor: 0 at full HP → 0.85 near death (almost fully blood-covered)
           const bloodLerp = (1 - hpRatio) * 0.85;
-          const bloodColor = new THREE.Color(0x8B0000);
+          // Cached blood colors to avoid per-hit allocation
+          if (!Enemy._bloodColor) Enemy._bloodColor = new THREE.Color(0x8B0000);
+          if (!Enemy._emissiveBloodColor) Enemy._emissiveBloodColor = new THREE.Color(0x6B0000);
           // Only update color if not frozen (freeze manages its own colour)
           if (!this.isFrozen) {
-            this.mesh.material.color.copy(this._originalColor).lerp(bloodColor, bloodLerp);
+            this.mesh.material.color.copy(this._originalColor).lerp(Enemy._bloodColor, bloodLerp);
           }
           // Also apply emissive for wet blood sheen
           if (!this.isFrozen && this.mesh.material.emissive !== undefined) {
             const bloodStainIntensity = (1 - hpRatio) * 0.4;
-            this.mesh.material.emissive = new THREE.Color(0x6B0000);
+            this.mesh.material.emissive.copy(Enemy._emissiveBloodColor);
             this.mesh.material.emissiveIntensity = bloodStainIntensity;
           }
         }
@@ -1274,18 +1274,18 @@
           
           // Massive blood spray instead of big limb pieces
           const enemyColor = this.mesh.material.color.getHex();
-          spawnParticles(this.mesh.position, 0x8B0000, 20);
-          spawnParticles(this.mesh.position, 0xCC0000, 15);
-          spawnParticles(this.mesh.position, 0x660000, 10);
-          spawnParticles(this.mesh.position, enemyColor, 6);
+          spawnParticles(this.mesh.position, 0x8B0000, 10);
+          spawnParticles(this.mesh.position, 0xCC0000, 6);
+          spawnParticles(this.mesh.position, 0x660000, 4);
+          spawnParticles(this.mesh.position, enemyColor, 3);
           
-          // Blood spray decals around
-          for (let i = 0; i < 6; i++) {
+          // Blood spray decals around (reduced for FPS)
+          for (let i = 0; i < 3; i++) {
             spawnBloodDecal(this.mesh.position);
           }
           
           // Airborne blood bursts
-          for (let b = 0; b < 5 && bloodDrips.length < MAX_BLOOD_DRIPS; b++) {
+          for (let b = 0; b < 3 && bloodDrips.length < MAX_BLOOD_DRIPS; b++) {
             const p = new THREE.Mesh(
               new THREE.SphereGeometry(0.03 + Math.random() * 0.04, 4, 4),
               new THREE.MeshBasicMaterial({ color: 0xAA0000 })

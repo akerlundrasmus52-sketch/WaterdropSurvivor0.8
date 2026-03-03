@@ -4,12 +4,51 @@
 
     // --- WORLD GENERATION ---
     function createWorld() {
-      // Ground - Unified green forest world
+      // Ground - Unified green forest world with grass texture
       const mapSize = 600;
+      
+      // Generate procedural grass texture via canvas for visual depth
+      const grassCanvas = document.createElement('canvas');
+      grassCanvas.width = 256;
+      grassCanvas.height = 256;
+      const gctx = grassCanvas.getContext('2d');
+      // Base color
+      gctx.fillStyle = '#2D5A1A';
+      gctx.fillRect(0, 0, 256, 256);
+      // Scatter grass blades / noise for 3D feel
+      for (let i = 0; i < 3000; i++) {
+        const gx = Math.random() * 256;
+        const gy = Math.random() * 256;
+        const shade = Math.random();
+        if (shade < 0.3) {
+          gctx.fillStyle = 'rgba(40, 80, 20, 0.6)';  // darker patch
+        } else if (shade < 0.7) {
+          gctx.fillStyle = 'rgba(55, 110, 35, 0.5)';  // mid-green blade
+        } else {
+          gctx.fillStyle = 'rgba(80, 140, 50, 0.4)';  // lighter blade
+        }
+        gctx.fillRect(gx, gy, 1 + Math.random() * 2, 2 + Math.random() * 4);
+      }
+      // Scatter tiny flower dots
+      for (let i = 0; i < 80; i++) {
+        const fx = Math.random() * 256;
+        const fy = Math.random() * 256;
+        const fc = Math.random();
+        if (fc < 0.3) gctx.fillStyle = 'rgba(255, 255, 100, 0.7)'; // yellow
+        else if (fc < 0.6) gctx.fillStyle = 'rgba(255, 200, 200, 0.6)'; // pink
+        else gctx.fillStyle = 'rgba(200, 200, 255, 0.5)'; // blue
+        gctx.beginPath();
+        gctx.arc(fx, fy, 1.5, 0, Math.PI * 2);
+        gctx.fill();
+      }
+      const grassTexture = new THREE.CanvasTexture(grassCanvas);
+      grassTexture.wrapS = THREE.RepeatWrapping;
+      grassTexture.wrapT = THREE.RepeatWrapping;
+      grassTexture.repeat.set(60, 60);
       
       // Single lush green ground plane covering the whole map
       const mainGroundGeo = new THREE.PlaneGeometry(mapSize, mapSize);
-      const mainGroundMat = new THREE.MeshStandardMaterial({ color: COLORS.ground, roughness: 0.95, metalness: 0.0 }); // Green grass - realistic shading
+      const mainGroundMat = new THREE.MeshStandardMaterial({ map: grassTexture, roughness: 0.92, metalness: 0.0 });
       const mainGround = new THREE.Mesh(mainGroundGeo, mainGroundMat);
       mainGround.rotation.x = -Math.PI / 2;
       mainGround.position.set(0, 0, 0);

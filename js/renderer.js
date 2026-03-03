@@ -10,22 +10,23 @@
 
 const RENDERER_CONFIG = {
   // Orthographic camera distance (half-height of the view frustum)
-  cameraDistance: 15,
+  // Zoomed in from 15 → 11 for a tighter, more immersive view and higher FPS
+  // (less geometry visible = less to render each frame)
+  cameraDistance: 11,
   // Camera world-space position (gives a balanced top-down isometric angle)
-  cameraPositionX: 18,
-  cameraPositionY: 16,
-  cameraPositionZ: 18,
+  cameraPositionX: 14,
+  cameraPositionY: 13,
+  cameraPositionZ: 14,
   // Scene fog distances (near/far clip for edge fog).
-  // fogNear must exceed player camera-depth (~25.6) so the player is never inside the fog.
-  // fogFar is pushed to ~42 so objects just beyond the visible area are fully hidden.
-  fogNear: 28,
-  fogFar: 42,
-  // Default shadow map size — 1024 balances quality and GPU fill-rate
-  defaultShadowMapSize: 1024,
-  // Directional light shadow frustum half-size (covers visible area; shadow is re-anchored to player each frame)
-  shadowFrustumHalfSize: 45,
+  // Tightened to match the zoomed-in camera — hides distant objects sooner for FPS gain.
+  fogNear: 20,
+  fogFar: 32,
+  // Default shadow map size — 512 for faster GPU fill-rate (was 1024)
+  defaultShadowMapSize: 512,
+  // Directional light shadow frustum half-size — tightened to match closer view
+  shadowFrustumHalfSize: 30,
   // Directional light shadow quality settings
-  shadowRadius: 3,   // Soft shadow blur - slightly sharper for quality
+  shadowRadius: 2,   // Slightly less blur = faster shadow pass
   shadowBias: -0.0003, // Prevent shadow acne with better bias
   // Split-resolution: world/terrain renders at a reduced pixel ratio to boost baseline FPS.
   // UI and HTML overlays are unaffected (they always render at native device resolution).
