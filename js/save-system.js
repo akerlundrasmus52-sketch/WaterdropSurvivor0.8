@@ -330,11 +330,19 @@
           saveData.trainingPoints = saveData.trainingPoints || 0;
           saveData.lastTrainingPointTime = saveData.lastTrainingPointTime || 0;
           saveData.skillPoints = saveData.skillPoints || 0;
-          saveData.selectedCompanion = saveData.selectedCompanion || 'stormWolf';
+          saveData.selectedCompanion = saveData.selectedCompanion || 'greyAlien';
+          // Migrate old saves that defaulted to stormWolf (now locked by default)
+          if (saveData.selectedCompanion === 'stormWolf' && saveData.companions && saveData.companions.stormWolf && !saveData.companions.stormWolf.unlocked) {
+            saveData.selectedCompanion = 'greyAlien';
+          }
           saveData.hasCompanionEgg = saveData.hasCompanionEgg || false;
           saveData.companionEggHatched = saveData.companionEggHatched || false;
           saveData.companionEggHatchProgress = saveData.companionEggHatchProgress || 0;
           saveData.companionSkillPoints = saveData.companionSkillPoints || 0;
+          // Migrate companionGrowthStage for older saves
+          if (!saveData.companionGrowthStage) {
+            saveData.companionGrowthStage = saveData.companionEggHatched ? 'adult' : 'egg';
+          }
           // Ensure companion skill data fields exist
           if (saveData.companions) {
             Object.keys(saveData.companions).forEach(cId => {
