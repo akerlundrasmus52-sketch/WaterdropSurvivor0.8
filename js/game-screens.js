@@ -127,13 +127,22 @@
         window.GameHarvesting._onHarvest = function(resourceType, amount) {
           const tq = saveData.tutorialQuests;
           if (!tq) return;
+          const res = saveData.resources || {};
+          // Quest questGather0_materials: gather 1 of each building material (auto-claim)
+          if (tq.currentQuest === 'questGather0_materials') {
+            if ((res.wood || 0) >= 1 && (res.stone || 0) >= 1 && (res.coal || 0) >= 1) {
+              progressTutorialQuest('questGather0_materials', true);
+              // Track globally so Benny reminder knows gathering was done
+              if (!saveData.gatheringProgress) saveData.gatheringProgress = {};
+              saveData.gatheringProgress.firstGatherDone = true;
+            }
+          }
           // Quest 23: harvest first resource
           if (tq.currentQuest === 'quest23_harvestFirst') {
             progressTutorialQuest('quest23_harvestFirst', true);
           }
           // Quest 24: collect 5 wood and 5 stone
           if (tq.currentQuest === 'quest24_harvestWoodStone') {
-            const res = saveData.resources || {};
             if ((res.wood || 0) >= 5 && (res.stone || 0) >= 5) {
               progressTutorialQuest('quest24_harvestWoodStone', true);
             }

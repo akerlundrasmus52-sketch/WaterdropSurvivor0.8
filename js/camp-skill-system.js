@@ -1531,8 +1531,22 @@
         unlockBuilding: 'questMission',
         autoClaim: true,
         triggerOnDeath: true,
-        nextQuest: 'quest1_kill3',
+        nextQuest: 'questGather0_materials',
         conditions: []
+      },
+
+      // === PHASE 0b: Intro gathering quest — teaches resource collection ===
+      questGather0_materials: {
+        id: 'questGather0_materials',
+        name: 'Gather Building Materials',
+        description: 'Head out on a run and gather 1 Wood (chop a tree 🪓), 1 Stone (mine a rock ⛏️), and 1 Coal (mine coal ⛏️). These are needed to build your first structure!',
+        objectives: 'Gather: 1🪵 Wood, 1🪨 Stone, 1🖤 Coal',
+        autoClaim: true,
+        rewardGold: 50,
+        rewardSkillPoints: 1,
+        message: "🪵🪨🖤 Materials gathered!<br><br>Excellent work! You now know how to gather building materials.<br><br>Each building requires materials — more buildings need more resources!<br><br>🎯 Now kill <b>3 enemies</b> in a run to unlock the Skill Tree!",
+        nextQuest: 'quest1_kill3',
+        conditions: ['firstRunDeath']
       },
 
       // === PHASE 1: Run quest → Unlock Skill Tree ===
@@ -1547,7 +1561,7 @@
         unlockBuilding: 'skillTree',
         message: "Outstanding, Droplet! 🎯<br><br>You've proven your combat worth. The <b>Skill Tree</b> is now unlocked at camp!<br><br>Head to the <b>Skill Tree</b> tab and spend your <b>3 Skill Points</b> to grow stronger.",
         nextQuest: 'quest2_spendSkills',
-        conditions: ['firstRunDeath']
+        conditionsAny: ['questGather0_materials', 'firstRunDeath']
       },
 
       // === PHASE 2: Camp quest → Use Skill Tree (free first use) ===
@@ -2121,130 +2135,213 @@
       }
     }
     
-    // ── Build Overlay: long-press meter to construct a building ─────────
-    // Shows materials (🌲 x1, 🪨 x1), a hold-to-build button with a fill meter
-    // that animates from left to right over ~1.5 seconds.
+    // ── Build Overlay: click-to-build with resource requirements and 0-100% animation ──
+    // Building N requires N of each: wood, stone, coal.
+    // Resources are checked and deducted on build. Progress shown as 0→100% with phases.
     function _showBuildOverlay(buildingId, buildingName) {
       if (window.CampWorld && window.CampWorld.isActive) window.CampWorld.pauseInput();
+
+      // Determine resource cost: building N costs N of each material
+      var builtCount = 0;
+      if (saveData.campBuildings) {
+        builtCount = Object.values(saveData.campBuildings).filter(function (b) { return b && b.unlocked; }).length;
+      }
+      var cost = Math.max(1, builtCount + 1);
+
+      // Get current resources
+      var res = (saveData.resources) || {};
+      var hasWood  = (res.wood  || 0) >= cost;
+      var hasStone = (res.stone || 0) >= cost;
+      var hasCoal  = (res.coal  || 0) >= cost;
+      var canBuild = hasWood && hasStone && hasCoal;
+
       var overlay = document.createElement('div');
-      overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:Bangers,cursive;';
+      overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.88);z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:Bangers,cursive;';
 
       var panel = document.createElement('div');
-      panel.style.cssText = 'background:linear-gradient(135deg,#0a0a1e,#0d1028);border:3px solid #1a3a6a;border-radius:14px;padding:28px 32px;max-width:340px;width:90vw;text-align:center;box-shadow:0 0 40px rgba(30,60,120,0.5);';
+      panel.style.cssText = 'background:linear-gradient(135deg,#0a0a1e,#0d1028);border:3px solid #1a3a6a;border-radius:14px;padding:28px 32px;max-width:360px;width:90vw;text-align:center;box-shadow:0 0 40px rgba(30,60,120,0.5);';
 
       // Title
       var title = document.createElement('div');
-      title.style.cssText = 'color:#5DADE2;font-size:1.6em;margin-bottom:12px;letter-spacing:2px;text-shadow:0 0 10px rgba(93,173,226,0.6);';
+      title.style.cssText = 'color:#5DADE2;font-size:1.6em;margin-bottom:8px;letter-spacing:2px;text-shadow:0 0 10px rgba(93,173,226,0.6);';
       title.textContent = '🔨 BUILD ' + buildingName.toUpperCase();
       panel.appendChild(title);
 
-      // Materials display
+      // Sub-heading: resource cost
+      var costLabel = document.createElement('div');
+      costLabel.style.cssText = 'color:#aaa;font-size:0.9em;margin-bottom:14px;font-family:Arial,sans-serif;letter-spacing:0;';
+      costLabel.textContent = 'Materials required: ' + cost + ' of each';
+      panel.appendChild(costLabel);
+
+      // Materials display with have/need indicators
       var mats = document.createElement('div');
-      mats.style.cssText = 'display:flex;justify-content:center;gap:24px;margin:16px 0;';
-      mats.innerHTML = '<div style="background:rgba(30,40,60,0.8);border:2px solid #2a4a2a;border-radius:8px;padding:10px 16px;"><div style="font-size:32px;">🌲</div><div style="color:#aaffaa;font-size:14px;margin-top:4px;">x1</div></div>' +
-                        '<div style="background:rgba(30,40,60,0.8);border:2px solid #4a4a2a;border-radius:8px;padding:10px 16px;"><div style="font-size:32px;">🪨</div><div style="color:#ddddaa;font-size:14px;margin-top:4px;">x1</div></div>';
+      mats.style.cssText = 'display:flex;justify-content:center;gap:14px;margin:0 0 16px;';
+      var matDefs = [
+        { icon: '🪵', label: 'Wood',  have: res.wood  || 0, ok: hasWood },
+        { icon: '🪨', label: 'Stone', have: res.stone || 0, ok: hasStone },
+        { icon: '🖤', label: 'Coal',  have: res.coal  || 0, ok: hasCoal }
+      ];
+      matDefs.forEach(function (m) {
+        var box = document.createElement('div');
+        var borderColor = m.ok ? '#2ecc71' : '#e74c3c';
+        box.style.cssText = 'background:rgba(30,40,60,0.8);border:2px solid ' + borderColor + ';border-radius:8px;padding:8px 12px;min-width:60px;';
+        box.innerHTML = '<div style="font-size:28px;">' + m.icon + '</div>' +
+          '<div style="color:' + (m.ok ? '#aaffaa' : '#ff8888') + ';font-size:13px;margin-top:3px;">' + m.have + '/' + cost + '</div>' +
+          '<div style="color:#888;font-size:11px;">' + (m.ok ? '✅' : '❌') + ' ' + m.label + '</div>';
+        mats.appendChild(box);
+      });
       panel.appendChild(mats);
 
-      // Build button with fill meter
-      var btnWrap = document.createElement('div');
-      btnWrap.style.cssText = 'position:relative;margin-top:20px;';
+      // "Need more resources" hint if can't build
+      if (!canBuild) {
+        var hint = document.createElement('div');
+        hint.style.cssText = 'color:#FFD700;font-size:0.88em;margin-bottom:12px;font-family:Arial,sans-serif;';
+        hint.textContent = '⛏️ Go gather resources in a run before building!';
+        panel.appendChild(hint);
+      }
 
+      // Progress area (hidden until build starts)
+      var progressWrap = document.createElement('div');
+      progressWrap.style.cssText = 'margin:8px 0 12px;display:none;';
+      var phaseLabel = document.createElement('div');
+      phaseLabel.style.cssText = 'color:#FFD700;font-size:1em;margin-bottom:6px;';
+      phaseLabel.textContent = 'Foundation...';
+      var progressBar = document.createElement('div');
+      progressBar.style.cssText = 'width:100%;height:18px;background:#111;border-radius:9px;overflow:hidden;border:2px solid #1a3a6a;';
+      var progressFill = document.createElement('div');
+      progressFill.style.cssText = 'height:100%;width:0%;background:linear-gradient(90deg,#1a3a6a,#5DADE2);transition:width 0.1s linear;border-radius:7px;';
+      var pctLabel = document.createElement('span');
+      pctLabel.style.cssText = 'position:absolute;left:50%;transform:translateX(-50%);color:#fff;font-size:12px;font-family:Bangers,cursive;';
+      progressBar.style.position = 'relative';
+      progressBar.appendChild(progressFill);
+      progressBar.appendChild(pctLabel);
+      progressWrap.appendChild(phaseLabel);
+      progressWrap.appendChild(progressBar);
+      panel.appendChild(progressWrap);
+
+      // Build button
       var buildBtn = document.createElement('button');
-      buildBtn.style.cssText = 'position:relative;overflow:hidden;width:220px;height:54px;background:#0a0a1e;border:3px solid #1a3a6a;border-radius:10px;color:#5DADE2;font-family:Bangers,cursive;font-size:1.2em;letter-spacing:3px;cursor:pointer;outline:none;-webkit-user-select:none;user-select:none;';
-      buildBtn.textContent = 'HOLD TO BUILD';
+      buildBtn.style.cssText = 'width:220px;height:54px;border-radius:10px;color:#fff;font-family:Bangers,cursive;font-size:1.3em;letter-spacing:3px;cursor:' + (canBuild ? 'pointer' : 'not-allowed') + ';outline:none;border:3px solid ' + (canBuild ? '#5DADE2' : '#555') + ';background:' + (canBuild ? 'linear-gradient(135deg,#1a3a6a,#2a5a9a)' : '#222') + ';opacity:' + (canBuild ? '1' : '0.5') + ';margin-top:4px;';
+      buildBtn.textContent = canBuild ? '🔨 BUILD' : '❌ NEED RESOURCES';
+      buildBtn.disabled = !canBuild;
+      panel.appendChild(buildBtn);
 
-      // Fill bar inside button
-      var fill = document.createElement('div');
-      fill.style.cssText = 'position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,#1a3a6a,#2a5a9a);transition:none;pointer-events:none;border-radius:7px;';
-      buildBtn.insertBefore(fill, buildBtn.firstChild);
+      // Close / cancel button
+      var cancelBtn = document.createElement('button');
+      cancelBtn.style.cssText = 'background:transparent;border:none;color:#888;font-family:Bangers,cursive;font-size:0.9em;cursor:pointer;margin-top:12px;letter-spacing:1px;';
+      cancelBtn.textContent = 'Cancel';
+      cancelBtn.addEventListener('click', function () {
+        overlay.remove();
+        if (window.CampWorld && window.CampWorld.isActive) window.CampWorld.resumeInput();
+      });
+      cancelBtn.addEventListener('touchend', function (e) { e.preventDefault(); cancelBtn.click(); }, { passive: false });
+      panel.appendChild(cancelBtn);
 
-      // Text on top of fill
-      var btnText = document.createElement('span');
-      btnText.style.cssText = 'position:relative;z-index:1;';
-      btnText.textContent = 'HOLD TO BUILD';
-      buildBtn.textContent = '';
-      buildBtn.appendChild(fill);
-      buildBtn.appendChild(btnText);
+      overlay.appendChild(panel);
+      document.body.appendChild(overlay);
 
-      var HOLD_DURATION = 1500; // 1.5 seconds to fill
-      var holdTimer = null;
-      var holdStart = 0;
-      var animFrame = null;
+      if (!canBuild) return;
+
+      // Build click handler: deduct resources, animate 0→100%, unlock building
       var built = false;
+      var BUILD_DURATION = 2400; // ms for full 0→100%
+      var BUILD_PHASES = [
+        { pct: 0,   label: '🪨 Laying Foundation...' },
+        { pct: 30,  label: '🧱 Raising Walls...' },
+        { pct: 60,  label: '🏗️ Building Roof...' },
+        { pct: 85,  label: '✨ Finishing Details...' },
+        { pct: 100, label: '✅ Construction Complete!' }
+      ];
 
-      function startHold() {
+      function _startBuild() {
         if (built) return;
-        holdStart = Date.now();
-        btnText.textContent = 'BUILDING...';
-        function tick() {
-          var elapsed = Date.now() - holdStart;
-          var pct = Math.min(elapsed / HOLD_DURATION, 1);
-          fill.style.width = (pct * 100) + '%';
-          if (pct >= 1) {
-            _finishBuild();
-            return;
-          }
-          animFrame = requestAnimationFrame(tick);
-        }
-        animFrame = requestAnimationFrame(tick);
-      }
-
-      function stopHold() {
-        if (built) return;
-        if (animFrame) cancelAnimationFrame(animFrame);
-        animFrame = null;
-        fill.style.width = '0%';
-        btnText.textContent = 'HOLD TO BUILD';
-      }
-
-      function _finishBuild() {
         built = true;
-        fill.style.width = '100%';
-        fill.style.background = 'linear-gradient(90deg,#2ecc71,#27ae60)';
-        btnText.textContent = '✅ BUILT!';
-        buildBtn.style.borderColor = '#27ae60';
-        buildBtn.style.color = '#fff';
+        buildBtn.disabled = true;
+        buildBtn.style.opacity = '0.5';
+        buildBtn.style.cursor = 'not-allowed';
+        cancelBtn.style.display = 'none';
+        progressWrap.style.display = 'block';
 
-        // Actually unlock building
-        saveData.campBuildings[buildingId].unlocked = true;
-        if (saveData.campBuildings[buildingId].level === 0) {
-          saveData.campBuildings[buildingId].level = 1;
+        // Deduct resources immediately
+        var r = saveData.resources || {};
+        r.wood  = Math.max(0, (r.wood  || 0) - cost);
+        r.stone = Math.max(0, (r.stone || 0) - cost);
+        r.coal  = Math.max(0, (r.coal  || 0) - cost);
+        if (window.GameHarvesting) window.GameHarvesting.refreshHUD();
+
+        var startMs = Date.now();
+        function animBuild() {
+          var elapsed = Date.now() - startMs;
+          var pct = Math.min(elapsed / BUILD_DURATION * 100, 100);
+          progressFill.style.width = pct + '%';
+          pctLabel.textContent = Math.floor(pct) + '%';
+
+          // Update phase label
+          var phase = BUILD_PHASES[0];
+          for (var i = BUILD_PHASES.length - 1; i >= 0; i--) {
+            if (pct >= BUILD_PHASES[i].pct) { phase = BUILD_PHASES[i]; break; }
+          }
+          phaseLabel.textContent = phase.label;
+
+          if (pct < 100) {
+            requestAnimationFrame(animBuild);
+          } else {
+            _completeBuild();
+          }
         }
-        showStatChange('🏛️ ' + buildingName + ' Unlocked!');
+        requestAnimationFrame(animBuild);
+      }
+
+      function _completeBuild() {
+        progressFill.style.background = 'linear-gradient(90deg,#2ecc71,#27ae60)';
+        panel.style.border = '3px solid #2ecc71';
+        panel.style.boxShadow = '0 0 40px rgba(46,204,113,0.5)';
+
+        // Unlock building
+        if (saveData.campBuildings[buildingId]) {
+          saveData.campBuildings[buildingId].unlocked = true;
+          if (saveData.campBuildings[buildingId].level === 0) saveData.campBuildings[buildingId].level = 1;
+        }
+        showStatChange('🏛️ ' + buildingName + ' Built!');
+
+        // Calculate next building resource cost for reminder
+        var newBuiltCount = Object.values(saveData.campBuildings).filter(function (b) { return b && b.unlocked; }).length;
+        var nextCost = newBuiltCount + 1;
+        saveData.buildingProgress = saveData.buildingProgress || {};
+        saveData.buildingProgress.nextBuildingCost = nextCost;
+
         saveSaveData();
 
-        // Benny walks and build animation
+        // Benny speech + 3D animation
         if (window.CampWorld && window.CampWorld.isActive) {
-          window.CampWorld.bennyWalkToBuild(buildingId,
-            'Wao dude, you\ndid it! 🔨');
+          window.CampWorld.bennyWalkToBuild(buildingId, 'Wao dude, you did it! 🔨 Let\'s go inside!');
           setTimeout(function () {
             window.CampWorld.refreshBuildings(saveData);
             window.CampWorld.playBuildingUnlockAnimation(buildingId);
           }, 1300);
+          // Show "Prepare for Next Building" reminder after celebration
+          setTimeout(function () {
+            if (window.CampWorld && window.CampWorld.isActive) {
+              window.CampWorld.showBennySpeech(
+                'Nice work! 🎉 For the next\nbuilding you\'ll need\n🪵x' + nextCost + ' 🪨x' + nextCost + ' 🖤x' + nextCost + '!\nStart gathering! ⛏️'
+              );
+              setTimeout(function () { window.CampWorld.hideBennySpeech(); }, 5000);
+            }
+          }, 4500);
         } else if (window.CampWorld) {
           window.CampWorld.refreshBuildings(saveData);
           window.CampWorld.playBuildingUnlockAnimation(buildingId);
         }
 
-        // Close overlay after short delay
+        // Close overlay after brief celebration delay
         setTimeout(function () {
           overlay.remove();
           if (window.CampWorld && window.CampWorld.isActive) window.CampWorld.resumeInput();
         }, 1800);
       }
 
-      // Touch and mouse events for long press
-      buildBtn.addEventListener('mousedown', startHold);
-      buildBtn.addEventListener('mouseup', stopHold);
-      buildBtn.addEventListener('mouseleave', stopHold);
-      buildBtn.addEventListener('touchstart', function (e) { e.preventDefault(); startHold(); }, { passive: false });
-      buildBtn.addEventListener('touchend', stopHold);
-      buildBtn.addEventListener('touchcancel', stopHold);
-
-      btnWrap.appendChild(buildBtn);
-      panel.appendChild(btnWrap);
-      overlay.appendChild(panel);
-      document.body.appendChild(overlay);
+      buildBtn.addEventListener('click', _startBuild);
+      buildBtn.addEventListener('touchend', function (e) { e.preventDefault(); _startBuild(); }, { passive: false });
     }
 
     // Claim a tutorial quest - REWRITTEN for reliability
@@ -2296,10 +2393,14 @@
       chatSystemMessage('🎁 Quest "' + quest.name + '" claimed! Rewards received.');
       
       // Unlock building on CLAIM (only for quests that use unlockBuilding, e.g. quest1 for SkillTree)
+      // window._campShowBuildOverlay can be set to null by camp-world.js to suppress this overlay
+      // when the build is triggered directly from the camp interaction system.
       if (quest.unlockBuilding && saveData.campBuildings[quest.unlockBuilding]) {
-        const buildingName = CAMP_BUILDINGS[quest.unlockBuilding]?.name || 'Building';
-        // Show long-press BUILD overlay with material display and fill meter
-        _showBuildOverlay(quest.unlockBuilding, buildingName);
+        // Use != null (not !==) so that both null and undefined suppress the overlay
+        if (window._campShowBuildOverlay != null) {
+          const buildingName = CAMP_BUILDINGS[quest.unlockBuilding]?.name || 'Building';
+          _showBuildOverlay(quest.unlockBuilding, buildingName);
+        }
       }
       
       // Give companion egg
@@ -2423,6 +2524,9 @@
     window.checkQuestConditions = checkQuestConditions;
     window.isQuestClaimed = isQuestClaimed;
     window.getCurrentQuest = getCurrentQuest;
+    // Expose build map and overlay for use by camp-world.js
+    window._buildingQuestUnlockMap = buildingQuestUnlockMap;
+    window._campShowBuildOverlay = _showBuildOverlay;
     
     // Show next quest popup
     function showNextQuestPopup(questId) {
@@ -2507,10 +2611,14 @@
       
       // Show current active quest with name prominently
       if (currentQuest && saveData.tutorialQuests.firstDeathShown) {
-        // Build progress info for kill-based quests
+        // Build progress info for kill-based and gathering quests
         let progressText = '';
         const killsNow = (saveData.tutorialQuests && saveData.tutorialQuests.killsThisRun) || 0;
-        if (currentQuest.id === 'quest1_kill3') {
+        if (currentQuest.id === 'questGather0_materials') {
+          const res = saveData.resources || {};
+          const w = res.wood || 0, s = res.stone || 0, c = res.coal || 0;
+          progressText = ` 🪵${Math.min(w,1)}/1 🪨${Math.min(s,1)}/1 🖤${Math.min(c,1)}/1`;
+        } else if (currentQuest.id === 'quest1_kill3') {
           progressText = ` (${Math.min(killsNow, 3)}/3)`;
         } else if (currentQuest.id === 'quest8_kill10') {
           progressText = ` (${Math.min(killsNow, 10)}/10)`;
@@ -2536,6 +2644,19 @@
         readyEl.setAttribute('aria-label', 'Quest reward ready to claim at Main Building');
         readyEl.textContent = '🎁 Claim Reward!';
         questTracker.appendChild(readyEl);
+      }
+
+      // Show "next building" resource reminder
+      const nextCost = saveData.buildingProgress && saveData.buildingProgress.nextBuildingCost;
+      if (nextCost && readyToClaim.length > 0) {
+        const res = saveData.resources || {};
+        const w = res.wood || 0, s = res.stone || 0, c = res.coal || 0;
+        if (w < nextCost || s < nextCost || c < nextCost) {
+          const remEl = document.createElement('div');
+          remEl.style.cssText = 'font-size: 10px; color: #aaa; margin-top: 3px;';
+          remEl.textContent = `🏗️ Next build needs: 🪵${Math.min(w,nextCost)}/${nextCost} 🪨${Math.min(s,nextCost)}/${nextCost} 🖤${Math.min(c,nextCost)}/${nextCost}`;
+          questTracker.appendChild(remEl);
+        }
       }
       
       // Side quest indicator

@@ -1908,6 +1908,17 @@
     return bd ? (bd.unlocked === true || bd.level > 0) : false;
   }
 
+  // Returns true if this building has a ready-to-claim quest that would unlock it
+  function _isBuildingReadyForBuild(buildingId) {
+    if (!_saveData || !_saveData.tutorialQuests) return false;
+    var map = window._buildingQuestUnlockMap;
+    if (!map) return false;
+    var questId = map[buildingId];
+    if (!questId) return false;
+    var readyToClaim = _saveData.tutorialQuests.readyToClaim || [];
+    return readyToClaim.indexOf(questId) !== -1;
+  }
+
   function _updatePromptUI() {
     if (!_promptEl) return;
     if (_nearBuilding) {
@@ -1915,12 +1926,24 @@
       if (def) {
         if (_isBuildingUnlocked(_nearBuilding)) {
           _promptEl.textContent = `${def.icon}  ${def.label}  —  Tap / [E]`;
+          if (_interactBtn) {
+            _interactBtn.textContent = 'ENTER';
+            _interactBtn.style.background = 'linear-gradient(135deg,#c8a248,#8b6914)';
+            _interactBtn.style.display = 'block';
+          }
+        } else if (_isBuildingReadyForBuild(_nearBuilding)) {
+          _promptEl.textContent = `🔨  ${def.label}  —  Ready to Build! [E]`;
+          if (_interactBtn) {
+            _interactBtn.textContent = 'BUILD';
+            _interactBtn.style.background = 'linear-gradient(135deg,#2980b9,#1a5276)';
+            _interactBtn.style.display = 'block';
+          }
         } else {
           _promptEl.textContent = `🔒  ${def.label}  —  Complete quests to unlock this building`;
+          if (_interactBtn) _interactBtn.style.display = 'none';
         }
         _promptEl.style.display = 'block';
       }
-      if (_interactBtn) _interactBtn.style.display = _isBuildingUnlocked(_nearBuilding) ? 'block' : 'none';
     } else {
       _promptEl.style.display = 'none';
       if (_interactBtn) _interactBtn.style.display = 'none';
@@ -1930,6 +1953,33 @@
   function _interact() {
     if (!_nearBuilding) return;
     if (_menuOpen) return; // already showing a building menu
+
+    // If this building is locked but has a ready-to-claim quest, show the build overlay directly
+    if (!_isBuildingUnlocked(_nearBuilding) && _isBuildingReadyForBuild(_nearBuilding)) {
+      const def = BUILDING_DEFS.find(d => d.id === _nearBuilding);
+      const buildingName = def ? def.label : _nearBuilding;
+      // Auto-claim the quest silently to give rewards, then show build overlay
+      const map = window._buildingQuestUnlockMap;
+      if (map && map[_nearBuilding] && typeof window.claimTutorialQuest === 'function') {
+        const targetId = _nearBuilding;
+        // Claim rewards without re-triggering build overlay from claimTutorialQuest
+        // by temporarily patching _campShowBuildOverlay. Use try-finally so the
+        // original is always restored even if claimTutorialQuest throws.
+        const origOverlay = window._campShowBuildOverlay;
+        window._campShowBuildOverlay = null;
+        try {
+          window.claimTutorialQuest(map[targetId]);
+        } finally {
+          window._campShowBuildOverlay = origOverlay;
+        }
+        // Now show our own build overlay
+        if (typeof origOverlay === 'function') {
+          origOverlay(targetId, buildingName);
+        }
+      }
+      return;
+    }
+
     // Block interaction with locked buildings
     if (!_isBuildingUnlocked(_nearBuilding)) {
       if (typeof showStatusMessage === 'function') {
@@ -2458,6 +2508,11 @@
       _nearBuilding = null;
       _updatePromptUI();
 
+      // Show resource HUD in camp mode (always shows wood/stone/coal even at 0)
+      if (window.GameHarvesting) {
+        window.GameHarvesting.showCampHUD(_saveData);
+      }
+
       // Camera aspect
       const aspect = window.innerWidth / window.innerHeight;
       if (_campCamera) {
@@ -2488,8 +2543,17 @@
           } else if (tq && tq.currentQuest) {
             var currentQ = (typeof getCurrentQuest === 'function') ? getCurrentQuest() : null;
             if (currentQ) {
-              _showBennySpeech('Hey dude!\nYour quest:\n' + currentQ.name);
-              setTimeout(function () { _hideBennySpeech(); }, 3500);
+              // Show gathering reminder if first gather not done
+              if (sd && !sd.gatheringProgress) sd.gatheringProgress = {};
+              var gp = sd && sd.gatheringProgress;
+              var res = sd && sd.resources;
+              if (gp && !gp.firstGatherDone && currentQ.id === 'quest1_kill3') {
+                _showBennySpeech('Before you fight, try\ngathering 🪵 Wood,\n🪨 Stone & 🖤 Coal\nfor building! ⛏️');
+                setTimeout(function () { _hideBennySpeech(); }, 5000);
+              } else {
+                _showBennySpeech('Hey dude!\nYour quest:\n' + currentQ.name);
+                setTimeout(function () { _hideBennySpeech(); }, 3500);
+              }
             }
           }
         }, 1500);
@@ -2519,6 +2583,8 @@
     if (_interactBtn) _interactBtn.style.display = 'none';
     _hideTouchIndicator();
     _hideBennySpeech();
+    // Remove camp mode from resource HUD when leaving camp
+    if (window.GameHarvesting) window.GameHarvesting.hideCampHUD();
 
     // Reset main-game joystick state so sticks don't stay "active" into the next run.
     // Use window._campJoystick / _campJoystickRight which are the same objects as

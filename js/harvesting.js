@@ -63,6 +63,11 @@
 
   // ── Node visual descriptors (populated during init when THREE is available) ─
   const NODE_DEFS = {
+    tree: {
+      label: 'Tree',         color: 0x2D6A2D, radius: 1.0,
+      hp: 60,                yield: 'wood',
+      toolRequired: 'axe'
+    },
     rock: {
       label: 'Rock',         color: 0x808080, radius: 1.8,
       hp: 80,                yield: 'stone',
@@ -147,7 +152,28 @@
     if (!def) return null;
 
     let mesh;
-    if (nodeType === 'rock' || nodeType === 'iron') {
+    if (nodeType === 'tree') {
+      // Simple cartoon tree: trunk + canopy
+      const group = new THREE.Group();
+      const trunkGeo = new THREE.CylinderGeometry(0.18, 0.25, 1.4, 7);
+      const trunkMat = new THREE.MeshToonMaterial({ color: 0x5C3A1E });
+      const trunk = new THREE.Mesh(trunkGeo, trunkMat);
+      trunk.position.y = 0.7;
+      trunk.castShadow = true;
+      group.add(trunk);
+      // Canopy layers
+      const canopyColors = [0x2D6A2D, 0x3A8A3A, 0x246824];
+      const sizes = [[1.4, 1.1], [1.1, 0.9], [0.75, 0.7]];
+      sizes.forEach(([r, h], i) => {
+        const cGeo = new THREE.ConeGeometry(r, h + 0.3, 7);
+        const cMat = new THREE.MeshToonMaterial({ color: canopyColors[i] });
+        const canopy = new THREE.Mesh(cGeo, cMat);
+        canopy.position.y = 1.4 + i * 0.65;
+        canopy.castShadow = true;
+        group.add(canopy);
+      });
+      mesh = group;
+    } else if (nodeType === 'rock' || nodeType === 'iron') {
       // Irregular rock shape
       const geo = new THREE.DodecahedronGeometry(def.radius * 0.9, 0);
       const mat = new THREE.MeshToonMaterial({ color: def.color });
@@ -215,6 +241,12 @@
     const rng = () => (Math.random() - 0.5) * 220;
     const avoid = (x, z) => Math.abs(x) < 18 && Math.abs(z) < 18; // near player start
 
+    // Trees — 35 nodes scattered around
+    for (let i = 0; i < 35; i++) {
+      const x = rng(), z = rng();
+      if (avoid(x, z)) continue;
+      _spawnNode('tree', x, z);
+    }
     // Rocky outcrops — 40 nodes
     for (let i = 0; i < 40; i++) {
       const x = rng(), z = rng();
@@ -392,15 +424,20 @@
     _updateHUD();
   }
 
+  // Building material resource keys shown in camp HUD
+  const BUILD_MATERIAL_KEYS = ['wood', 'stone', 'coal'];
+
   function _updateHUD() {
     const hud = document.getElementById('harvest-hud');
     if (!hud) return;
     const res = _getResources();
     if (!res) { hud.innerHTML = ''; return; }
 
+    // In camp mode: always show building materials (wood/stone/coal) even at 0
+    const isCamp = hud.classList.contains('camp-mode');
     const entries = Object.entries(RESOURCE_TYPES)
-      .filter(([k]) => res[k] > 0 && k !== 'flesh')
-      .map(([k, v]) => `<span class="harvest-res-item"><span class="harvest-res-icon">${v.icon}</span><span class="harvest-res-count">${res[k]}</span></span>`)
+      .filter(([k]) => k !== 'flesh' && (res[k] > 0 || (isCamp && BUILD_MATERIAL_KEYS.includes(k))))
+      .map(([k, v]) => `<span class="harvest-res-item"><span class="harvest-res-icon">${v.icon}</span><span class="harvest-res-count">x${(res[k] || 0)}</span></span>`)
       .join('');
     hud.innerHTML = entries || '';
     hud.style.display = entries ? 'flex' : 'none';
@@ -569,6 +606,27 @@
     // Called when a resource is harvested (hook for quest system)
     _onHarvest: null,
 
-    refreshHUD() { _updateHUD(); }
+    refreshHUD() { _updateHUD(); },
+
+    // Call from camp to build/show the resource HUD in camp mode (shows 0-count materials)
+    showCampHUD(saveData) {
+      if (saveData) _saveData = saveData;
+      _getResources();
+      _buildHUD();
+      const hud = document.getElementById('harvest-hud');
+      if (hud) {
+        hud.classList.add('camp-mode');
+        _updateHUD();
+      }
+    },
+
+    // Remove camp mode from HUD (revert to game mode)
+    hideCampHUD() {
+      const hud = document.getElementById('harvest-hud');
+      if (hud) {
+        hud.classList.remove('camp-mode');
+        _updateHUD();
+      }
+    }
   };
 }());

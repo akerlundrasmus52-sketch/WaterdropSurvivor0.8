@@ -278,10 +278,41 @@
       saveData.storyQuests.questNotifications.questMission = false;
       saveSaveData();
       
-      // Activate quest1 the first time the player enters the Main Building after their first run
+      // Activate questGather0_materials or quest1 the first time player enters Main Building after first run
       if (
         saveData.tutorialQuests.firstDeathShown &&
         isQuestClaimed('firstRunDeath') &&
+        !saveData.tutorialQuests.currentQuest &&
+        !isQuestClaimed('questGather0_materials') &&
+        !saveData.tutorialQuests.readyToClaim.includes('questGather0_materials') &&
+        !isQuestClaimed('quest1_kill3')
+      ) {
+        // Start gathering quest first
+        if (checkQuestConditions('questGather0_materials')) {
+          saveData.tutorialQuests.currentQuest = 'questGather0_materials';
+          saveSaveData();
+          showComicInfoBox(
+            '⛏️ GATHER BUILDING MATERIALS',
+            `<div style="text-align: left; padding: 10px;">
+              <p style="font-family: 'Bangers', cursive; font-size: 20px; margin-bottom: 10px;">🪵 QUEST: GATHER MATERIALS</p>
+              <p style="line-height: 1.8; margin-bottom: 10px;">
+                Welcome back, Droplet! To build your camp, you need resources.<br><br>
+                <b>YOUR MISSION:</b> Head out on a run and gather:<br>
+                &nbsp;🪵 <b>1 Wood</b> — chop a tree with your Axe<br>
+                &nbsp;🪨 <b>1 Stone</b> — mine a rock with your Sledgehammer<br>
+                &nbsp;🖤 <b>1 Coal</b> — mine coal with your Pickaxe<br><br>
+                Once gathered, return to build your first structure!
+              </p>
+              <p style="font-size: 13px; color: #FFD700;">Reward: +50 Gold · +1 Skill Point</p>
+            </div>`,
+            'START GATHERING!'
+          );
+        }
+      } else if (
+        // Original quest1 activation: for existing saves that already have firstRunDeath claimed
+        saveData.tutorialQuests.firstDeathShown &&
+        isQuestClaimed('firstRunDeath') &&
+        (isQuestClaimed('questGather0_materials') || !checkQuestConditions('questGather0_materials')) &&
         !saveData.tutorialQuests.currentQuest &&
         !isQuestClaimed('quest1_kill3') &&
         !saveData.tutorialQuests.readyToClaim.includes('quest1_kill3')

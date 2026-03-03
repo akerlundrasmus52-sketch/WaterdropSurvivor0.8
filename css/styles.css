@@ -723,7 +723,8 @@
       position: fixed;
       z-index: 360;
       max-width: 210px;
-      min-width: 130px;
+      min-width: 0;
+      width: max-content;
       padding: 12px 14px 10px;
       font-family: Bangers, cursive;
       font-size: 14px;
@@ -4191,6 +4192,18 @@
   gap: 4px;
   z-index: 110;
   pointer-events: none;
+}
+.harvest-hud.camp-mode {
+  top: 10px;
+  bottom: auto;
+  left: 50%;
+  transform: translateX(-50%);
+  flex-direction: row;
+  background: rgba(0,0,0,0.7);
+  border: 1px solid rgba(200,162,72,0.4);
+  border-radius: 14px;
+  padding: 4px 12px;
+  gap: 8px;
 }
 .harvest-res-item {
   display: flex;
