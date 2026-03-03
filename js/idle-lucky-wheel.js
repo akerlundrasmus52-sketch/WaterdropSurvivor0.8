@@ -130,7 +130,7 @@ window.GameLuckyWheel = (function () {
     html += '<div class="wheel-glow-ring"></div>';
     html += '<svg id="wheel-svg" viewBox="0 0 220 220" width="240" height="240" style="display:block;filter:drop-shadow(0 4px 20px rgba(0,0,0,0.8)) drop-shadow(0 0 12px rgba(255,215,0,0.3));">';
     // Rounded outer rim
-    html += '<circle cx="110" cy="110" r="108" fill="none" stroke="#333" stroke-width="4" rx="108"/>';
+    html += '<circle cx="110" cy="110" r="108" fill="none" stroke="#333" stroke-width="4"/>';
     html += '<circle cx="110" cy="110" r="105" fill="none" stroke="rgba(255,215,0,0.3)" stroke-width="1.5"/>';
     html += '<g id="wheel-group">';
     WHEEL_SEGMENTS.forEach(function (seg, i) {
@@ -171,7 +171,8 @@ window.GameLuckyWheel = (function () {
     // Spin buttons with rounded glass look
     html += '<div class="wheel-btns" style="display:flex;gap:10px;justify-content:center;margin:12px 0;">';
     if (free) html += '<button class="wheel-spin-free" style="background:linear-gradient(135deg,#FFD700,#FFA500);color:#000;border:none;border-radius:24px;padding:10px 24px;font-weight:bold;font-size:14px;cursor:pointer;box-shadow:0 3px 12px rgba(255,215,0,0.4);font-family:\'Bangers\',cursive;letter-spacing:1px;">🎁 FREE SPIN</button>';
-    html += '<button class="wheel-spin-paid" style="background:linear-gradient(135deg,#3498db,#2980b9);color:#fff;border:none;border-radius:24px;padding:10px 24px;font-weight:bold;font-size:14px;cursor:pointer;box-shadow:0 3px 12px rgba(52,152,219,0.4);font-family:\'Bangers\',cursive;letter-spacing:1px;"' + (essence < SPIN_COST ? ' disabled style="opacity:0.4;cursor:not-allowed;"' : '') + '>SPIN (50 ✨)</button>';
+    var paidDisabledStyle = essence < SPIN_COST ? 'opacity:0.4;cursor:not-allowed;' : '';
+    html += '<button class="wheel-spin-paid" style="background:linear-gradient(135deg,#3498db,#2980b9);color:#fff;border:none;border-radius:24px;padding:10px 24px;font-weight:bold;font-size:14px;cursor:pointer;box-shadow:0 3px 12px rgba(52,152,219,0.4);font-family:\'Bangers\',cursive;letter-spacing:1px;' + paidDisabledStyle + '"' + (essence < SPIN_COST ? ' disabled' : '') + '>SPIN (50 ✨)</button>';
     html += '</div>';
 
     html += '<div class="wheel-result" style="min-height:24px;font-size:15px;font-weight:bold;color:#FFD700;text-align:center;margin:4px 0;"></div>';
