@@ -412,7 +412,7 @@
               // HEADSHOT! Instant kill — set hp to 1 then call takeDamage with 'headshot' type
               // so die() triggers with correct damageType for headshot death animation
               enemy.hp = 1;
-              enemy.takeDamage(enemy.hp + 1, true, 'headshot');
+              enemy.takeDamage(9999, true, 'headshot');
               
               // Create floating HEADSHOT text - THINNER FONT
               const div = document.createElement('div');
