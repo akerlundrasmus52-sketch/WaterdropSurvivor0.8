@@ -4511,9 +4511,8 @@
 }
 
 /* Apply to ssb-countdown — living glow around it */
-/* The ssb-countdown timer is hidden per UI overhaul (yellow timer stat bar removed) */
 .ssb-countdown {
-  display: none !important;
+  animation: ssb-countdown-pulse 0.45s ease-out forwards, living-border-breathe 3s ease-in-out infinite;
 }
 
 /* tutorial-text-wrap: remove border animation that was creating a visible dark-bordered

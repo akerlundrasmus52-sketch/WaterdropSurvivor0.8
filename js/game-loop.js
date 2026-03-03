@@ -653,8 +653,10 @@
       enemies.forEach((e, _idx) => {
         if (!e || !e.mesh || e.isDead) return;
         const _dSq = e.mesh.position.distanceToSquared(player.mesh.position);
-        // Skip far enemies on alternating frames; always update close enemies
-        if (_dSq > _ENEMY_THROTTLE_DIST_SQ && (_frameEven !== ((_idx & 1) === 0))) return;
+        // Throttle far enemies: even-indexed skip on odd frames, odd-indexed skip on even frames
+        const _enemyIsEven = (_idx & 1) === 0;
+        const _shouldSkip = _dSq > _ENEMY_THROTTLE_DIST_SQ && (_frameEven !== _enemyIsEven);
+        if (_shouldSkip) return;
         e.update(dt, player.mesh.position);
       });
       if (window.GameDebug && window.GameDebug.enabled) {
