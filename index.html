@@ -211,12 +211,22 @@
       </button>
     </div>
 
-    <!-- Unspent Points Notification Bar (auto-shows when there are pending points/rewards) -->
+    <!-- Unspent Points Notification Bar (legacy, hidden) -->
     <div id="camp-unspent-bar" class="camp-unspent-bar" style="display:none;">
-      <div class="unspent-bar-inner" id="camp-unspent-inner">
-        <!-- Dynamically populated with unspent point chips -->
-      </div>
+      <div class="unspent-bar-inner" id="camp-unspent-inner"></div>
       <button class="unspent-bar-close" id="camp-unspent-close" title="Dismiss">✕</button>
+    </div>
+
+    <!-- Unspent Points Corner Dropdown (right-side tab, like AI chat) -->
+    <div id="unspent-tab" class="unspent-tab" style="display:none;" title="Upgrades Available">⬆️</div>
+    <div id="unspent-dropdown" class="unspent-dropdown">
+      <div class="unspent-dd-header">
+        <span>⬆️ UPGRADES</span>
+        <button class="unspent-dd-close" id="unspent-dd-close" title="Close">✕</button>
+      </div>
+      <div class="unspent-dd-list" id="unspent-dd-list">
+        <!-- Dynamically populated -->
+      </div>
     </div>
     
     <!-- Camp Tabs (hidden - navigation handled by building card clicks) -->
@@ -766,7 +776,7 @@
     </div>
     <div class="chat-messages" id="chat-messages"></div>
     <div class="chat-input-area">
-      <input type="text" id="chat-input" placeholder="Type a command..." autocomplete="off" />
+      <input type="text" id="chat-input" placeholder="Ask anything about the game..." autocomplete="off" />
       <button id="chat-send-btn">SEND</button>
     </div>
   </div>

@@ -693,6 +693,7 @@
   }
 
   // Benny walk-to-building animation: smoothly moves Benny to a building, shows speech, then returns
+  // Player now auto-follows Benny when he walks
   let _bennyWalking = false;
   function _bennyWalkToBuild(buildingId, speechText) {
     if (!_bennyMesh || _bennyWalking) return;
@@ -700,17 +701,33 @@
     if (!def) return;
     _bennyWalking = true;
 
-    // Save original position
+    // Save original positions
     const origX = BENNY_POS.x;
     const origZ = BENNY_POS.z;
     const targetX = def.x;
     const targetZ = def.z;
     const walkDuration = 1200; // ms
 
-    // Show speech
-    _showBennySpeech(speechText || 'Let me build\nthis for you! 🔨');
+    // Player follow offset (slightly behind Benny)
+    const playerOrigX = _playerPos ? _playerPos.x : 0;
+    const playerOrigZ = _playerPos ? _playerPos.z : 3;
+    // Player target: slightly offset from building position
+    const PLAYER_FOLLOW_DISTANCE = 2.0;
+    const dx = targetX - origX;
+    const dz = targetZ - origZ;
+    const dist = Math.sqrt(dx * dx + dz * dz) || 1;
+    const playerTargetX = targetX - (dx / dist) * PLAYER_FOLLOW_DISTANCE;
+    const playerTargetZ = targetZ - (dz / dist) * PLAYER_FOLLOW_DISTANCE;
 
-    // Animate walk to building
+    // Show "Follow me!" speech first
+    const DS = window.DialogueSystem;
+    if (DS) {
+      DS.show([{ text: 'Follow me! 🏃', emotion: 'task' }]);
+    } else {
+      _showBennySpeech(speechText || 'Let me build\nthis for you! 🔨');
+    }
+
+    // Animate walk to building (both Benny and player)
     const startMs = performance.now();
     function walkStep() {
       var t = Math.min((performance.now() - startMs) / walkDuration, 1);
@@ -718,15 +735,31 @@
       _bennyMesh.position.x = origX + (targetX - origX) * eased;
       _bennyMesh.position.z = origZ + (targetZ - origZ) * eased;
       // Face target direction
-      var dx = targetX - _bennyMesh.position.x;
-      var dz = targetZ - _bennyMesh.position.z;
-      if (Math.abs(dx) > 0.01 || Math.abs(dz) > 0.01) {
-        _bennyMesh.rotation.y = Math.atan2(dx, dz);
+      var bdx = targetX - _bennyMesh.position.x;
+      var bdz = targetZ - _bennyMesh.position.z;
+      if (Math.abs(bdx) > 0.01 || Math.abs(bdz) > 0.01) {
+        _bennyMesh.rotation.y = Math.atan2(bdx, bdz);
+      }
+      // Player auto-follow: smoothly move player toward their target
+      if (_playerMesh) {
+        _playerPos.x = playerOrigX + (playerTargetX - playerOrigX) * eased;
+        _playerPos.z = playerOrigZ + (playerTargetZ - playerOrigZ) * eased;
+        _playerMesh.position.x = _playerPos.x;
+        _playerMesh.position.z = _playerPos.z;
+        // Face Benny
+        var pdx = _bennyMesh.position.x - _playerPos.x;
+        var pdz = _bennyMesh.position.z - _playerPos.z;
+        if (Math.abs(pdx) > 0.01 || Math.abs(pdz) > 0.01) {
+          _playerMesh.rotation.y = Math.atan2(pdx, pdz);
+        }
       }
       if (t < 1) {
         requestAnimationFrame(walkStep);
       } else {
-        // Arrived — wait, then walk back
+        // Arrived — show building speech, wait, then walk back
+        if (DS) {
+          DS.show([{ text: speechText || 'Here we are! Let\'s build this! 🔨', emotion: 'happy' }]);
+        }
         setTimeout(function () {
           _hideBennySpeech();
           var retStart = performance.now();
@@ -735,11 +768,24 @@
             var re = rt < 0.5 ? 2 * rt * rt : 1 - Math.pow(-2 * rt + 2, 2) / 2;
             _bennyMesh.position.x = targetX + (origX - targetX) * re;
             _bennyMesh.position.z = targetZ + (origZ - targetZ) * re;
+            // Player returns too
+            if (_playerMesh) {
+              _playerPos.x = playerTargetX + (playerOrigX - playerTargetX) * re;
+              _playerPos.z = playerTargetZ + (playerOrigZ - playerTargetZ) * re;
+              _playerMesh.position.x = _playerPos.x;
+              _playerMesh.position.z = _playerPos.z;
+            }
             if (rt < 1) {
               requestAnimationFrame(returnStep);
             } else {
               _bennyMesh.position.x = origX;
               _bennyMesh.position.z = origZ;
+              if (_playerMesh) {
+                _playerPos.x = playerOrigX;
+                _playerPos.z = playerOrigZ;
+                _playerMesh.position.x = playerOrigX;
+                _playerMesh.position.z = playerOrigZ;
+              }
               _bennyWalking = false;
             }
           }

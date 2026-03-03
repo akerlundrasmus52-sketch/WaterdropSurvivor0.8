@@ -1041,21 +1041,78 @@
        * @param {string} damageType - Type of damage: 'physical', 'fire', 'ice', 'lightning', 'shotgun', 'headshot', 'gun', 'doubleBarrel', 'drone'
        */
       takeDamage(amount, isCrit = false, damageType = 'physical') {
-        // Track last damage type for death effects
+        // Track last damage type and crit state for death effects
         this.lastDamageType = damageType;
+        this.lastCrit = isCrit;
         
         // Phase 5: Hit impact particles (flesh/blood) on every hit — scaled with HP ratio
         const hpRatio = this.hp / this.maxHp;
-        const bloodParticleCount = Math.max(4, Math.floor((1 - hpRatio) * 14) + 4); // Reduced intensity for FPS
-        spawnParticles(this.mesh.position, 0x8B0000, Math.min(bloodParticleCount, 15)); // Blood particles
-        spawnParticles(this.mesh.position, 0x660000, Math.min(Math.floor(bloodParticleCount * 0.5), 6)); // Darker blood
-        // Ground blood decal (reduced from 3-5 per hit to 1-2 for FPS)
+        const isHeavyHit = damageType === 'doubleBarrel' || damageType === 'shotgun' || isCrit;
+        const bloodParticleCount = Math.max(5, Math.floor((1 - hpRatio) * 18) + 5);
+        spawnParticles(this.mesh.position, 0x8B0000, Math.min(bloodParticleCount, 20)); // Blood particles
+        spawnParticles(this.mesh.position, 0x660000, Math.min(Math.floor(bloodParticleCount * 0.5), 8)); // Darker blood
+        if (isHeavyHit) {
+          spawnParticles(this.mesh.position, 0xCC0000, 6); // Bright red burst for heavy hits
+          spawnParticles(this.mesh.position, 0xAA0000, 4);
+        }
+        // Ground blood decal — more on heavy hits
         spawnBloodDecal(this.mesh.position);
+        if (isHeavyHit) {
+          spawnBloodDecal(this.mesh.position);
+          spawnBloodDecal({ x: this.mesh.position.x + (Math.random()-0.5)*0.5, y: 0, z: this.mesh.position.z + (Math.random()-0.5)*0.5 });
+        }
         if (hpRatio < 0.5) {
           spawnBloodDecal(this.mesh.position); // Extra blood when low HP
         }
         if (hpRatio < 0.25) {
           spawnBloodDecal(this.mesh.position); // Extra decal at critical HP
+          spawnBloodDecal({ x: this.mesh.position.x + (Math.random()-0.5)*0.8, y: 0, z: this.mesh.position.z + (Math.random()-0.5)*0.8 });
+        }
+        // Blood system: directional spray on heavy hits
+        if (window.BloodSystem && isHeavyHit) {
+          const isShotgunHit = damageType === 'doubleBarrel' || damageType === 'shotgun';
+          window.BloodSystem.emitBurst(this.mesh.position, isShotgunHit ? 60 : 30, { spreadXZ: 0.8, spreadY: 0.2, minSize: 0.01, maxSize: 0.06, minLife: 20, maxLife: 50 });
+        }
+        // Pulsating wound blood drips — gravity-based spray from hit location
+        if (bloodDrips.length < MAX_BLOOD_DRIPS && (isHeavyHit || hpRatio < 0.5)) {
+          const dripCount = isHeavyHit ? (3 + Math.floor(Math.random() * 3)) : (1 + Math.floor(Math.random() * 2));
+          for (let bd = 0; bd < dripCount && bloodDrips.length < MAX_BLOOD_DRIPS; bd++) {
+            if (!_sharedBloodDripGeo && typeof THREE !== 'undefined') _sharedBloodDripGeo = new THREE.SphereGeometry(1, 4, 4);
+            const dripSize = 0.015 + Math.random() * 0.04;
+            const dripMesh = new THREE.Mesh(_sharedBloodDripGeo, new THREE.MeshBasicMaterial({ color: [0x8B0000, 0xAA0000, 0x660000, 0xCC0000][bd % 4] }));
+            dripMesh.scale.setScalar(dripSize);
+            dripMesh.position.copy(this.mesh.position);
+            dripMesh.position.y += 0.2 + Math.random() * 0.4;
+            scene.add(dripMesh);
+            bloodDrips.push({
+              mesh: dripMesh,
+              velX: (Math.random() - 0.5) * (isHeavyHit ? 0.25 : 0.1),
+              velZ: (Math.random() - 0.5) * (isHeavyHit ? 0.25 : 0.1),
+              velY: 0.08 + Math.random() * 0.2,
+              life: 40 + Math.floor(Math.random() * 25),
+              _sharedGeo: true
+            });
+          }
+        }
+        // Blood splatter on nearby enemies (stain them red)
+        if (isHeavyHit && enemies) {
+          const hitPos = this.mesh.position;
+          for (let ne = 0; ne < enemies.length; ne++) {
+            const other = enemies[ne];
+            if (other === this || other.isDead || !other.mesh) continue;
+            const dx = other.mesh.position.x - hitPos.x;
+            const dz = other.mesh.position.z - hitPos.z;
+            const distSq = dx * dx + dz * dz;
+            if (distSq < 4.0) { // Within 2 units
+              // Stain the nearby enemy with blood
+              if (other.mesh.material && other.mesh.material.color) {
+                if (!other._originalColor) other._originalColor = other.mesh.material.color.clone();
+                const stainAmt = Math.max(0, 0.15 * (1 - Math.sqrt(distSq) / 2));
+                if (!Enemy._bloodColor) Enemy._bloodColor = new THREE.Color(0x8B0000);
+                other.mesh.material.color.lerp(Enemy._bloodColor, stainAmt);
+              }
+            }
+          }
         }
         
         // Progressive blood stain: blend enemy mesh color toward dark red as HP drops
@@ -1374,78 +1431,121 @@
           spawnBloodDecal(this.mesh.position);
         }
         
-        // Varied hit reaction animations — 7 different reactions based on weapon and randomness
+        // Varied hit reaction animations — 10 different reactions, weapon-specific, more dramatic
         if (!this._squishTimer) {
-          const hitReaction = Math.floor(Math.random() * 7);
+          const hitReaction = Math.floor(Math.random() * 10);
           const isShotgun = damageType === 'doubleBarrel' || damageType === 'shotgun';
+          const isSword = damageType === 'sword';
           const isHeavy = isCrit || isShotgun;
+          const knockStr = isHeavy ? 1.5 : 1.0;
           
           if (hitReaction === 0 || (isHeavy && hitReaction < 2)) {
-            // Stumble backward — body rocks back then recovers
+            // Stumble backward — body rocks back hard
             const stDir = (Math.random() < 0.5) ? 1 : -1;
-            this.mesh.rotation.x = stDir * (isHeavy ? 0.5 : 0.25);
-            this.mesh.position.y += 0.05;
+            this.mesh.rotation.x = stDir * (isHeavy ? 0.7 : 0.35) * knockStr;
+            this.mesh.position.y += isHeavy ? 0.12 : 0.05;
+            if (isShotgun) { this.mesh.position.x += (Math.random()-0.5) * 0.3; this.mesh.position.z += (Math.random()-0.5) * 0.3; }
             this._squishTimer = setTimeout(() => {
               if (this.mesh && !this.isDead) { this.mesh.rotation.x = 0; this.mesh.position.y = 0.5; }
               this._squishTimer = null;
-            }, isHeavy ? 200 : 120);
+            }, isHeavy ? 300 : 180);
           } else if (hitReaction === 1) {
-            // Side stagger — tilt sideways
+            // Side stagger — tilt sideways dramatically
             const sDir = (Math.random() < 0.5) ? 1 : -1;
-            this.mesh.rotation.z = sDir * (isHeavy ? 0.6 : 0.3);
+            this.mesh.rotation.z = sDir * (isHeavy ? 0.8 : 0.4);
+            this.mesh.position.y -= 0.06;
             this._squishTimer = setTimeout(() => {
-              if (this.mesh && !this.isDead) { this.mesh.rotation.z = 0; }
+              if (this.mesh && !this.isDead) { this.mesh.rotation.z = 0; this.mesh.position.y = 0.5; }
+              this._squishTimer = null;
+            }, isHeavy ? 250 : 170);
+          } else if (hitReaction === 2) {
+            // Flinch down — body compresses hard from impact
+            const squishScale = isCrit ? 0.55 : 0.7;
+            this.mesh.scale.set(1.25, squishScale, 1.25);
+            this.mesh.position.y -= 0.08;
+            this._squishTimer = setTimeout(() => {
+              if (this.mesh && !this.isDead) { this.mesh.scale.set(1, 1, 1); this.mesh.position.y = 0.5; }
               this._squishTimer = null;
             }, 150);
-          } else if (hitReaction === 2) {
-            // Flinch down — body compresses from impact
-            const squishScale = isCrit ? 0.65 : 0.8;
-            this.mesh.scale.set(1.15, squishScale, 1.15);
-            this._squishTimer = setTimeout(() => {
-              if (this.mesh && !this.isDead) this.mesh.scale.set(1, 1, 1);
-              this._squishTimer = null;
-            }, 100);
           } else if (hitReaction === 3) {
-            // Jerk/twitch — rapid small displacement
-            const jx = (Math.random() - 0.5) * 0.15;
-            const jz = (Math.random() - 0.5) * 0.15;
+            // Jerk/twitch — rapid displacement + rotation
+            const jx = (Math.random() - 0.5) * 0.25;
+            const jz = (Math.random() - 0.5) * 0.25;
             this.mesh.position.x += jx;
             this.mesh.position.z += jz;
-            this.mesh.scale.set(0.9, 1.1, 0.9);
+            this.mesh.scale.set(0.85, 1.15, 0.85);
+            this.mesh.rotation.y += (Math.random()-0.5) * 0.4;
             this._squishTimer = setTimeout(() => {
-              if (this.mesh && !this.isDead) { this.mesh.scale.set(1, 1, 1); }
+              if (this.mesh && !this.isDead) { this.mesh.scale.set(1, 1, 1); this.mesh.rotation.y = 0; }
               this._squishTimer = null;
-            }, 80);
+            }, 120);
           } else if (hitReaction === 4) {
-            // Limp — enemy drops lower, wobbles
-            this.mesh.position.y = Math.max(0.2, this.mesh.position.y - 0.15);
-            this.mesh.rotation.z = (Math.random() - 0.5) * 0.3;
+            // Limp collapse — enemy drops lower with wobble
+            this.mesh.position.y = Math.max(0.15, this.mesh.position.y - 0.2);
+            this.mesh.rotation.z = (Math.random() - 0.5) * 0.5;
+            this.mesh.rotation.x = (Math.random() - 0.5) * 0.2;
             this._squishTimer = setTimeout(() => {
               if (this.mesh && !this.isDead) {
                 this.mesh.position.y = 0.5;
                 this.mesh.rotation.z = 0;
+                this.mesh.rotation.x = 0;
               }
               this._squishTimer = null;
-            }, 180);
+            }, 220);
           } else if (hitReaction === 5) {
-            // Impact bounce — springs up slightly then settles
-            this.mesh.position.y += 0.2;
-            this.mesh.scale.set(0.85, 1.2, 0.85);
+            // Impact bounce — springs up then crashes down
+            this.mesh.position.y += isHeavy ? 0.35 : 0.2;
+            this.mesh.scale.set(0.8, 1.3, 0.8);
             this._squishTimer = setTimeout(() => {
               if (this.mesh && !this.isDead) {
                 this.mesh.position.y = 0.5;
                 this.mesh.scale.set(1, 1, 1);
               }
               this._squishTimer = null;
-            }, 130);
-          } else {
-            // Classic squish deformation
-            const squishScale = isCrit ? 0.7 : 0.85;
-            this.mesh.scale.set(squishScale, 1.3, squishScale);
+            }, 180);
+          } else if (hitReaction === 6) {
+            // Classic squish deformation — dramatic
+            const squishScale = isCrit ? 0.6 : 0.75;
+            this.mesh.scale.set(squishScale, 1.4, squishScale);
             this._squishTimer = setTimeout(() => {
               if (this.mesh && !this.isDead) this.mesh.scale.set(1, 1, 1);
               this._squishTimer = null;
-            }, 100);
+            }, 140);
+          } else if (hitReaction === 7) {
+            // Spin hit — enemy spins from impact force
+            const spinDir = (Math.random() < 0.5) ? 1 : -1;
+            this.mesh.rotation.y += spinDir * (isHeavy ? 1.2 : 0.6);
+            this.mesh.position.y += 0.08;
+            this._squishTimer = setTimeout(() => {
+              if (this.mesh && !this.isDead) { this.mesh.rotation.y = 0; this.mesh.position.y = 0.5; }
+              this._squishTimer = null;
+            }, 200);
+          } else if (hitReaction === 8) {
+            // Gut punch — compress forward, rebound
+            this.mesh.scale.set(1.1, 0.7, 1.3);
+            this.mesh.rotation.x = 0.4;
+            this.mesh.position.y -= 0.1;
+            this._squishTimer = setTimeout(() => {
+              if (this.mesh && !this.isDead) { this.mesh.scale.set(1, 1, 1); this.mesh.rotation.x = 0; this.mesh.position.y = 0.5; }
+              this._squishTimer = null;
+            }, 160);
+          } else {
+            // Violent knockback — whole body displaced
+            const kbAngle = Math.random() * Math.PI * 2;
+            const kbDist = isHeavy ? 0.35 : 0.15;
+            this.mesh.position.x += Math.cos(kbAngle) * kbDist;
+            this.mesh.position.z += Math.sin(kbAngle) * kbDist;
+            this.mesh.rotation.z = (Math.random()-0.5) * 0.5;
+            this.mesh.scale.set(0.9, 1.05, 0.9);
+            this._squishTimer = setTimeout(() => {
+              if (this.mesh && !this.isDead) { this.mesh.scale.set(1, 1, 1); this.mesh.rotation.z = 0; }
+              this._squishTimer = null;
+            }, 160);
+          }
+          // Extra blood spray on heavy hits
+          if (isHeavy) {
+            spawnParticles(this.mesh.position, 0xAA0000, 4);
+            spawnBloodDecal(this.mesh.position);
           }
         }
 
@@ -1533,6 +1633,9 @@
         } else if (damageType === 'aura') {
           // Aura death: burnt flesh, boiling blood effects
           this.dieByAura(enemyColor);
+        } else if (damageType === 'poison') {
+          // Poison death: dissolve in green toxic melt
+          this.dieByPoison(enemyColor);
         } else {
           // Standard death (bullet/physical/gun)
           this.dieStandard(enemyColor);
@@ -1551,36 +1654,45 @@
         document.body.appendChild(flash);
         setTimeout(() => flash.remove(), (this.isMiniBoss || this.isFlyingBoss) ? 100 : 50);
         
-        // Blood spray on death — realistic pumping wound blood, not explosion
-        spawnParticles(this.mesh.position, 0x8B0000, 10); // Blood spray
-        spawnParticles(this.mesh.position, 0xCC0000, 6); // Bright red splatter
-        spawnParticles(this.mesh.position, 0x660000, 4); // Dark blood mist
-        // Wound blood burst — directional spray from wound, not omnidirectional explosion
+        // Blood spray on death — visceral pumping wound blood
+        const isShotgunKill = damageType === 'shotgun' || damageType === 'doubleBarrel';
+        const isHeadshotKill = damageType === 'headshot';
+        const deathBloodMult = this.isMiniBoss ? 2.0 : (isShotgunKill ? 1.8 : 1.0);
+        spawnParticles(this.mesh.position, 0x8B0000, Math.floor(14 * deathBloodMult));
+        spawnParticles(this.mesh.position, 0xCC0000, Math.floor(8 * deathBloodMult));
+        spawnParticles(this.mesh.position, 0x660000, Math.floor(6 * deathBloodMult));
+        spawnParticles(this.mesh.position, 0xAA0000, Math.floor(4 * deathBloodMult));
+        // Wound blood burst — directional spray
         if (window.BloodSystem) {
-          window.BloodSystem.emitBurst(deathPos, this.isMiniBoss ? 500 : 250, { spreadXZ: 1.5, spreadY: 0.3, minSize: 0.02, maxSize: 0.1, minLife: 40, maxLife: 90 });
-          // Pumping blood — pulses of decreasing intensity simulating heart pumping out
-          window.BloodSystem.emitPulse(deathPos, { pulses: this.isMiniBoss ? 8 : 5, perPulse: this.isMiniBoss ? 400 : 200, interval: 200, spreadXZ: 1.2, minSize: 0.015, maxSize: 0.07, minLife: 40, maxLife: 80 });
+          window.BloodSystem.emitBurst(deathPos, Math.floor((this.isMiniBoss ? 600 : 350) * deathBloodMult), { spreadXZ: 2.0, spreadY: 0.5, minSize: 0.02, maxSize: 0.12, minLife: 50, maxLife: 100 });
+          // Pumping blood — pulses simulating heartbeat pumping out
+          window.BloodSystem.emitPulse(deathPos, { pulses: this.isMiniBoss ? 10 : 6, perPulse: Math.floor((this.isMiniBoss ? 500 : 280) * deathBloodMult), interval: 180, spreadXZ: 1.5, minSize: 0.015, maxSize: 0.09, minLife: 45, maxLife: 90 });
+          // Extra guts for shotgun/explosive kills
+          if (isShotgunKill && typeof window.BloodSystem.emitGuts === 'function') {
+            window.BloodSystem.emitGuts(deathPos, 30);
+          }
         }
-        // Airborne blood spray burst — sprays high in air, rains down tiny droplets
-        for (let sb = 0; sb < 14 && bloodDrips.length < MAX_BLOOD_DRIPS; sb++) {
-          const spraySize = 0.02 + Math.random() * 0.06;
+        // Airborne blood spray burst — sprays high in air, rains down varied droplets
+        const sprayCount = Math.floor(18 * deathBloodMult);
+        for (let sb = 0; sb < sprayCount && bloodDrips.length < MAX_BLOOD_DRIPS; sb++) {
+          const spraySize = 0.015 + Math.random() * 0.08;
           if (!_sharedBloodDripGeo && typeof THREE !== 'undefined') {
             _sharedBloodDripGeo = new THREE.SphereGeometry(1, 4, 4);
           }
           const spray = new THREE.Mesh(
             _sharedBloodDripGeo,
-            new THREE.MeshBasicMaterial({ color: [0xAA0000, 0x8B0000, 0x660000, 0xCC0000][sb % 4] })
+            new THREE.MeshBasicMaterial({ color: [0xAA0000, 0x8B0000, 0x660000, 0xCC0000, 0x990000, 0x550000][sb % 6] })
           );
           spray.scale.setScalar(spraySize);
           spray.position.copy(deathPos);
-          spray.position.y += 0.3;
+          spray.position.y += 0.2 + Math.random() * 0.4;
           scene.add(spray);
           bloodDrips.push({
             mesh: spray,
-            velX: (Math.random() - 0.5) * 0.45,
-            velZ: (Math.random() - 0.5) * 0.45,
-            velY: 0.35 + Math.random() * 0.55,
-            life: 55 + Math.floor(Math.random() * 30),
+            velX: (Math.random() - 0.5) * (isShotgunKill ? 0.7 : 0.5),
+            velZ: (Math.random() - 0.5) * (isShotgunKill ? 0.7 : 0.5),
+            velY: 0.25 + Math.random() * 0.65,
+            life: 60 + Math.floor(Math.random() * 40),
             _sharedGeo: true
           });
         }
@@ -1677,128 +1789,289 @@
           spawnExp(deathPos.x + Math.cos(angle) * xpPopDist, deathPos.z + Math.sin(angle) * xpPopDist);
         }
         
-        // Dynamic death animation styles - brutal varied ragdoll falls
-        const deathStyle = Math.floor(Math.random() * 6); // 0-5 different death types
+        // Dynamic death animation styles - brutal varied ragdoll falls with dismemberment
+        const deathStyle = Math.floor(Math.random() * 8); // 0-7 different death types
         const fallSignX = (Math.random() < 0.5) ? 1 : -1;
         const fallSignZ = (Math.random() < 0.5) ? 1 : -1;
         const spinDir = (Math.random() < 0.5) ? 1 : -1;
+        const isShotgunDeath = damageType === 'shotgun' || damageType === 'doubleBarrel';
+        const isExplosiveDeath = isShotgunDeath || damageType === 'lightning';
+        const isCritDeath = this.lastCrit || false;
         
         // Fall down animation: enemy falls dynamically, lies on ground, explodes into blood
-        const FALL_FRAMES = wasFlying ? 50 : 35;
-        const LINGER_FRAMES = 50; // Lie on ground lifeless before blood explosion
-        const EXPLODE_FRAMES = 15; // Blood explosion phase
-        const FADE_FRAMES = 15; // Fade out remains
+        const FALL_FRAMES = wasFlying ? 55 : 40;
+        const LINGER_FRAMES = 60; // Lie on ground lifeless before blood explosion
+        const EXPLODE_FRAMES = 20; // Blood explosion phase
+        const FADE_FRAMES = 20; // Fade out remains
         let fallFrame = 0;
         const startY = dyingMesh.position.y;
         const startScaleY = dyingMesh.scale.y;
         
+        // Spawn detached body parts for heavy kills (dismemberment)
+        const SHOTGUN_CHUNK_MIN = 3, SHOTGUN_CHUNK_EXTRA = 4;
+        const NORMAL_CHUNK_MIN = 1, NORMAL_CHUNK_EXTRA = 3;
+        const CHUNK_SIZE_MIN = 0.08, CHUNK_SIZE_RANGE = 0.18;
+        const GROUND_Y = 0.05, BOUNCE_DAMPEN = 0.3;
+        const _deathChunks = [];
+        if (isExplosiveDeath || (isCritDeath && Math.random() < 0.5)) {
+          const chunkCount = isShotgunDeath ? (SHOTGUN_CHUNK_MIN + Math.floor(Math.random() * SHOTGUN_CHUNK_EXTRA)) : (NORMAL_CHUNK_MIN + Math.floor(Math.random() * NORMAL_CHUNK_EXTRA));
+          for (let ci = 0; ci < chunkCount; ci++) {
+            const chunkSize = CHUNK_SIZE_MIN + Math.random() * CHUNK_SIZE_RANGE;
+            const chunkGeo = Math.random() < 0.5 ? new THREE.SphereGeometry(chunkSize, 5, 4) : new THREE.BoxGeometry(chunkSize, chunkSize * 0.6, chunkSize * 0.8);
+            const chunkMat = new THREE.MeshBasicMaterial({ color: Math.random() < 0.6 ? enemyColor : 0x8B0000, transparent: true, opacity: 0.9 });
+            const chunk = new THREE.Mesh(chunkGeo, chunkMat);
+            chunk.position.copy(deathPos);
+            chunk.position.y += 0.3 + Math.random() * 0.3;
+            scene.add(chunk);
+            _deathChunks.push({
+              mesh: chunk, geo: chunkGeo, mat: chunkMat,
+              vx: (Math.random() - 0.5) * (isShotgunDeath ? 0.35 : 0.2),
+              vy: 0.15 + Math.random() * 0.25,
+              vz: (Math.random() - 0.5) * (isShotgunDeath ? 0.35 : 0.2),
+              rotX: (Math.random() - 0.5) * 0.3,
+              rotZ: (Math.random() - 0.5) * 0.3,
+              life: 80 + Math.floor(Math.random() * 40)
+            });
+          }
+        }
+        
+        // Head roll for headshot or lucky heavy kills
+        let _headRoll = null;
+        if (damageType === 'headshot' || (isExplosiveDeath && Math.random() < 0.4)) {
+          const headGeo = new THREE.SphereGeometry(0.15, 6, 5);
+          const headMat = new THREE.MeshBasicMaterial({ color: enemyColor, transparent: true, opacity: 0.9 });
+          const head = new THREE.Mesh(headGeo, headMat);
+          head.position.copy(deathPos);
+          head.position.y = 0.4;
+          scene.add(head);
+          _headRoll = {
+            mesh: head, geo: headGeo, mat: headMat,
+            vx: (Math.random() - 0.5) * 0.12,
+            vz: (Math.random() - 0.5) * 0.12,
+            vy: 0.08,
+            rotX: 0.15 + Math.random() * 0.2,
+            rotZ: (Math.random() - 0.5) * 0.1,
+            life: 120, bloodTimer: 0
+          };
+        }
+        
         if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
           managedAnimations.push({ update(_dt) {
             fallFrame++;
+            
+            // Animate detached body chunks (gravity + rotation + blood trail)
+            for (let ci = _deathChunks.length - 1; ci >= 0; ci--) {
+              const c = _deathChunks[ci];
+              c.life--;
+              c.vy -= 0.012; // gravity
+              c.mesh.position.x += c.vx;
+              c.mesh.position.y += c.vy;
+              c.mesh.position.z += c.vz;
+              c.mesh.rotation.x += c.rotX;
+              c.mesh.rotation.z += c.rotZ;
+              // Bounce off ground
+              if (c.mesh.position.y < GROUND_Y) {
+                c.mesh.position.y = GROUND_Y;
+                c.vy = Math.abs(c.vy) * BOUNCE_DAMPEN;
+                c.vx *= 0.7; c.vz *= 0.7;
+                if (Math.random() < 0.5) spawnBloodDecal(c.mesh.position);
+              }
+              // Blood trail from chunks
+              if (c.life % 6 === 0 && c.mesh.position.y > 0.1) {
+                spawnBloodDecal({ x: c.mesh.position.x, y: 0, z: c.mesh.position.z });
+              }
+              c.mat.opacity = Math.max(0, (c.life / 60) * 0.9);
+              if (c.life <= 0) {
+                scene.remove(c.mesh); c.geo.dispose(); c.mat.dispose();
+                _deathChunks.splice(ci, 1);
+              }
+            }
+            
+            // Animate rolling head with blood trail
+            if (_headRoll) {
+              _headRoll.life--;
+              _headRoll.vy -= 0.006; // slower gravity for rolling
+              _headRoll.mesh.position.x += _headRoll.vx;
+              _headRoll.mesh.position.y += _headRoll.vy;
+              _headRoll.mesh.position.z += _headRoll.vz;
+              _headRoll.mesh.rotation.x += _headRoll.rotX;
+              _headRoll.mesh.rotation.z += _headRoll.rotZ;
+              // Bounce/roll on ground
+              if (_headRoll.mesh.position.y < 0.15) {
+                _headRoll.mesh.position.y = 0.15;
+                _headRoll.vy = Math.abs(_headRoll.vy) * 0.2;
+                _headRoll.vx *= 0.92; _headRoll.vz *= 0.92; // friction
+              }
+              // Pumping blood from neck stump
+              _headRoll.bloodTimer++;
+              if (_headRoll.bloodTimer % 5 === 0) {
+                spawnBloodDecal({ x: _headRoll.mesh.position.x, y: 0, z: _headRoll.mesh.position.z });
+              }
+              if (_headRoll.bloodTimer % 12 === 0 && _headRoll.life > 40) {
+                spawnParticles(_headRoll.mesh.position, 0x8B0000, 2);
+              }
+              _headRoll.mat.opacity = Math.max(0, (_headRoll.life / 80) * 0.9);
+              if (_headRoll.life <= 0) {
+                scene.remove(_headRoll.mesh); _headRoll.geo.dispose(); _headRoll.mat.dispose();
+                _headRoll = null;
+              }
+            }
             
             if (fallFrame <= FALL_FRAMES) {
               const progress = Math.min(fallFrame / FALL_FRAMES, 1);
               const eased = 1 - Math.pow(1 - progress, 3); // Ease-out cubic for natural fall
               
               if (deathStyle === 0) {
-                // Face-plant: fall forward onto stomach
+                // Face-plant: fall forward onto stomach with bounce
                 dyingMesh.rotation.x = fallSignX * eased * (Math.PI / 2);
-                dyingMesh.rotation.z = fallSignZ * eased * 0.15; // slight twist
+                dyingMesh.rotation.z = fallSignZ * eased * 0.2;
                 dyingMesh.position.y = startY * (1 - eased);
-                dyingMesh.scale.y = startScaleY * (1 - eased * 0.6);
+                dyingMesh.scale.y = startScaleY * (1 - eased * 0.65);
               } else if (deathStyle === 1) {
-                // Side fall: topple sideways
+                // Side fall: topple sideways dramatically
                 dyingMesh.rotation.z = fallSignZ * eased * (Math.PI / 2);
-                dyingMesh.rotation.x = fallSignX * eased * 0.2;
+                dyingMesh.rotation.x = fallSignX * eased * 0.3;
                 dyingMesh.position.y = startY * (1 - eased);
-                dyingMesh.scale.y = startScaleY * (1 - eased * 0.4);
+                dyingMesh.scale.y = startScaleY * (1 - eased * 0.45);
               } else if (deathStyle === 2) {
-                // Back fall: fall backward
+                // Back fall: fall backward with arms spread
                 dyingMesh.rotation.x = fallSignX * -1 * eased * (Math.PI / 2.2);
-                dyingMesh.rotation.z = fallSignZ * eased * 0.1;
+                dyingMesh.rotation.z = fallSignZ * eased * 0.15;
                 dyingMesh.position.y = startY * (1 - eased);
                 dyingMesh.scale.y = startScaleY * (1 - eased * 0.5);
+                dyingMesh.scale.x = startScaleY * (1 + eased * 0.15);
               } else if (deathStyle === 3) {
-                // Knees first: two-stage collapse - knees buckle then body falls
+                // Knees first: two-stage collapse — knees buckle then body falls forward
                 if (progress < 0.4) {
                   const kneePhase = progress / 0.4;
-                  dyingMesh.scale.y = startScaleY * (1 - kneePhase * 0.5); // compress down
-                  dyingMesh.position.y = startY * (1 - kneePhase * 0.6);
+                  dyingMesh.scale.y = startScaleY * (1 - kneePhase * 0.55);
+                  dyingMesh.position.y = startY * (1 - kneePhase * 0.65);
                 } else {
                   const bodyPhase = (progress - 0.4) / 0.6;
                   const bodyEased = 1 - Math.pow(1 - bodyPhase, 2);
-                  dyingMesh.scale.y = startScaleY * 0.5 * (1 - bodyEased * 0.6);
+                  dyingMesh.scale.y = startScaleY * 0.45 * (1 - bodyEased * 0.6);
                   dyingMesh.rotation.x = fallSignX * bodyEased * (Math.PI / 2);
-                  dyingMesh.rotation.z = fallSignZ * bodyEased * 0.3;
-                  dyingMesh.position.y = startY * 0.4 * (1 - bodyEased);
+                  dyingMesh.rotation.z = fallSignZ * bodyEased * 0.35;
+                  dyingMesh.position.y = startY * 0.35 * (1 - bodyEased);
                 }
               } else if (deathStyle === 4) {
-                // Spin and collapse: enemy spins as they fall
-                dyingMesh.rotation.y = spinDir * eased * Math.PI * 1.5;
+                // Spin and collapse: enemy spins violently as they fall
+                dyingMesh.rotation.y = spinDir * eased * Math.PI * 2.0;
                 dyingMesh.rotation.x = fallSignX * eased * (Math.PI / 2.5);
                 dyingMesh.position.y = startY * (1 - eased);
-                dyingMesh.scale.y = startScaleY * (1 - eased * 0.55);
-              } else {
-                // Dramatic crumple: compress then topple
+                dyingMesh.scale.y = startScaleY * (1 - eased * 0.6);
+              } else if (deathStyle === 5) {
+                // Dramatic crumple: compress vertically then topple
                 if (progress < 0.3) {
                   const crumple = progress / 0.3;
-                  dyingMesh.scale.y = startScaleY * (1 - crumple * 0.4);
-                  dyingMesh.scale.x = startScaleY * (1 + crumple * 0.2);
-                  dyingMesh.position.y = startY * (1 - crumple * 0.3);
+                  dyingMesh.scale.y = startScaleY * (1 - crumple * 0.45);
+                  dyingMesh.scale.x = startScaleY * (1 + crumple * 0.25);
+                  dyingMesh.position.y = startY * (1 - crumple * 0.35);
                 } else {
                   const topple = (progress - 0.3) / 0.7;
                   const toppleEased = 1 - Math.pow(1 - topple, 2);
                   dyingMesh.rotation.x = fallSignX * toppleEased * (Math.PI / 2);
-                  dyingMesh.rotation.z = fallSignZ * toppleEased * (Math.PI / 4);
-                  dyingMesh.scale.y = startScaleY * 0.6 * (1 - toppleEased * 0.4);
-                  dyingMesh.position.y = startY * 0.7 * (1 - toppleEased);
+                  dyingMesh.rotation.z = fallSignZ * toppleEased * (Math.PI / 3);
+                  dyingMesh.scale.y = startScaleY * 0.55 * (1 - toppleEased * 0.45);
+                  dyingMesh.position.y = startY * 0.65 * (1 - toppleEased);
                 }
+              } else if (deathStyle === 6) {
+                // Ragdoll flip — launched up slightly then crashes
+                if (progress < 0.25) {
+                  const launchPhase = progress / 0.25;
+                  dyingMesh.position.y = startY + launchPhase * 0.4;
+                  dyingMesh.rotation.x = fallSignX * launchPhase * 0.5;
+                } else {
+                  const crashPhase = (progress - 0.25) / 0.75;
+                  const crashEased = 1 - Math.pow(1 - crashPhase, 3);
+                  dyingMesh.position.y = (startY + 0.4) * (1 - crashEased);
+                  dyingMesh.rotation.x = fallSignX * (0.5 + crashEased * (Math.PI / 2));
+                  dyingMesh.rotation.z = fallSignZ * crashEased * 0.4;
+                  dyingMesh.scale.y = startScaleY * (1 - crashEased * 0.55);
+                }
+              } else {
+                // Violent twist — wrench sideways with full rotation
+                dyingMesh.rotation.y = spinDir * eased * Math.PI;
+                dyingMesh.rotation.z = fallSignZ * eased * (Math.PI / 2.5);
+                dyingMesh.position.y = startY * (1 - eased);
+                dyingMesh.scale.y = startScaleY * (1 - eased * 0.5);
+                dyingMesh.scale.x = startScaleY * (1 + eased * 0.2);
               }
               // Flying enemies: also tumble during fall
               if (wasFlying) {
-                dyingMesh.rotation.y += 0.1;
+                dyingMesh.rotation.y += 0.12;
                 dyingMesh.position.y = Math.max(0, startY * (1 - eased));
               }
-              // Bounce impact when hitting ground near end of fall
-              if (progress > 0.85 && progress < 0.95) {
-                spawnParticles(deathPos, 0x8B0000, 3);
+              // Blood spray during fall
+              if (progress > 0.3 && fallFrame % 4 === 0) {
                 spawnBloodDecal(deathPos);
+              }
+              // Bounce impact when hitting ground near end of fall
+              if (progress > 0.82 && progress < 0.95) {
+                spawnParticles(deathPos, 0x8B0000, 4);
+                spawnParticles(deathPos, 0x660000, 2);
+                spawnBloodDecal(deathPos);
+                spawnBloodDecal({ x: deathPos.x + (Math.random()-0.5)*0.8, y: 0, z: deathPos.z + (Math.random()-0.5)*0.8 });
               }
             } else if (fallFrame <= FALL_FRAMES + LINGER_FRAMES) {
-              // Phase 2: Lie on ground lifeless - slight settling
+              // Phase 2: Lie on ground lifeless - pooling blood beneath
               const lingerProgress = (fallFrame - FALL_FRAMES) / LINGER_FRAMES;
-              if (lingerProgress < 0.1) {
-                // Small bounce/settle on impact
-                const bounce = Math.sin(lingerProgress * Math.PI * 10) * 0.02 * (1 - lingerProgress * 10);
+              if (lingerProgress < 0.15) {
+                // Impact bounce/settle
+                const bounce = Math.sin(lingerProgress * Math.PI * 8) * 0.03 * (1 - lingerProgress * 7);
                 dyingMesh.position.y = bounce;
               }
+              // Continuous blood pooling with heartbeat pulsation while body lies there
+              if (fallFrame % 10 === 0 && lingerProgress < 0.6) {
+                spawnBloodDecal({ x: deathPos.x + (Math.random()-0.5)*0.6, y: 0, z: deathPos.z + (Math.random()-0.5)*0.6 });
+              }
+              // Heartbeat blood pump — rhythmic spurts from wound
+              const heartbeatPhase = Math.sin(lingerProgress * Math.PI * 12); // ~6 beats
+              if (heartbeatPhase > 0.8 && lingerProgress < 0.7 && fallFrame % 3 === 0) {
+                spawnParticles(deathPos, 0x8B0000, 2);
+                if (bloodDrips.length < MAX_BLOOD_DRIPS) {
+                  if (!_sharedBloodDripGeo) _sharedBloodDripGeo = new THREE.SphereGeometry(1, 4, 4);
+                  const pumpDrip = new THREE.Mesh(_sharedBloodDripGeo, new THREE.MeshBasicMaterial({ color: 0xAA0000 }));
+                  pumpDrip.scale.setScalar(0.02 + Math.random() * 0.03);
+                  pumpDrip.position.copy(deathPos);
+                  pumpDrip.position.y += 0.1;
+                  scene.add(pumpDrip);
+                  bloodDrips.push({
+                    mesh: pumpDrip,
+                    velX: (Math.random()-0.5) * 0.08,
+                    velZ: (Math.random()-0.5) * 0.08,
+                    velY: 0.06 + Math.random() * 0.1,
+                    life: 30 + Math.floor(Math.random() * 15),
+                    _sharedGeo: true
+                  });
+                }
+              }
             } else if (fallFrame <= FALL_FRAMES + LINGER_FRAMES + EXPLODE_FRAMES) {
-              // Phase 3: Blood explosion - body bursts into blood piles
+              // Phase 3: Blood explosion - body bursts
               const explodeProgress = (fallFrame - FALL_FRAMES - LINGER_FRAMES) / EXPLODE_FRAMES;
-              if (explodeProgress < 0.3) {
-                // Burst blood spray
-                spawnParticles(deathPos, 0x8B0000, 4);
+              if (explodeProgress < 0.4) {
+                spawnParticles(deathPos, 0x8B0000, 5);
                 spawnParticles(deathPos, 0x660000, 3);
                 spawnBloodDecal(deathPos);
-                spawnBloodDecal(deathPos);
+                spawnBloodDecal({ x: deathPos.x + (Math.random()-0.5)*1.5, y: 0, z: deathPos.z + (Math.random()-0.5)*1.5 });
               }
               // Flatten and expand as body breaks apart
               if (dyingMesh.material) {
                 dyingMesh.material.transparent = true;
-                dyingMesh.material.opacity = 1 - explodeProgress * 0.7;
+                dyingMesh.material.opacity = 1 - explodeProgress * 0.75;
               }
-              dyingMesh.scale.y *= 0.92;
-              dyingMesh.scale.x *= 1.03;
-              dyingMesh.scale.z *= 1.03;
+              dyingMesh.scale.y *= 0.9;
+              dyingMesh.scale.x *= 1.04;
+              dyingMesh.scale.z *= 1.04;
             } else if (fallFrame <= FALL_FRAMES + LINGER_FRAMES + EXPLODE_FRAMES + FADE_FRAMES) {
               // Phase 4: Fade out remains
               const fadeProgress = (fallFrame - FALL_FRAMES - LINGER_FRAMES - EXPLODE_FRAMES) / FADE_FRAMES;
               if (dyingMesh.material) {
                 dyingMesh.material.transparent = true;
-                dyingMesh.material.opacity = Math.max(0, 0.3 * (1 - fadeProgress));
+                dyingMesh.material.opacity = Math.max(0, 0.25 * (1 - fadeProgress));
               }
             } else {
-              // Phase 5: Remove corpse (XP star already spawned at death start)
+              // Phase 5: Remove corpse
               scene.remove(dyingMesh);
               if (dyingMesh.geometry) dyingMesh.geometry.dispose();
               if (dyingMesh.material) dyingMesh.material.dispose();
@@ -1806,6 +2079,9 @@
               if (_bloodStains) _bloodStains.forEach(s => { if (s.geometry) s.geometry.dispose(); if (s.material) s.material.dispose(); });
               if (_leftEye) _leftEye.material.dispose();
               if (_rightEye) _rightEye.material.dispose();
+              // Clean up remaining chunks
+              _deathChunks.forEach(c => { scene.remove(c.mesh); c.geo.dispose(); c.mat.dispose(); });
+              if (_headRoll) { scene.remove(_headRoll.mesh); _headRoll.geo.dispose(); _headRoll.mat.dispose(); }
               return false;
             }
             return true;
@@ -2837,6 +3113,57 @@
           scene.remove(corpse); scene.remove(burnMark);
           corpse.geometry.dispose(); corpse.material.dispose();
           burnGeo.dispose(); burnMat.dispose();
+        }
+      }
+      
+      dieByPoison(enemyColor) {
+        // POISON DEATH: Toxic melt — green bubbling dissolution with blood
+        const deathPos = this.mesh.position.clone();
+        spawnParticles(deathPos, 0x00FF00, 14); // Bright green toxic
+        spawnParticles(deathPos, 0x44FF44, 8);  // Light green bubbles
+        spawnParticles(deathPos, 0x006600, 6);  // Dark green ooze
+        spawnParticles(deathPos, 0x8B0000, 8);  // Blood mixed in
+        if (window.BloodSystem) {
+          window.BloodSystem.emitBurst(deathPos, 40, { spreadXZ: 0.6, spreadY: 0.3, minSize: 0.02, maxSize: 0.08, minLife: 30, maxLife: 70 });
+        }
+        // Toxic puddle on ground
+        const puddleGeo = new THREE.CircleGeometry(0.7, 12);
+        const puddleMat = new THREE.MeshBasicMaterial({ color: 0x116611, transparent: true, opacity: 0.5, side: THREE.DoubleSide });
+        const puddle = new THREE.Mesh(puddleGeo, puddleMat);
+        puddle.rotation.x = -Math.PI / 2;
+        puddle.position.set(deathPos.x, 0.01, deathPos.z);
+        scene.add(puddle);
+        for (let i = 0; i < 4; i++) spawnBloodDecal({ x: deathPos.x + (Math.random()-0.5)*0.6, y: 0, z: deathPos.z + (Math.random()-0.5)*0.6 });
+        // Melting corpse remnant
+        const corpseGeo = new THREE.SphereGeometry(0.4, 8, 6);
+        const corpseMat = new THREE.MeshBasicMaterial({ color: 0x225522, transparent: true, opacity: 0.7 });
+        const corpse = new THREE.Mesh(corpseGeo, corpseMat);
+        corpse.position.copy(deathPos); corpse.position.y = 0.1; corpse.scale.y = 0.2;
+        scene.add(corpse);
+        let life = 100;
+        if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
+          managedAnimations.push({ update(_dt) {
+            life--;
+            corpse.material.opacity = (life / 100) * 0.7;
+            corpse.scale.x *= 1.005; corpse.scale.z *= 1.005; // melting outward
+            puddleMat.opacity = (life / 100) * 0.5;
+            if (life % 8 === 0 && life > 40) spawnParticles(deathPos, 0x44FF44, 1);
+            if (life <= 0) {
+              scene.remove(corpse); scene.remove(puddle);
+              corpseGeo.dispose(); corpseMat.dispose();
+              puddleGeo.dispose(); puddleMat.dispose();
+              return false;
+            }
+            return true;
+          }, cleanup() {
+            scene.remove(corpse); scene.remove(puddle);
+            corpseGeo.dispose(); corpseMat.dispose();
+            puddleGeo.dispose(); puddleMat.dispose();
+          }});
+        } else {
+          scene.remove(corpse); scene.remove(puddle);
+          corpseGeo.dispose(); corpseMat.dispose();
+          puddleGeo.dispose(); puddleMat.dispose();
         }
       }
     }
