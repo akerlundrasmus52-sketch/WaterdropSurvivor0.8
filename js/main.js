@@ -533,7 +533,7 @@
       controlType: 'touch', // 'touch', 'keyboard', 'gamepad'
       soundEnabled: true,
       musicEnabled: true,
-      graphicsQuality: 'medium', // 'low', 'medium', 'high'
+      graphicsQuality: 'auto', // 'auto','ultra-low','very-low','low','medium','high','very-high','ultra'
       isPortrait: null,
       inputListenersRegistered: false
     };

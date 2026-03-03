@@ -104,7 +104,12 @@
       scene.add(window.dirLight.target); // Must add target to scene for custom target position
 
       // Apply graphics quality settings
-      applyGraphicsQuality(gameSettings.graphicsQuality);
+      // For 'auto' mode, start at 'medium' and let the FPS booster adjust from there
+      if (gameSettings.graphicsQuality === 'auto') {
+        applyGraphicsQuality('medium');
+      } else {
+        applyGraphicsQuality(gameSettings.graphicsQuality);
+      }
 
       // Setup
       createWorld();
@@ -1632,7 +1637,17 @@
       
       document.getElementById('quality-select').onchange = (e) => {
         gameSettings.graphicsQuality = e.target.value;
-        applyGraphicsQuality(e.target.value);
+        if (e.target.value === 'auto') {
+          // Reset booster to medium as starting point
+          if (window._fpsBoosterReset) window._fpsBoosterReset(3);
+          applyGraphicsQuality('medium');
+          const statusEl = document.getElementById('fps-booster-status');
+          if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = 'Auto: detecting...'; }
+        } else {
+          applyGraphicsQuality(e.target.value);
+          const statusEl = document.getElementById('fps-booster-status');
+          if (statusEl) statusEl.style.display = 'none';
+        }
         saveSettings();
       };
 
@@ -1665,8 +1680,8 @@
       
       const qualitySelect = document.getElementById('quality-select');
       if (qualitySelect) {
-        // Set to saved value (fallback to 'medium' as defensive programming)
-        qualitySelect.value = gameSettings.graphicsQuality || 'medium';
+        // Set to saved value (fallback to 'auto' as defensive programming)
+        qualitySelect.value = gameSettings.graphicsQuality || 'auto';
       }
 
       // Ensure game systems reflect the current settings

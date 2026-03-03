@@ -2813,53 +2813,73 @@
       });
     }
 
+    // ── Quality Presets ─────────────────────────────────────────────────────
+    // Ordered from lowest to highest. Each preset controls shadows, pixel ratio,
+    // fog distance, and particle scale.  The dynamic FPS booster walks this list.
+    const QUALITY_LEVELS = ['ultra-low','very-low','low','medium','high','very-high','ultra'];
+
+    const QUALITY_PRESETS = {
+      'ultra-low': { shadows: false, shadowType: 'Basic', shadowSize: 0,    pixelRatio: 0.4,  fogNear: 14, fogFar: 22, particleScale: 0.20 },
+      'very-low':  { shadows: true,  shadowType: 'Basic', shadowSize: 256,  pixelRatio: 0.5,  fogNear: 16, fogFar: 26, particleScale: 0.35 },
+      'low':       { shadows: true,  shadowType: 'Basic', shadowSize: 512,  pixelRatio: 0.6,  fogNear: 18, fogFar: 28, particleScale: 0.50 },
+      'medium':    { shadows: true,  shadowType: 'PCFSoft', shadowSize: 1024, pixelRatio: 0.9,  fogNear: 20, fogFar: 32, particleScale: 0.75 },
+      'high':      { shadows: true,  shadowType: 'PCFSoft', shadowSize: 2048, pixelRatio: 1.0,  fogNear: 22, fogFar: 36, particleScale: 1.00 },
+      'very-high': { shadows: true,  shadowType: 'PCFSoft', shadowSize: 2048, pixelRatio: 1.0,  fogNear: 26, fogFar: 42, particleScale: 1.00 },
+      'ultra':     { shadows: true,  shadowType: 'PCFSoft', shadowSize: 4096, pixelRatio: 1.0,  fogNear: 30, fogFar: 50, particleScale: 1.00 }
+    };
+    window.QUALITY_LEVELS  = QUALITY_LEVELS;
+    window.QUALITY_PRESETS = QUALITY_PRESETS;
+
     // Apply graphics quality settings
     function applyGraphicsQuality(quality) {
+      // 'auto' is handled by the dynamic FPS booster — don't apply directly
+      if (quality === 'auto') return;
+
       if (!renderer || !window.dirLight) {
-        console.warn('[Graphics Quality] Cannot apply settings: renderer or dirLight not initialized. Call after init() completes.');
+        console.warn('[Graphics Quality] Cannot apply settings: renderer or dirLight not initialized.');
         return;
       }
-      
+
+      const preset = QUALITY_PRESETS[quality];
+      if (!preset) {
+        console.warn('[Graphics Quality] Unknown quality level:', quality);
+        return;
+      }
+
       // Dispose existing shadow maps to ensure proper reinitialization
       if (window.dirLight.shadow.map) {
         window.dirLight.shadow.map.dispose();
         window.dirLight.shadow.map = null;
       }
-      
-      switch(quality) {
-        case 'low':
-          // Low quality: Basic shadows, lower resolution
-          renderer.shadowMap.enabled = true;
-          renderer.shadowMap.type = THREE.BasicShadowMap;
-          window.dirLight.shadow.mapSize.width = 512;
-          window.dirLight.shadow.mapSize.height = 512;
-          // Reduced pixel ratio for performance on low-end devices
-          renderer.setPixelRatio(0.6);
-          break;
-        
-        case 'medium':
-          // Medium quality: Soft shadows, balanced resolution
-          renderer.shadowMap.enabled = true;
-          renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-          window.dirLight.shadow.mapSize.width = 1024;
-          window.dirLight.shadow.mapSize.height = 1024;
-          // Split-resolution: medium tier uses world pixel ratio scale
-          renderer.setPixelRatio(Math.min(window.devicePixelRatio, RENDERER_CONFIG.worldPixelRatio * 0.9));
-          break;
-        
-        case 'high':
-          // High quality: Best shadows, highest resolution
-          renderer.shadowMap.enabled = true;
-          renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-          window.dirLight.shadow.mapSize.width = 2048;
-          window.dirLight.shadow.mapSize.height = 2048;
-          // Apply split-resolution world scale: UI/HTML layers stay at full native resolution
-          renderer.setPixelRatio(Math.min(window.devicePixelRatio, RENDERER_CONFIG.worldPixelRatio));
-          break;
+
+      // ── Shadows ──
+      renderer.shadowMap.enabled = preset.shadows;
+      if (preset.shadows) {
+        renderer.shadowMap.type = preset.shadowType === 'PCFSoft'
+          ? THREE.PCFSoftShadowMap
+          : THREE.BasicShadowMap;
+        window.dirLight.shadow.mapSize.width  = preset.shadowSize;
+        window.dirLight.shadow.mapSize.height = preset.shadowSize;
+        window.dirLight.castShadow = true;
+      } else {
+        window.dirLight.castShadow = false;
       }
-      
-      // Force shadow map update
+
+      // ── Pixel Ratio ──
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, preset.pixelRatio));
+
+      // ── Fog Distance ──
+      if (scene && scene.fog) {
+        scene.fog.near = preset.fogNear;
+        scene.fog.far  = preset.fogFar;
+      }
+
+      // ── Particle Scale (used by FPS watchdog throttle) ──
+      if (window.performanceLog) {
+        window.performanceLog.qualityParticleScale = preset.particleScale;
+      }
+
       renderer.shadowMap.needsUpdate = true;
-      console.log(`[Graphics Quality] Applied ${quality} quality settings`);
+      console.log(`[Graphics Quality] Applied "${quality}" — shadows:${preset.shadows}, shadowSize:${preset.shadowSize}, pixelRatio:${preset.pixelRatio}, fog:${preset.fogNear}/${preset.fogFar}`);
     }
 
