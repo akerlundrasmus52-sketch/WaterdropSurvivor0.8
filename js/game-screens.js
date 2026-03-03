@@ -1639,7 +1639,7 @@
         gameSettings.graphicsQuality = e.target.value;
         if (e.target.value === 'auto') {
           // Reset booster to medium as starting point
-          if (window._fpsBoosterReset) window._fpsBoosterReset(3);
+          if (window._resetFpsBooster) window._resetFpsBooster(3);
           applyGraphicsQuality('medium');
           const statusEl = document.getElementById('fps-booster-status');
           if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = 'Auto: detecting...'; }

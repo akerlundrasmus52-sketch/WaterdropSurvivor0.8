@@ -199,6 +199,7 @@
     const _FPS_TARGET_LOW        = 55;      // Below this → step quality DOWN
     const _FPS_TARGET_HIGH       = 100;     // Above this → step quality UP (if stable)
     const _FPS_CRITICAL_LOW      = 35;      // Below this → drop 2 levels at once
+    const _FPS_STABILITY_MIN     = 70;      // Must be above this for stable count to grow
     const _FPS_STABLE_CHECKS     = 3;       // Need 3 consecutive stable checks (~6s) before up-stepping
 
     function updateDynamicFPSBooster(nowMs) {
@@ -236,7 +237,7 @@
         }
       } else {
         // In the sweet spot (55-100 FPS), accumulate stability
-        if (fps >= 70) _fpsBoosterStableCount = Math.min(_fpsBoosterStableCount + 1, _FPS_STABLE_CHECKS);
+        if (fps >= _FPS_STABILITY_MIN) _fpsBoosterStableCount = Math.min(_fpsBoosterStableCount + 1, _FPS_STABLE_CHECKS);
         else _fpsBoosterStableCount = 0;
       }
 
@@ -257,8 +258,8 @@
       }
     }
     // Expose so settings UI can read current auto-quality
-    window._fpsBoosterCurrentIdx = function() { return _fpsBoosterCurrentIdx; };
-    window._fpsBoosterReset = function(idx) { _fpsBoosterCurrentIdx = idx; _fpsBoosterStableCount = 0; };
+    window._getFpsBoosterCurrentIdx = function() { return _fpsBoosterCurrentIdx; };
+    window._resetFpsBooster = function(idx) { _fpsBoosterCurrentIdx = idx; _fpsBoosterStableCount = 0; };
 
     // ─── Combat Intensity Tracking ──────────────────────────────────────────────
     // Tracks recent kill rate to drive dynamic shadow-map quality reduction during
