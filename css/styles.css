@@ -4190,7 +4190,7 @@
 #melee-takedown-btn {
   position: fixed;
   bottom: 10px;
-  right: 155px;
+  left: 10px;
   width: 64px;
   height: 64px;
   background: rgba(20,0,0,0.85);

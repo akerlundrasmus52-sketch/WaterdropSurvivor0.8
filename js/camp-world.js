@@ -2495,12 +2495,12 @@
           var sd = window.saveData;
           var tq = sd && sd.tutorialQuests;
           if (tq && tq.readyToClaim && tq.readyToClaim.length > 0) {
-            _showBennySpeech('Welcome back!\nGo claim your\nquest reward! 📜');
+            _showBennySpeech('Duuude welcome back!\nGo claim your\nquest in the\nMain Building! 📜');
             setTimeout(function () { _hideBennySpeech(); }, 4000);
           } else if (tq && tq.currentQuest) {
             var currentQ = (typeof getCurrentQuest === 'function') ? getCurrentQuest() : null;
             if (currentQ) {
-              _showBennySpeech('Current quest:\n' + currentQ.name);
+              _showBennySpeech('Hey dude!\nYour quest:\n' + currentQ.name);
               setTimeout(function () { _hideBennySpeech(); }, 3500);
             }
           }

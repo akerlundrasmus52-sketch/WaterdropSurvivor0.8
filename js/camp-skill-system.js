@@ -2121,6 +2121,132 @@
       }
     }
     
+    // ── Build Overlay: long-press meter to construct a building ─────────
+    // Shows materials (🌲 x1, 🪨 x1), a hold-to-build button with a fill meter
+    // that animates from left to right over ~1.5 seconds.
+    function _showBuildOverlay(buildingId, buildingName) {
+      if (window.CampWorld && window.CampWorld.isActive) window.CampWorld.pauseInput();
+      var overlay = document.createElement('div');
+      overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:Bangers,cursive;';
+
+      var panel = document.createElement('div');
+      panel.style.cssText = 'background:linear-gradient(135deg,#0a0a1e,#0d1028);border:3px solid #1a3a6a;border-radius:14px;padding:28px 32px;max-width:340px;width:90vw;text-align:center;box-shadow:0 0 40px rgba(30,60,120,0.5);';
+
+      // Title
+      var title = document.createElement('div');
+      title.style.cssText = 'color:#5DADE2;font-size:1.6em;margin-bottom:12px;letter-spacing:2px;text-shadow:0 0 10px rgba(93,173,226,0.6);';
+      title.textContent = '🔨 BUILD ' + buildingName.toUpperCase();
+      panel.appendChild(title);
+
+      // Materials display
+      var mats = document.createElement('div');
+      mats.style.cssText = 'display:flex;justify-content:center;gap:24px;margin:16px 0;';
+      mats.innerHTML = '<div style="background:rgba(30,40,60,0.8);border:2px solid #2a4a2a;border-radius:8px;padding:10px 16px;"><div style="font-size:32px;">🌲</div><div style="color:#aaffaa;font-size:14px;margin-top:4px;">x1</div></div>' +
+                        '<div style="background:rgba(30,40,60,0.8);border:2px solid #4a4a2a;border-radius:8px;padding:10px 16px;"><div style="font-size:32px;">🪨</div><div style="color:#ddddaa;font-size:14px;margin-top:4px;">x1</div></div>';
+      panel.appendChild(mats);
+
+      // Build button with fill meter
+      var btnWrap = document.createElement('div');
+      btnWrap.style.cssText = 'position:relative;margin-top:20px;';
+
+      var buildBtn = document.createElement('button');
+      buildBtn.style.cssText = 'position:relative;overflow:hidden;width:220px;height:54px;background:#0a0a1e;border:3px solid #1a3a6a;border-radius:10px;color:#5DADE2;font-family:Bangers,cursive;font-size:1.2em;letter-spacing:3px;cursor:pointer;outline:none;-webkit-user-select:none;user-select:none;';
+      buildBtn.textContent = 'HOLD TO BUILD';
+
+      // Fill bar inside button
+      var fill = document.createElement('div');
+      fill.style.cssText = 'position:absolute;top:0;left:0;height:100%;width:0%;background:linear-gradient(90deg,#1a3a6a,#2a5a9a);transition:none;pointer-events:none;border-radius:7px;';
+      buildBtn.insertBefore(fill, buildBtn.firstChild);
+
+      // Text on top of fill
+      var btnText = document.createElement('span');
+      btnText.style.cssText = 'position:relative;z-index:1;';
+      btnText.textContent = 'HOLD TO BUILD';
+      buildBtn.textContent = '';
+      buildBtn.appendChild(fill);
+      buildBtn.appendChild(btnText);
+
+      var HOLD_DURATION = 1500; // 1.5 seconds to fill
+      var holdTimer = null;
+      var holdStart = 0;
+      var animFrame = null;
+      var built = false;
+
+      function startHold() {
+        if (built) return;
+        holdStart = Date.now();
+        btnText.textContent = 'BUILDING...';
+        function tick() {
+          var elapsed = Date.now() - holdStart;
+          var pct = Math.min(elapsed / HOLD_DURATION, 1);
+          fill.style.width = (pct * 100) + '%';
+          if (pct >= 1) {
+            _finishBuild();
+            return;
+          }
+          animFrame = requestAnimationFrame(tick);
+        }
+        animFrame = requestAnimationFrame(tick);
+      }
+
+      function stopHold() {
+        if (built) return;
+        if (animFrame) cancelAnimationFrame(animFrame);
+        animFrame = null;
+        fill.style.width = '0%';
+        btnText.textContent = 'HOLD TO BUILD';
+      }
+
+      function _finishBuild() {
+        built = true;
+        fill.style.width = '100%';
+        fill.style.background = 'linear-gradient(90deg,#2ecc71,#27ae60)';
+        btnText.textContent = '✅ BUILT!';
+        buildBtn.style.borderColor = '#27ae60';
+        buildBtn.style.color = '#fff';
+
+        // Actually unlock building
+        saveData.campBuildings[buildingId].unlocked = true;
+        if (saveData.campBuildings[buildingId].level === 0) {
+          saveData.campBuildings[buildingId].level = 1;
+        }
+        showStatChange('🏛️ ' + buildingName + ' Unlocked!');
+        saveSaveData();
+
+        // Benny walks and build animation
+        if (window.CampWorld && window.CampWorld.isActive) {
+          window.CampWorld.bennyWalkToBuild(buildingId,
+            'Wao dude, you\ndid it! 🔨');
+          setTimeout(function () {
+            window.CampWorld.refreshBuildings(saveData);
+            window.CampWorld.playBuildingUnlockAnimation(buildingId);
+          }, 1300);
+        } else if (window.CampWorld) {
+          window.CampWorld.refreshBuildings(saveData);
+          window.CampWorld.playBuildingUnlockAnimation(buildingId);
+        }
+
+        // Close overlay after short delay
+        setTimeout(function () {
+          overlay.remove();
+          if (window.CampWorld && window.CampWorld.isActive) window.CampWorld.resumeInput();
+        }, 1800);
+      }
+
+      // Touch and mouse events for long press
+      buildBtn.addEventListener('mousedown', startHold);
+      buildBtn.addEventListener('mouseup', stopHold);
+      buildBtn.addEventListener('mouseleave', stopHold);
+      buildBtn.addEventListener('touchstart', function (e) { e.preventDefault(); startHold(); }, { passive: false });
+      buildBtn.addEventListener('touchend', stopHold);
+      buildBtn.addEventListener('touchcancel', stopHold);
+
+      btnWrap.appendChild(buildBtn);
+      panel.appendChild(btnWrap);
+      overlay.appendChild(panel);
+      document.body.appendChild(overlay);
+    }
+
     // Claim a tutorial quest - REWRITTEN for reliability
     function claimTutorialQuest(questId) {
       const quest = TUTORIAL_QUESTS[questId];
@@ -2171,25 +2297,9 @@
       
       // Unlock building on CLAIM (only for quests that use unlockBuilding, e.g. quest1 for SkillTree)
       if (quest.unlockBuilding && saveData.campBuildings[quest.unlockBuilding]) {
-        saveData.campBuildings[quest.unlockBuilding].unlocked = true;
-        if (saveData.campBuildings[quest.unlockBuilding].level === 0) {
-          saveData.campBuildings[quest.unlockBuilding].level = 1;
-        }
         const buildingName = CAMP_BUILDINGS[quest.unlockBuilding]?.name || 'Building';
-        showStatChange(`🏛️ ${buildingName} Unlocked!`);
-        // Benny walks to the building and builds it, then play unlock animation
-        if (window.CampWorld && window.CampWorld.isActive) {
-          window.CampWorld.bennyWalkToBuild(quest.unlockBuilding,
-            'Time to build\nthe ' + buildingName + '! 🔨');
-          // Delay the unlock animation to sync with Benny arriving (1.2s walk)
-          setTimeout(function () {
-            window.CampWorld.refreshBuildings(saveData);
-            window.CampWorld.playBuildingUnlockAnimation(quest.unlockBuilding);
-          }, 1300);
-        } else if (window.CampWorld) {
-          window.CampWorld.refreshBuildings(saveData);
-          window.CampWorld.playBuildingUnlockAnimation(quest.unlockBuilding);
-        }
+        // Show long-press BUILD overlay with material display and fill meter
+        _showBuildOverlay(quest.unlockBuilding, buildingName);
       }
       
       // Give companion egg
