@@ -661,13 +661,21 @@
     // ============================================================
     const AI_CHAT_RESPONSES = {
       // Game help
-      help: "💧 I'm your Droplet AI assistant! I can help with:\n• Quest info — type 'quest' or 'what to do'\n• Settings — type 'settings' or 'graphics'\n• Game tips — type 'tips'\n• Buildings — type 'buildings'\n• Stats — type 'stats'",
+      help: "💧 I'm your Droplet AI assistant! I can help with:\n• 'quest' — current quest info\n• 'what to do' — what to do next\n• 'stats' — your stats\n• 'buildings' — camp buildings info\n• 'crafting' — how to craft\n• 'harvesting' — how to gather resources\n• 'companions' — companion info\n• 'cooking' — cooking recipes\n• 'weapons' — weapon info\n• 'tips' — game tips\n• 'settings' — graphics & controls\n• 'updates' — game updates\n• 'creator' — who made this game\n• 'contact' — contact info\n• Or just ask me anything!",
       quest: null, // dynamic
       settings: "⚙️ Settings you can adjust:\n• Type 'lower graphics' to reduce visual effects\n• Type 'higher graphics' for better visuals\n• Type 'more fps' to optimize performance\n• Use the Settings menu for detailed controls",
-      tips: "💡 Tips:\n• Collect XP drops to level up fast\n• Use dash to dodge enemy attacks\n• Visit Camp buildings between runs\n• Equip gear from the Armory\n• Defend the Windmill for bonus weapons",
-      buildings: "🏕️ Camp Buildings:\n• Quest Hall — start & claim quests\n• Skill Tree — unlock abilities\n• Armory — equip gear\n• Training Hall — upgrade attributes\n• Forge — buy upgrades\n• Character Visuals — customize look\n• Codex — enemy encyclopedia",
+      tips: "💡 Tips:\n• Collect XP drops to level up fast\n• Use dash to dodge enemy attacks\n• Visit Camp buildings between runs\n• Equip gear from the Armory\n• Defend the Windmill for bonus weapons\n• Gather resources (chop trees, mine rocks) to build buildings\n• Cook meals for buffs before runs\n• Upgrade your companion for extra damage\n• Check the Quest Hall often for new quests!",
+      buildings: "🏕️ Camp Buildings:\n• 📜 Quest Hall — start & claim quests\n• 🌳 Skill Tree — unlock abilities\n• 🛡️ Armory — equip gear\n• 🏋️ Training Hall — upgrade attributes\n• ⚒️ Forge — buy permanent upgrades\n• ⚡ Special Attacks — equip special moves\n• 🐺 Companion House — manage companions\n• 🏪 Warehouse — store resources\n• 🍺 Tavern — send on expeditions\n• 🛒 Shop — buy items\n• ✨ Prestige Altar — prestige for power\n• 🏆 Achievement Hall — claim achievements\n• 🎨 Character Visuals — customize look\n• 📖 Codex — enemy encyclopedia\n• 📋 Camp Board — fast access to all\n• ♻️ Trash & Recycle — scrap & fuse gear\n• 🏪 Temp Shop — buy run consumables\n• 🍳 Campfire Kitchen — cook meals\n• ⚒️ Weaponsmith — craft weapons\n\nBuildings unlock through quests. Build them with 🪵 Wood, 🪨 Stone, 🖤 Coal!",
       stats: null, // dynamic
-      greeting: "💧 Welcome, Droplet! I'm your AI assistant. Type 'help' to see what I can do, or ask me anything about the game!",
+      greeting: "💧 Welcome, Droplet! I'm your AI assistant.\n\nAsk me anything about the game — quests, crafting, buildings, how things work, or type 'help' for a full list of topics!",
+      creator: "🎮 Water Drop Survivor was created by Timmy Durell (TimmieTooth)!\n\nThis game has been in development since early 2025 and is still actively being updated with new features, buildings, quests, companions, and more.\n\n📧 Contact: timmie_tooth@live.com\n\nHave ideas or feedback? Send Timmy an email — he reads every message!",
+      crafting: "🔨 Crafting Guide:\n\n⚒️ Weaponsmith — craft weapons from resources:\n• Wooden Sword (5🪵)\n• Stone Axe (3🪵 3🪨)\n• Iron Blade (5 Iron)\n• Crystal Staff (3 Crystal, 2 Magic Essence)\n• Bone Club (5 Flesh, 3 Chitin)\n• Venom Dagger (3 Venom, 2 Iron)\n\n🍳 Campfire Kitchen — cook meals:\n• Berry Jam, Grilled Meat, Veggie Soup, Flower Tea, etc.\n• Meals give HP regen and combat buffs!\n\n♻️ Trash & Recycle — fuse or scrap old gear\n\nGather resources on runs by chopping trees 🪓 and mining rocks ⛏️!",
+      harvesting: "⛏️ Harvesting Guide:\n\nDuring runs, you can gather resources:\n• 🪵 Wood — chop trees\n• 🪨 Stone — mine rocks\n• 🖤 Coal — mine coal deposits\n• ⚙️ Iron — mine iron ore\n• 💎 Crystal — mine crystal nodes\n• ✨ Magic Essence — rare drops\n• 💀 Flesh, Fur, Leather, Feather, Chitin, Venom — from wildlife\n• 🫐 Berry, 🌸 Flower, 🥬 Vegetable — forage from plants\n\nResources are used to build buildings and craft items!",
+      cooking: "🍳 Cooking Guide:\n\nCook meals at the Campfire Kitchen for buffs!\n\nRecipes use berries, meat, vegetables, and flowers gathered during runs.\n\nMeals give healing and combat buffs that last for your next run. Higher Kitchen level = better meals!\n\nTip: Always cook before a run for the best advantage!",
+      companions: "🐺 Companion Guide:\n\nCompanions fight by your side during runs!\n\n• 👽 Grey Alien — your first companion, hatches from an egg\n• 🐺 Storm Wolf — breed from captured wolves (late game quest)\n• 🦅 Sky Falcon — unlocked later\n• 💧 Water Spirit — unlocked later\n\nCompanions grow: Egg → Newborn → Juvenile → Adult\nUpgrade them with Companion Skill Points at the Companion House!",
+      weapons: "⚔️ Weapons Guide:\n\nYou can find and craft various weapons:\n• Pistol — reliable sidearm\n• Shotgun — devastating close range\n• SMG — rapid fire\n• Sniper — long range precision\n• Aura — spiritual damage\n• And many more!\n\nCraft weapons at the Weaponsmith using gathered resources. Equip gear at the Armory.\n\nTip: Try different weapons to find your playstyle!",
+      prestige: "✨ Prestige Guide:\n\nPrestige is the endgame progression system!\n\nWhen you prestige at the Prestige Altar, you gain massive permanent bonuses. It's unlocked after Quest 10.\n\nPrestige resets some progress but makes you much stronger for future runs!",
+      updates: "📰 Game Updates:\n\nWater Drop Survivor is in active development (Alpha v0.5+)!\n\nRecent additions:\n• 🐺 Companion breeding system\n• 🍳 Campfire Kitchen & cooking\n• ⚒️ Weaponsmith & weapon crafting\n• 🌿 Wildlife & hunting\n• ♻️ Gear fusion & recycling\n• ✨ Prestige system\n• 🎡 Lucky Wheel\n• 📅 Daily login rewards\n\nDeveloped by Timmy Durell (TimmieTooth) since early 2025.\n📧 Email timmie_tooth@live.com with ideas or questions!",
     };
 
     let chatOpen = false;
@@ -759,8 +767,41 @@
     function getAIResponse(userText) {
       const lower = userText.toLowerCase().trim();
 
+      // Creator / who made this
+      if (lower.includes('creator') || lower.includes('who made') || lower.includes('developer') || lower.includes('timmy') || lower.includes('timmie') || lower.includes('who created') || lower.includes('who built')) {
+        return AI_CHAT_RESPONSES.creator;
+      }
+
+      // Contact info
+      if (lower.includes('contact') || lower.includes('email') || lower.includes('feedback') || lower.includes('report') || lower.includes('bug report') || lower.includes('suggestion')) {
+        return "📧 Contact the developer:\n\nTimmy Durell (TimmieTooth)\nEmail: timmie_tooth@live.com\n\nSend any questions, ideas, bug reports, or feedback — Timmy reads every message!";
+      }
+
+      // Updates / what's new / development
+      if (lower.includes('update') || lower.includes('what\'s new') || lower.includes('whats new') || lower.includes('changelog') || lower.includes('version') || lower.includes('development') || lower.includes('how long') || lower.includes('when') || lower.includes('roadmap')) {
+        return AI_CHAT_RESPONSES.updates;
+      }
+
+      // What to do next / next step
+      if (lower.includes('what to do') || lower.includes('what should i do') || lower.includes('next') || lower.includes('stuck') || lower.includes('where') || lower.includes('lost') || lower.includes('confused')) {
+        if (saveData.tutorialQuests && saveData.tutorialQuests.readyToClaim && saveData.tutorialQuests.readyToClaim.length > 0) {
+          return "✅ You have a quest ready to claim! Go to Camp → Quest Hall to collect your reward!";
+        }
+        if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest) {
+          const q = TUTORIAL_QUESTS[saveData.tutorialQuests.currentQuest];
+          if (q) {
+            return `🎯 Your current objective:\n\n📜 "${q.name}"\n${q.description}\n\nObjective: ${q.objectives}\n\nTip: Complete this and return to camp to claim your reward!`;
+          }
+        }
+        const sp = saveData.skillPoints || 0;
+        if (sp > 0) return "💡 You have " + sp + " unspent Skill Points! Visit the Skill Tree to unlock new abilities.";
+        const ap = saveData.unspentAttributePoints || 0;
+        if (ap > 0) return "💡 You have " + ap + " unspent Attribute Points! Visit the Training Hall to get stronger.";
+        return "💡 Start a run to fight enemies and gather resources! Check the Quest Hall for new objectives. Build and upgrade your camp buildings to get stronger!";
+      }
+
       // Quest info
-      if (lower.includes('quest') || lower.includes('what to do') || lower.includes('objective') || lower.includes('mission')) {
+      if (lower.includes('quest') || lower.includes('objective') || lower.includes('mission')) {
         if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest) {
           const q = TUTORIAL_QUESTS[saveData.tutorialQuests.currentQuest];
           if (q) {
@@ -775,14 +816,76 @@
       }
 
       // Stats
-      if (lower.includes('stats') || lower.includes('status') || lower.includes('health') || lower.includes('level')) {
+      if (lower.includes('stats') || lower.includes('status') || lower.includes('health') || lower.includes('level') || lower.includes('my stats')) {
         const ups = saveData.upgrades || {};
         const gold = saveData.gold || 0;
         const kills = saveData.totalKills || 0;
-        return `📊 Your Stats:\n• Gold: ${gold}\n• Total Kills: ${kills}\n• Account Level: ${saveData.accountLevel || 1}\n• Upgrades: ${Object.values(ups).reduce((a, b) => a + (b || 0), 0)} total`;
+        const sp = saveData.skillPoints || 0;
+        const ap = saveData.unspentAttributePoints || 0;
+        return `📊 Your Stats:\n• Gold: ${gold}\n• Total Kills: ${kills}\n• Account Level: ${saveData.accountLevel || 1}\n• Skill Points: ${sp}\n• Attribute Points: ${ap}\n• Upgrades: ${Object.values(ups).reduce((a, b) => a + (b || 0), 0)} total`;
       }
 
-      // Settings/graphics
+      // Crafting
+      if (lower.includes('craft') || lower.includes('forge') || lower.includes('weaponsmith') || lower.includes('make weapon') || lower.includes('how to craft')) {
+        return AI_CHAT_RESPONSES.crafting;
+      }
+
+      // Harvesting / resources
+      if (lower.includes('harvest') || lower.includes('resource') || lower.includes('gather') || lower.includes('mining') || lower.includes('chop') || lower.includes('wood') || lower.includes('stone') || lower.includes('coal') || lower.includes('iron')) {
+        return AI_CHAT_RESPONSES.harvesting;
+      }
+
+      // Cooking
+      if (lower.includes('cook') || lower.includes('recipe') || lower.includes('meal') || lower.includes('food') || lower.includes('kitchen') || lower.includes('campfire')) {
+        return AI_CHAT_RESPONSES.cooking;
+      }
+
+      // Companions
+      if (lower.includes('companion') || lower.includes('pet') || lower.includes('wolf') || lower.includes('alien') || lower.includes('falcon') || lower.includes('hatch') || lower.includes('breed')) {
+        return AI_CHAT_RESPONSES.companions;
+      }
+
+      // Weapons
+      if (lower.includes('weapon') || lower.includes('gun') || lower.includes('sword') || lower.includes('pistol') || lower.includes('shotgun') || lower.includes('sniper') || lower.includes('aura')) {
+        return AI_CHAT_RESPONSES.weapons;
+      }
+
+      // Prestige
+      if (lower.includes('prestige') || lower.includes('reset') || lower.includes('rebirth') || lower.includes('endgame')) {
+        return AI_CHAT_RESPONSES.prestige;
+      }
+
+      // Skill tree
+      if (lower.includes('skill') && (lower.includes('tree') || lower.includes('point') || lower.includes('unlock'))) {
+        return "🌳 Skill Tree:\n\nSpend Skill Points (SP) to unlock powerful abilities! You earn SP from quests and leveling up.\n\nVisit the Skill Tree building in camp to see all available skills. Each skill has multiple levels and unique effects!";
+      }
+
+      // Training / attributes
+      if (lower.includes('training') || lower.includes('attribute') || lower.includes('strength') || lower.includes('endurance')) {
+        return "🏋️ Training Hall:\n\nSpend Attribute Points to increase Strength, Endurance, and Flexibility.\n\nYou earn Attribute Points from quests. Each attribute makes you permanently stronger!";
+      }
+
+      // Gear / equipment / armory
+      if (lower.includes('gear') || lower.includes('equipment') || lower.includes('equip') || lower.includes('armory') || lower.includes('ring') || lower.includes('cigar')) {
+        return "🛡️ Armory & Gear:\n\nEquip weapons, rings, and armor at the Armory. Find gear from quest rewards and enemy drops.\n\nHigher rarity = better stats. Check the Armory building in camp to manage your loadout!";
+      }
+
+      // How to play / controls
+      if (lower.includes('how to play') || lower.includes('control') || lower.includes('move') || lower.includes('attack') || lower.includes('dash')) {
+        return "🎮 How to Play:\n\n• Move with joystick (touch) or WASD (keyboard)\n• Attack is automatic — aim at enemies!\n• Dash to dodge — swipe or press Shift\n• Collect XP drops to level up\n• Pick up weapon drops during runs\n• Survive as long as possible!\n\nAfter each run, you return to camp to upgrade.";
+      }
+
+      // Idle / offline
+      if (lower.includes('idle') || lower.includes('offline') || lower.includes('gold mine') || lower.includes('fountain') || lower.includes('expedition')) {
+        return "⚙️ Idle Progression:\n\nEarn gold and resources even while away!\n• Gold Mine — generates gold over time\n• Fountain — generates essence\n• Expeditions — send companions for loot\n\nVisit the Idle Progression building in camp!";
+      }
+
+      // Daily / login
+      if (lower.includes('daily') || lower.includes('login') || lower.includes('streak') || lower.includes('spin') || lower.includes('wheel')) {
+        return "🎁 Daily Rewards:\n\nLog in daily for rewards! 7-day streak cycle with increasing rewards.\n\n🎡 Lucky Wheel: Spin for random prizes! Free spin available daily.";
+      }
+
+      // Graphics/Performance
       if (lower.includes('lag') || lower.includes('fps') || lower.includes('smooth') || lower.includes('performance')) {
         const qs = document.getElementById('quality-select');
         if (window.GameRenderer && window.GameRenderer.setQuality) window.GameRenderer.setQuality('low');
@@ -893,18 +996,23 @@
         return "🏆 Visit the Achievement Hall in Camp to see all your achievements and claim rewards!";
       }
 
-      // Companion
-      if (lower.includes('companion') || lower.includes('pet') || lower.includes('wolf')) {
-        return "🐺 Companions fight by your side! Visit the Companion House in Camp to manage and upgrade them.";
-      }
-
       // Codex
       if (lower.includes('codex') || lower.includes('enemy') || lower.includes('enemies') || lower.includes('bestiary')) {
         return "📖 The Codex contains info on all enemies, landmarks, and structures. Visit the Codex building in Camp!";
       }
 
+      // Greetings
+      if (lower === 'hi' || lower === 'hello' || lower === 'hey' || lower.includes('good morning') || lower.includes('good evening') || lower === 'yo' || lower === 'sup') {
+        return "👋 Hey there, Droplet! What can I help you with? Type 'help' for a list of topics!";
+      }
+
+      // Thanks
+      if (lower.includes('thank') || lower.includes('thanks') || lower === 'ty' || lower === 'thx') {
+        return "😊 You're welcome! Let me know if you need anything else!";
+      }
+
       // Default
-      return "💧 I'm not sure about that. Type 'help' to see what I can assist with, or try asking about quests, settings, tips, or buildings!";
+      return "💧 I'm not sure about that. Here are some things you can ask:\n• 'help' — full list of topics\n• 'quest' — current quest\n• 'what to do' — what to do next\n• 'crafting' — how to craft\n• 'buildings' — camp info\n• 'creator' — who made this\n• 'updates' — game news\n\nOr just type a keyword like 'weapons', 'cooking', 'companions'!";
     }
 
     function sendChatMessage() {
@@ -1712,52 +1820,166 @@
       _updateUnspentBar();
     }
 
-    // ── Unspent Points Notification Bar ────────────────────────────
+    // ── Unspent Points Notification Bar (legacy — hidden) ────────
     let _unspentBarDismissed = false;
+
+    // ── Unspent Points Corner Dropdown (new) ──────────────────────
+    let _unspentDropdownOpen = false;
+
+    function _initUnspentDropdown() {
+      const tab = document.getElementById('unspent-tab');
+      const dropdown = document.getElementById('unspent-dropdown');
+      const closeBtn = document.getElementById('unspent-dd-close');
+      if (!tab || !dropdown) return;
+
+      tab.onclick = () => {
+        if (tab.classList.contains('tab-collapsed')) {
+          tab.classList.remove('tab-collapsed');
+        } else if (_unspentDropdownOpen) {
+          _toggleUnspentDropdown(false);
+          tab.classList.add('tab-collapsed');
+        } else {
+          _toggleUnspentDropdown(true);
+        }
+      };
+      if (closeBtn) closeBtn.onclick = () => {
+        _toggleUnspentDropdown(false);
+        tab.classList.add('tab-collapsed');
+      };
+    }
+
+    function _toggleUnspentDropdown(open) {
+      const tab = document.getElementById('unspent-tab');
+      const dropdown = document.getElementById('unspent-dropdown');
+      _unspentDropdownOpen = open;
+      if (open) {
+        dropdown.classList.add('unspent-visible');
+        tab.classList.add('unspent-open');
+      } else {
+        dropdown.classList.remove('unspent-visible');
+        tab.classList.remove('unspent-open');
+      }
+    }
+
     function _updateUnspentBar() {
+      // Legacy bar — always hide
       const bar = document.getElementById('camp-unspent-bar');
-      const inner = document.getElementById('camp-unspent-inner');
-      if (!bar || !inner) return;
-      if (_unspentBarDismissed) { bar.style.display = 'none'; return; }
+      if (bar) bar.style.display = 'none';
 
-      const chips = [];
-      // Skill points
+      // New dropdown system
+      const tab = document.getElementById('unspent-tab');
+      const list = document.getElementById('unspent-dd-list');
+      if (!tab || !list) return;
+
+      const items = [];
+
+      // ── Points & currencies ──
       const sp = saveData.skillPoints || 0;
-      if (sp > 0) chips.push({ icon: '🌳', label: sp + ' SP', color: '#2ecc71', bg: 'rgba(46,204,113,0.15)', border: 'rgba(46,204,113,0.5)', action: 'skillTree' });
-      // Attribute points
+      if (sp > 0) {
+        const bld = saveData.campBuildings && saveData.campBuildings.skillTree;
+        if (bld && (bld.unlocked || bld.level > 0))
+          items.push({ icon: '🌳', label: sp + ' Skill Points', desc: 'Spend in Skill Tree', color: '#2ecc71', bg: 'rgba(46,204,113,0.15)', border: 'rgba(46,204,113,0.5)', action: 'skillTree', section: 'points' });
+      }
       const ap = saveData.unspentAttributePoints || 0;
-      if (ap > 0) chips.push({ icon: '⭐', label: ap + ' AP', color: '#9b59b6', bg: 'rgba(155,89,182,0.15)', border: 'rgba(155,89,182,0.5)', action: 'training' });
-      // Gold
+      if (ap > 0) {
+        const bld = saveData.campBuildings && saveData.campBuildings.trainingHall;
+        if (bld && (bld.unlocked || bld.level > 0))
+          items.push({ icon: '🏋️', label: ap + ' Attribute Points', desc: 'Spend in Training Hall', color: '#9b59b6', bg: 'rgba(155,89,182,0.15)', border: 'rgba(155,89,182,0.5)', action: 'training', section: 'points' });
+      }
       const gold = saveData.gold || 0;
-      if (gold > 0) chips.push({ icon: '💰', label: gold.toLocaleString() + ' G', color: '#FFD700', bg: 'rgba(255,215,0,0.12)', border: 'rgba(255,215,0,0.45)', action: 'forge' });
-      // Companion skill points
+      if (gold >= 50) {
+        const bld = saveData.campBuildings && saveData.campBuildings.forge;
+        if (bld && (bld.unlocked || bld.level > 0))
+          items.push({ icon: '⚒️', label: gold.toLocaleString() + ' Gold', desc: 'Buy upgrades at Forge', color: '#FFD700', bg: 'rgba(255,215,0,0.12)', border: 'rgba(255,215,0,0.45)', action: 'forge', section: 'points' });
+      }
       const csp = saveData.companionSkillPoints || 0;
-      if (csp > 0) chips.push({ icon: '🐾', label: csp + ' CSP', color: '#e67e22', bg: 'rgba(230,126,34,0.15)', border: 'rgba(230,126,34,0.5)', action: 'companion' });
-      // Essence
+      if (csp > 0) {
+        const bld = saveData.campBuildings && saveData.campBuildings.companionHouse;
+        if (bld && (bld.unlocked || bld.level > 0))
+          items.push({ icon: '🐺', label: csp + ' Companion SP', desc: 'Upgrade at Companion House', color: '#e67e22', bg: 'rgba(230,126,34,0.15)', border: 'rgba(230,126,34,0.5)', action: 'companion', section: 'points' });
+      }
       const ess = (saveData.clicker && saveData.clicker.essence > 0) ? saveData.clicker.essence : (saveData.essence || 0);
-      if (ess > 0) chips.push({ icon: '✨', label: ess + ' Ess', color: '#3498db', bg: 'rgba(52,152,219,0.12)', border: 'rgba(52,152,219,0.45)', action: 'idle' });
+      if (ess > 0) {
+        items.push({ icon: '⚙️', label: ess + ' Essence', desc: 'Spend in Idle Progression', color: '#3498db', bg: 'rgba(52,152,219,0.12)', border: 'rgba(52,152,219,0.45)', action: 'idle', section: 'points' });
+      }
+      const sap = saveData.specialAtkPoints || 0;
+      if (sap > 0) {
+        const bld = saveData.campBuildings && saveData.campBuildings.specialAttacks;
+        if (bld && (bld.unlocked || bld.level > 0))
+          items.push({ icon: '⚡', label: sap + ' Special Atk Points', desc: 'Equip in Special Attacks', color: '#e74c3c', bg: 'rgba(231,76,60,0.15)', border: 'rgba(231,76,60,0.5)', action: 'specialAttacks', section: 'points' });
+      }
 
-      if (chips.length === 0) { bar.style.display = 'none'; return; }
-      bar.style.display = 'flex';
-      inner.innerHTML = chips.map(c =>
-        `<span class="unspent-chip" style="--chip-border:${c.border};--chip-bg:${c.bg};--chip-color:${c.color};" data-action="${c.action}">` +
-        `<span class="chip-icon" style="background:${c.bg};">${c.icon}</span>` +
-        `<span class="chip-count">${c.label}</span></span>`
-      ).join('');
-      // Chip click handlers
-      inner.querySelectorAll('.unspent-chip').forEach(chip => {
-        chip.onclick = () => {
-          const act = chip.dataset.action;
-          if (act === 'skillTree') { const el = document.getElementById('camp-skills-tab'); if (el) el.click(); }
-          else if (act === 'training') { const el = document.getElementById('camp-training-tab'); if (el) el.click(); }
+      // ── Quests ready to claim ──
+      if (saveData.tutorialQuests && saveData.tutorialQuests.readyToClaim && saveData.tutorialQuests.readyToClaim.length > 0) {
+        items.push({ icon: '📜', label: 'Quest Reward Ready!', desc: 'Claim at Quest Hall', color: '#FFD700', bg: 'rgba(255,215,0,0.12)', border: 'rgba(255,215,0,0.45)', action: 'questHall', section: 'actions' });
+      }
+
+      // ── New equipment in inventory ──
+      const inv = saveData.inventory || [];
+      const equipped = saveData.equippedGear || {};
+      const unequippedGear = inv.filter(item => {
+        if (!item || !item.type) return false;
+        const slot = item.type;
+        return !equipped[slot] || equipped[slot].id !== item.id;
+      });
+      if (unequippedGear.length > 0) {
+        const bld = saveData.campBuildings && saveData.campBuildings.armory;
+        if (bld && (bld.unlocked || bld.level > 0))
+          items.push({ icon: '🛡️', label: unequippedGear.length + ' Unequipped Gear', desc: 'Equip at Armory', color: '#e67e22', bg: 'rgba(230,126,34,0.12)', border: 'rgba(230,126,34,0.45)', action: 'armory', section: 'actions' });
+      }
+
+      // ── Resources for crafting ──
+      const res = saveData.resources || {};
+      const totalRes = Object.values(res).reduce((a, b) => a + (b || 0), 0);
+      if (totalRes > 0) {
+        const bld = saveData.campBuildings && saveData.campBuildings.campfireKitchen;
+        if (bld && (bld.unlocked || bld.level > 0))
+          items.push({ icon: '🍳', label: 'Cooking Ingredients', desc: totalRes + ' total resources for recipes', color: '#ff9800', bg: 'rgba(255,152,0,0.12)', border: 'rgba(255,152,0,0.45)', action: 'campfireKitchen', section: 'actions' });
+      }
+
+      // Show/hide tab
+      if (items.length === 0) {
+        tab.style.display = 'none';
+        if (_unspentDropdownOpen) _toggleUnspentDropdown(false);
+        return;
+      }
+      tab.style.display = '';
+
+      // Build list HTML
+      let html = '';
+      let lastSection = '';
+      const sectionLabels = { points: '💎 Spendable Points', actions: '🔔 Actions Available' };
+      items.forEach(item => {
+        if (item.section !== lastSection) {
+          html += '<div class="unspent-dd-section">' + (sectionLabels[item.section] || item.section) + '</div>';
+          lastSection = item.section;
+        }
+        html += '<div class="unspent-dd-item" style="--item-border:' + item.border + ';--item-bg:' + item.bg + ';--item-color:' + item.color + ';" data-action="' + item.action + '">' +
+          '<div class="dd-icon" style="background:' + item.bg + ';">' + item.icon + '</div>' +
+          '<div class="dd-info"><div class="dd-label">' + item.label + '</div><div class="dd-desc">' + item.desc + '</div></div>' +
+          '</div>';
+      });
+      list.innerHTML = html;
+
+      // Click handlers
+      list.querySelectorAll('.unspent-dd-item').forEach(el => {
+        el.onclick = () => {
+          const act = el.dataset.action;
+          _toggleUnspentDropdown(false);
+          if (act === 'skillTree') { const e = document.getElementById('camp-skills-tab'); if (e) e.click(); }
+          else if (act === 'training') { const e = document.getElementById('camp-training-tab'); if (e) e.click(); }
           else if (act === 'forge') showProgressionShop();
           else if (act === 'companion') showCompanionHouse();
           else if (act === 'idle') showIdleSection();
+          else if (act === 'specialAttacks') { if (typeof showSpecialAttacksPanel === 'function') showSpecialAttacksPanel(); }
+          else if (act === 'questHall') { if (typeof showQuestHall === 'function') showQuestHall(); }
+          else if (act === 'armory') {
+            try { updateGearScreen(); } catch(e) { console.error(e); }
+            const gs = document.getElementById('gear-screen'); if (gs) gs.style.display = 'flex';
+          }
+          else if (act === 'campfireKitchen') { if (typeof showCampfireKitchen === 'function') showCampfireKitchen(); }
         };
       });
-      // Close button
-      const closeBtn = document.getElementById('camp-unspent-close');
-      if (closeBtn) closeBtn.onclick = () => { _unspentBarDismissed = true; bar.style.display = 'none'; };
     }
     // Re-show on next camp visit
     function _resetUnspentBarDismiss() { _unspentBarDismissed = false; }

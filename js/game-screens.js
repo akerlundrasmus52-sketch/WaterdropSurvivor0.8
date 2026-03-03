@@ -2102,6 +2102,8 @@
       };
       // Initialize AI Chat Box Console
       initAIChat();
+      // Initialize Unspent Points Corner Dropdown
+      _initUnspentDropdown();
       
       // Equipment Button - Opens Gear Screen
       document.getElementById('equipment-btn').onclick = () => {
