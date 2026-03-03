@@ -18,10 +18,12 @@ window.DialogueSystem = (function () {
   };
 
   // Dynamic size class based on text length
+  var SHORT_TEXT_MAX = 30;
+  var MEDIUM_TEXT_MAX = 70;
   function _sizeClass(text) {
     var len = text.length;
-    if (len <= 30) return 'ds-size-short';
-    if (len <= 70) return 'ds-size-medium';
+    if (len <= SHORT_TEXT_MAX) return 'ds-size-short';
+    if (len <= MEDIUM_TEXT_MAX) return 'ds-size-medium';
     return 'ds-size-long';
   }
 

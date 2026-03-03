@@ -712,11 +712,12 @@
     const playerOrigX = _playerPos ? _playerPos.x : 0;
     const playerOrigZ = _playerPos ? _playerPos.z : 3;
     // Player target: slightly offset from building position
+    const PLAYER_FOLLOW_DISTANCE = 2.0;
     const dx = targetX - origX;
     const dz = targetZ - origZ;
     const dist = Math.sqrt(dx * dx + dz * dz) || 1;
-    const playerTargetX = targetX - (dx / dist) * 2.0;
-    const playerTargetZ = targetZ - (dz / dist) * 2.0;
+    const playerTargetX = targetX - (dx / dist) * PLAYER_FOLLOW_DISTANCE;
+    const playerTargetZ = targetZ - (dz / dist) * PLAYER_FOLLOW_DISTANCE;
 
     // Show "Follow me!" speech first
     const DS = window.DialogueSystem;

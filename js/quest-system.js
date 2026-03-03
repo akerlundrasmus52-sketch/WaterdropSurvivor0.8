@@ -2060,7 +2060,7 @@
         // Skip locked paid buildings - show them with quest unlock requirement
         if (!building.isFree && !isUnlocked && buildingData.level === 0) {
           // Map building IDs to which tutorial quest unlocks them
-          const buildingQuestUnlockMapLocal = {
+          const questUnlockMap = {
             'skillTree': { questId: 'quest1_kill3', label: 'Kill 3 Enemies (Quest 1)' },
             'armory': { questId: 'quest3_stonehengeGear', label: 'Find the Cigar (Quest 3)' },
             'specialAttacks': { questId: 'quest3_stonehengeGear', label: 'Find the Cigar (Quest 3)' },
@@ -2071,7 +2071,7 @@
             'tempShop': { questId: 'quest28_survive3min', label: 'Survive 3 Minutes (Quest 28)' }
           };
           
-          const questInfo = buildingQuestUnlockMapLocal[buildingId] || { questId: null, label: 'Complete a Quest' };
+          const questInfo = questUnlockMap[buildingId] || { questId: null, label: 'Complete a Quest' };
           // Legacy unlock quests
           const legacyUnlockQuests = {
             'skillTree': 'unlockSkillTree',
