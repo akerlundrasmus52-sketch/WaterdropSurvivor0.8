@@ -75,6 +75,11 @@
   let _campSlideTimer = 0;
   let _campActionTimer = 0; // for shoot/knife/chop/gather timed animations
   let _campActionAnim = null;
+  // Movement feel state
+  let _campAngularVel = 0;    // angular velocity for banking
+  let _campForwardLean = 0;   // forward lean angle
+  let _campBankLean = 0;      // banking lean angle
+  let _campSlideAmt = 0;      // visual slide intensity
   // Spritesheet overlay
   let _spriteAnimator = null;
 
@@ -2168,15 +2173,27 @@
     _playerMesh.position.x = _playerPos.x;
     _playerMesh.position.z = _playerPos.z;
 
-    // Rotation toward movement direction
+    // Rotation toward movement direction — crisp and responsive
     const speed = Math.sqrt(_playerVel.x * _playerVel.x + _playerVel.z * _playerVel.z);
     if (speed > 0.3) {
       const targetAngle = Math.atan2(_playerVel.x, _playerVel.z);
       let da = targetAngle - _playerMesh.rotation.y;
       while (da > Math.PI)  da -= Math.PI * 2;
       while (da < -Math.PI) da += Math.PI * 2;
-      _playerMesh.rotation.y += da * 0.2;
+      // Track angular velocity for banking lean
+      const angVel = da / Math.max(dt, 0.001);
+      _campAngularVel += (angVel - _campAngularVel) * Math.min(dt * 12, 0.7);
+      _playerMesh.rotation.y += da * 0.25;
+      
+      // Slide detection: sharp turn at speed
+      const turnIntensity = Math.abs(_campAngularVel) * speed;
+      if (turnIntensity > 15) {
+        _campSlideAmt = Math.min(1, _campSlideAmt + dt * 6);
+      }
+    } else {
+      _campAngularVel *= 0.85;
     }
+    _campSlideAmt = Math.max(0, _campSlideAmt - dt * 3);
 
     // ── Determine animation state ──
     let newState = 'idle';
@@ -2213,29 +2230,36 @@
         bobY = Math.sin(_campTime * 2.5) * 0.04;
         armSwing = Math.sin(_campTime * 1.5) * 0.08;
         break;
-      case 'walk':
-        bobY = Math.sin(phase * 10) * 0.06;
-        armSwing = Math.sin(phase * 10) * 0.35;
-        legSwing = Math.sin(phase * 10) * 0.40;
-        scaleY = 1.0 + Math.sin(phase * 20) * 0.03;
-        scaleXZ = 1.0 - Math.sin(phase * 20) * 0.015;
+      case 'walk': {
+        // Speed-proportional walk animation
+        const walkRate = 8 + Math.min(speed * 0.5, 4);
+        bobY = Math.sin(phase * walkRate) * 0.06;
+        armSwing = Math.sin(phase * walkRate) * (0.25 + speed * 0.03);
+        legSwing = Math.sin(phase * walkRate) * (0.30 + speed * 0.03);
+        scaleY = 1.0 + Math.sin(phase * walkRate * 2) * 0.03;
+        scaleXZ = 1.0 - Math.sin(phase * walkRate * 2) * 0.015;
         break;
-      case 'run':
-        bobY = Math.sin(phase * 16) * 0.10;
-        armSwing = Math.sin(phase * 16) * 0.55;
-        legSwing = Math.sin(phase * 16) * 0.65;
-        scaleY = 1.0 + Math.sin(phase * 32) * 0.06;
-        scaleXZ = 1.0 - Math.sin(phase * 32) * 0.03;
-        // Smooth forward lean
-        _playerMesh.rotation.x += (-0.15 - _playerMesh.rotation.x) * 0.2;
+      }
+      case 'run': {
+        // Speed-proportional run animation
+        const runRate = 12 + Math.min(speed * 0.3, 6);
+        bobY = Math.sin(phase * runRate) * 0.10;
+        armSwing = Math.sin(phase * runRate) * 0.55;
+        legSwing = Math.sin(phase * runRate) * 0.65;
+        scaleY = 1.0 + Math.sin(phase * runRate * 2) * 0.06;
+        scaleXZ = 1.0 - Math.sin(phase * runRate * 2) * 0.03;
+        // Forward lean proportional to speed
+        const fwdLean = -(0.10 + Math.min(speed * 0.01, 0.12));
+        _campForwardLean += (fwdLean - _campForwardLean) * Math.min(dt * 12, 0.6);
         break;
+      }
       case 'dash':
         bobY = -0.1;  // low to ground
         scaleY = 0.6;
         scaleXZ = 1.4;
         armSwing = -0.8; // arms back
         legSwing = -0.3;
-        _playerMesh.rotation.x += (-0.3 - _playerMesh.rotation.x) * 0.3; // smooth strong forward lean
+        _campForwardLean += (-0.3 - _campForwardLean) * 0.3; // smooth strong forward lean
         break;
       case 'slide':
         bobY = -0.15;
@@ -2311,10 +2335,20 @@
       if (_playerRightLeg) _playerRightLeg.rotation.x = 0;
     }
 
-    // Reset forward lean for non-dash/run states
+    // Physics-based lean: forward lean + bank lean into turns
+    // Bank lean driven by angular velocity — replaces static rotation that caused 'rolling'
+    const maxBank = 0.20;
+    const bankInput = -_campAngularVel * 0.015 * (1 + _campSlideAmt * 0.5);
+    const targetBank = Math.max(-maxBank, Math.min(maxBank, bankInput));
+    const campLeanDt = Math.min(dt * 12, 0.6);
+    _campBankLean += (targetBank - _campBankLean) * campLeanDt;
+    
     if (_campAnimState !== 'dash' && _campAnimState !== 'run') {
-      _playerMesh.rotation.x *= 0.85;
+      // Settle forward lean for non-run states
+      _campForwardLean += (0 - _campForwardLean) * Math.min(dt * 8, 0.45);
     }
+    _playerMesh.rotation.x = _campForwardLean;
+    _playerMesh.rotation.z = _campBankLean;
 
     // Bandage tail physics — sway based on movement
     if (_playerBandageTail) {
