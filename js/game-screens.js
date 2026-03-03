@@ -2289,7 +2289,7 @@
         // Random type - include new enemy types as level increases
         // 0: Tank, 1: Fast, 2: Balanced, 3: Slowing (lvl 8+), 4: Ranged (lvl 10+)
         // 5: Flying (lvl 8+), 6-9: Hard variants (lvl 12+), 12-14: Bug variants (lvl 15+)
-        // 15: Daddy Longlegs spider (lvl 5+), 16: Sweeping Swarm (after 3 kills, lvl 10+)
+        // 15: Daddy Longlegs spider (wave 1+), 16: Sweeping Swarm (after 3 kills, lvl 10+)
 
         // Early game safety: runs 0 and 1 (the first two runs) spawn only gentle enemies
         const totalRuns = saveData.totalRuns || 0;
@@ -2335,8 +2335,8 @@
             }
           }
           
-          // Daddy Longlegs spider (type 15) — available from level 5+, ~15% chance
-          if (playerStats.lvl >= 5 && Math.random() < 0.15) {
+          // Daddy Longlegs spider (type 15) — available from wave 1, ~15% chance
+          if (Math.random() < 0.15) {
             type = 15;
           }
           
@@ -2352,10 +2352,10 @@
             type = 16;
           }
         } else {
-          // Early game: reliably include Daddy Longlegs (spider, 3-hit kill) and the
+          // Early game: reliably include Daddy Longlegs (spider) and the
           // yellow easy enemy (type 7 — visually distinct, manageable at low levels)
           if (Math.random() < 0.30) {
-            type = 15; // Daddy Longlegs — tiny body, huge legs, 3 bullets to kill
+            type = 15; // Daddy Longlegs — tiny body, huge legs, low HP like yellow enemy
           } else if (Math.random() < 0.25) {
             type = 7;  // Yellow easy enemy — gold colour, low HP at early-game scaling
           }
