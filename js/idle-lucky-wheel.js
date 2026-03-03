@@ -238,7 +238,7 @@ window.GameLuckyWheel = (function () {
           var rarity = RARITY_COLORS[res.segment.rarity] || RARITY_COLORS.common;
           var el = container.querySelector('.wheel-result');
           if (el) {
-            el.innerHTML = '<style>@keyframes wheel-result-pop{from{opacity:0;transform:translateY(-14px)}to{opacity:1;transform:translateY(0)}}</style><div style="background:linear-gradient(135deg,' + rarity.bg + ',rgba(0,0,0,0.3));border:2px solid ' + rarity.border + ';border-radius:16px;padding:10px 20px;display:inline-block;box-shadow:0 0 16px ' + rarity.glow + ';animation:wheel-result-pop 0.3s ease-out;"><span style="font-size:18px;">🎉</span> <span style="color:#fff;font-weight:bold;">' + res.prize + '</span><br><small style="color:rgba(255,255,255,0.7);">' + res.description + '</small></div>';
+            el.innerHTML = '<div style="background:linear-gradient(135deg,' + rarity.bg + ',rgba(0,0,0,0.3));border:2px solid ' + rarity.border + ';border-radius:16px;padding:10px 20px;display:inline-block;box-shadow:0 0 16px ' + rarity.glow + ';animation:wheel-result-pop 0.3s ease-out;"><span style="font-size:18px;">🎉</span> <span style="color:#fff;font-weight:bold;">' + res.prize + '</span><br><small style="color:rgba(255,255,255,0.7);">' + res.description + '</small></div>';
           }
           setTimeout(function () { renderWheelPanel(saveData, container); }, 2500);
         }
