@@ -102,72 +102,105 @@ window.GameLuckyWheel = (function () {
     return { ok: true, segment: segment, prize: segment.label, description: description };
   }
 
+  var RARITY_COLORS = {
+    common:   { bg: '#6c757d', border: '#555', glow: 'rgba(108,117,125,0.4)', label: 'Common' },
+    uncommon: { bg: '#28a745', border: '#1e7e34', glow: 'rgba(40,167,69,0.4)', label: 'Uncommon' },
+    rare:     { bg: '#007bff', border: '#0056b3', glow: 'rgba(0,123,255,0.5)', label: 'Rare' },
+    epic:     { bg: '#9b59b6', border: '#7d3c98', glow: 'rgba(155,89,182,0.5)', label: 'Epic' },
+    legendary:{ bg: '#FF8C00', border: '#cc7000', glow: 'rgba(255,140,0,0.5)', label: 'Legendary' },
+    mythical: { bg: '#e91e63', border: '#c2185b', glow: 'rgba(233,30,99,0.5)', label: 'Mythical' }
+  };
+
   function renderWheelPanel(saveData, container) {
     if (!saveData.wheel) saveData.wheel = getWheelDefaults();
     var free = canFreeSpin(saveData);
     var essence = (saveData.clicker && saveData.clicker.essence > 0) ? saveData.clicker.essence : (saveData.essence || 0);
-    var colors = ['#e74c3c','#e67e22','#f1c40f','#2ecc71','#1abc9c','#3498db','#9b59b6','#e91e63'];
     var sliceAngle = 360 / WHEEL_SEGMENTS.length;
 
+    // Compute weighted total for percentages
+    var totalWeight = WHEEL_SEGMENTS.reduce(function (s, x) { return s + x.weight; }, 0);
+
     var html = '<div class="wheel-panel">';
-    html += '<h3>🎡 Lucky Wheel</h3>';
-    if (free) html += '<div class="wheel-free-badge">🎁 Free Spin Available!</div>';
-    // Wheel SVG wrapped in a 3D container for visual depth
+    html += '<h3 style="margin:0 0 8px;font-size:22px;letter-spacing:2px;">🎡 Lucky Wheel</h3>';
+    if (free) html += '<div class="wheel-free-badge" style="background:linear-gradient(135deg,#FFD700,#FFA500);color:#000;border-radius:20px;padding:5px 16px;font-weight:bold;font-size:13px;margin-bottom:8px;display:inline-block;box-shadow:0 2px 8px rgba(255,215,0,0.4);">🎁 Free Spin Available!</div>';
+
+    // Wheel SVG with rounded styling
     html += '<div class="wheel-visual">';
-    html += '<div class="wheel-3d-container">';
+    html += '<div class="wheel-3d-container" style="position:relative;display:inline-block;">';
     html += '<div class="wheel-glow-ring"></div>';
-    html += '<svg id="wheel-svg" viewBox="0 0 200 200" width="220" height="220" style="display:block;filter:drop-shadow(0 4px 16px rgba(0,0,0,0.7)) drop-shadow(0 0 8px rgba(255,215,0,0.4));">';
-    // Outer rim with 3D shadow effect
-    html += '<circle cx="100" cy="100" r="98" fill="none" stroke="#1a1a1a" stroke-width="4"/>';
-    html += '<circle cx="100" cy="100" r="97" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="2"/>';
+    html += '<svg id="wheel-svg" viewBox="0 0 220 220" width="240" height="240" style="display:block;filter:drop-shadow(0 4px 20px rgba(0,0,0,0.8)) drop-shadow(0 0 12px rgba(255,215,0,0.3));">';
+    // Rounded outer rim
+    html += '<circle cx="110" cy="110" r="108" fill="none" stroke="#333" stroke-width="4"/>';
+    html += '<circle cx="110" cy="110" r="105" fill="none" stroke="rgba(255,215,0,0.3)" stroke-width="1.5"/>';
     html += '<g id="wheel-group">';
     WHEEL_SEGMENTS.forEach(function (seg, i) {
       var startAngle = i * sliceAngle - 90;
       var endAngle = startAngle + sliceAngle;
       var s = startAngle * Math.PI / 180, e = endAngle * Math.PI / 180;
-      var x1 = 100 + 94 * Math.cos(s), y1 = 100 + 94 * Math.sin(s);
-      var x2 = 100 + 94 * Math.cos(e), y2 = 100 + 94 * Math.sin(e);
+      var x1 = 110 + 102 * Math.cos(s), y1 = 110 + 102 * Math.sin(s);
+      var x2 = 110 + 102 * Math.cos(e), y2 = 110 + 102 * Math.sin(e);
       var mid = (startAngle + sliceAngle / 2) * Math.PI / 180;
-      var tx = 100 + 68 * Math.cos(mid), ty = 100 + 68 * Math.sin(mid);
-      var color = colors[i % colors.length];
-      // Segment with gradient-like shading using lighter inner color
-      html += '<path d="M100,100 L' + x1 + ',' + y1 + ' A94,94 0 0,1 ' + x2 + ',' + y2 + ' Z" fill="' + color + '" stroke="#000" stroke-width="1.5"/>';
-      // Lighter overlay for 3D shine effect
-      html += '<path d="M100,100 L' + x1 + ',' + y1 + ' A94,94 0 0,1 ' + x2 + ',' + y2 + ' Z" fill="rgba(255,255,255,0.1)" stroke="none"/>';
-      html += '<text x="' + tx + '" y="' + (ty + 4) + '" text-anchor="middle" font-size="10" fill="#fff" font-weight="bold" style="text-shadow:1px 1px 2px #000;">' + seg.label.split(' ')[0] + '</text>';
+      var tx = 110 + 72 * Math.cos(mid), ty = 110 + 72 * Math.sin(mid);
+      var rarity = RARITY_COLORS[seg.rarity] || RARITY_COLORS.common;
+      html += '<path d="M110,110 L' + x1 + ',' + y1 + ' A102,102 0 0,1 ' + x2 + ',' + y2 + ' Z" fill="' + rarity.bg + '" stroke="#111" stroke-width="1"/>';
+      html += '<path d="M110,110 L' + x1 + ',' + y1 + ' A102,102 0 0,1 ' + x2 + ',' + y2 + ' Z" fill="rgba(255,255,255,0.08)" stroke="none"/>';
+      // Segment label with emoji icon
+      var labelParts = seg.label.split(' ');
+      html += '<text x="' + tx + '" y="' + (ty + 2) + '" text-anchor="middle" font-size="9" fill="#fff" font-weight="bold" style="text-shadow:1px 1px 3px #000;pointer-events:none;">' + (labelParts[0] || '') + '</text>';
+      html += '<text x="' + tx + '" y="' + (ty + 12) + '" text-anchor="middle" font-size="7" fill="rgba(255,255,255,0.7)" style="text-shadow:1px 1px 2px #000;pointer-events:none;">' + (labelParts.slice(1).join(' ') || '') + '</text>';
     });
-    // Center hub with 3D depth
-    html += '<circle cx="100" cy="100" r="16" fill="radial-gradient(circle,#fff,#ccc)" stroke="#888" stroke-width="2"/>';
-    html += '<circle cx="100" cy="100" r="16" fill="#f5f5f5" stroke="#555" stroke-width="2.5"/>';
-    html += '<circle cx="100" cy="100" r="10" fill="#e0e0e0" stroke="#999" stroke-width="1"/>';
-    // Shine highlight on hub
-    html += '<ellipse cx="96" cy="96" rx="5" ry="3" fill="rgba(255,255,255,0.7)"/>';
+    // Center hub
+    html += '<circle cx="110" cy="110" r="18" fill="url(#hubGrad)" stroke="#666" stroke-width="2.5"/>';
+    html += '<circle cx="110" cy="110" r="12" fill="#eee" stroke="#aaa" stroke-width="1"/>';
+    html += '<ellipse cx="107" cy="107" rx="5" ry="3" fill="rgba(255,255,255,0.6)"/>';
     html += '</g>';
-    // Outer decorative dots (lightbulb effect)
-    for (var d = 0; d < 12; d++) {
-      var da = (d / 12) * Math.PI * 2;
-      var dx = 100 + 99 * Math.cos(da), dy = 100 + 99 * Math.sin(da);
-      html += '<circle cx="' + dx.toFixed(1) + '" cy="' + dy.toFixed(1) + '" r="3" fill="#FFD700" opacity="0.9"/>';
+    // Hub gradient
+    html += '<defs><radialGradient id="hubGrad" cx="45%" cy="45%"><stop offset="0%" stop-color="#fff"/><stop offset="100%" stop-color="#bbb"/></radialGradient></defs>';
+    // Decorative rim dots
+    for (var d = 0; d < 16; d++) {
+      var da = (d / 16) * Math.PI * 2;
+      var dx = 110 + 107 * Math.cos(da), dy = 110 + 107 * Math.sin(da);
+      html += '<circle cx="' + dx.toFixed(1) + '" cy="' + dy.toFixed(1) + '" r="2.5" fill="#FFD700" opacity="0.85"/>';
     }
     html += '</svg>';
     html += '</div>';
-    // Pointer arrow
-    html += '<div class="wheel-pointer">▼</div>';
+    // Pointer
+    html += '<div class="wheel-pointer" style="position:absolute;top:-2px;left:50%;transform:translateX(-50%);font-size:28px;color:#FFD700;text-shadow:0 2px 6px rgba(0,0,0,0.8);z-index:2;filter:drop-shadow(0 0 4px rgba(255,215,0,0.6));">▼</div>';
     html += '</div>';
-    html += '<div class="wheel-btns">';
-    if (free) html += '<button class="wheel-spin-free">🎁 Free Spin</button>';
-    html += '<button class="wheel-spin-paid"' + (essence < SPIN_COST ? ' disabled' : '') + '>Spin (50 ✨)</button>';
+
+    // Spin buttons with rounded glass look
+    html += '<div class="wheel-btns" style="display:flex;gap:10px;justify-content:center;margin:12px 0;">';
+    if (free) html += '<button class="wheel-spin-free" style="background:linear-gradient(135deg,#FFD700,#FFA500);color:#000;border:none;border-radius:24px;padding:10px 24px;font-weight:bold;font-size:14px;cursor:pointer;box-shadow:0 3px 12px rgba(255,215,0,0.4);font-family:\'Bangers\',cursive;letter-spacing:1px;">🎁 FREE SPIN</button>';
+    var paidDisabledStyle = essence < SPIN_COST ? 'opacity:0.4;cursor:not-allowed;' : '';
+    html += '<button class="wheel-spin-paid" style="background:linear-gradient(135deg,#3498db,#2980b9);color:#fff;border:none;border-radius:24px;padding:10px 24px;font-weight:bold;font-size:14px;cursor:pointer;box-shadow:0 3px 12px rgba(52,152,219,0.4);font-family:\'Bangers\',cursive;letter-spacing:1px;' + paidDisabledStyle + '"' + (essence < SPIN_COST ? ' disabled' : '') + '>SPIN (50 ✨)</button>';
     html += '</div>';
-    html += '<div class="wheel-result"></div>';
-    html += '<div class="wheel-essence">✨ Essence: ' + essence + '</div>';
-    html += '<div class="wheel-history"><h4>Recent Spins</h4><ul>';
+
+    html += '<div class="wheel-result" style="min-height:24px;font-size:15px;font-weight:bold;color:#FFD700;text-align:center;margin:4px 0;"></div>';
+    html += '<div class="wheel-essence" style="text-align:center;font-size:13px;color:#aaa;margin-bottom:8px;">✨ Essence: ' + essence + '</div>';
+
+    // Possible Rewards tab
+    html += '<details style="width:100%;max-width:340px;margin:0 auto 10px auto;background:rgba(255,255,255,0.03);border:1px solid #333;border-radius:12px;padding:2px;">';
+    html += '<summary style="cursor:pointer;padding:8px 12px;font-size:13px;color:#FFD700;font-weight:bold;letter-spacing:1px;text-align:center;">📋 View Possible Rewards & Drop Rates</summary>';
+    html += '<div style="padding:6px 10px;max-height:200px;overflow-y:auto;">';
+    WHEEL_SEGMENTS.forEach(function (seg) {
+      var rarity = RARITY_COLORS[seg.rarity] || RARITY_COLORS.common;
+      var pct = ((seg.weight / totalWeight) * 100).toFixed(1);
+      html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:2px 0;background:rgba(255,255,255,0.02);border-radius:6px;border-left:3px solid ' + rarity.bg + ';">';
+      html += '<span style="color:#fff;font-size:12px;">' + seg.label + '</span>';
+      html += '<span style="display:flex;align-items:center;gap:6px;"><span style="background:' + rarity.bg + ';color:#fff;font-size:9px;padding:2px 6px;border-radius:8px;font-weight:bold;">' + rarity.label + '</span><span style="color:#888;font-size:11px;min-width:36px;text-align:right;">' + pct + '%</span></span>';
+      html += '</div>';
+    });
+    html += '</div></details>';
+
+    // History
+    html += '<div class="wheel-history" style="max-width:340px;margin:0 auto;"><h4 style="font-size:13px;color:#888;margin:4px 0;">Recent Spins</h4><ul style="list-style:none;padding:0;margin:0;max-height:100px;overflow-y:auto;">';
     (saveData.wheel.history || []).forEach(function (e) {
       var d = new Date(e.time);
       var ts = '[' + _pad2(d.getHours()) + ':' + _pad2(d.getMinutes()) + ']';
-      html += '<li><span class="wh-ts">' + ts + '</span> ' + e.label + ' — ' + e.desc + '</li>';
+      html += '<li style="font-size:11px;color:#999;padding:2px 0;"><span class="wh-ts">' + ts + '</span> ' + e.label + ' — ' + e.desc + '</li>';
     });
     html += '</ul></div>';
-    html += '<div class="wheel-total"><small>Total spins: ' + (saveData.wheel.totalSpins || 0) + '</small></div>';
+    html += '<div class="wheel-total" style="text-align:center;margin-top:4px;"><small style="color:#555;">Total spins: ' + (saveData.wheel.totalSpins || 0) + '</small></div>';
     html += '</div>';
     container.innerHTML = html;
 
@@ -176,7 +209,6 @@ window.GameLuckyWheel = (function () {
       var btns = container.querySelectorAll('.wheel-spin-free, .wheel-spin-paid');
       btns.forEach(function (b) { b.disabled = true; });
 
-      // Pre-calculate result so we can animate to the winning segment
       var res = spin(saveData, useFree);
       if (!res.ok) {
         btns.forEach(function (b) { b.disabled = false; });
@@ -184,35 +216,31 @@ window.GameLuckyWheel = (function () {
         return;
       }
 
-      // Find segment index to determine landing angle
       var segIndex = WHEEL_SEGMENTS.indexOf(res.segment);
       if (segIndex < 0) segIndex = 0;
-      // The pointer is at the top (-90 deg offset). Segment i center is at (i * sliceAngle - 90 + sliceAngle/2).
-      // We want that angle to be at 0 (top), so we rotate by -(i * sliceAngle + sliceAngle/2 - 90) mod 360.
       var segCenterAngle = segIndex * sliceAngle + sliceAngle / 2 - 90;
       var landingOffset = (360 - (segCenterAngle % 360 + 360) % 360) % 360;
-      // Spin 5 full rotations plus the landing offset for dramatic effect
-      var totalDeg = 360 * 5 + landingOffset;
-      var spinDuration = 3200; // ms
+      var totalDeg = 360 * 6 + landingOffset;
+      var spinDuration = 3800;
       var startTime = Date.now();
-      var currentRot = 0;
 
       function animateSpin() {
         var elapsed = Date.now() - startTime;
         var t = Math.min(elapsed / spinDuration, 1);
-        // Cubic ease-out for deceleration
-        var eased = 1 - Math.pow(1 - t, 3);
-        currentRot = totalDeg * eased;
+        var eased = 1 - Math.pow(1 - t, 3.5);
+        var currentRot = totalDeg * eased;
         if (wheelGroup) {
-          wheelGroup.setAttribute('transform', 'rotate(' + currentRot.toFixed(2) + ',100,100)');
+          wheelGroup.setAttribute('transform', 'rotate(' + currentRot.toFixed(2) + ',110,110)');
         }
         if (t < 1) {
           requestAnimationFrame(animateSpin);
         } else {
-          // Animation complete — show result
+          var rarity = RARITY_COLORS[res.segment.rarity] || RARITY_COLORS.common;
           var el = container.querySelector('.wheel-result');
-          if (el) el.textContent = '🎉 ' + res.prize + ' — ' + res.description;
-          setTimeout(function () { renderWheelPanel(saveData, container); }, 2000);
+          if (el) {
+            el.innerHTML = '<div style="background:linear-gradient(135deg,' + rarity.bg + ',rgba(0,0,0,0.3));border:2px solid ' + rarity.border + ';border-radius:16px;padding:10px 20px;display:inline-block;box-shadow:0 0 16px ' + rarity.glow + ';animation:wheel-result-pop 0.3s ease-out;"><span style="font-size:18px;">🎉</span> <span style="color:#fff;font-weight:bold;">' + res.prize + '</span><br><small style="color:rgba(255,255,255,0.7);">' + res.description + '</small></div>';
+          }
+          setTimeout(function () { renderWheelPanel(saveData, container); }, 2500);
         }
       }
       requestAnimationFrame(animateSpin);
@@ -226,6 +254,7 @@ window.GameLuckyWheel = (function () {
 
   return {
     WHEEL_SEGMENTS: WHEEL_SEGMENTS,
+    RARITY_COLORS: RARITY_COLORS,
     getWheelDefaults: getWheelDefaults,
     canFreeSpin: canFreeSpin,
     spin: spin,

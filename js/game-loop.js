@@ -1613,6 +1613,62 @@
       if (activeCompanion && !activeCompanion.isDead) {
         activeCompanion.update(dt);
       }
+
+      // Wildlife AI — wandering and interaction
+      if (window._wildlifeAnimals && player && player.mesh) {
+        const pPos = player.mesh.position;
+        for (const animalGroup of window._wildlifeAnimals) {
+          const ud = animalGroup.userData;
+          if (!ud || !ud.alive) continue;
+          // Wander timer
+          ud.wanderTimer -= dt;
+          if (ud.wanderTimer <= 0) {
+            ud.wanderTimer = 3 + Math.random() * 5;
+            const baseX = animalGroup.position.x;
+            const baseZ = animalGroup.position.z;
+            ud.wanderTarget = { x: baseX + (Math.random() - 0.5) * 20, z: baseZ + (Math.random() - 0.5) * 20 };
+          }
+          // Move toward wander target
+          const wx = ud.wanderTarget.x - animalGroup.position.x;
+          const wz = ud.wanderTarget.z - animalGroup.position.z;
+          const wDist = Math.sqrt(wx * wx + wz * wz);
+          if (wDist > 1) {
+            const spd = (ud.animalData.speed || 0.05) * 0.5;
+            animalGroup.position.x += (wx / wDist) * spd;
+            animalGroup.position.z += (wz / wDist) * spd;
+            animalGroup.rotation.y = Math.atan2(wx, wz);
+          }
+          // Idle animation — slight bob
+          animalGroup.position.y = Math.sin(Date.now() * 0.002 + (animalGroup.userData.wanderTimer * 100)) * 0.05;
+
+          // Player interaction check (tranquilize for quest33)
+          const pdx = pPos.x - animalGroup.position.x;
+          const pdz = pPos.z - animalGroup.position.z;
+          const pDist = Math.sqrt(pdx * pdx + pdz * pdz);
+          if (pDist < 3 && ud.animalId === 'wolf' && ud.gender) {
+            // Check if player has tranquilizer rifle and quest is active
+            if (saveData.craftedWeapons && saveData.craftedWeapons.tranquilizerRifle &&
+                saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest33_captureWolves') {
+              if (!ud.tranquilized) {
+                ud.tranquilized = true;
+                ud.alive = false;
+                animalGroup.visible = false;
+                if (!saveData.tranquilizedAnimals) saveData.tranquilizedAnimals = [];
+                saveData.tranquilizedAnimals.push({ id: 'wolf', gender: ud.gender });
+                if (typeof showStatChange === 'function') showStatChange('🔫 ' + ud.gender + ' Wolf Tranquilized!');
+                // Check if both wolves captured
+                const captured = saveData.tranquilizedAnimals.filter(a => a.id === 'wolf');
+                const hasMale = captured.some(a => a.gender === 'male');
+                const hasFemale = captured.some(a => a.gender === 'female');
+                if (hasMale && hasFemale) {
+                  if (typeof progressTutorialQuest === 'function') progressTutorialQuest('quest33_captureWolves', true);
+                }
+                saveSaveData();
+              }
+            }
+          }
+        }
+      }
       
       // Update drone turrets
       droneTurrets.forEach(drone => drone.update(dt));

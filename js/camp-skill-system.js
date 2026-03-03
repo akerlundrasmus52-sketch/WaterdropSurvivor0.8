@@ -355,6 +355,30 @@
         isFree: true,
         bonus: (level) => ({})
       },
+      campfireKitchen: {
+        name: 'Campfire Kitchen',
+        icon: '🍳',
+        description: 'Cook meals from harvested berries, meat, vegetables and flowers for healing and combat buffs',
+        baseCost: 250,
+        costMultiplier: 1.5,
+        maxCost: 50000,
+        bonus: (level) => ({
+          cookSpeed: 0.1 * level,
+          mealPotency: 0.05 * level
+        })
+      },
+      weaponsmith: {
+        name: 'Weaponsmith',
+        icon: '⚒️',
+        description: 'Craft and upgrade weapons from gathered resources. Build guns, bows, staffs and more',
+        baseCost: 300,
+        costMultiplier: 1.8,
+        maxCost: 80000,
+        bonus: (level) => ({
+          craftQuality: 0.08 * level,
+          weaponDamage: 0.03 * level
+        })
+      },
       
       // LEGACY BUILDINGS (kept for compatibility)
       trainingGrounds: {
@@ -1591,9 +1615,24 @@
         unlockBuilding: 'specialAttacks',
         rewardSAP: 2,
         giveItem: { id: 'cigar_quest', name: 'Cigar', type: 'ring', rarity: 'rare', stats: { attackSpeed: 1, movementSpeed: 1, attackPrecision: 1 }, description: '+1 Attack Speed, +1 Movement Speed, +1 Attack Precision' },
-        message: "🚬 Cigar acquired!<br><br>This rare ring grants <b>+1 Attack Speed, +1 Movement Speed, +1 Attack Precision</b>.<br><br>The <b>Special Attacks</b> building is now unlocked! Choose your first special attack.<br><br>Head to the <b>Armory</b> and equip the Cigar from your inventory!",
-        nextQuest: 'quest4_equipCigar',
+        message: "🚬 Cigar acquired!<br><br>This rare ring grants <b>+1 Attack Speed, +1 Movement Speed, +1 Attack Precision</b>.<br><br>The <b>Special Attacks</b> building is now unlocked! Visit it and choose your first special attack!",
+        nextQuest: 'quest3b_useSpecialAttacks',
         conditions: ['quest2_spendSkills']
+      },
+
+      // === PHASE 3b: Camp quest → Use Special Attacks building (first use) ===
+      quest3b_useSpecialAttacks: {
+        id: 'quest3b_useSpecialAttacks',
+        name: 'Choose a Special Attack',
+        description: 'Visit the Special Attacks building and equip your first special attack to unleash powerful abilities in combat!',
+        objectives: 'Open the Special Attacks building and equip a special attack',
+        claim: 'Main Building',
+        rewardGold: 100,
+        rewardSkillPoints: 1,
+        rewardSAP: 1,
+        message: "⚡ Special Attack equipped!<br><br>Use it in battle to devastate your enemies!<br><br>Now head to the <b>Armory</b> and equip the <b>Cigar</b> you found at Stonehenge!",
+        nextQuest: 'quest4_equipCigar',
+        conditions: ['quest3_stonehengeGear']
       },
 
       // === PHASE 4: Camp quest → Equip gear (free first use of Armory) ===
@@ -1655,9 +1694,23 @@
         rewardGold: 150,
         rewardSkillPoints: 1,
         unlockBuilding: 'warehouse',
-        message: "⚒️ Upgrade purchased!<br><br>Each upgrade makes you permanently stronger. Time to prove your might!<br><br>The <b>Warehouse</b> is now unlocked — store and manage your resources there!",
-        nextQuest: 'quest8_kill10',
+        message: "⚒️ Upgrade purchased!<br><br>Each upgrade makes you permanently stronger!<br><br>The <b>Warehouse</b> is now unlocked — visit it to store and manage your resources!",
+        nextQuest: 'quest7b_useWarehouse',
         conditions: ['quest6_survive2min']
+      },
+
+      // === PHASE 7b: Camp quest → Use Warehouse (first use) ===
+      quest7b_useWarehouse: {
+        id: 'quest7b_useWarehouse',
+        name: 'Visit the Warehouse',
+        description: 'Open the Warehouse building to view your resource storage and manage your materials.',
+        objectives: 'Open the Warehouse in Camp',
+        claim: 'Main Building',
+        rewardGold: 100,
+        rewardSkillPoints: 1,
+        message: "🏪 Warehouse visited!<br><br>You can now manage all your materials and resources from here.<br><br>Time to prove your might — head out and kill <b>10 enemies</b> in one run!",
+        nextQuest: 'quest8_kill10',
+        conditions: ['quest7_buyProgression']
       },
 
       // === PHASE 8: Run quest → Kill 10 enemies → Unlock Companion House ===
@@ -1671,7 +1724,7 @@
         rewardSkillPoints: 1,
         unlockBuilding: 'companionHouse',
         companionEgg: true,
-        message: "⚔️ 10 Enemies Defeated!<br><br>A <b>Companion Egg</b> has appeared! The <b>Companion House</b> is now unlocked. Visit it to activate your companion!",
+        message: "⚔️ 10 Enemies Defeated!<br><br>A <b>Grey Alien 👽 Egg</b> has appeared! The <b>Companion House</b> is now unlocked. Visit it to hatch and activate your alien companion!",
         nextQuest: 'quest9_activateCompanion',
         conditions: ['quest7_buyProgression']
       },
@@ -1680,16 +1733,30 @@
       quest9_activateCompanion: {
         id: 'quest9_activateCompanion',
         name: 'Activate Your Companion',
-        description: 'Visit the Companion House and activate your companion to fight by your side',
+        description: 'Visit the Companion House and activate your Grey Alien companion 👽 to fight by your side',
         objectives: 'Activate a companion',
         claim: 'Main Building',
         rewardGold: 150,
         rewardSkillPoints: 1,
         rewardAttributePoints: 1,
         unlockBuilding: 'shop',
-        message: "🐺 Companion activated!<br><br>They will fight by your side in battle!<br><br>The <b>Shop</b> is now open — buy powerful items to aid your journey!<br><br>Now go on a run and kill <b>15 enemies</b> to prove your combined strength!",
-        nextQuest: 'quest10_kill15',
+        message: "👽 Alien Companion activated!<br><br>Your Grey Alien will fight by your side with energy bolts!<br><br>The <b>Shop</b> is now open — buy powerful items!<br><br>Visit the <b>Tavern</b> to check out expeditions and rest options!",
+        nextQuest: 'quest9b_visitTavern',
         conditions: ['quest8_kill10']
+      },
+
+      // === PHASE 9b: Camp quest → Visit the Tavern (first use) ===
+      quest9b_visitTavern: {
+        id: 'quest9b_visitTavern',
+        name: 'Visit the Tavern',
+        description: 'Head to the Tavern in camp. Check out the expedition board and rest options for bonus buffs!',
+        objectives: 'Open the Tavern in Camp',
+        claim: 'Main Building',
+        rewardGold: 150,
+        rewardSkillPoints: 1,
+        message: "🍺 Tavern visited!<br><br>Use the Tavern to send companions on expeditions and rest for buffs!<br><br>Now go on a run and kill <b>15 enemies</b> to prove your combined strength!",
+        nextQuest: 'quest10_kill15',
+        conditions: ['quest9_activateCompanion']
       },
 
       // === PHASE 10: Run quest → Kill 15 enemies → Unlock Prestige Altar ===
@@ -1702,9 +1769,23 @@
         rewardGold: 300,
         rewardSkillPoints: 2,
         unlockBuilding: 'prestige',
-        message: "🎉 15 Kills! Well done!<br><br>The <b>Prestige Altar</b> has awakened — you may now begin the path of Prestige!<br><br>Explore the world — find every landmark (Stonehenge, Pyramid, Montana, Tesla Tower) to unlock the Achievement Building!",
+        message: "🎉 15 Kills! Well done!<br><br>The <b>Prestige Altar</b> has awakened! Visit it to view your prestige options!",
+        nextQuest: 'quest10b_usePrestige',
+        conditions: ['quest9b_visitTavern']
+      },
+
+      // === PHASE 10b: Camp quest → Visit Prestige Altar (first use) ===
+      quest10b_usePrestige: {
+        id: 'quest10b_usePrestige',
+        name: 'Visit the Prestige Altar',
+        description: 'Head to the Prestige Altar in camp and view your prestige options. Prestige lets you reset for powerful permanent bonuses!',
+        objectives: 'Open the Prestige Altar in Camp',
+        claim: 'Main Building',
+        rewardGold: 200,
+        rewardSkillPoints: 1,
+        message: "✨ Prestige Altar visited!<br><br>When you're ready, prestige to reset your progress in exchange for powerful permanent bonuses!<br><br>Explore the world — find every landmark (Stonehenge, Pyramid, Montana, Tesla Tower)!",
         nextQuest: 'quest11_findAllLandmarks',
-        conditions: ['quest9_activateCompanion']
+        conditions: ['quest10_kill15']
       },
 
       // === PHASE 11: Run quest → Find all landmarks → Unlock Achievement Building ===
@@ -1720,7 +1801,7 @@
         unlockBuilding: 'achievementBuilding',
         message: "🗺️ ALL LANDMARKS FOUND!<br><br>You've explored the entire world!<br><br>The <b>Achievement Building</b> is now unlocked in Camp. Visit it to claim your achievements!",
         nextQuest: 'quest12_visitAchievements',
-        conditions: ['quest10_kill15']
+        conditions: ['quest10b_usePrestige']
       },
 
       // === PHASE 12: Camp quest → Visit Achievement Building (free first use) ===
@@ -1778,9 +1859,24 @@
         rewardGold: 200,
         rewardSkillPoints: 1,
         rewardAttributePoints: 3,
-        message: "📊 Account reviewed!<br><br>A new building has appeared — the <b>Character Visuals</b> studio! Visit it to customize your look.",
-        nextQuest: 'quest16_visitCharVisuals',
+        message: "📊 Account reviewed!<br><br>Time for a combat challenge — head out and kill <b>12 enemies</b> in one run!",
+        nextQuest: 'quest15b_runKill12',
         conditions: ['quest14_kill25']
+      },
+
+      // === PHASE 15b: Run quest → Kill 12 enemies (alternation between camp quests) ===
+      quest15b_runKill12: {
+        id: 'quest15b_runKill12',
+        name: 'Kill 12 Enemies',
+        description: 'Head out on a run and kill 12 enemies to keep your skills sharp!',
+        objectives: 'Kill 12 enemies in one run',
+        triggerOnDeath: true,
+        rewardGold: 300,
+        rewardSkillPoints: 2,
+        rewardAttributePoints: 1,
+        message: "⚔️ 12 Kills! Nicely done!<br><br>A new building has appeared — the <b>Character Visuals</b> studio! Visit it to customize your look.",
+        nextQuest: 'quest16_visitCharVisuals',
+        conditions: ['quest15_accountVisit']
       },
 
       // === PHASE 16: Camp quest → Visit Character Visuals building ===
@@ -1795,7 +1891,7 @@
         unlockBuilding: 'characterVisuals',
         message: "🎨 Character Visuals unlocked!<br><br>Customize your look with accessories, animations, and outfits!<br><br>Next: open the <b>Codex</b> to learn about all the creatures and landmarks you've encountered!",
         nextQuest: 'quest17_visitCodex',
-        conditions: ['quest15_accountVisit']
+        conditions: ['quest15b_runKill12']
       },
 
       // === PHASE 17: Camp quest → Visit Codex building ===
@@ -1816,16 +1912,16 @@
       // === PHASE 18: Run quest → Find Companion Egg at UFO sight in Area 51 ===
       quest18_findCompanionEgg: {
         id: 'quest18_findCompanionEgg',
-        name: 'Find the Companion Egg',
-        description: 'A mysterious signal leads to the UFO crash site in Area 51. Find the glowing Companion Egg hidden there!',
-        objectives: 'Find the Companion Egg at the UFO sight in Area 51',
+        name: 'Find the Alien Egg',
+        description: 'A mysterious signal leads to the UFO crash site in Area 51. Find the glowing Alien Egg 👽 hidden near the wreckage!',
+        objectives: 'Find the Alien Egg at the UFO crash site in Area 51',
         claim: 'Main Building',
         rewardGold: 500,
         rewardSkillPoints: 3,
         rewardAttributePoints: 2,
         triggerOnDeath: false,
         questObjectivePos: { x: -150, z: 60 },
-        message: "🥚 COMPANION EGG FOUND!<br><br>You discovered a mysterious egg at the UFO crash site! Take it to the <b>Companion House</b> in camp to hatch it!",
+        message: "🥚 ALIEN EGG FOUND!<br><br>You discovered a mysterious alien egg 👽 at the UFO crash site! Take it to the <b>Companion House</b> in camp to hatch it!",
         nextQuest: 'quest19_hatchEgg',
         conditions: ['quest17_visitCodex']
       },
@@ -1833,16 +1929,48 @@
       // === PHASE 19: Camp quest → Place egg in Companion House and hatch it ===
       quest19_hatchEgg: {
         id: 'quest19_hatchEgg',
-        name: 'Hatch the Companion Egg',
-        description: 'Bring the Companion Egg to the Companion House and place it in the nest to hatch your new companion!',
-        objectives: 'Place and hatch the egg in the Companion House',
+        name: 'Hatch the Alien Egg',
+        description: 'Bring the Alien Egg to the Companion House and place it in the incubator to hatch your new alien companion!',
+        objectives: 'Place and hatch the alien egg in the Companion House',
         claim: 'Companion House',
         rewardGold: 600,
         rewardSkillPoints: 3,
         rewardAttributePoints: 3,
-        message: "🐣 COMPANION HATCHED!<br><br>Your new companion has hatched! Train it in the <b>Companion House</b> to unlock powerful abilities and grow it into a mighty ally!",
-        nextQuest: 'quest20_trainCompanion',
+        message: "🐣 ALIEN HATCHED!<br><br>A tiny newborn Grey Alien 👽 has emerged from the egg!<br><br>Take your <b>newborn alien companion</b> on a run and survive <b>60 seconds</b> together to help it grow into a juvenile!",
+        nextQuest: 'quest19b_growJuvenile',
         conditions: ['quest18_findCompanionEgg']
+      },
+
+      // === PHASE 19b: Run quest → Grow companion from newborn to juvenile ===
+      quest19b_growJuvenile: {
+        id: 'quest19b_growJuvenile',
+        name: 'Grow Your Companion — Juvenile',
+        description: 'Your newborn companion needs field experience! Take it on a run and survive 60 seconds together so it can grow into a juvenile.',
+        objectives: 'Survive 60 seconds with your newborn companion',
+        triggerOnDeath: true,
+        rewardGold: 400,
+        rewardSkillPoints: 2,
+        rewardAttributePoints: 1,
+        companionGrowth: 'juvenile',
+        message: "🐾 ALIEN GREW!<br><br>Your alien companion has grown into a <b>juvenile</b>! It's bigger, faster, and fires stronger energy bolts!<br><br>Take it on another run and kill <b>8 enemies</b> together to reach <b>adult</b> stage!",
+        nextQuest: 'quest19c_growAdult',
+        conditions: ['quest19_hatchEgg']
+      },
+
+      // === PHASE 19c: Run quest → Grow companion from juvenile to adult ===
+      quest19c_growAdult: {
+        id: 'quest19c_growAdult',
+        name: 'Grow Your Companion — Adult',
+        description: 'Your juvenile companion is almost fully grown! Take it on a run and kill 8 enemies together to reach adult form.',
+        objectives: 'Kill 8 enemies with your juvenile companion',
+        triggerOnDeath: true,
+        rewardGold: 500,
+        rewardSkillPoints: 3,
+        rewardAttributePoints: 2,
+        companionGrowth: 'adult',
+        message: "👽 ALIEN FULLY GROWN!<br><br>Your alien companion has reached <b>adult</b> form! Full size, full power!<br><br>Train it in the <b>Companion House</b> to unlock powerful abilities!",
+        nextQuest: 'quest20_trainCompanion',
+        conditions: ['quest19b_growJuvenile']
       },
 
       // === PHASE 20: Camp quest → Train companion (level it up once) ===
@@ -1858,7 +1986,7 @@
         unlockBuilding: 'campBoard',
         message: "⚔️ Companion trained!<br><br>Your companion grows stronger with every battle!<br><br>A <b>Camp Board</b> has appeared near the campfire — use it for instant access to ALL camp features without walking to each building!",
         nextQuest: 'quest21_useCampBoard',
-        conditions: ['quest19_hatchEgg']
+        conditions: ['quest19c_growAdult']
       },
 
       // === PHASE 21: Use the Camp Board (Fast Access) ===
@@ -1991,9 +2119,87 @@
         rewardGold: 400,
         rewardSkillPoints: 3,
         rewardAttributePoints: 2,
-        message: "🏪 Temp Shop explored!<br><br>Buy temporary boosts before each run to gain the edge!<br><br>🔥 <b>All buildings are now unlocked!</b> Keep exploring, upgrading, and conquering the world!",
-        nextQuest: null,
+        message: "🏪 Temp Shop explored!<br><br>Buy temporary boosts before each run!<br><br>🍳 A <b>Campfire Kitchen</b> is now available! Cook meals from harvested ingredients!",
+        nextQuest: 'quest30_buildCampfire',
         conditions: ['quest28_survive3min']
+      },
+
+      // === PHASE 30: Camp quest → Build Campfire Kitchen ===
+      quest30_buildCampfire: {
+        id: 'quest30_buildCampfire',
+        name: 'Cook Your First Meal',
+        description: 'Visit the Campfire Kitchen in camp and cook a meal from your harvested berries, meat, or vegetables!',
+        objectives: 'Cook any meal at the Campfire Kitchen',
+        claim: 'Main Building',
+        unlockBuilding: 'campfireKitchen',
+        rewardGold: 300,
+        rewardSkillPoints: 2,
+        rewardAttributePoints: 1,
+        message: "🍲 First meal cooked!<br><br>Cook meals from berries, meat, vegetables and flowers for healing and buff effects!<br><br>⚒️ A <b>Weaponsmith</b> building has appeared — craft powerful weapons!",
+        nextQuest: 'quest31_buildWeaponsmith',
+        conditions: ['quest29_useTempShop']
+      },
+
+      // === PHASE 31: Camp quest → Build Weaponsmith ===
+      quest31_buildWeaponsmith: {
+        id: 'quest31_buildWeaponsmith',
+        name: 'Craft a Weapon',
+        description: 'Visit the Weaponsmith and craft your first weapon from resources you\'ve gathered!',
+        objectives: 'Craft any weapon at the Weaponsmith',
+        claim: 'Main Building',
+        unlockBuilding: 'weaponsmith',
+        rewardGold: 400,
+        rewardSkillPoints: 2,
+        rewardAttributePoints: 1,
+        message: "⚔️ First weapon crafted!<br><br>Craft weapons with unique stats and elemental effects!<br><br>🔫 Craft a <b>Tranquilizer Rifle</b> to capture wild animals — you'll need it to breed wolves!",
+        nextQuest: 'quest32_craftTranquilizer',
+        conditions: ['quest30_buildCampfire']
+      },
+
+      // === PHASE 32: Craft Tranquilizer Rifle ===
+      quest32_craftTranquilizer: {
+        id: 'quest32_craftTranquilizer',
+        name: 'Craft a Tranquilizer Rifle',
+        description: 'Craft the Tranquilizer Rifle at the Weaponsmith. You\'ll need 10 Iron, 5 Wood, and 2 Crystal.',
+        objectives: 'Craft the Tranquilizer Rifle at the Weaponsmith',
+        claim: 'Main Building',
+        rewardGold: 500,
+        rewardSkillPoints: 3,
+        giveItem: { id: 'tranquilizerRifle', name: 'Tranquilizer Rifle', type: 'weapon', rarity: 'rare', stats: { damage: 0, range: 15 }, description: 'Non-lethal rifle for capturing wild animals' },
+        message: "🔫 Tranquilizer Rifle crafted!<br><br>Use it to capture wildlife on the map!<br><br>🐺 Find a <b>male</b> and <b>female wolf</b> roaming the forest region and tranquilize them both to start breeding!",
+        nextQuest: 'quest33_captureWolves',
+        conditions: ['quest31_buildWeaponsmith']
+      },
+
+      // === PHASE 33: Capture wild wolves for breeding ===
+      quest33_captureWolves: {
+        id: 'quest33_captureWolves',
+        name: 'Capture Two Wolves',
+        description: 'Find and tranquilize one male (♂) and one female (♀) wolf in the forest region. Walk near wolves with the Tranquilizer Rifle equipped to capture them.',
+        objectives: 'Capture 1 male wolf and 1 female wolf',
+        triggerOnDeath: true,
+        rewardGold: 600,
+        rewardSkillPoints: 3,
+        rewardAttributePoints: 2,
+        message: "🐺🐺 Both wolves captured!<br><br>Bring them to the <b>Companion House</b> to start the breeding process!",
+        nextQuest: 'quest34_breedWolf',
+        conditions: ['quest32_craftTranquilizer']
+      },
+
+      // === PHASE 34: Breed wolves to get Storm Wolf companion ===
+      quest34_breedWolf: {
+        id: 'quest34_breedWolf',
+        name: 'Breed the Storm Wolf',
+        description: 'Visit the Companion House and start the wolf breeding process. The male and female wolf will produce a Storm Wolf pup!',
+        objectives: 'Breed wolves in the Companion House',
+        claim: 'Companion House',
+        rewardGold: 800,
+        rewardSkillPoints: 4,
+        rewardAttributePoints: 3,
+        unlockCompanion: 'stormWolf',
+        message: "🐺⚡ STORM WOLF BRED!<br><br>A <b>Storm Wolf</b> pup has been born from your captured wolves! It's a powerful melee companion!<br><br>Visit the Companion House to switch between your Grey Alien 👽 and Storm Wolf 🐺!<br><br>🔥 <b>All buildings are now unlocked!</b> Keep exploring, upgrading, and conquering the world!",
+        nextQuest: null,
+        conditions: ['quest33_captureWolves']
       }
     };
 
@@ -2013,7 +2219,9 @@
       'codex': 'quest17_visitCodex',
       'campBoard': 'quest20_trainCompanion',
       'trashRecycle': 'quest26_kill20',
-      'tempShop': 'quest28_survive3min'
+      'tempShop': 'quest28_survive3min',
+      'campfireKitchen': 'quest30_buildCampfire',
+      'weaponsmith': 'quest31_buildWeaponsmith'
     };
     
     // Get current quest object
@@ -2405,10 +2613,32 @@
       
       // Give companion egg
       if (quest.companionEgg) {
-        if (saveData.companions && saveData.companions.stormWolf) {
-          saveData.companions.stormWolf.unlocked = true;
+        if (saveData.companions && saveData.companions.greyAlien) {
+          saveData.companions.greyAlien.unlocked = true;
         }
-        showStatChange('🥚 Companion Egg Received!');
+        saveData.hasCompanionEgg = true;
+        saveData.companionEggHatched = false;
+        saveData.companionEggHatchProgress = 0;
+        showStatChange('👽 Grey Alien Companion Received!');
+      }
+
+      // Handle companion growth stage progression
+      if (quest.companionGrowth) {
+        saveData.companionGrowthStage = quest.companionGrowth;
+        if (quest.companionGrowth === 'juvenile') {
+          showStatChange('🐾 Companion grew to Juvenile!');
+        } else if (quest.companionGrowth === 'adult') {
+          showStatChange('👽 Companion reached Adult form!');
+        }
+      }
+
+      // Unlock a specific companion (e.g. breeding storm wolf)
+      if (quest.unlockCompanion) {
+        const cId = quest.unlockCompanion;
+        if (saveData.companions[cId]) {
+          saveData.companions[cId].unlocked = true;
+          showStatChange(`🐺 ${COMPANIONS[cId]?.name || cId} Unlocked!`);
+        }
       }
       
       // Give item

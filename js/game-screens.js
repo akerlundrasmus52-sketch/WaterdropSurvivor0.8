@@ -656,6 +656,166 @@
     }
 
     // ============================================================
+    // CAMPFIRE KITCHEN — Cook meals from harvested ingredients
+    // ============================================================
+    function showCampfireKitchen() {
+      // Progress quest30 if active
+      if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest30_buildCampfire') {
+        progressTutorialQuest('quest30_buildCampfire', true);
+        saveSaveData();
+      }
+
+      const existing = document.getElementById('campfire-kitchen-overlay');
+      if (existing) existing.remove();
+
+      const overlay = document.createElement('div');
+      overlay.id = 'campfire-kitchen-overlay';
+      overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.92);z-index:500;display:flex;flex-direction:column;align-items:center;padding:20px 16px;box-sizing:border-box;overflow-y:auto;';
+
+      const header = document.createElement('div');
+      header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;width:100%;max-width:520px;margin-bottom:12px;';
+      header.innerHTML = '<div style="font-family:\'Bangers\',cursive;font-size:24px;color:#FF8C00;letter-spacing:2px;text-shadow:0 0 10px rgba(255,140,0,0.5);">🍳 CAMPFIRE KITCHEN</div>';
+      const closeBtn = document.createElement('button');
+      closeBtn.textContent = '✕';
+      closeBtn.style.cssText = 'background:#2a2a2a;border:2px solid #666;border-radius:50%;width:38px;height:38px;color:#fff;font-size:18px;cursor:pointer;font-family:"Bangers",cursive;';
+      closeBtn.onclick = () => overlay.remove();
+      header.appendChild(closeBtn);
+      overlay.appendChild(header);
+
+      const subtitle = document.createElement('div');
+      subtitle.style.cssText = 'color:#888;font-size:11px;margin-bottom:16px;text-align:center;letter-spacing:1.5px;max-width:400px;text-transform:uppercase;';
+      subtitle.textContent = 'Cook meals from harvested ingredients for healing & buffs';
+      overlay.appendChild(subtitle);
+
+      const res = saveData.resources || {};
+      const RECIPES = window.GameWorld && window.GameWorld.COOKING_RECIPES ? window.GameWorld.COOKING_RECIPES : {};
+
+      const grid = document.createElement('div');
+      grid.style.cssText = 'display:grid;grid-template-columns:1fr;gap:10px;width:100%;max-width:520px;';
+
+      for (const [recipeId, recipe] of Object.entries(RECIPES)) {
+        const card = document.createElement('div');
+        const canCook = Object.entries(recipe.ingredients).every(([k, v]) => (res[k] || 0) >= v);
+        const cooked = saveData.cookedMeals ? (saveData.cookedMeals[recipeId] || 0) : 0;
+
+        const ingredientList = Object.entries(recipe.ingredients).map(([k, v]) => {
+          const has = (res[k] || 0) >= v;
+          const rt = window.GameHarvesting && window.GameHarvesting.RESOURCE_TYPES ? window.GameHarvesting.RESOURCE_TYPES[k] : null;
+          return '<span style="color:' + (has ? '#0f0' : '#f66') + ';font-size:11px;">' + (rt ? rt.icon : k) + 'x' + v + '</span>';
+        }).join(' ');
+
+        card.style.cssText = 'background:rgba(255,140,0,0.08);border:1px solid ' + (canCook ? '#FF8C00' : '#444') + ';border-radius:10px;padding:14px;cursor:' + (canCook ? 'pointer' : 'default') + ';opacity:' + (canCook ? '1' : '0.6') + ';';
+        card.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;"><div><span style="font-size:24px;">' + recipe.icon + '</span> <b style="color:#FFD700;">' + recipe.name + '</b></div><div style="color:#888;font-size:11px;">x' + cooked + ' cooked</div></div><div style="color:#aaa;font-size:12px;margin:6px 0;">' + recipe.description + '</div><div style="display:flex;gap:6px;flex-wrap:wrap;">' + ingredientList + '</div>';
+
+        if (canCook) {
+          card.onclick = () => {
+            for (const [k, v] of Object.entries(recipe.ingredients)) {
+              res[k] = (res[k] || 0) - v;
+            }
+            if (!saveData.cookedMeals) saveData.cookedMeals = {};
+            saveData.cookedMeals[recipeId] = (saveData.cookedMeals[recipeId] || 0) + 1;
+            saveSaveData();
+            if (typeof showStatChange === 'function') showStatChange(recipe.icon + ' ' + recipe.name + ' Cooked!');
+            if (typeof playSound === 'function') playSound('collect');
+            overlay.remove();
+            showCampfireKitchen();
+          };
+        }
+        grid.appendChild(card);
+      }
+
+      overlay.appendChild(grid);
+      document.body.appendChild(overlay);
+    }
+
+    // ============================================================
+    // WEAPONSMITH — Craft weapons from gathered resources
+    // ============================================================
+    function showWeaponsmith() {
+      // Progress quest31 if active
+      if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest31_buildWeaponsmith') {
+        progressTutorialQuest('quest31_buildWeaponsmith', true);
+        saveSaveData();
+      }
+
+      const existing = document.getElementById('weaponsmith-overlay');
+      if (existing) existing.remove();
+
+      const overlay = document.createElement('div');
+      overlay.id = 'weaponsmith-overlay';
+      overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.92);z-index:500;display:flex;flex-direction:column;align-items:center;padding:20px 16px;box-sizing:border-box;overflow-y:auto;';
+
+      const header = document.createElement('div');
+      header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;width:100%;max-width:520px;margin-bottom:12px;';
+      header.innerHTML = '<div style="font-family:\'Bangers\',cursive;font-size:24px;color:#C0C0C0;letter-spacing:2px;text-shadow:0 0 10px rgba(192,192,192,0.5);">⚒️ WEAPONSMITH</div>';
+      const closeBtn = document.createElement('button');
+      closeBtn.textContent = '✕';
+      closeBtn.style.cssText = 'background:#2a2a2a;border:2px solid #666;border-radius:50%;width:38px;height:38px;color:#fff;font-size:18px;cursor:pointer;font-family:"Bangers",cursive;';
+      closeBtn.onclick = () => overlay.remove();
+      header.appendChild(closeBtn);
+      overlay.appendChild(header);
+
+      const subtitle = document.createElement('div');
+      subtitle.style.cssText = 'color:#888;font-size:11px;margin-bottom:16px;text-align:center;letter-spacing:1.5px;max-width:400px;text-transform:uppercase;';
+      subtitle.textContent = 'Craft weapons from gathered resources — each with unique stats & effects';
+      overlay.appendChild(subtitle);
+
+      const res = saveData.resources || {};
+      const WEAPONS = window.GameWorld && window.GameWorld.WEAPON_CRAFTS ? window.GameWorld.WEAPON_CRAFTS : {};
+
+      const grid = document.createElement('div');
+      grid.style.cssText = 'display:grid;grid-template-columns:1fr;gap:10px;width:100%;max-width:520px;';
+
+      for (const [weaponId, weapon] of Object.entries(WEAPONS)) {
+        const card = document.createElement('div');
+        const canCraft = Object.entries(weapon.cost).every(([k, v]) => (res[k] || 0) >= v);
+        const owned = saveData.craftedWeapons ? saveData.craftedWeapons[weaponId] : false;
+
+        const costList = Object.entries(weapon.cost).map(([k, v]) => {
+          const has = (res[k] || 0) >= v;
+          const rt = window.GameHarvesting && window.GameHarvesting.RESOURCE_TYPES ? window.GameHarvesting.RESOURCE_TYPES[k] : null;
+          return '<span style="color:' + (has ? '#0f0' : '#f66') + ';font-size:11px;">' + (rt ? rt.icon : k) + 'x' + v + '</span>';
+        }).join(' ');
+
+        const statsHTML = Object.entries(weapon.stats).map(([k, v]) => {
+          if (k === 'projectile') return '';
+          return '<span style="color:#4FC3F7;font-size:11px;">' + k + ': ' + v + '</span>';
+        }).filter(Boolean).join(' · ');
+
+        const rarityColors = { common: '#aaa', rare: '#4FC3F7', epic: '#AA44FF' };
+        const rarityColor = rarityColors[weapon.rarity] || '#aaa';
+
+        card.style.cssText = 'background:rgba(192,192,192,0.06);border:1px solid ' + (owned ? '#00FF64' : canCraft ? rarityColor : '#444') + ';border-radius:10px;padding:14px;cursor:' + (canCraft && !owned ? 'pointer' : 'default') + ';opacity:' + (owned ? '0.7' : canCraft ? '1' : '0.5') + ';';
+        card.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;"><div><span style="font-size:24px;">' + weapon.icon + '</span> <b style="color:' + rarityColor + ';">' + weapon.name + '</b> <span style="color:#666;font-size:10px;text-transform:uppercase;">' + weapon.type + '</span></div>' + (owned ? '<span style="color:#00FF64;font-size:12px;">✅ Owned</span>' : '') + '</div><div style="color:#aaa;font-size:12px;margin:6px 0;">' + weapon.description + '</div><div style="margin-bottom:4px;">' + statsHTML + '</div><div style="display:flex;gap:6px;flex-wrap:wrap;">' + costList + '</div>';
+
+        if (canCraft && !owned) {
+          card.onclick = () => {
+            for (const [k, v] of Object.entries(weapon.cost)) {
+              res[k] = (res[k] || 0) - v;
+            }
+            if (!saveData.craftedWeapons) saveData.craftedWeapons = {};
+            saveData.craftedWeapons[weaponId] = true;
+            // Give as inventory item
+            saveData.inventory.push({ id: weaponId, name: weapon.name, type: 'weapon', rarity: weapon.rarity, stats: weapon.stats, description: weapon.description });
+            // Progress quest32 if crafting tranquilizer
+            if (weaponId === 'tranquilizerRifle' && saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest32_craftTranquilizer') {
+              progressTutorialQuest('quest32_craftTranquilizer', true);
+            }
+            saveSaveData();
+            if (typeof showStatChange === 'function') showStatChange(weapon.icon + ' ' + weapon.name + ' Crafted!');
+            if (typeof playSound === 'function') playSound('collect');
+            overlay.remove();
+            showWeaponsmith();
+          };
+        }
+        grid.appendChild(card);
+      }
+
+      overlay.appendChild(grid);
+      document.body.appendChild(overlay);
+    }
+
+    // ============================================================
     // SPECIAL ATTACKS PANEL — Skill Tree for Special Attacks
     // ============================================================
     function showSpecialAttacksPanel() {
@@ -1024,11 +1184,39 @@
           document.getElementById('camp-screen').style.display = 'none';
           openCodex();
         },
-        specialAttacks:      () => { overlay.remove(); showSpecialAttacksPanel(); },
-        warehouse:           () => { overlay.remove(); showInventoryScreen(); },
-        tavern:              () => { overlay.remove(); if (typeof showExpeditionsMenu === 'function') showExpeditionsMenu(); else showQuestHall(); },
+        specialAttacks:      () => {
+          overlay.remove();
+          if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest3b_useSpecialAttacks') {
+            progressTutorialQuest('quest3b_useSpecialAttacks', true);
+            saveSaveData();
+          }
+          showSpecialAttacksPanel();
+        },
+        warehouse:           () => {
+          overlay.remove();
+          if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest7b_useWarehouse') {
+            progressTutorialQuest('quest7b_useWarehouse', true);
+            saveSaveData();
+          }
+          showInventoryScreen();
+        },
+        tavern:              () => {
+          overlay.remove();
+          if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest9b_visitTavern') {
+            progressTutorialQuest('quest9b_visitTavern', true);
+            saveSaveData();
+          }
+          if (typeof showExpeditionsMenu === 'function') showExpeditionsMenu(); else showQuestHall();
+        },
         shop:                () => { overlay.remove(); showProgressionShop(); },
-        prestige:            () => { overlay.remove(); if (typeof showPrestigeMenu === 'function') showPrestigeMenu(); else showProgressionShop(); },
+        prestige:            () => {
+          overlay.remove();
+          if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest10b_usePrestige') {
+            progressTutorialQuest('quest10b_usePrestige', true);
+            saveSaveData();
+          }
+          if (typeof showPrestigeMenu === 'function') showPrestigeMenu(); else showProgressionShop();
+        },
         trashRecycle:        () => {
           overlay.remove();
           if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest27_useRecycle') {
@@ -1036,6 +1224,22 @@
             saveSaveData();
           }
           showInventoryScreen();
+        },
+        campfireKitchen:     () => {
+          overlay.remove();
+          if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest30_buildCampfire') {
+            progressTutorialQuest('quest30_buildCampfire', true);
+            saveSaveData();
+          }
+          showCampfireKitchen();
+        },
+        weaponsmith:         () => {
+          overlay.remove();
+          if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest31_buildWeaponsmith') {
+            progressTutorialQuest('quest31_buildWeaponsmith', true);
+            saveSaveData();
+          }
+          showWeaponsmith();
         },
         tempShop:            () => {
           overlay.remove();

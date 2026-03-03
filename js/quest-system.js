@@ -713,8 +713,19 @@
       const input = document.getElementById('chat-input');
       if (!tab || !chatBox) return;
 
-      tab.onclick = () => toggleChat();
-      closeBtn.onclick = () => toggleChat(false);
+      tab.onclick = () => {
+        if (tab.classList.contains('chat-tab-collapsed')) {
+          // Expand from collapsed slim tab
+          tab.classList.remove('chat-tab-collapsed');
+        } else if (chatOpen) {
+          // Close chat and collapse tab
+          toggleChat(false);
+          tab.classList.add('chat-tab-collapsed');
+        } else {
+          toggleChat(true);
+        }
+      };
+      closeBtn.onclick = () => { toggleChat(false); tab.classList.add('chat-tab-collapsed'); };
       sendBtn.onclick = () => sendChatMessage();
       input.onkeydown = (e) => { if (e.key === 'Enter') sendChatMessage(); };
 
@@ -1286,7 +1297,7 @@
       const hasEgg = saveData.hasCompanionEgg;
       const isHatched = saveData.companionEggHatched;
       const hatchProgress = saveData.companionEggHatchProgress || 0;
-      const companionId = saveData.selectedCompanion || 'stormWolf';
+      const companionId = saveData.selectedCompanion || 'greyAlien';
       const companionData = saveData.companions[companionId] || { unlocked: true, level: 1, xp: 0, skills: {} };
       const companionInfo = COMPANIONS[companionId];
       const companionQuestDone = saveData.tutorialQuests?.completedQuests?.includes('quest9_activateCompanion');
@@ -1317,11 +1328,19 @@
             </div>
           </div>`;
       } else {
+        const growthStage = saveData.companionGrowthStage || 'newborn';
+        const growthIcons = { newborn: '🐣', juvenile: '👽', adult: '👽' };
+        const growthLabels = { newborn: 'Newborn', juvenile: 'Juvenile', adult: 'Adult' };
+        const growthColors = { newborn: '#FFD700', juvenile: '#FF8C00', adult: '#00FF64' };
+        const growthIcon = growthIcons[growthStage] || '🐣';
+        const growthLabel = growthLabels[growthStage] || 'Newborn';
+        const growthColor = growthColors[growthStage] || '#FFD700';
         eggSectionHTML = `
-          <div style="background:linear-gradient(135deg,rgba(255,180,0,0.1),rgba(150,80,0,0.2));border:2px solid #FFD700;border-radius:12px;padding:16px;margin-bottom:20px;text-align:center;">
-            <div style="font-size:36px;">🐣 ✅</div>
-            <div style="color:#FFD700;font-size:15px;font-weight:bold;">Companion Egg Hatched!</div>
-            <div style="color:#aaa;font-size:12px;">Your companion has joined your camp.</div>
+          <div style="background:linear-gradient(135deg,rgba(255,180,0,0.1),rgba(150,80,0,0.2));border:2px solid ${growthColor};border-radius:12px;padding:16px;margin-bottom:20px;text-align:center;">
+            <div style="font-size:36px;">${growthIcon} ✅</div>
+            <div style="color:${growthColor};font-size:15px;font-weight:bold;">Companion Egg Hatched!</div>
+            <div style="color:#aaa;font-size:12px;">Growth Stage: <b style="color:${growthColor};">${growthLabel}</b></div>
+            ${growthStage !== 'adult' ? '<div style="color:#888;font-size:11px;margin-top:4px;">Take your companion on runs to help it grow!</div>' : '<div style="color:#00FF64;font-size:11px;margin-top:4px;">Fully grown! Your companion is at full power.</div>'}
           </div>`;
       }
 
@@ -1335,7 +1354,7 @@
 
       const companionSection = `
         <div style="background:rgba(255,255,255,0.04);border:1px solid #555;border-radius:12px;padding:16px;margin-bottom:20px;">
-          <div style="color:#FFD700;font-size:15px;font-weight:bold;margin-bottom:12px;">🐺 Active Companion</div>
+          <div style="color:#FFD700;font-size:15px;font-weight:bold;margin-bottom:12px;">👽 Active Companion</div>
 
           <!-- Companion selector -->
           <div style="display:flex;gap:8px;margin-bottom:14px;">
@@ -1424,6 +1443,34 @@
           </div>
         </div>`;
 
+      // Wolf breeding section
+      const capturedWolves = (saveData.tranquilizedAnimals || []).filter(a => a.id === 'wolf');
+      const hasMaleWolf = capturedWolves.some(a => a.gender === 'male');
+      const hasFemaleWolf = capturedWolves.some(a => a.gender === 'female');
+      const wolfUnlocked = saveData.companions.stormWolf && saveData.companions.stormWolf.unlocked;
+      const showBreeding = saveData.craftedWeapons && saveData.craftedWeapons.tranquilizerRifle;
+      const breedingSectionHTML = showBreeding ? `
+        <div style="background:rgba(139,69,19,0.1);border:1px solid #8B4513;border-radius:12px;padding:16px;margin-bottom:20px;">
+          <div style="color:#8B4513;font-size:15px;font-weight:bold;margin-bottom:10px;">🐺 Wolf Breeding Program</div>
+          <div style="color:#aaa;font-size:12px;margin-bottom:10px;">Capture a male and female wolf with the Tranquilizer Rifle, then breed them to get a Storm Wolf companion.</div>
+          <div style="display:flex;gap:12px;margin-bottom:10px;">
+            <div style="flex:1;background:rgba(255,255,255,0.05);border-radius:8px;padding:10px;text-align:center;">
+              <div style="font-size:20px;">${hasMaleWolf ? '🐺♂' : '❓♂'}</div>
+              <div style="color:${hasMaleWolf ? '#00FF64' : '#f66'};font-size:11px;">${hasMaleWolf ? 'Male Wolf ✅' : 'Not captured'}</div>
+            </div>
+            <div style="flex:1;background:rgba(255,255,255,0.05);border-radius:8px;padding:10px;text-align:center;">
+              <div style="font-size:20px;">${hasFemaleWolf ? '🐺♀' : '❓♀'}</div>
+              <div style="color:${hasFemaleWolf ? '#00FF64' : '#f66'};font-size:11px;">${hasFemaleWolf ? 'Female Wolf ✅' : 'Not captured'}</div>
+            </div>
+          </div>
+          ${wolfUnlocked
+            ? '<div style="background:rgba(0,255,100,0.1);border:1px solid #00FF64;border-radius:8px;padding:10px;text-align:center;color:#00FF64;font-size:13px;">✅ Storm Wolf Bred! Select it above.</div>'
+            : hasMaleWolf && hasFemaleWolf
+              ? '<button id="breed-wolf-btn" style="width:100%;background:linear-gradient(135deg,#8B4513,#A0522D);border:none;border-radius:10px;padding:12px;color:#fff;font-weight:bold;cursor:pointer;font-size:14px;">🐺⚡ Breed Storm Wolf!</button>'
+              : '<div style="color:#888;font-size:11px;text-align:center;">Find wolves in the forest region and tranquilize them with your rifle.</div>'
+          }
+        </div>` : '';
+
       modal.innerHTML = `
         <div style="max-width:640px;width:100%;">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
@@ -1436,6 +1483,7 @@
 
           ${eggSectionHTML}
           ${companionSection}
+          ${breedingSectionHTML}
           ${skillTreeHTML}
         </div>
       `;
@@ -1447,6 +1495,22 @@
         modal.remove();
         if (campScreen) campScreen.style.display = 'flex';
       };
+
+      // Breed wolf button handler
+      const breedBtn = document.getElementById('breed-wolf-btn');
+      if (breedBtn) {
+        breedBtn.onclick = () => {
+          saveData.companions.stormWolf.unlocked = true;
+          if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest34_breedWolf') {
+            progressTutorialQuest('quest34_breedWolf', true);
+          }
+          saveSaveData();
+          showStatChange('🐺⚡ Storm Wolf Bred!');
+          playSound('collect');
+          modal.remove();
+          showCompanionHouse();
+        };
+      }
 
       // Activate companion button (quest9 progression)
       const activateBtn = document.getElementById('activate-companion-btn');
@@ -1474,6 +1538,7 @@
           saveData.gold -= 200;
           saveData.companionEggHatchProgress = 100;
           saveData.companionEggHatched = true;
+          saveData.companionGrowthStage = 'newborn';
           saveSaveData();
           showStatChange('🐣 Companion Egg Hatched!');
           playSound('collect');
@@ -1643,7 +1708,59 @@
         const hasFree = window.GameLuckyWheel.canFreeSpin(saveData);
         spinNotif.style.display = hasFree ? 'block' : 'none';
       }
+      // Unspent points notification bar
+      _updateUnspentBar();
     }
+
+    // ── Unspent Points Notification Bar ────────────────────────────
+    let _unspentBarDismissed = false;
+    function _updateUnspentBar() {
+      const bar = document.getElementById('camp-unspent-bar');
+      const inner = document.getElementById('camp-unspent-inner');
+      if (!bar || !inner) return;
+      if (_unspentBarDismissed) { bar.style.display = 'none'; return; }
+
+      const chips = [];
+      // Skill points
+      const sp = saveData.skillPoints || 0;
+      if (sp > 0) chips.push({ icon: '🌳', label: sp + ' SP', color: '#2ecc71', bg: 'rgba(46,204,113,0.15)', border: 'rgba(46,204,113,0.5)', action: 'skillTree' });
+      // Attribute points
+      const ap = saveData.unspentAttributePoints || 0;
+      if (ap > 0) chips.push({ icon: '⭐', label: ap + ' AP', color: '#9b59b6', bg: 'rgba(155,89,182,0.15)', border: 'rgba(155,89,182,0.5)', action: 'training' });
+      // Gold
+      const gold = saveData.gold || 0;
+      if (gold > 0) chips.push({ icon: '💰', label: gold.toLocaleString() + ' G', color: '#FFD700', bg: 'rgba(255,215,0,0.12)', border: 'rgba(255,215,0,0.45)', action: 'forge' });
+      // Companion skill points
+      const csp = saveData.companionSkillPoints || 0;
+      if (csp > 0) chips.push({ icon: '🐾', label: csp + ' CSP', color: '#e67e22', bg: 'rgba(230,126,34,0.15)', border: 'rgba(230,126,34,0.5)', action: 'companion' });
+      // Essence
+      const ess = (saveData.clicker && saveData.clicker.essence > 0) ? saveData.clicker.essence : (saveData.essence || 0);
+      if (ess > 0) chips.push({ icon: '✨', label: ess + ' Ess', color: '#3498db', bg: 'rgba(52,152,219,0.12)', border: 'rgba(52,152,219,0.45)', action: 'idle' });
+
+      if (chips.length === 0) { bar.style.display = 'none'; return; }
+      bar.style.display = 'flex';
+      inner.innerHTML = chips.map(c =>
+        `<span class="unspent-chip" style="--chip-border:${c.border};--chip-bg:${c.bg};--chip-color:${c.color};" data-action="${c.action}">` +
+        `<span class="chip-icon" style="background:${c.bg};">${c.icon}</span>` +
+        `<span class="chip-count">${c.label}</span></span>`
+      ).join('');
+      // Chip click handlers
+      inner.querySelectorAll('.unspent-chip').forEach(chip => {
+        chip.onclick = () => {
+          const act = chip.dataset.action;
+          if (act === 'skillTree') { const el = document.getElementById('camp-skills-tab'); if (el) el.click(); }
+          else if (act === 'training') { const el = document.getElementById('camp-training-tab'); if (el) el.click(); }
+          else if (act === 'forge') showProgressionShop();
+          else if (act === 'companion') showCompanionHouse();
+          else if (act === 'idle') showIdleSection();
+        };
+      });
+      // Close button
+      const closeBtn = document.getElementById('camp-unspent-close');
+      if (closeBtn) closeBtn.onclick = () => { _unspentBarDismissed = true; bar.style.display = 'none'; };
+    }
+    // Re-show on next camp visit
+    function _resetUnspentBarDismiss() { _unspentBarDismissed = false; }
 
     // Show daily reward panel in a popup overlay
     function _showDailyRewardPanel() {
@@ -1740,6 +1857,9 @@
     }
 
     function updateCampScreen() {
+      // Reset unspent bar dismiss so it shows again each camp visit
+      _resetUnspentBarDismiss();
+
       // Hide combat HUD (Rage Bar + Special Attacks) — not visible in camp
       if (window.GameRageCombat) window.GameRageCombat.setCombatHUDVisible(false);
 
@@ -1790,17 +1910,55 @@
           },
           inventory:           () => showInventoryScreen(),
           campBoard:           () => showCampBoardMenu(),
-          specialAttacks:      () => showSpecialAttacksPanel(),
-          warehouse:           () => showInventoryScreen(),
-          tavern:              () => showExpeditionsMenu ? showExpeditionsMenu() : showQuestHall(),
+          specialAttacks:      () => {
+            if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest3b_useSpecialAttacks') {
+              progressTutorialQuest('quest3b_useSpecialAttacks', true);
+              saveSaveData();
+            }
+            showSpecialAttacksPanel();
+          },
+          warehouse:           () => {
+            if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest7b_useWarehouse') {
+              progressTutorialQuest('quest7b_useWarehouse', true);
+              saveSaveData();
+            }
+            showInventoryScreen();
+          },
+          tavern:              () => {
+            if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest9b_visitTavern') {
+              progressTutorialQuest('quest9b_visitTavern', true);
+              saveSaveData();
+            }
+            showExpeditionsMenu ? showExpeditionsMenu() : showQuestHall();
+          },
           shop:                () => showProgressionShop(),
-          prestige:            () => showPrestigeMenu ? showPrestigeMenu() : showProgressionShop(),
+          prestige:            () => {
+            if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest10b_usePrestige') {
+              progressTutorialQuest('quest10b_usePrestige', true);
+              saveSaveData();
+            }
+            showPrestigeMenu ? showPrestigeMenu() : showProgressionShop();
+          },
           trashRecycle:        () => {
             if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest27_useRecycle') {
               progressTutorialQuest('quest27_useRecycle', true);
               saveSaveData();
             }
             showInventoryScreen();
+          },
+          campfireKitchen:     () => {
+            if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest30_buildCampfire') {
+              progressTutorialQuest('quest30_buildCampfire', true);
+              saveSaveData();
+            }
+            showCampfireKitchen();
+          },
+          weaponsmith:         () => {
+            if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest31_buildWeaponsmith') {
+              progressTutorialQuest('quest31_buildWeaponsmith', true);
+              saveSaveData();
+            }
+            showWeaponsmith();
           },
           tempShop:            () => {
             if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest29_useTempShop') {
@@ -2000,10 +2158,19 @@
           
           // NEW: For locked free buildings, show them as locked
           const isLockedFree = building.isFree && !isUnlocked;
+
+          // Unspent-points badge per building
+          let _bldgBadge = '';
+          if (!isLockedFree) {
+            if (buildingId === 'skillTree' && (saveData.skillPoints || 0) > 0) _bldgBadge = '<span class="building-badge" style="background:#2ecc71;">🌳 ' + saveData.skillPoints + '</span>';
+            else if (buildingId === 'trainingHall' && (saveData.unspentAttributePoints || 0) > 0) _bldgBadge = '<span class="building-badge" style="background:#9b59b6;">⭐ ' + saveData.unspentAttributePoints + '</span>';
+            else if (buildingId === 'forge' && (saveData.gold || 0) >= 50) _bldgBadge = '<span class="building-badge" style="background:#e67e22;">💰</span>';
+            else if (buildingId === 'companionHouse' && (saveData.companionSkillPoints || 0) > 0) _bldgBadge = '<span class="building-badge" style="background:#e67e22;">🐾 ' + saveData.companionSkillPoints + '</span>';
+          }
           
            buildingCard.innerHTML = `
              <div class="building-header">
-               <div class="building-name">${building.icon} ${building.name}${hasNotification ? ' <span class="quest-indicator">!</span>' : ''}</div>
+               <div class="building-name">${building.icon} ${building.name}${hasNotification ? ' <span class="quest-indicator">!</span>' : ''}${_bldgBadge}</div>
                <div class="building-level">${isLockedFree ? 'LOCKED' : `Lv ${buildingData.level}`}</div>
              </div>
              <div class="building-desc">${building.description}</div>
@@ -2036,6 +2203,42 @@
                 showProgressionShop();
               } else if (buildingId === 'companionHouse') {
                 showCompanionHouse();
+              } else if (buildingId === 'specialAttacks') {
+                if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest3b_useSpecialAttacks') {
+                  progressTutorialQuest('quest3b_useSpecialAttacks', true);
+                  saveSaveData();
+                }
+                showSpecialAttacksPanel();
+              } else if (buildingId === 'warehouse') {
+                if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest7b_useWarehouse') {
+                  progressTutorialQuest('quest7b_useWarehouse', true);
+                  saveSaveData();
+                }
+                showInventoryScreen();
+              } else if (buildingId === 'tavern') {
+                if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest9b_visitTavern') {
+                  progressTutorialQuest('quest9b_visitTavern', true);
+                  saveSaveData();
+                }
+                if (typeof showExpeditionsMenu === 'function') showExpeditionsMenu(); else showQuestHall();
+              } else if (buildingId === 'prestige') {
+                if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest10b_usePrestige') {
+                  progressTutorialQuest('quest10b_usePrestige', true);
+                  saveSaveData();
+                }
+                if (typeof showPrestigeMenu === 'function') showPrestigeMenu(); else showProgressionShop();
+              } else if (buildingId === 'campfireKitchen') {
+                if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest30_buildCampfire') {
+                  progressTutorialQuest('quest30_buildCampfire', true);
+                  saveSaveData();
+                }
+                showCampfireKitchen();
+              } else if (buildingId === 'weaponsmith') {
+                if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest31_buildWeaponsmith') {
+                  progressTutorialQuest('quest31_buildWeaponsmith', true);
+                  saveSaveData();
+                }
+                showWeaponsmith();
               } else {
                 showStatChange(`${building.icon} ${building.name}: Level ${buildingData.level}/${buildingData.maxLevel}`);
               }
@@ -2178,17 +2381,43 @@
         if (!_quest2Claimed && skillIndex >= 4) continue;
         if (!_quest1Claimed && skillIndex >= 2) continue;
         
+        // Skill icon map for branch tree visualization
+        const _skillIcons = {
+          dash: '🏃', criticalFocus: '🎯', autoAim: '🔫', dashMaster: '⚡',
+          headshot: '💀', combatMastery: '⚔️', bladeDancer: '🗡️', heavyStrike: '🔨',
+          rapidFire: '🔥', lifeDrain: '❤️', berserkerRage: '😡', executioner: '☠️',
+          ironSkin: '🛡️', regeneration: '💚', dodgeMaster: '🦶', magneticField: '🧲',
+          goldRush: '💰', expBoost: '📈', survivalInstinct: '🌟', spiritLink: '👻',
+          bloodlust: '🩸', overcharge: '⚡', lastStand: '🏴', fireMastery: '🔥',
+          iceMastery: '❄️', lightningMastery: '⚡', specialFirestorm: '🌋',
+          specialIceAge: '🧊', specialThunderStrike: '⛈️', specialDeathBlossom: '🌸',
+          specialVoidPulse: '🌀', specialInfernoRing: '💫', meleeTakedown: '🔪'
+        };
+        const _getSkillIcon = (id, name) => _skillIcons[id] || (name && name.match(/^[^\w\s]/) ? name.charAt(0) : '🔮');
+
         const skillNode = document.createElement('div');
         skillNode.className = 'skill-node';
         if (skillData.unlocked) skillNode.classList.add('unlocked');
         if (!canAfford || isMaxLevel) skillNode.classList.add('locked');
+        if (skill.requires) skillNode.setAttribute('data-has-parent', 'true');
         
+        // Build level dots
+        let dotsHTML = '';
+        if (skill.maxLevel > 1) {
+          dotsHTML = '<div class="skill-level-dots">';
+          for (let d = 0; d < skill.maxLevel; d++) {
+            dotsHTML += `<span class="skill-level-dot${d < skillData.level ? ' filled' : ''}"></span>`;
+          }
+          dotsHTML += '</div>';
+        }
+
         skillNode.innerHTML = `
+          <div class="skill-icon-badge">${_getSkillIcon(skillId, skill.name)}</div>
+          ${dotsHTML}
           <div class="skill-name">${skill.name}</div>
           <div class="skill-desc">${skill.description}</div>
-          <div style="font-size: 12px; color: #5DADE2; margin: 5px 0;">Level ${skillData.level}/${skill.maxLevel}</div>
-          <div class="skill-cost">${isMaxLevel ? 'MAX' : `${skill.cost} SP`}</div>
-          ${!isMaxLevel && canAfford ? '<div class="skill-hold-bar" style="height:6px;background:#333;border:2px solid #000;border-radius:3px;margin-top:6px;overflow:hidden;"><div class="skill-hold-fill" style="height:100%;width:0%;background:#FFD700;transition:none;"></div></div><div style="font-size:10px;color:#888;margin-top:2px;">Hold to buy</div>' : ''}
+          <div class="skill-cost">${isMaxLevel ? '✅ MAX' : `${skill.cost} SP`}</div>
+          ${!isMaxLevel && canAfford ? '<div class="skill-hold-bar" style="height:5px;background:#222;border:1.5px solid #000;border-radius:3px;margin-top:5px;overflow:hidden;"><div class="skill-hold-fill" style="height:100%;width:0%;background:linear-gradient(90deg,#FFD700,#FFA500);transition:none;border-radius:2px;"></div></div><div style="font-size:9px;color:#666;margin-top:2px;">Hold to buy</div>' : ''}
         `;
         
         if (!isMaxLevel && canAfford) {

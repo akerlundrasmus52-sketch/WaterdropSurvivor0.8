@@ -3,13 +3,13 @@
 
 (function () {
 var DAILY_LOGIN_REWARDS = [
-  { day: 1, gold: 50,  item: null },
-  { day: 2, gold: 100, item: null },
-  { day: 3, gold: 150, item: null },
-  { day: 4, gold: 200, item: null },
-  { day: 5, gold: 300, item: null },
-  { day: 6, gold: 400, item: null },
-  { day: 7, gold: 500, item: 'rare_item' }
+  { day: 1, gold: 50,  essence: 10, item: null,        spinTokens: 0, label: '💰 50 Gold + 10 Essence' },
+  { day: 2, gold: 100, essence: 0,  item: null,        spinTokens: 1, label: '💰 100 Gold + 🎡 Spin Token' },
+  { day: 3, gold: 150, essence: 25, item: null,        spinTokens: 0, label: '💰 150 Gold + 25 Essence' },
+  { day: 4, gold: 200, essence: 0,  item: null,        spinTokens: 1, label: '💰 200 Gold + 🎡 Spin Token' },
+  { day: 5, gold: 300, essence: 50, item: null,        spinTokens: 0, label: '💰 300 Gold + 50 Essence' },
+  { day: 6, gold: 400, essence: 0,  item: null,        spinTokens: 2, label: '💰 400 Gold + 🎡 2x Spin Tokens' },
+  { day: 7, gold: 500, essence: 100, item: 'rare_item', spinTokens: 1, label: '💰 500 Gold + 100 Essence + 🎁 Rare Item + 🎡 Spin Token' }
 ];
 
 var QUEST_POOL = [
@@ -86,7 +86,10 @@ function peekDailyReward(saveData) {
     streak: nextStreak,
     day: rewardDay + 1,
     gold: reward.gold,
-    item: reward.item
+    item: reward.item,
+    essence: reward.essence || 0,
+    spinTokens: reward.spinTokens || 0,
+    label: reward.label || ''
   };
 }
 
@@ -119,12 +122,27 @@ function checkDailyLogin(saveData) {
   dailies.lastLoginRewardDay = rewardDay + 1;
   saveData.dailies = dailies;
 
+  // Grant essence and spin tokens in addition to gold
+  if (reward.essence) {
+    if (saveData.clicker && typeof saveData.clicker.essence === 'number') {
+      saveData.clicker.essence += reward.essence;
+    } else {
+      saveData.essence = (saveData.essence || 0) + reward.essence;
+    }
+  }
+  if (reward.spinTokens) {
+    saveData.spinTokens = (saveData.spinTokens || 0) + reward.spinTokens;
+  }
+
   return {
     alreadyClaimed: false,
     streak: dailies.loginStreak,
     day: rewardDay + 1,
     gold: reward.gold,
-    item: reward.item
+    item: reward.item,
+    essence: reward.essence || 0,
+    spinTokens: reward.spinTokens || 0,
+    label: reward.label || ''
   };
 }
 

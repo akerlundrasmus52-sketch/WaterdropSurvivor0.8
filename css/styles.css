@@ -2642,6 +2642,22 @@
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .building-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+      font-size: 10px;
+      font-weight: bold;
+      color: #fff;
+      padding: 1px 6px;
+      border-radius: 8px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+      animation: notif-pulse 1.5s ease-in-out infinite;
+      flex-shrink: 0;
     }
 
     .building-level {
@@ -2680,57 +2696,116 @@
     /* Skill Tree Styles */
     .skill-tree-container {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 16px;
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      gap: 12px;
       width: 100%;
       max-width: 900px;
-      margin: 16px 0;
+      margin: 12px 0;
+      padding: 8px;
     }
 
     .skill-node {
-      background: linear-gradient(135deg, #1a1e32, #12162a);
-      border: 3px solid #555;
-      outline: 1px solid rgba(100, 100, 120, 0.2);
-      outline-offset: 1px;
-      border-radius: 12px;
-      padding: 14px;
+      background: linear-gradient(135deg, #1a1e32 0%, #12162a 100%);
+      border: 2px solid #444;
+      outline: none;
+      border-radius: 14px;
+      padding: 10px 12px;
       text-align: center;
       cursor: pointer;
       transition: all 0.2s ease;
-      box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 4px 12px rgba(0,0,0,0.4);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 3px 10px rgba(0,0,0,0.5);
+      position: relative;
+      min-width: 0;
+    }
+    /* Branch connector line from parent skill */
+    .skill-node::before {
+      content: '';
+      position: absolute;
+      top: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 2px;
+      height: 10px;
+      background: #444;
+      display: none;
+    }
+    .skill-node[data-has-parent="true"]::before { display: block; }
+    .skill-node.unlocked::before { background: linear-gradient(180deg, #2ecc71, #27ae60); box-shadow: 0 0 4px rgba(46,204,113,0.5); }
+
+    /* Skill icon badge at top */
+    .skill-node .skill-icon-badge {
+      width: 32px; height: 32px;
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+      margin: 0 auto 6px auto;
+      background: rgba(255,215,0,0.08);
+      border: 1.5px solid rgba(255,215,0,0.25);
+      box-shadow: 0 0 8px rgba(255,215,0,0.1);
+    }
+    .skill-node.unlocked .skill-icon-badge {
+      background: rgba(46,204,113,0.12);
+      border-color: rgba(46,204,113,0.5);
+      box-shadow: 0 0 10px rgba(46,204,113,0.25);
     }
 
     .skill-node:hover {
       border-color: #FFD700;
-      box-shadow: 0 0 20px rgba(255,215,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08);
-      transform: scale(1.04);
+      box-shadow: 0 0 18px rgba(255,215,0,0.3), inset 0 1px 0 rgba(255,255,255,0.08);
+      transform: translateY(-2px);
     }
 
     .skill-node.unlocked {
       border-color: #2ecc71;
-      box-shadow: 0 0 15px rgba(46,204,113,0.4), inset 0 0 10px rgba(46,204,113,0.1);
+      box-shadow: 0 0 12px rgba(46,204,113,0.3), inset 0 0 8px rgba(46,204,113,0.08);
     }
 
     .skill-node.locked {
-      opacity: 0.4;
+      opacity: 0.35;
       cursor: not-allowed;
+      filter: grayscale(0.4);
+    }
+    .skill-node.locked .skill-icon-badge {
+      filter: grayscale(0.6);
+      opacity: 0.5;
+    }
+
+    /* Level dots row under icon */
+    .skill-level-dots {
+      display: flex;
+      gap: 3px;
+      justify-content: center;
+      margin-bottom: 4px;
+    }
+    .skill-level-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: #333;
+      border: 1px solid #555;
+    }
+    .skill-level-dot.filled {
+      background: linear-gradient(135deg, #2ecc71, #27ae60);
+      border-color: #2ecc71;
+      box-shadow: 0 0 4px rgba(46,204,113,0.6);
     }
 
     .skill-name {
-      font-size: 16px;
+      font-size: 13px;
       color: #FFD700;
       font-weight: bold;
-      margin-bottom: 8px;
+      margin-bottom: 4px;
+      line-height: 1.2;
     }
 
     .skill-desc {
-      font-size: 12px;
-      color: #c9d1d9;
-      margin-bottom: 8px;
+      font-size: 10px;
+      color: #999;
+      margin-bottom: 4px;
+      line-height: 1.3;
     }
 
     .skill-cost {
-      font-size: 14px;
+      font-size: 12px;
       color: #5DADE2;
       font-weight: bold;
     }
@@ -3303,6 +3378,87 @@
     .camp-corner-btn .corner-icon { font-size: 32px; display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; }
     .camp-corner-btn .corner-label { font-size: 10px; color: #ccc; letter-spacing: 1px; }
 
+    /* ── Unspent Points Notification Bar ─────────────────────────── */
+    .camp-unspent-bar {
+      width: min(780px, 88vw);
+      margin: 6px auto 4px auto;
+      background: linear-gradient(135deg, rgba(20,20,40,0.92) 0%, rgba(10,10,25,0.95) 100%);
+      border: 2px solid rgba(255,215,0,0.45);
+      border-radius: 14px;
+      padding: 6px 10px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.5), 0 0 8px rgba(255,215,0,0.15), inset 0 1px 1px rgba(255,255,255,0.04);
+      animation: unspent-slide-in 0.35s ease-out;
+      position: relative;
+      z-index: 50;
+      pointer-events: auto;
+    }
+    @keyframes unspent-slide-in {
+      from { opacity: 0; transform: translateY(-14px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes wheel-result-pop {
+      from { opacity: 0; transform: translateY(-14px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .unspent-bar-inner {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      flex: 1;
+      align-items: center;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .unspent-bar-inner::-webkit-scrollbar { display: none; }
+    .unspent-bar-close {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 50%;
+      width: 22px; height: 22px;
+      color: #888;
+      font-size: 12px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      transition: background 0.15s;
+    }
+    .unspent-bar-close:hover { background: rgba(255,80,80,0.2); color: #ff6b6b; }
+
+    /* Individual point chip inside the bar */
+    .unspent-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: rgba(255,255,255,0.06);
+      border: 1.5px solid var(--chip-border, rgba(255,215,0,0.5));
+      border-radius: 10px;
+      padding: 3px 10px 3px 6px;
+      font-family: 'M PLUS Rounded 1c', sans-serif;
+      font-size: 12px;
+      color: #fff;
+      cursor: pointer;
+      transition: transform 0.1s, background 0.15s;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .unspent-chip:hover { background: rgba(255,215,0,0.12); transform: translateY(-1px); }
+    .unspent-chip .chip-icon {
+      width: 18px; height: 18px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px;
+      border-radius: 4px;
+      background: var(--chip-bg, rgba(255,215,0,0.15));
+    }
+    .unspent-chip .chip-count {
+      font-weight: 700;
+      font-family: 'Bangers', cursive;
+      letter-spacing: 0.5px;
+      color: var(--chip-color, #FFD700);
+    }
+
     /* 7-day login reward calendar strip */
     .daily-login-strip {
       display: flex;
@@ -3489,6 +3645,15 @@
       right: max(8px, env(safe-area-inset-right));
       z-index: 60;
     }
+    /* Unspent points bar floats over 3D world */
+    #camp-screen.camp-3d-mode .camp-unspent-bar {
+      position: fixed;
+      top: max(120px, calc(env(safe-area-inset-top) + 108px));
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 60;
+      pointer-events: auto;
+    }
     /* Subsections (skill tree, training, etc.) still overlay the 3D world */
     #camp-screen.camp-3d-mode .camp-section-flex {
       background: linear-gradient(to bottom, rgba(26,26,46,0.97), rgba(22,33,62,0.97));
@@ -3554,35 +3719,44 @@
       top: 50%;
       transform: translateY(-50%);
       z-index: 200;
-      /* Farmer bubble comic style: cream bg, dark brown border, offset shadow */
-      background: #fffde7;
-      border: 3px solid #4e342e;
+      /* Dark grey/black slim edge tab */
+      background: linear-gradient(135deg, #2a2a2e 0%, #1a1a1e 100%);
+      border: 2px solid #444;
       border-left: none;
-      border-radius: 0 12px 12px 0;
-      padding: 10px 8px;
+      border-radius: 0 8px 8px 0;
+      padding: 6px 5px;
       cursor: pointer;
-      color: #3e2723;
-      font-family: 'Bangers', cursive;
-      font-size: 16px;
+      color: #999;
+      font-family: 'M PLUS Rounded 1c', sans-serif;
+      font-size: 11px;
       writing-mode: vertical-rl;
       text-orientation: mixed;
-      /* Comic offset shadow */
-      box-shadow: 3px 3px 0px #4e342e;
-      text-shadow: 1px 1px 0 #4e342e;
-      transition: opacity 0.3s ease, left 0.3s ease;
+      box-shadow: 2px 2px 8px rgba(0,0,0,0.5);
+      text-shadow: none;
+      transition: opacity 0.3s ease, left 0.3s ease, width 0.2s ease;
       pointer-events: auto;
+      letter-spacing: 1px;
     }
     #ai-chat-tab:hover {
-      box-shadow: 4px 4px 0px #4e342e, 4px 4px 8px rgba(255,215,0,0.4);
-      background: #fff9c4;
+      box-shadow: 3px 3px 12px rgba(0,0,0,0.6);
+      background: linear-gradient(135deg, #3a3a3e 0%, #2a2a2e 100%);
+      color: #ccc;
     }
     #ai-chat-tab.chat-open {
       left: min(340px, 80vw);
     }
-    /* Hidden while joystick is active */
+    /* Hidden state — shrink to almost invisible slim tab on edge */
     #ai-chat-tab.chat-tab-hidden {
       opacity: 0;
       pointer-events: none;
+    }
+    #ai-chat-tab.chat-tab-collapsed {
+      padding: 3px 2px;
+      font-size: 9px;
+      opacity: 0.4;
+    }
+    #ai-chat-tab.chat-tab-collapsed:hover {
+      opacity: 1;
     }
     /* Upward offset in camp mode to avoid menu overlap */
     #ai-chat-tab.camp-mode {
@@ -3596,38 +3770,36 @@
       top: 50%;
       transform: translateY(-50%);
       z-index: 201;
-      background: #fffde7;
-      border: 3px solid #4e342e;
-      border-radius: 14px;
-      padding: 10px 14px;
+      background: linear-gradient(135deg, #2a2a2e 0%, #1a1a1e 100%);
+      border: 2px solid #555;
+      border-radius: 10px;
+      padding: 8px 12px;
       max-width: 180px;
       font-family: 'M PLUS Rounded 1c', sans-serif;
       font-size: 12px;
-      color: #3e2723;
-      box-shadow: 4px 4px 0px #4e342e;
+      color: #ccc;
+      box-shadow: 3px 3px 12px rgba(0,0,0,0.6);
       pointer-events: none;
       display: none;
       animation: bubble-bounce 0.4s ease-out;
     }
     #chat-reminder-bubble::before {
-      /* Outer triangle of left-pointing speech arrow (matches border color) */
       content: '';
       position: absolute;
-      left: -14px;
+      left: -12px;
       top: 50%;
       transform: translateY(-50%);
-      border: 7px solid transparent;
-      border-right-color: #4e342e;
+      border: 6px solid transparent;
+      border-right-color: #555;
     }
     #chat-reminder-bubble::after {
-      /* Inner triangle fills with bubble bg color, creating a layered outline effect */
       content: '';
       position: absolute;
-      left: -9px; /* -14px + 5px gap = border-width difference between outer(7) and inner(5) */
+      left: -8px;
       top: 50%;
       transform: translateY(-50%);
-      border: 5px solid transparent;
-      border-right-color: #fffde7;
+      border: 4px solid transparent;
+      border-right-color: #2a2a2e;
       z-index: 1;
     }
     #chat-reminder-bubble.camp-mode {

@@ -7,14 +7,22 @@
 
   // ── Resource catalogue ──────────────────────────────────────
   const RESOURCE_TYPES = {
-    wood:         { label: 'Wood',         icon: '🪵', color: '#8B4513' },
-    stone:        { label: 'Stone',        icon: '🪨', color: '#888888' },
-    coal:         { label: 'Coal',         icon: '🖤', color: '#222222' },
-    iron:         { label: 'Iron',         icon: '⚙️', color: '#AAAAAA' },
-    crystal:      { label: 'Crystal',      icon: '💎', color: '#88CCFF' },
-    magicEssence: { label: 'Magic Essence',icon: '✨', color: '#AA44FF' },
-    gem:          { label: 'Gem',          icon: '💍', color: '#FFD700' },
-    flesh:        { label: 'Flesh',        icon: '🩸', color: '#CC2200' }
+    wood:         { label: 'Wood',         icon: '🪵', color: '#8B4513', category: 'material' },
+    stone:        { label: 'Stone',        icon: '🪨', color: '#888888', category: 'material' },
+    coal:         { label: 'Coal',         icon: '🖤', color: '#222222', category: 'material' },
+    iron:         { label: 'Iron',         icon: '⚙️', color: '#AAAAAA', category: 'material' },
+    crystal:      { label: 'Crystal',      icon: '💎', color: '#88CCFF', category: 'material' },
+    magicEssence: { label: 'Magic Essence',icon: '✨', color: '#AA44FF', category: 'material' },
+    gem:          { label: 'Gem',          icon: '💍', color: '#FFD700', category: 'material' },
+    flesh:        { label: 'Flesh',        icon: '🥩', color: '#CC2200', category: 'food' },
+    fur:          { label: 'Fur',          icon: '🧶', color: '#8B6914', category: 'animal' },
+    leather:      { label: 'Leather',      icon: '🟫', color: '#654321', category: 'animal' },
+    feather:      { label: 'Feather',      icon: '🪶', color: '#DDDDDD', category: 'animal' },
+    chitin:       { label: 'Chitin',       icon: '🛡️', color: '#556B2F', category: 'animal' },
+    venom:        { label: 'Venom',        icon: '☠️', color: '#7CFC00', category: 'animal' },
+    berry:        { label: 'Berry',        icon: '🫐', color: '#4B0082', category: 'food' },
+    flower:       { label: 'Flower',       icon: '🌸', color: '#FF69B4', category: 'food' },
+    vegetable:    { label: 'Vegetable',    icon: '🥕', color: '#FF8C00', category: 'food' }
   };
 
   // ── Harvesting tool definitions ─────────────────────────────
@@ -58,6 +66,26 @@
       epicBuyCost: 2000,
       epicForgeReq: { crystal: 10, magicEssence: 5 },
       swingDurationMs: 500
+    },
+    knife: {
+      id: 'knife', name: 'Skinning Knife', icon: '🔪',
+      targets: ['animal_carcass'],
+      yields: null,
+      amountMin: 1, amountMax: 3,
+      buyCost: 100,
+      epicBuyCost: 600,
+      epicForgeReq: { iron: 8, leather: 3 },
+      swingDurationMs: 400
+    },
+    berryScoop: {
+      id: 'berryScoop', name: 'Berry Scoop', icon: '🧺',
+      targets: ['berryBush', 'flowerPatch', 'vegetablePatch'],
+      yields: null,
+      amountMin: 2, amountMax: 6,
+      buyCost: 80,
+      epicBuyCost: 400,
+      epicForgeReq: { wood: 10, leather: 2 },
+      swingDurationMs: 300
     }
   };
 
@@ -66,32 +94,50 @@
     tree: {
       label: 'Tree',         color: 0x2D6A2D, radius: 1.0,
       hp: 60,                yield: 'wood',
-      toolRequired: 'axe'
+      toolRequired: 'axe',   harvestAnim: 'chop'
     },
     rock: {
       label: 'Rock',         color: 0x808080, radius: 1.8,
       hp: 80,                yield: 'stone',
-      toolRequired: 'sledgehammer'
+      toolRequired: 'sledgehammer', harvestAnim: 'smash'
     },
     coal: {
       label: 'Coal Vein',    color: 0x222222, radius: 1.6,
       hp: 60,                yield: 'coal',
-      toolRequired: 'pickaxe'
+      toolRequired: 'pickaxe', harvestAnim: 'mine'
     },
     iron: {
       label: 'Iron Deposit', color: 0xC0C0C0, radius: 1.7,
       hp: 100,               yield: 'iron',
-      toolRequired: 'pickaxe'
+      toolRequired: 'pickaxe', harvestAnim: 'mine'
     },
     crystal: {
       label: 'Crystal',      color: 0x66BBFF, radius: 1.4,
       hp: 40,                yield: 'crystal',
-      toolRequired: 'magicTool'
+      toolRequired: 'magicTool', harvestAnim: 'channel'
     },
     magic: {
       label: 'Magic Node',   color: 0x8833FF, radius: 1.5,
       hp: 50,                yield: 'magicEssence',
-      toolRequired: 'magicTool'
+      toolRequired: 'magicTool', harvestAnim: 'channel'
+    },
+    berryBush: {
+      label: 'Berry Bush',   color: 0x4B0082, radius: 0.8,
+      hp: 20,                yield: 'berry',
+      toolRequired: 'berryScoop', harvestAnim: 'gather',
+      autoHarvest: true
+    },
+    flowerPatch: {
+      label: 'Flower Patch', color: 0xFF69B4, radius: 0.6,
+      hp: 15,                yield: 'flower',
+      toolRequired: 'berryScoop', harvestAnim: 'gather',
+      autoHarvest: true
+    },
+    vegetablePatch: {
+      label: 'Vegetable Patch', color: 0xFF8C00, radius: 0.7,
+      hp: 25,                yield: 'vegetable',
+      toolRequired: 'berryScoop', harvestAnim: 'gather',
+      autoHarvest: true
     }
   };
 
@@ -117,7 +163,9 @@
     if (!_saveData.resources) {
       _saveData.resources = {
         wood: 0, stone: 0, coal: 0, iron: 0,
-        crystal: 0, magicEssence: 0, gem: 0, flesh: 0
+        crystal: 0, magicEssence: 0, gem: 0, flesh: 0,
+        fur: 0, leather: 0, feather: 0, chitin: 0, venom: 0,
+        berry: 0, flower: 0, vegetable: 0
       };
     }
     return _saveData.resources;
@@ -207,6 +255,67 @@
       const geo = new THREE.SphereGeometry(def.radius * 0.7, 10, 10);
       const mat = new THREE.MeshToonMaterial({ color: def.color, emissive: def.color, emissiveIntensity: 0.4 });
       mesh = new THREE.Mesh(geo, mat);
+    } else if (nodeType === 'berryBush') {
+      // Berry bush with visible berries
+      const group = new THREE.Group();
+      const bushGeo = new THREE.SphereGeometry(0.6, 8, 6);
+      const bushMat = new THREE.MeshToonMaterial({ color: 0x2E8B2E });
+      const bush = new THREE.Mesh(bushGeo, bushMat);
+      bush.position.y = 0.4;
+      bush.scale.y = 0.7;
+      group.add(bush);
+      // Berry clusters
+      for (let i = 0; i < 8; i++) {
+        const berryGeo = new THREE.SphereGeometry(0.06, 5, 5);
+        const berryMat = new THREE.MeshToonMaterial({ color: 0x4B0082 });
+        const b = new THREE.Mesh(berryGeo, berryMat);
+        const angle = (i / 8) * Math.PI * 2;
+        b.position.set(Math.cos(angle) * 0.4, 0.35 + Math.random() * 0.25, Math.sin(angle) * 0.4);
+        b.userData.isBerry = true;
+        group.add(b);
+      }
+      mesh = group;
+    } else if (nodeType === 'flowerPatch') {
+      // Flower patch with colorful petals
+      const group = new THREE.Group();
+      const flowerColors = [0xFF69B4, 0xFFD700, 0xFF6347, 0xDA70D6, 0x87CEEB];
+      for (let i = 0; i < 5; i++) {
+        const stemGeo = new THREE.CylinderGeometry(0.02, 0.02, 0.3, 4);
+        const stemMat = new THREE.MeshToonMaterial({ color: 0x228B22 });
+        const stem = new THREE.Mesh(stemGeo, stemMat);
+        const fx = (Math.random() - 0.5) * 0.8;
+        const fz = (Math.random() - 0.5) * 0.8;
+        stem.position.set(fx, 0.15, fz);
+        group.add(stem);
+        const petalGeo = new THREE.SphereGeometry(0.08, 5, 5);
+        const petalMat = new THREE.MeshToonMaterial({ color: flowerColors[i % flowerColors.length] });
+        const petal = new THREE.Mesh(petalGeo, petalMat);
+        petal.position.set(fx, 0.32, fz);
+        group.add(petal);
+      }
+      mesh = group;
+    } else if (nodeType === 'vegetablePatch') {
+      // Vegetable patch with carrots/roots poking out
+      const group = new THREE.Group();
+      const soilGeo = new THREE.BoxGeometry(0.8, 0.1, 0.8);
+      const soilMat = new THREE.MeshToonMaterial({ color: 0x3E2723 });
+      const soil = new THREE.Mesh(soilGeo, soilMat);
+      soil.position.y = 0.05;
+      group.add(soil);
+      for (let i = 0; i < 4; i++) {
+        const leafGeo = new THREE.ConeGeometry(0.08, 0.2, 4);
+        const leafMat = new THREE.MeshToonMaterial({ color: 0x228B22 });
+        const leaf = new THREE.Mesh(leafGeo, leafMat);
+        leaf.position.set((i - 1.5) * 0.2, 0.2, (Math.random() - 0.5) * 0.3);
+        group.add(leaf);
+        const rootGeo = new THREE.ConeGeometry(0.04, 0.12, 4);
+        const rootMat = new THREE.MeshToonMaterial({ color: 0xFF8C00 });
+        const root = new THREE.Mesh(rootGeo, rootMat);
+        root.position.set((i - 1.5) * 0.2, 0.12, (Math.random() - 0.5) * 0.3);
+        root.rotation.x = Math.PI;
+        group.add(root);
+      }
+      mesh = group;
     }
 
     if (!mesh) return null;
@@ -278,6 +387,26 @@
       const x = rng(), z = rng();
       if (avoid(x, z)) continue;
       _spawnNode('magic', x, z);
+    }
+    // Berry bushes — 30 nodes (forest region, near center)
+    for (let i = 0; i < 30; i++) {
+      const x = (Math.random() - 0.5) * 160;
+      const z = (Math.random() - 0.5) * 160;
+      if (avoid(x, z)) continue;
+      _spawnNode('berryBush', x, z);
+    }
+    // Flower patches — 25 nodes (scattered everywhere)
+    for (let i = 0; i < 25; i++) {
+      const x = rng(), z = rng();
+      if (avoid(x, z)) continue;
+      _spawnNode('flowerPatch', x, z);
+    }
+    // Vegetable patches — 15 nodes (near camp area)
+    for (let i = 0; i < 15; i++) {
+      const x = (Math.random() - 0.5) * 100;
+      const z = 20 + (Math.random() - 0.5) * 80;
+      if (avoid(x, z)) continue;
+      _spawnNode('vegetablePatch', x, z);
     }
   }
 
@@ -360,6 +489,9 @@
       RESOURCE_TYPES[yieldRes] ? RESOURCE_TYPES[yieldRes].color : '#FFFFFF'
     );
 
+    // Show slide-in collection notification (upper-right corner)
+    _showCollectionNotification(yieldRes, amount);
+
     // Collapse animation — scale to 0 over ~0.5s then hide
     node._collapseStart = Date.now();
     node._collapseFrom = node.mesh.scale.clone ? node.mesh.scale.clone() : { x: 1, y: 1, z: 1 };
@@ -383,6 +515,30 @@
         _updateHUD();
       }
     }
+  }
+
+  // ── Resource collection notification (slide-in from upper-right) ──
+  let _notifContainer = null;
+  function _showCollectionNotification(resourceKey, amount) {
+    if (!_notifContainer) {
+      _notifContainer = document.createElement('div');
+      _notifContainer.id = 'harvest-notif-container';
+      _notifContainer.style.cssText = 'position:fixed;top:60px;right:10px;z-index:350;display:flex;flex-direction:column;gap:4px;pointer-events:none;';
+      document.body.appendChild(_notifContainer);
+    }
+    const rt = RESOURCE_TYPES[resourceKey];
+    if (!rt) return;
+    const el = document.createElement('div');
+    el.style.cssText = `background:rgba(0,0,0,0.85);border:1px solid ${rt.color};border-radius:8px;padding:6px 14px;color:#fff;font-size:13px;font-weight:bold;font-family:'Bangers',cursive;letter-spacing:1px;display:flex;align-items:center;gap:8px;transform:translateX(120%);transition:transform 0.3s ease-out,opacity 0.3s;opacity:0;white-space:nowrap;`;
+    el.innerHTML = `<span style="font-size:18px;">${rt.icon}</span><span>+${amount} ${rt.label}</span>`;
+    _notifContainer.appendChild(el);
+    // Slide in
+    requestAnimationFrame(() => { el.style.transform = 'translateX(0)'; el.style.opacity = '1'; });
+    // Slide out after 2s
+    setTimeout(() => {
+      el.style.transform = 'translateX(120%)'; el.style.opacity = '0';
+      setTimeout(() => el.remove(), 350);
+    }, 2000);
   }
 
   // ── Floating text helper ─────────────────────────────────────
