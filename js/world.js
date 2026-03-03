@@ -148,7 +148,7 @@ const WEAPON_CRAFTS = {
     cost: { iron: 15, coal: 10, magicEssence: 3 }, buildTime: 8,
     stats: { damage: 22, range: 14, attackSpeed: 2.0, projectile: 'fireBullet', element: 'fire' },
     description: 'Powerful fire musket — slow but devastating. Elemental: Fire.' },
-  iceRifle: { id: 'iceRifle', name: 'Frost Rifle', icon: '❄️', type: 'ranged', rarity: 'epic',
+  frostRifle: { id: 'frostRifle', name: 'Frost Rifle', icon: '❄️', type: 'ranged', rarity: 'epic',
     cost: { crystal: 12, iron: 8, magicEssence: 5 }, buildTime: 8,
     stats: { damage: 16, range: 16, attackSpeed: 1.6, projectile: 'iceBullet', element: 'ice', slowEffect: 0.4 },
     description: 'Frost rifle — slows enemies by 40%. Elemental: Ice.' }

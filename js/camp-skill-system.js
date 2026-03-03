@@ -1724,7 +1724,7 @@
         rewardSkillPoints: 1,
         unlockBuilding: 'companionHouse',
         companionEgg: true,
-        message: "⚔️ 10 Enemies Defeated!<br><br>A <b>Grey Alien 👽</b> companion has appeared! The <b>Companion House</b> is now unlocked. Visit it to activate your alien companion!",
+        message: "⚔️ 10 Enemies Defeated!<br><br>A <b>Grey Alien 👽 Egg</b> has appeared! The <b>Companion House</b> is now unlocked. Visit it to hatch and activate your alien companion!",
         nextQuest: 'quest9_activateCompanion',
         conditions: ['quest7_buyProgression']
       },

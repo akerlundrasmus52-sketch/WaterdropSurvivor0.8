@@ -1639,7 +1639,7 @@
             animalGroup.rotation.y = Math.atan2(wx, wz);
           }
           // Idle animation — slight bob
-          animalGroup.position.y = Math.sin(Date.now() * 0.002 + animalGroup.id) * 0.05;
+          animalGroup.position.y = Math.sin(Date.now() * 0.002 + (animalGroup.userData.wanderTimer * 100)) * 0.05;
 
           // Player interaction check (tranquilize for quest33)
           const pdx = pPos.x - animalGroup.position.x;
