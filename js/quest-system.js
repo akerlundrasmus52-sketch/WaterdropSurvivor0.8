@@ -713,8 +713,19 @@
       const input = document.getElementById('chat-input');
       if (!tab || !chatBox) return;
 
-      tab.onclick = () => toggleChat();
-      closeBtn.onclick = () => toggleChat(false);
+      tab.onclick = () => {
+        if (tab.classList.contains('chat-tab-collapsed')) {
+          // Expand from collapsed slim tab
+          tab.classList.remove('chat-tab-collapsed');
+        } else if (chatOpen) {
+          // Close chat and collapse tab
+          toggleChat(false);
+          tab.classList.add('chat-tab-collapsed');
+        } else {
+          toggleChat(true);
+        }
+      };
+      closeBtn.onclick = () => { toggleChat(false); tab.classList.add('chat-tab-collapsed'); };
       sendBtn.onclick = () => sendChatMessage();
       input.onkeydown = (e) => { if (e.key === 'Enter') sendChatMessage(); };
 
@@ -1697,7 +1708,59 @@
         const hasFree = window.GameLuckyWheel.canFreeSpin(saveData);
         spinNotif.style.display = hasFree ? 'block' : 'none';
       }
+      // Unspent points notification bar
+      _updateUnspentBar();
     }
+
+    // ── Unspent Points Notification Bar ────────────────────────────
+    let _unspentBarDismissed = false;
+    function _updateUnspentBar() {
+      const bar = document.getElementById('camp-unspent-bar');
+      const inner = document.getElementById('camp-unspent-inner');
+      if (!bar || !inner) return;
+      if (_unspentBarDismissed) { bar.style.display = 'none'; return; }
+
+      const chips = [];
+      // Skill points
+      const sp = saveData.skillPoints || 0;
+      if (sp > 0) chips.push({ icon: '🌳', label: sp + ' SP', color: '#2ecc71', bg: 'rgba(46,204,113,0.15)', border: 'rgba(46,204,113,0.5)', action: 'skillTree' });
+      // Attribute points
+      const ap = saveData.unspentAttributePoints || 0;
+      if (ap > 0) chips.push({ icon: '⭐', label: ap + ' AP', color: '#9b59b6', bg: 'rgba(155,89,182,0.15)', border: 'rgba(155,89,182,0.5)', action: 'training' });
+      // Gold
+      const gold = saveData.gold || 0;
+      if (gold > 0) chips.push({ icon: '💰', label: gold.toLocaleString() + ' G', color: '#FFD700', bg: 'rgba(255,215,0,0.12)', border: 'rgba(255,215,0,0.45)', action: 'forge' });
+      // Companion skill points
+      const csp = saveData.companionSkillPoints || 0;
+      if (csp > 0) chips.push({ icon: '🐾', label: csp + ' CSP', color: '#e67e22', bg: 'rgba(230,126,34,0.15)', border: 'rgba(230,126,34,0.5)', action: 'companion' });
+      // Essence
+      const ess = (saveData.clicker && saveData.clicker.essence > 0) ? saveData.clicker.essence : (saveData.essence || 0);
+      if (ess > 0) chips.push({ icon: '✨', label: ess + ' Ess', color: '#3498db', bg: 'rgba(52,152,219,0.12)', border: 'rgba(52,152,219,0.45)', action: 'idle' });
+
+      if (chips.length === 0) { bar.style.display = 'none'; return; }
+      bar.style.display = 'flex';
+      inner.innerHTML = chips.map(c =>
+        `<span class="unspent-chip" style="--chip-border:${c.border};--chip-bg:${c.bg};--chip-color:${c.color};" data-action="${c.action}">` +
+        `<span class="chip-icon" style="background:${c.bg};">${c.icon}</span>` +
+        `<span class="chip-count">${c.label}</span></span>`
+      ).join('');
+      // Chip click handlers
+      inner.querySelectorAll('.unspent-chip').forEach(chip => {
+        chip.onclick = () => {
+          const act = chip.dataset.action;
+          if (act === 'skillTree') { const el = document.getElementById('camp-skills-tab'); if (el) el.click(); }
+          else if (act === 'training') { const el = document.getElementById('camp-training-tab'); if (el) el.click(); }
+          else if (act === 'forge') showProgressionShop();
+          else if (act === 'companion') showCompanionHouse();
+          else if (act === 'idle') showIdleSection();
+        };
+      });
+      // Close button
+      const closeBtn = document.getElementById('camp-unspent-close');
+      if (closeBtn) closeBtn.onclick = () => { _unspentBarDismissed = true; bar.style.display = 'none'; };
+    }
+    // Re-show on next camp visit
+    function _resetUnspentBarDismiss() { _unspentBarDismissed = false; }
 
     // Show daily reward panel in a popup overlay
     function _showDailyRewardPanel() {
@@ -1794,6 +1857,9 @@
     }
 
     function updateCampScreen() {
+      // Reset unspent bar dismiss so it shows again each camp visit
+      _resetUnspentBarDismiss();
+
       // Hide combat HUD (Rage Bar + Special Attacks) — not visible in camp
       if (window.GameRageCombat) window.GameRageCombat.setCombatHUDVisible(false);
 
