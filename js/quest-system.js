@@ -1432,6 +1432,34 @@
           </div>
         </div>`;
 
+      // Wolf breeding section
+      const capturedWolves = (saveData.tranquilizedAnimals || []).filter(a => a.id === 'wolf');
+      const hasMaleWolf = capturedWolves.some(a => a.gender === 'male');
+      const hasFemaleWolf = capturedWolves.some(a => a.gender === 'female');
+      const wolfUnlocked = saveData.companions.stormWolf && saveData.companions.stormWolf.unlocked;
+      const showBreeding = saveData.craftedWeapons && saveData.craftedWeapons.tranquilizerRifle;
+      const breedingSectionHTML = showBreeding ? `
+        <div style="background:rgba(139,69,19,0.1);border:1px solid #8B4513;border-radius:12px;padding:16px;margin-bottom:20px;">
+          <div style="color:#8B4513;font-size:15px;font-weight:bold;margin-bottom:10px;">🐺 Wolf Breeding Program</div>
+          <div style="color:#aaa;font-size:12px;margin-bottom:10px;">Capture a male and female wolf with the Tranquilizer Rifle, then breed them to get a Storm Wolf companion.</div>
+          <div style="display:flex;gap:12px;margin-bottom:10px;">
+            <div style="flex:1;background:rgba(255,255,255,0.05);border-radius:8px;padding:10px;text-align:center;">
+              <div style="font-size:20px;">${hasMaleWolf ? '🐺♂' : '❓♂'}</div>
+              <div style="color:${hasMaleWolf ? '#00FF64' : '#f66'};font-size:11px;">${hasMaleWolf ? 'Male Wolf ✅' : 'Not captured'}</div>
+            </div>
+            <div style="flex:1;background:rgba(255,255,255,0.05);border-radius:8px;padding:10px;text-align:center;">
+              <div style="font-size:20px;">${hasFemaleWolf ? '🐺♀' : '❓♀'}</div>
+              <div style="color:${hasFemaleWolf ? '#00FF64' : '#f66'};font-size:11px;">${hasFemaleWolf ? 'Female Wolf ✅' : 'Not captured'}</div>
+            </div>
+          </div>
+          ${wolfUnlocked
+            ? '<div style="background:rgba(0,255,100,0.1);border:1px solid #00FF64;border-radius:8px;padding:10px;text-align:center;color:#00FF64;font-size:13px;">✅ Storm Wolf Bred! Select it above.</div>'
+            : hasMaleWolf && hasFemaleWolf
+              ? '<button id="breed-wolf-btn" style="width:100%;background:linear-gradient(135deg,#8B4513,#A0522D);border:none;border-radius:10px;padding:12px;color:#fff;font-weight:bold;cursor:pointer;font-size:14px;">🐺⚡ Breed Storm Wolf!</button>'
+              : '<div style="color:#888;font-size:11px;text-align:center;">Find wolves in the forest region and tranquilize them with your rifle.</div>'
+          }
+        </div>` : '';
+
       modal.innerHTML = `
         <div style="max-width:640px;width:100%;">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
@@ -1444,6 +1472,7 @@
 
           ${eggSectionHTML}
           ${companionSection}
+          ${breedingSectionHTML}
           ${skillTreeHTML}
         </div>
       `;
@@ -1455,6 +1484,22 @@
         modal.remove();
         if (campScreen) campScreen.style.display = 'flex';
       };
+
+      // Breed wolf button handler
+      const breedBtn = document.getElementById('breed-wolf-btn');
+      if (breedBtn) {
+        breedBtn.onclick = () => {
+          saveData.companions.stormWolf.unlocked = true;
+          if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest34_breedWolf') {
+            progressTutorialQuest('quest34_breedWolf', true);
+          }
+          saveSaveData();
+          showStatChange('🐺⚡ Storm Wolf Bred!');
+          playSound('collect');
+          modal.remove();
+          showCompanionHouse();
+        };
+      }
 
       // Activate companion button (quest9 progression)
       const activateBtn = document.getElementById('activate-companion-btn');
@@ -2107,6 +2152,18 @@
                   saveSaveData();
                 }
                 if (typeof showPrestigeMenu === 'function') showPrestigeMenu(); else showProgressionShop();
+              } else if (buildingId === 'campfireKitchen') {
+                if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest30_buildCampfire') {
+                  progressTutorialQuest('quest30_buildCampfire', true);
+                  saveSaveData();
+                }
+                showCampfireKitchen();
+              } else if (buildingId === 'weaponsmith') {
+                if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest31_buildWeaponsmith') {
+                  progressTutorialQuest('quest31_buildWeaponsmith', true);
+                  saveSaveData();
+                }
+                showWeaponsmith();
               } else {
                 showStatChange(`${building.icon} ${building.name}: Level ${buildingData.level}/${buildingData.maxLevel}`);
               }
