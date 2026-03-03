@@ -60,7 +60,7 @@
 
   // Benny NPC state
   let _bennyMesh   = null;
-  let _bennyBubble = null;        // DOM speech-bubble element
+  // _bennyBubble is now managed by window.DialogueSystem
   const BENNY_POS  = { x: 4, z: 7 }; // near camp entrance
   const BENNY_GREET_RADIUS = 3.5;
   let _bennyGreeted = false;      // whether Benny dialogue has fired this session
@@ -597,31 +597,6 @@
     grp.position.set(BENNY_POS.x, 0, BENNY_POS.z);
     _bennyMesh = grp;
     _campScene.add(grp);
-
-    // Create speech bubble DOM element (positioned via CSS transform in update)
-    const bubble = document.createElement('div');
-    bubble.id = 'benny-speech-bubble';
-    bubble.style.cssText = [
-      'position:fixed',
-      'background:rgba(20,14,8,0.92)',
-      'color:#FFD700',
-      'border:2px solid #8B6914',
-      'border-radius:10px',
-      'padding:6px 10px',
-      'font-family:Bangers,cursive',
-      'font-size:13px',
-      'letter-spacing:1px',
-      'pointer-events:none',
-      'z-index:350',
-      'max-width:160px',
-      'text-align:center',
-      'display:none',
-      'white-space:normal',
-      'line-height:1.4',
-      'box-shadow:0 2px 8px rgba(0,0,0,0.7)'
-    ].join(';');
-    document.body.appendChild(bubble);
-    _bennyBubble = bubble;
   }
 
   // Update Benny NPC each frame (gentle idle bob + speech bubble position)
@@ -645,14 +620,18 @@
       }
     }
 
-    // Project Benny's world position to screen space for the speech bubble
-    if (_bennyBubble && _campCamera) {
-      const pos3d = new THREE.Vector3(BENNY_POS.x, 1.9, BENNY_POS.z);
+    // Project Benny's mesh position to screen space for the DialogueSystem bubble
+    const DS = window.DialogueSystem;
+    if (DS && DS.isActive() && _campCamera && _bennyMesh) {
+      const pos3d = new THREE.Vector3(
+        _bennyMesh.position.x,
+        1.9 + _bennyMesh.position.y,
+        _bennyMesh.position.z
+      );
       pos3d.project(_campCamera);
       const sx = ( pos3d.x * 0.5 + 0.5) * window.innerWidth;
       const sy = (-pos3d.y * 0.5 + 0.5) * window.innerHeight;
-      _bennyBubble.style.left = (sx - 80) + 'px';
-      _bennyBubble.style.top  = (sy - 60) + 'px';
+      DS.setPosition(sx, sy);
     }
 
     // Check proximity for first-death greeting
@@ -676,37 +655,41 @@
     sd.bennyGreetingShown = true;
     if (typeof saveSaveData === 'function') saveSaveData();
 
-    _showBennySpeech('Heyyy dude!\nI\'m Benny! ✌️\nWelcome to your\nfine little place\nyou can call home!\nIt ain\'t much yet...');
-    setTimeout(() => { _hideBennySpeech(); }, 5000);
+    const DS = window.DialogueSystem;
+    if (!DS) {
+      // Fallback if DialogueSystem not loaded
+      _showBennySpeech('Heyyy dude! Welcome to camp! ✌️');
+      setTimeout(function () { _hideBennySpeech(); }, 5000);
+      return;
+    }
 
-    // After greeting, walk to the main building (questMission) and unlock it
-    setTimeout(() => {
-      _showBennySpeech('Let\'s do something\nto make this place\nmore useful and cozy!\nFollow me, dude! 🔨');
-      _bennyWalkToBuild('questMission', 'Here\'s where we\nbuild the Quest Hall!\nI got materials for ya! 📜');
-      setTimeout(() => { _hideBennySpeech(); }, 3500);
-    }, 5500);
-
-    // Then show quest hint
-    setTimeout(() => {
-      const currentQ = (typeof getCurrentQuest === 'function') ? getCurrentQuest() : null;
-      if (currentQ) {
-        _showBennySpeech('Wao dude!\nYour quest:\n' + currentQ.name);
-        setTimeout(() => { _hideBennySpeech(); }, 4000);
-      } else {
-        _showBennySpeech('Start a run and\nkill some enemies,\nthen come back\nhere dude! ⚔️');
-        setTimeout(() => { _hideBennySpeech(); }, 4000);
+    // Show camp welcome sequence, then walk to quest hall, then hint
+    DS.show(DS.DIALOGUES.campWelcome, {
+      onComplete: function () {
+        _bennyWalkToBuild('questMission', 'Here\'s where we build the Quest Hall! I got materials for ya! 📜');
+        setTimeout(function () {
+          const currentQ = (typeof getCurrentQuest === 'function') ? getCurrentQuest() : null;
+          if (currentQ) {
+            DS.show([{ text: 'Your quest: ' + currentQ.name + '! 🎯', emotion: 'task' }]);
+          } else {
+            DS.show([{ text: 'Start a run and kill some enemies, then come back here dude! ⚔️', emotion: 'task' }]);
+          }
+        }, 5000);
       }
-    }, 10000);
+    });
   }
 
   function _showBennySpeech(text) {
-    if (!_bennyBubble) return;
-    _bennyBubble.textContent = text;
-    _bennyBubble.style.display = 'block';
+    const DS = window.DialogueSystem;
+    if (DS) {
+      // Convert legacy newlines to spaces and show as a single happy sentence
+      DS.show([{ text: text.replace(/\n/g, ' '), emotion: 'happy' }]);
+    }
   }
 
   function _hideBennySpeech() {
-    if (_bennyBubble) _bennyBubble.style.display = 'none';
+    const DS = window.DialogueSystem;
+    if (DS) DS.dismiss();
   }
 
   // Benny walk-to-building animation: smoothly moves Benny to a building, shows speech, then returns
