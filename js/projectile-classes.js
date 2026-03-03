@@ -757,25 +757,55 @@
                 spawnBloodDecal({ x: enemy.mesh.position.x + (Math.random()-0.5)*0.6, y: 0, z: enemy.mesh.position.z + (Math.random()-0.5)*0.6 });
               }
             } else {
-              // Standard gun hit — entry wound at front face
-              // Entry: small dark hole at impact face + tiny blood drops toward player (entry splatter)
+              // Standard gun hit — varied hit effects
+              const gunHitVar = Math.floor(Math.random() * 5);
               const entryX = enemy.mesh.position.x - this.vx * 0.5;
               const entryZ = enemy.mesh.position.z - this.vz * 0.5;
-              // Small entry blood spray toward bullet direction (back-spatter at entry)
-              for (let es = 0; es < 3 && bloodDrips.length < MAX_BLOOD_DRIPS; es++) {
-                const ep = new THREE.Mesh(
-                  new THREE.SphereGeometry(0.02 + Math.random()*0.025, 4, 4),
-                  new THREE.MeshBasicMaterial({ color: 0xAA0000 })
-                );
-                ep.position.set(entryX + (Math.random()-0.5)*0.25, enemy.mesh.position.y + 0.1 + (Math.random()-0.5)*0.3, entryZ + (Math.random()-0.5)*0.25);
-                scene.add(ep);
-                bloodDrips.push({
-                  mesh: ep,
-                  velX: -this.vx * (0.1 + Math.random()*0.12),
-                  velZ: -this.vz * (0.1 + Math.random()*0.12),
-                  velY: 0.06 + Math.random()*0.1,
-                  life: 20 + Math.floor(Math.random()*12)
-                });
+              
+              if (gunHitVar === 0) {
+                // Clean entry — small back-spatter
+                for (let es = 0; es < 2 && bloodDrips.length < MAX_BLOOD_DRIPS; es++) {
+                  const ep = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.02 + Math.random()*0.02, 4, 4),
+                    new THREE.MeshBasicMaterial({ color: 0xAA0000 })
+                  );
+                  ep.position.set(entryX + (Math.random()-0.5)*0.2, enemy.mesh.position.y + 0.1, entryZ + (Math.random()-0.5)*0.2);
+                  scene.add(ep);
+                  bloodDrips.push({ mesh: ep, velX: -this.vx*0.1, velZ: -this.vz*0.1, velY: 0.05 + Math.random()*0.08, life: 18 + Math.floor(Math.random()*10) });
+                }
+              } else if (gunHitVar === 1) {
+                // Spray hit — blood flies sideways
+                for (let es = 0; es < 3 && bloodDrips.length < MAX_BLOOD_DRIPS; es++) {
+                  const ep = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.025 + Math.random()*0.025, 4, 4),
+                    new THREE.MeshBasicMaterial({ color: [0xAA0000, 0x880000, 0xCC0000][es%3] })
+                  );
+                  ep.position.set(enemy.mesh.position.x, enemy.mesh.position.y + 0.2, enemy.mesh.position.z);
+                  scene.add(ep);
+                  bloodDrips.push({ mesh: ep, velX: (Math.random()-0.5)*0.2, velZ: (Math.random()-0.5)*0.2, velY: 0.1 + Math.random()*0.15, life: 25 + Math.floor(Math.random()*12) });
+                }
+              } else if (gunHitVar === 2) {
+                // Heavy entry — bigger drops falling down
+                spawnParticles(enemy.mesh.position, 0x8B0000, 3);
+                spawnBloodDecal(enemy.mesh.position);
+              } else if (gunHitVar === 3) {
+                // Through-and-through — small entry, blood mist behind
+                spawnParticles({ x: entryX, y: enemy.mesh.position.y, z: entryZ }, 0x8B0000, 2);
+                if (window.BloodSystem) {
+                  const dir = new THREE.Vector3(this.vx, 0, this.vz).normalize();
+                  window.BloodSystem.emitExitWound(enemy.mesh.position, dir, 15, { spread: 0.2, speed: 0.15 });
+                }
+              } else {
+                // Standard entry spray
+                for (let es = 0; es < 3 && bloodDrips.length < MAX_BLOOD_DRIPS; es++) {
+                  const ep = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.02 + Math.random()*0.025, 4, 4),
+                    new THREE.MeshBasicMaterial({ color: 0xAA0000 })
+                  );
+                  ep.position.set(entryX + (Math.random()-0.5)*0.25, enemy.mesh.position.y + 0.1 + (Math.random()-0.5)*0.3, entryZ + (Math.random()-0.5)*0.25);
+                  scene.add(ep);
+                  bloodDrips.push({ mesh: ep, velX: -this.vx*(0.1+Math.random()*0.12), velZ: -this.vz*(0.1+Math.random()*0.12), velY: 0.06+Math.random()*0.1, life: 20+Math.floor(Math.random()*12) });
+                }
               }
               // Exit wound for gun level 3+ — large hole on back, massive high-velocity exit spray
               if (weapons.gun.level >= 3) {
@@ -1638,8 +1668,4 @@
       }
     }
 
-    // Shared star geometry for all ExpGem instances (created once, reused for performance)
-    let _expGemStarGeometry = null;
-    let _expGemStarMaterial = null;
-    let _expGemOutlineGeometry = null; // Shared outline geometry (created once, reused for performance)
 

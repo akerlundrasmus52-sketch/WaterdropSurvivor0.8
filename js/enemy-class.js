@@ -557,6 +557,7 @@
             const origZ = this.mesh.position.z;
             const shakeInterval = setInterval(() => {
               shakeCount++;
+              if (!this.mesh || this.isDead) { clearInterval(shakeInterval); return; }
               if (this.mesh) {
                 this.mesh.position.x = origX + (Math.random() - 0.5) * 0.12;
                 this.mesh.position.z = origZ + (Math.random() - 0.5) * 0.12;
@@ -1464,6 +1465,13 @@
           clearTimeout(this._squishTimer);
           this._squishTimer = null;
         }
+        // Cancel pending drone shake interval to prevent timer leak
+        if (this._droneShakeTimer) {
+          clearInterval(this._droneShakeTimer);
+          this._droneShakeTimer = null;
+        }
+        // Cancel shotgun slide to prevent movement on dead enemy
+        this._shotgunSlide = null;
         
         // Clean up ground shadow
         if (this.groundShadow) {
