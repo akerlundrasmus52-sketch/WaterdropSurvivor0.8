@@ -559,13 +559,13 @@
       emissiveIntensity: 0.1,
       shininess: 10
     });
-    var dreadAngles = [0, 0.8, 1.6, 2.4, 3.2, 4.0, 4.8, 5.6];
-    for (var di = 0; di < dreadAngles.length; di++) {
-      var da = dreadAngles[di];
-      var dreadLen = 0.5 + Math.random() * 0.25;
-      var dreadGeo = new THREE.CylinderGeometry(0.035, 0.025, dreadLen, 4);
-      var dread = new THREE.Mesh(dreadGeo, dreadMat);
-      var dreadR = 0.22;
+    const dreadAngles = [0, 0.8, 1.6, 2.4, 3.2, 4.0, 4.8, 5.6];
+    for (let di = 0; di < dreadAngles.length; di++) {
+      const da = dreadAngles[di];
+      const dreadLen = 0.5 + Math.random() * 0.25;
+      const dreadGeo = new THREE.CylinderGeometry(0.035, 0.025, dreadLen, 4);
+      const dread = new THREE.Mesh(dreadGeo, dreadMat);
+      const dreadR = 0.22;
       dread.position.set(
         Math.sin(da) * dreadR,
         1.12 - dreadLen * 0.35,
@@ -578,7 +578,7 @@
     }
 
     // Small round sunglasses (hippie look)
-    var glassMat = new THREE.MeshPhongMaterial({
+    const glassMat = new THREE.MeshPhongMaterial({
       color: 0x111111,
       emissive: 0x222244,
       emissiveIntensity: 0.3,
@@ -586,11 +586,11 @@
       transparent: true,
       opacity: 0.7
     });
-    var glassGeo = new THREE.SphereGeometry(0.07, 6, 4);
-    var glassL = new THREE.Mesh(glassGeo, glassMat);
+    const glassGeo = new THREE.SphereGeometry(0.07, 6, 4);
+    const glassL = new THREE.Mesh(glassGeo, glassMat);
     glassL.position.set(-0.1, 1.35, 0.22);
     grp.add(glassL);
-    var glassR = new THREE.Mesh(glassGeo, glassMat);
+    const glassR = new THREE.Mesh(glassGeo, glassMat);
     glassR.position.set(0.1, 1.35, 0.22);
     grp.add(glassR);
 
