@@ -197,6 +197,18 @@
 
     function resetGame() {
       stopDroneHum(); // Stop drone sound on reset
+
+      // Reset joystick state to prevent "stuck joystick" after camp/game-over
+      if (typeof joystickLeft !== 'undefined') {
+        joystickLeft.active = false;
+        joystickLeft.x = 0;
+        joystickLeft.y = 0;
+      }
+      if (typeof joystickRight !== 'undefined') {
+        joystickRight.active = false;
+        joystickRight.x = 0;
+        joystickRight.y = 0;
+      }
       
       // Reset weapons to default state for each run (roguelite: all run upgrades are temporary)
       Object.assign(weapons, getDefaultWeapons());
