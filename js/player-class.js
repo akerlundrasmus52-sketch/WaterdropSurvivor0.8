@@ -4,22 +4,34 @@
 
     class Player {
       constructor() {
-        // Create water droplet shape (teardrop)
-        const geometry = new THREE.SphereGeometry(0.5, 16, 16); // Reduced segments for performance
+        // Create water droplet shape (chunky waterdrop matching spritesheet)
+        const geometry = new THREE.SphereGeometry(0.5, 16, 16);
         
-        // Modify geometry to make it more teardrop-shaped
+        // Modify geometry — wide bottom, pointed curved tip like spritesheet
         const positions = geometry.attributes.position;
         for (let i = 0; i < positions.count; i++) {
-          const y = positions.getY(i);
-          const x = positions.getX(i);
-          const z = positions.getZ(i);
+          let y = positions.getY(i);
+          let x = positions.getX(i);
+          let z = positions.getZ(i);
           
-          // Stretch top to make teardrop
           if (y > 0) {
-            positions.setY(i, y * 1.2);
-            const squeeze = 1 - (y / 0.5) * 0.3;
+            // Stretch top into pointed tip
+            positions.setY(i, y * 1.35);
+            const t = y / 0.5; // 0..1
+            const squeeze = 1 - t * 0.55;
             positions.setX(i, x * squeeze);
             positions.setZ(i, z * squeeze);
+            // Bend the tip to one side (matching spritesheet curved point)
+            if (t > 0.5) {
+              const bend = (t - 0.5) * 2.0;
+              positions.setX(i, positions.getX(i) + bend * 0.18);
+              positions.setZ(i, positions.getZ(i) - bend * 0.06);
+            }
+          } else {
+            // Widen the bottom for chunky squat shape
+            const bulge = 1 + Math.abs(y / 0.5) * 0.15;
+            positions.setX(i, x * bulge);
+            positions.setZ(i, z * bulge);
           }
         }
         geometry.computeVertexNormals();
@@ -65,76 +77,98 @@
         this.highlight.position.set(-0.2, 0.3, 0.2);
         this.mesh.add(this.highlight);
         
-        // Eyes — bold red to match spritesheet character design
-        const eyeWhiteGeo = new THREE.SphereGeometry(0.10, 8, 8);
+        // Eyes — large and prominent matching spritesheet character design
+        const eyeWhiteGeo = new THREE.SphereGeometry(0.13, 8, 8);
         const eyeWhiteMat = new THREE.MeshBasicMaterial({ color: 0xFFFFFF });
         
         this.leftEyeWhite = new THREE.Mesh(eyeWhiteGeo, eyeWhiteMat);
-        this.leftEyeWhite.position.set(-0.14, 0.08, 0.38);
+        this.leftEyeWhite.position.set(-0.17, 0.10, 0.36);
         this.mesh.add(this.leftEyeWhite);
         
         this.rightEyeWhite = new THREE.Mesh(eyeWhiteGeo, eyeWhiteMat);
-        this.rightEyeWhite.position.set(0.14, 0.08, 0.38);
+        this.rightEyeWhite.position.set(0.17, 0.10, 0.36);
         this.mesh.add(this.rightEyeWhite);
         
-        const eyeGeo = new THREE.SphereGeometry(0.08, 8, 8);
+        const eyeGeo = new THREE.SphereGeometry(0.10, 8, 8);
         const eyeMat = new THREE.MeshBasicMaterial({ color: 0xCC2222 }); // Red eyes matching spritesheet
         
         this.leftEye = new THREE.Mesh(eyeGeo, eyeMat);
-        this.leftEye.position.set(-0.14, 0.08, 0.42);
+        this.leftEye.position.set(-0.17, 0.10, 0.40);
         this.mesh.add(this.leftEye);
         
         this.rightEye = new THREE.Mesh(eyeGeo, eyeMat);
-        this.rightEye.position.set(0.14, 0.08, 0.42);
+        this.rightEye.position.set(0.17, 0.10, 0.40);
         this.mesh.add(this.rightEye);
         
         // Pupils (dark centers)
-        const pupilGeo = new THREE.SphereGeometry(0.04, 8, 8);
+        const pupilGeo = new THREE.SphereGeometry(0.05, 8, 8);
         const pupilMat = new THREE.MeshBasicMaterial({ color: 0x220000 }); // Very dark red/black
         
         this.leftPupil = new THREE.Mesh(pupilGeo, pupilMat);
-        this.leftPupil.position.set(-0.14, 0.08, 0.46);
+        this.leftPupil.position.set(-0.17, 0.10, 0.44);
         this.mesh.add(this.leftPupil);
         
         this.rightPupil = new THREE.Mesh(pupilGeo, pupilMat);
-        this.rightPupil.position.set(0.14, 0.08, 0.46);
+        this.rightPupil.position.set(0.17, 0.10, 0.44);
         this.mesh.add(this.rightPupil);
         
-        // Angry brow — furrowed look matching spritesheet
-        const browGeo = new THREE.BoxGeometry(0.12, 0.025, 0.04);
-        const browMat = new THREE.MeshBasicMaterial({ color: 0x1a6fc4 }); // Darker blue brow
+        // Angry brow — thick and prominent matching spritesheet
+        const browGeo = new THREE.BoxGeometry(0.14, 0.035, 0.04);
+        const browMat = new THREE.MeshBasicMaterial({ color: 0x1565C0 }); // Darker blue brow
         this.leftBrow = new THREE.Mesh(browGeo, browMat);
-        this.leftBrow.position.set(-0.14, 0.18, 0.40);
-        this.leftBrow.rotation.z = 0.25; // Angled inward (angry)
+        this.leftBrow.position.set(-0.17, 0.20, 0.38);
+        this.leftBrow.rotation.z = 0.30; // Angled inward (angry)
         this.mesh.add(this.leftBrow);
         
         this.rightBrow = new THREE.Mesh(browGeo, browMat);
-        this.rightBrow.position.set(0.14, 0.18, 0.40);
-        this.rightBrow.rotation.z = -0.25;
+        this.rightBrow.position.set(0.17, 0.20, 0.38);
+        this.rightBrow.rotation.z = -0.30;
         this.mesh.add(this.rightBrow);
         
         // Mouth — small determined frown
         const mouthGeo = new THREE.BoxGeometry(0.12, 0.025, 0.03);
         const mouthMat = new THREE.MeshBasicMaterial({ color: 0x1a3a5a });
         this.mouth = new THREE.Mesh(mouthGeo, mouthMat);
-        this.mouth.position.set(0, -0.08, 0.42);
+        this.mouth.position.set(0, -0.06, 0.42);
         this.mesh.add(this.mouth);
         
-        // Head bandage wrap — wrapped cloth around head matching spritesheet
+        // Cigar — brown cylinder + ember tip, matching spritesheet
+        const cigarMat = new THREE.MeshToonMaterial({ color: 0x8B6914 });
+        const cigarGeo = new THREE.CylinderGeometry(0.025, 0.022, 0.22, 8);
+        this.cigar = new THREE.Mesh(cigarGeo, cigarMat);
+        this.cigar.rotation.z = -0.3;
+        this.cigar.rotation.x = Math.PI / 2;
+        this.cigar.position.set(0.14, -0.04, 0.48);
+        this.mesh.add(this.cigar);
+        // Cigar lit tip (orange ember)
+        const emberGeo = new THREE.SphereGeometry(0.028, 6, 6);
+        const emberMat = new THREE.MeshBasicMaterial({ color: 0xFF6600 });
+        this.cigarEmber = new THREE.Mesh(emberGeo, emberMat);
+        this.cigarEmber.position.set(0.24, -0.01, 0.48);
+        this.mesh.add(this.cigarEmber);
+        
+        // Head bandage wrap — positioned higher around curved tip matching spritesheet
         const bandageMat = new THREE.MeshToonMaterial({ color: 0xF5DEB3 }); // Wheat/tan color like cloth
-        // Main wrap band around head
-        const wrapGeo = new THREE.TorusGeometry(0.42, 0.06, 6, 16);
+        // Main wrap band around upper head
+        const wrapGeo = new THREE.TorusGeometry(0.38, 0.06, 6, 16);
         this.bandageWrap = new THREE.Mesh(wrapGeo, bandageMat);
-        this.bandageWrap.position.set(0, 0.30, 0);
+        this.bandageWrap.position.set(0.04, 0.35, 0);
         this.bandageWrap.rotation.x = Math.PI / 2;
-        this.bandageWrap.rotation.z = 0.15; // Slightly tilted for style
+        this.bandageWrap.rotation.z = 0.20;
         this.mesh.add(this.bandageWrap);
+        // Second wrap band for thicker look
+        const wrap2Geo = new THREE.TorusGeometry(0.34, 0.04, 6, 16);
+        this.bandageWrap2 = new THREE.Mesh(wrap2Geo, bandageMat);
+        this.bandageWrap2.position.set(0.06, 0.42, 0);
+        this.bandageWrap2.rotation.x = Math.PI / 2;
+        this.bandageWrap2.rotation.z = 0.10;
+        this.mesh.add(this.bandageWrap2);
         
         // Bandage tail hanging from wrap
-        const tailGeo = new THREE.BoxGeometry(0.08, 0.25, 0.04);
+        const tailGeo = new THREE.BoxGeometry(0.08, 0.28, 0.04);
         this.bandageTail = new THREE.Mesh(tailGeo, bandageMat);
-        this.bandageTail.position.set(-0.30, 0.18, -0.20);
-        this.bandageTail.rotation.z = 0.3;
+        this.bandageTail.position.set(-0.24, 0.22, -0.20);
+        this.bandageTail.rotation.z = 0.35;
         this.mesh.add(this.bandageTail);
         
         // Eye blink animation timer
@@ -143,21 +177,30 @@
         this.nextBlinkTime = 2 + Math.random() * 3; // Random 2-5 seconds
         this.isBlinking = false;
         
-        // Arms (simple cylinders attached to body)
-        const armGeo = new THREE.CylinderGeometry(0.06, 0.06, 0.35, 8);
+        // Arms — thick and stubby with fist ends matching spritesheet
+        const armGeo = new THREE.CylinderGeometry(0.06, 0.10, 0.24, 8);
         const limbMaterial = new THREE.MeshToonMaterial({ color: COLORS.player, opacity: 0.85, transparent: true });
         
         // Left arm
         this.leftArm = new THREE.Mesh(armGeo, limbMaterial);
-        this.leftArm.position.set(-0.35, 0, 0);
-        this.leftArm.rotation.z = Math.PI / 6; // Angled outward
+        this.leftArm.position.set(-0.38, 0, 0.05);
+        this.leftArm.rotation.z = Math.PI / 5; // Angled outward
         this.mesh.add(this.leftArm);
+        // Left fist
+        const fistGeo = new THREE.SphereGeometry(0.10, 8, 8);
+        this.leftFist = new THREE.Mesh(fistGeo, limbMaterial);
+        this.leftFist.position.set(-0.44, -0.16, 0.05);
+        this.mesh.add(this.leftFist);
         
         // Right arm (holding gun)
         this.rightArm = new THREE.Mesh(armGeo, limbMaterial);
-        this.rightArm.position.set(0.35, 0, 0);
-        this.rightArm.rotation.z = -Math.PI / 6; // Angled outward
+        this.rightArm.position.set(0.38, 0, 0.05);
+        this.rightArm.rotation.z = -Math.PI / 5; // Angled outward
         this.mesh.add(this.rightArm);
+        // Right fist
+        this.rightFist = new THREE.Mesh(fistGeo, limbMaterial);
+        this.rightFist.position.set(0.44, -0.16, 0.05);
+        this.mesh.add(this.rightFist);
         
         // Gun visual (held by right arm) - enhanced for better visibility
         const gunBodyGeo = new THREE.BoxGeometry(0.12, 0.16, 0.35); // Larger gun body
@@ -189,18 +232,29 @@
         this.gunHandle.rotation.z = -Math.PI / 6;
         this.mesh.add(this.gunHandle);
         
-        // Legs (simple cylinders below body)
-        const legGeo = new THREE.CylinderGeometry(0.08, 0.07, 0.4, 8);
+        // Legs — short and thick matching spritesheet's stubby legs
+        const legGeo = new THREE.CylinderGeometry(0.09, 0.08, 0.24, 8);
         
         // Left leg
         this.leftLeg = new THREE.Mesh(legGeo, limbMaterial);
-        this.leftLeg.position.set(-0.15, -0.45, 0);
+        this.leftLeg.position.set(-0.17, -0.42, 0);
         this.mesh.add(this.leftLeg);
+        // Left foot
+        const footGeo = new THREE.SphereGeometry(0.09, 8, 6);
+        this.leftFoot = new THREE.Mesh(footGeo, limbMaterial);
+        this.leftFoot.position.set(-0.17, -0.54, 0.02);
+        this.leftFoot.scale.set(1, 0.6, 1.2);
+        this.mesh.add(this.leftFoot);
         
         // Right leg
         this.rightLeg = new THREE.Mesh(legGeo, limbMaterial);
-        this.rightLeg.position.set(0.15, -0.45, 0);
+        this.rightLeg.position.set(0.17, -0.42, 0);
         this.mesh.add(this.rightLeg);
+        // Right foot
+        this.rightFoot = new THREE.Mesh(footGeo, limbMaterial);
+        this.rightFoot.position.set(0.17, -0.54, 0.02);
+        this.rightFoot.scale.set(1, 0.6, 1.2);
+        this.mesh.add(this.rightFoot);
         
         // Smoke particles timer
         this.smokeTimer = 0;
