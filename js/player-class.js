@@ -196,20 +196,35 @@
         this.glow = new THREE.Mesh(glowGeo, glowMat);
         this.mesh.add(this.glow);
         
-        // Aura Circle (visible when aura weapon is active) - smaller pulsating ring
-        const auraGeo = new THREE.RingGeometry(1.5, 2.0, 24);
+        // Aura Force Field (visible when aura weapon is active) - spiritual yellow-white energy sphere
+        // Outer translucent sphere shell — spiritual force surrounding player
+        const auraGeo = new THREE.SphereGeometry(2.0, 24, 16);
         const auraMat = new THREE.MeshBasicMaterial({ 
-          color: 0x5DADE2, 
+          color: 0xFFEE88, 
           transparent: true, 
-          opacity: 0.3,
-          side: THREE.DoubleSide
+          opacity: 0.08,
+          side: THREE.DoubleSide,
+          depthWrite: false
         });
         this.auraCircle = new THREE.Mesh(auraGeo, auraMat);
-        this.auraCircle.rotation.x = -Math.PI / 2;
-        this.auraCircle.position.y = 0.1;
+        this.auraCircle.position.y = 0.5;
         this.auraCircle.visible = false;
         this.currentAuraRange = 2.0;
         scene.add(this.auraCircle);
+        // Inner pulsing fog ring at feet level
+        const auraFogGeo = new THREE.TorusGeometry(1.8, 0.3, 8, 24);
+        const auraFogMat = new THREE.MeshBasicMaterial({
+          color: 0xFFFFCC,
+          transparent: true,
+          opacity: 0.12,
+          side: THREE.DoubleSide,
+          depthWrite: false
+        });
+        this.auraFogRing = new THREE.Mesh(auraFogGeo, auraFogMat);
+        this.auraFogRing.rotation.x = -Math.PI / 2;
+        this.auraFogRing.position.y = 0.15;
+        this.auraFogRing.visible = false;
+        scene.add(this.auraFogRing);
         
         // Fire Ring Orbs (visible when fireRing weapon is active)
         this.fireRingOrbs = [];
@@ -803,33 +818,53 @@
           }
         }
         
-        // Update aura circle - pulsating energy ring
+        // Update aura force field — spiritual yellow-white pulsating sphere
         if (weapons.aura.active) {
           this.auraCircle.visible = true;
+          this.auraFogRing.visible = true;
           this.auraCircle.position.x = this.mesh.position.x;
           this.auraCircle.position.z = this.mesh.position.z;
+          this.auraFogRing.position.x = this.mesh.position.x;
+          this.auraFogRing.position.z = this.mesh.position.z;
           
-          // Scale based on aura range - smaller ring, only recreate if range changed
+          // Scale based on aura range — sphere force field
           const scale = weapons.aura.range * 1.5;
           if (this.currentAuraRange !== scale) {
             this.currentAuraRange = scale;
             this.auraCircle.geometry.dispose();
-            this.auraCircle.geometry = new THREE.RingGeometry(scale - 0.4, scale, 24);
+            this.auraCircle.geometry = new THREE.SphereGeometry(scale, 24, 16);
+            this.auraFogRing.geometry.dispose();
+            this.auraFogRing.geometry = new THREE.TorusGeometry(scale * 0.9, 0.3, 8, 24);
           }
           
-          // Pulsating rotation and opacity for cool energy effect
-          this.auraCircle.rotation.z += 0.03;
-          const pulse1 = Math.sin(gameTime * 6) * 0.12;
-          const pulse2 = Math.sin(gameTime * 2.5) * 0.08;
-          this.auraCircle.material.opacity = 0.2 + pulse1 + pulse2;
-          // Pulsate scale for breathing energy effect
-          const scalePulse = 1.0 + Math.sin(gameTime * 4) * 0.06;
-          this.auraCircle.scale.set(scalePulse, scalePulse, 1);
-          // Color shift for cool pulsating look
-          const colorShift = Math.sin(gameTime * 3) * 0.5 + 0.5;
-          this.auraCircle.material.color.setRGB(0.36 + colorShift * 0.1, 0.75 - colorShift * 0.1, 0.88 + colorShift * 0.1);
+          // Fast pulsation — rapid spiritual energy waves
+          const fastPulse = Math.sin(gameTime * 10) * 0.04;
+          const slowPulse = Math.sin(gameTime * 3) * 0.02;
+          this.auraCircle.material.opacity = 0.06 + fastPulse + slowPulse;
+          // Scale pulsation — breathing force field
+          const scalePulse = 1.0 + Math.sin(gameTime * 8) * 0.04;
+          this.auraCircle.scale.setScalar(scalePulse);
+          // Yellow-white color shift
+          const colorShift = Math.sin(gameTime * 5) * 0.5 + 0.5;
+          this.auraCircle.material.color.setRGB(
+            1.0,
+            0.92 + colorShift * 0.08,
+            0.5 + colorShift * 0.3
+          );
+          // Fog ring: expand outward from feet with rotation
+          this.auraFogRing.rotation.z += 0.05;
+          const fogPulse = Math.sin(gameTime * 8) * 0.06;
+          this.auraFogRing.material.opacity = 0.08 + fogPulse;
+          const fogScale = 1.0 + Math.sin(gameTime * 6) * 0.08;
+          this.auraFogRing.scale.setScalar(fogScale);
+          this.auraFogRing.material.color.setRGB(
+            1.0,
+            1.0,
+            0.7 + colorShift * 0.2
+          );
         } else {
           this.auraCircle.visible = false;
+          this.auraFogRing.visible = false;
         }
         
         // Update fire ring orbs

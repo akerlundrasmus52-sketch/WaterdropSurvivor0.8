@@ -13,7 +13,7 @@ function getDefaultWeapons() {
     aura:        { active: false, level: 0, damage: 5,  cooldown: 500,  lastShot: 0, range: 3 },
     meteor:      { active: false, level: 0, damage: 60, cooldown: 2500, lastShot: 0, area: 5 },
     droneTurret: { active: false, level: 0, damage: 5,  cooldown: 80,   lastShot: 0, range: 15, droneCount: 1 },
-    doubleBarrel:{ active: false, level: 0, damage: 18, cooldown: 1500, lastShot: 0, range: 12, spread: 0.3, pellets: 2 },
+    doubleBarrel:{ active: false, level: 0, damage: 12, cooldown: 1500, lastShot: 0, range: 12, spread: 0.55, pellets: 12 },
     iceSpear:    { active: false, level: 0, damage: 20, cooldown: 1500, lastShot: 0, range: 15, slowPercent: 0.4, slowDuration: 2000 },
     fireRing:    { active: false, level: 0, damage: 8,  cooldown: 800,  lastShot: 0, range: 4,  orbs: 3, rotationSpeed: 2 }
   };
