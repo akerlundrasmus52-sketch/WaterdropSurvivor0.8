@@ -781,6 +781,11 @@
           this.rightLeg.rotation.x = 0;
         }
         
+        // Bandage tail sway — physics-like trailing motion
+        if (this.bandageTail) {
+          this.bandageTail.rotation.x = Math.sin(gameTime * 4 + speedMag * 2) * 0.2 * (1 + speedMag * 0.5);
+        }
+        
         // Breathing animation (subtle body scaling)
         this._breathScale = 1.0;
         this.breathTimer += dt;

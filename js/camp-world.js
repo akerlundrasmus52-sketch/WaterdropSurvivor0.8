@@ -2087,9 +2087,8 @@
     // ── Normal movement ──
     else {
       // Smooth velocity
-      const speedMult = _keys['ShiftLeft'] || _keys['ShiftRight'] ? 1.6 : 1.0;
-      const targetX = mx * PLAYER_SPEED * speedMult;
-      const targetZ = mz * PLAYER_SPEED * speedMult;
+      const targetX = mx * PLAYER_SPEED;
+      const targetZ = mz * PLAYER_SPEED;
       const lerpF = (len > 0) ? 0.18 : 0.12;
       _playerVel.x += (targetX - _playerVel.x) * lerpF;
       _playerVel.z += (targetZ - _playerVel.z) * lerpF;
@@ -2172,8 +2171,8 @@
         legSwing = Math.sin(phase * 16) * 0.65;
         scaleY = 1.0 + Math.sin(phase * 32) * 0.06;
         scaleXZ = 1.0 - Math.sin(phase * 32) * 0.03;
-        // Forward lean
-        _playerMesh.rotation.x = -0.15;
+        // Smooth forward lean
+        _playerMesh.rotation.x += (-0.15 - _playerMesh.rotation.x) * 0.2;
         break;
       case 'dash':
         bobY = -0.1;  // low to ground
@@ -2181,7 +2180,7 @@
         scaleXZ = 1.4;
         armSwing = -0.8; // arms back
         legSwing = -0.3;
-        _playerMesh.rotation.x = -0.3; // strong forward lean
+        _playerMesh.rotation.x += (-0.3 - _playerMesh.rotation.x) * 0.3; // smooth strong forward lean
         break;
       case 'slide':
         bobY = -0.15;
@@ -2249,6 +2248,8 @@
       if (_playerRightArm) _playerRightArm.rotation.x = -armSwing;
       if (_playerLeftLeg) _playerLeftLeg.rotation.x = -legSwing;
       if (_playerRightLeg) _playerRightLeg.rotation.x = legSwing;
+      // Reset gun position when not in action state
+      if (_playerGunBody) _playerGunBody.position.z = 0.30;
     } else {
       // Legs stay still during action states
       if (_playerLeftLeg) _playerLeftLeg.rotation.x = 0;
@@ -3019,6 +3020,12 @@
     if (_interactBtn) _interactBtn.style.display = 'none';
     _hideTouchIndicator();
     _hideBennySpeech();
+    // Reset camp animation state
+    _campAnimState = 'idle';
+    _campAnimTimer = 0;
+    _campDashing = false;
+    _campSliding = false;
+    _campActionAnim = null;
     // Remove camp mode from resource HUD when leaving camp
     if (window.GameHarvesting) window.GameHarvesting.hideCampHUD();
 
