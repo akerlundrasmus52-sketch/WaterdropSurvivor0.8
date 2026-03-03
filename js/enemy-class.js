@@ -560,9 +560,15 @@
             // Skip all movement below
           } else {
           
-          // Base movement towards target
-          let vx = (dx / dist) * this.speed;
-          let vz = (dz / dist) * this.speed;
+          // Base movement towards target — with slight prediction for smoother interception
+          const _predictT = Math.min(dist / (this.speed * 60 + 1), 0.8);
+          const _predX = targetPos.x + this._playerVelocity.x * _predictT * 0.3;
+          const _predZ = targetPos.z + this._playerVelocity.z * _predictT * 0.3;
+          const _pdx = _predX - this.mesh.position.x;
+          const _pdz = _predZ - this.mesh.position.z;
+          const _pdist = Math.sqrt(_pdx * _pdx + _pdz * _pdz) || 1;
+          let vx = (_pdx / _pdist) * this.speed;
+          let vz = (_pdz / _pdist) * this.speed;
           
           // Add enemy avoidance to prevent stacking/trains (optimized — squared distance to skip sqrt)
           let avoidX = 0, avoidZ = 0;

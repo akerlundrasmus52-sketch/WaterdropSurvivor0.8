@@ -451,7 +451,7 @@
         // branch cinematicActive is false whenever the cinematic has finished.
         if (player && player.mesh && !killCamActive && !cinematicActive) {
           camera.position.x = player.mesh.position.x;
-          camera.position.z = player.mesh.position.z + 20;
+          camera.position.z = player.mesh.position.z + 16;
           camera.lookAt(player.mesh.position);
         }
         // Still render the scene so visual effects (camera shake, particles, modals) are visible (PR #82)
@@ -643,9 +643,10 @@
       }
 
       // Update enemy AI movement (was missing - enemies were frozen)
-      // PERFORMANCE: Far enemies (> 22 units) only update every other frame to save CPU.
+      // PERFORMANCE: Far enemies (> 16 units) only update every other frame to save CPU.
       // Close enemies always update every frame for responsive combat.
-      const _ENEMY_THROTTLE_DIST_SQ = 22 * 22; // squared to avoid sqrt
+      // Tightened from 22 → 16 to match the closer camera view.
+      const _ENEMY_THROTTLE_DIST_SQ = 16 * 16; // squared to avoid sqrt
       const _frameEven = (performanceLog.frameCount & 1) === 0;
       // Debug: track alive/died counts per frame for diagnostics
       const _dbgAliveBeforeEnemyTick = window.GameDebug && window.GameDebug.enabled
@@ -677,16 +678,15 @@
         if (dashCooldownRemaining < 0) dashCooldownRemaining = 0;
       }
       
-      // Lake Physics - Check if player is in water
+      // Lake Physics - Check if player is in water (squared distance avoids expensive sqrt)
       const LAKE_CENTER_X = 30;
       const LAKE_CENTER_Z = -30;
-      const LAKE_RADIUS = 18;
-      const distToLake = Math.sqrt(
-        (player.mesh.position.x - LAKE_CENTER_X) ** 2 + 
-        (player.mesh.position.z - LAKE_CENTER_Z) ** 2
-      );
+      const LAKE_RADIUS_SQ = 18 * 18;
+      const _ldx = player.mesh.position.x - LAKE_CENTER_X;
+      const _ldz = player.mesh.position.z - LAKE_CENTER_Z;
+      const distToLakeSq = _ldx * _ldx + _ldz * _ldz;
       
-      if (distToLake < LAKE_RADIUS) {
+      if (distToLakeSq < LAKE_RADIUS_SQ) {
         // Player is in water!
         if (!player.inWater) {
           player.inWater = true;

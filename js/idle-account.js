@@ -4,18 +4,18 @@ window.GameAccount = (function () {
     { level: 5,   title: 'Newcomer',      border: null },
     { level: 10,  title: 'Beginner',      border: 'Bronze' },
     { level: 25,  title: 'Skilled',       border: null },
-    { level: 50,  title: 'Veteran',       border: 'Silver' },
-    { level: 75,  title: 'Expert',        border: null },
-    { level: 100, title: 'Master',        border: 'Gold' },
-    { level: 150, title: 'Legend',        border: 'Diamond' },
-    { level: 200, title: 'Transcendent',  border: 'Prismatic' }
+    { level: 40,  title: 'Veteran',       border: 'Silver' },
+    { level: 60,  title: 'Expert',        border: null },
+    { level: 80,  title: 'Legend',        border: 'Diamond' },
+    { level: 100, title: 'Transcendent',  border: 'Prismatic' }
   ];
 
-  var MAX_LEVEL = 200;
+  var MAX_LEVEL = 100;
   var LOG_MAX = 50;
 
   function getXPForLevel(level) {
-    return level * 100 + level * level * 10;
+    // Rebalanced for 100-level cap: gentler early curve, slightly steeper late
+    return level * 80 + level * level * 8;
   }
 
   function _pad2(n) { return n < 10 ? '0' + n : '' + n; }
