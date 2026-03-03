@@ -2324,7 +2324,6 @@
             if (hasLegacyUnlockQuest) {
               // Quest-based unlock (FREE) — legacy system
               buildingData.unlocked = true;
-              buildingData.level = 1;
               saveSaveData();
               updateCampScreen();
               playSound('collect');
