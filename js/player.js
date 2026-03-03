@@ -85,7 +85,9 @@ function getDefaultPlayerStats(baseExpReq) {
     elementalChain: 0,     // number of extra elemental chain jumps
     elementalGuaranteed: false, // elemental effects always trigger
     // Mobility (Flexibility stat)
-    mobilityScore: 1.0     // overall mobility: affects turn speed, dash fluidity
+    mobilityScore: 1.0,    // overall mobility: affects turn speed, dash fluidity
+    turnResponse: 1.0,     // how quickly player changes direction (scales with flexibility)
+    stopResponse: 1.0      // how quickly player stops (scales with flexibility)
   };
 }
 

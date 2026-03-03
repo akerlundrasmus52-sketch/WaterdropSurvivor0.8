@@ -31,9 +31,9 @@ const GAME_CONFIG = {
   // Performance optimization - Phase 1
   maxEnemiesOnScreen: 50, // Hard cap to prevent lag (docs specify 50 max)
   // Movement physics — slow and sluggish at start to reward movement upgrades
-  accelLerpFactor: 0.05, // Very slow acceleration at start — feels heavy and unresponsive
-  decelLerpFactor: 0.018, // Slow deceleration — lots of momentum/glide
-  movementLeanFactor: 0.25, // Stronger lean effect on turns and braking
+  accelLerpFactor: 0.07, // Responsive acceleration — upgrades improve further
+  decelLerpFactor: 0.035, // Crisp deceleration — momentum present but stops feel intentional
+  movementLeanFactor: 0.15, // Subtle lean — avoids the 'rolling' look on turns
   dashLeanFactor: 0.4, // Dramatic tilt during dash
   dashLeanReturnDuration: 200, // ms to return to upright after dash
   // Combat effects

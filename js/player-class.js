@@ -323,6 +323,12 @@
         this.prevVelDir = new THREE.Vector3(); // previous velocity direction for direction-change detection
         this.postDashSquish = 0;  // timer for post-dash bounce
         this.wasMoving = false;   // used to detect stopping transition for squish
+        // Movement feel: lean, bank, slide
+        this.prevMoveAngle = 0;     // previous movement direction angle
+        this.angularVelocity = 0;   // rate of turn (rad/sec)
+        this.slideAmount = 0;       // visual slide intensity on sharp turns (0-1)
+        this.forwardLean = 0;       // current forward lean angle
+        this.bankLean = 0;          // current banking lean angle (for turns)
         
         // Phase 5: Low health water bleed timer
         this.waterBleedTimer = 0;
@@ -508,19 +514,59 @@
           // Movement with LEFT stick
           if (joystickLeft.active) {
             const rageSpeedMult = this._rageSpeedMult || 1;
-            const speed = GAME_CONFIG.playerSpeedBase * (playerStats.walkSpeed / 25) * 60 * rageSpeedMult; // Base speed for 60fps
-            targetVel.x = joystickLeft.x * speed * dt; // Frame-rate independent
+            const speed = GAME_CONFIG.playerSpeedBase * (playerStats.walkSpeed / 25) * 60 * rageSpeedMult;
+            targetVel.x = joystickLeft.x * speed * dt;
             targetVel.z = joystickLeft.y * speed * dt;
           }
           
-          // Enhanced inertia: Smooth acceleration and deceleration with glide
-          // Scale lerpFactor by dt*60 to normalize across frame rates and eliminate jitter
-          // turnResponse (from flexibility training) scales acceleration, stopResponse scales deceleration
+          // Movement physics: attribute-scaled acceleration with direction-change awareness
           const turnResp = (playerStats.turnResponse || 1.0);
           const stopResp = (playerStats.stopResponse || 1.0);
-          const baseLerpFactor = joystickLeft.active ? GAME_CONFIG.accelLerpFactor * turnResp : GAME_CONFIG.decelLerpFactor * stopResp;
-          const lerpFactor = Math.min(baseLerpFactor * (dt * 60), 1.0);
+          const mobility = (playerStats.mobilityScore || 1.0);
+          
+          // Detect direction change intensity for adaptive acceleration
+          const currSpeed = this.velocity.length();
+          let dirChangeAmount = 0;
+          if (currSpeed > 0.03 && targetVel.lengthSq() > 0.0001) {
+            const currDir = this.velocity.clone().normalize();
+            const targetDir = targetVel.clone().normalize();
+            dirChangeAmount = Math.max(0, 1 - currDir.dot(targetDir));
+          }
+          
+          // Adaptive lerp: faster on direction change (snappier turns), normal on straight runs
+          const isChangingDir = dirChangeAmount > 0.25;
+          const isStopping = !joystickLeft.active;
+          let baseLerp;
+          if (isStopping) {
+            baseLerp = GAME_CONFIG.decelLerpFactor * stopResp;
+          } else if (isChangingDir) {
+            baseLerp = GAME_CONFIG.accelLerpFactor * turnResp * (1.0 + dirChangeAmount * 0.4);
+          } else {
+            baseLerp = GAME_CONFIG.accelLerpFactor * turnResp;
+          }
+          const lerpFactor = Math.min(baseLerp * (dt * 60), 1.0);
           this.velocity.lerp(targetVel, lerpFactor);
+          
+          // Track angular velocity of movement direction for banking/slide visuals
+          if (currSpeed > 0.03) {
+            const moveAngle = Math.atan2(this.velocity.x, this.velocity.z);
+            let angleDelta = moveAngle - this.prevMoveAngle;
+            while (angleDelta > Math.PI) angleDelta -= Math.PI * 2;
+            while (angleDelta < -Math.PI) angleDelta += Math.PI * 2;
+            const rawAngVel = (dt > 0.001) ? angleDelta / dt : 0;
+            this.angularVelocity += (rawAngVel - this.angularVelocity) * Math.min(dt * 15, 0.8);
+            this.prevMoveAngle = moveAngle;
+            
+            // Slide trigger: sharp turn at speed — unlocked by mobility upgrades
+            const turnIntensity = Math.abs(this.angularVelocity) * currSpeed;
+            const slideThreshold = Math.max(0.1, 0.5 - mobility * 0.12);
+            if (turnIntensity > slideThreshold && mobility >= 1.0) {
+              this.slideAmount = Math.min(1, this.slideAmount + dt * 6);
+            }
+          } else {
+            this.angularVelocity *= 0.85;
+          }
+          this.slideAmount = Math.max(0, this.slideAmount - dt * 3);
           
           // Apply velocity with inertia
           this.mesh.position.x += this.velocity.x;
@@ -614,21 +660,36 @@
             this.trailTimer = 0;
           }
           
-          // Add lean/tilt in direction of movement — more dynamic and responsive
-          if (this.velocity.length() > 0.03) {
-            const leanFactor = GAME_CONFIG.movementLeanFactor * (25 + this.wobbleIntensity * 25);
-            const leanAngleX = -this.velocity.z * leanFactor;
-            const leanAngleZ = this.velocity.x * leanFactor;
-            // Faster response on direction changes, smooth in steady state
-            const leanResponse = this.wobbleIntensity > 0.3 ? 0.7 : 0.5;
-            const leanDt = Math.min(dt * 12, leanResponse);
-            this.mesh.rotation.x += (leanAngleX - this.mesh.rotation.x) * leanDt;
-            this.mesh.rotation.z += (leanAngleZ - this.mesh.rotation.z) * leanDt;
+          // Physics-based lean: forward lean into movement, bank lean on turns
+          // Replaces world-space velocity lean that caused 'rolling' on direction changes
+          const leanSpd = this.velocity.length();
+          const mobilityLean = (playerStats.mobilityScore || 1.0);
+          
+          if (leanSpd > 0.02) {
+            // Forward lean: proportional to speed, character leans into movement direction
+            // Since mesh.rotation.y faces movement dir, rotation.x = forward tilt
+            const maxFwdLean = -(0.12 + Math.min(mobilityLean * 0.06, 0.18));
+            const targetFwdLean = Math.max(maxFwdLean, -leanSpd * 2.0);
+            
+            // Bank lean: driven by angular velocity — lean INTO turns, not world-space roll
+            // Higher mobility = more pronounced banking (looks agile)
+            const maxBank = 0.18 + Math.min(mobilityLean * 0.08, 0.24);
+            const bankInput = -this.angularVelocity * 0.025 * (1 + this.slideAmount * 0.6);
+            const targetBank = Math.max(-maxBank, Math.min(maxBank, bankInput));
+            
+            // Responsive lean interpolation
+            const leanDt = Math.min(dt * 14, 0.65);
+            this.forwardLean += (targetFwdLean - this.forwardLean) * leanDt;
+            this.bankLean += (targetBank - this.bankLean) * leanDt;
           } else {
-            // Smooth return to upright when idle - more natural settle
-            this.mesh.rotation.x *= 0.85;
-            this.mesh.rotation.z *= 0.85;
+            // Gravity-weighted settle back to upright
+            const settleDt = Math.min(dt * 8, 0.45);
+            this.forwardLean += (0 - this.forwardLean) * settleDt;
+            this.bankLean += (0 - this.bankLean) * settleDt;
           }
+          
+          this.mesh.rotation.x = this.forwardLean;
+          this.mesh.rotation.z = this.bankLean;
           
           // Rotation/Aiming with RIGHT stick (independent of movement)
           if (joystickRight.active) {
@@ -818,14 +879,22 @@
           1 + Math.sin(gameTime * 2) * 0.05
         );
         
-        // Animate arms and legs (walking animation when moving)
+        // Animate arms and legs — speed-proportional, turn-aware
         if (speedMag > 0.1) {
-          // Walking animation - swing arms and legs
-          const walkPhase = gameTime * 8; // Walking speed
-          this.leftArm.rotation.x = Math.sin(walkPhase) * 0.3;
-          this.rightArm.rotation.x = -Math.sin(walkPhase) * 0.3;
-          this.leftLeg.rotation.x = -Math.sin(walkPhase) * 0.4;
-          this.rightLeg.rotation.x = Math.sin(walkPhase) * 0.4;
+          // Phase speed scales with velocity — faster movement = faster limb swing
+          const walkRate = 6 + Math.min(speedMag * 25, 14);
+          const walkPhase = gameTime * walkRate;
+          // Amplitude scales with speed — faster = wider swing
+          const armAmp = Math.min(0.2 + speedMag * 1.2, 0.55);
+          const legAmp = Math.min(0.25 + speedMag * 1.5, 0.65);
+          this.leftArm.rotation.x = Math.sin(walkPhase) * armAmp;
+          this.rightArm.rotation.x = -Math.sin(walkPhase) * armAmp;
+          this.leftLeg.rotation.x = -Math.sin(walkPhase) * legAmp;
+          this.rightLeg.rotation.x = Math.sin(walkPhase) * legAmp;
+          // Bank-aware arm offset — arms shift during turns for balance
+          const armBankOffset = this.bankLean * 0.5;
+          this.leftArm.rotation.z = armBankOffset;
+          this.rightArm.rotation.z = -armBankOffset;
         } else {
           // Idle - gentle sway
           const idlePhase = gameTime * 2;
@@ -833,6 +902,8 @@
           this.rightArm.rotation.x = Math.sin(idlePhase + Math.PI) * 0.1;
           this.leftLeg.rotation.x = 0;
           this.rightLeg.rotation.x = 0;
+          this.leftArm.rotation.z = 0;
+          this.rightArm.rotation.z = 0;
         }
         
         // Bandage tail sway — physics-like trailing motion
@@ -855,14 +926,18 @@
         }
         
         // Apply spring-damper scale combined with breathing multiplier
-        // Directional stretch: mesh local Z = forward (movement direction), local X = sideways
-        // Over-exaggerated for comic waterdrop style — elongate in travel direction
-        const dirStretch = this.isDashing
+        // Directional stretch: mesh local Z = forward, local X = sideways
+        // Character reaches/elongates toward destination — cool and dynamic
+        const mobilityStretch = (playerStats.mobilityScore || 1.0);
+        const baseStretch = this.isDashing
           ? 0.5
-          : Math.min(speedMag * 2.0, 0.28);
+          : Math.min(speedMag * (1.8 + mobilityStretch * 0.4), 0.32);
+        // Slide adds extra sideways compression (body narrows during slide turns)
+        const slideStretch = this.slideAmount * 0.12;
+        const dirStretch = baseStretch + slideStretch;
         this.mesh.scale.y = this.currentScaleY * this._breathScale;
-        this.mesh.scale.x = this.currentScaleXZ * (1.0 - dirStretch * 0.65) * this._breathScale;
-        this.mesh.scale.z = this.currentScaleXZ * (1.0 + dirStretch * 0.55) * this._breathScale;
+        this.mesh.scale.x = this.currentScaleXZ * (1.0 - dirStretch * 0.6) * this._breathScale;
+        this.mesh.scale.z = this.currentScaleXZ * (1.0 + dirStretch * 0.5) * this._breathScale;
         
         // Blinking eyes animation
         this.blinkTimer += dt;
