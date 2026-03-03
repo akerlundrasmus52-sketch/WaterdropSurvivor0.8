@@ -1137,24 +1137,48 @@
         _acquireFlash(scene, 0xC0C0C0, 3, 8, _flashTempPos, 100);
       }
 
-      // 3. AURA
+      // 3. AURA — Spiritual force field, fast pulses, less damage per tick
       if (weapons.aura.active && time - weapons.aura.lastShot > weapons.aura.cooldown) {
-        // Damage all in range (auraRange skill multiplier expands reach)
         const effectiveAuraRange = weapons.aura.range * (playerStats.auraRange || 1.0);
         const auraRangeSq = effectiveAuraRange * effectiveAuraRange;
+        // Track pulse count for climbing effect (0-33% up body)
+        if (!weapons.aura._pulseCount) weapons.aura._pulseCount = 0;
+        weapons.aura._pulseCount++;
+        const pulseHeight = Math.min(0.33, weapons.aura._pulseCount * 0.02); // Climbs up to 33% body
         let hit = false;
         enemies.forEach(e => {
           if (e.isDead) return;
           const dSq = player.mesh.position.distanceToSquared(e.mesh.position);
           if (dSq < auraRangeSq) {
-          e.takeDamage(weapons.aura.damage * playerStats.strength, false, 'aura');
+            // Reduced damage per pulse (spiritual burn, not bullet damage)
+            const auraDmg = weapons.aura.damage * playerStats.strength * 0.6;
+            e.takeDamage(auraDmg, false, 'aura');
             hit = true;
+            // Enemy reacts to each pulse — flinch/shudder
+            if (e.mesh) {
+              const shudder = (Math.random() - 0.5) * 0.15;
+              e.mesh.position.x += shudder;
+              e.mesh.position.z += shudder;
+              // Spiritual pain — brief scale squish
+              e.mesh.scale.set(1 + Math.random() * 0.1, 1 - Math.random() * 0.1, 1 + Math.random() * 0.1);
+              setTimeout(() => { if (e.mesh && !e.isDead) e.mesh.scale.set(1, 1, 1); }, 80);
+            }
+            // Spiritual bleed effect on lower body — yellow-white energy wisps climbing up
+            const ePos = e.mesh.position;
+            spawnParticles(
+              { x: ePos.x, y: ePos.y * pulseHeight, z: ePos.z },
+              0xFFEE88, 2
+            );
+            // Bleeding at feet from spiritual damage
+            if (Math.random() < 0.4) {
+              spawnBloodDecal({ x: ePos.x + (Math.random()-0.5)*0.3, y: 0, z: ePos.z + (Math.random()-0.5)*0.3 });
+            }
           }
         });
         if (hit) {
-          // ENHANCED - Visual effect for aura tick
-          spawnParticles(player.mesh.position, 0x5DADE2, 10); // Blue aura particles
-          spawnParticles(player.mesh.position, 0xFFFFFF, 5); // White sparkles
+          // Yellow-white spiritual energy particles from player outward
+          spawnParticles(player.mesh.position, 0xFFEE88, 6); // Yellow spiritual glow
+          spawnParticles(player.mesh.position, 0xFFFFCC, 4); // White-yellow wisps
         }
         weapons.aura.lastShot = time;
       }
@@ -1228,7 +1252,7 @@
         weapons.droneTurret.lastShot = time;
       }
 
-      // 6. DOUBLE BARREL - ENHANCED with 6-pellet spread, heavy recoil, orange/yellow flash
+      // 6. DOUBLE BARREL - Swarm of 10-20 pellets, compact-to-wide spread, faster than gun
       if (weapons.doubleBarrel.active && time - weapons.doubleBarrel.lastShot > weapons.doubleBarrel.cooldown) {
         // Find nearest enemy (squared distance avoids sqrt per enemy)
         let nearest = null;
@@ -1244,7 +1268,6 @@
         }
 
         if (nearest) {
-          // Fire 6 pellets with spread (shotgun pattern)
           _tmpShotgunDir.set(
             nearest.mesh.position.x - player.mesh.position.x,
             0,
@@ -1254,10 +1277,13 @@
           const baseAngle = Math.atan2(_tmpShotgunDir.z, _tmpShotgunDir.x);
           const spreadAngle = weapons.doubleBarrel.spread;
           
-          // Fire pellets with spread (shotgun pattern) - pellets count increases per upgrade
-          const pelletCount = weapons.doubleBarrel.pellets || 2;
+          // Swarm of pellets — compact near muzzle, fans out at range
+          const pelletCount = weapons.doubleBarrel.pellets || 12;
           for (let i = 0; i < pelletCount; i++) {
-            const angle = baseAngle + (Math.random() - 0.5) * spreadAngle * 2;
+            // Gaussian-like spread: most pellets near centre, fewer at edges
+            const r1 = Math.random(), r2 = Math.random();
+            const gaussSpread = (r1 + r2 - 1.0) * spreadAngle;
+            const angle = baseAngle + gaussSpread;
             _tmpShotgunTarget.set(
               player.mesh.position.x + Math.cos(angle) * weapons.doubleBarrel.range,
               0,
@@ -1265,7 +1291,7 @@
             );
             const pellet = new Projectile(player.mesh.position.x, player.mesh.position.z, _tmpShotgunTarget);
             pellet.isDoubleBarrel = true;
-            pellet.speed = 0.6; // Faster projectiles for shotgun
+            pellet.speed = 0.75 + Math.random() * 0.15; // Faster than gun bullets (0.75-0.9)
             projectiles.push(pellet);
           }
           
@@ -1280,18 +1306,18 @@
           
           // Orange/yellow muzzle flash (shotgun characteristic) — pooled
           _flashTempPos.copy(player.mesh.position); _flashTempPos.y += 1;
-          _acquireFlash(scene, 0xFFA500, 8, 18, _flashTempPos, 100);
+          _acquireFlash(scene, 0xFFA500, 10, 22, _flashTempPos, 120);
           
           // Focused muzzle flash for shotgun blast (wider spread)
           _flashTempPos.copy(player.mesh.position); _flashTempPos.y = 0.5;
-          spawnParticles(_flashTempPos, 0xFFA500, 3); // Orange muzzle
-          spawnParticles(_flashTempPos, 0xFFFF00, 2); // Yellow spark
+          spawnParticles(_flashTempPos, 0xFFA500, 4); // Orange muzzle
+          spawnParticles(_flashTempPos, 0xFFFF00, 3); // Yellow spark
           spawnParticles(_flashTempPos, 0xFFFFFF, 2); // White flash
           // Heavy muzzle smoke for shotgun
-          spawnMuzzleSmoke(player.mesh.position, 6);
+          spawnMuzzleSmoke(player.mesh.position, 8);
           
           weapons.doubleBarrel.lastShot = time;
-          playSound('doublebarrel'); // Double barrel sound
+          playSound('doublebarrel');
         }
       }
       

@@ -414,6 +414,28 @@
       update(dt, playerPos) {
         if (this.isDead) return;
 
+        // Shotgun slide physics — enemy knocked back by double barrel glides on ground
+        if (this._shotgunSlide) {
+          const sl = this._shotgunSlide;
+          sl.frame++;
+          const friction = 0.9;
+          sl.vx *= friction;
+          sl.vz *= friction;
+          this.mesh.position.x += sl.vx;
+          this.mesh.position.z += sl.vz;
+          // Leave blood smear trail on ground while sliding
+          if (sl.frame % 2 === 0 && window.BloodSystem) {
+            window.BloodSystem.emitDragTrail(this.mesh.position, { x: sl.vx, y: 0, z: sl.vz }, 6);
+          }
+          if (sl.frame % 3 === 0) {
+            spawnBloodDecal(this.mesh.position);
+          }
+          if (sl.frame >= sl.frames || (Math.abs(sl.vx) < 0.01 && Math.abs(sl.vz) < 0.01)) {
+            this._shotgunSlide = null;
+          }
+          return; // Skip normal movement while sliding
+        }
+
         // Windmill Quest: Attack windmill instead of player
         let targetPos = playerPos;
         if (windmillQuest.active && windmillQuest.windmill) {

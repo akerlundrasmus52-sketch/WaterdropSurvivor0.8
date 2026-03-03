@@ -546,15 +546,39 @@
                 }
               }
             } else if (weapons.doubleBarrel.active && this.isDoubleBarrel) {
-              // Double barrel: heavy knockback with partial topple effect
-              knockbackForce = 1.8 * (1 + (weapons.doubleBarrel.level - 1) * 0.2);
-              // Topple: tilt enemy mesh briefly on impact
-              const toppleAngle = (Math.random() - 0.5) * 0.6;
-              enemy.mesh.rotation.x = toppleAngle;
-              enemy.mesh.rotation.z = toppleAngle * 0.5;
-              setTimeout(() => {
-                if (enemy.mesh) { enemy.mesh.rotation.x = 0; enemy.mesh.rotation.z = 0; }
-              }, 300);
+              // Double barrel: distance-based knockback — close range can send enemies flying/gliding
+              const distToPlayer = Math.sqrt(
+                (enemy.mesh.position.x - player.mesh.position.x) ** 2 +
+                (enemy.mesh.position.z - player.mesh.position.z) ** 2
+              );
+              const closeRange = distToPlayer < 3.5;
+              const medRange = distToPlayer < 7;
+              knockbackForce = closeRange ? 3.5 : (medRange ? 2.0 : 1.2);
+              knockbackForce *= (1 + (weapons.doubleBarrel.level - 1) * 0.2);
+              
+              if (closeRange && !enemy.isDead) {
+                // Close range: enemy flies back and glides on ground leaving blood trail
+                const slideVX = this.vx * knockbackForce * 0.6;
+                const slideVZ = this.vz * knockbackForce * 0.6;
+                enemy._shotgunSlide = { vx: slideVX, vz: slideVZ, frames: 25, frame: 0 };
+                // Topple/fall back animation
+                enemy.mesh.rotation.x = -0.8 * Math.sign(this.vz || 0.5);
+                enemy.mesh.scale.y = 0.5;
+                setTimeout(() => {
+                  if (enemy.mesh && !enemy.isDead) {
+                    enemy.mesh.rotation.x = 0; enemy.mesh.rotation.z = 0;
+                    enemy.mesh.scale.y = 1;
+                  }
+                }, 500);
+              } else {
+                // Mid/long range: stumble and topple
+                const toppleAngle = (Math.random() - 0.5) * 0.6;
+                enemy.mesh.rotation.x = toppleAngle;
+                enemy.mesh.rotation.z = toppleAngle * 0.5;
+                setTimeout(() => {
+                  if (enemy.mesh) { enemy.mesh.rotation.x = 0; enemy.mesh.rotation.z = 0; }
+                }, 300);
+              }
             } else {
               // Standard gun: reduced base force, scales up with weapon level
               knockbackForce = 0.3 * (1 + (weapons.gun.level - 1) * 0.2);
@@ -653,46 +677,80 @@
                 spawnBloodDecal({ x: exitMistX + (Math.random()-0.5)*0.6, y: 0, z: exitMistZ + (Math.random()-0.5)*0.6 });
               }
             } else if (this.isDoubleBarrel) {
-              // Double barrel / heavy explosive: large gore blobs + heavy directional blood
-              // Blow-away chunk effect: 2-3 large chunks of dark red "gore" scatter from enemy
-              for (let gc = 0; gc < 3 && bloodDrips.length < MAX_BLOOD_DRIPS; gc++) {
-                const goreSize = 0.07 + Math.random() * 0.1;
-                const gore = new THREE.Mesh(
-                  new THREE.DodecahedronGeometry(goreSize, 0),
-                  new THREE.MeshStandardMaterial({ color: gc % 2 === 0 ? 0x6B0000 : 0x4B0082, roughness: 0.9 })
-                );
-                gore.position.copy(enemy.mesh.position);
-                gore.position.y += (Math.random() - 0.5) * 0.6;
-                scene.add(gore);
-                bloodDrips.push({
-                  mesh: gore,
-                  velX: (Math.random() - 0.5) * 0.5 + this.vx * 0.6,
-                  velZ: (Math.random() - 0.5) * 0.5 + this.vz * 0.6,
-                  velY: 0.25 + Math.random() * 0.35,
-                  life: 55 + Math.floor(Math.random() * 25)
-                });
-              }
-              // Heavy blood spray in all directions, stronger along blast trajectory
-              spawnParticles(enemy.mesh.position, 0x8B0000, 5);
-              spawnParticles(enemy.mesh.position, 0xCC0000, 4);
-              spawnParticles(enemy.mesh.position, 0x660000, 3);
-              // Directional spray along bullet path
-              const blastExitX = enemy.mesh.position.x + this.vx * 1.5;
-              const blastExitZ = enemy.mesh.position.z + this.vz * 1.5;
-              for (let bs = 0; bs < 5 && bloodDrips.length < MAX_BLOOD_DRIPS; bs++) {
-                const sp = new THREE.Mesh(
-                  new THREE.SphereGeometry(0.04 + Math.random()*0.06, 4, 4),
-                  new THREE.MeshBasicMaterial({ color: [0xAA0000, 0x880000, 0xCC0000][bs % 3] })
-                );
-                sp.position.copy(enemy.mesh.position);
-                scene.add(sp);
-                bloodDrips.push({
-                  mesh: sp,
-                  velX: this.vx * (0.3 + Math.random()*0.4) + (Math.random()-0.5)*0.15,
-                  velZ: this.vz * (0.3 + Math.random()*0.4) + (Math.random()-0.5)*0.15,
-                  velY: 0.1 + Math.random() * 0.3,
-                  life: 40 + Math.floor(Math.random() * 20)
-                });
+              // Double barrel: varied brutal hit effects based on range
+              const distDB = Math.sqrt(
+                (enemy.mesh.position.x - player.mesh.position.x) ** 2 +
+                (enemy.mesh.position.z - player.mesh.position.z) ** 2
+              );
+              const hitVariation = Math.random();
+              
+              if (distDB < 3.5) {
+                // CLOSE RANGE — devastating: flesh rip, guts spill, half head blown off
+                if (hitVariation < 0.3) {
+                  // Guts spill from stomach
+                  for (let gc = 0; gc < 4 && bloodDrips.length < MAX_BLOOD_DRIPS; gc++) {
+                    const gutSize = 0.06 + Math.random() * 0.08;
+                    const gut = new THREE.Mesh(
+                      new THREE.DodecahedronGeometry(gutSize, 0),
+                      new THREE.MeshStandardMaterial({ color: [0xFF69B4, 0xCC2244, 0x8B1A1A, 0x6B0000][gc % 4], roughness: 0.9 })
+                    );
+                    gut.position.copy(enemy.mesh.position);
+                    scene.add(gut);
+                    bloodDrips.push({
+                      mesh: gut,
+                      velX: (Math.random() - 0.5) * 0.4 + this.vx * 0.3,
+                      velZ: (Math.random() - 0.5) * 0.4 + this.vz * 0.3,
+                      velY: 0.05 + Math.random() * 0.15,
+                      life: 60 + Math.floor(Math.random() * 30)
+                    });
+                  }
+                  if (window.BloodSystem) window.BloodSystem.emitGuts(enemy.mesh.position);
+                } else if (hitVariation < 0.6) {
+                  // Flesh chunks ripped off
+                  for (let fc = 0; fc < 3 && bloodDrips.length < MAX_BLOOD_DRIPS; fc++) {
+                    const flesh = new THREE.Mesh(
+                      new THREE.DodecahedronGeometry(0.05 + Math.random() * 0.08, 0),
+                      new THREE.MeshBasicMaterial({ color: [0xCC4444, 0xAA2222, 0x882222][fc % 3] })
+                    );
+                    flesh.position.copy(enemy.mesh.position);
+                    flesh.position.y += 0.3;
+                    scene.add(flesh);
+                    bloodDrips.push({
+                      mesh: flesh,
+                      velX: (Math.random() - 0.5) * 0.6 + this.vx * 0.5,
+                      velZ: (Math.random() - 0.5) * 0.6 + this.vz * 0.5,
+                      velY: 0.2 + Math.random() * 0.4,
+                      life: 50 + Math.floor(Math.random() * 25)
+                    });
+                  }
+                }
+                // Massive close-range blood burst
+                spawnParticles(enemy.mesh.position, 0x8B0000, 8);
+                spawnParticles(enemy.mesh.position, 0xCC0000, 6);
+                spawnParticles(enemy.mesh.position, 0xFF2200, 4);
+                if (window.BloodSystem) {
+                  window.BloodSystem.emitBurst(enemy.mesh.position, 200, { spreadXZ: 1.5, spreadY: 0.3 });
+                }
+              } else {
+                // MID/LONG RANGE — many small pellet holes bleeding
+                spawnParticles(enemy.mesh.position, 0x8B0000, 4);
+                spawnParticles(enemy.mesh.position, 0xCC0000, 3);
+                // Directional spray along bullet path  
+                for (let bs = 0; bs < 3 && bloodDrips.length < MAX_BLOOD_DRIPS; bs++) {
+                  const sp = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.03 + Math.random()*0.04, 4, 4),
+                    new THREE.MeshBasicMaterial({ color: [0xAA0000, 0x880000, 0xCC0000][bs % 3] })
+                  );
+                  sp.position.copy(enemy.mesh.position);
+                  scene.add(sp);
+                  bloodDrips.push({
+                    mesh: sp,
+                    velX: this.vx * (0.2 + Math.random()*0.3) + (Math.random()-0.5)*0.1,
+                    velZ: this.vz * (0.2 + Math.random()*0.3) + (Math.random()-0.5)*0.1,
+                    velY: 0.08 + Math.random() * 0.2,
+                    life: 35 + Math.floor(Math.random() * 15)
+                  });
+                }
               }
               // Large gore drops directly beneath enemy
               for (let gd = 0; gd < 3; gd++) {
