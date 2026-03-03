@@ -1478,7 +1478,7 @@
           const dSq = player.mesh.position.distanceToSquared(e.mesh.position);
           if (dSq < poisonRangeSq) {
             const dmg = weapons.poison.damage * playerStats.strength;
-            e.takeDamage(Math.floor(dmg));
+            e.takeDamage(Math.floor(dmg), false, 'poison');
             spawnParticles(e.mesh.position, 0x00FF00, 4);
             spawnParticles(e.mesh.position, 0x44FF44, 3);
           }

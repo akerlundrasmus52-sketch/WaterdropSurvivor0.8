@@ -1073,6 +1073,47 @@
           const isShotgunHit = damageType === 'doubleBarrel' || damageType === 'shotgun';
           window.BloodSystem.emitBurst(this.mesh.position, isShotgunHit ? 60 : 30, { spreadXZ: 0.8, spreadY: 0.2, minSize: 0.01, maxSize: 0.06, minLife: 20, maxLife: 50 });
         }
+        // Pulsating wound blood drips — gravity-based spray from hit location
+        if (bloodDrips.length < MAX_BLOOD_DRIPS && (isHeavyHit || hpRatio < 0.5)) {
+          const dripCount = isHeavyHit ? (3 + Math.floor(Math.random() * 3)) : (1 + Math.floor(Math.random() * 2));
+          for (let bd = 0; bd < dripCount && bloodDrips.length < MAX_BLOOD_DRIPS; bd++) {
+            if (!_sharedBloodDripGeo && typeof THREE !== 'undefined') _sharedBloodDripGeo = new THREE.SphereGeometry(1, 4, 4);
+            const dripSize = 0.015 + Math.random() * 0.04;
+            const dripMesh = new THREE.Mesh(_sharedBloodDripGeo, new THREE.MeshBasicMaterial({ color: [0x8B0000, 0xAA0000, 0x660000, 0xCC0000][bd % 4] }));
+            dripMesh.scale.setScalar(dripSize);
+            dripMesh.position.copy(this.mesh.position);
+            dripMesh.position.y += 0.2 + Math.random() * 0.4;
+            scene.add(dripMesh);
+            bloodDrips.push({
+              mesh: dripMesh,
+              velX: (Math.random() - 0.5) * (isHeavyHit ? 0.25 : 0.1),
+              velZ: (Math.random() - 0.5) * (isHeavyHit ? 0.25 : 0.1),
+              velY: 0.08 + Math.random() * 0.2,
+              life: 40 + Math.floor(Math.random() * 25),
+              _sharedGeo: true
+            });
+          }
+        }
+        // Blood splatter on nearby enemies (stain them red)
+        if (isHeavyHit && enemies) {
+          const hitPos = this.mesh.position;
+          for (let ne = 0; ne < enemies.length; ne++) {
+            const other = enemies[ne];
+            if (other === this || other.isDead || !other.mesh) continue;
+            const dx = other.mesh.position.x - hitPos.x;
+            const dz = other.mesh.position.z - hitPos.z;
+            const distSq = dx * dx + dz * dz;
+            if (distSq < 4.0) { // Within 2 units
+              // Stain the nearby enemy with blood
+              if (other.mesh.material && other.mesh.material.color) {
+                if (!other._originalColor) other._originalColor = other.mesh.material.color.clone();
+                const stainAmt = Math.max(0, 0.15 * (1 - Math.sqrt(distSq) / 2));
+                if (!Enemy._bloodColor) Enemy._bloodColor = new THREE.Color(0x8B0000);
+                other.mesh.material.color.lerp(Enemy._bloodColor, stainAmt);
+              }
+            }
+          }
+        }
         
         // Progressive blood stain: blend enemy mesh color toward dark red as HP drops
         // This works on ALL enemy colors (including yellow/gold) by directly lerping the color
@@ -1592,6 +1633,9 @@
         } else if (damageType === 'aura') {
           // Aura death: burnt flesh, boiling blood effects
           this.dieByAura(enemyColor);
+        } else if (damageType === 'poison') {
+          // Poison death: dissolve in green toxic melt
+          this.dieByPoison(enemyColor);
         } else {
           // Standard death (bullet/physical/gun)
           this.dieStandard(enemyColor);
@@ -1977,9 +2021,30 @@
                 const bounce = Math.sin(lingerProgress * Math.PI * 8) * 0.03 * (1 - lingerProgress * 7);
                 dyingMesh.position.y = bounce;
               }
-              // Continuous blood pooling while body lies there
+              // Continuous blood pooling with heartbeat pulsation while body lies there
               if (fallFrame % 10 === 0 && lingerProgress < 0.6) {
                 spawnBloodDecal({ x: deathPos.x + (Math.random()-0.5)*0.6, y: 0, z: deathPos.z + (Math.random()-0.5)*0.6 });
+              }
+              // Heartbeat blood pump — rhythmic spurts from wound
+              const heartbeatPhase = Math.sin(lingerProgress * Math.PI * 12); // ~6 beats
+              if (heartbeatPhase > 0.8 && lingerProgress < 0.7 && fallFrame % 3 === 0) {
+                spawnParticles(deathPos, 0x8B0000, 2);
+                if (bloodDrips.length < MAX_BLOOD_DRIPS) {
+                  if (!_sharedBloodDripGeo) _sharedBloodDripGeo = new THREE.SphereGeometry(1, 4, 4);
+                  const pumpDrip = new THREE.Mesh(_sharedBloodDripGeo, new THREE.MeshBasicMaterial({ color: 0xAA0000 }));
+                  pumpDrip.scale.setScalar(0.02 + Math.random() * 0.03);
+                  pumpDrip.position.copy(deathPos);
+                  pumpDrip.position.y += 0.1;
+                  scene.add(pumpDrip);
+                  bloodDrips.push({
+                    mesh: pumpDrip,
+                    velX: (Math.random()-0.5) * 0.08,
+                    velZ: (Math.random()-0.5) * 0.08,
+                    velY: 0.06 + Math.random() * 0.1,
+                    life: 30 + Math.floor(Math.random() * 15),
+                    _sharedGeo: true
+                  });
+                }
               }
             } else if (fallFrame <= FALL_FRAMES + LINGER_FRAMES + EXPLODE_FRAMES) {
               // Phase 3: Blood explosion - body bursts
@@ -3048,6 +3113,57 @@
           scene.remove(corpse); scene.remove(burnMark);
           corpse.geometry.dispose(); corpse.material.dispose();
           burnGeo.dispose(); burnMat.dispose();
+        }
+      }
+      
+      dieByPoison(enemyColor) {
+        // POISON DEATH: Toxic melt — green bubbling dissolution with blood
+        const deathPos = this.mesh.position.clone();
+        spawnParticles(deathPos, 0x00FF00, 14); // Bright green toxic
+        spawnParticles(deathPos, 0x44FF44, 8);  // Light green bubbles
+        spawnParticles(deathPos, 0x006600, 6);  // Dark green ooze
+        spawnParticles(deathPos, 0x8B0000, 8);  // Blood mixed in
+        if (window.BloodSystem) {
+          window.BloodSystem.emitBurst(deathPos, 40, { spreadXZ: 0.6, spreadY: 0.3, minSize: 0.02, maxSize: 0.08, minLife: 30, maxLife: 70 });
+        }
+        // Toxic puddle on ground
+        const puddleGeo = new THREE.CircleGeometry(0.7, 12);
+        const puddleMat = new THREE.MeshBasicMaterial({ color: 0x116611, transparent: true, opacity: 0.5, side: THREE.DoubleSide });
+        const puddle = new THREE.Mesh(puddleGeo, puddleMat);
+        puddle.rotation.x = -Math.PI / 2;
+        puddle.position.set(deathPos.x, 0.01, deathPos.z);
+        scene.add(puddle);
+        for (let i = 0; i < 4; i++) spawnBloodDecal({ x: deathPos.x + (Math.random()-0.5)*0.6, y: 0, z: deathPos.z + (Math.random()-0.5)*0.6 });
+        // Melting corpse remnant
+        const corpseGeo = new THREE.SphereGeometry(0.4, 8, 6);
+        const corpseMat = new THREE.MeshBasicMaterial({ color: 0x225522, transparent: true, opacity: 0.7 });
+        const corpse = new THREE.Mesh(corpseGeo, corpseMat);
+        corpse.position.copy(deathPos); corpse.position.y = 0.1; corpse.scale.y = 0.2;
+        scene.add(corpse);
+        let life = 100;
+        if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
+          managedAnimations.push({ update(_dt) {
+            life--;
+            corpse.material.opacity = (life / 100) * 0.7;
+            corpse.scale.x *= 1.005; corpse.scale.z *= 1.005; // melting outward
+            puddleMat.opacity = (life / 100) * 0.5;
+            if (life % 8 === 0 && life > 40) spawnParticles(deathPos, 0x44FF44, 1);
+            if (life <= 0) {
+              scene.remove(corpse); scene.remove(puddle);
+              corpseGeo.dispose(); corpseMat.dispose();
+              puddleGeo.dispose(); puddleMat.dispose();
+              return false;
+            }
+            return true;
+          }, cleanup() {
+            scene.remove(corpse); scene.remove(puddle);
+            corpseGeo.dispose(); corpseMat.dispose();
+            puddleGeo.dispose(); puddleMat.dispose();
+          }});
+        } else {
+          scene.remove(corpse); scene.remove(puddle);
+          corpseGeo.dispose(); corpseMat.dispose();
+          puddleGeo.dispose(); puddleMat.dispose();
         }
       }
     }

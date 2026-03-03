@@ -164,7 +164,7 @@
             // Attack
             const damageMultiplier = 1 + (this.companionData.level - 1) * 0.1; // +10% per level
             const finalDamage = Math.floor(this.damage * damageMultiplier * playerStats.strength);
-            nearest.takeDamage(finalDamage, false);
+            nearest.takeDamage(finalDamage, false, 'physical');
             spawnParticles(nearest.mesh.position, 0xFF6347, 3);
             this.lastAttackTime = now;
             this._animState = 'attack';
@@ -409,8 +409,10 @@
             const isDoubleCrit = isCrit && Math.random() < playerStats.critChance; // Second crit check
             
             if (isDoubleCrit && playerStats.headshotUnlocked) {
-              // HEADSHOT! Instant kill
-              enemy.hp = 0;
+              // HEADSHOT! Instant kill — set hp to 1 then call takeDamage with 'headshot' type
+              // so die() triggers with correct damageType for headshot death animation
+              enemy.hp = 1;
+              enemy.takeDamage(enemy.hp + 1, true, 'headshot');
               
               // Create floating HEADSHOT text - THINNER FONT
               const div = document.createElement('div');
@@ -1461,7 +1463,7 @@
         enemies.forEach(e => {
           const d = e.mesh.position.distanceTo(this.target);
           if (d < range) {
-            e.takeDamage(dmg);
+            e.takeDamage(dmg, false, 'fire');
             
             // Apply knockback to enemies
             const knockbackDir = new THREE.Vector3(
