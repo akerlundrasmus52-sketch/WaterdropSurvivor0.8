@@ -2732,9 +2732,6 @@
       if (saveData) _saveData = saveData;
       if (_saveData && _saveData.campBuildings && _saveData.campBuildings[buildingId]) {
         _saveData.campBuildings[buildingId].unlocked = true;
-        if (_saveData.campBuildings[buildingId].level === 0) {
-          _saveData.campBuildings[buildingId].level = 1;
-        }
       }
       _refreshBuildings();
       _playBuildingUnlockAnimation(buildingId);

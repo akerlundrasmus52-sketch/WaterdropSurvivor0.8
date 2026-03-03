@@ -1582,6 +1582,7 @@
         claim: 'Main Building',
         rewardGold: 50,
         rewardSkillPoints: 3,
+        rewardResources: { wood: 5, stone: 5, coal: 5 },
         unlockBuilding: 'skillTree',
         message: "Outstanding, Droplet! 🎯<br><br>You've proven your combat worth. The <b>Skill Tree</b> is now unlocked at camp!<br><br>Head to the <b>Skill Tree</b> tab and spend your <b>3 Skill Points</b> to grow stronger.",
         nextQuest: 'quest2_spendSkills',
@@ -2352,7 +2353,7 @@
       // Determine resource cost: building N costs N of each material
       var builtCount = 0;
       if (saveData.campBuildings) {
-        builtCount = Object.values(saveData.campBuildings).filter(function (b) { return b && b.unlocked; }).length;
+        builtCount = Object.values(saveData.campBuildings).filter(function (b) { return b && b.unlocked && b.level > 0; }).length;
       }
       var cost = Math.max(1, builtCount + 1);
 
@@ -2596,6 +2597,14 @@
         saveData.specialAtkPoints = (saveData.specialAtkPoints || 0) + quest.rewardSAP;
         showStatChange(`+${quest.rewardSAP} Special Atk Points!`);
       }
+      // Give resource rewards (wood, stone, coal) for building quests
+      if (quest.rewardResources) {
+        if (!saveData.resources) saveData.resources = {};
+        for (const [res, amt] of Object.entries(quest.rewardResources)) {
+          saveData.resources[res] = (saveData.resources[res] || 0) + amt;
+          showStatChange(`+${amt} ${res.charAt(0).toUpperCase() + res.slice(1)}!`);
+        }
+      }
       // Award account XP for completing a quest (50 XP per quest)
       addAccountXP(50);
       chatSystemMessage('🎁 Quest "' + quest.name + '" claimed! Rewards received.');
@@ -2604,6 +2613,8 @@
       // window._campShowBuildOverlay can be set to null by camp-world.js to suppress this overlay
       // when the build is triggered directly from the camp interaction system.
       if (quest.unlockBuilding && saveData.campBuildings[quest.unlockBuilding]) {
+        // Mark building as unlocked (level stays 0 — player must BUILD it)
+        saveData.campBuildings[quest.unlockBuilding].unlocked = true;
         // Use != null (not !==) so that both null and undefined suppress the overlay
         if (window._campShowBuildOverlay != null) {
           const buildingName = CAMP_BUILDINGS[quest.unlockBuilding]?.name || 'Building';
@@ -2660,7 +2671,6 @@
         buildingsToUnlock.forEach(bld => {
           if (saveData.campBuildings[bld] && !saveData.campBuildings[bld].unlocked) {
             saveData.campBuildings[bld].unlocked = true;
-            if (saveData.campBuildings[bld].level === 0) saveData.campBuildings[bld].level = 1;
             const bldName = CAMP_BUILDINGS[bld]?.name || 'Building';
             showStatChange(`🏛️ ${bldName} Unlocked!`);
           }
@@ -2671,7 +2681,6 @@
       if (questId === 'quest8_kill10') {
         if (saveData.campBuildings['tavern'] && !saveData.campBuildings['tavern'].unlocked) {
           saveData.campBuildings['tavern'].unlocked = true;
-          if (saveData.campBuildings['tavern'].level === 0) saveData.campBuildings['tavern'].level = 1;
           showStatChange('🏛️ Tavern Unlocked!');
           if (window.CampWorld) {
             window.CampWorld.refreshBuildings(saveData);
@@ -2691,7 +2700,6 @@
           const bld = nextQuestActivated.unlockBuildingOnActivation;
           if (saveData.campBuildings[bld]) {
             saveData.campBuildings[bld].unlocked = true;
-            if (saveData.campBuildings[bld].level === 0) { saveData.campBuildings[bld].level = 1; }
             const bldName = CAMP_BUILDINGS[bld]?.name || 'Building';
             showStatChange(`🏛️ ${bldName} Unlocked!`);
             if (window.CampWorld) {
