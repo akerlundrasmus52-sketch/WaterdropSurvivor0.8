@@ -355,6 +355,30 @@
         isFree: true,
         bonus: (level) => ({})
       },
+      campfireKitchen: {
+        name: 'Campfire Kitchen',
+        icon: '🍳',
+        description: 'Cook meals from harvested berries, meat, vegetables and flowers for healing and combat buffs',
+        baseCost: 250,
+        costMultiplier: 1.5,
+        maxCost: 50000,
+        bonus: (level) => ({
+          cookSpeed: 0.1 * level,
+          mealPotency: 0.05 * level
+        })
+      },
+      weaponsmith: {
+        name: 'Weaponsmith',
+        icon: '⚒️',
+        description: 'Craft and upgrade weapons from gathered resources. Build guns, bows, staffs and more',
+        baseCost: 300,
+        costMultiplier: 1.8,
+        maxCost: 80000,
+        bonus: (level) => ({
+          craftQuality: 0.08 * level,
+          weaponDamage: 0.03 * level
+        })
+      },
       
       // LEGACY BUILDINGS (kept for compatibility)
       trainingGrounds: {
@@ -1700,7 +1724,7 @@
         rewardSkillPoints: 1,
         unlockBuilding: 'companionHouse',
         companionEgg: true,
-        message: "⚔️ 10 Enemies Defeated!<br><br>A <b>Companion Egg</b> has appeared! The <b>Companion House</b> is now unlocked. Visit it to activate your companion!",
+        message: "⚔️ 10 Enemies Defeated!<br><br>A <b>Grey Alien 👽</b> companion has appeared! The <b>Companion House</b> is now unlocked. Visit it to activate your alien companion!",
         nextQuest: 'quest9_activateCompanion',
         conditions: ['quest7_buyProgression']
       },
@@ -1709,14 +1733,14 @@
       quest9_activateCompanion: {
         id: 'quest9_activateCompanion',
         name: 'Activate Your Companion',
-        description: 'Visit the Companion House and activate your companion to fight by your side',
+        description: 'Visit the Companion House and activate your Grey Alien companion 👽 to fight by your side',
         objectives: 'Activate a companion',
         claim: 'Main Building',
         rewardGold: 150,
         rewardSkillPoints: 1,
         rewardAttributePoints: 1,
         unlockBuilding: 'shop',
-        message: "🐺 Companion activated!<br><br>They will fight by your side in battle!<br><br>The <b>Shop</b> is now open — buy powerful items!<br><br>Visit the <b>Tavern</b> to check out expeditions and rest options!",
+        message: "👽 Alien Companion activated!<br><br>Your Grey Alien will fight by your side with energy bolts!<br><br>The <b>Shop</b> is now open — buy powerful items!<br><br>Visit the <b>Tavern</b> to check out expeditions and rest options!",
         nextQuest: 'quest9b_visitTavern',
         conditions: ['quest8_kill10']
       },
@@ -1888,16 +1912,16 @@
       // === PHASE 18: Run quest → Find Companion Egg at UFO sight in Area 51 ===
       quest18_findCompanionEgg: {
         id: 'quest18_findCompanionEgg',
-        name: 'Find the Companion Egg',
-        description: 'A mysterious signal leads to the UFO crash site in Area 51. Find the glowing Companion Egg hidden there!',
-        objectives: 'Find the Companion Egg at the UFO sight in Area 51',
+        name: 'Find the Alien Egg',
+        description: 'A mysterious signal leads to the UFO crash site in Area 51. Find the glowing Alien Egg 👽 hidden near the wreckage!',
+        objectives: 'Find the Alien Egg at the UFO crash site in Area 51',
         claim: 'Main Building',
         rewardGold: 500,
         rewardSkillPoints: 3,
         rewardAttributePoints: 2,
         triggerOnDeath: false,
         questObjectivePos: { x: -150, z: 60 },
-        message: "🥚 COMPANION EGG FOUND!<br><br>You discovered a mysterious egg at the UFO crash site! Take it to the <b>Companion House</b> in camp to hatch it!",
+        message: "🥚 ALIEN EGG FOUND!<br><br>You discovered a mysterious alien egg 👽 at the UFO crash site! Take it to the <b>Companion House</b> in camp to hatch it!",
         nextQuest: 'quest19_hatchEgg',
         conditions: ['quest17_visitCodex']
       },
@@ -1905,14 +1929,14 @@
       // === PHASE 19: Camp quest → Place egg in Companion House and hatch it ===
       quest19_hatchEgg: {
         id: 'quest19_hatchEgg',
-        name: 'Hatch the Companion Egg',
-        description: 'Bring the Companion Egg to the Companion House and place it in the nest to hatch your new companion!',
-        objectives: 'Place and hatch the egg in the Companion House',
+        name: 'Hatch the Alien Egg',
+        description: 'Bring the Alien Egg to the Companion House and place it in the incubator to hatch your new alien companion!',
+        objectives: 'Place and hatch the alien egg in the Companion House',
         claim: 'Companion House',
         rewardGold: 600,
         rewardSkillPoints: 3,
         rewardAttributePoints: 3,
-        message: "🐣 COMPANION HATCHED!<br><br>A tiny newborn companion has emerged from the egg! 🍼<br><br>Take your <b>newborn companion</b> on a run and survive <b>60 seconds</b> together to help it grow into a juvenile!",
+        message: "🐣 ALIEN HATCHED!<br><br>A tiny newborn Grey Alien 👽 has emerged from the egg!<br><br>Take your <b>newborn alien companion</b> on a run and survive <b>60 seconds</b> together to help it grow into a juvenile!",
         nextQuest: 'quest19b_growJuvenile',
         conditions: ['quest18_findCompanionEgg']
       },
@@ -1928,7 +1952,7 @@
         rewardSkillPoints: 2,
         rewardAttributePoints: 1,
         companionGrowth: 'juvenile',
-        message: "🐾 COMPANION GREW!<br><br>Your companion has grown into a <b>juvenile</b>! It's bigger, faster, and stronger now!<br><br>Take it on another run and kill <b>8 enemies</b> together to reach <b>adult</b> stage!",
+        message: "🐾 ALIEN GREW!<br><br>Your alien companion has grown into a <b>juvenile</b>! It's bigger, faster, and fires stronger energy bolts!<br><br>Take it on another run and kill <b>8 enemies</b> together to reach <b>adult</b> stage!",
         nextQuest: 'quest19c_growAdult',
         conditions: ['quest19_hatchEgg']
       },
@@ -1944,7 +1968,7 @@
         rewardSkillPoints: 3,
         rewardAttributePoints: 2,
         companionGrowth: 'adult',
-        message: "🐺 COMPANION FULLY GROWN!<br><br>Your companion has reached <b>adult</b> form! Full size, full power!<br><br>Train it in the <b>Companion House</b> to unlock powerful abilities!",
+        message: "👽 ALIEN FULLY GROWN!<br><br>Your alien companion has reached <b>adult</b> form! Full size, full power!<br><br>Train it in the <b>Companion House</b> to unlock powerful abilities!",
         nextQuest: 'quest20_trainCompanion',
         conditions: ['quest19b_growJuvenile']
       },
@@ -2095,9 +2119,87 @@
         rewardGold: 400,
         rewardSkillPoints: 3,
         rewardAttributePoints: 2,
-        message: "🏪 Temp Shop explored!<br><br>Buy temporary boosts before each run to gain the edge!<br><br>🔥 <b>All buildings are now unlocked!</b> Keep exploring, upgrading, and conquering the world!",
-        nextQuest: null,
+        message: "🏪 Temp Shop explored!<br><br>Buy temporary boosts before each run!<br><br>🍳 A <b>Campfire Kitchen</b> is now available! Cook meals from harvested ingredients!",
+        nextQuest: 'quest30_buildCampfire',
         conditions: ['quest28_survive3min']
+      },
+
+      // === PHASE 30: Camp quest → Build Campfire Kitchen ===
+      quest30_buildCampfire: {
+        id: 'quest30_buildCampfire',
+        name: 'Cook Your First Meal',
+        description: 'Visit the Campfire Kitchen in camp and cook a meal from your harvested berries, meat, or vegetables!',
+        objectives: 'Cook any meal at the Campfire Kitchen',
+        claim: 'Main Building',
+        unlockBuilding: 'campfireKitchen',
+        rewardGold: 300,
+        rewardSkillPoints: 2,
+        rewardAttributePoints: 1,
+        message: "🍲 First meal cooked!<br><br>Cook meals from berries, meat, vegetables and flowers for healing and buff effects!<br><br>⚒️ A <b>Weaponsmith</b> building has appeared — craft powerful weapons!",
+        nextQuest: 'quest31_buildWeaponsmith',
+        conditions: ['quest29_useTempShop']
+      },
+
+      // === PHASE 31: Camp quest → Build Weaponsmith ===
+      quest31_buildWeaponsmith: {
+        id: 'quest31_buildWeaponsmith',
+        name: 'Craft a Weapon',
+        description: 'Visit the Weaponsmith and craft your first weapon from resources you\'ve gathered!',
+        objectives: 'Craft any weapon at the Weaponsmith',
+        claim: 'Main Building',
+        unlockBuilding: 'weaponsmith',
+        rewardGold: 400,
+        rewardSkillPoints: 2,
+        rewardAttributePoints: 1,
+        message: "⚔️ First weapon crafted!<br><br>Craft weapons with unique stats and elemental effects!<br><br>🔫 Craft a <b>Tranquilizer Rifle</b> to capture wild animals — you'll need it to breed wolves!",
+        nextQuest: 'quest32_craftTranquilizer',
+        conditions: ['quest30_buildCampfire']
+      },
+
+      // === PHASE 32: Craft Tranquilizer Rifle ===
+      quest32_craftTranquilizer: {
+        id: 'quest32_craftTranquilizer',
+        name: 'Craft a Tranquilizer Rifle',
+        description: 'Craft the Tranquilizer Rifle at the Weaponsmith. You\'ll need 10 Iron, 5 Wood, and 2 Crystal.',
+        objectives: 'Craft the Tranquilizer Rifle at the Weaponsmith',
+        claim: 'Main Building',
+        rewardGold: 500,
+        rewardSkillPoints: 3,
+        giveItem: { id: 'tranquilizerRifle', name: 'Tranquilizer Rifle', type: 'weapon', rarity: 'rare', stats: { damage: 0, range: 15 }, description: 'Non-lethal rifle for capturing wild animals' },
+        message: "🔫 Tranquilizer Rifle crafted!<br><br>Use it to capture wildlife on the map!<br><br>🐺 Find a <b>male</b> and <b>female wolf</b> roaming the forest region and tranquilize them both to start breeding!",
+        nextQuest: 'quest33_captureWolves',
+        conditions: ['quest31_buildWeaponsmith']
+      },
+
+      // === PHASE 33: Capture wild wolves for breeding ===
+      quest33_captureWolves: {
+        id: 'quest33_captureWolves',
+        name: 'Capture Two Wolves',
+        description: 'Find and tranquilize one male (♂) and one female (♀) wolf in the forest region. Walk near wolves with the Tranquilizer Rifle equipped to capture them.',
+        objectives: 'Capture 1 male wolf and 1 female wolf',
+        triggerOnDeath: true,
+        rewardGold: 600,
+        rewardSkillPoints: 3,
+        rewardAttributePoints: 2,
+        message: "🐺🐺 Both wolves captured!<br><br>Bring them to the <b>Companion House</b> to start the breeding process!",
+        nextQuest: 'quest34_breedWolf',
+        conditions: ['quest32_craftTranquilizer']
+      },
+
+      // === PHASE 34: Breed wolves to get Storm Wolf companion ===
+      quest34_breedWolf: {
+        id: 'quest34_breedWolf',
+        name: 'Breed the Storm Wolf',
+        description: 'Visit the Companion House and start the wolf breeding process. The male and female wolf will produce a Storm Wolf pup!',
+        objectives: 'Breed wolves in the Companion House',
+        claim: 'Companion House',
+        rewardGold: 800,
+        rewardSkillPoints: 4,
+        rewardAttributePoints: 3,
+        unlockCompanion: 'stormWolf',
+        message: "🐺⚡ STORM WOLF BRED!<br><br>A <b>Storm Wolf</b> pup has been born from your captured wolves! It's a powerful melee companion!<br><br>Visit the Companion House to switch between your Grey Alien 👽 and Storm Wolf 🐺!<br><br>🔥 <b>All buildings are now unlocked!</b> Keep exploring, upgrading, and conquering the world!",
+        nextQuest: null,
+        conditions: ['quest33_captureWolves']
       }
     };
 
@@ -2117,7 +2219,9 @@
       'codex': 'quest17_visitCodex',
       'campBoard': 'quest20_trainCompanion',
       'trashRecycle': 'quest26_kill20',
-      'tempShop': 'quest28_survive3min'
+      'tempShop': 'quest28_survive3min',
+      'campfireKitchen': 'quest30_buildCampfire',
+      'weaponsmith': 'quest31_buildWeaponsmith'
     };
     
     // Get current quest object
@@ -2509,10 +2613,10 @@
       
       // Give companion egg
       if (quest.companionEgg) {
-        if (saveData.companions && saveData.companions.stormWolf) {
-          saveData.companions.stormWolf.unlocked = true;
+        if (saveData.companions && saveData.companions.greyAlien) {
+          saveData.companions.greyAlien.unlocked = true;
         }
-        showStatChange('🥚 Companion Egg Received!');
+        showStatChange('👽 Grey Alien Companion Received!');
       }
 
       // Handle companion growth stage progression
@@ -2521,7 +2625,16 @@
         if (quest.companionGrowth === 'juvenile') {
           showStatChange('🐾 Companion grew to Juvenile!');
         } else if (quest.companionGrowth === 'adult') {
-          showStatChange('🐺 Companion reached Adult form!');
+          showStatChange('👽 Companion reached Adult form!');
+        }
+      }
+
+      // Unlock a specific companion (e.g. breeding storm wolf)
+      if (quest.unlockCompanion) {
+        const cId = quest.unlockCompanion;
+        if (saveData.companions[cId]) {
+          saveData.companions[cId].unlocked = true;
+          showStatChange(`🐺 ${COMPANIONS[cId]?.name || cId} Unlocked!`);
         }
       }
       

@@ -36,19 +36,70 @@
           this._baseScale = 1.0;
         }
         
-        // Create visual representation
-        const icon = isEvolved ? this.data.evolvedIcon : this.data.icon;
+        // Create visual representation — shape and color based on companion type
         const size = 0.8 * this._baseScale;
-        const geo = new THREE.BoxGeometry(size, size, size);
-        const mat = new THREE.MeshStandardMaterial({ 
-          color: this.data.type === 'melee' ? 0x8B4513 : 
-                 this.data.type === 'ranged' ? 0x4169E1 : 0x00CED1
-        });
-        this.mesh = new THREE.Mesh(geo, mat);
-        this.mesh.castShadow = true;
-        this.mesh.receiveShadow = true;
-        this.mesh.material.emissive = new THREE.Color(0x000000);
-        this.mesh.material.emissiveIntensity = 0;
+        let mesh;
+        if (this.companionId === 'greyAlien') {
+          // Grey Alien — tall head, small body, green-grey
+          const group = new THREE.Group();
+          const headGeo = new THREE.SphereGeometry(size * 0.5, 8, 8);
+          headGeo.scale(1, 1.3, 0.9);
+          const headMat = new THREE.MeshStandardMaterial({ color: 0x90A090, roughness: 0.5, metalness: 0.2 });
+          const head = new THREE.Mesh(headGeo, headMat);
+          head.position.y = size * 0.5;
+          head.castShadow = true;
+          group.add(head);
+          // Eyes (large black)
+          const eyeGeo = new THREE.SphereGeometry(size * 0.12, 6, 6);
+          const eyeMat = new THREE.MeshStandardMaterial({ color: 0x000000, roughness: 0.1, metalness: 0.8 });
+          const eyeL = new THREE.Mesh(eyeGeo, eyeMat);
+          eyeL.position.set(-size * 0.15, size * 0.55, size * 0.3);
+          eyeL.scale.set(1, 1.4, 0.6);
+          group.add(eyeL);
+          const eyeR = eyeL.clone();
+          eyeR.position.x = size * 0.15;
+          group.add(eyeR);
+          // Small body
+          const bodyGeo = new THREE.CylinderGeometry(size * 0.2, size * 0.15, size * 0.5, 6);
+          const bodyMat = new THREE.MeshStandardMaterial({ color: 0x708070, roughness: 0.6 });
+          const body = new THREE.Mesh(bodyGeo, bodyMat);
+          body.position.y = size * 0.05;
+          body.castShadow = true;
+          group.add(body);
+          mesh = group;
+          mesh._isGroup = true;
+          mesh.castShadow = true;
+        } else if (this.companionId === 'stormWolf') {
+          // Storm Wolf — brown blocky wolf shape
+          const group = new THREE.Group();
+          const bodyGeo = new THREE.BoxGeometry(size * 1.2, size * 0.6, size * 0.5);
+          const bodyMat = new THREE.MeshStandardMaterial({ color: 0x8B4513, roughness: 0.8 });
+          const body = new THREE.Mesh(bodyGeo, bodyMat);
+          body.position.y = size * 0.3;
+          body.castShadow = true;
+          group.add(body);
+          const headGeo = new THREE.BoxGeometry(size * 0.4, size * 0.35, size * 0.35);
+          const head = new THREE.Mesh(headGeo, bodyMat);
+          head.position.set(size * 0.6, size * 0.45, 0);
+          head.castShadow = true;
+          group.add(head);
+          mesh = group;
+          mesh._isGroup = true;
+          mesh.castShadow = true;
+        } else {
+          // Default fallback — colored box
+          const geo = new THREE.BoxGeometry(size, size, size);
+          const mat = new THREE.MeshStandardMaterial({ 
+            color: this.data.type === 'melee' ? 0x8B4513 : 
+                   this.data.type === 'ranged' ? 0x4169E1 : 0x00CED1
+          });
+          mesh = new THREE.Mesh(geo, mat);
+          mesh.castShadow = true;
+          mesh.receiveShadow = true;
+          mesh.material.emissive = new THREE.Color(0x000000);
+          mesh.material.emissiveIntensity = 0;
+        }
+        this.mesh = mesh;
         scene.add(this.mesh);
         
         // Position near player
@@ -134,14 +185,17 @@
         // Apply animation based on state
         const baseY = 0.4 * this._baseScale;
         const s = this._baseScale;
+        const hasMaterial = this.mesh.material && this.mesh.material.emissive;
         if (this._animState === 'attack') {
           // Attack animation: quick scale pulse and slight lunge
           const t = this._attackAnimTimer / 0.25;
           const pulse = 1 + Math.sin(t * Math.PI) * 0.3;
           this.mesh.scale.set(s * pulse, s * pulse, s * pulse);
           this.mesh.position.y = baseY + 0.1;
-          this.mesh.material.emissive.setHex(0xFF4400);
-          this.mesh.material.emissiveIntensity = t * 0.8;
+          if (hasMaterial) {
+            this.mesh.material.emissive.setHex(0xFF4400);
+            this.mesh.material.emissiveIntensity = t * 0.8;
+          }
         } else if (this._animState === 'walk') {
           // Walk animation: bouncy hop movement
           const bounce = Math.abs(Math.sin(this._animTime * 8)) * 0.2;
@@ -149,7 +203,7 @@
           this.mesh.position.y = baseY + bounce;
           this.mesh.scale.set(s, s * (1 + bounce * 0.3), s);
           this.mesh.rotation.z = tilt;
-          this.mesh.material.emissiveIntensity = 0;
+          if (hasMaterial) this.mesh.material.emissiveIntensity = 0;
         } else {
           // Idle animation: gentle bob and breathe
           const bob = Math.sin(this._animTime * 2.5) * 0.08;
@@ -157,7 +211,7 @@
           this.mesh.position.y = baseY + bob;
           this.mesh.scale.set(s * breathe, s / breathe, s * breathe);
           this.mesh.rotation.z = 0;
-          this.mesh.material.emissiveIntensity = 0;
+          if (hasMaterial) this.mesh.material.emissiveIntensity = 0;
         }
       }
       
@@ -214,8 +268,15 @@
       
       destroy() {
         scene.remove(this.mesh);
-        this.mesh.geometry.dispose();
-        this.mesh.material.dispose();
+        if (this.mesh._isGroup) {
+          this.mesh.traverse(child => {
+            if (child.geometry) child.geometry.dispose();
+            if (child.material) child.material.dispose();
+          });
+        } else {
+          if (this.mesh.geometry) this.mesh.geometry.dispose();
+          if (this.mesh.material) this.mesh.material.dispose();
+        }
       }
     }
 

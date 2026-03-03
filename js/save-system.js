@@ -109,7 +109,9 @@
         warehouse: { level: 0, maxLevel: 1, unlocked: false },   // Quest 7
         tavern:    { level: 0, maxLevel: 1, unlocked: false },   // Quest 8
         shop:      { level: 0, maxLevel: 1, unlocked: false },   // Quest 9
-        prestige:  { level: 0, maxLevel: 1, unlocked: false }    // Quest 10
+        prestige:  { level: 0, maxLevel: 1, unlocked: false },   // Quest 10
+        campfireKitchen: { level: 0, maxLevel: 5, unlocked: false }, // Quest 30
+        weaponsmith: { level: 0, maxLevel: 5, unlocked: false }      // Quest 31
       },
       // COMPREHENSIVE SKILL TREE - 48 Skills Total (Fresh Implementation)
       skillTree: {

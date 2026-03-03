@@ -1286,7 +1286,7 @@
       const hasEgg = saveData.hasCompanionEgg;
       const isHatched = saveData.companionEggHatched;
       const hatchProgress = saveData.companionEggHatchProgress || 0;
-      const companionId = saveData.selectedCompanion || 'stormWolf';
+      const companionId = saveData.selectedCompanion || 'greyAlien';
       const companionData = saveData.companions[companionId] || { unlocked: true, level: 1, xp: 0, skills: {} };
       const companionInfo = COMPANIONS[companionId];
       const companionQuestDone = saveData.tutorialQuests?.completedQuests?.includes('quest9_activateCompanion');
@@ -1318,7 +1318,7 @@
           </div>`;
       } else {
         const growthStage = saveData.companionGrowthStage || 'newborn';
-        const growthIcons = { newborn: '🐣', juvenile: '🐾', adult: '🐺' };
+        const growthIcons = { newborn: '🐣', juvenile: '👽', adult: '👽' };
         const growthLabels = { newborn: 'Newborn', juvenile: 'Juvenile', adult: 'Adult' };
         const growthColors = { newborn: '#FFD700', juvenile: '#FF8C00', adult: '#00FF64' };
         const growthIcon = growthIcons[growthStage] || '🐣';
@@ -1343,7 +1343,7 @@
 
       const companionSection = `
         <div style="background:rgba(255,255,255,0.04);border:1px solid #555;border-radius:12px;padding:16px;margin-bottom:20px;">
-          <div style="color:#FFD700;font-size:15px;font-weight:bold;margin-bottom:12px;">🐺 Active Companion</div>
+          <div style="color:#FFD700;font-size:15px;font-weight:bold;margin-bottom:12px;">👽 Active Companion</div>
 
           <!-- Companion selector -->
           <div style="display:flex;gap:8px;margin-bottom:14px;">
