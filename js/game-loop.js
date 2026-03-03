@@ -643,10 +643,20 @@
       }
 
       // Update enemy AI movement (was missing - enemies were frozen)
+      // PERFORMANCE: Far enemies (> 22 units) only update every other frame to save CPU.
+      // Close enemies always update every frame for responsive combat.
+      const _ENEMY_THROTTLE_DIST_SQ = 22 * 22; // squared to avoid sqrt
+      const _frameEven = (performanceLog.frameCount & 1) === 0;
       // Debug: track alive/died counts per frame for diagnostics
       const _dbgAliveBeforeEnemyTick = window.GameDebug && window.GameDebug.enabled
         ? enemies.filter(e => e && !e.isDead).length : 0;
-      enemies.forEach(e => { if (e && e.mesh && !e.isDead) e.update(dt, player.mesh.position); });
+      enemies.forEach((e, _idx) => {
+        if (!e || !e.mesh || e.isDead) return;
+        const _dSq = e.mesh.position.distanceToSquared(player.mesh.position);
+        // Skip far enemies on alternating frames; always update close enemies
+        if (_dSq > _ENEMY_THROTTLE_DIST_SQ && (_frameEven !== ((_idx & 1) === 0))) return;
+        e.update(dt, player.mesh.position);
+      });
       if (window.GameDebug && window.GameDebug.enabled) {
         const _dbgAliveAfter = enemies.filter(e => e && !e.isDead).length;
         window.GameDebug.onEnemyTick(enemies, 0, _dbgAliveBeforeEnemyTick - _dbgAliveAfter);

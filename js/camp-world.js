@@ -201,7 +201,7 @@
 
     // ── Camera ──────────────────────────────────────────────
     const aspect = window.innerWidth / window.innerHeight;
-    _campCamera = new THREE.PerspectiveCamera(52, aspect, 0.1, 200);
+    _campCamera = new THREE.PerspectiveCamera(42, aspect, 0.1, 200);
     _updateCamera(0);
   }
 
@@ -1860,9 +1860,12 @@
   // ──────────────────────────────────────────────────────────
   function _updateCamera(dt) {
     if (!_campCamera || !_playerMesh) return;
-    const targetCX = _playerPos.x;
-    const targetCZ = _playerPos.z + 16;
-    const targetCY = 13;
+    // Camera offset: diagonal top-down angle similar to the main game camera
+    // Main game uses an orthographic camera at (18,16,18) from player.
+    // Here we mimic that with a perspective offset.
+    const targetCX = _playerPos.x + 11;
+    const targetCZ = _playerPos.z + 13;
+    const targetCY = 14;
 
     if (dt === 0) {
       // Immediate snap on init
@@ -1872,7 +1875,7 @@
       _campCamera.position.y += (targetCY - _campCamera.position.y) * 0.06;
       _campCamera.position.z += (targetCZ - _campCamera.position.z) * 0.06;
     }
-    _campCamera.lookAt(_playerPos.x, 0.6, _playerPos.z);
+    _campCamera.lookAt(_playerPos.x, 0, _playerPos.z);
   }
 
   // ──────────────────────────────────────────────────────────
@@ -2215,8 +2218,10 @@
         'cursor:pointer',
         'box-shadow:0 0 20px rgba(200,162,72,0.7)',
         'letter-spacing:0.5px',
+        'touch-action:manipulation',
       ].join(';');
       btn.addEventListener('click', () => _interact());
+      btn.addEventListener('touchend', (e) => { e.preventDefault(); _interact(); });
       document.body.appendChild(btn);
       _interactBtn = btn;
     } else {
@@ -2532,17 +2537,13 @@
     _hideTouchIndicator();
     _hideBennySpeech();
 
-    // Reset main-game joystick state so sticks don't stay "active" into the next run
-    if (typeof joystickLeft !== 'undefined') {
-      joystickLeft.active = false;
-      joystickLeft.x = 0;
-      joystickLeft.y = 0;
-    }
-    if (typeof joystickRight !== 'undefined') {
-      joystickRight.active = false;
-      joystickRight.x = 0;
-      joystickRight.y = 0;
-    }
+    // Reset main-game joystick state so sticks don't stay "active" into the next run.
+    // Use window._campJoystick / _campJoystickRight which are the same objects as
+    // joystickLeft / joystickRight in main.js (set before camp-world.js loads).
+    const _jLeft  = window._campJoystick;
+    const _jRight = window._campJoystickRight;
+    if (_jLeft)  { _jLeft.active  = false; _jLeft.x  = 0; _jLeft.y  = 0; _jLeft.id  = null; }
+    if (_jRight) { _jRight.active = false; _jRight.x = 0; _jRight.y = 0; _jRight.id = null; }
   }
 
   /**

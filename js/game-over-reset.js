@@ -203,11 +203,13 @@
         joystickLeft.active = false;
         joystickLeft.x = 0;
         joystickLeft.y = 0;
+        joystickLeft.id = null;
       }
       if (typeof joystickRight !== 'undefined') {
         joystickRight.active = false;
         joystickRight.x = 0;
         joystickRight.y = 0;
+        joystickRight.id = null;
       }
       
       // Reset weapons to default state for each run (roguelite: all run upgrades are temporary)
