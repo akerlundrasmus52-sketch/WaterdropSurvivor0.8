@@ -53,13 +53,13 @@
     /* HUD — centered below the day/night clock */
     .hud-top {
       position: fixed;
-      top: 52px;
-      left: 50%;
-      transform: translateX(-50%);
+      top: 8px;
+      left: 8px;
+      transform: none;
       padding: 4px 8px;
       display: flex;
       flex-direction: column;
-      align-items: center;
+      align-items: flex-start;
       gap: 6px;
       cursor: grab;
       z-index: 11;
@@ -2942,7 +2942,7 @@
     }
 
     .hud-top {
-      padding: 4px 8px; /* Keep compact in portrait; center position inherited */
+      padding: 4px 8px;
     }
       
       /* PR #117: Fix button overlap in portrait mode */
@@ -3018,7 +3018,7 @@
       .hud-top {
         padding: 4px 8px;
         flex-direction: row;
-        justify-content: center;
+        justify-content: flex-start;
       }
     }
     
@@ -4377,17 +4377,7 @@
        Right side, below menu button, above minimap
        ================================================= */
     #super-stat-bar {
-      position: fixed;
-      right: 5px;
-      top: 65px;
-      width: 150px;
-      z-index: 98;
-      display: none;          /* shown only in-game via JS */
-      flex-direction: column;
-      gap: 3px;
-      pointer-events: none;
-      font-family: 'Bangers', cursive;
-      overflow: hidden;
+      display: none !important;
     }
 
     /* Header row: wave · kills · combo */
@@ -4530,13 +4520,13 @@
       animation: ssb-countdown-pulse 0.45s ease-out forwards;
     }
 
-    /* Portrait: tuck under menu button (44 px tall + 10 px top + 8 px gap = 62) */
+    /* Portrait: super-stat-bar removed */
     @media (orientation: portrait) {
-      #super-stat-bar { right: 5px; top: 65px; }
+      #super-stat-bar { display: none !important; }
     }
-    /* Landscape: slightly higher since menu btn might be different */
+    /* Landscape: super-stat-bar removed */
     @media (orientation: landscape) {
-      #super-stat-bar { right: 5px; top: 52px; }
+      #super-stat-bar { display: none !important; }
     }
 
 /* ============================================================
@@ -5042,10 +5032,7 @@
   animation: none;
 }
 
-/* Apply to #super-stat-bar */
-#super-stat-bar {
-  animation: living-border-breathe 5s ease-in-out infinite;
-}
+/* super-stat-bar removed — no animation needed */
 
 /* Apply to ssb-countdown — living glow around it */
 .ssb-countdown {
