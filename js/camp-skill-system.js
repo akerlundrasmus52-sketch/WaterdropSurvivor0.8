@@ -1555,22 +1555,41 @@
         unlockBuilding: 'questMission',
         autoClaim: true,
         triggerOnDeath: true,
-        nextQuest: 'questGather0_materials',
+        nextQuest: 'questForge0_unlock',
         conditions: []
       },
 
-      // === PHASE 0b: Intro gathering quest — teaches resource collection ===
-      questGather0_materials: {
-        id: 'questGather0_materials',
-        name: 'Gather Building Materials',
-        description: 'Head out on a run and gather 1 Wood (chop a tree 🪓), 1 Stone (mine a rock ⛏️), and 1 Coal (mine coal ⛏️). These are needed to build your first structure!',
-        objectives: 'Gather: 1🪵 Wood, 1🪨 Stone, 1🖤 Coal',
-        autoClaim: true,
+      // === PHASE 0b: Unlock Forge — gives starter crafting materials & teaches tool crafting ===
+      questForge0_unlock: {
+        id: 'questForge0_unlock',
+        name: 'Unlock the Forge',
+        description: 'The Forge has been unlocked! Visit it in Camp to craft your first harvesting tools using the starter materials you received.',
+        objectives: 'Visit the Forge in Camp',
+        autoClaim: false,
+        claim: 'Main Building',
+        rewardGold: 75,
+        rewardSkillPoints: 1,
+        rewardResources: { wood: 10, stone: 10, coal: 5, iron: 3, leather: 3 },
+        unlockBuilding: 'forge',
+        message: "🔨 Forge Unlocked!<br><br>You received <b>starter materials</b>:<br>&nbsp;🪵 10 Wood · 🪨 10 Stone · 🖤 5 Coal · ⚙️ 3 Iron · 🧶 3 Leather<br><br>Visit the <b>Forge</b> to craft harvesting tools!<br>Tools let you gather resources out in the world.<br><br>🔧 <b>NEXT:</b> Craft a tool at the Forge!",
+        nextQuest: 'questForge0b_craftTools',
+        conditions: ['firstRunDeath']
+      },
+
+      // === PHASE 0c: Craft tools at the Forge — teaches crafting system ===
+      questForge0b_craftTools: {
+        id: 'questForge0b_craftTools',
+        name: 'Craft a Harvesting Tool',
+        description: 'Open the Forge and craft your first harvesting tool. You have all the materials you need!',
+        objectives: 'Craft any harvesting tool at the Forge',
+        autoClaim: false,
+        claim: 'Main Building',
         rewardGold: 50,
         rewardSkillPoints: 1,
-        message: "🪵🪨🖤 Materials gathered!<br><br>Excellent work! You now know how to gather building materials.<br><br>Each building requires materials — more buildings need more resources!<br><br>🎯 Now kill <b>3 enemies</b> in a run to unlock the Skill Tree!",
+        giveTools: true,
+        message: "🪓 Tool Crafted!<br><br>You now have a harvesting tool! Use it during runs to gather resources from trees, rocks, and ore deposits.<br><br>🎯 Now kill <b>3 enemies</b> in a run to unlock the Skill Tree!",
         nextQuest: 'quest1_kill3',
-        conditions: ['firstRunDeath']
+        conditions: ['questForge0_unlock']
       },
 
       // === PHASE 1: Run quest → Unlock Skill Tree ===
@@ -1586,7 +1605,7 @@
         unlockBuilding: 'skillTree',
         message: "Outstanding, Droplet! 🎯<br><br>You've proven your combat worth. The <b>Skill Tree</b> is now unlocked at camp!<br><br>Head to the <b>Skill Tree</b> tab and spend your <b>3 Skill Points</b> to grow stronger.",
         nextQuest: 'quest2_spendSkills',
-        conditionsAny: ['questGather0_materials', 'firstRunDeath']
+        conditionsAny: ['questForge0b_craftTools', 'questForge0_unlock', 'firstRunDeath']
       },
 
       // === PHASE 2: Camp quest → Use Skill Tree (free first use) ===
@@ -1668,7 +1687,7 @@
         conditions: ['quest4_equipCigar']
       },
 
-      // === PHASE 6: Run quest → Survive 2 minutes → Unlock Forge ===
+      // === PHASE 6: Run quest → Survive 2 minutes (Forge already unlocked earlier) ===
       quest6_survive2min: {
         id: 'quest6_survive2min',
         name: 'Survive 2 Minutes',
@@ -1679,8 +1698,7 @@
         rewardGold: 100,
         rewardSkillPoints: 1,
         rewardAttributePoints: 2,
-        unlockBuilding: 'forge',
-        message: "⏱️ You survived 2 minutes!<br><br>The <b>Progression Upgrades</b> building is now unlocked! Buy your first upgrade there.",
+        message: "⏱️ You survived 2 minutes!<br><br>Great endurance! The <b>Progression Upgrades</b> are now available at the Forge! Buy your first upgrade there.",
         nextQuest: 'quest7_buyProgression',
         conditions: ['quest5_upgradeAttr']
       },
@@ -2938,10 +2956,10 @@
         // Build progress info for kill-based and gathering quests
         let progressText = '';
         const killsNow = (saveData.tutorialQuests && saveData.tutorialQuests.killsThisRun) || 0;
-        if (currentQuest.id === 'questGather0_materials') {
-          const res = saveData.resources || {};
-          const w = res.wood || 0, s = res.stone || 0, c = res.coal || 0;
-          progressText = ` 🪵${Math.min(w,1)}/1 🪨${Math.min(s,1)}/1 🖤${Math.min(c,1)}/1`;
+        if (currentQuest.id === 'questForge0_unlock') {
+          progressText = ' 🔨 Visit the Forge';
+        } else if (currentQuest.id === 'questForge0b_craftTools') {
+          progressText = ' 🪓 Craft a tool at the Forge';
         } else if (currentQuest.id === 'quest1_kill3') {
           progressText = ` (${Math.min(killsNow, 3)}/3)`;
         } else if (currentQuest.id === 'quest8_kill10') {

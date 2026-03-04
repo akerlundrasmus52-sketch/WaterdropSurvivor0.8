@@ -290,36 +290,36 @@
       saveData.storyQuests.questNotifications.questMission = false;
       saveSaveData();
       
-      // Activate questGather0_materials or quest1 the first time player enters Main Building after first run
+      // Activate questForge0_unlock or quest1 the first time player enters Main Building after first run
       // Don't activate new quests if a building is pending construction
       if (
         !saveData.tutorialQuests.pendingBuildQuest &&
         saveData.tutorialQuests.firstDeathShown &&
         isQuestClaimed('firstRunDeath') &&
         !saveData.tutorialQuests.currentQuest &&
-        !isQuestClaimed('questGather0_materials') &&
-        !saveData.tutorialQuests.readyToClaim.includes('questGather0_materials') &&
+        !isQuestClaimed('questForge0_unlock') &&
+        !saveData.tutorialQuests.readyToClaim.includes('questForge0_unlock') &&
         !isQuestClaimed('quest1_kill3')
       ) {
-        // Start gathering quest first
-        if (checkQuestConditions('questGather0_materials')) {
-          saveData.tutorialQuests.currentQuest = 'questGather0_materials';
+        // Start forge unlock quest first
+        if (checkQuestConditions('questForge0_unlock')) {
+          saveData.tutorialQuests.currentQuest = 'questForge0_unlock';
           saveSaveData();
           showComicInfoBox(
-            '⛏️ GATHER BUILDING MATERIALS',
+            '🔨 UNLOCK THE FORGE',
             `<div style="text-align: left; padding: 10px;">
-              <p style="font-family: 'Bangers', cursive; font-size: 20px; margin-bottom: 10px;">🪵 QUEST: GATHER MATERIALS</p>
+              <p style="font-family: 'Bangers', cursive; font-size: 20px; margin-bottom: 10px;">🔨 QUEST: UNLOCK THE FORGE</p>
               <p style="line-height: 1.8; margin-bottom: 10px;">
-                Welcome back, Droplet! To build your camp, you need resources.<br><br>
-                <b>YOUR MISSION:</b> Head out on a run and gather:<br>
-                &nbsp;🪵 <b>1 Wood</b> — chop a tree with your Axe<br>
-                &nbsp;🪨 <b>1 Stone</b> — mine a rock with your Sledgehammer<br>
-                &nbsp;🖤 <b>1 Coal</b> — mine coal with your Pickaxe<br><br>
-                Once gathered, return to build your first structure!
+                Welcome back, Droplet! Before you can gather resources, you need the right tools.<br><br>
+                <b>YOUR MISSION:</b> Build the <b>Forge</b> in your camp!<br>
+                You'll receive <b>starter materials</b> to craft your first harvesting tools:<br>
+                &nbsp;🪵 <b>10 Wood</b> · 🪨 <b>10 Stone</b> · 🖤 <b>5 Coal</b><br>
+                &nbsp;⚙️ <b>3 Iron</b> · 🧶 <b>3 Leather</b><br><br>
+                Then use the Forge to craft tools for gathering!
               </p>
-              <p style="font-size: 13px; color: #FFD700;">Reward: +50 Gold · +1 Skill Point</p>
+              <p style="font-size: 13px; color: #FFD700;">Reward: +75 Gold · +1 Skill Point · Starter Materials</p>
             </div>`,
-            'START GATHERING!'
+            'UNLOCK THE FORGE!'
           );
         }
       } else if (
@@ -327,7 +327,7 @@
         !saveData.tutorialQuests.pendingBuildQuest &&
         saveData.tutorialQuests.firstDeathShown &&
         isQuestClaimed('firstRunDeath') &&
-        (isQuestClaimed('questGather0_materials') || !checkQuestConditions('questGather0_materials')) &&
+        (isQuestClaimed('questForge0_unlock') || isQuestClaimed('questForge0b_craftTools') || !checkQuestConditions('questForge0_unlock')) &&
         !saveData.tutorialQuests.currentQuest &&
         !isQuestClaimed('quest1_kill3') &&
         !saveData.tutorialQuests.readyToClaim.includes('quest1_kill3')
@@ -2328,7 +2328,7 @@
             'armory': { questId: 'quest3_stonehengeGear', label: 'Find the Cigar (Quest 3)' },
             'specialAttacks': { questId: 'quest3_stonehengeGear', label: 'Find the Cigar (Quest 3)' },
             'trainingHall': { questId: 'quest5_upgradeAttr', label: 'Upgrade an Attribute (Quest 5)' },
-            'forge': { questId: 'quest6_survive2min', label: 'Survive 2 Minutes (Quest 6)' },
+            'forge': { questId: 'questForge0_unlock', label: 'Unlock the Forge (Quest 0b)' },
             'companionHouse': { questId: 'quest8_kill10', label: 'Kill 10 Enemies (Quest 8)' },
             'trashRecycle': { questId: 'quest26_kill20', label: 'Kill 20 Enemies (Quest 26)' },
             'tempShop': { questId: 'quest28_survive3min', label: 'Survive 3 Minutes (Quest 28)' }
