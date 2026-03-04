@@ -834,6 +834,86 @@
     }
 
     // ============================================================
+    // WORKSHOP — Gathering Skill Tree
+    // ============================================================
+    function showWorkshop() {
+      const existing = document.getElementById('workshop-overlay');
+      if (existing) existing.remove();
+
+      const overlay = document.createElement('div');
+      overlay.id = 'workshop-overlay';
+      overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.92);z-index:500;display:flex;flex-direction:column;align-items:center;padding:20px 16px;box-sizing:border-box;overflow-y:auto;';
+
+      const header = document.createElement('div');
+      header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;width:100%;max-width:520px;margin-bottom:12px;';
+      header.innerHTML = '<div style="font-family:\'Bangers\',cursive;font-size:24px;color:#8B4513;letter-spacing:2px;text-shadow:0 0 10px rgba(139,69,19,0.5);">🔧 WORKSHOP</div>';
+      const closeBtn = document.createElement('button');
+      closeBtn.textContent = '✕';
+      closeBtn.style.cssText = 'background:#2a2a2a;border:2px solid #666;border-radius:50%;width:38px;height:38px;color:#fff;font-size:18px;cursor:pointer;font-family:"Bangers",cursive;';
+      closeBtn.onclick = () => overlay.remove();
+      header.appendChild(closeBtn);
+      overlay.appendChild(header);
+
+      const subtitle = document.createElement('div');
+      subtitle.style.cssText = 'color:#888;font-size:11px;margin-bottom:16px;text-align:center;letter-spacing:1.5px;max-width:400px;text-transform:uppercase;';
+      subtitle.textContent = 'Upgrade gathering skills — harvest faster, yield more resources';
+      overlay.appendChild(subtitle);
+
+      // Gold display
+      const goldDiv = document.createElement('div');
+      goldDiv.style.cssText = 'color:#FFD700;font-size:16px;font-weight:bold;margin-bottom:14px;font-family:"Bangers",cursive;letter-spacing:1px;';
+      goldDiv.textContent = '💰 Gold: ' + (saveData.gold || 0);
+      overlay.appendChild(goldDiv);
+
+      const GATHERING_SKILLS = window.GameHarvesting && window.GameHarvesting.GATHERING_SKILLS ? window.GameHarvesting.GATHERING_SKILLS : {};
+      const skills = (saveData.gatheringSkills) || {};
+
+      const grid = document.createElement('div');
+      grid.style.cssText = 'display:grid;grid-template-columns:1fr;gap:10px;width:100%;max-width:520px;';
+
+      for (const [key, def] of Object.entries(GATHERING_SKILLS)) {
+        const level = skills[key] || 0;
+        const maxed = level >= def.maxLevel;
+        const cost = 50;
+        const canAfford = (saveData.gold || 0) >= cost;
+
+        const card = document.createElement('div');
+        card.style.cssText = 'background:rgba(139,69,19,0.08);border:1px solid ' + (maxed ? '#FFD700' : canAfford ? '#8B4513' : '#444') + ';border-radius:10px;padding:14px;cursor:' + (!maxed && canAfford ? 'pointer' : 'default') + ';opacity:' + (maxed ? '0.8' : canAfford ? '1' : '0.5') + ';';
+
+        // Level pips
+        let pips = '';
+        for (let i = 0; i < def.maxLevel; i++) {
+          pips += '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;margin:0 2px;background:' + (i < level ? '#FFD700' : '#333') + ';border:1px solid #555;"></span>';
+        }
+
+        card.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;">' +
+          '<div><span style="font-size:22px;">' + def.icon + '</span> <b style="color:#f0d890;">' + def.label + '</b></div>' +
+          '<span style="color:' + (maxed ? '#FFD700' : '#aaa') + ';font-size:12px;">' + (maxed ? 'MAX' : 'Lv ' + level + '/' + def.maxLevel) + '</span></div>' +
+          '<div style="color:#aaa;font-size:12px;margin:6px 0;">' + def.description + '</div>' +
+          '<div style="margin:6px 0;">' + pips + '</div>' +
+          (!maxed ? '<div style="color:' + (canAfford ? '#FFD700' : '#f66') + ';font-size:11px;">Cost: 💰 ' + cost + ' gold</div>' : '');
+
+        if (!maxed && canAfford) {
+          card.onclick = () => {
+            if (window.GameHarvesting && window.GameHarvesting.upgradeGatheringSkill) {
+              if (window.GameHarvesting.upgradeGatheringSkill(key)) {
+                if (typeof saveSaveData === 'function') saveSaveData();
+                if (typeof playSound === 'function') playSound('collect');
+                if (typeof showStatChange === 'function') showStatChange(def.icon + ' ' + def.label + ' upgraded to Lv ' + ((skills[key] || 0) + 1) + '!');
+                overlay.remove();
+                showWorkshop(); // Re-render
+              }
+            }
+          };
+        }
+        grid.appendChild(card);
+      }
+
+      overlay.appendChild(grid);
+      document.body.appendChild(overlay);
+    }
+
+    // ============================================================
     // WEAPONSMITH — Craft weapons from gathered resources
     // ============================================================
     function showWeaponsmith() {
@@ -1354,6 +1434,7 @@
           }
           showProgressionShop();
         },
+        workshop:            () => { overlay.remove(); showWorkshop(); },
       };
 
       for (const [buildingId, building] of Object.entries(CAMP_BUILDINGS)) {

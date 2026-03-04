@@ -410,13 +410,13 @@
       workshop: {
         name: 'Workshop',
         icon: '🔧',
-        description: 'Craft better equipment',
+        description: 'Upgrade gathering skills — chop, mine, gather faster and yield more resources',
         baseCost: 175,
         costMultiplier: 1.5,
         maxCost: 100000,
         bonus: (level) => ({
-          critChance: 0.02 * level,
-          critDamage: 0.1 * level
+          gatherSpeed: 0.08 * level,
+          yieldBonus: 0.1 * level
         })
       },
       shrine: {
