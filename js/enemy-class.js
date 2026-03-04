@@ -1720,6 +1720,10 @@
           if (isShotgunKill && typeof window.BloodSystem.emitGuts === 'function') {
             window.BloodSystem.emitGuts(deathPos, 30);
           }
+          // Growing blood pool — forms gradually at death position
+          if (typeof window.BloodSystem.emitPoolGrow === 'function') {
+            window.BloodSystem.emitPoolGrow(deathPos, { maxRadius: this.isMiniBoss ? 2.5 : 1.5 });
+          }
         }
         // Airborne blood spray burst — sprays high in air, rains down varied droplets
         const sprayCount = Math.floor(18 * deathBloodMult);
@@ -2985,6 +2989,18 @@
         if (window.BloodSystem) {
           window.BloodSystem.emitBurst(deathPos, 800, { spreadXZ: 2.2, spreadY: 0.4 });
           window.BloodSystem.emitGuts(deathPos);
+          // Meteor explosion effect for massive blast
+          if (window.BloodSystem.emitMeteorExplosion) {
+            window.BloodSystem.emitMeteorExplosion(deathPos, 200, { radius: 3.0 });
+          }
+          // Heartbeat blood pumping from severed body
+          if (window.BloodSystem.emitHeartbeatWound) {
+            window.BloodSystem.emitHeartbeatWound(deathPos, { pulses: 4, perPulse: 150, interval: 300 });
+          }
+          // Growing blood pool beneath
+          if (window.BloodSystem.emitPoolGrow) {
+            window.BloodSystem.emitPoolGrow(deathPos, { maxRadius: 2.0, growSpeed: 0.03 });
+          }
         }
 
         // Scatter blood decals in a wide radius
@@ -3188,6 +3204,15 @@
           const neckPos = this.mesh.position.clone();
           neckPos.y += 0.6;
           window.BloodSystem.emitPulse(neckPos, { pulses: 4, perPulse: 400, interval: 200, spreadXZ: 1.8, color1: 0x8B0000, color2: 0xDC143C });
+          // Neck stump blood fountain
+          if (window.BloodSystem.emitThroatSpray) {
+            const neckDir = new THREE.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5).normalize();
+            window.BloodSystem.emitThroatSpray(neckPos, neckDir, { pulses: 5, perPulse: 200, arcHeight: 1.0 });
+          }
+          // Head bleed fountain
+          if (window.BloodSystem.emitHeadBleed) {
+            window.BloodSystem.emitHeadBleed(neckPos, { intensity: 1.2, duration: 6 });
+          }
         }
         
         // Create detached head that flies off with enhanced rotation
