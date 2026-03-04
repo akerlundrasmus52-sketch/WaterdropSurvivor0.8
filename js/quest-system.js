@@ -279,7 +279,9 @@
       saveSaveData();
       
       // Activate questGather0_materials or quest1 the first time player enters Main Building after first run
+      // Don't activate new quests if a building is pending construction
       if (
+        !saveData.tutorialQuests.pendingBuildQuest &&
         saveData.tutorialQuests.firstDeathShown &&
         isQuestClaimed('firstRunDeath') &&
         !saveData.tutorialQuests.currentQuest &&
@@ -310,6 +312,7 @@
         }
       } else if (
         // Original quest1 activation: for existing saves that already have firstRunDeath claimed
+        !saveData.tutorialQuests.pendingBuildQuest &&
         saveData.tutorialQuests.firstDeathShown &&
         isQuestClaimed('firstRunDeath') &&
         (isQuestClaimed('questGather0_materials') || !checkQuestConditions('questGather0_materials')) &&
@@ -426,11 +429,17 @@
           `;
         });
         content += `</div>`;
+      } else if (saveData.tutorialQuests.pendingBuildQuest && saveData.tutorialQuests.pendingBuildBuilding) {
+        // Building needs to be built before next quest can start
+        const _pbBld = saveData.tutorialQuests.pendingBuildBuilding;
+        const _pbDef = typeof CAMP_BUILDINGS !== 'undefined' ? CAMP_BUILDINGS[_pbBld] : null;
+        const _pbName = _pbDef ? _pbDef.name : 'the unlocked building';
+        content += `<div style="font-size: 16px; color: #5DADE2; margin-bottom: 20px;">🔨 Build the <b>${_pbName}</b> before your next quest can start!</div>`;
       } else {
         content += `<div style="font-size: 16px; color: #888; margin-bottom: 20px;">No quests ready to claim. Complete your active quest!</div>`;
       }
       
-      // Show active quest
+      // Show active quest or pending build task
       const currentQuest = getCurrentQuest();
       if (currentQuest) {
         content += `
@@ -440,6 +449,19 @@
               <div style="font-size: 18px; color: #5DADE2; margin-bottom: 5px;">${currentQuest.name}</div>
               <div style="font-size: 14px; color: #AAA;">${currentQuest.description}</div>
               <div style="font-size: 12px; color: #777; margin-top: 5px;">Objective: ${currentQuest.objectives}</div>
+            </div>
+          </div>
+        `;
+      } else if (saveData.tutorialQuests.pendingBuildQuest && saveData.tutorialQuests.pendingBuildBuilding) {
+        const _abBld = saveData.tutorialQuests.pendingBuildBuilding;
+        const _abDef = typeof CAMP_BUILDINGS !== 'undefined' ? CAMP_BUILDINGS[_abBld] : null;
+        const _abName = _abDef ? _abDef.name : 'Building';
+        content += `
+          <div style="text-align: left; margin-bottom: 20px;">
+            <div style="font-size: 20px; color: #FF9933; margin-bottom: 15px;">🔨 Build Required:</div>
+            <div style="background: rgba(255,153,51,0.1); border: 2px solid #FF9933; border-radius: 10px; padding: 15px;">
+              <div style="font-size: 18px; color: #FF9933; margin-bottom: 5px;">Build the ${_abName}</div>
+              <div style="font-size: 14px; color: #AAA;">Walk to the ${_abName} in camp and build it to continue your quest line!</div>
             </div>
           </div>
         `;

@@ -2234,6 +2234,8 @@
     // Helper: ensure quest2 is activated and check if both skills are already bought
     function ensureQuest2Activated() {
       if (!saveData.tutorialQuests) return;
+      // Don't activate quest2 if a building needs to be built first (pending build state)
+      if (saveData.tutorialQuests.pendingBuildQuest) return;
       // Auto-activate quest2 if quest1 is claimed but quest2 hasn't started
       if (
         isQuestClaimed('quest1_kill3') &&
