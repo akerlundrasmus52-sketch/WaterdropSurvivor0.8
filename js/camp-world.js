@@ -2607,6 +2607,8 @@
     _touch.active = false;
     _touch.x = 0;
     _touch.y = 0;
+    // Refresh prompt in case building state changed while menu was open
+    _updatePromptUI();
   }
 
   // ──────────────────────────────────────────────────────────
@@ -3240,6 +3242,8 @@
   function refreshBuildings(saveData) {
     if (saveData) _saveData = saveData;
     _refreshBuildings();
+    // Refresh prompt UI in case a building's state changed
+    _updatePromptUI();
   }
 
   /**

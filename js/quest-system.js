@@ -2237,12 +2237,12 @@
         // NEW: Only unlock Quest/Mission Hall initially - all other buildings locked
         if (saveData.campBuildings && saveData.campBuildings.questMission) {
           saveData.campBuildings.questMission.unlocked = true;
-          saveData.campBuildings.questMission.level = 1;
+          // level stays 0 — player must BUILD via the BUILD button
         }
         // Inventory is also unlocked on first visit so players can see their items
         if (saveData.campBuildings && saveData.campBuildings.inventory) {
           saveData.campBuildings.inventory.unlocked = true;
-          saveData.campBuildings.inventory.level = 1;
+          // level stays 0 — player must BUILD via the BUILD button
         }
         if (saveData.campBuildings && saveData.campBuildings.campHub) {
           saveData.campBuildings.campHub.unlocked = false;
@@ -2376,7 +2376,6 @@
         if (isUnlocked || building.isFree) {
           const buildingCard = document.createElement('div');
           buildingCard.className = 'building-card';
-          if (isMaxLevel) buildingCard.classList.add('building-locked');
           
           const bonus = building.bonus(buildingData.level);
           const bonusText = Object.entries(bonus)
@@ -2407,8 +2406,8 @@
           // NEW: For locked free buildings, show them as locked
           const isLockedFree = building.isFree && !isUnlocked;
           
-          // NEW: Non-core buildings that are unlocked but not yet built need a Build button
-          const needsBuild = !building.isCore && isUnlocked && buildingData.level === 0;
+          // Non-built buildings that are unlocked need a Build button
+          const needsBuild = isUnlocked && buildingData.level === 0;
 
           // Unspent-points badge per building
           let _bldgBadge = '';
@@ -2422,16 +2421,20 @@
           // Compute resource cost hint for needsBuild buildings
           let _buildCostHint = '';
           if (needsBuild) {
-            const builtCount = Object.values(saveData.campBuildings).filter(b => b && b.unlocked && b.level > 0).length;
-            const resCost = Math.max(1, builtCount + 1);
-            const res = saveData.resources || {};
-            _buildCostHint = `🔨 Build — 🪵${res.wood||0}/${resCost} 🪨${res.stone||0}/${resCost} 🖤${res.coal||0}/${resCost}`;
+            if (building.isFree || building.isCore) {
+              _buildCostHint = '🔨 Build — FREE';
+            } else {
+              const builtCount = Object.values(saveData.campBuildings).filter(b => b && b.unlocked && b.level > 0).length;
+              const resCost = Math.max(1, builtCount + 1);
+              const res = saveData.resources || {};
+              _buildCostHint = `🔨 Build — 🪵${res.wood||0}/${resCost} 🪨${res.stone||0}/${resCost} 🖤${res.coal||0}/${resCost}`;
+            }
           }
 
            buildingCard.innerHTML = `
              <div class="building-header">
                <div class="building-name">${building.icon} ${building.name}${hasNotification ? ' <span class="quest-indicator">!</span>' : ''}${_bldgBadge}</div>
-               <div class="building-level">${isLockedFree ? 'LOCKED' : (needsBuild ? '🔨 BUILD' : `Lv ${buildingData.level}`)}</div>
+               <div class="building-level">${isLockedFree ? 'LOCKED' : (needsBuild ? '🔨 BUILD' : '✅ BUILT')}</div>
              </div>
              <div class="building-desc">${building.description}</div>
             <div class="building-cost">${isLockedFree ? 'Unlock via Quest' : (needsBuild ? _buildCostHint : '')}</div>
@@ -2513,7 +2516,7 @@
                 }
                 showWeaponsmith();
               } else {
-                showStatChange(`${building.icon} ${building.name}: Level ${buildingData.level}/${buildingData.maxLevel}`);
+                showStatChange(`${building.icon} ${building.name}`);
               }
             };
           } else if (building.isFree) {

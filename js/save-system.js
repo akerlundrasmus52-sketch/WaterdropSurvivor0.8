@@ -79,30 +79,30 @@
       companionGrowthStage: 'egg', // Growth stages: egg, newborn, juvenile, adult
       // Camp System - Quest-Driven Building Unlock System
       campBuildings: {
-        // Core buildings - NEW: Only Quest Mission Hall unlocked initially
-        questMission: { level: 1, maxLevel: 10, unlocked: true },
-        inventory: { level: 0, maxLevel: 10, unlocked: false }, // Unlock via quest
-        campHub: { level: 0, maxLevel: 10, unlocked: false }, // Initially locked
-        loreMaster: { level: 0, maxLevel: 10, unlocked: false }, // Initially locked (placeholder for future lore content)
+        // Core buildings — unlocked on first camp visit but must be BUILT (level 0→1)
+        questMission: { level: 0, maxLevel: 1, unlocked: true }, // BUILD required on first visit
+        inventory: { level: 0, maxLevel: 1, unlocked: false }, // Unlock on first camp visit
+        campHub: { level: 0, maxLevel: 1, unlocked: false }, // Initially locked
+        loreMaster: { level: 0, maxLevel: 1, unlocked: false }, // Initially locked (placeholder)
         campBoard: { level: 0, maxLevel: 1, unlocked: false }, // Unlock via quest21
-        // Quest-unlockable buildings - locked initially, unlock through quest progression
-        skillTree: { level: 0, maxLevel: 10, unlocked: false }, // Unlock after Quest 1 is claimed
-        companionHouse: { level: 0, maxLevel: 10, unlocked: false }, // Unlock via quest
-        forge: { level: 0, maxLevel: 10, unlocked: false }, // Unlock via quest
-        armory: { level: 0, maxLevel: 10, unlocked: false }, // Unlock via quest
-        trainingHall: { level: 0, maxLevel: 10, unlocked: false }, // Unlock via quest
-        trashRecycle: { level: 0, maxLevel: 10, unlocked: false }, // Unlock via quest
-        tempShop: { level: 0, maxLevel: 10, unlocked: false }, // Unlock via quest
-        achievementBuilding: { level: 0, maxLevel: 1, unlocked: false }, // Unlock via quest11_findAllLandmarks
-        accountBuilding: { level: 1, maxLevel: 1, unlocked: true }, // Always unlocked — account stats
-        idleMenu: { level: 1, maxLevel: 1, unlocked: true }, // Always unlocked — idle progression panel
-        characterVisuals: { level: 0, maxLevel: 5, unlocked: false }, // Unlock via quest
-        codex: { level: 0, maxLevel: 5, unlocked: false }, // Unlock via quest
+        // Quest-unlockable buildings — locked initially, unlock through quest progression
+        skillTree: { level: 0, maxLevel: 1, unlocked: false }, // Unlock after Quest 1
+        companionHouse: { level: 0, maxLevel: 1, unlocked: false }, // Unlock via quest
+        forge: { level: 0, maxLevel: 1, unlocked: false }, // Unlock via quest
+        armory: { level: 0, maxLevel: 1, unlocked: false }, // Unlock via quest
+        trainingHall: { level: 0, maxLevel: 1, unlocked: false }, // Unlock via quest
+        trashRecycle: { level: 0, maxLevel: 1, unlocked: false }, // Unlock via quest
+        tempShop: { level: 0, maxLevel: 1, unlocked: false }, // Unlock via quest
+        achievementBuilding: { level: 0, maxLevel: 1, unlocked: false }, // Unlock via quest11
+        accountBuilding: { level: 1, maxLevel: 1, unlocked: true }, // Always unlocked — account stats (UI-only)
+        idleMenu: { level: 1, maxLevel: 1, unlocked: true }, // Always unlocked — idle progression (UI-only)
+        characterVisuals: { level: 0, maxLevel: 1, unlocked: false }, // Unlock via quest
+        codex: { level: 0, maxLevel: 1, unlocked: false }, // Unlock via quest
         // Legacy buildings (for compatibility)
-        trainingGrounds: { level: 0, maxLevel: 10, unlocked: false },
-        library: { level: 0, maxLevel: 10, unlocked: false },
-        workshop: { level: 0, maxLevel: 10, unlocked: false },
-        shrine: { level: 0, maxLevel: 10, unlocked: false },
+        trainingGrounds: { level: 0, maxLevel: 1, unlocked: false },
+        library: { level: 0, maxLevel: 1, unlocked: false },
+        workshop: { level: 0, maxLevel: 1, unlocked: false },
+        shrine: { level: 0, maxLevel: 1, unlocked: false },
         // Special Attacks arena — unlocked via quest
         specialAttacks: { level: 0, maxLevel: 1, unlocked: false },
         // New buildings — unlocked through quest progression
@@ -110,8 +110,8 @@
         tavern:    { level: 0, maxLevel: 1, unlocked: false },   // Quest 8
         shop:      { level: 0, maxLevel: 1, unlocked: false },   // Quest 9
         prestige:  { level: 0, maxLevel: 1, unlocked: false },   // Quest 10
-        campfireKitchen: { level: 0, maxLevel: 5, unlocked: false }, // Quest 30
-        weaponsmith: { level: 0, maxLevel: 5, unlocked: false }      // Quest 31
+        campfireKitchen: { level: 0, maxLevel: 1, unlocked: false }, // Quest 30
+        weaponsmith: { level: 0, maxLevel: 1, unlocked: false }      // Quest 31
       },
       // COMPREHENSIVE SKILL TREE - 48 Skills Total (Fresh Implementation)
       skillTree: {
@@ -403,6 +403,24 @@
               }
             });
             saveData._buildingMigrationV2 = true;
+          }
+          // ── Building level migration v3 ──
+          // Simplify building levels: buildings are either built (1) or not (0).
+          // Cap all levels at 1 and set maxLevel to 1. UI-only buildings
+          // (accountBuilding, idleMenu) keep their level since they have no 3D
+          // representation and don't use the BUILD/ENTER flow.
+          if (!saveData._buildingMigrationV3) {
+            var uiOnlyBuildings = ['accountBuilding', 'idleMenu'];
+            Object.keys(saveData.campBuildings).forEach(function(bId) {
+              var b = saveData.campBuildings[bId];
+              if (!b) return;
+              b.maxLevel = 1;
+              if (uiOnlyBuildings.indexOf(bId) !== -1) return;
+              if (typeof b.level === 'number' && b.level > 1) {
+                b.level = 1; // cap at 1 (built)
+              }
+            });
+            saveData._buildingMigrationV3 = true;
           }
         }
       } catch (e) {

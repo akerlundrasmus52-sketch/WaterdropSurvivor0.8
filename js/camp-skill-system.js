@@ -2354,11 +2354,13 @@
       if (window.CampWorld && window.CampWorld.isActive) window.CampWorld.pauseInput();
 
       // Determine resource cost: building N costs N of each material
+      // Free/core buildings cost 0 resources (instant build)
       var builtCount = 0;
       if (saveData.campBuildings) {
         builtCount = Object.values(saveData.campBuildings).filter(function (b) { return b && b.unlocked && b.level > 0; }).length;
       }
-      var cost = Math.max(1, builtCount + 1);
+      var bldDef = CAMP_BUILDINGS[buildingId];
+      var cost = (bldDef && (bldDef.isFree || bldDef.isCore)) ? 0 : Math.max(1, builtCount + 1);
 
       // Get current resources
       var res = (saveData.resources) || {};
@@ -2382,27 +2384,29 @@
       // Sub-heading: resource cost
       var costLabel = document.createElement('div');
       costLabel.style.cssText = 'color:#aaa;font-size:0.9em;margin-bottom:14px;font-family:Arial,sans-serif;letter-spacing:0;';
-      costLabel.textContent = 'Materials required: ' + cost + ' of each';
+      costLabel.textContent = cost === 0 ? 'No materials required — FREE build!' : 'Materials required: ' + cost + ' of each';
       panel.appendChild(costLabel);
 
-      // Materials display with have/need indicators
-      var mats = document.createElement('div');
-      mats.style.cssText = 'display:flex;justify-content:center;gap:14px;margin:0 0 16px;';
-      var matDefs = [
-        { icon: '🪵', label: 'Wood',  have: res.wood  || 0, ok: hasWood },
-        { icon: '🪨', label: 'Stone', have: res.stone || 0, ok: hasStone },
-        { icon: '🖤', label: 'Coal',  have: res.coal  || 0, ok: hasCoal }
-      ];
-      matDefs.forEach(function (m) {
-        var box = document.createElement('div');
-        var borderColor = m.ok ? '#2ecc71' : '#e74c3c';
-        box.style.cssText = 'background:rgba(30,40,60,0.8);border:2px solid ' + borderColor + ';border-radius:8px;padding:8px 12px;min-width:60px;';
-        box.innerHTML = '<div style="font-size:28px;">' + m.icon + '</div>' +
-          '<div style="color:' + (m.ok ? '#aaffaa' : '#ff8888') + ';font-size:13px;margin-top:3px;">' + m.have + '/' + cost + '</div>' +
-          '<div style="color:#888;font-size:11px;">' + (m.ok ? '✅' : '❌') + ' ' + m.label + '</div>';
-        mats.appendChild(box);
-      });
-      panel.appendChild(mats);
+      // Materials display with have/need indicators (skip for free buildings)
+      if (cost > 0) {
+        var mats = document.createElement('div');
+        mats.style.cssText = 'display:flex;justify-content:center;gap:14px;margin:0 0 16px;';
+        var matDefs = [
+          { icon: '🪵', label: 'Wood',  have: res.wood  || 0, ok: hasWood },
+          { icon: '🪨', label: 'Stone', have: res.stone || 0, ok: hasStone },
+          { icon: '🖤', label: 'Coal',  have: res.coal  || 0, ok: hasCoal }
+        ];
+        matDefs.forEach(function (m) {
+          var box = document.createElement('div');
+          var borderColor = m.ok ? '#2ecc71' : '#e74c3c';
+          box.style.cssText = 'background:rgba(30,40,60,0.8);border:2px solid ' + borderColor + ';border-radius:8px;padding:8px 12px;min-width:60px;';
+          box.innerHTML = '<div style="font-size:28px;">' + m.icon + '</div>' +
+            '<div style="color:' + (m.ok ? '#aaffaa' : '#ff8888') + ';font-size:13px;margin-top:3px;">' + m.have + '/' + cost + '</div>' +
+            '<div style="color:#888;font-size:11px;">' + (m.ok ? '✅' : '❌') + ' ' + m.label + '</div>';
+          mats.appendChild(box);
+        });
+        panel.appendChild(mats);
+      }
 
       // "Need more resources" hint if can't build
       if (!canBuild) {
@@ -2549,7 +2553,7 @@
         }
 
         // Calculate next building resource cost for reminder
-        var newBuiltCount = Object.values(saveData.campBuildings).filter(function (b) { return b && b.unlocked; }).length;
+        var newBuiltCount = Object.values(saveData.campBuildings).filter(function (b) { return b && b.unlocked && b.level > 0; }).length;
         var nextCost = newBuiltCount + 1;
         saveData.buildingProgress = saveData.buildingProgress || {};
         saveData.buildingProgress.nextBuildingCost = nextCost;
@@ -2657,7 +2661,8 @@
           window.CampWorld.playBuildingUnlockAnimation(quest.unlockBuilding);
         }
         // Use != null (not !==) so that both null and undefined suppress the overlay
-        if (window._campShowBuildOverlay != null) {
+        // Only show build overlay if CampWorld is active (prevent overlay during game runs)
+        if (window._campShowBuildOverlay != null && window.CampWorld && window.CampWorld.isActive) {
           const buildingName = CAMP_BUILDINGS[quest.unlockBuilding]?.name || 'Building';
           _showBuildOverlay(quest.unlockBuilding, buildingName);
         }
