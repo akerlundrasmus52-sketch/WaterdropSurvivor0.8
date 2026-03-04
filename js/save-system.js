@@ -388,6 +388,22 @@
               saveData.campBuildings[bld] = { level: 0, maxLevel: 1, unlocked: false };
             }
           });
+          // ── Building level migration v2 ──
+          // Previous code paths could leave non-core buildings with level > 0 without
+          // the player actually building them.  Reset any non-core building that has
+          // level > 0 back to level 0 (keep unlocked flag) so the BUILD step is
+          // required.  Core / always-available buildings are exempt.
+          if (!saveData._buildingMigrationV2) {
+            var coreBuildings = ['questMission', 'inventory', 'accountBuilding', 'idleMenu'];
+            Object.keys(saveData.campBuildings).forEach(function(bId) {
+              if (coreBuildings.indexOf(bId) !== -1) return; // skip core buildings
+              var b = saveData.campBuildings[bId];
+              if (b && typeof b.level === 'number' && b.level > 0) {
+                b.level = 0; // require BUILD step
+              }
+            });
+            saveData._buildingMigrationV2 = true;
+          }
         }
       } catch (e) {
         console.error('Failed to load save data:', e);

@@ -724,8 +724,9 @@
     _playerMesh = grp;
     _campScene.add(grp);
 
-    // Initialize sprite animator overlay
-    _initSpriteOverlay();
+    // Sprite overlay disabled — spritesheet PNGs lack alpha transparency,
+    // causing a large opaque square to render over the 3D character.
+    // _initSpriteOverlay();
   }
 
   // ── Sprite overlay initialization ─────────────────────────
@@ -2355,13 +2356,13 @@
       _playerBandageTail.rotation.x = Math.sin(_campTime * 4 + speed) * 0.2 * (1 + speed * 0.1);
     }
 
-    // ── Update sprite animator overlay ──
-    if (_spriteAnimator) {
-      _spriteAnimator.update(dt);
-      if (_spriteAnimator.currentAnim() !== _campAnimState) {
-        _spriteAnimator.play(_campAnimState);
-      }
-    }
+    // ── Update sprite animator overlay (disabled — see _initSpriteOverlay) ──
+    // if (_spriteAnimator) {
+    //   _spriteAnimator.update(dt);
+    //   if (_spriteAnimator.currentAnim() !== _campAnimState) {
+    //     _spriteAnimator.play(_campAnimState);
+    //   }
+    // }
   }
 
   // ──────────────────────────────────────────────────────────

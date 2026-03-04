@@ -2651,6 +2651,11 @@
       if (quest.unlockBuilding && saveData.campBuildings[quest.unlockBuilding]) {
         // Mark building as unlocked (level stays 0 — player must BUILD it)
         saveData.campBuildings[quest.unlockBuilding].unlocked = true;
+        // Refresh 3D camp building visuals so the building changes from blueprint to construction mode
+        if (window.CampWorld && window.CampWorld.isActive) {
+          window.CampWorld.refreshBuildings(saveData);
+          window.CampWorld.playBuildingUnlockAnimation(quest.unlockBuilding);
+        }
         // Use != null (not !==) so that both null and undefined suppress the overlay
         if (window._campShowBuildOverlay != null) {
           const buildingName = CAMP_BUILDINGS[quest.unlockBuilding]?.name || 'Building';
