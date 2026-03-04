@@ -436,6 +436,33 @@
             }
             saveData._buildingMigrationV4 = true;
           }
+
+          // ── Quest migration: questGather0_materials → questForge0_unlock ──
+          // Old quest required gathering resources before tools existed.
+          // Replace with forge unlock quest in existing saves.
+          if (!saveData._questMigrationForge0) {
+            var tq = saveData.tutorialQuests;
+            if (tq) {
+              // If current quest is the old gather quest, switch to forge quest
+              if (tq.currentQuest === 'questGather0_materials') {
+                tq.currentQuest = 'questForge0_unlock';
+              }
+              // If gather quest was completed, mark forge quests as completed too
+              var completed = tq.completedQuests || [];
+              if (completed.indexOf('questGather0_materials') !== -1) {
+                if (completed.indexOf('questForge0_unlock') === -1) completed.push('questForge0_unlock');
+                if (completed.indexOf('questForge0b_craftTools') === -1) completed.push('questForge0b_craftTools');
+              }
+              // Remove old quest from readyToClaim if present
+              var rtc = tq.readyToClaim || [];
+              var gatherIdx = rtc.indexOf('questGather0_materials');
+              if (gatherIdx !== -1) {
+                rtc.splice(gatherIdx, 1);
+                if (rtc.indexOf('questForge0_unlock') === -1) rtc.push('questForge0_unlock');
+              }
+            }
+            saveData._questMigrationForge0 = true;
+          }
         }
       } catch (e) {
         console.error('Failed to load save data:', e);

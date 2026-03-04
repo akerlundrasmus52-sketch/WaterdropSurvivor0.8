@@ -3203,8 +3203,8 @@
               if (sd && !sd.gatheringProgress) sd.gatheringProgress = {};
               var gp = sd && sd.gatheringProgress;
               var res = sd && sd.resources;
-              if (gp && !gp.firstGatherDone && currentQ.id === 'quest1_kill3') {
-                _showBennySpeech('Before you fight, try\ngathering 🪵 Wood,\n🪨 Stone & 🖤 Coal\nfor building! ⛏️');
+              if (gp && !gp.firstGatherDone && (currentQ.id === 'questForge0_unlock' || currentQ.id === 'questForge0b_craftTools')) {
+                _showBennySpeech('Duude! Build the\nForge and craft\ntools to gather\nresources! 🔨');
                 setTimeout(function () { _hideBennySpeech(); }, 5000);
               } else {
                 _showBennySpeech('Hey dude!\nYour quest:\n' + currentQ.name);
