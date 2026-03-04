@@ -278,8 +278,8 @@ window.GameLuckyWheel = (function () {
     // History
     html += '<div class="wheel-history" style="max-width:340px;margin:0 auto;"><h4 style="font-size:13px;color:#888;margin:4px 0;">Recent Spins</h4><ul style="list-style:none;padding:0;margin:0;max-height:100px;overflow-y:auto;">';
     (saveData.wheel.history || []).forEach(function (e) {
-      var dh = new Date(e.time);
-      var ts = '[' + _pad2(dh.getHours()) + ':' + _pad2(dh.getMinutes()) + ']';
+      var entryDate = new Date(e.time);
+      var ts = '[' + _pad2(entryDate.getHours()) + ':' + _pad2(entryDate.getMinutes()) + ']';
       html += '<li style="font-size:11px;color:#999;padding:2px 0;"><span class="wh-ts">' + ts + '</span> ' + e.label + ' — ' + e.desc + '</li>';
     });
     html += '</ul></div>';
