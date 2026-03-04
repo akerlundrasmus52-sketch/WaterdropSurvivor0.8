@@ -488,6 +488,415 @@
     }
   }
 
+  /**
+   * Simulate heartbeat pumping blood from open wounds/holes. Rhythmic pulsation
+   * with decreasing pressure — blood arcs upward then rains down with gravity,
+   * creating ground pools on impact.
+   * @param {THREE.Vector3} pos
+   * @param {object} options
+   */
+  function emitHeartbeatWound(pos, options) {
+    if (!_scene) return;
+    const scale = (window.performanceLog && window.performanceLog.particleThrottleScale !== undefined)
+      ? window.performanceLog.particleThrottleScale : 1.0;
+    const opts       = options || {};
+    const pulses     = opts.pulses     !== undefined ? opts.pulses     : 8;
+    const perPulse   = Math.ceil((opts.perPulse !== undefined ? opts.perPulse : 200) * scale);
+    const interval   = opts.interval   !== undefined ? opts.interval   : 350;
+    const woundHeight = opts.woundHeight !== undefined ? opts.woundHeight : 0.5;
+    const basePressure = opts.pressure !== undefined ? opts.pressure : 1.0;
+
+    const [r1, g1, b1] = _hexToRgb(0x8B0000);
+    const [r2, g2, b2] = _hexToRgb(0xCC1100);
+
+    for (let p = 0; p < pulses; p++) {
+      setTimeout(() => {
+        if (!_scene) return;
+        // Pressure decreases with each heartbeat — first pump is strongest
+        const pressure = Math.max(0.1, basePressure * (1 - p * 0.12));
+        const pulseCount = Math.ceil(perPulse * pressure);
+        for (let i = 0; i < pulseCount; i++) {
+          const t    = Math.random();
+          const r    = r1 + (r2 - r1) * t;
+          const g    = g1 + (g2 - g1) * t;
+          const b    = b1 + (b2 - b1) * t;
+          const size = 0.03 + Math.random() * 0.09;
+          const life = 60 + Math.floor(Math.random() * 60);
+
+          const theta = Math.random() * Math.PI * 2;
+          const speed = (0.02 + Math.random() * 0.06) * pressure;
+          const vx = Math.cos(theta) * speed;
+          // Blood arcs upward — height depends on pressure & woundHeight
+          const vy = (0.10 + Math.random() * 0.18) * pressure * woundHeight;
+          const vz = Math.sin(theta) * speed;
+
+          _emit(pos.x, pos.y + 0.4, pos.z, vx, vy, vz, r, g, b, size, life);
+        }
+      }, p * interval);
+    }
+  }
+
+  /**
+   * Arterial spray from throat/neck wounds. Blood pumps in arcs following the
+   * heartbeat, spraying forward and to the sides. Creates heavy ground coating.
+   * @param {THREE.Vector3} pos
+   * @param {THREE.Vector3} facingDir - normalised direction the character faces
+   * @param {object} options
+   */
+  function emitThroatSpray(pos, facingDir, options) {
+    if (!_scene) return;
+    const scale = (window.performanceLog && window.performanceLog.particleThrottleScale !== undefined)
+      ? window.performanceLog.particleThrottleScale : 1.0;
+    const opts      = options || {};
+    const pulses    = opts.pulses    !== undefined ? opts.pulses    : 6;
+    const perPulse  = Math.ceil((opts.perPulse !== undefined ? opts.perPulse : 300) * scale);
+    const arcHeight = opts.arcHeight !== undefined ? opts.arcHeight : 0.8;
+
+    const [r1, g1, b1] = _hexToRgb(0x8B0000);
+    const [r2, g2, b2] = _hexToRgb(0xFF0000);
+
+    const baseAngle = Math.atan2(facingDir.z, facingDir.x);
+
+    for (let p = 0; p < pulses; p++) {
+      setTimeout(() => {
+        if (!_scene) return;
+        const pressure = Math.max(0.15, 1 - p * 0.18);
+        const pulseCount = Math.ceil(perPulse * pressure);
+        for (let i = 0; i < pulseCount; i++) {
+          const t    = Math.random();
+          const r    = r1 + (r2 - r1) * t;
+          const g    = g1 + (g2 - g1) * t;
+          const b    = b1 + (b2 - b1) * t;
+          const size = 0.03 + Math.random() * 0.08;
+          const life = 50 + Math.floor(Math.random() * 60);
+
+          // Spray forward with side spread — fan 120° around facing direction
+          const angle = baseAngle + (Math.random() - 0.5) * (Math.PI * 0.67);
+          const speed = (0.08 + Math.random() * 0.15) * pressure;
+          const vx = Math.cos(angle) * speed;
+          const vy = (0.12 + Math.random() * 0.20) * pressure * arcHeight;
+          const vz = Math.sin(angle) * speed;
+
+          _emit(pos.x, pos.y + 0.6, pos.z, vx, vy, vz, r, g, b, size, life);
+        }
+      }, p * 350);
+    }
+  }
+
+  /**
+   * Blood pumping from head wounds / removed head stump. Fountain effect upward
+   * with blood raining down, creating significant ground pooling.
+   * @param {THREE.Vector3} pos
+   * @param {object} options
+   */
+  function emitHeadBleed(pos, options) {
+    if (!_scene) return;
+    const scale = (window.performanceLog && window.performanceLog.particleThrottleScale !== undefined)
+      ? window.performanceLog.particleThrottleScale : 1.0;
+    const opts      = options || {};
+    const intensity = opts.intensity !== undefined ? opts.intensity : 1.0;
+    const duration  = opts.duration  !== undefined ? opts.duration  : 8;
+    const perPulse  = Math.ceil(250 * scale * intensity);
+
+    const [r1, g1, b1] = _hexToRgb(0x8B0000);
+    const [r2, g2, b2] = _hexToRgb(0xDD1100);
+
+    for (let p = 0; p < duration; p++) {
+      setTimeout(() => {
+        if (!_scene) return;
+        const pressure = Math.max(0.12, 1 - p * 0.11);
+        const pulseCount = Math.ceil(perPulse * pressure);
+        for (let i = 0; i < pulseCount; i++) {
+          const t    = Math.random();
+          const r    = r1 + (r2 - r1) * t;
+          const g    = g1 + (g2 - g1) * t;
+          const b    = b1 + (b2 - b1) * t;
+          const size = 0.03 + Math.random() * 0.10;
+          const life = 60 + Math.floor(Math.random() * 70);
+
+          // Fountain: mostly upward, slight radial spread
+          const theta = Math.random() * Math.PI * 2;
+          const spread = 0.01 + Math.random() * 0.04;
+          const vx = Math.cos(theta) * spread;
+          const vy = (0.16 + Math.random() * 0.22) * pressure * intensity;
+          const vz = Math.sin(theta) * spread;
+
+          _emit(pos.x, pos.y + 0.7, pos.z, vx, vy, vz, r, g, b, size, life);
+        }
+      }, p * 300);
+    }
+  }
+
+  /**
+   * Player water blood equivalent — same physics as emitBurst but uses blue/cyan
+   * water colours. Water drops fall with gravity and create water pools on ground.
+   * @param {THREE.Vector3} pos
+   * @param {number} count
+   * @param {object} options
+   */
+  function emitWaterBurst(pos, count, options) {
+    if (!_scene) return;
+    const scale = (window.performanceLog && window.performanceLog.particleThrottleScale !== undefined)
+      ? window.performanceLog.particleThrottleScale : 1.0;
+    count = Math.ceil(count * scale);
+    const opts = options || {};
+    const spreadXZ = opts.spreadXZ !== undefined ? opts.spreadXZ : 1.8;
+    const spreadY  = opts.spreadY  !== undefined ? opts.spreadY  : 0.3;
+    const minLife  = opts.minLife  !== undefined ? opts.minLife  : 50;
+    const maxLife  = opts.maxLife  !== undefined ? opts.maxLife  : 100;
+    const minSize  = opts.minSize  !== undefined ? opts.minSize  : 0.04;
+    const maxSize  = opts.maxSize  !== undefined ? opts.maxSize  : 0.14;
+    const color1   = opts.color1   !== undefined ? opts.color1   : 0x5DADE2;
+    const color2   = opts.color2   !== undefined ? opts.color2   : 0x87CEEB;
+
+    // Water colour palette — blend between blue/cyan tones
+    const waterColors = [0x5DADE2, 0x87CEEB, 0x44AABB];
+    const [r1, g1, b1] = _hexToRgb(color1);
+    const [r2, g2, b2] = _hexToRgb(color2);
+
+    for (let i = 0; i < count; i++) {
+      // Occasionally pick from the tertiary cyan colour
+      let r, g, b;
+      if (Math.random() < 0.25) {
+        [r, g, b] = _hexToRgb(waterColors[2]);
+      } else {
+        const t = Math.random();
+        r = r1 + (r2 - r1) * t;
+        g = g1 + (g2 - g1) * t;
+        b = b1 + (b2 - b1) * t;
+      }
+      const size = minSize + Math.random() * (maxSize - minSize);
+      const life = minLife + Math.floor(Math.random() * (maxLife - minLife));
+
+      const theta = Math.random() * Math.PI * 2;
+      const phi   = Math.random() * Math.PI;
+      const speed = 0.04 + Math.random() * spreadXZ;
+      const vx = Math.sin(phi) * Math.cos(theta) * speed;
+      const vy = Math.abs(Math.cos(phi)) * spreadY + 0.05;
+      const vz = Math.sin(phi) * Math.sin(theta) * speed;
+
+      _emit(pos.x, pos.y + 0.3, pos.z, vx, vy, vz, r, g, b, size, life);
+    }
+  }
+
+  /**
+   * Player water blood pulsation — same as emitPulse but with water/blue colours.
+   * Water pools form on the ground with lighter blue tones.
+   * @param {THREE.Vector3} pos
+   * @param {object} options
+   */
+  function emitWaterPulse(pos, options) {
+    if (!_scene) return;
+    const scale = (window.performanceLog && window.performanceLog.particleThrottleScale !== undefined)
+      ? window.performanceLog.particleThrottleScale : 1.0;
+    const opts     = options || {};
+    const pulses   = opts.pulses   !== undefined ? opts.pulses   : 6;
+    const perPulse = Math.ceil((opts.perPulse !== undefined ? opts.perPulse : 500) * scale);
+    const interval = opts.interval !== undefined ? opts.interval : 200;
+    const arcDir   = opts.arcDir;
+    const spreadXZ = opts.spreadXZ !== undefined ? opts.spreadXZ : 1.8;
+    const minSize  = opts.minSize  !== undefined ? opts.minSize  : 0.03;
+    const maxSize  = opts.maxSize  !== undefined ? opts.maxSize  : 0.10;
+    const minLife  = opts.minLife  !== undefined ? opts.minLife  : 50;
+    const maxLife  = opts.maxLife  !== undefined ? opts.maxLife  : 100;
+
+    // Water blue/cyan palette
+    const [r1, g1, b1] = _hexToRgb(0x5DADE2);
+    const [r2, g2, b2] = _hexToRgb(0x87CEEB);
+    const [r3, g3, b3] = _hexToRgb(0x44AABB);
+
+    for (let p = 0; p < pulses; p++) {
+      setTimeout(() => {
+        if (!_scene) return;
+        const pressure = Math.max(0.15, 1 - p * 0.22);
+        const pulseCount = Math.ceil(perPulse * pressure);
+        for (let i = 0; i < pulseCount; i++) {
+          let r, g, b;
+          if (Math.random() < 0.25) {
+            r = r3; g = g3; b = b3;
+          } else {
+            const t = Math.random();
+            r = r1 + (r2 - r1) * t;
+            g = g1 + (g2 - g1) * t;
+            b = b1 + (b2 - b1) * t;
+          }
+          const size = minSize + Math.random() * (maxSize - minSize);
+          const life = minLife + Math.floor(Math.random() * (maxLife - minLife));
+
+          let vx, vy, vz;
+          if (arcDir) {
+            const baseAngle = Math.atan2(arcDir.z, arcDir.x);
+            const angle = baseAngle + (Math.random() - 0.5) * Math.PI;
+            const speed = (0.05 + Math.random() * spreadXZ) * pressure;
+            vx = Math.cos(angle) * speed;
+            vy = (0.12 + Math.random() * 0.15) * pressure;
+            vz = Math.sin(angle) * speed;
+          } else {
+            const theta = Math.random() * Math.PI * 2;
+            const speed = (0.04 + Math.random() * spreadXZ) * pressure;
+            vx = Math.cos(theta) * speed;
+            vy = (0.12 + Math.random() * 0.15) * pressure;
+            vz = Math.sin(theta) * speed;
+          }
+
+          _emit(pos.x, pos.y + 0.5, pos.z, vx, vy, vz, r, g, b, size, life);
+        }
+      }, p * interval);
+    }
+  }
+
+  /**
+   * Create a growing blood pool on the ground that expands over time. Starts small
+   * and grows as blood accumulates — particles are placed directly as ground stains.
+   * @param {THREE.Vector3} pos
+   * @param {object} options
+   */
+  function emitPoolGrow(pos, options) {
+    if (!_scene) return;
+    const scale = (window.performanceLog && window.performanceLog.particleThrottleScale !== undefined)
+      ? window.performanceLog.particleThrottleScale : 1.0;
+    const opts      = options || {};
+    const maxRadius = opts.maxRadius !== undefined ? opts.maxRadius : 1.5;
+    const growSpeed = opts.growSpeed !== undefined ? opts.growSpeed : 0.02;
+    const poolColor = opts.color    !== undefined ? opts.color    : 0x6B0000;
+    const steps     = 30;
+    const perStep   = Math.ceil(12 * scale);
+
+    const [pr, pg, pb] = _hexToRgb(poolColor);
+
+    for (let s = 0; s < steps; s++) {
+      setTimeout(() => {
+        if (!_scene) return;
+        const radius = Math.min(maxRadius, (s + 1) * growSpeed * maxRadius);
+        for (let i = 0; i < perStep; i++) {
+          const angle = Math.random() * Math.PI * 2;
+          const dist  = Math.random() * radius;
+          // Slight colour variation for natural look
+          const shade = 0.85 + Math.random() * 0.15;
+          const r = pr * shade;
+          const g = pg * shade;
+          const b = pb * shade;
+          const size = 0.08 + Math.random() * 0.12;
+
+          // Place directly as grounded stain
+          const idx = _head;
+          _head = (_head + 1) % MAX_BLOOD_PARTICLES;
+          if (_count < MAX_BLOOD_PARTICLES) _count++;
+          if (_head > _highWater) _highWater = _head;
+          if (_count >= MAX_BLOOD_PARTICLES) _highWater = MAX_BLOOD_PARTICLES;
+          const idx3 = idx * 3;
+          _positions[idx3]     = pos.x + Math.cos(angle) * dist;
+          _positions[idx3 + 1] = GROUND_Y;
+          _positions[idx3 + 2] = pos.z + Math.sin(angle) * dist;
+          _velX[idx] = 0;
+          _velY[idx] = 0;
+          _velZ[idx] = 0;
+          _colors[idx3]     = r;
+          _colors[idx3 + 1] = g;
+          _colors[idx3 + 2] = b;
+          _sizes[idx]    = size;
+          _life[idx]     = 350 + Math.floor(Math.random() * 200);
+          _grounded[idx] = 1;
+        }
+      }, s * 80);
+    }
+  }
+
+  /**
+   * Massive explosion blood spray for homing/meteor kills. Blood and body parts
+   * fly in all directions with high velocity. Burn marks mixed with blood.
+   * @param {THREE.Vector3} pos
+   * @param {number} count
+   * @param {object} options
+   */
+  function emitMeteorExplosion(pos, count, options) {
+    if (!_scene) return;
+    const scale = (window.performanceLog && window.performanceLog.particleThrottleScale !== undefined)
+      ? window.performanceLog.particleThrottleScale : 1.0;
+    count = Math.ceil(count * scale);
+    const opts      = options || {};
+    const radius    = opts.radius    !== undefined ? opts.radius    : 3.0;
+    const burnColor = opts.burnColor !== undefined ? opts.burnColor : 0x332200;
+
+    // Explosion palette: blood reds + burn/char tones
+    const bloodColors = [0x8B0000, 0xCC1100, 0xFF1A1A];
+    const charColors  = [burnColor, 0x1A0A00, 0x553300];
+
+    for (let i = 0; i < count; i++) {
+      // 70% blood, 30% burn/char particles
+      const isBurn = Math.random() < 0.3;
+      const palette = isBurn ? charColors : bloodColors;
+      const hex = palette[Math.floor(Math.random() * palette.length)];
+      const [r, g, b] = _hexToRgb(hex);
+      const size = isBurn
+        ? (0.04 + Math.random() * 0.08)
+        : (0.05 + Math.random() * 0.15);
+      const life = 50 + Math.floor(Math.random() * 80);
+
+      // High-velocity radial explosion
+      const theta = Math.random() * Math.PI * 2;
+      const phi   = Math.random() * Math.PI;
+      const speed = (0.10 + Math.random() * 0.30) * (radius / 3.0);
+      const vx = Math.sin(phi) * Math.cos(theta) * speed;
+      const vy = Math.abs(Math.cos(phi)) * speed * 0.8 + 0.05;
+      const vz = Math.sin(phi) * Math.sin(theta) * speed;
+
+      _emit(pos.x, pos.y + 0.4, pos.z, vx, vy, vz, r, g, b, size, life);
+    }
+  }
+
+  /**
+   * Blood trail from crawling wounded enemy. Similar to drag trail but with
+   * handprint-like patterns and intermittent drip marks.
+   * @param {THREE.Vector3} pos - current crawl position
+   * @param {THREE.Vector3} dir - crawl direction (normalised)
+   * @param {number} count
+   */
+  function emitCrawlTrail(pos, dir, count) {
+    if (!_scene) return;
+    const n = count !== undefined ? count : 8;
+    const [r1, g1, b1] = _hexToRgb(0x6B0000);
+    const [r2, g2, b2] = _hexToRgb(0x8B2500);
+
+    // Perpendicular to crawl direction for handprint side offset
+    const perpX = -dir.z;
+    const perpZ =  dir.x;
+
+    for (let i = 0; i < n; i++) {
+      const t = Math.random();
+      const r = r1 + (r2 - r1) * t;
+      const g = g1 + (g2 - g1) * t;
+      const b = b1 + (b2 - b1) * t;
+
+      // Alternate handprint patterns (left/right of centre) with random drips
+      const isHandprint = Math.random() < 0.6;
+      const side = (i % 2 === 0) ? 1 : -1;
+      const lateralOffset = isHandprint ? side * (0.15 + Math.random() * 0.1) : (Math.random() - 0.5) * 0.2;
+      const forwardOffset = (Math.random() - 0.5) * 0.15;
+      const size = isHandprint ? (0.08 + Math.random() * 0.06) : (0.03 + Math.random() * 0.04);
+
+      // Place directly as grounded stain
+      const idx = _head;
+      _head = (_head + 1) % MAX_BLOOD_PARTICLES;
+      if (_count < MAX_BLOOD_PARTICLES) _count++;
+      if (_head > _highWater) _highWater = _head;
+      if (_count >= MAX_BLOOD_PARTICLES) _highWater = MAX_BLOOD_PARTICLES;
+      const idx3 = idx * 3;
+      _positions[idx3]     = pos.x + perpX * lateralOffset + dir.x * forwardOffset;
+      _positions[idx3 + 1] = GROUND_Y;
+      _positions[idx3 + 2] = pos.z + perpZ * lateralOffset + dir.z * forwardOffset;
+      _velX[idx] = 0;
+      _velY[idx] = 0;
+      _velZ[idx] = 0;
+      _colors[idx3]     = r;
+      _colors[idx3 + 1] = g;
+      _colors[idx3 + 2] = b;
+      _sizes[idx]    = size;
+      _life[idx]     = 300 + Math.floor(Math.random() * 200);
+      _grounded[idx] = 1;
+    }
+  }
+
   // ─── Update (call every frame) ───────────────────────────────────────────────
   function update() {
     if (!_scene || !_geo) return;
@@ -590,7 +999,15 @@
     emitGuts,
     emitDroneMist,
     emitSwordSlash,
-    emitAuraBurn
+    emitAuraBurn,
+    emitHeartbeatWound,
+    emitThroatSpray,
+    emitHeadBleed,
+    emitWaterBurst,
+    emitWaterPulse,
+    emitPoolGrow,
+    emitMeteorExplosion,
+    emitCrawlTrail
   };
 
 })();
