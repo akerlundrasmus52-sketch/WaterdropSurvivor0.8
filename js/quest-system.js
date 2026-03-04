@@ -304,6 +304,10 @@
         // Start forge unlock quest first
         if (checkQuestConditions('questForge0_unlock')) {
           saveData.tutorialQuests.currentQuest = 'questForge0_unlock';
+          // Mark ready to claim immediately — this quest is claimed at Quest Hall
+          if (!saveData.tutorialQuests.readyToClaim.includes('questForge0_unlock')) {
+            saveData.tutorialQuests.readyToClaim.push('questForge0_unlock');
+          }
           saveSaveData();
           showComicInfoBox(
             '🔨 UNLOCK THE FORGE',

@@ -1580,14 +1580,13 @@
       questForge0b_craftTools: {
         id: 'questForge0b_craftTools',
         name: 'Craft a Harvesting Tool',
-        description: 'Open the Forge and craft your first harvesting tool. You have all the materials you need!',
-        objectives: 'Craft any harvesting tool at the Forge',
+        description: 'Open the Forge and buy your first harvesting tool. You received starter materials to get started!',
+        objectives: 'Buy any harvesting tool at the Forge',
         autoClaim: false,
         claim: 'Main Building',
         rewardGold: 50,
         rewardSkillPoints: 1,
-        giveTools: true,
-        message: "🪓 Tool Crafted!<br><br>You now have a harvesting tool! Use it during runs to gather resources from trees, rocks, and ore deposits.<br><br>🎯 Now kill <b>3 enemies</b> in a run to unlock the Skill Tree!",
+        message: "🪓 Tool Acquired!<br><br>You now have a harvesting tool! Use it during runs to gather resources from trees, rocks, and ore deposits.<br><br>🎯 Now kill <b>3 enemies</b> in a run to unlock the Skill Tree!",
         nextQuest: 'quest1_kill3',
         conditions: ['questForge0_unlock']
       },

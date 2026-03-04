@@ -1335,9 +1335,13 @@
               if (window.GameHarvesting.buyTool(toolDef.id)) {
                 saveSaveData();
                 playSound('levelup');
-                // Quest 22: bought first tool
+                // Quest: bought first tool (either early forge quest or later quest22)
                 if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest22_buyFirstTool') {
                   progressTutorialQuest('quest22_buyFirstTool', true);
+                  saveSaveData();
+                }
+                if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'questForge0b_craftTools') {
+                  progressTutorialQuest('questForge0b_craftTools', true);
                   saveSaveData();
                 }
                 showProgressionShop();
