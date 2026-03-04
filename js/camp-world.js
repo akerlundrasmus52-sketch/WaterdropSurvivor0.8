@@ -169,7 +169,7 @@
     _buildingMeshes = {};
     _campScene = new THREE.Scene();
     _campScene.background = new THREE.Color(0x0a0c18); // deep night sky
-    _campScene.fog = new THREE.FogExp2(0x120e08, 0.025); // warm hearth fog
+    _campScene.fog = new THREE.Fog(0x120e08, 18, 38); // edge-only fog: clear center, misty at edges
 
     // ── Lighting ────────────────────────────────────────────
     // Very dim cool ambient – sky light
@@ -1431,6 +1431,14 @@
       grp.add(w);
     }
 
+    // Warm torch lights inside dojo
+    const dojoTorch1 = new THREE.PointLight(0xffaa44, 1.5, 8, 2);
+    dojoTorch1.position.set(-3, 2.5, 0);
+    grp.add(dojoTorch1);
+    const dojoTorch2 = new THREE.PointLight(0xffaa44, 1.5, 8, 2);
+    dojoTorch2.position.set(3, 2.5, 0);
+    grp.add(dojoTorch2);
+
     _addNameSign(grp, def.label, 0, 4.6, 0);
     return grp;
   }
@@ -1551,6 +1559,18 @@
       grp.add(guard);
     }
 
+    // Warm torch light on the wall
+    const armoryTorch = new THREE.PointLight(0xff8844, 1.5, 8, 2);
+    armoryTorch.position.set(0, 3.5, 2.8);
+    grp.add(armoryTorch);
+
+    // Small flame mesh on wall
+    const armoryFlameGeo = new THREE.ConeGeometry(0.1, 0.4, 6, 1, true);
+    const armoryFlameMat = new THREE.MeshBasicMaterial({ color: 0xff6600, transparent: true, opacity: 0.85 });
+    const armoryFlame = _mesh(armoryFlameGeo, armoryFlameMat);
+    armoryFlame.position.set(0, 4.0, 2.6);
+    grp.add(armoryFlame);
+
     _addNameSign(grp, def.label, 0, 5.6, 0);
     return grp;
   }
@@ -1595,6 +1615,18 @@
     const brl = _mesh(brlGeo, _lambert(0x5c3a1e));
     brl.position.set(-3.5, 0.4, 2);
     grp.add(brl);
+
+    // Warm lantern light near door
+    const invLantern = new THREE.PointLight(0xffcc44, 1.2, 6, 2);
+    invLantern.position.set(-0.5, 3.0, 2.9);
+    grp.add(invLantern);
+
+    // Small flame mesh above door
+    const invFlameGeo = new THREE.ConeGeometry(0.08, 0.3, 6, 1, true);
+    const invFlameMat = new THREE.MeshBasicMaterial({ color: 0xffaa00, transparent: true, opacity: 0.85 });
+    const invFlame = _mesh(invFlameGeo, invFlameMat);
+    invFlame.position.set(-0.5, 3.5, 2.9);
+    grp.add(invFlame);
 
     _addNameSign(grp, def.label, 0, 5.0, 0);
     return grp;
@@ -1655,6 +1687,12 @@
     b.position.y = 1.75;
     b.castShadow = true;
     grp.add(b);
+
+    // Warm torch light
+    const genTorch = new THREE.PointLight(0xffaa44, 1.2, 6, 2);
+    genTorch.position.set(0, 3.0, 2.2);
+    grp.add(genTorch);
+
     _addNameSign(grp, def.label, 0, 4.2, 0);
     return grp;
   }

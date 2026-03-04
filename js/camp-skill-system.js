@@ -2560,33 +2560,35 @@
 
         saveSaveData();
 
-        // Benny speech + 3D animation
-        if (window.CampWorld && window.CampWorld.isActive) {
-          window.CampWorld.bennyWalkToBuild(buildingId, 'Wao dude, you did it! 🔨 Let\'s go inside!');
-          setTimeout(function () {
-            window.CampWorld.refreshBuildings(saveData);
-            window.CampWorld.playBuildingUnlockAnimation(buildingId);
-          }, 1300);
-          // Show "Prepare for Next Building" reminder after celebration
-          setTimeout(function () {
-            if (window.CampWorld && window.CampWorld.isActive) {
-              window.CampWorld.showBennySpeech(
-                'Nice work! 🎉 For the next\nbuilding you\'ll need\n🪵x' + nextCost + ' 🪨x' + nextCost + ' 🖤x' + nextCost + '!\nStart gathering! ⛏️'
-              );
-              setTimeout(function () { window.CampWorld.hideBennySpeech(); }, 5000);
-            }
-          }, 4500);
-        } else if (window.CampWorld) {
-          window.CampWorld.refreshBuildings(saveData);
-          window.CampWorld.playBuildingUnlockAnimation(buildingId);
-        }
-
-        // Close overlay after brief celebration delay
+        // Dismiss dialog FIRST with fade-out, THEN play 3D construction animation
+        overlay.style.transition = 'opacity 0.3s ease';
+        overlay.style.opacity = '0';
         setTimeout(function () {
           overlay.remove();
           window._buildOverlayActive = false;
           if (window.CampWorld && window.CampWorld.isActive) window.CampWorld.resumeInput();
-        }, 1800);
+
+          // 3D animation plays after dialog is gone
+          if (window.CampWorld && window.CampWorld.isActive) {
+            window.CampWorld.bennyWalkToBuild(buildingId, 'Wao dude, you did it! 🔨 Let\'s go inside!');
+            setTimeout(function () {
+              window.CampWorld.refreshBuildings(saveData);
+              window.CampWorld.playBuildingUnlockAnimation(buildingId);
+            }, 1300);
+            // Show "Prepare for Next Building" reminder after celebration
+            setTimeout(function () {
+              if (window.CampWorld && window.CampWorld.isActive) {
+                window.CampWorld.showBennySpeech(
+                  'Nice work! 🎉 For the next\nbuilding you\'ll need\n🪵x' + nextCost + ' 🪨x' + nextCost + ' 🖤x' + nextCost + '!\nStart gathering! ⛏️'
+                );
+                setTimeout(function () { window.CampWorld.hideBennySpeech(); }, 5000);
+              }
+            }, 4500);
+          } else if (window.CampWorld) {
+            window.CampWorld.refreshBuildings(saveData);
+            window.CampWorld.playBuildingUnlockAnimation(buildingId);
+          }
+        }, 300);
       }
 
       buildBtn.addEventListener('click', _startBuild);
