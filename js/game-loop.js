@@ -190,15 +190,16 @@
 
     // ─── Dynamic FPS Booster ────────────────────────────────────────────────────
     // When graphicsQuality === 'auto', monitors rolling FPS every 2 seconds and
-    // steps quality up/down through QUALITY_LEVELS to keep FPS in the 60-120 range.
+    // steps quality up/down through QUALITY_LEVELS to keep FPS ≥ 60.
+    // Drops 2 quality levels when FPS < 60, 3 levels when critically low (< 35).
     // Uses hysteresis (separate up/down thresholds) to prevent oscillation.
     let _fpsBoosterLastCheck  = 0;
     let _fpsBoosterCurrentIdx = 3;          // Start at 'medium' (index 3)
     let _fpsBoosterStableCount = 0;         // Frames of stable FPS before up-stepping
     const _FPS_BOOSTER_INTERVAL  = 2000;    // Check every 2 seconds
-    const _FPS_TARGET_LOW        = 55;      // Below this → step quality DOWN
+    const _FPS_TARGET_LOW        = 60;      // Below this → step quality DOWN 2 levels
     const _FPS_TARGET_HIGH       = 100;     // Above this → step quality UP (if stable)
-    const _FPS_CRITICAL_LOW      = 35;      // Below this → drop 2 levels at once
+    const _FPS_CRITICAL_LOW      = 35;      // Below this → drop 3 levels at once
     const _FPS_STABILITY_MIN     = 70;      // Must be above this for stable count to grow
     const _FPS_STABLE_CHECKS     = 3;       // Need 3 consecutive stable checks (~6s) before up-stepping
 
@@ -218,13 +219,13 @@
       let changed = false;
 
       if (fps < _FPS_CRITICAL_LOW && idx > 0) {
-        // Critical: drop 2 levels at once
-        idx = Math.max(0, idx - 2);
+        // Critical: drop 3 levels at once
+        idx = Math.max(0, idx - 3);
         _fpsBoosterStableCount = 0;
         changed = true;
       } else if (fps < _FPS_TARGET_LOW && idx > 0) {
-        // Below target: step down 1 level
-        idx = idx - 1;
+        // Below 60 FPS target: step down 2 levels
+        idx = Math.max(0, idx - 2);
         _fpsBoosterStableCount = 0;
         changed = true;
       } else if (fps > _FPS_TARGET_HIGH && idx < levels.length - 1) {
@@ -236,7 +237,7 @@
           changed = true;
         }
       } else {
-        // In the sweet spot (55-100 FPS), accumulate stability
+        // In the sweet spot (60-100 FPS), accumulate stability
         if (fps >= _FPS_STABILITY_MIN) _fpsBoosterStableCount = Math.min(_fpsBoosterStableCount + 1, _FPS_STABLE_CHECKS);
         else _fpsBoosterStableCount = 0;
       }
