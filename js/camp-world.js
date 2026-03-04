@@ -169,7 +169,7 @@
     _buildingMeshes = {};
     _campScene = new THREE.Scene();
     _campScene.background = new THREE.Color(0x0a0c18); // deep night sky
-    _campScene.fog = new THREE.Fog(0x120e08, 18, 38); // edge-only fog: clear center, misty at edges
+    _campScene.fog = new THREE.Fog(0x120e08, 18, 38); // edge-only linear fog: near=18 (fog starts), far=38 (fully opaque) — clear ~36-unit diameter around campfire
 
     // ── Lighting ────────────────────────────────────────────
     // Very dim cool ambient – sky light

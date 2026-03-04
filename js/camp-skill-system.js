@@ -2462,6 +2462,7 @@
       // Build click handler: deduct resources, animate 0→100%, unlock building
       var built = false;
       var BUILD_DURATION = 2400; // ms for full 0→100%
+      var BUILD_FADE_MS = 300; // ms for dialog fade-out before 3D animation
       var BUILD_PHASES = [
         { pct: 0,   label: '🪨 Laying Foundation...' },
         { pct: 30,  label: '🧱 Raising Walls...' },
@@ -2561,7 +2562,7 @@
         saveSaveData();
 
         // Dismiss dialog FIRST with fade-out, THEN play 3D construction animation
-        overlay.style.transition = 'opacity 0.3s ease';
+        overlay.style.transition = 'opacity ' + (BUILD_FADE_MS / 1000) + 's ease';
         overlay.style.opacity = '0';
         setTimeout(function () {
           overlay.remove();
@@ -2588,7 +2589,7 @@
             window.CampWorld.refreshBuildings(saveData);
             window.CampWorld.playBuildingUnlockAnimation(buildingId);
           }
-        }, 300);
+        }, BUILD_FADE_MS);
       }
 
       buildBtn.addEventListener('click', _startBuild);
