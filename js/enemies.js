@@ -19,7 +19,7 @@ const ENEMY_TYPES = {
   BUG_RANGED:        12, // Bug/water-being with eyes — ranged variant
   BUG_SLOW:          13, // Bug/water-being with eyes — slow, high HP variant
   BUG_FAST:          14, // Bug/water-being with eyes — fast, low HP variant
-  DADDY_LONGLEGS:    15, // Spider — small round body, huge thin legs, rears to attack, 3-hit kill
+  DADDY_LONGLEGS:    15, // Spider — small round body, huge thin legs, rears to attack, low HP like yellow enemy
   SWEEPING_SWARM:    16  // Cluster of fast flyers that sweep side to side, 1-hit kill
 };
 
@@ -120,8 +120,8 @@ function getEnemyBaseStats(type, levelScaling, speedBase, playerLevel) {
     stats.isBug    = true;
     stats.isFlying = true;
     stats.aiBehavior = 'divebomber';
-  } else if (type === 15) {   // Daddy Longlegs — small body, huge legs, easy 3-hit kill
-    stats.hp       = 30 * levelScaling;  // Very fragile — 3 bullets kill it
+  } else if (type === 15) {   // Daddy Longlegs — spider, low HP like yellow enemy
+    stats.hp       = 110 * levelScaling * 1.2;  // Same HP as yellow enemy
     stats.speed    = speedBase * 1.5;
     stats.isDaddyLonglegs = true;
     stats.aiBehavior = 'rearing'; // Creeps toward player, rears up before attacking

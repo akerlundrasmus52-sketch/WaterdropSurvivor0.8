@@ -2431,7 +2431,16 @@
   function _isBuildingUnlocked(buildingId) {
     if (!_saveData || !_saveData.campBuildings) return false;
     const bd = _saveData.campBuildings[buildingId];
-    return bd ? (bd.unlocked === true || bd.level > 0) : false;
+    // A building is truly "unlocked" (enterable) ONLY when it has been built (level > 0).
+    // unlocked=true with level===0 means the quest unlocked it but it still needs building.
+    return bd ? (bd.level > 0) : false;
+  }
+
+  // Returns true if this building is unlocked by a quest but not yet built (level===0)
+  function _isBuildingNeedsBuild(buildingId) {
+    if (!_saveData || !_saveData.campBuildings) return false;
+    const bd = _saveData.campBuildings[buildingId];
+    return bd ? (bd.unlocked === true && !bd.level) : false;
   }
 
   // Returns true if this building has a ready-to-claim quest that would unlock it
@@ -2451,10 +2460,19 @@
       const def = BUILDING_DEFS.find(d => d.id === _nearBuilding);
       if (def) {
         if (_isBuildingUnlocked(_nearBuilding)) {
+          // Building is built (level > 0) — show ENTER
           _promptEl.textContent = `${def.icon}  ${def.label}  —  Tap / [E]`;
           if (_interactBtn) {
             _interactBtn.textContent = 'ENTER';
             _interactBtn.style.background = 'linear-gradient(135deg,#c8a248,#8b6914)';
+            _interactBtn.style.display = 'block';
+          }
+        } else if (_isBuildingNeedsBuild(_nearBuilding)) {
+          // Building unlocked by quest but not yet built — show BUILD
+          _promptEl.textContent = `🔨  ${def.label}  —  Build this building! [E]`;
+          if (_interactBtn) {
+            _interactBtn.textContent = 'BUILD';
+            _interactBtn.style.background = 'linear-gradient(135deg,#2980b9,#1a5276)';
             _interactBtn.style.display = 'block';
           }
         } else if (_isBuildingReadyForBuild(_nearBuilding)) {
@@ -2502,6 +2520,16 @@
         if (typeof origOverlay === 'function') {
           origOverlay(targetId, buildingName);
         }
+      }
+      return;
+    }
+
+    // Building is unlocked by quest but not yet built — show build overlay
+    if (_isBuildingNeedsBuild(_nearBuilding)) {
+      const def = BUILDING_DEFS.find(d => d.id === _nearBuilding);
+      const buildingName = def ? def.label : _nearBuilding;
+      if (typeof window._campShowBuildOverlay === 'function') {
+        window._campShowBuildOverlay(_nearBuilding, buildingName);
       }
       return;
     }
