@@ -1073,6 +1073,55 @@
           const isShotgunHit = damageType === 'doubleBarrel' || damageType === 'shotgun';
           window.BloodSystem.emitBurst(this.mesh.position, isShotgunHit ? 60 : 30, { spreadXZ: 0.8, spreadY: 0.2, minSize: 0.01, maxSize: 0.06, minLife: 20, maxLife: 50 });
         }
+        // Weapon-level-based blood effects — higher levels produce more brutal hits
+        if (window.BloodSystem) {
+          const wl = (typeof weapons !== 'undefined' && weapons) || {};
+          const gunLvl = (wl.gun && wl.gun.level) || 1;
+          const droneLvl = (wl.droneTurret && wl.droneTurret.level) || 1;
+          const swordLvl = (wl.sword && wl.sword.level) || 1;
+          const auraLvl = (wl.aura && wl.aura.level) || 1;
+
+          if (damageType === 'gun' || damageType === 'physical') {
+            // Gun: Level 1 = small entry wound only; Level 2+ = exit wound spray
+            window.BloodSystem.emitBurst(this.mesh.position, 10 + gunLvl * 8, { spreadXZ: 0.3 + gunLvl * 0.15, spreadY: 0.1 + gunLvl * 0.05 });
+            if (gunLvl >= 2) {
+              const exitDir = new THREE.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5).normalize();
+              window.BloodSystem.emitExitWound(this.mesh.position, exitDir, 15 + gunLvl * 10, { speed: 0.2 + gunLvl * 0.05 });
+            }
+            if (gunLvl >= 3) {
+              window.BloodSystem.emitHeartbeatWound(this.mesh.position, { pulses: 2, perPulse: 30 + gunLvl * 15, interval: 250 });
+            }
+          } else if (damageType === 'drone') {
+            // Drone: Level 1 = entry only, Level 3+ = go through with exit mist
+            const bulletDir = new THREE.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5).normalize();
+            window.BloodSystem.emitDroneMist(this.mesh.position, bulletDir, 20 + droneLvl * 15);
+            if (droneLvl >= 3) {
+              window.BloodSystem.emitExitWound(this.mesh.position, bulletDir, 20 + droneLvl * 8, { speed: 0.25 });
+            }
+          } else if (damageType === 'sword') {
+            // Sword: slash lines with blood pouring — higher levels = deeper cuts
+            const slashDir = new THREE.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5).normalize();
+            window.BloodSystem.emitSwordSlash(this.mesh.position, slashDir, 20 + swordLvl * 12);
+            if (swordLvl >= 2) {
+              window.BloodSystem.emitPulse(this.mesh.position, { pulses: 2, perPulse: 40 + swordLvl * 20, interval: 200, arcDir: slashDir, spreadXZ: 0.4 });
+            }
+          } else if (damageType === 'aura') {
+            // Aura: energy burns escalate with level
+            window.BloodSystem.emitAuraBurn(this.mesh.position, 15 + auraLvl * 10);
+            if (auraLvl >= 2) {
+              window.BloodSystem.emitBurst(this.mesh.position, 10 + auraLvl * 8, { spreadXZ: 0.3, spreadY: 0.15, color1: 0x2A0000, color2: 0xFF4500, minSize: 0.02, maxSize: 0.06 });
+            }
+          } else if (damageType === 'headshot') {
+            // Headshot: always dramatic blood spray from head
+            window.BloodSystem.emitHeadBleed(this.mesh.position, { intensity: 0.5, duration: 3 });
+            window.BloodSystem.emitBurst(this.mesh.position, 80, { spreadXZ: 1.2, spreadY: 0.4 });
+          } else if (damageType === 'shotgun' || damageType === 'doubleBarrel') {
+            // Shotgun/Homing: massive burst — exit wounds + guts at high power
+            window.BloodSystem.emitBurst(this.mesh.position, 80, { spreadXZ: 1.5, spreadY: 0.3 });
+            window.BloodSystem.emitGuts(this.mesh.position, { count: 15 });
+            window.BloodSystem.emitExitWound(this.mesh.position, new THREE.Vector3(Math.random()-0.5, 0, Math.random()-0.5).normalize(), 40, { speed: 0.35 });
+          }
+        }
         // Pulsating wound blood drips — gravity-based spray from hit location
         if (bloodDrips.length < MAX_BLOOD_DRIPS && (isHeavyHit || hpRatio < 0.5)) {
           const dripCount = isHeavyHit ? (3 + Math.floor(Math.random() * 3)) : (1 + Math.floor(Math.random() * 2));
