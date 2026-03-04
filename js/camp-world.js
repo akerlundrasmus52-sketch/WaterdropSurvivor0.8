@@ -2700,8 +2700,9 @@
         }
         child.material = child.userData._constructionMat;
       } else {
-        // Only restore if not in blueprint mode (blueprint takes priority when removing construction)
-        if (child.userData._origMaterial && child.material === child.userData._constructionMat) {
+        // Restore original material if currently showing construction mode
+        if (child.userData._origMaterial && child.userData._constructionMat &&
+            (child.material === child.userData._constructionMat)) {
           child.material = child.userData._origMaterial;
         }
       }

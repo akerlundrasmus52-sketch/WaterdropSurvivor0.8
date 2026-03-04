@@ -2350,6 +2350,7 @@
     // Building N requires N of each: wood, stone, coal.
     // Resources are checked and deducted on build. Progress shown as 0→100% with phases.
     function _showBuildOverlay(buildingId, buildingName) {
+      window._buildOverlayActive = true;
       if (window.CampWorld && window.CampWorld.isActive) window.CampWorld.pauseInput();
 
       // Determine resource cost: building N costs N of each material
@@ -2443,6 +2444,7 @@
       cancelBtn.textContent = 'Cancel';
       cancelBtn.addEventListener('click', function () {
         overlay.remove();
+        window._buildOverlayActive = false;
         if (window.CampWorld && window.CampWorld.isActive) window.CampWorld.resumeInput();
       });
       cancelBtn.addEventListener('touchend', function (e) { e.preventDefault(); cancelBtn.click(); }, { passive: false });
@@ -2578,6 +2580,7 @@
         // Close overlay after brief celebration delay
         setTimeout(function () {
           overlay.remove();
+          window._buildOverlayActive = false;
           if (window.CampWorld && window.CampWorld.isActive) window.CampWorld.resumeInput();
         }, 1800);
       }
@@ -2772,12 +2775,18 @@
       }
       
       if (!quest.autoClaim) {
-        // When building needs building, DON'T show comic popup simultaneously with build overlay
-        // — wait for the build overlay to be dismissed first
-        if (_mustBuildFirst && window._campShowBuildOverlay != null) {
-          // Build overlay is already showing; show the combined popup AFTER build overlay closes
+        // When building needs building, manage popup carefully to avoid stacking
+        if (_mustBuildFirst && window._campShowBuildOverlay == null) {
+          // Build overlay was suppressed (called from 3D camp _interact).
+          // Skip comic popup — rewards already shown via showStatChange.
+          // _interact will show its own build overlay, and _completeBuild
+          // will show the next quest popup after building finishes.
+        } else if (_mustBuildFirst && window._campShowBuildOverlay != null) {
+          // Build overlay is showing from this function; wait for it to close
+          var _overlayWaitCount = 0;
           var _waitForBuildOverlay = setInterval(function () {
-            if (!document.querySelector('[style*="z-index: 500"]') && !document.querySelector('[style*="z-index:500"]')) {
+            _overlayWaitCount++;
+            if (!window._buildOverlayActive || _overlayWaitCount > 200) {
               clearInterval(_waitForBuildOverlay);
               showComicInfoBox(
                 '✨ Quest Complete!',
