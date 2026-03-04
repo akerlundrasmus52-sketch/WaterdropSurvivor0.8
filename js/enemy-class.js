@@ -2025,7 +2025,7 @@
                   dyingMesh.position.z = deathPos.z + fallSignZ * crawlPhase * 1.5;
                   dyingMesh.rotation.x = fallSignX * (0.3 + crawlPhase * 0.15 * Math.sin(crawlPhase * 12));
                   if (window.BloodSystem && window.BloodSystem.emitCrawlTrail) {
-                    window.BloodSystem.emitCrawlTrail(dyingMesh.position);
+                    window.BloodSystem.emitCrawlTrail(dyingMesh.position, { x: fallSignX, y: 0, z: fallSignZ });
                   }
                   if (fallFrame % 6 === 0) spawnBloodDecal(dyingMesh.position);
                 } else {
