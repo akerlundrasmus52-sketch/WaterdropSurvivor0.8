@@ -2619,21 +2619,30 @@
       if (!grp) continue;
       const bd = _saveData.campBuildings && _saveData.campBuildings[def.id];
       const isUnlocked = bd ? (bd.unlocked === true) : false;
+      const isBuilt = bd ? (bd.level > 0) : false;
 
-      if (isUnlocked) {
-        // Fully unlocked — show normally
+      if (isBuilt) {
+        // Fully built — show normally
         grp.visible = true;
         _setBlueprintMode(grp, false);
+        _setConstructionMode(grp, false);
+      } else if (isUnlocked) {
+        // Unlocked by quest but NOT yet built — show in construction/scaffolding mode
+        grp.visible = true;
+        _setBlueprintMode(grp, false);
+        _setConstructionMode(grp, true);
       } else {
         // Locked — show as semi-transparent blueprint outline
         grp.visible = true;
         _setBlueprintMode(grp, true);
+        _setConstructionMode(grp, false);
       }
     }
     // Quest Hall is always visible and unlocked
     if (_buildingMeshes['questMission']) {
       _buildingMeshes['questMission'].visible = true;
       _setBlueprintMode(_buildingMeshes['questMission'], false);
+      _setConstructionMode(_buildingMeshes['questMission'], false);
     }
   }
 
@@ -2668,14 +2677,47 @@
     });
   }
 
+  // Apply or remove construction (needs-build) visual mode to a building group.
+  // Shows the building as a semi-transparent orange scaffold — distinct from both
+  // the blue blueprint (locked) and normal (built) appearances.
+  function _setConstructionMode(grp, enable) {
+    const THREE = T();
+    grp.traverse(child => {
+      if (!child.isMesh) return;
+      if (enable) {
+        if (!child.userData._origMaterial) {
+          child.userData._origMaterial = child.material;
+        }
+        if (!child.userData._constructionMat) {
+          child.userData._constructionMat = new THREE.MeshBasicMaterial({
+            color: 0xFF9933,
+            transparent: true,
+            opacity: 0.45,
+            wireframe: true,
+            depthWrite: false,
+            side: THREE.DoubleSide
+          });
+        }
+        child.material = child.userData._constructionMat;
+      } else {
+        // Restore original material if currently showing construction mode
+        if (child.userData._origMaterial && child.userData._constructionMat &&
+            (child.material === child.userData._constructionMat)) {
+          child.material = child.userData._origMaterial;
+        }
+      }
+    });
+  }
+
   // Play a construction animation when a building is first unlocked
   function _playBuildingUnlockAnimation(buildingId) {
     const grp = _buildingMeshes[buildingId];
     if (!grp) return;
     const THREE = T();
 
-    // Remove blueprint mode immediately
+    // Remove blueprint and construction mode immediately
     _setBlueprintMode(grp, false);
+    _setConstructionMode(grp, false);
 
     // Flash effect: scale up from 0 → 1.07 → 1.0 over ~0.7 seconds (ease-out with slight overshoot)
     const ANIM_DURATION_MS      = 700;
