@@ -19,8 +19,8 @@ const RENDERER_CONFIG = {
   cameraPositionZ: 14,
   // Scene fog distances (near/far clip for edge fog).
   // Tightened to match the zoomed-in camera — hides distant objects sooner for FPS gain.
-  fogNear: 20,
-  fogFar: 32,
+  fogNear: 28,
+  fogFar: 45,
   // Default shadow map size — 512 for faster GPU fill-rate (was 1024)
   defaultShadowMapSize: 512,
   // Directional light shadow frustum half-size — tightened to match closer view
