@@ -1296,6 +1296,19 @@
           spawnWaterDroplet(this.mesh.position);
         }
         
+        // Advanced water blood system for player
+        if (window.BloodSystem) {
+          window.BloodSystem.emitWaterBurst(this.mesh.position, Math.min(Math.floor(8 + reduced * 0.5), 30), { 
+            spreadXZ: 0.8, spreadY: 0.25, minSize: 0.02, maxSize: 0.08 
+          });
+          // Heavy hit: pulsating water leak
+          if (reduced > 15) {
+            window.BloodSystem.emitWaterPulse(this.mesh.position, { 
+              pulses: 3, perPulse: 80, interval: 200, spreadXZ: 0.5 
+            });
+          }
+        }
+        
         // Squishy deformation on hit - drive spring-damper directly for smooth recovery
         this.currentScaleXZ = 1.4;
         this.currentScaleY = 0.6;
@@ -1339,6 +1352,16 @@
           // ENHANCED Death splash: more particles + ground pool with fade
           spawnParticles(this.mesh.position, COLORS.player, 25); // Reduced for performance
           spawnParticles(this.mesh.position, 0xFFFFFF, 8); // Reduced for performance
+          
+          // Advanced water death: massive water burst + pulsating leak + growing pool
+          if (window.BloodSystem) {
+            window.BloodSystem.emitWaterBurst(this.mesh.position, 300, { 
+              spreadXZ: 2.0, spreadY: 0.5, minSize: 0.03, maxSize: 0.14 
+            });
+            window.BloodSystem.emitWaterPulse(this.mesh.position, { 
+              pulses: 8, perPulse: 200, interval: 180, spreadXZ: 1.5 
+            });
+          }
           
           // Create ground pool (flat circle that fades out)
           const poolGeo = new THREE.CircleGeometry(1.5, 16);
