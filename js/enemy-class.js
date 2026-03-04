@@ -2442,7 +2442,7 @@
       // Specialized death effects by damage type
       dieStandard(enemyColor) {
         // 7 varied death animations — realistic gun kills with pumping blood
-        const deathVariation = Math.floor(Math.random() * 7);
+        const deathVariation = Math.floor(Math.random() * 10);
         const deathPos = this.mesh.position.clone();
         
         if (deathVariation === 0) {
@@ -2550,7 +2550,7 @@
             bloodDrips.push({ mesh: drip, velX: (Math.random()-0.5)*0.02, velZ: (Math.random()-0.5)*0.02, velY: -0.03, life: 50 + Math.floor(Math.random()*20), _sharedGeo: true });
           }
           for (let i = 0; i < 5; i++) spawnBloodDecal(deathPos);
-        } else {
+        } else if (deathVariation === 6) {
           // STAIN DEATH — multiple ground stains in varied sizes (small to large)
           spawnParticles(deathPos, 0x8B0000, 12);
           spawnParticles(deathPos, 0xCC0000, 6);
@@ -2572,6 +2572,143 @@
                 return true;
               }});
             } else { scene.remove(stain); stainGeo.dispose(); stainMat.dispose(); }
+          }
+        } else if (deathVariation === 7) {
+          // CRAWL TRAIL — crawls forward leaving blood trail then face-plants
+          spawnParticles(deathPos, 0x8B0000, 10);
+          spawnParticles(deathPos, 0xAA0000, 6);
+          const crawlGeo = new THREE.SphereGeometry(0.4, 8, 6);
+          const crawlMat = new THREE.MeshBasicMaterial({ color: enemyColor, transparent: true, opacity: 0.85 });
+          const crawlBody = new THREE.Mesh(crawlGeo, crawlMat);
+          crawlBody.position.copy(deathPos);
+          crawlBody.position.y = 0.15;
+          crawlBody.scale.y = 0.3;
+          scene.add(crawlBody);
+          const crawlDir = new THREE.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5).normalize();
+          let crawlLife = 80;
+          if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
+            managedAnimations.push({ update(_dt) {
+              crawlLife--;
+              if (crawlLife > 30) {
+                crawlBody.position.x += crawlDir.x * 0.015;
+                crawlBody.position.z += crawlDir.z * 0.015;
+                if (crawlLife % 5 === 0) {
+                  spawnBloodDecal({ x: crawlBody.position.x, y: 0, z: crawlBody.position.z });
+                }
+                if (window.BloodSystem && window.BloodSystem.emitCrawlTrail) {
+                  window.BloodSystem.emitCrawlTrail(crawlBody.position, { x: crawlDir.x, y: 0, z: crawlDir.z });
+                }
+              } else if (crawlLife === 30) {
+                crawlBody.scale.y = 0.15;
+                crawlBody.position.y = 0.08;
+                spawnParticles(crawlBody.position, 0x8B0000, 8);
+              }
+              if (crawlLife < 30) {
+                crawlBody.material.opacity = (crawlLife / 30) * 0.85;
+              }
+              if (crawlLife <= 0) {
+                scene.remove(crawlBody); crawlBody.geometry.dispose(); crawlBody.material.dispose();
+                return false;
+              }
+              return true;
+            }});
+          } else {
+            scene.remove(crawlBody); crawlBody.geometry.dispose(); crawlBody.material.dispose();
+          }
+        } else if (deathVariation === 8) {
+          // ROLL OVER — body rolls sideways with tumbling animation
+          spawnParticles(deathPos, 0x8B0000, 12);
+          spawnParticles(deathPos, 0xCC0000, 6);
+          const rollGeo = new THREE.SphereGeometry(0.4, 8, 6);
+          const rollMat = new THREE.MeshBasicMaterial({ color: enemyColor, transparent: true, opacity: 0.85 });
+          const rollBody = new THREE.Mesh(rollGeo, rollMat);
+          rollBody.position.copy(deathPos);
+          rollBody.position.y = 0.2;
+          rollBody.scale.y = 0.35;
+          scene.add(rollBody);
+          const rollDir = new THREE.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5).normalize();
+          let rollLife = 90;
+          if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
+            managedAnimations.push({ update(_dt) {
+              rollLife--;
+              if (rollLife > 30) {
+                rollBody.position.x += rollDir.x * 0.02;
+                rollBody.position.z += rollDir.z * 0.02;
+                rollBody.rotation.z += Math.PI * 2 / 60;
+                if (rollLife % 4 === 0) {
+                  spawnBloodDecal({ x: rollBody.position.x, y: 0, z: rollBody.position.z });
+                  spawnParticles(rollBody.position, 0x8B0000, 2);
+                }
+              } else if (rollLife === 30) {
+                rollBody.position.y = 0.08;
+                rollBody.scale.y = 0.18;
+                spawnParticles(rollBody.position, 0x660000, 6);
+              }
+              if (rollLife < 30) {
+                rollBody.material.opacity = (rollLife / 30) * 0.85;
+              }
+              if (rollLife <= 0) {
+                scene.remove(rollBody); rollBody.geometry.dispose(); rollBody.material.dispose();
+                return false;
+              }
+              return true;
+            }});
+          } else {
+            scene.remove(rollBody); rollBody.geometry.dispose(); rollBody.material.dispose();
+          }
+        } else if (deathVariation === 9) {
+          // STAGGER & DROP — staggers 3 steps left/right then drops
+          spawnParticles(deathPos, 0x8B0000, 14);
+          spawnParticles(deathPos, 0xCC0000, 8);
+          const staggerGeo = new THREE.SphereGeometry(0.45, 8, 6);
+          const staggerMat = new THREE.MeshBasicMaterial({ color: enemyColor, transparent: true, opacity: 0.85 });
+          const staggerBody = new THREE.Mesh(staggerGeo, staggerMat);
+          staggerBody.position.copy(deathPos);
+          staggerBody.position.y = 0.3;
+          staggerBody.scale.y = 0.4;
+          scene.add(staggerBody);
+          let staggerLife = 100;
+          const staggerSign = Math.random() < 0.5 ? 1 : -1;
+          if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
+            managedAnimations.push({ update(_dt) {
+              staggerLife--;
+              if (staggerLife > 40) {
+                const phase = (100 - staggerLife) / 20;
+                staggerBody.position.x = deathPos.x + Math.sin(phase * Math.PI) * 0.3 * staggerSign;
+                staggerBody.position.z = deathPos.z + Math.cos(phase * Math.PI * 0.5) * 0.1;
+                if (staggerLife % 8 === 0) spawnParticles(staggerBody.position, 0x8B0000, 3);
+              } else if (staggerLife === 40) {
+                staggerBody.position.y = 0.08;
+                staggerBody.scale.y = 0.18;
+                spawnParticles(staggerBody.position, 0x660000, 10);
+                const poolGeo = new THREE.CircleGeometry(0.7, 12);
+                const poolMat = new THREE.MeshBasicMaterial({ color: 0x8B0000, transparent: true, opacity: 0.6, side: THREE.DoubleSide });
+                const pool = new THREE.Mesh(poolGeo, poolMat);
+                pool.position.set(staggerBody.position.x, 0.01, staggerBody.position.z);
+                pool.rotation.x = -Math.PI / 2;
+                scene.add(pool);
+                let poolLife = 100;
+                if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
+                  managedAnimations.push({ update(_dt) {
+                    poolLife--;
+                    pool.material.opacity = (poolLife / 100) * 0.6;
+                    if (poolLife <= 0) { scene.remove(pool); poolGeo.dispose(); poolMat.dispose(); return false; }
+                    return true;
+                  }});
+                } else { scene.remove(pool); poolGeo.dispose(); poolMat.dispose(); }
+                for (let i = 0; i < 5; i++) spawnBloodDecal({ x: staggerBody.position.x + (Math.random()-0.5)*0.8, y: 0, z: staggerBody.position.z + (Math.random()-0.5)*0.8 });
+              }
+              if (staggerLife < 40) {
+                staggerBody.material.opacity = (staggerLife / 40) * 0.85;
+              }
+              if (staggerLife <= 0) {
+                scene.remove(staggerBody); staggerBody.geometry.dispose(); staggerBody.material.dispose();
+                return false;
+              }
+              return true;
+            }});
+          } else {
+            scene.remove(staggerBody); staggerBody.geometry.dispose(); staggerBody.material.dispose();
           }
         }
       }
@@ -3120,124 +3257,429 @@
       }
 
       dieByDrone(enemyColor) {
-        // DRONE TURRET DEATH: Riddled with 15-20 tiny holes, blood-mist spray
+        const variation = Math.floor(Math.random() * 3);
         const deathPos = this.mesh.position.clone();
-        spawnParticles(deathPos, 0xAA0000, 12);
-        spawnParticles(deathPos, 0xCC2200, 8);
-        if (window.BloodSystem) {
-          const mistDir = new THREE.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5).normalize();
-          window.BloodSystem.emitDroneMist(deathPos, mistDir, 120, { lineLength: 0.6 });
-          window.BloodSystem.emitBurst(deathPos, 80, { spreadXZ: 0.6, spreadY: 0.15, minSize: 0.01, maxSize: 0.04, minLife: 20, maxLife: 45 });
-        }
-        // 15-20 tiny bullet-hole decals scattered around death position
-        const holeCount = 15 + Math.floor(Math.random() * 6);
-        for (let h = 0; h < holeCount; h++) {
-          const angle = Math.random() * Math.PI * 2;
-          const dist = Math.random() * 0.9;
-          spawnBloodDecal({ x: deathPos.x + Math.cos(angle) * dist, y: 0, z: deathPos.z + Math.sin(angle) * dist });
-        }
-        const corpseGeo = new THREE.SphereGeometry(0.4, 8, 6);
-        const corpseMat = new THREE.MeshBasicMaterial({ color: enemyColor, transparent: true, opacity: 0.8 });
-        const corpse = new THREE.Mesh(corpseGeo, corpseMat);
-        corpse.position.copy(deathPos);
-        corpse.position.y = 0.1;
-        corpse.scale.y = 0.2;
-        scene.add(corpse);
-        let life = 120;
-        if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
-          managedAnimations.push({ update(_dt) {
-            life--;
-            corpse.material.opacity = (life / 120) * 0.8;
-            if (life <= 0) { scene.remove(corpse); corpse.geometry.dispose(); corpse.material.dispose(); return false; }
-            return true;
-          }, cleanup() { scene.remove(corpse); corpse.geometry.dispose(); corpse.material.dispose(); }});
+
+        if (variation === 0) {
+          // RIDDLED WITH HOLES — blood mist spray (original)
+          spawnParticles(deathPos, 0xAA0000, 12);
+          spawnParticles(deathPos, 0xCC2200, 8);
+          if (window.BloodSystem) {
+            const mistDir = new THREE.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5).normalize();
+            window.BloodSystem.emitDroneMist(deathPos, mistDir, 120, { lineLength: 0.6 });
+            window.BloodSystem.emitBurst(deathPos, 80, { spreadXZ: 0.6, spreadY: 0.15, minSize: 0.01, maxSize: 0.04, minLife: 20, maxLife: 45 });
+          }
+          const holeCount = 15 + Math.floor(Math.random() * 6);
+          for (let h = 0; h < holeCount; h++) {
+            const angle = Math.random() * Math.PI * 2;
+            const dist = Math.random() * 0.9;
+            spawnBloodDecal({ x: deathPos.x + Math.cos(angle) * dist, y: 0, z: deathPos.z + Math.sin(angle) * dist });
+          }
+          const corpseGeo = new THREE.SphereGeometry(0.4, 8, 6);
+          const corpseMat = new THREE.MeshBasicMaterial({ color: enemyColor, transparent: true, opacity: 0.8 });
+          const corpse = new THREE.Mesh(corpseGeo, corpseMat);
+          corpse.position.copy(deathPos);
+          corpse.position.y = 0.1;
+          corpse.scale.y = 0.2;
+          scene.add(corpse);
+          let life = 120;
+          if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
+            managedAnimations.push({ update(_dt) {
+              life--;
+              corpse.material.opacity = (life / 120) * 0.8;
+              if (life <= 0) { scene.remove(corpse); corpse.geometry.dispose(); corpse.material.dispose(); return false; }
+              return true;
+            }, cleanup() { scene.remove(corpse); corpse.geometry.dispose(); corpse.material.dispose(); }});
+          } else {
+            scene.remove(corpse); corpse.geometry.dispose(); corpse.material.dispose();
+          }
+        } else if (variation === 1) {
+          // SWISS CHEESE — more holes, blood streams, body puffs up then deflates
+          spawnParticles(deathPos, 0xAA0000, 16);
+          spawnParticles(deathPos, 0xCC2200, 10);
+          if (window.BloodSystem) {
+            window.BloodSystem.emitBurst(deathPos, 100, { spreadXZ: 0.8, spreadY: 0.3, minSize: 0.01, maxSize: 0.05, minLife: 25, maxLife: 55 });
+          }
+          const holeCount = 22 + Math.floor(Math.random() * 8);
+          const holePositions = [];
+          for (let h = 0; h < holeCount; h++) {
+            const angle = Math.random() * Math.PI * 2;
+            const dist = Math.random() * 1.0;
+            const hx = deathPos.x + Math.cos(angle) * dist;
+            const hz = deathPos.z + Math.sin(angle) * dist;
+            holePositions.push({ x: hx, z: hz });
+            spawnBloodDecal({ x: hx, y: 0, z: hz });
+          }
+          const corpseGeo = new THREE.SphereGeometry(0.4, 8, 6);
+          const corpseMat = new THREE.MeshBasicMaterial({ color: enemyColor, transparent: true, opacity: 0.85 });
+          const corpse = new THREE.Mesh(corpseGeo, corpseMat);
+          corpse.position.copy(deathPos);
+          corpse.position.y = 0.15;
+          corpse.scale.y = 0.25;
+          scene.add(corpse);
+          let life = 100;
+          if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
+            managedAnimations.push({ update(_dt) {
+              life--;
+              if (life > 70) {
+                const puff = 1 + (100 - life) * 0.01;
+                corpse.scale.set(puff, 0.25 * puff, puff);
+              } else if (life > 40) {
+                const deflate = (life - 40) / 30;
+                corpse.scale.set(1.3 * deflate + 0.7, 0.25 * deflate + 0.1, 1.3 * deflate + 0.7);
+              }
+              if (life % 6 === 0 && life > 30 && holePositions.length > 0) {
+                const hp = holePositions[life % holePositions.length];
+                spawnParticles({ x: hp.x, y: 0.15, z: hp.z }, 0x8B0000, 2);
+              }
+              corpse.material.opacity = Math.min(0.85, (life / 100) * 0.85);
+              if (life <= 0) { scene.remove(corpse); corpse.geometry.dispose(); corpse.material.dispose(); return false; }
+              return true;
+            }, cleanup() { scene.remove(corpse); corpse.geometry.dispose(); corpse.material.dispose(); }});
+          } else {
+            scene.remove(corpse); corpse.geometry.dispose(); corpse.material.dispose();
+          }
         } else {
-          scene.remove(corpse); corpse.geometry.dispose(); corpse.material.dispose();
+          // OVERWHELMED COLLAPSE — tiny blood geysers, body tips sideways
+          spawnParticles(deathPos, 0xAA0000, 14);
+          spawnParticles(deathPos, 0x880000, 8);
+          if (window.BloodSystem) {
+            window.BloodSystem.emitBurst(deathPos, 60, { spreadXZ: 0.5, spreadY: 0.4, minSize: 0.01, maxSize: 0.04, minLife: 20, maxLife: 50 });
+          }
+          const woundPoints = [];
+          for (let w = 0; w < 6; w++) {
+            woundPoints.push({
+              x: deathPos.x + (Math.random() - 0.5) * 0.6,
+              z: deathPos.z + (Math.random() - 0.5) * 0.6
+            });
+            spawnBloodDecal({ x: woundPoints[w].x, y: 0, z: woundPoints[w].z });
+          }
+          const corpseGeo = new THREE.SphereGeometry(0.4, 8, 6);
+          const corpseMat = new THREE.MeshBasicMaterial({ color: enemyColor, transparent: true, opacity: 0.8 });
+          const corpse = new THREE.Mesh(corpseGeo, corpseMat);
+          corpse.position.copy(deathPos);
+          corpse.position.y = 0.2;
+          corpse.scale.y = 0.25;
+          scene.add(corpse);
+          const tipDir = Math.random() < 0.5 ? 1 : -1;
+          let life = 110;
+          if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
+            managedAnimations.push({ update(_dt) {
+              life--;
+              if (life > 60) {
+                corpse.rotation.z += tipDir * 0.02;
+                corpse.position.y = Math.max(0.08, corpse.position.y - 0.002);
+              }
+              if (life % 8 === 0 && life > 30) {
+                const wp = woundPoints[life % woundPoints.length];
+                spawnParticles({ x: wp.x, y: 0.1, z: wp.z }, 0xAA0000, 3);
+              }
+              if (life < 40) {
+                corpse.material.opacity = (life / 40) * 0.8;
+              }
+              if (life <= 0) { scene.remove(corpse); corpse.geometry.dispose(); corpse.material.dispose(); return false; }
+              return true;
+            }, cleanup() { scene.remove(corpse); corpse.geometry.dispose(); corpse.material.dispose(); }});
+          } else {
+            scene.remove(corpse); corpse.geometry.dispose(); corpse.material.dispose();
+          }
         }
       }
 
       dieBySword(enemyColor) {
-        // SWORD DEATH: Deep slash wound with immediate blood flow along the cut line
+        const variation = Math.floor(Math.random() * 3);
         const deathPos = this.mesh.position.clone();
-        spawnParticles(deathPos, 0x8B0000, 18);
-        spawnParticles(deathPos, 0xCC0000, 10);
-        if (window.BloodSystem) {
+
+        if (variation === 0) {
+          // DEEP SLASH — blood flow along the cut line (original)
+          spawnParticles(deathPos, 0x8B0000, 18);
+          spawnParticles(deathPos, 0xCC0000, 10);
+          if (window.BloodSystem) {
+            const slashAngle = Math.random() * Math.PI * 2;
+            const slashDir = new THREE.Vector3(Math.cos(slashAngle), 0, Math.sin(slashAngle)).normalize();
+            window.BloodSystem.emitSwordSlash(deathPos, slashDir, 120);
+            window.BloodSystem.emitBurst(deathPos, 60, { spreadXZ: 0.8, spreadY: 0.2, minSize: 0.03, maxSize: 0.09, minLife: 30, maxLife: 70 });
+            window.BloodSystem.emitPulse(deathPos, { pulses: 3, perPulse: 80, interval: 200, spreadXZ: 0.5, arcDir: slashDir });
+          }
+          for (let i = 0; i < 4; i++) {
+            const a = Math.random() * Math.PI * 2;
+            spawnBloodDecal({ x: deathPos.x + Math.cos(a) * (0.3 + Math.random() * 0.7), y: 0, z: deathPos.z + Math.sin(a) * (0.3 + Math.random() * 0.7) });
+          }
+          const corpseGeo = new THREE.SphereGeometry(0.45, 8, 6);
+          const corpseMat = new THREE.MeshBasicMaterial({ color: enemyColor, transparent: true, opacity: 0.85 });
+          const corpse = new THREE.Mesh(corpseGeo, corpseMat);
+          corpse.position.copy(deathPos);
+          corpse.position.y = 0.1;
+          corpse.scale.y = 0.22;
+          scene.add(corpse);
+          let life = 130;
+          if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
+            managedAnimations.push({ update(_dt) {
+              life--;
+              corpse.material.opacity = (life / 130) * 0.85;
+              if (life <= 0) { scene.remove(corpse); corpse.geometry.dispose(); corpse.material.dispose(); return false; }
+              return true;
+            }, cleanup() { scene.remove(corpse); corpse.geometry.dispose(); corpse.material.dispose(); }});
+          } else {
+            scene.remove(corpse); corpse.geometry.dispose(); corpse.material.dispose();
+          }
+        } else if (variation === 1) {
+          // CLEAN CUT — body splits along slash line, halves slide apart
+          spawnParticles(deathPos, 0x8B0000, 20);
+          spawnParticles(deathPos, 0xCC0000, 12);
           const slashAngle = Math.random() * Math.PI * 2;
           const slashDir = new THREE.Vector3(Math.cos(slashAngle), 0, Math.sin(slashAngle)).normalize();
-          window.BloodSystem.emitSwordSlash(deathPos, slashDir, 120);
-          window.BloodSystem.emitBurst(deathPos, 60, { spreadXZ: 0.8, spreadY: 0.2, minSize: 0.03, maxSize: 0.09, minLife: 30, maxLife: 70 });
-          window.BloodSystem.emitPulse(deathPos, { pulses: 3, perPulse: 80, interval: 200, spreadXZ: 0.5, arcDir: slashDir });
-        }
-        for (let i = 0; i < 4; i++) {
-          const a = Math.random() * Math.PI * 2;
-          spawnBloodDecal({ x: deathPos.x + Math.cos(a) * (0.3 + Math.random() * 0.7), y: 0, z: deathPos.z + Math.sin(a) * (0.3 + Math.random() * 0.7) });
-        }
-        const corpseGeo = new THREE.SphereGeometry(0.45, 8, 6);
-        const corpseMat = new THREE.MeshBasicMaterial({ color: enemyColor, transparent: true, opacity: 0.85 });
-        const corpse = new THREE.Mesh(corpseGeo, corpseMat);
-        corpse.position.copy(deathPos);
-        corpse.position.y = 0.1;
-        corpse.scale.y = 0.22;
-        scene.add(corpse);
-        let life = 130;
-        if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
-          managedAnimations.push({ update(_dt) {
-            life--;
-            corpse.material.opacity = (life / 130) * 0.85;
-            if (life <= 0) { scene.remove(corpse); corpse.geometry.dispose(); corpse.material.dispose(); return false; }
-            return true;
-          }, cleanup() { scene.remove(corpse); corpse.geometry.dispose(); corpse.material.dispose(); }});
+          if (window.BloodSystem) {
+            window.BloodSystem.emitSwordSlash(deathPos, slashDir, 150);
+            window.BloodSystem.emitBurst(deathPos, 80, { spreadXZ: 1.0, spreadY: 0.3, minSize: 0.03, maxSize: 0.1, minLife: 30, maxLife: 80 });
+          }
+          const halfGeo = new THREE.SphereGeometry(0.3, 6, 4);
+          const halfMat = new THREE.MeshBasicMaterial({ color: enemyColor, transparent: true, opacity: 0.85 });
+          const half1 = new THREE.Mesh(halfGeo, halfMat);
+          const half2 = new THREE.Mesh(halfGeo, halfMat);
+          half1.position.copy(deathPos); half1.position.y = 0.12;
+          half2.position.copy(deathPos); half2.position.y = 0.12;
+          half1.scale.y = 0.25; half2.scale.y = 0.25;
+          scene.add(half1); scene.add(half2);
+          const perpX = -slashDir.z;
+          const perpZ = slashDir.x;
+          for (let i = 0; i < 5; i++) spawnBloodDecal({ x: deathPos.x + (Math.random()-0.5)*1.0, y: 0, z: deathPos.z + (Math.random()-0.5)*1.0 });
+          let life = 120;
+          if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
+            managedAnimations.push({ update(_dt) {
+              life--;
+              if (life > 80) {
+                half1.position.x += perpX * 0.01;
+                half1.position.z += perpZ * 0.01;
+                half2.position.x -= perpX * 0.01;
+                half2.position.z -= perpZ * 0.01;
+                if (life % 4 === 0) spawnParticles(deathPos, 0x8B0000, 2);
+              }
+              if (life < 40) {
+                half1.material.opacity = (life / 40) * 0.85;
+                half2.material.opacity = (life / 40) * 0.85;
+              }
+              if (life <= 0) {
+                scene.remove(half1); scene.remove(half2);
+                halfGeo.dispose(); halfMat.dispose();
+                return false;
+              }
+              return true;
+            }, cleanup() {
+              scene.remove(half1); scene.remove(half2);
+              halfGeo.dispose(); halfMat.dispose();
+            }});
+          } else {
+            scene.remove(half1); scene.remove(half2);
+            halfGeo.dispose(); halfMat.dispose();
+          }
         } else {
-          scene.remove(corpse); corpse.geometry.dispose(); corpse.material.dispose();
+          // MULTIPLE CUTS — 3 slash lines, blood pours from each, body collapses in segments
+          spawnParticles(deathPos, 0x8B0000, 22);
+          spawnParticles(deathPos, 0xCC0000, 14);
+          const slashDirs = [];
+          for (let s = 0; s < 3; s++) {
+            const a = Math.random() * Math.PI * 2;
+            slashDirs.push(new THREE.Vector3(Math.cos(a), 0, Math.sin(a)).normalize());
+            if (window.BloodSystem) {
+              window.BloodSystem.emitSwordSlash(
+                { x: deathPos.x + (Math.random()-0.5)*0.3, y: deathPos.y, z: deathPos.z + (Math.random()-0.5)*0.3 },
+                slashDirs[s], 100
+              );
+            }
+          }
+          if (window.BloodSystem) {
+            window.BloodSystem.emitBurst(deathPos, 90, { spreadXZ: 0.9, spreadY: 0.25, minSize: 0.03, maxSize: 0.09, minLife: 25, maxLife: 65 });
+          }
+          for (let i = 0; i < 6; i++) {
+            const a = Math.random() * Math.PI * 2;
+            spawnBloodDecal({ x: deathPos.x + Math.cos(a) * (0.3 + Math.random() * 0.8), y: 0, z: deathPos.z + Math.sin(a) * (0.3 + Math.random() * 0.8) });
+          }
+          const segGeo = new THREE.SphereGeometry(0.25, 6, 4);
+          const segMat = new THREE.MeshBasicMaterial({ color: enemyColor, transparent: true, opacity: 0.85 });
+          const segments = [];
+          for (let s = 0; s < 3; s++) {
+            const seg = new THREE.Mesh(segGeo, segMat);
+            seg.position.set(deathPos.x + (s - 1) * 0.2, 0.12, deathPos.z + (Math.random()-0.5)*0.2);
+            seg.scale.y = 0.22;
+            scene.add(seg);
+            segments.push(seg);
+          }
+          let life = 130;
+          if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
+            managedAnimations.push({ update(_dt) {
+              life--;
+              for (let s = 0; s < segments.length; s++) {
+                if (life > 90 - s * 15) {
+                  segments[s].position.y = Math.max(0.05, segments[s].position.y - 0.002);
+                }
+                if (life % 7 === 0 && life > 30) spawnParticles(segments[s].position, 0x8B0000, 2);
+              }
+              if (life < 40) {
+                segMat.opacity = (life / 40) * 0.85;
+              }
+              if (life <= 0) {
+                for (const seg of segments) { scene.remove(seg); }
+                segGeo.dispose(); segMat.dispose();
+                return false;
+              }
+              return true;
+            }, cleanup() {
+              for (const seg of segments) { scene.remove(seg); }
+              segGeo.dispose(); segMat.dispose();
+            }});
+          } else {
+            for (const seg of segments) { scene.remove(seg); }
+            segGeo.dispose(); segMat.dispose();
+          }
         }
       }
 
       dieByAura(enemyColor) {
-        // AURA DEATH: Spiritual force overwhelm — yellow-white energy dissipation
+        const variation = Math.floor(Math.random() * 3);
         const deathPos = this.mesh.position.clone();
-        spawnParticles(deathPos, 0xFFEE88, 12); // Yellow spiritual wisps
-        spawnParticles(deathPos, 0xFFFFCC, 8);  // White-yellow flashes
-        spawnParticles(deathPos, 0x8B0000, 6);  // Blood from lower body
-        if (window.BloodSystem) {
-          window.BloodSystem.emitAuraBurn(deathPos, 60);
-          window.BloodSystem.emitBurst(deathPos, 30, { spreadXZ: 0.3, spreadY: 0.1, minSize: 0.015, maxSize: 0.05, minLife: 15, maxLife: 40 });
-        }
-        // Spiritual scorch mark on ground (yellowish tint)
-        const burnGeo = new THREE.CircleGeometry(0.6, 12);
-        const burnMat = new THREE.MeshBasicMaterial({ color: 0x332200, transparent: true, opacity: 0.4, side: THREE.DoubleSide });
-        const burnMark = new THREE.Mesh(burnGeo, burnMat);
-        burnMark.rotation.x = -Math.PI / 2;
-        burnMark.position.set(deathPos.x, 0.01, deathPos.z);
-        scene.add(burnMark);
-        // Blood stains at feet from spiritual bleed
-        for (let i = 0; i < 3; i++) spawnBloodDecal({ x: deathPos.x + (Math.random()-0.5)*0.5, y: 0, z: deathPos.z + (Math.random()-0.5)*0.5 });
-        const corpseGeo = new THREE.SphereGeometry(0.45, 8, 6);
-        const corpseMat = new THREE.MeshBasicMaterial({ color: 0x2a1a00, transparent: true, opacity: 0.7 });
-        const corpse = new THREE.Mesh(corpseGeo, corpseMat);
-        corpse.position.copy(deathPos); corpse.position.y = 0.1; corpse.scale.y = 0.2;
-        scene.add(corpse);
-        let life = 120;
-        if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
-          managedAnimations.push({ update(_dt) {
-            life--;
-            corpse.material.opacity = (life / 120) * 0.85;
-            burnMat.opacity = (life / 120) * 0.55;
-            if (life <= 0) {
+
+        if (variation === 0) {
+          // ENERGY DISSIPATION — yellow-white spiritual overwhelm (original)
+          spawnParticles(deathPos, 0xFFEE88, 12);
+          spawnParticles(deathPos, 0xFFFFCC, 8);
+          spawnParticles(deathPos, 0x8B0000, 6);
+          if (window.BloodSystem) {
+            window.BloodSystem.emitAuraBurn(deathPos, 60);
+            window.BloodSystem.emitBurst(deathPos, 30, { spreadXZ: 0.3, spreadY: 0.1, minSize: 0.015, maxSize: 0.05, minLife: 15, maxLife: 40 });
+          }
+          const burnGeo = new THREE.CircleGeometry(0.6, 12);
+          const burnMat = new THREE.MeshBasicMaterial({ color: 0x332200, transparent: true, opacity: 0.4, side: THREE.DoubleSide });
+          const burnMark = new THREE.Mesh(burnGeo, burnMat);
+          burnMark.rotation.x = -Math.PI / 2;
+          burnMark.position.set(deathPos.x, 0.01, deathPos.z);
+          scene.add(burnMark);
+          for (let i = 0; i < 3; i++) spawnBloodDecal({ x: deathPos.x + (Math.random()-0.5)*0.5, y: 0, z: deathPos.z + (Math.random()-0.5)*0.5 });
+          const corpseGeo = new THREE.SphereGeometry(0.45, 8, 6);
+          const corpseMat = new THREE.MeshBasicMaterial({ color: 0x2a1a00, transparent: true, opacity: 0.7 });
+          const corpse = new THREE.Mesh(corpseGeo, corpseMat);
+          corpse.position.copy(deathPos); corpse.position.y = 0.1; corpse.scale.y = 0.2;
+          scene.add(corpse);
+          let life = 120;
+          if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
+            managedAnimations.push({ update(_dt) {
+              life--;
+              corpse.material.opacity = (life / 120) * 0.85;
+              burnMat.opacity = (life / 120) * 0.55;
+              if (life <= 0) {
+                scene.remove(corpse); scene.remove(burnMark);
+                corpse.geometry.dispose(); corpse.material.dispose();
+                burnGeo.dispose(); burnMat.dispose();
+                return false;
+              }
+              return true;
+            }, cleanup() {
               scene.remove(corpse); scene.remove(burnMark);
               corpse.geometry.dispose(); corpse.material.dispose();
               burnGeo.dispose(); burnMat.dispose();
-              return false;
-            }
-            return true;
-          }, cleanup() {
+            }});
+          } else {
             scene.remove(corpse); scene.remove(burnMark);
             corpse.geometry.dispose(); corpse.material.dispose();
             burnGeo.dispose(); burnMat.dispose();
-          }});
+          }
+        } else if (variation === 1) {
+          // DISINTEGRATE FROM BELOW — body erodes from feet upward with rising particles
+          spawnParticles(deathPos, 0xFFEE88, 14);
+          spawnParticles(deathPos, 0xFFFFCC, 10);
+          if (window.BloodSystem) {
+            window.BloodSystem.emitAuraBurn(deathPos, 80);
+          }
+          const stumpGeo = new THREE.CylinderGeometry(0.25, 0.3, 0.8, 8);
+          const stumpMat = new THREE.MeshBasicMaterial({ color: enemyColor, transparent: true, opacity: 0.85 });
+          const stump = new THREE.Mesh(stumpGeo, stumpMat);
+          stump.position.copy(deathPos);
+          stump.position.y = 0.4;
+          scene.add(stump);
+          const burnGeo = new THREE.CircleGeometry(0.5, 10);
+          const burnMat = new THREE.MeshBasicMaterial({ color: 0x332200, transparent: true, opacity: 0.3, side: THREE.DoubleSide });
+          const burnMark = new THREE.Mesh(burnGeo, burnMat);
+          burnMark.rotation.x = -Math.PI / 2;
+          burnMark.position.set(deathPos.x, 0.01, deathPos.z);
+          scene.add(burnMark);
+          let life = 100;
+          if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
+            managedAnimations.push({ update(_dt) {
+              life--;
+              const erode = life / 100;
+              stump.scale.y = Math.max(0.05, erode);
+              stump.position.y = 0.4 * erode;
+              stump.material.opacity = erode * 0.85;
+              if (life % 4 === 0 && life > 10) {
+                spawnParticles({ x: deathPos.x + (Math.random()-0.5)*0.3, y: stump.position.y, z: deathPos.z + (Math.random()-0.5)*0.3 }, 0xFFEE88, 3);
+              }
+              burnMat.opacity = (life / 100) * 0.4;
+              if (life <= 0) {
+                scene.remove(stump); scene.remove(burnMark);
+                stumpGeo.dispose(); stumpMat.dispose();
+                burnGeo.dispose(); burnMat.dispose();
+                return false;
+              }
+              return true;
+            }, cleanup() {
+              scene.remove(stump); scene.remove(burnMark);
+              stumpGeo.dispose(); stumpMat.dispose();
+              burnGeo.dispose(); burnMat.dispose();
+            }});
+          } else {
+            scene.remove(stump); scene.remove(burnMark);
+            stumpGeo.dispose(); stumpMat.dispose();
+            burnGeo.dispose(); burnMat.dispose();
+          }
         } else {
-          scene.remove(corpse); scene.remove(burnMark);
-          corpse.geometry.dispose(); corpse.material.dispose();
-          burnGeo.dispose(); burnMat.dispose();
+          // PULSE OVERLOAD — body pulses 3 times with energy wisps then bursts
+          spawnParticles(deathPos, 0xFFEE88, 10);
+          spawnParticles(deathPos, 0xFFFFCC, 6);
+          if (window.BloodSystem) {
+            window.BloodSystem.emitAuraBurn(deathPos, 50);
+          }
+          const pulseGeo = new THREE.SphereGeometry(0.4, 8, 6);
+          const pulseMat = new THREE.MeshBasicMaterial({ color: enemyColor, transparent: true, opacity: 0.85 });
+          const pulseBody = new THREE.Mesh(pulseGeo, pulseMat);
+          pulseBody.position.copy(deathPos);
+          pulseBody.position.y = 0.2;
+          scene.add(pulseBody);
+          for (let i = 0; i < 3; i++) spawnBloodDecal({ x: deathPos.x + (Math.random()-0.5)*0.5, y: 0, z: deathPos.z + (Math.random()-0.5)*0.5 });
+          let life = 90;
+          if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
+            managedAnimations.push({ update(_dt) {
+              life--;
+              if (life > 30) {
+                const pulsePhase = Math.sin((90 - life) * 0.15) * 0.3;
+                pulseBody.scale.setScalar(1 + pulsePhase);
+                if (life % 10 === 0) {
+                  spawnParticles(pulseBody.position, 0xFFEE88, 4);
+                  spawnParticles(pulseBody.position, 0xFFFFCC, 2);
+                }
+              } else if (life === 30) {
+                spawnParticles(deathPos, 0xFFEE88, 20);
+                spawnParticles(deathPos, 0xFFFFCC, 15);
+                spawnParticles(deathPos, 0x8B0000, 8);
+                if (window.BloodSystem) {
+                  window.BloodSystem.emitBurst(deathPos, 60, { spreadXZ: 1.0, spreadY: 0.5, minSize: 0.02, maxSize: 0.08, minLife: 20, maxLife: 50 });
+                }
+                pulseBody.scale.setScalar(0.5);
+              }
+              if (life < 30) {
+                pulseBody.material.opacity = (life / 30) * 0.85;
+                pulseBody.scale.multiplyScalar(0.97);
+              }
+              if (life <= 0) {
+                scene.remove(pulseBody); pulseBody.geometry.dispose(); pulseBody.material.dispose();
+                return false;
+              }
+              return true;
+            }, cleanup() {
+              scene.remove(pulseBody); pulseBody.geometry.dispose(); pulseBody.material.dispose();
+            }});
+          } else {
+            scene.remove(pulseBody); pulseBody.geometry.dispose(); pulseBody.material.dispose();
+          }
         }
       }
       
