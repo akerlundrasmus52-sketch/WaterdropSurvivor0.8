@@ -268,6 +268,18 @@
 
     // NEW: Show Quest Hall UI for claiming completed quests
     function showQuestHall() {
+      // Guard: Quest Hall must be built (level > 0) before it can be entered
+      var _qmData = saveData.campBuildings && saveData.campBuildings.questMission;
+      if (_qmData && _qmData.level === 0) {
+        // Building not yet built — show build overlay if available, otherwise a message
+        if (_qmData.unlocked && typeof window._campShowBuildOverlay === 'function') {
+          var _qmName = (CAMP_BUILDINGS.questMission && CAMP_BUILDINGS.questMission.name) || 'Quest Hall';
+          window._campShowBuildOverlay('questMission', _qmName);
+        } else if (typeof showStatusMessage === 'function') {
+          showStatusMessage('🔨 Build the Quest Hall first!', 2000);
+        }
+        return;
+      }
       // Pause game if active
       const wasGameActive = isGameActive && !isGameOver;
       if (wasGameActive) setGamePaused(true);
@@ -1932,7 +1944,9 @@
       }
 
       // ── Quests ready to claim ──
-      if (saveData.tutorialQuests && saveData.tutorialQuests.readyToClaim && saveData.tutorialQuests.readyToClaim.length > 0) {
+      // Only show shortcut if Quest Hall is built (level > 0); otherwise player must build it first
+      var _qmBld = saveData.campBuildings && saveData.campBuildings.questMission;
+      if (saveData.tutorialQuests && saveData.tutorialQuests.readyToClaim && saveData.tutorialQuests.readyToClaim.length > 0 && _qmBld && _qmBld.level > 0) {
         items.push({ icon: '📜', label: 'Quest Reward Ready!', desc: 'Claim at Quest Hall', color: '#FFD700', bg: 'rgba(255,215,0,0.12)', border: 'rgba(255,215,0,0.45)', action: 'questHall', section: 'actions' });
       }
 

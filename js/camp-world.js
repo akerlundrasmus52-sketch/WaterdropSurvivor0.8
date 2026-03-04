@@ -2641,12 +2641,6 @@
         _setConstructionMode(grp, false);
       }
     }
-    // Quest Hall is always visible and unlocked
-    if (_buildingMeshes['questMission']) {
-      _buildingMeshes['questMission'].visible = true;
-      _setBlueprintMode(_buildingMeshes['questMission'], false);
-      _setConstructionMode(_buildingMeshes['questMission'], false);
-    }
   }
 
   // Apply or remove blueprint (locked) visual mode to a building group
