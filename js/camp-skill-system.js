@@ -2743,7 +2743,7 @@
       const _unlockedBld = quest.unlockBuilding;
       const _bldData = _unlockedBld && saveData.campBuildings[_unlockedBld];
       const _bldDef = _unlockedBld && CAMP_BUILDINGS[_unlockedBld];
-      const _mustBuildFirst = _bldData && _bldDef && !_bldDef.isCore && _bldData.level === 0;
+      const _mustBuildFirst = _bldData && _bldDef && _bldData.level === 0;
 
       if (_mustBuildFirst && quest.nextQuest) {
         // Defer next quest — store pending quest to activate after building is built
