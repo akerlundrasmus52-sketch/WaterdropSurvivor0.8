@@ -557,14 +557,120 @@
     }
     window.startGame = startGame;
     
+    // Cinematic round-start camera zoom-out (PR #70-71 enhancement)
+    function playRoundStartCinematic(callback) {
+      const origLeft = camera.left;
+      const origRight = camera.right;
+      const origTop = camera.top;
+      const origBottom = camera.bottom;
+      const origPosY = camera.position.y;
+
+      // Zoom out: 4x wider frustum + raise camera
+      camera.left = origLeft * 4;
+      camera.right = origRight * 4;
+      camera.top = origTop * 4;
+      camera.bottom = origBottom * 4;
+      camera.position.y = origPosY + 20;
+      camera.updateProjectionMatrix();
+
+      // Region label data
+      const regions = [
+        { label: '⚙️ Windmill',       wx: 60,  wy: 0, wz: 40  },
+        { label: '⛰️ Montana',        wx: -50, wy: 0, wz: -50 },
+        { label: '⚡ Eiffel Tower',    wx: 70,  wy: 0, wz: -60 },
+        { label: '🗿 Stonehenge',      wx: -60, wy: 0, wz: 60  },
+        { label: '🏠 Spawn',           wx: 0,   wy: 0, wz: 0   }
+      ];
+
+      // Create overlay container
+      const overlay = document.createElement('div');
+      overlay.id = 'cinematic-region-overlay';
+      overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:500;';
+      document.body.appendChild(overlay);
+
+      const labelEls = [];
+      const vec = new THREE.Vector3();
+      regions.forEach(r => {
+        vec.set(r.wx, r.wy, r.wz);
+        vec.project(camera);
+        const sx = (vec.x * 0.5 + 0.5) * window.innerWidth;
+        const sy = (-vec.y * 0.5 + 0.5) * window.innerHeight;
+
+        const el = document.createElement('div');
+        el.textContent = r.label;
+        el.style.cssText =
+          'position:absolute;color:#fff;font-weight:bold;font-size:16px;' +
+          'text-shadow:0 0 6px rgba(0,0,0,0.9),0 2px 4px rgba(0,0,0,0.7);' +
+          'pointer-events:none;transform:translate(-50%,-50%);' +
+          'opacity:0;transition:opacity 0.4s ease;';
+        el.style.left = sx + 'px';
+        el.style.top = sy + 'px';
+        overlay.appendChild(el);
+        labelEls.push(el);
+      });
+
+      // Fade labels in
+      requestAnimationFrame(() => {
+        labelEls.forEach(el => { el.style.opacity = '1'; });
+      });
+
+      // After 2s hold, zoom back in over 1s
+      setTimeout(() => {
+        // Fade labels out
+        labelEls.forEach(el => { el.style.opacity = '0'; });
+
+        const zoomStart = performance.now();
+        const zoomDuration = 1000;
+        const startLeft = camera.left;
+        const startRight = camera.right;
+        const startTop = camera.top;
+        const startBottom = camera.bottom;
+        const startPosY = camera.position.y;
+
+        function animateZoom() {
+          const elapsed = performance.now() - zoomStart;
+          const t = Math.min(elapsed / zoomDuration, 1);
+          // Smooth ease-in-out
+          const ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+
+          camera.left = startLeft + (origLeft - startLeft) * ease;
+          camera.right = startRight + (origRight - startRight) * ease;
+          camera.top = startTop + (origTop - startTop) * ease;
+          camera.bottom = startBottom + (origBottom - startBottom) * ease;
+          camera.position.y = startPosY + (origPosY - startPosY) * ease;
+          camera.updateProjectionMatrix();
+
+          if (t < 1) {
+            requestAnimationFrame(animateZoom);
+          } else {
+            // Restore exact original values
+            camera.left = origLeft;
+            camera.right = origRight;
+            camera.top = origTop;
+            camera.bottom = origBottom;
+            camera.position.y = origPosY;
+            camera.updateProjectionMatrix();
+
+            // Clean up DOM
+            if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+
+            callback();
+          }
+        }
+        requestAnimationFrame(animateZoom);
+      }, 2000);
+    }
+
     // Countdown system (PR #70-71)
     function startCountdown() {
-      countdownActive = true;
-      countdownStep = 0;
-      countdownTimer = 0;
-      // Trigger fountain/lightning spawn sequence
-      if (window.SpawnSequence && player) window.SpawnSequence.play(player.mesh);
-      showCountdownMessage(0);
+      playRoundStartCinematic(() => {
+        countdownActive = true;
+        countdownStep = 0;
+        countdownTimer = 0;
+        // Trigger fountain/lightning spawn sequence
+        if (window.SpawnSequence && player) window.SpawnSequence.play(player.mesh);
+        showCountdownMessage(0);
+      });
     }
     
     function showCountdownMessage(step) {
