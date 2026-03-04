@@ -218,6 +218,9 @@
       _campScene.add(grp);
     }
 
+    // ── Torch / Lantern Lights between buildings ─────────
+    _buildCampTorches();
+
     // ── Player character ─────────────────────────────────────
     _buildPlayer();
 
@@ -440,6 +443,64 @@
       _dustPositions[i * 3]     = Math.sin(a) * r;
       _dustPositions[i * 3 + 1] = Math.random() * 4;
       _dustPositions[i * 3 + 2] = Math.cos(a) * r;
+    }
+  }
+
+  // ── Torch / Lantern system between buildings ────────────
+  let _torchLights = [];
+  function _buildCampTorches() {
+    const THREE = T();
+    // Place torch posts with warm point lights between building positions
+    // Creates a cozy, non-electrical atmosphere around the camp
+    const torchPositions = [
+      // Path torches between buildings (x, z)
+      { x:  6, z:  6 },   // between campfire and training hall
+      { x: -6, z:  6 },   // between campfire and companion house
+      { x:  6, z: -4 },   // near forge path
+      { x: -6, z: -4 },   // near skill tree path
+      { x:  0, z:  7 },   // path to quest hall
+      { x:  0, z: -8 },   // path to achievement hall
+      { x: -9, z:  0 },   // between warehouse and trash
+      { x:  9, z:  0 },   // between special attacks and temp shop
+      { x:  3, z: 10 },   // near shop
+      { x: -3, z: 10 },   // near tavern
+    ];
+
+    const postGeo = new THREE.CylinderGeometry(0.06, 0.08, 1.6, 6);
+    const postMat = new THREE.MeshStandardMaterial({ color: 0x3a2510, roughness: 0.9, metalness: 0.1 });
+    const flameMat = new THREE.MeshStandardMaterial({ color: 0xffaa33, emissive: 0xffaa33, emissiveIntensity: 1.5, transparent: true, opacity: 0.9 });
+    const flameGeo = new THREE.SphereGeometry(0.12, 6, 6);
+
+    for (const tp of torchPositions) {
+      // Torch post
+      const post = new THREE.Mesh(postGeo, postMat);
+      post.position.set(tp.x, 0.8, tp.z);
+      _campScene.add(post);
+
+      // Flame mesh on top
+      const flame = new THREE.Mesh(flameGeo, flameMat.clone());
+      flame.position.set(tp.x, 1.7, tp.z);
+      flame.scale.set(1, 1.5, 1);
+      _campScene.add(flame);
+
+      // Warm point light
+      const torchLight = new THREE.PointLight(0xffaa44, 1.2, 8, 2);
+      torchLight.position.set(tp.x, 1.8, tp.z);
+      _campScene.add(torchLight);
+      _torchLights.push({ light: torchLight, flame: flame, baseIntensity: 1.2 });
+    }
+  }
+
+  // Flicker torch lights each frame for cozy animation
+  function _updateTorchFlicker() {
+    for (const t of _torchLights) {
+      const flicker = 0.85 + Math.random() * 0.3; // 0.85–1.15
+      t.light.intensity = t.baseIntensity * flicker;
+      // Subtle flame scale wobble
+      if (t.flame) {
+        t.flame.scale.y = 1.3 + Math.random() * 0.4;
+        t.flame.scale.x = 0.9 + Math.random() * 0.2;
+      }
     }
   }
 
@@ -2060,6 +2121,8 @@
       f.scale.set(s, 0.85 + 0.2 * Math.sin(_campTime * (6 + i * 2.7)), s);
       f.material.opacity = 0.7 + 0.15 * Math.sin(_campTime * (5 + i * 1.5));
     });
+    // Flicker torch lights for cozy atmosphere
+    _updateTorchFlicker();
   }
 
   // ──────────────────────────────────────────────────────────

@@ -1789,8 +1789,26 @@
           spawnExp(deathPos.x + Math.cos(angle) * xpPopDist, deathPos.z + Math.sin(angle) * xpPopDist);
         }
         
-        // Dynamic death animation styles - brutal varied ragdoll falls with dismemberment
-        const deathStyle = Math.floor(Math.random() * 8); // 0-7 different death types
+        // Dynamic death animation styles - weapon-dependent with variation
+        // 0=collapse, 1=spin fall, 2=backward fall, 3=forward collapse, 4=side fall,
+        // 5=ragdoll tumble, 6=explosion knockback, 7=splatter
+        let deathStyle;
+        if (isShotgunDeath) {
+          // Shotgun/double barrel: knockback-heavy deaths
+          deathStyle = [2, 5, 6, 7][Math.floor(Math.random() * 4)];
+        } else if (damageType === 'lightning' || damageType === 'special') {
+          // Lightning/special: dramatic spin or explosion deaths
+          deathStyle = [1, 5, 6][Math.floor(Math.random() * 3)];
+        } else if (damageType === 'melee' || damageType === 'knife') {
+          // Melee: collapse or forward fall
+          deathStyle = [0, 2, 3, 4][Math.floor(Math.random() * 4)];
+        } else if (damageType === 'headshot') {
+          // Headshot: dramatic backward fall
+          deathStyle = [2, 5][Math.floor(Math.random() * 2)];
+        } else {
+          // Gun/default: any animation
+          deathStyle = Math.floor(Math.random() * 8);
+        }
         const fallSignX = (Math.random() < 0.5) ? 1 : -1;
         const fallSignZ = (Math.random() < 0.5) ? 1 : -1;
         const spinDir = (Math.random() < 0.5) ? 1 : -1;
@@ -1818,7 +1836,10 @@
           for (let ci = 0; ci < chunkCount; ci++) {
             const chunkSize = CHUNK_SIZE_MIN + Math.random() * CHUNK_SIZE_RANGE;
             const chunkGeo = Math.random() < 0.5 ? new THREE.SphereGeometry(chunkSize, 5, 4) : new THREE.BoxGeometry(chunkSize, chunkSize * 0.6, chunkSize * 0.8);
-            const chunkMat = new THREE.MeshBasicMaterial({ color: Math.random() < 0.6 ? enemyColor : 0x8B0000, transparent: true, opacity: 0.9 });
+            // Use realistic gore colors (dark reds, maroon) instead of enemy color to avoid pink bubbles
+            const goreColors = [0x8B0000, 0x660000, 0x4A0000, 0x550011, 0x3D0000, 0x800000];
+            const chunkColor = goreColors[Math.floor(Math.random() * goreColors.length)];
+            const chunkMat = new THREE.MeshBasicMaterial({ color: chunkColor, transparent: true, opacity: 0.9 });
             const chunk = new THREE.Mesh(chunkGeo, chunkMat);
             chunk.position.copy(deathPos);
             chunk.position.y += 0.3 + Math.random() * 0.3;
