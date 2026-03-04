@@ -1795,19 +1795,19 @@
         let deathStyle;
         if (isShotgunDeath) {
           // Shotgun/double barrel: knockback-heavy deaths
-          deathStyle = [2, 5, 6, 7][Math.floor(Math.random() * 4)];
+          deathStyle = [2, 5, 6, 7, 9][Math.floor(Math.random() * 5)];
         } else if (damageType === 'lightning' || damageType === 'special') {
           // Lightning/special: dramatic spin or explosion deaths
           deathStyle = [1, 5, 6][Math.floor(Math.random() * 3)];
         } else if (damageType === 'melee' || damageType === 'knife') {
           // Melee: collapse or forward fall
-          deathStyle = [0, 2, 3, 4][Math.floor(Math.random() * 4)];
+          deathStyle = [0, 2, 3, 4, 10][Math.floor(Math.random() * 5)];
         } else if (damageType === 'headshot') {
           // Headshot: dramatic backward fall
-          deathStyle = [2, 5][Math.floor(Math.random() * 2)];
+          deathStyle = [2, 5, 8][Math.floor(Math.random() * 3)];
         } else {
           // Gun/default: any animation
-          deathStyle = Math.floor(Math.random() * 8);
+          deathStyle = Math.floor(Math.random() * 11);
         }
         const fallSignX = (Math.random() < 0.5) ? 1 : -1;
         const fallSignZ = (Math.random() < 0.5) ? 1 : -1;
@@ -2010,6 +2010,109 @@
                   dyingMesh.rotation.z = fallSignZ * crashEased * 0.4;
                   dyingMesh.scale.y = startScaleY * (1 - crashEased * 0.55);
                 }
+              } else if (deathStyle === 8) {
+                // Crawl and Collapse — fall to knees, crawl forward, collapse face-down
+                if (progress < 0.25) {
+                  const kneePhase = progress / 0.25;
+                  dyingMesh.scale.y = startScaleY * (1 - kneePhase * 0.5);
+                  dyingMesh.position.y = startY * (1 - kneePhase * 0.6);
+                  dyingMesh.rotation.x = fallSignX * kneePhase * 0.3;
+                } else if (progress < 0.75) {
+                  const crawlPhase = (progress - 0.25) / 0.5;
+                  dyingMesh.scale.y = startScaleY * 0.5;
+                  dyingMesh.position.y = startY * 0.4;
+                  dyingMesh.position.x = deathPos.x + fallSignX * crawlPhase * 2.5;
+                  dyingMesh.position.z = deathPos.z + fallSignZ * crawlPhase * 1.5;
+                  dyingMesh.rotation.x = fallSignX * (0.3 + crawlPhase * 0.15 * Math.sin(crawlPhase * 12));
+                  if (window.BloodSystem && window.BloodSystem.emitCrawlTrail) {
+                    window.BloodSystem.emitCrawlTrail(dyingMesh.position);
+                  }
+                  if (fallFrame % 6 === 0) spawnBloodDecal(dyingMesh.position);
+                } else {
+                  const collapsePhase = (progress - 0.75) / 0.25;
+                  const collapseEased = 1 - Math.pow(1 - collapsePhase, 2);
+                  dyingMesh.scale.y = startScaleY * 0.5 * (1 - collapseEased * 0.6);
+                  dyingMesh.position.y = startY * 0.4 * (1 - collapseEased);
+                  dyingMesh.rotation.x = fallSignX * (0.45 + collapseEased * (Math.PI / 2));
+                  spawnBloodDecal(dyingMesh.position);
+                }
+              } else if (deathStyle === 9) {
+                // Split in Half — left/right halves slide apart with blood in the gap
+                if (progress < 0.15) {
+                  const stagger = progress / 0.15;
+                  dyingMesh.rotation.z = fallSignZ * stagger * 0.1;
+                  dyingMesh.position.y = startY * (1 - stagger * 0.1);
+                } else {
+                  const splitPhase = (progress - 0.15) / 0.85;
+                  const splitEased = 1 - Math.pow(1 - splitPhase, 2);
+                  dyingMesh.scale.x = startScaleY * (1 - splitEased * 0.48);
+                  dyingMesh.position.x = deathPos.x + fallSignX * splitEased * 0.6;
+                  dyingMesh.position.y = startY * (1 - splitEased);
+                  dyingMesh.rotation.z = fallSignZ * splitEased * (Math.PI / 4);
+                  dyingMesh.scale.y = startScaleY * (1 - splitEased * 0.55);
+                  if (splitPhase > 0.2 && !dyingMesh._splitProxy && managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
+                    const proxyGeo = dyingMesh.geometry.clone();
+                    const proxyMat = dyingMesh.material.clone();
+                    const proxy = new THREE.Mesh(proxyGeo, proxyMat);
+                    proxy.position.copy(dyingMesh.position);
+                    proxy.position.x = deathPos.x - fallSignX * splitEased * 0.6;
+                    proxy.rotation.copy(dyingMesh.rotation);
+                    proxy.rotation.z = -fallSignZ * splitEased * (Math.PI / 4);
+                    proxy.scale.copy(dyingMesh.scale);
+                    scene.add(proxy);
+                    dyingMesh._splitProxy = { mesh: proxy, geo: proxyGeo, mat: proxyMat };
+                  }
+                  if (dyingMesh._splitProxy) {
+                    const p = dyingMesh._splitProxy;
+                    p.mesh.position.x = deathPos.x - fallSignX * splitEased * 0.6;
+                    p.mesh.position.y = startY * (1 - splitEased);
+                    p.mesh.rotation.z = -fallSignZ * splitEased * (Math.PI / 4);
+                    p.mesh.scale.copy(dyingMesh.scale);
+                    p.mat.opacity = dyingMesh.material.opacity;
+                  }
+                  if (fallFrame % 4 === 0) {
+                    spawnBloodDecal({ x: deathPos.x, y: 0, z: deathPos.z });
+                  }
+                }
+              } else if (deathStyle === 10) {
+                // Gut Spill — stagger, bend forward, guts fall out, body collapses on top
+                if (progress < 0.2) {
+                  const stagger = progress / 0.2;
+                  dyingMesh.position.x = deathPos.x + Math.sin(stagger * 8) * 0.08;
+                  dyingMesh.position.y = startY * (1 - stagger * 0.1);
+                } else if (progress < 0.5) {
+                  const bendPhase = (progress - 0.2) / 0.3;
+                  const bendEased = 1 - Math.pow(1 - bendPhase, 2);
+                  dyingMesh.rotation.x = fallSignX * bendEased * (Math.PI / 3);
+                  dyingMesh.position.y = startY * (0.9 - bendEased * 0.25);
+                  dyingMesh.scale.y = startScaleY * (1 - bendEased * 0.2);
+                  if (bendPhase > 0.5 && !dyingMesh._gutsSpawned && managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
+                    dyingMesh._gutsSpawned = true;
+                    if (window.BloodSystem && window.BloodSystem.emitGuts) {
+                      window.BloodSystem.emitGuts(dyingMesh.position);
+                    }
+                    for (let gi = 0; gi < 4; gi++) {
+                      const gutGeo = new THREE.CylinderGeometry(0.04 + Math.random() * 0.03, 0.03, 0.15 + Math.random() * 0.15, 6);
+                      const gutMat = new THREE.MeshStandardMaterial({ color: gi < 2 ? 0xCC3344 : 0xDD7788, transparent: true, opacity: 0.9 });
+                      const gutMesh = new THREE.Mesh(gutGeo, gutMat);
+                      gutMesh.position.copy(dyingMesh.position);
+                      gutMesh.position.y = startY * 0.5;
+                      scene.add(gutMesh);
+                      _deathChunks.push({ mesh: gutMesh, geo: gutGeo, mat: gutMat,
+                        vx: (Math.random() - 0.5) * 0.06, vz: fallSignX * (0.02 + Math.random() * 0.04),
+                        vy: 0.04 + Math.random() * 0.03, rotX: Math.random() * 0.1, rotZ: Math.random() * 0.1,
+                        life: 100, bloodTimer: 0
+                      });
+                    }
+                  }
+                } else {
+                  const collapsePhase = (progress - 0.5) / 0.5;
+                  const collapseEased = 1 - Math.pow(1 - collapsePhase, 3);
+                  dyingMesh.rotation.x = fallSignX * (Math.PI / 3 + collapseEased * (Math.PI / 6));
+                  dyingMesh.position.y = startY * 0.65 * (1 - collapseEased);
+                  dyingMesh.scale.y = startScaleY * 0.8 * (1 - collapseEased * 0.55);
+                  if (collapsePhase > 0.7) spawnBloodDecal(deathPos);
+                }
               } else {
                 // Violent twist — wrench sideways with full rotation
                 dyingMesh.rotation.y = spinDir * eased * Math.PI;
@@ -2103,6 +2206,7 @@
               // Clean up remaining chunks
               _deathChunks.forEach(c => { scene.remove(c.mesh); c.geo.dispose(); c.mat.dispose(); });
               if (_headRoll) { scene.remove(_headRoll.mesh); _headRoll.geo.dispose(); _headRoll.mat.dispose(); }
+              if (dyingMesh._splitProxy) { scene.remove(dyingMesh._splitProxy.mesh); dyingMesh._splitProxy.geo.dispose(); dyingMesh._splitProxy.mat.dispose(); }
               return false;
             }
             return true;
