@@ -555,14 +555,14 @@
               );
               const closeRange = distToPlayer < 3.5;
               const medRange = distToPlayer < 7;
-              knockbackForce = closeRange ? 3.5 : (medRange ? 2.0 : 1.2);
-              knockbackForce *= (1 + (weapons.doubleBarrel.level - 1) * 0.2);
+              knockbackForce = closeRange ? 1.5 : (medRange ? 0.8 : 0.4);
+              knockbackForce *= (1 + (weapons.doubleBarrel.level - 1) * 0.15);
               
               if (closeRange && !enemy.isDead) {
-                // Close range: enemy flies back and glides on ground leaving blood trail
-                const slideVX = this.vx * knockbackForce * 0.6;
-                const slideVZ = this.vz * knockbackForce * 0.6;
-                enemy._shotgunSlide = { vx: slideVX, vz: slideVZ, frames: 25, frame: 0 };
+                // Close range: enemy pushed back with realistic force
+                const slideVX = this.vx * knockbackForce * 0.4;
+                const slideVZ = this.vz * knockbackForce * 0.4;
+                enemy._shotgunSlide = { vx: slideVX, vz: slideVZ, frames: 12, frame: 0 };
                 // Topple/fall back animation
                 enemy.mesh.rotation.x = -0.8 * Math.sign(this.vz || 0.5);
                 enemy.mesh.scale.y = 0.5;

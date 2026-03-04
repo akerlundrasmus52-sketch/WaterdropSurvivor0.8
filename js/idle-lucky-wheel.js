@@ -1,5 +1,6 @@
-// idle-lucky-wheel.js — Spin-the-wheel gacha mini-game
+// idle-lucky-wheel.js — Spin-the-wheel gacha mini-game with 3 tiers
 window.GameLuckyWheel = (function () {
+  // === TIER 1: Basic Wheel (free daily / 50 essence) ===
   var WHEEL_SEGMENTS = [
     { id: 'gold_50',    label: '🥉 50 Gold',        type: 'gold',    value: 50,  rarity: 'common',   weight: 25 },
     { id: 'gold_200',   label: '🥈 200 Gold',       type: 'gold',    value: 200, rarity: 'uncommon', weight: 15 },
@@ -11,7 +12,37 @@ window.GameLuckyWheel = (function () {
     { id: 'xp_500',     label: '🌟 500 XP Bonus',   type: 'xp',     value: 500, rarity: 'uncommon', weight: 7  }
   ];
 
-  var SPIN_COST = 50; // essence
+  // === TIER 2: Gold Wheel (costs 500 gold) — Temporary buffs, food, consumables ===
+  var WHEEL_SEGMENTS_GOLD = [
+    { id: 'food_heal',    label: '🍖 Healing Feast',     type: 'food',   value: 50,   rarity: 'common',   weight: 20 },
+    { id: 'food_speed',   label: '🍎 Speed Apple',       type: 'food',   value: 0,    rarity: 'uncommon', weight: 15, buff: 'speed' },
+    { id: 'food_power',   label: '🥩 Power Steak',       type: 'food',   value: 0,    rarity: 'uncommon', weight: 15, buff: 'damage' },
+    { id: 'gold_1000',    label: '💰 1000 Gold',         type: 'gold',   value: 1000, rarity: 'rare',     weight: 10 },
+    { id: 'essence_250',  label: '✨ 250 Essence',       type: 'essence',value: 250,  rarity: 'uncommon', weight: 12 },
+    { id: 'food_armor',   label: '🧀 Iron Cheese',       type: 'food',   value: 0,    rarity: 'uncommon', weight: 13, buff: 'armor' },
+    { id: 'food_luck',    label: '🍀 Lucky Clover',      type: 'food',   value: 0,    rarity: 'rare',     weight: 8,  buff: 'luck' },
+    { id: 'food_regen',   label: '🍯 Healing Honey',     type: 'food',   value: 0,    rarity: 'rare',     weight: 7,  buff: 'regen' }
+  ];
+
+  // === TIER 3: Equipment Wheel (costs 200 essence) — Gear, rare equipment, special items ===
+  var WHEEL_SEGMENTS_EQUIP = [
+    { id: 'ring_common',  label: '💍 Common Ring',       type: 'equip', value: 0, rarity: 'common',    weight: 22, equipRarity: 'common' },
+    { id: 'ring_uncommon',label: '💍 Uncommon Ring',     type: 'equip', value: 0, rarity: 'uncommon',  weight: 18, equipRarity: 'uncommon' },
+    { id: 'ring_rare',    label: '💍 Rare Ring',         type: 'equip', value: 0, rarity: 'rare',      weight: 12, equipRarity: 'rare' },
+    { id: 'ring_epic',    label: '💍 Epic Ring',         type: 'equip', value: 0, rarity: 'epic',      weight: 6,  equipRarity: 'epic' },
+    { id: 'ring_legend',  label: '👑 Legendary Ring',    type: 'equip', value: 0, rarity: 'legendary', weight: 2,  equipRarity: 'legendary' },
+    { id: 'gem_t3',       label: '💎 T3 Gem',           type: 'gem',   value: 3, rarity: 'epic',      weight: 8 },
+    { id: 'gold_2000',    label: '💰 2000 Gold',        type: 'gold',  value: 2000, rarity: 'rare',   weight: 15 },
+    { id: 'essence_500',  label: '✨ 500 Essence',      type: 'essence',value: 500, rarity: 'rare',    weight: 17 }
+  ];
+
+  var WHEEL_TIERS = {
+    basic:  { name: 'Basic Wheel',     icon: '🎡', segments: WHEEL_SEGMENTS,       costType: 'essence', cost: 50,  color: '#3498db' },
+    gold:   { name: 'Gold Wheel',      icon: '🪙', segments: WHEEL_SEGMENTS_GOLD,  costType: 'gold',    cost: 500, color: '#FFD700' },
+    equip:  { name: 'Equipment Wheel', icon: '⚔️', segments: WHEEL_SEGMENTS_EQUIP, costType: 'essence', cost: 200, color: '#e91e63' }
+  };
+
+  var SPIN_COST = 50; // essence (basic wheel)
 
   function _pad2(n) { return n < 10 ? '0' + n : '' + n; }
 
@@ -29,15 +60,16 @@ window.GameLuckyWheel = (function () {
            lastDate.getDate() !== now.getDate();
   }
 
-  function _weightedPick() {
-    var total = WHEEL_SEGMENTS.reduce(function (s, x) { return s + x.weight; }, 0);
+  function _weightedPick(segments) {
+    segments = segments || WHEEL_SEGMENTS;
+    var total = segments.reduce(function (s, x) { return s + x.weight; }, 0);
     var r = Math.random() * total;
     var cum = 0;
-    for (var i = 0; i < WHEEL_SEGMENTS.length; i++) {
-      cum += WHEEL_SEGMENTS[i].weight;
-      if (r < cum) return WHEEL_SEGMENTS[i];
+    for (var i = 0; i < segments.length; i++) {
+      cum += segments[i].weight;
+      if (r < cum) return segments[i];
     }
-    return WHEEL_SEGMENTS[WHEEL_SEGMENTS.length - 1];
+    return segments[segments.length - 1];
   }
 
   function _applyPrize(segment, saveData) {
@@ -70,28 +102,67 @@ window.GameLuckyWheel = (function () {
         function () { saveData.essence = (saveData.essence || 0) + 300; return '+300 Essence!'; }
       ];
       desc = 'Mystery Box: ' + prizes[Math.floor(Math.random() * prizes.length)]();
+    } else if (segment.type === 'food') {
+      // Temporary buff consumables from Gold Wheel
+      var buffName = segment.buff || 'heal';
+      if (!saveData.consumables) saveData.consumables = [];
+      if (buffName === 'heal') {
+        desc = 'Healing Feast (+50 HP next run)!';
+      } else {
+        desc = segment.label + ' buff for next run!';
+      }
+      saveData.consumables.push({ id: segment.id, name: segment.label, buff: buffName, value: segment.value });
+    } else if (segment.type === 'equip') {
+      // Equipment from Equipment Wheel
+      var rarityName = segment.equipRarity || 'common';
+      var statBonus = { common: 1, uncommon: 2, rare: 3, epic: 5, legendary: 8 }[rarityName] || 1;
+      var statTypes = ['attackSpeed', 'movementSpeed', 'armor', 'critChance', 'strength'];
+      var stat1 = statTypes[Math.floor(Math.random() * statTypes.length)];
+      var stat2 = statTypes[Math.floor(Math.random() * statTypes.length)];
+      var ringItem = {
+        id: 'wheel_ring_' + Date.now(),
+        name: rarityName.charAt(0).toUpperCase() + rarityName.slice(1) + ' Wheel Ring',
+        type: 'ring',
+        rarity: rarityName,
+        stats: {},
+        description: '+' + statBonus + ' ' + stat1 + (stat1 !== stat2 ? ', +' + statBonus + ' ' + stat2 : '')
+      };
+      ringItem.stats[stat1] = statBonus;
+      if (stat1 !== stat2) ringItem.stats[stat2] = statBonus;
+      if (!saveData.inventory) saveData.inventory = [];
+      saveData.inventory.push(ringItem);
+      desc = 'Got ' + ringItem.name + '!';
     }
     return desc;
   }
 
-  function spin(saveData, useFree) {
+  function spin(saveData, useFree, tier) {
     if (!saveData.wheel) saveData.wheel = getWheelDefaults();
-    var free = useFree && canFreeSpin(saveData);
+    tier = tier || 'basic';
+    var tierDef = WHEEL_TIERS[tier] || WHEEL_TIERS.basic;
+    var segments = tierDef.segments;
+    var free = useFree && canFreeSpin(saveData) && tier === 'basic';
     if (!free) {
-      var playerEssence = (saveData.clicker && saveData.clicker.essence > 0) ? saveData.clicker.essence : (saveData.essence || 0);
-      if (playerEssence < SPIN_COST) return { ok: false, msg: 'Not enough essence (need ' + SPIN_COST + ').' };
-      if (saveData.clicker && saveData.clicker.essence >= SPIN_COST) {
-        saveData.clicker.essence -= SPIN_COST;
+      var cost = tierDef.cost;
+      if (tierDef.costType === 'gold') {
+        if ((saveData.gold || 0) < cost) return { ok: false, msg: 'Not enough Gold (need ' + cost + ').' };
+        saveData.gold -= cost;
       } else {
-        saveData.essence = (saveData.essence || 0) - SPIN_COST;
+        var playerEssence = (saveData.clicker && saveData.clicker.essence > 0) ? saveData.clicker.essence : (saveData.essence || 0);
+        if (playerEssence < cost) return { ok: false, msg: 'Not enough Essence (need ' + cost + ').' };
+        if (saveData.clicker && saveData.clicker.essence >= cost) {
+          saveData.clicker.essence -= cost;
+        } else {
+          saveData.essence = (saveData.essence || 0) - cost;
+        }
       }
     } else {
       saveData.wheel.lastFreeSpin = Date.now();
     }
-    var segment = _weightedPick();
+    var segment = _weightedPick(segments);
     var description = _applyPrize(segment, saveData);
     saveData.wheel.totalSpins = (saveData.wheel.totalSpins || 0) + 1;
-    var entry = { time: Date.now(), segment: segment.id, label: segment.label, desc: description };
+    var entry = { time: Date.now(), segment: segment.id, label: segment.label, desc: description, tier: tier };
     saveData.wheel.history = [entry].concat((saveData.wheel.history || []).slice(0, 9));
     if (window.GameStatistics) {
       window.GameStatistics.incrementStat('totalWheelSpins', 1, saveData);
@@ -111,29 +182,44 @@ window.GameLuckyWheel = (function () {
     mythical: { bg: '#e91e63', border: '#c2185b', glow: 'rgba(233,30,99,0.5)', label: 'Mythical' }
   };
 
-  function renderWheelPanel(saveData, container) {
+  function renderWheelPanel(saveData, container, activeTier) {
     if (!saveData.wheel) saveData.wheel = getWheelDefaults();
-    var free = canFreeSpin(saveData);
+    activeTier = activeTier || 'basic';
+    var tierDef = WHEEL_TIERS[activeTier] || WHEEL_TIERS.basic;
+    var segments = tierDef.segments;
+    var free = canFreeSpin(saveData) && activeTier === 'basic';
     var essence = (saveData.clicker && saveData.clicker.essence > 0) ? saveData.clicker.essence : (saveData.essence || 0);
-    var sliceAngle = 360 / WHEEL_SEGMENTS.length;
+    var gold = saveData.gold || 0;
+    var sliceAngle = 360 / segments.length;
+    var totalWeight = segments.reduce(function (s, x) { return s + x.weight; }, 0);
 
-    // Compute weighted total for percentages
-    var totalWeight = WHEEL_SEGMENTS.reduce(function (s, x) { return s + x.weight; }, 0);
+    var html = '<div class="wheel-panel" style="position:relative;">';
+    html += '<button class="wheel-close-btn" style="position:absolute;top:8px;right:12px;background:rgba(255,255,255,0.1);border:1px solid #666;border-radius:8px;padding:6px 14px;color:#fff;cursor:pointer;font-size:16px;font-family:Arial,sans-serif;z-index:5;">✕</button>';
+    html += '<h3 style="margin:0 0 8px;font-size:22px;letter-spacing:2px;">' + tierDef.icon + ' ' + tierDef.name + '</h3>';
 
-    var html = '<div class="wheel-panel">';
-    html += '<h3 style="margin:0 0 8px;font-size:22px;letter-spacing:2px;">🎡 Lucky Wheel</h3>';
-    if (free) html += '<div class="wheel-free-badge" style="background:linear-gradient(135deg,#FFD700,#FFA500);color:#000;border-radius:20px;padding:5px 16px;font-weight:bold;font-size:13px;margin-bottom:8px;display:inline-block;box-shadow:0 2px 8px rgba(255,215,0,0.4);">🎁 Free Spin Available!</div>';
+    // Tier tabs
+    html += '<div style="display:flex;gap:6px;justify-content:center;margin-bottom:10px;">';
+    ['basic', 'gold', 'equip'].forEach(function (tid) {
+      var t = WHEEL_TIERS[tid];
+      var isActive = tid === activeTier;
+      var tabBg = isActive ? t.color : 'rgba(255,255,255,0.08)';
+      var tabColor = isActive ? '#000' : '#aaa';
+      var tabBorder = isActive ? t.color : '#444';
+      html += '<button class="wheel-tier-tab" data-tier="' + tid + '" style="background:' + tabBg + ';color:' + tabColor + ';border:1px solid ' + tabBorder + ';border-radius:16px;padding:5px 14px;font-size:12px;font-weight:bold;cursor:pointer;font-family:\'Bangers\',cursive;letter-spacing:1px;">' + t.icon + ' ' + t.name + '</button>';
+    });
+    html += '</div>';
 
-    // Wheel SVG with rounded styling
+    if (free && activeTier === 'basic') html += '<div class="wheel-free-badge" style="background:linear-gradient(135deg,#FFD700,#FFA500);color:#000;border-radius:20px;padding:5px 16px;font-weight:bold;font-size:13px;margin-bottom:8px;display:inline-block;box-shadow:0 2px 8px rgba(255,215,0,0.4);">🎁 Free Spin Available!</div>';
+
+    // Wheel SVG
     html += '<div class="wheel-visual">';
     html += '<div class="wheel-3d-container" style="position:relative;display:inline-block;">';
     html += '<div class="wheel-glow-ring"></div>';
-    html += '<svg id="wheel-svg" viewBox="0 0 220 220" width="240" height="240" style="display:block;filter:drop-shadow(0 4px 20px rgba(0,0,0,0.8)) drop-shadow(0 0 12px rgba(255,215,0,0.3));">';
-    // Rounded outer rim
-    html += '<circle cx="110" cy="110" r="108" fill="none" stroke="#333" stroke-width="4"/>';
-    html += '<circle cx="110" cy="110" r="105" fill="none" stroke="rgba(255,215,0,0.3)" stroke-width="1.5"/>';
+    html += '<svg id="wheel-svg" viewBox="0 0 220 220" width="240" height="240" style="display:block;filter:drop-shadow(0 4px 20px rgba(0,0,0,0.8)) drop-shadow(0 0 12px ' + tierDef.color + '44);">';
+    html += '<circle cx="110" cy="110" r="108" fill="none" stroke="' + tierDef.color + '" stroke-width="4" opacity="0.6"/>';
+    html += '<circle cx="110" cy="110" r="105" fill="none" stroke="' + tierDef.color + '44" stroke-width="1.5"/>';
     html += '<g id="wheel-group">';
-    WHEEL_SEGMENTS.forEach(function (seg, i) {
+    segments.forEach(function (seg, i) {
       var startAngle = i * sliceAngle - 90;
       var endAngle = startAngle + sliceAngle;
       var s = startAngle * Math.PI / 180, e = endAngle * Math.PI / 180;
@@ -144,45 +230,42 @@ window.GameLuckyWheel = (function () {
       var rarity = RARITY_COLORS[seg.rarity] || RARITY_COLORS.common;
       html += '<path d="M110,110 L' + x1 + ',' + y1 + ' A102,102 0 0,1 ' + x2 + ',' + y2 + ' Z" fill="' + rarity.bg + '" stroke="#111" stroke-width="1"/>';
       html += '<path d="M110,110 L' + x1 + ',' + y1 + ' A102,102 0 0,1 ' + x2 + ',' + y2 + ' Z" fill="rgba(255,255,255,0.08)" stroke="none"/>';
-      // Segment label with emoji icon
       var labelParts = seg.label.split(' ');
       html += '<text x="' + tx + '" y="' + (ty + 2) + '" text-anchor="middle" font-size="9" fill="#fff" font-weight="bold" style="text-shadow:1px 1px 3px #000;pointer-events:none;">' + (labelParts[0] || '') + '</text>';
       html += '<text x="' + tx + '" y="' + (ty + 12) + '" text-anchor="middle" font-size="7" fill="rgba(255,255,255,0.7)" style="text-shadow:1px 1px 2px #000;pointer-events:none;">' + (labelParts.slice(1).join(' ') || '') + '</text>';
     });
-    // Center hub
     html += '<circle cx="110" cy="110" r="18" fill="url(#hubGrad)" stroke="#666" stroke-width="2.5"/>';
     html += '<circle cx="110" cy="110" r="12" fill="#eee" stroke="#aaa" stroke-width="1"/>';
     html += '<ellipse cx="107" cy="107" rx="5" ry="3" fill="rgba(255,255,255,0.6)"/>';
     html += '</g>';
-    // Hub gradient
     html += '<defs><radialGradient id="hubGrad" cx="45%" cy="45%"><stop offset="0%" stop-color="#fff"/><stop offset="100%" stop-color="#bbb"/></radialGradient></defs>';
-    // Decorative rim dots
     for (var d = 0; d < 16; d++) {
       var da = (d / 16) * Math.PI * 2;
       var dx = 110 + 107 * Math.cos(da), dy = 110 + 107 * Math.sin(da);
-      html += '<circle cx="' + dx.toFixed(1) + '" cy="' + dy.toFixed(1) + '" r="2.5" fill="#FFD700" opacity="0.85"/>';
+      html += '<circle cx="' + dx.toFixed(1) + '" cy="' + dy.toFixed(1) + '" r="2.5" fill="' + tierDef.color + '" opacity="0.85"/>';
     }
     html += '</svg>';
     html += '</div>';
-    // Pointer
-    html += '<div class="wheel-pointer" style="position:absolute;top:-2px;left:50%;transform:translateX(-50%);font-size:28px;color:#FFD700;text-shadow:0 2px 6px rgba(0,0,0,0.8);z-index:2;filter:drop-shadow(0 0 4px rgba(255,215,0,0.6));">▼</div>';
+    html += '<div class="wheel-pointer" style="position:absolute;top:-2px;left:50%;transform:translateX(-50%);font-size:28px;color:' + tierDef.color + ';text-shadow:0 2px 6px rgba(0,0,0,0.8);z-index:2;filter:drop-shadow(0 0 4px ' + tierDef.color + '99);">▼</div>';
     html += '</div>';
 
-    // Spin buttons with rounded glass look
+    // Spin buttons
     html += '<div class="wheel-btns" style="display:flex;gap:10px;justify-content:center;margin:12px 0;">';
-    if (free) html += '<button class="wheel-spin-free" style="background:linear-gradient(135deg,#FFD700,#FFA500);color:#000;border:none;border-radius:24px;padding:10px 24px;font-weight:bold;font-size:14px;cursor:pointer;box-shadow:0 3px 12px rgba(255,215,0,0.4);font-family:\'Bangers\',cursive;letter-spacing:1px;">🎁 FREE SPIN</button>';
-    var paidDisabledStyle = essence < SPIN_COST ? 'opacity:0.4;cursor:not-allowed;' : '';
-    html += '<button class="wheel-spin-paid" style="background:linear-gradient(135deg,#3498db,#2980b9);color:#fff;border:none;border-radius:24px;padding:10px 24px;font-weight:bold;font-size:14px;cursor:pointer;box-shadow:0 3px 12px rgba(52,152,219,0.4);font-family:\'Bangers\',cursive;letter-spacing:1px;' + paidDisabledStyle + '"' + (essence < SPIN_COST ? ' disabled' : '') + '>SPIN (50 ✨)</button>';
+    if (free && activeTier === 'basic') html += '<button class="wheel-spin-free" style="background:linear-gradient(135deg,#FFD700,#FFA500);color:#000;border:none;border-radius:24px;padding:10px 24px;font-weight:bold;font-size:14px;cursor:pointer;box-shadow:0 3px 12px rgba(255,215,0,0.4);font-family:\'Bangers\',cursive;letter-spacing:1px;">🎁 FREE SPIN</button>';
+    var costLabel = tierDef.costType === 'gold' ? tierDef.cost + ' 💰' : tierDef.cost + ' ✨';
+    var canAfford = tierDef.costType === 'gold' ? gold >= tierDef.cost : essence >= tierDef.cost;
+    var paidDisabledStyle = !canAfford ? 'opacity:0.4;cursor:not-allowed;' : '';
+    html += '<button class="wheel-spin-paid" style="background:linear-gradient(135deg,' + tierDef.color + ',' + tierDef.color + 'cc);color:#000;border:none;border-radius:24px;padding:10px 24px;font-weight:bold;font-size:14px;cursor:pointer;box-shadow:0 3px 12px ' + tierDef.color + '66;font-family:\'Bangers\',cursive;letter-spacing:1px;' + paidDisabledStyle + '"' + (!canAfford ? ' disabled' : '') + '>SPIN (' + costLabel + ')</button>';
     html += '</div>';
 
     html += '<div class="wheel-result" style="min-height:24px;font-size:15px;font-weight:bold;color:#FFD700;text-align:center;margin:4px 0;"></div>';
-    html += '<div class="wheel-essence" style="text-align:center;font-size:13px;color:#aaa;margin-bottom:8px;">✨ Essence: ' + essence + '</div>';
+    html += '<div class="wheel-essence" style="text-align:center;font-size:13px;color:#aaa;margin-bottom:8px;">💰 Gold: ' + gold + ' &nbsp; ✨ Essence: ' + essence + '</div>';
 
-    // Possible Rewards tab
+    // Possible Rewards
     html += '<details style="width:100%;max-width:340px;margin:0 auto 10px auto;background:rgba(255,255,255,0.03);border:1px solid #333;border-radius:12px;padding:2px;">';
-    html += '<summary style="cursor:pointer;padding:8px 12px;font-size:13px;color:#FFD700;font-weight:bold;letter-spacing:1px;text-align:center;">📋 View Possible Rewards & Drop Rates</summary>';
+    html += '<summary style="cursor:pointer;padding:8px 12px;font-size:13px;color:' + tierDef.color + ';font-weight:bold;letter-spacing:1px;text-align:center;">📋 View Possible Rewards & Drop Rates</summary>';
     html += '<div style="padding:6px 10px;max-height:200px;overflow-y:auto;">';
-    WHEEL_SEGMENTS.forEach(function (seg) {
+    segments.forEach(function (seg) {
       var rarity = RARITY_COLORS[seg.rarity] || RARITY_COLORS.common;
       var pct = ((seg.weight / totalWeight) * 100).toFixed(1);
       html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;margin:2px 0;background:rgba(255,255,255,0.02);border-radius:6px;border-left:3px solid ' + rarity.bg + ';">';
@@ -195,8 +278,8 @@ window.GameLuckyWheel = (function () {
     // History
     html += '<div class="wheel-history" style="max-width:340px;margin:0 auto;"><h4 style="font-size:13px;color:#888;margin:4px 0;">Recent Spins</h4><ul style="list-style:none;padding:0;margin:0;max-height:100px;overflow-y:auto;">';
     (saveData.wheel.history || []).forEach(function (e) {
-      var d = new Date(e.time);
-      var ts = '[' + _pad2(d.getHours()) + ':' + _pad2(d.getMinutes()) + ']';
+      var entryDate = new Date(e.time);
+      var ts = '[' + _pad2(entryDate.getHours()) + ':' + _pad2(entryDate.getMinutes()) + ']';
       html += '<li style="font-size:11px;color:#999;padding:2px 0;"><span class="wh-ts">' + ts + '</span> ' + e.label + ' — ' + e.desc + '</li>';
     });
     html += '</ul></div>';
@@ -209,14 +292,14 @@ window.GameLuckyWheel = (function () {
       var btns = container.querySelectorAll('.wheel-spin-free, .wheel-spin-paid');
       btns.forEach(function (b) { b.disabled = true; });
 
-      var res = spin(saveData, useFree);
+      var res = spin(saveData, useFree, activeTier);
       if (!res.ok) {
         btns.forEach(function (b) { b.disabled = false; });
         alert(res.msg);
         return;
       }
 
-      var segIndex = WHEEL_SEGMENTS.indexOf(res.segment);
+      var segIndex = segments.indexOf(res.segment);
       if (segIndex < 0) segIndex = 0;
       var segCenterAngle = segIndex * sliceAngle + sliceAngle / 2 - 90;
       var landingOffset = (360 - (segCenterAngle % 360 + 360) % 360) % 360;
@@ -240,7 +323,7 @@ window.GameLuckyWheel = (function () {
           if (el) {
             el.innerHTML = '<div style="background:linear-gradient(135deg,' + rarity.bg + ',rgba(0,0,0,0.3));border:2px solid ' + rarity.border + ';border-radius:16px;padding:10px 20px;display:inline-block;box-shadow:0 0 16px ' + rarity.glow + ';animation:wheel-result-pop 0.3s ease-out;"><span style="font-size:18px;">🎉</span> <span style="color:#fff;font-weight:bold;">' + res.prize + '</span><br><small style="color:rgba(255,255,255,0.7);">' + res.description + '</small></div>';
           }
-          setTimeout(function () { renderWheelPanel(saveData, container); }, 2500);
+          setTimeout(function () { renderWheelPanel(saveData, container, activeTier); }, 2500);
         }
       }
       requestAnimationFrame(animateSpin);
@@ -250,10 +333,31 @@ window.GameLuckyWheel = (function () {
     if (freeBtn) freeBtn.addEventListener('click', function () { doSpin(true); });
     var paidBtn = container.querySelector('.wheel-spin-paid');
     if (paidBtn) paidBtn.addEventListener('click', function () { doSpin(false); });
+
+    // Tier tab switching
+    var tierTabs = container.querySelectorAll('.wheel-tier-tab');
+    tierTabs.forEach(function (tab) {
+      tab.addEventListener('click', function () {
+        renderWheelPanel(saveData, container, tab.getAttribute('data-tier'));
+      });
+    });
+
+    var closeWheelBtn = container.querySelector('.wheel-close-btn');
+    if (closeWheelBtn) {
+      closeWheelBtn.addEventListener('click', function () {
+        var overlay = container.closest('[style*="position:fixed"]') || container.closest('[style*="position: fixed"]');
+        if (overlay && overlay.parentNode === document.body) {
+          overlay.remove();
+          if (window._updateCampCornerWidgets) window._updateCampCornerWidgets();
+          if (window.CampWorld && window.CampWorld.isActive) window.CampWorld.resumeInput();
+        }
+      });
+    }
   }
 
   return {
     WHEEL_SEGMENTS: WHEEL_SEGMENTS,
+    WHEEL_TIERS: WHEEL_TIERS,
     RARITY_COLORS: RARITY_COLORS,
     getWheelDefaults: getWheelDefaults,
     canFreeSpin: canFreeSpin,

@@ -133,15 +133,9 @@
           const tq = saveData.tutorialQuests;
           if (!tq) return;
           const res = saveData.resources || {};
-          // Quest questGather0_materials: gather 1 of each building material (auto-claim)
-          if (tq.currentQuest === 'questGather0_materials') {
-            if ((res.wood || 0) >= 1 && (res.stone || 0) >= 1 && (res.coal || 0) >= 1) {
-              progressTutorialQuest('questGather0_materials', true);
-              // Track globally so Benny reminder knows gathering was done
-              if (!saveData.gatheringProgress) saveData.gatheringProgress = {};
-              saveData.gatheringProgress.firstGatherDone = true;
-            }
-          }
+          // Quest questForge0b_craftTools: auto-progress when player crafts a tool
+          // (This is now handled by the forge crafting UI, not by harvesting)
+          // Legacy: questGather0_materials quest removed — forge quest replaces it
           // Quest 23: harvest first resource
           if (tq.currentQuest === 'quest23_harvestFirst') {
             progressTutorialQuest('quest23_harvestFirst', true);
@@ -1341,9 +1335,13 @@
               if (window.GameHarvesting.buyTool(toolDef.id)) {
                 saveSaveData();
                 playSound('levelup');
-                // Quest 22: bought first tool
+                // Quest: bought first tool (either early forge quest or later quest22)
                 if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest22_buyFirstTool') {
                   progressTutorialQuest('quest22_buyFirstTool', true);
+                  saveSaveData();
+                }
+                if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'questForge0b_craftTools') {
+                  progressTutorialQuest('questForge0b_craftTools', true);
                   saveSaveData();
                 }
                 showProgressionShop();
