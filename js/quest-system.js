@@ -1899,25 +1899,25 @@
       const sp = saveData.skillPoints || 0;
       if (sp > 0) {
         const bld = saveData.campBuildings && saveData.campBuildings.skillTree;
-        if (bld && (bld.unlocked || bld.level > 0))
+        if (bld && bld.level > 0)
           items.push({ icon: '🌳', label: sp + ' Skill Points', desc: 'Spend in Skill Tree', color: '#2ecc71', bg: 'rgba(46,204,113,0.15)', border: 'rgba(46,204,113,0.5)', action: 'skillTree', section: 'points' });
       }
       const ap = saveData.unspentAttributePoints || 0;
       if (ap > 0) {
         const bld = saveData.campBuildings && saveData.campBuildings.trainingHall;
-        if (bld && (bld.unlocked || bld.level > 0))
+        if (bld && bld.level > 0)
           items.push({ icon: '🏋️', label: ap + ' Attribute Points', desc: 'Spend in Training Hall', color: '#9b59b6', bg: 'rgba(155,89,182,0.15)', border: 'rgba(155,89,182,0.5)', action: 'training', section: 'points' });
       }
       const gold = saveData.gold || 0;
       if (gold >= 50) {
         const bld = saveData.campBuildings && saveData.campBuildings.forge;
-        if (bld && (bld.unlocked || bld.level > 0))
+        if (bld && bld.level > 0)
           items.push({ icon: '⚒️', label: gold.toLocaleString() + ' Gold', desc: 'Buy upgrades at Forge', color: '#FFD700', bg: 'rgba(255,215,0,0.12)', border: 'rgba(255,215,0,0.45)', action: 'forge', section: 'points' });
       }
       const csp = saveData.companionSkillPoints || 0;
       if (csp > 0) {
         const bld = saveData.campBuildings && saveData.campBuildings.companionHouse;
-        if (bld && (bld.unlocked || bld.level > 0))
+        if (bld && bld.level > 0)
           items.push({ icon: '🐺', label: csp + ' Companion SP', desc: 'Upgrade at Companion House', color: '#e67e22', bg: 'rgba(230,126,34,0.15)', border: 'rgba(230,126,34,0.5)', action: 'companion', section: 'points' });
       }
       const ess = (saveData.clicker && saveData.clicker.essence > 0) ? saveData.clicker.essence : (saveData.essence || 0);
@@ -1927,7 +1927,7 @@
       const sap = saveData.specialAtkPoints || 0;
       if (sap > 0) {
         const bld = saveData.campBuildings && saveData.campBuildings.specialAttacks;
-        if (bld && (bld.unlocked || bld.level > 0))
+        if (bld && bld.level > 0)
           items.push({ icon: '⚡', label: sap + ' Special Atk Points', desc: 'Equip in Special Attacks', color: '#e74c3c', bg: 'rgba(231,76,60,0.15)', border: 'rgba(231,76,60,0.5)', action: 'specialAttacks', section: 'points' });
       }
 
@@ -1946,7 +1946,7 @@
       });
       if (unequippedGear.length > 0) {
         const bld = saveData.campBuildings && saveData.campBuildings.armory;
-        if (bld && (bld.unlocked || bld.level > 0))
+        if (bld && bld.level > 0)
           items.push({ icon: '🛡️', label: unequippedGear.length + ' Unequipped Gear', desc: 'Equip at Armory', color: '#e67e22', bg: 'rgba(230,126,34,0.12)', border: 'rgba(230,126,34,0.45)', action: 'armory', section: 'actions' });
       }
 
@@ -1955,7 +1955,7 @@
       const totalRes = Object.values(res).reduce((a, b) => a + (b || 0), 0);
       if (totalRes > 0) {
         const bld = saveData.campBuildings && saveData.campBuildings.campfireKitchen;
-        if (bld && (bld.unlocked || bld.level > 0))
+        if (bld && bld.level > 0)
           items.push({ icon: '🍳', label: 'Cooking Ingredients', desc: totalRes + ' total resources for recipes', color: '#ff9800', bg: 'rgba(255,152,0,0.12)', border: 'rgba(255,152,0,0.45)', action: 'campfireKitchen', section: 'actions' });
       }
 
@@ -2285,6 +2285,11 @@
         saveSaveData();
       }
       
+      // Refresh 3D camp building visuals after any first-visit state changes
+      if (window.CampWorld && window.CampWorld.isActive) {
+        window.CampWorld.refreshBuildings(saveData);
+      }
+
       // Update buildings section
       const buildingsContent = document.getElementById('camp-buildings-content');
       buildingsContent.innerHTML = '';
@@ -2624,7 +2629,7 @@
       const skillTabEl = document.getElementById('camp-skills-tab');
       if (skillTabEl) {
         const skillBuildingData = saveData.campBuildings.skillTree;
-        const isSkillTreeUnlocked = skillBuildingData && (skillBuildingData.unlocked || skillBuildingData.level > 0);
+        const isSkillTreeUnlocked = skillBuildingData && skillBuildingData.level > 0;
         skillTabEl.style.display = isSkillTreeUnlocked ? '' : 'none';
       }
       
