@@ -392,7 +392,7 @@
           // Previous code paths could leave non-core buildings with level > 0 without
           // the player actually building them.  Reset any non-core building that has
           // level > 0 back to level 0 (keep unlocked flag) so the BUILD step is
-          // required.  Core / always-available buildings are exempt.
+          // required.  NOTE: questMission was exempted here but is corrected in V4.
           if (!saveData._buildingMigrationV2) {
             var coreBuildings = ['questMission', 'inventory', 'accountBuilding', 'idleMenu'];
             Object.keys(saveData.campBuildings).forEach(function(bId) {
@@ -421,6 +421,20 @@
               }
             });
             saveData._buildingMigrationV3 = true;
+          }
+          // ── Building level migration v4 ──
+          // Migration V2 exempted questMission (core building) from the level
+          // reset, so old saves kept questMission.level = 1 from before the
+          // BUILD-flow was introduced.  Reset questMission to level 0 so that
+          // existing saves also go through the BUILD step before ENTER is shown.
+          // accountBuilding and idleMenu remain at level 1 (UI-only).
+          if (!saveData._buildingMigrationV4) {
+            var bldQM = saveData.campBuildings && saveData.campBuildings.questMission;
+            if (bldQM) {
+              bldQM.level = 0;
+              bldQM.unlocked = true; // keep unlocked so BUILD button shows
+            }
+            saveData._buildingMigrationV4 = true;
           }
         }
       } catch (e) {
