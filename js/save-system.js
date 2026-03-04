@@ -809,9 +809,7 @@
       el.classList.remove('ssb-countdown-pulse');
       void el.offsetWidth; // force reflow
       el.classList.add('ssb-countdown-pulse');
-      // Show parent bar during countdown if not already visible
-      const bar = document.getElementById('super-stat-bar');
-      if (bar) bar.style.display = 'flex';
+      // super-stat-bar removed from UI — skip showing parent bar
     }
 
     function _ssbHideCountdown() {
@@ -844,10 +842,7 @@
 
     // Called every frame from updateStatBar() to keep context rows fresh
     function _ssbUpdateContext() {
-      const bar = document.getElementById('super-stat-bar');
-      if (!bar) return;
-      if (!isGameActive || isGameOver) { bar.style.display = 'none'; return; }
-      bar.style.display = 'flex';
+      return; // super-stat-bar removed from UI
 
       // ---- Header: Wave · Kills · Combo ----
       const hdr = document.getElementById('ssb-header');

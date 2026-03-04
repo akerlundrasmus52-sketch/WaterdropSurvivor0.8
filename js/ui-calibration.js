@@ -54,7 +54,7 @@
     {
       selector: '.hud-top',
       label: '❤️ Stat Bars',
-      defaultPos: { left: null, top: '52px', right: null, bottom: null }, // centered via CSS transform
+      defaultPos: { left: '8px', top: '8px', right: null, bottom: null },
       defaultScale: 1,
     },
     {
