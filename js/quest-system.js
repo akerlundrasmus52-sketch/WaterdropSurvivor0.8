@@ -2629,7 +2629,7 @@
       const skillTabEl = document.getElementById('camp-skills-tab');
       if (skillTabEl) {
         const skillBuildingData = saveData.campBuildings.skillTree;
-        const isSkillTreeUnlocked = skillBuildingData && (skillBuildingData.unlocked || skillBuildingData.level > 0);
+        const isSkillTreeUnlocked = skillBuildingData && skillBuildingData.level > 0;
         skillTabEl.style.display = isSkillTreeUnlocked ? '' : 'none';
       }
       

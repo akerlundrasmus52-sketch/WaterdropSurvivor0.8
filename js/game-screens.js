@@ -1261,7 +1261,7 @@
         if (buildingId === 'campBoard') continue; // Don't list campBoard itself
         const buildingData = saveData.campBuildings[buildingId];
         if (!buildingData) continue;
-        const isUnlocked = buildingData.unlocked || buildingData.level > 0;
+        const isUnlocked = buildingData.level > 0;
         if (!isUnlocked) continue;
 
         const action = buildingActions[buildingId];
