@@ -2513,6 +2513,37 @@
         }
         showStatChange('🏛️ ' + buildingName + ' Built!');
 
+        // Activate pending quest now that building is built
+        if (saveData.tutorialQuests && saveData.tutorialQuests.pendingBuildBuilding === buildingId && saveData.tutorialQuests.pendingBuildQuest) {
+          var pendingQuestId = saveData.tutorialQuests.pendingBuildQuest;
+          var pendingQuestDef = TUTORIAL_QUESTS[pendingQuestId];
+          // Clear pending state
+          saveData.tutorialQuests.pendingBuildBuilding = null;
+          saveData.tutorialQuests.pendingBuildQuest = null;
+          // Activate the deferred next quest
+          if (pendingQuestDef && checkQuestConditions(pendingQuestId)) {
+            saveData.tutorialQuests.currentQuest = pendingQuestId;
+            // Unlock building on ACTIVATION for the new quest
+            if (pendingQuestDef.unlockBuildingOnActivation) {
+              var actBld = pendingQuestDef.unlockBuildingOnActivation;
+              if (saveData.campBuildings[actBld]) {
+                saveData.campBuildings[actBld].unlocked = true;
+                var actBldName = CAMP_BUILDINGS[actBld] ? CAMP_BUILDINGS[actBld].name : 'Building';
+                showStatChange('🏛️ ' + actBldName + ' Unlocked!');
+                if (window.CampWorld) {
+                  window.CampWorld.refreshBuildings(saveData);
+                  window.CampWorld.playBuildingUnlockAnimation(actBld);
+                }
+              }
+            }
+            updateQuestTracker();
+            // Show next quest popup after a short delay (let build celebration finish first)
+            setTimeout(function () {
+              showNextQuestPopup(pendingQuestId);
+            }, 2200);
+          }
+        }
+
         // Calculate next building resource cost for reminder
         var newBuiltCount = Object.values(saveData.campBuildings).filter(function (b) { return b && b.unlocked; }).length;
         var nextCost = newBuiltCount + 1;
@@ -2689,9 +2720,22 @@
         }
       }
       
-      // --- AUTO-CHAIN: Activate next quest IMMEDIATELY (synchronous) ---
+      // --- AUTO-CHAIN: Activate next quest (unless a building needs to be built first) ---
+      // If this quest unlocked a non-core building that still needs building (level===0),
+      // defer the next quest until the building is built. The player MUST build the building
+      // before the quest chain advances.
       let nextQuestActivated = null;
-      if (quest.nextQuest && checkQuestConditions(quest.nextQuest)) {
+      const _unlockedBld = quest.unlockBuilding;
+      const _bldData = _unlockedBld && saveData.campBuildings[_unlockedBld];
+      const _bldDef = _unlockedBld && CAMP_BUILDINGS[_unlockedBld];
+      const _mustBuildFirst = _bldData && _bldDef && !_bldDef.isCore && _bldData.level === 0;
+
+      if (_mustBuildFirst && quest.nextQuest) {
+        // Defer next quest — store pending quest to activate after building is built
+        saveData.tutorialQuests.pendingBuildQuest = quest.nextQuest;
+        saveData.tutorialQuests.pendingBuildBuilding = _unlockedBld;
+        saveData.tutorialQuests.currentQuest = null;
+      } else if (quest.nextQuest && checkQuestConditions(quest.nextQuest)) {
         saveData.tutorialQuests.currentQuest = quest.nextQuest;
         nextQuestActivated = TUTORIAL_QUESTS[quest.nextQuest] || null;
         
@@ -2717,28 +2761,49 @@
       // Build the combined popup message: reward info + new quest info
       const claimMsg = quest.message || `Quest Complete! ${quest.rewardGold ? `+${quest.rewardGold} gold` : ''} ${quest.rewardSkillPoints ? `+${quest.rewardSkillPoints} skill points` : ''}`;
       let combinedMessage = claimMsg;
-      if (nextQuestActivated) {
+      if (_mustBuildFirst) {
+        // Building needs to be built — show build instruction instead of next quest
+        const _bldLabel = _bldDef ? _bldDef.name : 'building';
+        combinedMessage += `<br><br><hr style="border-color:#5DADE2;opacity:0.4;margin:10px 0;"><br><span style="color:#5DADE2;font-size:18px;font-family:'Bangers',cursive;letter-spacing:1px;">🔨 BUILD THE ${_bldLabel.toUpperCase()}</span><br><span style="color:#ccc;font-size:14px;">Walk to the ${_bldLabel} and build it before you can enter! Your next quest will start after construction is complete.</span>`;
+      } else if (nextQuestActivated) {
         combinedMessage += `<br><br><hr style="border-color:#FFD700;opacity:0.4;margin:10px 0;"><br><span style="color:#FFD700;font-size:18px;font-family:'Bangers',cursive;letter-spacing:1px;">📜 NEW QUEST: ${nextQuestActivated.name}</span><br><span style="color:#ccc;font-size:14px;">${nextQuestActivated.description}</span><br><small style="color:#aaa;">Objective: ${nextQuestActivated.objectives}</small>`;
       }
       
       if (!quest.autoClaim) {
-        // Show single combined popup (claim reward + new quest info)
-        showComicInfoBox(
-          '✨ Quest Complete!',
-          combinedMessage,
-          'Continue',
-          () => {
-            // Trigger Stonehenge cinematic after closing popup if next quest involves stonehenge
-            if (quest.nextQuest === 'quest3_stonehengeGear' && window.stonehengeChest) {
-              if (!saveData.tutorialQuests.stonehengeChestCinematicShown) {
-                triggerCinematic('stonehenge', window.stonehengeChest.position, 2000);
-                saveData.tutorialQuests.stonehengeChestCinematicShown = true;
-                saveSaveData();
-              }
+        // When building needs building, DON'T show comic popup simultaneously with build overlay
+        // — wait for the build overlay to be dismissed first
+        if (_mustBuildFirst && window._campShowBuildOverlay != null) {
+          // Build overlay is already showing; show the combined popup AFTER build overlay closes
+          var _waitForBuildOverlay = setInterval(function () {
+            if (!document.querySelector('[style*="z-index: 500"]') && !document.querySelector('[style*="z-index:500"]')) {
+              clearInterval(_waitForBuildOverlay);
+              showComicInfoBox(
+                '✨ Quest Complete!',
+                combinedMessage,
+                'Continue',
+                () => { updateCampScreen(); }
+              );
             }
-            updateCampScreen();
-          }
-        );
+          }, 300);
+        } else {
+          // Show single combined popup (claim reward + new quest info)
+          showComicInfoBox(
+            '✨ Quest Complete!',
+            combinedMessage,
+            'Continue',
+            () => {
+              // Trigger Stonehenge cinematic after closing popup if next quest involves stonehenge
+              if (quest.nextQuest === 'quest3_stonehengeGear' && window.stonehengeChest) {
+                if (!saveData.tutorialQuests.stonehengeChestCinematicShown) {
+                  triggerCinematic('stonehenge', window.stonehengeChest.position, 2000);
+                  saveData.tutorialQuests.stonehengeChestCinematicShown = true;
+                  saveSaveData();
+                }
+              }
+              updateCampScreen();
+            }
+          );
+        }
       } else {
         // Auto-claim: show next quest popup if one was activated
         if (nextQuestActivated) {
@@ -2882,6 +2947,19 @@
         readyEl.setAttribute('aria-label', 'Quest reward ready to claim at Main Building');
         readyEl.textContent = '🎁 Claim Reward!';
         questTracker.appendChild(readyEl);
+      } else if (saveData.tutorialQuests && saveData.tutorialQuests.pendingBuildBuilding) {
+        // No active quest because building must be built first
+        const _pbBld = saveData.tutorialQuests.pendingBuildBuilding;
+        const _pbDef = CAMP_BUILDINGS[_pbBld];
+        const _pbName = _pbDef ? _pbDef.name : 'Building';
+        const nameEl = document.createElement('b');
+        nameEl.style.cssText = 'color: #5DADE2; font-size: 12px;';
+        nameEl.textContent = `🔨 Build: ${_pbName}`;
+        const hintEl = document.createElement('div');
+        hintEl.style.cssText = 'font-size: 10px; color: #ccc; margin-top: 2px;';
+        hintEl.textContent = 'Walk to it and build it!';
+        questTracker.appendChild(nameEl);
+        questTracker.appendChild(hintEl);
       }
 
       // Show "next building" resource reminder
