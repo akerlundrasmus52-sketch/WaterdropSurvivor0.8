@@ -324,6 +324,14 @@
         if (comboState.count >= 5) {
           showCombo();
         }
+
+        // Fever mode — activate when combo is high enough
+        if (window.DopamineSystem && window.DopamineSystem.FeverMode) {
+          if (comboState.count >= 10) {
+            const intensity = Math.min(1, (comboState.count - 10) / 10);
+            window.DopamineSystem.FeverMode.activate(intensity);
+          }
+        }
         
         // Spawn chest on specific combo milestones:
         // 7 kills: Common (white), 9 kills: Uncommon (green), 10 kills: Rare (blue)
@@ -598,6 +606,11 @@
       if (comboState.timerInterval) {
         clearInterval(comboState.timerInterval);
         comboState.timerInterval = null;
+      }
+
+      // Deactivate fever mode when combo ends
+      if (window.DopamineSystem && window.DopamineSystem.FeverMode) {
+        window.DopamineSystem.FeverMode.deactivate();
       }
       
       setTimeout(() => {
@@ -1001,6 +1014,15 @@
     function createDamageNumber(amount, pos, isCrit = false, isHeadshot = false) {
       // Cap visible damage numbers to prevent DOM bloat
       if (_activeDamageNumbers >= MAX_DAMAGE_NUMBERS) return;
+
+      // Use elastic spring-physics damage numbers for crits/headshots
+      if ((isCrit || isHeadshot) && window.DopamineSystem && window.DopamineSystem.ElasticNumbers) {
+        _activeDamageNumbers++;
+        window.DopamineSystem.ElasticNumbers.spawn(amount, pos, camera, isCrit, isHeadshot);
+        setTimeout(() => { _activeDamageNumbers = Math.max(0, _activeDamageNumbers - 1); }, 1200);
+        return;
+      }
+
       _activeDamageNumbers++;
 
       const div = document.createElement('div');

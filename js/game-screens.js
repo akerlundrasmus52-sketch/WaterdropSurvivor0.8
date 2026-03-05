@@ -297,6 +297,37 @@
       setupMenus();
       console.log('[Init] Menus set up OK');
       window.addEventListener('resize', onWindowResize, false);
+
+      // --- Initialise new performance & visual systems ---
+      // Instanced renderer for batched draw calls
+      if (window.InstancedRenderer && window.InstancedRenderer.createInstancedRenderer) {
+        try {
+          window._instancedRenderer = window.InstancedRenderer.createInstancedRenderer(scene);
+          console.log('[Init] Instanced renderer created OK');
+        } catch (e) { console.warn('[Init] Instanced renderer skipped:', e.message); }
+      }
+      // GC guard — pre-allocate temp vectors
+      if (window.PerfManager && window.PerfManager.GCGuard) {
+        window.PerfManager.GCGuard.init();
+      }
+      // Dopamine camera FX
+      if (window.DopamineSystem && window.DopamineSystem.CameraFX) {
+        window.DopamineSystem.CameraFX.init(camera);
+      }
+      // Dynamic projectile lighting pool
+      if (window.AdvancedPhysics && window.AdvancedPhysics.ProjectileLightPool) {
+        try {
+          window._projectileLightPool = new window.AdvancedPhysics.ProjectileLightPool(scene, 8);
+          console.log('[Init] Projectile light pool created OK');
+        } catch (e) { console.warn('[Init] Projectile lights skipped:', e.message); }
+      }
+      // Dynamic ground shadows for projectiles
+      if (window.AdvancedPhysics && window.AdvancedPhysics.DynamicShadows) {
+        try {
+          window.AdvancedPhysics.DynamicShadows.init(scene);
+        } catch (e) { console.warn('[Init] Dynamic shadows skipped:', e.message); }
+      }
+      console.log('[Init] New performance & visual systems initialised OK');
       
       // Start Loop - begin rendering immediately (non-blocking)
       animationFrameId = requestAnimationFrame(animate);

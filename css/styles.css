@@ -5256,3 +5256,78 @@
   color: #666;
   margin-top: 8px;
 }
+
+/* ===================================================================
+   Dopamine System — elastic damage numbers, fever mode, level-up FX
+   =================================================================== */
+
+/* --- Elastic Damage Numbers --- */
+.elastic-damage-number {
+  position: absolute;
+  pointer-events: none;
+  z-index: 10000;
+  font-family: 'Arial Black', 'Impact', sans-serif;
+  font-weight: 900;
+  font-size: 18px;
+  color: #fff;
+  text-shadow:
+    0 0 4px rgba(0,0,0,0.9),
+    0 1px 2px rgba(0,0,0,0.7);
+  white-space: nowrap;
+  will-change: transform, opacity;
+  transform: translate(-50%, -50%);
+}
+.elastic-damage-number.critical {
+  color: #FFD700;
+  font-size: 26px;
+  text-shadow:
+    0 0 8px rgba(255,215,0,0.8),
+    0 0 16px rgba(255,165,0,0.5),
+    0 2px 4px rgba(0,0,0,0.8);
+}
+.elastic-damage-number.headshot {
+  color: #FF4444;
+  font-size: 30px;
+  text-shadow:
+    0 0 10px rgba(255,0,0,0.8),
+    0 0 20px rgba(255,50,50,0.5),
+    0 2px 4px rgba(0,0,0,0.8);
+}
+
+/* --- Fever Mode Overlay --- */
+#fever-overlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+  z-index: 9990;
+  opacity: 0;
+  mix-blend-mode: screen;
+  transition: opacity 0.4s ease-out;
+}
+
+/* --- Dopamine FX Overlay (camera effects) --- */
+#dopamine-fx-overlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+  z-index: 9998;
+  transition: backdrop-filter 0.3s, box-shadow 0.2s;
+}
+
+/* --- Level-up card collector animations --- */
+@keyframes cardReveal {
+  0%   { opacity: 0; transform: scale(0.5) rotateY(20deg) translateY(50px); }
+  60%  { opacity: 1; transform: scale(1.05) rotateY(-3deg) translateY(-5px); }
+  100% { opacity: 1; transform: scale(1) rotateY(0) translateY(0); }
+}
+@keyframes cardGlow {
+  0%, 100% { box-shadow: 0 0 10px rgba(255,215,0,0.3); }
+  50%      { box-shadow: 0 0 25px rgba(255,215,0,0.7), 0 0 50px rgba(255,165,0,0.3); }
+}
+@keyframes cardSelected {
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.2); filter: brightness(1.3); }
+  100% { transform: scale(1.1); filter: brightness(1.1); }
+}

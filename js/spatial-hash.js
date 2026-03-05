@@ -270,5 +270,6 @@ class EnhancedObjectPool {
 window.GamePerformance = {
   SpatialHash: SpatialHash,
   AnimationThrottle: AnimationThrottle,
-  EnhancedObjectPool: EnhancedObjectPool
+  EnhancedObjectPool: EnhancedObjectPool,
+  // QuadTree is available via window.PerfManager.QuadTree (performance-manager.js)
 };

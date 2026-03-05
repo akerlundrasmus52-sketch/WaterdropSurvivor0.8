@@ -1393,6 +1393,12 @@
         this.hp -= finalAmount;
         createDamageNumber(Math.floor(finalAmount), this.mesh.position, isCrit);
 
+        // Knockback chain reaction — strong hits propagate to nearby enemies
+        if (window.AdvancedPhysics && window.AdvancedPhysics.KnockbackChain && finalAmount > 10) {
+          const knockForce = Math.min(finalAmount * 0.15, 8);
+          window.AdvancedPhysics.KnockbackChain.add(this.mesh.position, knockForce, 3, 2);
+        }
+
         // Multi-hit: chance to strike again for 50% damage
         if (playerStats.multiHitChance > 0 && !this.isDead && this.hp > 0 && Math.random() < playerStats.multiHitChance) {
           const multiHitDmg = Math.max(1, Math.floor(finalAmount * 0.5));
