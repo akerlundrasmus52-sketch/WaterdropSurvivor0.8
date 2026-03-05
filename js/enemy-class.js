@@ -1120,6 +1120,14 @@
         if (hpRatio < 0.25) {
           spawnBloodDecal(this.mesh.position); // Extra decal at critical HP
           spawnBloodDecal({ x: this.mesh.position.x + (Math.random()-0.5)*0.8, y: 0, z: this.mesh.position.z + (Math.random()-0.5)*0.8 });
+          // Arterial spurt at critically low HP — continuous pumping wound
+          if (window.BloodSystem && window.BloodSystem.emitArterialSpurt && !this._arterialSpurtFired) {
+            this._arterialSpurtFired = true; // fire only once per HP threshold crossing
+            const artDir = { x: Math.cos(Math.random() * Math.PI * 2), y: 0, z: Math.sin(Math.random() * Math.PI * 2) };
+            window.BloodSystem.emitArterialSpurt(this.mesh.position, artDir, {
+              pulses: 5, perPulse: 50, interval: 180, intensity: 0.7, coneAngle: 0.3
+            });
+          }
         }
         // Blood system: directional spray on heavy hits
         if (window.BloodSystem && isHeavyHit) {
@@ -1769,6 +1777,17 @@
         // Trigger kill cam effect for varied visual feedback
         triggerKillCam(this.mesh.position, this.isMiniBoss, damageType);
         
+        // Arterial spurt on death — blood jets pump from the neck/chest wound
+        if (window.BloodSystem && window.BloodSystem.emitArterialSpurt) {
+          const spurtDir = { x: Math.cos(Math.random() * Math.PI * 2), y: 0, z: Math.sin(Math.random() * Math.PI * 2) };
+          // Miniboss/boss get more dramatic spurts
+          const spurtPulses   = (this.isMiniBoss || this.isFlyingBoss) ? 12 : 8;
+          const spurtPerPulse = (this.isMiniBoss || this.isFlyingBoss) ? 150 : 80;
+          window.BloodSystem.emitArterialSpurt(deathPos, spurtDir, {
+            pulses: spurtPulses, perPulse: spurtPerPulse, interval: 160, intensity: 1.0
+          });
+        }
+
         // Special death effects based on damage type
         if (isYellowEnemy && damageType !== 'ice' && damageType !== 'fire' && damageType !== 'headshot') {
           // Yellow enemies: 180-degree spin death with continuous neck blood arc
@@ -2636,8 +2655,8 @@
         if (playerStats.kills % 10 === 0) {
           saveData.specialAtkPoints = (saveData.specialAtkPoints || 0) + 1;
         }
-        // Harvesting: chance to drop Flesh
-        if (window.GameHarvesting && this.mesh) window.GameHarvesting.onEnemyKilled(this.mesh.position);
+        // Harvesting: chance to drop Flesh, and spawn skinnable carcass for animal-type enemies
+        if (window.GameHarvesting && this.mesh) window.GameHarvesting.onEnemyKilled(this.mesh.position, this.type);
         // Kill 7 achievement check
         if (playerStats.kills === 7 && (!saveData.achievementQuests || !saveData.achievementQuests.kill7Unlocked)) {
           if (!saveData.achievementQuests) saveData.achievementQuests = { kill7Unlocked: false, kill7Quest: 'none' };

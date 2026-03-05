@@ -385,6 +385,7 @@
         this.isBoomerang = false;
         this.returnPhase = false;
         this.isShuriken = false;
+        this.isBow = false;
         this.isFireball = false;
         this.pierceCount = 0;
         this.explosionRadius = 0;
@@ -985,7 +986,58 @@
             
             // Mark this enemy as hit
             this.hitEnemies.add(enemy);
-            
+
+            // ── Projectile Pinning (Bow & Shuriken) ───────────────────────────
+            // Clone the projectile mesh and parent it to the enemy so it looks
+            // visually "pinned" into the body. The pinned mesh persists until the
+            // enemy is removed from the scene.
+            if ((this.isBow || this.isShuriken) && !enemy.isDead && enemy.mesh) {
+              try {
+                const pinnedMesh = this.mesh.clone();
+                // Convert projectile world-space position into the enemy's local space
+                const localPos = enemy.mesh.worldToLocal(this.mesh.position.clone());
+                // Vary penetration depth: arrows go deeper, shurikens lodge at surface
+                const depthOffset = this.isBow
+                  ? (Math.random() < 0.35 ? 0.0 : 0.3)  // 35% chance tip pokes out back
+                  : 0.45;                                 // shuriken lodges near surface
+                localPos.x += (Math.random() - 0.5) * 0.15;
+                localPos.y += (Math.random() - 0.5) * 0.2;
+                // Align the pinned mesh along the projectile travel direction
+                const yawAngle = Math.atan2(this.vz, this.vx);
+                pinnedMesh.rotation.set(0, -yawAngle, 0);
+                // Move slightly along travel direction for penetration depth
+                localPos.x += Math.cos(yawAngle) * depthOffset;
+                localPos.z += Math.sin(yawAngle) * depthOffset;
+                pinnedMesh.position.copy(localPos);
+                pinnedMesh.scale.copy(this.mesh.scale);
+                // Shurikens lodge flat; arrows point along travel axis
+                if (this.isShuriken) pinnedMesh.rotation.z = Math.random() * Math.PI;
+                enemy.mesh.add(pinnedMesh);
+                // Track pinned meshes for cleanup on enemy death
+                if (!enemy._pinnedProjectiles) enemy._pinnedProjectiles = [];
+                enemy._pinnedProjectiles.push(pinnedMesh);
+                // Localised blood drip at entry wound
+                if (bloodDrips.length < MAX_BLOOD_DRIPS && window.THREE) {
+                  const woundDrop = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.025 + Math.random() * 0.02, 4, 4),
+                    new THREE.MeshBasicMaterial({ color: 0x8B0000 })
+                  );
+                  woundDrop.position.copy(this.mesh.position);
+                  woundDrop.position.y += 0.15 + Math.random() * 0.2;
+                  scene.add(woundDrop);
+                  bloodDrips.push({
+                    mesh: woundDrop,
+                    velX: (Math.random() - 0.5) * 0.06,
+                    velZ: (Math.random() - 0.5) * 0.06,
+                    velY: -0.03 - Math.random() * 0.03,  // drips downward
+                    life: 60 + Math.floor(Math.random() * 40),
+                    _sharedGeo: false
+                  });
+                }
+              } catch (_e) { /* non-critical visual — silently ignore */ }
+            }
+            // ── End Projectile Pinning ────────────────────────────────────────
+
             // Check if bullet should be destroyed or continue piercing
             if (this.hitEnemies.size >= this.maxHits) {
               // Hit maximum number of enemies, destroy bullet

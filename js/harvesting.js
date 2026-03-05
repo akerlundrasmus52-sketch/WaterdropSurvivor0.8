@@ -11,10 +11,14 @@
     stone:        { label: 'Stone',        icon: '🪨', color: '#888888', category: 'material' },
     coal:         { label: 'Coal',         icon: '🖤', color: '#222222', category: 'material' },
     iron:         { label: 'Iron',         icon: '⚙️', color: '#AAAAAA', category: 'material' },
+    metal:        { label: 'Metal',        icon: '🔩', color: '#778899', category: 'material' },
     crystal:      { label: 'Crystal',      icon: '💎', color: '#88CCFF', category: 'material' },
     magicEssence: { label: 'Magic Essence',icon: '✨', color: '#AA44FF', category: 'material' },
     gem:          { label: 'Gem',          icon: '💍', color: '#FFD700', category: 'material' },
     flesh:        { label: 'Flesh',        icon: '🥩', color: '#CC2200', category: 'food' },
+    meat:         { label: 'Meat',         icon: '🍖', color: '#CC4400', category: 'food' },
+    food:         { label: 'Food',         icon: '🍲', color: '#FF8C00', category: 'food' },
+    animalSkin:   { label: 'Animal Skin',  icon: '🐾', color: '#D2B48C', category: 'animal' },
     fur:          { label: 'Fur',          icon: '🧶', color: '#8B6914', category: 'animal' },
     leather:      { label: 'Leather',      icon: '🟫', color: '#654321', category: 'animal' },
     feather:      { label: 'Feather',      icon: '🪶', color: '#DDDDDD', category: 'animal' },
@@ -148,6 +152,16 @@
       hp: 25,                yield: 'vegetable',
       toolRequired: 'berryScoop', harvestAnim: 'gather',
       autoHarvest: true
+    },
+    metalOre: {
+      label: 'Metal Ore',    color: 0x7B8999, radius: 1.6,
+      hp: 120,               yield: 'metal',
+      toolRequired: 'pickaxe', harvestAnim: 'mine'
+    },
+    animal_carcass: {
+      label: 'Animal Carcass', color: 0xCC9966, radius: 0.9,
+      hp: 30,                yield: 'animalSkin',  // primary yield; meat is secondary
+      toolRequired: 'knife',  harvestAnim: 'skin'
     }
   };
 
@@ -176,13 +190,19 @@
     if (!_saveData) return null;
     if (!_saveData.resources) {
       _saveData.resources = {
-        wood: 0, stone: 0, coal: 0, iron: 0,
-        crystal: 0, magicEssence: 0, gem: 0, flesh: 0,
-        fur: 0, leather: 0, feather: 0, chitin: 0, venom: 0,
+        wood: 0, stone: 0, coal: 0, iron: 0, metal: 0,
+        crystal: 0, magicEssence: 0, gem: 0, flesh: 0, meat: 0, food: 0,
+        animalSkin: 0, fur: 0, leather: 0, feather: 0, chitin: 0, venom: 0,
         berry: 0, flower: 0, vegetable: 0
       };
     }
-    return _saveData.resources;
+    // Ensure new keys exist for old save files
+    const r = _saveData.resources;
+    if (r.metal    === undefined) r.metal    = 0;
+    if (r.meat     === undefined) r.meat     = 0;
+    if (r.food     === undefined) r.food     = 0;
+    if (r.animalSkin === undefined) r.animalSkin = 0;
+    return r;
   }
 
   function _getTools() {
@@ -353,6 +373,32 @@
         group.add(root);
       }
       mesh = group;
+    } else if (nodeType === 'metalOre') {
+      // Metal ore: dark grey angular rock with metallic sheen
+      const geo = new THREE.DodecahedronGeometry(def.radius * 0.88, 0);
+      const mat = new THREE.MeshToonMaterial({ color: 0x7B8999 });
+      mesh = new THREE.Mesh(geo, mat);
+      mesh.scale.y = 0.6;
+      mesh.rotation.y = Math.random() * Math.PI;
+    } else if (nodeType === 'animal_carcass') {
+      // Animal carcass: simple low-poly dead creature lying on its side
+      const group = new THREE.Group();
+      const bodyMat = new THREE.MeshToonMaterial({ color: 0xCC9966 });
+      const bodyGeo = new THREE.SphereGeometry(0.32, 7, 5);
+      const body = new THREE.Mesh(bodyGeo, bodyMat);
+      body.scale.set(1.4, 0.55, 0.9);
+      body.position.y = 0.18;
+      group.add(body);
+      // Four limp legs
+      const legMat = new THREE.MeshToonMaterial({ color: 0xAA8855 });
+      for (let i = 0; i < 4; i++) {
+        const legGeo = new THREE.CylinderGeometry(0.035, 0.025, 0.3, 4);
+        const leg = new THREE.Mesh(legGeo, legMat);
+        leg.position.set((i < 2 ? -0.22 : 0.22), 0.08, (i % 2 === 0 ? -0.14 : 0.14));
+        leg.rotation.z = (Math.PI * 0.5) + (Math.random() - 0.5) * 0.6;
+        group.add(leg);
+      }
+      mesh = group;
     }
 
     if (!mesh) return null;
@@ -444,6 +490,13 @@
       const z = 20 + (Math.random() - 0.5) * 80;
       if (avoid(x, z)) continue;
       _spawnNode('vegetablePatch', x, z);
+    }
+    // Metal ore deposits — 18 nodes (scattered in a mid-zone, requires pickaxe)
+    for (let i = 0; i < 18; i++) {
+      const x = (Math.random() - 0.5) * 160;
+      const z = -80 + (Math.random() - 0.5) * 120;
+      if (avoid(x, z)) continue;
+      _spawnNode('metalOre', x, z);
     }
   }
 
@@ -537,6 +590,17 @@
       res[yieldRes] = (res[yieldRes] || 0) + amount;
     }
 
+    // Bonus yield for animal carcass: also grant meat
+    if (node.type === 'animal_carcass' && res) {
+      const meatAmount = 1 + Math.floor(Math.random() * 2);
+      res.meat = (res.meat || 0) + meatAmount;
+      _showFloatingText(
+        { x: node.mesh.position.x, y: (node.mesh.position.y || 0) + 0.5, z: node.mesh.position.z },
+        `+${meatAmount} ${RESOURCE_TYPES.meat.icon} ${RESOURCE_TYPES.meat.label}`,
+        RESOURCE_TYPES.meat.color
+      );
+    }
+
     // Visual & audio feedback
     if (_spawnParticlesFn) {
       _spawnParticlesFn(node.mesh.position, nodeDef ? nodeDef.color : 0x888888, 20);
@@ -574,8 +638,10 @@
   }
 
   // ── Enemy flesh drop ─────────────────────────────────────────
-  function onEnemyKilled(enemyPos) {
-    if (Math.random() < 0.25) {   // 25% chance
+  // Called on any enemy kill. Animal-type enemies (types 15=DaddyLonglegs, 16=Swarm
+  // and a random chance on others) leave a skinnable carcass node behind.
+  function onEnemyKilled(enemyPos, enemyType) {
+    if (Math.random() < 0.25) {   // 25% chance to drop flesh
       const res = _getResources();
       if (res) {
         res.flesh = (res.flesh || 0) + 1;
@@ -583,6 +649,62 @@
         _updateHUD();
       }
     }
+    // Animal-type enemies always drop a carcass; others have a 15% chance
+    const isAnimal = (enemyType === 15 || enemyType === 16);
+    if (isAnimal || Math.random() < 0.15) {
+      // Spawn a skinnable carcass node at the kill site (requires Knife to skin)
+      _spawnNode('animal_carcass', enemyPos.x + (Math.random() - 0.5) * 0.5, enemyPos.z + (Math.random() - 0.5) * 0.5);
+    }
+  }
+
+  // ── Crafting helpers ─────────────────────────────────────────
+
+  /**
+   * Craft Leather from Animal Skin.
+   * 2 Animal Skin → 1 Leather
+   * @returns {boolean} true if craft succeeded
+   */
+  function craftLeather() {
+    const res = _getResources();
+    if (!res || (res.animalSkin || 0) < 2) return false;
+    res.animalSkin -= 2;
+    res.leather = (res.leather || 0) + 1;
+    _showCollectionNotification('leather', 1);
+    _updateHUD();
+    return true;
+  }
+
+  /**
+   * Craft Food (a meal) from Meat.
+   * 1 Meat → 1 Food
+   * @returns {boolean} true if craft succeeded
+   */
+  function craftMeal() {
+    const res = _getResources();
+    if (!res || (res.meat || 0) < 1) return false;
+    res.meat -= 1;
+    res.food = (res.food || 0) + 1;
+    _showCollectionNotification('food', 1);
+    _updateHUD();
+    return true;
+  }
+
+  /**
+   * Recycle a weapon / gear piece into Metal.
+   * Accepts a weaponId string (any truthy value in practice — the UI provides it).
+   * Each recycle yields 1-3 Metal depending on weapon rarity tier.
+   * @param {string} weaponId  - ID of the gear to recycle (checked vs saveData.inventory)
+   * @param {number} [metalYield=1] - How many metal to grant (caller can pass rarity-based value)
+   * @returns {boolean} true if recycle succeeded
+   */
+  function recycleToMetal(weaponId, metalYield) {
+    const res = _getResources();
+    if (!res) return false;
+    const yield_ = Math.max(1, Math.floor(metalYield || 1));
+    res.metal = (res.metal || 0) + yield_;
+    _showCollectionNotification('metal', yield_);
+    _updateHUD();
+    return true;
   }
 
   // ── Resource collection notification (slide-in from upper-right) ──
@@ -824,6 +946,33 @@
     _drawSwingOverlay();
   }
 
+  // ── Solid collision resolver ──────────────────────────────────
+  // Push the player position out of any non-depleted resource node's radius.
+  // The player movement system should call this after applying movement each frame.
+  // @param {object} pos    - { x, z } player position (mutated in place)
+  // @param {number} radius - player collision radius (default 0.55)
+  function resolveNodeCollisions(pos, radius) {
+    const pr = (radius !== undefined) ? radius : 0.55;
+    for (let i = 0; i < harvestNodes.length; i++) {
+      const node = harvestNodes[i];
+      if (node.depleted || !node.mesh || !node.mesh.visible) continue;
+      const def = NODE_DEFS[node.type];
+      if (!def) continue;
+      // Use a slightly smaller node collision radius to avoid harsh walls on small nodes
+      const nodeR = def.radius * 0.6;
+      const combined = pr + nodeR;
+      const dx = pos.x - node.mesh.position.x;
+      const dz = pos.z - node.mesh.position.z;
+      const distSq = dx * dx + dz * dz;
+      if (distSq < combined * combined && distSq > 0.0001) {
+        const dist = Math.sqrt(distSq);
+        const push = combined - dist;
+        pos.x += (dx / dist) * push;
+        pos.z += (dz / dist) * push;
+      }
+    }
+  }
+
   // ── Store helpers (called from camp UI) ─────────────────────
   function buyTool(toolId) {
     const def = TOOL_DEFS[toolId];
@@ -897,6 +1046,10 @@
     forgeTool,
     getToolList,
     hasOwnedTools,
+    resolveNodeCollisions,
+    craftLeather,
+    craftMeal,
+    recycleToMetal,
 
     getResources() { return _getResources(); },
     getTools()    { return _getTools(); },
