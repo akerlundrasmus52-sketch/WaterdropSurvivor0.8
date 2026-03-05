@@ -192,7 +192,9 @@
      * @param {Function} onComplete  Called when the intro is done and modal should appear.
      */
     play(onComplete) {
-      // Slow time dramatically to 0.1x for 1 second
+      // Slow time dramatically to 0.1x; lerpSpeed=8 means the scale reaches 0.1x in ~0.12s.
+      // After 1 second, restore to normal at lerpSpeed=3 (~0.33s to fully return to 1x.
+      // lerpSpeed is a unitless exponential decay rate: higher = snappier transition.
       TimeDilation.set(0.1, 8);
       setTimeout(() => { TimeDilation.set(1.0, 3); }, 1000);
 
@@ -305,6 +307,13 @@
   // -----------------------------------------------------------------------
   // Elastic Damage Numbers — spring-physics floating text for crits
   // -----------------------------------------------------------------------
+  // Named constants for spring-physics tuning
+  const _EN_CRIT_INITIAL_SCALE   = 2.0;   // scale crits start at (pops from big → 1x)
+  const _EN_CRIT_SPRING_VEL      = -3.0;  // initial spring velocity (negative = moving toward 1x)
+  const _EN_SPRING_STIFFNESS     = 220;   // spring k (how fast scale snaps back)
+  const _EN_SPRING_DAMPING       = 14;    // spring damping (prevents endless oscillation)
+  const _EN_CRIT_FLOAT_SPEED     = -220;  // upward screen velocity for crits (px/s)
+  const _EN_NORMAL_FLOAT_SPEED   = -150;  // upward screen velocity for normal hits
   const ElasticNumbers = {
     _numbers: [],
 
@@ -321,9 +330,9 @@
       const entry = {
         amount:    Math.floor(amount),
         x:         0, y: 0,        // screen coords (set below)
-        vy:        isCrit ? -220 : -150,  // upward velocity (px/s)
-        scaleVel:  isCrit ? -3.0 : 0,     // start with negative velocity to bounce from 2x→1x
-        scale:     isCrit ? 2.0 : 1.0,    // crits start at 2x scale!
+        vy:        isCrit ? _EN_CRIT_FLOAT_SPEED : _EN_NORMAL_FLOAT_SPEED,
+        scaleVel:  isCrit ? _EN_CRIT_SPRING_VEL : 0,  // bounce from 2x→1x for crits
+        scale:     isCrit ? _EN_CRIT_INITIAL_SCALE : 1.0,
         targetScale: 1.0,
         opacity:   1,
         life:      0,
@@ -376,8 +385,7 @@
 
         // Spring physics for scale (crits bounce from 2x → 1x)
         if (n.isCrit) {
-          const springK = 220, dampC = 14;
-          const force = springK * (n.targetScale - n.scale) - dampC * n.scaleVel;
+          const force = _EN_SPRING_STIFFNESS * (n.targetScale - n.scale) - _EN_SPRING_DAMPING * n.scaleVel;
           n.scaleVel += force * dt;
           n.scale    += n.scaleVel * dt;
           // Shake horizontally while big (scale > 1.15)
@@ -415,7 +423,8 @@
   // -----------------------------------------------------------------------
   const RewardJuice = {
     _confettiPool: [],
-    _MAX_CONFETTI: 60,
+    /** Maximum confetti DOM elements spawned per confetti burst. */
+    _MAX_CONFETTI: 40,
 
     /**
      * Animate resource/item icons flying from a world position into the HUD.
@@ -506,7 +515,7 @@
       const cy = rect ? rect.top + 20 : window.innerHeight * 0.35;
 
       const colours = ['#FFD700','#FF6B6B','#4FC3F7','#69F0AE','#CE93D8','#FFA726','#ffffff'];
-      const count = Math.min(this._MAX_CONFETTI, 40);
+      const count = this._MAX_CONFETTI;
 
       for (let i = 0; i < count; i++) {
         const el = document.createElement('div');

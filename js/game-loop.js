@@ -274,8 +274,13 @@
         const adjustedCount = Math.ceil(count * performanceLog.particleThrottleScale * qualityScale);
         if (adjustedCount <= 0) return;
 
-        // Per-frame cap: max 5 particle spawn calls per frame to prevent GC stutter
-        const curFrame = performanceLog.frameCount || 0;
+        // Per-frame cap: max 5 particle spawn calls per frame to prevent GC stutter.
+        // Uses performanceLog.frameCount (incremented once per animate() tick) as frame
+        // identifier. Falls back to Math.floor(performance.now() / 16) (~60fps buckets)
+        // if frameCount is unavailable or stale (e.g. outside the main game loop).
+        const curFrame = (performanceLog.frameCount > 0)
+          ? performanceLog.frameCount
+          : Math.floor(performance.now() / 16);
         if (curFrame !== _particleFrameNum) {
           _particleFrameNum  = curFrame;
           _particleFrameBudget = 0;

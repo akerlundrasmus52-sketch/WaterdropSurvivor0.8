@@ -1097,17 +1097,20 @@
       const st = saveData.skillTree;
       const active = {};
 
-      // Helper sums
-      const fireTotal = (st.fireAura && st.fireAura.level || 0) + (st.infernoRing && st.infernoRing.level || 0);
-      const speedTotal = (st.bladeDancer && st.bladeDancer.level || 0) + (st.dash && st.dash.level || 0) + (st.dashMaster && st.dashMaster.level || 0);
-      const critTotal = (st.criticalFocus && st.criticalFocus.level || 0) + (st.headshot && st.headshot.level || 0);
-      const lightningTotal = (st.stormcaller && st.stormcaller.level || 0) + (st.lightningStrike && st.lightningStrike.level || 0);
-      const lifestealTotal = (st.bloodlust && st.bloodlust.level || 0) + (st.vampiricAura && st.vampiricAura.level || 0);
-      const armorTotal = (st.ironSkin && st.ironSkin.level || 0) + (st.fortify && st.fortify.level || 0) + (st.bodyArmor && st.bodyArmor.level || 0);
-      const dashTotal = (st.dash && st.dash.level || 0) + (st.dashMaster && st.dashMaster.level || 0);
-      const executeTotal = (st.executioner && st.executioner.level || 0) + (st.meleeTakedown && st.meleeTakedown.level || 0);
-      const iceTotal = (st.coldSnap && st.coldSnap.level || 0) + (st.iceAura && st.iceAura.level || 0);
-      const defenseTotal = (st.ironSkin && st.ironSkin.level || 0) + (st.fortify && st.fortify.level || 0) + (st.secondWind && st.secondWind.level || 0);
+      // Helper: safely read a skill level from the save tree
+      function _sl(name) { return (st[name] && st[name].level) || 0; }
+
+      // Aggregated sums per category
+      const fireTotal      = _sl('fireAura')       + _sl('infernoRing');
+      const speedTotal     = _sl('bladeDancer')    + _sl('dash')        + _sl('dashMaster');
+      const critTotal      = _sl('criticalFocus')  + _sl('headshot');
+      const lightningTotal = _sl('stormcaller')    + _sl('lightningStrike');
+      const lifestealTotal = _sl('bloodlust')      + _sl('vampiricAura');
+      const armorTotal     = _sl('ironSkin')       + _sl('fortify')     + _sl('bodyArmor');
+      const dashTotal      = _sl('dash')           + _sl('dashMaster');
+      const executeTotal   = _sl('executioner')    + _sl('meleeTakedown');
+      const iceTotal       = _sl('coldSnap')       + _sl('iceAura');
+      const defenseTotal   = _sl('ironSkin')       + _sl('fortify')     + _sl('secondWind');
 
       if (fireTotal >= 1 && speedTotal >= 1) active.flameDash = true;
       if (critTotal >= 2 && lightningTotal >= 1) active.chainLightningCrit = true;
@@ -1695,6 +1698,9 @@
         claim: 'Main Building',
         rewardGold: 75,
         rewardSkillPoints: 1,
+        // Softlock fix: the forge is the first non-free building (builtCount=0 → cost=1 of each).
+        // Giving 20 of each guarantees the player can build it even if they spent some resources.
+        // quest2_spendSkills also provides 15 of each as an additional safety net.
         rewardResources: { wood: 20, stone: 20, coal: 20 },
         unlockBuilding: 'forge',
         triggerOnDeath: true,
