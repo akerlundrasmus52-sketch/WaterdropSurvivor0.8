@@ -1012,7 +1012,7 @@
             }
             setTimeout(function() {
               if (window.DopamineSystem && window.DopamineSystem.TimeDilation) window.DopamineSystem.TimeDilation.set(1.0, 3);
-            }, 400);
+            }, 600);
           }
         }
         // Animate the egg (bob and spin)

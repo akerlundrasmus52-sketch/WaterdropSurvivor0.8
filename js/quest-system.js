@@ -574,7 +574,7 @@
       const startRunBtn = panel.querySelector('.start-run-btn');
       if (startRunBtn) {
         // Quest Notification Lock: disable Start Run if quests are still ready to claim
-        if (saveData.tutorialQuests.readyToClaim && saveData.tutorialQuests.readyToClaim.length > 0) {
+        if (saveData.tutorialQuests && saveData.tutorialQuests.readyToClaim && saveData.tutorialQuests.readyToClaim.length > 0) {
           startRunBtn.disabled = true;
           startRunBtn.textContent = '📜 Claim Quest First';
           startRunBtn.style.background = '#555';
