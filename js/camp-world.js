@@ -3204,7 +3204,7 @@
                 _showBennySpeech('Hey dude! 🌊\nSurvive 2 minutes\nin your next run\nto unlock daily rewards!');
                 setTimeout(function () { _hideBennySpeech(); }, 5000);
               } else if (currentQ.id === 'quest_harvester') {
-                _showBennySpeech('Reach Level 5\nin a run to unlock\nthe Forge, dude! 🔨');
+                _showBennySpeech('Reach Level 3\nin a run to unlock\nthe Forge, dude! 🔨');
                 setTimeout(function () { _hideBennySpeech(); }, 5000);
               } else if (currentQ.id === 'quest_firstBlood') {
                 var w = (sd.resources && sd.resources.wood) || 0;

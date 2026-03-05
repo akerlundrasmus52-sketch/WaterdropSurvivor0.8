@@ -345,7 +345,7 @@
           projectileMaterialCache.bulletGlow.clone()  // Clone material for independent color
         );
 
-        this.speed = 0.5; // Increased from 0.4 (25% faster)
+        this.speed = 0.4; // Original speed (reverted from 0.5 optimisation bump)
         // active starts false; reinit() sets it true.  Pool createFn creates with no args so
         // the projectile stays inactive until _spawnProjectile() calls reinit().
         this.active = false;
