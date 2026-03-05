@@ -1465,7 +1465,7 @@
         weapons.fireRing.lastShot = time;
       }
 
-      // 9. LIGHTNING ARC — chain lightning between up to N enemies
+      // 9. LIGHTNING STRIKE — lightning from the heavens, each strike looks different
       if (weapons.lightning.active && time - weapons.lightning.lastShot > weapons.lightning.cooldown) {
         let nearest = null;
         let minDstSq = weapons.lightning.range * weapons.lightning.range;
@@ -1475,73 +1475,99 @@
           if (dSq < minDstSq) { minDstSq = dSq; nearest = e; }
         }
         if (nearest) {
-          const chainCount = weapons.lightning.chainCount || 3;
+          // Number of simultaneous strikes increases with level
+          const strikeCount = weapons.lightning.strikes || 1;
           const hitTargets = new Set();
           let current = nearest;
-          _tmpBoltStart.copy(player.mesh.position); // Start bolt from player (reuse temp)
-          for (let c = 0; c < chainCount && current; c++) {
+
+          for (let sc = 0; sc < strikeCount && current; sc++) {
             if (hitTargets.has(current)) break;
             hitTargets.add(current);
-            const dmg = (weapons.lightning.damage * playerStats.strength) *
-              (1 + (playerStats.lightningDamage || 0) + (playerStats.elementalDamage || 0)) *
-              (1 - c * 0.2); // 20% falloff per chain
-            const isCrit = Math.random() < playerStats.critChance;
-            current.takeDamage(Math.floor(isCrit ? dmg * playerStats.critDmg : dmg), isCrit, 'lightning');
-            spawnParticles(current.mesh.position, 0xFFFF00, 6);
-            spawnParticles(current.mesh.position, 0x00FFFF, 4);
-            
-            // Visible lightning bolt line from previous target to current
-            const boltPoints = [];
-            _tmpBoltStart.y = 0.8;
-            _tmpBoltEnd.copy(current.mesh.position); _tmpBoltEnd.y = 0.8;
-            const segments = 6 + Math.floor(Math.random() * 4);
-            for (let s = 0; s <= segments; s++) {
-              const t = s / segments;
-              const px = _tmpBoltStart.x + (_tmpBoltEnd.x - _tmpBoltStart.x) * t + (s > 0 && s < segments ? (Math.random() - 0.5) * 0.6 : 0);
-              const py = _tmpBoltStart.y + (_tmpBoltEnd.y - _tmpBoltStart.y) * t + (s > 0 && s < segments ? (Math.random() - 0.5) * 0.3 : 0);
-              const pz = _tmpBoltStart.z + (_tmpBoltEnd.z - _tmpBoltStart.z) * t + (s > 0 && s < segments ? (Math.random() - 0.5) * 0.6 : 0);
-              boltPoints.push(new THREE.Vector3(px, py, pz));
+
+            const chainCount = weapons.lightning.chainCount || 3;
+            let chainCurrent = current;
+            _tmpBoltStart.set(chainCurrent.mesh.position.x + (Math.random() - 0.5) * 2, 15 + Math.random() * 5, chainCurrent.mesh.position.z + (Math.random() - 0.5) * 2); // Start from sky
+
+            const chainHitTargets = new Set();
+            for (let c = 0; c < chainCount && chainCurrent; c++) {
+              if (chainHitTargets.has(chainCurrent)) break;
+              chainHitTargets.add(chainCurrent);
+              const dmg = (weapons.lightning.damage * playerStats.strength) *
+                (1 + (playerStats.lightningDamage || 0) + (playerStats.elementalDamage || 0)) *
+                (1 - c * 0.2); // 20% falloff per chain
+              const isCrit = Math.random() < playerStats.critChance;
+              chainCurrent.takeDamage(Math.floor(isCrit ? dmg * playerStats.critDmg : dmg), isCrit, 'lightning');
+              spawnParticles(chainCurrent.mesh.position, 0xFFFF00, 6);
+              spawnParticles(chainCurrent.mesh.position, 0x00FFFF, 4);
+              
+              // Visible lightning bolt from sky — each looks different via random jitter
+              const boltPoints = [];
+              if (c === 0) _tmpBoltStart.y = 15 + Math.random() * 5; // From heaven
+              else _tmpBoltStart.y = 0.8;
+              _tmpBoltEnd.copy(chainCurrent.mesh.position); _tmpBoltEnd.y = 0.8;
+              // Randomize bolt style: forked (many segments), straight (few), zigzag (medium with wide jitter)
+              const boltStyle = Math.floor(Math.random() * 3);
+              const segments = boltStyle === 0 ? (10 + Math.floor(Math.random() * 6)) : boltStyle === 1 ? (3 + Math.floor(Math.random() * 3)) : (6 + Math.floor(Math.random() * 4));
+              const jitterScale = boltStyle === 0 ? 0.4 : boltStyle === 1 ? 0.2 : 1.0;
+              for (let s = 0; s <= segments; s++) {
+                const t = s / segments;
+                const px = _tmpBoltStart.x + (_tmpBoltEnd.x - _tmpBoltStart.x) * t + (s > 0 && s < segments ? (Math.random() - 0.5) * jitterScale : 0);
+                const py = _tmpBoltStart.y + (_tmpBoltEnd.y - _tmpBoltStart.y) * t + (s > 0 && s < segments ? (Math.random() - 0.5) * jitterScale * 0.5 : 0);
+                const pz = _tmpBoltStart.z + (_tmpBoltEnd.z - _tmpBoltStart.z) * t + (s > 0 && s < segments ? (Math.random() - 0.5) * jitterScale : 0);
+                boltPoints.push(new THREE.Vector3(px, py, pz));
+              }
+              _ensureSharedGeo();
+              const boltGeo = new THREE.BufferGeometry().setFromPoints(boltPoints);
+              // Vary bolt color slightly between strikes
+              const boltColors = [0xFFFF00, 0x88DDFF, 0xFFFFFF, 0xAADDFF, 0xCCFFFF];
+              const boltMat = _sharedBoltMat.clone();
+              boltMat.color.setHex(boltColors[Math.floor(Math.random() * boltColors.length)]);
+              const boltLine = new THREE.Line(boltGeo, boltMat);
+              scene.add(boltLine);
+              // Glow bolt (wider, dimmer)
+              const glowMat = _sharedGlowMat.clone();
+              const glowLine = new THREE.Line(boltGeo, glowMat);
+              scene.add(glowLine);
+              // Fade and remove bolt
+              if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
+                let boltLife = 8;
+                managedAnimations.push({ update(_dt) {
+                  boltLife--;
+                  boltMat.opacity = boltLife / 8;
+                  glowMat.opacity = (boltLife / 8) * 0.6;
+                  if (boltLife <= 0) {
+                    scene.remove(boltLine); scene.remove(glowLine);
+                    boltGeo.dispose(); boltMat.dispose(); glowMat.dispose();
+                    return false;
+                  }
+                  return true;
+                }});
+              } else {
+                scene.remove(boltLine); scene.remove(glowLine);
+                boltGeo.dispose(); boltMat.dispose(); glowMat.dispose();
+              }
+              
+              _tmpBoltStart.copy(chainCurrent.mesh.position);
+              // Find next chain target
+              let nextTarget = null; let nextDist = Infinity;
+              for (let e of enemies) {
+                if (e.isDead || chainHitTargets.has(e)) continue;
+                const d = chainCurrent.mesh.position.distanceTo(e.mesh.position);
+                if (d < (weapons.lightning.chainRange || 5) && d < nextDist) { nextDist = d; nextTarget = e; }
+              }
+              chainCurrent = nextTarget;
             }
-            _ensureSharedGeo();
-            const boltGeo = new THREE.BufferGeometry().setFromPoints(boltPoints);
-            // Clone shared materials so each bolt can fade independently
-            const boltMat = _sharedBoltMat.clone();
-            const boltLine = new THREE.Line(boltGeo, boltMat);
-            scene.add(boltLine);
-            // Glow bolt (wider, dimmer)
-            const glowMat = _sharedGlowMat.clone();
-            const glowLine = new THREE.Line(boltGeo, glowMat); // share geometry, no clone needed
-            scene.add(glowLine);
-            // Fade and remove bolt
-            if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
-              let boltLife = 8;
-              managedAnimations.push({ update(_dt) {
-                boltLife--;
-                boltMat.opacity = boltLife / 8;
-                glowMat.opacity = (boltLife / 8) * 0.6;
-                if (boltLife <= 0) {
-                  scene.remove(boltLine); scene.remove(glowLine);
-                  boltGeo.dispose(); boltMat.dispose(); glowMat.dispose();
-                  return false;
-                }
-                return true;
-              }});
-            } else {
-              scene.remove(boltLine); scene.remove(glowLine);
-              boltGeo.dispose(); boltMat.dispose(); glowMat.dispose();
-            }
-            
-            _tmpBoltStart.copy(current.mesh.position);
-            // Find next chain target
-            let nextTarget = null; let nextDist = Infinity;
+
+            // Find next strike target for multi-strike
+            let nextStrikeTarget = null; let nextStrikeDist = Infinity;
             for (let e of enemies) {
               if (e.isDead || hitTargets.has(e)) continue;
-              const d = current.mesh.position.distanceTo(e.mesh.position);
-              if (d < 6 && d < nextDist) { nextDist = d; nextTarget = e; }
+              const d = player.mesh.position.distanceTo(e.mesh.position);
+              if (d < weapons.lightning.range && d < nextStrikeDist) { nextStrikeDist = d; nextStrikeTarget = e; }
             }
-            current = nextTarget;
+            current = nextStrikeTarget;
           }
-          // Lightning flash (pooled)
+          // Lightning flash (pooled) — ground flash at impact
           _flashTempPos.copy(nearest.mesh.position); _flashTempPos.y += 1;
           _acquireFlash(scene, 0xFFFF00, 6, 14, _flashTempPos, 100);
           weapons.lightning.lastShot = time;

@@ -1047,7 +1047,7 @@
         
         // Phase 5: Hit impact particles (flesh/blood) on every hit — scaled with HP ratio
         const hpRatio = this.hp / this.maxHp;
-        const isHeavyHit = damageType === 'doubleBarrel' || damageType === 'shotgun' || isCrit;
+        const isHeavyHit = damageType === 'doubleBarrel' || damageType === 'shotgun' || damageType === 'pumpShotgun' || damageType === 'autoShotgun' || damageType === 'sniperRifle' || damageType === 'homingMissile' || damageType === 'fireball' || isCrit;
         const bloodParticleCount = Math.max(5, Math.floor((1 - hpRatio) * 18) + 5);
         spawnParticles(this.mesh.position, 0x8B0000, Math.min(bloodParticleCount, 20)); // Blood particles
         spawnParticles(this.mesh.position, 0x660000, Math.min(Math.floor(bloodParticleCount * 0.5), 8)); // Darker blood
@@ -1070,7 +1070,7 @@
         }
         // Blood system: directional spray on heavy hits
         if (window.BloodSystem && isHeavyHit) {
-          const isShotgunHit = damageType === 'doubleBarrel' || damageType === 'shotgun';
+          const isShotgunHit = damageType === 'doubleBarrel' || damageType === 'shotgun' || damageType === 'pumpShotgun' || damageType === 'autoShotgun';
           window.BloodSystem.emitBurst(this.mesh.position, isShotgunHit ? 60 : 30, { spreadXZ: 0.8, spreadY: 0.2, minSize: 0.01, maxSize: 0.06, minLife: 20, maxLife: 50 });
         }
         // Weapon-level-based blood effects — higher levels produce more brutal hits
@@ -1115,11 +1115,59 @@
             // Headshot: always dramatic blood spray from head
             window.BloodSystem.emitHeadBleed(this.mesh.position, { intensity: 0.5, duration: 3 });
             window.BloodSystem.emitBurst(this.mesh.position, 80, { spreadXZ: 1.2, spreadY: 0.4 });
-          } else if (damageType === 'shotgun' || damageType === 'doubleBarrel') {
-            // Shotgun/Homing: massive burst — exit wounds + guts at high power
+          } else if (damageType === 'shotgun' || damageType === 'doubleBarrel' || damageType === 'pumpShotgun' || damageType === 'autoShotgun') {
+            // Shotgun variants: massive burst — exit wounds + guts at high power
             window.BloodSystem.emitBurst(this.mesh.position, 80, { spreadXZ: 1.5, spreadY: 0.3 });
             window.BloodSystem.emitGuts(this.mesh.position, { count: 15 });
             window.BloodSystem.emitExitWound(this.mesh.position, new THREE.Vector3(Math.random()-0.5, 0, Math.random()-0.5).normalize(), 40, { speed: 0.35 });
+          } else if (damageType === 'samuraiSword' || damageType === 'teslaSaber') {
+            // Bladed weapons: deep slashing wounds
+            const slashDir2 = new THREE.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5).normalize();
+            window.BloodSystem.emitSwordSlash(this.mesh.position, slashDir2, 35);
+            window.BloodSystem.emitPulse(this.mesh.position, { pulses: 2, perPulse: 50, interval: 200, arcDir: slashDir2, spreadXZ: 0.5 });
+            if (damageType === 'teslaSaber') {
+              spawnParticles(this.mesh.position, 0x00CCFF, 8); // Electric sparks
+              spawnParticles(this.mesh.position, 0xFFFFFF, 4);
+            }
+          } else if (damageType === 'whip') {
+            // Whip: lash marks
+            window.BloodSystem.emitBurst(this.mesh.position, 25, { spreadXZ: 0.6, spreadY: 0.1 });
+            spawnParticles(this.mesh.position, 0xCC8844, 5);
+          } else if (damageType === 'sniperRifle' || damageType === '50cal') {
+            // Sniper: massive through-and-through
+            const sniperDir = new THREE.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5).normalize();
+            window.BloodSystem.emitBurst(this.mesh.position, 100, { spreadXZ: 2.0, spreadY: 0.5 });
+            window.BloodSystem.emitExitWound(this.mesh.position, sniperDir, 60, { speed: 0.5 });
+            window.BloodSystem.emitGuts(this.mesh.position, { count: 8 });
+          } else if (damageType === 'minigun' || damageType === 'uzi') {
+            // Rapid fire: small frequent blood spurts
+            window.BloodSystem.emitBurst(this.mesh.position, 15, { spreadXZ: 0.3, spreadY: 0.1 });
+          } else if (damageType === 'bow') {
+            // Arrow: pin wound + blood trickle
+            window.BloodSystem.emitBurst(this.mesh.position, 20, { spreadXZ: 0.4, spreadY: 0.15 });
+            spawnParticles(this.mesh.position, 0x8B4513, 3); // Wood splinter particles
+          } else if (damageType === 'boomerang' || damageType === 'shuriken') {
+            // Thrown weapons: slicing cuts
+            window.BloodSystem.emitSwordSlash(this.mesh.position, new THREE.Vector3(Math.random()-0.5, 0, Math.random()-0.5).normalize(), 25);
+            spawnParticles(this.mesh.position, 0xCCCCCC, 4); // Metal spark
+          } else if (damageType === 'nanoSwarm' || damageType === 'special') {
+            // Nano/special: small precise wounds
+            window.BloodSystem.emitBurst(this.mesh.position, 12, { spreadXZ: 0.2, spreadY: 0.1 });
+            spawnParticles(this.mesh.position, 0x6688FF, 3);
+          } else if (damageType === 'homingMissile' || damageType === 'fireball') {
+            // Explosive: massive blast
+            window.BloodSystem.emitBurst(this.mesh.position, 90, { spreadXZ: 2.0, spreadY: 0.5 });
+            window.BloodSystem.emitGuts(this.mesh.position, { count: 12 });
+            spawnParticles(this.mesh.position, 0xFF4400, 10);
+          } else if (damageType === 'lightning') {
+            // Lightning: charring + electric sparks
+            window.BloodSystem.emitAuraBurn(this.mesh.position, 30);
+            spawnParticles(this.mesh.position, 0x00CCFF, 6);
+            spawnParticles(this.mesh.position, 0xFFFF00, 4);
+          } else if (damageType === 'poison') {
+            // Poison: toxic dissolve particles
+            window.BloodSystem.emitBurst(this.mesh.position, 15, { spreadXZ: 0.3, spreadY: 0.1, color1: 0x00AA00, color2: 0x44FF44 });
+            spawnParticles(this.mesh.position, 0x00FF00, 5);
           }
         }
         // Pulsating wound blood drips — gravity-based spray from hit location
