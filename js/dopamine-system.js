@@ -342,11 +342,17 @@
         el:        null
       };
 
-      // Project 3D → 2D
-      const pos = new THREE.Vector3(worldPos.x, worldPos.y + 1.5, worldPos.z);
+      // Project 3D → 2D; crits/headshots spawn directly above the enemy head (lower Y offset)
+      const _yOffset = (isCrit || isHeadshot) ? 0.8 : 1.5;
+      const pos = new THREE.Vector3(worldPos.x, worldPos.y + _yOffset, worldPos.z);
       pos.project(camera);
       entry.x = (pos.x *  0.5 + 0.5) * window.innerWidth;
       entry.y = (pos.y * -0.5 + 0.5) * window.innerHeight;
+
+      // Quick camera shake on crits/headshots
+      if ((isCrit || isHeadshot) && window._triggerCameraShake) {
+        window._triggerCameraShake(isHeadshot ? 0.18 : 0.12, 200);
+      }
 
       // Create DOM element
       const el = document.createElement('div');

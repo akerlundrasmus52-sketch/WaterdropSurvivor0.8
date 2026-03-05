@@ -1787,22 +1787,28 @@
       animation: pulse 3s infinite;
     }
     
-    /* UPGRADE GRID: CSS grid layout for upgrade choices.
-       Cards flow in a responsive grid — two columns on wide screens, one on narrow ones
-       (e.g. Samsung S10 @ 360 px wide) without horizontal overflow. */
+    /* UPGRADE GRID: Flexbox layout for upgrade choices.
+       Cards wrap into 2 columns on wide screens and stack gracefully on narrow ones
+       (e.g. Samsung S10 @ 360 px wide) without horizontal overflow.
+       transform:translateZ(0) enables GPU compositing to stop flicker on older Android. */
     #upgrade-list, #level-up-choices {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
       gap: 10px;
       margin-top: 15px;
       width: 100%;
       box-sizing: border-box;
     }
 
-    /* Each card fills its grid cell fully. */
+    /* Each card takes up roughly half the container width so two fit side-by-side. */
     #upgrade-list > *, #level-up-choices > * {
-      min-width: 0;
+      flex: 1 1 40%;
+      min-width: 140px;
       max-width: 100%;
+      /* Hardware-acceleration hints to prevent flicker on older Android (Samsung S10) */
+      transform: translateZ(0);
+      backface-visibility: hidden;
     }
 
     h2 {
@@ -3245,8 +3251,10 @@
         gap: 4px;
       }
 
-      /* Level-up cards: allow two side-by-side in landscape */
+      /* Level-up cards: allow two side-by-side in landscape using flex sizing */
       #upgrade-list > *, #level-up-choices > * {
+        flex: 1 1 40%;
+        min-width: 140px;
         max-width: 260px;
       }
 
@@ -3400,14 +3408,15 @@
         box-sizing: border-box;
       }
 
-      /* Force single-column on very small screens to prevent horizontal overflow */
+      /* Force two-column flex wrap on very small screens instead of single column to avoid ugly vertical list */
       #upgrade-list, #level-up-choices {
-        grid-template-columns: 1fr;
         gap: 8px;
       }
 
       #upgrade-list > *, #level-up-choices > * {
-        max-width: 100%;
+        flex: 1 1 40%;
+        min-width: 120px;
+        max-width: calc(50% - 4px);
       }
 
       .upgrade-card {
@@ -4937,12 +4946,14 @@
   left: 10px;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   z-index: 115;
   background: rgba(0,0,0,0.65);
   border: 2px solid #FF4400;
-  border-radius: 12px;
-  padding: 4px 8px;
+  border-radius: 10px;
+  /* Slightly smaller than before so it doesn't overlap "Current Lvl" or companion buttons */
+  padding: 3px 6px;
+  max-width: 160px;
 }
 .rage-label {
   font-family: 'Bangers', cursive;
@@ -5659,9 +5670,10 @@
   position: absolute;
   pointer-events: none;
   z-index: 10000;
-  font-family: 'Arial Black', 'Impact', sans-serif;
+  /* Cozy, rounded, highly legible damage font — Nunito falls back to M PLUS Rounded (already loaded) */
+  font-family: 'Nunito', 'M PLUS Rounded 1c', 'Arial Rounded MT Bold', 'Trebuchet MS', sans-serif;
   font-weight: 900;
-  font-size: 18px;
+  font-size: 20px;
   color: #fff;
   text-shadow:
     0 0 4px rgba(0,0,0,0.9),
@@ -5672,17 +5684,21 @@
 }
 .elastic-damage-number.critical {
   color: #FFD700;
-  font-size: 26px;
+  /* Critical text is SMALLER than base so it spawns cleanly above the enemy head without dominating the screen */
+  font-size: 17px;
+  font-weight: 900;
   text-shadow:
     0 0 8px rgba(255,215,0,0.8),
     0 0 16px rgba(255,165,0,0.5),
     0 2px 4px rgba(0,0,0,0.8);
 }
 .elastic-damage-number.headshot {
-  color: #FF4444;
-  font-size: 30px;
+  color: #FF6644;
+  /* Headshot text is SMALLER — spawns right at the head position without large visual noise */
+  font-size: 17px;
+  font-weight: 900;
   text-shadow:
-    0 0 10px rgba(255,0,0,0.8),
+    0 0 10px rgba(255,100,68,0.8),
     0 0 20px rgba(255,50,50,0.5),
     0 2px 4px rgba(0,0,0,0.8);
 }
@@ -5983,4 +5999,99 @@
   align-items: center;
   gap: 12px;
   box-shadow: 0 4px 20px rgba(155,89,182,0.3);
+}
+
+/* ── Challenge Complete Board ────────────────────────────────────── */
+@keyframes challenge-board-slide-in {
+  from { transform: translateY(-120%); opacity: 0; }
+  to   { transform: translateY(0);     opacity: 1; }
+}
+@keyframes challenge-board-slide-out {
+  from { transform: translateY(0);     opacity: 1; }
+  to   { transform: translateY(-120%); opacity: 0; }
+}
+@keyframes challenge-strike {
+  from { width: 0; }
+  to   { width: 100%; }
+}
+@keyframes challenge-laser-confetti {
+  0%   { transform: translate(var(--cx), var(--cy)) scale(1)   rotate(0deg);   opacity: 1; }
+  100% { transform: translate(var(--tx), var(--ty)) scale(0.4) rotate(720deg); opacity: 0; }
+}
+@keyframes challenge-gold-pulse {
+  0%, 100% { text-shadow: 0 0 8px rgba(255,215,0,0.6); }
+  50%       { text-shadow: 0 0 20px rgba(255,215,0,1), 0 0 40px rgba(255,165,0,0.7); }
+}
+
+#challenge-complete-board {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-120%);
+  z-index: 99999;
+  background: #0a0a0a;
+  border: 2px solid #FFD700;
+  border-radius: 14px;
+  padding: 14px 24px 16px;
+  min-width: 280px;
+  max-width: 360px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.8), 0 0 20px rgba(255,215,0,0.15);
+  pointer-events: none;
+  opacity: 0;
+  will-change: transform, opacity;
+}
+#challenge-complete-board.slide-in {
+  animation: challenge-board-slide-in 0.45s cubic-bezier(0.34,1.56,0.64,1) forwards;
+}
+#challenge-complete-board.slide-out {
+  animation: challenge-board-slide-out 0.35s ease-in forwards;
+}
+#challenge-complete-board .ccb-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Bangers', cursive;
+  font-size: 14px;
+  color: #888;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+#challenge-complete-board .ccb-name {
+  position: relative;
+  font-family: 'Nunito', 'M PLUS Rounded 1c', sans-serif;
+  font-size: 17px;
+  font-weight: 800;
+  color: #fff;
+  margin-bottom: 10px;
+  overflow: hidden;
+}
+#challenge-complete-board .ccb-name .ccb-strike {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  height: 2px;
+  background: #FFD700;
+  width: 0;
+  transform: translateY(-50%);
+}
+#challenge-complete-board .ccb-name.struck .ccb-strike {
+  animation: challenge-strike 0.4s ease-out 0.3s forwards;
+}
+#challenge-complete-board .ccb-gold {
+  font-family: 'Bangers', cursive;
+  font-size: 26px;
+  color: #FFD700;
+  text-align: center;
+  animation: challenge-gold-pulse 1.2s infinite;
+  letter-spacing: 1px;
+}
+.challenge-confetti-particle {
+  position: fixed;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 99998;
+  animation: challenge-laser-confetti 0.8s ease-out forwards;
 }

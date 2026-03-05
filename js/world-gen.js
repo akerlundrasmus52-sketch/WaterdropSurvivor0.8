@@ -149,6 +149,10 @@
         color: 0xB0C4DE, // Light steel blue - matches water theme
         metalness: 0.1,
         roughness: 0.7,
+        // polygonOffset prevents Z-fighting against the flat ground plane (Samsung S10 fix)
+        polygonOffset: true,
+        polygonOffsetFactor: -1,
+        polygonOffsetUnits: -1
       });
       const rondelRadius = 10;
       const rondelGeo = new THREE.CircleGeometry(rondelRadius, 64);
@@ -3017,4 +3021,8 @@
       renderer.shadowMap.needsUpdate = true;
       console.log(`[Graphics Quality] Applied "${quality}" — shadows:${preset.shadows}, shadowSize:${preset.shadowSize}, pixelRatio:${preset.pixelRatio}, fog:${preset.fogNear}/${preset.fogFar}`);
     }
+
+    // Expose globally so other script files (game-screens.js, game-loop.js) can safely call it
+    // without depending on hoisting order across separate <script> tags.
+    window.applyGraphicsQuality = applyGraphicsQuality;
 

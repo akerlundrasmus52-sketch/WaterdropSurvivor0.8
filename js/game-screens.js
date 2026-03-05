@@ -107,10 +107,17 @@
 
       // Apply graphics quality settings
       // For 'auto' mode, start at 'medium' and let the FPS booster adjust from there
-      if (gameSettings.graphicsQuality === 'auto') {
-        applyGraphicsQuality('medium');
+      // Use window.applyGraphicsQuality (exposed by world-gen.js) with a typeof guard to prevent
+      // "not defined" crashes if the function hasn't been set yet.
+      const _applyGfx = window.applyGraphicsQuality || null;
+      if (_applyGfx) {
+        if (gameSettings.graphicsQuality === 'auto') {
+          _applyGfx('medium');
+        } else {
+          _applyGfx(gameSettings.graphicsQuality);
+        }
       } else {
-        applyGraphicsQuality(gameSettings.graphicsQuality);
+        console.warn('[Init] applyGraphicsQuality not yet defined — skipping initial quality pass.');
       }
 
       // Setup
@@ -2904,7 +2911,11 @@
           roughness: 0.15,     // Smooth reflective surface like wet blood
           metalness: 0.6,      // High metalness for glass-like reflection
           emissive: 0x3A0000,  // Subtle dark red glow
-          emissiveIntensity: 0.15
+          emissiveIntensity: 0.15,
+          // polygonOffset eliminates Z-fighting on the ground plane (Samsung S10 fix)
+          polygonOffset: true,
+          polygonOffsetFactor: -1,
+          polygonOffsetUnits: -1
         });
         const decal = new THREE.Mesh(geo, mat);
         decal.rotation.x = -Math.PI / 2;

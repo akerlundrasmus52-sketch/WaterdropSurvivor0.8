@@ -2862,6 +2862,81 @@
     }
 
     // Claim a tutorial quest - REWRITTEN for reliability
+// ── Challenge Complete Board ──────────────────────────────────────────────
+    // Slides a sleek black board down from the top of the screen, strikes through
+    // the challenge name, shows a trophy, shoots laser confetti, and counts up gold.
+    // Rarity-based confetti colours: Common→grey, Uncommon→green, Rare→blue,
+    //                                Epic→purple, Legendary→orange, Mythical→gold.
+    function showChallengeComplete(questName, goldAmount) {
+      const board = document.getElementById('challenge-complete-board');
+      const nameLabel = document.getElementById('ccb-name-label');
+      const nameEl    = document.getElementById('ccb-name-text');
+      const goldEl    = document.getElementById('ccb-gold-display');
+      if (!board || !nameLabel || !nameEl || !goldEl) return;
+
+      // Set content
+      nameLabel.textContent = questName || 'Challenge';
+      nameEl.classList.remove('struck');
+      goldEl.textContent = '+0 Gold';
+
+      // Slide in
+      board.classList.remove('slide-in', 'slide-out');
+      void board.offsetWidth; // force reflow
+      board.style.transform = 'translateX(-50%) translateY(-120%)';
+      board.style.opacity = '0';
+      board.classList.add('slide-in');
+
+      // Strike through name after 400ms
+      setTimeout(() => nameEl.classList.add('struck'), 400);
+
+      // Count up gold reward
+      const countDuration = 900;
+      const startTime = performance.now();
+      function _countUp(now) {
+        const t = Math.min((now - startTime) / countDuration, 1);
+        const current = Math.floor(goldAmount * t);
+        goldEl.textContent = '+' + current + ' Gold 🏆';
+        if (t < 1) requestAnimationFrame(_countUp);
+        else goldEl.textContent = '+' + goldAmount + ' Gold 🏆';
+      }
+      setTimeout(() => requestAnimationFrame(_countUp), 300);
+
+      // Laser confetti — rarity rainbow
+      const rarityColors = ['#aaaaaa', '#44ff44', '#4499ff', '#cc44ff', '#ff8800', '#FFD700'];
+      const boardRect = board.getBoundingClientRect ? board.getBoundingClientRect() : null;
+      const cx = boardRect ? boardRect.left + boardRect.width / 2 : window.innerWidth / 2;
+      const cy = boardRect ? boardRect.bottom : 80;
+      for (let i = 0; i < 28; i++) {
+        const p = document.createElement('div');
+        p.className = 'challenge-confetti-particle';
+        const color = rarityColors[Math.floor(Math.random() * rarityColors.length)];
+        p.style.background = color;
+        p.style.left = cx + 'px';
+        p.style.top  = cy + 'px';
+        const angle = Math.random() * Math.PI * 2;
+        const dist  = 60 + Math.random() * 120;
+        p.style.setProperty('--cx', '0px');
+        p.style.setProperty('--cy', '0px');
+        p.style.setProperty('--tx', (Math.cos(angle) * dist) + 'px');
+        p.style.setProperty('--ty', (Math.sin(angle) * dist + 30) + 'px');
+        p.style.animationDelay = (Math.random() * 0.2) + 's';
+        document.body.appendChild(p);
+        setTimeout(() => { if (p.parentNode) p.parentNode.removeChild(p); }, 1200);
+      }
+
+      // Slide out and hide after 3.8 seconds
+      setTimeout(() => {
+        board.classList.remove('slide-in');
+        board.classList.add('slide-out');
+        setTimeout(() => {
+          board.classList.remove('slide-out');
+          board.style.transform = 'translateX(-50%) translateY(-120%)';
+          board.style.opacity = '0';
+        }, 400);
+      }, 3800);
+    }
+    window.showChallengeComplete = showChallengeComplete;
+
     function claimTutorialQuest(questId) {
       const quest = TUTORIAL_QUESTS[questId];
       if (!quest) {
@@ -2893,6 +2968,9 @@
       // Award 50 bonus gold for every quest claimed
       saveData.gold += 50;
       showStatChange('+50 Gold!');
+
+      // Premium Challenge Complete board — slides from top with confetti and gold count-up
+      showChallengeComplete(quest.name, (quest.rewardGold || 0) + 50);
       if (quest.rewardSkillPoints) {
         saveData.skillPoints += quest.rewardSkillPoints;
         showStatChange(`+${quest.rewardSkillPoints} Skill Points!`);

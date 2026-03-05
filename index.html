@@ -49,6 +49,8 @@
   <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700;800;900&display=swap" rel="stylesheet">
   <!-- COMIC FONT: 80s Batman comic-style font for combo/notifications -->
   <link href="https://fonts.googleapis.com/css2?family=Bangers&display=swap" rel="stylesheet">
+  <!-- DAMAGE FONT: Cozy rounded font for floating damage numbers -->
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
@@ -417,6 +419,16 @@
   </div>
 
   <div id="game-container"></div>
+
+  <!-- Challenge Complete Board — slides down from top on quest claim -->
+  <div id="challenge-complete-board" role="status" aria-live="polite">
+    <div class="ccb-header">🏆 Challenge Complete</div>
+    <div class="ccb-name" id="ccb-name-text">
+      <span id="ccb-name-label"></span>
+      <span class="ccb-strike" id="ccb-strike-bar"></span>
+    </div>
+    <div class="ccb-gold" id="ccb-gold-display">+0 Gold</div>
+  </div>
 
   <!-- FRESH: Low HP warning vignette -->
   <div id="low-hp-vignette"></div>

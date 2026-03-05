@@ -578,6 +578,32 @@
     // Track the current camera shake RAF to cancel on new hit (prevent stacking shakes)
     let _cameraShakeRAF = null;
 
+    // Lightweight camera shake helper — exposed globally so DopamineSystem and others can trigger it.
+    // intensity: max displacement in world units; durationMs: shake duration in milliseconds.
+    window._triggerCameraShake = function _triggerCameraShake(intensity, durationMs) {
+      if (!camera) return;
+      if (_cameraShakeRAF) { cancelAnimationFrame(_cameraShakeRAF); _cameraShakeRAF = null; }
+      const origin = { x: camera.position.x, y: camera.position.y, z: camera.position.z };
+      const endTime = performance.now() + (durationMs || 200);
+      function _shake() {
+        const remaining = endTime - performance.now();
+        if (remaining <= 0) {
+          camera.position.x = origin.x;
+          camera.position.y = origin.y;
+          camera.position.z = origin.z;
+          _cameraShakeRAF = null;
+          return;
+        }
+        const t = remaining / (durationMs || 200);
+        const amp = intensity * t;
+        camera.position.x = origin.x + (Math.random() - 0.5) * amp;
+        camera.position.y = origin.y + (Math.random() - 0.5) * amp;
+        camera.position.z = origin.z + (Math.random() - 0.5) * amp;
+        _cameraShakeRAF = requestAnimationFrame(_shake);
+      }
+      _shake();
+    };
+
     // Upgrade Config — alias from GameWeapons
     const UPGRADES = WEAPON_UPGRADES;
 

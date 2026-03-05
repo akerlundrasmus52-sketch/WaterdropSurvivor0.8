@@ -174,8 +174,8 @@
   const HARVEST_RANGE = 3.0;       // distance in world-units to trigger harvest
   const HARVEST_COOLDOWN_MS = 1500; // ms between harvest ticks per node
   // Fraction of a node's visual radius used as its solid collision boundary.
-  // Set below 1.0 so the visual mesh and the collision wall feel generous but not unfair.
-  const NODE_COLLISION_RADIUS_SCALE = 0.6;
+  // 0.85 — close to visual radius so the player definitely can't walk through trees/rocks/coal.
+  const NODE_COLLISION_RADIUS_SCALE = 0.85;
 
   // Active swing animation state
   let _swingAnim = null; // { toolId, endTime, nodeRef }
