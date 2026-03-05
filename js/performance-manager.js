@@ -264,6 +264,12 @@
       entry.inUse = false;
       entry.mesh.visible = false;
       entry.life = 0;
+      entry.maxLife = 1;                // reset to avoid stale maxLife on re-acquire
+      entry.velocity.x = 0;            // reset velocity so ghost motion can't occur
+      entry.velocity.y = 0;
+      entry.velocity.z = 0;
+      entry.mesh.scale.set(1, 1, 1);   // reset scale (updateAll may have shrunk it)
+      entry.mesh.material.opacity = 1; // reset opacity
     }
 
     /** Update all active particles.  Returns count of active particles. */

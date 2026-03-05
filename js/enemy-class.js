@@ -19,6 +19,8 @@
     let _sharedBloodStainGeo = null;
     // Shared blood drip geometry (avoids per-hit SphereGeometry creation)
     let _sharedBloodDripGeo = null;
+    // Module-scoped temp vector for takeDamage() blood/hit direction — avoids per-hit allocation
+    const _tmpHitDir = new THREE.Vector3();
 
     function spawnWaterParticle(pos) {
       if (!scene) return;
@@ -505,7 +507,8 @@
             this.mesh.position.x += perpX * this.speed * 0.7;
             this.mesh.position.z += perpZ * this.speed * 0.7;
           }
-          this.mesh.lookAt(new THREE.Vector3(targetPos.x, this.mesh.position.y, targetPos.z));
+          // THREE.Object3D.lookAt() accepts (x, y, z) directly — zero allocation.
+          this.mesh.lookAt(targetPos.x, this.mesh.position.y, targetPos.z);
         } else if (this.isFlyingBoss && dist < this.attackRange) {
           // Flying Boss — orbit player and fire powerful projectiles
           const now = Date.now();
@@ -520,7 +523,8 @@
           const orbitR = this.attackRange * (0.6 + Math.sin(gameTime * 0.5) * 0.2);
           this.mesh.position.x = targetPos.x + Math.cos(newAngle) * orbitR;
           this.mesh.position.z = targetPos.z + Math.sin(newAngle) * orbitR;
-          this.mesh.lookAt(new THREE.Vector3(targetPos.x, this.mesh.position.y, targetPos.z));
+          // THREE.Object3D.lookAt() accepts (x, y, z) directly — zero allocation.
+          this.mesh.lookAt(targetPos.x, this.mesh.position.y, targetPos.z);
         } else if (dist > 0.5) {
           // Check if slow/freeze effect expired
           const nowMs = Date.now();
@@ -1095,25 +1099,25 @@
             // Gun: Level 1 = small entry wound only; Level 2+ = exit wound spray
             window.BloodSystem.emitBurst(this.mesh.position, 10 + gunLvl * 8, { spreadXZ: 0.3 + gunLvl * 0.15, spreadY: 0.1 + gunLvl * 0.05 });
             if (gunLvl >= 2) {
-              const exitDir = new THREE.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5).normalize();
-              window.BloodSystem.emitExitWound(this.mesh.position, exitDir, 15 + gunLvl * 10, { speed: 0.2 + gunLvl * 0.05 });
+              _tmpHitDir.set(Math.random() - 0.5, 0, Math.random() - 0.5).normalize();
+              window.BloodSystem.emitExitWound(this.mesh.position, _tmpHitDir, 15 + gunLvl * 10, { speed: 0.2 + gunLvl * 0.05 });
             }
             if (gunLvl >= 3) {
               window.BloodSystem.emitHeartbeatWound(this.mesh.position, { pulses: 2, perPulse: 30 + gunLvl * 15, interval: 250 });
             }
           } else if (damageType === 'drone') {
             // Drone: Level 1 = entry only, Level 3+ = go through with exit mist
-            const bulletDir = new THREE.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5).normalize();
-            window.BloodSystem.emitDroneMist(this.mesh.position, bulletDir, 20 + droneLvl * 15);
+            _tmpHitDir.set(Math.random() - 0.5, 0, Math.random() - 0.5).normalize();
+            window.BloodSystem.emitDroneMist(this.mesh.position, _tmpHitDir, 20 + droneLvl * 15);
             if (droneLvl >= 3) {
-              window.BloodSystem.emitExitWound(this.mesh.position, bulletDir, 20 + droneLvl * 8, { speed: 0.25 });
+              window.BloodSystem.emitExitWound(this.mesh.position, _tmpHitDir, 20 + droneLvl * 8, { speed: 0.25 });
             }
           } else if (damageType === 'sword') {
             // Sword: slash lines with blood pouring — higher levels = deeper cuts
-            const slashDir = new THREE.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5).normalize();
-            window.BloodSystem.emitSwordSlash(this.mesh.position, slashDir, 20 + swordLvl * 12);
+            _tmpHitDir.set(Math.random() - 0.5, 0, Math.random() - 0.5).normalize();
+            window.BloodSystem.emitSwordSlash(this.mesh.position, _tmpHitDir, 20 + swordLvl * 12);
             if (swordLvl >= 2) {
-              window.BloodSystem.emitPulse(this.mesh.position, { pulses: 2, perPulse: 40 + swordLvl * 20, interval: 200, arcDir: slashDir, spreadXZ: 0.4 });
+              window.BloodSystem.emitPulse(this.mesh.position, { pulses: 2, perPulse: 40 + swordLvl * 20, interval: 200, arcDir: _tmpHitDir, spreadXZ: 0.4 });
             }
           } else if (damageType === 'aura') {
             // Aura: energy burns escalate with level
@@ -1129,12 +1133,13 @@
             // Shotgun variants: massive burst — exit wounds + guts at high power
             window.BloodSystem.emitBurst(this.mesh.position, 80, { spreadXZ: 1.5, spreadY: 0.3 });
             window.BloodSystem.emitGuts(this.mesh.position, { count: 15 });
-            window.BloodSystem.emitExitWound(this.mesh.position, new THREE.Vector3(Math.random()-0.5, 0, Math.random()-0.5).normalize(), 40, { speed: 0.35 });
+            _tmpHitDir.set(Math.random()-0.5, 0, Math.random()-0.5).normalize();
+            window.BloodSystem.emitExitWound(this.mesh.position, _tmpHitDir, 40, { speed: 0.35 });
           } else if (damageType === 'samuraiSword' || damageType === 'teslaSaber') {
             // Bladed weapons: deep slashing wounds
-            const slashDir2 = new THREE.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5).normalize();
-            window.BloodSystem.emitSwordSlash(this.mesh.position, slashDir2, 35);
-            window.BloodSystem.emitPulse(this.mesh.position, { pulses: 2, perPulse: 50, interval: 200, arcDir: slashDir2, spreadXZ: 0.5 });
+            _tmpHitDir.set(Math.random() - 0.5, 0, Math.random() - 0.5).normalize();
+            window.BloodSystem.emitSwordSlash(this.mesh.position, _tmpHitDir, 35);
+            window.BloodSystem.emitPulse(this.mesh.position, { pulses: 2, perPulse: 50, interval: 200, arcDir: _tmpHitDir, spreadXZ: 0.5 });
             if (damageType === 'teslaSaber') {
               spawnParticles(this.mesh.position, 0x00CCFF, 8); // Electric sparks
               spawnParticles(this.mesh.position, 0xFFFFFF, 4);
@@ -1145,9 +1150,9 @@
             spawnParticles(this.mesh.position, 0xCC8844, 5);
           } else if (damageType === 'sniperRifle' || damageType === '50cal') {
             // Sniper: massive through-and-through
-            const sniperDir = new THREE.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5).normalize();
+            _tmpHitDir.set(Math.random() - 0.5, 0, Math.random() - 0.5).normalize();
             window.BloodSystem.emitBurst(this.mesh.position, 100, { spreadXZ: 2.0, spreadY: 0.5 });
-            window.BloodSystem.emitExitWound(this.mesh.position, sniperDir, 60, { speed: 0.5 });
+            window.BloodSystem.emitExitWound(this.mesh.position, _tmpHitDir, 60, { speed: 0.5 });
             window.BloodSystem.emitGuts(this.mesh.position, { count: 8 });
           } else if (damageType === 'minigun' || damageType === 'uzi') {
             // Rapid fire: small frequent blood spurts
@@ -1158,7 +1163,8 @@
             spawnParticles(this.mesh.position, 0x8B4513, 3); // Wood splinter particles
           } else if (damageType === 'boomerang' || damageType === 'shuriken') {
             // Thrown weapons: slicing cuts
-            window.BloodSystem.emitSwordSlash(this.mesh.position, new THREE.Vector3(Math.random()-0.5, 0, Math.random()-0.5).normalize(), 25);
+            _tmpHitDir.set(Math.random()-0.5, 0, Math.random()-0.5).normalize();
+            window.BloodSystem.emitSwordSlash(this.mesh.position, _tmpHitDir, 25);
             spawnParticles(this.mesh.position, 0xCCCCCC, 4); // Metal spark
           } else if (damageType === 'nanoSwarm' || damageType === 'special') {
             // Nano/special: small precise wounds

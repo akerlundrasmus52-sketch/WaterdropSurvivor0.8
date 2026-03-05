@@ -81,6 +81,17 @@
     const _tmpWhipLastPos = new THREE.Vector3();
     const _tmpBoltPoint = new THREE.Vector3();
     const _tmpArcMid = new THREE.Vector3();
+    // Pre-allocated missile velocity pool — round-robin of 4 vectors so multiple simultaneous
+    // missiles can each have an independent persistent velocity without allocating on launch.
+    const _missileVelPool = [
+      new THREE.Vector3(), new THREE.Vector3(),
+      new THREE.Vector3(), new THREE.Vector3()
+    ];
+    let _missileVelIdx = 0;
+    // Pre-allocated temporaries for instanced eye-batch sync (zero allocation per frame)
+    const _eyeSyncPos   = new THREE.Vector3();
+    const _eyeSyncEuler = new THREE.Euler();   // identity (0,0,0) — eyes are spheres, no rotation needed
+    const _eyeSyncScale = new THREE.Vector3(1, 1, 1);
 
     function _ensureFlashPool(sceneRef) {
       if (_flashPool !== null || typeof THREE === 'undefined') return;
@@ -1719,7 +1730,10 @@
           let target = nearest;
           let mLife = 120;
           let smokeTimer = 0;
-          const mVel = new THREE.Vector3(target.mesh.position.x - missileGroup.position.x, 0, target.mesh.position.z - missileGroup.position.z).normalize().multiplyScalar(0.25);
+          // Borrow a pre-allocated velocity vector from the pool (zero allocation on missile launch).
+          // `& 3` is equivalent to `% 4` for wrapping within 0-3 — more readable as explicit modulo.
+          const mVel = _missileVelPool[_missileVelIdx++ % _missileVelPool.length];
+          mVel.set(target.mesh.position.x - missileGroup.position.x, 0, target.mesh.position.z - missileGroup.position.z).normalize().multiplyScalar(0.25);
           if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
             managedAnimations.push({ update(_dt) {
               mLife--;
@@ -2143,14 +2157,27 @@
       droneTurrets.forEach(drone => drone.update(dt));
       
       // Projectiles update returns false if dead; release pooled bullets back to the pool
-      projectiles = projectiles.filter(p => {
-        const alive = p.update() !== false;
-        if (!alive && p._isPooled && window._projectilePool) {
-          window._projectilePool.release(p);
+      // In-place compaction avoids the GC spike from .filter() creating a new array each frame.
+      {
+        let _j = 0;
+        for (let _i = 0; _i < projectiles.length; _i++) {
+          const p = projectiles[_i];
+          const alive = p.update() !== false;
+          if (!alive && p._isPooled && window._projectilePool) {
+            window._projectilePool.release(p);
+          }
+          if (alive) projectiles[_j++] = p;
         }
-        return alive;
-      });
-      meteors = meteors.filter(m => m.update() !== false);
+        projectiles.length = _j;
+      }
+      // Meteors — in-place compaction (no new array allocation)
+      {
+        let _j = 0;
+        for (let _i = 0; _i < meteors.length; _i++) {
+          if (meteors[_i].update() !== false) meteors[_j++] = meteors[_i];
+        }
+        meteors.length = _j;
+      }
       expGems.forEach(g => g.update(player.mesh.position));
       goldCoins.forEach(g => g.update(player.mesh.position));
       goldDrops.forEach(g => g.update(player.mesh.position));
@@ -2159,10 +2186,66 @@
       // --- Instanced renderer: sync entity transforms to GPU buffers ---
       if (window._instancedRenderer && window._instancedRenderer.active) {
         const ir = window._instancedRenderer;
+
+        // Propagate each enemy's current material colour as its per-instance colour so that
+        // damage flashes (blood stain, freeze tint, etc.) are visible on instanced bodies.
+        // The batch materials use white base colour so setColorAt() passes through unchanged.
+        for (let _ei = 0; _ei < enemies.length; _ei++) {
+          const _e = enemies[_ei];
+          if (_e && _e.mesh && !_e.isDead && _e._usesInstancing && _e.mesh.material) {
+            _e._instanceColor = _e.mesh.material.color;
+          }
+        }
+
         ir.beginFrame();
-        ir.syncEntities('enemy_tank', enemies, e => !e.isDead && e.type === 0);
-        ir.syncEntities('enemy_fast', enemies, e => !e.isDead && e.type === 1);
-        ir.syncEntities('enemy_balanced', enemies, e => !e.isDead && e.type === 2);
+        ir.syncEntities('enemy_tank',     enemies,     e => !e.isDead && e.type === 0);
+        ir.syncEntities('enemy_fast',     enemies,     e => !e.isDead && e.type === 1);
+        ir.syncEntities('enemy_balanced', enemies,     e => !e.isDead && e.type === 2);
+
+        // Sync eye positions for instanced enemies — compute world-space position from
+        // the body mesh's transform (position + Y-rotation + scale).  Eyes are spheres
+        // so rotation in the eye batch itself doesn't matter visually.
+        const _eyeBatch = ir.getBatch('enemy_eye');
+        if (_eyeBatch) {
+          const _eyeSpread = 0.18; // local X offset (types 0-2 all share these values)
+          const _eyeFwd    = 0.42; // local Z offset (forward)
+          for (let _ei = 0; _ei < enemies.length; _ei++) {
+            const _e = enemies[_ei];
+            if (!_e || !_e.mesh || _e.isDead || !_e._usesInstancing) continue;
+            if (_e.type !== 0 && _e.type !== 1 && _e.type !== 2) continue;
+
+            const _mx  = _e.mesh.position.x;
+            const _my  = _e.mesh.position.y;
+            const _mz  = _e.mesh.position.z;
+            const _ry  = _e.mesh.rotation.y;
+            const _sc  = Math.cos(_ry);
+            const _ss  = Math.sin(_ry);
+            // Account for mesh scale (squish animation gives slight XZ/Y variation)
+            const _sx  = _e.mesh.scale.x; // treat as uniform for XZ plane
+            const _sy  = _e.mesh.scale.y;
+            const _spr = _eyeSpread * _sx;
+            const _fwd = _eyeFwd    * _sx;
+            const _yOff = 0.1       * _sy;
+
+            // Left eye: local (-spread, 0.1, fwd)
+            _eyeSyncPos.set(
+              _mx + _sc * (-_spr) - _ss * _fwd,
+              _my + _yOff,
+              _mz + _ss * (-_spr) + _sc * _fwd
+            );
+            _eyeBatch.push(_eyeSyncPos, _eyeSyncEuler, _eyeSyncScale);
+
+            // Right eye: local (+spread, 0.1, fwd)
+            _eyeSyncPos.set(
+              _mx + _sc * _spr - _ss * _fwd,
+              _my + _yOff,
+              _mz + _ss * _spr + _sc * _fwd
+            );
+            _eyeBatch.push(_eyeSyncPos, _eyeSyncEuler, _eyeSyncScale);
+          }
+          // Note: endFrame() below will commit the eye batch along with all others.
+        }
+
         ir.syncEntities('exp_gem', expGems, g => g.active);
         ir.syncEntities('bullet', projectiles, p => p.active && !p.isEnemyProjectile);
         // bullet_glow uses the same entity array: syncEntities reads p.mesh.position which is
@@ -2190,27 +2273,28 @@
       
       // Phase 5: Update particles and release back to pool when dead
       // PERFORMANCE: Cull particles beyond fog far plane (invisible beyond fog anyway)
+      // In-place compaction avoids the GC spike from .filter() creating a new array each frame.
       const FOG_DISTANCE_SQ = RENDERER_CONFIG.fogFar * RENDERER_CONFIG.fogFar;
-      particles = particles.filter(p => {
-        // Cull particles beyond fog distance (squared avoids sqrt per particle)
-        const distSq = p.mesh.position.distanceToSquared(player.mesh.position);
-        if (distSq > FOG_DISTANCE_SQ) {
-          // Remove from scene before releasing so the mesh is not left as an
-          // invisible orphan in scene.children, which inflates scene child count.
-          scene.remove(p.mesh);
-          p.mesh.visible = false;
-          if (particlePool) {
-            particlePool.release(p);
+      {
+        let _j = 0;
+        for (let _i = 0; _i < particles.length; _i++) {
+          const p = particles[_i];
+          // Cull particles beyond fog distance (squared avoids sqrt per particle)
+          const distSq = p.mesh.position.distanceToSquared(player.mesh.position);
+          if (distSq > FOG_DISTANCE_SQ) {
+            // Remove from scene before releasing so the mesh is not left as an
+            // invisible orphan in scene.children, which inflates scene child count.
+            scene.remove(p.mesh);
+            p.mesh.visible = false;
+            if (particlePool) particlePool.release(p);
+            continue;
           }
-          return false;
+          const alive = p.update();
+          if (!alive && particlePool) particlePool.release(p);
+          if (alive) particles[_j++] = p;
         }
-        
-        const alive = p.update();
-        if (!alive && particlePool) {
-          particlePool.release(p);
-        }
-        return alive;
-      });
+        particles.length = _j;
+      }
       
       // Update blood decal fade (12 second lifetime)
       updateBloodDecals();
@@ -2219,15 +2303,21 @@
       if (window.BloodSystem) window.BloodSystem.update();
       
       // Update managed animations (replaces individual RAF loops for death/damage effects)
+      // In-place compaction — no new array allocation each frame.
       if (managedAnimations.length > 0) {
-        managedAnimations = managedAnimations.filter(anim => {
-          return anim.update(dt);
-        });
+        let _j = 0;
+        for (let _i = 0; _i < managedAnimations.length; _i++) {
+          if (managedAnimations[_i].update(dt)) managedAnimations[_j++] = managedAnimations[_i];
+        }
+        managedAnimations.length = _j;
       }
 
       // Update blood drips (falling drops from wounded enemies)
+      // In-place compaction — no new array allocation each frame.
       if (bloodDrips.length > 0) {
-        bloodDrips = bloodDrips.filter(d => {
+        let _j = 0;
+        for (let _i = 0; _i < bloodDrips.length; _i++) {
+          const d = bloodDrips[_i];
           d.velY -= 0.018;
           d.mesh.position.y += d.velY;
           // Apply horizontal velocity for spray effect
@@ -2251,10 +2341,11 @@
             }
             // Ice shards don't leave blood decals on landing
             if (hitGround && !d.isIce) spawnBloodDecal(_tmpKnockback);
-            return false;
+            continue; // dropped from array
           }
-          return true;
-        });
+          bloodDrips[_j++] = d;
+        }
+        bloodDrips.length = _j;
       }
       
       // Update object wobble animations (trees, fences, barrels, crates)
@@ -2639,26 +2730,32 @@
       }
 
       // Update managed smoke particles (replaces individual RAF loops)
-      smokeParticles = smokeParticles.filter(sp => {
-        sp.life--;
-        sp.mesh.position.x += sp.velocity.x;
-        sp.mesh.position.y += sp.velocity.y;
-        sp.mesh.position.z += sp.velocity.z;
-        // Ground collision: keep smoke above ground to prevent visual artifacts
-        if (sp.mesh.position.y < 0.1) {
-          sp.mesh.position.y = 0.1;
-          sp.velocity.y = Math.abs(sp.velocity.y) * 0.1; // Damp vertical velocity at ground
+      // In-place compaction — no new array allocation each frame.
+      {
+        let _j = 0;
+        for (let _i = 0; _i < smokeParticles.length; _i++) {
+          const sp = smokeParticles[_i];
+          sp.life--;
+          sp.mesh.position.x += sp.velocity.x;
+          sp.mesh.position.y += sp.velocity.y;
+          sp.mesh.position.z += sp.velocity.z;
+          // Ground collision: keep smoke above ground to prevent visual artifacts
+          if (sp.mesh.position.y < 0.1) {
+            sp.mesh.position.y = 0.1;
+            sp.velocity.y = Math.abs(sp.velocity.y) * 0.1; // Damp vertical velocity at ground
+          }
+          sp.mesh.scale.multiplyScalar(1.05);
+          sp.material.opacity = (sp.life / sp.maxLife) * 0.5;
+          if (sp.life <= 0) {
+            scene.remove(sp.mesh);
+            // Don't dispose shared smoke geometry
+            sp.material.dispose();
+            continue; // dropped from array
+          }
+          smokeParticles[_j++] = sp;
         }
-        sp.mesh.scale.multiplyScalar(1.05);
-        sp.material.opacity = (sp.life / sp.maxLife) * 0.5;
-        if (sp.life <= 0) {
-          scene.remove(sp.mesh);
-          // Don't dispose shared smoke geometry
-          sp.material.dispose();
-          return false;
-        }
-        return true;
-      });
+        smokeParticles.length = _j;
+      }
       
       const now = Date.now();
       if (now - lastCleanupTime > 3000) { // Run cleanup every 3 seconds
@@ -2741,10 +2838,35 @@
         cleanupDistantItems(goldDrops, MAX_GOLD_DROPS, (drop) => { if (drop.destroy) drop.destroy(); });
       }
       
-      expGems = expGems.filter(g => g.active);
-      goldCoins = goldCoins.filter(g => g.active);
-      goldDrops = goldDrops.filter(g => g.active);
-      chests = chests.filter(c => c.active);
+      // Compact inactive item arrays — in-place to avoid new array allocation each frame.
+      {
+        let _j = 0;
+        for (let _i = 0; _i < expGems.length; _i++) {
+          if (expGems[_i].active) expGems[_j++] = expGems[_i];
+        }
+        expGems.length = _j;
+      }
+      {
+        let _j = 0;
+        for (let _i = 0; _i < goldCoins.length; _i++) {
+          if (goldCoins[_i].active) goldCoins[_j++] = goldCoins[_i];
+        }
+        goldCoins.length = _j;
+      }
+      {
+        let _j = 0;
+        for (let _i = 0; _i < goldDrops.length; _i++) {
+          if (goldDrops[_i].active) goldDrops[_j++] = goldDrops[_i];
+        }
+        goldDrops.length = _j;
+      }
+      {
+        let _j = 0;
+        for (let _i = 0; _i < chests.length; _i++) {
+          if (chests[_i].active) chests[_j++] = chests[_i];
+        }
+        chests.length = _j;
+      }
 
       // Screen shake effect
       if (window.screenShakeIntensity > 0.01) {
