@@ -317,10 +317,19 @@
               return p;
             },
             (p) => {
-              // Reset to idle state when returned to pool
+              // Full state reset when returned to pool — prevents ghost rendering on re-acquire
               p.active = false;
+              p.life = 0;
+              p.vx = 0; p.vz = 0;
               p.mesh.visible = false;
-              if (p.glow) p.glow.visible = false;
+              p.mesh.position.set(0, -9999, 0); // park far off-screen
+              p.mesh.scale.set(1, 1, 1);
+              p.mesh.material.opacity = 0.95;
+              if (p.glow) {
+                p.glow.visible = false;
+                p.glow.position.set(0, -9999, 0);
+                p.glow.material.opacity = 0;
+              }
             },
             60
           );

@@ -209,24 +209,36 @@
 
     // --- Enemy batches (one per common enemy geometry) ---------
     // Type 0 — Tank (sphere)
+    // White base colour so per-instance setColorAt() renders the actual enemy colour correctly.
     ir.register('enemy_tank', 
       new THREE.SphereGeometry(0.6, 8, 8),
-      new THREE.MeshStandardMaterial({ color: 0x44aa44, roughness: 0.7, metalness: 0.1 }),
+      new THREE.MeshStandardMaterial({ color: 0xFFFFFF, roughness: 0.7, metalness: 0.1 }),
       500
     );
 
     // Type 1 — Fast (capsule)
     ir.register('enemy_fast',
       new THREE.CapsuleGeometry(0.3, 0.8, 6, 8),
-      new THREE.MeshStandardMaterial({ color: 0xdd4444, roughness: 0.6, metalness: 0.15 }),
+      new THREE.MeshStandardMaterial({ color: 0xFFFFFF, roughness: 0.6, metalness: 0.15 }),
       500
     );
 
     // Type 2 — Balanced (dodecahedron)
     ir.register('enemy_balanced',
       new THREE.DodecahedronGeometry(0.5, 0),
-      new THREE.MeshStandardMaterial({ color: 0x4488dd, roughness: 0.5, metalness: 0.2 }),
+      new THREE.MeshStandardMaterial({ color: 0xFFFFFF, roughness: 0.5, metalness: 0.2 }),
       500
+    );
+
+    // Eye batch — renders two white spheres per instanced enemy (left + right eye).
+    // White base colour matches the sclera; irides/pupils are baked into the shared geometry
+    // for simplicity.  Rendered as a separate InstancedMesh so the body InstancedMesh
+    // doesn't need to carry the eye geometry.
+    // Capacity: up to 500 of each type (tank/fast/balanced) = 1500 enemies × 2 eyes = 3000 slots.
+    ir.register('enemy_eye',
+      new THREE.SphereGeometry(0.07, 6, 6),
+      new THREE.MeshBasicMaterial({ color: 0xFFFFFF }),
+      3000
     );
 
     // --- EXP Gem batch ----------------------------------------

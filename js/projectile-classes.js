@@ -2,6 +2,9 @@
 // Handles all projectile movement, collision setup, and visual effects.
 // Depends on: THREE (CDN), variables from main.js
 
+    // Module-scoped temp vector — avoids per-frame allocation in Projectile.update()
+    const _tmpEnemyProjMove = new THREE.Vector3();
+
     class Companion {
       constructor(companionId) {
         this.companionId = companionId;
@@ -425,7 +428,9 @@
         
         // Handle enemy projectiles separately
         if (this.isEnemyProjectile) {
-          this.mesh.position.add(this.direction.clone().multiplyScalar(this.speed));
+          // Zero-allocation move: reuse module-scoped temp vector
+          _tmpEnemyProjMove.copy(this.direction).multiplyScalar(this.speed);
+          this.mesh.position.add(_tmpEnemyProjMove);
           this.lifetime--;
           
           if (this.lifetime <= 0) {
