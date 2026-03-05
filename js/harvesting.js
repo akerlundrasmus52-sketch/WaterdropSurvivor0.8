@@ -89,6 +89,16 @@
     }
   };
 
+  // ── Gathering skill definitions ──────────────────────────────
+  const GATHERING_SKILLS = {
+    chopSpeed:    { label: 'Chopping Speed',    icon: '🪓', maxLevel: 10, description: 'Faster tree chopping' },
+    mineSpeed:    { label: 'Mining Speed',      icon: '⛏️', maxLevel: 10, description: 'Faster stone/ore mining' },
+    gatherSpeed:  { label: 'Gathering Speed',   icon: '🧺', maxLevel: 10, description: 'Faster berry/flower gathering' },
+    yieldBonus:   { label: 'Resource Yield',    icon: '📦', maxLevel: 10, description: 'More resources per harvest' },
+    critGather:   { label: 'Lucky Harvest',     icon: '🍀', maxLevel: 5,  description: 'Chance for double resources' },
+    durability:   { label: 'Tool Durability',   icon: '🔧', maxLevel: 5,  description: 'Tools last longer' }
+  };
+
   // ── Node visual descriptors (populated during init when THREE is available) ─
   const NODE_DEFS = {
     tree: {
@@ -153,6 +163,10 @@
   // Active swing animation state
   let _swingAnim = null; // { toolId, endTime, nodeRef }
 
+  // Walk-into detection: player must stand still for 0.3s before harvesting
+  let _stillTimer = 0;
+  let _lastPlayerPos = null;
+
   // Floating text pool (lightweight HTML elements)
   const _floatingTexts = [];
 
@@ -185,6 +199,29 @@
   function _hasTool(toolId) {
     const tools = _getTools();
     return tools && (tools[toolId] || tools['epic' + toolId.charAt(0).toUpperCase() + toolId.slice(1)]);
+  }
+
+  function _getGatheringSkills() {
+    if (!_saveData) return null;
+    if (!_saveData.gatheringSkills) {
+      _saveData.gatheringSkills = {};
+      for (const key of Object.keys(GATHERING_SKILLS)) {
+        _saveData.gatheringSkills[key] = 0;
+      }
+    }
+    return _saveData.gatheringSkills;
+  }
+
+  function upgradeGatheringSkill(skillKey) {
+    const skills = _getGatheringSkills();
+    if (!skills) return false;
+    const def = GATHERING_SKILLS[skillKey];
+    if (!def) return false;
+    if ((skills[skillKey] || 0) >= def.maxLevel) return false;
+    if (!_saveData || _saveData.gold < 50) return false;
+    _saveData.gold -= 50;
+    skills[skillKey] = (skills[skillKey] || 0) + 1;
+    return true;
   }
 
   function _getToolForNode(nodeType) {
@@ -433,7 +470,16 @@
       return;
     }
 
-    if (now - node._lastHarvestTime < HARVEST_COOLDOWN_MS) return;
+    // Apply speed bonus from gathering skills
+    const skills = _getGatheringSkills() || {};
+    let speedSkillKey = 'gatherSpeed';
+    if (node.type === 'tree') speedSkillKey = 'chopSpeed';
+    else if (node.type === 'rock' || node.type === 'coal' || node.type === 'iron') speedSkillKey = 'mineSpeed';
+    const skillLevel = skills[speedSkillKey] || 0;
+    const speedBonus = 1 - (skillLevel * 0.08);
+    const effectiveCooldown = HARVEST_COOLDOWN_MS * Math.max(0.2, speedBonus);
+    if (now - node._lastHarvestTime < effectiveCooldown) return;
+
     node._lastHarvestTime = now;
 
     // Start swing animation
@@ -445,6 +491,11 @@
     node.hp -= dmg;
     node._wobbleTime = 0.6;
     node._wobbleDir = { x: dx / (dist + 0.001), z: dz / (dist + 0.001) };
+
+    // Tree shake: spawn wood debris particles on hit
+    if (node.type === 'tree' && _spawnParticlesFn) {
+      _spawnParticlesFn(node.mesh.position, 0x8B4513, 4);
+    }
 
     // Particles
     if (_spawnParticlesFn) {
@@ -471,7 +522,14 @@
     const baseMin = toolDef.amountMin || 1;
     const baseMax = toolDef.amountMax || 3;
     const mult = isEpic ? 2.5 : 1;
-    const amount = Math.round((baseMin + Math.random() * (baseMax - baseMin)) * mult);
+    let amount = Math.round((baseMin + Math.random() * (baseMax - baseMin)) * mult);
+
+    // Apply gathering skill bonuses
+    const skills = _getGatheringSkills() || {};
+    const yieldLevel = skills.yieldBonus || 0;
+    const yieldMult = 1 + yieldLevel * 0.1;
+    amount = Math.round(amount * yieldMult);
+    if (Math.random() < (skills.critGather || 0) * 0.1) amount *= 2;
 
     // Grant resources
     const res = _getResources();
@@ -491,6 +549,16 @@
 
     // Show slide-in collection notification (upper-right corner)
     _showCollectionNotification(yieldRes, amount);
+
+    // Tree fall animation variation
+    if (node.type === 'tree') {
+      node._fallVariation = Math.floor(Math.random() * 5);
+    }
+
+    // Stone/ore break effect
+    if (node.type === 'rock' || node.type === 'coal' || node.type === 'iron') {
+      node._breakEffect = true;
+    }
 
     // Collapse animation — scale to 0 over ~0.5s then hide
     node._collapseStart = Date.now();
@@ -627,10 +695,81 @@
     if (!playerPos) return;
     now = now || Date.now();
 
+    // Walk-into detection: track player velocity and require 0.3s standing still
+    let canHarvest = false;
+    if (_lastPlayerPos === null) {
+      _lastPlayerPos = { x: playerPos.x, z: playerPos.z };
+    } else {
+      const pdx = playerPos.x - _lastPlayerPos.x;
+      const pdz = playerPos.z - _lastPlayerPos.z;
+      const velocity = Math.sqrt(pdx * pdx + pdz * pdz) / Math.max(dt, 0.001);
+      if (velocity < 0.01) {
+        _stillTimer += dt;
+      } else {
+        _stillTimer = 0;
+      }
+      _lastPlayerPos.x = playerPos.x;
+      _lastPlayerPos.z = playerPos.z;
+      canHarvest = _stillTimer >= 0.3;
+    }
+
     // Animate wobble on nodes
     for (const node of harvestNodes) {
       if (node.depleted) {
-        // Collapse animation
+        // Tree fall animation (5 variations)
+        if (node._fallVariation !== undefined && node._collapseStart !== undefined) {
+          const elapsed = Date.now() - node._collapseStart;
+          const fallDuration = 800;
+          const fadeDuration = 400;
+          if (elapsed < fallDuration) {
+            const t = elapsed / fallDuration;
+            const angle = t * (Math.PI / 2);
+            switch (node._fallVariation) {
+              case 0: node.mesh.rotation.x = angle; break;
+              case 1: node.mesh.rotation.z = angle; break;
+              case 2: node.mesh.rotation.z = -angle; break;
+              case 3: node.mesh.rotation.x = -angle; break;
+              case 4:
+                node.mesh.rotation.y = t * Math.PI * 2;
+                node.mesh.rotation.x = angle;
+                break;
+            }
+          } else if (elapsed < fallDuration + fadeDuration) {
+            const fadeT = (elapsed - fallDuration) / fadeDuration;
+            if (node.mesh.scale && typeof node.mesh.scale.setScalar === 'function') {
+              node.mesh.scale.setScalar(Math.max(0, 1 - fadeT));
+            }
+          } else {
+            node.mesh.visible = false;
+            delete node._collapseStart;
+            delete node._fallVariation;
+          }
+          continue;
+        }
+        // Stone/ore break animation
+        if (node._breakEffect && node._collapseStart !== undefined) {
+          const elapsed = Date.now() - node._collapseStart;
+          const breakDuration = 300;
+          if (elapsed === 0 || (elapsed > 0 && !node._breakParticlesSpawned)) {
+            node._breakParticlesSpawned = true;
+            if (_spawnParticlesFn) {
+              const nodeDef = NODE_DEFS[node.type];
+              _spawnParticlesFn(node.mesh.position, nodeDef ? nodeDef.color : 0x888888, 3 + Math.floor(Math.random() * 3));
+            }
+          }
+          const t = Math.min(1, elapsed / breakDuration);
+          if (node.mesh.scale && typeof node.mesh.scale.setScalar === 'function') {
+            node.mesh.scale.setScalar(Math.max(0, 1 - t));
+          }
+          if (t >= 1) {
+            node.mesh.visible = false;
+            delete node._collapseStart;
+            delete node._breakEffect;
+            delete node._breakParticlesSpawned;
+          }
+          continue;
+        }
+        // Default collapse animation
         if (node._collapseStart !== undefined) {
           const elapsed = (Date.now() - node._collapseStart) / 400;
           const s = Math.max(0, 1 - elapsed);
@@ -662,8 +801,10 @@
         node.mesh.position.y = 0.3 + Math.sin(now * 0.001 + node.mesh.position.x) * 0.15;
       }
 
-      // Try harvesting if player is nearby
-      _tryHarvest(node, playerPos, now);
+      // Try harvesting if player is nearby and standing still
+      if (canHarvest) {
+        _tryHarvest(node, playerPos, now);
+      }
     }
 
     // Update floating texts
@@ -734,6 +875,7 @@
     RESOURCE_TYPES,
     TOOL_DEFS,
     NODE_DEFS,
+    GATHERING_SKILLS,
     harvestNodes,
 
     init(scene, saveData, spawnParticlesFn) {
@@ -758,6 +900,8 @@
 
     getResources() { return _getResources(); },
     getTools()    { return _getTools(); },
+    getGatheringSkills() { return _getGatheringSkills(); },
+    upgradeGatheringSkill,
 
     // Called when a resource is harvested (hook for quest system)
     _onHarvest: null,
