@@ -1018,10 +1018,16 @@ function showWeaponBuilding() {
         if (typeof playSound === 'function') playSound('levelup');
 
         var rarityCol = RARITY_COLORS[chosen.rarity] || '#aaa';
-        resultEl.innerHTML =
-          '<span style="font-size:32px;">' + chosen.icon + '</span><br>' +
-          '<span style="color:' + rarityCol + ';' + HEADER_FONT + 'font-size:20px;">' + chosen.name + '</span><br>' +
-          '<span style="color:#888;font-size:12px;">Starting weapon selected!</span>';
+        // Use DOM construction instead of innerHTML for safety
+        resultEl.textContent = '';
+        var iconSpan = _el('span', 'font-size:32px;', chosen.icon);
+        var nameSpan = _el('span', 'color:' + rarityCol + ';' + HEADER_FONT + 'font-size:20px;', chosen.name);
+        var msgSpan = _el('span', 'color:#888;font-size:12px;', 'Starting weapon selected!');
+        resultEl.appendChild(iconSpan);
+        resultEl.appendChild(document.createElement('br'));
+        resultEl.appendChild(nameSpan);
+        resultEl.appendChild(document.createElement('br'));
+        resultEl.appendChild(msgSpan);
 
         // Store selection
         saveData.startWeapon = chosen.id;
