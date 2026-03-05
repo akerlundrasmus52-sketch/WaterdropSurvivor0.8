@@ -2393,7 +2393,9 @@
         const _eyeBatch = ir.getBatch('enemy_eye');
         if (_eyeBatch) {
           const _eyeSpread = 0.18; // local X offset (types 0-2 all share these values)
-          const _eyeFwd    = 0.42; // local Z offset (forward)
+          // Negative fwd: after the Math.PI facing fix the enemy's local -Z points toward
+          // the player, so we place eyes in the -Z direction to keep them on the front face.
+          const _eyeFwd    = -0.42; // local Z offset (toward player after rotation fix)
           for (let _ei = 0; _ei < enemies.length; _ei++) {
             const _e = enemies[_ei];
             if (!_e || !_e.mesh || _e.isDead || !_e._usesInstancing) continue;

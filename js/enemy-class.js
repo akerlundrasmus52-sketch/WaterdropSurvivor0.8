@@ -530,6 +530,7 @@
             this.mesh.position.z += perpZ * this.speed * 0.5 * strafeDir;
           }
           this.mesh.lookAt(targetPos);
+          this.mesh.rotation.y += Math.PI;
         } else if (this.type === 12 && dist < this.attackRange) {
           // Bug Ranged — strafe sideways while firing, retreat if too close
           const now = Date.now();
@@ -548,6 +549,7 @@
           }
           // THREE.Object3D.lookAt() accepts (x, y, z) directly — zero allocation.
           this.mesh.lookAt(targetPos.x, this.mesh.position.y, targetPos.z);
+          this.mesh.rotation.y += Math.PI;
         } else if (this.isFlyingBoss && dist < this.attackRange) {
           // Flying Boss — orbit player and fire powerful projectiles
           const now = Date.now();
@@ -564,6 +566,7 @@
           this.mesh.position.z = targetPos.z + Math.sin(newAngle) * orbitR;
           // THREE.Object3D.lookAt() accepts (x, y, z) directly — zero allocation.
           this.mesh.lookAt(targetPos.x, this.mesh.position.y, targetPos.z);
+          this.mesh.rotation.y += Math.PI;
         } else if (dist > 0.5) {
           // Check if slow/freeze effect expired
           const nowMs = Date.now();
@@ -902,7 +905,7 @@
           this.mesh.position.x += vx;
           this.mesh.position.z += vz;
           this.mesh.lookAt(targetPos);
-
+          this.mesh.rotation.y += Math.PI;
           // Collision with environment props (trees, barrels, crates) — ground enemies bounce off
           // Skip flying enemy types: 5=Flying, 11=FlyingBoss, 14=BugFast(fly), 16=SweepingSwarm
           const _isFlying = _ENEMY_FLYING_TYPES.has(this.type);
@@ -1939,7 +1942,7 @@
           });
           const pool = new THREE.Mesh(poolGeo, poolMat);
           pool.rotation.x = -Math.PI / 2;
-          pool.position.set(landX, 0.015, landZ);
+          pool.position.set(landX, 0.05, landZ);
           scene.add(pool);
           const delayFrames = 3 + Math.floor(Math.random() * 15);
           const maxOpacity = 0.5 + Math.random() * 0.35;
@@ -2071,10 +2074,12 @@
         const isCritDeath = this.lastCrit || false;
         
         // Fall down animation: enemy falls dynamically, lies on ground, explodes into blood
+        // LINGER_FRAMES extended to keep corpse visible for ~10 seconds total (at 60fps):
+        //   FALL(40) + LINGER(500) + EXPLODE(20) + FADE(40) = 600 frames ≈ 10 s
         const FALL_FRAMES = wasFlying ? 55 : 40;
-        const LINGER_FRAMES = 60; // Lie on ground lifeless before blood explosion
+        const LINGER_FRAMES = 500; // Corpse lingers on ground for ~8 seconds
         const EXPLODE_FRAMES = 20; // Blood explosion phase
-        const FADE_FRAMES = 20; // Fade out remains
+        const FADE_FRAMES = 40;    // Smooth 0.67-second fade out
         let fallFrame = 0;
         const startY = dyingMesh.position.y;
         const startScaleY = dyingMesh.scale.y;
@@ -2731,18 +2736,19 @@
           corpse.position.copy(deathPos); corpse.position.y = 0.12; corpse.scale.y = 0.22;
           scene.add(corpse);
           const bloodGeo = new THREE.CircleGeometry(0.8, 16);
-          const bloodMat = new THREE.MeshStandardMaterial({ color: 0x8B0000, transparent: true, opacity: 0, roughness: 0.3, metalness: 0.5, side: THREE.DoubleSide });
+          const bloodMat = new THREE.MeshStandardMaterial({ color: 0x8B0000, transparent: true, opacity: 0, roughness: 0.3, metalness: 0.5, side: THREE.DoubleSide, depthWrite: false });
           const bloodPool = new THREE.Mesh(bloodGeo, bloodMat);
-          bloodPool.position.set(deathPos.x, 0.01, deathPos.z); bloodPool.rotation.x = -Math.PI / 2;
+          bloodPool.position.set(deathPos.x, 0.05, deathPos.z); bloodPool.rotation.x = -Math.PI / 2;
           scene.add(bloodPool);
-          let corpseLife = 200;
+          let corpseLife = 600; // ~10 seconds at 60fps
           if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
             managedAnimations.push({ update(_dt) {
               corpseLife--;
-              // Blood pool grows then fades
-              if (corpseLife > 140) bloodMat.opacity = Math.min(0.6, (200 - corpseLife) / 60 * 0.6);
-              else bloodMat.opacity = (corpseLife / 140) * 0.6;
-              corpse.material.opacity = (corpseLife / 200) * 0.85;
+              // Blood pool grows (first 0.5s) then stays full, fades only at the end
+              if (corpseLife > 540) bloodMat.opacity = Math.min(0.6, (600 - corpseLife) / 60 * 0.6);
+              else if (corpseLife > 60) bloodMat.opacity = 0.6;
+              else bloodMat.opacity = (corpseLife / 60) * 0.6;
+              corpse.material.opacity = corpseLife > 60 ? 0.85 : (corpseLife / 60) * 0.85;
               if (corpseLife <= 0) {
                 scene.remove(corpse); scene.remove(bloodPool);
                 corpseGeo.dispose(); corpseMat.dispose(); bloodGeo.dispose(); bloodMat.dispose();
@@ -2773,7 +2779,7 @@
             );
             const angle = (i / 6) * Math.PI * 2;
             const dist = 0.4 + Math.random() * 0.6;
-            splatter.position.set(deathPos.x + Math.cos(angle)*dist, 0.01, deathPos.z + Math.sin(angle)*dist);
+            splatter.position.set(deathPos.x + Math.cos(angle)*dist, 0.05, deathPos.z + Math.sin(angle)*dist);
             splatter.rotation.x = -Math.PI / 2;
             scene.add(splatter);
             let life = 100;
@@ -2823,7 +2829,7 @@
             const stainGeo = new THREE.CircleGeometry(r, r > 0.15 ? 10 : 6);
             const stainMat = new THREE.MeshBasicMaterial({ color: sizeRoll < 0.5 ? 0x8B0000 : 0x6B0000, transparent: true, opacity: 0.5, side: THREE.DoubleSide });
             const stain = new THREE.Mesh(stainGeo, stainMat);
-            stain.position.set(deathPos.x + (Math.random()-0.5)*2, 0.01, deathPos.z + (Math.random()-0.5)*2);
+            stain.position.set(deathPos.x + (Math.random()-0.5)*2, 0.05, deathPos.z + (Math.random()-0.5)*2);
             stain.rotation.x = -Math.PI / 2;
             scene.add(stain);
             let life = 120;
@@ -2947,7 +2953,7 @@
                 const poolGeo = new THREE.CircleGeometry(0.7, 12);
                 const poolMat = new THREE.MeshBasicMaterial({ color: 0x8B0000, transparent: true, opacity: 0.6, side: THREE.DoubleSide });
                 const pool = new THREE.Mesh(poolGeo, poolMat);
-                pool.position.set(staggerBody.position.x, 0.01, staggerBody.position.z);
+                pool.position.set(staggerBody.position.x, 0.05, staggerBody.position.z);
                 pool.rotation.x = -Math.PI / 2;
                 scene.add(pool);
                 let poolLife = 100;
@@ -3005,7 +3011,7 @@
         });
         const burnMark = new THREE.Mesh(burnGeo, burnMat);
         burnMark.position.copy(this.mesh.position);
-        burnMark.position.y = 0.01;
+        burnMark.position.y = 0.05;
         burnMark.rotation.x = -Math.PI / 2;
         scene.add(burnMark);
         
@@ -3108,7 +3114,7 @@
           const waterMat = new THREE.MeshStandardMaterial({ color: 0x88CCFF, transparent: true, opacity: 0.55, roughness: 0.05, metalness: 0.3, depthWrite: false });
           const water = new THREE.Mesh(waterGeo, waterMat);
           water.rotation.x = -Math.PI / 2;
-          water.position.set(deathPos.x, 0.015, deathPos.z);
+          water.position.set(deathPos.x, 0.05, deathPos.z);
           scene.add(water);
           let wLife = 180;
           if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
@@ -3325,7 +3331,7 @@
         });
         const bloodPool = new THREE.Mesh(bloodGeo, bloodMat);
         bloodPool.position.copy(deathPos);
-        bloodPool.position.y = 0.01;
+        bloodPool.position.y = 0.05;
         bloodPool.rotation.x = -Math.PI / 2;
         scene.add(bloodPool);
         
@@ -3503,7 +3509,7 @@
         });
         const bloodPool = new THREE.Mesh(bloodGeo, bloodMat);
         bloodPool.position.copy(this.mesh.position);
-        bloodPool.position.y = 0.01;
+        bloodPool.position.y = 0.05;
         bloodPool.rotation.x = -Math.PI / 2;
         scene.add(bloodPool);
         

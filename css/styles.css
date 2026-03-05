@@ -1724,12 +1724,25 @@
       animation: pulse 3s infinite;
     }
     
-    /* UPGRADE GRID: 2×3 grid layout for upgrade choices */
-    #upgrade-list {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr); /* 2 columns */
-      gap: 15px;
+    /* UPGRADE GRID: responsive flexbox layout for upgrade choices.
+       Cards flow side-by-side on wide screens and wrap cleanly on narrow
+       screens (e.g. Samsung S10 @ 360 px wide) without horizontal overflow. */
+    #upgrade-list, #level-up-choices {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
       margin-top: 15px;
+      width: 100%;
+      box-sizing: border-box;
+      justify-content: center;
+    }
+
+    /* Each card takes at least 140px but grows to fill available space,
+       so 2 cards fit side-by-side on most screens and stack on very small ones. */
+    #upgrade-list > *, #level-up-choices > * {
+      flex: 1 1 140px;
+      min-width: 130px;
+      max-width: 280px;
     }
 
     h2 {
@@ -3150,10 +3163,12 @@
     }
 
     @media (orientation: landscape) {
-      /* Landscape mode adjustments */
+      /* Landscape mode adjustments — supports PC browsers and rotated phones */
       .modal-content {
         width: 70%;
-        max-width: 500px;
+        max-width: 520px;
+        max-height: 90vh;
+        overflow-y: auto;
       }
 
       .bar-container {
@@ -3161,10 +3176,32 @@
         height: 16px;
       }
 
+      /* Compact HUD in landscape so it doesn't eat into the play area */
       .hud-top {
         padding: 4px 8px;
-        flex-direction: column;
-        justify-content: flex-start;
+        flex-direction: row;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 4px;
+      }
+
+      /* Level-up cards: allow two side-by-side in landscape */
+      #upgrade-list > *, #level-up-choices > * {
+        flex: 1 1 200px;
+        max-width: 260px;
+      }
+
+      /* Joystick zone: push move joystick to far left and shoot joystick to far right
+         for comfortable two-thumb play in landscape orientation */
+      .joystick-outer {
+        /* Override inline positioning — JS may re-position, but these give a sane default */
+        width: 100px;
+        height: 100px;
+      }
+
+      /* Show settings/stats buttons in landscape (enough horizontal space) */
+      #settings-btn, #stats-btn, #equipment-btn {
+        display: flex !important;
       }
     }
     
@@ -3291,10 +3328,14 @@
         box-sizing: border-box;
       }
 
-      /* Single-column cards on very small screens — prevents horizontal overflow */
-      #upgrade-list {
-        grid-template-columns: 1fr;
+      /* Force single-column on very small screens to prevent horizontal overflow */
+      #upgrade-list, #level-up-choices {
         gap: 8px;
+      }
+
+      #upgrade-list > *, #level-up-choices > * {
+        flex: 1 1 100%;
+        max-width: 100%;
       }
 
       .upgrade-card {

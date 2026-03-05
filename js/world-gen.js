@@ -1050,7 +1050,7 @@
       const craterMat = new THREE.MeshToonMaterial({ color: 0x3E2723, polygonOffset: true, polygonOffsetFactor: -1 }); // Dark brown
       const crater = new THREE.Mesh(craterGeo, craterMat);
       crater.rotation.x = -Math.PI/2;
-      crater.position.y = 0.04; // raised from 0.02 to avoid z-fighting
+      crater.position.y = 0.05; // raised to avoid z-fighting on older GPUs
       cometGroup.add(crater);
       
       // Comet stone (dark metallic rock with glow)
@@ -2670,7 +2670,7 @@
         const pavingMat = new THREE.MeshStandardMaterial({ color: 0xC8B090, roughness: 0.95, metalness: 0.0 });
         const paving = new THREE.Mesh(pavingGeo, pavingMat);
         paving.rotation.x = -Math.PI / 2;
-        paving.position.y = 0.04;
+        paving.position.y = 0.05;
         paving.receiveShadow = true;
         colosseumGroup.add(paving);
 
