@@ -529,8 +529,7 @@
             this.mesh.position.x += perpX * this.speed * 0.5 * strafeDir;
             this.mesh.position.z += perpZ * this.speed * 0.5 * strafeDir;
           }
-          this.mesh.lookAt(targetPos);
-          this.mesh.rotation.y += Math.PI;
+          this.mesh.rotation.y = Math.atan2(dx, dz);
         } else if (this.type === 12 && dist < this.attackRange) {
           // Bug Ranged — strafe sideways while firing, retreat if too close
           const now = Date.now();
@@ -547,9 +546,7 @@
             this.mesh.position.x += perpX * this.speed * 0.7;
             this.mesh.position.z += perpZ * this.speed * 0.7;
           }
-          // THREE.Object3D.lookAt() accepts (x, y, z) directly — zero allocation.
-          this.mesh.lookAt(targetPos.x, this.mesh.position.y, targetPos.z);
-          this.mesh.rotation.y += Math.PI;
+          this.mesh.rotation.y = Math.atan2(dx, dz);
         } else if (this.isFlyingBoss && dist < this.attackRange) {
           // Flying Boss — orbit player and fire powerful projectiles
           const now = Date.now();
@@ -564,9 +561,8 @@
           const orbitR = this.attackRange * (0.6 + Math.sin(gameTime * 0.5) * 0.2);
           this.mesh.position.x = targetPos.x + Math.cos(newAngle) * orbitR;
           this.mesh.position.z = targetPos.z + Math.sin(newAngle) * orbitR;
-          // THREE.Object3D.lookAt() accepts (x, y, z) directly — zero allocation.
-          this.mesh.lookAt(targetPos.x, this.mesh.position.y, targetPos.z);
-          this.mesh.rotation.y += Math.PI;
+          // Face the player using atan2 for correct orientation
+          this.mesh.rotation.y = Math.atan2(dx, dz);
         } else if (dist > 0.5) {
           // Check if slow/freeze effect expired
           const nowMs = Date.now();
@@ -637,14 +633,24 @@
           
           // Base movement towards target — with slight prediction for smoother interception
           // speed * 60 estimates distance-per-second at ~60fps; +1 avoids division by zero
-          const _predictT = Math.min(dist / (this.speed * 60 + 1), 0.8);
+
+          // ── RAGE FLEE: When player's Rage Mode is active, ALL enemies turn tail and run ──
+          // Invert velocity direction so they flee from the player.
+          const _isRageFlee = window.RageCombat && window.RageCombat.isRageActive;
+
+          const _predictT = _isRageFlee ? 0 : Math.min(dist / (this.speed * 60 + 1), 0.8);
           const _predX = targetPos.x + this._playerVelocity.x * _predictT * 0.3;
           const _predZ = targetPos.z + this._playerVelocity.z * _predictT * 0.3;
-          const _pdx = _predX - this.mesh.position.x;
-          const _pdz = _predZ - this.mesh.position.z;
-          const _pdist = Math.sqrt(_pdx * _pdx + _pdz * _pdz) || 1;
+          const _pdx = _isRageFlee ? -(dx / (dist || 1)) : (_predX - this.mesh.position.x);
+          const _pdz = _isRageFlee ? -(dz / (dist || 1)) : (_predZ - this.mesh.position.z);
+          const _pdist = _isRageFlee ? 1 : (Math.sqrt(_pdx * _pdx + _pdz * _pdz) || 1);
           let vx = (_pdx / _pdist) * this.speed;
           let vz = (_pdz / _pdist) * this.speed;
+
+          // When fleeing, face away from player (inverted angle)
+          if (_isRageFlee) {
+            this.mesh.rotation.y = Math.atan2(-dx, -dz);
+          }
           
           // Add enemy avoidance to prevent stacking/trains (optimized — squared distance to skip sqrt)
           let avoidX = 0, avoidZ = 0;
@@ -904,8 +910,13 @@
           
           this.mesh.position.x += vx;
           this.mesh.position.z += vz;
-          this.mesh.lookAt(targetPos);
-          this.mesh.rotation.y += Math.PI;
+          // Proper player-facing using atan2 — avoids backwards/sideways artifacts that
+          // lookAt+PI can cause when the model's natural orientation differs from THREE.js convention.
+          // dx/dz = direction from this enemy toward the player.
+          // Skip if rage-flee already set a fleeing rotation.
+          if (!_isRageFlee) {
+            this.mesh.rotation.y = Math.atan2(dx, dz);
+          }
           // Collision with environment props (trees, barrels, crates) — ground enemies bounce off
           // Skip flying enemy types: 5=Flying, 11=FlyingBoss, 14=BugFast(fly), 16=SweepingSwarm
           const _isFlying = _ENEMY_FLYING_TYPES.has(this.type);
@@ -1454,6 +1465,72 @@
         const oldHp = this.hp;
         this.hp -= finalAmount;
         createDamageNumber(Math.floor(finalAmount), this.mesh.position, isCrit);
+
+        // ── 5 BRUTAL GORE STATES on critical hits ──
+        // Randomly apply one of 5 visual states so each crit feels uniquely brutal.
+        if (isCrit && !this.isDead && this.mesh) {
+          const goreState = Math.floor(Math.random() * 5);
+          switch (goreState) {
+            case 0: // Shoot off an eye — remove one eye instance (handled visually by hiding via scale)
+              if (!this._shotEye) {
+                this._shotEye = true;
+                // Spawn a small sphere flying off sideways
+                if (scene) {
+                  const eyeGeo = new THREE.SphereGeometry(0.07, 4, 4);
+                  const eyeMat = new THREE.MeshBasicMaterial({ color: 0xFFFFFF });
+                  const flyEye = new THREE.Mesh(eyeGeo, eyeMat);
+                  flyEye.position.copy(this.mesh.position);
+                  flyEye.position.y += 0.5;
+                  scene.add(flyEye);
+                  const evx = (Math.random() - 0.5) * 0.25, evz = (Math.random() - 0.5) * 0.25;
+                  let ef = 0;
+                  const _animEye = () => {
+                    if (++ef > 20 || !flyEye.parent) return;
+                    flyEye.position.x += evx; flyEye.position.z += evz; flyEye.position.y += 0.05 - ef * 0.005;
+                    requestAnimationFrame(_animEye);
+                  };
+                  _animEye();
+                  setTimeout(() => { if (flyEye.parent) scene.remove(flyEye); eyeGeo.dispose(); eyeMat.dispose(); }, 400);
+                }
+              }
+              break;
+            case 1: // Blast a hole through — add a dark hole decal on the enemy front face
+              if (this.mesh && (!this.bulletHoles || this.bulletHoles.length < 8)) {
+                if (!this.bulletHoles) this.bulletHoles = [];
+                const holeGeo = new THREE.CircleGeometry(0.1 + Math.random() * 0.07, 8);
+                const holeMat = new THREE.MeshBasicMaterial({ color: 0x0A0000, transparent: true, opacity: 0.92, side: THREE.DoubleSide, depthWrite: false });
+                const hole = new THREE.Mesh(holeGeo, holeMat);
+                hole.position.set((Math.random()-0.5)*0.3, (Math.random()-0.5)*0.3, 0.52);
+                this.mesh.add(hole);
+                this.bulletHoles.push(hole);
+              }
+              break;
+            case 2: // Tear off a side chunk — squish/shear the enemy scale temporarily
+              if (this.mesh && !this._toreChunk) {
+                this._toreChunk = true;
+                this.mesh.scale.set(0.82, 1.12, 0.88);
+                setTimeout(() => { if (this.mesh && !this.isDead) this.mesh.scale.set(1, 1, 1); }, 300);
+              }
+              break;
+            case 3: // Decapitate top half — shrink Y scale to squish upper body
+              if (this.mesh && !this._decapitated) {
+                this._decapitated = true;
+                this.mesh.scale.y = 0.65;
+                spawnParticles({ x: this.mesh.position.x, y: this.mesh.position.y + 0.8, z: this.mesh.position.z }, 0x8B0000, 12);
+              }
+              break;
+            case 4: // Extreme arterial spurt — force an immediate spurt regardless of HP
+              if (window.BloodSystem && window.BloodSystem.emitArterialSpurt) {
+                const aDir = { x: Math.cos(Math.random() * Math.PI * 2), y: 0, z: Math.sin(Math.random() * Math.PI * 2) };
+                window.BloodSystem.emitArterialSpurt(this.mesh.position, aDir, { pulses: 4, perPulse: 60, interval: 120, intensity: 1.0, coneAngle: 0.5 });
+              } else {
+                // Fallback: lots of blood particles
+                spawnParticles(this.mesh.position, 0xFF0000, 20);
+                spawnParticles({ x: this.mesh.position.x, y: this.mesh.position.y + 0.6, z: this.mesh.position.z }, 0xCC0000, 15);
+              }
+              break;
+          }
+        }
 
         // Knockback chain reaction — strong hits propagate to nearby enemies
         if (window.AdvancedPhysics && window.AdvancedPhysics.KnockbackChain && finalAmount > 10) {
@@ -4041,12 +4118,12 @@
       };
       projectileMaterialCache = {
         bullet: new THREE.MeshBasicMaterial({
-          color: 0xFF4500,
+          color: 0xFFFF00,      // Bright yellow — original snappy gun bullet colour
           transparent: true,
           opacity: 0.95
         }),
         bulletGlow: new THREE.MeshBasicMaterial({
-          color: 0xFF6347,
+          color: 0xFFFF88,      // Pale yellow glow
           transparent: true,
           opacity: 0.4
         })

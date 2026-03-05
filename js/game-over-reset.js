@@ -549,9 +549,19 @@
 
       // Immediately zero out instanced enemy batches so no ghost enemies appear on screen
       // before the next animate() frame rebuilds the batches from the (now empty) enemies array.
+      // Explicit count=0 on each known batch to guarantee GPU state is cleared this frame.
       if (window._instancedRenderer && window._instancedRenderer.active) {
-        window._instancedRenderer.beginFrame();
-        window._instancedRenderer.endFrame();
+        const _ir = window._instancedRenderer;
+        ['enemy_tank', 'enemy_fast', 'enemy_balanced', 'enemy_eye'].forEach(key => {
+          const batch = _ir.getBatch(key);
+          if (batch) {
+            batch.mesh.count = 0;
+            batch.mesh.instanceMatrix.needsUpdate = true;
+            if (batch.mesh.instanceColor) batch.mesh.instanceColor.needsUpdate = true;
+          }
+        });
+        _ir.beginFrame();
+        _ir.endFrame();
       }
 
       // Reset enemy spatial hash so the new run starts with a clean lookup structure.

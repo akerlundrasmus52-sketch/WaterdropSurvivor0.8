@@ -390,18 +390,20 @@
         this.pierceCount = 0;
         this.explosionRadius = 0;
 
-        // Reset mesh state
+        // Reset mesh state — use the cached material colour (bright yellow) without overriding it
+        // with the old orange colour that made the bullet look wrong.
         this.mesh.position.set(x, 0.5, z);
-        const _sm = window._projSizeMultiplier || 1.0;
-        this.mesh.scale.set(_sm, _sm, _sm);
-        this.mesh.material.color.setHex(0xFF4500);
+        // Use scale 1 for a small snappy bullet; only large weapons override scale later.
+        this.mesh.scale.set(1, 1, 1);
+        // Keep material colour from the cache (0xFFFF00 yellow); don't stomp it here.
         this.mesh.material.opacity = 0.95;
         this.mesh.visible = true;
 
         if (this.glow) {
           this.glow.position.copy(this.mesh.position);
+          this.glow.scale.set(1, 1, 1);
           this.glow.material.opacity = 0.4;
-          this.glow.material.color.setHex(0xFF6347);
+          // Keep cached pale-yellow glow colour.
           this.glow.visible = true;
         }
 

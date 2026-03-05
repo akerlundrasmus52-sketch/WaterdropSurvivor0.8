@@ -1787,22 +1787,28 @@
       animation: pulse 3s infinite;
     }
     
-    /* UPGRADE GRID: CSS grid layout for upgrade choices.
-       Cards flow in a responsive grid — two columns on wide screens, one on narrow ones
-       (e.g. Samsung S10 @ 360 px wide) without horizontal overflow. */
+    /* UPGRADE GRID: Flexbox layout for upgrade choices.
+       Cards wrap into 2 columns on wide screens and stack gracefully on narrow ones
+       (e.g. Samsung S10 @ 360 px wide) without horizontal overflow.
+       transform:translateZ(0) enables GPU compositing to stop flicker on older Android. */
     #upgrade-list, #level-up-choices {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
       gap: 10px;
       margin-top: 15px;
       width: 100%;
       box-sizing: border-box;
     }
 
-    /* Each card fills its grid cell fully. */
+    /* Each card takes up roughly half the container width so two fit side-by-side. */
     #upgrade-list > *, #level-up-choices > * {
-      min-width: 0;
+      flex: 1 1 40%;
+      min-width: 140px;
       max-width: 100%;
+      /* Hardware-acceleration hints to prevent flicker on older Android (Samsung S10) */
+      transform: translateZ(0);
+      backface-visibility: hidden;
     }
 
     h2 {
@@ -3245,8 +3251,10 @@
         gap: 4px;
       }
 
-      /* Level-up cards: allow two side-by-side in landscape */
+      /* Level-up cards: allow two side-by-side in landscape using flex sizing */
       #upgrade-list > *, #level-up-choices > * {
+        flex: 1 1 40%;
+        min-width: 140px;
         max-width: 260px;
       }
 
@@ -3400,14 +3408,15 @@
         box-sizing: border-box;
       }
 
-      /* Force single-column on very small screens to prevent horizontal overflow */
+      /* Force two-column flex wrap on very small screens instead of single column to avoid ugly vertical list */
       #upgrade-list, #level-up-choices {
-        grid-template-columns: 1fr;
         gap: 8px;
       }
 
       #upgrade-list > *, #level-up-choices > * {
-        max-width: 100%;
+        flex: 1 1 40%;
+        min-width: 120px;
+        max-width: calc(50% - 4px);
       }
 
       .upgrade-card {
@@ -5659,9 +5668,10 @@
   position: absolute;
   pointer-events: none;
   z-index: 10000;
-  font-family: 'Arial Black', 'Impact', sans-serif;
+  /* Cozy, rounded, highly legible damage font — Nunito falls back to M PLUS Rounded (already loaded) */
+  font-family: 'Nunito', 'M PLUS Rounded 1c', 'Arial Rounded MT Bold', 'Trebuchet MS', sans-serif;
   font-weight: 900;
-  font-size: 18px;
+  font-size: 20px;
   color: #fff;
   text-shadow:
     0 0 4px rgba(0,0,0,0.9),
@@ -5672,17 +5682,21 @@
 }
 .elastic-damage-number.critical {
   color: #FFD700;
-  font-size: 26px;
+  /* Critical text is intentionally SMALLER so it spawns cleanly above the enemy head */
+  font-size: 22px;
+  font-weight: 900;
   text-shadow:
     0 0 8px rgba(255,215,0,0.8),
     0 0 16px rgba(255,165,0,0.5),
     0 2px 4px rgba(0,0,0,0.8);
 }
 .elastic-damage-number.headshot {
-  color: #FF4444;
-  font-size: 30px;
+  color: #FF6644;
+  /* Headshot text is also smaller — spawns right at the head position */
+  font-size: 22px;
+  font-weight: 900;
   text-shadow:
-    0 0 10px rgba(255,0,0,0.8),
+    0 0 10px rgba(255,100,68,0.8),
     0 0 20px rgba(255,50,50,0.5),
     0 2px 4px rgba(0,0,0,0.8);
 }
