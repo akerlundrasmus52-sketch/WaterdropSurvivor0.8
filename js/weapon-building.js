@@ -163,10 +163,11 @@ function _getEffectiveStats(weapon) {
   var dmg = weapon.damage;
   var cd  = weapon.cooldown;
   var rng = weapon.range;
+  // Use same MIN_COOLDOWN_MULTIPLIER (0.2) floor as weapons.js
+  var MIN_CD_MULT = 0.2;
 
   dmg *= (1 + (mods.power * WEAPON_MOD_DEFS.power.perLevel));
-  cd  *= (1 + (mods.speed * WEAPON_MOD_DEFS.speed.perLevel) + (mods.cooldown * WEAPON_MOD_DEFS.cooldown.perLevel));
-  if (cd < 10) cd = 10; // minimum 10ms cooldown
+  cd  *= Math.max(MIN_CD_MULT, 1 + (mods.speed * WEAPON_MOD_DEFS.speed.perLevel) + (mods.cooldown * WEAPON_MOD_DEFS.cooldown.perLevel));
   rng *= (1 + (mods.sight * WEAPON_MOD_DEFS.sight.perLevel));
 
   var ammo = WEAPON_AMMO_TYPES[mods.ammoType] || WEAPON_AMMO_TYPES.standard;

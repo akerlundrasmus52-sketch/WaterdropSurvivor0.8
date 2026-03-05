@@ -723,13 +723,11 @@
 
       // Update enemy AI movement (was missing - enemies were frozen)
       // PERFORMANCE: Distance-based animation throttling for enemies.
-      // Near enemies (< 16 units) update every frame, medium (16-40) every 2nd,
-      // far (40-80) every 4th, very far (> 80) every 8th frame.
-      const _ENEMY_THROTTLE_DIST_SQ = 16 * 16; // squared to avoid sqrt
-      const _ENEMY_THROTTLE_MED_SQ  = 40 * 40;
-      const _ENEMY_THROTTLE_FAR_SQ  = 80 * 80;
+      // Uses AnimationThrottle from spatial-hash.js when available, with fallback.
+      // Near (< 16 units) → every frame, medium (16-40) → every 2nd,
+      // far (40-80) → every 4th, very far (> 80) → every 8th frame.
       const _fc = performanceLog.frameCount;
-      const _frameEven = (_fc & 1) === 0;
+      const _AT = window.GamePerformance && window.GamePerformance.AnimationThrottle;
       // Build spatial hash for enemy lookups (used by projectiles via window._enemySpatialHash)
       if (window.GamePerformance && window.GamePerformance.SpatialHash) {
         if (!window._enemySpatialHash) {
@@ -749,13 +747,9 @@
       enemies.forEach((e, _idx) => {
         if (!e || !e.mesh || e.isDead) return;
         const _dSq = e.mesh.position.distanceToSquared(player.mesh.position);
-        // Granular throttle: skip update based on distance tier
-        if (_dSq > _ENEMY_THROTTLE_FAR_SQ) {
-          if ((_fc & 7) !== (_idx & 7)) return; // every 8th frame
-        } else if (_dSq > _ENEMY_THROTTLE_MED_SQ) {
-          if ((_fc & 3) !== (_idx & 3)) return; // every 4th frame
-        } else if (_dSq > _ENEMY_THROTTLE_DIST_SQ) {
-          if (_frameEven !== ((_idx & 1) === 0)) return; // every 2nd frame
+        // Use AnimationThrottle utility for clean distance-based LOD
+        if (_AT) {
+          if (!_AT.shouldUpdate(_dSq, _fc + _idx)) return;
         }
         e.update(dt, player.mesh.position);
       });
