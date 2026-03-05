@@ -287,20 +287,9 @@
         this.mesh.add(this.glow);
         
         // Aura Force Field (visible when aura weapon is active) - spiritual yellow-white energy sphere
-        // Outer translucent sphere shell — spiritual force surrounding player
-        const auraGeo = new THREE.SphereGeometry(2.0, 24, 16);
-        const auraMat = new THREE.MeshBasicMaterial({ 
-          color: 0xFFEE88, 
-          transparent: true, 
-          opacity: 0.08,
-          side: THREE.DoubleSide,
-          depthWrite: false
-        });
-        this.auraCircle = new THREE.Mesh(auraGeo, auraMat);
-        this.auraCircle.position.y = 0.5;
-        this.auraCircle.visible = false;
+        // Solid dome sphere disabled — only the ground fog ring remains visible
+        this.auraCircle = null;
         this.currentAuraRange = 2.0;
-        scene.add(this.auraCircle);
         // Inner pulsing fog ring at feet level
         const auraFogGeo = new THREE.TorusGeometry(1.8, 0.3, 8, 24);
         const auraFogMat = new THREE.MeshBasicMaterial({
@@ -1058,21 +1047,16 @@
           }
         }
         
-        // Update aura force field — spiritual yellow-white pulsating sphere
+        // Update aura force field — spiritual yellow-white pulsating fog ring
         if (weapons.aura.active) {
-          this.auraCircle.visible = true;
           this.auraFogRing.visible = true;
-          this.auraCircle.position.x = this.mesh.position.x;
-          this.auraCircle.position.z = this.mesh.position.z;
           this.auraFogRing.position.x = this.mesh.position.x;
           this.auraFogRing.position.z = this.mesh.position.z;
           
-          // Scale based on aura range — sphere force field
+          // Scale based on aura range — fog ring
           const scale = weapons.aura.range * 1.5;
           if (this.currentAuraRange !== scale) {
             this.currentAuraRange = scale;
-            this.auraCircle.geometry.dispose();
-            this.auraCircle.geometry = new THREE.SphereGeometry(scale, 24, 16);
             this.auraFogRing.geometry.dispose();
             this.auraFogRing.geometry = new THREE.TorusGeometry(scale * 0.9, 0.3, 8, 24);
           }
@@ -1080,17 +1064,7 @@
           // Fast pulsation — rapid spiritual energy waves
           const fastPulse = Math.sin(gameTime * 10) * 0.04;
           const slowPulse = Math.sin(gameTime * 3) * 0.02;
-          this.auraCircle.material.opacity = 0.06 + fastPulse + slowPulse;
-          // Scale pulsation — breathing force field
-          const scalePulse = 1.0 + Math.sin(gameTime * 8) * 0.04;
-          this.auraCircle.scale.setScalar(scalePulse);
-          // Yellow-white color shift
           const colorShift = Math.sin(gameTime * 5) * 0.5 + 0.5;
-          this.auraCircle.material.color.setRGB(
-            1.0,
-            0.92 + colorShift * 0.08,
-            0.5 + colorShift * 0.3
-          );
           // Fog ring: expand outward from feet with rotation
           this.auraFogRing.rotation.z += 0.05;
           const fogPulse = Math.sin(gameTime * 8) * 0.06;
@@ -1103,7 +1077,6 @@
             0.7 + colorShift * 0.2
           );
         } else {
-          this.auraCircle.visible = false;
           this.auraFogRing.visible = false;
         }
         
@@ -1256,6 +1229,7 @@
         }
 
         playerStats.hp -= reduced;
+        if (window.GameMilestones) window.GameMilestones.recordDamageTaken(reduced);
         updateHUD();
         playSound('hit');
         

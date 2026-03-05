@@ -345,7 +345,7 @@
           projectileMaterialCache.bulletGlow.clone()  // Clone material for independent color
         );
 
-        this.speed = 0.4; // Original speed (reverted from 0.5 optimisation bump)
+        this.speed = 0.4 * (window._projSpeedMultiplier || 1.0); // Apply speed upgrade multiplier
         // active starts false; reinit() sets it true.  Pool createFn creates with no args so
         // the projectile stays inactive until _spawnProjectile() calls reinit().
         this.active = false;
@@ -392,7 +392,8 @@
 
         // Reset mesh state
         this.mesh.position.set(x, 0.5, z);
-        this.mesh.scale.set(1, 1, 1);
+        const _sm = window._projSizeMultiplier || 1.0;
+        this.mesh.scale.set(_sm, _sm, _sm);
         this.mesh.material.color.setHex(0xFF4500);
         this.mesh.material.opacity = 0.95;
         this.mesh.visible = true;
@@ -418,6 +419,8 @@
         const dx = target.x - x;
         const dz = target.z - z;
         const dist = Math.sqrt(dx * dx + dz * dz);
+        // Re-apply speed multiplier each shot so pooled projectiles pick up upgrades
+        this.speed = 0.4 * (window._projSpeedMultiplier || 1.0);
         this.vx = (dx / dist) * this.speed;
         this.vz = (dz / dist) * this.speed;
 
@@ -675,7 +678,7 @@
               );
               const closeRange = distToPlayer < 3.5;
               const medRange = distToPlayer < 7;
-              knockbackForce = closeRange ? 1.5 : (medRange ? 0.8 : 0.4);
+              knockbackForce = closeRange ? 0.9 : (medRange ? 0.48 : 0.24);
               knockbackForce *= (1 + (weapons.doubleBarrel.level - 1) * 0.15);
               
               if (closeRange && !enemy.isDead) {
@@ -1400,15 +1403,16 @@
         this.light.position.copy(this.mesh.position);
         scene.add(this.light);
 
-        this.speed = 0.42; // Slightly faster — ice shards fly fast
+        this.speed = 0.42 * (window._projSpeedMultiplier || 1.0); // Slightly faster — ice shards fly fast
         this.active = true;
         this.life = 70; // Frames - longer range than normal projectile
 
-        // Calculate direction
+        // Calculate direction — keep flat on XZ plane (no vertical component)
         const dx = target.x - x;
         const dz = target.z - z;
         const dist = Math.sqrt(dx*dx + dz*dz);
         this.vx = (dx / dist) * this.speed;
+        this.vy = 0; // Explicit zero — shard travels horizontally
         this.vz = (dz / dist) * this.speed;
         
         // Rotate shard to face direction of travel
@@ -1427,6 +1431,7 @@
         if (!this.active) return false;
         
         this.mesh.position.x += this.vx;
+        this.mesh.position.y = 0.5; // Lock height — shard travels flat on ground plane
         this.mesh.position.z += this.vz;
         // Keep light in sync with shard
         this.light.position.copy(this.mesh.position);

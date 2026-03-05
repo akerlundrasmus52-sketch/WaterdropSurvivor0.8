@@ -1046,6 +1046,12 @@
       if (isGameActive && !isPaused) {
         checkLegendaryCigarQuest();
       }
+
+      // Milestone system tick
+      if (window.GameMilestones && isGameActive && !isPaused && !isGameOver) {
+        window.GameMilestones.tick(dt);
+        window.GameMilestones.checkMilestones();
+      }
       
       // QUEST 3: Check Stonehenge chest proximity
       if (window.stonehengeChest && 
@@ -2855,6 +2861,22 @@
       // Warning light blink (Area 51)
       if (window.warningLight && window.warningLight.material) {
         window.warningLight.material.opacity = Math.sin(gameTime * 3) > 0 ? 0.9 : 0.1;
+      }
+
+      // All-Seeing Eye orb pulse animation (Illuminati pyramid)
+      if (window._eyeOfHorusMesh) {
+        window._eyeOfHorusPhase = (window._eyeOfHorusPhase || 0) + dt * 2.2;
+        const _eyePulse = 0.7 + Math.sin(window._eyeOfHorusPhase) * 0.3;
+        window._eyeOfHorusMesh.material.opacity = _eyePulse;
+        // Gentle hover: oscillate around the base position stored in userData
+        if (window._eyeOfHorusMesh.userData.baseY === undefined) {
+          window._eyeOfHorusMesh.userData.baseY = window._eyeOfHorusMesh.position.y;
+        }
+        window._eyeOfHorusMesh.position.y =
+          window._eyeOfHorusMesh.userData.baseY + Math.sin(window._eyeOfHorusPhase * 0.8) * 0.4;
+        if (window._eyeOfHorusLight) {
+          window._eyeOfHorusLight.intensity = 1.5 + Math.sin(window._eyeOfHorusPhase) * 1.0;
+        }
       }
 
       // Lava damage: player takes damage when close to volcano (at -100, 0, -120)

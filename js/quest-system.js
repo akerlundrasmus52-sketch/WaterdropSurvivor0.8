@@ -2747,6 +2747,34 @@
         };
         const _getSkillIcon = (id, name) => _skillIcons[id] || (name && name.match(/^[^\w\s]/) ? name.charAt(0) : '🔮');
 
+        // Helper: show a floating info tooltip for a skill node
+        const _showSkillInfoTooltip = (node) => {
+          const existing = document.getElementById('skill-info-tooltip');
+          if (existing) existing.remove();
+          const tooltip = document.createElement('div');
+          tooltip.id = 'skill-info-tooltip';
+          tooltip.style.cssText = 'position:fixed;z-index:9999;background:rgba(10,14,32,0.97);border:2px solid #FFD700;border-radius:12px;padding:12px 16px;max-width:220px;color:#fff;font-size:13px;pointer-events:none;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,0.85),0 0 12px rgba(255,215,0,0.15);';
+          const lvl = skillData.level || 0;
+          const lvlStr = lvl > 0 ? `Level ${lvl} / ${skill.maxLevel}` : 'Not unlocked';
+          const costStr = isMaxLevel ? '✅ MAX LEVEL' : `${skill.cost} SP per level`;
+          tooltip.innerHTML = `<div style="font-size:24px;margin-bottom:4px;">${_getSkillIcon(skillId, skill.name)}</div><div style="font-family:'Bangers',cursive;font-size:16px;color:#FFD700;letter-spacing:1px;margin-bottom:5px;">${skill.name}</div><div style="color:#bbb;font-size:11px;line-height:1.45;margin-bottom:5px;">${skill.description}</div><div style="color:#5DADE2;font-size:11px;">${lvlStr}</div><div style="color:#aaa;font-size:10px;margin-top:4px;">${costStr}</div>${!isMaxLevel && canAfford ? '<div style="color:#888;font-size:10px;margin-top:6px;letter-spacing:0.5px;">⬇ HOLD to purchase</div>' : ''}`;
+          document.body.appendChild(tooltip);
+          const rect = node.getBoundingClientRect();
+          const tw = 220;
+          let left = Math.round(rect.left + rect.width / 2 - tw / 2);
+          let top = Math.round(rect.top - 160);
+          left = Math.max(8, Math.min(left, window.innerWidth - tw - 8));
+          if (top < 8) top = rect.bottom + 8;
+          tooltip.style.left = left + 'px';
+          tooltip.style.top = top + 'px';
+          clearTimeout(window._skillTooltipTimer);
+          window._skillTooltipTimer = setTimeout(() => {
+            tooltip.style.transition = 'opacity 0.25s';
+            tooltip.style.opacity = '0';
+            setTimeout(() => tooltip.remove(), 280);
+          }, 2500);
+        };
+
         const skillNode = document.createElement('div');
         skillNode.className = 'skill-node';
         if (skillData.unlocked) skillNode.classList.add('unlocked');
@@ -2764,30 +2792,45 @@
         }
 
         skillNode.innerHTML = `
-          <div class="skill-icon-badge">${_getSkillIcon(skillId, skill.name)}</div>
+          <div class="skill-icon-badge"><span class="skill-icon-emoji">${_getSkillIcon(skillId, skill.name)}</span><div class="skill-hold-progress"></div></div>
           ${dotsHTML}
           <div class="skill-name">${skill.name}</div>
           <div class="skill-desc">${skill.description}</div>
           <div class="skill-cost">${isMaxLevel ? '✅ MAX' : `${skill.cost} SP`}</div>
-          ${!isMaxLevel && canAfford ? '<div class="skill-hold-bar" style="height:5px;background:#222;border:1.5px solid #000;border-radius:3px;margin-top:5px;overflow:hidden;"><div class="skill-hold-fill" style="height:100%;width:0%;background:linear-gradient(90deg,#FFD700,#FFA500);transition:none;border-radius:2px;"></div></div><div style="font-size:9px;color:#666;margin-top:2px;">Hold to buy</div>' : ''}
+          ${!isMaxLevel && canAfford ? '<div class="skill-hold-hint">HOLD TO BUY</div>' : ''}
         `;
-        
+
+        // Short press (tap/click) → show info tooltip for all nodes
+        let _holdFired = false;
+        skillNode.addEventListener('click', () => {
+          if (_holdFired) { _holdFired = false; return; }
+          _showSkillInfoTooltip(skillNode);
+        });
+
         if (!isMaxLevel && canAfford) {
           let holdTimer = null;
           let holdStart = null;
-          const HOLD_DURATION = 1000; // 1 second
-          // Cache DOM reference to avoid repeated queries in animation loop
-          const fillEl = skillNode.querySelector('.skill-hold-fill');
-          
+          const HOLD_DURATION = 800;
+          const progressEl = skillNode.querySelector('.skill-hold-progress');
+          const iconBadge  = skillNode.querySelector('.skill-icon-badge');
+
           const startHold = () => {
             if (holdTimer) return;
+            _holdFired = false;
             holdStart = Date.now();
             const animate = () => {
               const elapsed = Date.now() - holdStart;
               const pct = Math.min(100, (elapsed / HOLD_DURATION) * 100);
-              if (fillEl) fillEl.style.width = pct + '%';
+              if (progressEl) progressEl.style.setProperty('--fill', pct + '%');
               if (pct >= 100) {
                 holdTimer = null;
+                _holdFired = true;
+                if (progressEl) progressEl.style.setProperty('--fill', '0%');
+                if (iconBadge) {
+                  iconBadge.style.animation = 'skillPurchased 0.45s ease-out';
+                  setTimeout(() => { if (iconBadge) iconBadge.style.animation = ''; }, 450);
+                }
+                if (typeof playSound === 'function') playSound('collect');
                 unlockSkill(skillId);
               } else {
                 holdTimer = requestAnimationFrame(animate);
@@ -2795,12 +2838,12 @@
             };
             holdTimer = requestAnimationFrame(animate);
           };
-          
+
           const cancelHold = () => {
             if (holdTimer) { cancelAnimationFrame(holdTimer); holdTimer = null; }
-            if (fillEl) fillEl.style.width = '0%';
+            if (progressEl) progressEl.style.setProperty('--fill', '0%');
           };
-          
+
           skillNode.addEventListener('pointerdown', (e) => { e.preventDefault(); startHold(); });
           skillNode.addEventListener('pointerup', cancelHold);
           skillNode.addEventListener('pointerleave', cancelHold);

@@ -1281,3 +1281,102 @@
       window.screenShakeIntensity = Math.max(window.screenShakeIntensity, intensity);
     };
 
+// ─── Milestone / Hidden-Challenge System ────────────────────────────────────
+window.GameMilestones = (function () {
+  const POPUP_DISPLAY_MS  = 4000;
+  const POPUP_FADEOUT_MS  = 500;
+
+  const _stats = {
+    totalKills: 0,
+    survivalSeconds: 0,
+    totalDamageDealt: 0,
+    maxLevelReached: 1,
+    totalDamageTaken: 0,
+  };
+
+  const _milestones = [
+    { id: 'kills_1000',        label: 'Mass Extinction',    icon: '💀', stat: 'totalKills',       threshold: 1000,  reward: { type: 'skillPoints', amount: 2  }, claimed: false },
+    { id: 'survive_10min',     label: 'Survivor',           icon: '⏱️', stat: 'survivalSeconds',  threshold: 600,   reward: { type: 'skillPoints', amount: 2  }, claimed: false },
+    { id: 'damage_50k',        label: 'Overwhelming Force', icon: '⚔️', stat: 'totalDamageDealt', threshold: 50000, reward: { type: 'skillPoints', amount: 1  }, claimed: false },
+    { id: 'level_20',          label: 'Seasoned Veteran',   icon: '⭐', stat: 'maxLevelReached',  threshold: 20,    reward: { type: 'maxHp',       amount: 50 }, claimed: false },
+    { id: 'damage_taken_10k',  label: 'Iron Will',          icon: '🛡️', stat: 'totalDamageTaken', threshold: 10000, reward: { type: 'armor',       amount: 5  }, claimed: false },
+  ];
+
+  function _rewardLabel(reward) {
+    switch (reward.type) {
+      case 'skillPoints': return `+${reward.amount} Skill Point${reward.amount !== 1 ? 's' : ''}`;
+      case 'maxHp':       return `+${reward.amount} Max HP`;
+      case 'armor':       return `+${reward.amount} Armor`;
+      default:            return `+${reward.amount} ${reward.type}`;
+    }
+  }
+
+  function _applyReward(reward) {
+    if (typeof playerStats === 'undefined') {
+      console.warn('[GameMilestones] playerStats unavailable — reward deferred is not supported; reward lost.');
+      return false;
+    }
+    switch (reward.type) {
+      case 'skillPoints':
+        playerStats.skillPoints = (playerStats.skillPoints || 0) + reward.amount;
+        break;
+      case 'maxHp':
+        playerStats.maxHp = (playerStats.maxHp || 100) + reward.amount;
+        playerStats.hp   = Math.min((playerStats.hp || 0) + reward.amount, playerStats.maxHp);
+        break;
+      case 'armor':
+        playerStats.armor = (playerStats.armor || 0) + reward.amount;
+        break;
+    }
+    return true;
+  }
+
+  function showMilestonePopup(milestone) {
+    const popup = document.createElement('div');
+    popup.className = 'milestone-popup';
+    popup.innerHTML = `
+      <div class="milestone-popup-icon">${milestone.icon}</div>
+      <div class="milestone-popup-title">CHALLENGE COMPLETED!</div>
+      <div class="milestone-popup-label">${milestone.label}</div>
+      <div class="milestone-popup-reward">${_rewardLabel(milestone.reward)}</div>
+    `;
+    document.body.appendChild(popup);
+
+    setTimeout(() => {
+      popup.classList.add('milestone-popup-out');
+      setTimeout(() => popup.remove(), POPUP_FADEOUT_MS);
+    }, POPUP_DISPLAY_MS);
+  }
+
+  function checkMilestones() {
+    _milestones.forEach(m => {
+      if (m.claimed) return;
+      if (_stats[m.stat] >= m.threshold) {
+        // Only mark claimed if reward was successfully applied
+        if (_applyReward(m.reward)) {
+          m.claimed = true;
+          showMilestonePopup(m);
+        }
+      }
+    });
+  }
+
+  function tick(delta) {
+    // delta is in seconds (matches game-loop.js dt unit)
+    if (window.isPaused) return;
+    _stats.survivalSeconds += delta;
+    checkMilestones();
+  }
+
+  function recordKill()              { _stats.totalKills++;             checkMilestones(); }
+  function recordDamageDealt(amount) { _stats.totalDamageDealt += (amount || 0); checkMilestones(); }
+  function recordDamageTaken(amount) { _stats.totalDamageTaken += (amount || 0); checkMilestones(); }
+  function recordLevel(level)        { if (level > _stats.maxLevelReached) { _stats.maxLevelReached = level; checkMilestones(); } }
+
+  // Expose read-only snapshots to prevent external mutation of live data
+  function getStats()      { return Object.assign({}, _stats); }
+  function getMilestones() { return _milestones.map(m => Object.assign({}, m, { reward: Object.assign({}, m.reward) })); }
+
+  return { getStats, getMilestones, tick, recordKill, recordDamageDealt, recordDamageTaken, recordLevel, checkMilestones, showMilestonePopup };
+}());
+

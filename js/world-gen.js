@@ -47,8 +47,19 @@
       grassTexture.repeat.set(60, 60);
       
       // Single lush green ground plane covering the whole map
-      const mainGroundGeo = new THREE.PlaneGeometry(mapSize, mapSize);
-      const mainGroundMat = new THREE.MeshStandardMaterial({ map: grassTexture, roughness: 0.92, metalness: 0.0 });
+      const mainGroundGeo = new THREE.PlaneGeometry(mapSize, mapSize, 32, 32);
+      const mainGroundMat = new THREE.MeshStandardMaterial({ map: grassTexture, roughness: 0.92, metalness: 0.0, vertexColors: true });
+
+      // Per-vertex color variation for organic ground appearance
+      const _gColors = [];
+      const _gPos = mainGroundGeo.attributes.position;
+      for (let _gi = 0; _gi < _gPos.count; _gi++) {
+        const _gx = _gPos.getX(_gi);
+        const _gPlaneY = _gPos.getY(_gi); // PlaneGeometry is in XY; this axis becomes -Z after rotation
+        const _noise = (Math.sin(_gx * 0.3) * Math.cos(_gPlaneY * 0.3) + Math.sin(_gx * 0.7 + _gPlaneY * 0.5)) * 0.5 + 0.5;
+        _gColors.push(0.18 + _noise * 0.08, 0.45 + _noise * 0.15, 0.1 + _noise * 0.05);
+      }
+      mainGroundGeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(_gColors), 3));
       const mainGround = new THREE.Mesh(mainGroundGeo, mainGroundMat);
       mainGround.rotation.x = -Math.PI / 2;
       mainGround.position.set(0, 0, 0);
@@ -828,6 +839,28 @@
       allSeeingEyeGroup.add(innerPupil);
       
       illuminatiGroup.add(allSeeingEyeGroup);
+
+      // Glowing 3D All-Seeing Eye orb hovering above the capstone peak
+      const eyeOrbGeo = new THREE.SphereGeometry(0.5, 8, 8);
+      const eyeOrbMat = new THREE.MeshBasicMaterial({ color: 0xFFD700, transparent: true, opacity: 0.9 });
+      const eyeOrbMesh = new THREE.Mesh(eyeOrbGeo, eyeOrbMat);
+      // Peak of capstone: illuminatiSteps*2 + 1.5 (base) + 1 (half cone height) + 1.5 (float gap)
+      eyeOrbMesh.position.set(0, illuminatiSteps * 2 + 4, 0);
+      illuminatiGroup.add(eyeOrbMesh);
+
+      // Gold point light emanating from the eye orb (world position: illuminatiGroup + orb offset)
+      const eyeOrbLight = new THREE.PointLight(0xFFD700, 2, 18);
+      eyeOrbLight.position.set(
+        illuminatiGroup.position.x,
+        illuminatiGroup.position.y + illuminatiSteps * 2 + 4,
+        illuminatiGroup.position.z
+      );
+      scene.add(eyeOrbLight);
+
+      // Store references for animation in game-loop
+      window._eyeOfHorusMesh  = eyeOrbMesh;
+      window._eyeOfHorusLight = eyeOrbLight;
+      window._eyeOfHorusPhase = 0;
       
       // Fences around pyramid (4 sides)
       const illuminatiFenceMat = new THREE.MeshToonMaterial({ color: 0x8B4513 }); // Brown
@@ -1759,6 +1792,13 @@
           
           return false;
         }
+
+        // Tree-specific placement validation: extends isPositionExcluded with the Colosseum exclusion zone
+        function isTreePlacementValid(x, z) {
+          if (isPositionExcluded(x, z)) return false;
+          if (Math.sqrt((x + 25) ** 2 + (z - 25) ** 2) < 18) return false; // Colosseum
+          return true;
+        }
         
         let tx, tz;
         let excluded = true;
@@ -1776,7 +1816,7 @@
             tz = (seededRandom(i * 23 + attempts * 11) * 180) - 90;
           }
           
-          excluded = isPositionExcluded(tx, tz);
+          excluded = !isTreePlacementValid(tx, tz);
           attempts++;
         }
         
@@ -1868,16 +1908,24 @@
       // Scatter flowers around environment
       const flowerGeo = new THREE.ConeGeometry(0.2, 0.5, 6);
       const flowerColors = [0xFF69B4, 0xFFFF00, 0xFF0000, 0xFFA500, 0xFFFFFF];
+
+      // Validate flower placement: avoid lake, spawn rondel, pyramid area, and roads
+      function isFlowerPlacementValid(fx, fz) {
+        if (Math.sqrt(fx * fx + fz * fz) < 10) return false; // spawn rondel
+        if (Math.sqrt((fx - 30) ** 2 + (fz + 30) ** 2) < 22) return false; // lake
+        if (Math.sqrt((fx - 50) ** 2 + (fz + 50) ** 2) < 18) return false; // Mayan pyramid
+        if (Math.sqrt((fx + 70) ** 2 + (fz - 50) ** 2) < 15) return false; // Illuminati pyramid
+        return true;
+      }
       
       for(let i=0; i<250; i++) {
+        const fx = (Math.random() - 0.5) * 160;
+        const fz = (Math.random() - 0.5) * 160;
+        if (!isFlowerPlacementValid(fx, fz)) continue;
         const flower = new THREE.Mesh(flowerGeo, new THREE.MeshBasicMaterial({ 
           color: flowerColors[Math.floor(Math.random() * flowerColors.length)] 
         }));
-        flower.position.set(
-          (Math.random() - 0.5) * 160,
-          0.25,
-          (Math.random() - 0.5) * 160
-        );
+        flower.position.set(fx, 0.25, fz);
         flower.rotation.x = -Math.PI/2;
         scene.add(flower);
       }
@@ -2496,86 +2544,145 @@
         const colosseumGroup = new THREE.Group();
         colosseumGroup.position.set(-25, 0, 25);
 
-        const stoneMat = new THREE.MeshStandardMaterial({ color: 0xC8B89A, roughness: 0.9, metalness: 0.0 }); // Aged travertine stone
-        const darkStoneMat = new THREE.MeshStandardMaterial({ color: 0x9E8A6E, roughness: 0.95, metalness: 0.0 }); // Darker aged stone
-        const innerMat = new THREE.MeshStandardMaterial({ color: 0xB0A088, roughness: 0.9, metalness: 0.0 });
+        // Primary palette: warm beige/travertine limestone
+        const stoneMat     = new THREE.MeshStandardMaterial({ color: 0xD4B896, roughness: 0.88, metalness: 0.0 });
+        const darkStoneMat = new THREE.MeshStandardMaterial({ color: 0xC4A882, roughness: 0.92, metalness: 0.0 });
+        const columnMat    = new THREE.MeshStandardMaterial({ color: 0xE8D5B7, roughness: 0.80, metalness: 0.0 });
+        const rubbleMat    = new THREE.MeshStandardMaterial({ color: 0xB09070, roughness: 1.00, metalness: 0.0 });
+        const sandMat      = new THREE.MeshStandardMaterial({ color: 0xD4C4A0, roughness: 0.98, metalness: 0.0 });
 
-        // Oval outer wall - elliptical shape (wider than deep)
-        const outerRadX = 14, outerRadZ = 10;
-        const wallHeight = 6;
-        const numWallSections = 20;
-        for (let w = 0; w < numWallSections; w++) {
-          const wAngle = (w / numWallSections) * Math.PI * 2;
-          const wAngleNext = ((w + 1) / numWallSections) * Math.PI * 2;
-          const wx = Math.cos(wAngle) * outerRadX;
-          const wz = Math.sin(wAngle) * outerRadZ;
-          const wxN = Math.cos(wAngleNext) * outerRadX;
-          const wzN = Math.sin(wAngleNext) * outerRadZ;
-          const segLen = Math.sqrt((wxN - wx) ** 2 + (wzN - wz) ** 2);
-          const segAngle = Math.atan2(wzN - wz, wxN - wx);
+        const outerRadius  = 13;   // circular outer wall radius
+        const wallHeight   = 7;
+        const wallThick    = 1.4;
+        const numSections  = 24;   // 24-sided polygon → smooth circle
 
-          // Skip some sections to simulate ruined portions
-          const isRuined = (w >= 5 && w <= 6) || (w >= 14 && w <= 15);
-          const segH = isRuined ? wallHeight * 0.45 : wallHeight;
+        // ── Outer wall ring (CylinderGeometry gives solid circular wall) ──
+        const outerWallGeo = new THREE.CylinderGeometry(
+          outerRadius + wallThick * 0.5,   // top outer radius
+          outerRadius + wallThick * 0.5,   // bottom outer radius
+          wallHeight, numSections, 1, true // open-ended cylinder = ring face
+        );
+        // Build as segmented BoxGeometry pieces so each arc-segment can be ruined independently
+        for (let w = 0; w < numSections; w++) {
+          const angle     = (w       / numSections) * Math.PI * 2;
+          const angleNext = ((w + 1) / numSections) * Math.PI * 2;
+          const mx = Math.cos((angle + angleNext) * 0.5) * outerRadius;
+          const mz = Math.sin((angle + angleNext) * 0.5) * outerRadius;
+          const segAngle = Math.atan2(mz, mx) + Math.PI * 0.5;
+          const arcLen   = 2 * outerRadius * Math.sin(Math.PI / numSections) + 0.05;
+
+          const isRuined = (w >= 4 && w <= 5) || (w >= 16 && w <= 17);
+          const segH   = isRuined ? wallHeight * 0.40 : wallHeight;
           const segMat = isRuined ? darkStoneMat : stoneMat;
 
-          const wallSeg = new THREE.Mesh(new THREE.BoxGeometry(segLen + 0.1, segH, 1.2), segMat);
-          wallSeg.position.set((wx + wxN) * 0.5, segH * 0.5, (wz + wzN) * 0.5);
-          wallSeg.rotation.y = segAngle;
-          wallSeg.castShadow = true;
-          wallSeg.receiveShadow = true;
-          colosseumGroup.add(wallSeg);
-
-          // Arch cutouts (decorative arch shapes on wall, alternating)
-          if (!isRuined && w % 2 === 0) {
-            const archPillar = new THREE.Mesh(new THREE.BoxGeometry(0.5, wallHeight, 1.3), darkStoneMat);
-            archPillar.position.set(wx, wallHeight * 0.5, wz);
-            archPillar.castShadow = true;
-            colosseumGroup.add(archPillar);
-          }
+          const seg = new THREE.Mesh(new THREE.BoxGeometry(arcLen, segH, wallThick), segMat);
+          seg.position.set(mx, segH * 0.5, mz);
+          seg.rotation.y = segAngle;
+          seg.castShadow = true;
+          seg.receiveShadow = true;
+          colosseumGroup.add(seg);
         }
 
-        // Second tier (inner, slightly smaller oval)
-        const innerRadX = 10, innerRadZ = 7;
-        const tier2Height = 3.5;
-        for (let w = 0; w < 16; w++) {
-          const wAngle = (w / 16) * Math.PI * 2;
-          const wAngleNext = ((w + 1) / 16) * Math.PI * 2;
-          const wx = Math.cos(wAngle) * innerRadX;
-          const wz = Math.sin(wAngle) * innerRadZ;
-          const wxN = Math.cos(wAngleNext) * innerRadX;
-          const wzN = Math.sin(wAngleNext) * innerRadZ;
-          const segLen = Math.sqrt((wxN - wx) ** 2 + (wzN - wz) ** 2);
-          const segAngle = Math.atan2(wzN - wz, wxN - wx);
-          // Skip some sections for ruins look
-          if (w === 3 || w === 11) continue;
-          const wall2 = new THREE.Mesh(new THREE.BoxGeometry(segLen + 0.1, tier2Height, 1.0), innerMat);
-          wall2.position.set((wx + wxN) * 0.5, wallHeight + tier2Height * 0.5, (wz + wzN) * 0.5);
-          wall2.rotation.y = segAngle;
-          wall2.castShadow = true;
-          colosseumGroup.add(wall2);
+        // ── Crenellated battlements on top of full-height sections ──
+        for (let w = 0; w < numSections; w++) {
+          const isRuined = (w >= 4 && w <= 5) || (w >= 16 && w <= 17);
+          if (isRuined) continue;
+          const angle  = ((w + 0.5) / numSections) * Math.PI * 2;
+          const mx     = Math.cos(angle) * outerRadius;
+          const mz     = Math.sin(angle) * outerRadius;
+          const cren   = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.9, wallThick * 1.05), darkStoneMat);
+          cren.position.set(mx, wallHeight + 0.45, mz);
+          cren.rotation.y = angle + Math.PI * 0.5;
+          cren.castShadow = true;
+          colosseumGroup.add(cren);
         }
 
-        // Arena floor - flat sandy ellipse
-        const arenaFloorGeo = new THREE.CircleGeometry(1, 32);
-        const arenaFloorMat = new THREE.MeshStandardMaterial({ color: 0xD4C4A0, roughness: 0.98, metalness: 0.0 });
-        const arenaFloor = new THREE.Mesh(arenaFloorGeo, arenaFloorMat);
-        arenaFloor.scale.set(innerRadX - 1.5, 1, innerRadZ - 1.5);
+        // ── Inner second tier wall (smaller radius) ──
+        const innerRadius = 9;
+        const tier2Height = 3.8;
+        const numInner    = 20;
+        for (let w = 0; w < numInner; w++) {
+          if (w === 3 || w === 12) continue; // gaps for ruins look
+          const angle     = (w       / numInner) * Math.PI * 2;
+          const angleNext = ((w + 1) / numInner) * Math.PI * 2;
+          const mx        = Math.cos((angle + angleNext) * 0.5) * innerRadius;
+          const mz        = Math.sin((angle + angleNext) * 0.5) * innerRadius;
+          const segAngle  = Math.atan2(mz, mx) + Math.PI * 0.5;
+          const arcLen    = 2 * innerRadius * Math.sin(Math.PI / numInner) + 0.05;
+
+          const seg2 = new THREE.Mesh(new THREE.BoxGeometry(arcLen, tier2Height, 1.0), darkStoneMat);
+          seg2.position.set(mx, wallHeight + tier2Height * 0.5, mz);
+          seg2.rotation.y = segAngle;
+          seg2.castShadow = true;
+          colosseumGroup.add(seg2);
+        }
+
+        // ── Perimeter columns (CylinderGeometry, white/beige) ──
+        const numColumns  = 16;
+        const colRadius   = outerRadius + 0.1; // sit just outside the wall face
+        for (let c = 0; c < numColumns; c++) {
+          const angle = (c / numColumns) * Math.PI * 2;
+          const cx    = Math.cos(angle) * colRadius;
+          const cz    = Math.sin(angle) * colRadius;
+
+          // Fluted column shaft
+          const shaft = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.38, 0.45, wallHeight + 1.0, 8),
+            columnMat
+          );
+          shaft.position.set(cx, (wallHeight + 1.0) * 0.5, cz);
+          shaft.castShadow = true;
+          shaft.receiveShadow = true;
+          colosseumGroup.add(shaft);
+
+          // Column capital (wider top)
+          const capital = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.55, 0.40, 0.45, 8),
+            stoneMat
+          );
+          capital.position.set(cx, wallHeight + 1.0 + 0.22, cz);
+          capital.castShadow = true;
+          colosseumGroup.add(capital);
+
+          // Column base plinth
+          const plinth = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.55, 0.60, 0.35, 8),
+            stoneMat
+          );
+          plinth.position.set(cx, 0.18, cz);
+          plinth.castShadow = true;
+          plinth.receiveShadow = true;
+          colosseumGroup.add(plinth);
+        }
+
+        // ── Arena floor — circular sandy disc ──
+        const arenaFloor = new THREE.Mesh(
+          new THREE.CircleGeometry(innerRadius - 1.2, 40),
+          sandMat
+        );
         arenaFloor.rotation.x = -Math.PI / 2;
         arenaFloor.position.y = 0.05;
         arenaFloor.receiveShadow = true;
         colosseumGroup.add(arenaFloor);
 
-        // Scattered rubble / crumbled blocks at ruined sections
-        const rubbleMat = new THREE.MeshStandardMaterial({ color: 0x9E8A6E, roughness: 1.0, metalness: 0.0 });
+        // ── Ground ring between inner wall and outer wall (stone paving) ──
+        const pavingGeo = new THREE.RingGeometry(innerRadius - 1.1, outerRadius - wallThick * 0.5, 40);
+        const pavingMat = new THREE.MeshStandardMaterial({ color: 0xC8B090, roughness: 0.95, metalness: 0.0 });
+        const paving = new THREE.Mesh(pavingGeo, pavingMat);
+        paving.rotation.x = -Math.PI / 2;
+        paving.position.y = 0.04;
+        paving.receiveShadow = true;
+        colosseumGroup.add(paving);
+
+        // ── Scattered rubble at ruined sections ──
         const rubbleData = [
-          { x: 12, z: 2, ry: 0.4 }, { x: -12, z: 2, ry: 0.8 },
-          { x: 13, z: -1, ry: 0.2 }, { x: -13, z: -1, ry: 1.1 },
-          { x: 10, z: 4, ry: 0.6 }, { x: -10, z: -4, ry: 0.3 },
+          { x: 11.5, z: 3.5, ry: 0.4 }, { x: -11,  z: 3,   ry: 0.8 },
+          { x: 12.5, z: -2,  ry: 0.2 }, { x: -12,  z: -2,  ry: 1.1 },
+          { x:  9.5, z: 5,   ry: 0.6 }, { x: -9.5, z: -4,  ry: 0.3 },
         ];
         rubbleData.forEach(r => {
-          const rb = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.8, 1.2), rubbleMat);
-          rb.position.set(r.x, 0.4, r.z);
+          const rb = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.75, 1.1), rubbleMat);
+          rb.position.set(r.x, 0.37, r.z);
           rb.rotation.y = r.ry;
           rb.castShadow = true;
           rb.receiveShadow = true;

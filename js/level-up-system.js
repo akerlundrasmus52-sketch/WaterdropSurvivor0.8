@@ -26,11 +26,12 @@
         { 
           id: 'str', 
           icon: '⚔️',
-          title: 'TIDAL FORCE', 
-          desc: 'Weapon Damage +6%', 
+          title: `TIDAL FORCE Lv.${(window._strLevel||0)+1}`, 
+          desc: `Weapon Damage +6% (Total: ${Math.round(((window._strLevel||0)+1)*6)}%)`, 
           apply: () => { 
-            playerStats.strength += 0.06; // Reduced from 0.15 to 0.06 for level-100 balance
-            showStatChange('+6% Damage');
+            window._strLevel = (window._strLevel||0)+1;
+            playerStats.strength += 0.06;
+            showStatChange(`+6% Damage (Total +${Math.round(window._strLevel*6)}%)`);
           } 
         },
         { 
@@ -238,6 +239,65 @@
             playerStats.doubleUpgradeChance = (playerStats.doubleUpgradeChance || 0) + 0.25;
             showStatChange('Double Upgrade Chance +25%! (Total: ' + Math.round(playerStats.doubleUpgradeChance * 100) + '%)');
           } 
+        },
+        {
+          id: 'atkPassive',
+          icon: '🗡️',
+          title: `ATTACK MASTERY Lv.${(window._atkPassiveLv||0)+1}`,
+          desc: `Weapon Damage +6% (Total: ${Math.round(((window._atkPassiveLv||0)+1)*6)}%)`,
+          apply: () => {
+            window._atkPassiveLv = (window._atkPassiveLv||0)+1;
+            playerStats.strength += 0.06;
+            showStatChange(`+6% Damage (Total +${Math.round(window._atkPassiveLv*6)}%)`);
+          }
+        },
+        {
+          id: 'aspdPassive',
+          icon: '💨',
+          title: `SPEED MASTERY Lv.${(window._aspdPassiveLv||0)+1}`,
+          desc: `Attack Speed +4% (Total: ${Math.round(((window._aspdPassiveLv||0)+1)*4)}%)`,
+          apply: () => {
+            window._aspdPassiveLv = (window._aspdPassiveLv||0)+1;
+            playerStats.atkSpeed += 0.04;
+            weapons.gun.cooldown *= 0.96;
+            weapons.doubleBarrel.cooldown *= 0.96;
+            showStatChange(`+4% Atk Speed (Total +${Math.round(window._aspdPassiveLv*4)}%)`);
+          }
+        },
+        {
+          id: 'projSize',
+          icon: '🔴',
+          title: 'BIGGER SHOTS',
+          desc: 'Projectile Size +25%',
+          apply: () => {
+            window._projSizeMultiplier = (window._projSizeMultiplier || 1.0) * 1.25;
+            showStatChange('+25% Projectile Size');
+          }
+        },
+        {
+          id: 'projSpeed',
+          icon: '⚡',
+          title: 'FASTER SHOTS',
+          desc: 'Projectile Speed +30%',
+          apply: () => {
+            window._projSpeedMultiplier = (window._projSpeedMultiplier || 1.0) * 1.30;
+            showStatChange('+30% Projectile Speed');
+          }
+        },
+        {
+          id: 'projAmount',
+          icon: '🌟',
+          title: 'MULTISHOT',
+          rarity: 'legendary',
+          desc: '+1 Extra Projectile per shot (Requires Mini-Boss Kill)',
+          apply: () => {
+            if (!window._miniBossDefeated) {
+              showStatChange('❌ MULTISHOT requires defeating a Mini-Boss first!');
+              return;
+            }
+            window._extraProjectiles = (window._extraProjectiles || 0) + 1;
+            showStatChange(`+1 Projectile (Total: ${1 + window._extraProjectiles})`);
+          }
         }
       ];
 
@@ -606,6 +666,32 @@
               playerStats.walkSpeed *= 1.1;
               showStatChange('Class: MAGE');
             } 
+          },
+          {
+            id: 'class_vampire',
+            icon: '🧛',
+            title: 'VAMPIRE',
+            rarity: 'rare',
+            desc: 'Drain 8% of damage dealt as HP. +15% damage but -20% max HP.',
+            apply: () => {
+              window._vampireClass = true;
+              playerStats.maxHp = Math.max(50, playerStats.maxHp * 0.80);
+              playerStats.hp = Math.min(playerStats.hp, playerStats.maxHp);
+              playerStats.strength += 0.15;
+              playerStats.lifeStealPercent += 0.08;
+              showStatChange('🧛 VAMPIRE! Drain life on hit!');
+              // Apply crimson pulsing aura to player mesh
+              if (player && player.mesh && player.mesh.material) {
+                player.mesh.material.emissive = new THREE.Color(0x8B0000);
+                const pulseAura = () => {
+                  if (!window._vampireClass || !player || !player.mesh) return;
+                  player.mesh.material.emissiveIntensity = 0.2 + Math.sin(performance.now() / 500) * 0.15;
+                  window._vampireAuraRaf = requestAnimationFrame(pulseAura);
+                };
+                if (window._vampireAuraRaf) cancelAnimationFrame(window._vampireAuraRaf);
+                pulseAura();
+              }
+            }
           }
         ];
         // Fill with common upgrades to reach 6 choices
@@ -799,6 +885,7 @@
           }
           // Damage & Attack Speed upgrades get blue (rare) rarity
           else if (u.id === 'str' || u.id === 'aspd' || u.id === 'dmg' || u.id === 'atkspd' ||
+                   u.id === 'atkPassive' || u.id === 'aspdPassive' ||
                    u.id.includes('damage') || u.id.includes('attack_speed') || u.id.includes('atk_speed')) {
             card.className += ' rarity-rare';
           }
@@ -809,9 +896,15 @@
           
           // Special powerful upgrades get legendary (red) treatment
           if (u.id.includes('dash_mastery') || u.id.includes('second_wind') || 
-              u.id.includes('berserker_rage') || u.id.includes('lucky_strikes')) {
+              u.id.includes('berserker_rage') || u.id.includes('lucky_strikes') ||
+              u.rarity === 'legendary') {
             card.classList.remove('rarity-common', 'rarity-rare', 'rarity-epic', 'rarity-legendary', 'rarity-mythical');
             card.classList.add('max-upgrade', 'rarity-legendary');
+          }
+          // Apply explicit rarity property override if set
+          if (u.rarity === 'rare' && !card.classList.contains('rarity-rare') && !card.classList.contains('rarity-legendary')) {
+            card.classList.remove('rarity-common', 'rarity-epic');
+            card.classList.add('rarity-rare');
           }
         }
         

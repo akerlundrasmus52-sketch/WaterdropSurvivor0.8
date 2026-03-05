@@ -159,7 +159,12 @@ window.DialogueSystem = (function () {
   function _applyPosition() {
     if (!_container) return;
     if (_posX != null && _posY != null) {
-      _container.style.left      = (_posX - 90) + 'px';
+      // Use half the rendered bubble width to keep it centred above the anchor
+      var hw = Math.round((_container.offsetWidth || 180) / 2);
+      var left = _posX - hw;
+      // Clamp to viewport with 8px margin
+      left = Math.max(8, Math.min(left, window.innerWidth - (_container.offsetWidth || 180) - 8));
+      _container.style.left      = left + 'px';
       _container.style.top       = (_posY - 70) + 'px';
       _container.style.transform = 'none';
     } else {
