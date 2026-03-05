@@ -2121,6 +2121,7 @@
       meteors = meteors.filter(m => m.update() !== false);
       expGems.forEach(g => g.update(player.mesh.position));
       goldCoins.forEach(g => g.update(player.mesh.position));
+      goldDrops.forEach(g => g.update(player.mesh.position));
       chests.forEach(c => c.update(player.mesh.position));
 
       // --- Instanced renderer: sync entity transforms to GPU buffers ---
@@ -2660,6 +2661,7 @@
         // Limit max items on ground (memory optimization)
         const MAX_EXP_GEMS = 100;
         const MAX_GOLD_COINS = 50;
+        const MAX_GOLD_DROPS = 20;
         
         // Helper function to cleanup distant items
         const cleanupDistantItems = (items, maxItems, collectCallback) => {
@@ -2677,8 +2679,8 @@
               if (item.active) {
                 collectCallback(item);
                 scene.remove(item.mesh);
-                item.mesh.geometry.dispose();
-                item.mesh.material.dispose();
+                if (item.mesh.geometry) item.mesh.geometry.dispose();
+                if (item.mesh.material) item.mesh.material.dispose();
                 item.active = false;
               }
             });
@@ -2692,10 +2694,14 @@
         cleanupDistantItems(goldCoins, MAX_GOLD_COINS, (coin) => {
           playerStats.gold += coin.amount;
         });
+        
+        // Clean up gold drops (visual only — no gold added, just destroy properly)
+        cleanupDistantItems(goldDrops, MAX_GOLD_DROPS, (drop) => { if (drop.destroy) drop.destroy(); });
       }
       
       expGems = expGems.filter(g => g.active);
       goldCoins = goldCoins.filter(g => g.active);
+      goldDrops = goldDrops.filter(g => g.active);
       chests = chests.filter(c => c.active);
 
       // Screen shake effect

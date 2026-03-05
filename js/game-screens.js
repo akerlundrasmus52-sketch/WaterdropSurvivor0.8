@@ -2840,6 +2840,10 @@
       goldCoins.push(new GoldCoin(x, z, amount));
     }
     
+    function spawnGoldDrop(x, z, amount) {
+      goldDrops.push(new GoldDrop(x, z, amount));
+    }
+    
     function spawnChest(x, z, tier = 'common') {
       chests.push(new Chest(x, z, tier));
       createFloatingText('CHEST!', new THREE.Vector3(x, 0.3, z));

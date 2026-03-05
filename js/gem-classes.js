@@ -1,6 +1,11 @@
-// js/gem-classes.js — ExpGem, GoldCoin, and Chest pickup classes.
+// js/gem-classes.js — ExpGem, GoldCoin, GoldDrop, and Chest pickup classes.
 // Handles pickup animation, magnetism, collection effects.
 // Depends on: THREE (CDN), variables from main.js
+
+    // Shared geometry/material caches for ExpGem (created once, reused across all instances)
+    let _expGemStarGeometry = null;
+    let _expGemStarMaterial = null;
+    let _expGemOutlineGeometry = null;
 
     class ExpGem {
       constructor(x, z, sourceWeapon, hitForce) {
@@ -768,6 +773,331 @@
           this.lid.geometry.dispose();
           this.lid.material.dispose();
         }
+      }
+    }
+
+    // ─── GoldDrop: Visual-only gold drop (5 tiers, purely cosmetic) ───
+    // Gold is already added to player balance; these are rare visual feedback drops.
+    // Tier 1: Gold Bit (tiny sparkle)   — goldAmount 1-5
+    // Tier 2: Gold Coin (spinning coin) — goldAmount 6-15
+    // Tier 3: Gold Stack (coin stack)   — goldAmount 16-25
+    // Tier 4: Gold Pouch (small bag)    — goldAmount 26-40
+    // Tier 5: Gold Pile (large pile)    — goldAmount 41+
+    
+    // Shared geometries for GoldDrop (created once)
+    let _goldDropCoinGeo = null;
+    let _goldDropBitGeo = null;
+
+    class GoldDrop {
+      constructor(x, z, goldAmount) {
+        this.active = true;
+        this.goldAmount = goldAmount;
+        
+        // Determine tier based on gold amount
+        if (goldAmount >= 41) {
+          this.tier = 5; // Gold Pile
+        } else if (goldAmount >= 26) {
+          this.tier = 4; // Gold Pouch
+        } else if (goldAmount >= 16) {
+          this.tier = 3; // Gold Stack
+        } else if (goldAmount >= 6) {
+          this.tier = 2; // Gold Coin
+        } else {
+          this.tier = 1; // Gold Bit
+        }
+
+        // Scale factor: higher tiers are visually larger
+        const tierScales = [0, 0.5, 0.7, 0.9, 1.1, 1.4];
+        this._baseScale = tierScales[this.tier];
+
+        // Create shared geometries once
+        if (!_goldDropCoinGeo) {
+          _goldDropCoinGeo = new THREE.CylinderGeometry(0.2, 0.2, 0.06, 12);
+        }
+        if (!_goldDropBitGeo) {
+          // Small diamond-like shape for gold bit
+          _goldDropBitGeo = new THREE.OctahedronGeometry(0.12, 0);
+        }
+
+        // Build mesh based on tier
+        this._buildMesh(x, z);
+        
+        // Pop out from death position (like XP stars)
+        const popAngle = Math.random() * Math.PI * 2;
+        const popSpeed = 0.03 + Math.random() * 0.04;
+        this.vx = Math.cos(popAngle) * popSpeed;
+        this.vy = 0.07 + Math.random() * 0.05;
+        this.vz = Math.sin(popAngle) * popSpeed;
+        this.gravity = -0.003;
+        this.onGround = false;
+        this.groundFriction = 0.9;
+
+        // Spin speeds — all 3 axes
+        this.rotSpeedX = (Math.random() * 0.08 + 0.03) * (Math.random() < 0.5 ? 1 : -1);
+        this.rotSpeedY = (Math.random() * 0.12 + 0.08) * (Math.random() < 0.5 ? 1 : -1);
+        this.rotSpeedZ = (Math.random() * 0.06 + 0.02) * (Math.random() < 0.5 ? 1 : -1);
+
+        // Grow from invisible
+        this.mesh.scale.set(0.01, 0.01, 0.01);
+        this._growTimer = 0;
+        this._grown = false;
+
+        // Sparkle phase
+        this.sparklePhase = Math.random() * Math.PI * 2;
+        this.lifeTime = 0; // Track how long drop has been alive
+        this.maxLife = 600; // Auto-fade after ~600 frames (approx 10s at 60fps, varies with frame rate)
+      }
+
+      _buildMesh(x, z) {
+        const group = new THREE.Group();
+        const goldColor = 0xFFD700;
+        const darkGold = 0xDAA520;
+        const brightGold = 0xFFEC8B;
+
+        if (this.tier === 1) {
+          // Tier 1: Gold Bit — tiny sparkling octahedron
+          const mat = new THREE.MeshPhysicalMaterial({
+            color: goldColor, emissive: 0xFFAA00, emissiveIntensity: 0.5,
+            metalness: 0.95, roughness: 0.05, clearcoat: 1.0
+          });
+          const bit = new THREE.Mesh(_goldDropBitGeo, mat);
+          group.add(bit);
+          this._materials = [mat];
+
+        } else if (this.tier === 2) {
+          // Tier 2: Gold Coin — single spinning coin with rim detail
+          const coinMat = new THREE.MeshPhysicalMaterial({
+            color: goldColor, emissive: 0xFFAA00, emissiveIntensity: 0.4,
+            metalness: 0.9, roughness: 0.1, clearcoat: 0.8
+          });
+          const coin = new THREE.Mesh(_goldDropCoinGeo, coinMat);
+          coin.rotation.x = Math.PI / 2;
+          group.add(coin);
+          // Emblem on face (small darker circle)
+          const emblemGeo = new THREE.CircleGeometry(0.1, 8);
+          const emblemMat = new THREE.MeshBasicMaterial({ color: darkGold, side: THREE.DoubleSide });
+          const emblem = new THREE.Mesh(emblemGeo, emblemMat);
+          emblem.position.z = 0.035;
+          group.add(emblem);
+          this._materials = [coinMat, emblemMat];
+          this._extraGeo = [emblemGeo];
+
+        } else if (this.tier === 3) {
+          // Tier 3: Gold Stack — 3 coins stacked with slight offset
+          this._materials = [];
+          for (let i = 0; i < 3; i++) {
+            const stackMat = new THREE.MeshPhysicalMaterial({
+              color: i === 2 ? brightGold : goldColor,
+              emissive: 0xFFAA00, emissiveIntensity: 0.35 + i * 0.1,
+              metalness: 0.9, roughness: 0.1
+            });
+            const stackCoin = new THREE.Mesh(_goldDropCoinGeo, stackMat);
+            stackCoin.rotation.x = Math.PI / 2;
+            stackCoin.position.y = i * 0.07;
+            stackCoin.position.x = (Math.random() - 0.5) * 0.06;
+            stackCoin.position.z = (Math.random() - 0.5) * 0.06;
+            group.add(stackCoin);
+            this._materials.push(stackMat);
+          }
+
+        } else if (this.tier === 4) {
+          // Tier 4: Gold Pouch — round bag with coins peeking out
+          const bagGeo = new THREE.SphereGeometry(0.22, 12, 12);
+          const bagMat = new THREE.MeshPhysicalMaterial({
+            color: 0xB8860B, metalness: 0.2, roughness: 0.8, emissive: 0x554400, emissiveIntensity: 0.2
+          });
+          const bag = new THREE.Mesh(bagGeo, bagMat);
+          bag.scale.set(1, 1.1, 1);
+          group.add(bag);
+          // Knot at top
+          const knotGeo = new THREE.SphereGeometry(0.09, 6, 6);
+          const knotMat = new THREE.MeshBasicMaterial({ color: 0x8B6914 });
+          const knot = new THREE.Mesh(knotGeo, knotMat);
+          knot.position.y = 0.22;
+          group.add(knot);
+          // Coins peeking out
+          for (let i = 0; i < 2; i++) {
+            const peekMat = new THREE.MeshPhysicalMaterial({
+              color: goldColor, metalness: 0.9, roughness: 0.1, emissive: 0xFFAA00, emissiveIntensity: 0.4
+            });
+            const peek = new THREE.Mesh(_goldDropCoinGeo, peekMat);
+            peek.rotation.x = Math.PI / 2;
+            peek.rotation.z = (i === 0 ? 0.4 : -0.4);
+            peek.position.set(i === 0 ? -0.12 : 0.12, 0.18, 0);
+            peek.scale.set(0.6, 0.6, 0.6);
+            group.add(peek);
+            this._materials = this._materials || [];
+            this._materials.push(peekMat);
+          }
+          this._materials = this._materials || [];
+          this._materials.push(bagMat, knotMat);
+          this._extraGeo = [bagGeo, knotGeo];
+
+        } else {
+          // Tier 5: Gold Pile — large mound of gold with glow
+          const pileGeo = new THREE.SphereGeometry(0.3, 10, 8);
+          const pileMat = new THREE.MeshPhysicalMaterial({
+            color: goldColor, emissive: 0xFFAA00, emissiveIntensity: 0.6,
+            metalness: 0.95, roughness: 0.05, clearcoat: 1.0, clearcoatRoughness: 0.05
+          });
+          const pile = new THREE.Mesh(pileGeo, pileMat);
+          pile.scale.set(1.3, 0.7, 1.3); // Flatten into pile shape
+          group.add(pile);
+          // Small coins scattered on top
+          this._materials = [pileMat];
+          this._extraGeo = [pileGeo];
+          for (let i = 0; i < 4; i++) {
+            const scatMat = new THREE.MeshPhysicalMaterial({
+              color: brightGold, metalness: 0.9, roughness: 0.1,
+              emissive: 0xFFD700, emissiveIntensity: 0.5
+            });
+            const scat = new THREE.Mesh(_goldDropCoinGeo, scatMat);
+            const a = (i / 4) * Math.PI * 2;
+            scat.position.set(Math.cos(a) * 0.15, 0.12 + Math.random() * 0.05, Math.sin(a) * 0.15);
+            scat.rotation.set(Math.random() * 0.5, Math.random() * Math.PI, Math.random() * 0.5);
+            scat.scale.set(0.5, 0.5, 0.5);
+            group.add(scat);
+            this._materials.push(scatMat);
+          }
+          // Glow light for tier 5
+          this._glowLight = new THREE.PointLight(0xFFD700, 1.5, 3);
+          this._glowLight.position.set(0, 0.2, 0);
+          group.add(this._glowLight);
+        }
+
+        // Position and add to scene
+        group.position.set(x, 0.6 + Math.random() * 0.5, z);
+        scene.add(group);
+        this.mesh = group;
+      }
+
+      update(playerPos) {
+        if (!this.active) return;
+
+        this.lifeTime++;
+        
+        // Grow from invisible to full size
+        if (!this._grown) {
+          this._growTimer += 0.08;
+          const s = Math.min(this._baseScale, this._growTimer * this._baseScale);
+          this.mesh.scale.set(s, s, s);
+          if (this._growTimer >= 1.0) {
+            this._grown = true;
+            this.mesh.scale.set(this._baseScale, this._baseScale, this._baseScale);
+          }
+        }
+
+        // Spin in all 3 axes
+        this.mesh.rotation.x += this.rotSpeedX;
+        this.mesh.rotation.y += this.rotSpeedY;
+        this.mesh.rotation.z += this.rotSpeedZ;
+
+        // Gravity physics
+        if (!this.onGround) {
+          this.vy += this.gravity;
+          this.mesh.position.x += this.vx;
+          this.mesh.position.y += this.vy;
+          this.mesh.position.z += this.vz;
+          if (this.mesh.position.y <= 0.15) {
+            this.mesh.position.y = 0.15;
+            this.vy = 0;
+            this.vx *= this.groundFriction;
+            this.vz *= this.groundFriction;
+            this.onGround = true;
+            this.rotSpeedX *= 0.2;
+            this.rotSpeedZ *= 0.2;
+            this.rotSpeedY *= 0.4;
+          }
+        } else {
+          // Gentle idle spin on ground
+          this.mesh.rotation.y += this.rotSpeedY * 0.3;
+        }
+
+        // Pulsing gold emissive glow
+        this.sparklePhase += 0.08;
+        const pulse = 0.3 + Math.sin(this.sparklePhase) * 0.3;
+        if (this._materials) {
+          this._materials.forEach(m => {
+            if (m.emissiveIntensity !== undefined) {
+              m.emissiveIntensity = pulse;
+            }
+          });
+        }
+        // Glow light pulse (tier 5)
+        if (this._glowLight) {
+          this._glowLight.intensity = 1.0 + Math.sin(this.sparklePhase * 1.5) * 0.8;
+        }
+
+        // Sparkle particles (rare, more for higher tiers)
+        if (this.onGround && Math.random() < 0.02 * this.tier) {
+          spawnParticles(this.mesh.position, 0xFFD700, 1);
+        }
+
+        // Fade out near end of life
+        if (this.lifeTime > this.maxLife - 60) {
+          const fadeProgress = (this.lifeTime - (this.maxLife - 60)) / 60;
+          const fadeScale = this._baseScale * (1 - fadeProgress);
+          this.mesh.scale.set(fadeScale, fadeScale, fadeScale);
+          if (this.lifeTime >= this.maxLife) {
+            this.destroy();
+            return;
+          }
+        }
+
+        // Player pickup — walk over to collect (visual only, no gold added)
+        const dx = playerPos.x - this.mesh.position.x;
+        const dz = playerPos.z - this.mesh.position.z;
+        const dist = Math.sqrt(dx * dx + dz * dz);
+
+        // Light magnet pull when very close (direct position, no gravity reset)
+        if (dist < 2.0) {
+          this.mesh.position.x += (dx / dist) * 0.15;
+          this.mesh.position.z += (dz / dist) * 0.15;
+          const dy = 0.4 - this.mesh.position.y;
+          this.mesh.position.y += dy * 0.08;
+        }
+
+        if (dist < 0.9) {
+          this.collect();
+        }
+      }
+
+      collect() {
+        // Visual-only collection — gold was already added to balance
+        spawnParticles(this.mesh.position, 0xFFD700, 6 + this.tier * 2);
+        spawnParticles(this.mesh.position, 0xFFFFFF, 2);
+
+        // Gold flash effect (stronger for higher tiers)
+        const flash = document.createElement('div');
+        const alpha = 0.08 + this.tier * 0.03;
+        flash.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(255,215,0,' + alpha + ');pointer-events:none;z-index:500';
+        document.body.appendChild(flash);
+        setTimeout(() => flash.remove(), 80);
+
+        playSound('coin');
+        this.destroy();
+      }
+
+      destroy() {
+        this.active = false;
+        if (this._glowLight) {
+          this.mesh.remove(this._glowLight);
+        }
+        scene.remove(this.mesh);
+        // Dispose per-instance materials
+        if (this._materials) {
+          this._materials.forEach(m => m.dispose());
+        }
+        // Dispose per-instance extra geometries
+        if (this._extraGeo) {
+          this._extraGeo.forEach(g => g.dispose());
+        }
+        // Traverse group children for any remaining
+        this.mesh.traverse((child) => {
+          if (child.geometry && child.geometry !== _goldDropCoinGeo && child.geometry !== _goldDropBitGeo) {
+            child.geometry.dispose();
+          }
+        });
       }
     }
 

@@ -537,10 +537,15 @@
       
       goldCoins.forEach(g => {
         scene.remove(g.mesh);
-        g.mesh.geometry.dispose();
-        g.mesh.material.dispose();
+        if (g.mesh.geometry) g.mesh.geometry.dispose();
+        if (g.mesh.material) g.mesh.material.dispose();
       });
       goldCoins = [];
+      
+      goldDrops.forEach(g => {
+        g.destroy();
+      });
+      goldDrops = [];
       
       chests.forEach(c => {
         if (c.glowLight) scene.remove(c.glowLight);

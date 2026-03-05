@@ -32,6 +32,7 @@
     let projectiles = [];
     let expGems = [];
     let goldCoins = [];
+    let goldDrops = []; // Visual-only gold drop animations (cosmetic feedback)
     let chests = [];
     let particles = [];
     let damageNumbers = [];

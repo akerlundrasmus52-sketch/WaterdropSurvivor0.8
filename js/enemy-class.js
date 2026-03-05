@@ -2424,6 +2424,10 @@
         // Only spawn gold if amount > 0
         if (goldAmount > 0) {
           spawnGold(deathPos.x, deathPos.z, goldAmount);
+          // Rare visual-only gold drop animation (~12% chance)
+          if (Math.random() < 0.12) {
+            spawnGoldDrop(deathPos.x, deathPos.z, goldAmount);
+          }
         }
         
         // Phase 1: Gear drop system - enemies have a chance to drop gear
