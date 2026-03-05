@@ -66,6 +66,11 @@
     const _tmpBoltStart = new THREE.Vector3();
     const _tmpBoltEnd = new THREE.Vector3();
     const _tmpKnockback = new THREE.Vector3();
+    // Additional reusable temp vectors for homing missile, whip, tesla arcs
+    const _tmpMissileDesired = new THREE.Vector3();
+    const _tmpWhipLastPos = new THREE.Vector3();
+    const _tmpBoltPoint = new THREE.Vector3();
+    const _tmpArcMid = new THREE.Vector3();
 
     function _ensureFlashPool(sceneRef) {
       if (_flashPool !== null || typeof THREE === 'undefined') return;
@@ -727,12 +732,11 @@
       }
 
       // Update enemy AI movement (was missing - enemies were frozen)
-      // PERFORMANCE: Distance-based animation throttling for enemies.
-      // Uses AnimationThrottle from spatial-hash.js when available, with fallback.
+      // PERFORMANCE: Camera-distance-based AI throttling for enemies.
+      // Uses shouldUpdateEnemy from enemies.js — camera distance determines LOD band.
       // Near (< 16 units) → every frame, medium (16-40) → every 2nd,
-      // far (40-80) → every 4th, very far (> 80) → every 8th frame.
+      // far (40-80) → every 4th, very far (> 80) → every 10th frame (~100ms).
       const _fc = performanceLog.frameCount;
-      const _AT = window.GamePerformance && window.GamePerformance.AnimationThrottle;
       // Build spatial hash for enemy lookups (used by projectiles via window._enemySpatialHash)
       if (window.GamePerformance && window.GamePerformance.SpatialHash) {
         if (!window._enemySpatialHash) {
@@ -743,6 +747,19 @@
           var _she = enemies[_shi];
           if (_she && _she.mesh && !_she.isDead) {
             window._enemySpatialHash.insert(_she);
+          }
+        }
+      }
+      // Build EXP gem spatial hash for fast pickup/cleanup queries
+      if (window.GamePerformance && window.GamePerformance.SpatialHash) {
+        if (!window._expGemSpatialHash) {
+          window._expGemSpatialHash = new window.GamePerformance.SpatialHash(4);
+        }
+        window._expGemSpatialHash.clear();
+        for (var _egi = 0; _egi < expGems.length; _egi++) {
+          var _ege = expGems[_egi];
+          if (_ege && _ege.mesh && _ege.active) {
+            window._expGemSpatialHash.insert(_ege);
           }
         }
       }
@@ -768,12 +785,18 @@
       // Debug: track alive/died counts per frame for diagnostics
       const _dbgAliveBeforeEnemyTick = window.GameDebug && window.GameDebug.enabled
         ? enemies.filter(e => e && !e.isDead).length : 0;
+      // Camera-based throttle: use camera position for distance (off-screen enemies throttle to 10 fps)
+      const _shouldUpdateFn = window.GameEnemies && window.GameEnemies.shouldUpdateEnemy;
+      const _camX = camera.position.x;
+      const _camZ = camera.position.z;
       enemies.forEach((e, _idx) => {
         if (!e || !e.mesh || e.isDead) return;
-        const _dSq = e.mesh.position.distanceToSquared(player.mesh.position);
-        // Use AnimationThrottle utility for clean distance-based LOD
-        if (_AT) {
-          if (!_AT.shouldUpdate(_dSq, _fc + _idx)) return;
+        // Distance from camera determines throttle band (not player — saves CPU for off-screen enemies)
+        const _cdx = e.mesh.position.x - _camX;
+        const _cdz = e.mesh.position.z - _camZ;
+        const _camDistSq = _cdx * _cdx + _cdz * _cdz;
+        if (_shouldUpdateFn) {
+          if (!_shouldUpdateFn(_camDistSq, _fc, _idx)) return;
         }
         e.update(dt, player.mesh.position);
       });
@@ -1142,17 +1165,11 @@
       
       // 1. GUN
       if (weapons.gun.active && time - weapons.gun.lastShot > weapons.gun.cooldown) {
-        // Find nearest enemy (squared distance avoids sqrt per enemy)
-        let nearest = null;
-        let minDstSq = weapons.gun.range * weapons.gun.range;
-        
-        for (let e of enemies) {
-          if (e.isDead) continue;
-          const dSq = player.mesh.position.distanceToSquared(e.mesh.position);
-          if (dSq < minDstSq) {
-            minDstSq = dSq;
-            nearest = e;
-          }
+        // Find nearest enemy via spatial hash (O(1) grid lookup)
+        const _gunRangeSq = weapons.gun.range * weapons.gun.range;
+        const _gunResult = window.GameCombat.findNearestEnemySH(player.mesh.position.x, player.mesh.position.z, _gunRangeSq, enemies);
+        let nearest = _gunResult.enemy;
+        let minDstSq = _gunResult.distSq;
         }
 
         // In manual mode: only fire if right stick is active (player is aiming) OR if on keyboard/gamepad
@@ -1297,10 +1314,7 @@
         weapons.aura._pulseCount++;
         const pulseHeight = Math.min(0.33, weapons.aura._pulseCount * 0.02); // Climbs up to 33% body
         let hit = false;
-        enemies.forEach(e => {
-          if (e.isDead) return;
-          const dSq = player.mesh.position.distanceToSquared(e.mesh.position);
-          if (dSq < auraRangeSq) {
+        window.GameCombat.forEachEnemyInRangeSH(player.mesh.position.x, player.mesh.position.z, auraRangeSq, enemies, (e) => {
             // Reduced damage per pulse (spiritual burn, not bullet damage)
             const auraDmg = weapons.aura.damage * playerStats.strength * 0.6;
             e.takeDamage(auraDmg, false, 'aura');
@@ -1356,18 +1370,10 @@
         for (let drone of droneTurrets) {
           if (!drone.active) continue;
           
-          // Find nearest enemy for this drone (squared distance avoids sqrt)
-          let nearestEnemy = null;
-          let minDistSq = weapons.droneTurret.range * weapons.droneTurret.range;
-          
-          for (let e of enemies) {
-            if (e.isDead) continue;
-            const distSq = drone.mesh.position.distanceToSquared(e.mesh.position);
-            if (distSq < minDistSq) {
-              minDistSq = distSq;
-              nearestEnemy = e;
-            }
-          }
+          // Find nearest enemy for this drone via spatial hash
+          const _droneRangeSq = weapons.droneTurret.range * weapons.droneTurret.range;
+          const _droneResult = window.GameCombat.findNearestEnemySH(drone.mesh.position.x, drone.mesh.position.z, _droneRangeSq, enemies);
+          let nearestEnemy = _droneResult.enemy;
           
           // Fire projectile from drone
           if (nearestEnemy) {
@@ -1405,18 +1411,10 @@
 
       // 6. DOUBLE BARREL - Swarm of 10-20 pellets, compact-to-wide spread, faster than gun
       if (weapons.doubleBarrel.active && time - weapons.doubleBarrel.lastShot > weapons.doubleBarrel.cooldown) {
-        // Find nearest enemy (squared distance avoids sqrt per enemy)
-        let nearest = null;
-        let minDstSq = weapons.doubleBarrel.range * weapons.doubleBarrel.range;
-        
-        for (let e of enemies) {
-          if (e.isDead) continue;
-          const dSq = player.mesh.position.distanceToSquared(e.mesh.position);
-          if (dSq < minDstSq) {
-            minDstSq = dSq;
-            nearest = e;
-          }
-        }
+        // Find nearest enemy via spatial hash
+        const _dbRangeSq = weapons.doubleBarrel.range * weapons.doubleBarrel.range;
+        const _dbResult = window.GameCombat.findNearestEnemySH(player.mesh.position.x, player.mesh.position.z, _dbRangeSq, enemies);
+        let nearest = _dbResult.enemy;
 
         if (nearest) {
           _tmpShotgunDir.set(
@@ -1474,18 +1472,10 @@
       
       // 7. ICE SPEAR
       if (weapons.iceSpear.active && time - weapons.iceSpear.lastShot > weapons.iceSpear.cooldown) {
-        // Find nearest enemy (squared distance avoids sqrt per enemy)
-        let nearest = null;
-        let minDstSq = weapons.iceSpear.range * weapons.iceSpear.range;
-        
-        for (let e of enemies) {
-          if (e.isDead) continue;
-          const dSq = player.mesh.position.distanceToSquared(e.mesh.position);
-          if (dSq < minDstSq) {
-            minDstSq = dSq;
-            nearest = e;
-          }
-        }
+        // Find nearest enemy via spatial hash
+        const _isRangeSq = weapons.iceSpear.range * weapons.iceSpear.range;
+        const _isResult = window.GameCombat.findNearestEnemySH(player.mesh.position.x, player.mesh.position.z, _isRangeSq, enemies);
+        let nearest = _isResult.enemy;
 
         if (nearest) {
           projectiles.push(new IceSpear(player.mesh.position.x, player.mesh.position.z, nearest.mesh.position));
@@ -1504,13 +1494,10 @@
       
       // 8. FIRE RING
       if (weapons.fireRing.active && time - weapons.fireRing.lastShot > weapons.fireRing.cooldown) {
-        // Damage enemies within ring range (squared distance avoids sqrt)
+        // Damage enemies within ring range via spatial hash
         let hit = false;
         const fireRangeSq = weapons.fireRing.range * weapons.fireRing.range;
-        enemies.forEach(e => {
-          if (e.isDead) return;
-          const dSq = player.mesh.position.distanceToSquared(e.mesh.position);
-          if (dSq < fireRangeSq) {
+        window.GameCombat.forEachEnemyInRangeSH(player.mesh.position.x, player.mesh.position.z, fireRangeSq, enemies, (e) => {
             const dmg = weapons.fireRing.damage * playerStats.strength *
               (1 + (playerStats.fireDamage || 0) + (playerStats.elementalDamage || 0));
             const isCrit = Math.random() < playerStats.critChance;
@@ -1532,20 +1519,15 @@
             }
             e.lastDamageType = 'fire';
             hit = true;
-          }
         });
         weapons.fireRing.lastShot = time;
       }
 
       // 9. LIGHTNING STRIKE — lightning from the heavens, each strike looks different
       if (weapons.lightning.active && time - weapons.lightning.lastShot > weapons.lightning.cooldown) {
-        let nearest = null;
-        let minDstSq = weapons.lightning.range * weapons.lightning.range;
-        for (let e of enemies) {
-          if (e.isDead) continue;
-          const dSq = player.mesh.position.distanceToSquared(e.mesh.position);
-          if (dSq < minDstSq) { minDstSq = dSq; nearest = e; }
-        }
+        const _ltRangeSq = weapons.lightning.range * weapons.lightning.range;
+        const _ltResult = window.GameCombat.findNearestEnemySH(player.mesh.position.x, player.mesh.position.z, _ltRangeSq, enemies);
+        let nearest = _ltResult.enemy;
         if (nearest) {
           // Number of simultaneous strikes increases with level
           const strikeCount = weapons.lightning.strikes || 1;
@@ -1576,7 +1558,6 @@
               spawnParticles(chainCurrent.mesh.position, 0x00FFFF, 4);
               
               // Visible lightning bolt from sky — each looks different via random jitter
-              const boltPoints = [];
               if (c === 0) _tmpBoltStart.y = LIGHTNING_SKY_BASE + Math.random() * LIGHTNING_SKY_VARIANCE;
               else _tmpBoltStart.y = 0.8;
               _tmpBoltEnd.copy(chainCurrent.mesh.position); _tmpBoltEnd.y = 0.8;
@@ -1589,15 +1570,17 @@
               const style = BOLT_STYLES[Math.floor(Math.random() * BOLT_STYLES.length)];
               const segments = style.baseSegments + Math.floor(Math.random() * style.extraSegments);
               const jitterScale = style.jitter;
+              const _boltPositions = new Float32Array((segments + 1) * 3);
               for (let s = 0; s <= segments; s++) {
                 const t = s / segments;
-                const px = _tmpBoltStart.x + (_tmpBoltEnd.x - _tmpBoltStart.x) * t + (s > 0 && s < segments ? (Math.random() - 0.5) * jitterScale : 0);
-                const py = _tmpBoltStart.y + (_tmpBoltEnd.y - _tmpBoltStart.y) * t + (s > 0 && s < segments ? (Math.random() - 0.5) * jitterScale * 0.5 : 0);
-                const pz = _tmpBoltStart.z + (_tmpBoltEnd.z - _tmpBoltStart.z) * t + (s > 0 && s < segments ? (Math.random() - 0.5) * jitterScale : 0);
-                boltPoints.push(new THREE.Vector3(px, py, pz));
+                const _bi = s * 3;
+                _boltPositions[_bi]     = _tmpBoltStart.x + (_tmpBoltEnd.x - _tmpBoltStart.x) * t + (s > 0 && s < segments ? (Math.random() - 0.5) * jitterScale : 0);
+                _boltPositions[_bi + 1] = _tmpBoltStart.y + (_tmpBoltEnd.y - _tmpBoltStart.y) * t + (s > 0 && s < segments ? (Math.random() - 0.5) * jitterScale * 0.5 : 0);
+                _boltPositions[_bi + 2] = _tmpBoltStart.z + (_tmpBoltEnd.z - _tmpBoltStart.z) * t + (s > 0 && s < segments ? (Math.random() - 0.5) * jitterScale : 0);
               }
               _ensureSharedGeo();
-              const boltGeo = new THREE.BufferGeometry().setFromPoints(boltPoints);
+              const boltGeo = new THREE.BufferGeometry();
+              boltGeo.setAttribute('position', new THREE.BufferAttribute(_boltPositions, 3));
               // Vary bolt color slightly between strikes
               const boltColors = [0xFFFF00, 0x88DDFF, 0xFFFFFF, 0xAADDFF, 0xCCFFFF];
               const boltMat = _sharedBoltMat.clone();
@@ -1628,22 +1611,37 @@
               }
               
               _tmpBoltStart.copy(chainCurrent.mesh.position);
-              // Find next chain target
+              // Find next chain target via spatial hash
               let nextTarget = null; let nextDist = Infinity;
-              for (let e of enemies) {
+              const _chainRange = weapons.lightning.chainRange || 5;
+              const _chainRangeSq = _chainRange * _chainRange;
+              const _chainCandidates = window._enemySpatialHash
+                ? window._enemySpatialHash.query(chainCurrent.mesh.position.x, chainCurrent.mesh.position.z, _chainRange)
+                : enemies;
+              for (let _ci = 0; _ci < _chainCandidates.length; _ci++) {
+                const e = _chainCandidates[_ci];
                 if (e.isDead || chainHitTargets.has(e)) continue;
-                const d = chainCurrent.mesh.position.distanceTo(e.mesh.position);
-                if (d < (weapons.lightning.chainRange || 5) && d < nextDist) { nextDist = d; nextTarget = e; }
+                const _cdx = chainCurrent.mesh.position.x - e.mesh.position.x;
+                const _cdz = chainCurrent.mesh.position.z - e.mesh.position.z;
+                const _cdSq = _cdx * _cdx + _cdz * _cdz;
+                if (_cdSq < _chainRangeSq && _cdSq < nextDist) { nextDist = _cdSq; nextTarget = e; }
               }
               chainCurrent = nextTarget;
             }
 
-            // Find next strike target for multi-strike
+            // Find next strike target for multi-strike via spatial hash
             let nextStrikeTarget = null; let nextStrikeDist = Infinity;
-            for (let e of enemies) {
+            const _strikeRangeSq = weapons.lightning.range * weapons.lightning.range;
+            const _strikeCandidates = window._enemySpatialHash
+              ? window._enemySpatialHash.query(player.mesh.position.x, player.mesh.position.z, weapons.lightning.range)
+              : enemies;
+            for (let _si = 0; _si < _strikeCandidates.length; _si++) {
+              const e = _strikeCandidates[_si];
               if (e.isDead || hitTargets.has(e)) continue;
-              const d = player.mesh.position.distanceTo(e.mesh.position);
-              if (d < weapons.lightning.range && d < nextStrikeDist) { nextStrikeDist = d; nextStrikeTarget = e; }
+              const _sdx = player.mesh.position.x - e.mesh.position.x;
+              const _sdz = player.mesh.position.z - e.mesh.position.z;
+              const _sdSq = _sdx * _sdx + _sdz * _sdz;
+              if (_sdSq < _strikeRangeSq && _sdSq < nextStrikeDist) { nextStrikeDist = _sdSq; nextStrikeTarget = e; }
             }
             current = nextStrikeTarget;
           }
@@ -1658,15 +1656,11 @@
       // 10. POISON CLOUD — AoE damage field around player that poisons nearby enemies
       if (weapons.poison.active && time - weapons.poison.lastShot > weapons.poison.cooldown) {
         const poisonRangeSq = weapons.poison.range * weapons.poison.range;
-        enemies.forEach(e => {
-          if (e.isDead) return;
-          const dSq = player.mesh.position.distanceToSquared(e.mesh.position);
-          if (dSq < poisonRangeSq) {
+        window.GameCombat.forEachEnemyInRangeSH(player.mesh.position.x, player.mesh.position.z, poisonRangeSq, enemies, (e) => {
             const dmg = weapons.poison.damage * playerStats.strength;
             e.takeDamage(Math.floor(dmg), false, 'poison');
             spawnParticles(e.mesh.position, 0x00FF00, 4);
             spawnParticles(e.mesh.position, 0x44FF44, 3);
-          }
         });
         // Poison cloud visual
         spawnParticles(player.mesh.position, 0x00FF00, 8);
@@ -1676,12 +1670,9 @@
 
       // 11. HOMING MISSILE — Bullet Bill style with fire/smoke trail
       if (weapons.homingMissile.active && time - weapons.homingMissile.lastShot > weapons.homingMissile.cooldown) {
-        let nearest = null; let minDstSq = weapons.homingMissile.range * weapons.homingMissile.range;
-        for (let e of enemies) {
-          if (e.isDead) continue;
-          const dSq = player.mesh.position.distanceToSquared(e.mesh.position);
-          if (dSq < minDstSq) { minDstSq = dSq; nearest = e; }
-        }
+        const _hmRangeSq = weapons.homingMissile.range * weapons.homingMissile.range;
+        const _hmResult = window.GameCombat.findNearestEnemySH(player.mesh.position.x, player.mesh.position.z, _hmRangeSq, enemies);
+        let nearest = _hmResult.enemy;
         if (nearest) {
           // Bullet Bill body: dark sphere with white eyes — use cached geometries/materials
           _ensureSharedGeo();
@@ -1727,17 +1718,12 @@
               smokeTimer++;
               // Home toward target with stronger tracking
               if (!target.isDead) {
-                const desired = new THREE.Vector3(target.mesh.position.x - missileGroup.position.x, 0, target.mesh.position.z - missileGroup.position.z).normalize().multiplyScalar(0.25);
-                mVel.lerp(desired, 0.15); // Stronger homing
+                _tmpMissileDesired.set(target.mesh.position.x - missileGroup.position.x, 0, target.mesh.position.z - missileGroup.position.z).normalize().multiplyScalar(0.25);
+                mVel.lerp(_tmpMissileDesired, 0.15); // Stronger homing
               } else {
-                // Re-acquire target if current target died
-                let newTarget = null; let newMinDst = Infinity;
-                for (let e of enemies) {
-                  if (e.isDead) continue;
-                  const d = missileGroup.position.distanceTo(e.mesh.position);
-                  if (d < 20 && d < newMinDst) { newMinDst = d; newTarget = e; }
-                }
-                if (newTarget) target = newTarget;
+                // Re-acquire target if current target died — use spatial hash
+                const _reAcqResult = window.GameCombat.findNearestEnemySH(missileGroup.position.x, missileGroup.position.z, 20 * 20, enemies);
+                if (_reAcqResult.enemy) target = _reAcqResult.enemy;
               }
               missileGroup.position.add(mVel);
               missileGroup.rotation.y = Math.atan2(mVel.x, mVel.z);
@@ -1750,10 +1736,16 @@
                 spawnParticles(trailPos, 0x555555, 2); // More smoke
                 spawnParticles(trailPos, 0x888888, 1); // Light smoke
               }
-              // Explode on contact
-              for (let e of enemies) {
+              // Explode on contact — spatial hash query for nearby enemies
+              const _missileHitCandidates = window._enemySpatialHash
+                ? window._enemySpatialHash.query(missileGroup.position.x, missileGroup.position.z, 1.2)
+                : enemies;
+              for (let _mi = 0; _mi < _missileHitCandidates.length; _mi++) {
+                const e = _missileHitCandidates[_mi];
                 if (e.isDead) continue;
-                if (missileGroup.position.distanceTo(e.mesh.position) < 1.2) {
+                const _mhdx = missileGroup.position.x - e.mesh.position.x;
+                const _mhdz = missileGroup.position.z - e.mesh.position.z;
+                if (_mhdx * _mhdx + _mhdz * _mhdz < 1.44) { // 1.2²
                   const dmg = weapons.homingMissile.damage * playerStats.strength;
                   e.takeDamage(Math.floor(dmg), false, 'shotgun'); // Use shotgun death = dismemberment
                   spawnParticles(missileGroup.position, 0xFF4500, 12);
@@ -1820,21 +1812,29 @@
       if (weapons.whip && weapons.whip.active && time - weapons.whip.lastShot > weapons.whip.cooldown) {
         let hitCount = 0;
         const maxChain = weapons.whip.chainHits || 3;
-        let lastPos = player.mesh.position.clone();
+        _tmpWhipLastPos.copy(player.mesh.position);
         const hitEnemies = new Set();
+        const _whipRange = weapons.whip.range;
+        const _whipRangeSq = _whipRange * _whipRange;
         for (let c = 0; c < maxChain; c++) {
-          let nearest = null; let minD = Infinity;
-          for (let e of enemies) {
+          let nearest = null; let minDSq = _whipRangeSq;
+          const _whipCandidates = window._enemySpatialHash
+            ? window._enemySpatialHash.query(_tmpWhipLastPos.x, _tmpWhipLastPos.z, _whipRange)
+            : enemies;
+          for (let _wi = 0; _wi < _whipCandidates.length; _wi++) {
+            const e = _whipCandidates[_wi];
             if (e.isDead || hitEnemies.has(e)) continue;
-            const d = lastPos.distanceTo(e.mesh.position);
-            if (d < weapons.whip.range && d < minD) { minD = d; nearest = e; }
+            const _wdx = _tmpWhipLastPos.x - e.mesh.position.x;
+            const _wdz = _tmpWhipLastPos.z - e.mesh.position.z;
+            const _wdSq = _wdx * _wdx + _wdz * _wdz;
+            if (_wdSq < minDSq) { minDSq = _wdSq; nearest = e; }
           }
           if (!nearest) break;
           hitEnemies.add(nearest);
           const dmg = weapons.whip.damage * playerStats.strength * (1 - c * 0.15);
           nearest.takeDamage(Math.floor(dmg), false, 'melee');
           spawnParticles(nearest.mesh.position, 0xCC8844, 4);
-          lastPos = nearest.mesh.position.clone();
+          _tmpWhipLastPos.copy(nearest.mesh.position);
           hitCount++;
         }
         if (hitCount > 0) playSound('shoot');
@@ -1843,12 +1843,9 @@
 
       // ── 14. UZI — extreme fire rate ranged projectile ──
       if (weapons.uzi && weapons.uzi.active && time - weapons.uzi.lastShot > weapons.uzi.cooldown) {
-        let nearest = null; let minDSq = weapons.uzi.range * weapons.uzi.range;
-        for (let e of enemies) {
-          if (e.isDead) continue;
-          const dSq = player.mesh.position.distanceToSquared(e.mesh.position);
-          if (dSq < minDSq) { minDSq = dSq; nearest = e; }
-        }
+        const _uziRangeSq = weapons.uzi.range * weapons.uzi.range;
+        const _uziResult = window.GameCombat.findNearestEnemySH(player.mesh.position.x, player.mesh.position.z, _uziRangeSq, enemies);
+        let nearest = _uziResult.enemy;
         if (nearest) {
           projectiles.push(new Projectile(player.mesh.position.x, player.mesh.position.z, nearest.mesh.position));
           weapons.uzi.lastShot = time;
@@ -1858,12 +1855,9 @@
 
       // ── 15. 50 CAL SNIPER — high damage, piercing, slow fire ──
       if (weapons.sniperRifle && weapons.sniperRifle.active && time - weapons.sniperRifle.lastShot > weapons.sniperRifle.cooldown) {
-        let nearest = null; let minDSq = weapons.sniperRifle.range * weapons.sniperRifle.range;
-        for (let e of enemies) {
-          if (e.isDead) continue;
-          const dSq = player.mesh.position.distanceToSquared(e.mesh.position);
-          if (dSq < minDSq) { minDSq = dSq; nearest = e; }
-        }
+        const _snRangeSq = weapons.sniperRifle.range * weapons.sniperRifle.range;
+        const _snResult = window.GameCombat.findNearestEnemySH(player.mesh.position.x, player.mesh.position.z, _snRangeSq, enemies);
+        let nearest = _snResult.enemy;
         if (nearest) {
           const p = new Projectile(player.mesh.position.x, player.mesh.position.z, nearest.mesh.position);
           p.pierceCount = weapons.sniperRifle.piercing || 3;
@@ -1879,12 +1873,9 @@
 
       // ── 16. PUMP SHOTGUN — wide spread, heavy pellets ──
       if (weapons.pumpShotgun && weapons.pumpShotgun.active && time - weapons.pumpShotgun.lastShot > weapons.pumpShotgun.cooldown) {
-        let nearest = null; let minDSq = weapons.pumpShotgun.range * weapons.pumpShotgun.range;
-        for (let e of enemies) {
-          if (e.isDead) continue;
-          const dSq = player.mesh.position.distanceToSquared(e.mesh.position);
-          if (dSq < minDSq) { minDSq = dSq; nearest = e; }
-        }
+        const _psRangeSq = weapons.pumpShotgun.range * weapons.pumpShotgun.range;
+        const _psResult = window.GameCombat.findNearestEnemySH(player.mesh.position.x, player.mesh.position.z, _psRangeSq, enemies);
+        let nearest = _psResult.enemy;
         if (nearest) {
           const baseAngle = Math.atan2(nearest.mesh.position.z - player.mesh.position.z, nearest.mesh.position.x - player.mesh.position.x);
           const pelletCount = weapons.pumpShotgun.pellets || 8;
@@ -1906,12 +1897,9 @@
 
       // ── 17. AUTO SHOTGUN — rapid semi-auto bursts ──
       if (weapons.autoShotgun && weapons.autoShotgun.active && time - weapons.autoShotgun.lastShot > weapons.autoShotgun.cooldown) {
-        let nearest = null; let minDSq = weapons.autoShotgun.range * weapons.autoShotgun.range;
-        for (let e of enemies) {
-          if (e.isDead) continue;
-          const dSq = player.mesh.position.distanceToSquared(e.mesh.position);
-          if (dSq < minDSq) { minDSq = dSq; nearest = e; }
-        }
+        const _asRangeSq = weapons.autoShotgun.range * weapons.autoShotgun.range;
+        const _asResult = window.GameCombat.findNearestEnemySH(player.mesh.position.x, player.mesh.position.z, _asRangeSq, enemies);
+        let nearest = _asResult.enemy;
         if (nearest) {
           const baseAngle = Math.atan2(nearest.mesh.position.z - player.mesh.position.z, nearest.mesh.position.x - player.mesh.position.x);
           const pelletCount = weapons.autoShotgun.pellets || 6;
@@ -1931,12 +1919,9 @@
 
       // ── 18. MINIGUN — extreme fire rate ──
       if (weapons.minigun && weapons.minigun.active && time - weapons.minigun.lastShot > weapons.minigun.cooldown) {
-        let nearest = null; let minDSq = weapons.minigun.range * weapons.minigun.range;
-        for (let e of enemies) {
-          if (e.isDead) continue;
-          const dSq = player.mesh.position.distanceToSquared(e.mesh.position);
-          if (dSq < minDSq) { minDSq = dSq; nearest = e; }
-        }
+        const _mgRangeSq = weapons.minigun.range * weapons.minigun.range;
+        const _mgResult = window.GameCombat.findNearestEnemySH(player.mesh.position.x, player.mesh.position.z, _mgRangeSq, enemies);
+        let nearest = _mgResult.enemy;
         if (nearest) {
           const spreadOffset = (Math.random() - 0.5) * 0.15;
           const dir = { x: nearest.mesh.position.x + spreadOffset, y: 0, z: nearest.mesh.position.z + spreadOffset };
@@ -1952,12 +1937,9 @@
 
       // ── 19. BOW — long range arrow with pierce ──
       if (weapons.bow && weapons.bow.active && time - weapons.bow.lastShot > weapons.bow.cooldown) {
-        let nearest = null; let minDSq = weapons.bow.range * weapons.bow.range;
-        for (let e of enemies) {
-          if (e.isDead) continue;
-          const dSq = player.mesh.position.distanceToSquared(e.mesh.position);
-          if (dSq < minDSq) { minDSq = dSq; nearest = e; }
-        }
+        const _bowRangeSq = weapons.bow.range * weapons.bow.range;
+        const _bowResult = window.GameCombat.findNearestEnemySH(player.mesh.position.x, player.mesh.position.z, _bowRangeSq, enemies);
+        let nearest = _bowResult.enemy;
         if (nearest) {
           const p = new Projectile(player.mesh.position.x, player.mesh.position.z, nearest.mesh.position);
           p.pierceCount = weapons.bow.piercing || 1;
@@ -1974,16 +1956,12 @@
       if (weapons.teslaSaber && weapons.teslaSaber.active && time - weapons.teslaSaber.lastShot > weapons.teslaSaber.cooldown) {
         const tsRange = weapons.teslaSaber.range * weapons.teslaSaber.range;
         let hitAny = false;
-        enemies.forEach(e => {
-          if (e.isDead) return;
-          const dSq = player.mesh.position.distanceToSquared(e.mesh.position);
-          if (dSq < tsRange) {
+        window.GameCombat.forEachEnemyInRangeSH(player.mesh.position.x, player.mesh.position.z, tsRange, enemies, (e) => {
             const dmg = weapons.teslaSaber.damage * playerStats.strength;
             e.takeDamage(Math.floor(dmg), false, 'lightning');
             spawnParticles(e.mesh.position, 0x00CCFF, 6);
             spawnParticles(e.mesh.position, 0xFFFFFF, 3);
             hitAny = true;
-          }
         });
         if (hitAny) playSound('shoot');
         weapons.teslaSaber.lastShot = time;
@@ -1991,12 +1969,9 @@
 
       // ── 21. BOOMERANG — projectile that returns, hits both ways ──
       if (weapons.boomerang && weapons.boomerang.active && time - weapons.boomerang.lastShot > weapons.boomerang.cooldown) {
-        let nearest = null; let minDSq = weapons.boomerang.range * weapons.boomerang.range;
-        for (let e of enemies) {
-          if (e.isDead) continue;
-          const dSq = player.mesh.position.distanceToSquared(e.mesh.position);
-          if (dSq < minDSq) { minDSq = dSq; nearest = e; }
-        }
+        const _bmRangeSq = weapons.boomerang.range * weapons.boomerang.range;
+        const _bmResult = window.GameCombat.findNearestEnemySH(player.mesh.position.x, player.mesh.position.z, _bmRangeSq, enemies);
+        let nearest = _bmResult.enemy;
         if (nearest) {
           const p = new Projectile(player.mesh.position.x, player.mesh.position.z, nearest.mesh.position);
           p.isBoomerang = true;
@@ -2015,9 +1990,24 @@
       // ── 22. SHURIKEN — multiple spinning stars auto-target ──
       if (weapons.shuriken && weapons.shuriken.active && time - weapons.shuriken.lastShot > weapons.shuriken.cooldown) {
         const starCount = weapons.shuriken.projectiles || 3;
-        const sortedEnemies = enemies.filter(e => !e.isDead).sort((a, b) =>
-          player.mesh.position.distanceToSquared(a.mesh.position) - player.mesh.position.distanceToSquared(b.mesh.position)
-        ).slice(0, starCount);
+        // Use spatial hash to find nearby alive enemies, then sort closest
+        const _shRange = weapons.shuriken.range || 15;
+        const _shCandidates = window._enemySpatialHash
+          ? window._enemySpatialHash.query(player.mesh.position.x, player.mesh.position.z, _shRange)
+          : enemies;
+        const sortedEnemies = [];
+        for (let _si = 0; _si < _shCandidates.length; _si++) {
+          const e = _shCandidates[_si];
+          if (!e.isDead) sortedEnemies.push(e);
+        }
+        sortedEnemies.sort((a, b) => {
+          const _adx = player.mesh.position.x - a.mesh.position.x;
+          const _adz = player.mesh.position.z - a.mesh.position.z;
+          const _bdx = player.mesh.position.x - b.mesh.position.x;
+          const _bdz = player.mesh.position.z - b.mesh.position.z;
+          return (_adx * _adx + _adz * _adz) - (_bdx * _bdx + _bdz * _bdz);
+        });
+        if (sortedEnemies.length > starCount) sortedEnemies.length = starCount;
         sortedEnemies.forEach(e => {
           const p = new Projectile(player.mesh.position.x, player.mesh.position.z, e.mesh.position);
           p.isShuriken = true;
@@ -2033,14 +2023,10 @@
       // ── 23. NANO SWARM — persistent damaging cloud around player ──
       if (weapons.nanoSwarm && weapons.nanoSwarm.active && time - weapons.nanoSwarm.lastShot > weapons.nanoSwarm.cooldown) {
         const swarmRangeSq = weapons.nanoSwarm.range * weapons.nanoSwarm.range;
-        enemies.forEach(e => {
-          if (e.isDead) return;
-          const dSq = player.mesh.position.distanceToSquared(e.mesh.position);
-          if (dSq < swarmRangeSq) {
+        window.GameCombat.forEachEnemyInRangeSH(player.mesh.position.x, player.mesh.position.z, swarmRangeSq, enemies, (e) => {
             const dmg = weapons.nanoSwarm.damage * playerStats.strength;
             e.takeDamage(Math.floor(dmg), false, 'special');
             if (Math.random() < 0.3) spawnParticles(e.mesh.position, 0x88AAFF, 2);
-          }
         });
         spawnParticles(player.mesh.position, 0x6688FF, 4);
         weapons.nanoSwarm.lastShot = time;
@@ -2048,11 +2034,9 @@
 
       // ── 24. FIREBALL — projectile that explodes on impact ──
       if (weapons.fireball && weapons.fireball.active && time - weapons.fireball.lastShot > weapons.fireball.cooldown) {
-        let nearest = null; let minDSq = weapons.fireball.range * weapons.fireball.range;
-        for (let e of enemies) {
-          if (e.isDead) continue;
-          const dSq = player.mesh.position.distanceToSquared(e.mesh.position);
-          if (dSq < minDSq) { minDSq = dSq; nearest = e; }
+        const _fbRangeSq = weapons.fireball.range * weapons.fireball.range;
+        const _fbResult = window.GameCombat.findNearestEnemySH(player.mesh.position.x, player.mesh.position.z, _fbRangeSq, enemies);
+        let nearest = _fbResult.enemy;
         }
         if (nearest) {
           const p = new Projectile(player.mesh.position.x, player.mesh.position.z, nearest.mesh.position);
@@ -2522,25 +2506,27 @@
           for (let i = 0; i < numArcs; i++) {
             const targetPoint = tower.userData.arcPoints[Math.floor(Math.random() * tower.userData.arcPoints.length)];
             
-            // Create jagged lightning path
-            const points = [];
+            // Create jagged lightning path using Float32Array (avoids per-segment Vector3 allocation)
             const segments = 8;
-            const start = tower.userData.topPosition.clone();
-            const end = targetPoint.clone();
-            
-            points.push(start);
+            const _arcStart = tower.userData.topPosition;
+            const _arcEnd = targetPoint;
+            const _arcPositions = new Float32Array((segments + 1) * 3);
+            // First point: start
+            _arcPositions[0] = _arcStart.x; _arcPositions[1] = _arcStart.y; _arcPositions[2] = _arcStart.z;
             for (let j = 1; j < segments; j++) {
               const t = j / segments;
-              const mid = new THREE.Vector3().lerpVectors(start, end, t);
-              // Add random jitter
-              mid.x += (Math.random() - 0.5) * 3;
-              mid.z += (Math.random() - 0.5) * 3;
-              points.push(mid);
+              const _ai = j * 3;
+              _arcPositions[_ai]     = _arcStart.x + (_arcEnd.x - _arcStart.x) * t + (Math.random() - 0.5) * 3;
+              _arcPositions[_ai + 1] = _arcStart.y + (_arcEnd.y - _arcStart.y) * t;
+              _arcPositions[_ai + 2] = _arcStart.z + (_arcEnd.z - _arcStart.z) * t + (Math.random() - 0.5) * 3;
             }
-            points.push(end);
+            // Last point: end
+            const _lastI = segments * 3;
+            _arcPositions[_lastI] = _arcEnd.x; _arcPositions[_lastI + 1] = _arcEnd.y; _arcPositions[_lastI + 2] = _arcEnd.z;
             
             // Create line (Note: linewidth has no effect in WebGL, arcs will be 1-pixel lines)
-            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+            const geometry = new THREE.BufferGeometry();
+            geometry.setAttribute('position', new THREE.BufferAttribute(_arcPositions, 3));
             const material = new THREE.LineBasicMaterial({ 
               color: 0x00FFFF, 
               transparent: true,
@@ -2700,11 +2686,15 @@
         // Helper function to cleanup distant items
         const cleanupDistantItems = (items, maxItems, collectCallback) => {
           if (items.length > maxItems && player && player.mesh) {
-            // Sort by distance, keep closest ones, auto-collect furthest
+            // Sort by squared distance (avoids sqrt), keep closest ones, auto-collect furthest
+            const _px = player.mesh.position.x;
+            const _pz = player.mesh.position.z;
             items.sort((a, b) => {
-              const distA = a.mesh.position.distanceTo(player.mesh.position);
-              const distB = b.mesh.position.distanceTo(player.mesh.position);
-              return distA - distB;
+              const _adx = a.mesh.position.x - _px;
+              const _adz = a.mesh.position.z - _pz;
+              const _bdx = b.mesh.position.x - _px;
+              const _bdz = b.mesh.position.z - _pz;
+              return (_adx * _adx + _adz * _adz) - (_bdx * _bdx + _bdz * _bdz);
             });
             
             // Auto-collect excess items (furthest ones)
