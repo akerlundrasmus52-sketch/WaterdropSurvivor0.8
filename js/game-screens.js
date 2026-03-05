@@ -2873,8 +2873,8 @@
       }
     }
 
-    function spawnExp(x, z) {
-      expGems.push(new ExpGem(x, z));
+    function spawnExp(x, z, sourceWeapon, hitForce) {
+      expGems.push(new ExpGem(x, z, sourceWeapon, hitForce));
     }
     
     function spawnGold(x, z, amount) {

@@ -3,12 +3,12 @@
 // Depends on: THREE (CDN), variables from main.js
 
     class ExpGem {
-      constructor(x, z) {
-        // Use shared star geometry (created once)
+      constructor(x, z, sourceWeapon, hitForce) {
+        // Use shared star geometry (created once) — 65% smaller than original
         if (!_expGemStarGeometry) {
           const starPoints = 5;
-          const outerR = 0.28;
-          const innerR = 0.12;
+          const outerR = 0.28 * 0.35; // 65% smaller (0.35 = 1 - 0.65)
+          const innerR = 0.12 * 0.35;
           const starShape = new THREE.Shape();
           for (let i = 0; i < starPoints * 2; i++) {
             const angle = (i / (starPoints * 2)) * Math.PI * 2 - Math.PI / 2;
@@ -17,7 +17,7 @@
             else starShape.lineTo(Math.cos(angle) * r, Math.sin(angle) * r);
           }
           starShape.closePath();
-          const extrudeSettings = { depth: 0.10, bevelEnabled: true, bevelSize: 0.03, bevelThickness: 0.03, bevelSegments: 2 };
+          const extrudeSettings = { depth: 0.035, bevelEnabled: true, bevelSize: 0.01, bevelThickness: 0.01, bevelSegments: 2 };
           _expGemStarGeometry = new THREE.ExtrudeGeometry(starShape, extrudeSettings);
           _expGemStarGeometry.center();
           _expGemStarMaterial = new THREE.MeshPhysicalMaterial({
@@ -36,13 +36,23 @@
         const starMaterial = _expGemStarMaterial.clone();
 
         this.mesh = new THREE.Mesh(_expGemStarGeometry, starMaterial);
-        this.mesh.position.set(x, 0.5, z);
+
+        // Pop out from enemy body in random direction
+        var popAngle = Math.random() * Math.PI * 2;
+        var popDist  = 0.3 + Math.random() * 0.5;
+        var startX   = x + Math.cos(popAngle) * popDist;
+        var startZ   = z + Math.sin(popAngle) * popDist;
+        // Start invisible, grow to full size
+        this.mesh.position.set(startX, 0.6 + Math.random() * 0.8, startZ);
+        this.mesh.scale.set(0.01, 0.01, 0.01);
+        this._growTimer = 0;
+        this._grown = false;
 
         // SM64-style: add black outline ring and yellow-edge highlight using a slightly larger dark mesh
         // Outline geometry is shared across all ExpGem instances (created once)
         if (!_expGemOutlineGeometry) {
           const s = new THREE.Shape();
-          const pts = 5, outerO = 0.33, innerO = 0.14;
+          const pts = 5, outerO = 0.33 * 0.35, innerO = 0.14 * 0.35;
           for (let i = 0; i < pts * 2; i++) {
             const ang = (i / (pts * 2)) * Math.PI * 2 - Math.PI / 2;
             const r = i % 2 === 0 ? outerO : innerO;
@@ -50,12 +60,12 @@
             else s.lineTo(Math.cos(ang) * r, Math.sin(ang) * r);
           }
           s.closePath();
-          _expGemOutlineGeometry = new THREE.ExtrudeGeometry(s, { depth: 0.08, bevelEnabled: false });
+          _expGemOutlineGeometry = new THREE.ExtrudeGeometry(s, { depth: 0.028, bevelEnabled: false });
           _expGemOutlineGeometry.center();
         }
         const outlineMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
         const outlineMesh = new THREE.Mesh(_expGemOutlineGeometry, outlineMat);
-        outlineMesh.position.z = -0.01;
+        outlineMesh.position.z = -0.005;
         this._outlineMat = outlineMat; // Store per-instance material for disposal
         this.mesh.add(outlineMesh);
         
@@ -63,15 +73,32 @@
         const glowRingMat = new THREE.MeshBasicMaterial({ color: 0x111111, transparent: true, opacity: 0.65 });
         const glowRingMesh = new THREE.Mesh(_expGemOutlineGeometry, glowRingMat);
         glowRingMesh.scale.set(1.08, 1.08, 0.5);
-        glowRingMesh.position.z = -0.02;
+        glowRingMesh.position.z = -0.008;
         this._glowRingMat = glowRingMat;
         this.mesh.add(glowRingMesh);
 
         scene.add(this.mesh);
 
         this.active = true;
-        // Spin fast on Y axis (star spinning over its axis as required)
-        this.rotSpeedY = (Math.random() * 0.15 + 0.10) * (Math.random() < 0.5 ? 1 : -1);
+
+        // Dynamic spin based on weapon force — spins in all 3 axes (360 in any direction)
+        var force = hitForce || 1.0;
+        var isCritical = force > 1.5;
+        var isExplosive = (sourceWeapon === 'homingMissile' || sourceWeapon === 'meteor' || sourceWeapon === 'fireball');
+        var spinMult = isCritical ? 2.0 : isExplosive ? 2.5 : 1.0;
+        this.rotSpeedX = (Math.random() * 0.12 + 0.04) * spinMult * (Math.random() < 0.5 ? 1 : -1);
+        this.rotSpeedY = (Math.random() * 0.15 + 0.10) * spinMult * (Math.random() < 0.5 ? 1 : -1);
+        this.rotSpeedZ = (Math.random() * 0.10 + 0.03) * spinMult * (Math.random() < 0.5 ? 1 : -1);
+
+        // Physics: pop velocity + gravity
+        var popSpeed = (0.03 + Math.random() * 0.04) * force;
+        this.vx = Math.cos(popAngle) * popSpeed;
+        this.vy = 0.06 + Math.random() * 0.04 * force; // upward pop
+        this.vz = Math.sin(popAngle) * popSpeed;
+        this.gravity = -0.003; // gravity pull per frame
+        this.onGround = false;
+        this.groundFriction = 0.92;
+
         this.bobPhase = Math.random() * Math.PI * 2;
         this.sparklePhase = Math.random() * Math.PI * 2;
         this.value = GAME_CONFIG.expValue;
@@ -80,12 +107,42 @@
       update(playerPos) {
         if (!this.active) return;
 
-        // Spin star over its Y axis (fast)
-        this.mesh.rotation.y += this.rotSpeedY;
+        // Grow from invisible to full size
+        if (!this._grown) {
+          this._growTimer += 0.08;
+          var s = Math.min(1.0, this._growTimer);
+          this.mesh.scale.set(s, s, s);
+          if (s >= 1.0) this._grown = true;
+        }
 
-        // Bob up and down
-        this.bobPhase += 0.05;
-        this.mesh.position.y = 0.5 + Math.sin(this.bobPhase) * 0.1;
+        // Spin star in all 3 axes dynamically
+        this.mesh.rotation.x += this.rotSpeedX;
+        this.mesh.rotation.y += this.rotSpeedY;
+        this.mesh.rotation.z += this.rotSpeedZ;
+
+        // Gravity physics
+        if (!this.onGround) {
+          this.vy += this.gravity;
+          this.mesh.position.x += this.vx;
+          this.mesh.position.y += this.vy;
+          this.mesh.position.z += this.vz;
+
+          // Hit ground
+          if (this.mesh.position.y <= 0.08) {
+            this.mesh.position.y = 0.08;
+            this.vy = 0;
+            this.vx *= this.groundFriction;
+            this.vz *= this.groundFriction;
+            this.onGround = true;
+            // Dampen spin when resting on ground
+            this.rotSpeedX *= 0.3;
+            this.rotSpeedZ *= 0.3;
+            this.rotSpeedY *= 0.5;
+          }
+        } else {
+          // On ground: gentle idle spin (Y only), lying flat
+          this.mesh.rotation.y += this.rotSpeedY * 0.2;
+        }
         
         // Pulsing black edge glow — sync with star's emissive intensity
         this.sparklePhase += 0.1;
@@ -102,8 +159,12 @@
         const dist = Math.sqrt(dx*dx + dz*dz);
         
         if (dist < magnetRange) { // Use magnetRange variable
+          this.onGround = false; // lift off ground when pulled
           this.mesh.position.x += (dx / dist) * 0.3;
           this.mesh.position.z += (dz / dist) * 0.3;
+          // Lift toward player height
+          var dy = 0.5 - this.mesh.position.y;
+          this.mesh.position.y += dy * 0.1;
           
           // Visual Trail when pulled - lighter blue particles (PR #117)
           if (Math.random() < 0.3) {

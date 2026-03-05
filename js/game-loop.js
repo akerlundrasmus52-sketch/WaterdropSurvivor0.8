@@ -1569,8 +1569,8 @@
       }
 
       // 11. HOMING MISSILE — Bullet Bill style with fire/smoke trail
-      if (weapons.homing.active && time - weapons.homing.lastShot > weapons.homing.cooldown) {
-        let nearest = null; let minDstSq = weapons.homing.range * weapons.homing.range;
+      if (weapons.homingMissile.active && time - weapons.homingMissile.lastShot > weapons.homingMissile.cooldown) {
+        let nearest = null; let minDstSq = weapons.homingMissile.range * weapons.homingMissile.range;
         for (let e of enemies) {
           if (e.isDead) continue;
           const dSq = player.mesh.position.distanceToSquared(e.mesh.position);
@@ -1648,7 +1648,7 @@
               for (let e of enemies) {
                 if (e.isDead) continue;
                 if (missileGroup.position.distanceTo(e.mesh.position) < 1.2) {
-                  const dmg = weapons.homing.damage * playerStats.strength;
+                  const dmg = weapons.homingMissile.damage * playerStats.strength;
                   e.takeDamage(Math.floor(dmg), false, 'shotgun'); // Use shotgun death = dismemberment
                   spawnParticles(missileGroup.position, 0xFF4500, 12);
                   spawnParticles(missileGroup.position, 0xFFAA00, 8);
@@ -1694,10 +1694,276 @@
           } else {
             scene.remove(missileGroup);
           }
-          weapons.homing.lastShot = time;
+          weapons.homingMissile.lastShot = time;
           playSound('shoot');
         }
       }
+
+      // ── 12. SAMURAI SWORD — wide arc slash, higher damage than regular sword ──
+      if (weapons.samuraiSword && weapons.samuraiSword.active && time - weapons.samuraiSword.lastShot > weapons.samuraiSword.cooldown) {
+        const slashAngle = Math.atan2(
+          (enemies[0] && !enemies[0].isDead ? enemies[0].mesh.position.z : 0) - player.mesh.position.z,
+          (enemies[0] && !enemies[0].isDead ? enemies[0].mesh.position.x : 1) - player.mesh.position.x
+        );
+        projectiles.push(new SwordSlash(player.mesh.position.x, player.mesh.position.z, slashAngle));
+        weapons.samuraiSword.lastShot = time;
+        playSound('shoot');
+      }
+
+      // ── 13. WHIP — chain damage through multiple enemies ──
+      if (weapons.whip && weapons.whip.active && time - weapons.whip.lastShot > weapons.whip.cooldown) {
+        let hitCount = 0;
+        const maxChain = weapons.whip.chainHits || 3;
+        let lastPos = player.mesh.position.clone();
+        const hitEnemies = new Set();
+        for (let c = 0; c < maxChain; c++) {
+          let nearest = null; let minD = Infinity;
+          for (let e of enemies) {
+            if (e.isDead || hitEnemies.has(e)) continue;
+            const d = lastPos.distanceTo(e.mesh.position);
+            if (d < weapons.whip.range && d < minD) { minD = d; nearest = e; }
+          }
+          if (!nearest) break;
+          hitEnemies.add(nearest);
+          const dmg = weapons.whip.damage * playerStats.strength * (1 - c * 0.15);
+          nearest.takeDamage(Math.floor(dmg), false, 'melee');
+          spawnParticles(nearest.mesh.position, 0xCC8844, 4);
+          lastPos = nearest.mesh.position.clone();
+          hitCount++;
+        }
+        if (hitCount > 0) playSound('shoot');
+        weapons.whip.lastShot = time;
+      }
+
+      // ── 14. UZI — extreme fire rate ranged projectile ──
+      if (weapons.uzi && weapons.uzi.active && time - weapons.uzi.lastShot > weapons.uzi.cooldown) {
+        let nearest = null; let minDSq = weapons.uzi.range * weapons.uzi.range;
+        for (let e of enemies) {
+          if (e.isDead) continue;
+          const dSq = player.mesh.position.distanceToSquared(e.mesh.position);
+          if (dSq < minDSq) { minDSq = dSq; nearest = e; }
+        }
+        if (nearest) {
+          projectiles.push(new Projectile(player.mesh.position.x, player.mesh.position.z, nearest.mesh.position));
+          weapons.uzi.lastShot = time;
+          playSound('shoot');
+        }
+      }
+
+      // ── 15. 50 CAL SNIPER — high damage, piercing, slow fire ──
+      if (weapons.sniperRifle && weapons.sniperRifle.active && time - weapons.sniperRifle.lastShot > weapons.sniperRifle.cooldown) {
+        let nearest = null; let minDSq = weapons.sniperRifle.range * weapons.sniperRifle.range;
+        for (let e of enemies) {
+          if (e.isDead) continue;
+          const dSq = player.mesh.position.distanceToSquared(e.mesh.position);
+          if (dSq < minDSq) { minDSq = dSq; nearest = e; }
+        }
+        if (nearest) {
+          const p = new Projectile(player.mesh.position.x, player.mesh.position.z, nearest.mesh.position);
+          p.pierceCount = weapons.sniperRifle.piercing || 3;
+          p.mesh.scale.set(0.6, 0.6, 1.5);
+          p.mesh.material.color.setHex(0xFFDD44);
+          p.speed = 0.8;
+          projectiles.push(p);
+          spawnParticles(player.mesh.position, 0xFFFF00, 4);
+          weapons.sniperRifle.lastShot = time;
+          playSound('shoot');
+        }
+      }
+
+      // ── 16. PUMP SHOTGUN — wide spread, heavy pellets ──
+      if (weapons.pumpShotgun && weapons.pumpShotgun.active && time - weapons.pumpShotgun.lastShot > weapons.pumpShotgun.cooldown) {
+        let nearest = null; let minDSq = weapons.pumpShotgun.range * weapons.pumpShotgun.range;
+        for (let e of enemies) {
+          if (e.isDead) continue;
+          const dSq = player.mesh.position.distanceToSquared(e.mesh.position);
+          if (dSq < minDSq) { minDSq = dSq; nearest = e; }
+        }
+        if (nearest) {
+          const baseAngle = Math.atan2(nearest.mesh.position.z - player.mesh.position.z, nearest.mesh.position.x - player.mesh.position.x);
+          const pelletCount = weapons.pumpShotgun.pellets || 8;
+          const spreadAngle = weapons.pumpShotgun.spread || 0.7;
+          for (let i = 0; i < pelletCount; i++) {
+            const spread = (Math.random() + Math.random() - 1.0) * spreadAngle;
+            const dir = { x: Math.cos(baseAngle + spread) * 20 + player.mesh.position.x, y: 0, z: Math.sin(baseAngle + spread) * 20 + player.mesh.position.z };
+            const pellet = new Projectile(player.mesh.position.x, player.mesh.position.z, dir);
+            pellet.isDoubleBarrel = true;
+            pellet.speed = 0.6 + Math.random() * 0.15;
+            pellet.life = 20;
+            projectiles.push(pellet);
+          }
+          spawnParticles(player.mesh.position, 0xFFAA00, 6);
+          weapons.pumpShotgun.lastShot = time;
+          playSound('shoot');
+        }
+      }
+
+      // ── 17. AUTO SHOTGUN — rapid semi-auto bursts ──
+      if (weapons.autoShotgun && weapons.autoShotgun.active && time - weapons.autoShotgun.lastShot > weapons.autoShotgun.cooldown) {
+        let nearest = null; let minDSq = weapons.autoShotgun.range * weapons.autoShotgun.range;
+        for (let e of enemies) {
+          if (e.isDead) continue;
+          const dSq = player.mesh.position.distanceToSquared(e.mesh.position);
+          if (dSq < minDSq) { minDSq = dSq; nearest = e; }
+        }
+        if (nearest) {
+          const baseAngle = Math.atan2(nearest.mesh.position.z - player.mesh.position.z, nearest.mesh.position.x - player.mesh.position.x);
+          const pelletCount = weapons.autoShotgun.pellets || 6;
+          for (let i = 0; i < pelletCount; i++) {
+            const spread = (Math.random() + Math.random() - 1.0) * (weapons.autoShotgun.spread || 0.6);
+            const dir = { x: Math.cos(baseAngle + spread) * 20 + player.mesh.position.x, y: 0, z: Math.sin(baseAngle + spread) * 20 + player.mesh.position.z };
+            const pellet = new Projectile(player.mesh.position.x, player.mesh.position.z, dir);
+            pellet.isDoubleBarrel = true;
+            pellet.speed = 0.55 + Math.random() * 0.1;
+            pellet.life = 18;
+            projectiles.push(pellet);
+          }
+          weapons.autoShotgun.lastShot = time;
+          playSound('shoot');
+        }
+      }
+
+      // ── 18. MINIGUN — extreme fire rate ──
+      if (weapons.minigun && weapons.minigun.active && time - weapons.minigun.lastShot > weapons.minigun.cooldown) {
+        let nearest = null; let minDSq = weapons.minigun.range * weapons.minigun.range;
+        for (let e of enemies) {
+          if (e.isDead) continue;
+          const dSq = player.mesh.position.distanceToSquared(e.mesh.position);
+          if (dSq < minDSq) { minDSq = dSq; nearest = e; }
+        }
+        if (nearest) {
+          const spreadOffset = (Math.random() - 0.5) * 0.15;
+          const dir = { x: nearest.mesh.position.x + spreadOffset, y: 0, z: nearest.mesh.position.z + spreadOffset };
+          const p = new Projectile(player.mesh.position.x, player.mesh.position.z, dir);
+          p.mesh.scale.set(0.3, 0.3, 0.3);
+          p.mesh.material.color.setHex(0xFFCC00);
+          p.speed = 0.7;
+          projectiles.push(p);
+          weapons.minigun.lastShot = time;
+          if (Math.random() < 0.3) playSound('shoot');
+        }
+      }
+
+      // ── 19. BOW — long range arrow with pierce ──
+      if (weapons.bow && weapons.bow.active && time - weapons.bow.lastShot > weapons.bow.cooldown) {
+        let nearest = null; let minDSq = weapons.bow.range * weapons.bow.range;
+        for (let e of enemies) {
+          if (e.isDead) continue;
+          const dSq = player.mesh.position.distanceToSquared(e.mesh.position);
+          if (dSq < minDSq) { minDSq = dSq; nearest = e; }
+        }
+        if (nearest) {
+          const p = new Projectile(player.mesh.position.x, player.mesh.position.z, nearest.mesh.position);
+          p.pierceCount = weapons.bow.piercing || 1;
+          p.mesh.scale.set(0.3, 0.3, 1.2);
+          p.mesh.material.color.setHex(0x8B4513);
+          p.speed = 0.5;
+          projectiles.push(p);
+          weapons.bow.lastShot = time;
+          playSound('shoot');
+        }
+      }
+
+      // ── 20. TESLA SABER — melee hit + chain lightning effect ──
+      if (weapons.teslaSaber && weapons.teslaSaber.active && time - weapons.teslaSaber.lastShot > weapons.teslaSaber.cooldown) {
+        const tsRange = weapons.teslaSaber.range * weapons.teslaSaber.range;
+        let hitAny = false;
+        enemies.forEach(e => {
+          if (e.isDead) return;
+          const dSq = player.mesh.position.distanceToSquared(e.mesh.position);
+          if (dSq < tsRange) {
+            const dmg = weapons.teslaSaber.damage * playerStats.strength;
+            e.takeDamage(Math.floor(dmg), false, 'lightning');
+            spawnParticles(e.mesh.position, 0x00CCFF, 6);
+            spawnParticles(e.mesh.position, 0xFFFFFF, 3);
+            hitAny = true;
+          }
+        });
+        if (hitAny) playSound('shoot');
+        weapons.teslaSaber.lastShot = time;
+      }
+
+      // ── 21. BOOMERANG — projectile that returns, hits both ways ──
+      if (weapons.boomerang && weapons.boomerang.active && time - weapons.boomerang.lastShot > weapons.boomerang.cooldown) {
+        let nearest = null; let minDSq = weapons.boomerang.range * weapons.boomerang.range;
+        for (let e of enemies) {
+          if (e.isDead) continue;
+          const dSq = player.mesh.position.distanceToSquared(e.mesh.position);
+          if (dSq < minDSq) { minDSq = dSq; nearest = e; }
+        }
+        if (nearest) {
+          const p = new Projectile(player.mesh.position.x, player.mesh.position.z, nearest.mesh.position);
+          p.isBoomerang = true;
+          p.returnPhase = false;
+          p.originX = player.mesh.position.x;
+          p.originZ = player.mesh.position.z;
+          p.mesh.material.color.setHex(0xDD8800);
+          p.mesh.scale.set(0.5, 0.5, 0.5);
+          p.life = 80;
+          projectiles.push(p);
+          weapons.boomerang.lastShot = time;
+          playSound('shoot');
+        }
+      }
+
+      // ── 22. SHURIKEN — multiple spinning stars auto-target ──
+      if (weapons.shuriken && weapons.shuriken.active && time - weapons.shuriken.lastShot > weapons.shuriken.cooldown) {
+        const starCount = weapons.shuriken.projectiles || 3;
+        const sortedEnemies = enemies.filter(e => !e.isDead).sort((a, b) =>
+          player.mesh.position.distanceToSquared(a.mesh.position) - player.mesh.position.distanceToSquared(b.mesh.position)
+        ).slice(0, starCount);
+        sortedEnemies.forEach(e => {
+          const p = new Projectile(player.mesh.position.x, player.mesh.position.z, e.mesh.position);
+          p.isShuriken = true;
+          p.mesh.material.color.setHex(0xCCCCCC);
+          p.mesh.scale.set(0.4, 0.4, 0.15);
+          p.speed = 0.45;
+          projectiles.push(p);
+        });
+        if (sortedEnemies.length > 0) playSound('shoot');
+        weapons.shuriken.lastShot = time;
+      }
+
+      // ── 23. NANO SWARM — persistent damaging cloud around player ──
+      if (weapons.nanoSwarm && weapons.nanoSwarm.active && time - weapons.nanoSwarm.lastShot > weapons.nanoSwarm.cooldown) {
+        const swarmRangeSq = weapons.nanoSwarm.range * weapons.nanoSwarm.range;
+        enemies.forEach(e => {
+          if (e.isDead) return;
+          const dSq = player.mesh.position.distanceToSquared(e.mesh.position);
+          if (dSq < swarmRangeSq) {
+            const dmg = weapons.nanoSwarm.damage * playerStats.strength;
+            e.takeDamage(Math.floor(dmg), false, 'special');
+            if (Math.random() < 0.3) spawnParticles(e.mesh.position, 0x88AAFF, 2);
+          }
+        });
+        spawnParticles(player.mesh.position, 0x6688FF, 4);
+        weapons.nanoSwarm.lastShot = time;
+      }
+
+      // ── 24. FIREBALL — projectile that explodes on impact ──
+      if (weapons.fireball && weapons.fireball.active && time - weapons.fireball.lastShot > weapons.fireball.cooldown) {
+        let nearest = null; let minDSq = weapons.fireball.range * weapons.fireball.range;
+        for (let e of enemies) {
+          if (e.isDead) continue;
+          const dSq = player.mesh.position.distanceToSquared(e.mesh.position);
+          if (dSq < minDSq) { minDSq = dSq; nearest = e; }
+        }
+        if (nearest) {
+          const p = new Projectile(player.mesh.position.x, player.mesh.position.z, nearest.mesh.position);
+          p.isFireball = true;
+          p.explosionRadius = weapons.fireball.explosionRadius || 3;
+          p.mesh.material.color.setHex(0xFF4400);
+          p.mesh.material.emissive = new THREE.Color(0xFF2200);
+          p.mesh.material.emissiveIntensity = 0.6;
+          p.mesh.scale.set(0.6, 0.6, 0.6);
+          p.speed = 0.35;
+          projectiles.push(p);
+          spawnParticles(player.mesh.position, 0xFF6600, 4);
+          weapons.fireball.lastShot = time;
+          playSound('shoot');
+        }
+      }
+
       updateWaterParticles(dt);
       updateStatBar();
       

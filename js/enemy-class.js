@@ -1836,22 +1836,53 @@
         // so it is visible during the death animation and can be collected right away.
         const xpPopAngle = Math.random() * Math.PI * 2;
         const xpPopDist = 0.8 + Math.random() * 0.6; // 0.8–1.4 units away
+        var _isCrit = this.lastCrit || false;
+        var _isExplosive = (damageType === 'shotgun' || damageType === 'doubleBarrel' || damageType === 'lightning' || damageType === 'homingMissile' || damageType === 'meteor' || damageType === 'fireball');
+        var xpHitForce = _isCrit ? 2.0 : (_isExplosive ? 2.5 : 1.0);
         for (let i = 0; i < expMultiplier; i++) {
           const spread = i * (Math.PI * 2 / Math.max(expMultiplier, 1));
           const angle = xpPopAngle + spread;
-          spawnExp(deathPos.x + Math.cos(angle) * xpPopDist, deathPos.z + Math.sin(angle) * xpPopDist);
+          spawnExp(deathPos.x + Math.cos(angle) * xpPopDist, deathPos.z + Math.sin(angle) * xpPopDist, damageType, xpHitForce);
         }
         
         // Dynamic death animation styles - weapon-dependent with variation
         // 0=collapse, 1=spin fall, 2=backward fall, 3=forward collapse, 4=side fall,
-        // 5=ragdoll tumble, 6=explosion knockback, 7=splatter
+        // 5=ragdoll tumble, 6=explosion knockback, 7=splatter, 8=split in half,
+        // 9=gut spill, 10=crawl & collapse
         let deathStyle;
-        if (isShotgunDeath) {
-          // Shotgun/double barrel: knockback-heavy deaths
+        if (isShotgunDeath || damageType === 'pumpShotgun' || damageType === 'autoShotgun') {
+          // Shotgun variants: knockback-heavy deaths
           deathStyle = [2, 5, 6, 7, 9][Math.floor(Math.random() * 5)];
+        } else if (damageType === 'sniperRifle' || damageType === '50cal') {
+          // Sniper: violent backward knockback, split or ragdoll
+          deathStyle = [2, 5, 6, 8][Math.floor(Math.random() * 4)];
+        } else if (damageType === 'minigun' || damageType === 'uzi') {
+          // Rapid fire: riddled with bullets, ragdoll tumble
+          deathStyle = [0, 1, 5, 7][Math.floor(Math.random() * 4)];
+        } else if (damageType === 'samuraiSword' || damageType === 'teslaSaber') {
+          // Bladed melee: clean cuts, split, collapse
+          deathStyle = [0, 3, 4, 8, 10][Math.floor(Math.random() * 5)];
+        } else if (damageType === 'whip') {
+          // Whip: dramatic side falls, collapse
+          deathStyle = [0, 3, 4, 10][Math.floor(Math.random() * 4)];
+        } else if (damageType === 'bow') {
+          // Arrow: pin and fall backward
+          deathStyle = [2, 3, 4][Math.floor(Math.random() * 3)];
+        } else if (damageType === 'boomerang' || damageType === 'shuriken') {
+          // Thrown weapons: spin deaths
+          deathStyle = [1, 4, 5][Math.floor(Math.random() * 3)];
+        } else if (damageType === 'nanoSwarm') {
+          // Nano: dissolve/crumple
+          deathStyle = [0, 3, 7][Math.floor(Math.random() * 3)];
+        } else if (damageType === 'homingMissile' || damageType === 'fireball') {
+          // Explosive: massive knockback, splatter
+          deathStyle = [5, 6, 7, 9][Math.floor(Math.random() * 4)];
         } else if (damageType === 'lightning' || damageType === 'special') {
           // Lightning/special: dramatic spin or explosion deaths
           deathStyle = [1, 5, 6][Math.floor(Math.random() * 3)];
+        } else if (damageType === 'poison') {
+          // Poison: slow collapse, crawl
+          deathStyle = [0, 3, 10][Math.floor(Math.random() * 3)];
         } else if (damageType === 'melee' || damageType === 'knife') {
           // Melee: collapse or forward fall
           deathStyle = [0, 2, 3, 4, 10][Math.floor(Math.random() * 5)];
@@ -1865,8 +1896,8 @@
         const fallSignX = (Math.random() < 0.5) ? 1 : -1;
         const fallSignZ = (Math.random() < 0.5) ? 1 : -1;
         const spinDir = (Math.random() < 0.5) ? 1 : -1;
-        const isShotgunDeath = damageType === 'shotgun' || damageType === 'doubleBarrel';
-        const isExplosiveDeath = isShotgunDeath || damageType === 'lightning';
+        const isShotgunDeath = damageType === 'shotgun' || damageType === 'doubleBarrel' || damageType === 'pumpShotgun' || damageType === 'autoShotgun';
+        const isExplosiveDeath = isShotgunDeath || damageType === 'lightning' || damageType === 'homingMissile' || damageType === 'fireball' || damageType === 'sniperRifle';
         const isCritDeath = this.lastCrit || false;
         
         // Fall down animation: enemy falls dynamically, lies on ground, explodes into blood
