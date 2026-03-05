@@ -263,11 +263,26 @@
     // on window, not in a per-script lexical scope, so window.x is the canonical reference)
     if (typeof window.spawnParticles === 'function') {
       const originalSpawnParticles = window.spawnParticles;
+      // Per-frame particle budget to prevent GC stutter from too many spawn calls
+      let _particleFrameBudget = 0;
+      let _particleFrameNum    = -1;
+      const _MAX_DAMAGE_PARTICLES_PER_FRAME = 5;
+
       window.spawnParticles = function(position, color, count) {
         // Combine FPS-based throttle with quality-preset particle scale
         const qualityScale = performanceLog.qualityParticleScale || 1.0;
         const adjustedCount = Math.ceil(count * performanceLog.particleThrottleScale * qualityScale);
         if (adjustedCount <= 0) return;
+
+        // Per-frame cap: max 5 particle spawn calls per frame to prevent GC stutter
+        const curFrame = performanceLog.frameCount || 0;
+        if (curFrame !== _particleFrameNum) {
+          _particleFrameNum  = curFrame;
+          _particleFrameBudget = 0;
+        }
+        if (_particleFrameBudget >= _MAX_DAMAGE_PARTICLES_PER_FRAME) return;
+        _particleFrameBudget++;
+
         return originalSpawnParticles(position, color, adjustedCount);
       };
     }
@@ -830,15 +845,33 @@
       // far (40-80) → every 4th, very far (> 80) → every 10th frame (~100ms).
       const _fc = performanceLog.frameCount;
       // Build spatial hash for enemy lookups (used by projectiles via window._enemySpatialHash)
+      // TIME-SLICING: rebuild the hash every frame but insert enemies in batches of
+      // (enemies.length / 4) spread across 4 frames so not all weapons pay the full cost
+      // on the same frame. A full rebuild still happens every 4 frames for accuracy.
       if (window.GamePerformance && window.GamePerformance.SpatialHash) {
         if (!window._enemySpatialHash) {
           window._enemySpatialHash = new window.GamePerformance.SpatialHash(4);
         }
-        window._enemySpatialHash.clear();
-        for (var _shi = 0; _shi < enemies.length; _shi++) {
-          var _she = enemies[_shi];
-          if (_she && _she.mesh && !_she.isDead) {
-            window._enemySpatialHash.insert(_she);
+        const _hashSlice = _fc & 3; // 0,1,2,3 in rotation
+        if (_hashSlice === 0) {
+          // Full rebuild on slice 0 — clear and insert all enemies
+          window._enemySpatialHash.clear();
+          for (var _shi = 0; _shi < enemies.length; _shi++) {
+            var _she = enemies[_shi];
+            if (_she && _she.mesh && !_she.isDead) {
+              window._enemySpatialHash.insert(_she);
+            }
+          }
+        } else {
+          // Partial update: re-insert only the quarter of enemies belonging to this slice
+          const _sliceSize = Math.ceil(enemies.length / 4);
+          const _sliceStart = _hashSlice * _sliceSize;
+          const _sliceEnd   = Math.min(_sliceStart + _sliceSize, enemies.length);
+          for (var _shi2 = _sliceStart; _shi2 < _sliceEnd; _shi2++) {
+            var _she2 = enemies[_shi2];
+            if (_she2 && _she2.mesh && !_she2.isDead) {
+              window._enemySpatialHash.insert(_she2);
+            }
           }
         }
       }
@@ -958,8 +991,11 @@
         
         // Check underwater legendary chest collection
         if (window.underwaterChest && !window.underwaterChest.userData.collected) {
-          const chestDist = player.mesh.position.distanceTo(window.underwaterChest.position);
-          if (chestDist < window.underwaterChest.userData.collectRadius) {
+          const _ucdx = player.mesh.position.x - window.underwaterChest.position.x;
+          const _ucdz = player.mesh.position.z - window.underwaterChest.position.z;
+          const _ucDistSq = _ucdx * _ucdx + _ucdz * _ucdz;
+          const _ucRadius = window.underwaterChest.userData.collectRadius;
+          if (_ucDistSq < _ucRadius * _ucRadius) {
             window.underwaterChest.userData.collected = true;
             scene.remove(window.underwaterChest);
             window.underwaterChest = null;
@@ -1012,8 +1048,11 @@
           (saveData.tutorialQuests.currentQuest === 'quest3_stonehengeGear' ||
            saveData.tutorialQuests.currentQuest === 'quest6_stonehengeChest') &&
           isGameActive && !isPaused) {
-        const dist = player.mesh.position.distanceTo(window.stonehengeChest.position);
-        if (dist < window.stonehengeChest.userData.pickupRadius) {
+        const _scdx = player.mesh.position.x - window.stonehengeChest.position.x;
+        const _scdz = player.mesh.position.z - window.stonehengeChest.position.z;
+        const _scDistSq = _scdx * _scdx + _scdz * _scdz;
+        const _scRadius = window.stonehengeChest.userData.pickupRadius;
+        if (_scDistSq < _scRadius * _scRadius) {
           // Player found the chest!
           scene.remove(window.stonehengeChest);
           window.stonehengeChest = null;
@@ -1057,8 +1096,11 @@
           saveData.tutorialQuests.currentQuest === 'quest18_findCompanionEgg' &&
           !saveData.hasCompanionEgg &&
           isGameActive && !isPaused) {
-        const eggDist = player.mesh.position.distanceTo(window.companionEggObject.position);
-        if (eggDist < window.companionEggObject.userData.pickupRadius) {
+        const _egDx = player.mesh.position.x - window.companionEggObject.position.x;
+        const _egDz = player.mesh.position.z - window.companionEggObject.position.z;
+        const _egDistSq = _egDx * _egDx + _egDz * _egDz;
+        const _egRadius  = window.companionEggObject.userData.pickupRadius;
+        if (_egDistSq < _egRadius * _egRadius) {
           scene.remove(window.companionEggObject);
           window.companionEggObject = null;
           saveData.hasCompanionEgg = true;
@@ -1113,8 +1155,9 @@
           saveData.tutorialQuests.currentQuest === 'quest_eggHunt' &&
           !saveData.tutorialQuests.mysteriousEggFound &&
           isGameActive && !isPaused && player.mesh) {
-        const mEggDist = player.mesh.position.distanceTo(window._mysteriousEggObject.position);
-        if (mEggDist < 3.5) {
+        const _meDx = player.mesh.position.x - window._mysteriousEggObject.position.x;
+        const _meDz = player.mesh.position.z - window._mysteriousEggObject.position.z;
+        if (_meDx * _meDx + _meDz * _meDz < 3.5 * 3.5) {
           scene.remove(window._mysteriousEggObject);
           window._mysteriousEggObject = null;
           saveData.tutorialQuests.mysteriousEggFound = true;
@@ -1145,7 +1188,9 @@
       updateFarmerNPCIndicator();
       updateFarmerBubblePosition();
       if (farmerNPC && !windmillQuest.dialogueOpen && !isPaused && !isGameOver) {
-        const farmerDist = player.mesh.position.distanceTo(farmerNPC.position);
+        const _fndx = player.mesh.position.x - farmerNPC.position.x;
+        const _fndz = player.mesh.position.z - farmerNPC.position.z;
+        const farmerDist = Math.sqrt(_fndx * _fndx + _fndz * _fndz);
         const FARMER_TALK_DIST = 5;
         // Trigger intro dialogue if quest not yet started (and not currently failed/awaiting retry)
         if (!windmillQuest.active && !windmillQuest.hasCompleted && !windmillQuest.failed && !windmillQuest.failedCooldown && farmerDist < FARMER_TALK_DIST) {
@@ -1187,8 +1232,9 @@
       
       // Check Montana quest trigger (optimized with stored reference)
       if (!montanaQuest.active && !montanaQuest.hasCompleted && montanaLandmark) {
-        const dist = player.mesh.position.distanceTo(montanaLandmark.position);
-        if (dist < MONTANA_QUEST_TRIGGER_DISTANCE) {
+        const _mtdx = player.mesh.position.x - montanaLandmark.position.x;
+        const _mtdz = player.mesh.position.z - montanaLandmark.position.z;
+        if (Math.sqrt(_mtdx * _mtdx + _mtdz * _mtdz) < MONTANA_QUEST_TRIGGER_DISTANCE) {
           startMontanaQuest(montanaLandmark);
         }
       }
@@ -1211,8 +1257,9 @@
       
       // Check Eiffel quest trigger (optimized with stored reference)
       if (!eiffelQuest.active && !eiffelQuest.hasCompleted && eiffelLandmark) {
-        const dist = player.mesh.position.distanceTo(eiffelLandmark.position);
-        if (dist < EIFFEL_QUEST_TRIGGER_DISTANCE) {
+        const _efdx = player.mesh.position.x - eiffelLandmark.position.x;
+        const _efdz = player.mesh.position.z - eiffelLandmark.position.z;
+        if (Math.sqrt(_efdx * _efdx + _efdz * _efdz) < EIFFEL_QUEST_TRIGGER_DISTANCE) {
           startEiffelQuest(eiffelLandmark);
         }
       }
@@ -2403,8 +2450,10 @@
         let _j = 0;
         for (let _i = 0; _i < particles.length; _i++) {
           const p = particles[_i];
-          // Cull particles beyond fog distance (squared avoids sqrt per particle)
-          const distSq = p.mesh.position.distanceToSquared(player.mesh.position);
+          // Cull particles beyond fog distance (inline squared avoids both sqrt and method call)
+          const _pfdx = p.mesh.position.x - player.mesh.position.x;
+          const _pfdz = p.mesh.position.z - player.mesh.position.z;
+          const distSq = _pfdx * _pfdx + _pfdz * _pfdz;
           if (distSq > FOG_DISTANCE_SQ) {
             // Remove from scene before releasing so the mesh is not left as an
             // invisible orphan in scene.children, which inflates scene child count.

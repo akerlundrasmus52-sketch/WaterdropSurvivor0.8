@@ -876,6 +876,37 @@
       grp.add(dread);
     }
 
+    // Beanie (mössa) — Benny's signature woolly hat
+    // Brim: flat cylinder ring
+    const beanieBrimGeo = new THREE.CylinderGeometry(0.30, 0.30, 0.06, 12);
+    const beanieMat = new THREE.MeshPhongMaterial({
+      color: 0x8B0000,   // deep red woolly beanie
+      emissive: 0x2A0000,
+      emissiveIntensity: 0.2,
+      shininess: 8
+    });
+    const beanieBrim = new THREE.Mesh(beanieBrimGeo, beanieMat);
+    beanieBrim.position.y = 1.52;
+    grp.add(beanieBrim);
+    // Crown: domed top of the beanie
+    const beanieCrownGeo = new THREE.SphereGeometry(0.27, 10, 6, 0, Math.PI * 2, 0, Math.PI * 0.55);
+    const beanieCrown = new THREE.Mesh(beanieCrownGeo, beanieMat);
+    beanieCrown.position.y = 1.54;
+    beanieCrown.rotation.x = Math.PI; // flat side down
+    grp.add(beanieCrown);
+    // Pompom on top
+    const pomGeo = new THREE.SphereGeometry(0.07, 6, 6);
+    const pomMat = new THREE.MeshPhongMaterial({ color: 0xFFFFFF, emissive: 0x444444, shininess: 5 });
+    const pom = new THREE.Mesh(pomGeo, pomMat);
+    pom.position.y = 1.86;
+    grp.add(pom);
+    // Colorful horizontal stripe on beanie
+    const stripeGeo = new THREE.CylinderGeometry(0.285, 0.285, 0.05, 12);
+    const stripeMat = new THREE.MeshPhongMaterial({ color: 0xFFD700, emissive: 0x443300, emissiveIntensity: 0.15 });
+    const stripe = new THREE.Mesh(stripeGeo, stripeMat);
+    stripe.position.y = 1.58;
+    grp.add(stripe);
+
     // Small round sunglasses (hippie look)
     const glassMat = new THREE.MeshPhongMaterial({
       color: 0x111111,
@@ -956,26 +987,71 @@
 
     const DS = window.DialogueSystem;
     if (!DS) {
-      // Fallback if DialogueSystem not loaded
       _showBennySpeech('Heyyy dude! Welcome to camp! ✌️');
       setTimeout(function () { _hideBennySpeech(); }, 5000);
       return;
     }
 
-    // Show camp welcome sequence, then walk to quest hall, then hint
+    // Show camp welcome sequence, then walk to quest hall, then give a contextual tip
     DS.show(DS.DIALOGUES.campWelcome, {
       onComplete: function () {
-        _bennyWalkToBuild('questMission', 'Here\'s where we build the Quest Hall! I got materials for ya! 📜');
+        _bennyWalkToBuild('questMission', 'Here\'s the Quest Hall, man! This is where I give you marching orders! 📜✌️');
         setTimeout(function () {
-          const currentQ = (typeof getCurrentQuest === 'function') ? getCurrentQuest() : null;
-          if (currentQ) {
-            DS.show([{ text: 'Your quest: ' + currentQ.name + '! 🎯', emotion: 'task' }]);
-          } else {
-            DS.show([{ text: 'Start a run and kill some enemies, then come back here dude! ⚔️', emotion: 'task' }]);
-          }
+          _showBennyContextualHint();
         }, 5000);
       }
     });
+  }
+
+  /**
+   * Show Benny's contextual quest hint based on the player's current progress.
+   * Reads saveData.tutorialQuests.completedQuests to determine where the player is
+   * in the tutorial and shows a personalised hippie tip for the NEXT step.
+   */
+  function _showBennyContextualHint() {
+    if (!window.saveData || !window.saveData.tutorialQuests) return;
+    const DS = window.DialogueSystem;
+    if (!DS) return;
+
+    const tq = window.saveData.tutorialQuests;
+    const completed = tq.completedQuests || [];
+    const current   = tq.currentQuest || '';
+
+    let hint = null;
+
+    // Walk down the tutorial chain and give the most relevant hint
+    if (!completed.includes('firstRunDeath')) {
+      hint = { text: 'Hey man! Start a run and — don\'t be scared — just DIE once. It\'s part of the journey, dude! ☮️', emotion: 'happy' };
+    } else if (!completed.includes('quest_dailyRoutine') && current === 'quest_dailyRoutine') {
+      hint = { text: 'Survive for 2 whole minutes in a run, brooo! You can do it! Just… try not to trip over anything. 🍃', emotion: 'joking' };
+    } else if (!completed.includes('quest_harvester') && current === 'quest_harvester') {
+      hint = { text: 'Reach Level 3 in a run, dude. The universe rewards those who level up! Then come claim your Forge blueprint! ⚒️', emotion: 'task' };
+    } else if (!completed.includes('quest_firstBlood') && current === 'quest_firstBlood') {
+      hint = { text: 'Gather 30 Wood and 30 Stone out there, man! Mother Earth provides! Then bring \'em back here for the Armory! 🌿', emotion: 'task' };
+    } else if (!completed.includes('quest_gainingStats') && current === 'quest_gainingStats') {
+      hint = { text: 'Defeat 300 enemies total, my peaceful warrior friend! That unlocks the Skill Tree — your path to enlightenment! 🌳', emotion: 'task' };
+    } else if (!completed.includes('quest_eggHunt') && current === 'quest_eggHunt') {
+      hint = { text: 'Reach Level 15 AND find the Mysterious Egg on the map! The cosmos hid it somewhere special… ✨🥚', emotion: 'thinking' };
+    } else if (!completed.includes('quest_newFriend') && current === 'quest_newFriend') {
+      hint = { text: 'You found the egg, bro! Now bring it back to camp and the Companion House will hatch it! Life finds a way! 🐣', emotion: 'happy' };
+    } else if (!completed.includes('quest_pushingLimits') && current === 'quest_pushingLimits') {
+      hint = { text: 'Take down the First Boss at Wave 10! Show that big bad dude what peace-loving warriors are capable of! 💥☮️', emotion: 'task' };
+    } else if (!completed.includes('quest2_spendSkills') && current === 'quest2_spendSkills') {
+      hint = { text: 'Spend 3 Skill Points in the Skill Tree, man! Growing is a beautiful thing! 🌱', emotion: 'happy' };
+    } else if (tq.readyToClaim && tq.readyToClaim.length > 0) {
+      hint = { text: 'Duuude! 🎉 You\'ve got quests ready to claim at the Quest Hall! Go get your sweet sweet rewards! Don\'t leave me hanging! ✌️', emotion: 'joking' };
+    } else if (completed.length > 8) {
+      hint = { text: 'You\'re like… SO enlightened now, man. Keep pushing for Level 100 and prestige! The universe salutes you! 🙏✨', emotion: 'happy' };
+    } else {
+      const currentQ = (typeof getCurrentQuest === 'function') ? getCurrentQuest() : null;
+      if (currentQ) {
+        hint = { text: 'Current vibe: ' + currentQ.name + '! Let\'s make it happen, dude! 🎯', emotion: 'task' };
+      } else {
+        hint = { text: 'Start a run and kill some enemies, then come back here dude! Keep the vibes high! ⚔️☮️', emotion: 'task' };
+      }
+    }
+
+    if (hint) DS.show([hint]);
   }
 
   function _showBennySpeech(text) {
@@ -999,7 +1075,6 @@
     const def = BUILDING_DEFS.find(d => d.id === buildingId);
     if (!def) return;
     _bennyWalking = true;
-
     // Save original positions
     const origX = BENNY_POS.x;
     const origZ = BENNY_POS.z;
@@ -1095,9 +1170,116 @@
     requestAnimationFrame(walkStep);
   }
 
-  // ──────────────────────────────────────────────────────────
-  // Building construction helpers
-  // ──────────────────────────────────────────────────────────
+  /**
+   * Like _bennyWalkToBuild but fires onDialogClosed callback ONLY after the
+   * dialog is dismissed.  Used so the 3D building pop animation shows AFTER
+   * the player reads Benny's message — not at the same time.
+   */
+  function _bennyWalkToBuildThenDialog(buildingId, speechText, onDialogClosed) {
+    if (!_bennyMesh || _bennyWalking) {
+      // If Benny can't walk, still play animation immediately
+      if (typeof onDialogClosed === 'function') onDialogClosed();
+      return;
+    }
+    const def = BUILDING_DEFS.find(d => d.id === buildingId);
+    if (!def) {
+      if (typeof onDialogClosed === 'function') onDialogClosed();
+      return;
+    }
+    _bennyWalking = true;
+
+    const origX = BENNY_POS.x;
+    const origZ = BENNY_POS.z;
+    const targetX = def.x;
+    const targetZ = def.z;
+    const walkDuration = 1200;
+
+    const playerOrigX = _playerPos ? _playerPos.x : 0;
+    const playerOrigZ = _playerPos ? _playerPos.z : 3;
+    const PLAYER_FOLLOW_DISTANCE = 2.0;
+    const wdx = targetX - origX;
+    const wdz = targetZ - origZ;
+    const wdist = Math.sqrt(wdx * wdx + wdz * wdz) || 1;
+    const playerTargetX = targetX - (wdx / wdist) * PLAYER_FOLLOW_DISTANCE;
+    const playerTargetZ = targetZ - (wdz / wdist) * PLAYER_FOLLOW_DISTANCE;
+
+    const DS = window.DialogueSystem;
+    if (DS) DS.show([{ text: 'Yooo follow me man! 🏃✌️', emotion: 'task' }]);
+
+    const startMs = performance.now();
+    function walkStep2() {
+      var t = Math.min((performance.now() - startMs) / walkDuration, 1);
+      var eased = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+      _bennyMesh.position.x = origX + (targetX - origX) * eased;
+      _bennyMesh.position.z = origZ + (targetZ - origZ) * eased;
+      var bdx2 = targetX - _bennyMesh.position.x;
+      var bdz2 = targetZ - _bennyMesh.position.z;
+      if (Math.abs(bdx2) > 0.01 || Math.abs(bdz2) > 0.01) _bennyMesh.rotation.y = Math.atan2(bdx2, bdz2);
+      if (_playerMesh) {
+        _playerPos.x = playerOrigX + (playerTargetX - playerOrigX) * eased;
+        _playerPos.z = playerOrigZ + (playerTargetZ - playerOrigZ) * eased;
+        _playerMesh.position.x = _playerPos.x;
+        _playerMesh.position.z = _playerPos.z;
+        var pdx2 = _bennyMesh.position.x - _playerPos.x;
+        var pdz2 = _bennyMesh.position.z - _playerPos.z;
+        if (Math.abs(pdx2) > 0.01 || Math.abs(pdz2) > 0.01) _playerMesh.rotation.y = Math.atan2(pdx2, pdz2);
+      }
+      if (t < 1) {
+        requestAnimationFrame(walkStep2);
+      } else {
+        // Arrived — show Benny's building dialog FIRST
+        var dialogLines = [
+          { text: speechText || 'Duuude, check THIS out! ✌️🏛️', emotion: 'happy' }
+        ];
+        if (DS) {
+          DS.show(dialogLines, {
+            onComplete: function () {
+              // Dialog closed → fire callback so building pops up NOW
+              if (typeof onDialogClosed === 'function') onDialogClosed();
+              _startBennyReturn();
+            }
+          });
+        } else {
+          _showBennySpeech(speechText || 'Check this out dude! 🏛️');
+          if (typeof onDialogClosed === 'function') onDialogClosed();
+          setTimeout(_startBennyReturn, 2000);
+        }
+      }
+    }
+
+    function _startBennyReturn() {
+      _hideBennySpeech();
+      var retStart = performance.now();
+      function returnStep2() {
+        var rt = Math.min((performance.now() - retStart) / walkDuration, 1);
+        var re = rt < 0.5 ? 2 * rt * rt : 1 - Math.pow(-2 * rt + 2, 2) / 2;
+        _bennyMesh.position.x = targetX + (origX - targetX) * re;
+        _bennyMesh.position.z = targetZ + (origZ - targetZ) * re;
+        if (_playerMesh) {
+          _playerPos.x = playerTargetX + (playerOrigX - playerTargetX) * re;
+          _playerPos.z = playerTargetZ + (playerOrigZ - playerTargetZ) * re;
+          _playerMesh.position.x = _playerPos.x;
+          _playerMesh.position.z = _playerPos.z;
+        }
+        if (rt < 1) {
+          requestAnimationFrame(returnStep2);
+        } else {
+          _bennyMesh.position.x = origX;
+          _bennyMesh.position.z = origZ;
+          if (_playerMesh) {
+            _playerPos.x = playerOrigX;
+            _playerPos.z = playerOrigZ;
+            _playerMesh.position.x = playerOrigX;
+            _playerMesh.position.z = playerOrigZ;
+          }
+          _bennyWalking = false;
+        }
+      }
+      requestAnimationFrame(returnStep2);
+    }
+
+    requestAnimationFrame(walkStep2);
+  }
 
   function _buildBuilding(def) {
     switch (def.id) {
@@ -3366,6 +3548,8 @@
     refreshBuildings,
     playBuildingUnlockAnimation: _playBuildingUnlockAnimation,
     bennyWalkToBuild: _bennyWalkToBuild,
+    bennyWalkToBuildThenDialog: _bennyWalkToBuildThenDialog,
+    showBennyContextualHint: _showBennyContextualHint,
     showBennySpeech: _showBennySpeech,
     hideBennySpeech: _hideBennySpeech,
     unlockBuilding(buildingId, saveData) {

@@ -38,7 +38,7 @@
   };
 
   // -----------------------------------------------------------------------
-  // Camera FX — zoom, DOF-like blur, chromatic aberration
+  // Camera FX — zoom, DOF-like blur, chromatic aberration, shake
   // -----------------------------------------------------------------------
   const CameraFX = {
     _baseZoom:    null,   // captured once
@@ -48,6 +48,9 @@
     _dofBlur:     0,      // px for CSS backdrop-filter
     _overlay:     null,   // DOM overlay for post-fx
     _active:      false,
+    _shakeIntensity: 0,
+    _shakeDuration:  0,
+    _shakeMs:        0,
 
     /**
      * Initialise — call once from init() after camera is created.
@@ -107,6 +110,17 @@
       requestAnimationFrame(fadeDOF);
     },
 
+    /**
+     * Trigger a camera shake.
+     * @param {number} intensity  Shake radius in pixels (e.g. 6).
+     * @param {number} durationMs Shake duration.
+     */
+    shake(intensity, durationMs) {
+      this._shakeIntensity = intensity || 6;
+      this._shakeDuration  = durationMs || 180;
+      this._shakeMs        = performance.now();
+    },
+
     /** Per-frame update. */
     update(dt) {
       if (!this._active) return;
@@ -116,6 +130,19 @@
       if (cam && this._targetZoom !== null) {
         cam.zoom += (this._targetZoom - cam.zoom) * Math.min(1, this._zoomLerp * dt);
         cam.updateProjectionMatrix();
+      }
+
+      // Camera shake
+      const shakeElapsed = performance.now() - this._shakeMs;
+      if (this._shakeIntensity > 0 && shakeElapsed < this._shakeDuration) {
+        const t = 1 - shakeElapsed / this._shakeDuration;
+        const r = this._shakeIntensity * t;
+        if (cam) {
+          cam.position.x += (Math.random() - 0.5) * r * 0.05;
+          cam.position.z += (Math.random() - 0.5) * r * 0.05;
+        }
+      } else {
+        this._shakeIntensity = 0;
       }
 
       // Overlay effects
@@ -147,6 +174,7 @@
       this._targetZoom = this._baseZoom;
       this._aberration = 0;
       this._dofBlur    = 0;
+      this._shakeIntensity = 0;
       if (this._overlay) {
         this._overlay.style.backdropFilter = 'none';
         this._overlay.style.boxShadow      = 'none';
@@ -155,7 +183,7 @@
   };
 
   // -----------------------------------------------------------------------
-  // Level-up FX — cinematic camera + time dilation on level-up
+  // Level-up FX — cinematic camera + time dilation + shockwave on level-up
   // -----------------------------------------------------------------------
   const LevelUpFX = {
     /**
@@ -164,24 +192,55 @@
      * @param {Function} onComplete  Called when the intro is done and modal should appear.
      */
     play(onComplete) {
-      // Slow time dramatically
-      TimeDilation.set(0.15, 6);
+      // Slow time dramatically to 0.1x for 1 second
+      TimeDilation.set(0.1, 8);
+      setTimeout(() => { TimeDilation.set(1.0, 3); }, 1000);
 
-      // Camera zoom-out + chromatic aberration
+      // Camera zoom-out + chromatic aberration + shake
       CameraFX.zoomPunch(0.85, 600);
       CameraFX.chromaticPulse(0.6, 800);
       CameraFX.dofPulse(2.5, 1000);
+      CameraFX.shake(8, 350);
 
       // Screen flash
       const flash = document.getElementById('dopamine-fx-overlay');
       if (flash) {
-        flash.style.background = 'radial-gradient(circle, rgba(255,255,200,0.3) 0%, transparent 70%)';
-        setTimeout(() => { flash.style.background = 'none'; }, 300);
+        flash.style.background = 'radial-gradient(circle, rgba(255,255,200,0.45) 0%, transparent 70%)';
+        setTimeout(() => { flash.style.background = 'none'; }, 350);
       }
+
+      // Physics shockwave — push nearby enemies away from the player
+      setTimeout(() => {
+        try {
+          if (window.enemies && window.player && window.player.mesh) {
+            const px = window.player.mesh.position.x;
+            const pz = window.player.mesh.position.z;
+            const SHOCKWAVE_RADIUS = 8;
+            const SHOCKWAVE_FORCE  = 12;
+            for (let i = 0; i < window.enemies.length; i++) {
+              const e = window.enemies[i];
+              if (!e || e.isDead || !e.mesh) continue;
+              const dx = e.mesh.position.x - px;
+              const dz = e.mesh.position.z - pz;
+              const distSq = dx * dx + dz * dz;
+              if (distSq < SHOCKWAVE_RADIUS * SHOCKWAVE_RADIUS && distSq > 0.01) {
+                const dist  = Math.sqrt(distSq);
+                const force = SHOCKWAVE_FORCE * (1 - dist / SHOCKWAVE_RADIUS);
+                if (e.knockbackX !== undefined) {
+                  e.knockbackX = (e.knockbackX || 0) + (dx / dist) * force;
+                  e.knockbackZ = (e.knockbackZ || 0) + (dz / dist) * force;
+                } else {
+                  e.mesh.position.x += (dx / dist) * force * 0.05;
+                  e.mesh.position.z += (dz / dist) * force * 0.05;
+                }
+              }
+            }
+          }
+        } catch (_) {}
+      }, 80);
 
       // Restore time after a delay, then show modal
       setTimeout(() => {
-        TimeDilation.set(1.0, 3);
         if (onComplete) onComplete();
       }, 500);
     }
@@ -251,6 +310,7 @@
 
     /**
      * Spawn an elastic damage number.
+     * Crits start at 2x scale and elastic-bounce down to 1x before floating up.
      * @param {number} amount     Damage value.
      * @param {{ x: number, y: number, z: number }} worldPos  3D position.
      * @param {THREE.Camera}  camera
@@ -262,8 +322,8 @@
         amount:    Math.floor(amount),
         x:         0, y: 0,        // screen coords (set below)
         vy:        isCrit ? -220 : -150,  // upward velocity (px/s)
-        scaleVel:  isCrit ? 1.8 : 0,       // spring velocity
-        scale:     isCrit ? 1.6 : 1.0,     // current scale
+        scaleVel:  isCrit ? -3.0 : 0,     // start with negative velocity to bounce from 2x→1x
+        scale:     isCrit ? 2.0 : 1.0,    // crits start at 2x scale!
         targetScale: 1.0,
         opacity:   1,
         life:      0,
@@ -297,7 +357,8 @@
       this._numbers.push(entry);
     },
 
-    /** Per-frame update — spring physics on scale, float up, fade out. */
+    /** Per-frame update — spring physics on scale, float up, fade out.
+     *  Crits shake (offset x randomly) while scale > 1.2. */
     update(dt) {
       for (let i = this._numbers.length - 1; i >= 0; i--) {
         const n = this._numbers[i];
@@ -313,12 +374,16 @@
         n.y += n.vy * dt;
         n.vy *= 0.97; // drag
 
-        // Spring physics for scale (crits bounce)
+        // Spring physics for scale (crits bounce from 2x → 1x)
         if (n.isCrit) {
-          const springK = 180, dampC = 12;
+          const springK = 220, dampC = 14;
           const force = springK * (n.targetScale - n.scale) - dampC * n.scaleVel;
           n.scaleVel += force * dt;
           n.scale    += n.scaleVel * dt;
+          // Shake horizontally while big (scale > 1.15)
+          if (n.scale > 1.15) {
+            n.x += (Math.random() - 0.5) * 4;
+          }
         }
 
         // Fade out in last 30%
@@ -327,7 +392,7 @@
 
         // Apply to DOM
         if (n.el) {
-          n.el.style.transform = 'translate(-50%, -50%) scale(' + n.scale.toFixed(2) + ')';
+          n.el.style.transform = 'translate(-50%, -50%) scale(' + Math.max(0.1, n.scale).toFixed(2) + ')';
           n.el.style.left    = n.x + 'px';
           n.el.style.top     = n.y + 'px';
           n.el.style.opacity = n.opacity.toFixed(2);
@@ -342,6 +407,150 @@
         if (n.el && n.el.parentNode) n.el.parentNode.removeChild(n.el);
       }
       this._numbers.length = 0;
+    }
+  };
+
+  // -----------------------------------------------------------------------
+  // Reward Juice — resource icons flying to UI + confetti on quest/chest reward
+  // -----------------------------------------------------------------------
+  const RewardJuice = {
+    _confettiPool: [],
+    _MAX_CONFETTI: 60,
+
+    /**
+     * Animate resource/item icons flying from a world position into the HUD.
+     * @param {Array<{icon:string, label:string}>} items  e.g. [{icon:'🪵', label:'+20 Wood'}]
+     * @param {{ x: number, y: number }} screenOrigin  Source position in screen px.
+     */
+    flyResourcesIn(items, screenOrigin) {
+      if (!items || items.length === 0) return;
+      const origin = screenOrigin || { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+
+      // Target: top-left HUD area
+      const targetX = 60;
+      const targetY = 60;
+
+      items.forEach((item, idx) => {
+        setTimeout(() => {
+          const el = document.createElement('div');
+          el.className = 'reward-fly-icon';
+          el.textContent = item.icon || '⭐';
+          el.style.cssText = [
+            'position:fixed',
+            'left:' + origin.x + 'px',
+            'top:' + origin.y + 'px',
+            'font-size:28px',
+            'z-index:10001',
+            'pointer-events:none',
+            'transition:none',
+            'transform:translate(-50%,-50%) scale(1.4)',
+            'filter:drop-shadow(0 0 6px gold)'
+          ].join(';');
+          document.body.appendChild(el);
+
+          // Brief pause, then animate to HUD
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              el.style.transition = 'all 0.55s cubic-bezier(0.22,1,0.36,1)';
+              el.style.left   = targetX + 'px';
+              el.style.top    = targetY + 'px';
+              el.style.transform = 'translate(-50%,-50%) scale(0.7)';
+              el.style.opacity = '0';
+            });
+          });
+
+          setTimeout(() => {
+            if (el.parentNode) el.parentNode.removeChild(el);
+            // Show stat-change text
+            if (item.label && typeof window.showStatChange === 'function') {
+              window.showStatChange(item.label);
+            }
+          }, 600);
+        }, idx * 90);
+      });
+    },
+
+    /**
+     * Show a spinning sunburst behind a DOM element (reward popup).
+     * @param {HTMLElement} container  The popup element to add sunburst behind.
+     */
+    addSunburst(container) {
+      if (!container) return;
+      const sb = document.createElement('div');
+      sb.className = 'reward-sunburst';
+      sb.style.cssText = [
+        'position:absolute',
+        'top:50%',
+        'left:50%',
+        'width:280px',
+        'height:280px',
+        'transform:translate(-50%,-50%) rotate(0deg)',
+        'pointer-events:none',
+        'z-index:0',
+        'background:conic-gradient(from 0deg,transparent 0deg,rgba(255,220,0,0.18) 10deg,transparent 20deg,rgba(255,180,0,0.12) 30deg,transparent 40deg)',
+        'border-radius:50%',
+        'animation:sunburst-spin 4s linear infinite'
+      ].join(';');
+      container.style.position = 'relative';
+      container.style.overflow = 'hidden';
+      container.insertBefore(sb, container.firstChild);
+    },
+
+    /**
+     * Spawn UI confetti particles centred on a DOM element.
+     * @param {HTMLElement} [anchor]  Optional anchor element; defaults to screen centre.
+     */
+    spawnConfetti(anchor) {
+      const rect = anchor ? anchor.getBoundingClientRect() : null;
+      const cx = rect ? (rect.left + rect.right) / 2 : window.innerWidth / 2;
+      const cy = rect ? rect.top + 20 : window.innerHeight * 0.35;
+
+      const colours = ['#FFD700','#FF6B6B','#4FC3F7','#69F0AE','#CE93D8','#FFA726','#ffffff'];
+      const count = Math.min(this._MAX_CONFETTI, 40);
+
+      for (let i = 0; i < count; i++) {
+        const el = document.createElement('div');
+        el.className = 'reward-confetti';
+        const size  = 6 + Math.random() * 6;
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 120 + Math.random() * 160;
+        const vx = Math.cos(angle) * speed;
+        const vy = -Math.abs(Math.sin(angle) * speed) - 60; // always upward
+        const colour = colours[Math.floor(Math.random() * colours.length)];
+        const rot = Math.random() * 360;
+
+        el.style.cssText = [
+          'position:fixed',
+          'left:' + cx + 'px',
+          'top:' + cy + 'px',
+          'width:' + size + 'px',
+          'height:' + size + 'px',
+          'background:' + colour,
+          'border-radius:' + (Math.random() > 0.5 ? '50%' : '2px'),
+          'pointer-events:none',
+          'z-index:10002',
+          'transform:rotate(' + rot + 'deg)',
+          'opacity:1'
+        ].join(';');
+        document.body.appendChild(el);
+
+        const start = performance.now();
+        const dur   = 900 + Math.random() * 400;
+
+        const tick = (now) => {
+          const t  = (now - start) / dur;
+          if (t >= 1) { if (el.parentNode) el.parentNode.removeChild(el); return; }
+          const ease = 1 - t * t;
+          const x  = cx + vx * t;
+          const y  = cy + vy * t + 200 * t * t; // gravity
+          el.style.left    = x + 'px';
+          el.style.top     = y + 'px';
+          el.style.opacity = (ease * 0.9).toFixed(2);
+          el.style.transform = 'rotate(' + (rot + t * 360) + 'deg)';
+          requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      }
     }
   };
 
@@ -422,6 +631,7 @@
     LevelUpFX:      LevelUpFX,
     CollectorCards:  CollectorCards,
     ElasticNumbers:  ElasticNumbers,
+    RewardJuice:     RewardJuice,
     FeverMode:       FeverMode
   };
 })();
