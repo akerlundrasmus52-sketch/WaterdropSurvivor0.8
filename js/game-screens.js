@@ -2974,6 +2974,38 @@
         playerStats.expReq = Math.floor(GAME_CONFIG.baseExpReq * playerStats.lvl * 1.15);
       }
       
+      // Quest: The Egg Hunt — Spawn mysterious egg when reaching Level 15
+      if (playerStats.lvl >= 15 && saveData.tutorialQuests &&
+          saveData.tutorialQuests.currentQuest === 'quest_eggHunt' &&
+          !saveData.tutorialQuests.mysteriousEggFound && !window._mysteriousEggSpawned) {
+        window._mysteriousEggSpawned = true;
+        // Spawn a glowing egg object near the player
+        try {
+          const eggGroup = new THREE.Group();
+          const eggGeo = new THREE.SphereGeometry(0.8, 16, 16);
+          eggGeo.scale(1, 1.3, 1); // oval egg shape
+          const eggMat = new THREE.MeshStandardMaterial({
+            color: 0x8B5CF6, emissive: 0x7C3AED, emissiveIntensity: 0.6,
+            metalness: 0.3, roughness: 0.5
+          });
+          const eggMesh = new THREE.Mesh(eggGeo, eggMat);
+          eggMesh.castShadow = true;
+          eggMesh.position.y = 0.8;
+          eggGroup.add(eggMesh);
+          // Position egg ahead of player
+          const px = player.mesh ? player.mesh.position.x : 0;
+          const pz = player.mesh ? player.mesh.position.z : 0;
+          eggGroup.position.set(px + 8, 0, pz + 8);
+          eggGroup.userData.isMysteriousEgg = true;
+          scene.add(eggGroup);
+          window._mysteriousEggObject = eggGroup;
+          createFloatingText("🥚 A Mysterious Egg appeared!", eggGroup.position, '#8B5CF6');
+          showStatChange('🥚 A Mysterious Egg appeared nearby! Go pick it up!');
+        } catch(e) {
+          console.error('[Quest] Failed to spawn egg:', e);
+        }
+      }
+      
       // Wrap synchronous pre-modal operations in try-catch so that any unexpected
       // exception cannot prevent the level-up setTimeouts from being registered,
       // which would otherwise leave the game permanently frozen.

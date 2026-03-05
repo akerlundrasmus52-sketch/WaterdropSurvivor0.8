@@ -3199,11 +3199,33 @@
           } else if (tq && tq.currentQuest) {
             var currentQ = (typeof getCurrentQuest === 'function') ? getCurrentQuest() : null;
             if (currentQ) {
-              // Show gathering reminder if first gather not done
-              if (sd && !sd.gatheringProgress) sd.gatheringProgress = {};
-              var gp = sd && sd.gatheringProgress;
-              var res = sd && sd.resources;
-              if (gp && !gp.firstGatherDone && (currentQ.id === 'questForge0_unlock' || currentQ.id === 'questForge0b_craftTools')) {
+              // Context-aware hints for the new slow-burn quest chain
+              if (currentQ.id === 'quest_dailyRoutine') {
+                _showBennySpeech('Hey dude! 🌊\nSurvive 2 minutes\nin your next run\nto unlock daily rewards!');
+                setTimeout(function () { _hideBennySpeech(); }, 5000);
+              } else if (currentQ.id === 'quest_harvester') {
+                _showBennySpeech('Reach Level 5\nin a run to unlock\nthe Forge, dude! 🔨');
+                setTimeout(function () { _hideBennySpeech(); }, 5000);
+              } else if (currentQ.id === 'quest_firstBlood') {
+                var w = (sd.resources && sd.resources.wood) || 0;
+                var s = (sd.resources && sd.resources.stone) || 0;
+                _showBennySpeech('Gather resources!\n🪵 Wood: ' + w + '/30\n🪨 Stone: ' + s + '/30\nThen turn them in!');
+                setTimeout(function () { _hideBennySpeech(); }, 5000);
+              } else if (currentQ.id === 'quest_gainingStats') {
+                var kills = sd.totalKills || 0;
+                _showBennySpeech('Keep fighting!\n⚔️ ' + kills + '/300 kills\nThe Skill Tree\nawaits, dude! 🌳');
+                setTimeout(function () { _hideBennySpeech(); }, 5000);
+              } else if (currentQ.id === 'quest_eggHunt') {
+                _showBennySpeech('Reach Level 15 and\nfind the Mysterious\nEgg out there! 🥚');
+                setTimeout(function () { _hideBennySpeech(); }, 5000);
+              } else if (currentQ.id === 'quest_newFriend') {
+                _showBennySpeech('You found the egg!\nClaim your quest\nat the Main Building\nto hatch it! 🐣');
+                setTimeout(function () { _hideBennySpeech(); }, 5000);
+              } else if (currentQ.id === 'quest_pushingLimits') {
+                _showBennySpeech('Defeat the Boss\nat Wave 10 to\nunlock Special Attacks\nand the Warehouse! 🏆');
+                setTimeout(function () { _hideBennySpeech(); }, 5000);
+              } else if (currentQ.id === 'questForge0_unlock' || currentQ.id === 'questForge0b_craftTools') {
+                // Legacy forge quest hints
                 _showBennySpeech('Duude! Build the\nForge and craft\ntools to gather\nresources! 🔨');
                 setTimeout(function () { _hideBennySpeech(); }, 5000);
               } else {

@@ -2542,6 +2542,11 @@
         if (this.isMiniBoss) {
           playerStats.miniBossesDefeated++;
           createFloatingText("MINI-BOSS DEFEATED! 🏆", deathPos);
+          // Track first boss defeat for quest_pushingLimits
+          if (saveData.tutorialQuests && !saveData.tutorialQuests.firstBossDefeated) {
+            saveData.tutorialQuests.firstBossDefeated = true;
+            saveSaveData();
+          }
           // Clean up any surviving minions spawned with this mini-boss
           // Stagger deaths to prevent simultaneous death effect overload (freeze fix)
           let minionDelay = 0;

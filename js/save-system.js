@@ -25,6 +25,7 @@
       totalKills: 0, // Track cumulative kills for quest progression
       bestTime: 0,
       bestKills: 0,
+      gearTierLimit: 'rare', // Max gear tier before Prestige (common/uncommon/rare only)
       upgrades: {
         maxHp: 0,
         hpRegen: 0,
@@ -228,6 +229,8 @@
         secondRunCompleted: false, // For achievements building unlock
         killsThisRun: 0, // Track kills per run (reset on new run)
         survivalTimeThisRun: 0, // Track survival time per run
+        mysteriousEggFound: false, // quest_eggHunt: found the egg during a run
+        firstBossDefeated: false, // quest_pushingLimits: defeated boss at wave 10
         stonengengeChestFound: false, // Quest 6 specific
         landmarksFound: {          // Track landmarks found for quest11_findAllLandmarks
           stonehenge: false,
@@ -478,6 +481,45 @@
               }
             }
             saveData._questMigrationForge0 = true;
+          }
+
+          // ── Quest migration: Old quest chain → New slow-burn chain ──
+          // For fresh saves that haven't progressed past firstRunDeath,
+          // redirect to the new chain (quest_dailyRoutine).
+          // Existing saves deep in the old chain keep their progress.
+          if (!saveData._questMigrationSlowBurn) {
+            var tqSb = saveData.tutorialQuests;
+            if (tqSb) {
+              // Initialize new quest tracking fields
+              if (tqSb.mysteriousEggFound === undefined) tqSb.mysteriousEggFound = false;
+              if (tqSb.firstBossDefeated === undefined) tqSb.firstBossDefeated = false;
+              
+              // If current quest is the old forge unlock chain (not yet started on new chain),
+              // and firstRunDeath is done, redirect to new chain
+              var oldEarlyQuests = ['questForge0_unlock', 'questForge0b_craftTools'];
+              if (tqSb.currentQuest && oldEarlyQuests.indexOf(tqSb.currentQuest) !== -1) {
+                // Check if player hasn't claimed any old chain quests beyond firstRunDeath
+                var completed = tqSb.completedQuests || [];
+                var hasOldProgress = completed.indexOf('quest1_kill3') !== -1 ||
+                                     completed.indexOf('quest2_spendSkills') !== -1;
+                if (!hasOldProgress) {
+                  // Safe to redirect to new chain
+                  tqSb.currentQuest = 'quest_dailyRoutine';
+                  // Remove old quests from readyToClaim
+                  var rtcSb = tqSb.readyToClaim || [];
+                  oldEarlyQuests.forEach(function(q) {
+                    var idx = rtcSb.indexOf(q);
+                    if (idx !== -1) rtcSb.splice(idx, 1);
+                  });
+                }
+              }
+              
+              // Ensure gear tier restriction flag exists
+              if (saveData.gearTierLimit === undefined) {
+                saveData.gearTierLimit = 'rare'; // Max tier before prestige
+              }
+            }
+            saveData._questMigrationSlowBurn = true;
           }
         }
       } catch (e) {
@@ -1647,6 +1689,16 @@
       else if (rarityRoll < 0.90) rarity = 'rare';
       else if (rarityRoll < 0.98) rarity = 'epic';
       else rarity = 'legendary';
+      
+      // Gear tier restriction: before Prestige, cap at 'rare'
+      if (saveData.gearTierLimit === 'rare' && !saveData.hasPrestiged) {
+        const tierOrder = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
+        const limitIdx = tierOrder.indexOf(saveData.gearTierLimit);
+        const rarityIdx = tierOrder.indexOf(rarity);
+        if (rarityIdx > limitIdx) {
+          rarity = saveData.gearTierLimit;
+        }
+      }
       
       // Choose random gear type from all 6 slots
       const types = ['weapon', 'armor', 'helmet', 'boots', 'ring', 'amulet'];

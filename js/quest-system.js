@@ -290,70 +290,74 @@
       saveData.storyQuests.questNotifications.questMission = false;
       saveSaveData();
       
-      // Activate questForge0_unlock or quest1 the first time player enters Main Building after first run
+      // Activate new quest chain: quest_dailyRoutine after first death
       // Don't activate new quests if a building is pending construction
       if (
         !saveData.tutorialQuests.pendingBuildQuest &&
         saveData.tutorialQuests.firstDeathShown &&
         isQuestClaimed('firstRunDeath') &&
         !saveData.tutorialQuests.currentQuest &&
-        !isQuestClaimed('questForge0_unlock') &&
-        !saveData.tutorialQuests.readyToClaim.includes('questForge0_unlock') &&
-        !isQuestClaimed('quest1_kill3')
+        !isQuestClaimed('quest_dailyRoutine') &&
+        !saveData.tutorialQuests.readyToClaim.includes('quest_dailyRoutine')
       ) {
-        // Start forge unlock quest first
-        if (checkQuestConditions('questForge0_unlock')) {
-          saveData.tutorialQuests.currentQuest = 'questForge0_unlock';
-          // Mark ready to claim immediately — this quest is claimed at Quest Hall
-          if (!saveData.tutorialQuests.readyToClaim.includes('questForge0_unlock')) {
-            saveData.tutorialQuests.readyToClaim.push('questForge0_unlock');
-          }
+        // Start daily routine quest
+        if (checkQuestConditions('quest_dailyRoutine')) {
+          saveData.tutorialQuests.currentQuest = 'quest_dailyRoutine';
           saveSaveData();
           showComicInfoBox(
-            '🔨 UNLOCK THE FORGE',
+            '⏰ DAILY ROUTINE',
             `<div style="text-align: left; padding: 10px;">
-              <p style="font-family: 'Bangers', cursive; font-size: 20px; margin-bottom: 10px;">🔨 QUEST: UNLOCK THE FORGE</p>
+              <p style="font-family: 'Bangers', cursive; font-size: 20px; margin-bottom: 10px;">⏰ QUEST: DAILY ROUTINE</p>
               <p style="line-height: 1.8; margin-bottom: 10px;">
-                Welcome back, Droplet! Before you can gather resources, you need the right tools.<br><br>
-                <b>YOUR MISSION:</b> Build the <b>Forge</b> in your camp!<br>
-                You'll receive <b>starter materials</b> to craft your first harvesting tools:<br>
-                &nbsp;🪵 <b>10 Wood</b> · 🪨 <b>10 Stone</b> · 🖤 <b>10 Coal</b><br>
-                &nbsp;⚙️ <b>3 Iron</b> · 🧶 <b>3 Leather</b><br><br>
-                Then use the Forge to craft tools for gathering!
+                Welcome back, Droplet! It's time to prove you can survive out there.<br><br>
+                <b>YOUR MISSION:</b> Survive for <b>2 minutes</b> in a single run.<br><br>
+                When you complete this quest, you'll unlock the <b>Account Building</b> where you can track your daily rewards and stats!<br>
+                Plus, you'll get a <b>Free Spin</b> on the Spin Wheel!
               </p>
-              <p style="font-size: 13px; color: #FFD700;">Reward: +75 Gold · +1 Skill Point · Starter Materials</p>
-            </div>`,
-            'UNLOCK THE FORGE!'
-          );
-        }
-      } else if (
-        // Original quest1 activation: for existing saves that already have firstRunDeath claimed
-        !saveData.tutorialQuests.pendingBuildQuest &&
-        saveData.tutorialQuests.firstDeathShown &&
-        isQuestClaimed('firstRunDeath') &&
-        (isQuestClaimed('questForge0_unlock') || isQuestClaimed('questForge0b_craftTools') || !checkQuestConditions('questForge0_unlock')) &&
-        !saveData.tutorialQuests.currentQuest &&
-        !isQuestClaimed('quest1_kill3') &&
-        !saveData.tutorialQuests.readyToClaim.includes('quest1_kill3')
-      ) {
-        if (checkQuestConditions('quest1_kill3')) {
-          saveData.tutorialQuests.currentQuest = 'quest1_kill3';
-          saveSaveData();
-          // Show text magazine explaining the first quest (synchronous after save)
-          showComicInfoBox(
-            '📋 MISSION BRIEFING',
-            `<div style="text-align: left; padding: 10px;">
-              <p style="font-family: 'Bangers', cursive; font-size: 20px; margin-bottom: 10px;">🎯 QUEST 1: COMBAT READINESS</p>
-              <p style="line-height: 1.8; margin-bottom: 10px;">
-                Welcome back, Droplet. You survived your first encounter — now it's time to prove yourself.<br><br>
-                <b>YOUR MISSION:</b> Head back out and eliminate <b>3 enemies</b> in a single run.<br><br>
-                Once you achieve 3 kills, return here to claim your reward and unlock new camp upgrades.
-              </p>
-              <p style="font-size: 13px; color: #FFD700;">Reward: +50 Gold · +3 Skill Points · Skill Tree Unlocked</p>
+              <p style="font-size: 13px; color: #FFD700;">Reward: +100 Gold · +1 Skill Point · Account Building · 1 Free Spin</p>
             </div>`,
             'ACCEPT MISSION!'
           );
         }
+      } else if (
+        // Legacy quest activation: for existing saves that already have firstRunDeath claimed
+        // and need the old forge unlock chain
+        !saveData.tutorialQuests.pendingBuildQuest &&
+        saveData.tutorialQuests.firstDeathShown &&
+        isQuestClaimed('firstRunDeath') &&
+        !saveData.tutorialQuests.currentQuest &&
+        !isQuestClaimed('quest_dailyRoutine') &&
+        !isQuestClaimed('questForge0_unlock') &&
+        !saveData.tutorialQuests.readyToClaim.includes('questForge0_unlock') &&
+        !isQuestClaimed('quest1_kill3') &&
+        // Check if this save was on the old chain (has old quests completed)
+        (isQuestClaimed('questForge0_unlock') || isQuestClaimed('questForge0b_craftTools'))
+      ) {
+        if (checkQuestConditions('quest1_kill3') && !isQuestClaimed('quest1_kill3')) {
+          saveData.tutorialQuests.currentQuest = 'quest1_kill3';
+          saveSaveData();
+          showComicInfoBox(
+            '📋 MISSION BRIEFING',
+            `<div style="text-align: left; padding: 10px;">
+              <p style="font-family: 'Bangers', cursive; font-size: 20px; margin-bottom: 10px;">🎯 QUEST: COMBAT READINESS</p>
+              <p style="line-height: 1.8; margin-bottom: 10px;">
+                Welcome back, Droplet. You survived your first encounter — now it's time to prove yourself.<br><br>
+                <b>YOUR MISSION:</b> Head back out and eliminate <b>3 enemies</b> in a single run.
+              </p>
+              <p style="font-size: 13px; color: #FFD700;">Reward: +50 Gold · +3 Skill Points</p>
+            </div>`,
+            'ACCEPT MISSION!'
+          );
+        }
+      }
+      
+      // Auto-complete quest_newFriend when visiting Quest Hall with the egg
+      if (
+        saveData.tutorialQuests.currentQuest === 'quest_newFriend' &&
+        isQuestClaimed('quest_eggHunt') &&
+        !saveData.tutorialQuests.readyToClaim.includes('quest_newFriend')
+      ) {
+        progressTutorialQuest('quest_newFriend', true);
       }
       
       // Fallback: if questForge0_unlock is the active quest but not yet in readyToClaim
