@@ -573,10 +573,18 @@
       // Start New Run button handler
       const startRunBtn = panel.querySelector('.start-run-btn');
       if (startRunBtn) {
-        startRunBtn.onclick = () => {
-          document.body.removeChild(overlay);
-          startGame();
-        };
+        // Quest Notification Lock: disable Start Run if quests are still ready to claim
+        if (saveData.tutorialQuests && saveData.tutorialQuests.readyToClaim && saveData.tutorialQuests.readyToClaim.length > 0) {
+          startRunBtn.disabled = true;
+          startRunBtn.textContent = '📜 Claim Quest First';
+          startRunBtn.style.background = '#555';
+          startRunBtn.style.cursor = 'not-allowed';
+        } else {
+          startRunBtn.onclick = () => {
+            document.body.removeChild(overlay);
+            startGame();
+          };
+        }
       }
 
       // Shared close handler for quest hall

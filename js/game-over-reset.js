@@ -103,9 +103,10 @@
         if (currentQuest.id === 'quest_harvester' && playerStats.lvl >= 5) {
           progressTutorialQuest('quest_harvester', true);
         }
-        // Step 4: First Blood — Have 30 Wood and 30 Stone (resource check)
+        // Step 4: First Blood — Have 30 Wood and 30 Stone gathered across runs
         if (currentQuest.id === 'quest_firstBlood') {
-          const r = saveData.resources || {};
+          if (!saveData.resources) saveData.resources = {};
+          const r = saveData.resources;
           if ((r.wood || 0) >= 30 && (r.stone || 0) >= 30) {
             progressTutorialQuest('quest_firstBlood', true);
           }
