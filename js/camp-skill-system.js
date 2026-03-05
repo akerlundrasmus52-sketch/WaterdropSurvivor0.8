@@ -1041,6 +1041,116 @@
       }
     };
 
+    // ─────────────────────────────────────────────────────────────────────────────
+    // MUTATIONS — Meta-progression synergy layer unlocked after quest_pushingLimits.
+    // Investing in two complementary skill paths activates a hidden "Mutation" passive.
+    // ─────────────────────────────────────────────────────────────────────────────
+    const MUTATIONS = {
+      flameDash: {
+        id: 'flameDash',
+        name: '🔥 Flame Dash',
+        description: 'SYNERGY: Fire + Speed. Your dash leaves a burning trail that deals 40 damage/s for 2s.',
+        requires: { anyFire: 1, anySpeed: 1 },
+        tooltip: 'Requires: any Fire skill ≥ 1 AND any Speed/Dash skill ≥ 1',
+        bonus: (level) => ({ flameDash: true, flameDashDmg: 40 * level, flameDashDuration: 2 })
+      },
+      chainLightningCrit: {
+        id: 'chainLightningCrit',
+        name: '⚡ Arc Cascade',
+        description: 'SYNERGY: Crit + Lightning. Critical hits have a 25% chance to chain lightning to 2 nearby enemies.',
+        requires: { anyCrit: 2, anyLightning: 1 },
+        tooltip: 'Requires: any Crit skill ≥ 2 AND any Lightning skill ≥ 1',
+        bonus: (level) => ({ critChainLightning: 0.25 * level, critChainCount: 2 })
+      },
+      bloodPact: {
+        id: 'bloodPact',
+        name: '🩸 Blood Pact',
+        description: 'SYNERGY: Lifesteal + Armor. Each kill restores 3% of max HP and grants +2 temporary armor (stacks 10x).',
+        requires: { anyLifesteal: 1, anyArmor: 1 },
+        tooltip: 'Requires: any Lifesteal/Heal-on-kill skill ≥ 1 AND any Armor skill ≥ 1',
+        bonus: (level) => ({ lifestealPercent: 0.03 * level, killArmorStack: 2 * level, killArmorMax: 10 })
+      },
+      shadowBurst: {
+        id: 'shadowBurst',
+        name: '🌑 Shadow Burst',
+        description: 'SYNERGY: Dash + Execute. After a kill, your next dash deals 200% weapon damage in an area.',
+        requires: { anyDash: 2, anyExecute: 1 },
+        tooltip: 'Requires: any Dash skill ≥ 2 AND any Execute skill ≥ 1',
+        bonus: (level) => ({ shadowBurst: true, shadowBurstMult: 2.0 * level })
+      },
+      frostVeil: {
+        id: 'frostVeil',
+        name: '❄️ Frost Veil',
+        description: 'SYNERGY: Ice + Defense. Taking damage has 30% chance to emit a frost nova that slows enemies 60% for 1.5s.',
+        requires: { anyIce: 1, anyDefense: 1 },
+        tooltip: 'Requires: any Ice skill ≥ 1 AND any Defense/HP skill ≥ 1',
+        bonus: (level) => ({ frostVeil: true, frostNovaPct: 0.30 * level, frostNovaSlow: 0.60 })
+      }
+    };
+
+    /**
+     * Evaluate which mutations are active for the current skill tree state.
+     * Returns an object { mutationId: true } for each active mutation.
+     */
+    function getActiveMutations() {
+      if (!saveData.skillTree) return {};
+      const st = saveData.skillTree;
+      const active = {};
+
+      // Helper: safely read a skill level from the save tree
+      function _sl(name) { return (st[name] && st[name].level) || 0; }
+
+      // Aggregated sums per category
+      const fireTotal      = _sl('fireAura')       + _sl('infernoRing');
+      const speedTotal     = _sl('bladeDancer')    + _sl('dash')        + _sl('dashMaster');
+      const critTotal      = _sl('criticalFocus')  + _sl('headshot');
+      const lightningTotal = _sl('stormcaller')    + _sl('lightningStrike');
+      const lifestealTotal = _sl('bloodlust')      + _sl('vampiricAura');
+      const armorTotal     = _sl('ironSkin')       + _sl('fortify')     + _sl('bodyArmor');
+      const dashTotal      = _sl('dash')           + _sl('dashMaster');
+      const executeTotal   = _sl('executioner')    + _sl('meleeTakedown');
+      const iceTotal       = _sl('coldSnap')       + _sl('iceAura');
+      const defenseTotal   = _sl('ironSkin')       + _sl('fortify')     + _sl('secondWind');
+
+      if (fireTotal >= 1 && speedTotal >= 1) active.flameDash = true;
+      if (critTotal >= 2 && lightningTotal >= 1) active.chainLightningCrit = true;
+      if (lifestealTotal >= 1 && armorTotal >= 1) active.bloodPact = true;
+      if (dashTotal >= 2 && executeTotal >= 1) active.shadowBurst = true;
+      if (iceTotal >= 1 && defenseTotal >= 1) active.frostVeil = true;
+
+      return active;
+    }
+
+    /** Apply active mutation bonuses on top of skill-tree bonuses. */
+    function applyMutationBonuses() {
+      const active = getActiveMutations();
+      if (!saveData.mutations) saveData.mutations = {};
+      // Record which mutations fired this session for UI display
+      saveData.mutations._active = active;
+
+      for (const mutId in active) {
+        const mut = MUTATIONS[mutId];
+        if (!mut) continue;
+        const bonus = mut.bonus(1);
+        if (bonus.flameDash)              playerStats.flameDash          = true;
+        if (bonus.flameDashDmg)           playerStats.flameDashDmg       = bonus.flameDashDmg;
+        if (bonus.critChainLightning)     playerStats.critChainLightning = (playerStats.critChainLightning || 0) + bonus.critChainLightning;
+        if (bonus.critChainCount)         playerStats.critChainCount     = bonus.critChainCount;
+        if (bonus.lifestealPercent)       playerStats.lifestealPercent   = (playerStats.lifestealPercent || 0) + bonus.lifestealPercent;
+        if (bonus.killArmorStack)         playerStats.killArmorStack     = bonus.killArmorStack;
+        if (bonus.killArmorMax)           playerStats.killArmorMax       = bonus.killArmorMax;
+        if (bonus.shadowBurst)            playerStats.shadowBurst        = true;
+        if (bonus.shadowBurstMult)        playerStats.shadowBurstMult    = bonus.shadowBurstMult;
+        if (bonus.frostVeil)              playerStats.frostVeil          = true;
+        if (bonus.frostNovaPct)           playerStats.frostNovaPct       = bonus.frostNovaPct;
+      }
+    }
+
+    // Expose MUTATIONS and helpers globally
+    window.MUTATIONS             = MUTATIONS;
+    window.getActiveMutations    = getActiveMutations;
+    window.applyMutationBonuses  = applyMutationBonuses;
+
     /**
      * Apply all purchased SKILL_TREE bonuses to playerStats and the module-level
      * dash variables. Call this at the END of resetGame(), after base stats are set.
@@ -1136,6 +1246,9 @@
 
       // Mobility score = average of turnResponse bonuses (visual/feel metric)
       playerStats.mobilityScore = playerStats.turnResponse || 1.0;
+
+      // Apply active mutation synergy bonuses on top
+      if (typeof applyMutationBonuses === 'function') applyMutationBonuses();
     }
 
     function isDashUnlocked() {
@@ -1585,10 +1698,13 @@
         claim: 'Main Building',
         rewardGold: 75,
         rewardSkillPoints: 1,
-        rewardResources: { wood: 10, stone: 10 },
+        // Softlock fix: the forge is the first non-free building (builtCount=0 → cost=1 of each).
+        // Giving 20 of each guarantees the player can build it even if they spent some resources.
+        // quest2_spendSkills also provides 15 of each as an additional safety net.
+        rewardResources: { wood: 20, stone: 20, coal: 20 },
         unlockBuilding: 'forge',
         triggerOnDeath: true,
-        message: "🔨 <b>Forge Unlocked!</b> (Tool Crafting Only)<br><br>You received:<br>&nbsp;🪵 <b>10 Wood</b> · 🪨 <b>10 Stone</b><br><br>Benny says: <i>'Craft a Basic Axe and Basic Pickaxe so you can start gathering resources on the map, dude!'</i><br><br>🎯 <b>NEXT:</b> Gather <b>30 Wood</b> and <b>30 Stone</b> using your new tools!",
+        message: "🔨 <b>Forge Unlocked!</b> (Tool Crafting Only)<br><br>You received:<br>&nbsp;🪵 <b>20 Wood</b> · 🪨 <b>20 Stone</b> · 🖤 <b>20 Coal</b><br><br>Benny says: <i>'Dude! Walk up to the Forge plot and BUILD it — I stashed enough materials so you can get started right away, man! ✌️'</i><br><br>🎯 <b>NEXT:</b> Walk to the Forge plot in camp and build it!",
         nextQuest: 'quest_firstBlood',
         conditions: ['quest_dailyRoutine']
       },
@@ -1731,7 +1847,8 @@
         claim: 'Main Building',
         rewardGold: 100,
         rewardSkillPoints: 1,
-        message: "Skills unlocked! 🌟<br><br>Head to <b>Stonehenge</b> on the map — a glowing chest awaits you there with your first piece of gear!",
+        rewardResources: { wood: 15, stone: 15, coal: 15 },
+        message: "Skills unlocked! 🌟<br><br>You got extra building materials too — now walk up to any unlocked building plot and build it!<br><br>Head to <b>Stonehenge</b> on the map — a glowing chest awaits you there with your first piece of gear!",
         nextQuest: 'quest3_stonehengeGear',
         conditions: ['quest1_kill3']
       },
@@ -2696,12 +2813,29 @@
         saveSaveData();
 
         // Benny speech + 3D animation
+        // Per the building flow requirement:
+        //   1. Benny walks to the building plot
+        //   2. Benny shows dialog ("Here's your new <name>! Sick, right?")
+        //   3. ONLY after dialog is closed → building pops up (scale 0→1 bounce)
         if (window.CampWorld && window.CampWorld.isActive) {
-          window.CampWorld.bennyWalkToBuild(buildingId, 'Wao dude, you did it! 🔨 Let\'s go inside!');
-          setTimeout(function () {
-            window.CampWorld.refreshBuildings(saveData);
-            window.CampWorld.playBuildingUnlockAnimation(buildingId);
-          }, 1300);
+          window.CampWorld.refreshBuildings(saveData);
+          // Walk Benny to the building; the pop animation fires only after he arrives and dialog closes
+          var _bennyDialogText = 'Dude, it\'s beautiful! 🏛️ ' + buildingName + ' is all yours, man! ✌️';
+          if (window.CampWorld.bennyWalkToBuildThenDialog) {
+            window.CampWorld.bennyWalkToBuildThenDialog(buildingId, _bennyDialogText, function () {
+              // Dialog closed — NOW animate the building popping up
+              window.CampWorld.playBuildingUnlockAnimation(buildingId);
+              if (window.DopamineSystem && window.DopamineSystem.RewardJuice) {
+                window.DopamineSystem.RewardJuice.spawnConfetti();
+              }
+            });
+          } else {
+            // Fallback: original behaviour
+            window.CampWorld.bennyWalkToBuild(buildingId, _bennyDialogText);
+            setTimeout(function () {
+              window.CampWorld.playBuildingUnlockAnimation(buildingId);
+            }, 1500);
+          }
           // Show "Prepare for Next Building" reminder after celebration
           setTimeout(function () {
             if (window.CampWorld && window.CampWorld.isActive) {
@@ -2775,14 +2909,36 @@
       // Give resource rewards (wood, stone, coal) for building quests
       if (quest.rewardResources) {
         if (!saveData.resources) saveData.resources = {};
+        const flyItems = [];
         for (const [res, amt] of Object.entries(quest.rewardResources)) {
           saveData.resources[res] = (saveData.resources[res] || 0) + amt;
           showStatChange(`+${amt} ${res.charAt(0).toUpperCase() + res.slice(1)}!`);
+          const iconMap = { wood: '🪵', stone: '🪨', coal: '🖤', iron: '⚙️', leather: '🥩', crystal: '💎' };
+          flyItems.push({ icon: iconMap[res] || '📦', label: `+${amt} ${res}` });
+        }
+        // Animate resource icons flying into HUD
+        if (flyItems.length > 0 && window.DopamineSystem && window.DopamineSystem.RewardJuice) {
+          var _questPopupEl = document.getElementById('quest-popup') || document.getElementById('quest-reward-popup');
+          var _flyOrigin = _questPopupEl
+            ? { x: _questPopupEl.getBoundingClientRect().left + _questPopupEl.offsetWidth / 2,
+                y: _questPopupEl.getBoundingClientRect().top  + 40 }
+            : { x: window.innerWidth / 2, y: window.innerHeight * 0.35 };
+          window.DopamineSystem.RewardJuice.flyResourcesIn(flyItems, _flyOrigin);
         }
       }
       // Award account XP for completing a quest (50 XP per quest)
       addAccountXP(50);
       chatSystemMessage('🎁 Quest "' + quest.name + '" claimed! Rewards received.');
+
+      // Dopamine: spawn confetti + Benny contextual hint for next step
+      if (window.DopamineSystem && window.DopamineSystem.RewardJuice) {
+        window.DopamineSystem.RewardJuice.spawnConfetti(
+          document.getElementById('quest-hall-panel') || document.getElementById('quest-popup') || null
+        );
+      }
+      if (window.CampWorld && window.CampWorld.isActive && window.CampWorld.showBennyContextualHint) {
+        setTimeout(function () { window.CampWorld.showBennyContextualHint(); }, 1200);
+      }
       
       // Deduct resources on claim (e.g., quest_firstBlood turns in 30W/30S)
       if (quest.deductResources) {
