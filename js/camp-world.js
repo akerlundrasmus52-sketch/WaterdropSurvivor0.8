@@ -247,10 +247,10 @@
 
     // Central dirt circle (around campfire)
     const dirtGeo = new THREE.CircleGeometry(6, 32);
-    const dirtMat = new THREE.MeshLambertMaterial({ color: 0x3d2410 });
+    const dirtMat = new THREE.MeshLambertMaterial({ color: 0x3d2410, depthWrite: false });
     const dirt = new THREE.Mesh(dirtGeo, dirtMat);
     dirt.rotation.x = -Math.PI / 2;
-    dirt.position.y = 0.01;
+    dirt.position.y = 0.05;
     _campScene.add(dirt);
 
     // Stone ring around firepit

@@ -44,10 +44,12 @@
       console.log('[Init] Camera created OK');
 
       // Renderer
+      // logarithmicDepthBuffer: true prevents z-fighting on older mobile GPUs (e.g. Samsung S10)
       renderer = new THREE.WebGLRenderer({
         antialias: false,
         powerPreference: 'high-performance',
-        precision: 'mediump'
+        precision: 'mediump',
+        logarithmicDepthBuffer: true
       });
       renderer.setSize(window.innerWidth, window.innerHeight);
       // Split-resolution: render the 3D world at a reduced pixel ratio to boost FPS.
