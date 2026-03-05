@@ -1046,6 +1046,12 @@
       if (isGameActive && !isPaused) {
         checkLegendaryCigarQuest();
       }
+
+      // Milestone system tick
+      if (window.GameMilestones && isGameActive && !isPaused && !isGameOver) {
+        window.GameMilestones.tick(dt);
+        window.GameMilestones.checkMilestones();
+      }
       
       // QUEST 3: Check Stonehenge chest proximity
       if (window.stonehengeChest && 
