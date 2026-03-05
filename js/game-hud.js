@@ -29,7 +29,7 @@
       }
       
       const expPct = (playerStats.exp / playerStats.expReq) * 100;
-      // Update old EXP bar (hidden but keep for compatibility)
+      // Update EXP bar
       document.getElementById('exp-fill').style.width = `${Math.min(100, expPct)}%`;
       document.getElementById('exp-text').innerText = `EXP: ${Math.min(100, Math.ceil(expPct))}%`;
       
@@ -46,6 +46,9 @@
       const fillY = WATERDROP_FILL_TOP + WATERDROP_FILL_HEIGHT - fillHeight;
       waterdropFill.setAttribute('y', fillY);
       waterdropFill.setAttribute('height', fillHeight);
+
+      // Update unified rage bar in the top-left bar stack
+      _updateUnifiedRageBar();
       
       // Update minimap
       updateMinimap();
@@ -55,6 +58,37 @@
 
       // QUEST DIRECTION ARROW: Show animated directional arrow toward quest objective
       updateQuestArrow();
+    }
+
+    // Keep the unified rage bar in sync with the rage combat system
+    function _updateUnifiedRageBar() {
+      var rageFill = document.getElementById('rage-unified-fill');
+      var rageText = document.getElementById('rage-unified-text');
+      var rageContainer = document.getElementById('rage-bar-container');
+      if (!rageFill || !rageText || !rageContainer) return;
+
+      // Read rage values from the rage combat system (exposed on window)
+      var rc = window.GameRageCombat;
+      if (!rc) return;
+      var meter = rc.rageMeter || 0;
+      var isActive = rc.isRageActive || false;
+      var pct = Math.round(meter);
+      rageFill.style.width = pct + '%';
+
+      // Style based on state
+      rageContainer.classList.toggle('rage-bar-active', isActive);
+      rageContainer.classList.toggle('rage-bar-ready', !isActive && meter >= 80);
+
+      if (isActive) {
+        rageText.innerText = '🔥 RAGING!';
+        rageText.style.color = '#FFF';
+      } else if (meter >= 80) {
+        rageText.innerText = '⚡ RAGE: ' + pct + '%';
+        rageText.style.color = '#FFD700';
+      } else {
+        rageText.innerText = '⚡ RAGE: ' + pct + '%';
+        rageText.style.color = '#FF8800';
+      }
     }
 
     // Quest direction arrow: points toward current quest objective position

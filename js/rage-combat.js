@@ -493,30 +493,33 @@
     saContainer.innerHTML = '';
 
     const equipped = _getEquippedAttacks();
-    if (equipped.length === 0) {
-      const hint = document.createElement('div');
-      hint.style.cssText = 'color:#888;font-size:10px;padding:4px 8px;';
-      hint.textContent = '🔒 Unlock specials';
-      saContainer.appendChild(hint);
-      return;
-    }
 
-    equipped.forEach(sa => {
-      const unlocked = _isUnlocked(sa);
-      const btn = document.createElement('button');
-      btn.id = `sa-btn-${sa.id}`;
-      btn.className = 'special-attack-btn' + (unlocked ? '' : ' sa-locked');
-      btn.innerHTML = `<span class="sa-icon">${sa.icon}</span><span class="sa-name">${sa.name}</span><div class="sa-cooldown-overlay" id="sa-cd-${sa.id}"></div>`;
-      btn.title = unlocked ? sa.description : `🔒 Locked — unlock in Special Attacks building`;
-      // Use both click and touchstart to fix control conflict with joystick zone
-      btn.addEventListener('click', () => triggerSpecialAttack(sa.id));
-      btn.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        triggerSpecialAttack(sa.id);
-      }, { passive: false });
-      saContainer.appendChild(btn);
-    });
+    // Always show MAX_EQUIPPED_SPECIALS slots (filled or empty placeholder)
+    for (let i = 0; i < MAX_EQUIPPED_SPECIALS; i++) {
+      const sa = equipped[i];
+      if (sa) {
+        const unlocked = _isUnlocked(sa);
+        const btn = document.createElement('button');
+        btn.id = `sa-btn-${sa.id}`;
+        btn.className = 'special-attack-btn' + (unlocked ? '' : ' sa-locked');
+        btn.innerHTML = `<span class="sa-icon">${sa.icon}</span><span class="sa-name">${sa.name}</span><div class="sa-cooldown-overlay" id="sa-cd-${sa.id}"></div>`;
+        btn.title = unlocked ? sa.description : `🔒 Locked — unlock in Special Attacks building`;
+        btn.addEventListener('click', () => triggerSpecialAttack(sa.id));
+        btn.addEventListener('touchstart', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          triggerSpecialAttack(sa.id);
+        }, { passive: false });
+        saContainer.appendChild(btn);
+      } else {
+        // Empty placeholder slot matching the equipped icon frame
+        const empty = document.createElement('div');
+        empty.className = 'special-attack-btn ability-empty';
+        empty.innerHTML = `<span class="sa-icon">⬡</span><span class="sa-name">Empty</span>`;
+        empty.title = 'Empty slot — equip a special attack';
+        saContainer.appendChild(empty);
+      }
+    }
   }
 
   function _buildLoadoutPanel() {
@@ -856,9 +859,11 @@
   function setCombatHUDVisible(active) {
     const rageHud  = document.getElementById('rage-hud');
     const saHud    = document.getElementById('special-attacks-hud');
+    const rageBar  = document.getElementById('rage-bar-container');
     const dispVal  = active ? '' : 'none';
     if (rageHud)  rageHud.style.display  = dispVal;
     if (saHud)    saHud.style.display    = dispVal;
+    if (rageBar)  rageBar.style.display  = dispVal;
     // Close loadout panel when hiding
     if (!active) {
       const panel = document.getElementById('sa-loadout-panel');
