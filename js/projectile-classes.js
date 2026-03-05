@@ -335,32 +335,89 @@
           projectileGeometryCache.bullet, 
           projectileMaterialCache.bullet.clone()  // Clone material for independent color
         );
-        this.mesh.position.set(x, 0.5, z);
-        scene.add(this.mesh);
         
         // Add glowing trail effect with cloned material
         this.glow = new THREE.Mesh(
           projectileGeometryCache.bulletGlow, 
           projectileMaterialCache.bulletGlow.clone()  // Clone material for independent color
         );
-        this.glow.position.copy(this.mesh.position);
-        scene.add(this.glow);
 
         this.speed = 0.5; // Increased from 0.4 (25% faster)
-        this.active = true;
-        this.life = 60; // Frames
-        this.maxLife = 60; // Track max life for color transition
+        // active starts false; reinit() sets it true.  Pool createFn creates with no args so
+        // the projectile stays inactive until _spawnProjectile() calls reinit().
+        this.active = false;
+        this._usesInstancing = false;
+        this._isPooled = false; // Set true by the projectile pool's createFn
         
-        // Piercing support: track enemies already hit
+        // hitEnemies is allocated once per pool slot and cleared in reinit() — NOT recreated
+        // per shot.  This is intentional: creating it here (constructor) is the correct place
+        // so pooled objects always have a reusable Set.
         this.hitEnemies = new Set();
-        this.maxHits = (playerStats.pierceCount || 0) + 1; // Total enemies this bullet can hit (1 + pierce count)
+        this.maxHits = 1;
+
+        // Initialise immediately when coordinates are provided (non-pooled path)
+        if (x !== undefined) {
+          this.reinit(x, z, target);
+        }
+      }
+
+      /**
+       * (Re)initialise a projectile for a new shot.  Called by the pool helper
+       * _spawnProjectile() and also by the constructor when used directly.
+       * @param {number} x  - Start X world position
+       * @param {number} z  - Start Z world position
+       * @param {{x:number, z:number}} target - Direction target
+       * @returns {Projectile} this (for chaining)
+       */
+      reinit(x, z, target) {
+        this.active = true;
+        this.life = 60;
+        this.maxLife = 60;
+        this.hitEnemies.clear();
+        this.maxHits = (playerStats.pierceCount || 0) + 1;
+        // Reset per-shot flags so pooled objects don't carry stale state
+        this.isDoubleBarrel = false;
+        this.isDroneTurret = false;
+        this.isEnemyProjectile = false;
+        this.isBoomerang = false;
+        this.returnPhase = false;
+        this.isShuriken = false;
+        this.isFireball = false;
+        this.pierceCount = 0;
+        this.explosionRadius = 0;
+
+        // Reset mesh state
+        this.mesh.position.set(x, 0.5, z);
+        this.mesh.scale.set(1, 1, 1);
+        this.mesh.material.color.setHex(0xFF4500);
+        this.mesh.material.opacity = 0.95;
+        this.mesh.visible = true;
+
+        if (this.glow) {
+          this.glow.position.copy(this.mesh.position);
+          this.glow.material.opacity = 0.4;
+          this.glow.material.color.setHex(0xFF6347);
+          this.glow.visible = true;
+        }
+
+        // Determine rendering mode: instanced renderer handles the draw call,
+        // so the individual mesh must NOT be added to the scene as well.
+        if (window._instancedRenderer && window._instancedRenderer.active) {
+          this._usesInstancing = true;
+        } else {
+          this._usesInstancing = false;
+          scene.add(this.mesh);
+          if (this.glow) scene.add(this.glow);
+        }
 
         // Calculate direction
         const dx = target.x - x;
         const dz = target.z - z;
-        const dist = Math.sqrt(dx*dx + dz*dz);
+        const dist = Math.sqrt(dx * dx + dz * dz);
         this.vx = (dx / dist) * this.speed;
         this.vz = (dz / dist) * this.speed;
+
+        return this;
       }
 
       update() {
@@ -1183,18 +1240,17 @@
 
       destroy() {
         this.active = false;
-        scene.remove(this.mesh);
-        // Dispose cloned materials (not geometry, which is shared)
-        if (this.mesh.material) {
-          this.mesh.material.dispose();
-        }
-        
-        // Remove glow if it exists
-        if (this.glow) {
-          scene.remove(this.glow);
-          // Dispose cloned glow material
-          if (this.glow.material) {
-            this.glow.material.dispose();
+        this.mesh.visible = false;
+        if (this.glow) this.glow.visible = false;
+
+        if (!this._usesInstancing) {
+          scene.remove(this.mesh);
+          if (this.glow) scene.remove(this.glow);
+          // Dispose cloned materials only for non-pooled projectiles.
+          // Pooled projectiles keep their mesh/material alive for reuse.
+          if (!this._isPooled) {
+            if (this.mesh.material) this.mesh.material.dispose();
+            if (this.glow && this.glow.material) this.glow.material.dispose();
           }
         }
       }

@@ -82,7 +82,14 @@
         this._glowRingMat = glowRingMat;
         this.mesh.add(glowRingMesh);
 
-        scene.add(this.mesh);
+        // Use instanced rendering when available — avoids adding a separate mesh to the scene
+        // for every gem, which would cause double-rendering with the InstancedMesh batch.
+        if (window._instancedRenderer && window._instancedRenderer.active) {
+          this._usesInstancing = true;
+        } else {
+          this._usesInstancing = false;
+          scene.add(this.mesh);
+        }
 
         this.active = true;
 
@@ -195,7 +202,7 @@
         document.body.appendChild(flash);
         setTimeout(() => flash.remove(), 100);
         
-        scene.remove(this.mesh);
+        if (!this._usesInstancing) scene.remove(this.mesh);
         // Geometry is shared across all ExpGem instances - do not dispose it
         this.mesh.material.dispose(); // Only dispose the per-instance cloned material
         if (this._outlineMat) this._outlineMat.dispose(); // Dispose per-instance outline material
