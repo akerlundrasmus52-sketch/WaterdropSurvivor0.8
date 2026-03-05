@@ -996,10 +996,16 @@
                 const pinnedMesh = this.mesh.clone();
                 // Convert projectile world-space position into the enemy's local space
                 const localPos = enemy.mesh.worldToLocal(this.mesh.position.clone());
-                // Vary penetration depth: arrows go deeper, shurikens lodge at surface
-                const depthOffset = this.isBow
-                  ? (Math.random() < 0.35 ? 0.0 : 0.3)  // 35% chance tip pokes out back
-                  : 0.45;                                 // shuriken lodges near surface
+                // Vary penetration depth: arrows go deeper (sometimes tip pokes through),
+                // shurikens lodge near the surface.
+                let depthOffset;
+                if (this.isBow) {
+                  // 35% chance the tip exits the other side (full penetration); otherwise half-in
+                  depthOffset = Math.random() < 0.35 ? 0.0 : 0.3;
+                } else {
+                  // Shuriken: lodges at the surface
+                  depthOffset = 0.45;
+                }
                 localPos.x += (Math.random() - 0.5) * 0.15;
                 localPos.y += (Math.random() - 0.5) * 0.2;
                 // Align the pinned mesh along the projectile travel direction

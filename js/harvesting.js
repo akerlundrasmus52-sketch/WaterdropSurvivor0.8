@@ -173,6 +173,9 @@
   const harvestNodes = [];          // active resource nodes in the world
   const HARVEST_RANGE = 3.0;       // distance in world-units to trigger harvest
   const HARVEST_COOLDOWN_MS = 1500; // ms between harvest ticks per node
+  // Fraction of a node's visual radius used as its solid collision boundary.
+  // Set below 1.0 so the visual mesh and the collision wall feel generous but not unfair.
+  const NODE_COLLISION_RADIUS_SCALE = 0.6;
 
   // Active swing animation state
   let _swingAnim = null; // { toolId, endTime, nodeRef }
@@ -700,9 +703,9 @@
   function recycleToMetal(weaponId, metalYield) {
     const res = _getResources();
     if (!res) return false;
-    const yield_ = Math.max(1, Math.floor(metalYield || 1));
-    res.metal = (res.metal || 0) + yield_;
-    _showCollectionNotification('metal', yield_);
+    const recycleYield = Math.max(1, Math.floor(metalYield || 1));
+    res.metal = (res.metal || 0) + recycleYield;
+    _showCollectionNotification('metal', recycleYield);
     _updateHUD();
     return true;
   }
@@ -958,8 +961,7 @@
       if (node.depleted || !node.mesh || !node.mesh.visible) continue;
       const def = NODE_DEFS[node.type];
       if (!def) continue;
-      // Use a slightly smaller node collision radius to avoid harsh walls on small nodes
-      const nodeR = def.radius * 0.6;
+      const nodeR = def.radius * NODE_COLLISION_RADIUS_SCALE;
       const combined = pr + nodeR;
       const dx = pos.x - node.mesh.position.x;
       const dz = pos.z - node.mesh.position.z;

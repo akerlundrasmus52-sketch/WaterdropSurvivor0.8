@@ -986,6 +986,10 @@
     }
   }
 
+  // How much pressure drops per pump in emitArterialSpurt.
+  // 0.12 → first 8 pumps range from 1.0 down to 0.16 (realistic heartbeat decay).
+  const ARTERIAL_PRESSURE_DECAY_RATE = 0.12;
+
   /**
    * Arterial spurt — continuous high-pressure jets of blood pumping from a
    * wound on a heavily damaged or dying enemy. Shoots narrow streams in a
@@ -1021,7 +1025,7 @@
       setTimeout(() => {
         if (!_scene) return;
         // Pressure decays with each pulse — realistic heartbeat pumping effect
-        const pressure = Math.max(0.10, 1 - p * 0.12) * intensity;
+        const pressure = Math.max(0.10, 1 - p * ARTERIAL_PRESSURE_DECAY_RATE) * intensity;
         const count    = Math.ceil(perPulse * pressure);
         for (let i = 0; i < count; i++) {
           const t    = Math.random();
