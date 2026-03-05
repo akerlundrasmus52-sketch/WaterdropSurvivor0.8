@@ -442,7 +442,7 @@
           // false.  Set it to built so players can access inventory without a quest.
           if (!saveData._buildingMigrationV5) {
             var bldInv = saveData.campBuildings && saveData.campBuildings.inventory;
-            if (bldInv) {
+            if (bldInv && bldInv.level === 0) {
               bldInv.level = 1;
               bldInv.unlocked = true;
             }
