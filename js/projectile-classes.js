@@ -528,6 +528,8 @@
               // so die() triggers with correct damageType for headshot death animation
               enemy.hp = 1;
               enemy.takeDamage(9999, true, 'headshot');
+              // Hit-stop: headshots deserve the longest freeze
+              if (window.triggerHitStop) window.triggerHitStop(80);
               
               // Create floating HEADSHOT text - THINNER FONT
               const div = document.createElement('div');
@@ -581,6 +583,8 @@
               dmg *= playerStats.critDmg;
               const critDmgType = this.isDroneTurret ? 'drone' : (this.isDoubleBarrel ? 'doubleBarrel' : 'gun');
               enemy.takeDamage(Math.floor(dmg), isCrit, critDmgType);
+              // Hit-stop: critical hits get a short freeze for impact weight
+              if (window.triggerHitStop) window.triggerHitStop(55);
               
               // FRESH: Critical hit effects - gold particles, brief light flash
               spawnParticles(enemy.mesh.position, 0xFFD700, 15); // Gold particles

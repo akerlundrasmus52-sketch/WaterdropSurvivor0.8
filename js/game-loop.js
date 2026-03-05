@@ -77,6 +77,26 @@
       }
     }
 
+    // ─── Hit-Stop (Micro-Freeze) ────────────────────────────────────────────────────
+    // Instantly freezes time for a short window (50–80 ms) to add weight to heavy blows.
+    // Uses DopamineSystem.TimeDilation.snap(0) for an immediate freeze then lerps back.
+    let _hitStopUntilMs = 0; // timestamp (ms) when the hit-stop ends
+
+    /**
+     * Trigger a hit-stop (micro-freeze).
+     * @param {number} durationMs - Freeze duration in milliseconds (recommended 50–80).
+     */
+    function triggerHitStop(durationMs) {
+      if (!window.DopamineSystem || !window.DopamineSystem.TimeDilation) return;
+      const nowMs = typeof performance !== 'undefined' ? performance.now() : Date.now();
+      // Don't stack — only extend if a new hit-stop is longer
+      if (nowMs + durationMs <= _hitStopUntilMs) return;
+      _hitStopUntilMs = nowMs + durationMs;
+      window.DopamineSystem.TimeDilation.snap(0);
+    }
+    // Expose globally so projectile-classes.js and enemy-class.js can call it
+    window.triggerHitStop = triggerHitStop;
+
     // ─── Muzzle Flash PointLight Pool ──────────────────────────────────────────────
     // Pre-allocate 3 reusable PointLights instead of creating new ones every shot.
     // This eliminates GPU shader recompilations that caused FPS drops during combat.
@@ -493,6 +513,14 @@
       // Guard against NaN or negative dt (e.g. from tab-switch timing jitter)
       // which could propagate NaN into physics positions and permanently break the loop.
       if (!isFinite(dt) || dt <= 0) dt = 0.016; // fallback to ~60fps frame
+
+      // Hit-stop recovery — once the freeze window expires, snap time back to normal
+      if (_hitStopUntilMs > 0 && time >= _hitStopUntilMs) {
+        _hitStopUntilMs = 0;
+        if (window.DopamineSystem && window.DopamineSystem.TimeDilation) {
+          window.DopamineSystem.TimeDilation.set(1.0, 8); // fast lerp back to normal
+        }
+      }
 
       // Time dilation — DopamineSystem scales dt for slow-motion effects
       if (window.DopamineSystem && window.DopamineSystem.TimeDilation) {
@@ -1826,6 +1854,16 @@
                   _tmpKnockback.set(e.mesh.position.x - missileGroup.position.x, 0, e.mesh.position.z - missileGroup.position.z).normalize();
                   e.mesh.position.x += _tmpKnockback.x * 2.5;
                   e.mesh.position.z += _tmpKnockback.z * 2.5;
+                  // Knockback Domino: give this enemy a slide so the domino logic in
+                  // enemy-class.js can chain-collide with other nearby enemies
+                  e._shotgunSlide = {
+                    vx: _tmpKnockback.x * 0.45,
+                    vz: _tmpKnockback.z * 0.45,
+                    frames: 14,
+                    frame: 0
+                  };
+                  // Hit-stop: heavy missile impact deserves a brief freeze
+                  triggerHitStop(70);
                   scene.remove(missileGroup);
                   // Don't dispose shared cached geometries/materials
                   return false;

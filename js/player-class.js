@@ -334,6 +334,10 @@
         this.prevVelDir = new THREE.Vector3(); // previous velocity direction for direction-change detection
         this.postDashSquish = 0;  // timer for post-dash bounce
         this.wasMoving = false;   // used to detect stopping transition for squish
+        this._prevSpeedMag = 0;   // speed magnitude from the previous frame (for stop-wobble amplitude)
+        // Dedicated stopping-wobble state for a properly damped sine-wave water-settling effect
+        this._stopWobbleTimer   = 0; // elapsed time since stop (seconds)
+        this._stopWobbleInitAmp = 0; // initial amplitude at moment of stop (0–1)
         // Movement feel: lean, bank, slide
         this.prevMoveAngle = 0;     // previous movement direction angle
         this.angularVelocity = 0;   // rate of turn (rad/sec)
@@ -343,6 +347,8 @@
         
         // Phase 5: Low health water bleed timer
         this.waterBleedTimer = 0;
+        // Low HP boil state — rapid scale/color pulse when HP < 25%
+        this._lowHpBoilTime = 0;
         
         // Dash
         this.isDashing = false;
@@ -394,6 +400,36 @@
             if (Math.random() < 0.5) {
               spawnParticles(this.mesh.position, COLORS.player, 1);
             }
+          }
+        }
+
+        // Low-HP boil: when HP < 25%, rapidly pulse scale and tint the mesh red
+        // to visually communicate imminent death ("boiling water drop").
+        // LOW_HP_BOIL_THRESHOLD = 0.25 (matches the 25% danger zone)
+        if (healthPercent < 0.25 && healthPercent > 0) {
+          this._lowHpBoilTime += dt;
+          // Boil frequency ramps from 12 Hz (at 25 % HP) to 20 Hz (at 0 % HP)
+          const boilDanger = (0.25 - healthPercent) / 0.25; // 0→1 as HP drops to 0
+          const boilFreq   = 12 + boilDanger * 8; // 12–20 Hz
+          const boilAmp    = 0.06 + boilDanger * 0.08; // 6–14 % scale deviation
+          const boilPulse  = Math.sin(this._lowHpBoilTime * boilFreq * Math.PI * 2) * boilAmp;
+          // Additively applied on top of the existing spring-damper scale each frame
+          this.mesh.scale.y  *= (1 + boilPulse);
+          this.mesh.scale.x  *= (1 - boilPulse * 0.6);
+          this.mesh.scale.z  *= (1 - boilPulse * 0.6);
+          // Tint mesh toward red: R ramps 0.3→1.0, G fixed 0.2, B ramps 0.3→0.0
+          if (this.mesh.material && this.mesh.material.color) {
+            this.mesh.material.color.setRGB(
+              0.3 + boilDanger * 0.7, // R: near-normal tint → full red
+              0.2,                     // G: slight blue-green dampened
+              0.3 - boilDanger * 0.3   // B: fades out as danger peaks
+            );
+          }
+        } else if (this._lowHpBoilTime > 0) {
+          // Fade boil state — reset timer and restore normal colour
+          this._lowHpBoilTime = 0;
+          if (this.mesh.material && this.mesh.material.color) {
+            this.mesh.material.color.setHex(COLORS.player);
           }
         }
         
@@ -811,8 +847,14 @@
         if (this.wasMoving && speedMag < 0.02 && !this.isDashing) {
           this.postDashSquish = Math.max(this.postDashSquish, 0.7);
           this.wobbleIntensity = Math.min(1, this.wobbleIntensity + 0.5);
+          // Kick off dedicated stopping-wobble — amplitude scales with pre-stop speed
+          this._stopWobbleInitAmp = Math.min(0.55, 0.2 + this._prevSpeedMag * 2.0);
+          this._stopWobbleTimer = 0;
         }
+        this._prevSpeedMag = speedMag;
         this.wasMoving = speedMag > 0.02;
+        // Advance stopping-wobble timer only when an active wobble is running
+        if (this._stopWobbleInitAmp > 0) this._stopWobbleTimer += dt2;
 
         // Post-dash / post-stop squish bounce timer
         if (!this.isDashing && this.postDashSquish > 0) {
@@ -842,12 +884,25 @@
           const bounce = Math.sin(this.postDashSquish * Math.PI * 3.0) * 0.45 * this.postDashSquish;
           targetScaleY = 1.0 + bounce;
           targetScaleXZ = 1.0 - bounce * 0.6;
+        } else if (this._stopWobbleInitAmp > 0 && this._stopWobbleTimer < 1.2) {
+          // Dedicated stopping-wobble: damped sine wave simulating water settling.
+          // A = initAmp * exp(-damping * t) * sin(freq * t * 2π)
+          const swDecay = Math.exp(-5.5 * this._stopWobbleTimer);
+          const swSine  = Math.sin(this._stopWobbleTimer * 9.0 * Math.PI * 2);
+          const swAmp   = this._stopWobbleInitAmp * swDecay * swSine;
+          targetScaleY  = 1.0 + swAmp;
+          targetScaleXZ = 1.0 - swAmp * 0.55;
+          // Fade out the wobble once energy is negligible
+          if (swDecay < 0.02) this._stopWobbleInitAmp = 0;
         } else if (speedMag > 0.05) {
-          // Moving: vertical bounce oscillates — bigger range, more dramatic wobble
-          this.wobblePhase += dt2 * speedMag * 120;  // slower phase for heavier, lower-frequency bounce
+          // Moving: squash Y and expand XZ proportional to speed (stretching in direction of travel),
+          // plus a vertical bounce oscillation for a jelly-drop feel.
+          this.wobblePhase += dt2 * speedMag * 120;
+          // Velocity stretch: faster = more horizontal squash
+          const velSquash = Math.min(speedMag * 2.2, 0.38);
           const bounce = Math.sin(this.wobblePhase) * (0.14 + this.wobbleIntensity * 0.18);
-          targetScaleY = 1.0 + bounce;
-          const squishAmt = Math.min(speedMag * 1.5, 0.25);
+          targetScaleY  = 1.0 - velSquash + bounce; // squashed vertically at speed
+          const squishAmt = Math.min(speedMag * 1.8, 0.30);
           targetScaleXZ = 1.0 + squishAmt + Math.cos(this.wobblePhase) * (0.06 + this.wobbleIntensity * 0.10);
         } else {
           // Idle breathing
@@ -1334,6 +1389,8 @@
         this.currentScaleY = 0.6;
         this.scaleXZVel = 0;
         this.scaleYVel = 0;
+        // Cancel any active stopping-wobble — the hit deformation takes priority
+        this._stopWobbleInitAmp = 0;
         
         // FRESH IMPLEMENTATION: Screen shake scales with damage amount
         // Cancel any previous shake to prevent stacked RAF loops

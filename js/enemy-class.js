@@ -438,6 +438,45 @@
           if (sl.frame % 3 === 0) {
             spawnBloodDecal(this.mesh.position);
           }
+
+          // ── Knockback Domino Effect ──────────────────────────────────────────────────
+          // When a sliding enemy collides with another, transfer kinetic energy — the
+          // secondary enemy takes minor damage and receives a small secondary knockback.
+          const slideSpeed = Math.sqrt(sl.vx * sl.vx + sl.vz * sl.vz);
+          if (slideSpeed > 0.05 && sl.frame % 2 === 0) {
+            // Energy transfer fraction and damage multiplier for the domino chain
+            const DOMINO_RADIUS           = 1.2; // collision detection radius (world units)
+            const DOMINO_TRANSFER_FACTOR  = 0.4; // 40 % of kinetic energy passed to secondary
+            const DOMINO_DMG_MULTIPLIER   = 8;   // damage = slideSpeed × this multiplier
+            const candidates = window._enemySpatialHash
+              ? window._enemySpatialHash.query(this.mesh.position.x, this.mesh.position.z, DOMINO_RADIUS)
+              : (typeof enemies !== 'undefined' ? enemies : []);
+            for (let _di = 0; _di < candidates.length; _di++) {
+              const other = candidates[_di];
+              if (other === this || other.isDead || other._shotgunSlide) continue;
+              const odx = other.mesh.position.x - this.mesh.position.x;
+              const odz = other.mesh.position.z - this.mesh.position.z;
+              const odistSq = odx * odx + odz * odz;
+              if (odistSq < DOMINO_RADIUS * DOMINO_RADIUS) {
+                // Transfer kinetic energy as secondary knockback
+                other._shotgunSlide = {
+                  vx: sl.vx * DOMINO_TRANSFER_FACTOR,
+                  vz: sl.vz * DOMINO_TRANSFER_FACTOR,
+                  frames: 8,
+                  frame: 0
+                };
+                // Minor collision damage (scales with slide speed)
+                const dominoDmg = Math.max(1, Math.floor(slideSpeed * DOMINO_DMG_MULTIPLIER));
+                other.takeDamage(dominoDmg, false, 'knockback');
+                // Absorb some momentum from the primary slider
+                sl.vx *= (1 - DOMINO_TRANSFER_FACTOR * 0.5);
+                sl.vz *= (1 - DOMINO_TRANSFER_FACTOR * 0.5);
+                if (spawnParticles) spawnParticles(other.mesh.position, 0xFFCC44, 5);
+              }
+            }
+          }
+          // ────────────────────────────────────────────────────────────────────────────
+
           if (sl.frame >= sl.frames || (Math.abs(sl.vx) < 0.01 && Math.abs(sl.vz) < 0.01)) {
             this._shotgunSlide = null;
           }
@@ -1778,6 +1817,8 @@
         flash.style.zIndex = '500';
         document.body.appendChild(flash);
         setTimeout(() => flash.remove(), (this.isMiniBoss || this.isFlyingBoss) ? 100 : 50);
+        // Hit-stop: mini-boss and flying-boss deaths get the longest freeze
+        if ((this.isMiniBoss || this.isFlyingBoss) && window.triggerHitStop) window.triggerHitStop(80);
         
         // Blood spray on death — visceral pumping wound blood
         const isShotgunKill = damageType === 'shotgun' || damageType === 'doubleBarrel';
