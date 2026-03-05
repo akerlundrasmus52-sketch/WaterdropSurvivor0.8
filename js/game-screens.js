@@ -914,7 +914,7 @@
     }
 
     // ============================================================
-    // WEAPONSMITH — Craft weapons from gathered resources
+    // WEAPONSMITH — Weapon Building (delegates to weapon-building.js)
     // ============================================================
     function showWeaponsmith() {
       // Progress quest31 if active
@@ -922,82 +922,10 @@
         progressTutorialQuest('quest31_buildWeaponsmith', true);
         saveSaveData();
       }
-
-      const existing = document.getElementById('weaponsmith-overlay');
-      if (existing) existing.remove();
-
-      const overlay = document.createElement('div');
-      overlay.id = 'weaponsmith-overlay';
-      overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.92);z-index:500;display:flex;flex-direction:column;align-items:center;padding:20px 16px;box-sizing:border-box;overflow-y:auto;';
-
-      const header = document.createElement('div');
-      header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;width:100%;max-width:520px;margin-bottom:12px;';
-      header.innerHTML = '<div style="font-family:\'Bangers\',cursive;font-size:24px;color:#C0C0C0;letter-spacing:2px;text-shadow:0 0 10px rgba(192,192,192,0.5);">⚒️ WEAPONSMITH</div>';
-      const closeBtn = document.createElement('button');
-      closeBtn.textContent = '✕';
-      closeBtn.style.cssText = 'background:#2a2a2a;border:2px solid #666;border-radius:50%;width:38px;height:38px;color:#fff;font-size:18px;cursor:pointer;font-family:"Bangers",cursive;';
-      closeBtn.onclick = () => overlay.remove();
-      header.appendChild(closeBtn);
-      overlay.appendChild(header);
-
-      const subtitle = document.createElement('div');
-      subtitle.style.cssText = 'color:#888;font-size:11px;margin-bottom:16px;text-align:center;letter-spacing:1.5px;max-width:400px;text-transform:uppercase;';
-      subtitle.textContent = 'Craft weapons from gathered resources — each with unique stats & effects';
-      overlay.appendChild(subtitle);
-
-      const res = saveData.resources || {};
-      const WEAPONS = window.GameWorld && window.GameWorld.WEAPON_CRAFTS ? window.GameWorld.WEAPON_CRAFTS : {};
-
-      const grid = document.createElement('div');
-      grid.style.cssText = 'display:grid;grid-template-columns:1fr;gap:10px;width:100%;max-width:520px;';
-
-      for (const [weaponId, weapon] of Object.entries(WEAPONS)) {
-        const card = document.createElement('div');
-        const canCraft = Object.entries(weapon.cost).every(([k, v]) => (res[k] || 0) >= v);
-        const owned = saveData.craftedWeapons ? saveData.craftedWeapons[weaponId] : false;
-
-        const costList = Object.entries(weapon.cost).map(([k, v]) => {
-          const has = (res[k] || 0) >= v;
-          const rt = window.GameHarvesting && window.GameHarvesting.RESOURCE_TYPES ? window.GameHarvesting.RESOURCE_TYPES[k] : null;
-          return '<span style="color:' + (has ? '#0f0' : '#f66') + ';font-size:11px;">' + (rt ? rt.icon : k) + 'x' + v + '</span>';
-        }).join(' ');
-
-        const statsHTML = Object.entries(weapon.stats).map(([k, v]) => {
-          if (k === 'projectile') return '';
-          return '<span style="color:#4FC3F7;font-size:11px;">' + k + ': ' + v + '</span>';
-        }).filter(Boolean).join(' · ');
-
-        const rarityColors = { common: '#aaa', rare: '#4FC3F7', epic: '#AA44FF' };
-        const rarityColor = rarityColors[weapon.rarity] || '#aaa';
-
-        card.style.cssText = 'background:rgba(192,192,192,0.06);border:1px solid ' + (owned ? '#00FF64' : canCraft ? rarityColor : '#444') + ';border-radius:10px;padding:14px;cursor:' + (canCraft && !owned ? 'pointer' : 'default') + ';opacity:' + (owned ? '0.7' : canCraft ? '1' : '0.5') + ';';
-        card.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;"><div><span style="font-size:24px;">' + weapon.icon + '</span> <b style="color:' + rarityColor + ';">' + weapon.name + '</b> <span style="color:#666;font-size:10px;text-transform:uppercase;">' + weapon.type + '</span></div>' + (owned ? '<span style="color:#00FF64;font-size:12px;">✅ Owned</span>' : '') + '</div><div style="color:#aaa;font-size:12px;margin:6px 0;">' + weapon.description + '</div><div style="margin-bottom:4px;">' + statsHTML + '</div><div style="display:flex;gap:6px;flex-wrap:wrap;">' + costList + '</div>';
-
-        if (canCraft && !owned) {
-          card.onclick = () => {
-            for (const [k, v] of Object.entries(weapon.cost)) {
-              res[k] = (res[k] || 0) - v;
-            }
-            if (!saveData.craftedWeapons) saveData.craftedWeapons = {};
-            saveData.craftedWeapons[weaponId] = true;
-            // Give as inventory item
-            saveData.inventory.push({ id: weaponId, name: weapon.name, type: 'weapon', rarity: weapon.rarity, stats: weapon.stats, description: weapon.description });
-            // Progress quest32 if crafting tranquilizer
-            if (weaponId === 'tranquilizerRifle' && saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest32_craftTranquilizer') {
-              progressTutorialQuest('quest32_craftTranquilizer', true);
-            }
-            saveSaveData();
-            if (typeof showStatChange === 'function') showStatChange(weapon.icon + ' ' + weapon.name + ' Crafted!');
-            if (typeof playSound === 'function') playSound('collect');
-            overlay.remove();
-            showWeaponsmith();
-          };
-        }
-        grid.appendChild(card);
+      // Delegate to full weapon building panel (weapon-building.js)
+      if (window.WeaponBuilding && window.WeaponBuilding.showWeaponBuilding) {
+        window.WeaponBuilding.showWeaponBuilding();
       }
-
-      overlay.appendChild(grid);
-      document.body.appendChild(overlay);
     }
 
     // ============================================================

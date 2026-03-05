@@ -722,21 +722,41 @@
       }
 
       // Update enemy AI movement (was missing - enemies were frozen)
-      // PERFORMANCE: Far enemies (> 16 units) only update every other frame to save CPU.
-      // Close enemies always update every frame for responsive combat.
-      // Tightened from 22 → 16 to match the closer camera view.
+      // PERFORMANCE: Distance-based animation throttling for enemies.
+      // Near enemies (< 16 units) update every frame, medium (16-40) every 2nd,
+      // far (40-80) every 4th, very far (> 80) every 8th frame.
       const _ENEMY_THROTTLE_DIST_SQ = 16 * 16; // squared to avoid sqrt
-      const _frameEven = (performanceLog.frameCount & 1) === 0;
+      const _ENEMY_THROTTLE_MED_SQ  = 40 * 40;
+      const _ENEMY_THROTTLE_FAR_SQ  = 80 * 80;
+      const _fc = performanceLog.frameCount;
+      const _frameEven = (_fc & 1) === 0;
+      // Build spatial hash for enemy lookups (used by projectiles via window._enemySpatialHash)
+      if (window.GamePerformance && window.GamePerformance.SpatialHash) {
+        if (!window._enemySpatialHash) {
+          window._enemySpatialHash = new window.GamePerformance.SpatialHash(4);
+        }
+        window._enemySpatialHash.clear();
+        for (var _shi = 0; _shi < enemies.length; _shi++) {
+          var _she = enemies[_shi];
+          if (_she && _she.mesh && !_she.isDead) {
+            window._enemySpatialHash.insert(_she);
+          }
+        }
+      }
       // Debug: track alive/died counts per frame for diagnostics
       const _dbgAliveBeforeEnemyTick = window.GameDebug && window.GameDebug.enabled
         ? enemies.filter(e => e && !e.isDead).length : 0;
       enemies.forEach((e, _idx) => {
         if (!e || !e.mesh || e.isDead) return;
         const _dSq = e.mesh.position.distanceToSquared(player.mesh.position);
-        // Throttle far enemies: even-indexed skip on odd frames, odd-indexed skip on even frames
-        const _enemyIsEven = (_idx & 1) === 0;
-        const _shouldSkip = _dSq > _ENEMY_THROTTLE_DIST_SQ && (_frameEven !== _enemyIsEven);
-        if (_shouldSkip) return;
+        // Granular throttle: skip update based on distance tier
+        if (_dSq > _ENEMY_THROTTLE_FAR_SQ) {
+          if ((_fc & 7) !== (_idx & 7)) return; // every 8th frame
+        } else if (_dSq > _ENEMY_THROTTLE_MED_SQ) {
+          if ((_fc & 3) !== (_idx & 3)) return; // every 4th frame
+        } else if (_dSq > _ENEMY_THROTTLE_DIST_SQ) {
+          if (_frameEven !== ((_idx & 1) === 0)) return; // every 2nd frame
+        }
         e.update(dt, player.mesh.position);
       });
       if (window.GameDebug && window.GameDebug.enabled) {

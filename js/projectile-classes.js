@@ -423,7 +423,14 @@
         }
 
         // Collision Check - with piercing support
-        for (let enemy of enemies) {
+        // Use spatial hash if available for O(1) lookup instead of O(N) enemy scan
+        var _nearbyEnemies = enemies;
+        if (window._enemySpatialHash) {
+          _nearbyEnemies = window._enemySpatialHash.query(
+            this.mesh.position.x, this.mesh.position.z, 1.5
+          );
+        }
+        for (let enemy of _nearbyEnemies) {
           if (enemy.isDead) continue;
           if (this.hitEnemies.has(enemy)) continue; // Skip already-hit enemies
           
@@ -1314,8 +1321,14 @@
           return false;
         }
 
-        // Collision Check
-        for (let enemy of enemies) {
+        // Collision Check — use spatial hash if available
+        var _nearbyIce = enemies;
+        if (window._enemySpatialHash) {
+          _nearbyIce = window._enemySpatialHash.query(
+            this.mesh.position.x, this.mesh.position.z, 1.5
+          );
+        }
+        for (let enemy of _nearbyIce) {
           if (enemy.isDead) continue;
           const dx = this.mesh.position.x - enemy.mesh.position.x;
           const dz = this.mesh.position.z - enemy.mesh.position.z;
