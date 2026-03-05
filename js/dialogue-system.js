@@ -118,6 +118,12 @@ window.DialogueSystem = (function () {
     ]
   };
 
+  // ── Typewriter timing constants ────────────────────────────
+  // Named delays for natural terminal-style read rhythm
+  var TW_DELAY_DEFAULT      = 40;   // ms — normal characters
+  var TW_DELAY_COMMA        = 90;   // ms — brief pause at comma
+  var TW_DELAY_SENTENCE_END = 180;  // ms — longer pause at . ! ?
+
   // ── Internal state ─────────────────────────────────────────
   var _container  = null;
   var _textEl     = null;
@@ -228,9 +234,9 @@ window.DialogueSystem = (function () {
         }(span));
         // Micro-pauses at punctuation for a more natural terminal-style read rhythm
         var ch = chars[i];
-        var delay = 40;
-        if (ch === '.' || ch === '!' || ch === '?') delay = 180;
-        else if (ch === ',') delay = 90;
+        var delay = TW_DELAY_DEFAULT;
+        if (ch === '.' || ch === '!' || ch === '?') delay = TW_DELAY_SENTENCE_END;
+        else if (ch === ',') delay = TW_DELAY_COMMA;
         i++;
         _twTimer = setTimeout(typeNext, delay);
       } else {

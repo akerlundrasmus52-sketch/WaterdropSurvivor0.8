@@ -20,11 +20,10 @@
     // Map enemy type → gem tier
     function _gemTierForType(enemyType) {
       if (enemyType === 10 || enemyType === 11) return 4; // MiniBoss / FlyingBoss
-      if (enemyType === 9)  return 3; // Elite
-      if (enemyType === 12 || enemyType === 13 || enemyType === 14 || enemyType === 15 || enemyType === 16) return 3; // Bug variants (epic)
-      if (enemyType === 5 || enemyType === 6 || enemyType === 7 || enemyType === 8) return 2; // Flying/Hard variants (blue)
+      if (enemyType === 9 || (enemyType >= 12 && enemyType <= 16)) return 3; // Elite + Bug variants (epic)
+      if (enemyType >= 5 && enemyType <= 8) return 2; // Flying/Hard variants (blue)
       if (enemyType === 3 || enemyType === 4) return 1; // Slowing/Ranged (green)
-      return 0; // Common: Tank, Fast, Balanced
+      return 0; // Common: Tank(0), Fast(1), Balanced(2) — and unknown/null types
     }
 
     class ExpGem {
@@ -57,9 +56,11 @@
           });
         }
 
-        // Determine gem tier from enemy type and apply tier colour
+        // Determine gem tier from enemy type and apply tier colour.
+        // Passing null/undefined enemyType uses the -1 sentinel which falls through
+        // _gemTierForType to return tier 0 (Common/grey) — a safe default.
         const tier = _gemTierForType(enemyType != null ? enemyType : -1);
-        const tierCol = GEM_TIER_COLORS[tier] || GEM_TIER_COLORS[2];
+        const tierCol = GEM_TIER_COLORS[tier] || GEM_TIER_COLORS[0];
 
         // Each gem gets its own material clone for per-instance emissive animation
         const starMaterial = _expGemStarMaterial.clone();
