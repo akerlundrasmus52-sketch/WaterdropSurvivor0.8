@@ -1486,8 +1486,11 @@
 
             const chainCount = weapons.lightning.chainCount || 3;
             let chainCurrent = current;
-            _tmpBoltStart.set(chainCurrent.mesh.position.x + (Math.random() - 0.5) * 2, 15 + Math.random() * 5, chainCurrent.mesh.position.z + (Math.random() - 0.5) * 2); // Start from sky
+            _tmpBoltStart.set(chainCurrent.mesh.position.x + (Math.random() - 0.5) * 2, 15 + Math.random() * 5, chainCurrent.mesh.position.z + (Math.random() - 0.5) * 2);
 
+            const LIGHTNING_SKY_BASE = 15;
+            const LIGHTNING_SKY_VARIANCE = 5;
+            const LIGHTNING_OFFSET_RANGE = 2;
             const chainHitTargets = new Set();
             for (let c = 0; c < chainCount && chainCurrent; c++) {
               if (chainHitTargets.has(chainCurrent)) break;
@@ -1502,13 +1505,18 @@
               
               // Visible lightning bolt from sky — each looks different via random jitter
               const boltPoints = [];
-              if (c === 0) _tmpBoltStart.y = 15 + Math.random() * 5; // From heaven
+              if (c === 0) _tmpBoltStart.y = LIGHTNING_SKY_BASE + Math.random() * LIGHTNING_SKY_VARIANCE;
               else _tmpBoltStart.y = 0.8;
               _tmpBoltEnd.copy(chainCurrent.mesh.position); _tmpBoltEnd.y = 0.8;
               // Randomize bolt style: forked (many segments), straight (few), zigzag (medium with wide jitter)
-              const boltStyle = Math.floor(Math.random() * 3);
-              const segments = boltStyle === 0 ? (10 + Math.floor(Math.random() * 6)) : boltStyle === 1 ? (3 + Math.floor(Math.random() * 3)) : (6 + Math.floor(Math.random() * 4));
-              const jitterScale = boltStyle === 0 ? 0.4 : boltStyle === 1 ? 0.2 : 1.0;
+              const BOLT_STYLES = [
+                { baseSegments: 10, extraSegments: 6, jitter: 0.4 },  // Forked
+                { baseSegments: 3,  extraSegments: 3, jitter: 0.2 },  // Straight
+                { baseSegments: 6,  extraSegments: 4, jitter: 1.0 }   // Zigzag
+              ];
+              const style = BOLT_STYLES[Math.floor(Math.random() * BOLT_STYLES.length)];
+              const segments = style.baseSegments + Math.floor(Math.random() * style.extraSegments);
+              const jitterScale = style.jitter;
               for (let s = 0; s <= segments; s++) {
                 const t = s / segments;
                 const px = _tmpBoltStart.x + (_tmpBoltEnd.x - _tmpBoltStart.x) * t + (s > 0 && s < segments ? (Math.random() - 0.5) * jitterScale : 0);

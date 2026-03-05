@@ -1045,9 +1045,13 @@
         this.lastDamageType = damageType;
         this.lastCrit = isCrit;
         
+        // Damage type sets for cleaner conditional checks
+        const HEAVY_HIT_TYPES = ['doubleBarrel', 'shotgun', 'pumpShotgun', 'autoShotgun', 'sniperRifle', 'homingMissile', 'fireball'];
+        const SHOTGUN_TYPES = ['doubleBarrel', 'shotgun', 'pumpShotgun', 'autoShotgun'];
+
         // Phase 5: Hit impact particles (flesh/blood) on every hit — scaled with HP ratio
         const hpRatio = this.hp / this.maxHp;
-        const isHeavyHit = damageType === 'doubleBarrel' || damageType === 'shotgun' || damageType === 'pumpShotgun' || damageType === 'autoShotgun' || damageType === 'sniperRifle' || damageType === 'homingMissile' || damageType === 'fireball' || isCrit;
+        const isHeavyHit = HEAVY_HIT_TYPES.includes(damageType) || isCrit;
         const bloodParticleCount = Math.max(5, Math.floor((1 - hpRatio) * 18) + 5);
         spawnParticles(this.mesh.position, 0x8B0000, Math.min(bloodParticleCount, 20)); // Blood particles
         spawnParticles(this.mesh.position, 0x660000, Math.min(Math.floor(bloodParticleCount * 0.5), 8)); // Darker blood
@@ -1070,7 +1074,7 @@
         }
         // Blood system: directional spray on heavy hits
         if (window.BloodSystem && isHeavyHit) {
-          const isShotgunHit = damageType === 'doubleBarrel' || damageType === 'shotgun' || damageType === 'pumpShotgun' || damageType === 'autoShotgun';
+          const isShotgunHit = SHOTGUN_TYPES.includes(damageType);
           window.BloodSystem.emitBurst(this.mesh.position, isShotgunHit ? 60 : 30, { spreadXZ: 0.8, spreadY: 0.2, minSize: 0.01, maxSize: 0.06, minLife: 20, maxLife: 50 });
         }
         // Weapon-level-based blood effects — higher levels produce more brutal hits

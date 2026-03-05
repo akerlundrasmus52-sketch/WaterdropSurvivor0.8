@@ -90,10 +90,10 @@ const WEAPON_LEVEL_BONUSES = {
  */
 function getEffectiveWeaponStats(w, weaponId) {
   var bonuses = WEAPON_LEVEL_BONUSES[weaponId];
-  if (!bonuses || !w || w.level <= 1) return w;
+  if (!bonuses || !w) return Object.assign({}, w);
+  if (w.level <= 1) return Object.assign({}, w);
   var lvl = w.level - 1; // bonus levels above 1
-  var stats = {};
-  for (var k in w) stats[k] = w[k];
+  var stats = Object.assign({}, w);
   stats.damage  = Math.round(w.damage * (1 + bonuses.dmgPerLvl * lvl));
   stats.cooldown = Math.round(w.cooldown * Math.max(0.2, 1 - bonuses.cdPerLvl * lvl));
   // Extra projectile bonuses

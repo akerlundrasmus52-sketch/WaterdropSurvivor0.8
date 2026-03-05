@@ -304,9 +304,11 @@
       };
 
       // Update the companion skill buttons in HUD
+      static MAX_COMPANION_SKILLS = 3;
+
       static updateCompanionSkillsUI(companionId) {
         var skills = Companion.COMPANION_SKILLS[companionId] || [];
-        for (var i = 0; i < 3; i++) {
+        for (var i = 0; i < Companion.MAX_COMPANION_SKILLS; i++) {
           var btn = document.getElementById('comp-skill-' + (i + 1));
           if (!btn) continue;
           if (i < skills.length) {
