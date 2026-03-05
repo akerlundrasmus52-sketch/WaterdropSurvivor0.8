@@ -988,6 +988,29 @@
         window.companionEggObject.rotation.y += 0.01;
       }
 
+      // Mysterious Egg pickup for quest_eggHunt
+      if (window._mysteriousEggObject &&
+          saveData.tutorialQuests &&
+          saveData.tutorialQuests.currentQuest === 'quest_eggHunt' &&
+          !saveData.tutorialQuests.mysteriousEggFound &&
+          isGameActive && !isPaused && player.mesh) {
+        const mEggDist = player.mesh.position.distanceTo(window._mysteriousEggObject.position);
+        if (mEggDist < 3.5) {
+          scene.remove(window._mysteriousEggObject);
+          window._mysteriousEggObject = null;
+          saveData.tutorialQuests.mysteriousEggFound = true;
+          saveSaveData();
+          createFloatingText("🥚 Mysterious Egg collected!", player.mesh.position, '#8B5CF6');
+          showStatChange('🥚 Mysterious Egg collected! Finish the run and bring it to camp!');
+          playSound('chest_open');
+        }
+        // Animate the egg (bob and spin)
+        if (window._mysteriousEggObject) {
+          window._mysteriousEggObject.position.y = Math.sin(Date.now() * 0.003) * 0.4 + 0.5;
+          window._mysteriousEggObject.rotation.y += 0.015;
+        }
+      }
+
       // Farmer NPC: Update "?" indicator position and check for player proximity to trigger dialogue
       updateFarmerNPCIndicator();
       updateFarmerBubblePosition();

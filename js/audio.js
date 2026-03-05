@@ -1,6 +1,9 @@
-// --- AUDIO SYSTEM (Web Audio Noise Synthesis) ---
+// --- AUDIO SYSTEM (Web Audio Noise Synthesis — Water Drop ASMR Dopamine Design) ---
 // Extracted from game.js - loaded as a regular script before game.js (module)
 // Exposes window.GameAudio for use by game.js
+//
+// Sound design philosophy: The player is a Water Drop — everything should sound
+// squishy, wet, and crisp. ASMR-like, dopamine-triggering soundscape.
 
 let audioCtx;
 try {
@@ -11,8 +14,13 @@ try {
 let musicOscillators = [];
 let musicGain = null;
 
+    // Combo tracking for exp_pickup pitch-up effect
+    const EXP_COMBO_WINDOW = 0.4;  // seconds — rapid collection combo window
+    const MAX_EXP_COMBO = 12;      // max combo level to prevent over-pitching
+    let _lastExpPickupTime = 0;
+    let _expPickupCombo = 0;
+
 // Returns true only when game.js has initialised and sound is enabled.
-// window.gameSettings is set by game.js; until then this correctly returns false.
 function isSoundEnabled() {
   return !!(window.gameSettings && window.gameSettings.soundEnabled);
 }
@@ -27,7 +35,6 @@ function initMusic() {
 }
 
 function updateBackgroundMusic() {
-  // Background music removed per requirements
   initMusic();
   if (musicGain) {
     musicGain.gain.setValueAtTime(0, audioCtx.currentTime);
@@ -64,73 +71,338 @@ function playSound(type) {
 
   const now = audioCtx.currentTime;
 
-  if (type === 'shoot') {
-    // Realistic gunshot: noise crack (high-freq transient) + bass thump
-    const noise = createNoise(0.15);
+  // ── Player & Movement (Water Theme) ──
+
+  if (type === 'dash') {
+    // dash.mp3: High-pressure swoosh of water (pssshh-whip)
+    const noise = createNoise(0.22);
     const noiseGain = audioCtx.createGain();
     const bp = audioCtx.createBiquadFilter();
     bp.type = 'bandpass';
-    bp.frequency.setValueAtTime(2400, now);
-    bp.frequency.exponentialRampToValueAtTime(600, now + 0.04);
-    bp.Q.value = 0.8;
-    noiseGain.gain.setValueAtTime(0.9, now);
-    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
-    noise.connect(bp); bp.connect(noiseGain); noiseGain.connect(audioCtx.destination);
-    noise.start(now); noise.stop(now + 0.15);
-    // Physical bass thump
-    const bassOsc = audioCtx.createOscillator();
-    const bassGain = audioCtx.createGain();
-    bassOsc.type = 'sine';
-    bassOsc.frequency.setValueAtTime(160, now);
-    bassOsc.frequency.exponentialRampToValueAtTime(35, now + 0.1);
-    bassGain.gain.setValueAtTime(0.5, now);
-    bassGain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
-    bassOsc.connect(bassGain); bassGain.connect(audioCtx.destination);
-    bassOsc.start(now); bassOsc.stop(now + 0.12);
-
-  } else if (type === 'hit') {
-    // Punchy impact: noise burst + low thud, suitable for rapid repetition
-    const noise = createNoise(0.07);
-    const noiseGain = audioCtx.createGain();
-    const hp = audioCtx.createBiquadFilter();
-    hp.type = 'highpass'; hp.frequency.value = 400;
+    bp.frequency.setValueAtTime(4000, now);
+    bp.frequency.exponentialRampToValueAtTime(300, now + 0.18);
+    bp.Q.value = 1.0;
     noiseGain.gain.setValueAtTime(0.5, now);
-    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
-    noise.connect(hp); hp.connect(noiseGain); noiseGain.connect(audioCtx.destination);
-    noise.start(now); noise.stop(now + 0.07);
-    const thud = audioCtx.createOscillator();
-    const thudGain = audioCtx.createGain();
-    thud.type = 'sine';
-    thud.frequency.setValueAtTime(90, now);
-    thud.frequency.exponentialRampToValueAtTime(40, now + 0.05);
-    thudGain.gain.setValueAtTime(0.3, now);
-    thudGain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
-    thud.connect(thudGain); thudGain.connect(audioCtx.destination);
-    thud.start(now); thud.stop(now + 0.07);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+    noise.connect(bp); bp.connect(noiseGain); noiseGain.connect(audioCtx.destination);
+    noise.start(now); noise.stop(now + 0.22);
+    // Whip tail — sharp sine transient
+    const whip = audioCtx.createOscillator();
+    const whipG = audioCtx.createGain();
+    whip.type = 'sine';
+    whip.frequency.setValueAtTime(2200, now + 0.04);
+    whip.frequency.exponentialRampToValueAtTime(600, now + 0.12);
+    whipG.gain.setValueAtTime(0.15, now + 0.04);
+    whipG.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+    whip.connect(whipG); whipG.connect(audioCtx.destination);
+    whip.start(now + 0.04); whip.stop(now + 0.14);
 
-  } else if (type === 'levelup') {
-    // Power-up: ascending sawtooth burst with sparkle tail
+  } else if (type === 'player_hit' || type === 'splash') {
+    // player_hit.mp3: Wet heavy splash with slight glass-shatter undertone (losing droplets)
+    const noise = createNoise(0.3);
+    const noiseGain = audioCtx.createGain();
+    const bp = audioCtx.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.setValueAtTime(1400, now);
+    bp.frequency.exponentialRampToValueAtTime(300, now + 0.25);
+    bp.Q.value = 1.2;
+    noiseGain.gain.setValueAtTime(0.45, now);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+    noise.connect(bp); bp.connect(noiseGain); noiseGain.connect(audioCtx.destination);
+    noise.start(now); noise.stop(now + 0.3);
+    // Glass-shatter undertone — high crystalline burst
+    const shatter = createNoise(0.08);
+    const shatterG = audioCtx.createGain();
+    const hp = audioCtx.createBiquadFilter();
+    hp.type = 'highpass'; hp.frequency.value = 6000;
+    shatterG.gain.setValueAtTime(0.18, now);
+    shatterG.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+    shatter.connect(hp); hp.connect(shatterG); shatterG.connect(audioCtx.destination);
+    shatter.start(now); shatter.stop(now + 0.08);
+
+  } else if (type === 'heal') {
+    // heal.mp3: Reverse-water-drop sound (bloop going up in pitch)
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
-    osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(220, now);
-    osc.frequency.exponentialRampToValueAtTime(880, now + 0.2);
-    gain.gain.setValueAtTime(0.3, now);
-    gain.gain.linearRampToValueAtTime(0, now + 0.3);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(400, now);
+    osc.frequency.exponentialRampToValueAtTime(1800, now + 0.12);
+    gain.gain.setValueAtTime(0.2, now);
+    gain.gain.linearRampToValueAtTime(0.25, now + 0.06);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
     osc.connect(gain); gain.connect(audioCtx.destination);
-    osc.start(now); osc.stop(now + 0.3);
-    const osc2 = audioCtx.createOscillator();
-    const gain2 = audioCtx.createGain();
-    osc2.type = 'sine';
-    osc2.frequency.setValueAtTime(1760, now + 0.05);
-    osc2.frequency.exponentialRampToValueAtTime(3520, now + 0.2);
-    gain2.gain.setValueAtTime(0.12, now + 0.05);
-    gain2.gain.linearRampToValueAtTime(0, now + 0.3);
-    osc2.connect(gain2); gain2.connect(audioCtx.destination);
-    osc2.start(now + 0.05); osc2.stop(now + 0.3);
+    osc.start(now); osc.stop(now + 0.18);
+    // Soft bubble tail
+    const bub = audioCtx.createOscillator();
+    const bubG = audioCtx.createGain();
+    bub.type = 'sine';
+    bub.frequency.setValueAtTime(1200, now + 0.1);
+    bub.frequency.exponentialRampToValueAtTime(2400, now + 0.16);
+    bubG.gain.setValueAtTime(0.08, now + 0.1);
+    bubG.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+    bub.connect(bubG); bubG.connect(audioCtx.destination);
+    bub.start(now + 0.1); bub.stop(now + 0.2);
+
+  // ── Combat (Crisp & Punchy) ──
+
+  } else if (type === 'shoot' || type === 'gun_shoot') {
+    // gun_shoot.mp3: Sharp high-velocity water spit (pt-pt-pt)
+    const noise = createNoise(0.06);
+    const noiseGain = audioCtx.createGain();
+    const bp = audioCtx.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.setValueAtTime(3200, now);
+    bp.frequency.exponentialRampToValueAtTime(800, now + 0.03);
+    bp.Q.value = 1.5;
+    noiseGain.gain.setValueAtTime(0.6, now);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+    noise.connect(bp); bp.connect(noiseGain); noiseGain.connect(audioCtx.destination);
+    noise.start(now); noise.stop(now + 0.06);
+    // Wet pop transient
+    const pop = audioCtx.createOscillator();
+    const popG = audioCtx.createGain();
+    pop.type = 'sine';
+    pop.frequency.setValueAtTime(1800, now);
+    pop.frequency.exponentialRampToValueAtTime(400, now + 0.025);
+    popG.gain.setValueAtTime(0.35, now);
+    popG.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+    pop.connect(popG); popG.connect(audioCtx.destination);
+    pop.start(now); pop.stop(now + 0.04);
+
+  } else if (type === 'sword' || type === 'sword_slash') {
+    // sword_slash.mp3: Thick liquid whip cracking through the air
+    const noise = createNoise(0.15);
+    const noiseGain = audioCtx.createGain();
+    const hp = audioCtx.createBiquadFilter();
+    hp.type = 'highpass';
+    hp.frequency.setValueAtTime(1500, now);
+    hp.frequency.exponentialRampToValueAtTime(400, now + 0.12);
+    noiseGain.gain.setValueAtTime(0.5, now);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+    noise.connect(hp); hp.connect(noiseGain); noiseGain.connect(audioCtx.destination);
+    noise.start(now); noise.stop(now + 0.15);
+    // Liquid whip crack tone
+    const crack = audioCtx.createOscillator();
+    const crackG = audioCtx.createGain();
+    crack.type = 'sawtooth';
+    crack.frequency.setValueAtTime(800, now);
+    crack.frequency.exponentialRampToValueAtTime(200, now + 0.08);
+    crackG.gain.setValueAtTime(0.2, now);
+    crackG.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+    crack.connect(crackG); crackG.connect(audioCtx.destination);
+    crack.start(now); crack.stop(now + 0.1);
+    // Wet swoosh undertone
+    const wet = createNoise(0.1);
+    const wetG = audioCtx.createGain();
+    const lp = audioCtx.createBiquadFilter();
+    lp.type = 'lowpass'; lp.frequency.value = 600;
+    wetG.gain.setValueAtTime(0.15, now);
+    wetG.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+    wet.connect(lp); lp.connect(wetG); wetG.connect(audioCtx.destination);
+    wet.start(now); wet.stop(now + 0.1);
+
+  } else if (type === 'hit' || type === 'enemy_hit') {
+    // enemy_hit.mp3: Squishy satisfying thwack/pop (like popping a thick water balloon)
+    const pop = audioCtx.createOscillator();
+    const popG = audioCtx.createGain();
+    pop.type = 'sine';
+    pop.frequency.setValueAtTime(300, now);
+    pop.frequency.exponentialRampToValueAtTime(80, now + 0.06);
+    popG.gain.setValueAtTime(0.5, now);
+    popG.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+    pop.connect(popG); popG.connect(audioCtx.destination);
+    pop.start(now); pop.stop(now + 0.08);
+    // Squishy wet burst
+    const squelch = createNoise(0.06);
+    const squelchG = audioCtx.createGain();
+    const bp = audioCtx.createBiquadFilter();
+    bp.type = 'bandpass'; bp.frequency.value = 1200; bp.Q.value = 2;
+    squelchG.gain.setValueAtTime(0.35, now);
+    squelchG.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+    squelch.connect(bp); bp.connect(squelchG); squelchG.connect(audioCtx.destination);
+    squelch.start(now); squelch.stop(now + 0.06);
+
+  } else if (type === 'enemy_die') {
+    // enemy_die.mp3: Deeper bass-heavy splash
+    const noise = createNoise(0.3);
+    const noiseGain = audioCtx.createGain();
+    const lp = audioCtx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.setValueAtTime(900, now);
+    lp.frequency.exponentialRampToValueAtTime(200, now + 0.25);
+    noiseGain.gain.setValueAtTime(0.5, now);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+    noise.connect(lp); lp.connect(noiseGain); noiseGain.connect(audioCtx.destination);
+    noise.start(now); noise.stop(now + 0.3);
+    // Deep bass thud
+    const bass = audioCtx.createOscillator();
+    const bassG = audioCtx.createGain();
+    bass.type = 'sine';
+    bass.frequency.setValueAtTime(80, now);
+    bass.frequency.exponentialRampToValueAtTime(25, now + 0.2);
+    bassG.gain.setValueAtTime(0.5, now);
+    bassG.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+    bass.connect(bassG); bassG.connect(audioCtx.destination);
+    bass.start(now); bass.stop(now + 0.25);
+
+  } else if (type === 'crit_hit') {
+    // crit_hit.mp3: Sharp high-pitched "ding" (wine glass) overlaid on normal hit sound
+    // — Crucial for dopamine —
+    // Play normal enemy_hit first
+    playSound('enemy_hit');
+    // Overlay: wine-glass ding / ching
+    const ding = audioCtx.createOscillator();
+    const dingG = audioCtx.createGain();
+    ding.type = 'sine';
+    ding.frequency.setValueAtTime(3800, now);
+    ding.frequency.exponentialRampToValueAtTime(2800, now + 0.3);
+    dingG.gain.setValueAtTime(0.2, now);
+    dingG.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+    ding.connect(dingG); dingG.connect(audioCtx.destination);
+    ding.start(now); ding.stop(now + 0.4);
+    // Harmonic overtone for glass resonance
+    const harm = audioCtx.createOscillator();
+    const harmG = audioCtx.createGain();
+    harm.type = 'sine';
+    harm.frequency.setValueAtTime(7600, now);
+    harm.frequency.exponentialRampToValueAtTime(5600, now + 0.2);
+    harmG.gain.setValueAtTime(0.06, now);
+    harmG.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+    harm.connect(harmG); harmG.connect(audioCtx.destination);
+    harm.start(now); harm.stop(now + 0.25);
+
+  // ── Rewards & UI (The Dopamine Hit) ──
+
+  } else if (type === 'collect' || type === 'exp_pickup') {
+    // exp_pickup.mp3: Very fast tiny melodic water plink
+    // Combo effect: pitch goes UP if collected in rapid succession
+    if (now - _lastExpPickupTime < EXP_COMBO_WINDOW) {
+      _expPickupCombo = Math.min(_expPickupCombo + 1, MAX_EXP_COMBO);
+    } else {
+      _expPickupCombo = 0;
+    }
+    _lastExpPickupTime = now;
+    const basePitch = 1800 + (_expPickupCombo * 150); // pitch rises with combo
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(basePitch, now);
+    osc.frequency.exponentialRampToValueAtTime(basePitch * 1.4, now + 0.05);
+    gain.gain.setValueAtTime(0.1, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.start(now); osc.stop(now + 0.08);
+
+  } else if (type === 'levelup' || type === 'level_up') {
+    // level_up.mp3: Booming triumphant orchestral swell + cascading waterfall
+    // Trigger time dilation via DopamineSystem if available
+    if (window.DopamineSystem && window.DopamineSystem.TimeDilation &&
+        typeof window.DopamineSystem.TimeDilation.trigger === 'function') {
+      window.DopamineSystem.TimeDilation.trigger(0.3, 800);
+    }
+    // Orchestral swell — layered ascending tones
+    const layers = [220, 330, 440, 660, 880];
+    layers.forEach((freq, i) => {
+      const osc = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      osc.type = i < 2 ? 'sawtooth' : 'sine';
+      osc.frequency.setValueAtTime(freq, now);
+      osc.frequency.exponentialRampToValueAtTime(freq * 2, now + 0.4);
+      g.gain.setValueAtTime(0.08, now + i * 0.03);
+      g.gain.linearRampToValueAtTime(0.15, now + 0.2);
+      g.gain.linearRampToValueAtTime(0, now + 0.6);
+      osc.connect(g); g.connect(audioCtx.destination);
+      osc.start(now + i * 0.03); osc.stop(now + 0.6);
+    });
+    // Cascading waterfall — bandpass noise burst
+    const waterfall = createNoise(0.8);
+    const wfG = audioCtx.createGain();
+    const wfBp = audioCtx.createBiquadFilter();
+    wfBp.type = 'bandpass';
+    wfBp.frequency.setValueAtTime(2000, now + 0.1);
+    wfBp.frequency.exponentialRampToValueAtTime(400, now + 0.7);
+    wfBp.Q.value = 0.8;
+    wfG.gain.setValueAtTime(0, now);
+    wfG.gain.linearRampToValueAtTime(0.25, now + 0.15);
+    wfG.gain.linearRampToValueAtTime(0, now + 0.8);
+    waterfall.connect(wfBp); wfBp.connect(wfG); wfG.connect(audioCtx.destination);
+    waterfall.start(now); waterfall.stop(now + 0.8);
+    // Triumphant high sparkle
+    const sparkle = audioCtx.createOscillator();
+    const spG = audioCtx.createGain();
+    sparkle.type = 'sine';
+    sparkle.frequency.setValueAtTime(2200, now + 0.15);
+    sparkle.frequency.exponentialRampToValueAtTime(4400, now + 0.35);
+    spG.gain.setValueAtTime(0.12, now + 0.15);
+    spG.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+    sparkle.connect(spG); spG.connect(audioCtx.destination);
+    sparkle.start(now + 0.15); sparkle.stop(now + 0.5);
+
+  } else if (type === 'chest_open') {
+    // chest_open.mp3: Heavy wooden creak + angelic glowing synth choir
+    // Wooden creak — lowpass noise with resonance
+    const creak = createNoise(0.3);
+    const creakG = audioCtx.createGain();
+    const creakF = audioCtx.createBiquadFilter();
+    creakF.type = 'bandpass';
+    creakF.frequency.setValueAtTime(200, now);
+    creakF.frequency.exponentialRampToValueAtTime(600, now + 0.25);
+    creakF.Q.value = 5;
+    creakG.gain.setValueAtTime(0.3, now);
+    creakG.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+    creak.connect(creakF); creakF.connect(creakG); creakG.connect(audioCtx.destination);
+    creak.start(now); creak.stop(now + 0.3);
+    // Angelic synth choir — layered sine pads
+    const choir = [523.25, 659.25, 783.99, 1046.5]; // C5, E5, G5, C6 major chord
+    choir.forEach((freq, i) => {
+      const osc = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      g.gain.setValueAtTime(0, now + 0.2);
+      g.gain.linearRampToValueAtTime(0.08, now + 0.4);
+      g.gain.linearRampToValueAtTime(0, now + 1.0);
+      osc.connect(g); g.connect(audioCtx.destination);
+      osc.start(now + 0.2); osc.stop(now + 1.0);
+    });
+
+  } else if (type === 'ui_hover' || type === 'waterdrop') {
+    // ui_hover.mp3: Soft muted water bubble popping
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(1600, now);
+    osc.frequency.exponentialRampToValueAtTime(600, now + 0.04);
+    gain.gain.setValueAtTime(0.08, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.start(now); osc.stop(now + 0.06);
+
+  } else if (type === 'ui_click') {
+    // ui_click.mp3: Sharp dry click (two smooth stones tapping)
+    const noise = createNoise(0.03);
+    const noiseGain = audioCtx.createGain();
+    const hp = audioCtx.createBiquadFilter();
+    hp.type = 'highpass'; hp.frequency.value = 3000;
+    noiseGain.gain.setValueAtTime(0.3, now);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.025);
+    noise.connect(hp); hp.connect(noiseGain); noiseGain.connect(audioCtx.destination);
+    noise.start(now); noise.stop(now + 0.03);
+    // Stone resonance
+    const stone = audioCtx.createOscillator();
+    const stoneG = audioCtx.createGain();
+    stone.type = 'sine';
+    stone.frequency.setValueAtTime(4500, now);
+    stone.frequency.exponentialRampToValueAtTime(2000, now + 0.02);
+    stoneG.gain.setValueAtTime(0.15, now);
+    stoneG.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+    stone.connect(stoneG); stoneG.connect(audioCtx.destination);
+    stone.start(now); stone.stop(now + 0.04);
+
+  // ── Legacy / Weapon-Specific Sounds (kept for backward compatibility) ──
 
   } else if (type === 'upgrade') {
-    // Upgrade chime: warm descending tone
+    // Upgrade chime: warm descending water tone
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
     osc.type = 'sine';
@@ -141,20 +413,8 @@ function playSound(type) {
     osc.connect(gain); gain.connect(audioCtx.destination);
     osc.start(now); osc.stop(now + 0.6);
 
-  } else if (type === 'waterdrop') {
-    // Clean modern UI tap
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(1800, now);
-    osc.frequency.exponentialRampToValueAtTime(600, now + 0.06);
-    gain.gain.setValueAtTime(0.12, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
-    osc.connect(gain); gain.connect(audioCtx.destination);
-    osc.start(now); osc.stop(now + 0.08);
-
   } else if (type === 'multikill') {
-    // Multi-kill: deep punch + power ascend
+    // Multi-kill: deep water punch + power ascend
     const noise = createNoise(0.2);
     const noiseGain = audioCtx.createGain();
     const lp = audioCtx.createBiquadFilter();
@@ -173,33 +433,8 @@ function playSound(type) {
     osc.connect(gain); gain.connect(audioCtx.destination);
     osc.start(now); osc.stop(now + 0.3);
 
-  } else if (type === 'splash') {
-    // Water splash: bandpass noise burst
-    const noise = createNoise(0.25);
-    const noiseGain = audioCtx.createGain();
-    const bp = audioCtx.createBiquadFilter();
-    bp.type = 'bandpass';
-    bp.frequency.setValueAtTime(1200, now);
-    bp.frequency.exponentialRampToValueAtTime(400, now + 0.2);
-    bp.Q.value = 1.5;
-    noiseGain.gain.setValueAtTime(0.35, now);
-    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
-    noise.connect(bp); bp.connect(noiseGain); noiseGain.connect(audioCtx.destination);
-    noise.start(now); noise.stop(now + 0.25);
-
-  } else if (type === 'collect') {
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(1400, now);
-    osc.frequency.exponentialRampToValueAtTime(2200, now + 0.08);
-    gain.gain.setValueAtTime(0.07, now);
-    gain.gain.linearRampToValueAtTime(0, now + 0.1);
-    osc.connect(gain); gain.connect(audioCtx.destination);
-    osc.start(now); osc.stop(now + 0.1);
-
   } else if (type === 'coin') {
-    // Metallic coin clink: bell-like tone
+    // Metallic coin clink: bell-like water tone
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
     osc.type = 'sine';
@@ -221,44 +456,8 @@ function playSound(type) {
     noise.connect(bp); bp.connect(noiseGain); noiseGain.connect(audioCtx.destination);
     noise.start(now); noise.stop(now + 0.1);
 
-  } else if (type === 'dash') {
-    // Dash whoosh: swept bandpass noise
-    const noise = createNoise(0.18);
-    const noiseGain = audioCtx.createGain();
-    const bp = audioCtx.createBiquadFilter();
-    bp.type = 'bandpass';
-    bp.frequency.setValueAtTime(3000, now);
-    bp.frequency.exponentialRampToValueAtTime(400, now + 0.15);
-    bp.Q.value = 1.2;
-    noiseGain.gain.setValueAtTime(0.3, now);
-    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
-    noise.connect(bp); bp.connect(noiseGain); noiseGain.connect(audioCtx.destination);
-    noise.start(now); noise.stop(now + 0.18);
-
-  } else if (type === 'sword') {
-    // Sword slash: highpass noise sweep + metallic ring
-    const noise = createNoise(0.12);
-    const noiseGain = audioCtx.createGain();
-    const hp = audioCtx.createBiquadFilter();
-    hp.type = 'highpass';
-    hp.frequency.setValueAtTime(2000, now);
-    hp.frequency.exponentialRampToValueAtTime(500, now + 0.1);
-    noiseGain.gain.setValueAtTime(0.4, now);
-    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
-    noise.connect(hp); hp.connect(noiseGain); noiseGain.connect(audioCtx.destination);
-    noise.start(now); noise.stop(now + 0.12);
-    const ring = audioCtx.createOscillator();
-    const ringGain = audioCtx.createGain();
-    ring.type = 'sine';
-    ring.frequency.setValueAtTime(3000, now);
-    ring.frequency.exponentialRampToValueAtTime(1500, now + 0.08);
-    ringGain.gain.setValueAtTime(0.12, now);
-    ringGain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
-    ring.connect(ringGain); ringGain.connect(audioCtx.destination);
-    ring.start(now); ring.stop(now + 0.12);
-
   } else if (type === 'doublebarrel') {
-    // Double barrel shotgun: heavy noise crack + deep bass boom
+    // Double barrel: heavy water cannon blast
     const noise = createNoise(0.18);
     const noiseGain = audioCtx.createGain();
     const bp = audioCtx.createBiquadFilter();
@@ -374,6 +573,7 @@ function playSound(type) {
     noise.start(now); noise.stop(now + 0.04);
   }
 }
+
 // Drone humming sound - continuous
 let droneOscillator = null;
 let droneGain = null;
@@ -394,7 +594,7 @@ function startDroneHum() {
   // LFO for realistic propeller motor vibrato
   const lfo = audioCtx.createOscillator();
   const lfoGain = audioCtx.createGain();
-  lfo.frequency.value = 12; // Higher rate = faster motor
+  lfo.frequency.value = 12;
   lfoGain.gain.value = 8;
   lfo.connect(lfoGain);
   lfoGain.connect(droneOscillator.frequency);
@@ -422,11 +622,18 @@ function stopDroneHum() {
   }, 500);
 }
 
+// Reset exp pickup combo (call on run start)
+function resetExpCombo() {
+  _lastExpPickupTime = 0;
+  _expPickupCombo = 0;
+}
+
 window.GameAudio = {
   audioCtx,
   playSound,
   initMusic,
   updateBackgroundMusic,
   startDroneHum,
-  stopDroneHum
+  stopDroneHum,
+  resetExpCombo
 };

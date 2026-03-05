@@ -1544,10 +1544,10 @@
     
     // Quest definitions with conditions for dependencies
     const TUTORIAL_QUESTS = {
-      // === PHASE 0: First death triggers tutorial ===
+      // === STEP 1: The Awakening — Die for the first time ===
       firstRunDeath: {
         id: 'firstRunDeath',
-        name: 'First Death Tutorial',
+        name: 'The Awakening',
         description: 'Your first death triggers the tutorial',
         objectives: 'Die in your first run',
         rewardGold: 0,
@@ -1555,15 +1555,131 @@
         unlockBuilding: 'questMission',
         autoClaim: true,
         triggerOnDeath: true,
-        nextQuest: 'questForge0_unlock',
+        nextQuest: 'quest_dailyRoutine',
         conditions: []
       },
 
-      // === PHASE 0b: Unlock Forge — gives starter crafting materials & teaches tool crafting ===
+      // === STEP 2: Daily Routine — Survive 2 minutes ===
+      quest_dailyRoutine: {
+        id: 'quest_dailyRoutine',
+        name: 'Daily Routine',
+        description: 'Prove your endurance by surviving for 2 minutes in a run. Unlock the Account Building to track your daily rewards and stats!',
+        objectives: 'Survive for 2 minutes in a single run',
+        claim: 'Main Building',
+        rewardGold: 100,
+        rewardSkillPoints: 1,
+        rewardFreeSpin: 1,
+        unlockBuilding: 'accountBuilding',
+        triggerOnDeath: true,
+        message: "⏰ <b>Account Building Unlocked!</b><br><br>🎰 You got <b>1 Free Spin</b> on the Spin Wheel!<br><br>Benny says: <i>'Check your daily rewards and player stats here, dude! This hooks you into the daily loop — come back every day for free goodies!'</i>",
+        nextQuest: 'quest_harvester',
+        conditions: ['firstRunDeath']
+      },
+
+      // === STEP 3: The Harvester — Reach Level 5 ===
+      quest_harvester: {
+        id: 'quest_harvester',
+        name: 'The Harvester',
+        description: 'Reach Level 5 in a single run to unlock the Forge. You\'ll receive starter materials to craft your first tools!',
+        objectives: 'Reach Level 5 in a single run',
+        claim: 'Main Building',
+        rewardGold: 75,
+        rewardSkillPoints: 1,
+        rewardResources: { wood: 10, stone: 10 },
+        unlockBuilding: 'forge',
+        triggerOnDeath: true,
+        message: "🔨 <b>Forge Unlocked!</b> (Tool Crafting Only)<br><br>You received:<br>&nbsp;🪵 <b>10 Wood</b> · 🪨 <b>10 Stone</b><br><br>Benny says: <i>'Craft a Basic Axe and Basic Pickaxe so you can start gathering resources on the map, dude!'</i><br><br>🎯 <b>NEXT:</b> Gather <b>30 Wood</b> and <b>30 Stone</b> using your new tools!",
+        nextQuest: 'quest_firstBlood',
+        conditions: ['quest_dailyRoutine']
+      },
+
+      // === STEP 4: First Blood — Turn in 30 Wood and 30 Stone ===
+      quest_firstBlood: {
+        id: 'quest_firstBlood',
+        name: 'First Blood',
+        description: 'Gather and turn in 30 Wood and 30 Stone to unlock the Armory and Weapon Crafting at the Forge.',
+        objectives: 'Have 30 Wood and 30 Stone (turned in on claim)',
+        claim: 'Main Building',
+        rewardGold: 100,
+        rewardSkillPoints: 1,
+        deductResources: { wood: 30, stone: 30 },
+        unlockBuilding: 'armory',
+        triggerOnDeath: true,
+        message: "⚔️ <b>Armory</b> and <b>Weapon Crafting</b> Unlocked!<br><br>Benny says: <i>'Craft a Common Sword and equip it in the Armory, dude!'</i><br><br>⚠️ <b>Note:</b> Before Prestige, you can only craft and equip <b>Common</b>, <b>Uncommon</b>, and <b>Rare</b> gear.",
+        nextQuest: 'quest_gainingStats',
+        conditions: ['quest_harvester']
+      },
+
+      // === STEP 5: Gaining Stats — Defeat 300 enemies total ===
+      quest_gainingStats: {
+        id: 'quest_gainingStats',
+        name: 'Gaining Stats',
+        description: 'Defeat 300 enemies total across all your runs to unlock the Skill Tree. This is how you push further towards Level 100!',
+        objectives: 'Defeat 300 enemies total',
+        claim: 'Main Building',
+        rewardGold: 150,
+        rewardSkillPoints: 2,
+        unlockBuilding: 'skillTree',
+        triggerOnDeath: true,
+        message: "🌳 <b>Skill Tree Unlocked!</b><br><br>You received <b>2 Skill Points</b>!<br><br>Benny says: <i>'This is how you push further towards Level 100, dude! Invest your points wisely — the Skill Tree is your best friend for the long haul!'</i>",
+        nextQuest: 'quest_eggHunt',
+        conditions: ['quest_firstBlood']
+      },
+
+      // === STEP 6: The Egg Hunt — Reach Level 15 + find egg ===
+      quest_eggHunt: {
+        id: 'quest_eggHunt',
+        name: 'The Egg Hunt',
+        description: 'Reach Level 15 in a single run and explore the map to find the Mysterious Egg.',
+        objectives: 'Reach Level 15 and find the Mysterious Egg',
+        claim: 'Main Building',
+        rewardGold: 0,
+        rewardSkillPoints: 0,
+        triggerOnDeath: true,
+        giveItem: { name: 'Mysterious Egg', type: 'quest', rarity: 'rare', description: 'A strange egg that pulses with warmth...' },
+        message: "🥚 You found a <b>Mysterious Egg</b>! It's been added to your inventory.<br><br>🎯 <b>NEXT:</b> Bring the egg back to camp to see what hatches!",
+        nextQuest: 'quest_newFriend',
+        conditions: ['quest_gainingStats']
+      },
+
+      // === STEP 7: A New Friend — Bring egg to camp ===
+      quest_newFriend: {
+        id: 'quest_newFriend',
+        name: 'A New Friend',
+        description: 'Bring the Mysterious Egg back to camp. Something is stirring inside...',
+        objectives: 'Return to camp with the Mysterious Egg',
+        claim: 'Main Building',
+        rewardGold: 100,
+        rewardSkillPoints: 1,
+        unlockBuilding: 'companionHouse',
+        companionEgg: true,
+        message: "🐣 The egg hatched into a <b>Common Level 1 Pet</b>!<br><br><b>Companion House</b> is now unlocked!<br><br>Benny says: <i>'Your pet will grow with you, dude! Take good care of it — companions get stronger as you level up!'</i>",
+        nextQuest: 'quest_pushingLimits',
+        conditions: ['quest_eggHunt']
+      },
+
+      // === STEP 8: Pushing the Limits — Defeat the First Boss ===
+      quest_pushingLimits: {
+        id: 'quest_pushingLimits',
+        name: 'Pushing the Limits',
+        description: 'Defeat the First Boss at Wave 10 to unlock Special Attacks and the Warehouse.',
+        objectives: 'Defeat the First Boss (Wave 10)',
+        claim: 'Main Building',
+        rewardGold: 200,
+        rewardSkillPoints: 2,
+        unlockBuilding: 'specialAttacks',
+        unlockBuildingExtra: 'warehouse',
+        triggerOnDeath: true,
+        message: "🏆 <b>Boss Defeated!</b><br><br><b>Special Attacks Arena</b> and <b>Warehouse</b> are now unlocked!<br><br>Benny says: <i>'You're getting stronger, dude! Keep pushing towards Level 100 — that's the ultimate goal for this map!'</i>",
+        nextQuest: 'quest2_spendSkills',
+        conditions: ['quest_newFriend']
+      },
+
+      // === LEGACY QUESTS (kept for backward compatibility with existing saves) ===
       questForge0_unlock: {
         id: 'questForge0_unlock',
-        name: 'Unlock the Forge',
-        description: 'The Forge has been unlocked! Visit it in Camp to craft your first harvesting tools using the starter materials you received.',
+        name: 'Unlock the Forge (Legacy)',
+        description: 'Legacy quest — replaced by new progression chain.',
         objectives: 'Visit the Forge in Camp',
         autoClaim: false,
         claim: 'Main Building',
@@ -1571,22 +1687,21 @@
         rewardSkillPoints: 1,
         rewardResources: { wood: 10, stone: 10, coal: 10, iron: 3, leather: 3 },
         unlockBuilding: 'forge',
-        message: "🔨 Forge Unlocked!<br><br>You received <b>starter materials</b>:<br>&nbsp;🪵 10 Wood · 🪨 10 Stone · 🖤 10 Coal · ⚙️ 3 Iron · 🧶 3 Leather<br><br>Visit the <b>Forge</b> to craft harvesting tools!<br>Tools let you gather resources out in the world.<br><br>🔧 <b>NEXT:</b> Craft a tool at the Forge!",
+        message: "🔨 Forge Unlocked! You received starter materials.",
         nextQuest: 'questForge0b_craftTools',
         conditions: ['firstRunDeath']
       },
 
-      // === PHASE 0c: Craft tools at the Forge — teaches crafting system ===
       questForge0b_craftTools: {
         id: 'questForge0b_craftTools',
-        name: 'Craft a Harvesting Tool',
-        description: 'Open the Forge and buy your first harvesting tool. You received starter materials to get started!',
+        name: 'Craft a Harvesting Tool (Legacy)',
+        description: 'Legacy quest — replaced by new progression chain.',
         objectives: 'Buy any harvesting tool at the Forge',
         autoClaim: false,
         claim: 'Main Building',
         rewardGold: 50,
         rewardSkillPoints: 1,
-        message: "🪓 Tool Acquired!<br><br>You now have a harvesting tool! Use it during runs to gather resources from trees, rocks, and ore deposits.<br><br>🎯 Now kill <b>3 enemies</b> in a run to unlock the Skill Tree!",
+        message: "🪓 Tool Acquired!",
         nextQuest: 'quest1_kill3',
         conditions: ['questForge0_unlock']
       },
@@ -2222,13 +2337,16 @@
     };
 
     const buildingQuestUnlockMap = {
-      'skillTree': 'quest1_kill3',
-      'specialAttacks': 'quest3_stonehengeGear',
-      'armory': 'quest3_stonehengeGear',
+      // === New slow-burn progression chain (8-step building unlocks) ===
+      'accountBuilding': 'quest_dailyRoutine',
+      'forge': 'quest_harvester',
+      'armory': 'quest_firstBlood',
+      'skillTree': 'quest_gainingStats',
+      'companionHouse': 'quest_newFriend',
+      'specialAttacks': 'quest_pushingLimits',
+      'warehouse': 'quest_pushingLimits',
+      // === Legacy/extended progression (backward compat for old saves past quest 8) ===
       'trainingHall': 'quest5_upgradeAttr',
-      'forge': 'quest6_survive2min',
-      'warehouse': 'quest7_buyProgression',
-      'companionHouse': 'quest8_kill10',
       'tavern': 'quest8_kill10',
       'shop': 'quest9_activateCompanion',
       'prestige': 'quest10_kill15',
@@ -2666,6 +2784,22 @@
       addAccountXP(50);
       chatSystemMessage('🎁 Quest "' + quest.name + '" claimed! Rewards received.');
       
+      // Deduct resources on claim (e.g., quest_firstBlood turns in 30W/30S)
+      if (quest.deductResources) {
+        if (!saveData.resources) saveData.resources = {};
+        for (const [res, amt] of Object.entries(quest.deductResources)) {
+          saveData.resources[res] = Math.max(0, (saveData.resources[res] || 0) - amt);
+          showStatChange(`-${amt} ${res.charAt(0).toUpperCase() + res.slice(1)} turned in!`);
+        }
+        if (window.GameHarvesting) window.GameHarvesting.refreshHUD();
+      }
+      
+      // Award free spin on the Spin Wheel (e.g., quest_dailyRoutine)
+      if (quest.rewardFreeSpin) {
+        saveData.freeSpins = (saveData.freeSpins || 0) + quest.rewardFreeSpin;
+        showStatChange(`+${quest.rewardFreeSpin} Free Spin!`);
+      }
+      
       // Unlock building on CLAIM (only for quests that use unlockBuilding, e.g. quest1 for SkillTree)
       // window._campShowBuildOverlay can be set to null by camp-world.js to suppress this overlay
       // when the build is triggered directly from the camp interaction system.
@@ -2682,6 +2816,17 @@
         if (window._campShowBuildOverlay != null && window.CampWorld && window.CampWorld.isActive) {
           const buildingName = CAMP_BUILDINGS[quest.unlockBuilding]?.name || 'Building';
           _showBuildOverlay(quest.unlockBuilding, buildingName);
+        }
+      }
+      
+      // Unlock additional building (e.g., quest_pushingLimits unlocks both specialAttacks and warehouse)
+      if (quest.unlockBuildingExtra && saveData.campBuildings[quest.unlockBuildingExtra]) {
+        saveData.campBuildings[quest.unlockBuildingExtra].unlocked = true;
+        const extraName = CAMP_BUILDINGS[quest.unlockBuildingExtra]?.name || 'Building';
+        showStatChange(`🏛️ ${extraName} Unlocked!`);
+        if (window.CampWorld && window.CampWorld.isActive) {
+          window.CampWorld.refreshBuildings(saveData);
+          window.CampWorld.playBuildingUnlockAnimation(quest.unlockBuildingExtra);
         }
       }
       
@@ -2904,7 +3049,7 @@
       const tq = saveData && saveData.tutorialQuests;
       if (!tq) return false;
       return (tq.readyToClaim && tq.readyToClaim.length > 0) ||
-             (tq.firstDeathShown && !tq.currentQuest && !isQuestClaimed('quest1_kill3'));
+             (tq.firstDeathShown && !tq.currentQuest && !isQuestClaimed('quest_dailyRoutine') && !isQuestClaimed('quest1_kill3'));
     }
     
     // Update quest tracker in camp screen

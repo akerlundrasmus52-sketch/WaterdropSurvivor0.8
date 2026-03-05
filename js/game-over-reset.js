@@ -94,50 +94,75 @@
       // Tutorial: Check for quest completion on death
       const currentQuest = getCurrentQuest();
       if (currentQuest && currentQuest.triggerOnDeath) {
-        // Quest 4: Kill 10 enemies (legacy)
+        // === New slow-burn quest chain ===
+        // Step 2: Daily Routine — Survive 2 minutes
+        if (currentQuest.id === 'quest_dailyRoutine' && survivalTime >= 120) {
+          progressTutorialQuest('quest_dailyRoutine', true);
+        }
+        // Step 3: The Harvester — Reach Level 5 in a single run
+        if (currentQuest.id === 'quest_harvester' && playerStats.lvl >= 5) {
+          progressTutorialQuest('quest_harvester', true);
+        }
+        // Step 4: First Blood — Have 30 Wood and 30 Stone (resource check)
+        if (currentQuest.id === 'quest_firstBlood') {
+          const r = saveData.resources || {};
+          if ((r.wood || 0) >= 30 && (r.stone || 0) >= 30) {
+            progressTutorialQuest('quest_firstBlood', true);
+          }
+        }
+        // Step 5: Gaining Stats — 300 total kills
+        if (currentQuest.id === 'quest_gainingStats' && (saveData.totalKills || 0) >= 300) {
+          progressTutorialQuest('quest_gainingStats', true);
+        }
+        // Step 6: The Egg Hunt — Reach Level 15 + found mysterious egg
+        if (currentQuest.id === 'quest_eggHunt' && playerStats.lvl >= 15 && saveData.tutorialQuests.mysteriousEggFound) {
+          progressTutorialQuest('quest_eggHunt', true);
+        }
+        // Step 7: A New Friend — auto-completes on return to camp (handled below)
+        // Step 8: Pushing the Limits — Defeat boss (wave 10+)
+        if (currentQuest.id === 'quest_pushingLimits' && saveData.tutorialQuests.firstBossDefeated) {
+          progressTutorialQuest('quest_pushingLimits', true);
+        }
+
+        // === Legacy quest checks (backward compatibility) ===
         if (currentQuest.id === 'quest4_kill10' && saveData.tutorialQuests.killsThisRun >= 10) {
           progressTutorialQuest('quest4_kill10', true);
         }
-        // Quest 5 (survive 2 min): Check survival time
-        // Quest: Survive 2 minutes
         if (currentQuest.id === 'quest6_survive2min' && survivalTime >= 120) {
           progressTutorialQuest('quest6_survive2min', true);
         }
-        // Quest: Kill 10 enemies
         if (currentQuest.id === 'quest8_kill10' && saveData.tutorialQuests.killsThisRun >= 10) {
           progressTutorialQuest('quest8_kill10', true);
         }
-        // Quest: Kill 15 enemies
         if (currentQuest.id === 'quest10_kill15' && saveData.tutorialQuests.killsThisRun >= 15) {
           progressTutorialQuest('quest10_kill15', true);
         }
-        // Quest: Kill 25 enemies
         if (currentQuest.id === 'quest14_kill25' && saveData.tutorialQuests.killsThisRun >= 25) {
           progressTutorialQuest('quest14_kill25', true);
         }
-        // Quest: Kill 20 enemies (Trash & Recycle unlock)
         if (currentQuest.id === 'quest26_kill20' && saveData.tutorialQuests.killsThisRun >= 20) {
           progressTutorialQuest('quest26_kill20', true);
         }
-        // Quest: Survive 3 minutes (Temp Shop unlock)
         if (currentQuest.id === 'quest28_survive3min' && survivalTime >= 180) {
           progressTutorialQuest('quest28_survive3min', true);
         }
-        // Quest: Kill 12 enemies (alternation run quest)
         if (currentQuest.id === 'quest15b_runKill12' && saveData.tutorialQuests.killsThisRun >= 12) {
           progressTutorialQuest('quest15b_runKill12', true);
         }
-        // Quest: Grow companion to juvenile (survive 60 seconds)
         if (currentQuest.id === 'quest19b_growJuvenile' && survivalTime >= 60) {
           progressTutorialQuest('quest19b_growJuvenile', true);
         }
-        // Quest: Grow companion to adult (kill 8 enemies)
         if (currentQuest.id === 'quest19c_growAdult' && saveData.tutorialQuests.killsThisRun >= 8) {
           progressTutorialQuest('quest19c_growAdult', true);
         }
       }
       
-      // Quest 3 (new chain): Reach Level 5
+      // Auto-complete quest_newFriend when returning to camp with the egg
+      if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest_newFriend' && isQuestClaimed('quest_eggHunt')) {
+        progressTutorialQuest('quest_newFriend', true);
+      }
+      
+      // Legacy quest 3 (new chain): Reach Level 5
       if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest3_reachLevel5' && playerStats.lvl >= 5) {
         if (!saveData.tutorialQuests.readyToClaim.includes('quest3_reachLevel5')) {
           saveData.tutorialQuests.readyToClaim.push('quest3_reachLevel5');
@@ -363,6 +388,15 @@
       if (saveData.tutorialQuests) {
         saveData.tutorialQuests.killsThisRun = 0;
         saveData.tutorialQuests.survivalTimeThisRun = 0;
+      }
+      
+      // Reset mysterious egg spawning flag for new run
+      window._mysteriousEggSpawned = false;
+      window._mysteriousEggObject = null;
+      
+      // Reset exp pickup combo for new run
+      if (window.GameAudio && window.GameAudio.resetExpCombo) {
+        window.GameAudio.resetExpCombo();
       }
       
       // Reset player invulnerability state
