@@ -107,7 +107,7 @@
           const falloff = 1 - dist / kb.radius;
           if (falloff <= 0) continue;
 
-          const impulse = kb.force * falloff * 0.6;  // 60 % transfer
+          const impulse = kb.force * falloff * 0.6;  // 60% transfer
           const nx = dx / dist, nz = dz / dist;
 
           // Apply velocity change

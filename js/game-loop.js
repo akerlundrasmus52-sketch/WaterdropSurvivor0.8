@@ -747,9 +747,11 @@
         }
       }
       // QuadTree — hierarchical spatial partitioning (supplements spatial hash)
+      // Bounds cover ±60 units (well beyond fog far plane of 45 units)
       if (window.PerfManager && window.PerfManager.QuadTree) {
+        const qtHalf = RENDERER_CONFIG.fogFar ? RENDERER_CONFIG.fogFar + 15 : 60;
         if (!window._enemyQuadTree) {
-          window._enemyQuadTree = new window.PerfManager.QuadTree({ x: -60, z: -60, w: 120, h: 120 });
+          window._enemyQuadTree = new window.PerfManager.QuadTree({ x: -qtHalf, z: -qtHalf, w: qtHalf * 2, h: qtHalf * 2 });
         }
         window._enemyQuadTree.clear();
         for (var _qi = 0; _qi < enemies.length; _qi++) {

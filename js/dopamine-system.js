@@ -86,12 +86,12 @@
     chromaticPulse(intensity, fadeMs) {
       this._aberration = Math.min(intensity, 1);
       const fadeStep = 16 / (fadeMs || 600);
-      const fade = () => {
+      const fadeAberration = () => {
         this._aberration -= fadeStep;
-        if (this._aberration > 0.01) requestAnimationFrame(fade);
+        if (this._aberration > 0.01) requestAnimationFrame(fadeAberration);
         else this._aberration = 0;
       };
-      requestAnimationFrame(fade);
+      requestAnimationFrame(fadeAberration);
     },
 
     /** Apply DOF-style blur (0 = none). Auto-fades. */
@@ -99,12 +99,12 @@
       this._dofBlur = blurPx;
       const fadeStep = 16 / (fadeMs || 500);
       const initial = blurPx;
-      const fade = () => {
+      const fadeDOF = () => {
         this._dofBlur -= initial * fadeStep;
-        if (this._dofBlur > 0.1) requestAnimationFrame(fade);
+        if (this._dofBlur > 0.1) requestAnimationFrame(fadeDOF);
         else this._dofBlur = 0;
       };
-      requestAnimationFrame(fade);
+      requestAnimationFrame(fadeDOF);
     },
 
     /** Per-frame update. */

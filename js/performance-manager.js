@@ -19,7 +19,7 @@
     constructor(bounds, level = 0) {
       this.level  = level;
       this.bounds = bounds;   // { x, z, w, h } — origin is top-left
-      /** @type {Array<{ x: number, z: number, entity: object }>} */
+      /** @type {Array<object>}  Entities with `.mesh.position` (standard THREE.js layout). */
       this.objects = [];
       /** @type {QuadTree[]} */
       this.nodes  = [];
