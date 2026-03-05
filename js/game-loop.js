@@ -451,6 +451,11 @@
       // which could propagate NaN into physics positions and permanently break the loop.
       if (!isFinite(dt) || dt <= 0) dt = 0.016; // fallback to ~60fps frame
 
+      // Time dilation — DopamineSystem scales dt for slow-motion effects
+      if (window.DopamineSystem && window.DopamineSystem.TimeDilation) {
+        dt *= window.DopamineSystem.TimeDilation.update(dt);
+      }
+
       // Debug: log frame timing anomalies (throttled, observation-only)
       if (window.GameDebug) window.GameDebug.onFrameStart(time, dt * 1000, gameTime);
       
@@ -740,6 +745,23 @@
             window._enemySpatialHash.insert(_she);
           }
         }
+      }
+      // QuadTree — hierarchical spatial partitioning (supplements spatial hash)
+      if (window.PerfManager && window.PerfManager.QuadTree) {
+        if (!window._enemyQuadTree) {
+          window._enemyQuadTree = new window.PerfManager.QuadTree({ x: -60, z: -60, w: 120, h: 120 });
+        }
+        window._enemyQuadTree.clear();
+        for (var _qi = 0; _qi < enemies.length; _qi++) {
+          var _qe = enemies[_qi];
+          if (_qe && _qe.mesh && !_qe.isDead) {
+            window._enemyQuadTree.insert(_qe);
+          }
+        }
+      }
+      // Knockback chain reactions — propagate physics impulses between enemies
+      if (window.AdvancedPhysics && window.AdvancedPhysics.KnockbackChain) {
+        window.AdvancedPhysics.KnockbackChain.process(enemies, window._enemySpatialHash, dt);
       }
       // Debug: track alive/died counts per frame for diagnostics
       const _dbgAliveBeforeEnemyTick = window.GameDebug && window.GameDebug.enabled
@@ -2098,6 +2120,34 @@
       expGems.forEach(g => g.update(player.mesh.position));
       goldCoins.forEach(g => g.update(player.mesh.position));
       chests.forEach(c => c.update(player.mesh.position));
+
+      // --- Instanced renderer: sync entity transforms to GPU buffers ---
+      if (window._instancedRenderer && window._instancedRenderer.active) {
+        const ir = window._instancedRenderer;
+        ir.beginFrame();
+        ir.syncEntities('enemy_tank', enemies, e => !e.isDead && e.type === 0);
+        ir.syncEntities('enemy_fast', enemies, e => !e.isDead && e.type === 1);
+        ir.syncEntities('enemy_balanced', enemies, e => !e.isDead && e.type === 2);
+        ir.syncEntities('exp_gem', expGems);
+        ir.syncEntities('bullet', projectiles);
+        ir.endFrame();
+      }
+
+      // --- Dopamine system per-frame updates ---
+      if (window.DopamineSystem) {
+        if (window.DopamineSystem.CameraFX) window.DopamineSystem.CameraFX.update(dt);
+        if (window.DopamineSystem.ElasticNumbers) window.DopamineSystem.ElasticNumbers.update(dt);
+        if (window.DopamineSystem.FeverMode) window.DopamineSystem.FeverMode.update(dt);
+      }
+
+      // --- Advanced physics per-frame updates ---
+      if (window._projectileLightPool) window._projectileLightPool.update();
+      if (window.AdvancedPhysics && window.AdvancedPhysics.DynamicShadows) {
+        window.AdvancedPhysics.DynamicShadows.update();
+      }
+      if (window._waterMaterial && window.AdvancedPhysics) {
+        window.AdvancedPhysics.WaterMaterial.animate(window._waterMaterial, gameTime);
+      }
       
       // Phase 5: Update particles and release back to pool when dead
       // PERFORMANCE: Cull particles beyond fog far plane (invisible beyond fog anyway)

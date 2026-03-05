@@ -48,6 +48,17 @@
           clearcoat: 1,
           clearcoatRoughness: 0.1
         });
+
+        // Enhanced water material — apply IOR, sheen, and refined values from AdvancedPhysics
+        if (window.AdvancedPhysics && window.AdvancedPhysics.WaterMaterial) {
+          material.ior = 1.33;
+          material.sheen = 1.0;
+          material.sheenRoughness = 0.3;
+          material.sheenColor = new THREE.Color(0x88ccff);
+          material.transmission = 0.5;
+          material.thickness = 0.7;
+          window._waterMaterial = material;
+        }
         
         this.mesh = new THREE.Mesh(geometry, material);
         this.mesh.position.y = 0.5;
@@ -935,9 +946,18 @@
         // Slide adds extra sideways compression (body narrows during slide turns)
         const slideStretch = this.slideAmount * 0.12;
         const dirStretch = baseStretch + slideStretch;
-        this.mesh.scale.y = this.currentScaleY * this._breathScale;
-        this.mesh.scale.x = this.currentScaleXZ * (1.0 - dirStretch * 0.6) * this._breathScale;
-        this.mesh.scale.z = this.currentScaleXZ * (1.0 + dirStretch * 0.5) * this._breathScale;
+
+        // AdvancedPhysics velocity-coupled squash/stretch enhancement
+        let velStretchY = 1, velStretchXZ = 1;
+        if (window.AdvancedPhysics && window.AdvancedPhysics.SquashStretch && speedMag > 0.3) {
+          const ss = window.AdvancedPhysics.SquashStretch.compute(speedMag, 12, 0.3);
+          velStretchY  = ss.sy;
+          velStretchXZ = ss.sx;
+        }
+
+        this.mesh.scale.y = this.currentScaleY * this._breathScale * velStretchY;
+        this.mesh.scale.x = this.currentScaleXZ * (1.0 - dirStretch * 0.6) * this._breathScale * velStretchXZ;
+        this.mesh.scale.z = this.currentScaleXZ * (1.0 + dirStretch * 0.5) * this._breathScale * velStretchXZ;
         
         // Blinking eyes animation
         this.blinkTimer += dt;

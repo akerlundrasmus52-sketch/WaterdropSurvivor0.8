@@ -580,6 +580,17 @@
       
       // Reset fountain/lightning spawn sequence for next run
       if (window.SpawnSequence) window.SpawnSequence.reset();
+
+      // Reset new performance & visual systems
+      if (window.DopamineSystem) {
+        if (window.DopamineSystem.ElasticNumbers) window.DopamineSystem.ElasticNumbers.clear();
+        if (window.DopamineSystem.FeverMode) window.DopamineSystem.FeverMode.reset();
+        if (window.DopamineSystem.CameraFX) window.DopamineSystem.CameraFX.reset();
+        if (window.DopamineSystem.TimeDilation) window.DopamineSystem.TimeDilation.snap(1.0);
+      }
+      if (window.AdvancedPhysics && window.AdvancedPhysics.KnockbackChain) {
+        window.AdvancedPhysics.KnockbackChain.clear();
+      }
       
       // Clear any pending timeouts
       activeTimeouts.forEach(timeoutId => {

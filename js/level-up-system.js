@@ -996,6 +996,16 @@
       }
 
       modal.style.display = 'flex';
+
+      // --- Dopamine level-up FX: time dilation, camera zoom, chromatic aberration ---
+      if (window.DopamineSystem && window.DopamineSystem.LevelUpFX) {
+        window.DopamineSystem.LevelUpFX.play();
+      }
+      // Animate upgrade cards as collector cards
+      if (window.DopamineSystem && window.DopamineSystem.CollectorCards) {
+        const cards = list.querySelectorAll('.upgrade-option, .upgrade-card');
+        window.DopamineSystem.CollectorCards.animateEntrance(cards);
+      }
       
       // Show skip button after 5 seconds as safety valve if player can't select an upgrade
       const skipBtn = document.getElementById('levelup-skip-btn');
