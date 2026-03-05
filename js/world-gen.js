@@ -55,8 +55,8 @@
       const _gPos = mainGroundGeo.attributes.position;
       for (let _gi = 0; _gi < _gPos.count; _gi++) {
         const _gx = _gPos.getX(_gi);
-        const _gy = _gPos.getY(_gi); // PlaneGeometry is in XY; Y becomes -Z after rotation
-        const _noise = (Math.sin(_gx * 0.3) * Math.cos(_gy * 0.3) + Math.sin(_gx * 0.7 + _gy * 0.5)) * 0.5 + 0.5;
+        const _gPlaneY = _gPos.getY(_gi); // PlaneGeometry is in XY; this axis becomes -Z after rotation
+        const _noise = (Math.sin(_gx * 0.3) * Math.cos(_gPlaneY * 0.3) + Math.sin(_gx * 0.7 + _gPlaneY * 0.5)) * 0.5 + 0.5;
         _gColors.push(0.18 + _noise * 0.08, 0.45 + _noise * 0.15, 0.1 + _noise * 0.05);
       }
       mainGroundGeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(_gColors), 3));
