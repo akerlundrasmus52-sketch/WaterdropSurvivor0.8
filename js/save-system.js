@@ -81,7 +81,7 @@
       campBuildings: {
         // Core buildings — unlocked on first camp visit but must be BUILT (level 0→1)
         questMission: { level: 0, maxLevel: 1, unlocked: true }, // BUILD required on first visit
-        inventory: { level: 0, maxLevel: 1, unlocked: false }, // Unlock on first camp visit
+        inventory: { level: 1, maxLevel: 1, unlocked: true }, // Core free building — always built
         campHub: { level: 0, maxLevel: 1, unlocked: false }, // Initially locked
         loreMaster: { level: 0, maxLevel: 1, unlocked: false }, // Initially locked (placeholder)
         campBoard: { level: 0, maxLevel: 1, unlocked: false }, // Unlock via quest21
@@ -435,6 +435,18 @@
               bldQM.unlocked = true; // keep unlocked so BUILD button shows
             }
             saveData._buildingMigrationV4 = true;
+          }
+          // ── Building migration v5 ──
+          // Inventory is a core free building (isFree + isCore) that should always
+          // be built and available.  Older saves may have it at level 0 / unlocked
+          // false.  Set it to built so players can access inventory without a quest.
+          if (!saveData._buildingMigrationV5) {
+            var bldInv = saveData.campBuildings && saveData.campBuildings.inventory;
+            if (bldInv && bldInv.level === 0) {
+              bldInv.level = 1;
+              bldInv.unlocked = true;
+            }
+            saveData._buildingMigrationV5 = true;
           }
 
           // ── Quest migration: questGather0_materials → questForge0_unlock ──

@@ -317,7 +317,7 @@
                 Welcome back, Droplet! Before you can gather resources, you need the right tools.<br><br>
                 <b>YOUR MISSION:</b> Build the <b>Forge</b> in your camp!<br>
                 You'll receive <b>starter materials</b> to craft your first harvesting tools:<br>
-                &nbsp;🪵 <b>10 Wood</b> · 🪨 <b>10 Stone</b> · 🖤 <b>5 Coal</b><br>
+                &nbsp;🪵 <b>10 Wood</b> · 🪨 <b>10 Stone</b> · 🖤 <b>10 Coal</b><br>
                 &nbsp;⚙️ <b>3 Iron</b> · 🧶 <b>3 Leather</b><br><br>
                 Then use the Forge to craft tools for gathering!
               </p>
@@ -356,6 +356,18 @@
         }
       }
       
+      // Fallback: if questForge0_unlock is the active quest but not yet in readyToClaim
+      // (can happen when activated via _completeBuild after building questMission),
+      // add it to readyToClaim so the player can claim it at the Quest Hall.
+      if (
+        saveData.tutorialQuests.currentQuest === 'questForge0_unlock' &&
+        !isQuestClaimed('questForge0_unlock') &&
+        !saveData.tutorialQuests.readyToClaim.includes('questForge0_unlock')
+      ) {
+        saveData.tutorialQuests.readyToClaim.push('questForge0_unlock');
+        saveSaveData();
+      }
+
       // Fallback: auto-activate quest2 if quest1 is claimed but quest2 hasn't started
       // Also check if quest2 is active but skills are already bought
       ensureQuest2Activated();

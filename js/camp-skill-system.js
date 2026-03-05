@@ -1569,9 +1569,9 @@
         claim: 'Main Building',
         rewardGold: 75,
         rewardSkillPoints: 1,
-        rewardResources: { wood: 10, stone: 10, coal: 5, iron: 3, leather: 3 },
+        rewardResources: { wood: 10, stone: 10, coal: 10, iron: 3, leather: 3 },
         unlockBuilding: 'forge',
-        message: "🔨 Forge Unlocked!<br><br>You received <b>starter materials</b>:<br>&nbsp;🪵 10 Wood · 🪨 10 Stone · 🖤 5 Coal · ⚙️ 3 Iron · 🧶 3 Leather<br><br>Visit the <b>Forge</b> to craft harvesting tools!<br>Tools let you gather resources out in the world.<br><br>🔧 <b>NEXT:</b> Craft a tool at the Forge!",
+        message: "🔨 Forge Unlocked!<br><br>You received <b>starter materials</b>:<br>&nbsp;🪵 10 Wood · 🪨 10 Stone · 🖤 10 Coal · ⚙️ 3 Iron · 🧶 3 Leather<br><br>Visit the <b>Forge</b> to craft harvesting tools!<br>Tools let you gather resources out in the world.<br><br>🔧 <b>NEXT:</b> Craft a tool at the Forge!",
         nextQuest: 'questForge0b_craftTools',
         conditions: ['firstRunDeath']
       },
