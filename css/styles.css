@@ -1724,25 +1724,22 @@
       animation: pulse 3s infinite;
     }
     
-    /* UPGRADE GRID: responsive flexbox layout for upgrade choices.
-       Cards flow side-by-side on wide screens and wrap cleanly on narrow
-       screens (e.g. Samsung S10 @ 360 px wide) without horizontal overflow. */
+    /* UPGRADE GRID: CSS grid layout for upgrade choices.
+       Cards flow in a responsive grid — two columns on wide screens, one on narrow ones
+       (e.g. Samsung S10 @ 360 px wide) without horizontal overflow. */
     #upgrade-list, #level-up-choices {
-      display: flex;
-      flex-wrap: wrap;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
       gap: 10px;
       margin-top: 15px;
       width: 100%;
       box-sizing: border-box;
-      justify-content: center;
     }
 
-    /* Each card takes at least 140px but grows to fill available space,
-       so 2 cards fit side-by-side on most screens and stack on very small ones. */
+    /* Each card fills its grid cell fully. */
     #upgrade-list > *, #level-up-choices > * {
-      flex: 1 1 140px;
-      min-width: 130px;
-      max-width: 280px;
+      min-width: 0;
+      max-width: 100%;
     }
 
     h2 {
@@ -3187,16 +3184,28 @@
 
       /* Level-up cards: allow two side-by-side in landscape */
       #upgrade-list > *, #level-up-choices > * {
-        flex: 1 1 200px;
         max-width: 260px;
       }
 
-      /* Joystick zone: push move joystick to far left and shoot joystick to far right
+      /* Joystick zone: move joystick to far left and shoot joystick to far right
          for comfortable two-thumb play in landscape orientation */
       .joystick-outer {
-        /* Override inline positioning — JS may re-position, but these give a sane default */
         width: 100px;
         height: 100px;
+      }
+
+      /* Left joystick anchored to far left bottom corner */
+      #joystick-left {
+        left: 12px !important;
+        bottom: 12px !important;
+        right: auto !important;
+      }
+
+      /* Right joystick anchored to far right bottom corner */
+      #joystick-right {
+        right: 12px !important;
+        left: auto !important;
+        bottom: 12px !important;
       }
 
       /* Show settings/stats buttons in landscape (enough horizontal space) */
@@ -3330,11 +3339,11 @@
 
       /* Force single-column on very small screens to prevent horizontal overflow */
       #upgrade-list, #level-up-choices {
+        grid-template-columns: 1fr;
         gap: 8px;
       }
 
       #upgrade-list > *, #level-up-choices > * {
-        flex: 1 1 100%;
         max-width: 100%;
       }
 
@@ -3364,6 +3373,38 @@
       /* Ensure unified bars fit within 360px viewport */
       .unified-bars-wrap {
         max-width: 160px;
+      }
+
+      /* Samsung S10 / narrow: shrink rage meter so it doesn't overlap special/companion icons */
+      .rage-hud {
+        bottom: 90px;
+        padding: 3px 6px;
+        gap: 4px;
+        max-width: calc(100vw - 20px);
+      }
+
+      .rage-label {
+        font-size: 10px;
+        letter-spacing: 1px;
+      }
+
+      .rage-activate-btn {
+        font-size: 10px;
+        padding: 2px 5px;
+      }
+
+      /* Shift day/night clock slightly right to avoid overlap with left HUD */
+      #day-night-clock {
+        left: calc(50% + 16px) !important;
+        transform: translateX(-50%) scale(0.58) !important;
+      }
+
+      /* Settings button: shrink and align neatly top-right */
+      #settings-btn {
+        top: 14px !important;
+        right: 6px !important;
+        font-size: 14px !important;
+        padding: 3px 5px !important;
       }
     }
     
@@ -5578,74 +5619,95 @@
    Redesigned as dynamic, bold comic-style dialogue bubbles.
    =================================================================== */
 
-/* Override base ds-bubble with comic-book foundation */
+/* ===================================================================
+   A.I.D.A TERMINAL — Override ds-bubble with retro-futuristic terminal style
+   =================================================================== */
+/* Override base ds-bubble with terminal foundation */
 #ds-bubble {
-  font-family: 'Bangers', 'Comic Sans MS', cursive !important;
-  letter-spacing: 1.2px !important;
-  border-width: 3px !important;
+  font-family: 'Courier New', 'Lucida Console', monospace !important;
+  letter-spacing: 0.5px !important;
+  border-width: 2px !important;
   border-style: solid !important;
-  /* Dynamic tail pointing down-left toward Benny */
-  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.6));
-  /* Ensure responsive text fits without overflow */
-  max-width: min(300px, 88vw) !important;
+  filter: drop-shadow(0 0 8px rgba(0,255,204,0.5)) drop-shadow(0 4px 8px rgba(0,0,0,0.7));
+  max-width: min(320px, 88vw) !important;
   word-break: break-word !important;
   white-space: pre-wrap !important;
   box-sizing: border-box !important;
+  border-radius: 4px !important;
+  transform: none !important;
 }
 
-/* Comic-style happy bubble (Benny's main mood) */
-.ds-bubble-happy {
-  background: linear-gradient(135deg, #FFF9E0 0%, #FFF3B0 100%) !important;
-  color: #1a0a00 !important;
-  border-color: #2a1000 !important;
-  border-radius: 18px 18px 18px 4px !important;
+/* All emotion variants share the terminal dark look */
+.ds-bubble-happy,
+.ds-bubble-task,
+.ds-bubble-joking,
+.ds-bubble-thinking,
+.ds-bubble-sad,
+.ds-bubble-goal {
+  background: rgba(0, 12, 18, 0.94) !important;
+  color: #00ffcc !important;
+  border-color: #00ffcc !important;
+  border-radius: 4px !important;
   box-shadow:
-    4px 4px 0 #2a1000,
-    0 0 0 1px #2a1000,
-    inset 0 1px 0 rgba(255,255,255,0.8) !important;
-  transform: rotate(-1deg);
+    0 0 0 1px rgba(0,255,204,0.3),
+    inset 0 0 12px rgba(0,255,204,0.06),
+    0 0 20px rgba(0,255,204,0.2) !important;
+  transform: none !important;
 }
-.ds-bubble-happy::after {
-  border-top-color: #2a1000 !important;
+
+/* Tail pointer — terminal triangle pointing down */
+.ds-bubble-happy::after,
+.ds-bubble-task::after,
+.ds-bubble-joking::after,
+.ds-bubble-goal::after {
+  border-top-color: #00ffcc !important;
   bottom: -13px !important;
   left: 18px !important;
-  border-width: 13px !important;
+  border-width: 9px !important;
 }
 
-/* Task bubble (quest objectives) */
-.ds-bubble-task {
-  background: linear-gradient(135deg, #E8FFE8 0%, #C8FFC8 100%) !important;
-  color: #0a2a0a !important;
-  border-color: #1a5a1a !important;
-  border-radius: 6px 6px 6px 4px !important;
+/* Thinking variant: slightly yellow tint for uncertainty */
+.ds-bubble-thinking {
+  color: #ffe066 !important;
+  border-color: #ffe066 !important;
   box-shadow:
-    3px 3px 0 #1a5a1a,
-    0 0 0 1px #1a5a1a !important;
-  transform: rotate(0.5deg);
-}
-.ds-bubble-task::after {
-  border-top-color: #1a5a1a !important;
-  bottom: -13px !important;
+    0 0 0 1px rgba(255,224,102,0.3),
+    inset 0 0 12px rgba(255,224,102,0.06),
+    0 0 20px rgba(255,224,102,0.2) !important;
 }
 
-/* Joking bubble */
-.ds-bubble-joking {
-  background: linear-gradient(135deg, #FFF0C0 0%, #FFE080 100%) !important;
-  color: #3a1a00 !important;
-  border-color: #FF6600 !important;
-  border-radius: 50% 50% 40% 50% / 50% 50% 50% 40% !important;
+/* Goal / objective variant: gold for critical directives */
+.ds-bubble-goal {
+  color: #FFD700 !important;
+  border-color: #FFD700 !important;
   box-shadow:
-    3px 3px 0 #FF6600,
-    0 0 0 1px #FF6600 !important;
-  transform: rotate(2deg);
+    0 0 0 1px rgba(255,215,0,0.4),
+    inset 0 0 12px rgba(255,215,0,0.06),
+    0 0 20px rgba(255,215,0,0.25) !important;
 }
 
-/* Emphasis words rotated slightly for comic feel */
+/* Terminal scanline overlay for authentic retro feel */
+#ds-bubble::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0px,
+    transparent 3px,
+    rgba(0,0,0,0.08) 3px,
+    rgba(0,0,0,0.08) 4px
+  );
+  pointer-events: none;
+  border-radius: 4px;
+}
+
+/* Terminal prompt prefix styling */
 #ds-bubble strong, #ds-bubble b {
-  display: inline-block;
-  transform: rotate(-2deg) scale(1.1);
-  color: #FF4400;
-  text-shadow: 1px 1px 0 rgba(0,0,0,0.3);
+  display: inline;
+  transform: none;
+  color: #FFD700;
+  text-shadow: 0 0 6px rgba(255,215,0,0.5);
 }
 
 /* ===================================================================

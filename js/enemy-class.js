@@ -2015,7 +2015,7 @@
         for (let i = 0; i < expMultiplier; i++) {
           const spread = i * (Math.PI * 2 / Math.max(expMultiplier, 1));
           const angle = xpPopAngle + spread;
-          spawnExp(deathPos.x + Math.cos(angle) * xpPopDist, deathPos.z + Math.sin(angle) * xpPopDist, damageType, xpHitForce);
+          spawnExp(deathPos.x + Math.cos(angle) * xpPopDist, deathPos.z + Math.sin(angle) * xpPopDist, damageType, xpHitForce, this.type);
         }
         
         // Dynamic death animation styles - weapon-dependent with variation

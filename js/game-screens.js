@@ -2912,7 +2912,7 @@
         const decal = new THREE.Mesh(geo, mat);
         decal.rotation.x = -Math.PI / 2;
         decal.renderOrder = 12; // Render above ground to prevent z-fighting
-        decal.position.set(pos.x + (Math.random() - 0.5) * 0.8, 0.06, pos.z + (Math.random() - 0.5) * 0.8);
+        decal.position.set(pos.x + (Math.random() - 0.5) * 0.8, 0.05, pos.z + (Math.random() - 0.5) * 0.8);
         decal.userData.spawnTime = now;
         decal.userData.initialOpacity = initialOpacity;
         scene.add(decal);
@@ -2921,7 +2921,7 @@
         // Reuse existing slot (O(1) circular overwrite)
         const old = bloodDecals[bloodDecalIndex];
         const initialOpacity = 0.6 + Math.random() * 0.3;
-        old.position.set(pos.x + (Math.random() - 0.5) * 0.8, 0.06, pos.z + (Math.random() - 0.5) * 0.8);
+        old.position.set(pos.x + (Math.random() - 0.5) * 0.8, 0.05, pos.z + (Math.random() - 0.5) * 0.8);
         old.material.opacity = initialOpacity;
         old.userData.spawnTime = now;
         old.userData.initialOpacity = initialOpacity;
@@ -3031,8 +3031,8 @@
       }
     }
 
-    function spawnExp(x, z, sourceWeapon, hitForce) {
-      expGems.push(new ExpGem(x, z, sourceWeapon, hitForce));
+    function spawnExp(x, z, sourceWeapon, hitForce, enemyType) {
+      expGems.push(new ExpGem(x, z, sourceWeapon, hitForce, enemyType));
     }
     
     function spawnGold(x, z, amount) {

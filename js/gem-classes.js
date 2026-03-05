@@ -7,8 +7,27 @@
     let _expGemStarMaterial = null;
     let _expGemOutlineGeometry = null;
 
+    // EXP gem tier colours — colour-coded by enemy difficulty tier
+    // Common (tier 0): White/Grey | Green (tier 1) | Blue (tier 2) | Epic/Purple (tier 3) | Boss/Orange (tier 4)
+    const GEM_TIER_COLORS = [
+      { color: 0xCCCCCC, emissive: 0x888888 }, // 0 — Common  (White/Grey)
+      { color: 0x44FF66, emissive: 0x22AA33 }, // 1 — Green
+      { color: 0x5DADE2, emissive: 0x2E86C1 }, // 2 — Blue
+      { color: 0xAA44FF, emissive: 0x6600CC }, // 3 — Epic (Purple)
+      { color: 0xFF8800, emissive: 0xCC5500 }  // 4 — Boss (Orange)
+    ];
+
+    // Map enemy type → gem tier
+    function _gemTierForType(enemyType) {
+      if (enemyType === 10 || enemyType === 11) return 4; // MiniBoss / FlyingBoss
+      if (enemyType === 9 || (enemyType >= 12 && enemyType <= 16)) return 3; // Elite + Bug variants (epic)
+      if (enemyType >= 5 && enemyType <= 8) return 2; // Flying/Hard variants (blue)
+      if (enemyType === 3 || enemyType === 4) return 1; // Slowing/Ranged (green)
+      return 0; // Common: Tank(0), Fast(1), Balanced(2) — and unknown/null types
+    }
+
     class ExpGem {
-      constructor(x, z, sourceWeapon, hitForce) {
+      constructor(x, z, sourceWeapon, hitForce, enemyType) {
         // Use shared star geometry (created once) — 65% smaller than original
         if (!_expGemStarGeometry) {
           const starPoints = 5;
@@ -26,19 +45,27 @@
           _expGemStarGeometry = new THREE.ExtrudeGeometry(starShape, extrudeSettings);
           _expGemStarGeometry.center();
           _expGemStarMaterial = new THREE.MeshPhysicalMaterial({
-            color: 0x5DADE2,      // Match XP bar color exactly (#5DADE2)
-            emissive: 0x2E86C1,   // Blue emissive glow matching XP bar
+            color: 0x5DADE2,
+            emissive: 0x2E86C1,
             emissiveIntensity: 0.4,
             metalness: 0.3,
             roughness: 0.05,
-            clearcoat: 1.0,        // Glass-like shine layer
+            clearcoat: 1.0,
             clearcoatRoughness: 0.05,
             reflectivity: 0.8
           });
         }
 
+        // Determine gem tier from enemy type and apply tier colour.
+        // Passing null/undefined enemyType uses the -1 sentinel which falls through
+        // _gemTierForType to return tier 0 (Common/grey) — a safe default.
+        const tier = _gemTierForType(enemyType != null ? enemyType : -1);
+        const tierCol = GEM_TIER_COLORS[tier] || GEM_TIER_COLORS[0];
+
         // Each gem gets its own material clone for per-instance emissive animation
         const starMaterial = _expGemStarMaterial.clone();
+        starMaterial.color.setHex(tierCol.color);
+        starMaterial.emissive.setHex(tierCol.emissive);
 
         this.mesh = new THREE.Mesh(_expGemStarGeometry, starMaterial);
 
@@ -103,14 +130,14 @@
         this.rotSpeedZ = (Math.random() * 0.10 + 0.03) * spinMult * (Math.random() < 0.5 ? 1 : -1);
 
         // Physics: pop velocity + gravity
-        // Reduced pop speed and increased gravity so gems feel heavier and land faster.
+        // Increased gravity/drag so gems fall quickly and don't float too long.
         var popSpeed = (0.02 + Math.random() * 0.025) * force;
         this.vx = Math.cos(popAngle) * popSpeed;
-        this.vy = 0.04 + Math.random() * 0.02 * force; // upward pop — lowered so gems don't float
+        this.vy = 0.04 + Math.random() * 0.02 * force; // upward pop
         this.vz = Math.sin(popAngle) * popSpeed;
-        this.gravity = -0.008; // stronger gravity so gems fall quickly and feel heavier
+        this.gravity = -0.013; // increased gravity so gems land quickly and feel heavy
         this.onGround = false;
-        this.groundFriction = 0.85; // more drag on ground slide
+        this.groundFriction = 0.80; // more drag on ground slide
 
         this.bobPhase = Math.random() * Math.PI * 2;
         this.sparklePhase = Math.random() * Math.PI * 2;
