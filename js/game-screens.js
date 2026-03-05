@@ -3142,6 +3142,7 @@
       }
       
       playerStats.lvl++;
+      if (window.GameMilestones) window.GameMilestones.recordLevel(playerStats.lvl);
       // Notify the super stat bar — rarity escalates with milestone levels
       if (window.pushSuperStatEvent) {
         const lvl = playerStats.lvl;

@@ -1229,6 +1229,7 @@
         }
 
         playerStats.hp -= reduced;
+        if (window.GameMilestones) window.GameMilestones.recordDamageTaken(reduced);
         updateHUD();
         playSound('hit');
         

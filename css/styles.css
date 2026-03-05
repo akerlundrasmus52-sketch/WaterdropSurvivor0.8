@@ -5759,3 +5759,14 @@
   display: inline-block;
   letter-spacing: 0.5px;
 }
+
+/* Account section header — improved purple-gradient style */
+.account-header-improved {
+  background: linear-gradient(135deg, #1a0533 0%, #2d0a52 50%, #1a0533 100%);
+  border-bottom: 2px solid #9b59b6;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 4px 20px rgba(155,89,182,0.3);
+}
