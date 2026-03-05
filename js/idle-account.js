@@ -1,31 +1,31 @@
 // idle-account.js — Advanced account system with XP from everything
 window.GameAccount = (function () {
   var MILESTONES = [
-    { level: 1,   title: 'Newbie',               border: null },
-    { level: 3,   title: 'Adventurer',            border: null },
-    { level: 5,   title: 'Newcomer',              border: null },
-    { level: 8,   title: 'Explorer',              border: 'Bronze' },
-    { level: 10,  title: 'Beginner',              border: 'Bronze' },
-    { level: 13,  title: 'Survivor',              border: null },
-    { level: 16,  title: 'Pathfinder',            border: null },
-    { level: 20,  title: 'Warrior',               border: 'Silver' },
-    { level: 25,  title: 'Skilled',               border: 'Silver' },
-    { level: 30,  title: 'Slayer',                border: null },
-    { level: 35,  title: 'Champion',              border: null },
-    { level: 40,  title: 'Veteran',               border: 'Gold' },
-    { level: 45,  title: 'Elite',                 border: 'Gold' },
-    { level: 50,  title: 'Guardian',              border: null },
-    { level: 55,  title: 'Warden',                border: null },
-    { level: 60,  title: 'Expert',                border: 'Platinum' },
-    { level: 65,  title: 'Conqueror',             border: 'Platinum' },
-    { level: 70,  title: 'Hero',                  border: null },
-    { level: 75,  title: 'Titan',                 border: null },
-    { level: 80,  title: 'Master',                border: 'Diamond' },
-    { level: 85,  title: 'Grandmaster',           border: 'Diamond' },
-    { level: 88,  title: 'Mythic',                border: null },
-    { level: 92,  title: 'Ascendant',             border: null },
-    { level: 96,  title: 'Legend',                 border: 'Prismatic' },
-    { level: 100, title: 'Waterdrop Survivor',    border: 'Prismatic' }
+    { level: 1,   title: 'Puddle',              border: null },
+    { level: 3,   title: 'Stream',              border: null },
+    { level: 5,   title: 'Adventurer',          border: null },
+    { level: 8,   title: 'Wanderer',            border: 'Bronze' },
+    { level: 10,  title: 'Explorer',            border: 'Bronze' },
+    { level: 13,  title: 'Survivor',            border: null },
+    { level: 16,  title: 'Pathfinder',          border: null },
+    { level: 20,  title: 'Warrior',             border: 'Silver' },
+    { level: 25,  title: 'Skilled',             border: 'Silver' },
+    { level: 30,  title: 'Slayer',              border: null },
+    { level: 35,  title: 'Champion',            border: null },
+    { level: 40,  title: 'Veteran',             border: 'Gold' },
+    { level: 45,  title: 'Elite',               border: 'Gold' },
+    { level: 50,  title: 'Guardian',            border: null },
+    { level: 55,  title: 'Warden',              border: null },
+    { level: 60,  title: 'Expert',              border: 'Platinum' },
+    { level: 65,  title: 'Conqueror',           border: 'Platinum' },
+    { level: 70,  title: 'Hero',                border: null },
+    { level: 75,  title: 'Titan',               border: null },
+    { level: 80,  title: 'Master',              border: 'Diamond' },
+    { level: 85,  title: 'Grandmaster',         border: 'Diamond' },
+    { level: 88,  title: 'Mythic',              border: null },
+    { level: 92,  title: 'Ascendant',           border: null },
+    { level: 96,  title: 'Legend',              border: 'Prismatic' },
+    { level: 100, title: 'Waterdrop Survivor',  border: 'Prismatic' }
   ];
 
   var MAX_LEVEL = 100;
@@ -131,7 +131,7 @@ window.GameAccount = (function () {
 
   function getAccountDefaults() {
     return {
-      accountName: 'Adventurer',
+      accountName: 'Waterdrop',
       profileIcon: '🧙',
       createdAt: Date.now(),
       totalPlaytime: 0,
@@ -203,7 +203,7 @@ window.GameAccount = (function () {
 
   function setProfileName(name, saveData) {
     if (!saveData.account) saveData.account = getAccountDefaults();
-    saveData.account.accountName = String(name).slice(0, 24) || 'Adventurer';
+    saveData.account.accountName = String(name).slice(0, 24) || 'Waterdrop';
   }
 
   function setProfileIcon(icon, saveData) {

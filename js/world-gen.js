@@ -723,7 +723,35 @@
       eyeOfHorusGroup.add(pupil);
       
       mayanGroup.add(eyeOfHorusGroup);
-      
+
+      // ── Glowing All-Seeing Eye (above capstone — hovers and pulses) ──
+      const allSeeingEyeGroup = new THREE.Group();
+      allSeeingEyeGroup.position.set(0, pyramidSteps * 2.5 + 5.5, 0);
+      // Triangle background (all-seeing triangle) — ConeGeometry points up by default
+      const eyeTriGeo = new THREE.ConeGeometry(1.8, 2.0, 3);
+      const eyeTriMat = new THREE.MeshBasicMaterial({ color: 0xFFD700, transparent: true, opacity: 0.85 });
+      const eyeTri = new THREE.Mesh(eyeTriGeo, eyeTriMat);
+      // No rotation needed — ConeGeometry already points upward
+      allSeeingEyeGroup.add(eyeTri);
+      // Central glowing iris
+      const irisMat = new THREE.MeshBasicMaterial({ color: 0x00FFFF, transparent: true, opacity: 0.95 });
+      const iris = new THREE.Mesh(new THREE.CircleGeometry(0.4, 16), irisMat);
+      iris.position.y = 0.02;
+      allSeeingEyeGroup.add(iris);
+      // Inner pupil
+      const innerPupilMat = new THREE.MeshBasicMaterial({ color: 0x000022 });
+      const innerPupil = new THREE.Mesh(new THREE.CircleGeometry(0.18, 16), innerPupilMat);
+      innerPupil.position.y = 0.03;
+      allSeeingEyeGroup.add(innerPupil);
+      // Glow point light
+      const eyeGlow = new THREE.PointLight(0x00FFFF, 2.5, 20);
+      eyeGlow.position.y = 0.5;
+      allSeeingEyeGroup.add(eyeGlow);
+      allSeeingEyeGroup.userData = { isAllSeeingEye: true, baseY: pyramidSteps * 2.5 + 5.5, glowLight: eyeGlow };
+      mayanGroup.add(allSeeingEyeGroup);
+      // Store for animation — position is in mayanGroup local space, so we animate group.position.y
+      if (!window._pyramidEye) window._pyramidEye = { group: allSeeingEyeGroup, glow: eyeGlow, phase: 0, baseY: pyramidSteps * 2.5 + 5.5 };
+
       // Add some decorative blocks on sides - MADE LARGER
       for(let side=0; side<4; side++) {
         const angle = (side / 4) * Math.PI * 2;

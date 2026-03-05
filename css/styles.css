@@ -827,7 +827,7 @@
       50% { transform: translate(-50%, calc(-50% - 5px)); }
     }
 
-    /* ─── DialogueSystem Animated Speech Bubble ─────────────────────────── */
+    /* ─── DialogueSystem — 1980s Sci-Fi Comic Book Panel ─────────────────── */
     #ds-bubble {
       position: fixed;
       z-index: 360;
@@ -839,7 +839,7 @@
       font-size: clamp(12px, 3.5vw, 14px);
       letter-spacing: 0.8px;
       line-height: 1.5;
-      text-align: center;
+      text-align: left;
       pointer-events: auto;
       cursor: pointer;
       display: none;
@@ -849,6 +849,10 @@
       /* Smooth transitions between emotion styles */
       transition: border-radius 0.3s ease, background 0.3s ease, box-shadow 0.3s ease, color 0.3s ease, max-width 0.3s ease;
       user-select: none;
+      /* Comic book halftone-style border */
+      border: 2px solid rgba(0, 220, 255, 0.6);
+      border-radius: 4px;
+      outline: 1px solid rgba(0, 220, 255, 0.15);
     }
     /* Short text (≤30 chars): compact bubble */
     #ds-bubble.ds-size-short { max-width: min(180px, 80vw); font-size: clamp(12px, 3.5vw, 15px); }
@@ -1006,6 +1010,65 @@
     .ds-choice-btn:active {
       background: rgba(255,215,0,0.22);
       box-shadow: 0 0 8px rgba(255,215,0,0.35);
+    }
+
+    /* ── Comic Book Panel header & footer ── */
+    .ds-bubble-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(0, 220, 255, 0.35);
+      padding-bottom: 4px;
+      margin-bottom: 6px;
+    }
+    .ds-aida-label {
+      font-family: 'Bangers', cursive;
+      font-size: 11px;
+      letter-spacing: 3px;
+      color: #00DCFF;
+      text-shadow: 0 0 8px rgba(0,220,255,0.7);
+    }
+    .ds-panel-dots {
+      font-size: 8px;
+      color: rgba(0, 220, 255, 0.5);
+      letter-spacing: 2px;
+    }
+    .ds-bubble-footer {
+      margin-top: 6px;
+      font-family: 'Bangers', cursive;
+      font-size: 9px;
+      letter-spacing: 2px;
+      color: rgba(255, 215, 0, 0.45);
+      text-align: right;
+      border-top: 1px solid rgba(255, 215, 0, 0.15);
+      padding-top: 3px;
+      animation: ds-footer-blink 1.6s step-end infinite;
+    }
+    @keyframes ds-footer-blink {
+      0%, 100% { opacity: 0.45; }
+      50%       { opacity: 0.1; }
+    }
+
+    /* ── Comic Book image panel ── */
+    .ds-bubble-image-wrap {
+      width: 100%;
+      margin-bottom: 8px;
+      border: 2px solid rgba(0, 220, 255, 0.4);
+      border-radius: 4px;
+      overflow: hidden;
+      background: #000;
+      line-height: 0;
+    }
+    .ds-panel-image {
+      width: 100%;
+      max-height: 120px;
+      object-fit: cover;
+      display: block;
+      filter: contrast(1.1) saturate(1.2);
+    }
+    /* Wider bubble when image is present */
+    #ds-bubble.ds-has-image {
+      max-width: min(340px, 90vw);
     }
 
     /* ── Keyframe animations ── */
@@ -5398,6 +5461,7 @@
   transform: translateY(-100%);
   pointer-events: auto;
   cursor: pointer;
+  overflow: hidden;
 }
 #account-levelup-curtain.curtain-enter {
   animation: curtain-drop 0.5s cubic-bezier(0.22,1,0.36,1) forwards;
@@ -5439,7 +5503,54 @@
   text-shadow: 0 1px 4px rgba(0,0,0,0.9);
 }
 
-/* ── Item Info / Preview Panel ─────────────────────────────── */
+/* Rank title shown inside curtain */
+.curtain-rank-title {
+  font-family: 'Bangers', cursive;
+  font-size: 22px;
+  letter-spacing: 3px;
+  color: #FFA500;
+  text-shadow: 0 0 16px rgba(255,165,0,0.9), 0 2px 4px rgba(0,0,0,0.9);
+  animation: curtain-title-pulse 0.6s ease-out;
+}
+@keyframes curtain-title-pulse {
+  0%   { transform: scale(0.6); opacity: 0; }
+  70%  { transform: scale(1.12); opacity: 1; }
+  100% { transform: scale(1);    opacity: 1; }
+}
+
+/* Milestone rank-up: expanded curtain covering more screen */
+#account-levelup-curtain.curtain-milestone {
+  height: 40vh;
+  background: linear-gradient(to bottom,
+    rgba(5,5,15,0.98) 0%,
+    rgba(20,0,40,0.95) 60%,
+    transparent 100%);
+  border-bottom-color: rgba(255,165,0,0.8);
+  box-shadow: 0 6px 60px rgba(0,0,0,0.9), 0 0 100px rgba(255,165,0,0.25);
+  overflow: visible;
+}
+
+/* Sunburst inside the curtain */
+.curtain-sunburst {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 320px;
+  height: 320px;
+  transform: translate(-50%, -50%) rotate(0deg);
+  pointer-events: none;
+  z-index: 0;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg, rgba(255,220,0,0.14) 8deg,
+    transparent 16deg, rgba(255,180,0,0.10) 24deg,
+    transparent 32deg
+  );
+  border-radius: 50%;
+  animation: sunburst-spin 3s linear infinite;
+}
+
+
 .rarity-common    { color: #aaaaaa; }
 .rarity-uncommon  { color: #55cc55; }
 .rarity-rare      { color: #44aaff; }

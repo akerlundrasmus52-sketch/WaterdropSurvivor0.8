@@ -658,20 +658,50 @@
         curtain.removeEventListener('click', _curtainDismissHandler);
         _curtainDismissHandler = null;
       }
-      curtain.classList.remove('curtain-enter', 'curtain-exit');
+
+      // Determine rank title for this level
+      const rankTitle = (window.GameAccount && window.GameAccount.getCurrentTitle)
+        ? window.GameAccount.getCurrentTitle({ account: { level: newLevel } })
+        : '';
+
+      // Is this a milestone rank? (new title unlocked)
+      const prevTitle = (window.GameAccount && window.GameAccount.getCurrentTitle)
+        ? window.GameAccount.getCurrentTitle({ account: { level: newLevel - 1 } })
+        : '';
+      const isMilestone = rankTitle && rankTitle !== prevTitle;
+
+      curtain.classList.remove('curtain-enter', 'curtain-exit', 'curtain-milestone');
       curtain.innerHTML = [
-        '<div class="curtain-icon">🏆</div>',
-        '<div class="curtain-levelup-text">LEVEL UP!</div>',
+        '<div class="curtain-sunburst"></div>',
+        '<div class="curtain-icon">' + (isMilestone ? '⭐' : '🏆') + '</div>',
+        '<div class="curtain-levelup-text">' + (isMilestone ? 'RANK UP!' : 'LEVEL UP!') + '</div>',
         `<div class="curtain-level-num">Level ${newLevel}</div>`,
+        rankTitle ? `<div class="curtain-rank-title">${rankTitle}</div>` : '',
         `<div class="curtain-reward-text">${rewardLabel} · Tap to dismiss</div>`
       ].join('');
+
       // Force reflow so animation restarts
       void curtain.offsetWidth;
       curtain.classList.add('curtain-enter');
+      if (isMilestone) curtain.classList.add('curtain-milestone');
+
+      // Dopamine: confetti + sunburst on milestone rank-ups
+      if (isMilestone && window.DopamineSystem && window.DopamineSystem.RewardJuice) {
+        window.DopamineSystem.RewardJuice.spawnConfetti(curtain);
+        window.DopamineSystem.RewardJuice.addSunburst(curtain);
+        // Brief time dilation pause for drama
+        if (window.DopamineSystem.TimeDilation) {
+          window.DopamineSystem.TimeDilation.set(0.05, 6);
+          setTimeout(() => window.DopamineSystem.TimeDilation.set(1.0, 4), 600);
+        }
+      }
+
+      // Heavy sound effect
+      if (typeof playSound === 'function') playSound('levelup');
 
       function dismissCurtain() {
         if (_curtainTimer) { clearTimeout(_curtainTimer); _curtainTimer = null; }
-        curtain.classList.remove('curtain-enter');
+        curtain.classList.remove('curtain-enter', 'curtain-milestone');
         curtain.classList.add('curtain-exit');
         curtain.removeEventListener('click', dismissCurtain);
         _curtainDismissHandler = null;
@@ -679,8 +709,8 @@
       _curtainDismissHandler = dismissCurtain;
       curtain.addEventListener('click', dismissCurtain);
 
-      // Auto-dismiss after 3.5 seconds
-      _curtainTimer = setTimeout(dismissCurtain, 3500);
+      // Auto-dismiss after 4 seconds (longer for milestones)
+      _curtainTimer = setTimeout(dismissCurtain, isMilestone ? 5000 : 3500);
     }
 
     function updateAccountLevelDisplay() {

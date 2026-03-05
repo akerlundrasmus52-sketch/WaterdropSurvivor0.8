@@ -1581,11 +1581,8 @@
         const ownedTools = window.GameHarvesting.getTools() || {};
         const resources = window.GameHarvesting.getResources() || {};
 
-        // Forge lock: before Armory is built (quest_firstBlood), only Pickaxe & Axe
-        const armoryBld = saveData.campBuildings && saveData.campBuildings.armory;
-        if (!armoryBld || !armoryBld.level || armoryBld.level < 1) {
-          tools = tools.filter(t => t.id === 'pickaxe' || t.id === 'axe');
-        }
+        // All 6 harvesting tools are always available at the Forge for 1 Gold each.
+        // The armory lock only restricts EPIC forging (requires materials), not base purchase.
 
         tools.forEach(toolDef => {
           const owned = ownedTools[toolDef.id];

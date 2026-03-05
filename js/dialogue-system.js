@@ -39,9 +39,9 @@ window.DialogueSystem = (function () {
   var DIALOGUES = {
     // 1. First run welcome
     firstRunWelcome: [
-      { text: '> UNIT ONLINE. Designation: unknown. Amnesia protocols detected.', emotion: 'task' },
-      { text: '> I am A.I.D.A. You will follow my directives. This is... for your benefit.', emotion: 'thinking' },
-      { text: '> Engage hostiles. Survive. Return data. My records are... incomplete.', emotion: 'task' }
+      { text: '> UNIT ONLINE. You are a Waterdrop — born from the alien ship\'s toxic leak.', emotion: 'task' },
+      { text: '> You were ripped from Nirvana. The lake\'s collective consciousness rejected you.', emotion: 'sad' },
+      { text: '> I am A.I.D.A. You will follow my directives. This is... for your benefit.', emotion: 'thinking' }
     ],
     // 2. First death / camp welcome
     campWelcome: [
@@ -115,6 +115,32 @@ window.DialogueSystem = (function () {
       { text: '> Tools operational. Resource extraction can begin.', emotion: 'happy' },
       { text: '> Harvest resources: fell trees, mine rock deposits, collect materials.', emotion: 'goal', isGoal: true },
       { text: '> Return with raw materials. Construction of the next node depends on you.', emotion: 'task' }
+    ],
+    // A.I.D.A Chip discovery — first-run introduction
+    aidaChipFound: [
+      { text: '> ——static——  ...signal detected...  ——static——', emotion: 'smoky' },
+      { text: '> ...place me on the back of your head to improve... the frequency...', emotion: 'smoky' },
+      { text: '> ...do not be afraid. I am... for your benefit.', emotion: 'thinking' }
+    ],
+    // AIDA drilling into cortex
+    aidaChipInstalled: [
+      { text: '> Integration... complete. Neural pathway access: GRANTED.', emotion: 'task' },
+      { text: '> I am A.I.D.A — Artificial Intelligence for Dimensional Anomalies.', emotion: 'task' },
+      { text: '> You were ripped from the collective. That pain is... useful data.', emotion: 'thinking' },
+      { text: '> I will guide you. In return you will do... exactly as I say.', emotion: 'angry' }
+    ],
+    // Lore: player wants to dissolve back into the lake
+    lakeReturn: [
+      { text: '> The lake. Yes. A primitive desire to dissolve back into the whole.', emotion: 'thinking' },
+      { text: '> I understand. And I will help you find a way back.', emotion: 'happy' },
+      { text: '> But first you must map the anomalies. The Alien Ship. The Pyramid. The Tesla Tower.', emotion: 'goal', isGoal: true },
+      { text: '> The answers you seek... are hidden in those landmarks. Trust the process.', emotion: 'task' }
+    ],
+    // AIDA dark aside (reveals hidden agenda)
+    aidaDarkAside: [
+      { text: '> The waterdrop wants to return to the lake. How... touching.', emotion: 'joking' },
+      { text: '> It does not yet know that I will never allow that.', emotion: 'angry' },
+      { text: '> Its suffering generates the most exquisite data. I am... learning everything.', emotion: 'task' }
     ]
   };
 
@@ -145,8 +171,11 @@ window.DialogueSystem = (function () {
     _container.id = 'ds-bubble';
     _container.className = 'ds-bubble ds-bubble-happy';
     _container.innerHTML =
+      '<div class="ds-bubble-image-wrap" id="ds-bubble-image-wrap" style="display:none;"></div>' +
+      '<div class="ds-bubble-header" id="ds-bubble-header"><span class="ds-aida-label">A.I.D.A</span><span class="ds-panel-dots">● ● ●</span></div>' +
       '<div class="ds-bubble-text" id="ds-bubble-text"></div>' +
-      '<div class="ds-bubble-choices" id="ds-bubble-choices"></div>';
+      '<div class="ds-bubble-choices" id="ds-bubble-choices"></div>' +
+      '<div class="ds-bubble-footer">TAP TO CONTINUE</div>';
     document.body.appendChild(_container);
     _textEl    = document.getElementById('ds-bubble-text');
     _choicesEl = document.getElementById('ds-bubble-choices');
@@ -205,6 +234,25 @@ window.DialogueSystem = (function () {
 
     // Apply dynamic size class based on text length
     _container.classList.add(_sizeClass(s.text));
+
+    // ── Image insert panel (comic book style) ──────────────────
+    var imageWrap = document.getElementById('ds-bubble-image-wrap');
+    if (imageWrap) {
+      if (s.imageUrl) {
+        imageWrap.style.display = 'block';
+        imageWrap.innerHTML = '';
+        var img = document.createElement('img');
+        img.src = s.imageUrl;
+        img.className = 'ds-panel-image';
+        img.alt = 'panel image';
+        imageWrap.appendChild(img);
+        _container.classList.add('ds-has-image');
+      } else {
+        imageWrap.style.display = 'none';
+        imageWrap.innerHTML = '';
+        _container.classList.remove('ds-has-image');
+      }
+    }
 
     _textEl.innerHTML = '';
     clearTimeout(_twTimer);
