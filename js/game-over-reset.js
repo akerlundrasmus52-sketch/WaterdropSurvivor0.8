@@ -373,18 +373,31 @@
       
       const totalCdReduction = cdReduction + attrCdReduction;
       const gunCooldown = 1000 * (1 - totalCdReduction);
-      weapons.gun = { active: true, level: 1, damage: 15, cooldown: gunCooldown, lastShot: 0, range: 12, barrels: 1 };
-      weapons.sword = { active: false, level: 0, damage: 30, cooldown: 1500, lastShot: 0, range: 3.5 };
-      weapons.aura = { active: false, level: 0, damage: 5, cooldown: 500, lastShot: 0, range: 3 };
-      weapons.meteor = { active: false, level: 0, damage: 60, cooldown: 2500, lastShot: 0, area: 5 };
-      weapons.droneTurret = { active: false, level: 0, damage: 8, cooldown: 200, lastShot: 0, range: 15, droneCount: 1 };
-      weapons.doubleBarrel = { active: false, level: 0, damage: 18, cooldown: 1500, lastShot: 0, range: 12, spread: 0.3, pellets: 2 };
-      weapons.iceSpear = { active: false, level: 0, damage: 20, cooldown: 1500, lastShot: 0, range: 15, slowPercent: 0.4, slowDuration: 2000 };
-      weapons.fireRing = { active: false, level: 0, damage: 8, cooldown: 800, lastShot: 0, range: 4, orbs: 3, rotationSpeed: 2 };
+      weapons.gun = { active: true, level: 1, damage: 15, cooldown: gunCooldown, lastShot: 0, range: 12, barrels: 1, category: 1 };
+      weapons.sword = { active: false, level: 0, damage: 30, cooldown: 1500, lastShot: 0, range: 3.5, category: 1 };
+      weapons.aura = { active: false, level: 0, damage: 5, cooldown: 500, lastShot: 0, range: 3, category: 2 };
+      weapons.meteor = { active: false, level: 0, damage: 60, cooldown: 2500, lastShot: 0, area: 5, category: 3 };
+      weapons.droneTurret = { active: false, level: 0, damage: 8, cooldown: 200, lastShot: 0, range: 15, droneCount: 1, category: 2 };
+      weapons.doubleBarrel = { active: false, level: 0, damage: 18, cooldown: 1500, lastShot: 0, range: 12, spread: 0.3, pellets: 2, category: 1 };
+      weapons.iceSpear = { active: false, level: 0, damage: 20, cooldown: 1500, lastShot: 0, range: 15, slowPercent: 0.4, slowDuration: 2000, category: 2 };
+      weapons.fireRing = { active: false, level: 0, damage: 8, cooldown: 800, lastShot: 0, range: 4, orbs: 3, rotationSpeed: 2, category: 3 };
       // New weapons — initialized upfront so weapon-selection code can always check .active
-      weapons.lightning = { active: false, level: 0, damage: 25, cooldown: 1800, lastShot: 0, range: 12, chainCount: 3 };
-      weapons.poison    = { active: false, level: 0, damage: 8,  cooldown: 3000, lastShot: 0, range: 5,  duration: 4000 };
-      weapons.homing    = { active: false, level: 0, damage: 45, cooldown: 2500, lastShot: 0, range: 20 };
+      weapons.lightning     = { active: false, level: 0, damage: 45, cooldown: 2000, lastShot: 0, range: 18, strikes: 1, chainRange: 5, category: 3 };
+      weapons.poison        = { active: false, level: 0, damage: 6,  cooldown: 1500, lastShot: 0, range: 5,  dotDamage: 3, dotDuration: 4000, category: 3 };
+      weapons.homingMissile = { active: false, level: 0, damage: 40, cooldown: 2200, lastShot: 0, range: 20, category: 2 };
+      weapons.samuraiSword  = { active: false, level: 0, damage: 38, cooldown: 1200, lastShot: 0, range: 4.0, category: 1 };
+      weapons.whip          = { active: false, level: 0, damage: 18, cooldown: 900,  lastShot: 0, range: 6.0, chainHits: 3, category: 1 };
+      weapons.uzi           = { active: false, level: 0, damage: 8,  cooldown: 120,  lastShot: 0, range: 10, barrels: 1, category: 1 };
+      weapons.sniperRifle   = { active: false, level: 0, damage: 95, cooldown: 3000, lastShot: 0, range: 30, piercing: 3, category: 1 };
+      weapons.pumpShotgun   = { active: false, level: 0, damage: 14, cooldown: 1800, lastShot: 0, range: 8, spread: 0.7, pellets: 8, category: 1 };
+      weapons.autoShotgun   = { active: false, level: 0, damage: 10, cooldown: 600,  lastShot: 0, range: 7, spread: 0.6, pellets: 6, category: 1 };
+      weapons.minigun       = { active: false, level: 0, damage: 6,  cooldown: 60,   lastShot: 0, range: 12, barrels: 1, spinUp: 0, category: 1 };
+      weapons.bow           = { active: false, level: 0, damage: 22, cooldown: 1400, lastShot: 0, range: 16, piercing: 1, category: 1 };
+      weapons.teslaSaber    = { active: false, level: 0, damage: 28, cooldown: 800,  lastShot: 0, range: 3.5, chainLightning: true, category: 1 };
+      weapons.boomerang     = { active: false, level: 0, damage: 20, cooldown: 1600, lastShot: 0, range: 12, returnHits: true, category: 2 };
+      weapons.shuriken      = { active: false, level: 0, damage: 12, cooldown: 400,  lastShot: 0, range: 10, projectiles: 3, category: 2 };
+      weapons.nanoSwarm     = { active: false, level: 0, damage: 4,  cooldown: 200,  lastShot: 0, range: 8, swarmCount: 6, category: 2 };
+      weapons.fireball      = { active: false, level: 0, damage: 35, cooldown: 1800, lastShot: 0, range: 14, explosionRadius: 3, category: 3 };
       
       // Clean up any existing drone turrets
       droneTurrets.forEach(drone => drone.destroy());

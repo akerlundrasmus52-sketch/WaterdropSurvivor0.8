@@ -278,6 +278,50 @@
           if (this.mesh.material) this.mesh.material.dispose();
         }
       }
+
+      // Companion special skills — each companion has unique skills
+      static COMPANION_SKILLS = {
+        greyAlien: [
+          { id: 'energy_burst', icon: '💫', name: 'Energy Burst', cooldown: 8000, desc: 'AoE energy blast around companion' },
+          { id: 'phase_shift', icon: '👻', name: 'Phase Shift', cooldown: 15000, desc: 'Companion becomes invulnerable 3s' },
+          { id: 'mind_control', icon: '🧠', name: 'Mind Control', cooldown: 20000, desc: 'Confuses nearest enemy for 5s' }
+        ],
+        stormWolf: [
+          { id: 'howl', icon: '🌙', name: 'Battle Howl', cooldown: 10000, desc: 'Buffs player damage 20% for 5s' },
+          { id: 'pounce', icon: '🐾', name: 'Pounce', cooldown: 6000, desc: 'Leaps to nearest enemy, heavy damage' },
+          { id: 'pack_call', icon: '🐺', name: 'Pack Call', cooldown: 25000, desc: 'Summons ghost wolves to fight 8s' }
+        ],
+        skyFalcon: [
+          { id: 'dive_bomb', icon: '💨', name: 'Dive Bomb', cooldown: 7000, desc: 'Dives at enemy for 3x damage' },
+          { id: 'wind_gust', icon: '🌪️', name: 'Wind Gust', cooldown: 12000, desc: 'Pushes enemies away from player' },
+          { id: 'eagle_eye', icon: '👁️', name: 'Eagle Eye', cooldown: 18000, desc: 'Marks all enemies, +25% crit 6s' }
+        ],
+        waterSpirit: [
+          { id: 'heal_wave', icon: '💚', name: 'Heal Wave', cooldown: 10000, desc: 'Heals player for 30% max HP' },
+          { id: 'frost_nova', icon: '❄️', name: 'Frost Nova', cooldown: 14000, desc: 'Freezes all nearby enemies 3s' },
+          { id: 'tidal_shield', icon: '🛡️', name: 'Tidal Shield', cooldown: 20000, desc: 'Absorbs next 50 damage for 8s' }
+        ]
+      };
+
+      // Update the companion skill buttons in HUD
+      static MAX_COMPANION_SKILLS = 3;
+
+      static updateCompanionSkillsUI(companionId) {
+        var skills = Companion.COMPANION_SKILLS[companionId] || [];
+        for (var i = 0; i < Companion.MAX_COMPANION_SKILLS; i++) {
+          var btn = document.getElementById('comp-skill-' + (i + 1));
+          if (!btn) continue;
+          if (i < skills.length) {
+            btn.textContent = skills[i].icon;
+            btn.title = skills[i].name + ': ' + skills[i].desc;
+            btn.style.display = '';
+          } else {
+            btn.textContent = '—';
+            btn.title = 'Empty skill slot';
+            btn.style.display = '';
+          }
+        }
+      }
     }
 
     class Projectile {

@@ -1,4 +1,4 @@
-// idle-lucky-wheel.js — Spin-the-wheel gacha mini-game with 3 tiers
+// idle-lucky-wheel.js — Spin-the-wheel gacha mini-game with 4 tiers
 window.GameLuckyWheel = (function () {
   // === TIER 1: Basic Wheel (free daily / 50 essence) ===
   var WHEEL_SEGMENTS = [
@@ -36,10 +36,25 @@ window.GameLuckyWheel = (function () {
     { id: 'essence_500',  label: '✨ 500 Essence',      type: 'essence',value: 500, rarity: 'rare',    weight: 17 }
   ];
 
+  // === TIER 4: Mythic Wheel (costs 500 essence) — Mythic & Legendary rewards, earned through account progress ===
+  var WHEEL_SEGMENTS_MYTHIC = [
+    { id: 'ring_mythic',       label: '👑 Mythic Ring',          type: 'equip',   value: 0,    rarity: 'mythic',    weight: 5,  equipRarity: 'mythic' },
+    { id: 'ring_legend2',      label: '👑 Legendary Ring',       type: 'equip',   value: 0,    rarity: 'legendary', weight: 10, equipRarity: 'legendary' },
+    { id: 'weapon_chest',      label: '🗡️ Weapon Chest',        type: 'chest',   value: 0,    rarity: 'legendary', weight: 8 },
+    { id: 'gold_5000',         label: '💰 5000 Gold',            type: 'gold',    value: 5000, rarity: 'epic',      weight: 12 },
+    { id: 'essence_1000',      label: '✨ 1000 Essence',         type: 'essence', value: 1000, rarity: 'epic',      weight: 12 },
+    { id: 'gem_t4',            label: '💎 T4 Gem',              type: 'gem',     value: 4,    rarity: 'legendary', weight: 6 },
+    { id: 'companion_egg',     label: '🥚 Companion Egg',       type: 'companion', value: 0,  rarity: 'mythic',    weight: 3 },
+    { id: 'xp_5000',           label: '🌟 5000 XP Bonus',       type: 'xp',      value: 5000, rarity: 'epic',     weight: 10 },
+    { id: 'mythic_material',   label: '🔮 Mythic Material',     type: 'material', value: 0,   rarity: 'mythic',    weight: 4 },
+    { id: 'legendary_weapon',  label: '⚔️ Legendary Weapon Shard', type: 'shard', value: 0,  rarity: 'legendary', weight: 6 }
+  ];
+
   var WHEEL_TIERS = {
-    basic:  { name: 'Basic Wheel',     icon: '🎡', segments: WHEEL_SEGMENTS,       costType: 'essence', cost: 50,  color: '#3498db' },
-    gold:   { name: 'Gold Wheel',      icon: '🪙', segments: WHEEL_SEGMENTS_GOLD,  costType: 'gold',    cost: 500, color: '#FFD700' },
-    equip:  { name: 'Equipment Wheel', icon: '⚔️', segments: WHEEL_SEGMENTS_EQUIP, costType: 'essence', cost: 200, color: '#e91e63' }
+    basic:  { name: 'Basic Wheel',     icon: '🎡', segments: WHEEL_SEGMENTS,        costType: 'essence', cost: 50,   color: '#3498db' },
+    gold:   { name: 'Gold Wheel',      icon: '🪙', segments: WHEEL_SEGMENTS_GOLD,   costType: 'gold',    cost: 500,  color: '#FFD700' },
+    equip:  { name: 'Equipment Wheel', icon: '⚔️', segments: WHEEL_SEGMENTS_EQUIP,  costType: 'essence', cost: 200,  color: '#e91e63' },
+    mythic: { name: 'Mythic Wheel',    icon: '👑', segments: WHEEL_SEGMENTS_MYTHIC, costType: 'essence', cost: 500,  color: '#9B59B6', minAccountLevel: 20 }
   };
 
   var SPIN_COST = 50; // essence (basic wheel)
@@ -199,7 +214,7 @@ window.GameLuckyWheel = (function () {
 
     // Tier tabs
     html += '<div style="display:flex;gap:6px;justify-content:center;margin-bottom:10px;">';
-    ['basic', 'gold', 'equip'].forEach(function (tid) {
+    ['basic', 'gold', 'equip', 'mythic'].forEach(function (tid) {
       var t = WHEEL_TIERS[tid];
       var isActive = tid === activeTier;
       var tabBg = isActive ? t.color : 'rgba(255,255,255,0.08)';

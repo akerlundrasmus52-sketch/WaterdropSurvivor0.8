@@ -1045,9 +1045,13 @@
         this.lastDamageType = damageType;
         this.lastCrit = isCrit;
         
+        // Damage type sets for cleaner conditional checks
+        const HEAVY_HIT_TYPES = ['doubleBarrel', 'shotgun', 'pumpShotgun', 'autoShotgun', 'sniperRifle', 'homingMissile', 'fireball'];
+        const SHOTGUN_TYPES = ['doubleBarrel', 'shotgun', 'pumpShotgun', 'autoShotgun'];
+
         // Phase 5: Hit impact particles (flesh/blood) on every hit — scaled with HP ratio
         const hpRatio = this.hp / this.maxHp;
-        const isHeavyHit = damageType === 'doubleBarrel' || damageType === 'shotgun' || isCrit;
+        const isHeavyHit = HEAVY_HIT_TYPES.includes(damageType) || isCrit;
         const bloodParticleCount = Math.max(5, Math.floor((1 - hpRatio) * 18) + 5);
         spawnParticles(this.mesh.position, 0x8B0000, Math.min(bloodParticleCount, 20)); // Blood particles
         spawnParticles(this.mesh.position, 0x660000, Math.min(Math.floor(bloodParticleCount * 0.5), 8)); // Darker blood
@@ -1070,7 +1074,7 @@
         }
         // Blood system: directional spray on heavy hits
         if (window.BloodSystem && isHeavyHit) {
-          const isShotgunHit = damageType === 'doubleBarrel' || damageType === 'shotgun';
+          const isShotgunHit = SHOTGUN_TYPES.includes(damageType);
           window.BloodSystem.emitBurst(this.mesh.position, isShotgunHit ? 60 : 30, { spreadXZ: 0.8, spreadY: 0.2, minSize: 0.01, maxSize: 0.06, minLife: 20, maxLife: 50 });
         }
         // Weapon-level-based blood effects — higher levels produce more brutal hits
@@ -1115,11 +1119,59 @@
             // Headshot: always dramatic blood spray from head
             window.BloodSystem.emitHeadBleed(this.mesh.position, { intensity: 0.5, duration: 3 });
             window.BloodSystem.emitBurst(this.mesh.position, 80, { spreadXZ: 1.2, spreadY: 0.4 });
-          } else if (damageType === 'shotgun' || damageType === 'doubleBarrel') {
-            // Shotgun/Homing: massive burst — exit wounds + guts at high power
+          } else if (damageType === 'shotgun' || damageType === 'doubleBarrel' || damageType === 'pumpShotgun' || damageType === 'autoShotgun') {
+            // Shotgun variants: massive burst — exit wounds + guts at high power
             window.BloodSystem.emitBurst(this.mesh.position, 80, { spreadXZ: 1.5, spreadY: 0.3 });
             window.BloodSystem.emitGuts(this.mesh.position, { count: 15 });
             window.BloodSystem.emitExitWound(this.mesh.position, new THREE.Vector3(Math.random()-0.5, 0, Math.random()-0.5).normalize(), 40, { speed: 0.35 });
+          } else if (damageType === 'samuraiSword' || damageType === 'teslaSaber') {
+            // Bladed weapons: deep slashing wounds
+            const slashDir2 = new THREE.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5).normalize();
+            window.BloodSystem.emitSwordSlash(this.mesh.position, slashDir2, 35);
+            window.BloodSystem.emitPulse(this.mesh.position, { pulses: 2, perPulse: 50, interval: 200, arcDir: slashDir2, spreadXZ: 0.5 });
+            if (damageType === 'teslaSaber') {
+              spawnParticles(this.mesh.position, 0x00CCFF, 8); // Electric sparks
+              spawnParticles(this.mesh.position, 0xFFFFFF, 4);
+            }
+          } else if (damageType === 'whip') {
+            // Whip: lash marks
+            window.BloodSystem.emitBurst(this.mesh.position, 25, { spreadXZ: 0.6, spreadY: 0.1 });
+            spawnParticles(this.mesh.position, 0xCC8844, 5);
+          } else if (damageType === 'sniperRifle' || damageType === '50cal') {
+            // Sniper: massive through-and-through
+            const sniperDir = new THREE.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5).normalize();
+            window.BloodSystem.emitBurst(this.mesh.position, 100, { spreadXZ: 2.0, spreadY: 0.5 });
+            window.BloodSystem.emitExitWound(this.mesh.position, sniperDir, 60, { speed: 0.5 });
+            window.BloodSystem.emitGuts(this.mesh.position, { count: 8 });
+          } else if (damageType === 'minigun' || damageType === 'uzi') {
+            // Rapid fire: small frequent blood spurts
+            window.BloodSystem.emitBurst(this.mesh.position, 15, { spreadXZ: 0.3, spreadY: 0.1 });
+          } else if (damageType === 'bow') {
+            // Arrow: pin wound + blood trickle
+            window.BloodSystem.emitBurst(this.mesh.position, 20, { spreadXZ: 0.4, spreadY: 0.15 });
+            spawnParticles(this.mesh.position, 0x8B4513, 3); // Wood splinter particles
+          } else if (damageType === 'boomerang' || damageType === 'shuriken') {
+            // Thrown weapons: slicing cuts
+            window.BloodSystem.emitSwordSlash(this.mesh.position, new THREE.Vector3(Math.random()-0.5, 0, Math.random()-0.5).normalize(), 25);
+            spawnParticles(this.mesh.position, 0xCCCCCC, 4); // Metal spark
+          } else if (damageType === 'nanoSwarm' || damageType === 'special') {
+            // Nano/special: small precise wounds
+            window.BloodSystem.emitBurst(this.mesh.position, 12, { spreadXZ: 0.2, spreadY: 0.1 });
+            spawnParticles(this.mesh.position, 0x6688FF, 3);
+          } else if (damageType === 'homingMissile' || damageType === 'fireball') {
+            // Explosive: massive blast
+            window.BloodSystem.emitBurst(this.mesh.position, 90, { spreadXZ: 2.0, spreadY: 0.5 });
+            window.BloodSystem.emitGuts(this.mesh.position, { count: 12 });
+            spawnParticles(this.mesh.position, 0xFF4400, 10);
+          } else if (damageType === 'lightning') {
+            // Lightning: charring + electric sparks
+            window.BloodSystem.emitAuraBurn(this.mesh.position, 30);
+            spawnParticles(this.mesh.position, 0x00CCFF, 6);
+            spawnParticles(this.mesh.position, 0xFFFF00, 4);
+          } else if (damageType === 'poison') {
+            // Poison: toxic dissolve particles
+            window.BloodSystem.emitBurst(this.mesh.position, 15, { spreadXZ: 0.3, spreadY: 0.1, color1: 0x00AA00, color2: 0x44FF44 });
+            spawnParticles(this.mesh.position, 0x00FF00, 5);
           }
         }
         // Pulsating wound blood drips — gravity-based spray from hit location
@@ -1836,22 +1888,53 @@
         // so it is visible during the death animation and can be collected right away.
         const xpPopAngle = Math.random() * Math.PI * 2;
         const xpPopDist = 0.8 + Math.random() * 0.6; // 0.8–1.4 units away
+        var _isCrit = this.lastCrit || false;
+        var _isExplosive = (damageType === 'shotgun' || damageType === 'doubleBarrel' || damageType === 'lightning' || damageType === 'homingMissile' || damageType === 'meteor' || damageType === 'fireball');
+        var xpHitForce = _isCrit ? 2.0 : (_isExplosive ? 2.5 : 1.0);
         for (let i = 0; i < expMultiplier; i++) {
           const spread = i * (Math.PI * 2 / Math.max(expMultiplier, 1));
           const angle = xpPopAngle + spread;
-          spawnExp(deathPos.x + Math.cos(angle) * xpPopDist, deathPos.z + Math.sin(angle) * xpPopDist);
+          spawnExp(deathPos.x + Math.cos(angle) * xpPopDist, deathPos.z + Math.sin(angle) * xpPopDist, damageType, xpHitForce);
         }
         
         // Dynamic death animation styles - weapon-dependent with variation
         // 0=collapse, 1=spin fall, 2=backward fall, 3=forward collapse, 4=side fall,
-        // 5=ragdoll tumble, 6=explosion knockback, 7=splatter
+        // 5=ragdoll tumble, 6=explosion knockback, 7=splatter, 8=split in half,
+        // 9=gut spill, 10=crawl & collapse
         let deathStyle;
-        if (isShotgunDeath) {
-          // Shotgun/double barrel: knockback-heavy deaths
+        if (isShotgunDeath || damageType === 'pumpShotgun' || damageType === 'autoShotgun') {
+          // Shotgun variants: knockback-heavy deaths
           deathStyle = [2, 5, 6, 7, 9][Math.floor(Math.random() * 5)];
+        } else if (damageType === 'sniperRifle' || damageType === '50cal') {
+          // Sniper: violent backward knockback, split or ragdoll
+          deathStyle = [2, 5, 6, 8][Math.floor(Math.random() * 4)];
+        } else if (damageType === 'minigun' || damageType === 'uzi') {
+          // Rapid fire: riddled with bullets, ragdoll tumble
+          deathStyle = [0, 1, 5, 7][Math.floor(Math.random() * 4)];
+        } else if (damageType === 'samuraiSword' || damageType === 'teslaSaber') {
+          // Bladed melee: clean cuts, split, collapse
+          deathStyle = [0, 3, 4, 8, 10][Math.floor(Math.random() * 5)];
+        } else if (damageType === 'whip') {
+          // Whip: dramatic side falls, collapse
+          deathStyle = [0, 3, 4, 10][Math.floor(Math.random() * 4)];
+        } else if (damageType === 'bow') {
+          // Arrow: pin and fall backward
+          deathStyle = [2, 3, 4][Math.floor(Math.random() * 3)];
+        } else if (damageType === 'boomerang' || damageType === 'shuriken') {
+          // Thrown weapons: spin deaths
+          deathStyle = [1, 4, 5][Math.floor(Math.random() * 3)];
+        } else if (damageType === 'nanoSwarm') {
+          // Nano: dissolve/crumple
+          deathStyle = [0, 3, 7][Math.floor(Math.random() * 3)];
+        } else if (damageType === 'homingMissile' || damageType === 'fireball') {
+          // Explosive: massive knockback, splatter
+          deathStyle = [5, 6, 7, 9][Math.floor(Math.random() * 4)];
         } else if (damageType === 'lightning' || damageType === 'special') {
           // Lightning/special: dramatic spin or explosion deaths
           deathStyle = [1, 5, 6][Math.floor(Math.random() * 3)];
+        } else if (damageType === 'poison') {
+          // Poison: slow collapse, crawl
+          deathStyle = [0, 3, 10][Math.floor(Math.random() * 3)];
         } else if (damageType === 'melee' || damageType === 'knife') {
           // Melee: collapse or forward fall
           deathStyle = [0, 2, 3, 4, 10][Math.floor(Math.random() * 5)];
@@ -1865,8 +1948,8 @@
         const fallSignX = (Math.random() < 0.5) ? 1 : -1;
         const fallSignZ = (Math.random() < 0.5) ? 1 : -1;
         const spinDir = (Math.random() < 0.5) ? 1 : -1;
-        const isShotgunDeath = damageType === 'shotgun' || damageType === 'doubleBarrel';
-        const isExplosiveDeath = isShotgunDeath || damageType === 'lightning';
+        const isShotgunDeath = damageType === 'shotgun' || damageType === 'doubleBarrel' || damageType === 'pumpShotgun' || damageType === 'autoShotgun';
+        const isExplosiveDeath = isShotgunDeath || damageType === 'lightning' || damageType === 'homingMissile' || damageType === 'fireball' || damageType === 'sniperRifle';
         const isCritDeath = this.lastCrit || false;
         
         // Fall down animation: enemy falls dynamically, lies on ground, explodes into blood
