@@ -2215,9 +2215,9 @@
     /* Damage Numbers */
     .damage-number {
       position: absolute;
-      font-family: 'Bangers', 'M PLUS Rounded 1c', cursive; /* Comic font */
-      font-weight: bold;
-      font-size: 12px; /* SMALLER: Reduced from 16px */
+      font-family: 'Nunito', 'M PLUS Rounded 1c', 'Arial Rounded MT Bold', sans-serif; /* Cozy rounded font */
+      font-weight: 900;
+      font-size: 13px; /* Slightly larger for legibility */
       pointer-events: none;
       animation: floatUp 1s forwards;
       z-index: 1000;

@@ -956,28 +956,63 @@ function showWeaponBuilding() {
       startWeapons = _getAllWeapons().filter(function (w) { return w.id === 'gun'; });
     }
 
-    // Visual wheel
+    // Wheel wrapper — enlarged and zoomed so labels are big and readable
+    var wheelWrapper = _el('div',
+      'position:relative;width:340px;height:340px;margin:0 auto 20px;');
+    panel.appendChild(wheelWrapper);
+
+    // Visual wheel — larger (340 px) so icon + name labels are legible while spinning
     var wheelContainer = _el('div',
-      'position:relative;width:260px;height:260px;margin:0 auto 20px;border-radius:50%;' +
+      'position:absolute;top:0;left:0;width:340px;height:340px;border-radius:50%;' +
       'background:conic-gradient(from 0deg,' +
       _buildWheelGradient(startWeapons) + ');' +
-      'border:4px solid ' + GOLD + ';box-shadow:0 0 30px rgba(255,215,0,0.2);');
-    panel.appendChild(wheelContainer);
+      'border:4px solid ' + GOLD + ';box-shadow:0 0 30px rgba(255,215,0,0.3);');
+    wheelWrapper.appendChild(wheelContainer);
+
+    // Add weapon icon + name labels on each segment so they're readable at this size
+    var segCount = startWeapons.length;
+    if (segCount > 0) {
+      var segDegLabel = 360 / segCount;
+      var wheelRadius = 170; // = wheelSize / 2 = 340 / 2
+      var labelRadius = Math.round(wheelRadius * 0.71); // ~71% out from center so labels sit in middle of segment depth
+      startWeapons.forEach(function (w, i) {
+        var midAngleDeg = segDegLabel * i + segDegLabel / 2;
+        var midAngleRad = (midAngleDeg - 90) * Math.PI / 180;
+        var lx = wheelRadius + labelRadius * Math.cos(midAngleRad);
+        var ly = wheelRadius + labelRadius * Math.sin(midAngleRad);
+        var lbl = document.createElement('div');
+        lbl.style.cssText =
+          'position:absolute;left:' + lx + 'px;top:' + ly + 'px;' +
+          'transform:translate(-50%,-50%) rotate(' + midAngleDeg + 'deg);' +
+          'text-align:center;pointer-events:none;line-height:1.15;white-space:nowrap;';
+        var iconDiv = document.createElement('div');
+        iconDiv.textContent = w.icon || '🔫';
+        iconDiv.style.cssText = 'font-size:22px;';
+        var nameDiv = document.createElement('div');
+        nameDiv.textContent = w.name;
+        nameDiv.style.cssText =
+          'font-size:9px;font-weight:900;color:#fff;' +
+          'text-shadow:0 0 3px #000,0 0 3px #000;max-width:70px;white-space:normal;';
+        lbl.appendChild(iconDiv);
+        lbl.appendChild(nameDiv);
+        wheelContainer.appendChild(lbl);
+      });
+    }
 
     // Center circle
     var centerCircle = _el('div',
       'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);' +
-      'width:60px;height:60px;border-radius:50%;background:#1a1a2e;border:3px solid ' + GOLD + ';' +
-      'display:flex;align-items:center;justify-content:center;font-size:28px;cursor:pointer;' +
+      'width:70px;height:70px;border-radius:50%;background:#1a1a2e;border:3px solid ' + GOLD + ';' +
+      'display:flex;align-items:center;justify-content:center;font-size:32px;cursor:pointer;' +
       'transition:transform 0.2s;z-index:2;', '🎯');
     wheelContainer.appendChild(centerCircle);
 
-    // Pointer
+    // Pointer (top of wheel, outside wrapper)
     var pointer = _el('div',
-      'position:absolute;top:-14px;left:50%;transform:translateX(-50%);' +
-      'font-size:24px;z-index:3;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5));', '▼');
+      'position:absolute;top:-18px;left:50%;transform:translateX(-50%);' +
+      'font-size:28px;z-index:3;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5));', '▼');
     pointer.style.color = GOLD;
-    wheelContainer.appendChild(pointer);
+    wheelWrapper.appendChild(pointer);
 
     // Spin button
     var spinning = false;
@@ -988,6 +1023,7 @@ function showWeaponBuilding() {
       '🎰 SPIN!');
     panel.appendChild(spinBtn);
 
+    // Result bubble — clean inner text only, no coloured background rectangle
     var resultEl = _el('div',
       'text-align:center;font-size:16px;color:#fff;margin-top:14px;min-height:24px;');
     panel.appendChild(resultEl);
@@ -998,6 +1034,8 @@ function showWeaponBuilding() {
       spinBtn.style.opacity = '0.5';
       spinBtn.style.pointerEvents = 'none';
       resultEl.textContent = '';
+      resultEl.style.background = '';
+      resultEl.style.border = '';
 
       if (typeof playSound === 'function') playSound('collect');
 
@@ -1018,15 +1056,18 @@ function showWeaponBuilding() {
         if (typeof playSound === 'function') playSound('levelup');
 
         var rarityCol = RARITY_COLORS[chosen.rarity] || '#aaa';
-        // Use DOM construction instead of innerHTML for safety
+        // Clean result bubble: rounded border only, no solid background rectangle
+        resultEl.style.cssText =
+          'text-align:center;font-size:16px;color:#fff;margin-top:14px;min-height:24px;' +
+          'display:inline-block;width:100%;padding:10px 0;' +
+          'border:2px solid ' + rarityCol + ';border-radius:14px;' +
+          'background:rgba(0,0,0,0.55);';
         resultEl.textContent = '';
-        var iconSpan = _el('span', 'font-size:32px;', chosen.icon);
-        var nameSpan = _el('span', 'color:' + rarityCol + ';' + HEADER_FONT + 'font-size:20px;', chosen.name);
-        var msgSpan = _el('span', 'color:#888;font-size:12px;', 'Starting weapon selected!');
+        var iconSpan = _el('span', 'font-size:36px;display:block;margin-bottom:4px;', chosen.icon);
+        var nameSpan = _el('span', 'color:' + rarityCol + ';' + HEADER_FONT + 'font-size:22px;display:block;', chosen.name);
+        var msgSpan = _el('span', 'color:#aaa;font-size:12px;display:block;margin-top:2px;', 'Starting weapon selected!');
         resultEl.appendChild(iconSpan);
-        resultEl.appendChild(document.createElement('br'));
         resultEl.appendChild(nameSpan);
-        resultEl.appendChild(document.createElement('br'));
         resultEl.appendChild(msgSpan);
 
         // Store selection
