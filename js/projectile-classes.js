@@ -345,7 +345,7 @@
           projectileMaterialCache.bulletGlow.clone()  // Clone material for independent color
         );
 
-        this.speed = 0.4; // Original speed (reverted from 0.5 optimisation bump)
+        this.speed = 0.4 * (window._projSpeedMultiplier || 1.0); // Apply speed upgrade multiplier
         // active starts false; reinit() sets it true.  Pool createFn creates with no args so
         // the projectile stays inactive until _spawnProjectile() calls reinit().
         this.active = false;
@@ -392,7 +392,8 @@
 
         // Reset mesh state
         this.mesh.position.set(x, 0.5, z);
-        this.mesh.scale.set(1, 1, 1);
+        const _sm = window._projSizeMultiplier || 1.0;
+        this.mesh.scale.set(_sm, _sm, _sm);
         this.mesh.material.color.setHex(0xFF4500);
         this.mesh.material.opacity = 0.95;
         this.mesh.visible = true;
@@ -418,6 +419,8 @@
         const dx = target.x - x;
         const dz = target.z - z;
         const dist = Math.sqrt(dx * dx + dz * dz);
+        // Re-apply speed multiplier each shot so pooled projectiles pick up upgrades
+        this.speed = 0.4 * (window._projSpeedMultiplier || 1.0);
         this.vx = (dx / dist) * this.speed;
         this.vz = (dz / dist) * this.speed;
 

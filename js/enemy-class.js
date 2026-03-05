@@ -1472,6 +1472,17 @@
           updateHUD();
         }
 
+        // Vampire class drain: handled via lifeStealPercent (set in level-up-system.js)
+        // Additional drain for _vampireClass in case it was applied without lifeStealPercent
+        if (window._vampireClass && !(playerStats.lifeStealPercent > 0) && playerStats.hp < playerStats.maxHp) {
+          const drain = finalAmount * 0.08;
+          playerStats.hp = Math.min(playerStats.maxHp, playerStats.hp + drain);
+          updateHUD();
+        }
+
+        // Record damage dealt for milestone tracking
+        if (window.GameMilestones) window.GameMilestones.recordDamageDealt(finalAmount);
+
         const hpPercent = this.hp / this.maxHp;
         const oldHpPercent = oldHp / this.maxHp;
         
@@ -1494,17 +1505,31 @@
         if (oldHpPercent >= 0.5 && hpPercent < 0.5 && !this.stage2Damage) {
           this.stage2Damage = true;
           
-          // Add visible wounds/holes
+          // Add visible wounds/holes; for instanced enemies place at world pos since
+          // the individual mesh isn't in the scene during combat
           for(let i=0; i<3; i++) {
             const holeGeo = new THREE.SphereGeometry(0.1, 6, 6);
             const holeMat = new THREE.MeshBasicMaterial({ color: 0x220000 }); // Dark red
             const hole = new THREE.Mesh(holeGeo, holeMat);
-            hole.position.set(
-              (Math.random() - 0.5) * 0.5,
-              (Math.random() - 0.5) * 0.5,
-              (Math.random() - 0.5) * 0.5
-            );
-            this.mesh.add(hole);
+            if (this._usesInstancing) {
+              hole.position.set(
+                this.mesh.position.x + (Math.random() - 0.5) * 0.5,
+                this.mesh.position.y + (Math.random() - 0.5) * 0.5,
+                this.mesh.position.z + (Math.random() - 0.5) * 0.5
+              );
+              scene.add(hole);
+              // Fade out wound decal over time so it doesn't linger after death cleanup
+              const _hm = holeMat;
+              _hm.transparent = true;
+              setTimeout(() => { if (hole.parent) { scene.remove(hole); holeGeo.dispose(); _hm.dispose(); } }, 8000);
+            } else {
+              hole.position.set(
+                (Math.random() - 0.5) * 0.5,
+                (Math.random() - 0.5) * 0.5,
+                (Math.random() - 0.5) * 0.5
+              );
+              this.mesh.add(hole);
+            }
           }
           
           spawnParticles(this.mesh.position, 0x8B0000, 8); // Reduced for performance
@@ -1724,6 +1749,8 @@
         this.isDead = true;
         // Register kill for combat intensity tracking (dynamic shadow quality)
         if (typeof window.registerCombatKill === 'function') window.registerCombatKill();
+        // Record kill milestone progress
+        if (window.GameMilestones) window.GameMilestones.recordKill();
         // Clear freeze state so no further update logic applies to dead enemy
         this.isFrozen = false;
         // Cancel pending squish timeout to prevent callback on dead enemy
@@ -3995,9 +4022,12 @@
     // before THREE.js has been loaded (mirrors the bulletHoleGeo/bulletHoleMat pattern).
     let projectileGeometryCache = null;
     let projectileMaterialCache = null;
+    let _cachedProjSizeMultiplier = null;
     function ensureProjectileCaches() {
-      if (projectileGeometryCache) return;
       const sizeMultiplier = window._projSizeMultiplier || 1.0;
+      // Rebuild cache when size multiplier changes so new pool slots get correctly-sized geometry
+      if (projectileGeometryCache && _cachedProjSizeMultiplier === sizeMultiplier) return;
+      _cachedProjSizeMultiplier = sizeMultiplier;
       const baseRadius = 0.03125 * sizeMultiplier; // 50% smaller than original 0.0625
       projectileGeometryCache = {
         bullet:     new THREE.SphereGeometry(baseRadius, 8, 8),
