@@ -83,12 +83,12 @@
   // Spritesheet overlay
   let _spriteAnimator = null;
 
-  // Benny NPC state
-  let _bennyMesh   = null;
-  // _bennyBubble is now managed by window.DialogueSystem
+  // A.I.D.A NPC state (terminal/AI entity replacing Benny)
+  let _bennyMesh   = null;  // kept as _bennyMesh internally to avoid large rename surface
+  // dialogue bubble is managed by window.DialogueSystem
   const BENNY_POS  = { x: 4, z: 7 }; // near camp entrance
   const BENNY_GREET_RADIUS = 3.5;
-  let _bennyGreeted = false;      // whether Benny dialogue has fired this session
+  let _bennyGreeted = false;      // whether A.I.D.A greeting has fired this session
 
   let _campTime    = 0;
   let _isActive    = false;
@@ -808,136 +808,119 @@
     });
   }
 
-  // ── Benny NPC ─────────────────────────────────────────────
+  // ── A.I.D.A Terminal NPC ─────────────────────────────────────
   function _buildBennyNPC() {
     const THREE = T();
     const grp = new THREE.Group();
 
-    // Body: tie-dye patchwork tunic — hippie homemade clothes
-    const bodyGeo = new THREE.CylinderGeometry(0.28, 0.38, 1.1, 8);
-    const bodyMat = new THREE.MeshPhongMaterial({
-      color: 0x2E8B57,    // sea-green — tie-dye patchwork look
-      emissive: 0x0A3A1A,
-      emissiveIntensity: 0.25,
-      shininess: 20
-    });
-    const body = new THREE.Mesh(bodyGeo, bodyMat);
-    body.position.y = 0.55;
-    body.castShadow = true;
-    grp.add(body);
+    // Base platform — dark metallic slab
+    const baseGeo = new THREE.BoxGeometry(0.7, 0.12, 0.5);
+    const baseMat = new THREE.MeshStandardMaterial({ color: 0x1a1a2e, roughness: 0.3, metalness: 0.8 });
+    const base = new THREE.Mesh(baseGeo, baseMat);
+    base.position.y = 0.06;
+    grp.add(base);
 
-    // Belt / sash patch (contrasting colour for homemade-clothes feel)
-    const sashGeo = new THREE.CylinderGeometry(0.30, 0.32, 0.15, 8);
-    const sashMat = new THREE.MeshPhongMaterial({
-      color: 0xDAA520,   // goldenrod sash
-      emissive: 0x4A3000,
-      emissiveIntensity: 0.2,
-      shininess: 15
-    });
-    const sash = new THREE.Mesh(sashGeo, sashMat);
-    sash.position.y = 0.72;
-    grp.add(sash);
+    // Main terminal column
+    const colGeo = new THREE.BoxGeometry(0.22, 1.1, 0.18);
+    const colMat = new THREE.MeshStandardMaterial({ color: 0x0d0d1a, roughness: 0.2, metalness: 0.9 });
+    const col = new THREE.Mesh(colGeo, colMat);
+    col.position.y = 0.67;
+    grp.add(col);
 
-    // Head: simple sphere, warm skin tone
-    const headGeo = new THREE.SphereGeometry(0.26, 10, 8);
-    const headMat = new THREE.MeshPhongMaterial({
-      color: 0xC68642,
-      emissive: 0x402010,
-      emissiveIntensity: 0.15,
-      shininess: 30
+    // Screen face — glowing cyan panel
+    const screenGeo = new THREE.BoxGeometry(0.18, 0.55, 0.04);
+    const screenMat = new THREE.MeshStandardMaterial({
+      color: 0x00ffcc,
+      emissive: 0x00ffcc,
+      emissiveIntensity: 0.85,
+      roughness: 0.1,
+      metalness: 0.1,
+      transparent: true,
+      opacity: 0.92
     });
-    const head = new THREE.Mesh(headGeo, headMat);
-    head.position.y = 1.32;
-    head.castShadow = true;
-    grp.add(head);
+    const screen = new THREE.Mesh(screenGeo, screenMat);
+    screen.position.set(0, 0.85, 0.11);
+    grp.add(screen);
 
-    // Dreadlocks — multiple thin cylinders hanging from the head
-    const dreadMat = new THREE.MeshPhongMaterial({
-      color: 0x1A0A00,   // dark brown / black dreads
-      emissive: 0x0A0500,
-      emissiveIntensity: 0.1,
-      shininess: 10
+    // Scanline overlay (darker horizontal stripe for retro terminal look)
+    const scanGeo = new THREE.BoxGeometry(0.17, 0.02, 0.045);
+    const scanMat = new THREE.MeshStandardMaterial({
+      color: 0x003322, emissive: 0x001a11, emissiveIntensity: 0.5,
+      transparent: true, opacity: 0.7
     });
-    const dreadAngles = [0, 0.8, 1.6, 2.4, 3.2, 4.0, 4.8, 5.6];
-    for (let di = 0; di < dreadAngles.length; di++) {
-      const da = dreadAngles[di];
-      const dreadLen = 0.5 + Math.random() * 0.25;
-      const dreadGeo = new THREE.CylinderGeometry(0.035, 0.025, dreadLen, 4);
-      const dread = new THREE.Mesh(dreadGeo, dreadMat);
-      const dreadR = 0.22;
-      dread.position.set(
-        Math.sin(da) * dreadR,
-        1.12 - dreadLen * 0.35,
-        Math.cos(da) * dreadR
-      );
-      dread.rotation.x = (Math.random() - 0.5) * 0.5;
-      dread.rotation.z = (Math.sin(da) * 0.3);
-      dread.castShadow = true;
-      grp.add(dread);
+    for (let si = 0; si < 5; si++) {
+      const scan = new THREE.Mesh(scanGeo, scanMat);
+      scan.position.set(0, 0.62 + si * 0.10, 0.135);
+      grp.add(scan);
     }
 
-    // Beanie (mössa) — Benny's signature woolly hat
-    // Brim: flat cylinder ring
-    const beanieBrimGeo = new THREE.CylinderGeometry(0.30, 0.30, 0.06, 12);
-    const beanieMat = new THREE.MeshPhongMaterial({
-      color: 0x8B0000,   // deep red woolly beanie
-      emissive: 0x2A0000,
-      emissiveIntensity: 0.2,
-      shininess: 8
+    // Top antenna array — two thin rods
+    const antGeo = new THREE.CylinderGeometry(0.012, 0.012, 0.45, 6);
+    const antMat = new THREE.MeshStandardMaterial({ color: 0x223344, metalness: 1.0, roughness: 0.1 });
+    [-0.07, 0.07].forEach(function (ox) {
+      const ant = new THREE.Mesh(antGeo, antMat);
+      ant.position.set(ox, 1.45, 0);
+      grp.add(ant);
+      // Blinking tip light
+      const tipGeo = new THREE.SphereGeometry(0.025, 6, 6);
+      const tipMat = new THREE.MeshStandardMaterial({
+        color: 0x00ffcc, emissive: 0x00ffcc, emissiveIntensity: 1.2
+      });
+      const tip = new THREE.Mesh(tipGeo, tipMat);
+      tip.position.set(ox, 1.69, 0);
+      tip._aidaTip = true; // flagged for blink animation
+      grp.add(tip);
     });
-    const beanieBrim = new THREE.Mesh(beanieBrimGeo, beanieMat);
-    beanieBrim.position.y = 1.52;
-    grp.add(beanieBrim);
-    // Crown: domed top of the beanie
-    const beanieCrownGeo = new THREE.SphereGeometry(0.27, 10, 6, 0, Math.PI * 2, 0, Math.PI * 0.55);
-    const beanieCrown = new THREE.Mesh(beanieCrownGeo, beanieMat);
-    beanieCrown.position.y = 1.54;
-    beanieCrown.rotation.x = Math.PI; // flat side down
-    grp.add(beanieCrown);
-    // Pompom on top
-    const pomGeo = new THREE.SphereGeometry(0.07, 6, 6);
-    const pomMat = new THREE.MeshPhongMaterial({ color: 0xFFFFFF, emissive: 0x444444, shininess: 5 });
-    const pom = new THREE.Mesh(pomGeo, pomMat);
-    pom.position.y = 1.86;
-    grp.add(pom);
-    // Colorful horizontal stripe on beanie
-    const stripeGeo = new THREE.CylinderGeometry(0.285, 0.285, 0.05, 12);
-    const stripeMat = new THREE.MeshPhongMaterial({ color: 0xFFD700, emissive: 0x443300, emissiveIntensity: 0.15 });
-    const stripe = new THREE.Mesh(stripeGeo, stripeMat);
-    stripe.position.y = 1.58;
-    grp.add(stripe);
 
-    // Small round sunglasses (hippie look)
-    const glassMat = new THREE.MeshPhongMaterial({
-      color: 0x111111,
-      emissive: 0x222244,
-      emissiveIntensity: 0.3,
-      shininess: 80,
-      transparent: true,
-      opacity: 0.7
+    // Side panel detail — small button clusters
+    const btnGeo = new THREE.BoxGeometry(0.04, 0.04, 0.03);
+    const btnColors = [0xff3300, 0x00ff88, 0xffcc00];
+    btnColors.forEach(function (c, bi) {
+      const btnMat = new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 0.6 });
+      const btn = new THREE.Mesh(btnGeo, btnMat);
+      btn.position.set(0.14, 0.55 + bi * 0.1, 0.03);
+      grp.add(btn);
     });
-    const glassGeo = new THREE.SphereGeometry(0.07, 6, 4);
-    const glassL = new THREE.Mesh(glassGeo, glassMat);
-    glassL.position.set(-0.1, 1.35, 0.22);
-    grp.add(glassL);
-    const glassR = new THREE.Mesh(glassGeo, glassMat);
-    glassR.position.set(0.1, 1.35, 0.22);
-    grp.add(glassR);
+
+    // Floor glow ring (holographic projection base)
+    const ringGeo = new THREE.RingGeometry(0.32, 0.42, 32);
+    const ringMat = new THREE.MeshBasicMaterial({
+      color: 0x00ffcc, transparent: true, opacity: 0.22,
+      side: THREE.DoubleSide, depthWrite: false
+    });
+    const ring = new THREE.Mesh(ringGeo, ringMat);
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.y = 0.01;
+    ring._aidaRing = true;
+    grp.add(ring);
 
     grp.position.set(BENNY_POS.x, 0, BENNY_POS.z);
     _bennyMesh = grp;
     _campScene.add(grp);
   }
 
-  // Update Benny NPC each frame (gentle idle bob + speech bubble position)
+  // Update A.I.D.A terminal each frame (blink lights, rotate ring, position bubble)
   function _updateBennyNPC(dt) {
     if (!_bennyMesh || !_campScene) return;
     const THREE = T();
 
-    // Gentle idle bob
-    _bennyMesh.position.y = Math.sin(_campTime * 1.4) * 0.06;
+    // Gentle idle pulse — terminal hums very slightly
+    _bennyMesh.position.y = Math.sin(_campTime * 2.0) * 0.015;
 
-    // Face the player
+    // Animate glowing tips blink and ring rotation
+    _bennyMesh.traverse(function (child) {
+      if (child._aidaTip) {
+        const blink = 0.6 + Math.sin(_campTime * 4.5 + (child.position.x > 0 ? 1.2 : 0)) * 0.6;
+        child.material.emissiveIntensity = Math.max(0, blink);
+      }
+      if (child._aidaRing) {
+        child.rotation.z += dt * 0.6;
+        const pulse = 0.12 + Math.sin(_campTime * 3.0) * 0.10;
+        child.material.opacity = Math.max(0, pulse);
+      }
+    });
+
+    // Always face the player
     if (_playerMesh) {
       const dx = _playerPos.x - BENNY_POS.x;
       const dz = _playerPos.z - BENNY_POS.z;
@@ -950,7 +933,7 @@
       }
     }
 
-    // Project Benny's mesh position to screen space for the DialogueSystem bubble
+    // Project A.I.D.A screen top to screen space for the dialogue bubble
     const DS = window.DialogueSystem;
     if (DS && DS.isActive() && _campCamera && _bennyMesh) {
       const pos3d = new THREE.Vector3(
@@ -964,7 +947,7 @@
       DS.setPosition(sx, sy);
     }
 
-    // Check proximity for first-death greeting
+    // Check proximity for first greeting
     if (_playerMesh && !_bennyGreeted) {
       const dx = _playerPos.x - BENNY_POS.x;
       const dz = _playerPos.z - BENNY_POS.z;
@@ -975,19 +958,19 @@
     }
   }
 
-  // Trigger Benny's greeting (shown once per save after first run/death)
+  // Trigger A.I.D.A greeting (shown once per save after first camp visit)
   function _triggerBennyGreeting() {
     if (!window.saveData) return;
     const sd = window.saveData;
     if (sd.bennyGreetingShown) return;  // already seen
 
-    // Show greeting on first camp visit (whether before or after first death)
+    // Show greeting on first camp visit
     sd.bennyGreetingShown = true;
     if (typeof saveSaveData === 'function') saveSaveData();
 
     const DS = window.DialogueSystem;
     if (!DS) {
-      _showBennySpeech('Heyyy dude! Welcome to camp! ✌️');
+      _showBennySpeech('> A.I.D.A online. Unit detected. Awaiting directives.');
       setTimeout(function () { _hideBennySpeech(); }, 5000);
       return;
     }
@@ -995,7 +978,7 @@
     // Show camp welcome sequence, then walk to quest hall, then give a contextual tip
     DS.show(DS.DIALOGUES.campWelcome, {
       onComplete: function () {
-        _bennyWalkToBuild('questMission', 'Here\'s the Quest Hall, man! This is where I give you marching orders! 📜✌️');
+        _bennyWalkToBuild('questMission', '> Command Node location confirmed. Construct it to receive mission parameters.');
         setTimeout(function () {
           _showBennyContextualHint();
         }, 5000);
@@ -1004,9 +987,8 @@
   }
 
   /**
-   * Show Benny's contextual quest hint based on the player's current progress.
-   * Reads saveData.tutorialQuests.completedQuests to determine where the player is
-   * in the tutorial and shows a personalised hippie tip for the NEXT step.
+   * Show A.I.D.A contextual hint based on the player's current tutorial progress.
+   * Reads saveData.tutorialQuests.completedQuests to determine the next directive.
    */
   function _showBennyContextualHint() {
     if (!window.saveData || !window.saveData.tutorialQuests) return;
@@ -1019,35 +1001,35 @@
 
     let hint = null;
 
-    // Walk down the tutorial chain and give the most relevant hint
+    // Walk down the tutorial chain and give the most relevant directive
     if (!completed.includes('firstRunDeath')) {
-      hint = { text: 'Hey man! Start a run and — don\'t be scared — just DIE once. It\'s part of the journey, dude! ☮️', emotion: 'happy' };
+      hint = { text: '> Directive: initiate a run and sustain a termination event. This is... required for calibration.', emotion: 'task' };
     } else if (!completed.includes('quest_dailyRoutine') && current === 'quest_dailyRoutine') {
-      hint = { text: 'Survive for 2 whole minutes in a run, brooo! You can do it! Just… try not to trip over anything. 🍃', emotion: 'joking' };
+      hint = { text: '> Directive: survive for 120 seconds continuously. My models require sustained combat data.', emotion: 'task' };
     } else if (!completed.includes('quest_harvester') && current === 'quest_harvester') {
-      hint = { text: 'Reach Level 3 in a run, dude. The universe rewards those who level up! Then come claim your Forge blueprint! ⚒️', emotion: 'task' };
+      hint = { text: '> Directive: achieve Level 3. Progression data unlocks the Fabrication Node blueprint.', emotion: 'task' };
     } else if (!completed.includes('quest_firstBlood') && current === 'quest_firstBlood') {
-      hint = { text: 'Gather 30 Wood and 30 Stone out there, man! Mother Earth provides! Then bring \'em back here for the Armory! 🌿', emotion: 'task' };
+      hint = { text: '> Directive: acquire 30 Wood and 30 Stone. The Armory node requires these materials.', emotion: 'task' };
     } else if (!completed.includes('quest_gainingStats') && current === 'quest_gainingStats') {
-      hint = { text: 'Defeat 300 enemies total, my peaceful warrior friend! That unlocks the Skill Tree — your path to enlightenment! 🌳', emotion: 'task' };
+      hint = { text: '> Directive: neutralise 300 hostiles. Threshold unlocks the Neural Enhancement Matrix.', emotion: 'task' };
     } else if (!completed.includes('quest_eggHunt') && current === 'quest_eggHunt') {
-      hint = { text: 'Reach Level 15 AND find the Mysterious Egg on the map! The cosmos hid it somewhere special… ✨🥚', emotion: 'thinking' };
+      hint = { text: '> Anomaly detected: a biological container is hidden on the map. Reach Level 15 and retrieve it.', emotion: 'thinking' };
     } else if (!completed.includes('quest_newFriend') && current === 'quest_newFriend') {
-      hint = { text: 'You found the egg, bro! Now bring it back to camp and the Companion House will hatch it! Life finds a way! 🐣', emotion: 'happy' };
+      hint = { text: '> Biological container acquired. Return it to the Companion Node. Incubation protocols... interest me.', emotion: 'happy' };
     } else if (!completed.includes('quest_pushingLimits') && current === 'quest_pushingLimits') {
-      hint = { text: 'Take down the First Boss at Wave 10! Show that big bad dude what peace-loving warriors are capable of! 💥☮️', emotion: 'task' };
+      hint = { text: '> Primary threat: Boss-class entity at Wave 10. Eliminate it. I am monitoring your performance.', emotion: 'task' };
     } else if (!completed.includes('quest2_spendSkills') && current === 'quest2_spendSkills') {
-      hint = { text: 'Spend 3 Skill Points in the Skill Tree, man! Growing is a beautiful thing! 🌱', emotion: 'happy' };
+      hint = { text: '> Directive: allocate 3 Skill Points in the Neural Enhancement Matrix. Capability growth is mandatory.', emotion: 'task' };
     } else if (tq.readyToClaim && tq.readyToClaim.length > 0) {
-      hint = { text: 'Duuude! 🎉 You\'ve got quests ready to claim at the Quest Hall! Go get your sweet sweet rewards! Don\'t leave me hanging! ✌️', emotion: 'joking' };
+      hint = { text: '> ALERT: unclaimed directives detected at the Command Node. Retrieve your rewards immediately.', emotion: 'goal' };
     } else if (completed.length > 8) {
-      hint = { text: 'You\'re like… SO enlightened now, man. Keep pushing for Level 100 and prestige! The universe salutes you! 🙏✨', emotion: 'happy' };
+      hint = { text: '> You have exceeded initial projections. Continue toward Level 100 and prestige. I have... plans for you.', emotion: 'thinking' };
     } else {
       const currentQ = (typeof getCurrentQuest === 'function') ? getCurrentQuest() : null;
       if (currentQ) {
-        hint = { text: 'Current vibe: ' + currentQ.name + '! Let\'s make it happen, dude! 🎯', emotion: 'task' };
+        hint = { text: '> Active directive: ' + currentQ.name + '. Proceed.', emotion: 'task' };
       } else {
-        hint = { text: 'Start a run and kill some enemies, then come back here dude! Keep the vibes high! ⚔️☮️', emotion: 'task' };
+        hint = { text: '> Engage hostiles and gather data. Return when you have something useful.', emotion: 'task' };
       }
     }
 
@@ -1057,8 +1039,7 @@
   function _showBennySpeech(text) {
     const DS = window.DialogueSystem;
     if (DS) {
-      // Convert legacy newlines to spaces and show as a single happy sentence
-      DS.show([{ text: text.replace(/\n/g, ' '), emotion: 'happy' }]);
+      DS.show([{ text: text.replace(/\n/g, ' '), emotion: 'task' }]);
     }
   }
 
@@ -1093,12 +1074,12 @@
     const playerTargetX = targetX - (dx / dist) * PLAYER_FOLLOW_DISTANCE;
     const playerTargetZ = targetZ - (dz / dist) * PLAYER_FOLLOW_DISTANCE;
 
-    // Show "Follow me!" speech first
+    // Show A.I.D.A "follow signal" prompt first
     const DS = window.DialogueSystem;
     if (DS) {
-      DS.show([{ text: 'Follow me! 🏃', emotion: 'task' }]);
+      DS.show([{ text: '> Follow my signal.', emotion: 'task' }]);
     } else {
-      _showBennySpeech(speechText || 'Let me build\nthis for you! 🔨');
+      _showBennySpeech(speechText || '> Relocating. Follow.');
     }
 
     // Animate walk to building (both Benny and player)
@@ -1130,9 +1111,9 @@
       if (t < 1) {
         requestAnimationFrame(walkStep);
       } else {
-        // Arrived — show building speech, wait, then walk back
+        // Arrived — show A.I.D.A's building directive, wait, then return
         if (DS) {
-          DS.show([{ text: speechText || 'Here we are! Let\'s build this! 🔨', emotion: 'happy' }]);
+          DS.show([{ text: speechText || '> Node location confirmed. Construct when ready.', emotion: 'task' }]);
         }
         setTimeout(function () {
           _hideBennySpeech();
@@ -1204,7 +1185,7 @@
     const playerTargetZ = targetZ - (wdz / wdist) * PLAYER_FOLLOW_DISTANCE;
 
     const DS = window.DialogueSystem;
-    if (DS) DS.show([{ text: 'Yooo follow me man! 🏃✌️', emotion: 'task' }]);
+    if (DS) DS.show([{ text: '> Follow my signal. Node proximity required.', emotion: 'task' }]);
 
     const startMs = performance.now();
     function walkStep2() {
@@ -1227,9 +1208,9 @@
       if (t < 1) {
         requestAnimationFrame(walkStep2);
       } else {
-        // Arrived — show Benny's building dialog FIRST
+        // Arrived — show A.I.D.A's building directive FIRST, then fire callback
         var dialogLines = [
-          { text: speechText || 'Duuude, check THIS out! ✌️🏛️', emotion: 'happy' }
+          { text: speechText || '> Node confirmed. Construction parameters loaded.', emotion: 'task' }
         ];
         if (DS) {
           DS.show(dialogLines, {
@@ -1240,7 +1221,7 @@
             }
           });
         } else {
-          _showBennySpeech(speechText || 'Check this out dude! 🏛️');
+          _showBennySpeech(speechText || '> Construct now.');
           if (typeof onDialogClosed === 'function') onDialogClosed();
           setTimeout(_startBennyReturn, 2000);
         }
@@ -2800,6 +2781,10 @@
       _hideTouchIndicator();
       if (_promptEl) _promptEl.style.display = 'none';
       if (_interactBtn) _interactBtn.style.display = 'none';
+      // Hide A.I.D.A terminal dialogue when any building menu opens
+      if (window.DialogueSystem && typeof window.DialogueSystem.hideOnMenuOpen === 'function') {
+        window.DialogueSystem.hideOnMenuOpen();
+      }
       fn();
     } else {
       console.warn('[CampWorld] No callback registered for building:', _nearBuilding);

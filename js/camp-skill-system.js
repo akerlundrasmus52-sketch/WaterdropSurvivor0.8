@@ -1684,7 +1684,7 @@
         rewardFreeSpin: 1,
         unlockBuilding: 'accountBuilding',
         triggerOnDeath: true,
-        message: "⏰ <b>Account Building Unlocked!</b><br><br>🎰 You got <b>1 Free Spin</b> on the Spin Wheel!<br><br>Benny says: <i>'Check your daily rewards and player stats here, dude! This hooks you into the daily loop — come back every day for free goodies!'</i>",
+        message: "⏰ <b>Account Building Unlocked!</b><br><br>🎰 You got <b>1 Free Spin</b> on the Spin Wheel!<br><br><i>A.I.D.A: 'Utilise the Account Node for daily reward cycles. Consistent login patterns optimise your resource intake.'</i>",
         nextQuest: 'quest_harvester',
         conditions: ['firstRunDeath']
       },
@@ -1705,7 +1705,7 @@
         rewardResources: { wood: 20, stone: 20, coal: 20 },
         unlockBuilding: 'forge',
         triggerOnDeath: true,
-        message: "🔨 <b>Forge Unlocked!</b> (Tool Crafting Only)<br><br>You received:<br>&nbsp;🪵 <b>20 Wood</b> · 🪨 <b>20 Stone</b> · 🖤 <b>20 Coal</b><br>&nbsp;💰 <b>1,300 Gold</b> (enough to buy ALL harvesting tools!)<br><br>Benny says: <i>'Dude! Walk up to the Forge plot and BUILD it — I stashed enough materials AND gold so you can buy every tool right away, man! ✌️'</i><br><br>🎯 <b>NEXT:</b> Walk to the Forge plot in camp, build it, then buy your tools!",
+        message: "🔨 <b>Fabrication Node Unlocked!</b> (Tool Crafting Only)<br><br>You received:<br>&nbsp;🪵 <b>20 Wood</b> · 🪨 <b>20 Stone</b> · 🖤 <b>20 Coal</b><br>&nbsp;💰 <b>1,300 Gold</b> (enough to acquire ALL harvesting tools)<br><br><i>A.I.D.A: 'Resources and catalyst have been... provided. Walk to the Fabrication Node plot and construct it immediately. All tool schematics are available.'</i><br><br>🎯 <b>NEXT:</b> Walk to the Forge plot in camp, build it, then buy your tools!",
         nextQuest: 'quest_firstBlood',
         conditions: ['quest_dailyRoutine']
       },
@@ -1722,7 +1722,7 @@
         deductResources: { wood: 30, stone: 30 },
         unlockBuilding: 'armory',
         triggerOnDeath: true,
-        message: "⚔️ <b>Armory</b> and <b>Weapon Crafting</b> Unlocked!<br><br>Benny says: <i>'Craft a Common Sword and equip it in the Armory, dude!'</i><br><br>⚠️ <b>Note:</b> Before Prestige, you can only craft and equip <b>Common</b>, <b>Uncommon</b>, and <b>Rare</b> gear.",
+        message: "⚔️ <b>Armory</b> and <b>Weapon Crafting</b> Unlocked!<br><br><i>A.I.D.A: 'Armory Node is online. Fabricate a Common Sword and install it. Weapon capability is... necessary for continued survival.'</i><br><br>⚠️ <b>Note:</b> Before Prestige, you can only craft and equip <b>Common</b>, <b>Uncommon</b>, and <b>Rare</b> gear.",
         nextQuest: 'quest_gainingStats',
         conditions: ['quest_harvester']
       },
@@ -1738,7 +1738,7 @@
         rewardSkillPoints: 2,
         unlockBuilding: 'skillTree',
         triggerOnDeath: true,
-        message: "🌳 <b>Skill Tree Unlocked!</b><br><br>You received <b>2 Skill Points</b>!<br><br>Benny says: <i>'This is how you push further towards Level 100, dude! Invest your points wisely — the Skill Tree is your best friend for the long haul!'</i>",
+        message: "🌳 <b>Neural Enhancement Matrix Unlocked!</b><br><br>You received <b>2 Skill Points</b>!<br><br><i>A.I.D.A: 'Allocate points with precision. Each node alters your threat profile. The Skill Tree is... central to my projections for you.'</i>",
         nextQuest: 'quest_eggHunt',
         conditions: ['quest_firstBlood']
       },
@@ -1770,7 +1770,7 @@
         rewardSkillPoints: 1,
         unlockBuilding: 'companionHouse',
         companionEgg: true,
-        message: "🐣 The egg hatched into a <b>Common Level 1 Pet</b>!<br><br><b>Companion House</b> is now unlocked!<br><br>Benny says: <i>'Your pet will grow with you, dude! Take good care of it — companions get stronger as you level up!'</i>",
+        message: "🐣 The anomaly has incubated into a <b>Common Level 1 Companion Unit</b>!<br><br><b>Companion Node</b> is now online!<br><br><i>A.I.D.A: 'Interesting. The biological entity has bonded to you. Its capabilities will... develop alongside yours. I am monitoring this closely.'</i>",
         nextQuest: 'quest_pushingLimits',
         conditions: ['quest_eggHunt']
       },
@@ -1787,7 +1787,7 @@
         unlockBuilding: 'specialAttacks',
         unlockBuildingExtra: 'warehouse',
         triggerOnDeath: true,
-        message: "🏆 <b>Boss Defeated!</b><br><br><b>Special Attacks Arena</b> and <b>Warehouse</b> are now unlocked!<br><br>Benny says: <i>'You're getting stronger, dude! Keep pushing towards Level 100 — that's the ultimate goal for this map!'</i>",
+        message: "🏆 <b>Boss Entity Neutralised!</b><br><br><b>Special Combat Routines Arena</b> and <b>Warehouse</b> are now online!<br><br><i>A.I.D.A: 'Impressive. Your combat data is... exceptionally useful. Continue toward Level 100. That is the primary objective for this sector.'</i>",
         nextQuest: 'quest2_spendSkills',
         conditions: ['quest_newFriend']
       },
@@ -2813,15 +2813,15 @@
 
         saveSaveData();
 
-        // Benny speech + 3D animation
+        // A.I.D.A speech + 3D animation
         // Per the building flow requirement:
-        //   1. Benny walks to the building plot
-        //   2. Benny shows dialog ("Here's your new <name>! Sick, right?")
+        //   1. A.I.D.A terminal moves to the building plot
+        //   2. A.I.D.A shows directive dialog
         //   3. ONLY after dialog is closed → building pops up (scale 0→1 bounce)
         if (window.CampWorld && window.CampWorld.isActive) {
           window.CampWorld.refreshBuildings(saveData);
-          // Walk Benny to the building; the pop animation fires only after he arrives and dialog closes
-          var _bennyDialogText = 'Dude, it\'s beautiful! 🏛️ ' + buildingName + ' is all yours, man! ✌️';
+          // Walk A.I.D.A to the building; pop animation fires only after dialog closes
+          var _bennyDialogText = '> ' + buildingName + ' node constructed. New operational parameters available.';
           if (window.CampWorld.bennyWalkToBuildThenDialog) {
             window.CampWorld.bennyWalkToBuildThenDialog(buildingId, _bennyDialogText, function () {
               // Dialog closed — NOW animate the building popping up
@@ -2837,11 +2837,11 @@
               window.CampWorld.playBuildingUnlockAnimation(buildingId);
             }, 1500);
           }
-          // Show "Prepare for Next Building" reminder after celebration
+          // Show next-building resource directive after celebration
           setTimeout(function () {
             if (window.CampWorld && window.CampWorld.isActive) {
               window.CampWorld.showBennySpeech(
-                'Nice work! 🎉 For the next\nbuilding you\'ll need\n🪵x' + nextCost + ' 🪨x' + nextCost + ' 🖤x' + nextCost + '!\nStart gathering! ⛏️'
+                '> Next node requires: Wood x' + nextCost + ', Stone x' + nextCost + ', Coal x' + nextCost + '. Gather immediately.'
               );
               setTimeout(function () { window.CampWorld.hideBennySpeech(); }, 5000);
             }

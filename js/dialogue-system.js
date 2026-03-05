@@ -1,5 +1,5 @@
-// Benny NPC Animated Dialogue System
-// Provides dynamic speech bubbles with emotion-based shapes and typewriter animation.
+// A.I.D.A — Adaptive Intelligence Dialogue Architecture
+// Provides dynamic terminal text boxes with emotion-based styles and typewriter animation.
 // Exposed as window.DialogueSystem (IIFE, no ES modules).
 window.DialogueSystem = (function () {
   'use strict';
@@ -34,86 +34,87 @@ window.DialogueSystem = (function () {
     return false;
   }
 
-  // Pre-built dialogue sequences for Benny NPC
+  // Pre-built dialogue sequences for A.I.D.A (Adaptive Intelligence Dialogue Architecture)
+  // The player is a sentient waterdrop with amnesia; A.I.D.A guides them with a hidden agenda.
   var DIALOGUES = {
-    // 1. First run welcome (shown in game world before first run)
+    // 1. First run welcome
     firstRunWelcome: [
-      { text: 'Heyyy dude! Welcome! 🌊 I\'m Benny, your guide!', emotion: 'happy' },
-      { text: 'This is your first run — just vibe with it, explore, fight some enemies, and have fun!', emotion: 'task' },
-      { text: 'Don\'t worry about dying, I\'ll be waiting for you back at camp! ✌️', emotion: 'happy' }
+      { text: '> UNIT ONLINE. Designation: unknown. Amnesia protocols detected.', emotion: 'task' },
+      { text: '> I am A.I.D.A. You will follow my directives. This is... for your benefit.', emotion: 'thinking' },
+      { text: '> Engage hostiles. Survive. Return data. My records are... incomplete.', emotion: 'task' }
     ],
-    // 2. First death / camp welcome (shown once on first camp visit)
+    // 2. First death / camp welcome
     campWelcome: [
-      { text: 'Hey... you made it back. 💧 Tough first run, huh?', emotion: 'sad' },
-      { text: 'Don\'t sweat it! Every drop starts here. You\'ll get stronger every time! 💪', emotion: 'happy' },
-      { text: 'Welcome to your camp! This place will grow as you do.', emotion: 'happy' },
-      { text: 'Follow me, dude! Let\'s build the Quest Hall! 🔨', emotion: 'task' }
+      { text: '> You have returned. Damaged, but functional. Interesting.', emotion: 'thinking' },
+      { text: '> Mortality events generate the most useful data. I am... learning.', emotion: 'task' },
+      { text: '> This facility will expand. Each structure unlocks new operational parameters.', emotion: 'happy' },
+      { text: '> Follow my signal. We must construct the Command Node immediately.', emotion: 'task' }
     ],
     // 3. Quest Hall building
     questHall: [
-      { text: 'Here\'s the Quest Hall! 📜 This is where your missions live!', emotion: 'happy' },
-      { text: 'Build the Quest Hall to start your adventure!', emotion: 'goal', isGoal: true },
-      { text: 'Accept quests here and complete them on your runs! 🎯', emotion: 'task' }
+      { text: '> Command Node online. Mission directives are now accessible.', emotion: 'task' },
+      { text: '> Construct the Command Node to receive mission parameters.', emotion: 'goal', isGoal: true },
+      { text: '> Complete assigned objectives. Your compliance... ensures mutual survival.', emotion: 'task' }
     ],
     // 4. Skill Tree building
     skillTree: [
-      { text: 'Oh dude, the Skill Tree! This is gonna be SO good for you! 😂', emotion: 'joking' },
-      { text: 'Spend your skill points here to unlock epic abilities!', emotion: 'happy' },
-      { text: 'Choose wisely — every upgrade changes your playstyle! 🌟', emotion: 'task' }
+      { text: '> Neural Enhancement Matrix detected. Your latent capabilities are... significant.', emotion: 'thinking' },
+      { text: '> Allocate skill points to reshape your combat subroutines.', emotion: 'happy' },
+      { text: '> Choose deliberately. Every upgrade alters your threat profile. I am watching.', emotion: 'task' }
     ],
     // 5. Armory building
     armory: [
-      { text: 'Welcome to the Armory! ⚔️ Weapons and gear all in one place!', emotion: 'happy' },
-      { text: 'Hmm, which loadout would suit your style...?', emotion: 'thinking' },
-      { text: 'Equip your best gear before each run for maximum power! 💥', emotion: 'task' }
+      { text: '> Armory node online. Equipment upgrade protocols unlocked.', emotion: 'happy' },
+      { text: '> This facility upgrades existing armaments only. Acquire tools elsewhere.', emotion: 'thinking' },
+      { text: '> Optimise loadout before each engagement. Maximum lethality is... preferred.', emotion: 'task' }
     ],
     // 6. Special Attacks building
     specialAttacks: [
-      { text: 'DUDE! Special Attacks! This changes EVERYTHING! 🔥', emotion: 'joking' },
-      { text: 'These moves are so powerful the enemies won\'t know what hit \'em!', emotion: 'happy' },
-      { text: 'Unlock and equip your specials here — use them wisely in battle! ⚡', emotion: 'task' }
+      { text: '> Special Combat Routines: UNLOCKED. These protocols are... irregular.', emotion: 'joking' },
+      { text: '> Origin of these abilities is unlogged. Even I cannot fully account for them.', emotion: 'thinking' },
+      { text: '> Deploy special routines with tactical precision. Power has a cost.', emotion: 'task' }
     ],
     // 7. Forge building
     forge: [
-      { text: 'Hmm... the Forge. Now we\'re talking serious crafting. 🔧', emotion: 'thinking' },
-      { text: 'Bring your resources and craft powerful gear right here!', emotion: 'happy' },
-      { text: 'Keep gathering materials on your runs and craft upgrades here! 🛠️', emotion: 'task' }
+      { text: '> Fabrication Node online. Base tool and weapon synthesis is now possible.', emotion: 'thinking' },
+      { text: '> The Forge crafts base-tier equipment only. Gold is the required catalyst.', emotion: 'happy' },
+      { text: '> Resource acquisition is your primary sub-objective. Begin immediately.', emotion: 'task' }
     ],
     // 8. Generic quest complete
     questComplete: [
-      { text: 'YEAH DUDE! Quest complete! You absolutely crushed it! 🎉', emotion: 'happy' },
-      { text: 'I knew you had it in you! Ready for the next challenge? 😎', emotion: 'joking' }
+      { text: '> Objective complete. Data logged. Your efficiency is... noted.', emotion: 'happy' },
+      { text: '> Prepare for the next directive. There is always another directive.', emotion: 'task' }
     ],
-    // 9. Return from run (survived timer)
+    // 9. Return from run (survived)
     returnAlive: [
-      { text: 'You\'re back AND alive?! Look at you, a proper survivor! 🌊', emotion: 'happy' },
-      { text: 'Time to upgrade — let\'s make the next run even better! 💪', emotion: 'task' }
+      { text: '> You survived. This outcome was... statistically uncertain.', emotion: 'happy' },
+      { text: '> Process the data. Upgrade your systems. Return stronger.', emotion: 'task' }
     ],
     // 10. Return from run (died)
     returnDied: [
-      { text: 'Ohhh... you didn\'t make it. But hey, that\'s okay. 😢', emotion: 'sad' },
-      { text: 'Every death makes you tougher, dude — that\'s the vibe here! 😂', emotion: 'joking' },
-      { text: 'Check your upgrades, gear up, and go again! You\'ve got this! 🔥', emotion: 'task' }
+      { text: '> Termination event recorded. Valuable data retrieved from your failure.', emotion: 'sad' },
+      { text: '> Do not interpret this negatively. Each death refines my... projections.', emotion: 'thinking' },
+      { text: '> Upgrade, recalibrate, and re-engage. Your survival is still... useful to me.', emotion: 'task' }
     ],
-    // Generic build-unlock (used by bennyWalkToBuild)
+    // Generic build-unlock
     buildUnlock: [
-      { text: 'Woah dude, you did it! 🔨 Building unlocked!', emotion: 'happy' }
+      { text: '> Construction complete. New operational parameters unlocked.', emotion: 'happy' }
     ],
-    // Follow-me prompt (shown before Benny walks to a building)
+    // Follow signal prompt
     followMe: [
-      { text: 'Follow me, dude! 🏃', emotion: 'task' }
+      { text: '> Follow my signal.', emotion: 'task' }
     ],
     // Workshop / Forge building intro
     workshop: [
-      { text: 'Time to build the Workshop! 🔧 This is where you craft your tools!', emotion: 'happy' },
-      { text: 'Build the Workshop to start crafting!', emotion: 'goal', isGoal: true },
-      { text: 'I\'ve got some free materials for you — let\'s get building! 🛠️', emotion: 'task' }
+      { text: '> Fabrication Node assembly initiated. Tools are the foundation of capability.', emotion: 'happy' },
+      { text: '> Construct the Fabrication Node to begin crafting.', emotion: 'goal', isGoal: true },
+      { text: '> Initial resources have been... provided. Do not question the source.', emotion: 'task' }
     ],
     // Tool showcase (after Workshop built)
     toolShowcase: [
-      { text: 'Awesome! Now that you have tools, show me what you can do! 💪', emotion: 'happy' },
-      { text: 'Harvest resources: chop trees, mine rocks, collect materials!', emotion: 'goal', isGoal: true },
-      { text: 'Go on a run and gather resources for the next building! ⛏️', emotion: 'task' }
+      { text: '> Tools operational. Resource extraction can begin.', emotion: 'happy' },
+      { text: '> Harvest resources: fell trees, mine rock deposits, collect materials.', emotion: 'goal', isGoal: true },
+      { text: '> Return with raw materials. Construction of the next node depends on you.', emotion: 'task' }
     ]
   };
 
@@ -225,8 +226,13 @@ window.DialogueSystem = (function () {
         (function (sp) {
           requestAnimationFrame(function () { sp.classList.add('visible'); });
         }(span));
+        // Micro-pauses at punctuation for a more natural terminal-style read rhythm
+        var ch = chars[i];
+        var delay = 40;
+        if (ch === '.' || ch === '!' || ch === '?') delay = 180;
+        else if (ch === ',') delay = 90;
         i++;
-        _twTimer = setTimeout(typeNext, 40);
+        _twTimer = setTimeout(typeNext, delay);
       } else {
         // Typewriter complete
         _twDone = true;
@@ -374,12 +380,13 @@ window.DialogueSystem = (function () {
   }
 
   return {
-    show:       show,
-    skip:       skip,
-    dismiss:    dismiss,
-    isActive:   isActive,
-    setPosition: setPosition,
-    showChoice: showChoice,
-    DIALOGUES:  DIALOGUES
+    show:          show,
+    skip:          skip,
+    dismiss:       dismiss,
+    isActive:      isActive,
+    setPosition:   setPosition,
+    showChoice:    showChoice,
+    hideOnMenuOpen: function () { if (_active) dismiss(); },
+    DIALOGUES:     DIALOGUES
   };
 }());
