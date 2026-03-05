@@ -323,7 +323,13 @@
         if (type === 11) this.mesh.scale.set(1.8, 1.8, 1.8);
         this.mesh.castShadow = true;
         this.mesh.receiveShadow = true;
-        scene.add(this.mesh);
+        // For the three most common enemy types the InstancedRenderer owns the draw call.
+        // Adding the individual mesh to the scene as well would cause double-rendering.
+        const _instancingTypes = (type === 0 || type === 1 || type === 2);
+        this._usesInstancing = _instancingTypes && !!(window._instancedRenderer && window._instancedRenderer.active);
+        if (!this._usesInstancing) {
+          scene.add(this.mesh);
+        }
 
         // Add legs to Daddy Longlegs spider
         if (type === 15) {
@@ -1691,6 +1697,12 @@
         // Clone position NOW before any mesh removal or disposal to prevent
         // race condition where position becomes undefined after scene.remove/dispose
         if (!this.mesh) return;
+        // If this enemy was rendered via instancing, add its mesh to the scene
+        // now so the death animation (fall/splatter) is visible.
+        if (this._usesInstancing) {
+          scene.add(this.mesh);
+          this._usesInstancing = false;
+        }
         const deathPos = this.mesh.position.clone();
         
         // Track kills for active quests

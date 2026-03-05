@@ -2,6 +2,16 @@
 // and the main animate() game loop (collision detection, AI updates, rendering).
 // This is the last file loaded — it starts the game by calling init().
 
+    // ─── Projectile pool helper — zero allocation in the animate loop ───────────────
+    // Uses window._projectilePool (EnhancedObjectPool) when available; falls back to
+    // direct construction so the game works even if the pool hasn't been initialised yet.
+    function _spawnProjectile(x, z, target) {
+      if (window._projectilePool) {
+        return window._projectilePool.get().reinit(x, z, target);
+      }
+      return new Projectile(x, z, target);
+    }
+
     // ─── Shared geometries/materials for hot-path effects (avoid per-frame allocation) ───
     let _sharedGoreGeo = null;      // DodecahedronGeometry for gore blobs
     let _sharedGoreMats = [null, null]; // Two alternating MeshStandardMaterials
@@ -1203,7 +1213,7 @@
           // Fire based on barrels
           for(let i=0; i<weapons.gun.barrels; i++) {
             setTimeout(() => {
-              projectiles.push(new Projectile(player.mesh.position.x, player.mesh.position.z, gunTarget));
+              projectiles.push(_spawnProjectile(player.mesh.position.x, player.mesh.position.z, gunTarget));
               
               // Trigger waterdrop shooting wave animation
               if (i === 0) {
@@ -1228,7 +1238,7 @@
                   0,
                   player.mesh.position.z + (Math.sin(spreadAngle) * dx + Math.cos(spreadAngle) * dz)
                 );
-                projectiles.push(new Projectile(player.mesh.position.x, player.mesh.position.z, _tmpSpreadTarget));
+                projectiles.push(_spawnProjectile(player.mesh.position.x, player.mesh.position.z, _tmpSpreadTarget));
               }
               
               // Muzzle flash light effect - smaller radius to keep lightning contained to barrel area
@@ -1375,7 +1385,7 @@
           
           // Fire projectile from drone
           if (nearestEnemy) {
-            const projectile = new Projectile(
+            const projectile = _spawnProjectile(
               drone.mesh.position.x, 
               drone.mesh.position.z, 
               nearestEnemy.mesh.position
@@ -1436,7 +1446,7 @@
               0,
               player.mesh.position.z + Math.sin(angle) * weapons.doubleBarrel.range
             );
-            const pellet = new Projectile(player.mesh.position.x, player.mesh.position.z, _tmpShotgunTarget);
+            const pellet = _spawnProjectile(player.mesh.position.x, player.mesh.position.z, _tmpShotgunTarget);
             pellet.isDoubleBarrel = true;
             pellet.speed = 0.75 + Math.random() * 0.15; // Faster than gun bullets (0.75-0.9)
             projectiles.push(pellet);
@@ -1846,7 +1856,7 @@
         const _uziResult = window.GameCombat.findNearestEnemySH(player.mesh.position.x, player.mesh.position.z, _uziRangeSq, enemies);
         let nearest = _uziResult.enemy;
         if (nearest) {
-          projectiles.push(new Projectile(player.mesh.position.x, player.mesh.position.z, nearest.mesh.position));
+          projectiles.push(_spawnProjectile(player.mesh.position.x, player.mesh.position.z, nearest.mesh.position));
           weapons.uzi.lastShot = time;
           playSound('shoot');
         }
@@ -1858,7 +1868,7 @@
         const _snResult = window.GameCombat.findNearestEnemySH(player.mesh.position.x, player.mesh.position.z, _snRangeSq, enemies);
         let nearest = _snResult.enemy;
         if (nearest) {
-          const p = new Projectile(player.mesh.position.x, player.mesh.position.z, nearest.mesh.position);
+          const p = _spawnProjectile(player.mesh.position.x, player.mesh.position.z, nearest.mesh.position);
           p.pierceCount = weapons.sniperRifle.piercing || 3;
           p.mesh.scale.set(0.6, 0.6, 1.5);
           p.mesh.material.color.setHex(0xFFDD44);
@@ -1882,7 +1892,7 @@
           for (let i = 0; i < pelletCount; i++) {
             const spread = (Math.random() + Math.random() - 1.0) * spreadAngle;
             const dir = { x: Math.cos(baseAngle + spread) * 20 + player.mesh.position.x, y: 0, z: Math.sin(baseAngle + spread) * 20 + player.mesh.position.z };
-            const pellet = new Projectile(player.mesh.position.x, player.mesh.position.z, dir);
+            const pellet = _spawnProjectile(player.mesh.position.x, player.mesh.position.z, dir);
             pellet.isDoubleBarrel = true;
             pellet.speed = 0.6 + Math.random() * 0.15;
             pellet.life = 20;
@@ -1905,7 +1915,7 @@
           for (let i = 0; i < pelletCount; i++) {
             const spread = (Math.random() + Math.random() - 1.0) * (weapons.autoShotgun.spread || 0.6);
             const dir = { x: Math.cos(baseAngle + spread) * 20 + player.mesh.position.x, y: 0, z: Math.sin(baseAngle + spread) * 20 + player.mesh.position.z };
-            const pellet = new Projectile(player.mesh.position.x, player.mesh.position.z, dir);
+            const pellet = _spawnProjectile(player.mesh.position.x, player.mesh.position.z, dir);
             pellet.isDoubleBarrel = true;
             pellet.speed = 0.55 + Math.random() * 0.1;
             pellet.life = 18;
@@ -1924,7 +1934,7 @@
         if (nearest) {
           const spreadOffset = (Math.random() - 0.5) * 0.15;
           const dir = { x: nearest.mesh.position.x + spreadOffset, y: 0, z: nearest.mesh.position.z + spreadOffset };
-          const p = new Projectile(player.mesh.position.x, player.mesh.position.z, dir);
+          const p = _spawnProjectile(player.mesh.position.x, player.mesh.position.z, dir);
           p.mesh.scale.set(0.3, 0.3, 0.3);
           p.mesh.material.color.setHex(0xFFCC00);
           p.speed = 0.7;
@@ -1940,7 +1950,7 @@
         const _bowResult = window.GameCombat.findNearestEnemySH(player.mesh.position.x, player.mesh.position.z, _bowRangeSq, enemies);
         let nearest = _bowResult.enemy;
         if (nearest) {
-          const p = new Projectile(player.mesh.position.x, player.mesh.position.z, nearest.mesh.position);
+          const p = _spawnProjectile(player.mesh.position.x, player.mesh.position.z, nearest.mesh.position);
           p.pierceCount = weapons.bow.piercing || 1;
           p.mesh.scale.set(0.3, 0.3, 1.2);
           p.mesh.material.color.setHex(0x8B4513);
@@ -1972,7 +1982,7 @@
         const _bmResult = window.GameCombat.findNearestEnemySH(player.mesh.position.x, player.mesh.position.z, _bmRangeSq, enemies);
         let nearest = _bmResult.enemy;
         if (nearest) {
-          const p = new Projectile(player.mesh.position.x, player.mesh.position.z, nearest.mesh.position);
+          const p = _spawnProjectile(player.mesh.position.x, player.mesh.position.z, nearest.mesh.position);
           p.isBoomerang = true;
           p.returnPhase = false;
           p.originX = player.mesh.position.x;
@@ -2008,7 +2018,7 @@
         });
         if (sortedEnemies.length > starCount) sortedEnemies.length = starCount;
         sortedEnemies.forEach(e => {
-          const p = new Projectile(player.mesh.position.x, player.mesh.position.z, e.mesh.position);
+          const p = _spawnProjectile(player.mesh.position.x, player.mesh.position.z, e.mesh.position);
           p.isShuriken = true;
           p.mesh.material.color.setHex(0xCCCCCC);
           p.mesh.scale.set(0.4, 0.4, 0.15);
@@ -2037,7 +2047,7 @@
         const _fbResult = window.GameCombat.findNearestEnemySH(player.mesh.position.x, player.mesh.position.z, _fbRangeSq, enemies);
         let nearest = _fbResult.enemy;
         if (nearest) {
-          const p = new Projectile(player.mesh.position.x, player.mesh.position.z, nearest.mesh.position);
+          const p = _spawnProjectile(player.mesh.position.x, player.mesh.position.z, nearest.mesh.position);
           p.isFireball = true;
           p.explosionRadius = weapons.fireball.explosionRadius || 3;
           p.mesh.material.color.setHex(0xFF4400);
@@ -2132,8 +2142,14 @@
       // Update drone turrets
       droneTurrets.forEach(drone => drone.update(dt));
       
-      // Projectiles update returns false if dead
-      projectiles = projectiles.filter(p => p.update() !== false);
+      // Projectiles update returns false if dead; release pooled bullets back to the pool
+      projectiles = projectiles.filter(p => {
+        const alive = p.update() !== false;
+        if (!alive && p._isPooled && window._projectilePool) {
+          window._projectilePool.release(p);
+        }
+        return alive;
+      });
       meteors = meteors.filter(m => m.update() !== false);
       expGems.forEach(g => g.update(player.mesh.position));
       goldCoins.forEach(g => g.update(player.mesh.position));
@@ -2147,8 +2163,12 @@
         ir.syncEntities('enemy_tank', enemies, e => !e.isDead && e.type === 0);
         ir.syncEntities('enemy_fast', enemies, e => !e.isDead && e.type === 1);
         ir.syncEntities('enemy_balanced', enemies, e => !e.isDead && e.type === 2);
-        ir.syncEntities('exp_gem', expGems);
-        ir.syncEntities('bullet', projectiles);
+        ir.syncEntities('exp_gem', expGems, g => g.active);
+        ir.syncEntities('bullet', projectiles, p => p.active && !p.isEnemyProjectile);
+        // bullet_glow uses the same entity array: syncEntities reads p.mesh.position which is
+        // the bullet position.  The 'bullet_glow' batch geometry is a larger sphere (radius 0.18)
+        // so each instance renders as a soft halo around the corresponding bullet.
+        ir.syncEntities('bullet_glow', projectiles, p => p.active && !p.isEnemyProjectile);
         ir.endFrame();
       }
 

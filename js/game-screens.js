@@ -306,6 +306,27 @@
           console.log('[Init] Instanced renderer created OK');
         } catch (e) { console.warn('[Init] Instanced renderer skipped:', e.message); }
       }
+      // Projectile pool — eliminates `new Projectile()` allocations inside animate().
+      // Pre-warms 60 bullet objects (mesh + material created once, reused for every shot).
+      if (window.GamePerformance && window.GamePerformance.EnhancedObjectPool) {
+        try {
+          window._projectilePool = new window.GamePerformance.EnhancedObjectPool(
+            () => {
+              const p = new Projectile(); // no args → mesh created but NOT added to scene
+              p._isPooled = true;
+              return p;
+            },
+            (p) => {
+              // Reset to idle state when returned to pool
+              p.active = false;
+              p.mesh.visible = false;
+              if (p.glow) p.glow.visible = false;
+            },
+            60
+          );
+          console.log('[Init] Projectile pool created OK');
+        } catch (e) { console.warn('[Init] Projectile pool skipped:', e.message); }
+      }
       // GC guard — pre-allocate temp vectors
       if (window.PerfManager && window.PerfManager.GCGuard) {
         window.PerfManager.GCGuard.init();
