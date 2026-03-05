@@ -171,7 +171,54 @@ function getEnemyBaseStats(type, levelScaling, speedBase, playerLevel) {
   return stats;
 }
 
+// ---------------------------------------------------------------------------
+// AI Animation Throttle — camera-distance-based LOD for enemy updates
+// ---------------------------------------------------------------------------
+// Enemies outside the camera frustum waste CPU on pathfinding / animation.
+// These constants configure how aggressively we throttle far-off enemies.
+
+/** Squared-distance thresholds (world units²) for AI update LOD bands. */
+const ENEMY_THROTTLE = {
+  /** Near band — update every frame. */
+  NEAR_SQ:       256,    // 16²
+  /** Medium band — update every 2nd frame. */
+  MEDIUM_SQ:     1600,   // 40²
+  /** Far band — update every 4th frame. */
+  FAR_SQ:        6400,   // 80²
+  /** Very-far / off-screen — update every 10th frame (~100 ms at 100 fps). */
+  OFFSCREEN_DIVISOR: 10
+};
+
+/**
+ * Return how many frames to skip between AI updates for an enemy at the
+ * given squared distance from the camera.
+ *
+ * @param {number} distSq - Squared distance from the camera position.
+ * @returns {number} Tick divisor (1 = every frame, 10 = every 10th frame).
+ */
+function getEnemyTickDivisor(distSq) {
+  if (distSq < ENEMY_THROTTLE.NEAR_SQ)   return 1;
+  if (distSq < ENEMY_THROTTLE.MEDIUM_SQ) return 2;
+  if (distSq < ENEMY_THROTTLE.FAR_SQ)    return 4;
+  return ENEMY_THROTTLE.OFFSCREEN_DIVISOR;
+}
+
+/**
+ * Should this enemy run its AI update on the current frame?
+ *
+ * @param {number} distSq     - Squared distance from camera.
+ * @param {number} frameCount - Monotonically increasing frame counter.
+ * @param {number} entityIdx  - Per-enemy offset to stagger updates.
+ * @returns {boolean}
+ */
+function shouldUpdateEnemy(distSq, frameCount, entityIdx) {
+  return ((frameCount + entityIdx) % getEnemyTickDivisor(distSq)) === 0;
+}
+
 window.GameEnemies = {
   ENEMY_TYPES,
-  getEnemyBaseStats
+  getEnemyBaseStats,
+  ENEMY_THROTTLE,
+  getEnemyTickDivisor,
+  shouldUpdateEnemy
 };
