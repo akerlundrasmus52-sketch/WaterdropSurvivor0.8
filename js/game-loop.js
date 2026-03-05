@@ -12,6 +12,23 @@
       return new Projectile(x, z, target);
     }
 
+    /**
+     * Rescale a projectile's pre-computed vx/vz so it travels at desiredSpeed.
+     * reinit() computes velocity using the constructor's base speed (0.4); any
+     * per-weapon speed override must call this AFTER _spawnProjectile() to take effect.
+     *
+     * @param {Projectile} p            - Freshly spawned projectile.
+     * @param {number}     desiredSpeed - Target world-units-per-frame speed.
+     */
+    function _rescaleProjSpeed(p, desiredSpeed) {
+      const curSpeed = Math.sqrt(p.vx * p.vx + p.vz * p.vz);
+      if (curSpeed > 0) {
+        const ratio = desiredSpeed / curSpeed;
+        p.vx *= ratio;
+        p.vz *= ratio;
+      }
+    }
+
     // ─── Shared geometries/materials for hot-path effects (avoid per-frame allocation) ───
     let _sharedGoreGeo = null;      // DodecahedronGeometry for gore blobs
     let _sharedGoreMats = [null, null]; // Two alternating MeshStandardMaterials
@@ -1459,7 +1476,15 @@
             );
             const pellet = _spawnProjectile(player.mesh.position.x, player.mesh.position.z, _tmpShotgunTarget);
             pellet.isDoubleBarrel = true;
-            pellet.speed = 0.75 + Math.random() * 0.15; // Faster than gun bullets (0.75-0.9)
+            // Visual: smaller orange pellets distinct from gun bullets
+            pellet.mesh.scale.set(0.65, 0.65, 0.65);
+            pellet.mesh.material.color.setHex(0xFFA500);
+            if (pellet.glow) {
+              pellet.glow.scale.set(0.65, 0.65, 0.65);
+              pellet.glow.material.color.setHex(0xFFD700);
+            }
+            // Speed: rescale pre-computed velocity so pellets travel faster than gun bullets
+            _rescaleProjSpeed(pellet, 0.75 + Math.random() * 0.15); // 0.75-0.9
             projectiles.push(pellet);
           }
           
@@ -1886,7 +1911,7 @@
           p.pierceCount = weapons.sniperRifle.piercing || 3;
           p.mesh.scale.set(0.6, 0.6, 1.5);
           p.mesh.material.color.setHex(0xFFDD44);
-          p.speed = 0.8;
+          _rescaleProjSpeed(p, 0.8); // sniper rounds travel faster than standard bullets
           projectiles.push(p);
           spawnParticles(player.mesh.position, 0xFFFF00, 4);
           weapons.sniperRifle.lastShot = time;
@@ -1908,7 +1933,7 @@
             const dir = { x: Math.cos(baseAngle + spread) * 20 + player.mesh.position.x, y: 0, z: Math.sin(baseAngle + spread) * 20 + player.mesh.position.z };
             const pellet = _spawnProjectile(player.mesh.position.x, player.mesh.position.z, dir);
             pellet.isDoubleBarrel = true;
-            pellet.speed = 0.6 + Math.random() * 0.15;
+            _rescaleProjSpeed(pellet, 0.6 + Math.random() * 0.15); // pump shotgun pellet speed
             pellet.life = 20;
             projectiles.push(pellet);
           }
@@ -1931,7 +1956,7 @@
             const dir = { x: Math.cos(baseAngle + spread) * 20 + player.mesh.position.x, y: 0, z: Math.sin(baseAngle + spread) * 20 + player.mesh.position.z };
             const pellet = _spawnProjectile(player.mesh.position.x, player.mesh.position.z, dir);
             pellet.isDoubleBarrel = true;
-            pellet.speed = 0.55 + Math.random() * 0.1;
+            _rescaleProjSpeed(pellet, 0.55 + Math.random() * 0.1); // auto shotgun pellet speed
             pellet.life = 18;
             projectiles.push(pellet);
           }
@@ -1951,7 +1976,7 @@
           const p = _spawnProjectile(player.mesh.position.x, player.mesh.position.z, dir);
           p.mesh.scale.set(0.3, 0.3, 0.3);
           p.mesh.material.color.setHex(0xFFCC00);
-          p.speed = 0.7;
+          _rescaleProjSpeed(p, 0.7); // minigun rounds travel faster than standard bullets
           projectiles.push(p);
           weapons.minigun.lastShot = time;
           if (Math.random() < 0.3) playSound('shoot');
@@ -1968,7 +1993,7 @@
           p.pierceCount = weapons.bow.piercing || 1;
           p.mesh.scale.set(0.3, 0.3, 1.2);
           p.mesh.material.color.setHex(0x8B4513);
-          p.speed = 0.5;
+          _rescaleProjSpeed(p, 0.5); // bow arrows slightly faster than reverted base (0.4)
           projectiles.push(p);
           weapons.bow.lastShot = time;
           playSound('shoot');
@@ -2036,7 +2061,7 @@
           p.isShuriken = true;
           p.mesh.material.color.setHex(0xCCCCCC);
           p.mesh.scale.set(0.4, 0.4, 0.15);
-          p.speed = 0.45;
+          _rescaleProjSpeed(p, 0.45); // shuriken travel slower than bullets
           projectiles.push(p);
         });
         if (sortedEnemies.length > 0) playSound('shoot');
@@ -2068,7 +2093,7 @@
           p.mesh.material.emissive = new THREE.Color(0xFF2200);
           p.mesh.material.emissiveIntensity = 0.6;
           p.mesh.scale.set(0.6, 0.6, 0.6);
-          p.speed = 0.35;
+          _rescaleProjSpeed(p, 0.35); // fireballs are lobbed slowly for explosive area damage
           projectiles.push(p);
           spawnParticles(player.mesh.position, 0xFF6600, 4);
           weapons.fireball.lastShot = time;

@@ -99,8 +99,8 @@
         if (currentQuest.id === 'quest_dailyRoutine' && survivalTime >= 120) {
           progressTutorialQuest('quest_dailyRoutine', true);
         }
-        // Step 3: The Harvester — Reach Level 5 in a single run
-        if (currentQuest.id === 'quest_harvester' && playerStats.lvl >= 5) {
+        // Step 3: The Harvester — Reach Level 3 in a single run
+        if (currentQuest.id === 'quest_harvester' && playerStats.lvl >= 3) {
           progressTutorialQuest('quest_harvester', true);
         }
         // Step 4: First Blood — Have 30 Wood and 30 Stone gathered across runs
@@ -526,12 +526,37 @@
       updateBackgroundMusic();
 
       // Clear Entities
+      // For instanced enemies (types 0/1/2): mesh was never added to scene; geometry/material
+      // belong to the individual enemy tracking mesh (not the shared InstancedMesh batch), so
+      // disposal is safe. For non-instanced types, scene.remove() removes the mesh correctly.
       enemies.forEach(e => {
-        scene.remove(e.mesh);
-        e.mesh.geometry.dispose();
-        e.mesh.material.dispose();
+        if (e.mesh) {
+          scene.remove(e.mesh); // no-op for instanced enemies; removes non-instanced ones
+          if (!e._usesInstancing) {
+            // Only dispose geometry/material for enemies that own their mesh exclusively
+            if (e.mesh.geometry) e.mesh.geometry.dispose();
+            if (e.mesh.material) {
+              if (Array.isArray(e.mesh.material)) {
+                e.mesh.material.forEach(m => m.dispose());
+              } else {
+                e.mesh.material.dispose();
+              }
+            }
+          }
+        }
       });
       enemies = [];
+
+      // Immediately zero out instanced enemy batches so no ghost enemies appear on screen
+      // before the next animate() frame rebuilds the batches from the (now empty) enemies array.
+      if (window._instancedRenderer && window._instancedRenderer.active) {
+        window._instancedRenderer.beginFrame();
+        window._instancedRenderer.endFrame();
+      }
+
+      // Reset enemy spatial hash so the new run starts with a clean lookup structure.
+      if (window._enemySpatialHash && typeof window._enemySpatialHash.clear === 'function') window._enemySpatialHash.clear();
+      if (window._enemyQuadTree  && typeof window._enemyQuadTree.clear  === 'function') window._enemyQuadTree.clear();
       
       expGems.forEach(e => {
         scene.remove(e.mesh);
@@ -594,10 +619,21 @@
       });
       chests = [];
 
+      // Projectile cleanup — pooled bullets share cached geometry so MUST NOT be disposed.
+      // Return pooled projectiles to the pool; dispose only non-pooled ones.
       projectiles.forEach(p => {
-        scene.remove(p.mesh);
-        p.mesh.geometry.dispose();
-        p.mesh.material.dispose();
+        if (p._isPooled && window._projectilePool) {
+          // p.destroy() hides mesh and removes it from scene without disposing shared geometry
+          p.destroy();
+          window._projectilePool.release(p);
+        } else {
+          // Non-pooled: safe to remove from scene and dispose
+          scene.remove(p.mesh);
+          if (p.glow) scene.remove(p.glow);
+          if (p.mesh.material) p.mesh.material.dispose();
+          if (p.glow && p.glow.material) p.glow.material.dispose();
+          // Geometry is always from the shared cache — never dispose it
+        }
       });
       projectiles = [];
       

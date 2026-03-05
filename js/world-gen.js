@@ -124,10 +124,10 @@
       
       // Add water ripple effect
       const rippleGeo = new THREE.RingGeometry(14, 15, 16); // Reduced segments for performance
-      const rippleMat = new THREE.MeshBasicMaterial({ color: 0x3399FF, transparent: true, opacity: 0.5 });
+      const rippleMat = new THREE.MeshBasicMaterial({ color: 0x3399FF, transparent: true, opacity: 0.5, depthWrite: false });
       const ripple = new THREE.Mesh(rippleGeo, rippleMat);
       ripple.rotation.x = -Math.PI / 2;
-      ripple.position.set(30, 0.02, -30);
+      ripple.position.set(30, 0.04, -30); // raised from 0.02 → 0.04 to prevent z-fighting on mobile GPUs
       ripple.userData = { isWaterRipple: true, phase: 0 };
       scene.add(ripple);
 
@@ -1014,10 +1014,10 @@
       
       // Impact crater (dark brown ring)
       const craterGeo = new THREE.RingGeometry(2, 3, 16); // Reduced segments for performance
-      const craterMat = new THREE.MeshToonMaterial({ color: 0x3E2723 }); // Dark brown
+      const craterMat = new THREE.MeshToonMaterial({ color: 0x3E2723, polygonOffset: true, polygonOffsetFactor: -1 }); // Dark brown
       const crater = new THREE.Mesh(craterGeo, craterMat);
       crater.rotation.x = -Math.PI/2;
-      crater.position.y = 0.02;
+      crater.position.y = 0.04; // raised from 0.02 to avoid z-fighting
       cometGroup.add(crater);
       
       // Comet stone (dark metallic rock with glow)

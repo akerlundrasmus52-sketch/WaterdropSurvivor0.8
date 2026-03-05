@@ -3224,6 +3224,59 @@
       .screen-content {
         font-size: 14px;
       }
+
+      /* Galaxy S10 / small-360 level-up modal: prevent layout break at narrow widths */
+      #levelup-modal {
+        padding: 0;
+        overflow-y: auto;
+        /* Use column flexbox so the card list doesn't overflow horizontally */
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        padding-top: 8px;
+      }
+
+      .modal-content {
+        width: 98%;
+        max-width: 340px;
+        padding: 10px 8px;
+        max-height: 96vh;
+        box-sizing: border-box;
+      }
+
+      /* Single-column cards on very small screens — prevents horizontal overflow */
+      #upgrade-list {
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+
+      .upgrade-card {
+        padding: 10px;
+      }
+
+      .upgrade-title {
+        font-size: 15px;
+      }
+
+      .upgrade-desc {
+        font-size: 11px;
+      }
+
+      /* HUD: compress bars so they don't overlap the game canvas */
+      .bar-container {
+        width: min(160px, 42vw);
+        height: 14px;
+      }
+
+      .hud-top {
+        padding: 2px 4px;
+        gap: 4px;
+      }
+
+      /* Ensure unified bars fit within 360px viewport */
+      .unified-bars-wrap {
+        max-width: 160px;
+      }
     }
     
     /* iPhone 16 Specific (393px x 852px) and similar sizes */

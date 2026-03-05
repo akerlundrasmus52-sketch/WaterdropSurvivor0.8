@@ -89,11 +89,12 @@
       color: WATER_COLOR1,
       transparent: true,
       opacity: 0.7,
-      side: THREE.DoubleSide
+      side: THREE.DoubleSide,
+      depthWrite: false  // prevents z-fighting with the ground mesh on mobile GPUs
     });
     _puddle = new THREE.Mesh(geo, mat);
     _puddle.rotation.x = -Math.PI / 2;
-    _puddle.position.set(PLAYER_SPAWN.x, 0.03, PLAYER_SPAWN.z);
+    _puddle.position.set(PLAYER_SPAWN.x, 0.05, PLAYER_SPAWN.z); // raised from 0.03 → 0.05 to avoid z-fighting
     _scene.add(_puddle);
   }
 

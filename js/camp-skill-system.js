@@ -1576,12 +1576,12 @@
         conditions: ['firstRunDeath']
       },
 
-      // === STEP 3: The Harvester — Reach Level 5 ===
+      // === STEP 3: The Harvester — Reach Level 3 ===
       quest_harvester: {
         id: 'quest_harvester',
         name: 'The Harvester',
-        description: 'Reach Level 5 in a single run to unlock the Forge. You\'ll receive starter materials to craft your first tools!',
-        objectives: 'Reach Level 5 in a single run',
+        description: 'Reach Level 3 in a single run to unlock the Forge. You\'ll receive starter materials to craft your first tools!',
+        objectives: 'Reach Level 3 in a single run',
         claim: 'Main Building',
         rewardGold: 75,
         rewardSkillPoints: 1,
