@@ -1444,9 +1444,15 @@
         toolsHeader.textContent = '⛏️ HARVESTING TOOLS';
         shopGrid.appendChild(toolsHeader);
 
-        const tools = window.GameHarvesting.getToolList();
+        let tools = window.GameHarvesting.getToolList();
         const ownedTools = window.GameHarvesting.getTools() || {};
         const resources = window.GameHarvesting.getResources() || {};
+
+        // Forge lock: before Armory is built (quest_firstBlood), only Pickaxe & Axe
+        const armoryBld = saveData.campBuildings && saveData.campBuildings.armory;
+        if (!armoryBld || !armoryBld.level || armoryBld.level < 1) {
+          tools = tools.filter(t => t.id === 'pickaxe' || t.id === 'axe');
+        }
 
         tools.forEach(toolDef => {
           const owned = ownedTools[toolDef.id];
@@ -1939,6 +1945,15 @@
       
       document.getElementById('camp-action-btn').onclick = () => {
         playSound('waterdrop');
+        // Quest Notification Lock: prevent starting a new run if quests are ready to claim
+        if (!isGameActive && saveData.tutorialQuests &&
+            saveData.tutorialQuests.readyToClaim && saveData.tutorialQuests.readyToClaim.length > 0) {
+          if (typeof showStatusMessage === 'function') {
+            showStatusMessage('📜 Claim your completed quest first! Visit the Quest Hall.', 3000);
+          }
+          if (typeof showQuestHall === 'function') showQuestHall();
+          return;
+        }
         // Deactivate 3D camp world and clean up CSS class
         if (window.CampWorld) window.CampWorld.exit();
         const campScreenEl = document.getElementById('camp-screen');
@@ -2188,6 +2203,18 @@
       
       // Restart button - Start a new run immediately
       document.getElementById('restart-btn').onclick = () => {
+        // Quest Notification Lock: redirect to camp if quests are ready to claim
+        if (saveData.tutorialQuests &&
+            saveData.tutorialQuests.readyToClaim && saveData.tutorialQuests.readyToClaim.length > 0) {
+          playSound('waterdrop');
+          if (typeof showStatusMessage === 'function') {
+            showStatusMessage('📜 Claim your completed quest first! Heading to camp...', 3000);
+          }
+          document.getElementById('gameover-screen').style.display = 'none';
+          document.getElementById('camp-screen').style.display = 'flex';
+          try { updateCampScreen(); } catch(e) { console.error('[Camp] updateCampScreen error:', e); }
+          return;
+        }
         playSound('levelup');
         document.getElementById('gameover-screen').style.display = 'none';
         startGame(); // Start new run immediately

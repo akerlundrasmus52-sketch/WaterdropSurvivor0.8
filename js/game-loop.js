@@ -1003,6 +1003,17 @@
           createFloatingText("🥚 Mysterious Egg collected!", player.mesh.position, '#8B5CF6');
           showStatChange('🥚 Mysterious Egg collected! Finish the run and bring it to camp!');
           playSound('chest_open');
+          // Trigger DopamineSystem reward feedback
+          if (window.DopamineSystem) {
+            if (window.DopamineSystem.TimeDilation) window.DopamineSystem.TimeDilation.set(0.3, 4);
+            if (window.DopamineSystem.CameraFX) {
+              window.DopamineSystem.CameraFX.zoomPunch(0.9, 500);
+              window.DopamineSystem.CameraFX.chromaticPulse(0.5, 600);
+            }
+            setTimeout(function() {
+              if (window.DopamineSystem && window.DopamineSystem.TimeDilation) window.DopamineSystem.TimeDilation.set(1.0, 3);
+            }, 400);
+          }
         }
         // Animate the egg (bob and spin)
         if (window._mysteriousEggObject) {
