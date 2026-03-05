@@ -85,6 +85,12 @@ const WEAPON_LEVEL_BONUSES = {
 };
 
 /**
+ * Minimum cooldown multiplier floor — prevents cooldown from being reduced
+ * below 20% of its base value (80% max reduction).
+ */
+const MIN_COOLDOWN_MULTIPLIER = 0.2;
+
+/**
  * Apply level bonuses to a weapon's effective stats.
  * Call during fire logic: effectiveDamage = getEffectiveWeaponStats(weapons.gun).damage
  */
@@ -95,7 +101,7 @@ function getEffectiveWeaponStats(w, weaponId) {
   var lvl = w.level - 1; // bonus levels above 1
   var stats = Object.assign({}, w);
   stats.damage  = Math.round(w.damage * (1 + bonuses.dmgPerLvl * lvl));
-  stats.cooldown = Math.round(w.cooldown * Math.max(0.2, 1 - bonuses.cdPerLvl * lvl));
+  stats.cooldown = Math.round(w.cooldown * Math.max(MIN_COOLDOWN_MULTIPLIER, 1 - bonuses.cdPerLvl * lvl));
   // Extra projectile bonuses
   if (bonuses.extraBarrelsAt) {
     var extra = 0;
@@ -142,6 +148,34 @@ function getEffectiveWeaponStats(w, weaponId) {
     for (var i = 0; i < bonuses.extraStrikeAt.length; i++) { if (w.level >= bonuses.extraStrikeAt[i]) extra++; }
     stats.strikes = (w.strikes || 1) + extra;
   }
+  // ── Apply permanent weapon building mods (from saveData.weaponUpgrades) ──
+  if (typeof saveData !== 'undefined' && saveData.weaponUpgrades && saveData.weaponUpgrades[weaponId]) {
+    var mods = saveData.weaponUpgrades[weaponId];
+    // Speed mod: reduce cooldown by 8% per level
+    if (mods.speed && mods.speed > 0) {
+      stats.cooldown = Math.round(stats.cooldown * Math.max(MIN_COOLDOWN_MULTIPLIER, 1 - 0.08 * mods.speed));
+    }
+    // Power mod: increase damage by 10% per level
+    if (mods.power && mods.power > 0) {
+      stats.damage = Math.round(stats.damage * (1 + 0.10 * mods.power));
+    }
+    // Cooldown mod: reduce cooldown by 6% per level (stacks with speed)
+    if (mods.cooldown && mods.cooldown > 0) {
+      stats.cooldown = Math.round(stats.cooldown * Math.max(MIN_COOLDOWN_MULTIPLIER, 1 - 0.06 * mods.cooldown));
+    }
+    // Sight mod: increase range by 15% per level
+    if (mods.sight && mods.sight > 0) {
+      stats.range = stats.range ? Math.round(stats.range * (1 + 0.15 * mods.sight) * 10) / 10 : stats.range;
+    }
+    // Ammo type: attach elemental data to stats for combat system
+    if (mods.ammoType && mods.ammoType !== 'standard') {
+      stats._ammoType = mods.ammoType;
+    }
+    // Fire mode
+    if (mods.fireMode && mods.fireMode !== 'single') {
+      stats._fireMode = mods.fireMode;
+    }
+  }
   return stats;
 }
 
@@ -162,6 +196,7 @@ window.GameWeapons = {
   WEAPON_CATEGORIES,
   getDefaultWeapons,
   WEAPON_LEVEL_BONUSES,
+  MIN_COOLDOWN_MULTIPLIER,
   getEffectiveWeaponStats,
   WEAPON_UPGRADES
 };

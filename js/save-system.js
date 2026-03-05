@@ -302,6 +302,8 @@
       // Cooking system
       cookedMeals: {},
       craftedWeapons: {},
+      // Weapon building permanent upgrades (per weapon)
+      weaponUpgrades: {},
       // Wildlife tracking
       tranquilizedAnimals: [],
       wolfBreedingProgress: 0 // 0-100 progress toward breeding storm wolf
@@ -381,6 +383,8 @@
           saveData.specialAtkPoints = saveData.specialAtkPoints || 0;
           // Special branch choice (new field)
           if (saveData.specialBranch === undefined) saveData.specialBranch = null;
+          // Weapon building permanent upgrades
+          saveData.weaponUpgrades = saveData.weaponUpgrades || {};
           // New buildings migration
           saveData.campBuildings = saveData.campBuildings || {};
           ['warehouse', 'tavern', 'shop', 'prestige'].forEach(bld => {
