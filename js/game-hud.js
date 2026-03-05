@@ -16,15 +16,25 @@
       document.getElementById('hp-fill').style.width = `${Math.max(0, hpPct)}%`;
       document.getElementById('hp-text').innerText = `HP: ${Math.max(0, Math.ceil(playerStats.hp))}/${playerStats.maxHp}`;
       
-      // FRESH: Low HP warning vignette when HP < 30%
+      // Low HP warning vignette — below 25% the vignette pulses (critical state)
       const lowHpVignette = document.getElementById('low-hp-vignette');
       if (lowHpVignette) {
-        if (hpPct < 30 && hpPct > 0) {
-          // Show vignette, opacity scales with how low HP is (more intense as HP drops)
-          const vignetteOpacity = (30 - hpPct) / 30; // 0 at 30%, 1 at 0%
+        if (hpPct < 25 && hpPct > 0) {
+          // Intensity scales with how low HP is (more intense as HP drops)
+          const vignetteOpacity = (25 - hpPct) / 25; // 0 at 25%, 1 at 0%
+          lowHpVignette.style.setProperty('--low-hp-base-opacity', vignetteOpacity.toFixed(3));
           lowHpVignette.style.opacity = vignetteOpacity;
+          lowHpVignette.classList.add('low-hp-critical');
+        } else if (hpPct < 30 && hpPct > 0) {
+          // Between 25–30 %: static vignette, no pulse
+          const vignetteOpacity = (30 - hpPct) / 30;
+          lowHpVignette.style.removeProperty('--low-hp-base-opacity');
+          lowHpVignette.style.opacity = vignetteOpacity;
+          lowHpVignette.classList.remove('low-hp-critical');
         } else {
           lowHpVignette.style.opacity = '0';
+          lowHpVignette.style.removeProperty('--low-hp-base-opacity');
+          lowHpVignette.classList.remove('low-hp-critical');
         }
       }
       

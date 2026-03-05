@@ -50,6 +50,18 @@
       transition: opacity 0.3s;
     }
 
+    /* Pulsating vignette when HP < 25% — communicates imminent death */
+    #low-hp-vignette.low-hp-critical {
+      transition: none; /* let the animation control opacity */
+      animation: low-hp-vignette-pulse 0.8s ease-in-out infinite;
+    }
+
+    @keyframes low-hp-vignette-pulse {
+      0%   { opacity: var(--low-hp-base-opacity, 0.5); }
+      50%  { opacity: 1; }
+      100% { opacity: var(--low-hp-base-opacity, 0.5); }
+    }
+
     /* HUD — centered below the day/night clock */
     .hud-top {
       position: fixed;
