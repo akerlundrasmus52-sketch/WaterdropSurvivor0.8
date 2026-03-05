@@ -47,8 +47,19 @@
       grassTexture.repeat.set(60, 60);
       
       // Single lush green ground plane covering the whole map
-      const mainGroundGeo = new THREE.PlaneGeometry(mapSize, mapSize);
-      const mainGroundMat = new THREE.MeshStandardMaterial({ map: grassTexture, roughness: 0.92, metalness: 0.0 });
+      const mainGroundGeo = new THREE.PlaneGeometry(mapSize, mapSize, 32, 32);
+      const mainGroundMat = new THREE.MeshStandardMaterial({ map: grassTexture, roughness: 0.92, metalness: 0.0, vertexColors: true });
+
+      // Per-vertex color variation for organic ground appearance
+      const _gColors = [];
+      const _gPos = mainGroundGeo.attributes.position;
+      for (let _gi = 0; _gi < _gPos.count; _gi++) {
+        const _gx = _gPos.getX(_gi);
+        const _gy = _gPos.getY(_gi); // PlaneGeometry is in XY; Y becomes -Z after rotation
+        const _noise = (Math.sin(_gx * 0.3) * Math.cos(_gy * 0.3) + Math.sin(_gx * 0.7 + _gy * 0.5)) * 0.5 + 0.5;
+        _gColors.push(0.18 + _noise * 0.08, 0.45 + _noise * 0.15, 0.1 + _noise * 0.05);
+      }
+      mainGroundGeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(_gColors), 3));
       const mainGround = new THREE.Mesh(mainGroundGeo, mainGroundMat);
       mainGround.rotation.x = -Math.PI / 2;
       mainGround.position.set(0, 0, 0);
@@ -828,6 +839,28 @@
       allSeeingEyeGroup.add(innerPupil);
       
       illuminatiGroup.add(allSeeingEyeGroup);
+
+      // Glowing 3D All-Seeing Eye orb hovering above the capstone peak
+      const eyeOrbGeo = new THREE.SphereGeometry(0.5, 8, 8);
+      const eyeOrbMat = new THREE.MeshBasicMaterial({ color: 0xFFD700, transparent: true, opacity: 0.9 });
+      const eyeOrbMesh = new THREE.Mesh(eyeOrbGeo, eyeOrbMat);
+      // Peak of capstone: illuminatiSteps*2 + 1.5 (base) + 1 (half cone height) + 1.5 (float gap)
+      eyeOrbMesh.position.set(0, illuminatiSteps * 2 + 4, 0);
+      illuminatiGroup.add(eyeOrbMesh);
+
+      // Gold point light emanating from the eye orb (world position: illuminatiGroup + orb offset)
+      const eyeOrbLight = new THREE.PointLight(0xFFD700, 2, 18);
+      eyeOrbLight.position.set(
+        illuminatiGroup.position.x,
+        illuminatiGroup.position.y + illuminatiSteps * 2 + 4,
+        illuminatiGroup.position.z
+      );
+      scene.add(eyeOrbLight);
+
+      // Store references for animation in game-loop
+      window._eyeOfHorusMesh  = eyeOrbMesh;
+      window._eyeOfHorusLight = eyeOrbLight;
+      window._eyeOfHorusPhase = 0;
       
       // Fences around pyramid (4 sides)
       const illuminatiFenceMat = new THREE.MeshToonMaterial({ color: 0x8B4513 }); // Brown
@@ -1868,16 +1901,24 @@
       // Scatter flowers around environment
       const flowerGeo = new THREE.ConeGeometry(0.2, 0.5, 6);
       const flowerColors = [0xFF69B4, 0xFFFF00, 0xFF0000, 0xFFA500, 0xFFFFFF];
+
+      // Validate flower placement: avoid lake, spawn rondel, pyramid area, and roads
+      function isFlowerPlacementValid(fx, fz) {
+        if (Math.sqrt(fx * fx + fz * fz) < 10) return false; // spawn rondel
+        if (Math.sqrt((fx - 30) ** 2 + (fz + 30) ** 2) < 22) return false; // lake
+        if (Math.sqrt((fx - 50) ** 2 + (fz + 50) ** 2) < 18) return false; // Mayan pyramid
+        if (Math.sqrt((fx + 70) ** 2 + (fz - 50) ** 2) < 15) return false; // Illuminati pyramid
+        return true;
+      }
       
       for(let i=0; i<250; i++) {
+        const fx = (Math.random() - 0.5) * 160;
+        const fz = (Math.random() - 0.5) * 160;
+        if (!isFlowerPlacementValid(fx, fz)) continue;
         const flower = new THREE.Mesh(flowerGeo, new THREE.MeshBasicMaterial({ 
           color: flowerColors[Math.floor(Math.random() * flowerColors.length)] 
         }));
-        flower.position.set(
-          (Math.random() - 0.5) * 160,
-          0.25,
-          (Math.random() - 0.5) * 160
-        );
+        flower.position.set(fx, 0.25, fz);
         flower.rotation.x = -Math.PI/2;
         scene.add(flower);
       }

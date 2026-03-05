@@ -626,12 +626,17 @@
       const origBottom = camera.bottom;
       const origPosY = camera.position.y;
 
-      // Zoom out: 4x wider frustum + raise camera
-      camera.left = origLeft * 4;
-      camera.right = origRight * 4;
-      camera.top = origTop * 4;
-      camera.bottom = origBottom * 4;
-      camera.position.y = origPosY + 20;
+      // Save and temporarily lift fog so the entire map is visible during the aerial shot
+      const origFogNear = scene.fog ? scene.fog.near : null;
+      const origFogFar  = scene.fog ? scene.fog.far  : null;
+      if (scene.fog) { scene.fog.near = 500; scene.fog.far = 2000; }
+
+      // Zoom out: 8x wider frustum + raise camera high for dramatic top-down sweep
+      camera.left   = origLeft   * 8;
+      camera.right  = origRight  * 8;
+      camera.top    = origTop    * 8;
+      camera.bottom = origBottom * 8;
+      camera.position.y = origPosY + 60;
       camera.updateProjectionMatrix();
 
       // Region label data
@@ -640,6 +645,7 @@
         { label: '⛰️ Montana',        wx: -50, wy: 0, wz: -50 },
         { label: '⚡ Eiffel Tower',    wx: 70,  wy: 0, wz: -60 },
         { label: '🗿 Stonehenge',      wx: -60, wy: 0, wz: 60  },
+        { label: '🔺 Illuminati',      wx: -70, wy: 0, wz: 50  },
         { label: '🏠 Spawn',           wx: 0,   wy: 0, wz: 0   }
       ];
 
@@ -681,7 +687,7 @@
         labelEls.forEach(el => { el.style.opacity = '0'; });
 
         const zoomStart = performance.now();
-        const zoomDuration = 1000;
+        const zoomDuration = 1500;
         const startLeft = camera.left;
         const startRight = camera.right;
         const startTop = camera.top;
@@ -701,6 +707,12 @@
           camera.position.y = startPosY + (origPosY - startPosY) * ease;
           camera.updateProjectionMatrix();
 
+          // Smoothly restore fog during zoom-in
+          if (scene.fog && origFogNear !== null) {
+            scene.fog.near = 500 + (origFogNear - 500) * ease;
+            scene.fog.far  = 2000 + (origFogFar  - 2000) * ease;
+          }
+
           if (t < 1) {
             requestAnimationFrame(animateZoom);
           } else {
@@ -712,6 +724,12 @@
             camera.position.y = origPosY;
             camera.updateProjectionMatrix();
 
+            // Restore fog exactly
+            if (scene.fog && origFogNear !== null) {
+              scene.fog.near = origFogNear;
+              scene.fog.far  = origFogFar;
+            }
+
             // Clean up DOM
             if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
 
@@ -719,7 +737,7 @@
           }
         }
         requestAnimationFrame(animateZoom);
-      }, 2000);
+      }, 2500);
     }
 
     // Countdown system (PR #70-71)
