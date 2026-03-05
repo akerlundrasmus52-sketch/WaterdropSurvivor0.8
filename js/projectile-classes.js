@@ -888,6 +888,21 @@
               const gunHitVar = Math.floor(Math.random() * 5);
               const entryX = enemy.mesh.position.x - this.vx * 0.5;
               const entryZ = enemy.mesh.position.z - this.vz * 0.5;
+
+              // Bullet hole decal on front face for ALL gun hits (any level)
+              if (enemy.mesh && (!enemy.bulletHoles || enemy.bulletHoles.length < 10)) {
+                if (!enemy.bulletHoles) enemy.bulletHoles = [];
+                ensureBulletHoleMaterials();
+                if (bulletHoleGeo && bulletHoleMat) {
+                  const h = new THREE.Mesh(bulletHoleGeo, bulletHoleMat.clone());
+                  const bMag2 = Math.sqrt(this.vx*this.vx + this.vz*this.vz) || 1;
+                  const nx2 = this.vx / bMag2, nz2 = this.vz / bMag2;
+                  h.position.set(nx2 * 0.51, (Math.random()-0.5)*0.35, nz2 * 0.51);
+                  h.lookAt(h.position.clone().multiplyScalar(2));
+                  enemy.mesh.add(h);
+                  enemy.bulletHoles.push(h);
+                }
+              }
               
               if (gunHitVar === 0) {
                 // Clean entry — small back-spatter

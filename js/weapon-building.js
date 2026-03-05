@@ -956,12 +956,45 @@ function showWeaponBuilding() {
       startWeapons = _getAllWeapons().filter(function (w) { return w.id === 'gun'; });
     }
 
-    // Visual wheel
+    // Visual wheel — enlarged for readability; icons painted on each segment via canvas-style SVG overlay
+    var wheelSize = Math.min(window.innerWidth - 40, 340);
     var wheelContainer = _el('div',
-      'position:relative;width:260px;height:260px;margin:0 auto 20px;border-radius:50%;' +
+      'position:relative;width:' + wheelSize + 'px;height:' + wheelSize + 'px;margin:0 auto 20px;border-radius:50%;' +
       'background:conic-gradient(from 0deg,' +
       _buildWheelGradient(startWeapons) + ');' +
-      'border:4px solid ' + GOLD + ';box-shadow:0 0 30px rgba(255,215,0,0.2);');
+      'border:4px solid ' + GOLD + ';box-shadow:0 0 40px rgba(255,215,0,0.35);' +
+      'transform-origin:center center;');
+
+    // Render icon+name labels on each segment (before appending to DOM)
+    (function _addWheelLabels() {
+      var n = startWeapons.length;
+      if (!n) return;
+      var segDeg = 360 / n;
+      var half = wheelSize / 2;
+      startWeapons.forEach(function (w, i) {
+        var midAngleDeg = segDeg * i + segDeg / 2;
+        var midAngleRad = (midAngleDeg - 90) * Math.PI / 180;
+        var r = half * 0.62;
+        var x = half + r * Math.cos(midAngleRad);
+        var y = half + r * Math.sin(midAngleRad);
+        var lbl = document.createElement('div');
+        lbl.style.cssText =
+          'position:absolute;text-align:center;pointer-events:none;' +
+          'left:' + x + 'px;top:' + y + 'px;' +
+          'transform:translate(-50%,-50%) rotate(' + midAngleDeg + 'deg);' +
+          'width:' + Math.max(48, Math.floor(wheelSize * 0.28)) + 'px;';
+        var iconDiv = document.createElement('div');
+        iconDiv.style.cssText = 'font-size:' + Math.floor(wheelSize * 0.075) + 'px;line-height:1.1;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.9));';
+        iconDiv.textContent = w.icon || '🔫';
+        var nameDiv = document.createElement('div');
+        nameDiv.style.cssText = 'font-size:' + Math.floor(wheelSize * 0.038) + 'px;color:#fff;font-weight:bold;' +
+          'font-family:\'Nunito\',sans-serif;text-shadow:0 1px 3px #000;white-space:nowrap;overflow:hidden;max-width:100%;';
+        nameDiv.textContent = (w.name || '').split(' ').slice(0, 2).join(' ');
+        lbl.appendChild(iconDiv);
+        lbl.appendChild(nameDiv);
+        wheelContainer.appendChild(lbl);
+      });
+    }());
     panel.appendChild(wheelContainer);
 
     // Center circle
@@ -988,8 +1021,9 @@ function showWeaponBuilding() {
       '🎰 SPIN!');
     panel.appendChild(spinBtn);
 
+    // Result bubble — clean inner text only, no ugly background rectangle
     var resultEl = _el('div',
-      'text-align:center;font-size:16px;color:#fff;margin-top:14px;min-height:24px;');
+      'text-align:center;font-size:16px;color:#fff;margin-top:16px;min-height:48px;');
     panel.appendChild(resultEl);
 
     spinBtn.addEventListener('click', function () {
@@ -1018,15 +1052,14 @@ function showWeaponBuilding() {
         if (typeof playSound === 'function') playSound('levelup');
 
         var rarityCol = RARITY_COLORS[chosen.rarity] || '#aaa';
-        // Use DOM construction instead of innerHTML for safety
+        // Clean result bubble — icon + name + small message, no background rectangle
         resultEl.textContent = '';
-        var iconSpan = _el('span', 'font-size:32px;', chosen.icon);
-        var nameSpan = _el('span', 'color:' + rarityCol + ';' + HEADER_FONT + 'font-size:20px;', chosen.name);
-        var msgSpan = _el('span', 'color:#888;font-size:12px;', 'Starting weapon selected!');
+        var iconSpan = _el('span', 'font-size:36px;display:block;margin-bottom:4px;', chosen.icon);
+        var nameSpan = _el('span', 'color:' + rarityCol + ';' + HEADER_FONT + 'font-size:22px;display:block;margin-bottom:4px;' +
+          'text-shadow:0 0 12px ' + rarityCol + ';', chosen.name);
+        var msgSpan = _el('span', 'color:#888;font-size:12px;font-family:\'Nunito\',sans-serif;display:block;', 'Starting weapon selected!');
         resultEl.appendChild(iconSpan);
-        resultEl.appendChild(document.createElement('br'));
         resultEl.appendChild(nameSpan);
-        resultEl.appendChild(document.createElement('br'));
         resultEl.appendChild(msgSpan);
 
         // Store selection

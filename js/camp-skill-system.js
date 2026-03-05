@@ -491,6 +491,14 @@
       },
       
       // COMBAT PATH (12 skills) - Unlocked after initial skills
+      rageMode: {
+        name: '🔥 Rage Mode',
+        description: 'Unlock the Rage Combat system. Fill the Rage meter to activate — ALL enemies flee in terror for 8 seconds!',
+        cost: 1,
+        maxLevel: 1,
+        requires: 'criticalFocus',
+        bonus: (level) => ({ rageUnlocked: level > 0 })
+      },
       combatMastery: {
         name: 'Combat Mastery',
         description: '+10% damage, +5% crit chance',
@@ -1200,6 +1208,7 @@
         if (bonus.multiHitChance)     playerStats.multiHitChance     = Math.min(0.75, (playerStats.multiHitChance || 0) + bonus.multiHitChance);
         if (bonus.lastStand)          playerStats.hasLastStand       = true;
         if (bonus.secondWind)         playerStats.hasSecondWind      = true;
+        if (bonus.rageUnlocked)       playerStats.rageUnlocked       = true;
         if (bonus.pickupRange)        playerStats.pickupRange        = (playerStats.pickupRange || 1.0) + bonus.pickupRange;
         if (bonus.dropRate)           playerStats.dropRate           = (playerStats.dropRate || 1.0) + bonus.dropRate;
         if (bonus.auraRange)          playerStats.auraRange          = (playerStats.auraRange || 1.0) + bonus.auraRange;

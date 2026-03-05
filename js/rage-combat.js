@@ -857,13 +857,17 @@
 
   // ── HUD visibility (hide outside active gameplay) ────────────
   function setCombatHUDVisible(active) {
+    // Rage HUD requires the rageMode skill to be unlocked
+    const rageUnlocked = (typeof playerStats !== 'undefined' && playerStats.rageUnlocked) ||
+      (typeof saveData !== 'undefined' && saveData.skillTree?.rageMode?.level > 0);
     const rageHud  = document.getElementById('rage-hud');
     const saHud    = document.getElementById('special-attacks-hud');
     const rageBar  = document.getElementById('rage-bar-container');
     const dispVal  = active ? '' : 'none';
-    if (rageHud)  rageHud.style.display  = dispVal;
+    // Show rage HUD only when gameplay is active AND skill is unlocked
+    if (rageHud)  rageHud.style.display  = (active && rageUnlocked) ? '' : 'none';
     if (saHud)    saHud.style.display    = dispVal;
-    if (rageBar)  rageBar.style.display  = dispVal;
+    if (rageBar)  rageBar.style.display  = (active && rageUnlocked) ? '' : 'none';
     // Close loadout panel when hiding
     if (!active) {
       const panel = document.getElementById('sa-loadout-panel');

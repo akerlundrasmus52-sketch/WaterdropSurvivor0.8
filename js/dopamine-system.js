@@ -638,6 +638,141 @@
   };
 
   // -----------------------------------------------------------------------
+  // ChallengeBoard — premium slide-in board for challenge/milestone completion
+  // -----------------------------------------------------------------------
+  const RARITY_CONFETTI_COLORS = {
+    Common:    ['#AAAAAA','#CCCCCC','#888888'],
+    Uncommon:  ['#1EFF00','#55FF44','#00CC00'],
+    Rare:      ['#0070DD','#44AAFF','#0044AA'],
+    Epic:      ['#A335EE','#CC77FF','#7700CC'],
+    Legendary: ['#FF8000','#FFB040','#CC5500'],
+    Mythic:    ['#E6CC80','#FFE580','#FFD700']
+  };
+
+  const ChallengeBoard = {
+    _active: false,
+
+    /**
+     * Show a premium challenge-complete board.
+     * @param {object} opts
+     *   - title    {string}  Challenge name
+     *   - gold     {number}  Gold reward to count up to
+     *   - rarity   {string}  'Common'|'Uncommon'|'Rare'|'Epic'|'Legendary'|'Mythic'
+     *   - icon     {string}  Emoji icon (default '🏆')
+     */
+    show(opts = {}) {
+      if (this._active) return;
+      this._active = true;
+      const { title = 'Challenge Complete!', gold = 0, rarity = 'Common', icon = '🏆' } = opts;
+      const colors = RARITY_CONFETTI_COLORS[rarity] || RARITY_CONFETTI_COLORS.Common;
+      const rarityColor = colors[0];
+
+      // Board container
+      const board = document.createElement('div');
+      board.id = 'challenge-board';
+      board.style.cssText =
+        'position:fixed;top:0;left:50%;transform:translateX(-50%) translateY(-120%);' +
+        'background:#0a0a0a;border:2px solid ' + rarityColor + ';border-radius:0 0 16px 16px;' +
+        'padding:18px 32px 14px;z-index:99999;min-width:300px;max-width:420px;text-align:center;' +
+        'box-shadow:0 0 30px ' + rarityColor + '88,0 8px 24px rgba(0,0,0,0.8);' +
+        'transition:transform 0.5s cubic-bezier(0.34,1.56,0.64,1);' +
+        'font-family:\'Bangers\',cursive;letter-spacing:1px;';
+      document.body.appendChild(board);
+
+      // Trophy + title row
+      const titleRow = document.createElement('div');
+      titleRow.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:8px;';
+      const trophySpan = document.createElement('span');
+      trophySpan.textContent = icon;
+      trophySpan.style.cssText = 'font-size:36px;filter:drop-shadow(0 0 8px ' + rarityColor + ');';
+      const titleSpan = document.createElement('span');
+      titleSpan.style.cssText = 'font-size:22px;color:' + rarityColor + ';text-shadow:0 0 12px ' + rarityColor + ';';
+      titleSpan.textContent = title;
+      titleRow.appendChild(trophySpan);
+      titleRow.appendChild(titleSpan);
+      board.appendChild(titleRow);
+
+      // Strike-through text
+      const strikeDiv = document.createElement('div');
+      strikeDiv.style.cssText = 'font-size:15px;color:#aaa;text-decoration:line-through;margin-bottom:8px;opacity:0;transition:opacity 0.3s;font-family:\'Nunito\',sans-serif;font-weight:700;';
+      strikeDiv.textContent = title;
+      board.appendChild(strikeDiv);
+
+      // Gold counter
+      const goldDiv = document.createElement('div');
+      goldDiv.style.cssText = 'font-size:20px;color:#FFD700;text-shadow:0 0 10px #FFD700;margin-bottom:6px;';
+      goldDiv.textContent = '💰 +0 Gold';
+      board.appendChild(goldDiv);
+
+      // Rarity label
+      const rarityDiv = document.createElement('div');
+      rarityDiv.style.cssText = 'font-size:12px;color:' + rarityColor + ';letter-spacing:3px;opacity:0.8;font-family:\'Nunito\',sans-serif;font-weight:900;';
+      rarityDiv.textContent = rarity.toUpperCase();
+      board.appendChild(rarityDiv);
+
+      // Slide in
+      requestAnimationFrame(() => {
+        board.style.transform = 'translateX(-50%) translateY(0)';
+      });
+
+      // Strike-through & gold count-up after 0.4s
+      setTimeout(() => {
+        strikeDiv.style.opacity = '1';
+        // Count up gold
+        let currentGold = 0;
+        const targetGold = Math.max(0, Math.floor(gold));
+        if (targetGold > 0) {
+          const step = Math.max(1, Math.ceil(targetGold / 40));
+          const interval = setInterval(() => {
+            currentGold = Math.min(currentGold + step, targetGold);
+            goldDiv.textContent = '💰 +' + currentGold + ' Gold';
+            if (currentGold >= targetGold) clearInterval(interval);
+          }, 40);
+        }
+        // Confetti burst
+        this._spawnConfetti(board, colors, 30);
+      }, 400);
+
+      // Slide out after 4s
+      setTimeout(() => {
+        board.style.transform = 'translateX(-50%) translateY(-120%)';
+        setTimeout(() => {
+          if (board.parentNode) board.parentNode.removeChild(board);
+          this._active = false;
+        }, 600);
+      }, 4200);
+    },
+
+    _spawnConfetti(anchor, colors, count) {
+      // Cache the bounding rect once to avoid repeated layout thrashing in the loop
+      const rect = anchor.getBoundingClientRect();
+      const originTop  = rect.bottom - 10;
+      const originLeft = rect.left + rect.width / 2;
+      for (let i = 0; i < count; i++) {
+        const c = document.createElement('div');
+        const col = colors[i % colors.length];
+        const x = (Math.random() - 0.5) * 360;
+        const y = -(60 + Math.random() * 80);
+        c.style.cssText =
+          'position:fixed;width:' + (4 + Math.random() * 5) + 'px;height:' + (8 + Math.random() * 6) + 'px;' +
+          'background:' + col + ';border-radius:2px;pointer-events:none;z-index:100000;' +
+          'top:' + originTop + 'px;' +
+          'left:' + originLeft + 'px;' +
+          'transform:rotate(' + (Math.random()*360) + 'deg);' +
+          'transition:transform 1.2s ease-out,top 1.2s ease-out,left 1.2s ease-out,opacity 0.4s 0.8s;';
+        document.body.appendChild(c);
+        requestAnimationFrame(() => {
+          c.style.top = (parseFloat(c.style.top) + y) + 'px';
+          c.style.left = (parseFloat(c.style.left) + x) + 'px';
+          c.style.transform = 'rotate(' + (Math.random()*720) + 'deg)';
+          c.style.opacity = '0';
+        });
+        setTimeout(() => { if (c.parentNode) c.parentNode.removeChild(c); }, 1400);
+      }
+    }
+  };
+
+  // -----------------------------------------------------------------------
   // Export
   // -----------------------------------------------------------------------
   window.DopamineSystem = {
@@ -647,6 +782,7 @@
     CollectorCards:  CollectorCards,
     ElasticNumbers:  ElasticNumbers,
     RewardJuice:     RewardJuice,
-    FeverMode:       FeverMode
+    FeverMode:       FeverMode,
+    ChallengeBoard:  ChallengeBoard
   };
 })();

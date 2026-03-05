@@ -259,15 +259,17 @@
     );
 
     // --- Projectile batch (bullets) ---------------------------
+    // Bullet radius matches the non-instanced projectile geometry (0.03125) so the
+    // instanced and non-instanced paths look identical and the bullet appears small and snappy.
     ir.register('bullet',
-      new THREE.SphereGeometry(0.08, 6, 6),
-      new THREE.MeshStandardMaterial({ color: 0xffff00, emissive: 0x886600, roughness: 0.2, metalness: 0.5 }),
+      new THREE.SphereGeometry(0.03125, 8, 8),
+      new THREE.MeshBasicMaterial({ color: 0xFFFF00, transparent: true, opacity: 0.95 }),
       2000
     );
 
     ir.register('bullet_glow',
-      new THREE.SphereGeometry(0.18, 6, 6),
-      new THREE.MeshBasicMaterial({ color: 0xffff88, transparent: true, opacity: 0.35, depthWrite: false }),
+      new THREE.SphereGeometry(0.04375, 6, 6),
+      new THREE.MeshBasicMaterial({ color: 0xFFFF88, transparent: true, opacity: 0.4, depthWrite: false }),
       2000
     );
 

@@ -1927,11 +1927,11 @@
         if (e.target.value === 'auto') {
           // Reset booster to medium as starting point
           if (window._resetFpsBooster) window._resetFpsBooster(3);
-          applyGraphicsQuality('medium');
+          if (typeof window.applyGraphicsQuality === 'function') window.applyGraphicsQuality('medium');
           const statusEl = document.getElementById('fps-booster-status');
           if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = 'Auto: detecting...'; }
         } else {
-          applyGraphicsQuality(e.target.value);
+          if (typeof window.applyGraphicsQuality === 'function') window.applyGraphicsQuality(e.target.value);
           const statusEl = document.getElementById('fps-booster-status');
           if (statusEl) statusEl.style.display = 'none';
         }
