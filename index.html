@@ -426,15 +426,22 @@
 
   <div id="ui-layer">
     <div class="hud-top">
-      <div class="bar-container" id="hp-bar-container">
-        <div class="bar-fill" id="hp-fill"></div>
-        <div class="bar-text" id="hp-text" style="color: #FFFFFF;">HP: 100/100</div>
-      </div>
-      
-      <!-- Phase 3: EXP bar at top (restored) -->
-      <div class="bar-container" id="exp-bar-container">
-        <div class="bar-fill" id="exp-fill"></div>
-        <div class="bar-text" id="exp-text" style="color: #FFFFFF;">EXP: 0%</div>
+      <!-- Unified stat bars: HP, EXP, Rage stacked in one compact block -->
+      <div class="unified-bars-wrap">
+        <div class="bar-container" id="hp-bar-container">
+          <div class="bar-fill" id="hp-fill"></div>
+          <div class="bar-text" id="hp-text" style="color: #FFFFFF;">HP: 100/100</div>
+        </div>
+        
+        <div class="bar-container" id="exp-bar-container">
+          <div class="bar-fill" id="exp-fill"></div>
+          <div class="bar-text" id="exp-text" style="color: #FFFFFF;">EXP: 0%</div>
+        </div>
+
+        <div class="bar-container" id="rage-bar-container">
+          <div class="bar-fill" id="rage-unified-fill"></div>
+          <div class="bar-text" id="rage-unified-text" style="color: #FF8800;">⚡ RAGE: 0%</div>
+        </div>
       </div>
       
       <!-- Status Message Bar -->
@@ -519,11 +526,11 @@
       <div id="minimap"></div>
     </div>
 
-    <!-- Companion Skills Panel - Below minimap on right side -->
+    <!-- Companion Skills Panel — unified style matching special attacks -->
     <div id="companion-skills-panel">
-      <div class="companion-skill-btn" id="comp-skill-1" title="Companion Skill 1">—</div>
-      <div class="companion-skill-btn" id="comp-skill-2" title="Companion Skill 2">—</div>
-      <div class="companion-skill-btn" id="comp-skill-3" title="Companion Skill 3">—</div>
+      <div class="companion-skill-btn comp-empty" id="comp-skill-1" title="Empty companion slot">⬡</div>
+      <div class="companion-skill-btn comp-empty" id="comp-skill-2" title="Empty companion slot">⬡</div>
+      <div class="companion-skill-btn comp-empty" id="comp-skill-3" title="Empty companion slot">⬡</div>
     </div>
     
     <!-- REGION DISPLAY INDICATOR (above minimap, slides in from right) -->

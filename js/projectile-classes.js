@@ -315,10 +315,12 @@
             btn.textContent = skills[i].icon;
             btn.title = skills[i].name + ': ' + skills[i].desc;
             btn.style.display = '';
+            btn.classList.remove('comp-empty');
           } else {
-            btn.textContent = '—';
-            btn.title = 'Empty skill slot';
+            btn.textContent = '⬡';
+            btn.title = 'Empty companion slot';
             btn.style.display = '';
+            btn.classList.add('comp-empty');
           }
         }
       }
