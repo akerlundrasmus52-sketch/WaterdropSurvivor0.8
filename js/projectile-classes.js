@@ -1140,7 +1140,7 @@
                 if (typeof addAccountXP === 'function') addAccountXP(25);
                 else if (window.addAccountXP) window.addAccountXP(25);
               }
-              this.hitEnemies.add({ isDead: false, mesh: animalGroup }); // Prevent multi-hit
+              this.hitEnemies.add(animalGroup); // Prevent multi-hit on same animal
               this.destroy();
               return false;
             }

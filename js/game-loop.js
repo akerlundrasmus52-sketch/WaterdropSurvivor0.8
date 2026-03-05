@@ -2851,6 +2851,17 @@
         window.volcanoLight.userData.phase += dt * 8;
         window.volcanoLight.intensity = 3 + Math.sin(window.volcanoLight.userData.phase) * 1.5 + Math.sin(window.volcanoLight.userData.phase * 3.7) * 0.8;
       }
+      // ── All-Seeing Eye (Pyramid): hover bob + pulse glow ──
+      if (window._pyramidEye) {
+        const pe = window._pyramidEye;
+        pe.phase += dt * 1.5;
+        pe.group.position.y = pe.baseY + Math.sin(pe.phase) * 0.3;
+        pe.group.rotation.y = pe.phase * 0.4;
+        // Pulse the glow intensity
+        if (pe.glow) {
+          pe.glow.intensity = 1.8 + Math.sin(pe.phase * 2.0) * 1.2;
+        }
+      }
       if (window.lavaPool && window.lavaPool.material) {
         const lp = window.lavaPool;
         lp.userData.phase = (lp.userData.phase || 0) + dt * 4;

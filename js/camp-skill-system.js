@@ -265,9 +265,9 @@
         bonus: (level) => ({})
       },
       accountBuilding: {
-        name: 'Account & Records',
+        name: 'Profile & Records',
         icon: '👤',
-        description: 'View your starting stats, current stats, total kills, account level, and achievements.',
+        description: 'View your profile, activity log, current stats, total kills, profile level, and achievements.',
         baseCost: 0,
         costMultiplier: 0,
         maxCost: 0,
@@ -1661,7 +1661,7 @@
       firstRunDeath: {
         id: 'firstRunDeath',
         name: 'The Awakening',
-        description: 'You are a sentient Waterdrop — born from the toxic leak of a crashed alien ship. Ripped from the Nirvana of the lake\'s collective consciousness, you are forced to survive. Die once to trigger your awakening.',
+        description: 'A Waterdrop ripped from the lake\'s collective consciousness. You must survive. Die once to trigger your awakening.',
         objectives: 'Die in your first run',
         rewardGold: 0,
         rewardSkillPoints: 0,
@@ -2092,23 +2092,23 @@
         rewardGold: 500,
         rewardSkillPoints: 2,
         rewardAttributePoints: 2,
-        message: "💪 25 Kills! You're a true survivor!<br><br>Head to the <b>Account Building</b> in camp to review your progress and stats!",
+        message: "💪 25 Kills! You're a true survivor!<br><br>Head to the <b>Profile Building</b> in camp to review your progress and stats!",
         nextQuest: 'quest15_accountVisit',
         conditions: ['quest13_windmill']
       },
 
-      // === PHASE 15: Camp quest → Check Account stats ===
+      // === PHASE 15: Camp quest → Check Profile stats ===
       quest15_accountVisit: {
         id: 'quest15_accountVisit',
-        name: 'Check Your Account Stats',
-        description: 'Visit the Account & Records building in camp to see your full stats and progression',
-        objectives: 'Open the Account building in Camp',
-        claim: 'Account Building',
+        name: 'Check Your Profile Stats',
+        description: 'Visit the Profile & Records building in camp to see your full stats and progression',
+        objectives: 'Open the Profile building in Camp',
+        claim: 'Profile Building',
         autoClaim: true,
         rewardGold: 200,
         rewardSkillPoints: 1,
         rewardAttributePoints: 3,
-        message: "📊 Account reviewed!<br><br>Time for a combat challenge — head out and kill <b>12 enemies</b> in one run!",
+        message: "📊 Profile reviewed!<br><br><i>A.I.D.A: 'Your data is... impressive. Keep growing stronger. The lake is patient — but I am not.'</i><br><br>Time for a combat challenge — head out and kill <b>12 enemies</b> in one run!",
         nextQuest: 'quest15b_runKill12',
         conditions: ['quest14_kill25']
       },
