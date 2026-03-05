@@ -44,6 +44,7 @@ function calculateEnemyArmorReduction(amount, armorFraction) {
  * @returns {{ enemy: object|null, distSq: number }}
  */
 function findNearestEnemySH(x, z, rangeSq, enemies) {
+  // SpatialHash.query() requires a linear radius; sqrt is called once per weapon fire, not per frame.
   const range = Math.sqrt(rangeSq);
   const candidates = window._enemySpatialHash
     ? window._enemySpatialHash.query(x, z, range)
@@ -73,6 +74,7 @@ function findNearestEnemySH(x, z, rangeSq, enemies) {
  * @param {Function} callback - Invoked with (enemy, distSq).
  */
 function forEachEnemyInRangeSH(x, z, rangeSq, enemies, callback) {
+  // SpatialHash.query() requires a linear radius; sqrt is called once per weapon fire, not per frame.
   const range = Math.sqrt(rangeSq);
   const candidates = window._enemySpatialHash
     ? window._enemySpatialHash.query(x, z, range)

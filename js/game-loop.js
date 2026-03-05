@@ -1610,7 +1610,7 @@
               
               _tmpBoltStart.copy(chainCurrent.mesh.position);
               // Find next chain target via spatial hash
-              let nextTarget = null; let nextDist = Infinity;
+              let nextTarget = null; let nextDistSq = Infinity;
               const _chainRange = weapons.lightning.chainRange || 5;
               const _chainRangeSq = _chainRange * _chainRange;
               const _chainCandidates = window._enemySpatialHash
@@ -1622,13 +1622,13 @@
                 const _cdx = chainCurrent.mesh.position.x - e.mesh.position.x;
                 const _cdz = chainCurrent.mesh.position.z - e.mesh.position.z;
                 const _cdSq = _cdx * _cdx + _cdz * _cdz;
-                if (_cdSq < _chainRangeSq && _cdSq < nextDist) { nextDist = _cdSq; nextTarget = e; }
+                if (_cdSq < _chainRangeSq && _cdSq < nextDistSq) { nextDistSq = _cdSq; nextTarget = e; }
               }
               chainCurrent = nextTarget;
             }
 
             // Find next strike target for multi-strike via spatial hash
-            let nextStrikeTarget = null; let nextStrikeDist = Infinity;
+            let nextStrikeTarget = null; let nextStrikeDistSq = Infinity;
             const _strikeRangeSq = weapons.lightning.range * weapons.lightning.range;
             const _strikeCandidates = window._enemySpatialHash
               ? window._enemySpatialHash.query(player.mesh.position.x, player.mesh.position.z, weapons.lightning.range)
@@ -1639,7 +1639,7 @@
               const _sdx = player.mesh.position.x - e.mesh.position.x;
               const _sdz = player.mesh.position.z - e.mesh.position.z;
               const _sdSq = _sdx * _sdx + _sdz * _sdz;
-              if (_sdSq < _strikeRangeSq && _sdSq < nextStrikeDist) { nextStrikeDist = _sdSq; nextStrikeTarget = e; }
+              if (_sdSq < _strikeRangeSq && _sdSq < nextStrikeDistSq) { nextStrikeDistSq = _sdSq; nextStrikeTarget = e; }
             }
             current = nextStrikeTarget;
           }
@@ -1720,7 +1720,8 @@
                 mVel.lerp(_tmpMissileDesired, 0.15); // Stronger homing
               } else {
                 // Re-acquire target if current target died — use spatial hash
-                const _reAcqResult = window.GameCombat.findNearestEnemySH(missileGroup.position.x, missileGroup.position.z, 20 * 20, enemies);
+                const _reAcqRangeSq = 400; // 20² world units
+                const _reAcqResult = window.GameCombat.findNearestEnemySH(missileGroup.position.x, missileGroup.position.z, _reAcqRangeSq, enemies);
                 if (_reAcqResult.enemy) target = _reAcqResult.enemy;
               }
               missileGroup.position.add(mVel);
