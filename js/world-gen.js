@@ -847,30 +847,30 @@
       illuminatiGroup.add(capstone);
       
       // All-Seeing Eye (on capstone)
-      const allSeeingEyeGroup = new THREE.Group();
-      allSeeingEyeGroup.position.set(0, illuminatiSteps * 2 + 1.5, 1.2);
+      const illumEyeGroup = new THREE.Group();
+      illumEyeGroup.position.set(0, illuminatiSteps * 2 + 1.5, 1.2);
       
       // Eye background (triangle)
-      const eyeTriGeo = new THREE.CircleGeometry(0.8, 3);
-      const eyeTriMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
-      const eyeTri = new THREE.Mesh(eyeTriGeo, eyeTriMat);
-      allSeeingEyeGroup.add(eyeTri);
+      const illumEyeTriGeo = new THREE.CircleGeometry(0.8, 3);
+      const illumEyeTriMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+      const illumEyeTri = new THREE.Mesh(illumEyeTriGeo, illumEyeTriMat);
+      illumEyeGroup.add(illumEyeTri);
       
       // Eye pupil
       const eyePupilGeo = new THREE.CircleGeometry(0.4, 16);
       const eyePupilMat = new THREE.MeshBasicMaterial({ color: 0xFFFFFF });
       const eyePupil = new THREE.Mesh(eyePupilGeo, eyePupilMat);
       eyePupil.position.z = 0.01;
-      allSeeingEyeGroup.add(eyePupil);
+      illumEyeGroup.add(eyePupil);
       
       // Inner pupil
       const innerPupilGeo = new THREE.CircleGeometry(0.15, 16);
-      const innerPupilMat = new THREE.MeshBasicMaterial({ color: 0x0000FF }); // Blue eye
-      const innerPupil = new THREE.Mesh(innerPupilGeo, innerPupilMat);
-      innerPupil.position.z = 0.02;
-      allSeeingEyeGroup.add(innerPupil);
+      const illumInnerPupilMat = new THREE.MeshBasicMaterial({ color: 0x0000FF }); // Blue eye
+      const illumInnerPupil = new THREE.Mesh(innerPupilGeo, illumInnerPupilMat);
+      illumInnerPupil.position.z = 0.02;
+      illumEyeGroup.add(illumInnerPupil);
       
-      illuminatiGroup.add(allSeeingEyeGroup);
+      illuminatiGroup.add(illumEyeGroup);
 
       // Glowing 3D All-Seeing Eye orb hovering above the capstone peak
       const eyeOrbGeo = new THREE.SphereGeometry(0.5, 8, 8);
