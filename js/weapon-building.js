@@ -149,8 +149,8 @@ function _extraProps(id, base) {
 }
 
 function _isOwned(weaponId) {
-  var crafted = (saveData.craftedWeapons || []);
-  if (crafted.indexOf(weaponId) !== -1) return true;
+  var crafted = saveData.craftedWeapons || {};
+  if (crafted[weaponId]) return true;
   if (weaponId === 'gun') return true;
   var defaults = (typeof window.GameWeapons !== 'undefined' && window.GameWeapons.getDefaultWeapons)
     ? window.GameWeapons.getDefaultWeapons() : {};
