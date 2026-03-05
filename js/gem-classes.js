@@ -103,13 +103,14 @@
         this.rotSpeedZ = (Math.random() * 0.10 + 0.03) * spinMult * (Math.random() < 0.5 ? 1 : -1);
 
         // Physics: pop velocity + gravity
-        var popSpeed = (0.03 + Math.random() * 0.04) * force;
+        // Reduced pop speed and increased gravity so gems feel heavier and land faster.
+        var popSpeed = (0.02 + Math.random() * 0.025) * force;
         this.vx = Math.cos(popAngle) * popSpeed;
-        this.vy = 0.06 + Math.random() * 0.04 * force; // upward pop
+        this.vy = 0.04 + Math.random() * 0.02 * force; // upward pop — lowered so gems don't float
         this.vz = Math.sin(popAngle) * popSpeed;
-        this.gravity = -0.003; // gravity pull per frame
+        this.gravity = -0.008; // stronger gravity so gems fall quickly and feel heavier
         this.onGround = false;
-        this.groundFriction = 0.92;
+        this.groundFriction = 0.85; // more drag on ground slide
 
         this.bobPhase = Math.random() * Math.PI * 2;
         this.sparklePhase = Math.random() * Math.PI * 2;
@@ -831,13 +832,13 @@
         
         // Pop out from death position (like XP stars)
         const popAngle = Math.random() * Math.PI * 2;
-        const popSpeed = 0.03 + Math.random() * 0.04;
+        const popSpeed = 0.02 + Math.random() * 0.025;
         this.vx = Math.cos(popAngle) * popSpeed;
-        this.vy = 0.07 + Math.random() * 0.05;
+        this.vy = 0.05 + Math.random() * 0.03;
         this.vz = Math.sin(popAngle) * popSpeed;
-        this.gravity = -0.003;
+        this.gravity = -0.008; // stronger gravity — hits ground faster, feels heavier
         this.onGround = false;
-        this.groundFriction = 0.9;
+        this.groundFriction = 0.85;
 
         // Spin speeds — all 3 axes
         this.rotSpeedX = (Math.random() * 0.08 + 0.03) * (Math.random() < 0.5 ? 1 : -1);

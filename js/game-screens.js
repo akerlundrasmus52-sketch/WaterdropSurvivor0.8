@@ -822,6 +822,89 @@
     }
 
     // ============================================================
+    // TRASH & RECYCLE — Break down gear into Metal; craft Leather & Food
+    // ============================================================
+    function showRecycleScreen() {
+      const existing = document.getElementById('recycle-overlay');
+      if (existing) existing.remove();
+
+      const overlay = document.createElement('div');
+      overlay.id = 'recycle-overlay';
+      overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.88);z-index:600;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;overflow-y:auto;padding:20px 0 40px;box-sizing:border-box;';
+
+      overlay.innerHTML = `
+        <div style="max-width:480px;width:90vw;color:#fff;font-family:Bangers,cursive;">
+          <div style="font-size:2em;letter-spacing:3px;text-align:center;color:#FFD700;text-shadow:0 0 12px rgba(255,215,0,0.6);margin-bottom:6px;">♻️ TRASH & RECYCLE</div>
+          <div style="font-size:0.85em;font-family:Arial,sans-serif;color:#aaa;text-align:center;margin-bottom:18px;">Break down weapons into Metal · Craft Leather from Skins · Cook Food from Meat</div>
+          <div id="recycle-content"></div>
+          <button id="recycle-close-btn" style="display:block;margin:20px auto 0;background:transparent;border:2px solid #888;color:#ccc;font-family:Bangers,cursive;font-size:1.1em;letter-spacing:2px;padding:8px 28px;border-radius:8px;cursor:pointer;">CLOSE</button>
+        </div>`;
+
+      document.body.appendChild(overlay);
+      document.getElementById('recycle-close-btn').onclick = () => overlay.remove();
+      overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+
+      function _refreshRecycle() {
+        const content = document.getElementById('recycle-content');
+        if (!content) return;
+        const res = window.GameHarvesting ? window.GameHarvesting.getResources() : {};
+        const r = res || {};
+        const rows = [];
+
+        // ── Recycle weapon to Metal ──────────────────────────────
+        rows.push(`<div style="background:rgba(30,30,50,0.9);border:2px solid #445;border-radius:10px;padding:14px;margin-bottom:10px;">
+          <div style="font-size:1.15em;color:#90CAF9;margin-bottom:6px;">🔩 Recycle Weapon → Metal</div>
+          <div style="font-family:Arial,sans-serif;font-size:12px;color:#bbb;margin-bottom:8px;">Disassemble any equipped or spare weapon to gain 1–3 🔩 Metal for crafting.</div>
+          <button onclick="window._recycleWeapon()" style="background:#1a3a6a;border:2px solid #5DADE2;color:#fff;font-family:Bangers,cursive;font-size:1em;letter-spacing:1px;padding:6px 18px;border-radius:7px;cursor:pointer;">♻️ RECYCLE WEAPON (+2 Metal)</button>
+        </div>`);
+
+        // ── Craft Leather from Animal Skin ───────────────────────
+        const canLeather = (r.animalSkin || 0) >= 2;
+        rows.push(`<div style="background:rgba(30,30,50,0.9);border:2px solid ${canLeather ? '#654321' : '#333'};border-radius:10px;padding:14px;margin-bottom:10px;">
+          <div style="font-size:1.15em;color:#F5CBA7;margin-bottom:6px;">🟫 Craft Leather</div>
+          <div style="font-family:Arial,sans-serif;font-size:12px;color:#bbb;margin-bottom:8px;">2 🐾 Animal Skin → 1 🟫 Leather &nbsp;|&nbsp; You have: <b style="color:${canLeather?'#2ecc71':'#e74c3c'}">${r.animalSkin||0} Skin</b></div>
+          <button onclick="window._craftLeather()" ${canLeather?'':'disabled'} style="background:${canLeather?'#3E2723':'#222'};border:2px solid ${canLeather?'#8D6E63':'#555'};color:${canLeather?'#fff':'#666'};font-family:Bangers,cursive;font-size:1em;letter-spacing:1px;padding:6px 18px;border-radius:7px;cursor:${canLeather?'pointer':'default'};">CRAFT LEATHER</button>
+        </div>`);
+
+        // ── Craft Food from Meat ─────────────────────────────────
+        const canFood = (r.meat || 0) >= 1;
+        rows.push(`<div style="background:rgba(30,30,50,0.9);border:2px solid ${canFood ? '#CC4400' : '#333'};border-radius:10px;padding:14px;margin-bottom:10px;">
+          <div style="font-size:1.15em;color:#FDEBD0;margin-bottom:6px;">🍲 Cook Food</div>
+          <div style="font-family:Arial,sans-serif;font-size:12px;color:#bbb;margin-bottom:8px;">1 🍖 Meat → 1 🍲 Food &nbsp;|&nbsp; You have: <b style="color:${canFood?'#2ecc71':'#e74c3c'}">${r.meat||0} Meat</b></div>
+          <button onclick="window._craftMeal()" ${canFood?'':'disabled'} style="background:${canFood?'#7B3F00':'#222'};border:2px solid ${canFood?'#CC7700':'#555'};color:${canFood?'#fff':'#666'};font-family:Bangers,cursive;font-size:1em;letter-spacing:1px;padding:6px 18px;border-radius:7px;cursor:${canFood?'pointer':'default'};">COOK MEAL</button>
+        </div>`);
+
+        content.innerHTML = rows.join('');
+      }
+
+      // Bind global click helpers (scoped to this overlay lifetime)
+      window._recycleWeapon = () => {
+        if (window.GameHarvesting) {
+          window.GameHarvesting.recycleToMetal('weapon', 2);
+          saveSaveData();
+          _refreshRecycle();
+          playSound('collect');
+        }
+      };
+      window._craftLeather = () => {
+        if (window.GameHarvesting && window.GameHarvesting.craftLeather()) {
+          saveSaveData();
+          _refreshRecycle();
+          playSound('levelup');
+        }
+      };
+      window._craftMeal = () => {
+        if (window.GameHarvesting && window.GameHarvesting.craftMeal()) {
+          saveSaveData();
+          _refreshRecycle();
+          playSound('levelup');
+        }
+      };
+
+      _refreshRecycle();
+    }
+
+    // ============================================================
     // CAMPFIRE KITCHEN — Cook meals from harvested ingredients
     // ============================================================
     function showCampfireKitchen() {
@@ -1397,7 +1480,7 @@
             progressTutorialQuest('quest27_useRecycle', true);
             saveSaveData();
           }
-          showInventoryScreen();
+          showRecycleScreen();
         },
         campfireKitchen:     () => {
           overlay.remove();

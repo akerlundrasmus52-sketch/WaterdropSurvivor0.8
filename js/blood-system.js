@@ -833,10 +833,10 @@
         : (0.05 + Math.random() * 0.15);
       const life = 50 + Math.floor(Math.random() * 80);
 
-      // High-velocity radial explosion
+      // High-velocity radial explosion — spread reduced by 25% so it looks big but stays tighter
       const theta = Math.random() * Math.PI * 2;
       const phi   = Math.random() * Math.PI;
-      const speed = (0.10 + Math.random() * 0.30) * (radius / 3.0);
+      const speed = (0.10 + Math.random() * 0.30) * (radius / 3.0) * 0.75;
       const vx = Math.sin(phi) * Math.cos(theta) * speed;
       const vy = Math.abs(Math.cos(phi)) * speed * 0.8 + 0.05;
       const vz = Math.sin(phi) * Math.sin(theta) * speed;
@@ -986,6 +986,69 @@
     }
   }
 
+  // How much pressure drops per pump in emitArterialSpurt.
+  // 0.12 → first 8 pumps range from 1.0 down to 0.16 (realistic heartbeat decay).
+  const ARTERIAL_PRESSURE_DECAY_RATE = 0.12;
+
+  /**
+   * Arterial spurt — continuous high-pressure jets of blood pumping from a
+   * wound on a heavily damaged or dying enemy. Shoots narrow streams in a
+   * specific direction (e.g. out of neck / chest) that arc and fall.
+   *
+   * @param {THREE.Vector3} pos       - wound origin position
+   * @param {THREE.Vector3} facingDir - direction blood squirts out (normalised)
+   * @param {object}        options
+   *   pulses       {number}  – number of heartbeat-timed squirts (default 8)
+   *   perPulse     {number}  – particles per squirt (default 80)
+   *   interval     {number}  – ms between squirts (default 160)
+   *   intensity    {number}  – pressure multiplier 0–1 (default 1.0)
+   *   coneAngle    {number}  – half-angle of spray cone in radians (default 0.25)
+   */
+  function emitArterialSpurt(pos, facingDir, options) {
+    if (!_scene) return;
+    const scale = (window.performanceLog && window.performanceLog.particleThrottleScale !== undefined)
+      ? window.performanceLog.particleThrottleScale : 1.0;
+    const opts      = options  || {};
+    const pulses    = opts.pulses    !== undefined ? opts.pulses    : 8;
+    const perPulse  = Math.ceil((opts.perPulse !== undefined ? opts.perPulse : 80) * scale);
+    const interval  = opts.interval  !== undefined ? opts.interval  : 160;
+    const intensity = opts.intensity !== undefined ? opts.intensity : 1.0;
+    const coneAngle = opts.coneAngle !== undefined ? opts.coneAngle : 0.25;
+
+    const [r1, g1, b1] = _hexToRgb(0x8B0000);
+    const [r2, g2, b2] = _hexToRgb(0xFF0000);
+
+    // Base spray direction from the facing vector
+    const baseAngle = facingDir ? Math.atan2(facingDir.z, facingDir.x) : 0;
+
+    for (let p = 0; p < pulses; p++) {
+      setTimeout(() => {
+        if (!_scene) return;
+        // Pressure decays with each pulse — realistic heartbeat pumping effect
+        const pressure = Math.max(0.10, 1 - p * ARTERIAL_PRESSURE_DECAY_RATE) * intensity;
+        const count    = Math.ceil(perPulse * pressure);
+        for (let i = 0; i < count; i++) {
+          const t    = Math.random();
+          const r    = r1 + (r2 - r1) * t;
+          const g    = g1 + (g2 - g1) * t;
+          const b    = b1 + (b2 - b1) * t;
+          const size = 0.025 + Math.random() * 0.045;
+          const life = 40 + Math.floor(Math.random() * 50);
+
+          // Narrow cone spray: tight jet with slight lateral wobble
+          const angle  = baseAngle + (Math.random() - 0.5) * coneAngle * 2;
+          const speed  = (0.10 + Math.random() * 0.12) * pressure;
+          const vx     = Math.cos(angle) * speed;
+          // Arc upward then fall — first pump high arc, later pulses droop lower
+          const vy     = (0.08 + Math.random() * 0.10) * pressure;
+          const vz     = Math.sin(angle) * speed;
+
+          _emit(pos.x, pos.y + 0.55, pos.z, vx, vy, vz, r, g, b, size, life);
+        }
+      }, p * interval);
+    }
+  }
+
   // ─── Expose ──────────────────────────────────────────────────────────────────
   window.BloodSystem = {
     init,
@@ -1007,7 +1070,8 @@
     emitWaterPulse,
     emitPoolGrow,
     emitMeteorExplosion,
-    emitCrawlTrail
+    emitCrawlTrail,
+    emitArterialSpurt
   };
 
 })();

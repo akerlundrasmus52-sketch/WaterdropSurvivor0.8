@@ -2114,6 +2114,7 @@
           p.pierceCount = weapons.bow.piercing || 1;
           p.mesh.scale.set(0.3, 0.3, 1.2);
           p.mesh.material.color.setHex(0x8B4513);
+          p.isBow = true; // flag for projectile-pinning on hit
           _rescaleProjSpeed(p, 0.5); // bow arrows slightly faster than reverted base (0.4)
           projectiles.push(p);
           weapons.bow.lastShot = time;
@@ -2229,6 +2230,8 @@
       if (window.GameHarvesting && player && player.mesh) {
         window._gamePlayerMesh = player.mesh;
         window.GameHarvesting.update(dt, player.mesh.position, Date.now());
+        // Resolve solid collisions so the player cannot walk through harvestable nodes
+        window.GameHarvesting.resolveNodeCollisions(player.mesh.position, 0.55);
       }
 
       // Update Rage Combat system (meter decay, special attack cooldowns)

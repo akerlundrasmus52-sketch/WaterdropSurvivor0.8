@@ -1693,18 +1693,19 @@
       quest_harvester: {
         id: 'quest_harvester',
         name: 'The Harvester',
-        description: 'Reach Level 3 in a single run to unlock the Forge. You\'ll receive starter materials to craft your first tools!',
+        description: 'Reach Level 3 in a single run to unlock the Forge. You\'ll receive starter materials AND enough gold to buy every harvesting tool!',
         objectives: 'Reach Level 3 in a single run',
         claim: 'Main Building',
-        rewardGold: 75,
+        // Economy softlock fix: forge building costs N of each material (wood/stone/coal).
+        // Axe=150g + Sledgehammer=200g + Pickaxe=250g + MagicTool=500g + Knife=100g + BerryScoop=80g = 1280g total.
+        // Providing 1300g here guarantees the player can buy ALL harvesting tools without getting softlocked.
+        // 20 of each resource comfortably covers the forge build cost (which is builtCount+1 of each).
+        rewardGold: 1300,
         rewardSkillPoints: 1,
-        // Softlock fix: the forge is the first non-free building (builtCount=0 → cost=1 of each).
-        // Giving 20 of each guarantees the player can build it even if they spent some resources.
-        // quest2_spendSkills also provides 15 of each as an additional safety net.
         rewardResources: { wood: 20, stone: 20, coal: 20 },
         unlockBuilding: 'forge',
         triggerOnDeath: true,
-        message: "🔨 <b>Forge Unlocked!</b> (Tool Crafting Only)<br><br>You received:<br>&nbsp;🪵 <b>20 Wood</b> · 🪨 <b>20 Stone</b> · 🖤 <b>20 Coal</b><br><br>Benny says: <i>'Dude! Walk up to the Forge plot and BUILD it — I stashed enough materials so you can get started right away, man! ✌️'</i><br><br>🎯 <b>NEXT:</b> Walk to the Forge plot in camp and build it!",
+        message: "🔨 <b>Forge Unlocked!</b> (Tool Crafting Only)<br><br>You received:<br>&nbsp;🪵 <b>20 Wood</b> · 🪨 <b>20 Stone</b> · 🖤 <b>20 Coal</b><br>&nbsp;💰 <b>1,300 Gold</b> (enough to buy ALL harvesting tools!)<br><br>Benny says: <i>'Dude! Walk up to the Forge plot and BUILD it — I stashed enough materials AND gold so you can buy every tool right away, man! ✌️'</i><br><br>🎯 <b>NEXT:</b> Walk to the Forge plot in camp, build it, then buy your tools!",
         nextQuest: 'quest_firstBlood',
         conditions: ['quest_dailyRoutine']
       },
