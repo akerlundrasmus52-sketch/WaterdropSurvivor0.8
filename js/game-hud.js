@@ -62,17 +62,17 @@
 
     // Keep the unified rage bar in sync with the rage combat system
     function _updateUnifiedRageBar() {
-      var rageFill = document.getElementById('rage-unified-fill');
-      var rageText = document.getElementById('rage-unified-text');
-      var rageContainer = document.getElementById('rage-bar-container');
+      const rageFill = document.getElementById('rage-unified-fill');
+      const rageText = document.getElementById('rage-unified-text');
+      const rageContainer = document.getElementById('rage-bar-container');
       if (!rageFill || !rageText || !rageContainer) return;
 
       // Read rage values from the rage combat system (exposed on window)
-      var rc = window.GameRageCombat;
+      const rc = window.GameRageCombat;
       if (!rc) return;
-      var meter = rc.rageMeter || 0;
-      var isActive = rc.isRageActive || false;
-      var pct = Math.round(meter);
+      const meter = rc.rageMeter || 0;
+      const isActive = rc.isRageActive || false;
+      const pct = Math.round(meter);
       rageFill.style.width = pct + '%';
 
       // Style based on state
