@@ -230,7 +230,7 @@ window.GameLuckyWheel = (function () {
     html += '<div class="wheel-visual">';
     html += '<div class="wheel-3d-container" style="position:relative;display:inline-block;">';
     html += '<div class="wheel-glow-ring"></div>';
-    html += '<svg id="wheel-svg" viewBox="0 0 220 220" width="240" height="240" style="display:block;filter:drop-shadow(0 4px 20px rgba(0,0,0,0.8)) drop-shadow(0 0 12px ' + tierDef.color + '44);">';
+    html += '<svg id="wheel-svg" viewBox="0 0 220 220" width="290" height="290" style="display:block;filter:drop-shadow(0 4px 20px rgba(0,0,0,0.8)) drop-shadow(0 0 12px ' + tierDef.color + '44);">';
     html += '<circle cx="110" cy="110" r="108" fill="none" stroke="' + tierDef.color + '" stroke-width="4" opacity="0.6"/>';
     html += '<circle cx="110" cy="110" r="105" fill="none" stroke="' + tierDef.color + '44" stroke-width="1.5"/>';
     html += '<g id="wheel-group">';
@@ -246,8 +246,8 @@ window.GameLuckyWheel = (function () {
       html += '<path d="M110,110 L' + x1 + ',' + y1 + ' A102,102 0 0,1 ' + x2 + ',' + y2 + ' Z" fill="' + rarity.bg + '" stroke="#111" stroke-width="1"/>';
       html += '<path d="M110,110 L' + x1 + ',' + y1 + ' A102,102 0 0,1 ' + x2 + ',' + y2 + ' Z" fill="rgba(255,255,255,0.08)" stroke="none"/>';
       var labelParts = seg.label.split(' ');
-      html += '<text x="' + tx + '" y="' + (ty + 2) + '" text-anchor="middle" font-size="9" fill="#fff" font-weight="bold" style="text-shadow:1px 1px 3px #000;pointer-events:none;">' + (labelParts[0] || '') + '</text>';
-      html += '<text x="' + tx + '" y="' + (ty + 12) + '" text-anchor="middle" font-size="7" fill="rgba(255,255,255,0.7)" style="text-shadow:1px 1px 2px #000;pointer-events:none;">' + (labelParts.slice(1).join(' ') || '') + '</text>';
+      html += '<text x="' + tx + '" y="' + (ty + 2) + '" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold" style="text-shadow:1px 1px 3px #000;pointer-events:none;">' + (labelParts[0] || '') + '</text>';
+      html += '<text x="' + tx + '" y="' + (ty + 14) + '" text-anchor="middle" font-size="9" fill="rgba(255,255,255,0.85)" style="text-shadow:1px 1px 2px #000;pointer-events:none;">' + (labelParts.slice(1).join(' ') || '') + '</text>';
     });
     html += '<circle cx="110" cy="110" r="18" fill="url(#hubGrad)" stroke="#666" stroke-width="2.5"/>';
     html += '<circle cx="110" cy="110" r="12" fill="#eee" stroke="#aaa" stroke-width="1"/>';
@@ -336,7 +336,8 @@ window.GameLuckyWheel = (function () {
           var rarity = RARITY_COLORS[res.segment.rarity] || RARITY_COLORS.common;
           var el = container.querySelector('.wheel-result');
           if (el) {
-            el.innerHTML = '<div style="background:linear-gradient(135deg,' + rarity.bg + ',rgba(0,0,0,0.3));border:2px solid ' + rarity.border + ';border-radius:16px;padding:10px 20px;display:inline-block;box-shadow:0 0 16px ' + rarity.glow + ';animation:wheel-result-pop 0.3s ease-out;"><span style="font-size:18px;">🎉</span> <span style="color:#fff;font-weight:bold;">' + res.prize + '</span><br><small style="color:rgba(255,255,255,0.7);">' + res.description + '</small></div>';
+            // Clean reward bubble — no outer rectangle, just a bordered inner bubble with glow
+            el.innerHTML = '<div style="background:rgba(0,0,0,0.85);border:2px solid ' + rarity.border + ';border-radius:16px;padding:12px 22px;display:inline-block;box-shadow:0 0 20px ' + rarity.glow + ',0 0 40px ' + rarity.glow + ';animation:wheel-result-pop 0.3s ease-out;"><span style="font-size:20px;">🎉</span> <span style="color:#fff;font-weight:bold;font-size:16px;">' + res.prize + '</span><br><small style="color:rgba(255,255,255,0.8);font-size:13px;">' + res.description + '</small></div>';
           }
           setTimeout(function () { renderWheelPanel(saveData, container, activeTier); }, 2500);
         }

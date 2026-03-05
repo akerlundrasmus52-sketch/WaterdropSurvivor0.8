@@ -109,9 +109,7 @@
       // For 'auto' mode, start at 'medium' and let the FPS booster adjust from there
       // Use window.applyGraphicsQuality (exposed by world-gen.js) with a typeof guard to prevent
       // "not defined" crashes if the function hasn't been set yet.
-      const _applyGfx = (typeof applyGraphicsQuality === 'function')
-        ? applyGraphicsQuality
-        : (window.applyGraphicsQuality || null);
+      const _applyGfx = window.applyGraphicsQuality || null;
       if (_applyGfx) {
         if (gameSettings.graphicsQuality === 'auto') {
           _applyGfx('medium');

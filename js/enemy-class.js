@@ -1474,7 +1474,7 @@
             case 0: // Shoot off an eye — remove one eye instance (handled visually by hiding via scale)
               if (!this._shotEye) {
                 this._shotEye = true;
-                // Spawn a small sphere flying off sideways
+                // Spawn a tiny sphere flying off sideways — geometry/material disposed after animation to avoid leaks
                 if (scene) {
                   const eyeGeo = new THREE.SphereGeometry(0.07, 4, 4);
                   const eyeMat = new THREE.MeshBasicMaterial({ color: 0xFFFFFF });
@@ -1490,6 +1490,7 @@
                     requestAnimationFrame(_animEye);
                   };
                   _animEye();
+                  // Dispose geometry and material after 400ms to prevent memory leaks
                   setTimeout(() => { if (flyEye.parent) scene.remove(flyEye); eyeGeo.dispose(); eyeMat.dispose(); }, 400);
                 }
               }

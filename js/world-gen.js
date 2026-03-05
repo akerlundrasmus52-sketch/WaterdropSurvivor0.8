@@ -160,7 +160,6 @@
       rondel.rotation.x = -Math.PI/2;
       rondel.position.set(0, 0.02, 0);
       rondel.receiveShadow = true;
-      rondel.renderOrder = 1; // Render above ground to prevent z-fighting
       scene.add(rondel);
       
       // Path material - brown dirt road

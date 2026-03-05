@@ -4946,12 +4946,14 @@
   left: 10px;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   z-index: 115;
   background: rgba(0,0,0,0.65);
   border: 2px solid #FF4400;
-  border-radius: 12px;
-  padding: 4px 8px;
+  border-radius: 10px;
+  /* Slightly smaller than before so it doesn't overlap "Current Lvl" or companion buttons */
+  padding: 3px 6px;
+  max-width: 160px;
 }
 .rage-label {
   font-family: 'Bangers', cursive;
@@ -5682,8 +5684,8 @@
 }
 .elastic-damage-number.critical {
   color: #FFD700;
-  /* Critical text is intentionally SMALLER so it spawns cleanly above the enemy head */
-  font-size: 22px;
+  /* Critical text is SMALLER than base so it spawns cleanly above the enemy head without dominating the screen */
+  font-size: 17px;
   font-weight: 900;
   text-shadow:
     0 0 8px rgba(255,215,0,0.8),
@@ -5692,8 +5694,8 @@
 }
 .elastic-damage-number.headshot {
   color: #FF6644;
-  /* Headshot text is also smaller — spawns right at the head position */
-  font-size: 22px;
+  /* Headshot text is SMALLER — spawns right at the head position without large visual noise */
+  font-size: 17px;
   font-weight: 900;
   text-shadow:
     0 0 10px rgba(255,100,68,0.8),
@@ -5997,4 +5999,99 @@
   align-items: center;
   gap: 12px;
   box-shadow: 0 4px 20px rgba(155,89,182,0.3);
+}
+
+/* ── Challenge Complete Board ────────────────────────────────────── */
+@keyframes challenge-board-slide-in {
+  from { transform: translateY(-120%); opacity: 0; }
+  to   { transform: translateY(0);     opacity: 1; }
+}
+@keyframes challenge-board-slide-out {
+  from { transform: translateY(0);     opacity: 1; }
+  to   { transform: translateY(-120%); opacity: 0; }
+}
+@keyframes challenge-strike {
+  from { width: 0; }
+  to   { width: 100%; }
+}
+@keyframes challenge-laser-confetti {
+  0%   { transform: translate(var(--cx), var(--cy)) scale(1)   rotate(0deg);   opacity: 1; }
+  100% { transform: translate(var(--tx), var(--ty)) scale(0.4) rotate(720deg); opacity: 0; }
+}
+@keyframes challenge-gold-pulse {
+  0%, 100% { text-shadow: 0 0 8px rgba(255,215,0,0.6); }
+  50%       { text-shadow: 0 0 20px rgba(255,215,0,1), 0 0 40px rgba(255,165,0,0.7); }
+}
+
+#challenge-complete-board {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-120%);
+  z-index: 99999;
+  background: #0a0a0a;
+  border: 2px solid #FFD700;
+  border-radius: 14px;
+  padding: 14px 24px 16px;
+  min-width: 280px;
+  max-width: 360px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.8), 0 0 20px rgba(255,215,0,0.15);
+  pointer-events: none;
+  opacity: 0;
+  will-change: transform, opacity;
+}
+#challenge-complete-board.slide-in {
+  animation: challenge-board-slide-in 0.45s cubic-bezier(0.34,1.56,0.64,1) forwards;
+}
+#challenge-complete-board.slide-out {
+  animation: challenge-board-slide-out 0.35s ease-in forwards;
+}
+#challenge-complete-board .ccb-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Bangers', cursive;
+  font-size: 14px;
+  color: #888;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+#challenge-complete-board .ccb-name {
+  position: relative;
+  font-family: 'Nunito', 'M PLUS Rounded 1c', sans-serif;
+  font-size: 17px;
+  font-weight: 800;
+  color: #fff;
+  margin-bottom: 10px;
+  overflow: hidden;
+}
+#challenge-complete-board .ccb-name .ccb-strike {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  height: 2px;
+  background: #FFD700;
+  width: 0;
+  transform: translateY(-50%);
+}
+#challenge-complete-board .ccb-name.struck .ccb-strike {
+  animation: challenge-strike 0.4s ease-out 0.3s forwards;
+}
+#challenge-complete-board .ccb-gold {
+  font-family: 'Bangers', cursive;
+  font-size: 26px;
+  color: #FFD700;
+  text-align: center;
+  animation: challenge-gold-pulse 1.2s infinite;
+  letter-spacing: 1px;
+}
+.challenge-confetti-particle {
+  position: fixed;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 99998;
+  animation: challenge-laser-confetti 0.8s ease-out forwards;
 }

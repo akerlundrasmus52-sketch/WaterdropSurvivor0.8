@@ -5,6 +5,9 @@
     // ─── Projectile pool helper — zero allocation in the animate loop ───────────────
     // Uses window._projectilePool (EnhancedObjectPool) when available; falls back to
     // direct construction so the game works even if the pool hasn't been initialised yet.
+
+    // Distance within which the Hunting Knife instantly kills wildlife.
+    const KNIFE_KILL_RANGE = 2.2;
     function _spawnProjectile(x, z, target) {
       if (window._projectilePool) {
         return window._projectilePool.get().reinit(x, z, target);
@@ -2283,6 +2286,35 @@
           const pdx = pPos.x - animalGroup.position.x;
           const pdz = pPos.z - animalGroup.position.z;
           const pDist = Math.sqrt(pdx * pdx + pdz * pdz);
+
+          // ── HUNTING KNIFE: instantly kill any nearby animal if the knife is equipped ──
+          if (pDist < KNIFE_KILL_RANGE && !ud._knifeKilled) {
+            const hasKnife = saveData.craftedWeapons && (saveData.craftedWeapons.knife || saveData.craftedWeapons.huntingKnife);
+            const toolsOwned = window.GameHarvesting ? window.GameHarvesting.getTools() : null;
+            const knifeOwned = hasKnife || (toolsOwned && toolsOwned.knife);
+            if (knifeOwned) {
+              ud._knifeKilled = true;
+              ud.alive = false;
+              animalGroup.visible = false;
+              // Drop leather and meat
+              const leatherAmt = 1 + Math.floor(Math.random() * 2);
+              const meatAmt    = 1 + Math.floor(Math.random() * 2);
+              if (!saveData.resources) saveData.resources = {};
+              saveData.resources.leather = (saveData.resources.leather || 0) + leatherAmt;
+              saveData.resources.meat    = (saveData.resources.meat    || 0) + meatAmt;
+              if (window.GameHarvesting && window.GameHarvesting.refreshHUD) window.GameHarvesting.refreshHUD();
+              if (typeof showStatChange === 'function') {
+                showStatChange('🔪 +' + leatherAmt + ' Leather');
+                setTimeout(() => showStatChange('🍖 +' + meatAmt + ' Meat'), 400);
+              }
+              // Spawn blood decal where animal was
+              if (typeof spawnBloodDecal === 'function') {
+                spawnBloodDecal(animalGroup.position);
+              }
+              saveSaveData();
+            }
+          }
+
           if (pDist < 3 && ud.animalId === 'wolf' && ud.gender) {
             // Check if player has tranquilizer rifle and quest is active
             if (saveData.craftedWeapons && saveData.craftedWeapons.tranquilizerRifle &&
