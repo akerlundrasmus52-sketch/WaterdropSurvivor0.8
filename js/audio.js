@@ -14,9 +14,11 @@ try {
 let musicOscillators = [];
 let musicGain = null;
 
-// Combo tracking for exp_pickup pitch-up effect
-let _lastExpPickupTime = 0;
-let _expPickupCombo = 0;
+    // Combo tracking for exp_pickup pitch-up effect
+    const EXP_COMBO_WINDOW = 0.4;  // seconds — rapid collection combo window
+    const MAX_EXP_COMBO = 12;      // max combo level to prevent over-pitching
+    let _lastExpPickupTime = 0;
+    let _expPickupCombo = 0;
 
 // Returns true only when game.js has initialised and sound is enabled.
 function isSoundEnabled() {
@@ -274,9 +276,8 @@ function playSound(type) {
   } else if (type === 'collect' || type === 'exp_pickup') {
     // exp_pickup.mp3: Very fast tiny melodic water plink
     // Combo effect: pitch goes UP if collected in rapid succession
-    const comboWindow = 0.4; // seconds
-    if (now - _lastExpPickupTime < comboWindow) {
-      _expPickupCombo = Math.min(_expPickupCombo + 1, 12);
+    if (now - _lastExpPickupTime < EXP_COMBO_WINDOW) {
+      _expPickupCombo = Math.min(_expPickupCombo + 1, MAX_EXP_COMBO);
     } else {
       _expPickupCombo = 0;
     }
@@ -295,7 +296,8 @@ function playSound(type) {
   } else if (type === 'levelup' || type === 'level_up') {
     // level_up.mp3: Booming triumphant orchestral swell + cascading waterfall
     // Trigger time dilation via DopamineSystem if available
-    if (window.DopamineSystem && window.DopamineSystem.TimeDilation) {
+    if (window.DopamineSystem && window.DopamineSystem.TimeDilation &&
+        typeof window.DopamineSystem.TimeDilation.trigger === 'function') {
       window.DopamineSystem.TimeDilation.trigger(0.3, 800);
     }
     // Orchestral swell — layered ascending tones

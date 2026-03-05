@@ -1691,7 +1691,7 @@
       else rarity = 'legendary';
       
       // Gear tier restriction: before Prestige, cap at 'rare'
-      if (saveData.gearTierLimit === 'rare' && !saveData.hasPrestiged) {
+      if (!saveData.hasPrestiged && saveData.gearTierLimit === 'rare') {
         const tierOrder = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
         const limitIdx = tierOrder.indexOf(saveData.gearTierLimit);
         const rarityIdx = tierOrder.indexOf(rarity);

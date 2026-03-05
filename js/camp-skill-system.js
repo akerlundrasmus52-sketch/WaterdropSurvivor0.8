@@ -2337,7 +2337,7 @@
     };
 
     const buildingQuestUnlockMap = {
-      // === New slow-burn progression chain ===
+      // === New slow-burn progression chain (8-step building unlocks) ===
       'accountBuilding': 'quest_dailyRoutine',
       'forge': 'quest_harvester',
       'armory': 'quest_firstBlood',
@@ -2345,7 +2345,7 @@
       'companionHouse': 'quest_newFriend',
       'specialAttacks': 'quest_pushingLimits',
       'warehouse': 'quest_pushingLimits',
-      // === Extended progression (post-initial chain) ===
+      // === Legacy/extended progression (backward compat for old saves past quest 8) ===
       'trainingHall': 'quest5_upgradeAttr',
       'tavern': 'quest8_kill10',
       'shop': 'quest9_activateCompanion',

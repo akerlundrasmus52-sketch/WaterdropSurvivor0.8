@@ -390,6 +390,15 @@
         saveData.tutorialQuests.survivalTimeThisRun = 0;
       }
       
+      // Reset mysterious egg spawning flag for new run
+      window._mysteriousEggSpawned = false;
+      window._mysteriousEggObject = null;
+      
+      // Reset exp pickup combo for new run
+      if (window.GameAudio && window.GameAudio.resetExpCombo) {
+        window.GameAudio.resetExpCombo();
+      }
+      
       // Reset player invulnerability state
       if (player) {
         player.invulnerable = false;

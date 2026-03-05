@@ -360,6 +360,26 @@
         progressTutorialQuest('quest_newFriend', true);
       }
       
+      // Auto-complete quest_firstBlood when visiting Quest Hall with sufficient resources
+      if (
+        saveData.tutorialQuests.currentQuest === 'quest_firstBlood' &&
+        !saveData.tutorialQuests.readyToClaim.includes('quest_firstBlood')
+      ) {
+        const r = saveData.resources || {};
+        if ((r.wood || 0) >= 30 && (r.stone || 0) >= 30) {
+          progressTutorialQuest('quest_firstBlood', true);
+        }
+      }
+      
+      // Auto-complete quest_gainingStats when visiting Quest Hall with 300+ total kills
+      if (
+        saveData.tutorialQuests.currentQuest === 'quest_gainingStats' &&
+        !saveData.tutorialQuests.readyToClaim.includes('quest_gainingStats') &&
+        (saveData.totalKills || 0) >= 300
+      ) {
+        progressTutorialQuest('quest_gainingStats', true);
+      }
+      
       // Fallback: if questForge0_unlock is the active quest but not yet in readyToClaim
       // (can happen when activated via _completeBuild after building questMission),
       // add it to readyToClaim so the player can claim it at the Quest Hall.
@@ -524,6 +544,20 @@
         btn.addEventListener('click', function() {
           const questId = this.getAttribute('data-quest-id');
           console.log('[Quest] Claiming quest:', questId);
+          
+          // Safety check: quests with deductResources must verify sufficient resources
+          const questDef = TUTORIAL_QUESTS[questId];
+          if (questDef && questDef.deductResources) {
+            const r = saveData.resources || {};
+            for (const [res, amt] of Object.entries(questDef.deductResources)) {
+              if ((r[res] || 0) < amt) {
+                if (typeof showStatusMessage === 'function') {
+                  showStatusMessage(`❌ Not enough ${res}! Need ${amt}, have ${r[res] || 0}.`, 3000);
+                }
+                return; // Don't claim — insufficient resources
+              }
+            }
+          }
           
           // Remove Quest Hall overlay immediately so the reward popup is clearly visible
           const overlayElement = document.body.querySelector('[data-quest-hall-overlay]');
