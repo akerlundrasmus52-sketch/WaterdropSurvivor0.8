@@ -2762,16 +2762,25 @@
 
     // Phase 5: Updated to use Object Pool for performance
     const MAX_TOTAL_PARTICLES = 150; // Hard cap per spec
+    // Circular recycle index: when at cap, overwrite the oldest active particle (O(1) per recycle).
+    let _particleRecycleIdx = 0;
     function spawnParticles(pos, color, count) {
       if (!particlePool) return; // Safety check
-      // Enforce hard particle cap for performance
-      if (particles.length >= MAX_TOTAL_PARTICLES) return;
       // Cap particles per spawn to reduce quantity while keeping visuals impactful
-      const cappedCount = Math.min(count, 6, MAX_TOTAL_PARTICLES - particles.length);
-      for(let i=0; i<cappedCount; i++) {
-        const particle = particlePool.get();
-        particle.reset(pos, color);
-        particles.push(particle);
+      const cappedCount = Math.min(count, 6);
+      for (let i = 0; i < cappedCount; i++) {
+        if (particles.length >= MAX_TOTAL_PARTICLES) {
+          // Hard global cap reached — forcefully recycle the oldest alive particle
+          // instead of silently dropping the request. This keeps the array length
+          // strictly at MAX_TOTAL_PARTICLES and never allocates new objects.
+          const idx = _particleRecycleIdx % particles.length;
+          particles[idx].reset(pos, color);
+          _particleRecycleIdx = (idx + 1) % particles.length;
+        } else {
+          const particle = particlePool.get();
+          particle.reset(pos, color);
+          particles.push(particle);
+        }
       }
     }
 

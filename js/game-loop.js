@@ -130,6 +130,27 @@
     const _eyeSyncEuler = new THREE.Euler();   // identity (0,0,0) — eyes are spheres, no rotation needed
     const _eyeSyncScale = new THREE.Vector3(1, 1, 1);
 
+    // ─── Frustum Culling ────────────────────────────────────────────────────────
+    // Reusable Frustum + matrix objects — updated once per frame.
+    // Used to skip update()/collision logic for off-screen entities.
+    const _frustum         = new THREE.Frustum();
+    const _frustumProjMat  = new THREE.Matrix4();
+    // Scratch sphere for intersectsSphere checks (margin = 2 world units)
+    const _frustumSphere   = new THREE.Sphere(new THREE.Vector3(), 2);
+
+    /** Returns true when `pos` is inside the camera frustum (plus a 2-unit margin). */
+    function _isInFrustum(pos) {
+      _frustumSphere.center.copy(pos);
+      return _frustum.intersectsSphere(_frustumSphere);
+    }
+
+    /** Update the frustum from the current camera matrices (call once per frame). */
+    function _updateFrustum() {
+      _frustumProjMat.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+      _frustum.setFromProjectionMatrix(_frustumProjMat);
+    }
+
+
     function _ensureFlashPool(sceneRef) {
       if (_flashPool !== null || typeof THREE === 'undefined') return;
       _flashPool = [];
@@ -620,6 +641,11 @@
       let aliveEnemies = 0; // Declared here so it's accessible in the performance logging below
       try {
 
+      // Refresh frustum from current camera matrices (used for off-screen culling below)
+      _updateFrustum();
+      // Reset per-frame collision hit counter and drain any queued AoE hits from last frame
+      if (window.GameCombat && window.GameCombat.resetFrameHits) window.GameCombat.resetFrameHits();
+
       // Handle keyboard/gamepad input updates (integrated into game loop)
       if (gameSettings.controlType === 'keyboard') {
         const keysPressed = gameSettings.keysPressed || {};
@@ -864,6 +890,10 @@
         if (_shouldUpdateFn) {
           if (!_shouldUpdateFn(_camDistSq, _fc, _idx)) return;
         }
+        // Frustum culling: skip full AI update for enemies completely outside the view.
+        // Their position in the spatial hash is still current (updated above), so they
+        // can still be targeted by homing projectiles and weapon AoE that use the hash.
+        if (!_isInFrustum(e.mesh.position)) return;
         e.update(dt, player.mesh.position);
       });
       if (window.GameDebug && window.GameDebug.enabled) {
@@ -1634,10 +1664,11 @@
               else _tmpBoltStart.y = 0.8;
               _tmpBoltEnd.copy(chainCurrent.mesh.position); _tmpBoltEnd.y = 0.8;
               // Randomize bolt style: forked (many segments), straight (few), zigzag (medium with wide jitter)
+              // Segment counts halved from original to reduce BufferGeometry vertex cost.
               const BOLT_STYLES = [
-                { baseSegments: 10, extraSegments: 6, jitter: 0.4 },  // Forked
-                { baseSegments: 3,  extraSegments: 3, jitter: 0.2 },  // Straight
-                { baseSegments: 6,  extraSegments: 4, jitter: 1.0 }   // Zigzag
+                { baseSegments: 5, extraSegments: 3, jitter: 0.4 },  // Forked
+                { baseSegments: 2, extraSegments: 2, jitter: 0.2 },  // Straight
+                { baseSegments: 3, extraSegments: 2, jitter: 1.0 }   // Zigzag
               ];
               const style = BOLT_STYLES[Math.floor(Math.random() * BOLT_STYLES.length)];
               const segments = style.baseSegments + Math.floor(Math.random() * style.extraSegments);
@@ -2221,10 +2252,27 @@
       
       // Projectiles update returns false if dead; release pooled bullets back to the pool
       // In-place compaction avoids the GC spike from .filter() creating a new array each frame.
+      // Frustum culling: skip expensive collision + movement for off-screen non-homing projectiles,
+      // but still decrement their life counter so they expire normally and don't leak.
       {
         let _j = 0;
         for (let _i = 0; _i < projectiles.length; _i++) {
           const p = projectiles[_i];
+          if (p.mesh && !p.isHoming && !_isInFrustum(p.mesh.position)) {
+            // Off-screen: tick lifetime only — skip movement & collision.
+            if (p.life !== undefined) p.life--;
+            else if (p.lifetime !== undefined) p.lifetime--;
+            const expired = (p.life !== undefined && p.life <= 0) ||
+                            (p.lifetime !== undefined && p.lifetime <= 0);
+            if (expired) {
+              if (typeof p.destroy === 'function') p.destroy();
+              if (p._isPooled && window._projectilePool) window._projectilePool.release(p);
+              // Drop from array (don't push to _j)
+            } else {
+              projectiles[_j++] = p;
+            }
+            continue;
+          }
           const alive = p.update() !== false;
           if (!alive && p._isPooled && window._projectilePool) {
             window._projectilePool.release(p);
@@ -2241,7 +2289,20 @@
         }
         meteors.length = _j;
       }
-      expGems.forEach(g => g.update(player.mesh.position));
+      // ExpGems: skip update() for gems that are truly off-screen AND far from the player
+      // (player can't collect them if they're off-screen and beyond pickup range).
+      // We use a generous 12-unit "safe zone" around the player to catch magnet/collection
+      // triggers before they enter the frustum.
+      const _EXP_CULL_SAFE_SQ = 12 * 12;
+      expGems.forEach(g => {
+        if (g.mesh && !_isInFrustum(g.mesh.position)) {
+          // Allow update if player is close enough to possibly collect the gem
+          const _gdx = g.mesh.position.x - player.mesh.position.x;
+          const _gdz = g.mesh.position.z - player.mesh.position.z;
+          if (_gdx * _gdx + _gdz * _gdz > _EXP_CULL_SAFE_SQ) return;
+        }
+        g.update(player.mesh.position);
+      });
       goldCoins.forEach(g => g.update(player.mesh.position));
       goldDrops.forEach(g => g.update(player.mesh.position));
       chests.forEach(c => c.update(player.mesh.position));

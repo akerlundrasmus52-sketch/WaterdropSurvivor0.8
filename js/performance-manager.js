@@ -257,7 +257,23 @@
           return p;
         }
       }
-      return null;
+      // All slots in use — forcefully recycle the oldest (wrap around the pool array)
+      // so the hard max is never exceeded. The recycled entry gets its state reset
+      // immediately so the caller can re-initialise it.
+      if (this._recycleIdx === undefined) this._recycleIdx = 0;
+      const oldest = this._pool[this._recycleIdx % this._pool.length];
+      this._recycleIdx = (this._recycleIdx + 1) % this._pool.length;
+      // Reset to a clean state before handing back to caller
+      oldest.life = 0;
+      oldest.maxLife = 1;
+      oldest.velocity.x = 0;
+      oldest.velocity.y = 0;
+      oldest.velocity.z = 0;
+      oldest.mesh.scale.set(1, 1, 1);
+      oldest.mesh.material.opacity = 1;
+      oldest.mesh.visible = true;
+      oldest.inUse = true;
+      return oldest;
     }
 
     release(entry) {
