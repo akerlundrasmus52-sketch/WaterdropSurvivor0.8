@@ -2908,7 +2908,37 @@
         bloodDecalIndex = (bloodDecalIndex + 1) % MAX_BLOOD_DECALS;
       }
     }
-    
+
+    // Spawn an elongated blood skid mark at a position in a given direction (for shotgun deaths)
+    function spawnBloodSkidMark(pos, dirX, dirZ) {
+      if (!scene) return;
+      const geo = new THREE.PlaneGeometry(1.5, 0.4);
+      const mat = new THREE.MeshBasicMaterial({
+        color: 0x5A0000,
+        transparent: true,
+        opacity: 0.6,
+        depthWrite: false
+      });
+      const skid = new THREE.Mesh(geo, mat);
+      skid.rotation.x = -Math.PI / 2;
+      // Rotate the skid mark to align with the knockback direction
+      skid.rotation.z = -Math.atan2(dirZ, dirX);
+      skid.renderOrder = -1; // Draw under enemies
+      skid.position.set(pos.x, 0.05, pos.z);
+      scene.add(skid);
+      // Store in bloodDecals pool so it fades out like normal decals
+      skid.userData.spawnTime = Date.now();
+      skid.userData.initialOpacity = 0.6;
+      if (!window._bloodDecals) window._bloodDecals = [];
+      window._bloodDecals.push(skid);
+      // Auto-remove after 12 seconds
+      setTimeout(() => {
+        if (skid.parent) scene.remove(skid);
+        geo.dispose();
+        mat.dispose();
+      }, 12000);
+    }
+
     // Update blood decal fade (call in main loop)
     const BLOOD_DECAL_FADE_START = 0.7; // Start fading at 70% of lifetime
     function updateBloodDecals() {

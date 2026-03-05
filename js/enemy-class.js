@@ -1856,6 +1856,13 @@
           if (isShotgunKill && typeof window.BloodSystem.emitGuts === 'function') {
             window.BloodSystem.emitGuts(deathPos, 30);
           }
+          // Blood skid mark — elongated streak in the knockback direction
+          if (isShotgunKill && typeof spawnBloodSkidMark === 'function') {
+            const pdx = deathPos.x - (player ? player.mesh.position.x : 0);
+            const pdz = deathPos.z - (player ? player.mesh.position.z : 0);
+            const pdist = Math.sqrt(pdx * pdx + pdz * pdz) || 1;
+            spawnBloodSkidMark(deathPos, pdx / pdist, pdz / pdist);
+          }
           // Growing blood pool — forms gradually at death position
           if (typeof window.BloodSystem.emitPoolGrow === 'function') {
             window.BloodSystem.emitPoolGrow(deathPos, { maxRadius: this.isMiniBoss ? 2.5 : 1.5 });
@@ -3990,9 +3997,11 @@
     let projectileMaterialCache = null;
     function ensureProjectileCaches() {
       if (projectileGeometryCache) return;
+      const sizeMultiplier = window._projSizeMultiplier || 1.0;
+      const baseRadius = 0.03125 * sizeMultiplier; // 50% smaller than original 0.0625
       projectileGeometryCache = {
-        bullet:     new THREE.SphereGeometry(0.0625, 8, 8),
-        bulletGlow: new THREE.SphereGeometry(0.0875, 6, 6)
+        bullet:     new THREE.SphereGeometry(baseRadius, 8, 8),
+        bulletGlow: new THREE.SphereGeometry(baseRadius * 1.4, 6, 6)
       };
       projectileMaterialCache = {
         bullet: new THREE.MeshBasicMaterial({
