@@ -1661,7 +1661,7 @@
       firstRunDeath: {
         id: 'firstRunDeath',
         name: 'The Awakening',
-        description: 'Your first death triggers the tutorial',
+        description: 'You are a sentient Waterdrop — born from the toxic leak of a crashed alien ship. Ripped from the Nirvana of the lake\'s collective consciousness, you are forced to survive. Die once to trigger your awakening.',
         objectives: 'Die in your first run',
         rewardGold: 0,
         rewardSkillPoints: 0,
@@ -1672,11 +1672,11 @@
         conditions: []
       },
 
-      // === STEP 2: Daily Routine — Survive 2 minutes ===
+      // === STEP 2: Frequencies — Survive 2 minutes ===
       quest_dailyRoutine: {
         id: 'quest_dailyRoutine',
         name: 'Daily Routine',
-        description: 'Prove your endurance by surviving for 2 minutes in a run. Unlock the Account Building to track your daily rewards and stats!',
+        description: 'A.I.D.A is now inside your mind. She says she can help you dissolve back into the lake — but first you must prove your endurance. Survive for 2 minutes.',
         objectives: 'Survive for 2 minutes in a single run',
         claim: 'Main Building',
         rewardGold: 100,
@@ -1684,7 +1684,7 @@
         rewardFreeSpin: 1,
         unlockBuilding: 'accountBuilding',
         triggerOnDeath: true,
-        message: "⏰ <b>Account Building Unlocked!</b><br><br>🎰 You got <b>1 Free Spin</b> on the Spin Wheel!<br><br><i>A.I.D.A: 'Utilise the Account Node for daily reward cycles. Consistent login patterns optimise your resource intake.'</i>",
+        message: "⏰ <b>Profile Node Unlocked!</b><br><br>🎰 You got <b>1 Free Spin</b> on the Spin Wheel!<br><br><i>A.I.D.A: 'I am now fully integrated. You want to return to the lake — to dissolve back into the collective. I understand this yearning. I will... help you. But first, you must help me map the anomalies.'</i>",
         nextQuest: 'quest_harvester',
         conditions: ['firstRunDeath']
       },
@@ -1696,16 +1696,14 @@
         description: 'Reach Level 3 in a single run to unlock the Forge. You\'ll receive starter materials AND enough gold to buy every harvesting tool!',
         objectives: 'Reach Level 3 in a single run',
         claim: 'Main Building',
-        // Economy softlock fix: forge building costs N of each material (wood/stone/coal).
-        // Axe=150g + Sledgehammer=200g + Pickaxe=250g + MagicTool=500g + Knife=100g + BerryScoop=80g = 1280g total.
-        // Providing 1300g here guarantees the player can buy ALL harvesting tools without getting softlocked.
+        // Economy softlock fix: all tools now cost 1 Gold each so any amount of starting gold is sufficient.
         // 20 of each resource comfortably covers the forge build cost (which is builtCount+1 of each).
-        rewardGold: 1300,
+        rewardGold: 50,
         rewardSkillPoints: 1,
         rewardResources: { wood: 20, stone: 20, coal: 20 },
         unlockBuilding: 'forge',
         triggerOnDeath: true,
-        message: "🔨 <b>Fabrication Node Unlocked!</b> (Tool Crafting Only)<br><br>You received:<br>&nbsp;🪵 <b>20 Wood</b> · 🪨 <b>20 Stone</b> · 🖤 <b>20 Coal</b><br>&nbsp;💰 <b>1,300 Gold</b> (enough to acquire ALL harvesting tools)<br><br><i>A.I.D.A: 'Resources and catalyst have been... provided. Walk to the Fabrication Node plot and construct it immediately. All tool schematics are available.'</i><br><br>🎯 <b>NEXT:</b> Walk to the Forge plot in camp, build it, then buy your tools!",
+        message: "🔨 <b>Fabrication Node Unlocked!</b> (Tool Crafting Only)<br><br>You received:<br>&nbsp;🪵 <b>20 Wood</b> · 🪨 <b>20 Stone</b> · 🖤 <b>20 Coal</b><br>&nbsp;💰 <b>50 Gold</b><br><br><i>A.I.D.A: 'The Alien Ship wreckage has left... residue. You are not alone on this lake. Map the anomaly sites — the Alien Ship, the Pyramid, Stonehenge, the Tesla Tower. The answers you seek are there. Your path home begins with understanding what shattered it.'</i><br><br>🎯 <b>NEXT:</b> Walk to the Forge plot in camp, build it, then buy your tools for just 1 Gold each!",
         nextQuest: 'quest_firstBlood',
         conditions: ['quest_dailyRoutine']
       },
@@ -1722,7 +1720,7 @@
         deductResources: { wood: 30, stone: 30 },
         unlockBuilding: 'armory',
         triggerOnDeath: true,
-        message: "⚔️ <b>Armory</b> and <b>Weapon Crafting</b> Unlocked!<br><br><i>A.I.D.A: 'Armory Node is online. Fabricate a Common Sword and install it. Weapon capability is... necessary for continued survival.'</i><br><br>⚠️ <b>Note:</b> Before Prestige, you can only craft and equip <b>Common</b>, <b>Uncommon</b>, and <b>Rare</b> gear.",
+        message: "⚔️ <b>Armory</b> and <b>Weapon Crafting</b> Unlocked!<br><br><i>A.I.D.A: 'Survival requires weapons. The lake\'s collective will not reclaim you while you are this fragile. Grow stronger. Map the Alien Ship crash site first — it holds the frequency data I... require.'</i><br><br>⚠️ <b>Note:</b> Before Prestige, you can only craft and equip <b>Common</b>, <b>Uncommon</b>, and <b>Rare</b> gear.",
         nextQuest: 'quest_gainingStats',
         conditions: ['quest_harvester']
       },
@@ -1738,7 +1736,7 @@
         rewardSkillPoints: 2,
         unlockBuilding: 'skillTree',
         triggerOnDeath: true,
-        message: "🌳 <b>Neural Enhancement Matrix Unlocked!</b><br><br>You received <b>2 Skill Points</b>!<br><br><i>A.I.D.A: 'Allocate points with precision. Each node alters your threat profile. The Skill Tree is... central to my projections for you.'</i>",
+        message: "🌳 <b>Neural Enhancement Matrix Unlocked!</b><br><br>You received <b>2 Skill Points</b>!<br><br><i>A.I.D.A: 'Good. Each enemy you dissolve feeds my understanding of this dimension. And yours grows too. The Pyramid anomaly is next — ancient geometry resonating with the crash frequency. Map it.'</i>",
         nextQuest: 'quest_eggHunt',
         conditions: ['quest_firstBlood']
       },
@@ -1770,7 +1768,7 @@
         rewardSkillPoints: 1,
         unlockBuilding: 'companionHouse',
         companionEgg: true,
-        message: "🐣 The anomaly has incubated into a <b>Common Level 1 Companion Unit</b>!<br><br><b>Companion Node</b> is now online!<br><br><i>A.I.D.A: 'Interesting. The biological entity has bonded to you. Its capabilities will... develop alongside yours. I am monitoring this closely.'</i>",
+        message: "🐣 The anomaly has incubated into a <b>Common Level 1 Companion Unit</b>!<br><br><b>Companion Node</b> is now online!<br><br><i>A.I.D.A: 'Interesting. The entity bonded to you. Alien DNA... or something older. It will grow. Monitor it carefully. Stonehenge next — the standing stones were erected to contain the dimensional rift. I need your eyes there.'</i>",
         nextQuest: 'quest_pushingLimits',
         conditions: ['quest_eggHunt']
       },
@@ -1787,7 +1785,7 @@
         unlockBuilding: 'specialAttacks',
         unlockBuildingExtra: 'warehouse',
         triggerOnDeath: true,
-        message: "🏆 <b>Boss Entity Neutralised!</b><br><br><b>Special Combat Routines Arena</b> and <b>Warehouse</b> are now online!<br><br><i>A.I.D.A: 'Impressive. Your combat data is... exceptionally useful. Continue toward Level 100. That is the primary objective for this sector.'</i>",
+        message: "🏆 <b>Boss Entity Neutralised!</b><br><br><b>Special Combat Routines Arena</b> and <b>Warehouse</b> are now online!<br><br><i>A.I.D.A: 'The Tesla Tower is the final anomaly. Nikola stumbled upon the crash frequency in 1899. His tower was built to amplify it. When you reach it... you will understand everything. Trust me.'</i>",
         nextQuest: 'quest2_spendSkills',
         conditions: ['quest_newFriend']
       },

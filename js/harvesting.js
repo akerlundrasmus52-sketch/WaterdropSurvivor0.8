@@ -36,7 +36,7 @@
       targets: ['tree'],            // node types this tool works on
       yields: 'wood',
       amountMin: 2, amountMax: 5,
-      buyCost: 150,                 // gold cost in the Store
+      buyCost: 1,                   // gold cost in the Store — 1 Gold each so player is never softlocked
       epicBuyCost: 800,
       epicForgeReq: { wood: 20, iron: 5 },
       swingDurationMs: 600
@@ -46,7 +46,7 @@
       targets: ['rock'],
       yields: 'stone',
       amountMin: 2, amountMax: 4,
-      buyCost: 200,
+      buyCost: 1,
       epicBuyCost: 1000,
       epicForgeReq: { stone: 20, iron: 10 },
       swingDurationMs: 800
@@ -56,37 +56,37 @@
       targets: ['coal', 'iron'],
       yields: null,                 // yield determined by node type
       amountMin: 1, amountMax: 3,
-      buyCost: 250,
+      buyCost: 1,
       epicBuyCost: 1200,
       epicForgeReq: { coal: 15, iron: 15 },
       swingDurationMs: 700
     },
     magicTool: {
-      id: 'magicTool', name: 'Essence Rod', icon: '🔮',
+      id: 'magicTool', name: 'Magic Pickaxe', icon: '🔮',
       targets: ['crystal', 'magic'],
       yields: null,                 // node determines actual yield
       amountMin: 1, amountMax: 2,
-      buyCost: 500,
+      buyCost: 1,
       epicBuyCost: 2000,
       epicForgeReq: { crystal: 10, magicEssence: 5 },
       swingDurationMs: 500
     },
     knife: {
-      id: 'knife', name: 'Skinning Knife', icon: '🔪',
+      id: 'knife', name: 'Hunting Knife', icon: '🔪',
       targets: ['animal_carcass'],
       yields: null,
       amountMin: 1, amountMax: 3,
-      buyCost: 100,
+      buyCost: 1,
       epicBuyCost: 600,
       epicForgeReq: { iron: 8, leather: 3 },
       swingDurationMs: 400
     },
     berryScoop: {
-      id: 'berryScoop', name: 'Berry Scoop', icon: '🧺',
+      id: 'berryScoop', name: 'Foraging Scoop', icon: '🧺',
       targets: ['berryBush', 'flowerPatch', 'vegetablePatch'],
       yields: null,
       amountMin: 2, amountMax: 6,
-      buyCost: 80,
+      buyCost: 1,
       epicBuyCost: 400,
       epicForgeReq: { wood: 10, leather: 2 },
       swingDurationMs: 300
@@ -1057,6 +1057,17 @@
     getTools()    { return _getTools(); },
     getGatheringSkills() { return _getGatheringSkills(); },
     upgradeGatheringSkill,
+
+    // Spawn a harvestable animal_carcass node at given position (called when animal is killed)
+    spawnCarcassNode(x, z, animalData) {
+      _spawnNode('animal_carcass', x, z);
+    },
+
+    // Return the solid collision radius for a node type (used by player-class.js)
+    _nodeRadius(nodeType) {
+      const def = NODE_DEFS[nodeType];
+      return def ? def.radius * NODE_COLLISION_RADIUS_SCALE : 0.9;
+    },
 
     // Called when a resource is harvested (hook for quest system)
     _onHarvest: null,

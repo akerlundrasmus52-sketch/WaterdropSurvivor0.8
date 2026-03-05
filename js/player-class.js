@@ -659,7 +659,12 @@
           if (window.GameHarvesting && window.GameHarvesting.harvestNodes) {
             for (let node of window.GameHarvesting.harvestNodes) {
               if (node.depleted || !node.mesh) continue;
-              const collRadius = 0.9; // Rocks are about 1.6 radius but use smaller collider
+              // Use per-type collision radius from NODE_DEFS scaled factor; bushes/grass are passable
+              const passable = node.type === 'berryBush' || node.type === 'flowerPatch' || node.type === 'vegetablePatch';
+              if (passable) continue;
+              // Collision radius: use node's defined radius scaled by NODE_COLLISION_RADIUS_SCALE
+              const nodeRadius = window.GameHarvesting._nodeRadius ? window.GameHarvesting._nodeRadius(node.type) : 0.9;
+              const collRadius = nodeRadius;
               const ndx = this.mesh.position.x - node.mesh.position.x;
               const ndz = this.mesh.position.z - node.mesh.position.z;
               const ndist = Math.sqrt(ndx * ndx + ndz * ndz);

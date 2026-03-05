@@ -1098,6 +1098,54 @@
             }
           }
         }
+
+        // ── Wildlife hit detection — animals take damage from bullets ──────────
+        if (window._wildlifeAnimals) {
+          for (const animalGroup of window._wildlifeAnimals) {
+            const ud = animalGroup.userData;
+            if (!ud || !ud.alive) continue;
+            const dx = this.mesh.position.x - animalGroup.position.x;
+            const dz = this.mesh.position.z - animalGroup.position.z;
+            if (dx * dx + dz * dz < 0.8) { // Hit radius for animals
+              let dmg = weapons.gun.damage * playerStats.damage * playerStats.strength;
+              ud.hp = (ud.hp || 1) - dmg;
+              spawnParticles(animalGroup.position, 0xAA0000, 5);
+              spawnBloodDecal({ x: animalGroup.position.x, y: 0, z: animalGroup.position.z });
+              if (ud.hp <= 0 && ud.alive) {
+                ud.alive = false;
+                // ── Flayed texture: dark red "skinned" look ──
+                animalGroup.traverse(child => {
+                  if (child.isMesh && child.material) {
+                    child.material = new THREE.MeshToonMaterial({
+                      color: 0x8B0000,
+                      emissive: 0x3A0000,
+                      emissiveIntensity: 0.3
+                    });
+                  }
+                });
+                // Lay the animal on its side
+                animalGroup.rotation.z = Math.PI / 2;
+                // Spawn animal_carcass harvest node for skinning
+                if (window.GameHarvesting && window.GameHarvesting.spawnCarcassNode) {
+                  window.GameHarvesting.spawnCarcassNode(
+                    animalGroup.position.x, animalGroup.position.z,
+                    ud.animalData
+                  );
+                }
+                // Stat notification
+                if (typeof showStatChange === 'function') {
+                  showStatChange('🔪 Animal Downed! Skin it for Meat & Hide!');
+                }
+                // Account XP for hunting
+                if (typeof addAccountXP === 'function') addAccountXP(25);
+                else if (window.addAccountXP) window.addAccountXP(25);
+              }
+              this.hitEnemies.add({ isDead: false, mesh: animalGroup }); // Prevent multi-hit
+              this.destroy();
+              return false;
+            }
+          }
+        }
         
         // FRESH IMPLEMENTATION: Destructible Props Collision
         if (window.destructibleProps) {
