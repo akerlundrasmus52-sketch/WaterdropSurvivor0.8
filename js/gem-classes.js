@@ -845,7 +845,7 @@
         // Sparkle phase
         this.sparklePhase = Math.random() * Math.PI * 2;
         this.lifeTime = 0; // Track how long drop has been alive
-        this.maxLife = 600; // Auto-fade after ~10 seconds at 60fps
+        this.maxLife = 600; // Auto-fade after ~600 frames (approx 10s at 60fps, varies with frame rate)
       }
 
       _buildMesh(x, z) {
@@ -1049,9 +1049,8 @@
         const dz = playerPos.z - this.mesh.position.z;
         const dist = Math.sqrt(dx * dx + dz * dz);
 
-        // Light magnet pull when very close
+        // Light magnet pull when very close (direct position, no gravity reset)
         if (dist < 2.0) {
-          this.onGround = false;
           this.mesh.position.x += (dx / dist) * 0.15;
           this.mesh.position.z += (dz / dist) * 0.15;
           const dy = 0.4 - this.mesh.position.y;

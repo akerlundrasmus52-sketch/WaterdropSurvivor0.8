@@ -2695,8 +2695,8 @@
           playerStats.gold += coin.amount;
         });
         
-        // Clean up gold drops (visual only — no gold added, just destroy)
-        cleanupDistantItems(goldDrops, MAX_GOLD_DROPS, () => {});
+        // Clean up gold drops (visual only — no gold added, just destroy properly)
+        cleanupDistantItems(goldDrops, MAX_GOLD_DROPS, (drop) => { if (drop.destroy) drop.destroy(); });
       }
       
       expGems = expGems.filter(g => g.active);
