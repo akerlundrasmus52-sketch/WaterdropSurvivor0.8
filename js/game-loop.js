@@ -1170,7 +1170,6 @@
         const _gunResult = window.GameCombat.findNearestEnemySH(player.mesh.position.x, player.mesh.position.z, _gunRangeSq, enemies);
         let nearest = _gunResult.enemy;
         let minDstSq = _gunResult.distSq;
-        }
 
         // In manual mode: only fire if right stick is active (player is aiming) OR if on keyboard/gamepad
         // This prevents auto-fire off-aim on mobile touch
@@ -1338,7 +1337,6 @@
             if (Math.random() < 0.4) {
               spawnBloodDecal({ x: ePos.x + (Math.random()-0.5)*0.3, y: 0, z: ePos.z + (Math.random()-0.5)*0.3 });
             }
-          }
         });
         if (hit) {
           // Yellow-white spiritual energy particles from player outward
@@ -2037,7 +2035,6 @@
         const _fbRangeSq = weapons.fireball.range * weapons.fireball.range;
         const _fbResult = window.GameCombat.findNearestEnemySH(player.mesh.position.x, player.mesh.position.z, _fbRangeSq, enemies);
         let nearest = _fbResult.enemy;
-        }
         if (nearest) {
           const p = new Projectile(player.mesh.position.x, player.mesh.position.z, nearest.mesh.position);
           p.isFireball = true;
