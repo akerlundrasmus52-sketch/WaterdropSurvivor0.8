@@ -298,6 +298,48 @@
             window._extraProjectiles = (window._extraProjectiles || 0) + 1;
             showStatChange(`+1 Projectile (Total: ${1 + window._extraProjectiles})`);
           }
+        },
+        // ── Waterdrop-Theme RPG Stats ────────────────────────────────────────
+        {
+          id: 'surface_tension',
+          icon: '🫧',
+          title: 'SURFACE TENSION',
+          desc: 'Flat Damage Reduction: ignore 4 damage per hit (Stacks)',
+          apply: () => {
+            playerStats.surfaceTension = (playerStats.surfaceTension || 0) + 4;
+            showStatChange(`Surface Tension +4 (Total: ${playerStats.surfaceTension} flat reduction)`);
+          }
+        },
+        {
+          id: 'boiling_point',
+          icon: '🔥',
+          title: 'BOILING POINT',
+          desc: 'Low HP Fury: below 40% HP gain +25% Move Speed & +20% Fire Rate',
+          apply: () => {
+            playerStats.boilingPoint = (playerStats.boilingPoint || 0) + 1;
+            showStatChange(`Boiling Point Lv.${playerStats.boilingPoint}! Low-HP rage activated`);
+          }
+        },
+        {
+          id: 'viscosity',
+          icon: '💧',
+          title: 'VISCOSITY',
+          desc: 'Knockback Weight +30%: all weapons push enemies further (Stacks)',
+          apply: () => {
+            playerStats.viscosity = (playerStats.viscosity || 0) + 0.30;
+            showStatChange(`+30% Knockback Weight (Total: ${Math.round(playerStats.viscosity * 100)}%)`);
+          }
+        },
+        {
+          id: 'capillary_action',
+          icon: '⭐',
+          title: 'CAPILLARY ACTION',
+          desc: 'EXP & Gold Pickup Range ×1.5 (Stacks multiplicatively)',
+          apply: () => {
+            magnetRange *= 1.5;
+            playerStats.capillaryAction = (playerStats.capillaryAction || 0) + 1;
+            showStatChange(`Capillary Action Lv.${playerStats.capillaryAction}! EXP/Gold range ×1.5`);
+          }
         }
       ];
 
@@ -940,6 +982,40 @@
           });
 
           playSound('upgrade'); // "Wooooaaa" sound after picking upgrade
+
+          // ── Visual Upgrade Cue: screen flash + player mesh pulse with rarity colour ──
+          try {
+            const rarityFlashColors = {
+              'rarity-common':    'rgba(39,174,96,0.35)',
+              'rarity-rare':      'rgba(52,152,219,0.35)',
+              'rarity-epic':      'rgba(230,126,34,0.40)',
+              'rarity-legendary': 'rgba(231,76,60,0.45)',
+              'rarity-mythical':  'rgba(255,68,68,0.55)'
+            };
+            const rarityMeshColors = {
+              'rarity-common':    0x27AE60,
+              'rarity-rare':      0x3498DB,
+              'rarity-epic':      0xE67E22,
+              'rarity-legendary': 0xE74C3C,
+              'rarity-mythical':  0xFF4444
+            };
+            const rarityClass = Array.from(card.classList).find(c => c.startsWith('rarity-')) || 'rarity-common';
+            const flashColor = rarityFlashColors[rarityClass] || rarityFlashColors['rarity-common'];
+            const meshHex = rarityMeshColors[rarityClass] || rarityMeshColors['rarity-common'];
+            // Screen flash
+            const rarityFlash = document.createElement('div');
+            rarityFlash.style.cssText = `position:fixed;top:0;left:0;width:100%;height:100%;background:${flashColor};pointer-events:none;z-index:999;transition:opacity 0.4s;`;
+            document.body.appendChild(rarityFlash);
+            setTimeout(() => { rarityFlash.style.opacity = '0'; setTimeout(() => rarityFlash.remove(), 400); }, 80);
+            // Player mesh colour pulse
+            if (typeof player !== 'undefined' && player && player.mesh && player.mesh.material) {
+              const origColor = player.mesh.material.color.getHex();
+              player.mesh.material.color.setHex(meshHex);
+              setTimeout(() => {
+                if (player && player.mesh && player.mesh.material) player.mesh.material.color.setHex(origColor);
+              }, 220);
+            }
+          } catch (_ve) { /* non-critical visual — ignore */ }
 
           // Phase 4: Wrap in try-catch to ensure modal always closes
           try {

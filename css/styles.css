@@ -1938,10 +1938,23 @@
     }
 
     .upgrade-card:hover {
+      transform: perspective(800px) rotateX(5deg) rotateY(-5deg) scale(1.05);
       box-shadow: 0 0 0 4px rgba(4,8,18,0.97), 0 0 15px rgba(136,136,136,0.4), 0 0 30px rgba(136,136,136,0.2), inset 0 1px 0 rgba(255,255,255,0.08);
       filter: brightness(1.15);
       border-color: #aaa;
       animation: none;
+    }
+
+    .upgrade-card:hover::after {
+      animation: card-glare-sweep 0.55s ease-out forwards !important;
+      background: linear-gradient(115deg, transparent 20%, rgba(255,255,255,0.14) 50%, transparent 80%) !important;
+      opacity: 1 !important;
+      pointer-events: none;
+    }
+
+    @keyframes card-glare-sweep {
+      0%   { transform: translateX(-120%) skewX(-15deg); opacity: 0.8; }
+      100% { transform: translateX(220%)  skewX(-15deg); opacity: 0; }
     }
 
     .upgrade-card:active {

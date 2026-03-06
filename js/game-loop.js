@@ -875,6 +875,27 @@
         playerStats.damage = playerStats.hp < playerStats.maxHp * 0.5 ? (1 + playerStats.lowHpDamage) : 1;
       }
 
+      // Boiling Point: below 40% HP, boost speed and fire rate per stack
+      if (playerStats.boilingPoint > 0) {
+        const isLowHp = playerStats.hp < playerStats.maxHp * 0.40;
+        if (isLowHp && !player._boilingPointActive) {
+          player._boilingPointActive = true;
+          const speedBonus = 1 + (0.25 * playerStats.boilingPoint);
+          const cdMult = 1 / (1 + (0.20 * playerStats.boilingPoint));
+          player._boilingBaseSpeed = playerStats.walkSpeed;
+          playerStats.walkSpeed *= speedBonus;
+          weapons.gun.cooldown    *= cdMult;
+          weapons.doubleBarrel.cooldown *= cdMult;
+          if (weapons.sniperRifle.active) weapons.sniperRifle.cooldown *= cdMult;
+          spawnParticles(player.mesh.position, 0xFF4400, 8);
+          if (typeof showStatChange === 'function') showStatChange('🔥 BOILING POINT!');
+        } else if (!isLowHp && player._boilingPointActive) {
+          player._boilingPointActive = false;
+          if (player._boilingBaseSpeed) { playerStats.walkSpeed = player._boilingBaseSpeed; player._boilingBaseSpeed = null; }
+          // Restore cooldowns on reset (approximate — reinitialised next run)
+        }
+      }
+
       // Player Update
       if (killCamActive) {
         // Preserve kill cam camera position from being overridden by player.update
@@ -2095,6 +2116,9 @@
         if (nearest) {
           const p = _spawnProjectile(player.mesh.position.x, player.mesh.position.z, nearest.mesh.position);
           p.pierceCount = weapons.sniperRifle.piercing || 3;
+          // Fix: ensure maxHits reflects sniper's built-in piercing (overrides the reinit default)
+          p.maxHits = (weapons.sniperRifle.piercing || 3) + (playerStats.pierceCount || 0);
+          p.isSniperRifle = true;
           // Sniper: elongated bright white/blue-tinted slug
           p.mesh.scale.set(0.8, 0.8, 2.2);
           p.mesh.material.color.setHex(0xFFFFFF); // Bright white

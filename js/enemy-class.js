@@ -1150,6 +1150,11 @@
         // Track last damage type and crit state for death effects
         this.lastDamageType = damageType;
         this.lastCrit = isCrit;
+        // Track last bullet direction for weapon-specific death effects (e.g. shotgun cone, sniper exit wound)
+        if (hitDir && (hitDir.vx !== undefined)) {
+          this._lastHitVX = hitDir.vx;
+          this._lastHitVZ = hitDir.vz;
+        }
         
         // Damage type sets for cleaner conditional checks
         const HEAVY_HIT_TYPES = ['doubleBarrel', 'shotgun', 'pumpShotgun', 'autoShotgun', 'sniperRifle', 'homingMissile', 'fireball'];
@@ -1253,10 +1258,14 @@
             window.BloodSystem.emitBurst(this.mesh.position, 25, { spreadXZ: 0.6, spreadY: 0.1 });
             spawnParticles(this.mesh.position, 0xCC8844, 5);
           } else if (damageType === 'sniperRifle' || damageType === '50cal') {
-            // Sniper: massive through-and-through
-            _tmpHitDir.set(Math.random() - 0.5, 0, Math.random() - 0.5).normalize();
+            // Sniper: massive through-and-through — exit wound on opposite side of bullet direction
+            const sniperDir = (hitDir && (hitDir.vx !== undefined))
+              ? new THREE.Vector3(hitDir.vx, 0, hitDir.vz).normalize()
+              : new THREE.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5).normalize();
             window.BloodSystem.emitBurst(this.mesh.position, 100, { spreadXZ: 2.0, spreadY: 0.5 });
-            window.BloodSystem.emitExitWound(this.mesh.position, _tmpHitDir, 60, { speed: 0.5 });
+            // Exit wound on the OPPOSITE side (bullet passes through)
+            const exitPos = this.mesh.position.clone().addScaledVector(sniperDir, 0.9);
+            window.BloodSystem.emitExitWound(exitPos, sniperDir, 80, { speed: 0.6, spread: 0.5 });
             window.BloodSystem.emitGuts(this.mesh.position, { count: 8 });
           } else if (damageType === 'minigun' || damageType === 'uzi') {
             // Rapid fire: small frequent blood spurts
@@ -1791,6 +1800,14 @@
           }
         }
 
+        // ── SNIPER: violent instant backward snap ──────────────────────────────
+        if ((damageType === 'sniperRifle' || damageType === '50cal') && this.mesh && !this.isDead) {
+          this.mesh.rotation.x = -1.5; // Violent punch-through snap backward
+          setTimeout(() => {
+            if (this.mesh && !this.isDead) this.mesh.rotation.x = 0;
+          }, 350);
+        }
+
         if (this.hp <= 0) {
           this.die();
         }
@@ -1901,8 +1918,8 @@
         } else if (damageType === 'drone') {
           // Drone death: riddled with tiny holes and blood mist spray
           this.dieByDrone(enemyColor);
-        } else if (damageType === 'sword') {
-          // Sword death: slash wounds with immediate blood flow
+        } else if (damageType === 'sword' || damageType === 'whip' || damageType === 'samuraiSword') {
+          // Sword/whip/samurai death: slash wounds with immediate blood flow and visual slice
           this.dieBySword(enemyColor);
         } else if (damageType === 'aura') {
           // Aura death: burnt flesh, boiling blood effects
@@ -3288,8 +3305,16 @@
       }
       
       dieByShotgun(enemyColor) {
-        // DISMEMBERMENT: Body splits into upper/lower halves with gore physics
+        // CHUNK BLOWER: Scale mesh randomly on X/Z for that blown-apart look, then dismember
         const deathPos = this.mesh.position.clone();
+
+        // ── Random mesh scale distortion on X and Z (body blown sideways) ──
+        if (this.mesh) {
+          const sx = 0.5 + Math.random() * 1.2;
+          const sz = 0.5 + Math.random() * 1.2;
+          this.mesh.scale.set(sx, 0.3 + Math.random() * 0.4, sz);
+        }
+
         spawnParticles(deathPos, 0x8B0000, 30); // Lots of blood
         spawnParticles(deathPos, 0xCC0000, 20); // Bright splatter
         spawnParticles(deathPos, 0xFF2200, 10); // Vivid gore
@@ -3316,6 +3341,76 @@
           const angle = (i / 10) * Math.PI * 2;
           const dist = 0.3 + Math.random() * 1.5;
           spawnBloodDecal({ x: deathPos.x + Math.cos(angle) * dist, y: 0, z: deathPos.z + Math.sin(angle) * dist });
+        }
+
+        // ── 8–12 MEAT/FLESH CHUNKS flying backward in a cone based on bullet angle ──
+        const bulletVX = this._lastHitVX || 0;
+        const bulletVZ = this._lastHitVZ || 1;
+        const bulletAngle = Math.atan2(bulletVZ, bulletVX);
+        const chunkCount = 8 + Math.floor(Math.random() * 5); // 8–12
+        const goreColors = [0x8B0000, 0x660000, 0x4A0000, 0x550011, 0xAA2200, 0xCC1100];
+        const _sgChunks = [];
+        for (let ci = 0; ci < chunkCount; ci++) {
+          const chunkSize = 0.12 + Math.random() * 0.22; // Larger than standard chunks
+          const chunkGeo = Math.random() < 0.5
+            ? new THREE.SphereGeometry(chunkSize, 5, 4)
+            : new THREE.BoxGeometry(chunkSize * 1.2, chunkSize * 0.8, chunkSize);
+          const chunkMat = new THREE.MeshBasicMaterial({ color: goreColors[ci % goreColors.length], transparent: true, opacity: 0.95 });
+          const chunk = new THREE.Mesh(chunkGeo, chunkMat);
+          chunk.position.copy(deathPos);
+          chunk.position.y += 0.2 + Math.random() * 0.5;
+          scene.add(chunk);
+          // Cone spread: chunks fly backward (opposite of bullet dir) within a ~120° cone
+          const coneHalf = Math.PI * 0.33; // 60° each side = 120° total
+          const spreadAngle = bulletAngle + Math.PI + (Math.random() - 0.5) * coneHalf * 2;
+          const speed = 0.18 + Math.random() * 0.22;
+          _sgChunks.push({
+            mesh: chunk, geo: chunkGeo, mat: chunkMat,
+            vx: Math.cos(spreadAngle) * speed,
+            vy: 0.12 + Math.random() * 0.28,
+            vz: Math.sin(spreadAngle) * speed,
+            rotX: (Math.random() - 0.5) * 0.35,
+            rotZ: (Math.random() - 0.5) * 0.35,
+            life: 90 + Math.floor(Math.random() * 50)
+          });
+        }
+        if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
+          managedAnimations.push({ update(_dt) {
+            for (let ci = _sgChunks.length - 1; ci >= 0; ci--) {
+              const c = _sgChunks[ci];
+              c.life--;
+              c.vy -= 0.014;
+              c.mesh.position.x += c.vx;
+              c.mesh.position.y += c.vy;
+              c.mesh.position.z += c.vz;
+              c.mesh.rotation.x += c.rotX;
+              c.mesh.rotation.z += c.rotZ;
+              if (c.mesh.position.y < 0.05) {
+                c.mesh.position.y = 0.05;
+                c.vy = Math.abs(c.vy) * 0.25;
+                c.vx *= 0.6; c.vz *= 0.6;
+                if (Math.random() < 0.6) spawnBloodDecal(c.mesh.position);
+              }
+              if (c.life % 5 === 0 && c.life > 20 && window.BloodSystem) {
+                window.BloodSystem.emitBurst(c.mesh.position, 4, { spreadXZ: 0.3, spreadY: 0.1 });
+              }
+              if (c.life < 20) c.mat.opacity = c.life / 20;
+              if (c.life <= 0) {
+                scene.remove(c.mesh);
+                c.geo.dispose(); c.mat.dispose();
+                _sgChunks.splice(ci, 1);
+              }
+            }
+            return _sgChunks.length > 0;
+          }, cleanup() {
+            for (const c of _sgChunks) {
+              if (c.mesh.parent) scene.remove(c.mesh);
+              c.geo.dispose(); c.mat.dispose();
+            }
+            _sgChunks.length = 0;
+          }});
+        } else {
+          for (const c of _sgChunks) { scene.remove(c.mesh); c.geo.dispose(); c.mat.dispose(); }
         }
 
         // ── Upper body ─────────────────────────────────────────────────────────
@@ -3872,7 +3967,7 @@
             scene.remove(corpse); corpse.geometry.dispose(); corpse.material.dispose();
           }
         } else if (variation === 1) {
-          // CLEAN CUT — body splits along slash line, halves slide apart
+          // CLEAN CUT — hide main mesh, spawn two half-meshes scaled 0.5 on cut axis, slide apart + blood seam
           spawnParticles(deathPos, 0x8B0000, 20);
           spawnParticles(deathPos, 0xCC0000, 12);
           const slashAngle = Math.random() * Math.PI * 2;
@@ -3881,45 +3976,70 @@
             window.BloodSystem.emitSwordSlash(deathPos, slashDir, 150);
             window.BloodSystem.emitBurst(deathPos, 80, { spreadXZ: 1.0, spreadY: 0.3, minSize: 0.03, maxSize: 0.1, minLife: 30, maxLife: 80 });
           }
-          const halfGeo = new THREE.SphereGeometry(0.3, 6, 4);
-          const halfMat = new THREE.MeshBasicMaterial({ color: enemyColor, transparent: true, opacity: 0.85 });
-          const half1 = new THREE.Mesh(halfGeo, halfMat);
-          const half2 = new THREE.Mesh(halfGeo, halfMat);
-          half1.position.copy(deathPos); half1.position.y = 0.12;
-          half2.position.copy(deathPos); half2.position.y = 0.12;
-          half1.scale.y = 0.25; half2.scale.y = 0.25;
+          // Spawn two half-meshes — each is half the cut axis width
+          const half1Geo = new THREE.BoxGeometry(0.5, 0.6, 0.5);
+          const half2Geo = new THREE.BoxGeometry(0.5, 0.6, 0.5);
+          const half1Mat = new THREE.MeshBasicMaterial({ color: enemyColor, transparent: true, opacity: 0.9 });
+          const half2Mat = new THREE.MeshBasicMaterial({ color: enemyColor, transparent: true, opacity: 0.9 });
+          const half1 = new THREE.Mesh(half1Geo, half1Mat);
+          const half2 = new THREE.Mesh(half2Geo, half2Mat);
+          half1.position.copy(deathPos); half1.position.y = 0.3;
+          half2.position.copy(deathPos); half2.position.y = 0.3;
+          // Scale by 0.5 on the cut axis (perpendicular to slash direction)
+          half1.scale.set(0.5, 1, 1); half2.scale.set(0.5, 1, 1);
           scene.add(half1); scene.add(half2);
           const perpX = -slashDir.z;
           const perpZ = slashDir.x;
           for (let i = 0; i < 5; i++) spawnBloodDecal({ x: deathPos.x + (Math.random()-0.5)*1.0, y: 0, z: deathPos.z + (Math.random()-0.5)*1.0 });
-          let life = 120;
+          // Blood seam pool at center cut line
+          const seamGeo = new THREE.CylinderGeometry(0.08, 0.08, 0.65, 6);
+          const seamMat = new THREE.MeshBasicMaterial({ color: 0x8B0000, transparent: true, opacity: 0.9 });
+          const seam = new THREE.Mesh(seamGeo, seamMat);
+          seam.rotation.z = Math.PI / 2; // Lay the cylinder along the slash direction
+          seam.rotation.y = slashAngle;
+          seam.position.copy(deathPos); seam.position.y = 0.3;
+          scene.add(seam);
+          let life = 130;
           if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
             managedAnimations.push({ update(_dt) {
               life--;
-              if (life > 80) {
-                half1.position.x += perpX * 0.01;
-                half1.position.z += perpZ * 0.01;
-                half2.position.x -= perpX * 0.01;
-                half2.position.z -= perpZ * 0.01;
-                if (life % 4 === 0) spawnParticles(deathPos, 0x8B0000, 2);
+              // Slide the halves apart from each other
+              if (life > 70) {
+                const slideSpeed = 0.018;
+                half1.position.x += perpX * slideSpeed;
+                half1.position.z += perpZ * slideSpeed;
+                half2.position.x -= perpX * slideSpeed;
+                half2.position.z -= perpZ * slideSpeed;
+                // Blood gushing from center seam
+                if (life % 3 === 0 && window.BloodSystem) {
+                  window.BloodSystem.emitBurst(seam.position, 6, { spreadXZ: 0.3, spreadY: 0.4, minSize: 0.02, maxSize: 0.07 });
+                }
+                if (life % 5 === 0) spawnParticles(seam.position, 0x8B0000, 3);
               }
-              if (life < 40) {
-                half1.material.opacity = (life / 40) * 0.85;
-                half2.material.opacity = (life / 40) * 0.85;
+              if (life < 45) {
+                half1Mat.opacity = (life / 45) * 0.9;
+                half2Mat.opacity = (life / 45) * 0.9;
+                seamMat.opacity = (life / 45) * 0.9;
               }
               if (life <= 0) {
-                scene.remove(half1); scene.remove(half2);
-                halfGeo.dispose(); halfMat.dispose();
+                scene.remove(half1); scene.remove(half2); scene.remove(seam);
+                half1Geo.dispose(); half1Mat.dispose();
+                half2Geo.dispose(); half2Mat.dispose();
+                seamGeo.dispose(); seamMat.dispose();
                 return false;
               }
               return true;
             }, cleanup() {
-              scene.remove(half1); scene.remove(half2);
-              halfGeo.dispose(); halfMat.dispose();
+              scene.remove(half1); scene.remove(half2); scene.remove(seam);
+              half1Geo.dispose(); half1Mat.dispose();
+              half2Geo.dispose(); half2Mat.dispose();
+              seamGeo.dispose(); seamMat.dispose();
             }});
           } else {
-            scene.remove(half1); scene.remove(half2);
-            halfGeo.dispose(); halfMat.dispose();
+            scene.remove(half1); scene.remove(half2); scene.remove(seam);
+            half1Geo.dispose(); half1Mat.dispose();
+            half2Geo.dispose(); half2Mat.dispose();
+            seamGeo.dispose(); seamMat.dispose();
           }
         } else {
           // MULTIPLE CUTS — 3 slash lines, blood pours from each, body collapses in segments
