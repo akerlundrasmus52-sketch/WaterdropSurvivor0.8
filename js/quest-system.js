@@ -649,6 +649,8 @@
     // ── Level-Up Rarity Effects ───────────────────────────────────
     const _LEVEL_RARITY_COLORS = {
       common:    '#aaddff',
+      uncommon:  '#55cc55',
+      rare:      '#44aaff',
       epic:      '#aa44ff',
       legendary: '#ffaa00',
       mythic:    '#ff4444'
@@ -667,6 +669,8 @@
       const cy   = rect.top  + rect.height / 2;
       const colorMap = {
         common:    ['#ffffff', '#aaddff', '#cccccc', '#ddeeff'],
+        uncommon:  ['#55cc55', '#88ff88', '#33aa33', '#aaffaa'],
+        rare:      ['#44aaff', '#88ccff', '#2277cc', '#99ddff'],
         epic:      ['#aa44ff', '#cc88ff', '#8822cc', '#dd99ff'],
         legendary: ['#ffaa00', '#ffcc44', '#ff8800', '#ffdd88'],
         mythic:    ['#ff4444', '#ff8800', '#ffff00', '#44ff88', '#4488ff', '#cc44ff']

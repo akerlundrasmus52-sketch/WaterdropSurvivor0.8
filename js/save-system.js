@@ -1106,36 +1106,109 @@
     // ── Achievement Dopamine Notification ────────────────────────────────────
     // Slides up from the bottom: achievement logo, slot-machine reward reveal,
     // rolling gold counter, then rarity confetti + rays burst.
+
+    // Full 6-tier rarity colours (matching CSS rarity classes)
+    const _ACH_RARITY_COLORS = {
+      common:    '#aaaaaa',
+      uncommon:  '#55cc55',
+      rare:      '#44aaff',
+      epic:      '#aa44ff',
+      legendary: '#ffaa00',
+      mythic:    '#ff4444'
+    };
+
+    // Weighted spin pool — [ label, rarityKey, weight ]
+    // Higher rarity → lower weight → rarer appearance during the spin
+    const _ACH_SPIN_POOL = [
+      // Common (grey) — very frequent
+      ['🥉 50 Gold',          'common',   40],
+      ['🌿 Herb Bundle',      'common',   38],
+      ['🔩 Iron Scrap',       'common',   36],
+      ['🪵 Wood Bundle',      'common',   34],
+      ['🪨 Stone Chunk',      'common',   32],
+      // Uncommon (green)
+      ['💰 200 Gold',         'uncommon', 22],
+      ['🗺️ Explorer Map',    'uncommon', 20],
+      ['🌀 Essence Vial',     'uncommon', 20],
+      ['🍀 Lucky Charm',      'uncommon', 18],
+      ['🌱 Growth Tonic',     'uncommon', 16],
+      // Rare (blue)
+      ['🔮 +1 Skill Point',   'rare',     12],
+      ['⭐ +1 Attr Point',    'rare',     11],
+      ['💠 Sapphire Gem',     'rare',     10],
+      ['🏹 Swift Bow',        'rare',      9],
+      ['🗡️ Fine Dagger',     'rare',      8],
+      // Epic (purple)
+      ['🔮 +2 Skill Pts',     'epic',      7],
+      ['⭐ +2 Attr Pts',      'epic',      6],
+      ['💎 Amethyst Crystal', 'epic',      5],
+      ['🛡️ Enchanted Shield','epic',      5],
+      ['🗡️ Epic Blade',      'epic',      4],
+      // Legendary (orange/gold)
+      ['⚔️ Legendary Sword',  'legendary', 3],
+      ['👑 Golden Crown',      'legendary', 3],
+      ['✨ +3 Skill Pts',      'legendary', 2],
+      ['🔱 Golden Trident',    'legendary', 2],
+      ['🌟 Sunfire Relic',     'legendary', 2],
+      // Mythic (red) — rarest
+      ['🔴 Mythic Blade',      'mythic',    1],
+      ['💎 Dragon Gem',        'mythic',    1],
+      ['👁️ Eye of the Gods',  'mythic',    1],
+      ['⚡ Godly Power Shard', 'mythic',    1],
+      ['🐉 Dragon Soul',       'mythic',    1]
+    ];
+
+    function _weightedSpinPick(pool) {
+      let total = 0;
+      for (let i = 0; i < pool.length; i++) total += pool[i][2];
+      let r = Math.random() * total;
+      for (let i = 0; i < pool.length; i++) {
+        r -= pool[i][2];
+        if (r < 0) return pool[i];
+      }
+      return pool[pool.length - 1];
+    }
+
     function _achievementRarity(skillPts, attrPts, gold) {
-      if ((skillPts || 0) >= 3 || (attrPts || 0) >= 3) return 'legendary';
-      if ((skillPts || 0) > 0 || (attrPts || 0) > 0) return 'epic';
-      if ((gold || 0) >= 500) return 'epic';
+      const sp = skillPts || 0;
+      const ap = attrPts  || 0;
+      const g  = gold     || 0;
+      if (sp >= 5 || ap >= 5 || g >= 1500) return 'mythic';
+      if (sp >= 4 || ap >= 4 || g >= 1000) return 'legendary';
+      if (sp >= 3 || ap >= 3 || g >= 750)  return 'epic';
+      if (sp >= 2 || ap >= 2 || g >= 500)  return 'rare';
+      if (sp >= 1 || ap >= 1 || g >= 200)  return 'uncommon';
       return 'common';
     }
 
-    function showAchievementNotification(achievement, skillPoints, attributePoints) {
-      const gold      = achievement.reward || 0;
-      const skillPts  = skillPoints  || 0;
-      const attrPts   = attributePoints || 0;
-      const rarity    = _achievementRarity(skillPts, attrPts, gold);
-      const rarityColors = { common: '#aaddff', epic: '#aa44ff', legendary: '#ffaa00' };
-      const rarityColor  = rarityColors[rarity] || rarityColors.common;
-      const isHighRarity = rarity === 'epic' || rarity === 'legendary';
+    // Helper: set spinEl content safely using DOM (avoids innerHTML XSS)
+    function _setSpinLabel(el, text, color) {
+      el.textContent = '';
+      const span = document.createElement('span');
+      span.textContent = text;
+      span.style.color = color;
+      span.style.textShadow = '0 0 10px ' + color + '88, 0 1px 3px #000';
+      el.appendChild(span);
+    }
 
-      // Build reward label list for slot-machine spin
+    function showAchievementNotification(achievement, skillPoints, attributePoints) {
+      const gold     = achievement.reward || 0;
+      const skillPts = skillPoints  || 0;
+      const attrPts  = attributePoints || 0;
+      const rarity   = _achievementRarity(skillPts, attrPts, gold);
+      const rarityColor = _ACH_RARITY_COLORS[rarity] || _ACH_RARITY_COLORS.common;
+
+      // Zoom scale for spin reveal: mythic > legendary > epic/rare > others
+      const isHighRarity = rarity === 'epic' || rarity === 'legendary' || rarity === 'mythic';
+      const isTopTier    = rarity === 'legendary' || rarity === 'mythic';
+      const logoSizePx   = rarity === 'mythic' ? 64 : isTopTier ? 52 : isHighRarity ? 44 : 40;
+
+      // Build final reward label (shown when spin lands)
       const rewardParts = [];
-      if (gold > 0) rewardParts.push('🪙 +' + gold + ' GOLD');
+      if (gold > 0)     rewardParts.push('🪙 +' + gold + ' GOLD');
       if (skillPts > 0) rewardParts.push('🔮 +' + skillPts + ' Skill Point' + (skillPts > 1 ? 's' : ''));
       if (attrPts > 0)  rewardParts.push('⭐ +' + attrPts + ' Attribute Point' + (attrPts > 1 ? 's' : ''));
       const finalLabel = rewardParts.join('  ');
-
-      // Fake spin labels
-      const spinFakes = [
-        '⚔️ Legendary Sword', '🛡️ Dragon Shield', '💎 Blue Crystal',
-        '🔮 +5 Skill Points', '⭐ +4 Attr Points', '💰 +999 GOLD',
-        '🌀 Mystery Reward', '🗡️ Epic Dagger', '🏹 Swift Bow',
-        '🪙 +250 GOLD', '🔮 +3 Skill Points', '⚡ Power Surge'
-      ];
 
       // Panel element
       const panel = document.createElement('div');
@@ -1158,9 +1231,8 @@
         'will-change:transform'
       ].join(';');
 
-      const logoScale = isHighRarity ? '2.0' : '1.4';
       panel.innerHTML = [
-        '<div class="ach-notif-logo" style="font-size:' + (isHighRarity ? '52px' : '40px') + ';filter:drop-shadow(0 0 10px ' + rarityColor + ')">🏆</div>',
+        '<div class="ach-notif-logo" style="font-size:' + logoSizePx + 'px;filter:drop-shadow(0 0 12px ' + rarityColor + ')">🏆</div>',
         '<div class="ach-notif-title" style="color:' + rarityColor + '">ACHIEVEMENT UNLOCKED!</div>',
         '<div class="ach-notif-name">' + (achievement.name || '') + '</div>',
         '<div class="ach-notif-spin-wrap' + (isHighRarity ? ' ach-notif-spin-zoom' : '') + '">',
@@ -1181,19 +1253,21 @@
         panel.style.transform  = 'translateX(-50%) translateY(0)';
       });
 
-      // Slot-machine spin: cycle through fake labels, then settle on real reward
+      // Slot-machine spin: cycle through weighted pool with colored labels, decelerate, land
       const spinEl  = panel.querySelector('#ach-spin-text');
-      const spinIntervals = [80, 80, 80, 100, 100, 130, 160, 200, 260, 320];
+      const spinIntervals = [70, 70, 80, 80, 100, 120, 150, 190, 250, 320];
       let spinIdx = 0;
       function _nextSpin() {
         if (spinIdx < spinIntervals.length) {
-          spinEl.textContent = spinFakes[Math.floor(Math.random() * spinFakes.length)];
+          const picked = _weightedSpinPick(_ACH_SPIN_POOL);
+          const pColor = _ACH_RARITY_COLORS[picked[1]] || _ACH_RARITY_COLORS.common;
+          _setSpinLabel(spinEl, picked[0], pColor);
           spinEl.style.transform = isHighRarity ? 'scale(1.15)' : 'scale(1.0)';
           setTimeout(() => { spinEl.style.transform = ''; }, spinIntervals[spinIdx] * 0.5);
           setTimeout(_nextSpin, spinIntervals[spinIdx++]);
         } else {
-          // Land on actual reward
-          spinEl.textContent = finalLabel;
+          // Land on actual reward — render with rarity colour via DOM
+          _setSpinLabel(spinEl, finalLabel, rarityColor);
           spinEl.classList.add('ach-notif-spin-landed');
 
           // If gold reward: start rolling counter
@@ -1201,8 +1275,9 @@
             const goldRow   = panel.querySelector('#ach-gold-counter');
             const goldNumEl = panel.querySelector('#ach-gold-num');
             goldRow.style.display = 'flex';
-            const dur  = Math.min(1200, 400 + gold * 0.4);
-            const t0   = performance.now();
+            // Duration: 400ms base + up to 800ms extra for large amounts, capped at 1200ms
+            const dur = Math.min(1200, 400 + gold * 0.4);
+            const t0  = performance.now();
             function _rollGold(now) {
               const progress = Math.min((now - t0) / dur, 1);
               goldNumEl.textContent = Math.floor(progress * gold);
@@ -1220,15 +1295,18 @@
           }, 200);
         }
       }
-      setTimeout(_nextSpin, 400); // wait for panel to arrive
+      // Wait ~400ms for panel to slide into position before spinning
+      const PANEL_SLIDE_DURATION_MS = 400;
+      setTimeout(_nextSpin, PANEL_SLIDE_DURATION_MS);
 
-      // Auto-dismiss after 5 seconds
+      // Auto-dismiss after 5.2 seconds
+      const ACHIEVEMENT_DISPLAY_DURATION_MS = 5200;
       setTimeout(() => {
         panel.style.transition = 'transform 0.4s ease-in, opacity 0.4s ease-in';
         panel.style.transform  = 'translateX(-50%) translateY(110%)';
         panel.style.opacity    = '0';
         setTimeout(() => { if (panel.parentNode) panel.parentNode.removeChild(panel); }, 450);
-      }, 5200);
+      }, ACHIEVEMENT_DISPLAY_DURATION_MS);
     }
 
     function checkAchievements() {
