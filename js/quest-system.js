@@ -795,6 +795,17 @@
       _curtainTimer = setTimeout(dismissCurtain, isMilestone ? 5000 : 3500);
     }
 
+    // Expose rarity burst effects globally so other modules (challenges, achievements) can reuse them
+    window.spawnRarityEffects = function(anchorEl, rarity) {
+      _spawnLevelUpScreenFlash(rarity);
+      setTimeout(function() {
+        if (anchorEl && typeof anchorEl.getBoundingClientRect === 'function') {
+          _spawnLevelUpRays(anchorEl, rarity);
+          _spawnLevelUpConfetti(anchorEl, rarity);
+        }
+      }, 400);
+    };
+
     function updateAccountLevelDisplay() {
       const levelEl = document.getElementById('account-level-value');
       const barEl = document.getElementById('account-level-bar');

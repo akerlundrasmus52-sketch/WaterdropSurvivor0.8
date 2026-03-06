@@ -1090,15 +1090,8 @@
       // Play sound
       playSound('coin');
       
-      // Show gold bag animation
-      showGoldBagAnimation(achievement.reward);
-      
-      // FRESH IMPLEMENTATION: Show enhanced achievement notification
-      showEnhancedNotification(
-        'achievement',
-        'ACHIEVEMENT UNLOCKED!',
-        `${achievement.name} - +${achievement.reward} Gold, +${skillPoints} Skill Point${skillPoints > 1 ? 's' : ''}, +${attributePoints} Attribute Point${attributePoints > 1 ? 's' : ''}!`
-      );
+      // Show dopamine achievement notification (replaces old gold bag + enhanced notification)
+      showAchievementNotification(achievement, skillPoints, attributePoints);
       
       // Save
       saveSaveData();
@@ -1110,42 +1103,132 @@
     // Expose to global scope for onclick handlers
     window.claimAchievement = claimAchievement;
 
-    function showGoldBagAnimation(amount) {
-      const bag = document.createElement('div');
-      bag.style.cssText = `
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        font-size: 64px;
-        z-index: 10000;
-        pointer-events: none;
-        animation: goldBagPop 1s ease-out forwards;
-      `;
-      bag.textContent = '💰';
-      document.body.appendChild(bag);
-      
-      const text = document.createElement('div');
-      text.style.cssText = `
-        position: fixed;
-        top: 55%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        font-size: 32px;
-        font-weight: bold;
-        color: #FFD700;
-        text-shadow: 0 0 10px rgba(255, 215, 0, 0.8), -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000;
-        z-index: 10000;
-        pointer-events: none;
-        animation: goldTextFloat 1s ease-out forwards;
-      `;
-      text.textContent = `+${amount} GOLD!`;
-      document.body.appendChild(text);
-      
+    // ── Achievement Dopamine Notification ────────────────────────────────────
+    // Slides up from the bottom: achievement logo, slot-machine reward reveal,
+    // rolling gold counter, then rarity confetti + rays burst.
+    function _achievementRarity(skillPts, attrPts, gold) {
+      if ((skillPts || 0) >= 3 || (attrPts || 0) >= 3) return 'legendary';
+      if ((skillPts || 0) > 0 || (attrPts || 0) > 0) return 'epic';
+      if ((gold || 0) >= 500) return 'epic';
+      return 'common';
+    }
+
+    function showAchievementNotification(achievement, skillPoints, attributePoints) {
+      const gold      = achievement.reward || 0;
+      const skillPts  = skillPoints  || 0;
+      const attrPts   = attributePoints || 0;
+      const rarity    = _achievementRarity(skillPts, attrPts, gold);
+      const rarityColors = { common: '#aaddff', epic: '#aa44ff', legendary: '#ffaa00' };
+      const rarityColor  = rarityColors[rarity] || rarityColors.common;
+      const isHighRarity = rarity === 'epic' || rarity === 'legendary';
+
+      // Build reward label list for slot-machine spin
+      const rewardParts = [];
+      if (gold > 0) rewardParts.push('🪙 +' + gold + ' GOLD');
+      if (skillPts > 0) rewardParts.push('🔮 +' + skillPts + ' Skill Point' + (skillPts > 1 ? 's' : ''));
+      if (attrPts > 0)  rewardParts.push('⭐ +' + attrPts + ' Attribute Point' + (attrPts > 1 ? 's' : ''));
+      const finalLabel = rewardParts.join('  ');
+
+      // Fake spin labels
+      const spinFakes = [
+        '⚔️ Legendary Sword', '🛡️ Dragon Shield', '💎 Blue Crystal',
+        '🔮 +5 Skill Points', '⭐ +4 Attr Points', '💰 +999 GOLD',
+        '🌀 Mystery Reward', '🗡️ Epic Dagger', '🏹 Swift Bow',
+        '🪙 +250 GOLD', '🔮 +3 Skill Points', '⚡ Power Surge'
+      ];
+
+      // Panel element
+      const panel = document.createElement('div');
+      panel.className = 'ach-notif-panel';
+      panel.style.cssText = [
+        'position:fixed',
+        'bottom:0',
+        'left:50%',
+        'transform:translateX(-50%) translateY(110%)',
+        'z-index:100000',
+        'background:#0a0a0a',
+        'border:2px solid ' + rarityColor,
+        'border-radius:16px 16px 0 0',
+        'padding:20px 28px 24px',
+        'min-width:300px',
+        'max-width:420px',
+        'text-align:center',
+        'pointer-events:none',
+        'box-shadow:0 -6px 40px rgba(0,0,0,0.9), 0 0 30px ' + rarityColor + '55',
+        'will-change:transform'
+      ].join(';');
+
+      const logoScale = isHighRarity ? '2.0' : '1.4';
+      panel.innerHTML = [
+        '<div class="ach-notif-logo" style="font-size:' + (isHighRarity ? '52px' : '40px') + ';filter:drop-shadow(0 0 10px ' + rarityColor + ')">🏆</div>',
+        '<div class="ach-notif-title" style="color:' + rarityColor + '">ACHIEVEMENT UNLOCKED!</div>',
+        '<div class="ach-notif-name">' + (achievement.name || '') + '</div>',
+        '<div class="ach-notif-spin-wrap' + (isHighRarity ? ' ach-notif-spin-zoom' : '') + '">',
+        '  <div class="ach-notif-spin" id="ach-spin-text">🌀 ???</div>',
+        '</div>',
+        '<div class="ach-notif-gold" id="ach-gold-counter" style="display:none">',
+        '  <span class="ach-gold-icon">🪙</span>',
+        '  <span class="ach-gold-num" id="ach-gold-num">0</span>',
+        '  <span class="ach-gold-label"> GOLD</span>',
+        '</div>'
+      ].join('');
+
+      document.body.appendChild(panel);
+
+      // Slide up
+      requestAnimationFrame(() => {
+        panel.style.transition = 'transform 0.5s cubic-bezier(0.22,1,0.36,1)';
+        panel.style.transform  = 'translateX(-50%) translateY(0)';
+      });
+
+      // Slot-machine spin: cycle through fake labels, then settle on real reward
+      const spinEl  = panel.querySelector('#ach-spin-text');
+      const spinIntervals = [80, 80, 80, 100, 100, 130, 160, 200, 260, 320];
+      let spinIdx = 0;
+      function _nextSpin() {
+        if (spinIdx < spinIntervals.length) {
+          spinEl.textContent = spinFakes[Math.floor(Math.random() * spinFakes.length)];
+          spinEl.style.transform = isHighRarity ? 'scale(1.15)' : 'scale(1.0)';
+          setTimeout(() => { spinEl.style.transform = ''; }, spinIntervals[spinIdx] * 0.5);
+          setTimeout(_nextSpin, spinIntervals[spinIdx++]);
+        } else {
+          // Land on actual reward
+          spinEl.textContent = finalLabel;
+          spinEl.classList.add('ach-notif-spin-landed');
+
+          // If gold reward: start rolling counter
+          if (gold > 0) {
+            const goldRow   = panel.querySelector('#ach-gold-counter');
+            const goldNumEl = panel.querySelector('#ach-gold-num');
+            goldRow.style.display = 'flex';
+            const dur  = Math.min(1200, 400 + gold * 0.4);
+            const t0   = performance.now();
+            function _rollGold(now) {
+              const progress = Math.min((now - t0) / dur, 1);
+              goldNumEl.textContent = Math.floor(progress * gold);
+              if (progress < 1) requestAnimationFrame(_rollGold);
+              else goldNumEl.textContent = gold;
+            }
+            requestAnimationFrame(_rollGold);
+          }
+
+          // Fireworks burst after spin settles
+          setTimeout(() => {
+            if (typeof window.spawnRarityEffects === 'function') {
+              window.spawnRarityEffects(panel, rarity);
+            }
+          }, 200);
+        }
+      }
+      setTimeout(_nextSpin, 400); // wait for panel to arrive
+
+      // Auto-dismiss after 5 seconds
       setTimeout(() => {
-        bag.remove();
-        text.remove();
-      }, 1000);
+        panel.style.transition = 'transform 0.4s ease-in, opacity 0.4s ease-in';
+        panel.style.transform  = 'translateX(-50%) translateY(110%)';
+        panel.style.opacity    = '0';
+        setTimeout(() => { if (panel.parentNode) panel.parentNode.removeChild(panel); }, 450);
+      }, 5200);
     }
 
     function checkAchievements() {

@@ -6150,3 +6150,98 @@
   z-index: 99998;
   animation: challenge-laser-confetti 0.8s ease-out forwards;
 }
+
+/* ── Achievement Dopamine Notification ───────────────────────────────────── */
+.ach-notif-logo {
+  line-height: 1;
+  margin-bottom: 6px;
+  animation: ach-logo-pop 0.5s 0.3s cubic-bezier(0.34,1.56,0.64,1) both;
+}
+@keyframes ach-logo-pop {
+  from { transform: scale(0.3); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
+}
+.ach-notif-title {
+  font-family: 'Bangers', cursive;
+  font-size: 18px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+  text-shadow: 0 2px 6px rgba(0,0,0,0.9);
+}
+.ach-notif-name {
+  font-family: 'Nunito', 'M PLUS Rounded 1c', sans-serif;
+  font-size: 15px;
+  font-weight: 800;
+  color: #ffffff;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.9);
+  margin-bottom: 12px;
+}
+.ach-notif-spin-wrap {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-bottom: 10px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.ach-notif-spin-zoom {
+  transform-origin: center;
+}
+.ach-notif-spin {
+  font-family: 'Bangers', cursive;
+  font-size: 20px;
+  letter-spacing: 1px;
+  color: #ffffff;
+  text-shadow: 0 2px 6px rgba(0,0,0,0.8);
+  transition: transform 0.08s ease-out;
+  white-space: nowrap;
+}
+.ach-notif-spin.ach-notif-spin-landed {
+  color: #FFD700;
+  text-shadow: 0 0 12px rgba(255,215,0,0.9), 0 2px 6px rgba(0,0,0,0.8);
+  animation: ach-spin-land 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards;
+}
+@keyframes ach-spin-land {
+  0%   { transform: scale(0.7); }
+  60%  { transform: scale(1.18); }
+  100% { transform: scale(1); }
+}
+.ach-notif-gold {
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-family: 'Bangers', cursive;
+  letter-spacing: 1px;
+  animation: ach-gold-appear 0.3s ease-out forwards;
+}
+@keyframes ach-gold-appear {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.ach-gold-icon {
+  font-size: 28px;
+  filter: drop-shadow(0 0 8px rgba(255,215,0,0.9));
+}
+.ach-gold-num {
+  font-size: 36px;
+  color: #FFD700;
+  text-shadow:
+    0 0 20px rgba(255,215,0,1),
+    0 0 40px rgba(255,165,0,0.7),
+    -2px -2px 0 #000,
+     2px -2px 0 #000,
+    -2px  2px 0 #000,
+     2px  2px 0 #000;
+  line-height: 1;
+}
+.ach-gold-label {
+  font-size: 22px;
+  color: #FFD700;
+  text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+}
+
