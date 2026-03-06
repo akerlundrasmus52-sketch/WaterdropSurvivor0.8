@@ -1482,11 +1482,12 @@
           const noiseGain = audioCtx.createGain();
           const distortion = audioCtx.createWaveShaper();
           const lpf = audioCtx.createBiquadFilter();
-          // Generate heavy distortion curve
+          // Generate heavy distortion curve (soft-clipping at drive=400: higher = more crunch)
+          const DISTORTION_DRIVE = 400;
           const _curve = new Float32Array(256);
           for (let _ci = 0; _ci < 256; _ci++) {
             const _x = (_ci * 2) / 256 - 1;
-            _curve[_ci] = (Math.PI + 400) * _x / (Math.PI + 400 * Math.abs(_x));
+            _curve[_ci] = (Math.PI + DISTORTION_DRIVE) * _x / (Math.PI + DISTORTION_DRIVE * Math.abs(_x));
           }
           distortion.curve = _curve;
           lpf.type = 'lowpass';
@@ -5068,7 +5069,7 @@
               // Phase 2 — Heartbeat bleed-out: scale chest up/down like a pumping heart,
               // fountain of blood straight up at each peak.
               _heartTimer++;
-              const _beatPeriod = 22; // ~2.7 beats/sec at 60fps
+              const _beatPeriod = 22; // ~2.7 heartbeats/sec at 60 fps
               _pumpPhase = (_heartTimer % _beatPeriod) / _beatPeriod;
               const _beat = Math.sin(_pumpPhase * Math.PI * 2);
               // Scale chest (torsoGroup or baseGroup) up/down
