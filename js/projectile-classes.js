@@ -345,7 +345,7 @@
           projectileMaterialCache.bulletGlow.clone()  // Clone material for independent color
         );
 
-        this.speed = 0.4 * (window._projSpeedMultiplier || 1.0); // Apply speed upgrade multiplier
+        this.speed = 1.4 * (window._projSpeedMultiplier || 1.0); // 3.5× faster base speed
         // active starts false; reinit() sets it true.  Pool createFn creates with no args so
         // the projectile stays inactive until _spawnProjectile() calls reinit().
         this.active = false;
@@ -390,20 +390,19 @@
         this.pierceCount = 0;
         this.explosionRadius = 0;
 
-        // Reset mesh state — use the cached material colour (bright yellow) without overriding it
-        // with the old orange colour that made the bullet look wrong.
+        // Reset mesh state — use the cached material colour (bright orange-gold).
         this.mesh.position.set(x, 0.5, z);
         // Use scale 1 for a small snappy bullet; only large weapons override scale later.
         this.mesh.scale.set(1, 1, 1);
-        // Keep material colour from the cache (0xFFFF00 yellow); don't stomp it here.
         this.mesh.material.opacity = 0.95;
         this.mesh.visible = true;
+        // Trail frame counter — emit a tracer every 2-3 frames
+        this._trailFrame = 0;
 
         if (this.glow) {
           this.glow.position.copy(this.mesh.position);
           this.glow.scale.set(1, 1, 1);
           this.glow.material.opacity = 0.4;
-          // Keep cached pale-yellow glow colour.
           this.glow.visible = true;
         }
 
@@ -422,9 +421,15 @@
         const dz = target.z - z;
         const dist = Math.sqrt(dx * dx + dz * dz);
         // Re-apply speed multiplier each shot so pooled projectiles pick up upgrades
-        this.speed = 0.4 * (window._projSpeedMultiplier || 1.0);
+        // Base speed 1.4 = 0.4 * 3.5 — bullets snap to targets instead of floating
+        this.speed = 1.4 * (window._projSpeedMultiplier || 1.0);
         this.vx = (dx / dist) * this.speed;
         this.vz = (dz / dist) * this.speed;
+
+        // Orient the cylinder to face the travel direction
+        // The geometry is pre-rotated 90° around Z so it lies along +X.
+        // Setting rotation.y = atan2(vx, vz) points +X toward the velocity vector.
+        this.mesh.rotation.y = Math.atan2(this.vx, this.vz);
 
         return this;
       }
@@ -461,28 +466,27 @@
         this.mesh.position.x += this.vx;
         this.mesh.position.z += this.vz;
         
-        // Color transition: red-orange (start) → copper (end)
-        // Progress: 1.0 (just fired) → 0.0 (about to expire)
-        const progress = this.life / this.maxLife;
-        
-        // Red-orange: 0xFF4500 (RGB: 255, 69, 0)
-        // Copper: 0xB87333 (RGB: 184, 115, 51)
-        const startColor = { r: 255, g: 69, b: 0 };
-        const endColor = { r: 184, g: 115, b: 51 };
-        
-        const r = Math.floor(startColor.r * progress + endColor.r * (1 - progress));
-        const g = Math.floor(startColor.g * progress + endColor.g * (1 - progress));
-        const b = Math.floor(startColor.b * progress + endColor.b * (1 - progress));
-        
-        const currentColor = (r << 16) | (g << 8) | b;
-        this.mesh.material.color.setHex(currentColor);
-        
-        // Update glow position and fade it
+        // Keep hot static color — no transition; bullets are lethal and fast.
+        // Glow fades out gently as the bullet ages.
         if (this.glow) {
           this.glow.position.copy(this.mesh.position);
-          this.glow.material.opacity = 0.4 * (this.life / 60);
-          // Also update glow color to match bullet
-          this.glow.material.color.setHex(currentColor);
+          this.glow.material.opacity = 0.4 * (this.life / (this.maxLife || 60));
+        }
+
+        // TRACER TRAIL: every 2-3 frames, drop a tiny fading sphere at current position.
+        this._trailFrame = (this._trailFrame || 0) + 1;
+        if (this._trailFrame % 3 === 0 && window.bulletTrails) {
+          const trailGeo = new THREE.SphereGeometry(0.035, 4, 4);
+          const trailMat = new THREE.MeshBasicMaterial({
+            color: this.mesh.material.color.getHex(),
+            transparent: true,
+            opacity: 0.55
+          });
+          const trailDot = new THREE.Mesh(trailGeo, trailMat);
+          trailDot.position.copy(this.mesh.position);
+          scene.add(trailDot);
+          // Expire after ~150ms (≈9 frames at 60fps)
+          window.bulletTrails.push({ mesh: trailDot, life: 9 });
         }
         
         this.life--;

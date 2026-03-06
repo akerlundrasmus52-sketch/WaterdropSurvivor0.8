@@ -607,6 +607,15 @@
         d.mesh.material.dispose();
       });
       bloodDrips = [];
+      // Clean up bullet tracer trails
+      if (window.bulletTrails) {
+        window.bulletTrails.forEach(t => {
+          scene.remove(t.mesh);
+          t.mesh.geometry.dispose();
+          t.mesh.material.dispose();
+        });
+        window.bulletTrails = [];
+      }
       // Call optional cleanup() on each managed animation before clearing, so any
       // Three.js objects they own (e.g. air blood pool meshes/geometries) are
       // properly removed from the scene and disposed instead of leaking across runs.
