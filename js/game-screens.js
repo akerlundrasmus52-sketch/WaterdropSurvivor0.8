@@ -1498,7 +1498,7 @@
           }
           if (typeof showExpeditionsMenu === 'function') showExpeditionsMenu(); else showQuestHall();
         },
-        shop:                () => { overlay.remove(); showProgressionShop(); },
+        shop:                () => { overlay.remove(); showGachaStore(); },
         prestige:            () => {
           overlay.remove();
           if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest10b_usePrestige') {
@@ -1540,6 +1540,7 @@
           showProgressionShop();
         },
         workshop:            () => { overlay.remove(); showWorkshop(); },
+        prismReliquary:      () => { overlay.remove(); showPrismReliquary(); },
       };
 
       for (const [buildingId, building] of Object.entries(CAMP_BUILDINGS)) {
@@ -1745,6 +1746,467 @@
       
       playSound('levelup');
       showProgressionShop(); // Refresh the shop
+    }
+
+    // ============================================================
+    // PRISM RELIQUARY — Gem Slotting UI
+    // ============================================================
+    function showPrismReliquary() {
+      if (!window.GemSystem) return;
+      const GS = window.GemSystem;
+
+      // Remove any existing overlay
+      const existing = document.getElementById('prism-reliquary-overlay');
+      if (existing) existing.remove();
+
+      const overlay = document.createElement('div');
+      overlay.id = 'prism-reliquary-overlay';
+      overlay.className = 'prism-overlay';
+
+      // Header
+      const header = document.createElement('div');
+      header.className = 'prism-header';
+      header.innerHTML = `<span class="prism-title">💎 PRISM RELIQUARY</span>
+        <span class="prism-subtitle">Slot Cut Gems into weapons and companions</span>`;
+      overlay.appendChild(header);
+
+      const closeBtn = document.createElement('button');
+      closeBtn.className = 'prism-close-btn';
+      closeBtn.textContent = '✕';
+      closeBtn.onclick = () => overlay.remove();
+      overlay.appendChild(closeBtn);
+
+      // Raw Gem counts
+      const rawGemBar = document.createElement('div');
+      rawGemBar.className = 'prism-rawgem-bar';
+      const rg = saveData.rawGems || {};
+      rawGemBar.innerHTML = Object.entries(GS.GEM_TYPES).map(([type, def]) =>
+        `<span class="prism-rawgem" style="color:${def.color};">${def.icon} <b>${rg[type] || 0}</b> Raw ${def.name}</span>`
+      ).join('');
+      overlay.appendChild(rawGemBar);
+
+      // Two columns: weapon slot + companion slot
+      const cols = document.createElement('div');
+      cols.className = 'prism-cols';
+
+      // ── Weapon column ──
+      const weaponCol = _buildPrismItemColumn(GS, 'weapon', saveData.equippedGear.weapon || 'gun', () => {
+        // Refresh
+        const existing2 = document.getElementById('prism-reliquary-overlay');
+        if (existing2) existing2.remove();
+        showPrismReliquary();
+      });
+      cols.appendChild(weaponCol);
+
+      // ── Companion column ──
+      const companionId = saveData.selectedCompanion || 'greyAlien';
+      const companionCol = _buildPrismItemColumn(GS, 'companion', companionId, () => {
+        const existing2 = document.getElementById('prism-reliquary-overlay');
+        if (existing2) existing2.remove();
+        showPrismReliquary();
+      });
+      cols.appendChild(companionCol);
+      overlay.appendChild(cols);
+
+      // ── Gem Inventory (unslotted gems) ──
+      const invHeader = document.createElement('div');
+      invHeader.className = 'prism-inv-header';
+      invHeader.textContent = '✂️ Cut Gem Inventory (click a gem to select, then click a slot to equip)';
+      overlay.appendChild(invHeader);
+
+      const invGrid = document.createElement('div');
+      invGrid.className = 'prism-inv-grid';
+      invGrid.id = 'prism-inv-grid';
+
+      let _selectedGemId = null;
+
+      function renderInvGrid() {
+        invGrid.innerHTML = '';
+        const unslotted = GS.getUnslottedGems();
+        if (unslotted.length === 0) {
+          invGrid.innerHTML = '<div style="color:#888;padding:12px;text-align:center;">No cut gems — open chests at the Shop to get some!</div>';
+          return;
+        }
+        unslotted.forEach(gem => {
+          const typeDef = GS.getGemTypeDef(gem.type);
+          const rarIdx = GS.getRarityIndex(gem.rarity);
+          const rarDef = GS.getCutGemRarities()[rarIdx] || GS.getCutGemRarities()[0];
+          const card = document.createElement('div');
+          card.className = 'prism-gem-card' + (gem.id === _selectedGemId ? ' selected' : '');
+          card.style.setProperty('--gem-color', rarDef.color);
+          card.style.setProperty('--gem-border', rarDef.border);
+          card.innerHTML = `<span class="prism-gem-icon">${typeDef.icon}</span>
+            <span class="prism-gem-name" style="color:${rarDef.color}">${rarDef.name}</span>
+            <span class="prism-gem-type">${typeDef.name}</span>`;
+          card.title = Object.entries(typeDef.stats).map(([stat, vals]) => `+${vals[rarIdx]} ${stat}`).join('\n');
+          card.onclick = () => {
+            _selectedGemId = gem.id === _selectedGemId ? null : gem.id;
+            // Update selected gem in slot UI
+            overlay.querySelectorAll('.prism-slot').forEach(slot => {
+              slot.setAttribute('data-pending-gem', _selectedGemId || '');
+            });
+            renderInvGrid();
+          };
+          invGrid.appendChild(card);
+        });
+      }
+
+      renderInvGrid();
+      overlay.appendChild(invGrid);
+
+      // Wire slots: clicking an empty slot with selected gem equips it
+      overlay.querySelectorAll('.prism-slot').forEach(slot => {
+        slot.addEventListener('click', () => {
+          if (!_selectedGemId) return;
+          const itemType = slot.dataset.itemType;
+          const itemId = slot.dataset.itemId;
+          const slotIdx = parseInt(slot.dataset.slotIdx, 10);
+          const currentGemId = slot.dataset.gemId;
+          if (currentGemId) {
+            // Unslot existing gem first
+            GS.unslotGem(currentGemId);
+          }
+          if (GS.slotGem(_selectedGemId, itemType, itemId, slotIdx)) {
+            _triggerGemSlotEffect(slot, _selectedGemId);
+            _selectedGemId = null;
+            const existing2 = document.getElementById('prism-reliquary-overlay');
+            if (existing2) existing2.remove();
+            showPrismReliquary();
+          }
+        });
+      });
+
+      document.body.appendChild(overlay);
+    }
+
+    /** Format a gem bonus value: percentages for 0–1 decimals, integers otherwise. */
+    function _formatGemBonusValue(val) {
+      if (typeof val === 'number' && val > 0 && val < 1) {
+        return (val * 100).toFixed(0) + '%';
+      }
+      return val;
+    }
+
+    function _buildPrismItemColumn(GS, itemType, itemId, onRefresh) {
+      const col = document.createElement('div');
+      col.className = 'prism-item-col';
+
+      const icons = { weapon: '⚔️', companion: '🐾' };
+      const labels = { weapon: 'Weapon: ' + itemId, companion: 'Companion: ' + itemId };
+      const slotCount = itemType === 'companion'
+        ? GS.getCompanionSlotCount(itemId)
+        : GS.getWeaponSlotCount(itemId);
+      const slots = GS.getSlots(itemType, itemId);
+      const bonuses = GS.computeGemBonuses(itemType, itemId);
+
+      const colHeader = document.createElement('div');
+      colHeader.className = 'prism-col-header';
+      colHeader.innerHTML = `${icons[itemType] || ''} <b>${labels[itemType]}</b>
+        <span style="color:#aaa;font-size:11px;"> (${slotCount} slots)</span>`;
+      col.appendChild(colHeader);
+
+      // Slots row
+      const slotsRow = document.createElement('div');
+      slotsRow.className = 'prism-slots-row';
+      for (let i = 0; i < slotCount; i++) {
+        const gemId = slots[i] || null;
+        const slotEl = document.createElement('div');
+        slotEl.className = 'prism-slot' + (gemId ? ' occupied' : ' empty');
+        slotEl.dataset.itemType = itemType;
+        slotEl.dataset.itemId = itemId;
+        slotEl.dataset.slotIdx = i;
+        slotEl.dataset.gemId = gemId || '';
+
+        if (gemId) {
+          const gem = (saveData.cutGems || []).find(g => g.id === gemId);
+          if (gem) {
+            const typeDef = GS.getGemTypeDef(gem.type);
+            const rarIdx = GS.getRarityIndex(gem.rarity);
+            const rarDef = GS.getCutGemRarities()[rarIdx] || GS.getCutGemRarities()[0];
+            slotEl.style.setProperty('--gem-color', rarDef.color);
+            slotEl.innerHTML = `<span class="prism-slot-icon">${typeDef.icon}</span>
+              <span class="prism-slot-rarity" style="color:${rarDef.color}">${rarDef.name[0]}</span>`;
+            slotEl.title = rarDef.name + ' ' + typeDef.name + '\n' +
+              Object.entries(typeDef.stats).map(([s, v]) => `+${v[rarIdx]} ${s}`).join('\n') +
+              '\n(Click to unslot)';
+            slotEl.onclick = () => { GS.unslotGem(gemId); onRefresh(); };
+          }
+        } else {
+          slotEl.innerHTML = '<span class="prism-slot-empty-icon">○</span>';
+          slotEl.title = 'Empty slot — select a gem from inventory below';
+        }
+        slotsRow.appendChild(slotEl);
+      }
+      col.appendChild(slotsRow);
+
+      // Bonuses
+      const bonusKeys = Object.keys(bonuses);
+      if (bonusKeys.length > 0) {
+        const bonusDiv = document.createElement('div');
+        bonusDiv.className = 'prism-bonuses';
+        bonusDiv.innerHTML = '<span style="color:#ffd700;font-size:11px;">ACTIVE BONUSES:</span><br>' +
+          bonusKeys.map(k => `<span class="prism-bonus-line">+${_formatGemBonusValue(bonuses[k])} <b>${k}</b></span>`).join('');
+        col.appendChild(bonusDiv);
+      }
+
+      return col;
+    }
+
+    function _triggerGemSlotEffect(slotEl, gemId) {
+      // Get gem type for color
+      const gem = (saveData.cutGems || []).find(g => g.id === gemId);
+      if (!gem || !window.GemSystem) return;
+      const typeDef = window.GemSystem.getGemTypeDef(gem.type);
+      const rarIdx = window.GemSystem.getRarityIndex(gem.rarity);
+      const rarDef = window.GemSystem.getCutGemRarities()[rarIdx];
+      const gemColor = rarDef ? rarDef.color : '#ffffff';
+
+      // Flash the slot white
+      slotEl.classList.add('gem-flash');
+      setTimeout(() => slotEl.classList.remove('gem-flash'), 600);
+
+      // Shockwave ring
+      const shock = document.createElement('div');
+      shock.className = 'gem-shockwave';
+      shock.style.setProperty('--shock-color', gemColor);
+      slotEl.appendChild(shock);
+      setTimeout(() => shock.remove(), 700);
+
+      // Stat text shake with rarity color
+      const bonusDiv = slotEl.closest('.prism-item-col')?.querySelector('.prism-bonuses');
+      if (bonusDiv) {
+        bonusDiv.style.color = gemColor;
+        bonusDiv.classList.add('stat-shake');
+        setTimeout(() => {
+          bonusDiv.style.color = '';
+          bonusDiv.classList.remove('stat-shake');
+        }, 1500);
+      }
+
+      // Play sound
+      if (typeof playSound === 'function') playSound('levelup');
+    }
+
+    // ============================================================
+    // GACHA STORE — 4 Chest Tiers
+    // ============================================================
+    function showGachaStore() {
+      if (!window.GemSystem) return;
+      const GS = window.GemSystem;
+
+      const existing = document.getElementById('gacha-store-overlay');
+      if (existing) existing.remove();
+
+      const overlay = document.createElement('div');
+      overlay.id = 'gacha-store-overlay';
+      overlay.className = 'gacha-overlay';
+
+      const closeBtn = document.createElement('button');
+      closeBtn.className = 'gacha-close-btn';
+      closeBtn.textContent = '✕';
+      closeBtn.onclick = () => overlay.remove();
+      overlay.appendChild(closeBtn);
+
+      const title = document.createElement('div');
+      title.className = 'gacha-title';
+      title.innerHTML = '🎁 THE SHOP — LOOT CHESTS';
+      overlay.appendChild(title);
+
+      const subtitle = document.createElement('div');
+      subtitle.className = 'gacha-subtitle';
+      subtitle.textContent = 'Open chests to receive powerful gems, resources, and gold';
+      overlay.appendChild(subtitle);
+
+      // Currency display
+      const currencyBar = document.createElement('div');
+      currencyBar.className = 'gacha-currency-bar';
+      currencyBar.id = 'gacha-currency-bar';
+      _refreshGachaCurrencyBar(currencyBar);
+      overlay.appendChild(currencyBar);
+
+      // Chest grid
+      const chestGrid = document.createElement('div');
+      chestGrid.className = 'gacha-chest-grid';
+
+      Object.entries(GS.CHEST_TIERS).forEach(([tierId, tier]) => {
+        const card = document.createElement('div');
+        card.className = 'gacha-chest-card';
+        card.style.setProperty('--chest-color', tier.color);
+        card.style.setProperty('--chest-glow', tier.glowColor);
+        card.style.setProperty('--chest-border', tier.border);
+
+        const canAfford = GS.canAffordChest(tierId);
+        const costStr = _getChestCostStr(tier.cost);
+
+        card.innerHTML = `
+          <div class="gacha-chest-emoji">${tier.emoji}</div>
+          <div class="gacha-chest-name" style="color:${tier.color}">${tier.name}</div>
+          <div class="gacha-chest-desc">${tier.description}</div>
+          <div class="gacha-chest-cost">${costStr}</div>
+          <button class="gacha-open-btn ${canAfford ? '' : 'disabled'}" ${canAfford ? '' : 'disabled'}>
+            ${canAfford ? 'OPEN' : 'CAN\'T AFFORD'}
+          </button>`;
+
+        if (canAfford) {
+          card.querySelector('.gacha-open-btn').onclick = () => {
+            const drops = GS.openChest(tierId);
+            if (drops && drops.length > 0) {
+              overlay.remove();
+              _runChestOpenAnimation(tierId, tier, drops, () => {
+                showGachaStore(); // Re-open store after animation
+              });
+            }
+          };
+        }
+        chestGrid.appendChild(card);
+      });
+      overlay.appendChild(chestGrid);
+
+      document.body.appendChild(overlay);
+    }
+
+    function _refreshGachaCurrencyBar(bar) {
+      const rg = saveData.rawGems || {};
+      const res = saveData.resources || {};
+      bar.innerHTML =
+        `<span>🪙 <b>${saveData.gold || 0}</b> Gold</span>` +
+        `<span>✨ <b>${res.magicEssence || 0}</b> Essence</span>` +
+        `<span>🔴 <b>${rg.ruby || 0}</b></span>` +
+        `<span>🔵 <b>${rg.sapphire || 0}</b></span>` +
+        `<span>🟢 <b>${rg.emerald || 0}</b></span>` +
+        `<span>🟣 <b>${rg.void || 0}</b> Raw Gems</span>`;
+    }
+
+    function _getChestCostStr(cost) {
+      if (cost.type === 'gold') return `🪙 ${cost.amount} Gold`;
+      if (cost.type === 'magicEssence') return `✨ ${cost.amount} Magic Essence`;
+      if (cost.type === 'rawGems') {
+        const icons = { ruby: '🔴', sapphire: '🔵', emerald: '🟢', void: '🟣' };
+        return `${icons[cost.gemType] || '💎'} ${cost.amount} Raw ${cost.gemType.charAt(0).toUpperCase() + cost.gemType.slice(1)}`;
+      }
+      return 'Free';
+    }
+
+    // ── Chest Opening Animation (4 Phases) ──────────────────────
+    function _runChestOpenAnimation(tierId, tier, drops, onComplete) {
+      // Apply drops were already added in GS.openChest — just animate the reveal
+      updateGoldDisplays();
+
+      const stage = document.createElement('div');
+      stage.id = 'chest-anim-stage';
+      stage.className = 'chest-stage';
+      document.body.appendChild(stage);
+
+      // Background overlay
+      const bg = document.createElement('div');
+      bg.className = 'chest-stage-bg';
+      stage.appendChild(bg);
+
+      // ── PHASE 1: Chest appears and rattles (0–1.5s) ──
+      const chestWrap = document.createElement('div');
+      chestWrap.className = 'chest-wrap';
+      const chestEl = document.createElement('div');
+      chestEl.className = 'chest-icon chest-rattle';
+      chestEl.style.setProperty('--chest-glow', tier.glowColor);
+      chestEl.textContent = tier.emoji;
+      chestWrap.appendChild(chestEl);
+
+      // Keyhole sparks (anticipation particles)
+      for (let i = 0; i < 12; i++) {
+        const spark = document.createElement('div');
+        spark.className = 'chest-spark';
+        const angle = (i / 12) * 360;
+        const dist = 28 + Math.random() * 18;
+        spark.style.cssText = `--spark-angle:${angle}deg;--spark-dist:${dist}px;animation-delay:${(Math.random() * 1.2).toFixed(2)}s`;
+        chestWrap.appendChild(spark);
+      }
+      stage.appendChild(chestWrap);
+
+      setTimeout(() => {
+        // ── PHASE 2: Flash + light rays (1.5s) ──
+        chestEl.classList.remove('chest-rattle');
+        chestEl.classList.add('chest-burst-shake');
+
+        const flash = document.createElement('div');
+        flash.className = 'chest-flash';
+        stage.appendChild(flash);
+
+        const rays = document.createElement('div');
+        rays.className = 'chest-rays';
+        rays.style.setProperty('--ray-color', tier.glowColor);
+        stage.appendChild(rays);
+
+        setTimeout(() => {
+          flash.remove();
+          chestEl.classList.add('chest-hide');
+
+          // ── PHASE 3: Loot arc (2s) ──
+          const lootRow = document.createElement('div');
+          lootRow.className = 'chest-loot-row';
+          stage.appendChild(lootRow);
+
+          drops.forEach((drop, idx) => {
+            const lootCard = document.createElement('div');
+            lootCard.className = 'chest-loot-card chest-loot-arc';
+            lootCard.style.setProperty('--loot-idx', idx);
+            lootCard.style.setProperty('--loot-count', drops.length);
+            lootCard.style.setProperty('--loot-color', drop.color || '#ffffff');
+            lootCard.innerHTML = `<span class="chest-loot-icon">${drop.icon}</span>`;
+            lootCard.dataset.rarity = drop.rarity || 'common';
+            lootRow.appendChild(lootCard);
+
+            // ── PHASE 4: Reveal on land ──
+            const landDelay = 600 + idx * 220;
+            setTimeout(() => {
+              lootCard.classList.add('chest-loot-land');
+              lootCard.classList.add('chest-loot-flip');
+              lootCard.innerHTML += `<span class="chest-loot-label" style="color:${drop.color || '#fff'}">${drop.label}</span>`;
+
+              const rarity = drop.rarity || 'common';
+              const highRarities = ['epic', 'legendary', 'mythic'];
+              if (highRarities.includes(rarity)) {
+                _triggerRarityConfetti(lootCard, rarity);
+                if (typeof playSound === 'function') playSound('levelup');
+              }
+            }, landDelay);
+          });
+
+          // Done — show close button after all cards land
+          const totalAnimTime = 600 + drops.length * 220 + 800;
+          setTimeout(() => {
+            const closeLootBtn = document.createElement('button');
+            closeLootBtn.className = 'chest-close-btn';
+            closeLootBtn.textContent = 'COLLECT';
+            closeLootBtn.onclick = () => {
+              stage.remove();
+              if (onComplete) onComplete();
+            };
+            stage.appendChild(closeLootBtn);
+          }, totalAnimTime);
+
+        }, 600); // Phase 2 → 3 transition
+      }, 1500); // Phase 1 → 2 transition
+    }
+
+    function _triggerRarityConfetti(anchor, rarity) {
+      const colors = {
+        epic: '#aa44ff',
+        legendary: '#f39c12',
+        mythic: '#ff4444'
+      };
+      const color = colors[rarity] || '#ffffff';
+      const rect = anchor.getBoundingClientRect();
+      for (let i = 0; i < 20; i++) {
+        const c = document.createElement('div');
+        c.className = 'rarity-confetti';
+        c.style.setProperty('--conf-color', color);
+        c.style.setProperty('--conf-x', (rect.left + rect.width / 2 + (Math.random() - 0.5) * 120) + 'px');
+        c.style.setProperty('--conf-y', (rect.top + (Math.random() - 0.5) * 60) + 'px');
+        c.style.setProperty('--conf-rot', Math.floor(Math.random() * 360) + 'deg');
+        c.style.setProperty('--conf-delay', (Math.random() * 0.4).toFixed(2) + 's');
+        document.body.appendChild(c);
+        setTimeout(() => c.remove(), 2000);
+      }
     }
     
     function setupMenus() {
@@ -2324,6 +2786,14 @@
           try { updateCampScreen(); } catch(e) { console.error('[Camp] updateCampScreen error:', e); }
           // Refresh special attack loadout buttons for the new run
           if (window.GameRageCombat) window.GameRageCombat.refreshLoadout(saveData);
+          // Prism Reliquary newly unlocked? Show notification
+          if (window._prismReliquaryNewlyUnlocked) {
+            window._prismReliquaryNewlyUnlocked = false;
+            setTimeout(() => {
+              if (typeof showStatChange === 'function')
+                showStatChange('💎 PRISM RELIQUARY UNLOCKED! Visit it in camp to slot gems!', 'high');
+            }, 1500);
+          }
           // Safety retries: if CampWorld didn't activate (e.g. scene build threw), retry
           // with increasing delays so the 3D camp shows reliably rather than falling back.
           if (window.CampWorld && !window.CampWorld.isActive) {

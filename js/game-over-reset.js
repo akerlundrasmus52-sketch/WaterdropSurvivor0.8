@@ -58,6 +58,16 @@
       saveData.totalKills += playerStats.kills; // Track cumulative kills
       if (survivalTime > saveData.bestTime) saveData.bestTime = survivalTime;
       if (playerStats.kills > saveData.bestKills) saveData.bestKills = playerStats.kills;
+      
+      // ── Prism Reliquary: unlock after surviving 10 minutes (600s cumulative best) ──
+      if (saveData.bestTime >= 600 &&
+          saveData.campBuildings &&
+          saveData.campBuildings.prismReliquary &&
+          !saveData.campBuildings.prismReliquary.unlocked) {
+        saveData.campBuildings.prismReliquary.unlocked = true;
+        // Notify player when they reach camp
+        window._prismReliquaryNewlyUnlocked = true;
+      }
       // Add account XP for kills this run (1 XP per kill) + run completion bonus (25 XP)
       if (playerStats.kills > 0) addAccountXP(playerStats.kills);
       addAccountXP(25); // Run completion bonus
