@@ -742,9 +742,32 @@
     }
 
     // ── Account Level-Up Curtain Animation ──────────────────────
+    // _campFromRun: set by goto-camp-btn handler so curtain waits 3 s after
+    // returning from a run rather than firing instantly (cosmetic only—rewards
+    // are already saved before this flag is read).
+    let _curtainFromRunPending = null; // holds {newLevel,rewardLabel} if waiting
     let _curtainTimer = null;
     let _curtainDismissHandler = null;
+
     function showAccountLevelUpCurtain(newLevel, rewardLabel) {
+      // If the player just returned from a run, queue the curtain for 3 s
+      if (window._campFromRun) {
+        window._campFromRun = false;
+        // Cancel any previously queued curtain so rapid level-ups don't stack
+        if (_curtainFromRunPending && _curtainFromRunPending.timer) {
+          clearTimeout(_curtainFromRunPending.timer);
+        }
+        const timer = setTimeout(function() {
+          _curtainFromRunPending = null;
+          _showCurtainNow(newLevel, rewardLabel);
+        }, 3000);
+        _curtainFromRunPending = { newLevel, rewardLabel, timer };
+        return;
+      }
+      _showCurtainNow(newLevel, rewardLabel);
+    }
+
+    function _showCurtainNow(newLevel, rewardLabel) {
       const curtain = document.getElementById('account-levelup-curtain');
       if (!curtain) return;
       // Clear any in-progress curtain
@@ -765,7 +788,8 @@
         : '';
       const isMilestone = rankTitle && rankTitle !== prevTitle;
 
-      curtain.classList.remove('curtain-enter', 'curtain-exit', 'curtain-milestone');
+      curtain.classList.remove('curtain-teaser', 'curtain-enter', 'curtain-enter-done',
+                               'curtain-exit', 'curtain-milestone');
       curtain.innerHTML = [
         '<div class="curtain-sunburst"></div>',
         '<div class="curtain-icon">' + (isMilestone ? '⭐' : '🏆') + '</div>',
@@ -775,15 +799,33 @@
         `<div class="curtain-reward-text">${rewardLabel} · Tap to dismiss</div>`
       ].join('');
 
-      // Force reflow so animation restarts
-      void curtain.offsetWidth;
-      curtain.classList.add('curtain-enter');
+      // ── Phase 1: teaser peek (excitement builder) ─────────────
+      void curtain.offsetWidth; // force reflow
+      curtain.classList.add('curtain-teaser');
       if (isMilestone) curtain.classList.add('curtain-milestone');
+
+      // ── Phase 2: full spring-drop after teaser finishes ────────
+      setTimeout(function() {
+        curtain.classList.remove('curtain-teaser');
+        void curtain.offsetWidth;
+        curtain.classList.add('curtain-enter');
+        if (isMilestone) curtain.classList.add('curtain-milestone');
+
+        // Once drop animation ends, switch to continuous border-glow pulse
+        setTimeout(function() {
+          curtain.classList.remove('curtain-enter');
+          curtain.classList.add('curtain-enter-done');
+          if (isMilestone) curtain.classList.add('curtain-milestone');
+        }, 700); // slightly longer than curtain-drop animation duration
+
+      }, 400); // teaser duration
 
       // Dopamine: confetti + sunburst on milestone rank-ups
       if (isMilestone && window.DopamineSystem && window.DopamineSystem.RewardJuice) {
-        window.DopamineSystem.RewardJuice.spawnConfetti(curtain);
-        window.DopamineSystem.RewardJuice.addSunburst(curtain);
+        setTimeout(function() {
+          window.DopamineSystem.RewardJuice.spawnConfetti(curtain);
+          window.DopamineSystem.RewardJuice.addSunburst(curtain);
+        }, 500);
         // Brief time dilation pause for drama
         if (window.DopamineSystem.TimeDilation) {
           window.DopamineSystem.TimeDilation.set(0.05, 6);
@@ -791,7 +833,7 @@
         }
       }
 
-      // Rarity escalation reveal: screen flash fires immediately; escalation + full burst fire once curtain is down
+      // Rarity escalation reveal: fires after panel has fully landed
       const _rarity = _getLevelUpRarity(newLevel);
       _spawnLevelUpScreenFlash(_rarity);
       setTimeout(function() {
@@ -805,14 +847,14 @@
           _spawnLevelUpRays(curtain, _rarity);
           _spawnLevelUpConfetti(curtain, _rarity);
         }
-      }, 500);
+      }, 900); // wait for teaser + drop
 
       // Heavy sound effect
       if (typeof playSound === 'function') playSound('levelup');
 
       function dismissCurtain() {
         if (_curtainTimer) { clearTimeout(_curtainTimer); _curtainTimer = null; }
-        curtain.classList.remove('curtain-enter', 'curtain-milestone');
+        curtain.classList.remove('curtain-enter', 'curtain-enter-done', 'curtain-milestone');
         curtain.classList.add('curtain-exit');
         curtain.removeEventListener('click', dismissCurtain);
         _curtainDismissHandler = null;
