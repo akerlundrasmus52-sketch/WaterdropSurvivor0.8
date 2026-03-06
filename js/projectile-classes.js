@@ -615,19 +615,9 @@
               enemy.takeDamage(Math.floor(dmg), false, hitDmgType, { vx: this.vx, vz: this.vz });
             }
             
-            // ── SNIPER: massive exit wound on opposite side ───────────────────────
+            // ── SNIPER: hit-stop for weight, no separate exit wound here
+            // (exit wound is emitted via takeDamage() in enemy-class.js using the hitDir param)
             if (this.isSniperRifle && !enemy.isDead) {
-              const exitWoundPos = new THREE.Vector3(
-                enemy.mesh.position.x + this.vx * 0.9,
-                enemy.mesh.position.y + 0.3,
-                enemy.mesh.position.z + this.vz * 0.9
-              );
-              const bulletDir = new THREE.Vector3(this.vx, 0, this.vz).normalize();
-              if (window.BloodSystem) {
-                window.BloodSystem.emitExitWound(exitWoundPos, bulletDir, 70, { speed: 0.55, spread: 0.6 });
-                window.BloodSystem.emitBurst(exitWoundPos, 40, { spreadXZ: 1.2, spreadY: 0.4 });
-              }
-              spawnParticles(exitWoundPos, 0xCC0000, 8);
               if (window.triggerHitStop) window.triggerHitStop(45);
             }
             

@@ -883,16 +883,21 @@
           const speedBonus = 1 + (0.25 * playerStats.boilingPoint);
           const cdMult = 1 / (1 + (0.20 * playerStats.boilingPoint));
           player._boilingBaseSpeed = playerStats.walkSpeed;
-          playerStats.walkSpeed *= speedBonus;
-          weapons.gun.cooldown    *= cdMult;
+          player._boilingBaseCdGun   = weapons.gun.cooldown;
+          player._boilingBaseCdDB    = weapons.doubleBarrel.cooldown;
+          player._boilingBaseCdSniper = weapons.sniperRifle.cooldown;
+          playerStats.walkSpeed       *= speedBonus;
+          weapons.gun.cooldown         *= cdMult;
           weapons.doubleBarrel.cooldown *= cdMult;
           if (weapons.sniperRifle.active) weapons.sniperRifle.cooldown *= cdMult;
           spawnParticles(player.mesh.position, 0xFF4400, 8);
           if (typeof showStatChange === 'function') showStatChange('🔥 BOILING POINT!');
         } else if (!isLowHp && player._boilingPointActive) {
           player._boilingPointActive = false;
-          if (player._boilingBaseSpeed) { playerStats.walkSpeed = player._boilingBaseSpeed; player._boilingBaseSpeed = null; }
-          // Restore cooldowns on reset (approximate — reinitialised next run)
+          if (player._boilingBaseSpeed)   { playerStats.walkSpeed = player._boilingBaseSpeed; player._boilingBaseSpeed = null; }
+          if (player._boilingBaseCdGun)   { weapons.gun.cooldown = player._boilingBaseCdGun; player._boilingBaseCdGun = null; }
+          if (player._boilingBaseCdDB)    { weapons.doubleBarrel.cooldown = player._boilingBaseCdDB; player._boilingBaseCdDB = null; }
+          if (player._boilingBaseCdSniper){ weapons.sniperRifle.cooldown = player._boilingBaseCdSniper; player._boilingBaseCdSniper = null; }
         }
       }
 
