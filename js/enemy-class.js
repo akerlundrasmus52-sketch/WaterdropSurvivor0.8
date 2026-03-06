@@ -26,6 +26,14 @@
     const _tmpHitDir = new THREE.Vector3();
     // Module-scoped temp vector for head look-at target — avoids per-frame allocation in update()
     const _tmpHeadTarget = new THREE.Vector3();
+    // Additional pre-allocated scratch vectors for death-animation hot paths
+    const _tmpExitDir  = new THREE.Vector3(); // dieStandard exitDir / bone-break exits
+    const _tmpCrawlDir = new THREE.Vector3(); // CRAWL TRAIL direction
+    const _tmpRollDir  = new THREE.Vector3(); // BARREL ROLL direction
+    const _tmpNeckDir  = new THREE.Vector3(); // DECAPITATION neck spray direction
+    const _tmpMistDir  = new THREE.Vector3(); // MIST death particle direction
+    const _tmpSlashDir = new THREE.Vector3(); // slash attack direction
+    const _tmpHeadVel  = new THREE.Vector3(); // head-roll velocity on decapitation
 
     // ── Screen Blood Splatter ─────────────────────────────────────────────────────
     // Triggered when a point-blank meat chunk reaches camera proximity.
@@ -3646,7 +3654,8 @@
           spawnParticles(deathPos, 0x8B0000, 12);
           spawnParticles(deathPos, 0xCC0000, 8);
           if (window.BloodSystem) {
-            const exitDir = new THREE.Vector3((Math.random()-0.5)*2, 0, (Math.random()-0.5)*2).normalize();
+            _tmpExitDir.set((Math.random()-0.5)*2, 0, (Math.random()-0.5)*2).normalize();
+            const exitDir = _tmpExitDir;
             const exitPos = deathPos.clone();
             exitPos.x += exitDir.x * 0.5; exitPos.z += exitDir.z * 0.5;
             window.BloodSystem.emitExitWound(exitPos, exitDir, 80, { spread: 0.6, speed: 0.4 });
@@ -3702,7 +3711,8 @@
           crawlBody.position.y = 0.15;
           crawlBody.scale.y = 0.3;
           scene.add(crawlBody);
-          const crawlDir = new THREE.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5).normalize();
+          _tmpCrawlDir.set(Math.random() - 0.5, 0, Math.random() - 0.5).normalize();
+          const crawlDir = _tmpCrawlDir;
           let crawlLife = 80;
           if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
             managedAnimations.push({ update(_dt) {
@@ -3744,7 +3754,8 @@
           rollBody.position.y = 0.2;
           rollBody.scale.y = 0.35;
           scene.add(rollBody);
-          const rollDir = new THREE.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5).normalize();
+          _tmpRollDir.set(Math.random() - 0.5, 0, Math.random() - 0.5).normalize();
+          const rollDir = _tmpRollDir;
           let rollLife = 90;
           if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
             managedAnimations.push({ update(_dt) {
@@ -4456,7 +4467,8 @@
           window.BloodSystem.emitPulse(neckPos, { pulses: 4, perPulse: 400, interval: 200, spreadXZ: 1.8, color1: 0x8B0000, color2: 0xDC143C });
           // Neck stump blood fountain
           if (window.BloodSystem.emitThroatSpray) {
-            const neckDir = new THREE.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5).normalize();
+            _tmpNeckDir.set(Math.random() - 0.5, 0, Math.random() - 0.5).normalize();
+            const neckDir = _tmpNeckDir;
             window.BloodSystem.emitThroatSpray(neckPos, neckDir, { pulses: 5, perPulse: 200, arcHeight: 1.0 });
           }
           // Head bleed fountain
@@ -4478,11 +4490,12 @@
         scene.add(head);
         
         // Head velocity (flies backward and up with spin)
-        const headVel = new THREE.Vector3(
+        _tmpHeadVel.set(
           (Math.random() - 0.5) * 0.6,
           0.8 + Math.random() * 0.4, // Upward
           (Math.random() - 0.5) * 0.6
         );
+        const headVel = _tmpHeadVel;
         
         // Enhanced rotation speeds for dramatic spinning
         const rotSpeed = {
@@ -4589,7 +4602,8 @@
           spawnParticles(deathPos, 0xAA0000, 12);
           spawnParticles(deathPos, 0xCC2200, 8);
           if (window.BloodSystem) {
-            const mistDir = new THREE.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5).normalize();
+            _tmpMistDir.set(Math.random() - 0.5, 0, Math.random() - 0.5).normalize();
+            const mistDir = _tmpMistDir;
             window.BloodSystem.emitDroneMist(deathPos, mistDir, 120, { lineLength: 0.6 });
             window.BloodSystem.emitBurst(deathPos, 80, { spreadXZ: 0.6, spreadY: 0.15, minSize: 0.01, maxSize: 0.04, minLife: 20, maxLife: 45 });
           }
@@ -4720,7 +4734,8 @@
           spawnParticles(deathPos, 0xCC0000, 10);
           if (window.BloodSystem) {
             const slashAngle = Math.random() * Math.PI * 2;
-            const slashDir = new THREE.Vector3(Math.cos(slashAngle), 0, Math.sin(slashAngle)).normalize();
+            _tmpSlashDir.set(Math.cos(slashAngle), 0, Math.sin(slashAngle)).normalize();
+            const slashDir = _tmpSlashDir;
             window.BloodSystem.emitSwordSlash(deathPos, slashDir, 120);
             window.BloodSystem.emitBurst(deathPos, 60, { spreadXZ: 0.8, spreadY: 0.2, minSize: 0.03, maxSize: 0.09, minLife: 30, maxLife: 70 });
             window.BloodSystem.emitPulse(deathPos, { pulses: 3, perPulse: 80, interval: 200, spreadXZ: 0.5, arcDir: slashDir });
@@ -4752,7 +4767,8 @@
           spawnParticles(deathPos, 0x8B0000, 20);
           spawnParticles(deathPos, 0xCC0000, 12);
           const slashAngle = Math.random() * Math.PI * 2;
-          const slashDir = new THREE.Vector3(Math.cos(slashAngle), 0, Math.sin(slashAngle)).normalize();
+          _tmpSlashDir.set(Math.cos(slashAngle), 0, Math.sin(slashAngle)).normalize();
+          const slashDir = _tmpSlashDir;
           if (window.BloodSystem) {
             window.BloodSystem.emitSwordSlash(deathPos, slashDir, 150);
             window.BloodSystem.emitBurst(deathPos, 80, { spreadXZ: 1.0, spreadY: 0.3, minSize: 0.03, maxSize: 0.1, minLife: 30, maxLife: 80 });

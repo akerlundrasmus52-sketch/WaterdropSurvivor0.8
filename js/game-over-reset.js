@@ -612,14 +612,20 @@
       });
       expGems = [];
       
-      // Clean up blood decals
+      // Clean up blood decals (InstancedMesh path: park all slots; legacy array path: dispose)
+      if (window._bloodDecalIM) {
+        // Reset all slots by parking them below the floor
+        for (let _ri = 0; _ri < MAX_BLOOD_DECALS; _ri++) {
+          window._bdIMSpawnTime && (window._bdIMSpawnTime[_ri] = 0);
+        }
+        if (window._bloodDecalIM.instanceMatrix) window._bloodDecalIM.instanceMatrix.needsUpdate = true;
+      }
       bloodDecals.forEach(d => {
-        scene.remove(d);
-        d.geometry.dispose();
-        d.material.dispose();
+        if (d.parent) scene.remove(d);
+        if (d.geometry) d.geometry.dispose();
+        if (d.material) d.material.dispose();
       });
       bloodDecals = [];
-      bloodDecalIndex = 0; // Reset circular buffer index
       
       // Reset advanced blood particle system
       if (window.BloodSystem) window.BloodSystem.reset();
@@ -628,13 +634,20 @@
       window._lavaDamageTimer = 0;
       window._lavaSpoutTimer = 0;
       
-      // Clean up blood drips
+      // Clean up blood drips (return pooled meshes, dispose non-pooled)
       bloodDrips.forEach(d => {
-        scene.remove(d.mesh);
-        d.mesh.geometry.dispose();
-        d.mesh.material.dispose();
+        if (d._pool) {
+          d._pool.release(d.mesh);
+        } else {
+          if (d.mesh.parent) scene.remove(d.mesh);
+          if (d.mesh.geometry) d.mesh.geometry.dispose();
+          if (d.mesh.material) d.mesh.material.dispose();
+        }
       });
       bloodDrips = [];
+      // Release all active pool entries so they are ready for next run
+      if (window.meatChunkPool) window.meatChunkPool.releaseAll();
+      if (window.bloodDropPool) window.bloodDropPool.releaseAll();
       // Clean up bullet tracer trails
       if (window.bulletTrails) {
         window.bulletTrails.forEach(t => {

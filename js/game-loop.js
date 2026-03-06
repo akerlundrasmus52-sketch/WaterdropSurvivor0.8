@@ -2012,17 +2012,25 @@
                   spawnParticles(e.mesh.position, 0xCC0000, 4);
                   for (let mgc = 0; mgc < 4 && bloodDrips.length < MAX_BLOOD_DRIPS; mgc++) {
                     _ensureSharedGeo();
-                    const mgore = new THREE.Mesh(_sharedGoreGeo, _sharedGoreMats[mgc % 2]);
+                    let mgore;
+                    const _mgPool = window.meatChunkPool || null;
+                    if (_mgPool) {
+                      mgore = _mgPool.get();
+                      mgore.visible = true;
+                    } else {
+                      mgore = new THREE.Mesh(_sharedGoreGeo, _sharedGoreMats[mgc % 2]);
+                      scene.add(mgore);
+                    }
                     const mgScale = 0.9 + Math.random() * 1.1; // vary size via scale
                     mgore.scale.setScalar(mgScale);
                     mgore.position.copy(e.mesh.position);
-                    scene.add(mgore);
                     bloodDrips.push({
                       mesh: mgore,
                       velX: (Math.random() - 0.5) * 0.55,
                       velZ: (Math.random() - 0.5) * 0.55,
                       velY: 0.3 + Math.random() * 0.4,
-                      life: 60 + Math.floor(Math.random() * 25)
+                      life: 60 + Math.floor(Math.random() * 25),
+                      _pool: _mgPool
                     });
                   }
                   for (let gd = 0; gd < 3; gd++) {
