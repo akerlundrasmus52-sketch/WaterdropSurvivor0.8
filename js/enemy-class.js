@@ -27,6 +27,47 @@
     // Module-scoped temp vector for head look-at target — avoids per-frame allocation in update()
     const _tmpHeadTarget = new THREE.Vector3();
 
+    // ── Screen Blood Splatter ─────────────────────────────────────────────────────
+    // Triggered when a point-blank meat chunk reaches camera proximity.
+    // Injects temporary blob elements into #blood-splatter-overlay and removes them
+    // after the CSS animation finishes.
+    window._triggerBloodSplatter = (function() {
+      let _lastSplatter = 0;
+      return function triggerBloodSplatter() {
+        const _now = Date.now();
+        if (_now - _lastSplatter < 1800) return; // debounce 1.8 s
+        _lastSplatter = _now;
+        const _el = document.getElementById('blood-splatter-overlay');
+        if (!_el) return;
+        // Clear any leftover blobs from a previous splatter
+        _el.innerHTML = '';
+        // Spawn 6-12 irregular blobs scattered across the top half of the screen
+        const _count = 6 + Math.floor(Math.random() * 7);
+        for (let _i = 0; _i < _count; _i++) {
+          const _blob = document.createElement('div');
+          _blob.className = 'bso-blob';
+          const _w = 24 + Math.random() * 80;  // px width
+          const _h = _w * (0.55 + Math.random() * 0.9);
+          const _left = Math.random() * 92;     // % from left
+          const _top  = Math.random() * 55;     // % from top — top half
+          const _dur  = (2.2 + Math.random() * 1.4).toFixed(2);
+          const _del  = (Math.random() * 0.5).toFixed(2);
+          const _travel = Math.round(60 + Math.random() * 140);
+          _blob.style.cssText =
+            `width:${_w}px;height:${_h}px;` +
+            `left:${_left}%;top:${_top}%;` +
+            `--drip-dur:${_dur}s;--drip-delay:${_del}s;--drip-travel:${_travel}px;`;
+          _el.appendChild(_blob);
+        }
+        _el.classList.add('active');
+        // Remove class after animation ends so it can be re-triggered
+        setTimeout(() => {
+          _el.classList.remove('active');
+          _el.innerHTML = '';
+        }, 3500);
+      };
+    }());
+
     function spawnWaterParticle(pos) {
       if (!scene) return;
       let p = waterParticlePool.find(x => !x.active);
@@ -407,6 +448,34 @@
         // Lerped look-target for organic head tracking delay (avoids per-frame allocation)
         this._lerpedHeadTarget = new THREE.Vector3();
         this._lerpedHeadTargetInit = false;
+
+        // ── Hanging Guts System ───────────────────────────────────────────────────────
+        // 3-4 CapsuleGeometry intestine meshes stacked inside the torsoGroup.
+        // Initially hidden; revealed when torso HP drops below 50%.
+        {
+          this._gutsContainer = new THREE.Group();
+          this._gutsContainer.visible = false;
+          const gutColors  = [0x4B0082, 0x8B0000, 0x5C001A, 0x3D0000];
+          const gutCount   = 3 + Math.floor(Math.random() * 2);  // 3 or 4
+          for (let _gi = 0; _gi < gutCount; _gi++) {
+            const _gGeo = new THREE.CapsuleGeometry(0.045, 0.18 + Math.random() * 0.12, 4, 6);
+            const _gMat = new THREE.MeshBasicMaterial({
+              color: gutColors[_gi % gutColors.length],
+              transparent: true, opacity: 0.88
+            });
+            const _gMesh = new THREE.Mesh(_gGeo, _gMat);
+            // Stack intestines downward; slight random XZ offset for organic look
+            _gMesh.position.set(
+              (Math.random() - 0.5) * 0.08,
+              -0.12 - _gi * 0.16,
+              (Math.random() - 0.5) * 0.08
+            );
+            this._gutsContainer.add(_gMesh);
+          }
+          this.torsoGroup.add(this._gutsContainer);
+          this._gutsExposed = false;
+          this._gutsFrame   = 0;
+        }
 
         // Add decorative rings to Annunaki Orb
         if (type === 19) {
@@ -1332,8 +1401,38 @@
             // Lerp rate 3.5 ≈ 280 ms lag — makes the head feel heavy and organic
             this._lerpedHeadTarget.lerp(_tmpHeadTarget, Math.min(1.0, dt * 3.5));
             this.headGroup.position.y = _headY;
-            this.headGroup.lookAt(this._lerpedHeadTarget);
+            // Only look at player when head is still attached
+            if (this.anatomy && this.anatomy.head.attached) {
+              this.headGroup.lookAt(this._lerpedHeadTarget);
+            }
           }
+
+          // ── Gut Physics — procedural intestine swing ─────────────────────────────
+          if (this._gutsContainer && this._gutsContainer.visible) {
+            // Sine-wave pendulum that swings harder while moving
+            const _gutSwing = Math.sin(gameTime * 3.2 + this.wobbleOffset) * (0.12 + _moveSpd * 0.9);
+            this._gutsContainer.rotation.x = _gutSwing;
+            this._gutsContainer.rotation.z = Math.cos(gameTime * 2.7 + this.wobbleOffset) * (_moveSpd * 0.5);
+
+            // Blood slide tracks every 10 frames while dragging guts on the floor
+            if (_isMoving) {
+              this._gutsFrame = (this._gutsFrame || 0) + 1;
+              if (this._gutsFrame % 10 === 0) {
+                spawnBloodDecal({
+                  x: this.mesh.position.x + (Math.random() - 0.5) * 0.2,
+                  y: 0,
+                  z: this.mesh.position.z + (Math.random() - 0.5) * 0.2
+                });
+              }
+            }
+          }
+        }
+
+        // Headless stumble: if head severed, add random XZ drift to simulate blind wandering
+        if (this.anatomy && !this.anatomy.head.attached && !this.isDead) {
+          const _stumbleAmt = 0.004;
+          this.mesh.position.x += (Math.random() - 0.5) * _stumbleAmt;
+          this.mesh.position.z += (Math.random() - 0.5) * _stumbleAmt;
         }
       }
 
@@ -1374,8 +1473,10 @@
        * @param {number} amount - Damage amount
        * @param {boolean} isCrit - Whether this is a critical hit
        * @param {string} damageType - Type of damage: 'physical', 'fire', 'ice', 'lightning', 'shotgun', 'headshot', 'gun', 'doubleBarrel', 'drone'
+       * @param {object|null} hitDir - Direction vector {vx, vz} of the incoming projectile
+       * @param {THREE.Vector3|null} hitPoint - World-space position where the hit landed (Y used for segment detection)
        */
-      takeDamage(amount, isCrit = false, damageType = 'physical', hitDir = null) {
+      takeDamage(amount, isCrit = false, damageType = 'physical', hitDir = null, hitPoint = null) {
         // Track last damage type and crit state for death effects
         this.lastDamageType = damageType;
         this.lastCrit = isCrit;
@@ -1760,28 +1861,248 @@
         this.hp -= finalAmount;
         createDamageNumber(Math.floor(finalAmount), this.mesh.position, isCrit);
 
-        // Distribute damage to anatomy health pools — each body part can be dismembered.
-        // Hit probability: 25% head, 40% torso, 35% base.
+        // ── LOCALIZED HIT DETECTION ────────────────────────────────────────────────
+        // Use hitPoint.y (world-space) relative to enemy base to decide which segment
+        // was struck: Base (low), Torso (mid), Head (top).
+        // Falls back to random distribution when no hitPoint is provided.
         if (this.anatomy) {
-          const _zone = Math.random();
-          if (_zone < 0.25 && this.anatomy.head.attached) {           // 25% head
-            this.anatomy.head.hp = Math.max(0, this.anatomy.head.hp - finalAmount * 0.5);
-            if (this.anatomy.head.hp <= 0) {
-              this.anatomy.head.attached = false;
-              if (this.headGroup) this.headGroup.visible = false;
+          // Compute relative hit height — 0 = floor level, 1 ≈ top of enemy
+          const _enemyBaseY = this.mesh.position.y;
+          const _relY = hitPoint ? (hitPoint.y - _enemyBaseY) : -1; // -1 = use random
+
+          let _hitSegment; // 'head' | 'torso' | 'base'
+          if (_relY >= 0) {
+            // Rough segment boundaries (normalised to mesh height ~1 unit)
+            if      (_relY >= 0.55) _hitSegment = 'head';
+            else if (_relY >= 0.22) _hitSegment = 'torso';
+            else                   _hitSegment = 'base';
+          } else {
+            // Random fallback: 25% head, 40% torso, 35% base
+            const _zone = Math.random();
+            if      (_zone < 0.25) _hitSegment = 'head';
+            else if (_zone < 0.65) _hitSegment = 'torso';
+            else                   _hitSegment = 'base';
+          }
+
+          // ── Apply damage to the chosen segment ─────────────────────────────────
+          const _seg = this.anatomy[_hitSegment];
+          if (_seg && _seg.attached) {
+            const _dmgMult = _hitSegment === 'head' ? 0.5 : (_hitSegment === 'torso' ? 0.4 : 0.3);
+            _seg.hp = Math.max(0, _seg.hp - finalAmount * _dmgMult);
+
+            // ── VISUAL DEGRADATION: chip the segment mesh inward on random axes ──
+            const _segMesh = _hitSegment === 'head'  ? this.headGroup
+                           : _hitSegment === 'torso' ? this.torsoGroup
+                           :                           this.baseGroup;
+            if (_segMesh) {
+              const _axis = Math.random();
+              if      (_axis < 0.33) _segMesh.scale.x = Math.max(0.55, _segMesh.scale.x * 0.88);
+              else if (_axis < 0.66) _segMesh.scale.z = Math.max(0.55, _segMesh.scale.z * 0.88);
+              else                   _segMesh.scale.y = Math.max(0.50, _segMesh.scale.y * 0.85);
             }
-          } else if (_zone < 0.65 && this.anatomy.torso.attached) {  // 40% torso
-            this.anatomy.torso.hp = Math.max(0, this.anatomy.torso.hp - finalAmount * 0.4);
-            if (this.anatomy.torso.hp <= 0 && this.anatomy.torso.attached) {
-              this.anatomy.torso.attached = false;
-              // Torso destruction: visually squish the main body to show the gutted state
-              if (this.mesh && !this.isDead) this.mesh.scale.multiplyScalar(0.75);
+
+            // ── MEAT CHUNKS: 3-6 DodecahedronGeometry gore pieces ──────────────
+            if (scene && managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
+              const _chunkCount = 3 + Math.floor(Math.random() * 4); // 3-6
+              const _chunkHitX  = hitDir ? (hitDir.vx || 0) : (Math.random() - 0.5);
+              const _chunkHitZ  = hitDir ? (hitDir.vz || 0) : (Math.random() - 0.5);
+              const _spawnY     = _enemyBaseY + (_hitSegment === 'head' ? 0.55 : (_hitSegment === 'torso' ? 0.35 : 0.12));
+              const _chunkMeshes = [];
+              for (let _ci = 0; _ci < _chunkCount; _ci++) {
+                const _cSize = 0.04 + Math.random() * 0.07;
+                const _cGeo  = new THREE.DodecahedronGeometry(_cSize, 0);
+                const _goreC = [0x6B0000, 0x8B0000, 0x4A0000, 0x550011][Math.floor(Math.random() * 4)];
+                const _cMat  = new THREE.MeshBasicMaterial({ color: _goreC, transparent: true, opacity: 0.92 });
+                const _cMesh = new THREE.Mesh(_cGeo, _cMat);
+                _cMesh.position.set(
+                  this.mesh.position.x + (Math.random() - 0.5) * 0.15,
+                  _spawnY,
+                  this.mesh.position.z + (Math.random() - 0.5) * 0.15
+                );
+                scene.add(_cMesh);
+                _chunkMeshes.push({
+                  mesh: _cMesh, geo: _cGeo, mat: _cMat,
+                  vx: _chunkHitX * (0.08 + Math.random() * 0.14) + (Math.random() - 0.5) * 0.12,
+                  vy: 0.10 + Math.random() * 0.18,
+                  vz: _chunkHitZ * (0.08 + Math.random() * 0.14) + (Math.random() - 0.5) * 0.12,
+                  rotX: (Math.random() - 0.5) * 0.35,
+                  rotZ: (Math.random() - 0.5) * 0.35,
+                  life: 70 + Math.floor(Math.random() * 40),
+                  isCamChunk: false
+                });
+              }
+
+              // ── SCREEN SPLATTER: point-blank kill check — one chunk flies at camera ──
+              const _camPos = (typeof camera !== 'undefined' && camera) ? camera.position : null;
+              const _dToPlayer = _camPos
+                ? Math.sqrt(
+                    (_camPos.x - this.mesh.position.x) ** 2 +
+                    (_camPos.z - this.mesh.position.z) ** 2
+                  )
+                : 999;
+              if (_dToPlayer < 2.5 && _chunkMeshes.length > 0 && !this._splatterSent) {
+                this._splatterSent = true;
+                const _sc = _chunkMeshes[0];
+                _sc.isCamChunk = true;
+                if (_camPos) {
+                  const _toCamX = _camPos.x - this.mesh.position.x;
+                  const _toCamZ = _camPos.z - this.mesh.position.z;
+                  const _tcLen  = Math.sqrt(_toCamX * _toCamX + _toCamZ * _toCamZ) || 1;
+                  _sc.vx = (_toCamX / _tcLen) * 0.22;
+                  _sc.vz = (_toCamZ / _tcLen) * 0.22;
+                  _sc.vy = 0.06;
+                }
+              }
+
+              managedAnimations.push({
+                _chunks: _chunkMeshes,
+                update(_dt) {
+                  for (let _i = _chunkMeshes.length - 1; _i >= 0; _i--) {
+                    const _c = _chunkMeshes[_i];
+                    _c.vy -= 0.011; // gravity
+                    _c.mesh.position.x += _c.vx;
+                    _c.mesh.position.y += _c.vy;
+                    _c.mesh.position.z += _c.vz;
+                    _c.mesh.rotation.x += _c.rotX;
+                    _c.mesh.rotation.z += _c.rotZ;
+                    // Bounce on floor
+                    if (_c.mesh.position.y < 0.04) {
+                      _c.mesh.position.y = 0.04;
+                      _c.vy = Math.abs(_c.vy) * 0.28;
+                      _c.vx *= 0.65; _c.vz *= 0.65;
+                      if (Math.random() < 0.6) spawnBloodDecal(_c.mesh.position);
+                    }
+                    // Blood trail in air
+                    if (_c.life % 8 === 0 && _c.mesh.position.y > 0.1) {
+                      spawnBloodDecal({ x: _c.mesh.position.x, y: 0, z: _c.mesh.position.z });
+                    }
+                    // Screen splatter trigger — chunk reaching camera proximity
+                    if (_c.isCamChunk && _camPos) {
+                      const _dCam = Math.sqrt(
+                        (_c.mesh.position.x - _camPos.x) ** 2 +
+                        (_c.mesh.position.y - _camPos.y) ** 2 +
+                        (_c.mesh.position.z - _camPos.z) ** 2
+                      );
+                      if (_dCam < 0.8) {
+                        _c.isCamChunk = false;
+                        if (typeof window._triggerBloodSplatter === 'function') {
+                          window._triggerBloodSplatter();
+                        }
+                      }
+                    }
+                    _c.life--;
+                    _c.mat.opacity = Math.max(0, (_c.life / 60) * 0.92);
+                    if (_c.life <= 0) {
+                      scene.remove(_c.mesh); _c.geo.dispose(); _c.mat.dispose();
+                      _chunkMeshes.splice(_i, 1);
+                    }
+                  }
+                  return _chunkMeshes.length > 0;
+                },
+                cleanup() {
+                  for (const _c of _chunkMeshes) {
+                    if (_c.mesh.parent) scene.remove(_c.mesh);
+                    _c.geo.dispose(); _c.mat.dispose();
+                  }
+                  _chunkMeshes.length = 0;
+                }
+              });
             }
-          } else {                                                     // 35% base
-            this.anatomy.base.hp = Math.max(0, this.anatomy.base.hp - finalAmount * 0.3);
-            if (this.anatomy.base.hp <= 0 && this.anatomy.base.attached) {
-              this.anatomy.base.attached = false;
-              if (this.baseGroup) this.baseGroup.visible = false;
+
+            // ── SEGMENT SEVERING ────────────────────────────────────────────────
+            if (_seg.hp <= 0) {
+              _seg.attached = false;
+
+              if (_hitSegment === 'head') {
+                // Hide the head group and spawn a rolling severed head object
+                if (this.headGroup) this.headGroup.visible = false;
+                if (scene && managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
+                  const _shGeo  = new THREE.SphereGeometry(0.14, 6, 5);
+                  const _shMat  = new THREE.MeshBasicMaterial({ color: this.mesh.material.color.getHex(), transparent: true, opacity: 0.9 });
+                  const _shMesh = new THREE.Mesh(_shGeo, _shMat);
+                  _shMesh.position.copy(this.mesh.position);
+                  _shMesh.position.y = (this._headGroupBaseY || 0.42) + this.mesh.position.y;
+                  scene.add(_shMesh);
+                  const _svx = (Math.random() - 0.5) * 0.18;
+                  const _svz = (Math.random() - 0.5) * 0.18;
+                  let   _svy = 0.14;
+                  const _sRx = 0.18 + Math.random() * 0.22;
+                  const _sRz = (Math.random() - 0.5) * 0.12;
+                  let _sLife = 150, _sBT = 0;
+                  managedAnimations.push({
+                    update(_dt) {
+                      _svy -= 0.007;
+                      _shMesh.position.x += _svx;
+                      _shMesh.position.y += _svy;
+                      _shMesh.position.z += _svz;
+                      _shMesh.rotation.x += _sRx;
+                      _shMesh.rotation.z += _sRz;
+                      if (_shMesh.position.y < 0.15) {
+                        _shMesh.position.y = 0.15;
+                        _svy = Math.abs(_svy) * 0.22;
+                      }
+                      _sBT++;
+                      if (_sBT % 5 === 0) spawnBloodDecal({ x: _shMesh.position.x, y: 0, z: _shMesh.position.z });
+                      if (_sBT % 12 === 0 && _sLife > 50) spawnParticles(_shMesh.position, 0x8B0000, 2);
+                      _sLife--;
+                      _shMat.opacity = Math.max(0, (_sLife / 100) * 0.9);
+                      if (_sLife <= 0) { scene.remove(_shMesh); _shGeo.dispose(); _shMat.dispose(); return false; }
+                      return true;
+                    },
+                    cleanup() { if (_shMesh.parent) scene.remove(_shMesh); _shGeo.dispose(); _shMat.dispose(); }
+                  });
+                }
+                // Behavior change: headless = blind stumble (applied in update())
+              } else if (_hitSegment === 'torso') {
+                // Torso gone: squish body, reveal guts, spawn spinning torso chunk
+                if (this.mesh && !this.isDead) this.mesh.scale.multiplyScalar(0.75);
+                if (this._gutsContainer) {
+                  this._gutsContainer.visible = true;
+                  this._gutsExposed = true;
+                }
+                if (scene && managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
+                  const _tGeo  = new THREE.BoxGeometry(0.22, 0.28, 0.18);
+                  const _tMat  = new THREE.MeshBasicMaterial({ color: 0x550022, transparent: true, opacity: 0.85 });
+                  const _tMesh = new THREE.Mesh(_tGeo, _tMat);
+                  _tMesh.position.copy(this.mesh.position);
+                  _tMesh.position.y += 0.35;
+                  scene.add(_tMesh);
+                  const _tvx = (Math.random() - 0.5) * 0.22;
+                  let   _tvy = 0.16;
+                  const _tvz = (Math.random() - 0.5) * 0.22;
+                  const _trX = (Math.random() - 0.5) * 0.28;
+                  const _trZ = (Math.random() - 0.5) * 0.28;
+                  let _tLife = 120;
+                  managedAnimations.push({
+                    update(_dt) {
+                      _tvy -= 0.010;
+                      _tMesh.position.x += _tvx;
+                      _tMesh.position.y += _tvy;
+                      _tMesh.position.z += _tvz;
+                      _tMesh.rotation.x += _trX;
+                      _tMesh.rotation.z += _trZ;
+                      if (_tMesh.position.y < 0.06) { _tMesh.position.y = 0.06; _tvy = Math.abs(_tvy) * 0.25; }
+                      if (_tLife % 7 === 0) spawnBloodDecal({ x: _tMesh.position.x, y: 0, z: _tMesh.position.z });
+                      _tLife--;
+                      _tMat.opacity = Math.max(0, (_tLife / 80) * 0.85);
+                      if (_tLife <= 0) { scene.remove(_tMesh); _tGeo.dispose(); _tMat.dispose(); return false; }
+                      return true;
+                    },
+                    cleanup() { if (_tMesh.parent) scene.remove(_tMesh); _tGeo.dispose(); _tMat.dispose(); }
+                  });
+                }
+              } else {
+                // Base gone: hide it, enemy crawls at 50% speed
+                if (this.baseGroup) this.baseGroup.visible = false;
+                if (!this.originalSpeed) this.originalSpeed = this.speed;
+                this.speed = this.originalSpeed * 0.5;
+              }
+            }
+
+            // ── Show guts when torso HP drops below 50% (even before severing) ──
+            if (_hitSegment === 'torso' && _seg.hp < 50 && !this._gutsExposed && this._gutsContainer) {
+              this._gutsContainer.visible = true;
+              this._gutsExposed = true;
             }
           }
         }
