@@ -120,6 +120,12 @@
   let _promptEl      = null;   // the DOM prompt element
   let _interactBtn   = null;   // mobile interact button
 
+  // Alien Incubator pod state
+  let _incubatorMesh = null;
+  const INCUBATOR_POS = { x: -16, z: 6 }; // near Companion Home
+  const INCUBATOR_INTERACT_RADIUS = 3.5;
+  let _incubatorInteracted = false; // guard against duplicate interactions this session
+
   // Keyboard state (managed inside this module)
   let _keys = {};
 
@@ -226,6 +232,9 @@
 
     // ── Benny NPC ────────────────────────────────────────────
     _buildBennyNPC();
+
+    // ── Crashed UFO Debris + Alien Incubator Pod ─────────────
+    _buildUFODebrisAndIncubator();
 
     // ── Camera ──────────────────────────────────────────────
     const aspect = window.innerWidth / window.innerHeight;
@@ -809,6 +818,130 @@
   }
 
   // ── A.I.D.A Terminal NPC ─────────────────────────────────────
+  // ── Crashed UFO Debris + Alien Incubator Pod ─────────────────────────────
+  function _buildUFODebrisAndIncubator() {
+    const THREE = T();
+    const grp = new THREE.Group();
+
+    // ── Crashed UFO hull fragment ──────────────────────────────────────────
+    // Flattened disc shape, cracked and scorched
+    const hullGeo = new THREE.TorusGeometry(1.6, 0.35, 8, 24);
+    const hullMat = new THREE.MeshStandardMaterial({
+      color: 0x556677, metalness: 0.85, roughness: 0.35,
+      emissive: 0x001122, emissiveIntensity: 0.3
+    });
+    const hull = new THREE.Mesh(hullGeo, hullMat);
+    hull.rotation.x = Math.PI / 2 + 0.4; // Tilted — crash angle
+    hull.rotation.z = 0.3;
+    hull.position.set(0, 0.3, 0);
+    hull.castShadow = true;
+    grp.add(hull);
+
+    // Cockpit dome (cracked)
+    const domeGeo = new THREE.SphereGeometry(0.7, 10, 8, 0, Math.PI * 2, 0, Math.PI * 0.55);
+    const domeMat = new THREE.MeshPhysicalMaterial({
+      color: 0x88aacc, transparent: true, opacity: 0.55,
+      metalness: 0.1, roughness: 0.05, transmission: 0.3
+    });
+    const dome = new THREE.Mesh(domeGeo, domeMat);
+    dome.position.set(-0.2, 0.55, 0);
+    dome.rotation.z = 0.25;
+    grp.add(dome);
+
+    // Scorch marks on ground beneath crash site
+    const scorchGeo = new THREE.CircleGeometry(2.4, 20);
+    const scorchMat = new THREE.MeshBasicMaterial({
+      color: 0x110808, transparent: true, opacity: 0.7, depthWrite: false
+    });
+    const scorch = new THREE.Mesh(scorchGeo, scorchMat);
+    scorch.rotation.x = -Math.PI / 2;
+    scorch.position.y = 0.015;
+    grp.add(scorch);
+
+    // Debris chunks scattered around
+    const debrisMat = new THREE.MeshStandardMaterial({ color: 0x445566, metalness: 0.7, roughness: 0.4 });
+    for (let i = 0; i < 5; i++) {
+      const dGeo = new THREE.DodecahedronGeometry(0.12 + Math.random() * 0.18, 0);
+      const d = new THREE.Mesh(dGeo, debrisMat);
+      const angle = (i / 5) * Math.PI * 2;
+      d.position.set(Math.cos(angle) * (1.8 + Math.random() * 1.0), 0.05, Math.sin(angle) * (1.8 + Math.random() * 1.0));
+      d.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+      d.castShadow = true;
+      grp.add(d);
+    }
+
+    // Alien glowing core (exposed energy cell)
+    const coreGeo = new THREE.OctahedronGeometry(0.22, 1);
+    const coreMat = new THREE.MeshStandardMaterial({
+      color: 0x00ffcc, emissive: 0x00ffcc, emissiveIntensity: 1.2,
+      transparent: true, opacity: 0.85
+    });
+    const core = new THREE.Mesh(coreGeo, coreMat);
+    core.position.set(0.6, 0.55, 0.2);
+    core._ufoCoreGlow = true;
+    grp.add(core);
+
+    // Faint green light from crash site
+    const ufoLight = new THREE.PointLight(0x00ffcc, 1.2, 8, 2);
+    ufoLight.position.set(0, 1.2, 0);
+    grp.add(ufoLight);
+    grp._ufoLight = ufoLight;
+
+    grp.position.set(INCUBATOR_POS.x - 3, 0, INCUBATOR_POS.z - 1);
+    _campScene.add(grp);
+
+    // ── Incubator Pod ─────────────────────────────────────────────────────
+    const podGrp = new THREE.Group();
+
+    // Pod base ring
+    const podBaseGeo = new THREE.CylinderGeometry(0.6, 0.7, 0.2, 12);
+    const podBaseMat = new THREE.MeshStandardMaterial({ color: 0x223344, metalness: 0.9, roughness: 0.2 });
+    const podBase = new THREE.Mesh(podBaseGeo, podBaseMat);
+    podBase.position.y = 0.1;
+    podGrp.add(podBase);
+
+    // Pod chamber (translucent egg-shaped capsule)
+    const podGeo = new THREE.SphereGeometry(0.5, 10, 14);
+    podGeo.scale(0.9, 1.4, 0.9);
+    const podMat = new THREE.MeshPhysicalMaterial({
+      color: 0x33aaff, transparent: true, opacity: 0.45,
+      metalness: 0.05, roughness: 0.05, transmission: 0.5,
+      emissive: 0x003366, emissiveIntensity: 0.4
+    });
+    const pod = new THREE.Mesh(podGeo, podMat);
+    pod.position.y = 0.85;
+    pod._incubatorPod = true;
+    podGrp.add(pod);
+
+    // Tech struts on pod
+    const strutMat = new THREE.MeshStandardMaterial({ color: 0x445566, metalness: 0.85, roughness: 0.3 });
+    for (let s = 0; s < 4; s++) {
+      const sAngle = (s / 4) * Math.PI * 2;
+      const strutGeo = new THREE.CylinderGeometry(0.04, 0.04, 0.9, 5);
+      const strut = new THREE.Mesh(strutGeo, strutMat);
+      strut.position.set(Math.cos(sAngle) * 0.48, 0.55, Math.sin(sAngle) * 0.48);
+      strut.rotation.z = Math.PI / 12;
+      podGrp.add(strut);
+    }
+
+    // Pulsing light inside pod
+    const podLight = new THREE.PointLight(0x3399ff, 0.8, 3, 2);
+    podLight.position.set(0, 0.85, 0);
+    podGrp._podLight = podLight;
+    podGrp.add(podLight);
+
+    // Label sign
+    const signGeo = new THREE.BoxGeometry(1.1, 0.35, 0.08);
+    const signMat = new THREE.MeshStandardMaterial({ color: 0x0d0d1a, metalness: 0.7 });
+    const sign = new THREE.Mesh(signGeo, signMat);
+    sign.position.set(0, 0.18, 0.65);
+    podGrp.add(sign);
+
+    podGrp.position.set(INCUBATOR_POS.x, 0, INCUBATOR_POS.z);
+    _incubatorMesh = podGrp;
+    _campScene.add(podGrp);
+  }
+
   function _buildBennyNPC() {
     const THREE = T();
     const grp = new THREE.Group();
@@ -2336,8 +2469,15 @@
     // ── Action triggers (keys) ──
     if (!_campActionAnim) {
       if (_keys['KeyE']) {
-        _campActionAnim = 'chop';
-        _campActionTimer = 0.8;
+        // Check if player is near the Incubator pod — interact with it
+        const _idx = _playerPos.x - INCUBATOR_POS.x;
+        const _idz = _playerPos.z - INCUBATOR_POS.z;
+        if (Math.sqrt(_idx * _idx + _idz * _idz) < INCUBATOR_INTERACT_RADIUS) {
+          _interactIncubator();
+        } else {
+          _campActionAnim = 'chop';
+          _campActionTimer = 0.8;
+        }
       } else if (_keys['KeyF']) {
         _campActionAnim = 'shoot';
         _campActionTimer = 0.4;
@@ -3446,6 +3586,197 @@
     if (_jRight) { _jRight.active = false; _jRight.x = 0; _jRight.y = 0; _jRight.id = null; }
   }
 
+  // ── Alien Incubator Pod animation + proximity interaction ────────────────
+  function _updateIncubator(dt) {
+    if (!_incubatorMesh || !_campScene) return;
+    const THREE = T();
+
+    // Animate pod glow pulsing
+    _incubatorMesh.traverse(function (child) {
+      if (child._incubatorPod && child.material) {
+        const pulse = 0.3 + Math.abs(Math.sin(_campTime * 2.2)) * 0.5;
+        child.material.emissiveIntensity = pulse;
+        child.material.opacity = 0.35 + pulse * 0.2;
+      }
+    });
+    if (_incubatorMesh._podLight) {
+      _incubatorMesh._podLight.intensity = 0.5 + Math.abs(Math.sin(_campTime * 2.2)) * 0.8;
+    }
+    // Gentle float
+    _incubatorMesh.position.y = Math.sin(_campTime * 1.5) * 0.05;
+
+    // Proximity check — show interaction UI
+    const idx = _playerPos.x - INCUBATOR_POS.x;
+    const idz = _playerPos.z - INCUBATOR_POS.z;
+    const incubatorDist = Math.sqrt(idx * idx + idz * idz);
+    const isNear = incubatorDist < INCUBATOR_INTERACT_RADIUS;
+
+    // Show / hide incubator prompt
+    if (isNear && !_menuOpen) {
+      const sd = (typeof _saveData !== 'undefined' && _saveData) ? _saveData : (typeof saveData !== 'undefined' ? saveData : null);
+      const biomatter = (sd && sd.alienBiomatter) ? sd.alienBiomatter : 0;
+      const alreadyHatched = sd && sd.alienIncubatorHatched;
+
+      if (!_promptEl) return;
+
+      if (alreadyHatched) {
+        _promptEl.textContent = '👽 Incubator — Companion Active';
+      } else if (biomatter >= 50) {
+        _promptEl.textContent = `🧬 Incubator — Deposit 50 Biomatter [E]  (${biomatter} available)`;
+        if (_interactBtn) {
+          _interactBtn.textContent = 'DEPOSIT';
+          _interactBtn.style.background = 'linear-gradient(135deg,#00cc66,#006633)';
+          _interactBtn.style.display = 'block';
+        }
+      } else {
+        _promptEl.textContent = `🧬 Incubator — Need 50 Alien Biomatter  (${biomatter}/50)`;
+      }
+    }
+  }
+
+  /**
+   * Called by external input handler (or the existing camp E-key handler)
+   * when the player presses interact near the Incubator pod.
+   */
+  function _interactIncubator() {
+    const sd = (typeof saveData !== 'undefined') ? saveData : null;
+    if (!sd) return;
+    if (!sd.alienIncubatorHatched) {
+      // Pre-hatch: deposit biomatter
+      if ((sd.alienBiomatter || 0) < 50) {
+        _showIncubatorMsg(`🧬 Need 50 Alien Biomatter to hatch. You have ${sd.alienBiomatter || 0}/50.`, '#ff8800');
+        return;
+      }
+      // Deposit 50 biomatter and hatch companion
+      sd.alienBiomatter -= 50;
+      sd.alienIncubatorHatched = true;
+      sd.companionGrowthStage = sd.companionGrowthStage === 'egg' ? 'newborn' : sd.companionGrowthStage;
+      // Only advance from 'egg' → 'newborn' on first hatch; leave juvenile/adult intact
+      if (!sd.companions.greyAlien.skills) sd.companions.greyAlien.skills = {};
+      if (typeof saveSaveData === 'function') saveSaveData();
+      // Flash pod
+      if (_incubatorMesh) {
+        _incubatorMesh.traverse(function (child) {
+          if (child._incubatorPod && child.material) {
+            child.material.emissive.set(0x00ff88);
+            child.material.emissiveIntensity = 3.0;
+            setTimeout(() => { if (child.material) child.material.emissive.set(0x003366); }, 800);
+          }
+        });
+      }
+      _showIncubatorMsg('👽 Grey Alien companion hatched! It will join you on your next run.', '#00ff88');
+      return;
+    }
+
+    // Post-hatch: show skill upgrade UI
+    _showIncubatorSkillUI();
+  }
+
+  /** Shows the Grey Alien companion skill upgrade modal at the Incubator. */
+  function _showIncubatorSkillUI() {
+    const sd = (typeof saveData !== 'undefined') ? saveData : null;
+    if (!sd) return;
+    if (!sd.companions.greyAlien.skills) sd.companions.greyAlien.skills = {};
+    const skills = sd.companions.greyAlien.skills;
+    const sp = sd.companionSkillPoints || 0;
+    _menuOpen = true;
+
+    const overlay = document.createElement('div');
+    overlay.style.cssText = [
+      'position:fixed','top:0','left:0','width:100%','height:100%',
+      'background:rgba(0,0,0,0.88)','z-index:8000',
+      'display:flex','align-items:center','justify-content:center'
+    ].join(';');
+
+    const panel = document.createElement('div');
+    panel.style.cssText = [
+      'background:#040c14',
+      'border:2px solid #00ff88',
+      'border-radius:6px',
+      'padding:20px',
+      'max-width:min(400px,92vw)',
+      'width:100%',
+      'box-shadow:0 0 20px rgba(0,255,136,0.4)',
+      'font-family:"Courier New",monospace',
+      'color:#00ff88'
+    ].join(';');
+
+    function skillRow(id, icon, label, desc, maxLevel) {
+      const level = skills[id] || 0;
+      const canUpgrade = level < maxLevel && sp > 0;
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:10px;margin:10px 0;padding:8px;border:1px solid rgba(0,255,136,0.25);border-radius:4px;';
+      const info = document.createElement('div');
+      info.style.flex = '1';
+      info.innerHTML = `<span style="font-size:1.3em">${icon}</span> <b>${label}</b> <span style="color:#888">Lv ${level}/${maxLevel}</span><br><span style="font-size:0.8em;color:#668866">${desc}</span>`;
+      row.appendChild(info);
+      if (canUpgrade) {
+        const btn = document.createElement('button');
+        btn.textContent = 'UPGRADE (1 SP)';
+        btn.style.cssText = 'background:#003322;color:#00ff88;border:1px solid #00ff88;border-radius:3px;padding:4px 8px;cursor:pointer;font-family:inherit;font-size:0.85em;white-space:nowrap;';
+        btn.onclick = function () {
+          if ((sd.companionSkillPoints || 0) > 0 && (skills[id] || 0) < maxLevel) {
+            skills[id] = (skills[id] || 0) + 1;
+            sd.companionSkillPoints = (sd.companionSkillPoints || 0) - 1;
+            if (typeof saveSaveData === 'function') saveSaveData();
+            if (overlay.parentNode) { overlay.parentNode.removeChild(overlay); _menuOpen = false; }
+            _showIncubatorSkillUI(); // Refresh
+          }
+        };
+        row.appendChild(btn);
+      } else if (level >= maxLevel) {
+        const lbl = document.createElement('span');
+        lbl.style.cssText = 'color:#00ff88;font-size:0.8em;white-space:nowrap;';
+        lbl.textContent = '✓ MAX';
+        row.appendChild(lbl);
+      } else {
+        const lbl = document.createElement('span');
+        lbl.style.cssText = 'color:#446644;font-size:0.8em;white-space:nowrap;';
+        lbl.textContent = 'Need SP';
+        row.appendChild(lbl);
+      }
+      return row;
+    }
+
+    panel.innerHTML = `<div style="font-size:1.1em;margin-bottom:6px;text-align:center;letter-spacing:1px;">
+      👽 GREY ALIEN COMPANION<br>
+      <span style="font-size:0.8em;color:#668866">Skill Points Available: <b>${sp}</b></span></div>`;
+    panel.appendChild(skillRow('damage',   '💥', 'Plasma Damage',  '+20% bolt damage per level',   3));
+    panel.appendChild(skillRow('fireRate', '⚡', 'Fire Rate',       '-15% attack cooldown per level', 3));
+    panel.appendChild(skillRow('multiShot','🔫', 'Multi-Shot',      'Fire extra bolts per attack',    3));
+
+    const closeBtn = document.createElement('button');
+    closeBtn.textContent = '[ CLOSE ]';
+    closeBtn.style.cssText = 'display:block;margin:14px auto 0;background:none;color:#00ff88;border:1px solid #00ff88;border-radius:3px;padding:6px 18px;cursor:pointer;font-family:inherit;letter-spacing:1px;';
+    closeBtn.onclick = function () { if (overlay.parentNode) { overlay.parentNode.removeChild(overlay); _menuOpen = false; } };
+    panel.appendChild(closeBtn);
+
+    overlay.appendChild(panel);
+    document.body.appendChild(overlay);
+  }
+
+  function _showIncubatorMsg(text, color) {
+    const el = document.createElement('div');
+    el.style.cssText = [
+      'position:fixed', 'bottom:22%', 'left:50%',
+      'transform:translateX(-50%)',
+      'background:rgba(0,0,0,0.88)',
+      `color:${color || '#00ffcc'}`,
+      'font-family:"Courier New",monospace',
+      'font-size:clamp(13px,3vw,15px)',
+      'padding:10px 18px',
+      'border-radius:4px',
+      `border:1px solid ${color || '#00ffcc'}`,
+      'z-index:9000',
+      'pointer-events:none',
+      'text-align:center',
+      'max-width:min(340px,88vw)'
+    ].join(';');
+    el.textContent = text;
+    document.body.appendChild(el);
+    setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 3500);
+  }
+
   /**
    * update(dt)
    * Per-frame logic update.  Called from main.js animate() when isActive.
@@ -3455,6 +3786,7 @@
     _updateFire(dt);
     _updateParticles(dt);
     _updateBennyNPC(dt);
+    _updateIncubator(dt);
 
     // When a building menu is open, freeze player input/movement but keep
     // rendering the camp scene (fire, particles, camera).  Auto-detect when
@@ -3537,6 +3869,7 @@
     showBennyContextualHint: _showBennyContextualHint,
     showBennySpeech: _showBennySpeech,
     hideBennySpeech: _hideBennySpeech,
+    interactIncubator: _interactIncubator,
     unlockBuilding(buildingId, saveData) {
       if (saveData) _saveData = saveData;
       if (_saveData && _saveData.campBuildings && _saveData.campBuildings[buildingId]) {

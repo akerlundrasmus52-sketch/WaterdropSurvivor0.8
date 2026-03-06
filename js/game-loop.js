@@ -1129,6 +1129,13 @@
         checkLegendaryCigarQuest();
       }
 
+      // Waterdrop story quests: lake bounce + minute-10 alien + AI narrator
+      if (isGameActive && !isPaused && !isGameOver && player && player.mesh) {
+        if (window.checkLakeBounceQuest) window.checkLakeBounceQuest(player.mesh);
+        if (window.checkMinuteTenAlienQuest) window.checkMinuteTenAlienQuest();
+        if (window.checkAINarratorTick) window.checkAINarratorTick(dt);
+      }
+
       // Milestone system tick
       if (window.GameMilestones && isGameActive && !isPaused && !isGameOver) {
         window.GameMilestones.tick(dt);

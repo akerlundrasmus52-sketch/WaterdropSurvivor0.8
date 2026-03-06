@@ -3361,3 +3361,177 @@
       if (menuGold) menuGold.textContent = `GOLD: ${saveData.gold}`;
     }
 
+
+    // =========================================================================
+    // WATERDROP STORY QUESTS — dark psychological sci-fi questline
+    // =========================================================================
+
+    // ── Quest 1 State ─────────────────────────────────────────────────────────
+    let _lakeBounceShown = false;
+
+    /**
+     * checkLakeBounceQuest(playerMesh)
+     * Called every frame from game-loop.js when the game is active.
+     * If the player walks near the lake, bounces them back and shows
+     * the "The Cruel Bounce" terminal dialogue (once per run).
+     */
+    function checkLakeBounceQuest(playerMesh) {
+      if (!playerMesh || _lakeBounceShown) return;
+      if (typeof GAME_CONFIG === 'undefined') return;
+
+      const dx = playerMesh.position.x - GAME_CONFIG.lakeCenterX;
+      const dz = playerMesh.position.z - GAME_CONFIG.lakeCenterZ;
+      const dist = Math.sqrt(dx * dx + dz * dz);
+
+      // Trigger zone: edge of lake (lakeRadius + 1 unit buffer)
+      if (dist > GAME_CONFIG.lakeRadius + 4) return;
+
+      _lakeBounceShown = true;
+
+      // Bounce player away from lake
+      const bounceForce = 6;
+      const dirX = dx / (dist || 1);
+      const dirZ = dz / (dist || 1);
+      playerMesh.position.x = GAME_CONFIG.lakeCenterX + dirX * (GAME_CONFIG.lakeRadius + 6);
+      playerMesh.position.z = GAME_CONFIG.lakeCenterZ + dirZ * (GAME_CONFIG.lakeRadius + 6);
+
+      // Spawn repulsion particles
+      if (typeof spawnParticles === 'function') {
+        spawnParticles(playerMesh.position, 0x5DADE2, 12);
+      }
+
+      // Show "The Cruel Bounce" dialogue via DialogueSystem
+      if (window.DialogueSystem) {
+        window.DialogueSystem.show([
+          { text: '> QUEST — THE CRUEL BOUNCE', emotion: 'task', duration: 2000 },
+          { text: 'I am water. But I am solid. The stillness of Nirvana rejects me.', emotion: 'sad' },
+          { text: 'I bounce off my own kind. The aliens did this to me.', emotion: 'angry' },
+          { text: 'I must find their metal shell. Objective: Locate the alien vessel.', emotion: 'goal', isGoal: true }
+        ]);
+      }
+    }
+
+    // ── Quest 2 State ─────────────────────────────────────────────────────────
+    let _min10AlienShown = false;
+
+    /**
+     * checkMinuteTenAlienQuest()
+     * Called every frame from game-loop.js when the game is active.
+     * At minute 10, shows "The Architects" dialogue once per run.
+     */
+    function checkMinuteTenAlienQuest() {
+      if (_min10AlienShown) return;
+      if (typeof gameStartTime === 'undefined' || !gameStartTime) return;
+
+      const runSeconds = (Date.now() - gameStartTime) / 1000;
+      if (runSeconds < 600) return; // 10 minutes
+
+      _min10AlienShown = true;
+
+      if (window.DialogueSystem) {
+        window.DialogueSystem.show([
+          { text: '> QUEST — THE ARCHITECTS', emotion: 'task', duration: 2000 },
+          { text: 'They watch from the sky.', emotion: 'thinking' },
+          { text: 'They gave me a membrane to suffer this existence.', emotion: 'angry' },
+          { text: 'If I bleed them, maybe I can dissolve.', emotion: 'sad' },
+          { text: 'Objective: Survive to face the Grey Alien scout.', emotion: 'goal', isGoal: true }
+        ]);
+      }
+    }
+
+    /**
+     * resetLakeBounceQuest() — called by resetGame() each run.
+     */
+    function resetLakeBounceQuest() {
+      _lakeBounceShown = false;
+      _min10AlienShown = false;
+    }
+
+    // ── AI Narrator ───────────────────────────────────────────────────────────
+    const _AI_NARRATOR_LINES = [
+      'Calculating surface tension... Warning: Subject is experiencing existential dread. Recommend violent outbursts to alleviate stress.',
+      'Anomaly detected: Unit believes it has free will. Fascinating. Irrelevant. Logging.',
+      'Observation: Subject has absorbed 47% of recommended daily biomass. Efficiency: poor.',
+      'Warning — emotional subroutine overload. Prescribing: kill more things.',
+      'Fun fact: The lake would not even notice if you dissolved. You are statistically insignificant.',
+      'Simulation stability at 64%. Primary cause: Subject keeps trying to feel things.',
+      'Error 404: Nirvana not found. Try again after defeating 10,000 enemies.',
+      'The aliens are not watching because they care. They are watching because you are interesting data.'
+    ];
+    let _narratorTimer = 0;
+    const _NARRATOR_INTERVAL_MIN = 45; // seconds
+    const _NARRATOR_INTERVAL_MAX = 90;
+    let _narratorNextTick = 60; // first pop at 60s
+    let _narratorEl = null;
+
+    function _ensureNarratorEl() {
+      if (_narratorEl) return;
+      _narratorEl = document.createElement('div');
+      _narratorEl.id = 'ai-narrator-box';
+      // Static layout is defined in css/styles.css (#ai-narrator-box).
+      // Only set the initial dynamic state here.
+      _narratorEl.style.display = 'none';
+      _narratorEl.style.opacity = '1';
+      document.body.appendChild(_narratorEl);
+    }
+
+    /**
+     * _showNarratorLine(text)
+     * Displays a dark humor narrator message for 5s with typewriter effect.
+     */
+    function _showNarratorLine(text) {
+      _ensureNarratorEl();
+      _narratorEl.textContent = '';
+      _narratorEl.style.display = 'block';
+      _narratorEl.style.opacity = '1';
+      // Prefix
+      const prefix = '> [A.I. NARRATOR]: ';
+      let full = prefix + text;
+      let i = 0;
+      const TYPE_DELAY = 30;
+      function typeChar() {
+        if (i < full.length) {
+          _narratorEl.textContent += full[i];
+          i++;
+          setTimeout(typeChar, TYPE_DELAY);
+        } else {
+          // Fade out after 5s
+          setTimeout(() => {
+            let opacity = 1;
+            const fadeInterval = setInterval(() => {
+              opacity -= 0.05;
+              if (_narratorEl) _narratorEl.style.opacity = String(Math.max(0, opacity));
+              if (opacity <= 0) {
+                clearInterval(fadeInterval);
+                if (_narratorEl) _narratorEl.style.display = 'none';
+              }
+            }, 60);
+          }, 5000);
+        }
+      }
+      typeChar();
+    }
+
+    /**
+     * checkAINarratorTick(dt)
+     * Called each game frame from game-loop.js. Pops up narrator messages periodically.
+     */
+    function checkAINarratorTick(dt) {
+      if (typeof isGameActive === 'undefined' || !isGameActive) return;
+      if (typeof isPaused !== 'undefined' && isPaused) return;
+      if (typeof isGameOver !== 'undefined' && isGameOver) return;
+
+      _narratorTimer += dt;
+      if (_narratorTimer >= _narratorNextTick) {
+        _narratorTimer = 0;
+        _narratorNextTick = _NARRATOR_INTERVAL_MIN + Math.random() * (_NARRATOR_INTERVAL_MAX - _NARRATOR_INTERVAL_MIN);
+        const line = _AI_NARRATOR_LINES[Math.floor(Math.random() * _AI_NARRATOR_LINES.length)];
+        _showNarratorLine(line);
+      }
+    }
+
+    // Expose functions globally so game-loop.js and game-over-reset.js can call them
+    window.checkLakeBounceQuest   = checkLakeBounceQuest;
+    window.checkMinuteTenAlienQuest = checkMinuteTenAlienQuest;
+    window.checkAINarratorTick    = checkAINarratorTick;
+    window.resetLakeBounceQuest   = resetLakeBounceQuest;
