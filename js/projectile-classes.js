@@ -588,7 +588,7 @@
               // Normal crit
               dmg *= playerStats.critDmg;
               const critDmgType = this.isDroneTurret ? 'drone' : (this.isDoubleBarrel ? 'doubleBarrel' : 'gun');
-              enemy.takeDamage(Math.floor(dmg), isCrit, critDmgType);
+              enemy.takeDamage(Math.floor(dmg), isCrit, critDmgType, { vx: this.vx, vz: this.vz });
               // Hit-stop: critical hits get a short freeze for impact weight
               if (window.triggerHitStop) window.triggerHitStop(55);
               
@@ -607,7 +607,7 @@
             } else {
               // Normal hit — pass weapon-specific damageType for downstream effects
               const hitDmgType = this.isDroneTurret ? 'drone' : (this.isDoubleBarrel ? 'doubleBarrel' : 'gun');
-              enemy.takeDamage(Math.floor(dmg), false, hitDmgType);
+              enemy.takeDamage(Math.floor(dmg), false, hitDmgType, { vx: this.vx, vz: this.vz });
             }
             
             // Knockback effect — drone: near zero; gun: reduced with level scaling; double barrel: heavy

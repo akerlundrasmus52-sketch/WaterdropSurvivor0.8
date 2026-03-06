@@ -1856,6 +1856,20 @@
         if (!excluded) {
           group.position.set(tx, 0, tz);
           scene.add(group);
+          // Register as a harvestable node (uses the decorative mesh so it wobbles/falls)
+          if (window.GameHarvesting && window.GameHarvesting.harvestNodes) {
+            const _td = window.GameHarvesting.NODE_DEFS && window.GameHarvesting.NODE_DEFS.tree;
+            window.GameHarvesting.harvestNodes.push({
+              type: 'tree',
+              mesh: group,
+              hp: _td ? _td.hp : 60,
+              maxHp: _td ? _td.hp : 60,
+              depleted: false,
+              _lastHarvestTime: 0,
+              _wobbleTime: 0,
+              _wobbleDir: { x: 1, z: 0 }
+            });
+          }
         }
       }
       
@@ -1882,6 +1896,20 @@
         fGroup.add(fLeaves);
         fGroup.position.set(fx, 0, fz);
         scene.add(fGroup);
+        // Register ring trees as harvestable
+        if (window.GameHarvesting && window.GameHarvesting.harvestNodes) {
+          const _td = window.GameHarvesting.NODE_DEFS && window.GameHarvesting.NODE_DEFS.tree;
+          window.GameHarvesting.harvestNodes.push({
+            type: 'tree',
+            mesh: fGroup,
+            hp: _td ? _td.hp : 60,
+            maxHp: _td ? _td.hp : 60,
+            depleted: false,
+            _lastHarvestTime: 0,
+            _wobbleTime: 0,
+            _wobbleDir: { x: 1, z: 0 }
+          });
+        }
       }
       const waterfallGroup2 = new THREE.Group();
       

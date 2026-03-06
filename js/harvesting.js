@@ -180,8 +180,7 @@
   // Active swing animation state
   let _swingAnim = null; // { toolId, endTime, nodeRef }
 
-  // Walk-into detection: player must stand still for 0.3s before harvesting
-  let _stillTimer = 0;
+  // (Legacy variable kept for API compatibility — still-timer logic removed)
   let _lastPlayerPos = null;
 
   // Floating text pool (lightweight HTML elements)
@@ -316,23 +315,36 @@
       const mat = new THREE.MeshToonMaterial({ color: def.color, emissive: def.color, emissiveIntensity: 0.4 });
       mesh = new THREE.Mesh(geo, mat);
     } else if (nodeType === 'berryBush') {
-      // Berry bush with visible berries
+      // Berry bush with visible berries — organic icosahedron body
       const group = new THREE.Group();
-      const bushGeo = new THREE.SphereGeometry(0.6, 8, 6);
+      const bushGeo = new THREE.IcosahedronGeometry(0.55, 1);
       const bushMat = new THREE.MeshToonMaterial({ color: 0x2E8B2E });
       const bush = new THREE.Mesh(bushGeo, bushMat);
       bush.position.y = 0.4;
-      bush.scale.y = 0.7;
+      bush.scale.set(1.1, 0.8, 1.0);
       group.add(bush);
-      // Berry clusters
-      for (let i = 0; i < 8; i++) {
+      // Berry clusters — 12 berries at varied heights
+      for (let i = 0; i < 12; i++) {
         const berryGeo = new THREE.SphereGeometry(0.06, 5, 5);
         const berryMat = new THREE.MeshToonMaterial({ color: 0x4B0082 });
         const b = new THREE.Mesh(berryGeo, berryMat);
-        const angle = (i / 8) * Math.PI * 2;
-        b.position.set(Math.cos(angle) * 0.4, 0.35 + Math.random() * 0.25, Math.sin(angle) * 0.4);
+        const angle = (i / 12) * Math.PI * 2 + Math.random() * 0.3;
+        const radius = 0.35 + Math.random() * 0.15;
+        const heightVariance = (i % 3) * 0.12;
+        b.position.set(Math.cos(angle) * radius, 0.25 + heightVariance + Math.random() * 0.2, Math.sin(angle) * radius);
         b.userData.isBerry = true;
         group.add(b);
+      }
+      // Small branch stubs poking out at random angles
+      const branchCount = 3 + Math.floor(Math.random() * 2);
+      for (let i = 0; i < branchCount; i++) {
+        const branchGeo = new THREE.CylinderGeometry(0.02, 0.03, 0.2, 4);
+        const branchMat = new THREE.MeshToonMaterial({ color: 0x5C3A1E });
+        const branch = new THREE.Mesh(branchGeo, branchMat);
+        const bAngle = (i / branchCount) * Math.PI * 2 + Math.random() * 0.5;
+        branch.position.set(Math.cos(bAngle) * 0.45, 0.3 + Math.random() * 0.2, Math.sin(bAngle) * 0.45);
+        branch.rotation.set((Math.random() - 0.5) * 1.2, bAngle, (Math.random() - 0.5) * 0.8);
+        group.add(branch);
       }
       mesh = group;
     } else if (nodeType === 'flowerPatch') {
@@ -540,7 +552,7 @@
 
     // Start swing animation
     const toolDef = TOOL_DEFS[requiredTool];
-    _swingAnim = { toolId: requiredTool, endTime: now + (toolDef ? toolDef.swingDurationMs : 600), nodeRef: node };
+    _swingAnim = { toolId: requiredTool, endTime: now + (toolDef ? toolDef.swingDurationMs : 600), nodeRef: node, startTime: now };
 
     // Apply damage to node
     const dmg = 20;
@@ -548,9 +560,44 @@
     node._wobbleTime = 0.6;
     node._wobbleDir = { x: dx / (dist + 0.001), z: dz / (dist + 0.001) };
 
-    // Tree shake: spawn wood debris particles on hit
-    if (node.type === 'tree' && _spawnParticlesFn) {
-      _spawnParticlesFn(node.mesh.position, 0x8B4513, 4);
+    // Tree shake: spawn wood chip particles that fly outward and fall with gravity
+    if (node.type === 'tree') {
+      if (_spawnParticlesFn) _spawnParticlesFn(node.mesh.position, 0x8B4513, 4);
+      // Wood chips via managedAnimations if available
+      if (typeof managedAnimations !== 'undefined' && typeof MAX_MANAGED_ANIMATIONS !== 'undefined' &&
+          typeof THREE !== 'undefined' && typeof scene !== 'undefined') {
+        const chipCount = 5 + Math.floor(Math.random() * 4);
+        for (let _ci = 0; _ci < chipCount && managedAnimations.length < MAX_MANAGED_ANIMATIONS; _ci++) {
+          const chipGeo = new THREE.BoxGeometry(0.05, 0.05, 0.05);
+          const chipMat = new THREE.MeshBasicMaterial({ color: 0x8B4513 });
+          const chip = new THREE.Mesh(chipGeo, chipMat);
+          chip.position.copy(node.mesh.position);
+          chip.position.y += 0.8 + Math.random() * 0.5;
+          scene.add(chip);
+          const cvx = (dx / dist) * (0.05 + Math.random() * 0.1) + (Math.random() - 0.5) * 0.12;
+          const cvz = (dz / dist) * (0.05 + Math.random() * 0.1) + (Math.random() - 0.5) * 0.12;
+          let cvy = 0.08 + Math.random() * 0.12;
+          let _chipLife = 0;
+          managedAnimations.push({ update(cdt) {
+            _chipLife += cdt;
+            cvy -= 0.015;
+            chip.position.x += cvx;
+            chip.position.y += cvy;
+            chip.position.z += cvz;
+            chip.rotation.x += 0.15;
+            chip.rotation.z += 0.1;
+            if (_chipLife > 0.8 || chip.position.y < 0) {
+              scene.remove(chip);
+              chipGeo.dispose();
+              chipMat.dispose();
+              return false;
+            }
+            return true;
+          }});
+        }
+      }
+      // Screen flash on swing overlay
+      _swingAnim._flashPending = true;
     }
 
     // Particles
@@ -805,10 +852,26 @@
       const tool = TOOL_DEFS[_swingAnim.toolId];
       el.textContent = tool ? tool.icon : '⛏️';
       el.style.display = 'block';
-      // Animate rotation — cache swingDurationMs to avoid repeated property lookup
+      // Arc animation: rotate from -40deg to 120deg over swingDurationMs
       const swingDuration = tool ? tool.swingDurationMs : 600;
       const pct = 1 - ((_swingAnim.endTime - Date.now()) / swingDuration);
-      el.style.transform = `translate(-50%,-50%) rotate(${pct * -90}deg) scale(${1 + pct * 0.5})`;
+      const rotateDeg = -40 + pct * 160; // -40deg → 120deg
+      let scaleVal = 1.0;
+      // Flash: scale to 1.5x at start then fade back
+      if (_swingAnim._flashPending) {
+        _swingAnim._flashPending = false;
+        _swingAnim._flashStart = Date.now();
+      }
+      if (_swingAnim._flashStart) {
+        const flashAge = Date.now() - _swingAnim._flashStart;
+        if (flashAge < 80) {
+          scaleVal = 1.5 - (flashAge / 80) * 0.5;
+        } else {
+          scaleVal = 1.0;
+          delete _swingAnim._flashStart;
+        }
+      }
+      el.style.transform = `translate(-50%,-50%) rotate(${rotateDeg}deg) scale(${scaleVal})`;
     } else if (el) {
       el.style.display = 'none';
       if (_swingAnim && Date.now() >= _swingAnim.endTime) _swingAnim = null;
@@ -820,22 +883,13 @@
     if (!playerPos) return;
     now = now || Date.now();
 
-    // Walk-into detection: track player velocity and require 0.3s standing still
-    let canHarvest = false;
+    // Harvest is triggered simply by being near a node (no stand-still required)
+    const canHarvest = true;
     if (_lastPlayerPos === null) {
       _lastPlayerPos = { x: playerPos.x, z: playerPos.z };
     } else {
-      const pdx = playerPos.x - _lastPlayerPos.x;
-      const pdz = playerPos.z - _lastPlayerPos.z;
-      const velocity = Math.sqrt(pdx * pdx + pdz * pdz) / Math.max(dt, 0.001);
-      if (velocity < 0.01) {
-        _stillTimer += dt;
-      } else {
-        _stillTimer = 0;
-      }
       _lastPlayerPos.x = playerPos.x;
       _lastPlayerPos.z = playerPos.z;
-      canHarvest = _stillTimer >= 0.3;
     }
 
     // Animate wobble on nodes
@@ -926,7 +980,7 @@
         node.mesh.position.y = 0.3 + Math.sin(now * 0.001 + node.mesh.position.x) * 0.15;
       }
 
-      // Try harvesting if player is nearby and standing still
+      // Try harvesting if player is nearby
       if (canHarvest) {
         _tryHarvest(node, playerPos, now);
       }
@@ -991,6 +1045,9 @@
         const push = combined - dist;
         pos.x += (dx / dist) * push;
         pos.z += (dz / dist) * push;
+        // Wobble the node away from the player on collision
+        node._wobbleTime = 0.4;
+        node._wobbleDir = { x: -dx / dist, z: -dz / dist };
       }
     }
   }
