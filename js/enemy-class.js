@@ -779,8 +779,13 @@
             }, 40);
           }
           
-          // Frozen enemies stop moving
-          if (this.isFrozen) {
+          // Clear expired lightning spasm freeze
+          if (this._lightningFreezeUntil && nowMs >= this._lightningFreezeUntil) {
+            this._lightningFreezeUntil = null;
+          }
+
+          // Frozen enemies or lightning-spasmed enemies stop moving
+          if (this.isFrozen || (this._lightningFreezeUntil && nowMs < this._lightningFreezeUntil)) {
             // Gradual freeze visual: lerp from original → ice blue based on freeze progress
             if (this.mesh && this.mesh.material && this._originalColor && this.frozenUntil) {
               const totalFreezeDur = this._freezeDuration || 2500;
@@ -1434,6 +1439,69 @@
           this.mesh.position.x += (Math.random() - 0.5) * _stumbleAmt;
           this.mesh.position.z += (Math.random() - 0.5) * _stumbleAmt;
         }
+
+        // ── "LAST STAND" Death Throe state ─────────────────────────────────────────
+        // If below 15% HP and has lost head or torso segment, enter erratic death throes.
+        if (!this.isDead && this.anatomy && this.maxHp > 0 &&
+            (this.hp / this.maxHp) < 0.15 &&
+            (!this.anatomy.head.attached || !this.anatomy.torso.attached)) {
+          if (!this._deathThroeState) {
+            // Enter Death Throe state for the first time: halve movement speed
+            this._deathThroeState = true;
+            this.speed = (this.originalSpeed || this.speed) * 0.5;
+            this._playDeathThroeAudio();
+          }
+          // Violent erratic twitch-and-drag animation overrides normal locomotion
+          if (this.baseGroup) {
+            this.baseGroup.rotation.x = (Math.random() - 0.5) * 0.9;
+            this.baseGroup.rotation.z = (Math.random() - 0.5) * 0.9;
+            this.baseGroup.scale.set(
+              0.75 + Math.random() * 0.55,
+              0.45 + Math.random() * 0.45,
+              0.75 + Math.random() * 0.55
+            );
+          }
+          this.mesh.position.x += (Math.random() - 0.5) * 0.07;
+          this.mesh.position.z += (Math.random() - 0.5) * 0.07;
+          // Repeat scraping audio every ~2 seconds
+          this._deathThroeAudioTimer = (this._deathThroeAudioTimer || 0) + dt;
+          if (this._deathThroeAudioTimer > 2.0) {
+            this._deathThroeAudioTimer = 0;
+            this._playDeathThroeAudio();
+          }
+        }
+      }
+
+      // Web Audio synth: low-pitched, distorted wet scraping noise for Death Throe state
+      _playDeathThroeAudio() {
+        if (typeof audioCtx === 'undefined' || !audioCtx || !isSoundEnabled()) return;
+        try {
+          if (audioCtx.state === 'suspended') audioCtx.resume();
+          const now = audioCtx.currentTime;
+          const noise = createNoise(0.65);
+          const noiseGain = audioCtx.createGain();
+          const distortion = audioCtx.createWaveShaper();
+          const lpf = audioCtx.createBiquadFilter();
+          // Generate heavy distortion curve (soft-clipping at drive=400: higher = more crunch)
+          const DISTORTION_DRIVE = 400;
+          const _curve = new Float32Array(256);
+          for (let _ci = 0; _ci < 256; _ci++) {
+            const _x = (_ci * 2) / 256 - 1;
+            _curve[_ci] = (Math.PI + DISTORTION_DRIVE) * _x / (Math.PI + DISTORTION_DRIVE * Math.abs(_x));
+          }
+          distortion.curve = _curve;
+          lpf.type = 'lowpass';
+          lpf.frequency.setValueAtTime(160, now);
+          lpf.frequency.exponentialRampToValueAtTime(55, now + 0.55);
+          noiseGain.gain.setValueAtTime(0.22, now);
+          noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.65);
+          noise.connect(distortion);
+          distortion.connect(lpf);
+          lpf.connect(noiseGain);
+          noiseGain.connect(audioCtx.destination);
+          noise.start(now);
+          noise.stop(now + 0.65);
+        } catch (_e) {}
       }
 
       fireProjectile(targetPos) {
@@ -2384,6 +2452,52 @@
           }, 350);
         }
 
+        // ── FIRE / PLASMA: Char & Melt hit reaction ─────────────────────────────────
+        // Permanently lerp material color towards charred black. Spawn black smoke particles.
+        if ((damageType === 'fire' || damageType === 'plasma') && this.mesh && this.mesh.material && !this.isDead) {
+          if (!this._charStartColor) this._charStartColor = this.mesh.material.color.clone();
+          const _hpRatio = Math.max(0, this.hp / this.maxHp);
+          const _charAmt = (1.0 - _hpRatio) * 0.85;
+          if (!Enemy._charBlackColor) Enemy._charBlackColor = new THREE.Color(0x111111);
+          this.mesh.material.color.copy(this._charStartColor).lerp(Enemy._charBlackColor, _charAmt);
+          this.mesh.material.needsUpdate = true;
+          // Black smoke rising from the burning flesh
+          if (typeof smokeParticles !== 'undefined' && typeof MAX_SMOKE_PARTICLES !== 'undefined' &&
+              smokeParticles.length < MAX_SMOKE_PARTICLES && scene) {
+            const _smokeGeo = new THREE.SphereGeometry(0.09, 5, 5);
+            const _smokeMat = new THREE.MeshBasicMaterial({ color: 0x111111, transparent: true, opacity: 0.5 });
+            const _smoke = new THREE.Mesh(_smokeGeo, _smokeMat);
+            _smoke.position.copy(this.mesh.position);
+            _smoke.position.y += 0.2 + Math.random() * 0.5;
+            scene.add(_smoke);
+            smokeParticles.push({ mesh: _smoke, material: _smokeMat, geometry: _smokeGeo,
+              velocity: { x: (Math.random()-0.5)*0.02, y: 0.025+Math.random()*0.02, z: (Math.random()-0.5)*0.02 },
+              life: 30, maxLife: 30 });
+          }
+        }
+
+        // ── ELECTRIC / LIGHTNING: Nervous System Spasm hit reaction ─────────────────
+        // Hijack locomotion: jitter X/Z, freeze forward velocity 0.5 s, flash white.
+        if ((damageType === 'lightning' || damageType === 'electric') && this.mesh && !this.isDead) {
+          this.mesh.position.x += (Math.random() - 0.5) * 0.4;
+          this.mesh.position.z += (Math.random() - 0.5) * 0.4;
+          this._lightningFreezeUntil = Date.now() + 500;
+          this._lastMoveVX = 0;
+          this._lastMoveVZ = 0;
+          if (this.mesh.material && !this._lightningFlashTimer) {
+            const _preFlash = this.mesh.material.color.clone();
+            this.mesh.material.color.setHex(0xFFFFFF);
+            this.mesh.material.needsUpdate = true;
+            this._lightningFlashTimer = setTimeout(() => {
+              if (this.mesh && this.mesh.material && !this.isDead) {
+                this.mesh.material.color.copy(_preFlash);
+                this.mesh.material.needsUpdate = true;
+              }
+              this._lightningFlashTimer = null;
+            }, 130);
+          }
+        }
+
         if (this.hp <= 0) {
           this.die();
         }
@@ -2402,6 +2516,11 @@
         if (this._squishTimer) {
           clearTimeout(this._squishTimer);
           this._squishTimer = null;
+        }
+        // Cancel pending lightning-flash timeout to prevent color restore on dead enemy
+        if (this._lightningFlashTimer) {
+          clearTimeout(this._lightningFlashTimer);
+          this._lightningFlashTimer = null;
         }
         // Cancel pending drone shake interval to prevent timer leak
         if (this._droneShakeTimer) {
@@ -2450,7 +2569,9 @@
         triggerKillCam(this.mesh.position, this.isMiniBoss, damageType);
         
         // Arterial spurt on death — blood jets pump from the neck/chest wound
-        if (window.BloodSystem && window.BloodSystem.emitArterialSpurt) {
+        // Skip for elemental deaths (fire/lightning/poison) that have their own dissolution effects
+        if (window.BloodSystem && window.BloodSystem.emitArterialSpurt &&
+            damageType !== 'fire' && damageType !== 'lightning' && damageType !== 'poison') {
           const spurtDir = { x: Math.cos(Math.random() * Math.PI * 2), y: 0, z: Math.sin(Math.random() * Math.PI * 2) };
           // Miniboss/boss get more dramatic spurts
           const spurtPulses   = (this.isMiniBoss || this.isFlyingBoss) ? 12 : 8;
@@ -2504,8 +2625,8 @@
           // Poison death: dissolve in green toxic melt
           this.dieByPoison(enemyColor);
         } else {
-          // Standard death (bullet/physical/gun)
-          this.dieStandard(enemyColor);
+          // Standard death — Geyser Rollover: rolls onto back with 3-second heartbeat bleed-out
+          this.dieGeyserRollover(enemyColor);
         }
         
         // Screen flash on kill (dopamine boost) - stronger flash for mini-boss
@@ -2524,8 +2645,11 @@
         if ((this.isMiniBoss || this.isFlyingBoss) && window.triggerHitStop) window.triggerHitStop(80);
         
         // Blood spray on death — visceral pumping wound blood
+        // Skip entirely for elemental deaths that have their own dissolution effects
+        const _suppressDeathBlood = damageType === 'fire' || damageType === 'lightning' || damageType === 'poison';
         const isShotgunKill = damageType === 'shotgun' || damageType === 'doubleBarrel';
         const isHeadshotKill = damageType === 'headshot';
+        if (!_suppressDeathBlood) {
         const deathBloodMult = this.isMiniBoss ? 2.0 : (isShotgunKill ? 1.8 : 1.0);
         spawnParticles(this.mesh.position, 0x8B0000, Math.floor(14 * deathBloodMult));
         spawnParticles(this.mesh.position, 0xCC0000, Math.floor(8 * deathBloodMult));
@@ -2628,6 +2752,7 @@
         for (let db = 0; db < (this.isMiniBoss ? 18 : 12); db++) {
           spawnBloodDecal(this.mesh.position);
         }
+        } // end if (!_suppressDeathBlood)
         
         // Enemy death animation: fall lifeless to ground, then spawn XP star separately
         const dyingMesh = this.mesh;
@@ -2796,7 +2921,7 @@
           };
         }
         
-        if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
+        if (managedAnimations.length < MAX_MANAGED_ANIMATIONS && !this._skipMainDeathAnim) {
           managedAnimations.push({ update(_dt) {
             fallFrame++;
             
@@ -3707,62 +3832,66 @@
       }
       
       dieByFire(enemyColor) {
-        // Fire death: Char and burn to ash
-        spawnParticles(this.mesh.position, 0xFF4500, 20); // Orange fire
-        spawnParticles(this.mesh.position, 0xFFFF00, 10); // Yellow flames
-        spawnParticles(this.mesh.position, 0x222222, 8); // Black smoke
-        
-        // Charred corpse - 3D flattened body shape
-        const corpseGeo = new THREE.SphereGeometry(0.5, 8, 6);
-        const corpseMat = new THREE.MeshBasicMaterial({ 
-          color: 0x222222, // Charred black
-          transparent: true,
-          opacity: 0.8
-        });
-        const corpse = new THREE.Mesh(corpseGeo, corpseMat);
-        corpse.position.copy(this.mesh.position);
-        corpse.position.y = 0.11;
-        corpse.scale.y = 0.2; // Flat charred body
-        scene.add(corpse);
-        
-        // Burn mark on ground
-        const burnGeo = new THREE.CircleGeometry(0.9, 16);
-        const burnMat = new THREE.MeshBasicMaterial({ 
-          color: 0x111111, 
-          transparent: true,
-          opacity: 0.6,
-          side: THREE.DoubleSide
-        });
-        const burnMark = new THREE.Mesh(burnGeo, burnMat);
-        burnMark.position.copy(this.mesh.position);
-        burnMark.position.y = 0.05;
-        burnMark.rotation.x = -Math.PI / 2;
-        scene.add(burnMark);
-        
-        // Fade to ash
-        let life = 120;
+        // FIRE DEATH: Char & Melt — body shrinks into a tiny smoking black pile of ash
+        // that stays on the floor forever. No blood.
+        const deathPos = this.mesh.position.clone();
+
+        // Skip the generic fall animation — fire death handles the mesh itself
+        this._skipMainDeathAnim = true;
+
+        // Final burst of fire and black smoke
+        spawnParticles(deathPos, 0xFF4500, 18); // Orange fire
+        spawnParticles(deathPos, 0xFFFF00, 8);  // Yellow flames
+        spawnParticles(deathPos, 0x111111, 14); // Black smoke
+        if (window.BloodSystem) {
+          window.BloodSystem.emitBurst(deathPos, 40, { spreadXZ: 0.8, spreadY: 0.5,
+            color1: 0x222222, color2: 0x111111, minSize: 0.04, maxSize: 0.12, minLife: 20, maxLife: 50 });
+        }
+
+        // Instantly scale the mesh to 0 — it has already been charred visually by the hit reaction
+        if (this.mesh) this.mesh.scale.set(0, 0, 0);
+
+        // Permanent tiny black ash pile — stays on the floor forever (no removal)
+        const ashGeo  = new THREE.SphereGeometry(0.18, 6, 4);
+        const ashMat  = new THREE.MeshBasicMaterial({ color: 0x0A0A0A, transparent: true, opacity: 0.92 });
+        const ash     = new THREE.Mesh(ashGeo, ashMat);
+        ash.position.set(deathPos.x, 0.06, deathPos.z);
+        ash.scale.set(2.2, 0.22, 2.2); // Flat, small ash pile
+        scene.add(ash);
+
+        // Permanent char burn mark on the ground
+        const burnGeo = new THREE.CircleGeometry(0.55, 12);
+        const burnMat = new THREE.MeshBasicMaterial({ color: 0x080808, transparent: true, opacity: 0.7, side: THREE.DoubleSide });
+        const burn    = new THREE.Mesh(burnGeo, burnMat);
+        burn.rotation.x = -Math.PI / 2;
+        burn.position.set(deathPos.x, 0.04, deathPos.z);
+        scene.add(burn);
+
+        // Smoking ash: black smoke particles rise from the pile for several seconds
+        let ashSmokeTimer = 0;
+        let ashSmokeCount = 20;
         if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
-        managedAnimations.push({ update(_dt) {
-          life--;
-          corpse.material.opacity = (life / 120) * 0.8;
-          corpse.scale.multiplyScalar(0.995);
-          if (life <= 0) {
-            scene.remove(corpse);
-            scene.remove(burnMark);
-            corpse.geometry.dispose();
-            corpse.material.dispose();
-            burnMark.geometry.dispose();
-            burnMark.material.dispose();
-            return false;
-          }
-          return true;
-        }});
-        } else {
-          scene.remove(corpse); scene.remove(burnMark);
-          corpse.geometry.dispose(); corpse.material.dispose();
-          burnMark.geometry.dispose(); burnMark.material.dispose();
+          managedAnimations.push({ update(_dt) {
+            ashSmokeTimer++;
+            if (ashSmokeTimer % 8 === 0 && ashSmokeCount > 0) {
+              ashSmokeCount--;
+              if (typeof smokeParticles !== 'undefined' && typeof MAX_SMOKE_PARTICLES !== 'undefined' &&
+                  smokeParticles.length < MAX_SMOKE_PARTICLES && scene) {
+                const _sg = new THREE.SphereGeometry(0.07, 5, 5);
+                const _sm = new THREE.MeshBasicMaterial({ color: 0x111111, transparent: true, opacity: 0.45 });
+                const _s  = new THREE.Mesh(_sg, _sm);
+                _s.position.set(deathPos.x + (Math.random()-0.5)*0.12, 0.1 + Math.random()*0.15, deathPos.z + (Math.random()-0.5)*0.12);
+                scene.add(_s);
+                smokeParticles.push({ mesh: _s, material: _sm, geometry: _sg,
+                  velocity: { x: (Math.random()-0.5)*0.012, y: 0.018+Math.random()*0.012, z: (Math.random()-0.5)*0.012 },
+                  life: 35, maxLife: 35 });
+              }
+            }
+            return ashSmokeCount > 0;
+          }});
         }
       }
+      
       
       dieByIce(enemyColor) {
         // Enhanced ice death: crack → struggle → shatter, leaves ice chunks + water pools
@@ -3855,79 +3984,116 @@
       }
       
       dieByLightning(enemyColor) {
-        // Lightning death: Blackened and smoking
-        spawnParticles(this.mesh.position, 0xFFFF00, 15); // Yellow lightning
-        spawnParticles(this.mesh.position, 0xFFFFFF, 10); // White flash
-        spawnParticles(this.mesh.position, 0x444444, 8); // Gray smoke
-        
-        // Blackened corpse - 3D flattened body shape
-        const corpseGeo = new THREE.SphereGeometry(0.5, 8, 6);
-        const corpseMat = new THREE.MeshBasicMaterial({ 
-          color: 0x1a1a1a, // Very dark gray
-          transparent: true,
-          opacity: 0.9
-        });
-        const corpse = new THREE.Mesh(corpseGeo, corpseMat);
-        corpse.position.copy(this.mesh.position);
-        corpse.position.y = 0.11;
-        corpse.scale.y = 0.2; // Flat blackened body
-        scene.add(corpse);
-        
-        // Smoke particles rising - use managedAnimations instead of setInterval to prevent timer accumulation
+        // LIGHTNING DEATH: Nervous System Spasm — mesh scales to 0 instantly,
+        // leaving behind a glowing blue static spark that stays on the floor forever.
         const deathPos = this.mesh.position.clone();
-        let smokeSpawnCount = 8;
-        let smokeSpawnTimer = 0;
+
+        // Skip the generic fall animation — lightning death handles the mesh itself
+        this._skipMainDeathAnim = true;
+
+        // Final electric flash
+        spawnParticles(deathPos, 0xFFFF00, 12); // Yellow lightning
+        spawnParticles(deathPos, 0xFFFFFF, 10); // White flash
+        spawnParticles(deathPos, 0x4444FF, 8);  // Blue electric arcs
+        if (window.BloodSystem) {
+          window.BloodSystem.emitBurst(deathPos, 30, { spreadXZ: 0.7, spreadY: 0.6,
+            color1: 0xFFFFFF, color2: 0x8888FF, minSize: 0.03, maxSize: 0.09, minLife: 15, maxLife: 40 });
+        }
+
+        // Instantly scale mesh to 0 — electrocuted body vaporised
+        if (this.mesh) this.mesh.scale.set(0, 0, 0);
+
+        // Permanent glowing blue static spark on the floor
+        const sparkGeo = new THREE.SphereGeometry(0.08, 6, 6);
+        const sparkMat = new THREE.MeshBasicMaterial({ color: 0x44AAFF, transparent: true, opacity: 0.9 });
+        const spark    = new THREE.Mesh(sparkGeo, sparkMat);
+        spark.position.set(deathPos.x, 0.07, deathPos.z);
+        scene.add(spark);
+
+        // Pulse glow animation: the spark flickers as static electricity
+        let sparkTimer = 0;
         if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
           managedAnimations.push({ update(_dt) {
-            smokeSpawnTimer++;
-            if (smokeSpawnTimer % 6 === 0) { // ~100ms at 60fps
-              smokeSpawnCount--;
-              if (smokeSpawnCount <= 0 || !scene) return false;
-              if (smokeParticles.length < MAX_SMOKE_PARTICLES) {
-                const smokeGeo = new THREE.SphereGeometry(0.1, 6, 6);
-                const smokeMat = new THREE.MeshBasicMaterial({ color: 0x666666, transparent: true, opacity: 0.4 });
-                const smoke = new THREE.Mesh(smokeGeo, smokeMat);
-                smoke.position.copy(deathPos);
-                smoke.position.y = 0.1;
-                scene.add(smoke);
-                smokeParticles.push({ mesh: smoke, material: smokeMat, geometry: smokeGeo,
-                  velocity: { x: (Math.random()-0.5)*0.02, y: 0.03, z: (Math.random()-0.5)*0.02 },
-                  life: 40, maxLife: 40 });
-              }
+            sparkTimer++;
+            // Flicker pulsing glow
+            const _pulse = Math.sin(sparkTimer * 0.35) * 0.5 + 0.5;
+            sparkMat.opacity = 0.55 + _pulse * 0.45;
+            spark.scale.setScalar(0.9 + _pulse * 0.35);
+            // Tiny blue arc particles every ~0.5 second
+            if (sparkTimer % 30 === 0 && scene) {
+              spawnParticles(spark.position, 0x66BBFF, 2);
             }
-            return smokeSpawnCount > 0;
+            // Spark persists indefinitely — return true forever
+            return true;
+          }, cleanup() {
+            if (spark.parent) scene.remove(spark);
+            sparkGeo.dispose(); sparkMat.dispose();
           }});
-        }
-        
-        // Fade corpse
-        let corpseLife = 120;
-        if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
-        managedAnimations.push({ update(_dt) {
-          corpseLife--;
-          corpse.material.opacity = (corpseLife / 120) * 0.9;
-          if (corpseLife <= 0) {
-            scene.remove(corpse);
-            corpse.geometry.dispose();
-            corpse.material.dispose();
-            return false;
-          }
-          return true;
-        }});
-        } else {
-          scene.remove(corpse);
-          corpse.geometry.dispose(); corpse.material.dispose();
         }
       }
       
       dieByShotgun(enemyColor) {
-        // CHUNK BLOWER: Scale mesh randomly on X/Z for that blown-apart look, then dismember
+        // "INSIDE-OUT BLOWOUT": Massive blunt/explosive hit — scales mesh to pancake on X/Z,
+        // instantly deletes the Torso segment, spawns 30 meat chunks, blasts Head 15 units back.
         const deathPos = this.mesh.position.clone();
 
-        // ── Random mesh scale distortion on X and Z (body blown sideways) ──
+        // ── Pancake mesh scale: rapidly squash Y while expanding X/Z ──────────────
         if (this.mesh) {
-          const sx = 0.5 + Math.random() * 1.2;
-          const sz = 0.5 + Math.random() * 1.2;
-          this.mesh.scale.set(sx, 0.3 + Math.random() * 0.4, sz);
+          this.mesh.scale.set(2.8 + Math.random() * 0.8, 0.12 + Math.random() * 0.10, 2.8 + Math.random() * 0.8);
+        }
+
+        // ── Instantly delete Torso segment ────────────────────────────────────────
+        if (this.torsoGroup) {
+          this.torsoGroup.visible = false;
+          if (this.anatomy && this.anatomy.torso) this.anatomy.torso.attached = false;
+        }
+
+        // ── Blast Head segment 15 units backwards ────────────────────────────────
+        if (this.headGroup) {
+          // Detach head from parent, add to scene at world position
+          const _headWorldPos = new THREE.Vector3();
+          this.headGroup.getWorldPosition(_headWorldPos);
+          this.headGroup.visible = false; // hide original
+          if (this.anatomy && this.anatomy.head) this.anatomy.head.attached = false;
+
+          const _hGeo = new THREE.SphereGeometry(0.18, 7, 6);
+          const _hMat = new THREE.MeshBasicMaterial({ color: enemyColor, transparent: true, opacity: 0.95 });
+          const _hMesh = new THREE.Mesh(_hGeo, _hMat);
+          _hMesh.position.copy(_headWorldPos);
+          scene.add(_hMesh);
+
+          // Direction away from player for the head blast
+          const _px = player ? player.mesh.position.x : deathPos.x;
+          const _pz = player ? player.mesh.position.z : deathPos.z;
+          const _bdx = deathPos.x - _px;
+          const _bdz = deathPos.z - _pz;
+          const _blen = Math.sqrt(_bdx*_bdx + _bdz*_bdz) || 1;
+          const _blastVX = (_bdx / _blen) * 0.42 + (Math.random()-0.5)*0.15;
+          const _blastVZ = (_bdz / _blen) * 0.42 + (Math.random()-0.5)*0.15;
+          let _blastVY = 0.38;
+          let _headLife = 80;
+          if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
+            managedAnimations.push({ update(_dt) {
+              _headLife--;
+              _blastVY -= 0.016;
+              _hMesh.position.x += _blastVX;
+              _hMesh.position.y += _blastVY;
+              _hMesh.position.z += _blastVZ;
+              _hMesh.rotation.x += 0.18;
+              _hMesh.rotation.z += 0.12;
+              if (_hMesh.position.y < 0.18) {
+                _hMesh.position.y = 0.18;
+                _blastVY = Math.abs(_blastVY) * 0.15;
+              }
+              if (_headLife % 4 === 0 && _headLife > 20) spawnBloodDecal(_hMesh.position);
+              if (_headLife < 20) _hMat.opacity = (_headLife / 20) * 0.95;
+              if (_headLife <= 0) {
+                scene.remove(_hMesh); _hGeo.dispose(); _hMat.dispose();
+                return false;
+              }
+              return true;
+            }, cleanup() { scene.remove(_hMesh); _hGeo.dispose(); _hMat.dispose(); }});
+          } else { scene.remove(_hMesh); _hGeo.dispose(); _hMat.dispose(); }
         }
 
         spawnParticles(deathPos, 0x8B0000, 30); // Lots of blood
@@ -3958,11 +4124,11 @@
           spawnBloodDecal({ x: deathPos.x + Math.cos(angle) * dist, y: 0, z: deathPos.z + Math.sin(angle) * dist });
         }
 
-        // ── 8–12 MEAT/FLESH CHUNKS flying backward in a cone based on bullet angle ──
+        // ── 30 MEAT/FLESH CHUNKS flying outward in a full cone — "Inside-Out Blowout" ──
         const bulletVX = this._lastHitVX || 0;
         const bulletVZ = this._lastHitVZ || 1;
         const bulletAngle = Math.atan2(bulletVZ, bulletVX);
-        const chunkCount = 8 + Math.floor(Math.random() * 5); // 8–12
+        const chunkCount = 30; // Exactly 30 per spec
         const goreColors = [0x8B0000, 0x660000, 0x4A0000, 0x550011, 0xAA2200, 0xCC1100];
         const _sgChunks = [];
         for (let ci = 0; ci < chunkCount; ci++) {
@@ -4866,54 +5032,150 @@
         }
       }
       
-      dieByPoison(enemyColor) {
-        // POISON DEATH: Toxic melt — green bubbling dissolution with blood
+      dieGeyserRollover(enemyColor) {
+        // GEYSER ROLLOVER DEATH: Enemy rolls onto its back, then "heartbeat bleed-out" for 3 s,
+        // squirting blood fountains straight up. Finally fades to a dark corpse husk.
         const deathPos = this.mesh.position.clone();
-        spawnParticles(deathPos, 0x00FF00, 14); // Bright green toxic
-        spawnParticles(deathPos, 0x44FF44, 8);  // Light green bubbles
-        spawnParticles(deathPos, 0x006600, 6);  // Dark green ooze
-        spawnParticles(deathPos, 0x8B0000, 8);  // Blood mixed in
-        if (window.BloodSystem) {
-          window.BloodSystem.emitBurst(deathPos, 40, { spreadXZ: 0.6, spreadY: 0.3, minSize: 0.02, maxSize: 0.08, minLife: 30, maxLife: 70 });
-        }
-        // Toxic puddle on ground
-        const puddleGeo = new THREE.CircleGeometry(0.7, 12);
-        const puddleMat = new THREE.MeshBasicMaterial({ color: 0x116611, transparent: true, opacity: 0.5, side: THREE.DoubleSide });
-        const puddle = new THREE.Mesh(puddleGeo, puddleMat);
-        puddle.rotation.x = -Math.PI / 2;
-        puddle.position.set(deathPos.x, 0.01, deathPos.z);
-        scene.add(puddle);
-        for (let i = 0; i < 4; i++) spawnBloodDecal({ x: deathPos.x + (Math.random()-0.5)*0.6, y: 0, z: deathPos.z + (Math.random()-0.5)*0.6 });
-        // Melting corpse remnant
-        const corpseGeo = new THREE.SphereGeometry(0.4, 8, 6);
-        const corpseMat = new THREE.MeshBasicMaterial({ color: 0x225522, transparent: true, opacity: 0.7 });
-        const corpse = new THREE.Mesh(corpseGeo, corpseMat);
-        corpse.position.copy(deathPos); corpse.position.y = 0.1; corpse.scale.y = 0.2;
-        scene.add(corpse);
-        let life = 100;
+        const _dyingMesh = this.mesh;
+
+        // Flag die() to skip the generic fall animation — this method handles the mesh fully
+        this._skipMainDeathAnim = true;
+
+        // Stop all forward movement immediately
+        this._lastMoveVX = 0;
+        this._lastMoveVZ = 0;
+
+        // Phase 1 — Roll onto back: rotate 180° on Z over ~30 frames
+        const ROLL_FRAMES     = 30;
+        const HEARTBEAT_FRAMES = 180; // 3 seconds at 60 fps
+        const FADE_FRAMES_GR  = 50;
+        const TOTAL_FRAMES    = ROLL_FRAMES + HEARTBEAT_FRAMES + FADE_FRAMES_GR;
+
+        let geyserFrame = 0;
+        let _heartTimer = 0;
+        let _pumpPhase  = 0; // 0–1 within current beat
+
         if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
           managedAnimations.push({ update(_dt) {
-            life--;
-            corpse.material.opacity = (life / 100) * 0.7;
-            corpse.scale.x *= 1.005; corpse.scale.z *= 1.005; // melting outward
-            puddleMat.opacity = (life / 100) * 0.5;
-            if (life % 8 === 0 && life > 40) spawnParticles(deathPos, 0x44FF44, 1);
-            if (life <= 0) {
-              scene.remove(corpse); scene.remove(puddle);
-              corpseGeo.dispose(); corpseMat.dispose();
-              puddleGeo.dispose(); puddleMat.dispose();
-              return false;
+            geyserFrame++;
+
+            if (geyserFrame <= ROLL_FRAMES) {
+              // Roll 180° on Z axis to flip onto back
+              const _rollT = geyserFrame / ROLL_FRAMES;
+              _dyingMesh.rotation.z = _rollT * Math.PI;
+              _dyingMesh.position.y = deathPos.y * (1 - _rollT * 0.5);
+
+            } else if (geyserFrame <= ROLL_FRAMES + HEARTBEAT_FRAMES) {
+              // Phase 2 — Heartbeat bleed-out: scale chest up/down like a pumping heart,
+              // fountain of blood straight up at each peak.
+              _heartTimer++;
+              const _beatPeriod = 22; // ~2.7 heartbeats/sec at 60 fps
+              _pumpPhase = (_heartTimer % _beatPeriod) / _beatPeriod;
+              const _beat = Math.sin(_pumpPhase * Math.PI * 2);
+              // Scale chest (torsoGroup or baseGroup) up/down
+              if (_dyingMesh.children.length > 0) {
+                const _chest = _dyingMesh.children[0];
+                if (_chest) {
+                  _chest.scale.x = 1.0 + _beat * 0.18;
+                  _chest.scale.z = 1.0 + _beat * 0.18;
+                  _chest.scale.y = 1.0 + _beat * 0.12;
+                }
+              }
+              // At peak of each pump, squirt blood fountain straight up
+              if (_pumpPhase < 0.05 && _heartTimer > 3) {
+                if (window.BloodSystem) {
+                  window.BloodSystem.emitBurst(
+                    { x: deathPos.x, y: deathPos.y + 0.3, z: deathPos.z },
+                    22,
+                    { spreadXZ: 0.15, spreadY: 0.9, minSize: 0.02, maxSize: 0.07, minLife: 30, maxLife: 65 }
+                  );
+                }
+                spawnParticles({ x: deathPos.x, y: deathPos.y + 0.3, z: deathPos.z }, 0x8B0000, 6);
+              }
+              // Continuous blood drip from ground
+              if (_heartTimer % 8 === 0) spawnBloodDecal(deathPos);
+
+            } else {
+              // Phase 3 — Fade to dark corpse husk
+              const _fadeT = (geyserFrame - ROLL_FRAMES - HEARTBEAT_FRAMES) / FADE_FRAMES_GR;
+              if (_dyingMesh.material) {
+                _dyingMesh.material.color.setHex(0x1A0000); // Dark corpse husk
+                _dyingMesh.material.opacity = Math.max(0, (1 - _fadeT) * 0.75);
+                _dyingMesh.material.needsUpdate = true;
+              }
+              if (geyserFrame >= TOTAL_FRAMES) {
+                if (_dyingMesh.parent) scene.remove(_dyingMesh);
+                return false;
+              }
             }
             return true;
           }, cleanup() {
-            scene.remove(corpse); scene.remove(puddle);
-            corpseGeo.dispose(); corpseMat.dispose();
+            if (_dyingMesh.parent) scene.remove(_dyingMesh);
+          }});
+        }
+      }
+
+      dieByPoison(enemyColor) {
+        // POISON / ACID DEATH: The Puddle — corpse flattens into a permanent neon-green
+        // acidic puddle decal on the floor. scale.y → 0.05, scale.x/z → 2.5.
+        const deathPos = this.mesh.position.clone();
+
+        // Skip the generic fall animation — poison/acid death handles the mesh itself
+        this._skipMainDeathAnim = true;
+        spawnParticles(deathPos, 0x00FF00, 14); // Bright green toxic
+        spawnParticles(deathPos, 0x44FF44, 8);  // Light green bubbles
+        spawnParticles(deathPos, 0x006600, 6);  // Dark green ooze
+        if (window.BloodSystem) {
+          window.BloodSystem.emitBurst(deathPos, 40, { spreadXZ: 0.8, spreadY: 0.2,
+            color1: 0x00FF44, color2: 0x004400, minSize: 0.03, maxSize: 0.10, minLife: 25, maxLife: 60 });
+        }
+
+        // Animate the mesh itself morphing into an acidic puddle over 0.5 seconds
+        if (this.mesh && this.mesh.material) {
+          this.mesh.material.color.setHex(0x00FF22); // Neon green
+          this.mesh.material.needsUpdate = true;
+        }
+        const _startScaleX = this.mesh ? this.mesh.scale.x : 1;
+        const _startScaleY = this.mesh ? this.mesh.scale.y : 1;
+        const _startScaleZ = this.mesh ? this.mesh.scale.z : 1;
+        const _targetScaleY = 0.05;
+        const _targetScaleXZ = 2.5;
+        const _meltFrames = 30;
+        let _meltFrame = 0;
+        const _dyingMeshRef = this.mesh;
+        if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
+          managedAnimations.push({ update(_dt) {
+            _meltFrame++;
+            const _t = Math.min(_meltFrame / _meltFrames, 1);
+            if (_dyingMeshRef) {
+              _dyingMeshRef.scale.x = _startScaleX + (_targetScaleXZ - _startScaleX) * _t;
+              _dyingMeshRef.scale.y = _startScaleY + (_targetScaleY - _startScaleY) * _t;
+              _dyingMeshRef.scale.z = _startScaleZ + (_targetScaleXZ - _startScaleZ) * _t;
+              _dyingMeshRef.position.y = Math.max(0.04, deathPos.y * (1 - _t * 0.95));
+              if (_meltFrame % 5 === 0 && _meltFrame < 25) spawnParticles(deathPos, 0x00FF44, 2);
+            }
+            return _meltFrame < _meltFrames;
+          }});
+        }
+
+        // Permanent neon-green acidic puddle decal on the floor
+        const puddleGeo = new THREE.CircleGeometry(1.0, 14);
+        const puddleMat = new THREE.MeshBasicMaterial({ color: 0x00FF22, transparent: true, opacity: 0.65, side: THREE.DoubleSide });
+        const puddle = new THREE.Mesh(puddleGeo, puddleMat);
+        puddle.rotation.x = -Math.PI / 2;
+        puddle.position.set(deathPos.x, 0.03, deathPos.z);
+        scene.add(puddle);
+        // Pulsing acid puddle — permanently bubbles with green particles
+        let _bubbleTimer = 0;
+        if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
+          managedAnimations.push({ update(_dt) {
+            _bubbleTimer++;
+            if (_bubbleTimer % 35 === 0 && scene) spawnParticles(puddle.position, 0x00FF22, 1);
+            return true; // stays forever
+          }, cleanup() {
+            if (puddle.parent) scene.remove(puddle);
             puddleGeo.dispose(); puddleMat.dispose();
           }});
-        } else {
-          scene.remove(corpse); scene.remove(puddle);
-          corpseGeo.dispose(); corpseMat.dispose();
-          puddleGeo.dispose(); puddleMat.dispose();
         }
       }
     }
