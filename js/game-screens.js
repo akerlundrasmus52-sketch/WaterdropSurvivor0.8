@@ -3727,7 +3727,7 @@
     // instead of creating new PlaneGeometry / MeshStandardMaterial each time.
     let _bloodDecalIM        = null;  // THREE.InstancedMesh (MAX_BLOOD_DECALS instances)
     const _bdIMSpawnTime     = new Float64Array(MAX_BLOOD_DECALS); // spawn timestamp per slot
-    const _bdIMOpacity       = new Float32Array(MAX_BLOOD_DECALS); // initial opacity per slot
+    const _bdIMInitialSize   = new Float32Array(MAX_BLOOD_DECALS); // initial scale size per slot
     const _bdIMMatrix        = new THREE.Matrix4();                 // scratch matrix
     const _bdIMScale         = new THREE.Vector3();
     const _bdIMPos           = new THREE.Vector3();
@@ -3764,7 +3764,7 @@
         _bdIMMatrix.compose(_bdIMPos, _bdIMQuat, _bdIMScale);
         _bloodDecalIM.setMatrixAt(i, _bdIMMatrix);
         _bdIMSpawnTime[i] = 0;
-        _bdIMOpacity[i]   = 0;
+        _bdIMInitialSize[i] = 0;
       }
       _bloodDecalIM.instanceMatrix.needsUpdate = true;
       scene.add(_bloodDecalIM);
@@ -3782,7 +3782,7 @@
       const size           = 0.15 + Math.random() * 0.35;
       const initialOpacity = 0.6  + Math.random() * 0.3;
       _bdIMSpawnTime[idx]  = Date.now();
-      _bdIMOpacity[idx]    = initialOpacity;
+      _bdIMInitialSize[idx] = size;
       _bdIMPos.set(pos.x + (Math.random() - 0.5) * 0.8, 0.05, pos.z + (Math.random() - 0.5) * 0.8);
       _bdIMScale.set(size, size, size);
       _bdIMMatrix.compose(_bdIMPos, _bdIMQuat, _bdIMScale);
@@ -3845,7 +3845,7 @@
             // Shrink scale to simulate fade-out (single shared material, no per-instance opacity)
             const fadeProgress = (age - BLOOD_DECAL_FADE_MS * BLOOD_DECAL_FADE_START) /
                                  (BLOOD_DECAL_FADE_MS * (1 - BLOOD_DECAL_FADE_START));
-            const baseSize = _bdIMOpacity[i]; // we stored initial size-proxy here
+            const baseSize = _bdIMInitialSize[i];
             const s = baseSize * (1 - fadeProgress);
             _bloodDecalIM.getMatrixAt(i, _bdIMMatrix);
             _bdIMMatrix.decompose(_bdIMPos, _bdIMQuat, _bdIMScale);

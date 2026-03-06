@@ -2013,11 +2013,10 @@
                   for (let mgc = 0; mgc < 4 && bloodDrips.length < MAX_BLOOD_DRIPS; mgc++) {
                     _ensureSharedGeo();
                     let mgore;
-                    let _mgUsedPool = false;
-                    if (window.meatChunkPool) {
-                      mgore = window.meatChunkPool.get();
+                    const _mgPool = window.meatChunkPool || null;
+                    if (_mgPool) {
+                      mgore = _mgPool.get();
                       mgore.visible = true;
-                      _mgUsedPool = true;
                     } else {
                       mgore = new THREE.Mesh(_sharedGoreGeo, _sharedGoreMats[mgc % 2]);
                       scene.add(mgore);
@@ -2031,7 +2030,7 @@
                       velZ: (Math.random() - 0.5) * 0.55,
                       velY: 0.3 + Math.random() * 0.4,
                       life: 60 + Math.floor(Math.random() * 25),
-                      _pool: _mgUsedPool ? window.meatChunkPool : null
+                      _pool: _mgPool
                     });
                   }
                   for (let gd = 0; gd < 3; gd++) {
