@@ -422,11 +422,20 @@
       // Reset mysterious egg spawning flag for new run
       window._mysteriousEggSpawned = false;
       window._mysteriousEggObject = null;
+
+      // Reset Annunaki endgame event flags for new run
+      window._annunakiEventActive = false;
+      window._annunakiWavesStopped = false;
+      window._annunakiBoss = null;
       
       // Reset exp pickup combo for new run
       if (window.GameAudio && window.GameAudio.resetExpCombo) {
         window.GameAudio.resetExpCombo();
       }
+
+      // Restore lighting to default in case Annunaki event changed it
+      if (window.ambientLight) window.ambientLight.color.setRGB(1, 1, 1);
+      if (window.dirLight)     window.dirLight.color.setRGB(1, 1, 1);
       
       // Reset player invulnerability state
       if (player) {

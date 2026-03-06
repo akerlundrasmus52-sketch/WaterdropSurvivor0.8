@@ -570,10 +570,71 @@
       }
       // WEAPON UNLOCK: Level 4, 8, 15, 20 — show ONLY 6 weapon choices (no stat upgrades)
       else if ([4, 8, 15, 20].includes(playerStats.lvl)) {
-        modal.querySelector('h2').innerText = 'NEW WEAPON!';
+
+        // ── Helper: count currently active weapons (gun is always active) ──
+        const countActiveWeapons = () => Object.values(weapons).filter(w => w.active).length;
+        const atWeaponCap = countActiveWeapons() >= 4; // Hard cap: max 4 active weapons
+
+        modal.querySelector('h2').innerText = atWeaponCap ? 'WEAPON UPGRADE!' : 'NEW WEAPON!';
         modal.querySelector('h2').style.fontSize = '36px';
 
         const questCheck = () => { if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest8_newWeapon') progressTutorialQuest('quest8_newWeapon', true); };
+
+        // ── Weapon Evolution table: weapon key → Mythic evolved form ─────────
+        // When a weapon reaches Level 10 it "Evolves" into a Mythic state with
+        // drastically improved stats and a new identity.
+        const WEAPON_EVOLUTIONS = {
+          gun:          { name: 'RAILGUN',        icon: '🔵', desc: 'EVOLVED: Penetrating rail shot, 3× damage, infinite pierce' },
+          sword:        { name: 'PLASMA SCYTHE',  icon: '🌀', desc: 'EVOLVED: 3× range arc, melts through armor' },
+          samuraiSword: { name: 'VOID KATANA',    icon: '⚫', desc: 'EVOLVED: Void tears on hit, ignores 50% armor' },
+          whip:         { name: 'CHAOS LASH',     icon: '🟣', desc: 'EVOLVED: Chains to 10 enemies, triple damage' },
+          uzi:          { name: 'STORM NEEDLER',  icon: '💠', desc: 'EVOLVED: 4 barrels, high-velocity void rounds' },
+          sniperRifle:  { name: 'DARK MATTER GUN',icon: '🌑', desc: 'EVOLVED: Collapses enemies into singularities' },
+          pumpShotgun:  { name: 'FLAK CANNON',    icon: '💥', desc: 'EVOLVED: Explosive shrapnel burst, 2× radius' },
+          autoShotgun:  { name: 'HELLSTORM',      icon: '🔥', desc: 'EVOLVED: Incendiary shells, burns on hit' },
+          minigun:      { name: 'OBLITERATOR',    icon: '⚙️', desc: 'EVOLVED: No spin-up delay, void-tipped rounds' },
+          bow:          { name: 'DIVINE LONGBOW', icon: '✨', desc: 'EVOLVED: Holy arrows split into 5 on hit' },
+          teslaSaber:   { name: 'NOVA BLADE',     icon: '⚡', desc: 'EVOLVED: Full-screen lightning on each swing' },
+          doubleBarrel: { name: 'VORTEX CANNON',  icon: '🌪️', desc: 'EVOLVED: Pellets orbit and spiral outward' },
+          droneTurret:  { name: 'DEATH SPHERE',   icon: '🔴', desc: 'EVOLVED: 3 autonomous spheres, lock-on lasers' },
+          aura:         { name: 'VOID CORONA',    icon: '🟤', desc: 'EVOLVED: 3× radius, ignores armor' },
+          boomerang:    { name: 'PHASE BLADE',    icon: '🔷', desc: 'EVOLVED: Passes through walls, returns twice' },
+          shuriken:     { name: 'STAR STORM',     icon: '💫', desc: 'EVOLVED: 8 stars + chain explosion on impact' },
+          nanoSwarm:    { name: 'PLAGUE CLOUD',   icon: '☣️', desc: 'EVOLVED: Infects enemies, spreads on death' },
+          homingMissile:{ name: 'NOVA TORPEDO',   icon: '🚀', desc: 'EVOLVED: Splits into 4 seeking warheads' },
+          iceSpear:     { name: 'GLACIER SPIKE',  icon: '❄️', desc: 'EVOLVED: Permafrost — freezes on hit for 3s' },
+          meteor:       { name: 'EXTINCTION EVENT',icon:'☄️', desc: 'EVOLVED: Carpet-bombs the entire arena' },
+          fireRing:     { name: 'SOLAR HALO',     icon: '🌟', desc: 'EVOLVED: 8 orbital suns, each explodes on hit' },
+          lightning:    { name: 'STORM GOD',      icon: '⚡', desc: 'EVOLVED: Chain reaction through every enemy' },
+          poison:       { name: 'VOID DECAY',     icon: '🟢', desc: 'EVOLVED: Void corrosion — bypasses Divine Shield' },
+          fireball:     { name: 'ARMAGEDDON',     icon: '🔥', desc: 'EVOLVED: Reality-warping fire — ignores resistances' }
+        };
+
+        // Apply evolution stats to a weapon when it reaches level 10
+        function applyWeaponEvolution(weaponKey) {
+          const w = weapons[weaponKey];
+          if (!w || w.evolved) return;
+          w.evolved = true;
+          // Stat burst: damage 3×, cooldown halved, bonus multipliers
+          w.damage   = Math.round(w.damage * 3);
+          w.cooldown = Math.round(w.cooldown * 0.5);
+          if (w.range)            w.range            = Math.round(w.range * 3 * 10) / 10;
+          if (w.pellets)          w.pellets          += 6;
+          if (w.piercing)         w.piercing         += 5;
+          if (w.chainHits)        w.chainHits        += 4;
+          if (w.projectiles)      w.projectiles      += 4;
+          if (w.swarmCount)       w.swarmCount       *= 2;
+          if (w.droneCount)       w.droneCount       += 2;
+          if (w.orbs)             w.orbs             += 4;
+          if (w.strikes)          w.strikes          += 4;
+          if (w.explosionRadius)  w.explosionRadius  *= 2;
+          if (w.area)             w.area             *= 2;
+          if (w.dotDamage)        w.dotDamage        *= 3;
+          if (w.slowPercent)      w.slowPercent       = Math.min(0.9, w.slowPercent * 2);
+          const evo = WEAPON_EVOLUTIONS[weaponKey];
+          showStatChange(`🌟 ${evo ? evo.name : weaponKey.toUpperCase()} EVOLVED into MYTHIC form!`);
+          if (window.pushSuperStatEvent) window.pushSuperStatEvent(`🌟 ${evo ? evo.name : 'EVOLVED'}`, 'mythic', '⭐', 'success');
+        }
 
         // Full weapon pool — inactive weapons first, then upgrades for active weapons
         // Cat 1 = Handheld, Cat 2 = Passive, Cat 3 = Elemental
@@ -606,46 +667,59 @@
           { id: 'fireball',     icon: '🔥',  title: 'FIREBALL',           desc: 'Fireballs explode on impact — area damage',     category: 3, active: () => weapons.fireball.active,     apply: () => { weapons.fireball.active = true; weapons.fireball.level = 1; showStatChange('New Weapon: Fireball'); questCheck(); } }
         ];
 
-        // Separate inactive (new) weapons from upgrades for active ones
-        const inactiveWeapons = newWeaponChoices.filter(w => !w.active());
-        const upgradeWeapons = [
-          // Category 1 upgrades
-          ...(weapons.gun.level < 10 ? [{ id: 'gun_up', icon: '🎯', title: `GUN Lv.${weapons.gun.level + 1}`, desc: 'Damage +10, Fire Rate +15%', apply: () => { weapons.gun.level++; weapons.gun.damage += 10; weapons.gun.cooldown *= 0.85; showStatChange(`Gun Level ${weapons.gun.level}`); } }] : []),
-          ...(weapons.sword.active && weapons.sword.level < 10 ? [{ id: 'sword_up', icon: '⚔️', title: `SWORD Lv.${weapons.sword.level + 1}`, desc: 'Damage +15, Range +0.5', apply: () => { weapons.sword.level++; weapons.sword.damage += 15; weapons.sword.range += 0.5; showStatChange(`Sword Level ${weapons.sword.level}`); } }] : []),
-          ...(weapons.samuraiSword.active && weapons.samuraiSword.level < 10 ? [{ id: 'samurai_up', icon: '⚔️', title: `SAMURAI Lv.${weapons.samuraiSword.level + 1}`, desc: 'Damage +18, Speed +10%', apply: () => { weapons.samuraiSword.level++; weapons.samuraiSword.damage += 18; weapons.samuraiSword.cooldown *= 0.9; showStatChange(`Samurai Sword Level ${weapons.samuraiSword.level}`); } }] : []),
-          ...(weapons.whip.active && weapons.whip.level < 10 ? [{ id: 'whip_up', icon: '🪢', title: `WHIP Lv.${weapons.whip.level + 1}`, desc: 'Damage +8, +1 Chain hit', apply: () => { weapons.whip.level++; weapons.whip.damage += 8; weapons.whip.chainHits = (weapons.whip.chainHits || 3) + 1; showStatChange(`Whip Level ${weapons.whip.level}`); } }] : []),
-          ...(weapons.uzi.active && weapons.uzi.level < 10 ? [{ id: 'uzi_up', icon: '🔫', title: `UZI Lv.${weapons.uzi.level + 1}`, desc: 'Damage +4, Fire Rate +10%', apply: () => { weapons.uzi.level++; weapons.uzi.damage += 4; weapons.uzi.cooldown *= 0.9; showStatChange(`Uzi Level ${weapons.uzi.level}`); } }] : []),
-          ...(weapons.sniperRifle.active && weapons.sniperRifle.level < 10 ? [{ id: 'sniper_up', icon: '🎯', title: `SNIPER Lv.${weapons.sniperRifle.level + 1}`, desc: 'Damage +25, +1 Pierce', apply: () => { weapons.sniperRifle.level++; weapons.sniperRifle.damage += 25; weapons.sniperRifle.piercing = (weapons.sniperRifle.piercing || 3) + 1; showStatChange(`Sniper Level ${weapons.sniperRifle.level}`); } }] : []),
-          ...(weapons.pumpShotgun.active && weapons.pumpShotgun.level < 10 ? [{ id: 'pump_up', icon: '💥', title: `PUMP Lv.${weapons.pumpShotgun.level + 1}`, desc: 'Damage +6, +2 Pellets', apply: () => { weapons.pumpShotgun.level++; weapons.pumpShotgun.damage += 6; weapons.pumpShotgun.pellets += 2; showStatChange(`Pump Shotgun Level ${weapons.pumpShotgun.level}`); } }] : []),
-          ...(weapons.autoShotgun.active && weapons.autoShotgun.level < 10 ? [{ id: 'autoshotgun_up', icon: '💥', title: `AUTO SHOT Lv.${weapons.autoShotgun.level + 1}`, desc: 'Damage +5, Fire Rate +10%', apply: () => { weapons.autoShotgun.level++; weapons.autoShotgun.damage += 5; weapons.autoShotgun.cooldown *= 0.9; showStatChange(`Auto Shotgun Level ${weapons.autoShotgun.level}`); } }] : []),
-          ...(weapons.minigun.active && weapons.minigun.level < 10 ? [{ id: 'minigun_up', icon: '🔥', title: `MINIGUN Lv.${weapons.minigun.level + 1}`, desc: 'Damage +3, Fire Rate +8%', apply: () => { weapons.minigun.level++; weapons.minigun.damage += 3; weapons.minigun.cooldown *= 0.92; showStatChange(`Minigun Level ${weapons.minigun.level}`); } }] : []),
-          ...(weapons.bow.active && weapons.bow.level < 10 ? [{ id: 'bow_up', icon: '🏹', title: `BOW Lv.${weapons.bow.level + 1}`, desc: 'Damage +10, +1 Pierce', apply: () => { weapons.bow.level++; weapons.bow.damage += 10; weapons.bow.piercing = (weapons.bow.piercing || 1) + 1; showStatChange(`Bow Level ${weapons.bow.level}`); } }] : []),
-          ...(weapons.teslaSaber.active && weapons.teslaSaber.level < 10 ? [{ id: 'tesla_up', icon: '⚡', title: `TESLA Lv.${weapons.teslaSaber.level + 1}`, desc: 'Damage +12, Chain range +10%', apply: () => { weapons.teslaSaber.level++; weapons.teslaSaber.damage += 12; showStatChange(`Tesla Saber Level ${weapons.teslaSaber.level}`); } }] : []),
-          ...(weapons.doubleBarrel.active && weapons.doubleBarrel.level < 10 ? [{ id: 'dbl_up', icon: '🔫', title: `DOUBLE BARREL Lv.${weapons.doubleBarrel.level + 1}`, desc: '+1 Shot, Damage +12', apply: () => { weapons.doubleBarrel.level++; weapons.doubleBarrel.damage += 12; weapons.doubleBarrel.cooldown *= 0.9; weapons.doubleBarrel.pellets = (weapons.doubleBarrel.pellets || 2) + 1; showStatChange(`Double Barrel Level ${weapons.doubleBarrel.level}`); } }] : []),
-          // Category 2 upgrades
-          ...(weapons.droneTurret.active && weapons.droneTurret.level < 10 ? [{ id: 'drone_up', icon: '🤖', title: `DRONE Lv.${weapons.droneTurret.level + 1}`, desc: 'Damage +3, Fire Rate +12%', apply: () => { weapons.droneTurret.level++; weapons.droneTurret.damage += 3; weapons.droneTurret.cooldown *= 0.88; showStatChange(`Drone Level ${weapons.droneTurret.level}`); } }] : []),
-          ...(weapons.aura.active && weapons.aura.level < 10 ? [{ id: 'aura_up', icon: '🌀', title: `AURA Lv.${weapons.aura.level + 1}`, desc: 'Damage +3, Range +10%', apply: () => { weapons.aura.level++; weapons.aura.damage += 3; weapons.aura.range = Math.min(5, weapons.aura.range * 1.1); showStatChange(`Aura Level ${weapons.aura.level}`); } }] : []),
-          ...(weapons.boomerang.active && weapons.boomerang.level < 10 ? [{ id: 'boomerang_up', icon: '🪃', title: `BOOMERANG Lv.${weapons.boomerang.level + 1}`, desc: 'Damage +10, Range +1', apply: () => { weapons.boomerang.level++; weapons.boomerang.damage += 10; weapons.boomerang.range += 1; showStatChange(`Boomerang Level ${weapons.boomerang.level}`); } }] : []),
-          ...(weapons.shuriken.active && weapons.shuriken.level < 10 ? [{ id: 'shuriken_up', icon: '✦', title: `SHURIKEN Lv.${weapons.shuriken.level + 1}`, desc: '+1 Star, Damage +5', apply: () => { weapons.shuriken.level++; weapons.shuriken.damage += 5; weapons.shuriken.projectiles = (weapons.shuriken.projectiles || 3) + 1; showStatChange(`Shuriken Level ${weapons.shuriken.level}`); } }] : []),
-          ...(weapons.nanoSwarm.active && weapons.nanoSwarm.level < 10 ? [{ id: 'nano_up', icon: '🤖', title: `NANO Lv.${weapons.nanoSwarm.level + 1}`, desc: '+2 Bots, Damage +2', apply: () => { weapons.nanoSwarm.level++; weapons.nanoSwarm.damage += 2; weapons.nanoSwarm.swarmCount += 2; showStatChange(`Nano Swarm Level ${weapons.nanoSwarm.level}`); } }] : []),
-          ...(weapons.homingMissile.active && weapons.homingMissile.level < 10 ? [{ id: 'homing_up', icon: '🚀', title: `MISSILE Lv.${weapons.homingMissile.level + 1}`, desc: 'Damage +15, Speed +15%', apply: () => { weapons.homingMissile.level++; weapons.homingMissile.damage += 15; weapons.homingMissile.cooldown *= 0.85; showStatChange(`Homing Missile Level ${weapons.homingMissile.level}`); } }] : []),
-          ...(weapons.iceSpear.active && weapons.iceSpear.level < 10 ? [{ id: 'ice_up', icon: '❄️', title: `ICE SPEAR Lv.${weapons.iceSpear.level + 1}`, desc: 'Damage +10, Slow +10%', apply: () => { weapons.iceSpear.level++; weapons.iceSpear.damage += 10; weapons.iceSpear.slowPercent += 0.1; showStatChange(`Ice Spear Level ${weapons.iceSpear.level}`); } }] : []),
-          // Category 3 upgrades
-          ...(weapons.fireRing.active && weapons.fireRing.level < 10 ? [{ id: 'fire_up', icon: '🔥', title: `FIRE RING Lv.${weapons.fireRing.level + 1}`, desc: 'Damage +5, +1 Orb', apply: () => { weapons.fireRing.level++; weapons.fireRing.damage += 5; weapons.fireRing.orbs += 1; showStatChange(`Fire Ring Level ${weapons.fireRing.level}`); } }] : []),
-          ...(weapons.meteor.active && weapons.meteor.level < 10 ? [{ id: 'meteor_up', icon: '☄️', title: `METEOR Lv.${weapons.meteor.level + 1}`, desc: 'Damage +20, Area +1', apply: () => { weapons.meteor.level++; weapons.meteor.damage += 20; weapons.meteor.area += 1; showStatChange(`Meteor Level ${weapons.meteor.level}`); } }] : []),
-          ...(weapons.lightning.active && weapons.lightning.level < 10 ? [{ id: 'lightning_up', icon: '⚡', title: `LIGHTNING Lv.${weapons.lightning.level + 1}`, desc: 'Damage +15, +1 Strike', apply: () => { weapons.lightning.level++; weapons.lightning.damage += 15; weapons.lightning.strikes = (weapons.lightning.strikes || 1) + 1; showStatChange(`Lightning Level ${weapons.lightning.level}`); } }] : []),
-          ...(weapons.poison.active && weapons.poison.level < 10 ? [{ id: 'poison_up', icon: '☠️', title: `POISON Lv.${weapons.poison.level + 1}`, desc: 'DoT +2, Range +0.5', apply: () => { weapons.poison.level++; weapons.poison.dotDamage += 2; weapons.poison.range += 0.5; showStatChange(`Poison Level ${weapons.poison.level}`); } }] : []),
-          ...(weapons.fireball.active && weapons.fireball.level < 10 ? [{ id: 'fireball_up', icon: '🔥', title: `FIREBALL Lv.${weapons.fireball.level + 1}`, desc: 'Damage +12, Blast +0.5', apply: () => { weapons.fireball.level++; weapons.fireball.damage += 12; weapons.fireball.explosionRadius += 0.5; showStatChange(`Fireball Level ${weapons.fireball.level}`); } }] : [])
-        ];
+        // ── Weapon-upgrade entries (used both at cap and as padding) ─────────
+        // Weapons at level 9 show an EVOLVE option that triggers their Mythic form.
+        function makeUpgradeEntry(key, icon, label, regularApply) {
+          const w = weapons[key];
+          if (!w || !w.active) return null;
+          if (w.level >= 10 && !w.evolved) {
+            const evo = WEAPON_EVOLUTIONS[key] || { name: key.toUpperCase(), icon: '⭐', desc: 'Mythic Evolution' };
+            return { id: `${key}_evo`, icon: evo.icon, title: `✨ EVOLVE: ${evo.name}`, desc: evo.desc, apply: () => { applyWeaponEvolution(key); } };
+          }
+          if (w.level < 10) return { id: `${key}_up`, icon, title: `${label} Lv.${w.level + 1}`, desc: `Upgrade ${label}`, apply: regularApply };
+          return null;
+        }
 
-        // Prefer new weapons first; pad with weapon upgrades to always reach 6 choices
-        const shuffledNew = inactiveWeapons.sort(() => 0.5 - Math.random());
+        const upgradeWeapons = [
+          makeUpgradeEntry('gun',           '🎯', 'GUN',          () => { weapons.gun.level++;          weapons.gun.damage += 10;          weapons.gun.cooldown *= 0.85;                                            showStatChange(`Gun Level ${weapons.gun.level}`); }),
+          makeUpgradeEntry('sword',         '⚔️', 'SWORD',        () => { weapons.sword.level++;        weapons.sword.damage += 15;        weapons.sword.range += 0.5;                                              showStatChange(`Sword Level ${weapons.sword.level}`); }),
+          makeUpgradeEntry('samuraiSword',  '⚔️', 'SAMURAI',      () => { weapons.samuraiSword.level++; weapons.samuraiSword.damage += 18; weapons.samuraiSword.cooldown *= 0.9;                                    showStatChange(`Samurai Level ${weapons.samuraiSword.level}`); }),
+          makeUpgradeEntry('whip',          '🪢', 'WHIP',         () => { weapons.whip.level++;         weapons.whip.damage += 8;          weapons.whip.chainHits = (weapons.whip.chainHits || 3) + 1;              showStatChange(`Whip Level ${weapons.whip.level}`); }),
+          makeUpgradeEntry('uzi',           '🔫', 'UZI',          () => { weapons.uzi.level++;          weapons.uzi.damage += 4;           weapons.uzi.cooldown *= 0.9;                                             showStatChange(`Uzi Level ${weapons.uzi.level}`); }),
+          makeUpgradeEntry('sniperRifle',   '🎯', 'SNIPER',       () => { weapons.sniperRifle.level++;  weapons.sniperRifle.damage += 25;  weapons.sniperRifle.piercing = (weapons.sniperRifle.piercing || 3) + 1;  showStatChange(`Sniper Level ${weapons.sniperRifle.level}`); }),
+          makeUpgradeEntry('pumpShotgun',   '💥', 'PUMP SHOTGUN', () => { weapons.pumpShotgun.level++;  weapons.pumpShotgun.damage += 6;   weapons.pumpShotgun.pellets += 2;                                        showStatChange(`Pump Shotgun Level ${weapons.pumpShotgun.level}`); }),
+          makeUpgradeEntry('autoShotgun',   '💥', 'AUTO SHOTGUN', () => { weapons.autoShotgun.level++;  weapons.autoShotgun.damage += 5;   weapons.autoShotgun.cooldown *= 0.9;                                     showStatChange(`Auto Shotgun Level ${weapons.autoShotgun.level}`); }),
+          makeUpgradeEntry('minigun',       '🔥', 'MINIGUN',      () => { weapons.minigun.level++;      weapons.minigun.damage += 3;       weapons.minigun.cooldown *= 0.92;                                        showStatChange(`Minigun Level ${weapons.minigun.level}`); }),
+          makeUpgradeEntry('bow',           '🏹', 'BOW',          () => { weapons.bow.level++;          weapons.bow.damage += 10;          weapons.bow.piercing = (weapons.bow.piercing || 1) + 1;                  showStatChange(`Bow Level ${weapons.bow.level}`); }),
+          makeUpgradeEntry('teslaSaber',    '⚡', 'TESLA SABER',  () => { weapons.teslaSaber.level++;   weapons.teslaSaber.damage += 12;                                                                            showStatChange(`Tesla Saber Level ${weapons.teslaSaber.level}`); }),
+          makeUpgradeEntry('doubleBarrel',  '🔫', 'DOUBLE BARREL',() => { weapons.doubleBarrel.level++; weapons.doubleBarrel.damage += 12; weapons.doubleBarrel.cooldown *= 0.9; weapons.doubleBarrel.pellets = (weapons.doubleBarrel.pellets || 2) + 1; showStatChange(`Double Barrel Level ${weapons.doubleBarrel.level}`); }),
+          makeUpgradeEntry('droneTurret',   '🤖', 'DRONE',        () => { weapons.droneTurret.level++;  weapons.droneTurret.damage += 3;   weapons.droneTurret.cooldown *= 0.88;                                    showStatChange(`Drone Level ${weapons.droneTurret.level}`); }),
+          makeUpgradeEntry('aura',          '🌀', 'AURA',         () => { weapons.aura.level++;         weapons.aura.damage += 3;          weapons.aura.range = Math.min(5, weapons.aura.range * 1.1);              showStatChange(`Aura Level ${weapons.aura.level}`); }),
+          makeUpgradeEntry('boomerang',     '🪃', 'BOOMERANG',    () => { weapons.boomerang.level++;    weapons.boomerang.damage += 10;    weapons.boomerang.range += 1;                                            showStatChange(`Boomerang Level ${weapons.boomerang.level}`); }),
+          makeUpgradeEntry('shuriken',      '✦',  'SHURIKEN',     () => { weapons.shuriken.level++;     weapons.shuriken.damage += 5;      weapons.shuriken.projectiles = (weapons.shuriken.projectiles || 3) + 1;  showStatChange(`Shuriken Level ${weapons.shuriken.level}`); }),
+          makeUpgradeEntry('nanoSwarm',     '🤖', 'NANO SWARM',   () => { weapons.nanoSwarm.level++;    weapons.nanoSwarm.damage += 2;     weapons.nanoSwarm.swarmCount += 2;                                       showStatChange(`Nano Swarm Level ${weapons.nanoSwarm.level}`); }),
+          makeUpgradeEntry('homingMissile', '🚀', 'MISSILE',      () => { weapons.homingMissile.level++;weapons.homingMissile.damage += 15;weapons.homingMissile.cooldown *= 0.85;                                  showStatChange(`Missile Level ${weapons.homingMissile.level}`); }),
+          makeUpgradeEntry('iceSpear',      '❄️', 'ICE SPEAR',    () => { weapons.iceSpear.level++;     weapons.iceSpear.damage += 10;     weapons.iceSpear.slowPercent += 0.1;                                     showStatChange(`Ice Spear Level ${weapons.iceSpear.level}`); }),
+          makeUpgradeEntry('fireRing',      '🔥', 'FIRE RING',    () => { weapons.fireRing.level++;     weapons.fireRing.damage += 5;      weapons.fireRing.orbs += 1;                                              showStatChange(`Fire Ring Level ${weapons.fireRing.level}`); }),
+          makeUpgradeEntry('meteor',        '☄️', 'METEOR',       () => { weapons.meteor.level++;       weapons.meteor.damage += 20;       weapons.meteor.area += 1;                                                showStatChange(`Meteor Level ${weapons.meteor.level}`); }),
+          makeUpgradeEntry('lightning',     '⚡', 'LIGHTNING',    () => { weapons.lightning.level++;    weapons.lightning.damage += 15;    weapons.lightning.strikes = (weapons.lightning.strikes || 1) + 1;        showStatChange(`Lightning Level ${weapons.lightning.level}`); }),
+          makeUpgradeEntry('poison',        '☠️', 'POISON',       () => { weapons.poison.level++;       weapons.poison.dotDamage += 2;     weapons.poison.range += 0.5;                                             showStatChange(`Poison Level ${weapons.poison.level}`); }),
+          makeUpgradeEntry('fireball',      '🔥', 'FIREBALL',     () => { weapons.fireball.level++;     weapons.fireball.damage += 12;     weapons.fireball.explosionRadius += 0.5;                                 showStatChange(`Fireball Level ${weapons.fireball.level}`); })
+        ].filter(Boolean); // remove null entries (inactive or maxed+evolved)
+
+        // ── Build final choices ──────────────────────────────────────────────
+        // If player is at the 4-weapon cap, skip new weapons and only offer upgrades/evolutions.
         const shuffledUp  = upgradeWeapons.sort(() => 0.5 - Math.random());
-        choices = [...shuffledNew, ...shuffledUp].slice(0, 6);
+        let choices_new = [];
+        if (!atWeaponCap) {
+          const inactiveWeapons = newWeaponChoices.filter(w => !w.active());
+          choices_new = inactiveWeapons.sort(() => 0.5 - Math.random());
+        }
+        choices = [...choices_new, ...shuffledUp].slice(0, 6);
 
         // If still < 6 (edge case: all weapons maxed), loop inactive weapons again or repeat upgrades
         if (choices.length < 6) {
-          const filler = [...shuffledNew, ...shuffledUp];
+          const filler = [...choices_new, ...shuffledUp];
           while (choices.length < 6 && filler.length) {
             const pick = filler.shift();
             if (!choices.find(c => c.id === pick.id)) choices.push(pick);
