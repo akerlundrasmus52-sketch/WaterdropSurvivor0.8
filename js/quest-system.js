@@ -646,6 +646,80 @@
       updateAccountLevelDisplay();
     }
 
+    // ── Level-Up Rarity Effects ───────────────────────────────────
+    const _LEVEL_RARITY_COLORS = {
+      common:    '#aaddff',
+      epic:      '#aa44ff',
+      legendary: '#ffaa00',
+      mythic:    '#ff4444'
+    };
+
+    function _getLevelUpRarity(level) {
+      if (level % 25 === 0) return 'mythic';
+      if (level % 10 === 0) return 'legendary';
+      if (level % 5  === 0) return 'epic';
+      return 'common';
+    }
+
+    function _spawnLevelUpConfetti(curtain, rarity) {
+      const rect = curtain.getBoundingClientRect();
+      const cx   = rect.left + rect.width  / 2;
+      const cy   = rect.top  + rect.height / 2;
+      const colorMap = {
+        common:    ['#ffffff', '#aaddff', '#cccccc', '#ddeeff'],
+        epic:      ['#aa44ff', '#cc88ff', '#8822cc', '#dd99ff'],
+        legendary: ['#ffaa00', '#ffcc44', '#ff8800', '#ffdd88'],
+        mythic:    ['#ff4444', '#ff8800', '#ffff00', '#44ff88', '#4488ff', '#cc44ff']
+      };
+      const colors = colorMap[rarity] || colorMap.common;
+      const isMythic = rarity === 'mythic';
+
+      for (let i = 0; i < 40; i++) {
+        const el    = document.createElement('div');
+        el.className = 'lvlup-confetti' + (isMythic ? ' lvlup-confetti-mythic' : '');
+        const angle = Math.random() * Math.PI * 2;
+        const dist  = 80 + Math.random() * 180;
+        const tx    = Math.cos(angle) * dist;
+        const ty    = Math.sin(angle) * dist - 40;
+        const rot   = Math.floor(Math.random() * 360);
+        el.style.left = cx + 'px';
+        el.style.top  = cy + 'px';
+        if (!isMythic) el.style.background = colors[Math.floor(Math.random() * colors.length)];
+        el.style.setProperty('--rot', rot + 'deg');
+        el.style.setProperty('--tx',  tx  + 'px');
+        el.style.setProperty('--ty',  ty  + 'px');
+        document.body.appendChild(el);
+        setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 1300);
+      }
+    }
+
+    function _spawnLevelUpRays(curtain, rarity) {
+      const rect  = curtain.getBoundingClientRect();
+      const cx    = rect.left + rect.width  / 2;
+      const cy    = rect.top  + rect.height / 2;
+      const color = _LEVEL_RARITY_COLORS[rarity] || _LEVEL_RARITY_COLORS.common;
+
+      for (let i = 0; i < 8; i++) {
+        const el = document.createElement('div');
+        el.className = 'lvlup-ray';
+        el.style.left       = (cx - 1.5) + 'px';
+        el.style.top        = cy + 'px';
+        el.style.background = color;
+        el.style.setProperty('--angle', (i * 45) + 'deg');
+        document.body.appendChild(el);
+        setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 1000);
+      }
+    }
+
+    function _spawnLevelUpScreenFlash(rarity) {
+      const color = _LEVEL_RARITY_COLORS[rarity] || _LEVEL_RARITY_COLORS.common;
+      const el = document.createElement('div');
+      el.className = 'lvlup-screen-flash';
+      el.style.boxShadow = 'inset 0 0 40px ' + color + ', inset 0 0 80px ' + color;
+      document.body.appendChild(el);
+      setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 650);
+    }
+
     // ── Account Level-Up Curtain Animation ──────────────────────
     let _curtainTimer = null;
     let _curtainDismissHandler = null;
@@ -695,6 +769,14 @@
           setTimeout(() => window.DopamineSystem.TimeDilation.set(1.0, 4), 600);
         }
       }
+
+      // Rarity effects: screen flash fires immediately; confetti + rays fire once curtain is down
+      const _rarity = _getLevelUpRarity(newLevel);
+      _spawnLevelUpScreenFlash(_rarity);
+      setTimeout(function() {
+        _spawnLevelUpRays(curtain, _rarity);
+        _spawnLevelUpConfetti(curtain, _rarity);
+      }, 500);
 
       // Heavy sound effect
       if (typeof playSound === 'function') playSound('levelup');

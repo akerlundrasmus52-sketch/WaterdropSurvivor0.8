@@ -5561,6 +5561,61 @@
   animation: sunburst-spin 3s linear infinite;
 }
 
+/* ── Level-Up Rarity Effects ────────────────────────────────────────────── */
+
+/* Confetti burst */
+@keyframes lvlup-confetti {
+  0%   { transform: translate(0, 0) rotate(var(--rot)); opacity: 1; }
+  100% { transform: translate(var(--tx), var(--ty)) rotate(calc(var(--rot) + 720deg)); opacity: 0; }
+}
+.lvlup-confetti {
+  position: fixed;
+  width: 6px;
+  height: 10px;
+  border-radius: 2px;
+  pointer-events: none;
+  z-index: 10001;
+  animation: lvlup-confetti 1200ms ease-out forwards;
+}
+@keyframes lvlup-mythic-hue {
+  from { filter: hue-rotate(0deg); }
+  to   { filter: hue-rotate(360deg); }
+}
+.lvlup-confetti-mythic {
+  background: linear-gradient(135deg, #ff4444, #ff8800, #ffff00, #44ff88, #4488ff, #cc44ff) !important;
+  animation: lvlup-confetti 1200ms ease-out forwards, lvlup-mythic-hue 0.4s linear infinite;
+}
+
+/* Light rays */
+@keyframes lvlup-ray {
+  0%   { transform: rotate(var(--angle)) scaleY(0); opacity: 0.7; }
+  22%  { transform: rotate(var(--angle)) scaleY(1); opacity: 0.7; }
+  66%  { transform: rotate(var(--angle)) scaleY(1); opacity: 0.7; }
+  100% { transform: rotate(var(--angle)) scaleY(1); opacity: 0; }
+}
+.lvlup-ray {
+  position: fixed;
+  width: 3px;
+  height: 120px;
+  pointer-events: none;
+  z-index: 9998;
+  transform-origin: top center;
+  animation: lvlup-ray 900ms ease-out forwards;
+}
+
+/* Screen edge flash */
+@keyframes lvlup-flash {
+  0%   { opacity: 1; }
+  100% { opacity: 0; }
+}
+.lvlup-screen-flash {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9997;
+  animation: lvlup-flash 600ms ease-out forwards;
+}
+
 
 .rarity-common    { color: #aaaaaa; }
 .rarity-uncommon  { color: #55cc55; }
