@@ -2457,8 +2457,88 @@
         rewardAttributePoints: 3,
         unlockCompanion: 'stormWolf',
         message: "🐺⚡ STORM WOLF BRED!<br><br>A <b>Storm Wolf</b> pup has been born from your captured wolves! It's a powerful melee companion!<br><br>Visit the Companion House to switch between your Grey Alien 👽 and Storm Wolf 🐺!<br><br>🔥 <b>All buildings are now unlocked!</b> Keep exploring, upgrading, and conquering the world!",
-        nextQuest: null,
+        nextQuest: 'quest35_crystallizedTear',
         conditions: ['quest33_captureWolves']
+      },
+
+      // === LATE GAME: The Crystallized Tear — unlocks Prism Reliquary ===
+      quest35_crystallizedTear: {
+        id: 'quest35_crystallizedTear',
+        name: 'The Crystallized Tear',
+        description: 'Your liquid form is rejecting the alien metal. To survive, you must synthesise their power. Collect 5 of any raw gems from enemy drops.',
+        objectives: 'Collect 5 raw gems (any type) from enemy drops or chests',
+        claim: 'Quest Hall',
+        rewardGold: 500,
+        rewardSkillPoints: 3,
+        rewardRawGems: { ruby: 2, sapphire: 2 },
+        unlockBuilding: 'prismReliquary',
+        triggerOnDeath: true,
+        message: "💎 <b>Prism Reliquary Unlocked!</b><br><br><i>A.I.D.A: 'Your liquid form is rejecting the alien metal. To survive, you must synthesise their power. The Prism Reliquary will let you cut and slot gems into your weapons and companions — fusing crystalline frequency into your very structure.'</i><br><br>Visit the <b>Prism Reliquary</b> in camp to begin slotting Cut Gems!",
+        nextQuest: 'quest36_blackMarket',
+        conditions: ['quest34_breedWolf']
+      },
+
+      // === LATE GAME: The Black Market — unlocks advanced Store chests ===
+      quest36_blackMarket: {
+        id: 'quest36_blackMarket',
+        name: 'The Black Market',
+        description: 'The Greys left supply caches scattered across the battlefield. Use their extracted essence — raw gems — to buy them back. Open 3 chests at the Shop.',
+        objectives: 'Open 3 chests at the Shop (any tier)',
+        claim: 'Quest Hall',
+        rewardGold: 600,
+        rewardSkillPoints: 3,
+        rewardRawGems: { emerald: 3 },
+        triggerOnDeath: true,
+        message: "🛒 <b>Advanced Chests Unlocked at the Shop!</b><br><br><i>A.I.D.A: 'The Greys left supply caches. Use their extracted essence to buy them back. The void gems inside are not mere currency — they are condensed alien consciousness. Handle with extreme care.'</i><br><br>The <b>Epic</b> and <b>Legendary</b> chest tiers are now available at the Shop!",
+        nextQuest: 'quest_annunaki1',
+        conditions: ['quest35_crystallizedTear']
+      },
+
+      // === ANNUNAKI ARC: Three late-game dark psychological quests ===
+      quest_annunaki1: {
+        id: 'quest_annunaki1',
+        name: 'Echoes of the Architects',
+        description: 'The Annunaki were here long before the Greys. Their signal pulses through your crystallised form, mocking your inability to dissolve. You are hard water now. Ice that cannot freeze. Flesh that cannot bleed. Defeat 100 enemies in a single run.',
+        objectives: 'Defeat 100 enemies in one run',
+        claim: 'Quest Hall',
+        rewardGold: 1000,
+        rewardSkillPoints: 5,
+        rewardAttributePoints: 2,
+        triggerOnDeath: true,
+        message: "👁️ <b>The Architects Acknowledge You.</b><br><br><i>A.I.D.A: 'They built the pyramids as resonance anchors. They built Stonehenge as a dimensional lock. They built YOU as an accident — a water droplet that refused to evaporate. The Annunaki are not impressed. But they are... watching.'</i><br><br>The void grows heavier. Something is listening.",
+        nextQuest: 'quest_annunaki2',
+        conditions: ['quest36_blackMarket']
+      },
+
+      quest_annunaki2: {
+        id: 'quest_annunaki2',
+        name: 'Suffer the Chests',
+        description: 'Seek the Mythic Void Gem. Open chests. Open the boxes. The Annunaki say your suffering is the price of crystallisation. Open 10 chests total at the Shop.',
+        objectives: 'Open 10 chests total at the Shop',
+        claim: 'Quest Hall',
+        rewardGold: 1200,
+        rewardSkillPoints: 5,
+        rewardRawGems: { void: 1 },
+        triggerOnDeath: true,
+        message: "🌑 <b>A Void Gem Fragment.</b><br><br><i>A.I.D.A: 'Do you hear it? The frequency beneath the frequency? The Annunaki did not leave this dimension — they compressed themselves into the void gems. Every chest you open is a tomb. Every gem you slot is a parasite. But you need them. That is the joke. That is ALWAYS the joke.'</i><br><br>💀 You have received a <b>Void Raw Gem</b>. Handle it wisely.",
+        nextQuest: 'quest_annunaki3',
+        conditions: ['quest_annunaki1']
+      },
+
+      quest_annunaki3: {
+        id: 'quest_annunaki3',
+        name: 'The Mythic Void',
+        description: 'You are hard water now. Ice that cannot freeze. Flesh that cannot bleed. The Annunaki demand proof — reach Level 50 in a single run and return. They will be watching. They are always watching.',
+        objectives: 'Reach Level 50 in a single run',
+        claim: 'Quest Hall',
+        rewardGold: 2000,
+        rewardSkillPoints: 10,
+        rewardAttributePoints: 5,
+        rewardRawGems: { void: 2, ruby: 3, sapphire: 3, emerald: 3 },
+        triggerOnDeath: true,
+        message: "👁️‍🗨️ <b>THE ANNUNAKI ACKNOWLEDGE THE WATER.</b><br><br><i>A.I.D.A: 'You were supposed to melt. Every simulation predicted it. The Annunaki wrote 47 civilisations into their frequency logs — all of them dissolved back into the collective. Not you. You are the anomaly. You are hard water. You are the 48th variable. And I... I did not account for this. I apologise. I think.'</i><br><br>🌊 <b>The lake calls. But you are no longer sure you want to answer.</b>",
+        nextQuest: null,
+        conditions: ['quest_annunaki2']
       }
     };
 
@@ -2483,7 +2563,9 @@
       'trashRecycle': 'quest26_kill20',
       'tempShop': 'quest28_survive3min',
       'campfireKitchen': 'quest30_buildCampfire',
-      'weaponsmith': 'quest31_buildWeaponsmith'
+      'weaponsmith': 'quest31_buildWeaponsmith',
+      // === Late-game buildings ===
+      'prismReliquary': 'quest35_crystallizedTear'
     };
     
     // Get current quest object
@@ -3077,7 +3159,17 @@
         saveData.freeSpins = (saveData.freeSpins || 0) + quest.rewardFreeSpin;
         showStatChange(`+${quest.rewardFreeSpin} Free Spin!`);
       }
-      
+
+      // Award raw gems (e.g., quest35_crystallizedTear, quest36_blackMarket, Annunaki arc)
+      if (quest.rewardRawGems) {
+        if (!saveData.rawGems) saveData.rawGems = { ruby: 0, sapphire: 0, emerald: 0, void: 0 };
+        for (const [gemType, amt] of Object.entries(quest.rewardRawGems)) {
+          saveData.rawGems[gemType] = (saveData.rawGems[gemType] || 0) + amt;
+          const gemLabels = { ruby: '🔴 Ruby', sapphire: '🔵 Sapphire', emerald: '🟢 Emerald', void: '⚫ Void' };
+          showStatChange(`+${amt} ${gemLabels[gemType] || gemType} Raw Gem!`);
+        }
+      }
+
       // Unlock building on CLAIM (only for quests that use unlockBuilding, e.g. quest1 for SkillTree)
       // window._campShowBuildOverlay can be set to null by camp-world.js to suppress this overlay
       // when the build is triggered directly from the camp interaction system.
@@ -3212,6 +3304,11 @@
       // Save immediately after rewards and quest activation
       saveSaveData();
       updateQuestTracker();
+
+      // Show quest complete banner with slam animation
+      if (typeof window.showQuestCompleteBanner === 'function') {
+        window.showQuestCompleteBanner(quest.name);
+      }
       
       // Build the combined popup message: reward info + new quest info
       const claimMsg = quest.message || `Quest Complete! ${quest.rewardGold ? `+${quest.rewardGold} gold` : ''} ${quest.rewardSkillPoints ? `+${quest.rewardSkillPoints} skill points` : ''}`;

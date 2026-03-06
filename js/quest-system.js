@@ -2691,7 +2691,14 @@
         const campCallbacks = {
           questMission:        () => showQuestHall(),
           skillTree:           () => document.getElementById('camp-skills-tab').click(),
-          armory:              () => { try { updateGearScreen(); } catch(e) {} document.getElementById('gear-screen').style.display = 'flex'; },
+          armory:              () => {
+            if (typeof window.showArmory === 'function') {
+              window.showArmory();
+            } else {
+              try { updateGearScreen(); } catch(e) {}
+              document.getElementById('gear-screen').style.display = 'flex';
+            }
+          },
           trainingHall:        () => document.getElementById('camp-training-tab').click(),
           forge:               () => showProgressionShop(),
           companionHouse:      () => showCompanionHouse(),
@@ -2731,7 +2738,10 @@
             }
             showExpeditionsMenu ? showExpeditionsMenu() : showQuestHall();
           },
-          shop:                () => showProgressionShop(),
+          shop:                () => {
+            if (typeof showGachaStore === 'function') { showGachaStore(); }
+            else { showProgressionShop(); }
+          },
           prestige:            () => {
             if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest10b_usePrestige') {
               progressTutorialQuest('quest10b_usePrestige', true);
@@ -2766,6 +2776,13 @@
               saveSaveData();
             }
             showProgressionShop();
+          },
+          prismReliquary:      () => {
+            if (typeof showPrismReliquary === 'function') { showPrismReliquary(); }
+          },
+          gachaStore:          () => {
+            if (typeof showGachaStore === 'function') { showGachaStore(); }
+            else { showProgressionShop(); }
           },
         };
         window.CampWorld.enter(renderer, saveData, campCallbacks);

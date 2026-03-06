@@ -100,6 +100,16 @@
     if (GEM_TYPES[type] === undefined) return;
     saveData.rawGems[type] = (saveData.rawGems[type] || 0) + (amount || 1);
     saveSaveData();
+    // Quest35: The Crystallized Tear — collect 5 total raw gems
+    const totalRawGems = Object.values(saveData.rawGems).reduce((a, b) => a + b, 0);
+    if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest35_crystallizedTear') {
+      if (totalRawGems >= 5) {
+        if (typeof progressTutorialQuest === 'function') {
+          progressTutorialQuest('quest35_crystallizedTear', true);
+          saveSaveData();
+        }
+      }
+    }
   }
 
   /**
