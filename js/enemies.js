@@ -20,7 +20,10 @@ const ENEMY_TYPES = {
   BUG_SLOW:          13, // Bug/water-being with eyes — slow, high HP variant
   BUG_FAST:          14, // Bug/water-being with eyes — fast, low HP variant
   DADDY_LONGLEGS:    15, // Spider — small round body, huge thin legs, rears to attack, low HP like yellow enemy
-  SWEEPING_SWARM:    16  // Cluster of fast flyers that sweep side to side, 1-hit kill
+  SWEEPING_SWARM:    16, // Cluster of fast flyers that sweep side to side, 1-hit kill
+  GREY_ALIEN_SCOUT:  17, // Minute-10 alien scout — ranged kiter, drops Alien Biomatter
+  REPTILIAN_SHIFTER: 18, // Active-camo flanker — 80% transparent, fully visible at ≤3 units
+  ANNUNAKI_ORB:      19  // Minute-15 boss — golden geometric drone, teleports, laser sweep
 };
 
 const MINI_BOSS_HP_SCALING_RATE = 0.20; // 20% HP increase per player level above start (was 15%)
@@ -133,6 +136,32 @@ function getEnemyBaseStats(type, levelScaling, speedBase, playerLevel) {
     stats.isFlying = true;
     stats.isSwarm  = true;
     stats.aiBehavior = 'sweep'; // Flies rapidly in large arcs across the screen
+  } else if (type === 17) {   // Grey Alien Scout (minute-10 encounter) — ranged kiter
+    stats.hp             = 280 * levelScaling;
+    stats.speed          = speedBase * 1.8;
+    stats.isFlying       = true;           // hovers above ground
+    stats.isGreyAlien    = true;
+    stats.attackRange    = 11;
+    stats.projectileSpeed = 0.17;
+    stats.aiBehavior     = 'kiter';
+    stats.dropsAlienBiomatter = true;      // rare biomatter drop on kill
+  } else if (type === 18) {   // Reptilian Shifter — active-camo fast flanker
+    stats.hp          = 160 * levelScaling;
+    stats.speed       = speedBase * 3.6;
+    stats.isReptilian = true;
+    stats.aiBehavior  = 'flanker';
+  } else if (type === 19) {   // Annunaki Orb — teleporting golden boss (minute-15)
+    const annunakiStartLevel = 15;
+    stats.hp             = 4000 * (1 + Math.max(0, playerLevel - annunakiStartLevel) * MINI_BOSS_HP_SCALING_RATE);
+    stats.speed          = speedBase * 0;  // Doesn't move — teleports instead
+    stats.isFlying       = true;
+    stats.isAnnunaki     = true;
+    stats.isMiniBoss     = true;           // Shares boss treatment (cinematic, scaling)
+    stats.armor          = 0.40;
+    stats.attackRange    = 99;             // Can always "fire" — uses laser sweep
+    stats.projectileSpeed = 0.12;
+    stats.aiBehavior     = 'annunaki';     // Custom behavior handled in enemy-class.js
+    stats.elementalResistance = { fire: 0.20, ice: 0.20, lightning: 0.20, physical: 0.30 };
   }
 
   stats.maxHp  = stats.hp;
@@ -146,16 +175,22 @@ function getEnemyBaseStats(type, levelScaling, speedBase, playerLevel) {
   if (type === 14) stats.damage = 25 * levelScaling;  // Bug Fast — light but rapid
   if (type === 15) stats.damage = 20 * levelScaling;  // Daddy Longlegs — light bite
   if (type === 16) stats.damage = 15 * levelScaling;  // Swarm — each hit is light but they swarm
+  if (type === 17) stats.damage = 40 * levelScaling;  // Grey Alien Scout — moderate plasma bolt
+  if (type === 18) stats.damage = 55 * levelScaling;  // Reptilian Shifter — ambush strike
+  if (type === 19) stats.damage = 120 * levelScaling; // Annunaki Orb — laser devastation
 
   // --- Elemental resistance system ---
   // Each enemy type has intrinsic resistances/vulnerabilities (0 = neutral, >0 = resistant, <0 = vulnerable)
   // Resistances reduce incoming elemental damage by the given fraction.
-  stats.elementalResistance = {
-    fire:      0,
-    ice:       0,
-    lightning: 0,
-    physical:  0
-  };
+  // Type 19 (Annunaki Orb) already set its own resistance object inline above.
+  if (!stats.elementalResistance) {
+    stats.elementalResistance = {
+      fire:      0,
+      ice:       0,
+      lightning: 0,
+      physical:  0
+    };
+  }
   // Type-specific elemental profiles
   if (type === 0)  { stats.elementalResistance.fire = 0.20; stats.elementalResistance.ice = -0.20; } // Tank: fire resistant, ice vulnerable
   if (type === 1)  { stats.elementalResistance.lightning = 0.15; }  // Fast: slight lightning resist
@@ -167,6 +202,9 @@ function getEnemyBaseStats(type, levelScaling, speedBase, playerLevel) {
   if (type === 12) { stats.elementalResistance.ice = 0.20; }  // Bug Ranged: ice resistant
   if (type === 13) { stats.elementalResistance.fire = -0.20; stats.elementalResistance.ice = 0.30; } // Bug Slow: fire vulnerable, ice resistant
   if (type === 14) { stats.elementalResistance.lightning = -0.20; } // Bug Fast: lightning vulnerable
+  if (type === 17) { stats.elementalResistance.fire = 0.10; stats.elementalResistance.ice = -0.20; } // Grey Alien: ice vulnerable
+  if (type === 18) { stats.elementalResistance.lightning = -0.25; stats.elementalResistance.fire = 0.15; } // Reptilian: weak to lightning
+  // Type 19 (Annunaki Orb) elemental resistance is already set inline in the stats block above
 
   return stats;
 }

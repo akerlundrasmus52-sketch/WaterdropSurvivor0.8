@@ -5,6 +5,10 @@
     // Module-scoped temp vector — avoids per-frame allocation in Projectile.update()
     const _tmpEnemyProjMove = new THREE.Vector3();
 
+    // Companion skill tuning constants
+    const _COMPANION_MIN_FIRE_RATE_MULT = 0.30; // Minimum fire rate multiplier after skills
+    const _COMPANION_MULTI_SHOT_RANGE_SQ = 100;  // 10 units squared — range for multi-shot targeting
+
     class Companion {
       constructor(companionId) {
         this.companionId = companionId;
@@ -148,7 +152,10 @@
         
         // Attack nearest enemy
         const now = Date.now();
-        if (enemies.length > 0 && now - this.lastAttackTime > this.attackSpeed * 1000) {
+        // FireRate skill reduces cooldown: each level = -15% attack speed
+        const fireRateLevel = (this.companionData.skills && this.companionData.skills.fireRate) || 0;
+        const fireRateMult = 1 - fireRateLevel * 0.15;
+        if (enemies.length > 0 && now - this.lastAttackTime > this.attackSpeed * 1000 * Math.max(_COMPANION_MIN_FIRE_RATE_MULT, fireRateMult)) {
           let nearest = null;
           let nearestDist = Infinity;
           
@@ -157,21 +164,38 @@
             const ex = enemy.mesh.position.x - this.mesh.position.x;
             const ez = enemy.mesh.position.z - this.mesh.position.z;
             const d = ex*ex + ez*ez;
-            if (d < nearestDist && d < 100) { // Range check
+            if (d < nearestDist && d < _COMPANION_MULTI_SHOT_RANGE_SQ) { // Range check
               nearestDist = d;
               nearest = enemy;
             }
           }
           
           if (nearest) {
-            // Attack
-            const damageMultiplier = 1 + (this.companionData.level - 1) * 0.1; // +10% per level
+            // Attack — apply Damage skill: each level = +20% damage
+            const damageLevel = (this.companionData.skills && this.companionData.skills.damage) || 0;
+            const damageMultiplier = (1 + (this.companionData.level - 1) * 0.1) * (1 + damageLevel * 0.20);
             const finalDamage = Math.floor(this.damage * damageMultiplier * playerStats.strength);
             nearest.takeDamage(finalDamage, false, 'physical');
-            spawnParticles(nearest.mesh.position, 0xFF6347, 3);
+            spawnParticles(nearest.mesh.position, 0x00FF88, 3); // Green plasma for Grey Alien
             this.lastAttackTime = now;
             this._animState = 'attack';
             this._attackAnimTimer = 0.25;
+
+            // MultiShot skill: each level fires 1 additional bolt at a nearby enemy
+            const multiShotLevel = (this.companionData.skills && this.companionData.skills.multiShot) || 0;
+            if (multiShotLevel > 0 && this.companionId === 'greyAlien') {
+              let shotsFired = 0;
+              for (const enemy of enemies) {
+                if (enemy.isDead || enemy === nearest || shotsFired >= multiShotLevel) continue;
+                const ex = enemy.mesh.position.x - this.mesh.position.x;
+                const ez = enemy.mesh.position.z - this.mesh.position.z;
+                if (ex*ex + ez*ez < _COMPANION_MULTI_SHOT_RANGE_SQ) {
+                  enemy.takeDamage(Math.floor(finalDamage * 0.6), false, 'physical');
+                  spawnParticles(enemy.mesh.position, 0x00FF88, 2);
+                  shotsFired++;
+                }
+              }
+            }
           }
         }
         

@@ -2463,8 +2463,52 @@
       };
     })();
 
+    /**
+     * checkTimedAlienSpawns()
+     * Called each wave spawn cycle. Spawns Grey Alien Scout at minute 10 and
+     * the Annunaki Orb boss at minute 15 (each once per run).
+     */
+    function checkTimedAlienSpawns() {
+      if (!isGameActive || isGameOver || !player || !player.mesh) return;
+      const runMinutes = (Date.now() - gameStartTime) / 60000;
+
+      // ── Minute 10: Grey Alien Scout ───────────────────────────────────────
+      if (runMinutes >= 10 && !_alienScoutSpawned) {
+        _alienScoutSpawned = true;
+        const angle = Math.random() * Math.PI * 2;
+        const dist = 28;
+        const ex = player.mesh.position.x + Math.cos(angle) * dist;
+        const ez = player.mesh.position.z + Math.sin(angle) * dist;
+        const scout = new Enemy(17, ex, ez, playerStats.lvl);
+        enemies.push(scout);
+        createFloatingText('👽 GREY ALIEN SCOUT INCOMING!', player.mesh.position, '#00FF88');
+        if (window.pushSuperStatEvent) {
+          window.pushSuperStatEvent('👽 Grey Alien Scout', 'rare', '👽', 'danger');
+        }
+        console.log('[AlienSpawn] Grey Alien Scout spawned at minute', runMinutes.toFixed(1));
+      }
+
+      // ── Minute 15: Annunaki Orb Boss ──────────────────────────────────────
+      if (runMinutes >= 15 && !_annunakiOrbSpawned) {
+        _annunakiOrbSpawned = true;
+        const angle = Math.random() * Math.PI * 2;
+        const dist = 32;
+        const ex = player.mesh.position.x + Math.cos(angle) * dist;
+        const ez = player.mesh.position.z + Math.sin(angle) * dist;
+        const orb = new Enemy(19, ex, ez, playerStats.lvl);
+        enemies.push(orb);
+        createFloatingText('⚠️ ANNUNAKI ORB APPROACHING ⚠️', player.mesh.position, '#FFD700');
+        triggerCinematic('miniboss', orb.mesh, 4000);
+        if (window.pushSuperStatEvent) {
+          window.pushSuperStatEvent('🔺 ANNUNAKI ORB', 'epic', '🔺', 'danger');
+        }
+        console.log('[AlienSpawn] Annunaki Orb boss spawned at minute', runMinutes.toFixed(1));
+      }
+    }
+
     function spawnWave() {
       waveCount++;
+      checkTimedAlienSpawns(); // Check time-based alien spawns on each wave cycle
 
       // Notify super stat bar of new wave
       if (window.pushSuperStatEvent) {

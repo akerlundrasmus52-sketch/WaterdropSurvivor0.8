@@ -78,6 +78,8 @@
       companionEggHatchProgress: 0, // 0-100 hatching progress
       companionSkillPoints: 0, // Skill points for companion skill tree
       companionGrowthStage: 'egg', // Growth stages: egg, newborn, juvenile, adult
+      alienBiomatter: 0, // Alien Biomatter collected — deposit 50 at the Incubator to hatch companion
+      alienIncubatorHatched: false, // Grey Alien companion hatched from Incubator pod
       // Camp System - Quest-Driven Building Unlock System
       campBuildings: {
         // Core buildings — unlocked on first camp visit but must be BUILT (level 0→1)

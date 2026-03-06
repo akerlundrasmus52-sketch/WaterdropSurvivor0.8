@@ -6458,3 +6458,39 @@
   text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
 }
 
+
+/* ===================================================================
+   AI NARRATOR BOX — Dark hacker-terminal pop-up for dark-humor narrator
+   Injected dynamically via quest-system.js _showNarratorLine().
+   =================================================================== */
+#ai-narrator-box {
+  position: fixed;
+  top: 12%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.92);
+  color: #00ff88;
+  font-family: 'Courier New', 'Lucida Console', monospace;
+  font-size: clamp(11px, 2.8vw, 13px);
+  padding: 10px 16px;
+  border: 1px solid #00ff88;
+  border-radius: 3px;
+  box-shadow:
+    0 0 14px rgba(0, 255, 136, 0.4),
+    inset 0 0 10px rgba(0, 0, 0, 0.5);
+  max-width: min(400px, 88vw);
+  text-align: center;
+  z-index: 2900;
+  pointer-events: none;
+  display: none;
+  line-height: 1.5;
+  letter-spacing: 0.3px;
+  /* Scanline overlay */
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0px,
+    transparent 3px,
+    rgba(0, 0, 0, 0.07) 3px,
+    rgba(0, 0, 0, 0.07) 4px
+  );
+}

@@ -509,6 +509,8 @@
     let lastCleanupTime = 0; // Track last memory cleanup time
     let miniBossesSpawned = new Set(); // Track which mini-boss levels have been spawned
     const FLYING_BOSS_SPAWN_KEY = 'flyingBoss15'; // Unique key for the level-15 flying boss spawn
+    let _alienScoutSpawned    = false; // True once the minute-10 Grey Alien Scout is spawned this run
+    let _annunakiOrbSpawned   = false; // True once the minute-15 Annunaki Orb is spawned this run
     // Landmark positions and detection radii for quest11_findAllLandmarks
     const LANDMARK_CONFIGS = {
       stonehenge:  { x: 100, z:  80, radius: 20, key: 'stonehenge',  label: 'Stonehenge'  },

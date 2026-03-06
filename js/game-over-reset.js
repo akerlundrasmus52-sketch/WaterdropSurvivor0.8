@@ -389,6 +389,11 @@
       miniBossesSpawned.clear(); // Reset mini-boss tracking
       gameStartTime = Date.now();
       runStartGold = saveData.gold;
+      _alienScoutSpawned  = false; // Reset alien spawn flags for new run
+      _annunakiOrbSpawned = false;
+
+      // Reset Waterdrop story quest state for this run
+      if (window.resetLakeBounceQuest) window.resetLakeBounceQuest();
       
       // Reset tutorial quest progress for this run
       if (saveData.tutorialQuests) {
@@ -730,7 +735,8 @@
       
       // COMPANION UNLOCKS AFTER COMPANION ACTIVATION QUEST
       const companionQuestCompleted = saveData.tutorialQuests?.completedQuests?.includes('quest9_activateCompanion') ||
-                                      saveData.tutorialQuests?.completedQuests?.includes('quest5_breedCompanion') || false;
+                                      saveData.tutorialQuests?.completedQuests?.includes('quest5_breedCompanion') ||
+                                      saveData.alienIncubatorHatched === true || false; // also unlocked via Incubator pod
       
       if (saveData.selectedCompanion && 
           saveData.companions[saveData.selectedCompanion]?.unlocked &&

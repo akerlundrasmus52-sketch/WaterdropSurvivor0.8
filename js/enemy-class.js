@@ -11,9 +11,12 @@
     let waterParticleMat = null;
 
     // Pre-allocated constants for enemy update() — avoids per-frame Set/allocation
-    const _ENEMY_FLYING_TYPES = new Set([5, 11, 14, 16]);
+    const _ENEMY_FLYING_TYPES = new Set([5, 11, 14, 16, 17, 19]);
     const _TREE_COLL_R = 1.0;
     const _PROP_COLL_R = 0.7;
+    // Reptilian Shifter visibility thresholds
+    const _REPTILIAN_VISIBLE_DIST = 3;   // distance at which shifter becomes fully visible
+    const _REPTILIAN_CAMO_OPACITY = 0.2; // default camo opacity (80% invisible)
     const _FENCE_COLL_R = 0.6;
     // Shared blood stain geometry (avoids per-hit CircleGeometry creation)
     let _sharedBloodStainGeo = null;
@@ -304,22 +307,35 @@
           // Sweeping Swarm — small fast diamond shape
           geometry = new THREE.OctahedronGeometry(0.22, 0);
           color = 0xFFAA00; // Amber swarm colour
+        } else if (type === 17) {
+          // Grey Alien Scout — elongated almond head, sleek alien form
+          geometry = new THREE.SphereGeometry(0.45, 8, 12);
+          geometry.scale(0.7, 1.25, 0.7); // Tall almond shape
+          color = 0x90A080; // Grey-green alien
+        } else if (type === 18) {
+          // Reptilian Shifter — angular reptilian body
+          geometry = new THREE.IcosahedronGeometry(0.42, 0);
+          color = 0x2E8B57; // Sea green (will be mostly transparent)
+        } else if (type === 19) {
+          // Annunaki Orb — massive golden geometric drone
+          geometry = new THREE.OctahedronGeometry(1.6, 1);
+          color = 0xFFD700; // Brilliant gold
         }
 
         const material = new THREE.MeshPhysicalMaterial({ 
           color: color,
           transparent: true,
-          opacity: 0.85,
-          metalness: (type === 10 || type === 11) ? 0.4 : (type === 13 ? 0.3 : 0.1),
-          roughness: type === 13 ? 0.8 : 0.6,
+          opacity: type === 18 ? _REPTILIAN_CAMO_OPACITY : 0.85,  // Reptilian Shifter starts nearly invisible
+          metalness: (type === 10 || type === 11 || type === 19) ? 0.4 : (type === 13 ? 0.3 : 0.1),
+          roughness: type === 13 ? 0.8 : (type === 19 ? 0.1 : 0.6),
           transmission: 0.2,
           thickness: 0.5,
-          emissive: (type === 10 || type === 11) ? color : 0x000000,
-          emissiveIntensity: type === 10 ? 0.3 : (type === 11 ? 0.5 : 0)
+          emissive: (type === 10 || type === 11 || type === 19) ? color : 0x000000,
+          emissiveIntensity: type === 10 ? 0.3 : (type === 11 ? 0.5 : (type === 19 ? 0.6 : 0))
         });
         this.mesh = new THREE.Mesh(geometry, material);
-        // Flying enemies hover higher; Flying Boss is enormous and hovers high
-        const yPos = (type === 5 || type === 14 || type === 16) ? 2 : (type === 11 ? 5 : 0.5);
+        // Flying enemies hover higher; Flying Boss is enormous and hovers high; Annunaki Orb floats imposingly
+        const yPos = (type === 5 || type === 14 || type === 16 || type === 17) ? 2 : (type === 11 ? 5 : (type === 19 ? 4 : 0.5));
         this.mesh.position.set(x, yPos, z);
         // Flying Boss is scaled large enough to be dramatic but still mostly visible on screen
         if (type === 11) this.mesh.scale.set(1.8, 1.8, 1.8);
@@ -331,6 +347,24 @@
         this._usesInstancing = _instancingTypes && !!(window._instancedRenderer && window._instancedRenderer.active);
         if (!this._usesInstancing) {
           scene.add(this.mesh);
+        }
+
+        // Add decorative rings to Annunaki Orb
+        if (type === 19) {
+          const ringGeo = new THREE.TorusGeometry(2.0, 0.1, 8, 32);
+          const ringMat = new THREE.MeshStandardMaterial({ color: 0xFFAA00, emissive: 0xFFAA00, emissiveIntensity: 0.8, metalness: 0.9 });
+          const ring1 = new THREE.Mesh(ringGeo, ringMat);
+          ring1.rotation.x = Math.PI / 2;
+          this.mesh.add(ring1);
+          const ring2 = new THREE.Mesh(ringGeo, ringMat.clone());
+          ring2.rotation.y = Math.PI / 2;
+          this.mesh.add(ring2);
+          this._annunakiTeleportTimer = 0;
+          this._annunakiTeleportCooldown = 4.0; // teleport every 4 seconds
+          this._annunakiLaserTimer = 0;
+          this._annunakiLaserActive = false;
+          this._annunakiLaserMesh = null;
+          this._annunakiWarning = false;
         }
 
         // Add legs to Daddy Longlegs spider
@@ -351,8 +385,8 @@
 
         // Ground shadow for flying enemies
         this.groundShadow = null;
-        if (type === 5 || type === 11 || type === 14 || type === 16) {
-          const shadowRadius = type === 11 ? 2.0 : (type === 5 ? 0.6 : 0.35);
+        if (type === 5 || type === 11 || type === 14 || type === 16 || type === 17 || type === 19) {
+          const shadowRadius = type === 11 ? 2.0 : (type === 19 ? 1.8 : (type === 5 ? 0.6 : 0.35));
           const shadowGeo = new THREE.CircleGeometry(shadowRadius, 12);
           const shadowMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.25, depthWrite: false });
           this.groundShadow = new THREE.Mesh(shadowGeo, shadowMat);
@@ -923,16 +957,98 @@
             vz = (dz / (dist || 1)) * sweepSpeed * 0.4 + perpZ * Math.cos(this._sweepTimer * Math.PI) * sweepSpeed;
             // Reset sweep timer every 2s
             if (this._sweepTimer >= 2.0) this._sweepTimer = 0;
+          } else if (behavior === 'annunaki') {
+            // Annunaki Orb: doesn't move continuously — teleports every 4s near the player
+            // then charges for 1.5s (warning glow) before firing a laser sweep.
+            vx = 0; vz = 0; // No regular movement
+            if (!this._annunakiTeleportTimer) this._annunakiTeleportTimer = 0;
+            this._annunakiTeleportTimer += dt;
+            if (this._annunakiTeleportTimer >= this._annunakiTeleportCooldown) {
+              this._annunakiTeleportTimer = 0;
+              // Teleport to a random position 8-14 units from the player
+              const tpAngle = Math.random() * Math.PI * 2;
+              const tpDist = 8 + Math.random() * 6;
+              this.mesh.position.x = targetPos.x + Math.cos(tpAngle) * tpDist;
+              this.mesh.position.z = targetPos.z + Math.sin(tpAngle) * tpDist;
+              this.mesh.position.y = 4;
+              // Flash effect on teleport
+              if (typeof spawnParticles === 'function') {
+                spawnParticles(this.mesh.position, 0xFFD700, 12);
+              }
+              // Begin warning phase before laser
+              this._annunakiWarning = true;
+              this._annunakiLaserTimer = 0;
+            }
+            // Warning + laser sweep logic
+            if (this._annunakiWarning) {
+              this._annunakiLaserTimer += dt;
+              // Pulsing warning glow for 1.5s
+              const warnPulse = Math.abs(Math.sin(this._annunakiLaserTimer * 8));
+              if (this.mesh.material) {
+                this.mesh.material.emissiveIntensity = 0.4 + warnPulse * 1.5;
+              }
+              if (this._annunakiLaserTimer >= 1.5 && !this._annunakiLaserActive) {
+                // Fire the laser sweep
+                this._annunakiLaserActive = true;
+                this._annunakiLaserTimer = 0;
+                // Create a sweeping laser beam mesh
+                const beamGeo = new THREE.BoxGeometry(24, 0.6, 0.5);
+                const beamMat = new THREE.MeshBasicMaterial({
+                  color: 0xFFAA00, transparent: true, opacity: 0.85
+                });
+                this._annunakiLaserMesh = new THREE.Mesh(beamGeo, beamMat);
+                this._annunakiLaserMesh.position.copy(this.mesh.position);
+                this._annunakiLaserMesh.position.y = 1.0;
+                this._annunakiLaserMesh.rotation.y = Math.atan2(dx, dz);
+                scene.add(this._annunakiLaserMesh);
+                // Damage player if in beam path
+                const beamDx = player.mesh.position.x - this.mesh.position.x;
+                const beamDz = player.mesh.position.z - this.mesh.position.z;
+                const beamDist = Math.sqrt(beamDx * beamDx + beamDz * beamDz);
+                const beamAngle = Math.atan2(beamDx, beamDz);
+                const aimAngle = Math.atan2(dx, dz);
+                const angleDiff = Math.abs(((beamAngle - aimAngle + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
+                if (angleDiff < 0.35 && beamDist < 13 && typeof player.takeDamage === 'function') {
+                  player.takeDamage(this.damage);
+                  if (typeof spawnParticles === 'function') spawnParticles(player.mesh.position, 0xFFAA00, 10);
+                }
+              }
+              // Animate + remove laser after 1s
+              if (this._annunakiLaserActive) {
+                if (this._annunakiLaserMesh) {
+                  this._annunakiLaserMesh.material.opacity = Math.max(0, 0.85 - this._annunakiLaserTimer * 0.85);
+                  this._annunakiLaserMesh.rotation.y += dt * 1.5; // sweep rotation
+                }
+                if (this._annunakiLaserTimer >= 1.0) {
+                  // Done — clean up laser
+                  if (this._annunakiLaserMesh) {
+                    scene.remove(this._annunakiLaserMesh);
+                    this._annunakiLaserMesh.geometry.dispose();
+                    this._annunakiLaserMesh.material.dispose();
+                    this._annunakiLaserMesh = null;
+                  }
+                  this._annunakiLaserActive = false;
+                  this._annunakiWarning = false;
+                  if (this.mesh.material) this.mesh.material.emissiveIntensity = 0.6;
+                }
+              }
+            }
+            // Slow spin
+            this.mesh.rotation.y += dt * 0.5;
           }
           
           // Flying height behavior
-          if (this.type === 5 || this.type === 14 || this.type === 16) {
+          if (this.type === 5 || this.type === 14 || this.type === 16 || this.type === 17) {
             const wavePhase = gameTime * 5 + this.wobbleOffset;
             const wave = Math.sin(wavePhase) * 0.08;
             vx += wave * (dz/(dist||1));
             vz -= wave * (dx/(dist||1));
             const baseHeight = this._aiState === 'dive' ? 0.8 : (this.type === 16 ? 1.5 : 2);
             this.mesh.position.y = baseHeight + Math.sin(gameTime * 3 + this.wobbleOffset) * 0.5;
+          }
+          // Annunaki Orb gentle hover
+          if (this.type === 19) {
+            this.mesh.position.y = 4 + Math.sin(gameTime * 1.5 + this.wobbleOffset) * 0.4;
           }
           
           this.mesh.position.x += vx;
@@ -990,6 +1106,24 @@
             }
           }
           } // end else (!isFrozen) movement block
+        }
+
+        // Reptilian Shifter: fade opacity based on distance to player (active camo)
+        if (this.type === 18 && this.mesh && this.mesh.material) {
+          const _reptDist = dist; // dist is already computed above (distance to player)
+          const _reptTargetOpacity = _reptDist <= _REPTILIAN_VISIBLE_DIST ? 1.0 : _REPTILIAN_CAMO_OPACITY;
+          // Smooth opacity transition
+          this.mesh.material.opacity += (_reptTargetOpacity - this.mesh.material.opacity) * Math.min(1, dt * 4);
+        }
+
+        // Grey Alien Scout: fire plasma bolt at player periodically
+        if (this.type === 17) {
+          if (!this._alienShotTimer) this._alienShotTimer = 0;
+          this._alienShotTimer += dt;
+          if (this._alienShotTimer >= 2.0 && dist <= this.attackRange) {
+            this._alienShotTimer = 0;
+            this.fireProjectile(targetPos);
+          }
         }
 
         // Collision with target
@@ -2690,6 +2824,26 @@
         }
         
         playerStats.kills++;
+
+        // Alien Biomatter rare drop from Grey Alien Scout (type 17)
+        if (this.type === 17 && Math.random() < 0.35) {
+          // 35% chance to drop Alien Biomatter
+          if (!saveData.alienBiomatter) saveData.alienBiomatter = 0;
+          saveData.alienBiomatter = Math.min(saveData.alienBiomatter + 1, 999);
+          saveSaveData();
+          createFloatingText('🧬 Alien Biomatter', deathPos, '#00FF88');
+          if (window.pushSuperStatEvent) {
+            window.pushSuperStatEvent('🧬 Alien Biomatter', 'uncommon', '🧬', 'success');
+          }
+        }
+
+        // Clean up Annunaki Orb laser beam if it was alive when the orb died
+        if (this.type === 19 && this._annunakiLaserMesh) {
+          scene.remove(this._annunakiLaserMesh);
+          this._annunakiLaserMesh.geometry.dispose();
+          this._annunakiLaserMesh.material.dispose();
+          this._annunakiLaserMesh = null;
+        }
 
         // Heal on kill (Bloodlust skill and similar)
         if (playerStats.healOnKill > 0) {
