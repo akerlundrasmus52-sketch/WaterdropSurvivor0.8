@@ -545,6 +545,9 @@
           if (!saveData.campBuildings.prismReliquary) {
             saveData.campBuildings.prismReliquary = { level: 0, maxLevel: 1, unlocked: false };
           }
+          // ── Late-game quest / Annunaki arc migration ──
+          // Ensure chestOpenCount exists (used by quest36_blackMarket)
+          saveData.chestOpenCount = saveData.chestOpenCount || 0;
         }
       } catch (e) {
         console.error('Failed to load save data:', e);

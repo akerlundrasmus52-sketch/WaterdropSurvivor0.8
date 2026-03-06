@@ -160,6 +160,14 @@
         if (currentQuest.id === 'quest15b_runKill12' && saveData.tutorialQuests.killsThisRun >= 12) {
           progressTutorialQuest('quest15b_runKill12', true);
         }
+        // Annunaki arc: quest_annunaki1 = 100 kills in one run
+        if (currentQuest.id === 'quest_annunaki1' && saveData.tutorialQuests.killsThisRun >= 100) {
+          progressTutorialQuest('quest_annunaki1', true);
+        }
+        // Annunaki arc: quest_annunaki3 = reach level 50 in one run
+        if (currentQuest.id === 'quest_annunaki3' && playerStats.lvl >= 50) {
+          progressTutorialQuest('quest_annunaki3', true);
+        }
         if (currentQuest.id === 'quest19b_growJuvenile' && survivalTime >= 60) {
           progressTutorialQuest('quest19b_growJuvenile', true);
         }

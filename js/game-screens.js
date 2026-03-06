@@ -1012,40 +1012,60 @@
     // ============================================================
     // WORKSHOP — Gathering Skill Tree
     // ============================================================
+    // ============================================================
+    // BUILDING OVERLAY HELPERS — unified frosted-glass design
+    // ============================================================
+
+    /** Close a camp building panel with a slide-down animation, then remove the overlay. */
+    function _closeBldOverlay(overlay) {
+      const panel = overlay.querySelector('.camp-bld-panel');
+      if (panel) {
+        panel.classList.add('closing');
+        setTimeout(() => { if (overlay.parentNode) overlay.parentNode.removeChild(overlay); }, 210);
+      } else {
+        if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+      }
+    }
+
+    // ============================================================
+    // WORKSHOP — Gathering skill upgrades (frosted-glass redesign)
+    // ============================================================
     function showWorkshop() {
       const existing = document.getElementById('workshop-overlay');
       if (existing) existing.remove();
 
       const overlay = document.createElement('div');
       overlay.id = 'workshop-overlay';
-      overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.92);z-index:500;display:flex;flex-direction:column;align-items:center;padding:20px 16px;box-sizing:border-box;overflow-y:auto;';
+      overlay.className = 'camp-bld-overlay';
+      overlay.style.cssText += 'z-index:500;';
 
+      const panel = document.createElement('div');
+      panel.className = 'camp-bld-panel';
+
+      // Header
       const header = document.createElement('div');
-      header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;width:100%;max-width:520px;margin-bottom:12px;';
-      header.innerHTML = '<div style="font-family:\'Bangers\',cursive;font-size:24px;color:#8B4513;letter-spacing:2px;text-shadow:0 0 10px rgba(139,69,19,0.5);">🔧 WORKSHOP</div>';
+      header.className = 'camp-bld-header';
+      header.innerHTML = '<span class="camp-bld-title">🔧 WORKSHOP</span>';
       const closeBtn = document.createElement('button');
+      closeBtn.className = 'camp-bld-close-btn';
       closeBtn.textContent = '✕';
-      closeBtn.style.cssText = 'background:#2a2a2a;border:2px solid #666;border-radius:50%;width:38px;height:38px;color:#fff;font-size:18px;cursor:pointer;font-family:"Bangers",cursive;';
-      closeBtn.onclick = () => overlay.remove();
+      closeBtn.title = 'Leave';
+      closeBtn.onclick = () => _closeBldOverlay(overlay);
       header.appendChild(closeBtn);
-      overlay.appendChild(header);
+      panel.appendChild(header);
 
       const subtitle = document.createElement('div');
-      subtitle.style.cssText = 'color:#888;font-size:11px;margin-bottom:16px;text-align:center;letter-spacing:1.5px;max-width:400px;text-transform:uppercase;';
+      subtitle.className = 'camp-bld-subtitle';
       subtitle.textContent = 'Upgrade gathering skills — harvest faster, yield more resources';
-      overlay.appendChild(subtitle);
+      panel.appendChild(subtitle);
 
-      // Gold display
       const goldDiv = document.createElement('div');
-      goldDiv.style.cssText = 'color:#FFD700;font-size:16px;font-weight:bold;margin-bottom:14px;font-family:"Bangers",cursive;letter-spacing:1px;';
+      goldDiv.className = 'camp-bld-currency';
       goldDiv.textContent = '💰 Gold: ' + (saveData.gold || 0);
-      overlay.appendChild(goldDiv);
+      panel.appendChild(goldDiv);
 
       const GATHERING_SKILLS = window.GameHarvesting && window.GameHarvesting.GATHERING_SKILLS ? window.GameHarvesting.GATHERING_SKILLS : {};
       const skills = (saveData.gatheringSkills) || {};
-
-      const grid = document.createElement('div');
-      grid.style.cssText = 'display:grid;grid-template-columns:1fr;gap:10px;width:100%;max-width:520px;';
 
       for (const [key, def] of Object.entries(GATHERING_SKILLS)) {
         if (def.hidden) continue;
@@ -1055,20 +1075,42 @@
         const canAfford = (saveData.gold || 0) >= cost;
 
         const card = document.createElement('div');
-        card.style.cssText = 'background:rgba(139,69,19,0.08);border:1px solid ' + (maxed ? '#FFD700' : canAfford ? '#8B4513' : '#444') + ';border-radius:10px;padding:14px;cursor:' + (!maxed && canAfford ? 'pointer' : 'default') + ';opacity:' + (maxed ? '0.8' : canAfford ? '1' : '0.5') + ';';
+        const cardClasses = ['camp-workshop-card'];
+        if (maxed) cardClasses.push('camp-workshop-card-maxed');
+        else if (!canAfford) cardClasses.push('camp-workshop-card-locked');
+        card.className = cardClasses.join(' ');
 
         // Level pips
         let pips = '';
         for (let i = 0; i < def.maxLevel; i++) {
-          pips += '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;margin:0 2px;background:' + (i < level ? '#FFD700' : '#333') + ';border:1px solid #555;"></span>';
+          pips += '<span style="display:inline-block;width:9px;height:9px;border-radius:50%;margin:0 2px;' +
+            'background:' + (i < level ? '#00ffcc' : 'rgba(255,255,255,0.12)') + ';' +
+            'border:1px solid rgba(0,255,255,0.25);"></span>';
         }
 
-        card.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;">' +
-          '<div><span style="font-size:22px;">' + def.icon + '</span> <b style="color:#f0d890;">' + def.label + '</b></div>' +
-          '<span style="color:' + (maxed ? '#FFD700' : '#aaa') + ';font-size:12px;">' + (maxed ? 'MAX' : 'Lv ' + level + '/' + def.maxLevel) + '</span></div>' +
-          '<div style="color:#aaa;font-size:12px;margin:6px 0;">' + def.description + '</div>' +
+        // Current → Next level display
+        const nextLevelStr = maxed
+          ? '<span style="color:#FFD700;font-size:11px;font-weight:bold;">✓ MAX LEVEL</span>'
+          : '<span class="camp-ws-level-row">' +
+              '<span class="camp-ws-lv-cur">Lv ' + level + '</span>' +
+              '<span class="camp-ws-lv-arr">→</span>' +
+              '<span class="camp-ws-lv-nxt">Lv ' + (level + 1) + '</span>' +
+              '<span style="color:#aaa;font-size:11px;">/ ' + def.maxLevel + '</span>' +
+            '</span>';
+
+        const costStr = maxed ? '' :
+          '<div class="' + (canAfford ? 'camp-ws-cost-affordable' : 'camp-ws-cost-unaffordable') + '">' +
+            '💰 Cost: ' + cost + ' gold' + (canAfford ? ' ✓' : ' — Need more gold') +
+          '</div>';
+
+        card.innerHTML =
+          '<div style="display:flex;justify-content:space-between;align-items:center;">' +
+            '<div><span style="font-size:20px;">' + def.icon + '</span> <b style="color:#c8f0ff;font-size:14px;">' + def.label + '</b></div>' +
+          '</div>' +
+          '<div style="color:rgba(180,220,255,0.6);font-size:11px;margin:4px 0 6px;">' + def.description + '</div>' +
+          nextLevelStr +
           '<div style="margin:6px 0;">' + pips + '</div>' +
-          (!maxed ? '<div style="color:' + (canAfford ? '#FFD700' : '#f66') + ';font-size:11px;">Cost: 💰 ' + cost + ' gold</div>' : '');
+          costStr;
 
         if (!maxed && canAfford) {
           card.onclick = () => {
@@ -1078,17 +1120,196 @@
                 if (typeof playSound === 'function') playSound('collect');
                 if (typeof showStatChange === 'function') showStatChange(def.icon + ' ' + def.label + ' upgraded to Lv ' + ((skills[key] || 0) + 1) + '!');
                 overlay.remove();
-                showWorkshop(); // Re-render
+                showWorkshop();
               }
             }
           };
         }
-        grid.appendChild(card);
+        panel.appendChild(card);
       }
 
-      overlay.appendChild(grid);
+      overlay.appendChild(panel);
+      overlay.addEventListener('click', e => { if (e.target === overlay) _closeBldOverlay(overlay); });
       document.body.appendChild(overlay);
     }
+
+    // ============================================================
+    // ARMORY — Equipped vs Inventory weapons (frosted-glass redesign)
+    // ============================================================
+    function showArmory() {
+      const existing = document.getElementById('armory-overlay');
+      if (existing) existing.remove();
+
+      // Rarity colour map (mirrors weapon-building.js RARITY_COLORS)
+      const _RC = {
+        common:    '#aaaaaa',
+        uncommon:  '#2ecc71',
+        rare:      '#4FC3F7',
+        epic:      '#AA44FF',
+        legendary: '#F39C12',
+        mythic:    '#E74C3C'
+      };
+
+      const overlay = document.createElement('div');
+      overlay.id = 'armory-overlay';
+      overlay.className = 'camp-bld-overlay';
+      overlay.style.cssText += 'z-index:500;';
+
+      const panel = document.createElement('div');
+      panel.className = 'camp-bld-panel';
+
+      // Header
+      const header = document.createElement('div');
+      header.className = 'camp-bld-header';
+      header.innerHTML = '<span class="camp-bld-title">⚔️ ARMORY</span>';
+      const closeBtn = document.createElement('button');
+      closeBtn.className = 'camp-bld-close-btn';
+      closeBtn.textContent = '✕';
+      closeBtn.title = 'Leave';
+      closeBtn.onclick = () => _closeBldOverlay(overlay);
+      header.appendChild(closeBtn);
+      panel.appendChild(header);
+
+      const subtitle = document.createElement('div');
+      subtitle.className = 'camp-bld-subtitle';
+      subtitle.textContent = 'Manage your equipped gear and choose from your inventory';
+      panel.appendChild(subtitle);
+
+      const slots = [
+        { key: 'weapon', name: 'Weapon', icon: '⚔️' },
+        { key: 'armor',  name: 'Armor',  icon: '🛡️' },
+        { key: 'helmet', name: 'Helmet', icon: '⛑️' },
+        { key: 'boots',  name: 'Boots',  icon: '👢' },
+        { key: 'ring',   name: 'Ring',   icon: '💍' },
+        { key: 'amulet', name: 'Amulet', icon: '📿' }
+      ];
+
+      for (const slot of slots) {
+        const sTitle = document.createElement('div');
+        sTitle.className = 'armory-section-title';
+        sTitle.textContent = slot.icon + ' ' + slot.name;
+        panel.appendChild(sTitle);
+
+        const equippedId = saveData.equippedGear && saveData.equippedGear[slot.key];
+        const equippedGear = equippedId ? (saveData.inventory || []).find(g => g.id === equippedId) : null;
+
+        if (equippedGear) {
+          const rColor = _RC[equippedGear.rarity] || '#aaa';
+          const eCard = document.createElement('div');
+          eCard.className = 'armory-equipped-card';
+          eCard.style.borderColor = rColor;
+          eCard.style.boxShadow = '0 0 12px ' + rColor + '55';
+          eCard.innerHTML =
+            '<div style="flex:1;">' +
+              '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">' +
+                '<span style="font-size:20px;">' + (slot.icon) + '</span>' +
+                '<span style="color:' + rColor + ';font-weight:bold;font-size:15px;">' + equippedGear.name + '</span>' +
+                '<span style="background:' + rColor + '33;color:' + rColor + ';font-size:10px;padding:2px 7px;border-radius:5px;font-weight:bold;text-transform:uppercase;">' + (equippedGear.rarity || 'common') + '</span>' +
+              '</div>' +
+              '<div style="color:rgba(200,220,255,0.55);font-size:11px;margin-bottom:6px;">' + (equippedGear.description || '') + '</div>' +
+              (equippedGear.stats ? '<div style="font-size:11px;color:#90ee90;">' +
+                Object.entries(equippedGear.stats).map(([s, v]) => '+' + v + ' ' + s).join(' · ') + '</div>' : '') +
+            '</div>' +
+            '<button onclick="unequipGear(\'' + slot.key + '\')" style="background:rgba(231,76,60,0.2);border:1px solid #e74c3c;color:#e74c3c;border-radius:7px;padding:6px 12px;cursor:pointer;font-size:11px;font-weight:bold;white-space:nowrap;">UNEQUIP</button>';
+          panel.appendChild(eCard);
+        } else {
+          const emptyEl = document.createElement('div');
+          emptyEl.className = 'armory-empty-slot';
+          emptyEl.textContent = '— Empty Slot —';
+          panel.appendChild(emptyEl);
+        }
+
+        // Inventory items for this slot
+        const invItems = (saveData.inventory || []).filter(g => g.type === slot.key && g.id !== equippedId);
+        if (invItems.length > 0) {
+          const invLabel = document.createElement('div');
+          invLabel.style.cssText = 'color:rgba(0,255,255,0.5);font-size:10px;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;';
+          invLabel.textContent = 'Available in inventory:';
+          panel.appendChild(invLabel);
+
+          for (const gear of invItems) {
+            const rColor = _RC[gear.rarity] || '#aaa';
+            const iCard = document.createElement('div');
+            iCard.className = 'armory-inv-card';
+            iCard.style.borderColor = rColor;
+            iCard.innerHTML =
+              '<div style="display:flex;align-items:center;gap:8px;">' +
+                '<span style="color:' + rColor + ';font-size:13px;font-weight:bold;">' + gear.name + '</span>' +
+                '<span style="background:' + rColor + '22;color:' + rColor + ';font-size:9px;padding:1px 5px;border-radius:4px;text-transform:uppercase;">' + (gear.rarity || 'common') + '</span>' +
+              '</div>' +
+              (gear.description ? '<div style="color:rgba(200,220,255,0.45);font-size:10px;margin-top:2px;">' + gear.description + '</div>' : '') +
+              (gear.stats ? '<div style="font-size:10px;color:#90ee90;margin-top:3px;">' +
+                Object.entries(gear.stats).map(([s, v]) => '+' + v + ' ' + s).join(' · ') + '</div>' : '');
+            iCard.onclick = () => {
+              if (typeof equipGear === 'function') equipGear(slot.key, gear.id);
+              overlay.remove();
+              showArmory();
+            };
+            panel.appendChild(iCard);
+          }
+        }
+      }
+
+      overlay.appendChild(panel);
+      overlay.addEventListener('click', e => { if (e.target === overlay) _closeBldOverlay(overlay); });
+      document.body.appendChild(overlay);
+    }
+    window.showArmory = showArmory;
+
+    // ============================================================
+    // QUEST COMPLETE BANNER — slam animation + reward particles
+    // ============================================================
+    function showQuestCompleteBanner(questName, rewardDesc) {
+      // Remove any existing banner
+      const prev = document.getElementById('quest-complete-banner-overlay');
+      if (prev) prev.remove();
+
+      const bOverlay = document.createElement('div');
+      bOverlay.id = 'quest-complete-banner-overlay';
+      bOverlay.className = 'quest-complete-banner-overlay';
+
+      const banner = document.createElement('div');
+      banner.className = 'quest-complete-banner';
+      banner.innerHTML =
+        '<div class="quest-complete-banner-text">QUEST COMPLETE</div>' +
+        '<div class="quest-complete-quest-name">' + (questName || '') + '</div>';
+      bOverlay.appendChild(banner);
+      document.body.appendChild(bOverlay);
+
+      // Spawn reward particles after a short delay
+      setTimeout(() => {
+        const rect = banner.getBoundingClientRect();
+        const originX = rect.left + rect.width / 2;
+        const originY = rect.top + rect.height / 2;
+        const icons = ['💰', '💰', '💎', '⭐', '💰', '✨', '💎', '🪙'];
+        icons.forEach((icon, i) => {
+          const p = document.createElement('div');
+          p.className = 'reward-particle';
+          // Fan particles downward (arc from ~54° to ~306° in a 252° sweep)
+          const ANGLE_START = Math.PI * 0.3;  // ~54° — left edge of downward fan
+          const ANGLE_SWEEP = Math.PI * 1.4;  // ~252° — full downward half-circle arc
+          const angle = ANGLE_START + (i / icons.length) * ANGLE_SWEEP;
+          const dist = 120 + Math.random() * 160;
+          const dx = Math.round(Math.cos(angle) * dist);
+          const dy = Math.round(Math.abs(Math.sin(angle)) * dist + 40);
+          p.style.cssText =
+            'left:' + Math.round(originX - 11) + 'px;top:' + Math.round(originY - 11) + 'px;' +
+            '--rp-dx:' + dx + 'px;--rp-dy:' + dy + 'px;' +
+            '--rp-dur:' + (0.7 + Math.random() * 0.5).toFixed(2) + 's;' +
+            '--rp-delay:' + (0.3 + i * 0.07).toFixed(2) + 's;';
+          p.textContent = icon;
+          document.body.appendChild(p);
+          setTimeout(() => { if (p.parentNode) p.parentNode.removeChild(p); }, 2000);
+        });
+      }, 400);
+
+      // Fade out and remove
+      setTimeout(() => {
+        banner.classList.add('fading');
+        setTimeout(() => { if (bOverlay.parentNode) bOverlay.parentNode.removeChild(bOverlay); }, 550);
+      }, 2800);
+    }
+    window.showQuestCompleteBanner = showQuestCompleteBanner;
 
     // ============================================================
     // WEAPONSMITH — Weapon Building (delegates to weapon-building.js)
@@ -1439,7 +1660,11 @@
       const buildingActions = {
         questMission:        () => { overlay.remove(); showQuestHall(); },
         skillTree:           () => { overlay.remove(); document.getElementById('camp-skills-tab').click(); },
-        armory:              () => { overlay.remove(); try { updateGearScreen(); } catch(e) {} document.getElementById('gear-screen').style.display = 'flex'; },
+        armory:              () => {
+            overlay.remove();
+            if (typeof showArmory === 'function') { showArmory(); }
+            else { try { updateGearScreen(); } catch(e) {} document.getElementById('gear-screen').style.display = 'flex'; }
+          },
         trainingHall:        () => { overlay.remove(); document.getElementById('camp-training-tab').click(); },
         forge:               () => { overlay.remove(); showProgressionShop(); },
         companionHouse:      () => { overlay.remove(); showCompanionHouse(); },
@@ -1762,6 +1987,7 @@
       const overlay = document.createElement('div');
       overlay.id = 'prism-reliquary-overlay';
       overlay.className = 'prism-overlay';
+      overlay.style.cssText += 'animation:campBldIn 250ms ease-out forwards;';
 
       // Header
       const header = document.createElement('div');
@@ -1771,9 +1997,14 @@
       overlay.appendChild(header);
 
       const closeBtn = document.createElement('button');
-      closeBtn.className = 'prism-close-btn';
+      closeBtn.className = 'prism-close-btn camp-bld-close-btn';
+      closeBtn.style.cssText = 'position:absolute;top:14px;right:16px;width:38px;height:38px;font-size:16px;z-index:4001;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;';
       closeBtn.textContent = '✕';
-      closeBtn.onclick = () => overlay.remove();
+      closeBtn.title = 'Leave';
+      closeBtn.onclick = () => {
+        overlay.style.animation = 'campBldOut 200ms ease-in forwards';
+        setTimeout(() => { if (overlay.parentNode) overlay.parentNode.removeChild(overlay); }, 210);
+      };
       overlay.appendChild(closeBtn);
 
       // Raw Gem counts
@@ -2000,11 +2231,17 @@
       const overlay = document.createElement('div');
       overlay.id = 'gacha-store-overlay';
       overlay.className = 'gacha-overlay';
+      overlay.style.cssText += 'animation:campBldIn 250ms ease-out forwards;';
 
       const closeBtn = document.createElement('button');
-      closeBtn.className = 'gacha-close-btn';
+      closeBtn.className = 'gacha-close-btn camp-bld-close-btn';
+      closeBtn.style.cssText = 'position:absolute;top:14px;right:16px;width:38px;height:38px;font-size:16px;z-index:4001;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;';
       closeBtn.textContent = '✕';
-      closeBtn.onclick = () => overlay.remove();
+      closeBtn.title = 'Leave';
+      closeBtn.onclick = () => {
+        overlay.style.animation = 'campBldOut 200ms ease-in forwards';
+        setTimeout(() => { if (overlay.parentNode) overlay.parentNode.removeChild(overlay); }, 210);
+      };
       overlay.appendChild(closeBtn);
 
       const title = document.createElement('div');
@@ -2051,6 +2288,25 @@
           card.querySelector('.gacha-open-btn').onclick = () => {
             const drops = GS.openChest(tierId);
             if (drops && drops.length > 0) {
+              // Track total chests opened for quest36_blackMarket
+              saveData.chestOpenCount = (saveData.chestOpenCount || 0) + 1;
+              // Check quest36_blackMarket progress (need 10 total) or quest progress (3 total)
+              if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest36_blackMarket') {
+                if ((saveData.chestOpenCount || 0) >= 3) {
+                  if (typeof progressTutorialQuest === 'function') {
+                    progressTutorialQuest('quest36_blackMarket', true);
+                    if (typeof saveSaveData === 'function') saveSaveData();
+                  }
+                }
+              }
+              if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest_annunaki2') {
+                if ((saveData.chestOpenCount || 0) >= 10) {
+                  if (typeof progressTutorialQuest === 'function') {
+                    progressTutorialQuest('quest_annunaki2', true);
+                    if (typeof saveSaveData === 'function') saveSaveData();
+                  }
+                }
+              }
               overlay.remove();
               _runChestOpenAnimation(tierId, tier, drops, () => {
                 showGachaStore(); // Re-open store after animation
