@@ -210,8 +210,11 @@
           
           for (const enemy of enemies) {
             if (enemy.isDead) continue; // Skip dead enemies
-            const ex = enemy.mesh.position.x - this.mesh.position.x;
-            const ez = enemy.mesh.position.z - this.mesh.position.z;
+            if (!enemy.mesh) continue; // Skip enemies with no mesh (cleaned up)
+            // Use mesh position (root/center of enemy) to avoid targeting severed segments
+            const _ePos = enemy.mesh.position;
+            const ex = _ePos.x - this.mesh.position.x;
+            const ez = _ePos.z - this.mesh.position.z;
             const d = ex*ex + ez*ez;
             if (d < nearestDist && d < _COMPANION_MULTI_SHOT_RANGE_SQ) { // Range check
               nearestDist = d;
@@ -238,6 +241,7 @@
               let shotsFired = 0;
               for (const enemy of enemies) {
                 if (enemy.isDead || enemy === nearest || shotsFired >= multiShotLevel) continue;
+                if (!enemy.mesh) continue; // Skip enemies with no mesh
                 const ex = enemy.mesh.position.x - this.mesh.position.x;
                 const ez = enemy.mesh.position.z - this.mesh.position.z;
                 if (ex*ex + ez*ez < _COMPANION_MULTI_SHOT_RANGE_SQ) {
