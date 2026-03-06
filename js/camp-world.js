@@ -2326,15 +2326,35 @@
       grp.add(disc);
     }
 
-    // Main atmospheric light — vivid purple
-    const mainLight = new THREE.PointLight(0xbb44ff, 2.2, 10, 2);
-    mainLight.position.set(0, 4, 0);
-    grp.add(mainLight);
+    // Fake atmospheric glow — additive sprite (no real-time PointLight overhead)
+    const _glowCanvas = document.createElement('canvas');
+    _glowCanvas.width = 64; _glowCanvas.height = 64;
+    const _gCtx = _glowCanvas.getContext('2d');
+    const _gGrad = _gCtx.createRadialGradient(32, 32, 0, 32, 32, 32);
+    _gGrad.addColorStop(0, 'rgba(220,140,255,0.9)');
+    _gGrad.addColorStop(0.35, 'rgba(150,50,255,0.55)');
+    _gGrad.addColorStop(1, 'rgba(0,0,0,0)');
+    _gCtx.fillStyle = _gGrad;
+    _gCtx.fillRect(0, 0, 64, 64);
+    const glowTex = new THREE.CanvasTexture(_glowCanvas);
+    const glowSpriteMat = new THREE.SpriteMaterial({
+      map: glowTex, color: 0xcc88ff, transparent: true,
+      blending: THREE.AdditiveBlending, opacity: 0.75, depthWrite: false
+    });
+    const glowSprite = new THREE.Sprite(glowSpriteMat);
+    glowSprite.position.set(0, 4, 0);
+    glowSprite.scale.set(12, 12, 1);
+    grp.add(glowSprite);
 
-    // Accent light — pink shimmer
-    const accentLight = new THREE.PointLight(0xff88ff, 1.0, 7, 2);
-    accentLight.position.set(1.5, 2, 1.5);
-    grp.add(accentLight);
+    // Smaller accent glow near base
+    const accentSpriteMat = new THREE.SpriteMaterial({
+      map: glowTex, color: 0xff88ff, transparent: true,
+      blending: THREE.AdditiveBlending, opacity: 0.4, depthWrite: false
+    });
+    const accentSprite = new THREE.Sprite(accentSpriteMat);
+    accentSprite.position.set(1.5, 2, 1.5);
+    accentSprite.scale.set(6, 6, 1);
+    grp.add(accentSprite);
 
     _addNameSign(grp, def.label, 0, 7.2, 0);
     return grp;

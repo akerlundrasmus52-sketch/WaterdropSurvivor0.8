@@ -1,6 +1,48 @@
 // js/player-class.js — Player class: water droplet character, movement, dash, recoil, shooting.
 // Depends on: THREE (CDN), variables from main.js (scene, camera, enemies, playerStats, etc.)
 
+    // ── Evaporation helpers (Void/Alien gem mechanic) ────────────────────────
+    /** Returns true if any equipped slot (weapon or companion) has a void gem. */
+    function _playerHasVoidGem() {
+      if (!saveData || !saveData.cutGems) return false;
+      const _checkSlotStore = (store, id) => {
+        if (!store || !store[id]) return false;
+        return store[id].some(gemId => {
+          if (!gemId) return false;
+          const gem = saveData.cutGems.find(g => g.id === gemId);
+          return gem && gem.type === 'void';
+        });
+      };
+      const _weaponId = saveData.equippedGear && saveData.equippedGear.weapon;
+      if (_weaponId && _checkSlotStore(saveData.weaponGemSlots, _weaponId)) return true;
+      const companionId = saveData.selectedCompanion;
+      if (companionId && _checkSlotStore(saveData.companionGemSlots, companionId)) return true;
+      return false;
+    }
+
+    /** Trigger the Evaporation effect: negate damage, ghost player for 1.5 s, steam burst. */
+    function _triggerEvaporation(playerInstance) {
+      // Drop mesh opacity — player becomes semi-transparent
+      if (playerInstance.mesh && playerInstance.mesh.material) {
+        playerInstance.mesh.material.opacity = 0.2;
+      }
+      // Grant 1.5 s of invulnerability with special ghost flicker
+      playerInstance.invulnerable = true;
+      playerInstance.invulnerabilityTime = 0;
+      playerInstance.invulnerabilityDuration = 1.5;
+      playerInstance._isEvaporating = true;
+      // Steam / smoke burst
+      spawnParticles(playerInstance.mesh.position, 0xCCCCCC, 18); // grey steam
+      spawnParticles(playerInstance.mesh.position, 0xFFFFFF, 8);  // white puff
+      // Narrator flash
+      if (typeof window.showNarratorLine === 'function') {
+        window.showNarratorLine('Subject momentarily lost physical cohesion.');
+      }
+      // Floating status text
+      if (typeof createFloatingText === 'function') {
+        createFloatingText('EVAPORATION!', playerInstance.mesh.position, '#CC88FF');
+      }
+    }
 
     class Player {
       constructor() {
@@ -367,9 +409,12 @@
           if (this.invulnerabilityTime >= this.invulnerabilityDuration) {
             this.invulnerable = false;
             this.invulnerabilityTime = 0;
+            this._isEvaporating = false;
           }
-          // Flash effect during invulnerability
-          if (Math.floor(this.invulnerabilityTime * INVULNERABILITY_FLASH_FREQUENCY) % 2 === 0) {
+          // Flash effect during invulnerability — ghostly low opacity during Evaporation
+          if (this._isEvaporating) {
+            this.mesh.material.opacity = Math.floor(this.invulnerabilityTime * INVULNERABILITY_FLASH_FREQUENCY) % 2 === 0 ? 0.15 : 0.3;
+          } else if (Math.floor(this.invulnerabilityTime * INVULNERABILITY_FLASH_FREQUENCY) % 2 === 0) {
             this.mesh.material.opacity = 0.5;
           } else {
             this.mesh.material.opacity = 0.75;
@@ -1226,6 +1271,13 @@
           spawnParticles(this.mesh.position, 0x00FFFF, 6);
           return;
         }
+
+        // ── EVAPORATION: 5% chance when a Void/Alien gem is slotted ──────────────
+        if (Math.random() < 0.05 && _playerHasVoidGem()) {
+          _triggerEvaporation(this);
+          return;
+        }
+        // ─────────────────────────────────────────────────────────────────────────
 
         // Armor reduction — delegated to GameCombat
         let reduced = calculateArmorReduction(amount, playerStats.armor);

@@ -9,6 +9,49 @@
     const _COMPANION_MIN_FIRE_RATE_MULT = 0.30; // Minimum fire rate multiplier after skills
     const _COMPANION_MULTI_SHOT_RANGE_SQ = 100;  // 10 units squared — range for multi-shot targeting
 
+    // ── Gem type helpers ─────────────────────────────────────────────────────
+    /** Returns true if the currently equipped weapon has a slotted gem of the given type. */
+    function _weaponHasGemType(type) {
+      if (!saveData || !saveData.cutGems || !saveData.equippedGear) return false;
+      const weaponId = saveData.equippedGear.weapon;
+      if (!weaponId || !saveData.weaponGemSlots || !saveData.weaponGemSlots[weaponId]) return false;
+      for (const gemId of saveData.weaponGemSlots[weaponId]) {
+        if (!gemId) continue;
+        const gem = saveData.cutGems.find(g => g.id === gemId);
+        if (gem && gem.type === type) return true;
+      }
+      return false;
+    }
+
+    /** Returns the first slotted gem type for the given companion, or null. */
+    function _companionFirstGemType(companionId) {
+      if (!saveData || !saveData.cutGems || !saveData.companionGemSlots) return null;
+      const slots = saveData.companionGemSlots[companionId];
+      if (!slots) return null;
+      for (const gemId of slots) {
+        if (!gemId) continue;
+        const gem = saveData.cutGems.find(g => g.id === gemId);
+        if (gem) return gem.type;
+      }
+      return null;
+    }
+
+    /** Counts how many gems are slotted in a companion (for scale boost). */
+    function _companionGemCount(companionId) {
+      if (!saveData || !saveData.companionGemSlots) return 0;
+      const slots = saveData.companionGemSlots[companionId];
+      if (!slots) return 0;
+      return slots.filter(id => !!id).length;
+    }
+
+    /** Maps gem type to a particle colour hex. */
+    const _GEM_PARTICLE_COLORS = {
+      ruby:    0xFF3322,
+      sapphire:0x4488FF,
+      emerald: 0x22EE66,
+      void:    0xCC44FF
+    };
+
     class Companion {
       constructor(companionId) {
         this.companionId = companionId;
@@ -42,7 +85,13 @@
         } else {
           this._baseScale = 1.0;
         }
-        
+
+        // Gem enhancement: each slotted gem grows the companion slightly (+0.1 per gem, capped at +0.3)
+        const _gemBoost = Math.min(_companionGemCount(companionId) * 0.1, 0.3);
+        this._baseScale += _gemBoost;
+        // Store the dominant gem type for plasma colour changes
+        this._slottedGemType = _companionFirstGemType(companionId);
+
         // Create visual representation — shape and color based on companion type
         const size = 0.8 * this._baseScale;
         let mesh;
@@ -176,7 +225,9 @@
             const damageMultiplier = (1 + (this.companionData.level - 1) * 0.1) * (1 + damageLevel * 0.20);
             const finalDamage = Math.floor(this.damage * damageMultiplier * playerStats.strength);
             nearest.takeDamage(finalDamage, false, 'physical');
-            spawnParticles(nearest.mesh.position, 0x00FF88, 3); // Green plasma for Grey Alien
+            // Plasma bolt colour: use gem tint when a gem is slotted, otherwise default green
+            const _plasmaColor = (_GEM_PARTICLE_COLORS[this._slottedGemType] ?? 0x00FF88);
+            spawnParticles(nearest.mesh.position, _plasmaColor, 3);
             this.lastAttackTime = now;
             this._animState = 'attack';
             this._attackAnimTimer = 0.25;
@@ -191,7 +242,7 @@
                 const ez = enemy.mesh.position.z - this.mesh.position.z;
                 if (ex*ex + ez*ez < _COMPANION_MULTI_SHOT_RANGE_SQ) {
                   enemy.takeDamage(Math.floor(finalDamage * 0.6), false, 'physical');
-                  spawnParticles(enemy.mesh.position, 0x00FF88, 2);
+                  spawnParticles(enemy.mesh.position, _plasmaColor, 2);
                   shotsFired++;
                 }
               }
@@ -502,8 +553,12 @@
         this._trailFrame = (this._trailFrame || 0) + 1;
         if (this._trailFrame % 3 === 0 && window.bulletTrails) {
           const trailGeo = new THREE.SphereGeometry(0.035, 4, 4);
+          // Red gem: override trail colour with fiery red
+          const trailColor = _weaponHasGemType('ruby')
+            ? 0xFF2200
+            : this.mesh.material.color.getHex();
           const trailMat = new THREE.MeshBasicMaterial({
-            color: this.mesh.material.color.getHex(),
+            color: trailColor,
             transparent: true,
             opacity: 0.55
           });
@@ -637,6 +692,12 @@
               // Normal hit — pass weapon-specific damageType for downstream effects
               const hitDmgType = this.isSniperRifle ? 'sniperRifle' : (this.isDroneTurret ? 'drone' : (this.isDoubleBarrel ? 'doubleBarrel' : 'gun'));
               enemy.takeDamage(Math.floor(dmg), false, hitDmgType, { vx: this.vx, vz: this.vz });
+            }
+
+            // ── Blue Gem (Sapphire): icy shatter particles replace standard sparks ──
+            if (_weaponHasGemType('sapphire') && !enemy.isDead) {
+              spawnParticles(enemy.mesh.position, 0x5588FF, 6); // Icy blue shards
+              spawnParticles(enemy.mesh.position, 0xAADDFF, 4); // Frost glitter
             }
             
             // ── SNIPER: hit-stop for weight, no separate exit wound here
