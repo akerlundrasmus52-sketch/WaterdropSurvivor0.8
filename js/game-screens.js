@@ -4044,28 +4044,18 @@
         playerStats.exp -= playerStats.expReq;
       }
       
-      // Victory condition: Reaching level 100
+      // Level 100: Trigger the Annunaki endgame encounter instead of instant victory
       if (playerStats.lvl === 100) {
-        // Reset immediately so the game doesn't stay stuck in paused/pending state
-        // while the victory message and gameOver() are deferred
         levelUpPending = false;
         setGamePaused(false);
-        setTimeout(() => {
-          showStatChange('🎉 ULTIMATE VICTORY! You reached Level 100! 🎉');
-          setTimeout(() => {
-            gameOver(); // Show game over screen as victory screen
-          }, 2000);
-        }, 1000);
+        startAnnunakiEvent();
         return;
       }
       
-      // XP Curve: 1.5x growth when leveling up to levels 2-5 (rapid early pace),
-      // then formula-based for level 6+ to make Level 100 require meaningful grinding.
-      if (playerStats.lvl <= 5) {
-        playerStats.expReq = Math.floor(playerStats.expReq * 1.5);
-      } else {
-        playerStats.expReq = Math.floor(GAME_CONFIG.baseExpReq * playerStats.lvl * 1.15);
-      }
+      // XP Curve: Power scaling for a 1–100 progression loop.
+      // Levels 1–20: fast (linear feel), 21–50: slows down, 51–100: massive grind.
+      // Formula: expReq = baseExp * Math.pow(level, 1.6)
+      playerStats.expReq = Math.floor(GAME_CONFIG.baseExpReq * Math.pow(playerStats.lvl, 1.6));
       
       // Quest: The Egg Hunt — Spawn mysterious egg when reaching Level 15
       if (playerStats.lvl >= 15 && saveData.tutorialQuests &&
@@ -4168,6 +4158,391 @@
       checkPendingLevelUp();
     }
     window.forceGameUnpause = forceGameUnpause;
+
+    // ── ANNUNAKI ENDGAME EVENT (triggered at Level 100) ─────────────────────
+    // This is the cinematic, hardcoded boss encounter for reaching the endgame.
+    //
+    //  Phase 1 – PURGE:    Kill all normal enemies in a screen-wide gore explosion.
+    //  Phase 2 – ARRIVAL:  Fade lighting to dark crimson; spawn Annunaki Boss.
+    //  Phase 3 – COMBAT:   Two attack patterns (Grid Lock, Gravity Well).
+    //                      Massive HP pool protected by a Divine Shield that only
+    //                      Void/Mythic gem-equipped players can break.
+    // ────────────────────────────────────────────────────────────────────────
+
+    function startAnnunakiEvent() {
+      if (window._annunakiEventActive) return; // don't re-trigger
+      window._annunakiEventActive = true;
+
+      // ── Phase 1: Kill every living enemy in a spectacular gore burst ────────
+      showStatChange('⚠️ LEVEL 100 REACHED — ANNUNAKI DESCENDS ⚠️');
+      if (window.pushSuperStatEvent) window.pushSuperStatEvent('💀 ANNUNAKI DESCENDS', 'mythic', '👁️', 'danger');
+
+      enemies.forEach(e => {
+        if (!e.isDead) {
+          // Spawn a dramatic red particle burst at the enemy position
+          try {
+            const pos = e.mesh ? e.mesh.position : { x: 0, y: 0, z: 0 };
+            createFloatingText('💥', pos, '#FF0000');
+          } catch (err) { console.warn('[AnnunakiEvent] Particle effect failed:', err); }
+          e.hp = 0;
+          e.isDead = true;
+          if (e.mesh && e.mesh.parent) e.mesh.parent.remove(e.mesh);
+        }
+      });
+      // Remove dead references
+      enemies.splice(0, enemies.length);
+
+      // Stop the normal wave spawner permanently for this encounter
+      window._annunakiWavesStopped = true;
+
+      // ── Phase 2: Cinematic lighting fade to dark red ─────────────────────────
+      const fadeDuration = 3000; // 3 seconds
+      const fadeSteps = 60;
+      const stepMs = fadeDuration / fadeSteps;
+      let step = 0;
+      const origAmbR = 1.0, origAmbG = 1.0, origAmbB = 1.0;
+      const origDirR = 1.0, origDirG = 1.0, origDirB = 1.0;
+      const tgtAmbR = 0.27, tgtAmbG = 0.0, tgtAmbB = 0.0; // dark red ambient
+      const tgtDirR = 0.27, tgtDirG = 0.0, tgtDirB = 0.0; // dark red directional
+
+      const lightFadeInterval = setInterval(() => {
+        step++;
+        const t = step / fadeSteps;
+        if (window.ambientLight) {
+          window.ambientLight.color.setRGB(
+            origAmbR + (tgtAmbR - origAmbR) * t,
+            origAmbG + (tgtAmbG - origAmbG) * t,
+            origAmbB + (tgtAmbB - origAmbB) * t
+          );
+        }
+        if (window.dirLight) {
+          window.dirLight.color.setRGB(
+            origDirR + (tgtDirR - origDirR) * t,
+            origDirG + (tgtDirG - origDirG) * t,
+            origDirB + (tgtDirB - origDirB) * t
+          );
+        }
+        if (step >= fadeSteps) {
+          clearInterval(lightFadeInterval);
+          spawnAnnunakiBoss(); // Phase 3: Spawn boss after lighting transition
+        }
+      }, stepMs);
+
+      // ── Web Audio API: deep, booming synth bass drop ─────────────────────────
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (AudioCtx) {
+          const ctx = new AudioCtx();
+          // Sub-bass oscillator
+          const osc = ctx.createOscillator();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(60, ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(30, ctx.currentTime + 2.5);
+          // Gain envelope
+          const gain = ctx.createGain();
+          gain.gain.setValueAtTime(0, ctx.currentTime);
+          gain.gain.linearRampToValueAtTime(0.9, ctx.currentTime + 0.3);
+          gain.gain.linearRampToValueAtTime(0.6, ctx.currentTime + 1.5);
+          gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 3.5);
+          // Low-pass filter for deep rumble
+          const filter = ctx.createBiquadFilter();
+          filter.type = 'lowpass';
+          filter.frequency.setValueAtTime(200, ctx.currentTime);
+          filter.frequency.linearRampToValueAtTime(80, ctx.currentTime + 2.5);
+
+          osc.connect(filter);
+          filter.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(ctx.currentTime);
+          osc.stop(ctx.currentTime + 3.5);
+
+          // Secondary impact transient
+          const impactOsc = ctx.createOscillator();
+          impactOsc.type = 'square';
+          impactOsc.frequency.setValueAtTime(40, ctx.currentTime + 0.05);
+          impactOsc.frequency.exponentialRampToValueAtTime(20, ctx.currentTime + 0.8);
+          const impactGain = ctx.createGain();
+          impactGain.gain.setValueAtTime(0.7, ctx.currentTime + 0.05);
+          impactGain.gain.linearRampToValueAtTime(0, ctx.currentTime + 1.0);
+          impactOsc.connect(impactGain);
+          impactGain.connect(ctx.destination);
+          impactOsc.start(ctx.currentTime + 0.05);
+          impactOsc.stop(ctx.currentTime + 1.0);
+        }
+      } catch (err) { console.warn('[AnnunakiEvent] Web Audio API unavailable:', err); }
+    }
+    window.startAnnunakiEvent = startAnnunakiEvent;
+
+    // Patch spawnWave to respect the Annunaki wave-stop flag
+    const _origSpawnWave = spawnWave;
+    spawnWave = function() {
+      if (window._annunakiWavesStopped) return;
+      _origSpawnWave.apply(this, arguments);
+    };
+
+    // ── Annunaki Boss spawn & mechanics ────────────────────────────────────────
+    function spawnAnnunakiBoss() {
+      showStatChange('👁️ THE ANNUNAKI HAS ARRIVED 👁️');
+
+      const playerPos = player && player.mesh ? player.mesh.position : new THREE.Vector3(0, 0, 0);
+
+      // Boss geometry: perfect IcosahedronGeometry — gold & black glass
+      const bossGroup = new THREE.Group();
+      const icoGeo = new THREE.IcosahedronGeometry(3.5, 1);
+
+      // Outer shell: glowing gold
+      const goldMat = new THREE.MeshStandardMaterial({
+        color: 0xFFD700,
+        emissive: 0xBB8800,
+        emissiveIntensity: 1.2,
+        metalness: 0.95,
+        roughness: 0.05,
+        transparent: true,
+        opacity: 0.88
+      });
+      const goldMesh = new THREE.Mesh(icoGeo, goldMat);
+      bossGroup.add(goldMesh);
+
+      // Inner shell: dark glass
+      const innerIcoGeo = new THREE.IcosahedronGeometry(2.5, 1);
+      const glassMat = new THREE.MeshStandardMaterial({
+        color: 0x000000,
+        emissive: 0x330033,
+        emissiveIntensity: 0.8,
+        metalness: 0.2,
+        roughness: 0.0,
+        transparent: true,
+        opacity: 0.65
+      });
+      const glassMesh = new THREE.Mesh(innerIcoGeo, glassMat);
+      bossGroup.add(glassMesh);
+
+      // Position: float 5 units above ground, centred on player
+      bossGroup.position.set(playerPos.x, 5, playerPos.z);
+      scene.add(bossGroup);
+
+      // Boss state
+      const boss = {
+        mesh: bossGroup,
+        maxHp: 250000,
+        hp: 250000,
+        divineShieldHp: 50000, // shield that must be broken with Void/Mythic gems
+        divineShieldActive: true,
+        isDead: false,
+        damage: 80,
+        // Attack timers
+        _gridLockTimer: 0,
+        _gravityWellTimer: 0,
+        _rotationAngle: 0,
+        // Gem-piercing bypass: damage that ignores Divine Shield when player has Void/Mythic gems
+        _requiresVoidGems: true
+      };
+      window._annunakiBoss = boss;
+
+      // HUD announcement
+      if (window.pushSuperStatEvent) window.pushSuperStatEvent('👁️ ANNUNAKI', 'mythic', '⬡', 'danger');
+
+      // Register boss in enemies array so combat system can target it
+      const bossEnemy = new Enemy(19, playerPos.x, playerPos.z, 100);
+      bossEnemy.mesh = bossGroup;
+      bossEnemy.hp = boss.hp;
+      bossEnemy.maxHp = boss.maxHp;
+      bossEnemy.isAnnunakiBoss = true;
+      bossEnemy.divineShieldActive = true;
+      bossEnemy.divineShieldHp = boss.divineShieldHp;
+      enemies.push(bossEnemy);
+
+      // ── Continuous boss update: rotation + attacks ───────────────────────
+      const GRID_LOCK_INTERVAL  = 6000;  // ms between Grid Lock attacks
+      const GRAVITY_WELL_INTERVAL = 9000; // ms between Gravity Well attacks
+      let lastGridLock   = Date.now();
+      let lastGravityWell = Date.now() + 3000; // offset so they don't fire simultaneously
+
+      function bossTick() {
+        if (bossEnemy.isDead || isGameOver || !isGameActive) {
+          // Boss defeated — victory
+          setTimeout(() => {
+            showStatChange('🎉 ANNUNAKI DEFEATED! ULTIMATE VICTORY! 🎉');
+            if (window.pushSuperStatEvent) window.pushSuperStatEvent('🏆 VICTORY', 'mythic', '🏆', 'success');
+            setTimeout(() => { if (typeof gameOver === 'function') gameOver(); }, 3000);
+          }, 500);
+          return;
+        }
+
+        const now = Date.now();
+
+        // Slow rotation
+        bossGroup.rotation.y += 0.008;
+        bossGroup.rotation.x += 0.004;
+        bossGroup.position.y = 5 + Math.sin(now * 0.001) * 0.5; // gentle float
+
+        // Divine Shield visual pulse
+        if (bossEnemy.divineShieldActive) {
+          goldMat.emissiveIntensity = 0.8 + Math.sin(now * 0.003) * 0.6;
+        } else {
+          goldMat.emissiveIntensity = 0.3;
+          goldMat.color.setHex(0x883300); // Damaged: dim orange-red
+        }
+
+        // Attack 1: Grid Lock
+        if (now - lastGridLock > GRID_LOCK_INTERVAL) {
+          lastGridLock = now;
+          triggerGridLockAttack(bossGroup.position);
+        }
+
+        // Attack 2: Gravity Well
+        if (now - lastGravityWell > GRAVITY_WELL_INTERVAL) {
+          lastGravityWell = now;
+          triggerGravityWellAttack(bossGroup.position);
+        }
+
+        requestAnimationFrame(bossTick);
+      }
+      requestAnimationFrame(bossTick);
+    }
+
+    // ── Attack 1: Grid Lock — laser grids appear under the player that explode upward ──
+    function triggerGridLockAttack(bossPos) {
+      if (!player || !player.mesh || isGameOver) return;
+      showStatChange('⚡ GRID LOCK — MOVE NOW!');
+
+      const gridCount = 5;
+      const grids = [];
+
+      for (let i = 0; i < gridCount; i++) {
+        const angle = (i / gridCount) * Math.PI * 2;
+        const radius = 4 + Math.random() * 6;
+        const gx = player.mesh.position.x + Math.cos(angle) * radius;
+        const gz = player.mesh.position.z + Math.sin(angle) * radius;
+
+        // Create glowing floor grid tile
+        const gridGeo = new THREE.PlaneGeometry(3, 3);
+        const gridMat = new THREE.MeshBasicMaterial({
+          color: 0xFF4400,
+          transparent: true,
+          opacity: 0.6,
+          side: THREE.DoubleSide
+        });
+        const gridMesh = new THREE.Mesh(gridGeo, gridMat);
+        gridMesh.rotation.x = -Math.PI / 2;
+        gridMesh.position.set(gx, 0.05, gz);
+        scene.add(gridMesh);
+        grids.push({ mesh: gridMesh, mat: gridMat, x: gx, z: gz, exploded: false });
+      }
+
+      // Warn for 2.5 seconds then explode upward
+      let pulse = 0;
+      const pulseInterval = setInterval(() => {
+        pulse++;
+        grids.forEach(g => {
+          g.mat.opacity = 0.3 + (pulse % 2) * 0.5;
+          g.mat.color.setHex(pulse % 2 === 0 ? 0xFF4400 : 0xFFFF00);
+        });
+      }, 250);
+
+      setTimeout(() => {
+        clearInterval(pulseInterval);
+        grids.forEach(g => {
+          // Upward explosion pillar
+          const pillarGeo = new THREE.CylinderGeometry(1.2, 1.5, 12, 8);
+          const pillarMat = new THREE.MeshBasicMaterial({ color: 0xFF8800, transparent: true, opacity: 0.75 });
+          const pillar = new THREE.Mesh(pillarGeo, pillarMat);
+          pillar.position.set(g.x, 6, g.z);
+          scene.add(pillar);
+
+          // Damage player if inside explosion radius
+          if (player && player.mesh) {
+            const dx = player.mesh.position.x - g.x;
+            const dz = player.mesh.position.z - g.z;
+            const dist = Math.sqrt(dx * dx + dz * dz);
+            if (dist < 2.5) {
+              playerStats.hp = Math.max(0, playerStats.hp - 60);
+              updateHUD();
+              if (playerStats.hp <= 0) { gameOver(); return; }
+            }
+          }
+
+          // Remove pillar after 0.8 s
+          setTimeout(() => {
+            if (pillar.parent) pillar.parent.remove(pillar);
+            pillarGeo.dispose();
+            pillarMat.dispose();
+          }, 800);
+
+          if (g.mesh.parent) g.mesh.parent.remove(g.mesh);
+          g.mat.dispose();
+        });
+      }, 2500);
+    }
+
+    // ── Attack 2: Gravity Well — pulls player toward boss, fires tracking orbs ──
+    function triggerGravityWellAttack(bossPos) {
+      if (!player || !player.mesh || isGameOver) return;
+      showStatChange('🌀 GRAVITY WELL — RESIST THE PULL!');
+
+      const pullDuration = 5000; // 5 seconds of pull
+      const pullStart = Date.now();
+      const orbCount = 4;
+
+      // Spawn tracking orbs
+      const orbs = [];
+      for (let i = 0; i < orbCount; i++) {
+        const orbGeo = new THREE.SphereGeometry(0.4, 8, 8);
+        const orbMat = new THREE.MeshBasicMaterial({ color: 0xAA00FF, transparent: true, opacity: 0.9 });
+        const orbMesh = new THREE.Mesh(orbGeo, orbMat);
+        const spawnAngle = (i / orbCount) * Math.PI * 2;
+        orbMesh.position.set(
+          bossPos.x + Math.cos(spawnAngle) * 5,
+          bossPos.y,
+          bossPos.z + Math.sin(spawnAngle) * 5
+        );
+        scene.add(orbMesh);
+        orbs.push({ mesh: orbMesh, mat: orbMat, geo: orbGeo, speed: 0.04 + i * 0.01 });
+      }
+
+      // Pull & orb update loop
+      function gravityTick() {
+        const elapsed = Date.now() - pullStart;
+        if (elapsed > pullDuration || isGameOver || !player || !player.mesh) {
+          orbs.forEach(o => { if (!o.removed && o.mesh.parent) { o.mesh.parent.remove(o.mesh); o.geo.dispose(); o.mat.dispose(); o.removed = true; } });
+          return;
+        }
+
+        // Gravity pull: nudge player toward boss position
+        if (player && player.mesh) {
+          const pullStrength = 0.02;
+          const dx = bossPos.x - player.mesh.position.x;
+          const dz = bossPos.z - player.mesh.position.z;
+          const dist = Math.sqrt(dx * dx + dz * dz) || 1;
+          player.mesh.position.x += (dx / dist) * pullStrength;
+          player.mesh.position.z += (dz / dist) * pullStrength;
+        }
+
+        // Track orbs toward player
+        orbs.forEach(o => {
+          if (o.removed) return;
+          const tdx = player.mesh.position.x - o.mesh.position.x;
+          const tdz = player.mesh.position.z - o.mesh.position.z;
+          const tdist = Math.sqrt(tdx * tdx + tdz * tdz) || 1;
+          o.mesh.position.x += (tdx / tdist) * o.speed;
+          o.mesh.position.z += (tdz / tdist) * o.speed;
+
+          // Check hit
+          if (tdist < 0.8 && player && player.mesh) {
+            playerStats.hp = Math.max(0, playerStats.hp - 25);
+            updateHUD();
+            if (o.mesh.parent) o.mesh.parent.remove(o.mesh);
+            o.mat.dispose();
+            o.geo.dispose();
+            o.removed = true;
+            if (playerStats.hp <= 0) { gameOver(); return; }
+          }
+        });
+
+        requestAnimationFrame(gravityTick);
+      }
+      requestAnimationFrame(gravityTick);
+    }
 
     // Queue all free (quest-reward) level-ups and process them one-at-a-time after each upgrade
     // modal is dismissed, so the player sees an upgrade choice for every level gained.

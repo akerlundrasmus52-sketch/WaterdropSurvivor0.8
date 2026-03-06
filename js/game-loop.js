@@ -824,7 +824,8 @@
       const minWaveDelay = Math.floor(GAME_CONFIG.waveInterval * 0.6); // 60% of wave interval (3 seconds at 60fps)
       
       // Spawn new wave if: interval passed AND (no enemies alive OR enough time since last spawn)
-      if (frameCount % GAME_CONFIG.waveInterval === 0 && (aliveEnemies === 0 || timeSinceLastWave > GAME_CONFIG.waveInterval)) {
+      // Skip if the Annunaki endgame event has stopped normal waves.
+      if (!window._annunakiWavesStopped && frameCount % GAME_CONFIG.waveInterval === 0 && (aliveEnemies === 0 || timeSinceLastWave > GAME_CONFIG.waveInterval)) {
         lastWaveEndTime = frameCount; // Update last wave time on every spawn
         const spawnStartTime = performance.now();
         const _dbgPreSpawn = enemies.length;
@@ -839,7 +840,7 @@
         if (spawnEndTime - spawnStartTime > 10) {
           console.warn(`Spawn wave took ${(spawnEndTime - spawnStartTime).toFixed(2)}ms, enemies: ${aliveEnemies}`);
         }
-      } else if (aliveEnemies === 0 && timeSinceLastWave >= minWaveDelay) {
+      } else if (!window._annunakiWavesStopped && aliveEnemies === 0 && timeSinceLastWave >= minWaveDelay) {
         // Quick spawn if all enemies cleared and minimum delay passed
         lastWaveEndTime = frameCount;
         const spawnStartTime = performance.now();
