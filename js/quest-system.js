@@ -366,7 +366,7 @@
         !saveData.tutorialQuests.readyToClaim.includes('quest_firstBlood')
       ) {
         const r = saveData.resources || {};
-        if ((r.wood || 0) >= 30 && (r.stone || 0) >= 30) {
+        if ((r.wood || 0) >= 12 && (r.stone || 0) >= 12) {
           progressTutorialQuest('quest_firstBlood', true);
         }
       }

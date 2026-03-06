@@ -685,10 +685,10 @@
           const behavior = this.aiBehavior || 'approach';
           
           if (behavior === 'interceptor') {
-            // Predict where the player will be and move to intercept
-            const predictTime = Math.min(dist / (this.speed * 60), 1.5);
-            const predictX = targetPos.x + this._playerVelocity.x * predictTime * 0.5;
-            const predictZ = targetPos.z + this._playerVelocity.z * predictTime * 0.5;
+            // Predict where the player will be 0.8s ahead and move to intercept
+            const predictTime = 0.8;
+            const predictX = targetPos.x + this._playerVelocity.x * predictTime * 60;
+            const predictZ = targetPos.z + this._playerVelocity.z * predictTime * 60;
             const pdx = predictX - this.mesh.position.x;
             const pdz = predictZ - this.mesh.position.z;
             const pdist = Math.sqrt(pdx*pdx + pdz*pdz) || 1;
@@ -708,24 +708,52 @@
               if (this._chargeTime <= 0) this._charging = false;
             }
           } else if (behavior === 'flanker') {
-            // Approach from the side/behind the player, blend with forward movement to ensure closure
-            if (this._aiTimer > this._aiCooldown) {
+            // Zigzag: every 0.5s pick a perpendicular offset ±2 units from direct path
+            if (this._aiTimer > 0.5) {
               this._aiTimer = 0;
-              this._flankAngle = (Math.random() > 0.5 ? 1 : -1) * (Math.PI * 0.25 + Math.random() * Math.PI * 0.35);
-              this._aiCooldown = 0.8 + Math.random() * 1.5;
+              this._flankAngle = (Math.random() > 0.5 ? 1 : -1) * (1.5 + Math.random() * 0.5);
             }
-            const flankX = dx * Math.cos(this._flankAngle) - dz * Math.sin(this._flankAngle);
-            const flankZ = dx * Math.sin(this._flankAngle) + dz * Math.cos(this._flankAngle);
-            const fMag = Math.sqrt(flankX*flankX + flankZ*flankZ) || 1;
-            if (dist > 3) {
-              // Blend flank direction with direct approach so enemies always close distance
-              const blend = Math.min(1, (dist - 3) / 5);
-              vx = (flankX / fMag) * this.speed * (1 - blend * 0.4) + (dx / dist) * this.speed * blend * 0.4;
-              vz = (flankZ / fMag) * this.speed * (1 - blend * 0.4) + (dz / dist) * this.speed * blend * 0.4;
+            const perpX = -dz / (dist || 1);
+            const perpZ =  dx / (dist || 1);
+            const zigzagX = perpX * this._flankAngle * 2;
+            const zigzagZ = perpZ * this._flankAngle * 2;
+            const targetZX = targetPos.x + zigzagX;
+            const targetZZ = targetPos.z + zigzagZ;
+            const tzDx = targetZX - this.mesh.position.x;
+            const tzDz = targetZZ - this.mesh.position.z;
+            const tzDist = Math.sqrt(tzDx * tzDx + tzDz * tzDz) || 1;
+            if (dist > 1.5) {
+              vx = (tzDx / tzDist) * this.speed;
+              vz = (tzDz / tzDist) * this.speed;
             } else {
-              // Close range: dash straight at player
               vx = (dx / dist) * this.speed * 1.6;
               vz = (dz / dist) * this.speed * 1.6;
+            }
+          } else if (behavior === 'ranged') {
+            // Maintain 8-12 unit distance from player; fire projectile every 2s
+            const RANGED_MIN = 8, RANGED_MAX = 12;
+            if (dist < RANGED_MIN) {
+              // Too close — back away
+              vx = -(dx / dist) * this.speed * 1.5;
+              vz = -(dz / dist) * this.speed * 1.5;
+            } else if (dist > RANGED_MAX) {
+              // Too far — approach
+              vx = (dx / dist) * this.speed;
+              vz = (dz / dist) * this.speed;
+            } else {
+              // At ideal range — strafe
+              const rPerpX = -dz / dist;
+              const rPerpZ =  dx / dist;
+              const rDir = Math.sin(gameTime * 1.5 + this.wobbleOffset) > 0 ? 1 : -1;
+              vx = rPerpX * this.speed * 0.5 * rDir;
+              vz = rPerpZ * this.speed * 0.5 * rDir;
+            }
+            // Fire projectile every 2s when in range
+            if (!this._rangedShotTimer) this._rangedShotTimer = 0;
+            this._rangedShotTimer += dt;
+            if (this._rangedShotTimer >= 2.0 && dist < 20) {
+              this._rangedShotTimer = 0;
+              this.fireProjectile(targetPos);
             }
           } else if (behavior === 'pack') {
             // Spread out and surround the player, then rush together
@@ -881,21 +909,20 @@
               }
             }
           } else if (behavior === 'sweep') {
-            // Sweeping Swarm: flies rapidly in wide arcs across the map
-            if (!this._sweepDir) this._sweepDir = (Math.random() > 0.5) ? 1 : -1;
+            // Sweeping Swarm: moves as a tight group sweeping ±6 units perpendicular to approach
+            // with a sin wave over 2s period (π rad/s)
             if (!this._sweepTimer) this._sweepTimer = 0;
             this._sweepTimer += dt;
-            // Sweep side to side with a sinusoidal path
-            const sweepSpeed = this.speed * 2.5;
+            const sweepSpeed = this.speed * 2.0;
             const perpX = -dz / (dist || 1);
             const perpZ =  dx / (dist || 1);
-            vx = (dx / dist) * sweepSpeed * 0.3 + perpX * Math.sin(this._sweepTimer * 2) * sweepSpeed;
-            vz = (dz / dist) * sweepSpeed * 0.3 + perpZ * Math.sin(this._sweepTimer * 2) * sweepSpeed;
-            // Reverse direction occasionally
-            if (this._sweepTimer > 2.5 + Math.random() * 1.5) {
-              this._sweepDir *= -1;
-              this._sweepTimer = 0;
-            }
+            // Sin wave ±6 units: sin(t * π) gives one full cycle per 2s
+            const sweepOffset = Math.sin(this._sweepTimer * Math.PI) * 6;
+            // Blend inward approach with perpendicular sweep
+            vx = (dx / (dist || 1)) * sweepSpeed * 0.4 + perpX * Math.cos(this._sweepTimer * Math.PI) * sweepSpeed;
+            vz = (dz / (dist || 1)) * sweepSpeed * 0.4 + perpZ * Math.cos(this._sweepTimer * Math.PI) * sweepSpeed;
+            // Reset sweep timer every 2s
+            if (this._sweepTimer >= 2.0) this._sweepTimer = 0;
           }
           
           // Flying height behavior
@@ -1011,10 +1038,11 @@
           this.mesh.position.z -= (dz / dist) * 2;
         }
 
-        // Squishy idle with more gravity-based wobble
-        this.pulsePhase += dt * 6; // Slightly faster
-        const squish = Math.sin(this.pulsePhase) * 0.08; // More pronounced from 0.05
+        // Squishy idle breathing at 1.5Hz (9.4 rad/s) — only when not in hit reaction
+        this.pulsePhase += dt * 9.4;
+        const squish = Math.sin(this.pulsePhase) * 0.05;
         
+        if (!this._squishTimer) {
         // MiniBoss glowing effect
         if (this.isMiniBoss) {
           const glowIntensity = 0.3 + Math.sin(this.pulsePhase * 2) * 0.2;
@@ -1033,6 +1061,7 @@
         } else {
            this.mesh.scale.set(1-squish, 1+squish*1.5, 1-squish);
         }
+        } // end !_squishTimer breathing
         
         // Blinking eyes animation
         if (this.leftEye && this.rightEye) {
@@ -1056,6 +1085,17 @@
           }
         }
         
+        // Eye tracking: non-instanced enemies rotate eyes toward player each frame
+        if (this.leftEye && this.rightEye && !this._usesInstancing && playerPos) {
+          this.leftEye.lookAt(new THREE.Vector3(playerPos.x, this.mesh.position.y + 0.1, playerPos.z));
+          this.rightEye.lookAt(new THREE.Vector3(playerPos.x, this.mesh.position.y + 0.1, playerPos.z));
+        }
+
+        // Idle sway: gentle rotation.z oscillation at 0.8Hz (5.03 rad/s)
+        if (!this._squishTimer && !this.isFrozen) {
+          this.mesh.rotation.z = Math.sin(gameTime * 5.03 + this.wobbleOffset) * 0.03;
+        }
+
         // Update ground shadow position for flying enemies
         if (this.groundShadow) {
           this.groundShadow.position.x = this.mesh.position.x;
@@ -1103,7 +1143,7 @@
        * @param {boolean} isCrit - Whether this is a critical hit
        * @param {string} damageType - Type of damage: 'physical', 'fire', 'ice', 'lightning', 'shotgun', 'headshot', 'gun', 'doubleBarrel', 'drone'
        */
-      takeDamage(amount, isCrit = false, damageType = 'physical') {
+      takeDamage(amount, isCrit = false, damageType = 'physical', hitDir = null) {
         // Track last damage type and crit state for death effects
         this.lastDamageType = damageType;
         this.lastCrit = isCrit;
@@ -1383,20 +1423,33 @@
         
         // Bullet-hole decal that sticks to enemy surface (visible bloody wound)
         if (!this.bulletHoles) this.bulletHoles = [];
-        const MAX_ENEMY_BULLET_HOLES = 12;
+        const MAX_ENEMY_BULLET_HOLES = 4;
         if (this.bulletHoles.length < MAX_ENEMY_BULLET_HOLES) {
           // Reuse shared geometry; clone shared material for per-hole opacity control
           ensureBulletHoleMaterials();
           if (bulletHoleGeo && bulletHoleMat) {
           const holeDecal = new THREE.Mesh(bulletHoleGeo, bulletHoleMat.clone());
-          // Place on enemy surface (random position on sphere surface)
-          const theta = Math.random() * Math.PI * 2;
-          const phi = Math.random() * Math.PI;
-          const nx = Math.sin(phi) * Math.cos(theta);
-          const ny = Math.sin(phi) * Math.sin(theta);
-          const nz = Math.cos(phi);
-          holeDecal.position.set(nx * 0.54, ny * 0.54, nz * 0.54);
-          // Face outward from center
+          // Place on enemy surface using hit direction as normal (from projectile velocity)
+          let nx, ny, nz;
+          if (hitDir && (hitDir.vx !== undefined || hitDir.x !== undefined)) {
+            const hvx = hitDir.vx !== undefined ? hitDir.vx : (hitDir.x || 0);
+            const hvz = hitDir.vz !== undefined ? hitDir.vz : (hitDir.z || 0);
+            const hLen = Math.sqrt(hvx * hvx + hvz * hvz) || 1;
+            nx = hvx / hLen;
+            ny = 0;
+            nz = hvz / hLen;
+          } else {
+            // Fallback: random hemisphere facing forward (player-side)
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.random() * Math.PI * 0.5;
+            nx = Math.sin(phi) * Math.cos(theta);
+            ny = Math.sin(phi) * Math.sin(theta) * 0.5;
+            nz = Math.abs(Math.cos(phi));
+          }
+          // Offset 0.01 units along normal from mesh surface
+          const meshRadius = 0.54;
+          holeDecal.position.set(nx * (meshRadius + 0.01), ny * (meshRadius + 0.01), nz * (meshRadius + 0.01));
+          // Face outward along normal
           holeDecal.lookAt(new THREE.Vector3(nx * 2, ny * 2, nz * 2));
           this.mesh.add(holeDecal);
           this.bulletHoles.push(holeDecal);
@@ -1703,118 +1756,32 @@
           spawnBloodDecal(this.mesh.position);
         }
         
-        // Varied hit reaction animations — 10 different reactions, weapon-specific, more dramatic
+        // Water-balloon squishy hit reaction — consistent squish with bounce-back overshoot
         if (!this._squishTimer) {
-          const hitReaction = Math.floor(Math.random() * 10);
           const isShotgun = damageType === 'doubleBarrel' || damageType === 'shotgun';
-          const isSword = damageType === 'sword';
           const isHeavy = isCrit || isShotgun;
-          const knockStr = isHeavy ? 1.5 : 1.0;
-          
-          if (hitReaction === 0 || (isHeavy && hitReaction < 2)) {
-            // Stumble backward — body rocks back hard
-            const stDir = (Math.random() < 0.5) ? 1 : -1;
-            this.mesh.rotation.x = stDir * (isHeavy ? 0.7 : 0.35) * knockStr;
-            this.mesh.position.y += isHeavy ? 0.12 : 0.05;
-            if (isShotgun) { this.mesh.position.x += (Math.random()-0.5) * 0.3; this.mesh.position.z += (Math.random()-0.5) * 0.3; }
-            this._squishTimer = setTimeout(() => {
-              if (this.mesh && !this.isDead) { this.mesh.rotation.x = 0; this.mesh.position.y = 0.5; }
+          // Phase 1: Hit frame squish (water balloon impact)
+          const sy = isCrit ? 0.5 : 0.6;
+          const sxz = isCrit ? 1.45 : 1.35;
+          this.mesh.scale.set(
+            this.mesh.scale.x * sxz,
+            this.mesh.scale.y * sy,
+            this.mesh.scale.z * sxz
+          );
+          // Phase 2: Lerp back to (1,1,1) over 150ms
+          this._squishTimer = setTimeout(() => {
+            if (this.mesh && !this.isDead) {
+              this.mesh.scale.set(1, 1, 1);
+              // Phase 3: Bounce-back overshoot — tall then settle
+              this.mesh.scale.set(0.92, 1.15, 0.92);
+              this._squishTimer = setTimeout(() => {
+                if (this.mesh && !this.isDead) this.mesh.scale.set(1, 1, 1);
+                this._squishTimer = null;
+              }, 60);
+            } else {
               this._squishTimer = null;
-            }, isHeavy ? 300 : 180);
-          } else if (hitReaction === 1) {
-            // Side stagger — tilt sideways dramatically
-            const sDir = (Math.random() < 0.5) ? 1 : -1;
-            this.mesh.rotation.z = sDir * (isHeavy ? 0.8 : 0.4);
-            this.mesh.position.y -= 0.06;
-            this._squishTimer = setTimeout(() => {
-              if (this.mesh && !this.isDead) { this.mesh.rotation.z = 0; this.mesh.position.y = 0.5; }
-              this._squishTimer = null;
-            }, isHeavy ? 250 : 170);
-          } else if (hitReaction === 2) {
-            // Flinch down — body compresses hard from impact
-            const squishScale = isCrit ? 0.55 : 0.7;
-            this.mesh.scale.set(1.25, squishScale, 1.25);
-            this.mesh.position.y -= 0.08;
-            this._squishTimer = setTimeout(() => {
-              if (this.mesh && !this.isDead) { this.mesh.scale.set(1, 1, 1); this.mesh.position.y = 0.5; }
-              this._squishTimer = null;
-            }, 150);
-          } else if (hitReaction === 3) {
-            // Jerk/twitch — rapid displacement + rotation
-            const jx = (Math.random() - 0.5) * 0.25;
-            const jz = (Math.random() - 0.5) * 0.25;
-            this.mesh.position.x += jx;
-            this.mesh.position.z += jz;
-            this.mesh.scale.set(0.85, 1.15, 0.85);
-            this.mesh.rotation.y += (Math.random()-0.5) * 0.4;
-            this._squishTimer = setTimeout(() => {
-              if (this.mesh && !this.isDead) { this.mesh.scale.set(1, 1, 1); this.mesh.rotation.y = 0; }
-              this._squishTimer = null;
-            }, 120);
-          } else if (hitReaction === 4) {
-            // Limp collapse — enemy drops lower with wobble
-            this.mesh.position.y = Math.max(0.15, this.mesh.position.y - 0.2);
-            this.mesh.rotation.z = (Math.random() - 0.5) * 0.5;
-            this.mesh.rotation.x = (Math.random() - 0.5) * 0.2;
-            this._squishTimer = setTimeout(() => {
-              if (this.mesh && !this.isDead) {
-                this.mesh.position.y = 0.5;
-                this.mesh.rotation.z = 0;
-                this.mesh.rotation.x = 0;
-              }
-              this._squishTimer = null;
-            }, 220);
-          } else if (hitReaction === 5) {
-            // Impact bounce — springs up then crashes down
-            this.mesh.position.y += isHeavy ? 0.35 : 0.2;
-            this.mesh.scale.set(0.8, 1.3, 0.8);
-            this._squishTimer = setTimeout(() => {
-              if (this.mesh && !this.isDead) {
-                this.mesh.position.y = 0.5;
-                this.mesh.scale.set(1, 1, 1);
-              }
-              this._squishTimer = null;
-            }, 180);
-          } else if (hitReaction === 6) {
-            // Classic squish deformation — dramatic
-            const squishScale = isCrit ? 0.6 : 0.75;
-            this.mesh.scale.set(squishScale, 1.4, squishScale);
-            this._squishTimer = setTimeout(() => {
-              if (this.mesh && !this.isDead) this.mesh.scale.set(1, 1, 1);
-              this._squishTimer = null;
-            }, 140);
-          } else if (hitReaction === 7) {
-            // Spin hit — enemy spins from impact force
-            const spinDir = (Math.random() < 0.5) ? 1 : -1;
-            this.mesh.rotation.y += spinDir * (isHeavy ? 1.2 : 0.6);
-            this.mesh.position.y += 0.08;
-            this._squishTimer = setTimeout(() => {
-              if (this.mesh && !this.isDead) { this.mesh.rotation.y = 0; this.mesh.position.y = 0.5; }
-              this._squishTimer = null;
-            }, 200);
-          } else if (hitReaction === 8) {
-            // Gut punch — compress forward, rebound
-            this.mesh.scale.set(1.1, 0.7, 1.3);
-            this.mesh.rotation.x = 0.4;
-            this.mesh.position.y -= 0.1;
-            this._squishTimer = setTimeout(() => {
-              if (this.mesh && !this.isDead) { this.mesh.scale.set(1, 1, 1); this.mesh.rotation.x = 0; this.mesh.position.y = 0.5; }
-              this._squishTimer = null;
-            }, 160);
-          } else {
-            // Violent knockback — whole body displaced
-            const kbAngle = Math.random() * Math.PI * 2;
-            const kbDist = isHeavy ? 0.35 : 0.15;
-            this.mesh.position.x += Math.cos(kbAngle) * kbDist;
-            this.mesh.position.z += Math.sin(kbAngle) * kbDist;
-            this.mesh.rotation.z = (Math.random()-0.5) * 0.5;
-            this.mesh.scale.set(0.9, 1.05, 0.9);
-            this._squishTimer = setTimeout(() => {
-              if (this.mesh && !this.isDead) { this.mesh.scale.set(1, 1, 1); this.mesh.rotation.z = 0; }
-              this._squishTimer = null;
-            }, 160);
-          }
-          // Extra blood spray on heavy hits
+            }
+          }, 150);
           if (isHeavy) {
             spawnParticles(this.mesh.position, 0xAA0000, 4);
             spawnBloodDecal(this.mesh.position);
