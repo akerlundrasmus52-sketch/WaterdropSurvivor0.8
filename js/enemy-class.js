@@ -636,7 +636,7 @@
 
           // ── RAGE FLEE: When player's Rage Mode is active, ALL enemies turn tail and run ──
           // Invert velocity direction so they flee from the player.
-          const _isRageFlee = window.RageCombat && window.RageCombat.isRageActive;
+          const _isRageFlee = window.GameRageCombat && window.GameRageCombat.isRageActive;
 
           const _predictT = _isRageFlee ? 0 : Math.min(dist / (this.speed * 60 + 1), 0.8);
           const _predX = targetPos.x + this._playerVelocity.x * _predictT * 0.3;

@@ -2425,9 +2425,10 @@
         const _eyeBatch = ir.getBatch('enemy_eye');
         if (_eyeBatch) {
           const _eyeSpread = 0.18; // local X offset (types 0-2 all share these values)
-          // Negative fwd: after the Math.PI facing fix the enemy's local -Z points toward
-          // the player, so we place eyes in the -Z direction to keep them on the front face.
-          const _eyeFwd    = -0.42; // local Z offset (toward player after rotation fix)
+          // Positive fwd: Math.atan2(dx, dz) rotation makes local +Z point toward the player,
+          // so eyes placed at +Z appear on the front face (facing the player).
+          // Matches the constructor's `eyeForward = 0.42` in enemy-class.js lines 389-395.
+          const _eyeFwd    = 0.42; // local Z offset (toward player)
           for (let _ei = 0; _ei < enemies.length; _ei++) {
             const _e = enemies[_ei];
             if (!_e || !_e.mesh || _e.isDead || !_e._usesInstancing) continue;
