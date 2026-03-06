@@ -24,6 +24,8 @@
     let _sharedBloodDripGeo = null;
     // Module-scoped temp vector for takeDamage() blood/hit direction — avoids per-hit allocation
     const _tmpHitDir = new THREE.Vector3();
+    // Module-scoped temp vector for head look-at target — avoids per-frame allocation in update()
+    const _tmpHeadTarget = new THREE.Vector3();
 
     function spawnWaterParticle(pos) {
       if (!scene) return;
@@ -348,6 +350,63 @@
         if (!this._usesInstancing) {
           scene.add(this.mesh);
         }
+
+        // ── Procedural Segmented Anatomy ─────────────────────────────────────────────
+        // Three nested groups build an organic segmented creature from basic geometries.
+        //   baseGroup  — flat slug/foot disc at the bottom; pumps during locomotion.
+        //   torsoGroup — lean-forward container (uses this.mesh as the main body shape).
+        //   headGroup  — small head cap + jaw stub at the top; tracks the player with lag.
+        {
+          const _bR = type === 11 ? 2.0 : (type === 19 ? 1.5 : (type === 10 ? 0.90 : (type === 15 ? 0.18 : 0.48)));
+          const _hR = type === 11 ? 0.42 : (type === 19 ? 0.35 : (type === 10 ? 0.18 : (type === 15 ? 0.09 : 0.13)));
+          const _hY = type === 11 ? 2.6  : (type === 19 ? 1.5  : (type === 10 ? 1.10 : (type === 15 ? 0.20 : 0.42)));
+
+          // baseGroup — flat slug/foot disc that expands/contracts with the pump cycle
+          this.baseGroup = new THREE.Group();
+          const _bGeo = new THREE.CylinderGeometry(_bR * 1.05, _bR * 1.2, 0.20, 10);
+          const _bMat = new THREE.MeshPhysicalMaterial({
+            color, transparent: true, opacity: 0.68, roughness: 0.9,
+            transmission: 0.1, thickness: 0.3
+          });
+          this._anatBaseMesh = new THREE.Mesh(_bGeo, _bMat);
+          this._anatBaseMesh.position.y = type === 11 ? -2.4 : (type === 19 ? -1.4 : -0.36);
+          this.baseGroup.add(this._anatBaseMesh);
+          this.mesh.add(this.baseGroup);
+
+          // torsoGroup — lean-forward container; the main mesh body IS the torso shape
+          this.torsoGroup = new THREE.Group();
+          this.mesh.add(this.torsoGroup);
+
+          // headGroup — small sphere cap + jaw nub; tracks the player with lerp delay
+          this.headGroup = new THREE.Group();
+          const _hGeo = new THREE.SphereGeometry(_hR, 7, 7);
+          const _hMat = new THREE.MeshPhysicalMaterial({
+            color, transparent: true, opacity: 0.88, roughness: 0.5,
+            transmission: 0.15, thickness: 0.2
+          });
+          this._anatHeadMesh = new THREE.Mesh(_hGeo, _hMat);
+          this.headGroup.add(this._anatHeadMesh);
+          // Jaw nub: small cylinder below and slightly forward of the head centre
+          const _jGeo = new THREE.CylinderGeometry(_hR * 0.35, _hR * 0.55, _hR * 0.55, 6);
+          const _jMat = new THREE.MeshPhysicalMaterial({ color, transparent: true, opacity: 0.80, roughness: 0.7 });
+          this._anatJawMesh = new THREE.Mesh(_jGeo, _jMat);
+          this._anatJawMesh.position.set(0, -_hR * 0.55, _hR * 0.45);
+          this._anatJawMesh.rotation.x = 0.4;
+          this.headGroup.add(this._anatJawMesh);
+          this.headGroup.position.y = _hY;
+          this._headGroupBaseY = _hY;
+          this.mesh.add(this.headGroup);
+        }
+
+        // Anatomy health pools — each body part has its own HP and can be dismembered
+        this.anatomy = {
+          head:  { hp: 100, attached: true },
+          torso: { hp: 100, attached: true },
+          base:  { hp: 100, attached: true }
+        };
+        // Lerped look-target for organic head tracking delay (avoids per-frame allocation)
+        this._lerpedHeadTarget = new THREE.Vector3();
+        this._lerpedHeadTargetInit = false;
 
         // Add decorative rings to Annunaki Orb
         if (type === 19) {
@@ -1240,6 +1299,42 @@
           // Shadow opacity scales with height
           this.groundShadow.material.opacity = Math.max(0.08, 0.25 - (this.mesh.position.y - 0.5) * 0.03);
         }
+
+        // ── Organic "Snail/Worm Pump" Locomotion ─────────────────────────────────────
+        // Animate the segmented anatomy groups for a squishy, organic movement feel.
+        if (this.baseGroup && this.headGroup && this.torsoGroup) {
+          const _pump     = Math.sin(gameTime * 4.0 + this.wobbleOffset);
+          const _mvX      = this._lastMoveVX || 0;
+          const _mvZ      = this._lastMoveVZ || 0;
+          const _isMoving = Math.abs(_mvX) + Math.abs(_mvZ) > 0.002;
+
+          // baseGroup: expand horizontally and contract longitudinally while pumping forward
+          const _bScaleXZ = 1.0 + (_isMoving ? _pump * 0.14 : _pump * 0.04);
+          const _bScaleY  = 1.0 - (_isMoving ? _pump * 0.10 : _pump * 0.03);
+          this.baseGroup.scale.set(_bScaleXZ, _bScaleY, _bScaleXZ);
+
+          // torsoGroup: lean forward into the movement direction (local-space X tilt)
+          const _moveSpd = Math.sqrt(_mvX * _mvX + _mvZ * _mvZ);
+          this.torsoGroup.rotation.x = Math.min(_moveSpd * 0.42, 0.28); // max ~16° lean
+
+          // headGroup: heavy look-at with lerp delay and up/down bob from the base pump
+          if (playerPos) {
+            const _headY = this._headGroupBaseY + _pump * 0.06;
+            _tmpHeadTarget.set(
+              playerPos.x,
+              this.mesh.position.y + _headY,
+              playerPos.z
+            );
+            if (!this._lerpedHeadTargetInit) {
+              this._lerpedHeadTarget.copy(_tmpHeadTarget);
+              this._lerpedHeadTargetInit = true;
+            }
+            // Lerp rate 3.5 ≈ 280 ms lag — makes the head feel heavy and organic
+            this._lerpedHeadTarget.lerp(_tmpHeadTarget, Math.min(1.0, dt * 3.5));
+            this.headGroup.position.y = _headY;
+            this.headGroup.lookAt(this._lerpedHeadTarget);
+          }
+        }
       }
 
       fireProjectile(targetPos) {
@@ -1664,6 +1759,32 @@
         const oldHp = this.hp;
         this.hp -= finalAmount;
         createDamageNumber(Math.floor(finalAmount), this.mesh.position, isCrit);
+
+        // Distribute damage to anatomy health pools — each body part can be dismembered.
+        // Hit probability: 25% head, 40% torso, 35% base.
+        if (this.anatomy) {
+          const _zone = Math.random();
+          if (_zone < 0.25 && this.anatomy.head.attached) {           // 25% head
+            this.anatomy.head.hp = Math.max(0, this.anatomy.head.hp - finalAmount * 0.5);
+            if (this.anatomy.head.hp <= 0) {
+              this.anatomy.head.attached = false;
+              if (this.headGroup) this.headGroup.visible = false;
+            }
+          } else if (_zone < 0.65 && this.anatomy.torso.attached) {  // 40% torso
+            this.anatomy.torso.hp = Math.max(0, this.anatomy.torso.hp - finalAmount * 0.4);
+            if (this.anatomy.torso.hp <= 0 && this.anatomy.torso.attached) {
+              this.anatomy.torso.attached = false;
+              // Torso destruction: visually squish the main body to show the gutted state
+              if (this.mesh && !this.isDead) this.mesh.scale.multiplyScalar(0.75);
+            }
+          } else {                                                     // 35% base
+            this.anatomy.base.hp = Math.max(0, this.anatomy.base.hp - finalAmount * 0.3);
+            if (this.anatomy.base.hp <= 0 && this.anatomy.base.attached) {
+              this.anatomy.base.attached = false;
+              if (this.baseGroup) this.baseGroup.visible = false;
+            }
+          }
+        }
 
         // ── 5 BRUTAL GORE STATES on critical hits ──
         // Randomly apply one of 5 visual states so each crit feels uniquely brutal.
@@ -2193,10 +2314,17 @@
         const _bloodStains = this._bloodStains;
         const _leftEye = this.leftEye;
         const _rightEye = this.rightEye;
+        // Capture anatomy part refs so the managed animation can dispose their GL resources
+        const _anatBaseMesh = this._anatBaseMesh;
+        const _anatHeadMesh = this._anatHeadMesh;
+        const _anatJawMesh  = this._anatJawMesh;
         this.bulletHoles = [];
         this._bloodStains = [];
         this.leftEye = null;
         this.rightEye = null;
+        this._anatBaseMesh = null;
+        this._anatHeadMesh = null;
+        this._anatJawMesh  = null;
         
         // XP scaling by enemy type - stronger enemies give more XP
         let expMultiplier = 1;
@@ -2676,6 +2804,10 @@
               if (_bloodStains) _bloodStains.forEach(s => { if (s.material) s.material.dispose(); });
               if (_leftEye) { scene.remove(_leftEye); if (_leftEye.geometry) _leftEye.geometry.dispose(); if (_leftEye.material) _leftEye.material.dispose(); }
               if (_rightEye) { scene.remove(_rightEye); if (_rightEye.geometry) _rightEye.geometry.dispose(); if (_rightEye.material) _rightEye.material.dispose(); }
+              // Anatomy part meshes have unique geometries — dispose both geo and mat
+              if (_anatBaseMesh) { if (_anatBaseMesh.geometry) _anatBaseMesh.geometry.dispose(); if (_anatBaseMesh.material) _anatBaseMesh.material.dispose(); }
+              if (_anatHeadMesh) { if (_anatHeadMesh.geometry) _anatHeadMesh.geometry.dispose(); if (_anatHeadMesh.material) _anatHeadMesh.material.dispose(); }
+              if (_anatJawMesh)  { if (_anatJawMesh.geometry)  _anatJawMesh.geometry.dispose();  if (_anatJawMesh.material)  _anatJawMesh.material.dispose();  }
               // Clean up remaining chunks
               _deathChunks.forEach(c => { scene.remove(c.mesh); c.geo.dispose(); c.mat.dispose(); });
               if (_headRoll) { scene.remove(_headRoll.mesh); _headRoll.geo.dispose(); _headRoll.mat.dispose(); }
@@ -2695,6 +2827,10 @@
             if (_bloodStains) _bloodStains.forEach(s => { if (s.material) s.material.dispose(); });
             if (_leftEye) { if (_leftEye.parent) scene.remove(_leftEye); if (_leftEye.geometry) _leftEye.geometry.dispose(); if (_leftEye.material) _leftEye.material.dispose(); }
             if (_rightEye) { if (_rightEye.parent) scene.remove(_rightEye); if (_rightEye.geometry) _rightEye.geometry.dispose(); if (_rightEye.material) _rightEye.material.dispose(); }
+            // Anatomy part meshes have unique geometries — dispose both geo and mat
+            if (_anatBaseMesh) { if (_anatBaseMesh.geometry) _anatBaseMesh.geometry.dispose(); if (_anatBaseMesh.material) _anatBaseMesh.material.dispose(); }
+            if (_anatHeadMesh) { if (_anatHeadMesh.geometry) _anatHeadMesh.geometry.dispose(); if (_anatHeadMesh.material) _anatHeadMesh.material.dispose(); }
+            if (_anatJawMesh)  { if (_anatJawMesh.geometry)  _anatJawMesh.geometry.dispose();  if (_anatJawMesh.material)  _anatJawMesh.material.dispose();  }
             _deathChunks.forEach(c => { if (c.mesh.parent) scene.remove(c.mesh); c.geo.dispose(); c.mat.dispose(); });
             if (_headRoll) { if (_headRoll.mesh.parent) scene.remove(_headRoll.mesh); _headRoll.geo.dispose(); _headRoll.mat.dispose(); }
             if (dyingMesh._splitProxy) { if (dyingMesh._splitProxy.mesh.parent) scene.remove(dyingMesh._splitProxy.mesh); dyingMesh._splitProxy.geo.dispose(); dyingMesh._splitProxy.mat.dispose(); }
@@ -2711,6 +2847,10 @@
             if (_bloodStains) _bloodStains.forEach(s => { if (s.material) s.material.dispose(); });
             if (_leftEye) { scene.remove(_leftEye); if (_leftEye.geometry) _leftEye.geometry.dispose(); if (_leftEye.material) _leftEye.material.dispose(); }
             if (_rightEye) { scene.remove(_rightEye); if (_rightEye.geometry) _rightEye.geometry.dispose(); if (_rightEye.material) _rightEye.material.dispose(); }
+            // Anatomy part meshes have unique geometries — dispose both geo and mat
+            if (_anatBaseMesh) { if (_anatBaseMesh.geometry) _anatBaseMesh.geometry.dispose(); if (_anatBaseMesh.material) _anatBaseMesh.material.dispose(); }
+            if (_anatHeadMesh) { if (_anatHeadMesh.geometry) _anatHeadMesh.geometry.dispose(); if (_anatHeadMesh.material) _anatHeadMesh.material.dispose(); }
+            if (_anatJawMesh)  { if (_anatJawMesh.geometry)  _anatJawMesh.geometry.dispose();  if (_anatJawMesh.material)  _anatJawMesh.material.dispose();  }
           }, 100);
           // XP already spawned above; nothing extra needed in this fallback
         }
