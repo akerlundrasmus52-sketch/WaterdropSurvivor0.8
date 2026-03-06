@@ -8,21 +8,27 @@
     let _expGemOutlineGeometry = null;
 
     // EXP gem tier colours — colour-coded by enemy difficulty tier
-    // Common (tier 0): White/Grey | Green (tier 1) | Blue (tier 2) | Epic/Purple (tier 3) | Boss/Orange (tier 4)
+    // Common (tier 0): Grey | Green (tier 1) | Blue (tier 2) | Purple (tier 3) | Orange (tier 4) | Red (tier 5) | Mythical (tier 6)
     const GEM_TIER_COLORS = [
-      { color: 0xCCCCCC, emissive: 0x888888 }, // 0 — Common  (White/Grey)
-      { color: 0x44FF66, emissive: 0x22AA33 }, // 1 — Green
-      { color: 0x5DADE2, emissive: 0x2E86C1 }, // 2 — Blue
+      { color: 0xCCCCCC, emissive: 0x888888 }, // 0 — Common  (Grey)
+      { color: 0x44FF66, emissive: 0x22AA33 }, // 1 — Uncommon (Green)
+      { color: 0x5DADE2, emissive: 0x2E86C1 }, // 2 — Rare (Blue)
       { color: 0xAA44FF, emissive: 0x6600CC }, // 3 — Epic (Purple)
-      { color: 0xFF8800, emissive: 0xCC5500 }  // 4 — Boss (Orange)
+      { color: 0xFF8800, emissive: 0xCC5500 }, // 4 — Boss (Orange)
+      { color: 0xFF2222, emissive: 0xAA0000 }, // 5 — Legendary (Red)
+      { color: 0xFFD700, emissive: 0xFF8C00 }  // 6 — Mythical (Gold shimmer)
     ];
+
+    // XP multiplier per gem tier — higher tiers give more EXP
+    const GEM_TIER_XP_MULT = [1, 2, 3, 5, 10, 18, 40];
 
     // Map enemy type → gem tier
     function _gemTierForType(enemyType) {
-      if (enemyType === 10 || enemyType === 11) return 4; // MiniBoss / FlyingBoss
-      if (enemyType === 9 || (enemyType >= 12 && enemyType <= 16)) return 3; // Elite + Bug variants (epic)
-      if (enemyType >= 5 && enemyType <= 8) return 2; // Flying/Hard variants (blue)
-      if (enemyType === 3 || enemyType === 4) return 1; // Slowing/Ranged (green)
+      if (enemyType === 11) return 6;                               // FlyingBoss → Mythical
+      if (enemyType === 10) return 5;                               // MiniBoss → Legendary (Red)
+      if (enemyType === 9 || (enemyType >= 12 && enemyType <= 16)) return 3; // Elite + Bug variants (purple)
+      if (enemyType >= 5 && enemyType <= 8) return 2;              // Flying/Hard variants (blue)
+      if (enemyType === 3 || enemyType === 4) return 1;            // Slowing/Ranged (green)
       return 0; // Common: Tank(0), Fast(1), Balanced(2) — and unknown/null types
     }
 
@@ -141,7 +147,8 @@
 
         this.bobPhase = Math.random() * Math.PI * 2;
         this.sparklePhase = Math.random() * Math.PI * 2;
-        this.value = GAME_CONFIG.expValue;
+        // Scale EXP value by gem tier so higher-tier enemies give more experience
+        this.value = GAME_CONFIG.expValue * (GEM_TIER_XP_MULT[tier] || 1);
       }
 
       update(playerPos) {

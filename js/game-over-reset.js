@@ -378,6 +378,11 @@
       playerStats.stopResponse  = 1.0 + trainingFlexibility * 0.05 + dexterity * 0.02;
       // manualAimAccuracy: similar to autoAim but for manual aiming — scales differently
       playerStats.manualAimAccuracy = Math.min(1.0, 0.60 + dexterity * 0.04 + trainingFlexibility * 0.02);
+      // ── Waterdrop RPG Stats (reset each run) ─────────────────────────────────
+      playerStats.surfaceTension  = 0;    // Flat damage reduction per hit
+      playerStats.boilingPoint    = 0;    // Low-HP fury stacks (speed + fire rate)
+      playerStats.viscosity       = 0;    // Knockback weight multiplier bonus
+      playerStats.capillaryAction = 0;    // EXP/gold pickup range bonus stacks
       waveCount = 0;
       lastWaveEndTime = 0; // Reset wave timing
       _firstEnemyTutorialShown = false; // Reset first-enemy tutorial for each run

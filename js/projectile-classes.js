@@ -381,6 +381,7 @@
         // Reset per-shot flags so pooled objects don't carry stale state
         this.isDoubleBarrel = false;
         this.isDroneTurret = false;
+        this.isSniperRifle = false;
         this.isEnemyProjectile = false;
         this.isBoomerang = false;
         this.returnPhase = false;
@@ -591,7 +592,7 @@
             } else if (isCrit) {
               // Normal crit
               dmg *= playerStats.critDmg;
-              const critDmgType = this.isDroneTurret ? 'drone' : (this.isDoubleBarrel ? 'doubleBarrel' : 'gun');
+              const critDmgType = this.isSniperRifle ? 'sniperRifle' : (this.isDroneTurret ? 'drone' : (this.isDoubleBarrel ? 'doubleBarrel' : 'gun'));
               enemy.takeDamage(Math.floor(dmg), isCrit, critDmgType, { vx: this.vx, vz: this.vz });
               // Hit-stop: critical hits get a short freeze for impact weight
               if (window.triggerHitStop) window.triggerHitStop(55);
@@ -610,8 +611,14 @@
               }, 150);
             } else {
               // Normal hit — pass weapon-specific damageType for downstream effects
-              const hitDmgType = this.isDroneTurret ? 'drone' : (this.isDoubleBarrel ? 'doubleBarrel' : 'gun');
+              const hitDmgType = this.isSniperRifle ? 'sniperRifle' : (this.isDroneTurret ? 'drone' : (this.isDoubleBarrel ? 'doubleBarrel' : 'gun'));
               enemy.takeDamage(Math.floor(dmg), false, hitDmgType, { vx: this.vx, vz: this.vz });
+            }
+            
+            // ── SNIPER: hit-stop for weight, no separate exit wound here
+            // (exit wound is emitted via takeDamage() in enemy-class.js using the hitDir param)
+            if (this.isSniperRifle && !enemy.isDead) {
+              if (window.triggerHitStop) window.triggerHitStop(45);
             }
             
             // Knockback effect — drone: near zero; gun: reduced with level scaling; double barrel: heavy
@@ -714,8 +721,8 @@
               // Standard gun: reduced base force, scales up with weapon level
               knockbackForce = 0.3 * (1 + (weapons.gun.level - 1) * 0.2);
             }
-            enemy.mesh.position.x += this.vx * knockbackForce;
-            enemy.mesh.position.z += this.vz * knockbackForce;
+            enemy.mesh.position.x += this.vx * knockbackForce * (1 + (playerStats.viscosity || 0));
+            enemy.mesh.position.z += this.vz * knockbackForce * (1 + (playerStats.viscosity || 0));
             
             // ── Weapon-specific hit effects ──────────────────────────────────────
             if (this.isDroneTurret) {

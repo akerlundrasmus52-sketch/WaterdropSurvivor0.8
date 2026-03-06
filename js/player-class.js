@@ -1235,6 +1235,15 @@
           reduced = Math.max(1, reduced * (1 - playerStats.damageReduction));
         }
 
+        // Surface Tension: flat damage reduction per hit
+        if (playerStats.surfaceTension > 0) {
+          reduced = Math.max(0, reduced - playerStats.surfaceTension);
+          if (reduced <= 0) {
+            createFloatingText('ABSORBED!', this.mesh.position, '#5DADE2');
+            return;
+          }
+        }
+
         // Last Stand — survive a fatal hit once per run
         if (playerStats.hasLastStand && !playerStats.lastStandUsed && playerStats.hp - reduced <= 0) {
           playerStats.lastStandUsed = true;
