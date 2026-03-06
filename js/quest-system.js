@@ -3552,3 +3552,4 @@
     window.checkMinuteTenAlienQuest = checkMinuteTenAlienQuest;
     window.checkAINarratorTick    = checkAINarratorTick;
     window.resetLakeBounceQuest   = resetLakeBounceQuest;
+    window.showNarratorLine       = _showNarratorLine;

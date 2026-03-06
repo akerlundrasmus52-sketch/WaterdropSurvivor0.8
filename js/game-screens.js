@@ -2020,36 +2020,67 @@
       const cols = document.createElement('div');
       cols.className = 'prism-cols';
 
-      // ── Weapon column ──
-      const weaponCol = _buildPrismItemColumn(GS, 'weapon', saveData.equippedGear.weapon || 'gun', () => {
-        // Refresh
-        const existing2 = document.getElementById('prism-reliquary-overlay');
-        if (existing2) existing2.remove();
-        showPrismReliquary();
-      });
-      cols.appendChild(weaponCol);
-
-      // ── Companion column ──
+      const weaponId = saveData.equippedGear.weapon || 'gun';
       const companionId = saveData.selectedCompanion || 'greyAlien';
-      const companionCol = _buildPrismItemColumn(GS, 'companion', companionId, () => {
-        const existing2 = document.getElementById('prism-reliquary-overlay');
-        if (existing2) existing2.remove();
-        showPrismReliquary();
-      });
-      cols.appendChild(companionCol);
-      overlay.appendChild(cols);
 
       // ── Gem Inventory (unslotted gems) ──
       const invHeader = document.createElement('div');
       invHeader.className = 'prism-inv-header';
       invHeader.textContent = '✂️ Cut Gem Inventory (click a gem to select, then click a slot to equip)';
-      overlay.appendChild(invHeader);
 
       const invGrid = document.createElement('div');
       invGrid.className = 'prism-inv-grid';
       invGrid.id = 'prism-inv-grid';
 
       let _selectedGemId = null;
+
+      // ── In-place refresh: rebuilds only the changed columns and inventory grid ──
+      function _refreshInPlace() {
+        // Update raw gem bar without rebuilding the whole overlay
+        const rg2 = saveData.rawGems || {};
+        rawGemBar.innerHTML = Object.entries(GS.GEM_TYPES).map(([type, def]) =>
+          `<span class="prism-rawgem" style="color:${def.color};">${def.icon} <b>${rg2[type] || 0}</b> Raw ${def.name}</span>`
+        ).join('');
+
+        // Rebuild only the columns content
+        cols.innerHTML = '';
+        cols.appendChild(_buildPrismItemColumn(GS, 'weapon', weaponId, _refreshInPlace));
+        cols.appendChild(_buildPrismItemColumn(GS, 'companion', companionId, _refreshInPlace));
+
+        // Reset selection and rebuild inventory
+        _selectedGemId = null;
+        renderInvGrid();
+
+        // Rewire empty-slot click handlers after rebuilding
+        _wireSlotClicks();
+      }
+
+      function _wireSlotClicks() {
+        overlay.querySelectorAll('.prism-slot').forEach(slot => {
+          slot.addEventListener('click', () => {
+            if (!_selectedGemId) return;
+            const itemType = slot.dataset.itemType;
+            const slotItemId = slot.dataset.itemId;
+            const slotIdx = parseInt(slot.dataset.slotIdx, 10);
+            const currentGemId = slot.dataset.gemId;
+            if (currentGemId) GS.unslotGem(currentGemId);
+            if (GS.slotGem(_selectedGemId, itemType, slotItemId, slotIdx)) {
+              _triggerGemSlotEffect(slot, _selectedGemId);
+              _selectedGemId = null;
+              _refreshInPlace();
+            }
+          });
+        });
+      }
+
+      // ── Weapon column ──
+      cols.appendChild(_buildPrismItemColumn(GS, 'weapon', weaponId, _refreshInPlace));
+
+      // ── Companion column ──
+      cols.appendChild(_buildPrismItemColumn(GS, 'companion', companionId, _refreshInPlace));
+      overlay.appendChild(cols);
+
+      overlay.appendChild(invHeader);
 
       function renderInvGrid() {
         invGrid.innerHTML = '';
@@ -2072,7 +2103,7 @@
           card.title = Object.entries(typeDef.stats).map(([stat, vals]) => `+${vals[rarIdx]} ${stat}`).join('\n');
           card.onclick = () => {
             _selectedGemId = gem.id === _selectedGemId ? null : gem.id;
-            // Update selected gem in slot UI
+            // Update pending-gem attribute on slots
             overlay.querySelectorAll('.prism-slot').forEach(slot => {
               slot.setAttribute('data-pending-gem', _selectedGemId || '');
             });
@@ -2085,27 +2116,8 @@
       renderInvGrid();
       overlay.appendChild(invGrid);
 
-      // Wire slots: clicking an empty slot with selected gem equips it
-      overlay.querySelectorAll('.prism-slot').forEach(slot => {
-        slot.addEventListener('click', () => {
-          if (!_selectedGemId) return;
-          const itemType = slot.dataset.itemType;
-          const itemId = slot.dataset.itemId;
-          const slotIdx = parseInt(slot.dataset.slotIdx, 10);
-          const currentGemId = slot.dataset.gemId;
-          if (currentGemId) {
-            // Unslot existing gem first
-            GS.unslotGem(currentGemId);
-          }
-          if (GS.slotGem(_selectedGemId, itemType, itemId, slotIdx)) {
-            _triggerGemSlotEffect(slot, _selectedGemId);
-            _selectedGemId = null;
-            const existing2 = document.getElementById('prism-reliquary-overlay');
-            if (existing2) existing2.remove();
-            showPrismReliquary();
-          }
-        });
-      });
+      // Wire slot click handlers for the initial render
+      _wireSlotClicks();
 
       document.body.appendChild(overlay);
     }
@@ -2374,6 +2386,7 @@
         const angle = (i / 12) * 360;
         const dist = 28 + Math.random() * 18;
         spark.style.cssText = `--spark-angle:${angle}deg;--spark-dist:${dist}px;animation-delay:${(Math.random() * 1.2).toFixed(2)}s`;
+        spark.addEventListener('animationend', () => spark.remove(), { once: true });
         chestWrap.appendChild(spark);
       }
       stage.appendChild(chestWrap);
@@ -2390,6 +2403,7 @@
         const rays = document.createElement('div');
         rays.className = 'chest-rays';
         rays.style.setProperty('--ray-color', tier.glowColor);
+        rays.addEventListener('animationend', () => rays.remove(), { once: true });
         stage.appendChild(rays);
 
         setTimeout(() => {
