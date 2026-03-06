@@ -1,3 +1,16 @@
+    /* ══════════════════════════════════════════════════════════════════════
+       Z-INDEX MASTER HIERARCHY
+       ─────────────────────────────────────────────────────────────────────
+       Layer                           z-index
+       ─────────────────────────────────────────────────────────────────────
+       Canvas / game-container         0
+       HUD (HP, XP, Weapons)           10
+       Floating Damage Numbers         50
+       Screen Blood Splatters          100
+       Modals (Store, Reliquary, LvlUp)500
+       Quest / Dopamine Overlays       1000
+       ══════════════════════════════════════════════════════════════════════ */
+
     body {
       margin: 0;
       padding: 0;
@@ -15,7 +28,7 @@
       left: 0;
       width: 100%;
       height: 100%;
-      z-index: 1;
+      z-index: 0;
     }
 
     /* Fix blue border: canvas is inline by default which creates a line-height gap */
@@ -71,8 +84,8 @@
       left: 0;
       width: 100%;
       height: 100%;
-      pointer-events: none;
-      z-index: 200;
+      pointer-events: none !important;
+      z-index: 100;
       opacity: 0;
       overflow: hidden;
     }
@@ -109,7 +122,7 @@
       align-items: flex-start;
       gap: 4px;
       cursor: grab;
-      z-index: 115;
+      z-index: 10;
       touch-action: none;
       pointer-events: auto;
     }
@@ -1761,9 +1774,10 @@
 
     /* Level Up Modal */
     #levelup-modal {
-      position: absolute;
-      top: 0;
-      left: 0;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
       width: 100%;
       height: 100%;
       background: linear-gradient(to bottom, rgba(8, 8, 16, 0.98), rgba(4, 6, 14, 0.98));
@@ -1772,7 +1786,7 @@
       align-items: center;
       justify-content: center;
       pointer-events: none; /* Modal background should not block clicks */
-      z-index: 200;
+      z-index: 500;
       animation: fogwater-bg 8s ease-in-out infinite;
     }
 
@@ -2266,9 +2280,9 @@
       font-family: 'Nunito', 'M PLUS Rounded 1c', 'Arial Rounded MT Bold', sans-serif; /* Cozy rounded font */
       font-weight: 900;
       font-size: 13px; /* Slightly larger for legibility */
-      pointer-events: none;
+      pointer-events: none !important;
       animation: floatUp 1s forwards;
-      z-index: 1000;
+      z-index: 50;
       letter-spacing: 0.5px;
     }
     
@@ -5771,8 +5785,8 @@
   width: 6px;
   height: 10px;
   border-radius: 2px;
-  pointer-events: none;
-  z-index: 10001;
+  pointer-events: none !important;
+  z-index: 1000;
   animation: lvlup-confetti 1200ms ease-out forwards;
 }
 @keyframes lvlup-mythic-hue {
@@ -5795,8 +5809,8 @@
   position: fixed;
   width: var(--ray-w, 3px);
   height: var(--ray-h, 160px);
-  pointer-events: none;
-  z-index: 9998;
+  pointer-events: none !important;
+  z-index: 1000;
   transform-origin: top center;
   animation: lvlup-ray var(--ray-dur, 900ms) ease-out forwards;
 }
@@ -5971,8 +5985,8 @@
 /* --- Elastic Damage Numbers --- */
 .elastic-damage-number {
   position: absolute;
-  pointer-events: none;
-  z-index: 10000;
+  pointer-events: none !important;
+  z-index: 50;
   /* Cozy, rounded, highly legible damage font — Nunito falls back to M PLUS Rounded (already loaded) */
   font-family: 'Nunito', 'M PLUS Rounded 1c', 'Arial Rounded MT Bold', 'Trebuchet MS', sans-serif;
   font-weight: 900;
@@ -6180,8 +6194,8 @@
 
 .reward-confetti {
   position: fixed;
-  pointer-events: none;
-  z-index: 10002;
+  pointer-events: none !important;
+  z-index: 1000;
   will-change: transform, opacity, left, top;
 }
 
@@ -6537,8 +6551,12 @@
 /* Full-screen overlay */
 .prism-overlay {
   position: fixed;
-  inset: 0;
-  z-index: 4000;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 100%;
+  height: 100%;
+  z-index: 500;
   background: rgba(5, 0, 15, 0.93);
   backdrop-filter: blur(10px);
   display: flex;
@@ -7180,8 +7198,8 @@
   top:  var(--conf-y, 50vh);
   transform: rotate(var(--conf-rot, 0deg));
   animation: confettiFall var(--conf-delay, 0s) 1.8s ease-in forwards;
-  pointer-events: none;
-  z-index: 6000;
+  pointer-events: none !important;
+  z-index: 1000;
 }
 
 @keyframes confettiFall {
@@ -7383,13 +7401,17 @@
 
 .quest-complete-banner-overlay {
   position: fixed;
-  inset: 0;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 100%;
+  height: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  z-index: 9800;
-  pointer-events: none;
+  z-index: 1000;
+  pointer-events: none !important;
 }
 .quest-complete-banner {
   display: flex;

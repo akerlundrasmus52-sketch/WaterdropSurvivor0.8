@@ -60,9 +60,104 @@
     let lastTime = null; // Initialize as null for proper first-frame detection (PR #82 fix)
     let animationFrameId = null; // Track the animation frame ID for potential cancellation
     
+    // ─── ObjectPool — generic pre-allocated pool (zero-alloc reuse) ─────────────
+    // createFn() creates one new object; resetFn(obj) resets it before re-use.
+    // get() returns a recycled or freshly created object.
+    // release(obj) hides it and returns it to the free list.
+    class ObjectPool {
+      constructor(createFn, resetFn, initialSize = 100) {
+        this._createFn = createFn;
+        this._resetFn  = resetFn;
+        this._free     = [];
+        this._active   = new Set();
+        for (let i = 0; i < initialSize; i++) {
+          this._free.push(this._createFn());
+        }
+      }
+      get() {
+        const obj = this._free.length > 0 ? this._free.pop() : this._createFn();
+        this._active.add(obj);
+        return obj;
+      }
+      release(obj) {
+        if (!this._active.has(obj)) return;
+        this._active.delete(obj);
+        this._resetFn(obj);
+        this._free.push(obj);
+      }
+      releaseAll() {
+        this._active.forEach(obj => { this._resetFn(obj); this._free.push(obj); });
+        this._active.clear();
+      }
+    }
+    window.ObjectPool = ObjectPool;
+
     // Phase 5: Initialize particle object pool for performance
     let particlePool = null; // Will be initialized after scene is created
-    
+
+    // ─── Blood-drop / meat-chunk / projectile pools ───────────────────────────
+    // Populated lazily (after THREE is ready) by _ensureEntityPools().
+    // Pre-allocate 500 blood drops, 200 meat chunks, 100 projectile slots.
+    let bloodDropPool  = null;
+    let meatChunkPool  = null;
+    let _entityPoolsReady = false;
+    function _ensureEntityPools() {
+      if (_entityPoolsReady || typeof THREE === 'undefined' || !scene) return;
+      _entityPoolsReady = true;
+
+      // ── Blood drops (small falling spheres) ──────────────────────────────
+      const _bdGeo = new THREE.SphereGeometry(0.06, 4, 4);
+      const _bdMat = new THREE.MeshBasicMaterial({ color: 0x8B0000 });
+      bloodDropPool = new ObjectPool(
+        () => {
+          const m = new THREE.Mesh(_bdGeo, _bdMat);
+          m.visible = false;
+          scene.add(m);
+          return m;
+        },
+        (m) => {
+          m.visible = false;
+          m.userData.velX = 0;
+          m.userData.velY = 0;
+          m.userData.velZ = 0;
+          m.userData.life  = 0;
+          m.userData._sharedGeo = true;
+          m.userData.isIce      = false;
+        },
+        500
+      );
+      window.bloodDropPool = bloodDropPool;
+
+      // ── Meat chunks (larger gore pieces) ─────────────────────────────────
+      const _mcGeo = new THREE.DodecahedronGeometry(0.09, 0);
+      const _mcMats = [
+        new THREE.MeshStandardMaterial({ color: 0x6B0000, roughness: 0.9 }),
+        new THREE.MeshStandardMaterial({ color: 0x4B0082, roughness: 0.9 })
+      ];
+      let _mcIdx = 0;
+      meatChunkPool = new ObjectPool(
+        () => {
+          const m = new THREE.Mesh(_mcGeo, _mcMats[(_mcIdx++) % 2]);
+          m.visible = false;
+          scene.add(m);
+          return m;
+        },
+        (m) => {
+          m.visible = false;
+          m.scale.setScalar(1);
+          m.userData.velX = 0;
+          m.userData.velY = 0;
+          m.userData.velZ = 0;
+          m.userData.life  = 0;
+          m.userData._sharedGeo = true;
+          m.userData.isIce      = false;
+        },
+        200
+      );
+      window.meatChunkPool = meatChunkPool;
+    }
+    window._ensureEntityPools = _ensureEntityPools;
+
     // Managed animations array - replaces orphaned requestAnimationFrame loops in death/damage effects
     let managedAnimations = [];
     const MAX_MANAGED_ANIMATIONS = 350; // Increased to accommodate body chunks, head rolls, blood pools

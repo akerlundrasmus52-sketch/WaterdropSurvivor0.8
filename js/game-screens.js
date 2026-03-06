@@ -28,6 +28,9 @@
         100
       );
 
+      // Pre-allocate blood-drop and meat-chunk pools (500 + 200 meshes, zero GC during gameplay)
+      if (typeof window._ensureEntityPools === 'function') window._ensureEntityPools();
+
       // Initialize advanced blood particle system (THREE.Points, 50k particles)
       if (window.BloodSystem && typeof THREE !== 'undefined') window.BloodSystem.init(scene);
       console.log('[Init] Scene created OK');
@@ -1257,57 +1260,92 @@
     window.showArmory = showArmory;
 
     // ============================================================
+    // UIManager — Notification Queue
+    // Ensures massive banners (Quest Complete, Level Up) never overlap.
+    // If a banner is already on-screen, the next one waits in queue.
+    // ============================================================
+    const UIManager = (function () {
+      const _queue   = [];   // pending notifications
+      let   _showing = false; // whether a full-screen banner is active
+
+      function _processQueue() {
+        if (_showing || _queue.length === 0) return;
+        const next = _queue.shift();
+        _showing = true;
+        _showBannerNow(next.questName, next.rewardDesc, function onDone() {
+          _showing = false;
+          _processQueue();
+        });
+      }
+
+      function queueNotification(questName, rewardDesc) {
+        _queue.push({ questName, rewardDesc });
+        _processQueue();
+      }
+
+      function _showBannerNow(questName, rewardDesc, onDone) {
+        const prev = document.getElementById('quest-complete-banner-overlay');
+        if (prev) prev.remove();
+
+        const bOverlay = document.createElement('div');
+        bOverlay.id = 'quest-complete-banner-overlay';
+        bOverlay.className = 'quest-complete-banner-overlay';
+
+        const banner = document.createElement('div');
+        banner.className = 'quest-complete-banner';
+        banner.innerHTML =
+          '<div class="quest-complete-banner-text">QUEST COMPLETE</div>' +
+          '<div class="quest-complete-quest-name">' + (questName || '') + '</div>';
+        bOverlay.appendChild(banner);
+        document.body.appendChild(bOverlay);
+
+        // Spawn reward particles after a short delay
+        setTimeout(() => {
+          const rect = banner.getBoundingClientRect();
+          const originX = rect.left + rect.width / 2;
+          const originY = rect.top + rect.height / 2;
+          const icons = ['💰', '💰', '💎', '⭐', '💰', '✨', '💎', '🪙'];
+          icons.forEach((icon, i) => {
+            const p = document.createElement('div');
+            p.className = 'reward-particle';
+            const ANGLE_START = Math.PI * 0.3;
+            const ANGLE_SWEEP = Math.PI * 1.4;
+            const angle = ANGLE_START + (i / icons.length) * ANGLE_SWEEP;
+            const dist = 120 + Math.random() * 160;
+            const dx = Math.round(Math.cos(angle) * dist);
+            const dy = Math.round(Math.abs(Math.sin(angle)) * dist + 40);
+            p.style.cssText =
+              'left:' + Math.round(originX - 11) + 'px;top:' + Math.round(originY - 11) + 'px;' +
+              '--rp-dx:' + dx + 'px;--rp-dy:' + dy + 'px;' +
+              '--rp-dur:' + (0.7 + Math.random() * 0.5).toFixed(2) + 's;' +
+              '--rp-delay:' + (0.3 + i * 0.07).toFixed(2) + 's;';
+            p.textContent = icon;
+            document.body.appendChild(p);
+            setTimeout(() => { if (p.parentNode) p.parentNode.removeChild(p); }, 2000);
+          });
+        }, 400);
+
+        // Fade out, remove, then signal done
+        setTimeout(() => {
+          banner.classList.add('fading');
+          setTimeout(() => {
+            if (bOverlay.parentNode) bOverlay.parentNode.removeChild(bOverlay);
+            if (typeof onDone === 'function') onDone();
+          }, 550);
+        }, 2800);
+      }
+
+      return { queueNotification };
+    })();
+    window.UIManager = UIManager;
+
+    // ============================================================
     // QUEST COMPLETE BANNER — slam animation + reward particles
+    // Delegates to UIManager.queueNotification() so simultaneous
+    // level-up + quest-complete events never overlap on screen.
     // ============================================================
     function showQuestCompleteBanner(questName, rewardDesc) {
-      // Remove any existing banner
-      const prev = document.getElementById('quest-complete-banner-overlay');
-      if (prev) prev.remove();
-
-      const bOverlay = document.createElement('div');
-      bOverlay.id = 'quest-complete-banner-overlay';
-      bOverlay.className = 'quest-complete-banner-overlay';
-
-      const banner = document.createElement('div');
-      banner.className = 'quest-complete-banner';
-      banner.innerHTML =
-        '<div class="quest-complete-banner-text">QUEST COMPLETE</div>' +
-        '<div class="quest-complete-quest-name">' + (questName || '') + '</div>';
-      bOverlay.appendChild(banner);
-      document.body.appendChild(bOverlay);
-
-      // Spawn reward particles after a short delay
-      setTimeout(() => {
-        const rect = banner.getBoundingClientRect();
-        const originX = rect.left + rect.width / 2;
-        const originY = rect.top + rect.height / 2;
-        const icons = ['💰', '💰', '💎', '⭐', '💰', '✨', '💎', '🪙'];
-        icons.forEach((icon, i) => {
-          const p = document.createElement('div');
-          p.className = 'reward-particle';
-          // Fan particles downward (arc from ~54° to ~306° in a 252° sweep)
-          const ANGLE_START = Math.PI * 0.3;  // ~54° — left edge of downward fan
-          const ANGLE_SWEEP = Math.PI * 1.4;  // ~252° — full downward half-circle arc
-          const angle = ANGLE_START + (i / icons.length) * ANGLE_SWEEP;
-          const dist = 120 + Math.random() * 160;
-          const dx = Math.round(Math.cos(angle) * dist);
-          const dy = Math.round(Math.abs(Math.sin(angle)) * dist + 40);
-          p.style.cssText =
-            'left:' + Math.round(originX - 11) + 'px;top:' + Math.round(originY - 11) + 'px;' +
-            '--rp-dx:' + dx + 'px;--rp-dy:' + dy + 'px;' +
-            '--rp-dur:' + (0.7 + Math.random() * 0.5).toFixed(2) + 's;' +
-            '--rp-delay:' + (0.3 + i * 0.07).toFixed(2) + 's;';
-          p.textContent = icon;
-          document.body.appendChild(p);
-          setTimeout(() => { if (p.parentNode) p.parentNode.removeChild(p); }, 2000);
-        });
-      }, 400);
-
-      // Fade out and remove
-      setTimeout(() => {
-        banner.classList.add('fading');
-        setTimeout(() => { if (bOverlay.parentNode) bOverlay.parentNode.removeChild(bOverlay); }, 550);
-      }, 2800);
+      UIManager.queueNotification(questName, rewardDesc);
     }
     window.showQuestCompleteBanner = showQuestCompleteBanner;
 
@@ -3683,50 +3721,73 @@
       }
     }
 
-    // Blood ground decal - small circle splat on the ground for realistic blood
-    // Uses a circular buffer approach: overwrite oldest slot instead of shift() for O(1)
-    let bloodDecalIndex = 0; // Current write index for circular buffer
+    // ─── Blood ground decals — single InstancedMesh for zero draw-call overhead ──────
+    // One THREE.InstancedMesh with MAX_BLOOD_DECALS slots replaces per-splat Mesh objects.
+    // spawnBloodDecal() updates the transformation matrix of the next available slot
+    // instead of creating new PlaneGeometry / MeshStandardMaterial each time.
+    let _bloodDecalIM        = null;  // THREE.InstancedMesh (MAX_BLOOD_DECALS instances)
+    const _bdIMSpawnTime     = new Float64Array(MAX_BLOOD_DECALS); // spawn timestamp per slot
+    const _bdIMOpacity       = new Float32Array(MAX_BLOOD_DECALS); // initial opacity per slot
+    const _bdIMMatrix        = new THREE.Matrix4();                 // scratch matrix
+    const _bdIMScale         = new THREE.Vector3();
+    const _bdIMPos           = new THREE.Vector3();
+    const _bdIMQuat          = new THREE.Quaternion();
+    const _bdIMRot           = new THREE.Euler(-Math.PI / 2, 0, 0);
+    let   _bdIMIndex         = 0;   // circular write index
     const BLOOD_DECAL_FADE_MS = 12000; // 12 seconds fade per spec
+
+    // Lazily initialise the InstancedMesh once the scene exists
+    function _ensureBloodDecalIM() {
+      if (_bloodDecalIM || !scene || typeof THREE === 'undefined') return;
+      const geo = new THREE.CircleGeometry(1, 8); // radius=1; scale controls actual size per slot
+      const mat = new THREE.MeshStandardMaterial({
+        color: 0x6B0000,
+        transparent: true,
+        opacity: 0.7,
+        depthWrite: false,
+        roughness: 0.15,
+        metalness: 0.6,
+        emissive: 0x3A0000,
+        emissiveIntensity: 0.15,
+        polygonOffset: true,
+        polygonOffsetFactor: -1,
+        polygonOffsetUnits: -1
+      });
+      _bloodDecalIM = new THREE.InstancedMesh(geo, mat, MAX_BLOOD_DECALS);
+      _bloodDecalIM.renderOrder = 12;
+      _bloodDecalIM.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      // Park all instances below the floor so they are invisible until used
+      _bdIMQuat.setFromEuler(_bdIMRot);
+      for (let i = 0; i < MAX_BLOOD_DECALS; i++) {
+        _bdIMPos.set(0, -100, 0);
+        _bdIMScale.set(0.01, 0.01, 0.01);
+        _bdIMMatrix.compose(_bdIMPos, _bdIMQuat, _bdIMScale);
+        _bloodDecalIM.setMatrixAt(i, _bdIMMatrix);
+        _bdIMSpawnTime[i] = 0;
+        _bdIMOpacity[i]   = 0;
+      }
+      _bloodDecalIM.instanceMatrix.needsUpdate = true;
+      scene.add(_bloodDecalIM);
+      // Expose refs so game-over-reset.js can park all slots on reset
+      window._bloodDecalIM   = _bloodDecalIM;
+      window._bdIMSpawnTime  = _bdIMSpawnTime;
+    }
+
     function spawnBloodDecal(pos) {
       if (!scene) return;
-      const now = Date.now();
-      if (bloodDecals.length < MAX_BLOOD_DECALS) {
-        // Buffer not full yet - append
-        const size = 0.15 + Math.random() * 0.35;
-        const geo = new THREE.CircleGeometry(size, 8);
-        const initialOpacity = 0.6 + Math.random() * 0.3;
-        const mat = new THREE.MeshStandardMaterial({
-          color: 0x6B0000,
-          transparent: true,
-          opacity: initialOpacity,
-          depthWrite: false,
-          roughness: 0.15,     // Smooth reflective surface like wet blood
-          metalness: 0.6,      // High metalness for glass-like reflection
-          emissive: 0x3A0000,  // Subtle dark red glow
-          emissiveIntensity: 0.15,
-          // polygonOffset eliminates Z-fighting on the ground plane (Samsung S10 fix)
-          polygonOffset: true,
-          polygonOffsetFactor: -1,
-          polygonOffsetUnits: -1
-        });
-        const decal = new THREE.Mesh(geo, mat);
-        decal.rotation.x = -Math.PI / 2;
-        decal.renderOrder = 12; // Render above ground to prevent z-fighting
-        decal.position.set(pos.x + (Math.random() - 0.5) * 0.8, 0.05, pos.z + (Math.random() - 0.5) * 0.8);
-        decal.userData.spawnTime = now;
-        decal.userData.initialOpacity = initialOpacity;
-        scene.add(decal);
-        bloodDecals.push(decal);
-      } else {
-        // Reuse existing slot (O(1) circular overwrite)
-        const old = bloodDecals[bloodDecalIndex];
-        const initialOpacity = 0.6 + Math.random() * 0.3;
-        old.position.set(pos.x + (Math.random() - 0.5) * 0.8, 0.05, pos.z + (Math.random() - 0.5) * 0.8);
-        old.material.opacity = initialOpacity;
-        old.userData.spawnTime = now;
-        old.userData.initialOpacity = initialOpacity;
-        bloodDecalIndex = (bloodDecalIndex + 1) % MAX_BLOOD_DECALS;
-      }
+      _ensureBloodDecalIM();
+      if (!_bloodDecalIM) return;
+      const idx = _bdIMIndex;
+      _bdIMIndex = (idx + 1) % MAX_BLOOD_DECALS;
+      const size           = 0.15 + Math.random() * 0.35;
+      const initialOpacity = 0.6  + Math.random() * 0.3;
+      _bdIMSpawnTime[idx]  = Date.now();
+      _bdIMOpacity[idx]    = initialOpacity;
+      _bdIMPos.set(pos.x + (Math.random() - 0.5) * 0.8, 0.05, pos.z + (Math.random() - 0.5) * 0.8);
+      _bdIMScale.set(size, size, size);
+      _bdIMMatrix.compose(_bdIMPos, _bdIMQuat, _bdIMScale);
+      _bloodDecalIM.setMatrixAt(idx, _bdIMMatrix);
+      _bloodDecalIM.instanceMatrix.needsUpdate = true;
     }
 
     // Spawn an elongated blood skid mark at a position in a given direction (for shotgun deaths)
@@ -3762,31 +3823,54 @@
     // Update blood decal fade (call in main loop)
     const BLOOD_DECAL_FADE_START = 0.7; // Start fading at 70% of lifetime
     function updateBloodDecals() {
+      // InstancedMesh path: fade each active slot via per-instance opacity emulation.
+      // Since InstancedMesh shares one material, we encode fade by shrinking the scale
+      // of expired slots to zero (parking them) rather than changing opacity per-instance.
+      if (_bloodDecalIM) {
+        const now = Date.now();
+        let needsUpdate = false;
+        for (let i = 0; i < MAX_BLOOD_DECALS; i++) {
+          const spawnTime = _bdIMSpawnTime[i];
+          if (!spawnTime) continue;
+          const age = now - spawnTime;
+          if (age >= BLOOD_DECAL_FADE_MS) {
+            // Park this slot below the floor
+            _bdIMSpawnTime[i] = 0;
+            _bdIMPos.set(0, -100, 0);
+            _bdIMScale.set(0.01, 0.01, 0.01);
+            _bdIMMatrix.compose(_bdIMPos, _bdIMQuat, _bdIMScale);
+            _bloodDecalIM.setMatrixAt(i, _bdIMMatrix);
+            needsUpdate = true;
+          } else if (age > BLOOD_DECAL_FADE_MS * BLOOD_DECAL_FADE_START) {
+            // Shrink scale to simulate fade-out (single shared material, no per-instance opacity)
+            const fadeProgress = (age - BLOOD_DECAL_FADE_MS * BLOOD_DECAL_FADE_START) /
+                                 (BLOOD_DECAL_FADE_MS * (1 - BLOOD_DECAL_FADE_START));
+            const baseSize = _bdIMOpacity[i]; // we stored initial size-proxy here
+            const s = baseSize * (1 - fadeProgress);
+            _bloodDecalIM.getMatrixAt(i, _bdIMMatrix);
+            _bdIMMatrix.decompose(_bdIMPos, _bdIMQuat, _bdIMScale);
+            _bdIMScale.set(s, s, s);
+            _bdIMMatrix.compose(_bdIMPos, _bdIMQuat, _bdIMScale);
+            _bloodDecalIM.setMatrixAt(i, _bdIMMatrix);
+            needsUpdate = true;
+          }
+        }
+        if (needsUpdate) _bloodDecalIM.instanceMatrix.needsUpdate = true;
+        return;
+      }
+      // Legacy per-mesh fallback (active only if InstancedMesh failed to initialise)
       const now = Date.now();
-      // Use backward iteration so we can splice without index issues
       for (let i = bloodDecals.length - 1; i >= 0; i--) {
         const decal = bloodDecals[i];
-        // Skip entries that have already been disposed externally (air blood pools)
-        if (!decal.userData.spawnTime) {
-          if (!decal.parent) {
-            bloodDecals.splice(i, 1);
-          }
-          continue;
-        }
-        // Early-exit: decal was removed from scene externally, purge from array
-        if (!decal.parent) {
-          bloodDecals.splice(i, 1);
-          continue;
-        }
+        if (!decal.userData.spawnTime) { if (!decal.parent) bloodDecals.splice(i, 1); continue; }
+        if (!decal.parent) { bloodDecals.splice(i, 1); continue; }
         const age = now - decal.userData.spawnTime;
         if (age >= BLOOD_DECAL_FADE_MS) {
-          // Fully expired — remove from scene, dispose, and purge from array
           if (decal.parent) scene.remove(decal);
           if (decal.geometry) decal.geometry.dispose();
           if (decal.material) decal.material.dispose();
           bloodDecals.splice(i, 1);
         } else if (age > BLOOD_DECAL_FADE_MS * BLOOD_DECAL_FADE_START) {
-          // Start fading at 70% of lifetime
           const fadeProgress = (age - BLOOD_DECAL_FADE_MS * BLOOD_DECAL_FADE_START) / (BLOOD_DECAL_FADE_MS * (1 - BLOOD_DECAL_FADE_START));
           decal.material.opacity = (decal.userData.initialOpacity || 0.7) * (1 - fadeProgress);
         }
