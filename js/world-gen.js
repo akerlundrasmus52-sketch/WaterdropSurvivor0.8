@@ -3034,6 +3034,8 @@
 
       // ── Pixel Ratio ──
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, preset.pixelRatio));
+      // Keep the debug/watchdog tracking in sync
+      window._currentPixelRatio = Math.min(window.devicePixelRatio, preset.pixelRatio);
 
       // ── Fog Distance ──
       if (scene && scene.fog) {
