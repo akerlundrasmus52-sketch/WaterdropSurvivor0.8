@@ -2861,18 +2861,58 @@
       buildBtn.addEventListener('touchend', function (e) { e.preventDefault(); _startBuild(); }, { passive: false });
     }
 
-    // Claim a tutorial quest - REWRITTEN for reliability
-// ── Challenge Complete Board ──────────────────────────────────────────────
+    // ── Challenge Complete Board ──────────────────────────────────────────────
     // Slides a sleek black board down from the top of the screen, strikes through
     // the challenge name, shows a trophy, shoots laser confetti, and counts up gold.
     // Rarity-based confetti colours: Common→grey, Uncommon→green, Rare→blue,
     //                                Epic→purple, Legendary→orange, Mythical→gold.
+    function _challengeRarity(gold) {
+      if (gold >= 2000) return 'mythic';
+      if (gold >= 1000) return 'legendary';
+      if (gold >= 500)  return 'epic';
+      if (gold >= 250)  return 'rare';
+      if (gold >= 100)  return 'uncommon';
+      return 'common';
+    }
+
+    // Full 6-tier colour map used by challenge board (matches _ACH_RARITY_COLORS in save-system.js)
+    const _CCB_RARITY_COLORS = {
+      common:    '#aaaaaa',
+      uncommon:  '#55cc55',
+      rare:      '#44aaff',
+      epic:      '#aa44ff',
+      legendary: '#ffaa00',
+      mythic:    '#ff4444'
+    };
+
     function showChallengeComplete(questName, goldAmount) {
       const board = document.getElementById('challenge-complete-board');
       const nameLabel = document.getElementById('ccb-name-label');
       const nameEl    = document.getElementById('ccb-name-text');
       const goldEl    = document.getElementById('ccb-gold-display');
       if (!board || !nameLabel || !nameEl || !goldEl) return;
+
+      const rarity = _challengeRarity(goldAmount || 0);
+      const rarityColor = _CCB_RARITY_COLORS[rarity] || _CCB_RARITY_COLORS.common;
+      const rarityLabel = { common:'Common', uncommon:'Uncommon', rare:'Rare', epic:'Epic', legendary:'Legendary', mythic:'Mythic' }[rarity] || 'Common';
+
+      // Update border colour and glow to rarity (stronger glow for higher tiers)
+      const glowRadii = { common: '18px', uncommon: '20px', rare: '24px', epic: '28px', legendary: '36px', mythic: '48px' };
+      const glowRadius = glowRadii[rarity] || '18px';
+      board.style.borderColor = rarityColor;
+      board.style.boxShadow = `0 8px 40px rgba(0,0,0,0.9), 0 0 ${glowRadius} ${rarityColor}66, 0 0 ${glowRadius} ${rarityColor}33`;
+
+      // Inject rarity badge into board header (reuse or create)
+      let rarityBadge = board.querySelector('.ccb-rarity-badge');
+      if (!rarityBadge) {
+        rarityBadge = document.createElement('div');
+        rarityBadge.className = 'ccb-rarity-badge';
+        rarityBadge.style.cssText = 'font-family:"Bangers",cursive;font-size:12px;letter-spacing:1.5px;padding:1px 8px;border-radius:10px;border:1px solid currentColor;margin-left:6px;opacity:0.9;display:inline-block;';
+        const header = board.querySelector('.ccb-header');
+        if (header) header.appendChild(rarityBadge);
+      }
+      rarityBadge.textContent = rarityLabel.toUpperCase();
+      rarityBadge.style.color = rarityColor;
 
       // Set content
       nameLabel.textContent = questName || 'Challenge';
@@ -2889,42 +2929,35 @@
       // Strike through name after 400ms
       setTimeout(() => nameEl.classList.add('struck'), 400);
 
-      // Count up gold reward
-      const countDuration = 900;
-      const startTime = performance.now();
+      // Escalation timing constants (must mirror what rarityEscalationReveal uses)
+      const _escalateDurations = { common: 480, uncommon: 1000, rare: 1560, epic: 2180, legendary: 2900, mythic: 3780 };
+      const escalateDelay = 600; // let board slide in
+      const countDuration = Math.max(800, (_escalateDurations[rarity] || 480) * 0.75);
+
+      // Spin gold counter up in sync with escalation
+      const startTime_ = performance.now();
       function _countUp(now) {
-        const t = Math.min((now - startTime) / countDuration, 1);
+        const t = Math.min((now - startTime_) / countDuration, 1);
         const current = Math.floor(goldAmount * t);
         goldEl.textContent = '+' + current + ' Gold 🏆';
         if (t < 1) requestAnimationFrame(_countUp);
         else goldEl.textContent = '+' + goldAmount + ' Gold 🏆';
       }
-      setTimeout(() => requestAnimationFrame(_countUp), 300);
+      setTimeout(() => requestAnimationFrame(_countUp), escalateDelay);
+      setTimeout(() => {
+        if (typeof window.rarityEscalationReveal === 'function') {
+          window.rarityEscalationReveal(board, rarity, {
+            onComplete: function() {
+              // Final confetti burst already fired inside escalation; nothing more needed here
+            }
+          });
+        } else if (typeof window.spawnRarityEffects === 'function') {
+          window.spawnRarityEffects(board, rarity);
+        }
+      }, escalateDelay);
 
-      // Laser confetti — rarity rainbow
-      const rarityColors = ['#aaaaaa', '#44ff44', '#4499ff', '#cc44ff', '#ff8800', '#FFD700'];
-      const boardRect = board.getBoundingClientRect ? board.getBoundingClientRect() : null;
-      const cx = boardRect ? boardRect.left + boardRect.width / 2 : window.innerWidth / 2;
-      const cy = boardRect ? boardRect.bottom : 80;
-      for (let i = 0; i < 28; i++) {
-        const p = document.createElement('div');
-        p.className = 'challenge-confetti-particle';
-        const color = rarityColors[Math.floor(Math.random() * rarityColors.length)];
-        p.style.background = color;
-        p.style.left = cx + 'px';
-        p.style.top  = cy + 'px';
-        const angle = Math.random() * Math.PI * 2;
-        const dist  = 60 + Math.random() * 120;
-        p.style.setProperty('--cx', '0px');
-        p.style.setProperty('--cy', '0px');
-        p.style.setProperty('--tx', (Math.cos(angle) * dist) + 'px');
-        p.style.setProperty('--ty', (Math.sin(angle) * dist + 30) + 'px');
-        p.style.animationDelay = (Math.random() * 0.2) + 's';
-        document.body.appendChild(p);
-        setTimeout(() => { if (p.parentNode) p.parentNode.removeChild(p); }, 1200);
-      }
-
-      // Slide out and hide after 3.8 seconds
+      // Slide out and hide after enough time for the escalation to finish + a moment to enjoy it
+      const autoHideDelay = Math.max(4200, escalateDelay + (_escalateDurations[rarity] || 480) + 1600);
       setTimeout(() => {
         board.classList.remove('slide-in');
         board.classList.add('slide-out');
@@ -2932,8 +2965,10 @@
           board.classList.remove('slide-out');
           board.style.transform = 'translateX(-50%) translateY(-120%)';
           board.style.opacity = '0';
+          board.style.borderColor = '';
+          board.style.boxShadow = '';
         }, 400);
-      }, 3800);
+      }, autoHideDelay);
     }
     window.showChallengeComplete = showChallengeComplete;
 

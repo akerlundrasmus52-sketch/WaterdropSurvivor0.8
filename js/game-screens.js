@@ -2285,6 +2285,8 @@
       // Go to Camp from death screen
       document.getElementById('goto-camp-btn').onclick = () => {
         playSound('waterdrop');
+        // Mark that we're returning from a run so the level-up curtain waits 3 s
+        window._campFromRun = true;
         document.getElementById('gameover-screen').style.display = 'none';
         // Hide main menu if still visible (loading screen may have shown it)
         document.getElementById('main-menu').style.display = 'none';
