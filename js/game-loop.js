@@ -8,6 +8,12 @@
 
     // Distance within which the Hunting Knife instantly kills wildlife.
     const KNIFE_KILL_RANGE = 2.2;
+
+    // ─── Bullet Tracer Trails ───────────────────────────────────────────────────
+    // Array of { mesh, life } objects — faded and removed over ~150ms (9 frames).
+    // Populated by Projectile.update(); cleared by the main animate() loop below.
+    window.bulletTrails = [];
+
     function _spawnProjectile(x, z, target) {
       if (window._projectilePool) {
         return window._projectilePool.get().reinit(x, z, target);
@@ -1650,7 +1656,7 @@
               pellet.glow.material.color.setHex(0xFFD700);
             }
             // Speed: rescale pre-computed velocity so pellets travel faster than gun bullets
-            _rescaleProjSpeed(pellet, 0.75 + Math.random() * 0.15); // 0.75-0.9
+            _rescaleProjSpeed(pellet, 2.625 + Math.random() * 0.525); // 0.75*3.5–0.9*3.5
             projectiles.push(pellet);
           }
           
@@ -2072,8 +2078,11 @@
         const _uziResult = window.GameCombat.findNearestEnemySH(player.mesh.position.x, player.mesh.position.z, _uziRangeSq, enemies);
         let nearest = _uziResult.enemy;
         if (nearest) {
-          projectiles.push(_spawnProjectile(player.mesh.position.x, player.mesh.position.z, nearest.mesh.position));
+          const p = _spawnProjectile(player.mesh.position.x, player.mesh.position.z, nearest.mesh.position);
+          p.mesh.material.color.setHex(0xFFD700); // Bright orange-gold uzi rounds
+          if (p.glow) p.glow.material.color.setHex(0xFFAA00);
           weapons.uzi.lastShot = time;
+          projectiles.push(p);
           playSound('shoot');
         }
       }
@@ -2086,11 +2095,13 @@
         if (nearest) {
           const p = _spawnProjectile(player.mesh.position.x, player.mesh.position.z, nearest.mesh.position);
           p.pierceCount = weapons.sniperRifle.piercing || 3;
-          p.mesh.scale.set(0.6, 0.6, 1.5);
-          p.mesh.material.color.setHex(0xFFDD44);
-          _rescaleProjSpeed(p, 0.8); // sniper rounds travel faster than standard bullets
+          // Sniper: elongated bright white/blue-tinted slug
+          p.mesh.scale.set(0.8, 0.8, 2.2);
+          p.mesh.material.color.setHex(0xFFFFFF); // Bright white
+          if (p.glow) { p.glow.material.color.setHex(0xAADDFF); p.glow.material.opacity = 0.6; }
+          _rescaleProjSpeed(p, 2.8); // sniper rounds: 0.8 * 3.5 = 2.8
           projectiles.push(p);
-          spawnParticles(player.mesh.position, 0xFFFF00, 4);
+          spawnParticles(player.mesh.position, 0xFFFFFF, 4);
           weapons.sniperRifle.lastShot = time;
           playSound('shoot');
         }
@@ -2110,7 +2121,7 @@
             const dir = { x: Math.cos(baseAngle + spread) * 20 + player.mesh.position.x, y: 0, z: Math.sin(baseAngle + spread) * 20 + player.mesh.position.z };
             const pellet = _spawnProjectile(player.mesh.position.x, player.mesh.position.z, dir);
             pellet.isDoubleBarrel = true;
-            _rescaleProjSpeed(pellet, 0.6 + Math.random() * 0.15); // pump shotgun pellet speed
+            _rescaleProjSpeed(pellet, 2.1 + Math.random() * 0.525); // pump shotgun: 0.6*3.5–0.75*3.5
             pellet.life = 20;
             projectiles.push(pellet);
           }
@@ -2133,7 +2144,7 @@
             const dir = { x: Math.cos(baseAngle + spread) * 20 + player.mesh.position.x, y: 0, z: Math.sin(baseAngle + spread) * 20 + player.mesh.position.z };
             const pellet = _spawnProjectile(player.mesh.position.x, player.mesh.position.z, dir);
             pellet.isDoubleBarrel = true;
-            _rescaleProjSpeed(pellet, 0.55 + Math.random() * 0.1); // auto shotgun pellet speed
+            _rescaleProjSpeed(pellet, 1.925 + Math.random() * 0.35); // auto shotgun: 0.55*3.5–0.65*3.5
             pellet.life = 18;
             projectiles.push(pellet);
           }
@@ -2151,9 +2162,9 @@
           const spreadOffset = (Math.random() - 0.5) * 0.15;
           const dir = { x: nearest.mesh.position.x + spreadOffset, y: 0, z: nearest.mesh.position.z + spreadOffset };
           const p = _spawnProjectile(player.mesh.position.x, player.mesh.position.z, dir);
-          p.mesh.scale.set(0.3, 0.3, 0.3);
-          p.mesh.material.color.setHex(0xFFCC00);
-          _rescaleProjSpeed(p, 0.7); // minigun rounds travel faster than standard bullets
+          p.mesh.material.color.setHex(0xFFD700); // Bright orange-gold minigun rounds
+          if (p.glow) p.glow.material.color.setHex(0xFFAA00);
+          _rescaleProjSpeed(p, 2.45); // minigun: 0.7 * 3.5 = 2.45
           projectiles.push(p);
           weapons.minigun.lastShot = time;
           if (Math.random() < 0.3) playSound('shoot');
@@ -2568,6 +2579,24 @@
       // Update blood decal fade (12 second lifetime)
       updateBloodDecals();
       
+      // Update bullet tracer trails — fade opacity to 0 over ~150ms and remove
+      if (window.bulletTrails && window.bulletTrails.length > 0) {
+        let _j = 0;
+        for (let _i = 0; _i < window.bulletTrails.length; _i++) {
+          const t = window.bulletTrails[_i];
+          t.life--;
+          t.mesh.material.opacity = Math.max(0, (t.life / 9) * 0.55);
+          if (t.life <= 0) {
+            scene.remove(t.mesh);
+            t.mesh.geometry.dispose();
+            t.mesh.material.dispose();
+          } else {
+            window.bulletTrails[_j++] = t;
+          }
+        }
+        window.bulletTrails.length = _j;
+      }
+
       // Update advanced blood particle system
       if (window.BloodSystem) window.BloodSystem.update();
       

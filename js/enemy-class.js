@@ -937,6 +937,9 @@
           
           this.mesh.position.x += vx;
           this.mesh.position.z += vz;
+          // Track last movement vector for glide-spin death state
+          this._lastMoveVX = vx;
+          this._lastMoveVZ = vz;
           // Proper player-facing using atan2 — avoids backwards/sideways artifacts that
           // lookAt+PI can cause when the model's natural orientation differs from THREE.js convention.
           // dx/dz = direction from this enemy toward the player.
@@ -1865,9 +1868,21 @@
         }
 
         // Special death effects based on damage type
+        // Check for "Glide & Spin" death: enemy killed while moving fast (not elemental/special)
+        const _mvX = this._lastMoveVX || 0;
+        const _mvZ = this._lastMoveVZ || 0;
+        const _moveSpeed = Math.sqrt(_mvX * _mvX + _mvZ * _mvZ);
+        const _isGlideSpinCandidate = _moveSpeed > 0.035 &&
+          damageType !== 'fire' && damageType !== 'ice' && damageType !== 'lightning' &&
+          damageType !== 'headshot' && damageType !== 'aura' && damageType !== 'poison' &&
+          !this.isMiniBoss && !this.isFlyingBoss;
+
         if (isYellowEnemy && damageType !== 'ice' && damageType !== 'fire' && damageType !== 'headshot') {
           // Yellow enemies: 180-degree spin death with continuous neck blood arc
           this.dieBySpinDeath(enemyColor);
+        } else if (_isGlideSpinCandidate && (damageType === 'gun' || damageType === 'physical' || damageType === 'uzi' || damageType === 'minigun' || damageType === 'sniperRifle' || damageType === 'drone' || damageType === 'shotgun' || damageType === 'doubleBarrel') && Math.random() < 0.55) {
+          // Fast-moving enemy killed by ballistic/gun weapon — Glide & Spin death
+          this.dieByGlideSpin(enemyColor, _mvX / (_moveSpeed || 1), _mvZ / (_moveSpeed || 1), _moveSpeed);
         } else if (damageType === 'fire') {
           // Fire death: Char and ash
           this.dieByFire(enemyColor);
@@ -2777,6 +2792,18 @@
         // 7 varied death animations — realistic gun kills with pumping blood
         const deathVariation = Math.floor(Math.random() * 10);
         const deathPos = this.mesh.position.clone();
+
+        // HEARTBEAT BLEED-OUT: Every 600ms for 4 seconds, a high-pressure squirt of blood
+        // shoots UP from the bullet holes, landing on the floor to expand the blood pool.
+        if (window.BloodSystem && window.BloodSystem.emitHeartbeatWound) {
+          window.BloodSystem.emitHeartbeatWound(deathPos, {
+            pulses: 7,        // ~4 seconds at 600ms intervals
+            perPulse: 120,
+            interval: 600,
+            woundHeight: 1.2,
+            pressure: 1.0
+          });
+        }
         
         if (deathVariation === 0) {
           // BLOOD BURST — intense spray, wound pumps blood in pulses
@@ -3474,6 +3501,72 @@
         }
       }
       
+      dieByGlideSpin(enemyColor, dirX, dirZ, moveSpeed) {
+        // GLIDE & SPIN DEATH: Enemy killed while moving fast continues gliding and spins wildly.
+        // Creates a radial/spiral blood skid mark on the floor.
+        const deathPos = this.mesh.position.clone();
+
+        const bodyGeo = new THREE.SphereGeometry(0.42, 8, 8);
+        const bodyMat = new THREE.MeshBasicMaterial({ color: enemyColor, transparent: true, opacity: 1 });
+        const body = new THREE.Mesh(bodyGeo, bodyMat);
+        body.position.copy(deathPos);
+        body.position.y = 0.18;
+        body.scale.y = 0.4;
+        scene.add(body);
+
+        let glideLife = 90; // ~1.5 seconds at 60fps
+        let glideVX = dirX * moveSpeed * 2.5;
+        let glideVZ = dirZ * moveSpeed * 2.5;
+        let spinAngleX = 0;
+        let spinAngleZ = 0;
+        const spinSpeedX = 0.18 + Math.random() * 0.12; // Wild X-axis spin
+        const spinSpeedZ = 0.14 + Math.random() * 0.10; // Wild Z-axis spin
+        let bloodFrameCounter = 0;
+
+        if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
+          managedAnimations.push({ update(_dt) {
+            glideLife--;
+            // Friction deceleration
+            glideVX *= 0.96;
+            glideVZ *= 0.96;
+            body.position.x += glideVX;
+            body.position.z += glideVZ;
+            // Wild spin on X and Z axes (not Y) — tumbling corpse
+            spinAngleX += spinSpeedX;
+            spinAngleZ += spinSpeedZ;
+            body.rotation.x = spinAngleX;
+            body.rotation.z = spinAngleZ;
+
+            // Radial blood spatter: emit 2-3 blood particles every frame
+            bloodFrameCounter++;
+            if (window.BloodSystem && glideLife > 10) {
+              const dropCount = 2 + (bloodFrameCounter % 2 === 0 ? 1 : 0);
+              window.BloodSystem.emitSpinTrail(body.position, spinAngleX + spinAngleZ, dropCount);
+              // Also paint a ground stain at current position every 3rd frame
+              if (bloodFrameCounter % 3 === 0) {
+                window.BloodSystem.emitDragTrail(body.position, { x: glideVX, y: 0, z: glideVZ }, 3);
+              }
+            }
+
+            if (glideLife < 20) {
+              body.material.opacity = glideLife / 20;
+            }
+            if (glideLife <= 0) {
+              scene.remove(body);
+              body.geometry.dispose(); body.material.dispose();
+              return false;
+            }
+            return true;
+          }, cleanup() {
+            scene.remove(body);
+            body.geometry.dispose(); body.material.dispose();
+          }});
+        } else {
+          scene.remove(body);
+          body.geometry.dispose(); body.material.dispose();
+        }
+      }
+
       dieByHeadshot(enemyColor) {
         // FRESH IMPLEMENTATION: Enhanced headshot with actual head detachment
         // Headshot: Blood spray (reduced enemy color particles, more blood)
@@ -4099,19 +4192,23 @@
       // Rebuild cache when size multiplier changes so new pool slots get correctly-sized geometry
       if (projectileGeometryCache && _cachedProjSizeMultiplier === sizeMultiplier) return;
       _cachedProjSizeMultiplier = sizeMultiplier;
-      const baseRadius = 0.03125 * sizeMultiplier; // 50% smaller than original 0.0625
+      // Small elongated cylinder — bake a 90° Z-rotation so the long axis is along X.
+      // In Projectile.reinit() the mesh Y-rotation is set to Math.atan2(vx,vz) so the
+      // cylinder naturally faces the direction of travel.
+      const cylGeo = new THREE.CylinderGeometry(0.04 * sizeMultiplier, 0.04 * sizeMultiplier, 0.4 * sizeMultiplier, 8);
+      cylGeo.rotateZ(Math.PI / 2); // now long axis faces +X; mesh.rotation.y handles directional aim
       projectileGeometryCache = {
-        bullet:     new THREE.SphereGeometry(baseRadius, 8, 8),
-        bulletGlow: new THREE.SphereGeometry(baseRadius * 1.4, 6, 6)
+        bullet:     cylGeo,
+        bulletGlow: new THREE.SphereGeometry(0.06 * sizeMultiplier, 6, 6)
       };
       projectileMaterialCache = {
         bullet: new THREE.MeshBasicMaterial({
-          color: 0xFFFF00,      // Bright yellow — original snappy gun bullet colour
+          color: 0xFFD700,      // Bright orange-gold — hot, lethal default bullet colour
           transparent: true,
           opacity: 0.95
         }),
         bulletGlow: new THREE.MeshBasicMaterial({
-          color: 0xFFFF88,      // Pale yellow glow
+          color: 0xFFAA00,      // Warm orange glow
           transparent: true,
           opacity: 0.4
         })

@@ -304,7 +304,7 @@
       _colors[idx3 + 1] = g;
       _colors[idx3 + 2] = b;
       _sizes[idx]    = size;
-      _life[idx]     = 300 + Math.floor(Math.random() * 200); // long-lived stain
+      _life[idx]     = 1800 + Math.floor(Math.random() * 600); // 30-40 second stain
       _grounded[idx] = 1;
     }
   }
@@ -375,7 +375,7 @@
         pos.y + 0.3,
         pos.z + Math.sin(angle) * dist * 0.4,
         vx, vy, vz, r, g, b, size,
-        280 + Math.floor(Math.random() * 160) // long-lived stain
+        1800 + Math.floor(Math.random() * 600) // 30-40 second stain
       );
     }
   }
@@ -795,7 +795,7 @@
           _colors[idx3 + 1] = g;
           _colors[idx3 + 2] = b;
           _sizes[idx]    = size;
-          _life[idx]     = 350 + Math.floor(Math.random() * 200);
+          _life[idx]     = 1800 + Math.floor(Math.random() * 600); // 30-40 second pool
           _grounded[idx] = 1;
         }
       }, s * 80);
@@ -892,7 +892,7 @@
       _colors[idx3 + 1] = g;
       _colors[idx3 + 2] = b;
       _sizes[idx]    = size;
-      _life[idx]     = 300 + Math.floor(Math.random() * 200);
+      _life[idx]     = 1800 + Math.floor(Math.random() * 600); // 30-40 second stain
       _grounded[idx] = 1;
     }
   }
@@ -914,12 +914,10 @@
       _life[i]--;
 
       if (_grounded[i]) {
-        // Stain — slow fade
-        const alpha = Math.min(1, _life[i] / 120);
-        // Fade colour toward dark stain
+        // Stain — very slow fade to match 30-second lifetime, darkening toward dried blood
         const i3 = i * 3;
-        if (_colors[i3] > 0.18) _colors[i3]     -= 0.001;
-        if (_colors[i3+1] > 0)  _colors[i3 + 1] -= 0.0005;
+        if (_colors[i3] > 0.18) _colors[i3]     -= 0.00015;
+        if (_colors[i3+1] > 0)  _colors[i3 + 1] -= 0.00008;
         if (_life[i] <= 0) _positions[i * 3 + 1] = -9999;
         continue;
       }
@@ -938,12 +936,17 @@
         _velY[i] = 0;
         _velZ[i] = 0;
         _grounded[i] = 1;
-        _life[i] = 200 + Math.floor(Math.random() * 150); // stain lingers
+        // 30–40 second semi-permanent decals (1800–2400 frames at 60fps)
+        _life[i] = 1800 + Math.floor(Math.random() * 600);
         // Fan out on ground — add slight random spread to position
         _positions[i3]     += (Math.random() - 0.5) * 0.15;
         _positions[i3 + 2] += (Math.random() - 0.5) * 0.15;
-        // Make stain larger
-        _sizes[i] = Math.min(0.18, _sizes[i] * 2.0);
+        // Make stain larger and vary opacity via colour intensity (0.6–0.9 range)
+        _sizes[i] = Math.min(0.22, _sizes[i] * 2.0);
+        const wetness = 0.6 + Math.random() * 0.3; // 0.6–0.9 opacity equivalent
+        _colors[i3]     = Math.min(1, _colors[i3]     * wetness * 1.5);
+        _colors[i3 + 1] = Math.min(1, _colors[i3 + 1] * wetness);
+        _colors[i3 + 2] = Math.min(1, _colors[i3 + 2] * wetness);
       }
 
       // Kill if life expired
