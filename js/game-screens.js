@@ -1075,8 +1075,10 @@
         const canAfford = (saveData.gold || 0) >= cost;
 
         const card = document.createElement('div');
-        card.className = 'camp-workshop-card' +
-          (maxed ? ' camp-workshop-card-maxed' : (!canAfford ? ' camp-workshop-card-locked' : ''));
+        const cardClasses = ['camp-workshop-card'];
+        if (maxed) cardClasses.push('camp-workshop-card-maxed');
+        else if (!canAfford) cardClasses.push('camp-workshop-card-locked');
+        card.className = cardClasses.join(' ');
 
         // Level pips
         let pips = '';
@@ -1283,7 +1285,10 @@
         icons.forEach((icon, i) => {
           const p = document.createElement('div');
           p.className = 'reward-particle';
-          const angle = (Math.PI * 0.3) + (i / icons.length) * Math.PI * 1.4;
+          // Fan particles downward (arc from ~54° to ~306° in a 252° sweep)
+          const ANGLE_START = Math.PI * 0.3;  // ~54° — left edge of downward fan
+          const ANGLE_SWEEP = Math.PI * 1.4;  // ~252° — full downward half-circle arc
+          const angle = ANGLE_START + (i / icons.length) * ANGLE_SWEEP;
           const dist = 120 + Math.random() * 160;
           const dx = Math.round(Math.cos(angle) * dist);
           const dy = Math.round(Math.abs(Math.sin(angle)) * dist + 40);
