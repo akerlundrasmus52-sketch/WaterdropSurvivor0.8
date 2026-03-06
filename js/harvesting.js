@@ -14,16 +14,16 @@
     metal:        { label: 'Metal',        icon: '🔩', color: '#778899', category: 'material' },
     crystal:      { label: 'Crystal',      icon: '💎', color: '#88CCFF', category: 'material' },
     magicEssence: { label: 'Magic Essence',icon: '✨', color: '#AA44FF', category: 'material' },
-    gem:          { label: 'Gem',          icon: '💍', color: '#FFD700', category: 'material' },
+    gem:          { label: 'Gem',          icon: '💍', color: '#FFD700', category: 'material', hidden: true },
     flesh:        { label: 'Flesh',        icon: '🥩', color: '#CC2200', category: 'food' },
     meat:         { label: 'Meat',         icon: '🍖', color: '#CC4400', category: 'food' },
     food:         { label: 'Food',         icon: '🍲', color: '#FF8C00', category: 'food' },
     animalSkin:   { label: 'Animal Skin',  icon: '🐾', color: '#D2B48C', category: 'animal' },
-    fur:          { label: 'Fur',          icon: '🧶', color: '#8B6914', category: 'animal' },
+    fur:          { label: 'Fur',          icon: '🧶', color: '#8B6914', category: 'animal', hidden: true },
     leather:      { label: 'Leather',      icon: '🟫', color: '#654321', category: 'animal' },
-    feather:      { label: 'Feather',      icon: '🪶', color: '#DDDDDD', category: 'animal' },
-    chitin:       { label: 'Chitin',       icon: '🛡️', color: '#556B2F', category: 'animal' },
-    venom:        { label: 'Venom',        icon: '☠️', color: '#7CFC00', category: 'animal' },
+    feather:      { label: 'Feather',      icon: '🪶', color: '#DDDDDD', category: 'animal', hidden: true },
+    chitin:       { label: 'Chitin',       icon: '🛡️', color: '#556B2F', category: 'animal', hidden: true },
+    venom:        { label: 'Venom',        icon: '☠️', color: '#7CFC00', category: 'animal', hidden: true },
     berry:        { label: 'Berry',        icon: '🫐', color: '#4B0082', category: 'food' },
     flower:       { label: 'Flower',       icon: '🌸', color: '#FF69B4', category: 'food' },
     vegetable:    { label: 'Vegetable',    icon: '🥕', color: '#FF8C00', category: 'food' }
@@ -100,7 +100,7 @@
     gatherSpeed:  { label: 'Gathering Speed',   icon: '🧺', maxLevel: 10, description: 'Faster berry/flower gathering' },
     yieldBonus:   { label: 'Resource Yield',    icon: '📦', maxLevel: 10, description: 'More resources per harvest' },
     critGather:   { label: 'Lucky Harvest',     icon: '🍀', maxLevel: 5,  description: 'Chance for double resources' },
-    durability:   { label: 'Tool Durability',   icon: '🔧', maxLevel: 5,  description: 'Tools last longer' }
+    durability:   { label: 'Tool Durability',   icon: '🔧', maxLevel: 5,  description: 'Tools last longer', hidden: true } // TODO: not yet implemented
   };
 
   // ── Node visual descriptors (populated during init when THREE is available) ─
@@ -832,7 +832,7 @@
     // In camp mode: always show building materials (wood/stone/coal) even at 0
     const isCamp = hud.classList.contains('camp-mode');
     const entries = Object.entries(RESOURCE_TYPES)
-      .filter(([k]) => k !== 'flesh' && (res[k] > 0 || (isCamp && BUILD_MATERIAL_KEYS.includes(k))))
+      .filter(([k, v]) => k !== 'flesh' && (res[k] > 0 || (!v.hidden && isCamp && BUILD_MATERIAL_KEYS.includes(k))))
       .map(([k, v]) => `<span class="harvest-res-item"><span class="harvest-res-icon">${v.icon}</span><span class="harvest-res-count">x${(res[k] || 0)}</span></span>`)
       .join('');
     hud.innerHTML = entries || '';

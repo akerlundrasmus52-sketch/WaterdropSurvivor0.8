@@ -1048,6 +1048,7 @@
       grid.style.cssText = 'display:grid;grid-template-columns:1fr;gap:10px;width:100%;max-width:520px;';
 
       for (const [key, def] of Object.entries(GATHERING_SKILLS)) {
+        if (def.hidden) continue;
         const level = skills[key] || 0;
         const maxed = level >= def.maxLevel;
         const cost = 50;
