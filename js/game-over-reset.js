@@ -543,6 +543,14 @@
               }
             }
           }
+          // Dispose sub-mesh resources (bullet holes, blood stains, eyes) that are
+          // children of the enemy mesh — they are removed from scene with the parent,
+          // but their GPU resources must be explicitly freed.
+          // Note: bullet holes and blood stains use shared geometry — only dispose per-instance materials.
+          if (e.bulletHoles) e.bulletHoles.forEach(h => { if (h.material) h.material.dispose(); });
+          if (e._bloodStains) e._bloodStains.forEach(s => { if (s.material) s.material.dispose(); });
+          if (e.leftEye) { if (e.leftEye.geometry) e.leftEye.geometry.dispose(); if (e.leftEye.material) e.leftEye.material.dispose(); }
+          if (e.rightEye) { if (e.rightEye.geometry) e.rightEye.geometry.dispose(); if (e.rightEye.material) e.rightEye.material.dispose(); }
         }
       });
       enemies = [];
@@ -765,6 +773,11 @@
           fence.userData._wobbleTime = 0;
           return true;
         });
+      }
+
+      // Clear and repopulate harvest resource nodes so each run starts with a fresh world.
+      if (window.GameHarvesting) {
+        window.GameHarvesting.resetNodes();
       }
 
       // Reset Player - Spawn right next to the fountain/statue

@@ -949,6 +949,26 @@
     _drawSwingOverlay();
   }
 
+  // ── Clear all resource nodes from scene ──────────────────────
+  // Removes every node mesh from the Three.js scene and disposes its geometry/
+  // material, then empties the harvestNodes array. Call this from resetGame so
+  // stale node meshes and depleted/fallen trees don't carry over between runs.
+  function clearNodes() {
+    for (const node of harvestNodes) {
+      if (node.mesh && _scene) {
+        _scene.remove(node.mesh);
+        node.mesh.traverse(child => {
+          if (child.geometry) child.geometry.dispose();
+          if (child.material) {
+            if (Array.isArray(child.material)) child.material.forEach(m => m.dispose());
+            else child.material.dispose();
+          }
+        });
+      }
+    }
+    harvestNodes.length = 0;
+  }
+
   // ── Solid collision resolver ──────────────────────────────────
   // Push the player position out of any non-depleted resource node's radius.
   // The player movement system should call this after applying movement each frame.
@@ -1052,6 +1072,13 @@
     craftLeather,
     craftMeal,
     recycleToMetal,
+
+    // Remove all node meshes from scene, dispose GPU resources, and repopulate
+    // with a fresh set of nodes. Call from resetGame at the start of each new run.
+    resetNodes() {
+      clearNodes();
+      populateWorld();
+    },
 
     getResources() { return _getResources(); },
     getTools()    { return _getTools(); },
