@@ -29,15 +29,6 @@ window.GameAuth = (function () {
     return d.innerHTML;
   }
 
-  function _loadScript(src, onLoad, onError) {
-    var s = document.createElement('script');
-    s.type = 'module';
-    s.src = src;
-    s.onload = onLoad || null;
-    s.onerror = onError || null;
-    document.head.appendChild(s);
-  }
-
   // ─── Detect placeholder / unconfigured Firebase config ───────────────────
   function _isPlaceholderConfig() {
     return FIREBASE_CONFIG.apiKey === 'YOUR_API_KEY';
