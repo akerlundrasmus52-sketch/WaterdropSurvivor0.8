@@ -1139,9 +1139,22 @@
           }
         }
 
-        // Camera Follow (smooth, closer view for better immersion)
-        camera.position.x = this.mesh.position.x;
-        camera.position.z = this.mesh.position.z + 16; // Tighter isometric offset (was 20)
+        // Camera Follow — frame-rate independent lerp + look-ahead + Y height bob
+        const dtMs = dt * 1000;
+        // Smoothing constant: 0.12/frame @ 60fps → frame-rate independent
+        const camLerpFactor = 1 - Math.pow(0.88, dtMs / 16.67);
+        // Look-ahead: peek slightly in the movement direction
+        const targetCamX = this.mesh.position.x + this.velocity.x * 2.5;
+        const targetCamZ = this.mesh.position.z + 16 + this.velocity.z * 2.5;
+        camera.position.x += (targetCamX - camera.position.x) * camLerpFactor;
+        camera.position.z += (targetCamZ - camera.position.z) * camLerpFactor;
+        // Y height bob: rise 0.3 units when sprinting/dashing, settle at base
+        const _camBaseY = (typeof RENDERER_CONFIG !== 'undefined' && RENDERER_CONFIG.cameraPositionY) || 13;
+        const speedMagCam = Math.sqrt(this.velocity.x * this.velocity.x + this.velocity.z * this.velocity.z);
+        const _camBobMax = this.isDashing ? 0.3 : 0.15; // Dash rises 0.3, sprint rises 0.15
+        const targetCamY = _camBaseY + Math.min(speedMagCam / 0.1, 1) * _camBobMax;
+        const camYLerp = 1 - Math.pow(0.95, dtMs / 16.67); // ~0.05 per frame at 60fps
+        camera.position.y += (targetCamY - camera.position.y) * camYLerp;
         camera.lookAt(this.mesh.position);
 
         // Bounds (Map is 400x400, from -200 to 200)

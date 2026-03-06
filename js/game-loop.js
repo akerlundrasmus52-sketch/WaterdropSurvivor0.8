@@ -215,6 +215,15 @@
     // Expose for cross-script FPS-based throttling (BloodSystem, etc.)
     window.performanceLog = performanceLog;
     
+    // Pixel ratio dynamic scaler constants
+    const _PR_MIN = 0.6;        // Minimum pixel ratio floor
+    const _PR_STEP_DOWN = 0.1;  // Step down when FPS < 45 for 3s
+    const _PR_STEP_UP   = 0.05; // Step up when FPS > 58 for 5s
+    const _PR_LOW_FPS_THRESHOLD  = 45;   // FPS below this triggers reduction
+    const _PR_HIGH_FPS_THRESHOLD = 58;   // FPS above this triggers recovery
+    const _PR_LOW_DURATION_MS    = 3000; // 3 consecutive seconds below low threshold
+    const _PR_HIGH_DURATION_MS   = 5000; // 5 consecutive seconds above high threshold
+    
     // FRESH: FPS Watchdog - Update rolling average and throttle particles if needed
     function updateFPSWatchdog(frameTime) {
       // Add current frame time to rolling window
@@ -256,6 +265,42 @@
           performanceLog.particleThrottleScale = 0.75;
         } else if (fps >= 25 && performanceLog.particleThrottleScale < 0.50) {
           performanceLog.particleThrottleScale = 0.50;
+        }
+
+        // Dynamic pixel ratio scaler: auto-reduce on sustained low FPS, restore on high FPS
+        if (renderer) {
+          const _prNow = performance.now();
+          if (fps < _PR_LOW_FPS_THRESHOLD) {
+            if (!performanceLog._pixelRatioLowFPSStart) performanceLog._pixelRatioLowFPSStart = _prNow;
+            else if (_prNow - performanceLog._pixelRatioLowFPSStart >= _PR_LOW_DURATION_MS) {
+              const cur = window._currentPixelRatio || renderer.getPixelRatio();
+              if (cur > _PR_MIN) {
+                const next = Math.max(_PR_MIN, Math.round((cur - _PR_STEP_DOWN) * 100) / 100);
+                window._currentPixelRatio = next;
+                renderer.setPixelRatio(next);
+                console.warn(`[PixelRatio] FPS=${fps.toFixed(0)}<${_PR_LOW_FPS_THRESHOLD}: reduced to ${next.toFixed(2)}`);
+              }
+              performanceLog._pixelRatioLowFPSStart = _prNow; // reset to throttle future changes
+            }
+            performanceLog._pixelRatioHighFPSStart = 0;
+          } else if (fps > _PR_HIGH_FPS_THRESHOLD) {
+            if (!performanceLog._pixelRatioHighFPSStart) performanceLog._pixelRatioHighFPSStart = _prNow;
+            else if (_prNow - performanceLog._pixelRatioHighFPSStart >= _PR_HIGH_DURATION_MS) {
+              const maxPR = window.devicePixelRatio || 1;
+              const cur = window._currentPixelRatio || renderer.getPixelRatio();
+              if (cur < maxPR) {
+                const next = Math.min(maxPR, Math.round((cur + _PR_STEP_UP) * 100) / 100);
+                window._currentPixelRatio = next;
+                renderer.setPixelRatio(next);
+                console.log(`[PixelRatio] FPS=${fps.toFixed(0)}>${_PR_HIGH_FPS_THRESHOLD}: increased to ${next.toFixed(2)}`);
+              }
+              performanceLog._pixelRatioHighFPSStart = _prNow; // reset to throttle future changes
+            }
+            performanceLog._pixelRatioLowFPSStart = 0;
+          } else {
+            performanceLog._pixelRatioLowFPSStart = 0;
+            performanceLog._pixelRatioHighFPSStart = 0;
+          }
         }
       }
     }
@@ -385,6 +430,8 @@
      */
     window.registerCombatKill = function() {
       _combatKillsInWindow++;
+      // Force shadow map update this frame (death/explosion visual needs fresh shadows)
+      window._shadowForceUpdate = true;
     };
 
     /**
@@ -3201,6 +3248,9 @@
       const renderStartTime = performance.now();
       
       if (!shouldSkipRender || performanceLog.gameLogicErrorCount > 0) {
+        // Shadow map: update every 2nd frame normally; force-update on kills/explosions
+        renderer.shadowMap.needsUpdate = (performanceLog.frameCount % 2 === 0) || !!window._shadowForceUpdate;
+        window._shadowForceUpdate = false;
         try {
           renderer.render(scene, camera);
           performanceLog.renderCount++;

@@ -55,8 +55,13 @@
       // Split-resolution: render the 3D world at a reduced pixel ratio to boost FPS.
       // HTML/CSS UI layers are unaffected and always render at full native resolution.
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, RENDERER_CONFIG.worldPixelRatio));
+      // Track current pixel ratio for dynamic quality scaler and debug display
+      window._currentPixelRatio = Math.min(window.devicePixelRatio, RENDERER_CONFIG.worldPixelRatio);
       renderer.shadowMap.enabled = true;
       renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      // Disable auto shadow map updates — we control updates manually in the render loop
+      // for every-2nd-frame optimization (saves ~2-4ms per skipped frame on mobile)
+      renderer.shadowMap.autoUpdate = false;
       const gameContainer = document.getElementById('game-container');
       if (!gameContainer) {
         console.error('[Init] #game-container element not found - cannot append renderer canvas');
@@ -2981,6 +2986,11 @@
           if (!decal.parent) {
             bloodDecals.splice(i, 1);
           }
+          continue;
+        }
+        // Early-exit: decal was removed from scene externally, purge from array
+        if (!decal.parent) {
+          bloodDecals.splice(i, 1);
           continue;
         }
         const age = now - decal.userData.spawnTime;
