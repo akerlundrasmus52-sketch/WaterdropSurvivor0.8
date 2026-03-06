@@ -1828,6 +1828,7 @@
 
       die() {
         this.isDead = true;
+        this._deathTimestamp = Date.now();
         // Register kill for combat intensity tracking (dynamic shadow quality)
         if (typeof window.registerCombatKill === 'function') window.registerCombatKill();
         // Record kill milestone progress
@@ -2536,10 +2537,12 @@
               scene.remove(dyingMesh);
               if (dyingMesh.geometry) dyingMesh.geometry.dispose();
               if (dyingMesh.material) dyingMesh.material.dispose();
+              // bullet holes use shared geometry — only dispose per-hole cloned materials
               if (_bulletHoles) _bulletHoles.forEach(h => { if (h.material) h.material.dispose(); });
-              if (_bloodStains) _bloodStains.forEach(s => { if (s.geometry) s.geometry.dispose(); if (s.material) s.material.dispose(); });
-              if (_leftEye) _leftEye.material.dispose();
-              if (_rightEye) _rightEye.material.dispose();
+              // blood stains use shared geometry — only dispose per-stain materials
+              if (_bloodStains) _bloodStains.forEach(s => { if (s.material) s.material.dispose(); });
+              if (_leftEye) { scene.remove(_leftEye); if (_leftEye.geometry) _leftEye.geometry.dispose(); if (_leftEye.material) _leftEye.material.dispose(); }
+              if (_rightEye) { scene.remove(_rightEye); if (_rightEye.geometry) _rightEye.geometry.dispose(); if (_rightEye.material) _rightEye.material.dispose(); }
               // Clean up remaining chunks
               _deathChunks.forEach(c => { scene.remove(c.mesh); c.geo.dispose(); c.mat.dispose(); });
               if (_headRoll) { scene.remove(_headRoll.mesh); _headRoll.geo.dispose(); _headRoll.mat.dispose(); }
@@ -2547,17 +2550,34 @@
               return false;
             }
             return true;
-          }});
+          },
+          cleanup() {
+            // Called by resetGame when the animation is still in-progress.
+            // Force-remove the dying mesh and all sub-resources from the scene.
+            if (dyingMesh.parent) scene.remove(dyingMesh);
+            if (dyingMesh.geometry) dyingMesh.geometry.dispose();
+            if (dyingMesh.material) dyingMesh.material.dispose();
+            // bullet holes / blood stains use shared geometry — only dispose per-hole materials
+            if (_bulletHoles) _bulletHoles.forEach(h => { if (h.material) h.material.dispose(); });
+            if (_bloodStains) _bloodStains.forEach(s => { if (s.material) s.material.dispose(); });
+            if (_leftEye) { if (_leftEye.parent) scene.remove(_leftEye); if (_leftEye.geometry) _leftEye.geometry.dispose(); if (_leftEye.material) _leftEye.material.dispose(); }
+            if (_rightEye) { if (_rightEye.parent) scene.remove(_rightEye); if (_rightEye.geometry) _rightEye.geometry.dispose(); if (_rightEye.material) _rightEye.material.dispose(); }
+            _deathChunks.forEach(c => { if (c.mesh.parent) scene.remove(c.mesh); c.geo.dispose(); c.mat.dispose(); });
+            if (_headRoll) { if (_headRoll.mesh.parent) scene.remove(_headRoll.mesh); _headRoll.geo.dispose(); _headRoll.mat.dispose(); }
+            if (dyingMesh._splitProxy) { if (dyingMesh._splitProxy.mesh.parent) scene.remove(dyingMesh._splitProxy.mesh); dyingMesh._splitProxy.geo.dispose(); dyingMesh._splitProxy.mat.dispose(); }
+          }
+        });
         } else {
           // Fallback: no animation slot available, remove immediately
           scene.remove(dyingMesh);
           setTimeout(() => {
             if (dyingMesh.geometry) dyingMesh.geometry.dispose();
             if (dyingMesh.material) dyingMesh.material.dispose();
+            // bullet holes / blood stains use shared geometry — only dispose per-hole materials
             if (_bulletHoles) _bulletHoles.forEach(h => { if (h.material) h.material.dispose(); });
-            if (_bloodStains) _bloodStains.forEach(s => { if (s.geometry) s.geometry.dispose(); if (s.material) s.material.dispose(); });
-            if (_leftEye) _leftEye.material.dispose();
-            if (_rightEye) _rightEye.material.dispose();
+            if (_bloodStains) _bloodStains.forEach(s => { if (s.material) s.material.dispose(); });
+            if (_leftEye) { scene.remove(_leftEye); if (_leftEye.geometry) _leftEye.geometry.dispose(); if (_leftEye.material) _leftEye.material.dispose(); }
+            if (_rightEye) { scene.remove(_rightEye); if (_rightEye.geometry) _rightEye.geometry.dispose(); if (_rightEye.material) _rightEye.material.dispose(); }
           }, 100);
           // XP already spawned above; nothing extra needed in this fallback
         }

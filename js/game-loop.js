@@ -3010,6 +3010,15 @@
       if (now - lastCleanupTime > 3000) { // Run cleanup every 3 seconds
         lastCleanupTime = now;
 
+        // Failsafe: force-remove any enemy mesh still in scene if isDead for more than 10 seconds
+        // (guards against cases where the death managedAnimation slot was never available or got stuck)
+        const CORPSE_TIMEOUT_MS = 10000;
+        for (const e of enemies) {
+          if (e.isDead && e._deathTimestamp && (now - e._deathTimestamp) > CORPSE_TIMEOUT_MS) {
+            if (e.mesh && e.mesh.parent) scene.remove(e.mesh);
+          }
+        }
+
         // Remove dead enemies from array (forEach already skips dead ones each frame)
         enemies = enemies.filter(e => !e.isDead);
 
