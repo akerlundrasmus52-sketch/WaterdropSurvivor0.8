@@ -5655,6 +5655,56 @@
 .rarity-epic      { color: #aa44ff; }
 .rarity-legendary { color: #ffaa00; }
 
+/* ── Rarity Escalation Glow Ring ─────────────────────────────────────
+   Absolutely-positioned ring anchored over a reward element.
+   Colour is driven by --ring-color CSS variable set from JS.
+   Three states:
+     .rarity-ring-pulse  → gentle throb (building tension)
+     .rarity-ring-flash  → bright burst (advancing to next tier)
+     .rarity-ring-final  → hold + radiate (jackpot — final rarity)
+── */
+@keyframes rarity-ring-pulse-anim {
+  0%   { box-shadow: 0 0 8px 2px var(--ring-color), 0 0 0px 0px var(--ring-color); opacity: 0.55; }
+  45%  { box-shadow: 0 0 24px 8px var(--ring-color), 0 0 50px 12px var(--ring-color); opacity: 0.85; }
+  70%  { box-shadow: 0 0 12px 4px var(--ring-color), 0 0 20px  6px var(--ring-color); opacity: 0.65; }
+  100% { box-shadow: 0 0 30px 10px var(--ring-color), 0 0 60px 16px var(--ring-color); opacity: 0.9; }
+}
+
+@keyframes rarity-ring-flash-anim {
+  0%   { box-shadow: 0 0 40px 14px var(--ring-color), 0 0 80px 24px var(--ring-color); opacity: 1; }
+  50%  { box-shadow: 0 0 20px  6px var(--ring-color), 0 0 40px 12px var(--ring-color); opacity: 0.7; }
+  100% { box-shadow: 0 0 10px  2px var(--ring-color), 0 0 20px  4px var(--ring-color); opacity: 0.4; }
+}
+
+@keyframes rarity-ring-final-anim {
+  0%   { box-shadow: 0 0 24px  8px var(--ring-color), 0 0 50px  16px var(--ring-color); opacity: 0.8;  transform: translate(-50%, -50%) scale(1.00); }
+  30%  { box-shadow: 0 0 60px 22px var(--ring-color), 0 0 120px 40px var(--ring-color); opacity: 1.0;  transform: translate(-50%, -50%) scale(1.04); }
+  60%  { box-shadow: 0 0 40px 14px var(--ring-color), 0 0 80px  28px var(--ring-color); opacity: 0.95; transform: translate(-50%, -50%) scale(1.01); }
+  80%  { box-shadow: 0 0 70px 28px var(--ring-color), 0 0 140px 50px var(--ring-color); opacity: 1.0;  transform: translate(-50%, -50%) scale(1.06); }
+  100% { box-shadow: 0 0 50px 18px var(--ring-color), 0 0 100px 36px var(--ring-color); opacity: 0.9;  transform: translate(-50%, -50%) scale(1.02); }
+}
+
+.rarity-glow-ring {
+  --ring-color: #aaaaaa;
+  position: fixed;
+  border-radius: 14px;
+  border: 2px solid var(--ring-color);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 9999;
+  box-sizing: border-box;
+  will-change: box-shadow, opacity;
+}
+.rarity-glow-ring.rarity-ring-pulse {
+  animation: rarity-ring-pulse-anim 0.5s ease-in-out infinite alternate;
+}
+.rarity-glow-ring.rarity-ring-flash {
+  animation: rarity-ring-flash-anim 0.22s ease-out forwards;
+}
+.rarity-glow-ring.rarity-ring-final {
+  animation: rarity-ring-final-anim 0.7s ease-in-out infinite alternate;
+}
+
 #item-info-overlay {
   position: fixed;
   inset: 0;

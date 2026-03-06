@@ -791,12 +791,20 @@
         }
       }
 
-      // Rarity effects: screen flash fires immediately; confetti + rays fire once curtain is down
+      // Rarity escalation reveal: screen flash fires immediately; escalation + full burst fire once curtain is down
       const _rarity = _getLevelUpRarity(newLevel);
       _spawnLevelUpScreenFlash(_rarity);
       setTimeout(function() {
-        _spawnLevelUpRays(curtain, _rarity);
-        _spawnLevelUpConfetti(curtain, _rarity);
+        if (typeof window.rarityEscalationReveal === 'function') {
+          window.rarityEscalationReveal(curtain, _rarity, {
+            onComplete: function() {
+              // confetti/rays already fired inside escalation
+            }
+          });
+        } else {
+          _spawnLevelUpRays(curtain, _rarity);
+          _spawnLevelUpConfetti(curtain, _rarity);
+        }
       }, 500);
 
       // Heavy sound effect
@@ -812,8 +820,13 @@
       _curtainDismissHandler = dismissCurtain;
       curtain.addEventListener('click', dismissCurtain);
 
-      // Auto-dismiss after 4 seconds (longer for milestones)
-      _curtainTimer = setTimeout(dismissCurtain, isMilestone ? 5000 : 3500);
+      // Auto-dismiss — extend time for high-rarity escalation to fully play out
+      const _rarityDismissTimes = { common: 3500, uncommon: 3800, rare: 4200, epic: 5000, legendary: 6000, mythic: 7500 };
+      const _levelRarity = _getLevelUpRarity(newLevel);
+      const _curtainAutoMs = isMilestone
+        ? Math.max(5000, (_rarityDismissTimes[_levelRarity] || 3500) + 1500)
+        : (_rarityDismissTimes[_levelRarity] || 3500);
+      _curtainTimer = setTimeout(dismissCurtain, _curtainAutoMs);
     }
 
     // Expose rarity burst effects globally so other modules (challenges, achievements) can reuse them
@@ -825,6 +838,213 @@
           _spawnLevelUpConfetti(anchorEl, rarity);
         }
       }, 400);
+    };
+
+    // ── Rarity Escalation Reveal ─────────────────────────────────────────
+    // Pulses through rarity tiers common→green→blue→…→targetRarity, giving a
+    // jackpot "could it go higher?" feeling. Each tier pulses twice: a soft glow
+    // that grows into a flash, then flashes into the next colour (if the target
+    // rarity is higher). When the target is reached the final burst fires with
+    // full confetti + rays + screen flash.
+    //
+    // Usage: window.rarityEscalationReveal(anchorEl, 'epic', onComplete)
+    //   anchorEl   – DOM element to anchor the glow ring to
+    //   targetRarity – 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary' | 'mythic'
+    //   opts.goldEl  – optional: DOM element whose textContent will spin-count to goldAmount
+    //   opts.goldAmount – number to count up to
+    //   opts.onComplete – callback fired once the final burst is done
+    (function() {
+      var _TIERS = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic'];
+      var _TIER_HEX = {
+        common:    '#aaaaaa',
+        uncommon:  '#55cc55',
+        rare:      '#44aaff',
+        epic:      '#aa44ff',
+        legendary: '#ffaa00',
+        mythic:    '#ff4444'
+      };
+      // Duration (ms) each tier spends pulsing before advancing (or holding at final)
+      var _TIER_PULSE_MS = {
+        common:    480,
+        uncommon:  520,
+        rare:      560,
+        epic:      620,
+        legendary: 720,
+        mythic:    880
+      };
+
+      // Creates / reuses the glow-ring overlay attached to anchorEl
+      function _getRing(anchorEl) {
+        var ring = anchorEl._rarityGlowRing;
+        if (!ring) {
+          ring = document.createElement('div');
+          ring.className = 'rarity-glow-ring';
+          // Position over the anchor element using fixed coords
+          document.body.appendChild(ring);
+          anchorEl._rarityGlowRing = ring;
+        }
+        return ring;
+      }
+
+      function _removeRing(anchorEl) {
+        if (anchorEl && anchorEl._rarityGlowRing) {
+          if (anchorEl._rarityGlowRing.parentNode) {
+            anchorEl._rarityGlowRing.parentNode.removeChild(anchorEl._rarityGlowRing);
+          }
+          anchorEl._rarityGlowRing = null;
+        }
+      }
+
+      function _positionRing(ring, anchorEl) {
+        if (!anchorEl || typeof anchorEl.getBoundingClientRect !== 'function') return;
+        var r = anchorEl.getBoundingClientRect();
+        ring.style.left   = (r.left + r.width  / 2) + 'px';
+        ring.style.top    = (r.top  + r.height / 2) + 'px';
+        ring.style.width  = (r.width  + 24) + 'px';
+        ring.style.height = (r.height + 24) + 'px';
+      }
+
+      // Spin a gold counter from current value up to targetVal over durationMs
+      function _spinGoldCounter(goldEl, startVal, targetVal, durationMs) {
+        if (!goldEl) return;
+        var t0 = performance.now();
+        function tick(now) {
+          var prog = Math.min((now - t0) / durationMs, 1);
+          var ease = 1 - Math.pow(1 - prog, 2); // ease-out quad
+          var cur  = Math.floor(startVal + (targetVal - startVal) * ease);
+          goldEl.textContent = cur;
+          if (prog < 1) requestAnimationFrame(tick);
+          else goldEl.textContent = targetVal;
+        }
+        requestAnimationFrame(tick);
+      }
+
+      window.rarityEscalationReveal = function(anchorEl, targetRarity, opts) {
+        opts = opts || {};
+        var onComplete  = opts.onComplete  || null;
+        var goldEl      = opts.goldEl      || null;
+        var goldAmount  = opts.goldAmount  || 0;
+        var goldStart   = opts.goldStart   || 0;
+
+        var targetIdx = _TIERS.indexOf(targetRarity);
+        if (targetIdx < 0) targetIdx = 0;
+
+        var ring = _getRing(anchorEl);
+        _positionRing(ring, anchorEl);
+
+        // Total time of reveal so gold counter can be synchronised
+        var totalRevealMs = 0;
+        for (var t = 0; t <= targetIdx; t++) totalRevealMs += _TIER_PULSE_MS[_TIERS[t]];
+        // Add a little padding so counter finishes just before final burst
+        var goldDuration = Math.max(totalRevealMs * 0.85, 400);
+
+        if (goldEl && goldAmount > 0) {
+          _spinGoldCounter(goldEl, goldStart, goldAmount, goldDuration);
+        }
+
+        var currentTierIdx = 0;
+
+        function runTier() {
+          var tierName  = _TIERS[currentTierIdx];
+          var tierColor = _TIER_HEX[tierName];
+          var tierMs    = _TIER_PULSE_MS[tierName];
+          var isFinal   = (currentTierIdx === targetIdx);
+
+          // Update ring colour + pulse class
+          ring.style.setProperty('--ring-color', tierColor);
+          ring.classList.remove('rarity-ring-pulse', 'rarity-ring-flash', 'rarity-ring-final');
+          void ring.offsetWidth; // force reflow
+          ring.classList.add('rarity-ring-pulse');
+
+          // Also tint anchor border if it supports it
+          if (anchorEl.style) {
+            anchorEl.style.boxShadow = '0 0 18px ' + tierColor + ', 0 0 4px ' + tierColor;
+          }
+
+          var flashDelay = tierMs * 0.65; // flash to next colour near end of pulse
+
+          if (isFinal) {
+            // Stay and hold: upgrade to brighter final class after short delay
+            setTimeout(function() {
+              ring.classList.remove('rarity-ring-pulse');
+              ring.classList.add('rarity-ring-final');
+              // Fire the big burst
+              _spawnLevelUpScreenFlash(tierName);
+              setTimeout(function() {
+                _spawnLevelUpRays(anchorEl, tierName);
+                _spawnLevelUpConfetti(anchorEl, tierName);
+                // Remove ring after burst
+                setTimeout(function() {
+                  _removeRing(anchorEl);
+                  if (anchorEl.style) anchorEl.style.boxShadow = '';
+                  if (onComplete) onComplete();
+                }, 500);
+              }, 200);
+            }, flashDelay);
+          } else {
+            // Flash bright at flashDelay, then advance to next tier
+            setTimeout(function() {
+              ring.classList.remove('rarity-ring-pulse');
+              ring.classList.add('rarity-ring-flash');
+              // Small screen blip at each tier advance
+              _spawnLevelUpScreenFlash(tierName);
+            }, flashDelay);
+
+            setTimeout(function() {
+              currentTierIdx++;
+              runTier();
+            }, tierMs);
+          }
+        }
+
+        runTier();
+      };
+    })();
+
+    // ── Reward Balance Table ─────────────────────────────────────────────────
+    // Central source-of-truth for gold + skill point rewards per rarity tier.
+    // Used by challenges, quest rewards, achievements, and wheel bonus rows.
+    //
+    //   gold       – gold awarded alongside the reward
+    //   skillPts   – skill points given (spendable at Skill Tree)
+    //   attrPts    – attribute points given (spendable at Training Hall)
+    //   essence    – essence given (for idle progression)
+    //   extraDesc  – short text hint shown in reward badge
+    //
+    window.RARITY_REWARD_TABLE = {
+      common:    { gold:  20, skillPts: 1, attrPts: 0, essence:  10, extraDesc: '+1 Skill Pt'       },
+      uncommon:  { gold:  60, skillPts: 2, attrPts: 1, essence:  25, extraDesc: '+2 Skill Pts'      },
+      rare:      { gold: 150, skillPts: 3, attrPts: 1, essence:  60, extraDesc: '+3 Skill Pts'      },
+      epic:      { gold: 300, skillPts: 4, attrPts: 2, essence: 120, extraDesc: '+4 Skill Pts'      },
+      legendary: { gold: 500, skillPts: 5, attrPts: 3, essence: 250, extraDesc: '+5 Skill Pts'      },
+      mythic:    { gold: 750, skillPts: 6, attrPts: 4, essence: 500, extraDesc: '+6 Skill Pts · 2× Progression' }
+    };
+
+    // Apply a rarity reward to saveData (gold + skill/attr points + essence).
+    // Returns a summary string of what was awarded.
+    window.applyRarityReward = function(rarity, saveData_) {
+      var sd = saveData_ || (typeof saveData !== 'undefined' ? saveData : null);
+      if (!sd) return '';
+      var row = window.RARITY_REWARD_TABLE[rarity] || window.RARITY_REWARD_TABLE.common;
+      sd.gold = (sd.gold || 0) + row.gold;
+      sd.skillPoints = (sd.skillPoints || 0) + row.skillPts;
+      if (row.attrPts > 0) sd.attributePoints = (sd.attributePoints || 0) + row.attrPts;
+      // Essence: store in whichever field the idle system uses
+      if (sd.clicker) {
+        sd.clicker.essence = (sd.clicker.essence || 0) + row.essence;
+      } else {
+        sd.essence = (sd.essence || 0) + row.essence;
+      }
+      // Mythic bonus: +2 account progression levels
+      if (rarity === 'mythic') {
+        if (typeof addAccountXP === 'function') {
+          var lvl = sd.accountLevel || 1;
+          var needed = lvl * 100;
+          addAccountXP(needed * 2); // enough for ~2 levels
+        }
+      }
+      if (typeof saveSaveData === 'function') saveSaveData();
+      return row.extraDesc;
     };
 
     function updateAccountLevelDisplay() {
@@ -2303,30 +2523,49 @@
             const rarityColor = _dailyRarityColors[dayRarity] || '#aaaaaa';
             const rarityName  = { common:'Common', uncommon:'Uncommon', rare:'Rare', epic:'Epic', legendary:'Legendary', mythic:'Mythic' }[dayRarity] || 'Common';
 
-            // Tint panel border to rarity colour
-            panel.style.borderColor = rarityColor;
-            panel.style.boxShadow   = `0 0 40px ${rarityColor}66, 0 0 20px ${rarityColor}33`;
-
-            // Disable the claim button
+            // Disable the claim button immediately
             const btn = panel.querySelector('#claim-daily-btn');
             if (btn) { btn.disabled = true; }
 
-            // Animate reward badge in-place
+            // Prepare the result element — will show badge after escalation finishes
             const resultEl = panel.querySelector('#daily-reward-result');
-            if (resultEl) {
-              resultEl.innerHTML = '';
-              const badge = document.createElement('div');
-              badge.className = 'daily-reward-badge';
-              badge.style.border      = `2px solid ${rarityColor}`;
-              badge.style.color       = rarityColor;
-              badge.style.textShadow  = `0 0 10px ${rarityColor}88`;
-              badge.textContent = `⭐ ${rarityName} — +${result.gold} Gold!`;
-              resultEl.appendChild(badge);
-            }
 
-            // Fire rarity effects anchored to the panel
-            if (typeof window.spawnRarityEffects === 'function') {
+            // Run escalation reveal; badge pops in at the end
+            if (typeof window.rarityEscalationReveal === 'function') {
+              window.rarityEscalationReveal(panel, dayRarity, {
+                goldEl: null, // no inline counter; gold was already awarded above
+                onComplete: function() {
+                  // Tint panel border to final rarity colour
+                  panel.style.borderColor = rarityColor;
+                  panel.style.boxShadow   = `0 0 40px ${rarityColor}66, 0 0 20px ${rarityColor}33`;
+                  if (resultEl) {
+                    resultEl.innerHTML = '';
+                    const badge = document.createElement('div');
+                    badge.className = 'daily-reward-badge';
+                    badge.style.border      = `2px solid ${rarityColor}`;
+                    badge.style.color       = rarityColor;
+                    badge.style.textShadow  = `0 0 10px ${rarityColor}88`;
+                    badge.textContent = `⭐ ${rarityName} — +${result.gold} Gold!`;
+                    resultEl.appendChild(badge);
+                  }
+                }
+              });
+            } else if (typeof window.spawnRarityEffects === 'function') {
+              // Fallback
               window.spawnRarityEffects(panel, dayRarity);
+              // Tint panel border to rarity colour
+              panel.style.borderColor = rarityColor;
+              panel.style.boxShadow   = `0 0 40px ${rarityColor}66, 0 0 20px ${rarityColor}33`;
+              if (resultEl) {
+                resultEl.innerHTML = '';
+                const badge = document.createElement('div');
+                badge.className = 'daily-reward-badge';
+                badge.style.border      = `2px solid ${rarityColor}`;
+                badge.style.color       = rarityColor;
+                badge.style.textShadow  = `0 0 10px ${rarityColor}88`;
+                badge.textContent = `⭐ ${rarityName} — +${result.gold} Gold!`;
+                resultEl.appendChild(badge);
+              }
             }
           };
         }

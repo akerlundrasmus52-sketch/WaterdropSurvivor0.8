@@ -336,22 +336,46 @@ window.GameLuckyWheel = (function () {
         } else {
           var rarity = RARITY_COLORS[res.segment.rarity] || RARITY_COLORS.common;
           var el = container.querySelector('.wheel-result');
+          // Placeholder bubble (will be populated by escalation onComplete)
           if (el) {
-            // Reward bubble with rarity glow + rarity label
-            var rarityName = rarity.label || 'Common';
-            var bubble = document.createElement('div');
-            bubble.style.cssText = 'background:rgba(0,0,0,0.85);border:2px solid ' + rarity.border + ';border-radius:16px;padding:12px 22px;display:inline-block;box-shadow:0 0 20px ' + rarity.glow + ',0 0 40px ' + rarity.glow + ';animation:wheel-result-pop 0.3s ease-out;';
-            bubble.innerHTML = '<div style="font-size:11px;letter-spacing:2px;color:' + rarity.bg + ';font-family:\'Bangers\',cursive;margin-bottom:4px;">' + rarityName.toUpperCase() + '</div>' +
-              '<span style="font-size:20px;">🎉</span> <span style="color:#fff;font-weight:bold;font-size:16px;">' + res.prize + '</span><br>' +
-              '<small style="color:rgba(255,255,255,0.8);font-size:13px;">' + res.description + '</small>';
-            el.textContent = '';
-            el.appendChild(bubble);
+            el.innerHTML = '<div style="color:' + rarity.bg + ';font-family:\'Bangers\',cursive;letter-spacing:2px;font-size:13px;animation:wheel-result-pop 0.3s ease-out;">🎰 Revealing…</div>';
           }
-          // Fire full rarity dopamine effects
-          if (typeof window.spawnRarityEffects === 'function') {
-            window.spawnRarityEffects(el || container, res.segment.rarity || 'common');
+          // Escalation reveal — badge shown on complete
+          var anchorEl = el || container;
+          var segRarity = res.segment.rarity || 'common';
+          if (typeof window.rarityEscalationReveal === 'function') {
+            window.rarityEscalationReveal(anchorEl, segRarity, {
+              onComplete: function() {
+                if (el) {
+                  var rarityName = rarity.label || 'Common';
+                  var bubble = document.createElement('div');
+                  bubble.style.cssText = 'background:rgba(0,0,0,0.85);border:2px solid ' + rarity.border + ';border-radius:16px;padding:12px 22px;display:inline-block;box-shadow:0 0 20px ' + rarity.glow + ',0 0 40px ' + rarity.glow + ';animation:wheel-result-pop 0.3s ease-out;';
+                  bubble.innerHTML = '<div style="font-size:11px;letter-spacing:2px;color:' + rarity.bg + ';font-family:\'Bangers\',cursive;margin-bottom:4px;">' + rarityName.toUpperCase() + '</div>' +
+                    '<span style="font-size:20px;">🎉</span> <span style="color:#fff;font-weight:bold;font-size:16px;">' + res.prize + '</span><br>' +
+                    '<small style="color:rgba(255,255,255,0.8);font-size:13px;">' + res.description + '</small>';
+                  el.textContent = '';
+                  el.appendChild(bubble);
+                }
+                setTimeout(function () { renderWheelPanel(saveData, container, activeTier); }, 2200);
+              }
+            });
+          } else {
+            // Fallback: immediate reveal
+            if (el) {
+              var rarityName = rarity.label || 'Common';
+              var bubble = document.createElement('div');
+              bubble.style.cssText = 'background:rgba(0,0,0,0.85);border:2px solid ' + rarity.border + ';border-radius:16px;padding:12px 22px;display:inline-block;box-shadow:0 0 20px ' + rarity.glow + ',0 0 40px ' + rarity.glow + ';animation:wheel-result-pop 0.3s ease-out;';
+              bubble.innerHTML = '<div style="font-size:11px;letter-spacing:2px;color:' + rarity.bg + ';font-family:\'Bangers\',cursive;margin-bottom:4px;">' + rarityName.toUpperCase() + '</div>' +
+                '<span style="font-size:20px;">🎉</span> <span style="color:#fff;font-weight:bold;font-size:16px;">' + res.prize + '</span><br>' +
+                '<small style="color:rgba(255,255,255,0.8);font-size:13px;">' + res.description + '</small>';
+              el.textContent = '';
+              el.appendChild(bubble);
+            }
+            if (typeof window.spawnRarityEffects === 'function') {
+              window.spawnRarityEffects(el || container, segRarity);
+            }
+            setTimeout(function () { renderWheelPanel(saveData, container, activeTier); }, 2500);
           }
-          setTimeout(function () { renderWheelPanel(saveData, container, activeTier); }, 2500);
         }
       }
       requestAnimationFrame(animateSpin);
