@@ -114,7 +114,8 @@
         shop:      { level: 0, maxLevel: 1, unlocked: false },   // Quest 9
         prestige:  { level: 0, maxLevel: 1, unlocked: false },   // Quest 10
         campfireKitchen: { level: 0, maxLevel: 1, unlocked: false }, // Quest 30
-        weaponsmith: { level: 0, maxLevel: 1, unlocked: false }      // Quest 31
+        weaponsmith: { level: 0, maxLevel: 1, unlocked: false },      // Quest 31
+        prismReliquary: { level: 0, maxLevel: 1, unlocked: false }    // Unlocks after 10 min survival
       },
       // COMPREHENSIVE SKILL TREE - 48 Skills Total (Fresh Implementation)
       skillTree: {
@@ -311,7 +312,16 @@
       weaponUpgrades: {},
       // Wildlife tracking
       tranquilizedAnimals: [],
-      wolfBreedingProgress: 0 // 0-100 progress toward breeding storm wolf
+      wolfBreedingProgress: 0, // 0-100 progress toward breeding storm wolf
+      // ── Prism Reliquary — Gem System ──────────────────────────
+      // Raw Gems: premium dual-purpose currency
+      rawGems: { ruby: 0, sapphire: 0, emerald: 0, void: 0 },
+      // Cut Gems: slottable items with rarities
+      cutGems: [],
+      // Per-weapon gem slots: { weaponId: [gemId|null, ...] }
+      weaponGemSlots: {},
+      // Per-companion gem slots: { companionId: [gemId|null, ...] }
+      companionGemSlots: {}
     };
 
     let saveData = JSON.parse(JSON.stringify(defaultSaveData));
@@ -522,6 +532,18 @@
               }
             }
             saveData._questMigrationSlowBurn = true;
+          }
+          // ── Prism Reliquary / Gem System migration ──
+          saveData.rawGems = saveData.rawGems || { ruby: 0, sapphire: 0, emerald: 0, void: 0 };
+          saveData.rawGems.ruby    = saveData.rawGems.ruby    || 0;
+          saveData.rawGems.sapphire= saveData.rawGems.sapphire|| 0;
+          saveData.rawGems.emerald = saveData.rawGems.emerald || 0;
+          saveData.rawGems.void    = saveData.rawGems.void    || 0;
+          saveData.cutGems         = saveData.cutGems         || [];
+          saveData.weaponGemSlots  = saveData.weaponGemSlots  || {};
+          saveData.companionGemSlots = saveData.companionGemSlots || {};
+          if (!saveData.campBuildings.prismReliquary) {
+            saveData.campBuildings.prismReliquary = { level: 0, maxLevel: 1, unlocked: false };
           }
         }
       } catch (e) {

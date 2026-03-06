@@ -379,6 +379,16 @@
           weaponDamage: 0.03 * level
         })
       },
+      prismReliquary: {
+        name: 'Prism Reliquary',
+        icon: '💎',
+        description: 'A glowing alien crystal structure. Slot Cut Gems into weapons and companions for massive stat bonuses. Unlocked after surviving 10 minutes.',
+        baseCost: 0,
+        costMultiplier: 0,
+        maxCost: 0,
+        isFree: true,
+        bonus: (level) => ({})
+      },
       
       // LEGACY BUILDINGS (kept for compatibility)
       trainingGrounds: {

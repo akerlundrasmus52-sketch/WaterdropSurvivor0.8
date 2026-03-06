@@ -42,6 +42,7 @@
     { id: 'prestige',           x:  0,  z:-19,  label: 'Prestige Altar',   icon: '✨' },
     { id: 'trashRecycle',       x: -13, z: -2,  label: 'Trash & Recycle',  icon: '♻️' },
     { id: 'tempShop',           x:  13, z: -2,  label: 'Temp Shop',        icon: '🏪' },
+    { id: 'prismReliquary',     x: -8,  z:-19,  label: 'Prism Reliquary',  icon: '💎' },
   ];
 
   // ──────────────────────────────────────────────────────────
@@ -1411,6 +1412,7 @@
       case 'tavern':             return _buildTavern(def);
       case 'shop':               return _buildShop(def);
       case 'prestige':           return _buildPrestigeAltar(def);
+      case 'prismReliquary':     return _buildPrismReliquary(def);
       default:                   return _buildGenericBuilding(def);
     }
   }
@@ -2249,6 +2251,92 @@
     grp.add(shopLight);
 
     _addNameSign(grp, def.label, 0, 5.0, 0);
+    return grp;
+  }
+
+  // ── Prism Reliquary — glowing alien crystal structure ─────
+  function _buildPrismReliquary(def) {
+    const THREE = T();
+    const grp = new THREE.Group();
+    grp.position.set(def.x, 0, def.z);
+
+    // Hexagonal obsidian platform
+    const platformGeo = new THREE.CylinderGeometry(4.0, 4.3, 0.4, 6);
+    grp.add(_mesh(platformGeo, _lambert(0x0d0d1a)));
+
+    // Inner glowing ring
+    const ringGeo = new THREE.CylinderGeometry(2.8, 3.0, 0.15, 6);
+    const ringMat = new THREE.MeshPhongMaterial({ color: 0x220033, emissive: 0x8800ff, emissiveIntensity: 0.6 });
+    const ring = _mesh(ringGeo, ringMat);
+    ring.position.y = 0.3;
+    grp.add(ring);
+
+    // Central large crystal — main spire
+    const spireGeo = new THREE.ConeGeometry(0.7, 5.5, 6);
+    const spireMat = new THREE.MeshPhongMaterial({
+      color: 0xcc88ff, emissive: 0x9900ff, emissiveIntensity: 0.9,
+      transparent: true, opacity: 0.88
+    });
+    const spire = _mesh(spireGeo, spireMat);
+    spire.position.y = 3.15;
+    grp.add(spire);
+
+    // Inverted crystal base on the central spire
+    const spireBaseGeo = new THREE.ConeGeometry(0.7, 1.8, 6);
+    const spireBase = _mesh(spireBaseGeo, spireMat);
+    spireBase.position.y = 0.5;
+    spireBase.rotation.x = Math.PI;
+    grp.add(spireBase);
+
+    // 4 orbiting sub-crystals (Ruby/Sapphire/Emerald/Void)
+    const orbitColors = [
+      { color: 0xff6644, emissive: 0xff2200, eInt: 0.8 }, // Ruby
+      { color: 0x5588ff, emissive: 0x2255ff, eInt: 0.8 }, // Sapphire
+      { color: 0x44ff88, emissive: 0x00cc44, eInt: 0.8 }, // Emerald
+      { color: 0xcc44ff, emissive: 0x9900cc, eInt: 0.9 }  // Void
+    ];
+    orbitColors.forEach((c, i) => {
+      const angle = (i / 4) * Math.PI * 2;
+      const r = 2.2;
+      const crystalGeo = new THREE.ConeGeometry(0.28, 1.6, 4);
+      const crystalMat = new THREE.MeshPhongMaterial({
+        color: c.color, emissive: c.emissive, emissiveIntensity: c.eInt,
+        transparent: true, opacity: 0.85
+      });
+      const crystal = _mesh(crystalGeo, crystalMat);
+      crystal.position.set(Math.sin(angle) * r, 1.8, Math.cos(angle) * r);
+      crystal.rotation.z = 0.3 + (i * 0.15);
+      grp.add(crystal);
+
+      // Small inverted companion crystal
+      const smallGeo = new THREE.ConeGeometry(0.15, 0.8, 4);
+      const small = _mesh(smallGeo, crystalMat);
+      small.position.set(Math.sin(angle) * r, 1.0, Math.cos(angle) * r);
+      small.rotation.x = Math.PI;
+      grp.add(small);
+    });
+
+    // Floating gem rune circles (flat disc decorations on platform)
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2;
+      const discGeo = new THREE.CylinderGeometry(0.18, 0.18, 0.06, 6);
+      const discMat = new THREE.MeshPhongMaterial({ color: 0x440066, emissive: 0xcc00ff, emissiveIntensity: 0.7 });
+      const disc = _mesh(discGeo, discMat);
+      disc.position.set(Math.sin(a) * 3.2, 0.25, Math.cos(a) * 3.2);
+      grp.add(disc);
+    }
+
+    // Main atmospheric light — vivid purple
+    const mainLight = new THREE.PointLight(0xbb44ff, 2.2, 10, 2);
+    mainLight.position.set(0, 4, 0);
+    grp.add(mainLight);
+
+    // Accent light — pink shimmer
+    const accentLight = new THREE.PointLight(0xff88ff, 1.0, 7, 2);
+    accentLight.position.set(1.5, 2, 1.5);
+    grp.add(accentLight);
+
+    _addNameSign(grp, def.label, 0, 7.2, 0);
     return grp;
   }
 

@@ -6494,3 +6494,664 @@
     rgba(0, 0, 0, 0.07) 4px
   );
 }
+
+/* =====================================================================
+   PRISM RELIQUARY — Gem System UI
+   ===================================================================== */
+
+/* Full-screen overlay */
+.prism-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 4000;
+  background: rgba(5, 0, 15, 0.93);
+  backdrop-filter: blur(10px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px 12px 24px;
+  overflow-y: auto;
+  font-family: 'Segoe UI', sans-serif;
+}
+
+.prism-header {
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.prism-title {
+  display: block;
+  font-family: 'Bangers', cursive;
+  font-size: clamp(24px, 5vw, 38px);
+  letter-spacing: 3px;
+  color: #cc88ff;
+  text-shadow: 0 0 18px #9900ff, 0 0 36px #6600cc;
+}
+
+.prism-subtitle {
+  display: block;
+  color: #aaa;
+  font-size: 12px;
+  margin-top: 2px;
+  letter-spacing: 1px;
+}
+
+.prism-close-btn {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  background: rgba(80,0,120,0.7);
+  border: 1px solid #8844cc;
+  color: #cc88ff;
+  border-radius: 50%;
+  width: 34px;
+  height: 34px;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 4001;
+}
+
+.prism-rawgem-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  margin-bottom: 14px;
+  padding: 8px 16px;
+  background: rgba(30,0,50,0.6);
+  border: 1px solid #5500aa;
+  border-radius: 8px;
+}
+
+.prism-rawgem {
+  font-size: 13px;
+  letter-spacing: 0.5px;
+}
+
+.prism-cols {
+  display: flex;
+  gap: 16px;
+  width: 100%;
+  max-width: 700px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.prism-item-col {
+  flex: 1;
+  min-width: 240px;
+  max-width: 340px;
+  background: rgba(20,0,35,0.8);
+  border: 1px solid #6622aa;
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.prism-col-header {
+  color: #dda0ff;
+  font-size: 13px;
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #440077;
+}
+
+.prism-slots-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.prism-slot {
+  width: 54px;
+  height: 54px;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  transition: transform 0.15s, box-shadow 0.15s;
+  overflow: visible;
+}
+
+.prism-slot.empty {
+  background: rgba(40,0,60,0.7);
+  border: 2px dashed #5500aa;
+  color: #553377;
+}
+
+.prism-slot.occupied {
+  background: radial-gradient(circle at 50% 40%, rgba(255,255,255,0.18), rgba(80,0,120,0.9));
+  border: 2px solid var(--gem-color, #9900ff);
+  box-shadow: 0 0 10px var(--gem-color, #9900ff), 0 0 20px var(--gem-color, #9900ff);
+}
+
+.prism-slot:hover {
+  transform: scale(1.08);
+  box-shadow: 0 0 16px #cc44ff;
+}
+
+.prism-slot-icon {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.prism-slot-rarity {
+  font-size: 9px;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+}
+
+.prism-slot-empty-icon {
+  font-size: 20px;
+  color: #553377;
+}
+
+/* Gem flash effect */
+.gem-flash {
+  animation: gemFlash 0.5s ease-out forwards;
+}
+
+@keyframes gemFlash {
+  0%   { filter: brightness(1); }
+  20%  { filter: brightness(8) saturate(0); }
+  60%  { filter: brightness(4); }
+  100% { filter: brightness(1); }
+}
+
+/* Shockwave ring */
+.gem-shockwave {
+  position: absolute;
+  inset: -4px;
+  border-radius: 12px;
+  border: 3px solid var(--shock-color, #cc44ff);
+  animation: gemShockwave 0.65s ease-out forwards;
+  pointer-events: none;
+  z-index: 10;
+}
+
+@keyframes gemShockwave {
+  0%   { transform: scale(1);   opacity: 0.9; }
+  100% { transform: scale(3.2); opacity: 0; }
+}
+
+/* Stat text shake */
+.stat-shake {
+  animation: statShake 1.5s ease-out;
+  font-weight: bold;
+}
+
+@keyframes statShake {
+  0%, 100% { transform: translateX(0); }
+  10%  { transform: translateX(-4px) rotate(-1deg); }
+  20%  { transform: translateX(4px)  rotate(1deg);  }
+  30%  { transform: translateX(-3px); }
+  40%  { transform: translateX(3px);  }
+  50%  { transform: translateX(-2px); }
+  70%  { transform: translateX(0); }
+}
+
+.prism-bonuses {
+  padding: 6px 8px;
+  background: rgba(30,0,50,0.5);
+  border-radius: 6px;
+  font-size: 11px;
+  line-height: 1.7;
+  transition: color 1.5s ease;
+}
+
+.prism-bonus-line {
+  display: block;
+  color: #ddaaff;
+}
+
+.prism-inv-header {
+  color: #998aaa;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  text-align: center;
+  max-width: 700px;
+}
+
+.prism-inv-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  width: 100%;
+  max-width: 720px;
+}
+
+.prism-gem-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 68px;
+  height: 72px;
+  border-radius: 10px;
+  border: 2px solid var(--gem-border, #5500aa);
+  background: radial-gradient(circle at 50% 30%, rgba(255,255,255,0.12), rgba(10,0,20,0.9));
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.2s;
+  box-shadow: 0 0 6px var(--gem-color, #9900ff);
+}
+
+.prism-gem-card:hover,
+.prism-gem-card.selected {
+  transform: scale(1.1);
+  box-shadow: 0 0 18px var(--gem-color, #9900ff), 0 0 30px var(--gem-color, #9900ff);
+  border-color: #ffffff;
+}
+
+.prism-gem-card.selected {
+  outline: 2px solid #ffffff;
+}
+
+.prism-gem-icon {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.prism-gem-name {
+  font-size: 9px;
+  font-weight: bold;
+  letter-spacing: 0.3px;
+  text-align: center;
+}
+
+.prism-gem-type {
+  font-size: 9px;
+  color: #aaa;
+  text-align: center;
+}
+
+/* =====================================================================
+   GACHA STORE — Chest System
+   ===================================================================== */
+
+.gacha-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 4000;
+  background: rgba(0, 5, 15, 0.95);
+  backdrop-filter: blur(10px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px 12px 32px;
+  overflow-y: auto;
+  font-family: 'Segoe UI', sans-serif;
+}
+
+.gacha-title {
+  font-family: 'Bangers', cursive;
+  font-size: clamp(26px, 5.5vw, 42px);
+  letter-spacing: 4px;
+  color: #FFD700;
+  text-shadow: 0 0 20px #cc8800, 0 0 40px #aa6600;
+  margin-bottom: 4px;
+}
+
+.gacha-subtitle {
+  color: #aaa;
+  font-size: 12px;
+  margin-bottom: 14px;
+  letter-spacing: 1px;
+}
+
+.gacha-currency-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+  padding: 8px 20px;
+  background: rgba(20,15,0,0.7);
+  border: 1px solid #886600;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  font-size: 13px;
+  color: #ffe066;
+}
+
+.gacha-chest-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(200px, 100%), 1fr));
+  gap: 16px;
+  width: 100%;
+  max-width: 900px;
+}
+
+.gacha-chest-card {
+  background: radial-gradient(ellipse at 50% 0%, rgba(255,255,255,0.06), rgba(0,5,20,0.95));
+  border: 2px solid var(--chest-border, #888);
+  border-radius: 14px;
+  padding: 18px 14px 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 0 12px var(--chest-glow, #888);
+}
+
+.gacha-chest-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 30px var(--chest-glow, #888), 0 0 50px var(--chest-glow, #888);
+}
+
+.gacha-chest-emoji {
+  font-size: 52px;
+  line-height: 1;
+  filter: drop-shadow(0 0 10px var(--chest-glow, #fff));
+}
+
+.gacha-chest-name {
+  font-family: 'Bangers', cursive;
+  font-size: 20px;
+  letter-spacing: 2px;
+  text-align: center;
+}
+
+.gacha-chest-desc {
+  color: #aaa;
+  font-size: 11px;
+  text-align: center;
+  line-height: 1.4;
+}
+
+.gacha-chest-cost {
+  font-size: 13px;
+  color: #ffe066;
+  font-weight: bold;
+}
+
+.gacha-open-btn {
+  background: linear-gradient(135deg, var(--chest-color, #888), var(--chest-glow, #aaa));
+  border: none;
+  border-radius: 8px;
+  padding: 9px 22px;
+  font-family: 'Bangers', cursive;
+  font-size: 16px;
+  letter-spacing: 2px;
+  color: #fff;
+  cursor: pointer;
+  transition: transform 0.12s, filter 0.12s;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.6);
+}
+
+.gacha-open-btn:hover:not(.disabled) {
+  transform: scale(1.07);
+  filter: brightness(1.3);
+}
+
+.gacha-open-btn.disabled {
+  background: #333;
+  color: #666;
+  cursor: not-allowed;
+}
+
+.gacha-close-btn {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  background: rgba(30,15,0,0.8);
+  border: 1px solid #886600;
+  color: #FFD700;
+  border-radius: 50%;
+  width: 34px;
+  height: 34px;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 4001;
+}
+
+/* =====================================================================
+   CHEST OPENING ANIMATION — 4 Phases
+   ===================================================================== */
+
+.chest-stage {
+  position: fixed;
+  inset: 0;
+  z-index: 5000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+}
+
+.chest-stage-bg {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 50%, rgba(20,10,40,0.98), #000);
+}
+
+.chest-wrap {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Phase 1 – rattle */
+.chest-icon {
+  font-size: 100px;
+  line-height: 1;
+  filter: drop-shadow(0 0 20px var(--chest-glow, #ffe066)) drop-shadow(0 0 40px var(--chest-glow, #ffe066));
+  position: relative;
+  z-index: 2;
+}
+
+.chest-rattle {
+  animation: chestRattle 0.12s ease-in-out infinite;
+}
+
+@keyframes chestRattle {
+  0%   { transform: rotate(-4deg) translateX(-3px); }
+  25%  { transform: rotate(4deg)  translateX(3px);  }
+  50%  { transform: rotate(-3deg) translateY(-4px); }
+  75%  { transform: rotate(3deg)  translateY(2px);  }
+  100% { transform: rotate(-4deg) translateX(-3px); }
+}
+
+/* Keyhole sparks */
+.chest-spark {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #ffe066;
+  box-shadow: 0 0 6px #ffcc00;
+  transform-origin: center;
+  animation: sparkShoot 0.7s ease-out forwards;
+  animation-delay: var(--spark-delay, 0s);
+}
+
+@keyframes sparkShoot {
+  0%   { transform: rotate(var(--spark-angle)) translateX(0) scale(1); opacity: 1; }
+  100% { transform: rotate(var(--spark-angle)) translateX(var(--spark-dist)) scale(0); opacity: 0; }
+}
+
+/* Phase 2 – burst */
+.chest-burst-shake {
+  animation: chestBurst 0.3s ease-out;
+}
+
+@keyframes chestBurst {
+  0%  { transform: scale(1); }
+  30% { transform: scale(1.4) rotate(6deg); }
+  60% { transform: scale(0.9) rotate(-3deg); }
+  100%{ transform: scale(1); }
+}
+
+.chest-hide {
+  opacity: 0;
+  transform: scale(0.5);
+  transition: opacity 0.3s, transform 0.3s;
+}
+
+/* Screen flash */
+.chest-flash {
+  position: absolute;
+  inset: 0;
+  background: white;
+  animation: flashFade 0.5s ease-out forwards;
+  z-index: 3;
+}
+
+@keyframes flashFade {
+  0%   { opacity: 0.95; }
+  100% { opacity: 0; }
+}
+
+/* Spinning light rays */
+.chest-rays {
+  position: absolute;
+  inset: -30vw;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0%, var(--ray-color, #ffe066) 5%,
+    transparent 10%, var(--ray-color, #ffe066) 15%,
+    transparent 20%, var(--ray-color, #ffe066) 25%,
+    transparent 30%, var(--ray-color, #ffe066) 35%,
+    transparent 40%, var(--ray-color, #ffe066) 45%,
+    transparent 50%, var(--ray-color, #ffe066) 55%,
+    transparent 60%, var(--ray-color, #ffe066) 65%,
+    transparent 70%, var(--ray-color, #ffe066) 75%,
+    transparent 80%, var(--ray-color, #ffe066) 85%,
+    transparent 90%, var(--ray-color, #ffe066) 95%,
+    transparent 100%
+  );
+  opacity: 0.25;
+  animation: raysSpin 1.8s linear forwards;
+  z-index: 0;
+  border-radius: 50%;
+}
+
+@keyframes raysSpin {
+  0%   { transform: rotate(0deg)   scale(0); opacity: 0; }
+  20%  { opacity: 0.3; }
+  50%  { transform: rotate(180deg) scale(1.1); opacity: 0.25; }
+  100% { transform: rotate(360deg) scale(1.4); opacity: 0; }
+}
+
+/* Phase 3 – loot arc */
+.chest-loot-row {
+  position: absolute;
+  z-index: 4;
+  display: flex;
+  gap: 12px;
+  bottom: 20%;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.chest-loot-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 72px;
+  background: rgba(0,0,0,0.85);
+  border: 2px solid var(--loot-color, #ffe066);
+  border-radius: 10px;
+  padding: 8px 6px;
+  opacity: 0;
+  box-shadow: 0 0 12px var(--loot-color, #ffe066);
+}
+
+/* Arc entry animation */
+.chest-loot-arc {
+  animation: lootArc 0.55s cubic-bezier(0.22, 1.0, 0.36, 1.0) forwards;
+  animation-delay: calc(var(--loot-idx) * 0.22s);
+}
+
+@keyframes lootArc {
+  0%   { transform: translateY(-200px) scale(0.3) rotate(-20deg); opacity: 0; }
+  60%  { transform: translateY(10px)  scale(1.1) rotate(4deg);   opacity: 1; }
+  100% { transform: translateY(0)     scale(1)   rotate(0deg);   opacity: 1; }
+}
+
+/* Phase 4 – land flip */
+.chest-loot-land {
+  opacity: 1;
+}
+
+.chest-loot-flip {
+  animation: lootFlip 0.45s ease-out forwards;
+}
+
+@keyframes lootFlip {
+  0%   { transform: rotateY(90deg); }
+  100% { transform: rotateY(0deg); }
+}
+
+.chest-loot-icon {
+  font-size: 30px;
+  line-height: 1;
+}
+
+.chest-loot-label {
+  font-size: 9px;
+  text-align: center;
+  margin-top: 4px;
+  line-height: 1.3;
+  font-weight: bold;
+}
+
+.chest-close-btn {
+  position: absolute;
+  bottom: 8%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  background: linear-gradient(135deg, #c8a248, #8B6914);
+  border: none;
+  border-radius: 10px;
+  padding: 12px 36px;
+  font-family: 'Bangers', cursive;
+  font-size: 22px;
+  letter-spacing: 3px;
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 0 20px #c8a248;
+  animation: collectPulse 0.6s ease-in-out infinite alternate;
+}
+
+@keyframes collectPulse {
+  from { box-shadow: 0 0 14px #c8a248; }
+  to   { box-shadow: 0 0 30px #ffe066, 0 0 50px #c8a248; }
+}
+
+/* Rarity confetti */
+.rarity-confetti {
+  position: fixed;
+  width: 8px;
+  height: 8px;
+  background: var(--conf-color, #ff44ff);
+  border-radius: 2px;
+  left: var(--conf-x, 50vw);
+  top:  var(--conf-y, 50vh);
+  transform: rotate(var(--conf-rot, 0deg));
+  animation: confettiFall var(--conf-delay, 0s) 1.8s ease-in forwards;
+  pointer-events: none;
+  z-index: 6000;
+}
+
+@keyframes confettiFall {
+  0%   { transform: rotate(var(--conf-rot)) translateY(0)    scale(1); opacity: 1; }
+  80%  { opacity: 1; }
+  100% { transform: rotate(calc(var(--conf-rot) + 360deg)) translateY(160px) scale(0.5); opacity: 0; }
+}
+
