@@ -677,12 +677,17 @@
       };
       const colors = colorMap[rarity] || colorMap.common;
       const isMythic = rarity === 'mythic';
+      // Scale confetti count by rarity: common=20 → mythic=80
+      const confettiCounts = { common: 20, uncommon: 30, rare: 40, epic: 55, legendary: 70, mythic: 80 };
+      const count = confettiCounts[rarity] || 20;
+      // Scale spread distance by rarity
+      const maxDist = { common: 140, uncommon: 160, rare: 190, epic: 230, legendary: 280, mythic: 340 }[rarity] || 140;
 
-      for (let i = 0; i < 40; i++) {
+      for (let i = 0; i < count; i++) {
         const el    = document.createElement('div');
         el.className = 'lvlup-confetti' + (isMythic ? ' lvlup-confetti-mythic' : '');
         const angle = Math.random() * Math.PI * 2;
-        const dist  = 80 + Math.random() * 180;
+        const dist  = 60 + Math.random() * maxDist;
         const tx    = Math.cos(angle) * dist;
         const ty    = Math.sin(angle) * dist - 40;
         const rot   = Math.floor(Math.random() * 360);
@@ -693,7 +698,7 @@
         el.style.setProperty('--tx',  tx  + 'px');
         el.style.setProperty('--ty',  ty  + 'px');
         document.body.appendChild(el);
-        setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 1300);
+        setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 1400);
       }
     }
 
@@ -702,16 +707,25 @@
       const cx    = rect.left + rect.width  / 2;
       const cy    = rect.top  + rect.height / 2;
       const color = _LEVEL_RARITY_COLORS[rarity] || _LEVEL_RARITY_COLORS.common;
+      // More + longer + wider rays for higher rarities
+      const rayCounts = { common: 6, uncommon: 8, rare: 10, epic: 12, legendary: 16, mythic: 20 };
+      const rayHeights = { common: '140px', uncommon: '180px', rare: '220px', epic: '280px', legendary: '360px', mythic: '480px' };
+      const rayWidths  = { common: '2px',   uncommon: '2.5px', rare: '3px',   epic: '4px',   legendary: '5px',   mythic: '7px'   };
+      const rayDurs    = { common: '800ms', uncommon: '900ms', rare: '1000ms',epic: '1100ms',legendary: '1300ms',mythic: '1600ms'};
+      const rayCount = rayCounts[rarity] || 6;
 
-      for (let i = 0; i < 8; i++) {
+      for (let i = 0; i < rayCount; i++) {
         const el = document.createElement('div');
         el.className = 'lvlup-ray';
         el.style.left       = (cx - 1.5) + 'px';
         el.style.top        = cy + 'px';
         el.style.background = color;
-        el.style.setProperty('--angle', (i * 45) + 'deg');
+        el.style.setProperty('--angle', (i * (360 / rayCount)) + 'deg');
+        el.style.setProperty('--ray-h',   rayHeights[rarity] || '140px');
+        el.style.setProperty('--ray-w',   rayWidths[rarity]  || '2px');
+        el.style.setProperty('--ray-dur', rayDurs[rarity]    || '800ms');
         document.body.appendChild(el);
-        setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 1000);
+        setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 1700);
       }
     }
 
@@ -719,9 +733,12 @@
       const color = _LEVEL_RARITY_COLORS[rarity] || _LEVEL_RARITY_COLORS.common;
       const el = document.createElement('div');
       el.className = 'lvlup-screen-flash';
-      el.style.boxShadow = 'inset 0 0 40px ' + color + ', inset 0 0 80px ' + color;
+      // Stronger, wider flash for higher rarities
+      const innerGlow  = { common: '30px', uncommon: '40px', rare: '50px', epic: '70px', legendary: '90px', mythic: '120px' }[rarity] || '30px';
+      const outerGlow  = { common: '60px', uncommon: '80px', rare: '100px',epic: '130px',legendary: '160px',mythic: '200px' }[rarity] || '60px';
+      el.style.boxShadow = `inset 0 0 ${innerGlow} ${color}, inset 0 0 ${outerGlow} ${color}`;
       document.body.appendChild(el);
-      setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 650);
+      setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 700);
     }
 
     // ── Account Level-Up Curtain Animation ──────────────────────
@@ -2221,6 +2238,14 @@
       };
       const panel = document.createElement('div');
       panel.style.cssText = 'background:linear-gradient(135deg,#1a1a2e,#0d1020);border:4px solid #FFD700;border-radius:14px;padding:24px;max-width:90vw;width:380px;color:#fff;font-family:"Bangers",cursive;text-align:center;box-shadow:0 0 30px rgba(255,215,0,0.5);';
+
+      // Rarity map for each daily reward day (1-indexed, cycles after day 7)
+      const _dailyDayRarity = ['common','uncommon','uncommon','rare','epic','legendary','mythic'];
+      const _dailyRarityColors = {
+        common:    '#aaaaaa', uncommon: '#55cc55', rare:      '#44aaff',
+        epic:      '#aa44ff', legendary:'#ffaa00', mythic:    '#ff4444'
+      };
+
       // Build daily login calendar
       if (window.GameDailies) {
         const streak = (saveData.dailies && saveData.dailies.loginStreak) || 0;
@@ -2235,42 +2260,89 @@
           const dayNum = i + 1;
           const claimed = streak >= dayNum && !canClaim;
           const isToday = canClaim && nextDay === dayNum;
+          const dayRarity = _dailyDayRarity[(dayNum - 1) % _dailyDayRarity.length];
+          const rarityColor = _dailyRarityColors[dayRarity] || '#aaaaaa';
+          const rarityBorder = isToday ? '2px solid ' + rarityColor : (claimed ? '2px solid rgba(46,204,113,0.4)' : '2px solid rgba(255,215,0,0.2)');
+          const rarityGlow  = isToday ? '0 0 10px ' + rarityColor + '88' : 'none';
           const cls = 'daily-login-day' + (claimed ? ' claimed' : '') + (isToday ? ' today' : '');
-          html += '<div class="' + cls + '">';
+          html += '<div class="' + cls + '" style="border:' + rarityBorder + ';box-shadow:' + rarityGlow + ';">';
           html += '<div class="day-num">Day ' + dayNum + '</div>';
-          html += '<div class="day-reward">' + (claimed ? '✅' : r.item ? '🎁' : '💰') + '</div>';
-          html += '<div class="day-gold">' + r.gold + 'g</div>';
+          html += '<div class="day-reward" style="color:' + (claimed ? '#2ecc71' : isToday ? rarityColor : '#aaa') + '">' + (claimed ? '✅' : r.item ? '🎁' : '💰') + '</div>';
+          html += '<div class="day-gold" style="color:' + rarityColor + '">' + r.gold + 'g</div>';
           html += '</div>';
         });
         html += '</div>';
-        // Claim button
+
+        // Claim button — styled in the rarity color of today's reward
         if (canClaim) {
-          html += '<button id="claim-daily-btn" style="margin-top:16px;background:linear-gradient(to bottom,#2ecc71,#27ae60);color:#fff;border:3px solid #000;border-radius:8px;padding:10px 24px;font-family:Bangers,cursive;font-size:1.1em;letter-spacing:2px;cursor:pointer;box-shadow:3px 3px 0 #000;">CLAIM REWARD</button>';
+          const todayRarity = _dailyDayRarity[(nextDay - 1) % _dailyDayRarity.length];
+          const todayColor  = _dailyRarityColors[todayRarity] || '#2ecc71';
+          html += `<button id="claim-daily-btn" class="daily-claim-btn" style="background:linear-gradient(to bottom,${todayColor}cc,${todayColor}88);border:3px solid ${todayColor};box-shadow:0 0 12px ${todayColor}66,3px 3px 0 #000;">CLAIM REWARD</button>`;
+          html += '<div id="daily-reward-result" style="min-height:36px;margin-top:10px;"></div>';
         } else {
           html += '<div style="margin-top:16px;color:#aaa;font-family:Arial,sans-serif;font-size:13px;">✅ Already claimed today! Come back tomorrow.</div>';
         }
+
         panel.innerHTML = html;
+
         if (canClaim) {
+          let _claimDone = false;
           panel.querySelector('#claim-daily-btn').onclick = function() {
+            if (_claimDone) return;
+            _claimDone = true;
             const result = window.GameDailies.checkDailyLogin(saveData);
             if (!result.alreadyClaimed) {
               saveData.gold = (saveData.gold || 0) + result.gold;
               saveSaveData();
               showStatChange('🎁 Day ' + result.day + ' Reward: +' + result.gold + ' Gold!');
             }
-            _closeDailyOverlay();
+
+            // Determine rarity of claimed reward
+            // day is 1-based; _dailyDayRarity is 0-based: day-1 maps index 0→common … 6→mythic
+            const dayRarity   = _dailyDayRarity[(result.day - 1) % _dailyDayRarity.length];
+            const rarityColor = _dailyRarityColors[dayRarity] || '#aaaaaa';
+            const rarityName  = { common:'Common', uncommon:'Uncommon', rare:'Rare', epic:'Epic', legendary:'Legendary', mythic:'Mythic' }[dayRarity] || 'Common';
+
+            // Tint panel border to rarity colour
+            panel.style.borderColor = rarityColor;
+            panel.style.boxShadow   = `0 0 40px ${rarityColor}66, 0 0 20px ${rarityColor}33`;
+
+            // Disable the claim button
+            const btn = panel.querySelector('#claim-daily-btn');
+            if (btn) { btn.disabled = true; }
+
+            // Animate reward badge in-place
+            const resultEl = panel.querySelector('#daily-reward-result');
+            if (resultEl) {
+              resultEl.innerHTML = '';
+              const badge = document.createElement('div');
+              badge.className = 'daily-reward-badge';
+              badge.style.border      = `2px solid ${rarityColor}`;
+              badge.style.color       = rarityColor;
+              badge.style.textShadow  = `0 0 10px ${rarityColor}88`;
+              badge.textContent = `⭐ ${rarityName} — +${result.gold} Gold!`;
+              resultEl.appendChild(badge);
+            }
+
+            // Fire rarity effects anchored to the panel
+            if (typeof window.spawnRarityEffects === 'function') {
+              window.spawnRarityEffects(panel, dayRarity);
+            }
           };
         }
       } else {
         panel.innerHTML = '<div style="color:#FFD700;font-size:1.4em;">Daily Rewards not available</div>';
       }
+
+      // Close button — only way to dismiss the panel
       const closeBtn = document.createElement('button');
-      closeBtn.textContent = '✕';
-      closeBtn.style.cssText = 'position:absolute;top:12px;right:16px;background:none;border:none;color:#aaa;font-size:20px;cursor:pointer;font-family:Arial,sans-serif;';
+      closeBtn.textContent = '✕  Close';
+      closeBtn.style.cssText = 'position:absolute;top:12px;right:16px;background:none;border:1px solid rgba(255,255,255,0.2);color:#ccc;font-size:14px;cursor:pointer;font-family:"Bangers",cursive;padding:2px 10px;border-radius:8px;letter-spacing:1px;';
       closeBtn.onclick = () => _closeDailyOverlay();
       panel.style.position = 'relative';
       panel.appendChild(closeBtn);
       overlay.appendChild(panel);
+      // Clicking the dark backdrop also closes
       overlay.onclick = (e) => { if (e.target === overlay) _closeDailyOverlay(); };
       document.body.appendChild(overlay);
     }

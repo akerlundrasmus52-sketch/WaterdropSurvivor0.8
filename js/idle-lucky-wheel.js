@@ -189,12 +189,13 @@ window.GameLuckyWheel = (function () {
   }
 
   var RARITY_COLORS = {
-    common:   { bg: '#6c757d', border: '#555', glow: 'rgba(108,117,125,0.4)', label: 'Common' },
-    uncommon: { bg: '#28a745', border: '#1e7e34', glow: 'rgba(40,167,69,0.4)', label: 'Uncommon' },
-    rare:     { bg: '#007bff', border: '#0056b3', glow: 'rgba(0,123,255,0.5)', label: 'Rare' },
+    common:   { bg: '#6c757d', border: '#555',    glow: 'rgba(108,117,125,0.4)', label: 'Common' },
+    uncommon: { bg: '#28a745', border: '#1e7e34', glow: 'rgba(40,167,69,0.4)',  label: 'Uncommon' },
+    rare:     { bg: '#007bff', border: '#0056b3', glow: 'rgba(0,123,255,0.5)',  label: 'Rare' },
     epic:     { bg: '#9b59b6', border: '#7d3c98', glow: 'rgba(155,89,182,0.5)', label: 'Epic' },
-    legendary:{ bg: '#FF8C00', border: '#cc7000', glow: 'rgba(255,140,0,0.5)', label: 'Legendary' },
-    mythical: { bg: '#e91e63', border: '#c2185b', glow: 'rgba(233,30,99,0.5)', label: 'Mythical' }
+    legendary:{ bg: '#FF8C00', border: '#cc7000', glow: 'rgba(255,140,0,0.5)',  label: 'Legendary' },
+    mythical: { bg: '#e91e63', border: '#c2185b', glow: 'rgba(233,30,99,0.5)',  label: 'Mythical' },
+    mythic:   { bg: '#e91e63', border: '#c2185b', glow: 'rgba(233,30,99,0.5)',  label: 'Mythic' }
   };
 
   function renderWheelPanel(saveData, container, activeTier) {
@@ -336,8 +337,19 @@ window.GameLuckyWheel = (function () {
           var rarity = RARITY_COLORS[res.segment.rarity] || RARITY_COLORS.common;
           var el = container.querySelector('.wheel-result');
           if (el) {
-            // Clean reward bubble — no outer rectangle, just a bordered inner bubble with glow
-            el.innerHTML = '<div style="background:rgba(0,0,0,0.85);border:2px solid ' + rarity.border + ';border-radius:16px;padding:12px 22px;display:inline-block;box-shadow:0 0 20px ' + rarity.glow + ',0 0 40px ' + rarity.glow + ';animation:wheel-result-pop 0.3s ease-out;"><span style="font-size:20px;">🎉</span> <span style="color:#fff;font-weight:bold;font-size:16px;">' + res.prize + '</span><br><small style="color:rgba(255,255,255,0.8);font-size:13px;">' + res.description + '</small></div>';
+            // Reward bubble with rarity glow + rarity label
+            var rarityName = rarity.label || 'Common';
+            var bubble = document.createElement('div');
+            bubble.style.cssText = 'background:rgba(0,0,0,0.85);border:2px solid ' + rarity.border + ';border-radius:16px;padding:12px 22px;display:inline-block;box-shadow:0 0 20px ' + rarity.glow + ',0 0 40px ' + rarity.glow + ';animation:wheel-result-pop 0.3s ease-out;';
+            bubble.innerHTML = '<div style="font-size:11px;letter-spacing:2px;color:' + rarity.bg + ';font-family:\'Bangers\',cursive;margin-bottom:4px;">' + rarityName.toUpperCase() + '</div>' +
+              '<span style="font-size:20px;">🎉</span> <span style="color:#fff;font-weight:bold;font-size:16px;">' + res.prize + '</span><br>' +
+              '<small style="color:rgba(255,255,255,0.8);font-size:13px;">' + res.description + '</small>';
+            el.textContent = '';
+            el.appendChild(bubble);
+          }
+          // Fire full rarity dopamine effects
+          if (typeof window.spawnRarityEffects === 'function') {
+            window.spawnRarityEffects(el || container, res.segment.rarity || 'common');
           }
           setTimeout(function () { renderWheelPanel(saveData, container, activeTier); }, 2500);
         }

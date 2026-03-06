@@ -2867,10 +2867,23 @@
     // Rarity-based confetti colours: Common→grey, Uncommon→green, Rare→blue,
     //                                Epic→purple, Legendary→orange, Mythical→gold.
     function _challengeRarity(gold) {
-      if (gold >= 500) return 'legendary';
-      if (gold >= 200) return 'epic';
+      if (gold >= 2000) return 'mythic';
+      if (gold >= 1000) return 'legendary';
+      if (gold >= 500)  return 'epic';
+      if (gold >= 250)  return 'rare';
+      if (gold >= 100)  return 'uncommon';
       return 'common';
     }
+
+    // Full 6-tier colour map used by challenge board (matches _ACH_RARITY_COLORS in save-system.js)
+    const _CCB_RARITY_COLORS = {
+      common:    '#aaaaaa',
+      uncommon:  '#55cc55',
+      rare:      '#44aaff',
+      epic:      '#aa44ff',
+      legendary: '#ffaa00',
+      mythic:    '#ff4444'
+    };
 
     function showChallengeComplete(questName, goldAmount) {
       const board = document.getElementById('challenge-complete-board');
@@ -2880,11 +2893,26 @@
       if (!board || !nameLabel || !nameEl || !goldEl) return;
 
       const rarity = _challengeRarity(goldAmount || 0);
-      const rarityColor = { common: '#aaddff', epic: '#aa44ff', legendary: '#ffaa00' }[rarity] || '#aaddff';
+      const rarityColor = _CCB_RARITY_COLORS[rarity] || _CCB_RARITY_COLORS.common;
+      const rarityLabel = { common:'Common', uncommon:'Uncommon', rare:'Rare', epic:'Epic', legendary:'Legendary', mythic:'Mythic' }[rarity] || 'Common';
 
-      // Update border colour to rarity
+      // Update border colour and glow to rarity (stronger glow for higher tiers)
+      const glowRadii = { common: '18px', uncommon: '20px', rare: '24px', epic: '28px', legendary: '36px', mythic: '48px' };
+      const glowRadius = glowRadii[rarity] || '18px';
       board.style.borderColor = rarityColor;
-      board.style.boxShadow = `0 8px 40px rgba(0,0,0,0.8), 0 0 24px ${rarityColor}44`;
+      board.style.boxShadow = `0 8px 40px rgba(0,0,0,0.9), 0 0 ${glowRadius} ${rarityColor}66, 0 0 ${glowRadius} ${rarityColor}33`;
+
+      // Inject rarity badge into board header (reuse or create)
+      let rarityBadge = board.querySelector('.ccb-rarity-badge');
+      if (!rarityBadge) {
+        rarityBadge = document.createElement('div');
+        rarityBadge.className = 'ccb-rarity-badge';
+        rarityBadge.style.cssText = 'font-family:"Bangers",cursive;font-size:12px;letter-spacing:1.5px;padding:1px 8px;border-radius:10px;border:1px solid currentColor;margin-left:6px;opacity:0.9;display:inline-block;';
+        const header = board.querySelector('.ccb-header');
+        if (header) header.appendChild(rarityBadge);
+      }
+      rarityBadge.textContent = rarityLabel.toUpperCase();
+      rarityBadge.style.color = rarityColor;
 
       // Set content
       nameLabel.textContent = questName || 'Challenge';
