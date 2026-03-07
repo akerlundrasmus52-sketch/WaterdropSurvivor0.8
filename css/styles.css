@@ -7616,6 +7616,21 @@
   box-shadow: 0 0 14px rgba(80, 200, 255, 0.25);
 }
 
+/* Neural Matrix button inside AIDA dialogue */
+.aida-neural-matrix-btn {
+  margin-top: 6px;
+  background: rgba(0, 100, 255, 0.08);
+  border-color: rgba(0, 150, 255, 0.7);
+  color: #00aaff;
+  text-shadow: 0 0 10px #00aaff;
+  box-shadow: 0 0 18px rgba(0, 150, 255, 0.2);
+}
+.aida-neural-matrix-btn:hover {
+  background: rgba(0, 100, 255, 0.18);
+  border-color: rgba(0, 150, 255, 1);
+  box-shadow: 0 0 28px rgba(0, 150, 255, 0.4);
+}
+
 /* ================================================================
    ASTRAL DIVE MINIGAME
 ================================================================ */
@@ -7709,4 +7724,140 @@
 
 .astral-screen-shake {
   animation: astralShake 0.6s ease-out forwards;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   NEURAL MATRIX — Synapse-constellation upgrade UI
+   ═══════════════════════════════════════════════════════════════ */
+
+.nm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9400;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: rgba(0,2,10,0.97);
+  font-family: 'Courier New', Courier, monospace;
+  animation: nmFadeIn 0.35s ease-out forwards;
+}
+
+@keyframes nmFadeIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1);    }
+}
+
+.nm-header {
+  width: 100%;
+  max-width: 900px;
+  display: flex;
+  align-items: center;
+  padding: 10px 16px 8px;
+  border-bottom: 1px solid rgba(0,204,255,0.18);
+  gap: 12px;
+}
+
+.nm-title {
+  flex: 1;
+  font-size: 18px;
+  font-weight: bold;
+  letter-spacing: 4px;
+  color: #00ccff;
+  text-shadow: 0 0 18px #00ccff, 0 0 40px rgba(0,204,255,0.5);
+}
+
+.nm-currency {
+  font-size: 13px;
+  color: #00ffaa;
+  letter-spacing: 2px;
+  text-shadow: 0 0 10px #00ffaa;
+}
+
+.nm-close-btn {
+  background: transparent;
+  border: 1px solid rgba(0,204,255,0.4);
+  color: #00ccff;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 2px 10px;
+  border-radius: 4px;
+  transition: background 0.15s;
+}
+.nm-close-btn:hover { background: rgba(0,204,255,0.12); }
+
+.nm-canvas {
+  display: block;
+  border-radius: 4px;
+  margin: 8px auto 0;
+  box-shadow: 0 0 60px rgba(0,50,120,0.4);
+}
+
+.nm-info-panel {
+  width: 100%;
+  max-width: 900px;
+  padding: 10px 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.nm-node-title {
+  font-size: 15px;
+  font-weight: bold;
+  letter-spacing: 3px;
+  color: #00ccff;
+  text-transform: uppercase;
+}
+
+.nm-node-desc {
+  font-size: 12px;
+  color: rgba(180,220,255,0.7);
+  text-align: center;
+  max-width: 640px;
+  line-height: 1.5;
+}
+
+.nm-unlock-btn {
+  background: rgba(0,204,255,0.08);
+  border: 1px solid rgba(0,204,255,0.7);
+  color: #00ccff;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  letter-spacing: 2px;
+  cursor: pointer;
+  padding: 6px 24px;
+  border-radius: 4px;
+  text-shadow: 0 0 10px #00ccff;
+  box-shadow: 0 0 18px rgba(0,204,255,0.2);
+  transition: background 0.15s, box-shadow 0.15s;
+}
+.nm-unlock-btn:hover:not(:disabled) {
+  background: rgba(0,204,255,0.18);
+  box-shadow: 0 0 30px rgba(0,204,255,0.4);
+}
+.nm-unlock-btn:disabled { opacity: 0.45; cursor: default; }
+
+.nm-reroute-btn {
+  background: rgba(255,0,34,0.07);
+  border: 1px solid rgba(255,0,34,0.5);
+  color: #ff4455;
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  padding: 5px 18px;
+  border-radius: 4px;
+  transition: background 0.15s;
+}
+.nm-reroute-btn:hover {
+  background: rgba(255,0,34,0.18);
+}
+
+.nm-toast {
+  font-size: 12px;
+  letter-spacing: 1px;
+  min-height: 18px;
+  text-align: center;
+  transition: opacity 0.5s ease;
 }

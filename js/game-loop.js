@@ -14,6 +14,36 @@
     // Populated by Projectile.update(); cleared by the main animate() loop below.
     window.bulletTrails = [];
 
+    // ─── Neural Matrix: Event Horizon black holes ────────────────────────────────
+    // Each entry: { x, z, timer (seconds remaining), mesh }
+    window._eventHorizonHoles = [];
+
+    // ─── Neural Matrix: active blood pool counter (for Blood Alchemy regen) ─────
+    // Incremented by emitPoolGrow wrapper, decremented on expiry.
+    window._activeBloodPools = 0;
+
+    // Spawn a black-hole ground vortex for the Event Horizon upgrade.
+    window._spawnEventHorizon = function (pos) {
+      if (!window._eventHorizonHoles) window._eventHorizonHoles = [];
+      let holeMesh = null;
+      if (typeof THREE !== 'undefined' && typeof scene !== 'undefined') {
+        const geo = new THREE.SphereGeometry(0.9, 16, 16);
+        const mat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.85 });
+        holeMesh = new THREE.Mesh(geo, mat);
+        holeMesh.position.set(pos.x, 0.12, pos.z);
+        scene.add(holeMesh);
+        // Outer glow ring — DoubleSide so it's visible from the camera above
+        const glowGeo = new THREE.RingGeometry(0.9, 1.4, 32);
+        const glowMat = new THREE.MeshBasicMaterial({ color: 0xaa44ff, transparent: true, opacity: 0.5, side: THREE.DoubleSide });
+        const glowRing = new THREE.Mesh(glowGeo, glowMat);
+        glowRing.rotation.x = -Math.PI / 2;
+        glowRing.position.set(pos.x, 0.12, pos.z);
+        scene.add(glowRing);
+        holeMesh._glowRing = glowRing;
+      }
+      window._eventHorizonHoles.push({ x: pos.x, z: pos.z, timer: 1.5, mesh: holeMesh });
+    };
+
     function _spawnProjectile(x, z, target) {
       if (window._projectilePool) {
         return window._projectilePool.get().reinit(x, z, target);
@@ -865,10 +895,58 @@
       
       // HP Regen (Every 60 frames approx 1 sec)
       if (frameCount % 60 === 0 && playerStats.hpRegen > 0 && playerStats.hp < playerStats.maxHp) {
-        playerStats.hp = Math.min(playerStats.maxHp, playerStats.hp + playerStats.hpRegen);
+        // Blood Alchemy: multiply regen by (1 + 0.5 * activeBloodPools)
+        let regenAmount = playerStats.hpRegen;
+        if (window._nmBloodAlchemy) {
+          const poolCount = window._activeBloodPools || 0;
+          regenAmount *= (1 + 0.5 * poolCount);
+        }
+        playerStats.hp = Math.min(playerStats.maxHp, playerStats.hp + regenAmount);
         updateHUD();
         // Green particle
         spawnParticles(player.mesh.position, 0x00FF00, 2);
+      }
+
+      // Annunaki Protocol: drain ANNUNAKI_HP_DRAIN_RATE % max HP per second (every 60 frames)
+      const ANNUNAKI_HP_DRAIN_RATE = 0.01; // 1% max HP per second — forces ultra-aggressive playstyle
+      if (window._nmAnnunakiActive && frameCount % 60 === 0) {
+        const drain = Math.max(1, playerStats.maxHp * ANNUNAKI_HP_DRAIN_RATE);
+        player.takeDamage(drain);
+      }
+
+      // Event Horizon: update black holes
+      if (window._eventHorizonHoles && window._eventHorizonHoles.length > 0) {
+        const PULL_RADIUS = 5.0;
+        const PULL_FORCE  = 0.18;
+        for (let hi = window._eventHorizonHoles.length - 1; hi >= 0; hi--) {
+          const hole = window._eventHorizonHoles[hi];
+          hole.timer -= dt;
+          // Animate hole mesh pulsing
+          if (hole.mesh) {
+            const sc = 0.6 + 0.2 * Math.sin(hole.timer * 12);
+            hole.mesh.scale.set(sc, sc, sc);
+          }
+          // Pull enemies toward the hole
+          for (const en of enemies) {
+            if (en.isDead) continue;
+            const ex = en.mesh.position.x - hole.x;
+            const ez = en.mesh.position.z - hole.z;
+            const dist2 = ex * ex + ez * ez;
+            if (dist2 < PULL_RADIUS * PULL_RADIUS && dist2 > 0.01) {
+              const dist = Math.sqrt(dist2);
+              en.mesh.position.x -= (ex / dist) * PULL_FORCE;
+              en.mesh.position.z -= (ez / dist) * PULL_FORCE;
+            }
+          }
+          // Remove expired holes
+          if (hole.timer <= 0) {
+            if (hole.mesh && scene) {
+              scene.remove(hole.mesh);
+              if (hole.mesh._glowRing) scene.remove(hole.mesh._glowRing);
+            }
+            window._eventHorizonHoles.splice(hi, 1);
+          }
+        }
       }
 
       // Low-HP damage bonus: dynamically update playerStats.damage each frame

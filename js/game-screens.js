@@ -809,6 +809,13 @@
       gameStartTime = Date.now();
       console.log('[Countdown] Game started - isPaused:', isPaused, 'isGameActive:', isGameActive);
 
+      // Apply Neural Matrix upgrades for this run
+      if (window.NeuralMatrix) window.NeuralMatrix.applyToRun(playerStats);
+
+      // Reset Event Horizon holes and blood pool counter at run start
+      window._eventHorizonHoles = [];
+      window._activeBloodPools = 0;
+
       // Show combat HUD (Rage Bar + Special Attacks) now that gameplay is active
       if (window.GameRageCombat) window.GameRageCombat.setCombatHUDVisible(true);
 
@@ -1807,6 +1814,7 @@
         },
         workshop:            () => { overlay.remove(); showWorkshop(); },
         prismReliquary:      () => { overlay.remove(); showPrismReliquary(); },
+        neuralMatrix:        () => { overlay.remove(); if (window.NeuralMatrix) window.NeuralMatrix.show(); },
       };
 
       for (const [buildingId, building] of Object.entries(CAMP_BUILDINGS)) {
@@ -2278,6 +2286,15 @@
       const existing = document.getElementById('aida-modal-overlay');
       if (existing) existing.remove();
 
+      // ── Unlock Neural Matrix building when Astral Gateway is first visited ──
+      if (saveData && saveData.campBuildings && saveData.campBuildings.neuralMatrix
+          && !saveData.campBuildings.neuralMatrix.unlocked) {
+        saveData.campBuildings.neuralMatrix.unlocked = true;
+        saveData.campBuildings.neuralMatrix.level = 1;
+        saveSaveData();
+        window._neuralMatrixNewlyUnlocked = true;
+      }
+
       // ── Build the overlay ──────────────────────────────────────
       const overlay = document.createElement('div');
       overlay.id = 'aida-modal-overlay';
@@ -2421,6 +2438,18 @@
       panel.appendChild(label);
       panel.appendChild(textEl);
       panel.appendChild(diveBtn);
+
+      // ── "NEURAL MATRIX" button ─────────────────────────────────
+      const matrixBtn = document.createElement('button');
+      matrixBtn.className = 'aida-modal-confirm aida-neural-matrix-btn';
+      matrixBtn.textContent = '[ NEURAL MATRIX ]';
+      matrixBtn.addEventListener('click', function () {
+        overlay.remove();
+        clearTimeout(_aidaGlitchInterval);
+        if (window.NeuralMatrix) window.NeuralMatrix.show();
+      });
+      panel.appendChild(matrixBtn);
+
       panel.appendChild(confirmBtn);
       overlay.appendChild(panel);
       document.body.appendChild(overlay);

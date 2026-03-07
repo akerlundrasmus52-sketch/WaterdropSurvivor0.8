@@ -399,6 +399,16 @@
         isFree: true,
         bonus: (level) => ({})
       },
+      neuralMatrix: {
+        name: 'The Neural Matrix',
+        icon: '🧠',
+        description: 'A glowing map of brain synapses. Spend Astral Essence to unlock devastating neural upgrades that permanently alter your playstyle.',
+        baseCost: 0,
+        costMultiplier: 0,
+        maxCost: 0,
+        isFree: true,
+        bonus: (level) => ({})
+      },
       
       // LEGACY BUILDINGS (kept for compatibility)
       trainingGrounds: {
