@@ -207,6 +207,14 @@ function getEnemyBaseStats(type, levelScaling, speedBase, playerLevel) {
   if (type === 18) stats.damage = 55  * ls;  // Reptilian Shifter — ambush strike
   if (type === 19) stats.damage = 120 * ls; // Annunaki Orb — laser devastation
 
+  // ── Phasing mutation (Level 60+) ────────────────────────────────────────────
+  // Above level 60 all basic enemy types (0–9, 12–16) can randomly phase —
+  // turning 50% transparent and absorbing the next hit entirely.
+  const PHASING_ELIGIBLE_TYPES = [0,1,2,3,4,5,6,7,8,9,12,13,14,15,16];
+  if (playerLevel >= 60 && PHASING_ELIGIBLE_TYPES.includes(type)) {
+    stats._phasingEnabled = true; // flag consumed by takeDamage() in enemy-class.js
+  }
+
   // --- Elemental resistance system ---
   // Each enemy type has intrinsic resistances/vulnerabilities (0 = neutral, >0 = resistant, <0 = vulnerable)
   // Resistances reduce incoming elemental damage by the given fraction.

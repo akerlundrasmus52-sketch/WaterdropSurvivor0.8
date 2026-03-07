@@ -1055,6 +1055,19 @@
     let _activeDamageNumbers = 0;
     const MAX_DAMAGE_NUMBERS = 12; // Cap to prevent DOM bloat during high-intensity combat
 
+    /**
+     * Format a damage value into a compact string so huge numbers (1M+) stay
+     * readable on-screen.  Examples: 999 → "999", 12345 → "12.3K", 1234567 → "1.2M".
+     */
+    function formatDamageValue(n) {
+      n = Math.floor(n);
+      if (n >= 1000000000) return (n / 1000000000).toFixed(1).replace(/\.0$/, '') + 'B';
+      if (n >= 1000000)    return (n / 1000000).toFixed(1).replace(/\.0$/, '')    + 'M';
+      if (n >= 10000)      return (n / 1000).toFixed(1).replace(/\.0$/, '')       + 'K';
+      return String(n);
+    }
+    window.formatDamageValue = formatDamageValue; // expose for DopamineSystem / elastic numbers
+
     function createDamageNumber(amount, pos, isCrit = false, isHeadshot = false) {
       // Cap visible damage numbers to prevent DOM bloat
       if (_activeDamageNumbers >= MAX_DAMAGE_NUMBERS) return;
@@ -1069,17 +1082,18 @@
 
       _activeDamageNumbers++;
 
+      const fmtAmt = formatDamageValue(amount);
       const div = document.createElement('div');
       // Color code by damage type: headshot (red) > crit (gold) > normal (white)
       if (isHeadshot) {
         div.className = 'damage-number headshot';
-        div.innerText = `HEADSHOT!\n${Math.floor(amount)}`;
+        div.innerText = `HEADSHOT!\n${fmtAmt}`;
       } else if (isCrit) {
         div.className = 'damage-number critical';
-        div.innerText = `CRIT!\n${Math.floor(amount)}`;
+        div.innerText = `CRIT!\n${fmtAmt}`;
       } else {
         div.className = 'damage-number normal';
-        div.innerText = Math.floor(amount);
+        div.innerText = fmtAmt;
       }
       
       // Project 3D pos to 2D screen

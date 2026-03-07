@@ -357,9 +357,10 @@
       // Create DOM element
       const el = document.createElement('div');
       el.className = 'elastic-damage-number';
+      const _fmt = window.formatDamageValue ? window.formatDamageValue(entry.amount) : String(entry.amount);
       el.textContent = entry.isCrit
-        ? (entry.isHeadshot ? '💀 ' : '⚡ ') + entry.amount
-        : String(entry.amount);
+        ? (entry.isHeadshot ? '💀 ' : '⚡ ') + _fmt
+        : _fmt;
 
       if (isHeadshot)   el.classList.add('headshot');
       else if (isCrit)  el.classList.add('critical');
@@ -636,6 +637,153 @@
       if (hud) hud.style.filter = 'none';
     }
   };
+
+  // -----------------------------------------------------------------------
+  // Reward Blast — extreme visual sequence for Astral Dive extraction /
+  // major Neural Matrix loop completions.
+  //
+  // Usage:
+  //   window.triggerRewardBlast({ essence: 50, cores: 3, gold: 200 });
+  //
+  // Steps:
+  //  1. Screen dims with a dark overlay.
+  //  2. A massive 3D-styled title slams onto the screen.
+  //  3. Physics-based DOM particles (gems 💎, gold 🪙, essence ⚡) erupt from
+  //     the centre and fly toward the matching UI element (or top-left corner
+  //     as a sensible default).
+  //  4. The reward numbers in the title roll up rapidly (slot-machine style),
+  //     flashing green and shaking.
+  //  5. Everything fades out after ~2.5 s.
+  // -----------------------------------------------------------------------
+  (function _installRewardBlast() {
+    const CSS_ID = '_reward-blast-style';
+    if (!document.getElementById(CSS_ID)) {
+      const st = document.createElement('style');
+      st.id = CSS_ID;
+      st.textContent = [
+        '@keyframes _rb-slam{0%{transform:scale(3) translateY(-60px);opacity:0;}',
+        '40%{transform:scale(0.92) translateY(4px);opacity:1;}',
+        '60%{transform:scale(1.06) translateY(-2px);}',
+        '100%{transform:scale(1) translateY(0);}}',
+        '@keyframes _rb-shake{0%,100%{transform:translateX(0);}',
+        '20%{transform:translateX(-6px);}40%{transform:translateX(6px);}',
+        '60%{transform:translateX(-4px);}80%{transform:translateX(4px);}}',
+        '@keyframes _rb-roll{0%{color:#fff;}50%{color:#00ff88;}100%{color:#00ff88;}}',
+        '@keyframes _rb-particle-fly{0%{transform:translate(0,0) scale(1);opacity:1;}',
+        '100%{transform:translate(var(--rb-tx),var(--rb-ty)) scale(0.3);opacity:0;}}',
+        '._rb-overlay{position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,0.72);',
+        'pointer-events:none;transition:opacity 0.5s;}',
+        '._rb-banner{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);',
+        'z-index:9999;text-align:center;pointer-events:none;',
+        'font-family:\'Bangers\',\'Impact\',cursive;letter-spacing:4px;',
+        'text-shadow:0 0 40px #00ffff,0 6px 0 rgba(0,0,0,0.8),4px 4px 0 #003344;',
+        'color:#00ffff;animation:_rb-slam 0.55s cubic-bezier(0.22,1,0.36,1) forwards;}',
+        '._rb-title{font-size:clamp(36px,8vw,80px);display:block;}',
+        '._rb-rewards{font-size:clamp(18px,4vw,36px);margin-top:12px;',
+        'color:#FFD700;text-shadow:0 0 20px #FFD700,2px 2px 0 #000;}',
+        '._rb-num{display:inline-block;animation:_rb-roll 0.4s ease-out forwards,',
+        '_rb-shake 0.6s ease-in-out forwards;font-weight:bold;color:#00ff88;}',
+        '._rb-particle{position:fixed;z-index:9998;pointer-events:none;font-size:22px;',
+        'animation:_rb-particle-fly var(--rb-dur,1.2s) cubic-bezier(0.22,1,0.36,1) forwards;}'
+      ].join('');
+      document.head.appendChild(st);
+    }
+
+    function triggerRewardBlast(rewards) {
+      rewards = rewards || {};
+      const essence   = Math.floor(rewards.essence || 0);
+      const cores     = Math.floor(rewards.cores   || 0);
+      const gold      = Math.floor(rewards.gold    || 0);
+      const nodeLabel = rewards._nodeLabel || null;
+      if (essence === 0 && cores === 0 && gold === 0 && !nodeLabel) return;
+
+      // 1 — Dim overlay
+      const overlay = document.createElement('div');
+      overlay.className = '_rb-overlay';
+      document.body.appendChild(overlay);
+
+      // 2 — Banner
+      const banner = document.createElement('div');
+      banner.className = '_rb-banner';
+      const titleText = nodeLabel
+        ? '🧠 NODE UNLOCKED 🧠'
+        : '⚡ REWARDS EXTRACTED ⚡';
+      const rewardHtml = nodeLabel
+        ? '<div class="_rb-rewards" style="color:#aa44ff;text-shadow:0 0 20px #aa44ff,2px 2px 0 #000;">' +
+            '<span class="_rb-num" style="color:#cc88ff;">' + nodeLabel + '</span></div>'
+        : '<div class="_rb-rewards">' +
+            (essence ? '⚡ Essence: <span class="_rb-num">+' + essence + '</span>  ' : '') +
+            (cores   ? '🔷 Cores: <span class="_rb-num">+' + cores   + '</span>  ' : '') +
+            (gold    ? '💰 Gold: <span class="_rb-num">+'  + gold    + '</span>'   : '') +
+          '</div>';
+      banner.innerHTML = '<span class="_rb-title">' + titleText + '</span>' + rewardHtml;
+      document.body.appendChild(banner);
+
+      // 3 — Physics particles
+      const PARTICLE_ICONS = ['💎','🪙','⚡','🔷','✨','💛'];
+      const CX = window.innerWidth  / 2;
+      const CY = window.innerHeight / 2;
+      const COUNT = Math.min(80 + (essence + cores + gold) * 0.05, 150);
+      for (let i = 0; i < COUNT; i++) {
+        const p = document.createElement('div');
+        p.className = '_rb-particle';
+        p.textContent = PARTICLE_ICONS[Math.floor(Math.random() * PARTICLE_ICONS.length)];
+        // Random angle, distance trajectory
+        const angle = Math.random() * Math.PI * 2;
+        const dist  = 180 + Math.random() * (window.innerWidth * 0.38);
+        const tx    = Math.cos(angle) * dist;
+        const ty    = Math.sin(angle) * dist - window.innerHeight * 0.3; // bias upward toward HUD
+        const dur   = (0.7 + Math.random() * 0.8).toFixed(2);
+        const delay = (Math.random() * 0.4).toFixed(2);
+        p.style.cssText = [
+          'left:' + (CX + (Math.random()-0.5)*60) + 'px;',
+          'top:'  + (CY + (Math.random()-0.5)*60) + 'px;',
+          '--rb-tx:' + tx.toFixed(0) + 'px;',
+          '--rb-ty:' + ty.toFixed(0) + 'px;',
+          '--rb-dur:' + dur + 's;',
+          'animation-delay:' + delay + 's;',
+          'opacity:0;' // starts hidden until animation kicks in
+        ].join('');
+        document.body.appendChild(p);
+        // Clean up after animation
+        setTimeout(() => { if (p.parentNode) p.parentNode.removeChild(p); },
+          (parseFloat(dur) + parseFloat(delay) + 0.2) * 1000);
+      }
+
+      // 4 — Slot-machine number roll for each _rb-num span
+      const numEls = banner.querySelectorAll('._rb-num');
+      numEls.forEach(el => {
+        const target = parseInt(el.textContent.replace('+',''), 10);
+        let current  = 0;
+        const steps  = 18;
+        const stepMs = 60;
+        let step = 0;
+        const iv = setInterval(() => {
+          step++;
+          current = step < steps ? Math.floor(target * (step / steps)) : target;
+          el.textContent = '+' + current;
+          el.style.color = step % 2 === 0 ? '#00ff88' : '#ffffff';
+          if (step >= steps) {
+            clearInterval(iv);
+            el.style.color = '#00ff88';
+          }
+        }, stepMs);
+      });
+
+      // 5 — Fade out everything after 2.6 s
+      setTimeout(() => {
+        overlay.style.opacity = '0';
+        banner.style.opacity  = '0';
+        banner.style.transition = 'opacity 0.5s';
+        setTimeout(() => {
+          if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+          if (banner.parentNode)  banner.parentNode.removeChild(banner);
+        }, 550);
+      }, 2600);
+    }
+
+    window.triggerRewardBlast = triggerRewardBlast;
+  })();
 
   // -----------------------------------------------------------------------
   // Export

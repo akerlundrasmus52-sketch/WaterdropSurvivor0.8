@@ -5063,7 +5063,7 @@
     let floatingTextFadeInterval = null;
     let floatingTextFadeTimeout = null;
     
-    function createFloatingText(text, pos) {
+    function createFloatingText(text, pos, color) {
       // Display message in status bar instead of floating text
       const statusEl = document.getElementById('status-message');
       if (!statusEl) return;
@@ -5079,7 +5079,7 @@
       }
       
       statusEl.innerText = text;
-      statusEl.style.color = '#FF4444'; // Red for important messages like mini-boss
+      statusEl.style.color = color || '#FF4444'; // Use caller-supplied color or default red
       statusEl.style.fontSize = '18px';
       statusEl.style.opacity = '1';
       

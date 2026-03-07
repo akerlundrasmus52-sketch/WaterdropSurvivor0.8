@@ -352,6 +352,12 @@ window.NeuralMatrix = (function () {
     // Trigger unlock animation
     _unlockAnim = { nodeId, progress: 0 };
 
+    // Extreme reward blast — visual dopamine hit for major node unlock
+    const _majorNodes = ['eventHorizon', 'bloodAlchemy', 'kineticMirror', 'annunakiProtocol'];
+    if (_majorNodes.includes(nodeId) && typeof window.triggerRewardBlast === 'function') {
+      setTimeout(() => window.triggerRewardBlast({ essence: 0, cores: 0, gold: 0, _nodeLabel: node.label }), 300);
+    }
+
     // Play bass THUD (use available sound)
     if (typeof playSound === 'function') {
       try { playSound('levelup'); } catch (e) { /* ignore */ }

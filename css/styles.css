@@ -7466,12 +7466,14 @@
 .aida-modal-overlay {
   position: fixed;
   inset: 0;
-  z-index: 9500;
+  z-index: 9999;
   display: flex;
   align-items: center;
   justify-content: center;
   background: rgba(0, 0, 0, 0.35);
   animation: aidaOverlayIn 0.4s ease-out forwards;
+  /* Allow clicks to pass through the dark backdrop — only the panel receives events */
+  pointer-events: none;
 }
 
 @keyframes aidaOverlayIn {
@@ -7492,6 +7494,8 @@
   -webkit-mask-image: radial-gradient(ellipse 88% 85% at 50% 50%, black 55%, transparent 100%);
   mask-image: radial-gradient(ellipse 88% 85% at 50% 50%, black 55%, transparent 100%);
   animation: aidaPanelIn 0.45s cubic-bezier(0.22, 1.0, 0.36, 1.0) forwards;
+  /* Re-enable pointer events on the actual content panel */
+  pointer-events: auto;
 }
 
 @keyframes aidaPanelIn {
@@ -7740,6 +7744,8 @@
   background: rgba(0,2,10,0.97);
   font-family: 'Courier New', Courier, monospace;
   animation: nmFadeIn 0.35s ease-out forwards;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 @keyframes nmFadeIn {
