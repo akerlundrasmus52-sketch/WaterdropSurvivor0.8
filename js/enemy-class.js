@@ -1553,6 +1553,15 @@
        * @param {THREE.Vector3|null} hitPoint - World-space position where the hit landed (Y used for segment detection)
        */
       takeDamage(amount, isCrit = false, damageType = 'physical', hitDir = null, hitPoint = null) {
+        // If this enemy is already dead but still in the geyser bleed-out animation,
+        // a fire/plasma hit should interrupt the blood and instantly char the corpse.
+        if (this.isDead) {
+          if (this._inGeyserBleedout && (damageType === 'fire' || damageType === 'plasma')) {
+            if (typeof this._interruptGeyserBleedout === 'function') this._interruptGeyserBleedout();
+          }
+          return;
+        }
+
         // Track last damage type and crit state for death effects
         this.lastDamageType = damageType;
         this.lastCrit = isCrit;
@@ -2104,7 +2113,9 @@
                   let   _svy = 0.14;
                   const _sRx = 0.18 + Math.random() * 0.22;
                   const _sRz = (Math.random() - 0.5) * 0.12;
-                  let _sLife = 150, _sBT = 0;
+                  let _sLife = 300, _sBT = 0; // 300 frames ≈ 5 seconds at 60 fps
+                  const _shFullScale = new THREE.Vector3(1, 1, 1);
+                  const _shZeroScale = new THREE.Vector3(0, 0, 0);
                   managedAnimations.push({
                     update(_dt) {
                       _svy -= 0.007;
@@ -2119,9 +2130,14 @@
                       }
                       _sBT++;
                       if (_sBT % 5 === 0) spawnBloodDecal({ x: _shMesh.position.x, y: 0, z: _shMesh.position.z });
-                      if (_sBT % 12 === 0 && _sLife > 50) spawnParticles(_shMesh.position, 0x8B0000, 2);
+                      if (_sBT % 12 === 0 && _sLife > 60) spawnParticles(_shMesh.position, 0x8B0000, 2);
                       _sLife--;
-                      _shMat.opacity = Math.max(0, (_sLife / 100) * 0.9);
+                      // Shrink linearly to zero over last 60 frames (1 second)
+                      if (_sLife <= 60) {
+                        _shMesh.scale.lerpVectors(_shFullScale, _shZeroScale, 1 - _sLife / 60);
+                      }
+                      // Fade out over the final 100 frames
+                      _shMat.opacity = Math.max(0, Math.min(0.9, (_sLife / 100) * 0.9));
                       if (_sLife <= 0) { scene.remove(_shMesh); _shGeo.dispose(); _shMat.dispose(); return false; }
                       return true;
                     },
@@ -2148,7 +2164,9 @@
                   const _tvz = (Math.random() - 0.5) * 0.22;
                   const _trX = (Math.random() - 0.5) * 0.28;
                   const _trZ = (Math.random() - 0.5) * 0.28;
-                  let _tLife = 120;
+                  let _tLife = 300; // 300 frames ≈ 5 seconds at 60 fps
+                  const _tFullScale = new THREE.Vector3(1, 1, 1);
+                  const _tZeroScale = new THREE.Vector3(0, 0, 0);
                   managedAnimations.push({
                     update(_dt) {
                       _tvy -= 0.010;
@@ -2160,7 +2178,12 @@
                       if (_tMesh.position.y < 0.06) { _tMesh.position.y = 0.06; _tvy = Math.abs(_tvy) * 0.25; }
                       if (_tLife % 7 === 0) spawnBloodDecal({ x: _tMesh.position.x, y: 0, z: _tMesh.position.z });
                       _tLife--;
-                      _tMat.opacity = Math.max(0, (_tLife / 80) * 0.85);
+                      // Shrink linearly to zero over last 60 frames (1 second)
+                      if (_tLife <= 60) {
+                        _tMesh.scale.lerpVectors(_tFullScale, _tZeroScale, 1 - _tLife / 60);
+                      }
+                      // Fade out over the final 80 frames
+                      _tMat.opacity = Math.max(0, Math.min(0.85, (_tLife / 80) * 0.85));
                       if (_tLife <= 0) { scene.remove(_tMesh); _tGeo.dispose(); _tMat.dispose(); return false; }
                       return true;
                     },
@@ -2427,10 +2450,12 @@
           // Phase 1: Hit frame squish (water balloon impact)
           const sy = isCrit ? 0.5 : 0.6;
           const sxz = isCrit ? 1.45 : 1.35;
+          // Clamp scale to prevent explosively large values under rapid fire (e.g. minigun)
+          const _SCALE_MIN = 0.2, _SCALE_MAX = 2.5;
           this.mesh.scale.set(
-            this.mesh.scale.x * sxz,
-            this.mesh.scale.y * sy,
-            this.mesh.scale.z * sxz
+            Math.min(_SCALE_MAX, Math.max(_SCALE_MIN, this.mesh.scale.x * sxz)),
+            Math.min(_SCALE_MAX, Math.max(_SCALE_MIN, this.mesh.scale.y * sy)),
+            Math.min(_SCALE_MAX, Math.max(_SCALE_MIN, this.mesh.scale.z * sxz))
           );
           // Phase 2: Lerp back to (1,1,1) over 150ms
           this._squishTimer = setTimeout(() => {
@@ -5070,9 +5095,31 @@
         let geyserFrame = 0;
         let _heartTimer = 0;
         let _pumpPhase  = 0; // 0–1 within current beat
+        let _geyserAborted = false;
+        const _enemyRef = this; // Capture enemy reference for use in managed animation callbacks
+
+        // Mark enemy as being in bleed-out state so fire/plasma hits can interrupt it
+        this._inGeyserBleedout = true;
+        this._interruptGeyserBleedout = () => {
+          _geyserAborted = true;
+          _enemyRef._inGeyserBleedout = false;
+          _enemyRef._interruptGeyserBleedout = null;
+          // Instantly remove the rolling corpse
+          if (_dyingMesh.parent) scene.remove(_dyingMesh);
+          // Spawn ash pile identical to dieByFire result
+          const _ashGeo = new THREE.SphereGeometry(0.18, 6, 4);
+          const _ashMat = new THREE.MeshBasicMaterial({ color: 0x0A0A0A, transparent: true, opacity: 0.92 });
+          const _ash    = new THREE.Mesh(_ashGeo, _ashMat);
+          _ash.position.set(deathPos.x, 0.06, deathPos.z);
+          _ash.scale.set(2.2, 0.22, 2.2);
+          scene.add(_ash);
+          spawnParticles(deathPos, 0xFF4500, 14);
+          spawnParticles(deathPos, 0x111111, 10);
+        };
 
         if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
           managedAnimations.push({ update(_dt) {
+            if (_geyserAborted) return false;
             geyserFrame++;
 
             if (geyserFrame <= ROLL_FRAMES) {
@@ -5120,12 +5167,16 @@
                 _dyingMesh.material.needsUpdate = true;
               }
               if (geyserFrame >= TOTAL_FRAMES) {
+                _enemyRef._inGeyserBleedout = false;
+                _enemyRef._interruptGeyserBleedout = null;
                 if (_dyingMesh.parent) scene.remove(_dyingMesh);
                 return false;
               }
             }
             return true;
           }, cleanup() {
+            _enemyRef._inGeyserBleedout = false;
+            _enemyRef._interruptGeyserBleedout = null;
             if (_dyingMesh.parent) scene.remove(_dyingMesh);
           }});
         }
