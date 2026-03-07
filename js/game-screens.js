@@ -2391,9 +2391,36 @@
         clearTimeout(_aidaGlitchInterval);
       });
 
+      // ── "ENTER THE DIVE" button ────────────────────────────────
+      const diveBtn = document.createElement('button');
+      diveBtn.className = 'aida-modal-confirm';
+      diveBtn.style.cssText += 'margin-top:6px;background:rgba(0,255,80,0.06);border-color:rgba(0,255,120,0.7);color:#00ff88;text-shadow:0 0 10px #00ff88;box-shadow:0 0 18px rgba(0,255,120,0.2);';
+      diveBtn.textContent = '[ ENTER THE DIVE ]';
+
+      // Show current banked rewards if any
+      const essenceCount = (typeof saveData !== 'undefined') ? (saveData.astralEssence || 0) : 0;
+      const coreCount    = (typeof saveData !== 'undefined') ? (saveData.neuralCores   || 0) : 0;
+      if (essenceCount > 0 || coreCount > 0) {
+        const rewardInfo = document.createElement('div');
+        rewardInfo.style.cssText = 'font-family:monospace;font-size:12px;color:rgba(180,255,200,0.7);margin-top:4px;text-align:center;';
+        rewardInfo.textContent = '⚡ Astral Essence: ' + essenceCount + '   🔷 Neural Cores: ' + coreCount;
+        panel.appendChild(rewardInfo);
+      }
+
+      diveBtn.addEventListener('click', function () {
+        overlay.remove();
+        clearTimeout(_aidaGlitchInterval);
+        if (window.AstralDive && typeof window.AstralDive.start === 'function') {
+          window.AstralDive.start();
+        } else {
+          console.warn('AstralDive module not loaded');
+        }
+      });
+
       panel.appendChild(portraitWrap);
       panel.appendChild(label);
       panel.appendChild(textEl);
+      panel.appendChild(diveBtn);
       panel.appendChild(confirmBtn);
       overlay.appendChild(panel);
       document.body.appendChild(overlay);

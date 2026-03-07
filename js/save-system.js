@@ -321,7 +321,10 @@
       // Per-weapon gem slots: { weaponId: [gemId|null, ...] }
       weaponGemSlots: {},
       // Per-companion gem slots: { companionId: [gemId|null, ...] }
-      companionGemSlots: {}
+      companionGemSlots: {},
+      // ── Astral Dive rewards ──────────────────────────────────
+      astralEssence: 0,  // Collected inside Astral Dive — used in Neural Matrix
+      neuralCores:   0   // Rare drops from Firewall bosses inside the Dive
     };
 
     let saveData = JSON.parse(JSON.stringify(defaultSaveData));
@@ -548,6 +551,9 @@
           // ── Late-game quest / Annunaki arc migration ──
           // Ensure chestOpenCount exists (used by quest36_blackMarket)
           saveData.chestOpenCount = saveData.chestOpenCount || 0;
+          // ── Astral Dive rewards migration ──
+          saveData.astralEssence = saveData.astralEssence || 0;
+          saveData.neuralCores   = saveData.neuralCores   || 0;
         }
       } catch (e) {
         console.error('Failed to load save data:', e);
