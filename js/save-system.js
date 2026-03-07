@@ -559,6 +559,10 @@
           saveData.neuralCores   = saveData.neuralCores   || 0;
           // ── Neural Matrix migration ──
           saveData.neuralMatrix = saveData.neuralMatrix || {};
+          // Ensure parasiteSeenThisSession starts as false (re-rolls once per session)
+          if (saveData.neuralMatrix.parasiteSeenThisSession === undefined) {
+            saveData.neuralMatrix.parasiteSeenThisSession = false;
+          }
           if (!saveData.campBuildings.neuralMatrix) {
             saveData.campBuildings.neuralMatrix = { level: 0, maxLevel: 1, unlocked: false };
           }

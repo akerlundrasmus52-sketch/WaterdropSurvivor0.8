@@ -2441,8 +2441,7 @@
 
       // ── "NEURAL MATRIX" button ─────────────────────────────────
       const matrixBtn = document.createElement('button');
-      matrixBtn.className = 'aida-modal-confirm';
-      matrixBtn.style.cssText += 'margin-top:6px;background:rgba(0,100,255,0.08);border-color:rgba(0,150,255,0.7);color:#00aaff;text-shadow:0 0 10px #00aaff;box-shadow:0 0 18px rgba(0,150,255,0.2);';
+      matrixBtn.className = 'aida-modal-confirm aida-neural-matrix-btn';
       matrixBtn.textContent = '[ NEURAL MATRIX ]';
       matrixBtn.addEventListener('click', function () {
         overlay.remove();

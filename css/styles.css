@@ -7616,6 +7616,21 @@
   box-shadow: 0 0 14px rgba(80, 200, 255, 0.25);
 }
 
+/* Neural Matrix button inside AIDA dialogue */
+.aida-neural-matrix-btn {
+  margin-top: 6px;
+  background: rgba(0, 100, 255, 0.08);
+  border-color: rgba(0, 150, 255, 0.7);
+  color: #00aaff;
+  text-shadow: 0 0 10px #00aaff;
+  box-shadow: 0 0 18px rgba(0, 150, 255, 0.2);
+}
+.aida-neural-matrix-btn:hover {
+  background: rgba(0, 100, 255, 0.18);
+  border-color: rgba(0, 150, 255, 1);
+  box-shadow: 0 0 28px rgba(0, 150, 255, 0.4);
+}
+
 /* ================================================================
    ASTRAL DIVE MINIGAME
 ================================================================ */

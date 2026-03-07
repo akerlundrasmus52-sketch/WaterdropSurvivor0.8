@@ -32,9 +32,9 @@
         holeMesh = new THREE.Mesh(geo, mat);
         holeMesh.position.set(pos.x, 0.12, pos.z);
         scene.add(holeMesh);
-        // Outer glow ring
+        // Outer glow ring — DoubleSide so it's visible from the camera above
         const glowGeo = new THREE.RingGeometry(0.9, 1.4, 32);
-        const glowMat = new THREE.MeshBasicMaterial({ color: 0xaa44ff, transparent: true, opacity: 0.5, side: 2 });
+        const glowMat = new THREE.MeshBasicMaterial({ color: 0xaa44ff, transparent: true, opacity: 0.5, side: THREE.DoubleSide });
         const glowRing = new THREE.Mesh(glowGeo, glowMat);
         glowRing.rotation.x = -Math.PI / 2;
         glowRing.position.set(pos.x, 0.12, pos.z);
@@ -907,9 +907,10 @@
         spawnParticles(player.mesh.position, 0x00FF00, 2);
       }
 
-      // Annunaki Protocol: drain 1% max HP per second (every 60 frames)
+      // Annunaki Protocol: drain ANNUNAKI_HP_DRAIN_RATE % max HP per second (every 60 frames)
+      const ANNUNAKI_HP_DRAIN_RATE = 0.01; // 1% max HP per second — forces ultra-aggressive playstyle
       if (window._nmAnnunakiActive && frameCount % 60 === 0) {
-        const drain = Math.max(1, playerStats.maxHp * 0.01);
+        const drain = Math.max(1, playerStats.maxHp * ANNUNAKI_HP_DRAIN_RATE);
         player.takeDamage(drain);
       }
 
