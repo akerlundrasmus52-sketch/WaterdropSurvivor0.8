@@ -937,6 +937,15 @@
       if (typeof saveSaveData === 'function') saveSaveData();
     }
 
+    // Extreme reward visuals — dopamine blast for earned rewards
+    if (!_crashed && (_essence > 0 || _cores > 0)) {
+      setTimeout(function() {
+        if (typeof window.triggerRewardBlast === 'function') {
+          window.triggerRewardBlast({ essence: _essence, cores: _cores });
+        }
+      }, 600);
+    }
+
     // Narrator line
     if (typeof window.showNarratorLine === 'function') {
       var msg = _crashed

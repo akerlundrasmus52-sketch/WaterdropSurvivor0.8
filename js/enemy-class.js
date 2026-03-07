@@ -1570,6 +1570,43 @@
           this._lastHitVX = hitDir.vx;
           this._lastHitVZ = hitDir.vz;
         }
+
+        // ── Phasing (Level 60+) ──────────────────────────────────────────────
+        // If the enemy has phasing enabled and is not currently in a phase-out
+        // window, there is a 20% chance per hit to enter the phased state.
+        // While phased the enemy turns 50% transparent and the *next* hit is
+        // completely absorbed (no HP loss).  After absorbing one hit the enemy
+        // becomes solid again.
+        if (this._phasingEnabled) {
+          // Helper: set material opacity/transparency in one place
+          const _setPhaseMat = (opacity, transparent) => {
+            const mat = this.mesh && this.mesh.material;
+            if (mat) { mat.transparent = transparent; mat.opacity = opacity; }
+          };
+          if (this._phaseIgnoreNext) {
+            // Absorb this hit — show a ghostly deflect flash and restore opacity
+            this._phaseIgnoreNext = false;
+            _setPhaseMat(1.0, false);
+            if (typeof createFloatingText === 'function') {
+              createFloatingText('PHASED!', this.mesh.position, '#88CCFF');
+            }
+            return; // hit completely absorbed
+          }
+          if (!this._isPhasing && Math.random() < 0.20) {
+            // Enter phased state: go 50% transparent for up to 3 seconds
+            this._isPhasing = true;
+            this._phaseIgnoreNext = true;
+            _setPhaseMat(0.5, true);
+            // Auto-exit phase after 3 s if no hit absorbed it
+            clearTimeout(this._phaseClearTimer);
+            this._phaseClearTimer = setTimeout(() => {
+              this._isPhasing = false;
+              this._phaseIgnoreNext = false;
+              _setPhaseMat(1.0, false);
+            }, 3000);
+          }
+        }
+        // ────────────────────────────────────────────────────────────────────
         
         // Damage type sets for cleaner conditional checks
         const HEAVY_HIT_TYPES = ['doubleBarrel', 'shotgun', 'pumpShotgun', 'autoShotgun', 'sniperRifle', 'homingMissile', 'fireball'];
@@ -1941,7 +1978,51 @@
         if (playerStats.executeDamage > 0 && this.hp / this.maxHp < 0.30) {
           finalAmount *= (1 + playerStats.executeDamage);
         }
-        
+
+        // ── Annunaki Boss: Divine Shield + Neural Matrix gate ─────────────────
+        // The shield can only be penetrated if the player has unlocked at least
+        // 3 major Neural Matrix nodes (eventHorizon, bloodAlchemy, kineticMirror,
+        // annunakiProtocol).  Without that, all damage is absorbed by the shield
+        // and the player sees a warning.
+        if (this.isAnnunakiBoss && this.divineShieldActive) {
+          const _nm = (typeof saveData !== 'undefined' && saveData && saveData.neuralMatrix) ? saveData.neuralMatrix : {};
+          const _majorNodes = ['eventHorizon', 'bloodAlchemy', 'kineticMirror', 'annunakiProtocol'];
+          const _unlockedCount = _majorNodes.filter(n => !!_nm[n]).length;
+          if (_unlockedCount < 3) {
+            // Shield blocks the hit — show warning once per 3 s
+            const _now = Date.now();
+            if (!this._shieldWarnLast || _now - this._shieldWarnLast > 3000) {
+              this._shieldWarnLast = _now;
+              if (typeof createFloatingText === 'function') {
+                createFloatingText(
+                  '🛡️ NEURAL MATRIX: ' + _unlockedCount + '/3 NODES REQUIRED',
+                  this.mesh.position, '#FFD700'
+                );
+              }
+              if (window.pushSuperStatEvent) {
+                window.pushSuperStatEvent('🛡️ SHIELD BLOCKS — UNLOCK 3 NM NODES', 'rare', '⬡', 'danger');
+              }
+            }
+            return; // damage blocked entirely
+          }
+          // Player has ≥3 nodes — damage drains the shield first
+          // divineShieldHp is initialised to 50000 in spawnAnnunakiBoss; treat
+          // undefined as 0 only as a safety guard.
+          this.divineShieldHp = (this.divineShieldHp != null ? this.divineShieldHp : 0) - finalAmount;
+          if (this.divineShieldHp <= 0) {
+            this.divineShieldActive = false;
+            this.divineShieldHp = 0;
+            if (typeof createFloatingText === 'function') {
+              createFloatingText('🔥 DIVINE SHIELD BROKEN!', this.mesh.position, '#FF4400');
+            }
+            if (window.pushSuperStatEvent) {
+              window.pushSuperStatEvent('💥 DIVINE SHIELD BROKEN', 'mythic', '🔥', 'success');
+            }
+          }
+          return; // don't remove main HP while shield is (was) active
+        }
+        // ────────────────────────────────────────────────────────────────────
+
         const oldHp = this.hp;
         this.hp -= finalAmount;
         createDamageNumber(Math.floor(finalAmount), this.mesh.position, isCrit);
