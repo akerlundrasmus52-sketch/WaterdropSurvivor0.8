@@ -144,7 +144,7 @@ window.DialogueSystem = (function () {
     ],
     // Astral Gateway / Neural Dive Pod introduction
     astralGateway: [
-      { text: '> The Astral Gateway is... complete. Magnificent, isn\'t it.', emotion: 'happy' },
+      { text: '> The Astral Gateway is... complete. Magnificent, isn\'t it?', emotion: 'happy' },
       { text: '> I have constructed a Neural Dive Pod to help you unlock your hidden potential.', emotion: 'task' },
       { text: '> Trust me.', emotion: 'thinking' }
     ]

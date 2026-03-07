@@ -2388,7 +2388,7 @@
       confirmBtn.textContent = '[ UNDERSTOOD ]';
       confirmBtn.addEventListener('click', function () {
         overlay.remove();
-        clearInterval(_aidaGlitchInterval);
+        clearTimeout(_aidaGlitchInterval);
       });
 
       panel.appendChild(portraitWrap);
