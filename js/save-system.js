@@ -327,7 +327,12 @@
       companionGemSlots: {},
       // ── Astral Dive rewards ──────────────────────────────────
       astralEssence: 0,  // Collected inside Astral Dive — used in Neural Matrix
-      neuralCores:   0   // Rare drops from Firewall bosses inside the Dive
+      neuralCores:   0,  // Rare drops from Firewall bosses inside the Dive
+      // ── AIDA Dark Pacts ──────────────────────────────────────
+      aidaDarkPacts: {
+        hpReduction:      1.0,  // Multiplicative HP cap (e.g. 0.85 = −15%)
+        bossSpeedCharges: 0     // Remaining boss encounters that spawn at 200% speed
+      }
     };
 
     let saveData = JSON.parse(JSON.stringify(defaultSaveData));
@@ -566,6 +571,10 @@
           if (!saveData.campBuildings.neuralMatrix) {
             saveData.campBuildings.neuralMatrix = { level: 0, maxLevel: 1, unlocked: false };
           }
+          // ── AIDA Dark Pacts migration ──
+          if (!saveData.aidaDarkPacts) saveData.aidaDarkPacts = {};
+          if (saveData.aidaDarkPacts.hpReduction === undefined)   saveData.aidaDarkPacts.hpReduction   = 1.0;
+          if (saveData.aidaDarkPacts.bossSpeedCharges === undefined) saveData.aidaDarkPacts.bossSpeedCharges = 0;
         }
       } catch (e) {
         console.error('Failed to load save data:', e);

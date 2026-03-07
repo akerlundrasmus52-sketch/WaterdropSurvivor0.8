@@ -116,6 +116,33 @@
   // Building mesh registry { id → THREE.Group }
   let _buildingMeshes = {};
 
+  // ── AIDA Camp Corruption ─────────────────────────────────
+  // Tree meshes stored for glitch effect (tier 2 corruption)
+  let _treeMeshes = [];
+  // Star field mesh for tinting
+  let _starsMesh = null;
+  // Lake mesh + light
+  let _lakeMesh = null;
+  let _lakeLight = null;
+  // Lake binary particle system
+  let _lakeParticles = null;
+  let _lakeParticlePositions = null;
+  let _lakeParticleVelocities = [];
+  let _lakeParticleLifetimes = [];
+  const LAKE_PARTICLE_COUNT = 150;
+  const LAKE_POS = { x: 0, z: -40 }; // Waterdrop's ultimate goal, south of forest ring
+  // Corruption level last applied (0–3) – used to detect tier transitions
+  let _lastCorruptionLevel = -1;
+  // Tree glitch timer
+  let _treeGlitchTimer = 0;
+  const TREE_GLITCH_INTERVAL = 3.5; // seconds between glitch bursts
+  let _treeGlitching = false;       // true during 0.2s glitch flash
+  let _treeGlitchFlashTimer = 0;
+  let _treeGlitchMat = null;        // shared neon wireframe material, created once
+  // Original tree canopy materials stored for restoration after glitch
+  // Each entry: { canopies: Mesh[], origMats: Material[] }
+  let _treeOrigMaterials = [];
+
   // Interaction state
   let _nearBuilding  = null;   // id of nearest building (if within radius)
   let _promptEl      = null;   // the DOM prompt element
@@ -216,6 +243,10 @@
 
     // ── Surrounding trees / scenery ─────────────────────────
     _buildAmbientForest();
+
+    // ── Lake (Waterdrop's ultimate goal, south of forest ring) ──
+    _buildLake();
+    _buildLakeParticles();
 
     // ── Buildings ───────────────────────────────────────────
     for (const def of BUILDING_DEFS) {
@@ -392,7 +423,8 @@
       transparent: true,
       opacity: 0.8
     });
-    _campScene.add(new THREE.Points(starGeo, starMat));
+    _starsMesh = new THREE.Points(starGeo, starMat);
+    _campScene.add(_starsMesh);
   }
 
   // ── Spark / ember particle system ────────────────────────
@@ -520,6 +552,9 @@
     const treeCount = 40;
     const treeColors = [0x1a4010, 0x143810, 0x0e2808, 0x224818];
 
+    _treeMeshes = [];
+    _treeOrigMaterials = [];
+
     for (let i = 0; i < treeCount; i++) {
       const angle = (i / treeCount) * Math.PI * 2 + Math.random() * 0.3;
       const radius = 28 + Math.random() * 10;
@@ -541,17 +576,88 @@
       // Canopy (2 stacked cones)
       const col = treeColors[Math.floor(Math.random() * treeColors.length)];
       const canopyMat = new THREE.MeshLambertMaterial({ color: col });
+      const canopyMeshes = [];
+      const origMats = [];
       for (let c = 0; c < 2; c++) {
         const cr = (1.2 - c * 0.3) * scale;
         const ch = (1.6 - c * 0.3) * scale;
         const canopyGeo = new THREE.ConeGeometry(cr, ch, 7);
-        const canopy = new THREE.Mesh(canopyGeo, canopyMat);
+        const mat = canopyMat.clone();
+        const canopy = new THREE.Mesh(canopyGeo, mat);
         canopy.position.y = (1.8 + c * 1.0) * scale;
         canopy.castShadow = true;
         grp.add(canopy);
+        canopyMeshes.push(canopy);
+        origMats.push(mat);
       }
       _campScene.add(grp);
+      _treeMeshes.push(grp);
+      _treeOrigMaterials.push({ canopies: canopyMeshes, origMats });
     }
+  }
+
+  // ── Lake — Waterdrop's ultimate goal, beyond the forest ring ──
+  function _buildLake() {
+    const THREE = T();
+
+    // Dark-blue reflective lake surface
+    const lakeGeo = new THREE.CircleGeometry(12, 48);
+    const lakeMat = new THREE.MeshLambertMaterial({
+      color: 0x1a3a5c,
+      transparent: true,
+      opacity: 0.88,
+    });
+    _lakeMesh = new THREE.Mesh(lakeGeo, lakeMat);
+    _lakeMesh.rotation.x = -Math.PI / 2;
+    _lakeMesh.position.set(LAKE_POS.x, 0.01, LAKE_POS.z);
+    _lakeMesh.receiveShadow = false;
+    _campScene.add(_lakeMesh);
+
+    // Soft blue lake glow
+    _lakeLight = new THREE.PointLight(0x2266aa, 1.2, 25, 2);
+    _lakeLight.position.set(LAKE_POS.x, 2, LAKE_POS.z);
+    _campScene.add(_lakeLight);
+
+    // Shore ring – slightly lighter circle around the lake
+    const shoreGeo = new THREE.RingGeometry(12, 14, 48);
+    const shoreMat = new THREE.MeshLambertMaterial({
+      color: 0x2a4010,
+      side: THREE.DoubleSide,
+    });
+    const shore = new THREE.Mesh(shoreGeo, shoreMat);
+    shore.rotation.x = -Math.PI / 2;
+    shore.position.set(LAKE_POS.x, 0.005, LAKE_POS.z);
+    _campScene.add(shore);
+  }
+
+  // ── Lake binary-code particle system (active only at corruption tier 3) ──
+  function _buildLakeParticles() {
+    const THREE = T();
+    const count = LAKE_PARTICLE_COUNT;
+    const geo = new THREE.BufferGeometry();
+    _lakeParticlePositions = new Float32Array(count * 3);
+
+    for (let i = 0; i < count; i++) {
+      const r = Math.random() * 10;
+      const a = Math.random() * Math.PI * 2;
+      _lakeParticlePositions[i * 3]     = LAKE_POS.x + Math.cos(a) * r;
+      _lakeParticlePositions[i * 3 + 1] = -5; // start below ground (hidden)
+      _lakeParticlePositions[i * 3 + 2] = LAKE_POS.z + Math.sin(a) * r;
+      _lakeParticleVelocities.push(0.4 + Math.random() * 0.9);
+      _lakeParticleLifetimes.push(Math.random() * 5);
+    }
+    geo.setAttribute('position', new THREE.BufferAttribute(_lakeParticlePositions, 3));
+
+    const mat = new THREE.PointsMaterial({
+      color: 0xff1100,
+      size: 0.22,
+      transparent: true,
+      opacity: 0.0, // invisible until tier 3 corruption is applied
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
+    _lakeParticles = new THREE.Points(geo, mat);
+    _campScene.add(_lakeParticles);
   }
 
   // ── Player water-drop (exact match of in-game character) ──
@@ -2530,6 +2636,164 @@
   }
 
   // ──────────────────────────────────────────────────────────
+  // AIDA Camp Corruption — visual degradation as Neural Matrix
+  // nodes are unlocked.  Three tiers based on paid-node count:
+  //   Tier 1 (≥1 node)  : Sky & stars tint to sickly digital green
+  //   Tier 2 (≥3 nodes) : Trees occasionally glitch to neon wireframe
+  //   Tier 3 (all nodes): Lake turns pitch black, red binary particles rise
+  // ──────────────────────────────────────────────────────────
+
+  /** Count the number of *paid* Neural Matrix nodes the player has unlocked. */
+  function _getUnlockedNodeCount() {
+    const sd = _saveData || window.saveData;
+    if (!sd || !sd.neuralMatrix) return 0;
+    const nm = sd.neuralMatrix;
+    const paidNodes = ['eventHorizon', 'bloodAlchemy', 'kineticMirror', 'annunakiProtocol'];
+    return paidNodes.reduce((n, id) => n + (nm[id] ? 1 : 0), 0);
+  }
+
+  /**
+   * Returns 0 (none), 1 (sky tint), 2 (+ tree glitch), or 3 (+ lake corruption).
+   * Thresholds are tuned to the current Neural Matrix which has 4 paid nodes.
+   */
+  function _getCorruptionLevel() {
+    const n = _getUnlockedNodeCount();
+    if (n >= 4) return 3;
+    if (n >= 3) return 2;
+    if (n >= 1) return 1;
+    return 0;
+  }
+
+  /** Apply / revert per-tier environmental changes when corruption level changes. */
+  function _applyCorruptionTier(level) {
+    const THREE = T();
+    if (!_campScene || !THREE) return;
+
+    if (level >= 1) {
+      // Sickly digital-green sky
+      _campScene.background = new THREE.Color(0x030a03);
+      if (_campScene.fog) {
+        _campScene.fog.color = new THREE.Color(0x061406);
+      }
+      if (_starsMesh && _starsMesh.material) {
+        _starsMesh.material.color.set(0x00ff44);
+        _starsMesh.material.size = 0.28;
+      }
+    } else {
+      // Restore natural sky
+      _campScene.background = new THREE.Color(0x0a0c18);
+      if (_campScene.fog) {
+        _campScene.fog.color = new THREE.Color(0x120e08);
+      }
+      if (_starsMesh && _starsMesh.material) {
+        _starsMesh.material.color.set(0xffffff);
+        _starsMesh.material.size = 0.35;
+      }
+    }
+
+    if (level >= 3) {
+      // Lake goes pitch black; activate particle opacity
+      if (_lakeMesh && _lakeMesh.material) {
+        _lakeMesh.material.color.set(0x000000);
+        _lakeMesh.material.opacity = 1.0;
+      }
+      if (_lakeLight) {
+        _lakeLight.color.set(0x330000);
+        _lakeLight.intensity = 0.8;
+      }
+      if (_lakeParticles && _lakeParticles.material) {
+        _lakeParticles.material.opacity = 0.85;
+      }
+    } else {
+      // Restore natural lake
+      if (_lakeMesh && _lakeMesh.material) {
+        _lakeMesh.material.color.set(0x1a3a5c);
+        _lakeMesh.material.opacity = 0.88;
+      }
+      if (_lakeLight) {
+        _lakeLight.color.set(0x2266aa);
+        _lakeLight.intensity = 1.2;
+      }
+      if (_lakeParticles && _lakeParticles.material) {
+        _lakeParticles.material.opacity = 0.0;
+        // Reset particle positions below ground so they don't flash on re-enable
+        if (_lakeParticlePositions) {
+          for (let i = 0; i < LAKE_PARTICLE_COUNT; i++) {
+            _lakeParticlePositions[i * 3 + 1] = -5;
+          }
+          _lakeParticles.geometry.attributes.position.needsUpdate = true;
+        }
+      }
+    }
+  }
+
+  /** Per-frame corruption logic: tree glitch + lake particles. */
+  function _updateCorruption(dt) {
+    const level = _getCorruptionLevel();
+
+    // Detect tier changes and apply environmental palette swap
+    if (level !== _lastCorruptionLevel) {
+      _applyCorruptionTier(level);
+      _lastCorruptionLevel = level;
+    }
+
+    // ── Tier 2: tree glitch ─────────────────────────────────
+    if (level >= 2) {
+      const THREE = T();
+      if (!_treeGlitching) {
+        _treeGlitchTimer -= dt;
+        if (_treeGlitchTimer <= 0) {
+          _treeGlitchTimer = TREE_GLITCH_INTERVAL + Math.random() * 2;
+          // Flash a random subset (~1/3) of trees to neon wireframe
+          _treeGlitching = true;
+          _treeGlitchFlashTimer = 0.2;
+          if (!_treeGlitchMat) {
+            _treeGlitchMat = new THREE.MeshBasicMaterial({ color: 0x00ff00, wireframe: true });
+          }
+          _treeOrigMaterials.forEach((entry) => {
+            if (Math.random() < 0.33) {
+              entry.canopies.forEach(c => { c.material = _treeGlitchMat; });
+              entry._glitched = true;
+            }
+          });
+        }
+      } else {
+        _treeGlitchFlashTimer -= dt;
+        if (_treeGlitchFlashTimer <= 0) {
+          // Restore the original materials (no allocation — use stored references)
+          _treeOrigMaterials.forEach((entry) => {
+            if (entry._glitched) {
+              entry.canopies.forEach((c, i) => { c.material = entry.origMats[i]; });
+              entry._glitched = false;
+            }
+          });
+          _treeGlitching = false;
+        }
+      }
+    }
+
+    // ── Tier 3: lake binary-code particles ──────────────────
+    if (level >= 3 && _lakeParticles && _lakeParticlePositions) {
+      for (let i = 0; i < LAKE_PARTICLE_COUNT; i++) {
+        _lakeParticleLifetimes[i] -= dt;
+        if (_lakeParticleLifetimes[i] <= 0) {
+          // Respawn at random lake surface position
+          const r = Math.random() * 10;
+          const a = Math.random() * Math.PI * 2;
+          _lakeParticlePositions[i * 3]     = LAKE_POS.x + Math.cos(a) * r;
+          _lakeParticlePositions[i * 3 + 1] = 0.05;
+          _lakeParticlePositions[i * 3 + 2] = LAKE_POS.z + Math.sin(a) * r;
+          _lakeParticleVelocities[i] = 0.4 + Math.random() * 0.9;
+          _lakeParticleLifetimes[i]  = 2.5 + Math.random() * 3;
+        } else {
+          _lakeParticlePositions[i * 3 + 1] += _lakeParticleVelocities[i] * dt;
+        }
+      }
+      _lakeParticles.geometry.attributes.position.needsUpdate = true;
+    }
+  }
+
+  // ──────────────────────────────────────────────────────────
   // Player movement + animation states
   // ──────────────────────────────────────────────────────────
   const CAMP_DASH_DURATION = 0.22;
@@ -3598,6 +3862,11 @@
       _touch.y = 0;
       _hideTouchIndicator();
 
+      // Force corruption tier re-evaluation on each camp visit (save data may
+      // have changed since the last visit, e.g. a new node was unlocked mid-run)
+      _lastCorruptionLevel = -1;
+      _treeGlitchTimer = TREE_GLITCH_INTERVAL;
+
       // Reset Benny greeting so proximity check re-runs on each camp visit
       // (but _triggerBennyGreeting() checks bennyGreetingShown in save data so it only shows once)
       _bennyGreeted = false;
@@ -3895,6 +4164,7 @@
     _updateParticles(dt);
     _updateBennyNPC(dt);
     _updateIncubator(dt);
+    _updateCorruption(dt);
 
     // When a building menu is open, freeze player input/movement but keep
     // rendering the camp scene (fire, particles, camera).  Auto-detect when

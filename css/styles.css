@@ -7867,3 +7867,13 @@
   text-align: center;
   transition: opacity 0.5s ease;
 }
+
+/* ─── AIDA Dark Pact Overlay ─────────────────────────────── */
+#aida-dark-pact-overlay {
+  backdrop-filter: blur(6px);
+}
+
+.aida-pact-offer {
+  letter-spacing: 1px;
+  word-spacing: 2px;
+}
