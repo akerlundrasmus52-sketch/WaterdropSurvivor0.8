@@ -87,6 +87,84 @@ window.NeuralMatrix = (function () {
   let _unlockAnim = null; // { nodeId, progress 0→1, lines[] }
   let _time = 0;          // Monotonic tick for animations
 
+  // ─── Hidden star-pattern detection ──────────────────────────────────────────
+  // Five hotspot positions form a pentagram (normalized 0-1 canvas coords).
+  // Two additional hotspots form a 7-pointed Annunaki Star when all 7 are hit.
+  // Hotspots are invisible — the player discovers them by clicking around the canvas.
+  const _STAR_HOTSPOTS = [
+    { cx: 0.50, cy: 0.04 },  // Top
+    { cx: 0.92, cy: 0.55 },  // Right
+    { cx: 0.73, cy: 0.95 },  // Lower-right
+    { cx: 0.27, cy: 0.95 },  // Lower-left
+    { cx: 0.08, cy: 0.55 },  // Left
+    { cx: 0.82, cy: 0.04 },  // Upper-right (Annunaki Star extra)
+    { cx: 0.18, cy: 0.04 },  // Upper-left  (Annunaki Star extra)
+  ];
+  const _STAR_HIT_RADIUS = 0.06; // Normalized radius for hotspot activation
+  let _activatedHotspots = new Set(); // indices into _STAR_HOTSPOTS
+
+  function _checkStarHotspot(normX, normY) {
+    for (let i = 0; i < _STAR_HOTSPOTS.length; i++) {
+      const h = _STAR_HOTSPOTS[i];
+      const dx = normX - h.cx;
+      const dy = normY - h.cy;
+      if (Math.sqrt(dx * dx + dy * dy) <= _STAR_HIT_RADIUS) {
+        _activatedHotspots.add(i);
+      }
+    }
+    // Pentagram: all 5 base hotspots (indices 0-4)
+    const pentagramComplete = [0, 1, 2, 3, 4].every(i => _activatedHotspots.has(i));
+    // Annunaki Star: all 7 hotspots
+    const annunakiComplete = _STAR_HOTSPOTS.length === 7 && [0, 1, 2, 3, 4, 5, 6].every(i => _activatedHotspots.has(i));
+    if (pentagramComplete || annunakiComplete) {
+      _activatedHotspots.clear(); // Reset so it can be triggered again
+      _triggerForbiddenProtocol(annunakiComplete ? 'annunaki' : 'pentagram');
+    }
+  }
+
+  function _triggerForbiddenProtocol(shape) {
+    if (window._nmForbiddenProtocol) return; // Already active
+    window._nmForbiddenProtocol = true;
+    if (saveData && saveData.neuralMatrix) {
+      saveData.neuralMatrix.forbiddenProtocol = true;
+      _save();
+    }
+    // Play dramatic sound
+    if (typeof playSound === 'function') {
+      try { playSound('forbidden_protocol'); } catch (e) { /* ignore */ }
+    }
+    // Massive alert overlay
+    const alertEl = document.createElement('div');
+    alertEl.id = 'nm-forbidden-alert';
+    alertEl.style.cssText = [
+      'position:fixed', 'inset:0', 'z-index:99999',
+      'display:flex', 'flex-direction:column',
+      'align-items:center', 'justify-content:center',
+      'background:rgba(0,0,0,0.88)',
+      'color:#ff00ff',
+      'font-family:"Courier New",monospace',
+      'animation:nmForbiddenFlash 0.15s ease 3',
+      'pointer-events:none'
+    ].join(';');
+    alertEl.innerHTML = `
+      <div style="font-size:clamp(18px,4vw,36px);letter-spacing:4px;text-shadow:0 0 20px #ff00ff,0 0 40px #ff00ff;text-align:center;margin-bottom:16px">
+        ⚠ FORBIDDEN PROTOCOL EXECUTED ⚠
+      </div>
+      <div style="font-size:clamp(10px,2vw,15px);color:#00ffff;letter-spacing:2px;text-align:center;line-height:2">
+        ${shape === 'annunaki' ? 'ANNUNAKI STAR — 7-DIMENSIONAL BREACH' : 'PENTAGRAM — REALITY MATRIX COMPROMISED'}<br>
+        THE SOURCE GLITCH HAS BEEN RELEASED
+      </div>`;
+    document.body.appendChild(alertEl);
+    setTimeout(() => { if (alertEl.parentNode) alertEl.remove(); }, 4000);
+
+    // Narrator line
+    if (typeof window.showNarratorLine === 'function') {
+      window.showNarratorLine(
+        'AIDA: "...what have you done? The Source has been breached. They\'re coming."', 4500
+      );
+    }
+  }
+
   // ─── Helpers ───────────────────────────────────────────────────────────────
   function _save() {
     if (typeof saveSaveData === 'function') saveSaveData();
@@ -489,7 +567,11 @@ window.NeuralMatrix = (function () {
 
     canvas.addEventListener('click', e => {
       const rect = canvas.getBoundingClientRect();
-      const node = _getNodeAt(e.clientX - rect.left, e.clientY - rect.top);
+      const px = e.clientX - rect.left;
+      const py = e.clientY - rect.top;
+      const node = _getNodeAt(px, py);
+      // Check hidden star hotspots on every canvas click
+      _checkStarHotspot(px / _canvas.width, py / _canvas.height);
       if (node) {
         if (node.id === 'parasite') {
           _showToast('Parasite Node — click RE-ROUTE to isolate it!', '#ff4455');
@@ -564,6 +646,9 @@ window.NeuralMatrix = (function () {
     window._nmBloodAlchemy    = !!(nm.bloodAlchemy);
     window._nmKineticMirror   = !!(nm.kineticMirror);
     window._nmPathInfected    = _isPathInfected();
+
+    // Forbidden Protocol: restore flag and spawn Source Glitches this run
+    window._nmForbiddenProtocol = !!(nm.forbiddenProtocol);
 
     if (window._nmAnnunakiActive && pStats) {
       // Mark as active so player-class can switch material

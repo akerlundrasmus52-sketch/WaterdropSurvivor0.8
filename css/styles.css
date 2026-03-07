@@ -7868,6 +7868,12 @@
   transition: opacity 0.5s ease;
 }
 
+@keyframes nmForbiddenFlash {
+  0%   { background: rgba(0,0,0,0.88); }
+  50%  { background: rgba(80,0,80,0.92); }
+  100% { background: rgba(0,0,0,0.88); }
+}
+
 /* ─── AIDA Dark Pact Overlay ─────────────────────────────── */
 #aida-dark-pact-overlay {
   backdrop-filter: blur(6px);

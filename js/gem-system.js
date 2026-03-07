@@ -51,6 +51,18 @@
         fireRate:        [0.03, 0.06, 0.12, 0.20, 0.35, 0.55],
         companionDamage: [0.03, 0.06, 0.12, 0.22, 0.40, 0.65]
       }
+    },
+    corruptedSource: {
+      name: 'Corrupted Source Code',
+      icon: '💀',
+      color: '#ff00ff',
+      glowColor: '#ff66ff',
+      description: 'Reality-breaking code fragment dropped by The Source Glitch. Slot into a weapon for a 1% chance on hit to instantly delete a non-boss enemy — no death, no blood, just gone.',
+      stats: {
+        // The actual effect (1% instant-delete) is handled in projectile-classes.js via _weaponHasGemType.
+        // Provide a minor flat damage bonus so it shows something in the stat panel.
+        flatDamage: [0, 0, 0, 0, 0, 0, 1]  // 7 entries (corrupted rarity = index 6)
+      }
     }
   };
 
@@ -61,7 +73,8 @@
     { id: 'rare',      name: 'Rare',      color: '#5dade2', multiplier: 2.0, border: '#2e86c1' },
     { id: 'epic',      name: 'Epic',      color: '#aa44ff', multiplier: 2.8, border: '#7700cc' },
     { id: 'legendary', name: 'Legendary', color: '#f39c12', multiplier: 4.0, border: '#cc6600' },
-    { id: 'mythic',    name: 'Mythic',    color: '#ff4444', multiplier: 6.0, border: '#cc0000' }
+    { id: 'mythic',    name: 'Mythic',    color: '#ff4444', multiplier: 6.0, border: '#cc0000' },
+    { id: 'corrupted', name: 'Corrupted', color: '#ff00ff', multiplier: 10.0, border: '#cc00cc' }
   ];
 
   // ── Gem Slots per Weapon ─────────────────────────────────────────
