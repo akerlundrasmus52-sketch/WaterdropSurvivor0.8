@@ -2061,5 +2061,6 @@
         }
       }
     }
+    window.Particle = Particle;
 
 
