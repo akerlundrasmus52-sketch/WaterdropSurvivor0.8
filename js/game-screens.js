@@ -67,6 +67,12 @@
       // Disable auto shadow map updates — we control updates manually in the render loop
       // for every-2nd-frame optimization (saves ~2-4ms per skipped frame on mobile)
       renderer.shadowMap.autoUpdate = false;
+      // Brightness & contrast: sRGB output applies gamma correction so mid-tones appear
+      // correctly lit rather than washed-out dark on device displays.
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
+      // ACES Filmic tone mapping gives a cinematic, naturally bright result on mobile.
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.4;
       const gameContainer = document.getElementById('game-container');
       if (!gameContainer) {
         console.error('[Init] #game-container element not found - cannot append renderer canvas');
@@ -94,12 +100,12 @@
 
       // Day/Night Cycle System - Non-blocking, smooth transitions
       // Store light references for day/night cycle
-      window.ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+      window.ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
       scene.add(window.ambientLight);
 
       // Realistic sun/moon with soft dynamic shadows
       const frustumHalf = RENDERER_CONFIG.shadowFrustumHalfSize;
-      window.dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+      window.dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
       window.dirLight.position.set(50, 100, 50);
       window.dirLight.castShadow = true;
       window.dirLight.shadow.mapSize.width = RENDERER_CONFIG.defaultShadowMapSize;
