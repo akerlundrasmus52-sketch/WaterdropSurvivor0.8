@@ -101,6 +101,23 @@
           material.thickness = 0.7;
           window._waterMaterial = material;
         }
+
+        // Annunaki Protocol: permanent gold/liquid-metal texture
+        if (window._nmAnnunakiActive || (playerStats && playerStats._annunakiActive)) {
+          material.color.setHex(0xD4AF37);
+          material.metalness = 0.95;
+          material.roughness = 0.05;
+          material.emissive = new THREE.Color(0x7a5900);
+          material.emissiveIntensity = 0.4;
+          material.transmission = 0;
+          material.clearcoat = 1;
+          material.clearcoatRoughness = 0;
+          if (window._waterMaterial) {
+            window._waterMaterial.color.setHex(0xD4AF37);
+          }
+        }
+        // Store original water color for resets
+        window._playerOriginalColor = material.color.getHex();
         
         this.mesh = new THREE.Mesh(geometry, material);
         this.mesh.position.y = 0.5;
@@ -586,6 +603,10 @@
           
           if (this.dashTime <= 0) {
             this.isDashing = false;
+            // Event Horizon: spawn a black hole at dash end position
+            if (window._nmEventHorizon && window._spawnEventHorizon) {
+              window._spawnEventHorizon(this.mesh.position.clone());
+            }
           }
         }
         // Movement

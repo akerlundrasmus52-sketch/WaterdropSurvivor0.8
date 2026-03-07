@@ -192,7 +192,10 @@
       if (saveData.totalRuns >= 2) {
         saveData.tutorialQuests.secondRunCompleted = true;
       }
-      
+
+      // Neural Matrix: apply AIDA gold drain if path is infected, then save
+      if (window.NeuralMatrix) window.NeuralMatrix.onRunEnd();
+
       saveSaveData();
 
       // Display game over screen
@@ -671,6 +674,18 @@
       // properly removed from the scene and disposed instead of leaking across runs.
       managedAnimations.forEach(anim => { if (anim.cleanup) anim.cleanup(); });
       managedAnimations = [];
+
+      // Neural Matrix: clean up Event Horizon holes on reset
+      if (window._eventHorizonHoles) {
+        window._eventHorizonHoles.forEach(hole => {
+          if (hole.mesh) scene.remove(hole.mesh);
+          if (hole.mesh && hole.mesh._glowRing) scene.remove(hole.mesh._glowRing);
+        });
+        window._eventHorizonHoles = [];
+      }
+      window._activeBloodPools = 0;
+      // Re-apply Neural Matrix flags for the new run
+      if (window.NeuralMatrix) window.NeuralMatrix.applyToRun(playerStats);
       
       goldCoins.forEach(g => {
         scene.remove(g.mesh);

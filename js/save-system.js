@@ -115,8 +115,11 @@
         prestige:  { level: 0, maxLevel: 1, unlocked: false },   // Quest 10
         campfireKitchen: { level: 0, maxLevel: 1, unlocked: false }, // Quest 30
         weaponsmith: { level: 0, maxLevel: 1, unlocked: false },      // Quest 31
-        prismReliquary: { level: 0, maxLevel: 1, unlocked: false }    // Unlocks after 10 min survival
+        prismReliquary: { level: 0, maxLevel: 1, unlocked: false },   // Unlocks after 10 min survival
+        neuralMatrix:   { level: 0, maxLevel: 1, unlocked: false }    // Unlocked via Astral Gateway
       },
+      // Neural Matrix unlock state (which nodes the player has activated)
+      neuralMatrix: {},
       // COMPREHENSIVE SKILL TREE - 48 Skills Total (Fresh Implementation)
       skillTree: {
         // COMBAT PATH (12 skills)
@@ -554,6 +557,11 @@
           // ── Astral Dive rewards migration ──
           saveData.astralEssence = saveData.astralEssence || 0;
           saveData.neuralCores   = saveData.neuralCores   || 0;
+          // ── Neural Matrix migration ──
+          saveData.neuralMatrix = saveData.neuralMatrix || {};
+          if (!saveData.campBuildings.neuralMatrix) {
+            saveData.campBuildings.neuralMatrix = { level: 0, maxLevel: 1, unlocked: false };
+          }
         }
       } catch (e) {
         console.error('Failed to load save data:', e);

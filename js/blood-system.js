@@ -764,6 +764,13 @@
 
     const [pr, pg, pb] = _hexToRgb(poolColor);
 
+    // Blood Alchemy: track active pool count
+    window._activeBloodPools = (window._activeBloodPools || 0) + 1;
+    // Blood pools last 30-40 seconds; remove counter after ~35s
+    setTimeout(() => {
+      window._activeBloodPools = Math.max(0, (window._activeBloodPools || 1) - 1);
+    }, 35000);
+
     for (let s = 0; s < steps; s++) {
       setTimeout(() => {
         if (!_scene) return;

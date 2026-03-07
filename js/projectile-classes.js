@@ -533,6 +533,23 @@
           const dx = this.mesh.position.x - player.mesh.position.x;
           const dz = this.mesh.position.z - player.mesh.position.z;
           if (dx*dx + dz*dz < 0.8) { // Hit radius
+            // Kinetic Mirror: 10% chance to reflect back at 300% speed
+            if (window._nmKineticMirror && !this._reflected && Math.random() < 0.10) {
+              this._reflected = true;
+              this.isEnemyProjectile = false; // Now a player-owned projectile
+              // Reverse direction at 3× speed
+              this.vx = -this.direction.x * this.speed * 3.0;
+              this.vz = -this.direction.z * this.speed * 3.0;
+              this.speed *= 3.0;
+              // Tint mesh cyan to signal reflection
+              if (this.mesh && this.mesh.material) {
+                this.mesh.material.color && this.mesh.material.color.setHex(0x00ffcc);
+              }
+              if (typeof spawnParticles === 'function') {
+                spawnParticles(this.mesh.position, 0x00ffcc, 6);
+              }
+              return true;
+            }
             player.takeDamage(this.damage);
             spawnParticles(player.mesh.position, 0xFF6347, 5);
             this.destroy();
@@ -600,7 +617,10 @@
           const dz = this.mesh.position.z - enemy.mesh.position.z;
           if (dx*dx + dz*dz < 0.6) { // Hit radius
             // Calculate Damage
-            let dmg = weapons.gun.damage * playerStats.damage * playerStats.strength;
+            // Reflected projectiles deal their original damage (stored in this.damage)
+            let dmg = this._reflected
+              ? (this.damage || 15)
+              : weapons.gun.damage * playerStats.damage * playerStats.strength;
             
             // Double barrel uses its own damage
             if (weapons.doubleBarrel.active && this.isDoubleBarrel) {
