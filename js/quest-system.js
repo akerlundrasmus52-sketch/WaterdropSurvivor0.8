@@ -3497,36 +3497,50 @@
      * Displays a dark humor narrator message for 5s with typewriter effect.
      */
     function _showNarratorLine(text) {
-      _ensureNarratorEl();
-      _narratorEl.textContent = '';
-      _narratorEl.style.display = 'block';
-      _narratorEl.style.opacity = '1';
-      // Prefix
-      const prefix = '> [A.I. NARRATOR]: ';
-      let full = prefix + text;
-      let i = 0;
-      const TYPE_DELAY = 30;
-      function typeChar() {
-        if (i < full.length) {
-          _narratorEl.textContent += full[i];
-          i++;
-          setTimeout(typeChar, TYPE_DELAY);
-        } else {
-          // Fade out after 5s
-          setTimeout(() => {
-            let opacity = 1;
-            const fadeInterval = setInterval(() => {
-              opacity -= 0.05;
-              if (_narratorEl) _narratorEl.style.opacity = String(Math.max(0, opacity));
-              if (opacity <= 0) {
-                clearInterval(fadeInterval);
-                if (_narratorEl) _narratorEl.style.display = 'none';
-              }
-            }, 60);
-          }, 5000);
+      try {
+        _ensureNarratorEl();
+        _narratorEl.textContent = '';
+        _narratorEl.style.display = 'block';
+        _narratorEl.style.opacity = '1';
+        // Prefix
+        const prefix = '> [A.I. NARRATOR]: ';
+        let full = prefix + text;
+        let i = 0;
+        const TYPE_DELAY = 30;
+        function typeChar() {
+          if (i < full.length) {
+            _narratorEl.textContent += full[i];
+            i++;
+            setTimeout(typeChar, TYPE_DELAY);
+          } else {
+            // Fade out after 5s
+            setTimeout(() => {
+              let opacity = 1;
+              const fadeInterval = setInterval(() => {
+                opacity -= 0.05;
+                if (_narratorEl) _narratorEl.style.opacity = String(Math.max(0, opacity));
+                if (opacity <= 0) {
+                  clearInterval(fadeInterval);
+                  if (_narratorEl) _narratorEl.style.display = 'none';
+                }
+              }, 60);
+            }, 5000);
+          }
         }
-      }
-      typeChar();
+        typeChar();
+
+        // Speech synthesis for AIDA's voice — only fire after the user has interacted
+        // with the page (browser autoplay policy) and guard against blocked contexts.
+        if (window._audioContextUnlocked && window.speechSynthesis) {
+          try {
+            const utt = new SpeechSynthesisUtterance(text);
+            utt.volume = 0.4;
+            utt.rate   = 1.1;
+            utt.pitch  = 0.8;
+            window.speechSynthesis.speak(utt);
+          } catch (e) {}
+        }
+      } catch (e) {}
     }
 
     /**

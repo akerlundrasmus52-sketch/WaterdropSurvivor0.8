@@ -104,6 +104,10 @@
     if (!_audioCtx) {
       try { _audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {}
     }
+    // Resume a context that was auto-suspended (e.g. tab focus lost or autoplay policy)
+    if (_audioCtx && _audioCtx.state === 'suspended') {
+      try { _audioCtx.resume(); } catch (e) {}
+    }
     return _audioCtx;
   }
 
@@ -946,12 +950,13 @@
       }, 600);
     }
 
-    // Narrator line
+    // Narrator line — wrapped in try/catch to prevent a blocked speech-synthesis
+    // or narrator error from crashing the exit sequence.
     if (typeof window.showNarratorLine === 'function') {
       var msg = _crashed
         ? 'AIDA: "Organic instability detected. Synchronisation failed. Essence recovered: ' + _essence + '."'
         : 'AIDA: "Node purged. Synthesis continues. Astral Essence +' + _essence + ', Neural Cores +' + _cores + '."';
-      setTimeout(function() { window.showNarratorLine(msg, 4000); }, 800);
+      setTimeout(function() { try { window.showNarratorLine(msg, 4000); } catch (e) {} }, 800);
     }
 
     // Remove Three.js renderer & overlay
@@ -963,6 +968,10 @@
 
     _doWakeUp(function() {
       if (overlayRef && overlayRef.parentNode) overlayRef.parentNode.removeChild(overlayRef);
+      // Resume the main game loop now that Astral Dive has fully exited.
+      if (typeof animate === 'function' && !animationFrameId) {
+        animationFrameId = requestAnimationFrame(animate);
+      }
     });
   }
 
@@ -1083,6 +1092,13 @@
       _renderer.setSize(w, h, false);
     };
     window.addEventListener('resize', _onResize);
+
+    // Pause the main game loop to prevent two concurrent render loops.
+    // animationFrameId is a lexical global declared in main.js.
+    if (typeof animationFrameId !== 'undefined' && animationFrameId) {
+      cancelAnimationFrame(animationFrameId);
+      animationFrameId = null;
+    }
 
     _showIntro(function() {
       _lastTime = performance.now();

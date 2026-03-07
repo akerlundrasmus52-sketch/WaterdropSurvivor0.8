@@ -611,6 +611,7 @@
         }
         for (let enemy of _nearbyEnemies) {
           if (enemy.isDead) continue;
+          if (!enemy.mesh) continue; // Guard: mesh disposed or instancing active
           if (this.hitEnemies.has(enemy)) continue; // Skip already-hit enemies
           
           const dx = this.mesh.position.x - enemy.mesh.position.x;
@@ -1634,6 +1635,7 @@
         }
         for (let enemy of _nearbyIce) {
           if (enemy.isDead) continue;
+          if (!enemy.mesh) continue; // Guard: mesh disposed or instancing active
           const dx = this.mesh.position.x - enemy.mesh.position.x;
           const dz = this.mesh.position.z - enemy.mesh.position.z;
           if (dx*dx + dz*dz < 0.6) {
@@ -1822,6 +1824,7 @@
         const dmg = weapons.meteor.damage * playerStats.strength;
         
         enemies.forEach(e => {
+          if (e.isDead || !e.mesh) return; // Guard: skip dead or mesh-less enemies
           const d = e.mesh.position.distanceTo(this.target);
           if (d < range) {
             e.takeDamage(dmg, false, 'fire');
