@@ -3927,6 +3927,19 @@
         enemies.push(newEnemy);
       }
 
+      // Forbidden Protocol: spawn a Source Glitch (type 20) ~15% chance per wave
+      if (window._nmForbiddenProtocol && Math.random() < 0.15) {
+        const glitchAngle = Math.random() * Math.PI * 2;
+        const glitchDist = 12 + Math.random() * 8;
+        const gx = player.mesh.position.x + Math.cos(glitchAngle) * glitchDist;
+        const gz = player.mesh.position.z + Math.sin(glitchAngle) * glitchDist;
+        const glitch = new Enemy(20, gx, gz, playerStats.lvl);
+        enemies.push(glitch);
+        if (typeof createFloatingText === 'function') {
+          createFloatingText('⚠ SOURCE GLITCH', player.mesh.position, '#FF00FF');
+        }
+      }
+
       // First-run tutorial: pause on first enemy appearance to teach steering & aiming
       const isVeryFirstRun = saveData.totalRuns === 0;
       if (isVeryFirstRun && waveCount === 1 && !_firstEnemyTutorialShown) {

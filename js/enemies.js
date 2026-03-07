@@ -23,7 +23,8 @@ const ENEMY_TYPES = {
   SWEEPING_SWARM:    16, // Cluster of fast flyers that sweep side to side, 1-hit kill
   GREY_ALIEN_SCOUT:  17, // Minute-10 alien scout — ranged kiter, drops Alien Biomatter
   REPTILIAN_SHIFTER: 18, // Active-camo flanker — 80% transparent, fully visible at ≤3 units
-  ANNUNAKI_ORB:      19  // Minute-15 boss — golden geometric drone, teleports, laser sweep
+  ANNUNAKI_ORB:      19, // Minute-15 boss — golden geometric drone, teleports, laser sweep
+  SOURCE_GLITCH:     20  // Forbidden Protocol spawn — reality-breaking glitch entity
 };
 
 const MINI_BOSS_HP_SCALING_RATE = 0.20; // 20% HP increase per player level above start (was 15%)
@@ -178,6 +179,16 @@ function getEnemyBaseStats(type, levelScaling, speedBase, playerLevel) {
     stats.speed       = speedBase * 3.6;
     stats.isReptilian = true;
     stats.aiBehavior  = 'flanker';
+  } else if (type === 20) {   // Source Glitch — Forbidden Protocol reality-breaking entity
+    stats.hp       = 600 * ls;
+    stats.speed    = speedBase * 0;  // Teleports instead of walking — speed handled in AI
+    stats.isFlying = true;
+    stats.isSourceGlitch = true;
+    stats.armor    = 0;
+    stats.attackRange = 6;
+    stats.aiBehavior = 'sourceGlitch';
+    stats.dropsCorruptedSourceCode = true;
+    stats.elementalResistance = { fire: -0.50, ice: -0.50, lightning: -0.50, physical: -0.50 }; // Extremely vulnerable — reality is broken
   } else if (type === 19) {   // Annunaki Orb — teleporting golden boss (minute-15)
     const annunakiStartLevel = 15;
     stats.hp             = 4000 * (1 + Math.max(0, playerLevel - annunakiStartLevel) * MINI_BOSS_HP_SCALING_RATE);
@@ -206,6 +217,7 @@ function getEnemyBaseStats(type, levelScaling, speedBase, playerLevel) {
   if (type === 17) stats.damage = 40  * ls;  // Grey Alien Scout — moderate plasma bolt
   if (type === 18) stats.damage = 55  * ls;  // Reptilian Shifter — ambush strike
   if (type === 19) stats.damage = 120 * ls; // Annunaki Orb — laser devastation
+  if (type === 20) stats.damage = 60  * ls; // Source Glitch — erratic digital strikes
 
   // ── Phasing mutation (Level 60+) ────────────────────────────────────────────
   // Above level 60 all basic enemy types (0–9, 12–16) can randomly phase —

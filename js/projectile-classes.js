@@ -728,6 +728,30 @@
               spawnParticles(enemy.mesh.position, 0x5588FF, 6); // Icy blue shards
               spawnParticles(enemy.mesh.position, 0xAADDFF, 4); // Frost glitter
             }
+
+            // ── Corrupted Source Code: 1% chance to instantly delete a non-boss enemy ──
+            if (_weaponHasGemType('corruptedSource') && !enemy.isDead &&
+                !enemy.isMiniBoss && !enemy.isFlyingBoss && enemy.type !== 19 &&
+                Math.random() < 0.01) {
+              // Instant deletion — no death animation, no blood, just gone with a BEEP
+              enemy.isDead = true;
+              enemy._deathTimestamp = Date.now();
+              enemy._skipMainDeathAnim = true;
+              if (enemy.mesh) scene.remove(enemy.mesh);
+              if (enemy.groundShadow) { scene.remove(enemy.groundShadow); enemy.groundShadow = null; }
+              if (typeof spawnParticles === 'function') {
+                spawnParticles(enemy.mesh ? enemy.mesh.position : enemy.mesh.position, 0x00FFFF, 6);
+              }
+              if (typeof createFloatingText === 'function' && enemy.mesh) {
+                createFloatingText('DELETED', enemy.mesh.position, '#00FFFF');
+              }
+              if (typeof playSound === 'function') {
+                try { playSound('glitch_delete'); } catch (e) { /* ignore */ }
+              }
+              // Count as a kill for stats
+              if (typeof playerStats !== 'undefined') playerStats.kills = (playerStats.kills || 0) + 1;
+              return false; // Destroy the projectile
+            }
             
             // ── SNIPER: hit-stop for weight, no separate exit wound here
             // (exit wound is emitted via takeDamage() in enemy-class.js using the hitDir param)

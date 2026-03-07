@@ -568,6 +568,10 @@
           if (saveData.neuralMatrix.parasiteSeenThisSession === undefined) {
             saveData.neuralMatrix.parasiteSeenThisSession = false;
           }
+          // Forbidden Protocol flag (persists between sessions once activated)
+          if (saveData.neuralMatrix.forbiddenProtocol === undefined) {
+            saveData.neuralMatrix.forbiddenProtocol = false;
+          }
           if (!saveData.campBuildings.neuralMatrix) {
             saveData.campBuildings.neuralMatrix = { level: 0, maxLevel: 1, unlocked: false };
           }

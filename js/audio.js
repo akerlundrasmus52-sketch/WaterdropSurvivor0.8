@@ -599,6 +599,68 @@ function playSound(type) {
     oscGain.gain.linearRampToValueAtTime(0.0, now + dur);
     osc.connect(oscGain); oscGain.connect(audioCtx.destination);
     osc.start(now); osc.stop(now + dur);
+
+  } else if (type === 'glitch_delete') {
+    // Corrupted Source Code: instant digital BEEP — enemy erased from memory
+    const beep = audioCtx.createOscillator();
+    const beepGain = audioCtx.createGain();
+    beep.type = 'square';
+    beep.frequency.setValueAtTime(1800, now);
+    beep.frequency.setValueAtTime(900, now + 0.04);
+    beep.frequency.setValueAtTime(2400, now + 0.08);
+    beepGain.gain.setValueAtTime(0.25, now);
+    beepGain.gain.setValueAtTime(0.25, now + 0.10);
+    beepGain.gain.linearRampToValueAtTime(0.0, now + 0.14);
+    beep.connect(beepGain); beepGain.connect(audioCtx.destination);
+    beep.start(now); beep.stop(now + 0.15);
+    // Short static burst
+    const staticNoise = createNoise(0.12);
+    const sGain = audioCtx.createGain();
+    const sHp = audioCtx.createBiquadFilter();
+    sHp.type = 'highpass';
+    sHp.frequency.value = 3000;
+    sGain.gain.setValueAtTime(0.15, now);
+    sGain.gain.linearRampToValueAtTime(0.0, now + 0.12);
+    staticNoise.connect(sHp); sHp.connect(sGain); sGain.connect(audioCtx.destination);
+    staticNoise.start(now); staticNoise.stop(now + 0.12);
+
+  } else if (type === 'forbidden_protocol') {
+    // FORBIDDEN PROTOCOL EXECUTED: deep resonant boom + rising alarm tone
+    const dur = 1.2;
+    // Low resonant boom
+    const boom = audioCtx.createOscillator();
+    const boomGain = audioCtx.createGain();
+    boom.type = 'sawtooth';
+    boom.frequency.setValueAtTime(60, now);
+    boom.frequency.exponentialRampToValueAtTime(25, now + dur);
+    boomGain.gain.setValueAtTime(0.0, now);
+    boomGain.gain.linearRampToValueAtTime(0.3, now + 0.05);
+    boomGain.gain.linearRampToValueAtTime(0.0, now + dur);
+    boom.connect(boomGain); boomGain.connect(audioCtx.destination);
+    boom.start(now); boom.stop(now + dur);
+    // Rising alarm
+    const alarm = audioCtx.createOscillator();
+    const alarmGain = audioCtx.createGain();
+    alarm.type = 'square';
+    alarm.frequency.setValueAtTime(220, now + 0.1);
+    alarm.frequency.exponentialRampToValueAtTime(880, now + 0.7);
+    alarmGain.gain.setValueAtTime(0.0, now + 0.1);
+    alarmGain.gain.linearRampToValueAtTime(0.2, now + 0.2);
+    alarmGain.gain.linearRampToValueAtTime(0.0, now + 0.8);
+    alarm.connect(alarmGain); alarmGain.connect(audioCtx.destination);
+    alarm.start(now + 0.1); alarm.stop(now + 0.8);
+    // High pitch digital screech
+    const screech = audioCtx.createOscillator();
+    const screechGain = audioCtx.createGain();
+    screech.type = 'sawtooth';
+    screech.frequency.setValueAtTime(1200, now + 0.3);
+    screech.frequency.setValueAtTime(1800, now + 0.5);
+    screech.frequency.setValueAtTime(600, now + 0.7);
+    screechGain.gain.setValueAtTime(0.0, now + 0.3);
+    screechGain.gain.linearRampToValueAtTime(0.12, now + 0.35);
+    screechGain.gain.linearRampToValueAtTime(0.0, now + 1.0);
+    screech.connect(screechGain); screechGain.connect(audioCtx.destination);
+    screech.start(now + 0.3); screech.stop(now + 1.0);
   }
 }
 

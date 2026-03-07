@@ -11,7 +11,7 @@
     let waterParticleMat = null;
 
     // Pre-allocated constants for enemy update() — avoids per-frame Set/allocation
-    const _ENEMY_FLYING_TYPES = new Set([5, 11, 14, 16, 17, 19]);
+    const _ENEMY_FLYING_TYPES = new Set([5, 11, 14, 16, 17, 19, 20]);
     const _TREE_COLL_R = 1.0;
     const _PROP_COLL_R = 0.7;
     // Reptilian Shifter visibility thresholds
@@ -371,6 +371,10 @@
           // Annunaki Orb — massive golden geometric drone
           geometry = new THREE.OctahedronGeometry(1.6, 1);
           color = 0xFFD700; // Brilliant gold
+        } else if (type === 20) {
+          // Source Glitch — reality-breaking chaos entity (main mesh for collision bounds)
+          geometry = new THREE.TetrahedronGeometry(0.6, 0);
+          color = 0xFF00FF; // Magenta base — cycles each frame
         }
 
         const material = new THREE.MeshPhysicalMaterial({ 
@@ -381,12 +385,12 @@
           roughness: type === 13 ? 0.8 : (type === 19 ? 0.1 : 0.6),
           transmission: 0.2,
           thickness: 0.5,
-          emissive: (type === 10 || type === 11 || type === 19) ? color : 0x000000,
-          emissiveIntensity: type === 10 ? 0.3 : (type === 11 ? 0.5 : (type === 19 ? 0.6 : 0))
+          emissive: (type === 10 || type === 11 || type === 19 || type === 20) ? color : 0x000000,
+          emissiveIntensity: type === 10 ? 0.3 : (type === 11 ? 0.5 : (type === 19 ? 0.6 : (type === 20 ? 1.0 : 0)))
         });
         this.mesh = new THREE.Mesh(geometry, material);
-        // Flying enemies hover higher; Flying Boss is enormous and hovers high; Annunaki Orb floats imposingly
-        const yPos = (type === 5 || type === 14 || type === 16 || type === 17) ? 2 : (type === 11 ? 5 : (type === 19 ? 4 : 0.5));
+        // Flying enemies hover higher; Flying Boss is enormous and hovers high; Annunaki Orb floats imposingly; Source Glitch hovers mid-height
+        const yPos = (type === 5 || type === 14 || type === 16 || type === 17) ? 2 : (type === 11 ? 5 : (type === 19 ? 4 : (type === 20 ? 2 : 0.5)));
         this.mesh.position.set(x, yPos, z);
         // Flying Boss is scaled large enough to be dramatic but still mostly visible on screen
         if (type === 11) this.mesh.scale.set(1.8, 1.8, 1.8);
@@ -406,9 +410,9 @@
         //   torsoGroup — lean-forward container (uses this.mesh as the main body shape).
         //   headGroup  — small head cap + jaw stub at the top; tracks the player with lag.
         {
-          const _bR = type === 11 ? 2.0 : (type === 19 ? 1.5 : (type === 10 ? 0.90 : (type === 15 ? 0.18 : 0.48)));
-          const _hR = type === 11 ? 0.42 : (type === 19 ? 0.35 : (type === 10 ? 0.18 : (type === 15 ? 0.09 : 0.13)));
-          const _hY = type === 11 ? 2.6  : (type === 19 ? 1.5  : (type === 10 ? 1.10 : (type === 15 ? 0.20 : 0.42)));
+          const _bR = type === 11 ? 2.0 : (type === 19 ? 1.5 : (type === 20 ? 0.0 : (type === 10 ? 0.90 : (type === 15 ? 0.18 : 0.48))));
+          const _hR = type === 11 ? 0.42 : (type === 19 ? 0.35 : (type === 20 ? 0.0 : (type === 10 ? 0.18 : (type === 15 ? 0.09 : 0.13))));
+          const _hY = type === 11 ? 2.6  : (type === 19 ? 1.5  : (type === 20 ? 0.0 : (type === 10 ? 1.10 : (type === 15 ? 0.20 : 0.42))));
 
           // baseGroup — flat slug/foot disc that expands/contracts with the pump cycle
           this.baseGroup = new THREE.Group();
@@ -418,7 +422,7 @@
             transmission: 0.1, thickness: 0.3
           });
           this._anatBaseMesh = new THREE.Mesh(_bGeo, _bMat);
-          this._anatBaseMesh.position.y = type === 11 ? -2.4 : (type === 19 ? -1.4 : -0.36);
+          this._anatBaseMesh.position.y = type === 11 ? -2.4 : (type === 19 ? -1.4 : (type === 20 ? -100 : -0.36));
           this.baseGroup.add(this._anatBaseMesh);
           this.mesh.add(this.baseGroup);
 
@@ -503,6 +507,24 @@
           this._annunakiWarning = false;
         }
 
+        // Source Glitch: chaotic overlapping triangle cluster + teleport init
+        if (type === 20) {
+          this._glitchMeshes = [];
+          const _glitchColors = [0xFF00FF, 0x00FFFF, 0xFF0000, 0x00FF00, 0xFFFF00, 0xFF8800, 0xFFFFFF, 0x8800FF];
+          for (let _gi = 0; _gi < 9; _gi++) {
+            const _gGeo = new THREE.TetrahedronGeometry(0.25 + Math.random() * 0.45, 0);
+            const _gMat = new THREE.MeshBasicMaterial({ color: _glitchColors[_gi % _glitchColors.length], wireframe: _gi % 3 === 0 });
+            const _gMesh = new THREE.Mesh(_gGeo, _gMat);
+            _gMesh.position.set((Math.random() - 0.5) * 1.4, (Math.random() - 0.5) * 1.4, (Math.random() - 0.5) * 1.4);
+            _gMesh.rotation.set(Math.random() * Math.PI * 2, Math.random() * Math.PI * 2, Math.random() * Math.PI * 2);
+            this.mesh.add(_gMesh);
+            this._glitchMeshes.push(_gMesh);
+          }
+          this._glitchTeleportTimer = 0;
+          this._glitchTeleportCooldown = 0.7 + Math.random() * 0.8; // 0.7-1.5s between teleports
+          this._glitchColorTimer = 0;
+        }
+
         // Add legs to Daddy Longlegs spider
         if (type === 15) {
           const legMat = new THREE.MeshLambertMaterial({ color: 0x5C3317 });
@@ -521,10 +543,10 @@
 
         // Ground shadow for flying enemies
         this.groundShadow = null;
-        if (type === 5 || type === 11 || type === 14 || type === 16 || type === 17 || type === 19) {
-          const shadowRadius = type === 11 ? 2.0 : (type === 19 ? 1.8 : (type === 5 ? 0.6 : 0.35));
+        if (type === 5 || type === 11 || type === 14 || type === 16 || type === 17 || type === 19 || type === 20) {
+          const shadowRadius = type === 11 ? 2.0 : (type === 19 ? 1.8 : (type === 20 ? 0.7 : (type === 5 ? 0.6 : 0.35)));
           const shadowGeo = new THREE.CircleGeometry(shadowRadius, 12);
-          const shadowMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.25, depthWrite: false });
+          const shadowMat = new THREE.MeshBasicMaterial({ color: type === 20 ? 0xFF00FF : 0x000000, transparent: true, opacity: type === 20 ? 0.15 : 0.25, depthWrite: false });
           this.groundShadow = new THREE.Mesh(shadowGeo, shadowMat);
           this.groundShadow.rotation.x = -Math.PI / 2;
           this.groundShadow.position.set(x, 0.05, z);
@@ -1098,6 +1120,25 @@
             vz = (dz / (dist || 1)) * sweepSpeed * 0.4 + perpZ * Math.cos(this._sweepTimer * Math.PI) * sweepSpeed;
             // Reset sweep timer every 2s
             if (this._sweepTimer >= 2.0) this._sweepTimer = 0;
+          } else if (behavior === 'sourceGlitch') {
+            // Source Glitch: erratic teleportation — never walks, always blinks around the player
+            vx = 0; vz = 0;
+            if (!this._glitchTeleportTimer) this._glitchTeleportTimer = 0;
+            this._glitchTeleportTimer += dt;
+            if (this._glitchTeleportTimer >= this._glitchTeleportCooldown) {
+              this._glitchTeleportTimer = 0;
+              this._glitchTeleportCooldown = 0.5 + Math.random() * 1.0;
+              // Teleport to a random position 2-10 units from the player
+              const tpAngle = Math.random() * Math.PI * 2;
+              const tpDist = 2 + Math.random() * 8;
+              this.mesh.position.x = targetPos.x + Math.cos(tpAngle) * tpDist;
+              this.mesh.position.z = targetPos.z + Math.sin(tpAngle) * tpDist;
+              this.mesh.position.y = 1.5 + Math.random() * 2;
+              if (typeof spawnParticles === 'function') {
+                spawnParticles(this.mesh.position, 0xFF00FF, 8);
+                spawnParticles(this.mesh.position, 0x00FFFF, 5);
+              }
+            }
           } else if (behavior === 'annunaki') {
             // Annunaki Orb: doesn't move continuously — teleports every 4s near the player
             // then charges for 1.5s (warning glow) before firing a laser sweep.
@@ -1190,6 +1231,28 @@
           // Annunaki Orb gentle hover
           if (this.type === 19) {
             this.mesh.position.y = 4 + Math.sin(gameTime * 1.5 + this.wobbleOffset) * 0.4;
+          }
+          // Source Glitch: chaotic sub-mesh animation + main mesh rotation
+          if (this.type === 20 && this._glitchMeshes) {
+            const _glitchPalette = [0xFF00FF, 0x00FFFF, 0xFF0000, 0x00FF00, 0xFFFF00, 0xFF8800, 0xFFFFFF, 0x8800FF, 0x0088FF];
+            this.mesh.rotation.x += dt * (Math.random() - 0.5) * 8;
+            this.mesh.rotation.y += dt * (Math.random() - 0.5) * 8;
+            this.mesh.rotation.z += dt * (Math.random() - 0.5) * 8;
+            for (let _gi = 0; _gi < this._glitchMeshes.length; _gi++) {
+              const _gm = this._glitchMeshes[_gi];
+              if (!_gm || !_gm.material) continue;
+              _gm.rotation.x += dt * (Math.random() - 0.5) * 12;
+              _gm.rotation.y += dt * (Math.random() - 0.5) * 12;
+              _gm.rotation.z += dt * (Math.random() - 0.5) * 12;
+              const _chaos = 0.5 + Math.random() * 1.2;
+              _gm.scale.setScalar(_chaos);
+              _gm.material.color.setHex(_glitchPalette[Math.floor(Math.random() * _glitchPalette.length)]);
+            }
+            // Cycle main mesh emissive color
+            if (this.mesh.material) {
+              this.mesh.material.color.setHex(_glitchPalette[Math.floor(gameTime * 20) % _glitchPalette.length]);
+              this.mesh.material.emissive.setHex(_glitchPalette[(Math.floor(gameTime * 20) + 3) % _glitchPalette.length]);
+            }
           }
           
           this.mesh.position.x += vx;
@@ -2678,7 +2741,41 @@
         const enemyColor = this.mesh.material.color.getHex();
         // Detect yellow/gold enemy for special spin death (type 7=HardFast gold, type 10=MiniBoss gold)
         const isYellowEnemy = (this.type === 7 || this.type === 10);
-        
+
+        // ── SOURCE GLITCH: instant deletion — no death animation, no blood ──
+        if (this.type === 20) {
+          // Drop Corrupted Source Code before removing mesh
+          if (this.dropsCorruptedSourceCode) {
+            if (!saveData.cutGems) saveData.cutGems = [];
+            const _cscGem = {
+              id: 'csc_' + Date.now() + '_' + Math.floor(Math.random() * 9999),
+              type: 'corruptedSource',
+              rarity: 'corrupted',
+              slottedIn: null
+            };
+            saveData.cutGems.push(_cscGem);
+            if (typeof saveSaveData === 'function') saveSaveData();
+            if (typeof createFloatingText === 'function') {
+              createFloatingText('💀 CORRUPTED SOURCE CODE', deathPos, '#FF00FF');
+            }
+            if (window.pushSuperStatEvent) {
+              window.pushSuperStatEvent('💀 Corrupted Source Code', 'corrupted', '💀', 'success');
+            }
+          }
+          // Instant vanish — digital glitch particles
+          if (typeof spawnParticles === 'function') {
+            spawnParticles(deathPos, 0xFF00FF, 15);
+            spawnParticles(deathPos, 0x00FFFF, 10);
+            spawnParticles(deathPos, 0xFFFFFF, 8);
+          }
+          // Remove mesh immediately with no death animation
+          scene.remove(this.mesh);
+          this._skipMainDeathAnim = true;
+          // Spawn XP (generous amount for the rare encounter)
+          spawnExp(deathPos.x, deathPos.z, 'physical', 1.0, this.type);
+          spawnExp(deathPos.x + 0.5, deathPos.z + 0.5, 'physical', 1.0, this.type);
+          spawnExp(deathPos.x - 0.5, deathPos.z - 0.5, 'physical', 1.0, this.type);
+        } else {
         // Trigger kill cam effect for varied visual feedback
         triggerKillCam(this.mesh.position, this.isMiniBoss, damageType);
         
@@ -3414,6 +3511,7 @@
           }, 100);
           // XP already spawned above; nothing extra needed in this fallback
         }
+        } // end else (non-source-glitch): skip standard kill cam / blood / animation for type 20
         
         // PR #117: Drop GOLD - Reduced drop rate (chest-like rarity), bigger amounts
         let goldAmount = 0;
@@ -3463,6 +3561,8 @@
               goldAmount = 3 + Math.floor(Math.random() * 4);  // 3-6 gold
             } else if (this.type === 16) { // Sweeping Swarm — minimal reward
               goldAmount = 2 + Math.floor(Math.random() * 3);  // 2-4 gold
+            } else if (this.type === 20) { // Source Glitch — no gold, drops Corrupted Source Code instead
+              goldAmount = 0;
             } else {
               goldAmount = 5 + Math.floor(Math.random() * 6); // 5-10 gold (was 1-2)
             }
