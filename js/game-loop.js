@@ -2633,8 +2633,13 @@
           t.mesh.material.opacity = Math.max(0, (t.life / 9) * 0.55);
           if (t.life <= 0) {
             scene.remove(t.mesh);
-            t.mesh.geometry.dispose();
-            t.mesh.material.dispose();
+            // Return to pool instead of disposing geometry/material (prevents GC stutter).
+            if (window.GameObjectPool && t.mesh._poolEntry) {
+              window.GameObjectPool.releaseTrail(t.mesh._poolEntry);
+            } else {
+              t.mesh.geometry.dispose();
+              t.mesh.material.dispose();
+            }
           } else {
             window.bulletTrails[_j++] = t;
           }

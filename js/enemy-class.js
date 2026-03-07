@@ -4169,11 +4169,20 @@
         const _sgChunks = [];
         for (let ci = 0; ci < chunkCount; ci++) {
           const chunkSize = 0.12 + Math.random() * 0.22; // Larger than standard chunks
-          const chunkGeo = Math.random() < 0.5
-            ? new THREE.SphereGeometry(chunkSize, 5, 4)
-            : new THREE.BoxGeometry(chunkSize * 1.2, chunkSize * 0.8, chunkSize);
-          const chunkMat = new THREE.MeshBasicMaterial({ color: goreColors[ci % goreColors.length], transparent: true, opacity: 0.95 });
-          const chunk = new THREE.Mesh(chunkGeo, chunkMat);
+          const isBox = Math.random() >= 0.5;
+          const chunkColor = goreColors[ci % goreColors.length];
+          // Use global object pool to avoid per-chunk allocation / GC stutter.
+          let chunkEntry;
+          if (window.GameObjectPool) {
+            chunkEntry = window.GameObjectPool.getChunk(isBox, chunkSize, chunkColor, deathPos);
+          } else {
+            const chunkGeo = isBox
+              ? new THREE.BoxGeometry(chunkSize * 1.2, chunkSize * 0.8, chunkSize)
+              : new THREE.SphereGeometry(chunkSize, 5, 4);
+            const chunkMat = new THREE.MeshBasicMaterial({ color: chunkColor, transparent: true, opacity: 0.95 });
+            chunkEntry = { mesh: new THREE.Mesh(chunkGeo, chunkMat), geo: chunkGeo, mat: chunkMat };
+          }
+          const chunk = chunkEntry.mesh;
           chunk.position.copy(deathPos);
           chunk.position.y += 0.2 + Math.random() * 0.5;
           scene.add(chunk);
@@ -4182,7 +4191,7 @@
           const spreadAngle = bulletAngle + Math.PI + (Math.random() - 0.5) * coneHalf * 2;
           const speed = 0.18 + Math.random() * 0.22;
           _sgChunks.push({
-            mesh: chunk, geo: chunkGeo, mat: chunkMat,
+            mesh: chunk, geo: chunkEntry.geo, mat: chunkEntry.mat, _poolEntry: chunkEntry,
             vx: Math.cos(spreadAngle) * speed,
             vy: 0.12 + Math.random() * 0.28,
             vz: Math.sin(spreadAngle) * speed,
@@ -4214,7 +4223,12 @@
               if (c.life < 20) c.mat.opacity = c.life / 20;
               if (c.life <= 0) {
                 scene.remove(c.mesh);
-                c.geo.dispose(); c.mat.dispose();
+                // Return to pool (5 s delay) instead of disposing geometry/material.
+                if (window.GameObjectPool && c._poolEntry) {
+                  window.GameObjectPool.releaseChunk(c._poolEntry);
+                } else {
+                  c.geo.dispose(); c.mat.dispose();
+                }
                 _sgChunks.splice(ci, 1);
               }
             }
@@ -4222,12 +4236,23 @@
           }, cleanup() {
             for (const c of _sgChunks) {
               if (c.mesh.parent) scene.remove(c.mesh);
-              c.geo.dispose(); c.mat.dispose();
+              if (window.GameObjectPool && c._poolEntry) {
+                window.GameObjectPool.releaseChunk(c._poolEntry);
+              } else {
+                c.geo.dispose(); c.mat.dispose();
+              }
             }
             _sgChunks.length = 0;
           }});
         } else {
-          for (const c of _sgChunks) { scene.remove(c.mesh); c.geo.dispose(); c.mat.dispose(); }
+          for (const c of _sgChunks) {
+            scene.remove(c.mesh);
+            if (window.GameObjectPool && c._poolEntry) {
+              window.GameObjectPool.releaseChunk(c._poolEntry);
+            } else {
+              c.geo.dispose(); c.mat.dispose();
+            }
+          }
         }
 
         // ── Upper body ─────────────────────────────────────────────────────────

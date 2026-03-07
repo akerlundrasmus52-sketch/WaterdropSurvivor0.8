@@ -33,6 +33,8 @@
 
       // Initialize advanced blood particle system (THREE.Points, 50k particles)
       if (window.BloodSystem && typeof THREE !== 'undefined') window.BloodSystem.init(scene);
+      // Pre-warm global mesh pools (trail dots + meat chunks) so first firefight has no alloc cost.
+      if (window.GameObjectPool) window.GameObjectPool.prewarm();
       console.log('[Init] Scene created OK');
 
       // Camera (Orthographic for miniature look)
@@ -1762,6 +1764,7 @@
           if (typeof showExpeditionsMenu === 'function') showExpeditionsMenu(); else showQuestHall();
         },
         shop:                () => { overlay.remove(); showGachaStore(); },
+        astralGateway:       () => { overlay.remove(); showAstralGateway(); },
         prestige:            () => {
           overlay.remove();
           if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest10b_usePrestige') {
@@ -2266,6 +2269,170 @@
 
       // Play sound
       if (typeof playSound === 'function') playSound('levelup');
+    }
+
+    // ============================================================
+    // ASTRAL GATEWAY — AIDA's Neural Dive Pod dialogue
+    // ============================================================
+    function showAstralGateway() {
+      const existing = document.getElementById('aida-modal-overlay');
+      if (existing) existing.remove();
+
+      // ── Build the overlay ──────────────────────────────────────
+      const overlay = document.createElement('div');
+      overlay.id = 'aida-modal-overlay';
+      overlay.className = 'aida-modal-overlay';
+
+      const panel = document.createElement('div');
+      panel.className = 'aida-modal-panel';
+
+      // ── Portrait: beautiful humanoid mask (normal) + Annunaki eye (glitch) ──
+      const portraitWrap = document.createElement('div');
+      portraitWrap.className = 'aida-portrait-wrap';
+
+      // Normal face — serene, symmetrical humanoid mask in SVG
+      const faceNormal = document.createElement('div');
+      faceNormal.className = 'aida-face-normal';
+      faceNormal.innerHTML = `
+        <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <!-- Background -->
+          <circle cx="50" cy="50" r="50" fill="#060810"/>
+          <!-- Face oval -->
+          <ellipse cx="50" cy="52" rx="28" ry="34" fill="#0d1020" stroke="#1a2a4a" stroke-width="0.5"/>
+          <!-- Forehead band -->
+          <ellipse cx="50" cy="28" rx="20" ry="6" fill="#0f1830" opacity="0.8"/>
+          <!-- Eye sockets -->
+          <ellipse cx="37" cy="46" rx="7" ry="4.5" fill="#080c18"/>
+          <ellipse cx="63" cy="46" rx="7" ry="4.5" fill="#080c18"/>
+          <!-- Iris left -->
+          <ellipse cx="37" cy="46" rx="5" ry="3.5" fill="#0066aa"/>
+          <ellipse cx="37" cy="46" rx="3" ry="2.5" fill="#00aaff"/>
+          <ellipse cx="37" cy="46" rx="1.5" ry="1.5" fill="#001a33"/>
+          <!-- Iris right -->
+          <ellipse cx="63" cy="46" rx="5" ry="3.5" fill="#0066aa"/>
+          <ellipse cx="63" cy="46" rx="3" ry="2.5" fill="#00aaff"/>
+          <ellipse cx="63" cy="46" rx="1.5" ry="1.5" fill="#001a33"/>
+          <!-- Eye glow left -->
+          <ellipse cx="37" cy="46" rx="6" ry="4" fill="none" stroke="#00ccff" stroke-width="0.4" opacity="0.6"/>
+          <!-- Eye glow right -->
+          <ellipse cx="63" cy="46" rx="6" ry="4" fill="none" stroke="#00ccff" stroke-width="0.4" opacity="0.6"/>
+          <!-- Nose bridge -->
+          <path d="M48,50 Q50,56 52,50" fill="none" stroke="#1a2a4a" stroke-width="0.8"/>
+          <!-- Lips -->
+          <path d="M42,62 Q50,66 58,62" fill="none" stroke="#1a3050" stroke-width="1.2"/>
+          <!-- Cheekbones -->
+          <path d="M24,48 Q28,55 30,62" fill="none" stroke="#0a1428" stroke-width="0.6"/>
+          <path d="M76,48 Q72,55 70,62" fill="none" stroke="#0a1428" stroke-width="0.6"/>
+          <!-- Crown circuit lines -->
+          <path d="M30,22 L50,15 L70,22" fill="none" stroke="#003355" stroke-width="0.5"/>
+          <circle cx="50" cy="14" r="2" fill="#004477"/>
+          <circle cx="50" cy="14" r="1" fill="#0088cc"/>
+        </svg>`;
+
+      // Glitch face — single massive mechanical Annunaki eye
+      const faceGlitch = document.createElement('div');
+      faceGlitch.className = 'aida-face-glitch';
+      faceGlitch.innerHTML = `
+        <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <!-- Background — alien black -->
+          <rect width="100" height="100" fill="#000"/>
+          <!-- Outer iris ring — reptilian gold -->
+          <circle cx="50" cy="50" r="46" fill="#0a0500"/>
+          <circle cx="50" cy="50" r="44" fill="none" stroke="#8b6900" stroke-width="1.2"/>
+          <!-- Mid iris — amber with mechanical sectors -->
+          <circle cx="50" cy="50" r="36" fill="#1a0d00"/>
+          <!-- Iris sectors (gear-like) -->
+          <path d="M50,14 L53,30 L50,32 L47,30 Z" fill="#cc8800"/>
+          <path d="M86,50 L70,47 L68,50 L70,53 Z" fill="#cc8800"/>
+          <path d="M50,86 L47,70 L50,68 L53,70 Z" fill="#cc8800"/>
+          <path d="M14,50 L30,53 L32,50 L30,47 Z" fill="#cc8800"/>
+          <path d="M74,26 L62,38 L60,36 L68,24 Z" fill="#aa7000"/>
+          <path d="M74,74 L62,62 L60,64 L68,76 Z" fill="#aa7000"/>
+          <path d="M26,74 L38,62 L40,64 L32,76 Z" fill="#aa7000"/>
+          <path d="M26,26 L38,38 L40,36 L32,24 Z" fill="#aa7000"/>
+          <!-- Inner iris ring -->
+          <circle cx="50" cy="50" r="28" fill="#0d0800"/>
+          <circle cx="50" cy="50" r="26" fill="none" stroke="#ffaa00" stroke-width="0.6" opacity="0.7"/>
+          <!-- Pupil — vertical slit like a serpent/Annunaki -->
+          <ellipse cx="50" cy="50" rx="8" ry="22" fill="#000"/>
+          <!-- Pupil sheen -->
+          <ellipse cx="50" cy="50" rx="7" ry="21" fill="none" stroke="#330000" stroke-width="0.8"/>
+          <!-- Iris glow -->
+          <circle cx="50" cy="50" r="36" fill="none" stroke="#ff9900" stroke-width="0.5" opacity="0.5"/>
+          <!-- Cornea reflection -->
+          <ellipse cx="42" cy="37" rx="4" ry="2.5" fill="white" opacity="0.06" transform="rotate(-30 42 37)"/>
+          <!-- Circuit veins radiating from iris -->
+          <path d="M50,14 Q46,8 40,4" fill="none" stroke="#553300" stroke-width="0.5"/>
+          <path d="M86,50 Q92,46 96,40" fill="none" stroke="#553300" stroke-width="0.5"/>
+          <path d="M50,86 Q54,92 60,96" fill="none" stroke="#553300" stroke-width="0.5"/>
+          <path d="M14,50 Q8,54 4,60" fill="none" stroke="#553300" stroke-width="0.5"/>
+          <!-- Glow bloom -->
+          <circle cx="50" cy="50" r="44" fill="none" stroke="#cc6600" stroke-width="2" opacity="0.15"/>
+        </svg>`;
+
+      portraitWrap.appendChild(faceNormal);
+      portraitWrap.appendChild(faceGlitch);
+
+      // ── Text label ─────────────────────────────────────────────
+      const label = document.createElement('div');
+      label.className = 'aida-modal-label';
+      label.textContent = 'A · I · D · A';
+
+      // ── Dialogue text (typewriter) ─────────────────────────────
+      const textEl = document.createElement('div');
+      textEl.className = 'aida-modal-text';
+
+      // ── Confirm button ─────────────────────────────────────────
+      const confirmBtn = document.createElement('button');
+      confirmBtn.className = 'aida-modal-confirm';
+      confirmBtn.textContent = '[ UNDERSTOOD ]';
+      confirmBtn.addEventListener('click', function () {
+        overlay.remove();
+        clearTimeout(_aidaGlitchInterval);
+      });
+
+      panel.appendChild(portraitWrap);
+      panel.appendChild(label);
+      panel.appendChild(textEl);
+      panel.appendChild(confirmBtn);
+      overlay.appendChild(panel);
+      document.body.appendChild(overlay);
+
+      // ── Typewriter animation ───────────────────────────────────
+      const _aidaDialogue = 'I have constructed a Neural Dive Pod to help you unlock your hidden potential. Trust me.';
+      let _charIdx = 0;
+      function _typeChar() {
+        if (_charIdx < _aidaDialogue.length) {
+          textEl.textContent += _aidaDialogue[_charIdx];
+          _charIdx++;
+          setTimeout(_typeChar, 35);
+        } else {
+          textEl.classList.add('aida-typed-done');
+        }
+      }
+      setTimeout(_typeChar, 400);
+
+      // ── Portrait glitch: every 8-15 s, tear for 0.1 s ─────────
+      var _aidaGlitchInterval = null;
+      function _scheduleGlitch() {
+        const delay = 8000 + Math.random() * 7000; // 8–15 seconds
+        _aidaGlitchInterval = setTimeout(function () {
+          portraitWrap.classList.add('aida-glitching');
+          setTimeout(function () {
+            portraitWrap.classList.remove('aida-glitching');
+            if (document.body.contains(overlay)) _scheduleGlitch();
+          }, 100); // 0.1 s glitch window
+        }, delay);
+      }
+      _scheduleGlitch();
+
+      // Clean up on overlay click-outside
+      overlay.addEventListener('click', function (e) {
+        if (e.target === overlay) {
+          overlay.remove();
+          clearTimeout(_aidaGlitchInterval);
+        }
+      });
     }
 
     // ============================================================
