@@ -338,8 +338,9 @@
     let saveData = JSON.parse(JSON.stringify(defaultSaveData));
 
     function loadSaveData() {
+      let saved = null;
       try {
-        const saved = localStorage.getItem(SAVE_KEY);
+        saved = localStorage.getItem(SAVE_KEY);
         if (saved) {
           saveData = JSON.parse(saved);
           // Ensure all fields exist
@@ -583,6 +584,33 @@
       } catch (e) {
         console.error('Failed to load save data:', e);
         saveData = { ...defaultSaveData };
+
+        // Preserve raw save as a backup so progress is not permanently lost
+        if (typeof saved === 'string' && saved.length > 0) {
+          try { localStorage.setItem(SAVE_KEY + '_corrupt_backup', saved); } catch (_) {}
+        }
+
+        // Store error globally so other modules can inspect it
+        window._saveLoadError = e;
+
+        // Show a visible warning banner on screen (dismissed by tap / auto-dismissed after 12s).
+        // Uses a short delay so the banner is injected after the DOM is fully set up by init().
+        setTimeout(function() {
+          var banner = document.createElement('div');
+          banner.id = 'save-load-error-banner';
+          banner.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:rgba(180,90,0,0.97);color:#fff;padding:10px 12px;font-family:monospace;font-size:11px;z-index:99999;max-height:25vh;overflow-y:auto;border-top:3px solid #ffd700;';
+          var titleEl = document.createElement('div');
+          titleEl.style.cssText = 'font-size:13px;font-weight:bold;color:#ffd700;margin-bottom:4px;';
+          titleEl.textContent = '⚠️ Save data could not be loaded — starting fresh (tap to dismiss)';
+          var msgEl = document.createElement('div');
+          msgEl.style.cssText = 'white-space:pre-wrap;word-break:break-all;max-height:14vh;overflow-y:auto;';
+          msgEl.textContent = (e && e.stack) ? String(e.stack) : String(e);
+          banner.appendChild(titleEl);
+          banner.appendChild(msgEl);
+          var autoDismiss = setTimeout(function() { if (banner.parentNode) banner.style.display = 'none'; }, 12000);
+          banner.onclick = function() { clearTimeout(autoDismiss); banner.style.display = 'none'; };
+          document.body.appendChild(banner);
+        }, 500);
       }
     }
 
