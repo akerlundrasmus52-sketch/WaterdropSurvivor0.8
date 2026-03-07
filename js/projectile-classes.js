@@ -1929,50 +1929,6 @@
       }
     }
 
-    // Phase 5: Object Pooling System for Particles (Performance Critical)
-    class ObjectPool {
-      constructor(createFn, resetFn, initialSize = 100) {
-        this.createFn = createFn;
-        this.resetFn = resetFn;
-        this.pool = [];
-        this.activeSet = new Set(); // Use Set for O(1) lookups instead of array
-        
-        // Pre-allocate initial pool
-        for (let i = 0; i < initialSize; i++) {
-          this.pool.push(this.createFn());
-        }
-      }
-      
-      get() {
-        let obj;
-        if (this.pool.length > 0) {
-          obj = this.pool.pop();
-        } else {
-          obj = this.createFn();
-        }
-        this.activeSet.add(obj);
-        return obj;
-      }
-      
-      release(obj) {
-        if (this.activeSet.has(obj)) {
-          this.activeSet.delete(obj);
-          this.resetFn(obj);
-          this.pool.push(obj);
-        }
-      }
-      
-      clear() {
-        // Clean up all objects
-        for (const obj of this.activeSet) {
-          if (obj.mesh && obj.mesh.parent) {
-            scene.remove(obj.mesh);
-          }
-        }
-        this.activeSet.clear();
-      }
-    }
-
     class Particle {
       static MAX_LIFETIME = 28; // Lifetime in frames before removal
       static INITIAL_OPACITY = 0.92; // Maximum opacity for particles
