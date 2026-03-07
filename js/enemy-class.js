@@ -522,7 +522,6 @@
           }
           this._glitchTeleportTimer = 0;
           this._glitchTeleportCooldown = 0.7 + Math.random() * 0.8; // 0.7-1.5s between teleports
-          this._glitchColorTimer = 0;
         }
 
         // Add legs to Daddy Longlegs spider
@@ -1127,7 +1126,7 @@
             this._glitchTeleportTimer += dt;
             if (this._glitchTeleportTimer >= this._glitchTeleportCooldown) {
               this._glitchTeleportTimer = 0;
-              this._glitchTeleportCooldown = 0.5 + Math.random() * 1.0;
+              this._glitchTeleportCooldown = 0.7 + Math.random() * 0.8; // 0.7-1.5s (matches init)
               // Teleport to a random position 2-10 units from the player
               const tpAngle = Math.random() * Math.PI * 2;
               const tpDist = 2 + Math.random() * 8;

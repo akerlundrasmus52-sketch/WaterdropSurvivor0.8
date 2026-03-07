@@ -733,17 +733,21 @@
             if (_weaponHasGemType('corruptedSource') && !enemy.isDead &&
                 !enemy.isMiniBoss && !enemy.isFlyingBoss && enemy.type !== 19 &&
                 Math.random() < 0.01) {
+              // Capture position before mesh removal to avoid null-ref in particle/text calls
+              const _delPos = enemy.mesh ? enemy.mesh.position.clone() : null;
               // Instant deletion — no death animation, no blood, just gone with a BEEP
               enemy.isDead = true;
               enemy._deathTimestamp = Date.now();
               enemy._skipMainDeathAnim = true;
               if (enemy.mesh) scene.remove(enemy.mesh);
               if (enemy.groundShadow) { scene.remove(enemy.groundShadow); enemy.groundShadow = null; }
-              if (typeof spawnParticles === 'function') {
-                spawnParticles(enemy.mesh ? enemy.mesh.position : enemy.mesh.position, 0x00FFFF, 6);
-              }
-              if (typeof createFloatingText === 'function' && enemy.mesh) {
-                createFloatingText('DELETED', enemy.mesh.position, '#00FFFF');
+              if (_delPos) {
+                if (typeof spawnParticles === 'function') {
+                  spawnParticles(_delPos, 0x00FFFF, 6);
+                }
+                if (typeof createFloatingText === 'function') {
+                  createFloatingText('DELETED', _delPos, '#00FFFF');
+                }
               }
               if (typeof playSound === 'function') {
                 try { playSound('glitch_delete'); } catch (e) { /* ignore */ }
