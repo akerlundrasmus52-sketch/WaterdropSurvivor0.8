@@ -1578,12 +1578,15 @@
         // completely absorbed (no HP loss).  After absorbing one hit the enemy
         // becomes solid again.
         if (this._phasingEnabled) {
+          // Helper: set material opacity/transparency in one place
+          const _setPhaseMat = (opacity, transparent) => {
+            const mat = this.mesh && this.mesh.material;
+            if (mat) { mat.transparent = transparent; mat.opacity = opacity; }
+          };
           if (this._phaseIgnoreNext) {
-            // Absorb this hit — show a ghostly deflect flash
+            // Absorb this hit — show a ghostly deflect flash and restore opacity
             this._phaseIgnoreNext = false;
-            // Restore full opacity
-            if (this.mesh && this.mesh.material) this.mesh.material.opacity = 1.0;
-            if (this.mesh && this.mesh.material) this.mesh.material.transparent = false;
+            _setPhaseMat(1.0, false);
             if (typeof createFloatingText === 'function') {
               createFloatingText('PHASED!', this.mesh.position, '#88CCFF');
             }
@@ -1593,19 +1596,13 @@
             // Enter phased state: go 50% transparent for up to 3 seconds
             this._isPhasing = true;
             this._phaseIgnoreNext = true;
-            if (this.mesh && this.mesh.material) {
-              this.mesh.material.transparent = true;
-              this.mesh.material.opacity = 0.5;
-            }
+            _setPhaseMat(0.5, true);
             // Auto-exit phase after 3 s if no hit absorbed it
             clearTimeout(this._phaseClearTimer);
             this._phaseClearTimer = setTimeout(() => {
               this._isPhasing = false;
               this._phaseIgnoreNext = false;
-              if (this.mesh && this.mesh.material) {
-                this.mesh.material.opacity = 1.0;
-                this.mesh.material.transparent = false;
-              }
+              _setPhaseMat(1.0, false);
             }, 3000);
           }
         }
@@ -2009,7 +2006,9 @@
             return; // damage blocked entirely
           }
           // Player has ≥3 nodes — damage drains the shield first
-          this.divineShieldHp = (this.divineShieldHp || 0) - finalAmount;
+          // divineShieldHp is initialised to 50000 in spawnAnnunakiBoss; treat
+          // undefined as 0 only as a safety guard.
+          this.divineShieldHp = (this.divineShieldHp != null ? this.divineShieldHp : 0) - finalAmount;
           if (this.divineShieldHp <= 0) {
             this.divineShieldActive = false;
             this.divineShieldHp = 0;

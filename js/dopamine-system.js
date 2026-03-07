@@ -721,9 +721,12 @@
 
       // 3 — Physics particles
       const PARTICLE_ICONS = ['💎','🪙','⚡','🔷','✨','💛'];
+      const RB_MIN_PARTICLES   = 80;
+      const RB_PARTICLE_SCALE  = 0.05;
+      const RB_MAX_PARTICLES   = 150;
       const CX = window.innerWidth  / 2;
       const CY = window.innerHeight / 2;
-      const COUNT = Math.min(80 + (essence + cores + gold) * 0.05, 150);
+      const COUNT = Math.min(RB_MIN_PARTICLES + (essence + cores + gold) * RB_PARTICLE_SCALE, RB_MAX_PARTICLES);
       for (let i = 0; i < COUNT; i++) {
         const p = document.createElement('div');
         p.className = '_rb-particle';
@@ -750,24 +753,37 @@
           (parseFloat(dur) + parseFloat(delay) + 0.2) * 1000);
       }
 
-      // 4 — Slot-machine number roll for each _rb-num span
+      // 4 — Slot-machine number roll for numeric _rb-num spans
+      // Non-numeric spans (e.g. node label text) just flash colour instead.
+      const ROLL_STEPS   = 18;
+      const ROLL_STEP_MS = 60;
       const numEls = banner.querySelectorAll('._rb-num');
       numEls.forEach(el => {
-        const target = parseInt(el.textContent.replace('+',''), 10);
+        const raw    = el.textContent.replace(/[^0-9]/g, '');
+        const target = raw ? parseInt(raw, 10) : NaN;
+        if (isNaN(target)) {
+          // Non-numeric label — just do a colour flash
+          let flash = 0;
+          const flashIv = setInterval(() => {
+            flash++;
+            el.style.color = flash % 2 === 0 ? '#cc88ff' : '#ffffff';
+            if (flash >= ROLL_STEPS) { clearInterval(flashIv); el.style.color = '#cc88ff'; }
+          }, ROLL_STEP_MS);
+          return;
+        }
+        const prefix = el.textContent.includes('+') ? '+' : '';
         let current  = 0;
-        const steps  = 18;
-        const stepMs = 60;
-        let step = 0;
+        let step     = 0;
         const iv = setInterval(() => {
           step++;
-          current = step < steps ? Math.floor(target * (step / steps)) : target;
-          el.textContent = '+' + current;
+          current = step < ROLL_STEPS ? Math.floor(target * (step / ROLL_STEPS)) : target;
+          el.textContent = prefix + current;
           el.style.color = step % 2 === 0 ? '#00ff88' : '#ffffff';
-          if (step >= steps) {
+          if (step >= ROLL_STEPS) {
             clearInterval(iv);
             el.style.color = '#00ff88';
           }
-        }, stepMs);
+        }, ROLL_STEP_MS);
       });
 
       // 5 — Fade out everything after 2.6 s
