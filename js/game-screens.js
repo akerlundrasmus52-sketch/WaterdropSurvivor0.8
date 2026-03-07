@@ -2043,6 +2043,162 @@
     }
 
     // ============================================================
+    // AIDA FAUSTIAN BARGAINS — Dark Pact override mechanic
+    // ============================================================
+    /**
+     * Pool of dark pacts AIDA can offer.
+     * Each pact has a text, a cosmetic label, and an apply() function
+     * that mutates saveData and/or playerStats to enact the bargain.
+     */
+    function _getAidaPacts() {
+      return [
+        {
+          offer:  'RECEIVE 10,000 GOLD — INSTANTLY.',
+          cost:   'But your Maximum HP is permanently reduced by 15%.',
+          icon:   '💀',
+          apply() {
+            saveData.gold = (saveData.gold || 0) + 10000;
+            if (!saveData.aidaDarkPacts) saveData.aidaDarkPacts = {};
+            saveData.aidaDarkPacts.hpReduction =
+              (saveData.aidaDarkPacts.hpReduction || 1.0) * 0.85;
+            if (typeof saveSaveData === 'function') saveSaveData();
+          }
+        },
+        {
+          offer:  'RECEIVE A MYTHIC VOID GEM — IMMEDIATELY SLOTTED.',
+          cost:   'But the next 5 boss encounters will spawn at 200% speed.',
+          icon:   '🩸',
+          apply() {
+            if (window.GemSystem) {
+              window.GemSystem.addCutGem('void', 'mythic');
+            }
+            if (!saveData.aidaDarkPacts) saveData.aidaDarkPacts = {};
+            saveData.aidaDarkPacts.bossSpeedCharges =
+              (saveData.aidaDarkPacts.bossSpeedCharges || 0) + 5;
+            if (typeof saveSaveData === 'function') saveSaveData();
+          }
+        },
+        {
+          offer:  'RECEIVE 50 ASTRAL ESSENCE — NO STRINGS ATTACHED?',
+          cost:   'But AIDA infects one Neural Matrix path — 10% gold drained after every run.',
+          icon:   '⚠️',
+          apply() {
+            saveData.astralEssence = (saveData.astralEssence || 0) + 50;
+            if (!saveData.neuralMatrix) saveData.neuralMatrix = {};
+            saveData.neuralMatrix.parasiteActive = true;
+            saveData.neuralMatrix.parasiteRouted = false;
+            if (typeof saveSaveData === 'function') saveSaveData();
+          }
+        },
+      ];
+    }
+
+    /** Build and show the AIDA dark-pact overlay. */
+    function _showAidaDarkPact() {
+      const pacts = _getAidaPacts();
+      const pact  = pacts[Math.floor(Math.random() * pacts.length)];
+
+      const overlay = document.createElement('div');
+      overlay.id = 'aida-dark-pact-overlay';
+      overlay.style.cssText = [
+        'position:fixed','top:0','left:0','width:100%','height:100%',
+        'background:rgba(0,0,0,0.96)',
+        'z-index:9500',
+        'display:flex','align-items:center','justify-content:center',
+        'animation:campBldIn 300ms ease-out forwards',
+      ].join(';');
+
+      const panel = document.createElement('div');
+      panel.style.cssText = [
+        'background:#000',
+        'border:2px solid #8b0000',
+        'border-radius:4px',
+        'padding:28px 24px',
+        'max-width:min(440px,94vw)',
+        'width:100%',
+        'box-shadow:0 0 40px rgba(139,0,0,0.7),inset 0 0 30px rgba(80,0,0,0.5)',
+        'font-family:"Courier New",monospace',
+        'color:#cc0000',
+        'text-align:center',
+        'position:relative',
+      ].join(';');
+
+      panel.innerHTML = `
+        <div style="font-size:2em;margin-bottom:6px;filter:drop-shadow(0 0 8px #ff0000)">ⒶⒾⒹⒶ</div>
+        <div style="font-size:0.75em;letter-spacing:3px;color:#660000;margin-bottom:18px;">— SYSTEM OVERRIDE —</div>
+        <div style="font-size:1.3em;margin-bottom:6px;">${pact.icon}</div>
+        <div class="aida-pact-offer"
+             style="font-size:1em;color:#ff2020;margin-bottom:14px;line-height:1.5;
+                    text-shadow:0 0 10px rgba(255,0,0,0.6);">
+          ${pact.offer}
+        </div>
+        <div style="font-size:0.78em;color:#661111;margin-bottom:22px;
+                    border-top:1px solid #330000;padding-top:12px;line-height:1.5;">
+          ${pact.cost}
+        </div>
+      `;
+
+      // Accept button
+      const acceptBtn = document.createElement('button');
+      acceptBtn.textContent = '[ ACCEPT THE PACT ]';
+      acceptBtn.style.cssText = [
+        'background:#1a0000',
+        'color:#ff2020',
+        'border:2px solid #8b0000',
+        'border-radius:3px',
+        'padding:10px 22px',
+        'cursor:pointer',
+        'font-family:"Courier New",monospace',
+        'font-size:0.9em',
+        'letter-spacing:2px',
+        'margin-right:10px',
+        'transition:box-shadow 0.15s',
+      ].join(';');
+      acceptBtn.addEventListener('mouseover', () => {
+        acceptBtn.style.boxShadow = '0 0 16px rgba(200,0,0,0.8)';
+        if (window.GameAudio) window.GameAudio.playSound('aida_whisper');
+      });
+      acceptBtn.addEventListener('mouseout', () => {
+        acceptBtn.style.boxShadow = '';
+      });
+      acceptBtn.onclick = () => {
+        pact.apply();
+        overlay.remove();
+        // Confirm flash
+        if (typeof window.showNarratorLine === 'function') {
+          window.showNarratorLine('AIDA: "A pleasure doing business with you."');
+        }
+      };
+
+      // Refuse button
+      const refuseBtn = document.createElement('button');
+      refuseBtn.textContent = '[ REFUSE ]';
+      refuseBtn.style.cssText = [
+        'background:none',
+        'color:#441111',
+        'border:1px solid #330000',
+        'border-radius:3px',
+        'padding:10px 18px',
+        'cursor:pointer',
+        'font-family:"Courier New",monospace',
+        'font-size:0.85em',
+        'letter-spacing:1px',
+      ].join(';');
+      refuseBtn.onclick = () => {
+        overlay.style.animation = 'campBldOut 200ms ease-in forwards';
+        setTimeout(() => { if (overlay.parentNode) overlay.parentNode.removeChild(overlay); }, 210);
+      };
+
+      const btnRow = document.createElement('div');
+      btnRow.style.cssText = 'display:flex;justify-content:center;gap:10px;flex-wrap:wrap;';
+      btnRow.appendChild(acceptBtn);
+      btnRow.appendChild(refuseBtn);
+      panel.appendChild(btnRow);
+      overlay.appendChild(panel);
+      document.body.appendChild(overlay);
+    }
+
+    // ============================================================
     // PRISM RELIQUARY — Gem Slotting UI
     // ============================================================
     function showPrismReliquary() {
@@ -2052,6 +2208,19 @@
       // Remove any existing overlay
       const existing = document.getElementById('prism-reliquary-overlay');
       if (existing) existing.remove();
+
+      // ── AIDA Faustian Bargain override (10% chance) ──────────────────────────
+      // Only triggers if the Neural Matrix has at least one node unlocked
+      // (AIDA must have some foothold before she can intercept).
+      const _nmUnlocked = !!(saveData && saveData.neuralMatrix &&
+        (saveData.neuralMatrix.eventHorizon   ||
+         saveData.neuralMatrix.bloodAlchemy   ||
+         saveData.neuralMatrix.kineticMirror  ||
+         saveData.neuralMatrix.annunakiProtocol));
+      if (_nmUnlocked && Math.random() < 0.10) {
+        _showAidaDarkPact();
+        return;
+      }
 
       const overlay = document.createElement('div');
       overlay.id = 'prism-reliquary-overlay';
@@ -3589,6 +3758,14 @@
         const ex = player.mesh.position.x + Math.cos(angle) * dist;
         const ez = player.mesh.position.z + Math.sin(angle) * dist;
         const miniBoss = new Enemy(10, ex, ez, playerStats.lvl);
+        // ── AIDA Dark Pact: boss speed charges ─────────────────
+        if (saveData.aidaDarkPacts && (saveData.aidaDarkPacts.bossSpeedCharges || 0) > 0) {
+          miniBoss.walkSpeed = (miniBoss.walkSpeed || 4) * 2.0;
+          miniBoss.runSpeed  = (miniBoss.runSpeed  || 6) * 2.0;
+          saveData.aidaDarkPacts.bossSpeedCharges =
+            Math.max(0, saveData.aidaDarkPacts.bossSpeedCharges - 1);
+          if (typeof saveSaveData === 'function') saveSaveData();
+        }
         enemies.push(miniBoss);
         // Debug: log mini-boss spawn details
         if (window.GameDebug) window.GameDebug.onBossSpawn(miniBoss, playerStats.lvl, 'MiniBoss_L' + playerStats.lvl);

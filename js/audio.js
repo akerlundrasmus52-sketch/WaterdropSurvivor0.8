@@ -571,6 +571,34 @@ function playSound(type) {
     noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
     noise.connect(bp); bp.connect(noiseGain); noiseGain.connect(audioCtx.destination);
     noise.start(now); noise.stop(now + 0.04);
+
+  } else if (type === 'aida_whisper') {
+    // AIDA dark-pact hover: distorted low whisper + sinister static
+    const dur = 0.7;
+    const noise = createNoise(dur);
+    const noiseGain = audioCtx.createGain();
+    const lp = audioCtx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.setValueAtTime(400, now);
+    lp.frequency.linearRampToValueAtTime(120, now + dur);
+    lp.Q.value = 6;
+    noiseGain.gain.setValueAtTime(0.0, now);
+    noiseGain.gain.linearRampToValueAtTime(0.18, now + 0.05);
+    noiseGain.gain.linearRampToValueAtTime(0.0, now + dur);
+    noise.connect(lp); lp.connect(noiseGain); noiseGain.connect(audioCtx.destination);
+    noise.start(now); noise.stop(now + dur);
+
+    // Sinister low sine sweep underneath
+    const osc = audioCtx.createOscillator();
+    const oscGain = audioCtx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(55, now);
+    osc.frequency.exponentialRampToValueAtTime(35, now + dur);
+    oscGain.gain.setValueAtTime(0.0, now);
+    oscGain.gain.linearRampToValueAtTime(0.07, now + 0.1);
+    oscGain.gain.linearRampToValueAtTime(0.0, now + dur);
+    osc.connect(oscGain); oscGain.connect(audioCtx.destination);
+    osc.start(now); osc.stop(now + dur);
   }
 }
 

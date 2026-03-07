@@ -389,6 +389,14 @@
         playerStats.dropRate        = (playerStats.dropRate   || 1.0)  * (1 + (lvlBonuses.dropRate    || 0));
       }
 
+      // ── AIDA Dark Pact: permanent max-HP reduction ─────────────────────────
+      const _aidaHpMult = (saveData.aidaDarkPacts && saveData.aidaDarkPacts.hpReduction != null)
+        ? saveData.aidaDarkPacts.hpReduction : 1.0;
+      if (_aidaHpMult < 1.0) {
+        playerStats.maxHp = Math.max(10, Math.round(playerStats.maxHp * _aidaHpMult));
+        playerStats.hp    = playerStats.maxHp;
+      }
+
       // --- NEW STATS: connected to camp upgrades and attributes ---
       // dashPower: how far/fast dash goes — scales with strength (physical power) and endurance
       playerStats.dashPower = 1.0 + (strength * 0.04) + (trainingEndurance * 0.03);
