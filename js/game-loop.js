@@ -928,7 +928,7 @@
           }
           // Pull enemies toward the hole
           for (const en of enemies) {
-            if (en.isDead) continue;
+            if (en.isDead || !en.mesh) continue;
             const ex = en.mesh.position.x - hole.x;
             const ez = en.mesh.position.z - hole.z;
             const dist2 = ex * ex + ez * ez;

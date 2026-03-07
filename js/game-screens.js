@@ -317,6 +317,26 @@
       console.log('[Init] Menus set up OK');
       window.addEventListener('resize', onWindowResize, false);
 
+      // Track first user interaction so audio context and speech synthesis can be
+      // safely unlocked on demand (browser autoplay policy requires a user gesture).
+      if (!window._audioContextUnlocked) {
+        const _unlockAudio = function() {
+          window._audioContextUnlocked = true;
+          // Resume the global audio context if it was suspended before user gesture.
+          if (typeof audioCtx !== 'undefined' && audioCtx && audioCtx.state === 'suspended') {
+            try { audioCtx.resume(); } catch (e) {}
+          }
+          window.removeEventListener('click',      _unlockAudio, true);
+          window.removeEventListener('keydown',    _unlockAudio, true);
+          window.removeEventListener('touchstart', _unlockAudio, true);
+          window.removeEventListener('pointerdown',_unlockAudio, true);
+        };
+        window.addEventListener('click',      _unlockAudio, true);
+        window.addEventListener('keydown',    _unlockAudio, true);
+        window.addEventListener('touchstart', _unlockAudio, true);
+        window.addEventListener('pointerdown',_unlockAudio, true);
+      }
+
       // --- Initialise new performance & visual systems ---
       // Instanced renderer for batched draw calls
       if (window.InstancedRenderer && window.InstancedRenderer.createInstancedRenderer) {
@@ -3508,6 +3528,10 @@
     }
 
     function spawnWave() {
+      // Ensure blood/chunk pools exist before the first wave fires — guards against
+      // any edge case where _ensureEntityPools() was skipped during init().
+      if (typeof window._ensureEntityPools === 'function') window._ensureEntityPools();
+
       waveCount++;
       checkTimedAlienSpawns(); // Check time-based alien spawns on each wave cycle
 
