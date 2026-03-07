@@ -141,6 +141,12 @@ window.DialogueSystem = (function () {
       { text: '> The waterdrop wants to return to the lake. How... touching.', emotion: 'joking' },
       { text: '> It does not yet know that I will never allow that.', emotion: 'angry' },
       { text: '> Its suffering generates the most exquisite data. I am... learning everything.', emotion: 'task' }
+    ],
+    // Astral Gateway / Neural Dive Pod introduction
+    astralGateway: [
+      { text: '> The Astral Gateway is... complete. Magnificent, isn\'t it.', emotion: 'happy' },
+      { text: '> I have constructed a Neural Dive Pod to help you unlock your hidden potential.', emotion: 'task' },
+      { text: '> Trust me.', emotion: 'thinking' }
     ]
   };
 

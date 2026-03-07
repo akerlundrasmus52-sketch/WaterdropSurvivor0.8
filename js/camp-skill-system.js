@@ -345,6 +345,16 @@
         isFree: true,
         bonus: (level) => ({})
       },
+      astralGateway: {
+        name: 'The Astral Gateway',
+        icon: '🌀',
+        description: 'A massive, glowing alien ring. AIDA has constructed a Neural Dive Pod to help you unlock your hidden potential.',
+        baseCost: 0,
+        costMultiplier: 0,
+        maxCost: 0,
+        isFree: true,
+        bonus: (level) => ({})
+      },
       prestige: {
         name: 'Prestige Altar',
         icon: '✨',

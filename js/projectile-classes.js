@@ -556,21 +556,25 @@
         // TRACER TRAIL: every 2-3 frames, drop a tiny fading sphere at current position.
         this._trailFrame = (this._trailFrame || 0) + 1;
         if (this._trailFrame % 3 === 0 && window.bulletTrails) {
-          const trailGeo = new THREE.SphereGeometry(0.035, 4, 4);
           // Red gem: override trail colour with fiery red
           const trailColor = _weaponHasGemType('ruby')
             ? 0xFF2200
             : this.mesh.material.color.getHex();
-          const trailMat = new THREE.MeshBasicMaterial({
-            color: trailColor,
-            transparent: true,
-            opacity: 0.55
-          });
-          const trailDot = new THREE.Mesh(trailGeo, trailMat);
-          trailDot.position.copy(this.mesh.position);
-          scene.add(trailDot);
+          // Use the global object pool to avoid per-frame geometry/material allocation.
+          let trailMesh;
+          if (window.GameObjectPool) {
+            const _poolEntry = window.GameObjectPool.getTrail(trailColor, this.mesh.position);
+            trailMesh = _poolEntry.mesh;
+            trailMesh._poolEntry = _poolEntry;
+          } else {
+            const trailGeo = new THREE.SphereGeometry(0.035, 4, 4);
+            const trailMat = new THREE.MeshBasicMaterial({ color: trailColor, transparent: true, opacity: 0.55 });
+            trailMesh = new THREE.Mesh(trailGeo, trailMat);
+            trailMesh.position.copy(this.mesh.position);
+          }
+          scene.add(trailMesh);
           // Expire after ~150ms (≈9 frames at 60fps)
-          window.bulletTrails.push({ mesh: trailDot, life: 9 });
+          window.bulletTrails.push({ mesh: trailMesh, life: 9 });
         }
         
         this.life--;
