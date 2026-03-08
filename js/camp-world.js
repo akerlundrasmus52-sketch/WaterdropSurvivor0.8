@@ -3311,6 +3311,7 @@
 
   // Known overlay/screen element IDs that camp building callbacks may show.
   // Used by _checkMenuClosed() to auto-detect when the player closes a menu.
+  // Also exposed as window._CAMP_OVERLAY_IDS for use by other modules (e.g. dialogue-system.js).
   const _OVERLAY_IDS = [
     'gear-screen', 'achievements-screen', 'progression-shop',
     'companion-house-modal', 'inventory-screen-modal',
@@ -3323,6 +3324,7 @@
     'aida-modal-overlay', 'camp-codex-screen', 'character-visuals-screen',
     'weaponsmith-overlay'
   ];
+  window._CAMP_OVERLAY_IDS = _OVERLAY_IDS;
 
   /**
    * Auto-detect when a building overlay has been dismissed.

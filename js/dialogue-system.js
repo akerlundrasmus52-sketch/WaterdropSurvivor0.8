@@ -317,12 +317,13 @@ window.DialogueSystem = (function () {
    * _isCampMenuOpen()
    * Returns true when any camp building overlay is currently visible.
    * Used to suppress A.I.D.A dialogues while menus are open.
+   * Primarily relies on CampWorld.menuOpen; falls back to window._CAMP_OVERLAY_IDS.
    */
   function _isCampMenuOpen() {
-    // Check via CampWorld public API first
+    // Check via CampWorld public API first (most reliable)
     if (window.CampWorld && window.CampWorld.menuOpen) return true;
-    // Fallback: check common overlay IDs
-    var overlayIds = [
+    // Fallback: check common overlay IDs (shared constant or inline list)
+    var ids = window._CAMP_OVERLAY_IDS || [
       'prism-reliquary-overlay', 'camp-board-overlay', 'neural-matrix-overlay',
       'armory-overlay', 'recycle-overlay', 'campfire-kitchen-overlay',
       'workshop-overlay', 'gacha-store-overlay', 'aida-dark-pact-overlay',
@@ -331,9 +332,9 @@ window.DialogueSystem = (function () {
       'progression-shop', 'prestige-menu', 'expeditions-menu',
       'gear-screen', 'achievements-screen'
     ];
-    for (var i = 0; i < overlayIds.length; i++) {
-      var el = document.getElementById(overlayIds[i]);
-      if (el && el.style.display !== 'none' && getComputedStyle(el).display !== 'none') return true;
+    for (var i = 0; i < ids.length; i++) {
+      var el = document.getElementById(ids[i]);
+      if (el && getComputedStyle(el).display !== 'none') return true;
     }
     return false;
   }
