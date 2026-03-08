@@ -2584,6 +2584,10 @@
       goldCoins.forEach(g => g.update(player.mesh.position));
       goldDrops.forEach(g => g.update(player.mesh.position));
       chests.forEach(c => c.update(player.mesh.position));
+      // Boss Chests (dropped by bosses, grant Relic loot screen on collection)
+      if (window.bossChests && window.bossChests.length) {
+        window.bossChests = window.bossChests.filter(bc => { bc.update(player.mesh.position); return !bc.collected; });
+      }
 
       // --- Instanced renderer: sync entity transforms to GPU buffers ---
       if (window._instancedRenderer && window._instancedRenderer.active) {

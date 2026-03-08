@@ -2050,14 +2050,14 @@
     
     /* Rarity-based edge colors */
     .upgrade-card.rarity-common {
-      border-color: #27ae60;
-      background: linear-gradient(135deg, #0d1a12 0%, #081210 100%);
+      border-color: #cccccc;
+      background: linear-gradient(135deg, #141414 0%, #0e0e0e 100%);
       animation: rarity-glow-common 3s ease-in-out infinite;
-      --rarity-glow-color: rgba(39,174,96,0.8);
+      --rarity-glow-color: rgba(200,200,200,0.7);
     }
     @keyframes rarity-glow-common {
-      0%, 100% { box-shadow: 0 0 0 4px rgba(4,8,18,0.97), 0 4px 12px rgba(0,0,0,0.5), 0 0 8px rgba(39,174,96,0.15); }
-      50% { box-shadow: 0 0 0 5px rgba(3,7,16,0.98), 0 4px 12px rgba(0,0,0,0.5), 0 0 14px rgba(39,174,96,0.3); }
+      0%, 100% { box-shadow: 0 0 0 4px rgba(4,8,18,0.97), 0 4px 12px rgba(0,0,0,0.5), 0 0 8px rgba(200,200,200,0.15); }
+      50% { box-shadow: 0 0 0 5px rgba(3,7,16,0.98), 0 4px 12px rgba(0,0,0,0.5), 0 0 16px rgba(200,200,200,0.3); }
     }
     
     .upgrade-card.rarity-rare {
@@ -2075,61 +2075,185 @@
       50% { box-shadow: 0 0 0 5px rgba(3,7,16,0.98), 0 4px 12px rgba(0,0,0,0.5), 0 0 18px rgba(52,152,219,0.45); }
     }
     
+    /* Epic = Purple (ARPG spec) */
     .upgrade-card.rarity-epic {
-      border-color: #e67e22;
-      background: linear-gradient(135deg, #1a1005 0%, #120a03 100%);
+      border-color: #9b44f0;
+      background: linear-gradient(135deg, #120820 0%, #0b0515 100%);
       animation: rarity-glow-epic 2s ease-in-out infinite;
-      --rarity-glow-color: rgba(230,126,34,0.9);
+      --rarity-glow-color: rgba(155,68,240,0.9);
     }
     .upgrade-card.rarity-epic:hover {
-      box-shadow: 0 0 0 4px rgba(4,8,18,0.97), 0 0 22px rgba(230,126,34,0.7), 0 0 40px rgba(230,126,34,0.4);
-      border-color: #f39c12;
+      box-shadow: 0 0 0 4px rgba(4,8,18,0.97), 0 0 22px rgba(155,68,240,0.7), 0 0 40px rgba(155,68,240,0.4);
+      border-color: #bb66ff;
     }
     @keyframes rarity-glow-epic {
-      0%, 100% { box-shadow: 0 0 0 4px rgba(4,8,18,0.97), 0 4px 12px rgba(0,0,0,0.5), 0 0 12px rgba(230,126,34,0.25); }
-      50% { box-shadow: 0 0 0 5px rgba(3,7,16,0.98), 0 4px 12px rgba(0,0,0,0.5), 0 0 22px rgba(230,126,34,0.5); }
+      0%, 100% { box-shadow: 0 0 0 4px rgba(4,8,18,0.97), 0 4px 12px rgba(0,0,0,0.5), 0 0 12px rgba(155,68,240,0.25); }
+      50% { box-shadow: 0 0 0 5px rgba(3,7,16,0.98), 0 4px 12px rgba(0,0,0,0.5), 0 0 24px rgba(155,68,240,0.55); }
     }
     
+    /* Legendary = Gold (ARPG spec) */
     .upgrade-card.rarity-legendary {
-      border-color: #e74c3c;
-      background: linear-gradient(135deg, #1a0808 0%, #120404 100%);
+      border-color: #FFD700;
+      background: linear-gradient(135deg, #1a1400 0%, #120e00 100%);
       animation: legendary-glow 2s ease-in-out infinite alternate;
-      --rarity-glow-color: rgba(231,76,60,0.95);
+      --rarity-glow-color: rgba(255,215,0,0.95);
     }
     .upgrade-card.rarity-legendary:hover {
-      box-shadow: 0 0 0 4px rgba(4,8,18,0.97), 0 0 25px rgba(231,76,60,0.9), 0 0 45px rgba(231,76,60,0.5);
-      border-color: #ff6b5a;
+      box-shadow: 0 0 0 4px rgba(4,8,18,0.97), 0 0 26px rgba(255,215,0,0.9), 0 0 48px rgba(255,180,0,0.5);
+      border-color: #ffe44d;
     }
     
+    /* Mythic = Red/Black (ARPG spec) */
     .upgrade-card.rarity-mythical {
-      border-color: #FF4444;
-      background: linear-gradient(135deg, #200505 0%, #180202 100%);
-      animation: mythical-glow 1.5s ease-in-out infinite alternate;
-      --rarity-glow-color: rgba(255,68,68,1);
+      border-color: #FF2200;
+      background: linear-gradient(135deg, #200000 0%, #0a0000 100%);
+      animation: mythical-glow 1.2s ease-in-out infinite alternate;
+      --rarity-glow-color: rgba(255,34,0,1);
+      overflow: visible;
     }
     .upgrade-card.rarity-mythical:hover {
-      box-shadow: 0 0 0 4px rgba(4,8,18,0.97), 0 0 28px rgba(255,68,68,0.9), 0 0 50px rgba(255,68,68,0.6);
-      border-color: #ff6666;
+      box-shadow: 0 0 0 4px rgba(4,8,18,0.97), 0 0 32px rgba(255,34,0,0.95), 0 0 56px rgba(255,0,0,0.5);
+      border-color: #ff5533;
     }
     
     @keyframes legendary-glow {
       0% { 
-        box-shadow: 0 0 0 4px rgba(4,8,18,0.97), 0 4px 8px rgba(0,0,0,0.5), 0 0 20px rgba(231,76,60,0.5), inset 0 0 0 2px rgba(0,0,0,0.4);
+        box-shadow: 0 0 0 4px rgba(4,8,18,0.97), 0 4px 8px rgba(0,0,0,0.5), 0 0 20px rgba(255,215,0,0.5), inset 0 0 0 2px rgba(0,0,0,0.4);
       }
       100% { 
-        box-shadow: 0 0 0 5px rgba(3,7,16,0.98), 0 4px 8px rgba(0,0,0,0.5), 0 0 30px rgba(231,76,60,0.8), 0 0 50px rgba(231,76,60,0.4), inset 0 0 0 2px rgba(0,0,0,0.4);
+        box-shadow: 0 0 0 5px rgba(3,7,16,0.98), 0 4px 8px rgba(0,0,0,0.5), 0 0 32px rgba(255,215,0,0.85), 0 0 54px rgba(255,180,0,0.4), inset 0 0 0 2px rgba(0,0,0,0.4);
       }
     }
     
     @keyframes mythical-glow {
       0% { 
-        box-shadow: 0 0 0 4px rgba(4,8,18,0.97), 0 4px 8px rgba(0,0,0,0.5), 0 0 20px rgba(255,68,68,0.5), inset 0 0 0 2px rgba(0,0,0,0.4);
+        box-shadow: 0 0 0 4px rgba(4,8,18,0.97), 0 4px 8px rgba(0,0,0,0.5), 0 0 22px rgba(255,34,0,0.6), inset 0 0 0 2px rgba(0,0,0,0.4);
       }
       100% { 
-        box-shadow: 0 0 0 5px rgba(3,7,16,0.98), 0 4px 8px rgba(0,0,0,0.5), 0 0 30px rgba(255,68,68,0.8), 0 0 50px rgba(255,68,68,0.4), inset 0 0 0 2px rgba(0,0,0,0.4);
+        box-shadow: 0 0 0 5px rgba(3,7,16,0.98), 0 4px 8px rgba(0,0,0,0.5), 0 0 36px rgba(255,34,0,0.9), 0 0 60px rgba(200,0,0,0.5), inset 0 0 0 2px rgba(0,0,0,0.4);
       }
     }
     
+    /* ── ARPG Rarity Badge ────────────────────────────────────────────────── */
+    .upgrade-rarity-badge {
+      display: inline-block;
+      font-size: 9px;
+      font-weight: 900;
+      letter-spacing: 1.5px;
+      padding: 1px 6px;
+      border-radius: 3px;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+    }
+    .rarity-badge-common    { color: #ccc;    background: rgba(200,200,200,0.12); border: 1px solid #ccc; }
+    .rarity-badge-rare      { color: #3498DB; background: rgba(52,152,219,0.15); border: 1px solid #3498DB; }
+    .rarity-badge-epic      { color: #bb66ff; background: rgba(155,68,240,0.15); border: 1px solid #9b44f0; }
+    .rarity-badge-legendary { color: #FFD700; background: rgba(255,215,0,0.15);  border: 1px solid #FFD700; }
+    .rarity-badge-mythic    { color: #ff2200; background: rgba(255,34,0,0.15);   border: 1px solid #FF2200; text-shadow: 0 0 6px rgba(255,34,0,0.8); }
+
+    /* ── Mythic Particles ─────────────────────────────────────────────────── */
+    .mythic-particle {
+      position: absolute;
+      left: var(--mp-x, 50%);
+      bottom: 0;
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: #ff2200;
+      box-shadow: 0 0 6px #ff4400;
+      animation: mythicParticleRise 1.8s ease-in var(--mp-delay, 0s) infinite;
+      pointer-events: none;
+    }
+    @keyframes mythicParticleRise {
+      0%   { transform: translateY(0)    scale(1);   opacity: 0.9; }
+      70%  { transform: translateY(-60px) scale(0.7); opacity: 0.5; }
+      100% { transform: translateY(-90px) scale(0.2); opacity: 0; }
+    }
+
+    /* ── Focus Path Prompt ────────────────────────────────────────────────── */
+    .focus-path-prompt {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      align-items: stretch;
+      width: 100%;
+      padding: 12px 0;
+    }
+    .focus-path-btn {
+      flex: 1;
+      max-width: 220px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 24px 16px;
+      border-radius: 12px;
+      border: 2px solid rgba(255,255,255,0.25);
+      background: rgba(10,10,20,0.9);
+      cursor: pointer;
+      transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+      user-select: none;
+    }
+    .focus-path-btn:hover, .focus-path-btn:active {
+      transform: scale(1.04);
+    }
+    .focus-weapons {
+      border-color: #3498DB;
+      box-shadow: 0 0 14px rgba(52,152,219,0.35);
+    }
+    .focus-weapons:hover {
+      border-color: #5dade2;
+      box-shadow: 0 0 24px rgba(52,152,219,0.6);
+    }
+    .focus-passives {
+      border-color: #9b44f0;
+      box-shadow: 0 0 14px rgba(155,68,240,0.35);
+    }
+    .focus-passives:hover {
+      border-color: #bb66ff;
+      box-shadow: 0 0 24px rgba(155,68,240,0.6);
+    }
+    .fp-icon   { font-size: 36px; }
+    .fp-title  { font-size: 15px; font-weight: 800; letter-spacing: 1px; color: #fff; }
+    .fp-desc   { font-size: 11px; color: rgba(255,255,255,0.65); text-align: center; }
+
+    /* ── Relic Loot Screen Cards ──────────────────────────────────────────── */
+    .relic-card {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      width: 200px;
+      padding: 24px 16px 20px;
+      background: linear-gradient(160deg, #1a1200 0%, #0d0a00 100%);
+      border: 2px solid #FFD700;
+      border-radius: 14px;
+      box-shadow: 0 0 20px rgba(255,215,0,0.4), 0 0 40px rgba(255,180,0,0.15);
+      cursor: pointer;
+      user-select: none;
+      animation: relicFlyIn 0.55s cubic-bezier(0.22,1,0.36,1) var(--relic-delay,0s) both;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .relic-card:hover {
+      transform: scale(1.05) translateY(-4px);
+      box-shadow: 0 0 28px rgba(255,215,0,0.65), 0 0 56px rgba(255,180,0,0.25);
+    }
+    .relic-card.relic-holding {
+      transform: scale(1.08);
+      box-shadow: 0 0 36px rgba(255,215,0,0.85), 0 0 70px rgba(255,200,0,0.4);
+    }
+    .relic-icon  { font-size: 44px; }
+    .relic-title { font-size: 14px; font-weight: 900; letter-spacing: 1.5px; color: #FFD700; text-align: center; }
+    .relic-desc  { font-size: 11px; color: rgba(255,255,255,0.8); text-align: center; line-height: 1.5; }
+    .relic-pick-hint { font-size: 10px; color: rgba(255,215,0,0.55); letter-spacing: 1px; margin-top: 4px; }
+    @keyframes relicFlyIn {
+      0%   { opacity: 0; transform: translateY(-120px) scale(0.4) rotate(-8deg); }
+      65%  { opacity: 1; transform: translateY(8px)    scale(1.06) rotate(2deg); }
+      100% { opacity: 1; transform: translateY(0)      scale(1)    rotate(0deg); }
+    }
+
     @keyframes fadeIn {
       from { opacity: 0; }
       to { opacity: 1; }

@@ -3722,6 +3722,11 @@
             spawnGoldDrop(deathPos.x, deathPos.z, goldAmount);
           }
         }
+
+        // Boss Chest: bosses drop a glowing chest with Relics inside
+        if ((this.isFlyingBoss || this.isMiniBoss) && typeof window.spawnBossChest === 'function') {
+          window.spawnBossChest(deathPos.x, deathPos.z);
+        }
         
         // Phase 1: Gear drop system - enemies have a chance to drop gear
         let gearDropChance = 0;

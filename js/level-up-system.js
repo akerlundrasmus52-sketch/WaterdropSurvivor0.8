@@ -2,7 +2,277 @@
 // floating level-up text, slow motion effect, upgrade card rendering.
 // Depends on: all previously loaded game files
 
-    function showUpgradeModal(isBonusRound = false) {
+// ── ARPG Deep Mechanics: Upgrade Rarities, Focus Path, Boss Chests ───────────
+
+// Rarity table: Common(White)=50%, Rare(Blue)=30%, Epic(Purple)=15%, Legendary(Gold)=4%, Mythic(Red/Black)=1%
+const UPGRADE_RARITIES = [
+  { name: 'common',    label: 'COMMON',    cssClass: 'rarity-common',    scale: 1.0, weight: 50 },
+  { name: 'rare',      label: 'RARE',      cssClass: 'rarity-rare',      scale: 1.5, weight: 30 },
+  { name: 'epic',      label: 'EPIC',      cssClass: 'rarity-epic',      scale: 2.0, weight: 15 },
+  { name: 'legendary', label: 'LEGENDARY', cssClass: 'rarity-legendary', scale: 2.5, weight: 4  },
+  // cssClass 'rarity-mythical' matches the existing CSS keyframe name (mythical-glow) intentionally
+  { name: 'mythic',    label: 'MYTHIC',    cssClass: 'rarity-mythical',  scale: 3.0, weight: 1  },
+];
+
+// Weapon unlock levels: Weapon 2 at Lv4, Weapon 3 at Lv12, Weapon 4 at Lv25
+const WEAPON_UNLOCK_LEVELS = [4, 12, 25];
+
+// Boss chest gold reward constants
+const BOSS_CHEST_MIN_GOLD   = 150;
+const BOSS_CHEST_GOLD_RANGE = 101; // 0–100 random bonus on top of minimum
+
+function rollUpgradeRarity() {
+  const total = UPGRADE_RARITIES.reduce((s, r) => s + r.weight, 0);
+  let rand = Math.random() * total;
+  for (const r of UPGRADE_RARITIES) {
+    rand -= r.weight;
+    if (rand <= 0) return r;
+  }
+  return UPGRADE_RARITIES[0];
+}
+
+// Returns a copy of an upgrade with rarity applied — scaled stats and updated desc/apply
+function makeRarityScaledUpgrade(u) {
+  const rarity = rollUpgradeRarity();
+  const s = rarity.scale;
+  const scaled = Object.assign({}, u, { _rarity: rarity });
+  try {
+    switch (u.id) {
+      case 'str':
+      case 'atkPassive':
+        scaled.desc = `Weapon Damage +${Math.round(6 * s)}%`;
+        scaled.apply = () => {
+          window._strLevel = (window._strLevel||0)+1;
+          playerStats.strength += 0.06 * s;
+          showStatChange(`[${rarity.label}] +${Math.round(6*s)}% Damage`);
+        };
+        break;
+      case 'aspd':
+        scaled.desc = `Attack Speed +${Math.round(3 * s)}%`;
+        scaled.apply = () => {
+          playerStats.atkSpeed += 0.03 * s;
+          weapons.gun.cooldown       *= (1 - Math.min(0.5, 0.03 * s));
+          weapons.doubleBarrel.cooldown *= (1 - Math.min(0.5, 0.03 * s));
+          showStatChange(`[${rarity.label}] +${Math.round(3*s)}% Atk Speed`);
+        };
+        break;
+      case 'aspdPassive':
+        scaled.desc = `Attack Speed +${Math.round(4 * s)}%`;
+        scaled.apply = () => {
+          window._aspdPassiveLv = (window._aspdPassiveLv||0)+1;
+          playerStats.atkSpeed += 0.04 * s;
+          weapons.gun.cooldown       *= (1 - Math.min(0.5, 0.04 * s));
+          weapons.doubleBarrel.cooldown *= (1 - Math.min(0.5, 0.04 * s));
+          showStatChange(`[${rarity.label}] +${Math.round(4*s)}% Atk Speed`);
+        };
+        break;
+      case 'armor':
+        scaled.desc = `Armor +${Math.round(12 * s)}% Damage Reduction (Max 80%)`;
+        scaled.apply = () => {
+          playerStats.armor = Math.min(80, playerStats.armor + Math.round(12 * s));
+          showStatChange(`[${rarity.label}] +${Math.round(12*s)}% Armor`);
+        };
+        break;
+      case 'hp':
+        scaled.desc = `Max HP +${Math.round(30 * s)} (Instant Heal)`;
+        scaled.apply = () => {
+          const amt = Math.round(30 * s);
+          playerStats.maxHp += amt;
+          playerStats.hp += amt;
+          showStatChange(`[${rarity.label}] +${amt} Max HP`);
+        };
+        break;
+      case 'crit':
+        scaled.desc = `Critical Hit Chance +${(1.5 * s).toFixed(1)}%`;
+        scaled.apply = () => {
+          playerStats.critChance += 0.015 * s;
+          showStatChange(`[${rarity.label}] +${(1.5*s).toFixed(1)}% Crit`);
+        };
+        break;
+      case 'regen':
+        scaled.desc = `HP Regeneration +${Math.round(2 * s)}/sec`;
+        scaled.apply = () => {
+          playerStats.hpRegen += Math.round(2 * s);
+          showStatChange(`[${rarity.label}] +${Math.round(2*s)} HP/sec Regen`);
+        };
+        break;
+      case 'speed':
+        scaled.desc = `Movement Speed +${Math.round(3 * s)}%`;
+        scaled.apply = () => {
+          playerStats.walkSpeed *= (1 + 0.03 * s);
+          showStatChange(`[${rarity.label}] +${Math.round(3*s)}% Move Speed`);
+        };
+        break;
+      case 'critdmg':
+        scaled.desc = `Critical Damage +${Math.round(6 * s)}%`;
+        scaled.apply = () => {
+          playerStats.critDmg += 0.06 * s;
+          showStatChange(`[${rarity.label}] +${Math.round(6*s)}% Crit Damage`);
+        };
+        break;
+      case 'cooldown':
+        scaled.desc = `All Weapon Cooldowns -${Math.round(2 * s)}%`;
+        scaled.apply = () => {
+          const factor = 1 - Math.min(0.5, 0.02 * s);
+          Object.values(weapons).forEach(w => { if (w && w.cooldown) w.cooldown *= factor; });
+          showStatChange(`[${rarity.label}] All Cooldowns -${Math.round(2*s)}%`);
+        };
+        break;
+      case 'life_steal':
+        scaled.desc = `Heal ${Math.round(3 * s)}% of Damage Dealt (Stacks)`;
+        scaled.apply = () => {
+          playerStats.lifeStealPercent += 0.03 * s;
+          showStatChange(`[${rarity.label}] Life Steal +${Math.round(3*s)}%`);
+        };
+        break;
+      default:
+        // For complex/conditional upgrades, just tag with rarity for visuals
+        break;
+    }
+  } catch (_e) { /* scaling failed; keep base apply */ }
+  return scaled;
+}
+
+// ── Focus-Path Prompt ─────────────────────────────────────────────────────────
+function showFocusPathPrompt(onWeapons, onPassives) {
+  const modal = document.getElementById('levelup-modal');
+  const list  = document.getElementById('upgrade-list');
+  const h2    = modal.querySelector('h2');
+  if (h2) { h2.innerText = 'CHOOSE YOUR PATH'; h2.style.color = '#FFD700'; h2.style.fontSize = '28px'; }
+  list.innerHTML = `
+    <div class="focus-path-prompt">
+      <div class="focus-path-btn focus-weapons" id="fp-weapons">
+        <span class="fp-icon">⚔️</span>
+        <span class="fp-title">FOCUS WEAPONS</span>
+        <span class="fp-desc">Weapon upgrades appear more often</span>
+      </div>
+      <div class="focus-path-btn focus-passives" id="fp-passives">
+        <span class="fp-icon">📊</span>
+        <span class="fp-title">FOCUS PASSIVES</span>
+        <span class="fp-desc">Stat upgrades appear more often</span>
+      </div>
+    </div>`;
+  modal.style.display = 'flex';
+  document.getElementById('fp-weapons').addEventListener('pointerdown',  () => { modal.style.display='none'; onWeapons();  });
+  document.getElementById('fp-passives').addEventListener('pointerdown', () => { modal.style.display='none'; onPassives(); });
+}
+
+// ── Boss Chests & Relics ──────────────────────────────────────────────────────
+window.bossChests = window.bossChests || [];
+
+const RELICS = [
+  { id:'relic_colossus',    icon:'🏛️', title:'COLOSSUS HEART',    desc:'+120 Max HP, +5 HP/sec Regen',         apply:()=>{ playerStats.maxHp+=120; playerStats.hp+=120; playerStats.hpRegen+=5; showStatChange('🏛️ Colossus Heart: +120 HP, +5 Regen'); } },
+  { id:'relic_timelock',    icon:'⌛', title:'TIMELOCK SHARD',    desc:'All Cooldowns -30%, +10% Atk Speed',    apply:()=>{ Object.values(weapons).forEach(w=>{if(w&&w.cooldown)w.cooldown*=0.7;}); playerStats.atkSpeed+=0.10; showStatChange('⌛ Timelock Shard: -30% CD, +10% Atk Spd'); } },
+  { id:'relic_companion',   icon:'🤖', title:'COMPANION MATRIX',  desc:'+2 Drone Turrets, Drone becomes active', apply:()=>{ weapons.droneTurret.active=true; weapons.droneTurret.level=Math.max(1,weapons.droneTurret.level); weapons.droneTurret.droneCount=(weapons.droneTurret.droneCount||0)+2; for(let _di=0;_di<2;_di++){try{const d=new DroneTurret(player);droneTurrets.push(d);}catch(e){console.warn('[Relic] DroneTurret spawn failed:',e);}} if(typeof startDroneHum==='function')startDroneHum(); showStatChange('🤖 Companion Matrix: +2 Drones'); } },
+  { id:'relic_voidcrystal', icon:'💜', title:'VOID CRYSTAL',      desc:'+25% Crit Chance, +50% Crit Damage',    apply:()=>{ playerStats.critChance+=0.25; playerStats.critDmg+=0.50; showStatChange('💜 Void Crystal: +25% Crit, +50% Crit Dmg'); } },
+  { id:'relic_soulflame',   icon:'🔥', title:'SOUL FLAME',        desc:'+8% Life Steal, +30% Damage',           apply:()=>{ playerStats.lifeStealPercent+=0.08; playerStats.strength+=0.30; showStatChange('🔥 Soul Flame: +8% Life Steal, +30% Damage'); } },
+  { id:'relic_ironveil',    icon:'🛡️', title:'IRON VEIL',         desc:'+35% Armor, +30 Flat Damage Reduction', apply:()=>{ playerStats.armor=Math.min(80,playerStats.armor+35); playerStats.surfaceTension=(playerStats.surfaceTension||0)+30; showStatChange('🛡️ Iron Veil: +35% Armor, +30 Flat DR'); } },
+  { id:'relic_goldmaw',     icon:'💰', title:'GOLD MAW',          desc:'+50% Gold Pickup Chance, +30% EXP Range',apply:()=>{ playerStats.treasureHunterChance=(playerStats.treasureHunterChance||0)+0.50; magnetRange*=1.30; showStatChange('💰 Gold Maw: +50% Gold Pickup, +30% EXP Range'); } },
+  { id:'relic_berserkheart',icon:'😤', title:'BERSERK HEART',     desc:'+40% Damage below 40% HP, +20 Max HP',  apply:()=>{ playerStats.lowHpDamage=(playerStats.lowHpDamage||0)+0.40; playerStats.maxHp+=20; showStatChange('😤 Berserk Heart: +40% Low-HP Damage'); } },
+  { id:'relic_stormcrown',  icon:'⚡', title:'STORM CROWN',       desc:'Lightning Strike active, +2 extra Strikes',apply:()=>{ weapons.lightning.active=true; weapons.lightning.level=Math.max(1,weapons.lightning.level); weapons.lightning.strikes=(weapons.lightning.strikes||1)+2; showStatChange('⚡ Storm Crown: Lightning +2 Strikes'); } },
+];
+
+function showRelicLootScreen(goldBonus) {
+  const picks = RELICS.slice().sort(()=>0.5-Math.random()).slice(0,3);
+  const overlay = document.createElement('div');
+  overlay.id = 'relic-loot-overlay';
+  overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.87);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;';
+  const title = document.createElement('div');
+  title.style.cssText = 'color:#FFD700;font-size:32px;font-weight:bold;text-shadow:0 0 24px #FFD700,0 0 48px #FF8800;margin-bottom:8px;letter-spacing:3px;font-family:inherit;';
+  title.innerText = '⭐ BOSS DEFEATED ⭐';
+  const sub = document.createElement('div');
+  sub.style.cssText = 'color:#fff;font-size:16px;margin-bottom:32px;opacity:0.8;letter-spacing:1px;';
+  sub.innerText = `+${goldBonus} GOLD  •  Choose 1 Relic`;
+  const row = document.createElement('div');
+  row.style.cssText = 'display:flex;gap:28px;flex-wrap:wrap;justify-content:center;';
+  picks.forEach((relic, idx) => {
+    const card = document.createElement('div');
+    card.className = 'relic-card';
+    card.style.setProperty('--relic-delay', `${idx*0.18}s`);
+    card.innerHTML = `<div class="relic-icon">${relic.icon}</div><div class="relic-title">${relic.title}</div><div class="relic-desc">${relic.desc}</div><div class="relic-pick-hint">Hold to choose</div>`;
+    let holdT = null;
+    const startPick = () => {
+      if (holdT) return;
+      card.classList.add('relic-holding');
+      holdT = setTimeout(() => {
+        holdT = null;
+        try { relic.apply(); } catch(e) { console.error('[Relic]', e); }
+        overlay.remove();
+        if (typeof forceGameUnpause === 'function') forceGameUnpause();
+        if (typeof addGold === 'function') addGold(goldBonus);
+        if (window.pushSuperStatEvent) window.pushSuperStatEvent(`⭐ ${relic.title}`, 'legendary', '⭐', 'success');
+      }, 500);
+    };
+    const cancelPick = () => { if (!holdT) return; clearTimeout(holdT); holdT=null; card.classList.remove('relic-holding'); };
+    card.addEventListener('pointerdown', startPick);
+    card.addEventListener('pointerup', cancelPick);
+    card.addEventListener('pointercancel', cancelPick);
+    row.appendChild(card);
+  });
+  overlay.appendChild(title);
+  overlay.appendChild(sub);
+  overlay.appendChild(row);
+  document.body.appendChild(overlay);
+}
+
+class BossChest {
+  constructor(x, z, goldBonus) {
+    this.collected  = false;
+    this.goldBonus  = goldBonus;
+    this._spawnPos  = { x, z };
+    this._radius    = 2.8;
+    this._spawnTime = Date.now();
+    this.mesh       = null;
+    try {
+      const geo = new THREE.BoxGeometry(1.2, 1.0, 0.9);
+      const mat = new THREE.MeshLambertMaterial({ color: 0xFFD700, emissive: new THREE.Color(0xFFAA00), emissiveIntensity: 1.2 });
+      this.mesh = new THREE.Mesh(geo, mat);
+      this.mesh.position.set(x, 0.5, z);
+      this.mesh.castShadow = true;
+      scene.add(this.mesh);
+    } catch(_e) {}
+  }
+
+  update(playerPos) {
+    if (this.collected) return;
+    if (this.mesh) {
+      const t = (Date.now() - this._spawnTime) / 1000;
+      this.mesh.position.y = 0.5 + Math.sin(t * 2.5) * 0.15;
+      this.mesh.rotation.y += 0.025;
+      this.mesh.material.emissiveIntensity = 0.8 + Math.sin(t * 4) * 0.4;
+      const dx = playerPos.x - this.mesh.position.x;
+      const dz = playerPos.z - this.mesh.position.z;
+      if (dx*dx + dz*dz < this._radius * this._radius) this.collect();
+    } else {
+      const dx = playerPos.x - this._spawnPos.x;
+      const dz = playerPos.z - this._spawnPos.z;
+      if (dx*dx + dz*dz < this._radius * this._radius) this.collect();
+    }
+  }
+
+  collect() {
+    if (this.collected) return;
+    this.collected = true;
+    const pos = this.mesh ? { x: this.mesh.position.x, y: 0.5, z: this.mesh.position.z } : { x: this._spawnPos.x, y: 0.5, z: this._spawnPos.z };
+    if (this.mesh) {
+      try { scene.remove(this.mesh); this.mesh.geometry.dispose(); this.mesh.material.dispose(); } catch(_) {}
+      this.mesh = null;
+    }
+    try { spawnParticles(pos, 0xFFD700, 20); } catch(_) {}
+    if (typeof setGamePaused === 'function') setGamePaused(true);
+    showRelicLootScreen(this.goldBonus);
+  }
+}
+
+window.spawnBossChest = function(x, z) {
+  const goldBonus = BOSS_CHEST_MIN_GOLD + Math.floor(Math.random() * BOSS_CHEST_GOLD_RANGE);
+  window.bossChests.push(new BossChest(x, z, goldBonus));
+  try { createFloatingText('💰 BOSS CHEST!', { x, y: 1.5, z }, '#FFD700'); } catch(_) {}
+};
+
+// ── End ARPG Deep Mechanics preamble ─────────────────────────────────────────
+
+    function showUpgradeModal(isBonusRound = false, focusPath = null) {
       // Bail out if the game has ended; prevents stale setTimeout from showing modal post-death
       if (isGameOver || !isGameActive) {
         levelUpPending = false;
@@ -347,7 +617,7 @@
       
       // Quest 8: Force weapon choice when quest8_newWeapon is active (grant first new weapon)
       if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest8_newWeapon' &&
-          ![4, 8, 15, 20].includes(playerStats.lvl)) {
+          !WEAPON_UNLOCK_LEVELS.includes(playerStats.lvl)) {
         modal.querySelector('h2').innerText = 'NEW WEAPON!';
         modal.querySelector('h2').style.fontSize = '36px';
         const allWeaponChoicesQ8 = [
@@ -569,7 +839,8 @@
         }
       }
       // WEAPON UNLOCK: Level 4, 8, 15, 20 — show ONLY 6 weapon choices (no stat upgrades)
-      else if ([4, 8, 15, 20].includes(playerStats.lvl)) {
+      // WEAPON UNLOCK: Level 4 (Weapon 2), 12 (Weapon 3), 25 (Weapon 4)
+      else if (WEAPON_UNLOCK_LEVELS.includes(playerStats.lvl)) {
 
         // ── Helper: count currently active weapons (gun is always active) ──
         const countActiveWeapons = () => Object.values(weapons).filter(w => w.active).length;
@@ -884,22 +1155,62 @@
         choices.push(...perkUnlockFillers);
       }
       else {
+        // ── Focus Path Prompt (regular levels only, not bonus rounds) ──────────
+        if (!isBonusRound && focusPath === null) {
+          showFocusPathPrompt(
+            () => showUpgradeModal(isBonusRound, 'weapons'),
+            () => showUpgradeModal(isBonusRound, 'passives')
+          );
+          return;
+        }
+
         // ALWAYS SHOW 6 CHOICES: Show 6 random choices for 2×3 grid
         // Weighted selection: ATK speed and ATK power have higher spawn weight
+        // Focus path modifies weights: 'weapons'→weapon upgrades boosted, 'passives'→stats boosted
         
         // Create weighted pool with Fisher-Yates shuffle for proper randomization
         const weightedPool = [];
         
-        // Add each upgrade with appropriate weight
+        // Determine weight multipliers based on chosen focus path
+        const isWeaponFocus  = focusPath === 'weapons';
+        const isPassiveFocus = focusPath === 'passives';
+
+        // Add each upgrade with appropriate weight.
+        // Weight strategy: weapon-focus boosts combat stats; passive-focus boosts utility stats.
         commonUpgrades.forEach(upgrade => {
+          let w;
           if (upgrade.id === 'str' || upgrade.id === 'aspd') {
-            // ATK power and ATK speed: 3x weight
-            weightedPool.push({ upgrade, weight: 3 });
+            // Core combat stats: lower in weapon focus (weapons handle DPS), higher in passive focus
+            if (isWeaponFocus)       w = 1;
+            else if (isPassiveFocus) w = 6;
+            else                     w = 3;
+          } else if (upgrade.id === 'atkPassive' || upgrade.id === 'aspdPassive' ||
+                     upgrade.id === 'cooldown'   || upgrade.id === 'crit' || upgrade.id === 'critdmg') {
+            // Secondary combat/passive stats: equally valued in both paths
+            if (isWeaponFocus)       w = 2;
+            else if (isPassiveFocus) w = 4;
+            else                     w = 2;
           } else {
-            // Other upgrades: normal weight
-            weightedPool.push({ upgrade, weight: 1 });
+            // Utility/defensive stats: neutral in weapon focus, boosted in passive focus
+            if (isWeaponFocus)       w = 1;
+            else if (isPassiveFocus) w = 3;
+            else                     w = 1;
           }
+          weightedPool.push({ upgrade, weight: w });
         });
+
+        // If weapon-focused, add weapon upgrade entries for active weapons to the pool
+        if (isWeaponFocus) {
+          // Explicit ID→weapons key map to avoid fragile string replacement
+          const wupEntries = [
+            { id:'wup_gun',     weaponKey:'gun',      icon:'🔫', title:'GUN Upgrade',       desc:'Gun Dmg+10, Fire Rate+15%', apply:()=>{ if(weapons.gun.active&&weapons.gun.level<10){weapons.gun.level++;weapons.gun.damage+=10;weapons.gun.cooldown*=0.85;showStatChange('Gun upgraded!');} } },
+            { id:'wup_sword',   weaponKey:'sword',    icon:'⚔️', title:'SWORD Upgrade',     desc:'Sword Dmg+15, Range+0.5',   apply:()=>{ if(weapons.sword.active&&weapons.sword.level<10){weapons.sword.level++;weapons.sword.damage+=15;weapons.sword.range+=0.5;showStatChange('Sword upgraded!');} } },
+            { id:'wup_aura',    weaponKey:'aura',     icon:'🌀', title:'AURA Upgrade',      desc:'Aura Dmg+3, Range+0.3',     apply:()=>{ if(weapons.aura.active&&weapons.aura.level<10){weapons.aura.level++;weapons.aura.damage+=3;weapons.aura.range=Math.min(5,weapons.aura.range*1.1);showStatChange('Aura upgraded!');} } },
+            { id:'wup_meteor',  weaponKey:'meteor',   icon:'☄️', title:'METEOR Upgrade',    desc:'Meteor Dmg+20, Area+1',     apply:()=>{ if(weapons.meteor.active&&weapons.meteor.level<10){weapons.meteor.level++;weapons.meteor.damage+=20;weapons.meteor.area+=1;showStatChange('Meteor upgraded!');} } },
+            { id:'wup_firering',weaponKey:'fireRing', icon:'🔥', title:'FIRE RING Upgrade', desc:'Fire Ring Dmg+5, +1 Orb',   apply:()=>{ if(weapons.fireRing.active&&weapons.fireRing.level<10){weapons.fireRing.level++;weapons.fireRing.damage+=5;weapons.fireRing.orbs+=1;showStatChange('Fire Ring upgraded!');} } },
+          ].filter(e => weapons[e.weaponKey] && weapons[e.weaponKey].active);
+          wupEntries.forEach(e => weightedPool.push({ upgrade: e, weight: 5 }));
+        }
         
         // Expand weighted pool based on weights
         const expandedPool = [];
@@ -977,56 +1288,79 @@
       }
 
       try {
+      // Apply rarity scaling to all choices that don't already have a rarity assigned
+      choices = choices.map(u => (u._rarity ? u : makeRarityScaledUpgrade(u)));
+
       // Shared active-hold state: only one card can be held at a time
       let activeHold = null; // { timer, card } or null
       choices.forEach((u, index) => {
         const card = document.createElement('div');
         card.className = 'upgrade-card';
         
-        // Add appropriate styling classes based on upgrade type
-        if (u.id) {
-          // Class upgrades (epic - purple)
+        // Determine rarity class: rolled _rarity takes priority for scalable upgrades
+        if (u._rarity) {
+          card.className += ' ' + u._rarity.cssClass;
+          // Class/perk upgrades keep their type marker
+          if (u.id && u.id.startsWith('class_')) card.classList.add('class');
+          else if (u.id && u.id.startsWith('perk_')) card.classList.add('perk');
+          else if (u.id && (u.id.includes('_up') || u.id.includes('_evo') || u.id.startsWith('wup_') ||
+                   u.id.includes('gun_') || u.id.includes('sword_') || u.id.includes('aura_'))) {
+            card.classList.add('weapon');
+          }
+        } else if (u.id) {
+          // Fallback: legacy static rarity assignment
           if (u.id.startsWith('class_')) {
             card.className += ' class rarity-epic';
           }
-          // Perk upgrades (epic - orange)
           else if (u.id.startsWith('perk_')) {
             card.className += ' perk rarity-epic';
           }
-          // Weapon upgrades (dark border with shadow)
           else if (u.id.includes('gun_') || u.id.includes('sword_') || u.id.includes('aura_') || 
                    u.id.includes('meteor_') || u.id.includes('doublebarrel_') ||
                    u.id.includes('droneturret_') || u.id.includes('icespear_') || u.id.includes('firering_')) {
             card.className += ' weapon rarity-rare';
           }
-          // Damage & Attack Speed upgrades get blue (rare) rarity
           else if (u.id === 'str' || u.id === 'aspd' || u.id === 'dmg' || u.id === 'atkspd' ||
                    u.id === 'atkPassive' || u.id === 'aspdPassive' ||
                    u.id.includes('damage') || u.id.includes('attack_speed') || u.id.includes('atk_speed')) {
             card.className += ' rarity-rare';
           }
           else {
-            // Default common upgrades get green rarity
             card.className += ' rarity-common';
           }
           
-          // Special powerful upgrades get legendary (red) treatment
           if (u.id.includes('dash_mastery') || u.id.includes('second_wind') || 
               u.id.includes('berserker_rage') || u.id.includes('lucky_strikes') ||
               u.rarity === 'legendary') {
             card.classList.remove('rarity-common', 'rarity-rare', 'rarity-epic', 'rarity-legendary', 'rarity-mythical');
             card.classList.add('max-upgrade', 'rarity-legendary');
           }
-          // Apply explicit rarity property override if set
           if (u.rarity === 'rare' && !card.classList.contains('rarity-rare') && !card.classList.contains('rarity-legendary')) {
             card.classList.remove('rarity-common', 'rarity-epic');
             card.classList.add('rarity-rare');
           }
         }
         
-        // Upgrade cards: show icon (if present) + title + desc
+        // Build rarity badge HTML
+        const rarityInfo = u._rarity || null;
+        const rarityBadgeHtml = rarityInfo
+          ? `<span class="upgrade-rarity-badge rarity-badge-${rarityInfo.name}">${rarityInfo.label}</span>`
+          : '';
+        
+        // Upgrade cards: show icon (if present) + rarity badge + title + desc
         const iconHtml = u.icon ? `<span class="upgrade-icon">${u.icon}</span>` : '';
-        card.innerHTML = `${iconHtml}<div class="upgrade-title">${u.title}</div><div class="upgrade-desc">${u.desc}</div>`;
+        card.innerHTML = `${iconHtml}${rarityBadgeHtml}<div class="upgrade-title">${u.title}</div><div class="upgrade-desc">${u.desc}</div>`;
+        
+        // Mythic cards: add floating particle elements for dramatic effect
+        if (rarityInfo && rarityInfo.name === 'mythic') {
+          for (let _p = 0; _p < 6; _p++) {
+            const pEl = document.createElement('div');
+            pEl.className = 'mythic-particle';
+            pEl.style.setProperty('--mp-x', `${Math.random() * 100}%`);
+            pEl.style.setProperty('--mp-delay', `${(_p * 0.28).toFixed(2)}s`);
+            card.appendChild(pEl);
+          }
+        }
         
         // Add dramatic entrance animation - from corners
         card.style.opacity = '0';

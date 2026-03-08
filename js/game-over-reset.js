@@ -719,6 +719,18 @@
       });
       chests = [];
 
+      // Boss Chest cleanup on game reset
+      if (window.bossChests && window.bossChests.length) {
+        window.bossChests.forEach(bc => {
+          if (bc.mesh) { try { scene.remove(bc.mesh); bc.mesh.geometry.dispose(); bc.mesh.material.dispose(); } catch(_){} bc.mesh = null; }
+          bc.collected = true;
+        });
+        window.bossChests = [];
+      }
+      // Remove relic loot overlay if present
+      const _rlo = document.getElementById('relic-loot-overlay');
+      if (_rlo) _rlo.remove();
+
       // Projectile cleanup — pooled bullets share cached geometry so MUST NOT be disposed.
       // Return pooled projectiles to the pool; dispose only non-pooled ones.
       projectiles.forEach(p => {
