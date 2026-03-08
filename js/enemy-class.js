@@ -394,8 +394,10 @@
         this.mesh.position.set(x, yPos, z);
         // Flying Boss is scaled large enough to be dramatic but still mostly visible on screen
         if (type === 11) this.mesh.scale.set(1.8, 1.8, 1.8);
-        this.mesh.castShadow = true;
-        this.mesh.receiveShadow = true;
+        // Only Boss enemies cast/receive shadows to save GPU shadow-map cost
+        const _isBoss = (type === 10 || type === 11 || type === 19);
+        this.mesh.castShadow = _isBoss;
+        this.mesh.receiveShadow = _isBoss;
         // For the three most common enemy types the InstancedRenderer owns the draw call.
         // Adding the individual mesh to the scene as well would cause double-rendering.
         const _instancingTypes = (type === 0 || type === 1 || type === 2);
@@ -1898,12 +1900,8 @@
             const stainSize = 0.08 + Math.random() * 0.15;
             const stain = new THREE.Mesh(
               _sharedBloodStainGeo,
-              new THREE.MeshStandardMaterial({
+              new THREE.MeshBasicMaterial({
                 color: 0x5a0000,
-                emissive: 0x1a0000,
-                emissiveIntensity: 0.25,
-                roughness: 0.22,
-                metalness: 0.5,
                 transparent: true,
                 opacity: 0.82,
                 side: THREE.DoubleSide,
@@ -2923,10 +2921,9 @@
                     sizeRoll < 0.8 ? (0.25 + Math.random() * 0.3) :   // 25% medium pools
                                      (0.4 + Math.random() * 0.4);     // 20% big pools
           const poolGeo = new THREE.CircleGeometry(r, r > 0.2 ? 12 : 6);
-          const poolMat = new THREE.MeshStandardMaterial({ 
+          const poolMat = new THREE.MeshBasicMaterial({ 
             color: sizeRoll < 0.5 ? 0x8B0000 : 0x6B0000, 
-            transparent: true, opacity: 0,
-            roughness: 0.15, metalness: 0.5
+            transparent: true, opacity: 0
           });
           const pool = new THREE.Mesh(poolGeo, poolMat);
           pool.rotation.x = -Math.PI / 2;
@@ -3348,7 +3345,7 @@
                     }
                     for (let gi = 0; gi < 4; gi++) {
                       const gutGeo = new THREE.CylinderGeometry(0.04 + Math.random() * 0.03, 0.03, 0.15 + Math.random() * 0.15, 6);
-                      const gutMat = new THREE.MeshStandardMaterial({ color: gi < 2 ? 0xCC3344 : 0xDD7788, transparent: true, opacity: 0.9 });
+                      const gutMat = new THREE.MeshBasicMaterial({ color: gi < 2 ? 0xCC3344 : 0xDD7788, transparent: true, opacity: 0.9 });
                       const gutMesh = new THREE.Mesh(gutGeo, gutMat);
                       gutMesh.position.copy(dyingMesh.position);
                       gutMesh.position.y = startY * 0.5;
@@ -3798,7 +3795,7 @@
           corpse.position.copy(deathPos); corpse.position.y = 0.12; corpse.scale.y = 0.22;
           scene.add(corpse);
           const bloodGeo = new THREE.CircleGeometry(0.8, 16);
-          const bloodMat = new THREE.MeshStandardMaterial({ color: 0x8B0000, transparent: true, opacity: 0, roughness: 0.3, metalness: 0.5, side: THREE.DoubleSide, depthWrite: false });
+          const bloodMat = new THREE.MeshBasicMaterial({ color: 0x8B0000, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false });
           const bloodPool = new THREE.Mesh(bloodGeo, bloodMat);
           bloodPool.position.set(deathPos.x, 0.05, deathPos.z); bloodPool.rotation.x = -Math.PI / 2;
           scene.add(bloodPool);
@@ -4180,7 +4177,7 @@
         setTimeout(() => {
           if (!scene) return;
           const waterGeo = new THREE.CircleGeometry(0.6 + Math.random() * 0.3, 12);
-          const waterMat = new THREE.MeshStandardMaterial({ color: 0x88CCFF, transparent: true, opacity: 0.55, roughness: 0.05, metalness: 0.3, depthWrite: false });
+          const waterMat = new THREE.MeshBasicMaterial({ color: 0x88CCFF, transparent: true, opacity: 0.55, depthWrite: false });
           const water = new THREE.Mesh(waterGeo, waterMat);
           water.rotation.x = -Math.PI / 2;
           water.position.set(deathPos.x, 0.05, deathPos.z);

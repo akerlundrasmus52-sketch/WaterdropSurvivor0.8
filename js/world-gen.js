@@ -4,6 +4,9 @@
 
     // --- WORLD GENERATION ---
     function createWorld() {
+      // Exclusion zones: each entry is { x, z, r } — no prop spawns within r units of (x,z)
+      const exclusionZones = [];
+
       // Ground - Unified green forest world with grass texture
       const mapSize = 600;
       
@@ -161,6 +164,8 @@
       rondel.position.set(0, 0.02, 0);
       rondel.receiveShadow = true;
       scene.add(rondel);
+      // Spawn area clear zone: no props within 20 units of center
+      exclusionZones.push({ x: 0, z: 0, r: 20 });
       
       // Path material - brown dirt road
       const roadMat = new THREE.MeshPhysicalMaterial({ 
@@ -388,6 +393,8 @@
       // Store blades reference for rotation animation (includes ground shadow)
       wmGroup.userData = { isWindmill: true, blades: [bladeGroup], shadowGroup: shadowGroup, hp: 600, maxHp: 600, questActive: false, light: wmLight };
       scene.add(wmGroup);
+      // Windmill exclusion zone: no props within 12 units
+      exclusionZones.push({ x: 40, z: 40, r: 12 });
       
       // Hay bales outside windmill
       const hayBaleMat = new THREE.MeshToonMaterial({ color: 0xD4A855 }); // Golden hay color
@@ -494,9 +501,9 @@
         farmerNPC = farmerGroup;
       })();
       
-      // Barn adjacent to windmill (not connected - placed to the north-east)
+      // Barn: placed south of windmill, 18 units away — clearly separated
       const barnGroup = new THREE.Group();
-      barnGroup.position.set(50, 0, -10); // Farm area away from Stonehenge
+      barnGroup.position.set(40, 0, 58); // 18 units south of Windmill (40,40) → separation = 18
       // Barn body
       const barnBodyGeo = new THREE.BoxGeometry(8, 5, 10);
       const barnBodyMat = new THREE.MeshToonMaterial({ color: 0xA0522D }); // Sienna red barn
@@ -525,12 +532,15 @@
       barnWindow.position.set(0, 4.5, 5.1);
       barnGroup.add(barnWindow);
       scene.add(barnGroup);
+      // Barn exclusion zone: no props within 12 units
+      exclusionZones.push({ x: 40, z: 58, r: 12 });
       
-      // Realistic farm fields: wide soil strips with crop rows, adjacent to barn+windmill
+      // Realistic farm fields: wide soil strips with crop rows — placed east of windmill
+      // CropField at (58, 0, 40): 18 units east of Windmill (40,40) → separation = 18
       const fieldSoilMat = new THREE.MeshToonMaterial({ color: 0x5C3A1A }); // Rich dark soil
       const cropMat = new THREE.MeshToonMaterial({ color: 0x7CBA3E }); // Crop green
       const windmillFieldGroup = new THREE.Group();
-      windmillFieldGroup.position.set(55, 0, 42); // Adjacent to windmill+barn
+      windmillFieldGroup.position.set(58, 0, 40); // 18 units east of windmill — clearly separated
       // Wide field base
       const fieldBaseMesh = new THREE.Mesh(new THREE.PlaneGeometry(18, 14), new THREE.MeshToonMaterial({ color: 0x5C3A1A }));
       fieldBaseMesh.rotation.x = -Math.PI / 2;
@@ -552,6 +562,8 @@
         }
       }
       scene.add(windmillFieldGroup);
+      // CropField exclusion zone: no props within 12 units of field center
+      exclusionZones.push({ x: 58, z: 40, r: 12 });
       
       // Mine
       const mineGeo = new THREE.DodecahedronGeometry(5);
@@ -1289,6 +1301,8 @@
       enhancedLake.position.set(30, 0.03, -30); // Raised slightly above ground to prevent z-fighting
       enhancedLake.receiveShadow = true;
       scene.add(enhancedLake);
+      // Lake exclusion zone: no props within 22 units of lake center (radius 18 + buffer 4)
+      exclusionZones.push({ x: 30, z: -30, r: 22 });
       
       // Sandy shore ring around lake for visual border
       const shoreGeo = new THREE.RingGeometry(17.5, 20, 48);
@@ -1741,6 +1755,56 @@
       const shadowGeo = new THREE.CircleGeometry(2, 16);
       const shadowMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.3 });
       
+      const MAX_SPAWN_ATTEMPTS = 20;
+
+      // Helper: distance from point (px,pz) to line segment (x1,z1)→(x2,z2)
+      function distToSegment(px, pz, x1, z1, x2, z2) {
+        const dx = x2 - x1, dz = z2 - z1;
+        const len2 = dx * dx + dz * dz;
+        if (len2 === 0) return Math.sqrt((px - x1) * (px - x1) + (pz - z1) * (pz - z1));
+        const t = Math.max(0, Math.min(1, ((px - x1) * dx + (pz - z1) * dz) / len2));
+        return Math.sqrt((px - (x1 + t * dx)) ** 2 + (pz - (z1 + t * dz)) ** 2);
+      }
+
+      // Comprehensive exclusion: lake, rondel, all paths, all buildings/landmarks
+      function isPositionExcluded(x, z) {
+        // Check dynamic exclusion zones array (Lake, Windmill, Barn, CropField, Spawn)
+        for (let ei = 0; ei < exclusionZones.length; ei++) {
+          const ez = exclusionZones[ei];
+          const d = Math.sqrt((x - ez.x) ** 2 + (z - ez.z) ** 2);
+          if (d < ez.r) return true;
+        }
+
+        // Path exclusion (5-unit buffer on each side of trail)
+        const PATH_WIDTH = 5;
+        const r = rondelRadius;
+        if (distToSegment(x, z, r * 0.707, r * 0.707, 60, 60)     < PATH_WIDTH) return true; // → Stonehenge
+        if (distToSegment(x, z, r * 0.9,   r * 0.436, 40, 40)     < PATH_WIDTH) return true; // → Windmill
+        if (distToSegment(x, z, -r * 0.707, -r * 0.707, -80, -80) < PATH_WIDTH) return true; // → Tesla Tower
+        if (distToSegment(x, z, r * 0.707, -r * 0.707, 50, -50)   < PATH_WIDTH) return true; // → Pyramid
+        if (distToSegment(x, z, r * 0.5,   -r * 0.866, 30, -30)   < PATH_WIDTH) return true; // → Lake
+
+        // Building exclusion zones
+        if (Math.sqrt((x - 40) ** 2 + (z - 40) ** 2)   < 8)  return true; // Windmill
+        if (Math.sqrt((x + 20) ** 2 + (z + 20) ** 2)   < 8)  return true; // Cabin
+        if (Math.sqrt((x + 40) ** 2 + (z - 40) ** 2)   < 8)  return true; // Mine entrance
+
+        // Landmark exclusion zones
+        if (Math.sqrt((x - 100) ** 2 + (z - 80) ** 2)  < 22) return true; // Stonehenge
+        if (Math.sqrt((x - 50) ** 2  + (z + 50) ** 2)  < 22) return true; // Pyramid
+        if (Math.sqrt((x + 80) ** 2  + (z + 80) ** 2)  < 27) return true; // Tesla Tower
+        if (Math.sqrt((x + 80) ** 2  + (z - 150) ** 2) < 20) return true; // Eiffel Tower
+
+        return false;
+      }
+
+      // Tree-specific placement validation: extends isPositionExcluded with the Colosseum exclusion zone
+      function isTreePlacementValid(x, z) {
+        if (isPositionExcluded(x, z)) return false;
+        if (Math.sqrt((x + 25) ** 2 + (z - 25) ** 2) < 18) return false; // Colosseum
+        return true;
+      }
+
       // Seeded pseudo-random for deterministic tree positions.
       // Uses sin-based hash: multiplying by a large prime-like constant (10000) spreads
       // the sin output across the fractional range for good distribution.
@@ -1776,61 +1840,6 @@
         group.add(trunk);
         group.add(leaves);
         // Note: shadows are cast by the dirLight shadow map - no duplicate blob shadow needed
-        
-        // Random pos in forest area and spread across map
-        // Lake exclusion zone constants
-        const LAKE_CENTER_X = 30;
-        const LAKE_CENTER_Z = -30;
-        const LAKE_EXCLUSION_RADIUS = 22; // Lake radius 18 + buffer 4
-        const MAX_SPAWN_ATTEMPTS = 20;
-        
-        // Helper: distance from point (px,pz) to line segment (x1,z1)→(x2,z2)
-        function distToSegment(px, pz, x1, z1, x2, z2) {
-          const dx = x2 - x1, dz = z2 - z1;
-          const len2 = dx * dx + dz * dz;
-          if (len2 === 0) return Math.sqrt((px - x1) * (px - x1) + (pz - z1) * (pz - z1));
-          const t = Math.max(0, Math.min(1, ((px - x1) * dx + (pz - z1) * dz) / len2));
-          return Math.sqrt((px - (x1 + t * dx)) ** 2 + (pz - (z1 + t * dz)) ** 2);
-        }
-        
-        // Comprehensive exclusion: lake, rondel, all paths, all buildings/landmarks
-        function isPositionExcluded(x, z) {
-          // Lake exclusion
-          const distToLake = Math.sqrt((x - LAKE_CENTER_X) ** 2 + (z - LAKE_CENTER_Z) ** 2);
-          if (distToLake < LAKE_EXCLUSION_RADIUS) return true;
-          
-          // Rondel center exclusion
-          if (Math.sqrt(x * x + z * z) < (rondelRadius + 2)) return true;
-          
-          // Path exclusion (5-unit buffer on each side of trail)
-          const PATH_WIDTH = 5;
-          const r = rondelRadius;
-          if (distToSegment(x, z, r * 0.707, r * 0.707, 60, 60)   < PATH_WIDTH) return true; // → Stonehenge
-          if (distToSegment(x, z, r * 0.9,   r * 0.436, 40, 40)   < PATH_WIDTH) return true; // → Windmill
-          if (distToSegment(x, z, -r * 0.707, -r * 0.707, -80, -80) < PATH_WIDTH) return true; // → Tesla Tower
-          if (distToSegment(x, z, r * 0.707, -r * 0.707, 50, -50) < PATH_WIDTH) return true; // → Pyramid
-          if (distToSegment(x, z, r * 0.5,   -r * 0.866, 30, -30) < PATH_WIDTH) return true; // → Lake
-          
-          // Building exclusion zones
-          if (Math.sqrt((x - 40) ** 2 + (z - 40) ** 2)   < 8)  return true; // Windmill
-          if (Math.sqrt((x + 20) ** 2 + (z + 20) ** 2)   < 8)  return true; // Cabin
-          if (Math.sqrt((x + 40) ** 2 + (z - 40) ** 2)   < 8)  return true; // Mine entrance
-          
-          // Landmark exclusion zones
-          if (Math.sqrt((x - 100) ** 2 + (z - 80) ** 2)  < 22) return true; // Stonehenge
-          if (Math.sqrt((x - 50) ** 2  + (z + 50) ** 2)  < 22) return true; // Pyramid
-          if (Math.sqrt((x + 80) ** 2  + (z + 80) ** 2)  < 27) return true; // Tesla Tower
-          if (Math.sqrt((x + 80) ** 2  + (z - 150) ** 2) < 20) return true; // Eiffel Tower
-          
-          return false;
-        }
-
-        // Tree-specific placement validation: extends isPositionExcluded with the Colosseum exclusion zone
-        function isTreePlacementValid(x, z) {
-          if (isPositionExcluded(x, z)) return false;
-          if (Math.sqrt((x + 25) ** 2 + (z - 25) ** 2) < 18) return false; // Colosseum
-          return true;
-        }
         
         let tx, tz;
         let excluded = true;
@@ -1999,28 +2008,24 @@
         const rockGeo = new THREE.DodecahedronGeometry(scale, 0);
         const rockMat = Math.random() < 0.5 ? rockMatGray : rockMatDark;
         const rock = new THREE.Mesh(rockGeo, rockMat);
-        rock.position.set(
-          (Math.random() - 0.5) * 200,
-          scale * 0.4,
-          (Math.random() - 0.5) * 200
-        );
+        const rx = (Math.random() - 0.5) * 200;
+        const rz = (Math.random() - 0.5) * 200;
+        if (isPositionExcluded(rx, rz)) continue;
+        rock.position.set(rx, scale * 0.4, rz);
         rock.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
         rock.castShadow = true;
         rock.receiveShadow = true;
-        if (Math.abs(rock.position.x) > 12 || Math.abs(rock.position.z) > 12) {
-          scene.add(rock);
-        }
+        scene.add(rock);
       }
       // Small rocks (pebbles)
       for (let i = 0; i < 120; i++) {
         const scale = 0.1 + Math.random() * 0.35;
         const pebbleGeo = new THREE.DodecahedronGeometry(scale, 0);
         const pebble = new THREE.Mesh(pebbleGeo, rockMatGray);
-        pebble.position.set(
-          (Math.random() - 0.5) * 180,
-          scale * 0.4,
-          (Math.random() - 0.5) * 180
-        );
+        const px = (Math.random() - 0.5) * 180;
+        const pz = (Math.random() - 0.5) * 180;
+        if (isPositionExcluded(px, pz)) continue;
+        pebble.position.set(px, scale * 0.4, pz);
         pebble.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
         scene.add(pebble);
       }
@@ -2108,8 +2113,7 @@
       for (let i = 0; i < 120; i++) {
         const x = (Math.random() - 0.5) * 250; // Spread across map
         const z = (Math.random() - 0.5) * 250;
-        // Avoid spawning too close to center (player start)
-        if (Math.abs(x) < 15 && Math.abs(z) < 15) continue;
+        if (isPositionExcluded(x, z)) continue;
         
         const tree = createDestructibleProp('tree', new THREE.Vector3(x, 0, z));
         window.destructibleProps.push(tree);
@@ -2119,8 +2123,7 @@
       for (let i = 0; i < 30; i++) {
         const x = (Math.random() - 0.5) * 200;
         const z = (Math.random() - 0.5) * 200;
-        // Avoid spawning too close to center
-        if (Math.abs(x) < 15 && Math.abs(z) < 15) continue;
+        if (isPositionExcluded(x, z)) continue;
         
         const barrel = createDestructibleProp('barrel', new THREE.Vector3(x, 0, z));
         window.destructibleProps.push(barrel);
@@ -2130,8 +2133,7 @@
       for (let i = 0; i < 25; i++) {
         const x = (Math.random() - 0.5) * 200;
         const z = (Math.random() - 0.5) * 200;
-        // Avoid spawning too close to center
-        if (Math.abs(x) < 15 && Math.abs(z) < 15) continue;
+        if (isPositionExcluded(x, z)) continue;
         
         const crate = createDestructibleProp('crate', new THREE.Vector3(x, 0, z));
         window.destructibleProps.push(crate);
