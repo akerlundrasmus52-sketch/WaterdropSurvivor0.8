@@ -1815,26 +1815,49 @@
             spawnParticles(this.mesh.position, 0x00FF00, 5);
           }
         }
-        // Pulsating wound blood drips — gravity-based spray from hit location
-        if (bloodDrips.length < MAX_BLOOD_DRIPS && (isHeavyHit || hpRatio < 0.5)) {
+        // Pulsating wound blood drips — use instanced BloodSystem drops (zero per-drop mesh cost)
+        if (isHeavyHit || hpRatio < 0.5) {
           const dripCount = isHeavyHit ? (3 + Math.floor(Math.random() * 3)) : (1 + Math.floor(Math.random() * 2));
-          for (let bd = 0; bd < dripCount && bloodDrips.length < MAX_BLOOD_DRIPS; bd++) {
-            if (!_sharedBloodDripGeo && typeof THREE !== 'undefined') _sharedBloodDripGeo = new THREE.SphereGeometry(1, 4, 4);
-            const dripSize = 0.015 + Math.random() * 0.04;
-            const dripMesh = new THREE.Mesh(_sharedBloodDripGeo, new THREE.MeshBasicMaterial({ color: [0x8B0000, 0xAA0000, 0x660000, 0xCC0000][bd % 4] }));
-            dripMesh.scale.setScalar(dripSize);
-            dripMesh.position.copy(this.mesh.position);
-            dripMesh.position.y += 0.2 + Math.random() * 0.4;
-            scene.add(dripMesh);
-            bloodDrips.push({
-              mesh: dripMesh,
-              velX: (Math.random() - 0.5) * (isHeavyHit ? 0.25 : 0.1),
-              velZ: (Math.random() - 0.5) * (isHeavyHit ? 0.25 : 0.1),
-              velY: 0.08 + Math.random() * 0.2,
-              life: 40 + Math.floor(Math.random() * 25),
-              _sharedGeo: true
-            });
+          if (window.BloodSystem && window.BloodSystem.emitDrop) {
+            const spread = isHeavyHit ? 0.25 : 0.1;
+            for (let bd = 0; bd < dripCount; bd++) {
+              window.BloodSystem.emitDrop(
+                this.mesh.position.x,
+                this.mesh.position.y + 0.2 + Math.random() * 0.4,
+                this.mesh.position.z,
+                (Math.random() - 0.5) * spread,
+                0.08 + Math.random() * 0.2,
+                (Math.random() - 0.5) * spread,
+                0.015 + Math.random() * 0.04
+              );
+            }
+          } else if (bloodDrips.length < MAX_BLOOD_DRIPS) {
+            // Fallback: legacy individual mesh path
+            for (let bd = 0; bd < dripCount && bloodDrips.length < MAX_BLOOD_DRIPS; bd++) {
+              if (!_sharedBloodDripGeo && typeof THREE !== 'undefined') _sharedBloodDripGeo = new THREE.SphereGeometry(1, 4, 4);
+              const dripSize = 0.015 + Math.random() * 0.04;
+              const dripMesh = new THREE.Mesh(_sharedBloodDripGeo, new THREE.MeshBasicMaterial({ color: [0x8B0000, 0xAA0000, 0x660000, 0xCC0000][bd % 4] }));
+              dripMesh.scale.setScalar(dripSize);
+              dripMesh.position.copy(this.mesh.position);
+              dripMesh.position.y += 0.2 + Math.random() * 0.4;
+              scene.add(dripMesh);
+              bloodDrips.push({
+                mesh: dripMesh,
+                velX: (Math.random() - 0.5) * (isHeavyHit ? 0.25 : 0.1),
+                velZ: (Math.random() - 0.5) * (isHeavyHit ? 0.25 : 0.1),
+                velY: 0.08 + Math.random() * 0.2,
+                life: 40 + Math.floor(Math.random() * 25),
+                _sharedGeo: true
+              });
+            }
           }
+        }
+        // Register persistent wound for heartbeat spurts at low HP
+        if (hpRatio < 0.5 && window.BloodSystem && window.BloodSystem.addWound) {
+          // Direction away from player (blood spurts outward from wound)
+          const wDir = { x: Math.cos(Math.random() * Math.PI * 2), z: Math.sin(Math.random() * Math.PI * 2) };
+          const wLife = hpRatio < 0.25 ? 480 : 240; // longer spurts at critical HP
+          window.BloodSystem.addWound(this.mesh.position, wDir, damageType, { life: wLife });
         }
         // Blood splatter on nearby enemies (stain them red)
         if (isHeavyHit && enemies) {
@@ -1922,26 +1945,40 @@
         
         // Blood drip: small drops fall from wounded enemy to ground (managed in main loop)
         // More blood drips from first shot onward, increasing with damage
-        if (scene && bloodDrips.length < MAX_BLOOD_DRIPS) {
-          // Lazy-init shared drip geometry (unit-size, scale per instance)
-          if (!_sharedBloodDripGeo && typeof THREE !== 'undefined') {
-            _sharedBloodDripGeo = new THREE.SphereGeometry(1, 4, 4);
-          }
-          const dripCount = hpRatio < 0.25 ? 6 : (hpRatio < 0.5 ? 4 : 3); // Blood from every hit
-          for (let d = 0; d < dripCount && bloodDrips.length < MAX_BLOOD_DRIPS; d++) {
-            const dripSize = 0.03 + Math.random() * 0.05;
-            const drip = new THREE.Mesh(
-              _sharedBloodDripGeo,
-              new THREE.MeshBasicMaterial({ color: 0x8B0000 })
-            );
-            drip.scale.setScalar(dripSize);
-            drip.position.set(
-              this.mesh.position.x + (Math.random() - 0.5) * 0.5,
-              this.mesh.position.y + (Math.random() - 0.5) * 0.3,
-              this.mesh.position.z + (Math.random() - 0.5) * 0.5
-            );
-            scene.add(drip);
-            bloodDrips.push({ mesh: drip, velY: 0, life: 30 + Math.floor(Math.random() * 20), _sharedGeo: true });
+        if (scene) {
+          // Blood drip: use instanced drops for zero per-drop mesh overhead
+          const dripCount = hpRatio < 0.25 ? 6 : (hpRatio < 0.5 ? 4 : 3);
+          if (window.BloodSystem && window.BloodSystem.emitDrop) {
+            for (let d = 0; d < dripCount; d++) {
+              window.BloodSystem.emitDrop(
+                this.mesh.position.x + (Math.random() - 0.5) * 0.5,
+                this.mesh.position.y + Math.abs((Math.random() - 0.5) * 0.3),
+                this.mesh.position.z + (Math.random() - 0.5) * 0.5,
+                (Math.random() - 0.5) * 0.06,
+                0.02 + Math.random() * 0.06,
+                (Math.random() - 0.5) * 0.06,
+                0.03 + Math.random() * 0.05
+              );
+            }
+          } else if (bloodDrips.length < MAX_BLOOD_DRIPS) {
+            if (!_sharedBloodDripGeo && typeof THREE !== 'undefined') {
+              _sharedBloodDripGeo = new THREE.SphereGeometry(1, 4, 4);
+            }
+            for (let d = 0; d < dripCount && bloodDrips.length < MAX_BLOOD_DRIPS; d++) {
+              const dripSize = 0.03 + Math.random() * 0.05;
+              const drip = new THREE.Mesh(
+                _sharedBloodDripGeo,
+                new THREE.MeshBasicMaterial({ color: 0x8B0000 })
+              );
+              drip.scale.setScalar(dripSize);
+              drip.position.set(
+                this.mesh.position.x + (Math.random() - 0.5) * 0.5,
+                this.mesh.position.y + (Math.random() - 0.5) * 0.3,
+                this.mesh.position.z + (Math.random() - 0.5) * 0.5
+              );
+              scene.add(drip);
+              bloodDrips.push({ mesh: drip, velY: 0, life: 30 + Math.floor(Math.random() * 20), _sharedGeo: true });
+            }
           }
         }
         
@@ -1983,32 +2020,46 @@
         
         // Airborne blood splatter - throttled alongside other mesh creation
         if (canSpawnMeshes) {
-        const burstCount = isCrit ? 5 : 3; // More airborne blood per shot
-        for (let b = 0; b < burstCount && bloodDrips.length < MAX_BLOOD_DRIPS; b++) {
-          const bSize = 0.03 + Math.random() * 0.05;
-          if (!_sharedBloodDripGeo && typeof THREE !== 'undefined') {
-            _sharedBloodDripGeo = new THREE.SphereGeometry(1, 4, 4);
+          const burstCount = isCrit ? 5 : 3;
+          if (window.BloodSystem && window.BloodSystem.emitDrop) {
+            for (let b = 0; b < burstCount; b++) {
+              window.BloodSystem.emitDrop(
+                this.mesh.position.x + (Math.random() - 0.5) * 0.4,
+                this.mesh.position.y + 0.1,
+                this.mesh.position.z + (Math.random() - 0.5) * 0.4,
+                (Math.random() - 0.5) * 0.08,
+                0.12 + Math.random() * 0.22,
+                (Math.random() - 0.5) * 0.08,
+                0.03 + Math.random() * 0.05
+              );
+            }
+          } else {
+            for (let b = 0; b < burstCount && bloodDrips.length < MAX_BLOOD_DRIPS; b++) {
+              const bSize = 0.03 + Math.random() * 0.05;
+              if (!_sharedBloodDripGeo && typeof THREE !== 'undefined') {
+                _sharedBloodDripGeo = new THREE.SphereGeometry(1, 4, 4);
+              }
+              const p = new THREE.Mesh(
+                _sharedBloodDripGeo,
+                new THREE.MeshBasicMaterial({ color: 0xAA0000 })
+              );
+              p.scale.setScalar(bSize);
+              p.position.set(
+                this.mesh.position.x + (Math.random() - 0.5) * 0.4,
+                this.mesh.position.y + 0.1,
+                this.mesh.position.z + (Math.random() - 0.5) * 0.4
+              );
+              scene.add(p);
+              bloodDrips.push({
+                mesh: p,
+                velX: (Math.random() - 0.5) * 0.08,
+                velZ: (Math.random() - 0.5) * 0.08,
+                velY: 0.12 + Math.random() * 0.22,
+                life: 35 + Math.floor(Math.random() * 15),
+                _sharedGeo: true
+              });
+            }
           }
-          const p = new THREE.Mesh(
-            _sharedBloodDripGeo,
-            new THREE.MeshBasicMaterial({ color: 0xAA0000 })
-          );
-          p.scale.setScalar(bSize);
-          p.position.set(
-            this.mesh.position.x + (Math.random() - 0.5) * 0.4,
-            this.mesh.position.y + 0.1,
-            this.mesh.position.z + (Math.random() - 0.5) * 0.4
-          );
-          scene.add(p);
-          bloodDrips.push({
-            mesh: p,
-            velX: (Math.random() - 0.5) * 0.08,
-            velZ: (Math.random() - 0.5) * 0.08,
-            velY: 0.12 + Math.random() * 0.22, // initial upward burst
-            life: 35 + Math.floor(Math.random() * 15),
-            _sharedGeo: true
-          });
-        }
         } // end airborne blood throttle
         
         // Phase 3: Apply armor reduction for MiniBoss/FlyingBoss — delegated to GameCombat
@@ -2116,18 +2167,24 @@
             const _dmgMult = _hitSegment === 'head' ? 0.5 : (_hitSegment === 'torso' ? 0.4 : 0.3);
             _seg.hp = Math.max(0, _seg.hp - finalAmount * _dmgMult);
 
-            // ── VISUAL DEGRADATION: chip the segment mesh inward on random axes ──
+            // ── VISUAL DEGRADATION: chip the segment mesh inward, varying deformation
+            // by hit coordinate so each bullet hole looks structurally unique.
             const _segMesh = _hitSegment === 'head'  ? this.headGroup
                            : _hitSegment === 'torso' ? this.torsoGroup
                            :                           this.baseGroup;
             if (_segMesh) {
-              const _axis = Math.random();
-              if      (_axis < 0.33) _segMesh.scale.x = Math.max(0.55, _segMesh.scale.x * 0.88);
-              else if (_axis < 0.66) _segMesh.scale.z = Math.max(0.55, _segMesh.scale.z * 0.88);
-              else                   _segMesh.scale.y = Math.max(0.50, _segMesh.scale.y * 0.85);
-              _segMesh.scale.x = Math.max(0.4, Math.min(2.0, _segMesh.scale.x));
-              _segMesh.scale.y = Math.max(0.4, Math.min(2.0, _segMesh.scale.y));
-              _segMesh.scale.z = Math.max(0.4, Math.min(2.0, _segMesh.scale.z));
+              // Use hit coordinate components to seed deformation amounts
+              const _hx = hitPoint ? (hitPoint.x - this.mesh.position.x) : (Math.random() - 0.5);
+              const _hz = hitPoint ? (hitPoint.z - this.mesh.position.z) : (Math.random() - 0.5);
+              // _hy: 0 at mid-torso, ±0.35 at extremes; clamp so fallback stays moderate
+              const _hy = hitPoint ? Math.max(-0.35, Math.min(0.35, _relY - 0.35)) : (Math.random() - 0.5) * 0.35;
+              // Impact angle drives which axes collapse (cavity in direction of bullet)
+              const _dX = 0.80 + Math.abs(_hz) * 0.15; // Z-offset compresses X
+              const _dZ = 0.80 + Math.abs(_hx) * 0.15; // X-offset compresses Z
+              const _dY = 1.0  - Math.abs(_hy) * 0.18; // height offset flattens Y
+              _segMesh.scale.x = Math.max(0.1, Math.min(3.0, _segMesh.scale.x * _dX));
+              _segMesh.scale.y = Math.max(0.1, Math.min(3.0, _segMesh.scale.y * _dY));
+              _segMesh.scale.z = Math.max(0.1, Math.min(3.0, _segMesh.scale.z * _dZ));
             }
 
             // ── MEAT CHUNKS: 3-6 DodecahedronGeometry gore pieces ──────────────
