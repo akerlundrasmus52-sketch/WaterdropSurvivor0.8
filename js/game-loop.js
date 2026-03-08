@@ -1760,11 +1760,11 @@
             );
             const pellet = _spawnProjectile(player.mesh.position.x, player.mesh.position.z, _tmpShotgunTarget);
             pellet.isDoubleBarrel = true;
-            // Visual: smaller orange pellets distinct from gun bullets
-            pellet.mesh.scale.set(0.65, 0.65, 0.65);
+            // Visual: tiny pellets — much smaller than gun bullets to look like real buckshot
+            pellet.mesh.scale.set(0.28, 0.28, 0.28);
             pellet.mesh.material.color.setHex(0xFFA500);
             if (pellet.glow) {
-              pellet.glow.scale.set(0.65, 0.65, 0.65);
+              pellet.glow.scale.set(0.28, 0.28, 0.28);
               pellet.glow.material.color.setHex(0xFFD700);
             }
             // Speed: rescale pre-computed velocity so pellets travel faster than gun bullets
@@ -2244,6 +2244,8 @@
             const dir = { x: Math.cos(baseAngle + spread) * 20 + player.mesh.position.x, y: 0, z: Math.sin(baseAngle + spread) * 20 + player.mesh.position.z };
             const pellet = _spawnProjectile(player.mesh.position.x, player.mesh.position.z, dir);
             pellet.isDoubleBarrel = true;
+            pellet.mesh.scale.set(0.32, 0.32, 0.32); // small heavy pellets
+            if (pellet.glow) pellet.glow.scale.set(0.32, 0.32, 0.32);
             _rescaleProjSpeed(pellet, 2.1 + Math.random() * 0.525); // pump shotgun: 0.6*3.5–0.75*3.5
             pellet.life = 20;
             projectiles.push(pellet);
@@ -2267,6 +2269,8 @@
             const dir = { x: Math.cos(baseAngle + spread) * 20 + player.mesh.position.x, y: 0, z: Math.sin(baseAngle + spread) * 20 + player.mesh.position.z };
             const pellet = _spawnProjectile(player.mesh.position.x, player.mesh.position.z, dir);
             pellet.isDoubleBarrel = true;
+            pellet.mesh.scale.set(0.25, 0.25, 0.25); // very small rapid-fire pellets
+            if (pellet.glow) pellet.glow.scale.set(0.25, 0.25, 0.25);
             _rescaleProjSpeed(pellet, 1.925 + Math.random() * 0.35); // auto shotgun: 0.55*3.5–0.65*3.5
             pellet.life = 18;
             projectiles.push(pellet);
