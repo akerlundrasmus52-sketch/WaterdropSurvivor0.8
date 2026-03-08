@@ -10,8 +10,16 @@ const UPGRADE_RARITIES = [
   { name: 'rare',      label: 'RARE',      cssClass: 'rarity-rare',      scale: 1.5, weight: 30 },
   { name: 'epic',      label: 'EPIC',      cssClass: 'rarity-epic',      scale: 2.0, weight: 15 },
   { name: 'legendary', label: 'LEGENDARY', cssClass: 'rarity-legendary', scale: 2.5, weight: 4  },
+  // cssClass 'rarity-mythical' matches the existing CSS keyframe name (mythical-glow) intentionally
   { name: 'mythic',    label: 'MYTHIC',    cssClass: 'rarity-mythical',  scale: 3.0, weight: 1  },
 ];
+
+// Weapon unlock levels: Weapon 2 at Lv4, Weapon 3 at Lv12, Weapon 4 at Lv25
+const WEAPON_UNLOCK_LEVELS = [4, 12, 25];
+
+// Boss chest gold reward constants
+const BOSS_CHEST_MIN_GOLD   = 150;
+const BOSS_CHEST_GOLD_RANGE = 101; // 0–100 random bonus on top of minimum
 
 function rollUpgradeRarity() {
   const total = UPGRADE_RARITIES.reduce((s, r) => s + r.weight, 0);
@@ -155,7 +163,7 @@ window.bossChests = window.bossChests || [];
 const RELICS = [
   { id:'relic_colossus',    icon:'🏛️', title:'COLOSSUS HEART',    desc:'+120 Max HP, +5 HP/sec Regen',         apply:()=>{ playerStats.maxHp+=120; playerStats.hp+=120; playerStats.hpRegen+=5; showStatChange('🏛️ Colossus Heart: +120 HP, +5 Regen'); } },
   { id:'relic_timelock',    icon:'⌛', title:'TIMELOCK SHARD',    desc:'All Cooldowns -30%, +10% Atk Speed',    apply:()=>{ Object.values(weapons).forEach(w=>{if(w&&w.cooldown)w.cooldown*=0.7;}); playerStats.atkSpeed+=0.10; showStatChange('⌛ Timelock Shard: -30% CD, +10% Atk Spd'); } },
-  { id:'relic_companion',   icon:'🤖', title:'COMPANION MATRIX',  desc:'+2 Drone Turrets, Drone becomes active', apply:()=>{ weapons.droneTurret.active=true; weapons.droneTurret.level=Math.max(1,weapons.droneTurret.level); weapons.droneTurret.droneCount=(weapons.droneTurret.droneCount||0)+2; for(let _di=0;_di<2;_di++){try{const d=new DroneTurret(player);droneTurrets.push(d);}catch(_){}} if(typeof startDroneHum==='function')startDroneHum(); showStatChange('🤖 Companion Matrix: +2 Drones'); } },
+  { id:'relic_companion',   icon:'🤖', title:'COMPANION MATRIX',  desc:'+2 Drone Turrets, Drone becomes active', apply:()=>{ weapons.droneTurret.active=true; weapons.droneTurret.level=Math.max(1,weapons.droneTurret.level); weapons.droneTurret.droneCount=(weapons.droneTurret.droneCount||0)+2; for(let _di=0;_di<2;_di++){try{const d=new DroneTurret(player);droneTurrets.push(d);}catch(e){console.warn('[Relic] DroneTurret spawn failed:',e);}} if(typeof startDroneHum==='function')startDroneHum(); showStatChange('🤖 Companion Matrix: +2 Drones'); } },
   { id:'relic_voidcrystal', icon:'💜', title:'VOID CRYSTAL',      desc:'+25% Crit Chance, +50% Crit Damage',    apply:()=>{ playerStats.critChance+=0.25; playerStats.critDmg+=0.50; showStatChange('💜 Void Crystal: +25% Crit, +50% Crit Dmg'); } },
   { id:'relic_soulflame',   icon:'🔥', title:'SOUL FLAME',        desc:'+8% Life Steal, +30% Damage',           apply:()=>{ playerStats.lifeStealPercent+=0.08; playerStats.strength+=0.30; showStatChange('🔥 Soul Flame: +8% Life Steal, +30% Damage'); } },
   { id:'relic_ironveil',    icon:'🛡️', title:'IRON VEIL',         desc:'+35% Armor, +30 Flat Damage Reduction', apply:()=>{ playerStats.armor=Math.min(80,playerStats.armor+35); playerStats.surfaceTension=(playerStats.surfaceTension||0)+30; showStatChange('🛡️ Iron Veil: +35% Armor, +30 Flat DR'); } },
@@ -257,7 +265,7 @@ class BossChest {
 }
 
 window.spawnBossChest = function(x, z) {
-  const goldBonus = 150 + Math.floor(Math.random() * 101); // 150–250 gold
+  const goldBonus = BOSS_CHEST_MIN_GOLD + Math.floor(Math.random() * BOSS_CHEST_GOLD_RANGE);
   window.bossChests.push(new BossChest(x, z, goldBonus));
   try { createFloatingText('💰 BOSS CHEST!', { x, y: 1.5, z }, '#FFD700'); } catch(_) {}
 };
@@ -609,7 +617,7 @@ window.spawnBossChest = function(x, z) {
       
       // Quest 8: Force weapon choice when quest8_newWeapon is active (grant first new weapon)
       if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest8_newWeapon' &&
-          ![4, 12, 25].includes(playerStats.lvl)) {
+          !WEAPON_UNLOCK_LEVELS.includes(playerStats.lvl)) {
         modal.querySelector('h2').innerText = 'NEW WEAPON!';
         modal.querySelector('h2').style.fontSize = '36px';
         const allWeaponChoicesQ8 = [
@@ -832,7 +840,7 @@ window.spawnBossChest = function(x, z) {
       }
       // WEAPON UNLOCK: Level 4, 8, 15, 20 — show ONLY 6 weapon choices (no stat upgrades)
       // WEAPON UNLOCK: Level 4 (Weapon 2), 12 (Weapon 3), 25 (Weapon 4)
-      else if ([4, 12, 25].includes(playerStats.lvl)) {
+      else if (WEAPON_UNLOCK_LEVELS.includes(playerStats.lvl)) {
 
         // ── Helper: count currently active weapons (gun is always active) ──
         const countActiveWeapons = () => Object.values(weapons).filter(w => w.active).length;
@@ -1167,30 +1175,41 @@ window.spawnBossChest = function(x, z) {
         const isWeaponFocus  = focusPath === 'weapons';
         const isPassiveFocus = focusPath === 'passives';
 
-        // Add each upgrade with appropriate weight
+        // Add each upgrade with appropriate weight.
+        // Weight strategy: weapon-focus boosts combat stats; passive-focus boosts utility stats.
         commonUpgrades.forEach(upgrade => {
-          let w = 1;
+          let w;
           if (upgrade.id === 'str' || upgrade.id === 'aspd') {
-            w = isWeaponFocus ? 1 : (isPassiveFocus ? 6 : 3);
+            // Core combat stats: lower in weapon focus (weapons handle DPS), higher in passive focus
+            if (isWeaponFocus)       w = 1;
+            else if (isPassiveFocus) w = 6;
+            else                     w = 3;
           } else if (upgrade.id === 'atkPassive' || upgrade.id === 'aspdPassive' ||
-                     upgrade.id === 'cooldown' || upgrade.id === 'crit' || upgrade.id === 'critdmg') {
-            w = isWeaponFocus ? 2 : (isPassiveFocus ? 4 : 2);
+                     upgrade.id === 'cooldown'   || upgrade.id === 'crit' || upgrade.id === 'critdmg') {
+            // Secondary combat/passive stats: equally valued in both paths
+            if (isWeaponFocus)       w = 2;
+            else if (isPassiveFocus) w = 4;
+            else                     w = 2;
           } else {
-            w = isWeaponFocus ? 1 : (isPassiveFocus ? 3 : 1);
+            // Utility/defensive stats: neutral in weapon focus, boosted in passive focus
+            if (isWeaponFocus)       w = 1;
+            else if (isPassiveFocus) w = 3;
+            else                     w = 1;
           }
           weightedPool.push({ upgrade, weight: w });
         });
 
-        // If weapon-focused, add weapon upgrade entries from active weapons to the pool
+        // If weapon-focused, add weapon upgrade entries for active weapons to the pool
         if (isWeaponFocus) {
-          const weaponUpgradeEntries = [
-            { id:'wup_gun',    icon:'🔫', title:'GUN Upgrade',         desc:'Gun Dmg+10, Fire Rate+15%',   apply:()=>{ if(weapons.gun.active&&weapons.gun.level<10){weapons.gun.level++;weapons.gun.damage+=10;weapons.gun.cooldown*=0.85;showStatChange('Gun upgraded!');} } },
-            { id:'wup_sword',  icon:'⚔️', title:'SWORD Upgrade',       desc:'Sword Dmg+15, Range+0.5',     apply:()=>{ if(weapons.sword.active&&weapons.sword.level<10){weapons.sword.level++;weapons.sword.damage+=15;weapons.sword.range+=0.5;showStatChange('Sword upgraded!');} } },
-            { id:'wup_aura',   icon:'🌀', title:'AURA Upgrade',        desc:'Aura Dmg+3, Range+0.3',       apply:()=>{ if(weapons.aura.active&&weapons.aura.level<10){weapons.aura.level++;weapons.aura.damage+=3;weapons.aura.range=Math.min(5,weapons.aura.range*1.1);showStatChange('Aura upgraded!');} } },
-            { id:'wup_meteor', icon:'☄️', title:'METEOR Upgrade',      desc:'Meteor Dmg+20, Area+1',       apply:()=>{ if(weapons.meteor.active&&weapons.meteor.level<10){weapons.meteor.level++;weapons.meteor.damage+=20;weapons.meteor.area+=1;showStatChange('Meteor upgraded!');} } },
-            { id:'wup_firering',icon:'🔥',title:'FIRE RING Upgrade',   desc:'Fire Ring Dmg+5, +1 Orb',     apply:()=>{ if(weapons.fireRing.active&&weapons.fireRing.level<10){weapons.fireRing.level++;weapons.fireRing.damage+=5;weapons.fireRing.orbs+=1;showStatChange('Fire Ring upgraded!');} } },
-          ].filter(e => { const key = e.id.replace('wup_','').replace('firering','fireRing'); return weapons[key] && weapons[key].active; });
-          weaponUpgradeEntries.forEach(e => weightedPool.push({ upgrade: e, weight: 5 }));
+          // Explicit ID→weapons key map to avoid fragile string replacement
+          const wupEntries = [
+            { id:'wup_gun',     weaponKey:'gun',      icon:'🔫', title:'GUN Upgrade',       desc:'Gun Dmg+10, Fire Rate+15%', apply:()=>{ if(weapons.gun.active&&weapons.gun.level<10){weapons.gun.level++;weapons.gun.damage+=10;weapons.gun.cooldown*=0.85;showStatChange('Gun upgraded!');} } },
+            { id:'wup_sword',   weaponKey:'sword',    icon:'⚔️', title:'SWORD Upgrade',     desc:'Sword Dmg+15, Range+0.5',   apply:()=>{ if(weapons.sword.active&&weapons.sword.level<10){weapons.sword.level++;weapons.sword.damage+=15;weapons.sword.range+=0.5;showStatChange('Sword upgraded!');} } },
+            { id:'wup_aura',    weaponKey:'aura',     icon:'🌀', title:'AURA Upgrade',      desc:'Aura Dmg+3, Range+0.3',     apply:()=>{ if(weapons.aura.active&&weapons.aura.level<10){weapons.aura.level++;weapons.aura.damage+=3;weapons.aura.range=Math.min(5,weapons.aura.range*1.1);showStatChange('Aura upgraded!');} } },
+            { id:'wup_meteor',  weaponKey:'meteor',   icon:'☄️', title:'METEOR Upgrade',    desc:'Meteor Dmg+20, Area+1',     apply:()=>{ if(weapons.meteor.active&&weapons.meteor.level<10){weapons.meteor.level++;weapons.meteor.damage+=20;weapons.meteor.area+=1;showStatChange('Meteor upgraded!');} } },
+            { id:'wup_firering',weaponKey:'fireRing', icon:'🔥', title:'FIRE RING Upgrade', desc:'Fire Ring Dmg+5, +1 Orb',   apply:()=>{ if(weapons.fireRing.active&&weapons.fireRing.level<10){weapons.fireRing.level++;weapons.fireRing.damage+=5;weapons.fireRing.orbs+=1;showStatChange('Fire Ring upgraded!');} } },
+          ].filter(e => weapons[e.weaponKey] && weapons[e.weaponKey].active);
+          wupEntries.forEach(e => weightedPool.push({ upgrade: e, weight: 5 }));
         }
         
         // Expand weighted pool based on weights
