@@ -116,7 +116,8 @@
         campfireKitchen: { level: 0, maxLevel: 1, unlocked: false }, // Quest 30
         weaponsmith: { level: 0, maxLevel: 1, unlocked: false },      // Quest 31
         prismReliquary: { level: 0, maxLevel: 1, unlocked: false },   // Unlocks after 10 min survival
-        neuralMatrix:   { level: 0, maxLevel: 1, unlocked: false }    // Unlocked via Astral Gateway
+        neuralMatrix:   { level: 0, maxLevel: 1, unlocked: false },   // Unlocked via Astral Gateway
+        astralGateway:  { level: 0, maxLevel: 1, unlocked: false }    // Unlocked via quest/Annunaki arc
       },
       // Neural Matrix unlock state (which nodes the player has activated)
       neuralMatrix: {},
@@ -575,6 +576,9 @@
           }
           if (!saveData.campBuildings.neuralMatrix) {
             saveData.campBuildings.neuralMatrix = { level: 0, maxLevel: 1, unlocked: false };
+          }
+          if (!saveData.campBuildings.astralGateway) {
+            saveData.campBuildings.astralGateway = { level: 0, maxLevel: 1, unlocked: false };
           }
           // ── AIDA Dark Pacts migration ──
           if (!saveData.aidaDarkPacts) saveData.aidaDarkPacts = {};

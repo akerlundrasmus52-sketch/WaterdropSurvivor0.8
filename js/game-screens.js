@@ -1797,7 +1797,7 @@
           if (typeof showExpeditionsMenu === 'function') showExpeditionsMenu(); else showQuestHall();
         },
         shop:                () => { overlay.remove(); showGachaStore(); },
-        astralGateway:       () => { overlay.remove(); showAstralGateway(); },
+        astralGateway:       () => { overlay.remove(); window.showAstralGateway(); },
         prestige:            () => {
           overlay.remove();
           if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest10b_usePrestige') {
@@ -2231,11 +2231,11 @@
       const overlay = document.createElement('div');
       overlay.id = 'prism-reliquary-overlay';
       overlay.className = 'prism-overlay';
-      overlay.style.cssText += 'animation:campBldIn 250ms ease-out forwards;';
 
-      // Inner scrollable panel
+      // Inner scrollable panel — animation applied here so transform doesn't displace the fixed overlay
       const panel = document.createElement('div');
       panel.className = 'prism-panel';
+      panel.style.animation = 'campBldIn 250ms ease-out forwards';
       overlay.appendChild(panel);
 
       // Header
