@@ -422,7 +422,7 @@
           projectileMaterialCache.bulletGlow.clone()  // Clone material for independent color
         );
 
-        this.speed = 1.4 * (window._projSpeedMultiplier || 1.0); // 3.5× faster base speed
+        this.speed = 1.8 * (window._projSpeedMultiplier || 1.0); // increased base speed for snappy feel
         // active starts false; reinit() sets it true.  Pool createFn creates with no args so
         // the projectile stays inactive until _spawnProjectile() calls reinit().
         this.active = false;
@@ -468,10 +468,10 @@
         this.pierceCount = 0;
         this.explosionRadius = 0;
 
-        // Reset mesh state — use the cached material colour (bright orange-gold).
+        // Reset mesh state — use the cached material colour (soft yellow/white glow).
         this.mesh.position.set(x, 0.5, z);
-        // Use scale 1 for a small snappy bullet; only large weapons override scale later.
-        this.mesh.scale.set(1, 1, 1);
+        // Compact elongated scale for a tight, fast-looking bullet
+        this.mesh.scale.set(0.3, 0.3, 0.5);
         this.mesh.material.opacity = 0.95;
         this.mesh.visible = true;
         // Trail frame counter — emit a tracer every 2-3 frames
@@ -499,8 +499,8 @@
         const dz = target.z - z;
         const dist = Math.sqrt(dx * dx + dz * dz);
         // Re-apply speed multiplier each shot so pooled projectiles pick up upgrades
-        // Base speed 1.4 = 0.4 * 3.5 — bullets snap to targets instead of floating
-        this.speed = 1.4 * (window._projSpeedMultiplier || 1.0);
+        // Base speed 1.8 — fast, snappy bullets that feel responsive; upgrade multiplier stacks on top
+        this.speed = 1.8 * (window._projSpeedMultiplier || 1.0);
         this.vx = (dx / dist) * this.speed;
         this.vz = (dz / dist) * this.speed;
 

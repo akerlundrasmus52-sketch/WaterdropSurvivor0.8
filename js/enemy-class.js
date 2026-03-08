@@ -5623,7 +5623,7 @@
       };
       projectileMaterialCache = {
         bullet: new THREE.MeshBasicMaterial({
-          color: 0xFFD700,      // Bright orange-gold — hot, lethal default bullet colour
+          color: 0xffffaa,      // Soft yellow/white — glows smooth without needing lighting calculations
           transparent: true,
           opacity: 0.95
         }),
