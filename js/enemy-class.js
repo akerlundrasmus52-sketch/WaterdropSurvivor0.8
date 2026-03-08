@@ -1991,29 +1991,46 @@
           ensureBulletHoleMaterials();
           if (bulletHoleGeo && bulletHoleMat) {
           const holeDecal = new THREE.Mesh(bulletHoleGeo, bulletHoleMat.clone());
-          // Place on enemy surface using hit direction as normal (from projectile velocity)
-          let nx, ny, nz;
-          if (hitDir && (hitDir.vx !== undefined || hitDir.x !== undefined)) {
-            const hvx = hitDir.vx !== undefined ? hitDir.vx : (hitDir.x || 0);
-            const hvz = hitDir.vz !== undefined ? hitDir.vz : (hitDir.z || 0);
-            const hLen = Math.sqrt(hvx * hvx + hvz * hvz) || 1;
-            nx = hvx / hLen;
-            ny = 0;
-            nz = hvz / hLen;
+          // Choose the best anatomical group to parent the hole to (torso or head).
+          // This makes holes appear ON the correct body segment rather than floating.
+          const _enemyBaseY = this.mesh.position.y;
+          const _hitHY = hitPoint ? (hitPoint.y - _enemyBaseY) : 0.35;
+          const _targetGroup = (_hitHY >= 0.5 && this.headGroup) ? this.headGroup
+                             : (this.torsoGroup ? this.torsoGroup : null);
+          if (hitPoint && _targetGroup) {
+            // Convert world hit position to local space of the target group
+            const _localHit = _targetGroup.worldToLocal(
+              new THREE.Vector3(hitPoint.x, hitPoint.y, hitPoint.z)
+            );
+            const _localNorm = _localHit.clone().normalize();
+            holeDecal.position.copy(_localHit).addScaledVector(_localNorm, 0.02);
+            holeDecal.lookAt(_localHit.clone().add(_localNorm));
+            _targetGroup.add(holeDecal);
           } else {
-            // Fallback: random hemisphere facing forward (player-side)
-            const theta = Math.random() * Math.PI * 2;
-            const phi = Math.random() * Math.PI * 0.5;
-            nx = Math.sin(phi) * Math.cos(theta);
-            ny = Math.sin(phi) * Math.sin(theta) * 0.5;
-            nz = Math.abs(Math.cos(phi));
+            // Fallback: direction-based placement on this.mesh
+            let nx, ny, nz;
+            if (hitDir && (hitDir.vx !== undefined || hitDir.x !== undefined)) {
+              const hvx = hitDir.vx !== undefined ? hitDir.vx : (hitDir.x || 0);
+              const hvz = hitDir.vz !== undefined ? hitDir.vz : (hitDir.z || 0);
+              const hLen = Math.sqrt(hvx * hvx + hvz * hvz) || 1;
+              nx = hvx / hLen;
+              ny = 0;
+              nz = hvz / hLen;
+            } else {
+              // Fallback: random hemisphere facing forward (player-side)
+              const theta = Math.random() * Math.PI * 2;
+              const phi = Math.random() * Math.PI * 0.5;
+              nx = Math.sin(phi) * Math.cos(theta);
+              ny = Math.sin(phi) * Math.sin(theta) * 0.5;
+              nz = Math.abs(Math.cos(phi));
+            }
+            // Offset 0.01 units along normal from mesh surface
+            const meshRadius = 0.54;
+            holeDecal.position.set(nx * (meshRadius + 0.01), ny * (meshRadius + 0.01), nz * (meshRadius + 0.01));
+            // Face outward along normal
+            holeDecal.lookAt(new THREE.Vector3(nx * 2, ny * 2, nz * 2));
+            this.mesh.add(holeDecal);
           }
-          // Offset 0.01 units along normal from mesh surface
-          const meshRadius = 0.54;
-          holeDecal.position.set(nx * (meshRadius + 0.01), ny * (meshRadius + 0.01), nz * (meshRadius + 0.01));
-          // Face outward along normal
-          holeDecal.lookAt(new THREE.Vector3(nx * 2, ny * 2, nz * 2));
-          this.mesh.add(holeDecal);
           this.bulletHoles.push(holeDecal);
           }
         }
@@ -2891,12 +2908,22 @@
         // Skip for elemental deaths (fire/lightning/poison) that have their own dissolution effects
         if (window.BloodSystem && window.BloodSystem.emitArterialSpurt &&
             damageType !== 'fire' && damageType !== 'lightning' && damageType !== 'poison') {
-          const spurtDir = { x: Math.cos(Math.random() * Math.PI * 2), y: 0, z: Math.sin(Math.random() * Math.PI * 2) };
-          // Miniboss/boss get more dramatic spurts
-          const spurtPulses   = (this.isMiniBoss || this.isFlyingBoss) ? 12 : 8;
-          const spurtPerPulse = (this.isMiniBoss || this.isFlyingBoss) ? 150 : 80;
+          // Randomize direction angle and elevation so every death looks unique
+          const _spurtAngle = Math.random() * Math.PI * 2;
+          const _spurtLift = 0.15 + Math.random() * 0.55; // varied elevation (0.15–0.70)
+          const _spurtXZ = Math.sqrt(Math.max(0, 1 - _spurtLift * _spurtLift));
+          const spurtDir = {
+            x: Math.cos(_spurtAngle) * _spurtXZ,
+            y: _spurtLift,
+            z: Math.sin(_spurtAngle) * _spurtXZ
+          };
+          // Miniboss/boss get more dramatic spurts; vary pulse count and pressure per death
+          const spurtPulses   = (this.isMiniBoss || this.isFlyingBoss) ? 12 : (6 + Math.floor(Math.random() * 5));
+          const spurtPerPulse = (this.isMiniBoss || this.isFlyingBoss) ? 150 : (60 + Math.floor(Math.random() * 50));
+          const _spurtInterval = 120 + Math.floor(Math.random() * 80); // 120–200 ms between pulses
+          const _spurtIntensity = 0.7 + Math.random() * 0.6; // 0.7–1.3 pressure multiplier
           window.BloodSystem.emitArterialSpurt(deathPos, spurtDir, {
-            pulses: spurtPulses, perPulse: spurtPerPulse, interval: 160, intensity: 1.0
+            pulses: spurtPulses, perPulse: spurtPerPulse, interval: _spurtInterval, intensity: _spurtIntensity
           });
         }
 
@@ -5430,7 +5457,8 @@
       }
       
       dieGeyserRollover(enemyColor) {
-        // GEYSER ROLLOVER DEATH: Enemy rolls onto its back, then "heartbeat bleed-out" for 3 s,
+        // GEYSER ROLLOVER DEATH: Enemy snaps backward on impact, head flies off, torso
+        // bursts — then rolls onto its back with a "heartbeat bleed-out" for 3 s,
         // squirting blood fountains straight up. Finally fades to a dark corpse husk.
         const deathPos = this.mesh.position.clone();
         const _dyingMesh = this.mesh;
@@ -5441,6 +5469,64 @@
         // Stop all forward movement immediately
         this._lastMoveVX = 0;
         this._lastMoveVZ = 0;
+
+        // ── Violent backwards snap on impact ────────────────────────────────
+        // Read last-hit direction so the snap goes the right way.
+        const _ivx = this._lastHitVX || 0;
+        const _ivz = this._lastHitVZ || 0;
+        const _ilen = Math.sqrt(_ivx * _ivx + _ivz * _ivz) || 1;
+        const _snapForce = 0.6 + Math.random() * 0.6; // 0.6–1.2 rad
+        _dyingMesh.rotation.x = -_snapForce;
+        _dyingMesh.rotation.z += (_ivx / _ilen) * _snapForce * 0.35;
+
+        // ── Head flies off ─────────────────────────────────────────────────
+        if (this.headGroup) {
+          const _headWorldPos = new THREE.Vector3();
+          this.headGroup.getWorldPosition(_headWorldPos);
+          this.headGroup.visible = false;
+
+          const _fhGeo = new THREE.SphereGeometry(0.2, 7, 6);
+          const _fhMat = new THREE.MeshBasicMaterial({ color: enemyColor, transparent: true, opacity: 1 });
+          const _fh = new THREE.Mesh(_fhGeo, _fhMat);
+          _fh.position.copy(_headWorldPos);
+          scene.add(_fh);
+          // Head flies backward from impact direction with random scatter
+          const _fhvx = -(_ivx / _ilen) * (0.06 + Math.random() * 0.09) + (Math.random() - 0.5) * 0.07;
+          const _fhvz = -(_ivz / _ilen) * (0.06 + Math.random() * 0.09) + (Math.random() - 0.5) * 0.07;
+          let _fhvy = 0.18 + Math.random() * 0.20;
+          const _fhrx = (Math.random() - 0.5) * 0.18;
+          const _fhrz = (Math.random() - 0.5) * 0.18;
+          let _fhl = 80;
+          if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
+            managedAnimations.push({ update(_dt) {
+              _fhl--;
+              _fh.position.x += _fhvx;
+              _fh.position.y += _fhvy;
+              _fh.position.z += _fhvz;
+              _fhvy -= 0.020;
+              _fh.rotation.x += _fhrx;
+              _fh.rotation.z += _fhrz;
+              if (_fhl < 20) _fhMat.opacity = _fhl / 20;
+              if (_fhl <= 0 || _fh.position.y < 0) {
+                scene.remove(_fh);
+                _fhGeo.dispose();
+                _fhMat.dispose();
+                return false;
+              }
+              return true;
+            }});
+          } else {
+            scene.remove(_fh);
+            _fhGeo.dispose();
+            _fhMat.dispose();
+          }
+        }
+
+        // ── Torso burst: scatter blood outward in a ring from chest height ──
+        if (typeof spawnParticles === 'function') {
+          spawnParticles({ x: deathPos.x, y: deathPos.y + 0.35, z: deathPos.z }, 0x8B0000, 8);
+          spawnParticles({ x: deathPos.x, y: deathPos.y + 0.35, z: deathPos.z }, 0x660000, 5);
+        }
 
         // Phase 1 — Roll onto back: rotate 180° on Z over ~30 frames
         const ROLL_FRAMES     = 30;
