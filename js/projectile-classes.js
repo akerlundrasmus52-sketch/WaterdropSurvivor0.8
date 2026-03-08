@@ -100,14 +100,14 @@
           const group = new THREE.Group();
           const headGeo = new THREE.SphereGeometry(size * 0.5, 8, 8);
           headGeo.scale(1, 1.3, 0.9);
-          const headMat = new THREE.MeshStandardMaterial({ color: 0x90A090, roughness: 0.5, metalness: 0.2 });
+          const headMat = new THREE.MeshLambertMaterial({ color: 0x90A090 });
           const head = new THREE.Mesh(headGeo, headMat);
           head.position.y = size * 0.5;
-          head.castShadow = true;
+          head.castShadow = false;
           group.add(head);
           // Eyes (large black)
           const eyeGeo = new THREE.SphereGeometry(size * 0.12, 6, 6);
-          const eyeMat = new THREE.MeshStandardMaterial({ color: 0x000000, roughness: 0.1, metalness: 0.8 });
+          const eyeMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
           const eyeL = new THREE.Mesh(eyeGeo, eyeMat);
           eyeL.position.set(-size * 0.15, size * 0.55, size * 0.3);
           eyeL.scale.set(1, 1.4, 0.6);
@@ -117,43 +117,41 @@
           group.add(eyeR);
           // Small body
           const bodyGeo = new THREE.CylinderGeometry(size * 0.2, size * 0.15, size * 0.5, 6);
-          const bodyMat = new THREE.MeshStandardMaterial({ color: 0x708070, roughness: 0.6 });
+          const bodyMat = new THREE.MeshLambertMaterial({ color: 0x708070 });
           const body = new THREE.Mesh(bodyGeo, bodyMat);
           body.position.y = size * 0.05;
-          body.castShadow = true;
+          body.castShadow = false;
           group.add(body);
           mesh = group;
           mesh._isGroup = true;
-          mesh.castShadow = true;
+          mesh.castShadow = false;
         } else if (this.companionId === 'stormWolf') {
           // Storm Wolf — brown blocky wolf shape
           const group = new THREE.Group();
           const bodyGeo = new THREE.BoxGeometry(size * 1.2, size * 0.6, size * 0.5);
-          const bodyMat = new THREE.MeshStandardMaterial({ color: 0x8B4513, roughness: 0.8 });
+          const bodyMat = new THREE.MeshLambertMaterial({ color: 0x8B4513 });
           const body = new THREE.Mesh(bodyGeo, bodyMat);
           body.position.y = size * 0.3;
-          body.castShadow = true;
+          body.castShadow = false;
           group.add(body);
           const headGeo = new THREE.BoxGeometry(size * 0.4, size * 0.35, size * 0.35);
           const head = new THREE.Mesh(headGeo, bodyMat);
           head.position.set(size * 0.6, size * 0.45, 0);
-          head.castShadow = true;
+          head.castShadow = false;
           group.add(head);
           mesh = group;
           mesh._isGroup = true;
-          mesh.castShadow = true;
+          mesh.castShadow = false;
         } else {
           // Default fallback — colored box
           const geo = new THREE.BoxGeometry(size, size, size);
-          const mat = new THREE.MeshStandardMaterial({ 
+          const mat = new THREE.MeshLambertMaterial({ 
             color: this.data.type === 'melee' ? 0x8B4513 : 
                    this.data.type === 'ranged' ? 0x4169E1 : 0x00CED1
           });
           mesh = new THREE.Mesh(geo, mat);
-          mesh.castShadow = true;
-          mesh.receiveShadow = true;
-          mesh.material.emissive = new THREE.Color(0x000000);
-          mesh.material.emissiveIntensity = 0;
+          mesh.castShadow = false;
+          mesh.receiveShadow = false;
         }
         this.mesh = mesh;
         scene.add(this.mesh);
@@ -972,7 +970,7 @@
                     const gutSize = 0.06 + Math.random() * 0.08;
                     const gut = new THREE.Mesh(
                       new THREE.DodecahedronGeometry(gutSize, 0),
-                      new THREE.MeshStandardMaterial({ color: [0xFF69B4, 0xCC2244, 0x8B1A1A, 0x6B0000][gc % 4], roughness: 0.9 })
+                      new THREE.MeshBasicMaterial({ color: [0xFF69B4, 0xCC2244, 0x8B1A1A, 0x6B0000][gc % 4] })
                     );
                     gut.position.copy(enemy.mesh.position);
                     scene.add(gut);
@@ -1123,7 +1121,7 @@
                 if (enemy.bulletHoles.length < 12) {
                   const exitHole = new THREE.Mesh(
                     new THREE.CircleGeometry(0.12 + Math.random()*0.08, 8),
-                    new THREE.MeshStandardMaterial({ color: 0x1A0000, roughness: 0.3, metalness: 0.2, transparent: true, opacity: 0.9, side: THREE.DoubleSide, depthWrite: false })
+                    new THREE.MeshBasicMaterial({ color: 0x1A0000, transparent: true, opacity: 0.9, side: THREE.DoubleSide, depthWrite: false })
                   );
                   // Place on the exit (back) face
                   const bMag = Math.sqrt(this.vx*this.vx + this.vz*this.vz);
@@ -1586,25 +1584,20 @@
       constructor(x, z, target) {
         // Ice shard — elongated octahedron for a crystalline look (4-sided cone approximation)
         const geometry = new THREE.ConeGeometry(0.12, 0.7, 4);
-        // Bright ice-blue with high emissive so it stands out visually
-        const material = new THREE.MeshStandardMaterial({
+        // Bright ice-blue material — cheap Lambert so no PBR light bounce cost
+        const material = new THREE.MeshLambertMaterial({
           color: 0xAEEEFF,
           emissive: 0x005577,
           emissiveIntensity: 0.8,
           transparent: true,
-          opacity: 0.95,
-          metalness: 0.3,
-          roughness: 0.1
+          opacity: 0.95
         });
         this.mesh = new THREE.Mesh(geometry, material);
         this.mesh.scale.set(1, 3, 1); // Elongated ice shard
+        this.mesh.castShadow = false;
+        this.mesh.receiveShadow = false;
         this.mesh.position.set(x, 0.5, z);
         scene.add(this.mesh);
-
-        // Small glow light that travels with the shard
-        this.light = new THREE.PointLight(0x88DDFF, 2.5, 5);
-        this.light.position.copy(this.mesh.position);
-        scene.add(this.light);
 
         this.speed = 0.42 * (window._projSpeedMultiplier || 1.0); // Slightly faster — ice shards fly fast
         this.active = true;
@@ -1636,8 +1629,6 @@
         this.mesh.position.x += this.vx;
         this.mesh.position.y = 0.5; // Lock height — shard travels flat on ground plane
         this.mesh.position.z += this.vz;
-        // Keep light in sync with shard
-        this.light.position.copy(this.mesh.position);
         this.life--;
         
         // Denser ice trail — small ice chips flying off
@@ -1688,7 +1679,7 @@
                 const chunkSize = 0.07 + Math.random() * 0.09;
                 const chunk = new THREE.Mesh(
                   new THREE.DodecahedronGeometry(chunkSize, 0),
-                  new THREE.MeshStandardMaterial({ color: 0xAEEEFF, transparent: true, opacity: 0.85, roughness: 0.3, metalness: 0.2 })
+                  new THREE.MeshBasicMaterial({ color: 0xAEEEFF, transparent: true, opacity: 0.85 })
                 );
                 chunk.position.copy(enemy.mesh.position);
                 scene.add(chunk);
@@ -1762,7 +1753,7 @@
               const shardSize = 0.03 + Math.random() * 0.04;
               const shard = new THREE.Mesh(
                 new THREE.TetrahedronGeometry(shardSize, 0),
-                new THREE.MeshStandardMaterial({ color: 0xCCEEFF, transparent: true, opacity: 0.75, roughness: 0.2, metalness: 0.3 })
+                new THREE.MeshBasicMaterial({ color: 0xCCEEFF, transparent: true, opacity: 0.75 })
               );
               shard.position.copy(enemy.mesh.position);
               scene.add(shard);
@@ -1794,11 +1785,6 @@
         scene.remove(this.mesh);
         this.mesh.geometry.dispose();
         this.mesh.material.dispose();
-        // Remove the glow light that travels with the shard
-        if (this.light) {
-          scene.remove(this.light);
-          this.light = null;
-        }
       }
     }
 
@@ -1938,16 +1924,16 @@
       
       constructor(pos, color) {
         const geo = new THREE.BoxGeometry(0.06, 0.06, 0.06);
-        const mat = new THREE.MeshStandardMaterial({ 
+        const mat = new THREE.MeshLambertMaterial({ 
           color: color,
           transparent: true,
           opacity: Particle.INITIAL_OPACITY,
           emissive: color,
-          emissiveIntensity: 0.5,
-          roughness: 0.5,
-          metalness: 0.15
+          emissiveIntensity: 0.5
         });
         this.mesh = new THREE.Mesh(geo, mat);
+        this.mesh.castShadow = false;
+        this.mesh.receiveShadow = false;
         this.mesh.position.copy(pos);
         
         this.vel = new THREE.Vector3(
