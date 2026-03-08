@@ -582,6 +582,7 @@
           if (saveData.aidaDarkPacts.bossSpeedCharges === undefined) saveData.aidaDarkPacts.bossSpeedCharges = 0;
         }
       } catch (e) {
+
         console.error('Failed to load save data:', e);
         saveData = { ...defaultSaveData };
 
@@ -612,6 +613,22 @@
           document.body.appendChild(banner);
         }, 500);
       }
+
+      // ── Developer Override ──
+      // Forces new buildings to fully built state and injects test resources so
+      // new features are immediately accessible without completing tutorial quests.
+      if (!saveData.campBuildings) saveData.campBuildings = {};
+      saveData.campBuildings.astralGateway  = { unlocked: true, level: 1, maxLevel: 1 };
+      saveData.campBuildings.neuralMatrix   = { unlocked: true, level: 1, maxLevel: 1 };
+      saveData.campBuildings.prismReliquary = { unlocked: true, level: 1, maxLevel: 1 };
+      saveData.gold          = 50000;
+      saveData.astralEssence = 500;
+      saveData.neuralCores   = 100;
+      if (!saveData.rawGems) saveData.rawGems = {};
+      saveData.rawGems.ruby     = 100;
+      saveData.rawGems.sapphire = 100;
+      saveData.rawGems.emerald  = 100;
+      saveData.rawGems.void     = 100;
     }
 
     // Throttle saves to avoid excessive localStorage writes (max once per 500ms)
