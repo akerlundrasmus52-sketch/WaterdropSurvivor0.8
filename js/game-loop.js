@@ -657,8 +657,8 @@
       // Debug: log frame timing anomalies (throttled, observation-only)
       if (window.GameDebug) window.GameDebug.onFrameStart(time, dt * 1000, gameTime);
       
-      // Phase 3: Lag compensation - cap deltaTime to prevent death spiral
-      const MAX_DELTA_TIME = 0.1; // 100ms cap
+      // Phase 3: Lag compensation - cap deltaTime to prevent physics explosion during lag spikes
+      const MAX_DELTA_TIME = 0.05; // 50ms cap — prevents bullets/physics from exploding on lag spikes
       if (dt > MAX_DELTA_TIME) {
         // Throttle warning to avoid console spam during sustained lag
         if (!window.lastLagWarning || (Date.now() - window.lastLagWarning) > 5000) {
