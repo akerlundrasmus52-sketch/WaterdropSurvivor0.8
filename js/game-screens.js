@@ -2233,12 +2233,17 @@
       overlay.className = 'prism-overlay';
       overlay.style.cssText += 'animation:campBldIn 250ms ease-out forwards;';
 
+      // Inner scrollable panel
+      const panel = document.createElement('div');
+      panel.className = 'prism-panel';
+      overlay.appendChild(panel);
+
       // Header
       const header = document.createElement('div');
       header.className = 'prism-header';
       header.innerHTML = `<span class="prism-title">💎 PRISM RELIQUARY</span>
         <span class="prism-subtitle">Slot Cut Gems into weapons and companions</span>`;
-      overlay.appendChild(header);
+      panel.appendChild(header);
 
       const closeBtn = document.createElement('button');
       closeBtn.className = 'prism-close-btn camp-bld-close-btn';
@@ -2252,7 +2257,7 @@
           if (window.CampWorld && typeof window.CampWorld.resumeInput === 'function') window.CampWorld.resumeInput();
         }, 210);
       };
-      overlay.appendChild(closeBtn);
+      panel.appendChild(closeBtn);
 
       // Raw Gem counts
       const rawGemBar = document.createElement('div');
@@ -2261,7 +2266,7 @@
       rawGemBar.innerHTML = Object.entries(GS.GEM_TYPES).map(([type, def]) =>
         `<span class="prism-rawgem" style="color:${def.color};">${def.icon} <b>${rg[type] || 0}</b> Raw ${def.name}</span>`
       ).join('');
-      overlay.appendChild(rawGemBar);
+      panel.appendChild(rawGemBar);
 
       // Two columns: weapon slot + companion slot
       const cols = document.createElement('div');
@@ -2325,9 +2330,9 @@
 
       // ── Companion column ──
       cols.appendChild(_buildPrismItemColumn(GS, 'companion', companionId, _refreshInPlace));
-      overlay.appendChild(cols);
+      panel.appendChild(cols);
 
-      overlay.appendChild(invHeader);
+      panel.appendChild(invHeader);
 
       function renderInvGrid() {
         invGrid.innerHTML = '';
@@ -2361,7 +2366,7 @@
       }
 
       renderInvGrid();
-      overlay.appendChild(invGrid);
+      panel.appendChild(invGrid);
 
       // Wire slot click handlers for the initial render
       _wireSlotClicks();
@@ -2688,6 +2693,7 @@
         }
       });
     }
+    window.showAstralGateway = showAstralGateway;
 
     // ============================================================
     // GACHA STORE — 4 Chest Tiers

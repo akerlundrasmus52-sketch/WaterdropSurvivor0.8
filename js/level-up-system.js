@@ -143,13 +143,13 @@ function showFocusPathPrompt(onWeapons, onPassives) {
     <div class="focus-path-prompt">
       <div class="focus-path-btn focus-weapons" id="fp-weapons">
         <span class="fp-icon">⚔️</span>
-        <span class="fp-title">FOCUS WEAPONS</span>
-        <span class="fp-desc">Weapon upgrades appear more often</span>
+        <span class="fp-title">WEAPON</span>
+        <span class="fp-desc">Weapon upgrades only</span>
       </div>
       <div class="focus-path-btn focus-passives" id="fp-passives">
         <span class="fp-icon">📊</span>
-        <span class="fp-title">FOCUS PASSIVES</span>
-        <span class="fp-desc">Stat upgrades appear more often</span>
+        <span class="fp-title">PASSIVE</span>
+        <span class="fp-desc">Stat boosts only</span>
       </div>
     </div>`;
   modal.style.display = 'flex';
@@ -1155,8 +1155,8 @@ window.spawnBossChest = function(x, z) {
         choices.push(...perkUnlockFillers);
       }
       else {
-        // ── Focus Path Prompt (regular levels only, not bonus rounds) ──────────
-        if (!isBonusRound && focusPath === null) {
+        // ── Focus Path Prompt (regular levels only, not bonus rounds, only from level 4+) ──────────
+        if (!isBonusRound && focusPath === null && playerStats.lvl >= WEAPON_UNLOCK_LEVELS[0]) {
           showFocusPathPrompt(
             () => showUpgradeModal(isBonusRound, 'weapons'),
             () => showUpgradeModal(isBonusRound, 'passives')
@@ -1165,43 +1165,18 @@ window.spawnBossChest = function(x, z) {
         }
 
         // ALWAYS SHOW 6 CHOICES: Show 6 random choices for 2×3 grid
-        // Weighted selection: ATK speed and ATK power have higher spawn weight
-        // Focus path modifies weights: 'weapons'→weapon upgrades boosted, 'passives'→stats boosted
+        // When a path is chosen: WEAPON → only weapon upgrade cards; PASSIVE → only stat boosts.
+        // No path (level < 4): standard mixed upgrades.
         
         // Create weighted pool with Fisher-Yates shuffle for proper randomization
         const weightedPool = [];
         
-        // Determine weight multipliers based on chosen focus path
+        // Determine chosen focus path
         const isWeaponFocus  = focusPath === 'weapons';
         const isPassiveFocus = focusPath === 'passives';
 
-        // Add each upgrade with appropriate weight.
-        // Weight strategy: weapon-focus boosts combat stats; passive-focus boosts utility stats.
-        commonUpgrades.forEach(upgrade => {
-          let w;
-          if (upgrade.id === 'str' || upgrade.id === 'aspd') {
-            // Core combat stats: lower in weapon focus (weapons handle DPS), higher in passive focus
-            if (isWeaponFocus)       w = 1;
-            else if (isPassiveFocus) w = 6;
-            else                     w = 3;
-          } else if (upgrade.id === 'atkPassive' || upgrade.id === 'aspdPassive' ||
-                     upgrade.id === 'cooldown'   || upgrade.id === 'crit' || upgrade.id === 'critdmg') {
-            // Secondary combat/passive stats: equally valued in both paths
-            if (isWeaponFocus)       w = 2;
-            else if (isPassiveFocus) w = 4;
-            else                     w = 2;
-          } else {
-            // Utility/defensive stats: neutral in weapon focus, boosted in passive focus
-            if (isWeaponFocus)       w = 1;
-            else if (isPassiveFocus) w = 3;
-            else                     w = 1;
-          }
-          weightedPool.push({ upgrade, weight: w });
-        });
-
-        // If weapon-focused, add weapon upgrade entries for active weapons to the pool
         if (isWeaponFocus) {
-          // Explicit ID→weapons key map to avoid fragile string replacement
+          // WEAPON path: ONLY weapon upgrade entries for active weapons
           const wupEntries = [
             { id:'wup_gun',     weaponKey:'gun',      icon:'🔫', title:'GUN Upgrade',       desc:'Gun Dmg+10, Fire Rate+15%', apply:()=>{ if(weapons.gun.active&&weapons.gun.level<10){weapons.gun.level++;weapons.gun.damage+=10;weapons.gun.cooldown*=0.85;showStatChange('Gun upgraded!');} } },
             { id:'wup_sword',   weaponKey:'sword',    icon:'⚔️', title:'SWORD Upgrade',     desc:'Sword Dmg+15, Range+0.5',   apply:()=>{ if(weapons.sword.active&&weapons.sword.level<10){weapons.sword.level++;weapons.sword.damage+=15;weapons.sword.range+=0.5;showStatChange('Sword upgraded!');} } },
@@ -1209,7 +1184,26 @@ window.spawnBossChest = function(x, z) {
             { id:'wup_meteor',  weaponKey:'meteor',   icon:'☄️', title:'METEOR Upgrade',    desc:'Meteor Dmg+20, Area+1',     apply:()=>{ if(weapons.meteor.active&&weapons.meteor.level<10){weapons.meteor.level++;weapons.meteor.damage+=20;weapons.meteor.area+=1;showStatChange('Meteor upgraded!');} } },
             { id:'wup_firering',weaponKey:'fireRing', icon:'🔥', title:'FIRE RING Upgrade', desc:'Fire Ring Dmg+5, +1 Orb',   apply:()=>{ if(weapons.fireRing.active&&weapons.fireRing.level<10){weapons.fireRing.level++;weapons.fireRing.damage+=5;weapons.fireRing.orbs+=1;showStatChange('Fire Ring upgraded!');} } },
           ].filter(e => weapons[e.weaponKey] && weapons[e.weaponKey].active);
-          wupEntries.forEach(e => weightedPool.push({ upgrade: e, weight: 5 }));
+          wupEntries.forEach(e => weightedPool.push({ upgrade: e, weight: 1 }));
+        } else if (isPassiveFocus) {
+          // PASSIVE path: ONLY stat boost entries
+          commonUpgrades.forEach(upgrade => {
+            weightedPool.push({ upgrade, weight: 1 });
+          });
+        } else {
+          // No path chosen (level < 4): standard mixed upgrades with default weights
+          commonUpgrades.forEach(upgrade => {
+            let w;
+            if (upgrade.id === 'str' || upgrade.id === 'aspd') {
+              w = 3;
+            } else if (upgrade.id === 'atkPassive' || upgrade.id === 'aspdPassive' ||
+                       upgrade.id === 'cooldown'   || upgrade.id === 'crit' || upgrade.id === 'critdmg') {
+              w = 2;
+            } else {
+              w = 1;
+            }
+            weightedPool.push({ upgrade, weight: w });
+          });
         }
         
         // Expand weighted pool based on weights
