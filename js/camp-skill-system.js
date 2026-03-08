@@ -3034,7 +3034,7 @@
       // Slide in
       board.classList.remove('slide-in', 'slide-out');
       void board.offsetWidth; // force reflow
-      board.style.transform = 'translateX(-50%) translateY(-120%)';
+      board.style.transform = 'translateX(120%)';
       board.style.opacity = '0';
       board.classList.add('slide-in');
 
@@ -3075,7 +3075,7 @@
         board.classList.add('slide-out');
         setTimeout(() => {
           board.classList.remove('slide-out');
-          board.style.transform = 'translateX(-50%) translateY(-120%)';
+          board.style.transform = 'translateX(120%)';
           board.style.opacity = '0';
           board.style.borderColor = '';
           board.style.boxShadow = '';

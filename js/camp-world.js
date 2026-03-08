@@ -3195,6 +3195,12 @@
 
   function _updatePromptUI() {
     if (!_promptEl) return;
+    // Never show the prompt or interact button while a building menu is open
+    if (_menuOpen) {
+      _promptEl.style.display = 'none';
+      if (_interactBtn) _interactBtn.style.display = 'none';
+      return;
+    }
     if (_nearBuilding) {
       const def = BUILDING_DEFS.find(d => d.id === _nearBuilding);
       if (def) {
@@ -3309,7 +3315,13 @@
     'gear-screen', 'achievements-screen', 'progression-shop',
     'companion-house-modal', 'inventory-screen-modal',
     'camp-board-overlay', 'special-attacks-panel-overlay',
-    'quest-hall-overlay', 'prestige-menu', 'expeditions-menu'
+    'quest-hall-overlay', 'prestige-menu', 'expeditions-menu',
+    // Additional overlays added to fix stuck menus
+    'prism-reliquary-overlay', 'neural-matrix-overlay',
+    'armory-overlay', 'recycle-overlay', 'campfire-kitchen-overlay',
+    'workshop-overlay', 'gacha-store-overlay', 'aida-dark-pact-overlay',
+    'aida-modal-overlay', 'camp-codex-screen', 'character-visuals-screen',
+    'weaponsmith-overlay'
   ];
 
   /**
@@ -3572,23 +3584,25 @@
         'position:fixed',
         'bottom:18%',
         'right:6%',
-        'background:linear-gradient(135deg,#c8a248,#8b6914)',
-        'border:none',
-        'border-radius:50%',
-        'width:70px',
-        'height:70px',
-        'color:#000',
+        'background:linear-gradient(135deg,#c8a248 0%,#8b6914 60%,#5c4509 100%)',
+        'border:2px solid rgba(255,215,0,0.7)',
+        'border-radius:14px',
+        'width:76px',
+        'height:76px',
+        'color:#fff8e0',
         'font-family:"Bangers",cursive',
-        'font-size:16px',
+        'font-size:17px',
         'font-weight:bold',
         'display:none',
         'z-index:200',
         'cursor:pointer',
-        'box-shadow:0 0 20px rgba(200,162,72,0.7)',
-        'letter-spacing:0.5px',
+        'box-shadow:0 0 24px rgba(200,162,72,0.8),0 4px 12px rgba(0,0,0,0.6)',
+        'letter-spacing:1px',
         'touch-action:manipulation',
+        'text-shadow:0 1px 3px rgba(0,0,0,0.5)',
+        'transition:transform 0.1s,box-shadow 0.1s',
       ].join(';');
-      btn.addEventListener('click', () => _interact());
+      btn.addEventListener('click', () => { btn.style.transform = 'scale(0.93)'; setTimeout(() => { btn.style.transform = ''; }, 120); _interact(); });
       btn.addEventListener('touchend', (e) => { e.preventDefault(); _interact(); });
       document.body.appendChild(btn);
       _interactBtn = btn;

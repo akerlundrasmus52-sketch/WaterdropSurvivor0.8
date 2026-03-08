@@ -314,12 +314,44 @@ window.DialogueSystem = (function () {
   // ── Public API ─────────────────────────────────────────────
 
   /**
+   * _isCampMenuOpen()
+   * Returns true when any camp building overlay is currently visible.
+   * Used to suppress A.I.D.A dialogues while menus are open.
+   */
+  function _isCampMenuOpen() {
+    // Check via CampWorld public API first
+    if (window.CampWorld && window.CampWorld.menuOpen) return true;
+    // Fallback: check common overlay IDs
+    var overlayIds = [
+      'prism-reliquary-overlay', 'camp-board-overlay', 'neural-matrix-overlay',
+      'armory-overlay', 'recycle-overlay', 'campfire-kitchen-overlay',
+      'workshop-overlay', 'gacha-store-overlay', 'aida-dark-pact-overlay',
+      'special-attacks-panel-overlay', 'quest-hall-overlay',
+      'companion-house-modal', 'inventory-screen-modal',
+      'progression-shop', 'prestige-menu', 'expeditions-menu',
+      'gear-screen', 'achievements-screen'
+    ];
+    for (var i = 0; i < overlayIds.length; i++) {
+      var el = document.getElementById(overlayIds[i]);
+      if (el && el.style.display !== 'none' && getComputedStyle(el).display !== 'none') return true;
+    }
+    return false;
+  }
+
+  /**
    * show(dialogueArray, options)
    * Start a dialogue sequence.
    * dialogueArray: Array of { text, emotion, duration? }
    * options: { onComplete, x, y }
    */
   function show(dialogueArray, options) {
+    // Suppress A.I.D.A dialogue while a camp building menu is open
+    if (_isCampMenuOpen()) {
+      // If there's a completion callback, fire it so callers don't hang
+      options = options || {};
+      if (typeof options.onComplete === 'function') options.onComplete();
+      return;
+    }
     _init();
     options     = options || {};
     _sentences  = dialogueArray;

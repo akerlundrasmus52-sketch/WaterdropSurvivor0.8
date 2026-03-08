@@ -746,53 +746,150 @@
     function updateAchievementsScreen() {
       const content = document.getElementById('achievements-content');
       if (!content) return;
-      
-      let html = '<div style="display: grid; gap: 15px; width: 100%; max-width: 600px; margin: 0 auto;">';
-      
+
       let unclaimedCount = 0;
+
+      // ── Playing-card grid layout ─────────────────────────────────────
+      let html = `
+        <style>
+          .ach-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 14px;
+            width: 100%;
+            max-width: 700px;
+            margin: 0 auto;
+            padding: 4px;
+          }
+          .ach-card {
+            position: relative;
+            background: #050505;
+            border: 2px solid #222;
+            border-radius: 12px;
+            padding: 16px 10px 14px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            min-height: 180px;
+            text-align: center;
+            cursor: default;
+            transition: transform 0.18s, box-shadow 0.18s;
+            overflow: hidden;
+          }
+          .ach-card.unlocked {
+            background: linear-gradient(160deg, #1a1200 0%, #0d0900 100%);
+            border: 2px solid #FFD700;
+            box-shadow: 0 0 18px rgba(255,215,0,0.35), 0 0 6px rgba(255,215,0,0.2) inset;
+            cursor: pointer;
+          }
+          .ach-card.unlocked:hover {
+            transform: translateY(-4px) scale(1.04);
+            box-shadow: 0 0 28px rgba(255,215,0,0.55), 0 6px 20px rgba(0,0,0,0.6);
+          }
+          .ach-card.claimable {
+            background: linear-gradient(160deg, #1a1800 0%, #0d0c00 100%);
+            border: 2px solid #ffe033;
+            box-shadow: 0 0 20px rgba(255,230,0,0.4), 0 0 8px rgba(255,230,0,0.15) inset;
+            cursor: pointer;
+            animation: ach-pulse 1.5s ease-in-out infinite alternate;
+          }
+          @keyframes ach-pulse {
+            from { box-shadow: 0 0 12px rgba(255,230,0,0.3), 0 0 4px rgba(255,230,0,0.1) inset; }
+            to   { box-shadow: 0 0 28px rgba(255,230,0,0.6), 0 0 10px rgba(255,230,0,0.25) inset; }
+          }
+          .ach-icon {
+            font-size: 32px;
+            line-height: 1;
+            filter: drop-shadow(0 0 6px rgba(255,215,0,0.5));
+          }
+          .ach-icon.locked {
+            font-size: 28px;
+            filter: brightness(0.3) grayscale(1);
+          }
+          .ach-name {
+            font-family: 'Bangers', cursive;
+            font-size: 14px;
+            letter-spacing: 1px;
+            color: #FFD700;
+            line-height: 1.2;
+          }
+          .ach-name.locked {
+            color: #333;
+            filter: blur(3px);
+            user-select: none;
+          }
+          .ach-desc {
+            font-size: 10px;
+            color: #b89030;
+            line-height: 1.3;
+          }
+          .ach-desc.locked {
+            color: #1a1a1a;
+            filter: blur(4px);
+            user-select: none;
+          }
+          .ach-reward-row {
+            margin-top: auto;
+            font-size: 10px;
+            color: #998822;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+          }
+          .ach-reward-row .ach-gold { color: #FFD700; font-family: 'Bangers',cursive; font-size: 13px; }
+          .ach-claim-hint {
+            position: absolute;
+            bottom: 6px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 9px;
+            letter-spacing: 1px;
+            color: #ffe033;
+            font-family: 'Bangers', cursive;
+            text-transform: uppercase;
+          }
+          .ach-corner-glow {
+            position: absolute;
+            top: -8px; right: -8px;
+            width: 36px; height: 36px;
+            background: radial-gradient(circle, rgba(255,215,0,0.4) 0%, transparent 70%);
+            border-radius: 50%;
+          }
+        </style>
+        <div class="ach-grid">`;
+
       for (const key in ACHIEVEMENTS) {
         const achievement = ACHIEVEMENTS[key];
         const isClaimed = saveData.achievements && saveData.achievements.includes(achievement.id);
         const canClaim = !isClaimed && achievement.check();
-        
         if (canClaim) unclaimedCount++;
-        
+
+        const stateClass = isClaimed ? 'unlocked' : (canClaim ? 'claimable' : '');
+        const clickAttr  = canClaim ? `onclick="claimAchievement('${achievement.id}')"` : '';
+        const icon        = isClaimed ? '🏆' : (canClaim ? '🔓' : '🔒');
+        const iconClass   = (isClaimed || canClaim) ? 'ach-icon' : 'ach-icon locked';
+        const nameClass   = (isClaimed || canClaim) ? 'ach-name' : 'ach-name locked';
+        const descClass   = (isClaimed || canClaim) ? 'ach-desc' : 'ach-desc locked';
+
         html += `
-          <div style="
-            background: linear-gradient(to bottom, ${isClaimed ? '#2c5530' : (canClaim ? '#4a4a2a' : '#3a3a3a')}, ${isClaimed ? '#1a3020' : (canClaim ? '#3a3a1a' : '#2a2a2a')});
-            border: 3px solid ${isClaimed ? '#FFD700' : (canClaim ? '#FFFF00' : '#5a5a5a')};
-            border-radius: 15px;
-            padding: 15px;
-            text-align: left;
-            position: relative;
-            cursor: ${canClaim ? 'pointer' : 'default'};
-            transition: all 0.2s ease;
-            ${canClaim ? 'box-shadow: 0 0 15px rgba(255, 255, 0, 0.5);' : ''}
-          " ${canClaim ? `onclick="claimAchievement('${achievement.id}')"` : ''}>
-            <div style="color: ${isClaimed ? '#FFD700' : (canClaim ? '#FFFF00' : '#bbb')}; font-size: 20px; font-weight: bold; margin-bottom: 5px;">
-              ${isClaimed ? '✓ ' : ''}${achievement.name}
+          <div class="ach-card ${stateClass}" ${clickAttr}>
+            ${isClaimed ? '<div class="ach-corner-glow"></div>' : ''}
+            <div class="${iconClass}">${icon}</div>
+            <div class="${nameClass}">${achievement.name}</div>
+            <div class="${descClass}">${achievement.desc}</div>
+            <div class="ach-reward-row ${(isClaimed || canClaim) ? '' : 'locked'}">
+              <span class="ach-gold">+${achievement.reward} 💰</span>
+              ${achievement.skillPoints ? `<span>+${achievement.skillPoints} 🔮 SP</span>` : ''}
+              ${achievement.attributePoints ? `<span>+${achievement.attributePoints} ⭐ AP</span>` : ''}
             </div>
-            <div style="color: ${isClaimed ? '#90ee90' : (canClaim ? '#dddd00' : '#888')}; font-size: 14px; margin-bottom: 8px;">
-              ${achievement.desc}
-            </div>
-            <div style="color: #FFD700; font-size: 16px; font-weight: bold;">
-              Reward: ${achievement.reward} Gold
-            </div>
-            <div style="color: #90EE90; font-size: 16px; font-weight: bold; margin-top: 5px;">
-              Skill Points: ${achievement.skillPoints || 0} 🔮
-            </div>
-            <div style="color: #5DADE2; font-size: 16px; font-weight: bold; margin-top: 5px;">
-              Attribute Points: ${achievement.attributePoints} ${canClaim ? '⭐' : ''}
-            </div>
-            ${canClaim ? '<div style="color: #FFFF00; font-size: 14px; margin-top: 8px; animation: pulse 1s infinite;">CLICK TO CLAIM!</div>' : ''}
-            </div>
-          </div>
-        `;
+            ${canClaim ? '<div class="ach-claim-hint">✦ Tap to claim ✦</div>' : ''}
+          </div>`;
       }
-      
+
       html += '</div>';
       content.innerHTML = html;
-      
+
       // Update notification badge on achievements button
       updateAchievementBadge(unclaimedCount);
     }
@@ -816,15 +913,31 @@
           var ach = sd.achievements || GA.getAchievementsDefaults();
           var defs = GA.ACHIEVEMENTS;
           if (defs && defs.length) {
-            var h = '<h3 style="font-family:\'Bangers\',cursive;color:#FFD700;font-size:1.4em;margin:0 0 8px;letter-spacing:1px;">⚙️ IDLE ACHIEVEMENTS</h3>';
+            // Playing-card style for idle achievements
+            var h = '<h3 style="font-family:\'Bangers\',cursive;color:#FFD700;font-size:1.4em;margin:0 0 10px;letter-spacing:1px;">⚙️ IDLE ACHIEVEMENTS</h3>';
+            h += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;">';
             defs.forEach(function(def) {
               var unlocked = ach.unlocked && !!ach.unlocked[def.id];
-              h += '<div style="padding:6px 10px;margin:4px 0;border-radius:6px;font-size:13px;' +
-                (unlocked ? 'background:rgba(255,215,0,0.1);border:2px solid rgba(255,215,0,0.4);color:#FFD700;'
-                          : 'background:rgba(0,0,0,0.2);border:1px solid rgba(255,215,0,0.1);color:#666;') + '">' +
-                (unlocked ? '✅ ' : '🔒 ') + '<b>' + def.name + '</b> — ' + def.description +
-                ' <span style="color:#FFD700;">→ +' + def.bonus.pct + '% ' + def.bonus.type + '</span></div>';
+              var cardBg  = unlocked ? 'linear-gradient(160deg,#1a1200,#0d0900)' : '#050505';
+              var border  = unlocked ? '2px solid #FFD700' : '2px solid #1a1a1a';
+              var shadow  = unlocked ? '0 0 14px rgba(255,215,0,0.3)' : 'none';
+              var icon    = unlocked ? '🏆' : '🔒';
+              var nameCol = unlocked ? '#FFD700' : 'transparent';
+              var nameFilter = unlocked ? '' : 'filter:blur(3px);user-select:none;';
+              var descFilter = unlocked ? '' : 'filter:blur(4px);user-select:none;';
+              var nameStyle = 'font-family:\'Bangers\',cursive;font-size:12px;letter-spacing:1px;' + (unlocked ? 'color:#FFD700;' : 'color:#222;' + nameFilter);
+              var descStyle = 'font-size:9px;line-height:1.3;margin-top:2px;' + (unlocked ? 'color:#b89030;' : 'color:#111;' + descFilter);
+              var bonusStyle = 'font-family:\'Bangers\',cursive;font-size:12px;color:#FFD700;margin-top:auto;' + (unlocked ? '' : 'opacity:0.1;');
+              h += '<div style="background:' + cardBg + ';border:' + border + ';border-radius:10px;padding:12px 8px 10px;'
+                 + 'display:flex;flex-direction:column;align-items:center;gap:4px;min-height:140px;text-align:center;'
+                 + 'box-shadow:' + shadow + ';">'
+                 + '<div style="font-size:24px;line-height:1;' + (unlocked ? '' : 'filter:brightness(0.3);') + '">' + icon + '</div>'
+                 + '<div style="' + nameStyle + '">' + def.name + '</div>'
+                 + '<div style="' + descStyle + '">' + def.description + '</div>'
+                 + '<div style="' + bonusStyle + '">+' + def.bonus.pct + '% ' + def.bonus.type + '</div>'
+                 + '</div>';
             });
+            h += '</div>';
             idleAchWrap.innerHTML = h;
           }
         }

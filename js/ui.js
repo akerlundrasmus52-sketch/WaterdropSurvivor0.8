@@ -9,6 +9,8 @@
 // Stat Notification Queue System - module-private state
 const _statNotificationQueue = [];
 let _isShowingNotification = false;
+// Gap between consecutive queued notifications (ms)
+const _NOTIF_BETWEEN_DELAY = 1500;
 
 function _updateLiveStatDisplay(text) {
   // Show notification in the live stat rectangle via main.js
@@ -44,14 +46,19 @@ function _processStatNotificationQueue() {
   notification.innerText = text;
   container.appendChild(notification);
 
-  // Faster fade out: 0.8 seconds display, then 0.3s fade
+  // Display for 0.8s, fade for 0.3s, then 1.5s gap before next
   setTimeout(() => {
     notification.style.animation = 'stat-fade-out 0.3s ease-out forwards';
 
-    // Remove element and process next in queue
+    // Remove element, then wait inter-notification gap before showing next
     setTimeout(() => {
-      container.removeChild(notification);
-      _processStatNotificationQueue();
+      if (container.contains(notification)) container.removeChild(notification);
+      // Wait 1.5s before processing next notification
+      if (_statNotificationQueue.length > 0) {
+        setTimeout(_processStatNotificationQueue, _NOTIF_BETWEEN_DELAY);
+      } else {
+        _isShowingNotification = false;
+      }
     }, 300);
   }, 800);
 }
@@ -82,10 +89,73 @@ function showStatusMessage(text, duration = 2000) {
   showStatChange(text);
 }
 
+// ── Resource Collection Toast ─────────────────────────────────────────
+// Shows a brief slide-in toast on the right side when resources are collected.
+const _resourceToastQueue = [];
+let _resourceToastActive = false;
+
+function showResourceToast(text, color) {
+  _resourceToastQueue.push({ text, color: color || '#00ffcc' });
+  if (!_resourceToastActive) _processResourceToastQueue();
+}
+
+function _processResourceToastQueue() {
+  if (_resourceToastQueue.length === 0) { _resourceToastActive = false; return; }
+  _resourceToastActive = true;
+  const { text, color } = _resourceToastQueue.shift();
+
+  let wrap = document.getElementById('resource-toast-wrap');
+  if (!wrap) {
+    wrap = document.createElement('div');
+    wrap.id = 'resource-toast-wrap';
+    wrap.style.cssText = 'position:fixed;right:0;top:50%;transform:translateY(-50%);z-index:99990;display:flex;flex-direction:column;gap:6px;pointer-events:none;';
+    document.body.appendChild(wrap);
+  }
+
+  const toast = document.createElement('div');
+  toast.style.cssText = [
+    'background:rgba(0,0,0,0.85)',
+    `border-left:3px solid ${color}`,
+    `color:${color}`,
+    'font-family:"Bangers",cursive',
+    'font-size:clamp(12px,3vw,15px)',
+    'letter-spacing:1px',
+    'padding:8px 14px',
+    'border-radius:4px 0 0 4px',
+    'transform:translateX(110%)',
+    'transition:transform 0.35s cubic-bezier(0.34,1.56,0.64,1)',
+    'max-width:220px',
+    'white-space:nowrap',
+    'overflow:hidden',
+    'text-overflow:ellipsis'
+  ].join(';');
+  toast.textContent = text;
+  wrap.appendChild(toast);
+
+  // Slide in
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => { toast.style.transform = 'translateX(0)'; });
+  });
+
+  // Slide out after 2s, then show next
+  setTimeout(() => {
+    toast.style.transition = 'transform 0.3s ease-in,opacity 0.3s ease-in';
+    toast.style.transform = 'translateX(110%)';
+    toast.style.opacity = '0';
+    setTimeout(() => {
+      if (wrap.contains(toast)) wrap.removeChild(toast);
+      _processResourceToastQueue();
+    }, 350);
+  }, 2200);
+}
+
+window.showResourceToast = showResourceToast;
+
 window.GameUI = {
   showStatChange,
   showStatusMessage,
-  showYouDiedBanner
+  showYouDiedBanner,
+  showResourceToast
 };
 
 function showYouDiedBanner(duration) {
@@ -97,3 +167,4 @@ function showYouDiedBanner(duration) {
     banner.style.display = 'none';
   }, duration);
 }
+

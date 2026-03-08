@@ -2247,7 +2247,10 @@
       closeBtn.title = 'Leave';
       closeBtn.onclick = () => {
         overlay.style.animation = 'campBldOut 200ms ease-in forwards';
-        setTimeout(() => { if (overlay.parentNode) overlay.parentNode.removeChild(overlay); }, 210);
+        setTimeout(() => {
+          if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+          if (window.CampWorld && typeof window.CampWorld.resumeInput === 'function') window.CampWorld.resumeInput();
+        }, 210);
       };
       overlay.appendChild(closeBtn);
 

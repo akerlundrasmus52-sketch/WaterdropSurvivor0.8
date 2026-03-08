@@ -24,8 +24,8 @@ window.GameAccount = (function () {
     { level: 85,  title: 'Grandmaster',         border: 'Diamond' },
     { level: 88,  title: 'Mythic',              border: null },
     { level: 92,  title: 'Ascendant',           border: null },
-    { level: 96,  title: 'Legend',              border: 'Prismatic' },
-    { level: 100, title: 'Waterdrop Survivor',  border: 'Prismatic' }
+    { level: 96,  title: 'Waterdrop Survivor',  border: 'Prismatic' },
+    { level: 100, title: 'H2O',                 border: 'Prismatic' }
   ];
 
   var MAX_LEVEL = 100;
