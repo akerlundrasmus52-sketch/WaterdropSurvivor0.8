@@ -4226,7 +4226,7 @@
       const initialOpacity = 0.6  + Math.random() * 0.3;
       _bdIMSpawnTime[idx]  = Date.now();
       _bdIMInitialSize[idx] = size;
-      _bdIMPos.set(pos.x + (Math.random() - 0.5) * 0.8, 0.05, pos.z + (Math.random() - 0.5) * 0.8);
+      _bdIMPos.set(pos.x + (Math.random() - 0.5) * 0.8, 0.01 + (idx * 0.0001), pos.z + (Math.random() - 0.5) * 0.8);
       _bdIMScale.set(size, size, size);
       _bdIMMatrix.compose(_bdIMPos, _bdIMQuat, _bdIMScale);
       _bloodDecalIM.setMatrixAt(idx, _bdIMMatrix);

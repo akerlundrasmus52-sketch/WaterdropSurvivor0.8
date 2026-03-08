@@ -2125,11 +2125,14 @@
               if      (_axis < 0.33) _segMesh.scale.x = Math.max(0.55, _segMesh.scale.x * 0.88);
               else if (_axis < 0.66) _segMesh.scale.z = Math.max(0.55, _segMesh.scale.z * 0.88);
               else                   _segMesh.scale.y = Math.max(0.50, _segMesh.scale.y * 0.85);
+              _segMesh.scale.x = Math.max(0.4, Math.min(2.0, _segMesh.scale.x));
+              _segMesh.scale.y = Math.max(0.4, Math.min(2.0, _segMesh.scale.y));
+              _segMesh.scale.z = Math.max(0.4, Math.min(2.0, _segMesh.scale.z));
             }
 
             // ── MEAT CHUNKS: 3-6 DodecahedronGeometry gore pieces ──────────────
             if (scene && managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
-              const _chunkCount = 3 + Math.floor(Math.random() * 4); // 3-6
+              const _chunkCount = 3 + Math.floor(Math.random() * 2); // 3-4 max
               const _chunkHitX  = hitDir ? (hitDir.vx || 0) : (Math.random() - 0.5);
               const _chunkHitZ  = hitDir ? (hitDir.vz || 0) : (Math.random() - 0.5);
               const _spawnY     = _enemyBaseY + (_hitSegment === 'head' ? 0.55 : (_hitSegment === 'torso' ? 0.35 : 0.12));
@@ -2185,6 +2188,7 @@
                 update(_dt) {
                   for (let _i = _chunkMeshes.length - 1; _i >= 0; _i--) {
                     const _c = _chunkMeshes[_i];
+                    if (!_c.mesh.visible) continue;
                     _c.vy -= 0.011; // gravity
                     _c.mesh.position.x += _c.vx;
                     _c.mesh.position.y += _c.vy;
