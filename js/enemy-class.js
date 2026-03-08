@@ -1675,6 +1675,10 @@
         // Damage type sets for cleaner conditional checks
         const HEAVY_HIT_TYPES = ['doubleBarrel', 'shotgun', 'pumpShotgun', 'autoShotgun', 'sniperRifle', 'homingMissile', 'fireball'];
         const SHOTGUN_TYPES = ['doubleBarrel', 'shotgun', 'pumpShotgun', 'autoShotgun'];
+        // dt threshold above which FPS is considered too low for cosmetic-only effects (~45 FPS = 1/45 ≈ 0.022s)
+        const _DT_LOW_FPS = 0.022;
+        // Minimum allowed mesh scale to prevent NaN/zero values propagating under rapid fire
+        const _SCALE_MIN = 0.2;
 
         // Phase 5: Hit impact particles (flesh/blood) on every hit — scaled with HP ratio
         const hpRatio = this.hp / this.maxHp;
@@ -1832,8 +1836,9 @@
               );
             }
           } else if (bloodDrips.length < MAX_BLOOD_DRIPS) {
-            // Fallback: legacy individual mesh path
-            for (let bd = 0; bd < dripCount && bloodDrips.length < MAX_BLOOD_DRIPS; bd++) {
+            // Fallback: legacy individual mesh path — cap at 3 to avoid per-hit allocation spikes
+            const _fallbackMax = Math.min(dripCount, 3);
+            for (let bd = 0; bd < _fallbackMax && bloodDrips.length < MAX_BLOOD_DRIPS; bd++) {
               if (!_sharedBloodDripGeo && typeof THREE !== 'undefined') _sharedBloodDripGeo = new THREE.SphereGeometry(1, 4, 4);
               const dripSize = 0.015 + Math.random() * 0.04;
               const dripMesh = new THREE.Mesh(_sharedBloodDripGeo, new THREE.MeshBasicMaterial({ color: [0x8B0000, 0xAA0000, 0x660000, 0xCC0000][bd % 4] }));
@@ -2462,6 +2467,8 @@
               }
               break;
             case 1: // Blast a hole through — add a dark hole decal on the enemy front face
+              // Skip cosmetic bullet-hole Meshes when FPS is below ~45 (dt > 1/45 ≈ 0.022s)
+              if (window._lastDt && window._lastDt > _DT_LOW_FPS) break;
               if (this.mesh && (!this.bulletHoles || this.bulletHoles.length < 8)) {
                 if (!this.bulletHoles) this.bulletHoles = [];
                 const holeGeo = new THREE.CircleGeometry(0.1 + Math.random() * 0.07, 8);
@@ -2720,11 +2727,14 @@
           const sy = isCrit ? 0.5 : 0.6;
           const sxz = isCrit ? 1.45 : 1.35;
           // Clamp scale to prevent explosively large values under rapid fire (e.g. minigun)
-          const _SCALE_MIN = 0.2, _SCALE_MAX = 2.5;
+          // isFinite guard protects against NaN propagation from prior scale ops
+          const _rawSX = this.mesh.scale.x * sxz;
+          const _rawSY = this.mesh.scale.y * sy;
+          const _rawSZ = this.mesh.scale.z * sxz;
           this.mesh.scale.set(
-            Math.min(_SCALE_MAX, Math.max(_SCALE_MIN, this.mesh.scale.x * sxz)),
-            Math.min(_SCALE_MAX, Math.max(_SCALE_MIN, this.mesh.scale.y * sy)),
-            Math.min(_SCALE_MAX, Math.max(_SCALE_MIN, this.mesh.scale.z * sxz))
+            Math.max(_SCALE_MIN, isFinite(_rawSX) ? _rawSX : 1.0),
+            Math.max(_SCALE_MIN, isFinite(_rawSY) ? _rawSY : 1.0),
+            Math.max(_SCALE_MIN, isFinite(_rawSZ) ? _rawSZ : 1.0)
           );
           // Phase 2: Lerp back to (1,1,1) over 150ms
           this._squishTimer = setTimeout(() => {

@@ -667,6 +667,8 @@
         }
         dt = MAX_DELTA_TIME;
       }
+      // Expose dt globally so other modules (e.g. enemy-class.js) can gate cosmetics by FPS
+      window._lastDt = dt;
       
       // 3D Camp Hub World — update and render when active, skip all game logic
       if (window.CampWorld && window.CampWorld.isActive) {
@@ -2069,12 +2071,9 @@
                 spawnParticles(trailPos, 0x555555, 2); // More smoke
                 spawnParticles(trailPos, 0x888888, 1); // Light smoke
               }
-              // Explode on contact — spatial hash query for nearby enemies
-              const _missileHitCandidates = window._enemySpatialHash
-                ? window._enemySpatialHash.query(missileGroup.position.x, missileGroup.position.z, 1.2)
-                : enemies;
-              for (let _mi = 0; _mi < _missileHitCandidates.length; _mi++) {
-                const e = _missileHitCandidates[_mi];
+              // Explode on contact — direct array scan for nearby enemies
+              for (let _mi = 0; _mi < enemies.length; _mi++) {
+                const e = enemies[_mi];
                 if (e.isDead) continue;
                 const _mhdx = missileGroup.position.x - e.mesh.position.x;
                 const _mhdz = missileGroup.position.z - e.mesh.position.z;
