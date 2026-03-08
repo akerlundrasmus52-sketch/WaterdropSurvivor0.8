@@ -9,6 +9,10 @@
     
     let lastHudUpdateMs = 0;
     function updateHUD() {
+      // Minimap and quest arrow run every frame for smooth real-time updates
+      updateMinimap();
+      updateQuestArrow();
+
       const nowMs = Date.now();
       if (nowMs - lastHudUpdateMs < 100) return; // Throttle DOM updates to max 10/sec
       lastHudUpdateMs = nowMs;
@@ -60,14 +64,8 @@
       // Update unified rage bar in the top-left bar stack
       _updateUnifiedRageBar();
       
-      // Update minimap
-      updateMinimap();
-      
       // REGION DISPLAY: Update current region based on player position
       updateRegionDisplay();
-
-      // QUEST DIRECTION ARROW: Show animated directional arrow toward quest objective
-      updateQuestArrow();
     }
 
     // Keep the unified rage bar in sync with the rage combat system
@@ -101,7 +99,11 @@
       }
     }
 
-    // Quest direction arrow: points toward current quest objective position
+    // Boss types used for quest-arrow fallback targeting and minimap rendering
+    const _BOSS_TYPES = new Set([10, 11, 19]);
+
+    // Quest direction arrow: points toward current quest objective, or nearest boss as fallback.
+    // Fades when the target is on-screen; pulses when off-screen.
     function updateQuestArrow() {
       const arrowEl = document.getElementById('quest-arrow');
       if (!arrowEl) return;
@@ -111,42 +113,65 @@
         return;
       }
 
-      // Determine quest objective world position
-      const currentQuest = getCurrentQuest();
-      if (!currentQuest || !currentQuest.questObjectivePos) {
+      // Determine target: active quest objective, or nearest visible boss
+      let targetPos = null;
+      let isBossTarget = false;
+      const currentQuest = getCurrentQuest ? getCurrentQuest() : null;
+      if (currentQuest && currentQuest.questObjectivePos) {
+        targetPos = currentQuest.questObjectivePos;
+      } else if (enemies && enemies.length > 0) {
+        let nearestBoss = null;
+        let nearestDist = Infinity;
+        for (let i = 0; i < enemies.length; i++) {
+          const e = enemies[i];
+          if (e && !e.isDead && e.mesh && _BOSS_TYPES.has(e.type)) {
+            const d = player.mesh.position.distanceTo(e.mesh.position);
+            if (d < nearestDist) { nearestDist = d; nearestBoss = e; }
+          }
+        }
+        if (nearestBoss) {
+          targetPos = { x: nearestBoss.mesh.position.x, z: nearestBoss.mesh.position.z };
+          isBossTarget = true;
+        }
+      }
+
+      if (!targetPos) {
         arrowEl.style.display = 'none';
         return;
       }
 
-      const objPos = currentQuest.questObjectivePos;
       const px = player.mesh.position.x;
       const pz = player.mesh.position.z;
-      const dx = objPos.x - px;
-      const dz = objPos.z - pz;
+      const dx = targetPos.x - px;
+      const dz = targetPos.z - pz;
       const dist = Math.sqrt(dx * dx + dz * dz);
 
-      // Hide arrow when very close to objective
-      if (dist < 10) {
+      // Hide arrow when very close to a quest objective
+      if (!isBossTarget && dist < 10) {
         arrowEl.style.display = 'none';
         return;
       }
 
-      // Calculate angle (atan2 in screen space: x→right, z→down)
-      // Camera is top-down, x maps to screen right, z maps to screen down
-      const angleDeg = Math.atan2(dz, dx) * (180 / Math.PI); // 0° = right, 90° = down
+      // Determine if the target is currently visible on screen using NDC projection
+      let isOnScreen = false;
+      if (window.THREE && camera) {
+        const vec = new window.THREE.Vector3(targetPos.x, 0, targetPos.z);
+        vec.project(camera);
+        isOnScreen = Math.abs(vec.x) < _NDC_ON_SCREEN && Math.abs(vec.y) < _NDC_ON_SCREEN;
+      }
 
-      // Screen dimensions
+      // Calculate angle using Math.atan2 (x→screen-right, z→screen-down for top-down camera)
+      const angleRad = Math.atan2(dz, dx);
+      const angleDeg = angleRad * (180 / Math.PI);
+
+      // Position arrow on the edge of the screen (circular margin around center)
       const W = window.innerWidth;
       const H = window.innerHeight;
       const margin = 60;
       const cx = W / 2;
       const cy = H / 2;
-
-      // Find intersection of direction ray with screen edge rectangle
-      const angleRad = Math.atan2(dz, dx);
       let ax, ay;
       const tanA = Math.tan(angleRad);
-      // Try left/right edges first
       if (Math.abs(Math.cos(angleRad)) > 0.001) {
         if (dx > 0) {
           ax = cx + (W / 2 - margin);
@@ -155,7 +180,6 @@
           ax = cx - (W / 2 - margin);
           ay = cy - tanA * (W / 2 - margin);
         }
-        // Clamp to top/bottom
         if (Math.abs(ay - cy) > H / 2 - margin) {
           ay = dz > 0 ? cy + H / 2 - margin : cy - H / 2 + margin;
           ax = Math.abs(tanA) > 0.001 ? cx + (ay - cy) / tanA : cx;
@@ -169,9 +193,20 @@
       arrowEl.style.left = (ax - 24) + 'px';
       arrowEl.style.top = (ay - 24) + 'px';
       arrowEl.style.transform = `rotate(${angleDeg}deg)`;
-      // Update arrow label with distance
-      const distLabel = dist > 100 ? `${Math.round(dist)}m` : `${Math.round(dist)}m`;
-      arrowEl.innerHTML = `➤<span style="position:absolute;top:100%;left:50%;transform:translateX(-50%);font-size:10px;color:#FFD700;white-space:nowrap;">${distLabel}</span>`;
+
+      // Fade when on-screen; pulse when off-screen
+      if (isOnScreen) {
+        arrowEl.style.opacity = '0.25';
+        arrowEl.classList.remove('quest-arrow-pulsing');
+      } else {
+        arrowEl.style.opacity = '1';
+        arrowEl.classList.add('quest-arrow-pulsing');
+      }
+
+      // Icon and distance label
+      const icon = isBossTarget ? '💀' : '➤';
+      const distLabel = `${Math.round(dist)}m`;
+      arrowEl.innerHTML = `${icon}<span style="position:absolute;top:100%;left:50%;transform:translateX(-50%);font-size:10px;color:#FFD700;white-space:nowrap;">${distLabel}</span>`;
     }
     
     // Region display update function with slide-in/slide-out animation
@@ -216,118 +251,152 @@
       }
     }
     
-    // Minimap update function (with throttling for performance)
-    let minimapLastUpdate = 0;
-    const MINIMAP_UPDATE_INTERVAL = 200; // Update every 200ms instead of every frame
-    
+    // Real-time canvas-based minimap — redrawn every frame
+    let _minimapCanvas = null;
+    // Minimap world-space radius (units visible each side of player)
+    const _MM_RANGE = 60;
+    // Boss dot pulse: base radius, amplitude, and angular frequency (rad/ms)
+    const _MM_BOSS_BASE_R = 6;
+    const _MM_BOSS_PULSE_AMP = 2.5;
+    const _MM_BOSS_PULSE_FREQ = 0.005;
+    // NDC threshold: target is "on-screen" when projected |x|,|y| are within this value
+    const _NDC_ON_SCREEN = 0.95;
+
+    function _getOrCreateMinimapCanvas() {
+      const minimap = document.getElementById('minimap');
+      if (!minimap) return null;
+      if (!_minimapCanvas || !minimap.contains(_minimapCanvas)) {
+        minimap.innerHTML = '';
+        _minimapCanvas = document.createElement('canvas');
+        const w = minimap.offsetWidth || 130;
+        const h = minimap.offsetHeight || 130;
+        _minimapCanvas.width = w;
+        _minimapCanvas.height = h;
+        _minimapCanvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;';
+        minimap.appendChild(_minimapCanvas);
+      }
+      return _minimapCanvas;
+    }
+
     function updateMinimap() {
       if (!player || !player.mesh) return;
-      
-      const minimap = document.getElementById('minimap');
-      if (!minimap) return;
-      
-      // Throttle updates to every 200ms
-      const now = Date.now();
-      if (now - minimapLastUpdate < MINIMAP_UPDATE_INTERVAL) return;
-      minimapLastUpdate = now;
-      
-      // Clear previous dots
-      minimap.innerHTML = '';
-      
-      // Minimap scale - shows area of 100x100 units
-      const mapSize = 100;
-      const minimapSize = 120; // pixels
-      
-      // Add player dot (center)
-      const playerDot = document.createElement('div');
-      playerDot.className = 'minimap-dot minimap-player';
-      playerDot.style.left = '50%';
-      playerDot.style.top = '50%';
-      minimap.appendChild(playerDot);
-      
-      // Add enemy dots (up to 20 closest enemies) - optimized
-      if (enemies && enemies.length > 0) {
-        const sortedEnemies = enemies
-          .filter(e => e && !e.isDead)
-          .map(e => ({
-            enemy: e,
-            dist: player.mesh.position.distanceTo(e.mesh.position)
-          }))
-          .sort((a, b) => a.dist - b.dist)
-          .slice(0, 20);
-        
-        sortedEnemies.forEach(({enemy}) => {
-          const dx = enemy.mesh.position.x - player.mesh.position.x;
-          const dz = enemy.mesh.position.z - player.mesh.position.z;
-          
-          // Only show enemies within map range
-          if (Math.abs(dx) < mapSize / 2 && Math.abs(dz) < mapSize / 2) {
-            const mapX = 50 + (dx / mapSize) * 100; // percentage
-            const mapZ = 50 + (dz / mapSize) * 100; // percentage
-            
-            const enemyDot = document.createElement('div');
-            enemyDot.className = 'minimap-dot minimap-enemy';
-            enemyDot.style.left = `${mapX}%`;
-            enemyDot.style.top = `${mapZ}%`;
-            minimap.appendChild(enemyDot);
-          }
-        });
-      }
-      
-      // Add landmark dots with region-specific icons
-      const landmarks = [
-        { pos: { x: 60, z: 40 }, name: 'windmill', icon: '⚙️' },
-        { pos: { x: -50, z: -50 }, name: 'montana', icon: '⛰️' },
-        { pos: { x: 70, z: -60 }, name: 'eiffel', icon: '⚡' },
-        { pos: { x: -60, z: 60 }, name: 'stonehenge', icon: '🗿' }
-      ];
-      
-      landmarks.forEach(landmark => {
-        const dx = landmark.pos.x - player.mesh.position.x;
-        const dz = landmark.pos.z - player.mesh.position.z;
-        
-        if (Math.abs(dx) < mapSize / 2 && Math.abs(dz) < mapSize / 2) {
-          const mapX = 50 + (dx / mapSize) * 100;
-          const mapZ = 50 + (dz / mapSize) * 100;
-          
-          // Add icon element for landmark
-          const iconEl = document.createElement('div');
-          iconEl.className = 'minimap-icon';
-          iconEl.textContent = landmark.icon;
-          iconEl.style.left = `${mapX}%`;
-          iconEl.style.top = `${mapZ}%`;
-          minimap.appendChild(iconEl);
-          
-          const landmarkDot = document.createElement('div');
-          // Add quest-ready "?" indicator for windmill when quest available
-          const isWindmillAvailable = landmark.name === 'windmill' && !windmillQuest.active && !windmillQuest.rewardGiven;
-          landmarkDot.className = 'minimap-dot minimap-landmark' + (isWindmillAvailable ? ' quest-ready' : '');
-          landmarkDot.style.left = `${mapX}%`;
-          landmarkDot.style.top = `${mapZ}%`;
-          minimap.appendChild(landmarkDot);
-        }
-      });
 
-      // Show active quest location as yellow "?" on minimap
-      const QUEST_LOCATIONS = {
-        quest3_stonehengeGear: { x: -60, z: 60 },
-        quest3_findStonehenge: { x: -60, z: 60 }
-      };
-      const currentQuest = getCurrentQuest ? getCurrentQuest() : null;
-      if (currentQuest && QUEST_LOCATIONS[currentQuest.id]) {
-        const qPos = QUEST_LOCATIONS[currentQuest.id];
-        const qdx = qPos.x - player.mesh.position.x;
-        const qdz = qPos.z - player.mesh.position.z;
-        if (Math.abs(qdx) < mapSize / 2 && Math.abs(qdz) < mapSize / 2) {
-          const qmapX = 50 + (qdx / mapSize) * 100;
-          const qmapZ = 50 + (qdz / mapSize) * 100;
-          const questDot = document.createElement('div');
-          questDot.className = 'minimap-dot minimap-quest-location';
-          questDot.style.left = `${qmapX}%`;
-          questDot.style.top = `${qmapZ}%`;
-          minimap.appendChild(questDot);
+      const canvas = _getOrCreateMinimapCanvas();
+      if (!canvas) return;
+
+      const ctx = canvas.getContext('2d');
+      const W = canvas.width;
+      const H = canvas.height;
+      const cx = W / 2;
+      const cy = H / 2;
+
+      // World units visible on each side of the player
+      const scale = cx / _MM_RANGE;
+
+      const px = player.mesh.position.x;
+      const pz = player.mesh.position.z;
+      const now = Date.now();
+
+      ctx.clearRect(0, 0, W, H);
+
+      // Helper: world position → canvas pixel
+      function w2m(wx, wz) {
+        return { mx: cx + (wx - px) * scale, my: cy + (wz - pz) * scale };
+      }
+
+      // --- Enemies (small red dots) ---
+      ctx.shadowBlur = 0;
+      if (enemies && enemies.length > 0) {
+        for (let i = 0; i < enemies.length; i++) {
+          const e = enemies[i];
+          if (!e || e.isDead || !e.mesh || _BOSS_TYPES.has(e.type)) continue;
+          const { mx, my } = w2m(e.mesh.position.x, e.mesh.position.z);
+          if (mx < 0 || mx > W || my < 0 || my > H) continue;
+          ctx.beginPath();
+          ctx.arc(mx, my, 2.5, 0, Math.PI * 2);
+          ctx.fillStyle = '#FF4444';
+          ctx.shadowColor = 'rgba(255,68,68,0.7)';
+          ctx.shadowBlur = 4;
+          ctx.fill();
         }
       }
+
+      // --- Dropped boss chests (yellow squares) ---
+      const chests = window.bossChests;
+      if (chests && chests.length > 0) {
+        ctx.shadowColor = 'rgba(255,215,0,0.9)';
+        ctx.shadowBlur = 6;
+        ctx.fillStyle = '#FFD700';
+        for (let i = 0; i < chests.length; i++) {
+          const ch = chests[i];
+          if (!ch || !ch.mesh) continue;
+          const { mx, my } = w2m(ch.mesh.position.x, ch.mesh.position.z);
+          if (mx < 0 || mx > W || my < 0 || my > H) continue;
+          ctx.fillRect(mx - 4, my - 4, 8, 8);
+        }
+      }
+
+      // --- Bosses (large pulsing purple dot) ---
+      if (enemies && enemies.length > 0) {
+        for (let i = 0; i < enemies.length; i++) {
+          const e = enemies[i];
+          if (!e || e.isDead || !e.mesh || !_BOSS_TYPES.has(e.type)) continue;
+          const { mx, my } = w2m(e.mesh.position.x, e.mesh.position.z);
+          if (mx < 0 || mx > W || my < 0 || my > H) continue;
+          const pulse = _MM_BOSS_BASE_R + _MM_BOSS_PULSE_AMP * Math.sin(now * _MM_BOSS_PULSE_FREQ);
+          ctx.beginPath();
+          ctx.arc(mx, my, pulse, 0, Math.PI * 2);
+          ctx.fillStyle = '#9B59B6';
+          ctx.shadowColor = 'rgba(155,89,182,1)';
+          ctx.shadowBlur = 12;
+          ctx.fill();
+          ctx.shadowBlur = 0;
+          // Skull symbol
+          ctx.font = `${Math.round(pulse * 1.7)}px sans-serif`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('\u{1F480}', mx, my);
+        }
+      }
+
+      // --- Quest objective (glowing gold exclamation mark) ---
+      const currentQuest = getCurrentQuest ? getCurrentQuest() : null;
+      if (currentQuest && currentQuest.questObjectivePos) {
+        const qp = currentQuest.questObjectivePos;
+        const { mx, my } = w2m(qp.x, qp.z);
+        const glow = 0.5 + 0.5 * Math.sin(now * 0.004);
+        ctx.beginPath();
+        ctx.arc(mx, my, 5, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255,215,0,${0.3 + 0.4 * glow})`;
+        ctx.shadowColor = '#FFD700';
+        ctx.shadowBlur = 8 + 5 * glow;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = '#FFD700';
+        ctx.font = 'bold 10px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('!', mx, my);
+      }
+
+      // --- Player (white arrow pointing in look direction) ---
+      const angle = player.mesh.rotation.y; // radians, y-axis
+      const arrowLen = 8;
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(-angle); // top-down view: negate to match visual heading
+      ctx.beginPath();
+      ctx.moveTo(0, -arrowLen);           // tip
+      ctx.lineTo(-4.5, arrowLen * 0.5);
+      ctx.lineTo(0,    arrowLen * 0.15);
+      ctx.lineTo(4.5,  arrowLen * 0.5);
+      ctx.closePath();
+      ctx.fillStyle = '#FFFFFF';
+      ctx.shadowColor = 'rgba(255,255,255,0.9)';
+      ctx.shadowBlur = 7;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.restore();
     }
     
     // Stats Bar removed - Users access stats via STATS button modal
