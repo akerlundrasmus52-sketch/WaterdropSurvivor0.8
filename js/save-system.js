@@ -618,16 +618,28 @@
         }, 500);
       }
 
-      // ── Developer Override ──
-      // Forces new buildings to fully built state and injects test resources so
-      // new features are immediately accessible without completing tutorial quests.
+      // ── Ultimate Admin Override ──
+      // Forces max resources and unlocks ALL buildings so features are immediately
+      // testable without grinding.
       if (!saveData.campBuildings) saveData.campBuildings = {};
-      saveData.campBuildings.astralGateway  = { unlocked: true, level: 1, maxLevel: 1 };
-      saveData.campBuildings.neuralMatrix   = { unlocked: true, level: 1, maxLevel: 1 };
-      saveData.campBuildings.prismReliquary = { unlocked: true, level: 1, maxLevel: 1 };
-      saveData.gold          = 50000;
-      saveData.astralEssence = 500;
-      saveData.neuralCores   = 100;
+      // Ensure buildings not present in defaultSaveData are explicitly initialized
+      // before the unlock loop so they are always included.
+      ['astralGateway', 'neuralMatrix', 'prismReliquary'].forEach(function(key) {
+        if (!saveData.campBuildings[key]) {
+          saveData.campBuildings[key] = { level: 0, maxLevel: 1, unlocked: false };
+        }
+      });
+      Object.keys(saveData.campBuildings).forEach(function(key) {
+        saveData.campBuildings[key] = Object.assign({}, saveData.campBuildings[key], { unlocked: true, level: 1 });
+      });
+      saveData.gold          = 999999;
+      saveData.astralEssence = 9999;
+      saveData.neuralCores   = 999;
+      // Ensure all default resource keys are present, then set each to 99999
+      saveData.resources = Object.assign({}, defaultSaveData.resources, saveData.resources);
+      Object.keys(saveData.resources).forEach(function(key) {
+        saveData.resources[key] = 99999;
+      });
       if (!saveData.rawGems) saveData.rawGems = {};
       saveData.rawGems.ruby     = 100;
       saveData.rawGems.sapphire = 100;

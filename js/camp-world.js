@@ -44,6 +44,7 @@
     { id: 'tempShop',           x:  13, z: -2,  label: 'Temp Shop',        icon: '🏪' },
     { id: 'prismReliquary',     x: -8,  z:-19,  label: 'Prism Reliquary',  icon: '💎' },
     { id: 'astralGateway',      x:  8,  z:-19,  label: 'Astral Gateway',   icon: '🌀' },
+    { id: 'astralGateway',      x: -15, z: -10, label: 'ASTRAL GATEWAY',   icon: '🌀', w: 6, d: 6, color: 0x00ffff },
   ];
 
   // ──────────────────────────────────────────────────────────
