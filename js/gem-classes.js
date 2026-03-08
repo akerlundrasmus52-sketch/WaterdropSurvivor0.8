@@ -32,13 +32,24 @@
       return 0; // Common: Tank(0), Fast(1), Balanced(2) — and unknown/null types
     }
 
+    // Rarity colors based on gem value (overrides tier color).
+    // Value 1-5: Common (White/Light Blue) | 6-15: Rare (Deep Blue) |
+    // 16-30: Epic (Purple) | 31-49: Legendary (Gold) | 50+: Mythic (Red/Black pulsing)
+    function _gemRarityColorForValue(value) {
+      if (value >= 50) return { color: 0xCC0000, emissive: 0x660000, particle: 0xFF2200, mythic: true }; // Mythic
+      if (value >= 31) return { color: 0xFFD700, emissive: 0xCC8800, particle: 0xFFD700, mythic: false }; // Legendary
+      if (value >= 16) return { color: 0xAA44FF, emissive: 0x6600CC, particle: 0xBB66FF, mythic: false }; // Epic
+      if (value >=  6) return { color: 0x1A5ECC, emissive: 0x0033AA, particle: 0x4488FF, mythic: false }; // Rare (Deep Blue)
+      return               { color: 0xD0E8FF, emissive: 0x7799BB, particle: 0xADD8E6, mythic: false };    // Common (White/Light Blue)
+    }
+
     class ExpGem {
       constructor(x, z, sourceWeapon, hitForce, enemyType) {
-        // Use shared star geometry (created once) — 65% smaller than original
+        // Use shared star geometry (created once) — 10% larger than previous size
         if (!_expGemStarGeometry) {
           const starPoints = 5;
-          const outerR = 0.28 * 0.35; // 65% smaller (0.35 = 1 - 0.65)
-          const innerR = 0.12 * 0.35;
+          const outerR = 0.28 * 0.385; // 10% larger (0.35 * 1.1 = 0.385)
+          const innerR = 0.12 * 0.385;
           const starShape = new THREE.Shape();
           for (let i = 0; i < starPoints * 2; i++) {
             const angle = (i / (starPoints * 2)) * Math.PI * 2 - Math.PI / 2;
@@ -47,7 +58,7 @@
             else starShape.lineTo(Math.cos(angle) * r, Math.sin(angle) * r);
           }
           starShape.closePath();
-          const extrudeSettings = { depth: 0.035, bevelEnabled: true, bevelSize: 0.01, bevelThickness: 0.01, bevelSegments: 2 };
+          const extrudeSettings = { depth: 0.0385, bevelEnabled: true, bevelSize: 0.011, bevelThickness: 0.011, bevelSegments: 2 };
           _expGemStarGeometry = new THREE.ExtrudeGeometry(starShape, extrudeSettings);
           _expGemStarGeometry.center();
           _expGemStarMaterial = new THREE.MeshPhysicalMaterial({
@@ -62,16 +73,19 @@
           });
         }
 
-        // Determine gem tier from enemy type and apply tier colour.
-        // Passing null/undefined enemyType uses the -1 sentinel which falls through
-        // _gemTierForType to return tier 0 (Common/grey) — a safe default.
+        // Determine gem tier from enemy type, then compute base value so we can
+        // choose rarity colour based on the value (Common/Rare/Epic/Legendary/Mythic).
         const tier = _gemTierForType(enemyType != null ? enemyType : -1);
-        const tierCol = GEM_TIER_COLORS[tier] || GEM_TIER_COLORS[0];
+        const _gemBaseValue = (typeof GAME_CONFIG !== 'undefined' ? GAME_CONFIG.expValue : 1) * (GEM_TIER_XP_MULT[tier] || 1);
+        const _rarCol = _gemRarityColorForValue(_gemBaseValue);
 
         // Each gem gets its own material clone for per-instance emissive animation
         const starMaterial = _expGemStarMaterial.clone();
-        starMaterial.color.setHex(tierCol.color);
-        starMaterial.emissive.setHex(tierCol.emissive);
+        starMaterial.color.setHex(_rarCol.color);
+        starMaterial.emissive.setHex(_rarCol.emissive);
+        // Store rarity data for update() pulsing and collect() particle matching
+        this._rarityParticleColor = _rarCol.particle;
+        this._isMythic = _rarCol.mythic;
 
         this.mesh = new THREE.Mesh(_expGemStarGeometry, starMaterial);
 
@@ -90,7 +104,7 @@
         // Outline geometry is shared across all ExpGem instances (created once)
         if (!_expGemOutlineGeometry) {
           const s = new THREE.Shape();
-          const pts = 5, outerO = 0.33 * 0.35, innerO = 0.14 * 0.35;
+          const pts = 5, outerO = 0.33 * 0.385, innerO = 0.14 * 0.385;
           for (let i = 0; i < pts * 2; i++) {
             const ang = (i / (pts * 2)) * Math.PI * 2 - Math.PI / 2;
             const r = i % 2 === 0 ? outerO : innerO;
@@ -98,7 +112,7 @@
             else s.lineTo(Math.cos(ang) * r, Math.sin(ang) * r);
           }
           s.closePath();
-          _expGemOutlineGeometry = new THREE.ExtrudeGeometry(s, { depth: 0.028, bevelEnabled: false });
+          _expGemOutlineGeometry = new THREE.ExtrudeGeometry(s, { depth: 0.0308, bevelEnabled: false });
           _expGemOutlineGeometry.center();
         }
         const outlineMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
@@ -147,8 +161,8 @@
 
         this.bobPhase = Math.random() * Math.PI * 2;
         this.sparklePhase = Math.random() * Math.PI * 2;
-        // Scale EXP value by gem tier so higher-tier enemies give more experience
-        this.value = GAME_CONFIG.expValue * (GEM_TIER_XP_MULT[tier] || 1);
+        // Value already computed above for rarity colour selection
+        this.value = _gemBaseValue;
       }
 
       update(playerPos) {
@@ -199,6 +213,13 @@
         if (this._glowRingMat) {
           this._glowRingMat.opacity = 0.45 + Math.sin(this.sparklePhase + 0.5) * 0.2;
         }
+        // Mythic: pulse color between deep red and near-black for an ominous appearance
+        if (this._isMythic) {
+          const _mp = (Math.sin(this.sparklePhase * 1.8) + 1) * 0.5; // 0–1
+          this.mesh.material.color.setHex(_mp > 0.5 ? 0xCC0000 : 0x220000);
+          this.mesh.material.emissive.setHex(_mp > 0.5 ? 0x880000 : 0x110000);
+          this.mesh.material.emissiveIntensity = 0.4 + _mp * 0.8;
+        }
 
         // Magnet
         const dx = playerPos.x - this.mesh.position.x;
@@ -213,9 +234,9 @@
           var dy = 0.5 - this.mesh.position.y;
           this.mesh.position.y += dy * 0.1;
           
-          // Visual Trail when pulled - lighter blue particles (PR #117)
+          // Visual Trail when pulled — use gem's own rarity colour
           if (Math.random() < 0.3) {
-             spawnParticles(this.mesh.position, 0x4FC3F7, 1);
+             spawnParticles(this.mesh.position, this._rarityParticleColor || 0x4FC3F7, 1);
           }
         }
 
@@ -227,13 +248,16 @@
       collect() {
         this.active = false;
         
-        // SPLASH EFFECT: use pooled particles to avoid per-gem geometry/material allocation
-        // and eliminate 20 separate requestAnimationFrame callbacks per gem (PR #117)
-        spawnParticles(this.mesh.position, 0x4FC3F7, 8);
+        // SPLASH EFFECT: particles match the gem's rarity colour
+        const _pc = this._rarityParticleColor || 0x4FC3F7;
+        spawnParticles(this.mesh.position, _pc, 8);
         
-        // Screen flash effect - lighter blue tint (PR #117)
+        // Screen flash effect — tint matches gem rarity
+        const _pr = (_pc >> 16) & 0xFF;
+        const _pg = (_pc >> 8) & 0xFF;
+        const _pb = _pc & 0xFF;
         const flash = document.createElement('div');
-        flash.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(79,195,247,0.18);pointer-events:none;z-index:500';
+        flash.style.cssText = `position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(${_pr},${_pg},${_pb},0.18);pointer-events:none;z-index:500`;
         document.body.appendChild(flash);
         setTimeout(() => flash.remove(), 100);
         
