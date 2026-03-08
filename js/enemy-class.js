@@ -1852,11 +1852,12 @@
             }
           }
         }
-        // Register persistent wound for heartbeat spurts at low HP.
+        // Register persistent wound for heartbeat spurts – start early (75% HP) so blood
+        // visually pumps from wounds well before the enemy dies, not only near death.
         // Direction is randomised so each wound spurts in a unique direction.
-        if (hpRatio < 0.5 && window.BloodSystem && window.BloodSystem.addWound) {
+        if (hpRatio < 0.75 && window.BloodSystem && window.BloodSystem.addWound) {
           const wDir = { x: Math.cos(Math.random() * Math.PI * 2), z: Math.sin(Math.random() * Math.PI * 2) };
-          const wLife = hpRatio < 0.25 ? 480 : 240; // longer spurts at critical HP
+          const wLife = hpRatio < 0.25 ? 480 : (hpRatio < 0.5 ? 300 : 180); // 75-50%→180f, 50-25%→300f, <25%→480f
           window.BloodSystem.addWound(this.mesh.position, wDir, damageType, { life: wLife });
         }
         // Blood splatter on nearby enemies (stain them red)
@@ -2187,7 +2188,7 @@
               _segMesh.scale.z = Math.max(0.1, Math.min(3.0, _segMesh.scale.z * _dZ));
             }
 
-            // ── MEAT CHUNKS: 3-6 DodecahedronGeometry gore pieces ──────────────
+            // ── MEAT CHUNKS: flesh/gore pieces fly out on every hit ──────────────
             if (scene && managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
               const _chunkCount = 3 + Math.floor(Math.random() * 2); // 3-4 max
               const _chunkHitX  = hitDir ? (hitDir.vx || 0) : (Math.random() - 0.5);
@@ -2196,7 +2197,13 @@
               const _chunkMeshes = [];
               for (let _ci = 0; _ci < _chunkCount; _ci++) {
                 const _cSize = 0.04 + Math.random() * 0.07;
-                const _cGeo  = new THREE.DodecahedronGeometry(_cSize, 0);
+                // Mix shapes: organ blobs, limb capsules, irregular flesh
+                const _crShp = Math.random();
+                const _cGeo  = _crShp < 0.4
+                  ? new THREE.DodecahedronGeometry(_cSize, 0)
+                  : _crShp < 0.75
+                    ? new THREE.CapsuleGeometry(_cSize * 0.45, _cSize * 1.2, 3, 4)
+                    : new THREE.SphereGeometry(_cSize, 4, 3);
                 const _goreC = [0x6B0000, 0x8B0000, 0x4A0000, 0x550011][Math.floor(Math.random() * 4)];
                 const _cMat  = new THREE.MeshBasicMaterial({ color: _goreC, transparent: true, opacity: 0.92 });
                 const _cMesh = new THREE.Mesh(_cGeo, _cMat);
@@ -2598,6 +2605,49 @@
           }
           
           playSound('hit');
+        }
+        
+        // 35% HP: Spawn flesh/limb chunks — enemy starts visibly tearing apart
+        if (oldHpPercent >= 0.35 && hpPercent < 0.35 && !this.stage35Damage) {
+          this.stage35Damage = true;
+          if (scene && managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
+            const _tlCount = 2 + Math.floor(Math.random() * 2);
+            for (let _tli = 0; _tli < _tlCount; _tli++) {
+              const _tlSz = 0.06 + Math.random() * 0.08;
+              const _tlGeo = new THREE.CapsuleGeometry(_tlSz * 0.4, _tlSz * 1.3, 3, 5);
+              const _tlMat = new THREE.MeshBasicMaterial({ color: 0x660000, transparent: true, opacity: 0.88 });
+              const _tlMesh = new THREE.Mesh(_tlGeo, _tlMat);
+              _tlMesh.position.copy(this.mesh.position);
+              _tlMesh.position.y += 0.2 + Math.random() * 0.3;
+              scene.add(_tlMesh);
+              let _tlVX = (Math.random() - 0.5) * 0.22, _tlVY = 0.14 + Math.random() * 0.16;
+              let _tlVZ = (Math.random() - 0.5) * 0.22;
+              let _tlRX = (Math.random() - 0.5) * 0.3, _tlRZ = (Math.random() - 0.5) * 0.3;
+              let _tlLife = 120;
+              managedAnimations.push({
+                update() {
+                  _tlVY -= 0.010;
+                  _tlMesh.position.x += _tlVX; _tlMesh.position.y += _tlVY; _tlMesh.position.z += _tlVZ;
+                  _tlMesh.rotation.x += _tlRX; _tlMesh.rotation.z += _tlRZ;
+                  if (_tlMesh.position.y < 0.07) {
+                    _tlMesh.position.y = 0.07; _tlVY = Math.abs(_tlVY) * 0.2;
+                    _tlVX *= 0.72; _tlVZ *= 0.72;
+                    spawnBloodDecal(_tlMesh.position);
+                  }
+                  _tlLife--;
+                  _tlMat.opacity = Math.max(0, (_tlLife / 80) * 0.88);
+                  if (_tlLife <= 0) { scene.remove(_tlMesh); _tlGeo.dispose(); _tlMat.dispose(); return false; }
+                  return true;
+                },
+                cleanup() { if (_tlMesh.parent) scene.remove(_tlMesh); _tlGeo.dispose(); _tlMat.dispose(); }
+              });
+            }
+          }
+          if (window.BloodSystem && window.BloodSystem.emitBurst) {
+            window.BloodSystem.emitBurst(this.mesh.position, 30, { spreadXZ: 1.0, spreadY: 0.3 });
+          }
+          spawnParticles(this.mesh.position, 0x8B0000, 8);
+          spawnBloodDecal(this.mesh.position);
         }
         
         // Destruction effect at 20% HP threshold — covered in blood, near death
@@ -3039,6 +3089,40 @@
         this._anatBaseMesh = null;
         this._anatHeadMesh = null;
         this._anatJawMesh  = null;
+        // Hide the flat cylinder base-disc immediately so it doesn't appear as a
+        // big flat disk during the death fall / explosion phases.
+        if (_anatBaseMesh) _anatBaseMesh.visible = false;
+        // Spawn the base mass as a tumbling flesh chunk that rolls away instead of
+        // remaining as a flat disk on the ground.
+        if (scene && _anatBaseMesh) {
+          const _fbGeo = new THREE.CapsuleGeometry(0.12, 0.22, 3, 5);
+          const _fbMat = new THREE.MeshBasicMaterial({ color: 0x6B0000, transparent: true, opacity: 0.88 });
+          const _fbMesh = new THREE.Mesh(_fbGeo, _fbMat);
+          _fbMesh.position.copy(deathPos);
+          _fbMesh.position.y = 0.2;
+          scene.add(_fbMesh);
+          let _fbVX = (Math.random() - 0.5) * 0.18, _fbVY = 0.12 + Math.random() * 0.14;
+          let _fbVZ = (Math.random() - 0.5) * 0.18;
+          let _fbRX = (Math.random() - 0.5) * 0.22, _fbRZ = (Math.random() - 0.5) * 0.22;
+          let _fbLife = 200;
+          managedAnimations.push({
+            update() {
+              _fbVY -= 0.009;
+              _fbMesh.position.x += _fbVX; _fbMesh.position.y += _fbVY; _fbMesh.position.z += _fbVZ;
+              _fbMesh.rotation.x += _fbRX; _fbMesh.rotation.z += _fbRZ;
+              if (_fbMesh.position.y < 0.08) {
+                _fbMesh.position.y = 0.08; _fbVY = Math.abs(_fbVY) * 0.22;
+                _fbVX *= 0.7; _fbVZ *= 0.7;
+                if (Math.random() < 0.5) spawnBloodDecal(_fbMesh.position);
+              }
+              _fbLife--;
+              _fbMat.opacity = Math.max(0, (_fbLife / 120) * 0.88);
+              if (_fbLife <= 0) { scene.remove(_fbMesh); _fbGeo.dispose(); _fbMat.dispose(); return false; }
+              return true;
+            },
+            cleanup() { if (_fbMesh.parent) scene.remove(_fbMesh); _fbGeo.dispose(); _fbMat.dispose(); }
+          });
+        }
         
         // XP scaling by enemy type - stronger enemies give more XP
         let expMultiplier = 1;
@@ -3148,7 +3232,13 @@
           const chunkCount = isShotgunDeath ? (SHOTGUN_CHUNK_MIN + Math.floor(Math.random() * SHOTGUN_CHUNK_EXTRA)) : (NORMAL_CHUNK_MIN + Math.floor(Math.random() * NORMAL_CHUNK_EXTRA));
           for (let ci = 0; ci < chunkCount; ci++) {
             const chunkSize = CHUNK_SIZE_MIN + Math.random() * CHUNK_SIZE_RANGE;
-            const chunkGeo = Math.random() < 0.5 ? new THREE.SphereGeometry(chunkSize, 5, 4) : new THREE.BoxGeometry(chunkSize, chunkSize * 0.6, chunkSize * 0.8);
+            // Vary shapes: ~35% organ blobs, ~40% limb/intestine capsules, ~25% irregular flesh
+            const _rShp = Math.random();
+            const chunkGeo = _rShp < 0.35
+              ? new THREE.SphereGeometry(chunkSize, 5, 4)                                    // organ blob
+              : _rShp < 0.75
+                ? new THREE.CapsuleGeometry(chunkSize * 0.4, chunkSize * 1.4, 3, 5)         // limb / intestine
+                : new THREE.DodecahedronGeometry(chunkSize * 0.9, 0);                       // irregular flesh
             // Use realistic gore colors (dark reds, maroon) instead of enemy color to avoid pink bubbles
             const goreColors = [0x8B0000, 0x660000, 0x4A0000, 0x550011, 0x3D0000, 0x800000];
             const chunkColor = goreColors[Math.floor(Math.random() * goreColors.length)];
@@ -3484,7 +3574,8 @@
                 }
               }
             } else if (fallFrame <= FALL_FRAMES + LINGER_FRAMES + EXPLODE_FRAMES) {
-              // Phase 3: Blood explosion - body bursts
+              // Phase 3: Body dissolves into blood — fade out WITHOUT scale expansion
+              // (old code expanded XZ/collapsed Y each frame → created "big flat disk")
               const explodeProgress = (fallFrame - FALL_FRAMES - LINGER_FRAMES) / EXPLODE_FRAMES;
               if (explodeProgress < 0.4) {
                 spawnParticles(deathPos, 0x8B0000, 5);
@@ -3492,14 +3583,11 @@
                 spawnBloodDecal(deathPos);
                 spawnBloodDecal({ x: deathPos.x + (Math.random()-0.5)*1.5, y: 0, z: deathPos.z + (Math.random()-0.5)*1.5 });
               }
-              // Flatten and expand as body breaks apart
+              // Fade out: just reduce opacity, keep existing shape so no flat disk
               if (dyingMesh.material) {
                 dyingMesh.material.transparent = true;
-                dyingMesh.material.opacity = 1 - explodeProgress * 0.75;
+                dyingMesh.material.opacity = Math.max(0, 1 - explodeProgress * 0.75);
               }
-              dyingMesh.scale.y *= 0.9;
-              dyingMesh.scale.x *= 1.04;
-              dyingMesh.scale.z *= 1.04;
             } else if (fallFrame <= FALL_FRAMES + LINGER_FRAMES + EXPLODE_FRAMES + FADE_FRAMES) {
               // Phase 4: Fade out remains
               const fadeProgress = (fallFrame - FALL_FRAMES - LINGER_FRAMES - EXPLODE_FRAMES) / FADE_FRAMES;
