@@ -2780,6 +2780,9 @@
           prismReliquary:      () => {
             if (typeof showPrismReliquary === 'function') { showPrismReliquary(); }
           },
+          astralGateway:       () => {
+            if (typeof window.showAstralGateway === 'function') { window.showAstralGateway(); }
+          },
           gachaStore:          () => {
             if (typeof showGachaStore === 'function') { showGachaStore(); }
             else { showProgressionShop(); }
