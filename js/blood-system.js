@@ -31,6 +31,23 @@
   // Shared material / geometry
   let _mat = null;
 
+  // ─── Wound Tracking (heartbeat arterial spurts) ─────────────────────────────
+  // Each wound: { x, y, z, dirX, dirZ, weapon, life }
+  const MAX_WOUNDS = 32;
+  const _wounds = [];
+
+  // ─── Instanced Blood Drops (2000-instance zero-lag flying drops) ─────────────
+  const MAX_BLOOD_DROPS = 2000;
+  let _dropIM = null;          // THREE.InstancedMesh
+  let _dropPX = null, _dropPY = null, _dropPZ = null;  // positions
+  let _dropVX = null, _dropVY = null, _dropVZ = null;  // velocities
+  let _dropLife = null;        // frames remaining (0 = inactive)
+  let _dropSize = null;        // base scale (uniform)
+  let _dropHead = 0;           // ring-buffer write head
+  let _dropHighWater = 0;      // highest index written + 1
+  // Reusable THREE objects – allocated once in _initDrops to avoid per-frame GC
+  let _dPos = null, _dQuat = null, _dScale = null, _dMtx = null;
+
   // ─── Init ────────────────────────────────────────────────────────────────────
   function init(threeScene) {
     if (typeof THREE === 'undefined') {
@@ -77,6 +94,46 @@
     _points.frustumCulled = false; // particles span entire world; skip bounding-sphere test
     _geo.setDrawRange(0, 0);  // start with nothing to draw
     _scene.add(_points);
+
+    // Initialise the instanced blood-drop system
+    _initDrops(threeScene);
+  }
+
+  // ─── Instanced Blood Drop Init ───────────────────────────────────────────────
+  function _initDrops(scene) {
+    if (_dropIM) return; // already initialised
+    // Unit sphere scaled per instance — 4 segments is enough for small drops
+    const geo = new THREE.SphereGeometry(1, 4, 4);
+    const mat = new THREE.MeshBasicMaterial({ color: 0x8B0000 });
+    _dropIM = new THREE.InstancedMesh(geo, mat, MAX_BLOOD_DROPS);
+    _dropIM.frustumCulled = false;
+    _dropIM.renderOrder = 10;
+
+    _dropPX   = new Float32Array(MAX_BLOOD_DROPS);
+    _dropPY   = new Float32Array(MAX_BLOOD_DROPS);
+    _dropPZ   = new Float32Array(MAX_BLOOD_DROPS);
+    _dropVX   = new Float32Array(MAX_BLOOD_DROPS);
+    _dropVY   = new Float32Array(MAX_BLOOD_DROPS);
+    _dropVZ   = new Float32Array(MAX_BLOOD_DROPS);
+    _dropLife = new Float32Array(MAX_BLOOD_DROPS);
+    _dropSize = new Float32Array(MAX_BLOOD_DROPS);
+
+    // Allocate reusable THREE objects once
+    _dPos   = new THREE.Vector3();
+    _dQuat  = new THREE.Quaternion(); // identity, never rotated
+    _dScale = new THREE.Vector3();
+    _dMtx   = new THREE.Matrix4();
+
+    // Park all instances below ground so they are invisible initially
+    _dScale.set(0, 0, 0);
+    for (let i = 0; i < MAX_BLOOD_DROPS; i++) {
+      _dropPY[i] = -9999;
+      _dPos.set(0, -9999, 0);
+      _dMtx.compose(_dPos, _dQuat, _dScale);
+      _dropIM.setMatrixAt(i, _dMtx);
+    }
+    _dropIM.instanceMatrix.needsUpdate = true;
+    scene.add(_dropIM);
   }
 
   // ─── Emit helpers ────────────────────────────────────────────────────────────
@@ -910,7 +967,6 @@
 
     // Only iterate particles up to the high-water mark (avoids scanning 50k dead slots)
     const limit = _highWater;
-    if (limit === 0) return;
 
     let needsUpdate = false;
     let anyAlive = false;
@@ -977,6 +1033,126 @@
       _count = 0;
       _head = 0;
     }
+
+    // ── Wound heartbeat spurts ───────────────────────────────────────────────
+    // Emit weapon-specific blood jets from each registered wound, scaled by a
+    // sine-wave "heartbeat" pump so the spurts visually pulse with each beat.
+    if (_wounds.length > 0) {
+      const now = Date.now();
+      // Main cardiac pump frequency: ~0.008 rad/ms ≈ 75 bpm
+      const pump = Math.max(0, Math.sin(now * 0.008));
+      // Only emit during the rising half of the pump — creates distinct pulses
+      const isEmitting = pump > 0.3;
+      const scale = (window.performanceLog && window.performanceLog.particleThrottleScale !== undefined)
+        ? window.performanceLog.particleThrottleScale : 1.0;
+
+      for (let wi = _wounds.length - 1; wi >= 0; wi--) {
+        const w = _wounds[wi];
+        w.life--;
+        if (w.life <= 0) { _wounds.splice(wi, 1); continue; }
+        if (!isEmitting) continue;
+
+        // Weapon-specific arc shape and volume
+        let perPump = 10, coneAngle = 0.30, speed = 0.12, arcY = 0.09;
+        const wp = w.weapon;
+        if (wp === 'shotgun' || wp === 'doubleBarrel' || wp === 'pumpShotgun' || wp === 'autoShotgun') {
+          // Shotgun: wide mist — many fine drops, broad cone, low velocity
+          perPump   = Math.ceil(12 * pump * scale);
+          coneAngle = Math.PI * 0.55;
+          speed     = 0.04 * pump;
+          arcY      = 0.04 * pump;
+        } else if (wp === 'sniperRifle' || wp === '50cal') {
+          // Sniper: tight high-pressure jet that reaches far
+          perPump   = Math.ceil(18 * pump * scale);
+          coneAngle = 0.08;
+          speed     = 0.28 * pump;
+          arcY      = 0.18 * pump;
+        } else if (wp === 'minigun' || wp === 'uzi') {
+          // Rapid fire: moderate stream, moderate cone
+          perPump   = Math.ceil(8 * pump * scale);
+          coneAngle = 0.22;
+          speed     = 0.12 * pump;
+          arcY      = 0.08 * pump;
+        } else {
+          // Default gun / sword / other: standard medium spurt
+          perPump   = Math.ceil(10 * pump * scale);
+          coneAngle = 0.30;
+          speed     = 0.12 * pump;
+          arcY      = 0.09 * pump;
+        }
+
+        const baseAngle = Math.atan2(w.dirZ, w.dirX);
+        for (let p = 0; p < perPump; p++) {
+          const t     = Math.random();
+          const r     = 0.55 + t * 0.12;  // dark → bright red
+          const g     = 0.0;
+          const b     = 0.0;
+          const sz    = 0.025 + Math.random() * 0.04;
+          const life  = 35 + Math.floor(Math.random() * 35);
+          const angle = baseAngle + (Math.random() - 0.5) * coneAngle * 2;
+          const spd   = speed * (0.7 + Math.random() * 0.6);
+          const vx    = Math.cos(angle) * spd;
+          const vy    = arcY  * (0.8 + Math.random() * 0.4);
+          const vz    = Math.sin(angle) * spd;
+          _emit(w.x, w.y, w.z, vx, vy, vz, r, g, b, sz, life);
+        }
+      }
+    }
+
+    // ── Instanced blood drops update ─────────────────────────────────────────
+    // Physics: gravity + parabolic trajectory.  Ground landing → shrink + stain.
+    if (_dropIM && _dropHighWater > 0) {
+      let needsDropUpdate = false;
+      const dlimit = _dropHighWater;
+      for (let i = 0; i < dlimit; i++) {
+        if (_dropLife[i] <= 0) continue;
+        _dropLife[i]--;
+
+        if (_dropPY[i] <= 0.02) {
+          // Landed — park, shrink, emit a Points stain
+          _dropLife[i] = 0;
+          // Small stain: emit one grounded Points particle at impact site
+          const sx = _dropPX[i] + (Math.random() - 0.5) * 0.1;
+          const sz = _dropPZ[i] + (Math.random() - 0.5) * 0.1;
+          const ss = Math.min(0.20, _dropSize[i] * 2.5);
+          _emit(sx, GROUND_Y, sz, 0, 0, 0, 0.55, 0, 0, ss, 1800 + Math.floor(Math.random() * 600));
+          const stainIdx = (_head - 1 + MAX_BLOOD_PARTICLES) % MAX_BLOOD_PARTICLES;
+          _grounded[stainIdx] = 1;
+          // Park instance below ground
+          _dPos.set(0, -9999, 0);
+          _dScale.set(0, 0, 0);
+          _dMtx.compose(_dPos, _dQuat, _dScale);
+          _dropIM.setMatrixAt(i, _dMtx);
+          needsDropUpdate = true;
+          continue;
+        }
+
+        // Parabolic physics
+        _dropVY[i] += GRAVITY;
+        _dropPX[i] += _dropVX[i];
+        _dropPY[i] += _dropVY[i];
+        _dropPZ[i] += _dropVZ[i];
+
+        // Kill if life expired on this frame (life was 1 before decrement above)
+        if (_dropLife[i] <= 0) {
+          _dPos.set(0, -9999, 0);
+          _dScale.set(0, 0, 0);
+          _dMtx.compose(_dPos, _dQuat, _dScale);
+          _dropIM.setMatrixAt(i, _dMtx);
+          needsDropUpdate = true;
+          continue;
+        }
+
+        // Update instance matrix with current position
+        const s = _dropSize[i];
+        _dPos.set(_dropPX[i], _dropPY[i], _dropPZ[i]);
+        _dScale.set(s, s, s);
+        _dMtx.compose(_dPos, _dQuat, _dScale);
+        _dropIM.setMatrixAt(i, _dMtx);
+        needsDropUpdate = true;
+      }
+      if (needsDropUpdate) _dropIM.instanceMatrix.needsUpdate = true;
+    }
   }
 
   // ─── Cleanup (call on game reset) ────────────────────────────────────────────
@@ -994,6 +1170,83 @@
       _geo.setDrawRange(0, 0);
       if (_geo.attributes.position) _geo.attributes.position.needsUpdate = true;
     }
+    // Clear all active wounds
+    _wounds.length = 0;
+    // Reset instanced blood drops — park all below ground
+    if (_dropIM) {
+      _dScale.set(0, 0, 0);
+      for (let i = 0; i < _dropHighWater; i++) {
+        _dropLife[i] = 0;
+        _dropPY[i]   = -9999;
+        _dPos.set(0, -9999, 0);
+        _dMtx.compose(_dPos, _dQuat, _dScale);
+        _dropIM.setMatrixAt(i, _dMtx);
+      }
+      if (_dropHighWater > 0) _dropIM.instanceMatrix.needsUpdate = true;
+    }
+    _dropHead      = 0;
+    _dropHighWater = 0;
+  }
+
+  // ─── Instanced Blood Drop Emit ───────────────────────────────────────────────
+  /**
+   * Spawn one flying blood drop using the shared InstancedMesh pool.
+   * Drops obey parabolic physics (gravity) and trigger a ground stain on landing.
+   * @param {number} x,y,z   - spawn position
+   * @param {number} vx,vy,vz - initial velocity
+   * @param {number} size    - radius of the drop (0.02–0.08 typical)
+   */
+  function emitDrop(x, y, z, vx, vy, vz, size) {
+    if (!_dropIM) return;
+    // Guard against NaN positions
+    if (!isFinite(x) || !isFinite(y) || !isFinite(z)) return;
+    const i = _dropHead;
+    _dropHead = (_dropHead + 1) % MAX_BLOOD_DROPS;
+    if (i + 1 > _dropHighWater) _dropHighWater = i + 1;
+
+    _dropPX[i]   = x;
+    _dropPY[i]   = y;
+    _dropPZ[i]   = z;
+    _dropVX[i]   = isFinite(vx) ? vx : 0;
+    _dropVY[i]   = isFinite(vy) ? vy : 0;
+    _dropVZ[i]   = isFinite(vz) ? vz : 0;
+    _dropSize[i] = (size > 0 && isFinite(size)) ? size : 0.04;
+    _dropLife[i] = 60 + Math.random() * 40;
+  }
+
+  // ─── Wound System ───────────────────────────────────────────────────────────
+  /**
+   * Register a persistent arterial wound on an enemy.  During update(), the wound
+   * emits heartbeat-timed blood spurts whose volume and pressure scale with a
+   * sine-wave "pump" to simulate a beating heart.
+   *
+   * @param {THREE.Vector3|{x,y,z}} pos       - world-space wound origin
+   * @param {{x,z}}|null            facingDir - direction blood jets outward
+   * @param {string}                weaponType - e.g. 'shotgun', 'sniperRifle', 'gun'
+   * @param {object}                [options]
+   *   life {number} – wound lifetime in frames (default 360 ≈ 6 s at 60 fps)
+   */
+  function addWound(pos, facingDir, weaponType, options) {
+    if (!_scene) return;
+    if (!pos || !isFinite(pos.x) || !isFinite(pos.y) || !isFinite(pos.z)) return;
+    const opts = options || {};
+    const life = (opts.life > 0 && isFinite(opts.life)) ? opts.life : 360;
+    // Evict oldest wound when at capacity
+    if (_wounds.length >= MAX_WOUNDS) _wounds.shift();
+    _wounds.push({
+      x:      pos.x,
+      y:      pos.y + 0.4, // mid-chest offset
+      z:      pos.z,
+      dirX:   (facingDir && isFinite(facingDir.x)) ? facingDir.x : 1,
+      dirZ:   (facingDir && isFinite(facingDir.z)) ? facingDir.z : 0,
+      weapon: weaponType || 'gun',
+      life:   life
+    });
+  }
+
+  /** Remove all registered wounds (called on game reset). */
+  function clearWounds() {
+    _wounds.length = 0;
   }
 
   // How much pressure drops per pump in emitArterialSpurt.
@@ -1081,7 +1334,11 @@
     emitPoolGrow,
     emitMeteorExplosion,
     emitCrawlTrail,
-    emitArterialSpurt
+    emitArterialSpurt,
+    // New: instanced drop + wound systems
+    emitDrop,
+    addWound,
+    clearWounds
   };
 
 })();
