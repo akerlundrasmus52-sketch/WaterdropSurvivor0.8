@@ -271,6 +271,43 @@
       2000
     );
 
+    // --- Static world prop batches (rocks & trees) -------------------
+    // Single-unit geometry; scale is set per-instance via push().
+
+    // Rock batches — two materials for gray/dark variation
+    ir.register('rock_gray',
+      new THREE.DodecahedronGeometry(1, 0),
+      new THREE.MeshStandardMaterial({ color: 0x888888, roughness: 0.9, metalness: 0.1 }),
+      200
+    );
+    ir.register('rock_dark',
+      new THREE.DodecahedronGeometry(1, 0),
+      new THREE.MeshStandardMaterial({ color: 0x555555, roughness: 0.95, metalness: 0.05 }),
+      200
+    );
+
+    // Tree batches — trunk, three leaf variants (cone, round, pine)
+    ir.register('tree_trunk',
+      new THREE.CylinderGeometry(0.5, 0.7, 2, 6),
+      new THREE.MeshToonMaterial({ color: 0x8B4513 }),
+      300
+    );
+    ir.register('tree_leaves_cone',
+      new THREE.ConeGeometry(2.5, 5, 8),
+      new THREE.MeshToonMaterial({ color: 0x2d6e14 }),
+      150
+    );
+    ir.register('tree_leaves_sphere',
+      new THREE.SphereGeometry(2, 8, 8),
+      new THREE.MeshToonMaterial({ color: 0x90EE90 }),
+      100
+    );
+    ir.register('tree_leaves_pine',
+      new THREE.ConeGeometry(2, 6, 6),
+      new THREE.MeshToonMaterial({ color: 0x228B22 }),
+      100
+    );
+
     ir.attachToScene(scene);
     return ir;
   }

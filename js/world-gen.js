@@ -7,62 +7,11 @@
       // Exclusion zones: each entry is { x, z, r } — no prop spawns within r units of (x,z)
       const exclusionZones = [];
 
-      // Ground - Unified green forest world with grass texture
-      const mapSize = 600;
-      
-      // Generate procedural grass texture via canvas for visual depth
-      const grassCanvas = document.createElement('canvas');
-      grassCanvas.width = 256;
-      grassCanvas.height = 256;
-      const gctx = grassCanvas.getContext('2d');
-      // Base color
-      gctx.fillStyle = '#2D5A1A';
-      gctx.fillRect(0, 0, 256, 256);
-      // Scatter grass blades / noise for 3D feel
-      for (let i = 0; i < 3000; i++) {
-        const gx = Math.random() * 256;
-        const gy = Math.random() * 256;
-        const shade = Math.random();
-        if (shade < 0.3) {
-          gctx.fillStyle = 'rgba(40, 80, 20, 0.6)';  // darker patch
-        } else if (shade < 0.7) {
-          gctx.fillStyle = 'rgba(55, 110, 35, 0.5)';  // mid-green blade
-        } else {
-          gctx.fillStyle = 'rgba(80, 140, 50, 0.4)';  // lighter blade
-        }
-        gctx.fillRect(gx, gy, 1 + Math.random() * 2, 2 + Math.random() * 4);
-      }
-      // Scatter tiny flower dots
-      for (let i = 0; i < 80; i++) {
-        const fx = Math.random() * 256;
-        const fy = Math.random() * 256;
-        const fc = Math.random();
-        if (fc < 0.3) gctx.fillStyle = 'rgba(255, 255, 100, 0.7)'; // yellow
-        else if (fc < 0.6) gctx.fillStyle = 'rgba(255, 200, 200, 0.6)'; // pink
-        else gctx.fillStyle = 'rgba(200, 200, 255, 0.5)'; // blue
-        gctx.beginPath();
-        gctx.arc(fx, fy, 1.5, 0, Math.PI * 2);
-        gctx.fill();
-      }
-      const grassTexture = new THREE.CanvasTexture(grassCanvas);
-      grassTexture.wrapS = THREE.RepeatWrapping;
-      grassTexture.wrapT = THREE.RepeatWrapping;
-      grassTexture.repeat.set(60, 60);
-      
-      // Single lush green ground plane covering the whole map
-      const mainGroundGeo = new THREE.PlaneGeometry(mapSize, mapSize, 32, 32);
-      const mainGroundMat = new THREE.MeshStandardMaterial({ map: grassTexture, roughness: 0.92, metalness: 0.0, vertexColors: true });
+      // Ground - Single massive ground plane for minimal draw calls
 
-      // Per-vertex color variation for organic ground appearance
-      const _gColors = [];
-      const _gPos = mainGroundGeo.attributes.position;
-      for (let _gi = 0; _gi < _gPos.count; _gi++) {
-        const _gx = _gPos.getX(_gi);
-        const _gPlaneY = _gPos.getY(_gi); // PlaneGeometry is in XY; this axis becomes -Z after rotation
-        const _noise = (Math.sin(_gx * 0.3) * Math.cos(_gPlaneY * 0.3) + Math.sin(_gx * 0.7 + _gPlaneY * 0.5)) * 0.5 + 0.5;
-        _gColors.push(0.18 + _noise * 0.08, 0.45 + _noise * 0.15, 0.1 + _noise * 0.05);
-      }
-      mainGroundGeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(_gColors), 3));
+      // One ground plane with a stylized dark-green/alien-grass color
+      const mainGroundGeo = new THREE.PlaneGeometry(300, 300);
+      const mainGroundMat = new THREE.MeshStandardMaterial({ color: 0x1e3a29, roughness: 0.92, metalness: 0.0 });
       const mainGround = new THREE.Mesh(mainGroundGeo, mainGroundMat);
       mainGround.rotation.x = -Math.PI / 2;
       mainGround.position.set(0, 0, 0);
@@ -1740,6 +1689,7 @@
       scene.add(teslaGroup);
 
       // Forest (Various tree types with better shadows)
+      // Shared geometries and materials — reused across all instanced tree batches
       const trunkGeo = new THREE.CylinderGeometry(0.5, 0.7, 2, 6);
       const trunkMat = new THREE.MeshToonMaterial({ color: 0x8B4513 });
       const leavesGeo = new THREE.ConeGeometry(2.5, 5, 8);
@@ -1814,33 +1764,29 @@
         return x - Math.floor(x);
       }
 
+      // Render 120 decorative background trees via InstancedMesh to minimise draw calls.
+      // One InstancedMesh for trunks + one per leaf variant (cone/sphere/pine).
+      // Interactive / harvestable trees are handled separately by the destructibleProps system.
+      const _iTrunkMat4 = new THREE.Matrix4();
+      const _iTreePos = new THREE.Vector3();
+      const _iTreeQuat = new THREE.Quaternion(); _iTreeQuat.identity();
+      const _iTreeScale = new THREE.Vector3(1, 1, 1);
+
+      const _instTrunk = new THREE.InstancedMesh(trunkGeo, trunkMat, 120);
+      _instTrunk.castShadow = true; _instTrunk.receiveShadow = true;
+      const _instLeavesCone   = new THREE.InstancedMesh(leavesGeo,  treeMat,  60);
+      const _instLeavesSphere = new THREE.InstancedMesh(leavesGeo2, treeMat2, 40);
+      const _instLeavesPine   = new THREE.InstancedMesh(leavesGeo3, treeMat3, 40);
+      [_instLeavesCone, _instLeavesSphere, _instLeavesPine].forEach(m => {
+        m.castShadow = true; m.receiveShadow = true;
+      });
+      let _tIdx = 0, _cIdx = 0, _sIdx = 0, _pIdx = 0;
+
       for (let i = 0; i < 120; i++) { // Increased from 50 to 120
-        const group = new THREE.Group();
-        const trunk = new THREE.Mesh(trunkGeo, trunkMat);
-        trunk.position.y = 1;
-        trunk.castShadow = true;
-        trunk.receiveShadow = true;
-        
         // Deterministic tree type based on index
         const treeType = Math.floor(seededRandom(i * 7) * 3);
-        let leaves;
-        if (treeType === 0) {
-          leaves = new THREE.Mesh(leavesGeo, treeMat);
-          leaves.position.y = 4;
-        } else if (treeType === 1) {
-          leaves = new THREE.Mesh(leavesGeo2, treeMat2);
-          leaves.position.y = 3.5;
-        } else {
-          leaves = new THREE.Mesh(leavesGeo3, treeMat3);
-          leaves.position.y = 5;
-        }
-        leaves.castShadow = true;
-        leaves.receiveShadow = true;
-        
-        group.add(trunk);
-        group.add(leaves);
-        // Note: shadows are cast by the dirLight shadow map - no duplicate blob shadow needed
-        
+        const leavesYOffset = treeType === 0 ? 4 : treeType === 1 ? 3.5 : 5;
+
         let tx, tz;
         let excluded = true;
         let attempts = 0;
@@ -1863,24 +1809,27 @@
         
         // Only add tree if position is valid
         if (!excluded) {
-          group.position.set(tx, 0, tz);
-          scene.add(group);
-          // Register as a harvestable node (uses the decorative mesh so it wobbles/falls)
-          if (window.GameHarvesting && window.GameHarvesting.harvestNodes) {
-            const _td = window.GameHarvesting.NODE_DEFS && window.GameHarvesting.NODE_DEFS.tree;
-            window.GameHarvesting.harvestNodes.push({
-              type: 'tree',
-              mesh: group,
-              hp: _td ? _td.hp : 60,
-              maxHp: _td ? _td.hp : 60,
-              depleted: false,
-              _lastHarvestTime: 0,
-              _wobbleTime: 0,
-              _wobbleDir: { x: 1, z: 0 }
-            });
-          }
+          // Trunk instance
+          _iTreePos.set(tx, 1, tz);
+          _iTrunkMat4.compose(_iTreePos, _iTreeQuat, _iTreeScale);
+          _instTrunk.setMatrixAt(_tIdx++, _iTrunkMat4);
+
+          // Leaves instance
+          _iTreePos.set(tx, leavesYOffset, tz);
+          _iTrunkMat4.compose(_iTreePos, _iTreeQuat, _iTreeScale);
+          if (treeType === 0) _instLeavesCone.setMatrixAt(_cIdx++, _iTrunkMat4);
+          else if (treeType === 1) _instLeavesSphere.setMatrixAt(_sIdx++, _iTrunkMat4);
+          else _instLeavesPine.setMatrixAt(_pIdx++, _iTrunkMat4);
         }
       }
+      _instTrunk.count = _tIdx;
+      _instLeavesCone.count = _cIdx;
+      _instLeavesSphere.count = _sIdx;
+      _instLeavesPine.count = _pIdx;
+      [_instTrunk, _instLeavesCone, _instLeavesSphere, _instLeavesPine].forEach(m => {
+        m.instanceMatrix.needsUpdate = true;
+        scene.add(m);
+      });
       
       // Extra forest trees in a ring around the fountain spawn area for the forest feel
       const forestTrunkMat2 = new THREE.MeshToonMaterial({ color: 0x4A2C0A });
@@ -2000,35 +1949,67 @@
       }
       
       // Scatter rocks (big and small) across terrain for ground realism
-      const rockMatGray = new THREE.MeshStandardMaterial({ color: 0x888888, roughness: 0.9, metalness: 0.1 });
-      const rockMatDark = new THREE.MeshStandardMaterial({ color: 0x555555, roughness: 0.95, metalness: 0.05 });
+      // Use instanced rendering to batch all rock draw calls into two InstancedMesh objects.
+      const _irockEuler = new THREE.Euler();
+      const _irockScale = new THREE.Vector3();
+      const _irockPos = new THREE.Vector3();
+      const _irockQuat = new THREE.Quaternion();
+      const _irockMat4 = new THREE.Matrix4();
+
+      // Pre-allocate shared instanced meshes for rocks
+      const _rockGrayInstGeo = new THREE.DodecahedronGeometry(1, 0);
+      const _rockGrayInstMat = new THREE.MeshStandardMaterial({ color: 0x888888, roughness: 0.9, metalness: 0.1 });
+      const _rockDarkInstMat = new THREE.MeshStandardMaterial({ color: 0x555555, roughness: 0.95, metalness: 0.05 });
+      const _bigRockInstGray = new THREE.InstancedMesh(_rockGrayInstGeo, _rockGrayInstMat, 60);
+      const _bigRockInstDark = new THREE.InstancedMesh(_rockGrayInstGeo, _rockDarkInstMat, 60);
+      _bigRockInstGray.castShadow = true; _bigRockInstGray.receiveShadow = true;
+      _bigRockInstDark.castShadow = true; _bigRockInstDark.receiveShadow = true;
+      let _bigGrayIdx = 0, _bigDarkIdx = 0;
+
       // Big rocks
       for (let i = 0; i < 60; i++) {
         const scale = 0.6 + Math.random() * 1.2;
-        const rockGeo = new THREE.DodecahedronGeometry(scale, 0);
-        const rockMat = Math.random() < 0.5 ? rockMatGray : rockMatDark;
-        const rock = new THREE.Mesh(rockGeo, rockMat);
         const rx = (Math.random() - 0.5) * 200;
         const rz = (Math.random() - 0.5) * 200;
         if (isPositionExcluded(rx, rz)) continue;
-        rock.position.set(rx, scale * 0.4, rz);
-        rock.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
-        rock.castShadow = true;
-        rock.receiveShadow = true;
-        scene.add(rock);
+        _irockPos.set(rx, scale * 0.4, rz);
+        _irockEuler.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+        _irockQuat.setFromEuler(_irockEuler);
+        _irockScale.setScalar(scale);
+        _irockMat4.compose(_irockPos, _irockQuat, _irockScale);
+        if (Math.random() < 0.5) {
+          _bigRockInstGray.setMatrixAt(_bigGrayIdx++, _irockMat4);
+        } else {
+          _bigRockInstDark.setMatrixAt(_bigDarkIdx++, _irockMat4);
+        }
       }
-      // Small rocks (pebbles)
+      _bigRockInstGray.count = _bigGrayIdx;
+      _bigRockInstDark.count = _bigDarkIdx;
+      _bigRockInstGray.instanceMatrix.needsUpdate = true;
+      _bigRockInstDark.instanceMatrix.needsUpdate = true;
+      scene.add(_bigRockInstGray);
+      scene.add(_bigRockInstDark);
+
+      // Small rocks (pebbles) — single InstancedMesh sharing the same geometry.
+      // Shadows disabled: pebbles are tiny (scale 0.1–0.45) so shadow cost outweighs benefit.
+      const _pebbleInst = new THREE.InstancedMesh(_rockGrayInstGeo, _rockGrayInstMat, 120);
+      _pebbleInst.castShadow = false; _pebbleInst.receiveShadow = false;
+      let _pebbleIdx = 0;
       for (let i = 0; i < 120; i++) {
         const scale = 0.1 + Math.random() * 0.35;
-        const pebbleGeo = new THREE.DodecahedronGeometry(scale, 0);
-        const pebble = new THREE.Mesh(pebbleGeo, rockMatGray);
         const px = (Math.random() - 0.5) * 180;
         const pz = (Math.random() - 0.5) * 180;
         if (isPositionExcluded(px, pz)) continue;
-        pebble.position.set(px, scale * 0.4, pz);
-        pebble.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
-        scene.add(pebble);
+        _irockPos.set(px, scale * 0.4, pz);
+        _irockEuler.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+        _irockQuat.setFromEuler(_irockEuler);
+        _irockScale.setScalar(scale);
+        _irockMat4.compose(_irockPos, _irockQuat, _irockScale);
+        _pebbleInst.setMatrixAt(_pebbleIdx++, _irockMat4);
       }
+      _pebbleInst.count = _pebbleIdx;
+      _pebbleInst.instanceMatrix.needsUpdate = true;
+      scene.add(_pebbleInst);
       
       // FRESH IMPLEMENTATION: Destructible Environment System
       // Trees (120), Barrels (30), Crates (25) with HP and damage stages

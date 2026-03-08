@@ -1790,6 +1790,12 @@
       animation: fogwater-bg 8s ease-in-out infinite;
     }
 
+    .modal, .menu-container {
+      max-height: 90vh;
+      overflow-y: auto;
+      box-sizing: border-box;
+    }
+
     .modal-content {
       /* Dark glass panel with subtle noise pattern */
       background: linear-gradient(135deg, rgba(18, 18, 28, 0.97) 0%, rgba(8, 8, 16, 0.98) 100%);
@@ -1804,9 +1810,10 @@
       outline-offset: 2px;
       width: 90%;
       max-width: 600px;
-      max-height: 88vh;
+      max-height: 90vh;
       overflow-y: auto;
       text-align: center;
+      box-sizing: border-box;
       /* Glass-like shadow with subtle golden edge */
       box-shadow: 
         0 12px 40px rgba(0,0,0,0.95), 
