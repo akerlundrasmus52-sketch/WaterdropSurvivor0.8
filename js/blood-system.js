@@ -1053,7 +1053,7 @@
         if (!isEmitting) continue;
 
         // Weapon-specific arc shape and volume
-        let perPump, coneAngle, speed, arcY;
+        let perPump = 10, coneAngle = 0.30, speed = 0.12, arcY = 0.09;
         const wp = w.weapon;
         if (wp === 'shotgun' || wp === 'doubleBarrel' || wp === 'pumpShotgun' || wp === 'autoShotgun') {
           // Shotgun: wide mist — many fine drops, broad cone, low velocity
@@ -1133,7 +1133,7 @@
         _dropPY[i] += _dropVY[i];
         _dropPZ[i] += _dropVZ[i];
 
-        // Kill if life expired (shouldn't normally reach ground before life expires, but guard)
+        // Kill if life expired on this frame (life was 1 before decrement above)
         if (_dropLife[i] <= 0) {
           _dPos.set(0, -9999, 0);
           _dScale.set(0, 0, 0);
@@ -1173,7 +1173,7 @@
     // Clear all active wounds
     _wounds.length = 0;
     // Reset instanced blood drops — park all below ground
-    if (_dropIM && _dPos && _dMtx && _dScale && _dQuat) {
+    if (_dropIM) {
       _dScale.set(0, 0, 0);
       for (let i = 0; i < _dropHighWater; i++) {
         _dropLife[i] = 0;

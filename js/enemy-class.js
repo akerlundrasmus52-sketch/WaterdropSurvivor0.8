@@ -1852,9 +1852,9 @@
             }
           }
         }
-        // Register persistent wound for heartbeat spurts at low HP
+        // Register persistent wound for heartbeat spurts at low HP.
+        // Direction is randomised so each wound spurts in a unique direction.
         if (hpRatio < 0.5 && window.BloodSystem && window.BloodSystem.addWound) {
-          // Direction away from player (blood spurts outward from wound)
           const wDir = { x: Math.cos(Math.random() * Math.PI * 2), z: Math.sin(Math.random() * Math.PI * 2) };
           const wLife = hpRatio < 0.25 ? 480 : 240; // longer spurts at critical HP
           window.BloodSystem.addWound(this.mesh.position, wDir, damageType, { life: wLife });
@@ -1952,7 +1952,7 @@
             for (let d = 0; d < dripCount; d++) {
               window.BloodSystem.emitDrop(
                 this.mesh.position.x + (Math.random() - 0.5) * 0.5,
-                this.mesh.position.y + Math.abs((Math.random() - 0.5) * 0.3),
+                this.mesh.position.y + (Math.random() - 0.5) * 0.3,
                 this.mesh.position.z + (Math.random() - 0.5) * 0.5,
                 (Math.random() - 0.5) * 0.06,
                 0.02 + Math.random() * 0.06,
