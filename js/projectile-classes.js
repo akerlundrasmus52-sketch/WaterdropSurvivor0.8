@@ -600,14 +600,8 @@
         }
 
         // Collision Check - with piercing support
-        // Use spatial hash if available for O(1) lookup instead of O(N) enemy scan
-        var _nearbyEnemies = enemies;
-        if (window._enemySpatialHash) {
-          _nearbyEnemies = window._enemySpatialHash.query(
-            this.mesh.position.x, this.mesh.position.z, 1.5
-          );
-        }
-        for (let enemy of _nearbyEnemies) {
+        // Direct array scan is faster than a badly-performing spatial hash under load
+        for (let enemy of enemies) {
           if (enemy.isDead) continue;
           if (!enemy.mesh) continue; // Guard: mesh disposed or instancing active
           if (this.hitEnemies.has(enemy)) continue; // Skip already-hit enemies
