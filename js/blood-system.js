@@ -10,6 +10,9 @@
   const MAX_BLOOD_PARTICLES = 50000;
   const GRAVITY = -0.018;
   const GROUND_Y = 0.05; // Y position for ground stains (raised to prevent z-fighting with terrain)
+  // Global cap on wound-tracking entries and instanced drop instances.
+  // Keeping these bounded prevents runaway memory growth between level transitions.
+  const MAX_ACTIVE_WOUNDS_CAP = 100;
 
   // ─── Internal State ─────────────────────────────────────────────────────────
   let _scene = null;
@@ -1231,8 +1234,8 @@
     if (!pos || !isFinite(pos.x) || !isFinite(pos.y) || !isFinite(pos.z)) return;
     const opts = options || {};
     const life = (opts.life > 0 && isFinite(opts.life)) ? opts.life : 360;
-    // Evict oldest wound when at capacity
-    if (_wounds.length >= MAX_WOUNDS) _wounds.shift();
+    // Evict oldest wound when at capacity (hard cap for GC safety)
+    if (_wounds.length >= MAX_WOUNDS || _wounds.length >= MAX_ACTIVE_WOUNDS_CAP) _wounds.shift();
     _wounds.push({
       x:      pos.x,
       y:      pos.y + 0.4, // mid-chest offset

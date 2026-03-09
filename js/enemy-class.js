@@ -2,6 +2,20 @@
 // Contains all enemy AI, pathfinding, attack logic, death effects, and hard-mode tank enemies.
 // Depends on: THREE (CDN), variables from main.js and player-class.js
 
+    // ── GLOBAL SHARED GEOMETRY & MATERIAL (prevents per-enemy VRAM exhaustion) ──────────────
+    // ALL enemies reference exactly these objects. Never dispose SHARED_GEO or SHARED_MAT.
+    const SHARED_GEO = {
+      cube:   new THREE.BoxGeometry(1, 1, 1),
+      sphere: new THREE.SphereGeometry(1, 8, 8)
+    };
+    const SHARED_MAT = {
+      enemy:  new THREE.MeshLambertMaterial({ color: 0x8B4513 }),
+      black:  new THREE.MeshBasicMaterial({ color: 0x000000 }),
+      bullet: new THREE.MeshBasicMaterial({ color: 0xffff00 })
+    };
+    window.SHARED_GEO = SHARED_GEO;
+    window.SHARED_MAT = SHARED_MAT;
+
     let hardTankGeometryCache = null;
 
     // Water particle pool for player physics effects
@@ -268,286 +282,71 @@
     class Enemy {
       constructor(type, x, z, playerLevel = 1) {
         this.type = type; // 0: Tank, 1: Fast, 2: Balanced, 3: Slowing, 4: Ranged, 5: Flying, 6: Hard Tank, 7: Hard Fast, 8: Hard Balanced, 9: Elite, 10: MiniBoss, 11: FlyingBoss, 12: BugRanged, 13: BugSlow, 14: BugFast
-        let geometry;
-        let color;
-        
+
         // Enemy scaling based on player level - NOT SPEED, just HP and DAMAGE
         // Progressive difficulty: 20% per level to force use of all upgrades
         const levelScaling = 1 + (playerLevel - 1) * 0.20;
-        
-        if (type === 0) {
-          // Bacteria/Amoeba - Squishy organic blob shape
-          geometry = new THREE.SphereGeometry(0.6, 8, 8);
-          // Modify geometry to make it irregular/organic
-          const positions = geometry.attributes.position;
-          for (let i = 0; i < positions.count; i++) {
-            const x = positions.getX(i);
-            const y = positions.getY(i);
-            const z = positions.getZ(i);
-            // Add different randomness for each axis for truly organic look
-            const noiseX = 1 + (Math.random() - 0.5) * 0.3;
-            const noiseY = 1 + (Math.random() - 0.5) * 0.3;
-            const noiseZ = 1 + (Math.random() - 0.5) * 0.3;
-            positions.setX(i, x * noiseX);
-            positions.setY(i, y * noiseY);
-            positions.setZ(i, z * noiseZ);
-          }
-          geometry.computeVertexNormals();
-          color = COLORS.enemySquare; // Pink/Hot Pink - Tanky
-        } else if (type === 1) {
-          // Water Bug - Elongated with segments
-          geometry = new THREE.CapsuleGeometry(0.3, 0.8, 6, 8);
-          color = COLORS.enemyTriangle; // Gold - Fast
-        } else if (type === 2) {
-          // Microbe - Round squishy
-          geometry = new THREE.DodecahedronGeometry(0.5, 0);
-          color = COLORS.enemyRound; // Purple - Balanced
-        } else if (type === 3) {
-          // Slowing Enemy - Spiky/icy appearance
-          geometry = new THREE.IcosahedronGeometry(0.55, 0);
-          color = 0x00FFFF; // Cyan - Slowing
-        } else if (type === 4) {
-          // Ranged Enemy - Different shape, angular
-          geometry = new THREE.TetrahedronGeometry(0.6, 0);
-          color = 0xFF6347; // Tomato red - Ranged
-        } else if (type === 5) {
-          // Flying Enemy - Octahedron
-          geometry = new THREE.OctahedronGeometry(0.5, 1);
-          color = 0x87CEEB; // Sky blue - Flying
-        } else if (type === 6) {
-          // Hard Tank - use cached deformed geometry for performance
-          geometry = getHardTankGeometry();
-          color = 0xFF1493; // Deep pink - Hard Tank
-        } else if (type === 7) {
-          // Hard Fast
-          geometry = new THREE.CapsuleGeometry(0.3, 0.8, 6, 8);
-          color = 0xFFD700; // Gold - Hard Fast
-        } else if (type === 8) {
-          // Hard Balanced
-          geometry = new THREE.DodecahedronGeometry(0.5, 0);
-          color = 0x9932CC; // Dark orchid - Hard Balanced
-        } else if (type === 9) {
-          // Elite
-          geometry = new THREE.IcosahedronGeometry(0.6, 0);
-          color = 0xFF0000; // Red - Elite
-        } else if (type === 10) {
-          // MiniBoss
-          geometry = new THREE.DodecahedronGeometry(1.0, 1);
-          color = 0xFFD700; // Gold - MiniBoss
-        } else if (type === 11) {
-          // Flying Boss — large, imposing, multi-winged form
-          geometry = new THREE.IcosahedronGeometry(2.5, 1);
-          color = 0x8B008B; // Dark magenta — menacing flying boss
-        } else if (type === 12) {
-          // Bug Ranged — insect-like body with compound eyes
-          geometry = new THREE.CapsuleGeometry(0.35, 0.6, 6, 8);
-          color = 0x556B2F; // Dark olive green — bug colour
-        } else if (type === 13) {
-          // Bug Slow — bulky armoured beetle-like body
-          geometry = new THREE.SphereGeometry(0.7, 10, 10);
-          color = 0x2F4F2F; // Very dark green — armoured beetle
-        } else if (type === 14) {
-          // Bug Fast — small dart-like flying bug
-          geometry = new THREE.OctahedronGeometry(0.35, 1);
-          color = 0x9ACD32; // Yellow-green — quick bug
-        } else if (type === 15) {
-          // Daddy Longlegs — small round spider body
-          geometry = new THREE.SphereGeometry(0.28, 10, 10);
-          color = 0x8B4513; // Brown spider body
-        } else if (type === 16) {
-          // Sweeping Swarm — small fast diamond shape
-          geometry = new THREE.OctahedronGeometry(0.22, 0);
-          color = 0xFFAA00; // Amber swarm colour
-        } else if (type === 17) {
-          // Grey Alien Scout — elongated almond head, sleek alien form
-          geometry = new THREE.SphereGeometry(0.45, 8, 12);
-          geometry.scale(0.7, 1.25, 0.7); // Tall almond shape
-          color = 0x90A080; // Grey-green alien
-        } else if (type === 18) {
-          // Reptilian Shifter — angular reptilian body
-          geometry = new THREE.IcosahedronGeometry(0.42, 0);
-          color = 0x2E8B57; // Sea green (will be mostly transparent)
-        } else if (type === 19) {
-          // Annunaki Orb — massive golden geometric drone
-          geometry = new THREE.OctahedronGeometry(1.6, 1);
-          color = 0xFFD700; // Brilliant gold
-        } else if (type === 20) {
-          // Source Glitch — reality-breaking chaos entity (main mesh for collision bounds)
-          geometry = new THREE.TetrahedronGeometry(0.6, 0);
-          color = 0xFF00FF; // Magenta base — cycles each frame
-        }
 
-        const material = new THREE.MeshStandardMaterial({
-          color: color,
-          transparent: true,
-          opacity: type === 18 ? _REPTILIAN_CAMO_OPACITY : 0.85,  // Reptilian Shifter starts nearly invisible
-          metalness: (type === 10 || type === 11 || type === 19) ? 0.4 : (type === 13 ? 0.3 : 0.1),
-          roughness: type === 13 ? 0.8 : (type === 19 ? 0.1 : 0.6),
-          emissive: (type === 10 || type === 11 || type === 19 || type === 20) ? color : 0x000000,
-          emissiveIntensity: type === 10 ? 0.3 : (type === 11 ? 0.5 : (type === 19 ? 0.6 : (type === 20 ? 1.0 : 0)))
-        });
-        this.mesh = new THREE.Mesh(geometry, material);
-        // Flying enemies hover higher; Flying Boss is enormous and hovers high; Annunaki Orb floats imposingly; Source Glitch hovers mid-height
-        const yPos = (type === 5 || type === 14 || type === 16 || type === 17) ? 2 : (type === 11 ? 5 : (type === 19 ? 4 : (type === 20 ? 2 : 0.5)));
+        // ── BODY MESH — uses shared geometry & material to prevent VRAM exhaustion ──
+        // All enemy types share one geometry (sphere) and one material (brown Lambert).
+        // Per-enemy opacity/color changes are performed only after cloning on first hit.
+        this.mesh = new THREE.Mesh(SHARED_GEO.sphere, SHARED_MAT.enemy);
+
+        const yPos = (type === 5 || type === 14 || type === 16 || type === 17) ? 2
+                   : (type === 11 ? 5 : (type === 19 ? 4 : (type === 20 ? 2 : 0.5)));
         this.mesh.position.set(x, yPos, z);
-        // Flying Boss is scaled large enough to be dramatic but still mostly visible on screen
         if (type === 11) this.mesh.scale.set(1.8, 1.8, 1.8);
-        // Only Boss enemies cast/receive shadows to save GPU shadow-map cost
         const _isBoss = (type === 10 || type === 11 || type === 19);
         this.mesh.castShadow = _isBoss;
         this.mesh.receiveShadow = _isBoss;
-        // For the three most common enemy types the InstancedRenderer owns the draw call.
-        // Adding the individual mesh to the scene as well would cause double-rendering.
         const _instancingTypes = (type === 0 || type === 1 || type === 2);
         this._usesInstancing = _instancingTypes && !!(window._instancedRenderer && window._instancedRenderer.active);
         if (!this._usesInstancing) {
           scene.add(this.mesh);
         }
 
-        // ── Procedural Segmented Anatomy ─────────────────────────────────────────────
-        // Three nested groups build an organic segmented creature from basic geometries.
-        //   baseGroup  — flat slug/foot disc at the bottom; pumps during locomotion.
-        //   torsoGroup — lean-forward container (uses this.mesh as the main body shape).
-        //   headGroup  — small head cap + jaw stub at the top; tracks the player with lag.
-        {
-          const _bR = type === 11 ? 2.0 : (type === 19 ? 1.5 : (type === 20 ? 0.0 : (type === 10 ? 0.90 : (type === 15 ? 0.18 : 0.48))));
-          const _hR = type === 11 ? 0.42 : (type === 19 ? 0.35 : (type === 20 ? 0.0 : (type === 10 ? 0.18 : (type === 15 ? 0.09 : 0.13))));
-          const _hY = type === 11 ? 2.6  : (type === 19 ? 1.5  : (type === 20 ? 0.0 : (type === 10 ? 1.10 : (type === 15 ? 0.20 : 0.42))));
+        // ── HEAD MESH — second and only additional mesh; geometry is shared ─────────
+        // Material is cloned so per-enemy opacity (death fade) doesn't affect all heads.
+        this.headMesh = new THREE.Mesh(SHARED_GEO.cube, SHARED_MAT.black.clone());
+        this.headMesh.scale.setScalar(0.3);
+        this.headMesh.position.y = 0.7;
+        this.mesh.add(this.headMesh);
 
-          // baseGroup — flat slug/foot disc that expands/contracts with the pump cycle
-          this.baseGroup = new THREE.Group();
-          const _bGeo = new THREE.CylinderGeometry(_bR * 1.05, _bR * 1.2, 0.20, 10);
-          const _bMat = new THREE.MeshLambertMaterial({
-            color, transparent: true, opacity: 0.68
-          });
-          this._anatBaseMesh = new THREE.Mesh(_bGeo, _bMat);
-          this._anatBaseMesh.position.y = type === 11 ? -2.4 : (type === 19 ? -1.4 : (type === 20 ? -100 : -0.36));
-          this.baseGroup.add(this._anatBaseMesh);
-          this.mesh.add(this.baseGroup);
+        // ── NULL-INITIALIZE removed anatomy properties for update/die compatibility ──
+        // All procedural anatomy (base disc, head group, guts, eyes, legs, glitch meshes)
+        // has been removed to stop the per-enemy VRAM explosion (was 20-40 GPU objects/enemy).
+        this.baseGroup        = null;
+        this.torsoGroup       = null;
+        this.headGroup        = null;
+        this._gutsContainer   = null;
+        this._gutsExposed     = false;
+        this._anatBaseMesh    = null;
+        this._anatHeadMesh    = null;
+        this._anatJawMesh     = null;
+        this.leftEye          = null;
+        this.rightEye         = null;
+        this.groundShadow     = null;
+        this._glitchMeshes    = null;
+        this._annunakiLaserMesh = null;
 
-          // torsoGroup — lean-forward container; the main mesh body IS the torso shape
-          this.torsoGroup = new THREE.Group();
-          this.mesh.add(this.torsoGroup);
-
-          // headGroup — small sphere cap + jaw nub; tracks the player with lerp delay
-          this.headGroup = new THREE.Group();
-          const _hGeo = new THREE.SphereGeometry(_hR, 7, 7);
-          const _hMat = new THREE.MeshLambertMaterial({
-            color, transparent: true, opacity: 0.88
-          });
-          this._anatHeadMesh = new THREE.Mesh(_hGeo, _hMat);
-          this.headGroup.add(this._anatHeadMesh);
-          // Jaw nub: small cylinder below and slightly forward of the head centre
-          const _jGeo = new THREE.CylinderGeometry(_hR * 0.35, _hR * 0.55, _hR * 0.55, 6);
-          const _jMat = new THREE.MeshLambertMaterial({ color, transparent: true, opacity: 0.80 });
-          this._anatJawMesh = new THREE.Mesh(_jGeo, _jMat);
-          this._anatJawMesh.position.set(0, -_hR * 0.55, _hR * 0.45);
-          this._anatJawMesh.rotation.x = 0.4;
-          this.headGroup.add(this._anatJawMesh);
-          this.headGroup.position.y = _hY;
-          this._headGroupBaseY = _hY;
-          this.mesh.add(this.headGroup);
-        }
-
-        // Anatomy health pools — each body part has its own HP and can be dismembered
-        this.anatomy = {
-          head:  { hp: 100, attached: true },
-          torso: { hp: 100, attached: true },
-          base:  { hp: 100, attached: true }
-        };
-        // Lerped look-target for organic head tracking delay (avoids per-frame allocation)
-        this._lerpedHeadTarget = new THREE.Vector3();
-        this._lerpedHeadTargetInit = false;
-
-        // ── Hanging Guts System ───────────────────────────────────────────────────────
-        // 3-4 CapsuleGeometry intestine meshes stacked inside the torsoGroup.
-        // Initially hidden; revealed when torso HP drops below 50%.
-        {
-          this._gutsContainer = new THREE.Group();
-          this._gutsContainer.visible = false;
-          const gutColors  = [0x4B0082, 0x8B0000, 0x5C001A, 0x3D0000];
-          const gutCount   = 3 + Math.floor(Math.random() * 2);  // 3 or 4
-          for (let _gi = 0; _gi < gutCount; _gi++) {
-            const _gGeo = new THREE.CapsuleGeometry(0.045, 0.18 + Math.random() * 0.12, 4, 6);
-            const _gMat = new THREE.MeshBasicMaterial({
-              color: gutColors[_gi % gutColors.length],
-              transparent: true, opacity: 0.88
-            });
-            const _gMesh = new THREE.Mesh(_gGeo, _gMat);
-            // Stack intestines downward; slight random XZ offset for organic look
-            _gMesh.position.set(
-              (Math.random() - 0.5) * 0.08,
-              -0.12 - _gi * 0.16,
-              (Math.random() - 0.5) * 0.08
-            );
-            this._gutsContainer.add(_gMesh);
-          }
-          this.torsoGroup.add(this._gutsContainer);
-          this._gutsExposed = false;
-          this._gutsFrame   = 0;
-        }
-
-        // Add decorative rings to Annunaki Orb
-        if (type === 19) {
-          const ringGeo = new THREE.TorusGeometry(2.0, 0.1, 8, 32);
-          const ringMat = new THREE.MeshStandardMaterial({ color: 0xFFAA00, emissive: 0xFFAA00, emissiveIntensity: 0.8, metalness: 0.9 });
-          const ring1 = new THREE.Mesh(ringGeo, ringMat);
-          ring1.rotation.x = Math.PI / 2;
-          this.mesh.add(ring1);
-          const ring2 = new THREE.Mesh(ringGeo, ringMat.clone());
-          ring2.rotation.y = Math.PI / 2;
-          this.mesh.add(ring2);
-          this._annunakiTeleportTimer = 0;
-          this._annunakiTeleportCooldown = 4.0; // teleport every 4 seconds
-          this._annunakiLaserTimer = 0;
-          this._annunakiLaserActive = false;
-          this._annunakiLaserMesh = null;
-          this._annunakiWarning = false;
-        }
-
-        // Source Glitch: chaotic overlapping triangle cluster + teleport init
-        if (type === 20) {
-          this._glitchMeshes = [];
-          const _glitchColors = [0xFF00FF, 0x00FFFF, 0xFF0000, 0x00FF00, 0xFFFF00, 0xFF8800, 0xFFFFFF, 0x8800FF];
-          for (let _gi = 0; _gi < 9; _gi++) {
-            const _gGeo = new THREE.TetrahedronGeometry(0.25 + Math.random() * 0.45, 0);
-            const _gMat = new THREE.MeshBasicMaterial({ color: _glitchColors[_gi % _glitchColors.length], wireframe: _gi % 3 === 0 });
-            const _gMesh = new THREE.Mesh(_gGeo, _gMat);
-            _gMesh.position.set((Math.random() - 0.5) * 1.4, (Math.random() - 0.5) * 1.4, (Math.random() - 0.5) * 1.4);
-            _gMesh.rotation.set(Math.random() * Math.PI * 2, Math.random() * Math.PI * 2, Math.random() * Math.PI * 2);
-            this.mesh.add(_gMesh);
-            this._glitchMeshes.push(_gMesh);
-          }
-          this._glitchTeleportTimer = 0;
-          this._glitchTeleportCooldown = 0.7 + Math.random() * 0.8; // 0.7-1.5s between teleports
-        }
-
-        // Add legs to Daddy Longlegs spider
+        // ── TYPE-SPECIFIC AI STATE (no new meshes — pure numeric state) ─────────────
         if (type === 15) {
-          const legMat = new THREE.MeshLambertMaterial({ color: 0x5C3317 });
-          for (let leg = 0; leg < 8; leg++) {
-            const legAngle = (leg / 8) * Math.PI * 2;
-            const legGeo = new THREE.CylinderGeometry(0.02, 0.02, 0.9, 4);
-            const legMesh = new THREE.Mesh(legGeo, legMat);
-            legMesh.rotation.z = Math.PI / 2 - 0.4;
-            legMesh.rotation.y = legAngle;
-            legMesh.position.set(Math.cos(legAngle) * 0.35, -0.1, Math.sin(legAngle) * 0.35);
-            this.mesh.add(legMesh);
-          }
-          this._rearingPhase = 0; // 0=walking 1=rearing up 2=attacking
+          // Daddy Longlegs rearing-attack cycle
+          this._rearingPhase = 0;
           this._rearingTimer = 0;
         }
-
-        // Ground shadow for flying enemies
-        this.groundShadow = null;
-        if (type === 5 || type === 11 || type === 14 || type === 16 || type === 17 || type === 19 || type === 20) {
-          const shadowRadius = type === 11 ? 2.0 : (type === 19 ? 1.8 : (type === 20 ? 0.7 : (type === 5 ? 0.6 : 0.35)));
-          const shadowGeo = new THREE.CircleGeometry(shadowRadius, 12);
-          const shadowMat = new THREE.MeshBasicMaterial({ color: type === 20 ? 0xFF00FF : 0x000000, transparent: true, opacity: type === 20 ? 0.15 : 0.25, depthWrite: false });
-          this.groundShadow = new THREE.Mesh(shadowGeo, shadowMat);
-          this.groundShadow.rotation.x = -Math.PI / 2;
-          this.groundShadow.position.set(x, 0.05, z);
-          scene.add(this.groundShadow);
+        if (type === 19) {
+          // Annunaki Orb — teleport and laser AI state
+          this._annunakiTeleportTimer   = 0;
+          this._annunakiTeleportCooldown = 4.0;
+          this._annunakiLaserTimer      = 0;
+          this._annunakiLaserActive     = false;
+          this._annunakiWarning         = false;
+        }
+        if (type === 20) {
+          // Source Glitch — rapid teleport AI
+          this._glitchTeleportTimer    = 0;
+          this._glitchTeleportCooldown = 0.7 + Math.random() * 0.8;
         }
 
         // Stats based on type — delegated to GameEnemies.getEnemyBaseStats
@@ -569,45 +368,22 @@
         this._playerVelocity = { x: 0, z: 0 }; // Estimated player velocity
         this._flankAngle = (Math.random() > 0.5 ? 1 : -1) * (Math.PI * 0.3 + Math.random() * Math.PI * 0.4);
         this._packRush = false; // Pack behavior: periodic group rush flag
-        // Armor defaults to 0 if not set (only MiniBoss has armor = 0.25)
-        
-        // Add glowing eyes to enemy (VFX) with realistic pupils
-        const eyeRadius = type === 10 ? 0.12 : (type === 11 ? 0.28 : (type === 13 ? 0.10 : 0.07));
-        const eyeColor = type === 4 ? 0xFF3300 : (type === 10 ? 0xFF0000 : (type === 11 ? 0xFF0000 : (type >= 12 ? 0xFF6600 : 0xFF2222)));
-        const eGeo = new THREE.SphereGeometry(eyeRadius, 6, 6);
-        const eMat = new THREE.MeshBasicMaterial({ color: 0xFFFFFF }); // White sclera
-        const eyeSpread = type === 10 ? 0.3 : (type === 11 ? 0.7 : (type === 13 ? 0.25 : 0.18));
-        const eyeForward = type === 5 ? 0.45 : (type === 11 ? 2.0 : (type === 14 ? 0.3 : 0.42));
-        this.leftEye = new THREE.Mesh(eGeo, eMat);
-        this.leftEye.position.set(-eyeSpread, 0.1, eyeForward);
-        this.mesh.add(this.leftEye);
-        this.rightEye = new THREE.Mesh(eGeo, eMat.clone());
-        this.rightEye.position.set(eyeSpread, 0.1, eyeForward);
-        this.mesh.add(this.rightEye);
-        // Add colored iris + dark pupil for realistic eyes
-        const pupilRadius = eyeRadius * 0.55;
-        const pupilGeo = new THREE.SphereGeometry(pupilRadius, 5, 5);
-        const irisMat = new THREE.MeshBasicMaterial({ color: eyeColor });
-        const leftIris = new THREE.Mesh(pupilGeo, irisMat);
-        leftIris.position.set(0, 0, eyeRadius * 0.55);
-        this.leftEye.add(leftIris);
-        const rightIris = new THREE.Mesh(pupilGeo, irisMat.clone());
-        rightIris.position.set(0, 0, eyeRadius * 0.55);
-        this.rightEye.add(rightIris);
-        // Inner dark pupil
-        const innerPupilGeo = new THREE.SphereGeometry(pupilRadius * 0.5, 4, 4);
-        const innerPupilMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
-        const leftPupil = new THREE.Mesh(innerPupilGeo, innerPupilMat);
-        leftPupil.position.set(0, 0, pupilRadius * 0.4);
-        leftIris.add(leftPupil);
-        const rightPupil = new THREE.Mesh(innerPupilGeo, innerPupilMat.clone());
-        rightPupil.position.set(0, 0, pupilRadius * 0.4);
-        rightIris.add(rightPupil);
-        // Blink timer
+
+        // Blink timer vars kept for code compatibility (will never fire since leftEye is null)
         this.blinkTimer = 0;
         this.blinkDuration = 0.08;
         this.nextBlinkTime = 1.5 + Math.random() * 3.5;
         this.isBlinking = false;
+
+        // Anatomy health pools — each body part has its own HP and can be dismembered
+        this.anatomy = {
+          head:  { hp: 100, attached: true },
+          torso: { hp: 100, attached: true },
+          base:  { hp: 100, attached: true }
+        };
+        // Lerped look-target for organic head tracking delay (avoids per-frame allocation)
+        this._lerpedHeadTarget = new THREE.Vector3();
+        this._lerpedHeadTargetInit = false;
       }
 
       update(dt, playerPos) {
@@ -1888,6 +1664,10 @@
             if (distSq < 4.0) { // Within 2 units
               // Stain the nearby enemy with blood
               if (other.mesh.material && other.mesh.material.color) {
+                // Detach from shared material before modifying per-enemy color
+                if (other.mesh.material === SHARED_MAT.enemy) {
+                  other.mesh.material = SHARED_MAT.enemy.clone();
+                }
                 if (!other._originalColor) other._originalColor = other.mesh.material.color.clone();
                 const stainAmt = Math.max(0, 0.15 * (1 - Math.sqrt(distSq) / 2));
                 if (!Enemy._bloodColor) Enemy._bloodColor = new THREE.Color(0x8B0000);
@@ -1900,6 +1680,11 @@
         // Progressive blood stain: blend enemy mesh color toward dark red as HP drops
         // This works on ALL enemy colors (including yellow/gold) by directly lerping the color
         if (this.mesh && this.mesh.material) {
+          // Detach from the global shared material on first hit so per-enemy color
+          // transitions don't affect all living enemies simultaneously.
+          if (this.mesh.material === SHARED_MAT.enemy) {
+            this.mesh.material = SHARED_MAT.enemy.clone();
+          }
           if (!this._originalColor) {
             this._originalColor = this.mesh.material.color.clone();
           }
@@ -3150,6 +2935,11 @@
         
         // Enemy death animation: fall lifeless to ground, then spawn XP star separately
         const dyingMesh = this.mesh;
+        // Clone shared material for the fade-out animation so opacity changes on the
+        // dying mesh don't affect all other living enemies that share SHARED_MAT.enemy.
+        if (dyingMesh.material === SHARED_MAT.enemy) {
+          dyingMesh.material = SHARED_MAT.enemy.clone();
+        }
         const _bulletHoles = this.bulletHoles;
         const _bloodStains = this._bloodStains;
         const _leftEye = this.leftEye;
@@ -3725,8 +3515,8 @@
             } else {
               // Phase 5: Remove corpse
               scene.remove(dyingMesh);
-              if (dyingMesh.geometry) dyingMesh.geometry.dispose();
-              if (dyingMesh.material) dyingMesh.material.dispose();
+              if (dyingMesh.geometry && dyingMesh.geometry !== SHARED_GEO.sphere && dyingMesh.geometry !== SHARED_GEO.cube) dyingMesh.geometry.dispose();
+              if (dyingMesh.material && dyingMesh.material !== SHARED_MAT.enemy && dyingMesh.material !== SHARED_MAT.black) dyingMesh.material.dispose();
               // bullet holes use shared geometry — only dispose per-hole cloned materials
               if (_bulletHoles) _bulletHoles.forEach(h => { if (h.material) h.material.dispose(); });
               // blood stains use shared geometry — only dispose per-stain materials
@@ -3749,8 +3539,8 @@
             // Called by resetGame when the animation is still in-progress.
             // Force-remove the dying mesh and all sub-resources from the scene.
             if (dyingMesh.parent) scene.remove(dyingMesh);
-            if (dyingMesh.geometry) dyingMesh.geometry.dispose();
-            if (dyingMesh.material) dyingMesh.material.dispose();
+            if (dyingMesh.geometry && dyingMesh.geometry !== SHARED_GEO.sphere && dyingMesh.geometry !== SHARED_GEO.cube) dyingMesh.geometry.dispose();
+            if (dyingMesh.material && dyingMesh.material !== SHARED_MAT.enemy && dyingMesh.material !== SHARED_MAT.black) dyingMesh.material.dispose();
             // bullet holes / blood stains use shared geometry — only dispose per-hole materials
             if (_bulletHoles) _bulletHoles.forEach(h => { if (h.material) h.material.dispose(); });
             if (_bloodStains) _bloodStains.forEach(s => { if (s.material) s.material.dispose(); });
@@ -3769,8 +3559,8 @@
           // Fallback: no animation slot available, remove immediately
           scene.remove(dyingMesh);
           setTimeout(() => {
-            if (dyingMesh.geometry) dyingMesh.geometry.dispose();
-            if (dyingMesh.material) dyingMesh.material.dispose();
+            if (dyingMesh.geometry && dyingMesh.geometry !== SHARED_GEO.sphere && dyingMesh.geometry !== SHARED_GEO.cube) dyingMesh.geometry.dispose();
+            if (dyingMesh.material && dyingMesh.material !== SHARED_MAT.enemy && dyingMesh.material !== SHARED_MAT.black) dyingMesh.material.dispose();
             // bullet holes / blood stains use shared geometry — only dispose per-hole materials
             if (_bulletHoles) _bulletHoles.forEach(h => { if (h.material) h.material.dispose(); });
             if (_bloodStains) _bloodStains.forEach(s => { if (s.material) s.material.dispose(); });

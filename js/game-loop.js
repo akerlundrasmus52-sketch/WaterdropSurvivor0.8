@@ -2749,6 +2749,12 @@
 
       // Update blood drips (falling drops from wounded enemies)
       // In-place compaction — no new array allocation each frame.
+      // Hard cap: purge oldest drips if array exceeds MAX_BLOOD_DRIPS to prevent
+      // runaway mesh proliferation (safety guard per GC requirements).
+      while (bloodDrips.length > MAX_BLOOD_DRIPS) {
+        const _old = bloodDrips.shift();
+        if (_old && _old.mesh) scene.remove(_old.mesh);
+      }
       if (bloodDrips.length > 0) {
         let _j = 0;
         for (let _i = 0; _i < bloodDrips.length; _i++) {
@@ -3232,8 +3238,14 @@
           }
         }
 
-        // Remove dead enemies from array (forEach already skips dead ones each frame)
-        enemies = enemies.filter(e => !e.isDead);
+        // Remove dead enemies from array using reverse loop (avoids filter() new-array allocation)
+        // scene.remove is called here as a safety net; die() already removes meshes during animation.
+        for (let i = enemies.length - 1; i >= 0; i--) {
+          if (enemies[i].isDead) {
+            if (enemies[i].mesh && enemies[i].mesh.parent) scene.remove(enemies[i].mesh);
+            enemies.splice(i, 1);
+          }
+        }
 
         // Scene children growth guard — warn and cull stale invisible meshes if count exceeds threshold
         const MAX_SCENE_CHILDREN = 1200;
