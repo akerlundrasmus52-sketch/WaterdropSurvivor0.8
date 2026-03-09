@@ -2770,15 +2770,14 @@
           // Phase 1: Hit frame squish (water balloon impact)
           const sy = isCrit ? 0.5 : 0.6;
           const sxz = isCrit ? 1.45 : 1.35;
-          // Clamp scale to prevent explosively large values under rapid fire (e.g. minigun)
-          // isFinite guard protects against NaN propagation from prior scale ops
+          // Clamp scale to prevent explosively large or NaN values under rapid fire (e.g. minigun)
           const _rawSX = this.mesh.scale.x * sxz;
           const _rawSY = this.mesh.scale.y * sy;
           const _rawSZ = this.mesh.scale.z * sxz;
           this.mesh.scale.set(
-            Math.max(_SCALE_MIN, isFinite(_rawSX) ? _rawSX : 1.0),
-            Math.max(_SCALE_MIN, isFinite(_rawSY) ? _rawSY : 1.0),
-            Math.max(_SCALE_MIN, isFinite(_rawSZ) ? _rawSZ : 1.0)
+            Math.max(0.1, Math.min(3.0, isNaN(_rawSX) ? 1.0 : _rawSX)),
+            Math.max(0.1, Math.min(3.0, isNaN(_rawSY) ? 1.0 : _rawSY)),
+            Math.max(0.1, Math.min(3.0, isNaN(_rawSZ) ? 1.0 : _rawSZ))
           );
           // Phase 2: Lerp back to (1,1,1) over 150ms
           this._squishTimer = setTimeout(() => {
@@ -3300,9 +3299,60 @@
         const EXPLODE_FRAMES = 20; // Blood explosion phase
         const FADE_FRAMES = 40;    // Smooth 0.67-second fade out
         let fallFrame = 0;
-        const startY = dyingMesh.position.y;
-        const startScaleY = dyingMesh.scale.y;
-        
+        // Guard against NaN scale from prior squish operations
+        const startScaleY = isNaN(dyingMesh.scale.y) ? 1.0 : dyingMesh.scale.y;
+
+        // Instant flatten: random rotation, drop to ground, spawn 5 simple red cube meat chunks
+        dyingMesh.rotation.x = -Math.PI / 2 + (Math.random() - 0.5);
+        dyingMesh.position.y = 0.05;
+        if (scene) {
+          for (let _mc = 0; _mc < 5; _mc++) {
+            const _mcGeo = new THREE.BoxGeometry(0.12, 0.12, 0.12);
+            const _mcMat = new THREE.MeshBasicMaterial({ color: 0xCC0000, transparent: true, opacity: 0.9 });
+            const _mcMesh = new THREE.Mesh(_mcGeo, _mcMat);
+            _mcMesh.position.copy(deathPos);
+            _mcMesh.position.y += 0.2 + Math.random() * 0.3;
+            scene.add(_mcMesh);
+            const _mcVx = (Math.random() - 0.5) * 0.28;
+            const _mcVz = (Math.random() - 0.5) * 0.28;
+            let _mcVy = 0.12 + Math.random() * 0.16;
+            const _mcRx = (Math.random() - 0.5) * 0.25;
+            const _mcRz = (Math.random() - 0.5) * 0.25;
+            let _mcLife = 90 + Math.floor(Math.random() * 30);
+            managedAnimations.push({
+              update() {
+                _mcVy -= 0.012; // gravity
+                _mcMesh.position.x += _mcVx;
+                _mcMesh.position.y += _mcVy;
+                _mcMesh.position.z += _mcVz;
+                _mcMesh.rotation.x += _mcRx;
+                _mcMesh.rotation.z += _mcRz;
+                if (_mcMesh.position.y < 0.06) {
+                  _mcMesh.position.y = 0.06;
+                  _mcVy = Math.abs(_mcVy) * 0.25;
+                }
+                _mcLife--;
+                _mcMat.opacity = Math.max(0, (_mcLife / 60) * 0.9);
+                if (_mcLife <= 0) {
+                  scene.remove(_mcMesh);
+                  _mcGeo.dispose();
+                  _mcMat.dispose();
+                  return false;
+                }
+                return true;
+              },
+              cleanup() {
+                if (_mcMesh.parent) scene.remove(_mcMesh);
+                _mcGeo.dispose();
+                _mcMat.dispose();
+              }
+            });
+          }
+        }
+
+        // Capture startY after the instant drop so the linger animation stays near ground level
+        const startY = dyingMesh.position.y; // = 0.05 after instant flatten above
+
         // Spawn detached body parts for heavy kills (dismemberment)
         const SHOTGUN_CHUNK_MIN = 3, SHOTGUN_CHUNK_EXTRA = 4;
         const NORMAL_CHUNK_MIN = 1, NORMAL_CHUNK_EXTRA = 3;

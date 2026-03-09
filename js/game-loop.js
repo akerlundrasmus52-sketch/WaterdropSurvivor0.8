@@ -658,14 +658,14 @@
       if (window.GameDebug) window.GameDebug.onFrameStart(time, dt * 1000, gameTime);
       
       // Phase 3: Lag compensation - cap deltaTime to prevent physics explosion during lag spikes
-      const MAX_DELTA_TIME = 0.05; // 50ms cap — prevents bullets/physics from exploding on lag spikes
-      if (dt > MAX_DELTA_TIME) {
+      const MAX_DELTA_TIME = 0.033; // ~30fps cap — prevents NaN/physics explosion on lag spikes
+      dt = Math.min(dt, MAX_DELTA_TIME);
+      if (dt === MAX_DELTA_TIME) {
         // Throttle warning to avoid console spam during sustained lag
         if (!window.lastLagWarning || (Date.now() - window.lastLagWarning) > 5000) {
-          console.warn(`High deltaTime detected: ${dt.toFixed(3)}s, capping to ${MAX_DELTA_TIME}s`);
+          console.warn(`High deltaTime detected, capping to ${MAX_DELTA_TIME}s`);
           window.lastLagWarning = Date.now();
         }
-        dt = MAX_DELTA_TIME;
       }
       // Expose dt globally so other modules (e.g. enemy-class.js) can gate cosmetics by FPS
       window._lastDt = dt;
