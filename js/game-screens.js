@@ -5199,6 +5199,21 @@
     }
     
     function createLevelUpEffects() {
+      // Flash the player mesh white and scale up 1.3× for 0.3 s to signal the level-up in 3D
+      if (player && player.mesh && player.mesh.material && player.mesh.material.color) {
+        const origColor  = player.mesh.material.color.getHex();
+        const origScaleX = player.mesh.scale.x;
+        const origScaleY = player.mesh.scale.y;
+        const origScaleZ = player.mesh.scale.z;
+        player.mesh.material.color.setHex(0xffffff);
+        player.mesh.scale.set(origScaleX * 1.3, origScaleY * 1.3, origScaleZ * 1.3);
+        setTimeout(() => {
+          if (!player || !player.mesh || !player.mesh.material) return;
+          player.mesh.material.color.setHex(origColor);
+          player.mesh.scale.set(origScaleX, origScaleY, origScaleZ);
+        }, 300);
+      }
+
       // Water drop spray effect — small water drops that fly from character and land on ground
       // Uses BloodSystem with blue water colors for performance (pool-based, no GC spikes)
       const pos = player.mesh.position;

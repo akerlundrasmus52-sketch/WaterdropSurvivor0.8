@@ -4,14 +4,15 @@
 
 // ── ARPG Deep Mechanics: Upgrade Rarities, Focus Path, Boss Chests ───────────
 
-// Rarity table: Common(White)=50%, Rare(Blue)=30%, Epic(Purple)=15%, Legendary(Gold)=4%, Mythic(Red/Black)=1%
+// Rarity table: Common(White)=50%, Rare(Blue)=30%, Epic(Purple)=15%, Legendary(Gold)=4%, Mythic(Red)=1%
+// Thresholds: roll > 0.50 = Common, > 0.20 = Rare, > 0.05 = Epic, > 0.01 = Legendary, else = Mythic
 const UPGRADE_RARITIES = [
-  { name: 'common',    label: 'COMMON',    cssClass: 'rarity-common',    scale: 1.0, weight: 50 },
-  { name: 'rare',      label: 'RARE',      cssClass: 'rarity-rare',      scale: 1.5, weight: 30 },
-  { name: 'epic',      label: 'EPIC',      cssClass: 'rarity-epic',      scale: 2.0, weight: 15 },
-  { name: 'legendary', label: 'LEGENDARY', cssClass: 'rarity-legendary', scale: 2.5, weight: 4  },
+  { name: 'common',    label: 'COMMON',    cssClass: 'rarity-common',    scale: 1.0, color: '#ffffff' },
+  { name: 'rare',      label: 'RARE',      cssClass: 'rarity-rare',      scale: 1.5, color: '#00aaff' },
+  { name: 'epic',      label: 'EPIC',      cssClass: 'rarity-epic',      scale: 2.0, color: '#aa00ff' },
+  { name: 'legendary', label: 'LEGENDARY', cssClass: 'rarity-legendary', scale: 3.0, color: '#ffd700' },
   // cssClass 'rarity-mythical' matches the existing CSS keyframe name (mythical-glow) intentionally
-  { name: 'mythic',    label: 'MYTHIC',    cssClass: 'rarity-mythical',  scale: 3.0, weight: 1  },
+  { name: 'mythic',    label: 'MYTHIC',    cssClass: 'rarity-mythical',  scale: 5.0, color: '#ff0000' },
 ];
 
 // Weapon unlock levels: Weapon 2 at Lv4, Weapon 3 at Lv12, Weapon 4 at Lv25
@@ -22,20 +23,23 @@ const BOSS_CHEST_MIN_GOLD   = 150;
 const BOSS_CHEST_GOLD_RANGE = 101; // 0–100 random bonus on top of minimum
 
 function rollUpgradeRarity() {
-  const total = UPGRADE_RARITIES.reduce((s, r) => s + r.weight, 0);
-  let rand = Math.random() * total;
-  for (const r of UPGRADE_RARITIES) {
-    rand -= r.weight;
-    if (rand <= 0) return r;
-  }
-  return UPGRADE_RARITIES[0];
+  const r = Math.random();
+  if (r > 0.50) return UPGRADE_RARITIES[0]; // Common   (50%)
+  if (r > 0.20) return UPGRADE_RARITIES[1]; // Rare     (30%)
+  if (r > 0.05) return UPGRADE_RARITIES[2]; // Epic     (15%)
+  if (r > 0.01) return UPGRADE_RARITIES[3]; // Legendary (4%)
+  return UPGRADE_RARITIES[4];               // Mythic    (1%)
 }
 
 // Returns a copy of an upgrade with rarity applied — scaled stats and updated desc/apply
 function makeRarityScaledUpgrade(u) {
   const rarity = rollUpgradeRarity();
   const s = rarity.scale;
-  const scaled = Object.assign({}, u, { _rarity: rarity });
+  const scaled = Object.assign({}, u, {
+    _rarity: rarity,
+    rarityName: rarity.label,
+    rarityColor: rarity.color,
+  });
   try {
     switch (u.id) {
       case 'str':
@@ -143,12 +147,12 @@ function showFocusPathPrompt(onWeapons, onPassives) {
     <div class="focus-path-prompt">
       <div class="focus-path-btn focus-weapons" id="fp-weapons">
         <span class="fp-icon">⚔️</span>
-        <span class="fp-title">WEAPON</span>
+        <span class="fp-title">[ FOCUS WEAPONS ]</span>
         <span class="fp-desc">Weapon upgrades only</span>
       </div>
       <div class="focus-path-btn focus-passives" id="fp-passives">
         <span class="fp-icon">📊</span>
-        <span class="fp-title">PASSIVE</span>
+        <span class="fp-title">[ FOCUS PASSIVES ]</span>
         <span class="fp-desc">Stat boosts only</span>
       </div>
     </div>`;
@@ -1175,23 +1179,25 @@ window.spawnBossChest = function(x, z) {
         const isWeaponFocus  = focusPath === 'weapons';
         const isPassiveFocus = focusPath === 'passives';
 
+        // Shared weapon upgrade pool — filtered to weapons the player actually owns
+        const allWupEntries = [
+          { id:'wup_gun',     weaponKey:'gun',      icon:'🔫', title:'GUN Upgrade',       desc:'Gun Dmg+10, Fire Rate+15%', apply:()=>{ if(weapons.gun.active&&weapons.gun.level<10){weapons.gun.level++;weapons.gun.damage+=10;weapons.gun.cooldown*=0.85;showStatChange('Gun upgraded!');} } },
+          { id:'wup_sword',   weaponKey:'sword',    icon:'⚔️', title:'SWORD Upgrade',     desc:'Sword Dmg+15, Range+0.5',   apply:()=>{ if(weapons.sword.active&&weapons.sword.level<10){weapons.sword.level++;weapons.sword.damage+=15;weapons.sword.range+=0.5;showStatChange('Sword upgraded!');} } },
+          { id:'wup_aura',    weaponKey:'aura',     icon:'🌀', title:'AURA Upgrade',      desc:'Aura Dmg+3, Range+0.3',     apply:()=>{ if(weapons.aura.active&&weapons.aura.level<10){weapons.aura.level++;weapons.aura.damage+=3;weapons.aura.range=Math.min(5,weapons.aura.range*1.1);showStatChange('Aura upgraded!');} } },
+          { id:'wup_meteor',  weaponKey:'meteor',   icon:'☄️', title:'METEOR Upgrade',    desc:'Meteor Dmg+20, Area+1',     apply:()=>{ if(weapons.meteor.active&&weapons.meteor.level<10){weapons.meteor.level++;weapons.meteor.damage+=20;weapons.meteor.area+=1;showStatChange('Meteor upgraded!');} } },
+          { id:'wup_firering',weaponKey:'fireRing', icon:'🔥', title:'FIRE RING Upgrade', desc:'Fire Ring Dmg+5, +1 Orb',   apply:()=>{ if(weapons.fireRing.active&&weapons.fireRing.level<10){weapons.fireRing.level++;weapons.fireRing.damage+=5;weapons.fireRing.orbs+=1;showStatChange('Fire Ring upgraded!');} } },
+        ].filter(e => weapons[e.weaponKey] && weapons[e.weaponKey].active);
+
         if (isWeaponFocus) {
           // WEAPON path: ONLY weapon upgrade entries for active weapons
-          const wupEntries = [
-            { id:'wup_gun',     weaponKey:'gun',      icon:'🔫', title:'GUN Upgrade',       desc:'Gun Dmg+10, Fire Rate+15%', apply:()=>{ if(weapons.gun.active&&weapons.gun.level<10){weapons.gun.level++;weapons.gun.damage+=10;weapons.gun.cooldown*=0.85;showStatChange('Gun upgraded!');} } },
-            { id:'wup_sword',   weaponKey:'sword',    icon:'⚔️', title:'SWORD Upgrade',     desc:'Sword Dmg+15, Range+0.5',   apply:()=>{ if(weapons.sword.active&&weapons.sword.level<10){weapons.sword.level++;weapons.sword.damage+=15;weapons.sword.range+=0.5;showStatChange('Sword upgraded!');} } },
-            { id:'wup_aura',    weaponKey:'aura',     icon:'🌀', title:'AURA Upgrade',      desc:'Aura Dmg+3, Range+0.3',     apply:()=>{ if(weapons.aura.active&&weapons.aura.level<10){weapons.aura.level++;weapons.aura.damage+=3;weapons.aura.range=Math.min(5,weapons.aura.range*1.1);showStatChange('Aura upgraded!');} } },
-            { id:'wup_meteor',  weaponKey:'meteor',   icon:'☄️', title:'METEOR Upgrade',    desc:'Meteor Dmg+20, Area+1',     apply:()=>{ if(weapons.meteor.active&&weapons.meteor.level<10){weapons.meteor.level++;weapons.meteor.damage+=20;weapons.meteor.area+=1;showStatChange('Meteor upgraded!');} } },
-            { id:'wup_firering',weaponKey:'fireRing', icon:'🔥', title:'FIRE RING Upgrade', desc:'Fire Ring Dmg+5, +1 Orb',   apply:()=>{ if(weapons.fireRing.active&&weapons.fireRing.level<10){weapons.fireRing.level++;weapons.fireRing.damage+=5;weapons.fireRing.orbs+=1;showStatChange('Fire Ring upgraded!');} } },
-          ].filter(e => weapons[e.weaponKey] && weapons[e.weaponKey].active);
-          wupEntries.forEach(e => weightedPool.push({ upgrade: e, weight: 1 }));
+          allWupEntries.forEach(e => weightedPool.push({ upgrade: e, weight: 1 }));
         } else if (isPassiveFocus) {
           // PASSIVE path: ONLY stat boost entries
           commonUpgrades.forEach(upgrade => {
             weightedPool.push({ upgrade, weight: 1 });
           });
         } else {
-          // No path chosen (level < 4): standard mixed upgrades with default weights
+          // No path chosen (level < 4): mixed upgrades — both weapons AND passives
           commonUpgrades.forEach(upgrade => {
             let w;
             if (upgrade.id === 'str' || upgrade.id === 'aspd') {
@@ -1204,6 +1210,8 @@ window.spawnBossChest = function(x, z) {
             }
             weightedPool.push({ upgrade, weight: w });
           });
+          // Include weapon upgrades for weapons the player actually owns (levels 1-3 mix)
+          allWupEntries.forEach(e => weightedPool.push({ upgrade: e, weight: 2 }));
         }
         
         // Expand weighted pool based on weights
@@ -1220,7 +1228,7 @@ window.spawnBossChest = function(x, z) {
           [expandedPool[i], expandedPool[j]] = [expandedPool[j], expandedPool[i]];
         }
         
-        // Pick 6 unique upgrades
+        // Pick 3 unique upgrades
         const unique = [];
         const seen = new Set();
         
@@ -1229,15 +1237,15 @@ window.spawnBossChest = function(x, z) {
             unique.push(upgrade);
             seen.add(upgrade.id);
           }
-          if (unique.length >= 6) break;
+          if (unique.length >= 3) break;
         }
         
         choices = unique;
       }
 
-      // SAFETY FALLBACK: ensure exactly 6 choices are always available
+      // SAFETY FALLBACK: ensure exactly 3 choices are always available
       if (!choices) choices = [];
-      if (choices.length < 6) {
+      if (choices.length < 3) {
         const fallbackItems = [
           {
             id: 'fallback_hp', icon: '❤️', title: '+20 MAX HP', desc: 'Max HP +20 (Instant Heal +20)',
@@ -1264,20 +1272,20 @@ window.spawnBossChest = function(x, z) {
         ];
         const usedIds = new Set(choices.map(c => c.id));
         for (const f of fallbackItems) {
-          if (choices.length >= 6) break;
+          if (choices.length >= 3) break;
           if (!usedIds.has(f.id)) {
             choices.push(f);
             usedIds.add(f.id);
           }
         }
-        // If still under 6, fill with shuffled common upgrades
-        if (choices.length < 6) {
+        // If still under 3, fill with shuffled common upgrades
+        if (choices.length < 3) {
           const pool = commonUpgrades.filter(u => !usedIds.has(u.id));
           for (let i = pool.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [pool[i], pool[j]] = [pool[j], pool[i]];
           }
-          choices.push(...pool.slice(0, 6 - choices.length));
+          choices.push(...pool.slice(0, 3 - choices.length));
         }
       }
 
@@ -1335,15 +1343,23 @@ window.spawnBossChest = function(x, z) {
           }
         }
         
-        // Build rarity badge HTML
-        const rarityInfo = u._rarity || null;
-        const rarityBadgeHtml = rarityInfo
-          ? `<span class="upgrade-rarity-badge rarity-badge-${rarityInfo.name}">${rarityInfo.label}</span>`
-          : '';
+        // Resolve rarity display properties (color + label)
+        const rarityInfo  = u._rarity || null;
+        const cardColor   = u.rarityColor || (rarityInfo ? rarityInfo.color : '#ffffff') || '#ffffff';
+        const cardRarityLabel = u.rarityName || (rarityInfo ? rarityInfo.label : 'COMMON');
         
-        // Upgrade cards: show icon (if present) + rarity badge + title + desc
+        // Apply only the dynamic rarity-specific inline styles (border, box-shadow, overflow)
+        const isMythic = rarityInfo && rarityInfo.name === 'mythic';
+        card.style.borderColor = cardColor;
+        card.style.boxShadow   = `0 0 20px ${cardColor}40`;
+        if (isMythic) card.style.overflow = 'visible';
+        
+        // Upgrade cards: rarity header + icon + title + desc (playing-card layout)
         const iconHtml = u.icon ? `<span class="upgrade-icon">${u.icon}</span>` : '';
-        card.innerHTML = `${iconHtml}${rarityBadgeHtml}<div class="upgrade-title">${u.title}</div><div class="upgrade-desc">${u.desc}</div>`;
+        card.innerHTML = `
+          <div class="upgrade-rarity-header" style="color: ${cardColor}; text-shadow: 0 0 8px ${cardColor};">${cardRarityLabel}</div>
+          <div style="text-align: center;">${iconHtml}<div class="upgrade-title">${u.title}</div></div>
+          <div class="upgrade-desc">${u.desc}</div>`;
         
         // Mythic cards: add floating particle elements for dramatic effect
         if (rarityInfo && rarityInfo.name === 'mythic') {
@@ -1388,18 +1404,18 @@ window.spawnBossChest = function(x, z) {
           // ── Visual Upgrade Cue: screen flash + player mesh pulse with rarity colour ──
           try {
             const rarityFlashColors = {
-              'rarity-common':    'rgba(39,174,96,0.35)',
-              'rarity-rare':      'rgba(52,152,219,0.35)',
-              'rarity-epic':      'rgba(230,126,34,0.40)',
-              'rarity-legendary': 'rgba(231,76,60,0.45)',
-              'rarity-mythical':  'rgba(255,68,68,0.55)'
+              'rarity-common':    'rgba(255,255,255,0.25)',
+              'rarity-rare':      'rgba(0,170,255,0.35)',
+              'rarity-epic':      'rgba(170,0,255,0.40)',
+              'rarity-legendary': 'rgba(255,215,0,0.45)',
+              'rarity-mythical':  'rgba(255,0,0,0.55)'
             };
             const rarityMeshColors = {
-              'rarity-common':    0x27AE60,
-              'rarity-rare':      0x3498DB,
-              'rarity-epic':      0xE67E22,
-              'rarity-legendary': 0xE74C3C,
-              'rarity-mythical':  0xFF4444
+              'rarity-common':    0xFFFFFF,
+              'rarity-rare':      0x00AAFF,
+              'rarity-epic':      0xAA00FF,
+              'rarity-legendary': 0xFFD700,
+              'rarity-mythical':  0xFF0000
             };
             const rarityClass = Array.from(card.classList).find(c => c.startsWith('rarity-')) || 'rarity-common';
             const flashColor = rarityFlashColors[rarityClass] || rarityFlashColors['rarity-common'];
