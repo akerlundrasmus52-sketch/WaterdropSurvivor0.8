@@ -1853,19 +1853,18 @@
        transform:translateZ(0) enables GPU compositing to stop flicker on older Android. */
     #upgrade-list, #level-up-choices {
       display: flex;
-      flex-wrap: wrap;
+      flex-direction: row;
+      gap: 15px;
       justify-content: center;
-      gap: 10px;
+      align-items: center;
       margin-top: 15px;
       width: 100%;
       box-sizing: border-box;
     }
 
-    /* Each card takes up roughly half the container width so two fit side-by-side. */
+    /* Playing-card layout: items keep their own fixed width (200px set inline). */
     #upgrade-list > *, #level-up-choices > * {
-      flex: 1 1 40%;
-      min-width: 140px;
-      max-width: 100%;
+      flex-shrink: 0;
       /* Hardware-acceleration hints to prevent flicker on older Android (Samsung S10) */
       transform: translateZ(0);
       backface-visibility: hidden;
@@ -1934,22 +1933,22 @@
     }
 
     .upgrade-card {
-      background: linear-gradient(135deg, #141828 0%, #0a0e1e 100%);
-      background-image: 
-        linear-gradient(135deg, #141828 0%, #0a0e1e 100%),
-        radial-gradient(circle at 3px 3px, rgba(255,215,0,0.04) 2px, transparent 2px);
-      background-size: 100%, 12px 12px;
+      width: 200px;
+      height: 320px;
+      background: linear-gradient(180deg, #1a1a2e, #0d1020);
       margin: 0;
-      padding: 14px;
-      border-radius: 10px;
-      border: 3px solid #888888;
-      outline: 2px solid rgba(100, 100, 120, 0.3);
-      outline-offset: 1px;
+      padding: 15px;
+      border-radius: 12px;
+      border: 2px solid #888888;
+      outline: none;
       cursor: pointer;
-      transition: transform 0.15s, filter 0.2s, border-color 0.2s;
-      animation: fogwater-outer 4s ease-in-out infinite;
+      transition: transform 0.2s, filter 0.2s;
       position: relative;
       overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      box-sizing: border-box;
     }
 
     .upgrade-card::before {
@@ -1998,10 +1997,8 @@
     }
 
     .upgrade-card:hover {
-      transform: perspective(800px) rotateX(5deg) rotateY(-5deg) scale(1.05);
-      box-shadow: 0 0 0 4px rgba(4,8,18,0.97), 0 0 15px rgba(136,136,136,0.4), 0 0 30px rgba(136,136,136,0.2), inset 0 1px 0 rgba(255,255,255,0.08);
+      transform: translateY(-10px) scale(1.05);
       filter: brightness(1.15);
-      border-color: #aaa;
       animation: none;
     }
 
@@ -2334,6 +2331,14 @@
       letter-spacing: 1px;
       text-shadow: 0 0 10px rgba(255,215,0,0.8), 0 0 20px rgba(255,215,0,0.4), 2px 2px 4px rgba(0,0,0,1);
       margin-bottom: 8px;
+    }
+
+    .upgrade-rarity-header {
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      /* color and text-shadow applied inline (rarity-specific) */
     }
 
     .upgrade-icon {
@@ -3449,11 +3454,11 @@
         gap: 4px;
       }
 
-      /* Level-up cards: allow two side-by-side in landscape using flex sizing */
+      /* Level-up cards: allow horizontal scroll on landscape if cards overflow */
       #upgrade-list > *, #level-up-choices > * {
-        flex: 1 1 40%;
-        min-width: 140px;
-        max-width: 260px;
+        flex-shrink: 0;
+        min-width: unset;
+        max-width: unset;
       }
 
       /* Joystick zone: move joystick to far left and shoot joystick to far right
@@ -3606,15 +3611,17 @@
         box-sizing: border-box;
       }
 
-      /* Force two-column flex wrap on very small screens instead of single column to avoid ugly vertical list */
+      /* Force row layout with overflow-x scroll for very small screens */
       #upgrade-list, #level-up-choices {
         gap: 8px;
+        overflow-x: auto;
+        flex-wrap: nowrap;
       }
 
       #upgrade-list > *, #level-up-choices > * {
-        flex: 1 1 40%;
-        min-width: 120px;
-        max-width: calc(50% - 4px);
+        flex-shrink: 0;
+        min-width: unset;
+        max-width: unset;
       }
 
       .upgrade-card {
