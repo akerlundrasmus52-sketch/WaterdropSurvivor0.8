@@ -314,12 +314,16 @@
   const _EN_SPRING_DAMPING       = 14;    // spring damping (prevents endless oscillation)
   const _EN_CRIT_FLOAT_SPEED     = -220;  // upward screen velocity for crits (px/s)
   const _EN_NORMAL_FLOAT_SPEED   = -150;  // upward screen velocity for normal hits
+  // Hard cap on simultaneous elastic damage-number DOM elements.
+  const MAX_ELASTIC_NUMBERS      = 15;
   const ElasticNumbers = {
     _numbers: [],
 
     /**
      * Spawn an elastic damage number.
      * Crits start at 2x scale and elastic-bounce down to 1x before floating up.
+     * When at the pool cap, the oldest entry's DOM element is recycled instead of
+     * allocating a new one, preventing unbounded DOM growth during rapid-fire bursts.
      * @param {number} amount     Damage value.
      * @param {{ x: number, y: number, z: number }} worldPos  3D position.
      * @param {THREE.Camera}  camera
@@ -354,9 +358,18 @@
         window._triggerCameraShake(isHeadshot ? 0.18 : 0.12, 200);
       }
 
-      // Create DOM element
-      const el = document.createElement('div');
-      el.className = 'elastic-damage-number';
+      let el;
+      if (this._numbers.length >= MAX_ELASTIC_NUMBERS) {
+        // Recycle the oldest entry's DOM element to avoid unbounded allocation.
+        const oldest = this._numbers.shift();
+        el = oldest.el;
+        // Reset classes and content for the new hit.
+        el.className = 'elastic-damage-number';
+      } else {
+        el = document.createElement('div');
+        el.className = 'elastic-damage-number';
+      }
+
       const _fmt = window.formatDamageValue ? window.formatDamageValue(entry.amount) : String(entry.amount);
       el.textContent = entry.isCrit
         ? (entry.isHeadshot ? '💀 ' : '⚡ ') + _fmt
@@ -367,7 +380,9 @@
 
       el.style.left = entry.x + 'px';
       el.style.top  = entry.y + 'px';
-      document.body.appendChild(el);
+      el.style.opacity = '1';
+      el.style.transform = '';
+      if (!el.parentNode) document.body.appendChild(el);
       entry.el = el;
 
       this._numbers.push(entry);

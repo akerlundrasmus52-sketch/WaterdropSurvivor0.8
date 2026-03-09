@@ -776,6 +776,12 @@
         if (window.DopamineSystem.CameraFX) window.DopamineSystem.CameraFX.reset();
         if (window.DopamineSystem.TimeDilation) window.DopamineSystem.TimeDilation.snap(1.0);
       }
+      // Remove all regular damage-number divs and cancel their cleanup timers.
+      if (window.clearAllDamageNumbers) window.clearAllDamageNumbers();
+      // Forcefully sweep any orphaned damage/flash elements that may have been missed.
+      document.querySelectorAll('.damage-number, .elastic-damage-number, .lvlup-screen-flash').forEach(el => {
+        if (el.parentNode) el.parentNode.removeChild(el);
+      });
       if (window.AdvancedPhysics && window.AdvancedPhysics.KnockbackChain) {
         window.AdvancedPhysics.KnockbackChain.clear();
       }

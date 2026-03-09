@@ -1121,8 +1121,22 @@
       }
     }
 
-    let _activeDamageNumbers = 0;
-    const MAX_DAMAGE_NUMBERS = 12; // Cap to prevent DOM bloat during high-intensity combat
+    // Strict cap on active damage-number DOM elements to prevent DOM bloat.
+    const MAX_DAMAGE_NUMBERS = 20;
+    // Ordered list of active regular damage number entries { el, timerId }.
+    // The oldest entry is always at index 0, allowing O(1) recycling.
+    const _damageNumberEntries = [];
+
+    /** Remove all active damage-number elements (e.g. on game reset). */
+    function clearAllDamageNumbers() {
+      for (let i = 0; i < _damageNumberEntries.length; i++) {
+        const e = _damageNumberEntries[i];
+        if (e.timerId) clearTimeout(e.timerId);
+        if (e.el && e.el.parentNode) e.el.parentNode.removeChild(e.el);
+      }
+      _damageNumberEntries.length = 0;
+    }
+    window.clearAllDamageNumbers = clearAllDamageNumbers;
 
     /**
      * Format a damage value into a compact string so huge numbers (1M+) stay
@@ -1138,21 +1152,26 @@
     window.formatDamageValue = formatDamageValue; // expose for DopamineSystem / elastic numbers
 
     function createDamageNumber(amount, pos, isCrit = false, isHeadshot = false) {
-      // Cap visible damage numbers to prevent DOM bloat
-      if (_activeDamageNumbers >= MAX_DAMAGE_NUMBERS) return;
-
-      // Use elastic spring-physics damage numbers for crits/headshots
+      // Use elastic spring-physics damage numbers for crits/headshots (managed by ElasticNumbers pool).
       if ((isCrit || isHeadshot) && window.DopamineSystem && window.DopamineSystem.ElasticNumbers) {
-        _activeDamageNumbers++;
         window.DopamineSystem.ElasticNumbers.spawn(amount, pos, camera, isCrit, isHeadshot);
-        setTimeout(() => { _activeDamageNumbers = Math.max(0, _activeDamageNumbers - 1); }, 1200);
         return;
       }
 
-      _activeDamageNumbers++;
-
       const fmtAmt = formatDamageValue(amount);
-      const div = document.createElement('div');
+      let div, entry;
+
+      if (_damageNumberEntries.length >= MAX_DAMAGE_NUMBERS) {
+        // Pool is full — recycle the oldest element instead of creating a new DOM node.
+        entry = _damageNumberEntries.shift();
+        if (entry.timerId) clearTimeout(entry.timerId);
+        div = entry.el;
+        entry.timerId = null;
+      } else {
+        div = document.createElement('div');
+        entry = { el: div, timerId: null };
+      }
+
       // Color code by damage type: headshot (red) > crit (gold) > normal (white)
       if (isHeadshot) {
         div.className = 'damage-number headshot';
@@ -1164,24 +1183,35 @@
         div.className = 'damage-number normal';
         div.innerText = fmtAmt;
       }
-      
+
       // Project 3D pos to 2D screen
       const vec = pos.clone();
       vec.y += 1.5;
       vec.project(camera);
-      
+
       const x = (vec.x * .5 + .5) * window.innerWidth;
       const y = (-(vec.y * .5) + .5) * window.innerHeight;
-      
+
       div.style.position = 'absolute';
       div.style.left = `${x}px`;
       div.style.top = `${y}px`;
       div.style.transform = 'translate(-50%, -50%)';
       div.style.whiteSpace = 'pre';
       div.style.textAlign = 'center';
-      
-      document.body.appendChild(div);
-      setTimeout(() => { div.remove(); _activeDamageNumbers = Math.max(0, _activeDamageNumbers - 1); }, 1000);
+
+      // Reset the CSS animation so recycled elements animate from the beginning.
+      div.style.animation = 'none';
+      void div.offsetHeight; // force reflow
+      div.style.animation = '';
+
+      if (!div.parentNode) document.body.appendChild(div);
+
+      _damageNumberEntries.push(entry);
+      entry.timerId = setTimeout(() => {
+        if (div.parentNode) div.parentNode.removeChild(div);
+        const idx = _damageNumberEntries.indexOf(entry);
+        if (idx !== -1) _damageNumberEntries.splice(idx, 1);
+      }, 1000);
     }
     
     // Message fade tracking to prevent memory leaks
