@@ -1605,6 +1605,26 @@
       }
 
       /**
+       * Schedule a deferred flush of the per-enemy accumulated damage display.
+       * Called when a rapid-fire burst occurs within the 100 ms batching window to
+       * ensure the total accumulated damage is eventually shown even if no further
+       * hits arrive to trigger an immediate flush.
+       */
+      _scheduleDamageFlush() {
+        if (this._damageFlushTimer) return; // already scheduled
+        const _self = this;
+        this._damageFlushTimer = setTimeout(() => {
+          _self._damageFlushTimer = null;
+          _self._lastDamageNumberTime = Date.now();
+          if (!_self.isDead && _self.mesh && (_self._accumulatedDamage || 0) > 0) {
+            createDamageNumber(_self._accumulatedDamage, _self.mesh.position, _self._accumulatedCrit || false);
+          }
+          _self._accumulatedDamage = 0;
+          _self._accumulatedCrit   = false;
+        }, 100);
+      }
+
+      /**
        * Apply damage to the enemy
        * @param {number} amount - Damage amount
        * @param {boolean} isCrit - Whether this is a critical hit
@@ -2155,7 +2175,32 @@
 
         const oldHp = this.hp;
         this.hp -= finalAmount;
-        createDamageNumber(Math.floor(finalAmount), this.mesh.position, isCrit);
+
+        // ── Batched damage numbers (100 ms window per enemy) ─────────────────
+        // Rapid-fire weapons (Aura, Shotgun, minigun) can hit the same enemy
+        // many times in a single frame.  Accumulate all damage within a 100 ms
+        // window and emit only ONE floating number, preventing DOM element floods.
+        {
+          const now = Date.now();
+          if (!this._accumulatedDamage)       this._accumulatedDamage      = 0;
+          if (!this._accumulatedCrit)         this._accumulatedCrit        = false;
+          if (!this._lastDamageNumberTime)    this._lastDamageNumberTime   = 0;
+          this._accumulatedDamage += Math.floor(finalAmount);
+          if (isCrit) this._accumulatedCrit = true;
+          if (now - this._lastDamageNumberTime >= 100) {
+            // Enough time has elapsed — flush accumulated total immediately.
+            if (this._damageFlushTimer) { clearTimeout(this._damageFlushTimer); this._damageFlushTimer = null; }
+            createDamageNumber(this._accumulatedDamage, this.mesh.position, this._accumulatedCrit);
+            this._lastDamageNumberTime = now;
+            this._accumulatedDamage    = 0;
+            this._accumulatedCrit      = false;
+          } else if (!this._damageFlushTimer) {
+            // Still within the 100 ms burst window — schedule a deferred flush so
+            // the accumulated total is always eventually shown.
+            this._scheduleDamageFlush();
+          }
+        }
+        // ─────────────────────────────────────────────────────────────────────
 
         // ── LOCALIZED HIT DETECTION ────────────────────────────────────────────────
         // Use hitPoint.y (world-space) relative to enemy base to decide which segment
@@ -2512,7 +2557,10 @@
         if (playerStats.multiHitChance > 0 && !this.isDead && this.hp > 0 && Math.random() < playerStats.multiHitChance) {
           const multiHitDmg = Math.max(1, Math.floor(finalAmount * 0.5));
           this.hp -= multiHitDmg;
-          createDamageNumber(multiHitDmg, this.mesh.position, false);
+          // Feed into the batched accumulator so it appears in the same 100 ms window.
+          this._accumulatedDamage = (this._accumulatedDamage || 0) + multiHitDmg;
+          // If a deferred flush isn't already scheduled, schedule one now.
+          this._scheduleDamageFlush();
         }
 
         // Life steal: heal player for a % of damage dealt
