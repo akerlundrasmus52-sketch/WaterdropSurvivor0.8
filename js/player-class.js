@@ -1070,9 +1070,13 @@
           velStretchXZ = ss.sx;
         }
 
-        this.mesh.scale.y = this.currentScaleY * this._breathScale * velStretchY;
-        this.mesh.scale.x = this.currentScaleXZ * (1.0 - dirStretch * 0.6) * this._breathScale * velStretchXZ;
-        this.mesh.scale.z = this.currentScaleXZ * (1.0 + dirStretch * 0.5) * this._breathScale * velStretchXZ;
+        const _scaleY  = this.currentScaleY * this._breathScale * velStretchY;
+        const _scaleXZ = this.currentScaleXZ * this._breathScale * velStretchXZ;
+        const _scaleX  = _scaleXZ * (1.0 - dirStretch * 0.6);
+        const _scaleZ  = _scaleXZ * (1.0 + dirStretch * 0.5);
+        this.mesh.scale.y = Math.max(0.1, Math.min(3.0, isNaN(_scaleY) ? 1.0 : _scaleY));
+        this.mesh.scale.x = Math.max(0.1, Math.min(3.0, isNaN(_scaleX) ? 1.0 : _scaleX));
+        this.mesh.scale.z = Math.max(0.1, Math.min(3.0, isNaN(_scaleZ) ? 1.0 : _scaleZ));
         
         // Blinking eyes animation
         this.blinkTimer += dt;
