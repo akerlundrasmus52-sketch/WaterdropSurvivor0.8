@@ -161,6 +161,90 @@ function showFocusPathPrompt(onWeapons, onPassives) {
   document.getElementById('fp-passives').addEventListener('pointerdown', () => { modal.style.display='none'; onPassives(); });
 }
 
+// ── Dynamic Focus-Weapon Pool ─────────────────────────────────────────────────
+// Generates 3 upgrade cards per owned weapon: +Damage, -Cooldown, +Special.
+// Rarity is rolled immediately so each card already carries _rarity/rarityName/
+// rarityColor and will be skipped by makeRarityScaledUpgrade (which checks _rarity).
+function buildFocusWeaponPool() {
+  // Per-weapon metadata: base stat increments and a "special" upgrade factory.
+  const META = {
+    gun:          { icon:'🔫', name:'GUN',          dmgBase:10, cdBase:0.10, special:(w,s)=>({ label:`+${Math.round(1*s)} Projectile`,   fn:()=>{ w.barrels = (w.barrels||1)+Math.round(1*s); } }) },
+    sword:        { icon:'⚔️',  name:'SWORD',        dmgBase:15, cdBase:0.10, special:(w,s)=>({ label:`+${(0.5*s).toFixed(1)} Range`,     fn:()=>{ w.range = (w.range||3.5)+0.5*s; } }) },
+    samuraiSword: { icon:'⚔️',  name:'SAMURAI',      dmgBase:18, cdBase:0.10, special:(w,s)=>({ label:`+${(0.5*s).toFixed(1)} Range`,     fn:()=>{ w.range = (w.range||4.0)+0.5*s; } }) },
+    whip:         { icon:'🪢', name:'WHIP',          dmgBase:8,  cdBase:0.10, special:(w,s)=>({ label:`+${Math.round(1*s)} Chain`,        fn:()=>{ w.chainHits = (w.chainHits||3)+Math.round(1*s); } }) },
+    uzi:          { icon:'🔫', name:'UZI',           dmgBase:4,  cdBase:0.10, special:(w,s)=>({ label:`+${Math.round(1*s)} Barrel`,       fn:()=>{ w.barrels = (w.barrels||1)+Math.round(1*s); } }) },
+    sniperRifle:  { icon:'🎯', name:'SNIPER',        dmgBase:25, cdBase:0.10, special:(w,s)=>({ label:`+${Math.round(1*s)} Pierce`,       fn:()=>{ w.piercing = (w.piercing||3)+Math.round(1*s); } }) },
+    pumpShotgun:  { icon:'💥', name:'PUMP SHOTGUN',  dmgBase:6,  cdBase:0.10, special:(w,s)=>({ label:`+${Math.round(2*s)} Pellets`,      fn:()=>{ w.pellets = (w.pellets||8)+Math.round(2*s); } }) },
+    autoShotgun:  { icon:'💥', name:'AUTO SHOTGUN',  dmgBase:5,  cdBase:0.10, special:(w,s)=>({ label:`+${Math.round(2*s)} Pellets`,      fn:()=>{ w.pellets = (w.pellets||6)+Math.round(2*s); } }) },
+    minigun:      { icon:'🔥', name:'MINIGUN',       dmgBase:3,  cdBase:0.08, special:(w,s)=>({ label:`+${Math.round(1*s)} Barrel`,       fn:()=>{ w.barrels = (w.barrels||1)+Math.round(1*s); } }) },
+    bow:          { icon:'🏹', name:'BOW',           dmgBase:10, cdBase:0.10, special:(w,s)=>({ label:`+${Math.round(1*s)} Pierce`,       fn:()=>{ w.piercing = (w.piercing||1)+Math.round(1*s); } }) },
+    teslaSaber:   { icon:'⚡', name:'TESLA SABER',   dmgBase:12, cdBase:0.10, special:(w,s)=>({ label:`+${(0.5*s).toFixed(1)} Range`,     fn:()=>{ w.range = (w.range||3.5)+0.5*s; } }) },
+    doubleBarrel: { icon:'🔫', name:'DOUBLE BARREL', dmgBase:12, cdBase:0.10, special:(w,s)=>({ label:`+${Math.round(2*s)} Pellets`,      fn:()=>{ w.pellets = (w.pellets||12)+Math.round(2*s); } }) },
+    droneTurret:  { icon:'🤖', name:'DRONE',         dmgBase:3,  cdBase:0.10, special:(w,s)=>({ label:`+${(0.5*s).toFixed(1)} Range`,     fn:()=>{ w.range = (w.range||15)+0.5*s; } }) },
+    aura:         { icon:'🌀', name:'AURA',          dmgBase:3,  cdBase:0.10, special:(w,s)=>({ label:`+${(0.3*s).toFixed(1)} Range`,     fn:()=>{ w.range = Math.min(8,(w.range||3)+0.3*s); } }) },
+    boomerang:    { icon:'🪃', name:'BOOMERANG',     dmgBase:10, cdBase:0.10, special:(w,s)=>({ label:`+${Math.round(1*s)} Range`,        fn:()=>{ w.range = (w.range||12)+Math.round(1*s); } }) },
+    shuriken:     { icon:'✦',  name:'SHURIKEN',      dmgBase:5,  cdBase:0.10, special:(w,s)=>({ label:`+${Math.round(1*s)} Star`,         fn:()=>{ w.projectiles = (w.projectiles||3)+Math.round(1*s); } }) },
+    nanoSwarm:    { icon:'🤖', name:'NANO SWARM',    dmgBase:2,  cdBase:0.10, special:(w,s)=>({ label:`+${Math.round(2*s)} Nanobots`,     fn:()=>{ w.swarmCount = (w.swarmCount||6)+Math.round(2*s); } }) },
+    homingMissile:{ icon:'🚀', name:'MISSILE',       dmgBase:15, cdBase:0.10, special:(w,s)=>({ label:`+${Math.round(1*s)} Lock-On`,      fn:()=>{ w.projectiles = (w.projectiles||1)+Math.round(1*s); } }) },
+    iceSpear:     { icon:'❄️', name:'ICE SPEAR',     dmgBase:10, cdBase:0.10, special:(w,s)=>({ label:`+${(0.5*s).toFixed(1)}s Slow`,    fn:()=>{ w.slowDuration = (w.slowDuration||2000)+Math.round(500*s); } }) },
+    meteor:       { icon:'☄️', name:'METEOR',        dmgBase:20, cdBase:0.10, special:(w,s)=>({ label:`+${Math.round(1*s)} Area`,         fn:()=>{ w.area = (w.area||5)+Math.round(1*s); } }) },
+    fireRing:     { icon:'🔥', name:'FIRE RING',     dmgBase:5,  cdBase:0.10, special:(w,s)=>({ label:`+${Math.round(1*s)} Orb`,          fn:()=>{ w.orbs = (w.orbs||3)+Math.round(1*s); } }) },
+    lightning:    { icon:'⚡', name:'LIGHTNING',     dmgBase:15, cdBase:0.10, special:(w,s)=>({ label:`+${Math.round(1*s)} Strike`,       fn:()=>{ w.strikes = (w.strikes||1)+Math.round(1*s); } }) },
+    poison:       { icon:'☠️', name:'POISON',        dmgBase:2,  cdBase:0.10, special:(w,s)=>({ label:`+${Math.round(2*s)} DoT Dmg`,      fn:()=>{ w.dotDamage = (w.dotDamage||3)+Math.round(2*s); } }) },
+    fireball:     { icon:'🔥', name:'FIREBALL',      dmgBase:12, cdBase:0.10, special:(w,s)=>({ label:`+${(0.5*s).toFixed(1)} Blast Radius`, fn:()=>{ w.explosionRadius = (w.explosionRadius||3)+0.5*s; } }) }
+  };
+
+  const pool = [];
+  Object.entries(weapons).forEach(([key, w]) => {
+    if (!w || !w.active) return;
+    const meta = META[key];
+    if (!meta) return;
+
+    // 1) +Damage card (rarity-scaled flat damage bonus)
+    const rDmg = rollUpgradeRarity();
+    const dmgAmt = Math.round(meta.dmgBase * rDmg.scale);
+    pool.push({
+      id: `wfocus_${key}_dmg`, weaponKey: key,
+      icon: meta.icon,
+      title: `${meta.name}: +${dmgAmt} Damage`,
+      desc: `${meta.name} Damage +${dmgAmt} flat`,
+      _rarity: rDmg, rarityName: rDmg.label, rarityColor: rDmg.color,
+      apply: () => { w.damage += dmgAmt; showStatChange(`[${rDmg.label}] ${meta.name} +${dmgAmt} Damage`); }
+    });
+
+    // 2) -Cooldown card (rarity-scaled fire-rate boost)
+    // cdPct is at most meta.cdBase*100*5 (Mythic scale); the 50% cap below prevents
+    // a single card from halving the cooldown even at very high rarity scales.
+    const rCd = rollUpgradeRarity();
+    const cdPct = Math.round(meta.cdBase * 100 * rCd.scale);
+    const cdFactor = 1 - Math.min(0.5, cdPct / 100); // cap reduction at 50%
+    pool.push({
+      id: `wfocus_${key}_cd`, weaponKey: key,
+      icon: meta.icon,
+      title: `${meta.name}: -${cdPct}% Cooldown`,
+      desc: `${meta.name} Fire Rate +${cdPct}%`,
+      _rarity: rCd, rarityName: rCd.label, rarityColor: rCd.color,
+      apply: () => {
+        w.cooldown = Math.max(50, Math.round(w.cooldown * cdFactor));
+        showStatChange(`[${rCd.label}] ${meta.name} -${cdPct}% Cooldown`);
+      }
+    });
+
+    // 3) Special upgrade card (weapon-specific stat; e.g. +1 Projectile for gun)
+    const rSp = rollUpgradeRarity();
+    const sp   = meta.special(w, rSp.scale);
+    pool.push({
+      id: `wfocus_${key}_special`, weaponKey: key,
+      icon: meta.icon,
+      title: `${meta.name}: ${sp.label}`,
+      desc: `${meta.name} ${sp.label}`,
+      _rarity: rSp, rarityName: rSp.label, rarityColor: rSp.color,
+      apply: () => { sp.fn(); showStatChange(`[${rSp.label}] ${meta.name}: ${sp.label}`); }
+    });
+  });
+  return pool;
+}
+
 // ── Boss Chests & Relics ──────────────────────────────────────────────────────
 window.bossChests = window.bossChests || [];
 
@@ -652,7 +736,7 @@ window.spawnBossChest = function(x, z) {
         
         // Phase 3: Weapon upgrades now go to level 5 (up from 4)
         // Offer weapon upgrades for active weapons
-        if (weapons.gun.active && weapons.gun.level < 5) {
+        if (weapons.gun.active) {
           const nextLevel = weapons.gun.level + 1;
           choices.push({ 
             id: 'gun_upgrade', 
@@ -668,7 +752,7 @@ window.spawnBossChest = function(x, z) {
           });
         }
         
-        if (weapons.sword.active && weapons.sword.level < 5) {
+        if (weapons.sword.active) {
           const nextLevel = weapons.sword.level + 1;
           choices.push({ 
             id: 'sword_upgrade', 
@@ -684,7 +768,7 @@ window.spawnBossChest = function(x, z) {
           });
         }
         
-        if (weapons.aura.active && weapons.aura.level < 5) {
+        if (weapons.aura.active) {
           const nextLevel = weapons.aura.level + 1;
           const baseRange = 3; // Initial range
           const currentRange = weapons.aura.range;
@@ -705,7 +789,7 @@ window.spawnBossChest = function(x, z) {
           });
         }
         
-        if (weapons.meteor.active && weapons.meteor.level < 5) {
+        if (weapons.meteor.active) {
           const nextLevel = weapons.meteor.level + 1;
           choices.push({ 
             id: 'meteor_upgrade', 
@@ -721,7 +805,7 @@ window.spawnBossChest = function(x, z) {
           });
         }
         
-        if (weapons.droneTurret.active && weapons.droneTurret.level < 5) {
+        if (weapons.droneTurret.active) {
           const nextLevel = weapons.droneTurret.level + 1;
           // Phase 3: Define levels where drones are added
           const DRONE_TURRET_SPAWN_LEVELS = [2, 4, 5];
@@ -757,7 +841,7 @@ window.spawnBossChest = function(x, z) {
           });
         }
         
-        if (weapons.doubleBarrel.active && weapons.doubleBarrel.level < 5) {
+        if (weapons.doubleBarrel.active) {
           const nextLevel = weapons.doubleBarrel.level + 1;
           choices.push({ 
             id: 'doublebarrel_upgrade', 
@@ -774,7 +858,7 @@ window.spawnBossChest = function(x, z) {
           });
         }
         
-        if (weapons.iceSpear.active && weapons.iceSpear.level < 5) {
+        if (weapons.iceSpear.active) {
           const nextLevel = weapons.iceSpear.level + 1;
           choices.push({ 
             id: 'icespear_upgrade', 
@@ -791,7 +875,7 @@ window.spawnBossChest = function(x, z) {
           });
         }
         
-        if (weapons.fireRing.active && weapons.fireRing.level < 5) {
+        if (weapons.fireRing.active) {
           const nextLevel = weapons.fireRing.level + 1;
           choices.push({ 
             id: 'firering_upgrade', 
@@ -944,6 +1028,7 @@ window.spawnBossChest = function(x, z) {
 
         // ── Weapon-upgrade entries (used both at cap and as padding) ─────────
         // Weapons at level 9 show an EVOLVE option that triggers their Mythic form.
+        // After evolution, the regular upgrade is always shown (no hard level cap).
         function makeUpgradeEntry(key, icon, label, regularApply) {
           const w = weapons[key];
           if (!w || !w.active) return null;
@@ -951,8 +1036,8 @@ window.spawnBossChest = function(x, z) {
             const evo = WEAPON_EVOLUTIONS[key] || { name: key.toUpperCase(), icon: '⭐', desc: 'Mythic Evolution' };
             return { id: `${key}_evo`, icon: evo.icon, title: `✨ EVOLVE: ${evo.name}`, desc: evo.desc, apply: () => { applyWeaponEvolution(key); } };
           }
-          if (w.level < 10) return { id: `${key}_up`, icon, title: `${label} Lv.${w.level + 1}`, desc: `Upgrade ${label}`, apply: regularApply };
-          return null;
+          // No hard level cap — allow endless scaling for late-game
+          return { id: `${key}_up`, icon, title: `${label} Lv.${w.level + 1}`, desc: `Upgrade ${label}`, apply: regularApply };
         }
 
         const upgradeWeapons = [
@@ -1159,8 +1244,8 @@ window.spawnBossChest = function(x, z) {
         choices.push(...perkUnlockFillers);
       }
       else {
-        // ── Focus Path Prompt (regular levels only, not bonus rounds, only from level 4+) ──────────
-        if (!isBonusRound && focusPath === null && playerStats.lvl >= WEAPON_UNLOCK_LEVELS[0]) {
+        // ── Focus Path Prompt (regular levels only, not bonus rounds, starts at level 5) ──────────
+        if (!isBonusRound && focusPath === null && playerStats.lvl > 4) {
           showFocusPathPrompt(
             () => showUpgradeModal(isBonusRound, 'weapons'),
             () => showUpgradeModal(isBonusRound, 'passives')
@@ -1168,9 +1253,10 @@ window.spawnBossChest = function(x, z) {
           return;
         }
 
-        // ALWAYS SHOW 6 CHOICES: Show 6 random choices for 2×3 grid
-        // When a path is chosen: WEAPON → only weapon upgrade cards; PASSIVE → only stat boosts.
-        // No path (level < 4): standard mixed upgrades.
+        // ALWAYS SHOW 3 CHOICES:
+        // WEAPON focus (level 5+) → dynamic per-weapon upgrade cards
+        // PASSIVE focus (level 5+) → stat boosts with rarity math
+        // No path (level ≤ 4)     → mixed passives + basic weapon unlocks
         
         // Create weighted pool with Fisher-Yates shuffle for proper randomization
         const weightedPool = [];
@@ -1179,25 +1265,19 @@ window.spawnBossChest = function(x, z) {
         const isWeaponFocus  = focusPath === 'weapons';
         const isPassiveFocus = focusPath === 'passives';
 
-        // Shared weapon upgrade pool — filtered to weapons the player actually owns
-        const allWupEntries = [
-          { id:'wup_gun',     weaponKey:'gun',      icon:'🔫', title:'GUN Upgrade',       desc:'Gun Dmg+10, Fire Rate+15%', apply:()=>{ if(weapons.gun.active&&weapons.gun.level<10){weapons.gun.level++;weapons.gun.damage+=10;weapons.gun.cooldown*=0.85;showStatChange('Gun upgraded!');} } },
-          { id:'wup_sword',   weaponKey:'sword',    icon:'⚔️', title:'SWORD Upgrade',     desc:'Sword Dmg+15, Range+0.5',   apply:()=>{ if(weapons.sword.active&&weapons.sword.level<10){weapons.sword.level++;weapons.sword.damage+=15;weapons.sword.range+=0.5;showStatChange('Sword upgraded!');} } },
-          { id:'wup_aura',    weaponKey:'aura',     icon:'🌀', title:'AURA Upgrade',      desc:'Aura Dmg+3, Range+0.3',     apply:()=>{ if(weapons.aura.active&&weapons.aura.level<10){weapons.aura.level++;weapons.aura.damage+=3;weapons.aura.range=Math.min(5,weapons.aura.range*1.1);showStatChange('Aura upgraded!');} } },
-          { id:'wup_meteor',  weaponKey:'meteor',   icon:'☄️', title:'METEOR Upgrade',    desc:'Meteor Dmg+20, Area+1',     apply:()=>{ if(weapons.meteor.active&&weapons.meteor.level<10){weapons.meteor.level++;weapons.meteor.damage+=20;weapons.meteor.area+=1;showStatChange('Meteor upgraded!');} } },
-          { id:'wup_firering',weaponKey:'fireRing', icon:'🔥', title:'FIRE RING Upgrade', desc:'Fire Ring Dmg+5, +1 Orb',   apply:()=>{ if(weapons.fireRing.active&&weapons.fireRing.level<10){weapons.fireRing.level++;weapons.fireRing.damage+=5;weapons.fireRing.orbs+=1;showStatChange('Fire Ring upgraded!');} } },
-        ].filter(e => weapons[e.weaponKey] && weapons[e.weaponKey].active);
+        // Build dynamic per-weapon pool (3 cards per active weapon: Damage / Cooldown / Special)
+        const focusWeaponPool = buildFocusWeaponPool();
 
         if (isWeaponFocus) {
-          // WEAPON path: ONLY weapon upgrade entries for active weapons
-          allWupEntries.forEach(e => weightedPool.push({ upgrade: e, weight: 1 }));
+          // WEAPON path: fully dynamic, per-weapon upgrade cards for all owned weapons
+          focusWeaponPool.forEach(e => weightedPool.push({ upgrade: e, weight: 1 }));
         } else if (isPassiveFocus) {
-          // PASSIVE path: ONLY stat boost entries
+          // PASSIVE path: ONLY stat boost entries (rarity math applied below)
           commonUpgrades.forEach(upgrade => {
             weightedPool.push({ upgrade, weight: 1 });
           });
         } else {
-          // No path chosen (level < 4): mixed upgrades — both weapons AND passives
+          // No path chosen (level ≤ 4): mixed passives + basic weapon unlocks for variety
           commonUpgrades.forEach(upgrade => {
             let w;
             if (upgrade.id === 'str' || upgrade.id === 'aspd') {
@@ -1210,8 +1290,19 @@ window.spawnBossChest = function(x, z) {
             }
             weightedPool.push({ upgrade, weight: w });
           });
-          // Include weapon upgrades for weapons the player actually owns (levels 1-3 mix)
-          allWupEntries.forEach(e => weightedPool.push({ upgrade: e, weight: 2 }));
+          // Basic weapon unlock options for inactive weapons (early-level variety)
+          // Each entry carries an explicit `weaponKey` for reliable membership test.
+          const basicWeaponUnlocks = [
+            { id:'bwu_sword',     weaponKey:'sword',     icon:'⚔️',  title:'TIDAL SLASH',  desc:'New Weapon: Sword — slash enemies in front',   apply:()=>{ if(!weapons.sword.active){weapons.sword.active=true;weapons.sword.level=1;showStatChange('New Weapon: Sword!');} } },
+            { id:'bwu_aura',      weaponKey:'aura',      icon:'🌀',  title:'STORM SURGE',  desc:'New Weapon: Aura — zap nearby enemies',        apply:()=>{ if(!weapons.aura.active){weapons.aura.active=true;weapons.aura.level=1;showStatChange('New Weapon: Aura!');} } },
+            { id:'bwu_meteor',    weaponKey:'meteor',    icon:'☄️',  title:'HAILSTORM',    desc:'New Weapon: Meteor — call meteors from sky',   apply:()=>{ if(!weapons.meteor.active){weapons.meteor.active=true;weapons.meteor.level=1;showStatChange('New Weapon: Meteor!');} } },
+            { id:'bwu_fireRing',  weaponKey:'fireRing',  icon:'🔥',  title:'FIRE RING',    desc:'New Weapon: Fire Ring — orbiting fire orbs',   apply:()=>{ if(!weapons.fireRing.active){weapons.fireRing.active=true;weapons.fireRing.level=1;showStatChange('New Weapon: Fire Ring!');} } },
+            { id:'bwu_iceSpear',  weaponKey:'iceSpear',  icon:'❄️',  title:'ICE SPEAR',    desc:'New Weapon: Ice Spear — slows enemies 40%',    apply:()=>{ if(!weapons.iceSpear.active){weapons.iceSpear.active=true;weapons.iceSpear.level=1;showStatChange('New Weapon: Ice Spear!');} } },
+            { id:'bwu_boomerang', weaponKey:'boomerang', icon:'🪃',  title:'BOOMERANG',    desc:'New Weapon: Boomerang — hits enemies both ways',apply:()=>{ if(!weapons.boomerang.active){weapons.boomerang.active=true;weapons.boomerang.level=1;showStatChange('New Weapon: Boomerang!');} } },
+          ].filter(e => weapons[e.weaponKey] && !weapons[e.weaponKey].active);
+          basicWeaponUnlocks.forEach(e => weightedPool.push({ upgrade: e, weight: 2 }));
+          // Also include gun-specific dynamic upgrades for the always-active gun
+          focusWeaponPool.filter(e => e.weaponKey === 'gun').forEach(e => weightedPool.push({ upgrade: e, weight: 1 }));
         }
         
         // Expand weighted pool based on weights
