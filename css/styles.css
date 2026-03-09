@@ -1862,6 +1862,15 @@
       box-sizing: border-box;
     }
 
+    #upgrade-choices {
+      display: flex;
+      flex-wrap: wrap; /* CRITICAL: allows cards to wrap to a second row */
+      gap: 10px;
+      justify-content: center;
+      align-items: center;
+      max-width: 100%;
+    }
+
     /* Playing-card layout: items keep their own fixed width (200px set inline). */
     #upgrade-list > *, #level-up-choices > * {
       flex-shrink: 0;
@@ -1933,11 +1942,12 @@
     }
 
     .upgrade-card {
-      width: 200px;
-      height: 320px;
+      width: clamp(120px, 28vw, 160px) !important; /* Scales down on small screens */
+      height: clamp(180px, 40vw, 240px) !important;
       background: linear-gradient(180deg, #1a1a2e, #0d1020);
       margin: 0;
-      padding: 15px;
+      padding: 10px !important;
+      font-size: clamp(10px, 2vw, 14px); /* Shrinks text */
       border-radius: 12px;
       border: 2px solid #888888;
       outline: none;
