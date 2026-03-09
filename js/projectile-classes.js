@@ -681,14 +681,8 @@
                 window.BloodSystem.emitPulse(headPos, { pulses: 4, perPulse: 400, interval: 200, spreadXZ: 1.6 });
               }
               
-              // Flash effect
-              const headshotLight = new THREE.PointLight(0xFF0000, 12, 20);
-              headshotLight.position.copy(enemy.mesh.position);
-              headshotLight.position.y += 2;
-              scene.add(headshotLight);
-              setTimeout(() => {
-                scene.remove(headshotLight);
-              }, 200);
+              // Flash effect disabled — PointLights on standard projectiles are too expensive
+              // (only explosions cast temporary light)
             } else if (isCrit) {
               // Normal crit
               dmg *= playerStats.critDmg;
@@ -701,14 +695,8 @@
               spawnParticles(enemy.mesh.position, 0xFFD700, 15); // Gold particles
               spawnParticles(enemy.mesh.position, 0xFFA500, 10); // Orange particles
               
-              // Brief golden light flash
-              const critLight = new THREE.PointLight(0xFFD700, 8, 15);
-              critLight.position.copy(enemy.mesh.position);
-              critLight.position.y += 1;
-              scene.add(critLight);
-              setTimeout(() => {
-                scene.remove(critLight);
-              }, 150);
+              // Brief golden light flash disabled — PointLights on standard projectiles are too expensive
+              // (only explosions cast temporary light)
             } else {
               // Normal hit — pass weapon-specific damageType for downstream effects
               const hitDmgType = this.isSniperRifle ? 'sniperRifle' : (this.isDroneTurret ? 'drone' : (this.isDoubleBarrel ? 'doubleBarrel' : 'gun'));

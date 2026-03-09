@@ -377,14 +377,12 @@
           color = 0xFF00FF; // Magenta base — cycles each frame
         }
 
-        const material = new THREE.MeshPhysicalMaterial({ 
+        const material = new THREE.MeshStandardMaterial({
           color: color,
           transparent: true,
           opacity: type === 18 ? _REPTILIAN_CAMO_OPACITY : 0.85,  // Reptilian Shifter starts nearly invisible
           metalness: (type === 10 || type === 11 || type === 19) ? 0.4 : (type === 13 ? 0.3 : 0.1),
           roughness: type === 13 ? 0.8 : (type === 19 ? 0.1 : 0.6),
-          transmission: 0.2,
-          thickness: 0.5,
           emissive: (type === 10 || type === 11 || type === 19 || type === 20) ? color : 0x000000,
           emissiveIntensity: type === 10 ? 0.3 : (type === 11 ? 0.5 : (type === 19 ? 0.6 : (type === 20 ? 1.0 : 0)))
         });
@@ -419,9 +417,8 @@
           // baseGroup — flat slug/foot disc that expands/contracts with the pump cycle
           this.baseGroup = new THREE.Group();
           const _bGeo = new THREE.CylinderGeometry(_bR * 1.05, _bR * 1.2, 0.20, 10);
-          const _bMat = new THREE.MeshPhysicalMaterial({
-            color, transparent: true, opacity: 0.68, roughness: 0.9,
-            transmission: 0.1, thickness: 0.3
+          const _bMat = new THREE.MeshLambertMaterial({
+            color, transparent: true, opacity: 0.68
           });
           this._anatBaseMesh = new THREE.Mesh(_bGeo, _bMat);
           this._anatBaseMesh.position.y = type === 11 ? -2.4 : (type === 19 ? -1.4 : (type === 20 ? -100 : -0.36));
@@ -435,15 +432,14 @@
           // headGroup — small sphere cap + jaw nub; tracks the player with lerp delay
           this.headGroup = new THREE.Group();
           const _hGeo = new THREE.SphereGeometry(_hR, 7, 7);
-          const _hMat = new THREE.MeshPhysicalMaterial({
-            color, transparent: true, opacity: 0.88, roughness: 0.5,
-            transmission: 0.15, thickness: 0.2
+          const _hMat = new THREE.MeshLambertMaterial({
+            color, transparent: true, opacity: 0.88
           });
           this._anatHeadMesh = new THREE.Mesh(_hGeo, _hMat);
           this.headGroup.add(this._anatHeadMesh);
           // Jaw nub: small cylinder below and slightly forward of the head centre
           const _jGeo = new THREE.CylinderGeometry(_hR * 0.35, _hR * 0.55, _hR * 0.55, 6);
-          const _jMat = new THREE.MeshPhysicalMaterial({ color, transparent: true, opacity: 0.80, roughness: 0.7 });
+          const _jMat = new THREE.MeshLambertMaterial({ color, transparent: true, opacity: 0.80 });
           this._anatJawMesh = new THREE.Mesh(_jGeo, _jMat);
           this._anatJawMesh.position.set(0, -_hR * 0.55, _hR * 0.45);
           this._anatJawMesh.rotation.x = 0.4;

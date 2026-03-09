@@ -34,11 +34,15 @@
       this.mesh.count = 0;
       this.maxCount = maxCount;
       this._count = 0;
+      this._prevCount = 0;
+      this._dirty = false;
     }
 
     /** Begin a new frame — reset the instance counter. */
     begin() {
+      this._prevCount = this._count;
       this._count = 0;
+      this._dirty = false;
     }
 
     /**
@@ -51,6 +55,7 @@
     push(position, rotation, scale, color) {
       if (this._count >= this.maxCount) return;
       const idx = this._count++;
+      this._dirty = true;
 
       _quat.setFromEuler(rotation);
       _mat4.compose(position, _quat, scale);
@@ -68,6 +73,7 @@
     pushFromMesh(mesh, color) {
       if (this._count >= this.maxCount) return;
       const idx = this._count++;
+      this._dirty = true;
 
       _pos.copy(mesh.position);
       _quat.setFromEuler(mesh.rotation);
@@ -81,13 +87,15 @@
       }
     }
 
-    /** Finish the frame — commit buffers to the GPU. */
+    /** Finish the frame — commit buffers to the GPU only if something changed. */
     end() {
       this.mesh.count = this._count;
-      if (this._count > 0) {
-        this.mesh.instanceMatrix.needsUpdate = true;
-        if (this.mesh.instanceColor) {
-          this.mesh.instanceColor.needsUpdate = true;
+      if (this._dirty || this._count !== this._prevCount) {
+        if (this._count > 0) {
+          this.mesh.instanceMatrix.needsUpdate = true;
+          if (this.mesh.instanceColor) {
+            this.mesh.instanceColor.needsUpdate = true;
+          }
         }
       }
     }
