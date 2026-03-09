@@ -467,6 +467,7 @@
         this.isFireball = false;
         this.pierceCount = 0;
         this.explosionRadius = 0;
+        this.hitRadius = 0.3; // Radius used for collision detection
 
         // Reset mesh state — use the cached material colour (soft yellow/white glow).
         this.mesh.position.set(x, 0.5, z);
@@ -600,15 +601,16 @@
         }
 
         // Collision Check - with piercing support
-        // Direct array scan is faster than a badly-performing spatial hash under load
-        for (let enemy of enemies) {
-          if (enemy.isDead) continue;
+        // Brute-force distance check: bullets move fast (tunneling prevention via hitRadius)
+        for (let i = 0; i < enemies.length; i++) {
+          const enemy = enemies[i];
+          if (!enemy.active || enemy.isDead) continue;
           if (!enemy.mesh) continue; // Guard: mesh disposed or instancing active
           if (this.hitEnemies.has(enemy)) continue; // Skip already-hit enemies
-          
-          const dx = this.mesh.position.x - enemy.mesh.position.x;
-          const dz = this.mesh.position.z - enemy.mesh.position.z;
-          if (dx*dx + dz*dz < 0.6) { // Hit radius
+
+          const distSq = (this.mesh.position.x - enemy.mesh.position.x) ** 2 + (this.mesh.position.z - enemy.mesh.position.z) ** 2;
+          const hitThreshold = (enemy.hitRadius || 0.7) * (enemy.hitRadius || 0.7) + (this.hitRadius || 0.3) * (this.hitRadius || 0.3);
+          if (distSq < hitThreshold) {
             // Calculate Damage
             // Reflected projectiles deal their original damage (stored in this.damage)
             let dmg = this._reflected
@@ -1584,6 +1586,7 @@
         this.speed = 0.42 * (window._projSpeedMultiplier || 1.0); // Slightly faster — ice shards fly fast
         this.active = true;
         this.life = 70; // Frames - longer range than normal projectile
+        this.hitRadius = 0.3; // Radius used for collision detection
 
         // Calculate direction — keep flat on XZ plane (no vertical component)
         const dx = target.x - x;
@@ -1627,19 +1630,14 @@
           return false;
         }
 
-        // Collision Check — use spatial hash if available
-        var _nearbyIce = enemies;
-        if (window._enemySpatialHash) {
-          _nearbyIce = window._enemySpatialHash.query(
-            this.mesh.position.x, this.mesh.position.z, 1.5
-          );
-        }
-        for (let enemy of _nearbyIce) {
-          if (enemy.isDead) continue;
+        // Collision Check — brute-force scan (no spatial hash to avoid tunneling)
+        for (let i = 0; i < enemies.length; i++) {
+          const enemy = enemies[i];
+          if (!enemy.active || enemy.isDead) continue;
           if (!enemy.mesh) continue; // Guard: mesh disposed or instancing active
-          const dx = this.mesh.position.x - enemy.mesh.position.x;
-          const dz = this.mesh.position.z - enemy.mesh.position.z;
-          if (dx*dx + dz*dz < 0.6) {
+          const distSq = (this.mesh.position.x - enemy.mesh.position.x) ** 2 + (this.mesh.position.z - enemy.mesh.position.z) ** 2;
+          const hitThreshold = (enemy.hitRadius || 0.7) * (enemy.hitRadius || 0.7) + (this.hitRadius || 0.3) * (this.hitRadius || 0.3);
+          if (distSq < hitThreshold) {
             let dmg = weapons.iceSpear.damage * playerStats.damage * playerStats.strength;
             // Apply ice damage bonus from skills
             if (playerStats.iceDamage > 0 || playerStats.elementalDamage > 0) {

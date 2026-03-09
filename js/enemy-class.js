@@ -553,7 +553,9 @@
         // Stats based on type — delegated to GameEnemies.getEnemyBaseStats
         Object.assign(this, getEnemyBaseStats(type, levelScaling, GAME_CONFIG.enemySpeedBase, playerLevel));
         this.isDead = false;
+        this.active = true; // Marks enemy as active for hit detection; cleared in die()
         this.isDamaged = false; // Track if enemy has been visually damaged
+        this.hitRadius = 0.75; // Radius used for projectile hit detection
         this.pulsePhase = Math.random() * Math.PI;
         this.wobbleOffset = Math.random() * 100;
         this.lastAttackTime = 0;
@@ -705,18 +707,18 @@
           }
           // Smart retreat - predict player direction and dodge accordingly
           if (dist < 3.0) {
-            const retreatX = -(dx / dist) + this._playerVelocity.x * 0.3;
-            const retreatZ = -(dz / dist) + this._playerVelocity.z * 0.3;
+            const retreatX = -(dx / dist);
+            const retreatZ = -(dz / dist);
             const rMag = Math.sqrt(retreatX*retreatX + retreatZ*retreatZ) || 1;
-            this.mesh.position.x += (retreatX / rMag) * this.speed * 1.8;
-            this.mesh.position.z += (retreatZ / rMag) * this.speed * 1.8;
+            this.mesh.position.x += (retreatX / rMag) * this.speed * 1.8 * 60 * dt;
+            this.mesh.position.z += (retreatZ / rMag) * this.speed * 1.8 * 60 * dt;
           } else {
             // Strafe while shooting - vary pattern
             const strafeDir = Math.sin(gameTime * 3 + this.wobbleOffset) > 0 ? 1 : -1;
             const perpX = -dz / dist;
             const perpZ =  dx / dist;
-            this.mesh.position.x += perpX * this.speed * 0.5 * strafeDir;
-            this.mesh.position.z += perpZ * this.speed * 0.5 * strafeDir;
+            this.mesh.position.x += perpX * this.speed * 0.5 * strafeDir * 60 * dt;
+            this.mesh.position.z += perpZ * this.speed * 0.5 * strafeDir * 60 * dt;
           }
           this.mesh.rotation.y = Math.atan2(dx, dz);
         } else if (this.type === 12 && dist < this.attackRange) {
@@ -825,21 +827,14 @@
             // Skip all movement below
           } else {
           
-          // Base movement towards target — with slight prediction for smoother interception
-          // speed * 60 estimates distance-per-second at ~60fps; +1 avoids division by zero
-
+          // Base movement towards target — simple direct approach (no prediction to avoid instability)
           // ── RAGE FLEE: When player's Rage Mode is active, ALL enemies turn tail and run ──
           // Invert velocity direction so they flee from the player.
           const _isRageFlee = window.GameRageCombat && window.GameRageCombat.isRageActive;
 
-          const _predictT = _isRageFlee ? 0 : Math.min(dist / (this.speed * 60 + 1), 0.8);
-          const _predX = targetPos.x + this._playerVelocity.x * _predictT * 0.3;
-          const _predZ = targetPos.z + this._playerVelocity.z * _predictT * 0.3;
-          const _pdx = _isRageFlee ? -(dx / (dist || 1)) : (_predX - this.mesh.position.x);
-          const _pdz = _isRageFlee ? -(dz / (dist || 1)) : (_predZ - this.mesh.position.z);
-          const _pdist = _isRageFlee ? 1 : (Math.sqrt(_pdx * _pdx + _pdz * _pdz) || 1);
-          let vx = (_pdx / _pdist) * this.speed;
-          let vz = (_pdz / _pdist) * this.speed;
+          const _safeDistInv = dist > 0.01 ? 1 / dist : 0;
+          let vx = (_isRageFlee ? -dx : dx) * _safeDistInv * this.speed;
+          let vz = (_isRageFlee ? -dz : dz) * _safeDistInv * this.speed;
 
           // When fleeing, face away from player (inverted angle)
           if (_isRageFlee) {
@@ -1252,9 +1247,9 @@
             }
           }
           
-          this.mesh.position.x += vx;
-          this.mesh.position.z += vz;
-          // Track last movement vector for glide-spin death state
+          this.mesh.position.x += vx * 60 * dt;
+          this.mesh.position.z += vz * 60 * dt;
+          // Track last movement vector for glide-spin death state (store unscaled velocity direction)
           this._lastMoveVX = vx;
           this._lastMoveVZ = vz;
           // Proper player-facing using atan2 — avoids backwards/sideways artifacts that
@@ -2860,6 +2855,7 @@
 
       die() {
         this.isDead = true;
+        this.active = false; // Prevent further hit detection on dying enemy
         this._deathTimestamp = Date.now();
         // Register kill for combat intensity tracking (dynamic shadow quality)
         if (typeof window.registerCombatKill === 'function') window.registerCombatKill();

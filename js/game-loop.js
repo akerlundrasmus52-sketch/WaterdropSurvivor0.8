@@ -667,6 +667,8 @@
           window.lastLagWarning = Date.now();
         }
       }
+      // Skip sub-millisecond frames (super-fast monitors) to avoid divide-by-zero NaN errors
+      if (dt < 0.001) return;
       // Expose dt globally so other modules (e.g. enemy-class.js) can gate cosmetics by FPS
       window._lastDt = dt;
       
