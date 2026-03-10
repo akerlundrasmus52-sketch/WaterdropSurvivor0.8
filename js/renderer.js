@@ -30,9 +30,9 @@ const RENDERER_CONFIG = {
   shadowBias: -0.0003, // Prevent shadow acne with better bias
   // Split-resolution: world/terrain renders at a reduced pixel ratio to boost baseline FPS.
   // UI and HTML overlays are unaffected (they always render at native device resolution).
-  // Note: antialias is disabled in the renderer for major FPS gain; the higher pixel ratio
-  // compensates for edge quality, and the net result is both sharper AND faster.
-  worldPixelRatio: 1.0,    // 3D world render scale (raised from 0.85 since antialias is off)
+  // antialias is now enabled; pixel ratio is capped at 2 to sharpen graphics on high-DPI
+  // screens without destroying frame rate.
+  worldPixelRatio: 2,      // 3D world render scale — capped at 2x DPR for crisp AA output
   uiPixelRatio: 1.0        // Reserved: HTML/CSS UI always renders at native resolution
 };
 

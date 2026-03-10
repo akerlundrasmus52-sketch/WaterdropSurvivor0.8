@@ -1942,8 +1942,8 @@
     }
 
     .upgrade-card {
-      width: clamp(90px, 22vw, 135px) !important; /* Scales down on small screens */
-      height: clamp(140px, 32vw, 200px) !important;
+      width: clamp(80px, 20vw, 120px) !important; /* Slightly smaller so 4 cards fit within any viewport */
+      height: clamp(130px, 30vw, 185px) !important;
       background: linear-gradient(180deg, #1a1a2e, #0d1020);
       margin: 0;
       padding: 8px !important;

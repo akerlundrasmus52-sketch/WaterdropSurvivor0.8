@@ -505,13 +505,13 @@
             this.lastAttackTime = now;
           }
           if (dist < 4.0) {
-            this.mesh.position.x -= (dx / dist) * this.speed * 1.2;
-            this.mesh.position.z -= (dz / dist) * this.speed * 1.2;
+            this.mesh.position.x -= (dx / dist) * this.speed * 1.2 * 60 * dt;
+            this.mesh.position.z -= (dz / dist) * this.speed * 1.2 * 60 * dt;
           } else {
             const perpX = -dz / dist;
             const perpZ =  dx / dist;
-            this.mesh.position.x += perpX * this.speed * 0.7;
-            this.mesh.position.z += perpZ * this.speed * 0.7;
+            this.mesh.position.x += perpX * this.speed * 0.7 * 60 * dt;
+            this.mesh.position.z += perpZ * this.speed * 0.7 * 60 * dt;
           }
           this.mesh.rotation.y = Math.atan2(dx, dz);
         } else if (this.isFlyingBoss && dist < this.attackRange) {
@@ -652,8 +652,8 @@
           if (behavior === 'interceptor') {
             // Predict where the player will be 0.8s ahead and move to intercept
             const predictTime = 0.8;
-            const predictX = targetPos.x + this._playerVelocity.x * predictTime * 60;
-            const predictZ = targetPos.z + this._playerVelocity.z * predictTime * 60;
+            const predictX = targetPos.x + this._playerVelocity.x * predictTime;
+            const predictZ = targetPos.z + this._playerVelocity.z * predictTime;
             const pdx = predictX - this.mesh.position.x;
             const pdz = predictZ - this.mesh.position.z;
             const pdist = Math.sqrt(pdx*pdx + pdz*pdz) || 1;
@@ -2652,6 +2652,8 @@
         if (this._squishTimer) {
           clearTimeout(this._squishTimer);
           this._squishTimer = null;
+          // Reset scale so death animation starts from a clean (1,1,1) state
+          if (this.mesh) this.mesh.scale.set(1, 1, 1);
         }
         // Cancel pending lightning-flash timeout to prevent color restore on dead enemy
         if (this._lightningFlashTimer) {
