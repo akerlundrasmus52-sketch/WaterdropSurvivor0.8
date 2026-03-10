@@ -22,6 +22,11 @@
       // Push to super stat bar
       if (window.pushSuperStatEvent) window.pushSuperStatEvent('YOU DIED!', 'death', '\uD83D\uDC80', 'death');
 
+      // Capture active landmark-quest state BEFORE resetting it so the day/night
+      // starting time can be set correctly after the reset loop below.
+      const _landmarkQuestWasActive = (montanaQuest && montanaQuest.active) ||
+                                      (eiffelQuest  && eiffelQuest.active);
+
       // Also update quest state so active quests are properly cleaned up
       if (windmillQuest && windmillQuest.active) {
         windmillQuest.active = false;
@@ -280,10 +285,10 @@
       // Reset run loot tracking
       window.runLootGained = [];
       
-      // Time system: start at 18:00 (Evening) when a landmark quest is active,
-      // otherwise default to 06:00 (Morning).
+      // Time system: start at 18:00 (Evening) when a landmark quest was active
+      // on the previous run, otherwise default to 06:00 (Morning).
       saveData.runCount = (saveData.runCount || 0) + 1;
-      const startHour = (montanaQuest.active || eiffelQuest.active) ? 18 : 6;
+      const startHour = _landmarkQuestWasActive ? 18 : 6;
 
       // Convert hour (0-23) to timeOfDay (0-1)
       // 0 = midnight, 6 = dawn, 12 = noon, 18 = dusk
