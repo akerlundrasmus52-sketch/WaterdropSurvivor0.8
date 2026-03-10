@@ -1567,6 +1567,11 @@
       border: 3px solid #2980B9;
     }
 
+    .menu-btn-primary:hover {
+      filter: brightness(1.1);
+      transform: scale(1.03);
+    }
+
     /* Yellow comic-style confirmation button used in modals/info boxes */
     .comic-confirm-btn {
       display: block;
@@ -1586,6 +1591,7 @@
     }
     .comic-confirm-btn:hover {
       background: #FFC200;
+      transform: scale(1.03);
     }
     .comic-confirm-btn:active {
       transform: translate(2px, 2px);
@@ -1672,7 +1678,7 @@
     }
     
     #equipment-btn:hover, #menu-btn:hover {
-      transform: translateY(-2px);
+      transform: translateY(-2px) scale(1.03);
       box-shadow: 0 6px 0 #2a1a11, 0 8px 16px rgba(0,0,0,0.6);
       filter: brightness(1.2);
     }
@@ -2559,6 +2565,7 @@
     .btn:hover {
       box-shadow: 0 6px 0 #3a2a21, 0 0 20px rgba(90,58,49,0.6);
       filter: brightness(1.1);
+      transform: translateY(2px) scale(1.03);
     }
     
     .btn:active {
@@ -2603,6 +2610,7 @@
     .btn-small:hover {
       box-shadow: 0 5px 0 #3a2a21, 0 0 20px rgba(90,58,49,0.6);
       filter: brightness(1.1);
+      transform: scale(1.03);
     }
     
     .btn-small:active {
@@ -2754,6 +2762,7 @@
     .menu-btn:hover {
       background: rgba(93,173,226,0.15); /* Subtle highlight on hover so player knows it's a button */
       border-radius: 10px;
+      transform: translateX(-50%) scale(1.03);
     }
 
     .menu-btn:active {
@@ -5197,10 +5206,10 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%,-50%);
-  font-size: 56px;
+  font-size: 38px;
   pointer-events: none;
   z-index: 220;
-  filter: drop-shadow(0 0 8px rgba(255,180,0,0.9));
+  filter: drop-shadow(0 0 6px rgba(255,180,0,0.9));
   display: none;
 }
 
@@ -8116,6 +8125,12 @@
   flex-direction: column;
   gap: 6px;
   pointer-events: none;
+}
+
+@keyframes toast-pop-in {
+  0%   { transform: translateX(0) scale(0.85); }
+  60%  { transform: translateX(0) scale(1.10); }
+  100% { transform: translateX(0) scale(1.00); }
 }
 
 /* ─── Camp interact button hidden while menu open ────────── */

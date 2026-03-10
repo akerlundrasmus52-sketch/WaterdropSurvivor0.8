@@ -173,6 +173,8 @@
   const harvestNodes = [];          // active resource nodes in the world
   const HARVEST_RANGE = 3.0;       // distance in world-units to trigger harvest
   const HARVEST_COOLDOWN_MS = 1500; // ms between harvest ticks per node
+  const HARVEST_WINDUP_MS = 400;   // ms player must remain in range before harvesting begins
+  const SWING_OVERLAY_HEIGHT_OFFSET = 2.2; // world-Y offset above ground to project overlay above player's head
   // Fraction of a node's visual radius used as its solid collision boundary.
   // 0.85 — close to visual radius so the player definitely can't walk through trees/rocks/coal.
   const NODE_COLLISION_RADIUS_SCALE = 0.85;
@@ -521,7 +523,15 @@
     const dx = playerPos.x - node.mesh.position.x;
     const dz = playerPos.z - node.mesh.position.z;
     const dist = Math.sqrt(dx * dx + dz * dz);
-    if (dist > HARVEST_RANGE) return;
+    if (dist > HARVEST_RANGE) {
+      // Player left the range — reset wind-up timer
+      node._harvestEnterTime = null;
+      return;
+    }
+
+    // Wind-up delay: player must remain in range for HARVEST_WINDUP_MS before harvesting
+    if (!node._harvestEnterTime) node._harvestEnterTime = now;
+    if (now - node._harvestEnterTime < HARVEST_WINDUP_MS) return;
 
     const requiredTool = _getToolForNode(node.type);
     if (!_hasTool(requiredTool)) {
@@ -868,7 +878,7 @@
   }
 
   // ── Tool-swing HUD overlay (brief visual on-screen when harvesting) ──
-  function _drawSwingOverlay() {
+  function _drawSwingOverlay(playerPos) {
     let el = document.getElementById('harvest-swing-overlay');
     if (_swingAnim && Date.now() < _swingAnim.endTime) {
       if (!el) {
@@ -880,6 +890,17 @@
       const tool = TOOL_DEFS[_swingAnim.toolId];
       el.textContent = tool ? tool.icon : '⛏️';
       el.style.display = 'block';
+
+      // Project player world position to screen, offset upward above their head
+      if (playerPos && window._gameCamera && typeof THREE !== 'undefined') {
+        const worldPos = new THREE.Vector3(playerPos.x, SWING_OVERLAY_HEIGHT_OFFSET, playerPos.z);
+        worldPos.project(window._gameCamera);
+        const screenX = (worldPos.x * 0.5 + 0.5) * window.innerWidth;
+        const screenY = (-worldPos.y * 0.5 + 0.5) * window.innerHeight;
+        el.style.left = screenX + 'px';
+        el.style.top  = screenY + 'px';
+      }
+
       // Arc animation: rotate from -40deg to 120deg over swingDurationMs
       const swingDuration = tool ? tool.swingDurationMs : 600;
       const pct = 1 - ((_swingAnim.endTime - Date.now()) / swingDuration);
@@ -1028,7 +1049,7 @@
       ft.el.style.transform = `translateY(${-frac * 40}px)`;
     }
 
-    _drawSwingOverlay();
+    _drawSwingOverlay(playerPos);
   }
 
   // ── Clear all resource nodes from scene ──────────────────────

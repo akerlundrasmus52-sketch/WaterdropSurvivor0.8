@@ -132,21 +132,25 @@ function _processResourceToastQueue() {
   toast.textContent = text;
   wrap.appendChild(toast);
 
-  // Slide in
+  // Slide in with a bounce overshoot effect
   requestAnimationFrame(() => {
-    requestAnimationFrame(() => { toast.style.transform = 'translateX(0)'; });
+    requestAnimationFrame(() => {
+      toast.style.transform = 'translateX(0)';
+      toast.style.animation = 'toast-pop-in 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards';
+    });
   });
 
-  // Slide out after 2s, then show next
+  // Slide out after 3.5s, then show next
   setTimeout(() => {
     toast.style.transition = 'transform 0.3s ease-in,opacity 0.3s ease-in';
+    toast.style.animation = '';
     toast.style.transform = 'translateX(110%)';
     toast.style.opacity = '0';
     setTimeout(() => {
       if (wrap.contains(toast)) wrap.removeChild(toast);
       _processResourceToastQueue();
     }, 350);
-  }, 2200);
+  }, 3500);
 }
 
 window.showResourceToast = showResourceToast;
