@@ -1277,7 +1277,7 @@ window.spawnBossChest = function(x, z) {
             weightedPool.push({ upgrade, weight: 1 });
           });
         } else {
-          // No path chosen (level ≤ 4): mixed passives + basic weapon unlocks for variety
+          // No path chosen (level ≤ 4): level 2-3 = passives only; level 4+ = mixed passives + weapon unlocks
           commonUpgrades.forEach(upgrade => {
             let w;
             if (upgrade.id === 'str' || upgrade.id === 'aspd') {
@@ -1290,19 +1290,21 @@ window.spawnBossChest = function(x, z) {
             }
             weightedPool.push({ upgrade, weight: w });
           });
-          // Basic weapon unlock options for inactive weapons (early-level variety)
-          // Each entry carries an explicit `weaponKey` for reliable membership test.
-          const basicWeaponUnlocks = [
-            { id:'bwu_sword',     weaponKey:'sword',     icon:'⚔️',  title:'TIDAL SLASH',  desc:'New Weapon: Sword — slash enemies in front',   apply:()=>{ if(!weapons.sword.active){weapons.sword.active=true;weapons.sword.level=1;showStatChange('New Weapon: Sword!');} } },
-            { id:'bwu_aura',      weaponKey:'aura',      icon:'🌀',  title:'STORM SURGE',  desc:'New Weapon: Aura — zap nearby enemies',        apply:()=>{ if(!weapons.aura.active){weapons.aura.active=true;weapons.aura.level=1;showStatChange('New Weapon: Aura!');} } },
-            { id:'bwu_meteor',    weaponKey:'meteor',    icon:'☄️',  title:'HAILSTORM',    desc:'New Weapon: Meteor — call meteors from sky',   apply:()=>{ if(!weapons.meteor.active){weapons.meteor.active=true;weapons.meteor.level=1;showStatChange('New Weapon: Meteor!');} } },
-            { id:'bwu_fireRing',  weaponKey:'fireRing',  icon:'🔥',  title:'FIRE RING',    desc:'New Weapon: Fire Ring — orbiting fire orbs',   apply:()=>{ if(!weapons.fireRing.active){weapons.fireRing.active=true;weapons.fireRing.level=1;showStatChange('New Weapon: Fire Ring!');} } },
-            { id:'bwu_iceSpear',  weaponKey:'iceSpear',  icon:'❄️',  title:'ICE SPEAR',    desc:'New Weapon: Ice Spear — slows enemies 40%',    apply:()=>{ if(!weapons.iceSpear.active){weapons.iceSpear.active=true;weapons.iceSpear.level=1;showStatChange('New Weapon: Ice Spear!');} } },
-            { id:'bwu_boomerang', weaponKey:'boomerang', icon:'🪃',  title:'BOOMERANG',    desc:'New Weapon: Boomerang — hits enemies both ways',apply:()=>{ if(!weapons.boomerang.active){weapons.boomerang.active=true;weapons.boomerang.level=1;showStatChange('New Weapon: Boomerang!');} } },
-          ].filter(e => weapons[e.weaponKey] && !weapons[e.weaponKey].active);
-          basicWeaponUnlocks.forEach(e => weightedPool.push({ upgrade: e, weight: 2 }));
-          // Also include gun-specific dynamic upgrades for the always-active gun
-          focusWeaponPool.filter(e => e.weaponKey === 'gun').forEach(e => weightedPool.push({ upgrade: e, weight: 1 }));
+          // Basic weapon unlock options only available at level 4+
+          // Levels 2-3 are passive-only to ease the player into the game.
+          if (playerStats.lvl >= 4) {
+            const basicWeaponUnlocks = [
+              { id:'bwu_sword',     weaponKey:'sword',     icon:'⚔️',  title:'TIDAL SLASH',  desc:'New Weapon: Sword — slash enemies in front',   apply:()=>{ if(!weapons.sword.active){weapons.sword.active=true;weapons.sword.level=1;showStatChange('New Weapon: Sword!');} } },
+              { id:'bwu_aura',      weaponKey:'aura',      icon:'🌀',  title:'STORM SURGE',  desc:'New Weapon: Aura — zap nearby enemies',        apply:()=>{ if(!weapons.aura.active){weapons.aura.active=true;weapons.aura.level=1;showStatChange('New Weapon: Aura!');} } },
+              { id:'bwu_meteor',    weaponKey:'meteor',    icon:'☄️',  title:'HAILSTORM',    desc:'New Weapon: Meteor — call meteors from sky',   apply:()=>{ if(!weapons.meteor.active){weapons.meteor.active=true;weapons.meteor.level=1;showStatChange('New Weapon: Meteor!');} } },
+              { id:'bwu_fireRing',  weaponKey:'fireRing',  icon:'🔥',  title:'FIRE RING',    desc:'New Weapon: Fire Ring — orbiting fire orbs',   apply:()=>{ if(!weapons.fireRing.active){weapons.fireRing.active=true;weapons.fireRing.level=1;showStatChange('New Weapon: Fire Ring!');} } },
+              { id:'bwu_iceSpear',  weaponKey:'iceSpear',  icon:'❄️',  title:'ICE SPEAR',    desc:'New Weapon: Ice Spear — slows enemies 40%',    apply:()=>{ if(!weapons.iceSpear.active){weapons.iceSpear.active=true;weapons.iceSpear.level=1;showStatChange('New Weapon: Ice Spear!');} } },
+              { id:'bwu_boomerang', weaponKey:'boomerang', icon:'🪃',  title:'BOOMERANG',    desc:'New Weapon: Boomerang — hits enemies both ways',apply:()=>{ if(!weapons.boomerang.active){weapons.boomerang.active=true;weapons.boomerang.level=1;showStatChange('New Weapon: Boomerang!');} } },
+            ].filter(e => weapons[e.weaponKey] && !weapons[e.weaponKey].active);
+            basicWeaponUnlocks.forEach(e => weightedPool.push({ upgrade: e, weight: 2 }));
+            // Also include gun-specific dynamic upgrades for the always-active gun
+            focusWeaponPool.filter(e => e.weaponKey === 'gun').forEach(e => weightedPool.push({ upgrade: e, weight: 1 }));
+          }
         }
         
         // Expand weighted pool based on weights

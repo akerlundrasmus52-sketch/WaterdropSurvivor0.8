@@ -51,14 +51,13 @@
       // Renderer
       // logarithmicDepthBuffer: true prevents z-fighting on older mobile GPUs (e.g. Samsung S10)
       renderer = new THREE.WebGLRenderer({
-        antialias: false,
+        antialias: true,
         powerPreference: 'high-performance',
         precision: 'mediump',
         logarithmicDepthBuffer: true
       });
       renderer.setSize(window.innerWidth, window.innerHeight);
-      // Split-resolution: render the 3D world at a reduced pixel ratio to boost FPS.
-      // HTML/CSS UI layers are unaffected and always render at full native resolution.
+      // Cap pixel ratio at 2 to sharpen graphics on high-DPI screens without destroying frame rate.
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, RENDERER_CONFIG.worldPixelRatio));
       // Track current pixel ratio for dynamic quality scaler and debug display
       window._currentPixelRatio = Math.min(window.devicePixelRatio, RENDERER_CONFIG.worldPixelRatio);

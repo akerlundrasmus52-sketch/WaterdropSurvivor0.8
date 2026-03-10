@@ -3238,12 +3238,18 @@
           }
         }
 
-        // Remove dead enemies from array using reverse loop (avoids filter() new-array allocation)
-        // scene.remove is called here as a safety net; die() already removes meshes during animation.
+        // Remove dead enemies from array once their death animation has fully completed.
+        // Each dieBy* managed-animation callback handles scene.remove when the animation ends.
+        // Only splice the enemy out when the mesh is gone (animation done) or the corpse
+        // timeout has expired (failsafe for cases where no animation slot was available).
         for (let i = enemies.length - 1; i >= 0; i--) {
-          if (enemies[i].isDead) {
-            if (enemies[i].mesh && enemies[i].mesh.parent) scene.remove(enemies[i].mesh);
-            enemies.splice(i, 1);
+          const e = enemies[i];
+          if (e.isDead) {
+            const meshGone = !e.mesh || !e.mesh.parent;
+            const timedOut = e._deathTimestamp && (now - e._deathTimestamp) > CORPSE_TIMEOUT_MS;
+            if (meshGone || timedOut) {
+              enemies.splice(i, 1);
+            }
           }
         }
 
