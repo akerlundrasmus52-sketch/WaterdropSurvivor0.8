@@ -1,6 +1,12 @@
 // js/game-over-reset.js — Game-over screen (death screen), reset game state, debug stats toggle.
 // Depends on: all previously loaded game files
 
+    // Module-level flag: was a landmark quest active when the player last died?
+    // Captured by gameOver() and consumed by resetGame() to set the correct day/night
+    // start time. Declared here (not inside gameOver) so resetGame() can read it even
+    // on the very first run when gameOver() has never been called.
+    let _landmarkQuestWasActive = false;
+
     function gameOver() {
       setGameOver(true);
       setGamePaused(true);
@@ -24,8 +30,9 @@
 
       // Capture active landmark-quest state BEFORE resetting it so the day/night
       // starting time can be set correctly after the reset loop below.
-      const _landmarkQuestWasActive = (montanaQuest && montanaQuest.active) ||
-                                      (eiffelQuest  && eiffelQuest.active);
+      // Writes to the module-level _landmarkQuestWasActive so resetGame() can read it.
+      _landmarkQuestWasActive = (montanaQuest && montanaQuest.active) ||
+                                (eiffelQuest  && eiffelQuest.active);
 
       // Also update quest state so active quests are properly cleaned up
       if (windmillQuest && windmillQuest.active) {
@@ -944,6 +951,7 @@
       cinematicActive = false;
       cinematicData = null;
       killCamActive = false;
+      _roundStartCinematicActive = false;
       setGamePaused(true);  // Start paused, countdown will unpause (PR #70)
       setGameActive(false);  // Not active until countdown completes (PR #70)
       document.getElementById('gameover-screen').style.display = 'none';
