@@ -1319,7 +1319,7 @@ window.spawnBossChest = function(x, z) {
           [expandedPool[i], expandedPool[j]] = [expandedPool[j], expandedPool[i]];
         }
         
-        // Pick 3 unique upgrades
+        // Pick 4 unique upgrades
         const unique = [];
         const seen = new Set();
         
@@ -1328,15 +1328,15 @@ window.spawnBossChest = function(x, z) {
             unique.push(upgrade);
             seen.add(upgrade.id);
           }
-          if (unique.length >= 3) break;
+          if (unique.length >= 4) break;
         }
         
         choices = unique;
       }
 
-      // SAFETY FALLBACK: ensure exactly 3 choices are always available
+      // SAFETY FALLBACK: ensure exactly 4 choices are always available
       if (!choices) choices = [];
-      if (choices.length < 3) {
+      if (choices.length < 4) {
         const fallbackItems = [
           {
             id: 'fallback_hp', icon: '❤️', title: '+20 MAX HP', desc: 'Max HP +20 (Instant Heal +20)',
@@ -1363,20 +1363,20 @@ window.spawnBossChest = function(x, z) {
         ];
         const usedIds = new Set(choices.map(c => c.id));
         for (const f of fallbackItems) {
-          if (choices.length >= 3) break;
+          if (choices.length >= 4) break;
           if (!usedIds.has(f.id)) {
             choices.push(f);
             usedIds.add(f.id);
           }
         }
-        // If still under 3, fill with shuffled common upgrades
-        if (choices.length < 3) {
+        // If still under 4, fill with shuffled common upgrades
+        if (choices.length < 4) {
           const pool = commonUpgrades.filter(u => !usedIds.has(u.id));
           for (let i = pool.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [pool[i], pool[j]] = [pool[j], pool[i]];
           }
-          choices.push(...pool.slice(0, 3 - choices.length));
+          choices.push(...pool.slice(0, 4 - choices.length));
         }
       }
 

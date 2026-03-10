@@ -1865,7 +1865,7 @@
     #upgrade-choices {
       display: flex;
       flex-wrap: wrap; /* CRITICAL: allows cards to wrap to a second row */
-      gap: 10px;
+      gap: 8px;
       justify-content: center;
       align-items: center;
       max-width: 100%;
@@ -1942,12 +1942,12 @@
     }
 
     .upgrade-card {
-      width: clamp(120px, 28vw, 160px) !important; /* Scales down on small screens */
-      height: clamp(180px, 40vw, 240px) !important;
+      width: clamp(90px, 22vw, 135px) !important; /* Scales down on small screens */
+      height: clamp(140px, 32vw, 200px) !important;
       background: linear-gradient(180deg, #1a1a2e, #0d1020);
       margin: 0;
-      padding: 10px !important;
-      font-size: clamp(10px, 2vw, 14px); /* Shrinks text */
+      padding: 8px !important;
+      font-size: clamp(9px, 1.8vw, 12px); /* Shrinks text */
       border-radius: 12px;
       border: 2px solid #888888;
       outline: none;
@@ -2337,14 +2337,14 @@
       font-family: 'Bangers', cursive;
       font-weight: 400;
       color: #FFD700;
-      font-size: 20px; /* Slightly larger for better legibility */
+      font-size: 16px; /* Slightly smaller for better fit in compact cards */
       letter-spacing: 1px;
       text-shadow: 0 0 10px rgba(255,215,0,0.8), 0 0 20px rgba(255,215,0,0.4), 2px 2px 4px rgba(0,0,0,1);
       margin-bottom: 8px;
     }
 
     .upgrade-rarity-header {
-      font-size: 11px;
+      font-size: 10px;
       font-weight: 900;
       letter-spacing: 2px;
       text-transform: uppercase;
