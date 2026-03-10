@@ -2859,11 +2859,10 @@
     grp.add(accentSprite);
 
     // Pulsing blue/purple point lights (alien atmosphere)
-    const THREE2 = T();
-    const prismLight1 = new THREE2.PointLight(0x8800ff, 4.0, 16, 2);
+    const prismLight1 = new THREE.PointLight(0x8800ff, 4.0, 16, 2);
     prismLight1.position.set(0, 3.5, 0);
     grp.add(prismLight1);
-    const prismLight2 = new THREE2.PointLight(0x0044ff, 2.0, 10, 2);
+    const prismLight2 = new THREE.PointLight(0x0044ff, 2.0, 10, 2);
     prismLight2.position.set(0, 0.5, 0);
     grp.add(prismLight2);
     _alienLights.push({ light: prismLight1, base: 4.0, phase: 0.8 });

@@ -968,7 +968,7 @@
       const msg = _gameOver
         ? 'AIDA: "Organic instability detected. Synchronisation failed. Essence recovered: ' + (typeof saveData !== 'undefined' ? (saveData.astralEssence || 0) : 0) + '."'
         : 'AIDA: "Node purged. Synthesis continues. Astral Essence +' + (typeof saveData !== 'undefined' ? (saveData.astralEssence || 0) : 0) + '."';
-      setTimeout(() => { try { window.showNarratorLine(msg, 4000); } catch(e) {} }, 800);
+      setTimeout(() => { try { window.showNarratorLine(msg, 4000); } catch(e) { console.warn('Narrator line failed:', e); } }, 800);
     }
 
     const overlayRef = _overlay;
