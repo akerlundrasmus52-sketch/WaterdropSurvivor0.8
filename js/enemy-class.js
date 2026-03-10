@@ -465,14 +465,19 @@
           }
         }
 
-        // ── GROUND SHADOW for flying enemies ─────────────────────────────────────────
+        // ── BLOB SHADOW for all non-instanced enemies (fake shadow, no shadow maps) ──
+        // Flying enemies get a standard circle; grounded enemies get a slightly
+        // smaller disc (opacity ~0.4) that stays flat on the ground (Y = 0.05).
         this.groundShadow = null;
-        if (ENEMY_TYPES_FLYING.has(type)) {
-          const _shadowGeo = new THREE.CircleGeometry(0.5, 8);
-          const _shadowMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.2, depthWrite: false });
+        if (!this._usesInstancing) {
+          const _shadowRadius = ENEMY_TYPES_FLYING.has(type) ? 0.5 : 0.4;
+          const _shadowOpacity = ENEMY_TYPES_FLYING.has(type) ? 0.2 : 0.4;
+          const _shadowGeo = new THREE.CircleGeometry(_shadowRadius, 8);
+          const _shadowMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: _shadowOpacity, depthWrite: false });
+          _shadowMat._baseOpacity = _shadowOpacity; // stored so the update loop can scale it
           this.groundShadow = new THREE.Mesh(_shadowGeo, _shadowMat);
           this.groundShadow.rotation.x = -Math.PI / 2;
-          this.groundShadow.position.set(x, 0.02, z);
+          this.groundShadow.position.set(x, 0.05, z);
           scene.add(this.groundShadow);
         }
 
@@ -1432,12 +1437,14 @@
           this.mesh.rotation.z = Math.sin(gameTime * 5.03 + this.wobbleOffset) * 0.03;
         }
 
-        // Update ground shadow position for flying enemies
+        // Update ground shadow position for all non-instanced enemies
         if (this.groundShadow) {
           this.groundShadow.position.x = this.mesh.position.x;
           this.groundShadow.position.z = this.mesh.position.z;
-          // Shadow opacity scales with height
-          this.groundShadow.material.opacity = Math.max(0.08, 0.25 - (this.mesh.position.y - 0.5) * 0.03);
+          // Grounded enemies keep constant opacity; flying enemies fade with altitude
+          const _baseOp = this.groundShadow.material._baseOpacity || 0.4;
+          const _shadowHeight = Math.max(0, this.mesh.position.y - 0.5);
+          this.groundShadow.material.opacity = Math.max(0.05, _baseOp - _shadowHeight * 0.03);
         }
 
         // ── Organic "Snail/Worm Pump" Locomotion ─────────────────────────────────────
@@ -2894,6 +2901,7 @@
       }
 
       die() {
+        const _enemyInst = this; // captured for object pool release at animation end
         this.isDead = true;
         this.active = false; // Prevent further hit detection on dying enemy
         this._deathTimestamp = Date.now();
@@ -2923,12 +2931,18 @@
         // Cancel shotgun slide to prevent movement on dead enemy
         this._shotgunSlide = null;
         
-        // Clean up ground shadow
+        // Hide ground shadow for the duration of the death animation.
+        // With pooling the shadow mesh is kept alive and restored on reuse;
+        // without pooling it is removed and disposed as before.
         if (this.groundShadow) {
-          scene.remove(this.groundShadow);
-          this.groundShadow.geometry.dispose();
-          this.groundShadow.material.dispose();
-          this.groundShadow = null;
+          if (window.enemyPool) {
+            this.groundShadow.visible = false;
+          } else {
+            scene.remove(this.groundShadow);
+            this.groundShadow.geometry.dispose();
+            this.groundShadow.material.dispose();
+            this.groundShadow = null;
+          }
         }
         
         // Clone position NOW before any mesh removal or disposal to prevent
@@ -2985,7 +2999,11 @@
             spawnParticles(deathPos, 0xFFFFFF, 8);
           }
           // Remove mesh immediately with no death animation
-          scene.remove(this.mesh);
+          if (window.enemyPool) {
+            window.enemyPool._return(this);
+          } else {
+            scene.remove(this.mesh);
+          }
           this._skipMainDeathAnim = true;
           // Spawn XP (generous amount for the rare encounter)
           spawnExp(deathPos.x, deathPos.z, 'physical', 1.0, this.type);
@@ -3194,8 +3212,10 @@
         const dyingMesh = this.mesh;
         // Clone shared material for the fade-out animation so opacity changes on the
         // dying mesh don't affect all other living enemies sharing the same cached material.
-        if (dyingMesh.material && dyingMesh.material._isShared) {
-          dyingMesh.material = dyingMesh.material.clone();
+        // Keep a reference to the original so the pool can restore it on reuse.
+        const _origMaterial = (dyingMesh.material && dyingMesh.material._isShared) ? dyingMesh.material : null;
+        if (_origMaterial) {
+          dyingMesh.material = _origMaterial.clone();
         }
         const _bulletHoles = this.bulletHoles;
         const _bloodStains = this._bloodStains;
@@ -3771,63 +3791,112 @@
                 dyingMesh.material.opacity = Math.max(0, 0.25 * (1 - fadeProgress));
               }
             } else {
-              // Phase 5: Remove corpse
-              scene.remove(dyingMesh);
-              // Dispose geometry only if it is NOT a shared instance (flagged with _isShared)
-              if (dyingMesh.geometry && !dyingMesh.geometry._isShared) dyingMesh.geometry.dispose();
-              // Dispose material only if it is NOT a shared cached instance
-              if (dyingMesh.material && !dyingMesh.material._isShared) dyingMesh.material.dispose();
-              // bullet holes use shared geometry — only dispose per-hole cloned materials
-              if (_bulletHoles) _bulletHoles.forEach(h => { if (h.material && !h.material._isShared) h.material.dispose(); });
-              // blood stains use shared geometry — only dispose per-stain materials
-              if (_bloodStains) _bloodStains.forEach(s => { if (s.material && !s.material._isShared) s.material.dispose(); });
-              // Eyes use shared geo/mat — no disposal needed (they are children of dyingMesh, removed with it)
-              // Anatomy part meshes have unique geometries — dispose both geo and mat
-              if (_anatBaseMesh) { if (_anatBaseMesh.geometry) _anatBaseMesh.geometry.dispose(); if (_anatBaseMesh.material) _anatBaseMesh.material.dispose(); }
-              if (_anatHeadMesh) { if (_anatHeadMesh.geometry) _anatHeadMesh.geometry.dispose(); if (_anatHeadMesh.material) _anatHeadMesh.material.dispose(); }
-              if (_anatJawMesh)  { if (_anatJawMesh.geometry)  _anatJawMesh.geometry.dispose();  if (_anatJawMesh.material)  _anatJawMesh.material.dispose();  }
-              // Clean up remaining chunks
-              _deathChunks.forEach(c => { scene.remove(c.mesh); c.geo.dispose(); c.mat.dispose(); });
-              if (_headRoll) { scene.remove(_headRoll.mesh); _headRoll.geo.dispose(); _headRoll.mat.dispose(); }
-              if (dyingMesh._splitProxy) { scene.remove(dyingMesh._splitProxy.mesh); dyingMesh._splitProxy.geo.dispose(); dyingMesh._splitProxy.mat.dispose(); }
+              // Phase 5: Corpse fully faded — either return to pool or dispose.
+              // ── POOL PATH ────────────────────────────────────────────────────
+              if (window.enemyPool) {
+                // Dispose the cloned death-animation material; restore shared original.
+                if (dyingMesh.material && !dyingMesh.material._isShared) dyingMesh.material.dispose();
+                if (_origMaterial) dyingMesh.material = _origMaterial;
+                // Dispose bullet-hole and blood-stain cloned materials.
+                if (_bulletHoles) _bulletHoles.forEach(h => { if (h.material && !h.material._isShared) h.material.dispose(); });
+                if (_bloodStains) _bloodStains.forEach(s => { if (s.material && !s.material._isShared) s.material.dispose(); });
+                // Dispose animation-only gore meshes (head roll, split proxy, chunks).
+                if (_anatHeadMesh) { if (_anatHeadMesh.geometry) _anatHeadMesh.geometry.dispose(); if (_anatHeadMesh.material) _anatHeadMesh.material.dispose(); }
+                if (_anatJawMesh)  { if (_anatJawMesh.geometry)  _anatJawMesh.geometry.dispose();  if (_anatJawMesh.material)  _anatJawMesh.material.dispose(); }
+                _deathChunks.forEach(c => { scene.remove(c.mesh); c.geo.dispose(); c.mat.dispose(); });
+                if (_headRoll) { scene.remove(_headRoll.mesh); _headRoll.geo.dispose(); _headRoll.mat.dispose(); }
+                if (dyingMesh._splitProxy) { scene.remove(dyingMesh._splitProxy.mesh); dyingMesh._splitProxy.geo.dispose(); dyingMesh._splitProxy.mat.dispose(); dyingMesh._splitProxy = null; }
+                // Restore sentinel disc reference so the next die() can trigger gore again.
+                if (_anatBaseMesh) { _anatBaseMesh.visible = false; _enemyInst._anatBaseMesh = _anatBaseMesh; }
+                // Park the enemy and push to free list.
+                window.enemyPool._return(_enemyInst);
+              } else {
+                // ── DISPOSE PATH (no pool) ──────────────────────────────────────
+                scene.remove(dyingMesh);
+                // Dispose geometry only if it is NOT a shared instance (flagged with _isShared)
+                if (dyingMesh.geometry && !dyingMesh.geometry._isShared) dyingMesh.geometry.dispose();
+                // Dispose material only if it is NOT a shared cached instance
+                if (dyingMesh.material && !dyingMesh.material._isShared) dyingMesh.material.dispose();
+                // bullet holes use shared geometry — only dispose per-hole cloned materials
+                if (_bulletHoles) _bulletHoles.forEach(h => { if (h.material && !h.material._isShared) h.material.dispose(); });
+                // blood stains use shared geometry — only dispose per-stain materials
+                if (_bloodStains) _bloodStains.forEach(s => { if (s.material && !s.material._isShared) s.material.dispose(); });
+                // Eyes use shared geo/mat — no disposal needed (they are children of dyingMesh, removed with it)
+                // Anatomy part meshes have unique geometries — dispose both geo and mat
+                if (_anatBaseMesh) { if (_anatBaseMesh.geometry) _anatBaseMesh.geometry.dispose(); if (_anatBaseMesh.material) _anatBaseMesh.material.dispose(); }
+                if (_anatHeadMesh) { if (_anatHeadMesh.geometry) _anatHeadMesh.geometry.dispose(); if (_anatHeadMesh.material) _anatHeadMesh.material.dispose(); }
+                if (_anatJawMesh)  { if (_anatJawMesh.geometry)  _anatJawMesh.geometry.dispose();  if (_anatJawMesh.material)  _anatJawMesh.material.dispose();  }
+                // Clean up remaining chunks
+                _deathChunks.forEach(c => { scene.remove(c.mesh); c.geo.dispose(); c.mat.dispose(); });
+                if (_headRoll) { scene.remove(_headRoll.mesh); _headRoll.geo.dispose(); _headRoll.mat.dispose(); }
+                if (dyingMesh._splitProxy) { scene.remove(dyingMesh._splitProxy.mesh); dyingMesh._splitProxy.geo.dispose(); dyingMesh._splitProxy.mat.dispose(); }
+              }
               return false;
             }
             return true;
           },
           cleanup() {
             // Called by resetGame when the animation is still in-progress.
-            // Force-remove the dying mesh and all sub-resources from the scene.
-            if (dyingMesh.parent) scene.remove(dyingMesh);
-            const _isSharedGeoC = dyingMesh.geometry && dyingMesh.geometry._isShared;
-            if (dyingMesh.geometry && !_isSharedGeoC) dyingMesh.geometry.dispose();
-            if (dyingMesh.material && !dyingMesh.material._isShared) dyingMesh.material.dispose();
-            // bullet holes / blood stains use shared geometry — only dispose per-hole materials
-            if (_bulletHoles) _bulletHoles.forEach(h => { if (h.material && !h.material._isShared) h.material.dispose(); });
-            if (_bloodStains) _bloodStains.forEach(s => { if (s.material && !s.material._isShared) s.material.dispose(); });
-            // Anatomy part meshes have unique geometries — dispose both geo and mat
-            if (_anatBaseMesh) { if (_anatBaseMesh.geometry) _anatBaseMesh.geometry.dispose(); if (_anatBaseMesh.material) _anatBaseMesh.material.dispose(); }
-            if (_anatHeadMesh) { if (_anatHeadMesh.geometry) _anatHeadMesh.geometry.dispose(); if (_anatHeadMesh.material) _anatHeadMesh.material.dispose(); }
-            if (_anatJawMesh)  { if (_anatJawMesh.geometry)  _anatJawMesh.geometry.dispose();  if (_anatJawMesh.material)  _anatJawMesh.material.dispose();  }
-            _deathChunks.forEach(c => { if (c.mesh.parent) scene.remove(c.mesh); c.geo.dispose(); c.mat.dispose(); });
-            if (_headRoll) { if (_headRoll.mesh.parent) scene.remove(_headRoll.mesh); _headRoll.geo.dispose(); _headRoll.mat.dispose(); }
-            if (dyingMesh._splitProxy) { if (dyingMesh._splitProxy.mesh.parent) scene.remove(dyingMesh._splitProxy.mesh); dyingMesh._splitProxy.geo.dispose(); dyingMesh._splitProxy.mat.dispose(); }
+            // With object pooling: restore the shared material, park mesh, return to pool.
+            // Without pooling: force-remove and dispose everything.
+            if (window.enemyPool) {
+              if (dyingMesh.parent) scene.remove(dyingMesh);
+              if (dyingMesh.material && !dyingMesh.material._isShared) dyingMesh.material.dispose();
+              if (_origMaterial) dyingMesh.material = _origMaterial;
+              if (_bulletHoles) _bulletHoles.forEach(h => { if (h.material && !h.material._isShared) h.material.dispose(); });
+              if (_bloodStains) _bloodStains.forEach(s => { if (s.material && !s.material._isShared) s.material.dispose(); });
+              if (_anatHeadMesh) { if (_anatHeadMesh.geometry) _anatHeadMesh.geometry.dispose(); if (_anatHeadMesh.material) _anatHeadMesh.material.dispose(); }
+              if (_anatJawMesh)  { if (_anatJawMesh.geometry)  _anatJawMesh.geometry.dispose();  if (_anatJawMesh.material)  _anatJawMesh.material.dispose(); }
+              _deathChunks.forEach(c => { if (c.mesh.parent) scene.remove(c.mesh); c.geo.dispose(); c.mat.dispose(); });
+              if (_headRoll) { if (_headRoll.mesh.parent) scene.remove(_headRoll.mesh); _headRoll.geo.dispose(); _headRoll.mat.dispose(); }
+              if (dyingMesh._splitProxy) { if (dyingMesh._splitProxy.mesh.parent) scene.remove(dyingMesh._splitProxy.mesh); dyingMesh._splitProxy.geo.dispose(); dyingMesh._splitProxy.mat.dispose(); dyingMesh._splitProxy = null; }
+              if (_anatBaseMesh) { _anatBaseMesh.visible = false; _enemyInst._anatBaseMesh = _anatBaseMesh; }
+              window.enemyPool._return(_enemyInst);
+            } else {
+              // Force-remove the dying mesh and all sub-resources from the scene.
+              if (dyingMesh.parent) scene.remove(dyingMesh);
+              const _isSharedGeoC = dyingMesh.geometry && dyingMesh.geometry._isShared;
+              if (dyingMesh.geometry && !_isSharedGeoC) dyingMesh.geometry.dispose();
+              if (dyingMesh.material && !dyingMesh.material._isShared) dyingMesh.material.dispose();
+              // bullet holes / blood stains use shared geometry — only dispose per-hole materials
+              if (_bulletHoles) _bulletHoles.forEach(h => { if (h.material && !h.material._isShared) h.material.dispose(); });
+              if (_bloodStains) _bloodStains.forEach(s => { if (s.material && !s.material._isShared) s.material.dispose(); });
+              // Anatomy part meshes have unique geometries — dispose both geo and mat
+              if (_anatBaseMesh) { if (_anatBaseMesh.geometry) _anatBaseMesh.geometry.dispose(); if (_anatBaseMesh.material) _anatBaseMesh.material.dispose(); }
+              if (_anatHeadMesh) { if (_anatHeadMesh.geometry) _anatHeadMesh.geometry.dispose(); if (_anatHeadMesh.material) _anatHeadMesh.material.dispose(); }
+              if (_anatJawMesh)  { if (_anatJawMesh.geometry)  _anatJawMesh.geometry.dispose();  if (_anatJawMesh.material)  _anatJawMesh.material.dispose();  }
+              _deathChunks.forEach(c => { if (c.mesh.parent) scene.remove(c.mesh); c.geo.dispose(); c.mat.dispose(); });
+              if (_headRoll) { if (_headRoll.mesh.parent) scene.remove(_headRoll.mesh); _headRoll.geo.dispose(); _headRoll.mat.dispose(); }
+              if (dyingMesh._splitProxy) { if (dyingMesh._splitProxy.mesh.parent) scene.remove(dyingMesh._splitProxy.mesh); dyingMesh._splitProxy.geo.dispose(); dyingMesh._splitProxy.mat.dispose(); }
+            }
           }
         });
         } else {
-          // Fallback: no animation slot available, remove immediately
-          scene.remove(dyingMesh);
-          setTimeout(() => {
-            const _isSharedGeoFB = dyingMesh.geometry && dyingMesh.geometry._isShared;
-            if (dyingMesh.geometry && !_isSharedGeoFB) dyingMesh.geometry.dispose();
+          // Fallback: no animation slot available, return to pool or dispose immediately
+          if (window.enemyPool) {
             if (dyingMesh.material && !dyingMesh.material._isShared) dyingMesh.material.dispose();
-            // bullet holes / blood stains use shared geometry — only dispose per-hole materials
+            if (_origMaterial) dyingMesh.material = _origMaterial;
             if (_bulletHoles) _bulletHoles.forEach(h => { if (h.material && !h.material._isShared) h.material.dispose(); });
             if (_bloodStains) _bloodStains.forEach(s => { if (s.material && !s.material._isShared) s.material.dispose(); });
-            // Anatomy part meshes have unique geometries — dispose both geo and mat
-            if (_anatBaseMesh) { if (_anatBaseMesh.geometry) _anatBaseMesh.geometry.dispose(); if (_anatBaseMesh.material) _anatBaseMesh.material.dispose(); }
             if (_anatHeadMesh) { if (_anatHeadMesh.geometry) _anatHeadMesh.geometry.dispose(); if (_anatHeadMesh.material) _anatHeadMesh.material.dispose(); }
-            if (_anatJawMesh)  { if (_anatJawMesh.geometry)  _anatJawMesh.geometry.dispose();  if (_anatJawMesh.material)  _anatJawMesh.material.dispose();  }
-          }, 100);
+            if (_anatJawMesh)  { if (_anatJawMesh.geometry)  _anatJawMesh.geometry.dispose();  if (_anatJawMesh.material)  _anatJawMesh.material.dispose(); }
+            if (_anatBaseMesh) { _anatBaseMesh.visible = false; _enemyInst._anatBaseMesh = _anatBaseMesh; }
+            window.enemyPool._return(_enemyInst);
+          } else {
+            scene.remove(dyingMesh);
+            setTimeout(() => {
+              const _isSharedGeoFB = dyingMesh.geometry && dyingMesh.geometry._isShared;
+              if (dyingMesh.geometry && !_isSharedGeoFB) dyingMesh.geometry.dispose();
+              if (dyingMesh.material && !dyingMesh.material._isShared) dyingMesh.material.dispose();
+              // bullet holes / blood stains use shared geometry — only dispose per-hole materials
+              if (_bulletHoles) _bulletHoles.forEach(h => { if (h.material && !h.material._isShared) h.material.dispose(); });
+              if (_bloodStains) _bloodStains.forEach(s => { if (s.material && !s.material._isShared) s.material.dispose(); });
+              // Anatomy part meshes have unique geometries — dispose both geo and mat
+              if (_anatBaseMesh) { if (_anatBaseMesh.geometry) _anatBaseMesh.geometry.dispose(); if (_anatBaseMesh.material) _anatBaseMesh.material.dispose(); }
+              if (_anatHeadMesh) { if (_anatHeadMesh.geometry) _anatHeadMesh.geometry.dispose(); if (_anatHeadMesh.material) _anatHeadMesh.material.dispose(); }
+              if (_anatJawMesh)  { if (_anatJawMesh.geometry)  _anatJawMesh.geometry.dispose();  if (_anatJawMesh.material)  _anatJawMesh.material.dispose();  }
+            }, 100);
+          }
           // XP already spawned above; nothing extra needed in this fallback
         }
         } // end else (non-source-glitch): skip standard kill cam / blood / animation for type 20

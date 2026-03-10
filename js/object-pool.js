@@ -127,3 +127,126 @@ window.GameObjectPool = (function () {
     get chunkPoolSize()  { return _chunkPool.length;  }
   };
 }());
+
+// ── Enemy Object Pool ─────────────────────────────────────────────────────────
+// Eliminates GC pressure caused by repeatedly creating / disposing Enemy meshes.
+// Enemies that finish their death animation are hidden and parked at Y = -100
+// instead of being scene.remove()'d and geometry.dispose()'d.  When a new enemy
+// of the same type is needed, the parked instance is reset and reused.
+//
+// API:
+//   window.enemyPool.acquireEnemy(type, x, z, level)
+//       Returns a reset Enemy instance from the free list (or null if empty).
+//   window.enemyPool._return(enemyInst)
+//       Parks the enemy underground and pushes it onto the free list.
+
+window.enemyPool = (function () {
+  'use strict';
+
+  const POOL_MAX_PER_TYPE = 20; // max parked enemies per type
+  const _freeList = {};         // { [type]: Enemy[] }
+
+  // Y position for parked enemies — well below any playfield geometry
+  const PARK_Y = -100;
+
+  /**
+   * Attempt to acquire a pre-allocated Enemy of the given type.
+   * Resets its position, HP/stats, visibility, and key AI flags.
+   * Returns null when the free list for this type is empty.
+   */
+  function acquireEnemy(type, x, z, level) {
+    const list = _freeList[type];
+    if (!list || list.length === 0) return null;
+
+    const enemy = list.pop();
+    if (!enemy || !enemy.mesh) return null;
+
+    // ── Restore gameplay state ────────────────────────────────────────────────
+    enemy.isDead      = false;
+    enemy.active      = true;
+    enemy.isFrozen    = false;
+    enemy._shotgunSlide       = null;
+    enemy._squishTimer        = null;
+    enemy._lightningFlashTimer = null;
+    enemy._droneShakeTimer    = null;
+    enemy.lastDamageType      = null;
+    enemy.isDamaged           = false;
+    enemy.anatomy = { head: { hp: 100, attached: true },
+                      torso: { hp: 100, attached: true },
+                      base:  { hp: 100, attached: true } };
+
+    // Re-apply HP / speed / damage stats for the new player level
+    const GE = window.GameEnemies;
+    const GW = window.GameWorld;
+    if (GE && GW) {
+      const ls = GE.getEnemyLevelScaling(level);
+      const stats = GE.getEnemyBaseStats(type, ls, GW.GAME_CONFIG.enemySpeedBase, level);
+      Object.assign(enemy, stats);
+    }
+
+    // ── Restore mesh visibility and position ─────────────────────────────────
+    const yPos = (type === 5 || type === 14 || type === 16 || type === 17) ? 2
+               : (type === 11 ? 5 : (type === 19 ? 4 : (type === 20 ? 2 : 0.5)));
+    enemy.mesh.position.set(x, yPos, z);
+    enemy.mesh.rotation.set(0, 0, 0);
+    if (type === 11) {
+      enemy.mesh.scale.set(1.8, 1.8, 1.8);
+    } else {
+      enemy.mesh.scale.set(1, 1, 1);
+    }
+    enemy.mesh.visible = true;
+    if (enemy.mesh.material) {
+      enemy.mesh.material.transparent = false;
+      enemy.mesh.material.opacity     = 1;
+    }
+
+    // ── Restore blob shadow ───────────────────────────────────────────────────
+    if (enemy.groundShadow) {
+      enemy.groundShadow.position.set(x, 0.05, z);
+      enemy.groundShadow.visible = true;
+    }
+
+    // ── Ensure anatomy sentinel disc is hidden for clean re-entry ────────────
+    // die() restores _anatBaseMesh on the instance before returning to pool;
+    // hide it here so it does not briefly appear before the enemy activates.
+    if (enemy._anatBaseMesh) {
+      enemy._anatBaseMesh.visible = false;
+    }
+
+    return enemy;
+  }
+
+  /**
+   * Park a dead enemy underground and add it to the free list so it can be
+   * reused by the next acquireEnemy() call for the same type.
+   * Should be called after the death animation fully completes.
+   */
+  function _return(enemy) {
+    if (!enemy || !enemy.mesh) return;
+
+    // Move mesh underground and hide it (stays in Three.js scene graph to avoid
+    // the cost of scene.remove + scene.add on every respawn cycle).
+    enemy.mesh.position.set(0, PARK_Y, 0);
+    enemy.mesh.visible = false;
+
+    // Also hide the blob shadow
+    if (enemy.groundShadow) {
+      enemy.groundShadow.position.set(0, PARK_Y, 0);
+      enemy.groundShadow.visible = false;
+    }
+
+    const type = enemy.type;
+    if (!_freeList[type]) _freeList[type] = [];
+    if (_freeList[type].length < POOL_MAX_PER_TYPE) {
+      _freeList[type].push(enemy);
+    }
+  }
+
+  /** Diagnostic helper – returns total enemies currently in the pool. */
+  function totalFree() {
+    return Object.values(_freeList).reduce((s, a) => s + a.length, 0);
+  }
+
+  return { acquireEnemy, _return, get totalFree() { return totalFree(); } };
+}());
+

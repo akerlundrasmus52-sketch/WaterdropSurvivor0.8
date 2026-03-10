@@ -3668,6 +3668,17 @@
     })();
 
     /**
+     * spawnEnemy(type, x, z, level)
+     * Creates or reuses an Enemy of the given type at the specified position.
+     * Tries the EnemyPool first (zero GC cost); falls back to `new Enemy()` when
+     * the pool is empty or unavailable for this type.
+     */
+    function spawnEnemy(type, x, z, level) {
+      return (window.enemyPool && window.enemyPool.acquireEnemy(type, x, z, level))
+          || new Enemy(type, x, z, level);
+    }
+
+    /**
      * checkTimedAlienSpawns()
      * Called each wave spawn cycle. Spawns Grey Alien Scout at minute 10 and
      * the Annunaki Orb boss at minute 15 (each once per run).
@@ -3683,7 +3694,7 @@
         const dist = 28;
         const ex = player.mesh.position.x + Math.cos(angle) * dist;
         const ez = player.mesh.position.z + Math.sin(angle) * dist;
-        const scout = new Enemy(17, ex, ez, playerStats.lvl);
+        const scout = spawnEnemy(17, ex, ez, playerStats.lvl);
         enemies.push(scout);
         createFloatingText('👽 GREY ALIEN SCOUT INCOMING!', player.mesh.position, '#00FF88');
         if (window.pushSuperStatEvent) {
@@ -3699,7 +3710,7 @@
         const dist = 32;
         const ex = player.mesh.position.x + Math.cos(angle) * dist;
         const ez = player.mesh.position.z + Math.sin(angle) * dist;
-        const orb = new Enemy(19, ex, ez, playerStats.lvl);
+        const orb = spawnEnemy(19, ex, ez, playerStats.lvl);
         enemies.push(orb);
         createFloatingText('⚠️ ANNUNAKI ORB APPROACHING ⚠️', player.mesh.position, '#FFD700');
         triggerCinematic('miniboss', orb.mesh, 4000);
@@ -3747,7 +3758,7 @@
         const dist = 35; // Spawn further away so the large boss is framed well
         const ex = player.mesh.position.x + Math.cos(angle) * dist;
         const ez = player.mesh.position.z + Math.sin(angle) * dist;
-        const flyingBoss = new Enemy(11, ex, ez, playerStats.lvl);
+        const flyingBoss = spawnEnemy(11, ex, ez, playerStats.lvl);
         enemies.push(flyingBoss);
         // Debug: log flying boss spawn details
         if (window.GameDebug) window.GameDebug.onBossSpawn(flyingBoss, playerStats.lvl, 'FlyingBoss_L' + playerStats.lvl);
@@ -3757,7 +3768,7 @@
         for (let i = 0; i < 4; i++) {
           const sa = Math.random() * Math.PI * 2;
           const sd = 28 + Math.random() * 6;
-          enemies.push(new Enemy(14, player.mesh.position.x + Math.cos(sa) * sd, player.mesh.position.z + Math.sin(sa) * sd, playerStats.lvl));
+          enemies.push(spawnEnemy(14, player.mesh.position.x + Math.cos(sa) * sd, player.mesh.position.z + Math.sin(sa) * sd, playerStats.lvl));
         }
         return;
       }
@@ -3771,7 +3782,7 @@
         const dist = 28;
         const ex = player.mesh.position.x + Math.cos(angle) * dist;
         const ez = player.mesh.position.z + Math.sin(angle) * dist;
-        const miniBoss = new Enemy(10, ex, ez, playerStats.lvl);
+        const miniBoss = spawnEnemy(10, ex, ez, playerStats.lvl);
         // ── AIDA Dark Pact: boss speed charges ─────────────────
         if (saveData.aidaDarkPacts && (saveData.aidaDarkPacts.bossSpeedCharges || 0) > 0) {
           miniBoss.walkSpeed = (miniBoss.walkSpeed || 4) * 2.0;
@@ -3798,7 +3809,7 @@
           const supportX = player.mesh.position.x + Math.cos(supportAngle) * supportDist;
           const supportZ = player.mesh.position.z + Math.sin(supportAngle) * supportDist;
           const supportType = Math.floor(Math.random() * Math.min(3, Math.max(1, playerStats.lvl / 3)));
-          const minion = new Enemy(supportType, supportX, supportZ, playerStats.lvl);
+          const minion = spawnEnemy(supportType, supportX, supportZ, playerStats.lvl);
           minion.isMiniBossMinion = true; // Tag for cleanup on mini-boss death
           enemies.push(minion);
         }
@@ -3937,7 +3948,7 @@
           }
         }
         
-        const newEnemy = new Enemy(type, ex, ez, playerStats.lvl);
+        const newEnemy = spawnEnemy(type, ex, ez, playerStats.lvl);
         enemies.push(newEnemy);
       }
 
@@ -3947,7 +3958,7 @@
         const glitchDist = 12 + Math.random() * 8;
         const gx = player.mesh.position.x + Math.cos(glitchAngle) * glitchDist;
         const gz = player.mesh.position.z + Math.sin(glitchAngle) * glitchDist;
-        const glitch = new Enemy(20, gx, gz, playerStats.lvl);
+        const glitch = spawnEnemy(20, gx, gz, playerStats.lvl);
         enemies.push(glitch);
         if (typeof createFloatingText === 'function') {
           createFloatingText('⚠ SOURCE GLITCH', player.mesh.position, '#FF00FF');

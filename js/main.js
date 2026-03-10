@@ -172,7 +172,7 @@
     
     // Ground blood decals array (cleaned up on reset)
     let bloodDecals = [];
-    const MAX_BLOOD_DECALS = 50; // Cap for performance
+    const MAX_BLOOD_DECALS = 100; // Strict pool: wraps at 101st decal, overwriting oldest slot
     
     // Blood drips array - updated in main game loop to avoid many individual RAF loops
     let bloodDrips = [];
