@@ -703,9 +703,10 @@ window.spawnBossChest = function(x, z) {
 
       // --- SPECIAL LEVELS ---
       
-      // Quest 8: Force weapon choice when quest8_newWeapon is active (grant first new weapon)
+      // Quest 8: Force weapon choice when quest8_newWeapon is active (grant first new weapon).
+      // STRICT LEVEL GATE: only trigger at level 4+ so levels 2-3 remain passive-only.
       if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest8_newWeapon' &&
-          !WEAPON_UNLOCK_LEVELS.includes(playerStats.lvl)) {
+          !WEAPON_UNLOCK_LEVELS.includes(playerStats.lvl) && playerStats.lvl >= 4) {
         modal.querySelector('h2').innerText = 'NEW WEAPON!';
         modal.querySelector('h2').style.fontSize = '36px';
         const allWeaponChoicesQ8 = [
