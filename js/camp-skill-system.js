@@ -3639,3 +3639,212 @@
       questTracker.style.display = 'block';
     }
 
+    // ── FEATURE 1: Skill Tree Visual Overhaul ─────────────────────────────────
+    // Emoji detection regex (compiled once at module scope)
+    const _STW_EMOJI_RE = /^\p{Emoji}/u;
+
+    // Renders a full scrollable branching skill tree inside #camp-skills-content.
+    function renderSkillTreeWeb() {
+      const container = document.getElementById('camp-skills-content');
+      if (!container) return;
+
+      // Ensure window.unlockSkill is available for inline onclick handlers
+      window.unlockSkill = unlockSkill;
+
+      // Update SP display
+      const spDisplay = document.getElementById('skill-points-display');
+      if (spDisplay) spDisplay.textContent = `SP: ${saveData.skillPoints}`;
+
+      // Inject styles once
+      if (!document.getElementById('skill-tree-web-styles')) {
+        const style = document.createElement('style');
+        style.id = 'skill-tree-web-styles';
+        style.textContent = `
+          .stw-wrap { position:relative; width:100%; overflow-x:auto; padding-bottom:20px; }
+          .stw-svg   { position:absolute; top:0; left:0; pointer-events:none; z-index:0; }
+          .stw-cols  { display:flex; gap:0; position:relative; z-index:1; min-width:600px; }
+          .stw-col   { flex:1; display:flex; flex-direction:column; align-items:center; padding:0 4px; gap:10px; }
+          .stw-col-header { font-family:'Bangers',cursive; font-size:13px; letter-spacing:1px; padding:4px 10px; border-radius:6px; margin-bottom:4px; text-align:center; }
+          .stw-node {
+            width:88px; min-height:88px; border-radius:12px; padding:6px 5px 5px;
+            display:flex; flex-direction:column; align-items:center; justify-content:flex-start;
+            cursor:pointer; position:relative; transition:transform 0.12s, box-shadow 0.15s;
+            text-align:center; box-sizing:border-box;
+          }
+          .stw-node:active { transform:scale(0.95); }
+          .stw-node.stw-locked {
+            background:rgba(10,10,14,0.82); border:1.5px solid #1e2030;
+            filter:saturate(0.15) brightness(0.5);
+          }
+          .stw-node.stw-available {
+            background:rgba(20,22,35,0.92); border:1.5px solid #444;
+            box-shadow:0 0 6px rgba(255,215,0,0.08);
+          }
+          .stw-node.stw-available:hover { transform:scale(1.06); box-shadow:0 0 14px rgba(255,215,0,0.35); }
+          .stw-node.stw-owned {
+            background:rgba(18,26,14,0.95); border:2px solid #4CAF50;
+            box-shadow:0 0 14px rgba(76,175,80,0.45), inset 0 0 6px rgba(76,175,80,0.1);
+          }
+          .stw-node.stw-owned:hover { box-shadow:0 0 22px rgba(76,175,80,0.7); transform:scale(1.05); }
+          .stw-node.stw-maxed {
+            background:rgba(20,16,4,0.96); border:2px solid #FFD700;
+            box-shadow:0 0 18px rgba(255,215,0,0.55), inset 0 0 8px rgba(255,215,0,0.12);
+          }
+          .stw-icon   { font-size:22px; line-height:1; margin-bottom:2px; }
+          .stw-name   { font-size:9px; font-weight:bold; line-height:1.2; color:#ddd; margin-bottom:2px; max-width:80px; word-break:break-word; }
+          .stw-desc   { font-size:7.5px; color:#888; line-height:1.3; margin-bottom:3px; }
+          .stw-cost   { font-size:8.5px; color:#5DADE2; font-weight:bold; }
+          .stw-maxlbl { font-size:8px; color:#FFD700; font-weight:bold; }
+          .stw-dots   { display:flex; gap:2px; justify-content:center; margin-top:2px; flex-wrap:wrap; }
+          .stw-dot    { width:6px; height:6px; border-radius:50%; background:#333; border:1px solid #555; flex-shrink:0; }
+          .stw-dot.filled { background:#4CAF50; border-color:#4CAF50; box-shadow:0 0 4px #4CAF50; }
+          .stw-dot.filled-gold { background:#FFD700; border-color:#FFD700; box-shadow:0 0 4px #FFD700; }
+          .stw-locked .stw-name { color:#444; }
+          .stw-locked .stw-desc { color:#2a2a2a; }
+          .stw-sp-bar { display:flex; align-items:center; justify-content:center; gap:10px;
+            background:rgba(0,0,0,0.5); border-radius:8px; padding:6px 14px; margin-bottom:12px;
+            border:1px solid #333; }
+          @keyframes stw-pulse { 0%,100%{box-shadow:0 0 12px rgba(255,215,0,0.5)} 50%{box-shadow:0 0 24px rgba(255,215,0,0.9)} }
+          .stw-available { animation: stw-pulse 2s infinite; }
+        `;
+        document.head.appendChild(style);
+      }
+
+      // Path definitions
+      const PATHS = {
+        starter:  { label: '⭐ Starter',  color: '#aaaaff', cols: ['dash','criticalFocus','autoAim','dashMaster','headshot'] },
+        combat:   { label: '⚔️ Combat',   color: '#ff6644', cols: ['combatMastery','bladeDancer','heavyStrike','rapidFire','armorPierce','multiHit','executioner','bloodlust','berserker','weaponSpecialist','combatVeteran','meleeTakedown','specialShockwave','specialFrozenStorm','specialDeathBlossom','specialVoidPulse','specialThunderStrike','specialInfernoRing'] },
+        defense:  { label: '🛡️ Defense',  color: '#44aaff', cols: ['survivalist','ironSkin','quickReflex','fortification','regeneration','lastStand','toughness','guardian','resilience','secondWind','endurance','immortal'] },
+        utility:  { label: '🌿 Utility',  color: '#44dd88', cols: ['wealthHunter','quickLearner','magnetism','efficiency','scavenger','fortuneFinder','speedster','cooldownExpert','auraExpansion','resourceful','treasureHunter','fireMastery','iceMastery','lightningMastery','elementalFusion','pyromaniac','frostbite','stormCaller','elementalChain','manaOverflow','spellEcho','arcaneEmpowerment','elementalOverload'] }
+      };
+
+      // Helper: get state of a skill
+      const getState = (skillId) => {
+        const skill = SKILL_TREE[skillId];
+        if (!skill) return 'locked';
+        const skillData = saveData.skillTree[skillId] || { level: 0, unlocked: false };
+        const level = skillData.level || 0;
+        const isMaxLevel = level >= skill.maxLevel;
+        if (isMaxLevel) return 'maxed';
+        if (level > 0) return 'owned';
+        // check if parent is satisfied
+        if (!skill.requires) return 'available';
+        const parentData = saveData.skillTree[skill.requires] || { level: 0 };
+        if ((parentData.level || 0) > 0) return 'available';
+        return 'locked';
+      };
+
+      const SKILL_ICONS = {
+        dash:'🏃', criticalFocus:'🎯', autoAim:'🔫', dashMaster:'⚡', headshot:'💀',
+        combatMastery:'⚔️', bladeDancer:'🗡️', heavyStrike:'🔨', rapidFire:'🔥',
+        armorPierce:'🔩', multiHit:'🎯', executioner:'☠️', bloodlust:'🩸',
+        berserker:'😡', weaponSpecialist:'🏹', combatVeteran:'🎖️',
+        survivalist:'🌿', ironSkin:'🛡️', quickReflex:'🦶', fortification:'🏰',
+        regeneration:'💚', lastStand:'🏴', toughness:'💪', guardian:'🔰',
+        resilience:'🌊', secondWind:'🌬️', endurance:'🏋️', immortal:'✨',
+        wealthHunter:'💰', quickLearner:'📚', magnetism:'🧲', efficiency:'⚙️',
+        scavenger:'🔍', fortuneFinder:'🍀', speedster:'💨', cooldownExpert:'⏱️',
+        auraExpansion:'🌀', resourceful:'📦', treasureHunter:'💎',
+        fireMastery:'🔥', iceMastery:'❄️', lightningMastery:'⚡',
+        elementalFusion:'🌈', pyromaniac:'🌋', frostbite:'🧊', stormCaller:'⛈️',
+        elementalChain:'⛓️', manaOverflow:'🔮', spellEcho:'🪄',
+        arcaneEmpowerment:'✴️', elementalOverload:'🌟',
+        specialShockwave:'💥', specialFrozenStorm:'❄️', specialDeathBlossom:'🌸',
+        specialVoidPulse:'🌀', specialThunderStrike:'⚡', specialInfernoRing:'🔥',
+        meleeTakedown:'🔪'
+      };
+      const getIcon = (id, name) => SKILL_ICONS[id] || (name && _STW_EMOJI_RE.test(name) ? [...name][0] : '🔮');
+
+      // Build node HTML
+      const buildNode = (skillId) => {
+        const skill = SKILL_TREE[skillId];
+        if (!skill) return '';
+        const skillData = saveData.skillTree[skillId] || { level: 0 };
+        const level = skillData.level || 0;
+        const isMaxLevel = level >= skill.maxLevel;
+        const state = getState(skillId);
+        const canAfford = saveData.skillPoints >= skill.cost;
+        const stateClass = state === 'maxed' ? 'stw-maxed' : state === 'owned' ? 'stw-owned' : state === 'available' ? 'stw-available' : 'stw-locked';
+
+        let dotsHTML = '';
+        if (skill.maxLevel > 1) {
+          dotsHTML = '<div class="stw-dots">';
+          for (let d = 0; d < skill.maxLevel; d++) {
+            const cls = d < level ? (isMaxLevel ? 'stw-dot filled-gold' : 'stw-dot filled') : 'stw-dot';
+            dotsHTML += `<span class="${cls}"></span>`;
+          }
+          dotsHTML += '</div>';
+        }
+
+        const clickHandler = (state !== 'locked' && !isMaxLevel && canAfford)
+          ? `onclick="window.unlockSkill('${skillId}')"` : '';
+        const title = `${skill.name} — ${skill.description} (Cost: ${skill.cost} SP${isMaxLevel ? ' | MAX' : ''})`;
+
+        return `<div class="stw-node ${stateClass}" data-skill-id="${skillId}" ${clickHandler} title="${title.replace(/"/g,"'")}">
+          <div class="stw-icon">${getIcon(skillId, skill.name)}</div>
+          <div class="stw-name">${skill.name}</div>
+          <div class="stw-desc">${skill.description}</div>
+          ${isMaxLevel ? '<div class="stw-maxlbl">✅ MAX</div>' : `<div class="stw-cost">${skill.cost} SP</div>`}
+          ${dotsHTML}
+        </div>`;
+      };
+
+      // Layout: 4 columns by path
+      const pathKeys = ['starter','combat','defense','utility'];
+      const pathColors = { starter:'#aaaaff', combat:'#ff6644', defense:'#44aaff', utility:'#44dd88' };
+      const pathLabels = { starter:'⭐ Starter', combat:'⚔️ Combat', defense:'🛡️ Defense', utility:'🌿 Utility/Elemental' };
+
+      // Group skills by path
+      const pathSkills = { starter:[], combat:[], defense:[], utility:[] };
+      for (const [id, skill] of Object.entries(SKILL_TREE)) {
+        const path = skill.path || 'utility';
+        // Map legacy path names & categorize by dependency chain
+        const req = skill.requires;
+        if (!req || id === 'dash' || id === 'criticalFocus' || id === 'autoAim') {
+          pathSkills.starter.push(id);
+        } else if (id === 'dashMaster' || id === 'headshot' || id === 'combatMastery' ||
+                   id === 'bladeDancer' || id === 'heavyStrike' || id === 'rapidFire' ||
+                   id === 'armorPierce' || id === 'multiHit' || id === 'executioner' ||
+                   id === 'bloodlust' || id === 'berserker' || id === 'weaponSpecialist' ||
+                   id === 'combatVeteran' || id === 'meleeTakedown' ||
+                   id.startsWith('special')) {
+          pathSkills.combat.push(id);
+        } else if (id === 'survivalist' || id === 'ironSkin' || id === 'quickReflex' ||
+                   id === 'fortification' || id === 'regeneration' || id === 'lastStand' ||
+                   id === 'toughness' || id === 'guardian' || id === 'resilience' ||
+                   id === 'secondWind' || id === 'endurance' || id === 'immortal') {
+          pathSkills.defense.push(id);
+        } else {
+          pathSkills.utility.push(id);
+        }
+      }
+
+      let html = `<div class="stw-sp-bar">
+        <span style="font-size:14px;">🔮</span>
+        <span style="color:#FFD700;font-weight:bold;font-size:14px;">${saveData.skillPoints} SP</span>
+        <span style="color:#888;font-size:12px;">available</span>
+      </div>
+      <div class="stw-wrap"><div class="stw-cols">`;
+
+      for (const pk of pathKeys) {
+        const color = pathColors[pk];
+        const label = pathLabels[pk];
+        const skills = pathSkills[pk];
+        html += `<div class="stw-col">
+          <div class="stw-col-header" style="color:${color};border:1.5px solid ${color}30;background:${color}12;">${label}</div>`;
+        for (const sid of skills) {
+          html += buildNode(sid);
+        }
+        html += `</div>`;
+      }
+
+      html += `</div></div>`;
+
+      container.innerHTML = html;
+    }
+
+    // Export renderSkillTreeWeb
+    if (!window.CampSkillSystem) window.CampSkillSystem = {};
+    window.CampSkillSystem.renderSkillTreeWeb = renderSkillTreeWeb;
+    window.unlockSkill = unlockSkill;
+

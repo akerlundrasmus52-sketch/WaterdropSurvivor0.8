@@ -3639,6 +3639,9 @@
         document.getElementById('camp-sleep-tab').style.background = '#3a3a3a';
         document.getElementById('camp-training-tab').style.background = '#3a3a3a';
         document.getElementById('camp-passive-tab').style.background = '#3a3a3a';
+        if (window.CampSkillSystem && window.CampSkillSystem.renderSkillTreeWeb) {
+          window.CampSkillSystem.renderSkillTreeWeb();
+        }
       };
       
       document.getElementById('camp-passive-tab').onclick = () => {

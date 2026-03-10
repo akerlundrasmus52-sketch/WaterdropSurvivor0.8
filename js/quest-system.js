@@ -2900,16 +2900,20 @@
           forge:               () => showProgressionShop(),
           companionHouse:      () => showCompanionHouse(),
           achievementBuilding: () => {
-            if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest12_visitAchievements') {
-              progressTutorialQuest('quest12_visitAchievements', true);
-              saveSaveData();
-            }
-            document.getElementById('camp-screen').style.display = 'none';
-            const achScreen = document.getElementById('achievements-screen');
-            if (achScreen) {
-              achScreen.style.display = 'flex';
-              const achContent = document.getElementById('achievements-content');
-              if (achContent && typeof renderAchievementsContent === 'function') renderAchievementsContent(achContent);
+            if (typeof window.showHallOfFameScreen === 'function') {
+              window.showHallOfFameScreen();
+            } else {
+              if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest12_visitAchievements') {
+                progressTutorialQuest('quest12_visitAchievements', true);
+                saveSaveData();
+              }
+              document.getElementById('camp-screen').style.display = 'none';
+              const achScreen = document.getElementById('achievements-screen');
+              if (achScreen) {
+                achScreen.style.display = 'flex';
+                const achContent = document.getElementById('achievements-content');
+                if (achContent && typeof renderAchievementsContent === 'function') renderAchievementsContent(achContent);
+              }
             }
           },
           inventory:           () => showInventoryScreen(),
