@@ -1778,8 +1778,25 @@
         unlockBuilding: 'armory',
         triggerOnDeath: true,
         message: "⚔️ <b>Armory</b> and <b>Weapon Crafting</b> Unlocked!<br><br><i>A.I.D.A: 'Survival requires weapons. The lake\'s collective will not reclaim you while you are this fragile. Grow stronger. Map the Alien Ship crash site first — it holds the frequency data I... require.'</i><br><br>⚠️ <b>Note:</b> Before Prestige, you can only craft and equip <b>Common</b>, <b>Uncommon</b>, and <b>Rare</b> gear.",
-        nextQuest: 'quest_gainingStats',
+        nextQuest: 'quest_craftAllTools',
         conditions: ['quest_harvester']
+      },
+
+      // === STEP 4b: Craft ALL Gathering Tools ===
+      quest_craftAllTools: {
+        id: 'quest_craftAllTools',
+        name: 'Gear Up: Gathering Tools',
+        description: 'The Armory is built! Now craft ALL 6 gathering tools at the Forge (Axe, Sledgehammer, Pickaxe, Magic Pickaxe, Hunting Knife, Foraging Scoop). Each costs just 1 Gold. These tools let you gather resources during combat runs.',
+        objectives: 'Buy all 6 gathering tools at the Forge',
+        claim: 'Main Building',
+        rewardGold: 80,
+        rewardSkillPoints: 1,
+        rewardResources: { wood: 15, stone: 15, coal: 15 },
+        triggerOnDeath: false,
+        autoClaim: false,
+        message: "🛠️ <b>All Gathering Tools Acquired!</b><br><br>You received bonus resources to get you started!<br><br><i>A.I.D.A: 'Good. The training wheels are <b>off</b> now, Droplet. From this point forward, you must gather your own resources during runs — chop trees, mine rocks, harvest everything you can. You will need those materials to build the next structures. The lake rewards the prepared.'</i><br><br>🎯 <b>NEXT:</b> Head into the field — gather resources and earn 300 kills to unlock the Skill Tree!",
+        nextQuest: 'quest_gainingStats',
+        conditions: ['quest_firstBlood']
       },
 
       // === STEP 5: Gaining Stats — Defeat 300 enemies total ===
@@ -1795,7 +1812,7 @@
         triggerOnDeath: true,
         message: "🌳 <b>Neural Enhancement Matrix Unlocked!</b><br><br>You received <b>2 Skill Points</b>!<br><br><i>A.I.D.A: 'Good. Each enemy you dissolve feeds my understanding of this dimension. And yours grows too. The Pyramid anomaly is next — ancient geometry resonating with the crash frequency. Map it.'</i>",
         nextQuest: 'quest_eggHunt',
-        conditions: ['quest_firstBlood']
+        conditions: ['quest_craftAllTools', 'quest_firstBlood']
       },
 
       // === STEP 6: The Egg Hunt — Reach Level 15 + find egg ===

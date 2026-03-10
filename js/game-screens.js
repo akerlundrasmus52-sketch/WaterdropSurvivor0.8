@@ -1883,6 +1883,15 @@
     }
 
     function showProgressionShop() {
+      // ── Determine display mode ──────────────────────────────────────────────
+      // When called from the 3D camp, render in the new camp-bld-overlay frosted glass style.
+      // When called from the legacy 2D tab camp (progression-shop screen), use the old path.
+      const _fromCamp = window.CampWorld && window.CampWorld.isActive;
+      if (_fromCamp) {
+        _showProgressionShopOverlay();
+        return;
+      }
+      // ── Legacy 2D path ─────────────────────────────────────────────────────
       const shopGrid = document.getElementById('shop-grid');
       shopGrid.innerHTML = '';
 
@@ -1941,6 +1950,15 @@
                 if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'questForge0b_craftTools') {
                   progressTutorialQuest('questForge0b_craftTools', true);
                   saveSaveData();
+                }
+                // Quest quest_craftAllTools: check if ALL tools now owned
+                if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest_craftAllTools' && window.GameHarvesting) {
+                  const _ownedNow = window.GameHarvesting.getTools() || {};
+                  const _allIds = ['axe', 'sledgehammer', 'pickaxe', 'magicTool', 'knife', 'berryScoop'];
+                  if (_allIds.every(id => !!_ownedNow[id])) {
+                    progressTutorialQuest('quest_craftAllTools', true);
+                    saveSaveData();
+                  }
                 }
                 showProgressionShop();
               }
@@ -2027,8 +2045,225 @@
       document.getElementById('progression-shop').style.display = 'flex';
       updateGoldDisplays();
     }
-    
-    function buyUpgrade(upgradeKey) {
+
+    // ── Camp-overlay version of the Progression Shop ─────────────────────────
+    // Displays the same harvesting tools + stat upgrades content inside the
+    // modern frosted-glass camp-bld-overlay panel used by Armory, Inventory, etc.
+    function _showProgressionShopOverlay() {
+      const existing = document.getElementById('progression-shop-overlay');
+      if (existing) existing.remove();
+
+      if (window.CampWorld) window.CampWorld.pauseInput();
+
+      const overlay = document.createElement('div');
+      overlay.id = 'progression-shop-overlay';
+      overlay.className = 'camp-bld-overlay';
+      overlay.style.zIndex = '500';
+
+      const panel = document.createElement('div');
+      panel.className = 'camp-bld-panel';
+
+      // Header
+      const header = document.createElement('div');
+      header.className = 'camp-bld-header';
+      header.innerHTML = '<span class="camp-bld-title">⚒️ PROGRESSION UPGRADES</span>';
+      const closeBtn = document.createElement('button');
+      closeBtn.className = 'camp-bld-close-btn';
+      closeBtn.textContent = '✕';
+      closeBtn.title = 'Close';
+      closeBtn.onclick = () => {
+        panel.classList.add('closing');
+        setTimeout(() => {
+          overlay.remove();
+          if (window.CampWorld) window.CampWorld.resumeInput();
+        }, 200);
+      };
+      header.appendChild(closeBtn);
+      panel.appendChild(header);
+
+      // Gold display
+      const goldDiv = document.createElement('div');
+      goldDiv.className = 'camp-bld-currency';
+      goldDiv.textContent = `💰 GOLD: ${(saveData.gold || 0).toLocaleString()}`;
+      panel.appendChild(goldDiv);
+
+      const subtitle = document.createElement('div');
+      subtitle.className = 'camp-bld-subtitle';
+      subtitle.textContent = 'Buy gathering tools & invest in permanent stat upgrades';
+      panel.appendChild(subtitle);
+
+      // Content grid (reuse the same builder logic as the 2D shop)
+      const grid = document.createElement('div');
+      grid.style.cssText = 'display:flex;flex-direction:column;gap:10px;width:100%;';
+      panel.appendChild(grid);
+      overlay.appendChild(panel);
+      overlay.addEventListener('click', e => { if (e.target === overlay) closeBtn.onclick(); });
+      document.body.appendChild(overlay);
+
+      // Populate content — helper that rebuilds grid and updates gold label
+      const _rebuild = () => {
+        grid.innerHTML = '';
+        goldDiv.textContent = `💰 GOLD: ${(saveData.gold || 0).toLocaleString()}`;
+
+        // ── Harvesting Tools ─────────────────────────────────────────────────
+        if (window.GameHarvesting) {
+          const toolsHdr = document.createElement('div');
+          toolsHdr.style.cssText = 'color:#FFD700;font-family:"Bangers",cursive;font-size:18px;letter-spacing:2px;margin-top:4px;text-align:center;';
+          toolsHdr.textContent = '⛏️ HARVESTING TOOLS';
+          grid.appendChild(toolsHdr);
+
+          const toolsNote = document.createElement('div');
+          toolsNote.style.cssText = 'color:rgba(180,220,255,0.55);font-size:10px;letter-spacing:1px;text-transform:uppercase;text-align:center;margin-bottom:6px;';
+          toolsNote.textContent = 'Required to gather resources during runs';
+          grid.appendChild(toolsNote);
+
+          const tools = window.GameHarvesting.getToolList();
+          const ownedTools = window.GameHarvesting.getTools() || {};
+          const resources = window.GameHarvesting.getResources() || {};
+
+          tools.forEach(toolDef => {
+            const owned = ownedTools[toolDef.id];
+            const epicKey = 'epic' + toolDef.id.charAt(0).toUpperCase() + toolDef.id.slice(1);
+            const isEpic = ownedTools[epicKey];
+            const canAffordBase = (saveData.gold || 0) >= toolDef.buyCost;
+
+            const card = document.createElement('div');
+            card.className = 'camp-bld-panel';
+            card.style.cssText = 'padding:10px 14px;margin:0;border:1px solid rgba(139,69,19,0.6);background:rgba(40,20,0,0.7);display:flex;align-items:center;justify-content:space-between;gap:8px;';
+
+            let reqStr = '';
+            if (toolDef.epicForgeReq) {
+              reqStr = Object.entries(toolDef.epicForgeReq).map(([k, v]) => {
+                const rt = window.GameHarvesting.RESOURCE_TYPES && window.GameHarvesting.RESOURCE_TYPES[k];
+                const have = resources[k] || 0;
+                const color = have >= v ? '#2ecc71' : '#e74c3c';
+                return `<span style="color:${color}">${rt ? rt.icon : k} ${have}/${v}</span>`;
+              }).join(' ');
+            }
+
+            if (!owned) {
+              card.innerHTML = `
+                <div style="flex:1;">
+                  <div style="font-family:'Bangers',cursive;font-size:15px;color:#FFD700;letter-spacing:1px;">${toolDef.icon} ${toolDef.name}</div>
+                  <div style="color:rgba(180,220,255,0.55);font-size:10px;margin-top:2px;">Harvest resources from the world</div>
+                  <div style="color:#FFD700;font-size:11px;margin-top:3px;">Cost: ${toolDef.buyCost} Gold</div>
+                </div>
+                <button class="camp-bld-close-btn" style="width:auto;border-radius:7px;padding:6px 14px;font-size:12px;font-family:'Bangers',cursive;letter-spacing:1px;${!canAffordBase ? 'opacity:0.4;cursor:not-allowed;' : ''}" ${!canAffordBase ? 'disabled' : ''}>
+                  ${canAffordBase ? 'BUY' : 'NEED GOLD'}
+                </button>`;
+              const btn = card.querySelector('button');
+              btn.onclick = () => {
+                if (window.GameHarvesting.buyTool(toolDef.id)) {
+                  saveSaveData();
+                  playSound('levelup');
+                  if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest22_buyFirstTool') {
+                    progressTutorialQuest('quest22_buyFirstTool', true); saveSaveData();
+                  }
+                  if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'questForge0b_craftTools') {
+                    progressTutorialQuest('questForge0b_craftTools', true); saveSaveData();
+                  }
+                  // quest_craftAllTools: check if all tools now owned
+                  if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest_craftAllTools') {
+                    const _ownedNow = window.GameHarvesting.getTools() || {};
+                    const _allIds = ['axe','sledgehammer','pickaxe','magicTool','knife','berryScoop'];
+                    if (_allIds.every(id => !!_ownedNow[id])) {
+                      progressTutorialQuest('quest_craftAllTools', true); saveSaveData();
+                    }
+                  }
+                  _rebuild();
+                }
+              };
+            } else if (!isEpic) {
+              const epicReqsMet = toolDef.epicForgeReq && Object.entries(toolDef.epicForgeReq).every(([k, v]) => (resources[k] || 0) >= v);
+              card.innerHTML = `
+                <div style="flex:1;">
+                  <div style="font-family:'Bangers',cursive;font-size:15px;color:#2ecc71;letter-spacing:1px;">${toolDef.icon} ${toolDef.name} <span style="font-size:11px;color:#2ecc71;">✓ OWNED</span></div>
+                  <div style="color:rgba(180,220,255,0.55);font-size:10px;margin-top:2px;">⚒️ Forge to EPIC — 2.5× resource yield</div>
+                  <div style="font-size:10px;margin-top:3px;">Requires: ${reqStr}</div>
+                </div>
+                <button class="camp-bld-close-btn" style="width:auto;border-radius:7px;padding:6px 14px;font-size:12px;font-family:'Bangers',cursive;letter-spacing:1px;color:#FFD700;border-color:#FFD700;${!epicReqsMet ? 'opacity:0.4;cursor:not-allowed;' : ''}" ${!epicReqsMet ? 'disabled' : ''}>
+                  ${epicReqsMet ? '⚒️ FORGE' : 'NEED MORE'}
+                </button>`;
+              const btn = card.querySelector('button');
+              btn.onclick = () => {
+                if (window.GameHarvesting.forgeTool(toolDef.id)) {
+                  saveSaveData(); playSound('levelup');
+                  if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest25_useForge') {
+                    progressTutorialQuest('quest25_useForge', true); saveSaveData();
+                  }
+                  _rebuild();
+                }
+              };
+            } else {
+              card.innerHTML = `
+                <div style="font-family:'Bangers',cursive;font-size:15px;color:#FFD700;letter-spacing:1px;">${toolDef.icon} ${toolDef.name} <span style="color:#FFD700;">★ EPIC</span></div>
+                <div style="color:#2ecc71;font-size:11px;padding:6px 12px;border:1px solid #2ecc71;border-radius:7px;">MAX</div>`;
+            }
+            grid.appendChild(card);
+          });
+        }
+
+        // Separator
+        const sep = document.createElement('hr');
+        sep.style.cssText = 'border:none;border-top:1px solid rgba(0,255,255,0.15);margin:8px 0;';
+        grid.appendChild(sep);
+
+        // ── Stat Upgrades ────────────────────────────────────────────────────
+        const upgradesHdr = document.createElement('div');
+        upgradesHdr.style.cssText = 'color:#00ffff;font-family:"Bangers",cursive;font-size:18px;letter-spacing:2px;text-align:center;margin-bottom:6px;';
+        upgradesHdr.textContent = '⬆️ STAT UPGRADES';
+        grid.appendChild(upgradesHdr);
+
+        Object.keys(PERMANENT_UPGRADES).forEach(key => {
+          const upgrade = PERMANENT_UPGRADES[key];
+          const currentLevel = saveData.upgrades[key];
+          const isMaxLevel = currentLevel >= upgrade.maxLevel;
+          const cost = getCost(key);
+          const canAfford = (saveData.gold || 0) >= cost;
+
+          const card = document.createElement('div');
+          card.className = 'camp-bld-panel';
+          card.style.cssText = 'padding:10px 14px;margin:0;' +
+            (isMaxLevel ? 'border-color:rgba(255,215,0,0.4);background:rgba(255,215,0,0.06);' :
+             canAfford   ? 'border-color:rgba(0,255,255,0.3);' :
+                           'border-color:rgba(100,100,100,0.3);opacity:0.7;') +
+            'display:flex;align-items:center;justify-content:space-between;gap:8px;';
+
+          const lvlFrac = isMaxLevel ? upgrade.maxLevel : currentLevel;
+          const progress = upgrade.maxLevel > 0 ? (lvlFrac / upgrade.maxLevel) : 1;
+          card.innerHTML = `
+            <div style="flex:1;">
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">
+                <span style="font-size:20px;">${upgrade.icon || '⬆️'}</span>
+                <span style="font-family:'Bangers',cursive;font-size:15px;color:#00ffff;letter-spacing:1px;">${upgrade.name}</span>
+                <span style="font-size:10px;color:rgba(180,220,255,0.5);margin-left:auto;">Lv${currentLevel}/${upgrade.maxLevel}</span>
+              </div>
+              <div style="color:rgba(180,220,255,0.65);font-size:10px;margin-bottom:5px;">${upgrade.description || ''}</div>
+              <div style="background:rgba(0,255,255,0.1);border-radius:3px;height:3px;width:100%;overflow:hidden;">
+                <div style="background:#00ffff;height:100%;width:${Math.round(progress*100)}%;transition:width 0.3s;border-radius:3px;"></div>
+              </div>
+              ${!isMaxLevel ? `<div style="color:#FFD700;font-size:10px;margin-top:3px;">Cost: ${cost} Gold</div>` : `<div style="color:#FFD700;font-size:10px;margin-top:3px;">★ MAX LEVEL</div>`}
+            </div>
+            ${isMaxLevel ? '' : `<button class="camp-bld-close-btn" data-ukey="${key}" style="width:auto;border-radius:7px;padding:6px 14px;font-size:12px;font-family:'Bangers',cursive;letter-spacing:1px;${!canAfford ? 'opacity:0.4;cursor:not-allowed;color:#888;border-color:#555;' : 'color:#00ffff;border-color:rgba(0,255,255,0.5);'}" ${!canAfford ? 'disabled' : ''}>
+              ${canAfford ? 'BUY' : 'NEED GOLD'}
+            </button>`}`;
+
+          if (!isMaxLevel) {
+            const btn = card.querySelector('button');
+            btn.onclick = () => { buyUpgrade(key); _rebuild(); };
+          }
+          grid.appendChild(card);
+        });
+      };
+
+      _rebuild();
+
+      // Quest progress: quest7_buyProgression
+      if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest7_buyProgression') {
+        progressTutorialQuest('quest7_buyProgression', true);
+        saveSaveData();
+      }
+    }
       const upgrade = PERMANENT_UPGRADES[upgradeKey];
       const currentLevel = saveData.upgrades[upgradeKey];
       const cost = getCost(upgradeKey);
@@ -5046,66 +5281,138 @@
         top: ${startY}px;
         transform: translate(-50%, -50%) scale(0);
         font-family: 'Bangers', cursive;
-        font-size: 38px;
+        font-size: 44px;
         font-weight: 500;
         color: #FFD700;
         text-shadow: 
-          0 0 10px rgba(255,215,0,0.85),
-          0 0 20px rgba(93,173,226,0.4),
+          0 0 10px rgba(255,165,0,0.95),
+          0 0 22px rgba(255,80,0,0.7),
+          0 0 40px rgba(255,215,0,0.5),
           2px 2px 0 #000,
           -1px -1px 0 #000,
           1px -1px 0 #000,
           -1px 1px 0 #000;
         z-index: 200;
         pointer-events: none;
-        letter-spacing: 4px;
+        letter-spacing: 6px;
+        will-change: transform, opacity;
       `;
       levelUpText.textContent = 'LEVEL UP!';
       document.body.appendChild(levelUpText);
+
+      // ── Fire ember particles spawned around the text ──────────────────────
+      const _embers = [];
+      const _EMBER_COUNT = 18;
+      function _spawnEmbers(cx, cy) {
+        for (let i = 0; i < _EMBER_COUNT; i++) {
+          const em = document.createElement('div');
+          const size = 4 + Math.random() * 7;
+          const hue  = Math.random() < 0.5 ? '#FF4500' : (Math.random() < 0.5 ? '#FFD700' : '#FF8C00');
+          em.style.cssText = `
+            position:fixed;
+            width:${size}px;height:${size}px;
+            border-radius:50%;
+            background:${hue};
+            box-shadow:0 0 ${size*1.5}px ${hue};
+            left:${cx}px;top:${cy}px;
+            pointer-events:none;
+            z-index:199;
+            transform:translate(-50%,-50%);
+            will-change:transform,opacity;
+          `;
+          document.body.appendChild(em);
+          const angle  = (Math.random() * Math.PI * 2);
+          const speed  = 1.5 + Math.random() * 2.8;
+          const drift  = (Math.random() - 0.5) * 0.6;
+          const life   = 600 + Math.random() * 600;
+          _embers.push({ el: em, vx: Math.cos(angle)*speed+drift, vy: -(speed*0.8+Math.random()*1.2), startTime: Date.now(), life });
+        }
+      }
+
+      function _tickEmbers() {
+        const now = Date.now();
+        for (let i = _embers.length - 1; i >= 0; i--) {
+          const e = _embers[i];
+          const t = (now - e.startTime) / e.life;
+          if (t >= 1) {
+            if (e.el.parentNode) e.el.parentNode.removeChild(e.el);
+            _embers.splice(i, 1);
+            continue;
+          }
+          const px = parseFloat(e.el.style.left) + e.vx;
+          const py = parseFloat(e.el.style.top)  + e.vy;
+          e.vy  -= 0.04; // gravity upward rise for fire
+          e.vx  *= 0.97; // slight drag
+          e.el.style.left    = px + 'px';
+          e.el.style.top     = py + 'px';
+          e.el.style.opacity = (1 - t * t).toFixed(3);
+        }
+        if (_embers.length > 0) requestAnimationFrame(_tickEmbers);
+      }
       
-      // Animation: shoot up from character head, wait 0.2s, then float to center
+      // Animation: shoot up from character head, wait 0.2s, then float to center, then burn away
       const startTime = Date.now();
-      const totalDuration = 2000; // 2 seconds total
+      const totalDuration = 2200;
       const centerX = window.innerWidth / 2;
       const centerY = window.innerHeight / 2;
+      let _embersSpawned = false;
       
       const animFn = () => {
         const elapsed = Date.now() - startTime;
         const progress = elapsed / totalDuration;
         
         if (progress < 0.15) {
-          // Phase 1: Shoot up from head (0-15% = 300ms)
+          // Phase 1: Shoot up from head (0-15% = ~330ms)
           const t = progress / 0.15;
-          const scale = t * 1.2;
-          const curY = startY - t * 80; // Shoot up 80px
+          const scale = t * 1.3;
+          const curY = startY - t * 90;
           levelUpText.style.top = curY + 'px';
           levelUpText.style.transform = `translate(-50%, -50%) scale(${scale})`;
           levelUpText.style.opacity = t;
         } else if (progress < 0.25) {
-          // Phase 2: Wait 0.2s at that position (15-25%)
-          levelUpText.style.transform = `translate(-50%, -50%) scale(1.2)`;
-          levelUpText.style.opacity = 1;
+          // Phase 2: Hold at position (15-25%)
+          levelUpText.style.transform = `translate(-50%, -50%) scale(1.3)`;
+          levelUpText.style.opacity = '1';
+          // Spawn embers once when fully visible
+          if (!_embersSpawned) {
+            _embersSpawned = true;
+            const rect = levelUpText.getBoundingClientRect();
+            _spawnEmbers(rect.left + rect.width / 2, rect.top + rect.height / 2);
+            requestAnimationFrame(_tickEmbers);
+          }
         } else if (progress < 0.65) {
-          // Phase 3: Float toward center and grow (25-65%)
+          // Phase 3: Float toward center (25-65%)
           const t = (progress - 0.25) / 0.40;
           const curX = startX + (centerX - startX) * t;
-          const curY = (startY - 80) + (centerY - (startY - 80)) * t;
-          const scale = 1.2 + t * 0.2; // Grow to 1.4x
+          const curY = (startY - 90) + (centerY - (startY - 90)) * t;
+          const scale = 1.3 + t * 0.2;
           levelUpText.style.left = curX + 'px';
-          levelUpText.style.top = curY + 'px';
+          levelUpText.style.top  = curY + 'px';
           levelUpText.style.transform = `translate(-50%, -50%) scale(${scale})`;
-          levelUpText.style.opacity = 1;
+          levelUpText.style.opacity = '1';
         } else if (progress < 1) {
-          // Phase 4: Shrink and fade at center (65-100%)
-          const fadeProgress = (progress - 0.65) / 0.35;
-          const scale = 1.4 - (fadeProgress * 0.8);
-          const opacity = 1 - fadeProgress;
-          levelUpText.style.left = centerX + 'px';
-          levelUpText.style.top = centerY + 'px';
-          levelUpText.style.transform = `translate(-50%, -50%) scale(${scale})`;
-          levelUpText.style.opacity = opacity;
+          // Phase 4: Burn-away dissolve at center (65-100%)
+          // Text brightens then chars out — colour shifts orange→red→black while fading
+          const fp = (progress - 0.65) / 0.35;
+          const burnHue = fp < 0.4
+            ? `#FFD700`                              // golden phase
+            : fp < 0.7
+              ? `hsl(${30 - fp*80},100%,${60 - fp*50}%)`  // orange→red
+              : `hsl(0,80%,${Math.max(0,20 - (fp-0.7)*70)}%)`;  // red→black
+          levelUpText.style.left   = centerX + 'px';
+          levelUpText.style.top    = centerY + 'px';
+          levelUpText.style.color  = burnHue;
+          levelUpText.style.textShadow = `0 0 ${30*(1-fp)}px ${burnHue}, 2px 2px 0 #000`;
+          const scale = 1.5 - fp * 0.4;
+          levelUpText.style.transform = `translate(-50%, -50%) scale(${scale}) skewX(${fp*6}deg)`;
+          levelUpText.style.opacity = Math.max(0, 1 - fp * 1.1);
+          // Spawn extra embers at peak
+          if (fp > 0.05 && fp < 0.35 && Math.random() < 0.25) {
+            const rect = levelUpText.getBoundingClientRect();
+            _spawnEmbers(rect.left + rect.width/2 + (Math.random()-0.5)*60,
+                         rect.top  + rect.height/2 + (Math.random()-0.5)*20);
+          }
         } else {
-          // Animation complete, remove element
           if (levelUpText.parentNode) levelUpText.parentNode.removeChild(levelUpText);
           return;
         }

@@ -385,6 +385,20 @@
       ) {
         progressTutorialQuest('quest_gainingStats', true);
       }
+
+      // Auto-complete quest_craftAllTools when the player has bought all 6 gathering tools
+      if (
+        saveData.tutorialQuests.currentQuest === 'quest_craftAllTools' &&
+        !saveData.tutorialQuests.readyToClaim.includes('quest_craftAllTools') &&
+        window.GameHarvesting
+      ) {
+        const _ownedTools = window.GameHarvesting.getTools() || {};
+        const _allToolIds = ['axe', 'sledgehammer', 'pickaxe', 'magicTool', 'knife', 'berryScoop'];
+        const _hasAll = _allToolIds.every(id => !!_ownedTools[id]);
+        if (_hasAll) {
+          progressTutorialQuest('quest_craftAllTools', true);
+        }
+      }
       
       // Fallback: if questForge0_unlock is the active quest but not yet in readyToClaim
       // (can happen when activated via _completeBuild after building questMission),
@@ -2494,6 +2508,50 @@
     // Re-show on next camp visit
     function _resetUnspentBarDismiss() { _unspentBarDismissed = false; }
 
+    // ── Aida Account Progression Nudge ───────────────────────────────────────
+    // After runs, Aida explicitly guides the player to the Profile Building when
+    // they have available Free Spins, unspent Skill Points, or Challenge rewards.
+    // Shows at most once per camp visit to avoid spamming.
+    let _aidaProgressionNudgeShownThisVisit = false;
+    function _checkAndShowAidaProgressionNudge() {
+      if (_aidaProgressionNudgeShownThisVisit) return;
+      if (!saveData) return;
+
+      // Only show after profile/account building is unlocked
+      const _acctBld = saveData.campBuildings && saveData.campBuildings.accountBuilding;
+      if (!_acctBld || (!_acctBld.unlocked && (_acctBld.level || 0) === 0)) return;
+
+      const hasFreeSpin    = window.GameLuckyWheel && window.GameLuckyWheel.canFreeSpin(saveData);
+      const hasSkillPoints = (saveData.skillPoints || 0) > 0;
+      const hasAttrPoints  = (saveData.unspentAttributePoints || 0) > 0;
+
+      if (!hasFreeSpin && !hasSkillPoints && !hasAttrPoints) return;
+
+      _aidaProgressionNudgeShownThisVisit = true;
+
+      // Build a short Aida dialogue based on what's available
+      const _lines = [{ text: '> A.I.D.A — PROGRESSION ALERT', emotion: 'task', duration: 1800 }];
+      if (hasFreeSpin) {
+        _lines.push({ text: '> You have a Free Spin waiting, Droplet. Use it. The Wheel rewards the bold.', emotion: 'thinking' });
+      }
+      if (hasSkillPoints) {
+        const sp = saveData.skillPoints || 0;
+        _lines.push({ text: `> ${sp} unspent Skill Point${sp > 1 ? 's' : ''}. Visit the Skill Tree — growth untaken is growth wasted.`, emotion: 'task' });
+      }
+      if (hasAttrPoints) {
+        const ap = saveData.unspentAttributePoints || 0;
+        _lines.push({ text: `> ${ap} Attribute Point${ap > 1 ? 's' : ''} available. The Training Hall sharpens what combat cannot.`, emotion: 'thinking' });
+      }
+      _lines.push({ text: '> Head to the Profile Building to claim your rewards. Do not let them collect dust.', emotion: 'goal', isGoal: true });
+
+      if (window.DialogueSystem && _lines.length > 1) {
+        // Delay slightly so camp finishes loading before dialogue fires
+        setTimeout(() => {
+          if (window.DialogueSystem) window.DialogueSystem.show(_lines);
+        }, 1500);
+      }
+    }
+
     // Show daily reward panel in a popup overlay
     function _showDailyRewardPanel() {
       if (window.CampWorld && window.CampWorld.isActive) window.CampWorld.pauseInput();
@@ -2665,6 +2723,8 @@
     function updateCampScreen() {
       // Reset unspent bar dismiss so it shows again each camp visit
       _resetUnspentBarDismiss();
+      // Reset Aida nudge flag so it shows once per visit
+      _aidaProgressionNudgeShownThisVisit = false;
 
       // Hide combat HUD (Rage Bar + Special Attacks) — not visible in camp
       if (window.GameRageCombat) window.GameRageCombat.setCombatHUDVisible(false);
@@ -2813,6 +2873,8 @@
       updateAccountLevelDisplay();
       // Update corner notification dots and streak label
       _updateCampCornerWidgets();
+      // ── Aida guidance: nudge player toward Profile Building if they have pending rewards ──
+      _checkAndShowAidaProgressionNudge();
       // Check for first-time camp visit
       if (!saveData.hasVisitedCamp) {
         saveData.hasVisitedCamp = true;
