@@ -223,7 +223,7 @@ window.enemyPool = (function () {
       enemy.mesh.material = enemy.defaultMaterial;
       enemy.mesh.material.needsUpdate = true;
     }
-    if (enemy.mesh.material) {
+    if (enemy.mesh.material && !enemy.mesh.material._isSpiderHitbox) {
       enemy.mesh.material.transparent = false;
       enemy.mesh.material.opacity     = 1;
       // Reset material color to the canonical type color to clear any blood/freeze tint
