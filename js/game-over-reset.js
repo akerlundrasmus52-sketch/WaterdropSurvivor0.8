@@ -582,14 +582,8 @@
           scene.remove(e.mesh); // no-op for instanced enemies; removes non-instanced ones
           if (!e._usesInstancing) {
             // Only dispose geometry/material for enemies that own their mesh exclusively
-            // Never dispose shared cached geometry (SHARED_GEO_TYPE) or shared cached material (SHARED_MAT_CACHE)
-            const sharedGeoType = window.SHARED_GEO_TYPE || {};
-            const sharedGeo     = window.SHARED_GEO || {};
-            const isSharedGeo = e.mesh.geometry && (
-              Object.values(sharedGeoType).includes(e.mesh.geometry) ||
-              Object.values(sharedGeo).includes(e.mesh.geometry)
-            );
-            if (e.mesh.geometry && !isSharedGeo) e.mesh.geometry.dispose();
+            // Never dispose shared cached geometry (flagged with _isShared) or shared cached material (SHARED_MAT_CACHE)
+            if (e.mesh.geometry && !e.mesh.geometry._isShared) e.mesh.geometry.dispose();
             if (e.mesh.material) {
               if (Array.isArray(e.mesh.material)) {
                 e.mesh.material.forEach(m => { if (!m._isShared) m.dispose(); });

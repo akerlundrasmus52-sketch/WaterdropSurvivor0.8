@@ -8,6 +8,8 @@
       cube:   new THREE.BoxGeometry(1, 1, 1),
       sphere: new THREE.SphereGeometry(1, 8, 8)
     };
+    SHARED_GEO.cube._isShared   = true;
+    SHARED_GEO.sphere._isShared = true;
     const SHARED_MAT = {
       // SHARED_MAT.enemy is only used as a fallback — type-specific colors come from SHARED_MAT_CACHE
       enemy:  new THREE.MeshLambertMaterial({ color: 0x44AA44 }),
@@ -47,7 +49,7 @@
         case 3:  geo = new THREE.IcosahedronGeometry(0.85, 0);       break; // Slowing/Spiky — spiny icosahedron
         case 4:  geo = new THREE.TetrahedronGeometry(0.9, 0);        break; // Ranged
         case 5:  geo = new THREE.OctahedronGeometry(0.9, 0);         break; // Flying
-        case 6:  geo = getHardTankGeometry(); SHARED_GEO_TYPE[6] = geo; return geo; // Hard Tank (own cache)
+        case 6:  geo = getHardTankGeometry(); geo._isShared = true; SHARED_GEO_TYPE[6] = geo; return geo; // Hard Tank (own cache)
         case 7:  geo = new THREE.CapsuleGeometry(0.48, 0.6, 3, 8);  break; // Hard Fast — larger capsule
         case 8:  geo = new THREE.DodecahedronGeometry(0.85, 0);      break; // Hard Balanced
         case 9:  geo = new THREE.IcosahedronGeometry(0.9, 0);        break; // Elite
@@ -64,6 +66,7 @@
         default: return SHARED_GEO.sphere; // Types 0,2,11 share generic sphere
       }
       SHARED_GEO_TYPE[type] = geo;
+      geo._isShared = true;
       return geo;
     }
     window.SHARED_GEO_TYPE = SHARED_GEO_TYPE;
@@ -1439,8 +1442,8 @@
 
         // ── Organic "Snail/Worm Pump" Locomotion ─────────────────────────────────────
         // Animate the segmented anatomy groups for a squishy, organic movement feel.
-        // Guarded by !_squishTimer so hit-reaction squish always takes priority.
-        if (!this._squishTimer && this.baseGroup && this.headGroup && this.torsoGroup) {
+        // Runs continuously — hit-squish is applied additively on top of the base scale.
+        if (this.baseGroup && this.headGroup && this.torsoGroup) {
           const _pump     = Math.sin(gameTime * 4.0 + this.wobbleOffset);
           const _mvX      = this._lastMoveVX || 0;
           const _mvZ      = this._lastMoveVZ || 0;
@@ -1463,9 +1466,8 @@
               this.mesh.position.y + _headY,
               playerPos.z
             );
-            if (!this._lerpedHeadTargetInit) {
-              this._lerpedHeadTarget.copy(_tmpHeadTarget);
-              this._lerpedHeadTargetInit = true;
+            if (!this._lerpedHeadTarget) {
+              this._lerpedHeadTarget = new THREE.Vector3().copy(_tmpHeadTarget);
             }
             // Lerp rate 3.5 ≈ 280 ms lag — makes the head feel heavy and organic
             this._lerpedHeadTarget.lerp(_tmpHeadTarget, Math.min(1.0, dt * 3.5));
@@ -3771,12 +3773,8 @@
             } else {
               // Phase 5: Remove corpse
               scene.remove(dyingMesh);
-              // Dispose geometry only if it is NOT a shared instance (SHARED_GEO or SHARED_GEO_TYPE)
-              const _isSharedGeo = dyingMesh.geometry && (
-                Object.values(SHARED_GEO).includes(dyingMesh.geometry) ||
-                Object.values(SHARED_GEO_TYPE).includes(dyingMesh.geometry)
-              );
-              if (dyingMesh.geometry && !_isSharedGeo) dyingMesh.geometry.dispose();
+              // Dispose geometry only if it is NOT a shared instance (flagged with _isShared)
+              if (dyingMesh.geometry && !dyingMesh.geometry._isShared) dyingMesh.geometry.dispose();
               // Dispose material only if it is NOT a shared cached instance
               if (dyingMesh.material && !dyingMesh.material._isShared) dyingMesh.material.dispose();
               // bullet holes use shared geometry — only dispose per-hole cloned materials
