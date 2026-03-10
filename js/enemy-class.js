@@ -9,12 +9,94 @@
       sphere: new THREE.SphereGeometry(1, 8, 8)
     };
     const SHARED_MAT = {
-      enemy:  new THREE.MeshLambertMaterial({ color: 0x8B4513 }),
+      // SHARED_MAT.enemy is only used as a fallback — type-specific colors come from SHARED_MAT_CACHE
+      enemy:  new THREE.MeshLambertMaterial({ color: 0x44AA44 }),
       black:  new THREE.MeshBasicMaterial({ color: 0x000000 }),
       bullet: new THREE.MeshBasicMaterial({ color: 0xffff00 })
     };
+    SHARED_MAT.enemy._isShared = true;
     window.SHARED_GEO = SHARED_GEO;
     window.SHARED_MAT = SHARED_MAT;
+
+    // ── Per-color shared material cache — same color → same material object ──────────────────
+    // Prevents creating N materials for N enemies of the same type while still giving each
+    // type its own distinct visual appearance.  Tag with _isShared so takeDamage() knows to
+    // clone before mutating (blood stain, freeze, fire char, etc.).
+    const SHARED_MAT_CACHE = {};
+    function getOrCreateMat(colorHex, opts) {
+      // Build a deterministic key: hex color + optional transparency flag
+      const key = colorHex.toString(16) + (opts && opts.transparent ? '_t' : '');
+      if (!SHARED_MAT_CACHE[key]) {
+        const m = new THREE.MeshLambertMaterial(Object.assign({ color: colorHex }, opts || {}));
+        m._isShared = true;
+        SHARED_MAT_CACHE[key] = m;
+      }
+      return SHARED_MAT_CACHE[key];
+    }
+    window.SHARED_MAT_CACHE = SHARED_MAT_CACHE;
+
+    // ── Per-type geometry cache — each shape is created once, shared across all instances ───
+    const SHARED_GEO_TYPE = {};
+    function getEnemyGeo(type) {
+      if (SHARED_GEO_TYPE[type]) return SHARED_GEO_TYPE[type];
+      let geo;
+      switch (type) {
+        case 4:  geo = new THREE.TetrahedronGeometry(0.9, 0);    break; // Ranged
+        case 5:  geo = new THREE.OctahedronGeometry(0.9, 0);     break; // Flying
+        case 6:  geo = getHardTankGeometry();    SHARED_GEO_TYPE[6] = geo; return geo; // Hard Tank (own cache)
+        case 8:  geo = new THREE.DodecahedronGeometry(0.85, 0);  break; // Hard Balanced
+        case 9:  geo = new THREE.IcosahedronGeometry(0.9, 0);    break; // Elite
+        case 10: geo = new THREE.DodecahedronGeometry(1.1, 0);   break; // MiniBoss
+        case 15: geo = new THREE.SphereGeometry(0.65, 7, 7);     break; // Daddy Longlegs (small)
+        case 17: geo = new THREE.CapsuleGeometry(0.55, 0.6, 4, 8); break; // Grey Alien
+        case 19: geo = new THREE.OctahedronGeometry(1.0, 1);     break; // Annunaki Orb
+        case 20: geo = new THREE.DodecahedronGeometry(0.9, 0);   break; // Source Glitch
+        default: return SHARED_GEO.sphere; // Most types share the generic sphere
+      }
+      SHARED_GEO_TYPE[type] = geo;
+      return geo;
+    }
+    window.SHARED_GEO_TYPE = SHARED_GEO_TYPE;
+
+    // ── Per-type base colors ─────────────────────────────────────────────────────────────────
+    const _ENEMY_COLORS = [
+      0x44AA44,  // 0: Tank/Amoeba — green
+      0x4488FF,  // 1: Fast/Water Bug — blue
+      0x44CC88,  // 2: Balanced/Microbe — teal
+      0x88BBFF,  // 3: Slowing/Spiky — ice blue
+      0xFF8833,  // 4: Ranged/Tetrahedron — orange
+      0xAA44FF,  // 5: Flying/Octahedron — violet
+      0x226611,  // 6: Hard Tank — dark green
+      0xFFCC00,  // 7: Hard Fast/Capsule — gold
+      0x9933AA,  // 8: Hard Balanced/Dodecahedron — dark purple
+      0xCC2222,  // 9: Elite/Icosahedron — crimson
+      0xFFAA00,  // 10: MiniBoss — golden
+      0x6600BB,  // 11: FlyingBoss — deep purple
+      0x22BBCC,  // 12: Bug Ranged — bright teal
+      0x116655,  // 13: Bug Slow — dark teal
+      0x00EEFF,  // 14: Bug Fast — cyan
+      0x888888,  // 15: Daddy Longlegs — grey
+      0xFF4400,  // 16: Sweeping Swarm — orange-red
+      0xAABBCC,  // 17: Grey Alien — blue-grey
+      0x556633,  // 18: Reptilian Shifter — camo green
+      0xFFD700,  // 19: Annunaki Orb — gold
+      0xFF00FF   // 20: Source Glitch — magenta
+    ];
+    // Fallback color for any type not listed in _ENEMY_COLORS
+    const DEFAULT_ENEMY_COLOR = _ENEMY_COLORS[0]; // green (same as Tank/index-0)
+
+    // Enemy types that display eyes (creatures with recognizable faces)
+    const ENEMY_TYPES_WITH_EYES = new Set([0, 1, 2, 3, 4, 5, 12, 13, 14, 15, 17]);
+
+    // Enemy types that fly (need a ground shadow disc)
+    const ENEMY_TYPES_FLYING = new Set([5, 11, 14, 16, 17, 19]);
+
+    // Shared eye geometry and material reused by all enemy types that have eyes
+    const SHARED_EYE_GEO = new THREE.SphereGeometry(0.09, 5, 5);
+    const SHARED_EYE_MAT = new THREE.MeshBasicMaterial({ color: 0xFFFFFF });
+    const SHARED_PUPIL_MAT = new THREE.MeshBasicMaterial({ color: 0x000000 });
+    SHARED_EYE_MAT._isShared = true;
+    SHARED_PUPIL_MAT._isShared = true;
 
     let hardTankGeometryCache = null;
 
@@ -287,10 +369,26 @@
         // Progressive difficulty: 20% per level to force use of all upgrades
         const levelScaling = 1 + (playerLevel - 1) * 0.20;
 
-        // ── BODY MESH — uses shared geometry & material to prevent VRAM exhaustion ──
-        // All enemy types share one geometry (sphere) and one material (brown Lambert).
-        // Per-enemy opacity/color changes are performed only after cloning on first hit.
-        this.mesh = new THREE.Mesh(SHARED_GEO.sphere, SHARED_MAT.enemy);
+        // ── BODY MESH — type-specific geometry & shared-per-color material ──────────
+        // Geometry is cached per type (getEnemyGeo).  Material is retrieved from
+        // SHARED_MAT_CACHE (same color → same material object) to avoid per-enemy VRAM.
+        // Types whose material opacity/emissive must change per-instance get a clone.
+        const _bodyGeo = getEnemyGeo(type);
+        const _colorHex = _ENEMY_COLORS[type] !== undefined ? _ENEMY_COLORS[type] : DEFAULT_ENEMY_COLOR;
+        // Types that animate their own material properties each frame need a per-instance copy
+        const _needsUniqueMat = (type === 18 || type === 19 || type === 20);
+        const _baseMat = getOrCreateMat(_colorHex,
+          (type === 18) ? { transparent: true, opacity: _REPTILIAN_CAMO_OPACITY } : null
+        );
+        const _bodyMat = _needsUniqueMat ? _baseMat.clone() : _baseMat;
+        // MiniBoss/FlyingBoss have emissive glow — give them a per-instance material so the
+        // pulsing glow animation in update() doesn't affect all enemies of the same color.
+        if (type === 10 || type === 11) {
+          const _bossMat = new THREE.MeshLambertMaterial({ color: _colorHex, emissive: new THREE.Color(_colorHex), emissiveIntensity: 0.3 });
+          this.mesh = new THREE.Mesh(_bodyGeo, _bossMat);
+        } else {
+          this.mesh = new THREE.Mesh(_bodyGeo, _bodyMat);
+        }
 
         const yPos = (type === 5 || type === 14 || type === 16 || type === 17) ? 2
                    : (type === 11 ? 5 : (type === 19 ? 4 : (type === 20 ? 2 : 0.5)));
@@ -305,16 +403,59 @@
           scene.add(this.mesh);
         }
 
-        // ── HEAD MESH — second and only additional mesh; geometry is shared ─────────
-        // Material is cloned so per-enemy opacity (death fade) doesn't affect all heads.
-        this.headMesh = new THREE.Mesh(SHARED_GEO.cube, SHARED_MAT.black.clone());
+        // ── HEAD NUBBIN — small dark indicator on top of each enemy ─────────────────
+        this.headMesh = new THREE.Mesh(SHARED_GEO.cube, SHARED_MAT.black);
         this.headMesh.scale.setScalar(0.3);
         this.headMesh.position.y = 0.7;
         this.mesh.add(this.headMesh);
 
-        // ── NULL-INITIALIZE removed anatomy properties for update/die compatibility ──
-        // All procedural anatomy (base disc, head group, guts, eyes, legs, glitch meshes)
-        // has been removed to stop the per-enemy VRAM explosion (was 20-40 GPU objects/enemy).
+        // ── EYES — restored for creature-type enemies using shared geometry/material ─
+        // Each eye is a child of this.mesh; no new geometries are allocated per enemy.
+        this.leftEye  = null;
+        this.rightEye = null;
+        if (ENEMY_TYPES_WITH_EYES.has(type)) {
+          const _eyeL = new THREE.Mesh(SHARED_EYE_GEO, SHARED_EYE_MAT);
+          const _eyeR = new THREE.Mesh(SHARED_EYE_GEO, SHARED_EYE_MAT);
+          // Bug-type enemies (12-14) have larger, more expressive eyes
+          const _eyeScale = (type >= 12 && type <= 14) ? 1.2 : 0.85;
+          _eyeL.scale.setScalar(_eyeScale);
+          _eyeR.scale.setScalar(_eyeScale);
+          // Eyes sit on the forward face of the sphere at ~45° latitude
+          _eyeL.position.set(-0.32, 0.28, 0.58);
+          _eyeR.position.set( 0.32, 0.28, 0.58);
+          this.mesh.add(_eyeL);
+          this.mesh.add(_eyeR);
+          this.leftEye  = _eyeL;
+          this.rightEye = _eyeR;
+        }
+
+        // ── GLITCH MESHES for Source Glitch (type 20) ────────────────────────────────
+        this._glitchMeshes = null;
+        if (type === 20) {
+          this._glitchMeshes = [];
+          for (let _gi = 0; _gi < 4; _gi++) {
+            const _gmGeo = (_gi % 2 === 0) ? new THREE.BoxGeometry(0.4, 0.4, 0.4) : new THREE.OctahedronGeometry(0.3, 0);
+            const _gmMat = new THREE.MeshBasicMaterial({ color: 0xFF00FF, transparent: true, opacity: 0.8 });
+            const _gm = new THREE.Mesh(_gmGeo, _gmMat);
+            _gm.position.set((Math.random() - 0.5) * 1.2, (Math.random() - 0.5) * 1.2, (Math.random() - 0.5) * 1.2);
+            this.mesh.add(_gm);
+            this._glitchMeshes.push(_gm);
+          }
+        }
+
+        // ── GROUND SHADOW for flying enemies ─────────────────────────────────────────
+        this.groundShadow = null;
+        if (ENEMY_TYPES_FLYING.has(type)) {
+          const _shadowGeo = new THREE.CircleGeometry(0.5, 8);
+          const _shadowMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.2, depthWrite: false });
+          this.groundShadow = new THREE.Mesh(_shadowGeo, _shadowMat);
+          this.groundShadow.rotation.x = -Math.PI / 2;
+          this.groundShadow.position.set(x, 0.02, z);
+          scene.add(this.groundShadow);
+        }
+
+        // Anatomy groups — null (not recreating the full procedural anatomy is intentional;
+        // the die() and update() code handles null gracefully).
         this.baseGroup        = null;
         this.torsoGroup       = null;
         this.headGroup        = null;
@@ -323,10 +464,6 @@
         this._anatBaseMesh    = null;
         this._anatHeadMesh    = null;
         this._anatJawMesh     = null;
-        this.leftEye          = null;
-        this.rightEye         = null;
-        this.groundShadow     = null;
-        this._glitchMeshes    = null;
         this._annunakiLaserMesh = null;
 
         // ── TYPE-SPECIFIC AI STATE (no new meshes — pure numeric state) ─────────────
@@ -369,7 +506,7 @@
         this._flankAngle = (Math.random() > 0.5 ? 1 : -1) * (Math.PI * 0.3 + Math.random() * Math.PI * 0.4);
         this._packRush = false; // Pack behavior: periodic group rush flag
 
-        // Blink timer vars kept for code compatibility (will never fire since leftEye is null)
+        // Blink timer vars for enemy eye animation (fire only when leftEye is set)
         this.blinkTimer = 0;
         this.blinkDuration = 0.08;
         this.nextBlinkTime = 1.5 + Math.random() * 3.5;
@@ -462,9 +599,14 @@
         const dist = Math.sqrt(dx*dx + dz*dz);
 
         // Estimate player velocity for prediction AI
+        // Clamped to ±0.4 units/frame to prevent wild teleport-like predictions when
+        // dt is tiny (hit-stop exit frame) or player dashes.
+        const _MAX_PRED_VEL = 0.4;
         if (this._lastPlayerPosValid) {
-          this._playerVelocity.x = (playerPos.x - this._lastPlayerPos.x) / Math.max(dt, 0.016);
-          this._playerVelocity.z = (playerPos.z - this._lastPlayerPos.z) / Math.max(dt, 0.016);
+          this._playerVelocity.x = Math.max(-_MAX_PRED_VEL, Math.min(_MAX_PRED_VEL,
+            (playerPos.x - this._lastPlayerPos.x) / Math.max(dt, 0.016)));
+          this._playerVelocity.z = Math.max(-_MAX_PRED_VEL, Math.min(_MAX_PRED_VEL,
+            (playerPos.z - this._lastPlayerPos.z) / Math.max(dt, 0.016)));
         } else {
           this._lastPlayerPosValid = true;
         }
@@ -1429,9 +1571,13 @@
         // completely absorbed (no HP loss).  After absorbing one hit the enemy
         // becomes solid again.
         if (this._phasingEnabled) {
-          // Helper: set material opacity/transparency in one place
+          // Helper: set material opacity/transparency — clones shared mat first if needed
           const _setPhaseMat = (opacity, transparent) => {
-            const mat = this.mesh && this.mesh.material;
+            if (!this.mesh) return;
+            if (this.mesh.material && this.mesh.material._isShared) {
+              this.mesh.material = this.mesh.material.clone();
+            }
+            const mat = this.mesh.material;
             if (mat) { mat.transparent = transparent; mat.opacity = opacity; }
           };
           if (this._phaseIgnoreNext) {
@@ -1665,8 +1811,8 @@
               // Stain the nearby enemy with blood
               if (other.mesh.material && other.mesh.material.color) {
                 // Detach from shared material before modifying per-enemy color
-                if (other.mesh.material === SHARED_MAT.enemy) {
-                  other.mesh.material = SHARED_MAT.enemy.clone();
+                if (other.mesh.material._isShared) {
+                  other.mesh.material = other.mesh.material.clone();
                 }
                 if (!other._originalColor) other._originalColor = other.mesh.material.color.clone();
                 const stainAmt = Math.max(0, 0.15 * (1 - Math.sqrt(distSq) / 2));
@@ -1680,10 +1826,10 @@
         // Progressive blood stain: blend enemy mesh color toward dark red as HP drops
         // This works on ALL enemy colors (including yellow/gold) by directly lerping the color
         if (this.mesh && this.mesh.material) {
-          // Detach from the global shared material on first hit so per-enemy color
+          // Detach from the shared material on first hit so per-enemy color
           // transitions don't affect all living enemies simultaneously.
-          if (this.mesh.material === SHARED_MAT.enemy) {
-            this.mesh.material = SHARED_MAT.enemy.clone();
+          if (this.mesh.material._isShared) {
+            this.mesh.material = this.mesh.material.clone();
           }
           if (!this._originalColor) {
             this._originalColor = this.mesh.material.color.clone();
@@ -2590,6 +2736,10 @@
         // ── FIRE / PLASMA: Char & Melt hit reaction ─────────────────────────────────
         // Permanently lerp material color towards charred black. Spawn black smoke particles.
         if ((damageType === 'fire' || damageType === 'plasma') && this.mesh && this.mesh.material && !this.isDead) {
+          // Clone shared material before mutating so charring doesn't affect all enemies of this type
+          if (this.mesh.material._isShared) {
+            this.mesh.material = this.mesh.material.clone();
+          }
           if (!this._charStartColor) this._charStartColor = this.mesh.material.color.clone();
           const _hpRatio = Math.max(0, this.hp / this.maxHp);
           const _charAmt = (1.0 - _hpRatio) * 0.85;
@@ -2620,6 +2770,10 @@
           this._lastMoveVX = 0;
           this._lastMoveVZ = 0;
           if (this.mesh.material && !this._lightningFlashTimer) {
+            // Clone shared material before modifying so flash doesn't affect all enemies
+            if (this.mesh.material._isShared) {
+              this.mesh.material = this.mesh.material.clone();
+            }
             const _preFlash = this.mesh.material.color.clone();
             this.mesh.material.color.setHex(0xFFFFFF);
             this.mesh.material.needsUpdate = true;
@@ -2938,9 +3092,9 @@
         // Enemy death animation: fall lifeless to ground, then spawn XP star separately
         const dyingMesh = this.mesh;
         // Clone shared material for the fade-out animation so opacity changes on the
-        // dying mesh don't affect all other living enemies that share SHARED_MAT.enemy.
-        if (dyingMesh.material === SHARED_MAT.enemy) {
-          dyingMesh.material = SHARED_MAT.enemy.clone();
+        // dying mesh don't affect all other living enemies sharing the same cached material.
+        if (dyingMesh.material && dyingMesh.material._isShared) {
+          dyingMesh.material = dyingMesh.material.clone();
         }
         const _bulletHoles = this.bulletHoles;
         const _bloodStains = this._bloodStains;
@@ -3028,8 +3182,12 @@
         // 0=collapse, 1=spin fall, 2=backward fall, 3=forward collapse, 4=side fall,
         // 5=ragdoll tumble, 6=explosion knockback, 7=splatter, 8=split in half,
         // 9=gut spill, 10=crawl & collapse
+        // Declare these BEFORE deathStyle so they're available in the selection logic
+        const isShotgunDeath = damageType === 'shotgun' || damageType === 'doubleBarrel' || damageType === 'pumpShotgun' || damageType === 'autoShotgun';
+        const isExplosiveDeath = isShotgunDeath || damageType === 'lightning' || damageType === 'homingMissile' || damageType === 'fireball' || damageType === 'sniperRifle';
+        const isCritDeath = this.lastCrit || false;
         let deathStyle;
-        if (isShotgunDeath || damageType === 'pumpShotgun' || damageType === 'autoShotgun') {
+        if (isShotgunDeath) {
           // Shotgun variants: knockback-heavy deaths
           deathStyle = [2, 5, 6, 7, 9][Math.floor(Math.random() * 5)];
         } else if (damageType === 'sniperRifle' || damageType === '50cal') {
@@ -3075,9 +3233,6 @@
         const fallSignX = (Math.random() < 0.5) ? 1 : -1;
         const fallSignZ = (Math.random() < 0.5) ? 1 : -1;
         const spinDir = (Math.random() < 0.5) ? 1 : -1;
-        const isShotgunDeath = damageType === 'shotgun' || damageType === 'doubleBarrel' || damageType === 'pumpShotgun' || damageType === 'autoShotgun';
-        const isExplosiveDeath = isShotgunDeath || damageType === 'lightning' || damageType === 'homingMissile' || damageType === 'fireball' || damageType === 'sniperRifle';
-        const isCritDeath = this.lastCrit || false;
         
         // Fall down animation: enemy falls dynamically, lies on ground, explodes into blood
         // LINGER_FRAMES extended to keep corpse visible for ~10 seconds total (at 60fps):
@@ -3517,14 +3672,19 @@
             } else {
               // Phase 5: Remove corpse
               scene.remove(dyingMesh);
-              if (dyingMesh.geometry && dyingMesh.geometry !== SHARED_GEO.sphere && dyingMesh.geometry !== SHARED_GEO.cube) dyingMesh.geometry.dispose();
-              if (dyingMesh.material && dyingMesh.material !== SHARED_MAT.enemy && dyingMesh.material !== SHARED_MAT.black) dyingMesh.material.dispose();
+              // Dispose geometry only if it is NOT a shared instance (SHARED_GEO or SHARED_GEO_TYPE)
+              const _isSharedGeo = dyingMesh.geometry && (
+                Object.values(SHARED_GEO).includes(dyingMesh.geometry) ||
+                Object.values(SHARED_GEO_TYPE).includes(dyingMesh.geometry)
+              );
+              if (dyingMesh.geometry && !_isSharedGeo) dyingMesh.geometry.dispose();
+              // Dispose material only if it is NOT a shared cached instance
+              if (dyingMesh.material && !dyingMesh.material._isShared) dyingMesh.material.dispose();
               // bullet holes use shared geometry — only dispose per-hole cloned materials
-              if (_bulletHoles) _bulletHoles.forEach(h => { if (h.material) h.material.dispose(); });
+              if (_bulletHoles) _bulletHoles.forEach(h => { if (h.material && !h.material._isShared) h.material.dispose(); });
               // blood stains use shared geometry — only dispose per-stain materials
-              if (_bloodStains) _bloodStains.forEach(s => { if (s.material) s.material.dispose(); });
-              if (_leftEye) { scene.remove(_leftEye); if (_leftEye.geometry) _leftEye.geometry.dispose(); if (_leftEye.material) _leftEye.material.dispose(); }
-              if (_rightEye) { scene.remove(_rightEye); if (_rightEye.geometry) _rightEye.geometry.dispose(); if (_rightEye.material) _rightEye.material.dispose(); }
+              if (_bloodStains) _bloodStains.forEach(s => { if (s.material && !s.material._isShared) s.material.dispose(); });
+              // Eyes use shared geo/mat — no disposal needed (they are children of dyingMesh, removed with it)
               // Anatomy part meshes have unique geometries — dispose both geo and mat
               if (_anatBaseMesh) { if (_anatBaseMesh.geometry) _anatBaseMesh.geometry.dispose(); if (_anatBaseMesh.material) _anatBaseMesh.material.dispose(); }
               if (_anatHeadMesh) { if (_anatHeadMesh.geometry) _anatHeadMesh.geometry.dispose(); if (_anatHeadMesh.material) _anatHeadMesh.material.dispose(); }
@@ -3541,13 +3701,15 @@
             // Called by resetGame when the animation is still in-progress.
             // Force-remove the dying mesh and all sub-resources from the scene.
             if (dyingMesh.parent) scene.remove(dyingMesh);
-            if (dyingMesh.geometry && dyingMesh.geometry !== SHARED_GEO.sphere && dyingMesh.geometry !== SHARED_GEO.cube) dyingMesh.geometry.dispose();
-            if (dyingMesh.material && dyingMesh.material !== SHARED_MAT.enemy && dyingMesh.material !== SHARED_MAT.black) dyingMesh.material.dispose();
+            const _isSharedGeoC = dyingMesh.geometry && (
+              Object.values(SHARED_GEO).includes(dyingMesh.geometry) ||
+              Object.values(SHARED_GEO_TYPE).includes(dyingMesh.geometry)
+            );
+            if (dyingMesh.geometry && !_isSharedGeoC) dyingMesh.geometry.dispose();
+            if (dyingMesh.material && !dyingMesh.material._isShared) dyingMesh.material.dispose();
             // bullet holes / blood stains use shared geometry — only dispose per-hole materials
-            if (_bulletHoles) _bulletHoles.forEach(h => { if (h.material) h.material.dispose(); });
-            if (_bloodStains) _bloodStains.forEach(s => { if (s.material) s.material.dispose(); });
-            if (_leftEye) { if (_leftEye.parent) scene.remove(_leftEye); if (_leftEye.geometry) _leftEye.geometry.dispose(); if (_leftEye.material) _leftEye.material.dispose(); }
-            if (_rightEye) { if (_rightEye.parent) scene.remove(_rightEye); if (_rightEye.geometry) _rightEye.geometry.dispose(); if (_rightEye.material) _rightEye.material.dispose(); }
+            if (_bulletHoles) _bulletHoles.forEach(h => { if (h.material && !h.material._isShared) h.material.dispose(); });
+            if (_bloodStains) _bloodStains.forEach(s => { if (s.material && !s.material._isShared) s.material.dispose(); });
             // Anatomy part meshes have unique geometries — dispose both geo and mat
             if (_anatBaseMesh) { if (_anatBaseMesh.geometry) _anatBaseMesh.geometry.dispose(); if (_anatBaseMesh.material) _anatBaseMesh.material.dispose(); }
             if (_anatHeadMesh) { if (_anatHeadMesh.geometry) _anatHeadMesh.geometry.dispose(); if (_anatHeadMesh.material) _anatHeadMesh.material.dispose(); }
@@ -3561,13 +3723,15 @@
           // Fallback: no animation slot available, remove immediately
           scene.remove(dyingMesh);
           setTimeout(() => {
-            if (dyingMesh.geometry && dyingMesh.geometry !== SHARED_GEO.sphere && dyingMesh.geometry !== SHARED_GEO.cube) dyingMesh.geometry.dispose();
-            if (dyingMesh.material && dyingMesh.material !== SHARED_MAT.enemy && dyingMesh.material !== SHARED_MAT.black) dyingMesh.material.dispose();
+            const _isSharedGeoFB = dyingMesh.geometry && (
+              Object.values(SHARED_GEO).includes(dyingMesh.geometry) ||
+              Object.values(SHARED_GEO_TYPE).includes(dyingMesh.geometry)
+            );
+            if (dyingMesh.geometry && !_isSharedGeoFB) dyingMesh.geometry.dispose();
+            if (dyingMesh.material && !dyingMesh.material._isShared) dyingMesh.material.dispose();
             // bullet holes / blood stains use shared geometry — only dispose per-hole materials
-            if (_bulletHoles) _bulletHoles.forEach(h => { if (h.material) h.material.dispose(); });
-            if (_bloodStains) _bloodStains.forEach(s => { if (s.material) s.material.dispose(); });
-            if (_leftEye) { scene.remove(_leftEye); if (_leftEye.geometry) _leftEye.geometry.dispose(); if (_leftEye.material) _leftEye.material.dispose(); }
-            if (_rightEye) { scene.remove(_rightEye); if (_rightEye.geometry) _rightEye.geometry.dispose(); if (_rightEye.material) _rightEye.material.dispose(); }
+            if (_bulletHoles) _bulletHoles.forEach(h => { if (h.material && !h.material._isShared) h.material.dispose(); });
+            if (_bloodStains) _bloodStains.forEach(s => { if (s.material && !s.material._isShared) s.material.dispose(); });
             // Anatomy part meshes have unique geometries — dispose both geo and mat
             if (_anatBaseMesh) { if (_anatBaseMesh.geometry) _anatBaseMesh.geometry.dispose(); if (_anatBaseMesh.material) _anatBaseMesh.material.dispose(); }
             if (_anatHeadMesh) { if (_anatHeadMesh.geometry) _anatHeadMesh.geometry.dispose(); if (_anatHeadMesh.material) _anatHeadMesh.material.dispose(); }

@@ -582,23 +582,43 @@
           scene.remove(e.mesh); // no-op for instanced enemies; removes non-instanced ones
           if (!e._usesInstancing) {
             // Only dispose geometry/material for enemies that own their mesh exclusively
-            if (e.mesh.geometry) e.mesh.geometry.dispose();
+            // Never dispose shared cached geometry (SHARED_GEO_TYPE) or shared cached material (SHARED_MAT_CACHE)
+            const sharedGeoType = window.SHARED_GEO_TYPE || {};
+            const sharedGeo     = window.SHARED_GEO || {};
+            const isSharedGeo = e.mesh.geometry && (
+              Object.values(sharedGeoType).includes(e.mesh.geometry) ||
+              Object.values(sharedGeo).includes(e.mesh.geometry)
+            );
+            if (e.mesh.geometry && !isSharedGeo) e.mesh.geometry.dispose();
             if (e.mesh.material) {
               if (Array.isArray(e.mesh.material)) {
-                e.mesh.material.forEach(m => m.dispose());
+                e.mesh.material.forEach(m => { if (!m._isShared) m.dispose(); });
               } else {
-                e.mesh.material.dispose();
+                if (!e.mesh.material._isShared) e.mesh.material.dispose();
               }
             }
           }
           // Dispose sub-mesh resources (bullet holes, blood stains, eyes) that are
           // children of the enemy mesh — they are removed from scene with the parent,
           // but their GPU resources must be explicitly freed.
-          // Note: bullet holes and blood stains use shared geometry — only dispose per-instance materials.
-          if (e.bulletHoles) e.bulletHoles.forEach(h => { if (h.material) h.material.dispose(); });
-          if (e._bloodStains) e._bloodStains.forEach(s => { if (s.material) s.material.dispose(); });
-          if (e.leftEye) { if (e.leftEye.geometry) e.leftEye.geometry.dispose(); if (e.leftEye.material) e.leftEye.material.dispose(); }
-          if (e.rightEye) { if (e.rightEye.geometry) e.rightEye.geometry.dispose(); if (e.rightEye.material) e.rightEye.material.dispose(); }
+          // Note: bullet holes, blood stains, and eyes use shared geometry/material — only dispose per-instance materials.
+          if (e.bulletHoles) e.bulletHoles.forEach(h => { if (h.material && !h.material._isShared) h.material.dispose(); });
+          if (e._bloodStains) e._bloodStains.forEach(s => { if (s.material && !s.material._isShared) s.material.dispose(); });
+          // Eyes use shared geometry (SHARED_EYE_GEO) and shared material (SHARED_EYE_MAT) — never dispose
+          // Also skip disposing shared cached body geometry (SHARED_GEO_TYPE) and materials (SHARED_MAT_CACHE)
+          // Clean up ground shadow (flying enemy shadow disc — not shared, must be removed/disposed)
+          if (e.groundShadow) {
+            if (e.groundShadow.parent) scene.remove(e.groundShadow);
+            if (e.groundShadow.geometry) e.groundShadow.geometry.dispose();
+            if (e.groundShadow.material) e.groundShadow.material.dispose();
+          }
+          // Clean up glitch submeshes for Source Glitch (type 20)
+          if (e._glitchMeshes) {
+            e._glitchMeshes.forEach(gm => {
+              if (gm.geometry) gm.geometry.dispose();
+              if (gm.material) gm.material.dispose();
+            });
+          }
         }
       });
       enemies = [];
