@@ -759,26 +759,49 @@
 
   // ── Resource collection notification (slide-in from upper-right) ──
   let _notifContainer = null;
+  let _notifHideTimer = null;
+
+  function _hideAllNotifs() {
+    if (!_notifContainer) return;
+    Array.from(_notifContainer.children).forEach(c => {
+      c.style.transform = 'translateX(120%)';
+      c.style.opacity = '0';
+    });
+    setTimeout(() => { if (_notifContainer) _notifContainer.innerHTML = ''; }, 280);
+  }
+
   function _showCollectionNotification(resourceKey, amount) {
     if (!_notifContainer) {
       _notifContainer = document.createElement('div');
       _notifContainer.id = 'harvest-notif-container';
-      _notifContainer.style.cssText = 'position:fixed;top:60px;right:10px;z-index:350;display:flex;flex-direction:column;gap:4px;pointer-events:none;';
+      _notifContainer.style.cssText = 'position:fixed;top:60px;right:10px;z-index:350;display:flex;flex-direction:column;gap:3px;pointer-events:none;max-width:140px;';
       document.body.appendChild(_notifContainer);
     }
     const rt = RESOURCE_TYPES[resourceKey];
     if (!rt) return;
-    const el = document.createElement('div');
-    el.style.cssText = `background:rgba(0,0,0,0.85);border:1px solid ${rt.color};border-radius:8px;padding:6px 14px;color:#fff;font-size:13px;font-weight:bold;font-family:'Bangers',cursive;letter-spacing:1px;display:flex;align-items:center;gap:8px;transform:translateX(120%);transition:transform 0.3s ease-out,opacity 0.3s;opacity:0;white-space:nowrap;`;
-    el.innerHTML = `<span style="font-size:18px;">${rt.icon}</span><span>+${amount} ${rt.label}</span>`;
-    _notifContainer.appendChild(el);
-    // Slide in
-    requestAnimationFrame(() => { el.style.transform = 'translateX(0)'; el.style.opacity = '1'; });
-    // Slide out after 2s
-    setTimeout(() => {
-      el.style.transform = 'translateX(120%)'; el.style.opacity = '0';
-      setTimeout(() => el.remove(), 350);
-    }, 2000);
+
+    // Merge into existing toast for same resource
+    const existing = Array.from(_notifContainer.children).find(c => c.dataset.resKey === resourceKey);
+    if (existing) {
+      const countEl = existing.querySelector('[data-total]');
+      if (countEl) {
+        const newTotal = parseInt(countEl.dataset.total || '0', 10) + amount;
+        countEl.dataset.total = newTotal;
+        countEl.textContent = `+${newTotal}`;
+      }
+    } else {
+      const el = document.createElement('div');
+      el.dataset.resKey = resourceKey;
+      el.style.cssText = `background:rgba(0,0,0,0.82);border:1px solid ${rt.color};border-radius:5px;padding:2px 7px;color:#fff;font-size:11px;font-weight:bold;font-family:'Bangers',cursive;letter-spacing:1px;display:flex;align-items:center;gap:4px;transform:translateX(120%);transition:transform 0.25s ease-out,opacity 0.25s;opacity:0;white-space:nowrap;`;
+      el.innerHTML = `<span style="font-size:12px;">${rt.icon}</span><span data-total="${amount}">+${amount}</span><span style="opacity:0.75;font-size:10px;">${rt.label}</span>`;
+      _notifContainer.appendChild(el);
+      // Slide in
+      requestAnimationFrame(() => { el.style.transform = 'translateX(0)'; el.style.opacity = '1'; });
+    }
+
+    // Reset auto-hide timer – fade everything out after 2.5s of no activity
+    if (_notifHideTimer) clearTimeout(_notifHideTimer);
+    _notifHideTimer = setTimeout(_hideAllNotifs, 2500);
   }
 
   // ── Floating text helper ─────────────────────────────────────
@@ -826,11 +849,16 @@
   function _updateHUD() {
     const hud = document.getElementById('harvest-hud');
     if (!hud) return;
-    const res = _getResources();
-    if (!res) { hud.innerHTML = ''; return; }
 
-    // In camp mode: always show building materials (wood/stone/coal) even at 0
+    // In game mode, hide the persistent HUD entirely – resources are shown
+    // only as temporary toasts when actively collected.
     const isCamp = hud.classList.contains('camp-mode');
+    if (!isCamp) { hud.style.display = 'none'; return; }
+
+    const res = _getResources();
+    if (!res) { hud.innerHTML = ''; hud.style.display = 'none'; return; }
+
+    // Camp mode: always show building materials (wood/stone/coal) even at 0
     const entries = Object.entries(RESOURCE_TYPES)
       .filter(([k, v]) => k !== 'flesh' && (res[k] > 0 || (!v.hidden && isCamp && BUILD_MATERIAL_KEYS.includes(k))))
       .map(([k, v]) => `<span class="harvest-res-item"><span class="harvest-res-icon">${v.icon}</span><span class="harvest-res-count">x${(res[k] || 0)}</span></span>`)
