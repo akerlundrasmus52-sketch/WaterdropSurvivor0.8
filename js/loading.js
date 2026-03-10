@@ -102,18 +102,14 @@
         setTimeout(function() {
           loadingScreen.style.display = 'none';
 
-          // Always show main menu after loading — camp is reached via menu buttons
-          var mainMenu = document.getElementById('main-menu');
-          if (mainMenu) mainMenu.style.display = 'flex';
-
-          // If init failed, make buttons visible (they are normally transparent overlays
-          // on a background image) so users can actually find and click them
+          // If init failed, always fall back to main menu
           if (!initOk) {
+            var mainMenu = document.getElementById('main-menu');
+            if (mainMenu) mainMenu.style.display = 'flex';
             var buttons = mainMenu ? mainMenu.querySelectorAll('.menu-btn') : [];
             for (var i = 0; i < buttons.length; i++) {
               window._applyFallbackButtonStyles(buttons[i]);
             }
-
             var statusDiv = document.createElement('div');
             statusDiv.style.color = '#ff6666';
             statusDiv.style.fontSize = '12px';
@@ -126,7 +122,35 @@
             statusDiv.textContent = '⚠️ Game engine failed to load — tap buttons to retry';
             var menuButtons = mainMenu ? mainMenu.querySelector('.menu-buttons') : null;
             if (menuButtons) menuButtons.appendChild(statusDiv);
+            return;
           }
+
+          // ── First-time player: skip main menu and go directly to the 3D camp ──
+          // A brand-new player has no save progress at all: no tutorial quests and
+          // no prior camp visit. We route them straight into the camp so they
+          // discover the Aida chip / robot intro sequence immediately.
+          var sd = window.saveData;
+          var isNewPlayer = sd &&
+            !sd.hasVisitedCamp &&
+            !(sd.tutorialQuests && sd.tutorialQuests.currentQuest) &&
+            !(sd.tutorialQuests && sd.tutorialQuests.completedQuests && sd.tutorialQuests.completedQuests.length > 0);
+
+          if (isNewPlayer && typeof window.updateCampScreen === 'function') {
+            console.log('[Loading] First-time player — routing directly to 3D camp');
+            var campScreen = document.getElementById('camp-screen');
+            var mainMenuEl = document.getElementById('main-menu');
+            if (mainMenuEl) mainMenuEl.style.display = 'none';
+            if (campScreen) {
+              campScreen.classList.remove('camp-subsection-active');
+              campScreen.style.display = 'flex';
+            }
+            window.updateCampScreen();
+            return;
+          }
+
+          // Returning player — show main menu as normal
+          var mainMenu = document.getElementById('main-menu');
+          if (mainMenu) mainMenu.style.display = 'flex';
         }, 500);
       }
     })();

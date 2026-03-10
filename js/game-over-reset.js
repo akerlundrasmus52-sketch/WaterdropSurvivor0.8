@@ -106,8 +106,12 @@
           saveData.tutorialQuests.completedQuests.push('firstRunDeath');
         }
         saveSaveData();
-        // Show first death tutorial – quest1 activates later when player enters the Main Building
-        // Suppressed when the new first-run tutorial is active (it handles the death step itself)
+        // Show "Aida transfers from robot to head" dialogue on first death
+        setTimeout(() => {
+          if (window.DialogueSystem && window.DialogueSystem.DIALOGUES && window.DialogueSystem.DIALOGUES.aidaChipInstalled) {
+            window.DialogueSystem.show(window.DialogueSystem.DIALOGUES.aidaChipInstalled);
+          }
+        }, 1800);
         setTimeout(() => {
           showComicTutorial('first_death');
         }, 1000);

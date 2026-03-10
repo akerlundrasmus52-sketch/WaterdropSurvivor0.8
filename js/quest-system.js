@@ -2818,8 +2818,7 @@
         saveData.hasVisitedCamp = true;
         // NEW: Only unlock Quest/Mission Hall initially - all other buildings locked
         if (saveData.campBuildings && saveData.campBuildings.questMission) {
-          saveData.campBuildings.questMission.unlocked = true;
-          // level stays 0 — player must BUILD via the BUILD button
+          saveData.campBuildings.questMission.unlocked = false; // stays locked until Aida chip inserted
         }
         // Inventory is also unlocked on first visit so players can see their items
         if (saveData.campBuildings && saveData.campBuildings.inventory) {
@@ -2831,37 +2830,12 @@
           saveData.campBuildings.campHub.level = 0;
         }
         
-        // Show first-time welcome popup - REWRITTEN with comic-magazine styling
+        // First-time welcome: if Aida intro not yet started, show a brief hint to explore
         if (!saveData.storyQuests.welcomeShown) {
           saveData.storyQuests.welcomeShown = true;
           saveSaveData();
-          
-          // Show comic-style popup after a brief delay
-          setTimeout(() => {
-            showComicInfoBox(
-              '💧 WATERDROP SURVIVOR - THE GAME LOOP',
-              `<div style="text-align: left; padding: 10px;">
-                <p style="font-family: 'Bangers', cursive; font-size: 20px; margin-bottom: 10px;">🎮 <b>THE SURVIVAL CYCLE</b></p>
-                <p style="line-height: 1.8; margin-bottom: 10px;">
-                  1️⃣ <b>START RUN</b> → Fight enemies, level up, collect XP<br>
-                  2️⃣ <b>DIE & RETURN</b> → Keep your gold & progress<br>
-                  3️⃣ <b>UPGRADE CAMP</b> → Unlock skills, gear, companions<br>
-                  4️⃣ <b>GET STRONGER</b> → Go back out and survive longer!
-                </p>
-                <p style="font-family: 'Bangers', cursive; font-size: 20px; margin-bottom: 10px;">📜 <b>YOUR FIRST QUEST</b></p>
-                <p style="line-height: 1.8;">
-                  <b>NO QUEST IS ACTIVE ON YOUR FIRST RUN.</b><br>
-                  After you die, Quest 1 will unlock in the Main Building.<br>
-                  Complete quests to unlock new buildings and features!
-                </p>
-              </div>`,
-              'START MY JOURNEY!',
-              () => {
-                // NO quest set on first visit - quest activates after first death
-                saveSaveData();
-              }
-            );
-          }, 500);
+          // A.I.D.A intro is handled by the chip/robot objects in the 3D camp — no popup needed here.
+          // The player will naturally discover the glowing chip near the campfire.
         }
         
         saveSaveData();

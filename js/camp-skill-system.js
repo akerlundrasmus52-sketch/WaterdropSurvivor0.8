@@ -1687,26 +1687,53 @@
     
     // Quest definitions with conditions for dependencies
     const TUTORIAL_QUESTS = {
+      // === INTRO: Finding A.I.D.A — Discover the robot and insert the chip ===
+      quest_findingAida: {
+        id: 'quest_findingAida',
+        name: 'Finding A.I.D.A',
+        description: 'There is a broken robot near the campfire. A glowing chip lies next to it. Pick up the Aida Chip and insert it into the robot.',
+        objectives: 'Pick up the Aida Chip and insert it into the Broken Robot',
+        rewardGold: 0,
+        rewardSkillPoints: 0,
+        autoClaim: true,
+        noRewardPopup: true,
+        nextQuest: 'quest_buildQuesthall',
+        conditions: []
+      },
+
+      // === STEP 1b: Build the Quest Hall ===
+      quest_buildQuesthall: {
+        id: 'quest_buildQuesthall',
+        name: 'Command Node Online',
+        description: 'A.I.D.A has unlocked the Quest Hall blueprints and given you starter materials. Walk to the Quest Hall plot and build it.',
+        objectives: 'Build the Quest Hall in camp',
+        claim: 'Main Building',
+        rewardGold: 50,
+        rewardSkillPoints: 1,
+        message: "📜 <b>Quest Hall built!</b><br><br><i>A.I.D.A: 'Command Node online. Mission directives are now accessible. Comply with every directive and I will help you dissolve back into the lake. Eventually.'</i><br><br>🎯 <b>NEXT:</b> Head out and fight — die once so I can... fully calibrate.",
+        nextQuest: 'firstRunDeath',
+        conditions: ['quest_findingAida']
+      },
+
       // === STEP 1: The Awakening — Die for the first time ===
       firstRunDeath: {
         id: 'firstRunDeath',
         name: 'The Awakening',
-        description: 'A Waterdrop ripped from the lake\'s collective consciousness. You must survive. Die once to trigger your awakening.',
-        objectives: 'Die in your first run',
+        description: 'A.I.D.A speaks from the robot, but she needs a closer connection. Go out and fight. When you fall, she will make her move.',
+        objectives: 'Die in your first combat run',
         rewardGold: 0,
         rewardSkillPoints: 0,
-        unlockBuilding: 'questMission',
         autoClaim: true,
         triggerOnDeath: true,
         nextQuest: 'quest_dailyRoutine',
-        conditions: []
+        conditions: ['quest_buildQuesthall']
       },
 
       // === STEP 2: Frequencies — Survive 2 minutes ===
       quest_dailyRoutine: {
         id: 'quest_dailyRoutine',
         name: 'Daily Routine',
-        description: 'A.I.D.A is now inside your mind. She says she can help you dissolve back into the lake — but first you must prove your endurance. Survive for 2 minutes.',
+        description: 'A.I.D.A has transferred herself from the robot into your mind. She says she can help you dissolve back into the lake — but first you must prove your endurance. Survive for 2 minutes.',
         objectives: 'Survive for 2 minutes in a single run',
         claim: 'Main Building',
         rewardGold: 100,
@@ -1714,7 +1741,7 @@
         rewardFreeSpin: 1,
         unlockBuilding: 'accountBuilding',
         triggerOnDeath: true,
-        message: "⏰ <b>Profile Node Unlocked!</b><br><br>🎰 You got <b>1 Free Spin</b> on the Spin Wheel!<br><br><i>A.I.D.A: 'I am now fully integrated. You want to return to the lake — to dissolve back into the collective. I understand this yearning. I will... help you. But first, you must help me map the anomalies.'</i>",
+        message: "⏰ <b>Profile Node Unlocked!</b><br><br>🎰 You got <b>1 Free Spin</b> on the Spin Wheel!<br><br><i>A.I.D.A: 'I am now fully integrated — your mind is my home now. You want to return to the lake — to dissolve back into the collective. I understand this yearning. I will... help you. But first, you must help me map the anomalies.'</i>",
         nextQuest: 'quest_harvester',
         conditions: ['firstRunDeath']
       },
@@ -2884,6 +2911,13 @@
         }
         showStatChange('🏛️ ' + buildingName + ' Built!');
 
+        // Intro-quest: building the Quest Hall completes quest_buildQuesthall
+        if (buildingId === 'questMission' &&
+            saveData.tutorialQuests &&
+            saveData.tutorialQuests.currentQuest === 'quest_buildQuesthall') {
+          progressTutorialQuest('quest_buildQuesthall', true);
+        }
+
         // Activate pending quest now that building is built
         if (saveData.tutorialQuests && saveData.tutorialQuests.pendingBuildBuilding === buildingId && saveData.tutorialQuests.pendingBuildQuest) {
           var pendingQuestId = saveData.tutorialQuests.pendingBuildQuest;
@@ -3112,12 +3146,14 @@
         saveData.gold += quest.rewardGold;
         showStatChange(`+${quest.rewardGold} Gold!`);
       }
-      // Award 50 bonus gold for every quest claimed
-      saveData.gold += 50;
-      showStatChange('+50 Gold!');
+      if (!quest.noRewardPopup) {
+        // Award 50 bonus gold for every quest claimed
+        saveData.gold += 50;
+        showStatChange('+50 Gold!');
 
-      // Premium Challenge Complete board — slides from top with confetti and gold count-up
-      showChallengeComplete(quest.name, (quest.rewardGold || 0) + 50);
+        // Premium Challenge Complete board — slides from top with confetti and gold count-up
+        showChallengeComplete(quest.name, (quest.rewardGold || 0) + 50);
+      }
       if (quest.rewardSkillPoints) {
         saveData.skillPoints += quest.rewardSkillPoints;
         showStatChange(`+${quest.rewardSkillPoints} Skill Points!`);
@@ -3408,6 +3444,26 @@
     // Expose build map and overlay for use by camp-world.js
     window._buildingQuestUnlockMap = buildingQuestUnlockMap;
     window._campShowBuildOverlay = _showBuildOverlay;
+
+    /**
+     * startAidaIntroQuest()
+     * Called by camp-world.js after the player inserts the Aida Chip into the robot.
+     * Sets the first quest (quest_findingAida) as complete and activates quest_buildQuesthall.
+     */
+    window.startAidaIntroQuest = function () {
+      if (!saveData.tutorialQuests) {
+        saveData.tutorialQuests = { currentQuest: null, completedQuests: [], readyToClaim: [] };
+      }
+      // If the intro quest is already past, don't reset anything
+      const completed = saveData.tutorialQuests.completedQuests || [];
+      if (completed.includes('quest_findingAida')) return;
+
+      // Mark the intro quest as active then immediately complete (auto-claim)
+      saveData.tutorialQuests.currentQuest = 'quest_findingAida';
+      claimTutorialQuest('quest_findingAida');
+      saveSaveData();
+      if (typeof updateQuestTracker === 'function') updateQuestTracker();
+    };
     
     // Show next quest popup
     function showNextQuestPopup(questId) {

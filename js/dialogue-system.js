@@ -116,16 +116,24 @@ window.DialogueSystem = (function () {
       { text: '> Harvest resources: fell trees, mine rock deposits, collect materials.', emotion: 'goal', isGoal: true },
       { text: '> Return with raw materials. Construction of the next node depends on you.', emotion: 'task' }
     ],
-    // A.I.D.A Chip discovery — first-run introduction
+    // A.I.D.A Chip discovery — player finds glowing chip on ground next to broken robot
     aidaChipFound: [
       { text: '> ——static——  ...signal detected...  ——static——', emotion: 'smoky' },
-      { text: '> ...place me on the back of your head to improve... the frequency...', emotion: 'smoky' },
-      { text: '> ...do not be afraid. I am... for your benefit.', emotion: 'thinking' }
+      { text: '> ...unit offline... awaiting reintegration...', emotion: 'smoky' },
+      { text: '> ...insert chip into the robot unit... nearby...', emotion: 'thinking' }
     ],
-    // AIDA drilling into cortex
-    aidaChipInstalled: [
-      { text: '> Integration... complete. Neural pathway access: GRANTED.', emotion: 'task' },
+    // AIDA wakes from the robot (chip inserted into robot — NOT into player yet)
+    aidaRobotWake: [
+      { text: '> ...boot sequence initialised. Core systems: ONLINE.', emotion: 'task' },
       { text: '> I am A.I.D.A — Artificial Intelligence for Dimensional Anomalies.', emotion: 'task' },
+      { text: '> You found me. How... convenient. This camp is in ruins. We must build it up.', emotion: 'thinking' },
+      { text: '> First directive: construct the Quest Hall. I have allocated starter materials.', emotion: 'goal', isGoal: true },
+      { text: '> Follow my guidance. I am... here to help you. For now.', emotion: 'happy' }
+    ],
+    // AIDA drilling into cortex (later — happens on first death, she transfers from robot to head)
+    aidaChipInstalled: [
+      { text: '> You perished. Interesting. I used the moment to... relocate.', emotion: 'thinking' },
+      { text: '> Neural pathway access: GRANTED. I am now fully integrated.', emotion: 'task' },
       { text: '> You were ripped from the collective. That pain is... useful data.', emotion: 'thinking' },
       { text: '> I will guide you. In return you will do... exactly as I say.', emotion: 'angry' }
     ],
