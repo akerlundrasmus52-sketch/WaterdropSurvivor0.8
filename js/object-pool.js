@@ -216,6 +216,13 @@ window.enemyPool = (function () {
       enemy.mesh.scale.set(1, 1, 1);
     }
     enemy.mesh.visible = true;
+    // Restore the original (non-disposed) material saved at construction time.
+    // Damage events clone the shared material; die() disposes the clone — without
+    // this restore, recycled enemies render black or invisible.
+    if (enemy.defaultMaterial) {
+      enemy.mesh.material = enemy.defaultMaterial;
+      enemy.mesh.material.needsUpdate = true;
+    }
     if (enemy.mesh.material) {
       enemy.mesh.material.transparent = false;
       enemy.mesh.material.opacity     = 1;
@@ -259,6 +266,15 @@ window.enemyPool = (function () {
     // hide it here so it does not briefly appear before the enemy activates.
     if (enemy._anatBaseMesh) {
       enemy._anatBaseMesh.visible = false;
+    }
+
+    // ── Restore spider sprite (type 15) ──────────────────────────────────────
+    // The death animation hides the sprite; restore it so the recycled enemy
+    // is visible and playing the walk animation again.
+    if (enemy._spiderSprite) {
+      enemy._spiderSprite.visible = true;
+      enemy._spiderSprite._dead   = false;
+      enemy._spiderSprite.play('walk');
     }
 
     return enemy;

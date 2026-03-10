@@ -579,6 +579,9 @@
         } else {
           this.mesh = new THREE.Mesh(_bodyGeo, _bodyMat);
         }
+        // Save the original material so the pool can restore it after recycling
+        // (damage clones the material; die() disposes the clone — restoring prevents black/invisible enemies)
+        this.defaultMaterial = this.mesh.material;
 
         const yPos = (type === 5 || type === 14 || type === 16 || type === 17) ? 2
                    : (type === 11 ? 5 : (type === 19 ? 4 : (type === 20 ? 2 : 0.5)));
@@ -658,6 +661,8 @@
           const _spiderHitboxMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false });
           _spiderHitboxMat._isSpiderHitbox = true;
           this.mesh.material = _spiderHitboxMat;
+          // Update defaultMaterial so the pool restores the transparent hitbox mat (not the sphere mat)
+          this.defaultMaterial = this.mesh.material;
           // Also hide the head mesh
           if (this.headMesh) this.headMesh.visible = false;
           // Create the sprite
@@ -830,7 +835,7 @@
               : (typeof enemies !== 'undefined' ? enemies : []);
             for (let _di = 0; _di < candidates.length; _di++) {
               const other = candidates[_di];
-              if (other === this || other.isDead || other._shotgunSlide) continue;
+              if (other === this || other.isDead || !other.active || other._shotgunSlide) continue;
               const odx = other.mesh.position.x - this.mesh.position.x;
               const odz = other.mesh.position.z - this.mesh.position.z;
               const odistSq = odx * odx + odz * odz;
@@ -1038,7 +1043,7 @@
           const maxAvoidanceChecks = 5;
           const avoidRadiusSq = 1.5 * 1.5;
           for (let other of enemies) {
-            if (other === this || other.isDead) continue;
+            if (other === this || other.isDead || !other.active) continue;
             if (avoidanceCount >= maxAvoidanceChecks) break;
             const odx = this.mesh.position.x - other.mesh.position.x;
             const odz = this.mesh.position.z - other.mesh.position.z;
