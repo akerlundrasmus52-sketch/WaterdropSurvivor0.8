@@ -1247,6 +1247,9 @@
         if (bonus.spellEchoChance)    playerStats.spellEchoChance    = (playerStats.spellEchoChance || 0) + bonus.spellEchoChance;
         if (bonus.elementalChain)     playerStats.elementalChain     = (playerStats.elementalChain || 0) + bonus.elementalChain;
         if (bonus.elementalGuaranteed) playerStats.elementalGuaranteed = true;
+        // Gold/XP multipliers (wealthHunter, treasureHunter, quickLearner)
+        if (bonus.gold) playerStats.goldMultiplier = (playerStats.goldMultiplier || 1.0) + bonus.gold;
+        if (bonus.xp)   playerStats.xpMultiplier   = (playerStats.xpMultiplier   || 1.0) + bonus.xp;
       }
 
       // --- Apply accumulated bonuses ---
@@ -3638,4 +3641,365 @@
       
       questTracker.style.display = 'block';
     }
+
+    // ── FEATURE 1: Skill Tree Visual Overhaul ─────────────────────────────────
+    // Emoji detection regex (compiled once at module scope)
+    const _STW_EMOJI_RE = /^\p{Emoji}/u;
+
+    // Renders a full scrollable branching skill tree inside #camp-skills-content.
+    function renderSkillTreeWeb() {
+      const container = document.getElementById('camp-skills-content');
+      if (!container) return;
+
+      // Ensure window.unlockSkill is available for inline onclick handlers
+      window.unlockSkill = unlockSkill;
+
+      // Update SP display
+      const spDisplay = document.getElementById('skill-points-display');
+      if (spDisplay) spDisplay.textContent = `SP: ${saveData.skillPoints}`;
+
+      // Inject styles once
+      if (!document.getElementById('skill-tree-web-styles')) {
+        const style = document.createElement('style');
+        style.id = 'skill-tree-web-styles';
+        style.textContent = `
+          .stw-wrap { position:relative; width:100%; overflow-x:auto; padding-bottom:20px; }
+          .stw-svg   { position:absolute; top:0; left:0; pointer-events:none; z-index:0; }
+          .stw-cols  { display:flex; gap:0; position:relative; z-index:1; min-width:600px; }
+          .stw-col   { flex:1; display:flex; flex-direction:column; align-items:center; padding:0 4px; gap:10px; }
+          .stw-col-header { font-family:'Bangers',cursive; font-size:13px; letter-spacing:1px; padding:4px 10px; border-radius:6px; margin-bottom:4px; text-align:center; }
+          .stw-node {
+            width:88px; min-height:88px; border-radius:12px; padding:6px 5px 5px;
+            display:flex; flex-direction:column; align-items:center; justify-content:flex-start;
+            cursor:pointer; position:relative; transition:transform 0.12s, box-shadow 0.15s;
+            text-align:center; box-sizing:border-box;
+          }
+          .stw-node:active { transform:scale(0.95); }
+          .stw-node.stw-locked {
+            background:rgba(10,10,14,0.82); border:1.5px solid #1e2030;
+            filter:saturate(0.15) brightness(0.5);
+          }
+          .stw-node.stw-available {
+            background:rgba(20,22,35,0.92); border:1.5px solid #444;
+            box-shadow:0 0 6px rgba(255,215,0,0.08);
+          }
+          .stw-node.stw-available:hover { transform:scale(1.06); box-shadow:0 0 14px rgba(255,215,0,0.35); }
+          .stw-node.stw-owned {
+            background:rgba(18,26,14,0.95); border:2px solid #4CAF50;
+            box-shadow:0 0 14px rgba(76,175,80,0.45), inset 0 0 6px rgba(76,175,80,0.1);
+          }
+          .stw-node.stw-owned:hover { box-shadow:0 0 22px rgba(76,175,80,0.7); transform:scale(1.05); }
+          .stw-node.stw-maxed {
+            background:rgba(20,16,4,0.96); border:2px solid #FFD700;
+            box-shadow:0 0 18px rgba(255,215,0,0.55), inset 0 0 8px rgba(255,215,0,0.12);
+          }
+          .stw-icon   { font-size:22px; line-height:1; margin-bottom:2px; }
+          .stw-name   { font-size:9px; font-weight:bold; line-height:1.2; color:#ddd; margin-bottom:2px; max-width:80px; word-break:break-word; }
+          .stw-desc   { font-size:7.5px; color:#888; line-height:1.3; margin-bottom:3px; }
+          .stw-cost   { font-size:8.5px; color:#5DADE2; font-weight:bold; }
+          .stw-maxlbl { font-size:8px; color:#FFD700; font-weight:bold; }
+          .stw-dots   { display:flex; gap:2px; justify-content:center; margin-top:2px; flex-wrap:wrap; }
+          .stw-dot    { width:6px; height:6px; border-radius:50%; background:#333; border:1px solid #555; flex-shrink:0; }
+          .stw-dot.filled { background:#4CAF50; border-color:#4CAF50; box-shadow:0 0 4px #4CAF50; }
+          .stw-dot.filled-gold { background:#FFD700; border-color:#FFD700; box-shadow:0 0 4px #FFD700; }
+          .stw-locked .stw-name { color:#444; }
+          .stw-locked .stw-desc { color:#2a2a2a; }
+          .stw-sp-bar { display:flex; align-items:center; justify-content:center; gap:10px;
+            background:rgba(0,0,0,0.5); border-radius:8px; padding:6px 14px; margin-bottom:12px;
+            border:1px solid #333; }
+          @keyframes stw-pulse { 0%,100%{box-shadow:0 0 12px rgba(255,215,0,0.5)} 50%{box-shadow:0 0 24px rgba(255,215,0,0.9)} }
+          .stw-available { animation: stw-pulse 2s infinite; }
+        `;
+        document.head.appendChild(style);
+      }
+
+      // Path definitions
+      const PATHS = {
+        starter:  { label: '⭐ Starter',  color: '#aaaaff', cols: ['dash','criticalFocus','autoAim','dashMaster','headshot'] },
+        combat:   { label: '⚔️ Combat',   color: '#ff6644', cols: ['combatMastery','bladeDancer','heavyStrike','rapidFire','armorPierce','multiHit','executioner','bloodlust','berserker','weaponSpecialist','combatVeteran','meleeTakedown','specialShockwave','specialFrozenStorm','specialDeathBlossom','specialVoidPulse','specialThunderStrike','specialInfernoRing'] },
+        defense:  { label: '🛡️ Defense',  color: '#44aaff', cols: ['survivalist','ironSkin','quickReflex','fortification','regeneration','lastStand','toughness','guardian','resilience','secondWind','endurance','immortal'] },
+        utility:  { label: '🌿 Utility',  color: '#44dd88', cols: ['wealthHunter','quickLearner','magnetism','efficiency','scavenger','fortuneFinder','speedster','cooldownExpert','auraExpansion','resourceful','treasureHunter','fireMastery','iceMastery','lightningMastery','elementalFusion','pyromaniac','frostbite','stormCaller','elementalChain','manaOverflow','spellEcho','arcaneEmpowerment','elementalOverload'] }
+      };
+
+      // Helper: get state of a skill
+      const getState = (skillId) => {
+        const skill = SKILL_TREE[skillId];
+        if (!skill) return 'locked';
+        const skillData = saveData.skillTree[skillId] || { level: 0, unlocked: false };
+        const level = skillData.level || 0;
+        const isMaxLevel = level >= skill.maxLevel;
+        if (isMaxLevel) return 'maxed';
+        if (level > 0) return 'owned';
+        // check if parent is satisfied
+        if (!skill.requires) return 'available';
+        const parentData = saveData.skillTree[skill.requires] || { level: 0 };
+        if ((parentData.level || 0) > 0) return 'available';
+        return 'locked';
+      };
+
+      const SKILL_ICONS = {
+        dash:'🏃', criticalFocus:'🎯', autoAim:'🔫', dashMaster:'⚡', headshot:'💀',
+        combatMastery:'⚔️', bladeDancer:'🗡️', heavyStrike:'🔨', rapidFire:'🔥',
+        armorPierce:'🔩', multiHit:'🎯', executioner:'☠️', bloodlust:'🩸',
+        berserker:'😡', weaponSpecialist:'🏹', combatVeteran:'🎖️',
+        survivalist:'🌿', ironSkin:'🛡️', quickReflex:'🦶', fortification:'🏰',
+        regeneration:'💚', lastStand:'🏴', toughness:'💪', guardian:'🔰',
+        resilience:'🌊', secondWind:'🌬️', endurance:'🏋️', immortal:'✨',
+        wealthHunter:'💰', quickLearner:'📚', magnetism:'🧲', efficiency:'⚙️',
+        scavenger:'🔍', fortuneFinder:'🍀', speedster:'💨', cooldownExpert:'⏱️',
+        auraExpansion:'🌀', resourceful:'📦', treasureHunter:'💎',
+        fireMastery:'🔥', iceMastery:'❄️', lightningMastery:'⚡',
+        elementalFusion:'🌈', pyromaniac:'🌋', frostbite:'🧊', stormCaller:'⛈️',
+        elementalChain:'⛓️', manaOverflow:'🔮', spellEcho:'🪄',
+        arcaneEmpowerment:'✴️', elementalOverload:'🌟',
+        specialShockwave:'💥', specialFrozenStorm:'❄️', specialDeathBlossom:'🌸',
+        specialVoidPulse:'🌀', specialThunderStrike:'⚡', specialInfernoRing:'🔥',
+        meleeTakedown:'🔪'
+      };
+      const getIcon = (id, name) => SKILL_ICONS[id] || (name && _STW_EMOJI_RE.test(name) ? [...name][0] : '🔮');
+
+      // Build node HTML
+      const buildNode = (skillId) => {
+        const skill = SKILL_TREE[skillId];
+        if (!skill) return '';
+        const skillData = saveData.skillTree[skillId] || { level: 0 };
+        const level = skillData.level || 0;
+        const isMaxLevel = level >= skill.maxLevel;
+        const state = getState(skillId);
+        const canAfford = saveData.skillPoints >= skill.cost;
+        const stateClass = state === 'maxed' ? 'stw-maxed' : state === 'owned' ? 'stw-owned' : state === 'available' ? 'stw-available' : 'stw-locked';
+
+        let dotsHTML = '';
+        if (skill.maxLevel > 1) {
+          dotsHTML = '<div class="stw-dots">';
+          for (let d = 0; d < skill.maxLevel; d++) {
+            const cls = d < level ? (isMaxLevel ? 'stw-dot filled-gold' : 'stw-dot filled') : 'stw-dot';
+            dotsHTML += `<span class="${cls}"></span>`;
+          }
+          dotsHTML += '</div>';
+        }
+
+        const clickHandler = (state !== 'locked' && !isMaxLevel && canAfford)
+          ? `onclick="window.unlockSkill('${skillId}')"` : '';
+        const title = `${skill.name} — ${skill.description} (Cost: ${skill.cost} SP${isMaxLevel ? ' | MAX' : ''})`;
+
+        return `<div class="stw-node ${stateClass}" data-skill-id="${skillId}" ${clickHandler} title="${title.replace(/"/g,"'")}">
+          <div class="stw-icon">${getIcon(skillId, skill.name)}</div>
+          <div class="stw-name">${skill.name}</div>
+          <div class="stw-desc">${skill.description}</div>
+          ${isMaxLevel ? '<div class="stw-maxlbl">✅ MAX</div>' : `<div class="stw-cost">${skill.cost} SP</div>`}
+          ${dotsHTML}
+        </div>`;
+      };
+
+      // Layout: 4 columns by path
+      const pathKeys = ['starter','combat','defense','utility'];
+      const pathColors = { starter:'#aaaaff', combat:'#ff6644', defense:'#44aaff', utility:'#44dd88' };
+      const pathLabels = { starter:'⭐ Starter', combat:'⚔️ Combat', defense:'🛡️ Defense', utility:'🌿 Utility/Elemental' };
+
+      // Group skills by path
+      const pathSkills = { starter:[], combat:[], defense:[], utility:[] };
+      for (const [id, skill] of Object.entries(SKILL_TREE)) {
+        const path = skill.path || 'utility';
+        // Map legacy path names & categorize by dependency chain
+        const req = skill.requires;
+        if (!req || id === 'dash' || id === 'criticalFocus' || id === 'autoAim') {
+          pathSkills.starter.push(id);
+        } else if (id === 'dashMaster' || id === 'headshot' || id === 'combatMastery' ||
+                   id === 'bladeDancer' || id === 'heavyStrike' || id === 'rapidFire' ||
+                   id === 'armorPierce' || id === 'multiHit' || id === 'executioner' ||
+                   id === 'bloodlust' || id === 'berserker' || id === 'weaponSpecialist' ||
+                   id === 'combatVeteran' || id === 'meleeTakedown' ||
+                   id.startsWith('special')) {
+          pathSkills.combat.push(id);
+        } else if (id === 'survivalist' || id === 'ironSkin' || id === 'quickReflex' ||
+                   id === 'fortification' || id === 'regeneration' || id === 'lastStand' ||
+                   id === 'toughness' || id === 'guardian' || id === 'resilience' ||
+                   id === 'secondWind' || id === 'endurance' || id === 'immortal') {
+          pathSkills.defense.push(id);
+        } else {
+          pathSkills.utility.push(id);
+        }
+      }
+
+      let html = `<div class="stw-sp-bar">
+        <span style="font-size:14px;">🔮</span>
+        <span style="color:#FFD700;font-weight:bold;font-size:14px;">${saveData.skillPoints} SP</span>
+        <span style="color:#888;font-size:12px;">available</span>
+      </div>
+      <div class="stw-wrap"><div class="stw-cols">`;
+
+      for (const pk of pathKeys) {
+        const color = pathColors[pk];
+        const label = pathLabels[pk];
+        const skills = pathSkills[pk];
+        html += `<div class="stw-col">
+          <div class="stw-col-header" style="color:${color};border:1.5px solid ${color}30;background:${color}12;">${label}</div>`;
+        for (const sid of skills) {
+          html += buildNode(sid);
+        }
+        html += `</div>`;
+      }
+
+      html += `</div></div>`;
+
+      container.innerHTML = html;
+    }
+
+    // Export renderSkillTreeWeb
+    if (!window.CampSkillSystem) window.CampSkillSystem = {};
+    window.CampSkillSystem.renderSkillTreeWeb = renderSkillTreeWeb;
+    window.unlockSkill = unlockSkill;
+
+    /* ================================================================
+       MINIGAME SKILL TREE
+       Currency: saveData.astralEssence (same currency earned in the
+       Astral Dive minigame).  Bonuses apply inside the minigame only.
+    ================================================================ */
+    const MINIGAME_SKILL_TREE = {
+      atkBoost: {
+        id: 'atkBoost', name: '⚔️ ATK Boost', icon: '⚔️',
+        description: '+10% bullet damage per level',
+        maxLevel: 5, cost: 15, requires: null,
+        bonus: (l) => ({ damageMult: 0.10 * l })
+      },
+      spdBoost: {
+        id: 'spdBoost', name: '💨 Speed Boost', icon: '💨',
+        description: '+6% player move speed per level',
+        maxLevel: 5, cost: 12, requires: null,
+        bonus: (l) => ({ speedMult: 0.06 * l })
+      },
+      rapidFire: {
+        id: 'rapidFire', name: '⚡ Rapid Fire', icon: '⚡',
+        description: 'Reduce shoot cooldown by 15% per level',
+        maxLevel: 3, cost: 20, requires: 'spdBoost',
+        bonus: (l) => ({ rapidFire: 0.15 * l })
+      },
+      multiShot: {
+        id: 'multiShot', name: '🔫 Multi-Shot', icon: '🔫',
+        description: 'Fire additional bullets (+1 per level)',
+        maxLevel: 3, cost: 25, requires: 'atkBoost',
+        bonus: (l) => ({ extraBullets: l })
+      },
+      shield: {
+        id: 'shield', name: '🛡️ Shield', icon: '🛡️',
+        description: 'Start with a 1-hit damage-absorbing shield',
+        maxLevel: 1, cost: 50, requires: 'atkBoost',
+        bonus: (l) => ({ shield: l > 0 })
+      },
+      bombBlast: {
+        id: 'bombBlast', name: '💣 Bomb Blast', icon: '💣',
+        description: 'Start each run with extra screen-clearing bombs',
+        maxLevel: 3, cost: 35, requires: 'multiShot',
+        bonus: (l) => ({ startBombs: l })
+      },
+      magnetDrop: {
+        id: 'magnetDrop', name: '🧲 Magnet Drop', icon: '🧲',
+        description: 'Auto-attract nearby collectibles to the player',
+        maxLevel: 1, cost: 60, requires: 'rapidFire',
+        bonus: (l) => ({ magnetRange: l > 0 ? 90 : 0 })
+      },
+      waveBreaker: {
+        id: 'waveBreaker', name: '🌊 Wave Breaker', icon: '🌊',
+        description: 'Skip early waves at run start (+1 starting wave per level)',
+        maxLevel: 2, cost: 80, requires: 'bombBlast',
+        bonus: (l) => ({ startWave: l })
+      }
+    };
+
+    /** Returns the combined bonus object from all purchased minigame skills. */
+    function getMinigameSkillBonuses() {
+      const result = {};
+      if (typeof saveData === 'undefined' || !saveData.minigameSkills) return result;
+      for (const [id, def] of Object.entries(MINIGAME_SKILL_TREE)) {
+        const level = (saveData.minigameSkills[id] && saveData.minigameSkills[id].level) || 0;
+        if (level === 0) continue;
+        const b = def.bonus(level);
+        for (const [k, v] of Object.entries(b)) {
+          if (typeof v === 'boolean') result[k] = result[k] || v;
+          else result[k] = (result[k] || 0) + v;
+        }
+      }
+      return result;
+    }
+
+    /** Purchase one level of a minigame skill. */
+    function unlockMinigameSkill(skillId) {
+      if (typeof saveData === 'undefined') return false;
+      if (!saveData.minigameSkills) saveData.minigameSkills = {};
+      const def = MINIGAME_SKILL_TREE[skillId];
+      if (!def) return false;
+      const current = (saveData.minigameSkills[skillId] && saveData.minigameSkills[skillId].level) || 0;
+      if (current >= def.maxLevel) { alert('Already at max level!'); return false; }
+      // Check requires
+      if (def.requires) {
+        const reqLevel = (saveData.minigameSkills[def.requires] && saveData.minigameSkills[def.requires].level) || 0;
+        if (reqLevel === 0) { alert('Requires ' + MINIGAME_SKILL_TREE[def.requires].name + ' first!'); return false; }
+      }
+      const cost = def.cost * (current + 1);
+      if ((saveData.astralEssence || 0) < cost) { alert('Need ' + cost + ' ⚡ Astral Essence! (Have: ' + (saveData.astralEssence || 0) + ')'); return false; }
+      saveData.astralEssence -= cost;
+      if (!saveData.minigameSkills[skillId]) saveData.minigameSkills[skillId] = { level: 0 };
+      saveData.minigameSkills[skillId].level = current + 1;
+      if (typeof saveSaveData === 'function') saveSaveData();
+      return true;
+    }
+
+    /** Show the Minigame Skill Tree UI overlay. */
+    function showMinigameSkillTree() {
+      const existing = document.getElementById('minigame-skill-tree-overlay');
+      if (existing) existing.remove();
+      if (!saveData.minigameSkills) saveData.minigameSkills = {};
+
+      const overlay = document.createElement('div');
+      overlay.id = 'minigame-skill-tree-overlay';
+      overlay.style.cssText = 'position:fixed;inset:0;z-index:1500;background:rgba(0,0,20,0.93);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;overflow-y:auto;padding:20px 10px 40px;box-sizing:border-box;';
+
+      function _render() {
+        const essence = (typeof saveData !== 'undefined') ? (saveData.astralEssence || 0) : 0;
+        const rows = [];
+        rows.push(`<div style="text-align:center;margin-bottom:4px;">
+          <div style="font-family:Bangers,cursive;font-size:clamp(20px,4vw,32px);color:#00ffff;letter-spacing:4px;text-shadow:0 0 14px #00ffff;">🎮 ASTRAL SKILL TREE</div>
+          <div style="font-family:Arial,sans-serif;font-size:13px;color:#888;margin-top:4px;">Upgrade your minigame ship with Astral Essence</div>
+          <div style="font-family:monospace;font-size:16px;color:#4488ff;margin-top:6px;">⚡ Available: <b>${essence}</b></div>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;max-width:700px;margin-top:14px;">`);
+
+        for (const [id, def] of Object.entries(MINIGAME_SKILL_TREE)) {
+          const level = (saveData.minigameSkills[id] && saveData.minigameSkills[id].level) || 0;
+          const maxed = level >= def.maxLevel;
+          const reqLevel = def.requires ? ((saveData.minigameSkills[def.requires] && saveData.minigameSkills[def.requires].level) || 0) : 1;
+          const locked = def.requires && reqLevel === 0;
+          const nextCost = def.cost * (level + 1);
+          const canAfford = !maxed && !locked && essence >= nextCost;
+
+          rows.push(`<div style="background:rgba(0,20,40,0.88);border:2px solid ${maxed ? '#ffaa00' : locked ? '#333' : '#2255aa'};border-radius:10px;padding:12px 14px;width:200px;box-sizing:border-box;opacity:${locked ? '0.45' : '1'};">
+            <div style="font-size:22px;text-align:center;margin-bottom:4px;">${def.icon}</div>
+            <div style="font-family:Bangers,cursive;font-size:15px;color:${maxed ? '#ffaa00' : '#00ffff'};letter-spacing:1px;">${def.name}</div>
+            <div style="font-family:Arial,sans-serif;font-size:11px;color:#aaa;margin:4px 0;">${def.description}</div>
+            <div style="font-size:12px;color:#888;margin-bottom:8px;">Level: <b style="color:#fff;">${level}/${def.maxLevel}</b>${locked ? ' 🔒 (Requires ' + (MINIGAME_SKILL_TREE[def.requires] ? MINIGAME_SKILL_TREE[def.requires].name : def.requires) + ')' : ''}</div>
+            ${maxed ? '<div style="color:#ffaa00;font-family:Bangers,cursive;font-size:14px;text-align:center;">✓ MAXED</div>'
+              : locked ? '<div style="color:#555;font-size:12px;text-align:center;">🔒 Locked</div>'
+              : `<button onclick="window._unlockMinigameSkillAndRefresh('${id}')" style="width:100%;padding:6px;background:${canAfford ? 'rgba(0,100,200,0.2)' : 'rgba(50,50,50,0.3)'};border:1.5px solid ${canAfford ? '#00ffff' : '#444'};color:${canAfford ? '#00ffff' : '#666'};font-family:monospace;font-size:13px;cursor:${canAfford ? 'pointer' : 'default'};border-radius:4px;">UPGRADE ⚡${nextCost}</button>`}
+          </div>`);
+        }
+        rows.push('</div>');
+        rows.push(`<button onclick="document.getElementById('minigame-skill-tree-overlay').remove()" style="margin-top:20px;padding:10px 36px;background:transparent;border:2px solid #888;color:#ccc;font-family:Bangers,cursive;font-size:16px;letter-spacing:2px;cursor:pointer;border-radius:8px;">CLOSE</button>`);
+        overlay.innerHTML = rows.join('');
+      }
+
+      window._unlockMinigameSkillAndRefresh = function(id) {
+        if (unlockMinigameSkill(id)) _render();
+      };
+
+      _render();
+      document.body.appendChild(overlay);
+      overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+    }
+
+    // Expose globally
+    window.MINIGAME_SKILL_TREE = MINIGAME_SKILL_TREE;
+    window.getMinigameSkillBonuses = getMinigameSkillBonuses;
+    window.unlockMinigameSkill = unlockMinigameSkill;
+    window.showMinigameSkillTree = showMinigameSkillTree;
 

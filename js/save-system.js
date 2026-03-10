@@ -763,40 +763,75 @@
       const content = document.getElementById('achievements-content');
       if (!content) return;
 
-      let unclaimedCount = 0;
+      // Inject dark premium achievement styles once
+      if (!document.getElementById('ach-dark-styles')) {
+        const s = document.createElement('style');
+        s.id = 'ach-dark-styles';
+        s.textContent = `
+          .ach-dark-header { font-family:'Bangers',cursive; font-size:28px; letter-spacing:3px;
+            color:#FFD700; text-align:center; margin:0 0 16px;
+            text-shadow:0 0 16px rgba(255,215,0,0.6); }
+          .ach-dark-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(145px,1fr)); gap:10px; }
+          .ach-dark-card { background:#0d0d0d; border:1.5px solid #1a1a1a; border-radius:12px;
+            padding:12px 10px 10px; display:flex; flex-direction:column; align-items:center;
+            text-align:center; position:relative; overflow:hidden; transition:transform 0.12s, box-shadow 0.15s; }
+          .ach-dark-card.ach-state-locked { filter:brightness(0.55) saturate(0.3); }
+          .ach-dark-card.ach-state-claimed { background:#0d1a0d; border-color:#2d7a2d;
+            box-shadow:0 0 12px rgba(76,175,80,0.3); }
+          .ach-dark-card.ach-state-claimable { border-color:#FFD700;
+            animation:achPulse 1.5s infinite; cursor:pointer; }
+          .ach-dark-card.ach-state-claimable:hover { transform:scale(1.05); }
+          @keyframes achPulse {
+            0%,100% { box-shadow:0 0 10px rgba(255,215,0,0.4); }
+            50%      { box-shadow:0 0 24px rgba(255,215,0,0.85); }
+          }
+          .ach-dark-icon { font-size:26px; margin-bottom:5px; }
+          .ach-dark-name { font-size:11px; font-weight:bold; color:#e0e0e0; margin-bottom:3px; line-height:1.2; }
+          .ach-dark-name.dim { color:#333; }
+          .ach-dark-desc { font-size:9.5px; color:#666; line-height:1.3; margin-bottom:5px; }
+          .ach-dark-desc.dim { color:#1a1a1a; }
+          .ach-dark-reward { font-size:10px; color:#FFD700; margin-top:auto; }
+          .ach-dark-reward.dim { color:#222; }
+          .ach-dark-claim-btn { margin-top:6px; background:linear-gradient(135deg,#3a2800,#5a3d00);
+            border:1.5px solid #FFD700; color:#FFD700; border-radius:6px;
+            padding:3px 10px; font-size:10px; font-weight:bold; cursor:pointer;
+            font-family:'Bangers',cursive; letter-spacing:0.5px; }
+          .ach-dark-claimed-badge { position:absolute; top:6px; right:6px; background:#1a4a1a;
+            color:#4CAF50; font-size:8px; font-weight:bold; border-radius:4px; padding:1px 5px;
+            border:1px solid #2d7a2d; }
+          .ach-dark-card-green { background:#0d1a0d !important; border-color:#4CAF50 !important;
+            box-shadow:0 0 18px rgba(76,175,80,0.6) !important; animation:none !important; }
+        `;
+        document.head.appendChild(s);
+      }
 
-      // ── Playing-card grid layout (styles live in css/styles.css .ach-* rules)
-      let html = '<div class="ach-grid">';
+      let unclaimedCount = 0;
+      let html = `<div class="ach-dark-header">🏆 ACHIEVEMENT HALL</div><div class="ach-dark-grid">`;
 
       for (const key in ACHIEVEMENTS) {
         const achievement = ACHIEVEMENTS[key];
         const isClaimed = saveData.achievements && saveData.achievements.includes(achievement.id);
-        const canClaim = !isClaimed && achievement.check();
+        const canClaim  = !isClaimed && achievement.check();
         if (canClaim) unclaimedCount++;
 
-        const stateClass = isClaimed ? 'unlocked' : (canClaim ? 'claimable' : '');
-        const clickAttr  = canClaim ? `onclick="claimAchievement('${achievement.id}')"` : '';
-        const icon        = isClaimed ? '🏆' : (canClaim ? '🔓' : '🔒');
-        const iconClass   = (isClaimed || canClaim) ? 'ach-icon' : 'ach-icon locked';
-        const nameClass   = (isClaimed || canClaim) ? 'ach-name' : 'ach-name locked';
-        const descClass   = (isClaimed || canClaim) ? 'ach-desc' : 'ach-desc locked';
+        const stateClass = isClaimed ? 'ach-state-claimed' : canClaim ? 'ach-state-claimable' : 'ach-state-locked';
+        const icon        = isClaimed ? '🏆' : canClaim ? '🔓' : '🔒';
+        const dimCls      = (!isClaimed && !canClaim) ? ' dim' : '';
+        const rewardParts = [`+${achievement.reward} 💰`];
+        if (achievement.skillPoints)    rewardParts.push(`+${achievement.skillPoints} 🔮`);
+        if (achievement.attributePoints) rewardParts.push(`+${achievement.attributePoints} ⭐`);
 
-        html += `
-          <div class="ach-card ${stateClass}" ${clickAttr}>
-            ${isClaimed ? '<div class="ach-corner-glow"></div>' : ''}
-            <div class="${iconClass}">${icon}</div>
-            <div class="${nameClass}">${achievement.name}</div>
-            <div class="${descClass}">${achievement.desc}</div>
-            <div class="ach-reward-row ${(isClaimed || canClaim) ? '' : 'locked'}">
-              <span class="ach-gold">+${achievement.reward} 💰</span>
-              ${achievement.skillPoints ? `<span>+${achievement.skillPoints} 🔮 SP</span>` : ''}
-              ${achievement.attributePoints ? `<span>+${achievement.attributePoints} ⭐ AP</span>` : ''}
-            </div>
-            ${canClaim ? '<div class="ach-claim-hint">✦ Tap to claim ✦</div>' : ''}
-          </div>`;
+        html += `<div class="ach-dark-card ${stateClass}" id="ach-card-${achievement.id}">
+          ${isClaimed ? '<div class="ach-dark-claimed-badge">✓ CLAIMED</div>' : ''}
+          <div class="ach-dark-icon">${icon}</div>
+          <div class="ach-dark-name${dimCls}">${achievement.name}</div>
+          <div class="ach-dark-desc${dimCls}">${achievement.desc}</div>
+          <div class="ach-dark-reward${dimCls}">${rewardParts.join(' · ')}</div>
+          ${canClaim ? `<button class="ach-dark-claim-btn" onclick="claimAchievement('${achievement.id}')">CLAIM</button>` : ''}
+        </div>`;
       }
 
-      html += '</div>';
+      html += `</div>`;
       content.innerHTML = html;
 
       // Update notification badge on achievements button
@@ -1218,15 +1253,181 @@
       // Show dopamine achievement notification (replaces old gold bag + enhanced notification)
       showAchievementNotification(achievement, skillPoints, attributePoints);
       
+      // ── Dopamine Boost: screen flash + card turn green ──
+      // Screen white flash
+      const flash = document.createElement('div');
+      flash.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:#fff;pointer-events:none;z-index:99999;opacity:0.7;transition:opacity 0.35s ease-out;';
+      document.body.appendChild(flash);
+      requestAnimationFrame(() => {
+        flash.style.opacity = '0';
+        setTimeout(() => flash.remove(), 380);
+      });
+
+      // Spawn sparkle particles around the card
+      const cardEl = document.getElementById('ach-card-' + achievement.id);
+      if (cardEl) {
+        // Float "+reward 💰" text up from card
+        const rect = cardEl.getBoundingClientRect();
+        const float = document.createElement('div');
+        float.textContent = `+${achievement.reward} 💰`;
+        float.style.cssText = `position:fixed;left:${rect.left + rect.width/2 - 30}px;top:${rect.top}px;
+          color:#FFD700;font-family:'Bangers',cursive;font-size:18px;font-weight:bold;
+          pointer-events:none;z-index:99998;text-shadow:0 0 8px rgba(255,215,0,0.8);
+          transition:transform 0.8s ease-out,opacity 0.8s ease-out;`;
+        document.body.appendChild(float);
+        requestAnimationFrame(() => {
+          float.style.transform = 'translateY(-60px)';
+          float.style.opacity = '0';
+          setTimeout(() => float.remove(), 820);
+        });
+
+        // Sparkle burst
+        for (let i = 0; i < 10; i++) {
+          const spark = document.createElement('div');
+          const angle = (i / 10) * Math.PI * 2;
+          const dist  = 30 + Math.random() * 40;
+          spark.textContent = ['✨','⭐','💫','🌟'][i % 4];
+          spark.style.cssText = `position:fixed;left:${rect.left + rect.width/2}px;top:${rect.top + rect.height/2}px;
+            font-size:14px;pointer-events:none;z-index:99997;
+            transition:transform 0.6s ease-out,opacity 0.6s ease-out;`;
+          document.body.appendChild(spark);
+          requestAnimationFrame(() => {
+            spark.style.transform = `translate(${Math.cos(angle)*dist}px,${Math.sin(angle)*dist}px)`;
+            spark.style.opacity = '0';
+            setTimeout(() => spark.remove(), 650);
+          });
+        }
+      }
+
       // Save
       saveSaveData();
       
-      // Refresh screen
+      // Refresh screen (card will now be green/claimed in re-render)
       updateAchievementsScreen();
     }
     
     // Expose to global scope for onclick handlers
     window.claimAchievement = claimAchievement;
+
+    // ── FEATURE 4: Hall of Fame Screen ───────────────────────────────────────
+    function showHallOfFameScreen() {
+      // Mark tutorial quest if applicable
+      if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest12_visitAchievements') {
+        if (typeof progressTutorialQuest === 'function') progressTutorialQuest('quest12_visitAchievements', true);
+        if (typeof saveSaveData === 'function') saveSaveData();
+      }
+
+      const existing = document.getElementById('hall-of-fame-overlay');
+      if (existing) existing.remove();
+
+      // Format time helper
+      const fmtTime = (ms) => {
+        if (!ms || ms <= 0) return '—';
+        const s = Math.floor(ms / 1000);
+        const m = Math.floor(s / 60);
+        const h = Math.floor(m / 60);
+        if (h > 0) return `${h}h ${m % 60}m`;
+        if (m > 0) return `${m}m ${s % 60}s`;
+        return `${s}s`;
+      };
+
+      const bestWave   = saveData.bestWave   || saveData.highestWave   || 0;
+      const totalKills = saveData.totalKills  || 0;
+      const totalRuns  = saveData.totalRuns   || saveData.runCount      || 0;
+      const bestKills  = saveData.bestKills   || 0;
+      const bestTime   = saveData.bestTime    || 0;
+      const totalTime  = saveData.totalTimePlayed || 0;
+      const bestGold   = saveData.bestGoldRun || 0;
+      const runHistory = saveData.runHistory  || [];
+
+      const statCards = [
+        { icon:'🏆', label:'Best Wave',       value: bestWave  || '—', color:'#FFD700' },
+        { icon:'💀', label:'Total Kills',      value: totalKills.toLocaleString(), color:'#ff6644' },
+        { icon:'🔄', label:'Total Runs',       value: totalRuns.toLocaleString(),  color:'#5DADE2' },
+        { icon:'⏱️', label:'Total Time',       value: fmtTime(totalTime),          color:'#aa44ff' },
+        { icon:'⚡', label:'Best Run Time',    value: fmtTime(bestTime),           color:'#44dd88' },
+        { icon:'💥', label:'Best Run Kills',   value: bestKills.toLocaleString(),  color:'#ff4444' },
+        ...(bestGold > 0 ? [{ icon:'💰', label:'Best Run Gold', value: bestGold.toLocaleString(), color:'#FFD700' }] : [])
+      ];
+
+      let statsHTML = statCards.map(c => `
+        <div style="background:rgba(255,255,255,0.04);border:1.5px solid ${c.color}33;border-radius:12px;
+          padding:14px 10px;text-align:center;min-width:100px;flex:1;">
+          <div style="font-size:28px;margin-bottom:4px;">${c.icon}</div>
+          <div style="font-size:20px;font-weight:bold;color:${c.color};font-family:'Bangers',cursive;letter-spacing:1px;">${c.value}</div>
+          <div style="font-size:10px;color:#888;margin-top:2px;">${c.label}</div>
+        </div>`).join('');
+
+      let historyHTML = '';
+      if (runHistory.length > 0) {
+        const recent = runHistory.slice(-5).reverse();
+        historyHTML = `<div style="margin-top:20px;">
+          <div style="font-family:'Bangers',cursive;font-size:18px;color:#FFD700;letter-spacing:1px;margin-bottom:10px;">📜 Recent Runs</div>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+          ${recent.map((r,i) => `
+            <div style="background:rgba(255,255,255,0.03);border:1px solid #222;border-radius:8px;
+              padding:8px 12px;display:flex;justify-content:space-between;align-items:center;font-size:12px;">
+              <span style="color:#555;">#${i + 1}</span>
+              <span>Wave <b style="color:#FFD700;">${r.wave||'?'}</b></span>
+              <span>💀 ${(r.kills||0).toLocaleString()}</span>
+              <span>💰 ${(r.gold||0).toLocaleString()}</span>
+              <span style="color:#888;">${fmtTime(r.time)}</span>
+            </div>`).join('')}
+          </div>
+        </div>`;
+      }
+
+      const overlay = document.createElement('div');
+      overlay.id = 'hall-of-fame-overlay';
+      overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.97);z-index:9000;overflow-y:auto;display:flex;flex-direction:column;align-items:center;padding:20px 16px 40px;box-sizing:border-box;';
+
+      overlay.innerHTML = `
+        <div style="max-width:700px;width:100%;">
+          <div style="text-align:center;margin-bottom:24px;">
+            <div style="font-size:48px;margin-bottom:6px;">🏛️</div>
+            <div style="font-family:'Bangers',cursive;font-size:36px;color:#FFD700;letter-spacing:3px;text-shadow:0 0 20px rgba(255,215,0,0.6);">HALL OF FAME</div>
+            <div style="color:#555;font-size:12px;margin-top:4px;">Your legacy as a Waterdrop Survivor</div>
+          </div>
+
+          <div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-bottom:8px;">
+            ${statsHTML}
+          </div>
+
+          ${historyHTML}
+
+          <div style="margin-top:28px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+            <button onclick="window.openAchievementsFromHallOfFame()" style="background:linear-gradient(135deg,#1a1200,#2a2000);border:2px solid #FFD700;color:#FFD700;padding:10px 22px;border-radius:8px;font-family:'Bangers',cursive;font-size:16px;letter-spacing:1px;cursor:pointer;">🏆 View Achievements</button>
+            <button onclick="window.closeHallOfFame()"
+              style="background:rgba(255,255,255,0.05);border:1.5px solid #333;color:#aaa;padding:10px 22px;border-radius:8px;font-size:14px;cursor:pointer;">← Back to Camp</button>
+          </div>
+        </div>`;
+
+      document.body.appendChild(overlay);
+
+      // Hide camp screen while overlay is open
+      const campScreen = document.getElementById('camp-screen');
+      if (campScreen) campScreen.style.display = 'none';
+    }
+
+    window.showHallOfFameScreen = showHallOfFameScreen;
+
+    window.openAchievementsFromHallOfFame = function() {
+      const hof = document.getElementById('hall-of-fame-overlay');
+      if (hof) hof.remove();
+      const achScreen = document.getElementById('achievements-screen');
+      if (achScreen) {
+        achScreen.style.display = 'flex';
+        const c = document.getElementById('achievements-content');
+        if (c && typeof renderAchievementsContent === 'function') renderAchievementsContent(c);
+      }
+    };
+
+    window.closeHallOfFame = function() {
+      const hof = document.getElementById('hall-of-fame-overlay');
+      if (hof) hof.remove();
+      const cs = document.getElementById('camp-screen');
+      if (cs) cs.style.display = 'flex';
+    };
 
     // ── Achievement Dopamine Notification ────────────────────────────────────
     // Slides up from the bottom: achievement logo, slot-machine reward reveal,
