@@ -15,6 +15,8 @@
       bullet: new THREE.MeshBasicMaterial({ color: 0xffff00 })
     };
     SHARED_MAT.enemy._isShared = true;
+    SHARED_MAT.black._isShared = true;
+    SHARED_MAT.bullet._isShared = true;
     window.SHARED_GEO = SHARED_GEO;
     window.SHARED_MAT = SHARED_MAT;
 
@@ -41,17 +43,25 @@
       if (SHARED_GEO_TYPE[type]) return SHARED_GEO_TYPE[type];
       let geo;
       switch (type) {
-        case 4:  geo = new THREE.TetrahedronGeometry(0.9, 0);    break; // Ranged
-        case 5:  geo = new THREE.OctahedronGeometry(0.9, 0);     break; // Flying
-        case 6:  geo = getHardTankGeometry();    SHARED_GEO_TYPE[6] = geo; return geo; // Hard Tank (own cache)
-        case 8:  geo = new THREE.DodecahedronGeometry(0.85, 0);  break; // Hard Balanced
-        case 9:  geo = new THREE.IcosahedronGeometry(0.9, 0);    break; // Elite
-        case 10: geo = new THREE.DodecahedronGeometry(1.1, 0);   break; // MiniBoss
-        case 15: geo = new THREE.SphereGeometry(0.65, 7, 7);     break; // Daddy Longlegs (small)
-        case 17: geo = new THREE.CapsuleGeometry(0.55, 0.6, 4, 8); break; // Grey Alien
-        case 19: geo = new THREE.OctahedronGeometry(1.0, 1);     break; // Annunaki Orb
-        case 20: geo = new THREE.DodecahedronGeometry(0.9, 0);   break; // Source Glitch
-        default: return SHARED_GEO.sphere; // Most types share the generic sphere
+        case 1:  geo = new THREE.CapsuleGeometry(0.42, 0.55, 3, 7);  break; // Fast — elongated speedy shape
+        case 3:  geo = new THREE.IcosahedronGeometry(0.85, 0);       break; // Slowing/Spiky — spiny icosahedron
+        case 4:  geo = new THREE.TetrahedronGeometry(0.9, 0);        break; // Ranged
+        case 5:  geo = new THREE.OctahedronGeometry(0.9, 0);         break; // Flying
+        case 6:  geo = getHardTankGeometry(); SHARED_GEO_TYPE[6] = geo; return geo; // Hard Tank (own cache)
+        case 7:  geo = new THREE.CapsuleGeometry(0.48, 0.6, 3, 8);  break; // Hard Fast — larger capsule
+        case 8:  geo = new THREE.DodecahedronGeometry(0.85, 0);      break; // Hard Balanced
+        case 9:  geo = new THREE.IcosahedronGeometry(0.9, 0);        break; // Elite
+        case 10: geo = new THREE.DodecahedronGeometry(1.1, 0);       break; // MiniBoss
+        case 12: geo = new THREE.OctahedronGeometry(0.75, 1);        break; // Bug Ranged — multi-faceted
+        case 13: geo = new THREE.BoxGeometry(0.9, 0.65, 0.9);        break; // Bug Slow — blocky tanky
+        case 14: geo = new THREE.IcosahedronGeometry(0.65, 0);       break; // Bug Fast — angular speeder
+        case 15: geo = new THREE.SphereGeometry(0.65, 7, 7);         break; // Daddy Longlegs (small)
+        case 16: geo = new THREE.SphereGeometry(0.4, 6, 6);          break; // Sweeping Swarm — small
+        case 17: geo = new THREE.CapsuleGeometry(0.55, 0.6, 4, 8);  break; // Grey Alien
+        case 18: geo = new THREE.BoxGeometry(0.8, 0.9, 0.75);        break; // Reptilian Shifter — scaly block
+        case 19: geo = new THREE.OctahedronGeometry(1.0, 1);         break; // Annunaki Orb
+        case 20: geo = new THREE.DodecahedronGeometry(0.9, 0);       break; // Source Glitch
+        default: return SHARED_GEO.sphere; // Types 0,2,11 share generic sphere
       }
       SHARED_GEO_TYPE[type] = geo;
       return geo;
@@ -97,6 +107,15 @@
     const SHARED_PUPIL_MAT = new THREE.MeshBasicMaterial({ color: 0x000000 });
     SHARED_EYE_MAT._isShared = true;
     SHARED_PUPIL_MAT._isShared = true;
+
+    // ── Shared leg geometry — used by all legged enemy types (one geo, many instances) ──────
+    // Capsule sticks oriented vertically; each leg Mesh has its own world-space transform.
+    const SHARED_LEG_GEO  = new THREE.CapsuleGeometry(0.038, 0.38, 2, 4);
+    const SHARED_LLEG_GEO = new THREE.CapsuleGeometry(0.025, 0.72, 2, 4); // Daddy-Longlegs long legs
+    SHARED_LEG_GEO._isShared  = true;
+    SHARED_LLEG_GEO._isShared = true;
+    window.SHARED_LEG_GEO  = SHARED_LEG_GEO;
+    window.SHARED_LLEG_GEO = SHARED_LLEG_GEO;
 
     let hardTankGeometryCache = null;
 
@@ -454,17 +473,79 @@
           scene.add(this.groundShadow);
         }
 
-        // Anatomy groups — null (not recreating the full procedural anatomy is intentional;
-        // the die() and update() code handles null gracefully).
+        // ── LEGS — procedural stick-legs for creature/bug types ──────────────────────
+        // Leg meshes share SHARED_LEG_GEO (one geometry, many instances with unique transforms).
+        // Each leg's material is retrieved from the shared color cache (no extra VRAM per enemy).
+        this._legs = null;
+        const _LEGGED_TYPES = new Set([0, 1, 2, 3, 12, 13, 14, 15]);
+        if (_LEGGED_TYPES.has(type) && !this._usesInstancing) {
+          const _legCount = (type >= 12 && type <= 14) ? 8 : (type === 15 ? 8 : 6);
+          const _legGeo   = (type === 15) ? SHARED_LLEG_GEO : SHARED_LEG_GEO;
+          // Slightly darker shade for legs — per-channel darkening preserves hue
+          const _legR = Math.max(0, ((_colorHex >> 16) & 0xFF) - 40);
+          const _legG = Math.max(0, ((_colorHex >> 8) & 0xFF) - 40);
+          const _legB = Math.max(0, (_colorHex & 0xFF) - 40);
+          const _legColorHex = (_legR << 16) | (_legG << 8) | _legB;
+          const _legMat = getOrCreateMat(_legColorHex);
+          this._legs = [];
+          const _legReach   = (type === 15) ? 0.68 : (type >= 12 && type <= 14) ? 0.52 : 0.48;
+          const _legDropY   = (type === 15) ? -0.30 : -0.22;
+          const _legTiltAmt = (type === 15) ? 0.40 : 0.33;
+          for (let _li = 0; _li < _legCount; _li++) {
+            const _angle = (_li / _legCount) * Math.PI * 2;
+            const _leg = new THREE.Mesh(_legGeo, _legMat);
+            _leg.position.set(
+              Math.cos(_angle) * _legReach,
+              _legDropY,
+              Math.sin(_angle) * _legReach
+            );
+            // Tilt outward so legs splay naturally away from the body centre
+            _leg.rotation.z = Math.cos(_angle) * _legTiltAmt;
+            _leg.rotation.x = Math.sin(_angle) * _legTiltAmt;
+            this.mesh.add(_leg);
+            this._legs.push(_leg);
+          }
+        }
+
+        // ── ANATOMY GROUPS — organic locomotion squish & head-bob ───────────────────
+        // For non-boss, non-instanced enemies:
+        //   baseGroup  → this.mesh  (squish/scale along locomotion rhythm)
+        //   torsoGroup → this.mesh  (forward-lean rotation.x)
+        //   headGroup  → headMesh   (bob up/down + player look-at)
+        // These use the SAME Three.js objects as the main mesh to avoid allocating extra
+        // geometry/material — they just drive the existing mesh's transform properties.
         this.baseGroup        = null;
         this.torsoGroup       = null;
         this.headGroup        = null;
         this._gutsContainer   = null;
         this._gutsExposed     = false;
-        this._anatBaseMesh    = null;
-        this._anatHeadMesh    = null;
-        this._anatJawMesh     = null;
         this._annunakiLaserMesh = null;
+
+        // Sentinel mesh for die() flesh-tumbling effect — tiny invisible disc
+        // Its non-null value tells die() to spawn a tumbling meat chunk on death.
+        // The disc has its own unique geo+mat so die() can safely dispose them.
+        this._anatJawMesh  = null;
+        this._anatHeadMesh = null;
+        if (!this._usesInstancing && type !== 10 && type !== 11 && type !== 19 && type !== 20) {
+          const _sentGeo = new THREE.CircleGeometry(0.22, 5);
+          const _sentMat = new THREE.MeshBasicMaterial({ color: 0x3B0000 });
+          this._anatBaseMesh = new THREE.Mesh(_sentGeo, _sentMat);
+          this._anatBaseMesh.visible = false;
+          this._anatBaseMesh.rotation.x = -Math.PI / 2;
+          this._anatBaseMesh.position.y = 0.01;
+          this.mesh.add(this._anatBaseMesh);
+        } else {
+          this._anatBaseMesh = null;
+        }
+
+        // Assign anatomy locomotion groups (non-boss, non-instanced only)
+        // Boss types (10, 11) retain their own special scale pulsing logic.
+        if (!this._usesInstancing && type !== 10 && type !== 11) {
+          this.baseGroup  = this.mesh;
+          this.torsoGroup = this.mesh;
+          this.headGroup  = this.headMesh;
+          this._headGroupBaseY = this.headMesh.position.y; // 0.7
+        }
 
         // ── TYPE-SPECIFIC AI STATE (no new meshes — pure numeric state) ─────────────
         if (type === 15) {
@@ -1338,8 +1419,9 @@
         
         // Eye tracking: non-instanced enemies rotate eyes toward player each frame
         if (this.leftEye && this.rightEye && !this._usesInstancing && playerPos) {
-          this.leftEye.lookAt(new THREE.Vector3(playerPos.x, this.mesh.position.y + 0.1, playerPos.z));
-          this.rightEye.lookAt(new THREE.Vector3(playerPos.x, this.mesh.position.y + 0.1, playerPos.z));
+          _tmpHeadTarget.set(playerPos.x, this.mesh.position.y + 0.1, playerPos.z);
+          this.leftEye.lookAt(_tmpHeadTarget);
+          this.rightEye.lookAt(_tmpHeadTarget);
         }
 
         // Idle sway: gentle rotation.z oscillation at 0.8Hz (5.03 rad/s)
@@ -1357,7 +1439,8 @@
 
         // ── Organic "Snail/Worm Pump" Locomotion ─────────────────────────────────────
         // Animate the segmented anatomy groups for a squishy, organic movement feel.
-        if (this.baseGroup && this.headGroup && this.torsoGroup) {
+        // Guarded by !_squishTimer so hit-reaction squish always takes priority.
+        if (!this._squishTimer && this.baseGroup && this.headGroup && this.torsoGroup) {
           const _pump     = Math.sin(gameTime * 4.0 + this.wobbleOffset);
           const _mvX      = this._lastMoveVX || 0;
           const _mvZ      = this._lastMoveVZ || 0;
@@ -1410,6 +1493,22 @@
                   z: this.mesh.position.z + (Math.random() - 0.5) * 0.2
                 });
               }
+            }
+          }
+        }
+
+        // ── LEG ANIMATION — walk-cycle tilt proportional to movement speed ────────
+        if (this._legs && this._legs.length > 0) {
+          const _legMvX = this._lastMoveVX || 0;
+          const _legMvZ = this._lastMoveVZ || 0;
+          const _legSpd = Math.sqrt(_legMvX * _legMvX + _legMvZ * _legMvZ);
+          if (_legSpd > 0.001) {
+            for (let _li = 0; _li < this._legs.length; _li++) {
+              const _leg  = this._legs[_li];
+              const _base = (_li / this._legs.length) * Math.PI * 2;
+              // Alternating stride: each leg steps 180° out of phase with its opposite
+              const _stride = Math.sin(gameTime * 8.0 + _base + this.wobbleOffset) * Math.min(_legSpd * 6, 0.35);
+              _leg.rotation.x = Math.sin(_base) * 0.33 + _stride;
             }
           }
         }

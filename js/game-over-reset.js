@@ -619,6 +619,12 @@
               if (gm.material) gm.material.dispose();
             });
           }
+          // Clean up anatomy sentinel mesh (unique geo+mat; child of enemy mesh)
+          if (e._anatBaseMesh) {
+            if (e._anatBaseMesh.geometry) e._anatBaseMesh.geometry.dispose();
+            if (e._anatBaseMesh.material) e._anatBaseMesh.material.dispose();
+            e._anatBaseMesh = null;
+          }
         }
       });
       enemies = [];

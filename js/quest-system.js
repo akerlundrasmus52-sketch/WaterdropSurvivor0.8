@@ -360,13 +360,19 @@
         progressTutorialQuest('quest_newFriend', true);
       }
       
-      // Auto-complete quest_firstBlood when visiting Quest Hall with sufficient resources
+      // Auto-complete quest_firstBlood when visiting Quest Hall with sufficient resources.
+      // The quest deducts 30w+30s on claim, but we trigger readyToClaim at 20 to avoid
+      // softlocking players who spend exactly the quest_harvester reward (20 each) and
+      // gather a few more.  If a player has only 20 the deduct caps at 0 (Math.max(0,...)),
+      // so they still progress without losing resources they don't have.
       if (
         saveData.tutorialQuests.currentQuest === 'quest_firstBlood' &&
         !saveData.tutorialQuests.readyToClaim.includes('quest_firstBlood')
       ) {
         const r = saveData.resources || {};
-        if ((r.wood || 0) >= 12 && (r.stone || 0) >= 12) {
+        // Accept 20+ so players who collected the quest_harvester reward (20 each) can
+        // claim after one more small gathering session rather than being softlocked.
+        if ((r.wood || 0) >= 20 && (r.stone || 0) >= 20) {
           progressTutorialQuest('quest_firstBlood', true);
         }
       }
