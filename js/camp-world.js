@@ -26,25 +26,26 @@
 
   // Building layout (id → world position + label)
   const BUILDING_DEFS = [
-    { id: 'questMission',       x:  0,  z: 12,  label: 'Quest Hall',       icon: '📜' },
-    { id: 'skillTree',          x: -13, z: -9,  label: 'Skill Tree',       icon: '🌳' },
-    { id: 'forge',              x:  13, z: -9,  label: 'The Forge',        icon: '⚒️' },
-    { id: 'companionHouse',     x: -13, z:  5,  label: 'Companion Home',   icon: '🏡' },
-    { id: 'trainingHall',       x:  13, z:  5,  label: 'Training Hall',    icon: '🏋️' },
-    { id: 'achievementBuilding',x:   0, z:-15,  label: 'Hall of Trophies', icon: '🏆' },
-    { id: 'armory',             x: -9,  z:-13,  label: 'Armory',           icon: '⚔️' },
-    { id: 'inventory',          x:  9,  z:-13,  label: 'Inventory',        icon: '📦' },
-    { id: 'campBoard',          x: -3.5, z: 0,  label: 'Camp Board',       icon: '📋' },
-    { id: 'specialAttacks',     x:  9,  z:  7,  label: 'Special Attacks',  icon: '⚡' },
-    { id: 'warehouse',          x: -9,  z:  7,  label: 'Warehouse',        icon: '🏪' },
-    { id: 'tavern',             x: -5,  z: 14,  label: 'Tavern',           icon: '🍺' },
-    { id: 'shop',               x:  5,  z: 14,  label: 'Shop',             icon: '🛒' },
-    { id: 'prestige',           x:  0,  z:-19,  label: 'Prestige Altar',   icon: '✨' },
-    { id: 'trashRecycle',       x: -13, z: -2,  label: 'Trash & Recycle',  icon: '♻️' },
-    { id: 'tempShop',           x:  13, z: -2,  label: 'Temp Shop',        icon: '🏪' },
-    { id: 'prismReliquary',     x: -8,  z:-19,  label: 'Prism Reliquary',  icon: '💎' },
-    { id: 'astralGateway',      x:  8,  z:-19,  label: 'Astral Gateway',   icon: '🌀' },
-    { id: 'astralGateway',      x: -15, z: -10, label: 'ASTRAL GATEWAY',   icon: '🌀', w: 6, d: 6, color: 0x00ffff },
+    { id: 'questMission',       x:  0,  z: 12,  label: 'Quest Hall',          icon: '📜' },
+    { id: 'skillTree',          x: -13, z: -9,  label: 'Skill Tree',          icon: '🌳' },
+    { id: 'forge',              x:  13, z: -9,  label: 'The Forge',           icon: '⚒️' },
+    { id: 'companionHouse',     x: -13, z:  5,  label: 'Companion Home',      icon: '🏡' },
+    { id: 'trainingHall',       x:  13, z:  5,  label: 'Training Hall',       icon: '🏋️' },
+    { id: 'achievementBuilding',x:   0, z:-15,  label: 'Hall of Trophies',    icon: '🏆' },
+    { id: 'armory',             x: -9,  z:-13,  label: 'Armory',              icon: '⚔️' },
+    { id: 'inventory',          x:  9,  z:-13,  label: 'Inventory',           icon: '📦' },
+    { id: 'campBoard',          x: -3.5, z: 0,  label: 'Camp Board',          icon: '📋' },
+    { id: 'specialAttacks',     x:  9,  z:  7,  label: 'Special Attacks',     icon: '⚡' },
+    { id: 'warehouse',          x: -9,  z:  7,  label: 'Warehouse',           icon: '🏪' },
+    { id: 'tavern',             x: -5,  z: 14,  label: 'Tavern',              icon: '🍺' },
+    { id: 'shop',               x:  5,  z: 14,  label: 'Shop',                icon: '🛒' },
+    { id: 'prestige',           x:  0,  z:-19,  label: 'Prestige Altar',      icon: '✨' },
+    { id: 'trashRecycle',       x: -13, z: -2,  label: 'Trash & Recycle',     icon: '♻️' },
+    { id: 'tempShop',           x:  13, z: -2,  label: 'Temp Shop',           icon: '🏪' },
+    { id: 'prismReliquary',     x: -8,  z:-19,  label: 'Prism Reliquary',     icon: '💎' },
+    { id: 'astralGateway',      x:  8,  z:-19,  label: 'Astral Gateway',      icon: '🌀' },
+    { id: 'astralGateway',      x: -15, z: -10, label: 'ASTRAL GATEWAY',      icon: '🌀', w: 6, d: 6, color: 0x00ffff },
+    { id: 'accountBuilding',    x:  5,  z:-17,  label: 'Profile & Records',   icon: '👤' },
   ];
 
   // ──────────────────────────────────────────────────────────
@@ -3642,7 +3643,11 @@
     'armory-overlay', 'recycle-overlay', 'campfire-kitchen-overlay',
     'workshop-overlay', 'gacha-store-overlay', 'aida-dark-pact-overlay',
     'aida-modal-overlay', 'camp-codex-screen', 'character-visuals-screen',
-    'weaponsmith-overlay'
+    'weaponsmith-overlay',
+    // Progression upgrades overlay (camp-bld-overlay style)
+    'progression-shop-overlay',
+    // Profile/account building overlay
+    'account-building-overlay',
   ];
   window._CAMP_OVERLAY_IDS = _OVERLAY_IDS;
 

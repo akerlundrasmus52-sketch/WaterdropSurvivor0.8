@@ -122,6 +122,172 @@
 
     let hardTankGeometryCache = null;
 
+    // ── Spider Sprite System ──────────────────────────────────────────────────────────────
+    // Replaces the procedural 3D sphere+legs for type-15 (Daddy Longlegs) with a
+    // pixel-art billboard sprite that animates walk / rear / attack / hit / die states.
+    // The physical mesh remains as a tiny transparent hitbox; all visuals come from the sprite.
+    const SPIDER_SHEET_COLS = 4;
+    const SPIDER_SHEET_ROWS = 6;
+    // Sprite sheet paths — IMG_1155.png (walk+rear) and IMG_1149.png (attack+hit+die)
+    // Both are 1024×1536 grids → 4 columns × 6 rows, each cell ≈ 256×256 px
+    const SPIDER_SHEET_PATHS = ['IMG_1155.png', 'IMG_1149.png'];
+    const SPIDER_ANIMS = {
+      walk:   { sheet: 0, frames: [{c:0,r:0},{c:1,r:0},{c:2,r:0},{c:3,r:0},{c:0,r:1},{c:1,r:1},{c:2,r:1},{c:3,r:1}], fps: 8,  loop: true  },
+      rear:   { sheet: 0, frames: [{c:0,r:2},{c:1,r:2},{c:2,r:2},{c:3,r:2},{c:0,r:3},{c:1,r:3},{c:2,r:3},{c:3,r:3}], fps: 10, loop: true  },
+      attack: { sheet: 0, frames: [{c:0,r:4},{c:1,r:4},{c:2,r:4},{c:3,r:4},{c:0,r:5},{c:1,r:5},{c:2,r:5},{c:3,r:5}], fps: 14, loop: false },
+      hit:    { sheet: 1, frames: [{c:0,r:0},{c:1,r:0},{c:2,r:0},{c:3,r:0}], fps: 16, loop: false },
+      die:    { sheet: 1, frames: [{c:0,r:2},{c:1,r:2},{c:2,r:2},{c:3,r:2},{c:0,r:3},{c:1,r:3},{c:2,r:3},{c:3,r:3},{c:0,r:4},{c:1,r:4},{c:2,r:4},{c:3,r:4}], fps: 10, loop: false },
+    };
+    // Module-level texture cache so all spider instances share the same GPU textures
+    const _spiderTexCache = {};
+    // Track pending texture loads — resolve list of waiting instances
+    const _spiderTexWaiters = {};
+
+    class EnemySpiderSprite {
+      constructor(parentMesh) {
+        this._anim      = 'walk';
+        this._frameIdx  = 0;
+        this._frameTimer= 0;
+        this._playing   = true;
+        this._onComplete= null;
+        this._textures  = [null, null];
+        this._sprite    = null;
+        this._loaded    = [false, false];
+        this._flashTimer= 0;
+        this._parent    = parentMesh;
+        this._dead      = false;
+        this._init();
+      }
+
+      _init() {
+        const THREE = window.THREE;
+        if (!THREE) return;
+        const mat = new THREE.SpriteMaterial({ transparent: true, alphaTest: 0.08, color: 0xffffff });
+        this._sprite = new THREE.Sprite(mat);
+        this._sprite.scale.set(2.6, 2.6, 1);
+        this._sprite.position.set(0, 1.0, 0);
+        this._parent.add(this._sprite);
+
+        const loader = new THREE.TextureLoader();
+        SPIDER_SHEET_PATHS.forEach((path, i) => {
+          if (_spiderTexCache[path]) {
+            this._textures[i] = _spiderTexCache[path];
+            this._loaded[i] = true;
+            if (i === 0) this._applyFrame();
+            return;
+          }
+          if (_spiderTexWaiters[path]) {
+            _spiderTexWaiters[path].push(tex => { this._textures[i] = tex; this._loaded[i] = true; if (i === 0) this._applyFrame(); });
+            return;
+          }
+          _spiderTexWaiters[path] = [];
+          loader.load(path, (tex) => {
+            tex.magFilter = THREE.NearestFilter;
+            tex.minFilter = THREE.NearestFilter;
+            try { tex.colorSpace = THREE.SRGBColorSpace; } catch(_) {}
+            tex.repeat.set(1 / SPIDER_SHEET_COLS, 1 / SPIDER_SHEET_ROWS);
+            tex.wrapS = THREE.ClampToEdgeWrapping;
+            tex.wrapT = THREE.ClampToEdgeWrapping;
+            _spiderTexCache[path] = tex;
+            this._textures[i] = tex;
+            this._loaded[i] = true;
+            if (i === 0) this._applyFrame();
+            (_spiderTexWaiters[path] || []).forEach(cb => cb(tex));
+            delete _spiderTexWaiters[path];
+          }, undefined, () => {
+            // Texture load failed — mark loaded so we don't retry per frame
+            this._loaded[i] = true;
+            (_spiderTexWaiters[path] || []).forEach(cb => cb(null));
+            delete _spiderTexWaiters[path];
+          });
+        });
+      }
+
+      play(animName, onComplete) {
+        const a = SPIDER_ANIMS[animName];
+        if (!a) return;
+        if (this._anim === animName && this._playing && animName !== 'hit') return;
+        this._anim       = animName;
+        this._frameIdx   = 0;
+        this._frameTimer = 0;
+        this._playing    = true;
+        this._onComplete = onComplete || null;
+        this._applyFrame();
+      }
+
+      flash() {
+        this._flashTimer = 0.12;
+        if (this._sprite && this._sprite.material) this._sprite.material.color.setHex(0xFF8888);
+      }
+
+      update(dt) {
+        if (this._dead) return;
+        // Hit flash fade back to white
+        if (this._flashTimer > 0) {
+          this._flashTimer -= dt;
+          if (this._flashTimer <= 0 && this._sprite && this._sprite.material)
+            this._sprite.material.color.setHex(0xffffff);
+        }
+        if (!this._playing) return;
+        const anim = SPIDER_ANIMS[this._anim];
+        if (!anim) return;
+        this._frameTimer += dt;
+        const fd = 1 / anim.fps;
+        if (this._frameTimer >= fd) {
+          this._frameTimer -= fd;
+          this._frameIdx++;
+          if (this._frameIdx >= anim.frames.length) {
+            if (anim.loop) {
+              this._frameIdx = 0;
+            } else {
+              this._frameIdx = anim.frames.length - 1;
+              this._playing  = false;
+              if (this._onComplete) { const cb = this._onComplete; this._onComplete = null; cb(); }
+              return;
+            }
+          }
+          this._applyFrame();
+        }
+      }
+
+      _applyFrame() {
+        const anim = SPIDER_ANIMS[this._anim];
+        if (!anim || !this._sprite || !this._loaded[anim.sheet]) return;
+        const tex = this._textures[anim.sheet];
+        if (!tex) return;
+        if (this._sprite.material.map !== tex) {
+          this._sprite.material.map = tex;
+          this._sprite.material.needsUpdate = true;
+        }
+        const frame = anim.frames[this._frameIdx];
+        tex.offset.set(
+          frame.c / SPIDER_SHEET_COLS,
+          1 - (frame.r + 1) / SPIDER_SHEET_ROWS
+        );
+      }
+
+      playDeath(onDone) {
+        this._dead = false;
+        this.play('die', () => {
+          this._dead = true;
+          if (this._sprite) this._sprite.visible = false;
+          if (onDone) onDone();
+        });
+      }
+
+      dispose() {
+        if (this._sprite) {
+          if (this._parent) this._parent.remove(this._sprite);
+          if (this._sprite.material) {
+            // Don't dispose shared cached textures
+            this._sprite.material.dispose();
+          }
+          this._sprite = null;
+        }
+      }
+    }
+    // ─────────────────────────────────────────────────────────────────────────────────────────
+
     // Water particle pool for player physics effects
     const waterParticlePool = [];
     const MAX_WATER_PARTICLES = 20;
@@ -481,14 +647,30 @@
           scene.add(this.groundShadow);
         }
 
+        // ── SPIDER SPRITE (type 15) — replace procedural mesh with a pixel-art billboard ───
+        // The SphereGeometry mesh becomes a tiny transparent hitbox; all visuals come from
+        // the EnemySpiderSprite billboard that auto-animates walk / rear / attack / hit / die.
+        this._spiderSprite = null;
+        if (type === 15 && !this._usesInstancing) {
+          // Hide the 3D sphere (use a per-instance transparent material so shared cache is untouched)
+          const _spiderHitboxMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false });
+          _spiderHitboxMat._isSpiderHitbox = true;
+          this.mesh.material = _spiderHitboxMat;
+          // Also hide the head mesh
+          if (this.headMesh) this.headMesh.visible = false;
+          // Create the sprite
+          this._spiderSprite = new EnemySpiderSprite(this.mesh);
+        }
+
         // ── LEGS — procedural stick-legs for creature/bug types ──────────────────────
         // Leg meshes share SHARED_LEG_GEO (one geometry, many instances with unique transforms).
         // Each leg's material is retrieved from the shared color cache (no extra VRAM per enemy).
+        // Type 15 uses the sprite system above instead of procedural legs.
         this._legs = null;
-        const _LEGGED_TYPES = new Set([0, 1, 2, 3, 12, 13, 14, 15]);
+        const _LEGGED_TYPES = new Set([0, 1, 2, 3, 12, 13, 14]);
         if (_LEGGED_TYPES.has(type) && !this._usesInstancing) {
-          const _legCount = (type >= 12 && type <= 14) ? 8 : (type === 15 ? 8 : 6);
-          const _legGeo   = (type === 15) ? SHARED_LLEG_GEO : SHARED_LEG_GEO;
+          const _legCount = (type >= 12 && type <= 14) ? 8 : 6;
+          const _legGeo   = SHARED_LEG_GEO;
           // Slightly darker shade for legs — per-channel darkening preserves hue
           const _legR = Math.max(0, ((_colorHex >> 16) & 0xFF) - 40);
           const _legG = Math.max(0, ((_colorHex >> 8) & 0xFF) - 40);
@@ -496,9 +678,9 @@
           const _legColorHex = (_legR << 16) | (_legG << 8) | _legB;
           const _legMat = getOrCreateMat(_legColorHex);
           this._legs = [];
-          const _legReach   = (type === 15) ? 0.68 : (type >= 12 && type <= 14) ? 0.52 : 0.48;
-          const _legDropY   = (type === 15) ? -0.30 : -0.22;
-          const _legTiltAmt = (type === 15) ? 0.40 : 0.33;
+          const _legReach   = (type >= 12 && type <= 14) ? 0.52 : 0.48;
+          const _legDropY   = -0.22;
+          const _legTiltAmt = 0.33;
           for (let _li = 0; _li < _legCount; _li++) {
             const _angle = (_li / _legCount) * Math.PI * 2;
             const _leg = new THREE.Mesh(_legGeo, _legMat);
@@ -1079,6 +1261,7 @@
             this._rearingTimer += dt;
             if (this._rearingPhase === 0) {
               // Walking phase: approach slowly
+              if (this._spiderSprite) this._spiderSprite.play('walk');
               if (dist > this.attackRange) {
                 vx = (dx / dist) * this.speed * 0.8;
                 vz = (dz / dist) * this.speed * 0.8;
@@ -1088,14 +1271,16 @@
                 this._rearingTimer = 0;
               }
             } else if (this._rearingPhase === 1) {
-              // Rearing up: lift body, legs spread wide (animated via Y position)
+              // Rearing up: play rear animation, lift body
+              if (this._spiderSprite) this._spiderSprite.play('rear');
               this.mesh.position.y = 0.5 + Math.sin(this._rearingTimer * 4) * 0.4;
               if (this._rearingTimer > 0.8) {
                 this._rearingPhase = 2;
                 this._rearingTimer = 0;
               }
             } else if (this._rearingPhase === 2) {
-              // Attack lunge
+              // Attack lunge — play attack animation
+              if (this._spiderSprite) this._spiderSprite.play('attack');
               vx = (dx / dist) * this.speed * 3.0;
               vz = (dz / dist) * this.speed * 3.0;
               if (this._rearingTimer > 0.4) {
@@ -1104,6 +1289,8 @@
                 this.mesh.position.y = 0.5;
               }
             }
+            // Tick the spider sprite animator every frame
+            if (this._spiderSprite) this._spiderSprite.update(dt);
           } else if (behavior === 'sweep') {
             // Sweeping Swarm: moves as a tight group sweeping ±6 units perpendicular to approach
             // with a sin wave over 2s period (π rad/s)
@@ -1666,6 +1853,11 @@
         // Track last damage type and crit state for death effects
         this.lastDamageType = damageType;
         this.lastCrit = isCrit;
+        // Flash the spider sprite on every hit
+        if (this._spiderSprite) {
+          this._spiderSprite.flash();
+          this._spiderSprite.play('hit');
+        }
         // Track last bullet direction for weapon-specific death effects (e.g. shotgun cone, sniper exit wound)
         if (hitDir && (hitDir.vx !== undefined)) {
           this._lastHitVX = hitDir.vx;
@@ -2905,6 +3097,10 @@
         this.isDead = true;
         this.active = false; // Prevent further hit detection on dying enemy
         this._deathTimestamp = Date.now();
+        // Trigger spider death animation — sprite plays its die sequence before disposal
+        if (this._spiderSprite) {
+          this._spiderSprite.playDeath(() => { /* sprite hides itself when done */ });
+        }
         // Register kill for combat intensity tracking (dynamic shadow quality)
         if (typeof window.registerCombatKill === 'function') window.registerCombatKill();
         // Record kill milestone progress
@@ -3808,6 +4004,8 @@
                 if (dyingMesh._splitProxy) { scene.remove(dyingMesh._splitProxy.mesh); dyingMesh._splitProxy.geo.dispose(); dyingMesh._splitProxy.mat.dispose(); dyingMesh._splitProxy = null; }
                 // Restore sentinel disc reference so the next die() can trigger gore again.
                 if (_anatBaseMesh) { _anatBaseMesh.visible = false; _enemyInst._anatBaseMesh = _anatBaseMesh; }
+                // Dispose spider sprite (spider enemies only)
+                if (_enemyInst._spiderSprite) { _enemyInst._spiderSprite.dispose(); _enemyInst._spiderSprite = null; }
                 // Park the enemy and push to free list.
                 window.enemyPool._return(_enemyInst);
               } else {
@@ -3830,6 +4028,8 @@
                 _deathChunks.forEach(c => { scene.remove(c.mesh); c.geo.dispose(); c.mat.dispose(); });
                 if (_headRoll) { scene.remove(_headRoll.mesh); _headRoll.geo.dispose(); _headRoll.mat.dispose(); }
                 if (dyingMesh._splitProxy) { scene.remove(dyingMesh._splitProxy.mesh); dyingMesh._splitProxy.geo.dispose(); dyingMesh._splitProxy.mat.dispose(); }
+                // Dispose spider sprite (spider enemies only)
+                if (_enemyInst._spiderSprite) { _enemyInst._spiderSprite.dispose(); _enemyInst._spiderSprite = null; }
               }
               return false;
             }
@@ -3851,6 +4051,7 @@
               if (_headRoll) { if (_headRoll.mesh.parent) scene.remove(_headRoll.mesh); _headRoll.geo.dispose(); _headRoll.mat.dispose(); }
               if (dyingMesh._splitProxy) { if (dyingMesh._splitProxy.mesh.parent) scene.remove(dyingMesh._splitProxy.mesh); dyingMesh._splitProxy.geo.dispose(); dyingMesh._splitProxy.mat.dispose(); dyingMesh._splitProxy = null; }
               if (_anatBaseMesh) { _anatBaseMesh.visible = false; _enemyInst._anatBaseMesh = _anatBaseMesh; }
+              if (_enemyInst._spiderSprite) { _enemyInst._spiderSprite.dispose(); _enemyInst._spiderSprite = null; }
               window.enemyPool._return(_enemyInst);
             } else {
               // Force-remove the dying mesh and all sub-resources from the scene.
@@ -3868,6 +4069,7 @@
               _deathChunks.forEach(c => { if (c.mesh.parent) scene.remove(c.mesh); c.geo.dispose(); c.mat.dispose(); });
               if (_headRoll) { if (_headRoll.mesh.parent) scene.remove(_headRoll.mesh); _headRoll.geo.dispose(); _headRoll.mat.dispose(); }
               if (dyingMesh._splitProxy) { if (dyingMesh._splitProxy.mesh.parent) scene.remove(dyingMesh._splitProxy.mesh); dyingMesh._splitProxy.geo.dispose(); dyingMesh._splitProxy.mat.dispose(); }
+              if (_enemyInst._spiderSprite) { _enemyInst._spiderSprite.dispose(); _enemyInst._spiderSprite = null; }
             }
           }
         });

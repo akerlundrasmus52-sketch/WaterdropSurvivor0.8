@@ -385,6 +385,20 @@
       ) {
         progressTutorialQuest('quest_gainingStats', true);
       }
+
+      // Auto-complete quest_craftAllTools when the player has bought all 6 gathering tools
+      if (
+        saveData.tutorialQuests.currentQuest === 'quest_craftAllTools' &&
+        !saveData.tutorialQuests.readyToClaim.includes('quest_craftAllTools') &&
+        window.GameHarvesting
+      ) {
+        const _ownedTools = window.GameHarvesting.getTools() || {};
+        const _allToolIds = ['axe', 'sledgehammer', 'pickaxe', 'magicTool', 'knife', 'berryScoop'];
+        const _hasAll = _allToolIds.every(id => !!_ownedTools[id]);
+        if (_hasAll) {
+          progressTutorialQuest('quest_craftAllTools', true);
+        }
+      }
       
       // Fallback: if questForge0_unlock is the active quest but not yet in readyToClaim
       // (can happen when activated via _completeBuild after building questMission),
@@ -2494,6 +2508,50 @@
     // Re-show on next camp visit
     function _resetUnspentBarDismiss() { _unspentBarDismissed = false; }
 
+    // ── Aida Account Progression Nudge ───────────────────────────────────────
+    // After runs, Aida explicitly guides the player to the Profile Building when
+    // they have available Free Spins, unspent Skill Points, or Challenge rewards.
+    // Shows at most once per camp visit to avoid spamming.
+    let _aidaProgressionNudgeShownThisVisit = false;
+    function _checkAndShowAidaProgressionNudge() {
+      if (_aidaProgressionNudgeShownThisVisit) return;
+      if (!saveData) return;
+
+      // Only show after profile/account building is unlocked
+      const _acctBld = saveData.campBuildings && saveData.campBuildings.accountBuilding;
+      if (!_acctBld || (!_acctBld.unlocked && (_acctBld.level || 0) === 0)) return;
+
+      const hasFreeSpin    = window.GameLuckyWheel ? window.GameLuckyWheel.canFreeSpin(saveData) : false;
+      const hasSkillPoints = (saveData.skillPoints || 0) > 0;
+      const hasAttrPoints  = (saveData.unspentAttributePoints || 0) > 0;
+
+      if (!hasFreeSpin && !hasSkillPoints && !hasAttrPoints) return;
+
+      _aidaProgressionNudgeShownThisVisit = true;
+
+      // Build a short Aida dialogue based on what's available
+      const _lines = [{ text: '> A.I.D.A — PROGRESSION ALERT', emotion: 'task', duration: 1800 }];
+      if (hasFreeSpin) {
+        _lines.push({ text: '> You have a Free Spin waiting, Droplet. Use it. The Wheel rewards the bold.', emotion: 'thinking' });
+      }
+      if (hasSkillPoints) {
+        const sp = saveData.skillPoints || 0;
+        _lines.push({ text: `> ${sp} unspent Skill Point${sp > 1 ? 's' : ''}. Visit the Skill Tree — growth untaken is growth wasted.`, emotion: 'task' });
+      }
+      if (hasAttrPoints) {
+        const ap = saveData.unspentAttributePoints || 0;
+        _lines.push({ text: `> ${ap} Attribute Point${ap > 1 ? 's' : ''} available. The Training Hall sharpens what combat cannot.`, emotion: 'thinking' });
+      }
+      _lines.push({ text: '> Head to the Profile Building to claim your rewards. Do not let them collect dust.', emotion: 'goal', isGoal: true });
+
+      if (window.DialogueSystem && _lines.length > 1) {
+        // Delay slightly so camp finishes loading before dialogue fires
+        setTimeout(() => {
+          if (window.DialogueSystem) window.DialogueSystem.show(_lines);
+        }, 1500);
+      }
+    }
+
     // Show daily reward panel in a popup overlay
     function _showDailyRewardPanel() {
       if (window.CampWorld && window.CampWorld.isActive) window.CampWorld.pauseInput();
@@ -2662,9 +2720,142 @@
       document.body.appendChild(overlay);
     }
 
+    // ── Profile & Records Building Overlay ───────────────────────────────────
+    // Shows the account stats + spin wheel + GameAccount panel in the
+    // camp-bld-overlay frosted-glass style when clicked from 3D camp.
+    function showAccountBuildingOverlay() {
+      const existing = document.getElementById('account-building-overlay');
+      if (existing) existing.remove();
+
+      if (window.CampWorld) window.CampWorld.pauseInput();
+
+      const overlay = document.createElement('div');
+      overlay.id = 'account-building-overlay';
+      overlay.className = 'camp-bld-overlay';
+      overlay.style.zIndex = '500';
+
+      const panel = document.createElement('div');
+      panel.className = 'camp-bld-panel';
+      panel.style.maxWidth = '560px';
+
+      // Header
+      const header = document.createElement('div');
+      header.className = 'camp-bld-header';
+      header.innerHTML = '<span class="camp-bld-title">👤 PROFILE &amp; RECORDS</span>';
+      const closeBtn = document.createElement('button');
+      closeBtn.className = 'camp-bld-close-btn';
+      closeBtn.textContent = '✕';
+      closeBtn.title = 'Close';
+      closeBtn.onclick = () => {
+        panel.classList.add('closing');
+        setTimeout(() => {
+          overlay.remove();
+          if (window.CampWorld) window.CampWorld.resumeInput();
+        }, 200);
+      };
+      header.appendChild(closeBtn);
+      panel.appendChild(header);
+
+      // Subtitle
+      const subtitle = document.createElement('div');
+      subtitle.className = 'camp-bld-subtitle';
+      subtitle.textContent = 'Account level · stats · spin wheel · challenge rewards';
+      panel.appendChild(subtitle);
+
+      // Account stats panel
+      const statsDiv = document.createElement('div');
+      statsDiv.id = 'account-bld-stats';
+      panel.appendChild(statsDiv);
+
+      // Spin Wheel section (if available free spin)
+      if (window.GameLuckyWheel) {
+        const spinSep = document.createElement('hr');
+        spinSep.style.cssText = 'border:none;border-top:1px solid rgba(255,215,0,0.25);margin:12px 0;';
+        panel.appendChild(spinSep);
+
+        const spinHdr = document.createElement('div');
+        spinHdr.style.cssText = 'color:#FFD700;font-family:"Bangers",cursive;font-size:18px;letter-spacing:2px;text-align:center;margin-bottom:8px;';
+        const hasFree = window.GameLuckyWheel.canFreeSpin(saveData);
+        spinHdr.textContent = hasFree ? '🎰 FREE SPIN AVAILABLE!' : '🎰 LUCKY WHEEL';
+        panel.appendChild(spinHdr);
+
+        const spinWrap = document.createElement('div');
+        spinWrap.style.cssText = 'max-height:420px;overflow-y:auto;';
+        window.GameLuckyWheel.renderWheelPanel(saveData, spinWrap);
+        panel.appendChild(spinWrap);
+      }
+
+      // GameAccount panel
+      if (window.GameAccount && window.GameAccount.renderAccountPanel) {
+        const accSep = document.createElement('hr');
+        accSep.style.cssText = 'border:none;border-top:1px solid rgba(0,255,255,0.2);margin:12px 0;';
+        panel.appendChild(accSep);
+        const accHdr = document.createElement('div');
+        accHdr.style.cssText = 'color:#00ffff;font-family:"Bangers",cursive;font-size:18px;letter-spacing:2px;text-align:center;margin-bottom:8px;';
+        accHdr.textContent = '📊 ACCOUNT PROGRESSION';
+        panel.appendChild(accHdr);
+        const accWrap = document.createElement('div');
+        panel.appendChild(accWrap);
+        window.GameAccount.renderAccountPanel(saveData, accWrap);
+      }
+
+      overlay.appendChild(panel);
+      overlay.addEventListener('click', e => { if (e.target === overlay) closeBtn.onclick(); });
+      document.body.appendChild(overlay);
+
+      // Populate stats card content
+      _renderAccountBldStats(statsDiv);
+
+      // Progress quest if visiting profile for the first time
+      if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest15_accountVisit') {
+        progressTutorialQuest('quest15_accountVisit', true);
+        saveSaveData();
+      }
+    }
+
+    // Render compact stats summary into the account building overlay
+    function _renderAccountBldStats(container) {
+      const level = saveData.accountLevel || 1;
+      const totalKills = saveData.totalKills || 0;
+      const totalRuns = saveData.totalRuns || 0;
+      const questsDone = (saveData.tutorialQuests && saveData.tutorialQuests.completedQuests)
+        ? saveData.tutorialQuests.completedQuests.length : 0;
+      const totalGold = saveData.totalGoldEarned || 0;
+      const sp = saveData.skillPoints || 0;
+
+      container.innerHTML = `
+        <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:12px;">
+          <div style="background:rgba(255,215,0,0.08);border:2px solid #FFD700;border-radius:10px;padding:8px 14px;text-align:center;min-width:80px;">
+            <div style="font-family:'Bangers',cursive;font-size:26px;color:#FFD700;">${level}</div>
+            <div style="font-size:10px;color:#aaa;letter-spacing:1px;">ACCOUNT LVL</div>
+          </div>
+          <div style="background:rgba(231,76,60,0.08);border:2px solid #e74c3c;border-radius:10px;padding:8px 14px;text-align:center;min-width:80px;">
+            <div style="font-family:'Bangers',cursive;font-size:26px;color:#e74c3c;">${totalKills.toLocaleString()}</div>
+            <div style="font-size:10px;color:#aaa;letter-spacing:1px;">TOTAL KILLS</div>
+          </div>
+          <div style="background:rgba(46,204,113,0.08);border:2px solid #2ecc71;border-radius:10px;padding:8px 14px;text-align:center;min-width:80px;">
+            <div style="font-family:'Bangers',cursive;font-size:26px;color:#2ecc71;">${questsDone}</div>
+            <div style="font-size:10px;color:#aaa;letter-spacing:1px;">QUESTS DONE</div>
+          </div>
+          <div style="background:rgba(93,173,226,0.08);border:2px solid #5DADE2;border-radius:10px;padding:8px 14px;text-align:center;min-width:80px;">
+            <div style="font-family:'Bangers',cursive;font-size:26px;color:#5DADE2;">${totalRuns}</div>
+            <div style="font-size:10px;color:#aaa;letter-spacing:1px;">TOTAL RUNS</div>
+          </div>
+          ${sp > 0 ? `<div style="background:rgba(170,68,255,0.08);border:2px solid #aa44ff;border-radius:10px;padding:8px 14px;text-align:center;min-width:80px;">
+            <div style="font-family:'Bangers',cursive;font-size:26px;color:#aa44ff;">${sp}</div>
+            <div style="font-size:10px;color:#aaa;letter-spacing:1px;">SKILL PTS</div>
+          </div>` : ''}
+        </div>
+        <div style="color:rgba(180,220,255,0.55);font-size:11px;text-align:center;">
+          💰 Total Gold Earned: <span style="color:#FFD700;">${totalGold.toLocaleString()}</span>
+        </div>`;
+    }
+
     function updateCampScreen() {
       // Reset unspent bar dismiss so it shows again each camp visit
       _resetUnspentBarDismiss();
+      // Reset Aida nudge flag so it shows once per visit
+      _aidaProgressionNudgeShownThisVisit = false;
 
       // Hide combat HUD (Rage Bar + Special Attacks) — not visible in camp
       if (window.GameRageCombat) window.GameRageCombat.setCombatHUDVisible(false);
@@ -2793,6 +2984,8 @@
             if (typeof showGachaStore === 'function') { showGachaStore(); }
             else { showProgressionShop(); }
           },
+          accountBuilding:     () => showAccountBuildingOverlay(),
+          idleMenu:            () => showIdleSection(),
         };
         window.CampWorld.enter(renderer, saveData, campCallbacks);
         // Mark camp-screen as 3D mode only if CampWorld successfully activated
@@ -2813,6 +3006,8 @@
       updateAccountLevelDisplay();
       // Update corner notification dots and streak label
       _updateCampCornerWidgets();
+      // ── Aida guidance: nudge player toward Profile Building if they have pending rewards ──
+      _checkAndShowAidaProgressionNudge();
       // Check for first-time camp visit
       if (!saveData.hasVisitedCamp) {
         saveData.hasVisitedCamp = true;
