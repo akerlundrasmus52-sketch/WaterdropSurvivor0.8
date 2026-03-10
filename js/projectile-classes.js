@@ -408,19 +408,19 @@
 
     class Projectile {
       constructor(x, z, target) {
-        // Ensure geometry/material caches are initialised (lazy, safe even if THREE loads late)
-        ensureProjectileCaches();
-        // Performance: Reuse cached geometry but clone materials for independent color transitions
-        this.mesh = new THREE.Mesh(
-          projectileGeometryCache.bullet, 
-          projectileMaterialCache.bullet.clone()  // Clone material for independent color
-        );
-        
-        // Add glowing trail effect with cloned material
-        this.glow = new THREE.Mesh(
-          projectileGeometryCache.bulletGlow, 
-          projectileMaterialCache.bulletGlow.clone()  // Clone material for independent color
-        );
+        // Use globally shared geometry to prevent VRAM exhaustion from per-bullet allocations.
+        // The bullet pool creates a fixed number of these (60 slots), not one per shot.
+        // SHARED_GEO.sphere and SHARED_MAT.bullet are defined in enemy-class.js and exposed
+        // on window for cross-module access.
+        const _sharedGeo = (window.SHARED_GEO && window.SHARED_GEO.sphere) || new THREE.SphereGeometry(0.12, 6, 6);
+        const _sharedBulletMat = (window.SHARED_MAT && window.SHARED_MAT.bullet) || new THREE.MeshBasicMaterial({ color: 0xffff00 });
+        this.mesh = new THREE.Mesh(_sharedGeo, _sharedBulletMat.clone()); // clone for per-bullet opacity
+
+        // Glow uses the same shared sphere geometry with a separate cloned material
+        // so that glow opacity fades independently from the bullet core.
+        const _glowMat = _sharedBulletMat.clone();
+        _glowMat.opacity = 0.4;
+        this.glow = new THREE.Mesh(_sharedGeo, _glowMat);
 
         this.speed = 1.8 * (window._projSpeedMultiplier || 1.0); // increased base speed for snappy feel
         // active starts false; reinit() sets it true.  Pool createFn creates with no args so
