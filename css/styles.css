@@ -5133,10 +5133,11 @@
    HARVESTING & RESOURCE HUD
    ============================================================ */
 .harvest-hud {
+  /* Hidden in game mode – only shown in camp mode via JS */
+  display: none;
   position: fixed;
   bottom: 120px;
   left: 10px;
-  display: flex;
   flex-direction: column;
   gap: 4px;
   z-index: 110;
@@ -5157,18 +5158,18 @@
 .harvest-res-item {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
   background: rgba(0,0,0,0.65);
   border: 1px solid rgba(255,255,255,0.2);
-  border-radius: 8px;
-  padding: 3px 8px;
+  border-radius: 6px;
+  padding: 2px 6px;
   font-family: 'Bangers', cursive;
-  font-size: 15px;
+  font-size: 13px;
   color: #FFF;
   text-shadow: 0 1px 3px #000;
 }
-.harvest-res-icon { font-size: 16px; }
-.harvest-res-count { min-width: 22px; text-align: right; }
+.harvest-res-icon { font-size: 13px; }
+.harvest-res-count { min-width: 18px; text-align: right; }
 
 .harvest-swing-overlay {
   position: fixed;
