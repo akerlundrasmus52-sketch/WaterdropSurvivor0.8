@@ -664,6 +664,7 @@
     
     // Cinematic round-start camera zoom-out (PR #70-71 enhancement)
     function playRoundStartCinematic(callback) {
+      _roundStartCinematicActive = true;
       const origLeft = camera.left;
       const origRight = camera.right;
       const origTop = camera.top;
@@ -777,6 +778,8 @@
             // Clean up DOM
             if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
 
+            // Allow game loop to resume camera control
+            _roundStartCinematicActive = false;
             callback();
           }
         }

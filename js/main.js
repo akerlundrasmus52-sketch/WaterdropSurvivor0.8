@@ -620,6 +620,10 @@
     let countdownTimer = 0;
     // countdownMessages defined in world.js → window.GameWorld (aliased at top)
 
+    // Round-start cinematic flag — true while playRoundStartCinematic() is running.
+    // Prevents the paused-branch camera override from fighting the zoom animation.
+    let _roundStartCinematicActive = false;
+
     // Phase 5: Companion System Data
     // COMPANIONS defined in world.js → window.GameWorld (aliased at top)
     

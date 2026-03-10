@@ -725,17 +725,20 @@
 
       // Handle countdown sequence (PR #70)
       if (countdownActive) {
-        // During countdown, still render but don't update game logic
+        // During countdown, update spawn sequence particles and render but skip full game logic
+        if (window.SpawnSequence) window.SpawnSequence.update(dt);
         try { renderer.render(scene, camera); } catch(e) { console.error('Render error (countdown):', e); }
         return;
       }
 
       if (isPaused || isGameOver || !isGameActive) {
         // Update camera to follow player even when paused.
+        // Skip camera override during the round-start cinematic so the zoom animation
+        // is not fought by the paused-branch camera reset every frame.
         // cinematicActive is intentionally NOT excluded here: updateCinematic() ran
         // above and already ended any elapsed cinematic, so by the time we reach this
         // branch cinematicActive is false whenever the cinematic has finished.
-        if (player && player.mesh && !killCamActive && !cinematicActive) {
+        if (player && player.mesh && !killCamActive && !cinematicActive && !_roundStartCinematicActive) {
           camera.position.x = player.mesh.position.x;
           camera.position.z = player.mesh.position.z + 16;
           camera.lookAt(player.mesh.position);
