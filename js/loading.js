@@ -136,7 +136,7 @@
             !(sd.tutorialQuests && sd.tutorialQuests.completedQuests && sd.tutorialQuests.completedQuests.length > 0);
 
           if (isNewPlayer && typeof window.updateCampScreen === 'function') {
-            console.log('[Loading] First-time player — routing directly to 3D camp');
+            console.log('[Loading] First-time player -- routing directly to 3D camp');
             var campScreen = document.getElementById('camp-screen');
             var mainMenuEl = document.getElementById('main-menu');
             if (mainMenuEl) mainMenuEl.style.display = 'none';

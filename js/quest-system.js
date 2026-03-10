@@ -2818,7 +2818,7 @@
         saveData.hasVisitedCamp = true;
         // NEW: Only unlock Quest/Mission Hall initially - all other buildings locked
         if (saveData.campBuildings && saveData.campBuildings.questMission) {
-          saveData.campBuildings.questMission.unlocked = false; // stays locked until Aida chip inserted
+          saveData.campBuildings.questMission.unlocked = false; // stays locked until A.I.D.A chip inserted
         }
         // Inventory is also unlocked on first visit so players can see their items
         if (saveData.campBuildings && saveData.campBuildings.inventory) {
@@ -2830,11 +2830,10 @@
           saveData.campBuildings.campHub.level = 0;
         }
         
-        // First-time welcome: if Aida intro not yet started, show a brief hint to explore
+        // First-time welcome: A.I.D.A intro is handled by the chip/robot objects in the 3D camp.
         if (!saveData.storyQuests.welcomeShown) {
           saveData.storyQuests.welcomeShown = true;
           saveSaveData();
-          // A.I.D.A intro is handled by the chip/robot objects in the 3D camp — no popup needed here.
           // The player will naturally discover the glowing chip near the campfire.
         }
         

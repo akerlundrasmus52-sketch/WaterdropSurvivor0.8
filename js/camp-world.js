@@ -1466,7 +1466,7 @@
     if (_playerMesh && !_bennyGreeted) {
       const dx = _playerPos.x - BENNY_POS.x;
       const dz = _playerPos.z - BENNY_POS.z;
-      // Skip greeting until Aida chip is inserted — terminal is offline until then
+      // Skip greeting until A.I.D.A chip is inserted — terminal is offline until then
       if (Math.sqrt(dx * dx + dz * dz) < BENNY_GREET_RADIUS && _aidaIntroState.chipInserted) {
         _bennyGreeted = true;
         _triggerBennyGreeting();
@@ -1516,7 +1516,12 @@
 
     // Walk down the tutorial chain and give the most relevant directive
     if (!completed.includes('quest_findingAida')) {
-      hint = { text: '> A glowing chip lies near the campfire. Insert it into the broken robot unit.', emotion: 'smoky' };
+      // Give a hint appropriate to whether the chip has been picked up yet
+      if (!_aidaIntroState.chipPickedUp) {
+        hint = { text: '> A glowing chip lies near the campfire. Pick it up.', emotion: 'smoky' };
+      } else {
+        hint = { text: '> Chip acquired. Insert it into the broken robot unit nearby.', emotion: 'smoky' };
+      }
     } else if (!completed.includes('quest_buildQuesthall') && current === 'quest_buildQuesthall') {
       hint = { text: '> Directive: construct the Command Node. Starter materials have been provided. Walk to the plot and build.', emotion: 'task' };
     } else if (!completed.includes('firstRunDeath') && current === 'firstRunDeath') {

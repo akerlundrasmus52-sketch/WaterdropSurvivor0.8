@@ -106,11 +106,9 @@
           saveData.tutorialQuests.completedQuests.push('firstRunDeath');
         }
         saveSaveData();
-        // Show "Aida transfers from robot to head" dialogue on first death
+        // Show "A.I.D.A transfers from robot to head" dialogue on first death
         setTimeout(() => {
-          if (window.DialogueSystem && window.DialogueSystem.DIALOGUES && window.DialogueSystem.DIALOGUES.aidaChipInstalled) {
-            window.DialogueSystem.show(window.DialogueSystem.DIALOGUES.aidaChipInstalled);
-          }
+          window.DialogueSystem?.show(window.DialogueSystem?.DIALOGUES?.aidaChipInstalled);
         }, 1800);
         setTimeout(() => {
           showComicTutorial('first_death');
