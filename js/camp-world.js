@@ -571,7 +571,7 @@
 
   // Pulse alien lights (prismReliquary + astralGateway) with slow sine wave
   function _updateAlienLights(dt) {
-    _alienTime += dt;
+    _alienTime = (_alienTime + dt) % (Math.PI * 2 / 1.1);
     for (const al of _alienLights) {
       // Slow sine oscillation: 0.5–1.5x base intensity
       al.light.intensity = al.base * (1.0 + 0.45 * Math.sin(_alienTime * 1.1 + al.phase));

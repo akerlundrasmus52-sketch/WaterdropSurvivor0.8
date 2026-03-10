@@ -265,7 +265,7 @@
     _wave = waveNum;
     _sfxWave();
 
-    if (waveNum >= TOTAL_WAVES) {
+    if (waveNum === TOTAL_WAVES) {
       const d = ENEMY_DEFS.boss;
       _enemies.push({
         x: W / 2 - d.w / 2, y: -d.h - 30,

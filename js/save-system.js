@@ -1396,12 +1396,8 @@
           ${historyHTML}
 
           <div style="margin-top:28px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
-            <button onclick="
-              document.getElementById('hall-of-fame-overlay').remove();
-              const achScreen=document.getElementById('achievements-screen');
-              if(achScreen){achScreen.style.display='flex';const c=document.getElementById('achievements-content');if(c&&typeof renderAchievementsContent==='function')renderAchievementsContent(c);}
-            " style="background:linear-gradient(135deg,#1a1200,#2a2000);border:2px solid #FFD700;color:#FFD700;padding:10px 22px;border-radius:8px;font-family:'Bangers',cursive;font-size:16px;letter-spacing:1px;cursor:pointer;">🏆 View Achievements</button>
-            <button onclick="document.getElementById('hall-of-fame-overlay').remove();const cs=document.getElementById('camp-screen');if(cs)cs.style.display='flex';"
+            <button onclick="window.openAchievementsFromHallOfFame()" style="background:linear-gradient(135deg,#1a1200,#2a2000);border:2px solid #FFD700;color:#FFD700;padding:10px 22px;border-radius:8px;font-family:'Bangers',cursive;font-size:16px;letter-spacing:1px;cursor:pointer;">🏆 View Achievements</button>
+            <button onclick="window.closeHallOfFame()"
               style="background:rgba(255,255,255,0.05);border:1.5px solid #333;color:#aaa;padding:10px 22px;border-radius:8px;font-size:14px;cursor:pointer;">← Back to Camp</button>
           </div>
         </div>`;
@@ -1414,6 +1410,24 @@
     }
 
     window.showHallOfFameScreen = showHallOfFameScreen;
+
+    window.openAchievementsFromHallOfFame = function() {
+      const hof = document.getElementById('hall-of-fame-overlay');
+      if (hof) hof.remove();
+      const achScreen = document.getElementById('achievements-screen');
+      if (achScreen) {
+        achScreen.style.display = 'flex';
+        const c = document.getElementById('achievements-content');
+        if (c && typeof renderAchievementsContent === 'function') renderAchievementsContent(c);
+      }
+    };
+
+    window.closeHallOfFame = function() {
+      const hof = document.getElementById('hall-of-fame-overlay');
+      if (hof) hof.remove();
+      const cs = document.getElementById('camp-screen');
+      if (cs) cs.style.display = 'flex';
+    };
 
     // ── Achievement Dopamine Notification ────────────────────────────────────
     // Slides up from the bottom: achievement logo, slot-machine reward reveal,

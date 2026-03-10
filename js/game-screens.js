@@ -1029,13 +1029,13 @@
             grinder.style.borderColor = '#F9A825';
             grinder.style.background = 'rgba(30,20,0,0.85)';
             const itemId = e.dataTransfer.getData('text/plain');
-            window._recycleItemById(itemId, e.clientX, e.clientY);
+            window.recycleItemById(itemId, e.clientX, e.clientY);
           });
         }
       }
 
       // ── Global helpers ────────────────────────────────────────────
-      window._recycleItemById = function(itemId, mouseX, mouseY) {
+      window.recycleItemById = function(itemId, mouseX, mouseY) {
         const inv = saveData.inventory || [];
         const idx = inv.findIndex(g => g.id === itemId);
         if (idx === -1) return;
