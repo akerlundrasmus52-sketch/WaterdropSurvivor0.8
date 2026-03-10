@@ -3798,10 +3798,7 @@
             // Called by resetGame when the animation is still in-progress.
             // Force-remove the dying mesh and all sub-resources from the scene.
             if (dyingMesh.parent) scene.remove(dyingMesh);
-            const _isSharedGeoC = dyingMesh.geometry && (
-              Object.values(SHARED_GEO).includes(dyingMesh.geometry) ||
-              Object.values(SHARED_GEO_TYPE).includes(dyingMesh.geometry)
-            );
+            const _isSharedGeoC = dyingMesh.geometry && dyingMesh.geometry._isShared;
             if (dyingMesh.geometry && !_isSharedGeoC) dyingMesh.geometry.dispose();
             if (dyingMesh.material && !dyingMesh.material._isShared) dyingMesh.material.dispose();
             // bullet holes / blood stains use shared geometry — only dispose per-hole materials
@@ -3820,10 +3817,7 @@
           // Fallback: no animation slot available, remove immediately
           scene.remove(dyingMesh);
           setTimeout(() => {
-            const _isSharedGeoFB = dyingMesh.geometry && (
-              Object.values(SHARED_GEO).includes(dyingMesh.geometry) ||
-              Object.values(SHARED_GEO_TYPE).includes(dyingMesh.geometry)
-            );
+            const _isSharedGeoFB = dyingMesh.geometry && dyingMesh.geometry._isShared;
             if (dyingMesh.geometry && !_isSharedGeoFB) dyingMesh.geometry.dispose();
             if (dyingMesh.material && !dyingMesh.material._isShared) dyingMesh.material.dispose();
             // bullet holes / blood stains use shared geometry — only dispose per-hole materials
