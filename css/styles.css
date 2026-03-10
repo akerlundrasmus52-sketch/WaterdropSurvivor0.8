@@ -3428,16 +3428,33 @@
       }
       
       /* Optimize level-up cards for portrait iPhone 16 */
+      /* ── 2×2 GRID: guaranteed 4 cards on screen simultaneously ── */
+      #upgrade-list, #level-up-choices {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        width: 100%;
+        box-sizing: border-box;
+        overflow: visible;
+      }
+
       .upgrade-card {
-        padding: 15px; /* Slightly reduce padding for portrait */
+        width: auto !important;
+        max-width: none !important;
+        min-width: 0 !important;
+        height: auto !important;
+        max-height: 42vw;           /* ~160px on 380px-wide phone */
+        padding: 8px !important;
+        font-size: clamp(8px, 1.7vw, 11px);
+        overflow: hidden;
       }
-      
+
       .upgrade-title {
-        font-size: 18px; /* Slightly smaller for portrait readability */
+        font-size: clamp(11px, 3.2vw, 15px);
       }
-      
+
       .upgrade-desc {
-        font-size: 12px; /* Slightly smaller for portrait readability */
+        font-size: clamp(8px, 2.4vw, 11px);
       }
     }
 
@@ -3535,7 +3552,7 @@
       }
       
       #upgrade-list {
-        gap: 12px; /* Reduce gap between cards */
+        gap: 8px; /* Use consistent gap for the 2×2 grid */
       }
     }
     
@@ -3621,21 +3638,25 @@
         box-sizing: border-box;
       }
 
-      /* Force row layout with overflow-x scroll for very small screens */
+      /* Galaxy S10 / small-360: 2×2 grid keeps all 4 cards on-screen */
       #upgrade-list, #level-up-choices {
-        gap: 8px;
-        overflow-x: auto;
-        flex-wrap: nowrap;
+        display: grid !important;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+        overflow: visible;
       }
 
       #upgrade-list > *, #level-up-choices > * {
-        flex-shrink: 0;
-        min-width: unset;
-        max-width: unset;
+        min-width: 0;
+        max-width: none;
       }
 
       .upgrade-card {
-        padding: 10px;
+        width: auto !important;
+        height: auto !important;
+        max-height: 44vw;
+        padding: 7px !important;
+        font-size: clamp(7px, 1.8vw, 10px);
       }
 
       .upgrade-title {
