@@ -206,6 +206,13 @@ window.enemyPool = (function () {
       enemy.groundShadow.visible = true;
     }
 
+    // ── Ensure anatomy sentinel disc is hidden for clean re-entry ────────────
+    // die() restores _anatBaseMesh on the instance before returning to pool;
+    // hide it here so it does not briefly appear before the enemy activates.
+    if (enemy._anatBaseMesh) {
+      enemy._anatBaseMesh.visible = false;
+    }
+
     return enemy;
   }
 

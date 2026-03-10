@@ -586,11 +586,11 @@
             if (e.mesh.material && !e.mesh.material._isShared) {
               // Material was cloned for a mid-animation opacity change — dispose the clone
               // and restore the original shared material from the cache.
+              const origHexStr = e.mesh.material.color ? e.mesh.material.color.getHex().toString(16) : null;
               e.mesh.material.dispose();
               // Attempt to restore via SHARED_MAT_CACHE (accessed through the enemy's colour).
-              const origHex = e.mesh.material.color ? e.mesh.material.color.getHex() : null;
-              if (origHex && window.SHARED_MAT_CACHE && window.SHARED_MAT_CACHE[origHex.toString(16)]) {
-                e.mesh.material = window.SHARED_MAT_CACHE[origHex.toString(16)];
+              if (origHexStr && window.SHARED_MAT_CACHE && window.SHARED_MAT_CACHE[origHexStr]) {
+                e.mesh.material = window.SHARED_MAT_CACHE[origHexStr];
               }
             }
             if (e.bulletHoles) e.bulletHoles.forEach(h => { if (h.material && !h.material._isShared) h.material.dispose(); });
