@@ -559,6 +559,8 @@
       playerStats.elementalChain    = 0;
       playerStats.elementalGuaranteed = false;
       playerStats.mobilityScore     = 1.0;
+      playerStats.goldMultiplier    = 1.0;
+      playerStats.xpMultiplier      = 1.0;
       // Cache headshot unlock status for this run
       playerStats.headshotUnlocked = isHeadshotUnlocked();
 

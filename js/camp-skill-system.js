@@ -1247,6 +1247,9 @@
         if (bonus.spellEchoChance)    playerStats.spellEchoChance    = (playerStats.spellEchoChance || 0) + bonus.spellEchoChance;
         if (bonus.elementalChain)     playerStats.elementalChain     = (playerStats.elementalChain || 0) + bonus.elementalChain;
         if (bonus.elementalGuaranteed) playerStats.elementalGuaranteed = true;
+        // Gold/XP multipliers (wealthHunter, treasureHunter, quickLearner)
+        if (bonus.gold) playerStats.goldMultiplier = (playerStats.goldMultiplier || 1.0) + bonus.gold;
+        if (bonus.xp)   playerStats.xpMultiplier   = (playerStats.xpMultiplier   || 1.0) + bonus.xp;
       }
 
       // --- Apply accumulated bonuses ---
@@ -3847,4 +3850,156 @@
     if (!window.CampSkillSystem) window.CampSkillSystem = {};
     window.CampSkillSystem.renderSkillTreeWeb = renderSkillTreeWeb;
     window.unlockSkill = unlockSkill;
+
+    /* ================================================================
+       MINIGAME SKILL TREE
+       Currency: saveData.astralEssence (same currency earned in the
+       Astral Dive minigame).  Bonuses apply inside the minigame only.
+    ================================================================ */
+    const MINIGAME_SKILL_TREE = {
+      atkBoost: {
+        id: 'atkBoost', name: '⚔️ ATK Boost', icon: '⚔️',
+        description: '+10% bullet damage per level',
+        maxLevel: 5, cost: 15, requires: null,
+        bonus: (l) => ({ damageMult: 0.10 * l })
+      },
+      spdBoost: {
+        id: 'spdBoost', name: '💨 Speed Boost', icon: '💨',
+        description: '+6% player move speed per level',
+        maxLevel: 5, cost: 12, requires: null,
+        bonus: (l) => ({ speedMult: 0.06 * l })
+      },
+      rapidFire: {
+        id: 'rapidFire', name: '⚡ Rapid Fire', icon: '⚡',
+        description: 'Reduce shoot cooldown by 15% per level',
+        maxLevel: 3, cost: 20, requires: 'spdBoost',
+        bonus: (l) => ({ rapidFire: 0.15 * l })
+      },
+      multiShot: {
+        id: 'multiShot', name: '🔫 Multi-Shot', icon: '🔫',
+        description: 'Fire additional bullets (+1 per level)',
+        maxLevel: 3, cost: 25, requires: 'atkBoost',
+        bonus: (l) => ({ extraBullets: l })
+      },
+      shield: {
+        id: 'shield', name: '🛡️ Shield', icon: '🛡️',
+        description: 'Start with a 1-hit damage-absorbing shield',
+        maxLevel: 1, cost: 50, requires: 'atkBoost',
+        bonus: (l) => ({ shield: l > 0 })
+      },
+      bombBlast: {
+        id: 'bombBlast', name: '💣 Bomb Blast', icon: '💣',
+        description: 'Start each run with extra screen-clearing bombs',
+        maxLevel: 3, cost: 35, requires: 'multiShot',
+        bonus: (l) => ({ startBombs: l })
+      },
+      magnetDrop: {
+        id: 'magnetDrop', name: '🧲 Magnet Drop', icon: '🧲',
+        description: 'Auto-attract nearby collectibles to the player',
+        maxLevel: 1, cost: 60, requires: 'rapidFire',
+        bonus: (l) => ({ magnetRange: l > 0 ? 90 : 0 })
+      },
+      waveBreaker: {
+        id: 'waveBreaker', name: '🌊 Wave Breaker', icon: '🌊',
+        description: 'Skip early waves at run start (+1 starting wave per level)',
+        maxLevel: 2, cost: 80, requires: 'bombBlast',
+        bonus: (l) => ({ startWave: l })
+      }
+    };
+
+    /** Returns the combined bonus object from all purchased minigame skills. */
+    function getMinigameSkillBonuses() {
+      const result = {};
+      if (typeof saveData === 'undefined' || !saveData.minigameSkills) return result;
+      for (const [id, def] of Object.entries(MINIGAME_SKILL_TREE)) {
+        const level = (saveData.minigameSkills[id] && saveData.minigameSkills[id].level) || 0;
+        if (level === 0) continue;
+        const b = def.bonus(level);
+        for (const [k, v] of Object.entries(b)) {
+          if (typeof v === 'boolean') result[k] = result[k] || v;
+          else result[k] = (result[k] || 0) + v;
+        }
+      }
+      return result;
+    }
+
+    /** Purchase one level of a minigame skill. */
+    function unlockMinigameSkill(skillId) {
+      if (typeof saveData === 'undefined') return false;
+      if (!saveData.minigameSkills) saveData.minigameSkills = {};
+      const def = MINIGAME_SKILL_TREE[skillId];
+      if (!def) return false;
+      const current = (saveData.minigameSkills[skillId] && saveData.minigameSkills[skillId].level) || 0;
+      if (current >= def.maxLevel) { alert('Already at max level!'); return false; }
+      // Check requires
+      if (def.requires) {
+        const reqLevel = (saveData.minigameSkills[def.requires] && saveData.minigameSkills[def.requires].level) || 0;
+        if (reqLevel === 0) { alert('Requires ' + MINIGAME_SKILL_TREE[def.requires].name + ' first!'); return false; }
+      }
+      const cost = def.cost * (current + 1);
+      if ((saveData.astralEssence || 0) < cost) { alert('Need ' + cost + ' ⚡ Astral Essence! (Have: ' + (saveData.astralEssence || 0) + ')'); return false; }
+      saveData.astralEssence -= cost;
+      if (!saveData.minigameSkills[skillId]) saveData.minigameSkills[skillId] = { level: 0 };
+      saveData.minigameSkills[skillId].level = current + 1;
+      if (typeof saveSaveData === 'function') saveSaveData();
+      return true;
+    }
+
+    /** Show the Minigame Skill Tree UI overlay. */
+    function showMinigameSkillTree() {
+      const existing = document.getElementById('minigame-skill-tree-overlay');
+      if (existing) existing.remove();
+      if (!saveData.minigameSkills) saveData.minigameSkills = {};
+
+      const overlay = document.createElement('div');
+      overlay.id = 'minigame-skill-tree-overlay';
+      overlay.style.cssText = 'position:fixed;inset:0;z-index:1500;background:rgba(0,0,20,0.93);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;overflow-y:auto;padding:20px 10px 40px;box-sizing:border-box;';
+
+      function _render() {
+        const essence = (typeof saveData !== 'undefined') ? (saveData.astralEssence || 0) : 0;
+        const rows = [];
+        rows.push(`<div style="text-align:center;margin-bottom:4px;">
+          <div style="font-family:Bangers,cursive;font-size:clamp(20px,4vw,32px);color:#00ffff;letter-spacing:4px;text-shadow:0 0 14px #00ffff;">🎮 ASTRAL SKILL TREE</div>
+          <div style="font-family:Arial,sans-serif;font-size:13px;color:#888;margin-top:4px;">Upgrade your minigame ship with Astral Essence</div>
+          <div style="font-family:monospace;font-size:16px;color:#4488ff;margin-top:6px;">⚡ Available: <b>${essence}</b></div>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;max-width:700px;margin-top:14px;">`);
+
+        for (const [id, def] of Object.entries(MINIGAME_SKILL_TREE)) {
+          const level = (saveData.minigameSkills[id] && saveData.minigameSkills[id].level) || 0;
+          const maxed = level >= def.maxLevel;
+          const reqLevel = def.requires ? ((saveData.minigameSkills[def.requires] && saveData.minigameSkills[def.requires].level) || 0) : 1;
+          const locked = def.requires && reqLevel === 0;
+          const nextCost = def.cost * (level + 1);
+          const canAfford = !maxed && !locked && essence >= nextCost;
+
+          rows.push(`<div style="background:rgba(0,20,40,0.88);border:2px solid ${maxed ? '#ffaa00' : locked ? '#333' : '#2255aa'};border-radius:10px;padding:12px 14px;width:200px;box-sizing:border-box;opacity:${locked ? '0.45' : '1'};">
+            <div style="font-size:22px;text-align:center;margin-bottom:4px;">${def.icon}</div>
+            <div style="font-family:Bangers,cursive;font-size:15px;color:${maxed ? '#ffaa00' : '#00ffff'};letter-spacing:1px;">${def.name}</div>
+            <div style="font-family:Arial,sans-serif;font-size:11px;color:#aaa;margin:4px 0;">${def.description}</div>
+            <div style="font-size:12px;color:#888;margin-bottom:8px;">Level: <b style="color:#fff;">${level}/${def.maxLevel}</b>${locked ? ' 🔒 (Requires ' + (MINIGAME_SKILL_TREE[def.requires] ? MINIGAME_SKILL_TREE[def.requires].name : def.requires) + ')' : ''}</div>
+            ${maxed ? '<div style="color:#ffaa00;font-family:Bangers,cursive;font-size:14px;text-align:center;">✓ MAXED</div>'
+              : locked ? '<div style="color:#555;font-size:12px;text-align:center;">🔒 Locked</div>'
+              : `<button onclick="window._unlockMinigameSkillAndRefresh('${id}')" style="width:100%;padding:6px;background:${canAfford ? 'rgba(0,100,200,0.2)' : 'rgba(50,50,50,0.3)'};border:1.5px solid ${canAfford ? '#00ffff' : '#444'};color:${canAfford ? '#00ffff' : '#666'};font-family:monospace;font-size:13px;cursor:${canAfford ? 'pointer' : 'default'};border-radius:4px;">UPGRADE ⚡${nextCost}</button>`}
+          </div>`);
+        }
+        rows.push('</div>');
+        rows.push(`<button onclick="document.getElementById('minigame-skill-tree-overlay').remove()" style="margin-top:20px;padding:10px 36px;background:transparent;border:2px solid #888;color:#ccc;font-family:Bangers,cursive;font-size:16px;letter-spacing:2px;cursor:pointer;border-radius:8px;">CLOSE</button>`);
+        overlay.innerHTML = rows.join('');
+      }
+
+      window._unlockMinigameSkillAndRefresh = function(id) {
+        if (unlockMinigameSkill(id)) _render();
+      };
+
+      _render();
+      document.body.appendChild(overlay);
+      overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+    }
+
+    // Expose globally
+    window.MINIGAME_SKILL_TREE = MINIGAME_SKILL_TREE;
+    window.getMinigameSkillBonuses = getMinigameSkillBonuses;
+    window.unlockMinigameSkill = unlockMinigameSkill;
+    window.showMinigameSkillTree = showMinigameSkillTree;
 

@@ -26,26 +26,25 @@
 
   // Building layout (id → world position + label)
   const BUILDING_DEFS = [
-    { id: 'questMission',       x:  0,  z: 12,  label: 'Quest Hall',          icon: '📜' },
-    { id: 'skillTree',          x: -13, z: -9,  label: 'Skill Tree',          icon: '🌳' },
-    { id: 'forge',              x:  13, z: -9,  label: 'The Forge',           icon: '⚒️' },
-    { id: 'companionHouse',     x: -13, z:  5,  label: 'Companion Home',      icon: '🏡' },
-    { id: 'trainingHall',       x:  13, z:  5,  label: 'Training Hall',       icon: '🏋️' },
-    { id: 'achievementBuilding',x:   0, z:-15,  label: 'Hall of Trophies',    icon: '🏆' },
-    { id: 'armory',             x: -9,  z:-13,  label: 'Armory',              icon: '⚔️' },
-    { id: 'inventory',          x:  9,  z:-13,  label: 'Inventory',           icon: '📦' },
-    { id: 'campBoard',          x: -3.5, z: 0,  label: 'Camp Board',          icon: '📋' },
-    { id: 'specialAttacks',     x:  9,  z:  7,  label: 'Special Attacks',     icon: '⚡' },
-    { id: 'warehouse',          x: -9,  z:  7,  label: 'Warehouse',           icon: '🏪' },
-    { id: 'tavern',             x: -5,  z: 14,  label: 'Tavern',              icon: '🍺' },
-    { id: 'shop',               x:  5,  z: 14,  label: 'Shop',                icon: '🛒' },
-    { id: 'prestige',           x:  0,  z:-19,  label: 'Prestige Altar',      icon: '✨' },
-    { id: 'trashRecycle',       x: -13, z: -2,  label: 'Trash & Recycle',     icon: '♻️' },
-    { id: 'tempShop',           x:  13, z: -2,  label: 'Temp Shop',           icon: '🏪' },
-    { id: 'prismReliquary',     x: -8,  z:-19,  label: 'Prism Reliquary',     icon: '💎' },
-    { id: 'astralGateway',      x:  8,  z:-19,  label: 'Astral Gateway',      icon: '🌀' },
-    { id: 'astralGateway',      x: -15, z: -10, label: 'ASTRAL GATEWAY',      icon: '🌀', w: 6, d: 6, color: 0x00ffff },
-    { id: 'accountBuilding',    x:  5,  z:-17,  label: 'Profile & Records',   icon: '👤' },
+    { id: 'questMission',        x:  0,  z:  8,  label: 'Quest Hall',          icon: '📜' },
+    { id: 'skillTree',           x: -8,  z: -6,  label: 'Skill Tree',          icon: '🌳' },
+    { id: 'forge',               x:  8,  z: -6,  label: 'The Forge',           icon: '⚒️' },
+    { id: 'companionHouse',      x: -8,  z:  3,  label: 'Companion Home',      icon: '🏡' },
+    { id: 'trainingHall',        x:  8,  z:  3,  label: 'Training Hall',       icon: '🏋️' },
+    { id: 'achievementBuilding', x:  0,  z:-10,  label: 'Hall of Trophies',    icon: '🏆' },
+    { id: 'armory',              x: -6,  z: -9,  label: 'Armory',              icon: '⚔️' },
+    { id: 'inventory',           x:  6,  z: -9,  label: 'Inventory',           icon: '📦' },
+    { id: 'campBoard',           x: -2.5,z:  0,  label: 'Camp Board',          icon: '📋' },
+    { id: 'specialAttacks',      x:  6,  z:  5,  label: 'Special Attacks',     icon: '⚡' },
+    { id: 'warehouse',           x: -6,  z:  5,  label: 'Warehouse',           icon: '🏪' },
+    { id: 'tavern',              x: -4,  z: 10,  label: 'Tavern',              icon: '🍺' },
+    { id: 'shop',                x:  4,  z: 10,  label: 'Shop',                icon: '🛒' },
+    { id: 'prestige',            x:  0,  z:-14,  label: 'Prestige Altar',      icon: '✨' },
+    { id: 'trashRecycle',        x: -8,  z: -1,  label: 'Trash & Recycle',     icon: '♻️' },
+    { id: 'tempShop',            x:  8,  z: -1,  label: 'Temp Shop',           icon: '🏪' },
+    { id: 'prismReliquary',      x: -5,  z:-14,  label: 'Prism Reliquary',     icon: '💎' },
+    { id: 'astralGateway',       x:  5,  z:-14,  label: 'Astral Gateway',      icon: '🌀' },
+    { id: 'accountBuilding',     x:  3,  z:-12,  label: 'Profile & Records',   icon: '👤' },
   ];
 
   // ──────────────────────────────────────────────────────────
@@ -508,22 +507,28 @@
 
   // ── Torch / Lantern system between buildings ────────────
   let _torchLights = [];
+  // Alien pulsing lights (prismReliquary + astralGateway)
+  let _alienLights = [];
+  let _alienTime = 0;
   function _buildCampTorches() {
     const THREE = T();
+    _torchLights = [];
+    _alienLights = [];
+    _alienTime = 0;
     // Place torch posts with warm point lights between building positions
     // Creates a cozy, non-electrical atmosphere around the camp
     const torchPositions = [
-      // Path torches between buildings (x, z)
-      { x:  6, z:  6 },   // between campfire and training hall
-      { x: -6, z:  6 },   // between campfire and companion house
-      { x:  6, z: -4 },   // near forge path
-      { x: -6, z: -4 },   // near skill tree path
-      { x:  0, z:  7 },   // path to quest hall
-      { x:  0, z: -8 },   // path to achievement hall
-      { x: -9, z:  0 },   // between warehouse and trash
-      { x:  9, z:  0 },   // between special attacks and temp shop
-      { x:  3, z: 10 },   // near shop
-      { x: -3, z: 10 },   // near tavern
+      // Path torches between buildings (x, z) — updated for compact layout
+      { x:  5, z:  3 },   // between campfire and training hall
+      { x: -5, z:  3 },   // between campfire and companion house
+      { x:  5, z: -4 },   // near forge path
+      { x: -5, z: -4 },   // near skill tree path
+      { x:  0, z:  5 },   // path to quest hall
+      { x:  0, z: -6 },   // path to achievement hall
+      { x: -7, z: -1 },   // near trash & recycle
+      { x:  7, z: -1 },   // near temp shop
+      { x:  2, z:  8 },   // near shop
+      { x: -2, z:  8 },   // near tavern
     ];
 
     const postGeo = new THREE.CylinderGeometry(0.06, 0.08, 1.6, 6);
@@ -561,6 +566,15 @@
         t.flame.scale.y = 1.3 + Math.random() * 0.4;
         t.flame.scale.x = 0.9 + Math.random() * 0.2;
       }
+    }
+  }
+
+  // Pulse alien lights (prismReliquary + astralGateway) with slow sine wave
+  function _updateAlienLights(dt) {
+    _alienTime += dt;
+    for (const al of _alienLights) {
+      // Slow sine oscillation: 0.5–1.5x base intensity
+      al.light.intensity = al.base * (1.0 + 0.45 * Math.sin(_alienTime * 1.1 + al.phase));
     }
   }
 
@@ -1802,6 +1816,7 @@
       case 'shop':               return _buildShop(def);
       case 'prestige':           return _buildPrestigeAltar(def);
       case 'prismReliquary':     return _buildPrismReliquary(def);
+      case 'astralGateway':      return _buildAstralGateway(def);
       default:                   return _buildGenericBuilding(def);
     }
   }
@@ -2643,6 +2658,104 @@
     return grp;
   }
 
+  // ── Astral Gateway — alien crystalline portal structure ───
+  function _buildAstralGateway(def) {
+    const THREE = T();
+    const grp = new THREE.Group();
+    grp.position.set(def.x, 0, def.z);
+
+    // Obsidian hexagonal base platform
+    const platformGeo = new THREE.CylinderGeometry(3.8, 4.1, 0.35, 6);
+    grp.add(_mesh(platformGeo, _lambert(0x080814)));
+
+    // Outer ring of alien crystal pillars
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2;
+      const r = 3.0;
+      const pillarGeo = new THREE.CylinderGeometry(0.15, 0.22, 3.5 + (i % 2) * 1.2, 6);
+      const pillarMat = new THREE.MeshPhongMaterial({
+        color: 0x4400cc, emissive: 0x2200aa, emissiveIntensity: 0.7,
+        transparent: true, opacity: 0.88
+      });
+      const pillar = _mesh(pillarGeo, pillarMat);
+      pillar.position.set(Math.sin(a) * r, 1.9, Math.cos(a) * r);
+      grp.add(pillar);
+    }
+
+    // Central portal arch (two tall crystals leaning inward)
+    const archColors = [0x6622ff, 0x2255ff];
+    for (let s = -1; s <= 1; s += 2) {
+      const archGeo = new THREE.ConeGeometry(0.35, 5.0, 6);
+      const archMat = new THREE.MeshPhongMaterial({
+        color: archColors[s === -1 ? 0 : 1],
+        emissive: archColors[s === -1 ? 0 : 1],
+        emissiveIntensity: 0.9,
+        transparent: true, opacity: 0.85
+      });
+      const arch = _mesh(archGeo, archMat);
+      arch.position.set(s * 1.4, 2.6, 0);
+      arch.rotation.z = s * 0.18;
+      grp.add(arch);
+    }
+
+    // Hovering central vortex gem
+    const vortexGeo = new THREE.OctahedronGeometry(0.65, 1);
+    const vortexMat = new THREE.MeshPhongMaterial({
+      color: 0x8844ff, emissive: 0x5522ff, emissiveIntensity: 1.5,
+      transparent: true, opacity: 0.92, wireframe: false
+    });
+    const vortex = _mesh(vortexGeo, vortexMat);
+    vortex.position.set(0, 3.2, 0);
+    grp.add(vortex);
+
+    // Wireframe overlay on gem for alien look
+    const wireGeo = new THREE.OctahedronGeometry(0.68, 1);
+    const wireMat = new THREE.MeshBasicMaterial({ color: 0x00ccff, wireframe: true, transparent: true, opacity: 0.55 });
+    const wireMesh = new THREE.Mesh(wireGeo, wireMat);
+    wireMesh.position.set(0, 3.2, 0);
+    grp.add(wireMesh);
+
+    // Floating rune discs on platform
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2;
+      const runeGeo = new THREE.CylinderGeometry(0.2, 0.2, 0.06, 6);
+      const runeMat = new THREE.MeshPhongMaterial({ color: 0x220066, emissive: 0x8800ff, emissiveIntensity: 0.8 });
+      const rune = _mesh(runeGeo, runeMat);
+      rune.position.set(Math.sin(a) * 2.8, 0.22, Math.cos(a) * 2.8);
+      grp.add(rune);
+    }
+
+    // Alien glow sprite (additive, blue/purple)
+    const glowC = document.createElement('canvas');
+    glowC.width = 64; glowC.height = 64;
+    const gCtx = glowC.getContext('2d');
+    const gGrad = gCtx.createRadialGradient(32,32,0,32,32,32);
+    gGrad.addColorStop(0, 'rgba(140,100,255,0.95)');
+    gGrad.addColorStop(0.4, 'rgba(60,20,200,0.5)');
+    gGrad.addColorStop(1, 'rgba(0,0,0,0)');
+    gCtx.fillStyle = gGrad;
+    gCtx.fillRect(0, 0, 64, 64);
+    const glowTex = new THREE.CanvasTexture(glowC);
+    const glowMat = new THREE.SpriteMaterial({ map: glowTex, color: 0x8844ff, transparent: true, blending: THREE.AdditiveBlending, opacity: 0.7, depthWrite: false });
+    const glow = new THREE.Sprite(glowMat);
+    glow.position.set(0, 3.2, 0);
+    glow.scale.set(10, 10, 1);
+    grp.add(glow);
+
+    // Pulsing blue/purple point light (registered in _alienLights for animation)
+    const alienLight1 = new THREE.PointLight(0x5500ff, 3.5, 14, 2);
+    alienLight1.position.set(0, 3.5, 0);
+    grp.add(alienLight1);
+    const alienLight2 = new THREE.PointLight(0x0055ff, 1.5, 8, 2);
+    alienLight2.position.set(0, 1.0, 0);
+    grp.add(alienLight2);
+    _alienLights.push({ light: alienLight1, base: 3.5, phase: 0 });
+    _alienLights.push({ light: alienLight2, base: 1.5, phase: Math.PI });
+
+    _addNameSign(grp, def.label, 0, 6.5, 0);
+    return grp;
+  }
+
   // ── Prism Reliquary — glowing alien crystal structure ─────
   function _buildPrismReliquary(def) {
     const THREE = T();
@@ -2744,6 +2857,17 @@
     accentSprite.position.set(1.5, 2, 1.5);
     accentSprite.scale.set(6, 6, 1);
     grp.add(accentSprite);
+
+    // Pulsing blue/purple point lights (alien atmosphere)
+    const THREE2 = T();
+    const prismLight1 = new THREE2.PointLight(0x8800ff, 4.0, 16, 2);
+    prismLight1.position.set(0, 3.5, 0);
+    grp.add(prismLight1);
+    const prismLight2 = new THREE2.PointLight(0x0044ff, 2.0, 10, 2);
+    prismLight2.position.set(0, 0.5, 0);
+    grp.add(prismLight2);
+    _alienLights.push({ light: prismLight1, base: 4.0, phase: 0.8 });
+    _alienLights.push({ light: prismLight2, base: 2.0, phase: 2.2 });
 
     _addNameSign(grp, def.label, 0, 7.2, 0);
     return grp;
@@ -2916,6 +3040,8 @@
     });
     // Flicker torch lights for cozy atmosphere
     _updateTorchFlicker();
+    // Pulse alien lights on prismReliquary and astralGateway
+    _updateAlienLights(dt);
   }
 
   // ──────────────────────────────────────────────────────────

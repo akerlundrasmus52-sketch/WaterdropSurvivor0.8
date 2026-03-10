@@ -894,82 +894,214 @@
     }
 
     // ============================================================
-    // TRASH & RECYCLE — Break down gear into Metal; craft Leather & Food
+    // TRASH & RECYCLE — Drag-and-drop gear into grinder + craft sections
     // ============================================================
     function showRecycleScreen() {
       const existing = document.getElementById('recycle-overlay');
       if (existing) existing.remove();
 
+      const RARITY_COLORS = { common:'#aaaaaa', uncommon:'#55cc55', rare:'#44aaff', epic:'#aa44ff', legendary:'#ffaa00' };
+      const RARITY_METAL  = { common:1, uncommon:2, rare:3, epic:5, legendary:8 };
+      const RARITY_LEATHER= { common:0, uncommon:0, rare:1, epic:2, legendary:3 };
+
       const overlay = document.createElement('div');
       overlay.id = 'recycle-overlay';
-      overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.88);z-index:600;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;overflow-y:auto;padding:20px 0 40px;box-sizing:border-box;';
-
-      overlay.innerHTML = `
-        <div style="max-width:480px;width:90vw;color:#fff;font-family:Bangers,cursive;">
-          <div style="font-size:2em;letter-spacing:3px;text-align:center;color:#FFD700;text-shadow:0 0 12px rgba(255,215,0,0.6);margin-bottom:6px;">♻️ TRASH & RECYCLE</div>
-          <div style="font-size:0.85em;font-family:Arial,sans-serif;color:#aaa;text-align:center;margin-bottom:18px;">Break down weapons into Metal · Craft Leather from Skins · Cook Food from Meat</div>
-          <div id="recycle-content"></div>
-          <button id="recycle-close-btn" style="display:block;margin:20px auto 0;background:transparent;border:2px solid #888;color:#ccc;font-family:Bangers,cursive;font-size:1.1em;letter-spacing:2px;padding:8px 28px;border-radius:8px;cursor:pointer;">CLOSE</button>
-        </div>`;
-
+      overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);z-index:600;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;overflow-y:auto;padding:16px 6px 40px;box-sizing:border-box;';
       document.body.appendChild(overlay);
-      document.getElementById('recycle-close-btn').onclick = () => overlay.remove();
       overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
 
-      function _refreshRecycle() {
-        const content = document.getElementById('recycle-content');
-        if (!content) return;
-        const res = window.GameHarvesting ? window.GameHarvesting.getResources() : {};
-        const r = res || {};
-        const rows = [];
-
-        // ── Recycle weapon to Metal ──────────────────────────────
-        rows.push(`<div style="background:rgba(30,30,50,0.9);border:2px solid #445;border-radius:10px;padding:14px;margin-bottom:10px;">
-          <div style="font-size:1.15em;color:#90CAF9;margin-bottom:6px;">🔩 Recycle Weapon → Metal</div>
-          <div style="font-family:Arial,sans-serif;font-size:12px;color:#bbb;margin-bottom:8px;">Disassemble any equipped or spare weapon to gain 1–3 🔩 Metal for crafting.</div>
-          <button onclick="window._recycleWeapon()" style="background:#1a3a6a;border:2px solid #5DADE2;color:#fff;font-family:Bangers,cursive;font-size:1em;letter-spacing:1px;padding:6px 18px;border-radius:7px;cursor:pointer;">♻️ RECYCLE WEAPON (+2 Metal)</button>
-        </div>`);
-
-        // ── Craft Leather from Animal Skin ───────────────────────
-        const canLeather = (r.animalSkin || 0) >= 2;
-        rows.push(`<div style="background:rgba(30,30,50,0.9);border:2px solid ${canLeather ? '#654321' : '#333'};border-radius:10px;padding:14px;margin-bottom:10px;">
-          <div style="font-size:1.15em;color:#F5CBA7;margin-bottom:6px;">🟫 Craft Leather</div>
-          <div style="font-family:Arial,sans-serif;font-size:12px;color:#bbb;margin-bottom:8px;">2 🐾 Animal Skin → 1 🟫 Leather &nbsp;|&nbsp; You have: <b style="color:${canLeather?'#2ecc71':'#e74c3c'}">${r.animalSkin||0} Skin</b></div>
-          <button onclick="window._craftLeather()" ${canLeather?'':'disabled'} style="background:${canLeather?'#3E2723':'#222'};border:2px solid ${canLeather?'#8D6E63':'#555'};color:${canLeather?'#fff':'#666'};font-family:Bangers,cursive;font-size:1em;letter-spacing:1px;padding:6px 18px;border-radius:7px;cursor:${canLeather?'pointer':'default'};">CRAFT LEATHER</button>
-        </div>`);
-
-        // ── Craft Food from Meat ─────────────────────────────────
-        const canFood = (r.meat || 0) >= 1;
-        rows.push(`<div style="background:rgba(30,30,50,0.9);border:2px solid ${canFood ? '#CC4400' : '#333'};border-radius:10px;padding:14px;margin-bottom:10px;">
-          <div style="font-size:1.15em;color:#FDEBD0;margin-bottom:6px;">🍲 Cook Food</div>
-          <div style="font-family:Arial,sans-serif;font-size:12px;color:#bbb;margin-bottom:8px;">1 🍖 Meat → 1 🍲 Food &nbsp;|&nbsp; You have: <b style="color:${canFood?'#2ecc71':'#e74c3c'}">${r.meat||0} Meat</b></div>
-          <button onclick="window._craftMeal()" ${canFood?'':'disabled'} style="background:${canFood?'#7B3F00':'#222'};border:2px solid ${canFood?'#CC7700':'#555'};color:${canFood?'#fff':'#666'};font-family:Bangers,cursive;font-size:1em;letter-spacing:1px;padding:6px 18px;border-radius:7px;cursor:${canFood?'pointer':'default'};">COOK MEAL</button>
-        </div>`);
-
-        content.innerHTML = rows.join('');
+      // ── Floating reward text helper ──────────────────────────────
+      function _showRewardFloat(text, color, x, y) {
+        const el = document.createElement('div');
+        el.textContent = text;
+        el.style.cssText = `position:fixed;left:${x}px;top:${y}px;color:${color};font-family:Bangers,cursive;font-size:20px;font-weight:900;letter-spacing:2px;pointer-events:none;z-index:700;text-shadow:0 0 8px ${color};transition:opacity 1.2s,transform 1.2s;`;
+        document.body.appendChild(el);
+        requestAnimationFrame(() => {
+          el.style.opacity = '0';
+          el.style.transform = 'translateY(-60px)';
+        });
+        setTimeout(() => el.remove(), 1300);
       }
 
-      // Bind global click helpers (scoped to this overlay lifetime)
+      function _refreshRecycle() {
+        const res = window.GameHarvesting ? window.GameHarvesting.getResources() : {};
+        const r = res || {};
+
+        // Get unequipped inventory items (gear that can be recycled)
+        const equippedIds = new Set(Object.values(saveData.equippedGear || {}));
+        const recyclableItems = (saveData.inventory || []).filter(g => !equippedIds.has(g.id));
+
+        overlay.innerHTML = `
+          <div style="max-width:700px;width:100%;color:#fff;font-family:Bangers,cursive;">
+            <div style="font-size:clamp(18px,4vw,28px);letter-spacing:3px;text-align:center;color:#FFD700;text-shadow:0 0 12px rgba(255,215,0,0.6);margin-bottom:4px;">♻️ TRASH &amp; RECYCLE</div>
+            <div style="font-family:Arial,sans-serif;font-size:12px;color:#aaa;text-align:center;margin-bottom:14px;">Drag gear cards into the grinder · Craft Leather from Skins · Cook Food</div>
+
+            <!-- Drag-and-drop section -->
+            <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:16px;flex-wrap:wrap;">
+
+              <!-- Left: Inventory items -->
+              <div style="flex:1;min-width:180px;">
+                <div style="font-size:1.05em;color:#90CAF9;margin-bottom:8px;letter-spacing:1px;">📦 INVENTORY (drag to grinder)</div>
+                <div id="recycle-inv-grid" style="display:flex;flex-wrap:wrap;gap:8px;min-height:80px;border:1px dashed #334;border-radius:8px;padding:8px;">
+                  ${recyclableItems.length === 0
+                    ? '<div style="font-family:Arial,sans-serif;font-size:12px;color:#555;margin:auto;padding:12px;">No unequipped gear to recycle</div>'
+                    : recyclableItems.map(g => {
+                        const rc = RARITY_COLORS[g.rarity] || '#aaa';
+                        const icon = g.icon || (g.type === 'weapon' ? '⚔️' : g.type === 'helmet' ? '🪖' : g.type === 'armor' ? '🛡️' : g.type === 'boots' ? '👢' : '💍');
+                        const statLine = g.stats ? Object.entries(g.stats).slice(0,2).map(([k,v]) => `${k}:${v}`).join(' ') : '';
+                        return `<div class="recycle-item-card" draggable="true" data-item-id="${g.id}"
+                          style="width:75px;background:rgba(20,20,40,0.9);border:2px solid ${rc};border-radius:8px;padding:6px 4px;cursor:grab;text-align:center;filter:drop-shadow(0 2px 6px ${rc}66);user-select:none;-webkit-user-select:none;">
+                          <div style="font-size:22px;">${icon}</div>
+                          <div style="font-family:Arial,sans-serif;font-size:9px;color:${rc};margin-top:3px;word-break:break-word;line-height:1.3;">${g.name || 'Gear'}</div>
+                          <div style="font-family:Arial,sans-serif;font-size:9px;color:#888;margin-top:2px;">${g.rarity || 'common'}</div>
+                          ${statLine ? `<div style="font-family:monospace;font-size:8px;color:#aaa;margin-top:2px;">${statLine}</div>` : ''}
+                        </div>`;
+                      }).join('')
+                  }
+                </div>
+              </div>
+
+              <!-- Right: Grinder drop zone -->
+              <div style="flex:0 0 160px;display:flex;flex-direction:column;align-items:center;">
+                <div style="font-size:1.05em;color:#F9A825;margin-bottom:8px;letter-spacing:1px;">⚙️ GRINDER</div>
+                <div id="recycle-grinder-drop"
+                  style="width:140px;height:140px;border:3px dashed #F9A825;border-radius:12px;background:rgba(30,20,0,0.85);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:copy;position:relative;transition:border-color 0.2s,background 0.2s;filter:drop-shadow(0 0 8px #F9A82544);">
+                  <div style="font-size:42px;">⚙️</div>
+                  <div style="font-family:Arial,sans-serif;font-size:11px;color:#F9A825;margin-top:6px;text-align:center;">Drop gear here<br>to recycle</div>
+                </div>
+                <div style="font-family:Arial,sans-serif;font-size:10px;color:#888;margin-top:6px;text-align:center;">common=1🔩  uncommon=2🔩<br>rare=3🔩+1🟫  epic=5🔩+2🟫<br>legendary=8🔩+3🟫</div>
+              </div>
+            </div>
+
+            <!-- Craft sections -->
+            <div id="recycle-craft-content"></div>
+
+            <button id="recycle-close-btn" style="display:block;margin:14px auto 0;background:transparent;border:2px solid #888;color:#ccc;font-family:Bangers,cursive;font-size:1.1em;letter-spacing:2px;padding:8px 28px;border-radius:8px;cursor:pointer;">CLOSE</button>
+          </div>`;
+
+        document.getElementById('recycle-close-btn').onclick = () => overlay.remove();
+
+        // Craft sections
+        const canLeather = (r.animalSkin || 0) >= 2;
+        const canFood    = (r.meat || 0) >= 1;
+        const craftHTML = `
+          <div style="background:rgba(30,30,50,0.9);border:2px solid ${canLeather?'#654321':'#333'};border-radius:10px;padding:12px;margin-bottom:8px;">
+            <div style="font-size:1.1em;color:#F5CBA7;margin-bottom:5px;">🟫 Craft Leather</div>
+            <div style="font-family:Arial,sans-serif;font-size:12px;color:#bbb;margin-bottom:7px;">2 🐾 Animal Skin → 1 🟫 Leather &nbsp;|&nbsp; Have: <b style="color:${canLeather?'#2ecc71':'#e74c3c'}">${r.animalSkin||0}</b></div>
+            <button onclick="window._craftLeather()" ${canLeather?'':'disabled'} style="background:${canLeather?'#3E2723':'#222'};border:2px solid ${canLeather?'#8D6E63':'#555'};color:${canLeather?'#fff':'#666'};font-family:Bangers,cursive;font-size:1em;letter-spacing:1px;padding:5px 16px;border-radius:7px;cursor:${canLeather?'pointer':'default'};">CRAFT LEATHER</button>
+          </div>
+          <div style="background:rgba(30,30,50,0.9);border:2px solid ${canFood?'#CC4400':'#333'};border-radius:10px;padding:12px;margin-bottom:8px;">
+            <div style="font-size:1.1em;color:#FDEBD0;margin-bottom:5px;">🍲 Cook Food</div>
+            <div style="font-family:Arial,sans-serif;font-size:12px;color:#bbb;margin-bottom:7px;">1 🍖 Meat → 1 🍲 Food &nbsp;|&nbsp; Have: <b style="color:${canFood?'#2ecc71':'#e74c3c'}">${r.meat||0}</b></div>
+            <button onclick="window._craftMeal()" ${canFood?'':'disabled'} style="background:${canFood?'#7B3F00':'#222'};border:2px solid ${canFood?'#CC7700':'#555'};color:${canFood?'#fff':'#666'};font-family:Bangers,cursive;font-size:1em;letter-spacing:1px;padding:5px 16px;border-radius:7px;cursor:${canFood?'pointer':'default'};">COOK MEAL</button>
+          </div>`;
+        const craftEl = document.getElementById('recycle-craft-content');
+        if (craftEl) craftEl.innerHTML = craftHTML;
+
+        // Set up drag-and-drop on item cards
+        const cards = overlay.querySelectorAll('.recycle-item-card');
+        cards.forEach(card => {
+          card.addEventListener('dragstart', e => {
+            e.dataTransfer.setData('text/plain', card.dataset.itemId);
+            card.style.opacity = '0.45';
+            card.style.cursor = 'grabbing';
+          });
+          card.addEventListener('dragend', () => {
+            card.style.opacity = '1';
+            card.style.cursor = 'grab';
+          });
+        });
+
+        // Set up grinder drop zone
+        const grinder = document.getElementById('recycle-grinder-drop');
+        if (grinder) {
+          grinder.addEventListener('dragover', e => {
+            e.preventDefault();
+            grinder.style.borderColor = '#ffff00';
+            grinder.style.background = 'rgba(60,40,0,0.95)';
+          });
+          grinder.addEventListener('dragleave', () => {
+            grinder.style.borderColor = '#F9A825';
+            grinder.style.background = 'rgba(30,20,0,0.85)';
+          });
+          grinder.addEventListener('drop', e => {
+            e.preventDefault();
+            grinder.style.borderColor = '#F9A825';
+            grinder.style.background = 'rgba(30,20,0,0.85)';
+            const itemId = e.dataTransfer.getData('text/plain');
+            window._recycleItemById(itemId, e.clientX, e.clientY);
+          });
+        }
+      }
+
+      // ── Global helpers ────────────────────────────────────────────
+      window._recycleItemById = function(itemId, mouseX, mouseY) {
+        const inv = saveData.inventory || [];
+        const idx = inv.findIndex(g => g.id === itemId);
+        if (idx === -1) return;
+        const item = inv[idx];
+        const rarity = (item.rarity || 'common').toLowerCase();
+        const metalAmt   = RARITY_METAL[rarity]   || 1;
+        const leatherAmt = RARITY_LEATHER[rarity]  || 0;
+
+        // Grind animation: briefly spin the gear icon
+        const grinder = document.getElementById('recycle-grinder-drop');
+        if (grinder) {
+          const gear = grinder.querySelector('div');
+          if (gear) {
+            gear.style.transition = 'transform 0.6s';
+            gear.style.transform = 'rotate(360deg)';
+            setTimeout(() => { gear.style.transition = ''; gear.style.transform = ''; }, 650);
+          }
+          grinder.style.borderColor = '#ffff00';
+          setTimeout(() => { if (grinder) grinder.style.borderColor = '#F9A825'; }, 700);
+        }
+
+        // Remove item from inventory
+        saveData.inventory.splice(idx, 1);
+
+        // Add rewards
+        if (window.GameHarvesting) {
+          window.GameHarvesting.recycleToMetal('item', metalAmt);
+          // Add leather directly if possible
+          if (leatherAmt > 0) {
+            const res = window.GameHarvesting.getResources();
+            if (res) {
+              res.leather = (res.leather || 0) + leatherAmt;
+            }
+          }
+        }
+        saveSaveData();
+        if (typeof playSound === 'function') playSound('collect');
+
+        // Floating reward text
+        const mx = mouseX || window.innerWidth / 2;
+        const my = mouseY || window.innerHeight / 2;
+        _showRewardFloat('+' + metalAmt + ' 🔩 Metal' + (leatherAmt > 0 ? '  +' + leatherAmt + ' 🟫 Leather' : ''), RARITY_COLORS[rarity] || '#ffaa00', mx - 60, my - 40);
+
+        setTimeout(() => _refreshRecycle(), 300);
+      };
+
       window._recycleWeapon = () => {
         if (window.GameHarvesting) {
           window.GameHarvesting.recycleToMetal('weapon', 2);
           saveSaveData();
           _refreshRecycle();
-          playSound('collect');
+          if (typeof playSound === 'function') playSound('collect');
         }
       };
       window._craftLeather = () => {
         if (window.GameHarvesting && window.GameHarvesting.craftLeather()) {
           saveSaveData();
           _refreshRecycle();
-          playSound('levelup');
+          if (typeof playSound === 'function') playSound('levelup');
         }
       };
       window._craftMeal = () => {
         if (window.GameHarvesting && window.GameHarvesting.craftMeal()) {
           saveSaveData();
           _refreshRecycle();
-          playSound('levelup');
+          if (typeof playSound === 'function') playSound('levelup');
         }
       };
 
@@ -2880,6 +3012,20 @@
       panel.appendChild(label);
       panel.appendChild(textEl);
       panel.appendChild(diveBtn);
+
+      // ── "MINIGAME SKILL TREE" button ───────────────────────────
+      const skillTreeBtn = document.createElement('button');
+      skillTreeBtn.className = 'aida-modal-confirm';
+      skillTreeBtn.style.cssText += 'margin-top:6px;background:rgba(0,180,255,0.06);border-color:rgba(0,200,255,0.7);color:#00ccff;text-shadow:0 0 8px #00ccff;box-shadow:0 0 14px rgba(0,200,255,0.2);';
+      skillTreeBtn.textContent = '[ ASTRAL SKILL TREE ]';
+      skillTreeBtn.addEventListener('click', function () {
+        overlay.remove();
+        clearTimeout(_aidaGlitchInterval);
+        if (typeof window.showMinigameSkillTree === 'function') {
+          window.showMinigameSkillTree();
+        }
+      });
+      panel.appendChild(skillTreeBtn);
 
       // ── "NEURAL MATRIX" button ─────────────────────────────────
       const matrixBtn = document.createElement('button');
