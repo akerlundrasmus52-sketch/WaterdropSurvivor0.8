@@ -164,13 +164,34 @@ window.enemyPool = (function () {
     // ── Restore gameplay state ────────────────────────────────────────────────
     enemy.isDead      = false;
     enemy.active      = true;
-    enemy.isFrozen    = false;
-    enemy._shotgunSlide       = null;
-    enemy._squishTimer        = null;
+    enemy.isDamaged   = false;
+
+    // ── Physics & Movement ───────────────────────────────────────────────────
+    enemy._shotgunSlide        = null;
+    enemy._playerVelocity      = { x: 0, z: 0 };
+    enemy._lastPlayerPosValid  = false;
+
+    // ── Animation Timers ─────────────────────────────────────────────────────
+    enemy._squishTimer         = 0;
+    enemy._lastHitMeshTime     = 0;
+    enemy._damageFlushTimer    = null;
+    enemy._accumulatedDamage   = 0;
+    enemy.lastAttackTime       = 0;
+    enemy._aiTimer             = 0;
     enemy._lightningFlashTimer = null;
-    enemy._droneShakeTimer    = null;
-    enemy.lastDamageType      = null;
-    enemy.isDamaged           = false;
+    enemy._droneShakeTimer     = null;
+    enemy.lastDamageType       = null;
+
+    // ── Status Effects ───────────────────────────────────────────────────────
+    enemy.isFrozen             = false;
+    enemy.slowedUntil          = null;
+    enemy._lightningFreezeUntil = null;
+    enemy.frozenUntil          = null;
+    enemy._freezeProgress      = 0;
+    if (enemy.originalSpeed !== undefined) {
+      enemy.speed = enemy.originalSpeed;
+    }
+
     enemy.anatomy = { head: { hp: 100, attached: true },
                       torso: { hp: 100, attached: true },
                       base:  { hp: 100, attached: true } };
@@ -198,6 +219,33 @@ window.enemyPool = (function () {
     if (enemy.mesh.material) {
       enemy.mesh.material.transparent = false;
       enemy.mesh.material.opacity     = 1;
+      // Reset material color to the canonical type color to clear any blood/freeze tint
+      const _resetColorHex = window._ENEMY_COLORS
+        ? (window._ENEMY_COLORS[type] !== undefined ? window._ENEMY_COLORS[type] : window._ENEMY_COLORS[0])
+        : 0x44AA44; /* fallback: DEFAULT_ENEMY_COLOR from enemy-class.js */
+      enemy.mesh.material.color.setHex(_resetColorHex);
+      if (enemy.mesh.material.emissive) {
+        enemy.mesh.material.emissive.setHex(0x000000);
+        enemy.mesh.material.emissiveIntensity = 0;
+      }
+      enemy.mesh.material.needsUpdate = true;
+    }
+    // Clear cached original color so it is re-captured on next freeze/damage
+    enemy._originalColor = null;
+
+    // ── Restore anatomy group visibility (hidden by dieGeyserRollover etc.) ──
+    if (enemy.headGroup)  enemy.headGroup.visible  = true;
+    if (enemy.torsoGroup) enemy.torsoGroup.visible = true;
+    if (enemy.baseGroup)  enemy.baseGroup.visible  = true;
+
+    // ── Remove any lingering ice-crack overlay meshes ─────────────────────────
+    if (enemy._iceCracks && enemy._iceCracks.length > 0) {
+      for (const crack of enemy._iceCracks) {
+        if (enemy.mesh) enemy.mesh.remove(crack);
+        if (crack.geometry) crack.geometry.dispose();
+        if (crack.material)  crack.material.dispose();
+      }
+      enemy._iceCracks = [];
     }
 
     // ── Restore blob shadow ───────────────────────────────────────────────────

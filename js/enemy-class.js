@@ -97,6 +97,8 @@
     ];
     // Fallback color for any type not listed in _ENEMY_COLORS
     const DEFAULT_ENEMY_COLOR = _ENEMY_COLORS[0]; // green (same as Tank/index-0)
+    // Expose for use by object-pool.js when resetting pooled enemy material colors
+    window._ENEMY_COLORS = _ENEMY_COLORS;
 
     // Enemy types that display eyes (creatures with recognizable faces)
     const ENEMY_TYPES_WITH_EYES = new Set([0, 1, 2, 3, 4, 5, 12, 13, 14, 15, 17]);
