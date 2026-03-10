@@ -156,6 +156,18 @@
   const INCUBATOR_INTERACT_RADIUS = 3.5;
   let _incubatorInteracted = false; // guard against duplicate interactions this session
 
+  // ── A.I.D.A Intro — Broken Robot + Chip ──────────────────
+  // Placed east of campfire so first-time players discover them naturally
+  const AIDA_ROBOT_POS  = { x: 7, z: 2 };
+  const AIDA_CHIP_POS   = { x: 8.5, z: 3.5 };
+  const AIDA_INTRO_RADIUS = 3.0;
+  let _aidaRobotMesh  = null;  // broken robot Group
+  let _aidaChipMesh   = null;  // glowing chip Mesh (hidden after pickup)
+  let _aidaIntroState = {      // session cache (authoritative value in saveData)
+    chipPickedUp: false,
+    chipInserted: false,
+  };
+
   // Keyboard state (managed inside this module)
   let _keys = {};
 
@@ -269,6 +281,9 @@
 
     // ── Crashed UFO Debris + Alien Incubator Pod ─────────────
     _buildUFODebrisAndIncubator();
+
+    // ── A.I.D.A Intro — Broken Robot + Chip ─────────────────
+    _buildAidaIntroProps();
 
     // ── Camera ──────────────────────────────────────────────
     const aspect = window.innerWidth / window.innerHeight;
@@ -1051,6 +1066,264 @@
     _campScene.add(podGrp);
   }
 
+  // ── A.I.D.A Intro — Broken Robot + Glowing Chip ─────────
+  function _buildAidaIntroProps() {
+    const THREE = T();
+    const sd = window.saveData;
+    const introState = (sd && sd.aidaIntroState) || {};
+
+    // ─ Broken Robot ─────────────────────────────────────────
+    const robotGrp = new THREE.Group();
+    const metalMat  = new THREE.MeshStandardMaterial({ color: 0x445566, roughness: 0.55, metalness: 0.75 });
+    const darkMat   = new THREE.MeshStandardMaterial({ color: 0x1a2233, roughness: 0.7, metalness: 0.5 });
+
+    // Body (slightly tilted — looks broken/slumped)
+    const bodyGeo = new THREE.BoxGeometry(0.7, 0.9, 0.45);
+    const body = new THREE.Mesh(bodyGeo, metalMat);
+    body.position.set(0, 0.55, 0);
+    body.rotation.z = 0.18; // slump to the side
+    body.castShadow = true;
+    robotGrp.add(body);
+
+    // Head
+    const headGeo = new THREE.BoxGeometry(0.45, 0.4, 0.42);
+    const head = new THREE.Mesh(headGeo, metalMat);
+    head.position.set(0.08, 1.18, 0);
+    head.rotation.z = 0.25; // drooping
+    head.castShadow = true;
+    robotGrp.add(head);
+
+    // Eye sockets (dark — offline)
+    const eyeGeo  = new THREE.BoxGeometry(0.09, 0.06, 0.05);
+    const eyeMat  = new THREE.MeshBasicMaterial({ color: 0x110011 }); // eyes are off
+    [-0.1, 0.1].forEach(ox => {
+      const eye = new THREE.Mesh(eyeGeo, eyeMat);
+      eye.position.set(0.08 + ox, 1.2, 0.22);
+      robotGrp.add(eye);
+    });
+
+    // Left arm (fallen to ground)
+    const armGeo = new THREE.BoxGeometry(0.2, 0.65, 0.2);
+    const leftArm = new THREE.Mesh(armGeo, darkMat);
+    leftArm.position.set(-0.55, 0.25, 0);
+    leftArm.rotation.z = -1.2;
+    leftArm.castShadow = true;
+    robotGrp.add(leftArm);
+
+    // Right arm (hanging)
+    const rightArm = new THREE.Mesh(armGeo, darkMat);
+    rightArm.position.set(0.55, 0.45, 0);
+    rightArm.rotation.z = 0.8;
+    rightArm.castShadow = true;
+    robotGrp.add(rightArm);
+
+    // Legs
+    const legGeo = new THREE.BoxGeometry(0.22, 0.55, 0.22);
+    [-0.2, 0.2].forEach((ox, i) => {
+      const leg = new THREE.Mesh(legGeo, darkMat);
+      leg.position.set(ox, 0.12, 0);
+      leg.rotation.z = i === 0 ? -0.1 : 0.15;
+      leg.castShadow = true;
+      robotGrp.add(leg);
+    });
+
+    robotGrp.position.set(AIDA_ROBOT_POS.x, 0, AIDA_ROBOT_POS.z);
+    robotGrp._isAidaRobot = true;
+    _aidaRobotMesh = robotGrp;
+    _campScene.add(robotGrp);
+
+    // ─ Aida Chip ────────────────────────────────────────────
+    // Small glowing microchip lying on the ground near the robot.
+    // Hidden once picked up.
+    const chipGrp = new THREE.Group();
+
+    const chipBodyGeo = new THREE.BoxGeometry(0.28, 0.06, 0.22);
+    const chipMat = new THREE.MeshStandardMaterial({
+      color: 0x00ccff,
+      emissive: 0x00aaff,
+      emissiveIntensity: 1.2,
+      roughness: 0.2,
+      metalness: 0.8,
+    });
+    const chipBody = new THREE.Mesh(chipBodyGeo, chipMat);
+    chipBody._aidaChipBody = true;
+    chipGrp.add(chipBody);
+
+    // Small glow disc underneath
+    const glowGeo = new THREE.CircleGeometry(0.28, 16);
+    const glowMat = new THREE.MeshBasicMaterial({ color: 0x00aaff, transparent: true, opacity: 0.45 });
+    const glow = new THREE.Mesh(glowGeo, glowMat);
+    glow.rotation.x = -Math.PI / 2;
+    glow.position.y = -0.04;
+    chipGrp.add(glow);
+
+    // Point light so the chip illuminates the ground around it
+    const chipLight = new THREE.PointLight(0x00aaff, 1.2, 3, 2);
+    chipLight.position.y = 0.2;
+    chipGrp.add(chipLight);
+
+    chipGrp.position.set(AIDA_CHIP_POS.x, 0.06, AIDA_CHIP_POS.z);
+    chipGrp._isAidaChip = true;
+    chipGrp.visible = !introState.chipPickedUp; // hide if already picked up
+    _aidaChipMesh = chipGrp;
+    _campScene.add(chipGrp);
+
+    // Sync session state with saveData
+    _aidaIntroState.chipPickedUp = !!introState.chipPickedUp;
+    _aidaIntroState.chipInserted = !!introState.chipInserted;
+
+    // If chip already inserted, robot eyes should be on
+    if (_aidaIntroState.chipInserted) {
+      _aidaRobotEyesOn(true);
+    }
+  }
+
+  // Turn the robot's eye meshes on (glowing) or off
+  function _aidaRobotEyesOn(on) {
+    if (!_aidaRobotMesh) return;
+    _aidaRobotMesh.traverse(function (child) {
+      if (child.isMesh && child.material && child.material.color) {
+        const col = child.material.color.getHex();
+        if (col === 0x110011 || col === 0x00ccff) {
+          child.material.color.set(on ? 0x00ccff : 0x110011);
+          if (on) {
+            if (!child.material.emissive) child.material.emissive = new (T().Color)();
+            child.material.emissive.set(0x0088ff);
+            child.material.emissiveIntensity = 1.5;
+          } else {
+            if (child.material.emissive) child.material.emissive.set(0x000000);
+            child.material.emissiveIntensity = 0;
+          }
+        }
+      }
+    });
+  }
+
+  // Per-frame update for Aida intro props (chip glow + proximity prompts)
+  function _updateAidaIntro(dt) {
+    if (!_campScene) return;
+
+    // ─ Chip float + glow animation ─
+    if (_aidaChipMesh && _aidaChipMesh.visible) {
+      _aidaChipMesh.position.y = 0.06 + Math.sin(_campTime * 2.8) * 0.08;
+      _aidaChipMesh.rotation.y += dt * 1.2;
+      _aidaChipMesh.traverse(function (child) {
+        if (child._aidaChipBody && child.material) {
+          child.material.emissiveIntensity = 0.9 + Math.abs(Math.sin(_campTime * 3.0)) * 0.8;
+        }
+      });
+    }
+
+    if (_menuOpen) return; // don't show prompts while a menu is open
+    if (!_promptEl) return;
+
+    // ─ Chip proximity prompt ─
+    if (!_aidaIntroState.chipPickedUp && _aidaChipMesh && _aidaChipMesh.visible) {
+      const cdx = _playerPos.x - AIDA_CHIP_POS.x;
+      const cdz = _playerPos.z - AIDA_CHIP_POS.z;
+      if (Math.sqrt(cdx * cdx + cdz * cdz) < AIDA_INTRO_RADIUS) {
+        _promptEl.textContent = '💾 Aida Chip — Pick up [E]';
+        _promptEl.style.display = 'block';
+        if (_interactBtn) {
+          _interactBtn.textContent = 'PICK UP';
+          _interactBtn.style.background = 'linear-gradient(135deg,#0088cc,#004466)';
+          _interactBtn.style.display = 'block';
+        }
+      }
+    }
+
+    // ─ Robot proximity prompt ─
+    if (_aidaIntroState.chipPickedUp && !_aidaIntroState.chipInserted) {
+      const rdx = _playerPos.x - AIDA_ROBOT_POS.x;
+      const rdz = _playerPos.z - AIDA_ROBOT_POS.z;
+      if (Math.sqrt(rdx * rdx + rdz * rdz) < AIDA_INTRO_RADIUS) {
+        _promptEl.textContent = '🤖 Broken Robot — Insert Chip [E]';
+        _promptEl.style.display = 'block';
+        if (_interactBtn) {
+          _interactBtn.textContent = 'INSERT';
+          _interactBtn.style.background = 'linear-gradient(135deg,#00cc66,#006633)';
+          _interactBtn.style.display = 'block';
+        }
+      }
+    }
+  }
+
+  // Pick up the Aida Chip (called from E-key / interact button)
+  function _pickUpAidaChip() {
+    if (_aidaIntroState.chipPickedUp) return;
+    _aidaIntroState.chipPickedUp = true;
+
+    const sd = (typeof saveData !== 'undefined') ? saveData : null;
+    if (sd) {
+      if (!sd.aidaIntroState) sd.aidaIntroState = {};
+      sd.aidaIntroState.chipPickedUp = true;
+      if (typeof saveSaveData === 'function') saveSaveData();
+    }
+
+    if (_aidaChipMesh) _aidaChipMesh.visible = false;
+
+    const DS = window.DialogueSystem;
+    if (DS) DS.show(DS.DIALOGUES.aidaChipFound);
+
+    if (typeof showStatusMessage === 'function') {
+      showStatusMessage('💾 Aida Chip acquired — bring it to the broken robot!', 3000);
+    }
+  }
+
+  // Insert Aida Chip into the robot (called from E-key / interact button)
+  function _insertAidaChip() {
+    if (!_aidaIntroState.chipPickedUp || _aidaIntroState.chipInserted) return;
+    _aidaIntroState.chipInserted = true;
+
+    const sd = (typeof saveData !== 'undefined') ? saveData : null;
+    if (sd) {
+      if (!sd.aidaIntroState) sd.aidaIntroState = {};
+      sd.aidaIntroState.chipInserted = true;
+      if (typeof saveSaveData === 'function') saveSaveData();
+    }
+
+    _aidaRobotEyesOn(true);
+
+    const DS = window.DialogueSystem;
+    if (DS) {
+      DS.show(DS.DIALOGUES.aidaRobotWake, {
+        onComplete: function () {
+          _aidaGrantStarterMaterials();
+          if (typeof window.startAidaIntroQuest === 'function') {
+            window.startAidaIntroQuest();
+          }
+        }
+      });
+    } else {
+      _aidaGrantStarterMaterials();
+      if (typeof window.startAidaIntroQuest === 'function') window.startAidaIntroQuest();
+    }
+  }
+
+  // Grant free starter points / materials so the player can try the building mechanic
+  function _aidaGrantStarterMaterials() {
+    const sd = (typeof saveData !== 'undefined') ? saveData : null;
+    if (!sd || sd.aidaStarterGranted) return;
+    sd.aidaStarterGranted = true;
+    if (!sd.resources) sd.resources = {};
+    sd.resources.wood  = (sd.resources.wood  || 0) + 50;
+    sd.resources.stone = (sd.resources.stone || 0) + 50;
+    sd.resources.coal  = (sd.resources.coal  || 0) + 30;
+    sd.gold            = (sd.gold            || 0) + 100;
+    sd.skillPoints     = (sd.skillPoints     || 0) + 3;
+    if (typeof saveSaveData === 'function') saveSaveData();
+    if (typeof showStatChange === 'function') {
+      showStatChange('🎁 Aida Starter Pack: 🪵50 Wood  🪨50 Stone  🖤30 Coal  💰100 Gold  ⭐3 SP');
+    }
+    // Unlock Quest Hall so first building can be constructed
+    if (sd.campBuildings && sd.campBuildings.questMission) {
+      sd.campBuildings.questMission.unlocked = true;
+    }
+    if (typeof window.CampWorld !== 'undefined' && window.CampWorld.refreshBuildings) {
+      window.CampWorld.refreshBuildings(sd);
+    }
+  }
+
   function _buildBennyNPC() {
     const THREE = T();
     const grp = new THREE.Group();
@@ -1193,7 +1466,8 @@
     if (_playerMesh && !_bennyGreeted) {
       const dx = _playerPos.x - BENNY_POS.x;
       const dz = _playerPos.z - BENNY_POS.z;
-      if (Math.sqrt(dx * dx + dz * dz) < BENNY_GREET_RADIUS) {
+      // Skip greeting until A.I.D.A chip is inserted — terminal is offline until then
+      if (Math.sqrt(dx * dx + dz * dz) < BENNY_GREET_RADIUS && _aidaIntroState.chipInserted) {
         _bennyGreeted = true;
         _triggerBennyGreeting();
       }
@@ -1217,13 +1491,10 @@
       return;
     }
 
-    // Show camp welcome sequence, then walk to quest hall, then give a contextual tip
+    // Show camp welcome sequence, then give a contextual tip about building
     DS.show(DS.DIALOGUES.campWelcome, {
       onComplete: function () {
-        _bennyWalkToBuild('questMission', '> Command Node location confirmed. Construct it to receive mission parameters.');
-        setTimeout(function () {
-          _showBennyContextualHint();
-        }, 5000);
+        _showBennyContextualHint();
       }
     });
   }
@@ -1244,7 +1515,16 @@
     let hint = null;
 
     // Walk down the tutorial chain and give the most relevant directive
-    if (!completed.includes('firstRunDeath')) {
+    if (!completed.includes('quest_findingAida')) {
+      // Give a hint appropriate to whether the chip has been picked up yet
+      if (!_aidaIntroState.chipPickedUp) {
+        hint = { text: '> A glowing chip lies near the campfire. Pick it up.', emotion: 'smoky' };
+      } else {
+        hint = { text: '> Chip acquired. Insert it into the broken robot unit nearby.', emotion: 'smoky' };
+      }
+    } else if (!completed.includes('quest_buildQuesthall') && current === 'quest_buildQuesthall') {
+      hint = { text: '> Directive: construct the Command Node. Starter materials have been provided. Walk to the plot and build.', emotion: 'task' };
+    } else if (!completed.includes('firstRunDeath') && current === 'firstRunDeath') {
       hint = { text: '> Directive: initiate a run and sustain a termination event. This is... required for calibration.', emotion: 'task' };
     } else if (!completed.includes('quest_dailyRoutine') && current === 'quest_dailyRoutine') {
       hint = { text: '> Directive: survive for 120 seconds continuously. My models require sustained combat data.', emotion: 'task' };
@@ -2843,6 +3123,25 @@
     // ── Action triggers (keys) ──
     if (!_campActionAnim) {
       if (_keys['KeyE']) {
+        // Priority: A.I.D.A chip pickup / robot insertion (intro quest)
+        if (!_aidaIntroState.chipPickedUp && _aidaChipMesh && _aidaChipMesh.visible) {
+          const cdx = _playerPos.x - AIDA_CHIP_POS.x;
+          const cdz = _playerPos.z - AIDA_CHIP_POS.z;
+          if (Math.sqrt(cdx * cdx + cdz * cdz) < AIDA_INTRO_RADIUS) {
+            _keys['KeyE'] = false; // consume key
+            _pickUpAidaChip();
+            return;
+          }
+        }
+        if (_aidaIntroState.chipPickedUp && !_aidaIntroState.chipInserted) {
+          const rdx = _playerPos.x - AIDA_ROBOT_POS.x;
+          const rdz = _playerPos.z - AIDA_ROBOT_POS.z;
+          if (Math.sqrt(rdx * rdx + rdz * rdz) < AIDA_INTRO_RADIUS) {
+            _keys['KeyE'] = false; // consume key
+            _insertAidaChip();
+            return;
+          }
+        }
         // Check if player is near the Incubator pod — interact with it
         const _idx = _playerPos.x - INCUBATOR_POS.x;
         const _idz = _playerPos.z - INCUBATOR_POS.z;
@@ -3242,8 +3541,27 @@
   }
 
   function _interact() {
-    if (!_nearBuilding) return;
     if (_menuOpen) return; // already showing a building menu
+
+    // ── A.I.D.A intro interactions (chip pickup / robot insertion) ─
+    if (!_aidaIntroState.chipPickedUp && _aidaChipMesh && _aidaChipMesh.visible) {
+      const cdx = _playerPos.x - AIDA_CHIP_POS.x;
+      const cdz = _playerPos.z - AIDA_CHIP_POS.z;
+      if (Math.sqrt(cdx * cdx + cdz * cdz) < AIDA_INTRO_RADIUS) {
+        _pickUpAidaChip();
+        return;
+      }
+    }
+    if (_aidaIntroState.chipPickedUp && !_aidaIntroState.chipInserted) {
+      const rdx = _playerPos.x - AIDA_ROBOT_POS.x;
+      const rdz = _playerPos.z - AIDA_ROBOT_POS.z;
+      if (Math.sqrt(rdx * rdx + rdz * rdz) < AIDA_INTRO_RADIUS) {
+        _insertAidaChip();
+        return;
+      }
+    }
+
+    if (!_nearBuilding) return;
 
     // If this building is locked but has a ready-to-claim quest, show the build overlay directly
     if (!_isBuildingUnlocked(_nearBuilding) && _isBuildingReadyForBuild(_nearBuilding)) {
@@ -3856,6 +4174,13 @@
       // Refresh building visibility
       _refreshBuildings();
 
+      // Sync A.I.D.A intro state from saveData
+      const ais = (_saveData && _saveData.aidaIntroState) || {};
+      _aidaIntroState.chipPickedUp = !!ais.chipPickedUp;
+      _aidaIntroState.chipInserted = !!ais.chipInserted;
+      if (_aidaChipMesh)  _aidaChipMesh.visible  = !_aidaIntroState.chipPickedUp;
+      if (_aidaRobotMesh) _aidaRobotEyesOn(_aidaIntroState.chipInserted);
+
       // Ensure HUD elements
       _ensureHUD();
       _nearBuilding = null;
@@ -3902,7 +4227,13 @@
             var currentQ = (typeof getCurrentQuest === 'function') ? getCurrentQuest() : null;
             if (currentQ) {
               // Context-aware hints for the new slow-burn quest chain
-              if (currentQ.id === 'quest_dailyRoutine') {
+              if (currentQ.id === 'quest_buildQuesthall') {
+                _showBennySpeech('Walk to the\nQuest Hall plot\nand build it! 🏗️\n(I gave you materials)');
+                setTimeout(function () { _hideBennySpeech(); }, 5000);
+              } else if (currentQ.id === 'firstRunDeath') {
+                _showBennySpeech('Head out and fight!\nDie once so\nI can... calibrate. ⚔️');
+                setTimeout(function () { _hideBennySpeech(); }, 5000);
+              } else if (currentQ.id === 'quest_dailyRoutine') {
                 _showBennySpeech('Hey dude! 🌊\nSurvive 2 minutes\nin your next run\nto unlock daily rewards!');
                 setTimeout(function () { _hideBennySpeech(); }, 5000);
               } else if (currentQ.id === 'quest_harvester') {
@@ -4182,6 +4513,7 @@
     _updateParticles(dt);
     _updateBennyNPC(dt);
     _updateIncubator(dt);
+    _updateAidaIntro(dt);
     _updateCorruption(dt);
 
     // When a building menu is open, freeze player input/movement but keep
