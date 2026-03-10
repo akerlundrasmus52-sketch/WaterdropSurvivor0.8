@@ -280,10 +280,10 @@
       // Reset run loot tracking
       window.runLootGained = [];
       
-      // Time system: always start a run at 6 AM or 6 PM (alternating)
-      // First run: 6 AM. Each subsequent run alternates between 6 PM and 6 AM.
+      // Time system: start at 18:00 (Evening) when a landmark quest is active,
+      // otherwise default to 06:00 (Morning).
       saveData.runCount = (saveData.runCount || 0) + 1;
-      const startHour = (saveData.runCount % 2 === 1) ? 6 : 18; // Odd runs → 6 AM, Even runs → 6 PM
+      const startHour = (montanaQuest.active || eiffelQuest.active) ? 18 : 6;
 
       // Convert hour (0-23) to timeOfDay (0-1)
       // 0 = midnight, 6 = dawn, 12 = noon, 18 = dusk
@@ -574,50 +574,71 @@
       updateBackgroundMusic();
 
       // Clear Entities
-      // For instanced enemies (types 0/1/2): mesh was never added to scene; geometry/material
-      // belong to the individual enemy tracking mesh (not the shared InstancedMesh batch), so
-      // disposal is safe. For non-instanced types, scene.remove() removes the mesh correctly.
+      // With object pooling: active enemies are returned to the pool (mesh stays in scene,
+      // hidden at Y=-100) instead of being disposed.  Pooled enemies from previous waves
+      // survive across the reset so their GPU resources are reused in the next run.
+      // Without pooling: full disposal as before.
       enemies.forEach(e => {
         if (e.mesh) {
-          scene.remove(e.mesh); // no-op for instanced enemies; removes non-instanced ones
-          if (!e._usesInstancing) {
-            // Only dispose geometry/material for enemies that own their mesh exclusively
-            // Never dispose shared cached geometry (flagged with _isShared) or shared cached material (SHARED_MAT_CACHE)
-            if (e.mesh.geometry && !e.mesh.geometry._isShared) e.mesh.geometry.dispose();
-            if (e.mesh.material) {
-              if (Array.isArray(e.mesh.material)) {
-                e.mesh.material.forEach(m => { if (!m._isShared) m.dispose(); });
-              } else {
-                if (!e.mesh.material._isShared) e.mesh.material.dispose();
+          if (window.enemyPool && !e._usesInstancing) {
+            // Pool path: hide and park the enemy, restore its shared material if needed,
+            // then push it onto the free list for the next run.
+            if (e.mesh.material && !e.mesh.material._isShared) {
+              // Material was cloned for a mid-animation opacity change — dispose the clone
+              // and restore the original shared material from the cache.
+              e.mesh.material.dispose();
+              // Attempt to restore via SHARED_MAT_CACHE (accessed through the enemy's colour).
+              const origHex = e.mesh.material.color ? e.mesh.material.color.getHex() : null;
+              if (origHex && window.SHARED_MAT_CACHE && window.SHARED_MAT_CACHE[origHex.toString(16)]) {
+                e.mesh.material = window.SHARED_MAT_CACHE[origHex.toString(16)];
               }
             }
-          }
-          // Dispose sub-mesh resources (bullet holes, blood stains, eyes) that are
-          // children of the enemy mesh — they are removed from scene with the parent,
-          // but their GPU resources must be explicitly freed.
-          // Note: bullet holes, blood stains, and eyes use shared geometry/material — only dispose per-instance materials.
-          if (e.bulletHoles) e.bulletHoles.forEach(h => { if (h.material && !h.material._isShared) h.material.dispose(); });
-          if (e._bloodStains) e._bloodStains.forEach(s => { if (s.material && !s.material._isShared) s.material.dispose(); });
-          // Eyes use shared geometry (SHARED_EYE_GEO) and shared material (SHARED_EYE_MAT) — never dispose
-          // Also skip disposing shared cached body geometry (SHARED_GEO_TYPE) and materials (SHARED_MAT_CACHE)
-          // Clean up ground shadow (flying enemy shadow disc — not shared, must be removed/disposed)
-          if (e.groundShadow) {
-            if (e.groundShadow.parent) scene.remove(e.groundShadow);
-            if (e.groundShadow.geometry) e.groundShadow.geometry.dispose();
-            if (e.groundShadow.material) e.groundShadow.material.dispose();
-          }
-          // Clean up glitch submeshes for Source Glitch (type 20)
-          if (e._glitchMeshes) {
-            e._glitchMeshes.forEach(gm => {
-              if (gm.geometry) gm.geometry.dispose();
-              if (gm.material) gm.material.dispose();
-            });
-          }
-          // Clean up anatomy sentinel mesh (unique geo+mat; child of enemy mesh)
-          if (e._anatBaseMesh) {
-            if (e._anatBaseMesh.geometry) e._anatBaseMesh.geometry.dispose();
-            if (e._anatBaseMesh.material) e._anatBaseMesh.material.dispose();
-            e._anatBaseMesh = null;
+            if (e.bulletHoles) e.bulletHoles.forEach(h => { if (h.material && !h.material._isShared) h.material.dispose(); });
+            if (e._bloodStains) e._bloodStains.forEach(s => { if (s.material && !s.material._isShared) s.material.dispose(); });
+            e.bulletHoles = [];
+            e._bloodStains = [];
+            window.enemyPool._return(e);
+          } else {
+            scene.remove(e.mesh); // no-op for instanced enemies; removes non-instanced ones
+            if (!e._usesInstancing) {
+              // Only dispose geometry/material for enemies that own their mesh exclusively
+              // Never dispose shared cached geometry (flagged with _isShared) or shared cached material (SHARED_MAT_CACHE)
+              if (e.mesh.geometry && !e.mesh.geometry._isShared) e.mesh.geometry.dispose();
+              if (e.mesh.material) {
+                if (Array.isArray(e.mesh.material)) {
+                  e.mesh.material.forEach(m => { if (!m._isShared) m.dispose(); });
+                } else {
+                  if (!e.mesh.material._isShared) e.mesh.material.dispose();
+                }
+              }
+            }
+            // Dispose sub-mesh resources (bullet holes, blood stains, eyes) that are
+            // children of the enemy mesh — they are removed from scene with the parent,
+            // but their GPU resources must be explicitly freed.
+            // Note: bullet holes, blood stains, and eyes use shared geometry/material — only dispose per-instance materials.
+            if (e.bulletHoles) e.bulletHoles.forEach(h => { if (h.material && !h.material._isShared) h.material.dispose(); });
+            if (e._bloodStains) e._bloodStains.forEach(s => { if (s.material && !s.material._isShared) s.material.dispose(); });
+            // Eyes use shared geometry (SHARED_EYE_GEO) and shared material (SHARED_EYE_MAT) — never dispose
+            // Also skip disposing shared cached body geometry (SHARED_GEO_TYPE) and materials (SHARED_MAT_CACHE)
+            // Clean up ground shadow (blob shadow disc — not shared, must be removed/disposed)
+            if (e.groundShadow) {
+              if (e.groundShadow.parent) scene.remove(e.groundShadow);
+              if (e.groundShadow.geometry) e.groundShadow.geometry.dispose();
+              if (e.groundShadow.material) e.groundShadow.material.dispose();
+            }
+            // Clean up glitch submeshes for Source Glitch (type 20)
+            if (e._glitchMeshes) {
+              e._glitchMeshes.forEach(gm => {
+                if (gm.geometry) gm.geometry.dispose();
+                if (gm.material) gm.material.dispose();
+              });
+            }
+            // Clean up anatomy sentinel mesh (unique geo+mat; child of enemy mesh)
+            if (e._anatBaseMesh) {
+              if (e._anatBaseMesh.geometry) e._anatBaseMesh.geometry.dispose();
+              if (e._anatBaseMesh.material) e._anatBaseMesh.material.dispose();
+              e._anatBaseMesh = null;
+            }
           }
         }
       });
