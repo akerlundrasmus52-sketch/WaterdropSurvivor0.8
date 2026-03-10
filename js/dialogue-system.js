@@ -338,6 +338,7 @@ window.DialogueSystem = (function () {
       'special-attacks-panel-overlay', 'quest-hall-overlay',
       'companion-house-modal', 'inventory-screen-modal',
       'progression-shop', 'prestige-menu', 'expeditions-menu',
+      'progression-shop-overlay', 'account-building-overlay',
       'gear-screen', 'achievements-screen'
     ];
     for (var i = 0; i < ids.length; i++) {

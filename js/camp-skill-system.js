@@ -1812,7 +1812,9 @@
         triggerOnDeath: true,
         message: "🌳 <b>Neural Enhancement Matrix Unlocked!</b><br><br>You received <b>2 Skill Points</b>!<br><br><i>A.I.D.A: 'Good. Each enemy you dissolve feeds my understanding of this dimension. And yours grows too. The Pyramid anomaly is next — ancient geometry resonating with the crash frequency. Map it.'</i>",
         nextQuest: 'quest_eggHunt',
-        conditions: ['quest_craftAllTools', 'quest_firstBlood']
+        // conditionsAny: either quest_craftAllTools (new path) OR quest_firstBlood (legacy saves
+        // that pre-date quest_craftAllTools) can unlock this quest, preventing soft-locks.
+        conditionsAny: ['quest_craftAllTools', 'quest_firstBlood']
       },
 
       // === STEP 6: The Egg Hunt — Reach Level 15 + find egg ===

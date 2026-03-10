@@ -2264,6 +2264,8 @@
         saveSaveData();
       }
     }
+
+    function buyUpgrade(upgradeKey) {
       const upgrade = PERMANENT_UPGRADES[upgradeKey];
       const currentLevel = saveData.upgrades[upgradeKey];
       const cost = getCost(upgradeKey);
@@ -5307,13 +5309,13 @@
         for (let i = 0; i < _EMBER_COUNT; i++) {
           const em = document.createElement('div');
           const size = 4 + Math.random() * 7;
-          const hue  = Math.random() < 0.5 ? '#FF4500' : (Math.random() < 0.5 ? '#FFD700' : '#FF8C00');
+          const emberColor = Math.random() < 0.5 ? '#FF4500' : (Math.random() < 0.5 ? '#FFD700' : '#FF8C00');
           em.style.cssText = `
             position:fixed;
             width:${size}px;height:${size}px;
             border-radius:50%;
-            background:${hue};
-            box-shadow:0 0 ${size*1.5}px ${hue};
+            background:${emberColor};
+            box-shadow:0 0 ${size*1.5}px ${emberColor};
             left:${cx}px;top:${cy}px;
             pointer-events:none;
             z-index:199;
@@ -5392,7 +5394,9 @@
           levelUpText.style.opacity = '1';
         } else if (progress < 1) {
           // Phase 4: Burn-away dissolve at center (65-100%)
-          // Text brightens then chars out — colour shifts orange→red→black while fading
+          // Colour progression: golden (#FFD700) → orange (hsl ~30) → red (hsl 0) → near-black
+          // fp 0.0-0.4: gold phase; 0.4-0.7: hue drops 30→-24 (orange→red), lightness 60→25;
+          // 0.7-1.0: red darkens to black (lightness 20→0)
           const fp = (progress - 0.65) / 0.35;
           const burnHue = fp < 0.4
             ? `#FFD700`                              // golden phase
