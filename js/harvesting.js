@@ -447,7 +447,7 @@
 
   // ── World population ─────────────────────────────────────────
   function populateWorld() {
-    const rng = () => (Math.random() - 0.5) * 220;
+    const rng = () => (Math.random() - 0.5) * 140;
     const avoid = (x, z) => Math.abs(x) < 18 && Math.abs(z) < 18; // near player start
 
     // Trees — 35 nodes scattered around
@@ -464,15 +464,15 @@
     }
     // Coal veins — 25 nodes (clustered around mine area)
     for (let i = 0; i < 25; i++) {
-      const x = -50 + (Math.random() - 0.5) * 80;
-      const z = 30 + (Math.random() - 0.5) * 80;
+      const x = -30 + (Math.random() - 0.5) * 50;
+      const z = 18 + (Math.random() - 0.5) * 50;
       if (avoid(x, z)) continue;
       _spawnNode('coal', x, z);
     }
     // Iron deposits — 20 nodes
     for (let i = 0; i < 20; i++) {
-      const x = 60 + (Math.random() - 0.5) * 60;
-      const z = -60 + (Math.random() - 0.5) * 60;
+      const x = 36 + (Math.random() - 0.5) * 40;
+      const z = -36 + (Math.random() - 0.5) * 40;
       if (avoid(x, z)) continue;
       _spawnNode('iron', x, z);
     }
@@ -490,12 +490,12 @@
     }
     // Berry bushes — 30 nodes (forest region, near center)
     for (let i = 0; i < 30; i++) {
-      const x = (Math.random() - 0.5) * 160;
-      const z = (Math.random() - 0.5) * 160;
+      const x = (Math.random() - 0.5) * 100;
+      const z = (Math.random() - 0.5) * 100;
       if (avoid(x, z)) continue;
       _spawnNode('berryBush', x, z);
     }
-    // Flower patches — 25 nodes (scattered everywhere)
+    // Flower patches — 25 nodes (scattered everywhere — gatherable resource)
     for (let i = 0; i < 25; i++) {
       const x = rng(), z = rng();
       if (avoid(x, z)) continue;
@@ -503,15 +503,15 @@
     }
     // Vegetable patches — 15 nodes (near camp area)
     for (let i = 0; i < 15; i++) {
-      const x = (Math.random() - 0.5) * 100;
-      const z = 20 + (Math.random() - 0.5) * 80;
+      const x = (Math.random() - 0.5) * 65;
+      const z = 12 + (Math.random() - 0.5) * 50;
       if (avoid(x, z)) continue;
       _spawnNode('vegetablePatch', x, z);
     }
     // Metal ore deposits — 18 nodes (scattered in a mid-zone, requires pickaxe)
     for (let i = 0; i < 18; i++) {
-      const x = (Math.random() - 0.5) * 160;
-      const z = -80 + (Math.random() - 0.5) * 120;
+      const x = (Math.random() - 0.5) * 100;
+      const z = -50 + (Math.random() - 0.5) * 75;
       if (avoid(x, z)) continue;
       _spawnNode('metalOre', x, z);
     }

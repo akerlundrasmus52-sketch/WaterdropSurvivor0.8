@@ -10,7 +10,7 @@
       // Ground - Single massive ground plane for minimal draw calls
 
       // One ground plane with a stylized dark-green/alien-grass color
-      const mainGroundGeo = new THREE.PlaneGeometry(300, 300);
+      const mainGroundGeo = new THREE.PlaneGeometry(200, 200);
       const mainGroundMat = new THREE.MeshStandardMaterial({ color: 0x1e3a29, roughness: 0.92, metalness: 0.0 });
       const mainGround = new THREE.Mesh(mainGroundGeo, mainGroundMat);
       mainGround.rotation.x = -Math.PI / 2;
@@ -21,11 +21,11 @@
       // Decorative terrain hills/bumps for visual depth (low-profile so they don't block movement)
       const hillMat = new THREE.MeshStandardMaterial({ color: 0x2D5A1A, roughness: 0.96, metalness: 0.0 });
       const hillDataList = [
-        { x: -60, z: 30, rx: 8, ry: 1.4, rz: 7 }, { x: 80, z: -20, rx: 10, ry: 1.6, rz: 8 },
-        { x: -40, z: -70, rx: 12, ry: 1.8, rz: 10 }, { x: 70, z: 80, rx: 9, ry: 1.5, rz: 7 },
-        { x: -80, z: 60, rx: 11, ry: 1.3, rz: 9 }, { x: 100, z: -60, rx: 7, ry: 1.2, rz: 6 },
-        { x: 30, z: 90, rx: 8, ry: 1.4, rz: 7 }, { x: -100, z: -40, rx: 13, ry: 1.9, rz: 11 },
-        { x: -20, z: 80, rx: 6, ry: 1.1, rz: 5 }, { x: 110, z: 40, rx: 9, ry: 1.3, rz: 8 },
+        { x: -36, z: 18, rx: 8, ry: 1.4, rz: 7 }, { x: 48, z: -12, rx: 10, ry: 1.6, rz: 8 },
+        { x: -24, z: -42, rx: 12, ry: 1.8, rz: 10 }, { x: 42, z: 48, rx: 9, ry: 1.5, rz: 7 },
+        { x: -48, z: 36, rx: 11, ry: 1.3, rz: 9 }, { x: 60, z: -36, rx: 7, ry: 1.2, rz: 6 },
+        { x: 18, z: 54, rx: 8, ry: 1.4, rz: 7 }, { x: -60, z: -24, rx: 13, ry: 1.9, rz: 11 },
+        { x: -12, z: 48, rx: 6, ry: 1.1, rz: 5 }, { x: 66, z: 24, rx: 9, ry: 1.3, rz: 8 },
       ];
       hillDataList.forEach(h => {
         const hillGeo = new THREE.SphereGeometry(1, 10, 8);
@@ -49,11 +49,11 @@
       dCtx.fillStyle = dGrad; dCtx.fillRect(0, 0, 128, 128);
       const desertTex = new THREE.CanvasTexture(desertGradCanvas);
       const desertOverlay = new THREE.Mesh(
-        new THREE.PlaneGeometry(160, 160),
+        new THREE.PlaneGeometry(100, 100),
         new THREE.MeshStandardMaterial({ map: desertTex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 })
       );
       desertOverlay.rotation.x = -Math.PI / 2;
-      desertOverlay.position.set(120, 0.01, -80);
+      desertOverlay.position.set(70, 0.01, -50);
       scene.add(desertOverlay);
 
       // Snow region (northwest) - white ground overlay
@@ -67,16 +67,16 @@
       sCtx.fillStyle = sGrad; sCtx.fillRect(0, 0, 128, 128);
       const snowTex = new THREE.CanvasTexture(snowGradCanvas);
       const snowOverlay = new THREE.Mesh(
-        new THREE.PlaneGeometry(160, 160),
+        new THREE.PlaneGeometry(100, 100),
         new THREE.MeshStandardMaterial({ map: snowTex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 })
       );
       snowOverlay.rotation.x = -Math.PI / 2;
-      snowOverlay.position.set(-120, 0.01, -100);
+      snowOverlay.position.set(-70, 0.01, -60);
       scene.add(snowOverlay);
 
       // Darker forest floor ring around the fountain spawn area
       const forestRingMat = new THREE.MeshStandardMaterial({ color: 0x2E5A1A, roughness: 0.9, metalness: 0.0, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }); // Dark forest green with shading - polygon offset prevents z-fighting
-      const forestRingGeo = new THREE.RingGeometry(12, 45, 32);
+      const forestRingGeo = new THREE.RingGeometry(12, 30, 32);
       const forestRingMesh = new THREE.Mesh(forestRingGeo, forestRingMat);
       forestRingMesh.rotation.x = -Math.PI / 2;
       forestRingMesh.position.set(0, 0.005, 0);
@@ -90,7 +90,7 @@
       const rippleMat = new THREE.MeshBasicMaterial({ color: 0x3399FF, transparent: true, opacity: 0.5, depthWrite: false });
       const ripple = new THREE.Mesh(rippleGeo, rippleMat);
       ripple.rotation.x = -Math.PI / 2;
-      ripple.position.set(30, 0.04, -30); // raised from 0.02 → 0.04 to prevent z-fighting on mobile GPUs
+      ripple.position.set(20, 0.04, -20); // raised from 0.02 → 0.04 to prevent z-fighting on mobile GPUs
       ripple.userData = { isWaterRipple: true, phase: 0 };
       scene.add(ripple);
 
@@ -150,20 +150,20 @@
       
       // Narrow dirt trails from spawn rondel to key landmarks (no wagon roads)
       
-      // 1. Trail to Stonehenge (60, 60) - Northeast direction
-      createTrail(rondelRadius * 0.707, rondelRadius * 0.707, 60, 60);
+      // 1. Trail to Stonehenge (60, 50) - Northeast direction
+      createTrail(rondelRadius * 0.707, rondelRadius * 0.707, 60, 50);
       
-      // 2. Trail to Windmill (40, 40) - East direction
-      createTrail(rondelRadius * 0.9, rondelRadius * 0.436, 40, 40);
+      // 2. Trail to Windmill (25, 25) - East direction
+      createTrail(rondelRadius * 0.9, rondelRadius * 0.436, 25, 25);
       
-      // 3. Trail to Tesla Tower (-80, -80) - Southwest direction
-      createTrail(-rondelRadius * 0.707, -rondelRadius * 0.707, -80, -80);
+      // 3. Trail to Tesla Tower (-50, -50) - Southwest direction
+      createTrail(-rondelRadius * 0.707, -rondelRadius * 0.707, -50, -50);
       
-      // 4. Trail to Pyramid (50, -50) - Southeast direction
-      createTrail(rondelRadius * 0.707, -rondelRadius * 0.707, 50, -50);
+      // 4. Trail to Pyramid (35, -35) - Southeast direction
+      createTrail(rondelRadius * 0.707, -rondelRadius * 0.707, 35, -35);
       
-      // 5. Trail to Lake/Waterfall (30, -30) - South direction
-      createTrail(rondelRadius * 0.5, -rondelRadius * 0.866, 30, -30);
+      // 5. Trail to Lake/Waterfall (20, -20) - South direction
+      createTrail(rondelRadius * 0.5, -rondelRadius * 0.866, 20, -20);
       
       // Initialise fountain/lightning spawn sequence (replaces old circle portal)
       if (window.SpawnSequence) window.SpawnSequence.init(scene);
@@ -181,10 +181,10 @@
       
       // Create farm field patches in strategic locations
       const farmFields = [
-        { x: 20, z: 20, size: 15 },   // Near windmill
-        { x: -30, z: 20, size: 20 },  // Near mine
-        { x: 20, z: -20, size: 15 },  // Near lake
-        { x: 45, z: 45, size: 12 },   // Around stonehenge approach
+        { x: 12, z: 12, size: 12 },   // Near windmill
+        { x: -18, z: 12, size: 16 },  // Near mine
+        { x: 12, z: -12, size: 12 },  // Near lake
+        { x: 28, z: 28, size: 10 },   // Around stonehenge approach
       ];
       
       farmFields.forEach(field => {
@@ -205,8 +205,8 @@
       // Create fence segments around perimeter
       for(let i=0; i<40; i++) {
         const angle = (i / 40) * Math.PI * 2;
-        const x = Math.cos(angle) * 85;
-        const z = Math.sin(angle) * 85;
+        const x = Math.cos(angle) * 55;
+        const z = Math.sin(angle) * 55;
         
         // Fence post
         const post = new THREE.Mesh(postGeo, fenceMat.clone());
@@ -231,14 +231,14 @@
       const cabinGeo = new THREE.BoxGeometry(6, 5, 6);
       const cabinMat = new THREE.MeshToonMaterial({ color: COLORS.cabin });
       const cabin = new THREE.Mesh(cabinGeo, cabinMat);
-      cabin.position.set(-20, 2.5, -20);
+      cabin.position.set(-14, 2.5, -14);
       cabin.castShadow = true;
       cabin.receiveShadow = true;
       scene.add(cabin);
 
       // Windmill with improvements
       const wmGroup = new THREE.Group();
-      wmGroup.position.set(40, 0, 40);
+      wmGroup.position.set(25, 0, 25);
       const wmBase = new THREE.Mesh(new THREE.CylinderGeometry(2, 3, 8, 8), new THREE.MeshToonMaterial({color: 0xD2B48C})); // Beige
       wmBase.position.y = 4;
       wmBase.castShadow = true;
@@ -270,7 +270,7 @@
       });
       const groundLight = new THREE.Mesh(groundLightGeo, groundLightMat);
       groundLight.rotation.x = -Math.PI/2;
-      groundLight.position.set(40, 0.05, 40);
+      groundLight.position.set(25, 0.05, 25);
       scene.add(groundLight);
       
       // Windmill hub
@@ -328,7 +328,7 @@
       const windmillShadowGeo = new THREE.PlaneGeometry(0.8, bLen);
       const windmillShadowMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.18, depthWrite: false });
       const shadowGroup = new THREE.Group();
-      shadowGroup.position.set(40, 0.03, 40);
+      shadowGroup.position.set(25, 0.03, 25);
       shadowGroup.rotation.x = -Math.PI / 2;
       for (let si = 0; si < 4; si++) {
         const shadowBlade = new THREE.Mesh(windmillShadowGeo, windmillShadowMat.clone());
@@ -343,16 +343,16 @@
       wmGroup.userData = { isWindmill: true, blades: [bladeGroup], shadowGroup: shadowGroup, hp: 600, maxHp: 600, questActive: false, light: wmLight };
       scene.add(wmGroup);
       // Windmill exclusion zone: no props within 12 units
-      exclusionZones.push({ x: 40, z: 40, r: 12 });
+      exclusionZones.push({ x: 25, z: 25, r: 12 });
       
       // Hay bales outside windmill
       const hayBaleMat = new THREE.MeshToonMaterial({ color: 0xD4A855 }); // Golden hay color
       const hayBaleGeo = new THREE.CylinderGeometry(0.8, 0.8, 1.2, 12);
       const hayBalePositions = [
-        { x: 43, z: 43, ry: 0 },
-        { x: 37, z: 42, ry: Math.PI / 4 },
-        { x: 38, z: 38, ry: 0 },
-        { x: 44, z: 37, ry: Math.PI / 3 },
+        { x: 28, z: 28, ry: 0 },
+        { x: 22, z: 27, ry: Math.PI / 4 },
+        { x: 23, z: 23, ry: 0 },
+        { x: 29, z: 22, ry: Math.PI / 3 },
       ];
       hayBalePositions.forEach(pos => {
         const hayBale = new THREE.Mesh(hayBaleGeo, hayBaleMat);
@@ -366,7 +366,7 @@
       
       // Phase 5: Add "QUEST HERE" signpost at Windmill entrance
       const signpostGroup = new THREE.Group();
-      signpostGroup.position.set(40, 0, 45); // In front of windmill
+      signpostGroup.position.set(25, 0, 30); // In front of windmill
       
       // Signpost pole
       const signPoleGeo = new THREE.CylinderGeometry(0.2, 0.2, 3, 8);
@@ -405,7 +405,7 @@
       // Farmer NPC near windmill (between windmill and barn)
       (function() {
         const farmerGroup = new THREE.Group();
-        farmerGroup.position.set(44, 0, 45); // East of windmill at (40, 0, 40) — visible and interactable
+        farmerGroup.position.set(28, 0, 30); // East of windmill at (25, 0, 25) — visible and interactable
         // Body
         const bodyMesh = new THREE.Mesh(
           new THREE.BoxGeometry(0.8, 1.2, 0.5),
@@ -452,7 +452,7 @@
       
       // Barn: placed south of windmill, 18 units away — clearly separated
       const barnGroup = new THREE.Group();
-      barnGroup.position.set(40, 0, 58); // 18 units south of Windmill (40,40) → separation = 18
+      barnGroup.position.set(25, 0, 38); // 13 units south of Windmill (25,25) → separation = 13
       // Barn body
       const barnBodyGeo = new THREE.BoxGeometry(8, 5, 10);
       const barnBodyMat = new THREE.MeshToonMaterial({ color: 0xA0522D }); // Sienna red barn
@@ -482,14 +482,14 @@
       barnGroup.add(barnWindow);
       scene.add(barnGroup);
       // Barn exclusion zone: no props within 12 units
-      exclusionZones.push({ x: 40, z: 58, r: 12 });
+      exclusionZones.push({ x: 25, z: 38, r: 12 });
       
       // Realistic farm fields: wide soil strips with crop rows — placed east of windmill
-      // CropField at (58, 0, 40): 18 units east of Windmill (40,40) → separation = 18
+      // CropField at (38, 0, 25): 13 units east of Windmill (25,25) → separation = 13
       const fieldSoilMat = new THREE.MeshToonMaterial({ color: 0x5C3A1A }); // Rich dark soil
       const cropMat = new THREE.MeshToonMaterial({ color: 0x7CBA3E }); // Crop green
       const windmillFieldGroup = new THREE.Group();
-      windmillFieldGroup.position.set(58, 0, 40); // 18 units east of windmill — clearly separated
+      windmillFieldGroup.position.set(38, 0, 25); // 13 units east of windmill — clearly separated
       // Wide field base
       const fieldBaseMesh = new THREE.Mesh(new THREE.PlaneGeometry(18, 14), new THREE.MeshToonMaterial({ color: 0x5C3A1A }));
       fieldBaseMesh.rotation.x = -Math.PI / 2;
@@ -512,22 +512,22 @@
       }
       scene.add(windmillFieldGroup);
       // CropField exclusion zone: no props within 12 units of field center
-      exclusionZones.push({ x: 58, z: 40, r: 12 });
+      exclusionZones.push({ x: 38, z: 25, r: 12 });
       
       // Mine
       const mineGeo = new THREE.DodecahedronGeometry(5);
       const mineMat = new THREE.MeshToonMaterial({ color: 0x555555 });
       const mine = new THREE.Mesh(mineGeo, mineMat);
-      mine.position.set(-40, 2, 40);
+      mine.position.set(-25, 2, 25);
       scene.add(mine);
       const mineEnt = new THREE.Mesh(new THREE.CircleGeometry(2, 16), new THREE.MeshBasicMaterial({color: 0x000000}));
-      mineEnt.position.set(-40, 2, 44);
+      mineEnt.position.set(-25, 2, 28);
       mineEnt.rotation.y = Math.PI;
       scene.add(mineEnt);
 
       // Phase 4: Stonehenge - Circle of big rocks - Relocated to new mystical location
       const stonehengeGroup = new THREE.Group();
-      stonehengeGroup.position.set(100, 0, 80); // Moved far northeast — separated from farm area
+      stonehengeGroup.position.set(60, 0, 50); // Moved northeast — separated from farm area
       
       const stoneMat = new THREE.MeshToonMaterial({ color: 0x808080 }); // Gray stone
       const numStones = 30; // Real Stonehenge has ~30 stones in outer circle
@@ -610,7 +610,7 @@
       stonehengeChestGroup.add(blueGlowLight);
       
       // Position on altar
-      stonehengeChestGroup.position.set(100, 1, 80); // On top of Stonehenge altar
+      stonehengeChestGroup.position.set(60, 1, 50); // On top of Stonehenge altar
       stonehengeChestGroup.userData = { 
         isStonehengeChest: true, 
         questItem: true,
@@ -621,7 +621,7 @@
 
       // Great Pyramid of Giza - Egyptian stepped pyramid
       const mayanGroup = new THREE.Group();
-      mayanGroup.position.set(50, 0, -50);
+      mayanGroup.position.set(35, 0, -35);
       
       // Multi-material sandstone look with weathering
       const pyramidMatLight = new THREE.MeshStandardMaterial({ color: 0xE8D5A3, roughness: 0.92, metalness: 0.0 }); // Light sandstone face
@@ -1036,7 +1036,7 @@
 
       // Comet Stone - Beside the lake where player spawns (brings the water droplet to life)
       const cometGroup = new THREE.Group();
-      cometGroup.position.set(37, 0, -30); // Right beside lake where player spawns
+      cometGroup.position.set(27, 0, -20); // Right beside lake where player spawns
       
       // Impact crater (dark brown ring)
       const craterGeo = new THREE.RingGeometry(2, 3, 16); // Reduced segments for performance
@@ -1092,7 +1092,7 @@
 
       // Farm Area near windmill
       const farmGroup = new THREE.Group();
-      farmGroup.position.set(50, 0, 35); // Moved further back from spawn
+      farmGroup.position.set(30, 0, 22); // Moved further back from spawn
       
       // Wheat field (50 stalks)
       const wheatGeo = new THREE.ConeGeometry(0.1, 0.8, 4);
@@ -1247,18 +1247,18 @@
       });
       const enhancedLake = new THREE.Mesh(enhancedLakeGeo, enhancedLakeMat);
       enhancedLake.rotation.x = -Math.PI / 2;
-      enhancedLake.position.set(30, 0.03, -30); // Raised slightly above ground to prevent z-fighting
+      enhancedLake.position.set(20, 0.03, -20); // Raised slightly above ground to prevent z-fighting
       enhancedLake.receiveShadow = true;
       scene.add(enhancedLake);
       // Lake exclusion zone: no props within 22 units of lake center (radius 18 + buffer 4)
-      exclusionZones.push({ x: 30, z: -30, r: 22 });
+      exclusionZones.push({ x: 20, z: -20, r: 22 });
       
       // Sandy shore ring around lake for visual border
       const shoreGeo = new THREE.RingGeometry(17.5, 20, 48);
       const shoreMat = new THREE.MeshStandardMaterial({ color: 0xC2B280, roughness: 0.9, metalness: 0, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 });
       const shore = new THREE.Mesh(shoreGeo, shoreMat);
       shore.rotation.x = -Math.PI / 2;
-      shore.position.set(30, 0.02, -30);
+      shore.position.set(20, 0.02, -20);
       shore.receiveShadow = true;
       scene.add(shore);
       
@@ -1274,9 +1274,9 @@
         const angle = Math.random() * Math.PI * 2;
         const dist = Math.random() * 15;
         sparkle.position.set(
-          30 + Math.cos(angle) * dist,
+          20 + Math.cos(angle) * dist,
           0.02,
-          -30 + Math.sin(angle) * dist
+          -20 + Math.sin(angle) * dist
         );
         sparkle.rotation.x = -Math.PI/2;
         sparkle.userData = { 
@@ -1341,7 +1341,7 @@
       underwaterChestGroup.add(shimmerRing);
       
       // Place chest at lake center, slightly submerged
-      underwaterChestGroup.position.set(30, -0.4, -30);
+      underwaterChestGroup.position.set(20, -0.4, -20);
       underwaterChestGroup.userData = {
         isUnderwaterChest: true,
         collected: false,
@@ -1355,8 +1355,8 @@
       // More fences around farm area
       for(let i=0; i<20; i++) {
         const angle = (i / 20) * Math.PI * 2;
-        const x = 35 + Math.cos(angle) * 15;
-        const z = 35 + Math.sin(angle) * 15;
+        const x = 22 + Math.cos(angle) * 12;
+        const z = 22 + Math.sin(angle) * 12;
         
         const post = new THREE.Mesh(postGeo, fenceMat);
         post.position.set(x, 1, z);
@@ -1373,7 +1373,7 @@
 
       // Montana Landmark - Snowy area in the north (snow biome)
       const montanaGroup = new THREE.Group();
-      montanaGroup.position.set(0, 0, -200); // North in snow biome
+      montanaGroup.position.set(0, 0, -100); // North in snow biome
       
       // Base platform
       const montanaBaseMat = new THREE.MeshToonMaterial({ color: 0xD3D3D3 }); // Light gray
@@ -1475,7 +1475,7 @@
 
       // Eiffel Tower Landmark - In fields/desert transition area
       const eiffelGroup = new THREE.Group();
-      eiffelGroup.position.set(-80, 0, 150); // South-west in desert/fields transition
+      eiffelGroup.position.set(-50, 0, 90); // South-west in desert/fields transition
       
       // Tower structure - 4 legs converging to top
       const eiffelMat = new THREE.MeshPhysicalMaterial({ 
@@ -1598,7 +1598,7 @@
 
       // FRESH IMPLEMENTATION: Tesla Tower with Active Lightning Arcs
       const teslaGroup = new THREE.Group();
-      teslaGroup.position.set(-80, 0, -80); // Northwest corner, distant location
+      teslaGroup.position.set(-50, 0, -50); // Southwest corner, compact location
       
       // Tower base - wider platform
       const teslaBaseGeo = new THREE.CylinderGeometry(3, 4, 2, 8);
@@ -1672,17 +1672,17 @@
       
       // Lightning arc points (4 ground points around tower)
       const arcPoints = [
-        new THREE.Vector3(-80 + 8, 0.5, -80),
-        new THREE.Vector3(-80 - 8, 0.5, -80),
-        new THREE.Vector3(-80, 0.5, -80 + 8),
-        new THREE.Vector3(-80, 0.5, -80 - 8)
+        new THREE.Vector3(-50 + 8, 0.5, -50),
+        new THREE.Vector3(-50 - 8, 0.5, -50),
+        new THREE.Vector3(-50, 0.5, -50 + 8),
+        new THREE.Vector3(-50, 0.5, -50 - 8)
       ];
       
       // Store Tesla Tower data for animation
       teslaGroup.userData = { 
         isTeslaTower: true,
         arcPoints: arcPoints,
-        topPosition: new THREE.Vector3(-80, 19, -80),
+        topPosition: new THREE.Vector3(-50, 19, -50),
         arcLines: [] // Will store line meshes
       };
       
@@ -1728,30 +1728,32 @@
         // Path exclusion (5-unit buffer on each side of trail)
         const PATH_WIDTH = 5;
         const r = rondelRadius;
-        if (distToSegment(x, z, r * 0.707, r * 0.707, 60, 60)     < PATH_WIDTH) return true; // → Stonehenge
-        if (distToSegment(x, z, r * 0.9,   r * 0.436, 40, 40)     < PATH_WIDTH) return true; // → Windmill
-        if (distToSegment(x, z, -r * 0.707, -r * 0.707, -80, -80) < PATH_WIDTH) return true; // → Tesla Tower
-        if (distToSegment(x, z, r * 0.707, -r * 0.707, 50, -50)   < PATH_WIDTH) return true; // → Pyramid
-        if (distToSegment(x, z, r * 0.5,   -r * 0.866, 30, -30)   < PATH_WIDTH) return true; // → Lake
+        if (distToSegment(x, z, r * 0.707, r * 0.707, 60, 50)     < PATH_WIDTH) return true; // → Stonehenge
+        if (distToSegment(x, z, r * 0.9,   r * 0.436, 25, 25)     < PATH_WIDTH) return true; // → Windmill
+        if (distToSegment(x, z, -r * 0.707, -r * 0.707, -50, -50) < PATH_WIDTH) return true; // → Tesla Tower
+        if (distToSegment(x, z, r * 0.707, -r * 0.707, 35, -35)   < PATH_WIDTH) return true; // → Pyramid
+        if (distToSegment(x, z, r * 0.5,   -r * 0.866, 20, -20)   < PATH_WIDTH) return true; // → Lake
 
         // Building exclusion zones
-        if (Math.sqrt((x - 40) ** 2 + (z - 40) ** 2)   < 8)  return true; // Windmill
-        if (Math.sqrt((x + 20) ** 2 + (z + 20) ** 2)   < 8)  return true; // Cabin
-        if (Math.sqrt((x + 40) ** 2 + (z - 40) ** 2)   < 8)  return true; // Mine entrance
+        if (Math.sqrt((x - 25) ** 2 + (z - 25) ** 2)   < 8)  return true; // Windmill
+        if (Math.sqrt((x + 14) ** 2 + (z + 14) ** 2)   < 8)  return true; // Cabin
+        if (Math.sqrt((x + 25) ** 2 + (z - 25) ** 2)   < 8)  return true; // Mine entrance
 
         // Landmark exclusion zones
-        if (Math.sqrt((x - 100) ** 2 + (z - 80) ** 2)  < 22) return true; // Stonehenge
-        if (Math.sqrt((x - 50) ** 2  + (z + 50) ** 2)  < 22) return true; // Pyramid
-        if (Math.sqrt((x + 80) ** 2  + (z + 80) ** 2)  < 27) return true; // Tesla Tower
-        if (Math.sqrt((x + 80) ** 2  + (z - 150) ** 2) < 20) return true; // Eiffel Tower
+        if (Math.sqrt((x - 60) ** 2 + (z - 50) ** 2)   < 22) return true; // Stonehenge
+        if (Math.sqrt((x - 35) ** 2 + (z + 35) ** 2)   < 22) return true; // Pyramid
+        if (Math.sqrt((x + 50) ** 2 + (z + 50) ** 2)   < 27) return true; // Tesla Tower
+        if (Math.sqrt((x + 50) ** 2 + (z - 90) ** 2)   < 20) return true; // Eiffel Tower
 
         return false;
       }
 
-      // Tree-specific placement validation: extends isPositionExcluded with the Colosseum exclusion zone
+      // Tree-specific placement validation: extends isPositionExcluded with extra landmark zones
       function isTreePlacementValid(x, z) {
         if (isPositionExcluded(x, z)) return false;
-        if (Math.sqrt((x + 25) ** 2 + (z - 25) ** 2) < 18) return false; // Colosseum
+        if (Math.sqrt((x + 18) ** 2 + (z - 18) ** 2) < 18) return false; // Colosseum
+        // Extra lake buffer for trees (prevent clipping into water)
+        if (Math.sqrt((x - 20) ** 2 + (z + 20) ** 2) < 24) return false; // Lake + buffer
         return true;
       }
 
@@ -1795,12 +1797,12 @@
         while (excluded && attempts < MAX_SPAWN_ATTEMPTS) {
           if (i < 80) {
             // First 80 trees in forest area (Top Left quadrant mostly) - seeded deterministic
-            tx = (seededRandom(i * 13 + attempts * 3) * 100) - 90;
-            tz = (seededRandom(i * 17 + attempts * 5) * 100) - 90;
+            tx = (seededRandom(i * 13 + attempts * 3) * 65) - 55;
+            tz = (seededRandom(i * 17 + attempts * 5) * 65) - 55;
           } else {
             // Remaining 40 trees spread across entire map - seeded deterministic
-            tx = (seededRandom(i * 19 + attempts * 7) * 180) - 90;
-            tz = (seededRandom(i * 23 + attempts * 11) * 180) - 90;
+            tx = (seededRandom(i * 19 + attempts * 7) * 110) - 55;
+            tz = (seededRandom(i * 23 + attempts * 11) * 110) - 55;
           }
           
           excluded = !isTreePlacementValid(tx, tz);
@@ -1875,7 +1877,7 @@
       const cliffGeo2 = new THREE.BoxGeometry(8, 12, 6);
       const cliffMat2 = new THREE.MeshToonMaterial({ color: 0x696969 }); // Dark gray
       const cliff2 = new THREE.Mesh(cliffGeo2, cliffMat2);
-      cliff2.position.set(30, 6, -45); // Above and behind the lake
+      cliff2.position.set(20, 6, -35); // Above and behind the lake
       cliff2.castShadow = true;
       waterfallGroup2.add(cliff2);
       
@@ -1889,7 +1891,7 @@
       });
       
       const waterfall = new THREE.Mesh(waterfallGeo, waterfallMat);
-      waterfall.position.set(30, 6, -39);
+      waterfall.position.set(20, 6, -29);
       waterfall.rotation.x = -0.2; // Slight angle
       waterfall.userData = { isWaterfall: true, phase: 0 };
       waterfallGroup2.add(waterfall);
@@ -1917,36 +1919,14 @@
       });
       const splash = new THREE.Mesh(splashGeo, splashMat);
       splash.rotation.x = -Math.PI/2;
-      splash.position.set(30, 0.1, -33);
+      splash.position.set(20, 0.1, -23);
       splash.userData = { isSplash: true, phase: 0 };
       waterfallGroup2.add(splash);
       
       scene.add(waterfallGroup2);
       
-      // Scatter flowers around environment
-      const flowerGeo = new THREE.ConeGeometry(0.2, 0.5, 6);
-      const flowerColors = [0xFF69B4, 0xFFFF00, 0xFF0000, 0xFFA500, 0xFFFFFF];
-
-      // Validate flower placement: avoid lake, spawn rondel, pyramid area, and roads
-      function isFlowerPlacementValid(fx, fz) {
-        if (Math.sqrt(fx * fx + fz * fz) < 10) return false; // spawn rondel
-        if (Math.sqrt((fx - 30) ** 2 + (fz + 30) ** 2) < 22) return false; // lake
-        if (Math.sqrt((fx - 50) ** 2 + (fz + 50) ** 2) < 18) return false; // Mayan pyramid
-        if (Math.sqrt((fx + 70) ** 2 + (fz - 50) ** 2) < 15) return false; // Illuminati pyramid
-        return true;
-      }
-      
-      for(let i=0; i<250; i++) {
-        const fx = (Math.random() - 0.5) * 160;
-        const fz = (Math.random() - 0.5) * 160;
-        if (!isFlowerPlacementValid(fx, fz)) continue;
-        const flower = new THREE.Mesh(flowerGeo, new THREE.MeshBasicMaterial({ 
-          color: flowerColors[Math.floor(Math.random() * flowerColors.length)] 
-        }));
-        flower.position.set(fx, 0.25, fz);
-        flower.rotation.x = -Math.PI/2;
-        scene.add(flower);
-      }
+      // NOTE: Decorative flowers removed for FPS optimization.
+      // Only gatherable flowerPatch resource nodes remain (see harvesting.js).
       
       // Scatter rocks (big and small) across terrain for ground realism
       // Use instanced rendering to batch all rock draw calls into two InstancedMesh objects.
@@ -1969,8 +1949,8 @@
       // Big rocks
       for (let i = 0; i < 60; i++) {
         const scale = 0.6 + Math.random() * 1.2;
-        const rx = (Math.random() - 0.5) * 200;
-        const rz = (Math.random() - 0.5) * 200;
+        const rx = (Math.random() - 0.5) * 130;
+        const rz = (Math.random() - 0.5) * 130;
         if (isPositionExcluded(rx, rz)) continue;
         _irockPos.set(rx, scale * 0.4, rz);
         _irockEuler.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
@@ -1997,8 +1977,8 @@
       let _pebbleIdx = 0;
       for (let i = 0; i < 120; i++) {
         const scale = 0.1 + Math.random() * 0.35;
-        const px = (Math.random() - 0.5) * 180;
-        const pz = (Math.random() - 0.5) * 180;
+        const px = (Math.random() - 0.5) * 120;
+        const pz = (Math.random() - 0.5) * 120;
         if (isPositionExcluded(px, pz)) continue;
         _irockPos.set(px, scale * 0.4, pz);
         _irockEuler.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
@@ -2092,9 +2072,9 @@
       
       // Spawn Trees (120) - scattered across the map
       for (let i = 0; i < 120; i++) {
-        const x = (Math.random() - 0.5) * 250; // Spread across map
-        const z = (Math.random() - 0.5) * 250;
-        if (isPositionExcluded(x, z)) continue;
+        const x = (Math.random() - 0.5) * 160; // Spread across compact map
+        const z = (Math.random() - 0.5) * 160;
+        if (!isTreePlacementValid(x, z)) continue;
         
         const tree = createDestructibleProp('tree', new THREE.Vector3(x, 0, z));
         window.destructibleProps.push(tree);
@@ -2102,8 +2082,8 @@
       
       // Spawn Barrels (30) - near landmarks and paths
       for (let i = 0; i < 30; i++) {
-        const x = (Math.random() - 0.5) * 200;
-        const z = (Math.random() - 0.5) * 200;
+        const x = (Math.random() - 0.5) * 130;
+        const z = (Math.random() - 0.5) * 130;
         if (isPositionExcluded(x, z)) continue;
         
         const barrel = createDestructibleProp('barrel', new THREE.Vector3(x, 0, z));
@@ -2112,8 +2092,8 @@
       
       // Spawn Crates (25) - scattered around
       for (let i = 0; i < 25; i++) {
-        const x = (Math.random() - 0.5) * 200;
-        const z = (Math.random() - 0.5) * 200;
+        const x = (Math.random() - 0.5) * 130;
+        const z = (Math.random() - 0.5) * 130;
         if (isPositionExcluded(x, z)) continue;
         
         const crate = createDestructibleProp('crate', new THREE.Vector3(x, 0, z));
@@ -2124,7 +2104,7 @@
       // REGIONAL CONTENT: Desert, Snowy Mountains, Forest, Sci-Fi/Alien
       // ===================================================================
 
-      // --- DESERT REGION (x: 50-200, z: -200 to 0) ---
+      // --- DESERT REGION (x: 30-120, z: -120 to 0) ---
       // Camel props near pyramid
       function createCamel(cx, cz) {
         const camelGroup = new THREE.Group();
@@ -2165,19 +2145,19 @@
         });
         scene.add(camelGroup);
       }
-      createCamel(80, -70);
-      createCamel(120, -90);
-      createCamel(95, -120);
+      createCamel(50, -44);
+      createCamel(72, -54);
+      createCamel(57, -72);
 
       // Sand dunes in desert
       const sandMat = new THREE.MeshToonMaterial({ color: 0xE8C880 });
       const dunePositions = [
-        { x: 100, z: -80, rx: 0.6, rz: 1.2 },
-        { x: 140, z: -60, rx: 0.8, rz: 1.5 },
-        { x: 120, z: -130, rx: 0.5, rz: 1.0 },
-        { x: 160, z: -100, rx: 0.7, rz: 1.3 },
-        { x: 90, z: -150, rx: 0.6, rz: 1.1 },
-        { x: 170, z: -140, rx: 0.9, rz: 1.6 },
+        { x: 60, z: -50, rx: 0.6, rz: 1.2 },
+        { x: 84, z: -36, rx: 0.8, rz: 1.5 },
+        { x: 72, z: -78, rx: 0.5, rz: 1.0 },
+        { x: 96, z: -60, rx: 0.7, rz: 1.3 },
+        { x: 54, z: -90, rx: 0.6, rz: 1.1 },
+        { x: 102, z: -84, rx: 0.9, rz: 1.6 },
       ];
       dunePositions.forEach(d => {
         const duneGeo = new THREE.SphereGeometry(d.rx, 8, 6);
@@ -2191,7 +2171,7 @@
       // Old rusty car in desert
       (function() {
         const carGroup = new THREE.Group();
-        carGroup.position.set(110, 0, -80);
+        carGroup.position.set(66, 0, -50);
         carGroup.rotation.y = 0.7;
         const rustyMat = new THREE.MeshToonMaterial({ color: 0x8B4513 });
         // Car body
@@ -2220,16 +2200,16 @@
 
       // Sandy ground overlay for desert region
       const desertGroundMat = new THREE.MeshToonMaterial({ color: 0xDEB887, transparent: true, opacity: 0.5, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 });
-      const desertGround = new THREE.Mesh(new THREE.PlaneGeometry(150, 200), desertGroundMat);
+      const desertGround = new THREE.Mesh(new THREE.PlaneGeometry(90, 120), desertGroundMat);
       desertGround.rotation.x = -Math.PI / 2;
-      desertGround.position.set(125, 0.005, -100);
+      desertGround.position.set(75, 0.005, -60);
       scene.add(desertGround);
 
-      // --- SNOWY MOUNTAINS REGION (x: -200 to 0, z: -200 to 0) ---
+      // --- SNOWY MOUNTAINS REGION (x: -120 to 0, z: -120 to 0) ---
       // Volcano with glowing orange/red lava crater
       (function() {
         const volcanoGroup = new THREE.Group();
-        volcanoGroup.position.set(-100, 0, -120);
+        volcanoGroup.position.set(-60, 0, -72);
         
         const volMat = new THREE.MeshStandardMaterial({ color: 0x4A3525, roughness: 0.95, metalness: 0.0 }); // Dark volcanic rock
         // Volcano base cone - SCALED DOWN so it fits on screen
@@ -2317,21 +2297,21 @@
 
       // Snowy ground overlay
       const snowGroundMat = new THREE.MeshToonMaterial({ color: 0xEEEEFF, transparent: true, opacity: 0.4, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 });
-      const snowGround = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), snowGroundMat);
+      const snowGround = new THREE.Mesh(new THREE.PlaneGeometry(120, 120), snowGroundMat);
       snowGround.rotation.x = -Math.PI / 2;
-      snowGround.position.set(-100, 0.006, -100);
+      snowGround.position.set(-60, 0.006, -60);
       snowGround.receiveShadow = true;
       scene.add(snowGround);
 
-      // --- FOREST/GREEN REGION (x: 0-200, z: 0-200) - Extra trees and mushrooms near Stonehenge ---
+      // --- FOREST/GREEN REGION (x: 0-120, z: 0-120) - Extra trees and mushrooms near Stonehenge ---
       // Dense trees around Stonehenge (NOT inside the stone circle)
       const stonehengeTreeTrunkMat = new THREE.MeshToonMaterial({ color: 0x4A2C0A });
       const stonehengeTreeLeavesMat = new THREE.MeshToonMaterial({ color: 0x1A7A1A });
       const stonehengeDenseTreeData = [
-        {x:78, z:62}, {x:80, z:55}, {x:76, z:70}, {x:85, z:65},
-        {x:42, z:62}, {x:40, z:55}, {x:44, z:70}, {x:38, z:65},
-        {x:62, z:42}, {x:55, z:40}, {x:70, z:44}, {x:65, z:38},
-        {x:62, z:78}, {x:55, z:80}, {x:70, z:76}, {x:65, z:85},
+        {x:48, z:38}, {x:50, z:34}, {x:46, z:42}, {x:52, z:40},
+        {x:26, z:38}, {x:25, z:34}, {x:27, z:42}, {x:23, z:40},
+        {x:38, z:26}, {x:34, z:25}, {x:42, z:27}, {x:40, z:23},
+        {x:38, z:48}, {x:34, z:50}, {x:42, z:46}, {x:40, z:52},
       ];
       stonehengeDenseTreeData.forEach(td => {
         const tg = new THREE.Group();
@@ -2348,9 +2328,9 @@
       const mushroomCapMat = new THREE.MeshToonMaterial({ color: 0xC0392B }); // Red mushroom cap
       const mushroomStemMat = new THREE.MeshToonMaterial({ color: 0xFFF8DC }); // Cream stem
       const mushroomData = [
-        {x:75, z:75, s:1.0}, {x:85, z:80, s:0.7}, {x:90, z:70, s:1.2},
-        {x:70, z:90, s:0.8}, {x:100, z:80, s:1.0}, {x:80, z:100, s:0.6},
-        {x:110, z:70, s:1.3}, {x:65, z:110, s:0.9},
+        {x:45, z:45, s:1.0}, {x:52, z:48, s:0.7}, {x:54, z:42, s:1.2},
+        {x:42, z:54, s:0.8}, {x:60, z:48, s:1.0}, {x:48, z:60, s:0.6},
+        {x:66, z:42, s:1.3}, {x:40, z:66, s:0.9},
       ];
       mushroomData.forEach(m => {
         const mGroup = new THREE.Group();
@@ -2367,11 +2347,11 @@
         scene.add(mGroup);
       });
 
-      // --- SCI-FI/ALIEN REGION (x: -200 to 0, z: 0 to 200) ---
+      // --- SCI-FI/ALIEN REGION (x: -120 to 0, z: 0 to 120) ---
       // Area 51 building
       (function() {
         const area51Group = new THREE.Group();
-        area51Group.position.set(-120, 0, 100);
+        area51Group.position.set(-75, 0, 60);
         
         const a51Mat = new THREE.MeshToonMaterial({ color: 0x888888 }); // Flat grey
         // Main hangar building
@@ -2485,7 +2465,7 @@
       // Crashed alien spaceship
       (function() {
         const shipGroup = new THREE.Group();
-        shipGroup.position.set(-150, 0, 60);
+        shipGroup.position.set(-90, 0, 40);
         shipGroup.rotation.y = 0.8;
         
         // Disc body (saucer shape)
@@ -2547,14 +2527,14 @@
         const crashMat = new THREE.MeshBasicMaterial({ color: 0x4A3728, transparent: true, opacity: 0.7 });
         const crashCrater = new THREE.Mesh(crashGeo, crashMat);
         crashCrater.rotation.x = -Math.PI / 2;
-        crashCrater.position.set(-150, 0.01, 60);
+        crashCrater.position.set(-90, 0.01, 40);
         scene.add(crashCrater);
         
         scene.add(shipGroup);
 
         // Add a glowing Companion Egg near the UFO crash site (quest18 objective)
         const eggGroup = new THREE.Group();
-        eggGroup.position.set(-148, 0, 58);
+        eggGroup.position.set(-88, 0, 38);
         const eggGeo = new THREE.SphereGeometry(0.7, 12, 10);
         eggGeo.scale(1, 1.3, 1);
         const eggMat = new THREE.MeshPhysicalMaterial({
@@ -2576,16 +2556,16 @@
 
       // Alien/sci-fi ground overlay
       const scifiGroundMat = new THREE.MeshToonMaterial({ color: 0x334433, transparent: true, opacity: 0.3, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 });
-      const scifiGround = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), scifiGroundMat);
+      const scifiGround = new THREE.Mesh(new THREE.PlaneGeometry(120, 120), scifiGroundMat);
       scifiGround.rotation.x = -Math.PI / 2;
-      scifiGround.position.set(-100, 0.006, 100);
+      scifiGround.position.set(-60, 0.006, 60);
       scifiGround.receiveShadow = true;
       scene.add(scifiGround);
 
       // --- NEAR SPAWN: Roman Colosseum ---
       (function() {
         const colosseumGroup = new THREE.Group();
-        colosseumGroup.position.set(-25, 0, 25);
+        colosseumGroup.position.set(-18, 0, 18);
 
         // Primary palette: warm beige/travertine limestone
         const stoneMat     = new THREE.MeshStandardMaterial({ color: 0xD4B896, roughness: 0.88, metalness: 0.0 });
@@ -2757,8 +2737,8 @@
       // --- WATER LILIES on the lake ---
       const lilyMat = new THREE.MeshToonMaterial({ color: 0x228B22, side: THREE.DoubleSide });
       const lilyPositions = [
-        {x:24, z:-26}, {x:33, z:-22}, {x:36, z:-35}, {x:27, z:-38},
-        {x:22, z:-33}, {x:38, z:-28}, {x:29, z:-24}, {x:35, z:-40},
+        {x:14, z:-16}, {x:23, z:-12}, {x:26, z:-25}, {x:17, z:-28},
+        {x:12, z:-23}, {x:28, z:-18}, {x:19, z:-14}, {x:25, z:-30},
       ];
       lilyPositions.forEach((lp, lilyIdx) => {
         const lilyGeo = new THREE.CircleGeometry(0.7 + seededRandom(lilyIdx * 31) * 0.4, 8); // 31 = prime for varied lily sizes
@@ -2777,9 +2757,9 @@
 
       // --- RIVERS: 2 winding paths of flat blue planes ---
       const riverMat = new THREE.MeshBasicMaterial({ color: 0x4499CC, transparent: true, opacity: 0.65 });
-      // River 1: from lake (30,-30) northeast toward Stonehenge direction
+      // River 1: from lake (20,-20) northeast toward Stonehenge direction
       const river1Points = [
-        [30, -30], [25, -15], [20, 0], [15, 15], [25, 30]
+        [20, -20], [16, -10], [13, 0], [10, 10], [16, 20]
       ];
       for (let r = 0; r < river1Points.length - 1; r++) {
         const [ax, az] = river1Points[r];
@@ -2796,7 +2776,7 @@
       // River 2 removed — only one river flows through the map
       // Stone bridges over rivers
       const bridgeMat = new THREE.MeshToonMaterial({ color: 0x888880 });
-      [[20, 0]].forEach(([bx, bz]) => {
+      [[13, 0]].forEach(([bx, bz]) => {
         const bridgeGeo = new THREE.BoxGeometry(4, 0.3, 1.5);
         const bridge = new THREE.Mesh(bridgeGeo, bridgeMat);
         bridge.position.set(bx, 0.1, bz);
@@ -2825,7 +2805,7 @@
         return new THREE.CanvasTexture(cv);
       });
       let signIdx = 0;
-      const BORDER = 195;
+      const BORDER = 120;
       const FENCE_STEP = 10;
       // North & South edges
       [-BORDER, BORDER].forEach(edgeZ => {
@@ -2871,7 +2851,7 @@
 
       // --- Tesla Tower Point Light (blue/white) ---
       const teslaLight = new THREE.PointLight(0x00CCFF, 3, 30);
-      teslaLight.position.set(-80, 18, -80);
+      teslaLight.position.set(-50, 18, -50);
       teslaLight.userData = { isTeslaLight: true, phase: 0 };
       scene.add(teslaLight);
       window.teslaPointLight = teslaLight;
@@ -2881,9 +2861,9 @@
       if (window.GameWorld && window.GameWorld.WILDLIFE) {
         const WILDLIFE = window.GameWorld.WILDLIFE;
         const regionCenters = {
-          forest: { x: 0, z: 50, spread: 80 },
-          desert: { x: 120, z: -80, spread: 60 },
-          snow:   { x: -120, z: -100, spread: 60 }
+          forest: { x: 0, z: 30, spread: 50 },
+          desert: { x: 72, z: -50, spread: 40 },
+          snow:   { x: -72, z: -60, spread: 40 }
         };
         const animalMeshes = [];
         for (const [animalId, animal] of Object.entries(WILDLIFE)) {

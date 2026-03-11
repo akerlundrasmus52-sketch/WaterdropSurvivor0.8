@@ -608,10 +608,10 @@
     let _annunakiOrbSpawned   = false; // True once the minute-15 Annunaki Orb is spawned this run
     // Landmark positions and detection radii for quest11_findAllLandmarks
     const LANDMARK_CONFIGS = {
-      stonehenge:  { x: 100, z:  80, radius: 20, key: 'stonehenge',  label: 'Stonehenge'  },
-      pyramid:     { x:  50, z: -50, radius: 20, key: 'pyramid',     label: 'Pyramid'     },
-      montana:     { x:   0, z:-200, radius: 25, key: 'montana',     label: 'Montana'     },
-      teslaTower:  { x: -80, z: -80, radius: 25, key: 'teslaTower',  label: 'Tesla Tower' }
+      stonehenge:  { x:  60, z:  50, radius: 20, key: 'stonehenge',  label: 'Stonehenge'  },
+      pyramid:     { x:  35, z: -35, radius: 20, key: 'pyramid',     label: 'Pyramid'     },
+      montana:     { x:   0, z:-100, radius: 25, key: 'montana',     label: 'Montana'     },
+      teslaTower:  { x: -50, z: -50, radius: 25, key: 'teslaTower',  label: 'Tesla Tower' }
     };
     
     // Countdown system (PR #70-71)

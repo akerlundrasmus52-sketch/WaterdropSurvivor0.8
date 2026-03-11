@@ -689,11 +689,11 @@
 
       // Region label data
       const regions = [
-        { label: '⚙️ Windmill',       wx: 60,  wy: 0, wz: 40  },
-        { label: '⛰️ Montana',        wx: -50, wy: 0, wz: -50 },
-        { label: '⚡ Eiffel Tower',    wx: 70,  wy: 0, wz: -60 },
-        { label: '🗿 Stonehenge',      wx: -60, wy: 0, wz: 60  },
-        { label: '🔺 Illuminati',      wx: -70, wy: 0, wz: 50  },
+        { label: '⚙️ Windmill',       wx: 25,  wy: 0, wz: 25  },
+        { label: '⛰️ Montana',        wx: 0,   wy: 0, wz: -100 },
+        { label: '⚡ Eiffel Tower',    wx: -50, wy: 0, wz: 90  },
+        { label: '🗿 Stonehenge',      wx: 60,  wy: 0, wz: 50  },
+        { label: '🔺 Pyramid',         wx: 35,  wy: 0, wz: -35 },
         { label: '🏠 Spawn',           wx: 0,   wy: 0, wz: 0   }
       ];
 
@@ -4245,7 +4245,7 @@
         
         do {
           const angle = Math.random() * Math.PI * 2;
-          const dist = 25 + Math.random() * 10; // Just outside view
+          const dist = 15 + Math.random() * 8; // Tighter spawn — just off-screen
           ex = player.mesh.position.x + Math.cos(angle) * dist;
           ez = player.mesh.position.z + Math.sin(angle) * dist;
           
