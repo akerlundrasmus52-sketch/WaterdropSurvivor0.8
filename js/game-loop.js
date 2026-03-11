@@ -915,8 +915,12 @@
       }
 
       // Annunaki Protocol: drain ANNUNAKI_HP_DRAIN_RATE % max HP per second (every 60 frames)
+      // Double-check saveData to prevent drain when the protocol is not explicitly unlocked
+      // (guards against stale window flags from previous sessions).
       const ANNUNAKI_HP_DRAIN_RATE = 0.01; // 1% max HP per second — forces ultra-aggressive playstyle
-      if (window._nmAnnunakiActive && frameCount % 60 === 0) {
+      if (window._nmAnnunakiActive
+          && saveData?.neuralMatrix?.annunakiProtocol
+          && frameCount % 60 === 0) {
         const drain = Math.max(1, playerStats.maxHp * ANNUNAKI_HP_DRAIN_RATE);
         player.takeDamage(drain);
       }
