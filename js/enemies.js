@@ -271,8 +271,10 @@ const ENEMY_THROTTLE = {
   MEDIUM_SQ:     6400,   // 80²
   /** Far band — update every 4th frame. */
   FAR_SQ:        10000,  // 100²
-  /** Very-far / off-screen — update every 10th frame (~100 ms at 100 fps). */
-  OFFSCREEN_DIVISOR: 10
+  /** Very-far / off-screen — update every 4th frame (~33 ms at 120 fps).
+   *  Matches FAR_SQ divisor intentionally: enemies beyond 100 units and
+   *  fully off-screen both get the same throttle to avoid jitter on re-entry. */
+  OFFSCREEN_DIVISOR: 4
 };
 
 /**
