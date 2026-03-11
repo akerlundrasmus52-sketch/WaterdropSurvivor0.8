@@ -3224,6 +3224,15 @@
         // If this enemy was rendered via instancing, add its mesh to the scene
         // now so the death animation (fall/splatter) is visible.
         if (this._usesInstancing) {
+          // Scale correction: the proxy mesh uses SHARED_GEO.sphere (radius 1) for types 0 and 2,
+          // but the instanced renderer renders them with smaller geometry:
+          //   type 0 (tank)     → SphereGeometry(0.6)        → deathScale 0.60
+          //   type 1 (fast)     → CapsuleGeometry(0.3, 0.8)  → deathScale 0.71 (≈ 0.3/0.42)
+          //   type 2 (balanced) → DodecahedronGeometry(0.5)  → deathScale 0.50
+          // Without this correction the death mesh appears as a large "big ball".
+          const _INSTANCED_DEATH_SCALE = { 0: 0.60, 1: 0.71, 2: 0.50 };
+          const deathScale = _INSTANCED_DEATH_SCALE[this.type];
+          if (deathScale !== undefined) this.mesh.scale.setScalar(deathScale);
           scene.add(this.mesh);
           this._usesInstancing = false;
         }

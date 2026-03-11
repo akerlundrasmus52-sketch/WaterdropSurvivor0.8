@@ -1105,6 +1105,11 @@
             if (!e.isFrozen && e._lastMoveVX !== undefined && e._lastMoveVZ !== undefined) {
               e.mesh.position.x += e._lastMoveVX * 60 * dt;
               e.mesh.position.z += e._lastMoveVZ * 60 * dt;
+              // Keep ground shadow in sync so it doesn't lag behind the body on throttled frames.
+              if (e.groundShadow) {
+                e.groundShadow.position.x = e.mesh.position.x;
+                e.groundShadow.position.z = e.mesh.position.z;
+              }
               if (window._enemySpatialHash) window._enemySpatialHash.update(e);
             }
             // Continue interpolating rotation toward the last target so
@@ -1125,6 +1130,11 @@
           if (!e.isFrozen && e._lastMoveVX !== undefined && e._lastMoveVZ !== undefined) {
             e.mesh.position.x += e._lastMoveVX * 60 * dt;
             e.mesh.position.z += e._lastMoveVZ * 60 * dt;
+            // Keep ground shadow in sync so it doesn't lag behind the body on throttled frames.
+            if (e.groundShadow) {
+              e.groundShadow.position.x = e.mesh.position.x;
+              e.groundShadow.position.z = e.mesh.position.z;
+            }
             if (window._enemySpatialHash) window._enemySpatialHash.update(e);
           }
           if (e._targetRotY !== undefined) {
@@ -2643,9 +2653,9 @@
         }
 
         ir.beginFrame();
-        ir.syncEntities('enemy_tank',     enemies,     e => !e.isDead && e.type === 0);
-        ir.syncEntities('enemy_fast',     enemies,     e => !e.isDead && e.type === 1);
-        ir.syncEntities('enemy_balanced', enemies,     e => !e.isDead && e.type === 2);
+        ir.syncEntities('enemy_tank',     enemies,     e => !e.isDead && e.type === 0 && e._usesInstancing);
+        ir.syncEntities('enemy_fast',     enemies,     e => !e.isDead && e.type === 1 && e._usesInstancing);
+        ir.syncEntities('enemy_balanced', enemies,     e => !e.isDead && e.type === 2 && e._usesInstancing);
 
         // Sync eye positions for instanced enemies — compute world-space position from
         // the body mesh's transform (position + Y-rotation + scale).  Eyes are spheres
