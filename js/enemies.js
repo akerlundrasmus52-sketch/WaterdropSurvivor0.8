@@ -265,14 +265,14 @@ function getEnemyBaseStats(type, levelScaling, speedBase, playerLevel) {
 
 /** Squared-distance thresholds (world units²) for AI update LOD bands. */
 const ENEMY_THROTTLE = {
-  /** Near band — update every frame. */
-  NEAR_SQ:       256,    // 16²
+  /** Near band — update every frame.  Covers most on-screen enemies. */
+  NEAR_SQ:       1024,   // 32²  (was 16² — too small, caused visible jitter)
   /** Medium band — update every 2nd frame. */
-  MEDIUM_SQ:     1600,   // 40²
-  /** Far band — update every 4th frame. */
+  MEDIUM_SQ:     2500,   // 50²  (was 40²)
+  /** Far band — update every 3rd frame. */
   FAR_SQ:        6400,   // 80²
-  /** Very-far / off-screen — update every 10th frame (~100 ms at 100 fps). */
-  OFFSCREEN_DIVISOR: 10
+  /** Very-far / off-screen — update every 4th frame. */
+  OFFSCREEN_DIVISOR: 4   // (was 10 — caused extreme jitter / frame-skipping look)
 };
 
 /**
@@ -285,7 +285,7 @@ const ENEMY_THROTTLE = {
 function getEnemyTickDivisor(distSq) {
   if (distSq < ENEMY_THROTTLE.NEAR_SQ)   return 1;
   if (distSq < ENEMY_THROTTLE.MEDIUM_SQ) return 2;
-  if (distSq < ENEMY_THROTTLE.FAR_SQ)    return 4;
+  if (distSq < ENEMY_THROTTLE.FAR_SQ)    return 3;
   return ENEMY_THROTTLE.OFFSCREEN_DIVISOR;
 }
 

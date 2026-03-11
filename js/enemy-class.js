@@ -108,13 +108,17 @@
 
     // Shared eye geometry and material reused by all enemy types that have eyes
     const SHARED_EYE_GEO = new THREE.SphereGeometry(0.09, 5, 5);
+    const SHARED_PUPIL_GEO = new THREE.SphereGeometry(0.055, 4, 4);
     const SHARED_EYE_MAT = new THREE.MeshBasicMaterial({ color: 0xFFFFFF });
     const SHARED_PUPIL_MAT = new THREE.MeshBasicMaterial({ color: 0x000000 });
     SHARED_EYE_MAT._isShared = true;
     SHARED_PUPIL_MAT._isShared = true;
+    SHARED_PUPIL_GEO._isShared = true;
     // Expose for object-pool.js to restore eyes on recycled enemies
     window.SHARED_EYE_GEO = SHARED_EYE_GEO;
+    window.SHARED_PUPIL_GEO = SHARED_PUPIL_GEO;
     window.SHARED_EYE_MAT = SHARED_EYE_MAT;
+    window.SHARED_PUPIL_MAT = SHARED_PUPIL_MAT;
     window.ENEMY_TYPES_WITH_EYES = ENEMY_TYPES_WITH_EYES;
 
     // ── Shared leg geometry — used by all legged enemy types (one geo, many instances) ──────
@@ -618,6 +622,8 @@
 
         // ── EYES — restored for creature-type enemies using shared geometry/material ─
         // Each eye is a child of this.mesh; no new geometries are allocated per enemy.
+        // A small black pupil is added as a child of each eye so it inherits the
+        // lookAt() tracking automatically, giving enemies expressive, focused eyes.
         this.leftEye  = null;
         this.rightEye = null;
         if (ENEMY_TYPES_WITH_EYES.has(type)) {
@@ -631,6 +637,13 @@
           const _eyeZ = (type === 10 || type === 11 || type === 19) ? 1.15 : ((type >= 12 && type <= 14) ? 0.9 : 0.88);
           _eyeL.position.set(-0.32, 0.28, _eyeZ);
           _eyeR.position.set( 0.32, 0.28, _eyeZ);
+          // Add black pupils as children of each eye — follows lookAt tracking
+          const _pupilL = new THREE.Mesh(SHARED_PUPIL_GEO, SHARED_PUPIL_MAT);
+          const _pupilR = new THREE.Mesh(SHARED_PUPIL_GEO, SHARED_PUPIL_MAT);
+          _pupilL.position.set(0, 0, 0.045);
+          _pupilR.position.set(0, 0, 0.045);
+          _eyeL.add(_pupilL);
+          _eyeR.add(_pupilR);
           this.mesh.add(_eyeL);
           this.mesh.add(_eyeR);
           this.leftEye  = _eyeL;
@@ -3181,6 +3194,11 @@
         if (this._droneShakeTimer) {
           clearInterval(this._droneShakeTimer);
           this._droneShakeTimer = null;
+        }
+        // Cancel pending phasing timeout to prevent material mutation on recycled enemy
+        if (this._phaseClearTimer) {
+          clearTimeout(this._phaseClearTimer);
+          this._phaseClearTimer = null;
         }
         // Cancel shotgun slide and clear velocity to prevent movement on dead enemy
         this._shotgunSlide = null;

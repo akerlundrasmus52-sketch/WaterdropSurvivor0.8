@@ -201,6 +201,20 @@ window.enemyPool = (function () {
     enemy._gutsExposed         = false;
     enemy._originalColor       = null;
     enemy._skipMainDeathAnim   = false;
+    enemy._arterialSpurtFired  = false;
+    enemy._inGeyserBleedout    = false;
+
+    // ── Phasing State ────────────────────────────────────────────────────────
+    // Clear phasing flags so recycled enemies are not invincible on first hit.
+    // _phasingEnabled will be re-set by Object.assign(enemy, stats) below if
+    // the current player level qualifies for phasing.
+    if (enemy._phaseClearTimer) {
+      clearTimeout(enemy._phaseClearTimer);
+      enemy._phaseClearTimer = null;
+    }
+    enemy._phasingEnabled      = false;
+    enemy._isPhasing           = false;
+    enemy._phaseIgnoreNext     = false;
 
     // ── Status Effects ───────────────────────────────────────────────────────
     enemy.isFrozen             = false;
@@ -303,9 +317,24 @@ window.enemyPool = (function () {
         _foundR.visible = true;
         _foundL.scale.set(_foundL.scale.x, 1, _foundL.scale.z); // reset blink scale
         _foundR.scale.set(_foundR.scale.x, 1, _foundR.scale.z);
+        // Ensure pupils are present (may have been lost during death animation)
+        const _pupilMat = window.SHARED_PUPIL_MAT;
+        const _pupilGeo = window.SHARED_PUPIL_GEO;
+        if (_pupilMat && _pupilGeo) {
+          [_foundL, _foundR].forEach(eye => {
+            const hasPupil = eye.children.some(c => c.material === _pupilMat);
+            if (!hasPupil) {
+              const p = new THREE.Mesh(_pupilGeo, _pupilMat);
+              p.position.set(0, 0, 0.045);
+              eye.add(p);
+            }
+          });
+        }
       } else {
         // Fallback: recreate eyes if originals were lost
         const _eyeGeo = window.SHARED_EYE_GEO;
+        const _pupilGeo = window.SHARED_PUPIL_GEO;
+        const _pupilMat = window.SHARED_PUPIL_MAT;
         if (_eyeGeo) {
           const _eyeScale = (type >= 12 && type <= 14) ? 1.2 : 0.85;
           const _eyeL = new THREE.Mesh(_eyeGeo, _eyeMat);
@@ -315,6 +344,15 @@ window.enemyPool = (function () {
           const _eyeZ = (type === 10 || type === 11 || type === 19) ? 1.15 : ((type >= 12 && type <= 14) ? 0.9 : 0.88);
           _eyeL.position.set(-0.32, 0.28, _eyeZ);
           _eyeR.position.set( 0.32, 0.28, _eyeZ);
+          // Add pupils to recreated eyes
+          if (_pupilGeo && _pupilMat) {
+            const pL = new THREE.Mesh(_pupilGeo, _pupilMat);
+            const pR = new THREE.Mesh(_pupilGeo, _pupilMat);
+            pL.position.set(0, 0, 0.045);
+            pR.position.set(0, 0, 0.045);
+            _eyeL.add(pL);
+            _eyeR.add(pR);
+          }
           enemy.mesh.add(_eyeL);
           enemy.mesh.add(_eyeR);
           enemy.leftEye  = _eyeL;

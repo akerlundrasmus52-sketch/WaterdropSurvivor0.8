@@ -617,9 +617,9 @@
       }
 
       // Cap frame rate at 120fps to avoid unnecessary GPU work on high-refresh screens.
-      // Use a fixed increment to avoid under-running the target on high-refresh displays.
+      // Use the actual timestamp to prevent drift that causes uneven frame spacing.
       if (time - _lastAnimTime < _MIN_FRAME_MS) return;
-      _lastAnimTime += _MIN_FRAME_MS;
+      _lastAnimTime = time;
 
       // Initialize lastTime on first frame to prevent huge dt (PR #82 fix)
       if (lastTime === null) {
@@ -1091,6 +1091,7 @@
       const _shouldUpdateFn = window.GameEnemies && window.GameEnemies.shouldUpdateEnemy;
       const _camX = camera.position.x;
       const _camZ = camera.position.z;
+      const _playerPos = player && player.mesh ? player.mesh.position : null;
       enemies.forEach((e, _idx) => {
         if (!e || !e.mesh || e.isDead) return;
         // Distance from camera determines throttle band (not player — saves CPU for off-screen enemies)
@@ -1106,8 +1107,15 @@
               e.mesh.position.x += e._lastMoveVX * 60 * dt;
               e.mesh.position.z += e._lastMoveVZ * 60 * dt;
             }
-            // Continue interpolating rotation toward the last target so
-            // the facing direction doesn't freeze until the next full tick.
+            // Recompute rotation target from current player position so facing
+            // doesn't lag behind when the update tick is throttled.
+            if (_playerPos && !e.isFrozen) {
+              const _rdx = _playerPos.x - e.mesh.position.x;
+              const _rdz = _playerPos.z - e.mesh.position.z;
+              if (_rdx * _rdx + _rdz * _rdz > 0.01) {
+                e._targetRotY = Math.atan2(_rdx, _rdz);
+              }
+            }
             if (e._targetRotY !== undefined) {
               let _tDelta = e._targetRotY - e.mesh.rotation.y;
               if (_tDelta > Math.PI) _tDelta -= Math.PI * 2;
