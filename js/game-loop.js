@@ -1105,6 +1105,7 @@
             if (!e.isFrozen && e._lastMoveVX !== undefined && e._lastMoveVZ !== undefined) {
               e.mesh.position.x += e._lastMoveVX * 60 * dt;
               e.mesh.position.z += e._lastMoveVZ * 60 * dt;
+              if (window._enemySpatialHash) window._enemySpatialHash.update(e);
             }
             // Continue interpolating rotation toward the last target so
             // the facing direction doesn't freeze until the next full tick.
@@ -1124,6 +1125,7 @@
           if (!e.isFrozen && e._lastMoveVX !== undefined && e._lastMoveVZ !== undefined) {
             e.mesh.position.x += e._lastMoveVX * 60 * dt;
             e.mesh.position.z += e._lastMoveVZ * 60 * dt;
+            if (window._enemySpatialHash) window._enemySpatialHash.update(e);
           }
           if (e._targetRotY !== undefined) {
             let _tDelta = e._targetRotY - e.mesh.rotation.y;
@@ -2650,42 +2652,39 @@
         // so rotation in the eye batch itself doesn't matter visually.
         const _eyeBatch = ir.getBatch('enemy_eye');
         if (_eyeBatch) {
-          const _eyeSpread = 0.18; // local X offset (types 0-2 all share these values)
-          // Positive fwd: Math.atan2(dx, dz) rotation makes local +Z point toward the player,
-          // so eyes placed at +Z appear on the front face (facing the player).
-          // Matches the constructor's `eyeForward = 0.42` in enemy-class.js lines 389-395.
-          const _eyeFwd    = 0.42; // local Z offset (toward player)
+          const _eyeSpread = 0.18;  // local X offset (types 0-2 all share this value)
+          const _eyeYOff   = 0.28;  // local Y offset — fixed (matches non-instanced eyes)
+          // Forward (local +Z) offset per type so eyes sit outside the body mesh.
+          // Tank (0) body radius ~0.55, Balanced (2) ~0.45, Fast (1) ~0.32.
+          const _EYE_FWD_BY_TYPE = { 0: 0.58, 1: 0.35, 2: 0.48 };
           for (let _ei = 0; _ei < enemies.length; _ei++) {
             const _e = enemies[_ei];
             if (!_e || !_e.mesh || _e.isDead || !_e._usesInstancing) continue;
             if (_e.type !== 0 && _e.type !== 1 && _e.type !== 2) continue;
 
+            const _eyeFwd = _EYE_FWD_BY_TYPE[_e.type] ?? 0.42;
+
             const _mx  = _e.mesh.position.x;
             const _my  = _e.mesh.position.y;
             const _mz  = _e.mesh.position.z;
             const _ry  = _e.mesh.rotation.y;
-            const _sc  = Math.cos(_ry);
-            const _ss  = Math.sin(_ry);
-            // Account for mesh scale (squish animation gives slight XZ/Y variation)
-            const _sx  = _e.mesh.scale.x; // treat as uniform for XZ plane
-            const _sy  = _e.mesh.scale.y;
-            const _spr = _eyeSpread * _sx;
-            const _fwd = _eyeFwd    * _sx;
-            const _yOff = 0.1       * _sy;
+            const _cos = Math.cos(_ry);
+            const _sin = Math.sin(_ry);
 
-            // Left eye: local (-spread, 0.1, fwd)
+            // Left eye: local (-spread, _eyeYOff, fwd)
+            // THREE.js Y-rotation matrix: wx = cos*lx + sin*lz, wz = -sin*lx + cos*lz
             _eyeSyncPos.set(
-              _mx + _sc * (-_spr) - _ss * _fwd,
-              _my + _yOff,
-              _mz + _ss * (-_spr) + _sc * _fwd
+              _mx + _cos * -_eyeSpread + _sin * _eyeFwd,
+              _my + _eyeYOff,
+              _mz + -_sin * -_eyeSpread + _cos * _eyeFwd
             );
             _eyeBatch.push(_eyeSyncPos, _eyeSyncEuler, _eyeSyncScale);
 
-            // Right eye: local (+spread, 0.1, fwd)
+            // Right eye: local (+spread, _eyeYOff, fwd)
             _eyeSyncPos.set(
-              _mx + _sc * _spr - _ss * _fwd,
-              _my + _yOff,
-              _mz + _ss * _spr + _sc * _fwd
+              _mx + _cos * _eyeSpread + _sin * _eyeFwd,
+              _my + _eyeYOff,
+              _mz + -_sin * _eyeSpread + _cos * _eyeFwd
             );
             _eyeBatch.push(_eyeSyncPos, _eyeSyncEuler, _eyeSyncScale);
           }

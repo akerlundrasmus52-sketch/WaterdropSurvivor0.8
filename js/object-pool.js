@@ -247,7 +247,7 @@ window.enemyPool = (function () {
     } else {
       enemy.mesh.scale.set(1, 1, 1);
     }
-    enemy.mesh.visible = true;
+    enemy.mesh.visible = !enemy._usesInstancing;
     // Restore the original (non-disposed) material saved at construction time.
     // Damage events clone the shared material; die() disposes the clone — without
     // this restore, recycled enemies render black or invisible.

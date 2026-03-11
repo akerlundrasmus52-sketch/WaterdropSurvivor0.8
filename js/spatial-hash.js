@@ -147,8 +147,8 @@ class SpatialHash {
 // Animation Throttle — reduce update frequency for distant entities
 // ---------------------------------------------------------------------------
 
-/** Default squared-distance LOD thresholds matching game-loop.js (16², 40², 80²). */
-const LOD_DEFAULTS = { near: 256, medium: 1600, far: 6400 };
+/** Default squared-distance LOD thresholds matching game-loop.js (50², 80², 100²). */
+const LOD_DEFAULTS = { near: 2500, medium: 6400, far: 10000 };
 
 const AnimationThrottle = {
   /** Distance² thresholds — assign new values to tune at runtime. */
