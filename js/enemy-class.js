@@ -609,11 +609,8 @@
         const _isBoss = (type === 10 || type === 11 || type === 19);
         this.mesh.castShadow = _isBoss;
         this.mesh.receiveShadow = _isBoss;
-        const _instancingTypes = (type === 0 || type === 1 || type === 2);
-        this._usesInstancing = _instancingTypes && !!(window._instancedRenderer && window._instancedRenderer.active);
-        if (!this._usesInstancing) {
-          scene.add(this.mesh);
-        }
+        this._usesInstancing = false;
+        scene.add(this.mesh);
 
         // ── HEAD NUBBIN — small dark indicator on top of each enemy ─────────────────
         this.headMesh = new THREE.Mesh(SHARED_GEO.cube, SHARED_MAT.black);

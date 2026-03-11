@@ -164,11 +164,6 @@
       new THREE.Vector3(), new THREE.Vector3()
     ];
     let _missileVelIdx = 0;
-    // Pre-allocated temporaries for instanced eye-batch sync (zero allocation per frame)
-    const _eyeSyncPos   = new THREE.Vector3();
-    const _eyeSyncEuler = new THREE.Euler();   // identity (0,0,0) — eyes are spheres, no rotation needed
-    const _eyeSyncScale = new THREE.Vector3(1, 1, 1);
-
     // ─── Frustum Culling ────────────────────────────────────────────────────────
     // Reusable Frustum + matrix objects — updated once per frame.
     // Used to skip update()/collision logic for off-screen entities.
@@ -1015,11 +1010,7 @@
         else player.update(dt);
       }
 
-      // Update enemy AI movement (was missing - enemies were frozen)
-      // PERFORMANCE: Camera-distance-based AI throttling for enemies.
-      // Uses shouldUpdateEnemy from enemies.js — camera distance determines LOD band.
-      // Near (< 16 units) → every frame, medium (16-40) → every 2nd,
-      // far (40-80) → every 4th, very far (> 80) → every 10th frame (~100ms).
+      // Update enemy AI movement — all enemies updated every frame for smooth motion.
       const _fc = performanceLog.frameCount;
       // Build spatial hash for enemy lookups (used by projectiles via window._enemySpatialHash)
       // TIME-SLICING: rebuild the hash every frame but insert enemies in batches of
@@ -1087,64 +1078,8 @@
       // Debug: track alive/died counts per frame for diagnostics
       const _dbgAliveBeforeEnemyTick = window.GameDebug && window.GameDebug.enabled
         ? enemies.filter(e => e && !e.isDead).length : 0;
-      // Camera-based throttle: use camera position for distance (off-screen enemies throttle to 10 fps)
-      const _shouldUpdateFn = window.GameEnemies && window.GameEnemies.shouldUpdateEnemy;
-      const _camX = camera.position.x;
-      const _camZ = camera.position.z;
-      enemies.forEach((e, _idx) => {
+      enemies.forEach((e) => {
         if (!e || !e.mesh || e.isDead) return;
-        // Distance from camera determines throttle band (not player — saves CPU for off-screen enemies)
-        const _cdx = e.mesh.position.x - _camX;
-        const _cdz = e.mesh.position.z - _camZ;
-        const _camDistSq = _cdx * _cdx + _cdz * _cdz;
-        if (_shouldUpdateFn) {
-          if (!_shouldUpdateFn(_camDistSq, _fc, _idx)) {
-            // AI update is throttled this frame, but still extrapolate position using the
-            // last computed velocity so the mesh moves smoothly every frame instead of
-            // freezing for N frames then jumping.
-            if (!e.isFrozen && e._lastMoveVX !== undefined && e._lastMoveVZ !== undefined) {
-              e.mesh.position.x += e._lastMoveVX * 60 * dt;
-              e.mesh.position.z += e._lastMoveVZ * 60 * dt;
-              // Keep ground shadow in sync so it doesn't lag behind the body on throttled frames.
-              if (e.groundShadow) {
-                e.groundShadow.position.x = e.mesh.position.x;
-                e.groundShadow.position.z = e.mesh.position.z;
-              }
-              if (window._enemySpatialHash) window._enemySpatialHash.update(e);
-            }
-            // Continue interpolating rotation toward the last target so
-            // the facing direction doesn't freeze until the next full tick.
-            if (e._targetRotY !== undefined) {
-              let _tDelta = e._targetRotY - e.mesh.rotation.y;
-              if (_tDelta > Math.PI) _tDelta -= Math.PI * 2;
-              if (_tDelta < -Math.PI) _tDelta += Math.PI * 2;
-              e.mesh.rotation.y += _tDelta * Math.min(1.0, dt * 10);
-            }
-            return;
-          }
-        }
-        // Frustum culling: skip full AI update for enemies completely outside the view.
-        // Still extrapolate position so enemies don't freeze off-screen and then
-        // jump/teleport when they re-enter the frustum.
-        if (!_isInFrustum(e.mesh.position)) {
-          if (!e.isFrozen && e._lastMoveVX !== undefined && e._lastMoveVZ !== undefined) {
-            e.mesh.position.x += e._lastMoveVX * 60 * dt;
-            e.mesh.position.z += e._lastMoveVZ * 60 * dt;
-            // Keep ground shadow in sync so it doesn't lag behind the body on throttled frames.
-            if (e.groundShadow) {
-              e.groundShadow.position.x = e.mesh.position.x;
-              e.groundShadow.position.z = e.mesh.position.z;
-            }
-            if (window._enemySpatialHash) window._enemySpatialHash.update(e);
-          }
-          if (e._targetRotY !== undefined) {
-            let _tDelta = e._targetRotY - e.mesh.rotation.y;
-            if (_tDelta > Math.PI) _tDelta -= Math.PI * 2;
-            if (_tDelta < -Math.PI) _tDelta += Math.PI * 2;
-            e.mesh.rotation.y += _tDelta * Math.min(1.0, dt * 10);
-          }
-          return;
-        }
         e.update(dt, player.mesh.position);
       });
       if (window.GameDebug && window.GameDebug.enabled) {
@@ -2639,73 +2574,13 @@
       }
 
       // --- Instanced renderer: sync entity transforms to GPU buffers ---
+      // Note: enemy instancing is disabled (enemies use regular scene meshes for correctness).
+      // Only EXP gems and player bullets use the instanced renderer.
       if (window._instancedRenderer && window._instancedRenderer.active) {
         const ir = window._instancedRenderer;
-
-        // Propagate each enemy's current material colour as its per-instance colour so that
-        // damage flashes (blood stain, freeze tint, etc.) are visible on instanced bodies.
-        // The batch materials use white base colour so setColorAt() passes through unchanged.
-        for (let _ei = 0; _ei < enemies.length; _ei++) {
-          const _e = enemies[_ei];
-          if (_e && _e.mesh && !_e.isDead && _e._usesInstancing && _e.mesh.material) {
-            _e._instanceColor = _e.mesh.material.color;
-          }
-        }
-
         ir.beginFrame();
-        ir.syncEntities('enemy_tank',     enemies,     e => !e.isDead && e.type === 0 && e._usesInstancing);
-        ir.syncEntities('enemy_fast',     enemies,     e => !e.isDead && e.type === 1 && e._usesInstancing);
-        ir.syncEntities('enemy_balanced', enemies,     e => !e.isDead && e.type === 2 && e._usesInstancing);
-
-        // Sync eye positions for instanced enemies — compute world-space position from
-        // the body mesh's transform (position + Y-rotation + scale).  Eyes are spheres
-        // so rotation in the eye batch itself doesn't matter visually.
-        const _eyeBatch = ir.getBatch('enemy_eye');
-        if (_eyeBatch) {
-          const _eyeSpread = 0.18;  // local X offset (types 0-2 all share this value)
-          const _eyeYOff   = 0.28;  // local Y offset — fixed (matches non-instanced eyes)
-          // Forward (local +Z) offset per type so eyes sit outside the body mesh.
-          // Tank (0) body radius ~0.55, Balanced (2) ~0.45, Fast (1) ~0.32.
-          const _EYE_FWD_BY_TYPE = { 0: 0.58, 1: 0.35, 2: 0.48 };
-          for (let _ei = 0; _ei < enemies.length; _ei++) {
-            const _e = enemies[_ei];
-            if (!_e || !_e.mesh || _e.isDead || !_e._usesInstancing) continue;
-            if (_e.type !== 0 && _e.type !== 1 && _e.type !== 2) continue;
-
-            const _eyeFwd = _EYE_FWD_BY_TYPE[_e.type] ?? 0.42;
-
-            const _mx  = _e.mesh.position.x;
-            const _my  = _e.mesh.position.y;
-            const _mz  = _e.mesh.position.z;
-            const _ry  = _e.mesh.rotation.y;
-            const _cos = Math.cos(_ry);
-            const _sin = Math.sin(_ry);
-
-            // Left eye: local (-spread, _eyeYOff, fwd)
-            // THREE.js Y-rotation matrix: wx = cos*lx + sin*lz, wz = -sin*lx + cos*lz
-            _eyeSyncPos.set(
-              _mx + _cos * -_eyeSpread + _sin * _eyeFwd,
-              _my + _eyeYOff,
-              _mz + -_sin * -_eyeSpread + _cos * _eyeFwd
-            );
-            _eyeBatch.push(_eyeSyncPos, _eyeSyncEuler, _eyeSyncScale);
-
-            // Right eye: local (+spread, _eyeYOff, fwd)
-            _eyeSyncPos.set(
-              _mx + _cos * _eyeSpread + _sin * _eyeFwd,
-              _my + _eyeYOff,
-              _mz + -_sin * _eyeSpread + _cos * _eyeFwd
-            );
-            _eyeBatch.push(_eyeSyncPos, _eyeSyncEuler, _eyeSyncScale);
-          }
-          // Note: endFrame() below will commit the eye batch along with all others.
-        }
-
         ir.syncEntities('exp_gem', expGems, g => g.active);
         ir.syncEntities('bullet', projectiles, p => p.active && !p.isEnemyProjectile);
-        // bullet_glow uses the same entity array: syncEntities reads p.mesh.position which is
-        // the bullet position.  The 'bullet_glow' batch geometry is a larger sphere (radius 0.18)
-        // so each instance renders as a soft halo around the corresponding bullet.
         ir.syncEntities('bullet_glow', projectiles, p => p.active && !p.isEnemyProjectile);
         ir.endFrame();
       }

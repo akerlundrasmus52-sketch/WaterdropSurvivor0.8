@@ -259,26 +259,11 @@ window.enemyPool = (function () {
     } else {
       enemy.mesh.scale.set(1, 1, 1);
     }
-    // ── Restore correct instancing mode ──────────────────────────────────────
-    // When an instanced enemy (type 0, 1, 2) dies, die() calls scene.add(mesh)
-    // and sets _usesInstancing=false so the death animation mesh is visible in
-    // the scene.  On recycle we must undo that: remove the mesh from the scene
-    // and restore _usesInstancing=true so rendering only goes through the
-    // InstancedMesh batch.  Without this fix, recycled enemies are double-rendered
-    // (regular scene mesh AND instanced batch at the same position), causing
-    // Z-fighting, wrong colors, wrong size, and flickering every frame.
-    const _shouldUseInstancing = (type === 0 || type === 1 || type === 2)
-      && !!(window._instancedRenderer && window._instancedRenderer.active);
-    if (_shouldUseInstancing && !enemy._usesInstancing) {
-      // Mesh was added to scene during die() for the death animation — remove it.
-      if (enemy.mesh.parent) enemy.mesh.parent.remove(enemy.mesh);
-      enemy._usesInstancing = true;
-    } else if (!_shouldUseInstancing && enemy._usesInstancing) {
-      // Instancing no longer available (renderer disabled) — promote to regular mesh.
-      if (typeof scene !== 'undefined' && scene && !enemy.mesh.parent) scene.add(enemy.mesh);
-      enemy._usesInstancing = false;
-    }
-    enemy.mesh.visible = !enemy._usesInstancing;
+    // Enemy instancing is disabled — meshes always live in the scene as regular objects.
+    // Ensure the mesh is visible and in the scene when recycled.
+    enemy._usesInstancing = false;
+    if (typeof scene !== 'undefined' && scene && !enemy.mesh.parent) scene.add(enemy.mesh);
+    enemy.mesh.visible = true;
     // Restore the original (non-disposed) material saved at construction time.
     // Damage events clone the shared material; die() disposes the clone — without
     // this restore, recycled enemies render black or invisible.
