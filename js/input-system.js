@@ -346,8 +346,9 @@
       const isPortrait = window.innerHeight > window.innerWidth;
       gameSettings.isPortrait = isPortrait;
       
+      // Landscape camera zoom — zoom OUT so the full map is visible
       if (!isPortrait) {
-        d *= 0.5; // Zoom in 50% for landscape
+        d *= 1.5; // Zoom out 50% for landscape: wider view, more map visible
       }
       
       camera.left = -d * aspect;

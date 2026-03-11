@@ -160,7 +160,7 @@
   // Placed east of campfire so first-time players discover them naturally
   const AIDA_ROBOT_POS  = { x: 7, z: 2 };
   const AIDA_CHIP_POS   = { x: 8.5, z: 3.5 };
-  const AIDA_INTRO_RADIUS = 3.0;
+  const AIDA_INTRO_RADIUS = 5.0;  // Generous radius so the interaction is easy to trigger
   let _aidaRobotMesh  = null;  // broken robot Group
   let _aidaChipMesh   = null;  // glowing chip Mesh (hidden after pickup)
   let _aidaIntroState = {      // session cache (authoritative value in saveData)
@@ -4716,6 +4716,7 @@
     get menuOpen() { return _menuOpen; },
     pauseInput: function () { _menuOpen = true; },
     resumeInput: _resumeInput,
+    _forceResumeInput: _resumeInput,
     enter,
     exit,
     update,

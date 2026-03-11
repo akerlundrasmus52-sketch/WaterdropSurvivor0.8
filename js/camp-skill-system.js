@@ -1378,6 +1378,12 @@
 
     function unlockSkill(skillId) {
       const skill = SKILL_TREE[skillId];
+      if (!skill) { showStatusMessage('Unknown skill!', 2000); return; }
+
+      // Ensure skillData entry exists in saveData before accessing it
+      if (!saveData.skillTree[skillId]) {
+        saveData.skillTree[skillId] = { level: 0, unlocked: false };
+      }
       const skillData = saveData.skillTree[skillId];
       
       if (skillData.level >= skill.maxLevel) {
@@ -1395,6 +1401,8 @@
         
         saveSaveData();
         updateCampScreen();
+        // Immediately re-render the skill tree panel so nodes update state visually
+        if (typeof renderSkillTreeWeb === 'function') renderSkillTreeWeb();
         playSound('collect');
         
         // Refresh special attack loadout HUD if a special attack or melee node was unlocked
