@@ -3131,8 +3131,9 @@
           clearInterval(this._droneShakeTimer);
           this._droneShakeTimer = null;
         }
-        // Cancel shotgun slide to prevent movement on dead enemy
+        // Cancel shotgun slide and clear velocity to prevent movement on dead enemy
         this._shotgunSlide = null;
+        this._playerVelocity = { x: 0, z: 0 };
         
         // Hide ground shadow for the duration of the death animation.
         // With pooling the shadow mesh is kept alive and restored on reuse;
