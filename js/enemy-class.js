@@ -941,8 +941,8 @@
             this.fireProjectile(targetPos);
             this.lastAttackTime = now;
           }
-          // Orbit with varying radius
-          const orbitSpeed = 0.012;
+          // Orbit with varying radius (dt-scaled for frame-rate independence)
+          const orbitSpeed = 0.72 * dt;
           const angle = Math.atan2(this.mesh.position.z - targetPos.z, this.mesh.position.x - targetPos.x);
           const newAngle = angle + orbitSpeed;
           const orbitR = this.attackRange * (0.6 + Math.sin(gameTime * 0.5) * 0.2);
@@ -1547,6 +1547,11 @@
             player.takeDamage(this.damage);
             this.lastAttackTime = now;
             
+            // Knockback on attack: push enemy away from player once per strike
+            // (moved inside cooldown check to prevent per-frame oscillation/stutter)
+            this.mesh.position.x -= (dx / dist) * 2.0;
+            this.mesh.position.z -= (dz / dist) * 2.0;
+            
             // Thorns damage - reflect damage back to enemy if still alive
             if (playerStats.thornsPercent > 0 && !this.isDead) {
               const thornsDamage = this.damage * playerStats.thornsPercent;
@@ -1566,11 +1571,6 @@
               spawnParticles(player.mesh.position, 0x00FFFF, 10);
             }
           }
-          
-          // Knockback (dt-scaled so it is frame-rate independent — prevents
-          // the fixed-per-frame displacement from causing oscillation/stutter)
-          this.mesh.position.x -= (dx / dist) * 120 * dt;
-          this.mesh.position.z -= (dz / dist) * 120 * dt;
         }
 
         // Squishy idle breathing at 1.5Hz (9.4 rad/s) — only when not in hit reaction
