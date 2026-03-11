@@ -170,6 +170,10 @@ window.enemyPool = (function () {
     enemy._shotgunSlide        = null;
     enemy._playerVelocity      = { x: 0, z: 0 };
     enemy._lastPlayerPosValid  = false;
+    // Clear stale extrapolation velocity so recycled enemies don't drift on
+    // their first throttled frame with the old movement vector.
+    enemy._lastMoveVX          = 0;
+    enemy._lastMoveVZ          = 0;
 
     // ── Animation Timers ─────────────────────────────────────────────────────
     enemy._squishTimer         = 0;
@@ -181,6 +185,20 @@ window.enemyPool = (function () {
     enemy._lightningFlashTimer = null;
     enemy._droneShakeTimer     = null;
     enemy.lastDamageType       = null;
+    // Reset blink animation so recycled enemies blink from a fresh state
+    enemy.blinkTimer           = 0;
+    enemy.isBlinking           = false;
+    enemy.nextBlinkTime        = 1.5 + Math.random() * 3.5;
+
+    // ── Gore / Visual State ──────────────────────────────────────────────────
+    // Clear per-life gore flags so all critical-hit effects can trigger again.
+    enemy._shotEye             = false;
+    enemy._toreChunk           = false;
+    enemy._decapitated         = false;
+    enemy._charStartColor      = null;
+    enemy._gutsExposed         = false;
+    enemy._originalColor       = null;
+    enemy._skipMainDeathAnim   = false;
 
     // ── Status Effects ───────────────────────────────────────────────────────
     enemy.isFrozen             = false;
@@ -244,6 +262,58 @@ window.enemyPool = (function () {
     if (enemy.headGroup)  enemy.headGroup.visible  = true;
     if (enemy.torsoGroup) enemy.torsoGroup.visible = true;
     if (enemy.baseGroup)  enemy.baseGroup.visible  = true;
+
+    // ── Restore eyes for types that have them ─────────────────────────────────
+    // die() nulls leftEye/rightEye but the eye meshes remain as children of
+    // enemy.mesh (using shared geo/mat). Re-discover them so blink & tracking
+    // animations work again. Also make them visible (die() hides them during fade).
+    const _eyeTypes = window.ENEMY_TYPES_WITH_EYES;
+    const _eyeMat   = window.SHARED_EYE_MAT;
+    if (_eyeTypes && _eyeTypes.has(type) && _eyeMat) {
+      // Scan mesh children to find the two eye meshes (identified by shared eye material)
+      let _foundL = null, _foundR = null;
+      for (let i = 0; i < enemy.mesh.children.length; i++) {
+        const child = enemy.mesh.children[i];
+        if (child.material === _eyeMat) {
+          if (!_foundL) _foundL = child;
+          else { _foundR = child; break; }
+        }
+      }
+      if (_foundL && _foundR) {
+        enemy.leftEye  = _foundL;
+        enemy.rightEye = _foundR;
+        _foundL.visible = true;
+        _foundR.visible = true;
+        _foundL.scale.set(_foundL.scale.x, 1, _foundL.scale.z); // reset blink scale
+        _foundR.scale.set(_foundR.scale.x, 1, _foundR.scale.z);
+      } else {
+        // Fallback: recreate eyes if originals were lost
+        const _eyeGeo = window.SHARED_EYE_GEO;
+        if (_eyeGeo) {
+          const _eyeScale = (type >= 12 && type <= 14) ? 1.2 : 0.85;
+          const _eyeL = new THREE.Mesh(_eyeGeo, _eyeMat);
+          const _eyeR = new THREE.Mesh(_eyeGeo, _eyeMat);
+          _eyeL.scale.setScalar(_eyeScale);
+          _eyeR.scale.setScalar(_eyeScale);
+          _eyeL.position.set(-0.32, 0.28, 0.58);
+          _eyeR.position.set( 0.32, 0.28, 0.58);
+          enemy.mesh.add(_eyeL);
+          enemy.mesh.add(_eyeR);
+          enemy.leftEye  = _eyeL;
+          enemy.rightEye = _eyeR;
+        }
+      }
+    } else {
+      // Types without eyes: ensure references are null
+      enemy.leftEye  = null;
+      enemy.rightEye = null;
+    }
+    // Restore headMesh visibility (type 15/spider hides it; others should be visible)
+    if (enemy.headMesh) {
+      enemy.headMesh.visible = (type !== 15);
+    }
+    // Hide guts container for clean re-entry (it gets shown when torso HP drops)
+    if (enemy._gutsContainer) enemy._gutsContainer.visible = false;
 
     // ── Remove any lingering ice-crack overlay meshes ─────────────────────────
     if (enemy._iceCracks && enemy._iceCracks.length > 0) {

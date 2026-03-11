@@ -112,6 +112,10 @@
     const SHARED_PUPIL_MAT = new THREE.MeshBasicMaterial({ color: 0x000000 });
     SHARED_EYE_MAT._isShared = true;
     SHARED_PUPIL_MAT._isShared = true;
+    // Expose for object-pool.js to restore eyes on recycled enemies
+    window.SHARED_EYE_GEO = SHARED_EYE_GEO;
+    window.SHARED_EYE_MAT = SHARED_EYE_MAT;
+    window.ENEMY_TYPES_WITH_EYES = ENEMY_TYPES_WITH_EYES;
 
     // ── Shared leg geometry — used by all legged enemy types (one geo, many instances) ──────
     // Capsule sticks oriented vertically; each leg Mesh has its own world-space transform.
@@ -1017,6 +1021,7 @@
               // Safety: clone shared material if not already per-instance
               if (this.mesh.material._isShared) {
                 this.mesh.material = this.mesh.material.clone();
+                this.mesh.material._isShared = false;
               }
               const totalFreezeDur = this._freezeDuration || 2500;
               const elapsed = Math.max(0, nowMs - (this.frozenUntil - totalFreezeDur));
@@ -1890,6 +1895,7 @@
             if (!this.mesh) return;
             if (this.mesh.material && this.mesh.material._isShared) {
               this.mesh.material = this.mesh.material.clone();
+              this.mesh.material._isShared = false;
             }
             const mat = this.mesh.material;
             if (mat) { mat.transparent = transparent; mat.opacity = opacity; }
@@ -2127,6 +2133,7 @@
                 // Detach from shared material before modifying per-enemy color
                 if (other.mesh.material._isShared) {
                   other.mesh.material = other.mesh.material.clone();
+                  other.mesh.material._isShared = false;
                 }
                 if (!other._originalColor) other._originalColor = other.mesh.material.color.clone();
                 const stainAmt = Math.max(0, 0.15 * (1 - Math.sqrt(distSq) / 2));
@@ -2144,6 +2151,7 @@
           // transitions don't affect all living enemies simultaneously.
           if (this.mesh.material._isShared) {
             this.mesh.material = this.mesh.material.clone();
+            this.mesh.material._isShared = false;
           }
           if (!this._originalColor) {
             this._originalColor = this.mesh.material.color.clone();
@@ -3053,6 +3061,7 @@
           // Clone shared material before mutating so charring doesn't affect all enemies of this type
           if (this.mesh.material._isShared) {
             this.mesh.material = this.mesh.material.clone();
+            this.mesh.material._isShared = false;
           }
           if (!this._charStartColor) this._charStartColor = this.mesh.material.color.clone();
           const _hpRatio = Math.max(0, this.hp / this.maxHp);
@@ -3087,6 +3096,7 @@
             // Clone shared material before modifying so flash doesn't affect all enemies
             if (this.mesh.material._isShared) {
               this.mesh.material = this.mesh.material.clone();
+              this.mesh.material._isShared = false;
             }
             const _preFlash = this.mesh.material.color.clone();
             this.mesh.material.color.setHex(0xFFFFFF);
@@ -3179,7 +3189,9 @@
         
         // Determine death effect based on damage type and health when dying
         const damageType = this.lastDamageType || 'physical';
-        const enemyColor = this.mesh.material.color.getHex();
+        const enemyColor = (this.mesh.material && this.mesh.material.color)
+          ? this.mesh.material.color.getHex()
+          : (_ENEMY_COLORS[this.type] !== undefined ? _ENEMY_COLORS[this.type] : DEFAULT_ENEMY_COLOR);
         // Detect yellow/gold enemy for special spin death (type 7=HardFast gold, type 10=MiniBoss gold)
         const isYellowEnemy = (this.type === 7 || this.type === 10);
 
@@ -3432,6 +3444,13 @@
         const _bloodStains = this._bloodStains;
         const _leftEye = this.leftEye;
         const _rightEye = this.rightEye;
+        // Hide eyes during death animation so they don't float as opaque white dots
+        // while the body mesh fades out. The eye meshes stay as children of this.mesh
+        // so acquireEnemy() can re-discover and restore them on recycle.
+        if (_leftEye)  _leftEye.visible = false;
+        if (_rightEye) _rightEye.visible = false;
+        // Also hide head nubbin during death fade (it uses its own opaque material)
+        if (this.headMesh) this.headMesh.visible = false;
         // Capture anatomy part refs so the managed animation can dispose their GL resources
         const _anatBaseMesh = this._anatBaseMesh;
         const _anatHeadMesh = this._anatHeadMesh;
