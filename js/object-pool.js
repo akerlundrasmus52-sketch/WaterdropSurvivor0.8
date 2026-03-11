@@ -174,6 +174,8 @@ window.enemyPool = (function () {
     // their first throttled frame with the old movement vector.
     enemy._lastMoveVX          = 0;
     enemy._lastMoveVZ          = 0;
+    // Reset target rotation so throttle extrapolation uses the fresh spawn angle.
+    enemy._targetRotY          = undefined;
 
     // ── Animation Timers ─────────────────────────────────────────────────────
     enemy._squishTimer         = 0;
@@ -227,7 +229,19 @@ window.enemyPool = (function () {
     const yPos = (type === 5 || type === 14 || type === 16 || type === 17) ? 2
                : (type === 11 ? 5 : (type === 19 ? 4 : (type === 20 ? 2 : 0.5)));
     enemy.mesh.position.set(x, yPos, z);
-    enemy.mesh.rotation.set(0, 0, 0);
+    // Face toward the player immediately so recycled enemies never appear backwards.
+    const _pRef = window.player && window.player.mesh ? window.player.mesh.position : null;
+    if (_pRef) {
+      const _pdx = _pRef.x - x;
+      const _pdz = _pRef.z - z;
+      if (_pdx * _pdx + _pdz * _pdz > 0.01) {
+        enemy.mesh.rotation.set(0, Math.atan2(_pdx, _pdz), 0);
+      } else {
+        enemy.mesh.rotation.set(0, 0, 0);
+      }
+    } else {
+      enemy.mesh.rotation.set(0, 0, 0);
+    }
     if (type === 11) {
       enemy.mesh.scale.set(1.8, 1.8, 1.8);
     } else {

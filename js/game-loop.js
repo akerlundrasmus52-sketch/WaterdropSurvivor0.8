@@ -1106,13 +1106,33 @@
               e.mesh.position.x += e._lastMoveVX * 60 * dt;
               e.mesh.position.z += e._lastMoveVZ * 60 * dt;
             }
+            // Continue interpolating rotation toward the last target so
+            // the facing direction doesn't freeze until the next full tick.
+            if (e._targetRotY !== undefined) {
+              let _tDelta = e._targetRotY - e.mesh.rotation.y;
+              if (_tDelta > Math.PI) _tDelta -= Math.PI * 2;
+              if (_tDelta < -Math.PI) _tDelta += Math.PI * 2;
+              e.mesh.rotation.y += _tDelta * Math.min(1.0, dt * 10);
+            }
             return;
           }
         }
         // Frustum culling: skip full AI update for enemies completely outside the view.
-        // Their position in the spatial hash is still current (updated above), so they
-        // can still be targeted by homing projectiles and weapon AoE that use the hash.
-        if (!_isInFrustum(e.mesh.position)) return;
+        // Still extrapolate position so enemies don't freeze off-screen and then
+        // jump/teleport when they re-enter the frustum.
+        if (!_isInFrustum(e.mesh.position)) {
+          if (!e.isFrozen && e._lastMoveVX !== undefined && e._lastMoveVZ !== undefined) {
+            e.mesh.position.x += e._lastMoveVX * 60 * dt;
+            e.mesh.position.z += e._lastMoveVZ * 60 * dt;
+          }
+          if (e._targetRotY !== undefined) {
+            let _tDelta = e._targetRotY - e.mesh.rotation.y;
+            if (_tDelta > Math.PI) _tDelta -= Math.PI * 2;
+            if (_tDelta < -Math.PI) _tDelta += Math.PI * 2;
+            e.mesh.rotation.y += _tDelta * Math.min(1.0, dt * 10);
+          }
+          return;
+        }
         e.update(dt, player.mesh.position);
       });
       if (window.GameDebug && window.GameDebug.enabled) {

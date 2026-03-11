@@ -591,6 +591,15 @@
         const yPos = (type === 5 || type === 14 || type === 16 || type === 17) ? 2
                    : (type === 11 ? 5 : (type === 19 ? 4 : (type === 20 ? 2 : 0.5)));
         this.mesh.position.set(x, yPos, z);
+        // Face toward the player immediately on spawn so the enemy never appears backwards.
+        // Falls back to facing the world origin if player reference is unavailable.
+        const _spawnPx = (window.player && window.player.mesh) ? window.player.mesh.position.x : 0;
+        const _spawnPz = (window.player && window.player.mesh) ? window.player.mesh.position.z : 0;
+        const _spawnDx = _spawnPx - x;
+        const _spawnDz = _spawnPz - z;
+        if (_spawnDx * _spawnDx + _spawnDz * _spawnDz > 0.01) {
+          this.mesh.rotation.y = Math.atan2(_spawnDx, _spawnDz);
+        }
         if (type === 11) this.mesh.scale.set(1.8, 1.8, 1.8);
         const _isBoss = (type === 10 || type === 11 || type === 19);
         this.mesh.castShadow = _isBoss;
@@ -927,7 +936,12 @@
           const orbitR = this.attackRange * (0.6 + Math.sin(gameTime * 0.5) * 0.2);
           this.mesh.position.x = targetPos.x + Math.cos(newAngle) * orbitR;
           this.mesh.position.z = targetPos.z + Math.sin(newAngle) * orbitR;
-          this.mesh.rotation.y = Math.atan2(dx, dz);
+          // Smooth orbit facing (same shortest-arc lerp as normal enemies)
+          this._targetRotY = Math.atan2(dx, dz);
+          let _orbitDelta = this._targetRotY - this.mesh.rotation.y;
+          if (_orbitDelta > Math.PI) _orbitDelta -= Math.PI * 2;
+          if (_orbitDelta < -Math.PI) _orbitDelta += Math.PI * 2;
+          this.mesh.rotation.y += _orbitDelta * Math.min(1.0, dt * 10);
         }
 
         if (!(this.isFlyingBoss && dist < this.attackRange) && dist > 0.5) {
@@ -1017,9 +1031,13 @@
           let vx = (_isRageFlee ? -dx : dx) * _safeDistInv * this.speed;
           let vz = (_isRageFlee ? -dz : dz) * _safeDistInv * this.speed;
 
-          // When fleeing, face away from player (inverted angle)
+          // When fleeing, face away from player (smooth lerp)
           if (_isRageFlee) {
-            this.mesh.rotation.y = Math.atan2(-dx, -dz);
+            this._targetRotY = Math.atan2(-dx, -dz);
+            let _fleeDelta = this._targetRotY - this.mesh.rotation.y;
+            if (_fleeDelta > Math.PI) _fleeDelta -= Math.PI * 2;
+            if (_fleeDelta < -Math.PI) _fleeDelta += Math.PI * 2;
+            this.mesh.rotation.y += _fleeDelta * Math.min(1.0, dt * 10);
           }
           
           // Add enemy avoidance to prevent stacking/trains (optimized — squared distance to skip sqrt)
@@ -1473,12 +1491,16 @@
           // Track last movement vector for glide-spin death state (store unscaled velocity direction)
           this._lastMoveVX = vx;
           this._lastMoveVZ = vz;
-          // Proper player-facing using atan2 — avoids backwards/sideways artifacts that
-          // lookAt+PI can cause when the model's natural orientation differs from THREE.js convention.
-          // dx/dz = direction from this enemy toward the player.
-          // Skip if rage-flee already set a fleeing rotation.
+          // Smooth rotation toward target using shortest-arc lerp.
+          // Avoids the jittery snap that a direct `rotation.y = atan2(…)` causes
+          // when the player is circling or when throttle frames skip updates.
+          // Store target for continued interpolation during throttled frames.
           if (!_isRageFlee) {
-            this.mesh.rotation.y = Math.atan2(dx, dz);
+            this._targetRotY = Math.atan2(dx, dz);
+            let _faceDelta = this._targetRotY - this.mesh.rotation.y;
+            if (_faceDelta > Math.PI) _faceDelta -= Math.PI * 2;
+            if (_faceDelta < -Math.PI) _faceDelta += Math.PI * 2;
+            this.mesh.rotation.y += _faceDelta * Math.min(1.0, dt * 10);
           }
           // Collision with environment props (trees, barrels, crates) — ground enemies bounce off
           // Skip flying enemy types: 5=Flying, 11=FlyingBoss, 14=BugFast(fly), 16=SweepingSwarm
