@@ -1695,6 +1695,15 @@
             enemy.speed = 0;
             // Visual: turn enemy icy blue with bright emissive; track freeze progress (0–1)
             if (enemy.mesh && enemy.mesh.material) {
+              // Clone shared material before modifying per-enemy color to avoid
+              // affecting all enemies that share the same material instance.
+              if (enemy.mesh.material._isShared) {
+                enemy.mesh.material = enemy.mesh.material.clone();
+                // Re-capture originalColor from the just-cloned material
+                if (!enemy._originalColor) {
+                  enemy._originalColor = enemy.mesh.material.color.clone();
+                }
+              }
               if (!enemy._freezeProgress) enemy._freezeProgress = 0;
               enemy._freezeProgress = Math.min(1, enemy._freezeProgress + 0.35);
               // Lerp from original color toward icy blue based on freeze progress

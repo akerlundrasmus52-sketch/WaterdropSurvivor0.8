@@ -1014,6 +1014,10 @@
           if (this.isFrozen || (this._lightningFreezeUntil && nowMs < this._lightningFreezeUntil)) {
             // Gradual freeze visual: lerp from original → ice blue based on freeze progress
             if (this.mesh && this.mesh.material && this._originalColor && this.frozenUntil) {
+              // Safety: clone shared material if not already per-instance
+              if (this.mesh.material._isShared) {
+                this.mesh.material = this.mesh.material.clone();
+              }
               const totalFreezeDur = this._freezeDuration || 2500;
               const elapsed = Math.max(0, nowMs - (this.frozenUntil - totalFreezeDur));
               const freezeT = Math.min(1, elapsed / 600); // 600ms to reach full ice

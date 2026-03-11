@@ -972,11 +972,20 @@
     }
 
     const overlayRef = _overlay;
+    // Remove per-session resize listener to avoid accumulating listeners
+    if (overlayRef && overlayRef._resizeHandler) {
+      window.removeEventListener('resize', overlayRef._resizeHandler);
+    }
     _overlay = _canvas = _ctx = _pauseOverlay = null;
     setTimeout(() => {
       if (overlayRef && overlayRef.parentNode) overlayRef.parentNode.removeChild(overlayRef);
+      // Resume main game loop
       if (typeof animate === 'function' && !animationFrameId) {
         animationFrameId = requestAnimationFrame(animate);
+      }
+      // Force-resume camp world input in case _menuOpen was left true
+      if (window.CampWorld && typeof window.CampWorld._forceResumeInput === 'function') {
+        window.CampWorld._forceResumeInput();
       }
     }, 350);
   }
@@ -1014,7 +1023,12 @@
      PUBLIC API
   ================================================================ */
   function start() {
+    // Guard: if a session is still running with an active overlay, skip
     if (_active && _overlay) return;
+
+    // Clean up any stale overlay from a previous session that wasn't fully removed
+    const stale = document.getElementById('astral-dive-overlay');
+    if (stale && stale.parentNode) stale.parentNode.removeChild(stale);
 
     // Load minigame skill bonuses
     _skills = (typeof window.getMinigameSkillBonuses === 'function')
@@ -1031,6 +1045,10 @@
     _canvas.width  = window.innerWidth;
     _canvas.height = window.innerHeight;
     _ctx = _canvas.getContext('2d');
+    if (!_ctx) {
+      console.error('[AstralDive] Failed to get 2D canvas context');
+      return;
+    }
     _overlay.appendChild(_canvas);
 
     // Pause button (top-right)
@@ -1042,17 +1060,22 @@
 
     document.body.appendChild(_overlay);
 
-    window.addEventListener('resize', () => {
+    const _resizeHandler = () => {
       if (!_canvas) return;
       _canvas.width  = window.innerWidth;
       _canvas.height = window.innerHeight;
-    });
+    };
+    window.addEventListener('resize', _resizeHandler);
+    // Store so _finish can remove it
+    _overlay._resizeHandler = _resizeHandler;
 
     // Pause main game loop
     if (typeof animationFrameId !== 'undefined' && animationFrameId) {
       cancelAnimationFrame(animationFrameId);
       animationFrameId = null;
     }
+
+    // Release any frozen camp-world menu lock so controls resume after dive ends
 
     _attachInput();
     _showIntro(() => _startGameLoop());
