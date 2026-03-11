@@ -1094,7 +1094,16 @@
         const _cdz = e.mesh.position.z - _camZ;
         const _camDistSq = _cdx * _cdx + _cdz * _cdz;
         if (_shouldUpdateFn) {
-          if (!_shouldUpdateFn(_camDistSq, _fc, _idx)) return;
+          if (!_shouldUpdateFn(_camDistSq, _fc, _idx)) {
+            // AI update is throttled this frame, but still extrapolate position using the
+            // last computed velocity so the mesh moves smoothly every frame instead of
+            // freezing for N frames then jumping.
+            if (!e.isFrozen && e._lastMoveVX !== undefined && e._lastMoveVZ !== undefined) {
+              e.mesh.position.x += e._lastMoveVX * 60 * dt;
+              e.mesh.position.z += e._lastMoveVZ * 60 * dt;
+            }
+            return;
+          }
         }
         // Frustum culling: skip full AI update for enemies completely outside the view.
         // Their position in the spatial hash is still current (updated above), so they

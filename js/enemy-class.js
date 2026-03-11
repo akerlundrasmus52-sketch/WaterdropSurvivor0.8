@@ -1533,9 +1533,9 @@
             this.lastAttackTime = now;
             playSound('hit');
           }
-          // Knockback
-          this.mesh.position.x -= (dx / dist) * 2;
-          this.mesh.position.z -= (dz / dist) * 2;
+          // Knockback (dt-scaled so it is frame-rate independent)
+          this.mesh.position.x -= (dx / dist) * 120 * dt;
+          this.mesh.position.z -= (dz / dist) * 120 * dt;
           
           if (windmillQuest.windmill.userData.hp <= 0) {
             failWindmillQuest();
@@ -1567,9 +1567,10 @@
             }
           }
           
-          // Knockback (always apply to prevent enemies from stacking)
-          this.mesh.position.x -= (dx / dist) * 2;
-          this.mesh.position.z -= (dz / dist) * 2;
+          // Knockback (dt-scaled so it is frame-rate independent — prevents
+          // the fixed-per-frame displacement from causing oscillation/stutter)
+          this.mesh.position.x -= (dx / dist) * 120 * dt;
+          this.mesh.position.z -= (dz / dist) * 120 * dt;
         }
 
         // Squishy idle breathing at 1.5Hz (9.4 rad/s) — only when not in hit reaction

@@ -637,6 +637,15 @@ window.NeuralMatrix = (function () {
   // Apply all unlocked Neural Matrix effects to playerStats at run start.
   // Called from game-screens.js / init (game start) area.
   function applyToRun(pStats) {
+    // Always reset flags first so stale values from a previous run cannot
+    // persist (e.g. Annunaki Protocol active after save data is cleared).
+    window._nmAnnunakiActive    = false;
+    window._nmEventHorizon      = false;
+    window._nmBloodAlchemy      = false;
+    window._nmKineticMirror     = false;
+    window._nmPathInfected      = false;
+    window._nmForbiddenProtocol = false;
+
     if (!saveData || !saveData.neuralMatrix) return;
     const nm = saveData.neuralMatrix;
 
