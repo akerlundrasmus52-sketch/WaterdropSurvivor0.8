@@ -266,11 +266,11 @@ function getEnemyBaseStats(type, levelScaling, speedBase, playerLevel) {
 /** Squared-distance thresholds (world units²) for AI update LOD bands. */
 const ENEMY_THROTTLE = {
   /** Near band — update every frame. */
-  NEAR_SQ:       256,    // 16²
+  NEAR_SQ:       2500,   // 50²
   /** Medium band — update every 2nd frame. */
-  MEDIUM_SQ:     1600,   // 40²
+  MEDIUM_SQ:     6400,   // 80²
   /** Far band — update every 4th frame. */
-  FAR_SQ:        6400,   // 80²
+  FAR_SQ:        10000,  // 100²
   /** Very-far / off-screen — update every 10th frame (~100 ms at 100 fps). */
   OFFSCREEN_DIVISOR: 10
 };
