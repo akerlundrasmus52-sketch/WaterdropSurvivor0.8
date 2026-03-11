@@ -609,8 +609,11 @@
         const _isBoss = (type === 10 || type === 11 || type === 19);
         this.mesh.castShadow = _isBoss;
         this.mesh.receiveShadow = _isBoss;
-        this._usesInstancing = false;
-        scene.add(this.mesh);
+        const _instancingTypes = (type === 0 || type === 1 || type === 2);
+        this._usesInstancing = _instancingTypes && !!(window._instancedRenderer && window._instancedRenderer.active);
+        if (!this._usesInstancing) {
+          scene.add(this.mesh);
+        }
 
         // ── HEAD NUBBIN — small dark indicator on top of each enemy ─────────────────
         this.headMesh = new THREE.Mesh(SHARED_GEO.cube, SHARED_MAT.black);
@@ -802,6 +805,9 @@
         this._aiState = 'approach'; // approach, flank, retreat, dive, wait
         this._aiTimer = 0;
         this._aiCooldown = 1.0 + Math.random() * 2.0; // Randomize decision intervals
+        this._lastPlayerPos = { x: 0, z: 0 }; // For movement prediction (pre-allocated)
+        this._lastPlayerPosValid = false; // Skip velocity calc on first frame
+        this._playerVelocity = { x: 0, z: 0 }; // Estimated player velocity
         this._flankAngle = (Math.random() > 0.5 ? 1 : -1) * (Math.PI * 0.3 + Math.random() * Math.PI * 0.4);
         this._packRush = false; // Pack behavior: periodic group rush flag
 
@@ -896,6 +902,21 @@
         const dx = targetPos.x - this.mesh.position.x;
         const dz = targetPos.z - this.mesh.position.z;
         const dist = Math.sqrt(dx*dx + dz*dz);
+
+        // Estimate player velocity for prediction AI
+        // Clamped to ±0.4 units/frame to prevent wild teleport-like predictions when
+        // dt is tiny (hit-stop exit frame) or player dashes.
+        const _MAX_PRED_VEL = 0.4;
+        if (this._lastPlayerPosValid) {
+          this._playerVelocity.x = Math.max(-_MAX_PRED_VEL, Math.min(_MAX_PRED_VEL,
+            (playerPos.x - this._lastPlayerPos.x) / Math.max(dt, 0.016)));
+          this._playerVelocity.z = Math.max(-_MAX_PRED_VEL, Math.min(_MAX_PRED_VEL,
+            (playerPos.z - this._lastPlayerPos.z) / Math.max(dt, 0.016)));
+        } else {
+          this._lastPlayerPosValid = true;
+        }
+        this._lastPlayerPos.x = playerPos.x;
+        this._lastPlayerPos.z = playerPos.z;
 
         // AI decision timer
         this._aiTimer += dt;
@@ -1088,9 +1109,15 @@
               vz = perpZ * this.speed * 0.7;
             }
           } else if (behavior === 'interceptor') {
-            // Move directly toward the player
-            vx = (dx / dist) * this.speed;
-            vz = (dz / dist) * this.speed;
+            // Predict where the player will be 0.8s ahead and move to intercept
+            const predictTime = 0.8;
+            const predictX = targetPos.x + this._playerVelocity.x * predictTime;
+            const predictZ = targetPos.z + this._playerVelocity.z * predictTime;
+            const pdx = predictX - this.mesh.position.x;
+            const pdz = predictZ - this.mesh.position.z;
+            const pdist = Math.sqrt(pdx*pdx + pdz*pdz) || 1;
+            vx = (pdx / pdist) * this.speed;
+            vz = (pdz / pdist) * this.speed;
             // Charge when close
             if (dist < 5 && dist > 1.5 && !this._charging) {
               if (Math.random() < 0.008) {
@@ -3169,6 +3196,7 @@
         }
         // Cancel shotgun slide and clear velocity to prevent movement on dead enemy
         this._shotgunSlide = null;
+        this._playerVelocity = { x: 0, z: 0 };
         // Cancel pending phase timer to prevent it from mutating a recycled enemy's
         // material opacity/transparency after this enemy has been returned to the pool.
         if (this._phaseClearTimer) {

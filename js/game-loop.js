@@ -1016,6 +1016,10 @@
       }
 
       // Update enemy AI movement (was missing - enemies were frozen)
+      // PERFORMANCE: Camera-distance-based AI throttling for enemies.
+      // Uses shouldUpdateEnemy from enemies.js — camera distance determines LOD band.
+      // Near (< 16 units) → every frame, medium (16-40) → every 2nd,
+      // far (40-80) → every 4th, very far (> 80) → every 10th frame (~100ms).
       const _fc = performanceLog.frameCount;
       // Build spatial hash for enemy lookups (used by projectiles via window._enemySpatialHash)
       // TIME-SLICING: rebuild the hash every frame but insert enemies in batches of
@@ -1083,8 +1087,64 @@
       // Debug: track alive/died counts per frame for diagnostics
       const _dbgAliveBeforeEnemyTick = window.GameDebug && window.GameDebug.enabled
         ? enemies.filter(e => e && !e.isDead).length : 0;
-      enemies.forEach((e) => {
+      // Camera-based throttle: use camera position for distance (off-screen enemies throttle to 10 fps)
+      const _shouldUpdateFn = window.GameEnemies && window.GameEnemies.shouldUpdateEnemy;
+      const _camX = camera.position.x;
+      const _camZ = camera.position.z;
+      enemies.forEach((e, _idx) => {
         if (!e || !e.mesh || e.isDead) return;
+        // Distance from camera determines throttle band (not player — saves CPU for off-screen enemies)
+        const _cdx = e.mesh.position.x - _camX;
+        const _cdz = e.mesh.position.z - _camZ;
+        const _camDistSq = _cdx * _cdx + _cdz * _cdz;
+        if (_shouldUpdateFn) {
+          if (!_shouldUpdateFn(_camDistSq, _fc, _idx)) {
+            // AI update is throttled this frame, but still extrapolate position using the
+            // last computed velocity so the mesh moves smoothly every frame instead of
+            // freezing for N frames then jumping.
+            if (!e.isFrozen && e._lastMoveVX !== undefined && e._lastMoveVZ !== undefined) {
+              e.mesh.position.x += e._lastMoveVX * 60 * dt;
+              e.mesh.position.z += e._lastMoveVZ * 60 * dt;
+              // Keep ground shadow in sync so it doesn't lag behind the body on throttled frames.
+              if (e.groundShadow) {
+                e.groundShadow.position.x = e.mesh.position.x;
+                e.groundShadow.position.z = e.mesh.position.z;
+              }
+              if (window._enemySpatialHash) window._enemySpatialHash.update(e);
+            }
+            // Continue interpolating rotation toward the last target so
+            // the facing direction doesn't freeze until the next full tick.
+            if (e._targetRotY !== undefined) {
+              let _tDelta = e._targetRotY - e.mesh.rotation.y;
+              if (_tDelta > Math.PI) _tDelta -= Math.PI * 2;
+              if (_tDelta < -Math.PI) _tDelta += Math.PI * 2;
+              e.mesh.rotation.y += _tDelta * Math.min(1.0, dt * 10);
+            }
+            return;
+          }
+        }
+        // Frustum culling: skip full AI update for enemies completely outside the view.
+        // Still extrapolate position so enemies don't freeze off-screen and then
+        // jump/teleport when they re-enter the frustum.
+        if (!_isInFrustum(e.mesh.position)) {
+          if (!e.isFrozen && e._lastMoveVX !== undefined && e._lastMoveVZ !== undefined) {
+            e.mesh.position.x += e._lastMoveVX * 60 * dt;
+            e.mesh.position.z += e._lastMoveVZ * 60 * dt;
+            // Keep ground shadow in sync so it doesn't lag behind the body on throttled frames.
+            if (e.groundShadow) {
+              e.groundShadow.position.x = e.mesh.position.x;
+              e.groundShadow.position.z = e.mesh.position.z;
+            }
+            if (window._enemySpatialHash) window._enemySpatialHash.update(e);
+          }
+          if (e._targetRotY !== undefined) {
+            let _tDelta = e._targetRotY - e.mesh.rotation.y;
+            if (_tDelta > Math.PI) _tDelta -= Math.PI * 2;
+            if (_tDelta < -Math.PI) _tDelta += Math.PI * 2;
+            e.mesh.rotation.y += _tDelta * Math.min(1.0, dt * 10);
+          }
+          return;
+        }
         e.update(dt, player.mesh.position);
       });
       if (window.GameDebug && window.GameDebug.enabled) {
