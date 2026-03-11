@@ -191,6 +191,9 @@ window.enemyPool = (function () {
     enemy.blinkTimer           = 0;
     enemy.isBlinking           = false;
     enemy.nextBlinkTime        = 1.5 + Math.random() * 3.5;
+    // Reset head look-at interpolation so the head snaps to the correct forward
+    // direction on first frame instead of tracking a stale target from last life.
+    enemy._lerpedHeadTargetInit = false;
 
     // ── Gore / Visual State ──────────────────────────────────────────────────
     // Clear per-life gore flags so all critical-hit effects can trigger again.
@@ -311,13 +314,32 @@ window.enemyPool = (function () {
     if (enemy.torsoGroup) enemy.torsoGroup.visible = true;
     if (enemy.baseGroup)  enemy.baseGroup.visible  = true;
 
+    // ── Restore headMesh transform — death/damage animations may have moved it ──
+    // Reset position, scale, and rotation so the head sits correctly on the body.
+    if (enemy.headMesh) {
+      enemy.headMesh.visible = (type !== 15);
+      enemy.headMesh.position.y = 0.95;
+      enemy.headMesh.position.x = 0;
+      enemy.headMesh.position.z = 0;
+      enemy.headMesh.scale.set(1, 1, 1);
+      enemy.headMesh.rotation.set(0, 0, 0);
+    }
+    // Sync the head-bob base Y to the restored head position.
+    if (enemy._headGroupBaseY !== undefined) enemy._headGroupBaseY = 0.95;
+
     // ── Restore eyes for types that have them ─────────────────────────────────
     // die() nulls leftEye/rightEye but the eye meshes remain as children of
     // enemy.mesh (using shared geo/mat). Re-discover them so blink & tracking
     // animations work again. Also make them visible (die() hides them during fade).
+    // After finding or recreating eyes, always reset their position/scale so that
+    // damage-deformation or death-animation transforms don't carry over to the next life.
     const _eyeTypes = window.ENEMY_TYPES_WITH_EYES;
     const _eyeMat   = window.SHARED_EYE_MAT;
     if (_eyeTypes && _eyeTypes.has(type) && _eyeMat) {
+      // Canonical eye layout for this type — single source of truth in enemy-class.js
+      const _el = window.getEnemyEyeLayout ? window.getEnemyEyeLayout(type)
+        : { scale: 0.85, yPos: 0.92, zPos: 0.42, xPos: 0.22 };
+
       // Scan mesh children to find the two eye meshes (identified by shared eye material)
       let _foundL = null, _foundR = null;
       for (let i = 0; i < enemy.mesh.children.length; i++) {
@@ -332,8 +354,13 @@ window.enemyPool = (function () {
         enemy.rightEye = _foundR;
         _foundL.visible = true;
         _foundR.visible = true;
-        _foundL.scale.set(_foundL.scale.x, 1, _foundL.scale.z); // reset blink scale
-        _foundR.scale.set(_foundR.scale.x, 1, _foundR.scale.z);
+        // Fully reset eye transforms to canonical spawn values
+        _foundL.scale.setScalar(_el.scale);
+        _foundR.scale.setScalar(_el.scale);
+        _foundL.position.set(-_el.xPos, _el.yPos, _el.zPos);
+        _foundR.position.set( _el.xPos, _el.yPos, _el.zPos);
+        _foundL.rotation.set(0, 0, 0);
+        _foundR.rotation.set(0, 0, 0);
         // Ensure pupils are present as children of each eye
         const _pupilMat = window.SHARED_PUPIL_MAT;
         const _pupilGeo = window.SHARED_PUPIL_GEO;
@@ -351,14 +378,12 @@ window.enemyPool = (function () {
         // Fallback: recreate eyes if originals were lost
         const _eyeGeo = window.SHARED_EYE_GEO;
         if (_eyeGeo) {
-          const _eyeScale = (type >= 12 && type <= 14) ? 1.2 : 0.85;
           const _eyeL = new THREE.Mesh(_eyeGeo, _eyeMat);
           const _eyeR = new THREE.Mesh(_eyeGeo, _eyeMat);
-          _eyeL.scale.setScalar(_eyeScale);
-          _eyeR.scale.setScalar(_eyeScale);
-          const _eyeZ = (type === 10 || type === 11 || type === 19) ? 1.15 : ((type >= 12 && type <= 14) ? 0.9 : 0.88);
-          _eyeL.position.set(-0.32, 0.28, _eyeZ);
-          _eyeR.position.set( 0.32, 0.28, _eyeZ);
+          _eyeL.scale.setScalar(_el.scale);
+          _eyeR.scale.setScalar(_el.scale);
+          _eyeL.position.set(-_el.xPos, _el.yPos, _el.zPos);
+          _eyeR.position.set( _el.xPos, _el.yPos, _el.zPos);
           // Add pupils to recreated eye meshes
           const _pupilMat = window.SHARED_PUPIL_MAT;
           const _pupilGeo = window.SHARED_PUPIL_GEO;
@@ -381,12 +406,11 @@ window.enemyPool = (function () {
       enemy.leftEye  = null;
       enemy.rightEye = null;
     }
-    // Restore headMesh visibility (type 15/spider hides it; others should be visible)
-    if (enemy.headMesh) {
-      enemy.headMesh.visible = (type !== 15);
-    }
     // Hide guts container for clean re-entry (it gets shown when torso HP drops)
-    if (enemy._gutsContainer) enemy._gutsContainer.visible = false;
+    if (enemy._gutsContainer) {
+      enemy._gutsContainer.visible = false;
+      enemy._gutsContainer.rotation.set(0, 0, 0);
+    }
 
     // ── Remove any lingering ice-crack overlay meshes ─────────────────────────
     if (enemy._iceCracks && enemy._iceCracks.length > 0) {
@@ -430,6 +454,14 @@ window.enemyPool = (function () {
    */
   function _return(enemy) {
     if (!enemy || !enemy.mesh) return;
+
+    // Cancel any pending damage-display timer to prevent it from firing against
+    // a recycled enemy that has already been reset by acquireEnemy().
+    if (enemy._damageFlushTimer) {
+      clearTimeout(enemy._damageFlushTimer);
+      enemy._damageFlushTimer = null;
+    }
+    enemy._accumulatedDamage = 0;
 
     // Move mesh underground and hide it (stays in Three.js scene graph to avoid
     // the cost of scene.remove + scene.add on every respawn cycle).

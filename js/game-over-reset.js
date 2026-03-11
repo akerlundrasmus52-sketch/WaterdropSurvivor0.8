@@ -617,6 +617,10 @@
             if (e._bloodStains) e._bloodStains.forEach(s => { if (s.material && !s.material._isShared) s.material.dispose(); });
             e.bulletHoles = [];
             e._bloodStains = [];
+            // Cancel any pending damage-display timer before parking so it cannot
+            // fire against a recycled enemy in the next run.
+            if (e._damageFlushTimer) { clearTimeout(e._damageFlushTimer); e._damageFlushTimer = null; }
+            e._accumulatedDamage = 0;
             window.enemyPool._return(e);
           } else if (!window.enemyPool) {
             scene.remove(e.mesh); // no-op for instanced enemies; removes non-instanced ones
