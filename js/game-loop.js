@@ -619,7 +619,7 @@
       // Cap frame rate at 120fps to avoid unnecessary GPU work on high-refresh screens.
       // Use a fixed increment to avoid under-running the target on high-refresh displays.
       if (time - _lastAnimTime < _MIN_FRAME_MS) return;
-      _lastAnimTime += _MIN_FRAME_MS;
+      _lastAnimTime = time;
 
       // Initialize lastTime on first frame to prevent huge dt (PR #82 fix)
       if (lastTime === null) {
