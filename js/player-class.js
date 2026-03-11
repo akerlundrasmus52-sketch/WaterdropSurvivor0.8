@@ -1227,9 +1227,9 @@
         camera.position.y += (targetCamY - camera.position.y) * camYLerp;
         camera.lookAt(this.mesh.position);
 
-        // Bounds (Map is 400x400, from -200 to 200)
-        this.mesh.position.x = Math.max(-195, Math.min(195, this.mesh.position.x));
-        this.mesh.position.z = Math.max(-195, Math.min(195, this.mesh.position.z));
+        // Bounds (Compact map is 240x240, from -120 to 120)
+        this.mesh.position.x = Math.max(-120, Math.min(120, this.mesh.position.x));
+        this.mesh.position.z = Math.max(-120, Math.min(120, this.mesh.position.z));
       }
 
       dash(dx, dz) {
