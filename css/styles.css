@@ -3520,11 +3520,9 @@
         overflow: hidden;
       }
 
-      /* Level-up cards: allow horizontal scroll on landscape if cards overflow */
+      /* In landscape the cards wrap — let the .upgrade-card dimensions control sizing */
       #upgrade-list > *, #level-up-choices > * {
         flex-shrink: 0;
-        min-width: unset;
-        max-width: unset;
       }
 
       /* Joystick zone: move joystick to far left and shoot joystick to far right
