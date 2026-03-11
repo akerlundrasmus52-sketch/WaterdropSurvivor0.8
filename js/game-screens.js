@@ -321,6 +321,9 @@
       setupMenus();
       console.log('[Init] Menus set up OK');
       window.addEventListener('resize', onWindowResize, false);
+      // Apply the correct camera frustum immediately (especially important for landscape
+      // mode where onWindowResize zooms out by 50% to show the full map on first load).
+      onWindowResize();
 
       // Track first user interaction so audio context and speech synthesis can be
       // safely unlocked on demand (browser autoplay policy requires a user gesture).

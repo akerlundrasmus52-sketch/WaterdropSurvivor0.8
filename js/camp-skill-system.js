@@ -1390,6 +1390,17 @@
         showStatusMessage('Skill is at max level!', 2000);
         return;
       }
+
+      // Validate prerequisite skill is purchased before allowing this purchase
+      if (skill.requires) {
+        const parentData = saveData.skillTree[skill.requires] || { level: 0 };
+        if ((parentData.level || 0) === 0) {
+          const parentSkill = SKILL_TREE[skill.requires];
+          const parentName = parentSkill ? parentSkill.name : skill.requires;
+          showStatusMessage(`Requires ${parentName} first!`, 2000);
+          return;
+        }
+      }
       
       // Check skill point cost
       if (saveData.skillPoints >= skill.cost) {

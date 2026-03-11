@@ -1724,7 +1724,7 @@
 
         // Headless stumble: if head severed, add random XZ drift to simulate blind wandering
         if (this.anatomy && !this.anatomy.head.attached && !this.isDead) {
-          const _stumbleAmt = 0.004;
+          const _stumbleAmt = 0.24 * dt; // frame-rate independent (0.004 units/frame at 60fps)
           this.mesh.position.x += (Math.random() - 0.5) * _stumbleAmt;
           this.mesh.position.z += (Math.random() - 0.5) * _stumbleAmt;
         }
@@ -1750,8 +1750,9 @@
               0.75 + Math.random() * 0.55
             );
           }
-          this.mesh.position.x += (Math.random() - 0.5) * 0.07;
-          this.mesh.position.z += (Math.random() - 0.5) * 0.07;
+          const _throeShake = 4.2 * dt; // frame-rate independent death throe shake (0.07 units/frame at 60fps)
+          this.mesh.position.x += (Math.random() - 0.5) * _throeShake;
+          this.mesh.position.z += (Math.random() - 0.5) * _throeShake;
           // Repeat scraping audio every ~2 seconds
           this._deathThroeAudioTimer = (this._deathThroeAudioTimer || 0) + dt;
           if (this._deathThroeAudioTimer > 2.0) {
