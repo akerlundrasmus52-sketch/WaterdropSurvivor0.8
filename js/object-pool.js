@@ -252,21 +252,24 @@ window.enemyPool = (function () {
     // Damage events clone the shared material; die() disposes the clone — without
     // this restore, recycled enemies render black or invisible.
     if (enemy.defaultMaterial) {
+      if (enemy.mesh.material !== enemy.defaultMaterial && !enemy.mesh.material._isShared && !enemy.mesh.material._isSpiderHitbox) {
+        enemy.mesh.material.dispose();
+      }
       enemy.mesh.material = enemy.defaultMaterial;
       enemy.mesh.material.needsUpdate = true;
+
+      if (!enemy.defaultMaterial._isShared && !enemy.defaultMaterial._isSpiderHitbox) {
+        const _resetColorHex = window._ENEMY_COLORS ? (window._ENEMY_COLORS[type] !== undefined ? window._ENEMY_COLORS[type] : window._ENEMY_COLORS[0]) : 0x44AA44;
+        enemy.defaultMaterial.color.setHex(_resetColorHex);
+        enemy.defaultMaterial.transparent = (type === 18);
+        enemy.defaultMaterial.opacity = (type === 18) ? 0.2 : 1.0;
+        if (enemy.defaultMaterial.emissive) {
+          enemy.defaultMaterial.emissive.setHex((type === 10 || type === 11) ? _resetColorHex : 0x000000);
+          enemy.defaultMaterial.emissiveIntensity = (type === 10 || type === 11) ? 0.3 : 0;
+        }
+      }
     }
     if (enemy.mesh.material && !enemy.mesh.material._isSpiderHitbox) {
-      enemy.mesh.material.transparent = false;
-      enemy.mesh.material.opacity     = 1;
-      // Reset material color to the canonical type color to clear any blood/freeze tint
-      const _resetColorHex = window._ENEMY_COLORS
-        ? (window._ENEMY_COLORS[type] !== undefined ? window._ENEMY_COLORS[type] : window._ENEMY_COLORS[0])
-        : 0x44AA44; /* fallback: DEFAULT_ENEMY_COLOR from enemy-class.js */
-      enemy.mesh.material.color.setHex(_resetColorHex);
-      if (enemy.mesh.material.emissive) {
-        enemy.mesh.material.emissive.setHex(0x000000);
-        enemy.mesh.material.emissiveIntensity = 0;
-      }
       enemy.mesh.material.needsUpdate = true;
     }
     // Clear cached original color so it is re-captured on next freeze/damage
@@ -309,8 +312,9 @@ window.enemyPool = (function () {
           const _eyeR = new THREE.Mesh(_eyeGeo, _eyeMat);
           _eyeL.scale.setScalar(_eyeScale);
           _eyeR.scale.setScalar(_eyeScale);
-          _eyeL.position.set(-0.32, 0.28, 0.58);
-          _eyeR.position.set( 0.32, 0.28, 0.58);
+          const _eyeZ = (type === 10 || type === 11 || type === 19) ? 1.15 : ((type >= 12 && type <= 14) ? 0.9 : 0.88);
+          _eyeL.position.set(-0.32, 0.28, _eyeZ);
+          _eyeR.position.set( 0.32, 0.28, _eyeZ);
           enemy.mesh.add(_eyeL);
           enemy.mesh.add(_eyeR);
           enemy.leftEye  = _eyeL;

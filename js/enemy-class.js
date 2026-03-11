@@ -627,9 +627,10 @@
           const _eyeScale = (type >= 12 && type <= 14) ? 1.2 : 0.85;
           _eyeL.scale.setScalar(_eyeScale);
           _eyeR.scale.setScalar(_eyeScale);
-          // Eyes sit on the forward face of the sphere at ~45° latitude
-          _eyeL.position.set(-0.32, 0.28, 0.58);
-          _eyeR.position.set( 0.32, 0.28, 0.58);
+          // Eyes sit on the forward face of the sphere; Z depth depends on enemy radius
+          const _eyeZ = (type === 10 || type === 11 || type === 19) ? 1.15 : ((type >= 12 && type <= 14) ? 0.9 : 0.88);
+          _eyeL.position.set(-0.32, 0.28, _eyeZ);
+          _eyeR.position.set( 0.32, 0.28, _eyeZ);
           this.mesh.add(_eyeL);
           this.mesh.add(_eyeR);
           this.leftEye  = _eyeL;
@@ -1483,8 +1484,8 @@
             vz *= _velScale;
           }
           
-          // Cap dt to prevent lag-spike teleportation (max ~20fps equivalent)
-          const _safeDt = Math.min(dt, 0.05);
+          // Cap dt to prevent lag-spike teleportation while allowing animation throttle accumulation (~5fps floor)
+          const _safeDt = Math.min(dt, 0.2);
           
           this.mesh.position.x += vx * 60 * _safeDt;
           this.mesh.position.z += vz * 60 * _safeDt;
