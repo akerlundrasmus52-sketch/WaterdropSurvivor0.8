@@ -4245,7 +4245,7 @@
         
         do {
           const angle = Math.random() * Math.PI * 2;
-          const dist = 25 + Math.random() * 10; // Just outside view
+          const dist = 15 + Math.random() * 8; // Tighter spawn — just off-screen
           ex = player.mesh.position.x + Math.cos(angle) * dist;
           ez = player.mesh.position.z + Math.sin(angle) * dist;
           
