@@ -919,7 +919,7 @@
       // (guards against stale window flags from previous sessions).
       const ANNUNAKI_HP_DRAIN_RATE = 0.01; // 1% max HP per second — forces ultra-aggressive playstyle
       if (window._nmAnnunakiActive
-          && typeof saveData !== 'undefined' && saveData && saveData.neuralMatrix && saveData.neuralMatrix.annunakiProtocol
+          && saveData?.neuralMatrix?.annunakiProtocol
           && frameCount % 60 === 0) {
         const drain = Math.max(1, playerStats.maxHp * ANNUNAKI_HP_DRAIN_RATE);
         player.takeDamage(drain);

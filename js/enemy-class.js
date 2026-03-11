@@ -300,6 +300,7 @@
     const _ENEMY_FLYING_TYPES = new Set([5, 11, 14, 16, 17, 19, 20]);
     const _TREE_COLL_R = 1.0;
     const _PROP_COLL_R = 0.7;
+    const _MELEE_KNOCKBACK_DIST = 2.0; // units pushed away from player on each melee strike
     // Reptilian Shifter visibility thresholds
     const _REPTILIAN_VISIBLE_DIST = 3;   // distance at which shifter becomes fully visible
     const _REPTILIAN_CAMO_OPACITY = 0.2; // default camo opacity (80% invisible)
@@ -1549,8 +1550,8 @@
             
             // Knockback on attack: push enemy away from player once per strike
             // (moved inside cooldown check to prevent per-frame oscillation/stutter)
-            this.mesh.position.x -= (dx / dist) * 2.0;
-            this.mesh.position.z -= (dz / dist) * 2.0;
+            this.mesh.position.x -= (dx / dist) * _MELEE_KNOCKBACK_DIST;
+            this.mesh.position.z -= (dz / dist) * _MELEE_KNOCKBACK_DIST;
             
             // Thorns damage - reflect damage back to enemy if still alive
             if (playerStats.thornsPercent > 0 && !this.isDead) {
