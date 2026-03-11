@@ -596,10 +596,14 @@
       // Without pooling: full disposal as before.
       enemies.forEach(e => {
         if (e.mesh) {
-          if (window.enemyPool && !e._usesInstancing) {
-            // Pool path: hide and park the enemy, restore its shared material if needed,
-            // then push it onto the free list for the next run.
-            if (e.mesh.material && !e.mesh.material._isShared) {
+          if (window.enemyPool && !e.isDead) {
+            // Pool path: hide and park LIVING enemies (both instanced and non-instanced).
+            // Previously only non-instanced enemies were pooled (_usesInstancing check was
+            // wrong), causing living instanced enemies to be leaked on reset instead of
+            // returned to the free list for the next run.
+            // Dead enemies are handled by managedAnimations.forEach cleanup (below) so we
+            // skip them here to prevent double-pooling the same enemy object.
+            if (e.mesh.material && !e.mesh.material._isShared && !e.mesh.material._isSpiderHitbox) {
               // Material was cloned for a mid-animation opacity change — dispose the clone
               // and restore the original shared material from the cache.
               const origHexStr = e.mesh.material.color ? e.mesh.material.color.getHex().toString(16) : null;
@@ -614,7 +618,7 @@
             e.bulletHoles = [];
             e._bloodStains = [];
             window.enemyPool._return(e);
-          } else {
+          } else if (!window.enemyPool) {
             scene.remove(e.mesh); // no-op for instanced enemies; removes non-instanced ones
             if (!e._usesInstancing) {
               // Only dispose geometry/material for enemies that own their mesh exclusively
