@@ -110,13 +110,16 @@
           const impulse = kb.force * falloff * 0.6;  // 60% transfer
           const nx = dx / dist, nz = dz / dist;
 
+          // Cap dt to prevent lag-spike teleportation
+          const safeDt = Math.min(dt, 0.05);
+
           // Apply velocity change
           if (enemy.vx !== undefined) {
-            enemy.vx += nx * impulse * dt * 60;
-            enemy.vz += nz * impulse * dt * 60;
+            enemy.vx += nx * impulse * safeDt * 60;
+            enemy.vz += nz * impulse * safeDt * 60;
           } else {
-            pos.x += nx * impulse * dt;
-            pos.z += nz * impulse * dt;
+            pos.x += nx * impulse * safeDt;
+            pos.z += nz * impulse * safeDt;
           }
 
           // Queue chain reaction (weaker)

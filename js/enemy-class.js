@@ -899,63 +899,38 @@
         // AI decision timer
         this._aiTimer += dt;
 
-        // Ranged Enemy behavior - stop at range, strafe, and shoot
+        // Ranged enemy firing logic (standalone — movement handled in unified vx/vz block below)
         if (this.type === 4 && dist < this.attackRange) {
           const now = Date.now();
           if (now - this.lastAttackTime > this.attackCooldown) {
             this.fireProjectile(targetPos);
             this.lastAttackTime = now;
           }
-          // Smart retreat - predict player direction and dodge accordingly
-          if (dist < 3.0) {
-            const retreatX = -(dx / dist);
-            const retreatZ = -(dz / dist);
-            const rMag = Math.sqrt(retreatX*retreatX + retreatZ*retreatZ) || 1;
-            this.mesh.position.x += (retreatX / rMag) * this.speed * 1.8 * 60 * dt;
-            this.mesh.position.z += (retreatZ / rMag) * this.speed * 1.8 * 60 * dt;
-          } else {
-            // Strafe while shooting - vary pattern
-            const strafeDir = Math.sin(gameTime * 3 + this.wobbleOffset) > 0 ? 1 : -1;
-            const perpX = -dz / dist;
-            const perpZ =  dx / dist;
-            this.mesh.position.x += perpX * this.speed * 0.5 * strafeDir * 60 * dt;
-            this.mesh.position.z += perpZ * this.speed * 0.5 * strafeDir * 60 * dt;
-          }
-          this.mesh.rotation.y = Math.atan2(dx, dz);
-        } else if (this.type === 12 && dist < this.attackRange) {
-          // Bug Ranged — strafe sideways while firing, retreat if too close
+        }
+        if (this.type === 12 && dist < this.attackRange) {
           const now = Date.now();
           if (now - this.lastAttackTime > 1800) {
             this.fireProjectile(targetPos);
             this.lastAttackTime = now;
           }
-          if (dist < 4.0) {
-            this.mesh.position.x -= (dx / dist) * this.speed * 1.2 * 60 * dt;
-            this.mesh.position.z -= (dz / dist) * this.speed * 1.2 * 60 * dt;
-          } else {
-            const perpX = -dz / dist;
-            const perpZ =  dx / dist;
-            this.mesh.position.x += perpX * this.speed * 0.7 * 60 * dt;
-            this.mesh.position.z += perpZ * this.speed * 0.7 * 60 * dt;
-          }
-          this.mesh.rotation.y = Math.atan2(dx, dz);
-        } else if (this.isFlyingBoss && dist < this.attackRange) {
-          // Flying Boss — orbit player and fire powerful projectiles
+        }
+        if (this.isFlyingBoss && dist < this.attackRange) {
           const now = Date.now();
           if (now - this.lastAttackTime > 2000) {
             this.fireProjectile(targetPos);
             this.lastAttackTime = now;
           }
-          // Orbit with varying radius (dt-scaled for frame-rate independence)
-          const orbitSpeed = 0.72 * dt;
+          // Flying Boss orbit uses absolute positioning — special case
+          const orbitSpeed = 0.72 * Math.min(dt, 0.05);
           const angle = Math.atan2(this.mesh.position.z - targetPos.z, this.mesh.position.x - targetPos.x);
           const newAngle = angle + orbitSpeed;
           const orbitR = this.attackRange * (0.6 + Math.sin(gameTime * 0.5) * 0.2);
           this.mesh.position.x = targetPos.x + Math.cos(newAngle) * orbitR;
           this.mesh.position.z = targetPos.z + Math.sin(newAngle) * orbitR;
-          // Face the player using atan2 for correct orientation
           this.mesh.rotation.y = Math.atan2(dx, dz);
-        } else if (dist > 0.5) {
+        }
+
+        if (!(this.isFlyingBoss && dist < this.attackRange) && dist > 0.5) {
           // Check if slow/freeze effect expired
           const nowMs = Date.now();
           if (this.slowedUntil && this.slowedUntil < nowMs) {
@@ -1079,7 +1054,30 @@
           // AI Behavior System - each enemy type acts differently
           const behavior = this.aiBehavior || 'approach';
           
-          if (behavior === 'interceptor') {
+          if (this.type === 4 && dist < this.attackRange) {
+            // Ranged type 4: retreat when too close, strafe at range
+            if (dist < 3.0) {
+              vx = -(dx / dist) * this.speed * 1.8;
+              vz = -(dz / dist) * this.speed * 1.8;
+            } else {
+              const strafeDir = Math.sin(gameTime * 3 + this.wobbleOffset) > 0 ? 1 : -1;
+              const perpX = -dz / dist;
+              const perpZ =  dx / dist;
+              vx = perpX * this.speed * 0.5 * strafeDir;
+              vz = perpZ * this.speed * 0.5 * strafeDir;
+            }
+          } else if (this.type === 12 && dist < this.attackRange) {
+            // Bug Ranged type 12: retreat when too close, strafe at range
+            if (dist < 4.0) {
+              vx = -(dx / dist) * this.speed * 1.2;
+              vz = -(dz / dist) * this.speed * 1.2;
+            } else {
+              const perpX = -dz / dist;
+              const perpZ =  dx / dist;
+              vx = perpX * this.speed * 0.7;
+              vz = perpZ * this.speed * 0.7;
+            }
+          } else if (behavior === 'interceptor') {
             // Predict where the player will be 0.8s ahead and move to intercept
             const predictTime = 0.8;
             const predictX = targetPos.x + this._playerVelocity.x * predictTime;
@@ -1458,8 +1456,20 @@
             }
           }
           
-          this.mesh.position.x += vx * 60 * dt;
-          this.mesh.position.z += vz * 60 * dt;
+          // Clamp velocity magnitude to prevent teleportation
+          const _MAX_VEL = this.speed * 3.5;
+          const _velMag = Math.sqrt(vx * vx + vz * vz);
+          if (_velMag > _MAX_VEL) {
+            const _velScale = _MAX_VEL / _velMag;
+            vx *= _velScale;
+            vz *= _velScale;
+          }
+          
+          // Cap dt to prevent lag-spike teleportation (max ~20fps equivalent)
+          const _safeDt = Math.min(dt, 0.05);
+          
+          this.mesh.position.x += vx * 60 * _safeDt;
+          this.mesh.position.z += vz * 60 * _safeDt;
           // Track last movement vector for glide-spin death state (store unscaled velocity direction)
           this._lastMoveVX = vx;
           this._lastMoveVZ = vz;
@@ -1543,9 +1553,10 @@
             this.lastAttackTime = now;
             playSound('hit');
           }
-          // Knockback (dt-scaled so it is frame-rate independent)
-          this.mesh.position.x -= (dx / dist) * 120 * dt;
-          this.mesh.position.z -= (dz / dist) * 120 * dt;
+          // Knockback (dt-scaled so it is frame-rate independent; dt capped to prevent lag-spike teleportation)
+          const _wkDt = Math.min(dt, 0.05);
+          this.mesh.position.x -= (dx / dist) * 120 * _wkDt;
+          this.mesh.position.z -= (dz / dist) * 120 * _wkDt;
           
           if (windmillQuest.windmill.userData.hp <= 0) {
             failWindmillQuest();
