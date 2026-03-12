@@ -16,6 +16,14 @@ var IDLE_CONFIG = {
     COST_SCALE: 2.0,
     VALID_STATS: ['strength', 'agility', 'vitality']
   },
+  // Sleep Return speed upgrades: reduce offline cap from 8h → ~30s at max level
+  SLEEP_SPEED: {
+    MAX_LEVEL: 10,
+    BASE_COST: 200,
+    COST_SCALE: 2.5,
+    // Multipliers to offline hours cap (level 0 = 8h, level 10 = ~0.008h = ~30s)
+    CAP_HOURS: [8, 6, 4, 3, 2, 1.5, 1, 0.5, 0.2, 0.1, 0.008]
+  },
   MAX_OFFLINE_HOURS: 8,
   TICK_INTERVAL_MS: 1000
 };
@@ -25,6 +33,7 @@ function getIdleDefaults() {
     goldMineLevel: 0,
     autoTrainerLevel: 0,
     autoTrainerStat: 'strength',
+    sleepSpeedLevel: 0,
     lastTickTime: Date.now(),
     totalIdleGoldEarned: 0,
     totalIdleStatPoints: 0
@@ -50,12 +59,14 @@ function getAutoTrainerUpgradeCost(currentLevel) {
 function calculateOfflineProgress(lastTimestamp, saveData) {
   var now = Date.now();
   var elapsed = now - lastTimestamp;
-  var maxElapsed = IDLE_CONFIG.MAX_OFFLINE_HOURS * 3600 * 1000;
+  var idle = saveData.idle || getIdleDefaults();
+  // Sleep Speed upgrade reduces the max offline cap
+  var sleepLv = idle.sleepSpeedLevel || 0;
+  var capHours = IDLE_CONFIG.SLEEP_SPEED.CAP_HOURS[Math.min(sleepLv, IDLE_CONFIG.SLEEP_SPEED.MAX_LEVEL)];
+  var maxElapsed = capHours * 3600 * 1000;
   if (elapsed > maxElapsed) elapsed = maxElapsed;
 
   var elapsedMinutes = elapsed / 60000;
-  var idle = saveData.idle || getIdleDefaults();
-
   var goldEarned = 0;
   if (idle.goldMineLevel > 0) {
     var ratePerMin = idle.goldMineLevel * IDLE_CONFIG.GOLD_MINE.RATE_PER_LEVEL;
@@ -176,15 +187,47 @@ function buildWelcomeBackSummary(offlineResults) {
   };
 }
 
+function getSleepSpeedUpgradeCost(currentLevel) {
+  if (currentLevel >= IDLE_CONFIG.SLEEP_SPEED.MAX_LEVEL) return Infinity;
+  return Math.floor(
+    IDLE_CONFIG.SLEEP_SPEED.BASE_COST *
+    Math.pow(IDLE_CONFIG.SLEEP_SPEED.COST_SCALE, currentLevel)
+  );
+}
+
+function getSleepSpeedCapHours(level) {
+  var lv = Math.min(level || 0, IDLE_CONFIG.SLEEP_SPEED.MAX_LEVEL);
+  return IDLE_CONFIG.SLEEP_SPEED.CAP_HOURS[lv];
+}
+
+function upgradeSleepSpeed(saveData) {
+  var idle = saveData.idle || getIdleDefaults();
+  idle.sleepSpeedLevel = idle.sleepSpeedLevel || 0;
+  if (idle.sleepSpeedLevel >= IDLE_CONFIG.SLEEP_SPEED.MAX_LEVEL) {
+    return { success: false, reason: 'Max level reached' };
+  }
+  var cost = getSleepSpeedUpgradeCost(idle.sleepSpeedLevel);
+  if ((saveData.gold || 0) < cost) {
+    return { success: false, reason: 'Not enough gold', cost: cost };
+  }
+  saveData.gold -= cost;
+  idle.sleepSpeedLevel++;
+  saveData.idle = idle;
+  return { success: true, newLevel: idle.sleepSpeedLevel, cost: cost };
+}
+
 window.GameIdle = {
   IDLE_CONFIG: IDLE_CONFIG,
   getIdleDefaults: getIdleDefaults,
   getGoldMineUpgradeCost: getGoldMineUpgradeCost,
   getAutoTrainerUpgradeCost: getAutoTrainerUpgradeCost,
+  getSleepSpeedUpgradeCost: getSleepSpeedUpgradeCost,
+  getSleepSpeedCapHours: getSleepSpeedCapHours,
   calculateOfflineProgress: calculateOfflineProgress,
   idleTick: idleTick,
   upgradeGoldMine: upgradeGoldMine,
   upgradeAutoTrainer: upgradeAutoTrainer,
+  upgradeSleepSpeed: upgradeSleepSpeed,
   setAutoTrainerStat: setAutoTrainerStat,
   buildWelcomeBackSummary: buildWelcomeBackSummary
 };

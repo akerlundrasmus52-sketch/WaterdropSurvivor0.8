@@ -2994,6 +2994,19 @@
           if (saveData.campBuildings[buildingId].level === 0) saveData.campBuildings[buildingId].level = 1;
         }
         showStatChange('🏛️ ' + buildingName + ' Built!');
+        // Sleek construction complete notification
+        (function _showBuildComplete() {
+          const n = document.createElement('div');
+          n.style.cssText = 'position:fixed;top:12%;right:16px;background:linear-gradient(135deg,rgba(0,0,0,0.92),rgba(0,20,10,0.96));border:2px solid #2ecc71;border-radius:14px;padding:12px 18px;z-index:9999;display:flex;align-items:center;gap:12px;min-width:220px;box-shadow:0 0 20px rgba(46,204,113,0.4);animation:slideInRight 0.4s ease-out;pointer-events:none;';
+          n.innerHTML = '<span style="font-size:26px;">✅</span><div><div style="color:#2ecc71;font-family:Bangers,cursive;font-size:16px;letter-spacing:1px;">' + buildingName.toUpperCase() + '</div><div style="color:#aaa;font-size:11px;">Construction complete</div></div>';
+          document.body.appendChild(n);
+          setTimeout(function() {
+            n.style.transition = 'opacity 0.5s,transform 0.5s';
+            n.style.opacity = '0';
+            n.style.transform = 'translateX(120%)';
+            setTimeout(function() { n.remove(); }, 500);
+          }, 3000);
+        }());
 
         // Intro-quest: building the Quest Hall completes quest_buildQuesthall
         if (buildingId === 'questMission' &&

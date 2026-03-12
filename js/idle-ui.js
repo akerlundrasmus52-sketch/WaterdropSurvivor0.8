@@ -108,6 +108,31 @@ function renderIdleDashboard(saveData, container) {
   }
   container.appendChild(trainerCard);
 
+  // Sleep Speed card
+  if (window.GameIdle && window.GameIdle.upgradeSleepSpeed) {
+    var sleepCard = _el('div', 'idle-card');
+    var sleepLv = idle.sleepSpeedLevel || 0;
+    var sleepCapH = window.GameIdle.getSleepSpeedCapHours(sleepLv);
+    var sleepCapStr = sleepCapH < 0.02 ? '30 sec' : sleepCapH < 1 ? Math.round(sleepCapH * 60) + ' min' : sleepCapH + 'h';
+    sleepCard.appendChild(_el('h4', 'idle-card-title', 'color:#44ccff;', '⚡ Sleep Return Speed'));
+    sleepCard.appendChild(_el('p', null, null, 'Level: ' + sleepLv + '/10  |  Offline cap: ' + sleepCapStr));
+    sleepCard.appendChild(_el('p', 'idle-muted', 'font-size:10px;', 'Reduces how long before idle rewards kick in. Max level: 30 seconds!'));
+
+    var sleepCost = window.GameIdle.getSleepSpeedUpgradeCost(sleepLv);
+    var sleepBtn = _btn(
+      sleepLv >= 10 ? '⚡ MAX SPEED' : 'Upgrade (' + sleepCost + 'g)',
+      sleepLv >= 10 ? 'background:#00aa44;' : '',
+      function () {
+        var result = window.GameIdle.upgradeSleepSpeed(saveData);
+        if (result.success) renderIdleDashboard(saveData, container);
+        else alert(result.reason);
+      }
+    );
+    if (sleepLv >= 10) sleepBtn.disabled = true;
+    sleepCard.appendChild(sleepBtn);
+    container.appendChild(sleepCard);
+  }
+
   return container;
 }
 
