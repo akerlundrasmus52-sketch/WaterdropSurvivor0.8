@@ -2302,7 +2302,7 @@
         rewardSkillPoints: 3,
         rewardAttributePoints: 2,
         triggerOnDeath: false,
-        questObjectivePos: { x: -50, z: 25 }, // OPTIMIZED: Moved from (-90, 40) to match new UFO position
+        questObjectivePos: { x: -32, z: 25 }, // OPTIMIZED: Updated for ultra-compact 80x80 map (was -50, 25; before -90, 40)
         message: "🥚 ALIEN EGG FOUND!<br><br>You discovered a mysterious alien egg 👽 at the UFO crash site! Take it to the <b>Companion House</b> in camp to hatch it!",
         nextQuest: 'quest19_hatchEgg',
         conditions: ['quest17_visitCodex']

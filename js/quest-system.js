@@ -62,7 +62,7 @@
       // Start quest when player visits Stonehenge area (only after tutorial stonehenge quest is done)
       if (player && !saveData.extendedQuests.legendaryCigar.started &&
           saveData.tutorialQuests && isQuestClaimed('quest3_stonehengeGear')) {
-        const stonehengePos = { x: 35, z: 30 }; // OPTIMIZED: Updated from (60, 50)
+        const stonehengePos = { x: 32, z: 28 }; // OPTIMIZED: Updated for ultra-compact 80x80 map (was 35, 30; before 60, 50)
         const dist = Math.sqrt(
           Math.pow(player.mesh.position.x - stonehengePos.x, 2) +
           Math.pow(player.mesh.position.z - stonehengePos.z, 2)
@@ -81,7 +81,7 @@
       
       // Check if player found the cigar (near center of stonehenge)
       if (saveData.extendedQuests.legendaryCigar.started && !saveData.extendedQuests.legendaryCigar.foundCigar) {
-        const cigarPos = { x: -60, z: 60 }; // Exact center
+        const cigarPos = { x: 32, z: 28 }; // OPTIMIZED: Updated to match ultra-compact Stonehenge position (was -60, 60)
         const dist = Math.sqrt(
           Math.pow(player.mesh.position.x - cigarPos.x, 2) +
           Math.pow(player.mesh.position.z - cigarPos.z, 2)

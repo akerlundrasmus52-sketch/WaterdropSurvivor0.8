@@ -807,14 +807,14 @@
       // Pyramid scattered stones — partially destroyed look (scattered/fallen stone blocks)
       const pyramidScatterMat = new THREE.MeshStandardMaterial({ color: 0xBBA080, roughness: 0.9, metalness: 0.0 });
       const pyramidScatterPositions = [
-        // OPTIMIZED: Adjusted scatter positions around new pyramid location (25, -20)
-        { x: 32, z: -24, ry: 0.3, sx: 1.5, sy: 0.8, sz: 1.2 },
-        { x: 22, z: -22, ry: 1.1, sx: 1.0, sy: 0.6, sz: 1.0 },
-        { x: 34, z: -22, ry: 0.7, sx: 1.8, sy: 0.7, sz: 1.4 },
-        { x: 21, z: -27, ry: 0.2, sx: 1.2, sy: 0.5, sz: 0.9 },
-        { x: 35, z: -25, ry: 1.5, sx: 0.8, sy: 0.6, sz: 1.0 }, // OPTIMIZED from (60, -50)
-        { x: 24, z: -30, ry: 0.9, sx: 1.3, sy: 0.7, sz: 1.1 },
-        { x: 30, z: -18, ry: 0.4, sx: 0.6, sy: 0.4, sz: 0.8 },
+        // OPTIMIZED: Adjusted scatter positions around new ultra-compact pyramid location (32, -28)
+        { x: 32, z: -26, ry: 0.3, sx: 1.5, sy: 0.8, sz: 1.2 },
+        { x: 28, z: -28, ry: 1.1, sx: 1.0, sy: 0.6, sz: 1.0 },
+        { x: 34, z: -26, ry: 0.7, sx: 1.8, sy: 0.7, sz: 1.4 },
+        { x: 28, z: -30, ry: 0.2, sx: 1.2, sy: 0.5, sz: 0.9 },
+        { x: 35, z: -28, ry: 1.5, sx: 0.8, sy: 0.6, sz: 1.0 },
+        { x: 30, z: -32, ry: 0.9, sx: 1.3, sy: 0.7, sz: 1.1 },
+        { x: 30, z: -24, ry: 0.4, sx: 0.6, sy: 0.4, sz: 0.8 },
       ];
       pyramidScatterPositions.forEach(pos => {
         const sGeo = new THREE.BoxGeometry(pos.sx, pos.sy, pos.sz);
@@ -827,8 +827,9 @@
       });
 
       // Phase 4: Illuminati Pyramid - Pyramid with All-Seeing Eye, Fences, and Men in Black guards
+      // OPTIMIZED: Repositioned for ultra-compact 80x80 map (optional discovery landmark)
       const illuminatiGroup = new THREE.Group();
-      illuminatiGroup.position.set(-70, 0, 50); // New landmark location
+      illuminatiGroup.position.set(-38, 0, 32); // OPTIMIZED: Moved from (-70, 0, 50) to fit 80x80 map
       
       // Pyramid base and steps
       const illuminatiPyramidMat = new THREE.MeshToonMaterial({ color: 0xC0C0C0 }); // Silver/gray stone
@@ -2198,20 +2199,21 @@
         });
         scene.add(camelGroup);
       }
-      createCamel(50, -44);
-      createCamel(72, -54);
-      createCamel(57, -72);
+      // Place camels in desert region - OPTIMIZED: Repositioned for ultra-compact 80x80 map
+      createCamel(34, -30); // OPTIMIZED: Moved from (50, -44) to fit 80x80 map
+      createCamel(38, -32); // OPTIMIZED: Moved from (72, -54) to fit 80x80 map
+      createCamel(32, -35); // OPTIMIZED: Moved from (57, -72) to fit 80x80 map
 
       // Sand dunes in desert
       const sandMat = new THREE.MeshToonMaterial({ color: 0xE8C880 });
       const dunePositions = [
-        // OPTIMIZED: Adjusted sand dunes to cluster near pyramid and desert landmarks
-        { x: 35, z: -25, rx: 0.6, rz: 1.2 }, // OPTIMIZED from (60, -50) - near pyramid at (25, -20)
-        { x: 48, z: -18, rx: 0.8, rz: 1.5 }, // Adjusted closer
-        { x: 42, z: -38, rx: 0.5, rz: 1.0 }, // Adjusted closer
-        { x: 55, z: -30, rx: 0.7, rz: 1.3 }, // Adjusted closer
-        { x: 30, z: -42, rx: 0.6, rz: 1.1 }, // Adjusted closer
-        { x: 58, z: -42, rx: 0.9, rz: 1.6 }, // Adjusted closer
+        // OPTIMIZED: Adjusted sand dunes to cluster near pyramid for ultra-compact 80x80 map (pyramid at 32, -28)
+        { x: 34, z: -24, rx: 0.6, rz: 1.2 }, // OPTIMIZED for ultra-compact (was 35, -25; near pyramid)
+        { x: 38, z: -22, rx: 0.8, rz: 1.5 }, // Closer to edge
+        { x: 36, z: -32, rx: 0.5, rz: 1.0 }, // Closer to edge
+        { x: 38, z: -28, rx: 0.7, rz: 1.3 }, // Near pyramid
+        { x: 30, z: -32, rx: 0.6, rz: 1.1 }, // Near pyramid
+        { x: 36, z: -34, rx: 0.9, rz: 1.6 }, // Closer to edge
       ];
       dunePositions.forEach(d => {
         const duneGeo = new THREE.SphereGeometry(d.rx, 8, 6);
@@ -2222,10 +2224,10 @@
         scene.add(dune);
       });
 
-      // Old rusty car in desert
+      // Old rusty car in desert - OPTIMIZED: Repositioned for ultra-compact 80x80 map
       (function() {
         const carGroup = new THREE.Group();
-        carGroup.position.set(66, 0, -50);
+        carGroup.position.set(36, 0, -34); // OPTIMIZED: Moved from (66, 0, -50) to fit 80x80 map
         carGroup.rotation.y = 0.7;
         const rustyMat = new THREE.MeshToonMaterial({ color: 0x8B4513 });
         // Car body
@@ -2260,10 +2262,10 @@
       scene.add(desertGround);
 
       // --- SNOWY MOUNTAINS REGION (x: -120 to 0, z: -120 to 0) ---
-      // Volcano with glowing orange/red lava crater
+      // Volcano with glowing orange/red lava crater - OPTIMIZED: Repositioned for ultra-compact 80x80 map
       (function() {
         const volcanoGroup = new THREE.Group();
-        volcanoGroup.position.set(-60, 0, -72);
+        volcanoGroup.position.set(-35, 0, -35); // OPTIMIZED: Moved from (-60, 0, -72) to fit 80x80 map
         
         const volMat = new THREE.MeshStandardMaterial({ color: 0x4A3525, roughness: 0.95, metalness: 0.0 }); // Dark volcanic rock
         // Volcano base cone - SCALED DOWN so it fits on screen
@@ -2383,10 +2385,10 @@
       const mushroomCapMat = new THREE.MeshToonMaterial({ color: 0xC0392B }); // Red mushroom cap
       const mushroomStemMat = new THREE.MeshToonMaterial({ color: 0xFFF8DC }); // Cream stem
       const mushroomData = [
-        // OPTIMIZED: Adjusted mushroom positions to cluster around new Stonehenge location (35, 30)
-        {x:30, z:30, s:1.0}, {x:35, z:35, s:0.7}, {x:38, z:28, s:1.2},
-        {x:28, z:38, s:0.8}, {x:42, z:32, s:1.0}, {x:32, z:42, s:0.6},
-        {x:45, z:28, s:1.3}, {x:26, z:45, s:0.9},
+        // OPTIMIZED: Adjusted mushroom positions to cluster around new ultra-compact Stonehenge location (32, 28)
+        {x:28, z:26, s:1.0}, {x:32, z:32, s:0.7}, {x:35, z:26, s:1.2},
+        {x:26, z:32, s:0.8}, {x:36, z:28, s:1.0}, {x:28, z:35, s:0.6},
+        {x:38, z:26, s:1.3}, {x:24, z:35, s:0.9},
       ];
       mushroomData.forEach(m => {
         const mGroup = new THREE.Group();
@@ -2404,10 +2406,10 @@
       });
 
       // --- SCI-FI/ALIEN REGION (x: -120 to 0, z: 0 to 120) ---
-      // Area 51 building
+      // Area 51 building - OPTIMIZED: Repositioned for ultra-compact 80x80 map
       (function() {
         const area51Group = new THREE.Group();
-        area51Group.position.set(-75, 0, 60);
+        area51Group.position.set(-35, 0, 28); // OPTIMIZED: Moved from (-75, 0, 60) to fit 80x80 map
         
         const a51Mat = new THREE.MeshToonMaterial({ color: 0x888888 }); // Flat grey
         // Main hangar building
@@ -2588,9 +2590,9 @@
 
         scene.add(shipGroup);
 
-        // Add a glowing Companion Egg near the UFO crash site (quest18 objective) - OPTIMIZED: Updated position
+        // Add a glowing Companion Egg near the UFO crash site (quest18 objective) - OPTIMIZED: Updated position for 80x80 map
         const eggGroup = new THREE.Group();
-        eggGroup.position.set(-48, 0, 23); // OPTIMIZED: Moved from (-88, 0, 38) - near new UFO position
+        eggGroup.position.set(-32, 0, 25); // OPTIMIZED: Adjusted for ultra-compact map (was -48, 23; before -88, 38)
         const eggGeo = new THREE.SphereGeometry(0.7, 12, 10);
         eggGeo.scale(1, 1.3, 1);
         const eggMat = new THREE.MeshPhysicalMaterial({
@@ -2907,7 +2909,7 @@
 
       // --- Tesla Tower Point Light (blue/white) ---
       const teslaLight = new THREE.PointLight(0x00CCFF, 3, 30);
-      teslaLight.position.set(-30, 18, -30); // OPTIMIZED: Moved from (-50, 18, -50) to match Tesla Tower position
+      teslaLight.position.set(-32, 18, -28); // OPTIMIZED: Updated for ultra-compact 80x80 map (was -30, -30; before -50, -50)
       teslaLight.userData = { isTeslaLight: true, phase: 0 };
       scene.add(teslaLight);
       window.teslaPointLight = teslaLight;
