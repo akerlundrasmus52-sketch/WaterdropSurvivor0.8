@@ -116,6 +116,7 @@
     const DEFAULT_ENEMY_COLOR = _ENEMY_COLORS[0]; // green (same as Tank/index-0)
     // Expose for use by object-pool.js when resetting pooled enemy material colors
     window._ENEMY_COLORS = _ENEMY_COLORS;
+    const ENEMY_INSTANCING_ENABLED = window.ENEMY_INSTANCING_ENABLED === true;
 
     // Enemy types that display eyes (creatures with recognizable faces)
     const ENEMY_TYPES_WITH_EYES = new Set([0, 1, 2, 3, 4, 5, 12, 13, 14, 15, 17, 21]);
@@ -668,7 +669,8 @@
         // Check if the instanced renderer is available and active. If so, mark this
         // enemy for instancing (mesh won't be added to scene, rendered via InstancedMesh)
         // and hide its individual mesh. Otherwise fall back to regular scene rendering.
-        const _shouldInstance = (type === 0 || type === 1 || type === 2)
+        const _shouldInstance = ENEMY_INSTANCING_ENABLED
+          && (type === 0 || type === 1 || type === 2)
           && window._instancedRenderer && window._instancedRenderer.active;
 
         if (_shouldInstance) {
