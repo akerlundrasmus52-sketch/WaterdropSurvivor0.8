@@ -1730,6 +1730,10 @@
     };
 
     // Each entry: id (unique), category key, icon, name, desc, lore (rich text), triggerKey (what triggers discover)
+    // EXP values follow lore importance (5–5000):
+    //   Common/basic enemies & tools: 5–30   | Unlockable mechanics/weapons: 15–75
+    //   Named characters & companions: 25–500 | Major landmarks: 100–1000
+    //   Core lore chapters: 500–5000 (Chapter 5 "The Truth" grants the max 5000)
     const CODEX_ENTRIES = [
       // === CHARACTERS & AI ===
       { id: 'char_waterdrop', category: 'characters', icon: '💧', name: 'The Waterdrop', exp: 250,

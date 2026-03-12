@@ -4467,6 +4467,9 @@
     _updatePromptUI();
   }
 
+  // Helper: mark menu as open, add CSS class to body, and immediately hide the interact prompt.
+  // Use this instead of setting _menuOpen manually to ensure the CSS class (used by
+  // .camp-menu-open #camp-interact-prompt { display: none !important }) is always in sync.
   function _openMenu() {
     _menuOpen = true; _menuOpenTs = Date.now();
     document.body.classList.add('camp-menu-open');
