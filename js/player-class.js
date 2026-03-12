@@ -259,12 +259,13 @@
         // Arms — thick and stubby with fist ends matching spritesheet
         const armGeo = new THREE.CylinderGeometry(0.06, 0.10, 0.24, 8);
         const limbMaterial = new THREE.MeshPhongMaterial({
-          color: COLORS.player,
-          emissive: 0x0d47a1,
-          emissiveIntensity: 0.15,
-          shininess: 90,
+          color: 0x3A9FD8,             // Match new deeper sea-blue body color
+          emissive: 0x0A3D5C,          // Match deep ocean blue emissive
+          emissiveIntensity: 0.2,      // Slightly enhanced
+          shininess: 110,              // Match enhanced water shine
+          specular: 0x88CCFF,          // Bright specular highlights for wet look
           transparent: true,
-          opacity: 0.85
+          opacity: 0.88
         });
         
         // Left arm
