@@ -623,7 +623,12 @@
         // MiniBoss/FlyingBoss have emissive glow — give them a per-instance material so the
         // pulsing glow animation in update() doesn't affect all enemies of the same color.
         if (type === 10 || type === 11) {
-          const _bossMat = new THREE.MeshLambertMaterial({ color: _colorHex, emissive: new THREE.Color(_colorHex), emissiveIntensity: 0.3 });
+          const _bossMat = new THREE.MeshPhongMaterial({
+            color: _colorHex,
+            emissive: new THREE.Color(_colorHex),
+            emissiveIntensity: 0.3,
+            shininess: 90  // Higher shininess for bosses to make them stand out
+          });
           this.mesh = new THREE.Mesh(_bodyGeo, _bossMat);
         } else {
           this.mesh = new THREE.Mesh(_bodyGeo, _bodyMat);
