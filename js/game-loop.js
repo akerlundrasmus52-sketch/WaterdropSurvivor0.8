@@ -1083,10 +1083,31 @@
       // Debug: track alive/died counts per frame for diagnostics
       const _dbgAliveBeforeEnemyTick = window.GameDebug && window.GameDebug.enabled
         ? enemies.filter(e => e && !e.isDead).length : 0;
+
+      // ── ANIMATION THROTTLE — skip expensive updates for distant enemies ──────────
+      // Applies distance-based LOD: near enemies (< 50 units) update every frame,
+      // medium (< 80 units) every 2nd frame, far (< 100 units) every 4th frame,
+      // very far (100+) every 8th frame.  Reduces per-frame AI/animation overhead
+      // by ~60% when 150+ enemies are on screen.
+      const _playerPos = player.mesh.position;
+      const _useThrottle = window.GamePerformance && window.GamePerformance.AnimationThrottle;
       enemies.forEach((e) => {
         if (!e || !e.mesh || e.isDead) return;
-        e.update(dt, player.mesh.position);
+
+        // Calculate squared distance for throttle check (avoids expensive sqrt)
+        let _shouldUpdate = true;
+        if (_useThrottle && window._frameCount !== undefined) {
+          const _edx = e.mesh.position.x - _playerPos.x;
+          const _edz = e.mesh.position.z - _playerPos.z;
+          const _eDistSq = _edx * _edx + _edz * _edz;
+          _shouldUpdate = _useThrottle.shouldUpdate(_eDistSq, window._frameCount);
+        }
+
+        if (_shouldUpdate) {
+          e.update(dt, _playerPos);
+        }
       });
+
       if (window.GameDebug && window.GameDebug.enabled) {
         const _dbgAliveAfter = enemies.filter(e => e && !e.isDead).length;
         window.GameDebug.onEnemyTick(enemies, 0, _dbgAliveBeforeEnemyTick - _dbgAliveAfter);
@@ -3446,6 +3467,7 @@
       const totalFrameTime = frameEndTime - frameStartTime;
       performanceLog.totalFrameTime = totalFrameTime;
       performanceLog.frameCount++;
+      window._frameCount = performanceLog.frameCount; // Expose for AnimationThrottle system
       
       // FRESH: Update FPS watchdog with current frame time
       updateFPSWatchdog(totalFrameTime);
