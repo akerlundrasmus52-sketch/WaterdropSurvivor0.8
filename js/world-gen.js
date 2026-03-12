@@ -41,6 +41,15 @@
         gCtx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
       }
 
+      // Subtle long-form shading to anchor the ground to the lighting direction
+      const sweepGrad = gCtx.createLinearGradient(0, 0, 512, 512);
+      sweepGrad.addColorStop(0, 'rgba(255, 255, 220, 0.04)'); // gentle sun-kissed highlight
+      sweepGrad.addColorStop(1, 'rgba(12, 24, 14, 0.08)');    // cooler shadowed side
+      gCtx.globalCompositeOperation = 'soft-light';
+      gCtx.fillStyle = sweepGrad;
+      gCtx.fillRect(0, 0, 512, 512);
+      gCtx.globalCompositeOperation = 'source-over';
+
       const groundTexture = new THREE.CanvasTexture(groundTexCanvas);
       groundTexture.wrapS = groundTexture.wrapT = THREE.RepeatWrapping;
       groundTexture.repeat.set(20, 20); // Tile the texture for detail
@@ -3060,4 +3069,3 @@
     // Expose globally so other script files (game-screens.js, game-loop.js) can safely call it
     // without depending on hoisting order across separate <script> tags.
     window.applyGraphicsQuality = applyGraphicsQuality;
-
