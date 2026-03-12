@@ -72,125 +72,105 @@ function getEnemyBaseStats(type, levelScaling, speedBase, playerLevel) {
   // Use the new power-curve scaling instead of the legacy linear multiplier
   const ls = getEnemyLevelScaling(playerLevel);
 
-  if (type === 0) {           // Tank — charges, tries to cut off player
+  if (type === 0) {           // Tank — simple direct movement
     stats.hp    = 200 * ls;
-    stats.speed = speedBase * 1.2 * 60; // x60 compensates for removed * 60 in movement code
-    stats.aiBehavior = 'interceptor'; // Predicts player movement
-  } else if (type === 1) {    // Fast — flanker, zigzags around player
+    stats.speed = speedBase * 1.2;
+  } else if (type === 1) {    // Fast — simple direct movement
     stats.hp    = 60  * ls;
-    stats.speed = speedBase * 2.8 * 60;
-    stats.aiBehavior = 'flanker'; // Approaches from sides/behind
-  } else if (type === 2) {    // Balanced — pack hunter, coordinates with others
+    stats.speed = speedBase * 2.8;
+  } else if (type === 2) {    // Balanced — simple direct movement
     stats.hp    = 120 * ls;
-    stats.speed = speedBase * 1.8 * 60;
-    stats.aiBehavior = 'pack'; // Spreads out, surrounds player
-  } else if (type === 3) {    // Slowing — ambusher, hides then rushes
+    stats.speed = speedBase * 1.8;
+  } else if (type === 3) {    // Slowing — simple direct movement
     stats.hp           = 150 * ls;
-    stats.speed        = speedBase * 1.6 * 60;
+    stats.speed        = speedBase * 1.6;
     stats.slowDuration = 2000;
     stats.slowAmount   = 0.5;
-    stats.aiBehavior = 'ambusher'; // Waits then dashes in
-  } else if (type === 4) {    // Ranged — kiter, maintains distance smartly
+  } else if (type === 4) {    // Ranged — maintains distance
     stats.hp             = 100 * ls;
-    stats.speed          = speedBase * 1.4 * 60;
+    stats.speed          = speedBase * 1.4;
     stats.attackRange    = 8;
     stats.projectileSpeed = 0.15;
-    stats.aiBehavior = 'kiter'; // Retreats when player approaches
-  } else if (type === 5) {    // Flying — dive bomber, swoops in and out
+  } else if (type === 5) {    // Flying — simple direct movement
     stats.hp       = 120 * ls;
-    stats.speed    = speedBase * 2.4 * 60;
+    stats.speed    = speedBase * 2.4;
     stats.isFlying = true;
-    stats.aiBehavior = 'divebomber'; // Dives at player then retreats
-  } else if (type === 6) {    // Hard Tank — interceptor with prediction
+  } else if (type === 6) {    // Hard Tank — simple direct movement
     stats.hp    = 350 * ls;
-    stats.speed = speedBase * 1.3 * 60;
-    stats.aiBehavior = 'interceptor';
-  } else if (type === 7) {    // Hard Fast — aggressive flanker
+    stats.speed = speedBase * 1.3;
+  } else if (type === 7) {    // Hard Fast — simple direct movement
     stats.hp    = 110 * ls * 1.2; // +20% HP (yellow/gold enemy)
-    stats.speed = speedBase * 3.2 * 60;
-    stats.aiBehavior = 'flanker';
-  } else if (type === 8) {    // Hard Balanced — pack leader
+    stats.speed = speedBase * 3.2;
+  } else if (type === 8) {    // Hard Balanced — simple direct movement
     stats.hp    = 220 * ls;
-    stats.speed = speedBase * 2.0 * 60;
-    stats.aiBehavior = 'pack';
-  } else if (type === 9) {    // Elite — stalker, waits for openings
+    stats.speed = speedBase * 2.0;
+  } else if (type === 9) {    // Elite — simple direct movement
     stats.hp    = 400 * ls;
-    stats.speed = speedBase * 1.8 * 60;
-    stats.aiBehavior = 'stalker'; // Circles then strikes when player is busy
+    stats.speed = speedBase * 1.8;
   } else if (type === 10) {   // MiniBoss
     const miniBossStartLevel = 10;
     stats.hp         = 2000 * 1.2 * (1 + (playerLevel - miniBossStartLevel) * MINI_BOSS_HP_SCALING_RATE); // +20% HP (yellow/gold enemy)
-    stats.speed      = speedBase * 1.0 * 60;
+    stats.speed      = speedBase * 1.0;
     stats.isMiniBoss = true;
     stats.armor      = getEnemyArmor(playerLevel, 0.30);
-    stats.aiBehavior = 'interceptor';
   } else if (type === 11) {   // Flying Boss (level 15) — giant airborne boss
     const flyingBossStartLevel = 15;
     stats.hp          = 5000 * (1 + Math.max(0, playerLevel - flyingBossStartLevel) * MINI_BOSS_HP_SCALING_RATE);
-    stats.speed       = speedBase * 1.4 * 60;
+    stats.speed       = speedBase * 1.4;
     stats.isFlying    = true;
     stats.isFlyingBoss = true;
     stats.armor       = getEnemyArmor(playerLevel, 0.35);
     stats.attackRange = 12;
     stats.projectileSpeed = 0.18;
-    stats.aiBehavior = 'divebomber';
-  } else if (type === 12) {   // Bug Ranged — kiting ranged attacker
+  } else if (type === 12) {   // Bug Ranged — ranged attacker
     stats.hp             = 90 * ls;
-    stats.speed          = speedBase * 1.5 * 60;
+    stats.speed          = speedBase * 1.5;
     stats.isBug          = true;
     stats.attackRange    = 10;
     stats.projectileSpeed = 0.14;
-    stats.aiBehavior = 'kiter';
-  } else if (type === 13) {   // Bug Slow — armoured interceptor
+  } else if (type === 13) {   // Bug Slow — armoured tank
     stats.hp    = 280 * ls;
-    stats.speed = speedBase * 0.9 * 60;
+    stats.speed = speedBase * 0.9;
     stats.isBug = true;
     stats.armor = getEnemyArmor(playerLevel, 0.20);
-    stats.aiBehavior = 'interceptor';
-  } else if (type === 14) {   // Bug Fast — fast dive bomber
+  } else if (type === 14) {   // Bug Fast — fast flyer
     stats.hp       = 50 * ls;
-    stats.speed    = speedBase * 3.4 * 60;
+    stats.speed    = speedBase * 3.4;
     stats.isBug    = true;
     stats.isFlying = true;
-    stats.aiBehavior = 'divebomber';
-  } else if (type === 15) {   // Daddy Longlegs — spider, low HP like yellow enemy
+  } else if (type === 15) {   // Daddy Longlegs — spider
     stats.hp       = 110 * ls * 1.2;  // Same HP as yellow enemy
-    stats.speed    = speedBase * 1.5 * 60;
+    stats.speed    = speedBase * 1.5;
     stats.isDaddyLonglegs = true;
-    stats.aiBehavior = 'rearing'; // Creeps toward player, rears up before attacking
-    stats.attackRange    = 3.5;   // Melee-range rearing attack
+    stats.attackRange    = 3.5;   // Melee-range attack
     stats.isSpider       = true;
-  } else if (type === 16) {   // Sweeping Swarm — cluster that sweeps side to side
+  } else if (type === 16) {   // Sweeping Swarm — fast cluster
     stats.hp       = 10 * ls;  // 1-hit kill (very fragile)
-    stats.speed    = speedBase * 4.0 * 60;
+    stats.speed    = speedBase * 4.0;
     stats.isFlying = true;
     stats.isSwarm  = true;
-    stats.aiBehavior = 'sweep'; // Flies rapidly in large arcs across the screen
-  } else if (type === 17) {   // Grey Alien Scout (minute-10 encounter) — ranged kiter
+  } else if (type === 17) {   // Grey Alien Scout — ranged attacker
     stats.hp             = 280 * ls;
-    stats.speed          = speedBase * 1.8 * 60;
+    stats.speed          = speedBase * 1.8;
     stats.isFlying       = true;           // hovers above ground
     stats.isGreyAlien    = true;
     stats.attackRange    = 11;
     stats.projectileSpeed = 0.17;
-    stats.aiBehavior     = 'kiter';
     stats.dropsAlienBiomatter = true;      // rare biomatter drop on kill
-  } else if (type === 18) {   // Reptilian Shifter — active-camo fast flanker
+  } else if (type === 18) {   // Reptilian Shifter — active-camo fast enemy
     stats.hp          = 160 * ls;
-    stats.speed       = speedBase * 3.6 * 60;
+    stats.speed       = speedBase * 3.6;
     stats.isReptilian = true;
-    stats.aiBehavior  = 'flanker';
-  } else if (type === 20) {   // Source Glitch — Forbidden Protocol reality-breaking entity
+  } else if (type === 20) {   // Source Glitch — reality-breaking entity
     stats.hp       = 600 * ls;
     stats.speed    = speedBase * 0;  // Teleports instead of walking — speed handled in AI
     stats.isFlying = true;
     stats.isSourceGlitch = true;
     stats.armor    = 0;
     stats.attackRange = 6;
-    stats.aiBehavior = 'sourceGlitch';
     stats.dropsCorruptedSourceCode = true;
     stats.elementalResistance = { fire: -0.50, ice: -0.50, lightning: -0.50, physical: -0.50 }; // Extremely vulnerable — reality is broken
-  } else if (type === 19) {   // Annunaki Orb — teleporting golden boss (minute-15)
+  } else if (type === 19) {   // Annunaki Orb — teleporting golden boss
     const annunakiStartLevel = 15;
     stats.hp             = 4000 * (1 + Math.max(0, playerLevel - annunakiStartLevel) * MINI_BOSS_HP_SCALING_RATE);
     stats.speed          = speedBase * 0;  // Doesn't move — teleports instead
@@ -200,12 +180,10 @@ function getEnemyBaseStats(type, levelScaling, speedBase, playerLevel) {
     stats.armor          = getEnemyArmor(playerLevel, 0.40);
     stats.attackRange    = 99;             // Can always "fire" — uses laser sweep
     stats.projectileSpeed = 0.12;
-    stats.aiBehavior     = 'annunaki';     // Custom behavior handled in enemy-class.js
     stats.elementalResistance = { fire: 0.20, ice: 0.20, lightning: 0.20, physical: 0.30 };
-  } else if (type === 21) {   // Water Organism — watery creature with camp-style graphics (level-1)
+  } else if (type === 21) {   // Water Organism — watery creature with camp-style graphics
     stats.hp    = 100 * ls;
-    stats.speed = speedBase * 1.8 * 60;
-    stats.aiBehavior = 'pack'; // Coordinates with others, spreads out
+    stats.speed = speedBase * 1.8;
   }
 
   stats.maxHp  = stats.hp;
