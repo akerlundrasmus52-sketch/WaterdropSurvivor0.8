@@ -3201,7 +3201,7 @@
         }
       }
 
-      // Lava damage: player takes damage when close to volcano (at -100, 0, -120)
+      // Lava damage: player takes damage when close to volcano (OPTIMIZED: at -60, 0, -72)
       if (player && isGameActive && !isGameOver) {
         const LAVA_DAMAGE_RADIUS = 8;   // Distance from volcano center to take lava damage
         const LAVA_WARN_RADIUS = 14;    // Distance at which warning appears
