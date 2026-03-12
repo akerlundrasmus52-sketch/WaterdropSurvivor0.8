@@ -2365,23 +2365,22 @@
         rewardGold: 400,
         rewardSkillPoints: 2,
         rewardAttributePoints: 2,
-        unlockBuilding: 'campBoard',
-        message: "⚔️ Companion trained!<br><br>Your companion grows stronger with every battle!<br><br>A <b>Camp Board</b> has appeared near the campfire — use it for instant access to ALL camp features without walking to each building!",
+        message: "⚔️ Companion trained!<br><br>Your companion grows stronger with every battle!<br><br>📖 Head to the <b>Codex</b> sign near the campfire to explore the world encyclopedia!",
         nextQuest: 'quest21_useCampBoard',
         conditions: ['quest19c_growAdult']
       },
 
-      // === PHASE 21: Use the Camp Board (Fast Access) ===
+      // === PHASE 21: Visit the Codex (from previous unlock at quest17) ===
       quest21_useCampBoard: {
         id: 'quest21_useCampBoard',
-        name: 'Use the Camp Board',
-        description: 'The Camp Board near the campfire gives you fast access to every camp feature. Open it now!',
-        objectives: 'Interact with the Camp Board near the campfire',
+        name: 'Explore the Codex',
+        description: 'The Codex near the campfire holds lore, enemy info, and rewards. Open it and claim your first EXP!',
+        objectives: 'Open the Codex and claim EXP from an entry',
         claim: 'Quest Hall',
         rewardGold: 500,
         rewardSkillPoints: 3,
         rewardAttributePoints: 3,
-        message: "📋 CAMP BOARD MASTERED!<br><br>You can now open <b>ALL</b> camp features instantly from the Camp Board near the campfire!<br><br>⛏️ <b>NEXT:</b> Visit the Store and buy your first Harvesting Tool to gather resources from the world!",
+        message: "📖 CODEX EXPLORED!<br><br>Keep discovering new enemies and landmarks to unlock more Codex entries!<br><br>⛏️ <b>NEXT:</b> Visit the Store and buy your first Harvesting Tool to gather resources from the world!",
         nextQuest: 'quest22_buyFirstTool',
         conditions: ['quest20_trainCompanion']
       },
@@ -2601,7 +2600,7 @@
         conditions: ['quest34_breedWolf']
       },
 
-      // === LATE GAME: The Black Market — unlocks advanced Store chests ===
+      // === LATE GAME: The Black Market — unlocks advanced Store chests AND Camp Board ===
       quest36_blackMarket: {
         id: 'quest36_blackMarket',
         name: 'The Black Market',
@@ -2611,8 +2610,9 @@
         rewardGold: 600,
         rewardSkillPoints: 3,
         rewardRawGems: { emerald: 3 },
+        unlockBuilding: 'campBoard',
         triggerOnDeath: true,
-        message: "🛒 <b>Advanced Chests Unlocked at the Shop!</b><br><br><i>A.I.D.A: 'The Greys left supply caches. Use their extracted essence to buy them back. The void gems inside are not mere currency — they are condensed alien consciousness. Handle with extreme care.'</i><br><br>The <b>Epic</b> and <b>Legendary</b> chest tiers are now available at the Shop!",
+        message: "🛒 <b>Advanced Chests Unlocked at the Shop!</b><br><br><i>A.I.D.A: 'The Greys left supply caches. Use their extracted essence to buy them back. The void gems inside are not mere currency — they are condensed alien consciousness. Handle with extreme care.'</i><br><br>The <b>Epic</b> and <b>Legendary</b> chest tiers are now available at the Shop!<br><br>📋 The <b>Camp Board</b> has also appeared — use it for instant access to ALL camp features from one spot!",
         nextQuest: 'quest_annunaki1',
         conditions: ['quest35_crystallizedTear']
       },
@@ -2682,7 +2682,7 @@
       'achievementBuilding': 'quest11_findAllLandmarks',
       'characterVisuals': 'quest16_visitCharVisuals',
       'codex': 'quest17_visitCodex',
-      'campBoard': 'quest20_trainCompanion',
+      'campBoard': 'quest36_blackMarket',
       'trashRecycle': 'quest26_kill20',
       'tempShop': 'quest28_survive3min',
       'campfireKitchen': 'quest30_buildCampfire',

@@ -1548,6 +1548,22 @@
         }
         updateQuestTracker();
       }
+
+      // Discover Codex landmark entries when player is nearby (always active, not quest-gated)
+      if (window.CodexSystem && player && player.mesh) {
+        const _cx = player.mesh.position.x, _cz = player.mesh.position.z;
+        const _codexLandmarkMap = {
+          stonehenge: 'land_stonehenge', pyramid: 'land_pyramid',
+          teslaTower: 'land_tesla', eiffel: 'land_windmill', montana: 'land_montana'
+        };
+        for (const cfg of Object.values(LANDMARK_CONFIGS)) {
+          if (_codexLandmarkMap[cfg.key] && Math.hypot(_cx - cfg.x, _cz - cfg.z) < cfg.radius) {
+            window.CodexSystem.discover(_codexLandmarkMap[cfg.key]);
+          }
+        }
+        // UFO crash site discovery
+        if (Math.hypot(_cx - (-50), _cz - 25) < 20) window.CodexSystem.discover('land_ufo');
+      }
       
       // 1. GUN
       if (weapons.gun.active && time - weapons.gun.lastShot > weapons.gun.cooldown) {

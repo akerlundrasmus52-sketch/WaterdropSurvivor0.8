@@ -279,14 +279,14 @@
         });
     }
 
-    // Flip card animation
+    // Flip card animation — golden pop on reveal
     function flipCard(index) {
         const card = document.querySelectorAll('.stat-card')[index];
         if (!card) return;
 
-        card.style.animation = 'cardFlip 0.6s ease-in-out';
+        card.classList.add('just-flipped');
         setTimeout(() => {
-            card.style.animation = '';
+            card.classList.remove('just-flipped');
         }, 600);
     }
 
@@ -499,7 +499,7 @@
             document.body.appendChild(overlay);
         }
 
-        overlay.style.display = 'block';
+        overlay.style.display = 'flex';
         renderCards();
     }
 
