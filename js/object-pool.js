@@ -294,12 +294,13 @@ window.enemyPool = (function () {
 
       if (!enemy.defaultMaterial._isShared && !enemy.defaultMaterial._isSpiderHitbox) {
         const _resetColorHex = window._ENEMY_COLORS ? (window._ENEMY_COLORS[type] !== undefined ? window._ENEMY_COLORS[type] : window._ENEMY_COLORS[0]) : 0x44AA44;
+        const _emissiveIntensity = (type === 10 || type === 11) ? 0.3 : 0.15;
         enemy.defaultMaterial.color.setHex(_resetColorHex);
         enemy.defaultMaterial.transparent = (type === 18);
         enemy.defaultMaterial.opacity = (type === 18) ? 0.2 : 1.0;
         if (enemy.defaultMaterial.emissive) {
-          enemy.defaultMaterial.emissive.setHex((type === 10 || type === 11) ? _resetColorHex : 0x000000);
-          enemy.defaultMaterial.emissiveIntensity = (type === 10 || type === 11) ? 0.3 : 0;
+          enemy.defaultMaterial.emissive.setHex(_resetColorHex);
+          enemy.defaultMaterial.emissiveIntensity = _emissiveIntensity;
         }
       }
     }
@@ -488,4 +489,3 @@ window.enemyPool = (function () {
 
   return { acquireEnemy, _return, get totalFree() { return totalFree(); } };
 }());
-
