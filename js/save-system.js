@@ -724,32 +724,58 @@
 
     // --- ACHIEVEMENTS SYSTEM ---
     const ACHIEVEMENTS = {
+      // KILL ACHIEVEMENTS - Extended progression
+      kill5: { id: 'kill5', name: 'First Enemy', desc: 'Kill your first 5 enemies', reward: 5, skillPoints: 0, attributePoints: 0, check: () => playerStats.kills >= 5, claimed: false },
       kill7: { id: 'kill7', name: 'First Steps', desc: 'Kill 7 enemies', reward: 10, skillPoints: 0, attributePoints: 0, check: () => playerStats.kills >= 7, claimed: false },
       kills10: { id: 'kills10', name: 'First Blood', desc: 'Kill 10 enemies', reward: 25, skillPoints: 1, attributePoints: 1, check: () => playerStats.kills >= 10, claimed: false },
+      kills25: { id: 'kills25', name: 'Getting Started', desc: 'Kill 25 enemies', reward: 40, skillPoints: 1, attributePoints: 1, check: () => playerStats.kills >= 25, claimed: false },
       kills50: { id: 'kills50', name: 'Killer Instinct', desc: 'Kill 50 enemies', reward: 50, skillPoints: 1, attributePoints: 1, check: () => playerStats.kills >= 50, claimed: false },
       kills100: { id: 'kills100', name: 'Century Slayer', desc: 'Kill 100 enemies', reward: 100, skillPoints: 2, attributePoints: 2, check: () => playerStats.kills >= 100, claimed: false },
+      kills250: { id: 'kills250', name: 'Destroyer', desc: 'Kill 250 enemies', reward: 200, skillPoints: 2, attributePoints: 2, check: () => playerStats.kills >= 250, claimed: false },
       kills500: { id: 'kills500', name: 'Mass Destroyer', desc: 'Kill 500 enemies', reward: 250, skillPoints: 2, attributePoints: 2, check: () => playerStats.kills >= 500, claimed: false },
       kills1000: { id: 'kills1000', name: 'Legendary Warrior', desc: 'Kill 1000 enemies', reward: 500, skillPoints: 3, attributePoints: 3, check: () => playerStats.kills >= 1000, claimed: false },
       kills2500: { id: 'kills2500', name: 'Elite Slayer', desc: 'Kill 2500 enemies', reward: 750, skillPoints: 3, attributePoints: 3, check: () => playerStats.kills >= 2500, claimed: false },
       kills5000: { id: 'kills5000', name: 'God of War', desc: 'Kill 5000 enemies', reward: 1000, skillPoints: 4, attributePoints: 4, check: () => playerStats.kills >= 5000, claimed: false },
-      
+      kills10000: { id: 'kills10000', name: 'Annihilator', desc: 'Kill 10,000 enemies', reward: 1500, skillPoints: 4, attributePoints: 4, check: () => playerStats.kills >= 10000, claimed: false },
+      kills25000: { id: 'kills25000', name: 'Death Incarnate', desc: 'Kill 25,000 enemies', reward: 2000, skillPoints: 5, attributePoints: 5, check: () => playerStats.kills >= 25000, claimed: false },
+      kills50000: { id: 'kills50000', name: 'Apocalypse', desc: 'Kill 50,000 enemies', reward: 3000, skillPoints: 5, attributePoints: 5, check: () => playerStats.kills >= 50000, claimed: false },
+      kills100000: { id: 'kills100000', name: 'World Ender', desc: 'Kill 100,000 enemies', reward: 5000, skillPoints: 6, attributePoints: 6, check: () => playerStats.kills >= 100000, claimed: false },
+
+      // GOLD ACHIEVEMENTS - Extended progression
       gold100: { id: 'gold100', name: 'Small Fortune', desc: 'Collect 100 gold in one run', reward: 50, skillPoints: 1, attributePoints: 1, check: () => playerStats.gold >= 100, claimed: false },
+      gold250: { id: 'gold250', name: 'Gold Gatherer', desc: 'Collect 250 gold in one run', reward: 100, skillPoints: 1, attributePoints: 1, check: () => playerStats.gold >= 250, claimed: false },
       gold500: { id: 'gold500', name: 'Treasure Hunter', desc: 'Collect 500 gold in one run', reward: 150, skillPoints: 1, attributePoints: 1, check: () => playerStats.gold >= 500, claimed: false },
       gold1000: { id: 'gold1000', name: 'Gold Baron', desc: 'Collect 1000 gold in one run', reward: 300, skillPoints: 2, attributePoints: 2, check: () => playerStats.gold >= 1000, claimed: false },
       gold2500: { id: 'gold2500', name: 'Wealth Magnet', desc: 'Collect 2500 gold in one run', reward: 500, skillPoints: 2, attributePoints: 2, check: () => playerStats.gold >= 2500, claimed: false },
-      
-      dasher: { id: 'dasher', name: 'Dash Master', desc: 'Perform 50 dashes in one run', reward: 100, skillPoints: 1, attributePoints: 1, check: () => playerStats.dashesPerformed >= 50, claimed: false },
+      gold5000: { id: 'gold5000', name: 'Golden Legend', desc: 'Collect 5000 gold in one run', reward: 750, skillPoints: 3, attributePoints: 3, check: () => playerStats.gold >= 5000, claimed: false },
+      gold10000: { id: 'gold10000', name: 'Midas Touch', desc: 'Collect 10,000 gold in one run', reward: 1200, skillPoints: 3, attributePoints: 3, check: () => playerStats.gold >= 10000, claimed: false },
+
+      // DASH ACHIEVEMENTS - Extended progression
+      dasher25: { id: 'dasher25', name: 'Swift Mover', desc: 'Perform 25 dashes in one run', reward: 50, skillPoints: 0, attributePoints: 1, check: () => playerStats.dashesPerformed >= 25, claimed: false },
+      dasher50: { id: 'dasher50', name: 'Dash Master', desc: 'Perform 50 dashes in one run', reward: 100, skillPoints: 1, attributePoints: 1, check: () => playerStats.dashesPerformed >= 50, claimed: false },
+      dasher100: { id: 'dasher100', name: 'Speed Demon', desc: 'Perform 100 dashes in one run', reward: 200, skillPoints: 2, attributePoints: 2, check: () => playerStats.dashesPerformed >= 100, claimed: false },
+      dasher250: { id: 'dasher250', name: 'Flash Incarnate', desc: 'Perform 250 dashes in one run', reward: 400, skillPoints: 2, attributePoints: 2, check: () => playerStats.dashesPerformed >= 250, claimed: false },
+
+      // SURVIVAL ACHIEVEMENTS - Extended progression
       survivor: { id: 'survivor', name: 'Time Warrior', desc: 'Survive for 10 minutes', reward: 200, skillPoints: 2, attributePoints: 2, check: () => playerStats.survivalTime >= 600, claimed: false },
       survivor20: { id: 'survivor20', name: 'Endurance Master', desc: 'Survive for 20 minutes', reward: 400, skillPoints: 3, attributePoints: 3, check: () => playerStats.survivalTime >= 1200, claimed: false },
       survivor30: { id: 'survivor30', name: 'Immortal Legend', desc: 'Survive for 30 minutes', reward: 600, skillPoints: 4, attributePoints: 4, check: () => playerStats.survivalTime >= 1800, claimed: false },
+      survivor45: { id: 'survivor45', name: 'Eternal Survivor', desc: 'Survive for 45 minutes', reward: 900, skillPoints: 4, attributePoints: 4, check: () => playerStats.survivalTime >= 2700, claimed: false },
+      survivor60: { id: 'survivor60', name: 'Time Master', desc: 'Survive for 1 hour', reward: 1200, skillPoints: 5, attributePoints: 5, check: () => playerStats.survivalTime >= 3600, claimed: false },
+
+      // WEAPON & COMBAT ACHIEVEMENTS
       weaponMaster: { id: 'weaponMaster', name: 'Weapon Master', desc: 'Unlock all 3 weapons', reward: 150, skillPoints: 1, attributePoints: 1, check: () => playerStats.weaponsUnlocked >= 3, claimed: false },
       untouchable: { id: 'untouchable', name: 'Untouchable', desc: 'Take no damage for 3 minutes', reward: 300, skillPoints: 3, attributePoints: 3, check: () => playerStats.survivalTime >= 180 && playerStats.damageTaken === 0, claimed: false },
-      
+
+      // MINI-BOSS ACHIEVEMENTS - Extended progression
       miniBoss1: { id: 'miniBoss1', name: 'Boss Slayer I', desc: 'Defeat your first mini-boss', reward: 150, skillPoints: 2, attributePoints: 2, check: () => playerStats.miniBossesDefeated >= 1, claimed: false },
       miniBoss3: { id: 'miniBoss3', name: 'Boss Slayer II', desc: 'Defeat 3 mini-bosses', reward: 300, skillPoints: 2, attributePoints: 2, check: () => playerStats.miniBossesDefeated >= 3, claimed: false },
       miniBoss5: { id: 'miniBoss5', name: 'Boss Slayer III', desc: 'Defeat 5 mini-bosses', reward: 500, skillPoints: 3, attributePoints: 3, check: () => playerStats.miniBossesDefeated >= 5, claimed: false },
       miniBoss10: { id: 'miniBoss10', name: 'Boss Hunter', desc: 'Defeat 10 mini-bosses', reward: 800, skillPoints: 4, attributePoints: 4, check: () => playerStats.miniBossesDefeated >= 10, claimed: false },
-      
+      miniBoss25: { id: 'miniBoss25', name: 'Boss Destroyer', desc: 'Defeat 25 mini-bosses', reward: 1200, skillPoints: 4, attributePoints: 4, check: () => playerStats.miniBossesDefeated >= 25, claimed: false },
+      miniBoss50: { id: 'miniBoss50', name: 'Boss Nemesis', desc: 'Defeat 50 mini-bosses', reward: 2000, skillPoints: 5, attributePoints: 5, check: () => playerStats.miniBossesDefeated >= 50, claimed: false },
+
+      // LEVEL ACHIEVEMENTS - Extended progression
       level10: { id: 'level10', name: 'Rising Star', desc: 'Reach Level 10', reward: 100, skillPoints: 1, attributePoints: 1, check: () => playerStats.lvl >= 10, claimed: false },
       level25: { id: 'level25', name: 'Experienced Fighter', desc: 'Reach Level 25', reward: 250, skillPoints: 2, attributePoints: 2, check: () => playerStats.lvl >= 25, claimed: false },
       level50: { id: 'level50', name: 'Master Champion', desc: 'Reach Level 50', reward: 500, skillPoints: 3, attributePoints: 3, check: () => playerStats.lvl >= 50, claimed: false },
