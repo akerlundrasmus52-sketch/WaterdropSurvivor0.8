@@ -1543,24 +1543,27 @@
             vz *= _velScale;
           }
           
-          // Cap dt to prevent lag-spike teleportation while allowing animation throttle accumulation (~5fps floor)
+          // Cap dt to prevent lag-spike teleportation (~5fps floor)
+          // FIXED: Removed frame-rate dependent * 60 multiplier that caused jitter and teleportation
+          // Speed is now in units/second, dt scales it properly without additional multiplier
           const _safeDt = Math.min(dt, 0.2);
-          
-          this.mesh.position.x += vx * 60 * _safeDt;
-          this.mesh.position.z += vz * 60 * _safeDt;
+
+          this.mesh.position.x += vx * _safeDt;
+          this.mesh.position.z += vz * _safeDt;
           // Track last movement vector for glide-spin death state (store unscaled velocity direction)
           this._lastMoveVX = vx;
           this._lastMoveVZ = vz;
-          // Smooth rotation toward target using shortest-arc lerp.
-          // Avoids the jittery snap that a direct `rotation.y = atan2(…)` causes
-          // when the player is circling or when throttle frames skip updates.
-          // Store target for continued interpolation during throttled frames.
+          // Smooth rotation toward target using direct lerp with fixed speed.
+          // FIXED: Reduced lerp factor from dt * 10 to dt * 5 to prevent overshooting on frame drops
+          // This eliminates jitter caused by rotation snapping when FPS varies
           if (!_isRageFlee) {
             this._targetRotY = Math.atan2(dx, dz);
             let _faceDelta = this._targetRotY - this.mesh.rotation.y;
+            // Normalize to shortest arc (-PI to +PI)
             if (_faceDelta > Math.PI) _faceDelta -= Math.PI * 2;
             if (_faceDelta < -Math.PI) _faceDelta += Math.PI * 2;
-            this.mesh.rotation.y += _faceDelta * Math.min(1.0, dt * 10);
+            // Smooth lerp with reduced factor to prevent overshoot
+            this.mesh.rotation.y += _faceDelta * Math.min(1.0, dt * 5);
           }
           // Collision with environment props (trees, barrels, crates) — ground enemies bounce off
           // Skip flying enemy types: 5=Flying, 11=FlyingBoss, 14=BugFast(fly), 16=SweepingSwarm
