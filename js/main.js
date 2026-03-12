@@ -613,13 +613,13 @@
     let _alienScoutSpawned    = false; // True once the minute-10 Grey Alien Scout is spawned this run
     let _annunakiOrbSpawned   = false; // True once the minute-15 Annunaki Orb is spawned this run
     // Landmark positions and detection radii for quest11_findAllLandmarks
-    // OPTIMIZED: Updated landmark positions for compact world layout (40% closer to spawn)
+    // OPTIMIZED: Updated landmark positions for ultra-compact world layout (80x80 map, all at edges)
     const LANDMARK_CONFIGS = {
-      stonehenge:  { x:  35, z:  30, radius: 20, key: 'stonehenge',  label: 'Stonehenge'  }, // OPTIMIZED: Moved from (60, 50)
-      pyramid:     { x:  25, z: -20, radius: 20, key: 'pyramid',     label: 'Pyramid'     }, // OPTIMIZED: Moved from (35, -35)
-      montana:     { x:   0, z: -60, radius: 25, key: 'montana',     label: 'Montana'     }, // OPTIMIZED: Moved from (0, -100)
-      teslaTower:  { x: -30, z: -30, radius: 25, key: 'teslaTower',  label: 'Tesla Tower' }, // OPTIMIZED: Moved from (-50, -50)
-      eiffel:      { x: -50, z:  90, radius: 25, key: 'eiffel',      label: 'Eiffel Tower'} // NOT OPTIMIZED: Still in original position
+      stonehenge:  { x:  32, z:  28, radius: 20, key: 'stonehenge',  label: 'Stonehenge'  }, // OPTIMIZED: Moved to edge (was 35, 30; before 60, 50)
+      pyramid:     { x:  32, z: -28, radius: 20, key: 'pyramid',     label: 'Pyramid'     }, // OPTIMIZED: Moved to edge (was 25, -20; before 35, -35)
+      montana:     { x:   0, z: -36, radius: 25, key: 'montana',     label: 'Montana'     }, // OPTIMIZED: Moved closer to edge (was 0, -60; before 0, -100)
+      teslaTower:  { x: -32, z: -28, radius: 25, key: 'teslaTower',  label: 'Tesla Tower' }, // OPTIMIZED: Moved to edge (was -30, -30; before -50, -50)
+      eiffel:      { x: -32, z:  35, radius: 25, key: 'eiffel',      label: 'Eiffel Tower'} // OPTIMIZED: Moved to edge (was -50, 90)
     };
     
     // Countdown system (PR #70-71)
