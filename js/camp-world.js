@@ -26,25 +26,25 @@
 
   // Building layout (id → world position + label)
   const BUILDING_DEFS = [
-    { id: 'questMission',        x:  0,  z:  8,  label: 'Quest Hall',          icon: '📜' },
-    { id: 'skillTree',           x: -8,  z: -6,  label: 'Skill Tree',          icon: '🌳' },
-    { id: 'forge',               x:  8,  z: -6,  label: 'The Forge',           icon: '⚒️' },
-    { id: 'companionHouse',      x: -8,  z:  3,  label: 'Companion Home',      icon: '🏡' },
-    { id: 'trainingHall',        x:  8,  z:  3,  label: 'Training Hall',       icon: '🏋️' },
-    { id: 'achievementBuilding', x:  0,  z:-10,  label: 'Hall of Trophies',    icon: '🏆' },
-    { id: 'armory',              x: -6,  z: -9,  label: 'Armory',              icon: '⚔️' },
-    { id: 'inventory',           x:  6,  z: -9,  label: 'Inventory',           icon: '📦' },
-    { id: 'campBoard',           x: -2.5,z:  0,  label: 'Camp Board',          icon: '📋' },
-    { id: 'specialAttacks',      x:  6,  z:  5,  label: 'Special Attacks',     icon: '⚡' },
-    { id: 'warehouse',           x: -6,  z:  5,  label: 'Warehouse',           icon: '🏪' },
-    { id: 'tavern',              x: -4,  z: 10,  label: 'Tavern',              icon: '🍺' },
-    { id: 'shop',                x:  4,  z: 10,  label: 'Shop',                icon: '🛒' },
-    { id: 'prestige',            x:  0,  z:-14,  label: 'Prestige Altar',      icon: '✨' },
-    { id: 'trashRecycle',        x: -8,  z: -1,  label: 'Trash & Recycle',     icon: '♻️' },
-    { id: 'tempShop',            x:  8,  z: -1,  label: 'Temp Shop',           icon: '🏪' },
-    { id: 'prismReliquary',      x: -5,  z:-14,  label: 'Prism Reliquary',     icon: '💎' },
-    { id: 'astralGateway',       x:  5,  z:-14,  label: 'Astral Gateway',      icon: '🌀' },
-    { id: 'accountBuilding',     x:  3,  z:-12,  label: 'Profile & Records',   icon: '👤' },
+    { id: 'questMission',        x:  0,  z:  11,  label: 'Quest Hall',          icon: '📜' },
+    { id: 'skillTree',           x: -12,  z: -8,  label: 'Skill Tree',          icon: '🌳' },
+    { id: 'forge',               x:  12,  z: -8,  label: 'The Forge',           icon: '⚒️' },
+    { id: 'companionHouse',      x: -11,  z:  4,  label: 'Companion Home',      icon: '🏡' },
+    { id: 'trainingHall',        x:  11,  z:  4,  label: 'Training Hall',       icon: '🏋️' },
+    { id: 'achievementBuilding', x:  0,  z:-13,  label: 'Hall of Trophies',    icon: '🏆' },
+    { id: 'armory',              x: -8,  z: -12,  label: 'Armory',              icon: '⚔️' },
+    { id: 'inventory',           x:  8,  z: -12,  label: 'Inventory',           icon: '📦' },
+    { id: 'campBoard',           x: -3.5,z:  0,  label: 'Camp Board',          icon: '📋' },
+    { id: 'specialAttacks',      x:  8,  z:  7,  label: 'Special Attacks',     icon: '⚡' },
+    { id: 'warehouse',           x: -8,  z:  7,  label: 'Warehouse',           icon: '🏪' },
+    { id: 'tavern',              x: -6,  z: 14,  label: 'Tavern',              icon: '🍺' },
+    { id: 'shop',                x:  6,  z: 14,  label: 'Shop',                icon: '🛒' },
+    { id: 'prestige',            x:  0,  z:-18,  label: 'Prestige Altar',      icon: '✨' },
+    { id: 'trashRecycle',        x: -11,  z: -2,  label: 'Trash & Recycle',     icon: '♻️' },
+    { id: 'tempShop',            x:  11,  z: -2,  label: 'Temp Shop',           icon: '🏪' },
+    { id: 'prismReliquary',      x: -7,  z:-18,  label: 'Prism Reliquary',     icon: '💎' },
+    { id: 'astralGateway',       x:  7,  z:-18,  label: 'Astral Gateway',      icon: '🌀' },
+    { id: 'accountBuilding',     x:  4,  z:-15,  label: 'Profile & Records',   icon: '👤' },
   ];
 
   // ──────────────────────────────────────────────────────────
@@ -114,6 +114,14 @@
   let _dustVelocities = [];
   let _dustLifetimes  = [];
   const DUST_COUNT    = 80;
+
+  // Green firefly particles for cozy atmosphere
+  let _fireflySystem = null;
+  let _fireflyPositions = null;
+  let _fireflyVelocities = [];
+  let _fireflyLifetimes = [];
+  let _fireflyPhases = [];  // For pulsing glow effect
+  const FIREFLY_COUNT = 40;
 
   // Building mesh registry { id → THREE.Group }
   let _buildingMeshes = {};
@@ -220,25 +228,25 @@
     _campScene.fog = new THREE.FogExp2(0x120e08, 0.025); // warm hearth fog
 
     // ── Lighting ────────────────────────────────────────────
-    // Very dim cool ambient – sky light
-    const ambient = new THREE.AmbientLight(0x1a2040, 0.45);
+    // Warmer dim ambient – cozy sky light
+    const ambient = new THREE.AmbientLight(0x2a3050, 0.55);
     _campScene.add(ambient);
 
-    // Distant cool moonlight
-    const moonLight = new THREE.DirectionalLight(0x4060a0, 0.4);
+    // Warm moonlight with better intensity
+    const moonLight = new THREE.DirectionalLight(0x6080c0, 0.6);
     moonLight.position.set(-30, 60, -20);
     moonLight.castShadow = false;
     _campScene.add(moonLight);
 
-    // Warm campfire point light (flickers each frame)
-    _fireLight = new THREE.PointLight(0xff7a20, 5.5, 28, 2);
+    // Enhanced warm campfire point light (flickers each frame)
+    _fireLight = new THREE.PointLight(0xff8a30, 6.5, 32, 2);
     _fireLight.position.set(0, 2, 0);
     _fireLight.castShadow = true;
     _fireLight.shadow.mapSize.setScalar(512);
     _campScene.add(_fireLight);
 
-    // Secondary warm fill light (softer, from below)
-    const fillLight = new THREE.PointLight(0xff5510, 1.8, 14, 2);
+    // Secondary warm fill light (softer, from below, more orange)
+    const fillLight = new THREE.PointLight(0xff6620, 2.2, 16, 2);
     fillLight.position.set(0, 0.4, 0);
     _campScene.add(fillLight);
 
@@ -254,6 +262,7 @@
     // ── Atmospheric particles ───────────────────────────────
     _buildSparkSystem();
     _buildDustSystem();
+    _buildFireflySystem();
 
     // ── Surrounding trees / scenery ─────────────────────────
     _buildAmbientForest();
@@ -502,6 +511,42 @@
     }
   }
 
+  // ── Green firefly particle system for cozy atmosphere ────
+  function _buildFireflySystem() {
+    const THREE = T();
+    const geo = new THREE.BufferGeometry();
+    _fireflyPositions = new Float32Array(FIREFLY_COUNT * 3);
+    geo.setAttribute('position', new THREE.BufferAttribute(_fireflyPositions, 3));
+
+    const mat = new THREE.PointsMaterial({
+      color: 0x88ff44,  // Bright green-yellow
+      size: 0.15,
+      transparent: true,
+      opacity: 0.85,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    });
+    _fireflySystem = new THREE.Points(geo, mat);
+    _campScene.add(_fireflySystem);
+
+    // Initialize fireflies around the camp perimeter and near trees
+    for (let i = 0; i < FIREFLY_COUNT; i++) {
+      _fireflyLifetimes.push(Math.random() * 8 + 2); // 2-10 second lifetime
+      _fireflyPhases.push(Math.random() * Math.PI * 2); // Random phase for pulsing
+      _fireflyVelocities.push({
+        x: (Math.random() - 0.5) * 0.6,
+        y: (Math.random() - 0.5) * 0.3,
+        z: (Math.random() - 0.5) * 0.6
+      });
+      // Spawn in a ring around camp (radius 15-30) at low height
+      const r = 15 + Math.random() * 15;
+      const a = Math.random() * Math.PI * 2;
+      _fireflyPositions[i * 3]     = Math.sin(a) * r;
+      _fireflyPositions[i * 3 + 1] = 1 + Math.random() * 2.5; // 1-3.5 height
+      _fireflyPositions[i * 3 + 2] = Math.cos(a) * r;
+    }
+  }
+
   // ── Atmospheric dust ─────────────────────────────────────
   function _buildDustSystem() {
     const THREE = T();
@@ -672,13 +717,14 @@
   function _buildLake() {
     const THREE = T();
 
-    // Dark-blue reflective lake surface
+    // Dark-blue reflective lake surface with enhanced moon reflection
     const lakeGeo = new THREE.CircleGeometry(12, 48);
     const lakeMat = new THREE.MeshPhongMaterial({
       color: 0x1a3a5c,
       emissive: 0x0d1d2e,
       emissiveIntensity: 0.15,
-      shininess: 80,  // High shininess for water reflection
+      shininess: 120,  // Increased shininess for better moon reflection
+      specular: 0x88aaff,  // Add specular highlight for moon reflection
       transparent: true,
       opacity: 0.88,
     });
@@ -688,8 +734,8 @@
     _lakeMesh.receiveShadow = false;
     _campScene.add(_lakeMesh);
 
-    // Soft blue lake glow
-    _lakeLight = new THREE.PointLight(0x2266aa, 1.2, 25, 2);
+    // Enhanced blue lake glow with warmer tint
+    _lakeLight = new THREE.PointLight(0x3388cc, 1.5, 28, 2);
     _lakeLight.position.set(LAKE_POS.x, 2, LAKE_POS.z);
     _campScene.add(_lakeLight);
 
@@ -3076,6 +3122,55 @@
       }
     }
     if (_dustSystem) _dustSystem.geometry.attributes.position.needsUpdate = true;
+
+    // ── Green fireflies ──────────────────────────────────────
+    if (!_fireflySystem || !_fireflyPositions) return;
+    for (let i = 0; i < FIREFLY_COUNT; i++) {
+      _fireflyLifetimes[i] -= dt;
+      if (_fireflyLifetimes[i] <= 0) {
+        // Respawn in ring around camp
+        const a = Math.random() * Math.PI * 2;
+        const r = 15 + Math.random() * 15;
+        _fireflyPositions[i * 3]     = Math.sin(a) * r;
+        _fireflyPositions[i * 3 + 1] = 1 + Math.random() * 2.5;
+        _fireflyPositions[i * 3 + 2] = Math.cos(a) * r;
+        _fireflyVelocities[i] = {
+          x: (Math.random() - 0.5) * 0.6,
+          y: (Math.random() - 0.5) * 0.3,
+          z: (Math.random() - 0.5) * 0.6
+        };
+        _fireflyPhases[i] = Math.random() * Math.PI * 2;
+        _fireflyLifetimes[i] = 2 + Math.random() * 8;
+      } else {
+        // Gentle wandering movement
+        _fireflyPositions[i * 3]     += _fireflyVelocities[i].x * dt;
+        _fireflyPositions[i * 3 + 1] += _fireflyVelocities[i].y * dt;
+        _fireflyPositions[i * 3 + 2] += _fireflyVelocities[i].z * dt;
+        // Random direction changes
+        _fireflyVelocities[i].x += (Math.random() - 0.5) * 0.2 * dt;
+        _fireflyVelocities[i].y += (Math.random() - 0.5) * 0.1 * dt;
+        _fireflyVelocities[i].z += (Math.random() - 0.5) * 0.2 * dt;
+        // Limit speed
+        const speed = Math.sqrt(
+          _fireflyVelocities[i].x ** 2 +
+          _fireflyVelocities[i].y ** 2 +
+          _fireflyVelocities[i].z ** 2
+        );
+        if (speed > 0.8) {
+          _fireflyVelocities[i].x *= 0.8 / speed;
+          _fireflyVelocities[i].y *= 0.8 / speed;
+          _fireflyVelocities[i].z *= 0.8 / speed;
+        }
+      }
+      // Update pulsing glow phase
+      _fireflyPhases[i] += dt * 3.0; // Pulse frequency
+    }
+    if (_fireflySystem) {
+      _fireflySystem.geometry.attributes.position.needsUpdate = true;
+      // Pulsing glow effect
+      const pulseIntensity = 0.6 + 0.4 * Math.sin(_campTime * 2.5);
+      _fireflySystem.material.opacity = pulseIntensity;
+    }
   }
 
   // ──────────────────────────────────────────────────────────
@@ -3087,7 +3182,7 @@
                          + 0.10 * Math.sin(_campTime * 7.1)
                          + 0.05 * Math.sin(_campTime * 17.9);
     if (_fireLight) {
-      _fireLight.intensity = 5.5 * flicker;
+      _fireLight.intensity = 6.5 * flicker;  // Updated to match new base intensity
     }
     _flameMeshes.forEach((f, i) => {
       const s = 0.9 + 0.1 * Math.sin(_campTime * (8 + i * 3.1));
