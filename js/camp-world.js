@@ -105,6 +105,22 @@
   let _fireLight   = null;
   let _flameMeshes = [];
 
+  // Robot lap animation around the campfire (triggered after chip insertion)
+  let _robotMesh    = null;
+  let _robotLapActive = false;
+  let _robotLapT = 0;
+
+  // Camp Quest Arrow
+  let _campArrowEl = null;
+  let _campArrowDistEl = null;
+
+  // Smoke particle system and pulsating glow rings around campfire
+  let _smokeSystem   = null;
+  let _smokePositions = null;
+  let _smokeVelocities = null;
+  let _smokeLifetimes = null;
+  let _glowRings = null;
+
   // Spark / ember particle system
   let _sparkSystem   = null;
   let _sparkPositions = null;
@@ -462,6 +478,50 @@
     halo.rotation.x = -Math.PI / 2;
     halo.position.y = 0.02;
     _campScene.add(halo);
+
+    // Enhanced ground glow rings (multiple pulsating rings)
+    for (let g = 0; g < 3; g++) {
+      const glowGeo = new THREE.CircleGeometry(1.5 + g * 1.2, 32);
+      const glowMat = new THREE.MeshBasicMaterial({
+        color: g === 0 ? 0xff4400 : g === 1 ? 0xff7700 : 0xffaa00,
+        transparent: true,
+        opacity: 0.06 - g * 0.015,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+      });
+      const glowRing = new THREE.Mesh(glowGeo, glowMat);
+      glowRing.rotation.x = -Math.PI / 2;
+      glowRing.position.y = 0.01 + g * 0.005;
+      _campScene.add(glowRing);
+      _glowRings = _glowRings || [];
+      _glowRings.push({ mesh: glowRing, baseMat: glowMat, phase: g * Math.PI * 0.67 });
+    }
+
+    // Smoke particle system
+    const smokeCount = 20;
+    const smokeGeo = new THREE.BufferGeometry();
+    const smokePos = new Float32Array(smokeCount * 3);
+    for (let s = 0; s < smokeCount; s++) {
+      smokePos[s * 3] = 0; smokePos[s * 3 + 1] = -10; smokePos[s * 3 + 2] = 0;
+    }
+    smokeGeo.setAttribute('position', new THREE.BufferAttribute(smokePos, 3));
+    const smokeMat = new THREE.PointsMaterial({
+      color: 0x888888,
+      size: 0.6,
+      transparent: true,
+      opacity: 0.25,
+      blending: THREE.NormalBlending,
+      depthWrite: false
+    });
+    _smokeSystem = new THREE.Points(smokeGeo, smokeMat);
+    _campScene.add(_smokeSystem);
+    _smokePositions = smokePos;
+    _smokeVelocities = [];
+    _smokeLifetimes = [];
+    for (let s = 0; s < smokeCount; s++) {
+      _smokeLifetimes.push(0);
+      _smokeVelocities.push({ x: (Math.random() - 0.5) * 0.3, y: 0.8 + Math.random() * 0.4, z: (Math.random() - 0.5) * 0.3 });
+    }
   }
 
   // ── Star field ───────────────────────────────────────────
@@ -1243,6 +1303,7 @@
     robotGrp.position.set(AIDA_ROBOT_POS.x, 0, AIDA_ROBOT_POS.z);
     robotGrp._isAidaRobot = true;
     _aidaRobotMesh = robotGrp;
+    _robotMesh = robotGrp;
     _campScene.add(robotGrp);
 
     // ─ Aida Chip ────────────────────────────────────────────
@@ -1316,6 +1377,23 @@
   function _updateAidaIntro(dt) {
     if (!_campScene) return;
 
+    // Robot lap animation around the campfire (after chip inserted)
+    if (_robotLapActive && _robotMesh) {
+      _robotLapT += dt;
+      const lapDuration = 6.0;
+      const lapProgress = Math.min(_robotLapT / lapDuration, 1.0);
+      const angle = lapProgress * Math.PI * 2;
+      const lapRadius = 4.5;
+      _robotMesh.position.x = Math.sin(angle) * lapRadius;
+      _robotMesh.position.z = Math.cos(angle) * lapRadius;
+      _robotMesh.rotation.y = -angle + Math.PI * 0.5;
+      if (lapProgress >= 1.0) {
+        _robotLapActive = false;
+        _robotMesh.position.set(AIDA_ROBOT_POS.x, 0, AIDA_ROBOT_POS.z);
+        _robotMesh.rotation.y = 0;
+      }
+    }
+
     // ─ Chip float + glow animation ─
     if (_aidaChipMesh && _aidaChipMesh.visible) {
       _aidaChipMesh.position.y = 0.06 + Math.sin(_campTime * 2.8) * 0.08;
@@ -1359,16 +1437,16 @@
         }
       }
     }
-    // ─ Post-insertion prompt: open Aida menu ─
+    // ─ Post-insertion: show hint to go to Quest Hall ─
     if (_aidaIntroState.chipInserted) {
       const rdx = _playerPos.x - AIDA_ROBOT_POS.x;
       const rdz = _playerPos.z - AIDA_ROBOT_POS.z;
       if (Math.sqrt(rdx * rdx + rdz * rdz) < AIDA_INTRO_RADIUS) {
-        _promptEl.textContent = '🤖 A.I.D.A — Access Terminal [E]';
+        _promptEl.textContent = '🤖 A.I.D.A — Go to Quest Hall! [E]';
         _promptEl.style.display = 'block';
         if (_interactBtn) {
-          _interactBtn.textContent = 'ACCESS';
-          _interactBtn.style.background = 'linear-gradient(135deg,#8800cc,#440066)';
+          _interactBtn.textContent = 'QUEST HALL';
+          _interactBtn.style.background = 'linear-gradient(135deg,#cc8800,#664400)';
           _interactBtn.style.display = 'block';
         }
       }
@@ -1410,6 +1488,10 @@
     }
 
     _aidaRobotEyesOn(true);
+
+    // Start robot lap animation around the fire
+    _robotLapActive = true;
+    _robotLapT = 0;
 
     const DS = window.DialogueSystem;
     if (DS) {
@@ -3331,6 +3413,34 @@
     }
     if (_sparkSystem) _sparkSystem.geometry.attributes.position.needsUpdate = true;
 
+    // ── Smoke particles ─────────────────────────────────────
+    if (_smokeSystem && _smokePositions && _smokeLifetimes) {
+      for (let s = 0; s < _smokeLifetimes.length; s++) {
+        if (_smokeLifetimes[s] <= 0) {
+          _smokePositions[s * 3]     = (Math.random() - 0.5) * 0.3;
+          _smokePositions[s * 3 + 1] = 1.2;
+          _smokePositions[s * 3 + 2] = (Math.random() - 0.5) * 0.3;
+          _smokeVelocities[s] = { x: (Math.random() - 0.5) * 0.25, y: 0.6 + Math.random() * 0.5, z: (Math.random() - 0.5) * 0.25 };
+          _smokeLifetimes[s] = 3.0 + Math.random() * 2.0;
+        } else {
+          _smokePositions[s * 3]     += _smokeVelocities[s].x * dt;
+          _smokePositions[s * 3 + 1] += _smokeVelocities[s].y * dt;
+          _smokePositions[s * 3 + 2] += _smokeVelocities[s].z * dt;
+          _smokeLifetimes[s] -= dt;
+          _smokeVelocities[s].x *= 0.99;
+          _smokeVelocities[s].z *= 0.99;
+        }
+      }
+      _smokeSystem.geometry.attributes.position.needsUpdate = true;
+    }
+    // ── Pulsating glow rings around fire ────────────────────
+    if (_glowRings) {
+      const gt = Date.now() * 0.001;
+      _glowRings.forEach(function(r) {
+        r.baseMat.opacity = (0.04 + 0.02 * Math.sin(gt * 1.5 + r.phase));
+      });
+    }
+
     // ── Atmospheric dust ─────────────────────────────────────
     if (!_dustSystem || !_dustPositions) return;
     for (let i = 0; i < DUST_COUNT; i++) {
@@ -4070,25 +4180,30 @@
         return;
       }
     }
-    // Post-insertion: pressing E near the robot opens the Aida building menu
+    // Post-insertion: near robot shows hint to go to Quest Hall (no longer opens Profile)
     if (_aidaIntroState.chipInserted) {
       const rdx = _playerPos.x - AIDA_ROBOT_POS.x;
       const rdz = _playerPos.z - AIDA_ROBOT_POS.z;
       if (Math.sqrt(rdx * rdx + rdz * rdz) < AIDA_INTRO_RADIUS) {
-        const fn = _callbacks['accountBuilding'];
-        if (typeof fn === 'function') {
+        const DS = window.DialogueSystem;
+        if (DS && DS.DIALOGUES && DS.DIALOGUES.aidaQuestHallHint) {
           _menuOpen = true;
           _playerVel.x = 0; _playerVel.z = 0;
           _keys = {}; _touch.active = false;
           if (_promptEl) _promptEl.style.display = 'none';
           if (_interactBtn) _interactBtn.style.display = 'none';
-          fn();
-          return;
+          DS.show(DS.DIALOGUES.aidaQuestHallHint, {
+            onComplete: function() { _menuOpen = false; }
+          });
         }
+        return;
       }
     }
 
     if (!_nearBuilding) return;
+
+    // accountBuilding (Profile) must NOT be manually built - it unlocks via quest progression
+    if (_nearBuilding === 'accountBuilding' && !_isBuildingUnlocked('accountBuilding')) return;
 
     // If this building is locked but has a ready-to-claim quest, show the build overlay directly
     if (!_isBuildingUnlocked(_nearBuilding) && _isBuildingReadyForBuild(_nearBuilding)) {
@@ -5362,6 +5477,90 @@
   }
 
   /**
+   * _updateCampQuestArrow
+   * Shows a waterdrop-shaped arrow pointing toward the current quest objective building.
+   */
+  function _updateCampQuestArrow() {
+    if (!_campArrowEl) {
+      _campArrowEl = document.getElementById('camp-quest-arrow');
+      _campArrowDistEl = document.getElementById('camp-quest-arrow-dist');
+    }
+    if (!_campArrowEl) return;
+
+    let targetDef = null;
+    const tq = (typeof saveData !== 'undefined') && saveData && saveData.tutorialQuests;
+    if (tq) {
+      const cq = tq.currentQuest;
+      const questToBuilding = {
+        'quest_findingAida': null,
+        'quest_buildQuesthall': 'questMission',
+        'quest_dailyRoutine': 'questMission',
+        'quest_craftAllTools': 'forge',
+        'quest_firstBlood': 'questMission',
+        'firstRunDeath': null,
+      };
+      const targetId = cq ? questToBuilding[cq] : null;
+      if (targetId) {
+        targetDef = BUILDING_DEFS.find(function(d) { return d.id === targetId; });
+      } else if (cq === 'quest_findingAida') {
+        targetDef = { x: AIDA_CHIP_POS.x, z: AIDA_CHIP_POS.z };
+      }
+    }
+
+    // Also point to Quest Hall if a quest is ready to claim
+    if (!targetDef && tq && tq.readyToClaim && tq.readyToClaim.length > 0) {
+      targetDef = BUILDING_DEFS.find(function(d) { return d.id === 'questMission'; });
+    }
+
+    if (!targetDef) {
+      _campArrowEl.style.display = 'none';
+      return;
+    }
+
+    const dx = targetDef.x - _playerPos.x;
+    const dz = targetDef.z - _playerPos.z;
+    const dist = Math.sqrt(dx * dx + dz * dz);
+
+    if (dist < 3.5) {
+      _campArrowEl.style.display = 'none';
+      return;
+    }
+
+    _campArrowEl.style.display = 'block';
+    if (_campArrowDistEl) _campArrowDistEl.textContent = Math.round(dist) + 'm';
+
+    const angleRad = Math.atan2(dz, dx);
+    const W = window.innerWidth;
+    const H = window.innerHeight;
+    const margin = 70;
+    const cx = W / 2;
+    const cy = H / 2;
+    const tanA = Math.tan(angleRad);
+    let ax, ay;
+    if (Math.abs(Math.cos(angleRad)) > 0.001) {
+      if (dx > 0) {
+        ax = cx + (W / 2 - margin);
+        ay = cy + tanA * (W / 2 - margin);
+      } else {
+        ax = cx - (W / 2 - margin);
+        ay = cy - tanA * (W / 2 - margin);
+      }
+      if (Math.abs(ay - cy) > H / 2 - margin) {
+        ay = dz > 0 ? cy + H / 2 - margin : cy - H / 2 + margin;
+        ax = Math.abs(tanA) > 0.001 ? cx + (ay - cy) / tanA : cx;
+      }
+    } else {
+      ax = cx;
+      ay = dz > 0 ? cy + H / 2 - margin : cy - H / 2 + margin;
+    }
+
+    _campArrowEl.style.left = (ax - 24) + 'px';
+    _campArrowEl.style.top = (ay - 30) + 'px';
+    const angleDeg = angleRad * (180 / Math.PI);
+    _campArrowEl.style.transform = 'rotate(' + (angleDeg + 90) + 'deg)';
+  }
+
+  /**
    * update(dt)
    * Per-frame logic update.  Called from main.js animate() when isActive.
    */
@@ -5372,6 +5571,7 @@
     _updateBennyNPC(dt);
     _updateIncubator(dt);
     _updateAidaIntro(dt);
+    _updateCampQuestArrow();
     _updateCorruption(dt);
 
     // When a building menu is open, freeze player input/movement but keep

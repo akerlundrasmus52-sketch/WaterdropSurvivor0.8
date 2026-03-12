@@ -2735,6 +2735,14 @@
 
     // Update corner widget notification dots and daily streak label
     function _updateCampCornerWidgets() {
+      // Show/hide corner widgets based on quest progression
+      // They unlock after the first run quest (quest_dailyRoutine = "Daily Routine") is complete
+      const cornerWidgetsEl = document.getElementById('camp-corner-widgets');
+      if (cornerWidgetsEl) {
+        const spinDailyUnlocked = (typeof isQuestClaimed === 'function') &&
+          (isQuestClaimed('quest_dailyRoutine') || isQuestClaimed('firstRunDeath'));
+        cornerWidgetsEl.style.display = spinDailyUnlocked ? '' : 'none';
+      }
       // Daily reward notification
       const dailyNotif = document.getElementById('camp-daily-notif');
       const dailyStreak = document.getElementById('camp-daily-streak');
@@ -3500,25 +3508,25 @@
       // Check for first-time camp visit
       if (!saveData.hasVisitedCamp) {
         saveData.hasVisitedCamp = true;
-        // NEW: Only unlock Quest/Mission Hall initially - all other buildings locked
-        if (saveData.campBuildings && saveData.campBuildings.questMission) {
-          saveData.campBuildings.questMission.unlocked = false; // stays locked until A.I.D.A chip inserted
-        }
-        // Inventory is also unlocked on first visit so players can see their items
-        if (saveData.campBuildings && saveData.campBuildings.inventory) {
-          saveData.campBuildings.inventory.unlocked = true;
-          // level stays 0 — player must BUILD via the BUILD button
-        }
-        if (saveData.campBuildings && saveData.campBuildings.campHub) {
-          saveData.campBuildings.campHub.unlocked = false;
-          saveData.campBuildings.campHub.level = 0;
+        // Quest Hall is the only building built at start — all others lock until quests unlock them
+        if (saveData.campBuildings) {
+          // Ensure Quest Hall is built
+          if (saveData.campBuildings.questMission) {
+            saveData.campBuildings.questMission.unlocked = true;
+            saveData.campBuildings.questMission.level = 1;
+          }
+          // Lock all other buildings for fresh start quest flow
+          const keepBuilt = ['questMission'];
+          Object.keys(saveData.campBuildings).forEach(function(bId) {
+            if (!keepBuilt.includes(bId)) {
+              saveData.campBuildings[bId].unlocked = false;
+              saveData.campBuildings[bId].level = 0;
+            }
+          });
         }
         
-        // First-time welcome: A.I.D.A intro is handled by the chip/robot objects in the 3D camp.
         if (!saveData.storyQuests.welcomeShown) {
           saveData.storyQuests.welcomeShown = true;
-          saveSaveData();
-          // The player will naturally discover the glowing chip near the campfire.
         }
         
         saveSaveData();

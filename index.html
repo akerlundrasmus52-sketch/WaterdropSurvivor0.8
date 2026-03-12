@@ -202,7 +202,7 @@
     </div>
 
     <!-- Top Corner Widgets: Daily Reward (left) + Spin Wheel (right) -->
-    <div class="camp-corner-widgets">
+    <div class="camp-corner-widgets" id="camp-corner-widgets" style="display:none;">
       <button class="camp-corner-btn" id="camp-daily-btn" title="Daily Login Reward">
         <span id="camp-daily-notif" class="notif-dot" style="display:none;"></span>
         <span class="corner-icon">🎁</span>
@@ -211,6 +211,24 @@
         <span id="camp-spin-notif" class="notif-dot" style="display:none;"></span>
         <span class="corner-icon">🎡</span>
       </button>
+    </div>
+
+    <!-- Camp Quest Arrow: waterdrop-shaped, points to current quest objective in 3D camp -->
+    <div id="camp-quest-arrow" style="display:none; position:fixed; z-index:200; pointer-events:none;">
+      <svg width="48" height="60" viewBox="0 0 48 60">
+        <defs>
+          <filter id="cqa-glow">
+            <feGaussianBlur stdDeviation="2" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+        <!-- Waterdrop body -->
+        <path d="M24 4 C24 4, 44 28, 44 38 C44 49.6 35.6 58 24 58 C12.4 58 4 49.6 4 38 C4 28 24 4 24 4 Z" 
+              fill="#FFD700" stroke="#000" stroke-width="2.5" filter="url(#cqa-glow)" opacity="0.92"/>
+        <!-- Arrow inside -->
+        <text x="24" y="42" text-anchor="middle" font-size="20" font-weight="bold" fill="#000" font-family="Arial">↑</text>
+      </svg>
+      <div id="camp-quest-arrow-dist" style="position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);background:#FFD700;color:#000;font-size:11px;font-weight:bold;padding:2px 6px;border-radius:8px;white-space:nowrap;font-family:'Bangers',cursive;letter-spacing:0.5px;"></div>
     </div>
 
     <!-- Unspent Points Notification Bar (legacy, hidden) -->
