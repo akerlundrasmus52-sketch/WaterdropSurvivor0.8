@@ -1425,7 +1425,7 @@
 
       // Montana Landmark - Snowy area in the north (snow biome)
       const montanaGroup = new THREE.Group();
-      montanaGroup.position.set(0, 0, -100); // North in snow biome
+      montanaGroup.position.set(0, 0, -60); // OPTIMIZED: Moved from (0, 0, -100) - North in snow biome, 40% closer
       
       // Base platform
       const montanaBaseMat = new THREE.MeshToonMaterial({ color: 0xD3D3D3 }); // Light gray

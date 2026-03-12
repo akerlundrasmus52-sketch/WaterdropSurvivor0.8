@@ -613,11 +613,12 @@
     let _alienScoutSpawned    = false; // True once the minute-10 Grey Alien Scout is spawned this run
     let _annunakiOrbSpawned   = false; // True once the minute-15 Annunaki Orb is spawned this run
     // Landmark positions and detection radii for quest11_findAllLandmarks
+    // OPTIMIZED: Updated landmark positions for compact world layout (40% closer to spawn)
     const LANDMARK_CONFIGS = {
-      stonehenge:  { x:  60, z:  50, radius: 20, key: 'stonehenge',  label: 'Stonehenge'  },
-      pyramid:     { x:  35, z: -35, radius: 20, key: 'pyramid',     label: 'Pyramid'     },
-      montana:     { x:   0, z:-100, radius: 25, key: 'montana',     label: 'Montana'     },
-      teslaTower:  { x: -50, z: -50, radius: 25, key: 'teslaTower',  label: 'Tesla Tower' }
+      stonehenge:  { x:  35, z:  30, radius: 20, key: 'stonehenge',  label: 'Stonehenge'  }, // OPTIMIZED: Moved from (60, 50)
+      pyramid:     { x:  25, z: -20, radius: 20, key: 'pyramid',     label: 'Pyramid'     }, // OPTIMIZED: Moved from (35, -35)
+      montana:     { x:   0, z: -60, radius: 25, key: 'montana',     label: 'Montana'     }, // OPTIMIZED: Moved from (0, -100)
+      teslaTower:  { x: -30, z: -30, radius: 25, key: 'teslaTower',  label: 'Tesla Tower' }  // OPTIMIZED: Moved from (-50, -50)
     };
     
     // Countdown system (PR #70-71)
